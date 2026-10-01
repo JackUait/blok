@@ -69,7 +69,14 @@ describe('darkroom.css', () => {
 
     expect(flight).toMatch(/position:\s*fixed/);
     expect(flight).toMatch(/border-radius:\s*var\(--blok-radius-darkroom-frame\)/);
-    expect(rule('.blok-darkroom-flight img')).toMatch(/transform-origin:\s*0 0/);
+    expect(rule('.blok-darkroom-flight [data-role="image-plane"]')).toMatch(/transform-origin:\s*0 0/);
+  });
+
+  it('the turned img keeps its centre origin: only the camera plane scales from the corner', () => {
+    // planeImageStyle turns the img about its centre; a corner origin would swing it out of the plane.
+    expect(css).not.toMatch(/\.blok-darkroom-flight img\s*\{/);
+    expect(css).not.toMatch(/\.blok-darkroom__photo img[^{]*\{[^}]*transform-origin/);
+    expect(rule('.blok-darkroom__photo')).toMatch(/transform-origin:\s*0 0/);
   });
 
   it('the veil paints the same dark surround, square, and never takes a press', () => {
@@ -89,6 +96,76 @@ describe('darkroom.css', () => {
   it('the promoted veil and clone outrank the top-layer reset that would shrink them', () => {
     expect(css).toMatch(/\.blok-darkroom-veil\[data-blok-top-layer\]\[popover\],\s*\.blok-darkroom-veil \{/);
     expect(css).toMatch(/\.blok-darkroom-flight\[data-blok-top-layer\]\[popover\],\s*\.blok-darkroom-flight \{/);
+  });
+
+  it('the bottom dock fades by opacity like the bar, and stops for reduced motion', () => {
+    expect(rule('.blok-darkroom__dock')).toMatch(/transition:\s*opacity 120ms ease/);
+    expect(rule('.blok-darkroom__dock')).toMatch(/position:\s*absolute/);
+    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+
+    expect(reduced).toMatch(/\.blok-darkroom__dock[,\s]/);
+  });
+
+  it('the ratio pill flows inside the dock instead of pinning itself to the bottom', () => {
+    const pillRules = [...css.matchAll(/(?:^|\n)\.blok-darkroom__pill \{([^}]*)\}/g)].map((m) => m[1]);
+
+    expect(pillRules.length).toBeGreaterThan(1);
+    pillRules.forEach((body) => expect(body).not.toMatch(/position:\s*absolute/));
+  });
+
+  describe('outside Crop mode the photo shows as the cropped result', () => {
+    // The body of the rule whose selector list names this selector, grouped or not.
+    const offCrop = (target: string): string => {
+      const selector = `.blok-darkroom__surface:not([data-mode="crop"]) ${target}`;
+      const hit = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+        .find(([, list]) => list.replace(/\/\*[\s\S]*?\*\//g, '').split(',').map((x) => x.trim()).includes(selector));
+
+      if (!hit) throw new Error(`missing ${selector}`);
+
+      return hit[2];
+    };
+
+    it('handles and the thirds grid are gone', () => {
+      expect(offCrop('.blok-darkroom__handle')).toMatch(/display:\s*none/);
+      expect(offCrop('.blok-darkroom__grid')).toMatch(/display:\s*none/);
+    });
+
+    it('the frame drops its outline and the mask goes opaque', () => {
+      const frame = offCrop('.blok-darkroom__frame');
+
+      expect(frame).toMatch(/box-shadow:\s*0 0 0 9999px var\(--blok-darkroom-bg-edge\)/);
+      expect(frame).not.toMatch(/1\.5px/);
+      expect(rule('.blok-darkroom')).toMatch(/--blok-darkroom-bg-edge:\s*#[0-9a-f]{6};/);
+    });
+
+    it('the stage stops offering a grab cursor', () => {
+      expect(offCrop('.blok-darkroom__stage')).toMatch(/cursor:\s*default/);
+    });
+  });
+
+  describe('local reset controls', () => {
+    const bodyOf = (selector: string): string => {
+      const hit = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+        .find(([, list]) => list.replace(/\/\*[\s\S]*?\*\//g, '').split(',').map((x) => x.trim()).includes(selector));
+
+      if (!hit) throw new Error(`missing ${selector}`);
+
+      return hit[2];
+    };
+
+    it.each(['.blok-darkroom__dial-reset', '.blok-darkroom__panel-reset'])('%s hides by visibility so the layout keeps its box', (sel) => {
+      const off = bodyOf(`${sel}[data-shown="false"]`);
+
+      expect(off).toMatch(/visibility:\s*hidden/);
+      expect(off).not.toMatch(/display:\s*none/);
+    });
+
+    it('the dial reset sits beside the value label, and nothing is blue', () => {
+      expect(bodyOf('.blok-darkroom__dial-box')).toMatch(/position:\s*relative/);
+      expect(bodyOf('.blok-darkroom__dial-reset')).toMatch(/position:\s*absolute/);
+      expect(bodyOf('.blok-darkroom__dial-reset')).not.toMatch(BLUE);
+      expect(bodyOf('.blok-darkroom__panel-reset')).not.toMatch(BLUE);
+    });
   });
 
   it('is imported by main.css instead of the old crop styles', () => {

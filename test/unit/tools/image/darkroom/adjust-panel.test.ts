@@ -10,6 +10,9 @@ const LABELS: Record<string, string> = {
   'tools.image.adjustBrightness': 'Brightness',
   'tools.image.adjustContrast': 'Contrast',
   'tools.image.adjustSaturation': 'Saturation',
+  'tools.image.resetBrightness': 'Reset brightness',
+  'tools.image.resetContrast': 'Reset contrast',
+  'tools.image.resetSaturation': 'Reset saturation',
 };
 
 const i18n: I18nInstance = {
@@ -145,16 +148,84 @@ describe('createAdjustPanel', () => {
     expect(onCommit).toHaveBeenCalledTimes(1);
   });
 
-  it('a chip shows a dot only while its value is not zero', () => {
-    make({ brightness: 0, contrast: 5, saturation: 0 });
+  describe('per-tool reset', () => {
+    const reset = (tool: string): HTMLButtonElement => {
+      const el = panel.el.querySelector<HTMLButtonElement>(`[data-role="adjust-reset"][data-tool="${tool}"]`);
 
-    expect(chip('brightness').getAttribute('data-changed')).toBe('false');
-    expect(chip('contrast').getAttribute('data-changed')).toBe('true');
-    expect(chip('contrast').querySelector('[data-role="adjust-dot"]')?.getAttribute('aria-hidden')).toBe('true');
-    key(dial(), 'ArrowRight');
-    expect(chip('brightness').getAttribute('data-changed')).toBe('true');
-    key(dial(), 'ArrowLeft');
-    expect(chip('brightness').getAttribute('data-changed')).toBe('false');
+      if (el === null) throw new Error(`no reset ${tool}`);
+
+      return el;
+    };
+    const shown = (tool: string): string | null => reset(tool).getAttribute('data-shown');
+
+    it('each changed tool gets its own named reset, a sibling of its radio and outside the radiogroup', () => {
+      make({ brightness: 0, contrast: 5, saturation: 0 });
+
+      expect(chip('brightness').getAttribute('data-changed')).toBe('false');
+      expect(chip('contrast').getAttribute('data-changed')).toBe('true');
+      expect(reset('contrast').getAttribute('aria-label')).toBe('Reset contrast');
+      expect(reset('contrast').tagName).toBe('BUTTON');
+      expect(chip('contrast').contains(reset('contrast'))).toBe(false);
+      expect(reset('contrast').closest('[role="radiogroup"]')).toBeNull();
+      expect(reset('contrast').getAttribute('role')).toBeNull();
+      expect(shown('contrast')).toBe('true');
+      expect(shown('brightness')).toBe('false');
+      key(dial(), 'ArrowRight');
+      expect(shown('brightness')).toBe('true');
+      key(dial(), 'ArrowLeft');
+      expect(shown('brightness')).toBe('false');
+    });
+
+    it('a reset clears only its tool, commits once, and keeps the selected tool', () => {
+      make({ brightness: 10, contrast: 5, saturation: 0 });
+
+      reset('contrast').click();
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(onCommit).toHaveBeenCalledWith({ brightness: 10, contrast: 0, saturation: 0 });
+      expect(chip('brightness').getAttribute('aria-checked')).toBe('true');
+      expect(dial().getAttribute('aria-valuenow')).toBe('10');
+      expect(shown('contrast')).toBe('false');
+    });
+
+    it('resetting the selected tool moves the dial to 0', () => {
+      make({ brightness: 10, contrast: 0, saturation: 0 });
+
+      reset('brightness').click();
+
+      expect(dial().getAttribute('aria-valuenow')).toBe('0');
+    });
+
+    it('a pending dial key burst is its own step before a reset', () => {
+      make({ brightness: 0, contrast: 5, saturation: 0 });
+
+      key(dial(), 'ArrowRight');
+      reset('contrast').click();
+      vi.advanceTimersByTime(1000);
+
+      expect(onCommit.mock.calls).toEqual([
+        [{ brightness: 1, contrast: 5, saturation: 0 }],
+        [{ brightness: 1, contrast: 0, saturation: 0 }],
+      ]);
+    });
+
+    it('a focused reset that disappears hands focus to the dial', () => {
+      make({ brightness: 0, contrast: 5, saturation: 0 });
+
+      reset('contrast').focus();
+      reset('contrast').click();
+
+      expect(dial()).toHaveFocus();
+    });
+
+    it('the dial has no reset of its own here, but a double-click still resets the selected tool', () => {
+      make({ brightness: 7, contrast: 0, saturation: 0 });
+
+      expect(panel.el.querySelector('[data-role="dial-reset"]')).toBeNull();
+      dial().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      expect(onCommit).toHaveBeenCalledWith({ brightness: 0, contrast: 0, saturation: 0 });
+    });
   });
 
   it('set() updates the chips and dial without callbacks', () => {

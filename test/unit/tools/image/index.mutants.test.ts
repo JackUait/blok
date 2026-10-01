@@ -25,6 +25,7 @@ import type {
   PatternPasteEvent,
 } from '../../../../types';
 import type * as ImageUiModule from '../../../../src/tools/image/ui';
+import type { DarkroomResult } from '../../../../src/tools/image/darkroom';
 
 vi.mock('../../../../src/tools/image/gif-to-webm', () => ({ convertGifToWebm: vi.fn() }));
 vi.mock('../../../../src/tools/image/download', () => ({ downloadImage: vi.fn() }));
@@ -1153,6 +1154,28 @@ describe('ImageTool — an image that fails to decode', () => {
     expect(img.style.getPropertyValue('min-height')).toBe('0px');
   });
 
+  it('sizes the retry placeholder from the turned size of a quarter-turned image', () => {
+    const tool = new ImageTool(createOptions({ url: 'u', naturalWidth: 400, naturalHeight: 100, rotation: 90 }));
+    const root = tool.render();
+    const figure = el<HTMLElement>(root, '.blok-image-inner');
+
+    el<HTMLImageElement>(root, 'img').dispatchEvent(new Event('error'));
+
+    expect(figure.style.getPropertyValue('aspect-ratio')).toBe('100 / 400');
+  });
+
+  it('sizes the probed retry placeholder from the turned size of a quarter-turned image', async () => {
+    mockProbe.mockResolvedValue({ width: 800, height: 400 });
+    const tool = new ImageTool(createOptions({ url: 'u', rotation: 270 }));
+    const root = tool.render();
+    const figure = el<HTMLElement>(root, '.blok-image-inner');
+
+    el<HTMLImageElement>(root, 'img').dispatchEvent(new Event('error'));
+    await tick();
+
+    expect(figure.style.getPropertyValue('aspect-ratio')).toBe('400 / 800');
+  });
+
   it('probes the source when only one cached dimension is known', async () => {
     mockProbe.mockResolvedValue({ width: 800, height: 400 });
     const tool = new ImageTool(createOptions({ url: 'u', naturalWidth: 400 }));
@@ -1521,6 +1544,18 @@ const cropModalOptions = (): CropModalOptions => {
   return call[0];
 };
 
+/** What Done hands back: the crop plus untouched geometry, filter and adjust unless overridden. */
+const darkroomResult = (
+  crop: ImageCrop | null,
+  over: Partial<Omit<DarkroomResult, 'crop'>> = {}
+): DarkroomResult => ({
+  crop,
+  geometry: { rotation: 0, flipX: false, straighten: 0 },
+  filter: 'none',
+  adjust: { brightness: 0, contrast: 0, saturation: 0 },
+  ...over,
+});
+
 describe('ImageTool — cropping', () => {
   const openCrop = (tool: ImageTool): void => {
     settingsItem(tool, 'image-crop').onActivate?.();
@@ -1542,7 +1577,7 @@ describe('ImageTool — cropping', () => {
     openCrop(tool);
     const opts = cropModalOptions();
 
-    opts.onApply({ x: 10, y: 10, w: 50, h: 50 });
+    opts.onApply(darkroomResult({ x: 10, y: 10, w: 50, h: 50 }));
 
     expect(opts.getTargetEl?.()).toBe(root.querySelector('[data-role="image-crop"]'));
   });
@@ -1588,7 +1623,7 @@ describe('ImageTool — cropping', () => {
     const root = tool.render();
 
     openCrop(tool);
-    cropModalOptions().onApply({ x: 10, y: 20, w: 50, h: 60 });
+    cropModalOptions().onApply(darkroomResult({ x: 10, y: 20, w: 50, h: 60 }));
 
     expect(tool.save().crop).toStrictEqual({ x: 10, y: 20, w: 50, h: 60 });
     expect(block.dispatchChange).toHaveBeenCalled();
@@ -1600,7 +1635,7 @@ describe('ImageTool — cropping', () => {
     const root = tool.render();
 
     openCrop(tool);
-    cropModalOptions().onApply(null);
+    cropModalOptions().onApply(darkroomResult(null));
 
     expect(tool.save()).toStrictEqual({ url: 'u' });
     expect(root.querySelector('.blok-image-crop')).toBeNull();
@@ -1611,7 +1646,7 @@ describe('ImageTool — cropping', () => {
 
     tool.render();
     openCrop(tool);
-    cropModalOptions().onApply({ x: 0, y: 0, w: 50, h: 100 });
+    cropModalOptions().onApply(darkroomResult({ x: 0, y: 0, w: 50, h: 100 }));
 
     expect(tool.save().width).toBe(40);
   });
@@ -1621,7 +1656,7 @@ describe('ImageTool — cropping', () => {
 
     tool.render();
     openCrop(tool);
-    cropModalOptions().onApply({ x: 0, y: 0, w: 50, h: 100 });
+    cropModalOptions().onApply(darkroomResult({ x: 0, y: 0, w: 50, h: 100 }));
 
     expect(tool.save()).toStrictEqual({ url: 'u', crop: { x: 0, y: 0, w: 50, h: 100 } });
   });
@@ -1656,6 +1691,65 @@ describe('ImageTool — cropping', () => {
     const tool = new ImageTool(createOptions({ url: 'u' }));
 
     expect(() => { openCrop(tool); }).not.toThrow();
+  });
+
+  it('opens the darkroom on the saved geometry, filter and adjustments', () => {
+    const tool = new ImageTool(createOptions({
+      url: 'u', rotation: 90, flipX: true, straighten: 3.5, filter: 'mono', adjust: { contrast: 20 },
+    }));
+
+    tool.render();
+    openCrop(tool);
+
+    expect(mockCropModal).toHaveBeenCalledWith(expect.objectContaining({
+      initialGeometry: { rotation: 90, flipX: true, straighten: 3.5 },
+      initialFilter: 'mono',
+      initialAdjust: { brightness: 0, contrast: 20, saturation: 0 },
+    }));
+  });
+
+  it('Done writes the geometry, filter and adjustments it returns', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+
+    tool.render();
+    openCrop(tool);
+    cropModalOptions().onApply(darkroomResult({ x: 10, y: 10, w: 50, h: 50 }, {
+      geometry: { rotation: 270, flipX: true, straighten: -2.5 },
+      filter: 'noir',
+      adjust: { brightness: 15, contrast: 0, saturation: -30 },
+    }));
+
+    expect(tool.save()).toStrictEqual({
+      url: 'u',
+      crop: { x: 10, y: 10, w: 50, h: 50 },
+      rotation: 270,
+      flipX: true,
+      straighten: -2.5,
+      filter: 'noir',
+      adjust: { brightness: 15, saturation: -30 },
+    });
+  });
+
+  it('Done drops every edit field that went back to its default', () => {
+    const tool = new ImageTool(createOptions({
+      url: 'u', rotation: 180, flipX: true, straighten: 5, filter: 'warm', adjust: { brightness: 40 },
+    }));
+
+    tool.render();
+    openCrop(tool);
+    cropModalOptions().onApply(darkroomResult(null));
+
+    expect(tool.save()).toStrictEqual({ url: 'u' });
+  });
+
+  it('a quarter turn keeps the figure height: the explicit width follows the turned aspect', () => {
+    const tool = new ImageTool(createOptions({ url: 'u', width: 80, naturalWidth: 800, naturalHeight: 400 }));
+
+    tool.render();
+    openCrop(tool);
+    cropModalOptions().onApply(darkroomResult(null, { geometry: { rotation: 270, flipX: false, straighten: 0 } }));
+
+    expect(tool.save().width).toBe(20);
   });
 
   it('tears the modal down when the block is removed', () => {
@@ -2985,6 +3079,25 @@ describe('ImageTool — the auto-full verdict', () => {
     for (const sync of syncs) sync();
 
     expect(root.getAttribute('data-auto-full')).toBe('true');
+  });
+
+  it.each<[string, 0 | 90, boolean]>([
+    ['a wide strip stays tiny unturned', 0, true],
+    ['a quarter-turned wide strip stands tall, so it is not tiny', 90, false],
+  ])('judges tininess on the displayed aspect: %s', (_label, rotation, tiny) => {
+    const state = stubNaturalSize();
+
+    state.complete = true;
+    state.w = 1000;
+    state.h = 50;
+    const host = hostWide(800);
+    const tool = new ImageTool(createOptions({ url: 'u', rotation }));
+    const root = tool.render();
+
+    host.appendChild(root);
+    tool.setReadOnly(false);
+
+    expect(root.hasAttribute('data-auto-full')).toBe(tiny);
   });
 
   it('does not re-measure for an image that was already decoded', () => {

@@ -1,25 +1,45 @@
-import type { ImageCrop, ImageCropShape } from '../../../../types/tools/image';
+import type { ImageAdjust, ImageCrop, ImageCropShape, ImageFilterPreset } from '../../../../types/tools/image';
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
+import { IconFlipHorizontal, IconRotateLeft } from '../../../components/icons';
 import { openModalDialog } from '../../../components/utils/modal-dialog';
 import { rovingRadioGroup } from '../../../components/utils/roving-radio-group';
 import { createSpring, prefersReducedMotion, type SpringClock } from '../../../components/utils/spring';
 import type { I18nInstance } from '../../../components/utils/tools';
 import { applyRatio, clampRect, FULL_RECT, isFullRect, resizeRect, type Handle } from '../crop-math';
 import { renderErrorState } from '../error-state';
+import {
+  coverCrop, flipHorizontal, IDENTITY, isIdentity, orientedSize, planeImageStyle, rotateLeft, type Geometry,
+} from '../geometry';
 import { tr } from '../i18n';
+import { applyImageFilter } from '../image-view';
+import { createAdjustPanel } from './adjust-panel';
 import {
   cameraToRect, clampCamera, fitFrame, percentRatio, rectAspect, rectToCamera, rectToFrame,
-  rubberCamera, zoomAt, type Box, type Camera, type Insets,
+  rubberCamera, zoomAt, type Box, type Camera, type Insets, type Size,
 } from './camera';
+import { createDial } from './dial';
+import { createFilterStrip } from './filter-strip';
 import { attachGestures } from './gestures';
 import { createHistory, type Snapshot } from './history';
-import { createDissolve, createVeil, flyOut, isOnScreen } from './motion';
+import { createModeTabs } from './mode-tabs';
+import { cameraPlane, createDissolve, createVeil, fitCameraPlane, flyOut, isOnScreen } from './motion';
+
+export interface DarkroomResult {
+  /** Null only when the rect is the full image and nothing is straightened. */
+  crop: ImageCrop | null;
+  geometry: Geometry;
+  filter: ImageFilterPreset;
+  adjust: Required<ImageAdjust>;
+}
 
 export interface OpenDarkroomOptions {
   url: string;
   alt?: string;
   initial?: ImageCrop;
-  onApply(rect: ImageCrop | null): void;
+  initialGeometry?: Geometry;
+  initialFilter?: ImageFilterPreset;
+  initialAdjust?: Required<ImageAdjust>;
+  onApply(result: DarkroomResult): void;
   onCancel(): void;
   i18n?: I18nInstance;
   /** The block's visible image box; the photo flies out of it. */
@@ -44,21 +64,26 @@ const RATIOS: RatioDef[] = [
 
 const HANDLES: Handle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 const CORNERS = new Set<Handle>(['nw', 'ne', 'se', 'sw']);
-// Room for the top bar and the bottom pill around the frame.
-const PAD: Insets = { top: 72, right: 32, bottom: 104, left: 32 };
+// Room for the top bar and the bottom dock (mode tabs over the panel) around the frame.
+const PAD: Insets = { top: 72, right: 32, bottom: 200, left: 32 };
 // Stand-in size for an SVG without intrinsic dimensions.
 const FALLBACK_NATURAL = 1000;
 const NUDGE = 0.01;
 const NUDGE_BIG = 0.1;
 const ZOOM_STEP = 1.1;
 const KEY_IDLE_MS = 250;
+const MAX_STRAIGHTEN = 45;
+const QUARTER = 90;
+const NO_ADJUST: Required<ImageAdjust> = { brightness: 0, contrast: 0, saturation: 0 };
 
-type ViewKey = 's' | 'tx' | 'ty' | 'x' | 'y' | 'w' | 'h' | 'round';
+type ViewKey = 's' | 'tx' | 'ty' | 'x' | 'y' | 'w' | 'h' | 'round' | 'theta' | 'spin';
 
 const round3 = (v: number): number => Math.round(v * 1000) / 1000;
 const roundRect = (r: ImageCrop): ImageCrop => ({ x: round3(r.x), y: round3(r.y), w: round3(r.w), h: round3(r.h) });
 const ratioByKey = (key: string): RatioDef => RATIOS.find((r) => r.key === key) ?? RATIOS[0];
 const roundOf = (shape: RatioShape): number => (shape === 'rect' ? 0 : 1);
+// A quarter turn makes a wide fixed ratio tall; only a square one still fits it.
+const survivesQuarterTurn = (def: RatioDef): boolean => def.value === null || def.value === 1;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, role?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -71,6 +96,9 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, ro
 
 export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   const initialDef = RATIOS.find((r) => r.shape === (opts.initial?.shape ?? 'rect') && r.shape !== 'rect') ?? RATIOS[0];
+  const initialGeometry: Geometry = { ...(opts.initialGeometry ?? IDENTITY) };
+  const initialFilter: ImageFilterPreset = opts.initialFilter ?? 'none';
+  const initialAdjust: Required<ImageAdjust> = { ...(opts.initialAdjust ?? NO_ADJUST) };
   const st = {
     natural: { w: FALLBACK_NATURAL, h: FALLBACK_NATURAL },
     measured: false,
@@ -78,15 +106,26 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     stage: { w: 0, h: 0 },
     rect: opts.initial ? clampRect(opts.initial) : { ...FULL_RECT },
     def: initialDef,
+    geometry: { ...initialGeometry },
+    filter: initialFilter,
+    adjust: { ...initialAdjust },
     panFrom: { s: 1, tx: 0, ty: 0 },
     rectFrom: { ...FULL_RECT },
+    // The rect a straighten burst started from, so scrubbing back gives the crop back unshrunk.
+    straightenFrom: null as ImageCrop | null,
     keyIdle: 0,
     closed: false,
+    mode: 'crop',
+    // A gesture that began in Crop mode still ends there, even if a tab key switched modes meanwhile.
+    gesturing: false,
     // A chip picked before load; only then is the rect re-fitted to the ratio at load.
     ratioPicked: false,
   };
   const startRect = { ...st.rect };
-  const hist = { stack: createHistory({ rect: { ...st.rect }, ratioKey: st.def.key }) };
+  const snapshot = (): Snapshot => ({
+    rect: { ...st.rect }, ratioKey: st.def.key, geometry: { ...st.geometry }, filter: st.filter, adjust: { ...st.adjust },
+  });
+  const hist = { stack: createHistory(snapshot()) };
 
   const backdrop = el('div', 'blok-darkroom');
 
@@ -96,6 +135,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   surface.tabIndex = -1;
   surface.setAttribute(DATA_ATTR.keyboardOwner, '');
+  // darkroom.css hides the crop chrome outside Crop mode and shows the cropped result.
+  surface.setAttribute('data-mode', st.mode);
 
   const bar = el('div', 'blok-darkroom__bar');
 
@@ -109,26 +150,41 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
     return b;
   };
+  const makeIconBtn = (action: string, key: string, icon: string): HTMLButtonElement => {
+    const b = el('button', 'blok-darkroom__btn blok-darkroom__btn--ghost blok-darkroom__btn--icon');
+
+    b.type = 'button';
+    b.setAttribute('data-action', action);
+    b.setAttribute('aria-label', tr(opts.i18n, key));
+    b.innerHTML = icon;
+
+    return b;
+  };
   const cancelBtn = makeBtn('cancel', 'tools.image.cropCancel', 'ghost');
   const resetBtn = makeBtn('reset', 'tools.image.cropReset', 'ghost');
+  const rotateBtn = makeIconBtn('rotate-left', 'tools.image.rotateLeft', IconRotateLeft);
+  const flipBtn = makeIconBtn('flip', 'tools.image.flip', IconFlipHorizontal);
   const doneBtn = makeBtn('done', 'tools.image.cropDone', 'primary');
-  const readout = el('span', 'blok-darkroom__readout', 'darkroom-readout');
-
-  readout.setAttribute('aria-hidden', 'true');
   const lead = el('div', 'blok-darkroom__bar-lead');
 
-  lead.append(cancelBtn, resetBtn);
-  bar.append(lead, readout, doneBtn);
+  lead.append(cancelBtn, resetBtn, rotateBtn, flipBtn);
+  bar.append(lead, doneBtn);
 
   const stage = el('div', 'blok-darkroom__stage', 'darkroom-stage');
 
   stage.tabIndex = 0;
   stage.setAttribute('role', 'application');
   stage.setAttribute('aria-label', tr(opts.i18n, 'tools.image.cropStageLabel'));
-  const photo = el('img', 'blok-darkroom__photo', 'darkroom-photo');
+  const photo = document.createElement('img');
 
+  photo.setAttribute('data-role', 'darkroom-photo');
   photo.alt = opts.alt ?? '';
   photo.draggable = false;
+  applyImageFilter(photo, st.filter, st.adjust);
+  // The camera moves the plane; the img inside carries the turn and the filter.
+  const plane = cameraPlane(photo, null, st.geometry);
+
+  plane.classList.add('blok-darkroom__photo');
   const frame = el('div', 'blok-darkroom__frame', 'darkroom-frame');
   const grid = el('div', 'blok-darkroom__grid');
 
@@ -143,11 +199,10 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     frame.appendChild(handle);
     handleEls.set(h, handle);
   }
-  stage.append(photo, frame);
+  stage.append(plane, frame);
 
   const pill = el('div', 'blok-darkroom__pill');
 
-  pill.setAttribute('data-darkroom-chrome', '');
   pill.setAttribute('role', 'radiogroup');
   pill.setAttribute('aria-label', tr(opts.i18n, 'tools.image.cropAspectRatio'));
   const chips = RATIOS.map((r) => {
@@ -157,36 +212,44 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     chip.setAttribute('role', 'radio');
     chip.setAttribute('data-ratio', r.key);
     chip.textContent = tr(opts.i18n, r.i18nKey);
-    chip.addEventListener('click', () => { flushKeyCommit(); setRatio(r); commit(); });
+    chip.addEventListener('click', () => { flushAll(); setRatio(r); commit(); });
     pill.appendChild(chip);
 
     return chip;
   });
 
-  const live = el('div', 'blok-darkroom__live', 'darkroom-live');
-
-  live.setAttribute('aria-live', 'polite');
-  surface.append(bar, stage, pill, live);
-  backdrop.appendChild(surface);
-
-  const pctRatio = (): number | null => (st.def.value === null ? null : percentRatio(st.def.value, st.natural));
+  const o = (): Size => orientedSize(st.natural, st.geometry);
+  const theta = (): number => st.geometry.straighten;
+  /** Shrinks a rect until the turned photo covers it; a no-op while nothing is straightened. */
+  const covered = (r: ImageCrop): ImageCrop => (theta() === 0 ? r : coverCrop(r, o(), theta()));
+  const pctRatio = (): number | null => (st.def.value === null ? null : percentRatio(st.def.value, o()));
   const frameOf = (v: Readonly<Record<ViewKey, number>>): Box => ({ x: v.x, y: v.y, w: v.w, h: v.h });
   const camOf = (v: Readonly<Record<ViewKey, number>>): Camera => ({ s: v.s, tx: v.tx, ty: v.ty });
 
-  const sizeText = (r: ImageCrop): string =>
-    `${Math.round((r.w / 100) * st.natural.w)} × ${Math.round((r.h / 100) * st.natural.h)} px`;
+  const sizeText = (r: ImageCrop): string => {
+    const size = o();
+
+    return `${Math.round((r.w / 100) * size.w)} × ${Math.round((r.h / 100) * size.h)} px`;
+  };
+
+  const applyFilter = (): void => applyImageFilter(photo, st.filter, st.adjust);
 
   const paint = (v: Readonly<Record<ViewKey, number>>): void => {
-    photo.style.transform = `translate(${v.tx}px, ${v.ty}px) scale(${v.s})`;
-    frame.style.transform = `translate(${v.x}px, ${v.y}px)`;
+    const cx = v.x + v.w / 2;
+    const cy = v.y + v.h / 2;
+    // The spin turns photo and frame together about the frame centre while a quarter turn lands.
+    const spun = v.spin === 0 ? '' : `translate(${cx}px, ${cy}px) rotate(${v.spin}deg) translate(${-cx}px, ${-cy}px) `;
+
+    plane.style.transform = `${spun}translate(${v.tx}px, ${v.ty}px) scale(${v.s})`;
+    frame.style.transform = v.spin === 0 ? `translate(${v.x}px, ${v.y}px)` : `translate(${v.x}px, ${v.y}px) rotate(${v.spin}deg)`;
     frame.style.width = `${v.w}px`;
     frame.style.height = `${v.h}px`;
     frame.style.setProperty('--blok-radius-darkroom-frame', `${v.round * 50}%`);
-    readout.textContent = sizeText(cameraToRect(camOf(v), st.natural, frameOf(v)));
+    if (st.ready) photo.style.transform = planeImageStyle(st.natural, { ...st.geometry, straighten: v.theta }).transform;
   };
 
   const view = createSpring<ViewKey>({
-    from: { s: 1, tx: 0, ty: 0, x: 0, y: 0, w: 0, h: 0, round: roundOf(st.def.shape) },
+    from: { s: 1, tx: 0, ty: 0, x: 0, y: 0, w: 0, h: 0, round: roundOf(st.def.shape), theta: theta(), spin: 0 },
     clock: opts.clock,
     onUpdate: (v) => {
       // e2e waits on this; a gesture that starts mid-spring measures a moving frame.
@@ -198,9 +261,15 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   /** Target layout for the current rect: frame fitted and centred, camera showing the rect in it. */
   const fitted = (): Record<ViewKey, number> => {
-    const f = fitFrame(rectAspect(st.rect, st.natural), st.stage, PAD);
+    const f = fitFrame(rectAspect(st.rect, o()), st.stage, PAD);
 
-    return { ...rectToCamera(st.rect, st.natural, f), ...f, round: roundOf(st.def.shape) };
+    return { ...rectToCamera(st.rect, o(), f), ...f, round: roundOf(st.def.shape), theta: theta(), spin: 0 };
+  };
+
+  /** jump() never settles, so an instant move marks rest itself. */
+  const jumpTo = (v: Record<ViewKey, number>): void => {
+    view.jump(v);
+    stage.setAttribute('data-settled', '');
   };
 
   const syncChips = (): void => {
@@ -222,8 +291,16 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   };
 
   const commit = (): void => {
-    hist.stack.push({ rect: { ...st.rect }, ratioKey: st.def.key });
+    hist.stack.push(snapshot());
     announce();
+    syncResets();
+  };
+
+  /** A rotation swaps O, so the plane's box and the img inside it must follow. */
+  const refitPlane = (): void => {
+    if (!st.ready) return;
+    fitCameraPlane(plane, photo, st.natural, st.geometry);
+    paint(view.values());
   };
 
   const setRatio = (def: RatioDef): void => {
@@ -231,29 +308,148 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     if (!st.ready) st.ratioPicked = true;
     const r = pctRatio();
 
-    st.rect = r === null ? st.rect : applyRatio(st.rect, r);
+    st.rect = covered(r === null ? st.rect : applyRatio(st.rect, r));
     syncChips();
     if (st.ready) view.to(fitted());
   };
 
+  const gridShow = createDissolve([], grid);
+
+  const straightenDial = createDial({
+    min: -MAX_STRAIGHTEN,
+    max: MAX_STRAIGHTEN,
+    value: st.geometry.straighten,
+    label: tr(opts.i18n, 'tools.image.straighten'),
+    resetLabel: tr(opts.i18n, 'tools.image.resetStraighten'),
+    valueText: (v) => `${v}°`,
+    onInput: (v) => {
+      if (st.straightenFrom === null) {
+        flushKeyCommit();
+        st.straightenFrom = { ...st.rect };
+        gridShow.begin();
+      }
+      st.geometry = { ...st.geometry, straighten: v };
+      st.rect = covered(st.straightenFrom);
+      syncResets();
+      // The photo turns under a steady frame: no spring, the scrub drives it.
+      if (st.ready) jumpTo(fitted());
+    },
+    onCommit: () => {
+      st.straightenFrom = null;
+      gridShow.end();
+      commit();
+    },
+  });
+
+  const makePanelReset = (action: string, key: string): HTMLButtonElement => {
+    const b = makeBtn(action, key, 'ghost');
+
+    b.classList.add('blok-darkroom__panel-reset');
+
+    return b;
+  };
+  const cropReset = makePanelReset('reset-crop', 'tools.image.resetCrop');
+  const adjustReset = makePanelReset('reset-adjust', 'tools.image.resetAdjustments');
+  const filterReset = makePanelReset('reset-filter', 'tools.image.resetFilter');
+
+  const cropPanel = el('div', 'blok-darkroom__panel blok-darkroom__panel--crop');
+
+  cropPanel.append(pill, straightenDial.box, cropReset);
+
+  const adjustPanel = createAdjustPanel({
+    i18n: opts.i18n,
+    value: st.adjust,
+    onInput: (a) => { st.adjust = a; applyFilter(); syncResets(); },
+    onCommit: (a) => { st.adjust = a; applyFilter(); commit(); },
+  });
+  const adjustWrap = el('div', 'blok-darkroom__panel');
+
+  adjustWrap.append(adjustPanel.el, adjustReset);
+
+  const filterStrip = createFilterStrip({
+    i18n: opts.i18n,
+    url: opts.url,
+    value: st.filter,
+    onSelect: (p) => { flushAll(); st.filter = p; applyFilter(); commit(); },
+  });
+  const filterWrap = el('div', 'blok-darkroom__panel');
+
+  filterWrap.append(filterStrip.el, filterReset);
+
+  /** An attribute, not [hidden]: darkroom.css keeps the box so the panel never jumps. */
+  const showReset = (btn: HTMLButtonElement, shown: boolean, fallback: () => HTMLElement | null): void => {
+    btn.setAttribute('data-shown', String(shown));
+    // A browser drops focus to <body> from an invisible control; hand it to the panel's main control.
+    if (!shown && document.activeElement === btn) fallback()?.focus();
+  };
+
+  const syncResets = (): void => {
+    const cropDirty = !isFullRect(roundRect(st.rect)) || st.def.key !== RATIOS[0].key || !isIdentity(st.geometry);
+
+    showReset(cropReset, cropDirty, () => pill.querySelector<HTMLElement>('[aria-checked="true"]'));
+    showReset(adjustReset, Object.values(st.adjust).some((v) => v !== 0), () => adjustPanel.el.querySelector<HTMLElement>('[role="slider"]'));
+    showReset(filterReset, st.filter !== 'none', () => filterStrip.el.querySelector<HTMLElement>('[aria-checked="true"]'));
+  };
+
+  const tabs = createModeTabs({
+    modes: [
+      { key: 'crop', label: tr(opts.i18n, 'tools.image.editModeCrop') },
+      { key: 'adjust', label: tr(opts.i18n, 'tools.image.editModeAdjust') },
+      { key: 'filters', label: tr(opts.i18n, 'tools.image.editModeFilters') },
+    ],
+    panels: { crop: cropPanel, adjust: adjustWrap, filters: filterWrap },
+    selected: 'crop',
+    label: tr(opts.i18n, 'tools.image.editModes'),
+    onSelect: (mode) => {
+      flushAll();
+      st.mode = mode;
+      surface.setAttribute('data-mode', mode);
+    },
+  });
+
+  const dock = el('div', 'blok-darkroom__dock');
+
+  dock.setAttribute('data-darkroom-chrome', '');
+  // The crop panel goes first so the ratio pill stays the first radiogroup in the dialog.
+  dock.append(cropPanel, adjustWrap, filterWrap, tabs.el);
+
+  const live = el('div', 'blok-darkroom__live', 'darkroom-live');
+
+  live.setAttribute('aria-live', 'polite');
+  surface.append(bar, stage, dock, live);
+  backdrop.appendChild(surface);
+
   const restore = (s: Snapshot | null): void => {
     if (!s) return;
+    const turned = s.geometry.rotation !== st.geometry.rotation || s.geometry.flipX !== st.geometry.flipX;
+
     st.def = ratioByKey(s.ratioKey);
     st.rect = { ...s.rect };
+    st.geometry = { ...s.geometry };
+    st.filter = s.filter;
+    st.adjust = { ...s.adjust };
+    st.straightenFrom = null;
+    straightenDial.set(st.geometry.straighten);
+    adjustPanel.set(st.adjust);
+    filterStrip.set(st.filter);
+    applyFilter();
+    if (turned) refitPlane();
     syncChips();
-    view.to(fitted());
+    if (st.ready) view.to(fitted());
     announce();
+    syncResets();
   };
 
   const roving = rovingRadioGroup({
     radios: chips,
     getSelectedIndex: () => RATIOS.findIndex((r) => r.key === st.def.key),
-    onSelect: (i) => { flushKeyCommit(); setRatio(RATIOS[i]); commit(); },
+    onSelect: (i) => { flushAll(); setRatio(RATIOS[i]); commit(); },
   });
 
   syncChips();
+  syncResets();
 
-  const dissolve = createDissolve([bar, pill], grid);
+  const dissolve = createDissolve([bar, dock], grid);
 
   // A nudge commits after a short idle; undo, a gesture, a chip and Reset must see it recorded first.
   const flushKeyCommit = (): void => {
@@ -263,58 +459,138 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     commit();
   };
 
+  // Every pending burst (stage nudge, dial keys) becomes its own step before the next edit.
+  const flushAll = (): void => {
+    flushKeyCommit();
+    straightenDial.flush();
+    adjustPanel.flush();
+  };
+
+  const turnLeft = (): void => {
+    if (!st.ready) return;
+    flushAll();
+    const v = view.values();
+    const next = rotateLeft(st.geometry, st.rect);
+
+    st.geometry = next.g;
+    st.rect = next.crop;
+    if (!survivesQuarterTurn(st.def)) st.def = RATIOS[0];
+    syncChips();
+    refitPlane();
+    // The first frame matches the last one: the turned state, spun back a quarter about the same centre.
+    const cx = v.x + v.w / 2;
+    const cy = v.y + v.h / 2;
+    const from: Box = { x: cx - v.h / 2, y: cy - v.w / 2, w: v.h, h: v.w };
+
+    view.jump({ ...rectToCamera(st.rect, o(), from), ...from, round: v.round, theta: v.theta, spin: QUARTER });
+    view.to(fitted());
+    commit();
+  };
+
+  const flip = (): void => {
+    if (!st.ready) return;
+    flushAll();
+    const next = flipHorizontal(st.geometry, st.rect);
+
+    st.geometry = next.g;
+    st.rect = next.crop;
+    straightenDial.set(st.geometry.straighten);
+    refitPlane();
+    view.to(fitted());
+    commit();
+  };
+
+  // Crop, ratio and geometry only: filter and adjust are other tabs' state.
+  cropReset.addEventListener('click', () => {
+    flushAll();
+    const turned = st.geometry.rotation !== 0 || st.geometry.flipX;
+
+    st.def = RATIOS[0];
+    st.geometry = { ...IDENTITY };
+    st.rect = { ...FULL_RECT };
+    straightenDial.set(0);
+    if (turned) refitPlane();
+    syncChips();
+    if (st.ready) view.to(fitted());
+    commit();
+  });
+  adjustReset.addEventListener('click', () => {
+    flushAll();
+    st.adjust = { ...NO_ADJUST };
+    adjustPanel.set(st.adjust);
+    applyFilter();
+    commit();
+  });
+  filterReset.addEventListener('click', () => {
+    flushAll();
+    st.filter = 'none';
+    filterStrip.set(st.filter);
+    applyFilter();
+    commit();
+  });
+
+  rotateBtn.addEventListener('click', turnLeft);
+  flipBtn.addEventListener('click', flip);
+
+  // Only Crop mode edits the crop; elsewhere the photo is a preview of the result.
+  const cropping = (): boolean => st.ready && st.mode === 'crop';
+
   const detachGestures = attachGestures(stage, {
     onStart: (kind) => {
-      if (!st.ready) return;
-      flushKeyCommit();
+      if (!cropping()) return;
+      st.gesturing = true;
+      flushAll();
       dissolve.begin();
       view.stop();
       st.panFrom = camOf(view.values());
       if (kind === 'handle') st.rectFrom = { ...st.rect };
     },
     onPan: (dx, dy) => {
-      if (!st.ready) return;
+      if (!cropping()) return;
       const f = frameOf(view.values());
 
-      view.jump(rubberCamera({ ...st.panFrom, tx: st.panFrom.tx + dx, ty: st.panFrom.ty + dy }, st.natural, f));
+      view.jump(rubberCamera({ ...st.panFrom, tx: st.panFrom.tx + dx, ty: st.panFrom.ty + dy }, o(), f, theta()));
     },
     onZoom: (factor, center, dx, dy) => {
-      if (!st.ready) return;
+      if (!cropping()) return;
       const v = view.values();
       const f = frameOf(v);
 
-      view.jump(zoomAt({ s: v.s, tx: v.tx + dx, ty: v.ty + dy }, factor, center, st.natural, f));
+      view.jump(zoomAt({ s: v.s, tx: v.tx + dx, ty: v.ty + dy }, factor, center, o(), f, theta()));
     },
     onHandle: (h, dx, dy) => {
-      if (!st.ready) return;
+      if (!cropping()) return;
       const cam = camOf(view.values());
-      const dxPct = (dx / (cam.s * st.natural.w)) * 100;
-      const dyPct = (dy / (cam.s * st.natural.h)) * 100;
+      const size = o();
+      const dxPct = (dx / (cam.s * size.w)) * 100;
+      const dyPct = (dy / (cam.s * size.h)) * 100;
       const r = pctRatio();
       const next = clampRect(resizeRect(st.rectFrom, h, dxPct, dyPct));
 
-      st.rect = r === null ? next : applyRatio(next, r, h);
-      view.jump(rectToFrame(st.rect, st.natural, cam));
+      st.rect = covered(r === null ? next : applyRatio(next, r, h));
+      view.jump(rectToFrame(st.rect, size, cam));
     },
     onEnd: (kind) => {
-      if (!st.ready) return;
+      if (!st.gesturing) return;
+      st.gesturing = false;
       dissolve.end();
       if (kind !== 'handle') {
         const v = view.values();
         const f = frameOf(v);
-        const settled = clampCamera(camOf(v), st.natural, f);
+        const settled = clampCamera(camOf(v), o(), f, theta());
 
         const r = pctRatio();
 
         // A mid-flight frame has the spring's in-between aspect, not the chip's.
-        st.rect = cameraToRect(settled, st.natural, f);
+        st.rect = cameraToRect(settled, o(), f);
         if (r !== null) st.rect = applyRatio(st.rect, r);
+        st.rect = covered(st.rect);
       }
       // stop() keeps the old target, so every end retargets all keys to the new rect.
       view.to(fitted());
       commit();
     },
-    onPeek: (active) => { surface.toggleAttribute('data-peek', active); },
+    onPeek: (active) => { surface.toggleAttribute('data-peek', active && cropping()); },
   });
 
   const layout = (animate: boolean): void => {
@@ -326,9 +602,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
       return;
     }
-    view.jump(fitted());
-    // jump() never settles, so an instant layout marks rest itself.
-    stage.setAttribute('data-settled', '');
+    jumpTo(fitted());
   };
 
   const flyIn = (): void => {
@@ -344,7 +618,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const from: Box = { x: src.left - stageBox.left, y: src.top - stageBox.top, w: src.width, h: src.height };
 
     if (opts.sourceEl) opts.sourceEl.style.setProperty('visibility', 'hidden');
-    view.jump({ ...rectToCamera(st.rect, st.natural, from), ...from });
+    view.jump({ ...rectToCamera(st.rect, o(), from), ...from });
     view.to(fitted());
   };
 
@@ -355,23 +629,23 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       st.natural = { w: photo.naturalWidth, h: photo.naturalHeight };
     } else {
       const src = opts.sourceEl?.getBoundingClientRect();
+      // The block box shows the oriented image, so this is O's aspect.
       const aspect = src && src.width > 0 && src.height > 0
         ? (src.width / src.height) * (st.rect.h / st.rect.w)
         : 1;
 
-      st.natural = { w: FALLBACK_NATURAL, h: FALLBACK_NATURAL / aspect };
+      st.natural = orientedSize({ w: FALLBACK_NATURAL, h: FALLBACK_NATURAL / aspect }, st.geometry);
     }
     const r = pctRatio();
 
     // A ratio picked before load was applied against the fallback size.
     // An untouched saved crop keeps its rect: an old circle may not be square in pixels.
     if (r !== null && st.ratioPicked) st.rect = applyRatio(st.rect, r);
+    st.rect = covered(st.rect);
     // Steps taken before load hold rects measured against the fallback size, so the loaded state is the new base.
-    hist.stack = createHistory({ rect: { ...st.rect }, ratioKey: st.def.key });
-    readout.hidden = !st.measured;
-    photo.style.width = `${st.natural.w}px`;
-    photo.style.height = `${st.natural.h}px`;
+    hist.stack = createHistory(snapshot());
     st.ready = true;
+    fitCameraPlane(plane, photo, st.natural, st.geometry);
     flyIn();
     announce();
   };
@@ -380,15 +654,14 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     if (st.closed) return;
     // Read first: a browser drops focus to <body> the moment its control is disabled or hidden.
     const focused = document.activeElement;
+    const gone = [doneBtn, resetBtn, rotateBtn, flipBtn, pill, dock];
 
     stage.replaceChildren(renderErrorState({ variant: 'broken', i18n: opts.i18n }));
     doneBtn.disabled = true;
     resetBtn.disabled = true;
-    doneBtn.hidden = true;
-    resetBtn.hidden = true;
-    pill.hidden = true;
+    for (const n of gone) n.hidden = true;
     // Done holds the initial focus; a hidden control cannot keep it.
-    if ([doneBtn, resetBtn, pill].some((n) => n.contains(focused))) cancelBtn.focus();
+    if (gone.some((n) => n.contains(focused))) cancelBtn.focus();
   };
 
   photo.addEventListener('load', start);
@@ -406,15 +679,18 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   resize?.observe(stage);
 
-  const finish = (): ImageCrop | null => {
+  const finish = (): DarkroomResult => {
     const rect = roundRect(st.rect);
+    const edits = { geometry: { ...st.geometry }, filter: st.filter, adjust: { ...st.adjust } };
 
-    if (st.def.shape === 'circle' || st.def.shape === 'ellipse') return { ...rect, shape: st.def.shape };
+    if (st.def.shape === 'circle' || st.def.shape === 'ellipse') return { crop: { ...rect, shape: st.def.shape }, ...edits };
 
-    return isFullRect(rect) ? null : rect;
+    return { crop: isFullRect(rect) && theta() === 0 ? null : rect, ...edits };
   };
 
-  const leave = (rect: ImageCrop, round: number, after: () => void): void => {
+  interface Landing { rect: ImageCrop; round: number; geometry: Geometry; filter: ImageFilterPreset; adjust: Required<ImageAdjust> }
+
+  const leave = (land: Landing, after: () => void): void => {
     const v = view.values();
     const stageBox = stage.getBoundingClientRect();
     const from: Box = { x: v.x + stageBox.left, y: v.y + stageBox.top, w: v.w, h: v.h };
@@ -436,11 +712,12 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     if (source) source.style.visibility = '';
     if (!flies) return;
     const request = opts.clock ? opts.clock.request : requestAnimationFrame;
+    const natural = st.natural;
 
     request(() => {
       flyOut({
-        url: opts.url, natural: st.natural, rect, from, fromRound: v.round,
-        target: getTarget(), targetRound: round,
+        url: opts.url, natural, rect: land.rect, geometry: land.geometry, filter: land.filter, adjust: land.adjust,
+        from, fromRound: v.round, target: getTarget(), targetRound: land.round,
         clock: opts.clock, veil,
       });
     });
@@ -448,31 +725,45 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   const apply = (): void => {
     if (doneBtn.disabled) return;
+    flushAll();
     const result = finish();
 
-    leave(result ?? FULL_RECT, roundOf(st.def.shape), () => opts.onApply(result));
+    leave({
+      rect: result.crop ?? FULL_RECT, round: roundOf(st.def.shape),
+      geometry: result.geometry, filter: result.filter, adjust: result.adjust,
+    }, () => opts.onApply(result));
   };
 
   const cancel = (): void => {
-    const f = fitFrame(rectAspect(startRect, st.natural), st.stage, PAD);
-
+    const startO = orientedSize(st.natural, initialGeometry);
+    const f = fitFrame(rectAspect(startRect, startO), st.stage, PAD);
     const round = roundOf(initialDef.shape);
 
     // The clone starts from this view, so its corners must already match the block.
-    view.jump({ ...rectToCamera(startRect, st.natural, f), ...f, round });
-    leave({ ...startRect }, round, () => opts.onCancel());
+    view.jump({ ...rectToCamera(startRect, startO, f), ...f, round, spin: 0 });
+    leave({ rect: { ...startRect }, round, geometry: initialGeometry, filter: initialFilter, adjust: initialAdjust }, () => opts.onCancel());
   };
 
   doneBtn.addEventListener('click', apply);
   cancelBtn.addEventListener('click', cancel);
   resetBtn.addEventListener('click', () => {
-    flushKeyCommit();
+    flushAll();
+    const turned = st.geometry.rotation !== 0 || st.geometry.flipX;
+
+    st.geometry = { ...IDENTITY };
+    st.filter = 'none';
+    st.adjust = { ...NO_ADJUST };
+    straightenDial.set(0);
+    adjustPanel.set(st.adjust);
+    filterStrip.set(st.filter);
+    applyFilter();
+    if (turned) refitPlane();
     // Reset before load squares against the fallback size; start() must redo it at the real size.
     if (!st.ready) st.ratioPicked = true;
     const r = pctRatio();
 
     st.rect = r === null ? { ...FULL_RECT } : applyRatio({ ...FULL_RECT }, r);
-    view.to(fitted());
+    if (st.ready) view.to(fitted());
     commit();
   });
 
@@ -484,20 +775,22 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
     if (!dir && e.key !== '+' && e.key !== '=' && e.key !== '-') return false;
     const r = pctRatio();
+    const size = o();
 
     // A saved circle that is not square in pixels is squared by its first edit.
-    if (r !== null) st.rect = applyRatio(st.rect, r);
+    if (r !== null) st.rect = covered(applyRatio(st.rect, r));
     // From the committed rect, not the in-flight spring, so key repeats keep their full distance.
-    const f = fitFrame(rectAspect(st.rect, st.natural), st.stage, PAD);
+    const f = fitFrame(rectAspect(st.rect, size), st.stage, PAD);
     const step = (e.shiftKey ? NUDGE_BIG : NUDGE) * f.w;
     const move = dir ? [dir[0] * step, dir[1] * step] : null;
     const centre = { x: f.x + f.w / 2, y: f.y + f.h / 2 };
-    const cam = rectToCamera(st.rect, st.natural, f);
+    const cam = rectToCamera(st.rect, size, f);
     const next = move
-      ? clampCamera({ ...cam, tx: cam.tx + move[0], ty: cam.ty + move[1] }, st.natural, f)
-      : zoomAt(cam, e.key === '-' ? 1 / ZOOM_STEP : ZOOM_STEP, centre, st.natural, f);
+      ? clampCamera({ ...cam, tx: cam.tx + move[0], ty: cam.ty + move[1] }, size, f, theta())
+      : zoomAt(cam, e.key === '-' ? 1 / ZOOM_STEP : ZOOM_STEP, centre, size, f, theta());
+
     view.to({ ...next, ...f });
-    st.rect = cameraToRect(next, st.natural, f);
+    st.rect = cameraToRect(next, size, f);
     window.clearTimeout(st.keyIdle);
     st.keyIdle = window.setTimeout(() => { st.keyIdle = 0; commit(); }, KEY_IDLE_MS);
 
@@ -505,7 +798,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   };
 
   stage.addEventListener('keydown', (e) => {
-    if (!st.ready) return;
+    if (!cropping()) return;
     if (e.key === '\\' && !e.repeat) { surface.setAttribute('data-peek', ''); e.preventDefault(); return; }
     if (nudge(e)) e.preventDefault();
   });
@@ -526,7 +819,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
     if ((mod && isLetter('z')) || redoY) {
       e.preventDefault();
-      flushKeyCommit();
+      flushAll();
       restore(e.shiftKey || redoY ? hist.stack.redo() : hist.stack.undo());
 
       return;
@@ -553,9 +846,14 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       photo.removeEventListener('error', fail);
       view.stop();
       dissolve.destroy();
+      gridShow.destroy();
       detachGestures();
       resize?.disconnect();
       roving.destroy();
+      straightenDial.destroy();
+      adjustPanel.destroy();
+      filterStrip.destroy();
+      tabs.destroy();
       window.clearTimeout(st.keyIdle);
       if (opts.sourceEl) opts.sourceEl.style.removeProperty('visibility');
     },

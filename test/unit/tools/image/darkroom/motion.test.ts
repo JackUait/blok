@@ -138,4 +138,25 @@ describe('darkroom motion', () => {
     expect(veil.isConnected).toBe(false);
     expect(document.querySelector('[data-role="darkroom-flight"]')).toBeNull();
   });
+
+  it('the fly-out clone is the oriented plane with the filter, so it lands looking like the block', () => {
+    const { clock } = fakeFrameClock();
+
+    flyOut({
+      url: 'x.png', natural: { w: 800, h: 400 }, rect: { x: 0, y: 0, w: 100, h: 50 },
+      from: { x: 0, y: 0, w: 400, h: 400 }, fromRound: 0, target: null, targetRound: 0,
+      clock, reducedMotion: () => false,
+      geometry: { rotation: 90, flipX: true, straighten: 0 }, filter: 'mono', adjust: { brightness: 20 },
+    });
+    const plane = document.querySelector<HTMLElement>('[data-role="darkroom-flight"] [data-role="image-plane"]');
+    const img = plane?.querySelector('img');
+
+    expect(plane?.style.width).toBe('400px');
+    expect(plane?.style.height).toBe('800px');
+    // The 400 px box shows the full 400 px oriented width.
+    expect(plane?.style.transform).toBe('translate(0px, 0px) scale(1)');
+    expect(img?.style.transform).toBe('rotate(90deg) scaleX(-1)');
+    expect(img?.style.filter).toBe('grayscale(1) brightness(1.1)');
+  });
 });
+

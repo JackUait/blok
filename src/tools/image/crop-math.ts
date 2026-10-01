@@ -59,14 +59,21 @@ export function resizeRect(
  * figure is (w*NW)/(h*NH); across old/new crops the intrinsic factor NW/NH
  * cancels, so only the w/h ratio matters. "No crop" is equivalent to (100,100)
  * in percent-of-intrinsic terms (aspect_unit = 1) — natural dims still cancel.
+ *
+ * A quarter turn swaps the oriented box, so the dims no longer cancel: pass the
+ * oriented size before and after. Omitted sizes mean "same box on both sides".
  */
 export function widthForAspectChange(
   oldWidth: number,
   oldCrop: ImageCrop | null | undefined,
-  newCrop: ImageCrop | null | undefined
+  newCrop: ImageCrop | null | undefined,
+  oldSize?: { w: number; h: number },
+  newSize?: { w: number; h: number }
 ): number {
-  const oldUnit = oldCrop ? oldCrop.w / oldCrop.h : 1;
-  const newUnit = newCrop ? newCrop.w / newCrop.h : 1;
+  const oldBox = oldSize ? oldSize.w / oldSize.h : 1;
+  const newBox = newSize ? newSize.w / newSize.h : 1;
+  const oldUnit = (oldCrop ? oldCrop.w / oldCrop.h : 1) * oldBox;
+  const newUnit = (newCrop ? newCrop.w / newCrop.h : 1) * newBox;
   if (!Number.isFinite(oldUnit) || !Number.isFinite(newUnit) || oldUnit <= 0 || newUnit <= 0) {
     return oldWidth;
   }

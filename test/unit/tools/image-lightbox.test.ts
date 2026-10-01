@@ -230,12 +230,15 @@ describe('no-glass CSS regression', () => {
     expect(body).not.toMatch(/backdrop-filter/);
   });
 
-  it('darkroom glass stays on the pill; the full-viewport backdrop never blurs', () => {
+  it('darkroom glass stays on the small pill controls; the full-viewport backdrop never blurs', () => {
     const glassSelectors = [...darkroomCss.matchAll(/([^{}]+)\{([^}]*)\}/g)]
       .filter(([, , body]) => /backdrop-filter/.test(body))
-      .map(([, selector]) => selector.replace(/\/\*[\s\S]*?\*\//g, '').trim());
+      .flatMap(([, selector]) => selector.replace(/\/\*[\s\S]*?\*\//g, '').split(','))
+      .map((selector) => selector.trim())
+      .sort();
 
-    expect(glassSelectors).toEqual(['.blok-darkroom__pill']);
+    // The ratio pill, the mode tabs and the adjust tool group: each a small pill over the photo.
+    expect(glassSelectors).toEqual(['.blok-darkroom__adjust-tools', '.blok-darkroom__pill', '.blok-darkroom__tabs']);
   });
 
   /**

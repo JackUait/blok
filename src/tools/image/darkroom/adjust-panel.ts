@@ -1,4 +1,5 @@
 import type { ImageAdjust } from '../../../../types/tools/image';
+import { IconCross } from '../../../components/icons';
 import type { I18nInstance } from '../../../components/utils/tools';
 import { rovingRadioGroup } from '../../../components/utils/roving-radio-group';
 import { ADJUST_KEYS } from '../adjust';
@@ -30,6 +31,12 @@ const LABEL_KEYS: Record<Tool, string> = {
   saturation: 'tools.image.adjustSaturation',
 };
 
+const RESET_KEYS: Record<Tool, string> = {
+  brightness: 'tools.image.resetBrightness',
+  contrast: 'tools.image.resetContrast',
+  saturation: 'tools.image.resetSaturation',
+};
+
 const RANGE = 100;
 
 export function createAdjustPanel(o: AdjustPanelOptions): AdjustPanel {
@@ -47,21 +54,38 @@ export function createAdjustPanel(o: AdjustPanelOptions): AdjustPanel {
 
   const chips = ADJUST_KEYS.map((t) => {
     const chip = document.createElement('button');
-    const dot = document.createElement('span');
 
     chip.type = 'button';
     chip.className = 'blok-darkroom__chip blok-darkroom__adjust-chip';
     chip.setAttribute('role', 'radio');
     chip.setAttribute('data-tool', t);
     chip.textContent = label(t);
-    dot.className = 'blok-darkroom__adjust-dot';
-    dot.setAttribute('data-role', 'adjust-dot');
-    dot.setAttribute('aria-hidden', 'true');
-    chip.appendChild(dot);
     group.appendChild(chip);
 
     return chip;
   });
+
+  // A button may not sit inside a radio, so the resets live in a layer laid over the chips' grid.
+  const resetLayer = document.createElement('div');
+  const row = document.createElement('div');
+
+  resetLayer.className = 'blok-darkroom__adjust-resets';
+  row.className = 'blok-darkroom__adjust-row';
+  const resets = ADJUST_KEYS.map((t) => {
+    const btn = document.createElement('button');
+
+    btn.type = 'button';
+    btn.className = 'blok-darkroom__adjust-reset';
+    btn.setAttribute('data-role', 'adjust-reset');
+    btn.setAttribute('data-tool', t);
+    btn.setAttribute('aria-label', tr(o.i18n, RESET_KEYS[t]));
+    btn.innerHTML = IconCross;
+    resetLayer.appendChild(btn);
+
+    return btn;
+  });
+
+  row.append(group, resetLayer);
 
   const dial = createDial({
     min: -RANGE,
@@ -80,7 +104,7 @@ export function createAdjustPanel(o: AdjustPanelOptions): AdjustPanel {
     },
   });
 
-  root.append(group, dial.el);
+  root.append(row, dial.box);
 
   const renderChips = (): void => {
     ADJUST_KEYS.forEach((t, i) => {
@@ -89,6 +113,9 @@ export function createAdjustPanel(o: AdjustPanelOptions): AdjustPanel {
       chips[i].setAttribute('aria-checked', String(on));
       chips[i].setAttribute('data-active', String(on));
       chips[i].setAttribute('data-changed', String(value[t] !== 0));
+      // An attribute, not [hidden]: darkroom.css keeps its grid cell so nothing shifts.
+      resets[i].setAttribute('data-shown', String(value[t] !== 0));
+      if (value[t] === 0 && document.activeElement === resets[i]) dial.el.focus({ preventScroll: true });
     });
     roving.refresh();
   };
@@ -114,7 +141,21 @@ export function createAdjustPanel(o: AdjustPanelOptions): AdjustPanel {
     if (t !== undefined) choose(t);
   };
 
+  // One step for that tool only; the selected tool stays.
+  const onReset = (e: MouseEvent): void => {
+    const t = ADJUST_KEYS.find((k) => k === (e.currentTarget as HTMLElement).getAttribute('data-tool'));
+
+    if (t === undefined || value[t] === 0) return;
+    dial.flush();
+    value[t] = 0;
+    if (t === st.tool) dial.set(0);
+    renderChips();
+    o.onInput({ ...value });
+    o.onCommit({ ...value });
+  };
+
   chips.forEach((chip) => chip.addEventListener('click', onClick));
+  resets.forEach((btn) => btn.addEventListener('click', onReset));
   renderChips();
 
   return {
@@ -129,6 +170,7 @@ export function createAdjustPanel(o: AdjustPanelOptions): AdjustPanel {
       dial.destroy();
       roving.destroy();
       chips.forEach((chip) => chip.removeEventListener('click', onClick));
+      resets.forEach((btn) => btn.removeEventListener('click', onReset));
     },
   };
 }

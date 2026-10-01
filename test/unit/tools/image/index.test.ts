@@ -1538,6 +1538,56 @@ describe('ImageTool — lightbox navigation wiring', () => {
     expect(dialogImg?.getAttribute('src')).toBe('https://x/c.png');
   });
 
+  const turned = {
+    rotation: 90 as const,
+    flipX: true,
+    straighten: 2,
+    filter: 'mono' as const,
+    adjust: { brightness: 20 },
+    naturalWidth: 400,
+    naturalHeight: 300,
+  };
+  const turnedTransform = 'rotate(92deg) scaleX(-1)';
+  const turnedFilter = 'grayscale(1) brightness(1.1)';
+  const lightboxImg = (): HTMLImageElement | null =>
+    document.querySelector<HTMLImageElement>('[role="dialog"] [data-role="lightbox-crop"] [data-role="image-plane"] img');
+
+  it('passes rotation, mirror, straighten and filter to the lightbox from every entry point', () => {
+    const open = (via: (tool: ImageTool, root: HTMLElement) => void): HTMLImageElement | null => {
+      const tool = new ImageTool(createOptions({ url: 'https://x/t.png', crop: { x: 10, y: 10, w: 80, h: 80 }, ...turned }));
+      const root = tool.render();
+      via(tool, root);
+      const img = lightboxImg();
+      document.querySelectorAll('[role="dialog"][aria-modal="true"]').forEach((el) => el.remove());
+      return img;
+    };
+    const viaClick = open((_tool, root) => root.querySelector<HTMLImageElement>('img')?.click());
+    const viaOverlay = open((_tool, root) => root.querySelector<HTMLButtonElement>('[data-action="fullscreen"]')?.click());
+    const viaMenu = open((tool) => {
+      const items = tool.renderSettings() as Array<{ name?: string; onActivate?: () => void }>;
+      items.find((i) => i.name === 'image-fullscreen')?.onActivate?.();
+    });
+
+    for (const img of [viaClick, viaOverlay, viaMenu]) {
+      expect(img?.style.transform).toBe(turnedTransform);
+      expect(img?.style.filter).toBe(turnedFilter);
+    }
+  });
+
+  it('navigation items carry each block\'s edits', () => {
+    const api = makeApiWithImages([
+      { id: 'b1', data: { url: 'https://x/a.png' } },
+      { id: 'b2', data: { url: 'https://x/b.png', ...turned } },
+    ]);
+    const block = { ...createMockBlock(), id: 'b1' } as BlockAPI;
+    const tool = new ImageTool({ ...createOptions({ url: 'https://x/a.png' }, {}, block), api });
+    tool.render().querySelector<HTMLImageElement>('img')?.click();
+    document.querySelector<HTMLButtonElement>('[data-action="lightbox-next"]')?.click();
+
+    expect(lightboxImg()?.style.transform).toBe(turnedTransform);
+    expect(lightboxImg()?.style.filter).toBe(turnedFilter);
+  });
+
   it('does not render nav when page has only one image block', () => {
     const api = makeApiWithImages([
       { id: 'b1', data: { url: 'https://x/a.png' } },
@@ -1707,6 +1757,18 @@ describe('ImageTool — auto-retry loading dimensions', () => {
     const figure = root.querySelector<HTMLElement>('.blok-image-inner');
     if (!figure) throw new Error('figure missing');
     expect(figure.style.aspectRatio).toBe('1600 / 900');
+  });
+
+  it('pre-sizes the figure with the turned size for a quarter rotation', () => {
+    const tool = new ImageTool(createOptions({
+      url: 'https://opaque.example.com/z.png',
+      naturalWidth: 1600,
+      naturalHeight: 900,
+      rotation: 90,
+    }));
+    const figure = tool.render().querySelector<HTMLElement>('.blok-image-inner');
+    if (!figure) throw new Error('figure missing');
+    expect(figure.style.aspectRatio).toBe('900 / 1600');
   });
 
   it('applies aspect-ratio synchronously from persisted naturalWidth/naturalHeight', async () => {

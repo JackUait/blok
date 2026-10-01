@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { openDarkroom, type OpenDarkroomOptions } from '../../../../../src/tools/image/darkroom';
+import type { ImageCrop } from '../../../../../types/tools/image';
+import { openDarkroom, type DarkroomResult, type OpenDarkroomOptions } from '../../../../../src/tools/image/darkroom';
 import { cameraToRect, fitFrame } from '../../../../../src/tools/image/darkroom/camera';
+import { coverCrop } from '../../../../../src/tools/image/geometry';
 import { fakeFrameClock } from '../../../helpers/fake-frame-clock';
 
 // jsdom lacks the Popover API that promoteToTopLayer calls.
@@ -114,7 +116,7 @@ describe('openDarkroom', () => {
 
     button('done').click();
 
-    expect(onApply).toHaveBeenCalledWith(null);
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ crop: null }));
   });
 
   it('Done keeps an existing crop, rounded to 3 decimals', () => {
@@ -122,7 +124,7 @@ describe('openDarkroom', () => {
 
     button('done').click();
 
-    expect(onApply).toHaveBeenCalledWith({ x: 10, y: 10, w: 60, h: 60 });
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ crop: { x: 10, y: 10, w: 60, h: 60 } }));
   });
 
   it('Circle saves the shape and a crop that is square in pixels', () => {
@@ -132,7 +134,7 @@ describe('openDarkroom', () => {
     advance(3000);
     button('done').click();
 
-    const saved = onApply.mock.calls[0][0];
+    const saved = onApply.mock.calls[0][0].crop;
 
     expect(saved.shape).toBe('circle');
     expect((saved.w * 800) / (saved.h * 534)).toBeCloseTo(1, 2);
@@ -166,10 +168,19 @@ describe('openDarkroom', () => {
     expect(document.querySelector('[data-role="darkroom-stage"]')?.hasAttribute('data-settled')).toBe(true);
   });
 
-  it('shows the size readout from the natural size', () => {
+  it('shows no pixel readout: the bar holds the lead buttons and Done only', () => {
+    open({ initial: { x: 0, y: 0, w: 50, h: 50 } });
+    const bar = button('done').parentElement;
+
+    expect(document.querySelector('[data-role="darkroom-readout"]')).toBeNull();
+    expect(bar?.textContent).not.toMatch(/px/);
+    expect([...(bar?.children ?? [])]).toEqual([button('cancel').parentElement, button('done')]);
+  });
+
+  it('screen readers still hear the crop size once it settles', () => {
     open({ initial: { x: 0, y: 0, w: 50, h: 50 } });
 
-    expect(document.querySelector('[data-role="darkroom-readout"]')?.textContent).toBe('400 × 267 px');
+    expect(document.querySelector('[data-role="darkroom-live"]')?.textContent).toBe('400 × 267 px');
   });
 
   it('a photo that fails to load moves focus from the hidden Done to Cancel', () => {
@@ -245,7 +256,7 @@ describe('openDarkroom', () => {
     expect(document.querySelector('[class^="blok-darkroom"]')).toBeNull();
   });
 
-  it('an SVG with no intrinsic size still opens with finite transforms and no readout', () => {
+  it('an SVG with no intrinsic size still opens with finite transforms and announces no size', () => {
     const { clock, advance } = fakeFrameClock();
 
     track(openDarkroom({ url: 'x.svg', onApply: vi.fn(), onCancel: vi.fn(), clock }));
@@ -254,21 +265,26 @@ describe('openDarkroom', () => {
     photo?.dispatchEvent(new Event('load'));
     advance(3000);
 
-    expect(photo?.style.transform).not.toContain('NaN');
-    expect(photo?.style.transform).not.toContain('Infinity');
-    expect(document.querySelector<HTMLElement>('[data-role="darkroom-readout"]')?.hidden).toBe(true);
+    const plane = document.querySelector<HTMLElement>('[data-role="image-plane"]');
+
+    expect(plane?.style.transform).toMatch(/scale/);
+    expect(plane?.style.transform).not.toContain('NaN');
+    expect(plane?.style.transform).not.toContain('Infinity');
+    expect(document.querySelector('[data-role="darkroom-live"]')?.textContent).toBe('');
   });
 });
 
 const NATURAL = { w: 800, h: 534 };
+// Room the Darkroom leaves for the top bar and the bottom dock.
+const PAD = { top: 72, right: 32, bottom: 200, left: 32 };
 
 const px = (v: string): number => Number.parseFloat(v);
 
 /** Camera and frame as painted on the DOM. */
 const painted = (): { cam: { s: number; tx: number; ty: number }; frame: { x: number; y: number; w: number; h: number } } => {
-  const photo = document.querySelector<HTMLElement>('[data-role="darkroom-photo"]');
+  const plane = document.querySelector<HTMLElement>('[data-role="darkroom-stage"] [data-role="image-plane"]');
   const frame = document.querySelector<HTMLElement>('[data-role="darkroom-frame"]');
-  const p = /translate\(([-\d.e]+)px, ([-\d.e]+)px\) scale\(([-\d.e]+)\)/.exec(photo?.style.transform ?? '');
+  const p = /translate\(([-\d.e]+)px, ([-\d.e]+)px\) scale\(([-\d.e]+)\)/.exec(plane?.style.transform ?? '');
   const f = /translate\(([-\d.e]+)px, ([-\d.e]+)px\)/.exec(frame?.style.transform ?? '');
 
   if (!p || !f || !frame) throw new Error('no paint');
@@ -330,7 +346,7 @@ describe('openDarkroom fix round 1', () => {
       const { clock } = fakeFrameClock();
 
       track(openDarkroom({ url: 'x.png', onApply: vi.fn(), onCancel: vi.fn(), clock }));
-      const want = fitFrame(NATURAL.w / NATURAL.h, { w: 1200, h: 800 }, { top: 72, right: 32, bottom: 104, left: 32 });
+      const want = fitFrame(NATURAL.w / NATURAL.h, { w: 1200, h: 800 }, PAD);
       const got = painted().frame;
 
       expect(got.w).toBeCloseTo(want.w, 3);
@@ -362,7 +378,7 @@ describe('openDarkroom fix round 1', () => {
       advance(16);
 
       expect(stageEl()?.hasAttribute('data-settled')).toBe(false);
-      expect(painted().frame.w).toBeLessThan(fitFrame(NATURAL.w / NATURAL.h, { w: 1200, h: 800 }, { top: 72, right: 32, bottom: 104, left: 32 }).w - 1);
+      expect(painted().frame.w).toBeLessThan(fitFrame(NATURAL.w / NATURAL.h, { w: 1200, h: 800 }, PAD).w - 1);
     });
   });
 
@@ -500,7 +516,7 @@ describe('openDarkroom fix round 1', () => {
       const want = cameraToRect(rest.cam, NATURAL, rest.frame);
 
       button('done').click();
-      const saved = onApply.mock.calls[0][0];
+      const saved = onApply.mock.calls[0][0].crop;
 
       expect(Math.abs((saved.w * NATURAL.w) / (saved.h * NATURAL.h) - 16 / 9)).toBeLessThan(0.01);
       expect(saved.x).toBeCloseTo(want.x, 2);
@@ -516,7 +532,7 @@ describe('openDarkroom fix round 1', () => {
       key(stageEl(), { key: 'ArrowLeft' });
       quick.advance(3000);
       button('done').click();
-      const fast = quick.onApply.mock.calls[0][0];
+      const fast = quick.onApply.mock.calls[0][0].crop;
 
       const slow = open({ initial: { x: 25, y: 25, w: 50, h: 50 } });
 
@@ -526,7 +542,7 @@ describe('openDarkroom fix round 1', () => {
       slow.advance(3000);
       button('done').click();
 
-      const slowSaved: { x: number } = slow.onApply.mock.calls[0][0];
+      const slowSaved: { x: number } = slow.onApply.mock.calls[0][0].crop;
 
       expect(fast.x).toBeCloseTo(slowSaved.x, 2);
     });
@@ -557,7 +573,7 @@ describe('openDarkroom fix round 1', () => {
       advance(3000);
       button('done').click();
 
-      expect(onApply).toHaveBeenCalledWith({ x: 25, y: 25, w: 50, h: 50 });
+      expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ crop: { x: 25, y: 25, w: 50, h: 50 } }));
     });
 
     it('a handle drag right after a nudge is one undo step', () => {
@@ -597,7 +613,7 @@ describe('openDarkroom fix round 1', () => {
       advance(3000);
       button('done').click();
 
-      expect(onApply).toHaveBeenCalledWith({ x: 10, y: 10, w: 50, h: 50, shape: 'circle' });
+      expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ crop: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' } }));
     });
 
     it('Done with no edits keeps an old circle that is not square in pixels exactly', () => {
@@ -605,7 +621,7 @@ describe('openDarkroom fix round 1', () => {
 
       button('done').click();
 
-      expect(onApply).toHaveBeenCalledWith({ x: 10, y: 10, w: 50, h: 50, shape: 'circle' });
+      expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ crop: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' } }));
     });
 
     it('one pan on an old circle squares it in pixels', () => {
@@ -616,7 +632,7 @@ describe('openDarkroom fix round 1', () => {
       pointer('pointerup', 620, 410);
       advance(3000);
       button('done').click();
-      const saved = onApply.mock.calls[0][0];
+      const saved = onApply.mock.calls[0][0].crop;
 
       expect(saved.shape).toBe('circle');
       expect((saved.w * NATURAL.w) / (saved.h * NATURAL.h)).toBeCloseTo(1, 2);
@@ -630,7 +646,7 @@ describe('openDarkroom fix round 1', () => {
       vi.advanceTimersByTime(1000);
       advance(3000);
       button('done').click();
-      const saved = onApply.mock.calls[0][0];
+      const saved = onApply.mock.calls[0][0].crop;
 
       expect((saved.w * NATURAL.w) / (saved.h * NATURAL.h)).toBeCloseTo(1, 2);
     });
@@ -648,7 +664,7 @@ describe('openDarkroom fix round 1', () => {
       photo.dispatchEvent(new Event('load'));
       advance(3000);
       button('done').click();
-      const saved = onApply.mock.calls[0][0];
+      const saved = onApply.mock.calls[0][0].crop;
 
       expect(saved.shape).toBe('circle');
       expect(Math.abs(saved.w * NATURAL.w - saved.h * NATURAL.h)).toBeLessThan(0.01 * NATURAL.w);
@@ -668,7 +684,7 @@ describe('openDarkroom fix round 1', () => {
       photo.dispatchEvent(new Event('load'));
       advance(3000);
       button('done').click();
-      const saved = onApply.mock.calls[0][0];
+      const saved = onApply.mock.calls[0][0].crop;
 
       expect(saved.shape).toBe('circle');
       expect((saved.w * NATURAL.w) / (saved.h * NATURAL.h)).toBeCloseTo(1, 2);
@@ -687,7 +703,7 @@ describe('openDarkroom fix round 1', () => {
       photo.dispatchEvent(new Event('load'));
       advance(3000);
       button('done').click();
-      const saved = onApply.mock.calls[0][0];
+      const saved = onApply.mock.calls[0][0].crop;
 
       expect(saved).not.toBeNull();
       expect((saved.w * NATURAL.w) / (saved.h * NATURAL.h)).toBeCloseTo(1, 2);
@@ -707,7 +723,7 @@ describe('openDarkroom fix round 1', () => {
       touch('pointerup', 1, 600);
       advance(3000);
       button('done').click();
-      const saved: Record<string, unknown> = onApply.mock.calls[0][0];
+      const saved: Record<string, unknown> = onApply.mock.calls[0][0].crop;
 
       for (const k of ['x', 'y', 'w', 'h']) expect(Number.isFinite(saved[k])).toBe(true);
     });
@@ -810,7 +826,7 @@ describe('openDarkroom fix round 1', () => {
       advance(3000);
       button('done').click();
 
-      expect(onApply).toHaveBeenCalledWith({ x: 10, y: 10, w: 60, h: 60 });
+      expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ crop: { x: 10, y: 10, w: 60, h: 60 } }));
     });
 
     it('Cmd+Z works on a non-Latin keyboard layout', () => {
@@ -835,6 +851,850 @@ describe('openDarkroom fix round 1', () => {
       advance(3000);
 
       expect(circle?.getAttribute('aria-checked')).toBe('true');
+    });
+  });
+});
+
+describe('openDarkroom geometry, adjust and filters', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stubPopover();
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 1200, 800));
+  });
+
+  afterEach(() => {
+    closers.splice(0).forEach((close) => close());
+    document.body.replaceChildren();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const IDENTITY_RESULT = {
+    geometry: { rotation: 0, flipX: false, straighten: 0 },
+    filter: 'none',
+    adjust: { brightness: 0, contrast: 0, saturation: 0 },
+  };
+  const undo = (): void => key(dialog(), { key: 'z', metaKey: true });
+  const result = (onApply: ReturnType<typeof vi.fn>): DarkroomResult => {
+    const call: unknown = onApply.mock.calls.at(-1)?.[0];
+
+    if (typeof call !== 'object' || call === null || !('geometry' in call)) throw new Error('no result');
+
+    return call as DarkroomResult;
+  };
+  const q = <T extends Element = HTMLElement>(selector: string): T => {
+    const found = document.querySelector<T>(selector);
+
+    if (!found) throw new Error(`no ${selector}`);
+
+    return found;
+  };
+  const photoImg = (): HTMLImageElement => q<HTMLImageElement>('[data-role="darkroom-photo"]');
+  const plane = (): HTMLElement => q('[data-role="darkroom-stage"] [data-role="image-plane"]');
+  // The turned content covers the crop iff fitting it inside that content changes nothing.
+  const isCovered = (crop: ImageCrop, o: { w: number; h: number }, theta: number): boolean => {
+    const fitted = coverCrop(crop, o, theta);
+
+    return ['x', 'y', 'w', 'h'].every((k) => Math.abs(fitted[k as 'x'] - crop[k as 'x']) < 0.01);
+  };
+
+  describe('mode tabs', () => {
+    it('a tablist of Crop, Adjust and Filters, each tab controlling its panel', () => {
+      open();
+      const list = q('[role="tablist"]');
+      const tabs = [...list.querySelectorAll<HTMLElement>('[role="tab"]')];
+
+      expect(list.getAttribute('aria-label')).toBe('Edit modes');
+      expect(tabs.map((t) => t.textContent)).toEqual(['Crop', 'Adjust', 'Filters']);
+      tabs.forEach((tab) => {
+        const panel = document.getElementById(tab.getAttribute('aria-controls') ?? '');
+
+        expect(panel?.getAttribute('role')).toBe('tabpanel');
+      });
+      expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('the crop panel holds the ratio pill and the straighten dial; other panels are hidden', () => {
+      open();
+      const cropPanel = q('[role="tab"][data-mode="crop"]').getAttribute('aria-controls') ?? '';
+      const panel = document.getElementById(cropPanel);
+
+      expect(panel?.querySelector('[data-ratio="free"]')).not.toBeNull();
+      expect(panel?.querySelector('[role="slider"]')?.getAttribute('aria-label')).toBe('Straighten');
+      expect(document.getElementById(q('[role="tab"][data-mode="adjust"]').getAttribute('aria-controls') ?? '')?.hidden).toBe(true);
+    });
+
+    it('picking Adjust shows its panel and hides the crop panel', () => {
+      open();
+      q<HTMLButtonElement>('[role="tab"][data-mode="adjust"]').click();
+
+      const panelOf = (mode: string): HTMLElement | null =>
+        document.getElementById(q(`[role="tab"][data-mode="${mode}"]`).getAttribute('aria-controls') ?? '');
+
+      expect(panelOf('adjust')?.hidden).toBe(false);
+      expect(panelOf('crop')?.hidden).toBe(true);
+      expect(panelOf('adjust')?.querySelector('[role="radiogroup"]')?.getAttribute('aria-label')).toBe('Adjustments');
+    });
+
+    it('the selected tab, tool and preset carry only the neutral active hook, no inline paint', () => {
+      open();
+      q<HTMLButtonElement>('[role="tab"][data-mode="filters"]').click();
+      q<HTMLButtonElement>('[data-preset="mono"]').click();
+
+      for (const selected of [q('[role="tab"][data-mode="filters"]'), q('[data-preset="mono"]'), q('[data-tool="brightness"]')]) {
+        expect(selected.getAttribute('data-active')).toBe('true');
+        expect(selected.style.background).toBe('');
+        expect(selected.style.color).toBe('');
+      }
+    });
+  });
+
+  describe('outside Crop mode', () => {
+    const tab = (mode: string): void => q<HTMLButtonElement>(`[role="tab"][data-mode="${mode}"]`).click();
+
+    it.each(['adjust', 'filters'])('the surface says it is in %s mode, and Crop again on return', (mode) => {
+      open();
+
+      expect(dialog().getAttribute('data-mode')).toBe('crop');
+      tab(mode);
+      expect(dialog().getAttribute('data-mode')).toBe(mode);
+      tab('crop');
+      expect(dialog().getAttribute('data-mode')).toBe('crop');
+    });
+
+    it('pan, wheel, handle drag and arrow nudges leave the crop alone', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const initial = { x: 25, y: 25, w: 50, h: 50 };
+      const { onApply, advance } = open({ initial });
+      const handle = q('[data-handle="se"]');
+
+      tab('adjust');
+      pointer('pointerdown', 600, 400);
+      pointer('pointermove', 700, 480);
+      pointer('pointerup', 700, 480);
+      stageEl()?.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -400, clientX: 600, clientY: 400 }));
+      handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 2, clientX: 900, clientY: 600 }));
+      handle.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 2, clientX: 700, clientY: 450 }));
+      handle.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 2, clientX: 700, clientY: 450 }));
+      key(stageEl(), { key: 'ArrowLeft' });
+      key(stageEl(), { key: '+' });
+      vi.advanceTimersByTime(1000);
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).crop).toEqual(initial);
+    });
+
+    it('a pan outside Crop mode does not fade the chrome', () => {
+      open();
+      tab('filters');
+      pointer('pointerdown', 600, 400);
+      pointer('pointermove', 700, 480);
+
+      expect(q('[role="tablist"]').closest<HTMLElement>('[data-darkroom-chrome]')?.style.opacity).toBe('');
+    });
+
+    it('hold-to-peek is off outside Crop mode', () => {
+      open();
+      tab('adjust');
+      key(stageEl(), { key: '\\' });
+
+      expect(dialog().hasAttribute('data-peek')).toBe(false);
+    });
+
+    it('back in Crop mode a pan moves the crop again', () => {
+      const initial = { x: 25, y: 25, w: 50, h: 50 };
+      const { onApply, advance } = open({ initial });
+
+      tab('adjust');
+      tab('crop');
+      pointer('pointerdown', 600, 400);
+      pointer('pointermove', 700, 480);
+      pointer('pointerup', 700, 480);
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).crop).not.toEqual(initial);
+    });
+  });
+
+  describe('rotate and flip', () => {
+    it('both buttons lead the top bar after Reset, labelled, with icons', () => {
+      open();
+      const lead = button('reset').parentElement;
+      const actions = [...(lead?.children ?? [])].map((c) => c.getAttribute('data-action'));
+
+      expect(actions).toEqual(['cancel', 'reset', 'rotate-left', 'flip']);
+      expect(button('rotate-left').getAttribute('aria-label')).toBe('Rotate left');
+      expect(button('flip').getAttribute('aria-label')).toBe('Flip');
+      expect(button('rotate-left').querySelector('svg')).not.toBeNull();
+      expect(button('flip').querySelector('svg')).not.toBeNull();
+    });
+
+    it('rotate left turns the crop with the photo and Done returns the quarter turn', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });
+
+      button('rotate-left').click();
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply)).toEqual({ ...IDENTITY_RESULT, crop: { x: 20, y: 60, w: 40, h: 30 }, geometry: { rotation: 270, flipX: false, straighten: 0 } });
+    });
+
+    it('flip mirrors the crop and Done returns flipX', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });
+
+      button('flip').click();
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply)).toEqual({ ...IDENTITY_RESULT, crop: { x: 60, y: 20, w: 30, h: 40 }, geometry: { rotation: 0, flipX: true, straighten: 0 } });
+    });
+
+    it('a rotation alone, on an uncropped photo, still saves no crop', () => {
+      const { onApply, advance } = open();
+
+      button('rotate-left').click();
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).crop).toBeNull();
+      expect(result(onApply).geometry.rotation).toBe(270);
+    });
+
+    it('rotate and flip are one undo step each', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });
+
+      button('rotate-left').click();
+      advance(3000);
+      button('flip').click();
+      advance(3000);
+      undo();
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).geometry).toEqual({ rotation: 270, flipX: false, straighten: 0 });
+    });
+
+    it('undo after a rotate brings back the unturned crop', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });
+
+      button('rotate-left').click();
+      advance(3000);
+      undo();
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply)).toEqual({ ...IDENTITY_RESULT, crop: { x: 10, y: 20, w: 30, h: 40 } });
+    });
+
+    it('the photo becomes the oriented plane: a quarter turn swaps its size', () => {
+      const { advance } = open();
+
+      button('rotate-left').click();
+      advance(3000);
+
+      expect(plane().style.width).toBe(`${NATURAL.h}px`);
+      expect(plane().style.height).toBe(`${NATURAL.w}px`);
+      expect(photoImg().style.transform).toContain('rotate(270deg)');
+    });
+
+    it('rotate springs the photo through a quarter turn and lands at rest', () => {
+      const { advance } = open();
+
+      button('rotate-left').click();
+
+      expect(plane().style.transform).toContain('rotate(90deg)');
+      expect(stageEl()?.hasAttribute('data-settled')).toBe(false);
+      advance(3000);
+
+      expect(plane().style.transform).not.toContain('rotate(');
+      expect(stageEl()?.hasAttribute('data-settled')).toBe(true);
+    });
+
+    it('under reduced motion rotate jumps straight to the turned state', () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query }));
+      open();
+
+      button('rotate-left').click();
+
+      expect(plane().style.transform).not.toContain('rotate(');
+      expect(stageEl()?.hasAttribute('data-settled')).toBe(true);
+    });
+
+    it('a quarter turn under a fixed wide ratio switches to Free so the turned crop keeps its pixels', () => {
+      const { onApply, advance } = open();
+
+      q<HTMLButtonElement>(`[data-ratio="${String(16 / 9)}"]`).click();
+      advance(3000);
+      button('rotate-left').click();
+      advance(3000);
+
+      expect(q('[data-ratio="free"]').getAttribute('aria-checked')).toBe('true');
+      button('done').click();
+      const crop = result(onApply).crop;
+
+      if (!crop) throw new Error('no crop');
+      expect((crop.w * NATURAL.h) / (crop.h * NATURAL.w)).toBeCloseTo(9 / 16, 2);
+    });
+
+    it('the announced size is the crop in turned pixels', () => {
+      open({ initial: { x: 0, y: 0, w: 50, h: 50 }, initialGeometry: { rotation: 90, flipX: false, straighten: 0 } });
+
+      expect(q('[data-role="darkroom-live"]').textContent).toBe('267 × 400 px');
+    });
+  });
+
+  describe('straighten dial', () => {
+    const slider = (): HTMLElement => q('[role="slider"][aria-label="Straighten"]');
+
+    it('is a slider from -45 to 45 that starts at the saved straighten', () => {
+      open({ initialGeometry: { rotation: 0, flipX: false, straighten: 7 }, initial: { x: 30, y: 30, w: 30, h: 30 } });
+
+      expect(slider().getAttribute('aria-valuemin')).toBe('-45');
+      expect(slider().getAttribute('aria-valuemax')).toBe('45');
+      expect(slider().getAttribute('aria-valuenow')).toBe('7');
+    });
+
+    it('turns the photo under the frame and keeps the crop covered', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const { onApply, advance } = open();
+
+      key(slider(), { key: 'ArrowRight', shiftKey: true });
+      key(slider(), { key: 'ArrowRight', shiftKey: true });
+      vi.advanceTimersByTime(1000);
+      advance(3000);
+
+      expect(photoImg().style.transform).toContain('rotate(10deg)');
+      button('done').click();
+      const { crop, geometry } = result(onApply);
+
+      expect(geometry.straighten).toBe(10);
+      if (!crop) throw new Error('a straightened photo always saves a crop');
+      expect(isCovered(crop, NATURAL, 10)).toBe(true);
+    });
+
+    it('a straightened view still shows a covered crop after a pan', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const { onApply, advance } = open();
+
+      key(slider(), { key: 'ArrowRight', shiftKey: true });
+      vi.advanceTimersByTime(1000);
+      advance(3000);
+      pointer('pointerdown', 600, 400);
+      pointer('pointermove', 900, 650);
+      pointer('pointerup', 900, 650);
+      advance(3000);
+      button('done').click();
+      const { crop } = result(onApply);
+
+      if (!crop) throw new Error('no crop');
+      expect(isCovered(crop, NATURAL, 5)).toBe(true);
+    });
+
+    it('a handle drag on a straightened photo saves a covered crop', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const { onApply, advance } = open();
+      const drag = (type: string, x: number, y: number): void => {
+        q('[data-handle="se"]').dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, clientX: x, clientY: y }));
+      };
+
+      key(slider(), { key: 'ArrowRight', shiftKey: true });
+      key(slider(), { key: 'ArrowRight', shiftKey: true });
+      key(slider(), { key: 'ArrowRight', shiftKey: true });
+      vi.advanceTimersByTime(1000);
+      advance(3000);
+      drag('pointerdown', 900, 600);
+      drag('pointermove', 1400, 1000);
+      drag('pointerup', 1400, 1000);
+      advance(3000);
+      button('done').click();
+      const { crop } = result(onApply);
+
+      if (!crop) throw new Error('no crop');
+      expect(isCovered(crop, NATURAL, 15)).toBe(true);
+    });
+
+    it('a key burst is one undo step', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const { onApply, advance } = open();
+
+      key(slider(), { key: 'ArrowRight' });
+      key(slider(), { key: 'ArrowRight' });
+      key(slider(), { key: 'ArrowRight' });
+      vi.advanceTimersByTime(1000);
+      advance(3000);
+      undo();
+      advance(3000);
+
+      expect(slider().getAttribute('aria-valuenow')).toBe('0');
+      button('done').click();
+      expect(result(onApply)).toEqual({ ...IDENTITY_RESULT, crop: null });
+    });
+
+    it('scrubbing back to 0 in one burst gives the crop back unshrunk', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const { onApply, advance } = open({ initial: { x: 10, y: 10, w: 60, h: 60 } });
+
+      key(slider(), { key: 'ArrowRight', shiftKey: true });
+      key(slider(), { key: 'Home' });
+      vi.advanceTimersByTime(1000);
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).crop).toEqual({ x: 10, y: 10, w: 60, h: 60 });
+    });
+
+    it('Done right after a key, before the burst commits, keeps the straighten', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const { onApply } = open();
+
+      key(slider(), { key: 'ArrowLeft' });
+      button('done').click();
+
+      expect(result(onApply).geometry.straighten).toBe(-1);
+    });
+
+    it.each([3, 7, 10, 23, 37, 45])('a crop straightened %s degrees reopens and saves unchanged', (degrees) => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const first = open();
+
+      for (let i = 0; i < degrees; i++) key(slider(), { key: i % 2 === 0 ? 'ArrowRight' : 'ArrowUp' });
+      vi.advanceTimersByTime(1000);
+      first.advance(3000);
+      button('done').click();
+      const saved = result(first.onApply);
+
+      if (!saved.crop) throw new Error('no crop');
+      const again = open({ initial: saved.crop, initialGeometry: saved.geometry });
+
+      button('done').click();
+
+      expect(result(again.onApply)).toEqual(saved);
+    });
+
+    it('an untouched straightened, turned photo round-trips exactly', () => {
+      const initial = { x: 40, y: 40, w: 20, h: 20 };
+      const initialGeometry = { rotation: 90 as const, flipX: false, straighten: 10 };
+      const { onApply } = open({ initial, initialGeometry, initialFilter: 'warm', initialAdjust: { brightness: 5, contrast: 0, saturation: -10 } });
+
+      button('done').click();
+
+      expect(result(onApply)).toEqual({
+        crop: initial, geometry: initialGeometry, filter: 'warm', adjust: { brightness: 5, contrast: 0, saturation: -10 },
+      });
+    });
+  });
+
+  describe('adjust and filters', () => {
+    it('an adjust dial change shows live on the photo and lands in the result', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const { onApply } = open();
+
+      q<HTMLButtonElement>('[role="tab"][data-mode="adjust"]').click();
+      q<HTMLButtonElement>('[data-tool="contrast"]').click();
+      key(q('[role="slider"][aria-label="Contrast"]'), { key: 'ArrowRight', shiftKey: true });
+      vi.advanceTimersByTime(1000);
+
+      expect(photoImg().style.filter).toBe('contrast(1.025)');
+      button('done').click();
+
+      expect(result(onApply).adjust).toEqual({ brightness: 0, contrast: 5, saturation: 0 });
+    });
+
+    it('a filter preset applies live, saves, and is one undo step', () => {
+      const { onApply, advance } = open();
+
+      q<HTMLButtonElement>('[role="tab"][data-mode="filters"]').click();
+      q<HTMLButtonElement>('[data-preset="noir"]').click();
+
+      expect(photoImg().style.filter).toBe('grayscale(1) contrast(1.4) brightness(0.9)');
+      q<HTMLButtonElement>('[data-preset="mono"]').click();
+      undo();
+      advance(3000);
+
+      expect(q('[data-preset="noir"]').getAttribute('aria-checked')).toBe('true');
+      button('done').click();
+      expect(result(onApply).filter).toBe('noir');
+    });
+
+    it('undo walks back across modes: preset, then rotate, then crop chip', () => {
+      const { onApply, advance } = open();
+
+      q<HTMLButtonElement>('[data-ratio="1"]').click();
+      advance(3000);
+      button('rotate-left').click();
+      advance(3000);
+      q<HTMLButtonElement>('[role="tab"][data-mode="filters"]').click();
+      q<HTMLButtonElement>('[data-preset="sepia"]').click();
+      undo();
+      undo();
+      advance(3000);
+
+      expect(photoImg().style.filter).toBe('');
+      expect(q('[data-ratio="1"]').getAttribute('aria-checked')).toBe('true');
+      button('done').click();
+      expect(result(onApply).geometry.rotation).toBe(0);
+      expect(result(onApply).filter).toBe('none');
+    });
+
+    it('the photo opens with the saved filter and adjustments applied', () => {
+      open({ initialFilter: 'mono', initialAdjust: { brightness: 20, contrast: 0, saturation: 0 } });
+
+      expect(photoImg().style.filter).toBe('grayscale(1) brightness(1.1)');
+    });
+  });
+
+  it('Reset clears crop, geometry, filter and adjustments in one undo step', () => {
+    const initial = { x: 40, y: 40, w: 20, h: 20 };
+    const opts = {
+      initial,
+      initialGeometry: { rotation: 90 as const, flipX: true, straighten: 10 },
+      initialFilter: 'noir' as const,
+      initialAdjust: { brightness: 20, contrast: 0, saturation: 0 },
+    };
+    const { onApply, advance } = open(opts);
+
+    button('reset').click();
+    advance(3000);
+
+    expect(photoImg().style.filter).toBe('');
+    expect(q('[role="slider"][aria-label="Straighten"]').getAttribute('aria-valuenow')).toBe('0');
+    button('done').click();
+    expect(result(onApply)).toEqual({ ...IDENTITY_RESULT, crop: null });
+  });
+
+  it('undo after Reset brings every edit back', () => {
+    const initial = { x: 40, y: 40, w: 20, h: 20 };
+    const initialGeometry = { rotation: 90 as const, flipX: true, straighten: 10 };
+    const { onApply, advance } = open({ initial, initialGeometry, initialFilter: 'noir' });
+
+    button('reset').click();
+    advance(3000);
+    undo();
+    advance(3000);
+    button('done').click();
+
+    expect(result(onApply)).toEqual({ ...IDENTITY_RESULT, crop: initial, geometry: initialGeometry, filter: 'noir' });
+  });
+
+  it('the chrome dissolve fades the dock by opacity and never touches hidden or aria-hidden', () => {
+    open();
+    const chrome = [...document.querySelectorAll<HTMLElement>('[data-darkroom-chrome], [data-darkroom-chrome] *')];
+    const flags = (): string[] => chrome.map((n) => `${n.hidden}|${n.getAttribute('aria-hidden')}`);
+    const before = flags();
+
+    pointer('pointerdown', 600, 400);
+    pointer('pointermove', 640, 420);
+
+    expect(q('[role="tablist"]').closest<HTMLElement>('[data-darkroom-chrome]')?.style.opacity).toBe('0');
+    expect(flags()).toEqual(before);
+    pointer('pointerup', 640, 420);
+    expect(flags()).toEqual(before);
+  });
+
+  it('a photo that fails to load hides rotate, flip and the dock', () => {
+    track(openDarkroom({ url: 'x.png', onApply: vi.fn(), onCancel: vi.fn(), clock: fakeFrameClock().clock }));
+    photoImg().dispatchEvent(new Event('error'));
+
+    expect(button('rotate-left').hidden).toBe(true);
+    expect(button('flip').hidden).toBe(true);
+    expect(q('[role="tablist"]').closest<HTMLElement>('[data-darkroom-chrome]')?.hidden).toBe(true);
+  });
+
+  it('the fly-out clone carries the new geometry and filter', () => {
+    const target = document.createElement('div');
+
+    document.body.appendChild(target);
+    const { advance } = open({ getTargetEl: () => target });
+
+    button('rotate-left').click();
+    advance(3000);
+    q<HTMLButtonElement>('[role="tab"][data-mode="filters"]').click();
+    q<HTMLButtonElement>('[data-preset="mono"]').click();
+    button('done').click();
+    advance(16);
+    const img = q<HTMLImageElement>('[data-role="darkroom-flight"] [data-role="image-plane"] img');
+
+    expect(img.style.transform).toContain('rotate(270deg)');
+    expect(img.style.filter).toBe('grayscale(1)');
+  });
+
+  it('Cancel flies back with the geometry the block still has', () => {
+    const target = document.createElement('div');
+
+    document.body.appendChild(target);
+    const { advance } = open({ getTargetEl: () => target, initialGeometry: { rotation: 180, flipX: false, straighten: 0 } });
+
+    button('rotate-left').click();
+    advance(3000);
+    button('cancel').click();
+    advance(16);
+
+    expect(q<HTMLImageElement>('[data-role="darkroom-flight"] [data-role="image-plane"] img').style.transform).toContain('rotate(180deg)');
+  });
+});
+
+describe('openDarkroom local resets', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stubPopover();
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 1200, 800));
+  });
+
+  afterEach(() => {
+    closers.splice(0).forEach((close) => close());
+    document.body.replaceChildren();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  const q = <T extends Element = HTMLElement>(selector: string): T => {
+    const found = document.querySelector<T>(selector);
+
+    if (!found) throw new Error(`no ${selector}`);
+
+    return found;
+  };
+  const named = (name: string): HTMLButtonElement => {
+    const found = [...document.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.getAttribute('aria-label') === name || b.textContent === name);
+
+    if (!found) throw new Error(`no button ${name}`);
+
+    return found;
+  };
+  const shown = (name: string): boolean => named(name).getAttribute('data-shown') === 'true';
+  const result = (onApply: ReturnType<typeof vi.fn>): DarkroomResult => {
+    const call: unknown = onApply.mock.calls.at(-1)?.[0];
+
+    if (typeof call !== 'object' || call === null || !('geometry' in call)) throw new Error('no result');
+
+    return call as DarkroomResult;
+  };
+  const undo = (): void => key(dialog(), { key: 'z', metaKey: true });
+  const tab = (mode: string): void => q<HTMLButtonElement>(`[role="tab"][data-mode="${mode}"]`).click();
+  const edited = {
+    initial: { x: 40, y: 40, w: 20, h: 20 },
+    initialGeometry: { rotation: 90 as const, flipX: true, straighten: 10 },
+    initialFilter: 'noir' as const,
+    initialAdjust: { brightness: 20, contrast: -15, saturation: 0 },
+  };
+
+  it('every local reset has its own accessible name', () => {
+    open(edited);
+    const names = ['Reset straighten', 'Reset crop', 'Reset brightness', 'Reset adjustments', 'Reset filter'];
+
+    names.forEach((n) => expect(named(n)).toBeInstanceOf(HTMLButtonElement));
+    expect(new Set(names.map((n) => named(n))).size).toBe(names.length);
+    expect(button('reset').textContent).toBe('Reset');
+  });
+
+  it('each one shows only while its state is off default', () => {
+    open();
+
+    for (const n of ['Reset straighten', 'Reset crop', 'Reset brightness', 'Reset adjustments', 'Reset filter']) {
+      expect(shown(n), n).toBe(false);
+      expect(named(n).hidden, n).toBe(false);
+    }
+  });
+
+  describe('straighten reset', () => {
+    it('sets straighten to 0 in one undo step and leaves the rest', () => {
+      const { onApply, advance } = open(edited);
+
+      expect(shown('Reset straighten')).toBe(true);
+      named('Reset straighten').click();
+      advance(3000);
+
+      expect(shown('Reset straighten')).toBe(false);
+      expect(q('[role="slider"][aria-label="Straighten"]').getAttribute('aria-valuenow')).toBe('0');
+      undo();
+      advance(3000);
+      expect(q('[role="slider"][aria-label="Straighten"]').getAttribute('aria-valuenow')).toBe('10');
+      key(dialog(), { key: 'z', metaKey: true, shiftKey: true });
+      advance(3000);
+      button('done').click();
+
+      const r = result(onApply);
+
+      expect(r.geometry).toEqual({ rotation: 90, flipX: true, straighten: 0 });
+      expect(r.filter).toBe('noir');
+      expect(r.adjust).toEqual(edited.initialAdjust);
+    });
+
+    it('a double-click on the dial does the same', () => {
+      const { onApply } = open(edited);
+
+      q('[role="slider"][aria-label="Straighten"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      button('done').click();
+
+      expect(result(onApply).geometry.straighten).toBe(0);
+    });
+  });
+
+  describe('crop reset', () => {
+    it('clears rect, ratio and geometry in one step; filter and adjust stay', () => {
+      const { onApply, advance } = open({ ...edited, initial: { ...edited.initial, shape: 'circle' } });
+
+      expect(shown('Reset crop')).toBe(true);
+      named('Reset crop').click();
+      advance(3000);
+
+      expect(shown('Reset crop')).toBe(false);
+      expect(q('[data-ratio="free"]').getAttribute('aria-checked')).toBe('true');
+      expect(q<HTMLImageElement>('[data-role="darkroom-photo"]').style.filter).toBe('grayscale(1) contrast(1.4) brightness(0.9) brightness(1.1) contrast(0.925)');
+      button('done').click();
+
+      expect(result(onApply)).toEqual({
+        crop: null,
+        geometry: { rotation: 0, flipX: false, straighten: 0 },
+        filter: 'noir',
+        adjust: edited.initialAdjust,
+      });
+    });
+
+    it('is one undo step', () => {
+      const { onApply, advance } = open(edited);
+
+      named('Reset crop').click();
+      advance(3000);
+      undo();
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'noir', adjust: edited.initialAdjust });
+    });
+
+    it('shows after a rotate alone', () => {
+      const { advance } = open();
+
+      button('rotate-left').click();
+      advance(3000);
+
+      expect(shown('Reset crop')).toBe(true);
+    });
+
+    it('a focused reset that disappears hands focus to the selected ratio chip', () => {
+      const { advance } = open(edited);
+
+      named('Reset crop').focus();
+      named('Reset crop').click();
+      advance(3000);
+
+      expect(q('[data-ratio="free"]')).toHaveFocus();
+    });
+  });
+
+  describe('adjust resets', () => {
+    it('a chip reset clears only its tool, in one step', () => {
+      const { onApply, advance } = open(edited);
+
+      tab('adjust');
+      expect(shown('Reset brightness')).toBe(true);
+      named('Reset brightness').click();
+
+      expect(shown('Reset brightness')).toBe(false);
+      expect(q('[data-tool="contrast"]').getAttribute('data-changed')).toBe('true');
+      undo();
+      advance(3000);
+      expect(q('[role="slider"][aria-label="Brightness"]').getAttribute('aria-valuenow')).toBe('20');
+      key(dialog(), { key: 'z', metaKey: true, shiftKey: true });
+      advance(3000);
+      button('done').click();
+
+      const r = result(onApply);
+
+      expect(r.adjust).toEqual({ brightness: 0, contrast: -15, saturation: 0 });
+      expect(r.filter).toBe('noir');
+      expect(r.geometry).toEqual(edited.initialGeometry);
+    });
+
+    it('every changed tool has its own reset whichever tool is selected, and using one keeps the selection', () => {
+      open(edited);
+      tab('adjust');
+
+      expect(shown('Reset brightness')).toBe(true);
+      expect(shown('Reset contrast')).toBe(true);
+      expect(shown('Reset saturation')).toBe(false);
+      named('Reset contrast').click();
+
+      expect(q('[role="radio"][data-tool="brightness"]').getAttribute('aria-checked')).toBe('true');
+      expect(q('[role="radio"][data-tool="contrast"]').getAttribute('data-changed')).toBe('false');
+      expect(q('[role="radio"][data-tool="brightness"]').getAttribute('data-changed')).toBe('true');
+    });
+
+    it('the adjust dial has no reset of its own; straighten keeps its', () => {
+      open(edited);
+
+      expect(document.querySelectorAll('[data-role="dial-reset"]')).toHaveLength(1);
+      expect(q('[data-role="dial-reset"]').getAttribute('aria-label')).toBe('Reset straighten');
+    });
+
+    it('Reset adjustments clears all three in one step and leaves filter and geometry', () => {
+      const { onApply, advance } = open(edited);
+
+      tab('adjust');
+      expect(shown('Reset adjustments')).toBe(true);
+      named('Reset adjustments').click();
+
+      expect(shown('Reset adjustments')).toBe(false);
+      expect(q<HTMLImageElement>('[data-role="darkroom-photo"]').style.filter).toBe('grayscale(1) contrast(1.4) brightness(0.9)');
+      undo();
+      advance(3000);
+      expect(shown('Reset adjustments')).toBe(true);
+      key(dialog(), { key: 'z', metaKey: true, shiftKey: true });
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'noir', adjust: { brightness: 0, contrast: 0, saturation: 0 } });
+    });
+
+    it('a focused Reset adjustments that disappears hands focus to the adjust dial', () => {
+      open(edited);
+      tab('adjust');
+      named('Reset adjustments').focus();
+      named('Reset adjustments').click();
+
+      expect(q('[role="slider"][aria-label="Brightness"]')).toHaveFocus();
+    });
+  });
+
+  describe('filter reset', () => {
+    it('sets the preset to none in one step and leaves adjust and geometry', () => {
+      const { onApply, advance } = open(edited);
+
+      tab('filters');
+      expect(shown('Reset filter')).toBe(true);
+      named('Reset filter').click();
+
+      expect(shown('Reset filter')).toBe(false);
+      expect(q('[data-preset="none"]').getAttribute('aria-checked')).toBe('true');
+      undo();
+      advance(3000);
+      expect(q('[data-preset="noir"]').getAttribute('aria-checked')).toBe('true');
+      key(dialog(), { key: 'z', metaKey: true, shiftKey: true });
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'none', adjust: edited.initialAdjust });
+    });
+
+    it('a focused reset that disappears hands focus to the selected preset', () => {
+      open(edited);
+      tab('filters');
+      named('Reset filter').focus();
+      named('Reset filter').click();
+
+      expect(q('[data-preset="none"]')).toHaveFocus();
+    });
+
+    it('shows once a preset is picked', () => {
+      open();
+      tab('filters');
+      q<HTMLButtonElement>('[data-preset="fade"]').click();
+
+      expect(shown('Reset filter')).toBe(true);
     });
   });
 });

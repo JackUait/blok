@@ -96,12 +96,6 @@
   gap: var(--blok-space-1);
 }
 
-.blok-darkroom__readout {
-  font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-variant-numeric: tabular-nums;
-  color: var(--blok-darkroom-ink-faint);
-}
-
 .blok-darkroom__btn {
   appearance: none;
   border: 0;
@@ -115,6 +109,15 @@
   background: transparent;
   color: var(--blok-darkroom-ink-muted);
 }
+
+.blok-darkroom__btn--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--blok-space-1-5);
+}
+
+.blok-darkroom__btn--icon svg { width: 20px; height: 20px; }
 
 .blok-darkroom__btn--ghost:hover { color: var(--blok-darkroom-ink); background: var(--blok-darkroom-btn-hover-bg); }
 .blok-darkroom__btn:disabled { opacity: 0.4; cursor: default; }
@@ -227,20 +230,95 @@
 .blok-darkroom__handle--e::before,
 .blok-darkroom__handle--w::before { width: var(--blok-darkroom-stroke); height: 22px; }
 
-.blok-darkroom__pill {
+/* Adjust and Filters preview the cropped result: no crop chrome, nothing outside the crop. */
+.blok-darkroom__surface:not([data-mode="crop"]) .blok-darkroom__handle,
+.blok-darkroom__surface:not([data-mode="crop"]) .blok-darkroom__grid {
+  display: none;
+}
+
+.blok-darkroom__surface:not([data-mode="crop"]) .blok-darkroom__frame {
+  box-shadow: 0 0 0 9999px var(--blok-darkroom-bg-edge);
+}
+
+.blok-darkroom__surface:not([data-mode="crop"]) .blok-darkroom__stage {
+  cursor: default;
+}
+
+/* The dial reset sits just right of the dial's centred value label. */
+.blok-darkroom__dial-box {
+  position: relative;
+  width: min(360px, 100%);
+}
+
+.blok-darkroom__dial-reset {
   position: absolute;
-  left: 50%;
-  bottom: 28px;
+  top: -4px;
+  left: calc(50% + 24px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: transparent;
+  color: var(--blok-darkroom-ink-muted);
+  cursor: pointer;
+}
+
+.blok-darkroom__dial-reset svg { width: 14px; height: 14px; }
+.blok-darkroom__dial-reset:hover { color: var(--blok-darkroom-ink); background: var(--blok-darkroom-btn-hover-bg); }
+
+.blok-darkroom__panel-reset {
+  font-size: 12px;
+}
+
+/* Hidden by visibility, not display: the panel keeps its height when a reset comes and goes. */
+.blok-darkroom__dial-reset[data-shown="false"],
+.blok-darkroom__panel-reset[data-shown="false"] {
+  visibility: hidden;
+}
+
+.blok-darkroom__dial-reset:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Mode tabs under the active panel. Clicks pass through the gaps to the stage below. */
+.blok-darkroom__dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 20px;
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-3);
+  padding: 0 16px;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.blok-darkroom__dock > * { pointer-events: auto; }
+
+.blok-darkroom__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-3);
+  max-width: 100%;
+}
+
+.blok-darkroom__pill {
   display: flex;
   gap: var(--blok-darkroom-pill-gap);
   padding: var(--blok-space-1);
-  transform: translateX(-50%);
   border-radius: var(--blok-radius-pill);
   background: var(--blok-darkroom-pill-bg);
   box-shadow: inset 0 0 0 0.5px var(--blok-darkroom-pill-edge), 0 8px 24px var(--blok-darkroom-pill-shadow);
   backdrop-filter: blur(20px) saturate(1.6);
-  transition: opacity 120ms ease;
 }
 
 .blok-darkroom__chip {
@@ -308,11 +386,10 @@
   pointer-events: none;
 }
 
-.blok-darkroom-flight img {
-  position: absolute;
+/* The camera scales the plane from its corner; the img inside turns about its own centre. */
+.blok-darkroom-flight [data-role="image-plane"] {
   left: 0;
   top: 0;
-  max-width: none;
   transform-origin: 0 0;
 }
 
@@ -321,7 +398,234 @@
   .blok-darkroom[data-blok-top-layer][popover],
   .blok-darkroom__surface[data-entering="fade"] .blok-darkroom__stage { animation: none; }
   .blok-darkroom__bar,
-  .blok-darkroom__pill,
+  .blok-darkroom__dock,
   .blok-darkroom__grid,
   .blok-darkroom__frame { transition: none; }
+}
+
+/* Panels: dial, mode tabs, adjust, filters */
+
+/* Same dark-glass ink as .blok-darkroom__pill: these panels may sit outside it. */
+.blok-darkroom__tabs,
+.blok-darkroom__adjust,
+.blok-darkroom__filters,
+.blok-darkroom__dial {
+  --blok-icon-active-bg: rgba(255, 255, 255, 0.14);
+  --blok-text-primary: var(--blok-darkroom-ink);
+  --blok-icon-active-text: var(--blok-text-primary);
+}
+
+.blok-darkroom__tabs,
+.blok-darkroom__adjust-tools {
+  display: inline-flex;
+  gap: var(--blok-darkroom-pill-gap);
+  padding: var(--blok-space-1);
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-darkroom-pill-bg);
+  box-shadow: inset 0 0 0 0.5px var(--blok-darkroom-pill-edge), 0 8px 24px var(--blok-darkroom-pill-shadow);
+  backdrop-filter: blur(20px) saturate(1.6);
+}
+
+.blok-darkroom__tab {
+  appearance: none;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  padding: var(--blok-space-2) var(--blok-space-3);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  color: var(--blok-darkroom-chip-ink);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.blok-darkroom__tab:hover { color: var(--blok-darkroom-ink); }
+
+.blok-darkroom__tab[data-active="true"] {
+  background: var(--blok-icon-active-bg);
+  color: var(--blok-icon-active-text);
+}
+
+.blok-darkroom__tab:focus-visible,
+.blok-darkroom__filter:focus-visible,
+.blok-darkroom__dial:focus-visible,
+.blok-darkroom__adjust-reset:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
+}
+
+.blok-darkroom__adjust {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-3);
+}
+
+/*
+  A reset may not nest inside a radio, so the resets are a sibling layer stacked on the chips.
+  Both share one grid cell and the same three equal columns, so each reset lands on its chip's corner.
+*/
+.blok-darkroom__adjust-row {
+  display: inline-grid;
+}
+
+.blok-darkroom__adjust-row > * {
+  grid-area: 1 / 1;
+}
+
+.blok-darkroom__adjust-tools {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.blok-darkroom__adjust-resets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--blok-darkroom-pill-gap);
+  padding: var(--blok-space-1);
+  pointer-events: none;
+}
+
+.blok-darkroom__adjust-reset {
+  justify-self: end;
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin: calc(-1 * var(--blok-space-1-5)) calc(-1 * var(--blok-space-1-5)) 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-darkroom-ink);
+  color: var(--blok-darkroom-done-ink);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.blok-darkroom__adjust-reset svg { width: 10px; height: 10px; }
+
+.blok-darkroom__adjust-reset[data-shown="false"] {
+  visibility: hidden;
+}
+
+.blok-darkroom__dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  width: min(360px, 100%);
+  touch-action: none;
+  user-select: none;
+  cursor: ew-resize;
+  border-radius: var(--blok-radius-control);
+}
+
+.blok-darkroom__dial-value {
+  font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--blok-darkroom-ink);
+}
+
+/* Fade the ruler out at both ends so the scale reads as endless. */
+.blok-darkroom__dial-track {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, var(--blok-darkroom-ink) 25%, var(--blok-darkroom-ink) 75%, transparent);
+}
+
+/* Origin at the centre: a tick at value t sits t * 6px from the needle, then the JS transform scrolls it. */
+.blok-darkroom__dial-ruler {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  will-change: transform;
+}
+
+.blok-darkroom__dial-tick {
+  position: absolute;
+  bottom: 4px;
+  width: 1px;
+  height: 8px;
+  background: var(--blok-darkroom-ink-faint);
+  transform: translateX(-50%);
+}
+
+.blok-darkroom__dial-tick[data-major] {
+  height: 14px;
+  background: var(--blok-darkroom-ink-muted);
+}
+
+.blok-darkroom__dial-needle {
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-darkroom-ink);
+  transform: translateX(-50%);
+}
+
+.blok-darkroom__filters {
+  display: flex;
+  gap: var(--blok-space-2);
+  max-width: 100%;
+  padding: var(--blok-space-1);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.blok-darkroom__filters::-webkit-scrollbar { display: none; }
+
+.blok-darkroom__filter {
+  appearance: none;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  padding: var(--blok-space-1);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  scroll-snap-align: center;
+  background: transparent;
+  color: var(--blok-darkroom-chip-ink);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.blok-darkroom__filter:hover { color: var(--blok-darkroom-ink); }
+
+.blok-darkroom__filter[data-active="true"] {
+  background: var(--blok-icon-active-bg);
+  color: var(--blok-icon-active-text);
+}
+
+.blok-darkroom__filter-thumb {
+  display: block;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--blok-radius-control-sm);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blok-darkroom__tab,
+  .blok-darkroom__filter { transition: none; }
 }

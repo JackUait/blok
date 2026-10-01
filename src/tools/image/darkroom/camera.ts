@@ -1,5 +1,6 @@
 import type { ImageCrop } from '../../../../types/tools/image';
 import { MIN } from '../crop-math';
+import { clampCentre, coverScale } from '../geometry';
 import { rubberBand } from '../spring';
 
 export interface Size { w: number; h: number }
@@ -9,8 +10,6 @@ export interface Insets { top: number; right: number; bottom: number; left: numb
 
 /** Photo point (u, v) in natural px sits at stage (tx + s·u, ty + s·v). */
 export interface Camera { s: number; tx: number; ty: number }
-
-type Range = [number, number];
 
 export function rectAspect(r: ImageCrop, n: Size): number {
   return (r.w * n.w) / (r.h * n.h);
@@ -54,46 +53,47 @@ export function rectToFrame(r: ImageCrop, n: Size, c: Camera): Box {
   };
 }
 
-export function scaleLimits(n: Size, frame: Box): { min: number; max: number } {
-  const min = Math.max(frame.w / n.w, frame.h / n.h);
+/** `n` is the oriented size O; `theta` is the straighten turn in degrees. */
+export function scaleLimits(n: Size, frame: Box, theta = 0): { min: number; max: number } {
+  const min = coverScale(frame, n, theta);
   const max = Math.min(frame.w / ((MIN / 100) * n.w), frame.h / ((MIN / 100) * n.h));
 
   return { min, max: Math.max(min, max) };
 }
 
-const panRange = (c: Camera, n: Size, frame: Box): { tx: Range; ty: Range } => ({
-  tx: [frame.x + frame.w - c.s * n.w, frame.x],
-  ty: [frame.y + frame.h - c.s * n.h, frame.y],
-});
+/** Nearest camera at the same scale whose frame the turned content covers. */
+const coveredPan = (c: Camera, n: Size, frame: Box, theta: number): Camera => {
+  const centre = { x: (frame.x + frame.w / 2 - c.tx) / c.s, y: (frame.y + frame.h / 2 - c.ty) / c.s };
+  const held = clampCentre(centre, { w: frame.w / c.s, h: frame.h / c.s }, n, theta);
 
-const clamp = (v: number, [lo, hi]: Range): number => Math.min(hi, Math.max(lo, v));
+  if (held === centre) return c;
 
-const stretch = (v: number, [lo, hi]: Range, dimension: number): number => {
-  if (v < lo) return lo - rubberBand(lo - v, dimension);
-  if (v > hi) return hi + rubberBand(v - hi, dimension);
-
-  return v;
+  return { s: c.s, tx: frame.x + frame.w / 2 - held.x * c.s, ty: frame.y + frame.h / 2 - held.y * c.s };
 };
 
-export function clampCamera(c: Camera, n: Size, frame: Box): Camera {
-  const { min, max } = scaleLimits(n, frame);
-  const s = Math.min(max, Math.max(min, c.s));
-  const range = panRange({ ...c, s }, n, frame);
+const stretch = (v: number, rest: number, dimension: number): number => {
+  const over = v - rest;
 
-  return { s, tx: clamp(c.tx, range.tx), ty: clamp(c.ty, range.ty) };
+  return rest + Math.sign(over) * rubberBand(Math.abs(over), dimension);
+};
+
+export function clampCamera(c: Camera, n: Size, frame: Box, theta = 0): Camera {
+  const { min, max } = scaleLimits(n, frame, theta);
+
+  return coveredPan({ ...c, s: Math.min(max, Math.max(min, c.s)) }, n, frame, theta);
 }
 
-export function rubberCamera(c: Camera, n: Size, frame: Box): Camera {
-  const range = panRange(c, n, frame);
+export function rubberCamera(c: Camera, n: Size, frame: Box, theta = 0): Camera {
+  const rest = coveredPan(c, n, frame, theta);
 
-  return { s: c.s, tx: stretch(c.tx, range.tx, frame.w), ty: stretch(c.ty, range.ty, frame.h) };
+  return { s: c.s, tx: stretch(c.tx, rest.tx, frame.w), ty: stretch(c.ty, rest.ty, frame.h) };
 }
 
-export function zoomAt(c: Camera, factor: number, p: Point, n: Size, frame: Box): Camera {
+export function zoomAt(c: Camera, factor: number, p: Point, n: Size, frame: Box, theta = 0): Camera {
   if (!Number.isFinite(factor) || factor <= 0) return c;
-  const { min, max } = scaleLimits(n, frame);
+  const { min, max } = scaleLimits(n, frame, theta);
   const s = Math.min(max, Math.max(min, c.s * factor));
   const k = s / c.s;
 
-  return clampCamera({ s, tx: p.x - (p.x - c.tx) * k, ty: p.y - (p.y - c.ty) * k }, n, frame);
+  return clampCamera({ s, tx: p.x - (p.x - c.tx) * k, ty: p.y - (p.y - c.ty) * k }, n, frame, theta);
 }

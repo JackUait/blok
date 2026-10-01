@@ -1,3 +1,5 @@
+import { IconCross } from '../../../components/icons';
+
 export interface DialOptions {
   min: number;
   max: number;
@@ -14,12 +16,18 @@ export interface DialOptions {
   onInput(v: number): void;
   /** On pointerup, or 250 ms after the last key. */
   onCommit(v: number): void;
+  /** Adds a reset-to-0 button with this accessible name, shown while the value is off 0. */
+  resetLabel?: string;
 }
 
-export type DialSetup = Pick<DialOptions, 'min' | 'max' | 'label' | 'valueText'> & { value: number };
+export type DialSetup = Pick<DialOptions, 'min' | 'max' | 'label' | 'valueText' | 'resetLabel'> & { value: number };
 
 export interface Dial {
+  /** The slider itself. */
   el: HTMLElement;
+  /** The slider plus its reset button; mount this one. A button may not sit inside a slider. */
+  box: HTMLElement;
+  reset: HTMLButtonElement | null;
   /** Moves the dial without callbacks and drops a pending key commit. */
   set(v: number): void;
   /** Commits a pending key burst first, then swaps range, name and value. */
@@ -58,7 +66,7 @@ const format = (v: number): string => {
 export function createDial(o: DialOptions): Dial {
   const step = o.step ?? 1;
   const bigStep = o.bigStep ?? 5;
-  const setup: DialSetup = { min: o.min, max: o.max, value: o.value, label: o.label, valueText: o.valueText };
+  const setup: DialSetup = { min: o.min, max: o.max, value: o.value, label: o.label, valueText: o.valueText, resetLabel: o.resetLabel };
   const st = { value: o.value, keyTimer: 0, pointerId: -1, startX: 0, startValue: 0 };
 
   const root = el('blok-darkroom__dial', 'dial');
@@ -74,6 +82,17 @@ export function createDial(o: DialOptions): Dial {
   track.setAttribute('aria-hidden', 'true');
   track.append(ruler, needle);
   root.append(label, track);
+  const box = el('blok-darkroom__dial-box', 'dial-box');
+  const reset = o.resetLabel === undefined ? null : document.createElement('button');
+
+  box.appendChild(root);
+  if (reset) {
+    reset.type = 'button';
+    reset.className = 'blok-darkroom__dial-reset';
+    reset.setAttribute('data-role', 'dial-reset');
+    reset.innerHTML = IconCross;
+    box.appendChild(reset);
+  }
 
   const clamp = (v: number): number => Math.min(setup.max, Math.max(setup.min, v));
   // Rounds away float dust (0.1 + 0.2) so aria-valuenow and the saved value stay clean.
@@ -104,6 +123,13 @@ export function createDial(o: DialOptions): Dial {
     root.setAttribute('aria-valuetext', setup.valueText(st.value));
     label.textContent = format(st.value);
     ruler.style.transform = `translateX(${-st.value * PX_PER_UNIT + 0}px)`;
+    if (!reset) return;
+    const shown = st.value !== 0;
+
+    reset.setAttribute('aria-label', setup.resetLabel ?? '');
+    // An attribute, not [hidden]: darkroom.css keeps its box so the row never jumps.
+    reset.setAttribute('data-shown', String(shown));
+    if (!shown && document.activeElement === reset) root.focus({ preventScroll: true });
   };
 
   const change = (v: number): boolean => {
@@ -139,6 +165,14 @@ export function createDial(o: DialOptions): Dial {
       case 'Home': return 0;
       default: return null;
     }
+  };
+
+  // One step: drops a pending key burst, then commits 0 at once.
+  const resetToZero = (): void => {
+    if (st.value === 0) return;
+    flush();
+    change(0);
+    o.onCommit(0);
   };
 
   const onKeyDown = (e: KeyboardEvent): void => {
@@ -186,11 +220,15 @@ export function createDial(o: DialOptions): Dial {
   root.addEventListener('pointermove', onMove);
   root.addEventListener('pointerup', onEnd);
   root.addEventListener('pointercancel', onEnd);
+  root.addEventListener('dblclick', resetToZero);
+  reset?.addEventListener('click', resetToZero);
   drawTicks();
   render();
 
   return {
     el: root,
+    box,
+    reset,
     set(v: number): void {
       cancelKeyCommit();
       st.value = v;
@@ -212,6 +250,8 @@ export function createDial(o: DialOptions): Dial {
       root.removeEventListener('pointermove', onMove);
       root.removeEventListener('pointerup', onEnd);
       root.removeEventListener('pointercancel', onEnd);
+      root.removeEventListener('dblclick', resetToZero);
+      reset?.removeEventListener('click', resetToZero);
     },
   };
 }

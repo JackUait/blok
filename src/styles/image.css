@@ -944,6 +944,10 @@
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"] img {
   min-height: 220px;
 }
+/* A turned img is sized in percent of its plane; a min-height would stretch it. */
+[data-blok-tool="image"] .blok-image-inner[data-loading="true"] [data-role="image-plane"] img {
+  min-height: 0;
+}
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"] img {
   opacity: 0.35;
   filter: blur(18px) saturate(1.1);

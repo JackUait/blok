@@ -42,6 +42,24 @@ describe('widthForAspectChange', () => {
   });
 });
 
+describe('widthForAspectChange with oriented sizes', () => {
+  it('a quarter turn of an uncropped 2:1 photo keeps the rendered height', () => {
+    // 800x400 at width 80 is as tall as a 1:2 photo at width 20.
+    expect(widthForAspectChange(80, null, null, { w: 800, h: 400 }, { w: 400, h: 800 })).toBe(20);
+  });
+
+  it('the same oriented size on both sides behaves like the plain percent rule', () => {
+    const o = { w: 800, h: 400 };
+
+    expect(widthForAspectChange(60, null, { x: 0, y: 0, w: 30, h: 90 }, o, o)).toBe(20);
+  });
+
+  it('a turned crop compares pixel aspects in each oriented box', () => {
+    // Old: 50% x 100% of 800x400 = 400x400 (1:1). New: 100% x 50% of 400x800 = 400x400 (1:1).
+    expect(widthForAspectChange(40, { x: 0, y: 0, w: 50, h: 100 }, { x: 0, y: 0, w: 100, h: 50 }, { w: 800, h: 400 }, { w: 400, h: 800 })).toBe(40);
+  });
+});
+
 describe('resizeRect — opposite edge stays pinned when handle hits bounds', () => {
   it('w-handle dragged past left boundary pins right edge, does not grow width', () => {
     const start = { x: 20, y: 0, w: 60, h: 100 };

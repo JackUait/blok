@@ -27,6 +27,9 @@ import {
   IconMinus,
 } from '../../components/icons';
 import { applyRubberBand } from './spring';
+import { readAdjust } from './adjust';
+import { isIdentity, orientedSize, readGeometry } from './geometry';
+import { applyImageFilter, buildFrame, naturalOf, pickEdits, type ImageEdits } from './image-view';
 import { downloadImage } from './download';
 import { tr } from './i18n';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
@@ -104,8 +107,17 @@ export function renderImage(
   // `url` stays on the <img>, so everything that queries `img` keeps working.
   const better = (readVariants(data.variants, data.url) ?? []).filter((variant) => variant.url !== data.url);
   const content: HTMLElement = better.length === 0 ? img : wrapInPicture(img, better);
+  const geometry = readGeometry(data);
+  const { filter, adjust } = readAdjust(data);
 
-  if (data.crop) {
+  applyImageFilter(img, filter, adjust);
+
+  if (!isIdentity(geometry)) {
+    const frame = buildFrame(img, { natural: naturalOf(data), geometry, crop: data.crop, content });
+
+    frame.style.width = '100%';
+    figure.appendChild(frame);
+  } else if (data.crop) {
     const { x, y, w, h, shape } = data.crop;
     const wrapper = document.createElement('div');
     wrapper.className = 'blok-image-crop';
@@ -246,7 +258,7 @@ export function renderAltPill(opts: AltPillOptions): HTMLButtonElement {
   return btn;
 }
 
-export interface LightboxNavigationItem {
+export interface LightboxNavigationItem extends ImageEdits {
   url: string;
   alt?: string;
   fileName?: string;
@@ -259,7 +271,7 @@ export interface LightboxNavigationItem {
   origin?: HTMLElement;
 }
 
-export interface LightboxOptions {
+export interface LightboxOptions extends ImageEdits {
   url: string;
   alt?: string;
   fileName?: string;
@@ -368,6 +380,31 @@ export function openLightbox(opts: LightboxOptions): () => void {
     el.setAttribute('alt', item.alt ?? '');
     el.draggable = false;
     const crop = item.crop;
+    const edits = pickEdits(item);
+    const geometry = readGeometry(edits);
+    const { filter, adjust } = readAdjust(edits);
+    applyImageFilter(el, filter, adjust);
+    if (!isIdentity(geometry)) {
+      const { w, h } = crop ?? { w: 100, h: 100 };
+      return buildFrame(el, {
+        natural: naturalOf(edits),
+        geometry,
+        crop,
+        className: 'blok-image-lightbox__image blok-image-lightbox__crop',
+        role: 'lightbox-crop',
+        // The img is absolute, so the frame has no content size of its own. Fit it like the
+        // plain img: natural size at most, inside 95vw x 95vh.
+        onNatural: (n, frame) => {
+          const o = orientedSize(n, geometry);
+          const pxW = (w / 100) * o.w;
+          const pxH = (h / 100) * o.h;
+          // Inputs ride on custom properties: jsdom drops a literal min() width.
+          frame.style.setProperty('--blok-image-frame-width', `${pxW}px`);
+          frame.style.setProperty('--blok-image-frame-ratio', `${pxW / pxH}`);
+          frame.style.setProperty('width', 'min(95vw, 95vh * var(--blok-image-frame-ratio), var(--blok-image-frame-width))');
+        },
+      });
+    }
     if (!crop) {
       el.className = 'blok-image-lightbox__image';
       return el;
@@ -388,7 +425,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     return wrapper;
   }
 
-  const displayState: { el: HTMLElement } = { el: buildDisplay(currentItem) };
+  const displayState: { el: HTMLElement } = { el: buildDisplay({ ...currentItem, ...pickEdits(opts) }) };
 
   const zoomState = { value: 1 };
   const panState = { x: 0, y: 0 };
@@ -486,7 +523,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     panState.x = 0;
     panState.y = 0;
     const prev = displayState.el;
-    const fresh = buildDisplay(currentItem);
+    const fresh = buildDisplay(item);
     prev.replaceWith(fresh);
     displayState.el = fresh;
     applyTransform();

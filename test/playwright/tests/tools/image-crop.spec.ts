@@ -58,7 +58,7 @@ const openDarkroom = async (page: Page, crop?: { x: number; y: number; w: number
   const dialog = page.getByRole('dialog', { name: 'Crop image' });
 
   await expect(dialog).toBeVisible();
-  await expect(page.locator('[data-role="darkroom-readout"]')).toHaveText(/× \d+ px/);
+  // Settled is only set once the photo has loaded and been laid out.
   // The fly-in animates the darkroom's own photo; gestures must start from rest.
   await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
 
@@ -272,4 +272,95 @@ test('reduced motion applies with no flight', async ({ page }) => {
   }
   expect(await veilsSoFar(page)).toHaveLength(0);
   expect((await cropOf(page)).crop).toStrictEqual({ x: 10, y: 10, w: 60, h: 60 });
+});
+
+type EditedData = {
+  crop?: { x: number; y: number; w: number; h: number };
+  rotation?: number;
+  flipX?: boolean;
+  straighten?: number;
+  filter?: string;
+};
+
+const editsOf = async (page: Page): Promise<EditedData> => (await saveBlok(page)).blocks[0].data;
+
+test('rotate, flip and straighten save the turn and the block renders it', async ({ page }) => {
+  const { dialog } = await openDarkroom(page);
+
+  await dialog.getByRole('button', { name: 'Rotate left' }).click();
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
+  await dialog.getByRole('button', { name: 'Flip' }).click();
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
+  const dial = dialog.getByRole('slider', { name: 'Straighten' });
+
+  await dial.focus();
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect(dial).toHaveAttribute('aria-valuenow', '5');
+  await dialog.locator('[data-action="done"]').click();
+  await expect(dialog).toHaveCount(0);
+  const data = await editsOf(page);
+
+  // Rotate left makes 270; the mirror then negates the turn to 90.
+  expect(data.rotation).toBe(90);
+  expect(data.flipX).toBe(true);
+  expect(data.straighten).toBe(5);
+  // A straightened photo always saves a crop, shrunk inside the turned content.
+  expect(data.crop).toBeDefined();
+  expect(data.crop?.w ?? 100).toBeLessThan(100);
+  await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="image-plane"] img`))
+    .toHaveAttribute('style', /rotate\(95deg\) scaleX\(-1\)/);
+});
+
+test('a filter preset saves and the block image carries the filter', async ({ page }) => {
+  const { dialog } = await openDarkroom(page);
+
+  await dialog.getByRole('tab', { name: 'Filters' }).click();
+  await dialog.getByRole('radio', { name: 'Mono', exact: true }).click();
+  await expect(dialog.getByRole('radio', { name: 'Mono', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await dialog.locator('[data-action="done"]').click();
+  await expect(dialog).toHaveCount(0);
+
+  expect((await editsOf(page)).filter).toBe('mono');
+  await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="image-figure"] img`)).toHaveCSS('filter', 'grayscale(1)');
+});
+
+test('Cmd+Z inside the darkroom undoes a rotate', async ({ page }) => {
+  const { dialog } = await openDarkroom(page, { x: 10, y: 20, w: 30, h: 40 });
+  const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+  await dialog.getByRole('button', { name: 'Rotate left' }).click();
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
+  // The screen-reader size announcement follows the turned crop.
+  await expect(page.locator('[data-role="darkroom-live"]')).toHaveText('160 × 180 px');
+  await page.keyboard.press(`${mod}+z`);
+  await expect(page.locator('[data-role="darkroom-live"]')).toHaveText('180 × 160 px');
+  await dialog.locator('[data-action="done"]').click();
+  await expect(dialog).toHaveCount(0);
+  const data = await editsOf(page);
+
+  expect(data.rotation).toBeUndefined();
+  expect(data.crop).toStrictEqual({ x: 10, y: 20, w: 30, h: 40 });
+});
+
+test('Reset crop clears the crop and turn but keeps the filter', async ({ page }) => {
+  const { dialog } = await openDarkroom(page, { x: 10, y: 20, w: 30, h: 40 });
+  const resetCrop = dialog.getByRole('button', { name: 'Reset crop' });
+
+  await dialog.getByRole('button', { name: 'Rotate left' }).click();
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
+  await dialog.getByRole('tab', { name: 'Filters' }).click();
+  await dialog.getByRole('radio', { name: 'Mono', exact: true }).click();
+  await dialog.getByRole('tab', { name: 'Crop' }).click();
+  await expect(resetCrop).toBeVisible();
+  await resetCrop.click();
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
+  // Hidden by visibility, so it keeps its box but leaves the accessibility tree.
+  await expect(resetCrop).toBeHidden();
+  await dialog.locator('[data-action="done"]').click();
+  await expect(dialog).toHaveCount(0);
+  const data = await editsOf(page);
+
+  expect(data.crop).toBeUndefined();
+  expect(data.rotation).toBeUndefined();
+  expect(data.filter).toBe('mono');
 });

@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createHistory } from '../../../../../src/tools/image/darkroom/history';
+import { createHistory, type Snapshot } from '../../../../../src/tools/image/darkroom/history';
 
-const snap = (x: number, ratioKey = 'free') => ({ rect: { x, y: 0, w: 50, h: 50 }, ratioKey });
+const snap = (x: number, ratioKey = 'free', over: Partial<Snapshot> = {}): Snapshot => ({
+  rect: { x, y: 0, w: 50, h: 50 },
+  ratioKey,
+  geometry: { rotation: 0, flipX: false, straighten: 0 },
+  filter: 'none',
+  adjust: { brightness: 0, contrast: 0, saturation: 0 },
+  ...over,
+});
 
 describe('darkroom history', () => {
   beforeEach(() => {
@@ -49,6 +56,34 @@ describe('darkroom history', () => {
 
     h.push(snap(0, 'circle'));
 
+    expect(h.undo()).toEqual(snap(0));
+  });
+
+  it.each<[string, Partial<Snapshot>]>([
+    ['a rotation', { geometry: { rotation: 270, flipX: false, straighten: 0 } }],
+    ['a flip', { geometry: { rotation: 0, flipX: true, straighten: 0 } }],
+    ['a straighten', { geometry: { rotation: 0, flipX: false, straighten: 4.5 } }],
+    ['a filter preset', { filter: 'mono' }],
+    ['an adjustment', { adjust: { brightness: 0, contrast: 12, saturation: 0 } }],
+  ])('%s alone is a new entry', (_name, over) => {
+    const h = createHistory(snap(0));
+
+    h.push(snap(0, 'free', over));
+
+    expect(h.undo()).toEqual(snap(0));
+    expect(h.redo()).toEqual(snap(0, 'free', over));
+  });
+
+  it('undo walks back across crop, geometry and filter steps in order', () => {
+    const h = createHistory(snap(0));
+    const turned = { geometry: { rotation: 270 as const, flipX: false, straighten: 0 } };
+
+    h.push(snap(10));
+    h.push(snap(10, 'free', turned));
+    h.push(snap(10, 'free', { ...turned, filter: 'noir' }));
+
+    expect(h.undo()).toEqual(snap(10, 'free', turned));
+    expect(h.undo()).toEqual(snap(10));
     expect(h.undo()).toEqual(snap(0));
   });
 });

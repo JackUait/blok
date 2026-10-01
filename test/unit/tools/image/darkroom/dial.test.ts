@@ -31,7 +31,7 @@ describe('createDial', () => {
       onCommit,
       ...over,
     });
-    document.body.appendChild(dial.el);
+    document.body.appendChild(dial.box);
 
     return dial;
   };
@@ -55,7 +55,7 @@ describe('createDial', () => {
 
   afterEach(() => {
     dial.destroy();
-    dial.el.remove();
+    dial.box.remove();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -325,4 +325,95 @@ describe('createDial', () => {
     pointer(dial.el, 'pointermove', { clientX: -60 });
     expect(onInput).not.toHaveBeenCalled();
   });
+
+  describe('reset control', () => {
+    const resetBtn = (): HTMLButtonElement => {
+      if (!dial.reset) throw new Error('no reset');
+
+      return dial.reset;
+    };
+    const makeWithReset = (value = 0): Dial => {
+      make({ value, resetLabel: 'Reset straighten' });
+
+      return dial;
+    };
+
+    it('is absent without a resetLabel', () => {
+      make();
+
+      expect(dial.reset).toBeNull();
+    });
+
+    it('is a labelled button outside the slider, shown only while the value is off zero', () => {
+      makeWithReset();
+
+      expect(resetBtn().getAttribute('aria-label')).toBe('Reset straighten');
+      expect(dial.el.contains(resetBtn())).toBe(false);
+      expect(dial.box.contains(resetBtn())).toBe(true);
+      expect(dial.box.contains(dial.el)).toBe(true);
+      expect(resetBtn().getAttribute('data-shown')).toBe('false');
+      key(dial.el, 'ArrowRight');
+      expect(resetBtn().getAttribute('data-shown')).toBe('true');
+    });
+
+    it('a click sets 0 and commits once, at once', () => {
+      makeWithReset(12);
+
+      resetBtn().click();
+
+      expect(dial.el.getAttribute('aria-valuenow')).toBe('0');
+      expect(onInput).toHaveBeenLastCalledWith(0);
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(onCommit).toHaveBeenCalledWith(0);
+      expect(resetBtn().getAttribute('data-shown')).toBe('false');
+    });
+
+    it('a click drops a pending key commit so the reset is the only step', () => {
+      makeWithReset();
+
+      key(dial.el, 'ArrowRight');
+      resetBtn().click();
+      vi.advanceTimersByTime(1000);
+
+      expect(onCommit.mock.calls).toEqual([[1], [0]]);
+    });
+
+    it('a double-click on the dial resets to 0', () => {
+      makeWithReset(-7);
+
+      dial.el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      expect(dial.el.getAttribute('aria-valuenow')).toBe('0');
+      expect(onCommit).toHaveBeenCalledWith(0);
+    });
+
+    it('a reset at 0 does nothing', () => {
+      makeWithReset();
+
+      dial.el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      expect(onInput).not.toHaveBeenCalled();
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    it('a focused reset that disappears hands focus to the slider', () => {
+      makeWithReset(5);
+
+      resetBtn().focus();
+      resetBtn().click();
+
+      expect(dial.el).toHaveFocus();
+    });
+
+    it('set() and configure() update its visibility and configure() can rename it', () => {
+      makeWithReset();
+
+      dial.set(3);
+      expect(resetBtn().getAttribute('data-shown')).toBe('true');
+      dial.configure({ min: -100, max: 100, value: 0, label: 'Contrast', valueText: String, resetLabel: 'Reset contrast' });
+      expect(resetBtn().getAttribute('data-shown')).toBe('false');
+      expect(resetBtn().getAttribute('aria-label')).toBe('Reset contrast');
+    });
+  });
 });
+

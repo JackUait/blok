@@ -45,7 +45,7 @@ import { ImageError } from './errors';
 import { alignmentFraction, attachResizeHandle, edgePositionPercent, type ResizeEdge } from './resizer';
 import { resizeFloorPx } from './resize-floor';
 import { widthForAspectChange } from './crop-math';
-import { readGeometry, geometryFields } from './geometry';
+import { readGeometry, geometryFields, orientedSize } from './geometry';
 import { readAdjust, adjustFields } from './adjust';
 import {
   applyAutoFull,
@@ -56,7 +56,8 @@ import {
   renderOverlay,
   updateOverlayTier,
 } from './ui';
-import { openDarkroom } from './darkroom';
+import { openDarkroom, type DarkroomResult } from './darkroom';
+import { naturalOf, pickEdits, type ImageEdits } from './image-view';
 import { openAltPopover } from './alt-popover';
 import { probeImageDimensions } from './probe-dimensions';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
@@ -643,7 +644,9 @@ export class ImageTool implements BlockTool {
 
   private applyLoadingDimensions(figure: HTMLElement, imgEl: HTMLImageElement, width: number, height: number): void {
     if (figure.getAttribute('data-loading') !== 'true') return;
-    figure.style.setProperty('aspect-ratio', `${width} / ${height}`);
+    const oriented = orientedSize({ w: width, h: height }, readGeometry(this.data));
+
+    figure.style.setProperty('aspect-ratio', `${oriented.w} / ${oriented.h}`);
     figure.style.setProperty('min-height', '0px');
     imgEl.style.setProperty('min-height', '0px');
   }
@@ -806,17 +809,18 @@ export class ImageTool implements BlockTool {
       alt: this.data.alt,
       fileName: this.data.fileName,
       crop: this.data.crop,
+      ...pickEdits(this.data),
       origin,
       i18n: this.api.i18n,
       navigation: this.collectNavigation(),
     });
   }
 
-  private collectNavigation(): { items: Array<{ url: string; alt?: string; fileName?: string; crop?: ImageCrop; origin?: HTMLElement }>; startIndex: number } | undefined {
+  private collectNavigation(): { items: Array<{ url: string; alt?: string; fileName?: string; crop?: ImageCrop; origin?: HTMLElement } & ImageEdits>; startIndex: number } | undefined {
     const blocksApi = (this.api as API & { blocks?: { getBlocksCount(): number; getBlockByIndex(i: number): BlockAPI | undefined } }).blocks;
     if (!blocksApi?.getBlocksCount || !blocksApi.getBlockByIndex) return undefined;
     const count = blocksApi.getBlocksCount();
-    type Collected = { blockId: string; item: { url: string; alt?: string; fileName?: string; crop?: ImageCrop; origin?: HTMLElement } };
+    type Collected = { blockId: string; item: { url: string; alt?: string; fileName?: string; crop?: ImageCrop; origin?: HTMLElement } & ImageEdits };
     const collected: Collected[] = Array.from({ length: count }, (_, i) => blocksApi.getBlockByIndex(i))
       .filter((b): b is BlockAPI => b !== undefined && b.name === 'image')
       .map((b): Collected | null => {
@@ -828,13 +832,14 @@ export class ImageTool implements BlockTool {
         const origin = b.holder?.querySelector<HTMLElement>('.blok-image-crop') ?? img ?? undefined;
         const preserved = b.preservedData as Partial<ImageData> | undefined;
         const preservedUrl = typeof preserved?.url === 'string' ? preserved.url : '';
+        const edits = preserved ? pickEdits(preserved) : {};
         if (preservedUrl) {
-          return { blockId: b.id, item: { url: preservedUrl, alt: preserved?.alt, fileName: preserved?.fileName, crop: preserved?.crop, origin } };
+          return { blockId: b.id, item: { url: preservedUrl, alt: preserved?.alt, fileName: preserved?.fileName, crop: preserved?.crop, ...edits, origin } };
         }
         const src = img?.getAttribute('src') ?? '';
         if (!src) return null;
         const alt = img?.getAttribute('alt') ?? undefined;
-        return { blockId: b.id, item: { url: src, alt, fileName: preserved?.fileName, crop: preserved?.crop, origin } };
+        return { blockId: b.id, item: { url: src, alt, fileName: preserved?.fileName, crop: preserved?.crop, ...edits, origin } };
       })
       .filter((entry): entry is Collected => entry !== null);
     if (collected.length < 2) return undefined;
@@ -850,7 +855,10 @@ export class ImageTool implements BlockTool {
       url: this.data.url,
       alt: this.data.alt,
       initial: this.data.crop,
-      onApply: (rect) => this.applyCrop(rect),
+      initialGeometry: readGeometry(this.data),
+      initialFilter: readAdjust(this.data).filter,
+      initialAdjust: readAdjust(this.data).adjust,
+      onApply: (result) => this.applyCrop(result),
       onCancel: () => this.cancelCrop(),
       i18n: this.api.i18n,
       sourceEl: this.cropVisual(),
@@ -865,23 +873,45 @@ export class ImageTool implements BlockTool {
       ?? null;
   }
 
-  private applyCrop(rect: ImageCrop | null): void {
+  private applyCrop({ crop: rect, geometry, filter, adjust }: DarkroomResult): void {
     this.cropDetach = null;
     const prevCrop = this.data.crop;
+    const prevGeometry = readGeometry(this.data);
     // Keep the figure's rendered HEIGHT roughly stable across aspect changes
     // so a newly-tall crop doesn't balloon into a vertical tower (and a newly-
     // wide crop doesn't stretch sideways). Only rescale when the user has an
     // explicit width set; otherwise CSS size presets still rule.
     if (this.data.width !== undefined) {
-      this.data.width = widthForAspectChange(this.data.width, prevCrop, rect);
+      const n = this.naturalSize();
+
+      // Without the natural size a quarter turn's aspect is unknown; the percent rule is the best guess.
+      this.data.width = n
+        ? widthForAspectChange(this.data.width, prevCrop, rect, orientedSize(n, prevGeometry), orientedSize(n, geometry))
+        : widthForAspectChange(this.data.width, prevCrop, rect);
     }
     if (rect === null) {
       delete this.data.crop;
     } else {
       this.data.crop = rect;
     }
+    // Assign alone never removes a field that went back to its default.
+    delete this.data.rotation;
+    delete this.data.flipX;
+    delete this.data.straighten;
+    delete this.data.filter;
+    delete this.data.adjust;
+    Object.assign(this.data, geometryFields(geometry), adjustFields(filter, adjust));
     this.block.dispatchChange();
     this.renderState();
+  }
+
+  private naturalSize(): { w: number; h: number } | null {
+    const cached = naturalOf(this.data);
+
+    if (cached) return cached;
+    const img = this.root?.querySelector<HTMLImageElement>('[data-role="image-figure"] img');
+
+    return img && img.naturalWidth > 0 && img.naturalHeight > 0 ? { w: img.naturalWidth, h: img.naturalHeight } : null;
   }
 
   private cancelCrop(): void {
@@ -1077,8 +1107,10 @@ export class ImageTool implements BlockTool {
     // The card goes first so the hidden figure below it takes no room.
     if (this.mending) this.root.appendChild(this.buildErrorCard(true, true));
     const figure = renderImage(this.data);
-    if (this.data.naturalWidth && this.data.naturalHeight) {
-      figure.style.setProperty('aspect-ratio', `${this.data.naturalWidth} / ${this.data.naturalHeight}`);
+    const natural = naturalOf(this.data);
+    if (natural) {
+      const oriented = orientedSize(natural, readGeometry(this.data));
+      figure.style.setProperty('aspect-ratio', `${oriented.w} / ${oriented.h}`);
     }
 
     const imgEl = figure.querySelector('img');
@@ -1087,7 +1119,7 @@ export class ImageTool implements BlockTool {
     const originEl = figure.querySelector<HTMLElement>('.blok-image-crop') ?? imgEl ?? undefined;
     if (imgEl) {
       imgEl.style.cursor = 'zoom-in';
-      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }));
+      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, ...pickEdits(this.data), origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }));
       this.reloadAttempts = 0;
       imgEl.addEventListener('error', () => this.handleImgLoadFailure(imgEl, figure));
       imgEl.addEventListener('load', () => {
@@ -1123,7 +1155,7 @@ export class ImageTool implements BlockTool {
         onReplace: () => this.transitionToEmpty(),
         onDelete: () => this.deleteBlock(),
         onDownload: () => this.download(),
-        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }),
+        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, ...pickEdits(this.data), origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }),
         onCopyUrl: () => this.copyUrl(),
         onToggleCaption: () => this.toggleCaption(),
         onCrop: () => this.enterCrop(),
@@ -1203,7 +1235,9 @@ export class ImageTool implements BlockTool {
       if (this.root && img && img.naturalWidth > 0) {
         const container = this.root.parentElement;
         const containerWidth = container?.clientWidth ?? figure.clientWidth;
-        applyAutoFull(this.root, img, containerWidth);
+        const oriented = orientedSize({ w: img.naturalWidth, h: img.naturalHeight }, readGeometry(this.data));
+
+        applyAutoFull(this.root, { naturalWidth: oriented.w, naturalHeight: oriented.h }, containerWidth);
       }
       updateOverlayTier(overlay, figure.clientWidth, figure.clientHeight);
       syncMediaHeight(figure);

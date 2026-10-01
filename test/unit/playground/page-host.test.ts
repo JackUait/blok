@@ -124,6 +124,95 @@ describe('PageRegistry', () => {
   });
 });
 
+describe('root page header', () => {
+  const headerOptions = (pages: PageRegistry, pageId: string | null): Parameters<typeof renderPageHeader>[1] => ({
+    pageId,
+    pages,
+    search: '',
+    readOnly: false,
+    navigate: vi.fn(),
+    focusEditor: vi.fn(),
+    i18n: vi.fn(),
+    changed: vi.fn(),
+    restore: vi.fn(),
+    purge: vi.fn(),
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it('the root document shows a title and an icon button, like a page', () => {
+    const host = document.createElement('header');
+
+    renderPageHeader(host, headerOptions(new PageRegistry(seed()), null));
+
+    expect(host.hidden).toBe(false);
+    expect(host.querySelector('h1')?.textContent).toBe('Playground');
+    expect(host.querySelector('button')?.getAttribute('aria-label')).toBe('Add icon');
+    expect(host.querySelector('[role="status"]')).toBeNull();
+    expect([...host.querySelectorAll('.pg-crumb-text')].map((el) => el.textContent)).toEqual(['Playground']);
+  });
+
+  it('a root title typed in the header is saved and renames the breadcrumb', () => {
+    const pages = new PageRegistry(seed());
+    const host = document.createElement('header');
+    const options = headerOptions(pages, null);
+
+    renderPageHeader(host, options);
+
+    const title = host.querySelector('h1');
+
+    if (title === null) throw new Error('no title');
+    title.textContent = 'Workspace';
+    title.dispatchEvent(new Event('input'));
+
+    expect(pages.root().title).toBe('Workspace');
+    expect(host.querySelector('.pg-crumb-text')?.textContent).toBe('Workspace');
+    expect(options.changed).toHaveBeenCalled();
+  });
+
+  it('keeps the root title and icon in localStorage, and reset brings back the default', () => {
+    const first = new PageRegistry(seed());
+
+    first.setTitle(null, 'Workspace');
+    first.setIcon(null, '🏠');
+
+    const second = new PageRegistry(seed());
+
+    expect(second.root()).toEqual({ title: 'Workspace', icon: '🏠' });
+    second.reset();
+    expect(second.root()).toEqual({ title: 'Playground' });
+    expect(new PageRegistry(seed()).root()).toEqual({ title: 'Playground' });
+  });
+
+  it('a renamed root shows up in page paths and in a sub-page breadcrumb', () => {
+    const pages = new PageRegistry(seed());
+    const host = document.createElement('header');
+
+    pages.setTitle(null, 'Workspace');
+    pages.setIcon(null, '🏠');
+    renderPageHeader(host, headerOptions(pages, 'keys'));
+
+    expect(pages.info('keys')?.path).toEqual(['Workspace', 'Guide']);
+    expect(host.querySelector('.pg-crumb')?.textContent).toBe('🏠Workspace');
+  });
+
+  it('an empty root title reads Untitled in paths', () => {
+    const pages = new PageRegistry(seed());
+
+    pages.setTitle(null, '');
+
+    expect(pages.info('guide')?.path).toEqual(['Untitled']);
+  });
+});
+
 describe('page trash', () => {
   const pointer = (pageId: string): { id: string; type: string; data: { pageId: string } } =>
     ({ id: `p-${pageId}`, type: 'page', data: { pageId } });

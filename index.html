@@ -1753,7 +1753,7 @@
     }
 
     function updateDocumentTitle() {
-      const page = currentPageId === null ? undefined : pages.get(currentPageId);
+      const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
       document.title = page === undefined
         ? baseDocumentTitle
         : `${page.icon ? `${page.icon} ` : ''}${page.title.trim() || 'Untitled'} · ${baseDocumentTitle}`;

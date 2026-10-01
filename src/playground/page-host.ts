@@ -30,6 +30,13 @@ export const PAGES_STORAGE_KEY = 'blok-playground-pages';
 /** The root playground document's name, in breadcrumbs and page paths. */
 const ROOT_LABEL = 'Playground';
 
+/** The root document's title and icon. Apart from the page map, so no page loop meets it. */
+export const ROOT_STORAGE_KEY = 'blok-playground-root';
+
+export type RootRecord = Pick<PageRecord, 'title' | 'icon'>;
+
+const untitled = (title: string): string => (title.trim() === '' ? 'Untitled' : title);
+
 /** Pages deleted for good. Without it a deleted seed page returns on reload. */
 const PURGED_STORAGE_KEY = 'blok-playground-pages-purged';
 
@@ -68,6 +75,23 @@ const readStored = (): PageMap => {
   }
 };
 
+const readRoot = (): RootRecord => {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(ROOT_STORAGE_KEY) ?? '{}');
+
+    if (isRecord(parsed) && typeof parsed.title === 'string') {
+      return {
+        title: parsed.title,
+        ...(typeof parsed.icon === 'string' && { icon: parsed.icon }),
+      };
+    }
+  } catch {
+    // Unreadable storage: the default below.
+  }
+
+  return { title: ROOT_LABEL };
+};
+
 const readPurged = (): string[] => {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(PURGED_STORAGE_KEY) ?? '[]');
@@ -80,6 +104,8 @@ const readPurged = (): string[] => {
 
 export class PageRegistry {
   private pages: PageMap;
+
+  private rootPage: RootRecord = readRoot();
 
   constructor(private readonly seed: PageMap) {
     // Stored edits win, but a page added to the seed later still shows up.
@@ -94,6 +120,11 @@ export class PageRegistry {
     return Object.hasOwn(this.pages, pageId) ? this.pages[pageId] : undefined;
   }
 
+  /** The root document's title and icon. */
+  public root(): RootRecord {
+    return this.rootPage;
+  }
+
   public has(pageId: string): boolean {
     return this.get(pageId) !== undefined;
   }
@@ -106,12 +137,12 @@ export class PageRegistry {
       return null;
     }
 
-    const above = this.trail(pageId).slice(0, -1).map((entry) => (entry.title.trim() === '' ? 'Untitled' : entry.title));
+    const above = this.trail(pageId).slice(0, -1).map((entry) => untitled(entry.title));
 
     return {
       title: page.title,
       ...(page.icon !== undefined && { icon: { type: 'emoji' as const, value: page.icon } }),
-      path: [ROOT_LABEL, ...above],
+      path: [untitled(this.rootPage.title), ...above],
     };
   }
 
@@ -123,12 +154,27 @@ export class PageRegistry {
     this.persist();
   }
 
-  public setTitle(pageId: string, title: string): void {
+  /** `null` is the root document. */
+  public setTitle(pageId: string | null, title: string): void {
+    if (pageId === null) {
+      this.editRoot({ ...this.rootPage, title });
+
+      return;
+    }
     this.edit(pageId, (page) => ({ ...page, title }));
   }
 
-  public setIcon(pageId: string, icon: string | undefined): void {
-    this.edit(pageId, ({ icon: _old, ...page }) => (icon === undefined ? page : { ...page, icon }));
+  /** `null` is the root document. */
+  public setIcon(pageId: string | null, icon: string | undefined): void {
+    const withIcon = <T extends RootRecord>({ icon: _old, ...page }: T): Omit<T, 'icon'> & { icon?: string } =>
+      icon === undefined ? page : { ...page, icon };
+
+    if (pageId === null) {
+      this.editRoot(withIcon(this.rootPage));
+
+      return;
+    }
+    this.edit(pageId, withIcon);
   }
 
   public setBlocks(pageId: string, blocks: OutputBlockData[]): void {
@@ -216,10 +262,21 @@ export class PageRegistry {
     try {
       localStorage.removeItem(PAGES_STORAGE_KEY);
       localStorage.removeItem(PURGED_STORAGE_KEY);
+      localStorage.removeItem(ROOT_STORAGE_KEY);
     } catch {
       // Storage blocked: the in-memory reset below still applies.
     }
     this.pages = structuredClone(this.seed);
+    this.rootPage = { title: ROOT_LABEL };
+  }
+
+  private editRoot(root: RootRecord): void {
+    this.rootPage = root;
+    try {
+      localStorage.setItem(ROOT_STORAGE_KEY, JSON.stringify(root));
+    } catch {
+      // Quota or blocked storage: the title still works for this tab.
+    }
   }
 
   private edit(pageId: string, change: (page: PageRecord) => PageRecord): void {
@@ -363,14 +420,15 @@ const crumb = (label: string, icon: string | undefined, href: string | null): HT
   return el;
 };
 
-/** Draws the header of the page being shown. Empty and hidden on the root document. */
+/** Draws the header of the page being shown, the root document included. Hidden for an unknown page. */
 export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions): void => {
   const { pageId, pages, search } = options;
-  const page = pageId === null ? undefined : pages.get(pageId);
+  const page = pageId === null ? pages.root() : pages.get(pageId);
+  const currentIcon = (): string | undefined => (pageId === null ? pages.root() : pages.get(pageId))?.icon;
 
   closeIconPicker();
 
-  if (pageId === null || page === undefined) {
+  if (page === undefined) {
     host.toggleAttribute('hidden', true);
     host.replaceChildren();
 
@@ -385,12 +443,13 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
   nav.className = 'pg-crumbs';
   nav.setAttribute('aria-label', 'Breadcrumb');
 
-  const trail = pages.trail(pageId);
+  const root = pages.root();
+  const trail = pageId === null ? [] : pages.trail(pageId);
   const items: Array<{ id: string | null; el: HTMLElement }> = [
-    { id: null, el: crumb(ROOT_LABEL, undefined, pagePath(null, search)) },
+    { id: null, el: crumb(untitled(root.title), root.icon, pageId === null ? null : pagePath(null, search)) },
     ...trail.map((entry) => ({
       id: entry.id,
-      el: crumb(entry.title.trim() === '' ? 'Untitled' : entry.title, entry.icon, entry.id === pageId ? null : pagePath(entry.id, search)),
+      el: crumb(untitled(entry.title), entry.icon, entry.id === pageId ? null : pagePath(entry.id, search)),
     })),
   ];
 
@@ -433,7 +492,7 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
   iconButton.disabled = options.readOnly;
 
   const drawIcon = (): void => {
-    const icon = pages.get(pageId)?.icon;
+    const icon = currentIcon();
 
     iconButton.className = icon === undefined ? 'pg-page-add-icon' : 'pg-page-icon';
     iconButton.setAttribute('aria-label', icon === undefined ? 'Add icon' : 'Change icon');
@@ -490,7 +549,7 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
     }
     pages.setTitle(pageId, text);
     if (currentText !== null) {
-      currentText.textContent = text.trim() === '' ? 'Untitled' : text;
+      currentText.textContent = untitled(text);
     }
     options.changed();
   });
@@ -518,15 +577,16 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
     options.focusEditor();
   });
 
-  const trashed = pages.trashedIn(pageId);
+  const trashed = pageId === null ? null : pages.trashedIn(pageId);
+  const banner = pageId === null || trashed === null ? [] : [trashBanner(trashed, pageId, options)];
 
-  host.replaceChildren(...(trashed === null ? [] : [trashBanner(trashed, pageId, options)]), nav, iconRow, title);
+  host.replaceChildren(...banner, nav, iconRow, title);
 };
 
 const trashBanner = (trashed: PageRecord & { id: string }, pageId: string, options: PageHeaderOptions): HTMLElement => {
   const banner = document.createElement('div');
   const text = document.createElement('p');
-  const name = trashed.title.trim() === '' ? 'Untitled' : trashed.title;
+  const name = untitled(trashed.title);
 
   banner.className = 'pg-trash-banner';
   takeRadiusRoles(banner);

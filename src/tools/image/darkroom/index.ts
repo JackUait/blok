@@ -64,8 +64,10 @@ const RATIOS: RatioDef[] = [
 
 const HANDLES: Handle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 const CORNERS = new Set<Handle>(['nw', 'ne', 'se', 'sw']);
-// Room for the top bar and the bottom dock (mode tabs over the panel) around the frame.
+// Fallback room for the top bar and bottom dock when they cannot be measured.
 const PAD: Insets = { top: 72, right: 32, bottom: 200, left: 32 };
+// Clear space between the frame and the chrome around it.
+const CHROME_GAP = 16;
 // Stand-in size for an SVG without intrinsic dimensions.
 const FALLBACK_NATURAL = 1000;
 const NUDGE = 0.01;
@@ -259,9 +261,26 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     onSettle: () => stage.setAttribute('data-settled', ''),
   });
 
+  /**
+   * Room left by the bar and the dock as laid out now. The dock's height depends on the
+   * panel, its wrapping and the font, so a fixed inset let it cover the frame.
+   * Offsets ignore the fly-in transform; the bar and dock share the stage's origin.
+   */
+  const pad = (): Insets => {
+    const top = bar.offsetHeight;
+    const dockTop = dock.offsetTop;
+    const stageH = stage.offsetHeight;
+
+    return {
+      ...PAD,
+      top: top > 0 ? top + CHROME_GAP : PAD.top,
+      bottom: dockTop > 0 && stageH > dockTop ? stageH - dockTop + CHROME_GAP : PAD.bottom,
+    };
+  };
+
   /** Target layout for the current rect: frame fitted and centred, camera showing the rect in it. */
   const fitted = (): Record<ViewKey, number> => {
-    const f = fitFrame(rectAspect(st.rect, o()), st.stage, PAD);
+    const f = fitFrame(rectAspect(st.rect, o()), st.stage, pad());
 
     return { ...rectToCamera(st.rect, o(), f), ...f, round: roundOf(st.def.shape), theta: theta(), spin: 0 };
   };
@@ -678,6 +697,20 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     : null;
 
   resize?.observe(stage);
+  // A dock that grows (wrapping chips, a font swap) must push the frame up, not cover it.
+  // The first observation only repeats the current height; acting on it would retarget the fly-in.
+  const dockSeen = { h: -1 };
+  const dockResize = typeof ResizeObserver === 'function'
+    ? new ResizeObserver(() => {
+      const h = dock.offsetHeight;
+      const changed = dockSeen.h !== -1 && h !== dockSeen.h;
+
+      dockSeen.h = h;
+      if (changed && st.ready && !st.closed) layout(true);
+    })
+    : null;
+
+  dockResize?.observe(dock);
 
   const finish = (): DarkroomResult => {
     const rect = roundRect(st.rect);
@@ -736,7 +769,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   const cancel = (): void => {
     const startO = orientedSize(st.natural, initialGeometry);
-    const f = fitFrame(rectAspect(startRect, startO), st.stage, PAD);
+    const f = fitFrame(rectAspect(startRect, startO), st.stage, pad());
     const round = roundOf(initialDef.shape);
 
     // The clone starts from this view, so its corners must already match the block.
@@ -780,7 +813,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     // A saved circle that is not square in pixels is squared by its first edit.
     if (r !== null) st.rect = covered(applyRatio(st.rect, r));
     // From the committed rect, not the in-flight spring, so key repeats keep their full distance.
-    const f = fitFrame(rectAspect(st.rect, size), st.stage, PAD);
+    const f = fitFrame(rectAspect(st.rect, size), st.stage, pad());
     const step = (e.shiftKey ? NUDGE_BIG : NUDGE) * f.w;
     const move = dir ? [dir[0] * step, dir[1] * step] : null;
     const centre = { x: f.x + f.w / 2, y: f.y + f.h / 2 };
@@ -849,6 +882,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       gridShow.destroy();
       detachGestures();
       resize?.disconnect();
+      dockResize?.disconnect();
       roving.destroy();
       straightenDial.destroy();
       adjustPanel.destroy();

@@ -304,16 +304,31 @@
   right: 0;
   bottom: 20px;
   z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--blok-space-3);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  row-gap: var(--blok-space-3);
   padding: 0 16px;
   pointer-events: none;
   transition: opacity 120ms ease;
 }
 
 .blok-darkroom__dock > * { pointer-events: auto; }
+
+/* One cell for every panel: the dock is as tall as the tallest, so the frame keeps its place across tabs. */
+.blok-darkroom__dock > .blok-darkroom__panel {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: end;
+}
+
+/* Keeps its box but not its paint, focus or presses. Beats `.blok-darkroom [hidden]`. */
+.blok-darkroom__dock > .blok-darkroom__panel[hidden] {
+  display: flex;
+  visibility: hidden;
+}
+
+.blok-darkroom__dock > .blok-darkroom__tabs { grid-row: 2; }
 
 .blok-darkroom__panel {
   display: flex;

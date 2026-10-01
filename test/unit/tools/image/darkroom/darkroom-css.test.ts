@@ -113,6 +113,19 @@ describe('darkroom.css', () => {
     pillRules.forEach((body) => expect(body).not.toMatch(/position:\s*absolute/));
   });
 
+  it('all tab panels share one dock cell and a hidden one keeps its box, so the frame does not jump between tabs', () => {
+    expect(rule('.blok-darkroom__dock')).toMatch(/display:\s*grid/);
+    const panel = rule('.blok-darkroom__dock > .blok-darkroom__panel');
+
+    expect(panel).toMatch(/grid-row:\s*1/);
+    expect(panel).toMatch(/grid-column:\s*1/);
+    const hidden = rule('.blok-darkroom__dock > .blok-darkroom__panel[hidden]');
+
+    expect(hidden).toMatch(/display:\s*flex/);
+    expect(hidden).toMatch(/visibility:\s*hidden/);
+    expect(rule('.blok-darkroom__dock > .blok-darkroom__tabs')).toMatch(/grid-row:\s*2/);
+  });
+
   describe('outside Crop mode the photo shows as the cropped result', () => {
     // The body of the rule whose selector list names this selector, grouped or not.
     const offCrop = (target: string): string => {

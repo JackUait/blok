@@ -396,3 +396,21 @@ test('switching tabs never grows the frame outline into a screen-wide flash', as
 
   expect(Math.max(...await spreads())).toBeLessThanOrEqual(1.5);
 });
+
+test('the bottom dock never covers the frame, and the frame keeps its place across tabs', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const { dialog } = await openDarkroom(page);
+  const frame = page.locator('[data-role="darkroom-frame"]');
+  const frameBox = await frame.boundingBox();
+  // The bottom handle hangs below the frame edge; it is what the dock used to cover.
+  const handleBox = await page.locator('[data-handle="s"]').boundingBox();
+  const pillBox = await dialog.getByRole('radiogroup', { name: 'Crop shape' }).boundingBox();
+
+  expect(frameBox && handleBox && pillBox).toBeTruthy();
+  if (!frameBox || !handleBox || !pillBox) return;
+  expect(handleBox.y + handleBox.height).toBeLessThanOrEqual(pillBox.y);
+
+  await dialog.getByRole('tab', { name: 'Adjust' }).click();
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
+  expect(await frame.boundingBox()).toStrictEqual(frameBox);
+});

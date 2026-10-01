@@ -1698,3 +1698,36 @@ describe('openDarkroom local resets', () => {
     });
   });
 });
+
+describe('openDarkroom frame room', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stubPopover();
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 1200, 800));
+  });
+
+  afterEach(() => {
+    closers.splice(0).forEach((close) => close());
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  it('fits the frame between the measured top bar and bottom dock, so the dock never covers it', () => {
+    // A tall dock (ratio pill, dial, reset, tabs) and a 60px bar inside an 800px stage.
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function height(this: HTMLElement) {
+      if (this.classList.contains('blok-darkroom__bar')) return 60;
+      if (this.classList.contains('blok-darkroom__dock')) return 300;
+      if (this.classList.contains('blok-darkroom__stage')) return 800;
+
+      return 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(function top(this: HTMLElement) {
+      return this.classList.contains('blok-darkroom__dock') ? 480 : 0;
+    });
+    open();
+    const { frame } = painted();
+
+    expect(frame.y + frame.h).toBeLessThanOrEqual(480);
+    expect(frame.y).toBeGreaterThanOrEqual(60);
+  });
+});

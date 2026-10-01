@@ -696,7 +696,7 @@ export class Toolbar extends Module<ToolbarNodes> {
      *   to prevent overlap with the callout's emoji icon
      *
      * The callout block itself still shows BOTH buttons — the actions container
-     * sits outside the block (positioned via right:100% on the left gutter) and
+     * sits outside the block (positioned via end-full in the inline-start gutter) and
      * does not overlap the emoji which is inside the block at ps-8.
      *
      * Note: when the toolbar resolves to a parent table block from a focused

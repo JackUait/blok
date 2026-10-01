@@ -8248,6 +8248,10 @@ span[data-blok-slash-search] {
   animation: blok-audio-cover-picker-in var(--blok-duration-slow) var(--blok-ease-popover) both;
 }
 
+.blok-audio-cover-picker[dir="rtl"] {
+  transform-origin: top right;
+}
+
 [@media (prefers-reduced-motion: reduce)] .blok-audio-cover-picker {
   animation: none;
 }
@@ -8832,7 +8836,7 @@ span[data-blok-slash-search] {
 [data-blok-tool="embed"] .blok-embed-toolbar {
   position: absolute;
   top: 10px;
-  right: 10px;
+  inset-inline-end: 10px;
   display: inline-flex;
   align-items: center;
   background: var(--blok-overlay-surface);
@@ -9015,7 +9019,7 @@ span[data-blok-slash-search] {
   border-radius: var(--blok-radius-control-sm);
   overflow: hidden;
   opacity: 0;
-  transform: translateX(-4px);
+  transform: translateX(calc(-4px * var(--_blok-inline-sign, 1)));
   transition: max-width .2s ease, margin-inline-start .2s ease, padding .2s ease, opacity .15s ease .05s, transform .2s ease;
 }
 

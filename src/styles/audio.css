@@ -237,6 +237,11 @@
   animation: blok-audio-cover-picker-in var(--blok-duration-slow) var(--blok-ease-popover) both;
 }
 
+/* The picker carries `dir` (syncPortalDirection); in RTL it hangs from the cover's right edge. */
+.blok-audio-cover-picker[dir="rtl"] {
+  transform-origin: top right;
+}
+
 @keyframes blok-audio-cover-picker-in {
   from { opacity: 0; transform: translateY(-6px) scale(0.96); }
   to   { opacity: 1; transform: translateY(0) scale(1); }

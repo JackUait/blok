@@ -270,6 +270,68 @@ for (const direction of DIRECTIONS) {
 
       expect(Math.abs(startGap)).toBeLessThanOrEqual(TOLERANCE);
     });
+    test('the embed hover toolbar sits in the inline-end corner', async ({ page }) => {
+      await createBlok(page, direction, [{
+        type: 'embed',
+        data: { service: 'codepen', source: 'https://codepen.io/team/pen/abc123', embed: 'https://codepen.io/abc123?default-tab=result' },
+      }]);
+      const figure = page.locator('[data-blok-tool="embed"] [data-role="embed-figure"]');
+      const toolbar = page.locator('[data-blok-tool="embed"] [data-role="embed-overlay"]');
+
+      await figure.hover();
+      const [figureBox, toolbarBox] = await Promise.all([rect(figure), rect(toolbar)]);
+      const fromEnd = direction === 'rtl' ? toolbarBox.left - figureBox.left : figureBox.right - toolbarBox.right;
+
+      expect(Math.abs(fromEnd - 10)).toBeLessThanOrEqual(TOLERANCE);
+    });
+
+    test('the embed shortcut hint slides in from the inline start', async ({ page }) => {
+      await createBlok(page, direction, [{ type: 'embed', data: {} }]);
+      const kbd = page.locator('[data-role="embed-url-submit"]').getByText('↵');
+      const shift = (): Promise<number> => kbd.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).e);
+
+      await expect(kbd).toBeAttached();
+
+      expect(await shift()).toBe(direction === 'rtl' ? 4 : -4);
+    });
+
+    test('the audio cover picker grows from the corner on the cover side', async ({ page }) => {
+      await createBlok(page, direction, [{ type: 'audio', data: { url: AUDIO_URL, title: text(direction, 'Song', 'أغنية') } }]);
+      const audio = page.locator('[data-blok-tool="audio"]');
+
+      await audio.locator('[data-role="audio-cover"]').hover();
+      await audio.locator('[data-role="audio-cover-change"]').click();
+      const picker = page.locator('[data-role="audio-cover-picker"]');
+
+      await expect(picker).toBeVisible();
+      const { originX, width } = await picker.evaluate((element) => ({
+        originX: parseFloat(getComputedStyle(element).transformOrigin),
+        width: (element as HTMLElement).offsetWidth,
+      }));
+
+      expect(Math.abs(originX - (direction === 'rtl' ? width : 0))).toBeLessThanOrEqual(TOLERANCE);
+    });
+
+    test('the knocked-off callout emoji tips toward the inline end', async ({ page }) => {
+      await createBlok(page, direction, [{ type: 'callout', data: { emoji: '💡', color: 'default' } }]);
+      const tilt = await page.locator('[data-blok-tool="callout"]').evaluate((element) => {
+        const probe = document.createElement('span');
+
+        probe.style.display = 'inline-block';
+        probe.style.animation = 'blok-callout-emoji-knock-out 1s linear both paused';
+        element.appendChild(probe);
+        probe.getAnimations()[0].currentTime = 999;
+        const { b } = new DOMMatrixReadOnly(getComputedStyle(probe).transform);
+
+        probe.remove();
+
+        return Math.sign(b);
+      });
+
+      // Clockwise (positive) in LTR, counter-clockwise in RTL.
+      expect(tilt).toBe(direction === 'rtl' ? -1 : 1);
+    });
+
     test('the code language picker section label keeps its start padding', async ({ page }) => {
       await page.evaluate(() => {
         localStorage.setItem('blok:code:recent-languages', JSON.stringify(['python', 'rust']));

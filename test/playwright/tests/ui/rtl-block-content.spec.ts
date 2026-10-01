@@ -13,6 +13,22 @@ declare global {
 
 type Direction = 'ltr' | 'rtl';
 
+const TEXT_FIELDS = new Set([ 'text', 'title', 'artist', 'description' ]);
+
+/**
+ * Each block takes its direction from its own text, so an RTL editor must hold
+ * RTL text to lay out RTL. A leading Arabic letter makes the text RTL.
+ */
+const inScript = (blocks: OutputData['blocks'], direction: Direction): OutputData['blocks'] => direction === 'ltr'
+  ? blocks
+  : blocks.map(block => ({
+    ...block,
+    data: Object.fromEntries(Object.entries(block.data).map(([key, value]) => [
+      key,
+      TEXT_FIELDS.has(key) && typeof value === 'string' && value !== '' ? `ع ${value}` : value,
+    ])),
+  }));
+
 const createBlok = async (
   page: Page,
   blocks: OutputData['blocks'],
@@ -42,7 +58,7 @@ const createBlok = async (
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, blokBlocks: blocks, dir: direction, blokStyle: style ?? null });
+  }, { holder: HOLDER_ID, blokBlocks: inScript(blocks, direction), dir: direction, blokStyle: style ?? null });
 };
 
 /**

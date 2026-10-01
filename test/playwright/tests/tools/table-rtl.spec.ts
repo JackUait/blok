@@ -107,6 +107,14 @@ const inlineEndX = (cellBox: Box, direction: Direction): number =>
 
 const center = (b: Box): { x: number; y: number } => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
 
+/**
+ * Arrows follow the caret block's own text direction, so RTL arrow tests need
+ * RTL text in the cells.
+ */
+const cellText = (direction: 'ltr' | 'rtl'): string[][] => direction === 'rtl'
+  ? [['أ', 'ب', 'ج'], ['د', 'ه', 'و']]
+  : [['A', 'B', 'C'], ['D', 'E', 'F']];
+
 test.describe('table in RTL', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -247,7 +255,7 @@ test.describe('table in RTL', () => {
     });
 
     test(`${direction}: the forward arrow at a cell's end moves into the next column`, async ({ page }) => {
-      await createBlok(page, tableData([['A', 'B', 'C'], ['D', 'E', 'F']]), direction);
+      await createBlok(page, tableData(cellText(direction)), direction);
 
       const forward = direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
       const backward = direction === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
@@ -265,7 +273,7 @@ test.describe('table in RTL', () => {
     });
 
     test(`${direction}: Shift+forward arrow at a cell's end extends the selection into the next column`, async ({ page }) => {
-      await createBlok(page, tableData([['A', 'B', 'C'], ['D', 'E', 'F']]), direction);
+      await createBlok(page, tableData(cellText(direction)), direction);
 
       const forward = direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
 

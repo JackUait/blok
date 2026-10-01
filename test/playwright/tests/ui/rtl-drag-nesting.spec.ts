@@ -19,6 +19,16 @@ const BLOCKS: OutputData['blocks'] = [
   { id: 'c', type: 'list', data: { text: 'Mover item', style: 'unordered' } },
 ];
 
+/**
+ * A block takes its direction from its own text, so RTL needs RTL text. An RLM
+ * makes the text RTL without changing its width, which the drop line follows.
+ */
+const RTL_MARK = '\u200F';
+
+const blocksFor = (direction: Direction): OutputData['blocks'] => direction === 'ltr'
+  ? BLOCKS
+  : BLOCKS.map(block => ({ ...block, data: { ...block.data, text: `${RTL_MARK}${String(block.data.text)}` } }));
+
 type DropResult = {
   /** Resolved `left` / `right` of the blue line and of the gray lead-in. */
   line: [string, string];
@@ -41,7 +51,7 @@ const dropAtOffset = async (page: Page, direction: Direction, offset: number): P
 
     await blok.i18n.update({ direction: dir });
     await blok.render({ blocks });
-  }, { dir: direction, blocks: BLOCKS });
+  }, { dir: direction, blocks: blocksFor(direction) });
 
   await page.locator('[data-blok-id="c"]').hover();
 
@@ -90,15 +100,15 @@ const dropAtOffset = async (page: Page, direction: Direction, offset: number): P
   await page.mouse.up();
   await page.waitForFunction(() => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true');
 
-  const saved = await page.evaluate(async () => {
+  const saved = await page.evaluate(async (mark) => {
     const output = await window.blokInstance?.save();
 
     return (output?.blocks ?? []).map((block): [string, number, string | null] => {
       const data = block.data as { text: string; depth?: number };
 
-      return [ data.text, data.depth ?? 0, block.parent ?? null ];
+      return [ data.text.replace(mark, ''), data.depth ?? 0, block.parent ?? null ];
     });
-  });
+  }, RTL_MARK);
 
   return { ...indicator, saved };
 };

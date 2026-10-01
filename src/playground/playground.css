@@ -51,6 +51,37 @@
 }
 .pg-page-header[hidden] { display: none; }
 
+/* Trash banner. Notion paints it red; the playground keeps its neutral chrome. */
+.pg-trash-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 24px;
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--pg-page-line);
+  border-radius: var(--blok-radius-surface);
+  background: var(--pg-page-hover);
+  font-family: var(--pg-font);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--pg-page-ink);
+}
+.pg-trash-banner p { flex: 1 1 auto; margin: 0; }
+.pg-trash-action {
+  padding: 4px 12px;
+  border: 1px solid var(--pg-page-line-strong);
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  font: inherit;
+  font-weight: 500;
+  color: var(--pg-page-ink);
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+.pg-trash-action:hover { border-color: var(--pg-page-ink); }
+.pg-trash-action:focus-visible { outline: 2px solid var(--pg-page-ink); outline-offset: 2px; }
+
 .pg-crumbs ol {
   display: flex;
   flex-wrap: wrap;

@@ -264,6 +264,35 @@ describe('page trash', () => {
     expect(purge).toHaveBeenCalledWith('guide');
   });
 
+  it('every rounded header control carries the radius tokens, but the title does not get the editor resets', () => {
+    const pages = new PageRegistry(seed());
+    const host = document.createElement('header');
+
+    pages.trash('keys');
+    renderPageHeader(host, {
+      pageId: 'keys',
+      pages,
+      search: '',
+      readOnly: false,
+      navigate: vi.fn(),
+      focusEditor: vi.fn(),
+      i18n: vi.fn(),
+      changed: vi.fn(),
+      restore: vi.fn(),
+      purge: vi.fn(),
+    });
+
+    const rounded = [
+      ...host.querySelectorAll('.pg-crumb'),
+      ...host.querySelectorAll('button'),
+      host.querySelector('.pg-trash-banner'),
+    ];
+
+    expect(rounded.length).toBeGreaterThan(4);
+    rounded.forEach((el) => expect(el?.closest('[data-blok-interface]')).not.toBeNull());
+    expect(host.querySelector('h1')?.closest('[data-blok-interface]')).toBeNull();
+  });
+
   it('a page that is not in trash has no banner', () => {
     const pages = new PageRegistry(seed());
     const host = document.createElement('header');

@@ -509,39 +509,6 @@
     .rg-mini__child--on { background: var(--rg-bar); }
     .rg-selection { background: rgba(35, 131, 226, 0.16); }
 
-    /* Trash banner on a page (page-host.ts). Here, not in playground.css: Blok's
-       radius roles are not defined outside the editor. Notion paints it red; the
-       playground keeps its neutral chrome. */
-    .pg-trash-banner {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px 12px;
-      margin: 0 0 24px;
-      padding: 10px 12px 10px 16px;
-      border: 1px solid var(--pg-page-line);
-      border-radius: 12px;
-      background: var(--pg-page-hover);
-      font-family: var(--pg-font);
-      font-size: 14px;
-      line-height: 20px;
-      color: var(--pg-page-ink);
-    }
-    .pg-trash-banner p { flex: 1 1 auto; margin: 0; }
-    .pg-trash-action {
-      padding: 4px 12px;
-      border: 1px solid var(--pg-page-line-strong);
-      border-radius: 8px;
-      background: transparent;
-      font: inherit;
-      font-weight: 500;
-      color: var(--pg-page-ink);
-      cursor: pointer;
-      transition: border-color 120ms ease;
-    }
-    .pg-trash-action:hover { border-color: var(--pg-page-ink); }
-    .pg-trash-action:focus-visible { outline: 2px solid var(--pg-page-ink); outline-offset: 2px; }
-
     /* The --pg-* palette has no dark values; the page takes the dark neutrals here. */
     .dark-mode .rg {
       --pg-ink: #ffffff; --pg-muted: #a8a8a8; --pg-line: #2f2f2f; --pg-line-strong: #3d3d3d;

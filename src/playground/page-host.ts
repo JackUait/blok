@@ -319,6 +319,13 @@ export const pageLinkSelector = (pageId: string): string => {
 
 const ROOT_LABEL = 'Playground';
 
+/**
+ * Blok's radius roles are declared only on [data-blok-interface] elements, so
+ * each rounded header control carries the attribute itself. Never the whole
+ * header: the editor's preflight would then restyle the title h1.
+ */
+const takeRadiusRoles = (el: HTMLElement): void => el.setAttribute('data-blok-interface', 'page-header');
+
 const isPlainClick = (event: MouseEvent): boolean =>
   event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
 
@@ -326,6 +333,7 @@ const crumb = (label: string, icon: string | undefined, href: string | null): HT
   const el = document.createElement(href === null ? 'span' : 'a');
 
   el.className = 'pg-crumb';
+  takeRadiusRoles(el);
   if (href === null) {
     el.setAttribute('aria-current', 'page');
   } else {
@@ -415,6 +423,7 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
   const iconButton = document.createElement('button');
 
   iconButton.type = 'button';
+  takeRadiusRoles(iconButton);
   iconButton.disabled = options.readOnly;
 
   const drawIcon = (): void => {
@@ -514,6 +523,7 @@ const trashBanner = (trashed: PageRecord & { id: string }, pageId: string, optio
   const name = trashed.title.trim() === '' ? 'Untitled' : trashed.title;
 
   banner.className = 'pg-trash-banner';
+  takeRadiusRoles(banner);
   banner.setAttribute('role', 'status');
   text.textContent = trashed.id === pageId
     ? 'This page is in Trash.'

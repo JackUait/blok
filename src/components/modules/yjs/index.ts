@@ -69,7 +69,7 @@ export class YjsManager extends Module {
    * `history.track` callbacks, by key. One per key: tracking a key again
    * replaces its callback.
    */
-  private readonly valueListeners = new Map<string, (value: unknown) => void>();
+  private readonly valueListeners = new Map<string, (value: unknown, source: 'undo' | 'redo' | 'remote') => void>();
 
   /** The values map {@link onValuesChanged} watches; swapped by a lineage reset. */
   private observedValues: Y.Map<unknown> | null = null;
@@ -221,12 +221,17 @@ export class YjsManager extends Module {
   private readonly onValuesChanged = (event: Y.YMapEvent<unknown>): void => {
     const { transaction } = event;
 
-    if (transaction.local && transaction.origin !== this.undoHistory.undoManager) {
+    const { undoManager } = this.undoHistory;
+
+    if (transaction.local && transaction.origin !== undoManager) {
       return;
     }
 
+    const replay = undoManager.redoing ? 'redo' : 'undo';
+    const source = transaction.local ? replay : 'remote';
+
     event.keysChanged.forEach((key: string) => {
-      this.valueListeners.get(key)?.(event.target.get(key));
+      this.valueListeners.get(key)?.(event.target.get(key), source);
     });
   };
 
@@ -876,7 +881,7 @@ export class YjsManager extends Module {
    * @param key - the value's key
    * @param onChange - called when undo, redo or a peer changes the value
    */
-  public trackValue(key: string, onChange: (value: unknown) => void): void {
+  public trackValue(key: string, onChange: (value: unknown, source: 'undo' | 'redo' | 'remote') => void): void {
     this.valueListeners.set(key, onChange);
   }
 

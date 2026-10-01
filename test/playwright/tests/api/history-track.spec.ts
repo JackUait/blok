@@ -13,7 +13,7 @@ const PAST_CAPTURE = 600;
 declare global {
   interface Window {
     blokInstance?: Blok;
-    titleChanges?: Array<string | undefined>;
+    titleChanges?: string[];
   }
 }
 
@@ -52,8 +52,8 @@ const setup = async (page: Page): Promise<void> => {
 
     window.titleChanges = [];
 
-    const tracked = blok.history.track<string>('title', (value) => {
-      window.titleChanges?.push(value);
+    const tracked = blok.history.track<string>('title', (value, { source }) => {
+      window.titleChanges?.push(`${value ?? ''}:${source}`);
       title.textContent = value ?? '';
     });
 
@@ -158,7 +158,6 @@ test.describe('history.track', () => {
 
       const title = document.getElementById('host-title');
       const tracked = blok.history.track<string>('title', (value) => {
-        window.titleChanges?.push(value);
         if (title !== null) {
           title.textContent = value ?? '';
         }
@@ -179,7 +178,7 @@ test.describe('history.track', () => {
     expect(await page.evaluate(() => window.blokInstance?.history.canUndo())).toBe(false);
   });
 
-  test('onChange fires for undo and redo, not for the host\'s own set', async ({ page }) => {
+  test('onChange says whether undo or redo made the change, and stays quiet for the host\'s own set', async ({ page }) => {
     await typeInTitle(page, '!');
     await waitForDelay(page, PAST_CAPTURE);
     expect(await page.evaluate(() => window.titleChanges)).toEqual([]);
@@ -187,6 +186,6 @@ test.describe('history.track', () => {
     await page.keyboard.press(UNDO);
     await page.keyboard.press(REDO);
 
-    await expect.poll(() => page.evaluate(() => window.titleChanges)).toEqual(['Blok', 'Blok!']);
+    await expect.poll(() => page.evaluate(() => window.titleChanges)).toEqual(['Blok:undo', 'Blok!:redo']);
   });
 });

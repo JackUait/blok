@@ -11,6 +11,7 @@ import {
   PageRegistry,
   PointerWatch,
   caretToFirstBlock,
+  replaceTitleText,
   firstBlockKeydown,
   keepPageHeaderAligned,
   pointerBlock,
@@ -1190,5 +1191,48 @@ describe('caretToFirstBlock', () => {
 
     expect(target.caret.setToFirstBlock).toHaveBeenCalledWith('start');
     expect(setCaretAtXPosition).not.toHaveBeenCalled();
+  });
+});
+
+describe('replaceTitleText', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('keeps the caret where it was when a peer changes the title being typed in', () => {
+    const title = document.createElement('h1');
+
+    title.tabIndex = 0;
+    title.textContent = 'Blok';
+    document.body.append(title);
+    title.focus();
+    window.getSelection()?.setPosition(title.firstChild, 2);
+
+    replaceTitleText(title, 'Blok rocks');
+
+    expect(title.textContent).toBe('Blok rocks');
+    expect(window.getSelection()?.anchorNode).toBe(title.firstChild);
+    expect(window.getSelection()?.anchorOffset).toBe(2);
+  });
+
+  it('clamps the caret to a shorter title and leaves focus alone elsewhere', () => {
+    const title = document.createElement('h1');
+    const other = document.createElement('input');
+
+    title.tabIndex = 0;
+    title.textContent = 'Blok rocks';
+    document.body.append(title, other);
+    title.focus();
+    window.getSelection()?.setPosition(title.firstChild, 9);
+
+    replaceTitleText(title, 'Bl');
+
+    expect(window.getSelection()?.anchorOffset).toBe(2);
+
+    other.focus();
+    replaceTitleText(title, 'B');
+
+    expect(title.textContent).toBe('B');
+    expect(other).toHaveFocus();
   });
 });

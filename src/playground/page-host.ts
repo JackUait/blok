@@ -459,6 +459,22 @@ export const firstBlockKeydown = (event: KeyboardEvent, editor: FirstBlockEditor
   return true;
 };
 
+/**
+ * Puts a peer's title into the title element without moving focus. A caret
+ * in the title keeps its offset, clamped to the new text.
+ */
+export const replaceTitleText = (title: HTMLElement, text: string): void => {
+  const selection = window.getSelection();
+  const node = selection?.anchorNode ?? null;
+  const caret = selection !== null && node !== null && title.contains(node) ? selection.anchorOffset : null;
+
+  // No empty text node: the placeholder shows only on :empty.
+  title.replaceChildren(...(text === '' ? [] : [text]));
+  if (caret !== null && title.firstChild !== null) {
+    placeCaret(title.firstChild, Math.min(caret, text.length));
+  }
+};
+
 /** ArrowDown out of the title: the first block's first line, at `x` when known. */
 export const caretToFirstBlock = (
   editor: {

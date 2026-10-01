@@ -42,10 +42,18 @@ export interface History {
    *
    * @param key - names the value; tracking a key again replaces its callback
    * @param onChange - called when undo, redo or a peer changes the value; not
-   *   for the host's own `set`
+   *   for the host's own `set`. `change.source` says which: move focus to the
+   *   value for an undo or redo, never for a peer's change.
    * @returns a handle to read and write the value
    */
-  track<T extends HistoryValueData>(key: string, onChange: (value: T | undefined) => void): HistoryValue<T>;
+  track<T extends HistoryValueData>(key: string, onChange: (value: T | undefined, change: HistoryValueChange) => void): HistoryValue<T>;
+}
+
+/**
+ * What changed a tracked value. See `History.track`.
+ */
+export interface HistoryValueChange {
+  source: 'undo' | 'redo' | 'remote';
 }
 
 /**

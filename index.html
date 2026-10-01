@@ -1376,7 +1376,7 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
-    import { PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
+    import { PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
     // Default import only — the json-as-string vite plugin rewrites JSON
@@ -1772,23 +1772,43 @@
     let titleHistory = null;
 
     function wireTitleHistory(editor) {
-      titleHistory = editor.history.track('title', (value) => {
+      const tracked = editor.history.track('title', (value, { source }) => {
         pages.setTitle(currentPageId, value ?? '');
-        renderHeader();
         const title = document.querySelector(PAGE_TITLE_SELECTOR);
-        if (title === null) return;
-        title.focus();
-        window.getSelection()?.selectAllChildren(title);
+        // A peer's change must not pull the caret out of what this user is typing.
+        if (source === 'remote') {
+          if (title !== null) replaceTitleText(title, value ?? '');
+          updateDocumentTitle();
+          return;
+        }
+        renderHeader();
+        const fresh = document.querySelector(PAGE_TITLE_SELECTOR);
+        if (fresh === null) return;
+        fresh.focus();
+        window.getSelection()?.selectAllChildren(fresh);
         window.getSelection()?.collapseToEnd();
       });
-      const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
-      // A shared document may already carry the title a peer gave it.
-      const shared = titleHistory.get();
-      if (shared === undefined) {
-        titleHistory.set(page?.title ?? '', { record: false });
-      } else if (shared !== page?.title) {
-        pages.setTitle(currentPageId, shared);
-        renderHeader();
+      const seed = () => {
+        if (titleHistory !== null) return;
+        titleHistory = tracked;
+        const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
+        // A shared document may already carry the title a peer gave it.
+        const shared = tracked.get();
+        if (shared === undefined) {
+          tracked.set(page?.title ?? '', { record: false });
+        } else if (shared !== page?.title) {
+          pages.setTitle(currentPageId, shared);
+          renderHeader();
+        }
+      };
+      // A shared document is whole only after its first sync; seeding earlier
+      // would write this tab's saved title over the one peers already have.
+      if (collaborationConfig(editorPageId) === null) {
+        seed();
+      } else {
+        editor.on('collaboration:status', ({ status }) => {
+          if (status === 'connected') seed();
+        });
       }
     }
 

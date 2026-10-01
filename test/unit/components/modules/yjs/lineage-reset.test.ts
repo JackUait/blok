@@ -234,7 +234,7 @@ describe('lineage reset', () => {
       peer.getMap('values').set('title', 'From a peer');
       manager.applyRemoteUpdate(Y.encodeStateAsUpdate(peer), { source: 'peer' });
 
-      expect(onChange).toHaveBeenCalledWith('From a peer');
+      expect(onChange).toHaveBeenCalledWith('From a peer', 'remote');
       expect(manager.getValue('title')).toBe('From a peer');
     });
 

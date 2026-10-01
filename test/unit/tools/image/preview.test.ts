@@ -54,6 +54,13 @@ describe('image toolbox preview', () => {
       'stair',
       'smoke',
       'window-reflection',
+      'tuft',
+      'bush',
+      'bench',
+      'deer',
+      'firefly',
+      'footpath',
+      'sparkle',
     ]));
   });
 
@@ -77,7 +84,7 @@ describe('image toolbox preview', () => {
 describe('image toolbox preview motion', () => {
   const motion = css.slice(css.indexOf('@media (prefers-reduced-motion: no-preference)'));
 
-  it.each([ 'star', 'cloud', 'bird', 'ray', 'shimmer', 'ripple', 'boat', 'flag', 'lamp', 'wing-left', 'wing-right', 'swan', 'smoke' ])(
+  it.each([ 'star', 'cloud', 'bird', 'ray', 'shimmer', 'ripple', 'boat', 'flag', 'lamp', 'wing-left', 'wing-right', 'swan', 'smoke', 'firefly', 'sparkle' ])(
     'animates the %s only when motion is allowed',
     (part) => {
       const rule = new RegExp(`\\[data-blok-preview='image'\\] \\[data-part='${part}'\\][^{]*\\{[^}]*animation:`);

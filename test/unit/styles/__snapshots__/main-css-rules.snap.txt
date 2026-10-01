@@ -10364,7 +10364,7 @@ span[data-blok-slash-search] {
 [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='shimmer'] {
   fill: none;
   stroke: color-mix(in srgb, var(--blok-color-yellow-text) 40%, var(--blok-text-on-dark));
-  stroke-width: 1.6;
+  stroke-width: 1.1;
   stroke-linecap: round;
   opacity: 0.85;
 }
@@ -10408,7 +10408,7 @@ span[data-blok-slash-search] {
 
 [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='lake-deep'] {
   fill: var(--blok-overlay-dark);
-  opacity: 0.22;
+  opacity: 0.08;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='ripple'] {
@@ -10428,7 +10428,7 @@ span[data-blok-slash-search] {
   opacity: 0.35;
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='boat'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='rower'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='pier'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='pine'] {
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='boat'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='bench'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='deer'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='rower'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='pier'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='pine'] {
   fill: color-mix(in srgb, var(--blok-color-purple-text) 20%, var(--blok-overlay-dark));
 }
 
@@ -10548,6 +10548,34 @@ span[data-blok-slash-search] {
   stroke-width: 0.6;
   stroke-linecap: round;
   opacity: 0.4;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='footpath'] {
+  fill: color-mix(in srgb, var(--blok-color-orange-text) 25%, var(--blok-overlay-dark));
+  opacity: 0.6;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='bush'] {
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 34%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='tuft'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-purple-text) 34%, var(--blok-overlay-dark));
+  stroke-width: 0.35;
+  stroke-linecap: round;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='firefly'] {
+  fill: color-mix(in srgb, var(--blok-color-yellow-text) 40%, var(--blok-text-on-dark));
+  opacity: 0.9;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='sparkle'] {
+  fill: none;
+  stroke: var(--blok-text-on-dark);
+  stroke-width: 0.4;
+  stroke-linecap: round;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='caption'] {
@@ -11095,7 +11123,7 @@ span[data-blok-slash-search] {
   animation: blok-preview-media-ken-burns 3.2s var(--blok-preview-ease-out) both;
 }
 
-[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='star'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='shimmer'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='flag'] {
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='star'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='sparkle'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='shimmer'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='flag'] {
   transform-box: fill-box;
   transform-origin: center;
 }
@@ -11127,6 +11155,14 @@ span[data-blok-slash-search] {
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='swan'] {
   animation: blok-preview-media-bob 3.4s ease-in-out -1s infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='sparkle'] {
+  animation: blok-preview-media-twinkle 1.2s ease-in-out calc(var(--i) * -0.4s) infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='firefly'] {
+  animation: blok-preview-media-firefly 4s ease-in-out calc(var(--i) * -0.7s) infinite alternate;
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='smoke'] {

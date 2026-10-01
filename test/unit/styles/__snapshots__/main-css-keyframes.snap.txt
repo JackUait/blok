@@ -497,6 +497,12 @@
   from { opacity: 0 }
 }
 
+@keyframes blok-preview-media-firefly {
+  0% { opacity: 0.2; transform: translate(0, 0) }
+  50% { opacity: 1; transform: translate(1.5px, -2px) }
+  100% { opacity: 0.3; transform: translate(-1px, -3.5px) }
+}
+
 @keyframes blok-preview-media-flicker {
   0%, 40%, 48%, 100% { opacity: 1 }
   44% { opacity: 0.55 }

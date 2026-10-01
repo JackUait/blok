@@ -305,7 +305,7 @@
 [data-blok-tool="embed"] [data-role="embed-caption"] {
   margin-top: var(--blok-space-2);
   outline: none;
-  text-align: left;
+  text-align: start;
   color: var(--blok-text-secondary, inherit);
   font-size: var(--blok-embed-caption-font-size, 0.875em);
 }

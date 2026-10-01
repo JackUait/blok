@@ -12,9 +12,9 @@
   padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
   padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 
-  /* macOS-style scrollbar — thin, rounded, visible on hover/scroll.
-     Reserve its layout space so it never paints over the columns. */
-  scrollbar-gutter: stable;
+  /* No scrollbar-gutter: it only reserves a vertical lane, which this
+     horizontal scroller never needs, and in RTL Chromium it shifts the first
+     column 16px (scrollLeft stuck at -16). */
 }
 /* Standard scrollbar-* properties are Firefox-only: setting them makes
    Chromium ignore the ::-webkit-scrollbar styling below (overlay fallback). */

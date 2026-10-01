@@ -285,6 +285,13 @@ describe('Bookmark tool', () => {
       expect(img?.getAttribute('alt')).toBe('');
     });
 
+    it('lets the title and description follow their own script', () => {
+      const card = renderCard({ url: 'https://example.com/article', title: 'عنوان', description: 'وصف' });
+
+      expect(card.querySelector('[data-role="bookmark-title"]')?.getAttribute('dir')).toBe('auto');
+      expect(card.querySelector('[data-role="bookmark-description"]')?.getAttribute('dir')).toBe('auto');
+    });
+
     it('falls back to the hostname when metadata has no title', () => {
       const card = renderCard({ url: 'https://example.com/article' });
 

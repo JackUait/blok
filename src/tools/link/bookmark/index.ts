@@ -251,6 +251,9 @@ export class Bookmark implements BlockTool {
 
     title.classList.add('blok-bookmark__title');
     title.setAttribute('data-role', 'bookmark-title');
+    // Each line follows its own script: core reads only editable text, so it
+    // never sets a direction for this block.
+    title.setAttribute('dir', 'auto');
     title.textContent = this.data.title ?? this.fallbackTitle();
     content.appendChild(title);
 
@@ -259,6 +262,7 @@ export class Bookmark implements BlockTool {
 
       description.classList.add('blok-bookmark__description');
       description.setAttribute('data-role', 'bookmark-description');
+      description.setAttribute('dir', 'auto');
       description.textContent = this.data.description;
       content.appendChild(description);
     }

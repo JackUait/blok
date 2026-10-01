@@ -1523,6 +1523,8 @@
 
 [@layer base] :where([data-blok-interface]) span[data-latex] {
   transition: background-color 160ms ease-out;
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 [@layer base > @media (prefers-reduced-motion: reduce)] :where([data-blok-interface]) span[data-latex] {
@@ -3537,7 +3539,6 @@ span[data-blok-slash-search] {
 [data-blok-database-board] {
   padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
   padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  scrollbar-gutter: stable;
 }
 
 [@supports not selector(::-webkit-scrollbar)] [data-blok-database-board] {
@@ -9104,7 +9105,7 @@ span[data-blok-slash-search] {
 [data-blok-tool="embed"] [data-role="embed-caption"] {
   margin-top: var(--blok-space-2);
   outline: none;
-  text-align: left;
+  text-align: start;
   color: var(--blok-text-secondary, inherit);
   font-size: var(--blok-embed-caption-font-size, 0.875em);
 }

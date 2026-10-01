@@ -1313,6 +1313,16 @@
 :where([data-blok-nested-blocks]) {
   --blok-block-indent-step: 0px;
 }
+:where( [data-blok-interface=blok][dir="rtl"], [data-blok-interface=blok] [dir="rtl"], [data-blok-popover][dir="rtl"], [data-blok-popover] [dir="rtl"], [data-blok-table-drag-ghost][dir="rtl"], [data-blok-interface=view][dir="rtl"], [data-blok-interface=view] [dir="rtl"] ) {
+  --_blok-inline-sign: -1;
+  --_blok-start-side: right;
+  --_blok-end-side: left;
+}
+:where( [data-blok-interface=blok][dir="ltr"], [data-blok-interface=blok] [dir="ltr"], [data-blok-popover] [dir="ltr"], [data-blok-table-drag-ghost][dir="ltr"], [data-blok-interface=view][dir="ltr"], [data-blok-interface=view] [dir="ltr"] ) {
+  --_blok-inline-sign: 1;
+  --_blok-start-side: left;
+  --_blok-end-side: right;
+}
 [data-list-style] {
   --_blok-list-pad: var(--blok-list-padding-start, 0px);
 }

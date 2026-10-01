@@ -1009,3 +1009,47 @@ test.describe('table in RTL', () => {
     });
   }
 });
+
+// A table takes the direction of the block it sits in. Inside an English
+// toggle in an RTL editor it lays out LTR, so its placement must too.
+test('a table inside an LTR toggle in an RTL editor aligns cells by the table, not the editor', async ({ page }) => {
+  const text = 'Alpha';
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await gotoTestPage(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
+  await createBlok(page, {
+    blocks: [
+      { id: 'tog', type: 'toggle', data: { text: 'English toggle', isOpen: true }, content: [ 't' ] },
+      {
+        id: 't',
+        type: 'table',
+        parent: 'tog',
+        data: { withHeadings: false, content: [ [ { blocks: [ 'c0' ] }, { blocks: [ 'c1' ], placement: 'top-right' } ] ] },
+        content: [ 'c0', 'c1' ],
+      },
+      { id: 'c0', type: 'paragraph', data: { text }, parent: 't' },
+      { id: 'c1', type: 'paragraph', data: { text }, parent: 't' },
+    ],
+  }, 'rtl');
+
+  const sides = await page.evaluate(() => Array.from(document.querySelectorAll('[data-blok-table-cell-blocks]')).map((container) => {
+    const editable = container.querySelector('[contenteditable="true"]');
+
+    if (editable === null) {
+      return null;
+    }
+    const range = document.createRange();
+
+    range.selectNodeContents(editable);
+    const box = container.getBoundingClientRect();
+    const textBox = range.getBoundingClientRect();
+
+    return { left: Math.round(textBox.left - box.left), right: Math.round(box.right - textBox.right) };
+  }));
+
+  // LTR grid: the default cell hugs the left, the "right" cell hugs the right.
+  expect(sides[0]?.left).toBeLessThanOrEqual(2);
+  expect(sides[1]?.right).toBeLessThanOrEqual(2);
+});
+

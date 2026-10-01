@@ -1,4 +1,3 @@
-import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { getElementDirection } from '../../components/utils/direction';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
 
@@ -491,13 +490,8 @@ export class TableRowColDrag {
       this.buildColumnGhost();
     }
 
-    // A row ghost lays its cells out in reading order, like the grid.
+    // Cells lay out and align by the ghost's dir, like the grid's.
     syncPortalDirection(ghost, { source: this.grid });
-    // Cell text-align keys on the editor's data-blok-rtl (tables.css), so the
-    // body-mounted ghost copies that flag, not its own dir.
-    if (this.grid.closest(`[${DATA_ATTR.rtl}="true"]`) !== null) {
-      ghost.setAttribute(DATA_ATTR.rtl, 'true');
-    }
     document.body.appendChild(ghost);
 
     if (sourceRect) {

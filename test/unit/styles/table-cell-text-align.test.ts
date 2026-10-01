@@ -21,23 +21,24 @@ const findRule = (selector: string): { index: number; body: string } | null => {
 };
 
 describe('table cell text alignment', () => {
-  // Physical values keyed on the editor: a block's content carries its own
-  // text's dir, so start/end would follow the text, not the grid.
-  it.each([
-    ['[data-blok-table-cell-blocks]', 'left'],
-    ['[data-blok-rtl="true"] [data-blok-table-cell-blocks]', 'right'],
-  ])('starts every cell at the grid start (%s), so nested tables do not inherit the outer cell', (selector, value) => {
-    expect(findRule(selector)?.body).toMatch(new RegExp(`text-align:\\s*${value}`));
+  // The sides come from the nearest dir above the cell (the table's), not
+  // start/end: each cell paragraph carries the dir of its own text.
+  it('starts every cell at the grid start, so nested tables do not inherit the outer cell', () => {
+    expect(findRule('[data-blok-table-cell-blocks]')?.body).toMatch(/text-align:\s*var\(--_blok-start-side,\s*left\)/);
   });
 
   it.each([
-    ['[data-blok-table-cell-blocks][data-blok-cell-placement$="-center"]', 'center', '[data-blok-rtl="true"] [data-blok-table-cell-blocks]'],
-    ['[data-blok-table-cell-blocks][data-blok-cell-placement$="-right"]', 'right', '[data-blok-rtl="true"] [data-blok-table-cell-blocks]'],
-    ['[data-blok-rtl="true"] [data-blok-table-cell-blocks][data-blok-cell-placement$="-right"]', 'left', '[data-blok-table-cell-blocks][data-blok-cell-placement$="-right"]'],
-  ])('%s aligns to the %s and comes after the rule it must beat', (selector, value, beats) => {
+    ['[data-blok-table-cell-blocks][data-blok-cell-placement$="-center"]', 'center'],
+    ['[data-blok-table-cell-blocks][data-blok-cell-placement$="-right"]', 'var\\(--_blok-end-side,\\s*right\\)'],
+  ])('%s aligns to %s and comes after the grid-start rule', (selector, value) => {
     const rule = findRule(selector);
 
     expect(rule?.body).toMatch(new RegExp(`text-align:\\s*${value}`));
-    expect(rule?.index).toBeGreaterThan(findRule(beats)?.index ?? Infinity);
+    expect(rule?.index).toBeGreaterThan(findRule('[data-blok-table-cell-blocks]')?.index ?? Infinity);
+  });
+
+  it('defines the sides on every dir root, the table drag ghost included', () => {
+    expect(css).toMatch(/\[data-blok-table-drag-ghost\]\[dir="rtl"\][^{]*\{[^}]*--_blok-start-side:\s*right/);
+    expect(css).toMatch(/\[data-blok-table-drag-ghost\]\[dir="ltr"\][^{]*\{[^}]*--_blok-start-side:\s*left/);
   });
 });

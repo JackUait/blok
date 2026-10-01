@@ -549,17 +549,34 @@
  * property inherits, so the NEAREST [dir] wins: a block's own dir beats the
  * editor's. `[dir="rtl"] x` alone would match any RTL ancestor.
  */
+/* The start/end sides ride along for properties that only take physical
+ * keywords in a context whose own dir is not the one that counts (a table's
+ * text-align, where each cell paragraph carries its own dir). */
 :where(
   [data-blok-interface=blok][dir="rtl"],
   [data-blok-interface=blok] [dir="rtl"],
   [data-blok-popover][dir="rtl"],
-  [data-blok-popover] [dir="rtl"]
+  [data-blok-popover] [dir="rtl"],
+  [data-blok-table-drag-ghost][dir="rtl"],
+  [data-blok-interface=view][dir="rtl"],
+  [data-blok-interface=view] [dir="rtl"]
 ) {
   --_blok-inline-sign: -1;
+  --_blok-start-side: right;
+  --_blok-end-side: left;
 }
 
-:where([data-blok-interface=blok] [dir="ltr"], [data-blok-popover] [dir="ltr"]) {
+:where(
+  [data-blok-interface=blok][dir="ltr"],
+  [data-blok-interface=blok] [dir="ltr"],
+  [data-blok-popover] [dir="ltr"],
+  [data-blok-table-drag-ghost][dir="ltr"],
+  [data-blok-interface=view][dir="ltr"],
+  [data-blok-interface=view] [dir="ltr"]
+) {
   --_blok-inline-sign: 1;
+  --_blok-start-side: left;
+  --_blok-end-side: right;
 }
 
 /* A collapsed toggle chevron points toward the inline end. The open state is an

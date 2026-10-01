@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid';
+import { bakeMousePressure } from './freehand';
 import type {
   ImageData,
   ImageMarkup,
@@ -61,6 +62,16 @@ const normaliseRotation = (deg: number): number => {
 
   return q2(r > 180 ? r - 360 : r);
 };
+
+const UNIT: Size = { w: 1, h: 1 };
+const scalePoints = (points: number[], sx: number, sy: number): number[] => {
+  const scale = [sx, sy, 1];
+
+  return points.map((v, i) => v * (scale[i % 3] ?? 1));
+};
+const inPx = (points: number[], o: Size): number[] => scalePoints(points, o.w, o.h);
+const inUnits = (points: number[], o: Size): number[] => scalePoints(points, 1 / o.w, 1 / o.h);
+const quantizePoints = (points: number[]): number[] => points.map((v, i) => (i % 3 === 2 ? q2(v) : q4(v)));
 
 const isStroke = (m: ImageMarkup): m is ImageMarkupStroke => m.type === 'pen' || m.type === 'highlighter';
 const isText = (m: ImageMarkup): m is ImageMarkupText => m.type === 'text';
@@ -306,12 +317,15 @@ const simplify = (points: number[]): number[] => {
 };
 
 /** Quantises a finished mark and simplifies a stroke. Keeps the id. */
-export function commitMarkupItem(item: ImageMarkup): ImageMarkup {
+export function commitMarkupItem(item: ImageMarkup, o: Size = UNIT): ImageMarkup {
   const clean = readItem(item, item.id);
 
   if (clean === null) return item;
+  if (!isStroke(clean)) return clean;
+  // Baked in O px, where render.ts simulates it, so the committed pen keeps its live width.
+  const points = clean.type === 'pen' ? inUnits(bakeMousePressure(inPx(clean.points, o), clean.size * Math.min(o.w, o.h)), o) : clean.points;
 
-  return isStroke(clean) ? { ...clean, points: simplify(clean.points) } : clean;
+  return { ...clean, points: simplify(quantizePoints(points)) };
 }
 
 const shortSide = (o: Size): number => Math.min(o.w, o.h);

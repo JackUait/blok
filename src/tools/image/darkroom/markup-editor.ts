@@ -930,7 +930,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     const size = o();
 
     if (g.kind === 'stroke') {
-      const item = commitMarkupItem(g.item);
+      const item = commitMarkupItem(g.item, size);
 
       cancelFrame();
       commit([...st.markup, item]);

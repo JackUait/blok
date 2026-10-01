@@ -296,7 +296,8 @@ describe('commitMarkupItem', () => {
 
   it('simplifies a straight run of points down to its ends', () => {
     const points = Array.from({ length: 50 }, (_, i) => [0.1 + i * 0.01, 0.3, 0.5]).flat();
-    const out = asStroke(commitMarkupItem(pen({ points })));
+    // A highlighter is not pressure-baked, so this reads RDP alone.
+    const out = asStroke(commitMarkupItem(pen({ type: 'highlighter', points })));
 
     expect(out.points).toEqual([0.1, 0.3, 0.5, 0.59, 0.3, 0.5]);
   });
@@ -305,8 +306,16 @@ describe('commitMarkupItem', () => {
     const corner = [0.1, 0.1, 0.5, 0.3, 0.1, 0.5, 0.5, 0.1, 0.5, 0.5, 0.3, 0.5];
     const ramp = [0.1, 0.1, 0.2, 0.2, 0.1, 0.9, 0.3, 0.1, 0.2];
 
-    expect(asStroke(commitMarkupItem(pen({ points: corner }))).points).toEqual([0.1, 0.1, 0.5, 0.5, 0.1, 0.5, 0.5, 0.3, 0.5]);
+    expect(asStroke(commitMarkupItem(pen({ type: 'highlighter', points: corner }))).points).toEqual([0.1, 0.1, 0.5, 0.5, 0.1, 0.5, 0.5, 0.3, 0.5]);
     expect(asStroke(commitMarkupItem(pen({ points: ramp }))).points).toEqual(ramp);
+  });
+
+  it('keeps a slow mouse stroke as wide as it was drawn after simplifying', () => {
+    const points = Array.from({ length: 50 }, (_, i) => [0.1 + i * 0.001, 0.3, 0.5]).flat();
+    const out = asStroke(commitMarkupItem(pen({ points })));
+    const pressures = out.points.filter((_, i) => i % 3 === 2);
+
+    expect(pressures.at(-1)).toBeGreaterThan(0.6);
   });
 
   it('keeps a single-point stroke', () => {

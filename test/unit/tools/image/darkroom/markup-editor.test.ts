@@ -232,11 +232,11 @@ describe('createMarkupEditor', () => {
       expect(plane.querySelector<SVGElement>('[data-markup-type="pen"]')?.style.opacity).toBe('');
     });
 
-    it('a mouse stroke stores the nominal pressure; a pen stroke stores its own', () => {
+    it('a mouse stroke stores its speed as pressure; a pen stroke stores its own', () => {
       const { layer, onCommit } = setup();
 
       drag(layer, [350, 175], [400, 200]);
-      expect((lastCommit(onCommit)[0] as ImageMarkupStroke).points[2]).toBe(0.5);
+      expect((lastCommit(onCommit)[0] as ImageMarkupStroke).points[2]).not.toBe(0.5);
 
       drag(layer, [350, 175], [400, 200], { pointerType: 'pen', pressure: 0.9, pointerId: 2 });
       expect((lastCommit(onCommit)[1] as ImageMarkupStroke).points[2]).toBe(0.9);

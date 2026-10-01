@@ -88,6 +88,25 @@ describe('createCellPlacementPicker', () => {
     ]);
   });
 
+  it('names each option by the side it shows in an RTL table, where left/right mean start/end', () => {
+    const { element } = createCellPlacementPicker({ i18n: mockI18n, currentPlacement: undefined, onPlacementSelect, direction: 'rtl' });
+    const labelOf = (placement: CellPlacement): string | null =>
+      element.querySelector(`[data-placement="${placement}"]`)?.getAttribute('aria-label') ?? null;
+
+    expect(labelOf('top-left')).toBe('Top right');
+    expect(labelOf('middle-right')).toBe('Middle left');
+    expect(labelOf('bottom-left')).toBe('Bottom right');
+    expect(labelOf('top-center')).toBe('Top center');
+    expect(labelOf('middle-center')).toBe('Center');
+  });
+
+  it('keeps the left/right names in an LTR table', () => {
+    const { element } = createCellPlacementPicker({ i18n: mockI18n, currentPlacement: undefined, onPlacementSelect, direction: 'ltr' });
+
+    expect(element.querySelector('[data-placement="top-left"]')?.getAttribute('aria-label')).toBe('Top left');
+    expect(element.querySelector('[data-placement="bottom-right"]')?.getAttribute('aria-label')).toBe('Bottom right');
+  });
+
   it('uses real buttons, so each option is a keyboard stop inside the popover', () => {
     expect(radios(render(undefined))).toHaveLength(9);
 

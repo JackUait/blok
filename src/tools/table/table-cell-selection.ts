@@ -1444,6 +1444,7 @@ export class TableCellSelection {
 
       const { element: pickerElement } = createCellPlacementPicker({
         i18n: this.i18n,
+        direction: getElementDirection(this.grid),
         currentPlacement,
         onPlacementSelect: (placement: CellPlacement): void => {
           this.onPlacementChange?.([...this.selectedCells], placement);

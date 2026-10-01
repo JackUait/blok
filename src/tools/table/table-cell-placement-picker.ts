@@ -1,9 +1,12 @@
 import type { I18n } from '../../../types/api';
 import { twMerge } from '../../components/utils/tw';
+import type { TextDirection } from '../../components/utils/direction';
 import type { CellPlacement } from './types';
 
 interface PlacementPickerOptions {
   i18n: I18n;
+  /** The table's direction: in RTL, left/right placements show on the right/left. */
+  direction?: TextDirection;
   currentPlacement: CellPlacement | undefined;
   onPlacementSelect: (placement: CellPlacement) => void;
 }
@@ -28,6 +31,19 @@ const I18N_KEYS: Record<CellPlacement, string> = {
   'bottom-left': 'tools.table.placementBottomLeft',
   'bottom-center': 'tools.table.placementBottomCenter',
   'bottom-right': 'tools.table.placementBottomRight',
+};
+
+/** Names an RTL option by the side it shows on, since left/right mean the grid's start/end. */
+const MIRRORED: Record<CellPlacement, CellPlacement> = {
+  'top-left': 'top-right',
+  'top-center': 'top-center',
+  'top-right': 'top-left',
+  'middle-left': 'middle-right',
+  'middle-center': 'middle-center',
+  'middle-right': 'middle-left',
+  'bottom-left': 'bottom-right',
+  'bottom-center': 'bottom-center',
+  'bottom-right': 'bottom-left',
 };
 
 /** Row by row, so option n sits at grid column n % 3, row floor(n / 3). */
@@ -268,7 +284,9 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
     button.type = 'button';
     button.setAttribute('role', 'radio');
     button.setAttribute('data-placement', option.placement);
-    button.setAttribute('aria-label', options.i18n.t(I18N_KEYS[option.placement]));
+    const shown = options.direction === 'rtl' ? MIRRORED[option.placement] : option.placement;
+
+    button.setAttribute('aria-label', options.i18n.t(I18N_KEYS[shown]));
     button.className = twMerge(OPTION_CLASSES);
 
     const glyph = div(GLYPH_CLASSES);

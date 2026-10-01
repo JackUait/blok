@@ -928,34 +928,38 @@ describe('video controls — playback gear menu', () => {
   afterEach(() => { vi.useRealTimers(); h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
 
   const gear = (): HTMLElement => q(h.controls, '[data-action="gear"]');
-  // The menu now lives on the figure (outside the clipped controls overlay), so menu
+  // The menu lives on the figure (outside the clipped controls overlay), so menu
   // elements are queried from h.figure — a superset that still contains the controls.
   const menu = (): HTMLElement => q(h.figure, '[data-role="playback-menu"]');
+  const isOpen = (): boolean => !(menu() as HTMLElement & { hidden: boolean }).hidden;
 
-  it('renders a gear button and a hidden menu', () => {
-    expect(gear().getAttribute('aria-haspopup')).toBe('menu');
+  it('renders a gear button and a hidden settings dialog', () => {
+    // The card holds a slider and a switch, so it is a dialog, not a menu of items.
+    expect(gear().getAttribute('aria-haspopup')).toBe('dialog');
     expect(gear().getAttribute('aria-expanded')).toBe('false');
-    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(true);
+    expect(menu().getAttribute('role')).toBe('dialog');
+    expect(menu().getAttribute('aria-label')).toBe('Settings');
+    expect(isOpen()).toBe(false);
   });
 
   it('opens and closes the menu on gear click', () => {
     gear().click();
-    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(false);
+    expect(isOpen()).toBe(true);
     expect(gear().getAttribute('aria-expanded')).toBe('true');
     gear().click();
-    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(true);
+    expect(isOpen()).toBe(false);
   });
 
   it('closes the menu on an outside mousedown', () => {
     gear().click();
-    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(false);
+    expect(isOpen()).toBe(true);
     document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(true);
+    expect(isOpen()).toBe(false);
   });
 
   it('clicking the video while the menu is open just dismisses it without toggling playback', () => {
     gear().click();
-    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(false);
+    expect(isOpen()).toBe(true);
 
     // Replay the real pointer sequence for a click on the video surface while the
     // menu is open: pointerdown (menu still open) → document mousedown (closes the
@@ -966,207 +970,208 @@ describe('video controls — playback gear menu', () => {
     h.video.dispatchEvent(new Event('pointerup'));
     h.video.click();
 
-    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(true);
+    expect(isOpen()).toBe(false);
     expect(h.video.play).not.toHaveBeenCalled();
   });
 
-  // --- YouTube-style speed slider (readout + −/＋ steppers + continuous slider + presets) ---
+  it('mounts the menu on the figure (outside the clipped controls overlay) so it can overflow a short player', () => {
+    // The controls overlay box is overflow:hidden in the real DOM. A tall card must
+    // live on the figure, or it gets clipped inside a small video.
+    expect(h.figure.contains(menu())).toBe(true);
+    expect(h.controls.contains(menu())).toBe(false);
+  });
+
+  it('shows speed and loop together in one pane — there is no submenu to navigate', () => {
+    expect(menu().querySelector('[data-action="open-speed"]')).toBeNull();
+    expect(menu().querySelector('[data-action="speed-back"]')).toBeNull();
+    expect(menu().hasAttribute('data-view')).toBe(false);
+    expect(menu().querySelectorAll('[inert]')).toHaveLength(0);
+    expect(menu().contains(slider())).toBe(true);
+    expect(menu().contains(readout())).toBe(true);
+    expect(menu().contains(q(h.figure, '[data-action="loop"]'))).toBe(true);
+  });
+
+  it('labels the speed section as a group with a leading gauge icon', () => {
+    const section = q(h.figure, '[data-role="speed-section"]');
+    expect(section.getAttribute('role')).toBe('group');
+    expect(section.getAttribute('aria-label')).toBe('Playback speed');
+    expect(section.querySelector('.blok-video-controls__menu-icon svg')).not.toBeNull();
+  });
+
+  // --- speed: big readout + ruler tape over a native range + segmented presets ---
   const slider = (): HTMLInputElement => q<HTMLInputElement>(h.figure, '[data-role="speed-slider"]');
   const readout = (): HTMLElement => q(h.figure, '[data-role="speed-readout"]');
+  const ruler = (): HTMLElement => q(h.figure, '[data-role="speed-ruler"]');
   const chip = (rate: string): HTMLElement => q(h.figure, `[data-action="speed-${rate}"]`);
   const dragSlider = (value: number): void => {
     const s = slider();
     s.value = String(value);
     s.dispatchEvent(new Event('input', { bubbles: true }));
   };
+  // jsdom has no PointerEvent; a MouseEvent with a pointer type carries clientX.
+  const pointer = (type: string, clientX: number): void => {
+    ruler().dispatchEvent(new MouseEvent(type, { clientX, bubbles: true, cancelable: true }));
+  };
+  // 9px of tape per 0.05× step.
+  const STEP_PX = 9;
 
-  it('replaces the radio list with a continuous 0.05-step speed slider', () => {
-    // No legacy radio rows / speed-option rows remain.
-    expect(menu().querySelectorAll('[role="menuitemradio"]')).toHaveLength(0);
-    expect(menu().querySelectorAll('.blok-video-controls__speed-option')).toHaveLength(0);
+  it('keeps a native 0.05-step range as the keyboard and screen-reader control', () => {
     const s = slider();
     expect(s.type).toBe('range');
     expect(s.min).toBe('0.25');
     expect(s.max).toBe('2');
     expect(s.step).toBe('0.05');
     expect(s.value).toBe('1');
+    expect(s.getAttribute('aria-label')).toBe('Playback speed');
+    expect(ruler().contains(s)).toBe(true);
   });
 
-  it('defaults to 1× in the readout and the main-row value', () => {
+  it('defaults the readout to 1×', () => {
     expect(readout().textContent).toBe('1×');
-    expect(q(h.figure, '[data-role="menu-value-speed"]').textContent).toBe('1×');
   });
 
-  it('dragging the slider sets a fine playbackRate and syncs the readout + main row', () => {
+  it('typing into the range sets a fine playbackRate and syncs the readout', () => {
     dragSlider(1.15);
     expect(h.video.playbackRate).toBe(1.15);
     expect(readout().textContent).toBe('1.15×');
-    expect(q(h.figure, '[data-role="menu-value-speed"]').textContent).toBe('1.15×');
+    expect(slider().getAttribute('aria-valuetext')).toBe('1.15×');
   });
 
-  it('the ＋ / − steppers nudge by 0.05 and clamp (disabled) at the bounds', () => {
-    const inc = q<HTMLButtonElement>(h.figure, '[data-action="speed-inc"]');
-    const dec = q<HTMLButtonElement>(h.figure, '[data-action="speed-dec"]');
-    inc.click();
-    expect(h.video.playbackRate).toBe(1.05);
-    dec.click();
-    dec.click();
-    expect(h.video.playbackRate).toBe(0.95);
-    // top bound
-    dragSlider(2);
-    inc.click();
-    expect(h.video.playbackRate).toBe(2);
-    expect(inc.disabled).toBe(true);
-    // bottom bound
-    dragSlider(0.25);
-    dec.click();
-    expect(h.video.playbackRate).toBe(0.25);
-    expect(dec.disabled).toBe(true);
+  it('parks the tape so the current rate sits under the needle', () => {
+    // --blok-speed-pos counts 0.05 steps from the 0.25× start of the tape.
+    expect(ruler().style.getPropertyValue('--blok-speed-pos')).toBe('15');
+    dragSlider(1.5);
+    expect(ruler().style.getPropertyValue('--blok-speed-pos')).toBe('25');
   });
 
-  it('stepping avoids floating-point drift in the rate and readout', () => {
-    const inc = q<HTMLButtonElement>(h.figure, '[data-action="speed-inc"]');
-    inc.click();
-    inc.click();
-    inc.click();
+  it('draws one tick per 0.05× step and labels the round rates', () => {
+    const ticks = ruler().querySelectorAll('.blok-video-controls__speed-tick');
+    expect(ticks).toHaveLength(36);
+    const labels = Array.from(ruler().querySelectorAll('.blok-video-controls__speed-tick-label')).map((l) => l.textContent);
+    expect(labels).toEqual(['0.5×', '1×', '1.5×', '2×']);
+  });
+
+  it('dragging the tape left speeds up and dragging it right slows down, one step per 9px', () => {
+    pointer('pointerdown', 100);
+    pointer('pointermove', 100 - STEP_PX * 5);
+    expect(h.video.playbackRate).toBe(1.25);
+    expect(readout().textContent).toBe('1.25×');
+    pointer('pointermove', 100 + STEP_PX * 2);
+    expect(h.video.playbackRate).toBe(0.9);
+    pointer('pointerup', 100 + STEP_PX * 2);
+    // Moves after release do nothing.
+    pointer('pointermove', 0);
+    expect(h.video.playbackRate).toBe(0.9);
+  });
+
+  it('a tape drag snaps to whole steps without float drift and clamps at the ends', () => {
+    pointer('pointerdown', 200);
+    pointer('pointermove', 200 - STEP_PX * 3 - 2);
     expect(h.video.playbackRate).toBe(1.15);
     expect(readout().textContent).toBe('1.15×');
+    pointer('pointermove', -2000);
+    expect(h.video.playbackRate).toBe(2);
+    pointer('pointermove', 4000);
+    expect(h.video.playbackRate).toBe(0.25);
+    pointer('pointerup', 4000);
   });
 
-  it('offers the 0.5× / 1× / 1.5× / 2× presets as plain jump buttons — never a selection', () => {
+  it('pressing the tape hands focus to the range so arrow keys carry on from there', () => {
+    pointer('pointerdown', 100);
+    expect(slider()).toHaveFocus();
+    pointer('pointerup', 100);
+  });
+
+  it('a pointer press hides the focus ring until the keyboard takes over', () => {
+    pointer('pointerdown', 100);
+    pointer('pointerup', 100);
+    // Chrome counts the scripted focus as :focus-visible, so the ruler gates the ring itself.
+    expect(ruler().hasAttribute('data-pointer-focus')).toBe(true);
+    slider().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(ruler().hasAttribute('data-pointer-focus')).toBe(false);
+    pointer('pointerdown', 100);
+    slider().dispatchEvent(new FocusEvent('blur'));
+    expect(ruler().hasAttribute('data-pointer-focus')).toBe(false);
+  });
+
+  it('tapping the tape jumps to the rate under the tap', () => {
+    vi.spyOn(ruler(), 'getBoundingClientRect').mockReturnValue({ left: 0, width: 240 } as DOMRect);
+    // The needle sits at the centre (120px); 5 steps to its right is 1.25×.
+    pointer('pointerdown', 120 + STEP_PX * 5);
+    pointer('pointerup', 120 + STEP_PX * 5);
+    expect(h.video.playbackRate).toBe(1.25);
+  });
+
+  it('scrolling over the tape nudges the rate one step per notch and keeps the page still', () => {
+    const wheel = new WheelEvent('wheel', { deltaY: STEP_PX * 2, bubbles: true, cancelable: true });
+    ruler().dispatchEvent(wheel);
+    expect(h.video.playbackRate).toBe(1.1);
+    expect(wheel.defaultPrevented).toBe(true);
+    ruler().dispatchEvent(new WheelEvent('wheel', { deltaX: -STEP_PX, bubbles: true, cancelable: true }));
+    expect(h.video.playbackRate).toBe(1.05);
+  });
+
+  it('offers 0.5× / 1× / 1.5× / 2× presets and marks the one that matches the rate', () => {
     expect(h.figure.querySelectorAll('.blok-video-controls__speed-chip')).toHaveLength(4);
-    ['0.5', '1', '1.5', '2'].forEach((rate) => {
-      const c = chip(rate);
-      expect(c).not.toBeNull();
-      // Presets are shortcuts, not a radio group — no selected/checked semantics.
-      expect(c.getAttribute('role')).not.toBe('radio');
-      expect(c.hasAttribute('aria-checked')).toBe(false);
-    });
-    // The 1× chip reads as plain "1×" — no "Normal" caption.
     expect(chip('1').textContent).toBe('1×');
-    expect(h.figure.querySelector('.blok-video-controls__speed-chip-caption')).toBeNull();
-  });
-
-  it('a preset chip jumps to its exact rate and keeps the pane open, without marking itself selected', () => {
-    gear().click();
-    q(h.figure, '[data-action="open-speed"]').click();
-    expect(menu().getAttribute('data-view')).toBe('speed');
+    expect(chip('1').getAttribute('aria-pressed')).toBe('true');
+    expect(chip('1.5').getAttribute('aria-pressed')).toBe('false');
 
     chip('1.5').click();
     expect(h.video.playbackRate).toBe(1.5);
-    // A preset never lights up as "selected" — it just nudges the slider.
-    expect(chip('1.5').hasAttribute('aria-checked')).toBe(false);
-    // Picking a preset does NOT auto-return — you stay to fine-tune (unlike the old list).
-    expect(menu().getAttribute('data-view')).toBe('speed');
+    expect(chip('1.5').getAttribute('aria-pressed')).toBe('true');
+    expect(chip('1').getAttribute('aria-pressed')).toBe('false');
+
+    // A rate between presets marks none of them.
+    dragSlider(1.15);
+    ['0.5', '1', '1.5', '2'].forEach((rate) => expect(chip(rate).getAttribute('aria-pressed')).toBe('false'));
   });
 
-  it('opens the speed submenu from the main row and navigates back', () => {
-    // The main pane shows a "Playback speed" row carrying the current value.
-    const open = q(h.figure, '[data-action="open-speed"]');
-    expect(open.getAttribute('aria-haspopup')).toBe('menu');
-    expect(q(h.figure, '[data-role="menu-value-speed"]').textContent).toBe('1×');
-
+  it('a preset keeps the card open so the rate can still be fine-tuned', () => {
     gear().click();
-    expect(menu().getAttribute('data-view')).toBe('main');
-    open.click();
-    expect(menu().getAttribute('data-view')).toBe('speed');
-    q(h.figure, '[data-action="speed-back"]').click();
-    expect(menu().getAttribute('data-view')).toBe('main');
+    chip('2').click();
+    expect(isOpen()).toBe(true);
   });
 
-  it('pins the menu scroll position so focus-into-view cannot defeat the slide', () => {
-    gear().click();
-    const m = menu();
-    // The two panes ride a 200%-wide track, so the overflow:hidden menu is
-    // horizontally scrollable. In a real browser, focusing a control that lives
-    // in the off-screen right-half pane (entering the speed submenu, picking a
-    // rate) makes the browser auto-scroll the menu to reveal it — scrollLeft
-    // drifts to a pane width and fights the transform-based slide, leaving the
-    // tall speed pane shoved into view beside the card. The slide must be the
-    // only thing that moves the panes, so the menu pins its scroll to the origin.
-    m.scrollLeft = 210;
-    m.scrollTop = 40;
-    m.dispatchEvent(new Event('scroll'));
-    expect(m.scrollLeft).toBe(0);
-    expect(m.scrollTop).toBe(0);
+  it('the < and > shortcuts move the readout, tape and presets with the rate', () => {
+    const key = (k: string): void => {
+      h.video.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey: true, bubbles: true }));
+    };
+    key('>');
+    expect(h.video.playbackRate).toBe(1.25);
+    expect(readout().textContent).toBe('1.25×');
+    expect(slider().value).toBe('1.25');
+    expect(ruler().style.getPropertyValue('--blok-speed-pos')).toBe('20');
+    key('>');
+    expect(chip('1.5').getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('mounts the menu on the figure (outside the clipped controls overlay) so it can overflow a short player', () => {
-    const m = q(h.figure, '[data-role="playback-menu"]');
-    // The controls overlay box is overflow:hidden in the real DOM (it rounds/clips the
-    // player chrome). A tall speed submenu must therefore live on the figure, not inside
-    // that overlay, or it gets clipped inside a small video instead of spilling outside.
-    expect(h.figure.contains(m)).toBe(true);
-    expect(h.controls.contains(m)).toBe(false);
+  it('a 2× hold leaves the readout on the chosen rate and restores it on release', () => {
+    vi.useFakeTimers();
+    chip('1.5').click();
+    h.video.dispatchEvent(new Event('pointerdown'));
+    vi.advanceTimersByTime(300);
+    expect(h.video.playbackRate).toBe(2);
+    expect(readout().textContent).toBe('1.5×');
+    expect(chip('2').getAttribute('aria-pressed')).toBe('false');
+    h.video.dispatchEvent(new Event('pointerup'));
+    expect(h.video.playbackRate).toBe(1.5);
   });
 
-  it('parks the off-screen pane as inert so its clipped controls leave the tab order', () => {
-    const speedPane = (): HTMLElement => q(h.figure, '[data-role="menu-speed"]');
-    const mainPane = (): HTMLElement => q(h.figure, '[data-role="menu-main"]');
-
-    gear().click();
-    // Main view: the speed pane is parked off-screen (clipped by overflow), so its
-    // rate buttons must be inert — otherwise keyboard/AT users reach invisible rows.
-    expect(menu().getAttribute('data-view')).toBe('main');
-    expect(speedPane().hasAttribute('inert')).toBe(true);
-    expect(mainPane().hasAttribute('inert')).toBe(false);
-
-    // Sliding to the speed view flips which pane is parked.
-    q(h.figure, '[data-action="open-speed"]').click();
-    expect(speedPane().hasAttribute('inert')).toBe(false);
-    expect(mainPane().hasAttribute('inert')).toBe(true);
-  });
-
-  it('sizes the menu to include its own padding + border so the last row is not clipped', () => {
-    // jsdom has no layout engine, so stub the pane content height and the menu's
-    // chrome. The menu is box-sizing: border-box, so height must add the vertical
-    // padding + border on top of the pane's scrollHeight — otherwise the content
-    // box is shorter than the pane and the trailing Loop row gets clipped.
-    const mainPane = q(h.figure, '[data-role="menu-main"]');
-    Object.defineProperty(mainPane, 'scrollHeight', { configurable: true, value: 78 });
-    const realGetComputedStyle = window.getComputedStyle.bind(window);
-    vi.spyOn(window, 'getComputedStyle').mockImplementation((el, pseudo) => {
-      if (el === menu()) {
-        return { paddingTop: '6px', paddingBottom: '6px', borderTopWidth: '1px', borderBottomWidth: '1px' } as CSSStyleDeclaration;
-      }
-      return realGetComputedStyle(el, pseudo ?? undefined);
-    });
-
-    gear().click(); // opens → showView('main')
-    // 78 (pane) + 12 (padding) + 2 (border) = 92
-    expect(menu().style.height).toBe('92px');
-  });
-
-  it('selecting a speed updates the main-row value but stays on the speed view to fine-tune', () => {
-    gear().click();
-    q(h.figure, '[data-action="open-speed"]').click();
-    q(h.figure, '[data-action="speed-1.5"]').click();
-    expect(q(h.figure, '[data-role="menu-value-speed"]').textContent).toBe('1.5×');
-    // The slider is a live-adjust surface — picking a preset no longer slides back.
-    expect(menu().getAttribute('data-view')).toBe('speed');
-  });
-
-  it('reopening the gear resets to the main view', () => {
-    gear().click();
-    q(h.figure, '[data-action="open-speed"]').click();
-    expect(menu().getAttribute('data-view')).toBe('speed');
-    gear().click(); // close
-    gear().click(); // reopen
-    expect(menu().getAttribute('data-view')).toBe('main');
-  });
-
-  it('loop toggles media.loop and reflects the checked state with On/Off text', () => {
+  // --- loop: a real switch ---
+  it('loop is a switch that toggles media.loop', () => {
     const loop = q(h.figure, '[data-action="loop"]');
-    const value = q(h.figure, '[data-role="menu-value-loop"]');
-    expect(h.video.loop).toBe(false);
-    expect(value.textContent).toBe('Off');
+    expect(loop.getAttribute('role')).toBe('switch');
+    expect(loop.getAttribute('aria-checked')).toBe('false');
+    expect(loop.textContent?.trim()).toBe('Loop');
+    expect(loop.querySelector('.blok-video-controls__menu-icon svg')).not.toBeNull();
+    expect(loop.querySelector('.blok-video-controls__switch')).not.toBeNull();
     loop.click();
     expect(h.video.loop).toBe(true);
     expect(loop.getAttribute('aria-checked')).toBe('true');
-    expect(value.textContent).toBe('On');
     loop.click();
     expect(h.video.loop).toBe(false);
-    expect(value.textContent).toBe('Off');
+    expect(loop.getAttribute('aria-checked')).toBe('false');
   });
 
   it('does not offer a sleep timer', () => {
@@ -1177,27 +1182,6 @@ describe('video controls — playback gear menu', () => {
   it('does not offer a stable-volume toggle', () => {
     expect(h.figure.querySelector('[data-action="stable-volume"]')).toBeNull();
     expect(h.figure.textContent).not.toContain('Stable volume');
-  });
-
-  it('releasing a 2× hold restores the menu-selected rate, not 1×', () => {
-    vi.useFakeTimers();
-    q(h.figure, '[data-action="speed-1.5"]').click();
-    expect(h.video.playbackRate).toBe(1.5);
-    h.video.dispatchEvent(new Event('pointerdown'));
-    vi.advanceTimersByTime(300);
-    expect(h.video.playbackRate).toBe(2);
-    h.video.dispatchEvent(new Event('pointerup'));
-    expect(h.video.playbackRate).toBe(1.5);
-  });
-
-  it('renders a leading icon glyph on each main-pane settings row', () => {
-    // Each top-level row carries a leading icon span (speed = gauge, loop = repeat)
-    // so the menu reads as a crafted settings panel rather than a bare text list.
-    const speedRow = q(h.figure, '[data-action="open-speed"]');
-    const loopRow = q(h.figure, '[data-action="loop"]');
-
-    expect(speedRow.querySelector('.blok-video-controls__menu-icon svg')).not.toBeNull();
-    expect(loopRow.querySelector('.blok-video-controls__menu-icon svg')).not.toBeNull();
   });
 });
 
@@ -1218,15 +1202,16 @@ describe('video controls — preset glide animation', () => {
 
   const chip = (rate: string): HTMLElement => q(h.figure, `[data-action="speed-${rate}"]`);
   const slider = (): HTMLInputElement => q<HTMLInputElement>(h.figure, '[data-role="speed-slider"]');
+  const ruler = (): HTMLElement => q(h.figure, '[data-role="speed-ruler"]');
 
-  it('applies the new rate at once but glides the thumb to it from the old position', () => {
+  it('applies the new rate at once but glides the tape to it from the old position', () => {
     chip('2').click();
-    // The rate (and readout) change instantly — only the thumb animates.
+    // The rate changes instantly — only the tape animates.
     expect(h.video.playbackRate).toBe(2);
-    // The glide is scheduled, and the thumb starts back at the prior rate (1×),
-    // not snapped to 2× — proof it travels rather than teleporting.
     expect(raf).toHaveBeenCalled();
+    // The tape starts back at the prior rate (1×), not snapped to 2×.
     expect(Number(slider().value)).toBe(1);
+    expect(ruler().style.getPropertyValue('--blok-speed-pos')).toBe('15');
   });
 
   it('jumps straight to the rate with no animation under prefers-reduced-motion', () => {
@@ -1237,12 +1222,14 @@ describe('video controls — preset glide animation', () => {
     chip('2').click();
     expect(h.video.playbackRate).toBe(2);
     expect(Number(slider().value)).toBe(2);
+    expect(ruler().style.getPropertyValue('--blok-speed-pos')).toBe('35');
     expect(raf).not.toHaveBeenCalled();
   });
 
-  it('does not glide on a small stepper nudge — only presets animate', () => {
+  it('does not glide while the tape is dragged — it follows the pointer', () => {
     raf.mockClear();
-    q(h.figure, '[data-action="speed-inc"]').click();
+    ruler().dispatchEvent(new MouseEvent('pointerdown', { clientX: 100, bubbles: true }));
+    ruler().dispatchEvent(new MouseEvent('pointermove', { clientX: 91, bubbles: true }));
     expect(h.video.playbackRate).toBe(1.05);
     expect(raf).not.toHaveBeenCalled();
   });
@@ -1732,7 +1719,6 @@ describe('video controls — ambient mode', () => {
     expect(h.video.loop).toBe(true);
     const loopRow = q(h.figure, '[data-action="loop"]');
     expect(loopRow.getAttribute('aria-checked')).toBe('true');
-    expect(q(h.figure, '[data-role="menu-value-loop"]').textContent).toBe('On');
   });
 
   it('reflects an explicit glow level on the ambient canvas', () => {

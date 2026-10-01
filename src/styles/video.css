@@ -646,21 +646,24 @@
   animation: blok-video-mute-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* gear settings popover — speed / loop */
+/* gear settings card — speed / loop */
 [data-blok-tool="video"] .blok-video-controls__menu-wrap {
   position: relative;
   flex-shrink: 0;
 }
-/* Frosted-glass settings card: a fixed-width pane whose height tweens between
-   views (set inline from JS), with a horizontal track that slides the main pane
-   out and the speed submenu in. The hairline border + saturated blur give it a
-   floating-glass edge that lifts it off the video. */
+/* Frosted-glass settings card: one pane. The hairline border + saturated blur give
+   it a floating-glass edge that lifts it off the video. */
 [data-blok-tool="video"] .blok-video-controls__menu {
   position: absolute;
   /* right/bottom set from JS (anchored to the gear); sits on the figure, outside the
      media overflow clip, so it can spill out of a short player. */
-  width: 224px;
+  display: flex;
+  flex-direction: column;
+  width: 264px;
+  max-width: calc(100vw - 2 * var(--blok-space-3));
+  box-sizing: border-box;
   overflow: hidden;
+  isolation: isolate;
   padding: var(--blok-space-1-5);
   border: 1px solid var(--blok-video-menu-border);
   border-radius: var(--blok-radius-surface);
@@ -669,12 +672,10 @@
   color: var(--blok-video-control-fg);
   /* The gear's corner: bottom right, bottom left in RTL. */
   transform-origin: calc(50% + 50% * var(--_blok-inline-sign, 1)) bottom;
-  transition: height 320ms cubic-bezier(0.2, 0.85, 0.25, 1);
   z-index: 3;
 }
 /* Frosted glass lives on a ::before so it is NOT on the same box as overflow: hidden —
-   backdrop-filter on the clipping element makes it drop the clip (a compositing
-   quirk), which leaked the off-screen speed pane beside the card. */
+   backdrop-filter on the clipping element makes it drop the clip (a compositing quirk). */
 [data-blok-tool="video"] .blok-video-controls__menu::before {
   content: "";
   position: absolute;
@@ -685,64 +686,50 @@
   -webkit-backdrop-filter: blur(22px) saturate(1.6);
   backdrop-filter: blur(22px) saturate(1.6);
 }
+/* A soft top sheen, so the card reads as lit glass rather than a flat slab. */
+[data-blok-tool="video"] .blok-video-controls__menu::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(180deg, var(--blok-video-menu-border), transparent 45%);
+  pointer-events: none;
+}
 [data-blok-tool="video"] .blok-video-controls__menu[hidden] { display: none; }
 @keyframes blok-video-menu-in {
   from { opacity: 0; transform: translateY(8px) scale(0.94); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-/* each speed row lifts into place — drives the staggered cascade on submenu entry.
-   Transform-only: the pane cross-fade (below) owns the opacity, so rows stay visible
-   and merely settle up — no fade-stacked-on-fade that left late rows pouring into an
-   already-full card. */
+/* each section lifts into place after the card pops — transform only, so the card's
+   own fade owns the opacity. */
 @keyframes blok-video-menu-rise {
   from { transform: translateY(10px); }
   to   { transform: translateY(0); }
 }
-/* Entrance is motion only — honour reduced-motion by dropping the animation. */
 @media (prefers-reduced-motion: no-preference) {
   [data-blok-tool="video"] .blok-video-controls__menu {
-    animation: blok-video-menu-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: blok-video-menu-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
+  /* `backwards` holds the lowered position through the delay, then frees the
+     transform so each row's press-scale still works. */
+  [data-blok-tool="video"] .blok-video-controls__speed-section > *,
+  [data-blok-tool="video"] .blok-video-controls__menu > .blok-video-controls__menu-row {
+    animation: blok-video-menu-rise 320ms cubic-bezier(0.2, 0.85, 0.25, 1) backwards;
+  }
+  [data-blok-tool="video"] .blok-video-controls__speed-section > :nth-child(2) { animation-delay: 30ms; }
+  [data-blok-tool="video"] .blok-video-controls__speed-section > :nth-child(3) { animation-delay: 60ms; }
+  [data-blok-tool="video"] .blok-video-controls__speed-section > :nth-child(4) { animation-delay: 90ms; }
+  [data-blok-tool="video"] .blok-video-controls__menu > .blok-video-controls__menu-row { animation-delay: 120ms; }
 }
 
-/* the two panes ride a 200%-wide flex track; data-view slides it sideways */
-[data-blok-tool="video"] .blok-video-controls__menu-track {
-  display: flex;
-  align-items: flex-start;
-  width: 200%;
-  /* Spring curve (control-point y > 1) overshoots the slide a touch, so the panes
-     land with a gentle settle instead of snapping flat to a stop. */
-  transition: transform 320ms cubic-bezier(0.32, 1.12, 0.4, 1);
-}
-[data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] .blok-video-controls__menu-track {
-  /* RTL lays the speed pane out to the left, so the track slides right. */
-  transform: translateX(calc(-50% * var(--_blok-inline-sign, 1)));
-}
-[data-blok-tool="video"] .blok-video-controls__menu-pane {
-  flex: 0 0 50%;
-  display: flex;
-  flex-direction: column;
-  /* Each pane recedes (shrinks + fades back) as it parks and pushes forward (grows
-     in) as it enters, so the view-switch reads as a layered depth swap rather than a
-     flat sideways slide. Opacity runs quicker than the transform so the outgoing pane
-     clears the seam before the slide settles — no double-stack of text mid-slide. */
-  opacity: 1;
-  transform: scale(1);
-  transition: opacity 200ms ease, transform 320ms cubic-bezier(0.32, 1.12, 0.4, 1);
-}
-[data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-main"],
-[data-blok-tool="video"] .blok-video-controls__menu[data-view="main"] [data-role="menu-speed"] {
-  opacity: 0;
-  transform: scale(0.92);
-}
-
-/* a single tappable row — leading glyph + label left, value/chevron right */
+/* a single tappable row — leading glyph + label, trailing control */
 [data-blok-tool="video"] .blok-video-controls__menu-row {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-2);
+  gap: var(--blok-space-2-5);
   width: 100%;
-  min-height: 34px;
+  min-height: 36px;
   padding: var(--blok-space-1-5) var(--blok-space-2-5);
   border: 0;
   border-radius: var(--blok-radius-inner, var(--blok-radius-control));
@@ -755,9 +742,7 @@
   transition: background 120ms ease, transform 120ms ease;
 }
 [data-blok-tool="video"] .blok-video-controls__menu-row:hover { background: var(--blok-video-control-bg-hover); }
-[data-blok-tool="video"] .blok-video-controls__menu-row:hover .blok-video-controls__menu-icon,
-[data-blok-tool="video"] .blok-video-controls__menu-row:hover .blok-video-controls__menu-value,
-[data-blok-tool="video"] .blok-video-controls__menu-row:hover .blok-video-controls__menu-chevron {
+[data-blok-tool="video"] .blok-video-controls__menu-row:hover .blok-video-controls__menu-icon {
   color: var(--blok-video-control-fg);
 }
 [data-blok-tool="video"] .blok-video-controls__menu-row:active { transform: scale(0.985); }
@@ -766,7 +751,6 @@
   background: var(--blok-video-control-bg-hover);
   box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
 }
-/* leading glyph — a scannable icon per setting; dims at rest, lifts on hover */
 [data-blok-tool="video"] .blok-video-controls__menu-icon {
   display: grid;
   place-items: center;
@@ -781,145 +765,214 @@
   flex: 1 1 auto;
   min-width: 0;
 }
-/* current-value hint on the right of a main row (e.g. "Normal", "On") */
-[data-blok-tool="video"] .blok-video-controls__menu-value {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: var(--blok-video-menu-value-fg);
-  font-variant-numeric: tabular-nums;
-  transition: color 120ms ease;
+[data-blok-tool="video"] .blok-video-controls__menu-divider {
+  height: 1px;
+  margin: var(--blok-space-1-5) var(--blok-space-2-5);
+  background: var(--blok-video-menu-border);
 }
-[data-blok-tool="video"] .blok-video-controls__menu-chevron {
-  display: grid;
-  place-items: center;
+
+/* Loop switch: on = bright track with a dark knob. White, never blue. */
+[data-blok-tool="video"] .blok-video-controls__switch {
+  position: relative;
   flex-shrink: 0;
+  width: 30px;
+  height: 18px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-track);
+  transition: background 200ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
   width: 14px;
   height: 14px;
-  margin-inline-end: calc(-1 * var(--blok-space-1));
-  color: var(--blok-video-menu-icon);
-  transition: color 120ms ease;
+  border-radius: inherit;
+  background: var(--blok-video-thumb);
+  box-shadow: var(--blok-video-thumb-shadow);
+  /* Spring curve: the knob overshoots a touch and settles. */
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), background 200ms ease;
 }
-[data-blok-tool="video"] .blok-video-controls__menu-chevron svg { width: 14px; height: 14px; }
-/* › opens and ‹ goes back: both mirror in RTL. */
-[dir="rtl"] [data-blok-tool="video"] .blok-video-controls__menu-chevron svg { transform: scaleX(var(--_blok-inline-sign, 1)); }
-
-/* speed submenu back header — set apart by weight + spacing; no border-radius override
-   so its hover stays a rounded pill, not a squared-off full-width band. */
-[data-blok-tool="video"] .blok-video-controls__menu-back {
-  margin-bottom: var(--blok-space-1-5);
-  padding-inline-start: var(--blok-space-1);
-  font-weight: 600;
+[data-blok-tool="video"] .blok-video-controls__menu-row[aria-checked="true"] .blok-video-controls__switch {
+  background: var(--blok-video-accent);
 }
-[data-blok-tool="video"] .blok-video-controls__menu-back .blok-video-controls__menu-chevron { margin-inline-end: 0; }
+[data-blok-tool="video"] .blok-video-controls__menu-row[aria-checked="true"] .blok-video-controls__switch::after {
+  background: var(--blok-video-stage);
+  /* The knob travels in the reading direction. */
+  transform: translateX(calc(12px * var(--_blok-inline-sign, 1)));
+}
+[dir="rtl"] [data-blok-tool="video"] .blok-video-controls__switch::after { left: auto; right: 2px; }
+@keyframes blok-video-loop-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+/* Switching loop on spins its glyph once. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-blok-tool="video"] .blok-video-controls__menu-row[aria-checked="true"] .blok-video-controls__menu-icon svg {
+    animation: blok-video-loop-spin 520ms cubic-bezier(0.2, 0.85, 0.25, 1);
+  }
+}
 
-/* ===== Notion-style speed control: quiet readout + flat steppers + segmented presets ===== */
-/* The live value, stated calmly (Notion never shouts a number); tabular so the card
-   width doesn't jitter as digits change. */
+/* ===== speed: header, big readout, ruler tape, presets ===== */
+[data-blok-tool="video"] .blok-video-controls__speed-section {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--blok-space-1-5);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-head {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  padding: 0 var(--blok-space-2-5);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--blok-video-menu-value-fg);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-head .blok-video-controls__menu-icon,
+[data-blok-tool="video"] .blok-video-controls__speed-head .blok-video-controls__menu-icon svg {
+  width: 16px;
+  height: 16px;
+  color: inherit;
+}
+/* The live value: large and tabular, so the digits don't jitter as they change. */
 [data-blok-tool="video"] .blok-video-controls__speed-readout {
-  margin: var(--blok-space-1) 0 var(--blok-space-2);
-  font-size: 15px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px;
+  margin: var(--blok-space-2-5) 0 var(--blok-space-1);
+  font-size: 38px;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: -0.01em;
-  text-align: center;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   color: var(--blok-video-control-fg);
 }
-
-/* − [slider] ＋ — flat icon steppers (no filled discs) flank a flexible track */
-[data-blok-tool="video"] .blok-video-controls__speed-slider-row {
-  display: flex;
-  align-items: center;
-  gap: var(--blok-space-1-5);
-  padding: 0;
+[data-blok-tool="video"] .blok-video-controls__speed-readout-unit {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--blok-video-menu-value-fg);
 }
-[data-blok-tool="video"] .blok-video-controls__speed-step {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 26px;
+
+/* The ruler: a tape that slides under a fixed needle. --blok-speed-pos (from JS)
+   is the number of 0.05× steps from the start; --blok-speed-step-px is the tick gap. */
+[data-blok-tool="video"] .blok-video-controls__speed-ruler {
+  position: relative;
+  height: 46px;
+  margin: 0 calc(-1 * var(--blok-space-1-5));
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-ruler[data-dragging="true"] { cursor: grabbing; }
+[data-blok-tool="video"] .blok-video-controls__speed-tape {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(calc(var(--blok-speed-pos, 15) * var(--blok-speed-step-px) * -1));
+  will-change: transform;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-tick {
+  position: absolute;
+  bottom: 20px;
+  left: calc(var(--blok-speed-tick) * var(--blok-speed-step-px));
+  width: 1.5px;
+  height: 8px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-track);
+  transform: translateX(-50%);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-tick.is-major {
+  height: 14px;
+  background: var(--blok-video-menu-value-fg);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-tick-label {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--blok-video-menu-value-fg);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-needle {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  width: 2px;
   height: 26px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
-  background: transparent;
-  color: var(--blok-video-menu-icon);
-  cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, transform 120ms ease, opacity 120ms ease;
+  margin-left: -1px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-accent);
+  box-shadow: 0 0 10px var(--blok-video-buffered);
+  pointer-events: none;
+  transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-[data-blok-tool="video"] .blok-video-controls__speed-step:hover {
-  background: var(--blok-video-control-bg-hover);
-  color: var(--blok-video-control-fg);
+[data-blok-tool="video"] .blok-video-controls__speed-needle::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-accent);
 }
-[data-blok-tool="video"] .blok-video-controls__speed-step:active { transform: scale(0.92); }
-[data-blok-tool="video"] .blok-video-controls__speed-step:disabled { opacity: 0.3; cursor: default; transform: none; }
-[data-blok-tool="video"] .blok-video-controls__speed-step:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 1.5px var(--blok-video-focus-ring);
+[data-blok-tool="video"] .blok-video-controls__speed-ruler[data-dragging="true"] .blok-video-controls__speed-needle {
+  transform: scaleY(1.12);
 }
-[data-blok-tool="video"] .blok-video-controls__speed-step svg { width: 16px; height: 16px; }
-
-/* the continuous slider — a thin white elapsed fill + small knob on a faint track.
-   The fill gradient is JS-driven via --blok-speed-pct, exactly like the volume slider. */
+/* The real range: invisible, covering the ruler, keyboard-only. Pointer input goes
+   to the ruler (pointer-events: none here). The needle rings only after keyboard use. */
 [data-blok-tool="video"] .blok-video-controls__speed-slider {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: 3px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   margin: 0;
   -webkit-appearance: none;
   appearance: none;
-  background: linear-gradient(
-    to right,
-    var(--blok-video-accent) var(--blok-speed-pct),
-    var(--blok-video-track) var(--blok-speed-pct)
-  );
-  border-radius: var(--blok-radius-pill);
-  cursor: pointer;
+  background: transparent;
+  pointer-events: none;
 }
 [data-blok-tool="video"] .blok-video-controls__speed-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-video-thumb);
-  box-shadow: var(--blok-video-thumb-shadow);
-  transition: transform 120ms ease;
+  width: 0;
+  height: 0;
 }
 [data-blok-tool="video"] .blok-video-controls__speed-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 0;
+  height: 0;
   border: 0;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-video-thumb);
-  box-shadow: var(--blok-video-thumb-shadow);
 }
-[data-blok-tool="video"] .blok-video-controls__speed-slider:active::-webkit-slider-thumb { transform: scale(1.2); }
-[data-blok-tool="video"] .blok-video-controls__speed-slider:focus-visible { outline: none; }
-[data-blok-tool="video"] .blok-video-controls__speed-slider:focus-visible::-webkit-slider-thumb {
-  box-shadow: var(--blok-video-thumb-shadow), 0 0 0 4px var(--blok-video-focus-ring);
+[data-blok-tool="video"] .blok-video-controls__speed-slider:focus { outline: none; }
+[data-blok-tool="video"] .blok-video-controls__speed-ruler:not([data-pointer-focus]) .blok-video-controls__speed-slider:focus-visible ~ .blok-video-controls__speed-needle {
+  box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
 }
 
-/* preset rates float on the frosted glass like the menu rows — no filled track, no
-   raised card (those read as a foreign block against the airy list). Inactive labels
-   are muted; the active rate fills with the same subtle tint a row gets on hover. */
+/* presets: a segmented bar on a faint well. The pressed one gets the hover gray. */
 [data-blok-tool="video"] .blok-video-controls__speed-chips {
   display: flex;
-  gap: var(--blok-space-1);
-  margin-top: var(--blok-space-2-5);
+  gap: var(--blok-space-0-5);
+  margin-top: var(--blok-space-1-5);
+  padding: var(--blok-space-0-5);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1-5) - var(--blok-space-0-5)));
+  background: var(--blok-video-menu-row-active);
 }
 [data-blok-tool="video"] .blok-video-controls__speed-chip {
-  display: flex;
   flex: 1 1 0;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--blok-space-0-5);
   min-width: 0;
-  min-height: 30px;
-  padding: var(--blok-space-1);
+  min-height: 28px;
+  padding: 0 var(--blok-space-1);
   border: 0;
   border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   background: transparent;
@@ -928,9 +981,12 @@
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+  transition: background 160ms ease, color 160ms ease, transform 120ms ease;
 }
 [data-blok-tool="video"] .blok-video-controls__speed-chip:hover {
+  color: var(--blok-video-control-fg);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-chip[aria-pressed="true"] {
   background: var(--blok-video-control-bg-hover);
   color: var(--blok-video-control-fg);
 }
@@ -938,20 +994,6 @@
 [data-blok-tool="video"] .blok-video-controls__speed-chip:focus-visible {
   outline: none;
   box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
-}
-
-/* Entering the speed submenu: the sections (back header → readout → slider → chips)
-   settle up in sequence as the card grows, instead of snapping in as one rigid block.
-   `backwards` holds the lowered position through the delay, then frees the transform so
-   each section's press-scale still works. The stagger is tight so the last section lands
-   as the height tween settles. Reduced-motion keeps the plain slide. */
-@media (prefers-reduced-motion: no-preference) {
-  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > * {
-    animation: blok-video-menu-rise 300ms cubic-bezier(0.2, 0.85, 0.25, 1) backwards;
-  }
-  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > :nth-child(2) { animation-delay: 45ms; }
-  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > :nth-child(3) { animation-delay: 90ms; }
-  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > :nth-child(4) { animation-delay: 135ms; }
 }
 
 /* view-mode + gear toggles read as selected when active: a filled pill + accent tint */

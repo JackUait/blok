@@ -210,7 +210,7 @@ for (const direction of DIRECTIONS) {
       )).toBe(direction);
     });
 
-    test('the video settings menu opens over the player and its speed pane shows', async ({ page }) => {
+    test('the video settings menu opens over the player with its speed ruler inside', async ({ page }) => {
       const caption = text(direction, 'My clip', 'مقطع فيديو');
 
       await createBlok(page, direction, [
@@ -236,15 +236,17 @@ for (const direction of DIRECTIONS) {
 
       expect(Math.abs(anchored)).toBeLessThanOrEqual(TOLERANCE);
 
-      await menu.locator('[data-action="open-speed"]').click();
-      await expect(menu).toHaveAttribute('data-view', 'speed');
-      await settle(menu);
+      // The tape is pinned LTR in both directions; its needle marks the card's centre.
+      const ruler = menu.locator('[data-role="speed-ruler"]');
 
-      const speedPane = await rect(menu.locator('[data-role="menu-speed"]'));
-      const shown = await rect(menu);
+      await expect(ruler).toHaveAttribute('dir', 'ltr');
 
-      expect(Math.abs(speedPane.left - shown.left)).toBeLessThanOrEqual(8);
-      expect(Math.abs(speedPane.right - shown.right)).toBeLessThanOrEqual(8);
+      const rulerBox = await rect(ruler);
+      const needle = await rect(ruler.locator('[data-role="speed-needle"]'));
+
+      expect(rulerBox.left).toBeGreaterThanOrEqual(menuBox.left - 1);
+      expect(rulerBox.right).toBeLessThanOrEqual(menuBox.right + 1);
+      expect(Math.abs((needle.left + needle.right) / 2 - (menuBox.left + menuBox.right) / 2)).toBeLessThanOrEqual(TOLERANCE);
     });
 
     test('the audio speed menu grows from the gear toward the inline end', async ({ page }) => {

@@ -131,7 +131,7 @@ export class BlockHoverController extends Controller {
        * two sets of block controls at once.
        */
       if (closestBlockWrapper && this.belongsToAnotherEditor(closestBlockWrapper)) {
-        this.yieldHoverToOtherEditor();
+        this.releaseHover();
 
         return;
       }
@@ -170,12 +170,27 @@ export class BlockHoverController extends Controller {
          * the pointer is closest to — only that one runs nearest-block detection.
          */
         if (!this.isNearestEditorToPointer(event.clientX, event.clientY)) {
-          this.yieldHoverToOtherEditor();
+          this.releaseHover();
 
           return;
         }
 
-        this.emitNearestBlockHoveredInZone(event.clientX, event.clientY);
+        /**
+         * The pointer left the editor: drop the controls instead of parking
+         * them on the nearest block. A held button means a drag gesture
+         * crossed the edge — closing would cut it.
+         */
+        const isAway = !this.isWithinHoverZone(event.clientX, event.clientY);
+
+        if (isAway && event.buttons === 0) {
+          this.releaseHover();
+        }
+
+        if (isAway) {
+          return;
+        }
+
+        this.emitNearestBlockHovered(event.clientX, event.clientY);
 
         return;
       }
@@ -260,12 +275,22 @@ export class BlockHoverController extends Controller {
   }
 
   /**
-   * Emits a BlockHovered event for the nearest block, but only if the cursor
-   * is within the extended hover zone (HOVER_ZONE_SIZE px from content edges).
+   * Whether the cursor is in the extended hover zone: within the editor's
+   * height, and within HOVER_ZONE_SIZE px of the content column's sides.
+   * The sides use the content column, not the wrapper, so a wrapper tight
+   * around the content cannot hide the controls on the way to the plus button.
    * @param clientX - Cursor X position
    * @param clientY - Cursor Y position
    */
-  private emitNearestBlockHoveredInZone(clientX: number, clientY: number): void {
+  private isWithinHoverZone(clientX: number, clientY: number): boolean {
+    if (this.wrapperElement !== null) {
+      const wrapperRect = this.wrapperElement.getBoundingClientRect();
+
+      if (clientY < wrapperRect.top || clientY > wrapperRect.bottom) {
+        return false;
+      }
+    }
+
     const blocks = this.Blok.BlockManager.blocks;
     /**
      * Only the ZONE ANCHOR must be a top-level block — its content element
@@ -278,15 +303,13 @@ export class BlockHoverController extends Controller {
     );
 
     if (topLevelBlocks.length === 0) {
-      return;
+      return false;
     }
 
     const contentEl = topLevelBlocks[0].holder.querySelector<HTMLElement>('[data-blok-element-content]');
 
     if (!contentEl) {
-      this.emitNearestBlockHovered(clientX, clientY);
-
-      return;
+      return true;
     }
 
     const contentRect = contentEl.getBoundingClientRect();
@@ -297,12 +320,8 @@ export class BlockHoverController extends Controller {
      * cursors inside a column wider than 2×HOVER_ZONE_SIZE (e.g. hovering
      * below all blocks at the column's horizontal center).
      */
-    const withinZone = clientX >= contentRect.left - BlockHoverController.HOVER_ZONE_SIZE
+    return clientX >= contentRect.left - BlockHoverController.HOVER_ZONE_SIZE
       && clientX <= contentRect.right + BlockHoverController.HOVER_ZONE_SIZE;
-
-    if (withinZone) {
-      this.emitNearestBlockHovered(clientX, clientY);
-    }
   }
 
   /**
@@ -447,11 +466,11 @@ export class BlockHoverController extends Controller {
   }
 
   /**
-   * Hand the pointer over to another editor: drop this editor's block controls
-   * so only one set is visible on the page. Menus the user opened here stay put
-   * — moving the pointer away must not dismiss them.
+   * The pointer no longer belongs to this editor (it left it, or another
+   * editor owns it): drop the block controls. Menus the user opened here stay
+   * put — moving the pointer away must not dismiss them.
    */
-  private yieldHoverToOtherEditor(): void {
+  private releaseHover(): void {
     this.blockHoveredState.lastHoveredBlockId = null;
 
     const { Toolbar, BlockSettings, InlineToolbar, DragManager } = this.Blok;
@@ -462,7 +481,7 @@ export class BlockHoverController extends Controller {
 
     /**
      * A menu the user opened here, or a drag in flight, outranks the pointer:
-     * walking over a sibling editor must not dismiss them.
+     * walking away must not dismiss them.
      */
     const isBusy = BlockSettings.opened
       || BlockSettings.isOpening

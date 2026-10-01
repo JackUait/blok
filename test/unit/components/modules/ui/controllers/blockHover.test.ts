@@ -466,6 +466,102 @@ describe('BlockHoverController', () => {
 
       expect(eventsDispatcher.emit).not.toHaveBeenCalled();
     });
+
+    describe('pointer away from the editor', () => {
+      const createWrapper = (top: number, bottom: number): HTMLElement => {
+        const wrapper = document.createElement('div');
+
+        vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
+          left: 0,
+          right: 900,
+          top,
+          bottom,
+          width: 900,
+          height: bottom - top,
+          x: 0,
+          y: top,
+          toJSON: () => ({}),
+        });
+        document.body.appendChild(wrapper);
+
+        return wrapper;
+      };
+
+      const setUp = (): ReturnType<typeof createBlockHoverController> & { block: Block } => {
+        const setup = createBlockHoverController();
+        const block = createMockBlockWithContent('block-1', 300, 338, 200, 700);
+
+        setup.controller.setWrapperElement(createWrapper(250, 800));
+        (setup.controller as unknown as { enable: () => void }).enable();
+        (setup.blok.BlockManager as { blocks: typeof setup.blok.BlockManager.blocks }).blocks = [block];
+        (setup.blok.Toolbar as unknown as { opened: boolean }).opened = true;
+
+        return { ...setup, block };
+      };
+
+      it('hides the controls when the pointer is above the editor (e.g. over the page title)', () => {
+        const { blok, eventsDispatcher } = setUp();
+
+        dispatchMouseMoveAt(400, 200);
+
+        expect(blok.Toolbar.close).toHaveBeenCalled();
+        expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+      });
+
+      it('hides the controls when the pointer is below the editor', () => {
+        const { blok, eventsDispatcher } = setUp();
+
+        dispatchMouseMoveAt(400, 900);
+
+        expect(blok.Toolbar.close).toHaveBeenCalled();
+        expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+      });
+
+      it('hides the controls when the pointer is beyond the side hover zone', () => {
+        const { blok } = setUp();
+
+        dispatchMouseMoveAt(850, 400);
+
+        expect(blok.Toolbar.close).toHaveBeenCalled();
+      });
+
+      it('keeps the controls when the pointer is in the gutter inside the editor', () => {
+        const { blok, eventsDispatcher, block } = setUp();
+
+        dispatchMouseMoveAt(150, 500);
+
+        expect(blok.Toolbar.close).not.toHaveBeenCalled();
+        expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+          block,
+          target: block.holder,
+        });
+      });
+
+      it('keeps the controls while a mouse button is held (a drag gesture left the editor)', () => {
+        const { blok } = setUp();
+        const outside = document.createElement('div');
+
+        document.body.appendChild(outside);
+
+        const event = new MouseEvent('mousemove', { clientX: 400, clientY: 100, buttons: 1, bubbles: true });
+
+        Object.defineProperty(event, 'target', { value: outside });
+        document.dispatchEvent(event);
+        vi.runAllTimers();
+
+        expect(blok.Toolbar.close).not.toHaveBeenCalled();
+      });
+
+      it('keeps the controls while a menu is open', () => {
+        const { blok } = setUp();
+
+        (blok.BlockSettings as unknown as { opened: boolean }).opened = true;
+
+        dispatchMouseMoveAt(400, 200);
+
+        expect(blok.Toolbar.close).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('nearest block detection (RTL)', () => {
@@ -1457,7 +1553,7 @@ describe('BlockHoverController', () => {
       expect(first.eventsDispatcher.emit).not.toHaveBeenCalled();
     });
 
-    it('gives the gutter/gap hover to the nearest editor only', () => {
+    it('shows no controls in the gap between two editors', () => {
       const first = createBlockHoverController();
       const second = createBlockHoverController();
 
@@ -1475,6 +1571,7 @@ describe('BlockHoverController', () => {
 
       (first.blok.BlockManager as { blocks: typeof first.blok.BlockManager.blocks }).blocks = [firstBlock];
       (second.blok.BlockManager as { blocks: typeof second.blok.BlockManager.blocks }).blocks = [secondBlock];
+      (first.blok.Toolbar as unknown as { opened: boolean }).opened = true;
       (second.blok.Toolbar as unknown as { opened: boolean }).opened = true;
 
       /** Page background between the editors, closer to the first one */
@@ -1484,11 +1581,9 @@ describe('BlockHoverController', () => {
 
       dispatchMouseMove(pageBackground, 400, 430);
 
-      expect(first.eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
-        block: firstBlock,
-        target: firstBlock.holder,
-      });
+      expect(first.eventsDispatcher.emit).not.toHaveBeenCalled();
       expect(second.eventsDispatcher.emit).not.toHaveBeenCalled();
+      expect(first.blok.Toolbar.close).toHaveBeenCalled();
       expect(second.blok.Toolbar.close).toHaveBeenCalled();
     });
 
@@ -1519,7 +1614,7 @@ describe('BlockHoverController', () => {
       const first = createBlockHoverController();
       const second = createBlockHoverController();
 
-      /** Two editors at the same Y, so a point above both is equidistant */
+      /** Two editors in the same box, so a point inside both is equidistant */
       first.controller.setWrapperElement(createEditorWrapper(200, 400));
       second.controller.setWrapperElement(createEditorWrapper(200, 400));
 
@@ -1536,7 +1631,7 @@ describe('BlockHoverController', () => {
 
       document.body.appendChild(pageBackground);
 
-      dispatchMouseMove(pageBackground, 400, 100);
+      dispatchMouseMove(pageBackground, 400, 350);
 
       expect(first.eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
         block: firstBlock,
@@ -1551,16 +1646,20 @@ describe('BlockHoverController', () => {
        * the surviving editor keeps yielding to a corpse and never shows its
        * controls again.
        */
-      const survivor = createBlockHoverController();
       const destroyed = createBlockHoverController();
+      const survivor = createBlockHoverController();
 
+      /**
+       * Same box, and the destroyed editor registered first, so it would win
+       * the distance tie if it were still in the registry.
+       */
+      destroyed.controller.setWrapperElement(createEditorWrapper(500, 900));
       survivor.controller.setWrapperElement(createEditorWrapper(500, 900));
-      destroyed.controller.setWrapperElement(createEditorWrapper(0, 400));
 
       const block = createMockBlock('block-1', 600, 700);
 
-      (survivor.controller as unknown as { enable: () => void }).enable();
       (destroyed.controller as unknown as { enable: () => void }).enable();
+      (survivor.controller as unknown as { enable: () => void }).enable();
       (destroyed.controller as unknown as { disable: () => void }).disable();
 
       (survivor.blok.BlockManager as { blocks: typeof survivor.blok.BlockManager.blocks }).blocks = [block];
@@ -1569,8 +1668,7 @@ describe('BlockHoverController', () => {
 
       document.body.appendChild(pageBackground);
 
-      /** Pointer sits in the destroyed editor's old area */
-      dispatchMouseMove(pageBackground, 400, 200);
+      dispatchMouseMove(pageBackground, 400, 800);
 
       expect(survivor.eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
         block,

@@ -39,7 +39,31 @@ describe('image toolbox preview', () => {
       'flower',
       'rock',
       'lamp',
+      'wing-left',
+      'wing-right',
+      'canopy',
+      'canopy-stripe',
+      'boat-reflection',
+      'swan',
+      'swan-neck',
+      'swan-wing',
+      'passenger',
+      'pier-deck',
+      'pier-plank',
+      'cattail',
+      'stair',
+      'smoke',
+      'window-reflection',
     ]));
+  });
+
+  // Riders share the boat's motion, so they can never drift out of it.
+  it('keeps the rower and passengers inside the boat, and the swan in one piece', () => {
+    const preview = renderImagePreview();
+
+    expect(preview.querySelector("[data-part='boat'] [data-part='rower']")).not.toBeNull();
+    expect(preview.querySelector("[data-part='boat'] [data-part='passenger']")).not.toBeNull();
+    expect(preview.querySelector("[data-part='swan'] [data-part='swan-neck']")).not.toBeNull();
   });
 
   // An SVG shape with no rule paints solid black in both themes.
@@ -53,7 +77,7 @@ describe('image toolbox preview', () => {
 describe('image toolbox preview motion', () => {
   const motion = css.slice(css.indexOf('@media (prefers-reduced-motion: no-preference)'));
 
-  it.each([ 'star', 'cloud', 'bird', 'ray', 'shimmer', 'ripple', 'boat', 'rower', 'flag', 'lamp' ])(
+  it.each([ 'star', 'cloud', 'bird', 'ray', 'shimmer', 'ripple', 'boat', 'flag', 'lamp', 'wing-left', 'wing-right', 'swan', 'smoke' ])(
     'animates the %s only when motion is allowed',
     (part) => {
       const rule = new RegExp(`\\[data-blok-preview='image'\\] \\[data-part='${part}'\\][^{]*\\{[^}]*animation:`);

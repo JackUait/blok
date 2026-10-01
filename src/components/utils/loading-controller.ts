@@ -1,0 +1,150 @@
+import { DATA_ATTR } from '../constants/data-attributes';
+import type { ResolvedLoaderConfig } from './loader-config';
+import { buildLoadingSkeleton } from './loading-skeleton';
+import { HANDOFF_DURATION, HANDOFF_STAGGER, runSkeletonHandoff } from './skeleton-handoff';
+
+/** Once shown, shorter than this reads as a flicker. */
+export const MIN_VISIBLE = 400;
+
+/** Extra time past the handoff's own length before we stop waiting for it. */
+const HANDOFF_GRACE = 250;
+
+// Copied from SR_ONLY_STYLE in announcer.ts: utility classes are scoped away, so this must be inline.
+const SR_ONLY_STYLE: Partial<CSSStyleDeclaration> = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: '0',
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: '0',
+};
+
+export class LoadingController {
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private skeleton: { root: HTMLElement; bars: HTMLElement[] } | null = null;
+  private status: HTMLElement | null = null;
+  private wait: { timer: ReturnType<typeof setTimeout>; resolve: () => void } | null = null;
+  private shownAt = 0;
+  private started = false;
+  private destroyed = false;
+
+  constructor(private readonly args: { wrapper: HTMLElement; content: HTMLElement; config: ResolvedLoaderConfig; label: string }) {}
+
+  public get isVisible(): boolean {
+    return this.skeleton !== null;
+  }
+
+  public show(): void {
+    if (!this.args.config.enabled || this.started || this.destroyed) {
+      return;
+    }
+
+    this.started = true;
+    this.args.wrapper.setAttribute('aria-busy', 'true');
+    this.status = document.createElement('div');
+    this.status.setAttribute('role', 'status');
+    this.status.setAttribute('aria-live', 'polite');
+    Object.assign(this.status.style, SR_ONLY_STYLE);
+    this.status.textContent = this.args.label;
+    this.args.wrapper.appendChild(this.status);
+
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      this.skeleton = buildLoadingSkeleton(this.args.config.skeleton);
+      this.args.wrapper.setAttribute(DATA_ATTR.loading, '');
+      this.args.wrapper.appendChild(this.skeleton.root);
+      this.shownAt = performance.now();
+    }, this.args.config.delay);
+  }
+
+  public async hide(targets: HTMLElement[]): Promise<void> {
+    if (!this.started || this.destroyed) {
+      return;
+    }
+
+    this.started = false;
+
+    if (this.timer !== null) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    const skeleton = this.skeleton;
+
+    if (skeleton !== null) {
+      const remaining = MIN_VISIBLE - (performance.now() - this.shownAt);
+
+      if (remaining > 0) {
+        await this.sleep(remaining);
+      }
+
+      if (this.destroyed) {
+        return;
+      }
+
+      const { content, wrapper } = this.args;
+
+      content.style.opacity = '0';
+      wrapper.removeAttribute(DATA_ATTR.loading);
+
+      try {
+        // `finished` may never settle in a background tab; a stuck boot is worse than a cut animation.
+        await Promise.race([
+          runSkeletonHandoff({ bars: skeleton.bars, targets, content }),
+          this.sleep(skeleton.bars.length * HANDOFF_STAGGER + HANDOFF_DURATION + HANDOFF_GRACE),
+        ]);
+      } finally {
+        this.stopWaiting();
+        // The handoff uses fill: 'forwards', which would pin opacity and filter on the content.
+        content.getAnimations?.().forEach(animation => animation.cancel());
+        content.style.removeProperty('opacity');
+        this.teardown();
+      }
+
+      return;
+    }
+
+    this.teardown();
+  }
+
+  public destroy(): void {
+    this.destroyed = true;
+
+    if (this.timer !== null) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    this.stopWaiting();
+    this.teardown();
+  }
+
+  /** One wait at a time; destroy() resolves it early so a pending hide() settles. */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => {
+      this.wait = { timer: setTimeout(() => this.stopWaiting(), ms), resolve };
+    });
+  }
+
+  private stopWaiting(): void {
+    if (this.wait === null) {
+      return;
+    }
+
+    clearTimeout(this.wait.timer);
+    this.wait.resolve();
+    this.wait = null;
+  }
+
+  private teardown(): void {
+    this.skeleton?.root.remove();
+    this.skeleton = null;
+    this.status?.remove();
+    this.status = null;
+    this.args.wrapper.removeAttribute(DATA_ATTR.loading);
+    this.args.wrapper.removeAttribute('aria-busy');
+  }
+}

@@ -182,6 +182,26 @@ test.describe('tool surfaces after a runtime flip to RTL', () => {
     expect(flipped).toEqual(fresh);
   });
 
+  test('the database view overflow menu moves to where a fresh RTL menu opens', async ({ page }) => {
+    const blocks = database('إصلاح الخطأ');
+    const views = Array.from({ length: 12 }, (_, i) => ({
+      id: `view-${i}`, name: `عرض اللوحة ${i}`, type: 'board', position: `a${i}`, groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: ['prop-title'],
+    }));
+
+    blocks[0] = { ...blocks[0], data: { ...blocks[0].data, views, activeViewId: 'view-0' } };
+    const { fresh, flipped, ltr } = await freshAndFlipped(page, blocks, async () => {
+      await page.locator('[data-blok-database-tab-more]').click();
+      const menu = page.locator('[data-blok-database-tab-overflow-dropdown]');
+
+      await expect(menu).toBeVisible();
+
+      return menu;
+    });
+
+    expect(fresh).not.toEqual(ltr);
+    expect(flipped).toEqual(fresh);
+  });
+
   test('the database page body editor follows the flip', async ({ page }) => {
     await createBlok(page, 'ltr', database('إصلاح الخطأ'));
     await page.locator('[data-blok-database-card]').first().click();

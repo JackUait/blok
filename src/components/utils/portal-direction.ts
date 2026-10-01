@@ -113,14 +113,32 @@ export const syncPortalDirection = (
 };
 
 /**
+ * True when `source` belongs to an editor nested inside `root` (a database
+ * page body). That editor resyncs its own portals when its direction changes.
+ */
+const isInNestedEditor = (source: Element, root: Element): boolean => {
+  const owner = source.closest(`[${DATA_ATTR.editor}]`);
+
+  return owner !== null && owner !== root && root.contains(owner);
+};
+
+/**
  * Re-reads the direction of every open portal whose source lives in `root`.
  * Called when an editor flips direction at runtime; portals of other editors
- * are left alone. A portal that registered `onResync` re-places itself.
+ * are left alone. A portal that registered `onResync` re-places itself, but
+ * only when its direction changed: re-placing closes submenus, and the i18n
+ * API re-applies the same direction on every locale or message update.
  */
 export const resyncPortalDirections = (root: Element): void => {
   syncedPortals.forEach(({ source, onResync }, portal) => {
-    if (portal.isConnected && source.isConnected && root.contains(source)) {
-      syncPortalDirection(portal, { source, onResync });
+    if (!portal.isConnected || !source.isConnected || !root.contains(source) || isInNestedEditor(source, root)) {
+      return;
+    }
+
+    const previous = portal.getAttribute('dir');
+    const next = syncPortalDirection(portal, { source, onResync });
+
+    if (next !== undefined && next !== previous) {
       onResync?.();
     }
   });

@@ -84,6 +84,27 @@ describe('PopoverDesktop — runtime direction flip', () => {
     expect(element.style.left).toBe(open(fresh.trigger).getElement().style.left);
   });
 
+  it('keeps an open submenu when an update leaves the direction as it was', () => {
+    const { editor, trigger } = mountEditor();
+    const popover = open(trigger);
+    const internal = popover as unknown as Internal;
+    const parent = internal.items.find(
+      (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.name === 'parent'
+    );
+
+    if (parent === undefined) {
+      throw new Error('Missing parent item');
+    }
+    internal.showNestedItems(parent);
+    const nested = internal.nestedPopover;
+
+    expect(nested).toBeInstanceOf(PopoverDesktop);
+
+    resyncPortalDirections(editor);
+
+    expect(internal.nestedPopover).toBe(nested);
+  });
+
   it('closes an open submenu, which was placed for the old side', () => {
     const { editor, trigger } = mountEditor();
     const popover = open(trigger);

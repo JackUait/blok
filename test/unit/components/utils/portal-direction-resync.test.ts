@@ -72,6 +72,38 @@ describe('resyncPortalDirections', () => {
     expect(seen).toEqual(['rtl']);
   });
 
+  it('does not call back a portal whose direction did not change', () => {
+    const { editor, source, portal } = mount('ltr');
+    const onResync = vi.fn();
+
+    syncPortalDirection(portal, { source, onResync });
+    resyncPortalDirections(editor);
+
+    expect(onResync).not.toHaveBeenCalled();
+    expect(portal.getAttribute('dir')).toBe('ltr');
+  });
+
+  it('leaves the portals of an editor nested inside the flipped one to that editor', () => {
+    const outer = mount('ltr');
+    const inner = document.createElement('div');
+    const innerSource = document.createElement('button');
+    const innerPortal = document.createElement('div');
+    const onResync = vi.fn();
+
+    outer.editor.setAttribute('data-blok-editor', '');
+    inner.setAttribute('data-blok-editor', '');
+    inner.appendChild(innerSource);
+    outer.editor.appendChild(inner);
+    document.body.appendChild(innerPortal);
+    syncPortalDirection(innerPortal, { source: innerSource, onResync });
+    // The inner editor inherits the outer flip until it applies its own direction.
+    outer.editor.style.direction = 'rtl';
+    resyncPortalDirections(outer.editor);
+
+    expect(onResync).not.toHaveBeenCalled();
+    expect(innerPortal.getAttribute('dir')).toBe('ltr');
+  });
+
   it('does not call back a portal of another editor', () => {
     const first = mount('ltr');
     const second = mount('ltr');

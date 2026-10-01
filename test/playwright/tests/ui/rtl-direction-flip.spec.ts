@@ -110,6 +110,28 @@ test.describe('runtime direction flip with editor chrome open', () => {
     expect(await box(menuContainer(page))).toEqual(before);
   });
 
+  const sameDirectionUpdates: Array<{ name: string; options: Record<string, unknown> }> = [
+    { name: 'the same direction', options: { direction: 'ltr' } },
+    { name: 'another LTR locale', options: { locale: 'de' } },
+    // Framework adapters re-send the direction with any i18n prop change.
+    { name: 'new messages', options: { messages: { 'popover.search': 'Find' }, direction: 'ltr' } },
+  ];
+
+  for (const { name, options } of sameDirectionUpdates) {
+    test(`an update to ${name} keeps an open submenu`, async ({ page }) => {
+      await createBlok(page, 'ltr');
+      await openBlockSettings(page);
+      await page.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+      await expect(openPopovers(page)).toHaveCount(2);
+
+      await page.evaluate(async (update) => {
+        await window.blokInstance?.i18n.update(update);
+      }, options);
+
+      await expect(openPopovers(page)).toHaveCount(2);
+    });
+  }
+
   test('closes the inline toolbar', async ({ page }) => {
     await createBlok(page, 'ltr');
     await page.locator('[data-blok-tool="paragraph"]').first().evaluate((element) => {

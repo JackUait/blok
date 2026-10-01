@@ -939,6 +939,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   const dialogHandle = openModalDialog({
     content: backdrop,
     surface,
+    directionSource: opts.sourceEl,
     role: 'dialog',
     label: tr(opts.i18n, 'tools.image.cropDialogLabel'),
     initialFocus: () => doneBtn,

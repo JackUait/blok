@@ -149,7 +149,7 @@ export class MediaFailures extends Module {
       },
       onStay: () => this.settleLeave(false),
       onLeave: () => this.settleLeave(true),
-    });
+    }, this.Blok.UI.nodes.wrapper);
 
     this.leave = { promise, settle: answer.resolve, banner };
 

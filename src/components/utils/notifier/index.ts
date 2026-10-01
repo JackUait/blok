@@ -1,4 +1,5 @@
 import { registerLayer } from '../dismissable-layer';
+import { syncPortalDirection } from '../portal-direction';
 import { promoteToTopLayer, removeFromTopLayer } from '../top-layer';
 
 import { alert, confirm, drawResolved, getWrapper, modalCleanups, prompt, setToastDismisser } from './draw';
@@ -265,8 +266,13 @@ const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: Notif
  * Show new notification
  * @param {NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions} options - notification options
  * @param {NotifierPosition} position - notification container position
+ * @param directionSource - element whose direction the toast takes
  */
-export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions, position: NotifierPosition = DEFAULT_NOTIFIER_POSITION): void => {
+export const show = (
+  options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions,
+  position: NotifierPosition = DEFAULT_NOTIFIER_POSITION,
+  directionSource?: Element | null
+): void => {
   if (!options.message) {
     return;
   }
@@ -276,7 +282,16 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
   const autoDismiss = options.type !== 'confirm' && options.type !== 'prompt';
   const sticky = options.actions !== undefined && options.actions.length > 0;
 
+  // The wrapper is shared by every editor on the page, so each toast carries its own direction.
   const buildNotify = (): HTMLElement => {
+    const notify = buildByType();
+
+    syncPortalDirection(notify, { source: directionSource });
+
+    return notify;
+  };
+
+  const buildByType = (): HTMLElement => {
     const type = options.type;
 
     if (type === 'confirm') {

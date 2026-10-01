@@ -5,7 +5,7 @@ import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions, No
 import { DEFAULT_NOTIFIER_POSITION } from './notifier/types';
 
 type NotifierModule = {
-  show: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions, position?: NotifierPosition) => void;
+  show: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions, position?: NotifierPosition, directionSource?: Element) => void;
   dismiss: (options: NotifierOptions) => void;
   resolve: (options: NotifierOptions, message: string) => void;
   isClosed: (options: NotifierOptions) => boolean;
@@ -32,8 +32,12 @@ export class Notifier {
 
   /**
    * @param position - notification container position
+   * @param getDirectionSource - returns the editor element whose direction toasts take
    */
-  constructor(position: NotifierPosition = DEFAULT_NOTIFIER_POSITION) {
+  constructor(
+    position: NotifierPosition = DEFAULT_NOTIFIER_POSITION,
+    private readonly getDirectionSource?: () => Element | null | undefined
+  ) {
     this.position = position;
   }
 
@@ -76,7 +80,13 @@ export class Notifier {
   public show(options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions): void {
     void this.loadNotifierModule()
       .then((notifier) => {
-        notifier.show(options, this.position);
+        const source = this.getDirectionSource?.();
+
+        if (source === undefined || source === null) {
+          notifier.show(options, this.position);
+        } else {
+          notifier.show(options, this.position, source);
+        }
       })
       .catch((error) => {
         console.error('[Blok] Failed to display notification. Reason:', error);

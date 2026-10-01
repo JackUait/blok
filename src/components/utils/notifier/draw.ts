@@ -42,7 +42,7 @@ export const CSS = {
     'placeholder:text-white/30 focus:border-white/20'
   ),
   dismissBtn: twJoin(
-    'shrink-0 ml-3 -mr-2 grid place-items-center w-6 h-6 rounded-full',
+    'shrink-0 ms-3 -me-2 grid place-items-center w-6 h-6 rounded-full',
     'border-none bg-transparent text-[#a1a1aa] text-[16px] leading-none cursor-pointer',
     'outline-hidden hover:bg-white/10 hover:text-[#f5f5f5]',
     'focus-visible:ring-2 focus-visible:ring-focus-ring'

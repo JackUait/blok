@@ -470,6 +470,7 @@ export class FileTool implements BlockTool {
         openInNewTab: this.api.i18n.t('tools.file.previewOpenInNewTab'),
         backToContent: this.api.i18n.t('tools.file.previewBackToContent'),
       },
+      directionSource: this.root,
     });
   }
 

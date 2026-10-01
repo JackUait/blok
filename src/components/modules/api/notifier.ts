@@ -35,7 +35,8 @@ export class NotifierAPI extends Module {
   constructor({ config, eventsDispatcher }: ModuleConfig) {
     super({ config, eventsDispatcher });
 
-    this.builtInNotifier = new Notifier(config.notifierPosition ?? DEFAULT_NOTIFIER_POSITION);
+    // Toasts mount outside the editor, so they read its direction from the wrapper.
+    this.builtInNotifier = new Notifier(config.notifierPosition ?? DEFAULT_NOTIFIER_POSITION, () => this.Blok.UI?.nodes.wrapper);
     this.customNotifier = config.notifier;
   }
 

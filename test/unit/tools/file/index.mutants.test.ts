@@ -910,6 +910,7 @@ describe('FileTool mutants', () => {
           openInNewTab: 'tools.file.previewOpenInNewTab',
           backToContent: 'tools.file.previewBackToContent',
         },
+        directionSource: root,
       });
       expect(root.firstElementChild?.className).toBe('blok-file-rendered');
     });

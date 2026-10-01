@@ -496,6 +496,27 @@ for (const [locale, keys] of Object.entries(IMAGE_EDIT_COGNATE_RETENTIONS)) {
   for (const key of keys) set.add(key);
 }
 
+/**
+ * Image markup cognates: the native word is spelled the same as English in
+ * these locales. Each entry needs a matching ledger retention row.
+ */
+const IMAGE_MARKUP_COGNATE_RETENTIONS: Record<string, string[]> = {
+  cs: ['tools.image.markupText'],
+  da: ['tools.image.markupPen', 'tools.image.markupEllipse'],
+  de: ['tools.image.markupText', 'tools.image.markupEllipse'],
+  fr: ['tools.image.markupRectangle', 'tools.image.markupEllipse'],
+  nl: ['tools.image.markupPen'],
+  no: ['tools.image.markupEllipse'],
+  ro: ['tools.image.markupText'],
+  sk: ['tools.image.markupText'],
+  sv: ['tools.image.markupText'],
+};
+
+for (const [locale, keys] of Object.entries(IMAGE_MARKUP_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
 describe('locale values are translated (identical-to-en only when cognate)', () => {
   const english = loadLocaleMessages('en');
   const nonEnglish = listLocaleCodes().filter(code => code !== 'en');

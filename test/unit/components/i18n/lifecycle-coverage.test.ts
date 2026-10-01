@@ -262,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 505 + 128 + 34 + 4 closure for all 671 keys', () => {
+  it('rebuilds a disjoint 505 + 128 + 61 + 4 closure for all 698 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -276,7 +276,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(671);
+    expect(lifecycle.size).toBe(698);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -302,7 +302,9 @@ describe('current English catalog lifecycle coverage', () => {
       'finite-dynamic': 128,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
-      'registered-namespace-compatible': 34,
+      // +27: the image markup keys have no literal caller yet. Each one moves
+      // to executable-literal once the markup UI calls it by literal.
+      'registered-namespace-compatible': 61,
       'catalog-only': 4,
     });
     expect(

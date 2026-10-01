@@ -27,6 +27,7 @@ export class LoadingController {
   private skeleton: { root: HTMLElement; bars: HTMLElement[] } | null = null;
   private status: HTMLElement | null = null;
   private wait: { timer: ReturnType<typeof setTimeout>; resolve: () => void } | null = null;
+  private hiding: Promise<void> | null = null;
   private shownAt = 0;
   private started = false;
   private destroyed = false;
@@ -38,7 +39,8 @@ export class LoadingController {
   }
 
   public show(): void {
-    if (!this.args.config.enabled || this.started || this.destroyed) {
+    // Blok boots once per controller, so showing again during or after a hide is not supported.
+    if (!this.args.config.enabled || this.started || this.hiding !== null || this.destroyed) {
       return;
     }
 
@@ -60,13 +62,34 @@ export class LoadingController {
     }, this.args.config.delay);
   }
 
-  public async hide(targets: HTMLElement[]): Promise<void> {
+  public hide(targets: HTMLElement[]): Promise<void> {
+    if (this.hiding !== null) {
+      return this.hiding;
+    }
+
     if (!this.started || this.destroyed) {
-      return;
+      return Promise.resolve();
     }
 
     this.started = false;
+    this.hiding = this.runHide(targets);
 
+    return this.hiding;
+  }
+
+  public destroy(): void {
+    this.destroyed = true;
+
+    if (this.timer !== null) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    this.stopWaiting();
+    this.teardown();
+  }
+
+  private async runHide(targets: HTMLElement[]): Promise<void> {
     if (this.timer !== null) {
       clearTimeout(this.timer);
       this.timer = null;
@@ -110,19 +133,7 @@ export class LoadingController {
     this.teardown();
   }
 
-  public destroy(): void {
-    this.destroyed = true;
-
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
-
-    this.stopWaiting();
-    this.teardown();
-  }
-
-  /** One wait at a time; destroy() resolves it early so a pending hide() settles. */
+  /** Only one hide runs, so one wait slot is enough. destroy() resolves it early so the pending hide() settles. */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => {
       this.wait = { timer: setTimeout(() => this.stopWaiting(), ms), resolve };

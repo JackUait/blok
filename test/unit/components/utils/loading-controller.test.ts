@@ -182,13 +182,22 @@ describe('LoadingController', () => {
     const { content, controller } = setup();
     const cancel = vi.fn();
 
+    const handoff: { finish: () => void } = { finish: () => undefined };
+
     Object.defineProperty(content, 'getAnimations', { value: () => [{ cancel }], configurable: true });
+    mockRunSkeletonHandoff.mockImplementation(() => new Promise<void>(resolve => {
+      handoff.finish = resolve;
+    }));
 
     controller.show();
     vi.advanceTimersByTime(150);
     const done = controller.hide([]);
 
     await vi.advanceTimersByTimeAsync(MIN_VISIBLE);
+    expect(mockRunSkeletonHandoff).toHaveBeenCalledTimes(1);
+    expect(cancel).not.toHaveBeenCalled();
+
+    handoff.finish();
     await done;
 
     expect(cancel).toHaveBeenCalledTimes(1);
@@ -210,10 +219,55 @@ describe('LoadingController', () => {
     await assertion;
 
     expect(skeleton(wrapper)).toBeNull();
+    expect(wrapper.hasAttribute(DATA_ATTR.loading)).toBe(false);
     expect(wrapper.hasAttribute('aria-busy')).toBe(false);
     expect(wrapper.querySelector('[role="status"]')).toBeNull();
     expect(content.style.opacity).toBe('');
     expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('a second hide() waits for the same teardown as the first', async () => {
+    const { wrapper, controller } = setup();
+
+    controller.show();
+    vi.advanceTimersByTime(150);
+    const first = trackSettled(controller.hide([]));
+    const second = trackSettled(controller.hide([]));
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(skeleton(wrapper)).not.toBeNull();
+    expect(second.settled()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(MIN_VISIBLE - 1);
+    expect(skeleton(wrapper)).not.toBeNull();
+    expect(first.settled()).toBe(false);
+    expect(second.settled()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(skeleton(wrapper)).toBeNull();
+    expect(first.settled()).toBe(true);
+    expect(second.settled()).toBe(true);
+    expect(mockRunSkeletonHandoff).toHaveBeenCalledTimes(1);
+  });
+
+  it('show() while a hide() is in flight changes nothing', async () => {
+    const { wrapper, controller } = setup();
+
+    controller.show();
+    vi.advanceTimersByTime(150);
+    const done = trackSettled(controller.hide([]));
+
+    controller.show();
+    expect(wrapper.querySelectorAll('[role="status"]')).toHaveLength(1);
+
+    await vi.advanceTimersByTimeAsync(MIN_VISIBLE);
+    expect(done.settled()).toBe(true);
+    expect(wrapper.querySelectorAll('[role="status"]')).toHaveLength(0);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(skeleton(wrapper)).toBeNull();
+    expect(wrapper.hasAttribute('aria-busy')).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('gives up on a handoff that never settles and tears down anyway', async () => {

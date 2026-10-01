@@ -1203,6 +1203,7 @@
         <div id="editor-split">
           <div id="editor-col">
             <div class="pg-col-label" id="editor-col-label" hidden>Editor</div>
+            <header id="page-header" class="pg-page-header" hidden></header>
             <div id="blok"></div>
           </div>
           <div id="blokview-col" class="hidden">
@@ -1360,7 +1361,7 @@
     // `data-blok-tool` on its blocks — an unscoped import would double-style the
     // editor. Scoping keeps the sheet affecting only the Blok View render.
     import viewCssText from './view.css?raw';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Page, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
@@ -1375,6 +1376,7 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
+    import { PAGE_TITLE_SELECTOR, PageRegistry, alignPageHeader, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
     // Default import only — the json-as-string vite plugin rewrites JSON
@@ -1417,6 +1419,7 @@
         video: true,
         audio: true,
         columns: true,
+        page: true,
       },
     };
 
@@ -1433,14 +1436,16 @@
      * `?collab=off` opens the playground on its own document without stopping
      * the backend; any other `?collab=` value picks the shared document to join.
      */
-    function collaborationConfig() {
+    function collaborationConfig(pageId = null) {
       const params = new URLSearchParams(window.location.search);
-      const doc = params.get('collab') ?? 'playground';
+      const shared = params.get('collab') ?? 'playground';
 
-      if (!__BLOK_DEV_BACKEND__ || doc === 'off') {
+      if (!__BLOK_DEV_BACKEND__ || shared === 'off') {
         return null;
       }
 
+      // Each page is its own document, so it gets its own room.
+      const doc = pageId === null ? shared : `${shared}--page--${pageId}`;
       const name = params.get('name');
 
       return name?.trim() ? { doc, user: { name } } : { doc };
@@ -1540,7 +1545,22 @@
       tools.embed = Embed;
       tools.bookmark = { class: Bookmark, config: { endpoint: '/unfurl' } };
 
-      const collaboration = collaborationConfig();
+      // Captured now: callbacks of this editor must keep writing to ITS page
+      // even after navigation has moved `currentPageId` on.
+      const pageId = currentPageId;
+
+      if (state.tools.page) tools.page = {
+        class: Page,
+        config: {
+          href: (id) => pagePath(id, window.location.search),
+          // Deferred: the tool keeps working on its block right after `open`.
+          open: (id) => setTimeout(() => goToPage(id), 0),
+          resolve: (id) => pages.info(id),
+          create: ({ pageId: id }) => pages.create(id, pageId),
+        },
+      };
+
+      const collaboration = collaborationConfig(pageId);
 
       return {
         readOnly: state.readOnly,
@@ -1552,15 +1572,20 @@
         toolbarPosition: state.toolbarPosition,
         hideToolbar: state.hideToolbar,
         user: userConfig(),
+        // Destroying an editor clears the theme attribute on <html>, so every
+        // rebuild must say which theme the page is in (setDarkMode's rule).
+        theme: state.darkMode ? 'dark' : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'auto'),
         style: { contentAlign: 'center', fontSize: buildFontScaleConfig(state.fontScale) },
         // Under collaboration the document comes from the sync service, which
         // seeds it from this same file — passing `data` too would give it two owners.
         ...(collaboration === null
-          ? { data: { blocks: structuredClone(DEFAULT_BLOCKS) } }
+          ? { data: { blocks: blocksFor(pageId) } }
           : { server: DEV_SERVER_URL, collaboration }),
         onChange(api, event) {
           console.log('something changed', event);
           refreshBlokView();
+          // Under collaboration the sync service owns the document.
+          if (collaboration === null) schedulePersist(api, pageId);
         },
       };
     }
@@ -1588,27 +1613,179 @@
       });
     }
 
+    /**
+     * Pages. `/editor` is the root playground document; `/editor/page/<id>`
+     * is one page from the registry, each its own document and its own editor.
+     */
+    const pages = new PageRegistry(SEED_PAGES);
+    const pageHeader = document.getElementById('page-header');
+    const baseDocumentTitle = document.title;
+    let currentPageId = pageIdFromPath(window.location.pathname);
+    if (currentPageId !== null && !pages.has(currentPageId)) {
+      currentPageId = null;
+      history.replaceState(null, '', pagePath(null, window.location.search));
+    }
+    // The page the live editor shows. Differs from currentPageId mid-navigation.
+    let editorPageId = currentPageId;
+    // Root edits live for the tab only, so a reload still starts pristine.
+    let rootBlocks = null;
+    const scrollByPage = new Map();
+
+    function blocksFor(pageId) {
+      if (pageId === null) return structuredClone(rootBlocks ?? DEFAULT_BLOCKS);
+      return structuredClone(pages.get(pageId)?.blocks ?? []);
+    }
+
+    function storeBlocks(pageId, blocks) {
+      if (pageId === null) rootBlocks = blocks;
+      else pages.setBlocks(pageId, blocks);
+    }
+
+    let persistTimer;
+    function schedulePersist(api, pageId) {
+      clearTimeout(persistTimer);
+      persistTimer = setTimeout(async () => {
+        try {
+          storeBlocks(pageId, (await api.saver.save()).blocks);
+        } catch (error) {
+          console.error('Saving the page failed', error);
+        }
+      }, 300);
+    }
+
+    /** Saves the live editor's document under the page it shows. */
+    async function snapshotEditor() {
+      clearTimeout(persistTimer);
+      if (collaborationConfig(editorPageId) !== null) return;
+      try {
+        storeBlocks(editorPageId, (await blok.save()).blocks);
+      } catch (error) {
+        console.error('Saving the page failed', error);
+      }
+    }
+
+    function renderHeader() {
+      renderPageHeader(pageHeader, {
+        pageId: currentPageId,
+        pages,
+        search: window.location.search,
+        readOnly: state.readOnly,
+        navigate: (id) => goToPage(id),
+        focusEditor: () => blok.caret.setToFirstBlock('start'),
+        i18n: () => ({ i18n: blok.i18n, locale: state.locale }),
+        changed: () => updateDocumentTitle(),
+      });
+      updateDocumentTitle();
+      alignPageHeader(pageHeader, document.getElementById('blok'));
+    }
+    window.addEventListener('resize', () => alignPageHeader(pageHeader, document.getElementById('blok')));
+
+    function updateDocumentTitle() {
+      const page = currentPageId === null ? undefined : pages.get(currentPageId);
+      document.title = page === undefined
+        ? baseDocumentTitle
+        : `${page.icon ? `${page.icon} ` : ''}${page.title.trim() || 'Untitled'} · ${baseDocumentTitle}`;
+    }
+
+    /** Destroys the live editor and builds one for currentPageId. */
+    async function swapEditor() {
+      clearTimeout(persistTimer);
+      blok.destroy();
+      const editor = new Blok(buildConfig());
+      blok = editor;
+      window.blok = editor;
+      editorPageId = currentPageId;
+      try {
+        await editor.isReady;
+        refreshBlokView();
+        wireCollaborationPresence(editor);
+      } catch (error) {
+        console.error('Editor failed to start', error);
+      }
+    }
+
+    // Navigation, tool toggles and reset all rebuild the editor; one queue keeps
+    // a late save from landing on the next page.
+    let editorQueue = Promise.resolve();
+    function queueEditorWork(work) {
+      editorQueue = editorQueue.then(work).catch((error) => console.error(error));
+      return editorQueue;
+    }
+
+    /**
+     * Shows a page (null = root). `push: false` is for popstate, where the
+     * browser already moved the URL.
+     */
+    function goToPage(pageId, { push = true } = {}) {
+      return queueEditorWork(async () => {
+        const target = pageId !== null && pages.has(pageId) ? pageId : null;
+
+        if (push) history.pushState(null, '', pagePath(target, window.location.search));
+        if (target === editorPageId) {
+          currentPageId = target;
+          renderHeader();
+          return;
+        }
+
+        const from = editorPageId;
+        // Up the tree (breadcrumbs, browser back) slides the other way.
+        const back = from !== null && (target === null || pages.trail(from).some((page) => page.id === target));
+
+        scrollByPage.set(from, window.scrollY);
+        await snapshotEditor();
+        currentPageId = target;
+
+        await runPageTransition(async () => {
+          await swapEditor();
+          renderHeader();
+          window.scrollTo(0, back ? (scrollByPage.get(target) ?? 0) : 0);
+          // A brand-new page starts at its title, like Notion.
+          if (target !== null && pages.get(target)?.title === '' && !state.readOnly) {
+            document.querySelector(PAGE_TITLE_SELECTOR)?.focus();
+          }
+        }, {
+          direction: back ? 'back' : 'forward',
+          from: back ? PAGE_TITLE_SELECTOR : pageLinkSelector(target),
+          to: back ? pageLinkSelector(from) : PAGE_TITLE_SELECTOR,
+        });
+      });
+    }
+
     let blok = new Blok(buildConfig());
     window.blok = blok;
-    blok.isReady.then(() => wireCollaborationPresence(blok));
+    blok.isReady.then(() => {
+      wireCollaborationPresence(blok);
+      alignPageHeader(pageHeader, document.getElementById('blok'));
+    });
+    renderHeader();
 
     /**
      * Reinitialize editor with current state.
      * Debounced to prevent zombie instances when toggling multiple checkboxes rapidly.
+     * The root document restarts from the showcase, as it always has; a page
+     * keeps its content. `reset` also puts every page back to the seed.
      */
     let reinitTimeout;
-    function reinitEditor() {
+    function reinitEditor({ reset = false } = {}) {
       clearTimeout(reinitTimeout);
-      reinitTimeout = setTimeout(() => {
-        blok.destroy();
-        const editor = new Blok(buildConfig());
-        blok = editor;
-        window.blok = blok;
-        blok.isReady?.then(() => {
-          refreshBlokView();
-          wireCollaborationPresence(editor);
-        });
-      }, 50);
+      reinitTimeout = setTimeout(() => queueEditorWork(async () => {
+        if (reset) {
+          clearTimeout(persistTimer);
+          pages.reset();
+          rootBlocks = null;
+          if (currentPageId !== null && !pages.has(currentPageId)) {
+            currentPageId = null;
+            history.replaceState(null, '', pagePath(null, window.location.search));
+          }
+        } else if (editorPageId === null) {
+          clearTimeout(persistTimer);
+          rootBlocks = null;
+        } else {
+          await snapshotEditor();
+        }
+        await swapEditor();
+        renderHeader();
+      }), 50);
     }
 
     /**
@@ -1661,6 +1838,12 @@
       tab.addEventListener('click', (e) => {
         e.preventDefault();
         const page = tab.dataset.tab;
+        if (page === 'editor') {
+          // The Editor tab leads home, to the root document.
+          navigateTo(page, '');
+          goToPage(null);
+          return;
+        }
         history.pushState(null, '', `/${page}${window.location.search}`);
         navigateTo(page, '');
       });
@@ -1669,6 +1852,7 @@
     window.addEventListener('popstate', () => {
       const { page, subpath } = parseRoute(window.location.pathname);
       navigateTo(page, subpath);
+      if (page === 'editor') goToPage(pageIdFromPath(window.location.pathname), { push: false });
     });
 
     // Initial route
@@ -1868,6 +2052,7 @@
     toggleReadonly.addEventListener('change', async () => {
       state.readOnly = toggleReadonly.checked;
       await blok.readOnly.toggle(state.readOnly);
+      renderHeader();
     });
 
     /**
@@ -1917,6 +2102,7 @@
       blokviewCol.classList.toggle('hidden', !enabled);
       editorSheet.classList.toggle('is-split', enabled);
       editorColLabel.hidden = !enabled;
+      alignPageHeader(pageHeader, document.getElementById('blok'));
       if (enabled) refreshBlokView();
     }
 
@@ -2231,6 +2417,7 @@
       { key: 'divider', label: 'Divider', icon: Icons.IconMinus },
       { key: 'spacer', label: 'Spacer', icon: Icons.IconSpacer },
       { key: 'quote', label: 'Quote', icon: Icons.IconQuote },
+      { key: 'page', label: 'Page', icon: Icons.IconPage },
     ];
 
     const toolTogglesContainer = document.getElementById('tool-toggles');
@@ -2244,7 +2431,7 @@
           <span class="settings-row-icon">${tool.icon}</span>
           ${tool.label}
         </span>
-        <kbd class="settings-kbd">⌥${i + 1}</kbd>
+        ${i < 9 ? `<kbd class="settings-kbd">⌥${i + 1}</kbd>` : ''}
         <input type="checkbox" id="toggle-tool-${tool.key}" class="peer sr-only" checked>
         <span class="pill-toggle"></span>
       `;
@@ -2263,7 +2450,7 @@
      * Reset content
      */
     document.getElementById('reset-content').addEventListener('click', () => {
-      reinitEditor();
+      reinitEditor({ reset: true });
     });
 
     /**

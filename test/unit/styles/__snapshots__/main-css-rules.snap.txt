@@ -10715,6 +10715,46 @@ span[data-blok-slash-search] {
   color: var(--blok-text-secondary);
 }
 
+[data-blok-interface='block-preview'] [data-blok-preview='page'] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--blok-preview-space-6);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='page'] p {
+  margin: 0;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='page'] [data-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-preview-space-4);
+  margin-inline: calc(-1 * var(--blok-preview-space-4));
+  padding: var(--blok-preview-space-3) var(--blok-preview-space-4);
+  border-radius: var(--blok-radius-control-sm);
+  background: var(--blok-item-hover-bg);
+  white-space: nowrap;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='page'] [data-icon] {
+  display: grid;
+  flex-shrink: 0;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='page'] [data-icon] svg {
+  width: 18px;
+  height: 18px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='page'] [data-title] {
+  border-bottom: 1px solid var(--blok-border-primary);
+  font-weight: var(--blok-font-weight-medium, 500);
+}
+
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row], [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row] {
   animation: blok-preview-lists-row-in 360ms var(--blok-preview-ease-out) both;
 }
@@ -10817,6 +10857,10 @@ span[data-blok-slash-search] {
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='divider'] [data-heading], [data-blok-interface='block-preview'] [data-blok-preview='divider'] p:last-child {
   animation: blok-preview-lists-row-in 420ms var(--blok-preview-ease-out) 620ms both;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='page'] [data-row] {
+  animation: blok-preview-lists-row-in 420ms var(--blok-preview-ease-out) 320ms both, blok-preview-lists-hover 360ms ease-out 900ms both;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-grid] {

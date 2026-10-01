@@ -118,6 +118,18 @@ export interface BlockTool extends BaseTool {
   getToolbarAnchorElement?(): HTMLElement | undefined;
 
   /**
+   * Called when the user presses Enter (or Cmd/Ctrl+Enter) on this block while
+   * it is the keyboard navigation target (Escape, then arrows).
+   *
+   * Return true if the tool handled it (e.g. opened a link). Blok then leaves
+   * navigation mode without putting the caret in the block. Return false, or
+   * omit the method, to keep the default: the caret moves into the block.
+   *
+   * @param event - the Enter keydown
+   */
+  activate?(event: KeyboardEvent): boolean;
+
+  /**
    * Called when read-only mode is toggled without re-rendering the block.
    * Implementations should update the DOM in place: toggle contentEditable,
    * bind/unbind event listeners, show/hide interactive elements, etc.

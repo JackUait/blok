@@ -15,7 +15,6 @@ import type { InlineBackend, MarkdownDegradation, SerializableBlock } from '../m
 import { buildDocumentModel } from './document-model';
 import type { ViewBlock } from './document-model';
 import { needsTokenizing, parseInlineFragment } from './html-text';
-import { escapeHtml } from './sanitize';
 
 import type { LooseOutputData, OutputData } from '../../types';
 
@@ -144,22 +143,6 @@ const parse5InlineBackend: InlineBackend = {
 };
 
 /**
- * A page block's data as the core's default branch reads it: its title as
- * inline `text`. The core has no `page` case, and this API takes no option to
- * build the page's link, so a page exports as its title line.
- * @param data - page block data
- */
-const pageData = (data: Record<string, unknown>): Record<string, unknown> => {
-  const cache = data.cache;
-  const title = typeof cache === 'object' && cache !== null && !Array.isArray(cache)
-    ? (cache as Record<string, unknown>).title
-    : undefined;
-
-  /** The title is plain text, so it is escaped before the core reads it as HTML. */
-  return { ...data, text: escapeHtml(typeof title === 'string' && title !== '' ? title : 'Untitled') };
-};
-
-/**
  * Flatten a saved document into the core's block list, in reading order —
  * top-level blocks then their structural descendants — stamping each block's
  * `indent` with its parent-chain depth.
@@ -190,7 +173,7 @@ const flattenDocument = (data: OutputData | LooseOutputData | null | undefined):
     out.push({ ...(block.id === undefined ? {} : { id: block.id }),
       parentId,
       tool: block.type,
-      data: isPage ? pageData(block.data) : block.data,
+      data: block.data,
       indent,
       ...(unresolvedChildIds.length > 0 ? { unresolvedChildIds } : {}) });
 

@@ -960,6 +960,88 @@ const editor = new Blok({
 });`,
   },
   {
+    id: 'page',
+    exportName: 'Page',
+    type: 'block',
+    title: 'Page',
+    description:
+      'A one-line link to a sub-page, like a sub-page in Notion. It shows the page\'s icon and title. Each page is its own document, and your app stores it. The block saves only the page id and a display copy of the title and icon.\n\nBlok never loads or saves a page. Your app connects pages through the four config members below.\n\nThe block has three special states:\n\n- Untitled: the page has no title. It is still a link.\n- Page not found: `resolve` returned `null`.\n- No access: `resolve` returned `{ access: \'none\' }`. The cached title is hidden.\n\nA page that is not found or not accessible is never removed automatically. The block stays, but it stops working as a link.\n\nA plain click, or Enter on the focused link, calls `open`. Without `open`, the link follows `href`. Cmd/Ctrl-click, Shift-click and middle click keep their browser meaning, such as opening a new tab. Keyboard focus and new-tab clicks need `href`.\n\n`page` is not in `defaultBlockTools`. Register it yourself, with a config.\n\nFor read-only HTML, call `blocksToHtml(data, { pageHref })` from `@bloklabs/core/view`. It renders the block as an icon and a title, and it is a link only when you pass `pageHref`. The view reads only the saved cache, so it cannot show the not-found or no-access states. It never renders the page\'s body.',
+    importExample: `import { Page } from '@bloklabs/core/tools';`,
+    configOptions: [
+      {
+        option: 'href',
+        type: '(pageId: string) => string',
+        default: 'undefined',
+        description:
+          'Builds the page\'s URL from its id. Blok puts it on the link, so the link takes keyboard focus and Cmd/Ctrl-click or middle click opens the page in a new tab. Without it the link has no URL. Unsafe schemes such as `javascript:` are dropped.',
+      },
+      {
+        option: 'open',
+        type: '(pageId: string, ctx: { event?: MouseEvent | KeyboardEvent }) => void',
+        default: 'undefined',
+        description:
+          'Opens the page. Blok calls it on a plain left click, and on Enter on the focused link. Without it, a click follows `href`.\n\nEnter also opens the page when the block is selected from the keyboard (Escape, then the arrow keys). Then `ctx.event` is that key press.\n\nBlok also calls it once right after a user inserts a new page from the toolbox. Then `ctx.event` is empty. It is not called for a page inserted through the API, or when `create` throws.',
+      },
+      {
+        option: 'resolve',
+        type: '(pageId: string) => PageInfo | null | undefined | Promise<…>',
+        default: 'undefined',
+        description:
+          'Returns the page\'s current title and icon. Blok asks once, when the block renders. It may return a value or a promise:\n\n- `{ title, icon }`: the cached copy is updated if it changed.\n- `null`: the page does not exist. The block shows "Page not found".\n- `{ access: \'none\' }`: this user may not see the page. The block shows "No access".\n- `undefined`: nothing is known. The cached copy stays.\n\nReturn the full picture. A missing `title` or `icon` means the page has none. In read-only mode the fresh copy is shown but never saved. If `resolve` throws, the cached copy stays.',
+      },
+      {
+        option: 'create',
+        type: '(init: { pageId: string }) => void | Promise<void>',
+        default: 'undefined',
+        description:
+          'Makes the page in your app. Blok calls it once with the id it minted, when a page block is inserted without a `pageId`. That happens when a user picks Page in the toolbox, or when your code inserts one through the API.\n\nIt is never called on load, paste, undo, redo or a collaborator\'s change, or in read-only mode. If it throws, the block stays with its id. Then `resolve` can report the page as missing.',
+      },
+    ],
+    saveDataShape: `interface PageData {
+  pageId: string; // Id of the page. Blok mints one for a new page.
+  cache?: {       // Display copy, refreshed from resolve(). It can be stale.
+    title?: string;
+    icon?: { type: 'emoji'; value: string } | { type: 'image'; url: string };
+  };
+}
+// The page's body is NOT here. It is a separate document your app stores.`,
+    saveDataExample: `{
+  "id": "pg001",
+  "type": "page",
+  "data": {
+    "pageId": "p1",
+    "cache": {
+      "title": "Roadmap",
+      "icon": { "type": "emoji", "value": "🗺" }
+    }
+  }
+}`,
+    usageExample: `import { Blok } from '@bloklabs/core';
+import { Page } from '@bloklabs/core/tools';
+import { blocksToHtml } from '@bloklabs/core/view';
+
+const pageUrl = (pageId) => \`/pages/\${pageId}\`;
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    // Not in defaultBlockTools: register it with your own config.
+    page: {
+      class: Page,
+      config: {
+        href: pageUrl,
+        open: (pageId) => router.push(pageUrl(pageId)),
+        resolve: (pageId) => myApi.getPageInfo(pageId), // { title, icon } | null
+        create: ({ pageId }) => myApi.createPage(pageId),
+      },
+    },
+  },
+});
+
+// Read-only HTML: pass the same URL builder.
+const html = blocksToHtml(savedData, { pageHref: pageUrl });`,
+  },
+  {
     id: 'file',
     exportName: 'File',
     type: 'block',

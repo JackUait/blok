@@ -40,6 +40,14 @@ import {
   LIST_ITEM_CLASSES,
   LIST_ITEM_ROW_CLASSES,
 } from './list';
+import {
+  PAGE_ICON_CLASSES,
+  PAGE_LINK_CLASSES,
+  PAGE_LINK_INK_CLASSES,
+  PAGE_TITLE_CLASSES,
+  PAGE_TITLE_MUTED_CLASSES,
+  PAGE_WRAPPER_CLASSES,
+} from './page';
 import { PARAGRAPH_CLASSES } from './paragraph';
 import { quoteClasses } from './quote';
 import { SPACER_WRAPPER_CLASSES } from './spacer';
@@ -58,6 +66,7 @@ const STATIC_BY_TOOL: Record<string, readonly string[]> = {
   toggle: TOGGLE_WRAPPER_CLASSES,
   divider: DIVIDER_WRAPPER_CLASSES,
   spacer: SPACER_WRAPPER_CLASSES,
+  page: PAGE_WRAPPER_CLASSES,
   /**
    * Each list ITEM is its own block, so these land on the `<li>` — never on the
    * grouping `<ul>`/`<ol>`, which has no editor counterpart (the editor renders
@@ -156,5 +165,10 @@ export const ALL_STATIC_CLASSES: readonly string[] = [
     ...LIST_CHECKLIST_ROW_CLASSES,
     ...LIST_CONTENT_CLASSES,
     ...LIST_CHECKBOX_CLASSES,
+    ...PAGE_LINK_CLASSES,
+    ...PAGE_LINK_INK_CLASSES,
+    ...PAGE_ICON_CLASSES,
+    ...PAGE_TITLE_CLASSES,
+    ...PAGE_TITLE_MUTED_CLASSES,
   ]),
 ].sort();

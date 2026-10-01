@@ -1404,6 +1404,45 @@ describe('Block', () => {
     });
   });
 
+  describe('activate', () => {
+    const keydown = (): KeyboardEvent => new KeyboardEvent('keydown', { key: 'Enter' });
+
+    it('passes the event to the tool and reports that it handled it', () => {
+      const { block } = createBlock();
+      const activate = vi.fn(() => true);
+      const event = keydown();
+
+      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.activate = activate;
+
+      expect(block.activate(event)).toBe(true);
+      expect(activate).toHaveBeenCalledWith(event);
+    });
+
+    it('reports false when the tool has no activate', () => {
+      const { block } = createBlock();
+
+      expect(block.activate(keydown())).toBe(false);
+    });
+
+    it('reports false when the tool returns anything but true', () => {
+      const { block } = createBlock();
+
+      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.activate = vi.fn(() => 'yes');
+
+      expect(block.activate(keydown())).toBe(false);
+    });
+
+    it('reports false when the tool throws', () => {
+      const { block } = createBlock();
+
+      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.activate = vi.fn(() => {
+        throw new Error('boom');
+      });
+
+      expect(block.activate(keydown())).toBe(false);
+    });
+  });
+
   describe('edit metadata', () => {
     it('should initialize lastEditedAt and lastEditedBy from constructor options', () => {
       const { block } = createBlock({

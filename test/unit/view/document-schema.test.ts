@@ -49,6 +49,14 @@ type JsonSchema = {
   $defs?: Record<string, JsonSchema>;
 };
 
+/**
+ * Every block tool Blok ships a saved shape for. `page` is built in but not a
+ * default: without the host's `href`/`resolve` config it is a dead link, so it
+ * is registered by hand. Export names cannot stand in for this list — they are
+ * class names (`Columns`), not the registry keys a saved block's `type` holds.
+ */
+const BUILT_IN_BLOCK_TOOLS: readonly string[] = [...Object.keys(defaultBlockTools), 'page'];
+
 const schema = blokDocumentSchema as unknown as JsonSchema;
 const defs = schema.$defs ?? {};
 const blockSchema = (schema.properties?.blocks ?? {}) as JsonSchema;
@@ -248,11 +256,11 @@ describe('blokDocumentSchema', () => {
 
   describe('coverage', () => {
     /**
-     * `defaultBlockTools` is the registry, so the comparison is bidirectional:
-     * a new tool without a def AND a def left behind by a removed tool both fail.
+     * The comparison is bidirectional: a new tool without a def AND a def left
+     * behind by a removed tool both fail.
      */
     it('has exactly one $defs entry per built-in block tool', () => {
-      expect(Object.keys(defs).sort()).toEqual(Object.keys(defaultBlockTools).sort());
+      expect(Object.keys(defs).sort()).toEqual([...BUILT_IN_BLOCK_TOOLS].sort());
     });
 
     it('routes every built-in type to its own def', () => {
@@ -264,7 +272,7 @@ describe('blokDocumentSchema', () => {
         branches.map(branch => [branch.if.properties.type.const, branch.then.properties.data.$ref])
       );
 
-      Object.keys(defaultBlockTools).forEach((name) => {
+      BUILT_IN_BLOCK_TOOLS.forEach((name) => {
         expect(routed[name]).toBe(`#/$defs/${name}`);
       });
     });
@@ -302,7 +310,7 @@ describe('blokDocumentSchema', () => {
   });
 
   describe('field drift', () => {
-    it.each(Object.keys(defaultBlockTools))('%s: schema properties match what save() emits', (name) => {
+    it.each(BUILT_IN_BLOCK_TOOLS)('%s: schema properties match what save() emits', (name) => {
       const def = defs[name];
       const sample = savedData[name];
 
@@ -360,7 +368,7 @@ describe('blokDocumentSchema', () => {
         .toEqual(['arrow', 'ellipse', 'highlighter', 'line', 'pen', 'rect', 'text']);
     });
 
-    it.each(Object.keys(defaultBlockTools))('%s: every required field is actually saved', (name) => {
+    it.each(BUILT_IN_BLOCK_TOOLS)('%s: every required field is actually saved', (name) => {
       (defs[name].required ?? []).forEach(key => expect(savedData[name]).toHaveProperty(key));
     });
   });

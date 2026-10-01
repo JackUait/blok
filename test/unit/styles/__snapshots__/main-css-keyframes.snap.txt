@@ -462,6 +462,10 @@
   from { opacity: 1 }
 }
 
+@keyframes blok-preview-lists-hover {
+  from { background: transparent }
+}
+
 @keyframes blok-preview-lists-number-roll {
   from { opacity: 0; transform: translateY(-70%) }
 }

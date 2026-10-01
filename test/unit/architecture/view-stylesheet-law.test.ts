@@ -40,8 +40,11 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..');
  * media styling pushes the sheet past the budget is to split it into an opt-in
  * `view-media.css`, so hosts rendering text-only documents keep paying for text
  * only — not to pick a bigger number.
+ *
+ * Raised from 53,000 for the page block (54,970 measured): its card is text,
+ * not media, so it belongs in the base sheet rather than a media split.
  */
-const VIEW_CSS_BYTE_BUDGET = 53_000;
+const VIEW_CSS_BYTE_BUDGET = 56_000;
 
 const readManifest = (): Record<string, unknown> =>
   JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8')) as Record<string, unknown>;

@@ -444,6 +444,12 @@ const TOOL_COPY: Record<string, Copy> = {
       'Turn a URL into a rich link card with a title, description, and favicon, degrading gracefully when metadata is missing.',
     h1: 'Bookmark block: rich link previews',
   },
+  page: {
+    title: 'Page Block — Links to Sub-Pages',
+    description:
+      'A one-line link to a sub-page that your app stores as its own document. Host hooks open, create and refresh each page.',
+    h1: 'Page block: links to sub-pages',
+  },
   file: {
     title: 'File Block — Attachments and Downloads',
     description:

@@ -131,6 +131,17 @@ describe('BlokView', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/pic.png');
   });
 
+  it('forwards pageHref so a page card links to its sub-page', () => {
+    const { container } = render(
+      <BlokView
+        data={{ blocks: [{ type: 'page', data: { pageId: 'p1', cache: { title: 'Roadmap' } } }] }}
+        pageHref={(pageId) => `/pages/${pageId}`}
+      />
+    );
+
+    expect(container.querySelector('a')?.getAttribute('href')).toBe('/pages/p1');
+  });
+
   it('forwards id and arbitrary div attributes onto the wrapper', () => {
     const { container } = render(
       <BlokView data={paragraphDoc('x')} id="doc" data-testid="reader" aria-label="Article body" />
@@ -207,6 +218,21 @@ describe('useBlokView', () => {
 
     expect(container.querySelector('p')).toHaveTextContent('two');
     expect(Object.is(results[0], results[1])).toBe(false);
+  });
+
+  it('forwards pageHref', () => {
+    const Probe = (): React.ReactNode => {
+      const content = useBlokView(
+        { blocks: [{ type: 'page', data: { pageId: 'p1', cache: { title: 'Roadmap' } } }] },
+        { pageHref: (pageId) => `/pages/${pageId}` }
+      );
+
+      return <div data-testid="probe">{content}</div>;
+    };
+
+    render(<Probe />);
+
+    expect(screen.getByTestId('probe').querySelector('a')?.getAttribute('href')).toBe('/pages/p1');
   });
 
   it('forwards toolAttributes / blockIds / transformUrl options', () => {

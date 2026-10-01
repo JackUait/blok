@@ -190,6 +190,34 @@ export class PageTool implements BlockTool {
     this.detached = true;
   }
 
+  /**
+   * Enter on the selected block opens the page. A missing or locked page
+   * returns false: the block has no inputs, so core just keeps it selected.
+   */
+  public activate(event: KeyboardEvent): boolean {
+    if (!this.isNavigable) {
+      return false;
+    }
+
+    const open = this.config.open;
+
+    if (open !== undefined) {
+      open(this.data.pageId, { event });
+
+      return true;
+    }
+
+    const link = this.root?.querySelector('a[href]');
+
+    if (!(link instanceof HTMLAnchorElement)) {
+      return false;
+    }
+    // A real click, so the browser follows the href as it would for a mouse.
+    link.click();
+
+    return true;
+  }
+
   private async createPage(): Promise<void> {
     const { pageId } = this.data;
 

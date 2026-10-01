@@ -49,6 +49,18 @@ const ATTRIBUTE_NAME_MAP: Record<string, string> = {
 };
 
 /**
+ * React names SVG attributes in camelCase (`stroke-width` → `strokeWidth`) and
+ * warns on the raw form. Only inside `<svg>`: elsewhere a hyphenated name (a
+ * custom element's attribute) must reach the DOM as written.
+ * @param name - SVG attribute name
+ */
+const svgPropName = (name: string): string => (
+  name.startsWith('aria-') || name.startsWith('data-')
+    ? name
+    : name.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase())
+);
+
+/**
  * Convert a sanitized `style` attribute string to a React style object
  * (React only accepts object styles). Custom properties keep their raw name;
  * everything else is camelCased.
@@ -85,8 +97,9 @@ const styleStringToObject = (css: string): CSSProperties => {
  * Map one ViewNode attribute record to React props.
  * @param attrs - sanitized attributes from the view tree
  * @param key - sibling index used as the React key
+ * @param inSvg - whether the element sits in an `<svg>` subtree
  */
-const attrsToProps = (attrs: Record<string, string>, key: number): Record<string, unknown> => {
+const attrsToProps = (attrs: Record<string, string>, key: number, inSvg: boolean): Record<string, unknown> => {
   const props: Record<string, unknown> = { key };
 
   for (const [name, value] of Object.entries(attrs)) {
@@ -110,7 +123,7 @@ const attrsToProps = (attrs: Record<string, string>, key: number): Record<string
       continue;
     }
 
-    props[ATTRIBUTE_NAME_MAP[name] ?? name] = value;
+    props[ATTRIBUTE_NAME_MAP[name] ?? (inSvg ? svgPropName(name) : name)] = value;
   }
 
   return props;
@@ -120,19 +133,21 @@ const attrsToProps = (attrs: Record<string, string>, key: number): Record<string
  * Map a list of ViewNodes to React nodes. Element keys come from the sibling
  * index (the tree is static per render).
  * @param nodes - view tree siblings
+ * @param inSvg - whether the siblings sit in an `<svg>` subtree
  */
-export const viewNodesToReact = (nodes: ViewNode[]): ReactNode[] => {
+export const viewNodesToReact = (nodes: ViewNode[], inSvg = false): ReactNode[] => {
   return nodes.map((node, index): ReactNode => {
     if ('text' in node) {
       return node.text;
     }
 
-    const props = attrsToProps(node.attrs, index);
+    const svg = inSvg || node.tag === 'svg';
+    const props = attrsToProps(node.attrs, index, svg);
 
     if (VOID_ELEMENTS.has(node.tag) || node.children.length === 0) {
       return createElement(node.tag, props);
     }
 
-    return createElement(node.tag, props, ...viewNodesToReact(node.children));
+    return createElement(node.tag, props, ...viewNodesToReact(node.children, svg));
   });
 };

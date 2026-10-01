@@ -334,6 +334,52 @@ describe('NavigationMode', () => {
         expect(event.stopPropagation).toHaveBeenCalledTimes(1);
         expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
       });
+
+      const setupWithTarget = (activate?: (event: KeyboardEvent) => boolean): {
+        navigationMode: NavigationMode;
+        disableNavigationMode: ReturnType<typeof vi.fn>;
+        activate: ReturnType<typeof vi.fn>;
+      } => {
+        const disableNavigationMode = vi.fn();
+        const activateSpy = vi.fn(activate ?? ((): boolean => false));
+        const blok = createBlokModules({
+          BlockSelection: {
+            navigationModeEnabled: true,
+            disableNavigationMode,
+            navigationFocusedBlock: { activate: activateSpy },
+          } as unknown as BlokModules['BlockSelection'],
+        });
+
+        return { navigationMode: new NavigationMode(blok), disableNavigationMode, activate: activateSpy };
+      };
+
+      it.each([
+        ['Enter', {}],
+        ['Cmd+Enter', { metaKey: true }],
+        ['Ctrl+Enter', { ctrlKey: true }],
+      ])('activates the target block on %s and leaves without entering edit', (_name, init) => {
+        const { navigationMode, disableNavigationMode, activate } = setupWithTarget(() => true);
+        const event = createKeyboardEvent({ key: 'Enter', ...init });
+
+        const result = navigationMode.handleKey(event);
+
+        expect(activate).toHaveBeenCalledTimes(1);
+        expect(activate).toHaveBeenCalledWith(event);
+        expect(disableNavigationMode).toHaveBeenCalledTimes(1);
+        expect(disableNavigationMode).toHaveBeenCalledWith(false);
+        expect(result).toBe(true);
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      });
+
+      it('focuses the block for editing when the block does not handle activation', () => {
+        const { navigationMode, disableNavigationMode, activate } = setupWithTarget(() => false);
+        const event = createKeyboardEvent({ key: 'Enter' });
+
+        navigationMode.handleKey(event);
+
+        expect(activate).toHaveBeenCalledTimes(1);
+        expect(disableNavigationMode).toHaveBeenCalledWith(true);
+      });
     });
 
     describe('Escape in navigation mode', () => {

@@ -27,6 +27,11 @@ import { join, relative, sep } from 'node:path';
  *                                              Icons geometry, brand colours);
  *                                              trademarks drawn as their owners
  *                                              ship them, never Blok Line icons
+ * - src/shared/tool-classes/page.ts       → a byte copy of IconPage for the
+ *                                              view, which must not import the
+ *                                              icons module (it would pull the
+ *                                              shared icons chunk into view.mjs);
+ *                                              tool-classes.test.ts pins it equal
  * - src/stories/** (Storybook story files)   → fixtures demonstrating the
  *                                              external custom-icon API
  * - JSDoc comments mentioning `<svg>...</svg>` as documentation
@@ -40,6 +45,7 @@ const ALLOWED_FILES = new Set([
   'components/utils/popover/nothing-found-art.ts',
   'components/utils/media-preview-art.ts',
   'components/utils/brand-marks.ts',
+  'shared/tool-classes/page.ts',
 ]);
 
 const ALLOWED_DIR_PREFIXES = [

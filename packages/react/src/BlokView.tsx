@@ -26,6 +26,8 @@ export interface BlokViewProps extends Omit<HTMLAttributes<HTMLDivElement>, 'chi
   transformUrl?: BlocksToHtmlOptions['transformUrl'];
   /** Custom renderers for inline elements, keyed by lowercase tag name (equations, mentions). */
   inlineRenderers?: BlocksToHtmlOptions['inlineRenderers'];
+  /** Build the link for a `page` block from its `pageId`; without it a page card is not a link. */
+  pageHref?: BlocksToHtmlOptions['pageHref'];
   /**
    * Render with the editor's presentational classes and per-block scaffolding
    * so the output matches a read-only editor render (default `true`). Needs
@@ -59,6 +61,7 @@ export const BlokView = ({
   blockIds,
   transformUrl,
   inlineRenderers,
+  pageHref,
   classes,
   ...divProps
 }: BlokViewProps): ReactNode => {
@@ -77,6 +80,7 @@ export const BlokView = ({
     blockIds,
     transformUrl,
     inlineRenderers,
+    pageHref,
     classes: classes ?? true,
   });
 

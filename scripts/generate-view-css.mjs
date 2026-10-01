@@ -75,6 +75,10 @@ const FIXTURE_BLOCKS = [
   { id: 'tg1c', type: 'paragraph', parent: 'tg1', data: { text: 'Toggle body' } },
   { id: 'tg2', type: 'toggle', data: { text: 'Closed toggle', isOpen: false } },
   { id: 'tg2c', type: 'paragraph', parent: 'tg2', data: { text: 'Hidden body' } },
+  /** Every page icon shape: the fallback svg, an emoji, an image; and an untitled page. */
+  { id: 'pg1', type: 'page', data: { pageId: 'p1', cache: { title: 'Sub-page' } } },
+  { id: 'pg2', type: 'page', data: { pageId: 'p2', cache: { title: 'Emoji page', icon: { type: 'emoji', value: '🗺' } } } },
+  { id: 'pg3', type: 'page', data: { pageId: 'p3', cache: { icon: { type: 'image', url: 'https://example.com/icon.png' } } } },
 ];
 
 /**
@@ -446,6 +450,8 @@ const main = async () => {
     root: true,
     classes: true,
     toolAttributes: true,
+    /** Without it a page card is a `<span>`, and `<a>`-only rules would be pruned. */
+    pageHref: (pageId) => `/pages/${pageId}`,
   });
 
   const { window } = new JSDOM(`<!doctype html><html><body>${html}</body></html>`);

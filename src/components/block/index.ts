@@ -551,6 +551,31 @@ export class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
+   * Runs the tool's `activate` for Enter on the navigation-mode target.
+   *
+   * @param event - the Enter keydown
+   * @returns true only when the tool says it handled the key
+   */
+  public activate(event: KeyboardEvent): boolean {
+    if (typeof this.toolInstance.activate !== 'function') {
+      return false;
+    }
+
+    try {
+      // A plain-JS tool may return anything; only a real true counts.
+      const handled: unknown = this.toolInstance.activate(event);
+
+      return handled === true;
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+
+      log(`Error during 'activate' call: ${errorMessage}`, 'error');
+
+      return false;
+    }
+  }
+
+  /**
    * Extracts data from Block
    * Groups Tool's save processing time
    * @returns {object}

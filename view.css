@@ -76,6 +76,9 @@
   .my-2 {
     margin-block: calc(var(--spacing) * 2);
   }
+  .my-px {
+    margin-block: 1px;
+  }
   .mt-3 {
     margin-top: calc(var(--spacing) * 3);
   }
@@ -115,8 +118,18 @@
   .flex {
     display: flex;
   }
+  .inline-flex {
+    display: inline-flex;
+  }
+  .size-5 {
+    width: calc(var(--spacing) * 5);
+    height: calc(var(--spacing) * 5);
+  }
   .h-5 {
     height: calc(var(--spacing) * 5);
+  }
+  .min-h-7 {
+    min-height: calc(var(--spacing) * 7);
   }
   .min-h-\[1\.5em\] {
     min-height: 1.5em;
@@ -124,11 +137,17 @@
   .w-5 {
     width: calc(var(--spacing) * 5);
   }
+  .w-full {
+    width: 100%;
+  }
   .min-w-0 {
     min-width: 0px;
   }
   .flex-1 {
     flex: 1;
+  }
+  .flex-none {
+    flex: none;
   }
   .cursor-pointer {
     cursor: pointer;
@@ -136,14 +155,28 @@
   .flex-col {
     flex-direction: column;
   }
+  .items-center {
+    align-items: center;
+  }
   .items-start {
     align-items: flex-start;
+  }
+  .justify-center {
+    justify-content: center;
+  }
+  .gap-1\.5 {
+    gap: calc(var(--spacing) * 1.5);
   }
   .gap-2 {
     gap: calc(var(--spacing) * 2);
   }
   .gap-\[var\(--blok-list-gap\,0px\)\] {
     gap: var(--blok-list-gap,0px);
+  }
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .overflow-hidden {
     overflow: hidden;
@@ -169,6 +202,10 @@
     border-right-style: var(--tw-border-style);
     border-right-width: 0px;
   }
+  .border-b {
+    border-bottom-style: var(--tw-border-style);
+    border-bottom-width: 1px;
+  }
   .border-b-0 {
     border-bottom-style: var(--tw-border-style);
     border-bottom-width: 0px;
@@ -180,6 +217,13 @@
   .border-l-\[3px\] {
     border-left-style: var(--tw-border-style);
     border-left-width: 3px;
+  }
+  .border-solid {
+    --tw-border-style: solid;
+    border-style: solid;
+  }
+  .\[border-color\:var\(--blok-border-primary\)\] {
+    border-color: var(--blok-border-primary);
   }
   .border-\(--blok-border-primary\) {
     border-color: var(--blok-border-primary);
@@ -201,6 +245,9 @@
       --tw-leading: var(--leading-normal) !important;
       line-height: var(--leading-normal) !important;
     }
+  }
+  .px-0\.5 {
+    padding-inline: calc(var(--spacing) * 0.5);
   }
   .px-4 {
     padding-inline: calc(var(--spacing) * 4);
@@ -277,6 +324,9 @@
     font-size: var(--text-xl);
     line-height: var(--tw-leading, var(--text-xl--line-height));
   }
+  .text-\[1\.1em\] {
+    font-size: 1.1em;
+  }
   .text-\[length\:var\(--blok-callout-font-size\,var\(--blok-paragraph-font-size\,inherit\)\)\] {
     font-size: var(--blok-callout-font-size,var(--blok-paragraph-font-size,inherit));
   }
@@ -306,9 +356,21 @@
     --tw-leading: 1px;
     line-height: 1px;
   }
+  .leading-none {
+    --tw-leading: 1;
+    line-height: 1;
+  }
+  .leading-normal {
+    --tw-leading: var(--leading-normal);
+    line-height: var(--leading-normal);
+  }
   .leading-relaxed {
     --tw-leading: var(--leading-relaxed);
     line-height: var(--leading-relaxed);
+  }
+  .font-medium {
+    --tw-font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-medium);
   }
   .font-semibold {
     --tw-font-weight: var(--font-weight-semibold);
@@ -316,6 +378,15 @@
   }
   .whitespace-pre-wrap {
     white-space: pre-wrap;
+  }
+  .text-text-primary\! {
+    color: var(--blok-text-primary) !important;
+  }
+  .text-text-secondary {
+    color: var(--blok-text-secondary);
+  }
+  .no-underline\! {
+    text-decoration-line: none !important;
   }
   .accent-current {
     accent-color: currentcolor;
@@ -373,11 +444,25 @@
   .\[\&_p\]\:p-0\! p {
     padding: 0px !important;
   }
+  .\[\&\>img\]\:size-\[1\.125rem\] > img {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+  .\[\&\>img\]\:rounded-\(--blok-radius-mark\) > img {
+    border-radius: var(--blok-radius-mark);
+  }
+  .\[\&\>img\]\:object-cover > img {
+    object-fit: cover;
+  }
   .\[\&\>p\:first-of-type\]\:mt-0 > p:first-of-type {
     margin-top: 0px;
   }
   .\[\&\>p\:last-of-type\]\:mb-0 > p:last-of-type {
     margin-bottom: 0px;
+  }
+  .\[\&\>svg\]\:size-\[1\.125rem\] > svg {
+    width: 1.125rem;
+    height: 1.125rem;
   }
 }
 :root {
@@ -439,6 +524,14 @@
   }
   :where([data-blok-interface], [data-blok-popover]) :is(ol, ul, menu) {
     list-style: none;
+  }
+  :where([data-blok-interface], [data-blok-popover]) :is(img, svg, video, canvas, audio, iframe, embed, object) {
+    display: block;
+    vertical-align: middle;
+  }
+  :where([data-blok-interface], [data-blok-popover]) :is(img, video) {
+    max-width: 100%;
+    height: auto;
   }
   :where([data-blok-interface], [data-blok-popover]) :is(button, input, select, optgroup, textarea, ::file-selector-button) {
     font: inherit;

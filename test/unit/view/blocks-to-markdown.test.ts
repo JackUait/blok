@@ -181,6 +181,12 @@ describe('blocksToMarkdown (view)', () => {
 
       expect(warnings.filter(warning => warning.action === 'dropped')).toEqual([]);
     });
+
+    it('reports the lost sub-page link as a degradation', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([{ type: 'page', data: { pageId: 'p1' } }]));
+
+      expect(warnings).toEqual([expect.objectContaining({ construct: 'page', action: 'degraded' })]);
+    });
   });
 
   describe('containers that own their children', () => {

@@ -26,6 +26,49 @@
     }
   },
   {
+    "id": "pages-section-header",
+    "type": "header",
+    "data": {
+      "text": "Pages",
+      "level": 2
+    }
+  },
+  {
+    "id": "pages-intro",
+    "type": "paragraph",
+    "data": {
+      "text": "A page block links to another page, like a Notion sub-page. Each page is its own document — click one to open it, or type <code>/page</code> to make a new one."
+    }
+  },
+  {
+    "id": "page-getting-started",
+    "type": "page",
+    "data": {
+      "pageId": "getting-started",
+      "cache": {
+        "title": "Getting started",
+        "icon": {
+          "type": "emoji",
+          "value": "🚀"
+        }
+      }
+    }
+  },
+  {
+    "id": "page-design-notes",
+    "type": "page",
+    "data": {
+      "pageId": "design-notes",
+      "cache": {
+        "title": "Design notes",
+        "icon": {
+          "type": "emoji",
+          "value": "🎨"
+        }
+      }
+    }
+  },
+  {
     "type": "header",
     "id": "7ItVl5biRo",
     "data": {

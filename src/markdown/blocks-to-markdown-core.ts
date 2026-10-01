@@ -983,6 +983,18 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
 
       return `${flatIndent}[${label}](${url})`;
     }
+    /**
+     * A page points at a separate document, so only its title line is here.
+     * The title is plain text: written raw, never read as inline HTML.
+     * "Untitled" matches the view's card.
+     */
+    case 'page': {
+      warn(context, block.tool, 'degraded', 'page is rendered as its title; the link to the sub-page is lost');
+
+      const title = isRecord(data.cache) ? asString(data.cache.title) : '';
+
+      return `${flatIndent}${title === '' ? 'Untitled' : title}`;
+    }
     default: {
       const fallback = `${flatIndent}${text}`;
 

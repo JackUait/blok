@@ -25,6 +25,14 @@ import {
   LIST_CONTENT_CLASSES,
   LIST_ITEM_ROW_CLASSES,
 } from '../shared/tool-classes/list';
+import {
+  PAGE_FALLBACK_ICON,
+  PAGE_ICON_CLASSES,
+  PAGE_LINK_CLASSES,
+  PAGE_LINK_INK_CLASSES,
+  PAGE_TITLE_CLASSES,
+  PAGE_TITLE_MUTED_CLASSES,
+} from '../shared/tool-classes/page';
 import { TOGGLE_CHILDREN_CLASSES, TOGGLE_CONTENT_CLASSES, TOGGLE_HEADER_ROW_CLASSES } from '../shared/tool-classes/toggle';
 import type { ViewBlock } from './document-model';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from './table-grid';
@@ -396,15 +404,18 @@ const emitPage = (block: ViewBlock, env: EmitterEnv): string => {
   const title = str(cache, 'title');
   const emoji = icon.type === 'emoji' ? str(icon, 'value') : '';
   const src = icon.type === 'image' ? env.url('src', icon.url, block.type) : '';
-  const emojiGlyph = emoji === '' ? '' : `<span>${env.escape(emoji)}</span>`;
-  const glyph = src === '' ? emojiGlyph : `<img${src} alt="">`;
+  const fallback = emoji === '' ? PAGE_FALLBACK_ICON.trim() : env.escape(emoji);
+  const glyph = src === '' ? fallback : `<img${src} alt="">`;
+  const iconSlot = `<span${env.classList(PAGE_ICON_CLASSES)} aria-hidden="true">${glyph}</span>`;
   /** Matches the editor's placeholder; the view has no i18n layer. */
-  const label = `<span>${env.escape(title === '' ? 'Untitled' : title)}</span>`;
+  const titleClasses = title === '' ? [...PAGE_TITLE_CLASSES, ...PAGE_TITLE_MUTED_CLASSES] : PAGE_TITLE_CLASSES;
+  const label = `<span${env.classList(titleClasses)}>${env.escape(title === '' ? 'Untitled' : title)}</span>`;
+  const cardClasses = env.classList([...PAGE_LINK_CLASSES, ...PAGE_LINK_INK_CLASSES]);
   const href = env.pageHrefAttr(block.data.pageId);
 
   return href === ''
-    ? `<div><span>${glyph}${label}</span></div>`
-    : `<div><a${href}>${glyph}${label}</a></div>`;
+    ? `<div><span${cardClasses}>${iconSlot}${label}</span></div>`
+    : `<div><a${href}${cardClasses}>${iconSlot}${label}</a></div>`;
 };
 
 /**

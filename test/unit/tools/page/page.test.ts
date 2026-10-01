@@ -204,6 +204,83 @@ describe('Page tool', () => {
     });
   });
 
+  describe('activate (Enter in navigation mode)', () => {
+    const enter = (init: KeyboardEventInit = {}): KeyboardEvent =>
+      new KeyboardEvent('keydown', { key: 'Enter', ...init });
+
+    it('opens the page through the host', () => {
+      const open = vi.fn();
+      const tool = new PageTool(createOptions({ config: { open, href: (id) => `/p/${id}` } }));
+
+      tool.render();
+      const event = enter({ metaKey: true });
+
+      expect(tool.activate(event)).toBe(true);
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(open).toHaveBeenCalledWith('p1', { event });
+    });
+
+    it('opens an untitled page too', () => {
+      const open = vi.fn();
+      const tool = new PageTool(createOptions({ data: { pageId: 'p1' }, config: { open } }));
+
+      tool.render();
+
+      expect(tool.activate(enter())).toBe(true);
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens the page in read-only mode', () => {
+      const open = vi.fn();
+      const tool = new PageTool(createOptions({ config: { open }, readOnly: true }));
+
+      tool.render();
+
+      expect(tool.activate(enter())).toBe(true);
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+
+    it('follows the link like a click when the host gives no open()', () => {
+      const tool = new PageTool(createOptions({ config: { href: (id) => `/p/${id}` } }));
+      const root = tool.render();
+      const clicks: MouseEvent[] = [];
+
+      anchorOf(root).addEventListener('click', (event) => {
+        clicks.push(event);
+        // jsdom has no navigation.
+        event.preventDefault();
+      });
+
+      expect(tool.activate(enter())).toBe(true);
+      expect(clicks).toHaveLength(1);
+    });
+
+    it('does nothing when there is no open() and no href', () => {
+      const tool = new PageTool(createOptions());
+
+      tool.render();
+
+      expect(tool.activate(enter())).toBe(false);
+    });
+
+    it.each([
+      ['missing', (): Promise<null> => Promise.resolve(null)],
+      ['no-access', (): { access: 'none' } => ({ access: 'none' })],
+    ])('does not open a %s page', async (_name, resolve) => {
+      const open = vi.fn();
+      const tool = new PageTool(createOptions({
+        config: { resolve, open, href: (id) => `/p/${id}` },
+      }));
+
+      tool.render();
+      tool.rendered();
+      await flush();
+
+      expect(tool.activate(enter())).toBe(false);
+      expect(open).not.toHaveBeenCalled();
+    });
+  });
+
   describe('resolve', () => {
     it('refreshes the cached title when the host knows a newer one', async () => {
       const dispatchChange = vi.fn();

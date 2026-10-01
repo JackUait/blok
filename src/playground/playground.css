@@ -22,3 +22,146 @@
 */
 @source '.';
 @source '../../index.html';
+
+/*
+  Page header: breadcrumbs, icon and title above the editor when a page is
+  open. Plain rules, not utilities: utilities here would be emitted unscoped
+  and could shadow the editor's own (see the @source note above).
+*/
+.pg-page-header {
+  --pg-page-ink: #191919;
+  --pg-page-muted: #717171;
+  --pg-page-faint: #a8a8a8;
+  --pg-page-hover: rgba(55, 53, 47, 0.06);
+
+  /* Same column as the editor content (--max-width-content), so the title lines up with the text. */
+  max-width: 720px;
+  margin: 0 auto 4px;
+  padding: 0 2px;
+}
+.dark-mode .pg-page-header {
+  --pg-page-ink: #e2e0dc;
+  --pg-page-muted: #a8a8a8;
+  --pg-page-faint: #6e6e6e;
+  --pg-page-hover: rgba(255, 255, 255, 0.06);
+}
+.pg-page-header[hidden] { display: none; }
+
+.pg-crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 28px -6px;
+  padding: 0;
+  list-style: none;
+  font-family: var(--pg-font);
+  font-size: 14px;
+  line-height: 20px;
+}
+.pg-crumbs li { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.pg-crumb-sep { color: var(--pg-page-faint); padding: 0 2px; }
+.pg-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 220px;
+  padding: 2px 6px;
+  border-radius: var(--blok-radius-control);
+  color: var(--pg-page-muted);
+  text-decoration: none;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.pg-crumb-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-crumb-icon { font-size: 15px; line-height: 1; }
+a.pg-crumb:hover { background: var(--pg-page-hover); color: var(--pg-page-ink); }
+.pg-crumb[aria-current="page"] { color: var(--pg-page-ink); font-weight: 500; }
+.pg-crumb:focus-visible,
+.pg-page-icon:focus-visible,
+.pg-page-add-icon:focus-visible { outline: 2px solid var(--blok-focus-ring); outline-offset: 1px; }
+
+.pg-page-icon-row { display: flex; align-items: flex-end; min-height: 28px; margin-bottom: 4px; }
+.pg-page-icon-row.has-icon { min-height: 0; margin-bottom: 8px; }
+.pg-page-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 78px;
+  height: 78px;
+  margin-left: -4px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-control-lg);
+  background: transparent;
+  font-size: 64px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.pg-page-icon:hover:not(:disabled) { background: var(--pg-page-hover); }
+.pg-page-add-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: -6px;
+  padding: 4px 8px 4px 6px;
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--pg-page-muted);
+  font-family: var(--pg-font);
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 160ms ease, background-color 120ms ease, color 120ms ease;
+}
+.pg-page-add-icon svg { width: 16px; height: 16px; }
+.pg-page-header:hover .pg-page-add-icon,
+.pg-page-add-icon:focus-visible { opacity: 1; }
+.pg-page-add-icon:hover { background: var(--pg-page-hover); color: var(--pg-page-ink); }
+.pg-page-add-icon:disabled { display: none; }
+@media (hover: none) { .pg-page-add-icon { opacity: 1; } }
+
+.pg-page-title {
+  margin: 0;
+  padding: 3px 0;
+  color: var(--pg-page-ink);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  outline: none;
+  cursor: text;
+  caret-color: currentColor;
+}
+.pg-page-title:empty::before {
+  content: attr(data-placeholder);
+  color: var(--pg-page-faint);
+  pointer-events: none;
+}
+
+/* Page navigation: the content slides, the title morphs (page-host.ts runPageTransition). */
+html.pg-page-nav { --pg-page-shift: 18px; }
+html.pg-page-nav[data-pg-page-dir="back"] { --pg-page-shift: -18px; }
+html.pg-page-nav #tab-editor { view-transition-name: pg-page-body; }
+html.pg-page-nav::view-transition-old(root),
+html.pg-page-nav::view-transition-new(root) { animation: none; }
+html.pg-page-nav::view-transition-old(pg-page-body) {
+  animation: pg-page-leave 140ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+html.pg-page-nav::view-transition-new(pg-page-body) {
+  animation: pg-page-enter 280ms cubic-bezier(0.2, 0.8, 0.2, 1) 40ms both;
+}
+html.pg-page-nav::view-transition-group(pg-page-title) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes pg-page-leave {
+  to { opacity: 0; transform: translateX(calc(var(--pg-page-shift) * -1)); }
+}
+@keyframes pg-page-enter {
+  from { opacity: 0; transform: translateX(var(--pg-page-shift)); }
+}

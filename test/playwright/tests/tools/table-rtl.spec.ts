@@ -904,6 +904,77 @@ test.describe('table in RTL', () => {
       };
     }, placement);
 
+  /**
+   * Per cell: its text-align and the side every line is flush with. Line
+   * widths are not compared: the ghost inherits the host page's font stack.
+   */
+  const cellTextLayout = async (page: Page, rootSelector: string): Promise<Array<{ align: string; flush: string; wraps: boolean }>> =>
+    page.evaluate(selector => {
+      const root = document.querySelector(selector);
+
+      if (root === null) {
+        throw new Error(`no ${selector}`);
+      }
+
+      return Array.from(root.querySelectorAll('[data-blok-table-cell-blocks]')).map(blocks => {
+        const editable = blocks.querySelector('[data-blok-element-content] > *');
+        const range = document.createRange();
+        const box = blocks.getBoundingClientRect();
+
+        range.selectNodeContents(editable ?? blocks);
+
+        const lines = Array.from(range.getClientRects()).filter(line => line.width > 0);
+        const flushLeft = lines.every(line => line.left - box.left <= 1.5);
+        const flushRight = lines.every(line => box.right - line.right <= 1.5);
+
+        return {
+          align: getComputedStyle(blocks).textAlign,
+          flush: `${flushLeft ? 'left' : ''}${flushRight ? 'right' : ''}`,
+          wraps: lines.length > 1,
+        };
+      });
+    }, rootSelector);
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    test(`${direction}: a dragged row's ghost lines its text up like the row`, async ({ page }) => {
+      const children: OutputData['blocks'] = [];
+      const placements = [undefined, 'top-center', 'top-right'];
+      const content = [0, 1].map(r => placements.map((placement, c) => {
+        const id = `g${r}${c}`;
+
+        children.push({ id, type: 'paragraph', data: { text: LONG_TEXT[direction] }, parent: 't' });
+
+        return placement === undefined ? { blocks: [id] } : { blocks: [id], placement };
+      }));
+
+      await createBlok(page, {
+        blocks: [
+          { id: 't', type: 'table', data: { withHeadings: false, content, colWidths: [200, 200, 200] }, content: children.map(child => child.id ?? '') },
+          ...children,
+        ],
+      }, direction);
+
+      const source = await box(page, cell(0, 0));
+
+      await page.mouse.move(center(source).x, center(source).y);
+
+      const grip = center(await box(page, '[data-blok-table-grip-row="0"]'));
+
+      await page.mouse.move(grip.x, grip.y);
+      await page.mouse.down();
+      await page.mouse.move(grip.x, grip.y + 20, { steps: 5 });
+      await expect(page.locator('[data-blok-table-drag-ghost]')).toBeAttached();
+
+      const ghost = await cellTextLayout(page, '[data-blok-table-drag-ghost]');
+      const row = await cellTextLayout(page, `${GRID} tr`);
+
+      await page.mouse.up();
+
+      expect(row.map(one => one.wraps), 'row text wraps').toEqual([true, true, true]);
+      expect(ghost).toEqual(row);
+    });
+  }
+
   for (const direction of ['ltr', 'rtl'] as const) {
     test(`${direction}: the placement picker lays out its options where the content goes`, async ({ page }) => {
       await createBlok(page, tableData(cellText(direction)), direction);
@@ -927,6 +998,10 @@ test.describe('table in RTL', () => {
         expect(near).toBeGreaterThanOrEqual(0);
       }
       expect(new Set(nearSide.map(Math.round)).size, 'preview lines share one edge').toBe(1);
+
+      const named = async (name: string): Promise<number> => (await box(page, `[role="radio"][aria-label="${name}"]`)).x;
+
+      expect(await named('Top right'), 'the option named right sits on the right').toBeGreaterThan(await named('Top left'));
 
       const saved = await savedTable(page);
 

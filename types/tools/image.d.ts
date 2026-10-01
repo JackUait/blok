@@ -43,6 +43,67 @@ export interface ImageAdjust {
 }
 
 /**
+ * Markup colour: `#rrggbb`, lower case. Anything else is dropped on load.
+ */
+export type ImageMarkupColor = string;
+
+/**
+ * Markup coordinates are fractions (0..1) of the turned image's box — the same box
+ * `crop` uses, before the crop and before `straighten`. Sizes are fractions of that
+ * box's shorter side, so a mark keeps its weight on any rendered size.
+ */
+interface ImageMarkupBase {
+  /** Stable id, unique within the image. */
+  id: string;
+  color: ImageMarkupColor;
+}
+
+/** A freehand stroke. */
+export interface ImageMarkupStroke extends ImageMarkupBase {
+  /** `pen` is solid with pressure taper; `highlighter` is flat, wide and translucent. */
+  type: 'pen' | 'highlighter';
+  /** Flat list of `x, y, pressure` triples. Pressure is 0..1. */
+  points: number[];
+  /** Nominal stroke width. */
+  size: number;
+}
+
+/** A shape between two corner points. Rect and ellipse fill the box they span; line and arrow join the points. */
+export interface ImageMarkupShape extends ImageMarkupBase {
+  type: 'rect' | 'ellipse' | 'line' | 'arrow';
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  /** Stroke width. */
+  size: number;
+  /** Rect and ellipse only: a translucent fill of `color`. Omitted for false. */
+  fill?: boolean;
+}
+
+/** How a text mark is painted. */
+export type ImageMarkupTextStyle = 'plain' | 'outline' | 'background';
+
+/** A text label. */
+export interface ImageMarkupText extends ImageMarkupBase {
+  type: 'text';
+  /** Centre of the text block. */
+  x: number;
+  y: number;
+  /** Plain text; `\n` breaks lines. Never parsed as HTML. */
+  text: string;
+  /** Font size. */
+  size: number;
+  /** Omitted for 'plain'. */
+  style?: ImageMarkupTextStyle;
+  /** Clockwise degrees about the centre. Omitted for 0. */
+  rotation?: number;
+}
+
+/** One drawn object on an image. */
+export type ImageMarkup = ImageMarkupStroke | ImageMarkupShape | ImageMarkupText;
+
+/**
  * Persisted data shape for the Image block tool.
  */
 export interface ImageData extends BlockToolData {
@@ -77,6 +138,8 @@ export interface ImageData extends BlockToolData {
   filter?: ImageFilterPreset;
   /** Colour adjustments. Omitted when every value is 0. */
   adjust?: ImageAdjust;
+  /** Drawings, shapes and text on top of the image, back to front. Omitted when empty. */
+  markup?: ImageMarkup[];
   /** Alt text for screen readers */
   alt?: string;
   /** Original filename, when known */

@@ -1,13 +1,27 @@
 /* The overlay is a WRAPPER child: the redactor is under the modifications
    observer, so nothing here may live inside it. */
 
-[data-blok-interface] {
+/* Registered so the sweep keyframes can tween it. */
+@property --blok-skeleton-sweep {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+:where([data-blok-interface]) {
   --blok-skeleton-radius: var(--blok-radius-control-sm);
   --blok-skeleton-inset: 6px;
   --blok-skeleton-indent: 1.5em;
   /* Defaults only: the builder sets both inline on every bar. */
   --blok-skeleton-width: 100%;
   --blok-skeleton-index: 0;
+  --blok-skeleton-shift: 0px;
+  --blok-skeleton-edge: left;
+}
+
+/* The bar box starts at the inline start, which is the right edge in RTL. */
+:where([data-blok-rtl="true"]) {
+  --blok-skeleton-edge: right;
 }
 
 /* Hidden, not removed: the handoff measures real blocks under it. */
@@ -15,25 +29,68 @@
   opacity: 0;
 }
 
+/* The overlay box IS the content column. Insets mirror the redactor gutter
+   padding, max-width and margins mirror [data-blok-element-content]
+   (max-w-blok-content mx-auto + the content-align rules in main.css). The
+   wrapper has no padding, so its padding box lines up with the redactor. */
 [data-blok-loading-skeleton] {
   position: absolute;
-  inset: 0 0 auto 0;
+  inset-block: 0 auto;
+  inset-inline: var(--blok-editor-gutter-start, 0px) var(--blok-editor-gutter-end, 0px);
+  max-width: var(--blok-content-max-width, var(--max-width-content));
+  margin-left: auto;
+  margin-right: auto;
+  /* cqw in the bars resolves against this box, so every bar shares it. */
+  container-type: inline-size;
   pointer-events: none;
   padding-block: var(--blok-skeleton-inset);
 }
 
+[data-blok-width="full"] [data-blok-loading-skeleton] {
+  max-width: var(--blok-content-max-width, none);
+}
+
+[data-blok-content-align="left"] [data-blok-loading-skeleton] {
+  margin-left: 0;
+}
+
+[data-blok-content-align="center"] [data-blok-loading-skeleton] {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+[data-blok-content-align="right"] [data-blok-loading-skeleton] {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+[data-blok-rtl="true"][data-blok-content-align="left"] [data-blok-loading-skeleton] {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+[data-blok-rtl="true"][data-blok-content-align="right"] [data-blok-loading-skeleton] {
+  margin-left: 0;
+  margin-right: auto;
+}
+
 [data-blok-skeleton-bar] {
+  --blok-skeleton-sweep: 0px;
+
   position: relative;
   width: var(--blok-skeleton-width);
   height: 0.9em;
   margin-block: 0.55em;
   border-radius: var(--blok-skeleton-radius);
-  /* background-attachment: fixed would break inside transforms, so every bar
-     uses the same 300%-wide gradient and the same timing. Equal widths in
-     percentages of the overlay keep the band lined up across bars. */
-  background:
-    linear-gradient(100deg, transparent 40%, var(--blok-skeleton-sheen) 50%, transparent 60%) 0 0 / 300% 100% no-repeat,
-    var(--blok-skeleton-bar);
+  /* One band for all bars: the gradient is sized in overlay units and its
+     start is pulled back by the bar's own offset (shift), so it sits at the
+     same overlay x on every bar. Not a fixed background attachment, which is
+     viewport-relative and breaks under transforms. */
+  background-color: var(--blok-skeleton-bar);
+  background-image: linear-gradient(100deg, transparent 40%, var(--blok-skeleton-sheen) 50%, transparent 60%);
+  background-size: 300cqw 100%;
+  background-repeat: no-repeat;
+  background-position: var(--blok-skeleton-edge) calc(var(--blok-skeleton-sweep) - var(--blok-skeleton-shift)) top;
   animation:
     blok-skeleton-sweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite,
     blok-skeleton-breathe 2.4s ease-in-out calc(var(--blok-skeleton-index) * -0.35s) infinite;
@@ -44,7 +101,10 @@
   margin-block: 0.4em 0.9em;
 }
 
+/* Shift must equal the indent, or list bars lose the shared band. */
 [data-blok-skeleton-bar="list"] {
+  --blok-skeleton-shift: var(--blok-skeleton-indent);
+
   margin-inline-start: var(--blok-skeleton-indent);
 }
 

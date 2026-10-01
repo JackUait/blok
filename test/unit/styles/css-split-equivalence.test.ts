@@ -667,7 +667,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DARKROOM_FILTER_STRIP_BYTES = 1_712;
     // Loading skeleton: loading.css, its two keyframes, the bar and sheen tokens in
     // the three theme blocks, and its import in main.css.
-    const LOADING_SKELETON_BYTES = 2_451;
+    const LOADING_SKELETON_BYTES = 4_492;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

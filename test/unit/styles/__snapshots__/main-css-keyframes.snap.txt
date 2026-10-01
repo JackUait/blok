@@ -772,8 +772,8 @@
 }
 
 @keyframes blok-skeleton-sweep {
-  from { background-position: 150% 0 }
-  to { background-position: -50% 0 }
+  from { --blok-skeleton-sweep: -300cqw }
+  to { --blok-skeleton-sweep: 100cqw }
 }
 
 @keyframes blok-spotlight-flash {

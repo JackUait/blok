@@ -34,4 +34,37 @@ describe('loading skeleton styles', () => {
   it('keeps the overlay out of pointer input', () => {
     expect(css).toMatch(/\[data-blok-loading-skeleton\]\s*\{[^}]*pointer-events:\s*none/);
   });
+
+  it('declares its tokens at zero specificity so a host rule always wins', () => {
+    expect(css).toMatch(/:where\(\[data-blok-interface\]\)\s*\{[^}]*--blok-skeleton-radius:/);
+    expect(css).not.toMatch(/(^|\n)\[data-blok-interface\]\s*\{[^}]*--blok-skeleton-/);
+  });
+
+  it('places the overlay on the content column: gutters, max width and alignment', () => {
+    const overlay = css.match(/\n\[data-blok-loading-skeleton\]\s*\{([^}]*)\}/)?.[1] ?? '';
+
+    expect(overlay).toMatch(/inset-inline:\s*var\(--blok-editor-gutter-start, 0px\) var\(--blok-editor-gutter-end, 0px\)/);
+    expect(overlay).toMatch(/max-width:\s*var\(--blok-content-max-width, var\(--max-width-content\)\)/);
+    expect(css).toMatch(/\[data-blok-width="full"\] \[data-blok-loading-skeleton\]\s*\{[^}]*max-width:\s*var\(--blok-content-max-width, none\)/);
+    ['left', 'center', 'right'].forEach((align) => {
+      expect(css).toContain(`[data-blok-content-align="${align}"] [data-blok-loading-skeleton]`);
+    });
+    expect(css).toContain('[data-blok-rtl="true"][data-blok-content-align="left"] [data-blok-loading-skeleton]');
+    expect(css).toContain('[data-blok-rtl="true"][data-blok-content-align="right"] [data-blok-loading-skeleton]');
+  });
+
+  it('sizes and moves the sheen in overlay units so every bar shares one band', () => {
+    const overlay = css.match(/\n\[data-blok-loading-skeleton\]\s*\{([^}]*)\}/)?.[1] ?? '';
+    const bar = css.match(/\n\[data-blok-skeleton-bar\]\s*\{([^}]*)\}/)?.[1] ?? '';
+    const sweep = css.match(/@keyframes blok-skeleton-sweep\s*\{([^}]*\}[^}]*\})/)?.[1] ?? '';
+
+    expect(overlay).toMatch(/container-type:\s*inline-size/);
+    expect(bar).toMatch(/background-size:\s*300cqw 100%/);
+    expect(bar).toMatch(/background-position:[^;]*var\(--blok-skeleton-sweep\)\s*-\s*var\(--blok-skeleton-shift\)/);
+    expect(sweep).toMatch(/-300cqw/);
+    expect(sweep).toMatch(/100cqw/);
+    expect(sweep).not.toMatch(/\d%/);
+    expect(bar).not.toMatch(/background-attachment\s*:/);
+    expect(css).toMatch(/\[data-blok-skeleton-bar="list"\]\s*\{[^}]*--blok-skeleton-shift:\s*var\(--blok-skeleton-indent\)/);
+  });
 });

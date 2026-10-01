@@ -1139,6 +1139,7 @@ export class DatabaseTool implements BlockTool {
         wrapper: this.element,
         readOnly: this.readOnly,
         i18n: this.api.i18n,
+        events: this.api.events,
         toolsConfig: this.api.tools.getToolsConfig(),
         titlePropertyId: titlePropId,
         descriptionPropertyId: descriptionPropId,

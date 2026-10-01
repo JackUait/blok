@@ -1,21 +1,26 @@
 import type { I18n, OutputData } from '../../../types';
+import type { Events } from '../../../types/api/events';
 import type { ToolsConfig } from '../../../types/api/tools';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import type { DatabaseRow, PropertyDefinition, PropertyType, PropertyValue } from './types';
 import { IconChevronRight } from '../../components/icons';
 import { getElementDirection } from '../../components/utils/direction';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
 
 interface BlokInstance {
   save(): Promise<OutputData>;
   destroy(): void;
   isReady: Promise<void>;
+  i18n: { update(options: { direction: 'ltr' | 'rtl' }): Promise<void> };
 }
 
 export interface CardDrawerOptions {
   wrapper: HTMLElement;
   readOnly: boolean;
   i18n?: I18n;
+  /** The outer editor's events, so the page body follows its direction flips. */
+  events?: Pick<Events, 'on' | 'off'>;
   toolsConfig?: ToolsConfig;
   titlePropertyId: string;
   descriptionPropertyId?: string;
@@ -68,6 +73,7 @@ export class DatabaseCardDrawer {
   private readonly onDescriptionChange: (rowId: string, description: OutputData) => void;
   private readonly onClose: () => void;
   private readonly onAddProperty: ((type: PropertyType) => void) | undefined;
+  private readonly events: Pick<Events, 'on' | 'off'> | undefined;
 
   private drawer: HTMLDivElement | null = null;
   private currentRowId: string | null = null;
@@ -90,7 +96,31 @@ export class DatabaseCardDrawer {
     this.onDescriptionChange = options.onDescriptionChange;
     this.onClose = options.onClose;
     this.onAddProperty = options.onAddProperty;
+    this.events = options.events;
+    this.events?.on('i18n:changed', this.followOuterDirection);
   }
+
+  /**
+   * The page body is its own editor, so it does not inherit a runtime flip
+   * of the outer one.
+   */
+  private readonly followOuterDirection = (): void => {
+    const holder = this.drawer?.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
+    const instance = this.blokInstance;
+
+    if (holder === null || holder === undefined || instance === null) {
+      return;
+    }
+
+    const direction = getElementDirection(holder);
+    // Not yet mounted: the queued update lands once the editor is ready.
+    const current = holder.querySelector(`[${DATA_ATTR.editor}]`)?.getAttribute('dir');
+
+    // Any update rebuilds the toolbox, so skip one that changes nothing.
+    if (current !== direction) {
+      void instance.i18n.update({ direction });
+    }
+  };
 
   get isOpen(): boolean {
     return this.drawer !== null;
@@ -327,6 +357,7 @@ export class DatabaseCardDrawer {
   }
 
   destroy(): void {
+    this.events?.off('i18n:changed', this.followOuterDirection);
     this.cleanupListeners();
     this.cleanupEditor();
     this.propertyTypePopover?.destroy();

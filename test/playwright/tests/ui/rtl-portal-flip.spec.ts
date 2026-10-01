@@ -182,6 +182,18 @@ test.describe('tool surfaces after a runtime flip to RTL', () => {
     expect(flipped).toEqual(fresh);
   });
 
+  test('the database page body editor follows the flip', async ({ page }) => {
+    await createBlok(page, 'ltr', database('إصلاح الخطأ'));
+    await page.locator('[data-blok-database-card]').first().click();
+    const inner = page.locator('[data-blok-database-drawer-editor] [data-blok-editor]');
+
+    await expect(inner).toHaveAttribute('dir', 'ltr');
+
+    await flip(page);
+
+    await expect(inner).toHaveAttribute('dir', 'rtl');
+  });
+
   test('an open tooltip closes, since its anchor moved', async ({ page }) => {
     // Empty, so the toggle takes the editor direction and its arrow mirrors.
     await createBlok(page, 'ltr', [{ type: 'toggle', data: { text: '' } }]);

@@ -495,10 +495,6 @@
   to { transform: translateY(0.8px) }
 }
 
-@keyframes blok-preview-media-camera {
-  to { transform: scale(1.06) }
-}
-
 @keyframes blok-preview-media-caravan {
   from { transform: translateX(-32px) }
   to { transform: translateX(240px) }
@@ -524,7 +520,7 @@
 
 @keyframes blok-preview-media-ember {
   from { opacity: 1; transform: translate(0, 0) }
-  to { opacity: 0; transform: translate(calc((var(--i) - 1.5) * 1.6px), -12px) }
+  to { opacity: 0; transform: translate(var(--x), -13px) }
 }
 
 @keyframes blok-preview-media-fade {
@@ -550,6 +546,11 @@
   44% { opacity: 0.55 }
 }
 
+@keyframes blok-preview-media-flutter {
+  from { transform: rotate(-12deg) }
+  to { transform: rotate(10deg) skewX(-10deg) }
+}
+
 @keyframes blok-preview-media-glide {
   to { transform: translate(12px, -3px) }
 }
@@ -559,7 +560,7 @@
 }
 
 @keyframes blok-preview-media-glow {
-  to { opacity: 0.07 }
+  to { opacity: 0.045 }
 }
 
 @keyframes blok-preview-media-ken-burns {
@@ -585,11 +586,6 @@
   65% { transform: translateY(2px) }
 }
 
-@keyframes blok-preview-media-pan {
-  from { transform: translateX(var(--pan)) }
-  to { transform: translateX(calc(var(--pan) * -1)) }
-}
-
 @keyframes blok-preview-media-pin-drop {
   from { opacity: 0; transform: translateY(-18px) rotate(-45deg) }
 }
@@ -608,6 +604,16 @@
 @keyframes blok-preview-media-progress-head {
   from { transform: translateX(0) }
   to { transform: translateX(100%) }
+}
+
+@keyframes blok-preview-media-puff {
+  from { opacity: 0; transform: scale(0.6) }
+  20% { opacity: 0.14 }
+  to { opacity: 0; transform: translate(-6px, -12px) scale(2.8) }
+}
+
+@keyframes blok-preview-media-push {
+  to { transform: scale(1.1) translateY(-1.5px) }
 }
 
 @keyframes blok-preview-media-rays {
@@ -645,6 +651,11 @@
 @keyframes blok-preview-media-sway {
   from { transform: rotate(-4deg) }
   to { transform: rotate(4deg) }
+}
+
+@keyframes blok-preview-media-truck {
+  from { transform: translateX(var(--pan)) }
+  to { transform: translateX(calc(var(--pan) * -1)) }
 }
 
 @keyframes blok-preview-media-twinkle {

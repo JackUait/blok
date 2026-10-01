@@ -49,7 +49,21 @@ describe('video toolbox preview', () => {
       'flame',
       'ember',
       'tuft',
-      'sand',
+      'sand-grain',
+      'tent-lit',
+      'guy-rope',
+      'stone',
+      'flame-mid',
+      'puff',
+      'fire-rim',
+      'saddle',
+      'scarf',
+      'lantern-glow',
+      'trunk-ring',
+      'bush',
+      'cattail',
+      'pond-bank',
+      'glint',
     ]));
   });
 
@@ -74,7 +88,7 @@ describe('video toolbox preview', () => {
 describe('video toolbox preview motion', () => {
   it.each([
     'star', 'sparkle', 'moon', 'cloud', 'meteor', 'bat', 'bat-wing', 'caravan', 'leg', 'lantern',
-    'crown', 'flame', 'fire-glow', 'ember', 'smoke', 'firefly', 'reflection', 'tuft', 'sand',
+    'crown', 'flame', 'flame-mid', 'fire-glow', 'ember', 'puff', 'scarf', 'glint', 'firefly', 'reflection', 'tuft', 'sand',
     'layer-far', 'layer-mid', 'layer-near', 'layer-front',
   ])(
     'moves the %s in the scene only when motion is allowed',
@@ -89,7 +103,18 @@ describe('video toolbox preview motion', () => {
     expect(motionRule(part)).toMatch(/animation:[^;]*\s-\d|animation-delay:\s*calc\(-/);
   });
 
-  it.each([ 'meteor', 'ember' ])('hides the %s in the still frame', (part) => {
+  // A one-way move that restarts with the clock reads as a camera; a ping-pong reads as a slide.
+  it.each([ 'layer-far', 'layer-mid', 'layer-near', 'layer-front', 'camera' ])(
+    'moves the %s one way through the clip, starting on play',
+    (part) => {
+      const rule = motionRule(part);
+
+      expect(rule).toMatch(/animation:[^;]*\b24s\b[^;]*\b1s\b[^;]*\binfinite\b/);
+      expect(rule).not.toContain('alternate');
+    }
+  );
+
+  it.each([ 'meteor', 'ember', 'puff' ])('hides the %s in the still frame', (part) => {
     expect(still.match(ruleFor(part))?.[1]).toMatch(/opacity:\s*0;/);
   });
 

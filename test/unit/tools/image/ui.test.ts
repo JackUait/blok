@@ -153,9 +153,9 @@ describe('renderCaption', () => {
     expect(el.getAttribute('contenteditable')).toBe('false');
   });
 
-  it('forces text-align:left so caption stays left regardless of image alignment', () => {
+  it('forces text-align:start so the caption starts at its inline start regardless of image alignment', () => {
     const el = renderCaption({ value: '', placeholder: 'p', readOnly: false });
-    expect(el.style.textAlign).toBe('left');
+    expect(el.style.textAlign).toBe('start');
   });
 });
 

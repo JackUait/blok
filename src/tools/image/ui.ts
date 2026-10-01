@@ -177,7 +177,7 @@ export function renderCaption(opts: CaptionOptions): HTMLElement {
   }
   el.textContent = opts.value;
   el.style.outline = 'none';
-  el.style.textAlign = 'left';
+  el.style.textAlign = 'start';
   return el;
 }
 

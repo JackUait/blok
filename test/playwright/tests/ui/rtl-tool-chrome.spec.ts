@@ -292,5 +292,48 @@ for (const direction of DIRECTIONS) {
 
       expect(startPadding).toBe('8px');
     });
+    test('a markdown preview lays its table cells and footnotes out from the inline start', async ({ page }) => {
+      const body = direction === 'rtl'
+        ? '| العمود أ | العمود ب |\n|---|---|\n| واحد | اثنان |\n\nنص[^1].\n\n[^1]: حاشية.\n'
+        : '| Column A | Column B |\n|---|---|\n| one | two |\n\nText[^1].\n\n[^1]: A note.\n';
+
+      await page.route('**/rtl-sample.md', route => route.fulfill({ status: 200, contentType: 'text/markdown; charset=utf-8', body }));
+      await createBlok(page, direction, [
+        { type: 'file', data: { url: new URL('/rtl-sample.md', TEST_PAGE_URL).href, fileName: 'rtl-sample.md', mimeType: 'text/markdown', size: 100 } },
+      ]);
+
+      const file = page.locator('[data-blok-tool="file"]');
+
+      await file.hover();
+      await file.locator('[data-action="preview"]').click({ force: true });
+
+      const cell = page.getByRole('cell').first();
+
+      await expect(cell).toBeVisible();
+
+      const layout = await cell.evaluate((td) => {
+        const range = document.createRange();
+
+        range.selectNodeContents(td);
+
+        const text = range.getBoundingClientRect();
+        const box = td.getBoundingClientRect();
+        const back = td.ownerDocument.querySelector('.blok-md-fnback');
+        const backStyle = back === null ? null : getComputedStyle(back);
+        const backStart = backStyle?.direction === 'rtl' ? backStyle.marginRight : backStyle?.marginLeft;
+
+        return {
+          dir: getComputedStyle(td).direction,
+          fromLeft: text.left - box.left,
+          fromRight: box.right - text.right,
+          backStart,
+        };
+      });
+
+      expect(layout.dir).toBe(direction);
+      // Cell text starts at the inline-start padding (12px), not across the cell.
+      expect(direction === 'rtl' ? layout.fromRight : layout.fromLeft).toBeLessThanOrEqual(16);
+      expect(layout.backStart).toBe('4px');
+    });
   });
 }

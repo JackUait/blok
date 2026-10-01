@@ -92,7 +92,7 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
   }
   caption.textContent = opts.value;
   caption.style.outline = 'none';
-  caption.style.textAlign = 'left';
+  caption.style.textAlign = 'start';
 
   if (!opts.readOnly) {
     caption.addEventListener('blur', () => opts.onChange(caption.textContent ?? ''));

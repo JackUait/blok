@@ -855,7 +855,7 @@
 .blok-file-preview-md td {
   padding: var(--blok-space-2) var(--blok-space-3);
   border: 1px solid var(--blok-border-subtle);
-  text-align: left;
+  text-align: start;
   vertical-align: top;
 }
 
@@ -1004,7 +1004,7 @@
 }
 
 .blok-md-footnotes ol {
-  padding-left: 1.25em;
+  padding-inline-start: 1.25em;
 }
 
 .blok-md-fnref a,
@@ -1014,7 +1014,7 @@
 }
 
 .blok-md-fnback {
-  margin-left: var(--blok-space-1);
+  margin-inline-start: var(--blok-space-1);
 }
 
 /* Office previews (docx/xlsx/pptx) render into this scroll container inside the
@@ -1074,7 +1074,7 @@
 .blok-file-preview-xlsx-table td {
   min-width: 3rem;
   padding: var(--blok-space-2) var(--blok-space-3);
-  border-right: 1px solid var(--blok-border-subtle);
+  border-inline-end: 1px solid var(--blok-border-subtle);
   border-bottom: 1px solid var(--blok-border-subtle);
   white-space: pre;
 }
@@ -1086,7 +1086,7 @@
 }
 
 .blok-file-preview-xlsx-table td:last-child {
-  border-right: 0;
+  border-inline-end: 0;
 }
 
 .blok-file-preview-xlsx-table tr:last-child td {

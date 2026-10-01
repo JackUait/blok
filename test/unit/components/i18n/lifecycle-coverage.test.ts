@@ -262,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 484 + 128 + 26 + 4 closure for all 642 keys', () => {
+  it('rebuilds a disjoint 484 + 128 + 46 + 4 closure for all 662 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -276,7 +276,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(642);
+    expect(lifecycle.size).toBe(662);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -298,7 +298,10 @@ describe('current English catalog lifecycle coverage', () => {
       // (tools.callout.noEmojisFound) — see CATALOG_ONLY_KEYS above.
       'executable-literal': 484,
       'finite-dynamic': 128,
-      'registered-namespace-compatible': 26,
+      // The 20 image editor keys (tools.image.editMode*, adjust*, filter*, ...) count
+      // here until src/tools/image calls them by literal; each one that does
+      // moves 1 from this count to executable-literal.
+      'registered-namespace-compatible': 46,
       'catalog-only': 4,
     });
     expect(

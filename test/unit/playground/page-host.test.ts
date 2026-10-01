@@ -57,8 +57,8 @@ describe('PageRegistry', () => {
   it('starts from the seed and resolves a page to its title and emoji icon', () => {
     const pages = new PageRegistry(seed());
 
-    expect(pages.info('guide')).toEqual({ title: 'Guide', icon: { type: 'emoji', value: '📘' } });
-    expect(pages.info('keys')).toEqual({ title: 'Keys' });
+    expect(pages.info('guide')).toEqual({ title: 'Guide', icon: { type: 'emoji', value: '📘' }, path: ['Playground'] });
+    expect(pages.info('keys')).toEqual({ title: 'Keys', path: ['Playground', 'Guide'] });
     expect(pages.info('nope')).toBeNull();
   });
 
@@ -72,7 +72,7 @@ describe('PageRegistry', () => {
 
     const second = new PageRegistry(seed());
 
-    expect(second.info('guide')).toEqual({ title: 'Handbook' });
+    expect(second.info('guide')).toEqual({ title: 'Handbook', path: ['Playground'] });
     expect(second.get('fresh')).toEqual({
       title: '',
       parentId: 'guide',

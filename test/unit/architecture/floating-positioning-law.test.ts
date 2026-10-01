@@ -94,6 +94,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/popover/popover-abstract.ts': 'Root mount primitive whose desktop subclass owns positioning and tracking.',
   'components/utils/popover/popover-desktop.ts': 'Shared root implementation registered in ROOT_SURFACE_CONTRACTS.',
   'components/utils/tooltip.ts': 'Dismiss-on-scroll fixed surface registered in ROOT_SURFACE_CONTRACTS.',
+  'tools/page/hover-preview.ts': 'Shared-placement page preview card registered in ROOT_SURFACE_CONTRACTS.',
   'tools/audio/cover-picker.ts': 'Shared anchored root surface registered in ROOT_SURFACE_CONTRACTS.',
   'tools/audio/index.ts': 'Transient styleless download anchor clicked and removed synchronously.',
   'tools/callout/index.ts': 'Mount owner for the tracked emoji-picker root surface.',
@@ -166,6 +167,7 @@ const SHARED_POSITION_CALL_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-property-type-popover.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
   'tools/database/database-tab-bar.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
   'tools/image/alt-popover.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
+  'tools/page/hover-preview.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
   'tools/table/table-operations.ts': 'Uses the shared pure resolver for a locally-contained table operation surface.',
 };
 
@@ -186,6 +188,7 @@ const ROOT_SURFACE_CONTRACTS: Record<string, SurfaceContract> = {
   'tools/database/database-property-type-popover.ts': 'shared',
   'tools/database/database-tab-bar.ts': 'shared',
   'tools/image/alt-popover.ts': 'shared',
+  'tools/page/hover-preview.ts': 'shared',
 };
 
 const POPOVER_DESKTOP_CONSUMERS = [

@@ -11,7 +11,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconPage } from '../../components/icons';
 import { generateBlockId } from '../../components/utils/id-generator';
 import { PLAINTEXT } from '../../components/utils/sanitizer';
-import { safeHref, safeImageSrc } from '../../components/utils/sanitize-url';
+import { safeHref } from '../../components/utils/sanitize-url';
 import {
   PAGE_ICON_CLASSES,
   PAGE_LINK_CLASSES,
@@ -21,6 +21,7 @@ import {
   PAGE_TITLE_MUTED_CLASSES,
   PAGE_WRAPPER_CLASSES,
 } from './constants';
+import { PageHoverPreview, pageIconNode, type PageHoverContent } from './hover-preview';
 import { renderPagePreview } from './preview';
 import type { PageCache, PageConfig, PageData, PageIcon, PageInfo } from './types';
 
@@ -91,6 +92,9 @@ export class PageTool implements BlockTool {
   private shown: { cache: PageCache | undefined } | undefined;
   private started = false;
   private detached = false;
+  /** Titles above the page, from the last `resolve`. Shown only in the hover preview. */
+  private path: string[] = [];
+  private readonly preview = new PageHoverPreview(() => this.previewContent());
 
   constructor(options: BlockToolConstructorOptions<PageData, PageConfig>) {
     this.api = options.api;
@@ -154,6 +158,8 @@ export class PageTool implements BlockTool {
     // Nothing here is edited in place; data reaches the document through
     // dispatchChange, so re-renders must not count as edits.
     root.setAttribute(DATA_ATTR.mutationFree, 'true');
+    // The page has its own hover preview and click; Blok's link card would cover it.
+    root.setAttribute(DATA_ATTR.linkOwner, '');
     this.root = root;
     this.renderView();
 
@@ -224,6 +230,11 @@ export class PageTool implements BlockTool {
 
   public removed(): void {
     this.detached = true;
+    this.preview.hide();
+  }
+
+  public destroy(): void {
+    this.preview.hide();
   }
 
   /**
@@ -326,6 +337,7 @@ export class PageTool implements BlockTool {
     }
 
     this.found = 'yes';
+    this.path = Array.isArray(info.path) ? info.path.filter((title): title is string => typeof title === 'string') : [];
 
     const fresh = readCache({ title: info.title, icon: info.icon });
 
@@ -374,7 +386,19 @@ export class PageTool implements BlockTool {
   }
 
   private renderView(): void {
+    // The preview is anchored to the link being replaced.
+    this.preview.hide();
     this.root?.replaceChildren(this.buildLink());
+  }
+
+  private previewContent(): PageHoverContent | null {
+    if (!this.isNavigable) {
+      return null;
+    }
+
+    const state = this.state;
+
+    return { icon: this.visibleCache()?.icon, title: this.titleText(state), path: this.path };
   }
 
   private buildLink(): HTMLAnchorElement {
@@ -403,6 +427,7 @@ export class PageTool implements BlockTool {
     link.addEventListener('mousedown', this.handleMouseDown);
     link.addEventListener('click', this.handleClick);
     link.append(this.buildIcon(), this.buildTitle(state));
+    this.preview.attach(link);
 
     return link;
   }
@@ -414,27 +439,7 @@ export class PageTool implements BlockTool {
     slot.setAttribute(DATA_ATTR.testid, 'page-icon');
     slot.setAttribute('aria-hidden', 'true');
 
-    const icon = this.isNavigable ? this.visibleCache()?.icon : undefined;
-
-    if (icon?.type === 'emoji') {
-      slot.textContent = icon.value;
-
-      return slot;
-    }
-
-    const src = icon?.type === 'image' ? safeImageSrc(icon.url) : null;
-
-    if (src !== null) {
-      const img = document.createElement('img');
-
-      img.src = src;
-      img.alt = '';
-      slot.appendChild(img);
-
-      return slot;
-    }
-
-    slot.innerHTML = IconPage;
+    slot.replaceChildren(pageIconNode(this.isNavigable ? this.visibleCache()?.icon : undefined));
 
     return slot;
   }

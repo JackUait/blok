@@ -358,6 +358,10 @@ export const DATA_ATTR = {
    *  to walk a suggestion list), which is exactly what this attribute is for.
    *  Public authoring hook. */
   keyboardOwner: 'data-blok-keyboard-owner',
+  /** Marks a subtree whose links belong to the tool: Blok's link hover card
+   *  and link-click navigation stand down inside it. For a link the tool opens
+   *  and previews itself (the page block). Public authoring hook. */
+  linkOwner: 'data-blok-link-owner',
 
   // ============================================
   // Navigation

@@ -1382,6 +1382,10 @@ export class UI extends Module<UINodes> {
       return;
     }
 
+    if (anchor.closest(`[${DATA_ATTR.linkOwner}]`) !== null) {
+      return;
+    }
+
     /**
      * Only the primary button navigates. A modifier click always opens; a plain
      * click opens only when the selection is collapsed, so drag-selecting the
@@ -1580,7 +1584,7 @@ export class UI extends Module<UINodes> {
       return;
     }
 
-    if (!anchor.getAttribute('href')) {
+    if (!anchor.getAttribute('href') || anchor.closest(`[${DATA_ATTR.linkOwner}]`) !== null) {
       return;
     }
 

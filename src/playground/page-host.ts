@@ -26,6 +26,9 @@ export type PageMap = Record<string, PageRecord>;
 
 export const PAGES_STORAGE_KEY = 'blok-playground-pages';
 
+/** The root playground document's name, in breadcrumbs and page paths. */
+const ROOT_LABEL = 'Playground';
+
 /** Pages deleted for good. Without it a deleted seed page returns on reload. */
 const PURGED_STORAGE_KEY = 'blok-playground-pages-purged';
 
@@ -102,9 +105,12 @@ export class PageRegistry {
       return null;
     }
 
+    const above = this.trail(pageId).slice(0, -1).map((entry) => (entry.title.trim() === '' ? 'Untitled' : entry.title));
+
     return {
       title: page.title,
       ...(page.icon !== undefined && { icon: { type: 'emoji' as const, value: page.icon } }),
+      path: [ROOT_LABEL, ...above],
     };
   }
 
@@ -317,7 +323,6 @@ export const pageLinkSelector = (pageId: string): string => {
     .join(', ');
 };
 
-const ROOT_LABEL = 'Playground';
 
 /**
  * Blok's radius roles are declared only on [data-blok-interface] elements, so

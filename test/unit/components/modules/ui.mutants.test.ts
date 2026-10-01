@@ -2039,6 +2039,20 @@ describe('UI module — mutants', () => {
       expect(window.open).toHaveBeenCalled();
     });
 
+    it('leaves a click on a link a tool owns to that tool', () => {
+      const { redactor } = createLinkUI();
+      const owner = document.createElement('div');
+
+      owner.setAttribute('data-blok-link-owner', '');
+      redactor.appendChild(owner);
+
+      const anchor = addAnchor(owner, 'https://example.com/owned');
+      const event = clickAnchor(anchor);
+
+      expect(window.open).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
     it('scrolls to a same-page fragment target', () => {
       const { blok, redactor } = createLinkUI();
 
@@ -2317,6 +2331,26 @@ describe('UI module — mutants', () => {
       redactor.appendChild(plain);
 
       expect(() => mouseMove(plain, 5, 5)).not.toThrow();
+      vi.advanceTimersByTime(400);
+
+      expect(priv(ui).linkHoverCard).toBeNull();
+      expect(cardWrappers()).toHaveLength(0);
+    });
+
+    it('does not show a card for a link a tool owns', () => {
+      vi.useFakeTimers();
+
+      const { ui, redactor } = createHoverUI();
+      const owner = document.createElement('div');
+      const anchor = document.createElement('a');
+
+      owner.setAttribute('data-blok-link-owner', '');
+      anchor.setAttribute('href', 'https://example.com/owned');
+      anchor.textContent = 'owned-link';
+      owner.appendChild(anchor);
+      redactor.appendChild(owner);
+
+      mouseMove(anchor, 5, 5);
       vi.advanceTimersByTime(400);
 
       expect(priv(ui).linkHoverCard).toBeNull();

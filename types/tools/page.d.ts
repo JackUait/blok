@@ -41,6 +41,11 @@ export interface PageInfo {
   icon?: PageIcon;
   /** `'none'`: this user may not see the page. The block shows "No access" and hides the cached title. */
   access?: 'none';
+  /**
+   * Titles of the pages above this one, top first, e.g. `['Home', 'Plans']`.
+   * The hover preview shows them as a path above the title. Never saved.
+   */
+  path?: string[];
 }
 
 /**

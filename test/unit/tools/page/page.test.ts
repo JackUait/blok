@@ -853,6 +853,117 @@ describe('Page tool', () => {
     });
   });
 
+  describe('hover preview', () => {
+    const preview = (): HTMLElement | null => document.querySelector('[data-blok-testid="page-hover-preview"]');
+
+    const hoverOver = (link: HTMLElement): void => {
+      link.dispatchEvent(new MouseEvent('mouseenter'));
+    };
+
+    const mount = async (setup: Setup): Promise<{ tool: PageTool; root: HTMLElement }> => {
+      const tool = new PageTool(createOptions(setup));
+      const root = tool.render();
+
+      document.body.appendChild(root);
+      tool.rendered();
+      await flush();
+
+      return { tool, root };
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+      document.body.innerHTML = '';
+    });
+
+    it('owns its link, so Blok shows no link card for it', async () => {
+      const { root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } } });
+
+      expect(anchorOf(root).closest('[data-blok-link-owner]')).not.toBeNull();
+    });
+
+    it('shows the page icon, its path and its title after a hover pause', async () => {
+      const { root } = await mount({
+        data: { pageId: 'p1', cache: { title: 'Roadmap' } },
+        config: { resolve: () => ({ title: 'Roadmap', icon: { type: 'emoji', value: '🚀' }, path: ['Home', 'Plans'] }) },
+      });
+
+      vi.useFakeTimers();
+      hoverOver(anchorOf(root));
+      vi.advanceTimersByTime(300);
+      expect(preview()).toBeNull();
+
+      vi.advanceTimersByTime(200);
+      const card = preview();
+
+      expect(card?.querySelector('[data-blok-testid="page-hover-preview-title"]')?.textContent).toBe('Roadmap');
+      expect(card?.querySelector('[data-blok-testid="page-hover-preview-path"]')?.textContent).toBe('Home / Plans');
+      expect(card?.querySelector('[data-blok-testid="page-hover-preview-icon"]')?.textContent).toBe('🚀');
+      expect(card?.hasAttribute('data-blok-top-layer')).toBe(true);
+      // Blok's utilities and tokens apply only inside an interface root.
+      expect(card?.getAttribute('data-blok-interface')).toBe('page-hover-preview');
+      expect(card?.style.boxSizing).toBe('border-box');
+    });
+
+    it('names an untitled page and leaves out an empty path', async () => {
+      const { root } = await mount({ data: { pageId: 'p1' } });
+
+      vi.useFakeTimers();
+      hoverOver(anchorOf(root));
+      vi.advanceTimersByTime(500);
+
+      expect(preview()?.querySelector('[data-blok-testid="page-hover-preview-title"]')?.textContent).toBe('tools.page.untitled');
+      expect(preview()?.querySelector('[data-blok-testid="page-hover-preview-path"]')).toBeNull();
+    });
+
+    it('stays while the pointer moves onto the card, and goes once it leaves both', async () => {
+      const { root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } } });
+      const link = anchorOf(root);
+
+      vi.useFakeTimers();
+      hoverOver(link);
+      vi.advanceTimersByTime(500);
+
+      const card = preview();
+
+      link.dispatchEvent(new MouseEvent('mouseleave'));
+      card?.dispatchEvent(new MouseEvent('mouseenter'));
+      vi.advanceTimersByTime(1000);
+      expect(preview()).not.toBeNull();
+
+      card?.dispatchEvent(new MouseEvent('mouseleave'));
+      vi.advanceTimersByTime(1000);
+      expect(preview()).toBeNull();
+    });
+
+    it('never shows for a page that is missing', async () => {
+      const { root } = await mount({ data: { pageId: 'p1' }, config: { resolve: () => null } });
+
+      vi.useFakeTimers();
+      hoverOver(anchorOf(root));
+      vi.advanceTimersByTime(1000);
+
+      expect(preview()).toBeNull();
+    });
+
+    it('goes away when the block is removed or the link is pressed', async () => {
+      const { tool, root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } } });
+
+      vi.useFakeTimers();
+      hoverOver(anchorOf(root));
+      vi.advanceTimersByTime(500);
+      anchorOf(root).dispatchEvent(new MouseEvent('mousedown', { button: 0, cancelable: true }));
+      vi.advanceTimersByTime(500);
+      expect(preview()).toBeNull();
+
+      hoverOver(anchorOf(root));
+      vi.advanceTimersByTime(500);
+      tool.removed();
+      vi.advanceTimersByTime(500);
+      expect(preview()).toBeNull();
+    });
+  });
+
   describe('static surface', () => {
     it('declares a basic toolbox entry', () => {
       const toolbox = PageTool.toolbox;

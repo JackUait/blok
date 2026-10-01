@@ -26,6 +26,8 @@ export interface PageInfo {
   title?: string;
   icon?: PageIcon;
   access?: 'none';
+  /** Titles of the pages above this one, top first. Shown in the hover preview. */
+  path?: string[];
 }
 
 /** Page tool config. Every hook is optional. */

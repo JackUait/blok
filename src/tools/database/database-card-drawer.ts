@@ -215,6 +215,9 @@ export class DatabaseCardDrawer {
     const editorHolder = document.createElement('div');
 
     editorHolder.setAttribute('data-blok-database-drawer-editor', '');
+    // The page body saves through onDescriptionChange. Its own DOM churn
+    // (a direction flip, toolbox rebuilds) is not a change to this block.
+    editorHolder.setAttribute('data-blok-mutation-free', 'true');
     content.appendChild(editorHolder);
 
     drawer.appendChild(content);

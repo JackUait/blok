@@ -194,6 +194,47 @@ test.describe('tool surfaces after a runtime flip to RTL', () => {
     await expect(inner).toHaveAttribute('dir', 'rtl');
   });
 
+  test('flipping with the page body open saves nothing', async ({ page }) => {
+    const mount = async (): Promise<void> => {
+      await page.evaluate(async (data) => {
+        if (window.blokInstance) {
+          await window.blokInstance.destroy?.();
+        }
+        document.getElementById('blok')?.remove();
+        const holder = document.createElement('div');
+        const state = window as unknown as { blokChanges: number };
+
+        holder.id = 'blok';
+        document.body.appendChild(holder);
+        state.blokChanges = 0;
+        window.blokInstance = new window.Blok({ holder, data: { blocks: data }, onChange: () => { state.blokChanges += 1; } });
+        await window.blokInstance.isReady;
+      }, database('إصلاح الخطأ'));
+    };
+    // onChange is debounced, so "nothing fired" needs a quiet window.
+    const settledChanges = (): Promise<number> => page.evaluate(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      return (window as unknown as { blokChanges: number }).blokChanges;
+    });
+
+    await mount();
+    const closedBefore = await settledChanges();
+
+    await flip(page);
+    const closedDelta = await settledChanges() - closedBefore;
+
+    await mount();
+    await page.locator('[data-blok-database-card]').first().click();
+    await expect(page.locator('[data-blok-database-drawer-editor] [data-blok-editor]')).toHaveAttribute('dir', 'ltr');
+    const openBefore = await settledChanges();
+
+    await flip(page);
+    await expect(page.locator('[data-blok-database-drawer-editor] [data-blok-editor]')).toHaveAttribute('dir', 'rtl');
+
+    expect(await settledChanges() - openBefore).toBe(closedDelta);
+  });
+
   test('an open tooltip closes, since its anchor moved', async ({ page }) => {
     // Empty, so the toggle takes the editor direction and its arrow mirrors.
     await createBlok(page, 'ltr', [{ type: 'toggle', data: { text: '' } }]);
@@ -207,6 +248,23 @@ test.describe('tool surfaces after a runtime flip to RTL', () => {
     await flip(page);
 
     expect(await box(button)).not.toEqual(before);
+    await expect(tooltip).toHaveAttribute('data-blok-shown', 'false');
+  });
+
+  test('a tooltip opened by keyboard focus closes, since its anchor moved', async ({ page }) => {
+    await createBlok(page, 'ltr', [{ type: 'image', data: { url: IMAGE_URL, naturalWidth: 800, naturalHeight: 600 } }]);
+    const more = page.locator('[data-blok-tool="image"] [data-action="more"]');
+    const tooltip = page.getByTestId('tooltip');
+
+    // No pointer is involved, so no mouseleave can close it.
+    await more.focus();
+    await expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
+    const before = await box(more);
+
+    await flip(page);
+
+    expect(await box(more)).not.toEqual(before);
+    await expect(more).toBeFocused();
     await expect(tooltip).toHaveAttribute('data-blok-shown', 'false');
   });
 

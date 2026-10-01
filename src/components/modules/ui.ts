@@ -18,6 +18,8 @@ import { debounce, getBlokVersion, getValidUrl, isEmpty, openSameWindow, openTab
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { buildFontSizeVarLines } from '../utils/font-size-tokens';
 import { LinkHoverCard } from '../utils/link-hover-card';
+import { resolveLoaderConfig } from '../utils/loader-config';
+import { LoadingController } from '../utils/loading-controller';
 import { log } from '../utils/logger';
 import { resyncPortalDirections } from '../utils/portal-direction';
 import { decodeHashFragment, resolveHashTarget } from '../utils/hash-target';
@@ -113,6 +115,8 @@ export class UI extends Module<UINodes> {
    * {@link readOnlyMutableListeners}).
    */
   private linkHoverCard: LinkHoverCard | null = null;
+
+  private loading: LoadingController | null = null;
 
   /**
    * Handlers for simple event behaviors
@@ -561,10 +565,47 @@ export class UI extends Module<UINodes> {
   }
 
   /**
+   * Starts the boot skeleton; it appears only if the wait outlasts `loader.delay`.
+   */
+  public showLoading(): void {
+    // A destroy() that lands before render() must not start a skeleton nobody will hide.
+    if (this.isDestroyed) {
+      return;
+    }
+
+    this.loading ??= new LoadingController({
+      wrapper: this.nodes.wrapper,
+      content: this.nodes.redactor,
+      config: resolveLoaderConfig(this.config.loader),
+      label: this.Blok.I18n.t('a11y.loadingContent'),
+    });
+    this.loading.show();
+  }
+
+  /**
+   * Hands the skeleton off to the blocks now in the redactor.
+   */
+  public async hideLoading(): Promise<void> {
+    // destroy() may call this before BlockManager is prepared, when blocks cannot be read yet.
+    if (this.loading === null) {
+      return;
+    }
+
+    // Bar i must land on block i's visible content box. Direct child only, so a nested block's box is never picked.
+    const targets = this.Blok.BlockManager.blocks.map(({ holder }) =>
+      holder.querySelector<HTMLElement>(`:scope > [${DATA_ATTR.elementContent}]`) ?? holder
+    );
+
+    await this.loading.hide(targets);
+  }
+
+  /**
    * Clean blok`s UI
    */
   public destroy(): void {
     this.toggleShortcuts?.unregister();
+    this.loading?.destroy();
+    this.loading = null;
     this.nodes.holder.innerHTML = '';
 
     this.unbindReadOnlyInsensitiveListeners();

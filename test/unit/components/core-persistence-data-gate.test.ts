@@ -83,6 +83,8 @@ vi.mock('../../../src/components/modules', () => {
     public state?: BlokModules;
     public prepare = mockRegistry.modules.uiPrepare;
     public checkEmptiness = mockRegistry.modules.uiCheckEmptiness;
+    public showLoading = (): void => {};
+    public hideLoading = async (): Promise<void> => {};
   }
 
   /**

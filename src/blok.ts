@@ -273,6 +273,16 @@ class Blok {
      */
     this.destroy = (): void => {
       lifecycle.pendingDestroy = true;
+
+      // Teardown waits for isReady, which may wait on a slow load(), so stop the skeleton now.
+      // Deferred one microtask: Core queued init() first, so the UI module exists by then even on a same-tick destroy().
+      queueMicrotask(() => {
+        // Optional calls, as in teardown(): a partial module set must not throw from a microtask.
+        const ui = getUIModule() as Partial<Pick<BlokModules['UI'], 'markDestroyed' | 'hideLoading'>> | undefined;
+
+        ui?.markDestroyed?.();
+        void ui?.hideLoading?.();
+      });
     };
 
     /**

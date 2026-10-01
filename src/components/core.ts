@@ -482,6 +482,10 @@ export class Core {
       return renderer.render(normalizeOutputBlocks(data.blocks));
     }
 
+    const { UI } = this.moduleInstances;
+
+    UI.showLoading();
+
     return load().then((result) => {
       const loaded = unwrapPersistedDocument(result);
       const blocks = loaded?.blocks;
@@ -503,7 +507,13 @@ export class Core {
       }
 
       return renderer.render(normalizeOutputBlocks(data.blocks));
-    });
+    }).then(
+      () => UI.hideLoading(),
+      async (error: unknown) => {
+        await UI.hideLoading();
+        throw error;
+      }
+    );
   }
 
   /**

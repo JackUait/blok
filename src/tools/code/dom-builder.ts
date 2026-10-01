@@ -209,7 +209,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   languageButton.appendChild(langText);
 
   const chevronSpan = document.createElement('span');
-  chevronSpan.className = 'inline-flex items-center ml-0.5 -mr-0.5';
+  chevronSpan.className = 'inline-flex items-center ms-0.5 -me-0.5';
   chevronSpan.innerHTML = IconChevronDown;
   chevronSpan.setAttribute('data-blok-testid', 'code-language-chevron');
   chevronSpan.hidden = readOnly;

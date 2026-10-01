@@ -168,6 +168,30 @@ test.describe('RTL block content mirrors LTR', () => {
     }
   });
 
+  test('stub, spacer readout and code language chevron mirror', async ({ page }) => {
+    const blocks: OutputData['blocks'] = [
+      { id: 'st', type: 'not-a-registered-tool', data: { text: 'x' } },
+      { id: 'sp', type: 'spacer', data: { height: 40 } },
+      { id: 'cd', type: 'code', data: { code: 'a', language: 'javascript' } },
+    ];
+    const probes = {
+      stubInfo: '[data-blok-id="st"] [data-blok-stub-info]',
+      spacerReadout: '[data-blok-id="sp"] [data-blok-spacer-readout]',
+      codeChevron: '[data-blok-id="cd"] [data-blok-testid="code-language-chevron"]',
+      codeLanguage: '[data-blok-id="cd"] [data-blok-testid="code-language-name"]',
+    };
+
+    await createBlok(page, blocks, 'ltr');
+    const ltr = await measureLogical(page, probes);
+
+    await createBlok(page, blocks, 'rtl');
+    const rtl = await measureLogical(page, probes);
+
+    for (const name of Object.keys(probes)) {
+      expect.soft(rtl[name], name).toEqual(ltr[name]);
+    }
+  });
+
   test('quote rule sits on the inline-start side', async ({ page }) => {
     const read = async (): Promise<{ left: string; right: string }> => page.evaluate(() => {
       const el = document.querySelector('[data-blok-id="q"] [contenteditable="true"]')?.closest('blockquote')

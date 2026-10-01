@@ -544,7 +544,7 @@ describe('Flipper — mutation coverage', () => {
       const onArrowLeft = vi.fn();
 
       items.forEach((item, index) => {
-        item.style.direction = 'rtl';
+        item.style.setProperty('direction', 'rtl');
         item.addEventListener('click', () => clicked.push(index));
       });
       items[1].setAttribute('data-blok-has-children', '');

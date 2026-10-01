@@ -1,5 +1,6 @@
 import type { API } from '../../types';
 import { DATA_ATTR } from '../components/constants/data-attributes';
+import { getElementDirection, inlineDelta } from '../components/utils/direction';
 
 export const COLUMN_LIST_TOOL = 'column_list';
 export const COLUMN_TOOL = 'column';
@@ -175,9 +176,12 @@ const onResizerKeydown = (
   const pairWidth =
     leftHolder.getBoundingClientRect().width + rightHolder.getBoundingClientRect().width;
 
+  // `leftHolder` is the first column, which sits on the right in RTL. Arrows
+  // follow the screen; Home/End set the first column's share, so they don't flip.
+  const direction = getElementDirection(resizer);
   const deltaByKey: Record<string, number> = {
-    ArrowLeft: -KEYBOARD_RESIZE_STEP,
-    ArrowRight: KEYBOARD_RESIZE_STEP,
+    ArrowLeft: inlineDelta(-KEYBOARD_RESIZE_STEP, direction),
+    ArrowRight: inlineDelta(KEYBOARD_RESIZE_STEP, direction),
     Home: -pairWidth,
     End: pairWidth,
   };
@@ -220,6 +224,7 @@ const startColumnResize = (
   const leftEl = leftHolder;
   const rightEl = rightHolder;
   const startX = event.clientX;
+  const direction = getElementDirection(resizer);
   const leftWidth = leftEl.getBoundingClientRect().width;
   const rightWidth = rightEl.getBoundingClientRect().width;
   const leftGrow = Number(leftEl.style.flexGrow) || 1;
@@ -235,7 +240,7 @@ const startColumnResize = (
       rightWidth,
       leftGrow,
       rightGrow,
-      delta: moveEvent.clientX - startX,
+      delta: inlineDelta(moveEvent.clientX - startX, direction),
       minWidth,
     });
 

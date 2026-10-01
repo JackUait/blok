@@ -3,6 +3,7 @@ import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants';
 import { announce } from '../../utils/announcer';
+import { getElementDirection, logicalSide } from '../../utils/direction';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 import { hide as hideTooltip } from '../../utils/tooltip';
 
@@ -677,7 +678,7 @@ export class DragController extends Module {
       return;
     }
 
-    const separator = edge === 'left'
+    const separator = logicalSide(edge, getElementDirection(columnHolder.parentElement)) === 'start'
       ? columnHolder.previousElementSibling
       : columnHolder.nextElementSibling;
 

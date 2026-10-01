@@ -4,6 +4,7 @@
 
 import type { Block } from '../../../block';
 import { DATA_ATTR, createSelector } from '../../../constants';
+import { getElementDirection, logicalSide } from '../../../utils/direction';
 import { DRAG_CONFIG } from '../utils/drag.constants';
 import { getBlockNestingDepth, getListItemDepth } from '../utils/depthUtils';
 import { deepestLegalStructuralDepth } from '../utils/structuralParent';
@@ -449,14 +450,19 @@ export class DropTargetDetector {
       const nearLeft = clientX <= rect.left + sideZone;
       const nearRight = clientX >= rect.right - sideZone;
 
-      // Left edge fires only on the FIRST column, right edge only on the LAST —
-      // the row's outer edges. Every inner position (including inner edges)
-      // falls through to into-column.
-      if (nearLeft && this.isFirstColumnChild(targetBlock)) {
+      // The inline-start edge fires only on the FIRST column, the inline-end
+      // edge only on the LAST — the row's outer edges. Every inner position
+      // (including inner edges) falls through to into-column.
+      const direction = getElementDirection(columnsContainer);
+      const isOuterEdge = (edge: 'left' | 'right'): boolean => logicalSide(edge, direction) === 'start'
+        ? this.isFirstColumnChild(targetBlock)
+        : this.isLastColumnChild(targetBlock);
+
+      if (nearLeft && isOuterEdge('left')) {
         return { block: targetBlock, edge: 'left', depth: 0, parentId: this.findEnclosingColumnId(targetBlock) };
       }
 
-      if (nearRight && this.isLastColumnChild(targetBlock)) {
+      if (nearRight && isOuterEdge('right')) {
         return { block: targetBlock, edge: 'right', depth: 0, parentId: this.findEnclosingColumnId(targetBlock) };
       }
 
@@ -503,10 +509,10 @@ export class DropTargetDetector {
    * band, outer sideZone with no inner bound so the whole margin is live) so the
    * dropzone is identical whether or not columns already exist.
    *
-   * A left margin drop prepends a new column at the start of the row, a right
-   * margin drop appends one at the end. It does so by targeting the first/last
-   * column's first child block with a 'left'/'right' edge and that column's id as
-   * parentId — exactly the shape the row's inner outer-edge side-drop produces,
+   * An inline-start margin drop prepends a new column at the start of the row,
+   * an inline-end margin drop appends one at the end. It does so by targeting
+   * the first/last column's first child block with a 'left'/'right' edge and
+   * that column's id as parentId — exactly the shape the row's inner outer-edge side-drop produces,
    * so handleColumnDrop routes both through addColumnToList. Returns null when
    * the row has no resolvable column child, or the cursor falls in the central
    * reorder band / outside the vertical band (→ top/bottom reorders the list).
@@ -539,7 +545,8 @@ export class DropTargetDetector {
 
     const edge: 'left' | 'right' = nearLeft ? 'left' : 'right';
     const columns = this.blockManager.blocks.filter(block => block.parentId === columnListBlock.id);
-    const column = edge === 'left' ? columns[0] : columns[columns.length - 1];
+    const row = blockHolder.querySelector('[data-blok-columns]') ?? blockHolder;
+    const column = logicalSide(edge, getElementDirection(row)) === 'start' ? columns[0] : columns[columns.length - 1];
 
     if (column === undefined) {
       return null;
@@ -737,9 +744,9 @@ export class DropTargetDetector {
    * Detects a drop on the inter-column gutter — a resize separator that divides
    * two columns — and routes it to a "between columns" side-drop.
    *
-   * The separator's next sibling is the right-adjacent column's holder. We target
-   * that column's FIRST inner block with a 'left' edge so the integrator inserts a
-   * new column BEFORE it (addColumnToList side 'left'), i.e. between the two
+   * The separator's next sibling is the following column's holder. We target
+   * that column's FIRST inner block with its inline-start edge so the integrator
+   * inserts a new column BEFORE it (addColumnToList), i.e. between the two
    * columns the separator divides. Reusing a real child block keeps the indicator
    * and drop path identical to an inner-edge side-drop.
    *
@@ -779,20 +786,21 @@ export class DropTargetDetector {
       return gapRoot;
     }
 
-    // The separator sits between two column holders; the next one is the
-    // right-adjacent column. Its first child block is the side-drop target.
-    const rightColumnHolder = this.nextColumnHolder(resizer);
-    const childBlock = rightColumnHolder !== null
-      ? this.firstBlockInColumnHolder(rightColumnHolder)
+    // The separator sits between two column holders; the next one in reading
+    // order is the side-drop target, via its first child block.
+    const followingHolder = this.nextColumnHolder(resizer);
+    const childBlock = followingHolder !== null
+      ? this.firstBlockInColumnHolder(followingHolder)
       : undefined;
 
     if (childBlock === undefined) {
       return null;
     }
 
+    // Insert before that column: its inline-start side faces the separator.
     return {
       block: childBlock,
-      edge: 'left',
+      edge: getElementDirection(resizer) === 'rtl' ? 'right' : 'left',
       depth: 0,
       parentId: this.findEnclosingColumnId(childBlock),
     };

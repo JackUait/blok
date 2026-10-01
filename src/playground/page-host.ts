@@ -907,7 +907,20 @@ export const alignPageHeader = (header: HTMLElement, holder: HTMLElement): void 
   const content = holder.querySelector('[data-blok-element-content]');
   const column = header.parentElement;
 
-  if (header.hidden || content === null || column === null) {
+  if (header.hidden || column === null) {
+    return;
+  }
+
+  /*
+   * Before the first block renders there is nothing to measure, and the CSS
+   * fallback column ignores the gutter, so the header would jump sideways.
+   * Hide it until the first measurement; later re-renders keep the last one.
+   */
+  if (content === null) {
+    if (header.style.marginLeft === '') {
+      header.style.setProperty('visibility', 'hidden');
+    }
+
     return;
   }
 
@@ -915,6 +928,7 @@ export const alignPageHeader = (header: HTMLElement, holder: HTMLElement): void 
 
   header.style.setProperty('margin-left', `${Math.round(box.left - column.getBoundingClientRect().left)}px`);
   header.style.setProperty('max-width', `${Math.round(box.width)}px`);
+  header.style.removeProperty('visibility');
 };
 
 /**

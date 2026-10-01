@@ -836,6 +836,37 @@ describe('keepPageHeaderAligned', () => {
     expect(header.style.marginLeft).toBe('168px');
     expect(header.style.maxWidth).toBe('720px');
   });
+
+  it('keeps the header invisible until the text column can be measured, so it never jumps', () => {
+    const column = document.createElement('div');
+    const header = document.createElement('header');
+    const holder = document.createElement('div');
+
+    column.append(header, holder);
+    document.body.append(column);
+    vi.spyOn(column, 'getBoundingClientRect').mockReturnValue(rect(100, 1000));
+
+    keepPageHeaderAligned(header, holder);
+    resize();
+
+    expect(header.style.visibility).toBe('hidden');
+
+    const content = document.createElement('div');
+
+    content.setAttribute('data-blok-element-content', '');
+    vi.spyOn(content, 'getBoundingClientRect').mockReturnValue(rect(268, 720));
+    holder.append(content);
+    resize();
+
+    expect(header.style.visibility).toBe('');
+    expect(header.style.marginLeft).toBe('168px');
+
+    content.remove();
+    resize();
+
+    expect(header.style.visibility).toBe('');
+    expect(header.style.marginLeft).toBe('168px');
+  });
 });
 
 describe('firstBlockKeydown', () => {

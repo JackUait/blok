@@ -517,6 +517,8 @@ export class UI extends Module<UINodes> {
 
     // Open menus, the find bar and toasts live outside the wrapper.
     resyncPortalDirections(this.nodes.wrapper);
+    // Before relayout: the toolbar reads its own dir to pick a side.
+    this.Blok.Toolbar.syncDirection();
 
     if (flipped) {
       this.Blok.Toolbar.relayout();

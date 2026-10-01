@@ -398,6 +398,41 @@ describe('Toolbar — public surface', () => {
     });
   });
 
+  describe('syncDirection()', () => {
+    // Inside a nested child's holder the toolbar sits under the PARENT block's
+    // content, which carries that block's own dir.
+    const dockUnderBlockDir = (
+      editorDir: 'ltr' | 'rtl',
+      blockDir: 'ltr' | 'rtl'
+    ): { dir: string | null; physicallyRight: boolean } => {
+      const h = createHarness();
+      const parentContent = document.createElement('div');
+
+      h.editorWrapper.setAttribute('dir', editorDir);
+      parentContent.setAttribute('dir', blockDir);
+      h.editorWrapper.appendChild(parentContent);
+      parentContent.appendChild(h.wrapper);
+
+      h.toolbar.syncDirection();
+
+      return { dir: h.wrapper.getAttribute('dir'), physicallyRight: h.toolbar.isDockedPhysicallyRight };
+    };
+
+    it('an LTR editor docks left even under an RTL block', () => {
+      expect(dockUnderBlockDir('ltr', 'rtl')).toStrictEqual({ dir: 'ltr', physicallyRight: false });
+    });
+
+    it('an RTL editor docks right even under an LTR block', () => {
+      expect(dockUnderBlockDir('rtl', 'ltr')).toStrictEqual({ dir: 'rtl', physicallyRight: true });
+    });
+
+    it('does nothing before the toolbar is drawn', () => {
+      const h = createHarness({ omitWrapper: true });
+
+      expect(() => h.toolbar.syncDirection()).not.toThrow();
+    });
+  });
+
   describe('setPosition()', () => {
     it('writes the wrapper attribute when the side changes', () => {
       const h = createHarness({ config: { toolbarPosition: 'left' } });

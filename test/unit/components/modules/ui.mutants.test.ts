@@ -101,6 +101,7 @@ const createBlokStub = () => {
     Toolbar: {
       moveAndOpen: vi.fn(),
       relayout: vi.fn(),
+      syncDirection: vi.fn(),
       close: vi.fn(),
       contains: vi.fn(() => false),
       nodes: {
@@ -2695,6 +2696,16 @@ describe('UI module — mutants', () => {
 
       ui.setDirection('rtl');
       expect(wrapper.getAttribute('dir')).toBe('rtl');
+    });
+
+    // The toolbar sits inside block holders, under a block's own dir.
+    it('tells the block toolbar to re-read the editor direction', () => {
+      const { ui, blok } = createMadeUI();
+      const syncDirection = (blok.Toolbar as unknown as { syncDirection: ReturnType<typeof vi.fn> }).syncDirection;
+
+      ui.setDirection('rtl');
+
+      expect(syncDirection).toHaveBeenCalledTimes(1);
     });
 
     it('re-syncs open portals of this editor when the direction flips', () => {

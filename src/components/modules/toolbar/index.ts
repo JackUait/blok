@@ -518,12 +518,22 @@ export class Toolbar extends Module<ToolbarNodes> {
   /**
    * True while the controls sit on the PHYSICAL right of the content column:
    * the inline-end gutter in LTR, the inline-start one in RTL. Read from the
-   * toolbar's own computed direction, which follows the editor wrapper.
+   * toolbar's own direction, which `syncDirection` pins to the editor's.
    */
   public get isDockedPhysicallyRight(): boolean {
     const rtl = getElementDirection(this.nodes.wrapper ?? this.Blok.UI.nodes.wrapper) === 'rtl';
 
     return this.isPositionedRight !== rtl;
+  }
+
+  /**
+   * Stamps the editor's direction on the toolbar. The toolbar is mounted inside
+   * the hovered block's holder; a nested child's holder sits in its parent's
+   * content, which carries the parent's own `dir`. Without this the dock side,
+   * the settings menu side and the drag gutter would follow that text.
+   */
+  public syncDirection(): void {
+    this.nodes.wrapper?.setAttribute('dir', getElementDirection(this.Blok.UI.nodes.wrapper));
   }
 
   /**
@@ -1398,6 +1408,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     ]);
 
     this.nodes.wrapper = wrapper;
+    this.syncDirection();
     wrapper.setAttribute(DATA_ATTR.toolbar, '');
     wrapper.setAttribute('data-blok-testid', 'toolbar');
 

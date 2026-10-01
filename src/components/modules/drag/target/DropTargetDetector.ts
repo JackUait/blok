@@ -218,13 +218,7 @@ export class DropTargetDetector {
    */
   findBlockInGutterDropZone(clientX: number, clientY: number): Block | null {
     const { left, right } = this.ui.contentRect;
-    const onRight = this.controlsOnRight();
-
-    if (onRight && right === undefined) {
-      return null;
-    }
-
-    const distanceFromEdge = onRight ? clientX - (right ?? 0) : left - clientX;
+    const distanceFromEdge = this.controlsOnRight() ? clientX - right : left - clientX;
 
     if (distanceFromEdge < 0 || distanceFromEdge > DRAG_CONFIG.leftDropZone) {
       return null;

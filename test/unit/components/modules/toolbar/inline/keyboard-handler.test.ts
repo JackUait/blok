@@ -32,6 +32,7 @@ interface MockPopoverInline {
   };
   hasNestedPopoverOpen: boolean;
   closeNestedPopover: () => void;
+  getElement?: () => HTMLElement;
 }
 
 // Type-safe spy function
@@ -383,6 +384,43 @@ describe("InlineKeyboardHandler", () => {
 
       expect(flipLeftSpy).toHaveBeenCalledTimes(1);
       expect(event.defaultPrevented).toBe(true);
+    });
+
+    describe("in a right-to-left toolbar", () => {
+      const withRtlRoot = (popover: MockPopoverInline): MockPopoverInline => {
+        const root = document.createElement("div");
+
+        root.setAttribute("dir", "rtl");
+        document.body.appendChild(root);
+
+        return { ...popover, getElement: () => root };
+      };
+
+      afterEach(() => {
+        document.body.innerHTML = "";
+      });
+
+      it("flips to the next item on ArrowLeft, toward the inline end", () => {
+        const { popover, flipper } = createRealFlipperPopover(false);
+        vi.spyOn(flipper, "hasFocus").mockReturnValue(true);
+        const flipRightSpy = vi.spyOn(flipper, "flipRight");
+        const handler = createHandler(withRtlRoot(popover));
+
+        handler.handle(createMockKeyboardEvent({ key: "ArrowLeft" }), true);
+
+        expect(flipRightSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it("flips to the previous item on ArrowRight", () => {
+        const { popover, flipper } = createRealFlipperPopover(false);
+        vi.spyOn(flipper, "hasFocus").mockReturnValue(true);
+        const flipLeftSpy = vi.spyOn(flipper, "flipLeft");
+        const handler = createHandler(withRtlRoot(popover));
+
+        handler.handle(createMockKeyboardEvent({ key: "ArrowRight" }), true);
+
+        expect(flipLeftSpy).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("does not flip and does not swallow the event when a nested popover is open", () => {

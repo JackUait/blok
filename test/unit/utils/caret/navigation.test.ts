@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   getCaretXPosition,
   setCaretAtXPosition,
@@ -11,11 +11,13 @@ describe('caret/navigation', () => {
   const containerState = { element: null as HTMLElement | null };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     containerState.element = document.createElement('div');
     document.body.appendChild(containerState.element);
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     // Clear selection
     window.getSelection()?.removeAllRanges();
     if (containerState.element) {
@@ -97,6 +99,36 @@ describe('caret/navigation', () => {
       // Should return element's left position as fallback
       expect(result).not.toBeNull();
       expect(typeof result).toBe('number');
+    });
+
+    describe('when the range has no box', () => {
+      const placeCaretInEmptyLine = (dir: 'ltr' | 'rtl'): void => {
+        const div = document.createElement('div');
+
+        div.setAttribute('dir', dir);
+        div.innerHTML = 'Hello<br><br>';
+        getContainer().appendChild(div);
+        vi.spyOn(div, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 0, 500, 20));
+
+        const range = document.createRange();
+
+        range.setStart(div, 2);
+        range.collapse(true);
+        window.getSelection()?.removeAllRanges();
+        window.getSelection()?.addRange(range);
+      };
+
+      it('reads the left edge of a left-to-right element', () => {
+        placeCaretInEmptyLine('ltr');
+
+        expect(getCaretXPosition()).toBe(100);
+      });
+
+      it('reads the right edge of a right-to-left element, where its caret sits', () => {
+        placeCaretInEmptyLine('rtl');
+
+        expect(getCaretXPosition()).toBe(600);
+      });
     });
   });
 

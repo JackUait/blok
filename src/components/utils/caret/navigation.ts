@@ -7,6 +7,7 @@
 
 import { Dom as $ } from '../../dom';
 
+import { getElementDirection } from '../direction';
 import { setSelectionToElement } from './focus';
 
 /**
@@ -311,11 +312,19 @@ export const getCaretXPosition = (): number | null => {
     return null;
   }
 
-  // Check if getBoundingClientRect is available (may not be in jsdom)
-  if (typeof range.getBoundingClientRect !== 'function') {
+  /**
+   * A caret with no box of its own sits at the element's inline start: the
+   * right edge in RTL.
+   */
+  const elementInlineStart = (): number => {
     const elementRect = element.getBoundingClientRect();
 
-    return elementRect.left;
+    return getElementDirection(element) === 'rtl' ? elementRect.right : elementRect.left;
+  };
+
+  // Check if getBoundingClientRect is available (may not be in jsdom)
+  if (typeof range.getBoundingClientRect !== 'function') {
+    return elementInlineStart();
   }
 
   const rect = range.getBoundingClientRect();
@@ -329,7 +338,5 @@ export const getCaretXPosition = (): number | null => {
     return rect.left;
   }
 
-  const elementRect = element.getBoundingClientRect();
-
-  return elementRect.left;
+  return elementInlineStart();
 };

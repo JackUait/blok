@@ -476,6 +476,10 @@
   width: min(360px, 100%);
 }
 
+.blok-darkroom__dial-box[hidden] {
+  display: none;
+}
+
 .blok-darkroom__dial-reset {
   position: absolute;
   top: -4px;
@@ -828,6 +832,15 @@
   border-radius: var(--blok-radius-pill);
   background: var(--blok-darkroom-ink);
   transform: translateX(-50%);
+}
+
+.blok-darkroom__filter-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-3);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .blok-darkroom__filters {

@@ -476,11 +476,15 @@ const main = async () => {
    *
    * `block-preview.css` likewise: its drawings declare custom properties per
    * block, and the toolbox hover card they live in never exists in a view.
+   *
+   * `loading.css` too: its token block reads as a carrier, and a view never
+   * shows the loading skeleton.
    */
   const entrySource = readFileSync(STYLES_ENTRY, 'utf-8')
     .replace(/^@import '\.\/fonts\.css';$/m, '')
     .replace(/^@import '\.\/presence\.css';$/m, '')
-    .replace(/^@import '\.\/block-preview\.css';$/m, '');
+    .replace(/^@import '\.\/block-preview\.css';$/m, '')
+    .replace(/^@import '\.\/loading\.css';$/m, '');
 
   const compiler = await compile(entrySource, {
     base: dirname(STYLES_ENTRY),

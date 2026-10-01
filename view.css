@@ -629,6 +629,8 @@
   --blok-item-focus-shadow: rgba(55, 53, 47, 0.08);
   --blok-focus-ring: #2383e2;
   --blok-item-hover-bg: rgba(55, 53, 47, 0.08);
+  --blok-skeleton-bar: rgba(55, 53, 47, 0.07);
+  --blok-skeleton-sheen: rgba(255, 255, 255, 0.65);
   --blok-icon-bg: rgba(0, 0, 0, 0.04);
   --blok-item-confirm-bg: #c93636;
   --blok-item-confirm-hover-bg: #b92f2f;
@@ -949,6 +951,8 @@
     --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
     --blok-focus-ring: #4c9fff;
     --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+    --blok-skeleton-bar: rgba(255, 255, 255, 0.06);
+    --blok-skeleton-sheen: rgba(255, 255, 255, 0.09);
     --blok-icon-bg: rgba(255, 255, 255, 0.07);
     --blok-item-confirm-bg: #3d1f1f;
     --blok-item-confirm-hover-bg: #4a2020;
@@ -1112,6 +1116,8 @@
   --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
   --blok-focus-ring: #4c9fff;
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-skeleton-bar: rgba(255, 255, 255, 0.06);
+  --blok-skeleton-sheen: rgba(255, 255, 255, 0.09);
   --blok-icon-bg: rgba(255, 255, 255, 0.07);
   --blok-item-confirm-bg: #3d1f1f;
   --blok-item-confirm-hover-bg: #4a2020;

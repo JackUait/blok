@@ -766,6 +766,16 @@
   100% { transform: translateX(0) }
 }
 
+@keyframes blok-skeleton-breathe {
+  0%, 100% { opacity: 1 }
+  50% { opacity: 0.72 }
+}
+
+@keyframes blok-skeleton-sweep {
+  from { background-position: 150% 0 }
+  to { background-position: -50% 0 }
+}
+
 @keyframes blok-spotlight-flash {
   0% { --blok-spotlight-tint: transparent }
   15% { --blok-spotlight-tint: var(--blok-spotlight-flash) }

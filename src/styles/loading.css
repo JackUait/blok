@@ -1,0 +1,66 @@
+/* The overlay is a WRAPPER child: the redactor is under the modifications
+   observer, so nothing here may live inside it. */
+
+[data-blok-interface] {
+  --blok-skeleton-radius: var(--blok-radius-control-sm);
+  --blok-skeleton-inset: 6px;
+  --blok-skeleton-indent: 1.5em;
+  /* Defaults only: the builder sets both inline on every bar. */
+  --blok-skeleton-width: 100%;
+  --blok-skeleton-index: 0;
+}
+
+/* Hidden, not removed: the handoff measures real blocks under it. */
+[data-blok-loading] [data-blok-redactor] {
+  opacity: 0;
+}
+
+[data-blok-loading-skeleton] {
+  position: absolute;
+  inset: 0 0 auto 0;
+  pointer-events: none;
+  padding-block: var(--blok-skeleton-inset);
+}
+
+[data-blok-skeleton-bar] {
+  position: relative;
+  width: var(--blok-skeleton-width);
+  height: 0.9em;
+  margin-block: 0.55em;
+  border-radius: var(--blok-skeleton-radius);
+  /* background-attachment: fixed would break inside transforms, so every bar
+     uses the same 300%-wide gradient and the same timing. Equal widths in
+     percentages of the overlay keep the band lined up across bars. */
+  background:
+    linear-gradient(100deg, transparent 40%, var(--blok-skeleton-sheen) 50%, transparent 60%) 0 0 / 300% 100% no-repeat,
+    var(--blok-skeleton-bar);
+  animation:
+    blok-skeleton-sweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite,
+    blok-skeleton-breathe 2.4s ease-in-out calc(var(--blok-skeleton-index) * -0.35s) infinite;
+}
+
+[data-blok-skeleton-bar="heading"] {
+  height: 1.5em;
+  margin-block: 0.4em 0.9em;
+}
+
+[data-blok-skeleton-bar="list"] {
+  margin-inline-start: var(--blok-skeleton-indent);
+}
+
+[data-blok-skeleton-bullet] {
+  position: absolute;
+  inset-inline-start: -1.1em;
+  top: 50%;
+  width: 0.35em;
+  height: 0.35em;
+  border-radius: 50%;
+  background: var(--blok-skeleton-bar);
+  transform: translateY(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-skeleton-bar] {
+    animation: none;
+  }
+}

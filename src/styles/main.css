@@ -725,6 +725,7 @@
 @import './field.css';
 @import './notifier-card.css';
 @import './spotlight.css';
+@import './loading.css';
 
 /*
   Callout body type scale.

@@ -34,6 +34,7 @@ import { readMarkup } from './markup/model';
 import { downloadImage } from './download';
 import { tr } from './i18n';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import { inlineDelta, logicalArrow, type TextDirection } from '../../components/utils/direction';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
 
 const ALIGN_TO_TEXT_ALIGN: Record<ImageAlign, string> = {
@@ -351,10 +352,10 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.setAttribute('aria-modal', 'true');
   dialog.setAttribute('aria-label', tr(opts.i18n, 'tools.image.preview'));
   dialog.className = 'blok-image-lightbox';
-  syncPortalDirection(dialog, {
+  const direction: TextDirection = syncPortalDirection(dialog, {
     direction: opts.direction,
     source: opts.origin,
-  });
+  }) ?? 'ltr';
 
   const backdrop = document.createElement('div');
   backdrop.className = 'blok-image-lightbox__backdrop';
@@ -535,7 +536,8 @@ export function openLightbox(opts: LightboxOptions): () => void {
     syncResetLabel();
     syncZoomDisabled();
     syncNavDisabled();
-    const offset = delta > 0 ? 160 : -160;
+    // The next image slides in from the inline end.
+    const offset = inlineDelta(delta > 0 ? 160 : -160, direction);
     if (canAnimate(fresh)) {
       fresh.animate(
         [
@@ -550,7 +552,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     );
     if (btn && canAnimate(btn)) {
       if (source === 'keyboard') {
-        const nudge = delta > 0 ? 6 : -6;
+        const nudge = inlineDelta(delta > 0 ? 6 : -6, direction);
         btn.animate(
           [
             { transform: 'translateX(0) scale(1)' },
@@ -575,6 +577,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
   const nav = hasNav
     ? renderLightboxNav({
       i18n: opts.i18n,
+      direction,
       onPrev: () => navigate(-1),
       onNext: () => navigate(1),
     })
@@ -786,14 +789,10 @@ export function openLightbox(opts: LightboxOptions): () => void {
       setZoom(zoomState.value - ZOOM_STEP);
       return;
     }
-    if (hasNav && event.key === 'ArrowRight') {
+    const step = hasNav ? logicalArrow(event.key, direction) : null;
+    if (step !== null) {
       event.preventDefault();
-      navigate(1, 'keyboard');
-      return;
-    }
-    if (hasNav && event.key === 'ArrowLeft') {
-      event.preventDefault();
-      navigate(-1, 'keyboard');
+      navigate(step === 'forward' ? 1 : -1, 'keyboard');
       return;
     }
   };
@@ -983,11 +982,14 @@ function appendLightboxDivider(parent: HTMLElement): void {
 
 interface LightboxNavOptions {
   i18n?: I18nInstance;
+  direction: TextDirection;
   onPrev(): void;
   onNext(): void;
 }
 
 function renderLightboxNav(opts: LightboxNavOptions): HTMLElement {
+  // In RTL the sequence runs leftward: next is ArrowLeft and points left.
+  const isRtl = opts.direction === 'rtl';
   const nav = document.createElement('div');
   nav.setAttribute('data-role', 'lightbox-nav');
   nav.setAttribute('role', 'group');
@@ -998,16 +1000,16 @@ function renderLightboxNav(opts: LightboxNavOptions): HTMLElement {
   appendLightboxButton(nav, {
     action: 'lightbox-prev',
     label: tr(opts.i18n, 'tools.image.previousImage'),
-    shortcut: '←',
-    html: IconChevronLeft,
+    shortcut: isRtl ? '→' : '←',
+    html: isRtl ? IconChevronRight : IconChevronLeft,
     onClick: opts.onPrev,
     tooltipPlacement: 'right',
   });
   appendLightboxButton(nav, {
     action: 'lightbox-next',
     label: tr(opts.i18n, 'tools.image.nextImage'),
-    shortcut: '→',
-    html: IconChevronRight,
+    shortcut: isRtl ? '←' : '→',
+    html: isRtl ? IconChevronLeft : IconChevronRight,
     onClick: opts.onNext,
     tooltipPlacement: 'right',
   });

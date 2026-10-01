@@ -61,6 +61,29 @@ describe('resyncPortalDirections', () => {
     expect(portal.style.getPropertyValue('direction')).toBe('rtl');
   });
 
+  it('lets an open portal re-place itself after its direction is re-read', () => {
+    const { editor, source, portal } = mount('ltr');
+    const seen: Array<string | null> = [];
+
+    syncPortalDirection(portal, { source, onResync: () => seen.push(portal.getAttribute('dir')) });
+    editor.style.direction = 'rtl';
+    resyncPortalDirections(editor);
+
+    expect(seen).toEqual(['rtl']);
+  });
+
+  it('does not call back a portal of another editor', () => {
+    const first = mount('ltr');
+    const second = mount('ltr');
+    const onResync = vi.fn();
+
+    syncPortalDirection(second.portal, { source: second.source, onResync });
+    first.editor.style.direction = 'rtl';
+    resyncPortalDirections(first.editor);
+
+    expect(onResync).not.toHaveBeenCalled();
+  });
+
   it('leaves portals of another editor alone', () => {
     const first = mount('ltr');
     const second = mount('ltr');

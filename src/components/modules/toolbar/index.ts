@@ -556,6 +556,16 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
+   * Re-places an open toolbar on its current block, e.g. after a runtime
+   * direction flip moved the side its controls dock to.
+   */
+  public relayout(): void {
+    if (this.opened && this.hoveredBlock) {
+      this.moveAndOpen(this.hoveredBlock, this.positioner.target);
+    }
+  }
+
+  /**
    * Move Toolbar to the passed (or current) Block
    * @param block - block to move Toolbar near it
    * @param target - optional target element that was hovered (for content offset calculation)

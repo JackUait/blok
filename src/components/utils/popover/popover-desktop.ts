@@ -801,6 +801,15 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * A submenu was placed for the old side, so it closes; the menu itself
+   * re-places for the new direction.
+   */
+  protected override onDirectionResync(): void {
+    this.destroyNestedPopoverIfExists(false);
+    this.reposition();
+  }
+
+  /**
    * Calculates position for the popover
    */
   private calculatePosition(): { top: number; left: number; openTop: boolean; openLeft: boolean } {

@@ -495,6 +495,14 @@ export class UI extends Module<UINodes> {
    */
   public setDirection(direction: 'ltr' | 'rtl'): void {
     const isRtl = direction === 'rtl';
+    const flipped = this.nodes.wrapper.getAttribute('dir') !== direction;
+
+    // These menus were placed for the old side and do not re-place
+    // themselves (block menu side, inline toolbar anchor). The slash menu is
+    // rebuilt on every i18n update anyway.
+    if (flipped) {
+      this.closeAllToolbars();
+    }
 
     this.nodes.wrapper.classList.toggle('[direction:rtl]', isRtl);
     this.nodes.wrapper.setAttribute('dir', direction);
@@ -509,6 +517,10 @@ export class UI extends Module<UINodes> {
 
     // Open menus, the find bar and toasts live outside the wrapper.
     resyncPortalDirections(this.nodes.wrapper);
+
+    if (flipped) {
+      this.Blok.Toolbar.relayout();
+    }
   }
 
   /**

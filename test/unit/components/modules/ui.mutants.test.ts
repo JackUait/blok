@@ -100,6 +100,7 @@ const createBlokStub = () => {
     },
     Toolbar: {
       moveAndOpen: vi.fn(),
+      relayout: vi.fn(),
       close: vi.fn(),
       contains: vi.fn(() => false),
       nodes: {
@@ -2712,6 +2713,30 @@ describe('UI module — mutants', () => {
 
       expect(portal.getAttribute('dir')).toBe('rtl');
       portal.remove();
+    });
+
+    // Placement of open menus was computed for the old side; the toolbar
+    // offset was clamped for it too.
+    it('closes open menus and re-places the toolbar when the direction flips', () => {
+      const { ui, blok } = createMadeUI();
+
+      ui.setDirection('rtl');
+
+      expect(blok.BlockSettings.close).toHaveBeenCalledTimes(1);
+      expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.relayout).toHaveBeenCalledTimes(1);
+    });
+
+    // A locale change re-applies its direction, often the same one.
+    it('leaves open menus and the toolbar alone when the direction does not change', () => {
+      const { ui, blok } = createMadeUI();
+
+      ui.setDirection('ltr');
+
+      expect(blok.BlockSettings.close).not.toHaveBeenCalled();
+      expect(blok.InlineToolbar.close).not.toHaveBeenCalled();
+      expect(blok.Toolbar.relayout).not.toHaveBeenCalled();
     });
 
     it('stamps dir="ltr" on an LTR editor', () => {

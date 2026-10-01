@@ -180,7 +180,16 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     syncPortalDirection(mountTarget, {
       direction: this.params.direction,
       source: directionSource,
+      onResync: () => this.onDirectionResync(),
     });
+  }
+
+  /**
+   * Runs after a runtime direction flip re-stamped this popover's `dir`.
+   * Base implementation is a no-op.
+   */
+  protected onDirectionResync(): void {
+    // No-op in base class.
   }
 
   /**

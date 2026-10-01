@@ -14,6 +14,12 @@ interface PortalDirectionOptions {
    * Live element that owns the detached UI root.
    */
   source?: Element | null;
+
+  /**
+   * Called after a runtime flip re-reads the portal's direction, so the
+   * portal can re-place itself on the new side.
+   */
+  onResync?: () => void;
 }
 
 const isTextDirection = (value: string | null | undefined): value is TextDirection =>
@@ -60,17 +66,17 @@ const resolveSourceDirection = (source: Element | null | undefined): TextDirecti
  * them. Closed (disconnected) portals are dropped on every sync, which keeps
  * this bounded by the portals open at once.
  */
-const syncedPortals = new Map<HTMLElement, Element>();
+const syncedPortals = new Map<HTMLElement, { source: Element; onResync?: () => void }>();
 
 const rememberPortal = (target: HTMLElement, options: PortalDirectionOptions): void => {
-  syncedPortals.forEach((_source, portal) => {
+  syncedPortals.forEach((_entry, portal) => {
     if (portal !== target && !portal.isConnected) {
       syncedPortals.delete(portal);
     }
   });
 
   if (options.direction === undefined && options.source !== null && options.source !== undefined) {
-    syncedPortals.set(target, options.source);
+    syncedPortals.set(target, { source: options.source, onResync: options.onResync });
   } else {
     syncedPortals.delete(target);
   }
@@ -109,12 +115,13 @@ export const syncPortalDirection = (
 /**
  * Re-reads the direction of every open portal whose source lives in `root`.
  * Called when an editor flips direction at runtime; portals of other editors
- * are left alone. Placement is not recomputed here.
+ * are left alone. A portal that registered `onResync` re-places itself.
  */
 export const resyncPortalDirections = (root: Element): void => {
-  syncedPortals.forEach((source, portal) => {
+  syncedPortals.forEach(({ source, onResync }, portal) => {
     if (portal.isConnected && source.isConnected && root.contains(source)) {
-      syncPortalDirection(portal, { source });
+      syncPortalDirection(portal, { source, onResync });
+      onResync?.();
     }
   });
 };

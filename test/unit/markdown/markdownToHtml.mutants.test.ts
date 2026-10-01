@@ -365,14 +365,14 @@ describe('markdownToHtml mutants', () => {
     it('renders a flow equation in display mode', async () => {
       const html = await render('$$\nx\n$$');
 
-      expect(html.startsWith('<span dir="ltr" class="katex-display">')).toBe(true);
+      expect(html.startsWith('<span class="katex-display">')).toBe(true);
       expect(html).toContain('<annotation encoding="application/x-tex">x</annotation>');
     });
 
     it('renders an inline equation without display mode', async () => {
       const html = await render('a $x$ b');
 
-      expect(html.startsWith('<p>a <span dir="ltr" class="katex">')).toBe(true);
+      expect(html.startsWith('<p>a <span class="katex">')).toBe(true);
       expect(html).not.toContain('katex-display');
     });
 

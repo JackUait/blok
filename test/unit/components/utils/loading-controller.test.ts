@@ -127,6 +127,67 @@ describe('LoadingController', () => {
     expect(wrapper.querySelector('[role="status"]')).toBeNull();
   });
 
+  describe('reserving the overlay height', () => {
+    // A read-only or collaboration boot has an empty redactor and no bottom zone, so the absolute overlay would paint over the host's next element.
+    const mockOverlayHeight = (height: number): void => {
+      const realRect = Element.prototype.getBoundingClientRect;
+
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+        return this.hasAttribute(DATA_ATTR.loadingSkeleton) ? new DOMRect(0, 0, 600, height) : realRect.call(this);
+      });
+    };
+
+    it('holds the wrapper at the overlay height while visible, then clears it', async () => {
+      mockOverlayHeight(208);
+      const { wrapper, controller } = setup();
+
+      controller.show();
+      expect(wrapper.style.minHeight).toBe('');
+      vi.advanceTimersByTime(150);
+      expect(wrapper.style.minHeight).toBe('208px');
+
+      const done = controller.hide([]);
+
+      await vi.advanceTimersByTimeAsync(MIN_VISIBLE);
+      await done;
+      expect(wrapper.style.minHeight).toBe('');
+    });
+
+    it('restores the host inline min-height exactly, on hide and on destroy', async () => {
+      mockOverlayHeight(208);
+      const hidden = setup();
+
+      hidden.wrapper.style.minHeight = '12rem';
+      hidden.controller.show();
+      vi.advanceTimersByTime(150);
+      expect(hidden.wrapper.style.minHeight).toBe('208px');
+      const done = hidden.controller.hide([]);
+
+      await vi.advanceTimersByTimeAsync(MIN_VISIBLE);
+      await done;
+      expect(hidden.wrapper.style.minHeight).toBe('12rem');
+
+      const destroyed = setup();
+
+      destroyed.wrapper.style.minHeight = '40px';
+      destroyed.controller.show();
+      vi.advanceTimersByTime(150);
+      destroyed.controller.destroy();
+      expect(destroyed.wrapper.style.minHeight).toBe('40px');
+    });
+
+    it('never touches min-height when the load ends before the skeleton mounts', async () => {
+      const { wrapper, controller } = setup();
+
+      wrapper.style.minHeight = '12rem';
+      controller.show();
+      vi.advanceTimersByTime(100);
+      await controller.hide([]);
+
+      expect(wrapper.style.minHeight).toBe('12rem');
+    });
+  });
+
   it('stays at least MIN_VISIBLE once shown, even if data lands right after', async () => {
     const { wrapper, controller } = setup();
 

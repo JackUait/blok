@@ -94,4 +94,31 @@ test.describe('boot loading skeleton', () => {
     await expect(page.getByText('Loaded text')).toBeVisible();
     await expect(page.locator('[contenteditable="true"]')).toHaveCount(0);
   });
+
+  test('read-only boot: the skeleton never paints over the host element below the editor', async ({ page }) => {
+    await bootSlow(page, { readOnly: true });
+    await page.evaluate(({ holder }) => {
+      const after = document.createElement('div');
+
+      after.setAttribute('data-blok-testid', 'after-editor');
+      after.textContent = 'Host content below';
+      document.getElementById(holder)?.after(after);
+    }, { holder: HOLDER_ID });
+
+    const overlay = page.getByTestId('loading-skeleton');
+
+    await expect(overlay).toBeVisible();
+
+    const overlayBox = await overlay.boundingBox();
+    const afterBox = await page.getByTestId('after-editor').boundingBox();
+
+    expect(overlayBox).not.toBeNull();
+    expect(afterBox).not.toBeNull();
+    expect(afterBox?.y ?? 0).toBeGreaterThanOrEqual((overlayBox?.y ?? 0) + (overlayBox?.height ?? 0));
+
+    await page.evaluate(() => window.releaseLoad?.());
+    await expect(overlay).toHaveCount(0);
+    await page.evaluate(() => document.querySelector('[data-blok-testid="after-editor"]')?.remove());
+  });
+
 });

@@ -358,57 +358,6 @@
     .dark-mode .playground-tab[aria-selected="true"]:hover { color: #191919; }
     .dark-mode .playground-tab:focus-visible { outline-color: #ffffff; }
 
-    /* Pill toggle switch */
-    .pill-toggle {
-      position: relative;
-      width: 32px;
-      height: 18px;
-      background: #dddddd;
-      border-radius: 999px;
-      transition: background 0.18s ease;
-      flex-shrink: 0;
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04);
-    }
-    .pill-toggle::after {
-      content: '';
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 14px;
-      height: 14px;
-      background: white;
-      border-radius: 50%;
-      transition: transform 0.22s cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 0.18s;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12);
-    }
-    label:hover .pill-toggle::after {
-      box-shadow: 0 1px 2px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.16);
-    }
-    input:checked + .pill-toggle {
-      background: #222222;
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
-    }
-    input:focus-visible + .pill-toggle {
-      outline: 2px solid #222222;
-      outline-offset: 2px;
-    }
-    .dark-mode input:checked + .pill-toggle {
-      background: #ffffff;
-    }
-    .dark-mode input:checked + .pill-toggle::after {
-      background: #191919;
-    }
-    .dark-mode input:focus-visible + .pill-toggle {
-      outline-color: #ffffff;
-    }
-    .dark-mode .pill-toggle {
-      background: #3d3d3d;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
-    }
-    input:checked + .pill-toggle::after {
-      transform: translateX(14px);
-    }
-
     /* Dark mode page styles */
     .dark-mode { background: #191919; color: #ffffff; }
 
@@ -915,6 +864,8 @@
 
     /* Settings panel polish */
     #settings-panel {
+      /* Wide enough for "Paragraph" beside an icon and a check in a two-up chip. */
+      width: 328px;
       font-family: var(--pg-font);
       box-shadow: 0 12px 32px -8px rgba(0,0,0,0.10), 0 2px 8px -2px rgba(0,0,0,0.04);
     }
@@ -926,27 +877,37 @@
       transform: translateX(calc(100% + 12px));
     }
 
-    .settings-section-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--pg-ink);
-      margin-bottom: 12px;
-    }
-    .dark-mode .settings-section-label { color: #ffffff; }
-
-    .settings-row {
+    .settings-head {
+      position: sticky;
+      top: 0;
+      z-index: 2;
       display: flex;
       align-items: center;
       gap: 8px;
-      cursor: pointer;
-      padding: 6px 8px;
-      margin: 0 -8px;
-      border-radius: 6px;
-      transition: background 0.12s ease;
+      padding: 18px 20px 14px;
+      background: inherit;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s ease;
     }
-    .settings-row > .settings-row-label { flex: 1; }
-    .settings-row:hover { background: rgba(0,0,0,0.025); }
-    .dark-mode .settings-row:hover { background: rgba(255,255,255,0.04); }
+    #settings-panel.is-scrolled .settings-head { border-bottom-color: var(--pg-line); }
+    .dark-mode #settings-panel.is-scrolled .settings-head { border-bottom-color: #2f2f2f; }
+    .settings-title {
+      flex: 1;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--pg-ink);
+    }
+    .dark-mode .settings-title { color: #ffffff; }
+    .settings-section { padding: 10px 20px 18px; }
+    .settings-section--last { padding-bottom: 20px; }
+    .settings-section-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--pg-ink);
+      margin-bottom: 10px;
+    }
+    .dark-mode .settings-section-label { color: #ffffff; }
 
     .settings-kbd {
       font-family: 'PT Mono', monospace;
@@ -965,59 +926,341 @@
       background: #232323;
       color: #a8a8a8;
     }
+    .settings-inline { display: flex; align-items: center; gap: 10px; }
 
-    .settings-row-label {
-      font-size: 13px;
-      font-weight: 450;
-      color: var(--pg-ink);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      letter-spacing: -0.005em;
+    /* Appearance: Light | Dark, with a thumb that slides under the chosen side. */
+    .theme-switch {
+      position: relative;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 3px;
+      border-radius: 999px;
+      background: var(--pg-hover);
+      box-shadow: inset 0 0 0 1px var(--pg-line);
     }
-    .dark-mode .settings-row-label { color: #ffffff; }
+    .theme-switch__thumb {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      left: 3px;
+      width: calc(50% - 3px);
+      border-radius: 999px;
+      background: #ffffff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 2px 8px -2px rgba(0,0,0,0.12);
+      transition: transform 0.4s cubic-bezier(0.34, 1.3, 0.5, 1);
+    }
+    .theme-switch:has(#toggle-dark:checked) .theme-switch__thumb { transform: translateX(100%); }
+    .theme-switch__option {
+      position: relative;
+      z-index: 1;
+      padding: 7px 0;
+      border: 0;
+      border-radius: 999px;
+      background: none;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--pg-muted);
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+    .theme-switch__option[aria-pressed="true"] { color: var(--pg-ink); }
+    .theme-switch__option:hover { color: var(--pg-ink); }
+    html[data-pg-modality="keyboard"] .theme-switch__option:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 1px; }
+    .dark-mode .theme-switch { background: #232323; box-shadow: inset 0 0 0 1px #2f2f2f; }
+    .dark-mode .theme-switch__thumb { background: #3a3a3a; box-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+    .dark-mode .theme-switch__option { color: #a8a8a8; }
+    .dark-mode .theme-switch__option[aria-pressed="true"],
+    .dark-mode .theme-switch__option:hover { color: #ffffff; }
+    html[data-pg-modality="keyboard"] .dark-mode .theme-switch__option:focus-visible { outline-color: #ffffff; }
 
-    /* Stacked row: label + value on top, full-width control beneath */
-    .settings-row-stack {
+    /* Modes and tools: Airbnb-style selectable cards. On = ink ring, never a fill color. */
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .mode-tile,
+    .tool-chip {
+      position: relative;
+      cursor: pointer;
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: inset 0 0 0 1px var(--pg-line-strong);
+      transition: box-shadow 0.18s ease, background 0.18s ease, transform 0.12s ease;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .mode-tile {
+      display: flex;
       flex-direction: column;
-      align-items: stretch;
+      gap: 10px;
+      padding: 12px;
+    }
+    .mode-tile:hover,
+    .tool-chip:hover { box-shadow: inset 0 0 0 1px var(--pg-ink); }
+    .mode-tile:active,
+    .tool-chip:active { transform: scale(0.97); }
+    .mode-tile:has(input:checked) {
+      box-shadow: inset 0 0 0 2px var(--pg-ink);
+      background: var(--pg-hover);
+    }
+    html[data-pg-modality="keyboard"] .mode-tile:has(input:focus-visible),
+    html[data-pg-modality="keyboard"] .tool-chip:has(input:focus-visible) {
+      outline: 2px solid var(--pg-ink);
+      outline-offset: 2px;
+    }
+    .mode-tile__icon,
+    .tool-chip__icon {
+      display: inline-flex;
+      width: 20px;
+      height: 20px;
+      color: var(--pg-muted);
+      transition: color 0.18s ease, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .mode-tile__icon svg,
+    .tool-chip__icon svg { width: 20px; height: 20px; display: block; }
+    .mode-tile:has(input:checked) .mode-tile__icon,
+    .tool-chip:has(input:checked) .tool-chip__icon { color: var(--pg-ink); }
+    .mode-tile:has(input:checked) .mode-tile__icon { transform: scale(1.1); }
+    .mode-tile__label {
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--pg-ink);
+    }
+    .mode-tile:has(input:checked) .mode-tile__label { font-weight: 600; }
+    .mode-tile .settings-kbd { position: absolute; top: 12px; right: 12px; }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 6px;
     }
-    .settings-row-stack > .settings-stack-head {
+    .tool-chip {
       display: flex;
       align-items: center;
       gap: 8px;
+      padding: 9px 10px;
+      border-radius: 10px;
     }
-    .settings-stack-head > .settings-row-label { flex: 1; }
-    .settings-value {
-      font-family: 'PT Mono', monospace;
-      font-size: 11px;
+    .tool-chip__label {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
       color: var(--pg-muted);
-      font-variant-numeric: tabular-nums;
+      transition: color 0.18s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .dark-mode .settings-value { color: #a8a8a8; }
-
-    .settings-range {
-      width: 100%;
-      height: 4px;
-      margin: 4px 0;
-      padding: 0;
-      cursor: pointer;
-      accent-color: var(--pg-ink);
+    .tool-chip:has(input:checked) .tool-chip__label { color: var(--pg-ink); }
+    /* An off tool reads as switched off: muted, no fill. */
+    .tool-chip:not(:has(input:checked)) .tool-chip__icon { opacity: 0.55; }
+    /* The shortcut sits over the check and swaps in on hover, so labels keep their width. */
+    .tool-chip__key {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: 'PT Mono', monospace;
+      font-size: 10px;
+      color: var(--pg-muted);
+      opacity: 0;
+      transition: opacity 0.15s ease;
     }
-    .dark-mode .settings-range { accent-color: #ffffff; }
+    .tool-chip__key::before { content: '⌥'; }
+    .tool-chip:hover .tool-chip__key { opacity: 1; }
+    .tool-chip:hover:has(.tool-chip__key) .tool-chip__check { visibility: hidden; }
+    .tool-chip__check { display: inline-flex; width: 16px; height: 16px; color: var(--pg-ink); }
+    .tool-chip__check svg { width: 16px; height: 16px; display: block; }
+    .tool-chip__check svg,
+    .tool-chip:not(:has(input:checked)) .tool-chip__check { opacity: 0; }
+    .tool-chip:has(input:checked) .tool-chip__check svg { opacity: 1; animation: pg-check-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    /* An off tool steps back: dashed edge, no surface. */
+    .tool-chip:not(:has(input:checked)) { background: transparent; box-shadow: none; outline: 1px dashed var(--pg-line-strong); outline-offset: -1px; }
+    .tool-chip:not(:has(input:checked)):hover { outline-color: var(--pg-ink); }
+    @keyframes pg-check-pop {
+      from { transform: scale(0.4); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
 
-    .settings-row-icon {
-      width: 20px;
-      height: 20px;
+    .dark-mode .mode-tile,
+    .dark-mode .tool-chip { background: transparent; box-shadow: inset 0 0 0 1px #3d3d3d; }
+    .dark-mode .mode-tile:hover,
+    .dark-mode .tool-chip:hover { box-shadow: inset 0 0 0 1px #ffffff; }
+    .dark-mode .mode-tile:has(input:checked) { box-shadow: inset 0 0 0 2px #ffffff; background: #232323; }
+    .dark-mode .tool-chip__check { color: #ffffff; }
+    .dark-mode .tool-chip:not(:has(input:checked)) { outline-color: #3d3d3d; }
+    .dark-mode .tool-chip:not(:has(input:checked)):hover { outline-color: #ffffff; }
+    .dark-mode .mode-tile__label,
+    .dark-mode .tool-chip:has(input:checked) .tool-chip__label,
+    .dark-mode .mode-tile:has(input:checked) .mode-tile__icon,
+    .dark-mode .tool-chip:has(input:checked) .tool-chip__icon { color: #ffffff; }
+    .dark-mode .tool-chip__label,
+    .dark-mode .mode-tile__icon,
+    .dark-mode .tool-chip__icon { color: #a8a8a8; }
+    html[data-pg-modality="keyboard"] .dark-mode .mode-tile:has(input:focus-visible),
+    html[data-pg-modality="keyboard"] .dark-mode .tool-chip:has(input:focus-visible) { outline-color: #ffffff; }
+
+    /* Editor fields: label row above a full-width control. */
+    .settings-field + .settings-field { margin-top: 16px; }
+    .settings-field__head {
       display: flex;
       align-items: center;
-      justify-content: center;
-      color: var(--pg-muted);
-      transition: color 0.15s;
+      gap: 8px;
+      margin-bottom: 8px;
     }
-    .settings-row:hover .settings-row-icon { color: var(--pg-ink); }
-    .dark-mode .settings-row:hover .settings-row-icon { color: #ffffff; }
+    .settings-field__label {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--pg-ink);
+    }
+    .dark-mode .settings-field__label { color: #ffffff; }
+    .settings-field .lang-trigger { width: 100%; max-width: none; font-size: 13px; padding-top: 7px; padding-bottom: 7px; }
+    .settings-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--pg-ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .dark-mode .settings-value { color: #ffffff; }
+
+    .size-slider { display: flex; align-items: center; gap: 10px; }
+    .size-slider__glyph { font-weight: 600; color: var(--pg-muted); line-height: 1; }
+    .size-slider__glyph--small { font-size: 11px; }
+    .size-slider__glyph--large { font-size: 18px; }
+    .dark-mode .size-slider__glyph { color: #a8a8a8; }
+    .settings-range {
+      --fill: 0%;
+      flex: 1;
+      height: 18px;
+      margin: 0;
+      background: none;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .settings-range::-webkit-slider-runnable-track {
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(to right, var(--pg-ink) var(--fill), var(--pg-line-strong) var(--fill));
+    }
+    .settings-range::-moz-range-track {
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(to right, var(--pg-ink) var(--fill), var(--pg-line-strong) var(--fill));
+    }
+    .settings-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      margin-top: -7px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: inset 0 0 0 1px var(--pg-line-strong), 0 1px 2px rgba(0,0,0,0.12), 0 3px 8px -2px rgba(0,0,0,0.18);
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .settings-range::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border: 0;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: inset 0 0 0 1px var(--pg-line-strong), 0 1px 2px rgba(0,0,0,0.12), 0 3px 8px -2px rgba(0,0,0,0.18);
+    }
+    .settings-range:hover::-webkit-slider-thumb { transform: scale(1.12); }
+    .settings-range:active::-webkit-slider-thumb { transform: scale(0.95); }
+    .settings-range:focus { outline: none; }
+    html[data-pg-modality="keyboard"] .settings-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--pg-ink); }
+    .dark-mode .settings-range::-webkit-slider-runnable-track { background: linear-gradient(to right, #ffffff var(--fill), #3d3d3d var(--fill)); }
+    .dark-mode .settings-range::-moz-range-track { background: linear-gradient(to right, #ffffff var(--fill), #3d3d3d var(--fill)); }
+
+    /* Notification position: a tiny page with one spot per toast position. */
+    .position-picker {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: 1fr 1fr;
+      gap: 0 6px;
+      height: 96px;
+      padding: 8px;
+      border-radius: 12px;
+      background: var(--pg-hover);
+      box-shadow: inset 0 0 0 1px var(--pg-line);
+    }
+    /* Page text lines, so the box reads as a screen. */
+    .position-picker::before {
+      content: '';
+      position: absolute;
+      left: 28%;
+      right: 28%;
+      top: 50%;
+      height: 22px;
+      transform: translateY(-50%);
+      background:
+        linear-gradient(var(--pg-line-strong), var(--pg-line-strong)) 0 0 / 100% 4px no-repeat,
+        linear-gradient(var(--pg-line-strong), var(--pg-line-strong)) 0 9px / 82% 4px no-repeat,
+        linear-gradient(var(--pg-line-strong), var(--pg-line-strong)) 0 18px / 60% 4px no-repeat;
+      border-radius: 2px;
+      pointer-events: none;
+    }
+    .position-picker__spot {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: none;
+      cursor: pointer;
+    }
+    .position-picker__spot[data-position^="bottom"] { align-items: flex-end; grid-row: 2; }
+    .position-picker__spot[data-position^="top"] { grid-row: 1; }
+    .position-picker__spot[data-position$="left"] { grid-column: 1; justify-content: flex-start; }
+    .position-picker__spot[data-position$="center"] { grid-column: 2; }
+    .position-picker__spot[data-position$="right"] { grid-column: 3; justify-content: flex-end; }
+    /* The toast: a dashed outline until chosen, then a solid ink pill that pops in. */
+    .position-picker__spot::after {
+      content: '';
+      width: 48px;
+      height: 14px;
+      border-radius: 999px;
+      box-shadow: inset 0 0 0 1px var(--pg-line-strong);
+      background: transparent;
+      transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .position-picker__spot:hover::after { box-shadow: inset 0 0 0 1px var(--pg-ink); }
+    .position-picker__spot[aria-checked="true"]::after {
+      background: var(--pg-ink);
+      box-shadow: 0 2px 6px -1px rgba(0,0,0,0.35);
+      transform: scale(1.08);
+    }
+    html[data-pg-modality="keyboard"] .position-picker__spot:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 0; }
+    .position-picker__spot:focus { outline: none; }
+    .dark-mode .position-picker { background: #1f1f1f; box-shadow: inset 0 0 0 1px #2f2f2f; }
+    .dark-mode .position-picker::before {
+      background:
+        linear-gradient(#3d3d3d, #3d3d3d) 0 0 / 100% 4px no-repeat,
+        linear-gradient(#3d3d3d, #3d3d3d) 0 9px / 82% 4px no-repeat,
+        linear-gradient(#3d3d3d, #3d3d3d) 0 18px / 60% 4px no-repeat;
+    }
+    .dark-mode .position-picker__spot::after { box-shadow: inset 0 0 0 1px #3d3d3d; }
+    .dark-mode .position-picker__spot:hover::after { box-shadow: inset 0 0 0 1px #ffffff; }
+    .dark-mode .position-picker__spot[aria-checked="true"]::after { background: #ffffff; }
+    html[data-pg-modality="keyboard"] .dark-mode .position-picker__spot:focus-visible { outline-color: #ffffff; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .theme-switch__thumb,
+      .mode-tile,
+      .tool-chip,
+      .mode-tile__icon,
+      .position-picker__spot::after { transition: none; }
+    }
 
     #settings-close {
       width: 28px;
@@ -1261,7 +1504,6 @@
     .dark-mode #settings-tab:hover svg,
     .dark-mode #settings-tab:hover span { color: #ffffff; }
     .dark-mode #settings-panel { background: #191919; border-color: #2f2f2f; }
-    .dark-mode .settings-divider { border-color: #2f2f2f !important; }
    </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <script>
@@ -1369,93 +1611,110 @@
 
   <!-- Settings side panel: drawer -->
   <div id="settings-panel" class="fixed right-3 top-[92px] bottom-3 w-[300px] bg-white dark-mode:bg-[#191919] border border-[#ebebeb] dark-mode:border-[#2f2f2f] rounded-2xl translate-x-full transition-transform duration-[240ms] ease-[cubic-bezier(0.4,0.0,0.2,1)] z-10 overflow-y-auto" style="transform: translateX(calc(100% + 12px))" aria-label="Settings panel">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-[#ebebeb] settings-divider dark-mode:border-[#2f2f2f]">
-      <span class="text-[15px] font-semibold tracking-tight dark-mode:text-[#ffffff]" style="letter-spacing: -0.015em;">Settings</span>
+    <div class="settings-head">
+      <span class="settings-title">Settings</span>
+      <kbd class="settings-kbd">⌘\</kbd>
       <button id="settings-close" type="button" aria-label="Close settings panel" title="Close (Esc)"></button>
     </div>
 
-    <!-- Modes section -->
-    <div class="px-6 py-5 border-b border-[#ebebeb] settings-divider dark-mode:border-[#2f2f2f]">
-      <div class="settings-section-label">Modes</div>
-      <div class="flex flex-col gap-1">
-        <label class="settings-row">
-          <span class="settings-row-label">Readonly</span>
+    <section class="settings-section" aria-labelledby="settings-appearance">
+      <div class="settings-section-label" id="settings-appearance">Appearance</div>
+      <div class="settings-inline">
+      <div class="theme-switch" role="group" aria-labelledby="settings-appearance">
+        <input type="checkbox" id="toggle-dark" class="sr-only" tabindex="-1" aria-hidden="true">
+        <span class="theme-switch__thumb" aria-hidden="true"></span>
+        <button type="button" class="theme-switch__option" data-theme-choice="light" aria-pressed="true">Light</button>
+        <button type="button" class="theme-switch__option" data-theme-choice="dark" aria-pressed="false">Dark</button>
+      </div>
+      <kbd class="settings-kbd">⌥D</kbd>
+      </div>
+    </section>
+
+    <section class="settings-section" aria-labelledby="settings-modes">
+      <div class="settings-section-label" id="settings-modes">Modes</div>
+      <div class="mode-grid">
+        <label class="mode-tile">
+          <input type="checkbox" id="toggle-readonly" class="sr-only">
+          <span class="mode-tile__icon" data-icon="IconPreview" aria-hidden="true"></span>
+          <span class="mode-tile__label">Readonly</span>
           <kbd class="settings-kbd">⌥R</kbd>
-          <input type="checkbox" id="toggle-readonly" class="peer sr-only">
-          <span class="pill-toggle"></span>
         </label>
-        <label class="settings-row">
-          <span class="settings-row-label">Blok View</span>
+        <label class="mode-tile">
+          <input type="checkbox" id="toggle-blokview" class="sr-only">
+          <span class="mode-tile__icon" data-icon="IconSplitView" aria-hidden="true"></span>
+          <span class="mode-tile__label">Blok View</span>
           <kbd class="settings-kbd">⌥V</kbd>
-          <input type="checkbox" id="toggle-blokview" class="peer sr-only">
-          <span class="pill-toggle"></span>
         </label>
-        <label class="settings-row">
-          <span class="settings-row-label">Dark mode</span>
-          <kbd class="settings-kbd">⌥D</kbd>
-          <input type="checkbox" id="toggle-dark" class="peer sr-only">
-          <span class="pill-toggle"></span>
-        </label>
-        <label class="settings-row">
-          <span class="settings-row-label">Autofocus</span>
+        <label class="mode-tile">
+          <input type="checkbox" id="toggle-autofocus" class="sr-only" checked>
+          <span class="mode-tile__icon" data-icon="IconCursor" aria-hidden="true"></span>
+          <span class="mode-tile__label">Autofocus</span>
           <kbd class="settings-kbd">⌥F</kbd>
-          <input type="checkbox" id="toggle-autofocus" class="peer sr-only" checked>
-          <span class="pill-toggle"></span>
         </label>
-        <label class="settings-row">
-          <span class="settings-row-label">RTL</span>
+        <label class="mode-tile">
+          <input type="checkbox" id="toggle-rtl" class="sr-only">
+          <span class="mode-tile__icon" data-icon="IconAlignRight" aria-hidden="true"></span>
+          <span class="mode-tile__label">RTL</span>
           <kbd class="settings-kbd">⌥T</kbd>
-          <input type="checkbox" id="toggle-rtl" class="peer sr-only">
-          <span class="pill-toggle"></span>
         </label>
-        <label class="settings-row">
-          <span class="settings-row-label">Controls right</span>
-          <input type="checkbox" id="toggle-controls-right" class="peer sr-only">
-          <span class="pill-toggle"></span>
+        <label class="mode-tile">
+          <input type="checkbox" id="toggle-controls-right" class="sr-only">
+          <span class="mode-tile__icon" data-icon="IconMoveRight" aria-hidden="true"></span>
+          <span class="mode-tile__label">Controls right</span>
         </label>
-        <label class="settings-row">
-          <span class="settings-row-label">Hide controls</span>
-          <input type="checkbox" id="toggle-hide-toolbar" class="peer sr-only">
-          <span class="pill-toggle"></span>
+        <label class="mode-tile">
+          <input type="checkbox" id="toggle-hide-toolbar" class="sr-only">
+          <span class="mode-tile__icon" data-icon="IconMenu" aria-hidden="true"></span>
+          <span class="mode-tile__label">Hide controls</span>
         </label>
-        <div class="settings-row" style="cursor: default;">
-          <span class="settings-row-label">Language</span>
+      </div>
+    </section>
+
+    <section class="settings-section" aria-labelledby="settings-editor">
+      <div class="settings-section-label" id="settings-editor">Editor</div>
+      <div class="settings-field">
+        <div class="settings-field__head">
+          <span class="settings-field__label">Language</span>
           <kbd class="settings-kbd">⌥L</kbd>
-          <button type="button" id="locale-trigger" class="settings-select lang-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Editor language">
-            <span id="locale-trigger-label">English</span>
-          </button>
         </div>
-        <div class="settings-row settings-row-stack" style="cursor: default;">
-          <div class="settings-stack-head">
-            <span class="settings-row-label">Text size</span>
-            <span class="settings-value" id="font-scale-value">100%</span>
-          </div>
+        <button type="button" id="locale-trigger" class="settings-select lang-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Editor language">
+          <span id="locale-trigger-label">English</span>
+        </button>
+      </div>
+      <div class="settings-field">
+        <div class="settings-field__head">
+          <span class="settings-field__label">Text size</span>
+          <span class="settings-value" id="font-scale-value">100%</span>
+        </div>
+        <div class="size-slider">
+          <span class="size-slider__glyph size-slider__glyph--small" aria-hidden="true">A</span>
           <input type="range" id="font-scale" class="settings-range" min="80" max="150" step="5" value="100" aria-label="Editor text size">
-        </div>
-        <div class="settings-row" style="cursor: default;">
-          <span class="settings-row-label">Notification position</span>
-          <kbd class="settings-kbd">⌥N</kbd>
-          <select id="select-notifier-position" class="settings-select">
-            <option value="bottom-left">Bottom left</option>
-            <option value="bottom-right">Bottom right</option>
-            <option value="bottom-center" selected>Bottom center</option>
-            <option value="top-left">Top left</option>
-            <option value="top-right">Top right</option>
-            <option value="top-center">Top center</option>
-          </select>
+          <span class="size-slider__glyph size-slider__glyph--large" aria-hidden="true">A</span>
         </div>
       </div>
-    </div>
+      <div class="settings-field">
+        <div class="settings-field__head">
+          <span class="settings-field__label">Notification position</span>
+          <kbd class="settings-kbd">⌥N</kbd>
+        </div>
+        <select id="select-notifier-position" hidden>
+          <option value="bottom-left">Bottom left</option>
+          <option value="bottom-right">Bottom right</option>
+          <option value="bottom-center" selected>Bottom center</option>
+          <option value="top-left">Top left</option>
+          <option value="top-right">Top right</option>
+          <option value="top-center">Top center</option>
+        </select>
+        <div id="notifier-position-picker"></div>
+      </div>
+    </section>
 
-    <!-- Tools section -->
-    <div class="px-6 py-5 border-b border-[#ebebeb] settings-divider dark-mode:border-[#2f2f2f]">
-      <div class="settings-section-label">Tools</div>
-      <div class="flex flex-col gap-1" id="tool-toggles"></div>
-    </div>
+    <section class="settings-section" aria-labelledby="settings-tools">
+      <div class="settings-section-label" id="settings-tools">Tools</div>
+      <div class="tool-grid" id="tool-toggles"></div>
+    </section>
 
-    <!-- Actions section -->
-    <div class="px-6 py-5">
-      <div class="settings-section-label">Actions</div>
+    <section class="settings-section settings-section--last">
       <button id="reset-content">
         <svg width="13" height="13" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
           <path d="M16.5 10a6.5 6.5 0 1 1-.5-2.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1464,7 +1723,7 @@
         Reset content
         <kbd class="settings-kbd">⌥X</kbd>
       </button>
-    </div>
+    </section>
   </div>
 
   <script type="module">
@@ -1495,6 +1754,7 @@
     import { PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
+    import { mountPositionPicker } from './src/playground/position-picker.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
     // Default import only — the json-as-string vite plugin rewrites JSON
     // modules to a lone default export, so named JSON imports throw on load.
@@ -2173,6 +2433,10 @@
     const settingsTab = document.getElementById('settings-tab');
     const settingsPanel = document.getElementById('settings-panel');
     const settingsClose = document.getElementById('settings-close');
+    settingsPanel.querySelectorAll('[data-icon]').forEach((slot) => {
+      slot.innerHTML = Icons[slot.dataset.icon];
+    });
+    mountPositionPicker(document.getElementById('select-notifier-position'), document.getElementById('notifier-position-picker'));
 
     function openSettingsPanel() {
       settingsPanel.style.transform = '';
@@ -2195,6 +2459,9 @@
     }
 
     settingsTab.addEventListener('click', openSettingsPanel);
+    settingsPanel.addEventListener('scroll', () => {
+      settingsPanel.classList.toggle('is-scrolled', settingsPanel.scrollTop > 0);
+    }, { passive: true });
     settingsClose.addEventListener('click', closeSettingsPanel);
 
     document.addEventListener('keydown', (e) => {
@@ -2266,6 +2533,9 @@
     function setDarkMode(enabled) {
       state.darkMode = enabled;
       toggleDark.checked = enabled;
+      document.querySelectorAll('[data-theme-choice]').forEach((option) => {
+        option.setAttribute('aria-pressed', String((option.dataset.themeChoice === 'dark') === enabled));
+      });
       document.body.classList.toggle('dark-mode', enabled);
       if (enabled) {
         document.documentElement.setAttribute('data-blok-theme', 'dark');
@@ -2374,6 +2644,13 @@
     }
 
     toggleBlokview.addEventListener('change', () => applyBlokView(toggleBlokview.checked));
+
+    document.querySelectorAll('[data-theme-choice]').forEach((option) => {
+      option.addEventListener('click', () => {
+        // Clicking the side already on must not flip it back.
+        if ((option.dataset.themeChoice === 'dark') !== toggleDark.checked) toggleDark.click();
+      });
+    });
 
     toggleDark.addEventListener('change', () => {
       applyDarkMode(toggleDark.checked, { animate: true });
@@ -2663,9 +2940,15 @@
      */
     const fontScaleInput = document.getElementById('font-scale');
     const fontScaleValue = document.getElementById('font-scale-value');
+    const paintFontScaleFill = () => {
+      const { min, max, value } = fontScaleInput;
+      fontScaleInput.style.setProperty('--fill', `${((value - min) / (max - min)) * 100}%`);
+    };
+    paintFontScaleFill();
     fontScaleInput.addEventListener('input', () => {
       state.fontScale = Number(fontScaleInput.value) / 100;
       fontScaleValue.textContent = `${fontScaleInput.value}%`;
+      paintFontScaleFill();
       applyFontScale(document.getElementById('blok'), state.fontScale);
       applyFontScale(document.getElementById('blokview-panel'), state.fontScale);
     });
@@ -2692,15 +2975,13 @@
     for (let i = 0; i < TOOL_DEFS.length; i++) {
       const tool = TOOL_DEFS[i];
       const label = document.createElement('label');
-      label.className = 'settings-row';
+      label.className = 'tool-chip';
       label.innerHTML = `
-        <span class="settings-row-label">
-          <span class="settings-row-icon">${tool.icon}</span>
-          ${tool.label}
-        </span>
-        ${i < 9 ? `<kbd class="settings-kbd">⌥${i + 1}</kbd>` : ''}
-        <input type="checkbox" id="toggle-tool-${tool.key}" class="peer sr-only" checked>
-        <span class="pill-toggle"></span>
+        <input type="checkbox" id="toggle-tool-${tool.key}" class="sr-only" checked>
+        <span class="tool-chip__icon" aria-hidden="true">${tool.icon}</span>
+        <span class="tool-chip__label">${tool.label}</span>
+        ${i < 9 ? `<kbd class="tool-chip__key">${i + 1}</kbd>` : ''}
+        <span class="tool-chip__check" aria-hidden="true">${Icons.IconCheck}</span>
       `;
       toolTogglesContainer.appendChild(label);
     }

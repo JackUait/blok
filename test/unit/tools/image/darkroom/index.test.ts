@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ImageCrop, ImageMarkup } from '../../../../../types/tools/image';
 import { openDarkroom, type DarkroomResult, type OpenDarkroomOptions } from '../../../../../src/tools/image/darkroom';
+import { SHORTCUTS } from '../../../../../src/tools/image/darkroom/shortcuts';
 import { cameraToRect, fitFrame } from '../../../../../src/tools/image/darkroom/camera';
 import { resolveFilters } from '../../../../../src/tools/image/adjust';
 import { coverCrop } from '../../../../../src/tools/image/geometry';
@@ -1027,7 +1028,7 @@ describe('openDarkroom geometry, adjust and filters', () => {
       const lead = button('reset').parentElement;
       const actions = [...(lead?.children ?? [])].map((c) => c.getAttribute('data-action'));
 
-      expect(actions).toEqual(['cancel', 'reset', 'rotate-left', 'flip']);
+      expect(actions).toEqual(['cancel', 'reset', 'rotate-left', 'flip', 'shortcuts']);
       expect(button('rotate-left').getAttribute('aria-label')).toBe('Rotate left');
       expect(button('flip').getAttribute('aria-label')).toBe('Flip');
       expect(button('rotate-left').querySelector('svg')).not.toBeNull();
@@ -2707,6 +2708,91 @@ describe('openDarkroom photo editor keys', () => {
       photoImg().dispatchEvent(new Event('error'));
 
       expect(dialog().hasAttribute('data-zoomed')).toBe(false);
+    });
+  });
+
+  describe('? shows every key', () => {
+    const sheet = (): HTMLElement | null => document.querySelector('[data-role="darkroom-shortcuts"]');
+    const question = (target: Element | null = stageEl()): void => key(target, { key: '?', code: 'Slash', shiftKey: true });
+
+    it('? opens a sheet named Keyboard shortcuts that lists every row, grouped', () => {
+      open();
+      question();
+
+      expect(sheet()?.closest('[role="dialog"]')?.getAttribute('aria-label')).toBe('Keyboard shortcuts');
+      expect(sheet()?.querySelectorAll('[data-shortcut]')).toHaveLength(SHORTCUTS.length);
+      expect([...(sheet()?.querySelectorAll('h3') ?? [])].map((h) => h.textContent)).toEqual(['General', 'Crop', 'Markup']);
+      expect(sheet()?.querySelector('[data-shortcut="tools.image.shortcutZoomActual"] kbd')?.textContent).toBe('Z');
+    });
+
+    it('every row reads as words, never as a raw key name', () => {
+      open();
+      question();
+
+      [...(sheet()?.querySelectorAll('[data-shortcut] dt') ?? [])].forEach((dt) => {
+        expect(dt.textContent).not.toMatch(/^(tools|blockSettings)\./);
+      });
+    });
+
+    it('? again closes it; Escape closes only the sheet', () => {
+      const { onCancel } = open();
+
+      question();
+      question(sheet());
+      expect(sheet()).toBeNull();
+      question();
+      key(document.activeElement, { key: 'Escape' });
+
+      expect(sheet()).toBeNull();
+      expect(onCancel).not.toHaveBeenCalled();
+      expect(dialog().isConnected).toBe(true);
+    });
+
+    it('a ? typed into a field is just a character', () => {
+      open();
+      const input = document.createElement('input');
+
+      dialog().appendChild(input);
+      question(input);
+
+      expect(sheet()).toBeNull();
+    });
+
+    it('while it is open, the darkroom keys rest', () => {
+      open();
+      question();
+      key(sheet(), { key: 'a' });
+
+      expect(dialog().getAttribute('data-mode')).toBe('crop');
+    });
+
+    it('hides the Filters row when there are no filters', () => {
+      open({ filters: resolveFilters([]) });
+      question();
+
+      expect(sheet()?.querySelector('[data-shortcut="tools.image.editModeFilters"]')).toBeNull();
+    });
+
+    it('a button in the top bar opens it too and names its key', () => {
+      open();
+      const btn = button('shortcuts');
+
+      expect(btn.getAttribute('aria-label')).toBe('Keyboard shortcuts');
+      expect(btn.getAttribute('aria-keyshortcuts')).toBe('Shift+?');
+      btn.click();
+
+      expect(sheet()).not.toBeNull();
+    });
+
+    it('closing hands focus back to the stage', () => {
+      open();
+      const stage = q('[data-role="darkroom-stage"]');
+
+      stage.focus();
+      question();
+      question(sheet());
+
+      expect(stage).toHaveFocus();
     });
   });
 

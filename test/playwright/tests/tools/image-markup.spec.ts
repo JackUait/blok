@@ -222,3 +222,17 @@ test('Z zooms the view only: a rectangle drawn zoomed lands where the pointer wa
   expect(rect.x2).toBeCloseTo((to[0] - zoomed.x) / zoomed.width, 2);
   expect(rect.y2).toBeCloseTo((to[1] - zoomed.y) / zoomed.height, 2);
 });
+
+test('? opens the keyboard shortcuts sheet; Escape closes only the sheet', async ({ page }) => {
+  await seedImage(page);
+  const { dialog } = await openMarkup(page);
+
+  await page.keyboard.press('?');
+  const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText('Rotate right')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(sheet).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+});

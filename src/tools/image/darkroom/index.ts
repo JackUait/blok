@@ -1,7 +1,7 @@
 import type { ImageAdjust, ImageCrop, ImageCropShape, ImageMarkup } from '../../../../types/tools/image';
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import { IconFlipHorizontal, IconRotateLeft } from '../../../components/icons';
-import { openModalDialog } from '../../../components/utils/modal-dialog';
+import { openModalDialog, type ModalDialogHandle } from '../../../components/utils/modal-dialog';
 import { rovingRadioGroup } from '../../../components/utils/roving-radio-group';
 import { beautifyShortcut } from '../../../components/utils/string';
 import { createSpring, prefersReducedMotion, type SpringClock } from '../../../components/utils/spring';
@@ -27,6 +27,7 @@ import { createHistory, type Snapshot } from './history';
 import { createMarkupEditor, stateForMark, TOOL_KEYS } from './markup-editor';
 import { createMarkupPanel, DEFAULT_MARKUP_STATE, type MarkupPanelState } from './markup-panel';
 import { createModeTabs } from './mode-tabs';
+import { openShortcutSheet } from './shortcuts';
 import { clampView, FIT, panView, toView, zoomViewAt, type View } from './view-zoom';
 import { cameraPlane, createDissolve, createVeil, fitCameraPlane, flyOut, isOnScreen } from './motion';
 
@@ -107,6 +108,8 @@ const roundOf = (shape: RatioShape): number => (shape === 'rect' ? 0 : 1);
 /** The typed character, or the physical key where the layout types a non-Latin character. */
 const pressed = (e: KeyboardEvent, chars: string[], codes: string[]): boolean =>
   chars.includes(e.key) || (e.key.length === 1 && !/^[\x20-\x7e]$/.test(e.key) && codes.includes(e.code));
+const isTyping = (t: EventTarget | null): boolean =>
+  t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
 const isBracket = (e: KeyboardEvent, side: 'left' | 'right'): boolean =>
   pressed(e, [side === 'left' ? '[' : ']'], [side === 'left' ? 'BracketLeft' : 'BracketRight']);
 
@@ -166,6 +169,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     space: false,
     viewPan: null as { id: number; x: number; y: number; from: View } | null,
     pointer: null as { x: number; y: number } | null,
+    sheet: null as ModalDialogHandle | null,
   };
   const startRect = { ...st.rect };
   const snapshot = (): Snapshot => ({
@@ -220,7 +224,15 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   const doneBtn = makeBtn('done', 'tools.image.cropDone', 'primary');
   const lead = el('div', 'blok-darkroom__bar-lead');
 
-  lead.append(cancelBtn, resetBtn, rotateBtn, flipBtn);
+  const shortcutsBtn = el('button', 'blok-darkroom__btn blok-darkroom__btn--ghost blok-darkroom__btn--icon');
+
+  shortcutsBtn.type = 'button';
+  shortcutsBtn.setAttribute('data-action', 'shortcuts');
+  shortcutsBtn.setAttribute('aria-label', tr(opts.i18n, 'tools.image.shortcutsTitle'));
+  shortcutsBtn.setAttribute('aria-keyshortcuts', 'Shift+?');
+  shortcutsBtn.title = `${tr(opts.i18n, 'tools.image.shortcutsTitle')} (?)`;
+  shortcutsBtn.textContent = '?';
+  lead.append(cancelBtn, resetBtn, rotateBtn, flipBtn, shortcutsBtn);
   bar.append(lead, doneBtn);
 
   const stage = el('div', 'blok-darkroom__stage', 'darkroom-stage');
@@ -1105,10 +1117,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   /** Unmodified photo editor keys. True when the key was used. */
   const bareKey = (e: KeyboardEvent): boolean => {
-    const t = e.target;
-    const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
-
-    if (e.metaKey || e.ctrlKey || e.altKey || typing) return false;
+    if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return false;
     if (st.mode === 'markup' && (isBracket(e, 'left') || isBracket(e, 'right'))) {
       markupPanel.stepSize(isBracket(e, 'right') ? 1 : -1);
 
@@ -1152,8 +1161,38 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     return true;
   };
 
+  const toggleSheet = (): void => {
+    if (st.sheet) {
+      st.sheet.close();
+
+      return;
+    }
+    const back = document.activeElement;
+
+    st.sheet = openShortcutSheet({
+      i18n: opts.i18n,
+      container: surface,
+      showFilters,
+      onClose: () => {
+        st.sheet = null;
+        if (back instanceof HTMLElement && back.isConnected) back.focus();
+      },
+    });
+  };
+
+  shortcutsBtn.addEventListener('click', toggleSheet);
+
   surface.addEventListener('keydown', (e) => {
     const mod = e.metaKey || e.ctrlKey;
+
+    if (e.key === '?' && !mod && !e.altKey && !isTyping(e.target)) {
+      e.preventDefault();
+      toggleSheet();
+
+      return;
+    }
+    // The sheet's own Escape closes it; nothing else may edit the photo behind it.
+    if (st.sheet) return;
     // Same rule as the editor's shortcutLetter: the physical key counts only when the layout types a non-Latin letter there.
     const nonLatin = e.key.length === 1 && !/^[\x20-\x7e]$/.test(e.key) && !e.altKey;
     const isLetter = (letter: string): boolean =>
@@ -1245,6 +1284,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       markupPanel.destroy();
       tabs.destroy();
       window.removeEventListener('blur', endHolds);
+      st.sheet?.close();
       zoom.stop();
       window.clearTimeout(st.keyIdle);
       if (opts.sourceEl) opts.sourceEl.style.removeProperty('visibility');

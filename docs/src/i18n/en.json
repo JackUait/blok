@@ -1423,14 +1423,7 @@
       "description": "A production-ready, extensible rich text editor that brings Notion-like block-based editing to your app. Customizable, themeable, and battle-tested.",
       "ctaGetStarted": "Get Started",
       "ctaTryItOut": "Try it out",
-      "mascotAriaLabel": "Try the demo",
-      "selectHint": "Select any text above — it’s an editor.",
-      "format": {
-        "label": "Format text",
-        "bold": "Bold",
-        "italic": "Italic",
-        "highlight": "Highlight"
-      }
+      "mascotAriaLabel": "Try the demo"
     },
     "categories": {
       "label": "Browse the documentation",

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { Hero, SLOT_KINDS } from './Hero';
 import { LAYOUTS, CARD_KEYS } from './heroFormations';
@@ -30,10 +30,8 @@ describe('Hero', () => {
       </I18nProvider>
     );
 
-    // Words are separate spans, so match on the heading's text, not a single text node.
-    const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toHaveTextContent('Build beautiful');
-    expect(heading).toHaveTextContent('block-based editors');
+    expect(screen.getByText('Build beautiful')).toBeInTheDocument();
+    expect(screen.getByText('block-based editors')).toBeInTheDocument();
   });
 
   it('should render the description', () => {
@@ -45,9 +43,8 @@ describe('Hero', () => {
       </I18nProvider>
     );
 
-    const description = screen.getByTestId('hero-description');
-    expect(description).toHaveTextContent(/A production-ready, extensible rich text editor/);
-    expect(description).toHaveTextContent(/Notion-like block-based editing/);
+    expect(screen.getByText(/A production-ready, extensible rich text editor/)).toBeInTheDocument();
+    expect(screen.getByText(/Notion-like block-based editing/)).toBeInTheDocument();
   });
 
   it('should render the Get Started button with correct link', () => {
@@ -158,7 +155,9 @@ describe('Hero', () => {
       </I18nProvider>
     );
     expect(screen.queryByText('Редактор с открытым кодом')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Создавайте красивые');
+    expect(
+      screen.getByText((content) => content.includes('Создавайте красивые'))
+    ).toBeInTheDocument();
   });
 
   // The card stack is a decorative animation whose textContent ("H1", "1234",
@@ -199,104 +198,5 @@ describe('Hero', () => {
     const link = screen.getByRole('link', { name: 'Try the demo' });
 
     expect(link.getAttribute('aria-hidden')).toBeNull();
-  });
-  describe('the copy is a Blok page', () => {
-    const renderHero = () =>
-      render(
-        <I18nProvider>
-          <MemoryRouter>
-            <Hero />
-          </MemoryRouter>
-        </I18nProvider>
-      );
-
-    const selectWords = (first: Element, last: Element): void => {
-      const range = document.createRange();
-      range.setStart(first, 0);
-      range.setEnd(last, last.childNodes.length);
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      act(() => {
-        document.dispatchEvent(new Event('selectionchange'));
-      });
-    };
-
-    it('keeps the full title as the heading name', () => {
-      renderHero();
-
-      expect(screen.getByRole('heading', { level: 1, name: 'Build beautiful block-based editors' })).toBeInTheDocument();
-    });
-
-    it('splits the title into words that arrive as blocks', () => {
-      renderHero();
-
-      const heading = screen.getByRole('heading', { level: 1 });
-      const words = heading.querySelectorAll('[data-hero-word]');
-
-      expect([...words].map((w) => w.textContent)).toEqual(['Build', 'beautiful', 'block-based', 'editors']);
-    });
-
-    it('shows no format toolbar until text is selected', () => {
-      renderHero();
-
-      expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
-    });
-
-    it('formats the selected words from the inline toolbar', () => {
-      renderHero();
-      const heading = screen.getByRole('heading', { level: 1 });
-      const words = heading.querySelectorAll('[data-hero-word]');
-
-      selectWords(words[0], words[1]);
-      const bold = screen.getByRole('button', { name: 'Bold' });
-      expect(bold).toHaveAttribute('aria-pressed', 'false');
-
-      fireEvent.click(bold);
-
-      expect(words[0]).toHaveAttribute('data-bold');
-      expect(words[1]).toHaveAttribute('data-bold');
-      expect(words[2]).not.toHaveAttribute('data-bold');
-      expect(screen.getByRole('button', { name: 'Bold' })).toHaveAttribute('aria-pressed', 'true');
-    });
-
-    it('formats words in the description too', () => {
-      renderHero();
-      const description = screen.getByTestId('hero-description');
-      const words = description.querySelectorAll('[data-hero-word]');
-
-      selectWords(words[1], words[1]);
-      fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
-
-      expect(words[1]).toHaveAttribute('data-mark');
-      expect(words[0]).not.toHaveAttribute('data-mark');
-    });
-
-    it('hides the toolbar when the selection collapses', () => {
-      renderHero();
-      const words = screen.getByRole('heading', { level: 1 }).querySelectorAll('[data-hero-word]');
-
-      selectWords(words[0], words[0]);
-      expect(screen.getByRole('toolbar')).toBeInTheDocument();
-
-      window.getSelection()?.removeAllRanges();
-      act(() => {
-        document.dispatchEvent(new Event('selectionchange'));
-      });
-
-      expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
-    });
-
-    it('ignores selections outside the hero copy', () => {
-      renderHero();
-      const outside = document.createElement('p');
-      outside.textContent = 'elsewhere';
-      document.body.appendChild(outside);
-
-      selectWords(outside, outside);
-
-      expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
-      outside.remove();
-    });
   });
 });

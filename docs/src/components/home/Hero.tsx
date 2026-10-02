@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from '../common/Link';
 import { useI18n } from '../../contexts/I18nContext';
-import { HeroCopy } from './HeroCopy';
+import { Typo } from '../common/Typo';
+import { Button } from '@/components/ui/button';
 import {
   CARD_KEYS,
   LAYOUTS,
@@ -489,7 +490,7 @@ const HeroCard: React.FC<{ slot: CardKey; kind: BlockKind }> = ({ slot, kind }) 
 };
 
 export const Hero: React.FC = () => {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const stackRef = useRef<HTMLAnchorElement>(null);
   // The block type currently rendered in each slot (a→d). The engine reshuffles it on
   // every transition so the visible set is a fresh random mix — a tour of Blok's
@@ -750,7 +751,37 @@ export const Hero: React.FC = () => {
       </div>
 
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <HeroCopy key={locale} />
+        <div className="text-center lg:text-left" data-blok-testid="hero-content">
+          <h1 className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both text-4xl font-extrabold leading-[1.05] tracking-tight duration-700 sm:text-5xl lg:text-6xl">
+            <Typo>{t('home.hero.title')}</Typo>
+            <br />
+            <span className="text-brand-gradient"><Typo>{t('home.hero.titleGradient')}</Typo></span>
+          </h1>
+          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-100 lg:mx-0">
+            <Typo>{t('home.hero.description')}</Typo>
+          </p>
+          <div className="mt-9 hidden flex-col items-center justify-center gap-3 duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-200 sm:flex sm:flex-row lg:justify-start">
+            <Button variant="brand" size="lg" asChild>
+              <Link to="/docs"><Typo>{t('home.hero.ctaGetStarted')}</Typo></Link>
+            </Button>
+            <Button variant="outline" size="lg" asChild>
+              <Link to="/demo">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                <Typo>{t('home.hero.ctaTryItOut')}</Typo>
+              </Link>
+            </Button>
+          </div>
+        </div>
 
         <div className="relative flex justify-center lg:justify-end" data-blok-testid="hero-demo">
           <div className="hero-float group relative duration-1000 animate-in fade-in zoom-in-95 fill-mode-both delay-150">

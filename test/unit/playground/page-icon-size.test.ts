@@ -35,4 +35,9 @@ describe('page header icon', () => {
     expect(px(icon, 'width')).toBeGreaterThan(px(icon, 'font-size'));
     expect(px(icon, 'height')).toBeGreaterThan(px(icon, 'font-size'));
   });
+
+  it('keeps the emoji fully opaque when the button is disabled in read-only', () => {
+    // Chrome paints color emoji with the alpha of `color`; a disabled button's UA color is 30% gray.
+    expect(rule('.pg-page-icon:disabled')).toMatch(/(?:^|[\s;])color:\s*inherit/);
+  });
 });

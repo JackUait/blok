@@ -1,4 +1,5 @@
 import { DATA_ATTR } from '../constants/data-attributes';
+import { announce } from './announcer';
 import type { ResolvedLoaderConfig } from './loader-config';
 import { buildLoadingSkeleton } from './loading-skeleton';
 import { logLabeled } from './logger';
@@ -10,23 +11,9 @@ export const MIN_VISIBLE = 400;
 /** Extra time past the handoff's own length before we stop waiting for it. */
 const HANDOFF_GRACE = 250;
 
-// Copied from SR_ONLY_STYLE in announcer.ts: utility classes are scoped away, so this must be inline.
-const SR_ONLY_STYLE: Partial<CSSStyleDeclaration> = {
-  position: 'absolute',
-  width: '1px',
-  height: '1px',
-  padding: '0',
-  margin: '-1px',
-  overflow: 'hidden',
-  clip: 'rect(0, 0, 0, 0)',
-  whiteSpace: 'nowrap',
-  border: '0',
-};
-
 export class LoadingController {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private skeleton: { root: HTMLElement; bars: HTMLElement[] } | null = null;
-  private status: HTMLElement | null = null;
   private wait: { timer: ReturnType<typeof setTimeout>; resolve: () => void } | null = null;
   private hiding: Promise<void> | null = null;
   private shownAt = 0;
@@ -49,12 +36,8 @@ export class LoadingController {
     this.args.wrapper.setAttribute('aria-busy', 'true');
     // onChange is wired only after the handoff, so an edit made under the skeleton would never reach the host.
     this.args.content.setAttribute('inert', '');
-    this.status = document.createElement('div');
-    this.status.setAttribute('role', 'status');
-    this.status.setAttribute('aria-live', 'polite');
-    Object.assign(this.status.style, SR_ONLY_STYLE);
-    this.status.textContent = this.args.label;
-    this.args.wrapper.appendChild(this.status);
+    // The shared region lives on body, outside the busy subtree, and is filled a task after it is cleared.
+    announce(this.args.label, { politeness: 'polite' });
 
     this.timer = setTimeout(() => {
       this.timer = null;
@@ -159,8 +142,6 @@ export class LoadingController {
   private teardown(): void {
     this.skeleton?.root.remove();
     this.skeleton = null;
-    this.status?.remove();
-    this.status = null;
     this.args.wrapper.removeAttribute(DATA_ATTR.loading);
     this.args.wrapper.removeAttribute('aria-busy');
     this.args.content.removeAttribute('inert');

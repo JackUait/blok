@@ -8,6 +8,15 @@ const { mockRunSkeletonHandoff } = vi.hoisted(() => ({
   mockRunSkeletonHandoff: vi.fn<typeof SkeletonHandoff.runSkeletonHandoff>(),
 }));
 
+const { mockAnnounce } = vi.hoisted(() => ({
+  mockAnnounce: vi.fn(),
+}));
+
+// The real announcer schedules its own timers, which the timer-count checks below would see.
+vi.mock('../../../../src/components/utils/announcer', () => ({
+  announce: mockAnnounce,
+}));
+
 vi.mock('../../../../src/components/utils/skeleton-handoff', async () => {
   const actual = await vi.importActual<typeof SkeletonHandoff>('../../../../src/components/utils/skeleton-handoff');
 
@@ -96,7 +105,7 @@ describe('LoadingController', () => {
     expect(destroyed.content.hasAttribute('inert')).toBe(false);
   });
 
-  it('shows the skeleton and a polite status after the delay', () => {
+  it('shows the skeleton after the delay', () => {
     const { wrapper, controller } = setup();
 
     controller.show();
@@ -105,23 +114,17 @@ describe('LoadingController', () => {
     expect(skeleton(wrapper)).not.toBeNull();
     expect(wrapper.hasAttribute(DATA_ATTR.loading)).toBe(true);
     expect(controller.isVisible).toBe(true);
-    expect(wrapper.querySelector('[role="status"]')?.textContent).toBe('Loading content…');
   });
 
-  it('hides the status visually with the same inline style as the announcer', () => {
+  // A region inserted with its text set, inside an aria-busy subtree, is often not read out.
+  it('announces loading through the shared polite announcer, with no status element of its own', () => {
     const { wrapper, controller } = setup();
 
     controller.show();
 
-    const status = wrapper.querySelector<HTMLElement>('[role="status"]');
-
-    expect(status?.getAttribute('aria-live')).toBe('polite');
-    expect(status?.style.position).toBe('absolute');
-    expect(status?.style.width).toBe('1px');
-    expect(status?.style.height).toBe('1px');
-    expect(status?.style.overflow).toBe('hidden');
-    expect(status?.style.whiteSpace).toBe('nowrap');
-    expect(status?.style.margin).toBe('-1px');
+    expect(mockAnnounce).toHaveBeenCalledTimes(1);
+    expect(mockAnnounce).toHaveBeenCalledWith('Loading content…', { politeness: 'polite' });
+    expect(wrapper.querySelector('[role="status"]')).toBeNull();
   });
 
   it('stays at least MIN_VISIBLE once shown, even if data lands right after', async () => {
@@ -138,7 +141,6 @@ describe('LoadingController', () => {
     await done;
     expect(skeleton(wrapper)).toBeNull();
     expect(wrapper.hasAttribute('aria-busy')).toBe(false);
-    expect(wrapper.querySelector('[role="status"]')).toBeNull();
   });
 
   it('counts the time already shown toward MIN_VISIBLE', async () => {
@@ -240,7 +242,6 @@ describe('LoadingController', () => {
     expect(skeleton(wrapper)).toBeNull();
     expect(wrapper.hasAttribute(DATA_ATTR.loading)).toBe(false);
     expect(wrapper.hasAttribute('aria-busy')).toBe(false);
-    expect(wrapper.querySelector('[role="status"]')).toBeNull();
     expect(content.style.opacity).toBe('');
     expect(cancel).toHaveBeenCalledTimes(1);
   });
@@ -301,11 +302,10 @@ describe('LoadingController', () => {
     const done = trackSettled(controller.hide([]));
 
     controller.show();
-    expect(wrapper.querySelectorAll('[role="status"]')).toHaveLength(1);
+    expect(mockAnnounce).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(MIN_VISIBLE);
     expect(done.settled()).toBe(true);
-    expect(wrapper.querySelectorAll('[role="status"]')).toHaveLength(0);
 
     await vi.advanceTimersByTimeAsync(5000);
     expect(skeleton(wrapper)).toBeNull();
@@ -361,7 +361,6 @@ describe('LoadingController', () => {
 
     expect(skeleton(wrapper)).toBeNull();
     expect(wrapper.hasAttribute('aria-busy')).toBe(false);
-    expect(wrapper.querySelector('[role="status"]')).toBeNull();
   });
 
   it('destroy() during the minimum wait settles the pending hide() at once', async () => {

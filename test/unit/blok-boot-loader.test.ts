@@ -62,6 +62,9 @@ describe('boot skeleton (persistence)', () => {
 
     await vi.waitFor(() => expect(holder.querySelector(SKELETON)).not.toBeNull());
     expect(wrapperOf(holder)?.getAttribute('aria-busy')).toBe('true');
+    // The shared live region sits on body, outside the busy wrapper.
+    await vi.waitFor(() => expect(document.querySelector('[data-blok-announcer][role="status"]')?.textContent).toBe('Loading content…'));
+    expect(wrapperOf(holder)?.querySelector('[role="status"]')).toBeNull();
 
     load.resolve({ blocks: [{ id: 'a', type: 'paragraph', data: { text: 'Hi' } }] });
     await editor.isReady;

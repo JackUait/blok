@@ -80,6 +80,22 @@ describe('LoadingController', () => {
     expect(mockRunSkeletonHandoff).not.toHaveBeenCalled();
   });
 
+  it('makes the content inert from show() until teardown, on every teardown path', async () => {
+    const early = setup();
+
+    early.controller.show();
+    expect(early.content.hasAttribute('inert')).toBe(true);
+    await early.controller.hide([]);
+    expect(early.content.hasAttribute('inert')).toBe(false);
+
+    const destroyed = setup();
+
+    destroyed.controller.show();
+    vi.advanceTimersByTime(150);
+    destroyed.controller.destroy();
+    expect(destroyed.content.hasAttribute('inert')).toBe(false);
+  });
+
   it('shows the skeleton and a polite status after the delay', () => {
     const { wrapper, controller } = setup();
 

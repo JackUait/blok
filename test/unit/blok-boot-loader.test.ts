@@ -71,6 +71,32 @@ describe('boot skeleton (persistence)', () => {
     expect(holder.textContent).toContain('Hi');
   }, 120_000);
 
+  it('keeps the redactor inert while the skeleton is up, and editable after isReady', async () => {
+    const load = deferred<OutputData>();
+    const onChange = vi.fn();
+    const editor = await boot({ loader: { delay: 0 }, onChange, persistence: { load: () => load.promise, save: async () => {} } });
+
+    await vi.waitFor(() => expect(holder.querySelector(SKELETON)).not.toBeNull());
+    load.resolve({ blocks: [{ id: 'a', type: 'paragraph', data: { text: 'Hi' } }] });
+
+    // Blocks are rendered but the handoff still runs: onChange is not wired yet, so an edit here would be lost.
+    await vi.waitFor(() => expect(holder.querySelector('[data-blok-element]')).not.toBeNull());
+    expect(holder.querySelector(SKELETON)).not.toBeNull();
+    expect(holder.querySelector('[data-blok-redactor]')?.hasAttribute('inert')).toBe(true);
+
+    await editor.isReady;
+    expect(holder.querySelector('[data-blok-redactor]')?.hasAttribute('inert')).toBe(false);
+
+    // jsdom does not reflect contentEditable to the attribute, so reach the paragraph by structure.
+    const editable = holder.querySelector('[data-blok-element-content]')?.firstElementChild ?? null;
+
+    expect(editable).not.toBeNull();
+    if (editable !== null) {
+      editable.textContent = 'Hi there';
+    }
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled(), { timeout: 3000 });
+  }, 120_000);
+
   it('hands each skeleton bar to its block content box, never the full-width holder', async () => {
     const animate = vi.fn((): Animation => ({ finished: Promise.resolve(), cancel: () => {} }) as unknown as Animation);
 

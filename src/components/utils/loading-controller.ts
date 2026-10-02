@@ -47,6 +47,8 @@ export class LoadingController {
 
     this.started = true;
     this.args.wrapper.setAttribute('aria-busy', 'true');
+    // onChange is wired only after the handoff, so an edit made under the skeleton would never reach the host.
+    this.args.content.setAttribute('inert', '');
     this.status = document.createElement('div');
     this.status.setAttribute('role', 'status');
     this.status.setAttribute('aria-live', 'polite');
@@ -161,5 +163,6 @@ export class LoadingController {
     this.status = null;
     this.args.wrapper.removeAttribute(DATA_ATTR.loading);
     this.args.wrapper.removeAttribute('aria-busy');
+    this.args.content.removeAttribute('inert');
   }
 }

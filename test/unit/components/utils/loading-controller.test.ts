@@ -145,6 +145,8 @@ describe('LoadingController', () => {
       expect(wrapper.style.minHeight).toBe('');
       vi.advanceTimersByTime(150);
       expect(wrapper.style.minHeight).toBe('208px');
+      // isolation.css puts `all: initial !important` on the editor wrapper, so a normal inline value loses.
+      expect(wrapper.style.getPropertyPriority('min-height')).toBe('important');
 
       const done = controller.hide([]);
 
@@ -166,14 +168,16 @@ describe('LoadingController', () => {
       await vi.advanceTimersByTimeAsync(MIN_VISIBLE);
       await done;
       expect(hidden.wrapper.style.minHeight).toBe('12rem');
+      expect(hidden.wrapper.style.getPropertyPriority('min-height')).toBe('');
 
       const destroyed = setup();
 
-      destroyed.wrapper.style.minHeight = '40px';
+      destroyed.wrapper.style.setProperty('min-height', '40px', 'important');
       destroyed.controller.show();
       vi.advanceTimersByTime(150);
       destroyed.controller.destroy();
       expect(destroyed.wrapper.style.minHeight).toBe('40px');
+      expect(destroyed.wrapper.style.getPropertyPriority('min-height')).toBe('important');
     });
 
     it('never touches min-height when the load ends before the skeleton mounts', async () => {

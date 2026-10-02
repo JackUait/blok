@@ -17,7 +17,7 @@ export class LoadingController {
   private wait: { timer: ReturnType<typeof setTimeout>; resolve: () => void } | null = null;
   private hiding: Promise<void> | null = null;
   /** The host's own inline min-height, saved only while the skeleton holds the wrapper open. */
-  private savedMinHeight: string | null = null;
+  private savedMinHeight: { value: string; priority: string } | null = null;
   private shownAt = 0;
   private started = false;
   private destroyed = false;
@@ -47,8 +47,11 @@ export class LoadingController {
       this.args.wrapper.setAttribute(DATA_ATTR.loading, '');
       this.args.wrapper.appendChild(this.skeleton.root);
       // The overlay is absolute and a read-only boot has no bottom zone, so without this it paints over what follows the editor.
-      this.savedMinHeight = this.args.wrapper.style.minHeight;
-      this.args.wrapper.style.minHeight = `${this.skeleton.root.getBoundingClientRect().height}px`;
+      // Important: isolation.css sets `all: initial !important` on this wrapper.
+      const { style } = this.args.wrapper;
+
+      this.savedMinHeight = { value: style.getPropertyValue('min-height'), priority: style.getPropertyPriority('min-height') };
+      style.setProperty('min-height', `${this.skeleton.root.getBoundingClientRect().height}px`, 'important');
       this.shownAt = performance.now();
     }, this.args.config.delay);
   }
@@ -152,7 +155,7 @@ export class LoadingController {
     this.args.content.removeAttribute('inert');
 
     if (this.savedMinHeight !== null) {
-      this.args.wrapper.style.minHeight = this.savedMinHeight;
+      this.args.wrapper.style.setProperty('min-height', this.savedMinHeight.value, this.savedMinHeight.priority);
       this.savedMinHeight = null;
     }
   }

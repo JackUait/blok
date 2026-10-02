@@ -461,6 +461,21 @@ export class FindBar {
       return;
     }
 
+    const isArrow = event.key === 'ArrowUp' || event.key === 'ArrowDown';
+
+    // Modified arrows stay the field's: Shift selects, Alt/Cmd jump the caret.
+    if (inFind && isArrow && !event.shiftKey && !event.altKey && !event.metaKey && !event.ctrlKey) {
+      event.preventDefault();
+
+      if (event.key === 'ArrowUp') {
+        this.callbacks.onPrevious();
+      } else {
+        this.callbacks.onNext();
+      }
+
+      return;
+    }
+
     if (event.key !== 'Enter') {
       return;
     }

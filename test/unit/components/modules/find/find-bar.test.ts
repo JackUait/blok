@@ -298,6 +298,43 @@ describe('FindBar', () => {
       expect(callbacks.onNext).not.toHaveBeenCalled();
     });
 
+    it('goes to the next match on ArrowDown', () => {
+      const event = press(findInput(), { key: 'ArrowDown' });
+
+      expect(callbacks.onNext).toHaveBeenCalledTimes(1);
+      expect(callbacks.onPrevious).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('goes to the previous match on ArrowUp', () => {
+      const event = press(findInput(), { key: 'ArrowUp' });
+
+      expect(callbacks.onPrevious).toHaveBeenCalledTimes(1);
+      expect(callbacks.onNext).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it.each([
+      { shiftKey: true },
+      { altKey: true },
+      { metaKey: true },
+      { ctrlKey: true },
+    ])('leaves a modified arrow to the field (%o)', (modifier) => {
+      const up = press(findInput(), { key: 'ArrowUp', ...modifier });
+      const down = press(findInput(), { key: 'ArrowDown', ...modifier });
+
+      expect(callbacks.onPrevious).not.toHaveBeenCalled();
+      expect(callbacks.onNext).not.toHaveBeenCalled();
+      expect(up.defaultPrevented).toBe(false);
+      expect(down.defaultPrevented).toBe(false);
+    });
+
+    it('ignores arrows while an IME is composing', () => {
+      press(findInput(), { key: 'ArrowDown', isComposing: true });
+
+      expect(callbacks.onNext).not.toHaveBeenCalled();
+    });
+
     it('ignores Enter while an IME is composing', () => {
       press(findInput(), { key: 'Enter', isComposing: true });
 

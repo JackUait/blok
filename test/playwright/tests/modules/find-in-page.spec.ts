@@ -362,6 +362,21 @@ test.describe('find in page', () => {
       expect((await readHighlights(page)).activeBlockId).toBe('find-p0');
     });
 
+    test('ArrowDown moves to the next match and ArrowUp back', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one', 'foo two', 'foo three'));
+      await focusParagraph(page, 'foo one');
+      await openFind(page, 'foo');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 3');
+
+      await page.keyboard.press('ArrowDown');
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 3');
+      expect((await readHighlights(page)).activeBlockId).toBe('find-p1');
+
+      await page.keyboard.press('ArrowUp');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 3');
+      expect((await readHighlights(page)).activeBlockId).toBe('find-p0');
+    });
+
     test('the ring lands on the new match at once and hugs its fill', async ({ page }) => {
       await createEditor(page, paragraphs('foo one', 'a long line before foo two', 'foo three'));
       await focusParagraph(page, 'foo one');

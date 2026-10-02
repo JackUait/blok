@@ -43,18 +43,25 @@ When a host passes `data` directly, there is no wait and no loader.
 ### Handoff
 
 1. Real blocks render under the overlay with opacity 0.
-2. Bar `i` pairs with block holder `i` (by index).
-3. FLIP: measure each bar and its target holder's content box. The bar
-   glides and resizes onto that box.
-4. The bar dissolves (opacity + small blur). The real block fades in and
-   un-blurs.
+2. Bar `i` pairs with block `i` (by index).
+3. FLIP: measure each bar and block `i`'s `[data-blok-element-content]` box,
+   never the full-width holder. The bar glides and resizes onto that box. A
+   hidden block (zero-size rect) counts as no target.
+4. The bar dissolves (opacity + small blur). The content fades in and
+   un-blurs as one sheet, not block by block.
 5. Staggered top to bottom, ~40 ms apart, ~500 ms total.
-6. Extra bars with no block fade out in place. Extra blocks fade in with
-   the same stagger.
+6. Extra bars with no block fade out in place.
 7. Overlay is removed when all animations finish.
 
-`isReady` resolves after the handoff, so `autofocus` lands on visible
-content. Handoff animations use WAAPI so they can be awaited and cancelled.
+For `persistence.load()`, `isReady` resolves after the handoff, so
+`autofocus` lands on visible content. Under collaboration, `isReady` does NOT
+wait for the handoff: readiness never waits on the network.
+
+The redactor is `inert` from the start of loading until teardown, so no edit
+lands before `onChange` is wired. While the skeleton is visible the wrapper's
+`min-height` holds the overlay height, so a read-only boot does not paint over
+host content below. Handoff animations use WAAPI so they can be awaited and
+cancelled. A failed handoff is logged and never fails the boot.
 
 ### Reduced motion
 
@@ -64,8 +71,9 @@ breathing) and a plain 150 ms crossfade, no FLIP.
 ## Accessibility
 
 - Editor wrapper gets `aria-busy="true"` while loading.
-- A visually hidden `role="status"` (polite) element says the `ui.loading`
-  string ("Loading content…").
+- The shared polite announcer (`src/components/utils/announcer.ts`) says
+  the `a11y.loadingContent` string ("Loading content…"). Its region lives on
+  `body`, outside the busy subtree.
 - Overlay is `aria-hidden="true"` and `inert`. It never takes focus or
   pointer events.
 
@@ -96,7 +104,8 @@ Default `true`. `false` disables it.
 
 ### CSS tokens
 
-With dark-mode values:
+The only public, host-themable tokens, with dark-mode values (other
+`--blok-skeleton-*` properties are internal):
 
 - `--blok-skeleton-bar`
 - `--blok-skeleton-sheen`
@@ -110,7 +119,7 @@ With dark-mode values:
 
 ### i18n
 
-One new key, `ui.loading`, in every locale (follow the
+One new key, `a11y.loadingContent`, in every locale (follow the
 `blok-translations` skill and the 7-layer new-key checklist).
 
 ## Code layout
@@ -119,8 +128,11 @@ One new key, `ui.loading`, in every locale (follow the
   skeleton spec. Pure.
 - `src/components/utils/skeleton-handoff.ts`: FLIP handoff. Input: bar
   elements + target holders. Returns a promise. Respects reduced motion.
-- `src/components/modules/ui.ts`: `showLoading()` / `hideLoading(holders)`.
-  Owns the delay and minimum-visible timers, `aria-busy`, status text.
+- `src/components/utils/loading-controller.ts`: owns the delay and
+  minimum-visible timers, `aria-busy`, the announcement, `inert`, the
+  reserved height and teardown.
+- `src/components/modules/ui.ts`: `showLoading()` / `hideLoading()`.
+  `hideLoading()` never rejects.
 - `src/components/core.ts` `render()`: wraps the `load()` branch.
 - `src/components/modules/collaboration/index.ts`: hides the loader when
   `firstSynced` or `cacheAdopted` first latches.
@@ -133,7 +145,7 @@ Unit:
 
 - Skeleton spec → correct bars (default and custom).
 - Fake timers: nothing under `delay`; visible at least 400 ms.
-- `aria-busy` and status text toggle.
+- `aria-busy` toggles and the announcer is called.
 - `loader: false` shows nothing.
 - `load()` rejection removes overlay.
 - `destroy()` mid-load cancels timers, removes overlay.

@@ -1111,7 +1111,8 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     }
     // A non-Latin layout picks by physical key, as the darkroom's own letter keys do.
     const letter = /^[\x20-\x7e]$/.test(e.key) ? e.key.toLowerCase() : /^Key([A-Z])$/.exec(e.code)?.[1].toLowerCase();
-    const tool = mod || e.altKey || e.key.length !== 1 || letter === undefined ? undefined : TOOL_KEYS[letter];
+    // Shift+letter belongs to the darkroom (Shift+H flips).
+    const tool = mod || e.altKey || e.shiftKey || e.key.length !== 1 || letter === undefined ? undefined : TOOL_KEYS[letter];
 
     if (tool && tool !== st.state.tool) {
       e.preventDefault();

@@ -194,6 +194,9 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   rotateBtn.title = `${tr(opts.i18n, 'tools.image.rotateLeft')} (${beautifyShortcut('CMD+[')})`;
   rotateBtn.setAttribute('aria-keyshortcuts', 'Meta+[ Control+[');
   const flipBtn = makeIconBtn('flip', 'tools.image.flip', IconFlipHorizontal);
+
+  flipBtn.title = `${tr(opts.i18n, 'tools.image.flip')} (${beautifyShortcut('SHIFT+H')})`;
+  flipBtn.setAttribute('aria-keyshortcuts', 'Shift+H');
   const doneBtn = makeBtn('done', 'tools.image.cropDone', 'primary');
   const lead = el('div', 'blok-darkroom__bar-lead');
 
@@ -984,6 +987,12 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const isLetter = (letter: string): boolean =>
       e.key.toLowerCase() === letter || (nonLatin && e.code === `Key${letter.toUpperCase()}`);
 
+    if (e.shiftKey) {
+      if (!isLetter('h')) return false;
+      flip();
+
+      return true;
+    }
     if (isLetter('m')) {
       if (!e.repeat) showOriginal(true);
 

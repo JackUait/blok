@@ -2397,6 +2397,51 @@ describe('openDarkroom photo editor keys', () => {
     });
   });
 
+  describe('Shift+H flips the photo', () => {
+    it('flips like the button, in any tab, and leaves the markup tool alone', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });
+
+      tabOf('markup').click();
+      const toolBefore = q('[data-blok-testid^="markup-tool-"][aria-checked="true"]').getAttribute('data-blok-testid');
+
+      key(stageEl(), { key: 'H', code: 'KeyH', shiftKey: true });
+      advance(3000);
+
+      expect(q('[data-blok-testid^="markup-tool-"][aria-checked="true"]').getAttribute('data-blok-testid')).toBe(toolBefore);
+      button('done').click();
+      expect(result(onApply).geometry.flipX).toBe(true);
+      expect(result(onApply).crop).toEqual({ x: 60, y: 20, w: 30, h: 40 });
+    });
+
+    it('plain H is not a flip', () => {
+      const { onApply, advance } = open();
+
+      key(stageEl(), { key: 'h', code: 'KeyH' });
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).geometry.flipX).toBe(false);
+    });
+
+    it('works on a non-Latin layout, and the flip button names its key', () => {
+      const { onApply, advance } = open();
+
+      key(stageEl(), { key: 'Р', code: 'KeyH', shiftKey: true });
+      advance(3000);
+      expect(button('flip').getAttribute('aria-keyshortcuts')).toBe('Shift+H');
+      button('done').click();
+
+      expect(result(onApply).geometry.flipX).toBe(true);
+    });
+
+    it('Shift with a tab letter is not a tab key', () => {
+      open();
+      key(stageEl(), { key: 'A', code: 'KeyA', shiftKey: true });
+
+      expect(dialog().getAttribute('data-mode')).toBe('crop');
+    });
+  });
+
   describe('[ and ] change the markup size, as in Photoshop', () => {
     const size = (): string | null => q('[data-blok-testid^="markup-size-"][aria-checked="true"]').getAttribute('data-size');
 

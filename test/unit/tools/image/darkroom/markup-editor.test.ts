@@ -933,6 +933,14 @@ describe('createMarkupEditor', () => {
       expect(onStateChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool: 'pen' }));
     });
 
+    it('a Shift letter is not a tool key', () => {
+      const { stage, onStateChange } = setup({ state: { ...BASE, tool: 'select' } });
+
+      key(stage, 'H', { shiftKey: true });
+
+      expect(onStateChange).not.toHaveBeenCalled();
+    });
+
     it('letters with a modifier are not tool keys', () => {
       const { stage, onStateChange } = setup();
 

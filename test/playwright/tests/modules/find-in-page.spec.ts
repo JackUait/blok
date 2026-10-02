@@ -186,6 +186,26 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-replace-row')).toBeVisible();
     });
 
+    test('Mod+F in a host page title outside the editor opens the find bar, not the browser find', async ({ page }) => {
+      await createEditor(page, paragraphs('alpha'));
+      await page.evaluate(() => {
+        const title = document.createElement('h1');
+
+        title.textContent = 'Page title';
+        title.contentEditable = 'true';
+        title.setAttribute('data-blok-testid', 'host-title');
+        document.body.prepend(title);
+      });
+      await page.getByTestId('host-title').focus();
+      await recordNextFKeydown(page);
+
+      await page.keyboard.press(FIND_KEY);
+
+      await expect.poll(() => page.evaluate(() => window.__lastFindKey)).toEqual({ code: 'KeyF', prevented: true });
+      await expect(page.getByTestId('find-bar')).toBeVisible();
+      await expect(page.getByTestId('find-input')).toBeFocused();
+    });
+
     test('Mod+F on the body opens the find bar when the page has one editor', async ({ page }) => {
       await createEditor(page, paragraphs('alpha'));
       await page.evaluate(() => {

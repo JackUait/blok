@@ -111,6 +111,7 @@ export class Find extends Module {
 
     Find.instances.add(this);
     this.listeners.on(document, 'keydown', this.onDocumentKeydown, true);
+    this.listeners.on(document, 'keydown', this.onHostFieldKeydown);
     this.listeners.on(wrapper, 'pointerdown', this.markActive, true);
     this.listeners.on(wrapper, 'focusin', this.markActive, true);
     // Scroll does not bubble; capture sees scrollers outside this editor too.
@@ -302,10 +303,23 @@ export class Find extends Module {
   };
 
   private readonly onDocumentKeydown = (event: Event): void => {
-    if (!(event instanceof KeyboardEvent) || this.isDestroyed || !this.ownsKeyTarget(event.target)) {
+    if (!(event instanceof KeyboardEvent) || this.isDestroyed || !this.ownsKeyTarget(event.target, false)) {
       return;
     }
 
+    this.handleShortcut(event);
+  };
+
+  /** Bubble phase, so a host field that handles the shortcut itself keeps it. */
+  private readonly onHostFieldKeydown = (event: Event): void => {
+    if (!(event instanceof KeyboardEvent) || this.isDestroyed || event.defaultPrevented || !this.ownsKeyTarget(event.target, true)) {
+      return;
+    }
+
+    this.handleShortcut(event);
+  };
+
+  private handleShortcut(event: KeyboardEvent): void {
     const isMac = getUserOS().mac;
     const isFind = isModKey(event) && !event.altKey && !event.shiftKey && event.code === 'KeyF';
     const isReplace = isMac
@@ -330,36 +344,39 @@ export class Find extends Module {
       event.preventDefault();
       this.move(event.shiftKey ? -1 : 1);
     }
-  };
+  }
 
   /**
    * Whether a shortcut aimed at `target` is this editor's. A key inside another
-   * editor, or in a host page's own field, is never ours; a key on <body> goes
-   * to the editor used last.
+   * editor is never ours; a key on <body> or in a host page's own field goes to
+   * the editor used last.
    * @param target - the keydown target
+   * @param inHostField - true for the bubble-phase pass, which only takes host fields
    */
-  private ownsKeyTarget(target: EventTarget | null): boolean {
+  private ownsKeyTarget(target: EventTarget | null, inHostField: boolean): boolean {
     const { wrapper } = this.Blok.UI.nodes;
 
     const isInBar = target instanceof Node && this.bar?.element.contains(target) === true;
 
     if (isInBar) {
-      return true;
+      return !inHostField;
     }
 
     if (target instanceof Node) {
       const editor = editorOf(target);
 
       if (editor !== null) {
-        return editor === wrapper;
+        return !inHostField && editor === wrapper;
       }
 
       if (wrapper.contains(target)) {
-        return true;
+        return !inHostField;
       }
     }
 
-    if (target instanceof Element && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') !== null) {
+    const isHostField = target instanceof Element && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') !== null;
+
+    if (isHostField !== inHostField) {
       return false;
     }
 

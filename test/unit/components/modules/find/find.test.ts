@@ -275,13 +275,36 @@ describe('Find module', () => {
     expect(openBar().style.getPropertyValue('--blok-find-offset-y')).toBe('40px');
   });
 
-  it('leaves Cmd+F to a host input outside the editor', () => {
-    editor([{ id: 'a', text: 'hello' }]);
+  it('opens from a host input outside the editor', () => {
+    const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
     const hostInput = document.createElement('input');
 
     document.body.appendChild(hostInput);
 
-    expect(press(hostInput, { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(press(hostInput, { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(searchInput(wrapper)).toHaveFocus();
+  });
+
+  it('opens from a host contenteditable outside the editor', () => {
+    const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
+    const hostTitle = document.createElement('h1');
+
+    hostTitle.setAttribute('contenteditable', 'true');
+    document.body.appendChild(hostTitle);
+
+    expect(press(hostTitle, { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(searchInput(wrapper)).toHaveFocus();
+  });
+
+  it('leaves Cmd+F to a host field that handles it itself', () => {
+    editor([{ id: 'a', text: 'hello' }]);
+    const hostInput = document.createElement('input');
+
+    hostInput.addEventListener('keydown', (event) => event.preventDefault());
+    document.body.appendChild(hostInput);
+    press(hostInput, { key: 'f', code: 'KeyF', ctrlKey: true });
+
+    expect(document.querySelector('[data-blok-find]')).toBeNull();
   });
 
   it('only the editor that holds the target opens its bar', () => {

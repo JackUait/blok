@@ -7,7 +7,7 @@ import { beautifyShortcut } from '../../../components/utils/string';
 import { createSpring, prefersReducedMotion, type SpringClock } from '../../../components/utils/spring';
 import type { I18nInstance } from '../../../components/utils/tools';
 import { DEFAULT_FILTERS, type FilterSet } from '../adjust';
-import { applyRatio, clampRect, FULL_RECT, isFullRect, resizeRect, type Handle } from '../crop-math';
+import { applyRatio, clampRect, FULL_RECT, isFullRect, resizeRect, swapAspect, type Handle } from '../crop-math';
 import { renderErrorState } from '../error-state';
 import {
   coverCrop, flipHorizontal, IDENTITY, isIdentity, orientedSize, planeImageStyle, rotateLeft, type Geometry,
@@ -99,8 +99,10 @@ const round3 = (v: number): number => Math.round(v * 1000) / 1000;
 const roundRect = (r: ImageCrop): ImageCrop => ({ x: round3(r.x), y: round3(r.y), w: round3(r.w), h: round3(r.h) });
 const ratioByKey = (key: string): RatioDef => RATIOS.find((r) => r.key === key) ?? RATIOS[0];
 const roundOf = (shape: RatioShape): number => (shape === 'rect' ? 0 : 1);
-// A quarter turn makes a wide fixed ratio tall; only a square one still fits it.
-const survivesQuarterTurn = (def: RatioDef): boolean => def.value === null || def.value === 1;
+/** 4:3 and 16:9 have a portrait twin; Free, square and the round shapes do not. */
+const hasPortrait = (def: RatioDef): boolean => def.value !== null && def.value !== 1;
+/** "4:3" becomes "3:4". Every locale writes these as two numbers around a colon. */
+const swapLabel = (label: string): string => label.replace(/^(.+):(.+)$/, '$2:$1');
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, role?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -146,10 +148,12 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     gesturing: false,
     // A chip picked before load; only then is the rect re-fitted to the ratio at load.
     ratioPicked: false,
+    // Fixed ratios read tall (3:4, 9:16). X and a quarter turn swap it.
+    portrait: false,
   };
   const startRect = { ...st.rect };
   const snapshot = (): Snapshot => ({
-    rect: { ...st.rect }, ratioKey: st.def.key, geometry: { ...st.geometry }, filter: st.filter, strength: st.strength, adjust: { ...st.adjust },
+    rect: { ...st.rect }, ratioKey: st.def.key, portrait: st.portrait, geometry: { ...st.geometry }, filter: st.filter, strength: st.strength, adjust: { ...st.adjust },
     markup: st.markup,
   });
   const hist = { stack: createHistory(snapshot()) };
@@ -245,6 +249,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     chip.setAttribute('role', 'radio');
     chip.setAttribute('data-ratio', r.key);
     chip.textContent = tr(opts.i18n, r.i18nKey);
+    chip.setAttribute('data-label', chip.textContent);
     chip.addEventListener('click', () => { flushAll(); setRatio(r); commit(); });
     pill.appendChild(chip);
 
@@ -255,7 +260,11 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   const theta = (): number => st.geometry.straighten;
   /** Shrinks a rect until the turned photo covers it; a no-op while nothing is straightened. */
   const covered = (r: ImageCrop): ImageCrop => (theta() === 0 ? r : coverCrop(r, o(), theta()));
-  const pctRatio = (): number | null => (st.def.value === null ? null : percentRatio(st.def.value, o()));
+  const pctRatio = (): number | null => {
+    if (st.def.value === null) return null;
+
+    return percentRatio(st.portrait ? 1 / st.def.value : st.def.value, o());
+  };
   const frameOf = (v: Readonly<Record<ViewKey, number>>): Box => ({ x: v.x, y: v.y, w: v.w, h: v.h });
   const camOf = (v: Readonly<Record<ViewKey, number>>): Camera => ({ s: v.s, tx: v.tx, ty: v.ty });
 
@@ -357,6 +366,11 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       chip.setAttribute('aria-checked', String(on));
     });
     roving.refresh();
+    chips.forEach((chip, i) => {
+      const label = chip.getAttribute('data-label') ?? '';
+
+      chip.replaceChildren(st.portrait && hasPortrait(RATIOS[i]) ? swapLabel(label) : label);
+    });
     const freeform = st.def.value === null;
 
     handleEls.forEach((h, name) => { if (!CORNERS.has(name)) h.toggleAttribute('hidden', !freeform); });
@@ -482,7 +496,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   };
 
   const syncResets = (): void => {
-    const cropDirty = !isFullRect(roundRect(st.rect)) || st.def.key !== RATIOS[0].key || !isIdentity(st.geometry);
+    const cropDirty = !isFullRect(roundRect(st.rect)) || st.def.key !== RATIOS[0].key || st.portrait || !isIdentity(st.geometry);
 
     showReset(cropReset, cropDirty, () => pill.querySelector<HTMLElement>('[aria-checked="true"]'));
     showReset(adjustReset, Object.values(st.adjust).some((v) => v !== 0), () => adjustPanel.el.querySelector<HTMLElement>('[role="slider"]'));
@@ -549,6 +563,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const turned = s.geometry.rotation !== st.geometry.rotation || s.geometry.flipX !== st.geometry.flipX;
 
     st.def = ratioByKey(s.ratioKey);
+    st.portrait = s.portrait;
     st.rect = { ...s.rect };
     st.geometry = { ...s.geometry };
     st.filter = s.filter;
@@ -609,7 +624,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     st.geometry = next.g;
     st.rect = next.crop;
     st.markup = next.markup;
-    if (!survivesQuarterTurn(st.def)) st.def = RATIOS[0];
+    // The turned crop of a 4:3 is a 3:4.
+    if (hasPortrait(st.def)) st.portrait = !st.portrait;
     syncChips();
     refitPlane();
     markupEditor.set(st.markup);
@@ -644,6 +660,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const turned = st.geometry.rotation !== 0 || st.geometry.flipX;
 
     st.def = RATIOS[0];
+    st.portrait = false;
     st.geometry = { ...IDENTITY };
     st.rect = { ...FULL_RECT };
     straightenDial.set(0);
@@ -669,6 +686,17 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   });
 
   rotateBtn.addEventListener('click', () => turn(false));
+
+  /** Lightroom's X. A square crop has nothing to swap. */
+  const swapOrientation = (): void => {
+    if (!st.ready || st.def.value === 1) return;
+    flushAll();
+    st.portrait = !st.portrait;
+    st.rect = covered(swapAspect(st.rect, o()));
+    syncChips();
+    view.to(fitted());
+    commit();
+  };
   flipBtn.addEventListener('click', flip);
 
   // Only Crop mode edits the crop; elsewhere the photo is a preview of the result.
@@ -990,6 +1018,11 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     if (e.shiftKey) {
       if (!isLetter('h')) return false;
       flip();
+
+      return true;
+    }
+    if (isLetter('x') && st.mode === 'crop') {
+      swapOrientation();
 
       return true;
     }

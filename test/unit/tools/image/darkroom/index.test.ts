@@ -1125,15 +1125,17 @@ describe('openDarkroom geometry, adjust and filters', () => {
       expect(stageEl()?.hasAttribute('data-settled')).toBe(true);
     });
 
-    it('a quarter turn under a fixed wide ratio switches to Free so the turned crop keeps its pixels', () => {
+    it('a quarter turn under a fixed wide ratio keeps the ratio, turned to portrait', () => {
       const { onApply, advance } = open();
+      const wide = q<HTMLButtonElement>(`[data-ratio="${String(16 / 9)}"]`);
 
-      q<HTMLButtonElement>(`[data-ratio="${String(16 / 9)}"]`).click();
+      wide.click();
       advance(3000);
       button('rotate-left').click();
       advance(3000);
 
-      expect(q('[data-ratio="free"]').getAttribute('aria-checked')).toBe('true');
+      expect(wide.getAttribute('aria-checked')).toBe('true');
+      expect(wide.textContent).toBe('9:16');
       button('done').click();
       const crop = result(onApply).crop;
 
@@ -2444,6 +2446,85 @@ describe('openDarkroom photo editor keys', () => {
       tabOf('markup').click();
 
       expect(picked()).not.toBe('markup-tool-shapes');
+    });
+  });
+
+  describe('X swaps the crop between landscape and portrait, as in Lightroom', () => {
+    const chip = (ratio: string): HTMLElement => q(`[data-ratio="${ratio}"]`);
+    const aspect = (crop: ImageCrop | null): number => {
+      if (!crop) throw new Error('no crop');
+
+      return (crop.w * NATURAL.w) / (crop.h * NATURAL.h);
+    };
+
+    it('under 16:9 the chip becomes 9:16 and the crop follows', () => {
+      const { onApply, advance } = open();
+
+      chip(String(16 / 9)).click();
+      advance(3000);
+      key(stageEl(), { key: 'x', code: 'KeyX' });
+      advance(3000);
+
+      expect(chip(String(16 / 9)).textContent).toBe('9:16');
+      expect(chip(String(4 / 3)).textContent).toBe('3:4');
+      expect(chip(String(16 / 9)).getAttribute('aria-checked')).toBe('true');
+      button('done').click();
+      expect(aspect(result(onApply).crop)).toBeCloseTo(9 / 16, 2);
+    });
+
+    it('a portrait chip picked later stays portrait', () => {
+      const { onApply, advance } = open();
+
+      key(stageEl(), { key: 'x' });
+      chip(String(4 / 3)).click();
+      advance(3000);
+      button('done').click();
+
+      expect(aspect(result(onApply).crop)).toBeCloseTo(3 / 4, 2);
+    });
+
+    it('a free crop swaps its own shape', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });
+      const before = (30 * NATURAL.w) / (40 * NATURAL.h);
+
+      key(stageEl(), { key: 'x' });
+      advance(3000);
+      button('done').click();
+
+      expect(aspect(result(onApply).crop)).toBeCloseTo(1 / before, 2);
+    });
+
+    it('is one undo step, labels included', () => {
+      const { onApply, advance } = open();
+
+      chip(String(16 / 9)).click();
+      advance(3000);
+      key(stageEl(), { key: 'x' });
+      advance(3000);
+      key(dialog(), { key: 'z', metaKey: true });
+      advance(3000);
+
+      expect(chip(String(16 / 9)).textContent).toBe('16:9');
+      button('done').click();
+      expect(aspect(result(onApply).crop)).toBeCloseTo(16 / 9, 2);
+    });
+
+    it('Reset crop brings the landscape labels back', () => {
+      const { advance } = open();
+
+      key(stageEl(), { key: 'x' });
+      advance(3000);
+      button('reset-crop').click();
+
+      expect(chip(String(4 / 3)).textContent).toBe('4:3');
+    });
+
+    it('does nothing outside Crop', () => {
+      open();
+      tabOf('adjust').click();
+      key(stageEl(), { key: 'x' });
+
+      expect(chip(String(4 / 3)).textContent).toBe('4:3');
     });
   });
 

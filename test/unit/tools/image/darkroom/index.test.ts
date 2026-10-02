@@ -1177,6 +1177,21 @@ describe('openDarkroom geometry, adjust and filters', () => {
       expect(isCovered(crop, NATURAL, 10)).toBe(true);
     });
 
+    it('a Shift drag on the dial snaps the straighten to 15° steps', () => {
+      const { onApply, advance } = open();
+      const drag = (type: string, x: number, shiftKey: boolean): void => {
+        slider().dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, clientX: x, shiftKey }));
+      };
+
+      drag('pointerdown', 0, true);
+      drag('pointermove', -6 * 20, true);
+      drag('pointerup', -6 * 20, true);
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).geometry.straighten).toBe(15);
+    });
+
     it('a straightened view still shows a covered crop after a pan', () => {
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
       const { onApply, advance } = open();

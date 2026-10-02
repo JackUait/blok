@@ -88,6 +88,7 @@ const ZOOM_STEP = 1.1;
 const KEY_IDLE_MS = 250;
 const MAX_STRAIGHTEN = 45;
 const QUARTER = 90;
+const STRAIGHTEN_SNAP = 15;
 const NO_ADJUST: Required<ImageAdjust> = { brightness: 0, contrast: 0, saturation: 0 };
 // Apple Photos' edit keys. Markup has no letter there: its own tool letters (A = Arrow) win in it.
 const MODE_KEYS: Record<string, string> = { c: 'crop', a: 'adjust', f: 'filters' };
@@ -393,6 +394,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     max: MAX_STRAIGHTEN,
     value: st.geometry.straighten,
     label: tr(opts.i18n, 'tools.image.straighten'),
+    shiftSnap: STRAIGHTEN_SNAP,
     resetLabel: tr(opts.i18n, 'tools.image.resetStraighten'),
     valueText: (v) => `${v}°`,
     onInput: (v) => {

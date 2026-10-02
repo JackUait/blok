@@ -21,6 +21,8 @@ export interface DialOptions {
   resetLabel?: string;
   /** Where a double-click goes. Default 0. */
   resetTo?: number;
+  /** A Shift drag lands on whole multiples of this. */
+  shiftSnap?: number;
 }
 
 export type DialSetup = Pick<DialOptions, 'min' | 'max' | 'label' | 'valueText' | 'resetLabel'> & { value: number };
@@ -277,6 +279,11 @@ export function createDial(o: DialOptions): Dial {
     // The ruler moves under a fixed needle: dragging it left brings higher values to the centre.
     const raw = clamp(snap(st.startValue - (e.clientX - st.startX) / PX_PER_UNIT));
 
+    if (e.shiftKey && o.shiftSnap !== undefined) {
+      change(clamp(Math.round(raw / o.shiftSnap) * o.shiftSnap));
+
+      return;
+    }
     change(clamp(Math.abs(raw) < DETENT ? 0 : raw));
   };
 

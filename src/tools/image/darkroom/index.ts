@@ -3,6 +3,7 @@ import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import { IconFlipHorizontal, IconRotateLeft } from '../../../components/icons';
 import { openModalDialog } from '../../../components/utils/modal-dialog';
 import { rovingRadioGroup } from '../../../components/utils/roving-radio-group';
+import { beautifyShortcut } from '../../../components/utils/string';
 import { createSpring, prefersReducedMotion, type SpringClock } from '../../../components/utils/spring';
 import type { I18nInstance } from '../../../components/utils/tools';
 import { DEFAULT_FILTERS, type FilterSet } from '../adjust';
@@ -88,6 +89,8 @@ const KEY_IDLE_MS = 250;
 const MAX_STRAIGHTEN = 45;
 const QUARTER = 90;
 const NO_ADJUST: Required<ImageAdjust> = { brightness: 0, contrast: 0, saturation: 0 };
+// Apple Photos' edit keys. Markup has no letter there: its own tool letters (A = Arrow) win in it.
+const MODE_KEYS: Record<string, string> = { c: 'crop', a: 'adjust', f: 'filters' };
 
 type ViewKey = 's' | 'tx' | 'ty' | 'x' | 'y' | 'w' | 'h' | 'round' | 'theta' | 'spin';
 
@@ -186,6 +189,9 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   const cancelBtn = makeBtn('cancel', 'tools.image.cropCancel', 'ghost');
   const resetBtn = makeBtn('reset', 'tools.image.cropReset', 'ghost');
   const rotateBtn = makeIconBtn('rotate-left', 'tools.image.rotateLeft', IconRotateLeft);
+
+  rotateBtn.title = `${tr(opts.i18n, 'tools.image.rotateLeft')} (${beautifyShortcut('CMD+[')})`;
+  rotateBtn.setAttribute('aria-keyshortcuts', 'Meta+[ Control+[');
   const flipBtn = makeIconBtn('flip', 'tools.image.flip', IconFlipHorizontal);
   const doneBtn = makeBtn('done', 'tools.image.cropDone', 'primary');
   const lead = el('div', 'blok-darkroom__bar-lead');
@@ -481,9 +487,9 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   const tabs = createModeTabs({
     modes: [
-      { key: 'crop', label: tr(opts.i18n, 'tools.image.editModeCrop') },
-      { key: 'adjust', label: tr(opts.i18n, 'tools.image.editModeAdjust') },
-      ...(showFilters ? [{ key: 'filters', label: tr(opts.i18n, 'tools.image.editModeFilters') }] : []),
+      { key: 'crop', label: tr(opts.i18n, 'tools.image.editModeCrop'), shortcut: 'C' },
+      { key: 'adjust', label: tr(opts.i18n, 'tools.image.editModeAdjust'), shortcut: 'A' },
+      ...(showFilters ? [{ key: 'filters', label: tr(opts.i18n, 'tools.image.editModeFilters'), shortcut: 'F' }] : []),
       { key: 'markup', label: tr(opts.i18n, 'tools.image.editModeMarkup') },
     ],
     panels: { crop: cropPanel, adjust: adjustWrap, ...(showFilters ? { filters: filterWrap } : {}), markup: markupPanel.el },
@@ -500,6 +506,26 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       stage.setAttribute('aria-label', tr(opts.i18n, mode === 'markup' ? 'tools.image.markupStageLabel' : 'tools.image.cropStageLabel'));
     },
   });
+
+  /** A tab key does what a click on the tab does. */
+  const pickMode = (mode: string): void => {
+    const tab = tabs.el.querySelector<HTMLElement>(`[data-mode="${mode}"]`);
+
+    if (!tab || st.mode === mode || dock.hidden) return;
+    const focused = document.activeElement;
+
+    tabs.pick(mode);
+    // A browser drops focus to <body> from a control its panel just hid; the stage keeps its own.
+    if (focused !== stage && (dock.contains(focused) || document.activeElement === document.body)) tab.focus();
+  };
+
+  /** Hold M: the photo without filter, adjustments or marks. A view only, never a history step. */
+  const showOriginal = (on: boolean): void => {
+    if (surface.hasAttribute('data-original') === on) return;
+    surface.toggleAttribute('data-original', on);
+    if (on) applyImageFilter(photo, 'none', NO_ADJUST, 100, filters);
+    else applyFilter();
+  };
 
   const dock = el('div', 'blok-darkroom__dock');
 
@@ -565,15 +591,19 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     markupEditor.flush();
   };
 
-  const turnLeft = (): void => {
+  /** A right turn is three left ones. */
+  const turn = (clockwise: boolean): void => {
     if (!st.ready) return;
     flushAll();
     const v = view.values();
-    const next = rotateLeft(st.geometry, st.rect);
+    const next = Array.from({ length: clockwise ? 3 : 1 }).reduce<{ g: Geometry; crop: ImageCrop; markup: ImageMarkup[] }>(
+      (acc) => ({ ...rotateLeft(acc.g, acc.crop), markup: turnMarkupLeft(acc.markup) }),
+      { g: st.geometry, crop: st.rect, markup: st.markup }
+    );
 
     st.geometry = next.g;
     st.rect = next.crop;
-    st.markup = turnMarkupLeft(st.markup);
+    st.markup = next.markup;
     if (!survivesQuarterTurn(st.def)) st.def = RATIOS[0];
     syncChips();
     refitPlane();
@@ -583,7 +613,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const cy = v.y + v.h / 2;
     const from: Box = { x: cx - v.h / 2, y: cy - v.w / 2, w: v.h, h: v.w };
 
-    view.jump({ ...rectToCamera(st.rect, o(), from), ...from, round: v.round, theta: v.theta, spin: QUARTER });
+    view.jump({ ...rectToCamera(st.rect, o(), from), ...from, round: v.round, theta: v.theta, spin: clockwise ? -QUARTER : QUARTER });
     view.to(fitted());
     commit();
   };
@@ -633,7 +663,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     commit();
   });
 
-  rotateBtn.addEventListener('click', turnLeft);
+  rotateBtn.addEventListener('click', () => turn(false));
   flipBtn.addEventListener('click', flip);
 
   // Only Crop mode edits the crop; elsewhere the photo is a preview of the result.
@@ -937,6 +967,35 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   // A keyup that lands elsewhere never reaches the stage.
   stage.addEventListener('blur', () => surface.removeAttribute('data-peek'));
 
+  /** Unmodified photo editor keys. True when the key was used. */
+  const bareKey = (e: KeyboardEvent): boolean => {
+    const t = e.target;
+    const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
+
+    if (e.metaKey || e.ctrlKey || e.altKey || typing) return false;
+    if (st.mode === 'markup' && (e.code === 'BracketLeft' || e.code === 'BracketRight')) {
+      markupPanel.stepSize(e.code === 'BracketRight' ? 1 : -1);
+
+      return true;
+    }
+    const nonLatin = e.key.length === 1 && !/^[\x20-\x7e]$/.test(e.key);
+    const isLetter = (letter: string): boolean =>
+      e.key.toLowerCase() === letter || (nonLatin && e.code === `Key${letter.toUpperCase()}`);
+
+    if (isLetter('m')) {
+      if (!e.repeat) showOriginal(true);
+
+      return true;
+    }
+    const letter = Object.keys(MODE_KEYS).find(isLetter);
+
+    // In Markup, A is the Arrow tool.
+    if (letter === undefined || (st.mode === 'markup' && letter === 'a')) return false;
+    pickMode(MODE_KEYS[letter]);
+
+    return true;
+  };
+
   surface.addEventListener('keydown', (e) => {
     const mod = e.metaKey || e.ctrlKey;
     // Same rule as the editor's shortcutLetter: the physical key counts only when the layout types a non-Latin letter there.
@@ -953,12 +1012,32 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
       return;
     }
+    // Lightroom's rotate keys. By physical key: [ and ] move around between layouts.
+    if (mod && !e.altKey && !e.shiftKey && (e.code === 'BracketLeft' || e.code === 'BracketRight')) {
+      e.preventDefault();
+      turn(e.code === 'BracketRight');
+
+      return;
+    }
+    if (bareKey(e)) {
+      e.preventDefault();
+
+      return;
+    }
     // Enter on a button is that button's click.
     if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) {
       e.preventDefault();
       apply();
     }
   });
+
+  surface.addEventListener('keyup', (e) => {
+    if (e.key.toLowerCase() === 'm' || e.code === 'KeyM') showOriginal(false);
+  });
+  // A keyup outside the window never arrives.
+  const endOriginal = (): void => showOriginal(false);
+
+  window.addEventListener('blur', endOriginal);
 
   const dialogHandle = openModalDialog({
     content: backdrop,
@@ -987,6 +1066,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       markupEditor.destroy();
       markupPanel.destroy();
       tabs.destroy();
+      window.removeEventListener('blur', endOriginal);
       window.clearTimeout(st.keyIdle);
       if (opts.sourceEl) opts.sourceEl.style.removeProperty('visibility');
     },

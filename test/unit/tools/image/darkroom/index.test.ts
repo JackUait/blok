@@ -2118,3 +2118,296 @@ describe('openDarkroom markup', () => {
     });
   });
 });
+
+describe('openDarkroom photo editor keys', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stubPopover();
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 1200, 800));
+  });
+
+  afterEach(() => {
+    closers.splice(0).forEach((close) => close());
+    document.body.replaceChildren();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const MARK: ImageMarkup = { id: 'p1', type: 'pen', color: '#ff3b30', points: [0.1, 0.1, 0.5, 0.2, 0.2, 0.5], size: 0.012 };
+  const q = <T extends Element = HTMLElement>(selector: string): T => {
+    const found = document.querySelector<T>(selector);
+
+    if (!found) throw new Error(`no ${selector}`);
+
+    return found;
+  };
+  const tabOf = (mode: string): HTMLElement => q(`[role="tab"][data-mode="${mode}"]`);
+  const result = (onApply: ReturnType<typeof vi.fn>): DarkroomResult => {
+    const call: unknown = onApply.mock.calls.at(-1)?.[0];
+
+    if (typeof call !== 'object' || call === null || !('geometry' in call)) throw new Error('no result');
+
+    return call as DarkroomResult;
+  };
+  const photoImg = (): HTMLImageElement => q<HTMLImageElement>('[data-role="darkroom-photo"]');
+  const keyup = (target: Element | null, init: KeyboardEventInit): void => {
+    target?.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, ...init }));
+  };
+
+  describe('C, A and F pick a tab, as in Apple Photos', () => {
+    it.each([['a', 'adjust'], ['f', 'filters'], ['c', 'crop']])('%s opens %s', (letter, mode) => {
+      open();
+      if (mode === 'crop') tabOf('adjust').click();
+      key(stageEl(), { key: letter });
+
+      expect(tabOf(mode).getAttribute('aria-selected')).toBe('true');
+      expect(dialog().getAttribute('data-mode')).toBe(mode);
+    });
+
+    it('the key does the same work as a click: the filter strip is revealed and the stage relabelled', () => {
+      open();
+      const cropLabel = stageEl()?.getAttribute('aria-label');
+
+      key(stageEl(), { key: 'f' });
+
+      expect(document.getElementById(tabOf('filters').getAttribute('aria-controls') ?? '')?.hidden).toBe(false);
+      tabOf('markup').click();
+      expect(stageEl()?.getAttribute('aria-label')).not.toBe(cropLabel);
+      key(stageEl(), { key: 'c' });
+      expect(stageEl()?.getAttribute('aria-label')).toBe(cropLabel);
+    });
+
+    it('Cmd+C, Ctrl+F and Alt+A are not tab keys', () => {
+      open();
+      key(stageEl(), { key: 'c', metaKey: true });
+      key(stageEl(), { key: 'f', ctrlKey: true });
+      key(stageEl(), { key: 'a', altKey: true });
+
+      expect(dialog().getAttribute('data-mode')).toBe('crop');
+    });
+
+    it('a non-Latin layout uses the physical key', () => {
+      open();
+      key(stageEl(), { key: 'ф', code: 'KeyA' });
+
+      expect(dialog().getAttribute('data-mode')).toBe('adjust');
+    });
+
+    it('typing in a text field never switches tabs', () => {
+      open();
+      const input = document.createElement('input');
+
+      dialog().appendChild(input);
+      key(input, { key: 'a' });
+
+      expect(dialog().getAttribute('data-mode')).toBe('crop');
+    });
+
+    it('in Markup, A is the Arrow tool, even when Arrow is already picked', () => {
+      open();
+      tabOf('markup').click();
+      key(stageEl(), { key: 'a' });
+      key(stageEl(), { key: 'a' });
+      key(stageEl(), { key: 'ф', code: 'KeyA' });
+
+      expect(dialog().getAttribute('data-mode')).toBe('markup');
+      expect(q('[data-blok-testid="markup-tool-shapes"]').getAttribute('aria-checked')).toBe('true');
+      expect(q('[data-blok-testid="markup-tool-shapes"]').getAttribute('data-shape')).toBe('arrow');
+    });
+
+    it('C and F still leave Markup', () => {
+      open();
+      tabOf('markup').click();
+      key(stageEl(), { key: 'f' });
+
+      expect(dialog().getAttribute('data-mode')).toBe('filters');
+    });
+
+    it('F does nothing when there are no filters to offer', () => {
+      open({ filters: resolveFilters([]) });
+      key(stageEl(), { key: 'f' });
+
+      expect(dialog().getAttribute('data-mode')).toBe('crop');
+    });
+
+    it('focus on a control in the panel being hidden moves to the new tab, not to <body>', () => {
+      open();
+      const chip = q<HTMLButtonElement>('[data-ratio="free"]');
+
+      chip.focus();
+      key(chip, { key: 'a' });
+
+      expect(tabOf('adjust')).toHaveFocus();
+    });
+
+    it('focus on the stage stays on the stage', () => {
+      open();
+      const stage = q('[data-role="darkroom-stage"]');
+
+      stage.focus();
+      key(stage, { key: 'a' });
+
+      expect(stage).toHaveFocus();
+    });
+
+    it('each tab names its key', () => {
+      open();
+
+      expect(['crop', 'adjust', 'filters'].map((m) => tabOf(m).getAttribute('aria-keyshortcuts'))).toEqual(['C', 'A', 'F']);
+      expect(tabOf('adjust').getAttribute('title')).toBe('Adjust (A)');
+    });
+  });
+
+  describe('hold M to see the original, as in Apple Photos', () => {
+    it('while M is down the photo shows no look and no marks; letting go brings them back', () => {
+      open({ initialFilter: 'mono', initialAdjust: { brightness: 40, contrast: 0, saturation: 0 }, initialMarkup: [MARK] });
+      const look = photoImg().style.filter;
+
+      expect(look).not.toBe('');
+      key(stageEl(), { key: 'm' });
+      expect(photoImg().style.filter).toBe('');
+      expect(dialog().hasAttribute('data-original')).toBe(true);
+      keyup(stageEl(), { key: 'm' });
+
+      expect(photoImg().style.filter).toBe(look);
+      expect(dialog().hasAttribute('data-original')).toBe(false);
+    });
+
+    it('works in every tab, on a non-Latin layout too', () => {
+      open({ initialFilter: 'mono' });
+      tabOf('markup').click();
+      key(stageEl(), { key: 'ь', code: 'KeyM' });
+
+      expect(photoImg().style.filter).toBe('');
+      keyup(stageEl(), { key: 'ь', code: 'KeyM' });
+      expect(photoImg().style.filter).not.toBe('');
+    });
+
+    it('leaving the window while M is held brings the edits back', () => {
+      open({ initialFilter: 'mono' });
+      key(stageEl(), { key: 'm' });
+      window.dispatchEvent(new Event('blur'));
+
+      expect(photoImg().style.filter).not.toBe('');
+      expect(dialog().hasAttribute('data-original')).toBe(false);
+    });
+
+    it('is a view, not an edit: Done after a peek keeps the look, and undo has nothing to take back', () => {
+      const { onApply } = open({ initialFilter: 'mono' });
+
+      key(stageEl(), { key: 'm' });
+      key(stageEl(), { key: 'm', repeat: true });
+      keyup(stageEl(), { key: 'm' });
+      key(dialog(), { key: 'z', metaKey: true });
+      button('done').click();
+
+      expect(result(onApply).filter).toBe('mono');
+    });
+
+    it('Cmd+M is not a peek', () => {
+      open({ initialFilter: 'mono' });
+      key(stageEl(), { key: 'm', metaKey: true });
+
+      expect(photoImg().style.filter).not.toBe('');
+    });
+  });
+
+  describe('Cmd/Ctrl+[ and ] turn the photo, as in Lightroom', () => {
+    it('Cmd+] turns right: the crop turns with it and Done returns a quarter turn clockwise', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });
+
+      key(stageEl(), { key: ']', code: 'BracketRight', metaKey: true });
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).geometry).toEqual({ rotation: 90, flipX: false, straighten: 0 });
+      expect(result(onApply).crop).toEqual({ x: 40, y: 10, w: 40, h: 30 });
+    });
+
+    it('Ctrl+[ turns left, like the button', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });
+
+      key(stageEl(), { key: '[', code: 'BracketLeft', ctrlKey: true });
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).geometry.rotation).toBe(270);
+      expect(result(onApply).crop).toEqual({ x: 20, y: 60, w: 40, h: 30 });
+    });
+
+    it('right then left is where it started, marks included', () => {
+      const initial = { x: 10, y: 20, w: 30, h: 40 };
+      const { onApply, advance } = open({ initial, initialMarkup: [MARK] });
+
+      key(stageEl(), { key: ']', code: 'BracketRight', metaKey: true });
+      advance(3000);
+      key(stageEl(), { key: '[', code: 'BracketLeft', metaKey: true });
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).crop).toEqual(initial);
+      expect(result(onApply).geometry.rotation).toBe(0);
+      expect(result(onApply).markup[0]).toMatchObject({ points: MARK.points });
+    });
+
+    it('a right turn is one undo step and springs the other way', () => {
+      const { onApply, advance } = open();
+
+      key(stageEl(), { key: ']', code: 'BracketRight', metaKey: true });
+      expect(q('[data-role="darkroom-stage"] [data-role="image-plane"]').style.transform).toContain('rotate(-90deg)');
+      advance(3000);
+      key(dialog(), { key: 'z', metaKey: true });
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).geometry.rotation).toBe(0);
+    });
+
+    it('the bracket keys work by physical key and in every tab', () => {
+      const { onApply, advance } = open();
+
+      tabOf('markup').click();
+      key(stageEl(), { key: 'х', code: 'BracketLeft', metaKey: true });
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).geometry.rotation).toBe(270);
+    });
+
+    it('the rotate button names its key', () => {
+      open();
+
+      expect(button('rotate-left').getAttribute('aria-keyshortcuts')).toBe('Meta+[ Control+[');
+    });
+  });
+
+  describe('[ and ] change the markup size, as in Photoshop', () => {
+    const size = (): string | null => q('[data-blok-testid^="markup-size-"][aria-checked="true"]').getAttribute('data-size');
+
+    it('] steps up, [ steps down, and both stop at the ends', () => {
+      open();
+      tabOf('markup').click();
+      q<HTMLButtonElement>('[data-blok-testid="markup-tool-pen"]').click();
+
+      expect(size()).toBe('1');
+      key(stageEl(), { key: ']', code: 'BracketRight' });
+      key(stageEl(), { key: ']', code: 'BracketRight' });
+      expect(size()).toBe('2');
+      key(stageEl(), { key: '[', code: 'BracketLeft' });
+      key(stageEl(), { key: 'х', code: 'BracketLeft' });
+      key(stageEl(), { key: '[', code: 'BracketLeft' });
+
+      expect(size()).toBe('0');
+      expect(document.querySelector('[data-role="markup-layer"]')?.getAttribute('data-size')).toBe('0');
+    });
+
+    it('outside Markup the brackets do nothing', () => {
+      open();
+      key(stageEl(), { key: ']', code: 'BracketRight' });
+      tabOf('markup').click();
+
+      expect(size()).toBe('1');
+    });
+  });
+});

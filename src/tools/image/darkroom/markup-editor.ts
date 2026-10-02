@@ -1109,7 +1109,9 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
       return;
     }
-    const tool = mod || e.altKey || e.key.length !== 1 ? undefined : TOOL_KEYS[e.key.toLowerCase()];
+    // A non-Latin layout picks by physical key, as the darkroom's own letter keys do.
+    const letter = /^[\x20-\x7e]$/.test(e.key) ? e.key.toLowerCase() : /^Key([A-Z])$/.exec(e.code)?.[1].toLowerCase();
+    const tool = mod || e.altKey || e.key.length !== 1 || letter === undefined ? undefined : TOOL_KEYS[letter];
 
     if (tool && tool !== st.state.tool) {
       e.preventDefault();

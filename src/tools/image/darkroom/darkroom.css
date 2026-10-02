@@ -171,6 +171,12 @@
   box-shadow: 0 0 0 0 transparent, 0 0 0 9999px var(--blok-darkroom-dim-off);
 }
 
+/* Hold M: the original, without marks. The look is lifted in index.ts, where it is an inline style. */
+.blok-darkroom__surface[data-original] [data-role="image-markup"],
+.blok-darkroom__surface[data-original] [data-role="markup-layer"] {
+  visibility: hidden;
+}
+
 .blok-darkroom__grid {
   position: absolute;
   inset: 0;

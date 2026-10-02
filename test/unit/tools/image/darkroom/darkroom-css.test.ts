@@ -231,4 +231,10 @@ describe('darkroom.css', () => {
     expect(main).not.toContain('crop-editor.css');
     expect(main).not.toContain('crop-modal.css');
   });
+  it('holding M for the original hides the marks and the drawing layer', () => {
+    const original = rule('.blok-darkroom__surface[data-original] [data-role="markup-layer"]');
+
+    expect(css).toContain('.blok-darkroom__surface[data-original] [data-role="image-markup"],');
+    expect(original).toMatch(/visibility:\s*hidden;/);
+  });
 });

@@ -925,6 +925,14 @@ describe('createMarkupEditor', () => {
       expect(onStateChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool }));
     });
 
+    it('a non-Latin layout picks by physical key', () => {
+      const { stage, onStateChange } = setup({ state: { ...BASE, tool: 'select' } });
+
+      key(stage, 'з', { code: 'KeyP' });
+
+      expect(onStateChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool: 'pen' }));
+    });
+
     it('letters with a modifier are not tool keys', () => {
       const { stage, onStateChange } = setup();
 

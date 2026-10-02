@@ -649,6 +649,52 @@ describe('Find module', () => {
     expect(searchInput(wrapper).value).toBe('this');
   });
 
+  it('prefills the query from a selection in a host contenteditable outside the editor', () => {
+    const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
+    const hostTitle = document.createElement('h1');
+
+    hostTitle.setAttribute('contenteditable', 'true');
+    hostTitle.textContent = 'Blok title';
+    document.body.appendChild(hostTitle);
+
+    const text = hostTitle.firstChild;
+
+    if (!(text instanceof Text)) {
+      throw new Error('text missing');
+    }
+    window.getSelection()?.setBaseAndExtent(text, 0, text, 4);
+    press(hostTitle, { key: 'f', code: 'KeyF', ctrlKey: true });
+
+    expect(searchInput(wrapper).value).toBe('Blok');
+  });
+
+  it('prefills the query from the selected part of a host input', () => {
+    const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
+    const hostInput = document.createElement('input');
+
+    hostInput.value = 'search words';
+    document.body.appendChild(hostInput);
+    hostInput.focus();
+    hostInput.setSelectionRange(7, 12);
+    press(hostInput, { key: 'f', code: 'KeyF', ctrlKey: true });
+
+    expect(searchInput(wrapper).value).toBe('words');
+  });
+
+  it('does not prefill from a selection in another editor', () => {
+    const first = editor([{ id: 'a', text: 'hello' }]);
+    const second = editor([{ id: 'b', text: 'other words' }]);
+    const text = second.blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
+
+    if (!(text instanceof Text)) {
+      throw new Error('text missing');
+    }
+    window.getSelection()?.setBaseAndExtent(text, 0, text, 5);
+    first.find.open();
+
+    expect(searchInput(first.wrapper).value).toBe('');
+  });
+
   describe('replace preview', () => {
     it('shows each match struck through with its replacement after it, without touching the document', () => {
       const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat and cat' }]);

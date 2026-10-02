@@ -206,6 +206,32 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-input')).toBeFocused();
     });
 
+    test('Mod+F on a selection in a host page title searches for it from there', async ({ page }) => {
+      await createEditor(page, paragraphs('Zephyr in the editor'));
+      await page.evaluate(() => {
+        const title = document.createElement('h1');
+
+        title.textContent = 'Zephyr title';
+        title.contentEditable = 'true';
+        title.setAttribute('data-blok-testid', 'host-title');
+        document.body.appendChild(title);
+      });
+      await page.getByTestId('host-title').evaluate((title) => {
+        const text = title.firstChild;
+
+        if (!(title instanceof HTMLElement) || text === null) {
+          throw new Error('title text missing');
+        }
+        title.focus();
+        window.getSelection()?.setBaseAndExtent(text, 0, text, 6);
+      });
+
+      await page.keyboard.press(FIND_KEY);
+
+      await expect(page.getByTestId('find-input')).toHaveValue('Zephyr');
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+    });
+
     test('Mod+F on the body opens the find bar when the page has one editor', async ({ page }) => {
       await createEditor(page, paragraphs('alpha'));
       await page.evaluate(() => {

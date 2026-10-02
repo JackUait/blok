@@ -437,21 +437,34 @@ export class Find extends Module {
       editorOf(range.endContainer) === wrapper;
   }
 
+  /** Host page text: outside every editor and outside the bar. */
+  private isHostNode(node: Node): boolean {
+    return editorOf(node) === null && this.bar?.element.contains(node) !== true;
+  }
+
+  /** A selection Find may start from: in this editor or in the host page, never in another editor. */
+  private takesRange(range: Range): boolean {
+    return this.ownsRange(range) || (this.isHostNode(range.startContainer) && this.isHostNode(range.endContainer));
+  }
+
   /**
-   * The selected text, when it is a short single-line selection in this editor.
+   * The selected text, when it is a short single-line selection in this editor or the host page.
    */
   private selectedTextForPrefill(): string | null {
+    const field = document.activeElement;
     const selection = window.getSelection();
+    // An input's selected text is not part of the document selection.
+    const isHostTextField = (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) && this.isHostNode(field);
 
-    if (selection === null || selection.rangeCount === 0 || selection.isCollapsed) {
+    if (!isHostTextField && (selection === null || selection.rangeCount === 0 || selection.isCollapsed || !this.takesRange(selection.getRangeAt(0)))) {
       return null;
     }
 
-    const range = selection.getRangeAt(0);
-    const text = selection.toString().trim();
-    const isInEditor = this.ownsRange(range);
+    const text = (isHostTextField
+      ? field.value.slice(field.selectionStart ?? 0, field.selectionEnd ?? 0)
+      : selection?.toString() ?? '').trim();
 
-    if (!isInEditor || text === '' || text.length > PREFILL_MAX_LENGTH || /[\n\r]/.test(text)) {
+    if (text === '' || text.length > PREFILL_MAX_LENGTH || /[\n\r]/.test(text)) {
       return null;
     }
 
@@ -469,7 +482,7 @@ export class Find extends Module {
 
     range.collapse(true);
 
-    return this.ownsRange(range) ? range : null;
+    return this.takesRange(range) ? range : null;
   }
 
   private focusToReturn(): Find['returnFocus'] {

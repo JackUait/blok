@@ -1173,6 +1173,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       i18n: opts.i18n,
       container: surface,
       showFilters,
+      trigger: shortcutsBtn,
       onClose: () => {
         st.sheet = null;
         if (back instanceof HTMLElement && back.isConnected) back.focus();

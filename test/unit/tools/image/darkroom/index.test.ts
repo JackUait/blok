@@ -2784,6 +2784,18 @@ describe('openDarkroom photo editor keys', () => {
       expect(sheet()).not.toBeNull();
     });
 
+    it('a second press on the ? button closes the sheet instead of reopening it', () => {
+      open();
+      const btn = button('shortcuts');
+
+      btn.click();
+      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, button: 0 }));
+      btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, button: 0 }));
+      btn.click();
+
+      expect(sheet()).toBeNull();
+    });
+
     it('closing hands focus back to the stage', () => {
       open();
       const stage = q('[data-role="darkroom-stage"]');

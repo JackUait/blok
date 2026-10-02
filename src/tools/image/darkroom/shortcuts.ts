@@ -15,7 +15,7 @@ export interface ShortcutRow {
   filters?: boolean;
 }
 
-/** Every darkroom key, so the sheet is the one list of them. index.ts and markup-editor.ts handle them. */
+/** The darkroom keys a user should learn, so the sheet is built from one list. index.ts and markup-editor.ts handle them. */
 export const SHORTCUTS: readonly ShortcutRow[] = [
   { group: 'general', label: 'tools.image.cropDone', keys: ['⏎'] },
   { group: 'general', label: 'tools.image.cropCancel', keys: ['Esc'] },
@@ -66,6 +66,8 @@ export interface ShortcutSheetOptions {
   /** The darkroom surface; the sheet mounts inside it. */
   container: HTMLElement;
   showFilters: boolean;
+  /** The button that toggles the sheet; a press on it is not an outside press. */
+  trigger?: HTMLElement;
   onClose(): void;
 }
 
@@ -117,6 +119,7 @@ export function openShortcutSheet(o: ShortcutSheetOptions): ModalDialogHandle {
     container: o.container,
     label: tr(o.i18n, 'tools.image.shortcutsTitle'),
     initialFocus: () => sheet,
+    anchor: o.trigger,
     onDismiss: () => ref.handle?.close(),
     onClose: o.onClose,
   });

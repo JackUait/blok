@@ -236,3 +236,29 @@ test('? opens the keyboard shortcuts sheet; Escape closes only the sheet', async
   await expect(sheet).toHaveCount(0);
   await expect(dialog).toBeVisible();
 });
+
+test('the ? button opens the sheet and a second click closes it; a click outside closes it without touching the photo', async ({ page }) => {
+  await seedImage(page);
+  const image = page.locator(IMAGE_BLOCK_SELECTOR);
+
+  await image.hover();
+  await image.locator('[data-action="crop"]').click();
+  const dialog = page.locator('[role="dialog"][data-mode]');
+
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
+  const frameBefore = await page.locator('[data-role="darkroom-frame"]').boundingBox();
+  const btn = dialog.locator('[data-action="shortcuts"]');
+  const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+
+  await btn.click();
+  await expect(sheet).toBeVisible();
+  await btn.click();
+  await expect(sheet).toHaveCount(0);
+
+  await btn.click();
+  await expect(sheet).toBeVisible();
+  await page.mouse.click(640, 690);
+  await expect(sheet).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+  expect(await page.locator('[data-role="darkroom-frame"]').boundingBox()).toEqual(frameBefore);
+});

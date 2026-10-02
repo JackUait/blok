@@ -147,6 +147,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolNames.marker',
     // Same Spanish cognate reused as the toolbox Color section title.
     'toolbox.sectionColor',
+    // "General" is the Spanish adjective too, and the OS name for a General section.
+    'tools.image.shortcutsGeneral',
   ]),
   // "Link" is the standard loanword for a hyperlink in Estonian UIs; "OK" is
   // the conventional compact confirmation label.

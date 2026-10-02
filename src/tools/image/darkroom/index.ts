@@ -24,7 +24,7 @@ import { createDial } from './dial';
 import { createFilterStrip } from './filter-strip';
 import { attachGestures } from './gestures';
 import { createHistory, type Snapshot } from './history';
-import { createMarkupEditor, stateForMark } from './markup-editor';
+import { createMarkupEditor, stateForMark, TOOL_KEYS } from './markup-editor';
 import { createMarkupPanel, DEFAULT_MARKUP_STATE, type MarkupPanelState } from './markup-panel';
 import { createModeTabs } from './mode-tabs';
 import { cameraPlane, createDissolve, createVeil, fitCameraPlane, flyOut, isOnScreen } from './motion';
@@ -90,8 +90,8 @@ const MAX_STRAIGHTEN = 45;
 const QUARTER = 90;
 const STRAIGHTEN_SNAP = 15;
 const NO_ADJUST: Required<ImageAdjust> = { brightness: 0, contrast: 0, saturation: 0 };
-// Apple Photos' edit keys. Markup has no letter there: its own tool letters (A = Arrow) win in it.
-const MODE_KEYS: Record<string, string> = { c: 'crop', a: 'adjust', f: 'filters' };
+// Apple Photos' edit keys, plus Lightroom's R. In Markup its tool letters win (A = Arrow, R = rectangle).
+const MODE_KEYS: Record<string, string> = { c: 'crop', r: 'crop', a: 'adjust', f: 'filters' };
 
 type ViewKey = 's' | 'tx' | 'ty' | 'x' | 'y' | 'w' | 'h' | 'round' | 'theta' | 'spin';
 
@@ -998,10 +998,14 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
       return true;
     }
+    if (st.mode === 'markup' && isLetter('u')) {
+      markupPanel.pickShape();
+
+      return true;
+    }
     const letter = Object.keys(MODE_KEYS).find(isLetter);
 
-    // In Markup, A is the Arrow tool.
-    if (letter === undefined || (st.mode === 'markup' && letter === 'a')) return false;
+    if (letter === undefined || (st.mode === 'markup' && letter in TOOL_KEYS)) return false;
     pickMode(MODE_KEYS[letter]);
 
     return true;

@@ -50,8 +50,9 @@ type HandleName = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'rotate';
 
 const HANDLES: HandleName[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 const TEXT_HANDLES: HandleName[] = ['nw', 'ne', 'se', 'sw', 'rotate'];
-const TOOL_KEYS: Record<string, MarkupTool> = {
-  v: 'select', p: 'pen', h: 'highlighter', t: 'text', r: 'rect', o: 'ellipse', a: 'arrow', l: 'line', e: 'eraser',
+// B is Photoshop's brush.
+export const TOOL_KEYS: Readonly<Record<string, MarkupTool>> = {
+  v: 'select', p: 'pen', b: 'pen', h: 'highlighter', t: 'text', r: 'rect', o: 'ellipse', a: 'arrow', l: 'line', e: 'eraser',
 };
 const NUDGES: Record<string, [number, number]> = {
   ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],

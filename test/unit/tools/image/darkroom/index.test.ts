@@ -2397,6 +2397,56 @@ describe('openDarkroom photo editor keys', () => {
     });
   });
 
+  describe('Lightroom and Photoshop letters', () => {
+    const picked = (): string | null => q('[data-blok-testid^="markup-tool-"][aria-checked="true"]').getAttribute('data-blok-testid');
+
+    it('R opens Crop, as in Lightroom', () => {
+      open();
+      tabOf('adjust').click();
+      key(stageEl(), { key: 'r' });
+
+      expect(dialog().getAttribute('data-mode')).toBe('crop');
+    });
+
+    it('in Markup, R is still the rectangle and no tool letter switches tabs', () => {
+      open();
+      tabOf('markup').click();
+      ['r', 'v', 'p', 'h', 't', 'o', 'a', 'l', 'e', 'b'].forEach((k) => key(stageEl(), { key: k }));
+      key(q('[data-blok-testid="markup-size-1"]'), { key: 'r' });
+
+      expect(dialog().getAttribute('data-mode')).toBe('markup');
+    });
+
+    it('B picks the pen, as Photoshop\'s brush', () => {
+      open();
+      tabOf('markup').click();
+      key(stageEl(), { key: 'v' });
+      key(stageEl(), { key: 'b' });
+
+      expect(picked()).toBe('markup-tool-pen');
+    });
+
+    it('U picks the last shape used', () => {
+      open();
+      tabOf('markup').click();
+      key(stageEl(), { key: 'o' });
+      key(stageEl(), { key: 'v' });
+      key(stageEl(), { key: 'u' });
+
+      expect(picked()).toBe('markup-tool-shapes');
+      expect(q('[data-blok-testid="markup-tool-shapes"]').getAttribute('data-shape')).toBe('ellipse');
+    });
+
+    it('B and U do nothing outside Markup', () => {
+      open();
+      key(stageEl(), { key: 'b' });
+      key(stageEl(), { key: 'u' });
+      tabOf('markup').click();
+
+      expect(picked()).not.toBe('markup-tool-shapes');
+    });
+  });
+
   describe('Shift+H flips the photo', () => {
     it('flips like the button, in any tab, and leaves the markup tool alone', () => {
       const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });

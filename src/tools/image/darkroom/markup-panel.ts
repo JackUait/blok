@@ -65,6 +65,8 @@ export interface MarkupPanel {
   pickTool(tool: MarkupTool): void;
   /** One size up or down, as a click on the next size would; a no-op while the sizes are hidden. */
   stepSize(delta: 1 | -1): void;
+  /** Picks the shape the Shapes button shows. */
+  pickShape(): void;
   /** Shows or hides the Clear markup reset. */
   setHasMarkup(has: boolean): void;
   destroy(): void;
@@ -575,6 +577,9 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
       const next = SIZES[SIZES.findIndex((s) => s.size === st.size) + delta];
 
       if (next !== undefined && !paint.hidden) pickSize(next.size);
+    },
+    pickShape(): void {
+      pickTool(ui.shape);
     },
     setHasMarkup(has: boolean): void {
       // An attribute, not [hidden]: the reset keeps its box so the panel never jumps.

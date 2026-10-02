@@ -833,7 +833,7 @@ describe('English fallback when i18n is omitted', () => {
     };
     expectLabel('caption-toggle', 'Toggle caption');
     expectLabel('replace', 'Replace image');
-    expectLabel('crop', 'Crop');
+    expectLabel('crop', 'Edit');
     expectLabel('fullscreen', 'View full screen');
     expectLabel('download', 'Download original');
     expectLabel('more', 'More options');

@@ -330,7 +330,7 @@
   "tools.image.toggleCaption": "Beschriftung ein- oder ausblenden",
   "tools.image.captionPlaceholder": "Beschriftung schreiben…",
   "tools.image.replace": "Bild ersetzen",
-  "tools.image.crop": "Zuschneiden",
+  "tools.image.crop": "Bearbeiten",
   "tools.image.viewFullscreen": "Im Vollbild anzeigen",
   "tools.image.exitFullscreen": "Vollbild beenden",
   "tools.image.downloadOriginal": "Original herunterladen",

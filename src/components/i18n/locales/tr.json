@@ -328,7 +328,7 @@
   "tools.image.toggleCaption": "Altyazıyı aç/kapat",
   "tools.image.captionPlaceholder": "Altyazı yazın…",
   "tools.image.replace": "Görseli değiştir",
-  "tools.image.crop": "Kırp",
+  "tools.image.crop": "Düzenle",
   "tools.image.viewFullscreen": "Tam ekranda görüntüle",
   "tools.image.exitFullscreen": "Tam ekrandan çık",
   "tools.image.downloadOriginal": "Orijinali indir",

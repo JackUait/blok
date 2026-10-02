@@ -330,7 +330,7 @@
   "tools.image.toggleCaption": "キャプションの表示切替",
   "tools.image.captionPlaceholder": "キャプションを入力…",
   "tools.image.replace": "画像を置き換える",
-  "tools.image.crop": "トリミング",
+  "tools.image.crop": "編集",
   "tools.image.viewFullscreen": "全画面表示",
   "tools.image.exitFullscreen": "全画面表示を終了",
   "tools.image.downloadOriginal": "オリジナルをダウンロード",

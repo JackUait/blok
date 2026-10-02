@@ -112,6 +112,7 @@ export declare const IconAlignLeft: string;
 export declare const IconAlignCenter: string;
 export declare const IconAlignRight: string;
 export declare const IconCaption: string;
+export declare const IconSliders: string;
 export declare const IconCrop: string;
 export declare const IconRotateLeft: string;
 export declare const IconFlipHorizontal: string;

@@ -328,7 +328,7 @@
   "tools.image.toggleCaption": "Mostrar u ocultar la leyenda",
   "tools.image.captionPlaceholder": "Escribe una leyenda…",
   "tools.image.replace": "Reemplazar imagen",
-  "tools.image.crop": "Recortar",
+  "tools.image.crop": "Editar",
   "tools.image.viewFullscreen": "Ver en pantalla completa",
   "tools.image.exitFullscreen": "Salir de pantalla completa",
   "tools.image.downloadOriginal": "Descargar original",

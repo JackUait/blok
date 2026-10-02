@@ -8,6 +8,7 @@ import {
   IconAlignLeft,
   IconAlignRight,
   IconImage,
+  IconSliders,
 } from '../../../../src/components/icons';
 import type {
   ImageAlignment,
@@ -328,6 +329,14 @@ describe('ImageTool — renderSettings menu contents', () => {
       ['image-download', 'tools.image.downloadOriginal'],
       ['image-copy-url', 'tools.image.copyUrl'],
     ]);
+  });
+
+  it('shows the image editor icon on the entry that opens the editor', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+
+    tool.render();
+
+    expect(settingsItems(tool).find((i) => i.name === 'image-crop')?.icon).toBe(IconSliders);
   });
 
   it('closes the popover after every entry is activated', () => {

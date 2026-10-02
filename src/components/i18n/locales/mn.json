@@ -339,7 +339,7 @@
   "tools.image.toggleCaption": "Тайлбарыг харуулах эсвэл нуух",
   "tools.image.captionPlaceholder": "Тайлбар бичих…",
   "tools.image.replace": "Зураг солих",
-  "tools.image.crop": "Тайрах",
+  "tools.image.crop": "Засах",
   "tools.image.viewFullscreen": "Бүтэн дэлгэцээр үзэх",
   "tools.image.exitFullscreen": "Бүтэн дэлгэцээс гарах",
   "tools.image.downloadOriginal": "Эх файлыг татах",

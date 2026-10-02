@@ -328,7 +328,7 @@
   "tools.image.toggleCaption": "Visa eller dölj bildtext",
   "tools.image.captionPlaceholder": "Skriv en bildtext…",
   "tools.image.replace": "Ersätt bild",
-  "tools.image.crop": "Beskär",
+  "tools.image.crop": "Redigera",
   "tools.image.viewFullscreen": "Visa i helskärm",
   "tools.image.exitFullscreen": "Avsluta helskärmsläge",
   "tools.image.downloadOriginal": "Ladda ner original",

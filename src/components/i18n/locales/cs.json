@@ -330,7 +330,7 @@
   "tools.image.toggleCaption": "Zobrazit nebo skrýt popisek",
   "tools.image.captionPlaceholder": "Zadejte popisek…",
   "tools.image.replace": "Nahradit obrázek",
-  "tools.image.crop": "Oříznout",
+  "tools.image.crop": "Upravit",
   "tools.image.viewFullscreen": "Na celou obrazovku",
   "tools.image.exitFullscreen": "Ukončit režim celé obrazovky",
   "tools.image.downloadOriginal": "Stáhnout originál",

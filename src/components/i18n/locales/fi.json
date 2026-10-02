@@ -328,7 +328,7 @@
   "tools.image.toggleCaption": "Näytä tai piilota kuvateksti",
   "tools.image.captionPlaceholder": "Kirjoita kuvateksti…",
   "tools.image.replace": "Korvaa kuva",
-  "tools.image.crop": "Rajaa",
+  "tools.image.crop": "Muokkaa",
   "tools.image.viewFullscreen": "Näytä koko näytöllä",
   "tools.image.exitFullscreen": "Poistu koko näytön tilasta",
   "tools.image.downloadOriginal": "Lataa alkuperäinen",

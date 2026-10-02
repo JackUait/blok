@@ -328,7 +328,7 @@
   "tools.image.toggleCaption": "Afficher ou masquer la légende",
   "tools.image.captionPlaceholder": "Saisissez une légende…",
   "tools.image.replace": "Remplacer l’image",
-  "tools.image.crop": "Rogner",
+  "tools.image.crop": "Modifier",
   "tools.image.viewFullscreen": "Afficher en plein écran",
   "tools.image.exitFullscreen": "Quitter le plein écran",
   "tools.image.downloadOriginal": "Télécharger l’original",

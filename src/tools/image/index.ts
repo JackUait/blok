@@ -28,7 +28,7 @@ import {
   IconAlignRight,
   IconCaption,
   IconCopy,
-  IconCrop,
+  IconSliders,
   IconDownload,
   IconExpandFullscreen,
   IconImage,
@@ -742,7 +742,7 @@ export class ImageTool implements BlockTool {
     const iconAlignment = alignments.find((a) => a.value === currentAlignment)?.icon ?? alignments[1].icon;
     const iconCaption = IconCaption;
     const iconReplace = IconReplace;
-    const iconCrop = IconCrop;
+    const iconEdit = IconSliders;
     const iconFullscreen = IconExpandFullscreen;
     const iconDownload = IconDownload;
     return [
@@ -777,7 +777,7 @@ export class ImageTool implements BlockTool {
         onActivate: (): void => this.transitionToEmpty(),
       },
       {
-        icon: iconCrop,
+        icon: iconEdit,
         title: i18n.t('tools.image.crop'),
         name: 'image-crop',
         closeOnActivate: true,

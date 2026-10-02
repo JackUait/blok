@@ -341,7 +341,7 @@
   "tools.image.toggleCaption": "顯示或隱藏說明文字",
   "tools.image.captionPlaceholder": "新增說明文字…",
   "tools.image.replace": "取代圖片",
-  "tools.image.crop": "裁切",
+  "tools.image.crop": "編輯",
   "tools.image.viewFullscreen": "以全螢幕檢視",
   "tools.image.exitFullscreen": "離開全螢幕",
   "tools.image.downloadOriginal": "下載原始圖片",

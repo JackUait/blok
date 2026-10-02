@@ -328,7 +328,7 @@
   "tools.image.toggleCaption": "Näita või peida pildiallkiri",
   "tools.image.captionPlaceholder": "Kirjuta pildiallkiri…",
   "tools.image.replace": "Asenda pilt",
-  "tools.image.crop": "Kärbi",
+  "tools.image.crop": "Muuda",
   "tools.image.viewFullscreen": "Vaata täisekraanil",
   "tools.image.exitFullscreen": "Välju täisekraanilt",
   "tools.image.downloadOriginal": "Laadi alla originaal",

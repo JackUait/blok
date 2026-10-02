@@ -328,7 +328,7 @@
   "tools.image.toggleCaption": "แสดง/ซ่อนคำบรรยาย",
   "tools.image.captionPlaceholder": "เขียนคำบรรยาย…",
   "tools.image.replace": "แทนที่รูปภาพ",
-  "tools.image.crop": "ครอบตัด",
+  "tools.image.crop": "แก้ไข",
   "tools.image.viewFullscreen": "ดูเต็มจอ",
   "tools.image.exitFullscreen": "ออกจากโหมดเต็มหน้าจอ",
   "tools.image.downloadOriginal": "ดาวน์โหลดต้นฉบับ",

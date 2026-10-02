@@ -341,7 +341,7 @@
   "tools.image.toggleCaption": "캡션 표시/숨기기",
   "tools.image.captionPlaceholder": "캡션 입력…",
   "tools.image.replace": "이미지 교체",
-  "tools.image.crop": "자르기",
+  "tools.image.crop": "편집",
   "tools.image.viewFullscreen": "전체 화면 보기",
   "tools.image.exitFullscreen": "전체 화면 종료",
   "tools.image.downloadOriginal": "원본 다운로드",

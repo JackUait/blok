@@ -330,7 +330,7 @@
   "tools.image.toggleCaption": "Показать или скрыть подпись",
   "tools.image.captionPlaceholder": "Введите подпись…",
   "tools.image.replace": "Заменить изображение",
-  "tools.image.crop": "Обрезать",
+  "tools.image.crop": "Изменить",
   "tools.image.viewFullscreen": "На весь экран",
   "tools.image.exitFullscreen": "Выйти из полноэкранного режима",
   "tools.image.downloadOriginal": "Скачать оригинал",

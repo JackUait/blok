@@ -328,7 +328,7 @@
   "tools.image.toggleCaption": "Vis eller skjul bildetekst",
   "tools.image.captionPlaceholder": "Skriv en bildetekst…",
   "tools.image.replace": "Erstatt bilde",
-  "tools.image.crop": "Beskjær",
+  "tools.image.crop": "Rediger",
   "tools.image.viewFullscreen": "Vis i fullskjerm",
   "tools.image.exitFullscreen": "Avslutt fullskjerm",
   "tools.image.downloadOriginal": "Last ned original",

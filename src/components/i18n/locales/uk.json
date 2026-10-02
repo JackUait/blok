@@ -328,7 +328,7 @@
   "tools.image.toggleCaption": "Показати або приховати підпис",
   "tools.image.captionPlaceholder": "Введіть підпис…",
   "tools.image.replace": "Замінити зображення",
-  "tools.image.crop": "Обрізати",
+  "tools.image.crop": "Редагувати",
   "tools.image.viewFullscreen": "На весь екран",
   "tools.image.exitFullscreen": "Вийти з повноекранного режиму",
   "tools.image.downloadOriginal": "Завантажити оригінал",

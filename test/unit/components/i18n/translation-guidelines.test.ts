@@ -1137,7 +1137,7 @@ const MONGOLIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.link.linkTitle': 'Холбоосын текст',
   'tools.image.toggleCaption':
     'Тайлбарыг харуулах эсвэл нуух',
-  'tools.image.crop': 'Тайрах',
+  'tools.image.crop': 'Засах',
   'tools.image.altEdit': 'Өөр текстийг засах',
   'tools.image.altDescription':
     'Энэ зургийг харах боломжгүй хүмүүст зориулан тайлбарлана уу.',
@@ -2213,7 +2213,7 @@ const PASHTO_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.image.alignmentLeftAria': 'کیڼ لوري ته برابر کړئ',
   'tools.image.alignmentCenterAria': 'منځ ته برابر کړئ',
   'tools.image.alignmentRightAria': 'ښي لوري ته برابر کړئ',
-  'tools.image.crop': 'پرې کړئ',
+  'tools.image.crop': 'سم یې کړئ',
   'tools.image.viewFullscreen': 'په بشپړه پرده کې وګورئ',
   'tools.image.exitFullscreen': 'له بشپړې پردې ووځئ',
   'tools.image.downloadOriginal': 'اصلي انځور ډاونلوډ کړئ',
@@ -3280,7 +3280,7 @@ const TAMIL_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.link.linkTitle': 'இணைப்பு உரை',
   'tools.image.toggleCaption': 'தலைப்புரையைக் காட்டு அல்லது மறை',
   'tools.image.captionPlaceholder': 'தலைப்புரையை எழுதவும்…',
-  'tools.image.crop': 'செதுக்கு',
+  'tools.image.crop': 'திருத்து',
   'tools.image.viewFullscreen': 'முழுத் திரையில் பார்',
   'tools.image.exitFullscreen': 'முழுத் திரையிலிருந்து வெளியேறு',
   'tools.image.uploading': 'பதிவேற்றப்படுகிறது…',
@@ -5227,6 +5227,13 @@ describe('translation guideline corpus integrity', () => {
       expect(actual).toEqual(expected);
     }
   );
+
+  // The image toolbar button opens the whole editor (crop, adjust, filters, markup), not just crop.
+  it.each(localeCodes)('%s labels the image editor button with its generic "Edit"', locale => {
+    const { messages } = readLocale(locale);
+
+    expect(messages['tools.image.crop']).toBe(messages['tools.link.edit']);
+  });
 
   it.each(Object.entries(ENGLISH_GUIDELINE_EXPECTATIONS))(
     'English %s uses the approved source wording',

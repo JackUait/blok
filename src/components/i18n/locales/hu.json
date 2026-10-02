@@ -328,7 +328,7 @@
   "tools.image.toggleCaption": "Képaláírás mutatása vagy elrejtése",
   "tools.image.captionPlaceholder": "Írjon képaláírást…",
   "tools.image.replace": "Kép cseréje",
-  "tools.image.crop": "Körülvágás",
+  "tools.image.crop": "Szerkesztés",
   "tools.image.viewFullscreen": "Megtekintés teljes képernyőn",
   "tools.image.exitFullscreen": "Kilépés a teljes képernyős módból",
   "tools.image.downloadOriginal": "Eredeti letöltése",

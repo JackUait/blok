@@ -328,7 +328,7 @@
   "tools.image.toggleCaption": "显示或隐藏说明",
   "tools.image.captionPlaceholder": "添加说明…",
   "tools.image.replace": "替换图片",
-  "tools.image.crop": "裁剪",
+  "tools.image.crop": "编辑",
   "tools.image.viewFullscreen": "全屏查看",
   "tools.image.exitFullscreen": "退出全屏",
   "tools.image.downloadOriginal": "下载原图",

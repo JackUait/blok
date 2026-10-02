@@ -14,7 +14,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconCollapseFullscreen,
-  IconCrop,
+  IconSliders,
   IconDownload,
   IconExpandFullscreen,
   IconAlignCenter,
@@ -1182,7 +1182,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   appendSimpleButton(edit, {
     action: 'crop',
     label: tr(opts.i18n, 'tools.image.crop'),
-    icon: IconCrop,
+    icon: IconSliders,
     onClick: opts.onCrop,
   });
   appendSimpleButton(edit, {

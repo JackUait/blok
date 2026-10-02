@@ -341,7 +341,7 @@
   "tools.image.toggleCaption": "Toggle caption",
   "tools.image.captionPlaceholder": "Write a caption…",
   "tools.image.replace": "Replace image",
-  "tools.image.crop": "Crop",
+  "tools.image.crop": "Edit",
   "tools.image.viewFullscreen": "View full screen",
   "tools.image.exitFullscreen": "Exit full screen",
   "tools.image.downloadOriginal": "Download original",

@@ -330,7 +330,7 @@
   "tools.image.toggleCaption": "Mostrar ou ocultar legenda",
   "tools.image.captionPlaceholder": "Escreva uma legenda…",
   "tools.image.replace": "Substituir imagem",
-  "tools.image.crop": "Recortar",
+  "tools.image.crop": "Editar",
   "tools.image.viewFullscreen": "Ver em tela cheia",
   "tools.image.exitFullscreen": "Sair da tela cheia",
   "tools.image.downloadOriginal": "Baixar original",

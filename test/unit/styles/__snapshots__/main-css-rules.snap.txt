@@ -14427,6 +14427,7 @@ textarea[data-blok-field] {
   container-type: inline-size;
   pointer-events: none;
   padding-block: var(--blok-skeleton-inset);
+  animation: blok-skeleton-appear 0.2s ease-out var(--blok-skeleton-delay, 0ms) backwards;
 }
 
 [data-blok-rtl="true"] [data-blok-loading-skeleton] {

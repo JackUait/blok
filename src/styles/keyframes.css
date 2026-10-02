@@ -198,6 +198,10 @@
   to { --blok-skeleton-sweep: 20cqw; }
 }
 
+@keyframes blok-skeleton-appear {
+  from { opacity: 0; }
+}
+
 @keyframes blok-skeleton-breathe {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.72; }

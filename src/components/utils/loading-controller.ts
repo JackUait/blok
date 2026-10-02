@@ -12,7 +12,6 @@ export const MIN_VISIBLE = 400;
 const HANDOFF_GRACE = 250;
 
 export class LoadingController {
-  private timer: ReturnType<typeof setTimeout> | null = null;
   private skeleton: { root: HTMLElement; bars: HTMLElement[] } | null = null;
   private wait: { timer: ReturnType<typeof setTimeout>; resolve: () => void } | null = null;
   private hiding: Promise<void> | null = null;
@@ -26,7 +25,7 @@ export class LoadingController {
   constructor(private readonly args: { wrapper: HTMLElement; content: HTMLElement; config: ResolvedLoaderConfig; label: string }) {}
 
   public get isVisible(): boolean {
-    return this.skeleton !== null;
+    return this.skeleton !== null && this.elapsed() >= this.args.config.delay;
   }
 
   /** From show() until teardown: the document is not live yet, so nothing may edit it. */
@@ -48,19 +47,18 @@ export class LoadingController {
     // The shared region lives on body, outside the busy subtree, and is filled a task after it is cleared.
     announce(this.args.label, { politeness: 'polite' });
 
-    this.timer = setTimeout(() => {
-      this.timer = null;
-      this.skeleton = buildLoadingSkeleton(this.args.config.skeleton);
-      this.args.wrapper.setAttribute(DATA_ATTR.loading, '');
-      this.args.wrapper.appendChild(this.skeleton.root);
-      // The overlay is absolute and a read-only boot has no bottom zone, so without this it paints over what follows the editor.
-      // Important: isolation.css sets `all: initial !important` on this wrapper.
-      const { style } = this.args.wrapper;
+    // Mounted now, painted after the delay by CSS: loading is when the main thread is blocked, and a timer would starve.
+    this.skeleton = buildLoadingSkeleton(this.args.config.skeleton);
+    this.skeleton.root.style.setProperty('--blok-skeleton-delay', `${this.args.config.delay}ms`);
+    this.args.wrapper.setAttribute(DATA_ATTR.loading, '');
+    this.args.wrapper.appendChild(this.skeleton.root);
+    // The overlay is absolute and a read-only boot has no bottom zone, so without this it paints over what follows the editor.
+    // Important: isolation.css sets `all: initial !important` on this wrapper.
+    const { style } = this.args.wrapper;
 
-      this.savedMinHeight = { value: style.getPropertyValue('min-height'), priority: style.getPropertyPriority('min-height') };
-      style.setProperty('min-height', `${this.skeleton.root.getBoundingClientRect().height}px`, 'important');
-      this.shownAt = performance.now();
-    }, this.args.config.delay);
+    this.savedMinHeight = { value: style.getPropertyValue('min-height'), priority: style.getPropertyPriority('min-height') };
+    style.setProperty('min-height', `${this.skeleton.root.getBoundingClientRect().height}px`, 'important');
+    this.shownAt = performance.now();
   }
 
   public hide(targets: HTMLElement[]): Promise<void> {
@@ -81,25 +79,15 @@ export class LoadingController {
   public destroy(): void {
     this.destroyed = true;
 
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
-
     this.stopWaiting();
     this.teardown();
   }
 
   private async runHide(targets: HTMLElement[]): Promise<void> {
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
-
     const skeleton = this.skeleton;
 
-    if (skeleton !== null) {
-      const remaining = MIN_VISIBLE - (performance.now() - this.shownAt);
+    if (skeleton !== null && this.isVisible) {
+      const remaining = MIN_VISIBLE - (this.elapsed() - this.args.config.delay);
 
       if (remaining > 0) {
         await this.sleep(remaining);
@@ -135,6 +123,10 @@ export class LoadingController {
     }
 
     this.teardown();
+  }
+
+  private elapsed(): number {
+    return performance.now() - this.shownAt;
   }
 
   /** Only one hide runs, so one wait slot is enough. destroy() resolves it early so the pending hide() settles. */

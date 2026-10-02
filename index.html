@@ -773,6 +773,9 @@
       to { opacity: 0; transform: translateY(4px) scale(0.96); }
     }
 
+    /* The editor is a short skeleton while it loads; without this the footer shows under it, then jumps away. */
+    #tab-editor { min-height: 100dvh; }
+
     /* Footer */
     .playground-footer {
       display: flex;

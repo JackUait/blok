@@ -73,20 +73,40 @@ describe('LoadingController', () => {
     document.body.innerHTML = '';
   });
 
-  it('shows nothing when hidden before the delay', async () => {
+  it('ends a load shorter than the delay at once, with no handoff and no minimum wait', async () => {
     const { wrapper, controller } = setup();
 
     controller.show();
     expect(wrapper.getAttribute('aria-busy')).toBe('true');
     vi.advanceTimersByTime(149);
-    await controller.hide([]);
+    const done = trackSettled(controller.hide([]));
 
+    await vi.advanceTimersByTimeAsync(0);
+    expect(done.settled()).toBe(true);
     expect(skeleton(wrapper)).toBeNull();
     expect(wrapper.hasAttribute(DATA_ATTR.loading)).toBe(false);
     expect(wrapper.hasAttribute('aria-busy')).toBe(false);
-    vi.advanceTimersByTime(1000);
-    expect(skeleton(wrapper)).toBeNull();
     expect(mockRunSkeletonHandoff).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  // Loading is when the main thread is blocked (a big first render), so nothing here may wait on a timer.
+  it('mounts the skeleton and flags loading inside show(), without waiting on a timer', () => {
+    const { wrapper, controller } = setup();
+
+    controller.show();
+
+    expect(skeleton(wrapper)).not.toBeNull();
+    expect(wrapper.hasAttribute(DATA_ATTR.loading)).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('hands the delay to CSS, so the skeleton fades in only after it', () => {
+    const { wrapper, controller } = setup(240);
+
+    controller.show();
+
+    expect((skeleton(wrapper) as HTMLElement | null)?.style.getPropertyValue('--blok-skeleton-delay')).toBe('240ms');
   });
 
   it('makes the content inert from show() until teardown, on every teardown path', async () => {
@@ -122,11 +142,13 @@ describe('LoadingController', () => {
     expect(controller.isBusy).toBe(false);
   });
 
-  it('shows the skeleton after the delay', () => {
+  it('counts the skeleton as visible once the delay has passed', () => {
     const { wrapper, controller } = setup();
 
     controller.show();
-    vi.advanceTimersByTime(150);
+    vi.advanceTimersByTime(149);
+    expect(controller.isVisible).toBe(false);
+    vi.advanceTimersByTime(1);
 
     expect(skeleton(wrapper)).not.toBeNull();
     expect(wrapper.hasAttribute(DATA_ATTR.loading)).toBe(true);
@@ -154,13 +176,11 @@ describe('LoadingController', () => {
       });
     };
 
-    it('holds the wrapper at the overlay height while visible, then clears it', async () => {
+    it('holds the wrapper at the overlay height from show(), then clears it', async () => {
       mockOverlayHeight(208);
       const { wrapper, controller } = setup();
 
       controller.show();
-      expect(wrapper.style.minHeight).toBe('');
-      vi.advanceTimersByTime(150);
       expect(wrapper.style.minHeight).toBe('208px');
       // isolation.css puts `all: initial !important` on the editor wrapper, so a normal inline value loses.
       expect(wrapper.style.getPropertyPriority('min-height')).toBe('important');
@@ -197,7 +217,8 @@ describe('LoadingController', () => {
       expect(destroyed.wrapper.style.getPropertyPriority('min-height')).toBe('important');
     });
 
-    it('never touches min-height when the load ends before the skeleton mounts', async () => {
+    it('restores the host min-height when the load ends before the delay', async () => {
+      mockOverlayHeight(208);
       const { wrapper, controller } = setup();
 
       wrapper.style.minHeight = '12rem';

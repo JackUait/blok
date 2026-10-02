@@ -243,7 +243,7 @@ test('the ? button opens the sheet and a second click closes it; a click outside
 
   await image.hover();
   await image.locator('[data-action="crop"]').click();
-  const dialog = page.locator('[role="dialog"][data-mode]');
+  const dialog = page.getByRole('dialog', { name: 'Crop image' });
 
   await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
   const frameBefore = await page.locator('[data-role="darkroom-frame"]').boundingBox();

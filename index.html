@@ -154,36 +154,68 @@
       user-select: none;
     }
 
+    /* Header lockup: mascot, name, and the build it runs. The whole thing leads home. */
     .playground-wordmark {
-      font-weight: 700;
-      font-size: 16px;
-      letter-spacing: -0.02em;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      color: var(--pg-ink);
+      text-decoration: none;
+      border-radius: 14px;
+      padding: 4px 10px 4px 4px;
+      margin-left: -4px;
+      transition: background 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
     }
-    .playground-wordmark__logo {
-      width: 20px;
-      height: 20px;
+    .playground-wordmark:hover { background: var(--pg-hover); }
+    .playground-wordmark:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+    .playground-wordmark__mark {
+      width: 34px;
+      height: 34px;
       display: block;
       flex-shrink: 0;
+      transform-origin: 50% 85%;
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.12));
     }
-    .playground-wordmark__tag {
-      font-weight: 500;
-      font-size: 11px;
-      letter-spacing: 0;
-      color: var(--pg-muted);
-      background: var(--pg-hover);
-      border-radius: 999px;
-      padding: 4px 9px;
+    .playground-wordmark__text {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
       line-height: 1;
-      margin-left: 2px;
-      transform: translateY(1px);
     }
-    .dark-mode .playground-wordmark__tag {
-      color: #a8a8a8;
-      background: #2a2a2a;
+    .playground-wordmark__name {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
     }
+    .playground-wordmark__meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--pg-muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    #pg-header-version:not(:empty)::before { content: '·'; margin-right: 5px; }
+    @media (prefers-reduced-motion: no-preference) {
+      .playground-wordmark:hover .playground-wordmark__mark { animation: pg-mark-jiggle 0.7s cubic-bezier(0.34, 1.56, 0.64, 1); }
+      .playground-wordmark:active .playground-wordmark__mark { transform: scale(0.9, 0.84); transition: transform 0.1s ease; }
+    }
+    /* A noodle squash and stretch, settling from the base. */
+    @keyframes pg-mark-jiggle {
+      0% { transform: none; }
+      20% { transform: scale(1.12, 0.86) rotate(-4deg); }
+      42% { transform: scale(0.9, 1.12) rotate(5deg) translateY(-3px); }
+      64% { transform: scale(1.05, 0.95) rotate(-2deg); }
+      82% { transform: scale(0.98, 1.02) rotate(1deg); }
+      100% { transform: none; }
+    }
+    .dark-mode .playground-wordmark { color: #ffffff; }
+    .dark-mode .playground-wordmark:hover { background: rgba(255,255,255,0.06); }
+    .dark-mode .playground-wordmark__meta { color: #a8a8a8; }
+    .dark-mode .playground-wordmark:focus-visible { outline-color: #ffffff; }
 
     /* Playground nav: centered floating pill. Two pills slide under the tabs
        (src/playground/nav-indicator.ts): black for the page, gray for hover. */
@@ -287,12 +319,6 @@
       .playground-tab:hover .playground-tab__icon { transform: none; }
     }
 
-    .playground-wordmark__logo { transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
-    .playground-wordmark:hover .playground-wordmark__logo { transform: rotate(-14deg) scale(1.12); }
-    @media (prefers-reduced-motion: reduce) {
-      .playground-wordmark:hover .playground-wordmark__logo { transform: none; }
-    }
-
     @media (max-width: 860px) {
       .playground-nav {
         position: relative;
@@ -304,7 +330,7 @@
       }
       .playground-tab { padding: 8px 10px; font-size: 13px; }
       .playground-tab__icon { display: none; }
-      .playground-wordmark__tag { display: none; }
+      .playground-wordmark__meta { display: none; }
       .playground-header .playground-wordmark { margin-right: 12px; }
     }
     /* Five tabs outgrow a phone header; the pill scrolls instead of the page. */
@@ -1226,8 +1252,8 @@
 
     /* Dark mode overrides */
     .dark-mode .playground-header { border-color: #2f2f2f; }
-    .dark-mode #main-content > div.playground-header a:not(.playground-tab) { color: #a8a8a8; }
-    .dark-mode #main-content > div.playground-header a:not(.playground-tab):hover { color: #ffffff; }
+    .dark-mode #main-content > div.playground-header a:not(.playground-tab):not(.playground-wordmark) { color: #a8a8a8; }
+    .dark-mode #main-content > div.playground-header a:not(.playground-tab):not(.playground-wordmark):hover { color: #ffffff; }
     .dark-mode #settings-tab { background: #191919; border-color: #2f2f2f; }
     .dark-mode #settings-tab:hover { background: #1f1f1f; }
     .dark-mode #settings-tab svg,
@@ -1265,11 +1291,13 @@
   <div class="text-base" id="main-content">
     <!-- Header -->
     <div class="playground-header relative flex items-center px-[30px] max-md:px-5 border-b border-[#ebebeb] dark-mode:border-[#2f2f2f] transition-colors duration-150">
-      <span class="playground-wordmark text-inherit mr-7 select-none">
-        <img class="playground-wordmark__logo" src="/favicon.svg" alt="" aria-hidden="true">
-        Blok
-        <span class="playground-wordmark__tag" aria-hidden="true">Playground</span>
-      </span>
+      <a class="playground-wordmark mr-7 select-none" href="/editor" aria-label="Blok playground, home">
+        <img class="playground-wordmark__mark" src="/blok-mark.png" alt="" aria-hidden="true" width="34" height="34">
+        <span class="playground-wordmark__text" aria-hidden="true">
+          <span class="playground-wordmark__name">Blok</span>
+          <span class="playground-wordmark__meta">Playground<span id="pg-header-version"></span></span>
+        </span>
+      </a>
       <nav role="tablist" class="playground-nav">
         <a class="playground-tab" role="tab" aria-selected="true" href="/editor" data-tab="editor"><span class="playground-tab__icon" data-icon="IconPencil" aria-hidden="true"></span>Editor</a>
         <a class="playground-tab" role="tab" aria-selected="false" href="/block-states" data-tab="block-states"><span class="playground-tab__icon" data-icon="IconBoard" aria-hidden="true"></span>Block States</a>
@@ -1473,6 +1501,7 @@
     import pkg from './package.json';
 
     document.getElementById('pg-version').textContent = `v${pkg.version}`;
+    document.getElementById('pg-header-version').textContent = `v${pkg.version}`;
     document.getElementById('settings-close').innerHTML = Icons.IconCross;
     document.documentElement.style.setProperty('--pg-select-caret', `url("data:image/svg+xml,${encodeURIComponent(Icons.IconChevronDown.replaceAll('currentColor', '#717171'))}")`);
     document.documentElement.style.setProperty('--pg-select-caret-dark', `url("data:image/svg+xml,${encodeURIComponent(Icons.IconChevronDown.replaceAll('currentColor', '#a8a8a8'))}")`);
@@ -2024,6 +2053,10 @@
       slot.innerHTML = Icons[slot.dataset.icon];
     });
     const navIndicator = mountNavIndicator(playgroundNav);
+    document.querySelector('.playground-wordmark').addEventListener('click', (event) => {
+      event.preventDefault();
+      playgroundNav.querySelector('[data-tab="editor"]').click();
+    });
 
     const VALID_PAGES = ['editor', 'block-states', 'icons', 'rounding', 'previews'];
 
@@ -2695,7 +2728,7 @@
       'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconClearFormat', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconMarker', 'IconEquation', 'IconSuperscript', 'IconSubscript', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconReturn', 'IconCode'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
       'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconSpacer', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar', 'IconPage'],
-      'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCrop', 'IconRotateLeft', 'IconFlipHorizontal', 'IconExpandFullscreen', 'IconCollapseFullscreen', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerBackward', 'IconPlayerForward', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconPlayerSettings', 'IconPlayerSpeed', 'IconPlayerLoop', 'IconPlayerPip', 'IconPlayerTheater', 'IconDownload', 'IconUpload'],
+      'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCrop', 'IconSliders', 'IconRotateLeft', 'IconFlipHorizontal', 'IconExpandFullscreen', 'IconCollapseFullscreen', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerBackward', 'IconPlayerForward', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconPlayerSettings', 'IconPlayerSpeed', 'IconPlayerLoop', 'IconPlayerPip', 'IconPlayerTheater', 'IconDownload', 'IconUpload'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3', 'IconToggleH4', 'IconToggleH5', 'IconToggleH6'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconArrowUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight', 'IconMergeCells', 'IconSplitCell', 'IconPlacement', 'IconTextSizeSmall', 'IconTextSizeLarge'],
       'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconPaintRoller', 'IconPreview', 'IconSplitView', 'IconDotsHorizontal'],

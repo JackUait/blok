@@ -27,6 +27,8 @@ export interface MarkupEditorOptions {
   onSelectionChange(kind: MarkupSelectionKind, item: ImageMarkup | null): void;
   /** The stage asked for another panel state (a tool key). */
   onStateChange?(next: MarkupPanelState): void;
+  /** True while a press must not draw (Space held to pan); the press then reaches the stage. */
+  suspended?(): boolean;
   clock?: SpringClock;
 }
 
@@ -793,6 +795,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
   };
 
   const onDown = (e: PointerEvent): void => {
+    if (opts.suspended?.()) return;
     e.stopPropagation();
     if (!st.active || edit.current?.el.contains(e.target as Node)) return;
     const touch = e.pointerType === 'touch';

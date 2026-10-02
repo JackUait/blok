@@ -146,6 +146,21 @@
 
 .blok-darkroom__stage:active { cursor: grabbing; }
 
+.blok-darkroom__viewport {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
+/* Zoomed, the crop is not editable: Z or Cmd/Ctrl+0 goes back to fit. */
+.blok-darkroom__surface[data-zoomed] [data-handle] {
+  display: none;
+}
+
+.blok-darkroom__surface[data-space] [data-role="markup-layer"] {
+  cursor: grab;
+}
+
 .blok-darkroom__photo {
   position: absolute;
   left: 0;

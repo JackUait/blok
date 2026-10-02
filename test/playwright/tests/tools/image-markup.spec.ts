@@ -187,3 +187,38 @@ test('a saved text shows again on reopen and a double-click edits it', async ({ 
   expect(marks[0].text).toBe('Bye');
   await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="image-markup"] [data-markup-type="text"]`)).toHaveText('Bye');
 });
+
+test('Z zooms the view only: a rectangle drawn zoomed lands where the pointer was, and 100% is one image px per CSS px', async ({ page }) => {
+  await seedImage(page);
+  const { dialog } = await openMarkup(page);
+  const plane = page.locator('[data-role="darkroom-stage"] [data-role="image-plane"]');
+  const fit = await plane.boundingBox();
+
+  if (!fit) throw new Error('no plane');
+  await page.locator('[data-role="darkroom-stage"]').focus();
+  await page.keyboard.press('r');
+  await page.keyboard.press('z');
+  // 600 px wide at 100%; a photo already shown at or above that doubles instead.
+  const zoomedWidth = fit.width < 600 ? 600 : fit.width * 2;
+
+  await expect.poll(async () => Math.round((await plane.boundingBox())?.width ?? 0)).toBe(Math.round(zoomedWidth));
+  const zoomed = await plane.boundingBox();
+  const stage = await page.locator('[data-role="darkroom-stage"]').boundingBox();
+
+  if (!zoomed || !stage) throw new Error('no box');
+  const from: [number, number] = [stage.x + stage.width * 0.45, stage.y + stage.height * 0.4];
+  const to: [number, number] = [stage.x + stage.width * 0.55, stage.y + stage.height * 0.5];
+
+  await stroke(page, from, to);
+  await expect(darkroomMarks(page)).toHaveCount(1);
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(dialog).toHaveCount(0);
+
+  const [rect] = await marksOf(page);
+
+  expect(rect.type).toBe('rect');
+  expect(rect.x1).toBeCloseTo((from[0] - zoomed.x) / zoomed.width, 2);
+  expect(rect.y1).toBeCloseTo((from[1] - zoomed.y) / zoomed.height, 2);
+  expect(rect.x2).toBeCloseTo((to[0] - zoomed.x) / zoomed.width, 2);
+  expect(rect.y2).toBeCloseTo((to[1] - zoomed.y) / zoomed.height, 2);
+});

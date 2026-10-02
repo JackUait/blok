@@ -237,4 +237,16 @@ describe('darkroom.css', () => {
     expect(css).toContain('.blok-darkroom__surface[data-original] [data-role="image-markup"],');
     expect(original).toMatch(/visibility:\s*hidden;/);
   });
+  it('zoomed, the crop handles are hidden: the crop is not editable then', () => {
+    expect(rule('.blok-darkroom__surface[data-zoomed] [data-handle]')).toMatch(/display:\s*none;/);
+  });
+
+  it('the viewport fills the stage and scales from its corner', () => {
+    const viewport = rule('.blok-darkroom__viewport');
+
+    expect(viewport).toMatch(/position:\s*absolute;/);
+    expect(viewport).toMatch(/inset:\s*0;/);
+    expect(viewport).toMatch(/transform-origin:\s*0 0;/);
+  });
+
 });

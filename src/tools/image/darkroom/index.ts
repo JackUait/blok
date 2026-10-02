@@ -27,6 +27,7 @@ import { createHistory, type Snapshot } from './history';
 import { createMarkupEditor, stateForMark, TOOL_KEYS } from './markup-editor';
 import { createMarkupPanel, DEFAULT_MARKUP_STATE, type MarkupPanelState } from './markup-panel';
 import { createModeTabs } from './mode-tabs';
+import { clampView, FIT, panView, toView, zoomViewAt, type View } from './view-zoom';
 import { cameraPlane, createDissolve, createVeil, fitCameraPlane, flyOut, isOnScreen } from './motion';
 
 export interface DarkroomResult {
@@ -89,6 +90,10 @@ const KEY_IDLE_MS = 250;
 const MAX_STRAIGHTEN = 45;
 const QUARTER = 90;
 const STRAIGHTEN_SNAP = 15;
+const ZOOM_KEY_STEP = 1.25;
+// Where Z goes when the photo already shows at or above 100%.
+const ZOOM_CLOSER = 2;
+const MAX_VIEW_ZOOM = 8;
 const NO_ADJUST: Required<ImageAdjust> = { brightness: 0, contrast: 0, saturation: 0 };
 // Apple Photos' edit keys, plus Lightroom's R. In Markup its tool letters win (A = Arrow, R = rectangle).
 const MODE_KEYS: Record<string, string> = { c: 'crop', r: 'crop', a: 'adjust', f: 'filters' };
@@ -99,6 +104,12 @@ const round3 = (v: number): number => Math.round(v * 1000) / 1000;
 const roundRect = (r: ImageCrop): ImageCrop => ({ x: round3(r.x), y: round3(r.y), w: round3(r.w), h: round3(r.h) });
 const ratioByKey = (key: string): RatioDef => RATIOS.find((r) => r.key === key) ?? RATIOS[0];
 const roundOf = (shape: RatioShape): number => (shape === 'rect' ? 0 : 1);
+/** The typed character, or the physical key where the layout types a non-Latin character. */
+const pressed = (e: KeyboardEvent, chars: string[], codes: string[]): boolean =>
+  chars.includes(e.key) || (e.key.length === 1 && !/^[\x20-\x7e]$/.test(e.key) && codes.includes(e.code));
+const isBracket = (e: KeyboardEvent, side: 'left' | 'right'): boolean =>
+  pressed(e, [side === 'left' ? '[' : ']'], [side === 'left' ? 'BracketLeft' : 'BracketRight']);
+
 /** 4:3 and 16:9 have a portrait twin; Free, square and the round shapes do not. */
 const hasPortrait = (def: RatioDef): boolean => def.value !== null && def.value !== 1;
 /** "4:3" becomes "3:4". Every locale writes these as two numbers around a colon. */
@@ -150,6 +161,11 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     ratioPicked: false,
     // Fixed ratios read tall (3:4, 9:16). X and a quarter turn swap it.
     portrait: false,
+    // The view-only zoom's target; the zoom spring animates toward it.
+    view: { ...FIT },
+    space: false,
+    viewPan: null as { id: number; x: number; y: number; from: View } | null,
+    pointer: null as { x: number; y: number } | null,
   };
   const startRect = { ...st.rect };
   const snapshot = (): Snapshot => ({
@@ -236,7 +252,11 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     frame.appendChild(handle);
     handleEls.set(h, handle);
   }
-  stage.append(plane, frame);
+  // The view zoom scales this, so the crop maths below stay in unzoomed stage space.
+  const viewport = el('div', 'blok-darkroom__viewport', 'darkroom-viewport');
+
+  viewport.append(plane, frame);
+  stage.append(viewport);
 
   const pill = el('div', 'blok-darkroom__pill');
 
@@ -285,6 +305,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       if (item) setMarkupState(stateForMark(st.markupState, item));
       markupPanel.setSelection(kind);
     },
+    // Space held: the press pans the view instead of drawing.
+    suspended: () => st.space,
     // Through the panel, so a tool key swaps colour and size like a click.
     onStateChange: (next) => (next.tool === st.markupState.tool ? setMarkupState(next) : markupPanel.pickTool(next.tool)),
   });
@@ -699,8 +721,76 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   };
   flipBtn.addEventListener('click', flip);
 
-  // Only Crop mode edits the crop; elsewhere the photo is a preview of the result.
-  const cropping = (): boolean => st.ready && st.mode === 'crop';
+  // Only Crop mode at fit edits the crop; elsewhere the photo is a preview of the result.
+  const cropping = (): boolean => st.ready && st.mode === 'crop' && st.view.z === 1;
+
+  const round2 = (n: number): number => Math.round(n * 100) / 100;
+  const zoom = createSpring<'z' | 'x' | 'y'>({
+    from: { ...FIT },
+    clock: opts.clock,
+    onUpdate: (v) => {
+      viewport.style.transform = v.z === 1 && v.x === 0 && v.y === 0 ? '' : `translate(${round2(v.x)}px, ${round2(v.y)}px) scale(${round2(v.z * 10_000) / 10_000})`;
+      // The marks' overlay places itself from the plane's screen box.
+      markupEditor.refresh();
+    },
+  });
+
+  const setView = (next: View, animate: boolean): void => {
+    st.view = next;
+    surface.toggleAttribute('data-zoomed', next.z > 1);
+    if (animate) zoom.to(next);
+    else zoom.jump(next);
+  };
+
+  /** The zoom at which one image pixel is one CSS pixel. */
+  const actualSize = (): number => {
+    const shown = plane.getBoundingClientRect().width / zoom.values().z;
+
+    return shown > 0 ? o().w / shown : 1;
+  };
+
+  const zoomFocus = (): { x: number; y: number } => st.pointer ?? { x: st.stage.w / 2, y: st.stage.h / 2 };
+
+  const zoomBy = (factor: number): void => {
+    if (!st.ready) return;
+    setView(zoomViewAt(st.view, factor, zoomFocus(), st.stage, Math.max(MAX_VIEW_ZOOM, actualSize())), true);
+  };
+
+  /** Apple Photos' Z: fit and 100% in turn. */
+  const toggleZoom = (): void => {
+    if (!st.ready) return;
+    if (st.view.z > 1) {
+      setView({ ...FIT }, true);
+
+      return;
+    }
+    const actual = actualSize();
+
+    zoomBy(actual > 1 ? actual : ZOOM_CLOSER);
+  };
+
+  const endViewPan = (e: PointerEvent): void => {
+    if (st.viewPan?.id === e.pointerId) st.viewPan = null;
+  };
+
+  // Zoomed, a drag pans the view; in Markup only with Space held, so a plain drag still draws.
+  stage.addEventListener('pointerdown', (e) => {
+    if (st.view.z === 1 || (st.mode === 'markup' && !st.space)) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    st.viewPan = { id: e.pointerId, x: e.clientX, y: e.clientY, from: st.view };
+  });
+  stage.addEventListener('pointermove', (e) => {
+    const r = stage.getBoundingClientRect();
+
+    st.pointer = { x: e.clientX - r.left, y: e.clientY - r.top };
+    const pan = st.viewPan;
+
+    if (pan?.id !== e.pointerId) return;
+    setView(panView(pan.from, e.clientX - pan.x, e.clientY - pan.y, st.stage), false);
+  });
+  stage.addEventListener('pointerup', endViewPan);
+  stage.addEventListener('pointercancel', endViewPan);
+  stage.addEventListener('pointerleave', () => { st.pointer = null; });
 
   const detachGestures = attachGestures(stage, {
     onStart: (kind) => {
@@ -764,6 +854,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const r = stage.getBoundingClientRect();
 
     st.stage = { w: r.width, h: r.height };
+    setView(clampView(st.view, st.stage), false);
     if (animate) {
       view.to(fitted());
 
@@ -825,6 +916,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const gone = [doneBtn, resetBtn, rotateBtn, flipBtn, pill, dock, markupPanel.el];
 
     markupEditor.setActive(false);
+    setView({ ...FIT }, false);
     stage.replaceChildren(renderErrorState({ variant: 'broken', i18n: opts.i18n }));
     doneBtn.disabled = true;
     resetBtn.disabled = true;
@@ -878,7 +970,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   const leave = (land: Landing, after: () => void): void => {
     const v = view.values();
     const stageBox = stage.getBoundingClientRect();
-    const from: Box = { x: v.x + stageBox.left, y: v.y + stageBox.top, w: v.w, h: v.h };
+    const shown = toView(frameOf(v), zoom.values());
+    const from: Box = { ...shown, x: shown.x + stageBox.left, y: shown.y + stageBox.top };
     const source = opts.sourceEl ?? null;
     const getTarget = opts.getTargetEl;
     // Without a target there is nothing to land on; skipping also keeps a late rAF out of torn-down tests.
@@ -1000,14 +1093,24 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   // A keyup that lands elsewhere never reaches the stage.
   stage.addEventListener('blur', () => surface.removeAttribute('data-peek'));
 
+  /** Cmd/Ctrl with = - 0: the view zoom, in place of the browser's page zoom. True when the key was used. */
+  const viewKey = (e: KeyboardEvent): boolean => {
+    if (pressed(e, ['=', '+'], ['Equal', 'NumpadAdd'])) zoomBy(ZOOM_KEY_STEP);
+    else if (pressed(e, ['-', '_'], ['Minus', 'NumpadSubtract'])) zoomBy(1 / ZOOM_KEY_STEP);
+    else if (pressed(e, ['0'], ['Digit0', 'Numpad0'])) setView({ ...FIT }, true);
+    else return false;
+
+    return true;
+  };
+
   /** Unmodified photo editor keys. True when the key was used. */
   const bareKey = (e: KeyboardEvent): boolean => {
     const t = e.target;
     const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
 
     if (e.metaKey || e.ctrlKey || e.altKey || typing) return false;
-    if (st.mode === 'markup' && (e.code === 'BracketLeft' || e.code === 'BracketRight')) {
-      markupPanel.stepSize(e.code === 'BracketRight' ? 1 : -1);
+    if (st.mode === 'markup' && (isBracket(e, 'left') || isBracket(e, 'right'))) {
+      markupPanel.stepSize(isBracket(e, 'right') ? 1 : -1);
 
       return true;
     }
@@ -1018,6 +1121,11 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     if (e.shiftKey) {
       if (!isLetter('h')) return false;
       flip();
+
+      return true;
+    }
+    if (isLetter('z')) {
+      toggleZoom();
 
       return true;
     }
@@ -1060,10 +1168,23 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
       return;
     }
-    // Lightroom's rotate keys. By physical key: [ and ] move around between layouts.
-    if (mod && !e.altKey && !e.shiftKey && (e.code === 'BracketLeft' || e.code === 'BracketRight')) {
+    if (mod && !e.altKey && viewKey(e)) {
       e.preventDefault();
-      turn(e.code === 'BracketRight');
+
+      return;
+    }
+    // Lightroom's rotate keys.
+    if (mod && !e.altKey && !e.shiftKey && (isBracket(e, 'left') || isBracket(e, 'right'))) {
+      e.preventDefault();
+      turn(isBracket(e, 'right'));
+
+      return;
+    }
+    // Photoshop's hand: only from the stage, so Space still presses a focused button.
+    if (!mod && e.target === stage && (e.code === 'Space' || e.key === ' ')) {
+      e.preventDefault();
+      st.space = true;
+      surface.setAttribute('data-space', '');
 
       return;
     }
@@ -1079,13 +1200,22 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     }
   });
 
+  const endSpace = (): void => {
+    st.space = false;
+    surface.removeAttribute('data-space');
+  };
+
   surface.addEventListener('keyup', (e) => {
     if (e.key.toLowerCase() === 'm' || e.code === 'KeyM') showOriginal(false);
+    if (e.code === 'Space' || e.key === ' ') endSpace();
   });
   // A keyup outside the window never arrives.
-  const endOriginal = (): void => showOriginal(false);
+  const endHolds = (): void => {
+    showOriginal(false);
+    endSpace();
+  };
 
-  window.addEventListener('blur', endOriginal);
+  window.addEventListener('blur', endHolds);
 
   const dialogHandle = openModalDialog({
     content: backdrop,
@@ -1114,7 +1244,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       markupEditor.destroy();
       markupPanel.destroy();
       tabs.destroy();
-      window.removeEventListener('blur', endOriginal);
+      window.removeEventListener('blur', endHolds);
+      zoom.stop();
       window.clearTimeout(st.keyIdle);
       if (opts.sourceEl) opts.sourceEl.style.removeProperty('visibility');
     },

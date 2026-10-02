@@ -2528,6 +2528,188 @@ describe('openDarkroom photo editor keys', () => {
     });
   });
 
+  describe('a view-only zoom: Z, Cmd/Ctrl + = - 0', () => {
+    const viewport = (): HTMLElement => q('[data-role="darkroom-viewport"]');
+    const scale = (): number => Number(/scale\(([\d.]+)\)/.exec(viewport().style.transform)?.[1] ?? 1);
+    const shift = (): [number, number] => {
+      const m = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(viewport().style.transform);
+
+      return m ? [Number(m[1]), Number(m[2])] : [0, 0];
+    };
+    const LAYER_S = 1.5;
+    const layerAt = (type: string, x: number, y: number): void => {
+      q('[data-role="markup-layer"]').dispatchEvent(new PointerEvent(type, {
+        bubbles: true, pointerId: 3, pointerType: 'mouse', button: 0, pressure: 0.5, clientX: x * LAYER_S, clientY: y * LAYER_S,
+      }));
+    };
+
+    it('the photo and the frame sit in one viewport inside the stage', () => {
+      open();
+
+      expect(viewport().parentElement).toBe(stageEl());
+      expect(viewport().querySelector('[data-role="image-plane"]')).not.toBeNull();
+      expect(viewport().querySelector('[data-role="darkroom-frame"]')).not.toBeNull();
+    });
+
+    it('Z zooms in, Z again goes back to fit', () => {
+      const { advance } = open();
+
+      key(stageEl(), { key: 'z', code: 'KeyZ' });
+      advance(3000);
+      expect(scale()).toBeGreaterThan(1);
+      expect(dialog().hasAttribute('data-zoomed')).toBe(true);
+      key(stageEl(), { key: 'z', code: 'KeyZ' });
+      advance(3000);
+
+      expect(scale()).toBe(1);
+      expect(dialog().hasAttribute('data-zoomed')).toBe(false);
+    });
+
+    it('Cmd+= zooms in a step, Cmd+- back out, and never past fit; Cmd+0 fits', () => {
+      const { advance } = open();
+
+      key(stageEl(), { key: '=', code: 'Equal', metaKey: true });
+      key(stageEl(), { key: '=', code: 'Equal', metaKey: true });
+      advance(3000);
+      expect(scale()).toBeCloseTo(1.5625);
+      key(stageEl(), { key: '-', code: 'Minus', ctrlKey: true });
+      advance(3000);
+      expect(scale()).toBeCloseTo(1.25);
+      key(stageEl(), { key: '0', code: 'Digit0', metaKey: true });
+      advance(3000);
+      expect(scale()).toBe(1);
+      key(stageEl(), { key: '-', code: 'Minus', metaKey: true });
+      advance(3000);
+
+      expect(scale()).toBe(1);
+    });
+
+    it('the keys match by key or by code, numpad included, and stop the browser zoom', () => {
+      const { advance } = open();
+      const plus = new KeyboardEvent('keydown', { key: '+', code: 'BracketRight', metaKey: true, bubbles: true, cancelable: true });
+
+      stageEl()?.dispatchEvent(plus);
+      key(stageEl(), { key: '+', code: 'NumpadAdd', ctrlKey: true });
+      advance(3000);
+
+      expect(plus.defaultPrevented).toBe(true);
+      expect(scale()).toBeCloseTo(1.5625);
+    });
+
+    it('zoomed, a drag pans the view and leaves the crop alone; handles and nudges are off', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const initial = { x: 25, y: 25, w: 50, h: 50 };
+      const { onApply, advance } = open({ initial });
+
+      key(stageEl(), { key: 'z' });
+      advance(3000);
+      const before = shift();
+
+      pointer('pointerdown', 600, 400);
+      pointer('pointermove', 650, 430);
+      pointer('pointerup', 650, 430);
+      key(stageEl(), { key: 'ArrowLeft' });
+      vi.advanceTimersByTime(1000);
+      advance(3000);
+
+      expect(shift()).toEqual([before[0] + 50, before[1] + 30]);
+      button('done').click();
+      expect(result(onApply).crop).toEqual(initial);
+    });
+
+    it('back at fit the crop is editable again', () => {
+      const initial = { x: 25, y: 25, w: 50, h: 50 };
+      const { onApply, advance } = open({ initial });
+
+      key(stageEl(), { key: 'z' });
+      advance(3000);
+      key(stageEl(), { key: '0', code: 'Digit0', metaKey: true });
+      advance(3000);
+      pointer('pointerdown', 600, 400);
+      pointer('pointermove', 700, 480);
+      pointer('pointerup', 700, 480);
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).crop).not.toEqual(initial);
+    });
+
+    it('in Markup a zoomed drag draws; with Space held on the stage it pans and draws nothing', () => {
+      const { onApply, advance } = open();
+
+      tabOf('markup').click();
+      q<HTMLButtonElement>('[data-blok-testid="markup-tool-pen"]').click();
+      key(stageEl(), { key: 'z' });
+      advance(3000);
+      const before = shift();
+
+      layerAt('pointerdown', 100, 100);
+      layerAt('pointermove', 150, 120);
+      layerAt('pointerup', 150, 120);
+      expect(shift()).toEqual(before);
+      key(stageEl(), { key: ' ', code: 'Space' });
+      layerAt('pointerdown', 100, 100);
+      layerAt('pointermove', 120, 110);
+      layerAt('pointerup', 120, 110);
+      stageEl()?.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', bubbles: true }));
+      advance(3000);
+
+      expect(shift()).not.toEqual(before);
+      button('done').click();
+      expect(result(onApply).markup).toHaveLength(1);
+    });
+
+    it('Space on a focused button is still that button\'s key', () => {
+      open();
+      const done = button('done');
+      const space = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+
+      done.dispatchEvent(space);
+
+      expect(space.defaultPrevented).toBe(false);
+    });
+
+    it('leaving the window lets go of Space', () => {
+      const { onApply, advance } = open();
+
+      tabOf('markup').click();
+      q<HTMLButtonElement>('[data-blok-testid="markup-tool-pen"]').click();
+      key(stageEl(), { key: ' ', code: 'Space' });
+      window.dispatchEvent(new Event('blur'));
+      layerAt('pointerdown', 100, 100);
+      layerAt('pointermove', 150, 120);
+      layerAt('pointerup', 150, 120);
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).markup).toHaveLength(1);
+    });
+
+    it('a zoom is not an edit: undo has nothing to take back and Done keeps the crop', () => {
+      const initial = { x: 25, y: 25, w: 50, h: 50 };
+      const { onApply, advance } = open({ initial });
+
+      key(stageEl(), { key: '=', code: 'Equal', metaKey: true });
+      advance(3000);
+      key(dialog(), { key: 'z', metaKey: true });
+      advance(3000);
+
+      expect(scale()).toBeCloseTo(1.25);
+      button('done').click();
+      expect(result(onApply).crop).toEqual(initial);
+    });
+
+    it('a photo that fails to load drops the zoom', () => {
+      const { advance } = open();
+
+      key(stageEl(), { key: 'z' });
+      advance(3000);
+      photoImg().dispatchEvent(new Event('error'));
+
+      expect(dialog().hasAttribute('data-zoomed')).toBe(false);
+    });
+  });
+
   describe('Shift+H flips the photo', () => {
     it('flips like the button, in any tab, and leaves the markup tool alone', () => {
       const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });

@@ -10,18 +10,6 @@
 
 :where([data-blok-interface]) {
   --blok-skeleton-radius: var(--blok-radius-control-sm);
-  --blok-skeleton-inset: 6px;
-  --blok-skeleton-indent: 1.5em;
-  /* Defaults only: the builder sets both inline on every bar. */
-  --blok-skeleton-width: 100%;
-  --blok-skeleton-index: 0;
-  --blok-skeleton-shift: 0px;
-  --blok-skeleton-edge: left;
-}
-
-/* The bar box starts at the inline start, which is the right edge in RTL. */
-:where([data-blok-rtl="true"]) {
-  --blok-skeleton-edge: right;
 }
 
 /* Hidden, not removed: the handoff measures real blocks under it. */
@@ -34,6 +22,11 @@
    (max-w-blok-content mx-auto + the content-align rules in main.css). The
    wrapper has no padding, so its padding box lines up with the redactor. */
 [data-blok-loading-skeleton] {
+  /* Internal, not a theming hook. */
+  --blok-skeleton-inset: 6px;
+  --blok-skeleton-indent: 1.5em;
+  --blok-skeleton-edge: left;
+
   position: absolute;
   inset-block: 0 auto;
   inset-inline: var(--blok-editor-gutter-start, 0px) var(--blok-editor-gutter-end, 0px);
@@ -44,6 +37,11 @@
   container-type: inline-size;
   pointer-events: none;
   padding-block: var(--blok-skeleton-inset);
+}
+
+/* An RTL bar starts at its right edge. */
+[data-blok-rtl="true"] [data-blok-loading-skeleton] {
+  --blok-skeleton-edge: right;
 }
 
 [data-blok-width="full"] [data-blok-loading-skeleton] {
@@ -75,6 +73,10 @@
 }
 
 [data-blok-skeleton-bar] {
+  /* Internal, not a theming hook; width and index are set inline. */
+  --blok-skeleton-width: 100%;
+  --blok-skeleton-index: 0;
+  --blok-skeleton-shift: 0px;
   --blok-skeleton-sweep: 0px;
 
   position: relative;

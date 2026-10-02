@@ -121,4 +121,15 @@ test.describe('boot loading skeleton', () => {
     await page.evaluate(() => document.querySelector('[data-blok-testid="after-editor"]')?.remove());
   });
 
+  test('RTL: the sheen is anchored at the right edge', async ({ page }) => {
+    await bootSlow(page, { i18n: { direction: 'rtl' } });
+
+    const bar = page.getByTestId('loading-skeleton').locator('[data-blok-skeleton-bar]').first();
+
+    await expect(bar).toBeVisible();
+
+    const edge = await bar.evaluate(el => getComputedStyle(el).getPropertyValue('--blok-skeleton-edge').trim());
+
+    expect(edge).toBe('right');
+  });
 });

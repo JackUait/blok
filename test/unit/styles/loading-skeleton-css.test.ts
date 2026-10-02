@@ -40,6 +40,28 @@ describe('loading skeleton styles', () => {
     expect(css).not.toMatch(/(^|\n)\[data-blok-interface\]\s*\{[^}]*--blok-skeleton-/);
   });
 
+  it('exposes only bar, sheen and radius as host tokens; helpers live on the overlay and bars', () => {
+    const publicTokens = ['--blok-skeleton-bar', '--blok-skeleton-sheen', '--blok-skeleton-radius'];
+    const hostRules = [...css.matchAll(/(?:^|\n)([^{}\n]*\[data-blok-interface\][^{}\n]*)\{([^}]*)\}/g)];
+    const hostSkeletonTokens = hostRules.flatMap(([, , body]) => [...body.matchAll(/(--blok-skeleton-[\w-]+)\s*:/g)].map(match => match[1]));
+    const overlay = css.match(/\n\[data-blok-loading-skeleton\]\s*\{([^}]*)\}/)?.[1] ?? '';
+    const bar = css.match(/\n\[data-blok-skeleton-bar\]\s*\{([^}]*)\}/)?.[1] ?? '';
+
+    expect(hostSkeletonTokens.length).toBeGreaterThan(0);
+    hostSkeletonTokens.forEach(token => expect(publicTokens, token).toContain(token));
+    expect(overlay).toMatch(/--blok-skeleton-inset:/);
+    expect(overlay).toMatch(/--blok-skeleton-indent:/);
+    expect(overlay).toMatch(/--blok-skeleton-edge:\s*left/);
+    expect(bar).toMatch(/--blok-skeleton-width:/);
+    expect(bar).toMatch(/--blok-skeleton-index:/);
+    expect(bar).toMatch(/--blok-skeleton-shift:/);
+  });
+
+  // The overlay declares the LTR edge itself, so an RTL value only reaches the bars from a rule on the overlay.
+  it('flips the sheen edge on the overlay in RTL', () => {
+    expect(css).toMatch(/\[data-blok-rtl="true"\] \[data-blok-loading-skeleton\]\s*\{[^}]*--blok-skeleton-edge:\s*right/);
+  });
+
   it('places the overlay on the content column: gutters, max width and alignment', () => {
     const overlay = css.match(/\n\[data-blok-loading-skeleton\]\s*\{([^}]*)\}/)?.[1] ?? '';
 

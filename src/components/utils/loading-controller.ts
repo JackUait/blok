@@ -21,11 +21,17 @@ export class LoadingController {
   private shownAt = 0;
   private started = false;
   private destroyed = false;
+  private busy = false;
 
   constructor(private readonly args: { wrapper: HTMLElement; content: HTMLElement; config: ResolvedLoaderConfig; label: string }) {}
 
   public get isVisible(): boolean {
     return this.skeleton !== null;
+  }
+
+  /** From show() until teardown: the document is not live yet, so nothing may edit it. */
+  public get isBusy(): boolean {
+    return this.busy;
   }
 
   public show(): void {
@@ -35,6 +41,7 @@ export class LoadingController {
     }
 
     this.started = true;
+    this.busy = true;
     this.args.wrapper.setAttribute('aria-busy', 'true');
     // onChange is wired only after the handoff, so an edit made under the skeleton would never reach the host.
     this.args.content.setAttribute('inert', '');
@@ -153,6 +160,7 @@ export class LoadingController {
     this.args.wrapper.removeAttribute(DATA_ATTR.loading);
     this.args.wrapper.removeAttribute('aria-busy');
     this.args.content.removeAttribute('inert');
+    this.busy = false;
 
     if (this.savedMinHeight !== null) {
       this.args.wrapper.style.setProperty('min-height', this.savedMinHeight.value, this.savedMinHeight.priority);

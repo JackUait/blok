@@ -1320,7 +1320,8 @@ export class UI extends Module<UINodes> {
    * open the toolbar. Returns false when the editor guards reject the action.
    */
   private appendBlockAtBottom(): boolean {
-    if (!Selection.isCollapsed) {
+    // The redactor is inert while loading, but the bottom zone is not; onChange is not wired yet.
+    if (this.loading?.isBusy === true || !Selection.isCollapsed) {
       return false;
     }
 

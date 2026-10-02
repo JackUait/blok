@@ -105,6 +105,23 @@ describe('LoadingController', () => {
     expect(destroyed.content.hasAttribute('inert')).toBe(false);
   });
 
+  it('is busy from show() until teardown, before the skeleton mounts too', async () => {
+    const { controller } = setup();
+
+    expect(controller.isBusy).toBe(false);
+    controller.show();
+    expect(controller.isBusy).toBe(true);
+    expect(controller.isVisible).toBe(false);
+
+    vi.advanceTimersByTime(150);
+    const done = controller.hide([]);
+
+    expect(controller.isBusy).toBe(true);
+    await vi.advanceTimersByTimeAsync(MIN_VISIBLE);
+    await done;
+    expect(controller.isBusy).toBe(false);
+  });
+
   it('shows the skeleton after the delay', () => {
     const { wrapper, controller } = setup();
 

@@ -100,6 +100,29 @@ describe('boot skeleton (persistence)', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenCalled(), { timeout: 3000 });
   }, 120_000);
 
+  // The redactor is inert, but the bottom zone is a wrapper child with its own append-a-block click.
+  it.each(['while load() is pending', 'during the handoff'])('a bottom-zone click %s adds no block', async (phase) => {
+    const load = deferred<OutputData>();
+    const editor = await boot({ loader: { delay: 0 }, persistence: { load: () => load.promise, save: async () => {} } });
+    const clickBottomZone = (): void => {
+      holder.querySelector('[data-blok-bottom-zone]')?.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 50, clientY: 50 }));
+    };
+
+    await vi.waitFor(() => expect(holder.querySelector(SKELETON)).not.toBeNull());
+    if (phase === 'while load() is pending') {
+      clickBottomZone();
+    }
+    load.resolve({ blocks: [{ id: 'a', type: 'paragraph', data: { text: 'Hi' } }] });
+    if (phase === 'during the handoff') {
+      await vi.waitFor(() => expect(holder.querySelector('[data-blok-element]')).not.toBeNull());
+      expect(holder.querySelector(SKELETON)).not.toBeNull();
+      clickBottomZone();
+    }
+    await editor.isReady;
+
+    expect(holder.querySelectorAll('[data-blok-element]')).toHaveLength(1);
+  }, 120_000);
+
   it('hands each skeleton bar to its block content box, never the full-width holder', async () => {
     const animate = vi.fn((): Animation => ({ finished: Promise.resolve(), cancel: () => {} }) as unknown as Animation);
 

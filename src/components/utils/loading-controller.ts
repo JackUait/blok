@@ -1,6 +1,7 @@
 import { DATA_ATTR } from '../constants/data-attributes';
 import type { ResolvedLoaderConfig } from './loader-config';
 import { buildLoadingSkeleton } from './loading-skeleton';
+import { logLabeled } from './logger';
 import { HANDOFF_DURATION, HANDOFF_STAGGER, runSkeletonHandoff } from './skeleton-handoff';
 
 /** Once shown, shorter than this reads as a flicker. */
@@ -119,6 +120,9 @@ export class LoadingController {
           runSkeletonHandoff({ bars: skeleton.bars, targets, content }),
           this.sleep(skeleton.bars.length * HANDOFF_STAGGER + HANDOFF_DURATION + HANDOFF_GRACE),
         ]);
+      } catch (error) {
+        // Render awaits this hide, so a failed animation must not fail the boot.
+        logLabeled('The loading skeleton handoff failed', 'warn', error);
       } finally {
         this.stopWaiting();
         // The handoff uses fill: 'forwards', which would pin opacity and filter on the content.

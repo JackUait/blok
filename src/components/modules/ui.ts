@@ -20,7 +20,7 @@ import { buildFontSizeVarLines } from '../utils/font-size-tokens';
 import { LinkHoverCard } from '../utils/link-hover-card';
 import { resolveLoaderConfig } from '../utils/loader-config';
 import { LoadingController } from '../utils/loading-controller';
-import { log } from '../utils/logger';
+import { log, logLabeled } from '../utils/logger';
 import { resyncPortalDirections } from '../utils/portal-direction';
 import { decodeHashFragment, resolveHashTarget } from '../utils/hash-target';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
@@ -591,10 +591,19 @@ export class UI extends Module<UINodes> {
       return;
     }
 
-    // Bar i must land on block i's visible content box. Direct child only, so a nested block's box is never picked.
-    const targets = this.Blok.BlockManager.blocks.map(({ holder }) =>
-      holder.querySelector<HTMLElement>(`:scope > [${DATA_ATTR.elementContent}]`) ?? holder
-    );
+    // Never rejects: collaboration and a pre-ready destroy() call this without awaiting it.
+    const targets = ((): HTMLElement[] => {
+      try {
+        // Bar i must land on block i's visible content box. Direct child only, so a nested block's box is never picked.
+        return this.Blok.BlockManager.blocks.map(({ holder }) =>
+          holder.querySelector<HTMLElement>(`:scope > [${DATA_ATTR.elementContent}]`) ?? holder
+        );
+      } catch (error) {
+        logLabeled('The loading skeleton could not read the blocks', 'warn', error);
+
+        return [];
+      }
+    })();
 
     await this.loading.hide(targets);
   }

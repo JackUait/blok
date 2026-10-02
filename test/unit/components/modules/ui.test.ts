@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UI } from "../../../../src/components/modules/ui";
 import { Flipper } from "../../../../src/components/flipper";
 import {
@@ -838,6 +838,35 @@ describe("UI module", () => {
 
       expect(holder.innerHTML).toBe("");
       expect(unbindSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("loading skeleton", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    // Collaboration and pre-ready destroy call hideLoading() fire-and-forget, so a rejection would go unhandled.
+    it("hideLoading() never rejects and still ends the busy state when the blocks cannot be read", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const blockManager = {
+        get blocks(): never {
+          throw new Error("BlockManager not ready");
+        },
+      };
+      const { ui, wrapper } = createUI({
+        blokOverrides: {
+          BlockManager: blockManager as unknown as UI["Blok"]["BlockManager"],
+          I18n: { t: (key: string) => key } as unknown as UI["Blok"]["I18n"],
+        },
+      });
+
+      ui.showLoading();
+      expect(wrapper.getAttribute("aria-busy")).toBe("true");
+
+      await expect(ui.hideLoading()).resolves.toBeUndefined();
+      expect(wrapper.hasAttribute("aria-busy")).toBe(false);
+      expect(warn).toHaveBeenCalledTimes(1);
     });
   });
 

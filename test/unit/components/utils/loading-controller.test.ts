@@ -203,9 +203,10 @@ describe('LoadingController', () => {
     expect(cancel).toHaveBeenCalledTimes(1);
   });
 
-  it('still tears down when the handoff rejects', async () => {
+  it('tears down and resolves when the handoff rejects, so the boot does not fail', async () => {
     const { wrapper, content, controller } = setup();
     const cancel = vi.fn();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     Object.defineProperty(content, 'getAnimations', { value: () => [{ cancel }], configurable: true });
     mockRunSkeletonHandoff.mockRejectedValueOnce(new Error('boom'));
@@ -213,10 +214,12 @@ describe('LoadingController', () => {
     controller.show();
     vi.advanceTimersByTime(150);
     const done = controller.hide([]);
-    const assertion = expect(done).rejects.toThrow('boom');
+    const assertion = expect(done).resolves.toBeUndefined();
 
     await vi.advanceTimersByTimeAsync(MIN_VISIBLE);
     await assertion;
+
+    expect(warn).toHaveBeenCalledTimes(1);
 
     expect(skeleton(wrapper)).toBeNull();
     expect(wrapper.hasAttribute(DATA_ATTR.loading)).toBe(false);
@@ -224,6 +227,30 @@ describe('LoadingController', () => {
     expect(wrapper.querySelector('[role="status"]')).toBeNull();
     expect(content.style.opacity).toBe('');
     expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('tears down and resolves when the handoff throws synchronously', async () => {
+    const { wrapper, content, controller } = setup();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    mockRunSkeletonHandoff.mockImplementationOnce(() => {
+      throw new Error('sync boom');
+    });
+
+    controller.show();
+    vi.advanceTimersByTime(150);
+    const done = controller.hide([]);
+    const assertion = expect(done).resolves.toBeUndefined();
+
+    await vi.advanceTimersByTimeAsync(MIN_VISIBLE);
+    await assertion;
+
+    expect(skeleton(wrapper)).toBeNull();
+    expect(wrapper.hasAttribute(DATA_ATTR.loading)).toBe(false);
+    expect(wrapper.hasAttribute('aria-busy')).toBe(false);
+    expect(content.style.opacity).toBe('');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('a second hide() waits for the same teardown as the first', async () => {

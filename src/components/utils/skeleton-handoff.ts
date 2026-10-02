@@ -12,6 +12,13 @@ const HOLD = 0.4;
 // A cancelled animation rejects `finished` with AbortError; the caller's cleanup must still run.
 const settle = (animation: Animation): Promise<unknown> => animation.finished.catch(() => undefined);
 
+// A display:none block (a collapsed toggle's child) measures all zeros; flying there lands in the viewport corner.
+const visibleRect = (target: HTMLElement | undefined): DOMRect | undefined => {
+  const rect = target?.getBoundingClientRect();
+
+  return rect === undefined || (rect.width === 0 && rect.height === 0) ? undefined : rect;
+};
+
 /**
  * Moves each skeleton bar onto its block and fades the content in.
  * `targets[i]` is the visible content box of block i, the element the bar should land on,
@@ -40,7 +47,7 @@ export const runSkeletonHandoff = async ({ bars, targets, content }: {
   const pairs = bars.map((bar, i) => ({
     bar,
     from: bar.getBoundingClientRect(),
-    to: targets[i]?.getBoundingClientRect(),
+    to: visibleRect(targets[i]),
     rtl: getComputedStyle(bar).direction === 'rtl',
     // The CSS breathe animation is mid-cycle; starting from 1 would pop the bar when its delay ends.
     opacity: Number.parseFloat(getComputedStyle(bar).opacity) || 1,

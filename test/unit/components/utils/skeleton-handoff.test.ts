@@ -64,6 +64,21 @@ describe('runSkeletonHandoff', () => {
     expect(calls.some(call => call.el === content)).toBe(true);
   });
 
+  it('fades a bar in place when its block is hidden, instead of flying it to the viewport corner', async () => {
+    const bars = make(1, [40]);
+    const hidden = document.createElement('div');
+
+    // A collapsed toggle's child is display:none, so its rect is all zeros.
+    vi.spyOn(hidden, 'getBoundingClientRect').mockReturnValue(rect(0, 0, 0, 0));
+
+    await runSkeletonHandoff({ bars, targets: [hidden], content: document.createElement('div') });
+
+    const barCall = calls.find(call => call.el === bars[0]);
+
+    expect(barCall?.keyframes.some(frame => frame.transform !== undefined)).toBe(false);
+    expect(last(barCall?.keyframes ?? []).opacity).toBe(0);
+  });
+
   it('in RTL anchors the bar at its right edge and moves it by the right-edge delta', async () => {
     const overlay = document.createElement('div');
     const bar = document.createElement('div');

@@ -247,7 +247,7 @@ test('the ? button opens the sheet and a second click closes it; a click outside
 
   await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
   const frameBefore = await page.locator('[data-role="darkroom-frame"]').boundingBox();
-  const btn = dialog.locator('[data-action="shortcuts"]');
+  const btn = dialog.getByRole('button', { name: 'Keyboard shortcuts' });
   const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
 
   await btn.click();

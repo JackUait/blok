@@ -10,6 +10,7 @@ declare global {
     blokInstance?: Blok;
     blokInstance2?: Blok;
     __lastFindKey?: { code: string; prevented: boolean };
+    __flashedNoResults?: boolean;
   }
 }
 
@@ -230,6 +231,32 @@ test.describe('find in page', () => {
 
       await expect(page.getByTestId('find-input')).toHaveValue('Zephyr');
       await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+    });
+
+    test('Mod+F on a selection never flashes "No results" before the matches show', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one', 'foo two'));
+      await page.evaluate(() => {
+        window.__flashedNoResults = false;
+        new MutationObserver(() => {
+          if (document.querySelector('[data-blok-testid="find-input"]')?.getAttribute('aria-invalid') === 'true') {
+            window.__flashedNoResults = true;
+          }
+        }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['aria-invalid'] });
+      });
+      await page.getByText('foo two').evaluate((paragraph) => {
+        const text = paragraph.firstChild;
+
+        if (!(paragraph instanceof HTMLElement) || text === null) {
+          throw new Error('paragraph text missing');
+        }
+        paragraph.focus();
+        window.getSelection()?.setBaseAndExtent(text, 0, text, 3);
+      });
+
+      await page.keyboard.press(FIND_KEY);
+
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+      expect(await page.evaluate(() => window.__flashedNoResults)).toBe(false);
     });
 
     test('Mod+F on the body opens the find bar when the page has one editor', async ({ page }) => {

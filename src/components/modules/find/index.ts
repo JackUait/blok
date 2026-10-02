@@ -154,7 +154,9 @@ export class Find extends Module {
       readOnly: this.Blok.ReadOnly.isEnabled,
     });
 
-    if (!wasOpen && prefill === null && bar.query !== '') {
+    // Search now, not after the typing debounce: until then the bar would show "No results".
+    if (bar.query !== '' && (!wasOpen || prefill !== null)) {
+      this.cancelSearch();
       this.search({ reveal: true });
     }
   }
@@ -524,7 +526,10 @@ export class Find extends Module {
     this.resizeObserver?.disconnect();
     this.observer = null;
     this.resizeObserver = null;
+    this.cancelSearch();
+  }
 
+  private cancelSearch(): void {
     if (this.searchTimer !== null) {
       clearTimeout(this.searchTimer);
       this.searchTimer = null;

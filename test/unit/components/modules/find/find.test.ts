@@ -649,6 +649,35 @@ describe('Find module', () => {
     expect(searchInput(wrapper).value).toBe('this');
   });
 
+  it('never flashes "No results" while a prefilled query waits for its search', async () => {
+    // A real ResizeObserver reports once after layout, before the query's search timer.
+    vi.stubGlobal('ResizeObserver', class {
+      private readonly callback: () => void;
+
+      constructor(callback: () => void) {
+        this.callback = callback;
+      }
+
+      public observe(): void {
+        queueMicrotask(this.callback);
+      }
+
+      public disconnect(): void {}
+    });
+    const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'pick this word' }]);
+    const text = blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
+
+    if (!(text instanceof Text)) {
+      throw new Error('text missing');
+    }
+    window.getSelection()?.setBaseAndExtent(text, 5, text, 9);
+    press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await Promise.resolve();
+
+    expect(searchInput(wrapper).getAttribute('aria-invalid')).toBeNull();
+    expect(painted('blok-find-match-active')).toHaveLength(1);
+  });
+
   it('prefills the query from a selection in a host contenteditable outside the editor', () => {
     const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
     const hostTitle = document.createElement('h1');

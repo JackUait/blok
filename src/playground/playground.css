@@ -218,6 +218,21 @@ html.pg-page-nav::view-transition-new(pg-page-icon) {
   animation-duration: 460ms;
   animation-timing-function: var(--pg-page-glide);
 }
+/* The two titles differ in line box, so a crossfade over the whole flight smears them into a doubled word. */
+html.pg-page-nav::view-transition-old(pg-page-title) { animation-name: pg-page-title-out; }
+html.pg-page-nav::view-transition-new(pg-page-title) { animation-name: pg-page-title-in; }
+/*
+ * Back zooms out: the page being left recedes while its title folds into its
+ * row, and the parent settles down from slightly larger.
+ */
+html.pg-page-nav[data-pg-page-dir="back"]::view-transition-old(pg-page-out) {
+  transform-origin: var(--pg-page-out-origin, 50% 50%);
+  animation: pg-page-recede 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+html.pg-page-nav[data-pg-page-dir="back"]::view-transition-new(pg-page-in) {
+  transform-origin: var(--pg-page-in-origin, 50% 50%);
+  animation: pg-page-settle 560ms var(--pg-page-glide) 170ms both;
+}
 /* A part with no end on the new page (a page with no icon yet) leaves with the old page. */
 html.pg-page-nav::view-transition-old(pg-page-title):only-child,
 html.pg-page-nav::view-transition-old(pg-page-icon):only-child {
@@ -228,6 +243,23 @@ html.pg-page-nav::view-transition-old(pg-page-icon):only-child {
 }
 @keyframes pg-page-vanish {
   to { opacity: 0; }
+}
+@keyframes pg-page-recede {
+  to { opacity: 0; transform: scale(0.955); filter: blur(3px); }
+}
+@keyframes pg-page-settle {
+  from { opacity: 0; transform: scale(1.03); filter: blur(8px); }
+}
+@keyframes pg-page-title-out {
+  0% { opacity: 1; }
+  40% { opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes pg-page-title-in {
+  0% { opacity: 0; }
+  15% { opacity: 0; }
+  55% { opacity: 1; }
+  100% { opacity: 1; }
 }
 @keyframes pg-page-enter {
   from { opacity: 0; transform: translateX(var(--pg-page-shift)) scale(0.985); filter: blur(6px); }

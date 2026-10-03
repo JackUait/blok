@@ -1756,7 +1756,7 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
-    import { PAGE_HEADER_MORPH, PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkMorph, holdPageHeight, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
+    import { PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountPageTree } from './src/playground/page-tree.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
@@ -2209,12 +2209,12 @@
     }
 
     /** Destroys the live editor and builds one for currentPageId. */
-    async function swapEditor() {
+    async function swapEditor(overrides = {}) {
       clearTimeout(persistTimer);
       persistPending = false;
       blok.destroy();
       titleHistory = null;
-      const editor = new Blok(buildConfig());
+      const editor = new Blok({ ...buildConfig(), ...overrides });
       blok = editor;
       window.blok = editor;
       editorPageId = currentPageId;
@@ -2262,7 +2262,10 @@
         currentPageId = target;
 
         await runPageTransition(async () => {
-          await swapEditor();
+          // The transition paints its loading state, so a page that arrives in time never shows a skeleton.
+          await swapEditor({ loader: { delay: PAGE_CONTENT_WAIT_MS } });
+          // The new snapshot must be the real page, not an empty editor.
+          await waitForPageContent(document.getElementById('blok'), PAGE_CONTENT_WAIT_MS);
           renderHeader();
           const saved = back ? scrollByPage.get(target) : undefined;
           // The page's blocks may still be loading; without the hold the offset clamps to the empty page.
@@ -2274,12 +2277,9 @@
           }
         }, {
           direction: back ? 'back' : 'forward',
-          // Back morphs nothing: the row it would land on is Blok's DOM, which
-          // re-renders when the page syncs, and a named element replaced
-          // mid-transition makes the browser cut it short.
-          from: back ? null : pageLinkMorph(target),
-          to: back ? null : PAGE_HEADER_MORPH,
+          ...pageNavMorphs({ back, from, target, parentOf: (id) => pages.get(id)?.parentId }),
         });
+        if (back && from !== null) flashArrivalRow(from);
       });
     }
 

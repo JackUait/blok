@@ -524,15 +524,15 @@ export interface PageHeaderOptions {
 
 export const PAGE_TITLE_SELECTOR = '#pg-page-title';
 
-/** A part (`page-title` or `page-icon`) of the page block for `pageId`, as the parent page renders it. */
-export const pageLinkSelector = (pageId: string, part = 'page-title'): string => {
+const pageLinks = (pageId: string): string[] => {
   const path = CSS.escape(`/editor/page/${encodeURIComponent(pageId)}`);
 
-  return [`[href="${path}"]`, `[href^="${path}?"]`]
-    .map((link) => `[data-blok-testid="page-link"]${link} [data-blok-testid="${part}"]`)
-    .join(', ');
+  return [`[href="${path}"]`, `[href^="${path}?"]`].map((link) => `[data-blok-testid="page-link"]${link}`);
 };
 
+/** A part (`page-title` or `page-icon`) of the page block for `pageId`, as the parent page renders it. */
+export const pageLinkSelector = (pageId: string, part = 'page-title'): string =>
+  pageLinks(pageId).map((link) => `${link} [data-blok-testid="${part}"]`).join(', ');
 
 /**
  * Blok's radius roles are declared only on [data-blok-interface] elements, so
@@ -927,6 +927,16 @@ const morphRules = (morph: PageMorph | null): string => {
  */
 const bodyRule = (side: 'out' | 'in'): string => `#tab-editor { view-transition-name: pg-page-${side}; }`;
 
+/*
+ * A body snapshot is as tall as the whole page, so scaling it around its own
+ * middle would slide what is on screen. Scale around the viewport's middle.
+ */
+const setBodyOrigin = (side: 'out' | 'in'): void => {
+  const top = document.getElementById('tab-editor')?.getBoundingClientRect().top ?? 0;
+
+  document.documentElement.style.setProperty(`--pg-page-${side}-origin`, `50% ${Math.round(window.innerHeight / 2 - top)}px`);
+};
+
 /* A page that came back shorter (a peer deleted blocks) must not keep a blank tail forever. */
 const HOLD_LIMIT_MS = 4000;
 
@@ -952,6 +962,82 @@ export const holdPageHeight = (height: number): void => {
   watch.observe(document.body);
 };
 
+/*
+ * Must stay under Chrome's 4s update-callback abort. Navigation swaps also pass
+ * it as the loader delay, so a page that loads in time never paints a skeleton.
+ */
+export const PAGE_CONTENT_WAIT_MS = 1200;
+
+/**
+ * Resolves once the editor in `holder` shows its blocks and the loading
+ * skeleton has let go, or at `limitMs`. Inside a transition's update this
+ * makes the new snapshot the real page, and keeps the heavy first render
+ * off the animation's main thread.
+ */
+export const waitForPageContent = (holder: HTMLElement, limitMs: number): Promise<void> => new Promise((resolve) => {
+  const ready = (): boolean => holder.querySelector('[data-blok-element]') !== null && holder.querySelector('[data-blok-loading]') === null;
+
+  // No frame yield here: rAF never fires while a transition's update is pending.
+  if (ready()) {
+    resolve();
+
+    return;
+  }
+
+  const finish = (): void => {
+    watch.disconnect();
+    clearTimeout(timer);
+    resolve();
+  };
+  const watch = new MutationObserver(() => {
+    if (ready()) {
+      finish();
+    }
+  });
+  const timer = setTimeout(finish, limitMs);
+
+  watch.observe(holder, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-blok-loading'] });
+});
+
+/**
+ * Which parts morph on a page change. Going down, the row grows into the
+ * header; going up to the direct parent, the header shrinks back into its row.
+ * Any other jump has no row for the page, so nothing morphs.
+ */
+export const pageNavMorphs = (nav: {
+  back: boolean;
+  from: string | null;
+  target: string | null;
+  parentOf: (pageId: string) => string | null | undefined;
+}): { from: PageMorph | null; to: PageMorph | null } => {
+  if (!nav.back) {
+    return nav.target === null ? { from: null, to: null } : { from: pageLinkMorph(nav.target), to: PAGE_HEADER_MORPH };
+  }
+
+  if (nav.from !== null && nav.parentOf(nav.from) === nav.target) {
+    return { from: PAGE_HEADER_MORPH, to: pageLinkMorph(nav.from) };
+  }
+
+  return { from: null, to: null };
+};
+
+/**
+ * A soft gray wash that fades off the row of the page just left, so the eye
+ * lands where it came from. An animation, not a class: Blok's DOM stays untouched.
+ */
+export const flashArrivalRow = (pageId: string): void => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
+
+  const link = document.querySelector<HTMLElement>(pageLinks(pageId).join(', '));
+
+  link?.animate(
+    [{ backgroundColor: 'var(--blok-item-hover-bg)' }, { backgroundColor: 'var(--blok-item-hover-bg)', offset: 0.35 }, { backgroundColor: 'transparent' }],
+    { duration: 1100, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' }
+  );
+};
+
 /**
  * Runs `update` inside a view transition: the body slides, and the `from`
  * title and icon morph into the `to` ones (a page row into the page header).
@@ -975,10 +1061,12 @@ export const runPageTransition = async (update: () => Promise<void>, options: Pa
   document.head.append(morph);
   root.classList.add('pg-page-nav');
   root.setAttribute('data-pg-page-dir', options.direction);
+  setBodyOrigin('out');
 
   const transition = document.startViewTransition(async () => {
     await update();
     morph.textContent = [bodyRule('in'), morphRules(options.to)].join('\n');
+    setBodyOrigin('in');
   });
 
   try {
@@ -990,6 +1078,8 @@ export const runPageTransition = async (update: () => Promise<void>, options: Pa
     morph.remove();
     root.classList.remove('pg-page-nav');
     root.removeAttribute('data-pg-page-dir');
+    root.style.removeProperty('--pg-page-out-origin');
+    root.style.removeProperty('--pg-page-in-origin');
   }
 };
 

@@ -670,7 +670,7 @@ const TEXT_ALIGN = /(?<![a-z-])text-align\s*:\s*([^;]+)/i;
  * drops. Copy it onto the cell's own style (the table reads it there) when
  * every content paragraph agrees and the cell has no text-align of its own.
  */
-function carryParagraphAlignmentToCell(cell: Element): void {
+export function carryParagraphAlignmentToCell(cell: Element): void {
   const ownStyle = cell.getAttribute('style') ?? '';
 
   if (TEXT_ALIGN.test(ownStyle)) {

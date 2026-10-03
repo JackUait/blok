@@ -578,4 +578,46 @@ describe('table — a peer child that arrives already under the table with no ce
     peer.destroy();
     server.destroy();
   });
+
+  // A peer's add-row: the add lands after the last cell block, then moves to
+  // the end of the table. Add-column: it moves into the middle of the table.
+  it.each([
+    ['the end of the table', 'c11'],
+    ['the middle of the table', 'c01'],
+  ] as const)('added at the root, then moved to %s, stays off-screen until the table data names its cell', async (_where, tableAfterId) => {
+    const server = roomWith(blockFormatTable());
+    const a = await bootLive(server, 'A');
+
+    await pump(server, [a]);
+
+    const peer = rawPeer(server, 7);
+
+    deliver(peer, server, a, () => {
+      peer.addBlockAt({ id: 'stray-1', type: 'paragraph', data: { text: 'theirs' } }, { parentId: null, afterId: 'c11' });
+    });
+    await settle();
+
+    // Mounted next to c11 it would sit in cell (1,1), and the parent write
+    // only detaches a holder that joins the table from outside.
+    expect(placeOf(a, 'stray-1')).toEqual({ connected: true, insideTable: false, atRoot: true });
+
+    deliver(peer, server, a, () => peer.moveBlockTo('stray-1', { parentId: 'table-1', afterId: tableAfterId }));
+    await settle();
+
+    expect(placeOf(a, 'stray-1')).toEqual({ connected: false, insideTable: false, atRoot: false });
+    expect(cellTexts(a)).toEqual([['A', 'B'], ['C', 'D']]);
+
+    deliver(peer, server, a, () => {
+      peer.updateBlockData('table-1', 'content', [
+        [{ blocks: ['c00'] }, { blocks: ['c01'] }],
+        [{ blocks: ['c10'] }, { blocks: ['c11', 'stray-1'] }],
+      ]);
+    });
+    await settle();
+
+    expect(placeOf(a, 'stray-1')).toEqual({ connected: true, insideTable: true, atRoot: false });
+    expect(cellTexts(a)).toEqual([['A', 'B'], ['C', 'D|theirs']]);
+    peer.destroy();
+    server.destroy();
+  });
 });

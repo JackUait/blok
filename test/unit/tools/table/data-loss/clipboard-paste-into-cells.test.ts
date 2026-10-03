@@ -131,14 +131,25 @@ const cellBlocksAt = (saved: OutputData, row: number, col: number): OutputBlockD
   });
 };
 
+const placementAt = (saved: OutputData, row: number, col: number): string | undefined => {
+  const table = saved.blocks.find(block => block.id === 'dst');
+  const cell = (table?.data as TableData | undefined)?.content[row]?.[col];
+
+  if (cell === undefined || !isCellWithBlocks(cell)) {
+    throw new Error(`no cell ${row},${col}`);
+  }
+
+  return cell.placement;
+};
+
 // 2x2 so the grid paste replaces cells instead of inserting inline at the caret.
 const tableWithFirstCell = (td: string): string =>
   `<table><tbody><tr><td>${td}</td><td>z</td></tr><tr><td>q</td><td>w</td></tr></tbody></table>`;
 
 const GDOCS_SPAN = 'font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre-wrap;';
 const GDOCS_TD = 'border-left:solid #000000 1pt;border-right:solid #000000 1pt;border-bottom:solid #000000 1pt;border-top:solid #000000 1pt;vertical-align:top;padding:5pt 5pt 5pt 5pt;overflow:hidden;overflow-wrap:break-word;';
-const gdocsP = (inner: string): string =>
-  `<p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">${inner}</p>`;
+const gdocsP = (inner: string, align = ''): string =>
+  `<p dir="ltr" style="line-height:1.2;${align === '' ? '' : `text-align:${align};`}margin-top:0pt;margin-bottom:0pt;">${inner}</p>`;
 // Real Docs writes each property once; an override replaces the default.
 const gdocsSpan = (text: string, extra = ''): string => {
   const props = new Map<string, string>();
@@ -287,5 +298,34 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
     expect(cellBlocksAt(saved, 0, 0).map(block => block.data.text)).toEqual(['a &lt; b']);
     expect(cellBlocksAt(saved, 0, 1).map(block => block.data.text)).toEqual(['z']);
     expect(saved.blocks.every(block => block.type === 'table' || block.type === 'paragraph')).toBe(true);
+  });
+
+  it('google docs: paragraph alignment becomes the cell placement', async () => {
+    const editor = await bootWithTable();
+
+    await pasteIntoCell(gdocsTable([
+      // The unaligned spacer paragraph is not a vote.
+      [gdocsP(gdocsSpan('a'), 'center') + gdocsP('&nbsp;'), gdocsP(gdocsSpan('b'), 'right')],
+      [gdocsP(gdocsSpan('c')), gdocsP(gdocsSpan('d'), 'center')],
+    ]), 'a\tb\nc\td');
+    const saved = await editor.save();
+
+    expect(placementAt(saved, 0, 0)).toBe('top-center');
+    expect(placementAt(saved, 0, 1)).toBe('top-right');
+    expect(placementAt(saved, 1, 0)).toBeUndefined();
+    expect(placementAt(saved, 1, 1)).toBe('top-center');
+  });
+
+  it('google docs: paragraphs that disagree leave the placement alone', async () => {
+    const editor = await bootWithTable();
+
+    await pasteIntoCell(gdocsTable([
+      [gdocsP(gdocsSpan('a'), 'center') + gdocsP(gdocsSpan('b'), 'right'), gdocsP(gdocsSpan('z'))],
+      [gdocsP(gdocsSpan('q')), gdocsP(gdocsSpan('w'))],
+    ]), 'a\nb\tz\nq\tw');
+    const saved = await editor.save();
+
+    expect(placementAt(saved, 0, 0)).toBeUndefined();
+    expect(cellHtml(saved, 0, 0)).toContain('a');
   });
 });

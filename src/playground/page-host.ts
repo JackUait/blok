@@ -524,12 +524,12 @@ export interface PageHeaderOptions {
 
 export const PAGE_TITLE_SELECTOR = '#pg-page-title';
 
-/** The page block's title for `pageId`, as the parent page renders it. */
-export const pageLinkSelector = (pageId: string): string => {
+/** A part (`page-title` or `page-icon`) of the page block for `pageId`, as the parent page renders it. */
+export const pageLinkSelector = (pageId: string, part = 'page-title'): string => {
   const path = CSS.escape(`/editor/page/${encodeURIComponent(pageId)}`);
 
   return [`[href="${path}"]`, `[href^="${path}?"]`]
-    .map((link) => `[data-blok-testid="page-link"]${link} [data-blok-testid="page-title"]`)
+    .map((link) => `[data-blok-testid="page-link"]${link} [data-blok-testid="${part}"]`)
     .join(', ');
 };
 
@@ -884,17 +884,46 @@ const disposeIconPicker = (): void => {
 
 /* ------------------------------------------------------------ transition */
 
-export interface PageTransitionOptions {
-  direction: 'forward' | 'back';
-  /** The element in the page being left that morphs into `to`. */
-  from: string | null;
-  to: string | null;
+/** The elements of one page end that morph into the other end's. */
+export interface PageMorph {
+  title: string;
+  icon: string;
 }
 
+export const PAGE_HEADER_MORPH: PageMorph = { title: PAGE_TITLE_SELECTOR, icon: '.pg-page-icon' };
+
+/** The page block for `pageId`, as the parent page renders it. */
+export const pageLinkMorph = (pageId: string): PageMorph => ({
+  title: pageLinkSelector(pageId),
+  icon: pageLinkSelector(pageId, 'page-icon'),
+});
+
+export interface PageTransitionOptions {
+  direction: 'forward' | 'back';
+  /** The page being left. */
+  from: PageMorph | null;
+  to: PageMorph | null;
+}
+
+/*
+ * Two elements with one name make the browser skip the whole transition, and
+ * a page can be linked twice, so a part that matches more than once stays unnamed.
+ */
+const morphRules = (morph: PageMorph | null): string => {
+  if (morph === null) {
+    return '';
+  }
+
+  return (['title', 'icon'] as const)
+    .filter((part) => document.querySelectorAll(morph[part]).length === 1)
+    .map((part) => `${morph[part]} { view-transition-name: pg-page-${part}; }`)
+    .join('\n');
+};
+
 /**
- * Runs `update` inside a view transition: the body slides, and `from` morphs
- * into `to` (a page row's title into the big title, or back). Instant when the
- * API is missing or the user asked for reduced motion.
+ * Runs `update` inside a view transition: the body slides, and the `from`
+ * title and icon morph into the `to` ones (a page row into the page header).
+ * Instant when the API is missing or the user asked for reduced motion.
  */
 export const runPageTransition = async (update: () => Promise<void>, options: PageTransitionOptions): Promise<void> => {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -909,24 +938,22 @@ export const runPageTransition = async (update: () => Promise<void>, options: Pa
   // A name set on Blok's DOM through a sheet, not inline: the old editor is
   // still live when the old snapshot is taken.
   const morph = document.createElement('style');
-  const name = (selector: string | null): string =>
-    selector === null ? '' : `${selector} { view-transition-name: pg-page-title; }`;
 
-  morph.textContent = name(options.from);
+  morph.textContent = morphRules(options.from);
   document.head.append(morph);
   root.classList.add('pg-page-nav');
   root.setAttribute('data-pg-page-dir', options.direction);
 
   const transition = document.startViewTransition(async () => {
     await update();
-    morph.textContent = name(options.to);
+    morph.textContent = morphRules(options.to);
   });
 
   try {
     await transition.updateCallbackDone;
     await transition.finished;
   } catch {
-    // A skipped transition (two elements with one name, a hidden tab) still ran update.
+    // A skipped transition (a hidden tab, a named element replaced mid-way) still ran update.
   } finally {
     morph.remove();
     root.classList.remove('pg-page-nav');

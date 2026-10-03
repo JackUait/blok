@@ -1754,7 +1754,7 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
-    import { PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
+    import { PAGE_HEADER_MORPH, PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkMorph, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
@@ -2261,8 +2261,11 @@
           }
         }, {
           direction: back ? 'back' : 'forward',
-          from: back ? PAGE_TITLE_SELECTOR : pageLinkSelector(target),
-          to: back ? pageLinkSelector(from) : PAGE_TITLE_SELECTOR,
+          // Back morphs nothing: the row it would land on is Blok's DOM, which
+          // re-renders when the page syncs, and a named element replaced
+          // mid-transition makes the browser cut it short.
+          from: back ? null : pageLinkMorph(target),
+          to: back ? null : PAGE_HEADER_MORPH,
         });
       });
     }

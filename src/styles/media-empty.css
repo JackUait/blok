@@ -27,7 +27,7 @@
 .blok-media-empty__card > * {
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-block) - var(--blok-border-width-hairline) - var(--blok-space-2)));
 }
-.blok-media-empty__card:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__card:focus-visible {
   outline: none;
   outline-offset: 0;
   border-color: var(--blok-focus-ring);
@@ -69,7 +69,7 @@
   color: var(--blok-text-primary);
   background: var(--blok-bg-hover);
 }
-.blok-media-empty__tab:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__tab:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -418,7 +418,7 @@
 }
 .blok-media-empty__choose:hover { opacity: 0.88; }
 .blok-media-empty__choose:active { opacity: 0.78; }
-.blok-media-empty__choose:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__choose:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -625,7 +625,7 @@
   transform: scale(0.96);
   transition-duration: 80ms;
 }
-.blok-media-empty__embed-submit:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__embed-submit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -815,7 +815,7 @@
 }
 .blok-media-empty__submit:hover { opacity: 0.88; }
 .blok-media-empty__submit:active { opacity: 0.78; }
-.blok-media-empty__submit:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__submit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }

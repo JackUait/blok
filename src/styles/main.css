@@ -96,6 +96,13 @@
 */
 @custom-variant theme-dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/*
+  Replaces the built-in focus-visible: a click must never paint a ring, and
+  Blink still matches :focus-visible after some clicks. The attribute comes
+  from src/components/utils/input-modality.ts. :where() adds no specificity.
+*/
+@custom-variant focus-visible (&:focus-visible:where(:root:not([data-blok-modality="pointer"]) *));
+
 @import './tokens.css';
 @import './colors.css';
 

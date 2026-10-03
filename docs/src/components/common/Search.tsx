@@ -672,7 +672,7 @@ export const Search: React.FC<SearchProps> = ({
           <input
             ref={inputRef}
             type="text"
-            className="min-w-0 flex-1 rounded-md bg-transparent text-[15px] font-semibold tracking-[-0.01em] text-foreground placeholder:font-semibold placeholder:text-foreground/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-w-0 flex-1 rounded-md bg-transparent text-[15px] font-semibold tracking-[-0.01em] text-foreground placeholder:font-semibold placeholder:text-foreground/55 outline-none"
             placeholder={t("search.placeholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}

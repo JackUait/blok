@@ -786,7 +786,7 @@
   background: var(--blok-bg-hover);
   border-color: var(--blok-border-primary);
 }
-[data-blok-tool="audio"] .blok-audio-retry:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"] .blok-audio-retry:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }

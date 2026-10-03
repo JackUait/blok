@@ -224,7 +224,7 @@
   background: var(--blok-bg-hover);
   border-color: var(--blok-border-primary);
 }
-[data-blok-tool="video"] .blok-video-retry:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-retry:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -588,7 +588,7 @@
   background: var(--blok-video-thumb);
   box-shadow: var(--blok-video-thumb-shadow);
 }
-[data-blok-tool="video"] .blok-video-controls__seek:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__seek:focus-visible {
   box-shadow: 0 0 0 3px var(--blok-video-focus-ring);
 }
 
@@ -746,7 +746,7 @@
   color: var(--blok-video-control-fg);
 }
 [data-blok-tool="video"] .blok-video-controls__menu-row:active { transform: scale(0.985); }
-[data-blok-tool="video"] .blok-video-controls__menu-row:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__menu-row:focus-visible {
   outline: none;
   background: var(--blok-video-control-bg-hover);
   box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
@@ -956,7 +956,7 @@
   border: 0;
 }
 [data-blok-tool="video"] .blok-video-controls__speed-slider:focus { outline: none; }
-[data-blok-tool="video"] .blok-video-controls__speed-ruler:not([data-pointer-focus]) .blok-video-controls__speed-slider:focus-visible ~ .blok-video-controls__speed-needle {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__speed-ruler:not([data-pointer-focus]) .blok-video-controls__speed-slider:focus-visible ~ .blok-video-controls__speed-needle {
   box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
 }
 
@@ -1027,7 +1027,7 @@
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="video"] .blok-video-controls__speed-puck { transition: none; }
 }
-[data-blok-tool="video"] .blok-video-controls__speed-chip:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__speed-chip:focus-visible {
   outline: none;
   box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
 }
@@ -1210,10 +1210,10 @@
 [data-blok-tool="video"] .blok-video-controls__time { cursor: pointer; }
 
 /* keyboard focus rings */
-[data-blok-tool="video"] .blok-video-controls__btn:focus-visible,
-[data-blok-tool="video"] .blok-video-controls__center:focus-visible,
-[data-blok-tool="video"] .blok-video-controls__time:focus-visible,
-[data-blok-tool="video"] .blok-video-controls__ctx-item:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__btn:focus-visible,
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__center:focus-visible,
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__time:focus-visible,
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__ctx-item:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
 }

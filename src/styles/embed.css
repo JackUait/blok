@@ -229,7 +229,7 @@
 }
 .blok-embed-empty__bar[data-valid="true"] .blok-embed-empty__submit:hover { filter: brightness(1.05); }
 .blok-embed-empty__submit:active { transform: translateY(1px); }
-.blok-embed-empty__submit:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-embed-empty__submit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }

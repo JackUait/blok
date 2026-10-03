@@ -1967,6 +1967,10 @@
 
 }
 
+@custom-variant focus-visible (&:focus-visible:where(:root:not([data-blok-modality="pointer"]) *)) {
+
+}
+
 [@layer utilities] .max-w-blok-content {
   max-width: var(--blok-content-max-width, var(--max-width-content));
 }
@@ -4806,7 +4810,7 @@ span[data-blok-slash-search] {
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-block) - var(--blok-border-width-hairline) - var(--blok-space-2)));
 }
 
-.blok-media-empty__card:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__card:focus-visible {
   outline: none;
   outline-offset: 0;
   border-color: var(--blok-focus-ring);
@@ -4860,7 +4864,7 @@ span[data-blok-slash-search] {
   background: var(--blok-bg-hover);
 }
 
-.blok-media-empty__tab:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__tab:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -5381,7 +5385,7 @@ span[data-blok-slash-search] {
   opacity: 0.78;
 }
 
-.blok-media-empty__choose:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__choose:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -5620,7 +5624,7 @@ span[data-blok-slash-search] {
   transition-duration: 80ms;
 }
 
-.blok-media-empty__embed-submit:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__embed-submit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -5834,7 +5838,7 @@ span[data-blok-slash-search] {
   opacity: 0.78;
 }
 
-.blok-media-empty__submit:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__submit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -6598,7 +6602,7 @@ span[data-blok-slash-search] {
   color: var(--blok-text-primary);
 }
 
-.blok-image-uploading__cancel:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-image-uploading__cancel:focus-visible {
   outline: none;
   border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
@@ -6805,7 +6809,7 @@ span[data-blok-slash-search] {
   border-color: var(--blok-border-primary);
 }
 
-.blok-image-error__btn:focus-visible, .blok-image-error__dismiss:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-image-error__btn:focus-visible, :where(:root:not([data-blok-modality="pointer"])) .blok-image-error__dismiss:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -7363,7 +7367,7 @@ span[data-blok-slash-search] {
   border-color: var(--blok-border-primary);
 }
 
-[data-blok-tool="video"] .blok-video-retry:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-retry:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -7710,7 +7714,7 @@ span[data-blok-slash-search] {
   box-shadow: var(--blok-video-thumb-shadow);
 }
 
-[data-blok-tool="video"] .blok-video-controls__seek:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__seek:focus-visible {
   box-shadow: 0 0 0 3px var(--blok-video-focus-ring);
 }
 
@@ -7866,7 +7870,7 @@ span[data-blok-slash-search] {
   transform: scale(0.985);
 }
 
-[data-blok-tool="video"] .blok-video-controls__menu-row:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__menu-row:focus-visible {
   outline: none;
   background: var(--blok-video-control-bg-hover);
   box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
@@ -8095,7 +8099,7 @@ span[data-blok-slash-search] {
   outline: none;
 }
 
-[data-blok-tool="video"] .blok-video-controls__speed-ruler:not([data-pointer-focus]) .blok-video-controls__speed-slider:focus-visible ~ .blok-video-controls__speed-needle {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__speed-ruler:not([data-pointer-focus]) .blok-video-controls__speed-slider:focus-visible ~ .blok-video-controls__speed-needle {
   box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
 }
 
@@ -8170,7 +8174,7 @@ span[data-blok-slash-search] {
   transition: none;
 }
 
-[data-blok-tool="video"] .blok-video-controls__speed-chip:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__speed-chip:focus-visible {
   outline: none;
   box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
 }
@@ -8335,7 +8339,7 @@ span[data-blok-slash-search] {
   cursor: pointer;
 }
 
-[data-blok-tool="video"] .blok-video-controls__btn:focus-visible, [data-blok-tool="video"] .blok-video-controls__center:focus-visible, [data-blok-tool="video"] .blok-video-controls__time:focus-visible, [data-blok-tool="video"] .blok-video-controls__ctx-item:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__btn:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__center:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__time:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__ctx-item:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
 }
@@ -9089,7 +9093,7 @@ span[data-blok-slash-search] {
   border-color: var(--blok-border-primary);
 }
 
-[data-blok-tool="audio"] .blok-audio-retry:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"] .blok-audio-retry:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -9368,7 +9372,7 @@ span[data-blok-slash-search] {
   transform: translateY(1px);
 }
 
-.blok-embed-empty__submit:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-embed-empty__submit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }

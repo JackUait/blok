@@ -197,6 +197,11 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     match: 'focus:border-white/20',
     reason: 'Text input: the notifier prompt field.',
   },
+  {
+    file: 'docs/src/components/ui/input.tsx',
+    match: 'focus:border-foreground/40',
+    reason: 'Text input: the docs field darkens its border however it was focused. It paints no ring.',
+  },
 ];
 
 /**

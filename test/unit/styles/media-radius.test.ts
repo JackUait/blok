@@ -81,7 +81,7 @@ const RADII: Array<[string, string, string]> = [
   ['styles/file.css', '[data-blok-tool="file"] [data-role="file-card"]', 'inherit'],
   ['styles/image.css', '.blok-image-uploading__card', role('block')],
   ['styles/image.css', '.blok-image-uploading__cancel', nested('control')],
-  ['styles/image.css', '.blok-image-uploading__cancel:focus-visible', nested('control')],
+  ['styles/image.css', ':where(:root:not([data-blok-modality="pointer"])) .blok-image-uploading__cancel:focus-visible', nested('control')],
   ['styles/image.css', '.blok-image-uploading__tile', role('control-lg')],
   ['styles/image.css', '.blok-image-uploading__bar', role('pill')],
   ['styles/image.css', '.blok-image-error', role('block')],

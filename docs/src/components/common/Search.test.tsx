@@ -190,7 +190,7 @@ describe('Search', () => {
       expect(dialog).toHaveAttribute('aria-modal', 'true');
     });
 
-    it('renders a visible focus ring on the search input', () => {
+    it('paints no focus ring on the search input; the caret shows focus', () => {
       render(
         <I18nProvider>
           <MemoryRouter>
@@ -200,7 +200,7 @@ describe('Search', () => {
       );
 
       const input = screen.getByPlaceholderText('Search docs...');
-      expect(input.className).toMatch(/focus-visible:ring-ring/);
+      expect(input.className).not.toMatch(/ring/);
     });
 
     it('marks sibling content inert while open', () => {

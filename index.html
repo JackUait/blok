@@ -168,7 +168,9 @@
       -webkit-tap-highlight-color: transparent;
     }
     .playground-wordmark:hover { background: var(--pg-hover); }
-    .playground-wordmark:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+    html[data-pg-modality="keyboard"] .playground-wordmark:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+    /* Blink can keep :focus-visible after a click, and its default ring would show. */
+    html[data-pg-modality="pointer"] :focus-visible { outline: none; }
     .playground-wordmark__mark {
       width: 34px;
       height: 34px;
@@ -215,7 +217,7 @@
     .dark-mode .playground-wordmark { color: #ffffff; }
     .dark-mode .playground-wordmark:hover { background: rgba(255,255,255,0.06); }
     .dark-mode .playground-wordmark__meta { color: #a8a8a8; }
-    .dark-mode .playground-wordmark:focus-visible { outline-color: #ffffff; }
+    html[data-pg-modality="keyboard"] .dark-mode .playground-wordmark:focus-visible { outline-color: #ffffff; }
 
     /* Playground nav: centered floating pill. Two pills slide under the tabs
        (src/playground/nav-indicator.ts): black for the page, gray for hover. */
@@ -311,7 +313,7 @@
     /* Before the script mounts the pills, the tab paints its own fill. */
     .playground-nav:not([data-pg-nav-ready]) .playground-tab:hover { background: var(--pg-hover); }
     .playground-nav:not([data-pg-nav-ready]) .playground-tab[aria-selected="true"] { background: var(--pg-ink); }
-    .playground-tab:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+    html[data-pg-modality="keyboard"] .playground-tab:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
     @media (prefers-reduced-motion: reduce) {
       .playground-nav__pill,
       .playground-nav__pill[data-animate="true"],
@@ -356,7 +358,7 @@
     .dark-mode .playground-nav:not([data-pg-nav-ready]) .playground-tab[aria-selected="true"] { background: #ffffff; }
     .dark-mode .playground-tab[aria-selected="true"],
     .dark-mode .playground-tab[aria-selected="true"]:hover { color: #191919; }
-    .dark-mode .playground-tab:focus-visible { outline-color: #ffffff; }
+    html[data-pg-modality="keyboard"] .dark-mode .playground-tab:focus-visible { outline-color: #ffffff; }
 
     /* Dark mode page styles */
     .dark-mode { background: #191919; color: #ffffff; }
@@ -484,7 +486,7 @@
       background: var(--pg-ink);
       border-color: var(--pg-ink);
     }
-    .icon-gallery-controls .icon-lightbox__btn:focus-visible {
+    html[data-pg-modality="keyboard"] .icon-gallery-controls .icon-lightbox__btn:focus-visible {
       outline: 2px solid var(--pg-ink);
       outline-offset: 3px;
     }
@@ -639,7 +641,7 @@
       background: #ffffff;
       border-color: #ffffff;
     }
-    .dark-mode .icon-gallery-controls .icon-lightbox__btn:focus-visible { outline-color: #ffffff; }
+    html[data-pg-modality="keyboard"] .dark-mode .icon-gallery-controls .icon-lightbox__btn:focus-visible { outline-color: #ffffff; }
     .dark-mode .icon-cell:hover { background: #232323; }
     .dark-mode .icon-cell:active { background: #2a2a2a; }
     .dark-mode .icon-cell .icon-preview svg { border-color: #3d3d3d; }
@@ -1287,7 +1289,7 @@
     #settings-close:hover { background: rgba(0,0,0,0.05); color: #1a1a1a; }
     #settings-close:hover svg { transform: rotate(90deg); }
     #settings-close:active { transform: scale(0.92); background: rgba(0,0,0,0.08); }
-    #settings-close:focus-visible { box-shadow: 0 0 0 2px rgba(34,34,34,0.4); }
+    html[data-pg-modality="keyboard"] #settings-close:focus-visible { box-shadow: 0 0 0 2px rgba(34,34,34,0.4); }
     .dark-mode #settings-close { color: #a8a8a8; }
     .dark-mode #settings-close:hover { background: rgba(255,255,255,0.07); color: #ffffff; }
     .dark-mode #settings-close:active { background: rgba(255,255,255,0.11); }
@@ -1382,9 +1384,9 @@
       transition: border-color 0.12s, box-shadow 0.12s;
     }
     #locale-search::placeholder { color: var(--pg-muted); }
-    #locale-search:focus { border-color: #222222; box-shadow: 0 0 0 3px rgba(34,34,34,0.08); }
+    #locale-search:focus { border-color: #222222; }
     .dark-mode #locale-search { border-color: #3d3d3d; color: #e0e0e0; }
-    .dark-mode #locale-search:focus { border-color: #ffffff; box-shadow: 0 0 0 3px rgba(255,255,255,0.1); }
+    .dark-mode #locale-search:focus { border-color: #ffffff; }
 
     #locale-list {
       max-height: 280px;

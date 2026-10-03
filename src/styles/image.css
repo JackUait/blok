@@ -680,7 +680,7 @@
   background: var(--blok-bg-hover);
   color: var(--blok-text-primary);
 }
-.blok-image-uploading__cancel:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-image-uploading__cancel:focus-visible {
   outline: none;
   border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
@@ -836,8 +836,8 @@
   background: var(--blok-bg-hover);
   border-color: var(--blok-border-primary);
 }
-.blok-image-error__btn:focus-visible,
-.blok-image-error__dismiss:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-image-error__btn:focus-visible,
+:where(:root:not([data-blok-modality="pointer"])) .blok-image-error__dismiss:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }

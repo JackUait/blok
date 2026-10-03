@@ -102,6 +102,13 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Replaces the built-in focus-visible so a click never paints a ring.
+   data-modality comes from src/lib/input-modality.ts. */
+@custom-variant focus-visible (&:focus-visible:where(:root:not([data-modality="pointer"]) *));
+
+/* Unlayered, so it beats the browser's own ring and every layered utility. */
+:root[data-modality="pointer"] :focus-visible { outline: none; }
+
 /* ============================================================
    Blok-brand design tokens
    Pulled from the Blok noodle logo: a rose-pink wordmark (#E14B6E)

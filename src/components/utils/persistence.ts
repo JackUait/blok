@@ -36,6 +36,8 @@ type SaveHandler = NonNullable<BlokConfig['onSave']>;
 type PendingSave = {
   document: OutputData;
   recordedBefore: number;
+  /** The queue generation it was handed over in; `abandon()` moves on. */
+  generation: number;
 };
 
 /**
@@ -177,6 +179,13 @@ export interface PersistenceVersionAccess {
   onSaved(listener: (version: string | null) => void): () => void;
   /** `saving` covers retries; `failed` = the payload is parked until the next save. */
   saveState(): 'idle' | 'saving' | 'failed';
+  /**
+   * Gives up the current payload: no retry, no queued save. A tab that stops
+   * leading calls it, or its retry would carry the next leader's version over
+   * newer content. The request already sent cannot be stopped.
+   * @returns null with no request in flight; else whether that request landed
+   */
+  abandon(): Promise<boolean> | null;
 }
 
 /**
@@ -351,6 +360,10 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
      * flight when the release ran; its result is discarded.
      */
     released: boolean;
+    /** Bumped by `abandon()`; payloads of an older generation are never sent again. */
+    generation: number;
+    /** Requests that landed; tells `abandon()` whether the one in flight did. */
+    landed: number;
   } = {
     inFlight: null,
     pending: null,
@@ -361,6 +374,8 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     failures: 0,
     reported: false,
     released: false,
+    generation: 0,
+    landed: 0,
   };
 
   const guardUnload = (event: BeforeUnloadEvent): void => {
@@ -477,8 +492,11 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     }
   };
 
+  /** Released, or abandoned by a tab that stopped leading. */
+  const stopped = (payload: PendingSave): boolean => queue.released || payload.generation !== queue.generation;
+
   const attemptSave = async (payload: PendingSave, attempt: number): Promise<void> => {
-    if (queue.released) {
+    if (stopped(payload)) {
       return;
     }
 
@@ -495,8 +513,9 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
 
       queue.failures = 0;
       queue.reported = false;
+      queue.landed += 1;
     } catch (error: unknown) {
-      if (queue.released) {
+      if (stopped(payload)) {
         return;
       }
 
@@ -529,7 +548,7 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
 
       await backoff(RETRY_DELAYS_MS[attempt]);
 
-      if (queue.released) {
+      if (stopped(payload)) {
         return;
       }
 
@@ -673,12 +692,29 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
 
       return queue.inFlight !== null || queue.pending !== null ? 'saving' : 'idle';
     },
+    abandon: () => {
+      queue.generation += 1;
+      queue.pending = null;
+      queue.parked = false;
+      queue.cancelBackoff?.();
+      syncUnloadGuard();
+
+      const flight = queue.inFlight;
+
+      if (flight === null) {
+        return null;
+      }
+
+      const landedBefore = queue.landed;
+
+      return flight.then(() => queue.landed > landedBefore);
+    },
   });
 
   pumps.set(expanded, (data: OutputData): void => {
     // The sweep mark is taken HERE, as the serialized document arrives, and
     // travels with it through the queue and through every retry. See PendingSave.
-    queue.pending = { document: data, recordedBefore: sweep.beginSave() };
+    queue.pending = { document: data, recordedBefore: sweep.beginSave(), generation: queue.generation };
     queue.parked = false;
     // A backoff still running belongs to a document this one replaces; waking
     // it now lets the queue move on to the newest payload immediately.

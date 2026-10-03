@@ -5,7 +5,9 @@ import { TAB_SYNC_PROTOCOL } from './identity';
  * state); non-null = a tab that already joined asks only for what it missed
  * (wake). `recordId` is the saved document id, so a leader hand-off keeps
  * writing the same id. `claim` asks the leader to hand over; `yield` names
- * the tab that takes the lock and the version saved before it.
+ * the tab that takes the lock and the version saved before it. `saving` =
+ * a request of the old leader is still out: the new leader waits for its
+ * `saved`, or for `settled` when that request failed.
  */
 export type TabMessage =
   | { kind: 'hello'; from: string; stateVector: Uint8Array | null }
@@ -13,7 +15,8 @@ export type TabMessage =
   | { kind: 'update'; from: string; update: Uint8Array }
   | { kind: 'saved'; from: string; version: string | null }
   | { kind: 'claim'; from: string }
-  | { kind: 'yield'; from: string; to: string; version: string | null };
+  | { kind: 'yield'; from: string; to: string; version: string | null; saving: boolean }
+  | { kind: 'settled'; from: string; ok: boolean };
 
 export interface Envelope { protocol: number; key: string; message: TabMessage }
 
@@ -71,7 +74,11 @@ const toMessage = (value: unknown): TabMessage | null => {
     case 'claim':
       return { kind: 'claim', from };
     case 'yield':
-      return isString(value.to) && isNullableString(value.version) ? { kind: 'yield', from, to: value.to, version: value.version } : null;
+      return isString(value.to) && isNullableString(value.version) && typeof value.saving === 'boolean'
+        ? { kind: 'yield', from, to: value.to, version: value.version, saving: value.saving }
+        : null;
+    case 'settled':
+      return typeof value.ok === 'boolean' ? { kind: 'settled', from, ok: value.ok } : null;
     default:
       return null;
   }

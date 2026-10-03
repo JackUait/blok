@@ -183,6 +183,71 @@ describe('persistenceVersionAccess', () => {
     expect(access?.saveState()).toBe('failed');
   });
 
+  it('an abandoned payload is never sent again, even after the version moves on', async () => {
+    vi.useFakeTimers();
+    const failed: { reject: () => void } = { reject: () => undefined };
+    const save = vi.fn()
+      .mockImplementationOnce(() => new Promise((_resolve, reject) => {
+        failed.reject = () => reject(new Error('conflict'));
+      }))
+      .mockResolvedValue({ version: 'v2' });
+    const config = expand({ persistence: { load: async () => null, save, onError: () => undefined } });
+    const access = persistenceVersionAccess(config.persistence);
+
+    config.onSave?.({ blocks: [] }, apiStub);
+    await vi.advanceTimersByTimeAsync(0);
+    const settled = access?.abandon();
+
+    // Another tab saved meanwhile; a retry would now pass its If-Match.
+    access?.set('v1');
+    failed.reject();
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(save).toHaveBeenCalledTimes(1);
+    await expect(settled).resolves.toBe(false);
+    expect(access?.saveState()).toBe('idle');
+  });
+
+  it('abandon drops the queued payload and reports a request that still lands', async () => {
+    const landed: { resolve: () => void } = { resolve: () => undefined };
+    const save = vi.fn()
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        landed.resolve = () => resolve({ version: 'v1' });
+      }))
+      .mockResolvedValue({ version: 'v2' });
+    const config = expand({ persistence: { load: async () => null, save } });
+    const access = persistenceVersionAccess(config.persistence);
+
+    config.onSave?.({ blocks: [] }, apiStub);
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    config.onSave?.({ blocks: [{ id: 'b', type: 'paragraph', data: {} }] }, apiStub);
+    const settled = access?.abandon();
+
+    landed.resolve();
+
+    await expect(settled).resolves.toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(access?.get()).toBe('v1');
+  });
+
+  it('abandon with no request in flight has nothing to wait for', () => {
+    const config = expand({ persistence: { load: async () => null, save: async () => undefined } });
+
+    expect(persistenceVersionAccess(config.persistence)?.abandon()).toBeNull();
+  });
+
+  it('a payload handed over after abandon is saved as usual', async () => {
+    const save = vi.fn(async () => ({ version: 'v3' }));
+    const config = expand({ persistence: { load: async () => null, save } });
+    const access = persistenceVersionAccess(config.persistence);
+
+    void access?.abandon();
+    config.onSave?.({ blocks: [] }, apiStub);
+
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  });
+
   it('answers null for an editor without persistence', () => {
     expect(persistenceVersionAccess(undefined)).toBeNull();
   });

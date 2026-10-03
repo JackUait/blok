@@ -28,8 +28,9 @@ describe('tab messages', () => {
     { kind: 'saved', from: 'a', version: null },
     { kind: 'saved', from: 'a', version: 'v2' },
     { kind: 'claim', from: 'a' },
-    { kind: 'yield', from: 'a', to: 'b', version: null },
-    { kind: 'yield', from: 'a', to: 'b', version: 'v3' },
+    { kind: 'yield', from: 'a', to: 'b', version: null, saving: false },
+    { kind: 'yield', from: 'a', to: 'b', version: 'v3', saving: true },
+    { kind: 'settled', from: 'a', ok: false },
   ])('round-trips a valid message %#', (message) => {
     expect(unwrap('k', structuredClone(wrap('k', message)))).toEqual(message);
   });
@@ -64,10 +65,14 @@ describe('tab messages', () => {
     envelope({ kind: 'saved', from: 'a' }),
     envelope({ kind: 'claim' }),
     envelope({ kind: 'claim', from: 1 }),
-    envelope({ kind: 'yield', from: 'a', version: null }),
-    envelope({ kind: 'yield', from: 'a', to: 2, version: null }),
-    envelope({ kind: 'yield', from: 'a', to: 'b', version: 5 }),
-    envelope({ kind: 'yield', from: 'a', to: 'b' }),
+    envelope({ kind: 'yield', from: 'a', version: null, saving: false }),
+    envelope({ kind: 'yield', from: 'a', to: 2, version: null, saving: false }),
+    envelope({ kind: 'yield', from: 'a', to: 'b', version: 5, saving: false }),
+    envelope({ kind: 'yield', from: 'a', to: 'b', saving: false }),
+    envelope({ kind: 'yield', from: 'a', to: 'b', version: null }),
+    envelope({ kind: 'yield', from: 'a', to: 'b', version: null, saving: 'no' }),
+    envelope({ kind: 'settled', from: 'a' }),
+    envelope({ kind: 'settled', from: 'a', ok: 'false' }),
   ])('drops malformed %#', (data) => {
     expect(unwrap('k', data)).toBeNull();
   });

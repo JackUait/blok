@@ -2673,7 +2673,7 @@ describe('cell-selection wiring', () => {
 
     cellSelectionOptions().onSelectionActiveChange(true, false);
 
-    expect(rowColMock().pinCell).toHaveBeenLastCalledWith({ row: 1, col: 0 });
+    expect(rowColMock().pinCell).toHaveBeenLastCalledWith({ row: 1, col: 0, rowSpan: 2, colSpan: 2 });
   });
 
   it('releases the pinned grips for a multi-cell range', () => {

@@ -1607,42 +1607,141 @@ describe('TableRowColControls', () => {
       expect(rowGrips[2].style.top).toBe('100px');
     });
 
-    it('shows the grip of the row under the pointer when entering the merged cell at row 1', () => {
+    const rowGripTop = (table: HTMLElement, i: number): string =>
+      table.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`)[i].style.top;
+
+    const colGripLeft = (table: HTMLElement, i: number): string =>
+      table.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`)[i].style.left;
+
+    it('shows one row grip and one column grip wherever the pointer is inside the merged cell', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+
+      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 150, clientY: 100 }));
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0']);
+
+      origin.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 20, clientY: 10 }));
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0']);
+    });
+
+    it('centres the hovered merged cell grips on the merged cell', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+
+      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 150, clientY: 100 }));
+
+      expect(rowGripTop(table, 0)).toBe('60px');
+      expect(colGripLeft(table, 0)).toBe('100px');
+    });
+
+    it('puts the grip back on its own row once a plain cell of that row is hovered', () => {
       const { table, origin } = createSpanGrid();
 
       grid = table;
       controls = mountControls(table);
 
       origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 50, clientY: 60 }));
+      table.querySelectorAll<HTMLElement>(`[${CELL_ROW_ATTR}="0"][${CELL_COL_ATTR}="2"]`)[0]
+        .dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 250, clientY: 10 }));
+
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(rowGripTop(table, 0)).toBe('20px');
+    });
+
+    it('centres the pinned grips of a merged caret cell and shows no others', () => {
+      const { table } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+      controls.pinCell({ row: 0, col: 0, rowSpan: 3, colSpan: 2 });
+
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0']);
+      expect(rowGripTop(table, 0)).toBe('60px');
+      expect(colGripLeft(table, 0)).toBe('100px');
+    });
+
+    it('keeps a single pair when the pointer moves inside the pinned merged cell', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+      controls.pinCell({ row: 0, col: 0, rowSpan: 3, colSpan: 2 });
+
+      origin.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 150, clientY: 100 }));
+
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0']);
+      expect(rowGripTop(table, 0)).toBe('60px');
+    });
+
+    it('hides the pinned merged grip while a row it covers is hovered elsewhere, so two grips never stack', () => {
+      const { table } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+      controls.pinCell({ row: 0, col: 0, rowSpan: 3, colSpan: 2 });
+
+      table.querySelectorAll<HTMLElement>(`[${CELL_ROW_ATTR}="1"][${CELL_COL_ATTR}="2"]`)[0]
+        .dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 250, clientY: 60 }));
 
       expect(visibleRowGrips(table)).toEqual(['1']);
+      expect(visibleColGrips(table)).toEqual(['0', '2']);
     });
 
-    it('follows the pointer to another row while it moves inside the merged cell', () => {
+    it('hides the pinned plain-cell grip while a merged cell covering its row is hovered', () => {
       const { table, origin } = createSpanGrid();
 
       grid = table;
       controls = mountControls(table);
+      controls.pinCell({ row: 1, col: 2 });
 
       origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 50, clientY: 10 }));
-      expect(visibleRowGrips(table)).toEqual(['0']);
 
-      origin.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 50, clientY: 100 }));
-      expect(visibleRowGrips(table)).toEqual(['2']);
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0', '2']);
     });
 
-    it('shows the grip of the column under the pointer inside a colspan', () => {
+    it('opens the merged grip menu for the whole span', async () => {
       const { table, origin } = createSpanGrid();
+      const onAction = vi.fn();
 
       grid = table;
-      controls = mountControls(table);
+      controls = new TableRowColControls({
+        grid: table,
+        getColumnCount: () => 3,
+        getRowCount: () => 4,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction,
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
+        i18n: mockI18n,
+      });
 
-      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 150, clientY: 10 }));
+      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 150, clientY: 100 }));
 
-      expect(visibleColGrips(table)).toEqual(['1']);
+      const rowGrip = table.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`)[0];
+
+      rowGrip.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, clientY: 60 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 0, clientY: 60 }));
+      await vi.runAllTimersAsync();
+
+      const deleteItem = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-popover-item]'))
+        .find(item => item.textContent?.includes('tools.table.deleteRow'));
+
+      deleteItem?.click();
+
+      expect(onAction).toHaveBeenCalledWith({ type: 'delete-row', index: 0, count: 3 });
     });
 
-    it('resolves the row under the pointer when a locked grip is released over the merged cell', () => {
+    it('resolves the merged cell as a unit when a locked grip is released over it', () => {
       const { table, origin } = createSpanGrid();
 
       grid = table;
@@ -1651,8 +1750,9 @@ describe('TableRowColControls', () => {
 
       origin.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 150, clientY: 60 }));
 
-      expect(visibleRowGrips(table)).toEqual(['1']);
-      expect(visibleColGrips(table)).toEqual(['1']);
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0']);
+      expect(rowGripTop(table, 0)).toBe('60px');
     });
   });
 

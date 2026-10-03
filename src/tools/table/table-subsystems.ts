@@ -682,8 +682,8 @@ export class TableSubsystems {
           : this.host.model.canMoveColumn(fromIndex, toIndex)
       ),
       onAction: (action: RowColAction) => this.handleRowColAction(gridEl, action),
-      onClearContents: (type, index) => this.clearRangeContents(type, index),
-      onColorChange: (type, index, color, mode) => this.colorRange(type, index, color, mode),
+      onClearContents: (type, index, count) => this.clearRangeContents(type, index, count),
+      onColorChange: (type, index, color, mode, count) => this.colorRange(type, index, color, mode, count),
       onDragStateChange: (isDragging: boolean, dragType: 'row' | 'col' | null, dragIndex: number) => {
         if (this.resize) {
           this.resize.enabled = !isDragging;
@@ -756,17 +756,20 @@ export class TableSubsystems {
   }
 
   /**
-   * Every real <td> of a row/column, in order. Merge-covered coordinates have no
-   * <td> at all, so they simply do not appear (and a merge origin appears once).
+   * Every real <td> of `count` rows/columns from `index`, in order. Merge-covered
+   * coordinates have no <td> at all, so they simply do not appear (and a merge
+   * origin appears once).
    */
-  private rangeCells(gridEl: HTMLElement, type: 'row' | 'col', index: number): HTMLElement[] {
-    const count = type === 'row'
+  private rangeCells(gridEl: HTMLElement, type: 'row' | 'col', index: number, count = 1): HTMLElement[] {
+    const length = type === 'row'
       ? this.host.grid.getColumnCount(gridEl)
       : this.host.grid.getRowCount(gridEl);
 
-    return Array.from({ length: count }, (_, i) => (
-      type === 'row' ? this.cellAt(gridEl, index, i) : this.cellAt(gridEl, i, index)
-    )).filter((cell): cell is HTMLElement => cell !== null);
+    return Array.from({ length: count }, (_, offset) => index + offset).flatMap(line => (
+      Array.from({ length }, (_, i) => (
+        type === 'row' ? this.cellAt(gridEl, line, i) : this.cellAt(gridEl, i, line)
+      )).filter((cell): cell is HTMLElement => cell !== null)
+    ));
   }
 
   /**
@@ -865,27 +868,27 @@ export class TableSubsystems {
   /**
    * Clear the contents of a whole row/column from the grip menu.
    */
-  private clearRangeContents(type: 'row' | 'col', index: number): void {
+  private clearRangeContents(type: 'row' | 'col', index: number, count: number): void {
     const gridEl = this.host.gridElement;
 
     if (!gridEl || this.host.readOnly) {
       return;
     }
 
-    this.clearCellsContent(this.rangeCells(gridEl, type, index));
+    this.clearCellsContent(this.rangeCells(gridEl, type, index, count));
   }
 
   /**
    * Paint a whole row/column from the grip menu's color submenu.
    */
-  private colorRange(type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode): void {
+  private colorRange(type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode, count: number): void {
     const gridEl = this.host.gridElement;
 
     if (!gridEl || this.host.readOnly) {
       return;
     }
 
-    this.handleCellColorChange(this.rangeCells(gridEl, type, index), color, mode);
+    this.handleCellColorChange(this.rangeCells(gridEl, type, index, count), color, mode);
   }
 
   /**
@@ -986,10 +989,12 @@ export class TableSubsystems {
         this.rowColControls?.refresh();
       }
 
-      if (action.type === 'duplicate-row') {
-        this.duplicateRangeContent(gridEl, 'row', action.index, action.index + 1);
-      } else if (action.type === 'duplicate-col') {
-        this.duplicateRangeContent(gridEl, 'col', action.index, action.index + 1);
+      if (action.type === 'duplicate-row' || action.type === 'duplicate-col') {
+        const count = action.count ?? 1;
+
+        Array.from({ length: count }).forEach((_, i) => {
+          this.duplicateRangeContent(gridEl, action.type === 'duplicate-row' ? 'row' : 'col', action.index + i, action.index + count + i);
+        });
       }
 
       if (!result.moveSelection) {
@@ -1041,12 +1046,16 @@ export class TableSubsystems {
         this.host.model.addColumn(action.index + 1);
         break;
       case 'duplicate-row':
-        // The copy starts life as an empty row; its content is deep-copied in
+        // The copies start life as empty rows; their content is deep-copied in
         // duplicateRangeContent() once the DOM half has rendered the new cells.
-        this.host.model.addRow(action.index + 1);
+        Array.from({ length: action.count ?? 1 }).forEach(() => {
+          this.host.model.addRow(action.index + (action.count ?? 1));
+        });
         break;
       case 'duplicate-col':
-        this.host.model.addColumn(action.index + 1);
+        Array.from({ length: action.count ?? 1 }).forEach(() => {
+          this.host.model.addColumn(action.index + (action.count ?? 1));
+        });
         break;
       case 'move-row':
         // The model refuses only the moves that would tear a merge, and the
@@ -1058,9 +1067,14 @@ export class TableSubsystems {
         this.host.model.moveColumn(action.fromIndex, action.toIndex);
         break;
       case 'delete-row':
-        return this.host.model.deleteRow(action.index);
       case 'delete-col':
-        return this.host.model.deleteColumn(action.index);
+        return {
+          blocksToDelete: Array.from({ length: action.count ?? 1 }).flatMap(() => (
+            action.type === 'delete-row'
+              ? this.host.model.deleteRow(action.index).blocksToDelete
+              : this.host.model.deleteColumn(action.index).blocksToDelete
+          )),
+        };
       case 'toggle-heading':
       case 'toggle-heading-column':
         // Metadata only — handled after executeRowColAction
@@ -1471,10 +1485,17 @@ export class TableSubsystems {
         this.cornerDrag?.setInteractive(!isMultiCell);
         this.rowColControls?.setGripsDisplay(!hasSelection);
 
-        // A merged cell pins its origin row/col.
+        // A merged cell pins one grip pair standing for all the rows/cols it covers.
         const caretRange = hasSelection && !isMultiCell ? this.cellSelection?.getSelectedRange() : null;
 
-        this.rowColControls?.pinCell(caretRange ? { row: caretRange.minRow, col: caretRange.minCol } : null);
+        this.rowColControls?.pinCell(caretRange
+          ? {
+            row: caretRange.minRow,
+            col: caretRange.minCol,
+            rowSpan: caretRange.maxRow - caretRange.minRow + 1,
+            colSpan: caretRange.maxCol - caretRange.minCol + 1,
+          }
+          : null);
       },
       onSelectionRangeChange: () => {
         // Selection finalized — restore grips so hover works normally

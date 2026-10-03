@@ -188,7 +188,7 @@ describe('native keyboard in color submenus', () => {
     const active = checkNativeKeyboard(popover.getElement());
 
     fireEvent.click(getByRole(popover.getElement(), 'button', { name: 'Red background' }));
-    expect(onColorChange).toHaveBeenCalledExactlyOnceWith(type, 1, '#fdebec', 'backgroundColor');
+    expect(onColorChange).toHaveBeenCalledExactlyOnceWith(type, 1, '#fdebec', 'backgroundColor', 1);
     fireEvent.keyDown(active, { key: 'Escape' });
     expect(popover.isShown).toBe(false);
   });

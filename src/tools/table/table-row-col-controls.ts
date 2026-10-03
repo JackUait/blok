@@ -32,10 +32,10 @@ export type RowColAction =
   | { type: 'insert-col-right'; index: number }
   | { type: 'move-row'; fromIndex: number; toIndex: number }
   | { type: 'move-col'; fromIndex: number; toIndex: number }
-  | { type: 'duplicate-row'; index: number }
-  | { type: 'duplicate-col'; index: number }
-  | { type: 'delete-row'; index: number }
-  | { type: 'delete-col'; index: number }
+  | { type: 'duplicate-row'; index: number; count?: number }
+  | { type: 'duplicate-col'; index: number; count?: number }
+  | { type: 'delete-row'; index: number; count?: number }
+  | { type: 'delete-col'; index: number; count?: number }
   | { type: 'toggle-heading' }
   | { type: 'toggle-heading-column' };
 
@@ -48,10 +48,10 @@ export interface TableRowColControlsOptions {
   isHeadingRow: () => boolean;
   isHeadingColumn: () => boolean;
   onAction: (action: RowColAction) => void;
-  /** Wipe the content of every cell in the grip's row/column (colors survive). */
-  onClearContents: (type: 'row' | 'col', index: number) => void;
-  /** Paint every cell in the grip's row/column. */
-  onColorChange: (type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode) => void;
+  /** Wipe the content of every cell in the grip's rows/columns (colors survive). */
+  onClearContents: (type: 'row' | 'col', index: number, count: number) => void;
+  /** Paint every cell in the grip's rows/columns. */
+  onColorChange: (type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode, count: number) => void;
   onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null, dragIndex: number) => void;
   onGripClick?: (type: 'row' | 'col', index: number) => void;
   onGripPopoverClose?: () => void;
@@ -108,8 +108,8 @@ export class TableRowColControls {
   private isHeadingRow: () => boolean;
   private isHeadingColumn: () => boolean;
   private onAction: (action: RowColAction) => void;
-  private onClearContents: (type: 'row' | 'col', index: number) => void;
-  private onColorChange: (type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode) => void;
+  private onClearContents: (type: 'row' | 'col', index: number, count: number) => void;
+  private onColorChange: (type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode, count: number) => void;
   private onGripClick: ((type: 'row' | 'col', index: number) => void) | undefined;
   private onGripPopoverClose: (() => void) | undefined;
   private i18n: I18n;
@@ -125,6 +125,14 @@ export class TableRowColControls {
   /** Row/col of the cell holding the caret. Its grips stay up whatever the pointer hovers. */
   private pinnedRowIndex = -1;
   private pinnedColIndex = -1;
+  /**
+   * How many rows/cols the hovered and the pinned grip stand for. A merged cell
+   * acts as one cell: one grip per axis, centred on it, acting on every row/col it covers.
+   */
+  private hoverRowSpan = 1;
+  private hoverColSpan = 1;
+  private pinnedRowSpan = 1;
+  private pinnedColSpan = 1;
   private isInsideTable = false;
   private rowResizeObserver: ResizeObserver | null = null;
 
@@ -244,35 +252,84 @@ export class TableRowColControls {
   /**
    * Keep the grips of `cell` visible on top of the hover pair. Pass null to release them.
    */
-  public pinCell(cell: { row: number; col: number } | null): void {
+  public pinCell(cell: { row: number; col: number; rowSpan?: number; colSpan?: number } | null): void {
     const prevRow = this.pinnedRowIndex;
     const prevCol = this.pinnedColIndex;
 
     this.pinnedRowIndex = cell?.row ?? -1;
     this.pinnedColIndex = cell?.col ?? -1;
+    this.pinnedRowSpan = cell?.rowSpan ?? 1;
+    this.pinnedColSpan = cell?.colSpan ?? 1;
 
     if (prevCol >= 0 && prevCol !== this.pinnedColIndex && prevCol !== this.activeColGripIndex && prevCol < this.colGrips.length) {
       this.applyIdleClasses(this.colGrips[prevCol]);
+      this.positionGrip('col', prevCol);
     }
     if (prevRow >= 0 && prevRow !== this.pinnedRowIndex && prevRow !== this.activeRowGripIndex && prevRow < this.rowGrips.length) {
       this.applyIdleClasses(this.rowGrips[prevRow]);
+      this.positionGrip('row', prevRow);
     }
 
     this.showPinnedGrips();
   }
 
   private showPinnedGrips(): void {
+    this.syncPinnedGrip('col');
+    this.syncPinnedGrip('row');
+  }
+
+  /**
+   * Show the pinned grip of one axis, at its span. When the hovered grip's rows
+   * overlap the pinned grip's rows, the pinned one hides: they would stack.
+   */
+  private syncPinnedGrip(type: 'row' | 'col'): void {
     // An open menu or a locked grip shows only its own grip.
     if (this.isGripInteractionLocked()) {
       return;
     }
 
-    [this.colGrips[this.pinnedColIndex], this.rowGrips[this.pinnedRowIndex]].forEach(grip => {
-      // No fade: the grips mark the caret cell like its box does, and a fade replays after every undo rebuild.
-      if (grip !== undefined && !grip.hasAttribute('data-blok-table-grip-visible')) {
-        this.applyVisibleClasses(grip, true);
+    const pinned = type === 'row' ? this.pinnedRowIndex : this.pinnedColIndex;
+    const span = type === 'row' ? this.pinnedRowSpan : this.pinnedColSpan;
+    const active = type === 'row' ? this.activeRowGripIndex : this.activeColGripIndex;
+    const activeSpan = type === 'row' ? this.hoverRowSpan : this.hoverColSpan;
+    const grip = (type === 'row' ? this.rowGrips : this.colGrips)[pinned];
+
+    if (grip === undefined) {
+      return;
+    }
+
+    this.positionGrip(type, pinned);
+
+    if (active >= 0 && active !== pinned && active < pinned + span && pinned < active + activeSpan) {
+      this.applyIdleClasses(grip);
+
+      return;
+    }
+
+    // No fade: the grips mark the caret cell like its box does, and a fade replays after every undo rebuild.
+    if (!grip.hasAttribute('data-blok-table-grip-visible')) {
+      this.applyVisibleClasses(grip, true);
+    }
+  }
+
+  /**
+   * How many rows/cols a grip stands for right now. Hover wins over the pin:
+   * the grip under the pointer describes what the pointer is on.
+   */
+  private getGripSpan(type: 'row' | 'col', index: number): number {
+    if (type === 'row') {
+      if (index === this.activeRowGripIndex) {
+        return this.hoverRowSpan;
       }
-    });
+
+      return index === this.pinnedRowIndex ? this.pinnedRowSpan : 1;
+    }
+
+    if (index === this.activeColGripIndex) {
+      return this.hoverColSpan;
+    }
+
+    return index === this.pinnedColIndex ? this.pinnedColSpan : 1;
   }
 
   private handleUnlockGrip(e: PointerEvent): void {
@@ -291,12 +348,12 @@ export class TableRowColControls {
     const cell = target ? this.findOwnCell(target) : null;
 
     if (cell) {
-      const position = this.getPointerPosition(cell, e);
+      const position = this.getPointerPosition(cell);
 
       if (position) {
         this.clearHideTimeout();
-        this.showColGrip(position.col);
-        this.showRowGrip(position.row);
+        this.showColGrip(position.col, position.colSpan);
+        this.showRowGrip(position.row, position.rowSpan);
         this.isInsideTable = true;
       }
     }
@@ -403,6 +460,8 @@ export class TableRowColControls {
     this.rowGrips = [];
     this.activeColGripIndex = -1;
     this.activeRowGripIndex = -1;
+    this.hoverColSpan = 1;
+    this.hoverRowSpan = 1;
     this.isInsideTable = false;
   }
 
@@ -520,37 +579,66 @@ export class TableRowColControls {
     const direction = getElementDirection(this.grid);
     const frame = this.getGripFrame(direction);
 
-    this.colGrips.forEach((grip, i) => {
-      if (i + 1 >= edges.length) {
-        return;
-      }
+    this.colGrips.forEach((grip, i) => this.placeColGrip(grip, i, edges, direction, frame));
+    this.rowGrips.forEach((grip, i) => this.placeRowGrip(grip, i, rows, frame));
+  }
 
-      const centerX = (colEdgeX(edges, i, direction) + colEdgeX(edges, i + 1, direction)) / 2;
-      const adjustedX = centerX + frame.gridOffset;
-      const style = grip.style;
+  private positionGrip(type: 'row' | 'col', index: number): void {
+    const grip = (type === 'row' ? this.rowGrips : this.colGrips)[index];
 
-      style.top = `${BORDER_WIDTH / 2}px`;
-      style.left = `${adjustedX}px`;
+    if (grip === undefined) {
+      return;
+    }
 
-      // Hide grips scrolled out of the visible area
-      if (this.overlay) {
-        style.visibility = (adjustedX < frame.visibleStart || adjustedX > frame.visibleStart + frame.visibleWidth) ? 'hidden' : '';
-      }
-    });
+    const direction = getElementDirection(this.grid);
+    const frame = this.getGripFrame(direction);
 
-    this.rowGrips.forEach((grip, i) => {
-      if (i >= rows.length) {
-        return;
-      }
+    if (type === 'row') {
+      this.placeRowGrip(grip, index, ownRows(this.grid), frame);
+    } else {
+      this.placeColGrip(grip, index, getCumulativeColEdges(this.grid), direction, frame);
+    }
+  }
 
-      const rowEl = rows[i];
-      // A row grip must sit inside its own row: centring it on a rowspan puts grip 0 on top of grip 1.
-      const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
-      const style = grip.style;
+  private placeColGrip(
+    grip: HTMLElement,
+    i: number,
+    edges: number[],
+    direction: 'ltr' | 'rtl',
+    frame: { gridOffset: number; visibleStart: number; visibleWidth: number }
+  ): void {
+    if (i + 1 >= edges.length) {
+      return;
+    }
 
-      style.left = `${frame.rowGripX}px`;
-      style.top = `${centerY}px`;
-    });
+    const end = Math.min(i + this.getGripSpan('col', i), edges.length - 1);
+    const centerX = (colEdgeX(edges, i, direction) + colEdgeX(edges, end, direction)) / 2;
+    const adjustedX = centerX + frame.gridOffset;
+    const style = grip.style;
+
+    style.top = `${BORDER_WIDTH / 2}px`;
+    style.left = `${adjustedX}px`;
+
+    // Hide grips scrolled out of the visible area
+    if (this.overlay) {
+      style.visibility = (adjustedX < frame.visibleStart || adjustedX > frame.visibleStart + frame.visibleWidth) ? 'hidden' : '';
+    }
+  }
+
+  private placeRowGrip(grip: HTMLElement, i: number, rows: ArrayLike<HTMLElement>, frame: { rowGripX: number }): void {
+    if (i >= rows.length) {
+      return;
+    }
+
+    // Only a grip standing for a merged cell spans rows; an idle one stays in
+    // its own row, or grip 0 of a rowspan would sit on top of grip 1.
+    const first = rows[i];
+    const last = rows[Math.min(i + this.getGripSpan('row', i), rows.length) - 1];
+    const centerY = (first.offsetTop + last.offsetTop + last.offsetHeight) / 2;
+    const style = grip.style;
+
+    style.left = `${frame.rowGripX}px`;
+    style.top = `${centerY}px`;
   }
 
   /**
@@ -619,14 +707,14 @@ export class TableRowColControls {
 
     this.clearHideTimeout();
 
-    const position = this.getPointerPosition(cell, e);
+    const position = this.getPointerPosition(cell);
 
     if (!position) {
       return;
     }
 
-    this.showColGrip(position.col);
-    this.showRowGrip(position.row);
+    this.showColGrip(position.col, position.colSpan);
+    this.showRowGrip(position.row, position.rowSpan);
     this.isInsideTable = true;
   }
 
@@ -658,40 +746,21 @@ export class TableRowColControls {
   }
 
   /**
-   * The row/col under the pointer. A merged cell's attributes name only its
-   * origin, so inside a span the pointer coordinates pick the covered row/col.
+   * The cell under the pointer. A merged cell counts as one cell: its origin
+   * and the rows/cols it covers.
    */
-  private getPointerPosition(cell: HTMLElement, e: MouseEvent): { row: number; col: number } | null {
+  private getPointerPosition(cell: HTMLElement): { row: number; col: number; rowSpan: number; colSpan: number } | null {
     const position = this.getCellPosition(cell);
 
     if (!position) {
       return null;
     }
 
-    const rowSpan = (cell as HTMLTableCellElement).rowSpan || 1;
-    const colSpan = (cell as HTMLTableCellElement).colSpan || 1;
-
     return {
-      row: rowSpan > 1 ? this.getRowInSpan(position.row, rowSpan, e.clientY) : position.row,
-      col: colSpan > 1 ? this.getColInSpan(position.col, colSpan, e.clientX) : position.col,
+      ...position,
+      rowSpan: (cell as HTMLTableCellElement).rowSpan || 1,
+      colSpan: (cell as HTMLTableCellElement).colSpan || 1,
     };
-  }
-
-  private getRowInSpan(originRow: number, rowSpan: number, clientY: number): number {
-    const rows = Array.from(ownRows(this.grid));
-    const covered = rows.slice(originRow, originRow + rowSpan);
-    const hit = covered.findIndex(row => clientY < row.getBoundingClientRect().bottom);
-
-    return originRow + (hit >= 0 ? hit : Math.max(covered.length - 1, 0));
-  }
-
-  private getColInSpan(originCol: number, colSpan: number, clientX: number): number {
-    const edges = getCumulativeColEdges(this.grid);
-    const x = gridX(clientX - this.grid.getBoundingClientRect().left, edges[edges.length - 1] ?? 0, getElementDirection(this.grid));
-    const rightEdges = edges.slice(originCol + 1, originCol + colSpan + 1);
-    const hit = rightEdges.findIndex(edge => x < edge);
-
-    return originCol + (hit >= 0 ? hit : Math.max(rightEdges.length - 1, 0));
   }
 
   private getCellPosition(cell: HTMLElement): { row: number; col: number } | null {
@@ -742,40 +811,56 @@ export class TableRowColControls {
     this.isInsideTable = false;
   }
 
-  private showColGrip(index: number): void {
-    if (this.activeColGripIndex === index) {
+  private showColGrip(index: number, span = 1): void {
+    if (this.activeColGripIndex === index && this.hoverColSpan === span) {
       return;
     }
 
     this.hideColGrip();
     this.activeColGripIndex = index;
+    this.hoverColSpan = span;
     this.applyVisibleClasses(this.colGrips[index]);
+    this.positionGrip('col', index);
+    this.syncPinnedGrip('col');
   }
 
   private hideColGrip(): void {
-    if (this.activeColGripIndex >= 0 && this.activeColGripIndex < this.colGrips.length && this.activeColGripIndex !== this.pinnedColIndex) {
-      this.applyIdleClasses(this.colGrips[this.activeColGripIndex]);
+    const prev = this.activeColGripIndex;
+
+    if (prev >= 0 && prev < this.colGrips.length && prev !== this.pinnedColIndex) {
+      this.applyIdleClasses(this.colGrips[prev]);
     }
 
     this.activeColGripIndex = -1;
+    this.hoverColSpan = 1;
+    this.positionGrip('col', prev);
+    this.syncPinnedGrip('col');
   }
 
-  private showRowGrip(index: number): void {
-    if (this.activeRowGripIndex === index) {
+  private showRowGrip(index: number, span = 1): void {
+    if (this.activeRowGripIndex === index && this.hoverRowSpan === span) {
       return;
     }
 
     this.hideRowGrip();
     this.activeRowGripIndex = index;
+    this.hoverRowSpan = span;
     this.applyVisibleClasses(this.rowGrips[index]);
+    this.positionGrip('row', index);
+    this.syncPinnedGrip('row');
   }
 
   private hideRowGrip(): void {
-    if (this.activeRowGripIndex >= 0 && this.activeRowGripIndex < this.rowGrips.length && this.activeRowGripIndex !== this.pinnedRowIndex) {
-      this.applyIdleClasses(this.rowGrips[this.activeRowGripIndex]);
+    const prev = this.activeRowGripIndex;
+
+    if (prev >= 0 && prev < this.rowGrips.length && prev !== this.pinnedRowIndex) {
+      this.applyIdleClasses(this.rowGrips[prev]);
     }
 
     this.activeRowGripIndex = -1;
+    this.hoverRowSpan = 1;
+    this.positionGrip('row', prev);
+    this.syncPinnedGrip('row');
   }
 
   private applyVisibleClasses(grip: HTMLElement, instant = this.isInsideTable): void {
@@ -930,6 +1015,7 @@ export class TableRowColControls {
     this.popoverState = createGripPopover(
       type,
       index,
+      this.getGripSpan(type, index),
       { col: this.colGrips, row: this.rowGrips },
       {
         getColumnCount: this.getColumnCount,

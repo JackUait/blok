@@ -662,7 +662,7 @@ test.describe('Table merge browser audit', () => {
     await expect(getCellAt(page, 0, 0)).toHaveAttribute('rowspan', '2');
   });
 
-  test('AUD10 hover over merged cell lower half shows a row grip', async ({ page }) => {
+  test('AUD10 hover anywhere in a merged cell shows its one row grip and one column grip', async ({ page }) => {
     await create3x3Table(page);
     await mergeTopLeft2x2(page);
 
@@ -680,8 +680,8 @@ test.describe('Table merge browser audit', () => {
       .map(g => g.getAttribute('data-blok-table-grip-col')));
 
     console.log('AUD10 visible col grips (right half)', JSON.stringify(visibleColGrips));
-    expect(visibleRowGrips).toContain('1');
-    expect(visibleColGrips).toContain('1');
+    expect(visibleRowGrips).toEqual(['0']);
+    expect(visibleColGrips).toEqual(['0']);
   });
 
   const gripAction = async (page: Page, kind: 'row' | 'col', index: number, hover: [number, number], item: string): Promise<void> => {

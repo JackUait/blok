@@ -15,7 +15,8 @@ export interface TabChannel {
 
 /**
  * One acquisition at a time: `tryAcquire` or `queue` while this object is
- * already waiting or holding rejects with an InvalidStateError.
+ * already waiting or holding rejects with an InvalidStateError. `steal` is the
+ * exception: see there.
  */
 export interface LeaderLock {
   /** Resolves true when this tab got the lock without waiting. */
@@ -27,6 +28,24 @@ export interface LeaderLock {
   queue(signal: AbortSignal): Promise<void>;
   /** Frees a held lock, or cancels a pending `tryAcquire` / `queue`. */
   release(): void;
+  /**
+   * Takes the lock from whoever holds it; resolves once held. Tabs waiting in
+   * line keep their place (Chromium). Cancels this object's own pending
+   * `tryAcquire` / `queue` first; resolves at once when already holding.
+   */
+  steal(): Promise<void>;
+  /**
+   * Called when another tab steals the lock this object holds. Never for its
+   * own `release()`. After it, the object may acquire again.
+   */
+  onLost(listener: () => void): () => void;
+}
+
+/** Whether the user is working in this tab. */
+export interface TabActivity {
+  isActive(): boolean;
+  /** Called when activity may have changed; read `isActive()` again. */
+  onChange(listener: () => void): () => void;
 }
 
 export interface TabPlatform {
@@ -36,6 +55,8 @@ export interface TabPlatform {
   channel(key: string): TabChannel | null;
   /** Null when navigator.locks is missing. */
   lock(key: string): LeaderLock | null;
+  /** Null outside a browser page. */
+  activity(): TabActivity | null;
 }
 
 const hasUnref = (port: BroadcastChannel): port is BroadcastChannel & { unref: () => void } =>
@@ -95,9 +116,18 @@ const lock = (key: string): LeaderLock | null => {
   interface Attempt { cancelled: boolean; free: (() => void) | null; abort: AbortController }
 
   const current: { attempt: Attempt | null } = { attempt: null };
+  const lostListeners = new Set<() => void>();
 
   const busy = (): Promise<never> =>
     Promise.reject(new DOMException('LeaderLock is already waiting or holding', 'InvalidStateError'));
+
+  const isHeld = (attempt: Attempt | null): boolean => attempt !== null && attempt.free !== null && !attempt.cancelled;
+
+  const done = (attempt: Attempt): void => {
+    if (current.attempt === attempt) {
+      current.attempt = null;
+    }
+  };
 
   /**
    * Requests the lock. `settle` gets the outcome; the lock stays held while the
@@ -121,11 +151,34 @@ const lock = (key: string): LeaderLock | null => {
       return new Promise<void>((resolve) => {
         attempt.free = resolve;
       });
-    }).finally(() => {
-      if (current.attempt === attempt) {
-        current.attempt = null;
+    }).then((value) => {
+      done(attempt);
+
+      return value;
+    }, (error: unknown) => {
+      // One step, not catch + finally: callers may acquire again right after a miss.
+      const lost = isHeld(attempt);
+
+      done(attempt);
+      if (!lost) {
+        throw error;
       }
+      // A held request rejects only when another tab steals it.
+      attempt.cancelled = true;
+      lostListeners.forEach((listener) => listener());
     });
+  };
+
+  const release = (): void => {
+    const attempt = current.attempt;
+
+    current.attempt = null;
+    if (attempt === null) {
+      return;
+    }
+    attempt.cancelled = true;
+    attempt.abort.abort();
+    attempt.free?.();
   };
 
   return {
@@ -165,18 +218,54 @@ const lock = (key: string): LeaderLock | null => {
           .finally(() => signal.removeEventListener('abort', forward));
       });
     },
-    release: () => {
-      const attempt = current.attempt;
-
-      current.attempt = null;
-      if (attempt === null) {
-        return;
+    release,
+    steal: () => {
+      if (isHeld(current.attempt)) {
+        return Promise.resolve();
       }
-      attempt.cancelled = true;
-      attempt.abort.abort();
-      attempt.free?.();
+      release();
+
+      // No signal: the Web Locks API rejects `steal` with `signal` or `ifAvailable`.
+      return new Promise<void>((resolve, reject) => {
+        request(() => ({ steal: true }), (granted) => {
+          if (granted) {
+            resolve();
+          } else {
+            reject(new DOMException('LeaderLock released while stealing', 'AbortError'));
+          }
+        }).catch(reject);
+      });
+    },
+    onLost: (listener) => {
+      lostListeners.add(listener);
+
+      return () => {
+        lostListeners.delete(listener);
+      };
     },
   };
 };
 
-export const browserTabPlatform: TabPlatform = { rawChannel, channel, lock };
+const activity = (): TabActivity | null => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return null;
+  }
+
+  return {
+    isActive: () => document.visibilityState === 'visible' && document.hasFocus(),
+    onChange: (listener) => {
+      // Window focus only: element focus events do not reach a bubbling window listener.
+      document.addEventListener('visibilitychange', listener);
+      window.addEventListener('focus', listener);
+      window.addEventListener('blur', listener);
+
+      return () => {
+        document.removeEventListener('visibilitychange', listener);
+        window.removeEventListener('focus', listener);
+        window.removeEventListener('blur', listener);
+      };
+    },
+  };
+};
+
+export const browserTabPlatform: TabPlatform = { rawChannel, channel, lock, activity };

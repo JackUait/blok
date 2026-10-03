@@ -1,8 +1,29 @@
 import * as Y from 'yjs';
 import { vi } from 'vitest';
 
-import type { LeaderLock, RawChannel, TabChannel, TabPlatform } from '../../../../../src/components/modules/tabSync/platform';
+import type { LeaderLock, RawChannel, TabActivity, TabChannel, TabPlatform } from '../../../../../src/components/modules/tabSync/platform';
 import type { TabMessage } from '../../../../../src/components/modules/tabSync/messages';
+
+/** A tab's activity the test sets by hand. Inactive until set, so no tab claims by itself. */
+export const createFakeActivity = (): TabActivity & { set: (active: boolean) => void } => {
+  const listeners = new Set<() => void>();
+  const state = { active: false };
+
+  return {
+    isActive: () => state.active,
+    onChange: (listener) => {
+      listeners.add(listener);
+
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    set: (active) => {
+      state.active = active;
+      listeners.forEach((listener) => listener());
+    },
+  };
+};
 
 const busy = (): Promise<never> =>
   Promise.reject(new DOMException('LeaderLock is already waiting or holding', 'InvalidStateError'));
@@ -10,7 +31,8 @@ const busy = (): Promise<never> =>
 /**
  * One in-memory bus per key; delivery is async like BroadcastChannel and skips the sender.
  * Each lock object follows the real LeaderLock contract (platform.ts): one
- * acquisition at a time, and `release()` cancels a pending `queue`.
+ * acquisition at a time, `release()` cancels a pending `queue`, and `steal`
+ * takes the lock from its holder while waiters keep their place.
  */
 export const createFakePlatform = (): TabPlatform & {
   holders: Map<string, number>;
@@ -24,6 +46,8 @@ export const createFakePlatform = (): TabPlatform & {
   const paused = new Set<TabChannel>();
   const holders = new Map<string, number>();
   const waiters = new Map<string, Array<() => void>>();
+  /** Tells a lock object its held lock was stolen. */
+  const losers = new Map<number, () => void>();
   let nextId = 0;
 
   return {
@@ -92,13 +116,33 @@ export const createFakePlatform = (): TabPlatform & {
 
       return channel;
     },
+    activity: () => createFakeActivity(),
     lock: (key): LeaderLock => {
       const me = nextId++;
       const state: { phase: 'idle' | 'pending' | 'held'; cancel: (() => void) | null } = { phase: 'idle', cancel: null };
+      const lostListeners = new Set<() => void>();
 
       const handOn = (): void => {
         holders.delete(key);
         waiters.get(key)?.shift()?.();
+      };
+
+      losers.set(me, () => {
+        state.phase = 'idle';
+        // Async, like the rejection of the real held request.
+        queueMicrotask(() => lostListeners.forEach((listener) => listener()));
+      });
+
+      const release = (): void => {
+        if (state.phase === 'pending') {
+          state.cancel?.();
+
+          return;
+        }
+        if (state.phase === 'held' && holders.get(key) === me) {
+          state.phase = 'idle';
+          handOn();
+        }
       };
 
       return {
@@ -154,16 +198,26 @@ export const createFakePlatform = (): TabPlatform & {
             }, { once: true });
           });
         },
-        release: () => {
-          if (state.phase === 'pending') {
-            state.cancel?.();
-
+        release,
+        steal: async () => {
+          if (state.phase === 'held' && holders.get(key) === me) {
             return;
           }
-          if (state.phase === 'held' && holders.get(key) === me) {
-            state.phase = 'idle';
-            handOn();
+          release();
+          const holder = holders.get(key);
+
+          holders.set(key, me);
+          state.phase = 'held';
+          if (holder !== undefined) {
+            losers.get(holder)?.();
           }
+        },
+        onLost: (listener) => {
+          lostListeners.add(listener);
+
+          return () => {
+            lostListeners.delete(listener);
+          };
         },
       };
     },

@@ -27,6 +27,9 @@ describe('tab messages', () => {
     { kind: 'state', from: 'a', to: 'b', mode: 'diff', recordId: 'r', update: new Uint8Array([1]), version: 'v1' },
     { kind: 'saved', from: 'a', version: null },
     { kind: 'saved', from: 'a', version: 'v2' },
+    { kind: 'claim', from: 'a' },
+    { kind: 'yield', from: 'a', to: 'b', version: null },
+    { kind: 'yield', from: 'a', to: 'b', version: 'v3' },
   ])('round-trips a valid message %#', (message) => {
     expect(unwrap('k', structuredClone(wrap('k', message)))).toEqual(message);
   });
@@ -59,6 +62,12 @@ describe('tab messages', () => {
     envelope({ kind: 'state', from: 'a', to: 'b', mode: 'full', recordId: 'r', update: new Uint8Array([1]), version: 5 }),
     envelope({ kind: 'saved', from: 'a', version: 5 }),
     envelope({ kind: 'saved', from: 'a' }),
+    envelope({ kind: 'claim' }),
+    envelope({ kind: 'claim', from: 1 }),
+    envelope({ kind: 'yield', from: 'a', version: null }),
+    envelope({ kind: 'yield', from: 'a', to: 2, version: null }),
+    envelope({ kind: 'yield', from: 'a', to: 'b', version: 5 }),
+    envelope({ kind: 'yield', from: 'a', to: 'b' }),
   ])('drops malformed %#', (data) => {
     expect(unwrap('k', data)).toBeNull();
   });

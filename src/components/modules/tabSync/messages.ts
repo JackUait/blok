@@ -4,13 +4,16 @@ import { TAB_SYNC_PROTOCOL } from './identity';
  * `hello.stateVector` null = first join (the joiner resets and adopts a full
  * state); non-null = a tab that already joined asks only for what it missed
  * (wake). `recordId` is the saved document id, so a leader hand-off keeps
- * writing the same id.
+ * writing the same id. `claim` asks the leader to hand over; `yield` names
+ * the tab that takes the lock and the version saved before it.
  */
 export type TabMessage =
   | { kind: 'hello'; from: string; stateVector: Uint8Array | null }
   | { kind: 'state'; from: string; to: string; mode: 'full' | 'diff'; recordId: string; update: Uint8Array; version: string | null }
   | { kind: 'update'; from: string; update: Uint8Array }
-  | { kind: 'saved'; from: string; version: string | null };
+  | { kind: 'saved'; from: string; version: string | null }
+  | { kind: 'claim'; from: string }
+  | { kind: 'yield'; from: string; to: string; version: string | null };
 
 export interface Envelope { protocol: number; key: string; message: TabMessage }
 
@@ -65,6 +68,10 @@ const toMessage = (value: unknown): TabMessage | null => {
     }
     case 'saved':
       return isNullableString(value.version) ? { kind: 'saved', from, version: value.version } : null;
+    case 'claim':
+      return { kind: 'claim', from };
+    case 'yield':
+      return isString(value.to) && isNullableString(value.version) ? { kind: 'yield', from, to: value.to, version: value.version } : null;
     default:
       return null;
   }

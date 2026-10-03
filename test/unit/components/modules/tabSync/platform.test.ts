@@ -2,29 +2,48 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TAB_SYNC_PROTOCOL } from '../../../../../src/components/modules/tabSync/identity';
 import { browserTabPlatform } from '../../../../../src/components/modules/tabSync/platform';
+import type { TabPlatform } from '../../../../../src/components/modules/tabSync/platform';
 
-interface FakeLockOptions { ifAvailable?: boolean; signal?: AbortSignal }
+import { createFakePlatform } from './fakes';
+
+interface FakeLockOptions { ifAvailable?: boolean; signal?: AbortSignal; steal?: boolean }
 type FakeLockCallback = (lock: { name: string } | null) => unknown;
 
-/** In-memory stand-in for navigator.locks: one holder per name, FIFO waiters. */
+/**
+ * In-memory stand-in for navigator.locks: one holder per name, FIFO waiters.
+ * `steal` follows Chromium (probed): the holder's request rejects with an
+ * AbortError, waiters keep their place, and steal refuses signal / ifAvailable.
+ */
 const installFakeLocks = (): void => {
-  const held = new Set<string>();
+  const held = new Map<string, { broken: (reason: unknown) => void }>();
   const waiters = new Map<string, Array<() => void>>();
 
-  const run = async (name: string, cb: FakeLockCallback): Promise<unknown> => {
-    held.add(name);
-    try {
-      // Real lock callbacks run in a later task, never synchronously.
-      await Promise.resolve();
+  const run = (name: string, cb: FakeLockCallback): Promise<unknown> => new Promise((resolve, reject) => {
+    const entry = { broken: reject };
 
-      return await cb({ name });
-    } finally {
-      held.delete(name);
-      waiters.get(name)?.shift()?.();
-    }
-  };
+    held.set(name, entry);
+    // Real lock callbacks run in a later task, never synchronously.
+    Promise.resolve()
+      .then(() => cb({ name }))
+      .then(resolve, reject)
+      .finally(() => {
+        // A stolen entry is no longer the holder: the stealer frees the name.
+        if (held.get(name) === entry) {
+          held.delete(name);
+          waiters.get(name)?.shift()?.();
+        }
+      });
+  });
 
   const request = (name: string, options: FakeLockOptions, cb: FakeLockCallback): Promise<unknown> => {
+    if (options.steal === true) {
+      if (options.signal !== undefined || options.ifAvailable === true) {
+        return Promise.reject(new DOMException('steal with signal or ifAvailable', 'NotSupportedError'));
+      }
+      held.get(name)?.broken(new DOMException('Lock broken by another request with the \'steal\' option.', 'AbortError'));
+
+      return run(name, cb);
+    }
     if (options.signal?.aborted === true) {
       return Promise.reject(options.signal.reason);
     }
@@ -308,6 +327,187 @@ describe('browserTabPlatform', () => {
       a?.release();
 
       await vi.waitFor(async () => expect(await a?.tryAcquire()).toBe(true));
+    });
+  });
+  // The fake platform must behave like the browser one, so both run these.
+  describe.each<[string, () => TabPlatform]>([
+    ['browser', () => {
+      installFakeLocks();
+
+      return browserTabPlatform;
+    }],
+    ['fake', () => createFakePlatform()],
+  ])('lock steal (%s)', (_name, makePlatform) => {
+    it('takes a held lock from another tab and tells that tab it lost it', async () => {
+      const platform = makePlatform();
+      const a = platform.lock('k');
+      const b = platform.lock('k');
+      const lost = vi.fn();
+
+      a?.onLost(lost);
+      expect(await a?.tryAcquire()).toBe(true);
+      await b?.steal();
+      await vi.waitFor(() => expect(lost).toHaveBeenCalledTimes(1));
+
+      // The old holder's release must not free the stealer's lock.
+      a?.release();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(await platform.lock('k')?.tryAcquire()).toBe(false);
+    });
+
+    it('leaves waiting tabs in line: they get the lock after the stealer releases', async () => {
+      const platform = makePlatform();
+      const a = platform.lock('k');
+      const waiter = platform.lock('k');
+      const b = platform.lock('k');
+
+      expect(await a?.tryAcquire()).toBe(true);
+      const waiting = waiter?.queue(new AbortController().signal);
+      const granted = vi.fn();
+
+      void waiting?.then(granted);
+      await b?.steal();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(granted).not.toHaveBeenCalled();
+
+      b?.release();
+      await expect(waiting).resolves.toBeUndefined();
+    });
+
+    it('cancels its own wait in line and steals', async () => {
+      const platform = makePlatform();
+      const a = platform.lock('k');
+      const b = platform.lock('k');
+
+      expect(await a?.tryAcquire()).toBe(true);
+      const waiting = b?.queue(new AbortController().signal);
+
+      await b?.steal();
+      await expect(waiting).rejects.toMatchObject({ name: 'AbortError' });
+      // b holds it: a release by b frees it for a third tab.
+      b?.release();
+      const c = platform.lock('k');
+
+      await vi.waitFor(async () => expect(await c?.tryAcquire()).toBe(true));
+    });
+
+    it('a steal while holding keeps the lock and reports no loss', async () => {
+      const platform = makePlatform();
+      const a = platform.lock('k');
+      const lost = vi.fn();
+
+      a?.onLost(lost);
+      expect(await a?.tryAcquire()).toBe(true);
+      await a?.steal();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(lost).not.toHaveBeenCalled();
+      expect(await platform.lock('k')?.tryAcquire()).toBe(false);
+    });
+
+    it('reports no loss on its own release', async () => {
+      const platform = makePlatform();
+      const a = platform.lock('k');
+      const lost = vi.fn();
+
+      a?.onLost(lost);
+      expect(await a?.tryAcquire()).toBe(true);
+      a?.release();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(lost).not.toHaveBeenCalled();
+    });
+
+    it('a tab that lost its lock can wait in line again', async () => {
+      const platform = makePlatform();
+      const a = platform.lock('k');
+      const b = platform.lock('k');
+      const lost = vi.fn();
+
+      a?.onLost(lost);
+      expect(await a?.tryAcquire()).toBe(true);
+      await b?.steal();
+      await vi.waitFor(() => expect(lost).toHaveBeenCalledTimes(1));
+
+      const waiting = a?.queue(new AbortController().signal);
+
+      b?.release();
+      await expect(waiting).resolves.toBeUndefined();
+    });
+
+    it('a lock taken by steal can itself be stolen', async () => {
+      const platform = makePlatform();
+      const a = platform.lock('k');
+      const b = platform.lock('k');
+      const c = platform.lock('k');
+      const lost = vi.fn();
+
+      b?.onLost(lost);
+      expect(await a?.tryAcquire()).toBe(true);
+      await b?.steal();
+      await c?.steal();
+
+      await vi.waitFor(() => expect(lost).toHaveBeenCalledTimes(1));
+    });
+
+    it('stops telling a listener once unsubscribed', async () => {
+      const platform = makePlatform();
+      const a = platform.lock('k');
+      const b = platform.lock('k');
+      const lost = vi.fn();
+      const off = a?.onLost(lost);
+
+      expect(await a?.tryAcquire()).toBe(true);
+      off?.();
+      await b?.steal();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(lost).not.toHaveBeenCalled();
+    });
+  });
+  describe('activity', () => {
+    const visibility = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+
+    const setVisibility = (value: DocumentVisibilityState): void => {
+      Object.defineProperty(document, 'visibilityState', { value, configurable: true });
+    };
+
+    afterEach(() => {
+      if (visibility === undefined) {
+        Reflect.deleteProperty(document, 'visibilityState');
+      } else {
+        Object.defineProperty(document, 'visibilityState', visibility);
+      }
+    });
+
+    it('is active only while the page is visible and has focus', () => {
+      const activity = browserTabPlatform.activity();
+      const focus = vi.spyOn(document, 'hasFocus');
+
+      setVisibility('visible');
+      focus.mockReturnValue(true);
+      expect(activity?.isActive()).toBe(true);
+
+      focus.mockReturnValue(false);
+      expect(activity?.isActive()).toBe(false);
+
+      setVisibility('hidden');
+      focus.mockReturnValue(true);
+      expect(activity?.isActive()).toBe(false);
+    });
+
+    it('reports visibility and window focus changes until unsubscribed', () => {
+      const changed = vi.fn();
+      const off = browserTabPlatform.activity()?.onChange(changed);
+
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.dispatchEvent(new FocusEvent('focus'));
+      window.dispatchEvent(new FocusEvent('blur'));
+      expect(changed).toHaveBeenCalledTimes(3);
+
+      off?.();
+      window.dispatchEvent(new FocusEvent('focus'));
+      expect(changed).toHaveBeenCalledTimes(3);
     });
   });
 });

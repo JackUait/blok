@@ -13,6 +13,11 @@ import { registerUnsavedWork } from '../utils/persistence';
 type UniqueBlockMutationKey = `block:${BlockId}:event:${BlockMutationType}`;
 
 /**
+ * This tab's part in tab sync. Only `solo` and `leader` save.
+ */
+export type TabRole = 'solo' | 'joining' | 'leader' | 'follower';
+
+/**
  * Single entry point for Block mutation events
  */
 export class ModificationsObserver extends Module {
@@ -168,6 +173,39 @@ export class ModificationsObserver extends Module {
   }
 
   /**
+   * An editor without a TabSync module is `solo`, which saves as before.
+   */
+  private get tabRole(): TabRole {
+    return (this.Blok as { TabSync?: { role: TabRole } }).TabSync?.role ?? 'solo';
+  }
+
+  /**
+   * Called by TabSync when this tab's role changes. Acts on `role`, not on
+   * TabSync's own field, so it works whichever is updated first.
+   * @param role - the role this tab now has
+   */
+  public onRoleChanged(role: TabRole): void {
+    if (role === 'follower') {
+      this.discardPendingSave();
+
+      return;
+    }
+
+    if (role === 'solo' || role === 'leader') {
+      this.saveIfPending();
+    }
+  }
+
+  /**
+   * Forgets the unsaved edit without touching queued onChange events: the
+   * leader saves it, and onChange fires in every role.
+   */
+  private discardPendingSave(): void {
+    this.pendingSave = false;
+    this.syncUnloadGuard();
+  }
+
+  /**
    * Releases one suspension, re-arming onChange/onSave only once the last one is
    * gone — see {@link suspendDepth}.
    */
@@ -269,8 +307,12 @@ export class ModificationsObserver extends Module {
     if (queued?.detail.origin !== 'local' || event.detail.origin === 'local') {
       this.batchingOnChangeQueue.set(key, event);
     }
-    this.pendingSave = true;
-    this.syncUnloadGuard();
+
+    // The leader saves for a follower, so a follower is never dirty.
+    if (this.tabRole !== 'follower') {
+      this.pendingSave = true;
+      this.syncUnloadGuard();
+    }
 
     /**
      * A window is already open — this change rides its trailing edge. Leaving
@@ -333,10 +375,24 @@ export class ModificationsObserver extends Module {
   }
 
   /**
-   * Serializes once for the batch that just closed, if the host can still
-   * receive it.
+   * Serializes once for the batch that just closed, if this tab saves and the
+   * host can still receive it.
    */
   private flushPendingSave(): void {
+    const role = this.tabRole;
+
+    // A joining tab keeps its edit: onRoleChanged saves or drops it.
+    if (role === 'joining' || role === 'follower') {
+      return;
+    }
+
+    this.saveIfPending();
+  }
+
+  /**
+   * Serializes once if an edit is waiting and the host can still receive it.
+   */
+  private saveIfPending(): void {
     if (!this.pendingSave || this.isDeliverySuppressed) {
       return;
     }

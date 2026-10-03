@@ -62,6 +62,13 @@ export class ModificationsObserver extends Module {
   private leadingFlushScheduled = false;
 
   /**
+   * Whether a change has led the open window. A window opened with no change
+   * (markDirty, enable) is not led yet: its first change still gets the
+   * leading-edge onChange.
+   */
+  private windowLed = false;
+
+  /**
    * Set when a change enters the open window, cleared once a serialization for
    * it has STARTED. onSave cannot key off the event queue like onChange does,
    * because the leading-edge delivery drains that queue before the window
@@ -82,6 +89,12 @@ export class ModificationsObserver extends Module {
    * host never received was still outstanding.
    */
   private savesInFlight = 0;
+
+  /**
+   * Set when this tab turned read-only as leader. Its unsaved edit is its own,
+   * so as a follower it keeps it until it saves again as leader or solo.
+   */
+  private keepsOwnEdit = false;
 
   /**
    * Array of onChange events used to batch them
@@ -180,7 +193,7 @@ export class ModificationsObserver extends Module {
    * Puts an undelivered save back, unless the leader saves for this tab.
    */
   private rearmSave(): void {
-    if (this.tabRole !== 'follower') {
+    if (this.tabRole !== 'follower' || this.keepsOwnEdit) {
       this.pendingSave = true;
     }
     this.syncUnloadGuard();
@@ -190,10 +203,17 @@ export class ModificationsObserver extends Module {
    * Called by TabSync when this tab's role changes. Acts on `role`, not on
    * TabSync's own field, so it works whichever is updated first.
    * @param role - the role this tab now has
+   * @param options - role change details
+   * @param options.keepPendingSave - true when a leader turned read-only: its
+   * edit cannot be saved now and nobody is known to have saved it
    */
-  public onRoleChanged(role: TabRole): void {
+  public onRoleChanged(role: TabRole, { keepPendingSave = false }: { keepPendingSave?: boolean } = {}): void {
+    this.keepsOwnEdit = role === 'follower' && keepPendingSave;
+
     if (role === 'follower') {
-      this.discardPendingSave();
+      if (!this.keepsOwnEdit) {
+        this.discardPendingSave();
+      }
 
       return;
     }
@@ -297,6 +317,7 @@ export class ModificationsObserver extends Module {
    */
   public discardPendingChanges(): void {
     this.pendingSave = false;
+    this.keepsOwnEdit = false;
     this.batchingOnChangeQueue.clear();
 
     if (this.batchingTimeout !== null) {
@@ -361,24 +382,27 @@ export class ModificationsObserver extends Module {
     }
 
     /**
-     * A window is already open — this change rides its trailing edge. Leaving
-     * the timer alone is what bounds latency at one window: hosts drive UI off
-     * onChange ("document is dirty" -> reveal the Save button), and a change
-     * still sitting in the queue is indistinguishable from no change at all.
+     * A window already led by a change — this one rides its trailing edge.
+     * Leaving the timer alone is what bounds latency at one window: hosts drive
+     * UI off onChange ("document is dirty" -> reveal the Save button), and a
+     * change still sitting in the queue is indistinguishable from no change at
+     * all. Never a second timer: that would save twice per window.
      */
-    if (this.batchingTimeout !== null) {
+    if (this.batchingTimeout === null) {
+      this.openBatchWindow();
+    } else if (this.windowLed) {
       return;
     }
 
+    this.windowLed = true;
     this.scheduleLeadingFlush();
-
-    this.openBatchWindow();
   }
 
   /**
    * Arms the trailing edge of a batch window.
    */
   private openBatchWindow(): void {
+    this.windowLed = false;
     this.batchingTimeout = setTimeout(() => {
       this.batchingTimeout = null;
       this.flushTrailing();

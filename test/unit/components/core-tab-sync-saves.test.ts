@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Core } from '../../../src/components/core';
 import { modificationsObserverBatchTimeout } from '../../../src/components/constants';
+import { releasePersistenceQueue } from '../../../src/components/utils/persistence';
 import { Paragraph, Toggle } from '../../../src/tools';
 import type * as PlatformModule from '../../../src/components/modules/tabSync/platform';
 import type { BlokConfig, OutputBlockData, OutputData } from '../../../types';
+import type { BlockMutationEvent } from '../../../types/events/block';
 
 // jsdom has no navigator.locks, so the browser platform would never open a session.
 vi.mock('../../../src/components/modules/tabSync/platform', async (importOriginal) => {
@@ -33,6 +35,7 @@ const createCore = (extra: Partial<BlokConfig>): Core => {
 
 /** Same teardown as Blok.destroy() minus markDestroyed: every module, in map order. */
 const destroyCore = (core: Core): void => {
+  releasePersistenceQueue(core.config.persistence);
   Object.values(core.moduleInstances).forEach((module) => {
     if (typeof (module as { destroy?: unknown }).destroy === 'function') {
       (module as { destroy: () => void }).destroy();
@@ -290,5 +293,133 @@ describe('Core — the leader saves structural changes made in a follower', () =
     const saved = (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === 'a');
 
     expect(saved?.data.text).toBe('a one two');
+  });
+
+  /** Whether a guard holds the tab back from closing. */
+  const closePromptArmed = (): boolean => {
+    const event = new Event('beforeunload', { cancelable: true });
+
+    window.dispatchEvent(event);
+
+    return event.defaultPrevented;
+  };
+
+  it('a lone leader that turns read-only inside the batch window keeps its edit unsaved and saves it once editable', async () => {
+    const save = vi.fn(async () => undefined);
+    const leader = createCore({
+      documentId: 'ro-window',
+      persistence: { load: async () => document3(), save },
+    });
+
+    await leader.isReady;
+    await wait(50);
+    expect(leader.moduleInstances.TabSync.role).toBe('leader');
+    await oneWindow();
+    save.mockClear();
+
+    const editable = leader.moduleInstances.BlockManager.getBlockById('a')?.pluginsContent;
+
+    expect(editable).toBeInstanceOf(HTMLElement);
+    if (!(editable instanceof HTMLElement)) {
+      return;
+    }
+    editable.textContent = 'a typed';
+    editable.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    await wait(20);
+    await leader.moduleInstances.ReadOnly.set(true);
+
+    expect(leader.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(true);
+    await oneWindow();
+    expect(leader.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(true);
+    expect(closePromptArmed()).toBe(true);
+    expect(save).not.toHaveBeenCalled();
+
+    await leader.moduleInstances.ReadOnly.set(false);
+    await oneWindow();
+
+    expect(leader.moduleInstances.TabSync.role).toBe('leader');
+    const saved = (save.mock.lastCall as unknown as [ { blocks: OutputBlockData[] } ] | undefined)?.[0];
+
+    expect(saved?.blocks.find((block) => block.id === 'a')?.data.text).toBe('a typed');
+  });
+
+  it('a leader that turns read-only inside the batch window has its edit saved by the tab that takes over', async () => {
+    const onSave = vi.fn();
+    const leader = createCore({ documentId: 'ro-window-pair', data: document3(), onSave });
+
+    await leader.isReady;
+    await wait(50);
+    const follower = createCore({ documentId: 'ro-window-pair', data: document3(), onSave });
+
+    await follower.isReady;
+    await wait(100);
+    onSave.mockClear();
+
+    await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
+    await leader.moduleInstances.ReadOnly.set(true);
+    await oneWindow();
+
+    expect(follower.moduleInstances.TabSync.role).toBe('leader');
+    const saved = (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === 'a');
+
+    expect(saved?.data.text).toBe('a edited');
+  });
+
+  it('the leader gets onChange for a follower text edit within a frame, not a batch window', async () => {
+    const onChange = vi.fn();
+    const leader = createCore({ documentId: 'tab-onchange', data: document3(), onChange });
+
+    await leader.isReady;
+    await wait(50);
+    const follower = createCore({ documentId: 'tab-onchange', data: document3() });
+
+    await follower.isReady;
+    await wait(100);
+    await oneWindow();
+    onChange.mockClear();
+
+    const arrived = { at: -1 };
+    const unsubscribe = leader.moduleInstances.YjsManager.onAnyDocUpdate(() => {
+      if (arrived.at < 0) {
+        arrived.at = performance.now();
+      }
+    });
+    const delivered = new Promise<number>((resolve) => {
+      onChange.mockImplementation(() => resolve(performance.now()));
+    });
+
+    await follower.moduleInstances.API.methods.blocks.update('b', { text: 'b from follower' });
+    const deliveredAt = await delivered;
+
+    unsubscribe();
+    expect(arrived.at).toBeGreaterThan(0);
+    expect(deliveredAt - arrived.at).toBeLessThan(50);
+    const event = onChange.mock.lastCall?.[1] as BlockMutationEvent | BlockMutationEvent[];
+
+    expect((Array.isArray(event) ? event : [ event ]).some((e) => e.detail.origin === 'tab')).toBe(true);
+  });
+
+  it('a burst of follower edits gets at most one leader save per batch window', async () => {
+    const { follower, onSave } = await twoEditors('tab-burst');
+    const savedAt: number[] = [];
+
+    onSave.mockImplementation(() => {
+      savedAt.push(performance.now());
+    });
+
+    for (const text of ['one', 'two', 'three', 'four', 'five', 'six']) {
+      await follower.moduleInstances.API.methods.blocks.update('b', { text });
+      await wait(60);
+    }
+    await oneWindow();
+
+    expect(savedAt.length).toBeGreaterThan(0);
+    savedAt.slice(1).forEach((at, i) => {
+      // Timers may fire a millisecond early.
+      expect(at - savedAt[i]).toBeGreaterThanOrEqual(modificationsObserverBatchTimeout - 5);
+    });
+    const saved = (onSave.mock.lastCall?.[0] as OutputData).blocks.find((block) => block.id === 'b');
+
+    expect(saved?.data.text).toBe('six');
   });
 });

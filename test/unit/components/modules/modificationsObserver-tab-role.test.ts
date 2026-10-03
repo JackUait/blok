@@ -41,6 +41,8 @@ describe('ModificationsObserver — tab role', () => {
     emitBlockChanged: (detail: { origin: Origin }) => void;
     save: ReturnType<typeof vi.fn>;
     tabSync: { role: TabRole };
+    readOnly: { isEnabled: boolean };
+    turnReadOnly: () => void;
   } => {
     const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
     const onChange = vi.fn();
@@ -49,12 +51,13 @@ describe('ModificationsObserver — tab role', () => {
     const observer = new ModificationsObserver({ config, eventsDispatcher });
     const save = vi.fn().mockResolvedValue(DOC);
     const tabSync = { role: role ?? 'solo' };
+    const readOnly = { isEnabled: false };
 
     observer.state = {
       UI: { nodes: { redactor: document.createElement('div') } },
       API: { methods: {} },
       Saver: { save },
-      ReadOnly: { isEnabled: false },
+      ReadOnly: readOnly,
       ...(role === undefined ? {} : { TabSync: tabSync }),
     } as unknown as BlokModules;
 
@@ -68,7 +71,14 @@ describe('ModificationsObserver — tab role', () => {
       });
     };
 
-    return { observer, onChange, onSave, emitBlockChanged, save, tabSync };
+    // What ReadOnly + TabSync do when a leader turns read-only: flip first, then demote.
+    const turnReadOnly = (): void => {
+      readOnly.isEnabled = true;
+      tabSync.role = 'follower';
+      observer.onRoleChanged('follower', { keepPendingSave: true });
+    };
+
+    return { observer, onChange, onSave, emitBlockChanged, save, tabSync, readOnly, turnReadOnly };
   };
 
   const flushWindow = async (): Promise<void> => {
@@ -273,5 +283,97 @@ describe('ModificationsObserver — tab role', () => {
     observer.destroy();
 
     expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('a leader that turns read-only inside the window keeps its edit unsaved and saves it as leader again', async () => {
+    const { observer, onSave, emitBlockChanged, tabSync, readOnly, turnReadOnly } = setup({ role: 'leader' });
+
+    emitBlockChanged({ origin: 'local' });
+    turnReadOnly();
+    await flushWindow();
+
+    expect(observer.hasUnsavedChanges).toBe(true);
+    expect(onSave).not.toHaveBeenCalled();
+
+    readOnly.isEnabled = false;
+    tabSync.role = 'leader';
+    observer.onRoleChanged('leader');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(observer.hasUnsavedChanges).toBe(false);
+  });
+
+  it('a leader that turns read-only while its save is in flight keeps that edit unsaved', async () => {
+    const { observer, onSave, emitBlockChanged, save, tabSync, readOnly, turnReadOnly } = setup({ role: 'leader' });
+    const pending: { resolve: (v: OutputData) => void } = { resolve: () => undefined };
+
+    save.mockReturnValueOnce(new Promise<OutputData>((resolve) => {
+      pending.resolve = resolve;
+    }));
+    emitBlockChanged({ origin: 'local' });
+    await flushWindow();
+    expect(save).toHaveBeenCalledTimes(1);
+
+    turnReadOnly();
+    pending.resolve(DOC);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(observer.hasUnsavedChanges).toBe(true);
+
+    readOnly.isEnabled = false;
+    tabSync.role = 'leader';
+    observer.onRoleChanged('leader');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(observer.hasUnsavedChanges).toBe(false);
+  });
+
+  it('a later plain demotion still drops the edit a read-only demotion kept', async () => {
+    const { observer, emitBlockChanged, tabSync, turnReadOnly } = setup({ role: 'leader' });
+
+    emitBlockChanged({ origin: 'local' });
+    turnReadOnly();
+    tabSync.role = 'joining';
+    observer.onRoleChanged('joining');
+    tabSync.role = 'follower';
+    observer.onRoleChanged('follower');
+
+    expect(observer.hasUnsavedChanges).toBe(false);
+  });
+
+  it('a change from another tab after markDirty still leads its window with onChange', async () => {
+    const { observer, onChange, onSave, emitBlockChanged } = setup({ role: 'leader' });
+
+    observer.markDirty();
+    emitBlockChanged({ origin: 'tab' });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+
+    await flushWindow();
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('only the first change in a markDirty window leads it; one save per window', async () => {
+    const { observer, onChange, onSave, emitBlockChanged } = setup({ role: 'leader' });
+
+    observer.markDirty();
+    emitBlockChanged({ origin: 'tab' });
+    await vi.advanceTimersByTimeAsync(0);
+    observer.markDirty();
+    emitBlockChanged({ origin: 'local' });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+
+    await flushWindow();
+
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 });

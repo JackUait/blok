@@ -279,7 +279,8 @@ export class TabSync extends Module {
       this.postTypingBeforeReadOnly();
       if (this.currentRole === 'leader' || this.currentRole === 'follower') {
         this.cancelQueue(session);
-        this.setRole('follower');
+        // Its edit stays unsaved here: it is saved once this tab leads again.
+        this.setRole('follower', { keepPendingSave: true });
       }
 
       return;
@@ -1004,12 +1005,18 @@ export class TabSync extends Module {
   /**
    * Sets the field BEFORE telling the observer, which reads it live.
    * @param role - the new role
+   * @param options - passed on to the observer
+   * @param options.keepPendingSave - keep this tab's unsaved edit
    */
-  private setRole(role: TabRole): void {
+  private setRole(role: TabRole, options?: { keepPendingSave: boolean }): void {
     if (this.currentRole === role) {
       return;
     }
     this.currentRole = role;
-    this.Blok.ModificationsObserver.onRoleChanged(role);
+    if (options === undefined) {
+      this.Blok.ModificationsObserver.onRoleChanged(role);
+    } else {
+      this.Blok.ModificationsObserver.onRoleChanged(role, options);
+    }
   }
 }

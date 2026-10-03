@@ -530,6 +530,8 @@ describe('TabSync — roles, leader lock and join', () => {
 
       expect(a.sync.role).toBe('follower');
       expect(b.sync.role).toBe('leader');
+      // Its unsaved edit is its own; the observer keeps it.
+      expect(a.fake.ModificationsObserver.onRoleChanged).toHaveBeenLastCalledWith('follower', { keepPendingSave: true });
 
       a.fake.ReadOnly.isEnabled = false;
       a.sync.toggleReadOnly(false);

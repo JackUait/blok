@@ -163,6 +163,23 @@ export class PageRegistry {
     this.persist();
   }
 
+  /**
+   * Gives a page a record when a link to it is followed. Another tab of this
+   * browser may have stored it after this registry was read; else the page
+   * came from a peer, and the link is all this browser knows about it.
+   */
+  public adopt(pageId: string, link: { parentId: string | null; title: string; icon?: string }): void {
+    if (this.has(pageId)) {
+      return;
+    }
+    const stored = readStored();
+
+    this.pages[pageId] = Object.hasOwn(stored, pageId)
+      ? stored[pageId]
+      : { title: link.title, parentId: link.parentId, blocks: [], ...(link.icon !== undefined && { icon: link.icon }) };
+    this.persist();
+  }
+
   /** `null` is the root document. */
   public setTitle(pageId: string | null, title: string): void {
     if (pageId === null) {

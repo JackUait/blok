@@ -133,6 +133,34 @@ describe('PageRegistry', () => {
     expect(new PageRegistry(seed()).get('fresh')).toBeUndefined();
   });
 
+  it('adopts a page another tab made after this registry was read', () => {
+    const here = new PageRegistry(seed());
+    const otherTab = new PageRegistry(seed());
+
+    otherTab.create('fresh', 'guide');
+    otherTab.setTitle('fresh', 'Fresh');
+    here.adopt('fresh', { parentId: null, title: 'Stale cache' });
+
+    expect(here.get('fresh')).toEqual({ title: 'Fresh', parentId: 'guide', blocks: [] });
+  });
+
+  it('adopts a page with no record anywhere from the link that points at it', () => {
+    const pages = new PageRegistry(seed());
+
+    pages.adopt('peer', { parentId: 'guide', title: 'From a peer', icon: '🌱' });
+
+    expect(pages.info('peer')).toEqual({ title: 'From a peer', icon: { type: 'emoji', value: '🌱' }, path: ['Blok', 'Guide'] });
+    expect(new PageRegistry(seed()).has('peer')).toBe(true);
+  });
+
+  it('adopting keeps a record this tab already has', () => {
+    const pages = new PageRegistry(seed());
+
+    pages.adopt('guide', { parentId: 'keys', title: 'Other' });
+
+    expect(pages.get('guide')).toMatchObject({ title: 'Guide', parentId: null });
+  });
+
   it('falls back to the seed when storage holds something that is not a page map', () => {
     localStorage.setItem(PAGES_STORAGE_KEY, '[1,2,3]');
 
@@ -725,6 +753,57 @@ describe('playground collaboration room per page', () => {
   it('keeps the root document and the off switch as they were', () => {
     expect(roomFor('', 'collaborationConfig()')).toEqual({ doc: 'playground' });
     expect(roomFor('?collab=off', "collaborationConfig('abc')")).toBeNull();
+  });
+});
+
+describe('playground follows a link to a page this tab has no record of', () => {
+  const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
+  const from = html.indexOf('function goToPage(');
+  const source = html.slice(from, html.indexOf('let blok = new Blok(', from));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it('opens a page a peer linked from the open page', async () => {
+    const pages = new PageRegistry(seed());
+    const pushed: string[] = [];
+    const linked = { guide: [{ id: 'p', type: 'page', data: { pageId: 'peer', cache: { title: 'From a peer' } } }] };
+    const context = {
+      pages,
+      editorPageId: null as string | null,
+      currentPageId: null as string | null,
+      pageBlocksOf: (id: string | null) => (id === null ? [{ id: 'g', type: 'page', data: { pageId: 'guide' } }] : linked[id as 'guide']),
+      findPageLink: (await import('../../../src/playground/page-tree')).findPageLink,
+      queueEditorWork: (work: () => Promise<void>) => work(),
+      history: { pushState: (_state: unknown, _title: string, url: string) => pushed.push(url) },
+      window: { location: { search: '' }, scrollY: 0, scrollTo: vi.fn() },
+      document: { body: { getBoundingClientRect: () => ({ height: 0 }) }, getElementById: vi.fn(), querySelector: vi.fn() },
+      pagePath,
+      scrollByPage: new Map(),
+      snapshotEditor: vi.fn(),
+      runPageTransition: async (run: () => Promise<void>) => run(),
+      swapEditor: vi.fn(),
+      waitForPageContent: vi.fn(),
+      renderHeader: vi.fn(),
+      holdPageHeight: vi.fn(),
+      pageNavMorphs: () => ({}),
+      flashArrivalRow: vi.fn(),
+      state: { readOnly: false },
+      PAGE_CONTENT_WAIT_MS: 0,
+      PAGE_TITLE_SELECTOR: '',
+    };
+
+    await runInNewContext(`${source}; goToPage('peer')`, context);
+
+    expect(pushed).toEqual(['/editor/page/peer']);
+    expect(pages.get('peer')).toMatchObject({ title: 'From a peer', parentId: 'guide' });
   });
 });
 

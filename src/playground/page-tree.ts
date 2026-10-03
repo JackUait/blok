@@ -48,6 +48,41 @@ const pageLinks = (blocks: OutputBlockData[]): PageLink[] => blocks.flatMap((blo
   return [{ pageId, title, ...(icon !== undefined && { icon }) }];
 });
 
+/** The page whose blocks link to `pageId`, with the link's cached title and icon; null when no page block points at it. */
+export const findPageLink = (
+  blocksOf: (pageId: string | null) => OutputBlockData[] | undefined,
+  pageId: string
+): { parentId: string | null; title: string; icon?: string } | null => {
+  const seen = new Set<string | null>();
+
+  const search = (parentId: string | null): { parentId: string | null; title: string; icon?: string } | null => {
+    // Pages linking each other would search forever.
+    if (seen.has(parentId)) {
+      return null;
+    }
+    seen.add(parentId);
+
+    const links = pageLinks(blocksOf(parentId) ?? []);
+    const link = links.find((candidate) => candidate.pageId === pageId);
+
+    if (link !== undefined) {
+      return { parentId, title: link.title, ...(link.icon !== undefined && { icon: link.icon }) };
+    }
+
+    for (const child of links) {
+      const found = search(child.pageId);
+
+      if (found !== null) {
+        return found;
+      }
+    }
+
+    return null;
+  };
+
+  return search(null);
+};
+
 /**
  * The tree follows the page blocks, like Notion's sidebar: a page sits where
  * its block sits, in block order. Page records live in this browser only, so a

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OutputBlockData } from '../../../types';
 import { PageRegistry, type PageMap } from '../../../src/playground/page-host';
-import { buildPageTree, mountPageTree, type PageTree } from '../../../src/playground/page-tree';
+import { buildPageTree, findPageLink, mountPageTree, type PageTree } from '../../../src/playground/page-tree';
 
 const pointer = (pageId: string): OutputBlockData => ({ id: `p-${pageId}`, type: 'page', data: { pageId } });
 
@@ -21,6 +21,26 @@ const blocksOf = (pages: PageRegistry) => (id: string | null): OutputBlockData[]
   id === null ? rootBlocks : (pages.get(id)?.blocks ?? []);
 
 const titles = (nodes: Array<{ title: string }>): string[] => nodes.map((node) => node.title);
+
+describe('findPageLink', () => {
+  const cached = (pageId: string, cache: unknown): OutputBlockData => ({ id: `p-${pageId}`, type: 'page', data: { pageId, cache } });
+
+  it('finds the page holding the link and the title and icon the link caches', () => {
+    const blocks: Record<string, OutputBlockData[]> = {
+      root: [pointer('guide')],
+      guide: [cached('peer', { title: 'From a peer', icon: { type: 'emoji', value: '🌱' } })],
+    };
+
+    expect(findPageLink((id) => blocks[id ?? 'root'], 'peer')).toEqual({ parentId: 'guide', title: 'From a peer', icon: '🌱' });
+    expect(findPageLink((id) => blocks[id ?? 'root'], 'guide')).toEqual({ parentId: null, title: '' });
+  });
+
+  it('is null when no page block points at the page, and stops at a link cycle', () => {
+    const blocks: Record<string, OutputBlockData[]> = { root: [pointer('a')], a: [pointer('b')], b: [pointer('a')] };
+
+    expect(findPageLink((id) => blocks[id ?? 'root'], 'nope')).toBeNull();
+  });
+});
 
 describe('buildPageTree', () => {
   beforeEach(() => {

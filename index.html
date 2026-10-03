@@ -1758,7 +1758,7 @@
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
     import { PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
-    import { mountPageTree } from './src/playground/page-tree.ts';
+    import { findPageLink, mountPageTree } from './src/playground/page-tree.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
@@ -2243,6 +2243,9 @@
      */
     function goToPage(pageId, { push = true } = {}) {
       return queueEditorWork(async () => {
+        // A page made in another tab or by a peer has a block here but no record yet.
+        const link = pageId !== null && !pages.has(pageId) ? findPageLink(pageBlocksOf, pageId) : null;
+        if (link !== null) pages.adopt(pageId, link);
         const target = pageId !== null && pages.has(pageId) ? pageId : null;
 
         if (push) history.pushState(null, '', pagePath(target, window.location.search));
@@ -2293,19 +2296,21 @@
     });
     renderHeader();
 
+    // The open page reads the live editor: its saved blocks lag behind it.
+    function pageBlocksOf(id) {
+      if (id === editorPageId) {
+        try {
+          return livePagePointers(blok);
+        } catch {
+          // An editor mid-swap: its saved blocks below.
+        }
+      }
+      return id === null ? (rootBlocks ?? DEFAULT_BLOCKS) : pages.get(id)?.blocks;
+    }
+
     pageTree = mountPageTree({
       pages,
-      // The open page reads the live editor: its saved blocks lag behind it.
-      blocksOf: (id) => {
-        if (id === editorPageId) {
-          try {
-            return livePagePointers(blok);
-          } catch {
-            // An editor mid-swap: its saved blocks below.
-          }
-        }
-        return id === null ? (rootBlocks ?? DEFAULT_BLOCKS) : pages.get(id)?.blocks;
-      },
+      blocksOf: pageBlocksOf,
       currentPageId: () => currentPageId,
       href: (id) => pagePath(id, window.location.search),
       navigate: (id) => goToPage(id),

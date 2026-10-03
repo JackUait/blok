@@ -162,6 +162,28 @@ describe('browserTabPlatform', () => {
 
       expect(browserTabPlatform.rawChannel('s')).toBeNull();
     });
+
+    it('unrefs the channel so it never keeps a Node process alive', () => {
+      const unref = vi.fn();
+
+      vi.stubGlobal('BroadcastChannel', class {
+        public unref = unref;
+
+        public close(): void {}
+      });
+
+      browserTabPlatform.rawChannel('s')?.close();
+
+      expect(unref).toHaveBeenCalledTimes(1);
+    });
+
+    it('works with a BroadcastChannel that has no unref, as in browsers', () => {
+      vi.stubGlobal('BroadcastChannel', class {
+        public close(): void {}
+      });
+
+      expect(browserTabPlatform.rawChannel('s')).not.toBeNull();
+    });
   });
 
   describe('lock', () => {

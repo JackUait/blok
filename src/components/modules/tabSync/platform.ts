@@ -38,12 +38,19 @@ export interface TabPlatform {
   lock(key: string): LeaderLock | null;
 }
 
+const hasUnref = (port: BroadcastChannel): port is BroadcastChannel & { unref: () => void } =>
+  'unref' in port && typeof port.unref === 'function';
+
 const rawChannel = (name: string): RawChannel | null => {
   if (typeof BroadcastChannel === 'undefined') {
     return null;
   }
 
   const port = new BroadcastChannel(name);
+  // Node's BroadcastChannel keeps the process alive until closed; browsers have no unref.
+  if (hasUnref(port)) {
+    port.unref();
+  }
 
   return {
     post: (data) => port.postMessage(data),

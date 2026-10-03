@@ -1044,6 +1044,11 @@ export class TabSync extends Module {
    * Leads after the lock came to this tab without a yield.
    */
   private promote(): void {
+    // The last leader's request may land after this tab's first save went
+    // out with an older version; its late `saved` carries the one to retry with.
+    if (this.leaderId !== null) {
+      this.takeoverFrom = this.leaderId;
+    }
     // Role first: the observer reads it live and saves only as leader. A save
     // that promotion started already covers the changes below.
     const started = this.setRole('leader');

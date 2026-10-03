@@ -826,6 +826,29 @@ describe('TabSync — the leader follows the tab the user works in', () => {
     expect(a.save).not.toHaveBeenCalled();
   });
 
+  it('a thief whose first save conflicts with the frozen leader\'s landed request retries with that request\'s version', async () => {
+    const { a, b } = await twoTabs();
+    const request = holdRequest(a, 'v-a2');
+
+    editUnsaved(a, 'x');
+    a.fake.ModificationsObserver.flushNow();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(a.save).toHaveBeenCalledTimes(1);
+    a.pauseInbound();
+    b.save.mockRejectedValueOnce(new Error('conflict'));
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + CLAIM_TIMEOUT_MS);
+    expect(b.sync.role).toBe('leader');
+    expect(b.save).toHaveBeenCalledTimes(1);
+
+    // The store applied A's write first; its answer reaches A only now.
+    request.land();
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(b.save.mock.calls.length).toBeGreaterThan(1);
+    expect(b.save.mock.lastCall).toEqual([ { blocks: [] }, { version: 'v-a2' } ]);
+  });
+
   it('a leader whose lock was stolen waits in line and leads again when the thief leaves', async () => {
     const { a, b } = await twoTabs();
 

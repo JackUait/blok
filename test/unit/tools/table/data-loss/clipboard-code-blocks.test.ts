@@ -293,6 +293,10 @@ describe('clipboard data loss: code blocks in table cells', { timeout: 60_000 },
       + '</tbody></table></div></b>';
 
     await paste(freeEditable('free'), { 'text/html': html, 'text/plain': '' });
+    // The column paste fills its columns asynchronously; slow runs (coverage) need the wait.
+    await vi.waitFor(async () => {
+      expect(JSON.stringify(await editor.save())).toContain('line one');
+    }, { timeout: 5000 });
     const saved = await editor.save();
     const json = JSON.stringify(saved);
 

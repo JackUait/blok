@@ -251,7 +251,7 @@ describe('blokDocumentSchema', () => {
 
   it('is a draft 2020-12 schema for the saved document envelope', () => {
     expect(blokDocumentSchema.$schema).toBe('https://json-schema.org/draft/2020-12/schema');
-    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(['blocks', 'time', 'version']);
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(['blocks', 'id', 'time', 'version']);
   });
 
   describe('coverage', () => {
@@ -386,6 +386,7 @@ describe('blokDocumentSchema', () => {
         holder,
         tools: { paragraph: Paragraph, callout: Callout },
         data: {
+          id: 'doc-1',
           blocks: [
             {
               id: 'c1', type: 'callout', data: { emoji: '💡' },
@@ -403,6 +404,7 @@ describe('blokDocumentSchema', () => {
         const blockProperties = Object.keys((blockSchema.items ?? {}).properties ?? {});
 
         expect(Object.keys(saved).sort()).toEqual(Object.keys(schema.properties ?? {}).sort());
+        expect(saved.id).toBe('doc-1');
         expect(typeof saved.time).toBe('number');
         expect(typeof saved.version).toBe('string');
 

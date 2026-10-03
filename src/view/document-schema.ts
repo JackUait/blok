@@ -28,6 +28,10 @@ export const blokDocumentSchema = {
   required: ['blocks'],
   additionalProperties: false,
   properties: {
+    id: {
+      type: 'string',
+      description: 'The document id. Blok writes it on the first save and keeps it.',
+    },
     time: {
       type: 'integer',
       description: 'Unix epoch milliseconds when the document was saved.',

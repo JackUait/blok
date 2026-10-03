@@ -302,7 +302,10 @@ export class Core {
       this.config.collaboration === undefined &&
       (isEmpty(this.config.data) || this.config.data.blocks.length === 0)
     ) {
-      this.config.data = { blocks: [ defaultBlockData ] };
+      const { id } = this.config.data;
+
+      // Keep the id: the Saver reads it from here to keep the document's identity.
+      this.config.data = { ...(typeof id === 'string' && id !== '' ? { id } : {}), blocks: [ defaultBlockData ] };
     }
 
     this.config.readOnly = this.config.readOnly ?? false;

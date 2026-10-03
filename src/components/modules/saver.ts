@@ -21,6 +21,7 @@ import {
   validateTreeOrder
 } from '../utils/hierarchy-invariant';
 import { sanitizeBlocks } from '../utils/sanitizer';
+import { generateDocumentId } from '../utils/id-generator';
 import { dfsOrder } from '../utils/tree-order';
 import { normalizeInlineImages } from './normalizeInlineImages';
 
@@ -81,6 +82,9 @@ export class Saver extends Module {
    */
   private queuedSave: Promise<OutputData | undefined> | null = null;
 
+  private documentRecordId: string | null = null;
+  private mintedDocumentId = false;
+
   /**
    * @param options - module options
    * @param options.config - Blok configuration object
@@ -99,6 +103,41 @@ export class Saver extends Module {
     this.eventsDispatcher.on(BlockChanged, () => {
       this.documentRevision += 1;
     });
+  }
+
+  /**
+   * The id the next save writes. Read lazily: core replaces `config.data`
+   * with the persisted document after modules are built.
+   */
+  public getDocumentRecordId(): string {
+    if (this.documentRecordId === null) {
+      const loaded = this.config.data?.id;
+
+      if (typeof loaded === 'string' && loaded !== '') {
+        this.documentRecordId = loaded;
+      } else {
+        this.documentRecordId = generateDocumentId();
+        this.mintedDocumentId = true;
+      }
+    }
+
+    return this.documentRecordId;
+  }
+
+  /**
+   * True when this tab minted the id rather than loading or adopting it.
+   */
+  public hasMintedDocumentId(): boolean {
+    return this.mintedDocumentId;
+  }
+
+  /**
+   * Take another tab's id, so a leader hand-off never changes the stored id.
+   * @param id - the leader's document id
+   */
+  public adoptDocumentRecordId(id: string): void {
+    this.documentRecordId = id;
+    this.mintedDocumentId = false;
   }
 
   /**
@@ -235,6 +274,7 @@ export class Saver extends Module {
 
     if (shouldFilterSingleBlock) {
       return {
+        id: this.getDocumentRecordId(),
         time: +new Date(),
         blocks: [],
         version: getBlokVersion(),
@@ -1027,6 +1067,7 @@ export class Saver extends Module {
     }
 
     return {
+      id: this.getDocumentRecordId(),
       time: +new Date(),
       blocks: finalBlocks,
       version: getBlokVersion(),

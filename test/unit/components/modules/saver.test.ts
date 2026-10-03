@@ -11,6 +11,7 @@ import * as utils from '../../../../src/components/utils';
 
 vi.mock('../../../../src/components/utils/id-generator', () => ({
   generateBlockId: vi.fn(() => 'mock-id'),
+  generateDocumentId: vi.fn(() => 'mock-doc-id'),
 }));
 
 type BlockSaveResult = SavedData & { tunes?: Record<string, unknown> };
@@ -293,6 +294,7 @@ describe('Saver module', () => {
     ]);
 
     expect(result).toEqual({
+      id: expect.any(String),
       time: frozenDate.valueOf(),
       version,
       blocks: [

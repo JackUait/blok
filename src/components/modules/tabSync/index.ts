@@ -150,7 +150,13 @@ export class TabSync extends Module {
    * Set between a takeover and the old leader's last request settling; this
    * tab holds the lock but saves nothing until then.
    */
-  private awaitingSettle: { from: string; timer: ReturnType<typeof setTimeout> } | null = null;
+  private awaitingSettle: {
+    from: string;
+    /** Set once the steal is done; null while it runs. */
+    timer: ReturnType<typeof setTimeout> | null;
+    /** The old leader reported before the steal finished. */
+    settled: boolean;
+  } | null = null;
 
   /** True while this leader saves before it yields; one hand-over at a time. */
   private yielding = false;
@@ -689,9 +695,7 @@ export class TabSync extends Module {
 
         return;
       case 'settled':
-        if (this.awaitingSettle?.from === message.from) {
-          this.finishTakeover();
-        }
+        this.onOldLeaderSettled(message.from);
 
         return;
     }
@@ -709,9 +713,7 @@ export class TabSync extends Module {
       // A successor then saves with the right If-Match.
       persistenceVersionAccess(this.config.persistence)?.set(message.version);
       this.dirtySinceSaved = false;
-      if (this.awaitingSettle?.from === message.from) {
-        this.finishTakeover();
-      }
+      this.onOldLeaderSettled(message.from);
     } else if (this.currentRole === 'leader' && message.from === this.takeoverFrom) {
       // The old leader's save landed after it yielded; this tab saves next.
       persistenceVersionAccess(this.config.persistence)?.set(message.version);
@@ -1066,7 +1068,12 @@ export class TabSync extends Module {
 
   /** Read-only, solo and joining tabs never claim. */
   private canClaim(): boolean {
-    return this.session !== null && this.currentRole === 'follower' && !this.Blok.ReadOnly.isEnabled && this.awaitingSettle === null;
+    return this.mayLead() && this.awaitingSettle === null;
+  }
+
+  /** A follower that could lead: in a session and editable. */
+  private mayLead(): boolean {
+    return this.session !== null && this.currentRole === 'follower' && !this.Blok.ReadOnly.isEnabled;
   }
 
   private armClaim(): void {
@@ -1153,6 +1160,16 @@ export class TabSync extends Module {
     if (session === null || !this.canClaim()) {
       return;
     }
+    if (message !== null) {
+      // Before the steal: a `saved` that lands during it is newer and wins.
+      persistenceVersionAccess(this.config.persistence)?.set(message.version);
+      this.takeoverFrom = message.from;
+      this.leaderId = null;
+      if (message.saving) {
+        // Armed before the steal, so a report that comes during it is kept.
+        this.awaitingSettle = { from: message.from, timer: null, settled: false };
+      }
+    }
     // steal() drops this tab's place in line.
     this.queueAbort?.abort();
     this.queueAbort = null;
@@ -1160,6 +1177,7 @@ export class TabSync extends Module {
       await session.lock.steal();
     } catch (error) {
       log('Tab sync could not take the lock from the other tab.', 'debug', error);
+      this.clearAwaitingSettle();
       if (this.session === session && this.currentRole === 'follower') {
         this.queueForLock(session);
       }
@@ -1170,8 +1188,9 @@ export class TabSync extends Module {
       return;
     }
     this.holdsLock = true;
-    if (!this.canClaim()) {
+    if (!this.mayLead()) {
       // Went read-only meanwhile: a read-only leader saves nothing.
+      this.clearAwaitingSettle();
       this.holdsLock = false;
       session.lock.release();
 
@@ -1183,19 +1202,33 @@ export class TabSync extends Module {
 
       return;
     }
-    persistenceVersionAccess(this.config.persistence)?.set(message.version);
-    this.takeoverFrom = message.from;
-    this.leaderId = null;
-    if (!message.saving) {
+    const waiting = this.awaitingSettle;
+
+    if (waiting === null || waiting.settled) {
       this.finishTakeover();
 
       return;
     }
     // Saving now would race the old leader's request with a stale If-Match.
-    this.awaitingSettle = {
-      from: message.from,
-      timer: setTimeout(() => this.finishTakeover(), TAKEOVER_SETTLE_WAIT_MS),
-    };
+    waiting.timer = setTimeout(() => this.finishTakeover(), TAKEOVER_SETTLE_WAIT_MS);
+  }
+
+  /**
+   * The old leader's last request landed (`saved`) or failed (`settled`).
+   * @param from - the reporting tab
+   */
+  private onOldLeaderSettled(from: string): void {
+    const waiting = this.awaitingSettle;
+
+    if (waiting?.from !== from) {
+      return;
+    }
+    if (waiting.timer === null) {
+      // Still stealing: takeOver finishes once it holds the lock.
+      waiting.settled = true;
+    } else {
+      this.finishTakeover();
+    }
   }
 
   /**
@@ -1204,19 +1237,21 @@ export class TabSync extends Module {
    */
   private finishTakeover(): void {
     this.clearAwaitingSettle();
-    if (!this.holdsLock || !this.canClaim()) {
+    if (!this.holdsLock || !this.mayLead()) {
       return;
     }
+    // Only followers read leaderId; a `saved` heard while waiting may have set it.
+    this.leaderId = null;
     if (!this.setRole('leader')) {
       this.Blok.ModificationsObserver.flushNow();
     }
   }
 
   private clearAwaitingSettle(): void {
-    if (this.awaitingSettle !== null) {
+    if (this.awaitingSettle?.timer != null) {
       clearTimeout(this.awaitingSettle.timer);
-      this.awaitingSettle = null;
     }
+    this.awaitingSettle = null;
   }
 
   /**
@@ -1236,8 +1271,15 @@ export class TabSync extends Module {
 
       const saved = await this.saveBeforeYield(session);
 
-      // Read-only or teardown meanwhile: no hand-over; the claimant steals.
-      if (this.session !== session || this.currentRole !== 'leader') {
+      // Teardown meanwhile: nothing left to hand over.
+      if (this.session !== session) {
+        return;
+      }
+      // Read-only meanwhile: no hand-over, the claimant steals. It leads
+      // soon, and a retry here would carry its version.
+      if (this.currentRole !== 'leader') {
+        void this.abandonSaves();
+
         return;
       }
       // Without persistence no `saved` goes out on its own.
@@ -1284,11 +1326,20 @@ export class TabSync extends Module {
     const deadline = Date.now() + YIELD_SAVE_WAIT_MS;
     const { ModificationsObserver } = this.Blok;
 
+    // Each pass either awaits a save (waitForSave polls while one runs) or
+    // returns: an idle queue never loops back.
     for (;;) {
+      if (this.session !== session || this.currentRole !== 'leader') {
+        return false;
+      }
       // The observer, not dirtySinceSaved: the write buffer lands typing in
       // the document after the save that already read it from the page.
       if (ModificationsObserver.hasPendingSave) {
         ModificationsObserver.flushNow();
+      }
+      // Delivery suppressed (read-only, disabled, destroyed): it cannot save now.
+      if (ModificationsObserver.hasPendingSave) {
+        return false;
       }
       if (!await this.waitForSave(session, deadline)) {
         return false;
@@ -1326,7 +1377,8 @@ export class TabSync extends Module {
       if (!this.Blok.ModificationsObserver.isSaving && state !== 'saving') {
         return state === 'idle';
       }
-      if (Date.now() >= deadline || this.session !== session) {
+      // A leader that turned read-only must stop its queue now, not at the deadline.
+      if (Date.now() >= deadline || this.session !== session || this.currentRole !== 'leader') {
         return false;
       }
       await new Promise((resolve) => {

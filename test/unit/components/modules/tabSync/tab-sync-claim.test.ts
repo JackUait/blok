@@ -43,7 +43,16 @@ const apiStub = {} as unknown as API;
  * A tab whose `flushNow` really pumps its save queue, so a save has a
  * version and can be in flight.
  */
-const makeTab = (platform: FakePlatform, options: { recordId?: string; readOnly?: boolean; version?: string; failSteal?: boolean } = {}): Tab => {
+interface TabOptions {
+  recordId?: string;
+  readOnly?: boolean;
+  version?: string;
+  failSteal?: boolean;
+  /** Called as a steal starts; the steal then takes 20 ms. */
+  onSlowSteal?: () => void;
+}
+
+const makeTab = (platform: FakePlatform, options: TabOptions = {}): Tab => {
   const fake = createFakeBlok({ recordId: options.recordId, readOnly: options.readOnly });
   const save = vi.fn(async () => ({ version: options.version ?? 'v-saved' }));
   const config = expandPersistenceConfig({ documentId: 'doc', persistence: { load: async () => null, save } });
@@ -63,9 +72,27 @@ const makeTab = (platform: FakePlatform, options: { recordId?: string; readOnly?
     lock: (key) => {
       const lock = platform.lock(key);
 
-      return lock === null || options.failSteal !== true
+      if (lock === null) {
+        return null;
+      }
+      if (options.failSteal === true) {
+        return { ...lock, steal: () => Promise.reject(new Error('steal refused')) };
+      }
+      const { onSlowSteal } = options;
+
+      return onSlowSteal === undefined
         ? lock
-        : { ...lock, steal: () => Promise.reject(new Error('steal refused')) };
+        : {
+          ...lock,
+          steal: async () => {
+            onSlowSteal();
+            await new Promise((resolve) => {
+              setTimeout(resolve, 20);
+            });
+
+            return lock.steal();
+          },
+        };
     },
     channel: (key) => {
       own.channel = platform.channel(key);
@@ -111,7 +138,7 @@ describe('TabSync — the leader follows the tab the user works in', () => {
   let platform: FakePlatform;
   const tabs: Tab[] = [];
 
-  const tab = async (options: { recordId?: string; readOnly?: boolean; version?: string; active?: boolean; failSteal?: boolean } = {}): Promise<Tab> => {
+  const tab = async (options: TabOptions & { active?: boolean } = {}): Promise<Tab> => {
     const t = makeTab(platform, options);
 
     if (options.active === true) {
@@ -374,6 +401,94 @@ describe('TabSync — the leader follows the tab the user works in', () => {
     expect(a.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(2);
     expect(a.save).toHaveBeenCalledTimes(2);
     expect(b.sync.role).toBe('leader');
+  });
+
+  it('a save that lands while the claimant is still stealing ends its wait at once, with that version', async () => {
+    const a = await tab({ recordId: 'A' });
+    const request = holdRequest(a, 'v-slow');
+    const b = await tab({ recordId: 'B', version: 'v-b', onSlowSteal: () => setTimeout(() => request.land(), 5) });
+
+    await vi.advanceTimersByTimeAsync(0);
+    editUnsaved(a, 'x');
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 200);
+
+    expect(b.sync.role).toBe('leader');
+    expect(b.save).toHaveBeenCalledTimes(1);
+    expect(b.save).toHaveBeenCalledWith({ blocks: [] }, { version: 'v-slow' });
+  });
+
+  it('a leader that turns read-only while it yields never retries its save', async () => {
+    const { a, b } = await twoTabs();
+    const request = holdRequest(a, 'v-a2');
+
+    editUnsaved(a, 'x');
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + 100);
+    a.fake.ReadOnly.isEnabled = true;
+    a.sync.toggleReadOnly(true);
+    await vi.advanceTimersByTimeAsync(100);
+    request.fail();
+    await vi.advanceTimersByTimeAsync(CLAIM_TIMEOUT_MS + 5000);
+
+    expect(b.sync.role).toBe('leader');
+    expect(a.save).toHaveBeenCalledTimes(1);
+  });
+
+  describe('the yielding leader never spins', () => {
+    const sleep = (ms: number): Promise<void> => new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+
+    /** A leader A in the middle of a yield, its save held. Real timers: a spin blocks them. */
+    const yieldingWithHeldSave = async (): Promise<{ a: Tab; request: { land: () => void; fail: () => void } }> => {
+      vi.useRealTimers();
+      const a = await tab({ recordId: 'A' });
+      const b = await tab({ recordId: 'B' });
+
+      await sleep(10);
+      const request = holdRequest(a, 'v-slow');
+
+      editUnsaved(a, 'x');
+      b.activity.set(true);
+      await sleep(CLAIM_SETTLE_MS + 200);
+      expect(a.save).toHaveBeenCalledTimes(1);
+
+      return { a, request };
+    };
+
+    /** How late a short timer fires after the held save lands. */
+    const blockedAfterLanding = async (request: { land: () => void }): Promise<number> => {
+      const start = Date.now();
+
+      request.land();
+      await sleep(100);
+
+      return Date.now() - start;
+    };
+
+    it('when a save cannot start because the leader turned read-only', async () => {
+      const { a, request } = await yieldingWithHeldSave();
+
+      a.fake.ReadOnly.isEnabled = true;
+      a.sync.toggleReadOnly(true);
+      a.fake.ModificationsObserver.flushNow.mockImplementation(() => undefined);
+      a.fake.ModificationsObserver.hasPendingSave = true;
+
+      expect(await blockedAfterLanding(request)).toBeLessThan(1000);
+      expect(a.fake.ModificationsObserver.flushNow.mock.calls.length).toBeLessThan(20);
+    });
+
+    it('when a save cannot start while the leader still leads', async () => {
+      const { a, request } = await yieldingWithHeldSave();
+
+      // Delivery suppressed: flushNow starts nothing and the edit stays pending.
+      a.fake.ModificationsObserver.flushNow.mockImplementation(() => undefined);
+      a.fake.ModificationsObserver.hasPendingSave = true;
+
+      expect(await blockedAfterLanding(request)).toBeLessThan(1000);
+      expect(a.fake.ModificationsObserver.flushNow.mock.calls.length).toBeLessThan(20);
+    });
   });
 
   it('a claimant whose steal fails waits in line again', async () => {

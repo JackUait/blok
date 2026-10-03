@@ -88,6 +88,7 @@ vi.mock('../../../../src/tools/table/table-row-col-controls', () => ({
     public hideAllGrips = vi.fn();
     public setGripsDisplay = vi.fn();
     public setActiveGrip = vi.fn();
+    public pinCell = vi.fn();
 
     public get isPopoverOpen(): boolean {
       return captured.popoverOpen;
@@ -107,6 +108,7 @@ vi.mock('../../../../src/tools/table/table-cell-selection', () => ({
     public selectColumn = vi.fn();
     public selectRange = vi.fn();
     public clearActiveSelection = vi.fn();
+    public getSelectedRange = vi.fn(() => null);
 
     public constructor(options: unknown) {
       captured.cellSelection.push(options);
@@ -259,12 +261,14 @@ interface MockRowColControls {
   hideAllGrips: Mock;
   setGripsDisplay: Mock;
   setActiveGrip: Mock;
+  pinCell: Mock;
 }
 
 interface MockCellSelection {
   destroy: Mock;
   selectRow: Mock;
   selectColumn: Mock;
+  getSelectedRange: Mock;
 }
 
 interface MockResize {
@@ -2660,6 +2664,32 @@ describe('cell-selection wiring', () => {
     expect(resizeMock().enabled).toBe(true);
     expect(addControlsMock().setInteractive).toHaveBeenCalledWith(true);
     expect(rowColMock().setGripsDisplay).toHaveBeenCalledWith(true);
+  });
+
+  it('pins the grips of the single cell holding the caret, at a merge origin', () => {
+    createHarness();
+    cellSelectionMock().getSelectedRange.mockReturnValue({ minRow: 1, maxRow: 2, minCol: 0, maxCol: 1 });
+
+    cellSelectionOptions().onSelectionActiveChange(true, false);
+
+    expect(rowColMock().pinCell).toHaveBeenLastCalledWith({ row: 1, col: 0 });
+  });
+
+  it('releases the pinned grips for a multi-cell range', () => {
+    createHarness();
+    cellSelectionMock().getSelectedRange.mockReturnValue({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
+
+    cellSelectionOptions().onSelectionActiveChange(true, true);
+
+    expect(rowColMock().pinCell).toHaveBeenLastCalledWith(null);
+  });
+
+  it('releases the pinned grips when the selection is dropped', () => {
+    createHarness();
+
+    cellSelectionOptions().onSelectionActiveChange(false, false);
+
+    expect(rowColMock().pinCell).toHaveBeenLastCalledWith(null);
   });
 
   it('brings the grips back once the range is finalized', () => {

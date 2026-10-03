@@ -122,6 +122,9 @@ export class TableRowColControls {
   private hideTimeout: ReturnType<typeof setTimeout> | null = null;
   private activeColGripIndex = -1;
   private activeRowGripIndex = -1;
+  /** Row/col of the cell holding the caret. Its grips stay up whatever the pointer hovers. */
+  private pinnedRowIndex = -1;
+  private pinnedColIndex = -1;
   private isInsideTable = false;
   private rowResizeObserver: ResizeObserver | null = null;
 
@@ -238,6 +241,40 @@ export class TableRowColControls {
     document.addEventListener('pointerdown', this.boundUnlockGrip);
   }
 
+  /**
+   * Keep the grips of `cell` visible on top of the hover pair. Pass null to release them.
+   */
+  public pinCell(cell: { row: number; col: number } | null): void {
+    const prevRow = this.pinnedRowIndex;
+    const prevCol = this.pinnedColIndex;
+
+    this.pinnedRowIndex = cell?.row ?? -1;
+    this.pinnedColIndex = cell?.col ?? -1;
+
+    if (prevCol >= 0 && prevCol !== this.pinnedColIndex && prevCol !== this.activeColGripIndex && prevCol < this.colGrips.length) {
+      this.applyIdleClasses(this.colGrips[prevCol]);
+    }
+    if (prevRow >= 0 && prevRow !== this.pinnedRowIndex && prevRow !== this.activeRowGripIndex && prevRow < this.rowGrips.length) {
+      this.applyIdleClasses(this.rowGrips[prevRow]);
+    }
+
+    this.showPinnedGrips();
+  }
+
+  private showPinnedGrips(): void {
+    // An open menu or a locked grip shows only its own grip.
+    if (this.isGripInteractionLocked()) {
+      return;
+    }
+
+    [this.colGrips[this.pinnedColIndex], this.rowGrips[this.pinnedRowIndex]].forEach(grip => {
+      // No fade: the grips mark the caret cell like its box does, and a fade replays after every undo rebuild.
+      if (grip !== undefined && !grip.hasAttribute('data-blok-table-grip-visible')) {
+        this.applyVisibleClasses(grip, true);
+      }
+    });
+  }
+
   private handleUnlockGrip(e: PointerEvent): void {
     document.removeEventListener('pointerdown', this.boundUnlockGrip);
 
@@ -245,6 +282,8 @@ export class TableRowColControls {
       this.applyIdleClasses(this.lockedGrip);
       this.lockedGrip = null;
     }
+
+    this.showPinnedGrips();
 
     // Re-evaluate grip visibility: the preceding mouseover was blocked
     // by isGripInteractionLocked(). Check if pointer is over a table cell.
@@ -337,6 +376,7 @@ export class TableRowColControls {
     this.positionGrips();
     this.observeRowHeights();
     this.attachScrollListener();
+    this.showPinnedGrips();
   }
 
   private attachScrollListener(): void {
@@ -713,7 +753,7 @@ export class TableRowColControls {
   }
 
   private hideColGrip(): void {
-    if (this.activeColGripIndex >= 0 && this.activeColGripIndex < this.colGrips.length) {
+    if (this.activeColGripIndex >= 0 && this.activeColGripIndex < this.colGrips.length && this.activeColGripIndex !== this.pinnedColIndex) {
       this.applyIdleClasses(this.colGrips[this.activeColGripIndex]);
     }
 
@@ -731,14 +771,14 @@ export class TableRowColControls {
   }
 
   private hideRowGrip(): void {
-    if (this.activeRowGripIndex >= 0 && this.activeRowGripIndex < this.rowGrips.length) {
+    if (this.activeRowGripIndex >= 0 && this.activeRowGripIndex < this.rowGrips.length && this.activeRowGripIndex !== this.pinnedRowIndex) {
       this.applyIdleClasses(this.rowGrips[this.activeRowGripIndex]);
     }
 
     this.activeRowGripIndex = -1;
   }
 
-  private applyVisibleClasses(grip: HTMLElement): void {
+  private applyVisibleClasses(grip: HTMLElement, instant = this.isInsideTable): void {
     const el = grip;
     const isCol = el.hasAttribute(GRIP_COL_ATTR);
     const type: 'col' | 'row' = isCol ? 'col' : 'row';
@@ -746,14 +786,14 @@ export class TableRowColControls {
 
     setGripPillSize(el, type, pillSize);
 
-    if (this.isInsideTable) {
+    if (instant) {
       el.style.transition = 'none';
     }
 
     el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_VISIBLE_CLASSES);
     el.setAttribute('data-blok-table-grip-visible', '');
 
-    if (this.isInsideTable) {
+    if (instant) {
       void el.offsetHeight;
       el.style.transition = '';
     }
@@ -829,6 +869,7 @@ export class TableRowColControls {
       this.hideRowGrip();
       this.isInsideTable = false;
       this.hideTimeout = null;
+      this.showPinnedGrips();
     }, HIDE_DELAY_MS);
   }
 

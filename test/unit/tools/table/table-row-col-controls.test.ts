@@ -252,6 +252,115 @@ describe('TableRowColControls', () => {
     });
   });
 
+  describe('caret cell grips stay visible while hovering elsewhere', () => {
+    const createControls = (): void => {
+      grid = createGrid(3, 3);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 3,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
+        i18n: mockI18n,
+      });
+    };
+
+    const colGrip = (i: number): HTMLElement => grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`)[i];
+    const rowGrip = (i: number): HTMLElement => grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`)[i];
+
+    it('shows the pinned cell grips with no hover at all', () => {
+      createControls();
+
+      controls.pinCell({ row: 1, col: 2 });
+
+      expect(isGripVisible(rowGrip(1))).toBe(true);
+      expect(isGripVisible(colGrip(2))).toBe(true);
+      expect(isGripVisible(rowGrip(0))).toBe(false);
+      expect(isGripVisible(colGrip(0))).toBe(false);
+    });
+
+    it('keeps the pinned grips and adds the hovered cell grips', () => {
+      createControls();
+      controls.pinCell({ row: 0, col: 0 });
+
+      simulateMouseOver(getCell(grid, 2, 1));
+
+      expect(isGripVisible(rowGrip(0))).toBe(true);
+      expect(isGripVisible(colGrip(0))).toBe(true);
+      expect(isGripVisible(rowGrip(2))).toBe(true);
+      expect(isGripVisible(colGrip(1))).toBe(true);
+
+      simulateMouseOver(getCell(grid, 1, 2));
+
+      expect(isGripVisible(rowGrip(2))).toBe(false);
+      expect(isGripVisible(colGrip(1))).toBe(false);
+      expect(isGripVisible(rowGrip(0))).toBe(true);
+      expect(isGripVisible(colGrip(0))).toBe(true);
+    });
+
+    it('keeps the pinned grips after hovering the pinned row and moving away', () => {
+      createControls();
+      controls.pinCell({ row: 0, col: 0 });
+
+      simulateMouseOver(getCell(grid, 0, 0));
+      simulateMouseOver(getCell(grid, 2, 2));
+
+      expect(isGripVisible(rowGrip(0))).toBe(true);
+      expect(isGripVisible(colGrip(0))).toBe(true);
+    });
+
+    it('keeps the pinned grips after the pointer leaves the table', () => {
+      createControls();
+      controls.pinCell({ row: 0, col: 0 });
+
+      simulateMouseOver(getCell(grid, 2, 2));
+      simulateMouseLeave(grid);
+      vi.advanceTimersByTime(HIDE_DELAY_MS + 10);
+
+      expect(isGripVisible(rowGrip(0))).toBe(true);
+      expect(isGripVisible(colGrip(0))).toBe(true);
+      expect(isGripVisible(rowGrip(2))).toBe(false);
+      expect(isGripVisible(colGrip(2))).toBe(false);
+    });
+
+    it('moves the pinned grips to the new caret cell', () => {
+      createControls();
+      controls.pinCell({ row: 0, col: 0 });
+
+      controls.pinCell({ row: 2, col: 1 });
+
+      expect(isGripVisible(rowGrip(0))).toBe(false);
+      expect(isGripVisible(colGrip(0))).toBe(false);
+      expect(isGripVisible(rowGrip(2))).toBe(true);
+      expect(isGripVisible(colGrip(1))).toBe(true);
+    });
+
+    it('unpinning hides the grips unless the pointer is over them', () => {
+      createControls();
+      controls.pinCell({ row: 0, col: 0 });
+      simulateMouseOver(getCell(grid, 0, 2));
+
+      controls.pinCell(null);
+
+      expect(isGripVisible(rowGrip(0))).toBe(true);
+      expect(isGripVisible(colGrip(0))).toBe(false);
+      expect(isGripVisible(colGrip(2))).toBe(true);
+    });
+
+    it('keeps the pinned grips after refresh() rebuilds them', () => {
+      createControls();
+      controls.pinCell({ row: 1, col: 1 });
+
+      controls.refresh();
+
+      expect(isGripVisible(rowGrip(1))).toBe(true);
+      expect(isGripVisible(colGrip(1))).toBe(true);
+    });
+  });
+
   describe('public positionGrips', () => {
     it('positionGrips can be called externally to reposition grips', () => {
       grid = createGrid(2, 2);

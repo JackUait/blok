@@ -1471,6 +1471,11 @@ export class TableSubsystems {
         this.addControls?.setInteractive(!isMultiCell);
         this.cornerDrag?.setInteractive(!isMultiCell);
         this.rowColControls?.setGripsDisplay(!hasSelection);
+
+        // A merged cell pins its origin row/col.
+        const caretRange = hasSelection && !isMultiCell ? this.cellSelection?.getSelectedRange() : null;
+
+        this.rowColControls?.pinCell(caretRange ? { row: caretRange.minRow, col: caretRange.minCol } : null);
       },
       onSelectionRangeChange: () => {
         // Selection finalized — restore grips so hover works normally

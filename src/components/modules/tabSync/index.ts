@@ -83,6 +83,9 @@ export class TabSync extends Module {
    */
   private dirtySinceSaved = false;
 
+  /** A tab update or diff changed this tab's document. */
+  private receivedTabChange = false;
+
   /** True from the join hello until its answer is taken; one answer per hello. */
   private waitingForState = false;
 
@@ -404,9 +407,13 @@ export class TabSync extends Module {
       this.editedSinceStart = true;
       void this.start({
         loadedFromPersistence: false,
-        isEmpty: this.Blok.BlockManager.blocks.every((block) => block.isEmpty),
+        isEmpty: this.isDocumentEmpty(),
       });
     }) ?? null;
+  }
+
+  private isDocumentEmpty(): boolean {
+    return this.Blok.BlockManager.blocks.every((block) => block.isEmpty);
   }
 
   private stopWaitingForFirstSave(): void {
@@ -655,6 +662,7 @@ export class TabSync extends Module {
       unsubscribe();
     }
     if (applied.changed) {
+      this.receivedTabChange = true;
       this.Blok.ModificationsObserver.markDirty();
     }
 
@@ -839,9 +847,12 @@ export class TabSync extends Module {
       if (this.session === session && this.currentRole === 'follower' && this.isSameDocument()) {
         // Role first: the observer reads it live and saves only as leader.
         this.setRole('leader');
-        // Always: the adopted state, a wake diff or a `saved` that came before
-        // an edit can all hold changes the old leader never saved.
-        this.Blok.ModificationsObserver.flushNow();
+        // The adopted state, a wake diff or a `saved` that came before an edit
+        // can all hold changes the old leader never saved. An empty document
+        // nobody changed is skipped: it may be a boot doc, not the real one.
+        if (this.editedSinceStart || this.receivedTabChange || !this.isDocumentEmpty()) {
+          this.Blok.ModificationsObserver.flushNow();
+        }
       }
     }, () => {
       // Aborted or released by teardown.
@@ -860,12 +871,14 @@ export class TabSync extends Module {
 
   /**
    * False, after leaving, when the host put another document in this editor.
+   * A host documentId names the document; the record id may change under it
+   * (a render() of data without an id mints one).
    */
   private isSameDocument(): boolean {
     if (this.session === null) {
       return false;
     }
-    if (this.Blok.Saver.getDocumentRecordId() === this.session.recordId) {
+    if (this.config.documentId !== undefined || this.Blok.Saver.getDocumentRecordId() === this.session.recordId) {
       return true;
     }
     this.leave();

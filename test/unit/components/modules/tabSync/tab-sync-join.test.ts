@@ -30,6 +30,9 @@ const baseConfig = (): BlokConfig => {
   return { documentId: 'doc', persistence: expanded };
 };
 
+/** No documentId: the key comes from the loaded record id. */
+const autoConfig = (): BlokConfig => ({ persistence: baseConfig().persistence });
+
 const makeTab = (
   platform: TabPlatform,
   options: { recordId?: string; readOnly?: boolean; config?: BlokConfig } = {}
@@ -333,10 +336,30 @@ describe('TabSync — roles, leader lock and join', () => {
     expect(seen).toEqual([]);
   });
 
-  it('a tab whose document changes under it leaves the session', async () => {
+  it('with an explicit documentId, a new record id under a follower keeps it in sync', async () => {
     const platform = createFakePlatform();
     const a = await startTab(platform, { recordId: 'A' });
     const b = await startTab(platform, { recordId: 'B' });
+
+    await settle();
+    expect(b.sync.role).toBe('follower');
+
+    // A render() of data without an id mints a new record id.
+    b.fake.Saver.adoptDocumentRecordId('another-record');
+    a.fake.type('to b');
+    await settle();
+    b.fake.type(' and back');
+    await settle();
+
+    expect(b.sync.role).toBe('follower');
+    expect(b.fake.text()).toBe('to b and back');
+    expect(a.fake.text()).toBe('to b and back');
+  });
+
+  it('in auto mode, a tab whose document changes under it leaves the session', async () => {
+    const platform = createFakePlatform();
+    const a = await startTab(platform, { recordId: 'R', config: autoConfig() });
+    const b = await startTab(platform, { recordId: 'R', config: autoConfig() });
 
     await settle();
     expect(b.sync.role).toBe('follower');
@@ -545,10 +568,10 @@ describe('TabSync — roles, leader lock and join', () => {
       expect(b.sync.role).toBe('leader');
     });
 
-    it('a follower promoted after its document changed leaves instead of leading', async () => {
+    it('in auto mode, a follower promoted after its document changed leaves instead of leading', async () => {
       const platform = createFakePlatform();
-      const a = await startTab(platform, { recordId: 'A' });
-      const b = await startTab(platform, { recordId: 'B' });
+      const a = await startTab(platform, { recordId: 'R', config: autoConfig() });
+      const b = await startTab(platform, { recordId: 'R', config: autoConfig() });
 
       await settle();
       b.fake.Saver.adoptDocumentRecordId('another-document');

@@ -181,4 +181,36 @@ describe('Core — the leader saves structural changes made in a follower', () =
 
     expect(leader.moduleInstances.BlockManager.getBlockById('a')?.holder.textContent).toBe('a typed more');
   });
+
+  it('with an explicit documentId, a render of data without an id keeps the tab in sync', async () => {
+    const { leader, follower } = await twoEditors('render-no-id');
+
+    await follower.moduleInstances.API.methods.blocks.render({ blocks: [paragraph('x'), paragraph('y')] });
+    await wait(50);
+    await follower.moduleInstances.API.methods.blocks.update('y', { text: 'y edited' });
+    await wait(50);
+
+    expect(follower.moduleInstances.TabSync.role).toBe('follower');
+    expect(leader.moduleInstances.BlockManager.getBlockById('y')?.holder.textContent).toBe('y edited');
+  });
+
+  it('a tab promoted with an empty document nobody changed saves nothing', async () => {
+    const leader = createCore({ documentId: 'empty-boot', data: { blocks: [] } });
+
+    await leader.isReady;
+    await wait(50);
+    const onSave = vi.fn();
+    const follower = createCore({ documentId: 'empty-boot', data: { blocks: [] }, onSave });
+
+    await follower.isReady;
+    await wait(100);
+    expect(follower.moduleInstances.TabSync.role).toBe('follower');
+
+    cores.splice(cores.indexOf(leader), 1);
+    destroyCore(leader);
+    await oneWindow();
+
+    expect(follower.moduleInstances.TabSync.role).toBe('leader');
+    expect(onSave).not.toHaveBeenCalled();
+  });
 });

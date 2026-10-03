@@ -279,6 +279,48 @@ describe('TabSync — edits, adopt, wake diff and hand-off', () => {
     expect(b.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
   });
 
+  it('a successor with an empty document it never changed saves nothing', async () => {
+    const { a, b } = await twoTabs();
+
+    b.fake.BlockManager.blocks = [{ isEmpty: true }];
+    a.sync.destroy();
+    await flush();
+
+    expect(b.sync.role).toBe('leader');
+    expect(b.fake.ModificationsObserver.flushNow).not.toHaveBeenCalled();
+  });
+
+  it('a successor whose document another tab emptied still saves it', async () => {
+    const { a, b } = await twoTabs();
+    const c = await tab({ recordId: 'C' });
+
+    await flush();
+    c.fake.type('gone');
+    await flush();
+    c.fake.erase(4);
+    await flush();
+    b.fake.BlockManager.blocks = [{ isEmpty: true }];
+    a.sync.destroy();
+    await flush();
+
+    expect(b.sync.role).toBe('leader');
+    expect(b.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('a successor that emptied its document itself still saves it', async () => {
+    const { a, b } = await twoTabs();
+
+    b.fake.type('gone');
+    b.fake.erase(4);
+    await flush();
+    b.fake.BlockManager.blocks = [{ isEmpty: true }];
+    a.sync.destroy();
+    await flush();
+
+    expect(b.sync.role).toBe('leader');
+    expect(b.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
+  });
+
   it('a woken leader asks the followers for the edits it missed, without a reset', async () => {
     const { a, b } = await twoTabs();
 

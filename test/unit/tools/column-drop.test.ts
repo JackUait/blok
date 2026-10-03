@@ -280,7 +280,7 @@ describe('addColumnToList', () => {
 
       holder.style.flexGrow = grow;
 
-      return { id, holder };
+      return { id, holder, dispatchChange: vi.fn() };
     };
     const existingA = makeColumn('neighbor', '2');
     const existingB = makeColumn('colB', '0.5');

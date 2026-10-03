@@ -1173,6 +1173,18 @@ describe('LinkInlineTool', () => {
       expect(rows.map((row) => rowText(row, 'meta'))).toEqual(['github.com', 'figma.com']);
     });
 
+    it('a reopen shows links another tab added while it was closed', () => {
+      const { tool, itemWrapper } = openCreating();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onClose();
+      seed([{ url: 'https://a.com', title: 'From another tab' }]);
+      window.dispatchEvent(new StorageEvent('storage', { key: 'blok-recent-links', storageArea: localStorage }));
+      renderResult.children.onOpen();
+
+      expect(recentRows(itemWrapper).map((row) => rowText(row, 'title'))).toEqual(['From another tab']);
+    });
+
     it('labels the list "Recent"', () => {
       seed([{ url: 'https://a.com', title: 'A' }]);
 

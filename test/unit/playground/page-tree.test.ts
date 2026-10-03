@@ -278,7 +278,7 @@ describe('mountPageTree', () => {
     row('Notes').dispatchEvent(plain);
 
     expect(plain.defaultPrevented).toBe(true);
-    expect(navigate).toHaveBeenCalledWith('notes');
+    expect(navigate).toHaveBeenCalledWith('notes', row('Notes'));
 
     const withMeta = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, metaKey: true });
 

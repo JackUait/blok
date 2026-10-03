@@ -2116,7 +2116,7 @@
         pages,
         search: window.location.search,
         readOnly: state.readOnly,
-        navigate: (id) => goToPage(id),
+        navigate: (id, link) => goToPage(id, { from: link }),
         splitTitle: (html) => {
           blok.blocks.insert('paragraph', { text: html }, {}, 0, false);
           blok.caret.setToFirstBlock('start');
@@ -2239,9 +2239,11 @@
 
     /**
      * Shows a page (null = root). `push: false` is for popstate, where the
-     * browser already moved the URL.
+     * browser already moved the URL. `from` is a clicked link outside the
+     * editor (page tree, crumb, tab): the page grows out of it, since its
+     * row in the editor may be anywhere or off screen.
      */
-    function goToPage(pageId, { push = true } = {}) {
+    function goToPage(pageId, { push = true, from: opener } = {}) {
       return queueEditorWork(async () => {
         // A page made in another tab or by a peer has a block here but no record yet.
         const link = pageId !== null && !pages.has(pageId) ? findPageLink(pageBlocksOf, pageId) : null;
@@ -2263,6 +2265,8 @@
         scrollByPage.set(from, { y: window.scrollY, height: document.body.getBoundingClientRect().height });
         await snapshotEditor();
         currentPageId = target;
+        const box = opener?.getBoundingClientRect();
+        const origin = box === undefined ? undefined : { x: box.left + box.width / 2, y: box.top + box.height / 2 };
 
         await runPageTransition(async () => {
           // The transition paints its loading state, so a page that arrives in time never shows a skeleton.
@@ -2280,7 +2284,9 @@
           }
         }, {
           direction: back ? 'back' : 'forward',
-          ...pageNavMorphs({ back, from, target, parentOf: (id) => pages.get(id)?.parentId }),
+          ...(origin === undefined
+            ? pageNavMorphs({ back, from, target, parentOf: (id) => pages.get(id)?.parentId })
+            : { from: null, to: null, origin }),
         });
         if (back && from !== null) flashArrivalRow(from);
       });
@@ -2313,7 +2319,7 @@
       blocksOf: pageBlocksOf,
       currentPageId: () => currentPageId,
       href: (id) => pagePath(id, window.location.search),
-      navigate: (id) => goToPage(id),
+      navigate: (id, link) => goToPage(id, { from: link }),
     });
 
     /**
@@ -2410,7 +2416,7 @@
         if (page === 'editor') {
           // The Editor tab leads home, to the root document.
           navigateTo(page, '');
-          goToPage(null);
+          goToPage(null, { from: tab });
           return;
         }
         history.pushState(null, '', `/${page}${window.location.search}`);

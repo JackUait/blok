@@ -56,6 +56,25 @@ describe('page transition styles', () => {
   });
 });
 
+describe('page transition styles from the sidebar', () => {
+  const PORTAL = 'html.pg-page-nav[data-pg-page-via="portal"]';
+
+  it('grows the new page out of the clicked point instead of flying parts across the screen', () => {
+    const enter = rule(`${PORTAL}::view-transition-new(pg-page-in)`);
+
+    expect(enter).toMatch(/var\(--pg-portal-in\)/);
+    expect(enter).toMatch(/var\(--pg-portal-reach\)|var\(--pg-portal-r\)/);
+  });
+
+  it('sinks the page being left toward the clicked point', () => {
+    expect(rule(`${PORTAL}::view-transition-old(pg-page-out)`)).toMatch(/transform-origin:\s*var\(--pg-portal-out\)/);
+  });
+
+  it('paints the bodies opaque, so the two pages never show through each other inside the reveal', () => {
+    expect(rule('html.pg-page-nav #tab-editor')).toMatch(/background(?:-color)?:/);
+  });
+});
+
 describe('page transition styles going back', () => {
   const BACK = 'html.pg-page-nav[data-pg-page-dir="back"]';
 
@@ -209,6 +228,61 @@ describe('runPageTransition', () => {
     }, { direction: 'back', from: null, to: null });
 
     expect(origins[0]).toBe('50% 700px');
+  });
+
+  it('opens a page from the point it was clicked, measured against each body', async () => {
+    document.body.innerHTML = '<div id="tab-editor"></div>';
+    let top = -300;
+    const seen: Record<string, string> = {};
+    const style = document.documentElement.style;
+
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return { top: this.id === 'tab-editor' ? top : 0, left: this.id === 'tab-editor' ? 10 : 0 } as DOMRect;
+    });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1000 });
+
+    await runPageTransition(async () => {
+      seen.via = document.documentElement.getAttribute('data-pg-page-via') ?? '';
+      seen.out = style.getPropertyValue('--pg-portal-out');
+      seen.reach = style.getPropertyValue('--pg-portal-reach');
+      top = 81;
+    }, { direction: 'forward', from: null, to: null, origin: { x: 110, y: 200 } });
+
+    expect(seen.via).toBe('portal');
+    expect(seen.out).toBe('100px 500px');
+    expect(seen.reach).toBe(`${Math.ceil(Math.hypot(890, 600))}px`);
+    expect(document.documentElement.hasAttribute('data-pg-page-via')).toBe(false);
+    expect(style.getPropertyValue('--pg-portal-out')).toBe('');
+    expect(style.getPropertyValue('--pg-portal-in')).toBe('');
+    Reflect.deleteProperty(window, 'innerWidth');
+  });
+
+  it('places the arriving reveal against the new body, after its scroll is restored', async () => {
+    document.body.innerHTML = '<div id="tab-editor"></div>';
+    let top = -300;
+    const style = document.documentElement.style;
+    let arriving = '';
+
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return { top: this.id === 'tab-editor' ? top : 0, left: 0 } as DOMRect;
+    });
+    Object.defineProperty(document, 'startViewTransition', {
+      configurable: true,
+      value: (update: () => Promise<void>) => {
+        const done = update().then(() => {
+          arriving = style.getPropertyValue('--pg-portal-in');
+        });
+
+        return { updateCallbackDone: done, finished: done };
+      },
+    });
+
+    await runPageTransition(async () => {
+      top = 81;
+    }, { direction: 'forward', from: null, to: null, origin: { x: 110, y: 200 } });
+
+    expect(arriving).toBe('110px 119px');
   });
 
   it('removes the naming sheet once the transition ends', async () => {

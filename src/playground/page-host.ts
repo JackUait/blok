@@ -517,8 +517,8 @@ export interface PageHeaderOptions {
   pages: PageRegistry;
   search: string;
   readOnly: boolean;
-  /** Plain click on a breadcrumb. */
-  navigate(pageId: string | null): void;
+  /** Plain click on a breadcrumb. `link` is the crumb: the page opens from it. */
+  navigate(pageId: string | null, link: HTMLElement): void;
   /** Enter in the title: open a new first block holding `html`, the title's text after the caret. */
   splitTitle(html: string): void;
   /** ArrowDown on the title's last line; `x` is the caret's, when known. */
@@ -639,7 +639,7 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
           return;
         }
         event.preventDefault();
-        options.navigate(id);
+        options.navigate(id, el);
       });
     }
     li.append(el);
@@ -920,6 +920,11 @@ export interface PageTransitionOptions {
   /** The page being left. */
   from: PageMorph | null;
   to: PageMorph | null;
+  /**
+   * Viewport point of a link outside the editor (the page tree, a crumb).
+   * The new page then grows out of it instead of morphing parts.
+   */
+  origin?: { x: number; y: number };
 }
 
 /*
@@ -952,6 +957,28 @@ const setBodyOrigin = (side: 'out' | 'in'): void => {
   const top = document.getElementById('tab-editor')?.getBoundingClientRect().top ?? 0;
 
   document.documentElement.style.setProperty(`--pg-page-${side}-origin`, `50% ${Math.round(window.innerHeight / 2 - top)}px`);
+};
+
+/*
+ * Body snapshots span the whole page, so the click point is set against each
+ * body's own box: before the swap for the old one, after the scroll restore
+ * for the new one.
+ */
+const setPortalPoint = (side: 'out' | 'in', origin: { x: number; y: number }): void => {
+  const box = document.getElementById('tab-editor')?.getBoundingClientRect();
+
+  document.documentElement.style.setProperty(
+    `--pg-portal-${side}`,
+    `${Math.round(origin.x - (box?.left ?? 0))}px ${Math.round(origin.y - (box?.top ?? 0))}px`
+  );
+};
+
+/* The reveal must reach the farthest corner of the screen from the click. */
+const portalReach = (origin: { x: number; y: number }): string => {
+  const dx = Math.max(origin.x, window.innerWidth - origin.x);
+  const dy = Math.max(origin.y, window.innerHeight - origin.y);
+
+  return `${Math.ceil(Math.hypot(dx, dy))}px`;
 };
 
 /* A page that came back shorter (a peer deleted blocks) must not keep a blank tail forever. */
@@ -1079,11 +1106,19 @@ export const runPageTransition = async (update: () => Promise<void>, options: Pa
   root.classList.add('pg-page-nav');
   root.setAttribute('data-pg-page-dir', options.direction);
   setBodyOrigin('out');
+  if (options.origin !== undefined) {
+    root.setAttribute('data-pg-page-via', 'portal');
+    root.style.setProperty('--pg-portal-reach', portalReach(options.origin));
+    setPortalPoint('out', options.origin);
+  }
 
   const transition = document.startViewTransition(async () => {
     await update();
     morph.textContent = [bodyRule('in'), morphRules(options.to)].join('\n');
     setBodyOrigin('in');
+    if (options.origin !== undefined) {
+      setPortalPoint('in', options.origin);
+    }
   });
 
   try {
@@ -1095,8 +1130,8 @@ export const runPageTransition = async (update: () => Promise<void>, options: Pa
     morph.remove();
     root.classList.remove('pg-page-nav');
     root.removeAttribute('data-pg-page-dir');
-    root.style.removeProperty('--pg-page-out-origin');
-    root.style.removeProperty('--pg-page-in-origin');
+    root.removeAttribute('data-pg-page-via');
+    ['--pg-page-out-origin', '--pg-page-in-origin', '--pg-portal-out', '--pg-portal-in', '--pg-portal-reach'].forEach((name) => root.style.removeProperty(name));
   }
 };
 

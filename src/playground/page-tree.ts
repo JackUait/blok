@@ -150,7 +150,8 @@ export interface PageTreeOptions {
   blocksOf: (pageId: string | null) => OutputBlockData[] | undefined;
   currentPageId: () => string | null;
   href: (pageId: string | null) => string;
-  navigate: (pageId: string | null) => void;
+  /** `link` is the clicked row: the page opens from it. */
+  navigate: (pageId: string | null, link: HTMLElement) => void;
 }
 
 export interface PageTree {
@@ -278,7 +279,7 @@ export const mountPageTree = (options: PageTreeOptions): PageTree => {
         return;
       }
       event.preventDefault();
-      options.navigate(node.id);
+      options.navigate(node.id, link);
     });
     row.append(link);
     item.append(row);

@@ -522,6 +522,19 @@ describe('root page header', () => {
     expect(host.querySelector('.pg-crumb')?.textContent).toBe('🏠Workspace');
   });
 
+  it('hands the clicked crumb to navigate, so the page can open from where it was clicked', () => {
+    const pages = new PageRegistry(seed());
+    const host = document.createElement('header');
+    const options = headerOptions(pages, 'keys');
+
+    renderPageHeader(host, options);
+    const crumb = host.querySelector<HTMLAnchorElement>('a.pg-crumb');
+
+    crumb?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+
+    expect(options.navigate).toHaveBeenCalledWith(null, crumb);
+  });
+
   it('an empty root title reads Untitled in paths', () => {
     const pages = new PageRegistry(seed());
 
@@ -804,6 +817,68 @@ describe('playground follows a link to a page this tab has no record of', () => 
 
     expect(pushed).toEqual(['/editor/page/peer']);
     expect(pages.get('peer')).toMatchObject({ title: 'From a peer', parentId: 'guide' });
+  });
+});
+
+describe('playground opens a page from a link outside the editor', () => {
+  const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
+  const from = html.indexOf('function goToPage(');
+  const source = html.slice(from, html.indexOf('let blok = new Blok(', from));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  const navigate = async (link: unknown): Promise<Record<string, unknown>> => {
+    const calls: Array<Record<string, unknown>> = [];
+    const context = {
+      pages: new PageRegistry(seed()),
+      editorPageId: null as string | null,
+      currentPageId: null as string | null,
+      pageBlocksOf: () => [],
+      findPageLink: () => null,
+      queueEditorWork: (work: () => Promise<void>) => work(),
+      history: { pushState: vi.fn() },
+      window: { location: { search: '' }, scrollY: 0, scrollTo: vi.fn() },
+      document: { body: { getBoundingClientRect: () => ({ height: 0 }) }, getElementById: vi.fn(), querySelector: vi.fn() },
+      pagePath,
+      scrollByPage: new Map(),
+      snapshotEditor: vi.fn(),
+      runPageTransition: async (run: () => Promise<void>, options: Record<string, unknown>) => {
+        calls.push(options);
+        await run();
+      },
+      swapEditor: vi.fn(),
+      waitForPageContent: vi.fn(),
+      renderHeader: vi.fn(),
+      holdPageHeight: vi.fn(),
+      pageNavMorphs: () => ({ from: 'row', to: 'header' }),
+      flashArrivalRow: vi.fn(),
+      state: { readOnly: false },
+      PAGE_CONTENT_WAIT_MS: 0,
+      PAGE_TITLE_SELECTOR: '',
+      link,
+    };
+
+    await runInNewContext(`${source}; goToPage('guide', { from: link })`, context);
+
+    return calls[0];
+  };
+
+  it('grows the page out of the clicked row and morphs no part from the editor', async () => {
+    const row = { getBoundingClientRect: () => ({ left: 20, top: 100, width: 200, height: 30 }) };
+
+    expect(await navigate(row)).toMatchObject({ from: null, to: null, origin: { x: 120, y: 115 } });
+  });
+
+  it('keeps the row-to-header morph for a page link inside the editor', async () => {
+    expect(await navigate(undefined)).toMatchObject({ from: 'row', to: 'header' });
   });
 });
 

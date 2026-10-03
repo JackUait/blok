@@ -40,6 +40,8 @@ export interface PageConfig {
   resolve?(pageId: string): PageInfo | null | undefined | Promise<PageInfo | null | undefined>;
   /** Makes the page a new page block points at. */
   create?(init: { pageId: string }): void | Promise<void>;
+  /** Calls `onChange` when the page's title or icon changes elsewhere; the block then resolves again. */
+  subscribe?(pageId: string, onChange: () => void): (() => void) | void;
   /** The page's opening blocks, for the hover preview. */
   preview?(pageId: string): OutputBlockData[] | null | undefined | Promise<OutputBlockData[] | null | undefined>;
 }

@@ -92,6 +92,7 @@ export class PageTool implements BlockTool {
   private shown: { cache: PageCache | undefined } | undefined;
   private started = false;
   private detached = false;
+  private unsubscribe: (() => void) | undefined;
   /** Titles above the page, from the last `resolve`. Shown only in the hover preview. */
   private path: string[] = [];
   private readonly preview = new PageHoverPreview(() => this.previewContent(), () => this.previewBody());
@@ -191,6 +192,7 @@ export class PageTool implements BlockTool {
       return;
     }
     this.started = true;
+    this.listen();
 
     if (this.isNew) {
       void this.createPage();
@@ -222,13 +224,17 @@ export class PageTool implements BlockTool {
    */
   public setData(data: PageData): boolean {
     const pageId = typeof data.pageId === 'string' ? data.pageId : '';
+    const moved = pageId !== this.data.pageId;
 
-    if (pageId !== this.data.pageId) {
+    if (moved) {
       // The missing or locked verdict was about the old page.
       this.found = 'yes';
       this.shown = undefined;
     }
     this.data = { pageId, cache: readCache(data.cache) };
+    if (moved && this.unsubscribe !== undefined) {
+      this.listen();
+    }
     this.renderView();
 
     return true;
@@ -249,10 +255,12 @@ export class PageTool implements BlockTool {
 
   public removed(): void {
     this.detached = true;
+    this.stopListening();
     this.preview.hide();
   }
 
   public destroy(): void {
+    this.stopListening();
     this.preview.hide();
   }
 
@@ -326,6 +334,21 @@ export class PageTool implements BlockTool {
     }
 
     await this.refresh();
+  }
+
+  private listen(): void {
+    this.stopListening();
+
+    const { pageId } = this.data;
+    const stop = pageId === '' ? undefined : this.config.subscribe?.(pageId, () => void this.refresh());
+
+    // A no-op still marks the block as listening, so setData moves it to a new page.
+    this.unsubscribe = typeof stop === 'function' ? stop : (): void => undefined;
+  }
+
+  private stopListening(): void {
+    this.unsubscribe?.();
+    this.unsubscribe = undefined;
   }
 
   private async refresh(): Promise<void> {

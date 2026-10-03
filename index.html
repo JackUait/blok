@@ -1756,7 +1756,7 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
-    import { PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
+    import { PAGE_TITLE_SELECTOR, PAGES_STORAGE_KEY, ROOT_STORAGE_KEY, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { findPageLink, mountPageTree } from './src/playground/page-tree.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
@@ -1942,6 +1942,7 @@
           // Deferred: the tool keeps working on its block right after `open`.
           open: (id) => setTimeout(() => goToPage(id), 0),
           resolve: (id) => pages.info(id),
+          subscribe: (id, onChange) => pages.subscribe(id, onChange),
           create: ({ pageId: id }) => pages.create(id, pageId),
           preview: (id) => pages.get(id)?.blocks,
         },
@@ -2134,6 +2135,20 @@
       alignPageHeader(pageHeader, document.getElementById('blok'));
     }
     keepPageHeaderAligned(pageHeader, document.getElementById('blok'));
+
+    // The registry is read once at boot; another tab's rename lands here.
+    window.addEventListener('storage', (event) => {
+      if (event.key !== null && event.key !== PAGES_STORAGE_KEY && event.key !== ROOT_STORAGE_KEY) return;
+      const crumbs = () => JSON.stringify([pages.root(), ...(currentPageId === null ? [] : pages.trail(currentPageId).map(({ title, icon }) => [title, icon]))]);
+      const before = crumbs();
+      pages.reload();
+      // Block saves land here too; a rebuilt header would close its icon picker.
+      if (crumbs() !== before && document.activeElement?.matches(PAGE_TITLE_SELECTOR) !== true) {
+        renderHeader();
+      } else {
+        updateDocumentTitle();
+      }
+    });
     // Capture: runs before the editor's own Backspace and ArrowUp handling.
     document.getElementById('blok').addEventListener('keydown', (event) => firstBlockKeydown(event, blok), true);
 

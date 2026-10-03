@@ -468,6 +468,71 @@ describe('Page tool', () => {
       expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'Old' } });
     });
 
+    it('resolves again and saves the new cache when the host says the page changed', async () => {
+      const dispatchChange = vi.fn();
+      let title = 'Old';
+      let changed: (() => void) | undefined;
+      const subscribe = vi.fn((_id: string, onChange: () => void) => {
+        changed = onChange;
+      });
+      const tool = new PageTool(createOptions({
+        data: { pageId: 'p1', cache: { title: 'Old' } },
+        config: { resolve: () => ({ title }), subscribe },
+        dispatchChange,
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+      title = 'Renamed in another tab';
+      changed?.();
+      await flush();
+
+      expect(titleOf(root).textContent).toBe('Renamed in another tab');
+      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'Renamed in another tab' } });
+      expect(dispatchChange).toHaveBeenCalledWith({ derived: true });
+      expect(subscribe).toHaveBeenCalledTimes(1);
+      expect(subscribe).toHaveBeenCalledWith('p1', expect.any(Function));
+    });
+
+    it('stops listening when the block is removed or destroyed', () => {
+      const unsubscribe = vi.fn();
+      const removed = new PageTool(createOptions({ config: { subscribe: () => unsubscribe } }));
+      const destroyed = new PageTool(createOptions({ config: { subscribe: () => unsubscribe } }));
+
+      removed.render();
+      removed.rendered();
+      removed.removed();
+      destroyed.render();
+      destroyed.rendered();
+      destroyed.destroy();
+
+      expect(unsubscribe).toHaveBeenCalledTimes(2);
+    });
+
+    it('listens to the new page when undo or a peer points the block elsewhere', () => {
+      const unsubscribe = vi.fn();
+      const subscribe = vi.fn(() => unsubscribe);
+      const tool = new PageTool(createOptions({ config: { subscribe } }));
+
+      tool.render();
+      tool.rendered();
+      tool.setData({ pageId: 'p2' });
+
+      expect(unsubscribe).toHaveBeenCalledTimes(1);
+      expect(subscribe).toHaveBeenLastCalledWith('p2', expect.any(Function));
+    });
+
+    it('a probe block never listens', () => {
+      const subscribe = vi.fn();
+      const tool = new PageTool(createOptions({ origin: 'probe', config: { subscribe } }));
+
+      tool.render();
+      tool.rendered();
+
+      expect(subscribe).not.toHaveBeenCalled();
+    });
+
     it('ignores a resolve that lands after the block was removed', async () => {
       const dispatchChange = vi.fn();
       const tool = new PageTool(createOptions({

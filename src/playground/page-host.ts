@@ -116,13 +116,41 @@ export class PageRegistry {
 
   private rootPage: RootRecord = readRoot();
 
-  constructor(private readonly seed: PageMap) {
-    // Stored edits win, but a page added to the seed later still shows up.
-    const purged = readPurged();
+  private readonly listeners = new Map<string, Set<() => void>>();
 
-    this.pages = Object.fromEntries(
-      Object.entries({ ...structuredClone(seed), ...readStored() }).filter(([id]) => !purged.includes(id))
-    );
+  constructor(private readonly seed: PageMap) {
+    this.pages = this.read();
+  }
+
+  /**
+   * Reads storage again after another tab wrote it, and tells each page
+   * whose title, icon or path changed.
+   */
+  public reload(): void {
+    const before = new Map([...this.listeners.keys()].map((id) => [id, JSON.stringify(this.info(id))]));
+
+    this.pages = this.read();
+    this.rootPage = readRoot();
+    before.forEach((info, id) => {
+      if (JSON.stringify(this.info(id)) !== info) {
+        this.listeners.get(id)?.forEach((listener) => listener());
+      }
+    });
+  }
+
+  /** What the page block's `subscribe` gets. */
+  public subscribe(pageId: string, listener: () => void): () => void {
+    const set = this.listeners.get(pageId) ?? new Set();
+
+    set.add(listener);
+    this.listeners.set(pageId, set);
+
+    return () => {
+      set.delete(listener);
+      if (set.size === 0) {
+        this.listeners.delete(pageId);
+      }
+    };
   }
 
   public get(pageId: string): PageRecord | undefined {
@@ -294,6 +322,15 @@ export class PageRegistry {
     }
     this.pages = structuredClone(this.seed);
     this.rootPage = { title: ROOT_LABEL };
+  }
+
+  private read(): PageMap {
+    // Stored edits win, but a page added to the seed later still shows up.
+    const purged = readPurged();
+
+    return Object.fromEntries(
+      Object.entries({ ...structuredClone(this.seed), ...readStored() }).filter(([id]) => !purged.includes(id))
+    );
   }
 
   private editRoot(root: RootRecord): void {

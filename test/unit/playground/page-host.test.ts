@@ -161,6 +161,54 @@ describe('PageRegistry', () => {
     expect(pages.get('guide')).toMatchObject({ title: 'Guide', parentId: null });
   });
 
+  it('reload picks up a page another tab made and renamed after this registry was read', () => {
+    const here = new PageRegistry(seed());
+    const otherTab = new PageRegistry(seed());
+
+    otherTab.create('fresh', 'guide');
+    otherTab.setTitle('fresh', 'Fresh');
+    otherTab.setTitle(null, 'Home');
+    here.reload();
+
+    expect(here.info('fresh')).toEqual({ title: 'Fresh', path: ['Home', 'Guide'] });
+  });
+
+  it('reload tells only the pages whose title, icon or path changed', () => {
+    const here = new PageRegistry(seed());
+    const otherTab = new PageRegistry(seed());
+    const guide = vi.fn();
+    const keys = vi.fn();
+    const fresh = vi.fn();
+
+    here.subscribe('guide', guide);
+    here.subscribe('keys', keys);
+    here.subscribe('fresh', fresh);
+    otherTab.setBlocks('guide', []);
+    here.reload();
+
+    expect(guide).not.toHaveBeenCalled();
+
+    otherTab.setTitle('guide', 'Handbook');
+    otherTab.create('fresh', null);
+    here.reload();
+
+    expect(guide).toHaveBeenCalledTimes(1);
+    // Its path holds the guide's title.
+    expect(keys).toHaveBeenCalledTimes(1);
+    expect(fresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('a page stops hearing about changes once it unsubscribes', () => {
+    const here = new PageRegistry(seed());
+    const listener = vi.fn();
+
+    here.subscribe('guide', listener)();
+    new PageRegistry(seed()).setTitle('guide', 'Handbook');
+    here.reload();
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it('falls back to the seed when storage holds something that is not a page map', () => {
     localStorage.setItem(PAGES_STORAGE_KEY, '[1,2,3]');
 
@@ -885,6 +933,94 @@ describe('playground opens a page from a link outside the editor', () => {
 
   it('keeps the row-to-header morph for a page link inside the editor', async () => {
     expect(await navigate(undefined)).toMatchObject({ from: 'row', to: 'header' });
+  });
+});
+
+describe('playground follows a rename made in another tab', () => {
+  const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
+  const from = html.indexOf('keepPageHeaderAligned(pageHeader');
+  const source = html.slice(from, html.indexOf('// Capture: runs before', from));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  const boot = (currentPageId: string | null = 'keys', { titleFocused = false } = {}) => {
+    const listeners = new Map<string, (event: { key: string | null }) => void>();
+    const pages = new PageRegistry(seed());
+    const context = {
+      pages,
+      currentPageId,
+      pageHeader: {},
+      keepPageHeaderAligned: () => undefined,
+      renderHeader: vi.fn(),
+      updateDocumentTitle: vi.fn(),
+      PAGE_TITLE_SELECTOR: '#pg-page-title',
+      PAGES_STORAGE_KEY,
+      ROOT_STORAGE_KEY,
+      window: { addEventListener: (type: string, fn: (event: { key: string | null }) => void) => listeners.set(type, fn) },
+      document: {
+        getElementById: () => null,
+        activeElement: { matches: (selector: string) => titleFocused && selector === '#pg-page-title' },
+      },
+    };
+
+    runInNewContext(source, context);
+
+    return { context, pages, fire: (key: string | null) => listeners.get('storage')?.({ key }) };
+  };
+
+  it('picks up the new title, so page links and crumbs show it', () => {
+    const tab = boot();
+
+    new PageRegistry(seed()).setTitle('guide', 'Handbook');
+    tab.fire(PAGES_STORAGE_KEY);
+
+    expect(tab.pages.get('guide')?.title).toBe('Handbook');
+    expect(tab.context.renderHeader).toHaveBeenCalledTimes(1);
+  });
+
+  it('a renamed root rebuilds the root page header', () => {
+    const tab = boot(null);
+
+    new PageRegistry(seed()).setTitle(null, 'Home');
+    tab.fire(ROOT_STORAGE_KEY);
+
+    expect(tab.context.renderHeader).toHaveBeenCalledTimes(1);
+  });
+
+  it('a block save in another tab leaves the header alone', () => {
+    const tab = boot();
+
+    new PageRegistry(seed()).setBlocks('guide', []);
+    tab.fire(PAGES_STORAGE_KEY);
+
+    expect(tab.context.renderHeader).not.toHaveBeenCalled();
+    expect(tab.context.updateDocumentTitle).toHaveBeenCalledTimes(1);
+  });
+
+  it('never rebuilds the header under a caret in the title', () => {
+    const tab = boot('keys', { titleFocused: true });
+
+    new PageRegistry(seed()).setTitle('guide', 'Handbook');
+    tab.fire(PAGES_STORAGE_KEY);
+
+    expect(tab.context.renderHeader).not.toHaveBeenCalled();
+  });
+
+  it('ignores storage keys that are not the page registry', () => {
+    const tab = boot();
+    const reload = vi.spyOn(tab.pages, 'reload');
+
+    tab.fire('blok-playground-state');
+
+    expect(reload).not.toHaveBeenCalled();
   });
 });
 

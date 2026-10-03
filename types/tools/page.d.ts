@@ -65,7 +65,7 @@ export interface PageConfig {
    */
   open?(pageId: string, ctx: { event?: MouseEvent | KeyboardEvent }): void;
   /**
-   * Fresh title and icon, asked once when the block renders.
+   * Fresh title and icon, asked when the block renders and on each `subscribe` change.
    * - `null`: the page does not exist. The block shows "Page not found" and stays.
    * - `undefined`: nothing known. The cached copy stays.
    * - `{ access: 'none' }`: no access.
@@ -73,6 +73,13 @@ export interface PageConfig {
    * and saves it once editing turns on.
    */
   resolve?(pageId: string): PageInfo | null | undefined | Promise<PageInfo | null | undefined>;
+  /**
+   * Hears about title and icon changes made outside this editor: another
+   * tab, a peer, a rename in your own UI. Call `onChange` and the block asks
+   * `resolve` again. Return a function that stops it; Blok calls it when the
+   * block goes away or points at another page.
+   */
+  subscribe?(pageId: string, onChange: () => void): (() => void) | void;
   /**
    * Makes the page for a new page block. Called once, when a page block is
    * inserted without a `pageId`, with the id Blok minted. Never called on load,

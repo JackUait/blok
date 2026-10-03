@@ -481,6 +481,8 @@ export class Header implements BlockTool {
       return;
     }
 
+    const wasReadOnly = this.readOnly;
+
     this.readOnly = state;
 
     if (state) {
@@ -488,6 +490,12 @@ export class Header implements BlockTool {
 
       if (this._data.isToggleable) {
         this._element.removeEventListener('keydown', this.handleKeyDown);
+      }
+
+      this._bodyPlaceholderElement?.removeEventListener('click', this.handleBodyPlaceholderClick);
+
+      if (!wasReadOnly) {
+        this.api.events.off('block changed', this.handleBlockChanged);
       }
 
       if (this.placeholderCleanup) {
@@ -501,10 +509,22 @@ export class Header implements BlockTool {
         this._element.addEventListener('keydown', this.handleKeyDown);
       }
 
+      // A stable handler ref makes a repeated add a DOM no-op.
+      this._bodyPlaceholderElement?.addEventListener('click', this.handleBodyPlaceholderClick);
+
+      if (wasReadOnly && this._data.isToggleable) {
+        this.api.events.on('block changed', this.handleBlockChanged);
+      }
+
       const translatedName = this.api.i18n.t(this.currentLevel.nameKey);
       const placeholderText = this.resolvePlaceholderText(translatedName);
 
+      this.placeholderCleanup?.();
       this.placeholderCleanup = setupPlaceholder(this._element, placeholderText);
+    }
+
+    if (this._data.isToggleable) {
+      this.updateBodyPlaceholderVisibility();
     }
   }
 
@@ -1066,7 +1086,7 @@ export class Header implements BlockTool {
     bodyPlaceholder.setAttribute('data-blok-mutation-free', 'true');
     bodyPlaceholder.textContent = this.api.i18n.t('tools.toggle.bodyPlaceholder');
     if (!this.readOnly) {
-      bodyPlaceholder.addEventListener('click', () => this.handleBodyPlaceholderClick());
+      bodyPlaceholder.addEventListener('click', this.handleBodyPlaceholderClick);
     }
     this._bodyPlaceholderElement = bodyPlaceholder;
     wrapper.appendChild(bodyPlaceholder);
@@ -1229,7 +1249,7 @@ export class Header implements BlockTool {
    * Handle a click on the body placeholder: insert a new child paragraph and focus it.
    * Mirrors the toggle list's handleBodyPlaceholderClick.
    */
-  private handleBodyPlaceholderClick(): void {
+  private handleBodyPlaceholderClick = (): void => {
     if (this.blockId === undefined) {
       return;
     }
@@ -1245,7 +1265,7 @@ export class Header implements BlockTool {
     this.api.caret.setToBlock(newBlock.id, 'start');
 
     this._bodyPlaceholderElement?.classList.add('hidden');
-  }
+  };
 
   /**
    * Handle 'block changed' events to refresh body placeholder visibility.

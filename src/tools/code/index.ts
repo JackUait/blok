@@ -100,6 +100,8 @@ export class CodeTool implements BlockTool {
   private readOnly: boolean;
   private _data: CodeData;
   private _dom: CodeDOMRefs | null = null;
+  // A read-only build lacks the editable structure, so leaving read-only must rebuild it.
+  private _builtReadOnly = false;
   private _lineNumbers = true;
   private _picker: PopoverDesktop | null = null;
   private _viewMode: CodeViewMode = 'preview';
@@ -133,6 +135,22 @@ export class CodeTool implements BlockTool {
   }
 
   public render(): HTMLElement {
+    this._builtReadOnly = this.readOnly;
+
+    const dom = this.buildDOM();
+
+    if (!this.readOnly) {
+      this.ensureLanguagePicker();
+    }
+
+    return dom.wrapper;
+  }
+
+  /**
+   * Build the tool DOM for the current mode and wire its listeners.
+   * Read-only and editable builds differ in structure, not just listeners.
+   */
+  private buildDOM(): CodeDOMRefs {
     const isPreviewable = PREVIEWABLE_LANGUAGES.has(this._data.language);
 
     const dom = buildCodeDOM({
@@ -277,11 +295,48 @@ export class CodeTool implements BlockTool {
       this.setLanguagePickerExpanded(true);
     });
 
-    if (!this.readOnly) {
-      this.ensureLanguagePicker();
+    return dom;
+  }
+
+  /**
+   * Swap a read-only build for an editable one inside the same wrapper,
+   * since Blok holds the wrapper as the tool root.
+   */
+  private rebuildEditable(): void {
+    if (!this._dom) {
+      return;
     }
 
-    return dom.wrapper;
+    const host = this._dom.wrapper;
+
+    this._data.code = this._dom.codeElement.textContent ?? this._data.code;
+
+    // These point at the read-only DOM that is about to be dropped.
+    this._picker?.destroy();
+    this._picker = null;
+    this._highlightCleanup = null;
+    this._highlightedLang = null;
+    this._previewContainer = null;
+    this._lineRows = [];
+    this._activeLineIndex = null;
+    this._rowHeight = 0;
+
+    const fresh = this.buildDOM();
+
+    host.replaceChildren(...Array.from(fresh.wrapper.childNodes));
+    this._dom = { ...fresh, wrapper: host };
+    this._builtReadOnly = false;
+
+    // The picker aligns to the wrapper, so build it after the swap.
+    this.ensureLanguagePicker();
+
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver.observe(this._dom.codeElement);
+    }
+
+    void this.highlightCode();
+    this.scheduleLineGeometry();
   }
 
   /**
@@ -378,6 +433,12 @@ export class CodeTool implements BlockTool {
     this.readOnly = state;
 
     if (!this._dom) {
+      return;
+    }
+
+    if (!state && this._builtReadOnly) {
+      this.rebuildEditable();
+
       return;
     }
 

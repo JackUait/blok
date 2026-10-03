@@ -1297,7 +1297,7 @@ describe('CodeTool', () => {
 
       tool.setReadOnly(false);
 
-      expect(codeEl.getAttribute('contenteditable')).toBe('plaintext-only');
+      expect(el.querySelector('[data-blok-testid="code-content"]')?.getAttribute('contenteditable')).toBe('plaintext-only');
     });
 
     it('removes spellcheck when entering readonly', async () => {
@@ -1323,7 +1323,7 @@ describe('CodeTool', () => {
 
       tool.setReadOnly(false);
 
-      expect(codeEl.getAttribute('spellcheck')).toBe('false');
+      expect(el.querySelector('[data-blok-testid="code-content"]')?.getAttribute('spellcheck')).toBe('false');
     });
 
     it('mutates code element in-place across toggle', async () => {
@@ -1384,13 +1384,15 @@ describe('CodeTool', () => {
       const tool = new CodeTool(createOptions({ code: 'const x = 1;' }, { readOnly: true }));
       const el = tool.render();
       const chevron = el.querySelector('[data-blok-testid="code-language-chevron"]') as HTMLElement;
-      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLButtonElement;
 
       expect(chevron.hidden).toBe(true);
 
       tool.setReadOnly(false);
 
-      expect(chevron.hidden).toBe(false);
+      const restoredChevron = el.querySelector('[data-blok-testid="code-language-chevron"]') as HTMLElement;
+      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLButtonElement;
+
+      expect(restoredChevron.hidden).toBe(false);
       expect(langBtn.getAttribute('aria-haspopup')).toBe('listbox');
     });
 
@@ -1400,6 +1402,123 @@ describe('CodeTool', () => {
 
       // Should not throw
       expect(() => tool.setReadOnly(true)).not.toThrow();
+    });
+  });
+
+  // Collaboration boots every block read-only and flips it editable in place.
+  describe('read-only boot, then setReadOnly(false)', () => {
+    const testIds = (root: HTMLElement): Array<string | null> =>
+      Array.from(root.querySelectorAll('[data-blok-testid]')).map((node) => node.getAttribute('data-blok-testid'));
+
+    const caretAtEnd = (codeEl: HTMLElement): void => {
+      const range = document.createRange();
+
+      range.selectNodeContents(codeEl);
+      range.collapse(false);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+    };
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('builds the view-mode group for a mermaid block and switches modes', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }, { readOnly: true }));
+      const el = tool.render();
+
+      document.body.appendChild(el);
+      tool.setReadOnly(false);
+
+      const modeButtons = el.querySelectorAll<HTMLButtonElement>('[data-mode]');
+
+      expect(modeButtons).toHaveLength(3);
+
+      const codeBtn = el.querySelector<HTMLButtonElement>('[data-mode="code"]');
+      const pre = el.querySelector('pre') as HTMLElement;
+
+      expect(pre.hidden).toBe(true);
+
+      codeBtn?.click();
+
+      expect(pre.hidden).toBe(false);
+      expect((el.querySelector('[data-blok-testid="code-preview"]') as HTMLElement).hidden).toBe(true);
+    });
+
+    it('indents on Tab like an editable-boot block', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'x' }, { readOnly: true }));
+      const el = tool.render();
+
+      document.body.appendChild(el);
+      tool.setReadOnly(false);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      caretAtEnd(codeEl);
+
+      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+
+      codeEl.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(codeEl.textContent).toBe('x  ');
+    });
+
+    it('does not stack listeners when made editable twice', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'x' }, { readOnly: true }));
+      const el = tool.render();
+
+      document.body.appendChild(el);
+      tool.setReadOnly(false);
+      tool.setReadOnly(false);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      caretAtEnd(codeEl);
+      simulateKeydown(codeEl, 'Tab', { cancelable: true });
+
+      expect(codeEl.textContent).toBe('x  ');
+    });
+
+    it('ends with the same DOM and saved data as an editable-boot block', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const data = { code: 'E = mc^2', language: 'latex' };
+      const flipped = new CodeTool(createOptions(data, { readOnly: true }));
+      const flippedEl = flipped.render();
+      const savedBefore = flipped.save(flippedEl);
+
+      flipped.setReadOnly(false);
+
+      const editable = new CodeTool(createOptions(data));
+      const editableEl = editable.render();
+
+      expect(testIds(flippedEl)).toEqual(testIds(editableEl));
+      expect(flippedEl.innerHTML).toBe(editableEl.innerHTML);
+      expect(flipped.save(flippedEl)).toEqual(savedBefore);
+    });
+
+    it('keeps the tool root element Blok holds', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'x' }, { readOnly: true }));
+      const el = tool.render();
+
+      tool.setReadOnly(false);
+
+      expect(tool.getToolbarAnchorElement()).toBe(el);
+    });
+
+    it('goes back to read-only after the flip', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'x' }, { readOnly: true }));
+      const el = tool.render();
+
+      tool.setReadOnly(false);
+      tool.setReadOnly(true);
+
+      expect(el.querySelector('[data-blok-testid="code-content"]')?.getAttribute('contenteditable')).toBe('false');
     });
   });
 

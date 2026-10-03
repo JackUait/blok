@@ -2211,6 +2211,82 @@ describe('DatabaseTool', () => {
       element.remove();
       tool.destroy();
     });
+
+    // Collab boots every block read-only, then flips it in place.
+    it.each(['Enter', 'Tab'])('exiting read-only makes %s in the title commit like an editable boot', (key) => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.setReadOnly(false);
+
+      const titleEl = queryByData(element, 'data-blok-database-title');
+
+      if (titleEl === null) {
+        throw new Error('title element missing');
+      }
+
+      const blurSpy = vi.spyOn(titleEl, 'blur');
+      const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true });
+
+      titleEl.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(blurSpy).toHaveBeenCalledTimes(1);
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('title Enter does nothing again after re-entering read-only', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.setReadOnly(true);
+
+      const titleEl = queryByData(element, 'data-blok-database-title');
+
+      if (titleEl === null) {
+        throw new Error('title element missing');
+      }
+
+      const blurSpy = vi.spyOn(titleEl, 'blur');
+      const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true, bubbles: true });
+
+      titleEl.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(blurSpy).not.toHaveBeenCalled();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('toggling read-only repeatedly does not stack title Enter handlers', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.setReadOnly(false);
+      tool.setReadOnly(true);
+      tool.setReadOnly(false);
+
+      const titleEl = queryByData(element, 'data-blok-database-title');
+
+      if (titleEl === null) {
+        throw new Error('title element missing');
+      }
+
+      const blurSpy = vi.spyOn(titleEl, 'blur');
+
+      titleEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true, bubbles: true }));
+
+      expect(blurSpy).toHaveBeenCalledTimes(1);
+
+      element.remove();
+      tool.destroy();
+    });
   });
 
   describe('getToolbarAnchorElement', () => {

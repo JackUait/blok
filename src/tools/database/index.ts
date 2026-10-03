@@ -204,13 +204,19 @@ export class DatabaseTool implements BlockTool {
 
     if (!this.readOnly) {
       titleEl.setAttribute('contenteditable', 'true');
-      titleEl.addEventListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === 'Tab') {
-          e.preventDefault();
-          titleEl.blur();
-        }
-      });
     }
+
+    // Always attached: setReadOnly flips the title in place without re-rendering.
+    titleEl.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (this.readOnly) {
+        return;
+      }
+
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        titleEl.blur();
+      }
+    });
 
     return titleEl;
   }

@@ -17,6 +17,8 @@ declare global {
     tabSaves?: number;
     /** While true, this tab's BroadcastChannel listeners hear nothing. */
     dropTabMessages?: boolean;
+    /** Focuses or blurs this tab as far as Blok can tell. */
+    setTabFocus?: (focused: boolean) => void;
   }
 }
 
@@ -65,8 +67,30 @@ const installDroppableChannel = (): void => {
   };
 };
 
+/**
+ * Headless Chromium under Playwright reports EVERY page as visible and
+ * focused at all times, and bringToFront() fires no focus, blur or
+ * visibilitychange (probed: hasFocus() true in both pages before and after
+ * bringToFront, no events). So each tab gets a focus switch instead: Blok
+ * reads document.hasFocus() and listens for window focus/blur. Every tab
+ * starts unfocused, so no tab claims unless a test says so. Visibility is left
+ * real ('visible'): the bfcache test needs it.
+ */
+const installFocusSwitch = (): void => {
+  const state = { focused: false };
+
+  Object.defineProperty(document, 'hasFocus', { value: () => state.focused, configurable: true });
+  window.setTabFocus = (focused: boolean): void => {
+    state.focused = focused;
+    // eslint-disable-next-line internal-playwright/no-direct-event-dispatch -- no real focus change exists here, see above
+    window.dispatchEvent(new FocusEvent(focused ? 'focus' : 'blur'));
+  };
+};
+
 const openTab = async (context: BrowserContext, options: { droppableChannel?: boolean; source?: OutputData } = {}): Promise<Page> => {
   const page = await context.newPage();
+
+  await page.addInitScript(installFocusSwitch);
 
   if (options.droppableChannel === true) {
     await page.addInitScript(installDroppableChannel);
@@ -109,6 +133,15 @@ const openTab = async (context: BrowserContext, options: { droppableChannel?: bo
 };
 
 const editorIn = (page: Page): Locator => page.getByTestId(HOLDER_ID);
+
+/** The user switches to `page`: it comes to the front with focus, the others lose it. */
+const switchTo = async (page: Page, others: Page[]): Promise<void> => {
+  for (const other of others) {
+    await other.evaluate(() => window.setTabFocus?.(false));
+  }
+  await page.bringToFront();
+  await page.evaluate(() => window.setTabFocus?.(true));
+};
 
 const savesIn = (page: Page): Promise<number> => page.evaluate(() => window.tabSaves ?? 0);
 
@@ -377,6 +410,64 @@ test.describe('tab sync', () => {
     await expect(editorIn(a).getByTestId('block-wrapper')).toHaveText(['two', 'three', 'one']);
     await expect.poll(() => savedOrder(b)).toEqual(await savedOrder(a));
     await expect(editorIn(b).getByTestId('block-wrapper')).toHaveText(['two', 'three', 'one']);
+    await context.close();
+  });
+  test('the tab the user switches to saves its own edits', async ({ browser }) => {
+    const context = await browser.newContext();
+    const a = await openTab(context);
+    const b = await openTab(context);
+    const tabs = [a, b];
+
+    await settleSaves(tabs);
+    await switchTo(b, [a]);
+    // Settle delay plus the hand-over; nothing is unsaved, so no save runs.
+    await b.waitForTimeout(1000);
+    const aBefore = await savesIn(a);
+    const bBefore = await savesIn(b);
+
+    await appendToFirst(b, ' in B');
+
+    await expect.poll(() => savesIn(b)).toBe(bBefore + 1);
+    await b.waitForTimeout(1500);
+    expect(await savesIn(a)).toBe(aBefore);
+    expect(await savesIn(b)).toBe(bBefore + 1);
+    expect(await storedDocument(b)).toContain('first in B');
+
+    await switchTo(a, [b]);
+    await a.waitForTimeout(1000);
+    await appendToFirst(a, ' then A');
+
+    await expect.poll(() => savesIn(a)).toBe(aBefore + 1);
+    await a.waitForTimeout(1500);
+    expect(await savesIn(b)).toBe(bBefore + 1);
+    expect(await storedDocument(a)).toContain('first in B then A');
+    await context.close();
+  });
+
+  test('a focused tab takes saving from a main tab that hears nothing', async ({ browser }) => {
+    const context = await browser.newContext();
+    const a = await openTab(context, { droppableChannel: true });
+    const b = await openTab(context);
+    const tabs = [a, b];
+
+    await settleSaves(tabs);
+    // A is frozen as far as messages go: it never answers the claim.
+    await a.evaluate(() => {
+      window.dropTabMessages = true;
+    });
+    await switchTo(b, [a]);
+    // Settle delay plus the 4 s claim timeout, then the steal.
+    await b.waitForTimeout(5000);
+    const aBefore = await savesIn(a);
+    const bBefore = await savesIn(b);
+
+    // A lost its lock, so its edit goes to B, which saves it; A does not.
+    await appendToFirst(a, ' from A');
+    await expect(editorIn(b).getByText('first from A')).toBeVisible();
+    await expect.poll(() => savesIn(b)).toBeGreaterThan(bBefore);
+    await a.waitForTimeout(1500);
+    expect(await savesIn(a)).toBe(aBefore);
+    expect(await storedDocument(b)).toContain('first from A');
     await context.close();
   });
 });

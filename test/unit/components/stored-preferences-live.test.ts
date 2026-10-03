@@ -204,7 +204,10 @@ describe('readers that re-read storage each time they open', () => {
     const { element } = createColorPicker({
       i18n,
       testIdPrefix: 'test',
-      modes: [{ key: 'color', labelKey: 'tools.marker.textColor', presetField: 'text' }],
+      modes: [
+        { key: 'color', labelKey: 'tools.marker.textColor', presetField: 'text' },
+        { key: 'bg', labelKey: 'tools.marker.background', presetField: 'bg' },
+      ],
       onColorSelect: vi.fn(),
     });
 

@@ -59,6 +59,8 @@ export const USE_BLOK_CONFIG_KEYS = [
   'ticket',
   'persistence',
   'collaboration',
+  'documentId',
+  'tabSync',
   'captureClicksBelowEditor',
 ] as const satisfies readonly (keyof UseBlokConfig)[];
 

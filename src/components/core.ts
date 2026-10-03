@@ -140,6 +140,7 @@ export class Core {
      * so a refused config never builds a persistence save queue it will not use.
      */
     this.validateCollaborationConfig();
+    this.validateTabSyncConfig();
 
     /**
      * `server` is sugar over options that already exist. Expanding it here —
@@ -317,6 +318,21 @@ export class Core {
    */
   public get configuration(): BlokConfig {
     return this.config;
+  }
+
+  /**
+   * Refuse a malformed `documentId` / `tabSync`. Throwing rejects the ready promise.
+   */
+  private validateTabSyncConfig(): void {
+    const { documentId, tabSync } = this.config;
+
+    if (documentId !== undefined && (typeof documentId !== 'string' || documentId === '')) {
+      throw new Error('documentId must be a non-empty string');
+    }
+
+    if (tabSync !== undefined && typeof tabSync !== 'boolean' && (typeof tabSync !== 'object' || tabSync === null)) {
+      throw new Error('tabSync must be a boolean or an object');
+    }
   }
 
   /**

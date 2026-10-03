@@ -170,4 +170,82 @@ describe('Core — replacing the document in one tab adds no block in the others
     expect(ids(leader)).toEqual(ids(follower));
     expect(docIds(leader)).toEqual(ids(follower));
   });
+
+  describe('overlapping renders', () => {
+    const untilRenderStarts = async (core: Core): Promise<void> => {
+      while (core.moduleInstances.Renderer.pendingRender === null) {
+        await Promise.resolve();
+      }
+      for (let i = 0; i < 3; i++) {
+        await Promise.resolve();
+      }
+    };
+
+    const insertLater = (core: Core): void => {
+      core.moduleInstances.API.methods.blocks.insert('paragraph', { text: 'later' }, {}, undefined, true, false, 'later');
+    };
+
+    it('an edit after a renderFromHTML that started during a render still reaches the other tab', async () => {
+      const { leader, follower } = await twoEditors('overlap-render-html');
+      const { blocks } = follower.moduleInstances.API.methods;
+      const first = blocks.render({ blocks: [paragraph('x')] });
+
+      await untilRenderStarts(follower);
+      await Promise.all([first, blocks.renderFromHTML('<p>h</p>')]);
+      await wait(50);
+      insertLater(follower);
+      await oneWindow();
+
+      expect(docIds(follower)).toContain('later');
+      expect(docIds(leader)).toEqual(docIds(follower));
+    });
+
+    it('an edit after a render that started during a renderFromHTML still reaches the other tab', async () => {
+      const { leader, follower } = await twoEditors('overlap-html-render');
+      const { blocks } = follower.moduleInstances.API.methods;
+      const first = blocks.renderFromHTML('<p>h</p>');
+
+      await untilRenderStarts(follower);
+      await Promise.all([first, blocks.render({ blocks: [paragraph('x')] })]);
+      await wait(50);
+      insertLater(follower);
+      await oneWindow();
+
+      expect(docIds(follower)).toContain('later');
+      expect(docIds(leader)).toEqual(docIds(follower));
+    });
+
+    it('an edit after a render that threw still reaches the other tab', async () => {
+      const { leader, follower } = await twoEditors('overlap-render-throws');
+
+      vi.spyOn(follower.moduleInstances.Renderer, 'render').mockRejectedValueOnce(new Error('bad block'));
+      await expect(follower.moduleInstances.API.methods.blocks.render({ blocks: [paragraph('x')] })).rejects.toThrow('bad block');
+      await wait(50);
+      insertLater(follower);
+      await oneWindow();
+
+      expect(docIds(follower)).toContain('later');
+      expect(docIds(leader)).toEqual(docIds(follower));
+    });
+
+    it('a save started during overlapping renders resolves', async () => {
+      const core = createCore({ documentId: 'overlap-save', data: document3() });
+
+      await core.isReady;
+      const { blocks } = core.moduleInstances.API.methods;
+      const first = blocks.render({ blocks: [paragraph('x')] });
+
+      await untilRenderStarts(core);
+      const save = core.moduleInstances.Saver.save();
+      const second = blocks.renderFromHTML('<p>h</p>');
+
+      await Promise.all([first, second]);
+      const outcome = await Promise.race([
+        save.then(() => 'saved'),
+        wait(1000).then(() => 'stuck'),
+      ]);
+
+      expect(outcome).toBe('saved');
+    });
+  });
 });

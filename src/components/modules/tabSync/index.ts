@@ -974,6 +974,7 @@ export class TabSync extends Module {
     this.queueAbort = null;
     this.heldUpdates = null;
     this.outbox = [];
+    this.outboxScheduled = false;
     this.waitingForState = false;
     this.savedDuringJoin = null;
     this.leaderId = null;

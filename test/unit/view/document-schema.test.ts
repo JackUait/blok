@@ -311,7 +311,37 @@ describe('blokDocumentSchema', () => {
     });
   });
 
+  describe('documents saved by older versions', () => {
+    /**
+     * v1.15.2 saved `isOpen` on toggles and toggle headings. The editor ignores it
+     * now, but the closed defs must still accept those documents.
+     */
+    it.each([
+      ['toggle', { text: 'Summary', isOpen: true }],
+      ['header', { text: 'Title', level: 2, isToggleable: true, isOpen: false }],
+    ])('%s: accepts a v1.15.2 payload with isOpen', (name, data) => {
+      const def = defs[name];
+      const declared = Object.keys(def.properties ?? {});
+
+      expect(def.additionalProperties).toBe(false);
+      Object.keys(data).forEach(key => expect(declared, `"${key}" rejected by the ${name} def`).toContain(key));
+    });
+
+    it.each(['toggle', 'header'])('%s: marks isOpen as deprecated and ignored', (name) => {
+      const isOpen = (defs[name].properties ?? {}).isOpen as { type?: string; deprecated?: boolean; description?: string } | undefined;
+
+      expect(isOpen).toEqual({ type: 'boolean', deprecated: true, description: 'Ignored. Open state is personal and never saved.' });
+    });
+  });
+
   describe('field drift', () => {
+    /** Keys a def still accepts from older documents although save() no longer writes them. */
+    const LEGACY_KEYS: Record<string, string[]> = {
+      // v1.15.2 saved the open state; it is personal now and ignored on load.
+      toggle: ['isOpen'],
+      header: ['isOpen'],
+    };
+
     it.each(BUILT_IN_BLOCK_TOOLS)('%s: schema properties match what save() emits', (name) => {
       const def = defs[name];
       const sample = savedData[name];
@@ -319,7 +349,9 @@ describe('blokDocumentSchema', () => {
       expect(sample, `no save() sample for "${name}"`).toBeDefined();
 
       const savedKeys = Object.keys(sample).sort();
-      const schemaKeys = Object.keys(def.properties ?? {}).sort();
+      const schemaKeys = Object.keys(def.properties ?? {})
+        .filter(key => !(LEGACY_KEYS[name] ?? []).includes(key))
+        .sort();
 
       // Forward: nothing the tool saves may be missing from the schema.
       savedKeys.forEach(key => expect(schemaKeys).toContain(key));

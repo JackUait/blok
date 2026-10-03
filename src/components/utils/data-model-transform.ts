@@ -504,9 +504,6 @@ const processRootToggleItem = (
 
   const data: unknown = block.data;
   const text = isObjectWithText(data) ? data.text : '';
-  const isOpen = typeof (data as Record<string, unknown>)?.isOpen === 'boolean'
-    ? (data as Record<string, unknown>).isOpen as boolean
-    : undefined;
 
   const contentIds = block.content ?? [];
   const childBlocks = collapseBodyBlocks(contentIds, blockMap, processedIds);
@@ -516,7 +513,6 @@ const processRootToggleItem = (
     type: 'toggleList',
     data: {
       title: text,
-      ...(isOpen !== undefined ? { isExpanded: isOpen } : {}),
       ...(childBlocks.length > 0 ? {
         body: {
           blocks: childBlocks,
@@ -564,9 +560,6 @@ const processRootToggleableHeader = (
   const level = typeof (data as Record<string, unknown>)?.level === 'number'
     ? (data as Record<string, unknown>).level as number
     : undefined;
-  const isOpen = typeof (data as Record<string, unknown>)?.isOpen === 'boolean'
-    ? (data as Record<string, unknown>).isOpen as boolean
-    : undefined;
 
   const contentIds = block.content ?? [];
   const childBlocks = collapseBodyBlocks(contentIds, blockMap, processedIds);
@@ -577,7 +570,6 @@ const processRootToggleableHeader = (
     data: {
       title: text,
       ...(level !== undefined ? { titleVariant: level } : {}),
-      ...(isOpen !== undefined ? { isExpanded: isOpen } : {}),
       ...(childBlocks.length > 0 ? { body: { blocks: childBlocks } } : {}),
     },
     ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),

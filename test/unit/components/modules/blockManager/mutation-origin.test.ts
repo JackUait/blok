@@ -283,7 +283,11 @@ describe('block mutation events carry origin', () => {
     applyPeerText('from another tab');
     await settle();
 
-    expect(seen.map((event) => event.origin)).toContain('local');
+    // One event per block and type per batch, as before origin existed.
+    expect(seen).toEqual([
+      { type: 'block-changed', origin: 'tab' },
+      { type: 'block-changed', origin: 'local' },
+    ]);
   });
 
   it('labels a change from a collaboration peer remote by default', async () => {

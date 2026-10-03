@@ -1,6 +1,5 @@
 import type { BlockId } from '../../../types';
 import type { BlockMutationEvent, BlockMutationType } from '../../../types/events/block';
-import type { BlockMutationOrigin } from '../../../types/events/block/Base';
 import type { ModuleConfig } from '../../types-internal/module-config';
 import { Module } from '../__module';
 import { modificationsObserverBatchTimeout } from '../constants';
@@ -9,10 +8,9 @@ import { isFunction } from '../utils';
 import { registerUnsavedWork } from '../utils/persistence';
 
 /**
- * We use map of block mutations to filter only unique events. Origin is part
- * of the key: a later tab or peer change must not swallow a local one.
+ * We use map of block mutations to filter only unique events
  */
-type UniqueBlockMutationKey = `block:${BlockId}:event:${BlockMutationType}:${BlockMutationOrigin}`;
+type UniqueBlockMutationKey = `block:${BlockId}:event:${BlockMutationType}`;
 
 /**
  * Single entry point for Block mutation events
@@ -263,7 +261,14 @@ export class ModificationsObserver extends Module {
       return;
     }
 
-    this.batchingOnChangeQueue.set(`block:${event.detail.target.id}:event:${event.type as BlockMutationType}:${event.detail.origin ?? 'local'}`, event);
+    const key: UniqueBlockMutationKey = `block:${event.detail.target.id}:event:${event.type as BlockMutationType}`;
+    const queued = this.batchingOnChangeQueue.get(key);
+
+    // One event per key, so a later tab or peer change must not hide a
+    // queued local one from the host.
+    if (queued?.detail.origin !== 'local' || event.detail.origin === 'local') {
+      this.batchingOnChangeQueue.set(key, event);
+    }
     this.pendingSave = true;
     this.syncUnloadGuard();
 

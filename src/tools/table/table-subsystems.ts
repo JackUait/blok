@@ -1460,14 +1460,13 @@ export class TableSubsystems {
         this.host.api.blocks.setPointerDragActive?.(active);
       },
       onSelectionActiveChange: (hasSelection, isMultiCell) => {
-        if (this.resize) {
-          this.resize.enabled = !hasSelection;
-        }
-
         // A single-cell caret box is not a range: it exists whenever the caret
-        // is anywhere in the table, so gating these two on it left the corner
-        // drag and the "+" buttons permanently dead after one click. Only a
+        // is anywhere in the table, so gating these on it left column resize,
+        // the corner drag and the "+" buttons dead after one click. Only a
         // real multi-cell range can conflict with those pointer gestures.
+        if (this.resize) {
+          this.resize.enabled = !isMultiCell;
+        }
         this.addControls?.setInteractive(!isMultiCell);
         this.cornerDrag?.setInteractive(!isMultiCell);
         this.rowColControls?.setGripsDisplay(!hasSelection);

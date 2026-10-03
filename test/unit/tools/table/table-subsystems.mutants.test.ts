@@ -2641,7 +2641,7 @@ describe('cell-selection wiring', () => {
 
     cellSelectionOptions().onSelectionActiveChange(true, false);
 
-    expect(resizeMock().enabled).toBe(false);
+    expect(resizeMock().enabled).toBe(true);
     expect(addControlsMock().setInteractive).toHaveBeenCalledWith(true);
     expect(cornerDragMock().setInteractive).toHaveBeenCalledWith(true);
     expect(rowColMock().setGripsDisplay).toHaveBeenCalledWith(false);
@@ -2652,6 +2652,7 @@ describe('cell-selection wiring', () => {
 
     cellSelectionOptions().onSelectionActiveChange(true, true);
 
+    expect(resizeMock().enabled).toBe(false);
     expect(addControlsMock().setInteractive).toHaveBeenCalledWith(false);
     expect(cornerDragMock().setInteractive).toHaveBeenCalledWith(false);
   });

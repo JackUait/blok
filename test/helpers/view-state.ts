@@ -18,16 +18,17 @@ export const createMemoryViewState = (): ViewState => {
 };
 
 /**
- * Store every fixture toggle's open state as if this browser left it so, since
- * a loaded toggle no longer reads `isOpen` from its data. Load the document
+ * Store every fixture toggle's and toggle heading's open state as if this
+ * browser left it so, since neither reads `isOpen` from its data any more. Load the document
  * with `data.id` equal to `documentId`: that id is the storage scope.
  * Writes false too, so a value left by an earlier test never leaks in.
  * @param documentId - the `data.id` the editor loads with
- * @param blocks - fixture blocks; toggles marked `isOpen: true` start open
+ * @param blocks - fixture blocks; toggles and toggle headings marked `isOpen: true` start open
  */
 export const storeToggleOpenState = (documentId: string, blocks: OutputBlockData[]): void => {
   blocks
-    .filter(block => block.type === 'toggle' && block.id !== undefined)
+    .filter(block => block.id !== undefined
+      && (block.type === 'toggle' || (block.type === 'header' && block.data.isToggleable === true)))
     .forEach((block) => {
       localStorage.setItem(
         `blok:view:${documentId}:${block.id}:open`,

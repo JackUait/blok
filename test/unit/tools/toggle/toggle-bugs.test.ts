@@ -86,12 +86,16 @@ const createToggle = (
 
 const createHeader = (
   data: Partial<HeaderData> = {},
-  opts: { readOnly?: boolean; blockId?: string; children?: unknown[] } = {}
+  opts: { readOnly?: boolean; blockId?: string; children?: unknown[]; storedOpen?: boolean } = {}
 ): { header: Header; api: API; blocks: BlocksStub } => {
   const children = opts.children ?? [];
   const blocks = makeBlocks(children);
   const api = makeApi(blocks);
   const blockId = opts.blockId ?? 'header-1';
+
+  if (opts.storedOpen !== undefined) {
+    api.viewState.set(blockId, 'open', opts.storedOpen);
+  }
 
   const header = new Header({
     data: { text: '', level: 2, ...data },
@@ -149,16 +153,16 @@ describe('Bug 10: Toggle arrow click guard in read-only mode', () => {
     const arrow = element.querySelector('[data-blok-toggle-arrow]') as HTMLElement;
     expect(arrow).not.toBeNull();
 
-    // Toggle starts open by default (default = true).
+    // Nothing stored: starts collapsed.
     const heading = element.querySelector('[data-blok-toggle-open]');
     const attrBefore = heading?.getAttribute('data-blok-toggle-open');
-    expect(attrBefore).toBe('true');
+    expect(attrBefore).toBe('false');
 
     // Clicking the arrow MUST flip the open state.
     arrow.click();
     const attrAfter = heading?.getAttribute('data-blok-toggle-open');
 
-    expect(attrAfter).toBe('false');
+    expect(attrAfter).toBe('true');
   });
 });
 
@@ -246,7 +250,7 @@ describe('Bug 6: Saved isOpen state respected in constructor', () => {
   });
 
   describe('Header (toggleable)', () => {
-    it('uses data.isOpen=true even when readOnly=true', () => {
+    it('ignores data.isOpen=true: open state is personal, not document data', () => {
       const { header } = createHeader(
         { text: 'H', level: 2, isToggleable: true, isOpen: true },
         { readOnly: true }
@@ -255,34 +259,34 @@ describe('Bug 6: Saved isOpen state respected in constructor', () => {
       const wrapper = header.render();
       const heading = wrapper.querySelector('[data-blok-toggle-open]');
 
-      expect(heading?.getAttribute('data-blok-toggle-open')).toBe('true');
+      expect(heading?.getAttribute('data-blok-toggle-open')).toBe('false');
     });
 
-    it('uses data.isOpen=false even when readOnly=false', () => {
+    it('uses the stored personal state over data.isOpen=false', () => {
       const { header } = createHeader(
         { text: 'H', level: 2, isToggleable: true, isOpen: false },
-        { readOnly: false }
+        { readOnly: false, storedOpen: true }
       );
       const wrapper = header.render();
       const heading = wrapper.querySelector('[data-blok-toggle-open]');
 
-      expect(heading?.getAttribute('data-blok-toggle-open')).toBe('false');
+      expect(heading?.getAttribute('data-blok-toggle-open')).toBe('true');
     });
 
-    it('falls back to open when data.isOpen is undefined', () => {
+    it('falls back to collapsed when nothing is stored, in both modes', () => {
       const { header: hEdit } = createHeader(
         { text: 'H', level: 2, isToggleable: true },
         { readOnly: false }
       );
       const wEdit = hEdit.render();
-      expect(wEdit.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('true');
+      expect(wEdit.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('false');
 
       const { header: hRO } = createHeader(
         { text: 'H', level: 2, isToggleable: true },
         { readOnly: true }
       );
       const wRO = hRO.render();
-      expect(wRO.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('true');
+      expect(wRO.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('false');
     });
   });
 });
@@ -392,26 +396,30 @@ describe('Bug 5: Toggle collapsed state persisted in save()', () => {
   });
 
   describe('Header.save()', () => {
-    it('includes isOpen=true in saved data when toggle heading is open', () => {
+    it('never saves isOpen while the toggle heading is open', () => {
       const { header } = createHeader(
         { text: 'Title', level: 2, isToggleable: true, isOpen: true },
         { readOnly: false }
       );
       const element = header.render();
+
+      header.expand();
       const saved = header.save(element);
 
-      expect(saved.isOpen).toBe(true);
+      expect(saved).not.toHaveProperty('isOpen');
     });
 
-    it('includes isOpen=false in saved data when toggle heading is closed', () => {
+    it('never saves isOpen after a collapse', () => {
       const { header } = createHeader(
-        { text: 'Title', level: 2, isToggleable: true, isOpen: false },
-        { readOnly: false }
+        { text: 'Title', level: 2, isToggleable: true },
+        { readOnly: false, storedOpen: true }
       );
       const element = header.render();
+
+      header.collapse();
       const saved = header.save(element);
 
-      expect(saved.isOpen).toBe(false);
+      expect(saved).not.toHaveProperty('isOpen');
     });
 
     it('does not include isOpen for non-toggleable headers', () => {
@@ -422,7 +430,7 @@ describe('Bug 5: Toggle collapsed state persisted in save()', () => {
       const element = header.render();
       const saved = header.save(element);
 
-      expect(saved.isOpen).toBeUndefined();
+      expect(saved).not.toHaveProperty('isOpen');
     });
   });
 });

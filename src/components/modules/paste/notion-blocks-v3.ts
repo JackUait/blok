@@ -567,7 +567,7 @@ function mapHeader(text: string, level: number, format: Record<string, unknown> 
   // Notion's clipboard record-map carries only whether a heading is toggleable,
   // not its per-instance collapsed state, so toggle headings default to open.
   return format?.toggleable === true
-    ? { tool: 'header', data: { text, level, isToggleable: true, isOpen: true } }
+    ? { tool: 'header', data: { text, level, isToggleable: true } }
     : { tool: 'header', data: { text, level } };
 }
 

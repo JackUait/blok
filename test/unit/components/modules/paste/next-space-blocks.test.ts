@@ -185,7 +185,7 @@ describe('parseNextSpaceBlocks', () => {
       );
 
       expect(out).toEqual([
-        { id: 'h', tool: 'header', data: { text: 'Toggle H2', level: 2, isToggleable: true, isOpen: true } },
+        { id: 'h', tool: 'header', data: { text: 'Toggle H2', level: 2, isToggleable: true } },
         { id: 'c1', tool: 'paragraph', data: { text: 'body' }, parentId: 'h' },
       ]);
     });

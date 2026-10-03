@@ -948,7 +948,7 @@ describe('parseNotionBlocksV3', () => {
       );
 
       expect(out).toEqual([
-        { id: 'h', tool: 'header', data: { text: 'Toggle H3', level: 3, isToggleable: true, isOpen: true } },
+        { id: 'h', tool: 'header', data: { text: 'Toggle H3', level: 3, isToggleable: true } },
         { id: 'c1', tool: 'paragraph', data: { text: 'body' }, parentId: 'h' },
       ]);
     });

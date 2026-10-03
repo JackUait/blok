@@ -591,7 +591,7 @@ export class TabSync extends Module {
     }
     if (this.currentRole === 'leader' || this.currentRole === 'follower') {
       try {
-        this.Blok.YjsManager.applyRemoteUpdate(update, this.origin);
+        this.applyTabUpdate(update);
       } catch (error) {
         this.fail('Tab sync could not apply a change from another tab; this tab works on its own.', error);
 
@@ -610,32 +610,53 @@ export class TabSync extends Module {
    * @param message - a diff against this tab's state vector
    */
   private onDiffState(message: Extract<TabMessage, { kind: 'state' }>): void {
-    const { YjsManager } = this.Blok;
-    // Yjs emits no update for a diff with nothing new. Every follower answers
-    // a wake hello, so most diffs are empty and must not mark the leader dirty.
-    const applied = { changed: false };
-    const unsubscribe = YjsManager.onAnyDocUpdate((_update, origin) => {
-      applied.changed ||= origin === this.origin;
-    });
+    // Every follower answers a wake hello, so most diffs are empty and must
+    // not mark the leader dirty.
+    const changed = { value: false };
 
     try {
-      YjsManager.applyRemoteUpdate(message.update, this.origin);
+      changed.value = this.applyTabUpdate(message.update);
     } catch (error) {
       this.fail('Tab sync could not catch up with the other tabs; this tab works on its own.', error);
 
       return;
-    } finally {
-      unsubscribe();
     }
     // Only from the leader: a follower's version may be stale. A frozen
     // follower missed every `saved` meanwhile.
     if (this.currentRole === 'follower') {
       this.leaderId = message.from;
       persistenceVersionAccess(this.config.persistence)?.set(message.version);
-    } else if (applied.changed) {
+    } else if (changed.value) {
       // The followers' edits in it are unsaved until this leader saves.
       this.dirtySinceSaved = true;
     }
+  }
+
+  /**
+   * Applies a tab update and, when it changed the document, has the observer
+   * save it: a move or an indent emits no BlockChanged, so nothing else would.
+   * The observer ignores this in a follower.
+   * @param update - a tab update or a diff answer
+   * @returns whether the document changed
+   */
+  private applyTabUpdate(update: Uint8Array): boolean {
+    const { YjsManager } = this.Blok;
+    // Yjs emits no update for one with nothing new.
+    const applied = { changed: false };
+    const unsubscribe = YjsManager.onAnyDocUpdate((_update, origin) => {
+      applied.changed ||= origin === this.origin;
+    });
+
+    try {
+      YjsManager.applyRemoteUpdate(update, this.origin);
+    } finally {
+      unsubscribe();
+    }
+    if (applied.changed) {
+      this.Blok.ModificationsObserver.markDirty();
+    }
+
+    return applied.changed;
   }
 
   /**

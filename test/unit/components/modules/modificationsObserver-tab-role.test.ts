@@ -236,4 +236,42 @@ describe('ModificationsObserver — tab role', () => {
       expect(observer.hasUnsavedChanges, role).toBe(false);
     }
   });
+
+  it('markDirty in a leader arms the close prompt and saves once, when the window closes', async () => {
+    const { observer, onSave, onChange } = setup({ role: 'leader' });
+
+    observer.markDirty();
+    observer.markDirty();
+
+    expect(observer.hasUnsavedChanges).toBe(true);
+    await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout - 1);
+    expect(onSave).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(observer.hasUnsavedChanges).toBe(false);
+  });
+
+  it('markDirty in a follower or a joining tab saves nothing and arms no close prompt', async () => {
+    for (const role of ['follower', 'joining'] as const) {
+      const { observer, save } = setup({ role });
+
+      observer.markDirty();
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout);
+
+      expect(save, role).not.toHaveBeenCalled();
+      expect(observer.hasUnsavedChanges, role).toBe(false);
+    }
+  });
+
+  it('a leader destroyed inside the window opened by markDirty still serializes', async () => {
+    const { observer, save } = setup({ role: 'leader' });
+
+    observer.markDirty();
+    await vi.advanceTimersByTimeAsync(Math.round(modificationsObserverBatchTimeout / 4));
+    observer.destroy();
+
+    expect(save).toHaveBeenCalledTimes(1);
+  });
 });

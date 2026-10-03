@@ -294,6 +294,7 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
       discardPendingChanges: vi.fn(),
       onRoleChanged: vi.fn(),
       flushNow: vi.fn(),
+      markDirty: vi.fn(),
       hasUnsavedChanges: false,
     },
     Saver: {

@@ -295,6 +295,43 @@ describe('TabSync — edits, adopt, wake diff and hand-off', () => {
     expect(a.sync.role).toBe('leader');
   });
 
+  it('the leader marks its observer dirty for each tab update that changed the document', async () => {
+    const { a, b } = await twoTabs();
+    const seen = listen();
+
+    b.fake.type('moved');
+    await flush();
+
+    expect(a.fake.ModificationsObserver.markDirty).toHaveBeenCalledTimes(1);
+
+    // The same update again changes nothing.
+    const repeat = seen.find((m) => m.kind === 'update');
+
+    expect(repeat).toBeDefined();
+    if (repeat !== undefined) {
+      platform.channel(KEY)?.post(repeat);
+    }
+    await flush();
+
+    expect(a.fake.ModificationsObserver.markDirty).toHaveBeenCalledTimes(1);
+    // A follower never saves, so it is never marked.
+    expect(b.fake.ModificationsObserver.markDirty).not.toHaveBeenCalled();
+  });
+
+  it('a woken leader marks its observer dirty for a diff that changed the document', async () => {
+    const { a, b } = await twoTabs();
+
+    a.pauseInbound();
+    b.fake.type('from b');
+    await flush();
+    a.resumeInbound();
+    await a.sync.resync();
+    await flush();
+
+    expect(a.fake.text()).toContain('from b');
+    expect(a.fake.ModificationsObserver.markDirty).toHaveBeenCalledTimes(1);
+  });
+
   it('a woken leader keeps its own version, not a follower one', async () => {
     const { a, b } = await twoTabs();
 

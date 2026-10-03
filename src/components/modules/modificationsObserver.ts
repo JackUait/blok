@@ -222,6 +222,27 @@ export class ModificationsObserver extends Module {
   }
 
   /**
+   * Marks the document unsaved and saves it when the batch window closes.
+   * TabSync calls it for a change from another tab: a move emits no
+   * BlockChanged, so nothing else would save it. No onChange: the block
+   * events that do fire already carry it.
+   */
+  public markDirty(): void {
+    const role = this.tabRole;
+
+    if (role === 'follower' || role === 'joining') {
+      return;
+    }
+
+    this.pendingSave = true;
+    this.syncUnloadGuard();
+    // A disabled observer opens the window in enable().
+    if (!this.disabled && this.batchingTimeout === null) {
+      this.openBatchWindow();
+    }
+  }
+
+  /**
    * Forgets the unsaved edit without touching queued onChange events: the
    * leader saves it, and onChange fires in every role.
    */

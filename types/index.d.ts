@@ -40,6 +40,7 @@ import {
   Theme,
   ThemeMode,
   ResolvedTheme,
+  ViewState,
   Width,
   Placeholder,
   Tokens,
@@ -186,6 +187,7 @@ export {
   Theme,
   ThemeMode,
   ResolvedTheme,
+  ViewState,
   Width,
   EditorWidth,
   Placeholder,
@@ -248,6 +250,8 @@ export interface API {
   readOnly: ReadOnly;
   ui: Ui;
   theme: Theme;
+  /** This browser's personal block state, never saved in the document (see {@link ViewState}). */
+  viewState: ViewState;
   /** Runtime setter for the live callback config (see {@link Handlers}). */
   handlers: Handlers;
   /** Read-only view of selected editor configuration. */

@@ -20,6 +20,7 @@ import { TooltipAPI } from '../components/modules/api/tooltip';
 import { UiAPI } from '../components/modules/api/ui';
 
 import { ThemeAPI } from '../components/modules/api/theme';
+import { ViewStateAPI } from '../components/modules/api/viewState';
 /** ./toolbar */
 import { BlockSettings } from '../components/modules/toolbar/blockSettings';
 import { Toolbar } from '../components/modules/toolbar/index';
@@ -77,6 +78,7 @@ export interface BlokModules {
   TooltipAPI: TooltipAPI,
   UiAPI: UiAPI,
   ThemeAPI: ThemeAPI,
+  ViewStateAPI: ViewStateAPI,
 
   // Toolbar Modules
   BlockSettings: BlockSettings,

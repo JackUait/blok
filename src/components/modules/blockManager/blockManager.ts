@@ -6,7 +6,7 @@
  */
 import { Map as YMap } from 'yjs';
 
-import type { BlockToolData, OutputBlockData, PasteEvent } from '../../../../types';
+import type { BlockOrigin, BlockToolData, OutputBlockData, PasteEvent } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { BlockMutationEventMap, BlockMutationType } from '../../../../types/events/block';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
@@ -364,6 +364,8 @@ export class BlockManager extends Module {
   /** True while `insertMany` renders a document; see `normalizeRenderedBlocks`. */
   private isRenderingDocument = false;
 
+  private readonly createdHere = new Set<string>();
+
   /**
    * Operations handler for state changes
    */
@@ -460,6 +462,7 @@ export class BlockManager extends Module {
         tools: this.Blok.Tools.blockTools,
         moduleInstances: this.Blok,
         migrations: this.config.migrations,
+        onComposed: (block, origin) => this.trackCreatedHere(block.id, origin),
       },
       this.bindBlockEvents.bind(this),
       (block) => this.eventBinder.bindBlockChanges(block)
@@ -620,6 +623,31 @@ export class BlockManager extends Module {
    */
   public composeBlock(options: ComposeBlockOptions): Block {
     return this.factory.composeBlock(options);
+  }
+
+  /**
+   * True for a block this tab created after the document rendered.
+   * @param blockId - the block to check
+   */
+  public isCreatedHere(blockId: string): boolean {
+    return this.createdHere.has(blockId);
+  }
+
+  /**
+   * Classified by origin, not by render/sync flags: inserts reach the factory
+   * directly, and `isSyncingFromYjs` is still true just after render.
+   * @param id - id of the block just composed
+   * @param origin - why it was composed
+   */
+  private trackCreatedHere(id: string, origin: BlockOrigin): void {
+    // An existing id is a rebuild in place (setData fallback, replay rebuild): keep its status.
+    const isRebuild = this.repository.getBlockById(id) !== undefined;
+
+    if (origin === 'load' || (origin === 'replay' && !isRebuild)) {
+      this.createdHere.delete(id);
+    } else if (origin !== 'probe' && origin !== 'replay' && !isRebuild) {
+      this.createdHere.add(id);
+    }
   }
 
   /**

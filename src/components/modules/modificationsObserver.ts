@@ -1,5 +1,6 @@
 import type { BlockId } from '../../../types';
 import type { BlockMutationEvent, BlockMutationType } from '../../../types/events/block';
+import type { BlockMutationOrigin } from '../../../types/events/block/Base';
 import type { ModuleConfig } from '../../types-internal/module-config';
 import { Module } from '../__module';
 import { modificationsObserverBatchTimeout } from '../constants';
@@ -8,9 +9,10 @@ import { isFunction } from '../utils';
 import { registerUnsavedWork } from '../utils/persistence';
 
 /**
- * We use map of block mutations to filter only unique events
+ * We use map of block mutations to filter only unique events. Origin is part
+ * of the key: a later tab or peer change must not swallow a local one.
  */
-type UniqueBlockMutationKey = `block:${BlockId}:event:${BlockMutationType}`;
+type UniqueBlockMutationKey = `block:${BlockId}:event:${BlockMutationType}:${BlockMutationOrigin}`;
 
 /**
  * Single entry point for Block mutation events
@@ -261,7 +263,7 @@ export class ModificationsObserver extends Module {
       return;
     }
 
-    this.batchingOnChangeQueue.set(`block:${event.detail.target.id}:event:${event.type as BlockMutationType}`, event);
+    this.batchingOnChangeQueue.set(`block:${event.detail.target.id}:event:${event.type as BlockMutationType}:${event.detail.origin ?? 'local'}`, event);
     this.pendingSave = true;
     this.syncUnloadGuard();
 

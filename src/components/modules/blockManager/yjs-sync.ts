@@ -258,10 +258,23 @@ export class BlockYjsSync {
   private peerMaterializeDepth = 0;
 
   /**
+   * Open sync windows that a peer's change opened. Lives as long as the
+   * window, setData's await and the RAF tail included.
+   */
+  private remoteSyncCount = 0;
+
+  /**
    * Returns true if any Yjs sync operation is in progress
    */
   public get isSyncingFromYjs(): boolean {
     return this.yjsSyncCount > 0;
+  }
+
+  /**
+   * Whether a sync window opened by a peer's change is still open.
+   */
+  public get isApplyingRemote(): boolean {
+    return this.remoteSyncCount > 0;
   }
 
   /**
@@ -413,6 +426,14 @@ export class BlockYjsSync {
     const parent = block.parentId === null ? undefined : this.repository.getBlockById(block.parentId);
 
     return this.wasRewrittenFromDocument(parent, visited);
+  }
+
+  /**
+   * Whether the user typed into `block` in a reconcile window still open.
+   * @param block - the block to check
+   */
+  public hasUserTypedWhileReconciling(block: Block): boolean {
+    return this.userTypedWhileReconciling.has(block.id);
   }
 
   /**
@@ -734,8 +755,15 @@ export class BlockYjsSync {
    * @returns cleanup function to call when operation completes
    */
   private beginAtomicOperation(blockId?: string): () => void {
+    // Read at begin: a window that outlives the dispatch (setData's await, the
+    // RAF tail) is still the peer's.
+    const remote = this.peerMaterializeDepth > 0;
+
     this.yjsSyncCount++;
     this.activeOperationDepth++;
+    if (remote) {
+      this.remoteSyncCount++;
+    }
     this.trackScope(blockId, 1);
     const operations = this.dependencies.operations;
 
@@ -745,6 +773,9 @@ export class BlockYjsSync {
 
     return (): void => {
       this.yjsSyncCount--;
+      if (remote) {
+        this.remoteSyncCount--;
+      }
       this.trackScope(blockId, -1);
       if (operations && this.yjsSyncCount === 0) {
         operations.suppressStopCapturing = false;

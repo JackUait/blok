@@ -9,6 +9,7 @@ import { Map as YMap } from 'yjs';
 import type { BlockOrigin, BlockToolData, OutputBlockData, PasteEvent } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { BlockMutationEventMap, BlockMutationType } from '../../../../types/events/block';
+import type { BlockMutationOrigin } from '../../../../types/events/block/Base';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 import { BlockMovedMutationType } from '../../../../types/events/block/BlockMoved';
@@ -247,6 +248,20 @@ export class BlockManager extends Module {
    */
   public get isApplyingRemoteChange(): boolean {
     return this.yjsSync.isMaterializingFromPeer;
+  }
+
+  /**
+   * What a change applied from another client is called in mutation events.
+   */
+  private remoteOriginLabel: 'tab' | 'remote' = 'remote';
+
+  /**
+   * Name the source of changes applied from another client: 'tab' when they
+   * come from another tab of this browser, 'remote' from a collaboration peer.
+   * @param label - the origin mutation events carry for those changes
+   */
+  public setRemoteOriginLabel(label: 'tab' | 'remote'): void {
+    this.remoteOriginLabel = label;
   }
 
   /**
@@ -2056,9 +2071,12 @@ export class BlockManager extends Module {
     source: 'mutation' | 'replay' = 'mutation'
   ): Block {
     const isEcho = this.yjsSync.isSyncingFromYjs && this.yjsSync.isReconciling(block);
+    // A keystroke inside a remote window is the user's own.
+    const fromRemote = isEcho && this.yjsSync.isApplyingRemote && !this.yjsSync.hasUserTypedWhileReconciling(block);
+    const origin = fromRemote ? this.remoteOriginLabel : 'local';
 
     if (mutationType !== BlockChangedMutationType || !isEcho || this.yjsSync.claimChangeAnnouncement(block, source)) {
-      this.emitBlockMutation(mutationType, block, detailData);
+      this.emitBlockMutation(mutationType, block, detailData, origin);
     }
 
     // Sync content changes to Yjs for undo/redo support
@@ -2083,16 +2101,19 @@ export class BlockManager extends Module {
    * @param mutationType - what happened to the block
    * @param block - the block
    * @param detailData - event details
+   * @param origin - who made the change
    */
   private emitBlockMutation<Type extends BlockMutationType>(
     mutationType: Type,
     block: Block,
-    detailData: BlockMutationEventDetailWithoutTarget<Type>
+    detailData: BlockMutationEventDetailWithoutTarget<Type>,
+    origin: BlockMutationOrigin = 'local'
   ): void {
     const eventDetail = {
       target: new BlockAPI(block, this.Blok.API),
       ...this.placementDetail(mutationType, block, detailData),
       ...detailData,
+      origin,
     };
 
     const event = new CustomEvent(mutationType, {

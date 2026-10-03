@@ -8095,7 +8095,7 @@ span[data-blok-slash-search] {
   border: 0;
 }
 
-[data-blok-tool="video"] .blok-video-controls__speed-slider:focus {
+[data-blok-tool="video"] .blok-video-controls__speed-slider:focus-visible {
   outline: none;
 }
 

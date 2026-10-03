@@ -955,7 +955,7 @@
   height: 0;
   border: 0;
 }
-[data-blok-tool="video"] .blok-video-controls__speed-slider:focus { outline: none; }
+[data-blok-tool="video"] .blok-video-controls__speed-slider:focus-visible { outline: none; }
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__speed-ruler:not([data-pointer-focus]) .blok-video-controls__speed-slider:focus-visible ~ .blok-video-controls__speed-needle {
   box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
 }

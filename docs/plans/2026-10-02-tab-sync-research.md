@@ -39,7 +39,7 @@ Scope chosen by user: a new Blok option so editors on the SAME document in tabs 
 
 ## Decisions (user-approved)
 - New core module, ON BY DEFAULT (opt-out `tabSync: false`). Refused/no-op with `collaboration`.
-- Join conflict: newer version wins (persistence version/ETag); no version → open tabs win.
+- Join conflict: open tabs ALWAYS win (2026-10-03 revision; version comparison dropped).
 - Identity: explicit `documentId` (host) wins. Else Blok mints `id` into saved `OutputData` (new top-level field; BREAKING for strict backend schemas — release note owed). Channel key = doc id + `location.pathname` (no query/hash/holder). Auto mode joins only versions that came via `persistence.load` or a save (raw `data` templates never auto-join). Empty docs never auto-join.
 - Docs must say: app that copies stored docs or shows all docs at one path → pass `documentId` or strip `id` on copy.
 - Blok has NO document-duplicate op (page block copies as link, `src/tools/page/index.ts:147-150`); copy risk is host-side.

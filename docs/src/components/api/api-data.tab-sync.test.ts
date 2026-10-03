@@ -55,6 +55,8 @@ describe("tab sync guide", () => {
     expect(text.toLowerCase()).toContain("secure");
     // Raw `data` never joins on its own.
     expect(text).toContain("`data`");
+    expect(text).toContain("joins after its first `persistence` save");
+    expect(text).toContain("`isReady` rejects");
   });
 
   it("lists what syncs and what never does", () => {
@@ -63,6 +65,8 @@ describe("tab sync guide", () => {
     for (const fact of ["locale", "theme", "width", "toggle", "selection", "scroll", "read-only", "playback"]) {
       expect(text.toLowerCase()).toContain(fact);
     }
+    // Stored preferences belong to the browser, not to tab sync.
+    expect(text).toContain("whatever `tabSync` says");
   });
 
   it("says only the main tab saves and names the adapter bindings", () => {
@@ -79,6 +83,8 @@ describe("tab sync guide", () => {
 
     expect(text).toContain("isOpen");
     expect(text).toContain("viewState");
+    expect(text).toContain("With tab sync on");
+    expect(text).toContain("lost on reload");
   });
 
   it("states the limits", () => {
@@ -88,7 +94,9 @@ describe("tab sync guide", () => {
     expect(text).toContain("localhost");
     expect(text.toLowerCase()).toContain("iframe");
     expect(text).toContain("recreateKey");
-    expect(text).toContain("key");
+    expect(text).toContain("In React, change its `key`");
+    expect(text).toContain("saves on its own");
+    expect(text).toContain("returns a version");
   });
 });
 
@@ -147,6 +155,8 @@ describe("viewState API", () => {
     const names = section?.methods?.map((m) => m.name.replace(/\(.*\)$/, "")) ?? [];
 
     expect(names).toEqual(["viewState.get", "viewState.set", "viewState.onChange", "viewState.isCreatedHere"]);
+    // A tool keeps its block from the constructor; there is no `this.blockId`.
+    expect(section?.methods?.[3]?.example).toContain("this.block.id");
     expect(MODULE_ORDER).toContain("view-state-api");
   });
 });

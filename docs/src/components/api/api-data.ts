@@ -667,7 +667,7 @@ const editor = new Blok(config);`,
         type: "string",
         default: "undefined",
         description:
-          "Your app's id for this document. Tabs of one browser that show the same `documentId` stay in sync live, with no server.\n\nUse the id your app already loads and saves the document by, such as a route param or a record key. It must be unique across the whole site.\n\nWithout it, Blok uses the `id` it writes into saved data, plus the page path. That only covers a document that `persistence` loads or saves.\n\nMount-only: to show another document, recreate the editor. The Tab sync guide covers where the id comes from.",
+          "Your app's id for this document. Tabs of one browser that show the same `documentId` stay in sync live, with no server.\n\nUse the id your app already loads and saves the document by, such as a route param or a record key. It must be unique across the whole site. An empty string is refused, and `isReady` rejects.\n\nWithout it, Blok uses the `id` it writes into saved data, plus the page path. That only covers a document that `persistence` loads or saves.\n\nMount-only: to show another document, recreate the editor. The Tab sync guide covers where the id comes from.",
       },
       {
         option: "tabSync",
@@ -3208,11 +3208,17 @@ unsubscribe();`,
         description:
           "`true` for a block this tab created after the document rendered: from the toolbox, a shortcut, paste, convert or split. `false` for blocks from the saved document, another tab, a collaborator, or undo and redo. Use it to open a new block for the person who made it.",
         example: `// In a block tool
+constructor({ api, block }) {
+  this.api = api;
+  this.block = block;
+}
+
 rendered() {
   const { viewState } = this.api;
+  const id = this.block.id;
 
-  if (viewState.get(this.blockId, 'open') === undefined && viewState.isCreatedHere(this.blockId)) {
-    viewState.set(this.blockId, 'open', true);
+  if (viewState.get(id, 'open') === undefined && viewState.isCreatedHere(id)) {
+    viewState.set(id, 'open', true);
   }
 }`,
       },

@@ -62,6 +62,17 @@
   font-size: var(--blok-table-comfortable-font-size, 1rem);
 }
 
+/*
+ * No placeholder ever paints inside a cell. Cells strip the attributes on the
+ * paths they know about; this covers every other one. Specificity (0,4,0) must
+ * beat the placeholder utilities (up to `.cls:empty:focus` = 0,3,0). The
+ * slash-search pill also lives on ::before, but its `content: ''` is
+ * !important, so it survives.
+ */
+[data-blok-table-cell] [data-blok-table-cell-blocks] [contenteditable]:is([data-placeholder], [data-blok-placeholder-active])::before {
+  content: none;
+}
+
 /* ─── Cell content placement ──────────────────────────────────── */
 
 /*

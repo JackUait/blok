@@ -731,6 +731,38 @@ test.describe('Cell Editing', () => {
     await expect(firstCellEditable).not.toHaveAttribute('data-placeholder');
   });
 
+  // Cells strip the attributes on the paths they know about. Any other path
+  // (a new block tool, a conversion) leaves them, so the stylesheet is the
+  // backstop: no placeholder paints inside a cell, whatever carries it.
+  test('Cell placeholder never paints, even on a block that kept its placeholder attributes', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['', ''], ['', '']],
+            },
+          },
+        ],
+      },
+    });
+
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.evaluate((el) => {
+      el.setAttribute('data-blok-placeholder-active', 'Write something');
+      el.setAttribute('data-placeholder', 'Write something');
+    });
+    await firstCellEditable.click();
+
+    const painted = await firstCellEditable.evaluate((el) => getComputedStyle(el, '::before').content);
+
+    expect(painted).not.toContain('Write something');
+  });
+
   test('Ghost children (blocks with parent but not in any cell) are cleaned up on render', async ({ page }) => {
     // Set up data that simulates stale ghost children:
     // - A table with a 2x2 grid where cells reference specific child blocks

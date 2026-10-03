@@ -672,6 +672,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // grid and its corner cells, the radius role and the matching toolbox
     // preview. Measured net growth against 7d2de4e2.
     const TABLE_FRAME_BYTES = 2_676;
+    // Table cells: no placeholder ::before paints inside a cell, whatever path
+    // left the placeholder attributes on a block.
+    const CELL_PLACEHOLDER_BYTES = 497;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -697,7 +700,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DARKROOM_FILTER_STRIP_BYTES
       + LOADING_SKELETON_BYTES
       + TOOLBOX_HOVER_PREVIEWS_BYTES
-      + TABLE_FRAME_BYTES;
+      + TABLE_FRAME_BYTES
+      + CELL_PLACEHOLDER_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

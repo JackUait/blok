@@ -3026,6 +3026,10 @@
   font-size: var(--blok-table-comfortable-font-size, 1rem);
 }
 
+[data-blok-table-cell] [data-blok-table-cell-blocks] [contenteditable]:is([data-placeholder], [data-blok-placeholder-active])::before {
+  content: none;
+}
+
 [data-blok-table-cell-blocks] {
   text-align: var(--_blok-start-side, left);
 }

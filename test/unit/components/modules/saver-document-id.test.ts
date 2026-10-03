@@ -155,7 +155,10 @@ describe('Blok — document id through a real editor', () => {
     isReady: Promise<unknown>;
     save: () => Promise<OutputData>;
     render: (data: BlokConfig['data']) => Promise<void>;
-    blocks: { render: (data: BlokConfig['data']) => Promise<void> };
+    blocks: {
+      render: (data: BlokConfig['data']) => Promise<void>;
+      importMarkdown: (md: string) => Promise<OutputData>;
+    };
     destroy: () => void;
   };
 
@@ -237,5 +240,33 @@ describe('Blok — document id through a real editor', () => {
     const saved = await withEditor(docA, editor => editor.render({ blocks: docA.blocks }));
 
     expect(saved.id).toBe('A');
+  }, 60_000);
+
+  it('keeps the id when Markdown is imported', async () => {
+    const saved = await withEditor(docA, async (editor) => {
+      await editor.blocks.importMarkdown('# x');
+    });
+
+    expect(saved.id).toBe('A');
+  }, 60_000);
+
+  it('keeps a minted id when Markdown is imported', async () => {
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+
+    const editor = new Blok({ holder, tools: { paragraph: Paragraph } }) as unknown as TestEditor;
+
+    try {
+      await editor.isReady;
+      const before = await editor.save();
+
+      await editor.blocks.importMarkdown('# x');
+
+      expect((await editor.save()).id).toBe(before.id);
+    } finally {
+      editor.destroy();
+      holder.remove();
+    }
   }, 60_000);
 });

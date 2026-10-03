@@ -292,6 +292,17 @@ export class BlocksAPI extends Module {
     // wholesale replace must do no work at all.
     this.refuseWholesaleReplace('render');
 
+    return this.replaceDocument(data, { keepId: false });
+  }
+
+  /**
+   * The body of {@link render}.
+   * @param data - the document to show
+   * @param options - replace behaviour
+   * @param options.keepId - true when only the content changes (Markdown
+   *   import), so an id-less `data` keeps the current document id
+   */
+  private async replaceDocument(data: OutputData | LooseOutputData, { keepId }: { keepId: boolean }): Promise<void> {
     if (data === undefined || data.blocks === undefined) {
       throw new Error('Incorrect data passed to the render() method');
     }
@@ -320,7 +331,7 @@ export class BlocksAPI extends Module {
     }
 
     // Only a real swap resets: an id-less echo would otherwise churn the id.
-    if (incomingId === null) {
+    if (incomingId === null && !keepId) {
       this.Blok.Saver.resetDocumentRecordId();
     }
 
@@ -391,7 +402,7 @@ export class BlocksAPI extends Module {
     const blocks = await markdownToBlocks(md, options);
     const data: OutputData = { blocks };
 
-    await this.render(data);
+    await this.replaceDocument(data, { keepId: true });
 
     return data;
   }

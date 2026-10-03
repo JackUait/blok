@@ -134,6 +134,8 @@
   "tools.table.cellColor": "रङ",
   "tools.table.mergeCells": "कक्षहरू मिलाउनुहोस्",
   "tools.table.splitCell": "कक्ष विभाजन गर्नुहोस्",
+  "tools.table.rowLockedByMerge": "यो पङ्क्ति सार्न मिलाइएका कक्षहरू विभाजन गर्नुहोस्",
+  "tools.table.columnLockedByMerge": "यो स्तम्भ सार्न मिलाइएका कक्षहरू विभाजन गर्नुहोस्",
   "tools.table.headerColumn": "हेडर स्तम्भ",
   "tools.table.insertColumnLeft": "बायाँ स्तम्भ थप्नुहोस्",
   "tools.table.insertColumnRight": "दायाँ स्तम्भ थप्नुहोस्",

@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Szín",
   "tools.table.mergeCells": "Cellák egyesítése",
   "tools.table.splitCell": "Cella felosztása",
+  "tools.table.rowLockedByMerge": "Ennek a sornak az áthelyezéséhez ossza fel az egyesített cellákat",
+  "tools.table.columnLockedByMerge": "Ennek az oszlopnak az áthelyezéséhez ossza fel az egyesített cellákat",
   "tools.table.headerColumn": "Fejlécoszlop",
   "tools.table.insertColumnLeft": "Oszlop beszúrása balra",
   "tools.table.insertColumnRight": "Oszlop beszúrása jobbra",

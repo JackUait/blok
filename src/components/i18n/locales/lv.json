@@ -136,6 +136,8 @@
   "tools.table.cellColor": "Krāsa",
   "tools.table.mergeCells": "Apvienot šūnas",
   "tools.table.splitCell": "Sadalīt šūnu",
+  "tools.table.rowLockedByMerge": "Sadaliet apvienotās šūnas, lai pārvietotu šo rindu",
+  "tools.table.columnLockedByMerge": "Sadaliet apvienotās šūnas, lai pārvietotu šo kolonnu",
   "tools.table.headerColumn": "Galvenes kolonna",
   "tools.table.insertColumnLeft": "Ievietot kolonnu kreisajā pusē",
   "tools.table.insertColumnRight": "Ievietot kolonnu labajā pusē",

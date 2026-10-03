@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Өнгө",
   "tools.table.mergeCells": "Нүднүүдийг нэгтгэх",
   "tools.table.splitCell": "Нүдийг хуваах",
+  "tools.table.rowLockedByMerge": "Энэ мөрийг зөөхийн тулд нэгтгэсэн нүднүүдийг хуваана уу",
+  "tools.table.columnLockedByMerge": "Энэ баганыг зөөхийн тулд нэгтгэсэн нүднүүдийг хуваана уу",
   "tools.table.headerColumn": "Толгой багана",
   "tools.table.insertColumnLeft": "Зүүн талд багана оруулах",
   "tools.table.insertColumnRight": "Баруун талд багана оруулах",

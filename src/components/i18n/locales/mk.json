@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Боја",
   "tools.table.mergeCells": "Спои ќелии",
   "tools.table.splitCell": "Раздели ќелија",
+  "tools.table.rowLockedByMerge": "Разделете ги споените ќелии за да го преместите овој ред",
+  "tools.table.columnLockedByMerge": "Разделете ги споените ќелии за да ја преместите оваа колона",
   "tools.table.headerColumn": "Заглавна колона",
   "tools.table.insertColumnLeft": "Вметни колона лево",
   "tools.table.insertColumnRight": "Вметни колона десно",

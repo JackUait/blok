@@ -99,6 +99,8 @@
   "tools.table.cellColor": "Kulay",
   "tools.table.mergeCells": "Pagsamahin ang mga cell",
   "tools.table.splitCell": "Hatiin ang cell",
+  "tools.table.rowLockedByMerge": "Hatiin ang mga pinagsamang cell para mailipat ang hanay na ito",
+  "tools.table.columnLockedByMerge": "Hatiin ang mga pinagsamang cell para mailipat ang kolum na ito",
   "tools.table.headerColumn": "Header na kolum",
   "tools.table.insertColumnLeft": "Magsingit ng kolum sa kaliwa",
   "tools.table.insertColumnRight": "Magsingit ng kolum sa kanan",

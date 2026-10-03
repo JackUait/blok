@@ -123,6 +123,8 @@
   "tools.table.cellColor": "ቀለም",
   "tools.table.mergeCells": "ሕዋሶችን አዋህድ",
   "tools.table.splitCell": "ሕዋስ ክፈል",
+  "tools.table.rowLockedByMerge": "ይህን ረድፍ ለማንቀሳቀስ የተዋሃዱ ሕዋሶችን ይክፈሉ",
+  "tools.table.columnLockedByMerge": "ይህን አምድ ለማንቀሳቀስ የተዋሃዱ ሕዋሶችን ይክፈሉ",
   "tools.table.headerColumn": "የራስጌ አምድ",
   "tools.table.insertColumnLeft": "ከግራ አምድ አስገባ",
   "tools.table.insertColumnRight": "ከቀኝ አምድ አስገባ",

@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Boja",
   "tools.table.mergeCells": "Spoji ćelije",
   "tools.table.splitCell": "Razdijeli ćeliju",
+  "tools.table.rowLockedByMerge": "Razdijeli spojene ćelije za premještanje ovog retka",
+  "tools.table.columnLockedByMerge": "Razdijeli spojene ćelije za premještanje ovog stupca",
   "tools.table.headerColumn": "Stupac zaglavlja",
   "tools.table.insertColumnLeft": "Umetni stupac lijevo",
   "tools.table.insertColumnRight": "Umetni stupac desno",

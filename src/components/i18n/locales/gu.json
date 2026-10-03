@@ -123,6 +123,8 @@
   "tools.table.cellColor": "રંગ",
   "tools.table.mergeCells": "સેલ ભેગા કરો",
   "tools.table.splitCell": "સેલ વિભાજિત કરો",
+  "tools.table.rowLockedByMerge": "આ હરોળ ખસેડવા માટે ભેગા કરેલા સેલ વિભાજિત કરો",
+  "tools.table.columnLockedByMerge": "આ કૉલમ ખસેડવા માટે ભેગા કરેલા સેલ વિભાજિત કરો",
   "tools.table.headerColumn": "હેડર કૉલમ",
   "tools.table.insertColumnLeft": "ડાબી બાજુએ કૉલમ ઉમેરો",
   "tools.table.insertColumnRight": "જમણી બાજુએ કૉલમ ઉમેરો",

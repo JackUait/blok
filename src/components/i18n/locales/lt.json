@@ -136,6 +136,8 @@
   "tools.table.cellColor": "Spalva",
   "tools.table.mergeCells": "Sujungti langelius",
   "tools.table.splitCell": "Išskaidyti langelį",
+  "tools.table.rowLockedByMerge": "Išskaidykite sujungtus langelius, kad perkeltumėte šią eilutę",
+  "tools.table.columnLockedByMerge": "Išskaidykite sujungtus langelius, kad perkeltumėte šį stulpelį",
   "tools.table.headerColumn": "Antraštės stulpelis",
   "tools.table.insertColumnLeft": "Įterpti stulpelį kairėje",
   "tools.table.insertColumnRight": "Įterpti stulpelį dešinėje",

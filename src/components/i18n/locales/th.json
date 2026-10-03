@@ -125,6 +125,8 @@
   "tools.table.cellColor": "สี",
   "tools.table.mergeCells": "รวมเซลล์",
   "tools.table.splitCell": "แยกเซลล์",
+  "tools.table.rowLockedByMerge": "แยกเซลล์ที่รวมไว้เพื่อย้ายแถวนี้",
+  "tools.table.columnLockedByMerge": "แยกเซลล์ที่รวมไว้เพื่อย้ายคอลัมน์นี้",
   "tools.table.headerColumn": "คอลัมน์หัวข้อ",
   "tools.table.insertColumnLeft": "แทรกคอลัมน์ทางซ้าย",
   "tools.table.insertColumnRight": "แทรกคอลัมน์ทางขวา",

@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Màu",
   "tools.table.mergeCells": "Gộp ô",
   "tools.table.splitCell": "Tách ô",
+  "tools.table.rowLockedByMerge": "Tách các ô đã gộp để di chuyển hàng này",
+  "tools.table.columnLockedByMerge": "Tách các ô đã gộp để di chuyển cột này",
   "tools.table.headerColumn": "Cột tiêu đề",
   "tools.table.insertColumnLeft": "Chèn cột bên trái",
   "tools.table.insertColumnRight": "Chèn cột bên phải",

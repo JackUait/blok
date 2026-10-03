@@ -101,6 +101,8 @@
   "tools.table.cellColor": "لون",
   "tools.table.mergeCells": "دمج الخلايا",
   "tools.table.splitCell": "تقسيم الخلية",
+  "tools.table.rowLockedByMerge": "قسّم الخلايا المدمجة لنقل هذا الصف",
+  "tools.table.columnLockedByMerge": "قسّم الخلايا المدمجة لنقل هذا العمود",
   "tools.table.headerColumn": "عمود رأس",
   "tools.table.insertColumnLeft": "إدراج عمود يساراً",
   "tools.table.insertColumnRight": "إدراج عمود يميناً",

@@ -99,6 +99,8 @@
   "tools.table.cellColor": "ពណ៌",
   "tools.table.mergeCells": "បញ្ចូលក្រឡាចូលគ្នា",
   "tools.table.splitCell": "បំបែកក្រឡា",
+  "tools.table.rowLockedByMerge": "បំបែកក្រឡាដែលបានបញ្ចូលគ្នា ដើម្បីផ្លាស់ទីជួរដេកនេះ",
+  "tools.table.columnLockedByMerge": "បំបែកក្រឡាដែលបានបញ្ចូលគ្នា ដើម្បីផ្លាស់ទីជួរឈរនេះ",
   "tools.table.headerColumn": "ជួរឈរចំណងជើង",
   "tools.table.insertColumnLeft": "បញ្ចូលជួរឈរខាងឆ្វេង",
   "tools.table.insertColumnRight": "បញ្ចូលជួរឈរខាងស្ដាំ",

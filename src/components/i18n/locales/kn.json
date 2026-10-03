@@ -99,6 +99,8 @@
   "tools.table.cellColor": "ಬಣ್ಣ",
   "tools.table.mergeCells": "ಕೋಶಗಳನ್ನು ವಿಲೀನಗೊಳಿಸಿ",
   "tools.table.splitCell": "ಕೋಶವನ್ನು ವಿಭಜಿಸಿ",
+  "tools.table.rowLockedByMerge": "ಈ ಸಾಲನ್ನು ಸರಿಸಲು ವಿಲೀನಗೊಂಡ ಕೋಶಗಳನ್ನು ವಿಭಜಿಸಿ",
+  "tools.table.columnLockedByMerge": "ಈ ಕಾಲಮ್ ಅನ್ನು ಸರಿಸಲು ವಿಲೀನಗೊಂಡ ಕೋಶಗಳನ್ನು ವಿಭಜಿಸಿ",
   "tools.table.headerColumn": "ಹೆಡರ್ ಕಾಲಮ್",
   "tools.table.insertColumnLeft": "ಎಡಕ್ಕೆ ಕಾಲಮ್ ಸೇರಿಸಿ",
   "tools.table.insertColumnRight": "ಬಲಕ್ಕೆ ಕಾಲಮ್ ಸೇರಿಸಿ",

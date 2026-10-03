@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Farge",
   "tools.table.mergeCells": "Slå sammen celler",
   "tools.table.splitCell": "Del celle",
+  "tools.table.rowLockedByMerge": "Del sammenslåtte celler for å flytte denne raden",
+  "tools.table.columnLockedByMerge": "Del sammenslåtte celler for å flytte denne kolonnen",
   "tools.table.headerColumn": "Overskriftskolonne",
   "tools.table.insertColumnLeft": "Sett inn kolonne til venstre",
   "tools.table.insertColumnRight": "Sett inn kolonne til høyre",

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import * as tooltip from '../../../../src/components/utils/tooltip';
 import { GRIP_DRAG_DISABLED_ATTR, TableRowColControls } from '../../../../src/tools/table/table-row-col-controls';
 import type { TableRowColControlsOptions } from '../../../../src/tools/table/table-row-col-controls';
 
@@ -411,7 +412,8 @@ describe('TableRowColControls — geometry and grip state', () => {
 
       expect(locked.hasAttribute(GRIP_DRAG_DISABLED_ATTR)).toBe(true);
       expect(locked.getAttribute(GRIP_DRAG_DISABLED_ATTR)).toBe('');
-      expect(locked.style.cursor).toBe('not-allowed');
+      // It still opens a menu, so it reads as a button, not as broken.
+      expect(locked.style.cursor).toBe('pointer');
       expect(locked.getAttribute('aria-label')).toBe('blockSettings.clickToOpenMenu');
 
       expect(free.hasAttribute(GRIP_DRAG_DISABLED_ATTR)).toBe(false);
@@ -419,6 +421,65 @@ describe('TableRowColControls — geometry and grip state', () => {
       expect(free.getAttribute('aria-label'))
         .toBe('blockSettings.dragToMove. blockSettings.clickToOpenMenu');
       expect(free.getAttribute(GRIP_ATTR)).toBe('');
+    });
+
+    it('explains why when the user tries to drag a locked row', async () => {
+      const show = vi.spyOn(tooltip, 'show').mockImplementation(() => undefined);
+      const hide = vi.spyOn(tooltip, 'hide').mockImplementation(() => undefined);
+
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        ...baseOptions(grid, 2, 2),
+        canDrag: (type, index) => !(type === 'row' && index === 1),
+      });
+
+      const locked = gripsIn(grid, GRIP_ROW_ATTR)[1];
+
+      locked.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 0, clientY: 60 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 0, clientY: 120 }));
+
+      expect(show).toHaveBeenCalledTimes(1);
+      expect(show).toHaveBeenCalledWith(locked, 'tools.table.rowLockedByMerge', expect.anything());
+      expect(document.body.style.cursor).toBe('');
+
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 0, clientY: 120 }));
+      await Promise.resolve();
+
+      expect(hide).toHaveBeenCalled();
+    });
+
+    it('names the column when the locked grip is a column', () => {
+      const show = vi.spyOn(tooltip, 'show').mockImplementation(() => undefined);
+
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        ...baseOptions(grid, 2, 2),
+        canDrag: (type, index) => !(type === 'col' && index === 0),
+      });
+
+      const locked = gripsIn(grid, GRIP_COL_ATTR)[0];
+
+      locked.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 50, clientY: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 150, clientY: 0 }));
+
+      expect(show).toHaveBeenCalledWith(locked, 'tools.table.columnLockedByMerge', expect.anything());
+    });
+
+    it('shows no explanation for a click on a locked grip', () => {
+      const show = vi.spyOn(tooltip, 'show').mockImplementation(() => undefined);
+
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        ...baseOptions(grid, 2, 2),
+        canDrag: () => false,
+      });
+
+      const locked = gripsIn(grid, GRIP_ROW_ATTR)[0];
+
+      locked.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 0, clientY: 20 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 0, clientY: 20 }));
+
+      expect(show).not.toHaveBeenCalled();
     });
 
     it('leaves every grip draggable when no canDrag predicate is supplied', () => {

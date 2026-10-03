@@ -101,6 +101,8 @@
   "tools.table.cellColor": "צבע",
   "tools.table.mergeCells": "מזג תאים",
   "tools.table.splitCell": "פצל תא",
+  "tools.table.rowLockedByMerge": "פצל את התאים הממוזגים כדי להזיז שורה זו",
+  "tools.table.columnLockedByMerge": "פצל את התאים הממוזגים כדי להזיז עמודה זו",
   "tools.table.headerColumn": "עמודת כותרת",
   "tools.table.insertColumnLeft": "הוסף עמודה משמאל",
   "tools.table.insertColumnRight": "הוסף עמודה מימין",

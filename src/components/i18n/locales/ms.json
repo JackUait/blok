@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Warna",
   "tools.table.mergeCells": "Gabungkan sel",
   "tools.table.splitCell": "Pisahkan sel",
+  "tools.table.rowLockedByMerge": "Pisahkan sel yang digabungkan untuk mengalihkan baris ini",
+  "tools.table.columnLockedByMerge": "Pisahkan sel yang digabungkan untuk mengalihkan lajur ini",
   "tools.table.headerColumn": "Lajur pengepala",
   "tools.table.insertColumnLeft": "Sisip lajur ke kiri",
   "tools.table.insertColumnRight": "Sisip lajur ke kanan",

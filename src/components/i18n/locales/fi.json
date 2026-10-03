@@ -125,6 +125,8 @@
   "tools.table.cellColor": "Väri",
   "tools.table.mergeCells": "Yhdistä solut",
   "tools.table.splitCell": "Jaa solu",
+  "tools.table.rowLockedByMerge": "Jaa yhdistetyt solut siirtääksesi tämän rivin",
+  "tools.table.columnLockedByMerge": "Jaa yhdistetyt solut siirtääksesi tämän sarakkeen",
   "tools.table.headerColumn": "Otsikkosarake",
   "tools.table.insertColumnLeft": "Lisää sarake vasemmalle",
   "tools.table.insertColumnRight": "Lisää sarake oikealle",

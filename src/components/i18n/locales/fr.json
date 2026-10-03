@@ -125,6 +125,8 @@
   "tools.table.cellColor": "Couleur",
   "tools.table.mergeCells": "Fusionner les cellules",
   "tools.table.splitCell": "Diviser la cellule",
+  "tools.table.rowLockedByMerge": "Diviser les cellules fusionnées pour déplacer cette ligne",
+  "tools.table.columnLockedByMerge": "Diviser les cellules fusionnées pour déplacer cette colonne",
   "tools.table.headerColumn": "Colonne d’en-tête",
   "tools.table.insertColumnLeft": "Insérer une colonne à gauche",
   "tools.table.insertColumnRight": "Insérer une colonne à droite",

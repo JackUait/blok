@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Farbe",
   "tools.table.mergeCells": "Zellen verbinden",
   "tools.table.splitCell": "Zelle teilen",
+  "tools.table.rowLockedByMerge": "Verbundene Zellen teilen, um diese Zeile zu verschieben",
+  "tools.table.columnLockedByMerge": "Verbundene Zellen teilen, um diese Spalte zu verschieben",
   "tools.table.headerColumn": "Kopfspalte",
   "tools.table.insertColumnLeft": "Spalte links einfügen",
   "tools.table.insertColumnRight": "Spalte rechts einfügen",

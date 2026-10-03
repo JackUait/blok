@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Barva",
   "tools.table.mergeCells": "Združi celice",
   "tools.table.splitCell": "Razdeli celico",
+  "tools.table.rowLockedByMerge": "Razdelite združene celice, da premaknete to vrstico",
+  "tools.table.columnLockedByMerge": "Razdelite združene celice, da premaknete ta stolpec",
   "tools.table.headerColumn": "Stolpec z glavo",
   "tools.table.insertColumnLeft": "Vstavi stolpec levo",
   "tools.table.insertColumnRight": "Vstavi stolpec desno",

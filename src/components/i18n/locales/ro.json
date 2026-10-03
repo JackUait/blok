@@ -125,6 +125,8 @@
   "tools.table.cellColor": "Culoare",
   "tools.table.mergeCells": "Îmbină celulele",
   "tools.table.splitCell": "Scindează celula",
+  "tools.table.rowLockedByMerge": "Scindați celulele îmbinate pentru a muta acest rând",
+  "tools.table.columnLockedByMerge": "Scindați celulele îmbinate pentru a muta această coloană",
   "tools.table.headerColumn": "Coloană antet",
   "tools.table.insertColumnLeft": "Inserează coloană la stânga",
   "tools.table.insertColumnRight": "Inserează coloană la dreapta",

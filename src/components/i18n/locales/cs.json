@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Barva",
   "tools.table.mergeCells": "Sloučit buňky",
   "tools.table.splitCell": "Rozdělit buňku",
+  "tools.table.rowLockedByMerge": "Chcete-li přesunout tento řádek, rozdělte sloučené buňky",
+  "tools.table.columnLockedByMerge": "Chcete-li přesunout tento sloupec, rozdělte sloučené buňky",
   "tools.table.headerColumn": "Sloupec záhlaví",
   "tools.table.insertColumnLeft": "Vložit sloupec vlevo",
   "tools.table.insertColumnRight": "Vložit sloupec vpravo",

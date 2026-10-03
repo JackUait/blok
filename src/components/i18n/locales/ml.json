@@ -99,6 +99,8 @@
   "tools.table.cellColor": "നിറം",
   "tools.table.mergeCells": "സെല്ലുകൾ ലയിപ്പിക്കുക",
   "tools.table.splitCell": "സെല്ല് വിഭജിക്കുക",
+  "tools.table.rowLockedByMerge": "ഈ വരി നീക്കാൻ ലയിപ്പിച്ച സെല്ലുകൾ വിഭജിക്കുക",
+  "tools.table.columnLockedByMerge": "ഈ കോളം നീക്കാൻ ലയിപ്പിച്ച സെല്ലുകൾ വിഭജിക്കുക",
   "tools.table.headerColumn": "ഹെഡർ കോളം",
   "tools.table.insertColumnLeft": "ഇടതുവശത്ത് കോളം ചേർക്കുക",
   "tools.table.insertColumnRight": "വലതുവശത്ത് കോളം ചേർക്കുക",

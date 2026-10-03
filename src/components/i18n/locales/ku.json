@@ -101,6 +101,8 @@
   "tools.table.cellColor": "ڕەنگ",
   "tools.table.mergeCells": "یەکخستنی خانەکان",
   "tools.table.splitCell": "جیاکردنەوەی خانە",
+  "tools.table.rowLockedByMerge": "خانە یەکخراوەکان جیا بکەرەوە بۆ گواستنەوەی ئەم ڕیزە",
+  "tools.table.columnLockedByMerge": "خانە یەکخراوەکان جیا بکەرەوە بۆ گواستنەوەی ئەم ستوونە",
   "tools.table.headerColumn": "ستوونی سەرپەڕە",
   "tools.table.insertColumnLeft": "زیادکردنی ستوون لە چەپ",
   "tools.table.insertColumnRight": "زیادکردنی ستوون لە ڕاست",

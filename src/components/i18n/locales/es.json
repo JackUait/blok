@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Color",
   "tools.table.mergeCells": "Combinar celdas",
   "tools.table.splitCell": "Dividir celda",
+  "tools.table.rowLockedByMerge": "Divide las celdas combinadas para mover esta fila",
+  "tools.table.columnLockedByMerge": "Divide las celdas combinadas para mover esta columna",
   "tools.table.headerColumn": "Columna de encabezado",
   "tools.table.insertColumnLeft": "Insertar columna a la izquierda",
   "tools.table.insertColumnRight": "Insertar columna a la derecha",

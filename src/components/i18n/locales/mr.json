@@ -134,6 +134,8 @@
   "tools.table.cellColor": "रंग",
   "tools.table.mergeCells": "सेल विलीन करा",
   "tools.table.splitCell": "सेल विभाजित करा",
+  "tools.table.rowLockedByMerge": "ही पंक्ती हलवण्यासाठी विलीन केलेले सेल विभाजित करा",
+  "tools.table.columnLockedByMerge": "हा स्तंभ हलवण्यासाठी विलीन केलेले सेल विभाजित करा",
   "tools.table.headerColumn": "हेडर स्तंभ",
   "tools.table.insertColumnLeft": "डावीकडे स्तंभ घाला",
   "tools.table.insertColumnRight": "उजवीकडे स्तंभ घाला",

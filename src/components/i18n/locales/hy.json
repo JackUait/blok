@@ -125,6 +125,8 @@
   "tools.table.cellColor": "Գույն",
   "tools.table.mergeCells": "Միավորել բջիջները",
   "tools.table.splitCell": "Բաժանել բջիջը",
+  "tools.table.rowLockedByMerge": "Բաժանեք միավորված բջիջները՝ այս տողը տեղափոխելու համար",
+  "tools.table.columnLockedByMerge": "Բաժանեք միավորված բջիջները՝ այս սյունակը տեղափոխելու համար",
   "tools.table.headerColumn": "Վերնագրի սյունակ",
   "tools.table.insertColumnLeft": "Ավելացնել սյունակ ձախից",
   "tools.table.insertColumnRight": "Ավելացնել սյունակ աջից",

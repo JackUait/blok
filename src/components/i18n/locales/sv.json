@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Färg",
   "tools.table.mergeCells": "Slå ihop celler",
   "tools.table.splitCell": "Dela cell",
+  "tools.table.rowLockedByMerge": "Dela ihopslagna celler för att flytta den här raden",
+  "tools.table.columnLockedByMerge": "Dela ihopslagna celler för att flytta den här kolumnen",
   "tools.table.headerColumn": "Rubrikkolumn",
   "tools.table.insertColumnLeft": "Infoga kolumn till vänster",
   "tools.table.insertColumnRight": "Infoga kolumn till höger",

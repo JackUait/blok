@@ -125,6 +125,8 @@
   "tools.table.cellColor": "Колір",
   "tools.table.mergeCells": "Об'єднати клітинки",
   "tools.table.splitCell": "Розділити клітинку",
+  "tools.table.rowLockedByMerge": "Розділіть об'єднані клітинки, щоб перемістити цей рядок",
+  "tools.table.columnLockedByMerge": "Розділіть об'єднані клітинки, щоб перемістити цю колонку",
   "tools.table.headerColumn": "Колонка-заголовок",
   "tools.table.insertColumnLeft": "Вставити колонку зліва",
   "tools.table.insertColumnRight": "Вставити колонку справа",

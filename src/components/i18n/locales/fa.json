@@ -125,6 +125,8 @@
   "tools.table.cellColor": "رنگ",
   "tools.table.mergeCells": "ادغام سلول‌ها",
   "tools.table.splitCell": "تقسیم سلول",
+  "tools.table.rowLockedByMerge": "برای جابه‌جایی این سطر، سلول‌های ادغام‌شده را تقسیم کنید",
+  "tools.table.columnLockedByMerge": "برای جابه‌جایی این ستون، سلول‌های ادغام‌شده را تقسیم کنید",
   "tools.table.headerColumn": "ستون سرآیند",
   "tools.table.insertColumnLeft": "درج ستون چپ",
   "tools.table.insertColumnRight": "درج ستون راست",

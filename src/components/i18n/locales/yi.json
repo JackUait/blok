@@ -101,6 +101,8 @@
   "tools.table.cellColor": "קאָליר",
   "tools.table.mergeCells": "פֿאַראייניקן צעלן",
   "tools.table.splitCell": "צעטיילן צעל",
+  "tools.table.rowLockedByMerge": "צעטייל די פֿאַראייניקטע צעלן כדי צו באַוועגן די דאָזיקע רײ",
+  "tools.table.columnLockedByMerge": "צעטייל די פֿאַראייניקטע צעלן כדי צו באַוועגן דעם דאָזיקן שפּאַלט",
   "tools.table.headerColumn": "קעפּל שפּאַלט",
   "tools.table.insertColumnLeft": "אַרײַנשטעלן שפּאַלט לינקס",
   "tools.table.insertColumnRight": "אַרײַנשטעלן שפּאַלט רעכטס",

@@ -123,6 +123,8 @@
   "tools.table.cellColor": "রঙ",
   "tools.table.mergeCells": "সেল একত্রিত করুন",
   "tools.table.splitCell": "সেল বিভক্ত করুন",
+  "tools.table.rowLockedByMerge": "এই সারি সরাতে একত্রিত সেলগুলো বিভক্ত করুন",
+  "tools.table.columnLockedByMerge": "এই কলাম সরাতে একত্রিত সেলগুলো বিভক্ত করুন",
   "tools.table.headerColumn": "শিরোনাম কলাম",
   "tools.table.insertColumnLeft": "বামে কলাম ঢোকান",
   "tools.table.insertColumnRight": "ডানে কলাম ঢোকান",

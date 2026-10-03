@@ -103,6 +103,8 @@
   "tools.table.cellColor": "Color",
   "tools.table.mergeCells": "Merge cells",
   "tools.table.splitCell": "Split cell",
+  "tools.table.rowLockedByMerge": "Split merged cells to move this row",
+  "tools.table.columnLockedByMerge": "Split merged cells to move this column",
   "tools.table.headerColumn": "Header column",
   "tools.table.insertColumnLeft": "Insert column left",
   "tools.table.insertColumnRight": "Insert column right",

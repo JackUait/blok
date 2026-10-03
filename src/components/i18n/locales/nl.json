@@ -125,6 +125,8 @@
   "tools.table.cellColor": "Kleur",
   "tools.table.mergeCells": "Cellen samenvoegen",
   "tools.table.splitCell": "Cel splitsen",
+  "tools.table.rowLockedByMerge": "Splits samengevoegde cellen om deze rij te verplaatsen",
+  "tools.table.columnLockedByMerge": "Splits samengevoegde cellen om deze kolom te verplaatsen",
   "tools.table.headerColumn": "Koptekstkolom",
   "tools.table.insertColumnLeft": "Kolom links invoegen",
   "tools.table.insertColumnRight": "Kolom rechts invoegen",

@@ -125,6 +125,8 @@
   "tools.table.cellColor": "颜色",
   "tools.table.mergeCells": "合并单元格",
   "tools.table.splitCell": "拆分单元格",
+  "tools.table.rowLockedByMerge": "拆分合并单元格后即可移动此行",
+  "tools.table.columnLockedByMerge": "拆分合并单元格后即可移动此列",
   "tools.table.headerColumn": "标题列",
   "tools.table.insertColumnLeft": "在左侧插入列",
   "tools.table.insertColumnRight": "在右侧插入列",

@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Kolor",
   "tools.table.mergeCells": "Scal komórki",
   "tools.table.splitCell": "Podziel komórkę",
+  "tools.table.rowLockedByMerge": "Podziel scalone komórki, aby przenieść ten wiersz",
+  "tools.table.columnLockedByMerge": "Podziel scalone komórki, aby przenieść tę kolumnę",
   "tools.table.headerColumn": "Kolumna nagłówkowa",
   "tools.table.insertColumnLeft": "Wstaw kolumnę z lewej",
   "tools.table.insertColumnRight": "Wstaw kolumnę z prawej",

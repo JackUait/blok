@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types/api';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { getElementDirection } from '../../components/utils/direction';
+import { hide as hideTooltip, show as showTooltip } from '../../components/utils/tooltip';
 import { twMerge } from '../../components/utils/tw';
 
 import type { CellColorMode } from './table-cell-color-picker';
@@ -144,6 +145,7 @@ export class TableRowColControls {
 
   private drag: TableRowColDrag;
   private canDrag: ((type: 'row' | 'col', index: number) => boolean) | undefined;
+  private isRejectionTooltipShown = false;
 
   private boundMouseOver: (e: MouseEvent) => void;
   private boundMouseLeave: (e: MouseEvent) => void;
@@ -175,6 +177,7 @@ export class TableRowColControls {
       },
       canDrag: options.canDrag,
       canDrop: options.canDrop,
+      onDragRejected: (type, index) => this.explainDragRejected(type, index),
     });
 
     this.boundMouseOver = this.handleMouseOver.bind(this);
@@ -492,13 +495,12 @@ export class TableRowColControls {
         : `${this.i18n.t('blockSettings.dragToMove')}. ${this.i18n.t('blockSettings.clickToOpenMenu')}`
     );
 
-    // A row/column locked inside a merge cannot be reordered. Mark it so the
-    // drag affordance reads as disabled (not-allowed cursor) rather than
-    // inviting a drag that would snap back with no explanation. The grip still
-    // opens its menu on click — insert/delete remain valid there.
+    // A row/column locked inside a merge cannot be reordered, but the grip
+    // still opens its menu. A grab cursor would promise a drag; a not-allowed
+    // one reads as broken. A drag attempt gets a tooltip saying why instead.
     if (isDragLocked) {
       grip.setAttribute(GRIP_DRAG_DISABLED_ATTR, '');
-      grip.style.cursor = 'not-allowed';
+      grip.style.cursor = 'pointer';
     }
 
     const idleWidth = type === 'col' ? COL_PILL_WIDTH : ROW_PILL_WIDTH;
@@ -993,10 +995,33 @@ export class TableRowColControls {
     void this.drag
       .beginTracking(detected.type, detected.index, e.clientX, e.clientY)
       .then(wasDrag => {
+        if (this.isRejectionTooltipShown) {
+          this.isRejectionTooltipShown = false;
+          hideTooltip();
+        }
+
         if (!wasDrag) {
           this.openPopover(detected.type, detected.index);
         }
       });
+  }
+
+  private explainDragRejected(type: 'row' | 'col', index: number): void {
+    const grip = type === 'col' ? this.colGrips[index] : this.rowGrips[index];
+
+    if (grip === undefined) {
+      return;
+    }
+
+    // Row grips sit at the inline start, so the tip goes outside the table.
+    const rowPlacement = getElementDirection(this.grid) === 'rtl' ? 'right' : 'left';
+
+    this.isRejectionTooltipShown = true;
+    showTooltip(
+      grip,
+      this.i18n.t(type === 'col' ? 'tools.table.columnLockedByMerge' : 'tools.table.rowLockedByMerge'),
+      { placement: type === 'col' ? 'top' : rowPlacement }
+    );
   }
 
   private detectGripType(grip: HTMLElement): { type: 'row' | 'col'; index: number } | null {

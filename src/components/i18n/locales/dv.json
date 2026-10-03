@@ -125,6 +125,8 @@
   "tools.table.cellColor": "ކުލަ",
   "tools.table.mergeCells": "ސެލްތައް އެއްކޮށްލާ",
   "tools.table.splitCell": "ސެލް ވަކިކުރޭ",
+  "tools.table.rowLockedByMerge": "މި ރޯ ހިއްލަން އެއްކުރި ސެލްތައް ވަކިކުރޭ",
+  "tools.table.columnLockedByMerge": "މި ކޮލަމް ހިއްލަން އެއްކުރި ސެލްތައް ވަކިކުރޭ",
   "tools.table.headerColumn": "ހެޑަރ ކޮލަމް",
   "tools.table.insertColumnLeft": "ވާތުން ކޮލަމް އިތުރުކުރޭ",
   "tools.table.insertColumnRight": "ކަނާތުން ކޮލަމް އިތުރުކުރޭ",

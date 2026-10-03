@@ -123,6 +123,8 @@
   "tools.table.cellColor": "ਰੰਗ",
   "tools.table.mergeCells": "ਸੈੱਲ ਮਿਲਾਓ",
   "tools.table.splitCell": "ਸੈੱਲ ਵੰਡੋ",
+  "tools.table.rowLockedByMerge": "ਇਸ ਕਤਾਰ ਨੂੰ ਹਿਲਾਉਣ ਲਈ ਮਿਲਾਏ ਸੈੱਲ ਵੰਡੋ",
+  "tools.table.columnLockedByMerge": "ਇਸ ਕਾਲਮ ਨੂੰ ਹਿਲਾਉਣ ਲਈ ਮਿਲਾਏ ਸੈੱਲ ਵੰਡੋ",
   "tools.table.headerColumn": "ਹੈਡਰ ਕਾਲਮ",
   "tools.table.insertColumnLeft": "ਖੱਬੇ ਕਾਲਮ ਜੋੜੋ",
   "tools.table.insertColumnRight": "ਸੱਜੇ ਕਾਲਮ ਜੋੜੋ",

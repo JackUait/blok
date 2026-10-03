@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Värv",
   "tools.table.mergeCells": "Ühenda lahtrid",
   "tools.table.splitCell": "Tükelda lahter",
+  "tools.table.rowLockedByMerge": "Selle rea teisaldamiseks tükelda ühendatud lahtrid",
+  "tools.table.columnLockedByMerge": "Selle veeru teisaldamiseks tükelda ühendatud lahtrid",
   "tools.table.headerColumn": "Päiseveerg",
   "tools.table.insertColumnLeft": "Lisa veerg vasakule",
   "tools.table.insertColumnRight": "Lisa veerg paremale",

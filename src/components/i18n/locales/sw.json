@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Rangi",
   "tools.table.mergeCells": "Unganisha seli",
   "tools.table.splitCell": "Gawanya seli",
+  "tools.table.rowLockedByMerge": "Gawanya seli zilizounganishwa ili kuhamisha safu mlalo hii",
+  "tools.table.columnLockedByMerge": "Gawanya seli zilizounganishwa ili kuhamisha safu wima hii",
   "tools.table.headerColumn": "Safu wima ya kichwa",
   "tools.table.insertColumnLeft": "Ingiza safu wima kushoto",
   "tools.table.insertColumnRight": "Ingiza safu wima kulia",

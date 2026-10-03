@@ -125,6 +125,8 @@
   "tools.table.cellColor": "ფერი",
   "tools.table.mergeCells": "უჯრედების გაერთიანება",
   "tools.table.splitCell": "უჯრედის გაყოფა",
+  "tools.table.rowLockedByMerge": "ამ სტრიქონის გადასატანად გაყავით გაერთიანებული უჯრედები",
+  "tools.table.columnLockedByMerge": "ამ სვეტის გადასატანად გაყავით გაერთიანებული უჯრედები",
   "tools.table.headerColumn": "სათაურის სვეტი",
   "tools.table.insertColumnLeft": "სვეტის დამატება მარცხნივ",
   "tools.table.insertColumnRight": "სვეტის დამატება მარჯვნივ",

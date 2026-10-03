@@ -123,6 +123,8 @@
   "tools.table.cellColor": "రంగు",
   "tools.table.mergeCells": "సెల్‌లను విలీనం చేయి",
   "tools.table.splitCell": "సెల్‌ను విభజించు",
+  "tools.table.rowLockedByMerge": "ఈ వరుసను తరలించడానికి విలీనం చేసిన సెల్‌లను విభజించండి",
+  "tools.table.columnLockedByMerge": "ఈ స్తంభాన్ని తరలించడానికి విలీనం చేసిన సెల్‌లను విభజించండి",
   "tools.table.headerColumn": "శీర్ష స్తంభం",
   "tools.table.insertColumnLeft": "ఎడమవైపు స్తంభం చొప్పించు",
   "tools.table.insertColumnRight": "కుడివైపు స్తంభం చొప్పించు",

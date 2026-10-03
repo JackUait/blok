@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Цвет",
   "tools.table.mergeCells": "Объединить ячейки",
   "tools.table.splitCell": "Разделить ячейку",
+  "tools.table.rowLockedByMerge": "Разделите объединённые ячейки, чтобы переместить эту строку",
+  "tools.table.columnLockedByMerge": "Разделите объединённые ячейки, чтобы переместить этот столбец",
   "tools.table.headerColumn": "Столбец заголовков",
   "tools.table.insertColumnLeft": "Вставить столбец слева",
   "tools.table.insertColumnRight": "Вставить столбец справа",

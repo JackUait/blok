@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Ngjyra",
   "tools.table.mergeCells": "Bashko qelizat",
   "tools.table.splitCell": "Ndaj qelizën",
+  "tools.table.rowLockedByMerge": "Ndaj qelizat e bashkuara për ta zhvendosur këtë rresht",
+  "tools.table.columnLockedByMerge": "Ndaj qelizat e bashkuara për ta zhvendosur këtë kolonë",
   "tools.table.headerColumn": "Kolona e kokës",
   "tools.table.insertColumnLeft": "Shto kolonë majtas",
   "tools.table.insertColumnRight": "Shto kolonë djathtas",

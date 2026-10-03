@@ -101,6 +101,8 @@
   "tools.table.cellColor": "Colore",
   "tools.table.mergeCells": "Unisci celle",
   "tools.table.splitCell": "Dividi cella",
+  "tools.table.rowLockedByMerge": "Dividi le celle unite per spostare questa riga",
+  "tools.table.columnLockedByMerge": "Dividi le celle unite per spostare questa colonna",
   "tools.table.headerColumn": "Colonna d’intestazione",
   "tools.table.insertColumnLeft": "Inserisci colonna a sinistra",
   "tools.table.insertColumnRight": "Inserisci colonna a destra",

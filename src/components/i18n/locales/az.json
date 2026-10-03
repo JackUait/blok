@@ -99,6 +99,8 @@
   "tools.table.cellColor": "Rəng",
   "tools.table.mergeCells": "Xanaları birləşdir",
   "tools.table.splitCell": "Xananı böl",
+  "tools.table.rowLockedByMerge": "Bu sətri köçürmək üçün birləşdirilmiş xanaları bölün",
+  "tools.table.columnLockedByMerge": "Bu sütunu köçürmək üçün birləşdirilmiş xanaları bölün",
   "tools.table.headerColumn": "Başlıq sütunu",
   "tools.table.insertColumnLeft": "Soldan sütun əlavə et",
   "tools.table.insertColumnRight": "Sağdan sütun əlavə et",

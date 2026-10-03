@@ -125,6 +125,8 @@
   "tools.table.cellColor": "Χρώμα",
   "tools.table.mergeCells": "Συγχώνευση κελιών",
   "tools.table.splitCell": "Διαίρεση κελιού",
+  "tools.table.rowLockedByMerge": "Διαιρέστε τα συγχωνευμένα κελιά για να μετακινήσετε αυτή τη γραμμή",
+  "tools.table.columnLockedByMerge": "Διαιρέστε τα συγχωνευμένα κελιά για να μετακινήσετε αυτή τη στήλη",
   "tools.table.headerColumn": "Στήλη επικεφαλίδας",
   "tools.table.insertColumnLeft": "Εισαγωγή στήλης αριστερά",
   "tools.table.insertColumnRight": "Εισαγωγή στήλης δεξιά",

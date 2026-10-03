@@ -101,6 +101,8 @@
   "tools.table.cellColor": "رەڭ",
   "tools.table.mergeCells": "كاتەكچىلەرنى بىرلەشتۈرۈش",
   "tools.table.splitCell": "كاتەكچىنى بۆلۈش",
+  "tools.table.rowLockedByMerge": "بۇ قۇرنى يۆتكەش ئۈچۈن بىرلەشتۈرۈلگەن كاتەكچىلەرنى بۆلۈڭ",
+  "tools.table.columnLockedByMerge": "بۇ ئىستوننى يۆتكەش ئۈچۈن بىرلەشتۈرۈلگەن كاتەكچىلەرنى بۆلۈڭ",
   "tools.table.headerColumn": "ماۋزۇ ئىستونى",
   "tools.table.insertColumnLeft": "سولغا ئىستون قىستۇرۇش",
   "tools.table.insertColumnRight": "ئوڭغا ئىستون قىستۇرۇش",

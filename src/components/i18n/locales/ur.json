@@ -125,6 +125,8 @@
   "tools.table.cellColor": "رنگ",
   "tools.table.mergeCells": "خانے ضم کریں",
   "tools.table.splitCell": "خانہ تقسیم کریں",
+  "tools.table.rowLockedByMerge": "اس قطار کو منتقل کرنے کے لیے ضم شدہ خانے تقسیم کریں",
+  "tools.table.columnLockedByMerge": "اس کالم کو منتقل کرنے کے لیے ضم شدہ خانے تقسیم کریں",
   "tools.table.headerColumn": "ہیڈر کالم",
   "tools.table.insertColumnLeft": "بائیں کالم شامل کریں",
   "tools.table.insertColumnRight": "دائیں کالم شامل کریں",

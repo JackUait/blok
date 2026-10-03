@@ -123,6 +123,8 @@
   "tools.table.cellColor": "Boja",
   "tools.table.mergeCells": "Spoji ćelije",
   "tools.table.splitCell": "Razdvoji ćeliju",
+  "tools.table.rowLockedByMerge": "Razdvojite spojene ćelije da biste premjestili ovaj red",
+  "tools.table.columnLockedByMerge": "Razdvojite spojene ćelije da biste premjestili ovu kolonu",
   "tools.table.headerColumn": "Kolona zaglavlja",
   "tools.table.insertColumnLeft": "Umetni kolonu lijevo",
   "tools.table.insertColumnRight": "Umetni kolonu desno",

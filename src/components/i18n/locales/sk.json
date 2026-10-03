@@ -125,6 +125,8 @@
   "tools.table.cellColor": "Farba",
   "tools.table.mergeCells": "Zlúčiť bunky",
   "tools.table.splitCell": "Rozdeliť bunku",
+  "tools.table.rowLockedByMerge": "Ak chcete presunúť tento riadok, rozdeľte zlúčené bunky",
+  "tools.table.columnLockedByMerge": "Ak chcete presunúť tento stĺpec, rozdeľte zlúčené bunky",
   "tools.table.headerColumn": "Stĺpec hlavičky",
   "tools.table.insertColumnLeft": "Vložiť stĺpec vľavo",
   "tools.table.insertColumnRight": "Vložiť stĺpec vpravo",

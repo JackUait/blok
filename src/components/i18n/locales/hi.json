@@ -125,6 +125,8 @@
   "tools.table.cellColor": "रंग",
   "tools.table.mergeCells": "सेल मिलाएं",
   "tools.table.splitCell": "सेल विभाजित करें",
+  "tools.table.rowLockedByMerge": "इस पंक्ति को खिसकाने के लिए मिलाए गए सेल विभाजित करें",
+  "tools.table.columnLockedByMerge": "इस स्तंभ को खिसकाने के लिए मिलाए गए सेल विभाजित करें",
   "tools.table.headerColumn": "हेडर कॉलम",
   "tools.table.insertColumnLeft": "बाईं ओर स्तंभ जोड़ें",
   "tools.table.insertColumnRight": "दाईं ओर स्तंभ जोड़ें",

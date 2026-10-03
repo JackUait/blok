@@ -101,6 +101,8 @@
   "tools.table.cellColor": "رنګ",
   "tools.table.mergeCells": "حجرې یوځای کړئ",
   "tools.table.splitCell": "حجره ووېشئ",
+  "tools.table.rowLockedByMerge": "د دې قطار د خوځولو لپاره یوځای شوې حجرې ووېشئ",
+  "tools.table.columnLockedByMerge": "د دې کالم د خوځولو لپاره یوځای شوې حجرې ووېشئ",
   "tools.table.headerColumn": "د سرلیک کالم",
   "tools.table.insertColumnLeft": "کیڼ لوري ته کالم دننه کړئ",
   "tools.table.insertColumnRight": "ښي لوري ته کالم دننه کړئ",

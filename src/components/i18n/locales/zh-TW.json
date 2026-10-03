@@ -103,6 +103,8 @@
   "tools.table.cellColor": "顏色",
   "tools.table.mergeCells": "合併儲存格",
   "tools.table.splitCell": "分割儲存格",
+  "tools.table.rowLockedByMerge": "分割合併的儲存格後即可移動此列",
+  "tools.table.columnLockedByMerge": "分割合併的儲存格後即可移動此欄",
   "tools.table.headerColumn": "標題欄",
   "tools.table.insertColumnLeft": "在左側插入欄",
   "tools.table.insertColumnRight": "在右側插入欄",

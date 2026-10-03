@@ -99,6 +99,8 @@
   "tools.table.cellColor": "အရောင်",
   "tools.table.mergeCells": "ဆဲလ်များ ပေါင်းစည်းရန်",
   "tools.table.splitCell": "ဆဲလ် ခွဲရန်",
+  "tools.table.rowLockedByMerge": "ဤတန်းကို ရွှေ့ရန် ပေါင်းစည်းထားသော ဆဲလ်များကို ခွဲပါ",
+  "tools.table.columnLockedByMerge": "ဤကော်လံကို ရွှေ့ရန် ပေါင်းစည်းထားသော ဆဲလ်များကို ခွဲပါ",
   "tools.table.headerColumn": "ခေါင်းစဉ်ကော်လံ",
   "tools.table.insertColumnLeft": "ဘယ်ဘက်တွင် ကော်လံထည့်ရန်",
   "tools.table.insertColumnRight": "ညာဘက်တွင် ကော်လံထည့်ရန်",

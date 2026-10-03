@@ -101,6 +101,8 @@
   "tools.table.cellColor": "カラー",
   "tools.table.mergeCells": "セルの結合",
   "tools.table.splitCell": "セルの分割",
+  "tools.table.rowLockedByMerge": "この行を移動するには、結合されたセルを分割してください",
+  "tools.table.columnLockedByMerge": "この列を移動するには、結合されたセルを分割してください",
   "tools.table.headerColumn": "見出し列",
   "tools.table.insertColumnLeft": "左に列を挿入",
   "tools.table.insertColumnRight": "右に列を挿入",

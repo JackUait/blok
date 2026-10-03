@@ -101,6 +101,8 @@
   "tools.table.cellColor": "رنگ",
   "tools.table.mergeCells": "سيلن کي ملايو",
   "tools.table.splitCell": "سيل ورهايو",
+  "tools.table.rowLockedByMerge": "هن قطار کي منتقل ڪرڻ لاءِ مليل سيل ورهايو",
+  "tools.table.columnLockedByMerge": "هن ڪالم کي منتقل ڪرڻ لاءِ مليل سيل ورهايو",
   "tools.table.headerColumn": "هيڊر ڪالم",
   "tools.table.insertColumnLeft": "کاٻي ڪالم شامل ڪريو",
   "tools.table.insertColumnRight": "ساڄي ڪالم شامل ڪريو",

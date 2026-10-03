@@ -99,6 +99,8 @@
   "tools.table.cellColor": "நிறம்",
   "tools.table.mergeCells": "கலங்களை ஒன்றிணை",
   "tools.table.splitCell": "கலத்தைப் பிரி",
+  "tools.table.rowLockedByMerge": "இந்த வரிசையை நகர்த்த ஒன்றிணைக்கப்பட்ட கலங்களைப் பிரிக்கவும்",
+  "tools.table.columnLockedByMerge": "இந்த நெடுவரிசையை நகர்த்த ஒன்றிணைக்கப்பட்ட கலங்களைப் பிரிக்கவும்",
   "tools.table.headerColumn": "தலைப்பு நெடுவரிசை",
   "tools.table.insertColumnLeft": "இடப்புறத்தில் நெடுவரிசையைச் செருகு",
   "tools.table.insertColumnRight": "வலப்புறத்தில் நெடுவரிசையைச் செருகு",

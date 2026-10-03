@@ -182,6 +182,12 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
     type: (s: string): void => {
       doc.getText('t').insert(doc.getText('t').length, s);
     },
+    /** Deletes the last `count` characters. */
+    erase: (count: number): void => {
+      const text = doc.getText('t');
+
+      text.delete(text.length - count, count);
+    },
     /** Typing that reaches the Y.Doc only on the next flush, like BlockWriteBuffer. */
     typeBuffered: (s: string): void => {
       buffered += s;
@@ -214,6 +220,14 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
         updateListeners.add(l);
 
         return () => updateListeners.delete(l);
+      },
+      /** Every update, remote ones included, like the real one. */
+      onAnyDocUpdate: (l: (u: Uint8Array, origin: unknown) => void) => {
+        const current = doc;
+
+        current.on('update', l);
+
+        return () => current.off('update', l);
       },
       encodeStateAsUpdate: (stateVector?: Uint8Array) => {
         land();

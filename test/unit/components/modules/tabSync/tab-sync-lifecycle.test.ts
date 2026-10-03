@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TabSync } from '../../../../../src/components/modules/tabSync';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import { expandPersistenceConfig } from '../../../../../src/components/utils/persistence';
+import { resolveTabKey } from '../../../../../src/components/modules/tabSync/identity';
+import type { TabMessage } from '../../../../../src/components/modules/tabSync/messages';
 import type { TabChannel } from '../../../../../src/components/modules/tabSync/platform';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
@@ -18,6 +20,8 @@ interface Tab { sync: TabSync; fake: FakeBlok; config: BlokConfig }
 const CONTEXT = { loadedFromPersistence: true, isEmpty: false };
 
 const apiStub = {} as unknown as API;
+
+const KEY = resolveTabKey({ documentId: 'doc', recordId: null, idSource: 'host', hasSaved: false, isEmpty: false, pathname: '/' }) ?? 'missing-key';
 
 const flush = async (): Promise<void> => {
   await vi.runAllTimersAsync();
@@ -249,6 +253,62 @@ describe('TabSync — page lifecycle and restart', () => {
 
       expect(b.sync.role).toBe('solo');
       expect(b.fake.YjsManager.resetForRelineage).toHaveBeenCalledTimes(1);
+      a.sync.destroy();
+      b.sync.destroy();
+    });
+
+    it('a woken leader that missed nothing stays clean', async () => {
+      const a = await started({ recordId: 'A' });
+      const b = await started({ recordId: 'B' });
+      const seen: TabMessage[] = [];
+
+      await a.sync.resync();
+      await flush();
+      a.sync.flushBeforeUnload();
+      expect(a.fake.ModificationsObserver.flushNow).not.toHaveBeenCalled();
+
+      platform.channel(KEY)?.onMessage((message) => seen.push(message));
+      await a.sync.resync();
+      await flush();
+
+      expect(seen.map((message) => message.kind)).toContain('saved');
+      a.sync.destroy();
+      b.sync.destroy();
+    });
+
+    it('a woken leader that took a delete-only diff saves it on unload', async () => {
+      const a = makeTab(platform, { documentId: 'doc', recordId: 'A' });
+      const own: { channel: TabChannel | null } = { channel: null };
+
+      a.sync.setPlatform({
+        ...platform,
+        channel: (key) => {
+          own.channel = platform.channel(key);
+
+          return own.channel;
+        },
+      });
+      await a.sync.start(CONTEXT);
+      a.fake.type('abc');
+      const b = await started({ recordId: 'B' });
+
+      if (own.channel === null) {
+        throw new Error('no channel');
+      }
+      expect(b.fake.text()).toBe('abc');
+      a.config.onSave?.({ blocks: [] }, apiStub);
+      await flush();
+      platform.pauseInbound(own.channel);
+      b.fake.erase(1);
+      await flush();
+      platform.resumeInbound(own.channel);
+      await a.sync.resync();
+      await flush();
+      expect(a.fake.text()).toBe('ab');
+
+      a.sync.flushBeforeUnload();
+
+      expect(a.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
       a.sync.destroy();
       b.sync.destroy();
     });

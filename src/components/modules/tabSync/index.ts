@@ -526,19 +526,29 @@ export class TabSync extends Module {
    * @param message - a diff against this tab's state vector
    */
   private onDiffState(message: Extract<TabMessage, { kind: 'state' }>): void {
+    const { YjsManager } = this.Blok;
+    // Yjs emits no update for a diff with nothing new. Every follower answers
+    // a wake hello, so most diffs are empty and must not mark the leader dirty.
+    const applied = { changed: false };
+    const unsubscribe = YjsManager.onAnyDocUpdate((_update, origin) => {
+      applied.changed ||= origin === this.origin;
+    });
+
     try {
-      this.Blok.YjsManager.applyRemoteUpdate(message.update, this.origin);
+      YjsManager.applyRemoteUpdate(message.update, this.origin);
     } catch (error) {
       this.fail('Tab sync could not catch up with the other tabs; this tab works on its own.', error);
 
       return;
+    } finally {
+      unsubscribe();
     }
     // Only from the leader: a follower's version may be stale. A frozen
     // follower missed every `saved` meanwhile.
     if (this.currentRole === 'follower') {
       this.leaderId = message.from;
       persistenceVersionAccess(this.config.persistence)?.set(message.version);
-    } else {
+    } else if (applied.changed) {
       // The followers' edits in it are unsaved until this leader saves.
       this.dirtySinceSaved = true;
     }

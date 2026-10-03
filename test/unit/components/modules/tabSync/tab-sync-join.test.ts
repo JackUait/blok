@@ -406,4 +406,185 @@ describe('TabSync — roles, leader lock and join', () => {
     expect(at('TabSync')).toBeGreaterThan(at('ModificationsObserver'));
     expect(at('TabSync')).toBeLessThan(at('YjsManager'));
   });
+
+  describe('fix round 1', () => {
+    it('a joiner keeps a follower edit that reaches it before the answer', async () => {
+      const platform = createFakePlatform();
+      const a = await startTab(platform, { recordId: 'A', seed: 'base' });
+      const f = await startTab(platform, { recordId: 'F' });
+
+      await settle();
+      expect(f.fake.text()).toBe('base');
+
+      // F types right after B's hello leaves, so A answers before it sees 'u'.
+      const typeAfterHello: TabPlatform = {
+        ...platform,
+        channel: (key) => {
+          const channel = platform.channel(key);
+
+          return channel === null ? null : {
+            ...channel,
+            post: (message) => {
+              channel.post(message);
+              if (message.kind === 'hello') {
+                f.fake.type('u');
+              }
+            },
+          };
+        },
+      };
+      const b = makeTab(typeAfterHello, { recordId: 'B' });
+
+      await b.sync.start(CONTEXT);
+      await settle();
+
+      expect(a.fake.text()).toBe('baseu');
+      expect(b.sync.role).toBe('follower');
+      expect(b.fake.text()).toBe('baseu');
+
+      f.fake.type('v');
+      await settle();
+      expect(b.fake.text()).toBe('baseuv');
+    });
+
+    it('a joiner with typing still in its write buffer keeps it and stays solo', async () => {
+      const platform = createFakePlatform();
+
+      await startTab(platform, { recordId: 'A', seed: 'leader' });
+      const b = makeTab(platform, { recordId: 'B' });
+      const started = b.sync.start(CONTEXT);
+
+      b.fake.typeBuffered('x');
+      await started;
+      await settle();
+
+      expect(b.sync.role).toBe('solo');
+      expect(b.fake.text()).toBe('x');
+      expect(b.fake.YjsManager.resetForRelineage).not.toHaveBeenCalled();
+    });
+
+    it('a held update that fails to apply drops the joiner to solo and frees its place in line', async () => {
+      const platform = createFakePlatform();
+      const a = await startTab(platform, { recordId: 'A', seed: 'one' });
+      const b = makeTab(platform, { recordId: 'B' });
+      const gate: { open: () => void } = { open: () => undefined };
+      const apply = b.fake.YjsManager.applyRemoteUpdate.getMockImplementation();
+
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      b.fake.BlockManager.clear.mockImplementationOnce(() => new Promise<void>((resolve) => {
+        gate.open = resolve;
+      }));
+      b.fake.YjsManager.applyRemoteUpdate.mockImplementation((update: Uint8Array, origin: unknown) => {
+        if (b.fake.YjsManager.applyRemoteUpdate.mock.calls.length > 1) {
+          throw new Error('bad update');
+        }
+        apply?.(update, origin);
+      });
+      await b.sync.start(CONTEXT);
+      await settle();
+      a.fake.type(' two');
+      await settle();
+      gate.open();
+      await settle();
+
+      expect(b.sync.role).toBe('solo');
+      a.sync.destroy();
+      await settle();
+      expect(platform.holders.size).toBe(0);
+    });
+
+    it('a read-only leader hands the lock to an editable follower', async () => {
+      const platform = createFakePlatform();
+      const a = await startTab(platform, { recordId: 'A' });
+      const b = await startTab(platform, { recordId: 'B' });
+
+      await settle();
+      a.fake.ReadOnly.isEnabled = true;
+      a.sync.toggleReadOnly(true);
+      await settle();
+
+      expect(a.sync.role).toBe('follower');
+      expect(b.sync.role).toBe('leader');
+
+      a.fake.ReadOnly.isEnabled = false;
+      a.sync.toggleReadOnly(false);
+      b.sync.destroy();
+      await settle();
+      expect(a.sync.role).toBe('leader');
+    });
+
+    it('a read-only follower that becomes editable queues to lead', async () => {
+      const platform = createFakePlatform();
+      const a = await startTab(platform, { recordId: 'A' });
+      const b = await startTab(platform, { recordId: 'B', readOnly: true });
+
+      await settle();
+      b.fake.ReadOnly.isEnabled = false;
+      b.sync.toggleReadOnly(false);
+      a.sync.destroy();
+      await settle();
+
+      expect(b.sync.role).toBe('leader');
+    });
+
+    it('a solo tab that becomes editable tries to lead', async () => {
+      const platform = createFakePlatform();
+      const squatter = await squat(platform);
+      const b = await startTab(platform, { recordId: 'B', readOnly: true });
+
+      await vi.advanceTimersByTimeAsync(JOIN_TIMEOUT_MS);
+      expect(b.sync.role).toBe('solo');
+
+      squatter.release();
+      b.fake.ReadOnly.isEnabled = false;
+      b.sync.toggleReadOnly(false);
+      await settle();
+
+      expect(b.sync.role).toBe('leader');
+    });
+
+    it('a follower promoted after its document changed leaves instead of leading', async () => {
+      const platform = createFakePlatform();
+      const a = await startTab(platform, { recordId: 'A' });
+      const b = await startTab(platform, { recordId: 'B' });
+
+      await settle();
+      b.fake.Saver.adoptDocumentRecordId('another-document');
+      a.sync.destroy();
+      await settle();
+
+      expect(b.sync.role).toBe('solo');
+      expect(platform.holders.size).toBe(0);
+    });
+
+    it('destroy during adopt leaves the observer off and the document alone', async () => {
+      const platform = createFakePlatform();
+
+      await startTab(platform, { recordId: 'A', seed: 'leader' });
+      const b = makeTab(platform, { recordId: 'B' });
+      const gate: { open: () => void } = { open: () => undefined };
+
+      b.fake.BlockManager.clear.mockImplementationOnce(() => new Promise<void>((resolve) => {
+        gate.open = resolve;
+      }));
+      await b.sync.start(CONTEXT);
+      await settle();
+      b.sync.destroy();
+      gate.open();
+      await settle();
+
+      expect(b.fake.ModificationsObserver.disable).toHaveBeenCalledTimes(1);
+      expect(b.fake.ModificationsObserver.enable).not.toHaveBeenCalled();
+      expect(b.fake.YjsManager.resetForRelineage).not.toHaveBeenCalled();
+    });
+
+    it('leaving tab sync labels incoming changes as remote again', async () => {
+      const platform = createFakePlatform();
+      const a = await startTab(platform, { recordId: 'A' });
+
+      a.sync.destroy();
+
+      expect(a.fake.BlockManager.setRemoteOriginLabel).toHaveBeenLastCalledWith('remote');
+    });
+  });
 });

@@ -63,6 +63,8 @@ export class TabSync extends Module {
   /** True once this tab adopted a leader's document. Task 14 resyncs those by diff. */
   private joined = false;
 
+  private destroyed = false;
+
   /**
    * @param options - module options
    * @param options.config - Blok configuration
@@ -149,8 +151,41 @@ export class TabSync extends Module {
   }
 
   public destroy(): void {
+    this.destroyed = true;
     this.teardown();
     this.setRole('solo');
+  }
+
+  /**
+   * Called by the ReadOnly module on every read-only change. A read-only tab
+   * never leads: it would save nothing for the editable tabs.
+   * @param readOnly - the new read-only state
+   */
+  public toggleReadOnly(readOnly: boolean): void {
+    const session = this.session;
+
+    if (session === null) {
+      return;
+    }
+
+    if (readOnly) {
+      if (this.currentRole === 'leader' || this.currentRole === 'follower') {
+        this.cancelQueue(session);
+        this.setRole('follower');
+      }
+
+      return;
+    }
+
+    if (this.currentRole === 'follower' && this.queueAbort === null) {
+      this.queueForLock(session);
+    } else if (this.currentRole === 'solo' && !this.entering) {
+      // Lead if nobody does; otherwise join, which keeps a tab with edits solo.
+      this.enter().catch((error: unknown) => {
+        log('Tab sync could not rejoin; this tab works on its own.', 'debug', error);
+        this.leave();
+      });
+    }
   }
 
   /** Off with `tabSync: false` and with `collaboration`, whose server already syncs tabs. */
@@ -224,11 +259,15 @@ export class TabSync extends Module {
    * @param session - the live session
    */
   private join(session: Session): void {
+    // Held from the hello on: the leader may answer before it sees another
+    // follower's edit, and that edit is never sent again.
+    this.heldUpdates = [];
     this.setRole('joining');
     this.post({ kind: 'hello', from: this.id, stateVector: null });
     this.joinTimer = setTimeout(() => {
       this.joinTimer = null;
       if (this.session === session && this.currentRole === 'joining') {
+        this.heldUpdates = null;
         this.setRole('solo');
       }
     }, JOIN_TIMEOUT_MS);
@@ -340,9 +379,13 @@ export class TabSync extends Module {
     const session = this.session;
 
     this.clearJoinTimer();
+    // Lands buffered typing while still subscribed, so it counts as an edit
+    // here instead of vanishing into the Y.Doc the reset throws away.
+    this.Blok.YjsManager.flushPendingBlockWrites();
 
     // Open tabs win only over a tab that has not been edited yet.
     if (session === null || this.editedSinceStart) {
+      this.heldUpdates = null;
       this.setRole('solo');
 
       return;
@@ -350,25 +393,22 @@ export class TabSync extends Module {
 
     try {
       await this.adopt(message.update);
+      if (this.session !== session) {
+        return;
+      }
+      this.Blok.Saver.adoptDocumentRecordId(message.recordId);
+      session.recordId = message.recordId;
+      persistenceVersionAccess(this.config.persistence)?.set(message.version);
+      this.joined = true;
+      this.setRole('follower');
+      // Before the held updates: one of them can throw.
+      this.queueForLock(session);
+      this.flushHeldUpdates();
     } catch (error) {
       log('Tab sync could not take the other tab\'s document; this tab works on its own.', 'warn', error);
       this.leave();
       this.editedSinceStart = true;
-
-      return;
     }
-
-    if (this.session !== session) {
-      return;
-    }
-
-    this.Blok.Saver.adoptDocumentRecordId(message.recordId);
-    session.recordId = message.recordId;
-    persistenceVersionAccess(this.config.persistence)?.set(message.version);
-    this.joined = true;
-    this.setRole('follower');
-    this.flushHeldUpdates();
-    this.queueForLock(session);
   }
 
   /**
@@ -378,9 +418,8 @@ export class TabSync extends Module {
   private async adopt(update: Uint8Array): Promise<void> {
     const { BlockManager, ModificationsObserver, YjsManager } = this.Blok;
 
-    this.heldUpdates = [];
-    // Stop listening BEFORE the reset: resetForRelineage flushes the write
-    // buffer into the dying Y.Doc, and that flush is not a local edit.
+    // onJoinState already flushed the write buffer; unsubscribing keeps the
+    // reset's own bookkeeping from counting as a local edit.
     this.unsubscribeOutbound?.();
     this.unsubscribeOutbound = null;
     ModificationsObserver.disable();
@@ -389,11 +428,18 @@ export class TabSync extends Module {
       // touching the document, swap to a fresh Y.Doc, then let the leader's
       // state materialise through the ordinary remote path.
       await BlockManager.clear(false, { skipYjsSync: true });
+      // Left or destroyed during the clear: the document is no longer ours to swap.
+      if (this.session === null) {
+        return;
+      }
       YjsManager.resetForRelineage();
       YjsManager.applyRemoteUpdate(update, this.origin);
     } finally {
       ModificationsObserver.discardPendingChanges();
-      ModificationsObserver.enable();
+      // After destroy the observer is torn down too; enabling would re-attach it.
+      if (!this.destroyed) {
+        ModificationsObserver.enable();
+      }
       if (this.session !== null) {
         this.subscribeOutbound();
       }
@@ -421,12 +467,26 @@ export class TabSync extends Module {
 
     this.queueAbort = abort;
     session.lock.queue(abort.signal).then(() => {
-      if (this.session === session && this.currentRole === 'follower') {
+      if (this.queueAbort === abort) {
+        this.queueAbort = null;
+      }
+      // isSameDocument() leaves when the host swapped the document meanwhile.
+      if (this.session === session && this.currentRole === 'follower' && this.isSameDocument()) {
         this.setRole('leader');
       }
     }, () => {
       // Aborted or released by teardown.
     });
+  }
+
+  /**
+   * Gives up the lock, held or waited for. The lock object is reusable after.
+   * @param session - the live session
+   */
+  private cancelQueue(session: Session): void {
+    this.queueAbort?.abort();
+    this.queueAbort = null;
+    session.lock.release();
   }
 
   /**
@@ -473,6 +533,9 @@ export class TabSync extends Module {
     this.unlisten = null;
     session?.lock.release();
     session?.channel.close();
+    if (session !== null) {
+      this.Blok.BlockManager.setRemoteOriginLabel('remote');
+    }
   }
 
   private clearJoinTimer(): void {

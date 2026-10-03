@@ -135,6 +135,14 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
   const remoteOrigins = new Set<unknown>();
   let recordId = options.recordId ?? 'rec-1';
   let minted = options.minted ?? false;
+  // Typing still in the block write buffer, not yet in the Y.Doc.
+  let buffered = '';
+  const land = (): void => {
+    if (buffered !== '') {
+      doc.getText('t').insert(doc.getText('t').length, buffered);
+      buffered = '';
+    }
+  };
 
   const bind = (): void => {
     doc.on('update', (u: Uint8Array, origin: unknown) => {
@@ -151,8 +159,13 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
     type: (s: string): void => {
       doc.getText('t').insert(doc.getText('t').length, s);
     },
+    /** Typing that reaches the Y.Doc only on the next flush, like BlockWriteBuffer. */
+    typeBuffered: (s: string): void => {
+      buffered += s;
+    },
     YjsManager: {
       applyRemoteUpdate: vi.fn((u: Uint8Array, origin: unknown) => {
+        land();
         remoteOrigins.add(origin);
         Y.applyUpdate(doc, u, origin);
       }),
@@ -162,8 +175,9 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
         return () => updateListeners.delete(l);
       },
       encodeStateAsUpdate: () => Y.encodeStateAsUpdate(doc),
-      flushPendingBlockWrites: vi.fn(),
+      flushPendingBlockWrites: vi.fn(land),
       resetForRelineage: vi.fn(() => {
+        land();
         doc.destroy();
         doc = new Y.Doc();
         bind();

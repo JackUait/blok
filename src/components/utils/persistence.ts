@@ -169,6 +169,21 @@ type UnsavedWorkRegistrar = (isDirty: () => boolean) => () => void;
  */
 const registrars = new WeakMap<ExpandedPersistence, UnsavedWorkRegistrar>();
 
+/** How tab sync reads and moves an editor's document version. */
+export interface PersistenceVersionAccess {
+  get(): string | null;
+  set(version: string | null): void;
+  /** Called after each successful save with the version the endpoint reported (or the one it kept). */
+  onSaved(listener: (version: string | null) => void): () => void;
+}
+
+/**
+ * Keyed by the same handle as the pump. A follower tab must take over the
+ * version its leader saved, or the next `If-Match` it sends as leader names a
+ * version the store has already moved past.
+ */
+const versionAccess = new WeakMap<ExpandedPersistence, PersistenceVersionAccess>();
+
 const noop = (): void => undefined;
 
 /**
@@ -194,6 +209,14 @@ export function registerUnsavedWork(
   const register = owner === undefined ? undefined : registrars.get(owner);
 
   return register === undefined ? noop : register(isDirty);
+}
+
+/**
+ * The version handle of an editor's save queue, or `null` without `persistence`.
+ * @param owner - the editor's expanded `persistence` block, if it has one
+ */
+export function persistenceVersionAccess(owner: ExpandedPersistence | undefined): PersistenceVersionAccess | null {
+  return owner === undefined ? null : versionAccess.get(owner) ?? null;
 }
 
 /**
@@ -436,6 +459,22 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     }
   };
 
+  const savedListeners = new Set<(version: string | null) => void>();
+
+  /**
+   * Runs outside the save's try block: a throwing listener there would read as
+   * a rejected save and write the document again.
+   */
+  const notifySaved = (): void => {
+    for (const listener of savedListeners) {
+      try {
+        listener(queue.version);
+      } catch (error: unknown) {
+        log('A save listener threw. The save itself landed.', 'warn', error);
+      }
+    }
+  };
+
   const attemptSave = async (payload: PendingSave, attempt: number): Promise<void> => {
     if (queue.released) {
       return;
@@ -510,6 +549,8 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     if (queue.released) {
       return;
     }
+
+    notifySaved();
 
     // A newer payload is already queued, and IT is the live document: the one
     // that just landed may have dropped a URL the newer one still names — an
@@ -609,6 +650,20 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     // fires up to 2s after the editor is gone, and `released` is only read once
     // the timer resolves.
     queue.cancelBackoff?.();
+  });
+
+  versionAccess.set(expanded, {
+    get: () => queue.version,
+    set: (version) => {
+      queue.version = version;
+    },
+    onSaved: (listener) => {
+      savedListeners.add(listener);
+
+      return () => {
+        savedListeners.delete(listener);
+      };
+    },
   });
 
   pumps.set(expanded, (data: OutputData): void => {

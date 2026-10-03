@@ -417,6 +417,21 @@ describe('TabSync — the leader follows the tab the user works in', () => {
     expect(b.save).toHaveBeenCalledTimes(1);
   });
 
+  it('a claimant waiting for the old leader keeps its own edits, and drops them when the wait is cancelled', async () => {
+    const { a, b } = await twoTabs();
+    const endSerialization = holdSerialization(a);
+
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 100);
+    expect(b.sync.role).toBe('follower');
+    expect(lastRole(b)).toEqual(['follower', { keepPendingSave: true }]);
+
+    b.fake.ReadOnly.isEnabled = true;
+    b.sync.toggleReadOnly(true);
+    expect(lastRole(b)).toEqual(['follower']);
+    endSerialization();
+  });
+
   it('a serialization and a request both out at the deadline: one report, after both', async () => {
     const { a, b } = await twoTabs();
     const request = holdRequest(a, 'v-slow');

@@ -1209,6 +1209,8 @@ export class TabSync extends Module {
       if (message.saving) {
         // Armed before the steal, so a report that comes during it is kept.
         this.awaitingSettle = { from: message.from, timer: null, settled: false };
+        // Nobody saves until the takeover: this tab's typing meanwhile is its own.
+        this.Blok.ModificationsObserver.onRoleChanged('follower', { keepPendingSave: true });
       }
     }
     // steal() drops this tab's place in line.
@@ -1289,10 +1291,20 @@ export class TabSync extends Module {
   }
 
   private clearAwaitingSettle(): void {
-    if (this.awaitingSettle?.timer != null) {
-      clearTimeout(this.awaitingSettle.timer);
+    const waiting = this.awaitingSettle;
+
+    if (waiting === null) {
+      return;
+    }
+    if (waiting.timer !== null) {
+      clearTimeout(waiting.timer);
     }
     this.awaitingSettle = null;
+    // A cancelled takeover leaves this tab's typing to the leader. A finished
+    // one saves everything right after.
+    if (this.currentRole === 'follower') {
+      this.Blok.ModificationsObserver.onRoleChanged('follower');
+    }
   }
 
   /**

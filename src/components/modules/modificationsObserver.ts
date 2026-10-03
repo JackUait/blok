@@ -431,8 +431,9 @@ export class ModificationsObserver extends Module {
       this.batchingOnChangeQueue.set(key, event);
     }
 
-    // The leader saves for a follower, so a follower is never dirty.
-    if (this.tabRole !== 'follower') {
+    // The leader saves for a follower, so a follower is dirty only with an
+    // edit of its own it saves once it leads.
+    if (this.tabRole !== 'follower' || (this.keepsOwnEdit && event.detail.origin === 'local')) {
       this.pendingSave = true;
       this.syncUnloadGuard();
     }

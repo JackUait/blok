@@ -484,4 +484,23 @@ describe('ModificationsObserver — tab role', () => {
 
     expect(settled).toHaveBeenCalledTimes(1);
   });
+  it('a follower that keeps its own edit arms the close prompt for its local edits only, and saves them as leader', async () => {
+    const { observer, onSave, emitBlockChanged, tabSync } = setup({ role: 'follower' });
+
+    observer.onRoleChanged('follower', { keepPendingSave: true });
+    emitBlockChanged({ origin: 'tab' });
+    expect(observer.hasUnsavedChanges).toBe(false);
+
+    emitBlockChanged({ origin: 'local' });
+    expect(observer.hasUnsavedChanges).toBe(true);
+    await flushWindow();
+    expect(onSave).not.toHaveBeenCalled();
+
+    tabSync.role = 'leader';
+    observer.onRoleChanged('leader');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(observer.hasUnsavedChanges).toBe(false);
+  });
 });

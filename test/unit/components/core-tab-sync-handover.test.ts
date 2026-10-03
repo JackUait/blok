@@ -339,11 +339,12 @@ describe('Core — a demoted leader never saves', () => {
   it('a serialization that outlasts the yield is never delivered by the old leader; the new leader saves after it', async () => {
     const { leader, follower, followerActivity, store, hostSaves } = await twoStoredEditors('slow-serialization-yield');
 
-    slowNextSerialization(leader, YIELD_SAVE_WAIT_MS + 500);
+    // Ends well after the yield deadline, which runs from the claim.
+    slowNextSerialization(leader, YIELD_SAVE_WAIT_MS + 1500);
     await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
     await oneWindow();
     followerActivity.set(true);
-    await wait(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 1500);
+    await wait(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 2500);
 
     expect(follower.moduleInstances.TabSync.role).toBe('leader');
     expect(leader.moduleInstances.TabSync.role).toBe('follower');
@@ -403,5 +404,29 @@ describe('Core — a demoted leader never saves', () => {
     expect(hostSaves.leader).not.toContain('follower');
     expect(store.writes.filter((write) => write.by === 'leader')).toEqual([]);
     expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a edited');
+  }, 20_000);
+
+  it('the tab taking over keeps its own typing unsaved while it waits for the old leader, then saves it', async () => {
+    const { leader, follower, followerActivity, store } = await twoStoredEditors('claimant-typing-while-settling');
+
+    store.delayNext('leader', YIELD_SAVE_WAIT_MS + 2000);
+    await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
+    await oneWindow();
+    followerActivity.set(true);
+    await wait(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 300);
+    expect(leader.moduleInstances.TabSync.role).toBe('follower');
+    expect(follower.moduleInstances.TabSync.role).toBe('follower');
+
+    await type(follower, 'b', 'b typed while waiting');
+
+    expect(follower.moduleInstances.TabSync.role).toBe('follower');
+    expect(follower.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(true);
+
+    await wait(2500);
+
+    expect(follower.moduleInstances.TabSync.role).toBe('leader');
+    expect(store.writes.filter((write) => write.by === 'leader')).toEqual([expect.objectContaining({ ok: true })]);
+    expect(store.current().doc.blocks.find((block) => block.id === 'b')?.data.text).toBe('b typed while waiting');
+    expect(follower.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(false);
   }, 20_000);
 });

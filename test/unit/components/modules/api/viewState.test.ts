@@ -172,6 +172,26 @@ describe('ViewStateAPI', () => {
     expect(converted.id).toBe('loaded');
   });
 
+  it('reports a converted block as not created here after undo and redo', async () => {
+    const editor = await createRealEditor({
+      tools: { paragraph: Paragraph, header: Header },
+      data: { blocks: [{ id: 'loaded', type: 'paragraph', data: { text: 'x' } }] },
+    });
+
+    await editor.blocks.convert('loaded', 'header');
+    editor.history.undo();
+    await settle();
+
+    expect(editor.viewState.isCreatedHere('loaded')).toBe(false);
+    expect(editor.blocks.getById('loaded')?.name).toBe('paragraph');
+
+    editor.history.redo();
+    await settle();
+
+    expect(editor.viewState.isCreatedHere('loaded')).toBe(false);
+    expect(editor.blocks.getById('loaded')?.name).toBe('header');
+  });
+
   it('reports blocks inserted in bulk as created here', async () => {
     const editor = await createRealEditor({ data: { blocks: [{ id: 'loaded', type: 'paragraph', data: { text: 'x' } }] } });
 

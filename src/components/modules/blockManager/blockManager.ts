@@ -640,6 +640,13 @@ export class BlockManager extends Module {
    * @param origin - why it was composed
    */
   private trackCreatedHere(id: string, origin: BlockOrigin): void {
+    // Undo, redo and remote are never created here, even when they rebuild in place.
+    if (origin === 'load' || origin === 'replay') {
+      this.createdHere.delete(id);
+
+      return;
+    }
+
     // Convert reuses the old block's id, so it must win before the rebuild check.
     if (origin === 'convert') {
       this.createdHere.add(id);
@@ -647,12 +654,8 @@ export class BlockManager extends Module {
       return;
     }
 
-    // An existing id is a rebuild in place (setData fallback, replay rebuild): keep its status.
-    const isRebuild = this.repository.getBlockById(id) !== undefined;
-
-    if (origin === 'load' || (origin === 'replay' && !isRebuild)) {
-      this.createdHere.delete(id);
-    } else if (origin !== 'probe' && origin !== 'replay' && !isRebuild) {
+    // An existing id is a rebuild in place (setData fallback): keep its status.
+    if (origin !== 'probe' && this.repository.getBlockById(id) === undefined) {
       this.createdHere.add(id);
     }
   }

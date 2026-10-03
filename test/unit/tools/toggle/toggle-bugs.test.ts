@@ -10,6 +10,7 @@ import type { ToggleItemData } from '../../../../src/tools/toggle/types';
 import { Header } from '../../../../src/tools/header/index';
 import type { HeaderData } from '../../../../src/tools/header/index';
 import { buildArrow } from '../../../../src/tools/toggle/dom-builder';
+import { createMemoryViewState } from '../../../helpers/view-state';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -46,6 +47,7 @@ const makeApi = (blocks: BlocksStub = makeBlocks()): API =>
     events: makeEvents(),
     blocks,
     styles: { block: 'ce-block' },
+    viewState: createMemoryViewState(),
   } as unknown as API);
 
 const makeBlock = (id = 'toggle-1'): BlockAPI => ({ id, dispatchChange: vi.fn() } as unknown as BlockAPI);
@@ -56,12 +58,16 @@ const makeBlock = (id = 'toggle-1'): BlockAPI => ({ id, dispatchChange: vi.fn() 
 
 const createToggle = (
   data: Partial<ToggleItemData> = {},
-  opts: { readOnly?: boolean; blockId?: string; children?: unknown[] } = {}
+  opts: { readOnly?: boolean; blockId?: string; children?: unknown[]; storedOpen?: boolean } = {}
 ): { toggle: ToggleItem; api: API; blocks: BlocksStub } => {
   const children = opts.children ?? [];
   const blocks = makeBlocks(children);
   const api = makeApi(blocks);
   const blockId = opts.blockId ?? 'toggle-1';
+
+  if (opts.storedOpen !== undefined) {
+    api.viewState.set(blockId, 'open', opts.storedOpen);
+  }
 
   const toggle = new ToggleItem({
     data: { text: '', ...data },
@@ -122,15 +128,15 @@ describe('Bug 10: Toggle arrow click guard in read-only mode', () => {
     const arrow = element.querySelector('[data-blok-toggle-arrow]') as HTMLElement;
     expect(arrow).not.toBeNull();
 
-    // Toggle starts open by default (no saved isOpen, default = true).
+    // Nothing stored: starts collapsed.
     const attrBefore = element.getAttribute('data-blok-toggle-open');
-    expect(attrBefore).toBe('true');
+    expect(attrBefore).toBe('false');
 
     // After arrow click, the state MUST flip — read-only should not block expand/collapse.
     arrow.click();
     const attrAfter = element.getAttribute('data-blok-toggle-open');
 
-    expect(attrAfter).toBe('false');
+    expect(attrAfter).toBe('true');
   });
 
   it('header buildArrow DOES toggle when read-only', () => {
@@ -169,7 +175,7 @@ describe('Bug 9: Body placeholder reappears after last child block is deleted', 
     const api = makeApi(blocks);
 
     const toggle = new ToggleItem({
-      data: { text: '', isOpen: true },
+      data: { text: '' },
       config: {},
       api,
       readOnly: false,
@@ -178,6 +184,7 @@ describe('Bug 9: Body placeholder reappears after last child block is deleted', 
 
     const element = toggle.render();
     toggle.rendered();
+    toggle.expand();
 
     const placeholder = element.querySelector('[data-blok-toggle-body-placeholder]') as HTMLElement;
     expect(placeholder).not.toBeNull();
@@ -213,30 +220,28 @@ describe('Bug 9: Body placeholder reappears after last child block is deleted', 
 
 describe('Bug 6: Saved isOpen state respected in constructor', () => {
   describe('ToggleItem', () => {
-    it('uses data.isOpen=true even when readOnly=true', () => {
-      // readOnly=true would set _isOpen = !readOnly = false, but data.isOpen=true should win
+    it('ignores data.isOpen=true: open state is personal, not document data', () => {
       const { toggle } = createToggle({ isOpen: true }, { readOnly: true });
-      const element = toggle.render();
-
-      expect(element.getAttribute('data-blok-toggle-open')).toBe('true');
-    });
-
-    it('uses data.isOpen=false even when readOnly=false (edit mode)', () => {
-      // readOnly=false would set _isOpen = !readOnly = true, but data.isOpen=false should win
-      const { toggle } = createToggle({ isOpen: false }, { readOnly: false });
       const element = toggle.render();
 
       expect(element.getAttribute('data-blok-toggle-open')).toBe('false');
     });
 
-    it('falls back to open when data.isOpen is undefined (no saved state)', () => {
+    it('uses the stored personal state over data.isOpen=false', () => {
+      const { toggle } = createToggle({ isOpen: false }, { readOnly: false, storedOpen: true });
+      const element = toggle.render();
+
+      expect(element.getAttribute('data-blok-toggle-open')).toBe('true');
+    });
+
+    it('falls back to collapsed when nothing is stored, in both modes', () => {
       const { toggle: toggleEdit } = createToggle({ text: '' }, { readOnly: false });
       const elEdit = toggleEdit.render();
-      expect(elEdit.getAttribute('data-blok-toggle-open')).toBe('true');
+      expect(elEdit.getAttribute('data-blok-toggle-open')).toBe('false');
 
       const { toggle: toggleRO } = createToggle({ text: '' }, { readOnly: true });
       const elRO = toggleRO.render();
-      expect(elRO.getAttribute('data-blok-toggle-open')).toBe('true');
+      expect(elRO.getAttribute('data-blok-toggle-open')).toBe('false');
     });
   });
 
@@ -358,33 +363,31 @@ describe('Bug: onPaste() sanitizes pasted HTML before assigning to contentEl and
 
 describe('Bug 5: Toggle collapsed state persisted in save()', () => {
   describe('ToggleItem.save()', () => {
-    it('includes isOpen=true when toggle is open', () => {
+    it('never saves isOpen while the toggle is open', () => {
       const { toggle } = createToggle({ text: 'hello', isOpen: true }, { readOnly: false });
       toggle.render();
+      toggle.expand();
       const saved = toggle.save();
 
-      expect(saved.isOpen).toBe(true);
+      expect(saved).not.toHaveProperty('isOpen');
     });
 
-    it('includes isOpen reflecting current state after collapse', () => {
-      // Start open, then collapse by toggling internal state
-      const { toggle } = createToggle({ text: 'world', isOpen: true }, { readOnly: false });
+    it('never saves isOpen after a collapse', () => {
+      const { toggle } = createToggle({ text: 'world' }, { readOnly: false, storedOpen: true });
       toggle.render();
 
-      // Collapse the toggle
       toggle.collapse();
 
       const saved = toggle.save();
-      expect(saved.isOpen).toBe(false);
+      expect(saved).not.toHaveProperty('isOpen');
     });
 
-    it('saves current state when no explicit isOpen was provided in data', () => {
-      // When no isOpen in data, _isOpen = data.isOpen ?? true = true (always open by default)
+    it('saves only the text when no state was ever set', () => {
       const { toggle } = createToggle({ text: '' }, { readOnly: false });
       toggle.render();
       const saved = toggle.save();
 
-      expect(saved.isOpen).toBe(true);
+      expect(saved).toEqual({ text: '' });
     });
   });
 
@@ -428,54 +431,34 @@ describe('Bug 5: Toggle collapsed state persisted in save()', () => {
 // BUG: setData() does not update _isOpen or arrow state
 // ---------------------------------------------------------------------------
 
-describe('Bug: setData() syncs _isOpen and arrow state from new data', () => {
-  it('updates _isOpen when setData receives isOpen=false on an open toggle', () => {
-    // Start with an open toggle (isOpen: true)
-    const { toggle, blocks } = createToggle({ text: 'test', isOpen: true });
-    blocks.getChildren.mockReturnValue([]);
-    toggle.render();
-    toggle.rendered();
-
-    // setData with isOpen: false (simulates undo/redo restoring collapsed state)
-    toggle.setData({ text: 'test', isOpen: false });
-
-    // save() reads _isOpen — it should reflect the new state
-    const saved = toggle.save();
-    expect(saved.isOpen).toBe(false);
-  });
-
-  it('updates _isOpen when setData receives isOpen=true on a collapsed toggle', () => {
-    // Start with a collapsed toggle (isOpen: false)
-    const { toggle, blocks } = createToggle({ text: 'test', isOpen: false });
-    blocks.getChildren.mockReturnValue([]);
-    toggle.render();
-    toggle.rendered();
-
-    // setData with isOpen: true (simulates undo/redo restoring expanded state)
-    toggle.setData({ text: 'test', isOpen: true });
-
-    const saved = toggle.save();
-    expect(saved.isOpen).toBe(true);
-  });
-
-  it('updates the wrapper data-blok-toggle-open attribute when isOpen changes via setData', () => {
-    const { toggle, blocks } = createToggle({ text: 'test', isOpen: true });
+describe('setData() keeps the personal open state', () => {
+  it('ignores isOpen=false in setData on an open toggle', () => {
+    const { toggle, blocks } = createToggle({ text: 'test' }, { storedOpen: true });
     blocks.getChildren.mockReturnValue([]);
     const element = toggle.render();
     toggle.rendered();
 
-    // Wrapper should start as open
-    expect(element.getAttribute('data-blok-toggle-open')).toBe('true');
-
-    // setData with isOpen: false
+    // Undo/redo replays data; it must not touch the personal state.
     toggle.setData({ text: 'test', isOpen: false });
 
-    // Wrapper attribute should reflect the new state
-    expect(element.getAttribute('data-blok-toggle-open')).toBe('false');
+    expect(element.getAttribute('data-blok-toggle-open')).toBe('true');
+    expect(toggle.save()).not.toHaveProperty('isOpen');
   });
 
-  it('updates arrow aria-expanded when isOpen changes via setData', () => {
-    const { toggle, blocks } = createToggle({ text: 'test', isOpen: true });
+  it('ignores isOpen=true in setData on a collapsed toggle', () => {
+    const { toggle, blocks } = createToggle({ text: 'test' });
+    blocks.getChildren.mockReturnValue([]);
+    const element = toggle.render();
+    toggle.rendered();
+
+    toggle.setData({ text: 'test', isOpen: true });
+
+    expect(element.getAttribute('data-blok-toggle-open')).toBe('false');
+    expect(toggle.save()).not.toHaveProperty('isOpen');
+  });
+
+  it('keeps arrow aria-expanded on the personal state across setData', () => {
+    const { toggle, blocks } = createToggle({ text: 'test' }, { storedOpen: true });
     blocks.getChildren.mockReturnValue([]);
     const element = toggle.render();
     toggle.rendered();
@@ -485,25 +468,24 @@ describe('Bug: setData() syncs _isOpen and arrow state from new data', () => {
 
     toggle.setData({ text: 'test', isOpen: false });
 
-    expect(arrow.getAttribute('aria-expanded')).toBe('false');
+    expect(arrow.getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('hides children when setData changes isOpen from true to false', () => {
+  it('picks up a personal state changed while the data was replayed', () => {
     const childHolder = document.createElement('div');
     childHolder.setAttribute('data-blok-element', '');
     const child = { id: 'child-1', holder: childHolder };
 
-    const { toggle } = createToggle({ text: 'test', isOpen: true }, { children: [child] });
+    const { toggle, api } = createToggle({ text: 'test' }, { children: [child], storedOpen: true });
     toggle.render();
     toggle.rendered();
 
-    // Children should be visible (toggle starts open)
     expect(childHolder.classList.contains('hidden')).toBe(false);
 
-    // setData collapses the toggle
-    toggle.setData({ text: 'test', isOpen: false });
+    toggle.removed();
+    api.viewState.set('toggle-1', 'open', false);
+    toggle.setData({ text: 'test' });
 
-    // Children should now be hidden
     expect(childHolder.classList.contains('hidden')).toBe(true);
   });
 });
@@ -515,7 +497,7 @@ describe('Bug: setData() syncs _isOpen and arrow state from new data', () => {
 describe('Bug: handleBlockChanged hides body placeholder on block-added event', () => {
   it('hides body placeholder when a child block is added (toggle)', () => {
     // Create an open toggle with NO children — body placeholder should be visible
-    const { toggle, api, blocks } = createToggle({ text: 'test', isOpen: true });
+    const { toggle, api, blocks } = createToggle({ text: 'test' }, { storedOpen: true });
     blocks.getChildren.mockReturnValue([]);
     const element = toggle.render();
     toggle.rendered();

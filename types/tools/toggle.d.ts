@@ -10,8 +10,6 @@ import { ToolboxConfig } from './tool-settings';
 export interface ToggleData extends BlockToolData {
   /** Toggle item text content (can include HTML) */
   text: string;
-  /** Whether the toggle is open (expanded). Persisted on save so state is restored on reload. */
-  isOpen?: boolean;
   /** Block text color, a preset name such as 'red'. Absent = inherit. */
   textColor?: string;
   /** Block background color, a preset name such as 'blue'. Absent = none. */

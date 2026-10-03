@@ -292,7 +292,7 @@ function mapValue(value: NotionValue, byId: Map<string, NotionValue>): Mapped | 
     case 'numbered_list':
       return { tool: 'list', data: { text, style: 'ordered' } };
     case 'toggle':
-      return { tool: 'toggle', data: { text, isOpen: true } };
+      return { tool: 'toggle', data: { text } };
     case 'column_list':
       return { tool: 'column_list', data: {} };
     case 'column': {

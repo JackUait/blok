@@ -521,7 +521,7 @@ describe('parseNotionBlocksV3', () => {
       );
 
       expect(out).toEqual([
-        { id: 'tg', tool: 'toggle', data: { text: 'Parent', isOpen: true } },
+        { id: 'tg', tool: 'toggle', data: { text: 'Parent' } },
         { id: 'c1', tool: 'paragraph', data: { text: 'child' }, parentId: 'tg' },
       ]);
     });

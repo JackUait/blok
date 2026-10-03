@@ -68,7 +68,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -189,7 +188,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -291,7 +289,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -412,7 +409,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -494,7 +490,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -602,7 +597,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -706,7 +700,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -827,7 +820,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -929,7 +921,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -1050,7 +1041,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -1150,7 +1140,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -1258,7 +1247,6 @@ exports[`column and database placement — characterization > adds a column on t
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -3020,7 +3008,6 @@ exports[`column and database placement — characterization > appends a paragrap
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -3141,7 +3128,6 @@ exports[`column and database placement — characterization > appends a paragrap
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -3243,7 +3229,6 @@ exports[`column and database placement — characterization > appends a paragrap
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -3364,7 +3349,6 @@ exports[`column and database placement — characterization > appends a paragrap
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -3464,7 +3448,6 @@ exports[`column and database placement — characterization > appends a paragrap
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -3572,7 +3555,6 @@ exports[`column and database placement — characterization > appends a paragrap
           "t1c",
         ],
         "data": {
-          "isOpen": true,
           "text": "t1",
         },
         "id": "t1",
@@ -4165,7 +4147,6 @@ exports[`column and database placement — characterization > side-drop left of 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -4273,7 +4254,6 @@ exports[`column and database placement — characterization > side-drop left of 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -4364,7 +4344,6 @@ exports[`column and database placement — characterization > side-drop left of 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -4472,7 +4451,6 @@ exports[`column and database placement — characterization > side-drop left of 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -4560,7 +4538,6 @@ exports[`column and database placement — characterization > side-drop left of 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -4631,7 +4608,6 @@ exports[`column and database placement — characterization > side-drop left of 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -4708,7 +4684,6 @@ exports[`column and database placement — characterization > side-drop right of
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -4816,7 +4791,6 @@ exports[`column and database placement — characterization > side-drop right of
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -4907,7 +4881,6 @@ exports[`column and database placement — characterization > side-drop right of
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -5015,7 +4988,6 @@ exports[`column and database placement — characterization > side-drop right of
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -5103,7 +5075,6 @@ exports[`column and database placement — characterization > side-drop right of
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -5174,7 +5145,6 @@ exports[`column and database placement — characterization > side-drop right of
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -5269,7 +5239,6 @@ exports[`column and database placement — characterization > wraps a selection 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -5365,7 +5334,6 @@ exports[`column and database placement — characterization > wraps a selection 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -5446,7 +5414,6 @@ exports[`column and database placement — characterization > wraps a selection 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -5542,7 +5509,6 @@ exports[`column and database placement — characterization > wraps a selection 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -5601,7 +5567,6 @@ exports[`column and database placement — characterization > wraps a selection 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",
@@ -5660,7 +5625,6 @@ exports[`column and database placement — characterization > wraps a selection 
           "tc",
         ],
         "data": {
-          "isOpen": true,
           "text": "t",
         },
         "id": "t",

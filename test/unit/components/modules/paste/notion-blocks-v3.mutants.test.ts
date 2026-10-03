@@ -307,7 +307,7 @@ describe('parseNotionBlocksV3 — tables', () => {
     ]);
 
     expect(parseNotionBlocksV3(json)).toStrictEqual([
-      { id: 'tg', tool: 'toggle', data: { text: 'Group', isOpen: true } },
+      { id: 'tg', tool: 'toggle', data: { text: 'Group' } },
       {
         id: 'tb',
         tool: 'table',

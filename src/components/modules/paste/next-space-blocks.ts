@@ -279,7 +279,7 @@ function mapNode(node: NextSpaceNode): Mapped | null {
     case 38:
       return { tool: 'header', data: { text, level: data.level, isToggleable: true, isOpen: true } };
     case 6:
-      return { tool: 'toggle', data: { text, isOpen: true } };
+      return { tool: 'toggle', data: { text } };
     case 9:
       return { tool: 'divider', data: {} };
     case 12:

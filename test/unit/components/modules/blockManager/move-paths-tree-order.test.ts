@@ -12,6 +12,7 @@ import { isCollapsedToggleBlock } from '../../../../../src/components/modules/dr
 import { Callout, Column, ColumnList, Header, List, Toggle } from '../../../../../src/tools';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { OutputBlockData } from '../../../../../types';
+import { storeToggleOpenState } from '../../../../helpers/view-state';
 
 interface Runtime {
   isReady: Promise<unknown>;
@@ -57,10 +58,12 @@ const boot = async (blocks: OutputBlockData[]): Promise<Runtime> => {
   document.body.appendChild(holder);
   holders.push(holder);
 
+  storeToggleOpenState('doc', blocks);
+
   const editor = new Blok({
     holder,
     tools: { paragraph: Paragraph, toggle: Toggle, callout: Callout, header: Header, list: List, column_list: ColumnList, column: Column },
-    data: { blocks },
+    data: { id: 'doc', blocks },
   }) as unknown as Runtime;
 
   await editor.isReady;

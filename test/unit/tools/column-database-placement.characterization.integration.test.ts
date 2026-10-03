@@ -17,6 +17,7 @@ import { DatabaseTool } from '../../../src/tools/database';
 import { DatabaseRowTool } from '../../../src/tools/database-row';
 import { addColumnToList, wrapBlocksInColumns, wrapInNewColumnList } from '../../../src/tools/column-drop';
 import type { API, BlockMutationEvent, OutputBlockData, OutputData } from '../../../types';
+import { storeToggleOpenState } from '../../helpers/view-state';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -68,6 +69,8 @@ let holder: HTMLDivElement | undefined;
 let events: BlockMutationEvent[] = [];
 
 const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
+  storeToggleOpenState('doc', blocks);
+
   const instance = new Blok({
     holder,
     dataModel: 'hierarchical',
@@ -79,7 +82,7 @@ const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
       database: DatabaseTool,
       'database-row': DatabaseRowTool,
     },
-    data: { blocks },
+    data: { id: 'doc', blocks },
     onChange: (_api, event) => {
       events.push(...(Array.isArray(event) ? event : [event]));
     },

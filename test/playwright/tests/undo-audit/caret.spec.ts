@@ -227,7 +227,7 @@ test.describe('undo audit — caret, scroll, selection', () => {
       const afterUndo = await caretInfo(page);
 
       // The caret goes back into the edited block, which stays hidden in the collapsed toggle.
-      expect([afterUndo.blockId, afterUndo.offset]).toEqual(['ch', 5]);
+      expect([afterUndo.blockId, afterUndo.offset, afterUndo.anchorVisible]).toEqual(['ch', 5, false]);
     });
 
     test('undo/redo in a code block keeps the offset after newlines', async ({ page }) => {

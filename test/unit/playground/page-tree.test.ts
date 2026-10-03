@@ -53,11 +53,11 @@ describe('buildPageTree', () => {
     expect(titles(tree.children[1].children[1].children)).toEqual(['Deep']);
   });
 
-  it('puts a page with no block in its parent after the ones that have one', () => {
+  it('leaves out a page its parent has no block for, as the root forgets its pages on reload', () => {
     const pages = new PageRegistry(seed());
     const tree = buildPageTree(pages, (id) => (id === null ? [pointer('guide')] : (pages.get(id)?.blocks ?? [])));
 
-    expect(titles(tree.children)).toEqual(['Guide', 'Notes']);
+    expect(titles(tree.children)).toEqual(['Guide']);
   });
 
   it('leaves out a trashed page and everything under it', () => {
@@ -73,11 +73,11 @@ describe('buildPageTree', () => {
   it('stops at a parent cycle', () => {
     const pages = new PageRegistry({
       a: { title: 'A', parentId: null, blocks: [] },
-      b: { title: 'B', parentId: 'c', blocks: [] },
-      c: { title: 'C', parentId: 'b', blocks: [] },
+      b: { title: 'B', parentId: 'c', blocks: [pointer('c')] },
+      c: { title: 'C', parentId: 'b', blocks: [pointer('b')] },
     });
 
-    expect(titles(buildPageTree(pages, () => []).children)).toEqual(['A']);
+    expect(titles(buildPageTree(pages, (id) => (id === null ? [pointer('a')] : pages.get(id)?.blocks)).children)).toEqual(['A']);
   });
 });
 

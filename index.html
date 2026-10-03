@@ -2128,7 +2128,6 @@
       });
       updateDocumentTitle();
       alignPageHeader(pageHeader, document.getElementById('blok'));
-      pageTree?.refresh();
     }
     keepPageHeaderAligned(pageHeader, document.getElementById('blok'));
     // Capture: runs before the editor's own Backspace and ArrowUp handling.
@@ -2157,6 +2156,8 @@
       document.title = page === undefined
         ? baseDocumentTitle
         : `${page.icon ? `${page.icon} ` : ''}${page.title.trim() || 'Untitled'} · ${baseDocumentTitle}`;
+      // Every title and icon change lands here, typed or from a peer.
+      pageTree?.refresh();
     }
 
     /** The open page's title in the editor's undo history. */

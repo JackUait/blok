@@ -30,8 +30,9 @@ const pointerOrder = (blocks: OutputBlockData[]): string[] =>
 
 /**
  * Sub-pages sit in the order of their blocks in the parent, like Notion's
- * sidebar. A page with no block there (a seed page the root never linked)
- * goes last. Trashed pages drop out with their whole subtree.
+ * sidebar. A page with no block there is left out: the root document forgets
+ * its edits on reload, so its old pages stay in the registry unlinked.
+ * Trashed pages drop out with their whole subtree.
  */
 export const buildPageTree = (
   pages: PageTreeSource,
@@ -41,13 +42,11 @@ export const buildPageTree = (
 
   const grow = (parentId: string | null): PageTreeNode[] => {
     const order = pointerOrder(blocksOf(parentId) ?? []);
-    const rank = (id: string): number => (order.includes(id) ? order.indexOf(id) : order.length);
 
     return pages.children(parentId)
-      .filter((page) => page.trashed !== true && !seen.has(page.id))
-      .map((page, index) => ({ page, index }))
-      .sort((a, b) => rank(a.page.id) - rank(b.page.id) || a.index - b.index)
-      .map(({ page }) => {
+      .filter((page) => page.trashed !== true && !seen.has(page.id) && order.includes(page.id))
+      .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
+      .map((page) => {
         seen.add(page.id);
 
         return {

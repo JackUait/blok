@@ -12,7 +12,8 @@
   --pg-tree-surface: #ffffff;
   --pg-tree-line: #ebebeb;
   --pg-tree-hover: rgba(55, 53, 47, 0.06);
-  --pg-tree-current: rgba(55, 53, 47, 0.09);
+  /* Selected is no darker than hover (CLAUDE.md: no blue, hover fill at most). */
+  --pg-tree-current: var(--pg-tree-hover);
   --pg-tree-toggle-hover: rgba(55, 53, 47, 0.1);
   --pg-tree-glide: cubic-bezier(0.22, 1, 0.36, 1);
 
@@ -26,7 +27,6 @@
   --pg-tree-surface: #191919;
   --pg-tree-line: #2f2f2f;
   --pg-tree-hover: rgba(255, 255, 255, 0.06);
-  --pg-tree-current: rgba(255, 255, 255, 0.1);
   --pg-tree-toggle-hover: rgba(255, 255, 255, 0.12);
 }
 

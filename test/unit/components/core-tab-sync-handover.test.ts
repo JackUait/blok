@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { Core } from '../../../src/components/core';
 import { modificationsObserverBatchTimeout } from '../../../src/components/constants';
@@ -464,7 +465,7 @@ describe('Core — a lone leader that turns read-only keeps a save that did not 
   });
 
   /** One tab on its own store. */
-  const loneEditor = async (documentId: string, save: ReturnType<typeof vi.fn>): Promise<Core> => {
+  const loneEditor = async (documentId: string, save: Mock<() => Promise<undefined>>): Promise<Core> => {
     const core = createCore({ documentId, persistence: { load: async () => document3(), save } });
 
     await core.isReady;
@@ -475,7 +476,7 @@ describe('Core — a lone leader that turns read-only keeps a save that did not 
     return core;
   };
 
-  const savedTextOf = (save: ReturnType<typeof vi.fn>): unknown => savedText(save.mock.lastCall, 'a');
+  const savedTextOf = (save: Mock<() => Promise<undefined>>): unknown => savedText(save.mock.lastCall, 'a');
 
   it('a request that fails after the tab turned read-only keeps the edit, the close prompt, and is saved once editable', async () => {
     const save = vi.fn(async (): Promise<undefined> => undefined);

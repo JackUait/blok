@@ -55,7 +55,7 @@ describe('buildPageTree', () => {
     expect(tree.id).toBeNull();
     expect(tree.title).toBe('Blok');
     expect(titles(tree.children)).toEqual(['Notes', 'Guide']);
-    expect(titles(tree.children[1].children)).toEqual(['Untitled', 'Keys']);
+    expect(titles(tree.children[1].children)).toEqual(['New page', 'Keys']);
     expect(titles(tree.children[1].children[1].children)).toEqual(['Deep']);
   });
 
@@ -73,7 +73,7 @@ describe('buildPageTree', () => {
 
     const guide = buildPageTree(pages, blocksOf(pages)).children[1];
 
-    expect(titles(guide.children)).toEqual(['Untitled']);
+    expect(titles(guide.children)).toEqual(['New page']);
   });
 
   it('stops when pages link each other in a loop', () => {
@@ -98,7 +98,7 @@ describe('buildPageTree', () => {
     const bare: OutputBlockData = { id: 'p-bare', type: 'page', data: { pageId: 'bare' } };
     const tree = buildPageTree(pages, (id) => (id === null ? [linked, bare, pointer('notes')] : pages.get(id)?.blocks));
 
-    expect(titles(tree.children)).toEqual(['Made elsewhere', 'Untitled', 'Notes']);
+    expect(titles(tree.children)).toEqual(['Made elsewhere', 'New page', 'Notes']);
     expect(tree.children[0].icon).toBe('🧭');
   });
 
@@ -240,7 +240,7 @@ describe('mountPageTree', () => {
   });
 
   it('expands the ancestors of the open page and marks it current', () => {
-    expect(visibleTitles()).toEqual(['Blok', 'Notes', 'Guide', 'Untitled', 'Keys']);
+    expect(visibleTitles()).toEqual(['Blok', 'Notes', 'Guide', 'New page', 'Keys']);
     expect(row('Keys').getAttribute('aria-current')).toBe('page');
     expect(row('Guide').hasAttribute('aria-current')).toBe(false);
   });

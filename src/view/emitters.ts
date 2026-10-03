@@ -464,7 +464,7 @@ const emitPage = (block: ViewBlock, env: EmitterEnv): string => {
   const iconSlot = `<span${env.classList(PAGE_ICON_CLASSES)} aria-hidden="true">${glyph}</span>`;
   /** Matches the editor's placeholder; the view has no i18n layer. */
   const titleClasses = title === '' ? [...PAGE_TITLE_CLASSES, ...PAGE_TITLE_MUTED_CLASSES] : PAGE_TITLE_CLASSES;
-  const label = `<span${env.classList(titleClasses)}>${env.escape(title === '' ? 'Untitled' : title)}</span>`;
+  const label = `<span${env.classList(titleClasses)}>${env.escape(title === '' ? 'New page' : title)}</span>`;
   const cardClasses = env.classList([...PAGE_LINK_CLASSES, ...PAGE_LINK_INK_CLASSES]);
   const href = env.pageHrefAttr(block.data.pageId);
 

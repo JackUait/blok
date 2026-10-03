@@ -2159,7 +2159,7 @@
       const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
       document.title = page === undefined
         ? baseDocumentTitle
-        : `${page.icon ? `${page.icon} ` : ''}${page.title.trim() || 'Untitled'} · ${baseDocumentTitle}`;
+        : `${page.icon ? `${page.icon} ` : ''}${page.title.trim() || 'New page'} · ${baseDocumentTitle}`;
       // Every title and icon change lands here, typed or from a peer.
       pageTree?.refresh();
     }

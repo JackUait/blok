@@ -163,8 +163,8 @@ describe('blocksToMarkdown (view)', () => {
       expect(md).toBe('Before\n\nQ3 <plan> & notes');
     });
 
-    it('exports an untitled page as "Untitled", like the rendered card', () => {
-      expect(blocksToMarkdown(doc([{ type: 'page', data: { pageId: 'p1' } }]))).toBe('Untitled');
+    it('exports an untitled page as "New page", like the rendered card', () => {
+      expect(blocksToMarkdown(doc([{ type: 'page', data: { pageId: 'p1' } }]))).toBe('New page');
     });
 
     it('never exports children a malformed document hangs off a page', () => {

@@ -22,7 +22,7 @@ export interface PageTreeSource {
   get(pageId: string): PageRecord | undefined;
 }
 
-const untitled = (title: string): string => (title.trim() === '' ? 'Untitled' : title);
+const untitled = (title: string): string => (title.trim() === '' ? 'New page' : title);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);

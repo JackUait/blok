@@ -167,7 +167,7 @@
   "toolNames.quote": "인용",
   "toolNames.columns": "다단",
   "toolNames.page": "페이지",
-  "tools.page.untitled": "제목 없음",
+  "tools.page.untitled": "새 페이지",
   "tools.page.missing": "페이지를 찾을 수 없음",
   "tools.page.noAccess": "액세스 권한 없음",
   "tools.columns.col2": "2단",

@@ -723,9 +723,9 @@ describe('blocksToHtml', () => {
       expect(pageHref).toHaveBeenCalledWith('p1');
     });
 
-    it('falls back to "Untitled" when the cache has no title', () => {
-      expect(blocksToHtml(doc([page({ pageId: 'p1' })]))).toBe(`<div><span>${ICON}<span>Untitled</span></span></div>`);
-      expect(blocksToHtml(doc([page({ pageId: 'p1', cache: { title: '' } })]))).toContain('<span>Untitled</span>');
+    it('falls back to "New page" when the cache has no title', () => {
+      expect(blocksToHtml(doc([page({ pageId: 'p1' })]))).toBe(`<div><span>${ICON}<span>New page</span></span></div>`);
+      expect(blocksToHtml(doc([page({ pageId: 'p1', cache: { title: '' } })]))).toContain('<span>New page</span>');
     });
 
     it('escapes the title and the emoji', () => {
@@ -879,7 +879,7 @@ describe('blocksToHtml', () => {
       it('mutes an untitled page, like the editor', () => {
         const { title } = render({ pageId: 'p1' });
 
-        expect(title.children).toEqual([{ text: 'Untitled' }]);
+        expect(title.children).toEqual([{ text: 'New page' }]);
         expect(classesOf(title)).toEqual([...PAGE_TITLE_CLASSES, ...PAGE_TITLE_MUTED_CLASSES]);
       });
     });

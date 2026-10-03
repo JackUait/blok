@@ -40,7 +40,7 @@ export const ROOT_STORAGE_KEY = 'blok-playground-root';
 
 export type RootRecord = Pick<PageRecord, 'title' | 'icon'>;
 
-const untitled = (title: string): string => (title.trim() === '' ? 'Untitled' : title);
+const untitled = (title: string): string => (title.trim() === '' ? 'New page' : title);
 
 /** Pages deleted for good. Without it a deleted seed page returns on reload. */
 const PURGED_STORAGE_KEY = 'blok-playground-pages-purged';
@@ -719,7 +719,7 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
   title.id = PAGE_TITLE_SELECTOR.slice(1);
   title.className = 'pg-page-title';
   title.textContent = page.title;
-  title.setAttribute('data-placeholder', 'Untitled');
+  title.setAttribute('data-placeholder', 'New page');
   title.setAttribute('role', 'textbox');
   title.setAttribute('aria-label', 'Page title');
   title.spellcheck = false;

@@ -166,13 +166,13 @@ test.describe('Page block', () => {
     await expect(page.getByText('Salaries')).toHaveCount(0);
   });
 
-  test('a page without a title shows the Untitled placeholder', async ({ page }) => {
+  test('a page without a title shows the New page placeholder', async ({ page }) => {
     await createPageEditor(page, { data: pageBlock('blank') });
 
     const link = page.getByTestId('page-link');
 
     await expect(link).toHaveAttribute('data-blok-page-state', 'untitled');
-    await expect(link.getByTestId('page-title')).toHaveText('Untitled');
+    await expect(link.getByTestId('page-title')).toHaveText('New page');
   });
 
   test('inserting from the toolbox mints a page id, creates the page once and opens it once', async ({ page }) => {

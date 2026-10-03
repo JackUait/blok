@@ -45,7 +45,7 @@ describe('a foreign block saved as type "page"', () => {
     expect(JSON.stringify(texts)).not.toContain('Not a pointer');
   });
 
-  it('the shared markdown core does not write it as "Untitled"', () => {
-    expect(serializeBlocks([{ tool: 'page', data: { text: 'Own page tool' } }])).not.toContain('Untitled');
+  it('the shared markdown core does not write it as "New page"', () => {
+    expect(serializeBlocks([{ tool: 'page', data: { text: 'Own page tool' } }])).not.toContain('New page');
   });
 });

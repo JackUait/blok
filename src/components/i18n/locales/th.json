@@ -156,7 +156,7 @@
   "toolNames.quote": "ข้อความอ้างอิง",
   "toolNames.columns": "คอลัมน์",
   "toolNames.page": "หน้า",
-  "tools.page.untitled": "ไม่มีชื่อ",
+  "tools.page.untitled": "หน้าใหม่",
   "tools.page.missing": "ไม่พบหน้า",
   "tools.page.noAccess": "ไม่มีสิทธิ์เข้าถึง",
   "tools.columns.col2": "2 คอลัมน์",

@@ -156,7 +156,7 @@
   "toolNames.quote": "引用",
   "toolNames.columns": "段組み",
   "toolNames.page": "ページ",
-  "tools.page.untitled": "無題",
+  "tools.page.untitled": "新しいページ",
   "tools.page.missing": "ページが見つかりません",
   "tools.page.noAccess": "アクセス権がありません",
   "tools.columns.col2": "2列",

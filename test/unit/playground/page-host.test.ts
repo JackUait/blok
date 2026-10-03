@@ -535,12 +535,18 @@ describe('root page header', () => {
     expect(options.navigate).toHaveBeenCalledWith(null, crumb);
   });
 
-  it('an empty root title reads Untitled in paths', () => {
+  it('an empty root title reads New page in paths', () => {
     const pages = new PageRegistry(seed());
 
     pages.setTitle(null, '');
 
-    expect(pages.info('guide')?.path).toEqual(['Untitled']);
+    expect(pages.info('guide')?.path).toEqual(['New page']);
+  });
+
+  it('an empty title shows the same New page label as the path', () => {
+    const { title } = renderRootTitle();
+
+    expect(title.getAttribute('data-placeholder')).toBe('New page');
   });
 });
 

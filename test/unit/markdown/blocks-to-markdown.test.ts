@@ -112,9 +112,9 @@ describe('blocksToMarkdown', () => {
       ])).toBe('Q3 <plan> & notes');
     });
 
-    it('serializes a page with no title as "Untitled"', () => {
-      expect(blocksToMarkdown([{ tool: 'page', data: { pageId: 'p1' } }])).toBe('Untitled');
-      expect(blocksToMarkdown([{ tool: 'page', data: { pageId: 'p1', cache: { title: '' } } }])).toBe('Untitled');
+    it('serializes a page with no title as "New page"', () => {
+      expect(blocksToMarkdown([{ tool: 'page', data: { pageId: 'p1' } }])).toBe('New page');
+      expect(blocksToMarkdown([{ tool: 'page', data: { pageId: 'p1', cache: { title: '' } } }])).toBe('New page');
     });
 
     it('keeps the list-continuation indent under a list item', () => {

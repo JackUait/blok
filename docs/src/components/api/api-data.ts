@@ -667,7 +667,7 @@ const editor = new Blok(config);`,
         type: "string",
         default: "undefined",
         description:
-          "Your app's id for this document. Tabs of one browser that show the same `documentId` stay in sync live, with no server.\n\nUse the id your app already loads and saves the document by, such as a route param or a record key. It must be unique across the whole site.\n\nWithout it, Blok uses the `id` it writes into saved data, plus the page path. That only covers a document loaded through `persistence`.\n\nMount-only: to show another document, recreate the editor. The Tab sync guide covers where the id comes from.",
+          "Your app's id for this document. Tabs of one browser that show the same `documentId` stay in sync live, with no server.\n\nUse the id your app already loads and saves the document by, such as a route param or a record key. It must be unique across the whole site.\n\nWithout it, Blok uses the `id` it writes into saved data, plus the page path. That only covers a document that `persistence` loads or saves.\n\nMount-only: to show another document, recreate the editor. The Tab sync guide covers where the id comes from.",
       },
       {
         option: "tabSync",

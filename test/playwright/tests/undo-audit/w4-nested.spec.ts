@@ -279,8 +279,9 @@ test.describe('hidden and nested targets', () => {
     await expect(holder(page, 'k2')).toBeHidden();
   });
 
-  // Open/close is personal state, not an undo step: one undo reverts the edit and both toggles stay collapsed.
-  test('works: edit deep in nested toggles, collapse both, one undo reverts the edit, not the collapses', async ({ page }) => {
+  // Open/close is not an undo step: one undo reverts the edit. The caret goes back into
+  // the edited block, so undo and redo open both collapsed toggles around it.
+  test('works: edit deep in nested toggles, collapse both, one undo reverts the edit and opens both toggles', async ({ page }) => {
     await createBlok(page, [
       P('top', 'Top'),
       { id: 't', type: 'toggle', data: { text: 'Outer', isOpen: true }, content: ['t2'] },
@@ -300,10 +301,13 @@ test.describe('hidden and nested targets', () => {
     await editable(page, 'top').click();
     await undo(page);
     expect(await save(page)).toEqual(s0);
+    await expect(holder(page, 'c')).toBeVisible();
+    await page.locator('[data-blok-id="t"] [data-blok-toggle-arrow]').first().click();
     await expect(holder(page, 't2')).toBeHidden();
+    await editable(page, 'top').click();
     await redo(page);
     expect(await save(page)).toEqual(collapsed);
-    await expect(holder(page, 't2')).toBeHidden();
+    await expect(holder(page, 'c')).toBeVisible();
   });
 
   test('works: toggle > callout > list > nested list, edit and Enter undo/redo exactly', async ({ page }) => {

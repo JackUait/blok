@@ -208,8 +208,9 @@ test.describe('undo audit — caret, scroll, selection', () => {
   });
 
   test.describe('works (no other coverage)', () => {
-    // Open/close is personal state, not an undo step, so the first undo reverts the child edit.
-    test('undo after collapsing a toggle reverts the child edit, not the collapse', async ({ page }) => {
+    // Open/close is not an undo step, so the first undo reverts the child edit. The caret
+    // must not land in hidden text, so undo opens the collapsed toggle around it.
+    test('undo after collapsing a toggle reverts the child edit and opens the toggle to show the caret', async ({ page }) => {
       await createBlok(page, [
         { id: 'tg', type: 'toggle', data: { text: 'Toggle', isOpen: true }, content: ['ch'] },
         { id: 'ch', type: 'paragraph', data: { text: 'child' }, parent: 'tg' },
@@ -223,11 +224,10 @@ test.describe('undo audit — caret, scroll, selection', () => {
       await undo(page);
 
       await expect(editableOf(page, 'ch')).toHaveText('child');
-      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-id="tg"] [data-blok-toggle-arrow]`).first()).toHaveAttribute('aria-expanded', 'false');
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-id="tg"] [data-blok-toggle-arrow]`).first()).toHaveAttribute('aria-expanded', 'true');
       const afterUndo = await caretInfo(page);
 
-      // The caret goes back into the edited block, which stays hidden in the collapsed toggle.
-      expect([afterUndo.blockId, afterUndo.offset, afterUndo.anchorVisible]).toEqual(['ch', 5, false]);
+      expect([afterUndo.blockId, afterUndo.offset, afterUndo.anchorVisible]).toEqual(['ch', 5, true]);
     });
 
     test('undo/redo in a code block keeps the offset after newlines', async ({ page }) => {

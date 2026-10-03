@@ -95,6 +95,57 @@ describe('TableScrollHaze', () => {
     });
   });
 
+  describe('placement', () => {
+    /**
+     * The scroller hangs past the wrapper's content box (pill room), so the
+     * hazes must hug its real box, not the wrapper's padding.
+     */
+    const layOut = (sc: HTMLElement, box: { wrapperWidth: number; left: number; width: number }): void => {
+      Object.defineProperty(wrapper, 'clientWidth', { value: box.wrapperWidth, configurable: true });
+      Object.defineProperty(sc, 'offsetLeft', { value: box.left, configurable: true });
+      Object.defineProperty(sc, 'offsetWidth', { value: box.width, configurable: true });
+    };
+
+    it('ends the right haze at the scroller clip edge in ltr', () => {
+      const sc = createScrollContainer();
+
+      wrapper.appendChild(sc);
+      layOut(sc, { wrapperWidth: 720, left: 0, width: 708 });
+
+      const haze = new TableScrollHaze();
+
+      haze.init(wrapper, sc);
+
+      const rightHaze = wrapper.querySelector('[data-blok-table-haze="right"]') as HTMLElement;
+      const leftHaze = wrapper.querySelector('[data-blok-table-haze="left"]') as HTMLElement;
+
+      expect(rightHaze.style.right).toBe('12px');
+      expect(leftHaze.style.left).toBe('0px');
+
+      haze.destroy();
+    });
+
+    it('starts the left haze at the scroller clip edge in rtl', () => {
+      const sc = createScrollContainer();
+
+      wrapper.dir = 'rtl';
+      wrapper.appendChild(sc);
+      layOut(sc, { wrapperWidth: 720, left: 12, width: 708 });
+
+      const haze = new TableScrollHaze();
+
+      haze.init(wrapper, sc);
+
+      const rightHaze = wrapper.querySelector('[data-blok-table-haze="right"]') as HTMLElement;
+      const leftHaze = wrapper.querySelector('[data-blok-table-haze="left"]') as HTMLElement;
+
+      expect(leftHaze.style.left).toBe('12px');
+      expect(rightHaze.style.right).toBe('0px');
+
+      haze.destroy();
+    });
+  });
+
   describe('initial visibility', () => {
     it('shows right haze when content overflows at scrollLeft=0', () => {
       const sc = createScrollContainer({ scrollWidth: 800, clientWidth: 400, scrollLeft: 0 });

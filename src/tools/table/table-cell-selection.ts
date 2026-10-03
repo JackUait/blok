@@ -1331,26 +1331,10 @@ export class TableCellSelection {
     }
 
     if (this.pill) {
+      // Centre of the 2px inline-end border; translate(-50%,-50%) handles centering
       const isRtl = gridStyle.direction === 'rtl';
-      const borderRight = parseFloat(gridStyle.borderRightWidth) || 0;
-      /**
-       * At the grid's inline-end edge a centred pill hangs half outside, and the
-       * table's scroll container clips that half. There the pill's outer edge
-       * sits on the border instead, so it grows inward when hovered.
-       */
-      const atInlineEnd = isRtl
-        ? rangeLeft <= gridRect.left + borderLeft + 1
-        : rangeRight >= gridRect.right - borderRight - 1;
 
-      if (atInlineEnd) {
-        this.pill.style.left = `${isRtl ? left : left + width}px`;
-        this.pill.style.transform = isRtl ? 'translate(0, -50%)' : 'translate(-100%, -50%)';
-      } else {
-        // Centre of the 2px inline-end border
-        this.pill.style.left = `${isRtl ? left + 1 : left + width - 1}px`;
-        this.pill.style.transform = 'translate(-50%, -50%)';
-      }
-
+      this.pill.style.left = `${isRtl ? left + 1 : left + width - 1}px`;
       this.pill.style.top = `${top + height / 2}px`;
     }
   }

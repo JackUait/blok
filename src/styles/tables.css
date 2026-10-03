@@ -187,6 +187,19 @@
   border-radius: var(--blok-radius-table);
 }
 
+/*
+ * The cell pill is centred on the cell's inline-end border, so in the last
+ * column half of it hangs past the table. This room keeps the scroll box
+ * from clipping that half without narrowing the table. 8px = half the
+ * hovered pill's width (PILL_WIDTH in table-cell-selection.ts).
+ */
+[data-blok-table-scroll] {
+  --_blok-table-pill-room: 8px;
+
+  margin-inline-end: calc(-1 * var(--_blok-table-pill-room));
+  padding-inline-end: var(--_blok-table-pill-room);
+}
+
 [data-blok-table-cell][data-blok-table-corner~="top-start"] {
   border-start-start-radius: var(--blok-radius-table) calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px);
 }

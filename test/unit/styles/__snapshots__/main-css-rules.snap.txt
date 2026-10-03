@@ -3105,6 +3105,12 @@
   border-radius: var(--blok-radius-table);
 }
 
+[data-blok-table-scroll] {
+  --_blok-table-pill-room: 8px;
+  margin-inline-end: calc(-1 * var(--_blok-table-pill-room));
+  padding-inline-end: var(--_blok-table-pill-room);
+}
+
 [data-blok-table-cell][data-blok-table-corner~="top-start"] {
   border-start-start-radius: var(--blok-radius-table) calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px);
 }

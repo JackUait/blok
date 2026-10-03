@@ -924,6 +924,8 @@ describe('Page tool', () => {
 
       expect(lines.map((line) => line.textContent)).toEqual(['Goals', 'Ship fast & safe', '• First']);
       expect(lines[0].getAttribute('data-blok-preview-heading')).toBe('true');
+      // Indented past the title's left edge, like a page body under its title.
+      expect(lines.every((line) => line.classList.contains('pl-3'))).toBe(true);
       expect(preview).toHaveBeenCalledWith('p1');
       expect(document.querySelector('[data-blok-testid="page-hover-preview-content"] script, [data-blok-testid="page-hover-preview-content"] b')).toBeNull();
     });

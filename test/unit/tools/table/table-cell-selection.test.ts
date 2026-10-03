@@ -1641,6 +1641,31 @@ describe('TableCellSelection', () => {
       document.dispatchEvent(upEvent);
     };
 
+    it('keeps the selection when a column resize handle of this table is pressed', () => {
+      simulateClick(grid, 1, 1);
+
+      const handle = document.createElement('div');
+
+      handle.setAttribute('data-blok-table-resize', '');
+      grid.appendChild(handle);
+      handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(1);
+    });
+
+    it('clears the selection when another table\'s resize handle is pressed', () => {
+      simulateClick(grid, 1, 1);
+
+      const otherHandle = document.createElement('div');
+
+      otherHandle.setAttribute('data-blok-table-resize', '');
+      document.body.appendChild(otherHandle);
+      otherHandle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+      otherHandle.remove();
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+    });
+
     it('marks the clicked cell as selected', () => {
       simulateClick(grid, 1, 1);
 

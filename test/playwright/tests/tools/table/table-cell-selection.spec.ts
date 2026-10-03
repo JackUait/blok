@@ -495,6 +495,52 @@ test.describe('Cell Selection', () => {
     expect(afterBox.width).toBeCloseTo(initialBox.width + 80, 0);
   });
 
+  test('Resizing a column keeps the selected cell and its caret', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['A1', 'B1'],
+                ['A2', 'B2'],
+              ],
+              colWidths: [200, 200],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    const cell01 = getCell(page, 0, 1);
+    const clickBox = assertBoundingBox(await cell01.boundingBox(), 'cell [0,1]');
+
+    await page.mouse.click(clickBox.x + clickBox.width / 2, clickBox.y + clickBox.height / 2);
+
+    const selected = page.locator('[data-blok-table-cell-selected]');
+
+    await expect(selected).toHaveCount(1);
+
+    const resizeHandle = page.locator(`${TABLE_SELECTOR} [data-blok-table-resize]`).first();
+    const handleBox = assertBoundingBox(await resizeHandle.boundingBox(), 'resize handle');
+    const handleCenterX = handleBox.x + handleBox.width / 2;
+    const handleCenterY = handleBox.y + handleBox.height / 2;
+
+    await page.mouse.move(handleCenterX, handleCenterY);
+    await page.mouse.down();
+    await page.mouse.move(handleCenterX + 80, handleCenterY, { steps: 10 });
+    await page.mouse.up();
+
+    await expect(selected).toHaveCount(1);
+    await expect(cell01).toHaveAttribute('data-blok-table-cell-selected', /.*/);
+    await expect.poll(() => cell01.evaluate(el => el.contains(document.activeElement))).toBe(true);
+  });
+
   test('Selection persists while extending drag across more cells', async ({ page }) => {
     // Regression: dragging across more cells should keep the blue selection visible
     await create3x3TableWithContent(page);

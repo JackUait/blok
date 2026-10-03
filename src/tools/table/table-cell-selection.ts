@@ -700,6 +700,11 @@ export class TableCellSelection {
       return;
     }
 
+    // Resizing a column acts on the table, not on the selection inside it.
+    if (target instanceof HTMLElement && this.grid.contains(target) && target.closest('[data-blok-table-resize]') !== null) {
+      return;
+    }
+
     // Don't clear when clicking inside an open popover — the user may be
     // clicking a popover item whose pointerdown bubbles to the document.
     // Popovers render on document.body and carry `data-blok-popover-opened`.

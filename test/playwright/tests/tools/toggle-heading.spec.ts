@@ -670,14 +670,38 @@ test.describe('Toggle Heading', () => {
     });
 
     test('toggle heading opens from personal state in read-only mode', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Read-Only Open', 2, true)], true);
+      // The document id is the storage scope of the personal state.
+      const documentId = 'toggle-heading-read-only-personal';
+      const storageKey = `blok:view:${documentId}:h:open`;
+      const mount = async (readOnly: boolean): Promise<void> => {
+        await resetBlok(page);
+        await page.evaluate(async ({ holder, id, readOnlyMode }) => {
+          const blok = new window.Blok({
+            holder,
+            readOnly: readOnlyMode,
+            data: { id, blocks: [{ id: 'h', type: 'header', data: { text: 'Read-Only Open', level: 2, isToggleable: true } }] },
+          });
 
+          window.blokInstance = blok;
+          await blok.isReady;
+        }, { holder: HOLDER_ID, id: documentId, readOnlyMode: readOnly });
+      };
       const header = page.getByRole('heading', { level: 2, name: 'Read-Only Open' });
+
+      await mount(false);
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
+      await page.locator(TOGGLE_ARROW_SELECTOR).click();
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), storageKey)).not.toBeNull();
+
+      await page.reload();
+      await page.waitForFunction(() => typeof window.Blok === 'function');
+      await mount(true);
 
       await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
     });
 
-    test('toggle heading starts with explicit isOpen:false preserved in read-only mode', async ({ page }) => {
+    test('toggle heading ignores isOpen:false in saved data and loads collapsed in read-only mode', async ({ page }) => {
       await createBlokWithData(page, [makeToggleHeadingBlock('Read-Only Explicit Closed', 2, false)], true);
 
       const header = page.getByRole('heading', { level: 2, name: 'Read-Only Explicit Closed' });

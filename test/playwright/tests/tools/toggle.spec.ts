@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
@@ -477,6 +477,43 @@ test.describe('Toggle Tool', () => {
       const toggle = page.locator(TOGGLE_BLOCK_SELECTOR);
 
       await expect(toggle).toHaveCount(0);
+    });
+  });
+
+  test.describe('personal open state', () => {
+    test('a toggle opened here stays open after a reload, and a fresh browser sees it collapsed', async ({ page, browser }) => {
+      // The document id is the storage scope of the personal state.
+      const data: OutputData = {
+        id: 'toggle-personal-round-trip',
+        blocks: [{ id: 'rt', type: 'toggle', data: { text: 'Round trip toggle' } }],
+      };
+      const wrapper = page.locator('[data-blok-toggle-open]');
+
+      await createBlok(page, data);
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'false');
+      await page.locator(TOGGLE_ARROW_SELECTOR).click();
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect.poll(() => page.evaluate(() => localStorage.getItem('blok:view:toggle-personal-round-trip:rt:open'))).not.toBeNull();
+
+      await page.reload();
+      await page.waitForFunction(() => typeof window.Blok === 'function');
+      await createBlok(page, data);
+
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'true');
+
+      const freshContext = await browser.newContext();
+
+      try {
+        const freshPage = await freshContext.newPage();
+
+        await freshPage.goto(TEST_PAGE_URL);
+        await freshPage.waitForFunction(() => typeof window.Blok === 'function');
+        await createBlok(freshPage, data);
+
+        await expect(freshPage.locator('[data-blok-toggle-open]')).toHaveAttribute('data-blok-toggle-open', 'false');
+      } finally {
+        await freshContext.close();
+      }
     });
   });
 

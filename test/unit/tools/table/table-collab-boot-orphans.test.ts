@@ -24,6 +24,25 @@ import type { BlockToolConstructable } from '../../../../types/tools';
 
 const LINEAGE = '0123456789abcdef0123456789abcdef';
 
+/**
+ * A read-only capable tool with no `setReadOnly`. One such tool turns every
+ * read-only change into the full save/clear/render instead of the in-place
+ * toggle — what a host with any third-party tool gets.
+ */
+class PlainTool {
+  public static get isReadOnlySupported(): boolean {
+    return true;
+  }
+
+  public render(): HTMLElement {
+    return document.createElement('div');
+  }
+
+  public save(): Record<string, never> {
+    return {};
+  }
+}
+
 class MockSocket {
   public binaryType = 'blob';
   public readyState = 0;
@@ -91,13 +110,20 @@ const settle = async (): Promise<void> => {
   }
 };
 
+interface LiveClient {
+  core: Core;
+  /** Writes everything the client has sent so far into the server document. */
+  flushTo: (server: DocumentStore) => void;
+  /** Delivers a peer's update, as the server relays it. */
+  receive: (update: Uint8Array) => void;
+}
+
 /**
- * Boots an editor against a server holding `server`, waits for the veto to
- * lift and writes the client's updates back into `server`.
- * @param server - the room's document, written into by this boot
- * @returns whether the boot left an undo step behind
+ * Boots an editor against a server holding `server` and waits for the veto to
+ * lift.
+ * @param server - the room's document
  */
-const bootAgainst = async (server: DocumentStore): Promise<{ canUndo: boolean }> => {
+const bootLive = async (server: DocumentStore, options: { plainTool?: boolean } = {}): Promise<LiveClient> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -123,6 +149,7 @@ const bootAgainst = async (server: DocumentStore): Promise<{ canUndo: boolean }>
       bookmark: { class: Bookmark },
       paragraph: { class: Paragraph },
       table: { class: Table as unknown as BlockToolConstructable },
+      ...(options.plainTool === true ? { plain: { class: PlainTool as unknown as BlockToolConstructable } } : {}),
     },
     server: 'https://sync.test/api/',
     collaboration,
@@ -147,18 +174,36 @@ const bootAgainst = async (server: DocumentStore): Promise<{ canUndo: boolean }>
   await waitFor(() => !core.moduleInstances.ReadOnly.isEnabled, 'the veto to lift');
   await settle();
 
-  const canUndo = core.moduleInstances.YjsManager.canUndo();
+  let flushed = 0;
 
-  for (const bytes of socket.sent) {
-    const frame = decode(bytes);
+  return {
+    core,
+    flushTo: (target) => {
+      for (const bytes of socket.sent.slice(flushed)) {
+        const frame = decode(bytes);
 
-    if (frame.type === 'update') {
-      server.applyRemoteUpdate(frame.update);
-    }
-  }
+        if (frame.type === 'update') {
+          target.applyRemoteUpdate(frame.update);
+        }
+      }
+      flushed = socket.sent.length;
+    },
+    receive: (update) => socket.deliver({ type: 'update', update }),
+  };
+};
 
-  destroyCore(core);
-  booted.splice(booted.indexOf(core), 1);
+/**
+ * Boots an editor, writes its updates back into `server` and destroys it.
+ * @param server - the room's document, written into by this boot
+ * @returns whether the boot left an undo step behind
+ */
+const bootAgainst = async (server: DocumentStore, options: { plainTool?: boolean } = {}): Promise<{ canUndo: boolean }> => {
+  const client = await bootLive(server, options);
+  const canUndo = client.core.moduleInstances.YjsManager.canUndo();
+
+  client.flushTo(server);
+  destroyCore(client.core);
+  booted.splice(booted.indexOf(client.core), 1);
 
   return { canUndo };
 };
@@ -218,6 +263,26 @@ describe('table — collaborative boot writes its cell references', () => {
     server.destroy();
   });
 
+  it('a second boot adds no new cell blocks when a tool forces the full re-render', async () => {
+    const server = roomWith([
+      {
+        id: 'table-1',
+        type: 'table',
+        data: { withHeadings: false, content: [['A', 'B'], ['C', 'D']] },
+      },
+    ]);
+
+    await bootAgainst(server, { plainTool: true });
+    const afterFirstBoot = childrenOf(server, 'table-1');
+
+    await bootAgainst(server, { plainTool: true });
+
+    expect(childrenOf(server, 'table-1')).toEqual(afterFirstBoot);
+    expect([...referencedIds(server, 'table-1')].sort()).toEqual([...afterFirstBoot].sort());
+
+    server.destroy();
+  });
+
   it('a second boot of a table whose cells reference missing blocks adds no new cell blocks', async () => {
     const server = roomWith([
       {
@@ -235,6 +300,30 @@ describe('table — collaborative boot writes its cell references', () => {
     expect(childrenOf(server, 'table-1')).toEqual(afterFirstBoot);
     expect(referencedIds(server, 'table-1')).toEqual(expect.arrayContaining(afterFirstBoot));
 
+    server.destroy();
+  });
+
+  it('a legacy-string table arriving from a peer is synced with the cells it gets', async () => {
+    const server = roomWith([{ id: 'p-1', type: 'paragraph', data: { text: 'hi' } }]);
+    const client = await bootLive(server);
+    const peer = new DocumentStore(new YBlockSerializer());
+
+    peer.applyRemoteUpdate(server.encodeStateAsUpdate());
+    const before = peer.getStateVector();
+
+    peer.addBlockAt(
+      { id: 'table-1', type: 'table', data: { withHeadings: false, content: [['A', 'B']] } },
+      { parentId: null, afterId: 'p-1' }
+    );
+    const update = peer.encodeStateAsUpdate(before);
+
+    server.applyRemoteUpdate(update);
+    client.receive(update);
+    await settle();
+    client.flushTo(server);
+    expect([...referencedIds(server, 'table-1')].sort()).toEqual([...childrenOf(server, 'table-1')].sort());
+
+    peer.destroy();
     server.destroy();
   });
 

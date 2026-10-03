@@ -253,6 +253,39 @@ describe('TabSync — edits, adopt, wake diff and hand-off', () => {
     expect(b.fake.ModificationsObserver.flushNow).not.toHaveBeenCalled();
   });
 
+  it('a woken leader with unsaved edits does not tell followers they are saved', async () => {
+    const { a, b } = await twoTabs();
+
+    b.fake.type('x');
+    await flush();
+    await a.sync.resync();
+    await flush();
+    a.sync.destroy();
+    await flush();
+
+    expect(b.sync.role).toBe('leader');
+    expect(b.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('a joiner takes a version the leader saved while it was adopting', async () => {
+    const a = await tab({ recordId: 'A', persistence: true });
+    const b = makeTab(platform, { recordId: 'B', persistence: true });
+    const gate: { open: () => void } = { open: () => undefined };
+
+    b.fake.BlockManager.clear.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      gate.open = resolve;
+    }));
+    await b.sync.start(CONTEXT);
+    await settle();
+    a.config.onSave?.({ blocks: [] }, apiStub);
+    await flush();
+    gate.open();
+    await flush();
+
+    expect(b.sync.role).toBe('follower');
+    expect(persistenceVersionAccess(b.config.persistence)?.get()).toBe('v-next');
+  });
+
   it('followers take the version the leader saved', async () => {
     const { a, b } = await twoTabs({ persistence: true });
 

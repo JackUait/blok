@@ -74,6 +74,12 @@ export class TabSync extends Module {
   /** True from the join hello until its answer is taken; one answer per hello. */
   private waitingForState = false;
 
+  /**
+   * The leader's `saved` that came after its join answer, while this tab was
+   * still adopting. Newer than the answer's version: one sender, in order.
+   */
+  private savedDuringJoin: { version: string | null } | null = null;
+
   private destroyed = false;
 
   /**
@@ -146,8 +152,11 @@ export class TabSync extends Module {
     }
 
     if (this.currentRole === 'leader') {
-      // Lets solo tabs find this leader, and followers take its version.
-      this.postSaved();
+      // Lets solo tabs find this leader, and followers take its version. Not
+      // while dirty: `saved` tells followers their edits are saved.
+      if (!this.dirtySinceSaved) {
+        this.postSaved();
+      }
 
       return;
     }
@@ -367,6 +376,8 @@ export class TabSync extends Module {
           // A successor then saves with the right If-Match.
           persistenceVersionAccess(this.config.persistence)?.set(message.version);
           this.dirtySinceSaved = false;
+        } else if (this.currentRole === 'joining' && !this.waitingForState) {
+          this.savedDuringJoin = { version: message.version };
         } else {
           this.rejoinIfClean();
         }
@@ -484,6 +495,7 @@ export class TabSync extends Module {
     const session = this.session;
 
     this.waitingForState = false;
+    this.savedDuringJoin = null;
     // Lands typing while still subscribed, so it counts as an edit here
     // instead of vanishing into the Y.Doc the reset throws away. The join
     // timer stays on and bounds this wait.
@@ -510,7 +522,8 @@ export class TabSync extends Module {
       }
       this.Blok.Saver.adoptDocumentRecordId(message.recordId);
       session.recordId = message.recordId;
-      persistenceVersionAccess(this.config.persistence)?.set(message.version);
+      persistenceVersionAccess(this.config.persistence)?.set((this.savedDuringJoin ?? message).version);
+      this.savedDuringJoin = null;
       this.setRole('follower');
       // Before the held updates: one of them can throw.
       this.queueForLock(session);
@@ -661,6 +674,7 @@ export class TabSync extends Module {
     this.queueAbort = null;
     this.heldUpdates = null;
     this.waitingForState = false;
+    this.savedDuringJoin = null;
     this.stopSettleWait();
     this.unsubscribeOutbound?.();
     this.unsubscribeOutbound = null;

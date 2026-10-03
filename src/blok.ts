@@ -4,6 +4,8 @@ import type { BlokConfig, API, EditorWidth, Tokens, EditorI18n, I18nUpdateOption
 
 import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
+import { SettingChanged } from './components/events/SettingChanged';
+import type { SettingChangedPayload } from './components/events/SettingChanged';
 import { getBlokVersion, isObject, isFunction } from './components/utils';
 import { announce } from './components/utils/announcer';
 import { prefersReducedMotion } from './components/utils/reduced-motion';
@@ -300,6 +302,11 @@ class Blok {
      */
     type ThemeMode = Parameters<BlokModules['ThemeManager']['setMode']>[0];
 
+    // Only these setters emit: the boot config and the pre-ready replay stay silent, so tab sync never pushes them.
+    const announceSetting = (payload: SettingChangedPayload): void => {
+      (blok.moduleInstances as Partial<BlokModules>).EventsAPI?.methods.emit(SettingChanged, payload);
+    };
+
     const themeBuffer = { pendingMode: null as ThemeMode | null };
 
     const getThemeManager = (): BlokModules['ThemeManager'] | undefined =>
@@ -318,7 +325,13 @@ class Blok {
         const tm = getThemeManager();
 
         if (tm !== undefined) {
+          const changed = tm.getMode() !== mode;
+
+          // Always applied: it re-asserts the page attribute another editor may have changed.
           tm.setMode(mode);
+          if (changed) {
+            announceSetting({ setting: 'theme', value: mode });
+          }
         }
       },
       getResolved: () => {
@@ -350,7 +363,12 @@ class Blok {
       const ui = getUIModule();
 
       if (ui !== undefined) {
+        const changed = ui.getWidthMode() !== mode;
+
         ui.setWidthMode(mode);
+        if (changed) {
+          announceSetting({ setting: 'width', value: mode });
+        }
       }
     };
 

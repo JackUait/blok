@@ -963,7 +963,7 @@ describe('Page tool', () => {
       expect(preview()?.querySelector('[data-blok-testid="page-hover-preview-path"]')).toBeNull();
     });
 
-    it('stays while the pointer moves onto the card, and goes once it leaves both', async () => {
+    it('goes as soon as the pointer leaves the page block, even onto the card', async () => {
       const { root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } } });
       const link = anchorOf(root);
 
@@ -975,12 +975,19 @@ describe('Page tool', () => {
 
       link.dispatchEvent(new MouseEvent('mouseleave'));
       card?.dispatchEvent(new MouseEvent('mouseenter'));
-      vi.advanceTimersByTime(1000);
-      expect(preview()).not.toBeNull();
-
-      card?.dispatchEvent(new MouseEvent('mouseleave'));
+      expect(preview()).toBeNull();
       vi.advanceTimersByTime(1000);
       expect(preview()).toBeNull();
+    });
+
+    it('lets the pointer pass through the card, so it never holds a hover', async () => {
+      const { root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } } });
+
+      vi.useFakeTimers();
+      hoverOver(anchorOf(root));
+      vi.advanceTimersByTime(500);
+
+      expect(preview()?.style.pointerEvents).toBe('none');
     });
 
     it('never shows for a page that is missing', async () => {

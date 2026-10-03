@@ -10,9 +10,6 @@ import type { PageIcon } from './types';
 /** Notion shows its page preview about 400ms into a hover (measured). */
 const SHOW_DELAY = 400;
 
-/** Time for the pointer to cross the gap from the link onto the card. */
-const HIDE_GRACE = 250;
-
 /** Notion's page preview card width (measured). */
 const CARD_WIDTH = 260;
 
@@ -136,7 +133,6 @@ export class PageHoverPreview {
   private card: HTMLElement | null = null;
   private link: HTMLElement | null = null;
   private showTimer: ReturnType<typeof setTimeout> | null = null;
-  private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private tracker: PositionTracker | null = null;
 
   /** The page's opening content, asked for when a hover starts. */
@@ -153,7 +149,8 @@ export class PageHoverPreview {
 
   public attach(link: HTMLElement): void {
     link.addEventListener('mouseenter', () => this.queueShow(link));
-    link.addEventListener('mouseleave', () => this.queueHide());
+    // The card is not a hover target: leaving the link hides it at once.
+    link.addEventListener('mouseleave', () => this.hide());
     // Pressing the link opens or selects the page: the preview is in the way.
     link.addEventListener('mousedown', () => this.hide());
   }
@@ -182,28 +179,10 @@ export class PageHoverPreview {
     }, SHOW_DELAY);
   }
 
-  private queueHide(): void {
-    if (this.showTimer !== null) {
-      clearTimeout(this.showTimer);
-      this.showTimer = null;
-    }
-    if (this.hideTimer !== null) {
-      return;
-    }
-    this.hideTimer = setTimeout(() => {
-      this.hideTimer = null;
-      this.hide();
-    }, HIDE_GRACE);
-  }
-
   private clearTimers(): void {
     if (this.showTimer !== null) {
       clearTimeout(this.showTimer);
       this.showTimer = null;
-    }
-    if (this.hideTimer !== null) {
-      clearTimeout(this.hideTimer);
-      this.hideTimer = null;
     }
   }
 
@@ -255,8 +234,8 @@ export class PageHoverPreview {
     card.style.width = `${CARD_WIDTH}px`;
     card.style.border = 'var(--blok-border-width-hairline) solid var(--blok-popover-border, rgba(13, 20, 33, 0.12))';
     card.style.padding = '16px';
-    card.addEventListener('mouseenter', () => this.clearTimers());
-    card.addEventListener('mouseleave', () => this.queueHide());
+    // The pointer passes through, so the card can never hold a hover.
+    card.style.pointerEvents = 'none';
 
     return card;
   }

@@ -18,11 +18,6 @@ export class ViewStateAPI extends Module {
     };
   }
 
-  public setScope(scope: string | null): void {
-    this.resolveStore().setScope(scope);
-    this.currentScope = scope;
-  }
-
   public destroy(): void {
     this.store?.destroy();
     this.store = null;

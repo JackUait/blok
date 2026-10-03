@@ -640,6 +640,13 @@ export class BlockManager extends Module {
    * @param origin - why it was composed
    */
   private trackCreatedHere(id: string, origin: BlockOrigin): void {
+    // Convert reuses the old block's id, so it must win before the rebuild check.
+    if (origin === 'convert') {
+      this.createdHere.add(id);
+
+      return;
+    }
+
     // An existing id is a rebuild in place (setData fallback, replay rebuild): keep its status.
     const isRebuild = this.repository.getBlockById(id) !== undefined;
 

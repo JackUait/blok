@@ -6,6 +6,7 @@ import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
+import { Header } from '../../../../../src/tools/header';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { API, BlokConfig, OutputData } from '../../../../../types';
 
@@ -157,6 +158,18 @@ describe('ViewStateAPI', () => {
 
     expect(editor.blocks.getById(inserted.id)).not.toBeNull();
     expect(editor.viewState.isCreatedHere(inserted.id)).toBe(false);
+  });
+
+  it('reports a saved block converted here as created here', async () => {
+    const editor = await createRealEditor({
+      tools: { paragraph: Paragraph, header: Header },
+      data: { blocks: [{ id: 'loaded', type: 'paragraph', data: { text: 'x' } }] },
+    });
+
+    const converted = await editor.blocks.convert('loaded', 'header');
+
+    expect(editor.viewState.isCreatedHere(converted.id)).toBe(true);
+    expect(converted.id).toBe('loaded');
   });
 
   it('reports blocks inserted in bulk as created here', async () => {

@@ -295,8 +295,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           searchResults: this.Blok.I18n.t('a11y.searchResults'),
         },
         autoFocusFirstItem: false,
-        width: '280px',
-        minWidth: '220px',
+        // A floor, not a fixed width: a long translation plus its shortcut
+        // would otherwise be pushed past the menu edge.
+        minWidth: '280px',
         /**
          * A cursor/holder-anchored menu (context menu, Shift+F10) opens AT the
          * anchor going down/right; the dots-button menu opens to the LEFT of

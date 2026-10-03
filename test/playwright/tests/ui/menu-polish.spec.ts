@@ -135,3 +135,45 @@ test('heading controls and color submenu stay usable near the viewport edge', as
   expect(pickerBounds?.x).toBeGreaterThanOrEqual(0);
   expect((pickerBounds?.x ?? 0) + (pickerBounds?.width ?? 0)).toBeLessThanOrEqual(760);
 });
+
+// Locales whose block-menu shortcuts used to be pushed past the menu edge.
+for (const locale of ['hu', 'ta']) {
+  test(`block menu rows keep their label and shortcut inside the menu (${locale})`, async ({ page }) => {
+    await page.evaluate(async lang => {
+      await window.blokInstance?.i18n.update({ locale: lang });
+    }, locale);
+    await page.locator('[data-blok-tool="header"]').click();
+    await page.getByTestId('settings-toggler').click();
+
+    const container = page.getByTestId('block-tunes-popover').getByTestId('popover-container').first();
+
+    await expect(container).toBeVisible();
+
+    const overflow = await container.evaluate(menu => {
+      const edge = menu.getBoundingClientRect();
+
+      return [...menu.querySelectorAll<HTMLElement>('[data-blok-popover-item]')]
+        .filter(row => row.getClientRects().length > 0)
+        .flatMap(row => {
+          const box = row.getBoundingClientRect();
+          const labels = [...row.querySelectorAll<HTMLElement>('*')]
+            .filter(el => [...el.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()))
+            // Screen-reader-only labels (the heading tiles) are 1px boxes by design.
+            .filter(el => el.getBoundingClientRect().width > 1);
+
+          return labels.flatMap(label => {
+            const range = document.createRange();
+
+            range.selectNodeContents(label);
+            const text = range.getBoundingClientRect();
+
+            return text.right > Math.min(box.right, edge.right) + 0.01 || text.left < Math.max(box.left, edge.left) - 0.01
+              ? [label.textContent ?? '']
+              : [];
+          });
+        });
+    });
+
+    expect(overflow).toStrictEqual([]);
+  });
+}

@@ -1719,10 +1719,22 @@ export class PopoverDesktop extends PopoverAbstract {
 
     container.className = twMerge(container.className, popoverCss.popoverContainerOpened);
 
+    // The clone's host is 0px wide, so an auto container would shrink to its
+    // min-content width. A tiled item grid collapses there, and the measured
+    // width ends up narrower than the longest row.
+    // Placement reads this size, so it must include the minWidth floor that
+    // show() applies to --width.
+    if (this.params.width === undefined || this.params.width === 'auto') {
+      popoverClone.style.setProperty('--width', 'max-content');
+      container.style.minWidth = this.params.minWidth ?? '';
+    }
+
     document.body.appendChild(popoverClone);
 
     size.height = container.offsetHeight;
-    size.width = container.offsetWidth;
+    // offsetWidth rounds to the nearest pixel. Rounding down locks --width a
+    // fraction short of the widest row, and its label gets cut off.
+    size.width = Math.ceil(container.getBoundingClientRect().width);
     popoverClone.remove();
 
     this._size = size;

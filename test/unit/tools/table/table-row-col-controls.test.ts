@@ -1026,6 +1026,41 @@ describe('TableRowColControls', () => {
       expect(grip.style.width).toBe('24px');
     });
 
+    it('clicking the open grip again keeps the same menu open instead of rebuilding it', async () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      const grip = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`)[0];
+      const click = (): void => {
+        grip.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 50, clientY: 0 }));
+        document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      };
+
+      click();
+
+      await vi.waitFor(() => {
+        expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      });
+
+      const firstMenu = document.querySelector('[data-blok-popover-opened]');
+
+      click();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(document.querySelector('[data-blok-popover-opened]')).toBe(firstMenu);
+      expect(firstMenu?.isConnected).toBe(true);
+    });
+
     it('row grip remains at expanded size (16px width) while popover is open', async () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({

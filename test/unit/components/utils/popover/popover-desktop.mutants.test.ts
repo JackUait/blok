@@ -1168,6 +1168,58 @@ describe('PopoverDesktop — size measurement', () => {
     expect(clone?.getAttribute(ATTR_OPENED)).toBe('true');
     expect(clone?.isConnected).toBe(false);
   });
+
+  it('measures an auto-width menu at its natural width, not its min-content width', () => {
+    const measured: string[] = [];
+    const originalAppend = document.body.appendChild.bind(document.body);
+
+    vi.spyOn(document.body, 'appendChild').mockImplementation((node: Node) => {
+      if (node instanceof HTMLElement && node.hasAttribute(ATTR_OPENED)) {
+        measured.push(node.style.getPropertyValue('--width'));
+      }
+
+      return originalAppend(node);
+    });
+
+    void asInternal(createPopover()).size;
+    void asInternal(createPopover({ minWidth: '280px' })).size;
+    void asInternal(createPopover({ width: '240px' })).size;
+
+    expect(measured).toStrictEqual(['max-content', 'max-content', '240px']);
+  });
+
+  it('measures with the minWidth floor, so placement uses the width the menu renders at', () => {
+    const floors: string[] = [];
+    const originalAppend = document.body.appendChild.bind(document.body);
+
+    vi.spyOn(document.body, 'appendChild').mockImplementation((node: Node) => {
+      if (node instanceof HTMLElement && node.hasAttribute(ATTR_OPENED)) {
+        floors.push(node.querySelector<HTMLElement>('[data-blok-popover-container]')?.style.minWidth ?? '');
+      }
+
+      return originalAppend(node);
+    });
+
+    void asInternal(createPopover({ minWidth: '280px' })).size;
+
+    expect(floors).toStrictEqual(['280px']);
+  });
+
+  it('rounds a fractional content width up so the widest label is not cut off', () => {
+    const popover = createPopover();
+    const isContainer = (el: Element): boolean => el.hasAttribute('data-blok-popover-container');
+
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return isContainer(this) ? 190 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return new DOMRect(0, 0, isContainer(this) ? 190.1 : 0, 0);
+    });
+
+    popover.invalidateSizeCache();
+
+    expect(asInternal(popover).size.width).toBe(191);
+  });
 });
 
 describe('PopoverDesktop — flippable elements', () => {

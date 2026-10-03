@@ -1018,6 +1018,13 @@ export class TableRowColControls {
   // ── Popover menus ────────────────────────────────────────────
 
   private openPopover(type: 'row' | 'col', index: number): void {
+    const grip = type === 'col' ? this.colGrips[index] : this.rowGrips[index];
+
+    // Rebuilding would replay the open animation; the menu is already there.
+    if (this.popoverState.popover !== null && grip !== undefined && this.popoverState.grip === grip) {
+      return;
+    }
+
     this.popoverState = createGripPopover(
       type,
       index,

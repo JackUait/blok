@@ -247,6 +247,9 @@ export class ReadOnly extends Module {
       return this.readOnlyEnabled;
     }
 
+    // No-op when entering read-only: read-only already suppresses delivery.
+    this.Blok.ModificationsObserver.flushPendingBeforeRender();
+
     /**
      * Mutex for modifications observer to prevent onChange call when read-only mode is enabled
      */

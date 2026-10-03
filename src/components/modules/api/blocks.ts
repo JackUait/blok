@@ -357,7 +357,9 @@ export class BlocksAPI extends Module {
     try {
       await this.Blok.BlockManager.clear();
 
-      return this.Blok.Paste.processText(data, true);
+      // Awaited: the render must stay pending until the import ends, or a save
+      // in between reads the half-cleared document.
+      return await this.Blok.Paste.processText(data, true);
     } finally {
       this.Blok.Renderer.markRenderEnd();
     }

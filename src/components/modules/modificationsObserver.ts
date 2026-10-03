@@ -82,6 +82,11 @@ export class ModificationsObserver extends Module {
   private savesInFlight = 0;
 
   /**
+   * The newest save started by {@link flushBeforeTeardown} that has not settled.
+   */
+  private teardownSafeSave: Promise<void> | null = null;
+
+  /**
    * Array of onChange events used to batch them
    *
    * Map is used to filter duplicated events related to the same block
@@ -417,8 +422,11 @@ export class ModificationsObserver extends Module {
          * Either way the host never saw this batch, so the document goes back
          * to dirty and the next window retries it.
          */
-        // The teardown save is the one delivery `destroyed` must not stop.
-        if ((this.isDeliverySuppressed && !outlivesTeardown) || data === undefined) {
+        // This save must outlive `destroyed` and the render's `disable()`, but
+        // read-only still blocks it.
+        const suppressed = outlivesTeardown ? this.Blok.ReadOnly.isEnabled : this.isDeliverySuppressed;
+
+        if (suppressed || data === undefined) {
           this.pendingSave = true;
           this.syncUnloadGuard();
 
@@ -452,20 +460,39 @@ export class ModificationsObserver extends Module {
    * Starts the save for an edit still inside its batch window. Teardown calls
    * this before marking any module destroyed, because the Saver must read the
    * blocks while they are still mounted.
-   * @returns the delivery, or null when there was nothing to save
+   * @returns the delivery still to land, or null when there is none
    */
   public flushBeforeTeardown(): Promise<void> | null {
-    if (!this.pendingSave || this.isDeliverySuppressed) {
-      return null;
-    }
-
-    if (!isFunction(this.config.onSave)) {
-      return null;
+    // An early save from flushPendingBeforeRender may still be running: hand it
+    // back so teardown keeps the persistence queue until it lands.
+    if (!this.pendingSave || this.isDeliverySuppressed || !isFunction(this.config.onSave)) {
+      return this.teardownSafeSave;
     }
 
     this.pendingSave = false;
 
-    return this.emitOnSave(true);
+    const delivery = this.emitOnSave(true).finally(() => {
+      if (this.teardownSafeSave === delivery) {
+        this.teardownSafeSave = null;
+      }
+    });
+
+    this.teardownSafeSave = delivery;
+
+    return delivery;
+  }
+
+  /**
+   * Closes the open batch window early, before a same-document re-render (i18n
+   * repaint, full read-only flip). Call it BEFORE `disable()`: a disabled
+   * observer is skipped by the teardown flush, so a destroy landing mid-render
+   * would drop the edit. Clears `pendingSave`, so the window `enable()` opens
+   * after the render does not deliver it again — which is also why the queued
+   * onChange events go now: no later window would carry them.
+   */
+  public flushPendingBeforeRender(): void {
+    this.deliverQueuedChanges();
+    void this.flushBeforeTeardown();
   }
 
   /**

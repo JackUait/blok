@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Blok } from '../../../../src/blok';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import { Table } from '../../../../src/tools/table';
+import { Header } from '../../../../src/tools/header';
+import { Renderer } from '../../../../src/components/modules/renderer';
+import { ModificationsObserver } from '../../../../src/components/modules/modificationsObserver';
 import type { OutputBlockData, OutputData } from '../../../../types';
 
 /**
@@ -11,6 +14,32 @@ import type { OutputBlockData, OutputData } from '../../../../types';
 interface TestEditor {
   isReady: Promise<unknown>;
   destroy: () => void;
+}
+
+/**
+ * The API groups Blok attaches at runtime, which its class type does not declare.
+ */
+type LiveEditor = TestEditor & {
+  blocks: { renderFromHTML: (html: string) => Promise<void> };
+  i18n: { update: (options: { messages: Record<string, string> }) => Promise<void> };
+  readOnly: { set: (state: boolean) => Promise<boolean> };
+};
+
+/**
+ * Has no setReadOnly, so a read-only flip takes the full save/clear/render path.
+ */
+class NoInPlaceToggleTool {
+  public static get isReadOnlySupported(): boolean {
+    return true;
+  }
+
+  public render(): HTMLElement {
+    return document.createElement('div');
+  }
+
+  public save(): Record<string, never> {
+    return {};
+  }
 }
 
 const BLOCKS: OutputBlockData[] = [
@@ -122,5 +151,191 @@ describe('ModificationsObserver — final flush on teardown (real editor)', () =
     await wait(600);
 
     expect(onSave).not.toHaveBeenCalled();
+  }, 60_000);
+
+  it('does not hand persistence.save a half-built document when destroyed during renderFromHTML', async () => {
+    const save = vi.fn<(data: OutputData) => Promise<void>>(() => Promise.resolve());
+    const live = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, header: Header },
+      persistence: {
+        load: () => Promise.resolve({ blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'before' } }] }),
+        save,
+      },
+    }) as unknown as LiveEditor;
+
+    editor = live;
+    await live.isReady;
+    await wait(600);
+
+    typeInto('p1', 'typed');
+    await wait(20);
+
+    // Header has rendered(), so each pasted heading waits a frame: the import
+    // spans several tasks, and a host can destroy the editor in between.
+    void live.blocks.renderFromHTML('<h2>A</h2><p>one</p><h2>B</h2><p>two</p>').catch(() => undefined);
+    await new Promise((resolve) => {
+      requestAnimationFrame(resolve);
+    });
+    live.destroy();
+    editor = undefined;
+    await wait(1000);
+
+    const saved = save.mock.calls.map(([data]) => data.blocks.map((block) => block.data.text));
+
+    expect(saved.filter((texts) => texts.join('|') !== 'A|one|B|two')).toEqual([]);
+  }, 60_000);
+
+  it('delivers an edit made right before an i18n repaint that destroy() interrupts', async () => {
+    const onSave = vi.fn<(data: OutputData) => void>();
+    const live = new Blok({
+      holder,
+      tools: { paragraph: Paragraph },
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'before' } }] },
+      onSave,
+    }) as unknown as LiveEditor;
+
+    editor = live;
+    await live.isReady;
+    await wait(600);
+
+    typeInto('p1', 'typed');
+    await wait(20);
+
+    const markRenderStart = Renderer.prototype.markRenderStart;
+
+    vi.spyOn(Renderer.prototype, 'markRenderStart').mockImplementation(function (this: Renderer) {
+      markRenderStart.call(this);
+      queueMicrotask(() => live.destroy());
+    });
+
+    // Messages only: a locale change would add a lazy locale load to the timing.
+    void live.i18n.update({ messages: { 'blockSettings.delete': 'X' } }).catch(() => undefined);
+    await wait(1000);
+    editor = undefined;
+
+    expect(onSave.mock.calls.map(([data]) => textOf(data, 'p1'))).toContain('typed');
+  }, 60_000);
+
+  it('delivers an edit made right before an i18n repaint that destroy() interrupts to persistence.save', async () => {
+    const save = vi.fn<(data: OutputData) => Promise<void>>(() => Promise.resolve());
+    const live = new Blok({
+      holder,
+      tools: { paragraph: Paragraph },
+      persistence: {
+        load: () => Promise.resolve({ blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'before' } }] }),
+        save,
+      },
+    }) as unknown as LiveEditor;
+
+    editor = live;
+    await live.isReady;
+    await wait(600);
+
+    typeInto('p1', 'typed');
+    await wait(20);
+
+    // Destroy as soon as the repaint has started its early save.
+    const disable = ModificationsObserver.prototype.disable;
+
+    vi.spyOn(ModificationsObserver.prototype, 'disable').mockImplementation(function (this: ModificationsObserver) {
+      disable.call(this);
+      live.destroy();
+    });
+
+    void live.i18n.update({ messages: { 'blockSettings.delete': 'X' } }).catch(() => undefined);
+    await wait(1000);
+    editor = undefined;
+
+    expect(save.mock.calls.map(([data]) => textOf(data, 'p1'))).toContain('typed');
+  }, 60_000);
+
+  it('delivers the trailing onChange of a window an i18n repaint cuts short', async () => {
+    type ChangeEvent = { detail: { target: { id: string } } };
+    const onChange = vi.fn<(api: unknown, event: ChangeEvent | ChangeEvent[]) => void>();
+    const live = new Blok({
+      holder,
+      tools: { paragraph: Paragraph },
+      data: { blocks: [
+        { id: 'p1', type: 'paragraph', data: { text: 'one' } },
+        { id: 'p2', type: 'paragraph', data: { text: 'two' } },
+      ] },
+      onChange,
+      onSave: () => undefined,
+    }) as unknown as LiveEditor;
+
+    editor = live;
+    await live.isReady;
+    await wait(600);
+
+    typeInto('p1', 'one!');
+    await wait(20);
+    onChange.mockClear();
+    typeInto('p2', 'two!');
+    await wait(20);
+
+    await live.i18n.update({ messages: { 'blockSettings.delete': 'X' } });
+    await wait(1000);
+
+    const targets = onChange.mock.calls.flatMap(([, event]) => (Array.isArray(event) ? event : [event]).map((item) => item.detail.target.id));
+
+    expect(targets).toContain('p2');
+  }, 60_000);
+
+  it('delivers an edit made before an i18n repaint exactly once', async () => {
+    const onSave = vi.fn<(data: OutputData) => void>();
+    const live = new Blok({
+      holder,
+      tools: { paragraph: Paragraph },
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'before' } }] },
+      onSave,
+    }) as unknown as LiveEditor;
+
+    editor = live;
+    await live.isReady;
+    await wait(600);
+
+    typeInto('p1', 'typed');
+    await wait(20);
+
+    await live.i18n.update({ messages: { 'blockSettings.delete': 'X' } });
+    await wait(1000);
+
+    expect(onSave.mock.calls.map(([data]) => textOf(data, 'p1'))).toEqual(['typed']);
+  }, 60_000);
+
+  it('delivers an edit held through read-only when leaving read-only is interrupted by destroy()', async () => {
+    const onSave = vi.fn<(data: OutputData) => void>();
+    const live = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, plain: NoInPlaceToggleTool },
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'before' } }] },
+      onSave,
+    }) as unknown as LiveEditor;
+
+    editor = live;
+    await live.isReady;
+    await wait(600);
+
+    typeInto('p1', 'typed');
+    await wait(20);
+
+    await live.readOnly.set(true);
+    await wait(600);
+
+    expect(onSave).not.toHaveBeenCalled();
+
+    const markRenderStart = Renderer.prototype.markRenderStart;
+
+    vi.spyOn(Renderer.prototype, 'markRenderStart').mockImplementation(function (this: Renderer) {
+      markRenderStart.call(this);
+      queueMicrotask(() => live.destroy());
+    });
+
+    void live.readOnly.set(false).catch(() => undefined);
+    await wait(1000);
+    editor = undefined;
+
+    expect(onSave.mock.calls.map(([data]) => textOf(data, 'p1'))).toContain('typed');
   }, 60_000);
 });

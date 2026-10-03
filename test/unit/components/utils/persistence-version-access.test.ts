@@ -119,15 +119,17 @@ describe('persistenceVersionAccess', () => {
   it('stops calling a listener once it unsubscribes', async () => {
     const save = vi.fn(async () => ({ version: 'v5' }));
     const config = expand({ persistence: { load: async () => null, save } });
+    const access = persistenceVersionAccess(config.persistence);
     const saved = vi.fn();
+    const control = vi.fn();
 
-    const off = persistenceVersionAccess(config.persistence)?.onSaved(saved);
+    const off = access?.onSaved(saved);
 
+    access?.onSaved(control);
     off?.();
     config.onSave?.({ blocks: [] }, apiStub);
 
-    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-    await Promise.resolve();
+    await vi.waitFor(() => expect(control).toHaveBeenCalledWith('v5'));
     expect(saved).not.toHaveBeenCalled();
   });
 

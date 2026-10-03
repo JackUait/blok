@@ -1382,6 +1382,20 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const storedLoop = safeGet(LOOP_KEY);
   if (storedLoop !== null) setLoop(storedLoop === 'true');
 
+  // Another tab changed a shared preference. Exact keys only: position is per-tab.
+  const onStorage = (event: StorageEvent): void => {
+    if (store === null || event.storageArea !== store || event.newValue === null) return;
+    if (event.key === VOL_KEY) {
+      try { applyStoredVolume(event.newValue); } catch { /* corrupt entry */ }
+    } else if (event.key === RATE_KEY) {
+      const rate = Number(event.newValue);
+      if (Number.isFinite(rate) && rate > 0) setRate(rate);
+    } else if (event.key === LOOP_KEY) {
+      setLoop(event.newValue === 'true');
+    }
+  };
+  window.addEventListener('storage', onStorage);
+
   playToggle.addEventListener('click', togglePlay);
   centerPlay.addEventListener('click', () => { void media.play(); });
   // A native <button> already activates on Enter/Space (firing click), so a
@@ -1444,6 +1458,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     document.removeEventListener('mousedown', onCtxOutside);
     document.removeEventListener('keydown', onCtxKeydown);
     window.removeEventListener('keydown', onTheaterKey, true);
+    window.removeEventListener('storage', onStorage);
     video.removeEventListener('contextmenu', onContextMenu);
     cancelAnimationFrame(speedGlide.raf);
     stopSeekLoop();

@@ -60,13 +60,9 @@ describe('table card look', () => {
     expect(ruleBody('[data-blok-table-heading-col]')).toMatch(/color:\s*var\(--blok-text-secondary\)/);
   });
 
-  it('draws a firmer line under the heading row without changing its width', () => {
-    const body = ruleBody('[data-blok-table-heading] > [data-blok-table-cell]');
-
-    expect(body).toMatch(
-      /border-bottom-color:\s*color-mix\(in srgb,\s*var\(--blok-table-border\) 75%,\s*var\(--blok-text-primary\)\)\s*!important/
-    );
-    expect(body).not.toMatch(/border-bottom-width|border-bottom:/);
+  // The heading row is set apart by its fill alone; its bottom line is a plain grid line.
+  it('draws no darker line under the heading row', () => {
+    expect(css).not.toMatch(/\[data-blok-table-heading\][^{]*\{[^}]*border-bottom-color/);
   });
 
   // A resize handle is not inside a row, so a :hover row tint blinked off on
@@ -81,8 +77,11 @@ describe('table card look', () => {
     expect(colors).not.toMatch(/--blok-table-(?:heading-text|heading-divider|row-hover-bg):/);
   });
 
-  it('keeps the existing border and heading fill values, so host overrides still apply', () => {
+  it('keeps the existing border value, so host overrides still apply', () => {
     expect(colors).toMatch(/--blok-table-border:\s*#d1d5db;/);
-    expect(colors).toMatch(/--blok-table-heading-bg:\s*#f9fafb;/);
+  });
+
+  it('fills the heading row with the warm light gray', () => {
+    expect(colors).toMatch(/--blok-table-heading-bg:\s*#f7f6f3;/);
   });
 });

@@ -2022,7 +2022,7 @@
   --blok-popover-icon-bg: rgba(55, 53, 47, 0.04);
   --blok-popover-icon-active-bg: rgba(55, 53, 47, 0.08);
   --blok-table-border: #d1d5db;
-  --blok-table-heading-bg: #f9fafb;
+  --blok-table-heading-bg: #f7f6f3;
   --blok-table-grip-outline: transparent;
   --blok-table-drag-source-bg: #f3f4f6;
   --blok-database-card-bg: #ffffff;
@@ -3095,10 +3095,6 @@
 [data-blok-table-heading] [data-blok-table-cell], [data-blok-table-heading-col] {
   background-color: var(--blok-table-heading-bg);
   color: var(--blok-text-secondary);
-}
-
-[data-blok-table-heading] > [data-blok-table-cell] {
-  border-bottom-color: color-mix(in srgb, var(--blok-table-border) 75%, var(--blok-text-primary)) !important;
 }
 
 [data-blok-table-scroll] > table {

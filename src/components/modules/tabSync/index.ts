@@ -1548,8 +1548,8 @@ export class TabSync extends Module {
    */
   private stepDown(session: Session): void {
     const { ModificationsObserver } = this.Blok;
-    // Read before abandon() empties it: a queued or parked payload is dropped.
-    const state = persistenceVersionAccess(this.config.persistence)?.saveState() ?? 'idle';
+    // Read before abandon() drops it, however the request in flight ends.
+    const dropsQueued = persistenceVersionAccess(this.config.persistence)?.hasQueuedPayload() ?? false;
     const request = this.abandonSaves();
     const busy = request !== null || ModificationsObserver.isSaving;
 
@@ -1559,7 +1559,7 @@ export class TabSync extends Module {
     } else {
       this.setRole('follower');
     }
-    if (state === 'failed' || (state === 'saving' && request === null)) {
+    if (dropsQueued) {
       ModificationsObserver.keepUnsavedEdit();
     }
     void request?.then((landed) => {

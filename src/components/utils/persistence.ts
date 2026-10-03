@@ -179,6 +179,8 @@ export interface PersistenceVersionAccess {
   onSaved(listener: (version: string | null) => void): () => void;
   /** `saving` covers retries; `failed` = the payload is parked until the next save. */
   saveState(): 'idle' | 'saving' | 'failed';
+  /** Whether a payload waits in the queue, parked or behind the request in flight. */
+  hasQueuedPayload(): boolean;
   /**
    * Gives up the current payload: no retry, no queued save. A tab that stops
    * leading calls it, or its retry would carry the next leader's version over
@@ -692,6 +694,7 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
 
       return queue.inFlight !== null || queue.pending !== null ? 'saving' : 'idle';
     },
+    hasQueuedPayload: () => queue.pending !== null,
     abandon: () => {
       queue.generation += 1;
       queue.pending = null;

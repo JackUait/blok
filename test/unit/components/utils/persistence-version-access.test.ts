@@ -231,6 +231,29 @@ describe('persistenceVersionAccess', () => {
     expect(access?.get()).toBe('v1');
   });
 
+  it('reports a payload queued behind a request apart from the request itself', async () => {
+    const landed: { resolve: () => void } = { resolve: () => undefined };
+    const save = vi.fn()
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        landed.resolve = () => resolve({ version: 'v1' });
+      }))
+      .mockResolvedValue({ version: 'v2' });
+    const config = expand({ persistence: { load: async () => null, save } });
+    const access = persistenceVersionAccess(config.persistence);
+
+    expect(access?.hasQueuedPayload()).toBe(false);
+    config.onSave?.({ blocks: [] }, apiStub);
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(access?.hasQueuedPayload()).toBe(false);
+
+    config.onSave?.({ blocks: [{ id: 'b', type: 'paragraph', data: {} }] }, apiStub);
+    expect(access?.hasQueuedPayload()).toBe(true);
+
+    landed.resolve();
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+    expect(access?.hasQueuedPayload()).toBe(false);
+  });
+
   it('abandon with no request in flight has nothing to wait for', () => {
     const config = expand({ persistence: { load: async () => null, save: async () => undefined } });
 

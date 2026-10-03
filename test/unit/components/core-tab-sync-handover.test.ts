@@ -517,4 +517,28 @@ describe('Core — a lone leader that turns read-only keeps a save that did not 
     await until(() => expect(save.mock.calls.length).toBeGreaterThan(calls));
     expect(savedTextOf(save)).toBe('a edited');
   }, 20_000);
+
+  it('a newer save queued behind a request that lands keeps the edit, the close prompt, and is saved once editable', async () => {
+    const save = vi.fn(async (): Promise<undefined> => undefined);
+    const core = await loneEditor('lone-queued-behind', save);
+    const held = { land: (): void => undefined };
+
+    save.mockImplementationOnce(() => new Promise<undefined>((resolve) => {
+      held.land = () => resolve(undefined);
+    }));
+    await core.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
+    await until(() => expect(save).toHaveBeenCalledTimes(1));
+    await core.moduleInstances.API.methods.blocks.update('a', { text: 'a newer' });
+    // The newer payload waits in the queue behind the request.
+    await until(() => expect(core.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(false));
+    expect(save).toHaveBeenCalledTimes(1);
+
+    await core.moduleInstances.ReadOnly.set(true);
+    held.land();
+    await until(() => expect(core.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(true));
+    expect(closePromptArmed()).toBe(true);
+
+    await core.moduleInstances.ReadOnly.set(false);
+    await until(() => expect(savedTextOf(save)).toBe('a newer'));
+  }, 20_000);
 });

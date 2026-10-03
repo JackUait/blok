@@ -27,21 +27,22 @@
   font-weight: 600;
 }
 
-/* Same card corners as the real table; the drawing is always 4 columns wide. */
+/* Same card corners as the real table (see tables.css for the split-corner
+   radii); the drawing is always 4 columns wide. */
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:first-child {
-  border-start-start-radius: var(--blok-radius-table);
+  border-start-start-radius: var(--blok-radius-table) calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:nth-child(4) {
-  border-start-end-radius: var(--blok-radius-table);
+  border-start-end-radius: var(--blok-radius-table) calc(var(--blok-radius-table) - (1 + var(--_blok-inline-sign, 1)) * 0.5px);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:nth-last-child(4) {
-  border-end-start-radius: var(--blok-radius-table);
+  border-end-start-radius: calc(var(--blok-radius-table) - (1 + var(--_blok-inline-sign, 1)) * 0.5px) var(--blok-radius-table);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:last-child {
-  border-end-end-radius: var(--blok-radius-table);
+  border-end-end-radius: calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px) var(--blok-radius-table);
 }
 
 /* ─── Code ──────────────────────────────────────────── */

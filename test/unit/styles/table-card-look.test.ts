@@ -26,15 +26,34 @@ describe('table card look', () => {
     expect(ruleBody('[data-blok-table-scroll] > table')).toMatch(/border-radius:\s*var\(--blok-radius-table\)/);
   });
 
+  // The table draws the top and left lines, cells the right and bottom ones, so
+  // the physical top-right and bottom-left corners are split between the two
+  // boxes. A plain radius there draws two arcs 1px apart: a notch.
+  // Which logical corner is split mirrors in RTL, hence the inline sign.
+  const R = 'var(--blok-radius-table)';
+  const shortWhenLtr = 'calc(var(--blok-radius-table) - (1 + var(--_blok-inline-sign, 1)) * 0.5px)';
+  const shortWhenRtl = 'calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px)';
+
   it.each([
-    ['top-start', 'border-start-start-radius'],
-    ['top-end', 'border-start-end-radius'],
-    ['bottom-start', 'border-end-start-radius'],
-    ['bottom-end', 'border-end-end-radius'],
-  ])('rounds the %s corner cell, whose own border may be the frame line', (corner, property) => {
+    ['top-start', 'border-start-start-radius', `${R} ${shortWhenRtl}`],
+    ['top-end', 'border-start-end-radius', `${R} ${shortWhenLtr}`],
+    ['bottom-start', 'border-end-start-radius', `${shortWhenLtr} ${R}`],
+    ['bottom-end', 'border-end-end-radius', `${shortWhenRtl} ${R}`],
+  ])('rounds the %s corner cell so its arc joins the table arc', (corner, property, value) => {
     const body = ruleBody(`[data-blok-table-cell][data-blok-table-corner~="${corner}"]`);
 
-    expect(body).toMatch(new RegExp(`${property}:\\s*var\\(--blok-radius-table\\)`));
+    expect(body).toMatch(new RegExp(`${property}:\\s*${escape(value)};`));
+  });
+
+  it.each([
+    [':first-child', 'border-start-start-radius', `${R} ${shortWhenRtl}`],
+    [':nth-child(4)', 'border-start-end-radius', `${R} ${shortWhenLtr}`],
+    [':nth-last-child(4)', 'border-end-start-radius', `${shortWhenLtr} ${R}`],
+    [':last-child', 'border-end-end-radius', `${shortWhenRtl} ${R}`],
+  ])('rounds the toolbox preview table corner cell %s the same way', (pseudo, property, value) => {
+    const body = ruleBody(`[data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]${pseudo}`);
+
+    expect(body).toMatch(new RegExp(`${property}:\\s*${escape(value)};`));
   });
 
   it('sets heading text in the muted heading ink', () => {

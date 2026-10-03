@@ -182,30 +182,35 @@
 }
 
 /*
- * Rounded frame. The table draws only its top and start lines; cells draw the
- * end and bottom ones, so each corner cell rounds itself too. Core stamps
+ * Rounded frame. The table draws only its top and left lines; cells draw the
+ * right and bottom ones, so each corner cell rounds itself too. Core stamps
  * data-blok-table-corner on the cell that really holds a corner, merged cells
  * included. No clipping: the selection overlay, its pill and the resize
  * handles live inside the <table>.
+ * The physical top-right and bottom-left corners are split: one line is the
+ * table's, the other the cell's, and the cell sits one line inside the table.
+ * There the cell's radius is 1px (BORDER_WIDTH) shorter across the table's
+ * line, so its arc meets the table's arc as one ring. The lines are physical
+ * in both directions, so the split logical corners mirror in RTL.
  */
 [data-blok-table-scroll] > table {
   border-radius: var(--blok-radius-table);
 }
 
 [data-blok-table-cell][data-blok-table-corner~="top-start"] {
-  border-start-start-radius: var(--blok-radius-table);
+  border-start-start-radius: var(--blok-radius-table) calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px);
 }
 
 [data-blok-table-cell][data-blok-table-corner~="top-end"] {
-  border-start-end-radius: var(--blok-radius-table);
+  border-start-end-radius: var(--blok-radius-table) calc(var(--blok-radius-table) - (1 + var(--_blok-inline-sign, 1)) * 0.5px);
 }
 
 [data-blok-table-cell][data-blok-table-corner~="bottom-start"] {
-  border-end-start-radius: var(--blok-radius-table);
+  border-end-start-radius: calc(var(--blok-radius-table) - (1 + var(--_blok-inline-sign, 1)) * 0.5px) var(--blok-radius-table);
 }
 
 [data-blok-table-cell][data-blok-table-corner~="bottom-end"] {
-  border-end-end-radius: var(--blok-radius-table);
+  border-end-end-radius: calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px) var(--blok-radius-table);
 }
 
 /**

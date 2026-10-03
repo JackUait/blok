@@ -204,6 +204,24 @@ export class ModificationsObserver extends Module {
   }
 
   /**
+   * Saves now, edit or not. TabSync calls it when this tab takes over saving
+   * (or unloads as leader) while the document may hold edits nobody saved.
+   * Does nothing in a follower or a joining tab: they do not save, and a set
+   * `pendingSave` would arm their close prompt.
+   */
+  public flushNow(): void {
+    const role = this.tabRole;
+
+    if (role === 'follower' || role === 'joining') {
+      return;
+    }
+
+    this.pendingSave = true;
+    this.saveIfPending();
+    this.syncUnloadGuard();
+  }
+
+  /**
    * Forgets the unsaved edit without touching queued onChange events: the
    * leader saves it, and onChange fires in every role.
    */

@@ -12,8 +12,15 @@ const busy = (): Promise<never> =>
  * Each lock object follows the real LeaderLock contract (platform.ts): one
  * acquisition at a time, and `release()` cancels a pending `queue`.
  */
-export const createFakePlatform = (): TabPlatform & { holders: Map<string, number>; openChannels: (key: string) => number } => {
+export const createFakePlatform = (): TabPlatform & {
+  holders: Map<string, number>;
+  openChannels: (key: string) => number;
+  /** Drops deliveries to this channel, like a frozen tab. */
+  pauseInbound: (channel: TabChannel) => void;
+  resumeInbound: (channel: TabChannel) => void;
+} => {
   const buses = new Map<string, Set<(m: TabMessage) => void>>();
+  const paused = new Set<TabChannel>();
   const holders = new Map<string, number>();
   const waiters = new Map<string, Array<() => void>>();
   let nextId = 0;
@@ -21,16 +28,22 @@ export const createFakePlatform = (): TabPlatform & { holders: Map<string, numbe
   return {
     holders,
     openChannels: (key) => buses.get(key)?.size ?? 0,
+    pauseInbound: (channel) => {
+      paused.add(channel);
+    },
+    resumeInbound: (channel) => {
+      paused.delete(channel);
+    },
     rawChannel: (): RawChannel | null => null,
     channel: (key): TabChannel => {
       const listeners = new Set<(m: TabMessage) => void>();
       const bus = buses.get(key) ?? new Set();
-      const deliver = (m: TabMessage): void => listeners.forEach((l) => l(structuredClone(m)));
-
-      buses.set(key, bus);
-      bus.add(deliver);
-
-      return {
+      const deliver = (m: TabMessage): void => {
+        if (!paused.has(channel)) {
+          listeners.forEach((l) => l(structuredClone(m)));
+        }
+      };
+      const channel: TabChannel = {
         post: (m) => bus.forEach((d) => {
           if (d !== deliver) {
             queueMicrotask(() => d(m));
@@ -46,6 +59,11 @@ export const createFakePlatform = (): TabPlatform & { holders: Map<string, numbe
           listeners.clear();
         },
       };
+
+      buses.set(key, bus);
+      bus.add(deliver);
+
+      return channel;
     },
     lock: (key): LeaderLock => {
       const me = nextId++;
@@ -129,8 +147,10 @@ export const createFakePlatform = (): TabPlatform & { holders: Map<string, numbe
  * A stand-in for the Blok modules TabSync touches, built on a REAL Y.Doc so
  * merge, reset and generation behaviour is the real Yjs behaviour.
  */
-export const createFakeBlok = (options: { recordId?: string; minted?: boolean; readOnly?: boolean } = {}) => {
+export const createFakeBlok = (options: { recordId?: string; minted?: boolean; readOnly?: boolean; seedText?: string } = {}) => {
   let doc = new Y.Doc();
+  const settledListeners = new Set<() => void>();
+  let savesInFlight = 0;
   const updateListeners = new Set<(u: Uint8Array, origin: unknown) => void>();
   const remoteOrigins = new Set<unknown>();
   let recordId = options.recordId ?? 'rec-1';
@@ -153,6 +173,9 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
   };
 
   bind();
+  if (options.seedText !== undefined) {
+    doc.getText('t').insert(0, options.seedText);
+  }
 
   return {
     text: (): string => doc.getText('t').toJSON(),
@@ -162,6 +185,24 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
     /** Typing that reaches the Y.Doc only on the next flush, like BlockWriteBuffer. */
     typeBuffered: (s: string): void => {
       buffered += s;
+    },
+    /**
+     * A block.save() round trip still running. The returned function ends it:
+     * its typing enters the write buffer, then settled listeners run.
+     */
+    startBlockSave: (s: string): (() => void) => {
+      savesInFlight += 1;
+
+      return () => {
+        buffered += s;
+        savesInFlight -= 1;
+        if (savesInFlight === 0) {
+          const listeners = Array.from(settledListeners);
+
+          settledListeners.clear();
+          listeners.forEach((l) => l());
+        }
+      };
     },
     YjsManager: {
       applyRemoteUpdate: vi.fn((u: Uint8Array, origin: unknown) => {
@@ -174,7 +215,29 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
 
         return () => updateListeners.delete(l);
       },
-      encodeStateAsUpdate: () => Y.encodeStateAsUpdate(doc),
+      encodeStateAsUpdate: (stateVector?: Uint8Array) => {
+        land();
+
+        return Y.encodeStateAsUpdate(doc, stateVector);
+      },
+      getStateVector: () => {
+        land();
+
+        return Y.encodeStateVector(doc);
+      },
+      /** Like the real one: runs at once when no block save is in flight. */
+      onPendingBlockWritesSettled: (callback: () => void): (() => void) => {
+        if (savesInFlight === 0) {
+          callback();
+
+          return () => undefined;
+        }
+        settledListeners.add(callback);
+
+        return () => {
+          settledListeners.delete(callback);
+        };
+      },
       flushPendingBlockWrites: vi.fn(land),
       resetForRelineage: vi.fn(() => {
         land();

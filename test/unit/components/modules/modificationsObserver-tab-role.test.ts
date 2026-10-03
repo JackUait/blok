@@ -215,4 +215,25 @@ describe('ModificationsObserver — tab role', () => {
 
     expect(save).not.toHaveBeenCalled();
   });
+  it('flushNow saves at once for a leader, with no edit and no batch window', async () => {
+    const { observer, onSave } = setup({ role: 'leader' });
+
+    observer.flushNow();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('flushNow in a follower or a joining tab saves nothing and arms no close prompt', async () => {
+    for (const role of ['follower', 'joining'] as const) {
+      const { observer, onSave, save } = setup({ role });
+
+      observer.flushNow();
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout);
+
+      expect(save, role).not.toHaveBeenCalled();
+      expect(onSave, role).not.toHaveBeenCalled();
+      expect(observer.hasUnsavedChanges, role).toBe(false);
+    }
+  });
 });

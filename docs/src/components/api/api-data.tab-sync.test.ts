@@ -79,6 +79,14 @@ describe("tab sync guide", () => {
     expect(text).toContain("editor.save()");
     expect(text.toLowerCase()).toContain("background");
     expect(at(en as Bundle, "api.tabSync.saving.title")).toBe("The tab you work in saves");
+    // A running save delays the hand-over; "half a second" alone overclaims.
+    expect(text).toContain("If a save is still running");
+    expect(at(ru as Bundle, "api.tabSync.saving.body")).toContain("Если сохранение ещё идёт");
+  });
+
+  it("names the frozen-tab takeover by the switch, not by leaving", () => {
+    expect(body("limits")).toContain("when you switch to another tab");
+    expect(at(ru as Bundle, "api.tabSync.limits.body")).toContain("когда вы переходите в другую вкладку");
   });
 
   it("no longer speaks of a fixed main tab", () => {

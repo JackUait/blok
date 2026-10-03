@@ -12,7 +12,7 @@ const busy = (): Promise<never> =>
  * Each lock object follows the real LeaderLock contract (platform.ts): one
  * acquisition at a time, and `release()` cancels a pending `queue`.
  */
-export const createFakePlatform = (): TabPlatform & { holders: Map<string, number> } => {
+export const createFakePlatform = (): TabPlatform & { holders: Map<string, number>; openChannels: (key: string) => number } => {
   const buses = new Map<string, Set<(m: TabMessage) => void>>();
   const holders = new Map<string, number>();
   const waiters = new Map<string, Array<() => void>>();
@@ -20,6 +20,7 @@ export const createFakePlatform = (): TabPlatform & { holders: Map<string, numbe
 
   return {
     holders,
+    openChannels: (key) => buses.get(key)?.size ?? 0,
     rawChannel: (): RawChannel | null => null,
     channel: (key): TabChannel => {
       const listeners = new Set<(m: TabMessage) => void>();

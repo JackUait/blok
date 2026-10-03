@@ -135,15 +135,9 @@ describe('TabSync — roles, leader lock and join', () => {
     const platform = createFakePlatform();
     const seen = listen(platform);
     const a = await startTab(platform, { recordId: 'A' });
-    const c = await startTab(platform, { recordId: 'C' });
+    // Both join at once, so each sees the other's answer while still joining.
+    const [b, c] = await Promise.all([startTab(platform, { recordId: 'B' }), startTab(platform, { recordId: 'C' })]);
 
-    await settle();
-    expect(c.sync.role).toBe('follower');
-    expect(c.fake.YjsManager.applyRemoteUpdate).toHaveBeenCalledTimes(1);
-
-    const b = await startTab(platform, { recordId: 'B' });
-
-    expect(b.sync.role).toBe('joining');
     await settle();
 
     const hellos = seen.filter((m) => m.kind === 'hello');
@@ -151,9 +145,10 @@ describe('TabSync — roles, leader lock and join', () => {
     expect(hellos).toHaveLength(2);
     expect(hellos[1]).toMatchObject({ kind: 'hello', stateVector: null });
     expect(seen.filter((m) => m.kind === 'state')).toHaveLength(2);
-    expect(b.sync.role).toBe('follower');
     expect(b.fake.YjsManager.applyRemoteUpdate).toHaveBeenCalledTimes(1);
     expect(c.fake.YjsManager.applyRemoteUpdate).toHaveBeenCalledTimes(1);
+    expect(b.sync.role).toBe('follower');
+    expect(c.sync.role).toBe('follower');
     expect(a.fake.YjsManager.applyRemoteUpdate).not.toHaveBeenCalled();
   });
 
@@ -318,8 +313,10 @@ describe('TabSync — roles, leader lock and join', () => {
     const platform = createFakePlatform();
     const a = await startTab(platform, { recordId: 'A' });
 
+    expect(platform.openChannels(KEY)).toBe(1);
     a.sync.destroy();
     expect(platform.holders.size).toBe(0);
+    expect(platform.openChannels(KEY)).toBe(0);
 
     const probe = platform.channel(KEY);
 

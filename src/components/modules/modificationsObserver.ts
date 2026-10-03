@@ -99,6 +99,12 @@ export class ModificationsObserver extends Module {
    */
   private keepsOwnEdit = false;
 
+  /**
+   * Set while this follower's takeover waits for the old leader: nobody saves
+   * meanwhile, so its own typing is its to save once it leads.
+   */
+  private keepsLocalEdits = false;
+
   /** The role onRoleChanged last gave; null until it is called. */
   private toldRole: TabRole | null = null;
 
@@ -267,6 +273,7 @@ export class ModificationsObserver extends Module {
   public onRoleChanged(role: TabRole, { keepPendingSave = false }: { keepPendingSave?: boolean } = {}): boolean {
     this.toldRole = role;
     this.keepsOwnEdit = role === 'follower' && keepPendingSave;
+    this.keepsLocalEdits = false;
 
     if (role === 'follower') {
       if (!this.keepsOwnEdit) {
@@ -277,6 +284,34 @@ export class ModificationsObserver extends Module {
     }
 
     return (role === 'solo' || role === 'leader') && this.saveIfPending();
+  }
+
+  /**
+   * TabSync calls it while a takeover waits for the old leader's last save.
+   * Turned off with the wait cancelled, it drops what it kept: the leader saves it.
+   * @param keep - whether this follower keeps its own typing
+   */
+  public keepLocalEdits(keep: boolean): void {
+    const dropping = this.keepsLocalEdits && !keep;
+
+    this.keepsLocalEdits = keep;
+    if (dropping && !this.keepsOwnEdit) {
+      this.discardPendingSave();
+    }
+  }
+
+  /**
+   * Puts back an edit whose save never landed: TabSync dropped that save when
+   * this tab stopped leading. It stays unsaved until this tab saves again.
+   */
+  public keepUnsavedEdit(): void {
+    this.pendingSave = true;
+    if (this.savesHere) {
+      this.saveIfPending();
+    } else {
+      this.keepsOwnEdit = true;
+    }
+    this.syncUnloadGuard();
   }
 
   /**
@@ -433,7 +468,7 @@ export class ModificationsObserver extends Module {
 
     // The leader saves for a follower, so a follower is dirty only with an
     // edit of its own it saves once it leads.
-    if (this.tabRole !== 'follower' || (this.keepsOwnEdit && event.detail.origin === 'local')) {
+    if (this.tabRole !== 'follower' || (this.keepsLocalEdits && event.detail.origin === 'local')) {
       this.pendingSave = true;
       this.syncUnloadGuard();
     }

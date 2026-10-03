@@ -170,6 +170,9 @@ export class TabSync extends Module {
   /** Set while a read-only tab keeps the lock for its last save; cleared to cancel. */
   private releaseWait: Promise<void> | null = null;
 
+  /** Bounds {@link releaseWait}. */
+  private releaseTimer: ReturnType<typeof setTimeout> | null = null;
+
   /** After a yield: leads again if the claimant never takes the lock. */
   private handOverTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -360,7 +363,7 @@ export class TabSync extends Module {
 
     if (this.currentRole === 'follower' && this.holdsLock && this.releaseWait !== null) {
       // Editable again before its last save settled: it still holds the lock.
-      this.releaseWait = null;
+      this.stopReleaseWait();
       this.promote();
     } else if (this.currentRole === 'follower' && this.queueAbort === null) {
       this.queueForLock(session);
@@ -1215,7 +1218,7 @@ export class TabSync extends Module {
         // Armed before the steal, so a report that comes during it is kept.
         this.awaitingSettle = { from: message.from, timer: null, settled: false };
         // Nobody saves until the takeover: this tab's typing meanwhile is its own.
-        this.Blok.ModificationsObserver.onRoleChanged('follower', { keepPendingSave: true });
+        this.Blok.ModificationsObserver.keepLocalEdits(true);
       }
     }
     // steal() drops this tab's place in line.
@@ -1307,9 +1310,7 @@ export class TabSync extends Module {
     this.awaitingSettle = null;
     // A cancelled takeover leaves this tab's typing to the leader. A finished
     // one saves everything right after.
-    if (this.currentRole === 'follower') {
-      this.Blok.ModificationsObserver.onRoleChanged('follower');
-    }
+    this.Blok.ModificationsObserver.keepLocalEdits(false);
   }
 
   /**
@@ -1366,7 +1367,7 @@ export class TabSync extends Module {
         saving: request !== null || serializing,
       });
       this.leaderId = to;
-      if (saved) {
+      if (saved || !this.Blok.ModificationsObserver.hasUnsavedChanges) {
         this.setRole('follower');
       } else {
         // The save may never land: keep the edit, as a read-only demotion does.
@@ -1524,7 +1525,7 @@ export class TabSync extends Module {
     const session = this.session;
 
     this.holdsLock = false;
-    this.releaseWait = null;
+    this.stopReleaseWait();
     this.clearHandOverTimer();
     if (session === null) {
       return;
@@ -1546,24 +1547,37 @@ export class TabSync extends Module {
    * @param session - the live session
    */
   private stepDown(session: Session): void {
+    const { ModificationsObserver } = this.Blok;
+    // Read before abandon() empties it: a queued or parked payload is dropped.
+    const state = persistenceVersionAccess(this.config.persistence)?.saveState() ?? 'idle';
     const request = this.abandonSaves();
-    const busy = request !== null || this.Blok.ModificationsObserver.isSaving;
+    const busy = request !== null || ModificationsObserver.isSaving;
 
     // Its edit stays unsaved here: it is saved once this tab leads again.
-    this.setRole('follower', { keepPendingSave: true });
+    if (ModificationsObserver.hasUnsavedChanges) {
+      this.setRole('follower', { keepPendingSave: true });
+    } else {
+      this.setRole('follower');
+    }
+    if (state === 'failed' || (state === 'saving' && request === null)) {
+      ModificationsObserver.keepUnsavedEdit();
+    }
+    void request?.then((landed) => {
+      if (!landed && this.session === session) {
+        ModificationsObserver.keepUnsavedEdit();
+      }
+    });
     if (!busy) {
       this.cancelQueue(session);
 
       return;
     }
-    const timer: { id: ReturnType<typeof setTimeout> | undefined } = { id: undefined };
     const wait = Promise.race([
-      Promise.all([this.Blok.ModificationsObserver.whenSavesSettled(), request]),
+      Promise.all([ModificationsObserver.whenSavesSettled(), request]),
       new Promise((resolve) => {
-        timer.id = setTimeout(resolve, TAKEOVER_SETTLE_WAIT_MS);
+        this.releaseTimer = setTimeout(resolve, TAKEOVER_SETTLE_WAIT_MS);
       }),
     ]).then(() => {
-      clearTimeout(timer.id);
       if (this.releaseWait === wait && this.session === session && this.currentRole === 'follower') {
         this.cancelQueue(session);
       }
@@ -1572,12 +1586,20 @@ export class TabSync extends Module {
     this.releaseWait = wait;
   }
 
+  private stopReleaseWait(): void {
+    this.releaseWait = null;
+    if (this.releaseTimer !== null) {
+      clearTimeout(this.releaseTimer);
+      this.releaseTimer = null;
+    }
+  }
+
   /**
    * Gives up the lock, held or waited for. The lock object is reusable after.
    * @param session - the live session
    */
   private cancelQueue(session: Session): void {
-    this.releaseWait = null;
+    this.stopReleaseWait();
     this.queueAbort?.abort();
     this.queueAbort = null;
     this.holdsLock = false;
@@ -1635,7 +1657,7 @@ export class TabSync extends Module {
     this.takeoverFrom = null;
     this.yieldedBy = null;
     this.holdsLock = false;
-    this.releaseWait = null;
+    this.stopReleaseWait();
     this.stopClaim();
     this.clearHandOverTimer();
     this.clearAwaitingSettle();

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Core } from '../../../src/components/core';
 import { modificationsObserverBatchTimeout } from '../../../src/components/constants';
-import { releasePersistenceQueue } from '../../../src/components/utils/persistence';
+import { persistenceVersionAccess, releasePersistenceQueue } from '../../../src/components/utils/persistence';
 import { Paragraph } from '../../../src/tools';
 import { browserTabPlatform } from '../../../src/components/modules/tabSync/platform';
 import type * as PlatformModule from '../../../src/components/modules/tabSync/platform';
@@ -58,6 +58,9 @@ const wait = (ms: number): Promise<void> => new Promise((resolve) => {
 const ids = (core: Core): string[] => core.moduleInstances.BlockManager.blocks.map((block) => block.id);
 
 const docIds = (core: Core): string[] => core.moduleInstances.YjsManager.orderedIds();
+
+/** Polls until `check` passes; the tests wait on state, not on a clock. */
+const until = (check: () => void, timeout = 3000): Promise<void> => vi.waitFor(check, { timeout, interval: 20 });
 
 /** One batch window, plus room for the message hop and the serialization. */
 const oneWindow = (): Promise<void> => wait(modificationsObserverBatchTimeout + 150);
@@ -151,7 +154,7 @@ describe('Core — a render that overlaps a hand-over', () => {
 
     handOverMidRender(follower, () => followerActivity.set(true));
     await follower.moduleInstances.API.methods.blocks.render({ blocks: [paragraph('x'), paragraph('y')] });
-    await oneWindow();
+    await until(() => expect(savedIds(followerSave.mock.lastCall)).toEqual(['x', 'y']));
 
     expect(follower.moduleInstances.TabSync.role).toBe('leader');
     expect(ids(follower)).toEqual(['x', 'y']);
@@ -162,16 +165,13 @@ describe('Core — a render that overlaps a hand-over', () => {
     expect(savedIds(followerSave.mock.lastCall)).toEqual(['x', 'y']);
 
     await type(follower, 'x', 'x typed');
-    await oneWindow();
-    expect(savedText(followerSave.mock.lastCall, 'x')).toBe('x typed');
+    await until(() => expect(savedText(followerSave.mock.lastCall, 'x')).toBe('x typed'));
 
     followerActivity.set(false);
     leaderActivity.set(true);
-    await wait(CLAIM_SETTLE_MS + 150);
-    await oneWindow();
+    await until(() => expect(savedText(leaderSave.mock.lastCall, 'x')).toBe('x typed'));
 
     expect(leader.moduleInstances.TabSync.role).toBe('leader');
-    expect(savedText(leaderSave.mock.lastCall, 'x')).toBe('x typed');
     expect(savedIds(leaderSave.mock.lastCall)).toEqual(['x', 'y']);
   });
 
@@ -182,6 +182,8 @@ describe('Core — a render that overlaps a hand-over', () => {
       void follower.moduleInstances.ReadOnly.set(true);
     });
     await follower.moduleInstances.API.methods.blocks.render({ blocks: [paragraph('x'), paragraph('y')] });
+    await until(() => expect(docIds(leader)).toEqual(['x', 'y']));
+    // Room for a stray default block to come back, if one were made.
     await oneWindow();
 
     expect(ids(follower)).toEqual(['x', 'y']);
@@ -195,7 +197,7 @@ describe('Core — a render that overlaps a hand-over', () => {
 
     handOverMidRender(leader, () => followerActivity.set(true));
     await leader.moduleInstances.API.methods.blocks.render({ blocks: [paragraph('x'), paragraph('y')] });
-    await oneWindow();
+    await until(() => expect(savedIds(followerSave.mock.lastCall)).toEqual(['x', 'y']));
 
     expect(follower.moduleInstances.TabSync.role).toBe('leader');
     expect(ids(leader)).toEqual(['x', 'y']);
@@ -208,11 +210,9 @@ describe('Core — a render that overlaps a hand-over', () => {
     await type(leader, 'x', 'x typed');
     followerActivity.set(false);
     leaderActivity.set(true);
-    await wait(CLAIM_SETTLE_MS + 150);
-    await oneWindow();
+    await until(() => expect(savedText(leaderSave.mock.lastCall, 'x')).toBe('x typed'));
 
     expect(leader.moduleInstances.TabSync.role).toBe('leader');
-    expect(savedText(leaderSave.mock.lastCall, 'x')).toBe('x typed');
   });
 });
 
@@ -301,9 +301,8 @@ const twoStoredEditors = async (documentId: string): Promise<StoredPair> => {
 
   cell.follower = follower;
   await follower.isReady;
-  await wait(100);
+  await until(() => expect(follower.moduleInstances.TabSync.role).toBe('follower'));
   expect(leader.moduleInstances.TabSync.role).toBe('leader');
-  expect(follower.moduleInstances.TabSync.role).toBe('follower');
   await oneWindow();
   hostSaves.leader.length = 0;
   hostSaves.follower.length = 0;
@@ -344,7 +343,8 @@ describe('Core — a demoted leader never saves', () => {
     await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
     await oneWindow();
     followerActivity.set(true);
-    await wait(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 2500);
+    // The new leader writes only after the old serialization was dropped.
+    await until(() => expect(store.writes.some((write) => write.by === 'follower')).toBe(true), 10_000);
 
     expect(follower.moduleInstances.TabSync.role).toBe('leader');
     expect(leader.moduleInstances.TabSync.role).toBe('follower');
@@ -363,14 +363,13 @@ describe('Core — a demoted leader never saves', () => {
     expect(store.writes).toEqual([]);
 
     await leader.moduleInstances.ReadOnly.set(true);
-    await wait(200);
-    // The read-only tab keeps the lock until its request settles.
-    expect(follower.moduleInstances.TabSync.role).toBe('follower');
-    await wait(1500);
-    expect(follower.moduleInstances.TabSync.role).toBe('leader');
+    await until(() => expect(follower.moduleInstances.TabSync.role).toBe('leader'));
+    // The read-only tab kept the lock until its request settled.
     expect(store.writes[0]).toEqual(expect.objectContaining({ by: 'leader', ok: true }));
     await follower.moduleInstances.API.methods.blocks.update('a', { text: 'a by follower' });
-    await wait(3000);
+    await until(() => expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a by follower'));
+    // Past the old queue's retry delays: a retry would show up here.
+    await wait(2500);
 
     expect(hostSaves.leader).not.toContain('follower');
     expect(store.writes.filter((write) => write.by === 'leader' && !write.ok)).toEqual([]);
@@ -395,11 +394,10 @@ describe('Core — a demoted leader never saves', () => {
     // A frozen leader: it hears no claim, so only the steal moves the lock.
     fakePlatform.pauseInbound(leaderChannel);
     followerActivity.set(true);
-    await wait(CLAIM_SETTLE_MS + CLAIM_TIMEOUT_MS + 200);
-    expect(follower.moduleInstances.TabSync.role).toBe('leader');
+    await until(() => expect(follower.moduleInstances.TabSync.role).toBe('leader'), CLAIM_SETTLE_MS + CLAIM_TIMEOUT_MS + 2000);
     expect(leader.moduleInstances.TabSync.role).toBe('follower');
 
-    await wait(2500);
+    await until(() => expect(leader.moduleInstances.ModificationsObserver.isSaving).toBe(false), 5000);
 
     expect(hostSaves.leader).not.toContain('follower');
     expect(store.writes.filter((write) => write.by === 'leader')).toEqual([]);
@@ -413,8 +411,7 @@ describe('Core — a demoted leader never saves', () => {
     await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
     await oneWindow();
     followerActivity.set(true);
-    await wait(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 300);
-    expect(leader.moduleInstances.TabSync.role).toBe('follower');
+    await until(() => expect(leader.moduleInstances.TabSync.role).toBe('follower'), CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 1000);
     expect(follower.moduleInstances.TabSync.role).toBe('follower');
 
     await type(follower, 'b', 'b typed while waiting');
@@ -422,11 +419,101 @@ describe('Core — a demoted leader never saves', () => {
     expect(follower.moduleInstances.TabSync.role).toBe('follower');
     expect(follower.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(true);
 
-    await wait(2500);
+    await until(() => expect(store.current().doc.blocks.find((block) => block.id === 'b')?.data.text).toBe('b typed while waiting'), 5000);
 
     expect(follower.moduleInstances.TabSync.role).toBe('leader');
     expect(store.writes.filter((write) => write.by === 'leader')).toEqual([expect.objectContaining({ ok: true })]);
     expect(store.current().doc.blocks.find((block) => block.id === 'b')?.data.text).toBe('b typed while waiting');
     expect(follower.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(false);
+  }, 20_000);
+
+  it('a tab demoted by read-only that types again as a follower shows no close prompt once the leader saved', async () => {
+    const { leader, follower, store } = await twoStoredEditors('read-only-round-trip');
+
+    await leader.moduleInstances.ReadOnly.set(true);
+    await until(() => expect(follower.moduleInstances.TabSync.role).toBe('leader'));
+    await leader.moduleInstances.ReadOnly.set(false);
+    expect(leader.moduleInstances.TabSync.role).toBe('follower');
+
+    await type(leader, 'a', 'a typed as follower');
+    await until(() => expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a typed as follower'));
+
+    expect(leader.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(false);
+  }, 20_000);
+});
+
+/** Whether a guard holds the tab back from closing. */
+const closePromptArmed = (): boolean => {
+  const event = new Event('beforeunload', { cancelable: true });
+
+  window.dispatchEvent(event);
+
+  return event.defaultPrevented;
+};
+
+describe('Core — a lone leader that turns read-only keeps a save that did not land', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    cores.splice(0).forEach(destroyCore);
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  /** One tab on its own store. */
+  const loneEditor = async (documentId: string, save: ReturnType<typeof vi.fn>): Promise<Core> => {
+    const core = createCore({ documentId, persistence: { load: async () => document3(), save } });
+
+    await core.isReady;
+    await until(() => expect(core.moduleInstances.TabSync.role).toBe('leader'));
+    await oneWindow();
+    save.mockClear();
+
+    return core;
+  };
+
+  const savedTextOf = (save: ReturnType<typeof vi.fn>): unknown => savedText(save.mock.lastCall, 'a');
+
+  it('a request that fails after the tab turned read-only keeps the edit, the close prompt, and is saved once editable', async () => {
+    const save = vi.fn(async (): Promise<undefined> => undefined);
+    const core = await loneEditor('lone-request-fails', save);
+
+    save.mockImplementationOnce(async () => {
+      await wait(800);
+      throw new Error('store down');
+    });
+    await core.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
+    await until(() => expect(save).toHaveBeenCalledTimes(1));
+    await core.moduleInstances.ReadOnly.set(true);
+
+    await until(() => expect(core.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(true));
+    expect(closePromptArmed()).toBe(true);
+
+    await core.moduleInstances.ReadOnly.set(false);
+    await until(() => expect(save).toHaveBeenCalledTimes(2));
+    expect(savedTextOf(save)).toBe('a edited');
+  }, 20_000);
+
+  it('a parked save dropped by the read-only turn keeps the edit, the close prompt, and is saved once editable', async () => {
+    const save = vi.fn(async (): Promise<undefined> => undefined);
+    const core = await loneEditor('lone-parked', save);
+
+    save.mockRejectedValue(new Error('store down'));
+    await core.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
+    await until(() => expect(persistenceVersionAccess(core.config.persistence)?.saveState()).toBe('failed'), 6000);
+    const calls = save.mock.calls.length;
+
+    await core.moduleInstances.ReadOnly.set(true);
+
+    expect(core.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(true);
+    expect(closePromptArmed()).toBe(true);
+
+    save.mockResolvedValue(undefined);
+    await core.moduleInstances.ReadOnly.set(false);
+    await until(() => expect(save.mock.calls.length).toBeGreaterThan(calls));
+    expect(savedTextOf(save)).toBe('a edited');
   }, 20_000);
 });

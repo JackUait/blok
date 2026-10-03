@@ -484,10 +484,11 @@ describe('ModificationsObserver — tab role', () => {
 
     expect(settled).toHaveBeenCalledTimes(1);
   });
-  it('a follower that keeps its own edit arms the close prompt for its local edits only, and saves them as leader', async () => {
+
+  it('a follower whose takeover waits on the old leader arms the close prompt for its local edits only, and saves them as leader', async () => {
     const { observer, onSave, emitBlockChanged, tabSync } = setup({ role: 'follower' });
 
-    observer.onRoleChanged('follower', { keepPendingSave: true });
+    observer.keepLocalEdits(true);
     emitBlockChanged({ origin: 'tab' });
     expect(observer.hasUnsavedChanges).toBe(false);
 
@@ -502,5 +503,39 @@ describe('ModificationsObserver — tab role', () => {
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(observer.hasUnsavedChanges).toBe(false);
+  });
+  it('a follower that kept an edit from a read-only demotion arms no close prompt for later typing', async () => {
+    const { observer, emitBlockChanged } = setup({ role: 'follower' });
+
+    observer.onRoleChanged('follower', { keepPendingSave: true });
+    emitBlockChanged({ origin: 'local' });
+
+    expect(observer.hasUnsavedChanges).toBe(false);
+  });
+
+  it('a follower whose takeover is cancelled drops the typing it kept for it', () => {
+    const { observer, emitBlockChanged } = setup({ role: 'follower' });
+
+    observer.keepLocalEdits(true);
+    emitBlockChanged({ origin: 'local' });
+    observer.keepLocalEdits(false);
+
+    expect(observer.hasUnsavedChanges).toBe(false);
+  });
+
+  it('keepUnsavedEdit puts back an edit whose save was lost, kept until the tab saves again', async () => {
+    const { observer, onSave, tabSync } = setup({ role: 'follower' });
+
+    observer.onRoleChanged('follower');
+    observer.keepUnsavedEdit();
+    expect(observer.hasUnsavedChanges).toBe(true);
+    await flushWindow();
+    expect(onSave).not.toHaveBeenCalled();
+
+    tabSync.role = 'leader';
+    observer.onRoleChanged('leader');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 });

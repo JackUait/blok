@@ -524,6 +524,7 @@ describe('TabSync — roles, leader lock and join', () => {
       const b = await startTab(platform, { recordId: 'B' });
 
       await settle();
+      a.fake.ModificationsObserver.hasUnsavedChanges = true;
       a.fake.ReadOnly.isEnabled = true;
       a.sync.toggleReadOnly(true);
       await settle();
@@ -538,6 +539,19 @@ describe('TabSync — roles, leader lock and join', () => {
       b.sync.destroy();
       await settle();
       expect(a.sync.role).toBe('leader');
+    });
+
+    it('a read-only leader with nothing unsaved keeps no edit', async () => {
+      const platform = createFakePlatform();
+      const a = await startTab(platform, { recordId: 'A' });
+
+      await startTab(platform, { recordId: 'B' });
+      await settle();
+      a.fake.ReadOnly.isEnabled = true;
+      a.sync.toggleReadOnly(true);
+      await settle();
+
+      expect(a.fake.ModificationsObserver.onRoleChanged).toHaveBeenLastCalledWith('follower');
     });
 
     it('a read-only follower that becomes editable queues to lead', async () => {

@@ -424,11 +424,11 @@ describe('TabSync — the leader follows the tab the user works in', () => {
     b.activity.set(true);
     await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 100);
     expect(b.sync.role).toBe('follower');
-    expect(lastRole(b)).toEqual(['follower', { keepPendingSave: true }]);
+    expect(b.fake.ModificationsObserver.keepLocalEdits.mock.calls).toEqual([[true]]);
 
     b.fake.ReadOnly.isEnabled = true;
     b.sync.toggleReadOnly(true);
-    expect(lastRole(b)).toEqual(['follower']);
+    expect(b.fake.ModificationsObserver.keepLocalEdits.mock.lastCall).toEqual([false]);
     endSerialization();
   });
 
@@ -487,7 +487,8 @@ describe('TabSync — the leader follows the tab the user works in', () => {
 
     expect(kinds(seen, 'yield')).toEqual([expect.objectContaining({ saving: true })]);
     expect(a.sync.role).toBe('follower');
-    expect(lastRole(a)).toEqual(['follower', { keepPendingSave: true }]);
+    // The observer holds nothing unsaved: the request is the store's, and B saves after it.
+    expect(lastRole(a)).toEqual(['follower']);
     expect(b.save).not.toHaveBeenCalled();
 
     request.land();
@@ -666,6 +667,15 @@ describe('TabSync — the leader follows the tab the user works in', () => {
 
       await vi.advanceTimersByTimeAsync(200);
       expect(b.sync.role).toBe('leader');
+    });
+
+    it('clears its 10 s bound when it is torn down', async () => {
+      const { a } = await readOnlyWithRequestOut();
+      const before = vi.getTimerCount();
+
+      a.sync.destroy();
+
+      expect(vi.getTimerCount()).toBe(before - 1);
     });
 
     it('leads again, without giving up the lock, when it turns editable before the request settles', async () => {

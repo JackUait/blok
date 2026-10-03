@@ -83,6 +83,9 @@ export class TabSync extends Module {
    */
   private dirtySinceSaved = false;
 
+  /** Lets the last typing out after ReadOnly already reports enabled. */
+  private flushingBeforeReadOnly = false;
+
   /** A tab update or diff changed this tab's document. */
   private receivedTabChange = false;
 
@@ -262,6 +265,7 @@ export class TabSync extends Module {
     }
 
     if (readOnly) {
+      this.postTypingBeforeReadOnly();
       if (this.currentRole === 'leader' || this.currentRole === 'follower') {
         this.cancelQueue(session);
         this.setRole('follower');
@@ -279,6 +283,19 @@ export class TabSync extends Module {
         log('Tab sync could not rejoin; this tab works on its own.', 'debug', error);
         this.leave();
       });
+    }
+  }
+
+  /**
+   * ReadOnly flips its state before it calls modules, so the outbound gate
+   * is already shut; typing made while editable must still go out.
+   */
+  private postTypingBeforeReadOnly(): void {
+    this.flushingBeforeReadOnly = true;
+    try {
+      this.Blok.YjsManager.flushPendingBlockWrites();
+    } finally {
+      this.flushingBeforeReadOnly = false;
     }
   }
 
@@ -510,7 +527,7 @@ export class TabSync extends Module {
 
       const role = this.currentRole;
 
-      if (!this.Blok.ReadOnly.isEnabled && (role === 'leader' || role === 'follower')) {
+      if ((this.flushingBeforeReadOnly || !this.Blok.ReadOnly.isEnabled) && (role === 'leader' || role === 'follower')) {
         this.post({ kind: 'update', from: this.id, update });
       }
     });

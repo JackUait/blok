@@ -213,4 +213,82 @@ describe('Core — the leader saves structural changes made in a follower', () =
     expect(follower.moduleInstances.TabSync.role).toBe('leader');
     expect(onSave).not.toHaveBeenCalled();
   });
+
+  /** Two writes into block `id`: the first lands at once, the second waits in the buffer. */
+  const typeTwice = async (core: Core, id: string, first: string, second: string): Promise<void> => {
+    const editable = core.moduleInstances.BlockManager.getBlockById(id)?.pluginsContent;
+
+    expect(editable).toBeInstanceOf(HTMLElement);
+    for (const text of [first, second]) {
+      if (editable instanceof HTMLElement) {
+        editable.textContent = text;
+        editable.dispatchEvent(new InputEvent('input', { bubbles: true }));
+      }
+      // Long enough for block.save() to reach the write buffer, well short of its 400 ms flush.
+      await wait(60);
+    }
+  };
+
+  const textOf = (core: Core, id: string): string | null | undefined =>
+    core.moduleInstances.BlockManager.getBlockById(id)?.holder.textContent;
+
+  it('a leader that turns read-only hands its buffered typing to the tab that takes over', async () => {
+    const onSave = vi.fn();
+    const leader = createCore({ documentId: 'ro-leader', data: document3() });
+
+    await leader.isReady;
+    await wait(50);
+    const follower = createCore({ documentId: 'ro-leader', data: document3(), onSave });
+
+    await follower.isReady;
+    await wait(100);
+    expect(follower.moduleInstances.TabSync.role).toBe('follower');
+
+    await typeTwice(leader, 'a', 'a one', 'a one two');
+    expect(textOf(follower, 'a')).toBe('a one');
+
+    await leader.moduleInstances.ReadOnly.set(true);
+    await oneWindow();
+
+    expect(leader.moduleInstances.TabSync.role).toBe('follower');
+    expect(follower.moduleInstances.TabSync.role).toBe('leader');
+    expect(textOf(follower, 'a')).toBe('a one two');
+    const saved = (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === 'a');
+
+    expect(saved?.data.text).toBe('a one two');
+  });
+
+  it('a follower that turns read-only still posts its buffered typing', async () => {
+    const { leader, follower } = await twoEditors('ro-follower');
+
+    await typeTwice(follower, 'a', 'a one', 'a one two');
+    expect(textOf(leader, 'a')).toBe('a one');
+
+    await follower.moduleInstances.ReadOnly.set(true);
+    await wait(50);
+
+    expect(textOf(leader, 'a')).toBe('a one two');
+  });
+
+  it('a lone leader that turns read-only saves its typing once it is editable again', async () => {
+    const onSave = vi.fn();
+    const leader = createCore({ documentId: 'ro-lone', data: document3(), onSave });
+
+    await leader.isReady;
+    await wait(50);
+    await typeTwice(leader, 'a', 'a one', 'a one two');
+    onSave.mockClear();
+
+    await leader.moduleInstances.ReadOnly.set(true);
+    await oneWindow();
+    expect(onSave).not.toHaveBeenCalled();
+
+    await leader.moduleInstances.ReadOnly.set(false);
+    await oneWindow();
+
+    expect(leader.moduleInstances.TabSync.role).toBe('leader');
+    const saved = (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === 'a');
+
+    expect(saved?.data.text).toBe('a one two');
+  });
 });

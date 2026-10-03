@@ -313,7 +313,16 @@ export class TabSync extends Module {
    * @param listener - gets each local locale, theme or width change
    */
   private onLocalSetting(listener: (setting: SettingMessage) => void): () => void {
-    const onLocale = ({ locale }: I18nChangedPayload): void => listener({ setting: 'locale', value: locale });
+    // I18nChanged also fires for messages-only and direction-only updates
+    // (adapters re-apply their config on mount); only a new locale is sent.
+    const seen: { locale: string } = { locale: this.Blok.I18n.getLocale() };
+    const onLocale = ({ locale }: I18nChangedPayload): void => {
+      if (locale === seen.locale) {
+        return;
+      }
+      seen.locale = locale;
+      listener({ setting: 'locale', value: locale });
+    };
     const onSetting = (payload: SettingChangedPayload): void => listener(payload);
 
     this.eventsDispatcher.on(I18nChanged, onLocale);

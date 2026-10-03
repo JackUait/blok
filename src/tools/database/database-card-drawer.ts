@@ -648,6 +648,8 @@ export class DatabaseCardDrawer {
         holder: editorHolder,
         data: description as OutputData | undefined,
         readOnly: this.readOnly,
+        // The card body belongs to the host's document; it must not sync or lead on its own.
+        tabSync: false,
         // A fresh editor defaults to LTR; the page body reads like its database.
         i18n: { direction: getElementDirection(editorHolder) },
         onChange: async () => {

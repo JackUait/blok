@@ -109,9 +109,9 @@ describe('settings channel', () => {
     const b = side(platform);
     const c = side(platform);
 
-    // A leaking setter would emit the applied value back.
+    // I18n emits the applied locale back; theme and width setters are silent.
     b.apply.mockImplementation((s) => b.change(s));
-    a.change({ setting: 'theme', value: 'dark' });
+    a.change({ setting: 'locale', value: 'ru' });
     await flush();
 
     expect(c.apply).toHaveBeenCalledTimes(1);
@@ -147,6 +147,34 @@ describe('settings channel', () => {
 
     expect(a.apply).toHaveBeenNthCalledWith(1, { setting: 'theme', value: 'light' });
     expect(a.apply).toHaveBeenNthCalledWith(2, { setting: 'theme', value: 'dark' });
+  });
+
+  it('a theme received earlier never swallows a later host change to that theme', async () => {
+    const platform = createFakePlatform();
+    const a = side(platform);
+    const b = side(platform);
+
+    a.change({ setting: 'theme', value: 'dark' });
+    await flush();
+    // B's tool then sets light through api.theme.set, which emits nothing.
+    // The host sets dark again: a real change, so A must hear it.
+    b.change({ setting: 'theme', value: 'dark' });
+    await flush();
+
+    expect(a.apply).toHaveBeenCalledWith({ setting: 'theme', value: 'dark' });
+  });
+
+  it('a width received earlier never swallows a later host change to that width', async () => {
+    const platform = createFakePlatform();
+    const a = side(platform, 'doc-1');
+    const b = side(platform, 'doc-1');
+
+    a.change({ setting: 'width', value: 'full' });
+    await flush();
+    b.change({ setting: 'width', value: 'full' });
+    await flush();
+
+    expect(a.apply).toHaveBeenCalledWith({ setting: 'width', value: 'full' });
   });
 
   it('ignores malformed, foreign-protocol and out-of-range messages', async () => {
@@ -209,7 +237,7 @@ describe('TabSync — settings', () => {
   const makeTab = (platform: FakePlatform, overrides: Partial<BlokConfig> = {}, minted = false) => {
     const fake = {
       ...createFakeBlok({ minted }),
-      I18n: { update: vi.fn(async (_options: { locale: string }): Promise<void> => undefined) },
+      I18n: { getLocale: vi.fn(() => 'en'), update: vi.fn(async (_options: { locale: string }): Promise<void> => undefined) },
       ThemeManager: { setMode: vi.fn() },
       UI: { setWidthMode: vi.fn() },
     };
@@ -334,6 +362,31 @@ describe('TabSync — settings', () => {
     expect(platform.openChannels(SETTINGS_CHANNEL)).toBe(2);
     minted.sync.destroy();
     loaded.sync.destroy();
+  });
+
+  it('sends the locale only when it changed, not on a messages-only or direction-only update', async () => {
+    const platform = createFakePlatform();
+    const a = makeTab(platform);
+    const listener = vi.fn();
+
+    await a.sync.start(CONTEXT);
+    await flush();
+    platform.rawChannel(SETTINGS_CHANNEL)?.onMessage(listener);
+
+    // The editor already runs in 'en' (an adapter re-applies its config on mount).
+    a.bus.emit(I18nChanged, { locale: 'en', direction: 'ltr' });
+    a.bus.emit(I18nChanged, { locale: 'en', direction: 'rtl' });
+    await flush();
+
+    expect(listener).not.toHaveBeenCalled();
+
+    a.bus.emit(I18nChanged, { locale: 'ru', direction: 'ltr' });
+    a.bus.emit(I18nChanged, { locale: 'ru', direction: 'ltr' });
+    await flush();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith(expect.objectContaining({ setting: 'locale', value: 'ru' }));
+    a.sync.destroy();
   });
 
   it('a received setting does not go back out', async () => {

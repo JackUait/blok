@@ -18,7 +18,7 @@ interface SettingsChannelDeps {
   documentKey?: string;
   /** Local changes to send. Returns an unsubscribe. */
   on: (listener: (setting: SettingMessage) => void) => () => void;
-  /** Must not emit back through `on`; the echo guard only catches the same value. */
+  /** Theme and width must not emit back through `on`; only a locale echo is caught. */
   apply: (setting: SettingMessage) => void;
 }
 
@@ -67,19 +67,23 @@ export const createSettingsChannel = (deps: SettingsChannelDeps): { close(): voi
   }
 
   /*
-   * The last value applied from another tab, per setting. A local emission of
-   * that same value is its echo: I18n emits after an async repaint, so a flag
-   * held only while `apply` runs would miss it.
+   * The locale last applied from another tab. A local emission of that same
+   * locale is its echo: I18n emits after an async repaint, so a flag held only
+   * while `apply` runs would miss it. Theme and width are applied through
+   * silent setters, so they never echo; a memory for them would swallow a
+   * later real change to the same value.
    */
-  const applied = new Map<SettingMessage['setting'], string>();
+  const applied: { locale: string | null } = { locale: null };
   const { documentKey } = deps;
   // A closed BroadcastChannel throws on post; a source may still emit after close.
   const state = { closed: false };
 
   const unsubscribe = deps.on((message) => {
-    const echo = applied.get(message.setting) === message.value;
+    const echo = message.setting === 'locale' && applied.locale === message.value;
 
-    applied.delete(message.setting);
+    if (message.setting === 'locale') {
+      applied.locale = null;
+    }
     if (state.closed || echo) {
       return;
     }
@@ -102,7 +106,9 @@ export const createSettingsChannel = (deps: SettingsChannelDeps): { close(): voi
     if (decoded.message.setting === 'width' && (documentKey === undefined || decoded.documentKey !== documentKey)) {
       return;
     }
-    applied.set(decoded.message.setting, decoded.message.value);
+    if (decoded.message.setting === 'locale') {
+      applied.locale = decoded.message.value;
+    }
     deps.apply(decoded.message);
   });
 

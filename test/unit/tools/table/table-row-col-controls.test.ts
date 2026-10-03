@@ -1088,6 +1088,36 @@ describe('TableRowColControls', () => {
   });
 
   describe('grip entry animation', () => {
+    // Size is in the transition list, so a reveal that also changed the size
+    // would play as a pale blob shrinking into the pill. Only opacity may fade.
+    it('reveals grips at their idle size, after the pointer left and came back', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      simulateMouseOver(getCell(grid, 0, 0));
+      simulateMouseLeave(grid);
+      vi.advanceTimersByTime(HIDE_DELAY_MS + 10);
+
+      const colGrip = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`)[0];
+      const rowGrip = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`)[0];
+      const idle = { height: colGrip.style.height, width: rowGrip.style.width };
+
+      simulateMouseOver(getCell(grid, 0, 0));
+
+      expect(isGripVisible(colGrip)).toBe(true);
+      expect({ height: colGrip.style.height, width: rowGrip.style.width }).toEqual(idle);
+    });
+
     it('skips opacity transition when switching grips while already inside table', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({

@@ -257,6 +257,44 @@ test.describe('table in RTL', () => {
       expect(Math.abs(rowGrip.x - startLine)).toBeLessThan(0.25);
     });
 
+    test(`${direction}: grips fade in at pill size when the pointer comes back`, async ({ page }) => {
+      await createBlok(page, tableData([['A', 'B'], ['C', 'D']]), direction);
+
+      const target = center(await box(page, cell(1, 0)));
+      const colGrip = page.locator('[data-blok-table-grip-col="0"]');
+
+      await page.mouse.move(target.x, target.y);
+      await expect(colGrip).toHaveAttribute('data-blok-table-grip-visible', '');
+      await page.mouse.move(target.x, target.y + 400);
+      await expect(colGrip).not.toHaveAttribute('data-blok-table-grip-visible', '');
+
+      // Sample every frame of the fade: a size change would show up mid-way.
+      await page.evaluate(() => {
+        const grip = document.querySelector('[data-blok-table-grip-col="0"]');
+        const heights: number[] = [];
+        const until = performance.now() + 400;
+        const sample = (): void => {
+          heights.push(grip?.getBoundingClientRect().height ?? 0);
+
+          if (performance.now() < until) {
+            requestAnimationFrame(sample);
+          } else {
+            Object.assign(window, { gripSamplingDone: true });
+          }
+        };
+
+        Object.assign(window, { gripHeights: heights, gripSamplingDone: false });
+        requestAnimationFrame(sample);
+      });
+      await page.mouse.move(target.x, target.y);
+      await expect(colGrip).toHaveAttribute('data-blok-table-grip-visible', '');
+      await expect.poll(() => page.evaluate(() => (window as unknown as { gripSamplingDone: boolean }).gripSamplingDone)).toBe(true);
+
+      const heights = await page.evaluate(() => (window as unknown as { gripHeights: number[] }).gripHeights);
+
+      expect(Math.max(...heights)).toBeLessThanOrEqual(4.5);
+    });
+
     test(`${direction}: dragging a column grip reorders toward the inline end`, async ({ page }) => {
       await createBlok(page, tableData([['A', 'B', 'C'], ['D', 'E', 'F']], [200, 200, 200]), direction);
 

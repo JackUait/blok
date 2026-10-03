@@ -790,9 +790,9 @@ export class TableRowColControls {
     const el = grip;
     const isCol = el.hasAttribute(GRIP_COL_ATTR);
     const type: 'col' | 'row' = isCol ? 'col' : 'row';
-    // With border-box, pillSize must account for the 12px padding (6px each side)
-    const HIT_AREA_PADDING = 12;
-    const pillSize = isCol ? (COL_PILL_HEIGHT + HIT_AREA_PADDING) : (ROW_PILL_WIDTH + HIT_AREA_PADDING);
+    // Same size as the visible pill: size is in the transition list, so any
+    // difference would play on reveal as a blob shrinking into the pill.
+    const pillSize = isCol ? COL_PILL_HEIGHT : ROW_PILL_WIDTH;
 
     if (this.isInsideTable) {
       el.style.transition = 'none';

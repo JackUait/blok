@@ -14,8 +14,8 @@ const GRIP_VISIBLE_ATTR = 'data-blok-table-grip-visible';
 const HIDE_DELAY_MS = 150;
 /** GRIP_HOVER_SIZE from table-grip-visuals. */
 const HOVER_SIZE_PX = '16px';
-/** COL_PILL_HEIGHT / ROW_PILL_WIDTH (4) plus the 12px hit-area padding. */
-const IDLE_PILL_PX = '16px';
+/** COL_PILL_HEIGHT / ROW_PILL_WIDTH: idle matches the visible pill, so a reveal only fades. */
+const IDLE_PILL_PX = '4px';
 const CELL_WIDTH = 100;
 
 const mockI18n = {
@@ -468,7 +468,7 @@ describe('TableRowColControls — geometry and grip state', () => {
       expect(gripsIn(grid, GRIP_COL_ATTR).some(g => g.hasAttribute(GRIP_VISIBLE_ATTR))).toBe(false);
     });
 
-    it('hides the grips revealed by hover, and returns them to their idle pill size', () => {
+    it('hides the grips revealed by hover, at the same pill size', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls(baseOptions(grid, 2, 2));
 
@@ -484,7 +484,6 @@ describe('TableRowColControls — geometry and grip state', () => {
       expect(hoveredCol.hasAttribute(GRIP_VISIBLE_ATTR)).toBe(false);
       expect(hoveredRow.hasAttribute(GRIP_VISIBLE_ATTR)).toBe(false);
       expect(gripsIn(grid, GRIP_COL_ATTR)[0].hasAttribute(GRIP_VISIBLE_ATTR)).toBe(true);
-      // Idle pill keeps the 12px hit-area padding, otherwise the grip is unhoverable.
       expect(hoveredCol.style.height).toBe(IDLE_PILL_PX);
       expect(hoveredRow.style.width).toBe(IDLE_PILL_PX);
     });
@@ -1543,10 +1542,12 @@ describe('TableRowColControls — geometry and grip state', () => {
       const colGrips = gripsIn(grid, GRIP_COL_ATTR);
 
       expect(colGrips[2].classList.contains('bg-blue-500')).toBe(true);
-      // Rebuilt grips start at the bare 4px pill; every other grip must be
-      // padded out to its hoverable hit area, not left as a sliver.
-      expect(colGrips[0].style.height).toBe(IDLE_PILL_PX);
-      expect(colGrips[1].style.height).toBe(IDLE_PILL_PX);
+
+      for (const other of [colGrips[0], colGrips[1]]) {
+        expect(other.classList.contains('opacity-0')).toBe(true);
+        expect(other.classList.contains('pointer-events-none')).toBe(true);
+        expect(other.style.height).toBe(IDLE_PILL_PX);
+      }
     });
   });
 

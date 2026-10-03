@@ -5,6 +5,7 @@ import {
   CLAIM_TIMEOUT_MS,
   JOIN_TIMEOUT_MS,
   TabSync,
+  TAKEOVER_SETTLE_WAIT_MS,
   YIELD_SAVE_WAIT_MS,
 } from '../../../../../src/components/modules/tabSync';
 import { resolveTabKey } from '../../../../../src/components/modules/tabSync/identity';
@@ -42,7 +43,7 @@ const apiStub = {} as unknown as API;
  * A tab whose `flushNow` really pumps its save queue, so a save has a
  * version and can be in flight.
  */
-const makeTab = (platform: FakePlatform, options: { recordId?: string; readOnly?: boolean; version?: string } = {}): Tab => {
+const makeTab = (platform: FakePlatform, options: { recordId?: string; readOnly?: boolean; version?: string; failSteal?: boolean } = {}): Tab => {
   const fake = createFakeBlok({ recordId: options.recordId, readOnly: options.readOnly });
   const save = vi.fn(async () => ({ version: options.version ?? 'v-saved' }));
   const config = expandPersistenceConfig({ documentId: 'doc', persistence: { load: async () => null, save } });
@@ -59,6 +60,13 @@ const makeTab = (platform: FakePlatform, options: { recordId?: string; readOnly?
   sync.setPlatform({
     ...platform,
     activity: () => activity,
+    lock: (key) => {
+      const lock = platform.lock(key);
+
+      return lock === null || options.failSteal !== true
+        ? lock
+        : { ...lock, steal: () => Promise.reject(new Error('steal refused')) };
+    },
     channel: (key) => {
       own.channel = platform.channel(key);
 
@@ -103,7 +111,7 @@ describe('TabSync — the leader follows the tab the user works in', () => {
   let platform: FakePlatform;
   const tabs: Tab[] = [];
 
-  const tab = async (options: { recordId?: string; readOnly?: boolean; version?: string; active?: boolean } = {}): Promise<Tab> => {
+  const tab = async (options: { recordId?: string; readOnly?: boolean; version?: string; active?: boolean; failSteal?: boolean } = {}): Promise<Tab> => {
     const t = makeTab(platform, options);
 
     if (options.active === true) {
@@ -183,7 +191,7 @@ describe('TabSync — the leader follows the tab the user works in', () => {
     expect(b.sync.role).toBe('follower');
   });
 
-  it('the leader saves its unsaved edit once before it yields, and the claimant saves nothing more', async () => {
+  it('the leader saves its unsaved edit before it yields; the claimant saves once to bring its bindings up to date', async () => {
     const { a, b } = await twoTabs();
 
     editUnsaved(a, 'unsaved');
@@ -195,10 +203,11 @@ describe('TabSync — the leader follows the tab the user works in', () => {
     expect(b.sync.role).toBe('leader');
     expect(b.fake.text()).toBe('unsaved buffered');
     expect(a.save).toHaveBeenCalledTimes(1);
-    // The saved version travels with the hand-over: B's next If-Match is right.
-    expect(version(b)).toBe('v-a');
-    expect(b.fake.ModificationsObserver.flushNow).not.toHaveBeenCalled();
-    expect(b.save).not.toHaveBeenCalled();
+    // The saved version travels with the hand-over: B's If-Match below is right.
+    // One save after the hand-over: onSave bindings in the new tab are current at once.
+    expect(b.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
+    expect(b.save).toHaveBeenCalledTimes(1);
+    expect(b.save).toHaveBeenCalledWith({ blocks: [] }, { version: 'v-a' });
   });
 
   it('a leader whose observer saved everything does not save again before it yields', async () => {
@@ -256,37 +265,131 @@ describe('TabSync — the leader follows the tab the user works in', () => {
 
     expect(kinds(seen, 'yield')).toEqual([expect.objectContaining({ version: 'v-late' })]);
     expect(b.sync.role).toBe('leader');
-    expect(version(b)).toBe('v-late');
+    expect(b.save).toHaveBeenCalledWith({ blocks: [] }, { version: 'v-late' });
   });
 
-  it('a save still running at the deadline: the leader yields, keeps its edit, and the new leader retries with the late version', async () => {
+  /** Holds A's next save; the returned functions land or fail it. */
+  const holdRequest = (a: Tab, version: string): { land: () => void; fail: () => void } => {
+    const held = { land: (): void => undefined, fail: (): void => undefined };
+
+    a.save.mockImplementationOnce(() => new Promise((resolve, reject) => {
+      held.land = () => resolve({ version });
+      held.fail = () => reject(new Error('conflict'));
+    }));
+
+    return held;
+  };
+
+  /** A leader A whose save is still out when it yields to B at the deadline. */
+  const yieldWhileSaving = async (): Promise<{ a: Tab; b: Tab; request: { land: () => void; fail: () => void }; seen: TabMessage[] }> => {
     const { a, b } = await twoTabs();
-    const landed: { resolve: () => void } = { resolve: () => undefined };
+    const request = holdRequest(a, 'v-slow');
     const seen = listen();
 
-    a.save.mockImplementationOnce(() => new Promise((resolve) => {
-      landed.resolve = () => resolve({ version: 'v-slow' });
-    }));
-    // A versioned store refuses B's first save: it names a version A is still replacing.
-    b.save.mockRejectedValueOnce(new Error('conflict'));
     editUnsaved(a, 'x');
     b.activity.set(true);
     await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 100);
 
-    expect(kinds(seen, 'yield')).toHaveLength(1);
-    expect(a.sync.role).toBe('follower');
-    expect(b.sync.role).toBe('leader');
-    expect(lastRole(a)).toEqual(['follower', { keepPendingSave: true }]);
-    expect(b.save).toHaveBeenCalledTimes(1);
+    return { a, b, request, seen };
+  };
 
-    landed.resolve();
+  it('a save still running at the deadline: the leader yields, keeps its edit, and the new leader saves only after it lands', async () => {
+    const { a, b, request, seen } = await yieldWhileSaving();
+
+    expect(kinds(seen, 'yield')).toEqual([expect.objectContaining({ saving: true })]);
+    expect(a.sync.role).toBe('follower');
+    expect(lastRole(a)).toEqual(['follower', { keepPendingSave: true }]);
+    expect(b.save).not.toHaveBeenCalled();
+
+    request.land();
     await vi.advanceTimersByTimeAsync(0);
 
-    // Posted although A no longer leads: B's next save needs this version.
-    expect(kinds(seen, 'saved')).toEqual([expect.objectContaining({ version: 'v-slow' })]);
-    expect(version(b)).toBe('v-slow');
-    await vi.advanceTimersByTimeAsync(600);
+    // Posted although A no longer leads: B's first save needs this version.
+    expect(kinds(seen, 'saved')[0]).toEqual(expect.objectContaining({ version: 'v-slow' }));
+    expect(b.sync.role).toBe('leader');
+    expect(b.save).toHaveBeenCalledTimes(1);
     expect(b.save).toHaveBeenLastCalledWith({ blocks: [] }, { version: 'v-slow' });
+  });
+
+  it('when the old leader\'s request fails, it never retries it, and the new leader saves after the notice', async () => {
+    const { a, b, request, seen } = await yieldWhileSaving();
+
+    request.fail();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(kinds(seen, 'settled')).toEqual([expect.objectContaining({ ok: false })]);
+    expect(b.sync.role).toBe('leader');
+    expect(b.save).toHaveBeenCalledTimes(1);
+
+    // B's save moved the version A follows; a retry would now pass its If-Match.
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(version(a)).toBe('v-b');
+    expect(a.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('the new leader saves after 10 s when the old leader never reports back', async () => {
+    const { a, b } = await yieldWhileSaving();
+
+    a.pauseInbound();
+    await vi.advanceTimersByTimeAsync(TAKEOVER_SETTLE_WAIT_MS - 200);
+    expect(b.save).not.toHaveBeenCalled();
+    expect(b.sync.role).toBe('follower');
+
+    await vi.advanceTimersByTimeAsync(200);
+    expect(b.sync.role).toBe('leader');
+    expect(b.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('a leader whose lock was stolen never retries its failed save', async () => {
+    const { a, b } = await twoTabs();
+    const request = holdRequest(a, 'v-a2');
+
+    editUnsaved(a, 'x');
+    a.fake.ModificationsObserver.flushNow();
+    a.pauseInbound();
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + CLAIM_TIMEOUT_MS + 100);
+    expect(a.sync.role).toBe('follower');
+    a.resumeInbound();
+    await vi.advanceTimersByTimeAsync(0);
+
+    request.fail();
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(a.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('an edit that lands in the yielding leader while it waits is saved before it yields', async () => {
+    const { a, b } = await twoTabs();
+    const request = holdRequest(a, 'v-a');
+
+    editUnsaved(a, 'x');
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS);
+    // Lands after the first serialization started.
+    a.fake.ModificationsObserver.hasPendingSave = true;
+    request.land();
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(a.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(2);
+    expect(a.save).toHaveBeenCalledTimes(2);
+    expect(b.sync.role).toBe('leader');
+  });
+
+  it('a claimant whose steal fails waits in line again', async () => {
+    const a = await tab({ recordId: 'A' });
+    const b = await tab({ recordId: 'B', failSteal: true });
+
+    await vi.advanceTimersByTimeAsync(0);
+
+    b.activity.set(true);
+    vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + 100);
+    expect(b.sync.role).toBe('follower');
+    a.sync.destroy();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(b.sync.role).toBe('leader');
   });
 
   /** Holds A's next save until the returned function lands it. */

@@ -73,7 +73,7 @@ const twoEditors = async (documentId: string): Promise<{ leader: Core; follower:
 const oneWindow = (): Promise<void> => wait(modificationsObserverBatchTimeout + 150);
 
 const savedIds = (onSave: ReturnType<typeof vi.fn>): string[] | undefined =>
-  (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.map((block) => block.id);
+  (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.map((block) => block.id ?? '');
 
 describe('Core — replacing the document in one tab adds no block in the others', () => {
   beforeEach(() => {

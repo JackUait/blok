@@ -443,7 +443,7 @@ describe('Core — the tab the user works in saves', () => {
     document.body.innerHTML = '';
   });
 
-  it('a follower the user turns to takes over: the old leader saves its edit once, then only the new one saves', async () => {
+  it('a follower the user turns to takes over: the old leader saves its edit once, the new one saves on takeover and from then on', async () => {
     const { createFakeActivity } = await import('./modules/tabSync/fakes');
     const followerActivity = createFakeActivity();
     const leaderSave = vi.fn();
@@ -472,13 +472,14 @@ describe('Core — the tab the user works in saves', () => {
     expect((leaderSave.mock.lastCall?.[0] as OutputData).blocks[0].data.text).toBe('a by leader');
 
     await oneWindow();
-    // Nothing changed after the hand-over, so the new leader adds no save of its own.
-    expect(followerSave).not.toHaveBeenCalled();
+    // One save on takeover: bindings that ride onSave in this tab are current at once.
+    expect(followerSave).toHaveBeenCalledTimes(1);
+    expect((followerSave.mock.lastCall?.[0] as OutputData).blocks[0].data.text).toBe('a by leader');
 
     await follower.moduleInstances.API.methods.blocks.update('b', { text: 'b by follower' });
     await oneWindow();
 
-    expect(followerSave).toHaveBeenCalledTimes(1);
+    expect(followerSave).toHaveBeenCalledTimes(2);
     expect((followerSave.mock.lastCall?.[0] as OutputData).blocks[1].data.text).toBe('b by follower');
     expect(leaderSave).toHaveBeenCalledTimes(1);
   });

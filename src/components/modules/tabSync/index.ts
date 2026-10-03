@@ -36,6 +36,9 @@ export const CLAIM_TIMEOUT_MS = 4000;
 /** How long a leader asked to yield waits for its save to land. Below CLAIM_TIMEOUT_MS. */
 export const YIELD_SAVE_WAIT_MS = 3000;
 
+/** How long a new leader waits for the old leader's last request before its own first save. */
+export const TAKEOVER_SETTLE_WAIT_MS = 10_000;
+
 const SAVE_POLL_MS = 50;
 
 interface StartContext { loadedFromPersistence: boolean; isEmpty: boolean }
@@ -144,10 +147,10 @@ export class TabSync extends Module {
   private claimTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
-   * Who changed this tab's document since it claimed (its own id for local
-   * edits). The yielding leader's save covers its own changes, not the rest.
+   * Set between a takeover and the old leader's last request settling; this
+   * tab holds the lock but saves nothing until then.
    */
-  private changedSinceClaim = new Set<string>();
+  private awaitingSettle: { from: string; timer: ReturnType<typeof setTimeout> } | null = null;
 
   /** True while this leader saves before it yields; one hand-over at a time. */
   private yielding = false;
@@ -593,7 +596,6 @@ export class TabSync extends Module {
     this.unsubscribeOutbound = this.Blok.YjsManager.onDocUpdate((update) => {
       this.editedSinceStart = true;
       this.dirtySinceSaved = true;
-      this.changedSinceClaim.add(this.id);
 
       const role = this.currentRole;
 
@@ -669,7 +671,7 @@ export class TabSync extends Module {
 
         return;
       case 'update':
-        this.onUpdate(message.update, message.from);
+        this.onUpdate(message.update);
 
         return;
       case 'saved':
@@ -684,6 +686,12 @@ export class TabSync extends Module {
         return;
       case 'yield':
         this.onYield(message);
+
+        return;
+      case 'settled':
+        if (this.awaitingSettle?.from === message.from) {
+          this.finishTakeover();
+        }
 
         return;
     }
@@ -701,6 +709,9 @@ export class TabSync extends Module {
       // A successor then saves with the right If-Match.
       persistenceVersionAccess(this.config.persistence)?.set(message.version);
       this.dirtySinceSaved = false;
+      if (this.awaitingSettle?.from === message.from) {
+        this.finishTakeover();
+      }
     } else if (this.currentRole === 'leader' && message.from === this.takeoverFrom) {
       // The old leader's save landed after it yielded; this tab saves next.
       persistenceVersionAccess(this.config.persistence)?.set(message.version);
@@ -736,26 +747,20 @@ export class TabSync extends Module {
 
   /**
    * @param update - a tab update
-   * @param from - the sending tab, when known
    */
-  private onUpdate(update: Uint8Array, from: string | null): void {
+  private onUpdate(update: Uint8Array): void {
     if (this.heldUpdates !== null) {
       this.heldUpdates.push(update);
 
       return;
     }
     if (this.currentRole === 'leader' || this.currentRole === 'follower') {
-      const applied = { changed: false };
-
       try {
-        applied.changed = this.applyTabUpdate(update);
+        this.applyTabUpdate(update);
       } catch (error) {
         this.fail('Tab sync could not apply a change from another tab; this tab works on its own.', error);
 
         return;
-      }
-      if (applied.changed && from !== null) {
-        this.changedSinceClaim.add(from);
       }
       // The leader may close before it saves this; its successor must know.
       this.dirtySinceSaved = true;
@@ -783,9 +788,6 @@ export class TabSync extends Module {
     }
     // Only from the leader: a follower's version may be stale. A frozen
     // follower missed every `saved` meanwhile.
-    if (changed.value) {
-      this.changedSinceClaim.add(message.from);
-    }
     if (this.currentRole === 'follower') {
       this.leaderId = message.from;
       persistenceVersionAccess(this.config.persistence)?.set(message.version);
@@ -981,7 +983,7 @@ export class TabSync extends Module {
     const held = this.heldUpdates ?? [];
 
     this.heldUpdates = null;
-    held.forEach((update) => this.onUpdate(update, null));
+    held.forEach((update) => this.onUpdate(update));
   }
 
   /**
@@ -1064,7 +1066,7 @@ export class TabSync extends Module {
 
   /** Read-only, solo and joining tabs never claim. */
   private canClaim(): boolean {
-    return this.session !== null && this.currentRole === 'follower' && !this.Blok.ReadOnly.isEnabled;
+    return this.session !== null && this.currentRole === 'follower' && !this.Blok.ReadOnly.isEnabled && this.awaitingSettle === null;
   }
 
   private armClaim(): void {
@@ -1091,7 +1093,6 @@ export class TabSync extends Module {
     // one sender's messages arrive in order.
     this.Blok.YjsManager.flushPendingBlockWrites();
     this.postOutbox();
-    this.changedSinceClaim.clear();
     this.claimTimer = setTimeout(() => {
       this.claimTimer = null;
       void this.takeOver(null);
@@ -1159,6 +1160,9 @@ export class TabSync extends Module {
       await session.lock.steal();
     } catch (error) {
       log('Tab sync could not take the lock from the other tab.', 'debug', error);
+      if (this.session === session && this.currentRole === 'follower') {
+        this.queueForLock(session);
+      }
 
       return;
     }
@@ -1182,15 +1186,36 @@ export class TabSync extends Module {
     persistenceVersionAccess(this.config.persistence)?.set(message.version);
     this.takeoverFrom = message.from;
     this.leaderId = null;
+    if (!message.saving) {
+      this.finishTakeover();
 
-    const started = this.setRole('leader');
+      return;
+    }
+    // Saving now would race the old leader's request with a stale If-Match.
+    this.awaitingSettle = {
+      from: message.from,
+      timer: setTimeout(() => this.finishTakeover(), TAKEOVER_SETTLE_WAIT_MS),
+    };
+  }
 
-    // The old leader saved what it had; only what others changed after the
-    // claim, or what its save missed, is left.
-    const changedByOthers = [...this.changedSinceClaim].some((tab) => tab !== message.from);
-
-    if (!started && (this.hasUnsavedWork() || changedByOthers)) {
+  /**
+   * Leads, and always saves once: onSave bindings in this tab are stale until
+   * it does. A repeat of the old leader's last write is accepted.
+   */
+  private finishTakeover(): void {
+    this.clearAwaitingSettle();
+    if (!this.holdsLock || !this.canClaim()) {
+      return;
+    }
+    if (!this.setRole('leader')) {
       this.Blok.ModificationsObserver.flushNow();
+    }
+  }
+
+  private clearAwaitingSettle(): void {
+    if (this.awaitingSettle !== null) {
+      clearTimeout(this.awaitingSettle.timer);
+      this.awaitingSettle = null;
     }
   }
 
@@ -1208,23 +1233,28 @@ export class TabSync extends Module {
     try {
       this.Blok.YjsManager.flushPendingBlockWrites();
       this.postOutbox();
-      // The observer, not dirtySinceSaved: the write buffer lands typing in
-      // the document after the save that already read it from the page.
-      if (this.Blok.ModificationsObserver.hasPendingSave) {
-        this.Blok.ModificationsObserver.flushNow();
-      }
-      const saved = await this.waitForSave(session);
+
+      const saved = await this.saveBeforeYield(session);
 
       // Read-only or teardown meanwhile: no hand-over; the claimant steals.
       if (this.session !== session || this.currentRole !== 'leader') {
         return;
       }
-      // Without persistence no `saved` goes out on its own; the claimant would
-      // then save everything again.
-      if (saved && !this.Blok.ModificationsObserver.hasUnsavedChanges) {
+      // Without persistence no `saved` goes out on its own.
+      if (saved) {
         this.postSaved();
       }
-      this.post({ kind: 'yield', from: this.id, to, version: persistenceVersionAccess(this.config.persistence)?.get() ?? null });
+      // No yieldedBy = this.id: this tab never hears its own `saved`, and
+      // overwriting would forget the tab that yielded before.
+      const request = this.abandonSaves();
+
+      this.post({
+        kind: 'yield',
+        from: this.id,
+        to,
+        version: persistenceVersionAccess(this.config.persistence)?.get() ?? null,
+        saving: request !== null,
+      });
       this.leaderId = to;
       if (saved) {
         this.setRole('follower');
@@ -1233,20 +1263,62 @@ export class TabSync extends Module {
         this.setRole('follower', { keepPendingSave: true });
       }
       this.watchHandOver(session);
+      // A request that lands posts `saved` through onSaved.
+      void request?.then((landed) => {
+        if (!landed && this.session === session) {
+          this.post({ kind: 'settled', from: this.id, ok: false });
+        }
+      });
     } finally {
       this.yielding = false;
     }
   }
 
   /**
-   * Waits for the serialization and the store save to settle. Edits that come
-   * in meanwhile are the claimant's to save.
+   * Saves what the observer holds, again for edits that land meanwhile,
+   * within YIELD_SAVE_WAIT_MS.
    * @param session - the live session
+   * @returns true when everything landed and nothing waits for a save
+   */
+  private async saveBeforeYield(session: Session): Promise<boolean> {
+    const deadline = Date.now() + YIELD_SAVE_WAIT_MS;
+    const { ModificationsObserver } = this.Blok;
+
+    for (;;) {
+      // The observer, not dirtySinceSaved: the write buffer lands typing in
+      // the document after the save that already read it from the page.
+      if (ModificationsObserver.hasPendingSave) {
+        ModificationsObserver.flushNow();
+      }
+      if (!await this.waitForSave(session, deadline)) {
+        return false;
+      }
+      if (!ModificationsObserver.hasPendingSave) {
+        return true;
+      }
+      if (Date.now() >= deadline) {
+        return false;
+      }
+    }
+  }
+
+  /**
+   * Stops this tab's save queue: a demoted tab must never retry, or it would
+   * write with the next leader's version over newer content.
+   * @returns the request still out, resolving to whether it landed
+   */
+  private abandonSaves(): Promise<boolean> | null {
+    return persistenceVersionAccess(this.config.persistence)?.abandon() ?? null;
+  }
+
+  /**
+   * Waits for the serialization and the store save to settle.
+   * @param session - the live session
+   * @param deadline - when to give up
    * @returns false when the save failed or still runs at the deadline
    */
-  private async waitForSave(session: Session): Promise<boolean> {
+  private async waitForSave(session: Session, deadline: number): Promise<boolean> {
     const access = persistenceVersionAccess(this.config.persistence);
-    const deadline = Date.now() + YIELD_SAVE_WAIT_MS;
 
     for (;;) {
       const state = access?.saveState() ?? 'idle';
@@ -1296,7 +1368,9 @@ export class TabSync extends Module {
     if (session === null) {
       return;
     }
+    this.clearAwaitingSettle();
     if (this.currentRole === 'leader') {
+      void this.abandonSaves();
       this.setRole('follower');
     }
     if (this.currentRole === 'follower' && this.queueAbort === null) {
@@ -1313,6 +1387,7 @@ export class TabSync extends Module {
     this.queueAbort = null;
     this.holdsLock = false;
     this.clearHandOverTimer();
+    this.clearAwaitingSettle();
     session.lock.release();
   }
 
@@ -1366,6 +1441,7 @@ export class TabSync extends Module {
     this.holdsLock = false;
     this.stopClaim();
     this.clearHandOverTimer();
+    this.clearAwaitingSettle();
     this.unsubscribeActivity?.();
     this.unsubscribeActivity = null;
     this.activity = null;

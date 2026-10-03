@@ -181,11 +181,6 @@
   border-bottom-color: color-mix(in srgb, var(--blok-table-border) 75%, var(--blok-text-primary)) !important;
 }
 
-/* Inline cell colors beat this, so a colored cell keeps its color on hover. */
-[data-blok-table-row]:not([data-blok-table-heading]):hover > [data-blok-table-cell]:not([data-blok-table-heading-col]) {
-  background-color: color-mix(in srgb, var(--blok-text-primary) 3%, transparent);
-}
-
 /*
  * Rounded frame. The table draws only its top and start lines; cells draw the
  * end and bottom ones, so each corner cell rounds itself too. Core stamps

@@ -50,12 +50,10 @@ describe('table card look', () => {
     expect(body).not.toMatch(/border-bottom-width|border-bottom:/);
   });
 
-  it('tints the hovered body row but never a heading cell', () => {
-    const body = ruleBody(
-      '[data-blok-table-row]:not([data-blok-table-heading]):hover > [data-blok-table-cell]:not([data-blok-table-heading-col])'
-    );
-
-    expect(body).toMatch(/background-color:\s*color-mix\(in srgb,\s*var\(--blok-text-primary\) 3%,\s*transparent\)/);
+  // A resize handle is not inside a row, so a :hover row tint blinked off on
+  // every column border the pointer crossed.
+  it('does not tint the hovered row', () => {
+    expect(css).not.toMatch(/\[data-blok-table-row\][^{]*:hover[^{]*\{[^}]*background/);
   });
 
   // view.css ships every token and has a hard byte budget, so the new colors

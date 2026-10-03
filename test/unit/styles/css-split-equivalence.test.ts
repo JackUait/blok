@@ -668,10 +668,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Loading skeleton: loading.css, its three keyframes, the bar and sheen tokens in
     // the three theme blocks, and its import in main.css.
     const LOADING_SKELETON_BYTES = 4_837;
-    // Table frame: heading ink + divider, row hover, the 2px frame radius on the
+    // Table frame: heading ink + divider, the 2px frame radius on the
     // grid and its corner cells, the radius role and the matching toolbox
     // preview. Measured net growth against 7d2de4e2.
-    const TABLE_FRAME_BYTES = 2_676;
+    const TABLE_FRAME_BYTES = 2_390;
     // Table cells: no placeholder ::before paints inside a cell, whatever path
     // left the placeholder attributes on a block.
     const CELL_PLACEHOLDER_BYTES = 497;

@@ -295,6 +295,86 @@ test.describe('table in RTL', () => {
       expect(Math.max(...heights)).toBeLessThanOrEqual(4.5);
     });
 
+    // The border between two columns is the physically-left cell's 1px
+    // border-right, so its centre is that cell's right edge minus 0.5px.
+    const borderLineCenter = async (page: Page, col: number): Promise<number> => {
+      const leftCell = await box(page, cell(0, direction === 'rtl' ? col + 1 : col));
+
+      return leftCell.x + leftCell.width - 0.5;
+    };
+
+    const resizeLineCenter = async (page: Page, col: number): Promise<number> =>
+      page.locator(`[data-blok-table-resize][data-col="${col}"]`).evaluate((handle) => {
+        const lineStart = parseFloat(getComputedStyle(handle).getPropertyValue('--blok-table-resize-line-x'));
+
+        return handle.getBoundingClientRect().left + lineStart + 1;
+      });
+
+    test(`${direction}: the resize line is centred on the column border`, async ({ page }) => {
+      await createBlok(page, tableData([['A', 'B', 'C'], ['D', 'E', 'F']], [200, 200, 200]), direction);
+
+      expect(Math.abs(await resizeLineCenter(page, 0) - await borderLineCenter(page, 0))).toBeLessThan(0.25);
+    });
+
+    test(`${direction}: the resize line stays shown when a resize ends under the pointer`, async ({ page }) => {
+      await createBlok(page, tableData([['A', 'B', 'C'], ['D', 'E', 'F']], [200, 200, 200]), direction);
+
+      const handle = page.locator('[data-blok-table-resize][data-col="0"]');
+      const start = center(await box(page, '[data-blok-table-resize][data-col="0"]'));
+      const outward = direction === 'rtl' ? -30 : 30;
+
+      await page.mouse.move(start.x, start.y);
+      await expect(handle).toHaveCSS('opacity', '1');
+      await page.mouse.down();
+      await page.mouse.move(start.x + outward, start.y, { steps: 6 });
+
+      // Sample the line on every frame after release: a fade-out that a later
+      // mouseenter brings back is still a blink.
+      await page.evaluate(() => {
+        const opacities: number[] = [];
+        const until = performance.now() + 400;
+        const sample = (): void => {
+          const line = document.querySelector('[data-blok-table-resize][data-col="0"]');
+
+          opacities.push(line === null ? 0 : Number(getComputedStyle(line).opacity));
+
+          if (performance.now() < until) {
+            requestAnimationFrame(sample);
+          } else {
+            Object.assign(window, { resizeLineDone: true });
+          }
+        };
+
+        Object.assign(window, { resizeLineOpacities: opacities, resizeLineDone: false });
+        requestAnimationFrame(sample);
+      });
+      await page.mouse.up();
+      await expect.poll(() => page.evaluate(() => (window as unknown as { resizeLineDone: boolean }).resizeLineDone)).toBe(true);
+
+      // The handle followed the border, so the pointer is still on it.
+      expect(Math.abs(center(await box(page, '[data-blok-table-resize][data-col="0"]')).x - (start.x + outward))).toBeLessThanOrEqual(TOLERANCE);
+
+      const opacities = await page.evaluate(() => (window as unknown as { resizeLineOpacities: number[] }).resizeLineOpacities);
+
+      expect(Math.min(...opacities)).toBe(1);
+    });
+
+    test(`${direction}: the resize line hides when a resize ends away from the border`, async ({ page }) => {
+      await createBlok(page, tableData([['A', 'B', 'C'], ['D', 'E', 'F']], [200, 200, 200]), direction);
+
+      const start = center(await box(page, '[data-blok-table-resize][data-col="0"]'));
+      // Past the 50px column minimum: the border stops, the pointer goes on.
+      const inward = direction === 'rtl' ? 250 : -250;
+
+      await page.mouse.move(start.x, start.y);
+      await expect(page.locator('[data-blok-table-resize][data-col="0"]')).toHaveCSS('opacity', '1');
+      await page.mouse.down();
+      await page.mouse.move(start.x + inward, start.y, { steps: 8 });
+      await page.mouse.up();
+
+      await expect(page.locator('[data-blok-table-resize][data-col="0"]')).toHaveCSS('opacity', '0');
+    });
+
     test(`${direction}: dragging a column grip reorders toward the inline end`, async ({ page }) => {
       await createBlok(page, tableData([['A', 'B', 'C'], ['D', 'E', 'F']], [200, 200, 200]), direction);
 

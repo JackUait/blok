@@ -3101,10 +3101,6 @@
   border-bottom-color: color-mix(in srgb, var(--blok-table-border) 75%, var(--blok-text-primary)) !important;
 }
 
-[data-blok-table-row]:not([data-blok-table-heading]):hover > [data-blok-table-cell]:not([data-blok-table-heading-col]) {
-  background-color: color-mix(in srgb, var(--blok-text-primary) 3%, transparent);
-}
-
 [data-blok-table-scroll] > table {
   border-radius: var(--blok-radius-table);
 }

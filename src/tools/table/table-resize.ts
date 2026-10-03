@@ -7,6 +7,7 @@ import { gridX } from './table-direction';
 
 const RESIZE_ATTR = 'data-blok-table-resize';
 const HANDLE_HIT_WIDTH = 16;
+const RESIZE_LINE_WIDTH = 2;
 /** Two clicks on the same handle within this window count as a double-click. */
 const DBLCLICK_MS = 300;
 
@@ -131,7 +132,8 @@ export class TableResize {
     handle.style.left = `${this.getHandleOffsetPx(colIndex)}px`;
     handle.style.cursor = 'col-resize';
     handle.style.zIndex = '2';
-    handle.style.background = 'linear-gradient(to right, transparent 7px, #3b82f6 7px, #3b82f6 9px, transparent 9px)';
+    handle.style.setProperty('--blok-table-resize-line-x', `${this.getLineOffsetPx(colIndex)}px`);
+    handle.style.background = `linear-gradient(to right, transparent var(--blok-table-resize-line-x), #3b82f6 var(--blok-table-resize-line-x), #3b82f6 calc(var(--blok-table-resize-line-x) + ${RESIZE_LINE_WIDTH}px), transparent calc(var(--blok-table-resize-line-x) + ${RESIZE_LINE_WIDTH}px))`;
     handle.style.opacity = '0';
     handle.style.transition = 'opacity 150ms ease';
     handle.setAttribute('contenteditable', 'false');
@@ -288,10 +290,27 @@ export class TableResize {
    */
   private getHandleOffsetPx(colIndex: number): number {
     const gridWidth = this.colWidths.reduce((sum, w) => sum + w, 0);
-    const border = gridX(this.getHandleLeftPx(colIndex), gridWidth, getElementDirection(this.gridEl));
-    const centred = border - HANDLE_HIT_WIDTH / 2;
+    const centred = this.getBorderX(colIndex) - HANDLE_HIT_WIDTH / 2;
 
     return Math.max(0, Math.min(centred, gridWidth - HANDLE_HIT_WIDTH));
+  }
+
+  private getBorderX(colIndex: number): number {
+    const gridWidth = this.colWidths.reduce((sum, w) => sum + w, 0);
+
+    return gridX(this.getHandleLeftPx(colIndex), gridWidth, getElementDirection(this.gridEl));
+  }
+
+  /**
+   * Where the 2px line starts inside its handle. The border it marks is the
+   * physically-left cell's 1px border-right, which ends AT the border x, so
+   * its centre is BORDER_WIDTH / 2 before it. Clamped so an edge handle (see
+   * getHandleOffsetPx) still draws its whole line.
+   */
+  private getLineOffsetPx(colIndex: number): number {
+    const lineStart = this.getBorderX(colIndex) - BORDER_WIDTH / 2 - RESIZE_LINE_WIDTH / 2;
+
+    return Math.max(0, Math.min(lineStart - this.getHandleOffsetPx(colIndex), HANDLE_HIT_WIDTH - RESIZE_LINE_WIDTH));
   }
 
   /**
@@ -307,6 +326,7 @@ export class TableResize {
       const handleEl: HTMLElement = handle;
 
       handleEl.style.left = `${this.getHandleOffsetPx(i)}px`;
+      handleEl.style.setProperty('--blok-table-resize-line-x', `${this.getLineOffsetPx(i)}px`);
     });
   }
 
@@ -432,7 +452,9 @@ export class TableResize {
 
     const activeHandle = this.handles[this.dragColIndex];
 
-    if (activeHandle) {
+    // Released still on the border: keep the line. Hiding it here and letting
+    // the next mouseenter bring it back blinks it.
+    if (activeHandle && !activeHandle.matches(':hover')) {
       activeHandle.style.opacity = '0';
     }
 

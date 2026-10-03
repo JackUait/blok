@@ -153,4 +153,32 @@ describe('Core — the leader saves structural changes made in a follower', () =
 
     expect(save).toHaveBeenCalledTimes(1);
   });
+
+  it('a follower unmounted with typing still in its write buffer hands it to the leader', async () => {
+    const { leader, follower } = await twoEditors('unmount-typing');
+    const block = follower.moduleInstances.BlockManager.getBlockById('a');
+    const editable = block?.pluginsContent;
+
+    expect(editable).toBeInstanceOf(HTMLElement);
+    if (!(editable instanceof HTMLElement)) {
+      return;
+    }
+    const type = async (text: string): Promise<void> => {
+      editable.textContent = text;
+      editable.dispatchEvent(new InputEvent('input', { bubbles: true }));
+      // Long enough for block.save() to reach the write buffer, well short of its 400 ms flush.
+      await wait(60);
+    };
+
+    // The first write lands at once; the next one waits in the buffer.
+    await type('a typed');
+    await type('a typed more');
+    expect(leader.moduleInstances.BlockManager.getBlockById('a')?.holder.textContent).toBe('a typed');
+
+    cores.splice(cores.indexOf(follower), 1);
+    destroyCore(follower);
+    await wait(50);
+
+    expect(leader.moduleInstances.BlockManager.getBlockById('a')?.holder.textContent).toBe('a typed more');
+  });
 });

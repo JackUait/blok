@@ -118,12 +118,14 @@ describe('TabSync — page lifecycle and restart', () => {
       expect(flushSpy).toHaveBeenCalledTimes(1);
 
       sync.destroy();
+      // Destroy itself flushes once; the events below must not.
+      flushSpy.mockClear();
       setVisibility('visible');
       window.dispatchEvent(new PageTransitionEvent('pagehide'));
       document.dispatchEvent(new Event('visibilitychange'));
       window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
 
-      expect(flushSpy).toHaveBeenCalledTimes(1);
+      expect(flushSpy).not.toHaveBeenCalled();
       expect(resync).not.toHaveBeenCalled();
     });
 

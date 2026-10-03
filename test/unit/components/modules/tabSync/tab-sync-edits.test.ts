@@ -460,6 +460,16 @@ describe('TabSync — edits, adopt, wake diff and hand-off', () => {
     expect(a.fake.text()).toBe('last words');
   });
 
+  it('a follower destroyed without pagehide still posts its buffered typing', async () => {
+    const { a, b } = await twoTabs();
+
+    b.fake.typeBuffered('last words');
+    b.sync.destroy();
+    await flush();
+
+    expect(a.fake.text()).toBe('last words');
+  });
+
   it('a leader saves typing still in its write buffer on unload', async () => {
     const { a } = await twoTabs();
 

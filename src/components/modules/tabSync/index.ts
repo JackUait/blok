@@ -236,6 +236,8 @@ export class TabSync extends Module {
   }
 
   public destroy(): void {
+    // A host unmount fires no pagehide; teardown stops posting.
+    this.flushBeforeUnload();
     this.destroyed = true;
     this.stopWaitingForFirstSave();
     this.settings?.channel.close();

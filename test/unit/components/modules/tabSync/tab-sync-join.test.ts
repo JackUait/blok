@@ -317,6 +317,8 @@ describe('TabSync — roles, leader lock and join', () => {
     a.sync.destroy();
     expect(platform.holders.size).toBe(0);
     expect(platform.openChannels(KEY)).toBe(0);
+    // Destroy itself flushes once; the probe below must not cause another.
+    a.fake.YjsManager.flushPendingBlockWrites.mockClear();
 
     const probe = platform.channel(KEY);
 

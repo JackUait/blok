@@ -168,6 +168,15 @@ export class BlockYjsSync {
   private readonly reconcilingBlocks = new Map<string, number>();
 
   /**
+   * Blocks this client added to the document while a sync window was open (a
+   * tool minting children in `rendered()` or in its read-only lift). They are
+   * not replay, so their parent's data, which references them, must be written
+   * too — or the doc keeps orphans and every boot mints another set.
+   * Cleared when the window closes.
+   */
+  private readonly addedLocallyDuringSync = new Set<string>();
+
+  /**
    * Blocks that mutated while their reconcile window was open, so the
    * write-back was dropped as the reconciler's own echo.
    *
@@ -262,6 +271,26 @@ export class BlockYjsSync {
    */
   public get isSyncingFromYjs(): boolean {
     return this.yjsSyncCount > 0;
+  }
+
+  /**
+   * Records a block this client just added to the document inside a sync
+   * window. See `addedLocallyDuringSync`.
+   * @param blockId - the added block
+   */
+  public noteLocalAddDuringSync(blockId: string): void {
+    if (this.isSyncingFromYjs) {
+      this.addedLocallyDuringSync.add(blockId);
+    }
+  }
+
+  /**
+   * Whether any of `childIds` was added by this client inside the open sync
+   * window. Their parent's data then has to reach the document.
+   * @param childIds - the parent's children
+   */
+  public hasLocalAddDuringSync(childIds: readonly string[]): boolean {
+    return this.addedLocallyDuringSync.size > 0 && childIds.some((id) => this.addedLocallyDuringSync.has(id));
   }
 
   /**
@@ -746,6 +775,9 @@ export class BlockYjsSync {
     return (): void => {
       this.yjsSyncCount--;
       this.trackScope(blockId, -1);
+      if (this.yjsSyncCount === 0) {
+        this.addedLocallyDuringSync.clear();
+      }
       if (operations && this.yjsSyncCount === 0) {
         operations.suppressStopCapturing = false;
       }

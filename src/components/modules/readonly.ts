@@ -229,9 +229,12 @@ export class ReadOnly extends Module {
       try {
         const blocks = (this.Blok.BlockManager as { blocks?: Array<{ setReadOnly: (s: boolean) => void }> }).blocks ?? [];
 
-        blocks.forEach((block) => {
+        // Like a document render: what tools write while switching mode (a
+        // table converting legacy cell text into blocks) is not an edit, so
+        // it must not become an undo step.
+        this.Blok.YjsManager.transactWithoutCapture(() => blocks.forEach((block) => {
           block.setReadOnly(state);
-        });
+        }));
       } finally {
         this.Blok.ModificationsObserver.enable();
       }

@@ -473,7 +473,12 @@ export class BlockManager extends Module {
     this.hierarchy = new BlockHierarchy(
       this.repository,
       (parentId) => {
-        if (!this.yjsSync.isSyncingFromYjs) {
+        // Inside a sync window the parent's data came from the doc — unless a
+        // child under it was just minted here, which the doc only half has.
+        const hasLocalChild = (): boolean =>
+          this.yjsSync.hasLocalAddDuringSync(this.repository.getBlockById(parentId)?.contentIds ?? []);
+
+        if (!this.yjsSync.isSyncingFromYjs || hasLocalChild()) {
           this.scheduleParentSync(parentId);
         }
       },

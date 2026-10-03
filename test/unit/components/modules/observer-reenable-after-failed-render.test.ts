@@ -115,6 +115,7 @@ const createReadOnly = (
     },
     YjsManager: {
       captureCaretSnapshot: vi.fn(() => null),
+      transactWithoutCapture: vi.fn((fn: () => void) => fn()),
     },
     Caret: {
       setToInput: vi.fn(),

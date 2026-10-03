@@ -379,6 +379,8 @@ export class BlockInsertion {
         this.dependencies.YjsManager.continueUndoEntryThatCreated(replacedIdToRemove);
       }
 
+      this.yjsSync.noteLocalAddDuringSync(block.id);
+
       this.dependencies.YjsManager.transact(() => {
         if (replacedIdToRemove !== undefined) {
           this.dependencies.YjsManager.removeBlock(replacedIdToRemove);
@@ -544,6 +546,7 @@ export class BlockInsertion {
 
     // Same gate as insert(): a Yjs replay still adds a block the doc lacks.
     if (!skipYjsSync && (!this.yjsSync.isSyncingFromYjs || this.dependencies.YjsManager.getBlockById(block.id) === undefined)) {
+      this.yjsSync.noteLocalAddDuringSync(block.id);
       this.dependencies.YjsManager.transact(() => {
         this.dependencies.YjsManager.addBlockAt({
           id: block.id,

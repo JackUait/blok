@@ -305,6 +305,8 @@ const createMockYjsSync = (): BlockYjsSync => {
     updateBlocksStore: vi.fn(),
     syncBlockDataToYjs: vi.fn(),
     isBlockDataChanged: vi.fn(() => false),
+    noteLocalAddDuringSync: vi.fn(),
+    hasLocalAddDuringSync: vi.fn(() => false),
   } as unknown as BlockYjsSync;
 
   return mockYjsSync;

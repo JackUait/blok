@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { ModificationsObserver } from '../../../../src/components/modules/modificationsObserver';
+import type { TabRole } from '../../../../src/components/modules/tabSync';
 import { modificationsObserverBatchTimeout } from '../../../../src/components/constants';
 import { BlockChanged } from '../../../../src/components/events';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
@@ -10,7 +11,6 @@ import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { BlokConfig, OutputData } from '../../../../types';
 import type { BlockMutationEvent } from '../../../../types/events/block';
 
-type TabRole = 'solo' | 'joining' | 'leader' | 'follower';
 type Origin = 'local' | 'tab' | 'remote';
 
 const DOC: OutputData = {
@@ -39,19 +39,23 @@ describe('ModificationsObserver — tab role', () => {
     onChange: ReturnType<typeof vi.fn>;
     onSave: ReturnType<typeof vi.fn>;
     emitBlockChanged: (detail: { origin: Origin }) => void;
+    save: ReturnType<typeof vi.fn>;
+    tabSync: { role: TabRole };
   } => {
     const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
     const onChange = vi.fn();
     const onSave = vi.fn();
     const config = { onChange, onSave } as unknown as BlokConfig;
     const observer = new ModificationsObserver({ config, eventsDispatcher });
+    const save = vi.fn().mockResolvedValue(DOC);
+    const tabSync = { role: role ?? 'solo' };
 
     observer.state = {
       UI: { nodes: { redactor: document.createElement('div') } },
       API: { methods: {} },
-      Saver: { save: vi.fn().mockResolvedValue(DOC) },
+      Saver: { save },
       ReadOnly: { isEnabled: false },
-      ...(role === undefined ? {} : { TabSync: { role } }),
+      ...(role === undefined ? {} : { TabSync: tabSync }),
     } as unknown as BlokModules;
 
     observer.enable();
@@ -64,7 +68,7 @@ describe('ModificationsObserver — tab role', () => {
       });
     };
 
-    return { observer, onChange, onSave, emitBlockChanged };
+    return { observer, onChange, onSave, emitBlockChanged, save, tabSync };
   };
 
   const flushWindow = async (): Promise<void> => {
@@ -161,5 +165,54 @@ describe('ModificationsObserver — tab role', () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(onChange).toHaveBeenCalledTimes(2);
     expect(observer.hasUnsavedChanges).toBe(false);
+  });
+
+  it.each([
+    { outcome: 'came back empty', settle: (resolve: (v: OutputData | undefined) => void) => resolve(undefined) },
+    { outcome: 'failed', settle: (_: unknown, reject: (e: Error) => void) => reject(new Error('serialize failed')) },
+  ])('a save that $outcome after the tab became follower does not re-arm', async ({ settle }) => {
+    const { observer, onSave, emitBlockChanged, save, tabSync } = setup({ role: 'solo' });
+    const pending: { resolve: (v: OutputData | undefined) => void; reject: (e: Error) => void } = {
+      resolve: () => undefined,
+      reject: () => undefined,
+    };
+
+    save.mockReturnValueOnce(new Promise<OutputData | undefined>((resolve, reject) => {
+      pending.resolve = resolve;
+      pending.reject = reject;
+    }));
+    emitBlockChanged({ origin: 'local' });
+    await flushWindow();
+    expect(save).toHaveBeenCalledTimes(1);
+
+    tabSync.role = 'follower';
+    observer.onRoleChanged('follower');
+    settle(pending.resolve, pending.reject);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(observer.hasUnsavedChanges).toBe(false);
+    await flushWindow();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('destroying a joining tab still serializes its held edit', async () => {
+    const { observer, emitBlockChanged, save } = setup({ role: 'joining' });
+
+    emitBlockChanged({ origin: 'local' });
+    await vi.advanceTimersByTimeAsync(Math.round(modificationsObserverBatchTimeout / 4));
+    observer.destroy();
+
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('destroying a follower serializes nothing', async () => {
+    const { observer, emitBlockChanged, save } = setup({ role: 'follower' });
+
+    emitBlockChanged({ origin: 'local' });
+    await vi.advanceTimersByTimeAsync(Math.round(modificationsObserverBatchTimeout / 4));
+    observer.destroy();
+
+    expect(save).not.toHaveBeenCalled();
   });
 });

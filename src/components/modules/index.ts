@@ -45,6 +45,7 @@ import { Tools } from './tools';
 import { UI } from './ui';
 
 import { Collaboration } from './collaboration';
+import { TabSync } from './tabSync';
 import { ThemeManager } from './themeManager';
 import { UserDirectory } from './userDirectory';
 import { YjsManager } from './yjs';
@@ -106,8 +107,9 @@ export const Modules = {
   ThemeManager,
   UserDirectory,
 
-  // Collaboration comes BEFORE YjsManager: destroy walks this map in order, and
-  // the provider's teardown needs a live document and a live awareness.
+  // Collaboration and TabSync come BEFORE YjsManager: destroy walks this map in
+  // order, and their teardown needs a live document and a live awareness.
   Collaboration,
+  TabSync,
   YjsManager,
 };

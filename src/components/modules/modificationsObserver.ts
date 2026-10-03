@@ -7,15 +7,12 @@ import { BlockChanged, FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, Redact
 import { isFunction } from '../utils';
 import { registerUnsavedWork } from '../utils/persistence';
 
+import type { TabRole } from './tabSync';
+
 /**
  * We use map of block mutations to filter only unique events
  */
 type UniqueBlockMutationKey = `block:${BlockId}:event:${BlockMutationType}`;
-
-/**
- * This tab's part in tab sync. Only `solo` and `leader` save.
- */
-export type TabRole = 'solo' | 'joining' | 'leader' | 'follower';
 
 /**
  * Single entry point for Block mutation events
@@ -173,10 +170,20 @@ export class ModificationsObserver extends Module {
   }
 
   /**
-   * An editor without a TabSync module is `solo`, which saves as before.
+   * An editor without a TabSync module (unit fixtures) is `solo`, which saves as before.
    */
   private get tabRole(): TabRole {
-    return (this.Blok as { TabSync?: { role: TabRole } }).TabSync?.role ?? 'solo';
+    return this.Blok.TabSync?.role ?? 'solo';
+  }
+
+  /**
+   * Puts an undelivered save back, unless the leader saves for this tab.
+   */
+  private rearmSave(): void {
+    if (this.tabRole !== 'follower') {
+      this.pendingSave = true;
+    }
+    this.syncUnloadGuard();
   }
 
   /**
@@ -479,8 +486,7 @@ export class ModificationsObserver extends Module {
          * to dirty and the next window retries it.
          */
         if (this.isDeliverySuppressed || data === undefined) {
-          this.pendingSave = true;
-          this.syncUnloadGuard();
+          this.rearmSave();
 
           return;
         }
@@ -503,8 +509,7 @@ export class ModificationsObserver extends Module {
          * batch is not swallowed with it.
          */
         this.savesInFlight = Math.max(0, this.savesInFlight - 1);
-        this.pendingSave = true;
-        this.syncUnloadGuard();
+        this.rearmSave();
       });
   }
 
@@ -526,8 +531,15 @@ export class ModificationsObserver extends Module {
      * window is real, and tearing the editor down must not be the thing that
      * loses it. Only the save half — the queued onChange events are dropped, as
      * they always were.
+     *
+     * A joining tab saves too: TabSync is destroyed after this module, so its
+     * switch to solo comes too late.
      */
-    this.flushPendingSave();
+    if (this.tabRole === 'joining') {
+      this.saveIfPending();
+    } else {
+      this.flushPendingSave();
+    }
 
     this.disabled = true;
     this.destroyed = true;

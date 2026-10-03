@@ -90,11 +90,17 @@ export class ModificationsObserver extends Module {
    */
   private savesInFlight = 0;
 
+  /** Waiting for {@link savesInFlight} to reach zero. */
+  private savesSettledWaiters: Array<() => void> = [];
+
   /**
    * Set when this tab turned read-only as leader. Its unsaved edit is its own,
    * so as a follower it keeps it until it saves again as leader or solo.
    */
   private keepsOwnEdit = false;
+
+  /** The role onRoleChanged last gave; null until it is called. */
+  private toldRole: TabRole | null = null;
 
   /**
    * Array of onChange events used to batch them
@@ -185,6 +191,42 @@ export class ModificationsObserver extends Module {
   }
 
   /**
+   * Resolves once no serialization runs. TabSync waits on it to report a
+   * save it dropped when it stopped leading.
+   */
+  public whenSavesSettled(): Promise<void> {
+    if (this.savesInFlight === 0) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      this.savesSettledWaiters.push(resolve);
+    });
+  }
+
+  private endSave(): void {
+    this.savesInFlight = Math.max(0, this.savesInFlight - 1);
+    if (this.savesInFlight > 0) {
+      return;
+    }
+    const waiters = this.savesSettledWaiters;
+
+    this.savesSettledWaiters = [];
+    waiters.forEach((resolve) => resolve());
+  }
+
+  /**
+   * Only `solo` and `leader` save: a tab demoted mid-serialization must not
+   * write with its successor's version. The role onRoleChanged last gave wins
+   * over TabSync's field, which may not be updated yet.
+   */
+  private get savesHere(): boolean {
+    const role = this.toldRole ?? this.tabRole;
+
+    return role === 'solo' || role === 'leader';
+  }
+
+  /**
    * Whether onChange/onSave may reach the host right now.
    *
    * Read at DELIVERY time, never at enqueue time: a batch window and a
@@ -223,6 +265,7 @@ export class ModificationsObserver extends Module {
    * @returns whether this call started a save
    */
   public onRoleChanged(role: TabRole, { keepPendingSave = false }: { keepPendingSave?: boolean } = {}): boolean {
+    this.toldRole = role;
     this.keepsOwnEdit = role === 'follower' && keepPendingSave;
 
     if (role === 'follower') {
@@ -556,7 +599,7 @@ export class ModificationsObserver extends Module {
 
     void this.Blok.Saver.save()
       .then((data) => {
-        this.savesInFlight = Math.max(0, this.savesInFlight - 1);
+        this.endSave();
 
         /**
          * Re-checked after the await: the host can freeze or tear down the
@@ -566,7 +609,7 @@ export class ModificationsObserver extends Module {
          * Either way the host never saw this batch, so the document goes back
          * to dirty and the next window retries it.
          */
-        if (this.isDeliverySuppressed || data === undefined) {
+        if (this.isDeliverySuppressed || data === undefined || !this.savesHere) {
           this.rearmSave();
 
           return;
@@ -589,7 +632,7 @@ export class ModificationsObserver extends Module {
          * own channel, so swallow here to avoid an unhandled rejection. The
          * batch is not swallowed with it.
          */
-        this.savesInFlight = Math.max(0, this.savesInFlight - 1);
+        this.endSave();
         this.rearmSave();
       });
   }

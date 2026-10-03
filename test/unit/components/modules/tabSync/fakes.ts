@@ -352,6 +352,7 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
       hasUnsavedChanges: false,
       hasPendingSave: false,
       isSaving: false,
+      whenSavesSettled: vi.fn(async (): Promise<void> => undefined),
     },
     Saver: {
       getDocumentRecordId: () => recordId,

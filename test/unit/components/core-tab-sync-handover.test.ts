@@ -6,10 +6,13 @@ import { releasePersistenceQueue } from '../../../src/components/utils/persisten
 import { Paragraph } from '../../../src/tools';
 import { browserTabPlatform } from '../../../src/components/modules/tabSync/platform';
 import type * as PlatformModule from '../../../src/components/modules/tabSync/platform';
-import { CLAIM_SETTLE_MS } from '../../../src/components/modules/tabSync';
+import type { TabChannel } from '../../../src/components/modules/tabSync/platform';
+import { resolveTabKey } from '../../../src/components/modules/tabSync/identity';
+import { CLAIM_SETTLE_MS, CLAIM_TIMEOUT_MS, YIELD_SAVE_WAIT_MS } from '../../../src/components/modules/tabSync';
 import type { BlokConfig, OutputBlockData, OutputData } from '../../../types';
 
 import { createFakeActivity } from './modules/tabSync/fakes';
+import type { createFakePlatform } from './modules/tabSync/fakes';
 
 // jsdom has no navigator.locks, so the browser platform would never open a session.
 vi.mock('../../../src/components/modules/tabSync/platform', async (importOriginal) => {
@@ -211,4 +214,194 @@ describe('Core — a render that overlaps a hand-over', () => {
     expect(leader.moduleInstances.TabSync.role).toBe('leader');
     expect(savedText(leaderSave.mock.lastCall, 'x')).toBe('x typed');
   });
+});
+
+interface StoreWrite { by: string; ifMatch: string | number | null | undefined; ok: boolean; text: unknown }
+
+/** One versioned store both tabs write to; a stale If-Match is a conflict. */
+const createStore = (): {
+  writes: StoreWrite[];
+  current: () => { version: string; doc: OutputData };
+  persistence: (by: string) => NonNullable<BlokConfig['persistence']>;
+  /** The next write by `by` reaches the store `ms` later. */
+  delayNext: (by: string, ms: number) => void;
+} => {
+  const state = { version: 'v0', doc: document3(), count: 0 };
+  const delays = new Map<string, number>();
+  const writes: StoreWrite[] = [];
+
+  return {
+    writes,
+    current: () => ({ version: state.version, doc: state.doc }),
+    delayNext: (by, ms) => delays.set(by, ms),
+    persistence: (by) => ({
+      load: async () => ({ data: state.doc, version: state.version }),
+      save: async (data, { version }) => {
+        const delay = delays.get(by);
+
+        if (delay !== undefined) {
+          delays.delete(by);
+          await wait(delay);
+        }
+        const ok = version === state.version;
+
+        writes.push({ by, ifMatch: version, ok, text: data.blocks.find((block) => block.id === 'a')?.data.text });
+        if (!ok) {
+          throw new Error('conflict');
+        }
+        state.count += 1;
+        state.version = `${by}-${state.count}`;
+        state.doc = data;
+
+        return { version: state.version };
+      },
+    }),
+  };
+};
+
+interface StoredPair {
+  leader: Core;
+  follower: Core;
+  followerActivity: FakeActivity;
+  store: ReturnType<typeof createStore>;
+  /** The role each tab had whenever its host onSave ran. */
+  hostSaves: { leader: string[]; follower: string[] };
+}
+
+const isTabChannel = (value: unknown): value is TabChannel =>
+  typeof value === 'object' && value !== null && 'post' in value && 'onMessage' in value;
+
+/** The mocked browser platform is a fake one; see vi.mock above. */
+const fakePlatform = browserTabPlatform as unknown as ReturnType<typeof createFakePlatform>;
+
+/** A leader and a follower on one versioned store, both settled. */
+const twoStoredEditors = async (documentId: string): Promise<StoredPair> => {
+  const store = createStore();
+  const followerActivity = createFakeActivity();
+  const activity = vi.spyOn(browserTabPlatform, 'activity');
+  const hostSaves = { leader: [] as string[], follower: [] as string[] };
+  const cell: { leader: Core | null; follower: Core | null } = { leader: null, follower: null };
+
+  activity.mockImplementationOnce(() => createFakeActivity());
+  const leader = createCore({
+    documentId,
+    persistence: store.persistence('leader'),
+    onSave: () => hostSaves.leader.push(cell.leader?.moduleInstances.TabSync.role ?? '?'),
+  });
+
+  cell.leader = leader;
+  await leader.isReady;
+  await wait(50);
+  activity.mockImplementationOnce(() => followerActivity);
+  const follower = createCore({
+    documentId,
+    persistence: store.persistence('follower'),
+    onSave: () => hostSaves.follower.push(cell.follower?.moduleInstances.TabSync.role ?? '?'),
+  });
+
+  cell.follower = follower;
+  await follower.isReady;
+  await wait(100);
+  expect(leader.moduleInstances.TabSync.role).toBe('leader');
+  expect(follower.moduleInstances.TabSync.role).toBe('follower');
+  await oneWindow();
+  hostSaves.leader.length = 0;
+  hostSaves.follower.length = 0;
+  store.writes.length = 0;
+
+  return { leader, follower, followerActivity, store, hostSaves };
+};
+
+/** The next serialization in `core` takes `ms` longer. */
+const slowNextSerialization = (core: Core, ms: number): void => {
+  const { Saver } = core.moduleInstances;
+  const save = Saver.save.bind(Saver);
+
+  vi.spyOn(Saver, 'save').mockImplementationOnce(async (...args) => {
+    await wait(ms);
+
+    return save(...args);
+  });
+};
+
+describe('Core — a demoted leader never saves', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    cores.splice(0).forEach(destroyCore);
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('a serialization that outlasts the yield is never delivered by the old leader; the new leader saves after it', async () => {
+    const { leader, follower, followerActivity, store, hostSaves } = await twoStoredEditors('slow-serialization-yield');
+
+    slowNextSerialization(leader, YIELD_SAVE_WAIT_MS + 500);
+    await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
+    await oneWindow();
+    followerActivity.set(true);
+    await wait(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 1500);
+
+    expect(follower.moduleInstances.TabSync.role).toBe('leader');
+    expect(leader.moduleInstances.TabSync.role).toBe('follower');
+    expect(hostSaves.leader).not.toContain('follower');
+    expect(store.writes.filter((write) => write.by === 'leader')).toEqual([]);
+    expect(store.writes.every((write) => write.ok)).toBe(true);
+    expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a edited');
+  }, 20_000);
+
+  it('a leader that turns read-only with a request out: the tab that takes over writes after it, and the old request is never retried over newer content', async () => {
+    const { leader, follower, store, hostSaves } = await twoStoredEditors('read-only-request-out');
+
+    store.delayNext('leader', 1500);
+    await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
+    await oneWindow();
+    expect(store.writes).toEqual([]);
+
+    await leader.moduleInstances.ReadOnly.set(true);
+    await wait(200);
+    // The read-only tab keeps the lock until its request settles.
+    expect(follower.moduleInstances.TabSync.role).toBe('follower');
+    await wait(1500);
+    expect(follower.moduleInstances.TabSync.role).toBe('leader');
+    expect(store.writes[0]).toEqual(expect.objectContaining({ by: 'leader', ok: true }));
+    await follower.moduleInstances.API.methods.blocks.update('a', { text: 'a by follower' });
+    await wait(3000);
+
+    expect(hostSaves.leader).not.toContain('follower');
+    expect(store.writes.filter((write) => write.by === 'leader' && !write.ok)).toEqual([]);
+    expect(store.writes.filter((write) => write.by === 'leader' && typeof write.ifMatch === 'string' && write.ifMatch.startsWith('follower'))).toEqual([]);
+    expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a by follower');
+  }, 20_000);
+
+  it('a leader whose lock is stolen while it serializes never delivers that save', async () => {
+    const channel = vi.spyOn(browserTabPlatform, 'channel');
+    const { leader, follower, followerActivity, store, hostSaves } = await twoStoredEditors('stolen-mid-serialization');
+    const key = resolveTabKey({ documentId: 'stolen-mid-serialization', recordId: null, idSource: 'host', hasSaved: false, isEmpty: false, pathname: '/' });
+    // The leader opened its channel first.
+    const leaderChannel: unknown = channel.mock.results.find((_result, i) => channel.mock.calls[i][0] === key)?.value;
+
+    expect(leaderChannel).toBeInstanceOf(Object);
+    if (!isTabChannel(leaderChannel)) {
+      return;
+    }
+    slowNextSerialization(leader, CLAIM_TIMEOUT_MS + 2000);
+    await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
+    await oneWindow();
+    // A frozen leader: it hears no claim, so only the steal moves the lock.
+    fakePlatform.pauseInbound(leaderChannel);
+    followerActivity.set(true);
+    await wait(CLAIM_SETTLE_MS + CLAIM_TIMEOUT_MS + 200);
+    expect(follower.moduleInstances.TabSync.role).toBe('leader');
+    expect(leader.moduleInstances.TabSync.role).toBe('follower');
+
+    await wait(2500);
+
+    expect(hostSaves.leader).not.toContain('follower');
+    expect(store.writes.filter((write) => write.by === 'leader')).toEqual([]);
+    expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a edited');
+  }, 20_000);
 });

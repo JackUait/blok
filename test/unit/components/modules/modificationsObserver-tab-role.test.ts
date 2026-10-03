@@ -420,4 +420,68 @@ describe('ModificationsObserver — tab role', () => {
     expect(onChange).toHaveBeenCalledTimes(2);
     expect(onSave).toHaveBeenCalledTimes(1);
   });
+  /** A leader whose next serialization waits until the returned function runs. */
+  const holdSerialization = (save: ReturnType<typeof vi.fn>): (() => void) => {
+    const pending: { resolve: (v: OutputData) => void } = { resolve: () => undefined };
+
+    save.mockReturnValueOnce(new Promise<OutputData>((resolve) => {
+      pending.resolve = resolve;
+    }));
+
+    return () => pending.resolve(DOC);
+  };
+
+  it.each([ 'follower', 'joining' ] as const)('a leader that became %s while it serialized never delivers onSave', async (role) => {
+    const { observer, onSave, emitBlockChanged, save, tabSync } = setup({ role: 'leader' });
+    const finish = holdSerialization(save);
+
+    emitBlockChanged({ origin: 'local' });
+    await flushWindow();
+    expect(save).toHaveBeenCalledTimes(1);
+
+    tabSync.role = role;
+    observer.onRoleChanged(role);
+    finish();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(observer.isSaving).toBe(false);
+  });
+
+  it('a leader that yielded keeping its edit keeps it unsaved when its serialization is dropped', async () => {
+    const { observer, onSave, emitBlockChanged, save, tabSync } = setup({ role: 'leader' });
+    const finish = holdSerialization(save);
+
+    emitBlockChanged({ origin: 'local' });
+    await flushWindow();
+    tabSync.role = 'follower';
+    observer.onRoleChanged('follower', { keepPendingSave: true });
+    finish();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(observer.hasUnsavedChanges).toBe(true);
+  });
+
+  it('whenSavesSettled resolves at once with nothing running, and after the last serialization ends', async () => {
+    const { observer, emitBlockChanged, save, tabSync } = setup({ role: 'leader' });
+    const settled = vi.fn();
+
+    await observer.whenSavesSettled();
+
+    const finish = holdSerialization(save);
+
+    emitBlockChanged({ origin: 'local' });
+    await flushWindow();
+    tabSync.role = 'follower';
+    observer.onRoleChanged('follower');
+    void observer.whenSavesSettled().then(settled);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).not.toHaveBeenCalled();
+
+    finish();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(settled).toHaveBeenCalledTimes(1);
+  });
 });

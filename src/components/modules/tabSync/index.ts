@@ -167,6 +167,9 @@ export class TabSync extends Module {
   /** True while this leader saves before it yields; one hand-over at a time. */
   private yielding = false;
 
+  /** Set while a read-only tab keeps the lock for its last save; cleared to cancel. */
+  private releaseWait: Promise<void> | null = null;
+
   /** After a yield: leads again if the claimant never takes the lock. */
   private handOverTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -346,16 +349,20 @@ export class TabSync extends Module {
     if (readOnly) {
       this.postTypingBeforeReadOnly();
       this.stopClaim();
-      if (this.currentRole === 'leader' || this.currentRole === 'follower') {
+      if (this.currentRole === 'leader') {
+        this.stepDown(session);
+      } else if (this.currentRole === 'follower') {
         this.cancelQueue(session);
-        // Its edit stays unsaved here: it is saved once this tab leads again.
-        this.setRole('follower', { keepPendingSave: true });
       }
 
       return;
     }
 
-    if (this.currentRole === 'follower' && this.queueAbort === null) {
+    if (this.currentRole === 'follower' && this.holdsLock && this.releaseWait !== null) {
+      // Editable again before its last save settled: it still holds the lock.
+      this.releaseWait = null;
+      this.promote();
+    } else if (this.currentRole === 'follower' && this.queueAbort === null) {
       this.queueForLock(session);
       this.claimIfActive();
     } else if (this.currentRole === 'solo' && !this.entering && !this.editedSinceStart) {
@@ -1331,13 +1338,15 @@ export class TabSync extends Module {
       // No yieldedBy = this.id: this tab never hears its own `saved`, and
       // overwriting would forget the tab that yielded before.
       const request = this.abandonSaves();
+      // Dropped once this tab follows, but the claimant must not save before it ends.
+      const serializing = this.Blok.ModificationsObserver.isSaving;
 
       this.post({
         kind: 'yield',
         from: this.id,
         to,
         version: persistenceVersionAccess(this.config.persistence)?.get() ?? null,
-        saving: request !== null,
+        saving: request !== null || serializing,
       });
       this.leaderId = to;
       if (saved) {
@@ -1347,12 +1356,9 @@ export class TabSync extends Module {
         this.setRole('follower', { keepPendingSave: true });
       }
       this.watchHandOver(session);
-      // A request that lands posts `saved` through onSaved.
-      void request?.then((landed) => {
-        if (!landed && this.session === session) {
-          this.post({ kind: 'settled', from: this.id, ok: false });
-        }
-      });
+      if (request !== null || serializing) {
+        void this.reportSettled(session, request);
+      }
     } finally {
       this.yielding = false;
     }
@@ -1392,6 +1398,21 @@ export class TabSync extends Module {
       if (Date.now() >= deadline) {
         return false;
       }
+    }
+  }
+
+  /**
+   * Tells the claimant this tab's last save is over. A request that lands
+   * already posts `saved` through onSaved; anything else posts `settled`.
+   * @param session - the live session
+   * @param request - the abandoned request, resolving to whether it landed
+   */
+  private async reportSettled(session: Session, request: Promise<boolean> | null): Promise<void> {
+    await this.Blok.ModificationsObserver.whenSavesSettled();
+    const landed = request !== null && await request;
+
+    if (!landed && this.session === session) {
+      this.post({ kind: 'settled', from: this.id, ok: false });
     }
   }
 
@@ -1486,6 +1507,7 @@ export class TabSync extends Module {
     const session = this.session;
 
     this.holdsLock = false;
+    this.releaseWait = null;
     this.clearHandOverTimer();
     if (session === null) {
       return;
@@ -1501,10 +1523,42 @@ export class TabSync extends Module {
   }
 
   /**
+   * A leader turned read-only. It keeps the lock until its last request and
+   * serialization settle: the next leader would race them with the same
+   * If-Match, and a retry here would carry the next leader's version.
+   * @param session - the live session
+   */
+  private stepDown(session: Session): void {
+    const request = this.abandonSaves();
+    const busy = request !== null || this.Blok.ModificationsObserver.isSaving;
+
+    // Its edit stays unsaved here: it is saved once this tab leads again.
+    this.setRole('follower', { keepPendingSave: true });
+    if (!busy) {
+      this.cancelQueue(session);
+
+      return;
+    }
+    const wait = Promise.race([
+      Promise.all([this.Blok.ModificationsObserver.whenSavesSettled(), request]),
+      new Promise((resolve) => {
+        setTimeout(resolve, TAKEOVER_SETTLE_WAIT_MS);
+      }),
+    ]).then(() => {
+      if (this.releaseWait === wait && this.session === session && this.currentRole === 'follower') {
+        this.cancelQueue(session);
+      }
+    });
+
+    this.releaseWait = wait;
+  }
+
+  /**
    * Gives up the lock, held or waited for. The lock object is reusable after.
    * @param session - the live session
    */
   private cancelQueue(session: Session): void {
+    this.releaseWait = null;
     this.queueAbort?.abort();
     this.queueAbort = null;
     this.holdsLock = false;
@@ -1562,6 +1616,7 @@ export class TabSync extends Module {
     this.takeoverFrom = null;
     this.yieldedBy = null;
     this.holdsLock = false;
+    this.releaseWait = null;
     this.stopClaim();
     this.clearHandOverTimer();
     this.clearAwaitingSettle();

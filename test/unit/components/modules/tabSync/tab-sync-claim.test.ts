@@ -379,6 +379,69 @@ describe('TabSync — the leader follows the tab the user works in', () => {
     expect(b.save).toHaveBeenCalledWith({ blocks: [] }, { version: 'v-late' });
   });
 
+  /** A's observer serializes until the returned function ends it. */
+  const holdSerialization = (a: Tab): (() => void) => {
+    const observer = a.fake.ModificationsObserver;
+    const end = { run: (): void => undefined };
+    const settled = new Promise<void>((resolve) => {
+      end.run = () => {
+        observer.isSaving = false;
+        resolve();
+      };
+    });
+
+    observer.isSaving = true;
+    observer.whenSavesSettled.mockImplementation(() => (observer.isSaving ? settled : Promise.resolve()));
+
+    return () => end.run();
+  };
+
+  it('a serialization still running at the deadline: the yield says saving, and the new leader saves only once it is dropped', async () => {
+    const { a, b } = await twoTabs();
+    const seen = listen();
+    const endSerialization = holdSerialization(a);
+
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 100);
+
+    expect(kinds(seen, 'yield')).toEqual([expect.objectContaining({ saving: true })]);
+    expect(a.sync.role).toBe('follower');
+    expect(b.sync.role).toBe('follower');
+    expect(b.save).not.toHaveBeenCalled();
+
+    endSerialization();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(kinds(seen, 'settled')).toEqual([expect.objectContaining({ ok: false })]);
+    expect(b.sync.role).toBe('leader');
+    expect(b.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('a serialization and a request both out at the deadline: one report, after both', async () => {
+    const { a, b } = await twoTabs();
+    const request = holdRequest(a, 'v-slow');
+    const seen = listen();
+
+    editUnsaved(a, 'x');
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS);
+    const endSerialization = holdSerialization(a);
+
+    await vi.advanceTimersByTimeAsync(YIELD_SAVE_WAIT_MS + 100);
+    expect(kinds(seen, 'yield')).toEqual([expect.objectContaining({ saving: true })]);
+
+    request.fail();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(kinds(seen, 'settled')).toEqual([]);
+    expect(b.sync.role).toBe('follower');
+
+    endSerialization();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(kinds(seen, 'settled')).toHaveLength(1);
+    expect(b.sync.role).toBe('leader');
+  });
+
   /** Holds A's next save; the returned functions land or fail it. */
   const holdRequest = (a: Tab, version: string): { land: () => void; fail: () => void } => {
     const held = { land: (): void => undefined, fail: (): void => undefined };
@@ -517,6 +580,94 @@ describe('TabSync — the leader follows the tab the user works in', () => {
 
     expect(b.sync.role).toBe('leader');
     expect(a.save).toHaveBeenCalledTimes(1);
+  });
+
+  describe('a leader that turns read-only with its last save out', () => {
+    const turnReadOnly = ({ fake, sync }: Tab): void => {
+      const { ReadOnly } = fake;
+
+      ReadOnly.isEnabled = true;
+      sync.toggleReadOnly(true);
+    };
+
+    /** A leader A whose request is out, and a follower B waiting in line. */
+    const readOnlyWithRequestOut = async (): Promise<{ a: Tab; b: Tab; request: { land: () => void; fail: () => void } }> => {
+      const { a, b } = await twoTabs();
+      const request = holdRequest(a, 'v-a2');
+
+      editUnsaved(a, 'x');
+      a.fake.ModificationsObserver.flushNow();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(a.save).toHaveBeenCalledTimes(1);
+      turnReadOnly(a);
+      await vi.advanceTimersByTimeAsync(1000);
+
+      return { a, b, request };
+    };
+
+    it('keeps the lock until the request lands; the next leader then saves with its version', async () => {
+      const { a, b, request } = await readOnlyWithRequestOut();
+
+      expect(a.sync.role).toBe('follower');
+      expect(b.sync.role).toBe('follower');
+      expect(b.save).not.toHaveBeenCalled();
+
+      request.land();
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(b.sync.role).toBe('leader');
+      expect(b.save).toHaveBeenCalledWith({ blocks: [] }, { version: 'v-a2' });
+    });
+
+    it('never retries a request that fails; the next leader leads once it does', async () => {
+      const { a, b, request } = await readOnlyWithRequestOut();
+
+      request.fail();
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(a.save).toHaveBeenCalledTimes(1);
+      expect(b.sync.role).toBe('leader');
+    });
+
+    it('keeps the lock while a serialization runs, and gives it up once it ends', async () => {
+      const { a, b } = await twoTabs();
+      const endSerialization = holdSerialization(a);
+
+      turnReadOnly(a);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(b.sync.role).toBe('follower');
+
+      endSerialization();
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(b.sync.role).toBe('leader');
+    });
+
+    it('gives the lock up after 10 s when the request never settles', async () => {
+      const { b } = await readOnlyWithRequestOut();
+
+      await vi.advanceTimersByTimeAsync(TAKEOVER_SETTLE_WAIT_MS - 1100);
+      expect(b.sync.role).toBe('follower');
+
+      await vi.advanceTimersByTimeAsync(200);
+      expect(b.sync.role).toBe('leader');
+    });
+
+    it('leads again, without giving up the lock, when it turns editable before the request settles', async () => {
+      const { a, b, request } = await readOnlyWithRequestOut();
+
+      a.fake.ReadOnly.isEnabled = false;
+      a.sync.toggleReadOnly(false);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(a.sync.role).toBe('leader');
+
+      request.land();
+      await vi.advanceTimersByTimeAsync(TAKEOVER_SETTLE_WAIT_MS);
+
+      expect(a.sync.role).toBe('leader');
+      expect(b.sync.role).toBe('follower');
+      expect(platform.holders.size).toBe(1);
+    });
   });
 
   describe('the yielding leader never spins', () => {

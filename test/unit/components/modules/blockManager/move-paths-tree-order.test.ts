@@ -170,11 +170,13 @@ const keyboardMove = (id: string, direction: 'up' | 'down') => (editor: Runtime)
  * @param blocks - initial document
  * @param act - the move
  * @param expected - flat order after the move
+ * @param afterUndo - flat order after one undo; the starting order when omitted
  */
 const expectMove = async (
   blocks: OutputBlockData[],
   act: (editor: Runtime) => void,
-  expected: string[]
+  expected: string[],
+  afterUndo?: string[]
 ): Promise<void> => {
   const editor = await boot(blocks);
   const before = flat(editor);
@@ -189,7 +191,7 @@ const expectMove = async (
   editor.history.undo();
   await settle();
 
-  expect({ flat: flat(editor), problems: treeViolations(editor) }, 'one undo').toStrictEqual({ flat: before, problems: [] });
+  expect({ flat: flat(editor), problems: treeViolations(editor) }, 'one undo').toStrictEqual({ flat: afterUndo ?? before, problems: [] });
 
   editor.history.redo();
   await settle();
@@ -332,7 +334,14 @@ describe('public blocks.move keeps tree order', () => {
   }, 60_000);
 
   it('a move out of a collapsed toggle shows the block again', async () => {
-    await expectMove([P('a'), T('t', ['tc'], false), P('tc', 't'), P('b')], apiMove('tc', 3), ['a^-', 't^-', 'b^-', 'tc^-']);
+    // No caret before the move, so undo puts it in tc (the caret after the move), which opens t.
+    await expectMove(
+      [P('a'), T('t', ['tc'], false), P('tc', 't'), P('b')],
+      apiMove('tc', 3),
+      ['a^-', 't^-', 'b^-', 'tc^-'],
+      ['a^-', 't^-', 'tc^t', 'b^-']
+    );
+    expect(JSON.parse(localStorage.getItem('blok:view:doc:t:open') ?? 'null')).toMatchObject({ v: true });
   }, 60_000);
 
   it('a move of a toggle child to the top of the document shows it first', async () => {

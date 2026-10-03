@@ -1364,6 +1364,40 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[0][1].placement).toBeUndefined();
     });
 
+    it('reads legacy align/valign/bgcolor attributes off a pasted cell', () => {
+      const result = parseGenericHtmlTable(
+        '<table><tr>'
+        + '<td align="right" valign="bottom">A</td>'
+        + '<td bgcolor="#ffff00">B</td>'
+        + '<td bgcolor="javascript:alert(1)">C</td>'
+        + '</tr></table>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('bottom-right');
+      expect(result?.cells[0][1].color).toBeDefined();
+      expect(result?.cells[0][2].color).toBeUndefined();
+    });
+
+    it('reads only a keyword from a legacy align attribute', () => {
+      const result = parseGenericHtmlTable(
+        '<table><tr><td align="center;background-color:#ff0000">A</td></tr></table>'
+      );
+
+      expect(result?.cells[0][0].color).toBeUndefined();
+    });
+
+    it('lets the inline style win over a legacy attribute', () => {
+      const result = parseGenericHtmlTable(
+        '<table><tr>'
+        + '<td style="text-align: right" align="center" valign="middle">A</td>'
+        + '<td style="background: transparent" bgcolor="#ffff00">B</td>'
+        + '</tr></table>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('middle-right');
+      expect(result?.cells[0][1].color).toBeUndefined();
+    });
+
     it('round-trips placement through the external HTML flavor', () => {
       const payload: TableCellsClipboard = {
         rows: 1,
@@ -1538,6 +1572,35 @@ describe('table-cell-clipboard', () => {
       const parsed = parseClipboardHtml(buildClipboardHtml(payload));
 
       expect(parsed).toEqual(payload);
+    });
+  });
+
+  describe('nested children in a clipboard cell', () => {
+    const toggleWithChild = (childText: string): TableCellsClipboard => ({
+      rows: 1,
+      cols: 1,
+      cells: [[{
+        blocks: [{
+          tool: 'toggle',
+          data: { text: 'Toggle' },
+          children: [{ tool: 'paragraph', data: { text: childText } }],
+        }],
+      }]],
+    });
+
+    it('sanitizes the text of a nested child on parse', () => {
+      const html = buildClipboardHtml(toggleWithChild('<img src="x" onerror="alert(1)">child'));
+      const parsed = parseClipboardHtml(html);
+      const child = parsed?.cells[0][0].blocks[0].children?.[0];
+
+      expect(child?.data.text).toBe('child');
+    });
+
+    it('keeps a nested child\'s text in the external HTML and plain-text flavors', () => {
+      const payload = toggleWithChild('child');
+
+      expect(buildClipboardHtml(payload)).toContain('Toggle<br>child');
+      expect(buildClipboardPlainText(payload)).toBe('Toggle child');
     });
   });
 });

@@ -65,6 +65,13 @@ interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
   acceptsChildren: boolean;
 
   /**
+   * True when a copy of this Tool's block rebuilds its children from its own
+   * data. Declared by the Tool as `static copiesOwnChildren` — see
+   * {@link BlockToolConstructable.copiesOwnChildren}.
+   */
+  copiesOwnChildren: boolean;
+
+  /**
    * The link a copy of this block carries, from the Tool's
    * `static copyAsLink` — see {@link BlockToolConstructable.copyAsLink}.
    * Undefined when the Tool declares none; null when it has nothing to link to

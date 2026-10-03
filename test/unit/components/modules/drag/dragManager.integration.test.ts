@@ -12,6 +12,8 @@ import type { BlokEventMap } from "../../../../../src/components/events";
 import type { BlokModules } from "../../../../../src/types-internal/blok-modules";
 import type { Block } from "../../../../../src/components/block";
 import { DATA_ATTR } from "../../../../../src/components/constants";
+import { flatIndexForPlacement } from "../../../../../src/components/utils/tree-order";
+import type { TreePlacement } from "../../../../../src/components/utils/tree-order";
 import * as tooltip from "../../../../../src/components/utils/tooltip";
 import * as announcer from "../../../../../src/components/utils/announcer";
 import {
@@ -295,7 +297,7 @@ describe("DragManager - Component Integration", () => {
 
       // The source block was saved and a copy of its tool/data inserted below it.
       expect(blockManager.insert).toHaveBeenCalledWith(
-        expect.objectContaining({ tool: "paragraph", index: 1 })
+        expect.objectContaining({ tool: "paragraph", placement: { parentId: null, afterId: "block-1" } })
       );
       expect(result).toEqual([dup]);
       expect(toolbar.moveAndOpen).toHaveBeenCalledWith(dup);
@@ -2556,15 +2558,18 @@ describe("DragManager - Component Integration", () => {
 
           blocks.splice(toIndex, 0, block);
         }),
-        insert: vi.fn((config: { tool: string; data: Record<string, unknown>; index: number }) => {
+        insert: vi.fn((config: { tool: string; data: Record<string, unknown> } & ({ index: number } | { placement: TreePlacement })) => {
           insertCounter++;
           const newBlock = createBlockStub({
             id: `duplicated-${insertCounter}`,
             name: config.tool,
-            parentId: null,
+            parentId: "placement" in config ? config.placement.parentId : null,
           });
+          const index = "placement" in config
+            ? flatIndexForPlacement({ blocks, getById: (id: string) => blocks.find((b) => b.id === id) }, config.placement)
+            : config.index;
 
-          blocks.splice(config.index, 0, newBlock);
+          blocks.splice(index, 0, newBlock);
 
           return newBlock;
         }),
@@ -2665,11 +2670,15 @@ describe("DragManager - Component Integration", () => {
         "bottom",
       );
 
-      // setBlockParent should be called on the duplicated block with toggle's id
-      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "duplicated-1" }),
-        "toggle-1",
+      // The copy is inserted straight under the toggle, as its first child.
+      expect(modules.BlockManager.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ placement: { parentId: "toggle-1", afterId: null } }),
       );
+      expect(modules.BlockManager.blocks.map((block) => [block.id, block.parentId])).toEqual([
+        ["paragraph-1", null],
+        ["toggle-1", null],
+        ["duplicated-1", "toggle-1"],
+      ]);
     });
 
     it("should set parent to target's parent when alt+drag duplicating to bottom of a child block", async () => {
@@ -2717,10 +2726,9 @@ describe("DragManager - Component Integration", () => {
         "bottom",
       );
 
-      // setBlockParent should be called with the toggle's id (child's parent)
-      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "duplicated-1" }),
-        "toggle-1",
+      // The copy is inserted under the toggle (the child's parent), after the child.
+      expect(modules.BlockManager.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ placement: { parentId: "toggle-1", afterId: "child-1" } }),
       );
     });
 

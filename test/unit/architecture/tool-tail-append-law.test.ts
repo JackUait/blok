@@ -33,12 +33,7 @@ const TOOLS_ROOT = join(__dirname, '../../../src/tools');
  * Files allowed to keep a tail-append, with the reason it is safe there.
  * Keys are paths relative to src/tools/.
  */
-const EXEMPTIONS: Record<string, string> = {
-  'table/table-subsystems.ts':
-    'Row/column duplication path: the inserted paragraph is ' +
-    'immediately claimed by setBlockParent(…, tableBlockId) in the same block, ' +
-    'so it is never observable as a root-level sibling (asserted below).',
-};
+const EXEMPTIONS: Record<string, string> = {};
 
 /** Files whose tail-appends are exempt because they reparent immediately. */
 const REPARENT_PAIRED = new Set(Object.keys(EXEMPTIONS));

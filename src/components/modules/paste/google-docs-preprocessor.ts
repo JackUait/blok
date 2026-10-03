@@ -10,6 +10,7 @@ import { COLUMNS_CANDIDATE_ATTR } from './constants';
 import { parseUntrustedHtml } from '../../utils/inert-html';
 import { trimTrailingBreaks } from '../../utils/trailing-breaks';
 import { isSpacerParagraph } from '../../utils/spacer-paragraph';
+import { ownPastedCells, ownPastedRows } from '../../../tools/table/table-cell-paste';
 
 /**
  * Pre-process Google Docs clipboard HTML before sanitization.
@@ -420,7 +421,9 @@ function hasHeadingAncestor(node: Element): boolean {
   return hasHeadingAncestor(parent);
 }
 
-function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string | null {
+const SCRIPT_TAGS: Record<string, string | undefined> = { super: 'sup', sub: 'sub' };
+
+export function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string | null {
   const style = span.getAttribute('style') ?? '';
   /**
    * Headings are already rendered bold. A span with font-weight:700 inside a
@@ -456,14 +459,27 @@ function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string
    */
   const hasBgColor = bgColor !== undefined && !isInvisibleBackground(bgColor);
 
-  if (!isBold && !isItalic && !hasColor && !hasBgColor) {
+  const decoration = isGoogleDocs ? /text-decoration(?:-line)?\s*:\s*([^;]+)/i.exec(style)?.[1] ?? '' : '';
+  const verticalAlign = isGoogleDocs ? /vertical-align\s*:\s*([^;]+)/i.exec(style)?.[1]?.trim() ?? '' : '';
+  // Docs underlines every link; that underline is the link style, not a mark.
+  const isUnderline = /underline/i.test(decoration) && !isLinkContent(span);
+  const isStrike = /line-through/i.test(decoration);
+  const scriptTag = SCRIPT_TAGS[verticalAlign.toLowerCase()];
+
+  if (!isBold && !isItalic && !hasColor && !hasBgColor && !isUnderline && !isStrike && scriptTag === undefined) {
     return null;
   }
 
   const inner = buildMarkWrapper(span.innerHTML, hasColor, hasBgColor, color, bgColor);
-  const italic = isItalic ? `<i>${inner}</i>` : inner;
+  const tags = [
+    isBold ? 'b' : '',
+    isItalic ? 'i' : '',
+    isUnderline ? 'u' : '',
+    isStrike ? 's' : '',
+    scriptTag ?? '',
+  ].filter(Boolean);
 
-  return isBold ? `<b>${italic}</b>` : italic;
+  return tags.reduceRight((html, tag) => `<${tag}>${html}</${tag}>`, inner);
 }
 
 /**
@@ -473,6 +489,8 @@ function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string
  * - `<span style="font-style:italic">` → `<i>`
  * - `<span style="color:...">` → `<mark style="color: ...">`
  * - `<span style="background-color:...">` → `<mark style="background-color: ...">`
+ * - Google Docs only: `text-decoration` underline / line-through → `<u>` / `<s>`,
+ *   `vertical-align` super / sub → `<sup>` / `<sub>`
  *
  * Color and bold/italic can combine: a bold red span becomes `<b><mark style="color: red;">text</mark></b>`.
  */
@@ -528,17 +546,6 @@ function convertAnchorColorStyles(wrapper: HTMLElement): void {
 }
 
 /**
- * The table's own rows (nested tables' rows excluded) as arrays of TD/TH
- * cells, in document order.
- */
-function ownRowCells(table: HTMLTableElement): HTMLElement[][] {
-  return Array.from(table.querySelectorAll('tr'))
-    .filter((row) => row.closest('table') === table)
-    .map((row) => Array.from(row.children)
-      .filter((child): child is HTMLElement => child.tagName === 'TD' || child.tagName === 'TH'));
-}
-
-/**
  * Unwrap single-column LAYOUT tables into plain top-level content.
  *
  * A one-column table can never become a `column_list` (the editor dissolves
@@ -563,7 +570,7 @@ function unwrapLayoutSingleColumnTables(wrapper: HTMLElement): void {
       continue;
     }
 
-    const rows = ownRowCells(table);
+    const rows = ownPastedRows(table).map(ownPastedCells);
 
     if (rows.length === 0 || rows.some((cells) => cells.length !== 1)) {
       continue;
@@ -608,7 +615,7 @@ function stampColumnsCandidateTables(wrapper: HTMLElement): void {
       continue;
     }
 
-    const rows = ownRowCells(table);
+    const rows = ownPastedRows(table).map(ownPastedCells);
 
     if (rows.length === 0) {
       continue;
@@ -656,8 +663,40 @@ function unwrapCellParagraph(p: Element): void {
   p.replaceWith(fragment);
 }
 
+const TEXT_ALIGN = /(?<![a-z-])text-align\s*:\s*([^;]+)/i;
+
+/**
+ * Docs and Word put a cell's alignment on its `<p>`s, which the unwrap below
+ * drops. Copy it onto the cell's own style (the table reads it there) when
+ * every content paragraph agrees and the cell has no text-align of its own.
+ */
+function carryParagraphAlignmentToCell(cell: Element): void {
+  const ownStyle = cell.getAttribute('style') ?? '';
+
+  if (TEXT_ALIGN.test(ownStyle)) {
+    return;
+  }
+
+  // A nested table's paragraphs belong to its own cells.
+  const paragraphs = Array.from(cell.querySelectorAll('p'))
+    .filter(p => p.closest('td, th') === cell && !isSpacerParagraph(p));
+  const alignments = new Set(paragraphs.map(p => TEXT_ALIGN.exec(p.getAttribute('style') ?? '')?.[1]?.trim().toLowerCase()));
+  const [alignment] = alignments;
+
+  if (alignments.size !== 1 || alignment === undefined) {
+    return;
+  }
+
+  cell.setAttribute('style', ownStyle === '' ? `text-align:${alignment}` : `${ownStyle};text-align:${alignment}`);
+}
+
 function convertTableCellParagraphs(wrapper: HTMLElement): void {
-  for (const cell of Array.from(wrapper.querySelectorAll('td, th'))) {
+  const cells = Array.from(wrapper.querySelectorAll('td, th'));
+
+  // Before any unwrap: an outer cell unwraps its nested cells' <p>s too.
+  cells.forEach(carryParagraphAlignmentToCell);
+
+  for (const cell of cells) {
     const paragraphs = cell.querySelectorAll('p');
 
     if (paragraphs.length === 0) {

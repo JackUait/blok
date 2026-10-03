@@ -11,6 +11,9 @@ export const ROW_ATTR = 'data-blok-table-row';
 export const ownRows = (grid: HTMLElement): NodeListOf<HTMLElement> =>
   grid.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}], :scope > [${ROW_ATTR}]`);
 export const CELL_ATTR = 'data-blok-table-cell';
+/** Grid-relative selector for this table's own cells; a nested table's cells sit inside ours. */
+export const ownCells = (tail = ''): string =>
+  `:scope > tbody > [${ROW_ATTR}] > [${CELL_ATTR}]${tail}, :scope > [${ROW_ATTR}] > [${CELL_ATTR}]${tail}`;
 export const CELL_ROW_ATTR = 'data-blok-table-cell-row';
 export const CELL_COL_ATTR = 'data-blok-table-cell-col';
 /** Corners of the grid a cell touches, as tokens: top-start top-end bottom-start bottom-end. */

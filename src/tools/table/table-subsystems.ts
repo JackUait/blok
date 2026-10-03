@@ -5,7 +5,7 @@ import type { TextDirection } from '../../components/utils/direction';
 
 import { TableAddControls } from './table-add-controls';
 import type { TableCellBlocks } from './table-cell-blocks';
-import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
+import { CELL_BLOCKS_ATTR, toClipboardBlock } from './table-cell-blocks';
 import {
   serializeCellsToClipboard,
   buildClipboardHtml,
@@ -830,12 +830,7 @@ export class TableSubsystems {
         return;
       }
 
-      const blocks = this.readCellBlocks(sourceCell).map(block => ({
-        ...block,
-        data: structuredClone(block.data),
-      }));
-
-      this.pasteCellPayload(targetCell, { blocks });
+      this.pasteCellPayload(targetCell, { blocks: this.readCellBlocks(sourceCell) });
       this.host.model.setCellBlocks(
         target.row,
         target.col,
@@ -1135,27 +1130,50 @@ export class TableSubsystems {
     this.scrollHaze?.update();
   }
 
-  private handleCellCopy(cells: HTMLElement[], clipboardData: DataTransfer): void {
+  /**
+   * Clipboard payload for the selected cells, or null when nothing is copied.
+   * Heading flags travel only when the range holds the heading row/column.
+   */
+  private buildCellClipboardPayload(cells: HTMLElement[]): TableCellsClipboard | null {
     const entries = this.collectCellBlockData(cells);
 
     if (entries.length === 0) {
-      return;
+      return null;
     }
 
     const payload = serializeCellsToClipboard(entries);
+    const hasRowZero = entries.some(entry => entry.row === 0);
+    const hasColZero = entries.some(entry => entry.col === 0);
+
+    if (this.host.model.withHeadings && hasRowZero) {
+      payload.withHeadings = true;
+    }
+
+    if (this.host.model.withHeadingColumn && hasColZero) {
+      payload.withHeadingColumn = true;
+    }
+
+    return payload;
+  }
+
+  private handleCellCopy(cells: HTMLElement[], clipboardData: DataTransfer): void {
+    const payload = this.buildCellClipboardPayload(cells);
+
+    if (payload === null) {
+      return;
+    }
 
     clipboardData.setData('text/html', buildClipboardHtml(payload, getElementDirection(this.host.gridElement)));
     clipboardData.setData('text/plain', buildClipboardPlainText(payload));
   }
 
   private handleCellCopyViaButton(cells: HTMLElement[]): void {
-    const entries = this.collectCellBlockData(cells);
+    const payload = this.buildCellClipboardPayload(cells);
 
-    if (entries.length === 0) {
+    if (payload === null) {
       return;
     }
 
-    const payload = serializeCellsToClipboard(entries);
     const html = buildClipboardHtml(payload, getElementDirection(this.host.gridElement));
     const plainText = buildClipboardPlainText(payload);
 
@@ -1265,19 +1283,18 @@ export class TableSubsystems {
   }
 
   /**
-   * Snapshot a cell's blocks as insertable payload data.
+   * Snapshot a cell's blocks as insertable payload data, children nested
+   * under their parent. Deep-cloned: preservedData is the live saved object.
    */
   private readCellBlocks(cell: HTMLElement): ClipboardBlockData[] {
-    const ids = this.host.cellBlocks?.getBlockIdsFromCells([cell]) ?? [];
+    const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
 
-    return ids
-      .map(id => this.host.api.blocks.getById(id))
+    return Array.from(container?.children ?? [])
+      .map(blockEl => this.host.api.blocks.getById(blockEl.getAttribute('data-blok-id') ?? ''))
       .filter((block): block is BlockAPI => block !== null && block !== undefined)
-      .map(block => ({
-        tool: block.name,
-        data: block.preservedData,
-        ...(Object.keys(block.preservedTunes).length > 0 ? { tunes: block.preservedTunes } : {}),
-      }));
+      // A list item's children sit beside it in the container and travel inside it.
+      .filter(block => !this.isNestedUnderCellBlock(block))
+      .map(block => structuredClone(toClipboardBlock(this.host.api, block)));
   }
 
   private handleCellColorChange(cells: HTMLElement[], color: string | null, mode: CellColorMode): void {
@@ -1370,6 +1387,14 @@ export class TableSubsystems {
     }
   }
 
+  /** A child of another cell block: it travels inside that block. */
+  private isNestedUnderCellBlock(block: BlockAPI): boolean {
+    const tableId = this.host.blockId;
+
+    // Without the table's id every parented block would look nested and be dropped.
+    return tableId !== undefined && typeof block.parentId === 'string' && block.parentId !== tableId;
+  }
+
   private collectCellBlockData(
     cells: HTMLElement[],
   ): Array<{
@@ -1399,32 +1424,14 @@ export class TableSubsystems {
         return { row: rowIndex, col: colIndex, blocks };
       }
 
-      container.querySelectorAll('[data-blok-id]').forEach(blockEl => {
+      // Nested children travel inside their parent. A list item's sit beside it, so skip by parent.
+      Array.from(container.children).forEach(blockEl => {
         const blockId = blockEl.getAttribute('data-blok-id');
+        const block = blockId === null ? undefined : this.host.api.blocks.getById(blockId);
 
-        if (!blockId) {
-          return;
+        if (block && !this.isNestedUnderCellBlock(block)) {
+          blocks.push(toClipboardBlock(this.host.api, block));
         }
-
-        const blockIndex = this.host.api.blocks.getBlockIndex(blockId);
-
-        if (blockIndex === undefined) {
-          return;
-        }
-
-        const block = this.host.api.blocks.getBlockByIndex(blockIndex);
-
-        if (!block) {
-          return;
-        }
-
-        blocks.push({
-          tool: block.name,
-          data: block.preservedData,
-          ...(Object.keys(block.preservedTunes).length > 0
-            ? { tunes: block.preservedTunes }
-            : {}),
-        });
       });
 
       // Read-only legacy cells can render plain text without mounted block holders.
@@ -1613,10 +1620,12 @@ export class TableSubsystems {
      * If the pasted HTML contains multiple tables (e.g. from Google Docs),
      * don't intercept — let the Paste module handle it as a document-level paste
      * so each table becomes a separate block without overwriting existing cells.
+     * A table nested in a cell is that cell's content, not a separate table.
      */
     if (
       externalPayload !== null &&
-      new DOMParser().parseFromString(html, 'text/html').querySelectorAll('table').length > 1
+      Array.from(new DOMParser().parseFromString(html, 'text/html').querySelectorAll('table'))
+        .filter(table => (table.parentElement?.closest('table') ?? null) === null).length > 1
     ) {
       return;
     }
@@ -1657,7 +1666,7 @@ export class TableSubsystems {
       // lose their list structure in a text join) must be recreated as real
       // blocks in the target cell instead.
       const isTextOnly = singleCell.blocks.every(
-        block => block.tool === 'paragraph' && typeof block.data.text === 'string'
+        block => block.tool === 'paragraph' && typeof block.data.text === 'string' && block.children === undefined
       );
 
       if (isTextOnly) {
@@ -1986,41 +1995,27 @@ export class TableSubsystems {
     cell: HTMLElement,
     payloadCell: { blocks: ClipboardBlockData[] },
   ): void {
-    // Clear existing blocks in this cell
-    if (this.host.cellBlocks) {
-      const existingIds = this.host.cellBlocks.getBlockIdsFromCells([cell]);
-
-      this.host.cellBlocks.deleteBlocks(existingIds);
-    }
-
+    const cellBlocks = this.host.cellBlocks;
     const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
 
-    if (!container) {
+    if (!cellBlocks || !container) {
       return;
     }
 
+    cellBlocks.deleteBlocks(cellBlocks.getBlockIdsFromCells([cell]));
+
     if (payloadCell.blocks.length === 0) {
-      this.host.cellBlocks?.ensureCellHasBlock(cell);
+      cellBlocks.ensureCellHasBlock(cell);
 
       return;
     }
 
     for (const blockData of payloadCell.blocks) {
-      // The 8th argument is the block's tunes: the payload collected them and
-      // this call used to omit them, so every copied cell lost its tunes.
-      const block = this.host.api.blocks.insert(
-        blockData.tool,
-        blockData.data,
-        {},
-        this.host.cellBlocks?.indexAfterTableSubtree() ?? this.host.api.blocks.getBlocksCount(),
-        false,
-        false,
-        undefined,
-        blockData.tunes,
-      );
+      const block = cellBlocks.insertClipboardBlock(blockData);
 
       container.appendChild(block.holder);
       this.host.api.blocks.setBlockParent(block.id, this.host.blockId ?? '');
+      cellBlocks.insertClipboardChildren(block.id, blockData.children);
     }
   }
 }

@@ -420,6 +420,18 @@ describe('BlockToolAdapter', () => {
 
       expect(tool.acceptsChildren).toBe(true);
     });
+
+    it('reports a tool whose copy rebuilds its own children', () => {
+      const { tool } = createBlockTool({ constructable: createConstructable({ copiesOwnChildren: true }) });
+
+      expect(tool.copiesOwnChildren).toBe(true);
+    });
+
+    it('leaves copying the children to core when the tool declares nothing', () => {
+      const { tool } = createBlockTool();
+
+      expect(tool.copiesOwnChildren).toBe(false);
+    });
   });
 
   describe('copy as link', () => {

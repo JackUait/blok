@@ -10,14 +10,14 @@ import {
   focus,
 } from '../../components/utils/caret';
 
-import { CELL_ATTR, ROW_ATTR, CELL_COL_ATTR, ownRows } from './table-core';
-import { parseCellContentToBlocks } from './table-cell-paste';
+import { CELL_ATTR, ROW_ATTR, CELL_COL_ATTR, ownCells, ownRows } from './table-core';
+import { cellBlockFallbackText, parseCellContentToBlocks } from './table-cell-paste';
 import type { CellBlockInsert } from './table-cell-paste';
 import { getCellPosition } from './table-operations';
 import type { TableModel } from './table-model';
 import type { ClipboardBlockData, LegacyCellContent, CellContent } from './types';
 import { isCellWithBlocks } from './types';
-import { pickTableIds } from './table-ids';
+import { cellKey, pickTableIds } from './table-ids';
 
 /**
  * A cell as initializeCells reads it. `leadingText` is a text-only origin's
@@ -26,6 +26,20 @@ import { pickTableIds } from './table-ids';
 export type InitCellContent = LegacyCellContent | (CellContent & { leadingText?: string });
 
 export const CELL_BLOCKS_ATTR = 'data-blok-table-cell-blocks';
+
+/**
+ * A block and its nested children as clipboard data, read from the live tree.
+ */
+export const toClipboardBlock = (api: API, block: BlockAPI): ClipboardBlockData => {
+  const children = api.blocks.getChildren(block.id).map(child => toClipboardBlock(api, child));
+
+  return {
+    tool: block.name,
+    data: block.preservedData,
+    ...(Object.keys(block.preservedTunes).length > 0 ? { tunes: block.preservedTunes } : {}),
+    ...(children.length > 0 ? { children } : {}),
+  };
+};
 
 /**
  * Get the cell element that contains the given element
@@ -61,6 +75,18 @@ interface TableCellBlocksOptions {
    * not by this object: a setData rebuild replaces this object.
    */
   repairIds?: Set<string>;
+  /** Stand-ins this editor put in cells a merge padded. Owned by the table, like `repairIds`. */
+  paddedFillIds?: Set<string>;
+  /** Blocks this editor made from legacy cell text, by id. Owned by the table, like `repairIds`. */
+  convertedBlocks?: Map<string, ConvertedBlock>;
+}
+
+/** Where a block made from legacy cell text was put, and the data it was made with. */
+export interface ConvertedBlock {
+  row: number;
+  col: number;
+  index: number;
+  minted: string;
 }
 
 /**
@@ -136,6 +162,10 @@ export class TableCellBlocks {
 
   private readonly repairIds: Set<string>;
 
+  private readonly convertedBlocks: Map<string, ConvertedBlock>;
+
+  private readonly paddedFillIds: Set<string>;
+
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
@@ -145,6 +175,8 @@ export class TableCellBlocks {
     this.isStructuralOpActive = options.isStructuralOpActive ?? (() => false);
     this.onCellReferenceDropped = options.onCellReferenceDropped;
     this.repairIds = options.repairIds ?? new Set();
+    this.convertedBlocks = options.convertedBlocks ?? new Map<string, ConvertedBlock>();
+    this.paddedFillIds = options.paddedFillIds ?? new Set();
 
     this.api.events.on('block changed', this.handleBlockMutation);
     this.gridElement.addEventListener('click', this.handleCellBlankSpaceClick);
@@ -762,7 +794,7 @@ export class TableCellBlocks {
       }
     }
 
-    return this.api.blocks.insert('paragraph', { text: insert.data.text }, {}, index, false);
+    return this.api.blocks.insert('paragraph', { text: cellBlockFallbackText(insert.data) }, {}, index, false);
   }
 
   /**
@@ -772,13 +804,17 @@ export class TableCellBlocks {
    * routing them through the `text` channel dropped them entirely.
    * Falls back to a paragraph when the tool is not registered in this editor.
    */
-  private insertClipboardBlock(block: ClipboardBlockData): ReturnType<API['blocks']['insert']> {
+  public insertClipboardBlock(
+    block: ClipboardBlockData,
+    index: number = this.indexAfterTableSubtree()
+  ): ReturnType<API['blocks']['insert']> {
     try {
+      // 8th arg = tunes; omit it and copied cells lose them.
       return this.api.blocks.insert(
         block.tool,
         block.data,
         {},
-        this.indexAfterTableSubtree(),
+        index,
         false,
         false,
         undefined,
@@ -786,10 +822,22 @@ export class TableCellBlocks {
       );
     } catch {
       // Tool unavailable — degrade to a paragraph carrying whatever text it had.
-      const text = typeof block.data.text === 'string' ? block.data.text : '';
-
-      return this.api.blocks.insert('paragraph', { text }, {}, this.indexAfterTableSubtree(), false);
+      return this.api.blocks.insert('paragraph', { text: cellBlockFallbackText(block.data) }, {}, index, false);
     }
+  }
+
+  /**
+   * Rebuild a clipboard block's nested children under `parentId`, depth-first.
+   * Call it only after the parent is placed in the table, or the flat index
+   * lands outside the table's subtree.
+   */
+  public insertClipboardChildren(parentId: string, children: ClipboardBlockData[] | undefined): void {
+    children?.forEach(child => {
+      const block = this.insertClipboardBlock(child, this.indexAfterSubtreeOf(parentId));
+
+      this.api.blocks.setBlockParent(block.id, parentId);
+      this.insertClipboardChildren(block.id, child.children);
+    });
   }
 
   /**
@@ -967,9 +1015,26 @@ export class TableCellBlocks {
           };
 
           if (seedBlocks !== undefined && seedBlocks.length > 0) {
-            seedBlocks.forEach(block => mount(this.insertClipboardBlock(block)));
+            seedBlocks.forEach(seed => {
+              const block = this.insertClipboardBlock(seed);
+
+              mount(block);
+              this.insertClipboardChildren(block.id, seed.children);
+            });
           } else {
-            parseCellContentToBlocks(text).forEach(insert => mount(this.insertCellContentBlock(insert)));
+            parseCellContentToBlocks(text).forEach(insert => {
+              const block = this.insertCellContentBlock(insert);
+
+              if (typeof cellContent === 'string' && !this.api.blocks.isApplyingRemoteChange) {
+                this.convertedBlocks.set(block.id, {
+                  row: rowIndex,
+                  col: colIndex,
+                  index: ids.length,
+                  minted: JSON.stringify(block.preservedData),
+                });
+              }
+              mount(block);
+            });
           }
 
           normalizedRow.push({
@@ -1061,8 +1126,9 @@ export class TableCellBlocks {
    * After a sync replay has settled, give an editable block to every cell
    * whose referenced blocks have not arrived (a peer's content write that won
    * over a delete). Only then: during the replay they may still land.
+   * @param paddedCells - `rowId:columnId` of cells no peer's write holds; see `mergePaddedCells`
    */
-  public fillCellsWithUnresolvedBlocks(): void {
+  public fillCellsWithUnresolvedBlocks(paddedCells: ReadonlySet<string> = new Set()): void {
     this.gridElement.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`).forEach(cell => {
       const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
       const pos = this.getCellPosition(cell);
@@ -1072,6 +1138,13 @@ export class TableCellBlocks {
       }
 
       const ids = this.model.getCellBlocks(pos.row, pos.col);
+
+      if (ids.length === 0 && paddedCells.has(this.cellKeyAt(pos.row, pos.col))) {
+        // A stand-in: every peer that padded the cell fills it, and `yieldRepairsToPeers` keeps one.
+        this.ensureCellHasBlock(cell, { padded: true });
+
+        return;
+      }
 
       // A cell the replay left empty on purpose (undo to an empty table) is
       // not ours to fill: its blocks may still be restored by later ops.
@@ -1114,6 +1187,33 @@ export class TableCellBlocks {
    * A stand-in the user typed into is content and stays.
    */
   public yieldRepairsToPeers(restoredIds: ReadonlySet<string> = new Set()): void {
+    // Peers that padded the same cell each write it as a new key, so one
+    // stand-in loses and no cell names it any more.
+    const named = new Set(this.model.snapshot().content.flat().flatMap(cell => (isCellWithBlocks(cell) ? cell.blocks : [])));
+    const unnamed = [...this.paddedFillIds].filter(id => {
+      const block = this.api.blocks.getById?.(id);
+
+      if (block?.isEmpty !== true || block.parentId !== this.tableBlockId) {
+        this.paddedFillIds.delete(id);
+
+        return false;
+      }
+
+      return !named.has(id);
+    });
+
+    unnamed.forEach(id => {
+      this.repairIds.delete(id);
+      this.paddedFillIds.delete(id);
+    });
+    if (unnamed.length > 0) {
+      this.api.blocks.transactWithoutCapture?.(() => this.deleteBlocks(unnamed, false));
+    }
+
+    this.yieldNamedRepairs(restoredIds);
+  }
+
+  private yieldNamedRepairs(restoredIds: ReadonlySet<string>): void {
     if (this.repairIds.size === 0) {
       return;
     }
@@ -1149,6 +1249,118 @@ export class TableCellBlocks {
 
     losers.forEach(id => this.repairIds.delete(id));
     this.api.blocks.transactWithoutCapture?.(() => this.deleteBlocks(losers, false));
+  }
+
+  /**
+   * After a sync settles, hand over this editor's legacy conversion when a
+   * peer's concurrent conversion won the table data. Its untouched blocks go;
+   * a block the user edited takes the place of the peer's untouched twin, or
+   * sits right after a twin the peer edited too.
+   *
+   * Only the editor that made a block deletes it. A twin that looks untouched
+   * here may hold typing whose frame has not arrived, so it is only unnamed;
+   * its own editor runs this same pass and keeps it if it was edited.
+   */
+  public yieldLostConversion(): void {
+    if (this.convertedBlocks.size === 0) {
+      return;
+    }
+
+    const named = new Set(this.model.snapshot().content.flat().flatMap(cell => (isCellWithBlocks(cell) ? cell.blocks : [])));
+    const dataOf = (block: { preservedData: unknown }): string => JSON.stringify(block.preservedData);
+    const dropped: string[] = [];
+    const kept: Array<{ id: string; twin: string | undefined; replace: boolean; record: ConvertedBlock }> = [];
+
+    [...this.convertedBlocks].forEach(([id, record]) => {
+      if (named.has(id)) {
+        return;
+      }
+
+      this.convertedBlocks.delete(id);
+
+      const block = this.api.blocks.getById?.(id);
+
+      if (block == null || block.parentId !== this.tableBlockId) {
+        return;
+      }
+
+      if (dataOf(block) === record.minted) {
+        dropped.push(id);
+
+        return;
+      }
+
+      const twin = this.model.getCellBlocks(record.row, record.col)[record.index];
+      const twinBlock = twin === undefined ? null : this.api.blocks.getById?.(twin);
+      const replace = twinBlock != null && twinBlock.name === block.name && dataOf(twinBlock) === record.minted;
+
+      kept.push({ id, twin, replace, record });
+    });
+
+    if (dropped.length === 0 && kept.length === 0) {
+      return;
+    }
+
+    this.api.blocks.transactWithoutCapture?.(() => {
+      kept.forEach(({ id, twin, replace, record }) => this.placeInCell(id, record, twin, replace));
+      // Out of the model and the cell first: a removal of a cell's block
+      // otherwise saves the table as a tracked change and records a refill.
+      dropped.forEach(id => {
+        const pos = this.model.findCellForBlock(id);
+
+        if (pos !== null) {
+          this.model.removeBlockFromCell(pos.row, pos.col, id);
+        }
+        this.api.blocks.getById?.(id)?.holder.remove();
+      });
+      this.deleteBlocks(dropped, false);
+    });
+  }
+
+  /**
+   * Mount a table child into a cell in place of `twin`, or after it (last
+   * when there is no twin).
+   */
+  private placeInCell(id: string, record: ConvertedBlock, twin: string | undefined, replace: boolean): void {
+    const cell = this.getCell(record.row, record.col);
+    const container = cell?.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+    const block = this.api.blocks.getById?.(id);
+
+    if (cell == null || container == null || block == null) {
+      return;
+    }
+
+    const ids = this.model.getCellBlocks(record.row, record.col);
+    const twinAt = twin === undefined ? -1 : ids.indexOf(twin);
+    const replaced = replace && twinAt !== -1 ? twin : undefined;
+    const at = twinAt === -1 ? ids.length : twinAt + (replaced === undefined ? 1 : 0);
+    const rest = replaced === undefined ? ids : ids.filter(other => other !== replaced);
+    const before = rest[at];
+    const beforeHolder = before === undefined ? null : this.api.blocks.getById?.(before)?.holder ?? null;
+    const last = rest.at(-1);
+    const anchor = [
+      replaced !== undefined ? { before: replaced } : null,
+      before !== undefined ? { before } : null,
+      last !== undefined ? { after: last } : null,
+    ].find(candidate => candidate !== null) ?? null;
+
+    container.insertBefore(block.holder, beforeHolder?.parentElement === container ? beforeHolder : null);
+    // The table's child order must match the cell order, or save reorders the
+    // cell. The move is also what writes the table data, untracked.
+    if (anchor !== null) {
+      this.api.blocks.moveTo(id, { parentId: this.tableBlockId, position: anchor });
+    }
+    this.model.setCellBlocks(record.row, record.col, [...rest.slice(0, at), id, ...rest.slice(at)]);
+    if (replaced !== undefined) {
+      this.api.blocks.getById?.(replaced)?.holder.remove();
+    }
+    this.stripPlaceholders(container);
+  }
+
+  private cellKeyAt(row: number, col: number): string {
+    const cell = this.model.snapshot().content[row]?.[col];
+
+    return isCellWithBlocks(cell) ? cellKey(cell.rowId ?? '', cell.id ?? '') : '';
   }
 
   public reclaimReferencedBlocks(): void {
@@ -1275,18 +1487,36 @@ export class TableCellBlocks {
           block.preservedData,
           {},
           this.indexAfterTableSubtree(),
-          false
+          false,
+          false,
+          undefined,
+          block.preservedTunes,
         );
 
         container.appendChild(duplicate.holder);
         this.api.blocks.setBlockParent(duplicate.id, this.tableBlockId);
+        this.insertClipboardChildren(duplicate.id, this.api.blocks.getChildren(blockId).map(child => toClipboardBlock(this.api, child)));
         mountedIds.push(duplicate.id);
         replacements.set(blockId, duplicate.id);
         continue;
       }
 
+      const previous = container.lastElementChild === block.holder
+        ? block.holder.previousElementSibling
+        : container.lastElementChild;
+
       container.appendChild(block.holder);
       this.api.blocks.setBlockParent(blockId, this.tableBlockId);
+
+      // setBlockParent re-sorts a holder in its cell by flat order, which can
+      // disagree with the data (a peer's doc order). The data orders the cell.
+      const resorted = block.holder.parentElement === container && block.holder.previousElementSibling !== previous;
+
+      if (resorted && previous === null) {
+        container.prepend(block.holder);
+      } else if (resorted) {
+        previous?.after(block.holder);
+      }
       this.blocksAwaitingCell.delete(blockId);
       this.mountedThisPass.add(blockId);
       mountedIds.push(blockId);
@@ -1406,10 +1636,15 @@ export class TableCellBlocks {
    * Ensure a cell has at least one block.
    * If the blocks container is empty, insert an empty paragraph.
    * @param options.track - true when the fill is part of a user gesture (add
-   *   row/column): the new block joins the gesture's undo step. Otherwise it
-   *   is an invisible repair, kept out of undo.
+   *   row/column, or the fill after a local removal empties a cell): the new
+   *   block joins the gesture's undo step. Otherwise it is an invisible
+   *   repair, kept out of undo.
+   * @param options.standIn - the block only fills the emptied cell, so a
+   *   peer's stand-in may replace it (see `yieldRepairsToPeers`). Defaults to
+   *   true when the fill is untracked.
+   * @param options.padded - the cell is one a merge padded (see `mergePaddedCells`)
    */
-  public ensureCellHasBlock(cell: HTMLElement, options: { track?: boolean } = {}): void {
+  public ensureCellHasBlock(cell: HTMLElement, options: { track?: boolean; standIn?: boolean; padded?: boolean } = {}): void {
     const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
 
     if (!container) {
@@ -1422,9 +1657,7 @@ export class TableCellBlocks {
       return;
     }
 
-    // Wrap in transactWithoutCapture so this auto-repair insertion does not
-    // pollute the undo history. If a drag or other operation causes a cell to
-    // temporarily lose its block, the repair should be invisible to undo/redo.
+    // Untracked fills stay out of undo; tracked ones join the current step.
     //
     // isRepairingCell suppresses handleBlockMutation's claim heuristics for the
     // repair block's own block-added event: this method places the block itself,
@@ -1435,8 +1668,11 @@ export class TableCellBlocks {
     const fill = (): void => {
       const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.indexForCell(cell), true);
 
-      if (options.track !== true) {
+      if (options.standIn ?? options.track !== true) {
         this.repairIds.add(block.id);
+      }
+      if (options.padded === true) {
+        this.paddedFillIds.add(block.id);
       }
       container.appendChild(block.holder);
       this.api.blocks.setBlockParent(block.id, this.tableBlockId);
@@ -1602,6 +1838,14 @@ export class TableCellBlocks {
 
       if (parentId === this.tableBlockId || peerBlockAwaitingParent) {
         this.blocksAwaitingCell.add(detail.target.id);
+      }
+
+      // A peer's child of ours, shown in a cell no data names, would take
+      // typing that a reload drops. Mounting from the data puts it back.
+      if (parentId === this.tableBlockId
+        && this.api.blocks.isApplyingRemoteChange
+        && this.gridElement.contains(detail.target.holder)) {
+        detail.target.holder.remove();
       }
 
       return;
@@ -2029,8 +2273,9 @@ export class TableCellBlocks {
       // which runs shortly after. Inserting a phantom block here would race with
       // that restoration and leave the cell with a duplicate/wrong block.
       if (!this.api.blocks.isSyncingFromYjs) {
+        // Tracked: the fill must join the step that emptied the cell, or undo cannot restore it.
         for (const cell of this.cellsPendingCheck) {
-          this.ensureCellHasBlock(cell);
+          this.ensureCellHasBlock(cell, { track: true, standIn: true });
         }
       }
 
@@ -2098,7 +2343,21 @@ export class TableCellBlocks {
    *   whichever cell became current, painting a focus box mid-drag.
    */
   public deleteBlocks(blockIds: string[], setCaret = true): void {
-    const blockIndices = blockIds
+    // A slotless block's children sit beside it in the cell, and deleting only
+    // the parent re-homes them into the table. The Set also keeps one index
+    // from being deleted twice when a caller lists a child and its parent.
+    const withSubtrees = new Set<string>();
+    const collect = (id: string): void => {
+      if (withSubtrees.has(id) || this.api.blocks.getBlockIndex(id) === undefined) {
+        return;
+      }
+      withSubtrees.add(id);
+      this.api.blocks.getChildren(id).forEach(child => collect(child.id));
+    };
+
+    blockIds.forEach(collect);
+
+    const blockIndices = Array.from(withSubtrees)
       .map(id => this.api.blocks.getBlockIndex(id))
       .filter((index): index is number => index !== undefined)
       .sort((a, b) => b - a);
@@ -2123,6 +2382,43 @@ export class TableCellBlocks {
   public deleteAllBlocks(): void {
     const allCells = this.gridElement.querySelectorAll(`[${CELL_ATTR}]`);
     const blockIds = this.getBlockIdsFromCells(allCells);
+
+    this.deleteBlocks(blockIds);
+  }
+
+  /**
+   * Delete the blocks mounted in the grid except the kept ones and everything
+   * nested inside a kept one: new content names only a cell's top-level blocks.
+   */
+  public deleteBlocksExcept(keepIds: ReadonlySet<string>): void {
+    // A kept list item's children are its siblings in the cell, not nested in its holder.
+    const kept = new Set<string>();
+    const keep = (id: string): void => {
+      if (kept.has(id)) {
+        return;
+      }
+      kept.add(id);
+      if (this.api.blocks.getBlockIndex(id) !== undefined) {
+        this.api.blocks.getChildren(id).forEach(child => keep(child.id));
+      }
+    };
+
+    keepIds.forEach(keep);
+
+    const isKept = (holder: Element | null | undefined, container: Element): boolean =>
+      holder !== null && holder !== undefined && container.contains(holder) && (
+        kept.has(holder.getAttribute('data-blok-id') ?? '')
+        || isKept(holder.parentElement?.closest('[data-blok-id]'), container)
+      );
+    // Own cells only: a nested table's cells sit inside ours and its blocks are
+    // reached through the outer container, under the kept nested table.
+    const blockIds = Array.from(
+      this.gridElement.querySelectorAll(ownCells(` > [${CELL_BLOCKS_ATTR}]`)),
+      container => Array.from(container.querySelectorAll('[data-blok-id]'))
+        .filter(holder => !isKept(holder, container))
+        .map(holder => holder.getAttribute('data-blok-id') ?? '')
+        .filter(id => id !== '')
+    ).flat();
 
     this.deleteBlocks(blockIds);
   }

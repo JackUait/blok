@@ -119,8 +119,8 @@ describe('Table static configs', () => {
       expect(thConfig).toBeDefined();
       // colspan/rowspan must stay whitelisted — without them the paste
       // sanitizer strips merges before onPaste runs.
-      expect((tdConfig as Record<string, unknown>).TD).toEqual({ style: true, colspan: true, rowspan: true });
-      expect((thConfig as Record<string, unknown>).TH).toEqual({ style: true, colspan: true, rowspan: true });
+      expect((tdConfig as Record<string, unknown>).TD).toEqual({ style: true, colspan: true, rowspan: true, align: true, valign: true, bgcolor: true });
+      expect((thConfig as Record<string, unknown>).TH).toEqual({ style: true, colspan: true, rowspan: true, align: true, valign: true, bgcolor: true });
     }
   });
 });

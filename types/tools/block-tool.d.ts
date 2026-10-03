@@ -293,6 +293,18 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   acceptsChildren?: boolean;
 
   /**
+   * Set to true when a copy of this Tool's block rebuilds its children from
+   * its own data — a table's `content` names its cell blocks, and the copy
+   * duplicates them when it renders.
+   *
+   * Duplicate and Alt-drag then copy only the block and leave its descendants
+   * to the Tool, so they are not copied twice. Leave unset when the children
+   * are not named in the data (toggle, column_list, database rows): declaring
+   * it there loses them from every copy.
+   */
+  copiesOwnChildren?: boolean;
+
+  /**
    * For a block that stands for something that must exist once, like a page.
    * Copy, Duplicate and Alt-drag carry this link instead of the block, and a
    * pasted copy becomes the link. A cut still moves the block, once.

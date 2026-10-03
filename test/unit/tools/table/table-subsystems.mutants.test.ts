@@ -453,6 +453,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
       setBlockParent,
       getBlocksCount: (): number => order.length,
       getById: (id: string): BlockAPI | null => registry.get(id) ?? null,
+      getChildren: (): BlockAPI[] => [],
       getBlockIndex: (id: string): number | undefined => {
         const index = order.indexOf(id);
 
@@ -514,6 +515,9 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     ensureCellHasBlock,
     focusClearedCell,
     indexAfterTableSubtree: (): number => order.length,
+    insertClipboardBlock: (block: ClipboardBlockData): BlockAPI =>
+      api.blocks.insert(block.tool, block.data, {}, order.length, false, false, undefined, block.tunes),
+    insertClipboardChildren: vi.fn(),
   } as unknown as TableCellBlocks;
 
   const transactions: string[] = [];
@@ -3037,6 +3041,16 @@ describe('copy and cut', () => {
     expect(setData.mock.calls[1]).toEqual(['text/plain', 'r0c0\tr0c1']);
   });
 
+  it('copies a parented cell block when the table has no block id', () => {
+    const harness = createHarness({ blockId: undefined });
+    const block = harness.api.blocks.getById(harness.idsOf(0, 0)[0]);
+
+    Object.assign(block ?? {}, { parentId: 'table-1' });
+    cellSelectionOptions().onCopy([harness.cellOf(0, 0)], clipboard());
+
+    expect(String(setData.mock.calls[0][1])).toContain('"text":"r0c0"');
+  });
+
   it('writes the same payload on cut', () => {
     const harness = createHarness();
 
@@ -3573,7 +3587,7 @@ describe('wiring that must survive missing collaborators', () => {
 });
 
 describe('wiring that must survive a missing cell-blocks manager', () => {
-  it('pastes a rectangle with nothing to delete or re-seed', () => {
+  it('pastes a rectangle without creating blocks it cannot place', () => {
     const harness = createHarness({ noCellBlocks: true });
 
     pasteInto(harness, 0, 0, clipHtml([
@@ -3582,7 +3596,7 @@ describe('wiring that must survive a missing cell-blocks manager', () => {
     ]));
 
     expect(harness.model.getCellBlocks(0, 0)).toEqual([]);
-    expect(harness.insertCalls).toHaveLength(2);
+    expect(harness.insertCalls).toHaveLength(0);
   });
 
   it('rebuilds a pasted merge with no blocks to clear', () => {

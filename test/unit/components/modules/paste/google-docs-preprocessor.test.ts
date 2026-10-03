@@ -441,6 +441,43 @@ describe('preprocessGoogleDocsHtml', () => {
     expect(result).not.toContain('<p>');
   });
 
+  describe('cell alignment carried on the inner <p>', () => {
+    const cellStyleAfter = (cellHtml: string): string | null => {
+      const html = `<table><tr>${cellHtml}</tr><tr><td><p>x</p></td></tr></table>`;
+      const doc = new DOMParser().parseFromString(preprocessGoogleDocsHtml(html), 'text/html');
+
+      return doc.querySelector('td, th')?.getAttribute('style') ?? null;
+    };
+
+    it('moves a text-align every paragraph shares onto the cell', () => {
+      expect(cellStyleAfter(
+        '<td><p style="text-align:center">a</p><p>&nbsp;</p><p style="text-align: center;">b</p></td>'
+      )).toMatch(/text-align:\s*center/);
+    });
+
+    it('leaves the cell alone when its paragraphs disagree', () => {
+      expect(cellStyleAfter(
+        '<td><p style="text-align:center">a</p><p style="text-align:right">b</p></td>'
+      )).toBeNull();
+    });
+
+    it('keeps the cell\'s own text-align', () => {
+      expect(cellStyleAfter(
+        '<td style="text-align:right"><p style="text-align:center">a</p></td>'
+      )).toBe('text-align:right');
+    });
+
+    it('does not give a nested table\'s alignment to the outer cell', () => {
+      const html = '<table><tr><td><p>outer</p><table><tr><td><p style="text-align:center">inner</p></td></tr></table></td></tr>'
+        + '<tr><td><p>x</p></td></tr></table>';
+      const doc = new DOMParser().parseFromString(preprocessGoogleDocsHtml(html), 'text/html');
+      const [outer, inner] = Array.from(doc.querySelectorAll('td'));
+
+      expect(outer.getAttribute('style')).toBeNull();
+      expect(inner.getAttribute('style')).toMatch(/text-align:\s*center/);
+    });
+  });
+
   it('converts <p> boundaries to <br> inside <th> cells', () => {
     const html = gdocs('<table><tr><th><p>header one</p><p>header two</p></th></tr><tr><th><p>second row</p></th></tr></table>');
     const result = preprocessGoogleDocsHtml(html);

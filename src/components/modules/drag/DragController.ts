@@ -1406,7 +1406,9 @@ export class DragController extends Module {
       if (!this.operations) {
         return;
       }
-      resultRef.current = this.operations.applyDuplicates(prep);
+      const dropParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks);
+
+      resultRef.current = this.operations.applyDuplicates(prep, () => dropParentId);
 
       if (resultRef.current.duplicatedBlocks.length === 0) {
         return;
@@ -1414,7 +1416,6 @@ export class DragController extends Module {
 
       // Only the copied ROOTS take the drop parent. applyDuplicates already
       // put each copied descendant under its copied parent.
-      const dropParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks);
       const copyIds = new Set(resultRef.current.duplicatedBlocks.map(dupBlock => dupBlock.id));
 
       for (const dupBlock of resultRef.current.duplicatedBlocks) {
@@ -1721,27 +1722,25 @@ export class DragController extends Module {
   }
 
   /**
-   * Collects a block's full set of duplicable descendants, unifying the two
-   * nesting carriers: list/flat-indent followers (via `data-list-depth`) take
-   * precedence, otherwise toggle/callout children via `parentId`/`contentIds`.
-   * Returns an empty array for a leaf block.
+   * Depth followers plus contentIds subtrees; table cells carry no depth marker.
    * @param block - block whose subtree should be collected
    * @returns descendant blocks (excluding the block itself)
    */
   private collectDuplicateDescendants(block: Block): Block[] {
-    const listDescendants = this.listItemDescendants
-      ? this.listItemDescendants.getDescendants(block)
-      : [];
+    const depthFollowers = this.listItemDescendants?.getDescendants(block) ?? [];
+    const found = new Map<string, Block>();
 
-    if (listDescendants.length > 0) {
-      return listDescendants;
+    for (const member of [block, ...depthFollowers]) {
+      found.set(member.id, member);
+      for (const descendant of this.getHierarchyDescendants(member)) {
+        found.set(descendant.id, descendant);
+      }
     }
+    found.delete(block.id);
 
-    if (block.contentIds?.length > 0) {
-      return this.getHierarchyDescendants(block);
-    }
+    const blockManager = this.Blok.BlockManager;
 
-    return [];
+    return [...found.values()].sort((a, b) => blockManager.getBlockIndex(a) - blockManager.getBlockIndex(b));
   }
 
   /**

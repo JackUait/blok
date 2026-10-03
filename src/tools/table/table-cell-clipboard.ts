@@ -1,10 +1,15 @@
 import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard, TableClipboardCell } from './types';
 import { mapPastedTableCells } from './table-operations';
-import { parseCellContentToBlocks, serializeCellBlocksToHtml } from './table-cell-paste';
+import { ownPastedRows, parseCellContentToBlocks, serializeCellBlocksToHtml } from './table-cell-paste';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
-import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../components/modules/paste/google-docs-preprocessor';
+import {
+  convertSpanToSemanticHtml,
+  isDefaultDarkBackground,
+  isDefaultWhiteBackground,
+} from '../../components/modules/paste/google-docs-preprocessor';
 import { isInvisibleBackground } from '../../components/utils/default-page-colors';
+import { isSafeCssColor } from '../../shared/css-color';
 import { clean, sanitizeBlocks } from '../../components/utils/sanitizer';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { resolvePresetColorVars, resolvePresetColors } from '../../components/shared/resolve-preset-colors';
@@ -14,24 +19,6 @@ import type { TextDirection } from '../../components/utils/direction';
 
 /** Attribute name used to embed clipboard data on the HTML table element. */
 const DATA_ATTR = 'data-blok-table-cells';
-
-/**
- * Resolve the background-color style value for clipboard markup.
- * When the cell has an explicit background, use it; when it only has a text
- * color, force a transparent background so the mark element doesn't inherit
- * an unwanted default; otherwise return an empty string (no style needed).
- */
-function resolveBackgroundStyle(hasBgColor: boolean, hasColor: boolean, mappedBg: string): string {
-  if (hasBgColor) {
-    return `background-color: ${mappedBg}`;
-  }
-
-  if (hasColor) {
-    return 'background-color: transparent';
-  }
-
-  return '';
-}
 
 /**
  * Entry describing one cell to be serialized for the clipboard.
@@ -286,12 +273,22 @@ function extractBlockPlainText(block: ClipboardBlockData): string {
 }
 
 /**
+ * Blocks in document order: each block, then its nested children.
+ * External apps have no block nesting, so children follow their parent as siblings.
+ */
+function flattenClipboardBlocks(blocks: ClipboardBlockData[]): ClipboardBlockData[] {
+  return blocks.flatMap(block => [block, ...flattenClipboardBlocks(block.children ?? [])]);
+}
+
+/**
  * Render one clipboard cell's blocks as external-app HTML: text and list
  * blocks go through the canonical serializer (so lists stay real <ul>/<ol>
  * markup), and non-text blocks render as <img>/<pre><code>/<a> instead of
  * collapsing to nothing.
  */
-function renderCellBlocksHtml(blocks: ClipboardBlockData[]): string {
+function renderCellBlocksHtml(cellBlocks: ClipboardBlockData[]): string {
+  const blocks = flattenClipboardBlocks(cellBlocks);
+
   // Consecutive text blocks are grouped so the canonical serializer sees each
   // run whole — a list run must stay inside ONE <ul>/<ol>.
   type CellGroup = { external: string } | { textRun: ClipboardBlockData[] };
@@ -404,7 +401,7 @@ export function buildClipboardPlainText(payload: TableCellsClipboard): string {
     .map((row) =>
       row
         .filter((cell) => cell.covered !== true)
-        .map((cell) => cell.blocks.map(extractBlockPlainText).join(' ')).join('\t')
+        .map((cell) => flattenClipboardBlocks(cell.blocks).map(extractBlockPlainText).join(' ')).join('\t')
     )
     .join('\n');
 }
@@ -444,6 +441,24 @@ const CELL_SANITIZE_CONFIG: SanitizerConfig = {
   },
 };
 
+// Pasted cells only: parseCellContentToBlocks splits a nested table into one
+// block per cell. Stripped here, its cells' text would glue into one run.
+const PASTED_CELL_SANITIZE_CONFIG: SanitizerConfig = {
+  ...CELL_SANITIZE_CONFIG,
+  table: {},
+  thead: {},
+  tbody: {},
+  tfoot: {},
+  tr: {},
+  th: {},
+  td: {},
+  // parseCellContentToBlocks makes a code block from it.
+  pre: {},
+  // Same as the new-table paste: the saver's normalizeInlineImages turns it
+  // into an image block. clean() drops unsafe src schemes.
+  img: { src: true },
+};
+
 /**
  * Check whether a CSS color value is the default black text color.
  * Google Docs uses different formats: `rgb(0, 0, 0)`, `rgb(0,0,0)`, or `#000000`.
@@ -456,22 +471,6 @@ export function isDefaultBlack(color: string): boolean {
 }
 
 /**
- * Whether an element's text is entirely a link's text. Pasted links always use
- * Blok's default link color, so any color on link text is dropped. True when the
- * node is inside an `<a>` or wraps an `<a>` covering all of its text; a span that
- * only partially overlaps a link keeps its color (intentional text formatting).
- */
-function isLinkContent(node: Element): boolean {
-  if (node.closest('a') !== null) {
-    return true;
-  }
-
-  const anchor = node.querySelector('a');
-
-  return anchor !== null && anchor.textContent?.trim() === node.textContent?.trim();
-}
-
-/**
  * Extract HTML content from a `<td>`/`<th>` element, converting Google Docs
  * style-based spans to semantic tags and sanitizing to allowed formatting only.
  *
@@ -479,51 +478,21 @@ function isLinkContent(node: Element): boolean {
  * - `<span style="font-style:italic">` → `<i>`
  * - `<span style="color:...">` → `<mark style="color: ...">`
  * - `<span style="background-color:...">` → `<mark style="background-color: ...">`
+ * - `text-decoration` underline / line-through → `<u>` / `<s>` (not on link text),
+ *   `vertical-align` super / sub → `<sup>` / `<sub>`
  * - `<p>` boundaries → `<br>` line breaks
- * - Everything else stripped except `<b>`, `<strong>`, `<i>`, `<em>`, `<br>`, `<a href>`, `<mark style>`
+ * - Everything else stripped to the inline marks a text block keeps
  */
 function sanitizeCellHtml(td: Element): string {
   const clone = td.cloneNode(true) as HTMLElement;
 
-  // Convert style-based spans to semantic tags
-  for (const span of Array.from(clone.querySelectorAll('span'))) {
-    const style = span.getAttribute('style') ?? '';
-    const isBold = /font-weight\s*:\s*(700|bold)/i.test(style);
-    const isItalic = /font-style\s*:\s*italic/i.test(style);
+  for (const span of Array.from(clone.querySelectorAll('span[style]'))) {
+    // Docs rules for every source: keep light text, map u/s/sup/sub.
+    const replacement = convertSpanToSemanticHtml(span, true);
 
-    const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
-    const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
-
-    const color = colorMatch?.[1]?.trim();
-    const bgColor = bgMatch?.[1]?.trim();
-
-    const isLinkColor = color !== undefined && isLinkContent(span);
-    const hasColor = !isLinkColor && color !== undefined && !isDefaultBlack(color);
-    // Filter invisible bg (transparent, near-white light page, near-black dark
-    // page) so plain spans don't collapse onto the gray preset.
-    const hasBgColor = bgColor !== undefined && !isInvisibleBackground(bgColor);
-
-    if (!isBold && !isItalic && !hasColor && !hasBgColor) {
-      continue;
+    if (replacement !== null) {
+      span.replaceWith(span.ownerDocument.createRange().createContextualFragment(replacement));
     }
-
-    const mappedColor = hasColor ? mapToNearestPresetColor(color, 'text') : '';
-    const mappedBg = hasBgColor ? mapToNearestPresetColor(bgColor, 'bg') : '';
-
-    const colorStyles = [
-      hasColor ? `color: ${mappedColor}` : '',
-      resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
-    ].filter(Boolean).join('; ');
-
-    const inner = span.innerHTML;
-    const marked = colorStyles
-      ? `<mark style="${colorStyles};">${inner}</mark>`
-      : inner;
-
-    const italic = isItalic ? `<i>${marked}</i>` : marked;
-    const wrapped = isBold ? `<b>${italic}</b>` : italic;
-
-    span.replaceWith(span.ownerDocument.createRange().createContextualFragment(wrapped));
   }
 
   // Move background-color from <a> tags into <mark> wrappers.
@@ -563,7 +532,7 @@ function sanitizeCellHtml(td: Element): string {
     p.replaceWith(fragment);
   }
 
-  const html = trimTrailingBreaks(clean(clone.innerHTML, CELL_SANITIZE_CONFIG)).trim();
+  const html = trimTrailingBreaks(clean(clone.innerHTML, PASTED_CELL_SANITIZE_CONFIG)).trim();
 
   return html;
 }
@@ -595,7 +564,7 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
     return null;
   }
 
-  const rows = table.querySelectorAll('tr');
+  const rows = ownPastedRows(table);
 
   if (rows.length === 0) {
     return null;
@@ -698,6 +667,38 @@ export function readPastedCellStyle(
 }
 
 /**
+ * {@link readPastedCellStyle} for a pasted `<td>`/`<th>`, with the legacy
+ * `align` / `valign` / `bgcolor` attributes as fallbacks. The inline style
+ * wins: a legacy value is only added when the style lacks that property.
+ */
+export function readPastedCell(
+  cell: Element,
+  direction: TextDirection = 'ltr',
+): Pick<TableClipboardCell, 'color' | 'textColor' | 'placement'> {
+  const style = cell.getAttribute('style') ?? '';
+  const declarations = [style];
+  const align = cell.getAttribute('align')?.trim();
+  const valign = cell.getAttribute('valign')?.trim();
+  const bgcolor = cell.getAttribute('bgcolor')?.trim();
+
+  // Keywords only, so an attribute cannot smuggle in another declaration.
+  if (align !== undefined && /^[a-z]+$/i.test(align) && !/(?<![a-z-])text-align\s*:/i.test(style)) {
+    declarations.push(`text-align:${align}`);
+  }
+
+  if (valign !== undefined && /^[a-z]+$/i.test(valign) && !/vertical-align\s*:/i.test(style)) {
+    declarations.push(`vertical-align:${valign}`);
+  }
+
+  // Validate before it reaches the style parser: bgcolor is free text.
+  if (isSafeCssColor(bgcolor) && !/(?<![a-z-])background(?:-color)?\s*:/i.test(style)) {
+    declarations.push(`background-color:${bgcolor}`);
+  }
+
+  return readPastedCellStyle(declarations.join(';'), direction);
+}
+
+/**
  * Build a clipboard cell payload from a single `<td>`/`<th>`: sanitized
  * paragraph blocks (split on line breaks), list blocks for `<ul>`/`<ol>`
  * content (structure would otherwise silently flatten to text), plus
@@ -706,7 +707,7 @@ export function readPastedCellStyle(
 function buildCellPayloadFromTd(td: Element): TableClipboardCell {
   const blocks: ClipboardBlockData[] = parseCellContentToBlocks(sanitizeCellHtml(td));
   const direction = pastedGridDirection(td.closest('table') ?? td);
-  const cell: TableClipboardCell = { blocks, ...readPastedCellStyle(td.getAttribute('style') ?? '', direction) };
+  const cell: TableClipboardCell = { blocks, ...readPastedCell(td, direction) };
 
   return cell;
 }
@@ -786,6 +787,19 @@ function sanitizeClipboardPayload(
  * the tool declares none) fall back to {@link CELL_SANITIZE_CONFIG} on `text`.
  */
 function sanitizeClipboardBlock(
+  block: ClipboardBlockData,
+  toolSanitizeConfig: ToolSanitizeConfigResolver | undefined,
+): ClipboardBlockData {
+  const cleaned = sanitizeOwnBlockData(block, toolSanitizeConfig);
+
+  if (block.children === undefined) {
+    return cleaned;
+  }
+
+  return { ...cleaned, children: block.children.map(child => sanitizeClipboardBlock(child, toolSanitizeConfig)) };
+}
+
+function sanitizeOwnBlockData(
   block: ClipboardBlockData,
   toolSanitizeConfig: ToolSanitizeConfigResolver | undefined,
 ): ClipboardBlockData {

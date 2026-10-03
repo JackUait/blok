@@ -158,6 +158,14 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * True when a copy of the Tool's block rebuilds its children from its own
+   * data, so Duplicate and Alt-drag leave them out.
+   */
+  public get copiesOwnChildren(): boolean {
+    return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.CopiesOwnChildren] === true;
+  }
+
+  /**
    * The link a copy of this block carries, or undefined when the Tool declares
    * no `copyAsLink`. A throwing hook gives null, so a copy still writes the
    * clipboard.

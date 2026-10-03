@@ -591,6 +591,56 @@ describe('blocksToHtml', () => {
       expect(new TableModel({ content }).findCellForBlock('c')).toEqual({ row: 0, col: 2 });
     });
 
+    it('paints a cell\'s background, text colour and placement as inline style', () => {
+      const html = blocksToHtml(doc([
+        { type: 'table', data: { content: [[
+          { blocks: [], text: 'A', color: '#fbecdd', textColor: 'rgb(217, 115, 13)', placement: 'bottom-right' },
+          { blocks: [], text: 'B', placement: 'middle-center' },
+          { blocks: [], text: 'C', placement: 'top-left' },
+        ]] } },
+      ]));
+
+      expect(html).toBe(
+        '<table><tbody><tr>'
+        + '<td style="background-color:#fbecdd;color:rgb(217, 115, 13);vertical-align:bottom;text-align:var(--_blok-end-side, right)">A</td>'
+        + '<td style="vertical-align:middle;text-align:center">B</td>'
+        + '<td style="vertical-align:top">C</td>'
+        + '</tr></tbody></table>'
+      );
+    });
+
+    it('never emits a cell colour or placement the table model would reject', () => {
+      const html = blocksToHtml(doc([
+        { type: 'table', data: { content: [[
+          { blocks: [], text: 'A', color: 'red;position:fixed', textColor: '"><script>x()</script>', placement: 'top-left;color:red' },
+          { blocks: [], text: 'B', color: 'url(https://evil.test/x)', textColor: 'expression(alert(1))' },
+          { blocks: [], text: 'C', color: 'var(--x);color:red', textColor: 'red/**/' },
+          { blocks: [], text: 'D', color: 'rgb(1 2 3', textColor: 'red\nposition:fixed' },
+          { blocks: [], text: 'E', color: 'var(--x, url(y))', textColor: 'r\\65 d' },
+        ]] } },
+      ]));
+
+      expect(html).toBe('<table><tbody><tr><td>A</td><td>B</td><td>C</td><td>D</td><td>E</td></tr></tbody></table>');
+    });
+
+    it('paints modern, named and token cell colours the table model keeps', () => {
+      const content = [[
+        { blocks: [], text: 'A', color: 'var(--blok-color-red-bg)', textColor: 'red' },
+        { blocks: [], text: 'B', color: 'rgb(1 2 3 / 50%)', textColor: 'hsl(10 20% 30%)' },
+      ]];
+      const html = blocksToHtml(doc([{ type: 'table', data: { content } }]));
+      const model = new TableModel({ content });
+
+      expect(html).toBe(
+        '<table><tbody><tr>'
+        + '<td style="background-color:var(--blok-color-red-bg);color:red">A</td>'
+        + '<td style="background-color:rgb(1 2 3 / 50%);color:hsl(10 20% 30%)">B</td>'
+        + '</tr></tbody></table>'
+      );
+      expect([model.getCellColor(0, 0), model.getCellTextColor(0, 0), model.getCellColor(0, 1), model.getCellTextColor(0, 1)])
+        .toEqual(['var(--blok-color-red-bg)', 'red', 'rgb(1 2 3 / 50%)', 'hsl(10 20% 30%)']);
+    });
+
     it('marks the first column as th when withHeadingColumn is set', () => {
       const html = blocksToHtml(doc([
         { type: 'table', data: { withHeadings: false, withHeadingColumn: true, content: [[{ blocks: [], text: 'K' }, { blocks: [], text: 'V' }]] } },

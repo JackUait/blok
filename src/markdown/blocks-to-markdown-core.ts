@@ -396,6 +396,11 @@ const cellBlockLines = (block: SerializableBlock, context: SerializationContext,
   const lines = [blockToMarkdown({ ...block,
     indent: depth }, context)];
 
+  // A container already rendered its own subtree above.
+  if (CONTAINER_TOOLS.has(block.tool)) {
+    return lines;
+  }
+
   for (const child of context.childrenOf.get(block.id ?? '') ?? []) {
     lines.push(...cellBlockLines(child, context, depth + 1));
   }

@@ -20,11 +20,12 @@ import {
   IconTextSizeSmall,
 } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
+import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
-import type { InitCellContent } from './table-cell-blocks';
-import { ALLOWED_MARK_STYLE_PROPS, pastedGridDirection, readPastedCellStyle } from './table-cell-clipboard';
-import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
+import type { ConvertedBlock, InitCellContent } from './table-cell-blocks';
+import { ALLOWED_MARK_STYLE_PROPS, pastedGridDirection, readPastedCell } from './table-cell-clipboard';
+import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR, ownCells } from './table-core';
 import {
   applyCellColors,
   applyCellPlacements,
@@ -44,8 +45,10 @@ import {
   updateHeadingStyles,
   updateTextSizeStyles,
 } from './table-operations';
+import { mergePaddedCells } from './table-ids';
 import { TableModel } from './table-model';
 import { renderTablePreview } from './preview';
+import { CELL_BLOCK_TAGS_SANITIZE, ownPastedCells, ownPastedRows } from './table-cell-paste';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
 import { TableSubsystems } from './table-subsystems';
 import type { TableHost } from './table-subsystems';
@@ -56,10 +59,6 @@ const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
 /** Frames to wait for a sync replay to close before filling cells it left without a block. */
 const SYNC_SETTLE_MAX_FRAMES = 5;
-
-// Cells of this table only; a nested table's cells sit inside ours.
-const ownCells = (tail = ''): string =>
-  `:scope > tbody > [${ROW_ATTR}] > [${CELL_ATTR}]${tail}, :scope > [${ROW_ATTR}] > [${CELL_ATTR}]${tail}`;
 
 const WRAPPER_CLASSES = [
   'my-2',
@@ -111,6 +110,12 @@ export class Table implements BlockTool {
 
   /** See `TableCellBlocksOptions.repairIds`. */
   private readonly repairIds = new Set<string>();
+
+  /** See `TableCellBlocksOptions.paddedFillIds`. */
+  private readonly paddedFillIds = new Set<string>();
+
+  /** See `TableCellBlocksOptions.convertedBlocks`. */
+  private readonly convertedBlocks = new Map<string, ConvertedBlock>();
 
   /**
    * Depth counter for structural operations (add/delete/move row/col).
@@ -504,14 +509,23 @@ export class Table implements BlockTool {
     return true;
   }
 
+  /**
+   * The copy's `content` still names these cell blocks, and mounting them
+   * duplicates each one with its children (`mountBlocksInCell`).
+   */
+  public static get copiesOwnChildren(): boolean {
+    return true;
+  }
+
   public static get enableLineBreaks(): boolean {
     return true;
   }
 
   public static get pasteConfig(): PasteConfig {
     return {
-      // colspan/rowspan must be whitelisted here or the paste sanitizer strips
-      // them before onPaste runs, silently flattening merged cells.
+      // Every cell attribute onPaste reads (colspan/rowspan, the legacy
+      // align/valign/bgcolor) must be whitelisted here or the paste sanitizer
+      // strips it before onPaste runs.
       // The columns-candidate stamp (set by the Google Docs preprocessor on
       // single-row tables) must survive the whole-document sanitize pass so
       // the HTML handler can expand the table into column blocks.
@@ -519,8 +533,8 @@ export class Table implements BlockTool {
         // dir tells which side a pasted text-align: left/right means.
         { TABLE: { 'data-blok-columns-candidate': true, dir: true } },
         'TR',
-        { TH: { style: true, colspan: true, rowspan: true } },
-        { TD: { style: true, colspan: true, rowspan: true } },
+        { TH: { style: true, colspan: true, rowspan: true, align: true, valign: true, bgcolor: true } },
+        { TD: { style: true, colspan: true, rowspan: true, align: true, valign: true, bgcolor: true } },
       ],
     };
   }
@@ -528,7 +542,7 @@ export class Table implements BlockTool {
   public static get sanitize(): ToolSanitizerConfig {
     return {
       content: {
-        br: true,
+        ...INLINE_TEXT_SANITIZE,
         b: true,
         i: true,
         strong: true,
@@ -552,12 +566,9 @@ export class Table implements BlockTool {
           return style.length > 0 ? { style: true } : {};
         },
         a: { href: true, target: '_blank', rel: 'nofollow' },
-        input: { type: true, checked: true },
-        // Legacy string cells may hold lists; this runs before
-        // parseCellContentToBlocks reads them. Attrs match what it reads.
-        ul: true,
-        ol: true,
-        li: { style: true, 'aria-level': true, 'data-list-style': true },
+        // Legacy string cells may hold lists and lines; this runs before
+        // parseCellContentToBlocks reads them.
+        ...CELL_BLOCK_TAGS_SANITIZE,
       },
     };
   }
@@ -1184,8 +1195,8 @@ export class Table implements BlockTool {
   }
 
   /**
-   * Update table with new data in-place (used by undo/redo).
-   * Follows the onPaste() pattern: delete old blocks, re-render, reinitialize.
+   * Update table with new data in-place (undo/redo, blocks.update).
+   * Re-renders the grid and re-mounts the cell blocks the new data names.
    */
   public setData(newData: Partial<TableData>): void {
     this.setDataGeneration++;
@@ -1221,13 +1232,23 @@ export class Table implements BlockTool {
     this.initialContent = normalized.content;
     this.model.replaceAll(normalized);
 
+    const paddedCells = this.api.blocks.isSyncingFromYjs
+      ? mergePaddedCells(newData.content, this.model.snapshot().content)
+      : new Set<string>();
+
     // Only delete cell blocks during normal updates, not Yjs undo/redo.
     // During Yjs sync, the child cell blocks are managed by Yjs and will be
     // reattached via mountBlocksInCell(). Deleting them here would destroy
     // the block data that Yjs is restoring, causing empty cells after undo.
+    // Blocks the new content still names must survive: initializeCells below
+    // re-mounts them, and core merges a partial update with the old data.
     if (!this.api.blocks.isSyncingFromYjs) {
+      const keptIds = new Set(this.withModelBlocks(normalized.content).flat().flatMap(cell =>
+        isCellWithBlocks(cell) && cell.mergedInto === undefined ? cell.blocks : []
+      ));
+
       this.runStructuralOp(() => {
-        this.cellBlocks?.deleteAllBlocks();
+        this.cellBlocks?.deleteBlocksExcept(keptIds);
       }, true);
     }
 
@@ -1251,6 +1272,7 @@ export class Table implements BlockTool {
 
     this.teardownSubsystems();
 
+    const oldGrid = this.gridElement;
     const newElement = this.render();
 
     oldElement.parentNode.replaceChild(newElement, oldElement);
@@ -1262,6 +1284,11 @@ export class Table implements BlockTool {
     }
 
     if (this.readOnly) {
+      // The read-only mount clones a holder still inside a cell container, so
+      // free the holders from the old grid first.
+      oldGrid?.querySelectorAll(ownCells(` > [${CELL_BLOCKS_ATTR}]`)).forEach(container => container.replaceChildren());
+      // Same mount as rendered(): initialContent stays pending for setReadOnly(false).
+      mountCellBlocksReadOnly(gridEl, this.withModelBlocks(this.initialContent ?? []), this.api, this.blockId ?? '');
       const snapRO = this.model.snapshot();
       applyCellColors(gridEl, snapRO.content);
       applyCellPlacements(gridEl, snapRO.content);
@@ -1352,7 +1379,7 @@ export class Table implements BlockTool {
           return;
         }
         this.cellBlocks?.reclaimReferencedBlocks();
-        this.fillUnresolvedCellsAfterSync(currentGeneration, SYNC_SETTLE_MAX_FRAMES, restoredIds);
+        this.fillUnresolvedCellsAfterSync(currentGeneration, SYNC_SETTLE_MAX_FRAMES, restoredIds, paddedCells);
       });
     }
   }
@@ -1361,7 +1388,12 @@ export class Table implements BlockTool {
    * Wait for the sync window to close (it stays open through a frame), then
    * fill cells whose referenced blocks never arrived.
    */
-  private fillUnresolvedCellsAfterSync(generation: number, framesLeft: number, restoredIds = new Set<string>()): void {
+  private fillUnresolvedCellsAfterSync(
+    generation: number,
+    framesLeft: number,
+    restoredIds = new Set<string>(),
+    paddedCells = new Set<string>()
+  ): void {
     requestAnimationFrame(() => {
       if (generation !== this.setDataGeneration || this.readOnly) {
         return;
@@ -1369,27 +1401,31 @@ export class Table implements BlockTool {
 
       if (this.api.blocks.isSyncingFromYjs) {
         if (framesLeft > 1) {
-          this.fillUnresolvedCellsAfterSync(generation, framesLeft - 1, restoredIds);
+          this.fillUnresolvedCellsAfterSync(generation, framesLeft - 1, restoredIds, paddedCells);
         }
 
         return;
       }
 
-      this.cellBlocks?.fillCellsWithUnresolvedBlocks();
+      this.cellBlocks?.fillCellsWithUnresolvedBlocks(paddedCells);
       this.cellBlocks?.yieldRepairsToPeers(restoredIds);
+      this.cellBlocks?.yieldLostConversion();
     });
   }
 
   public onPaste(event: HTMLPasteEvent): void {
     const content = event.detail.data;
-    const rows = content.querySelectorAll('tr');
+    const rows = ownPastedRows(content);
     // Logical grid: spans are honoured, covered slots carry mergedInto and
     // colors sit at their logical (not physical) coordinates.
     const direction = pastedGridDirection(content);
-    const tableContent = parsePastedTable(rows, cell => readPastedCellStyle(cell.getAttribute('style') ?? '', direction));
+    const tableContent = parsePastedTable(rows, cell => readPastedCell(cell, direction));
 
-    const hasTheadHeadings = content.querySelector('thead') !== null;
-    const hasThHeadings = rows[0]?.querySelector('th') !== null;
+    const isTh = (cell: Element | undefined): boolean => cell?.tagName === 'TH';
+    const hasTheadHeadings = rows.some(row => row.parentElement?.tagName === 'THEAD');
+    const hasThHeadings = rows[0] !== undefined && ownPastedCells(rows[0]).some(isTh);
+    // A th opening every row is a heading column. One row is a header row instead.
+    const withHeadingColumn = rows.length >= 2 && rows.every(row => isTh(ownPastedCells(row)[0]));
     // Notion parity: pasted spreadsheet/HTML data treats its first row as the
     // header by default. Explicit thead/th force it on; otherwise any multi-row
     // paste heads its first row. A single-row paste has no body to head, so it
@@ -1398,7 +1434,7 @@ export class Table implements BlockTool {
 
     this.initialContent = tableContent;
     this.model.setWithHeadings(withHeadings);
-    this.model.setWithHeadingColumn(false);
+    this.model.setWithHeadingColumn(withHeadingColumn);
     this.model.setColWidths(undefined);
     // Push the parsed grid into the model BEFORE render() so the merge-aware
     // path (createGridFromModel) builds the DOM with colspan/rowspan.
@@ -1513,6 +1549,8 @@ export class Table implements BlockTool {
       isStructuralOpActive: () => this.structuralOpDepth > 0,
       onCellReferenceDropped: () => this.block?.dispatchChange(),
       repairIds: this.repairIds,
+      convertedBlocks: this.convertedBlocks,
+      paddedFillIds: this.paddedFillIds,
     });
   }
 

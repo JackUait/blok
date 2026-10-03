@@ -466,17 +466,18 @@ describe('BlockHierarchy.placeBlock', () => {
       expect(holderIds(secondCell)).toEqual(['c2']);
     });
 
-    it('leaves the DOM alone for a child of a slotless block inside a table', () => {
+    it('mounts a child of a slotless block inside a table in that block\'s cell', () => {
       const h = build(workingArea, [
         { id: 'tbl', kind: 'table' },
         { id: 'c1', parentId: 'tbl' },
         { id: 'x' },
       ]);
+      const cell = h.get('c1').holder.parentElement;
 
       h.hierarchy.placeBlock(h.get('x'), { parentId: 'c1', afterId: null });
 
       expect(h.ids()).toEqual(['tbl', 'c1', 'x']);
-      expect(h.get('x').holder.parentElement).toBe(workingArea);
+      expect(cell === null ? [] : holderIds(cell)).toEqual(['c1', 'x']);
     });
 
     it('moves a table with its cell blocks inside it', () => {

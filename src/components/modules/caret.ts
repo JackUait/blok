@@ -1306,7 +1306,12 @@ export class Caret extends Module {
     /** Cross-browser caret insertion */
     const newRange = document.createRange();
 
-    const nodeToSetCaret = lastChild.nodeType === Node.TEXT_NODE ? lastChild : lastChild.firstChild;
+    /**
+     * The caret offset is a character count, so it must sit in a text node.
+     * On an element it counts children: nested marks like <s><u>x</u></s> throw IndexSizeError.
+     */
+    const deepest = $.getDeepestNode(lastChild, true);
+    const nodeToSetCaret = deepest?.nodeType === Node.TEXT_NODE ? deepest : null;
 
     if (nodeToSetCaret !== null && nodeToSetCaret.textContent !== null) {
       newRange.setStart(nodeToSetCaret, nodeToSetCaret.textContent.length);

@@ -483,7 +483,8 @@ export class BlockManager extends Module {
         }
       },
       () => Boolean(this.yjsSync?.isSyncingFromYjs),
-      this.blocksStore
+      this.blocksStore,
+      () => Boolean(this.yjsSync?.isMaterializingFromPeer)
     );
 
     // Initialize operations first (before yjsSync) to allow circular dependency resolution
@@ -915,6 +916,11 @@ export class BlockManager extends Module {
    * @param skipYjsSync - if true, skip syncing to Yjs (caller handles sync separately)
    */
   public removeBlock(block: Block, addLastBlock = true, skipYjsSync = false): Promise<void> {
+    // Teardown is not a deletion: a container's destroy() must not delete its children from the doc.
+    if (this.isDestroyed) {
+      return Promise.resolve();
+    }
+
     return this.operations.removeBlock(block, addLastBlock, skipYjsSync, this.blocksStore);
   }
 

@@ -109,6 +109,11 @@ export enum InternalBlockToolSettings {
    */
   CopyAsLink = 'copyAsLink',
   /**
+   * A copy of this Tool's block rebuilds its children from its own data (a
+   * table's cells), so Duplicate and Alt-drag must not copy them again
+   */
+  CopiesOwnChildren = 'copiesOwnChildren',
+  /**
    * Enter on this Tool's empty LAST child stays INSIDE the container instead of
    * escaping it (a column, a card) — per-tool policy the DOM cannot express,
    * since a callout renders the same nested-blocks slot yet wants the escape

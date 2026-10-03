@@ -159,6 +159,8 @@ const createMockDependencies = (): BlockOperationsDependencies => {
       updateBlockTune: vi.fn(),
       updateBlockIndent: vi.fn(),
       stopCapturing: vi.fn(),
+      holdCapture: vi.fn(),
+      releaseCapture: vi.fn(),
       continueUndoEntryThatCreated: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
       transactMoves: vi.fn((fn: () => void) => fn()),
@@ -3457,6 +3459,28 @@ describe('BlockOperations', () => {
 
       expect(dependencies.YjsManager.addBlockAt).toHaveBeenCalled();
       expect(result).toBeDefined();
+    });
+
+    it('holds undo capture from before the insert until after the final doc add', async () => {
+      const yjs = dependencies.YjsManager as unknown as Record<'holdCapture' | 'releaseCapture' | 'addBlockAt', Mock>;
+
+      await operations.paste('paragraph', { detail: { data: { text: 'Pasted' } } } as unknown as PasteEvent, false, blocksStore);
+
+      expect(yjs.holdCapture).toHaveBeenCalledTimes(1);
+      expect(yjs.releaseCapture).toHaveBeenCalledTimes(1);
+      expect(yjs.holdCapture.mock.invocationCallOrder[0]).toBeLessThan(yjs.addBlockAt.mock.invocationCallOrder[0]);
+      expect(yjs.releaseCapture.mock.invocationCallOrder[0]).toBeGreaterThan(yjs.addBlockAt.mock.invocationCallOrder[0]);
+    });
+
+    it('releases the undo capture hold when the paste fails', async () => {
+      const yjs = dependencies.YjsManager as unknown as Record<'holdCapture' | 'releaseCapture' | 'addBlockAt', Mock>;
+
+      yjs.addBlockAt.mockImplementation(() => {
+        throw new Error('doc write failed');
+      });
+
+      await expect(operations.paste('paragraph', { detail: { data: { text: 'Pasted' } } } as unknown as PasteEvent, false, blocksStore)).rejects.toThrow('doc write failed');
+      expect(yjs.releaseCapture).toHaveBeenCalledTimes(1);
     });
 
     it('uses atomic operation during paste processing', async () => {

@@ -12,6 +12,7 @@
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*). Never import
  * the `src/components/utils` barrel, editor modules, or tool classes.
  */
+import { isSafeCssColor } from '../shared/css-color';
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
 import { readVariants } from '../shared/read-variants';
 import { CALLOUT_CHILDREN_CLASSES } from '../shared/tool-classes/callout';
@@ -351,6 +352,53 @@ const tableCellInner = (cell: unknown, env: EmitterEnv): string => {
   return own + claimedCellTexts(cell).map(text => env.inline(text)).join('');
 };
 
+const CELL_VERTICAL = new Set(['top', 'middle', 'bottom']);
+
+/**
+ * Left/right are the grid's start/end, as in `tables.css`: the side vars are
+ * set on the nearest `[dir]` under the view root (main.css).
+ */
+const CELL_HORIZONTAL = new Map([
+  ['left', ''],
+  ['center', 'text-align:center'],
+  ['right', 'text-align:var(--_blok-end-side, right)'],
+]);
+
+/**
+ * The cell's inline `style` attribute: background, text colour and placement,
+ * as the editor's `applyCellColors` / `applyCellPlacements` paint them.
+ * @param cell - raw cell value from `data.content`
+ * @param env - emitter environment
+ */
+const tableCellStyle = (cell: unknown, env: EmitterEnv): string => {
+  if (!isRecord(cell)) {
+    return '';
+  }
+
+  const rules: string[] = [];
+
+  if (isSafeCssColor(cell.color)) {
+    rules.push(`background-color:${cell.color}`);
+  }
+
+  if (isSafeCssColor(cell.textColor)) {
+    rules.push(`color:${cell.textColor}`);
+  }
+
+  const [vertical = '', horizontal = '', extra] = typeof cell.placement === 'string' ? cell.placement.split('-') : [];
+  const align = CELL_HORIZONTAL.get(horizontal);
+
+  if (extra === undefined && CELL_VERTICAL.has(vertical) && align !== undefined) {
+    rules.push(`vertical-align:${vertical}`);
+
+    if (align !== '') {
+      rules.push(align);
+    }
+  }
+
+  return rules.length === 0 ? '' : ` style="${env.escape(rules.join(';'))}"`;
+};
+
 /**
  * Table emitter: `<thead>` when `withHeadings`, `<th>` first column when
  * `withHeadingColumn`, colspan/rowspan from merged-cell origin data, covered
@@ -382,7 +430,7 @@ const emitTable = (block: ViewBlock, env: EmitterEnv): string => {
         return Number.isInteger(value) && value > 1 ? ` ${name}="${value}"` : '';
       };
 
-      return `<${tag}${span('colspan')}${span('rowspan')}>${tableCellInner(cell, env)}</${tag}>`;
+      return `<${tag}${span('colspan')}${span('rowspan')}${tableCellStyle(cell, env)}>${tableCellInner(cell, env)}</${tag}>`;
     }).join('');
 
     return `<tr>${cells}</tr>`;

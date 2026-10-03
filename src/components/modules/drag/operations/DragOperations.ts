@@ -5,6 +5,8 @@
 import type { BlockOrigin } from '../../../../../types';
 import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
+import type { TreePlacement } from '../../../utils/tree-order';
+import { isSelfPlacedParent } from '../../blockManager/new-block-placement';
 import { resolveMoveDestination } from '../utils/moveDestination';
 import type { MoveDestination } from '../utils/moveDestination';
 
@@ -46,10 +48,9 @@ export interface BlockManagerAdapter {
     tool: string;
     data: Record<string, unknown>;
     tunes: Record<string, unknown>;
-    index: number;
     needToFocus: boolean;
     origin?: BlockOrigin;
-  }): Block;
+  } & ({ index: number } | { placement: TreePlacement })): Block;
   setBlockParent?(block: Block, parentId: string | null): void;
   getBlockById?(id: string): Block | undefined;
 }
@@ -62,6 +63,28 @@ export interface BlockSelectionAdapter {
   clearSelection(): void;
   selectBlock(block: Block): void;
 }
+
+/**
+ * The sources minus those under a copied block whose tool declares
+ * `copiesOwnChildren` (a table). That copy rebuilds them itself, so a second
+ * copy from here would land in it as extra content. A database does not
+ * declare it: its rows are copied here.
+ * @param sourceBlocks - the blocks being duplicated
+ */
+const withoutSelfCopiedChildren = (sourceBlocks: Block[]): Block[] => {
+  const sourceById = new Map(sourceBlocks.map(block => [block.id, block]));
+  const underSelfCopyingParent = (block: Block, seen: Set<string>): boolean => {
+    const parent = block.parentId === null ? undefined : sourceById.get(block.parentId);
+
+    if (parent === undefined || seen.has(parent.id)) {
+      return false;
+    }
+
+    return parent.tool?.copiesOwnChildren || underSelfCopyingParent(parent, seen.add(parent.id));
+  };
+
+  return sourceBlocks.filter(block => !underSelfCopyingParent(block, new Set()));
+};
 
 /**
  * The block to insert instead of a copy of a `copyAsLink` block (a page must
@@ -169,7 +192,7 @@ export class DragOperations {
     }
 
     // Sort blocks by current index to preserve order
-    const sortedBlocks = [...sourceBlocks].sort((a, b) =>
+    const sortedBlocks = withoutSelfCopiedChildren(sourceBlocks).sort((a, b) =>
       this.blockManager.getBlockIndex(a) - this.blockManager.getBlockIndex(b)
     );
 
@@ -236,7 +259,10 @@ export class DragOperations {
    * write this method emits must stay synchronous so the caller can bracket
    * the whole thing in `BlockManager.transactForTool` for a single undo entry.
    */
-  applyDuplicates(prep: DuplicatePreparation): DuplicateResult {
+  applyDuplicates(
+    prep: DuplicatePreparation,
+    rootParentOf: (original: Block) => string | null = (original) => original.parentId
+  ): DuplicateResult {
     if (prep.aborted) {
       return { duplicatedBlocks: [], targetIndex: prep.baseInsertIndex };
     }
@@ -266,7 +292,7 @@ export class DragOperations {
         tool: link?.tool ?? toolName,
         data: link?.data ?? structuredClone(saved.data),
         tunes: link === null ? structuredClone(saved.tunes) : {},
-        index: prep.baseInsertIndex + index,
+        ...this.duplicatePosition(prep, index, rootParentOf),
         needToFocus: false,
         origin: copiedParentIds.has(prep.sortedBlocks[index].id) ? 'paste' : undefined,
       });
@@ -307,6 +333,40 @@ export class DragOperations {
     }
 
     return { duplicatedBlocks, targetIndex: prep.baseInsertIndex };
+  }
+
+  /**
+   * Where the copy of `prep.sortedBlocks[index]` goes. Copied roots go by
+   * placement (an index after a table would land in a cell); descendants and
+   * table/database children keep the flat index.
+   * @param prep - the duplicate plan
+   * @param index - position of the copy in the plan
+   * @param rootParentOf - the parent a copied root takes
+   */
+  private duplicatePosition(
+    prep: DuplicatePreparation,
+    index: number,
+    rootParentOf: (original: Block) => string | null
+  ): { index: number } | { placement: TreePlacement } {
+    const slot = prep.baseInsertIndex + index;
+    const original = prep.sortedBlocks[index];
+
+    if (original === undefined || (original.parentId !== null && prep.sourceIds.has(original.parentId))) {
+      return { index: slot };
+    }
+
+    const parentId = rootParentOf(original);
+    const getBlock = (id: string): Block | undefined => this.blockManager.getBlockById?.(id);
+    const parent = parentId === null ? undefined : getBlock(parentId);
+
+    if (parentId !== null && (parent === undefined || isSelfPlacedParent(parent, getBlock))) {
+      return { index: slot };
+    }
+
+    // The last sibling before the slot: the copy lands after its subtree, which is the slot.
+    const afterId = this.blockManager.blocks.slice(0, slot).filter(block => block.parentId === parentId).pop()?.id ?? null;
+
+    return { placement: { parentId, afterId } };
   }
 
   /**

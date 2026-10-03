@@ -78,7 +78,7 @@ const makeBlock = (spec: Spec): Block => {
  * Specs list the flat array depth-first. A child goes into the nearest
  * ancestor slot; a table child into the table's first cell.
  */
-const build = (workingArea: HTMLElement, specs: Spec[]): Harness => {
+const build = (workingArea: HTMLElement, specs: Spec[], isApplyingRemoteChange?: () => boolean): Harness => {
   const store = new Blocks(workingArea);
   const blocks = specs.map(makeBlock);
   const byId = new Map(blocks.map(block => [block.id, block]));
@@ -122,7 +122,7 @@ const build = (workingArea: HTMLElement, specs: Spec[]): Harness => {
     return slot;
   };
 
-  return { store, hierarchy: new BlockHierarchy(repository, vi.fn(), undefined, store), get, slotOf, cellsOf };
+  return { store, hierarchy: new BlockHierarchy(repository, vi.fn(), undefined, store, isApplyingRemoteChange), get, slotOf, cellsOf };
 };
 
 const holderIds = (element: Element): Array<string | null> =>
@@ -335,6 +335,24 @@ describe('BlockHierarchy.setBlockParent — holders in the DOM', () => {
     expect(h.get('x').parentId).toBe('table');
     expect(holderIds(firstCell)).toEqual(['a', 'x']);
     expect(holderIds(workingArea)).toEqual(['table']);
+  });
+
+  it('shows a peer\'s block that joins a table from outside it nowhere until the table places it', () => {
+    const h = build(workingArea, [
+      { id: 'table', kind: 'table' },
+      { id: 'a', parentId: 'table' },
+      { id: 'x' },
+    ], () => true);
+    const [firstCell] = h.cellsOf('table');
+
+    h.hierarchy.setBlockParent(h.get('x'), 'table');
+
+    expect({
+      parentId: h.get('x').parentId,
+      firstCell: holderIds(firstCell),
+      root: holderIds(workingArea),
+      connected: h.get('x').holder.isConnected,
+    }).toEqual({ parentId: 'table', firstCell: ['a'], root: ['table'], connected: false });
   });
 
   it('moves a block that leaves a table cell for the root out of the cell', () => {

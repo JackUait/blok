@@ -1780,12 +1780,10 @@ export class BlockYjsSync {
         lastEditedBy,
       });
 
-      // An undo/redo root block after a nested one would land in that block's
-      // slot (see activateBlock). Not a peer's: its parent write may still
-      // come, and the table holds such a block by where its holder lands.
-      const mountAtRoot = parentId === undefined && replaySourceOf(origin) === 'history';
-
-      this.blocksStore.insert(targetIndex, block, false, false, mountAtRoot);
+      // A root block after a nested one would land in that block's slot (see
+      // activateBlock). A peer's table child is placed by the table data, not
+      // by where its holder lands.
+      this.blocksStore.insert(targetIndex, block, false, false, parentId === undefined);
 
       // The tool's own normalisation of what the document handed us lands
       // after this window closes — see `settlingBlocks`.
@@ -2344,7 +2342,8 @@ export class BlockYjsSync {
         return positions;
       }
 
-      this.blocksStore.move(targetIndex, currentIndex);
+      // An unmounted holder stays unmounted: a peer's table child waits for its cell.
+      this.blocksStore.move(targetIndex, currentIndex, block.holder.parentElement === null);
 
       return this.indexBlockPositions();
     }, this.indexBlockPositions());

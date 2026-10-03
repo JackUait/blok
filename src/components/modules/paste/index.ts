@@ -11,6 +11,7 @@ import { preprocessNotionHtml } from './notion-preprocessor';
 import { preprocessAiChatHtml } from './ai-chat-preprocessor';
 import { recoverGfmToggles } from './gfm-toggle-recovery';
 import { preprocessDivLines } from './div-lines-preprocessor';
+import { protectCellCodeBlocks } from '../../../tools/table/table-cell-paste';
 import { NOTION_BLOCKS_V3_MIME, parseNotionBlocksV3 } from './notion-blocks-v3';
 import { NEXT_SPACE_MIMES, parseNextSpaceBlocks } from './next-space-blocks';
 import type { PasteHandler } from './handlers/base';
@@ -315,9 +316,10 @@ export class Paste extends Module {
       this.config.sanitizer as SanitizerConfig
     );
 
-    const preprocessed = preprocessDivLines(recoverGfmToggles(
+    // After preprocessDivLines: it turns a <pre>'s line divs into the <br>s protectCellCodeBlocks reads.
+    const preprocessed = protectCellCodeBlocks(preprocessDivLines(recoverGfmToggles(
       preprocessNotionHtml(preprocessAiChatHtml(preprocessGoogleDocsHtml(rawHtmlData)))
-    ));
+    )));
     /**
      * Clipboard sources describe formatting run by run, so pasted markup
      * arrives fragmented no matter which app it came from. Collapse it here,

@@ -1215,6 +1215,26 @@ export class BlockInsertion {
     blocksStore: BlocksStore,
     data?: BlockToolData
   ): Promise<Block> {
+    // The pasted block's children reach the doc one write at a time across
+    // the awaits in pasteAndSync, and the block itself last. A gap past the capture
+    // timeout would split the paste into undo steps, and undoing only the
+    // newest one would leave the children orphaned in the doc.
+    this.dependencies.YjsManager.holdCapture();
+
+    try {
+      return await this.pasteAndSync(toolName, pasteEvent, replace, blocksStore, data);
+    } finally {
+      this.dependencies.YjsManager.releaseCapture();
+    }
+  }
+
+  private async pasteAndSync(
+    toolName: string,
+    pasteEvent: PasteEvent,
+    replace: boolean,
+    blocksStore: BlocksStore,
+    data?: BlockToolData
+  ): Promise<Block> {
     // Capture predecessor's parentId and id BEFORE insert. The predecessor is
     // the current block — whether we're replacing it in place or inserting
     // after it, the new block belongs to the same parent. Without this, pasting

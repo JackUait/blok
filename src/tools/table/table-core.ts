@@ -13,6 +13,8 @@ export const ownRows = (grid: HTMLElement): NodeListOf<HTMLElement> =>
 export const CELL_ATTR = 'data-blok-table-cell';
 export const CELL_ROW_ATTR = 'data-blok-table-cell-row';
 export const CELL_COL_ATTR = 'data-blok-table-cell-col';
+/** Corners of the grid a cell touches, as tokens: top-start top-end bottom-start bottom-end. */
+export const CORNER_ATTR = 'data-blok-table-corner';
 
 export const BORDER_WIDTH = 1;
 const BORDER_STYLE = `${BORDER_WIDTH}px solid var(--blok-table-border)`;
@@ -112,6 +114,7 @@ export class TableGrid {
       tbody.appendChild(this.createRow(cols, rowIndex));
     });
     table.appendChild(tbody);
+    this.markCornerCells(table);
 
     return table;
   }
@@ -180,6 +183,7 @@ export class TableGrid {
     });
 
     table.appendChild(tbody);
+    this.markCornerCells(table);
 
     return table;
   }
@@ -488,6 +492,41 @@ export class TableGrid {
       }, 0);
 
       occupiedCols.delete(r);
+    });
+
+    this.markCornerCells(table);
+  }
+
+  /**
+   * Stamp the cells that touch a corner of the grid, so CSS can round just
+   * those. Reads the logical coordinates, so a merged cell from an earlier
+   * row that reaches the last row still counts as a bottom corner.
+   */
+  private markCornerCells(table: HTMLElement): void {
+    const rowCount = this.getRowCount(table);
+    const colCount = this.getColumnCount(table);
+
+    this.getRows(table).forEach(row => {
+      row.querySelectorAll<HTMLTableCellElement>(`:scope > [${CELL_ATTR}]`).forEach(cell => {
+        const r = Number(cell.getAttribute(CELL_ROW_ATTR));
+        const c = Number(cell.getAttribute(CELL_COL_ATTR));
+        const isTop = r === 0;
+        const isBottom = r + (cell.rowSpan || 1) >= rowCount;
+        const isStart = c === 0;
+        const isEnd = c + (cell.colSpan || 1) >= colCount;
+        const corners = [
+          isTop && isStart && 'top-start',
+          isTop && isEnd && 'top-end',
+          isBottom && isStart && 'bottom-start',
+          isBottom && isEnd && 'bottom-end',
+        ].filter(Boolean).join(' ');
+
+        if (corners) {
+          cell.setAttribute(CORNER_ATTR, corners);
+        } else {
+          cell.removeAttribute(CORNER_ATTR);
+        }
+      });
     });
   }
 

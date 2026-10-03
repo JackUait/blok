@@ -668,6 +668,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Loading skeleton: loading.css, its three keyframes, the bar and sheen tokens in
     // the three theme blocks, and its import in main.css.
     const LOADING_SKELETON_BYTES = 4_837;
+    // Table frame: heading ink + divider, row hover, the 1px frame radius on the
+    // grid and its corner cells, the radius role and the matching toolbox
+    // preview. Measured net growth against 7d2de4e2.
+    const TABLE_FRAME_BYTES = 2_700;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -692,7 +696,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DARKROOM_MARKUP_BYTES
       + DARKROOM_FILTER_STRIP_BYTES
       + LOADING_SKELETON_BYTES
-      + TOOLBOX_HOVER_PREVIEWS_BYTES;
+      + TOOLBOX_HOVER_PREVIEWS_BYTES
+      + TABLE_FRAME_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

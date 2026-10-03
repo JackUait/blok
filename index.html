@@ -546,6 +546,9 @@
     .rg-caret { display: inline-block; width: 3px; height: 44px; margin-left: 3px; background: #2383e2; }
     .rg-nest { width: 110px; height: 70px; box-sizing: border-box; background: var(--rg-bar); }
     .rg-nest__child { width: 100%; height: 100%; background: var(--rg-surface); }
+    .rg-table { display: grid; grid-template-columns: repeat(3, 48px); gap: 1px; padding: 1px; overflow: hidden; background: var(--pg-line-strong); }
+    .rg-table__cell { height: 22px; background: var(--rg-surface); }
+    .rg-table__cell--head { background: var(--rg-bar); }
 
     .rg-demo { display: grid; grid-template-columns: auto 200px; gap: 40px; align-items: center; justify-content: start; }
     .rg-demo__stages { display: flex; flex-wrap: wrap; gap: 24px; }

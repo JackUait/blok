@@ -7,6 +7,7 @@
   grid-template-columns: repeat(4, auto);
   border-top: 1px solid var(--blok-table-border);
   border-left: 1px solid var(--blok-table-border);
+  border-radius: var(--blok-radius-table);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -21,7 +22,26 @@
 
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell='heading'] {
   background-color: var(--blok-table-heading-bg);
+  border-bottom-color: color-mix(in srgb, var(--blok-table-border) 75%, var(--blok-text-primary));
+  color: var(--blok-text-secondary);
   font-weight: 600;
+}
+
+/* Same card corners as the real table; the drawing is always 4 columns wide. */
+[data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:first-child {
+  border-start-start-radius: var(--blok-radius-table);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:nth-child(4) {
+  border-start-end-radius: var(--blok-radius-table);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:nth-last-child(4) {
+  border-end-start-radius: var(--blok-radius-table);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:last-child {
+  border-end-end-radius: var(--blok-radius-table);
 }
 
 /* ─── Code ──────────────────────────────────────────── */

@@ -157,6 +157,49 @@
 [data-blok-table-heading-col] {
   @apply font-semibold;
   background-color: var(--blok-table-heading-bg);
+  color: var(--blok-text-secondary);
+}
+
+/*
+ * Colors here derive from existing tokens: view.css ships every token and has
+ * a hard byte budget.
+ * Color only: the line width is BORDER_WIDTH, which resize and the selection
+ * overlay measure against. !important beats the inline border shorthand.
+ */
+[data-blok-table-heading] > [data-blok-table-cell] {
+  border-bottom-color: color-mix(in srgb, var(--blok-table-border) 75%, var(--blok-text-primary)) !important;
+}
+
+/* Inline cell colors beat this, so a colored cell keeps its color on hover. */
+[data-blok-table-row]:not([data-blok-table-heading]):hover > [data-blok-table-cell]:not([data-blok-table-heading-col]) {
+  background-color: color-mix(in srgb, var(--blok-text-primary) 3%, transparent);
+}
+
+/*
+ * Rounded frame. The table draws only its top and start lines; cells draw the
+ * end and bottom ones, so each corner cell rounds itself too. Core stamps
+ * data-blok-table-corner on the cell that really holds a corner, merged cells
+ * included. No clipping: the selection overlay, its pill and the resize
+ * handles live inside the <table>.
+ */
+[data-blok-table-scroll] > table {
+  border-radius: var(--blok-radius-table);
+}
+
+[data-blok-table-cell][data-blok-table-corner~="top-start"] {
+  border-start-start-radius: var(--blok-radius-table);
+}
+
+[data-blok-table-cell][data-blok-table-corner~="top-end"] {
+  border-start-end-radius: var(--blok-radius-table);
+}
+
+[data-blok-table-cell][data-blok-table-corner~="bottom-start"] {
+  border-end-start-radius: var(--blok-radius-table);
+}
+
+[data-blok-table-cell][data-blok-table-corner~="bottom-end"] {
+  border-end-end-radius: var(--blok-radius-table);
 }
 
 /**

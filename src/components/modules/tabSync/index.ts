@@ -1,6 +1,9 @@
 import { nanoid } from 'nanoid';
 
 import type { ModuleConfig } from '../../../types-internal/module-config';
+import { I18nChanged, SettingChanged } from '../../events';
+import type { I18nChangedPayload } from '../../events/I18nChanged';
+import type { SettingChangedPayload } from '../../events/SettingChanged';
 import { Module } from '../../__module';
 import { log } from '../../utils/logger';
 import { persistenceVersionAccess } from '../../utils/persistence';
@@ -10,6 +13,8 @@ import type { IdSource } from './identity';
 import type { TabMessage } from './messages';
 import { browserTabPlatform } from './platform';
 import type { LeaderLock, TabChannel, TabPlatform } from './platform';
+import { createSettingsChannel } from './settings-channel';
+import type { SettingMessage } from './settings-channel';
 
 /**
  * This tab's part in tab sync. Only `solo` and `leader` save.
@@ -92,6 +97,9 @@ export class TabSync extends Module {
 
   private destroyed = false;
 
+  /** Lives apart from the document session: a failed join must not close it. */
+  private settings: { channel: { close(): void }; documentKey: string | undefined } | null = null;
+
   /**
    * @param options - module options
    * @param options.config - Blok configuration
@@ -124,6 +132,8 @@ export class TabSync extends Module {
 
     try {
       const key = this.resolveKey(context);
+
+      this.openSettings(key ?? undefined);
 
       if (key === null) {
         this.waitForFirstSave(context);
@@ -228,6 +238,8 @@ export class TabSync extends Module {
   public destroy(): void {
     this.destroyed = true;
     this.stopWaitingForFirstSave();
+    this.settings?.channel.close();
+    this.settings = null;
     this.teardown();
     this.setRole('solo');
   }
@@ -268,6 +280,69 @@ export class TabSync extends Module {
   /** Off with `tabSync: false` and with `collaboration`, whose server already syncs tabs. */
   private isAllowed(): boolean {
     return this.config.tabSync !== false && this.config.collaboration === undefined;
+  }
+
+  /**
+   * Opens the settings channel once. Reopens it when a document key turns up
+   * later (a minted id after its first save), so width starts to follow.
+   * @param documentKey - this tab's document key, if it has one yet
+   */
+  private openSettings(documentKey: string | undefined): void {
+    const { tabSync } = this.config;
+
+    if (typeof tabSync === 'object' && tabSync.settings === false) {
+      return;
+    }
+    if (this.settings !== null && (this.settings.documentKey !== undefined || documentKey === undefined)) {
+      return;
+    }
+
+    this.settings?.channel.close();
+    this.settings = {
+      documentKey,
+      channel: createSettingsChannel({
+        platform: this.platform,
+        documentKey,
+        on: (listener) => this.onLocalSetting(listener),
+        apply: (setting) => this.applySetting(setting),
+      }),
+    };
+  }
+
+  /**
+   * @param listener - gets each local locale, theme or width change
+   */
+  private onLocalSetting(listener: (setting: SettingMessage) => void): () => void {
+    const onLocale = ({ locale }: I18nChangedPayload): void => listener({ setting: 'locale', value: locale });
+    const onSetting = (payload: SettingChangedPayload): void => listener(payload);
+
+    this.eventsDispatcher.on(I18nChanged, onLocale);
+    this.eventsDispatcher.on(SettingChanged, onSetting);
+
+    return () => {
+      this.eventsDispatcher.off(I18nChanged, onLocale);
+      this.eventsDispatcher.off(SettingChanged, onSetting);
+    };
+  }
+
+  /**
+   * Theme and width use the plain setters, which never emit SettingChanged.
+   * @param setting - a setting another tab changed
+   */
+  private applySetting(setting: SettingMessage): void {
+    switch (setting.setting) {
+      case 'locale':
+        this.Blok.I18n.update({ locale: setting.value }).catch((error: unknown) => {
+          log('Tab sync could not apply a locale from another tab.', 'debug', error);
+        });
+        break;
+      case 'theme':
+        this.Blok.ThemeManager.setMode(setting.value);
+        break;
+      case 'width':
+        this.Blok.UI.setWidthMode(setting.value);
+        break;
+    }
   }
 
   /**

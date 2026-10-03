@@ -20,6 +20,7 @@ export const createFakePlatform = (): TabPlatform & {
   resumeInbound: (channel: TabChannel) => void;
 } => {
   const buses = new Map<string, Set<(m: TabMessage) => void>>();
+  const rawBuses = new Map<string, Set<(data: unknown) => void>>();
   const paused = new Set<TabChannel>();
   const holders = new Map<string, number>();
   const waiters = new Map<string, Array<() => void>>();
@@ -27,14 +28,40 @@ export const createFakePlatform = (): TabPlatform & {
 
   return {
     holders,
-    openChannels: (key) => buses.get(key)?.size ?? 0,
+    openChannels: (key) => (buses.get(key)?.size ?? 0) + (rawBuses.get(key)?.size ?? 0),
     pauseInbound: (channel) => {
       paused.add(channel);
     },
     resumeInbound: (channel) => {
       paused.delete(channel);
     },
-    rawChannel: (): RawChannel | null => null,
+    rawChannel: (name): RawChannel => {
+      const listeners = new Set<(data: unknown) => void>();
+      const bus = rawBuses.get(name) ?? new Set();
+      const deliver = (data: unknown): void => {
+        listeners.forEach((l) => l(structuredClone(data)));
+      };
+
+      rawBuses.set(name, bus);
+      bus.add(deliver);
+
+      return {
+        post: (data) => bus.forEach((d) => {
+          if (d !== deliver) {
+            queueMicrotask(() => d(data));
+          }
+        }),
+        onMessage: (l) => {
+          listeners.add(l);
+
+          return () => listeners.delete(l);
+        },
+        close: () => {
+          bus.delete(deliver);
+          listeners.clear();
+        },
+      };
+    },
     channel: (key): TabChannel => {
       const listeners = new Set<(m: TabMessage) => void>();
       const bus = buses.get(key) ?? new Set();

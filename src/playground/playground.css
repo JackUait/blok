@@ -217,8 +217,16 @@ html.pg-page-nav::view-transition-new(pg-page-icon) {
   animation-duration: 460ms;
   animation-timing-function: var(--pg-page-glide);
 }
+/* A part with no end on the new page (a page with no icon yet) leaves with the old page. */
+html.pg-page-nav::view-transition-old(pg-page-title):only-child,
+html.pg-page-nav::view-transition-old(pg-page-icon):only-child {
+  animation: pg-page-vanish 100ms cubic-bezier(0.4, 0, 1, 1) both;
+}
 @keyframes pg-page-leave {
   to { opacity: 0; transform: translateX(calc(var(--pg-page-shift) * -0.5)) scale(0.985); filter: blur(2px); }
+}
+@keyframes pg-page-vanish {
+  to { opacity: 0; }
 }
 @keyframes pg-page-enter {
   from { opacity: 0; transform: translateX(var(--pg-page-shift)) scale(0.985); filter: blur(6px); }

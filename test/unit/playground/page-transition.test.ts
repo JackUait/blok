@@ -37,6 +37,13 @@ describe('page transition styles', () => {
     }
   });
 
+  it.each(['pg-page-title', 'pg-page-icon'])('makes a %s with no end on the new page leave with the old page, not linger over it', (name) => {
+    const leave = ms(rule('html.pg-page-nav::view-transition-old(pg-page-body)'), 0);
+    const orphan = ms(rule(`html.pg-page-nav::view-transition-old(${name}):only-child`), 0);
+
+    expect(orphan).toBeLessThanOrEqual(leave);
+  });
+
   it('lets the old page leave before the new page arrives', () => {
     const leave = ms(rule('html.pg-page-nav::view-transition-old(pg-page-body)'), 0);
     const enterDelay = ms(rule('html.pg-page-nav::view-transition-new(pg-page-body)'), 1);

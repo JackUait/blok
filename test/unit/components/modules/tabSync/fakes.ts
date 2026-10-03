@@ -296,6 +296,7 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
       flushNow: vi.fn(),
       markDirty: vi.fn(),
       hasUnsavedChanges: false,
+      isSaving: false,
     },
     Saver: {
       getDocumentRecordId: () => recordId,

@@ -915,8 +915,11 @@ export class TabSync extends Module {
         // The adopted state, a wake diff or a `saved` that came before an edit
         // can all hold changes the old leader never saved. An empty document
         // nobody changed is skipped: it may be a boot doc, not the real one.
-        if (this.editedSinceStart || this.receivedTabChange || !this.isDocumentEmpty()) {
-          this.Blok.ModificationsObserver.flushNow();
+        // A save the promotion just started already covers them.
+        const { ModificationsObserver } = this.Blok;
+
+        if (!ModificationsObserver.isSaving && (this.editedSinceStart || this.receivedTabChange || !this.isDocumentEmpty())) {
+          ModificationsObserver.flushNow();
         }
       }
     }, () => {

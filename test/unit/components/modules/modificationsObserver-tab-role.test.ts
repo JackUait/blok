@@ -376,4 +376,24 @@ describe('ModificationsObserver — tab role', () => {
     expect(onChange).toHaveBeenCalledTimes(2);
     expect(onSave).toHaveBeenCalledTimes(1);
   });
+
+  it('without tab sync, a change in the window enable() opens rides its trailing edge', async () => {
+    const { observer, onChange, onSave, emitBlockChanged } = setup({});
+
+    emitBlockChanged({ origin: 'local' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onChange).toHaveBeenCalledTimes(1);
+
+    observer.disable();
+    observer.enable();
+    emitBlockChanged({ origin: 'local' });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+
+    await flushWindow();
+
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
 });

@@ -62,9 +62,9 @@ export class ModificationsObserver extends Module {
   private leadingFlushScheduled = false;
 
   /**
-   * Whether a change has led the open window. A window opened with no change
-   * (markDirty, enable) is not led yet: its first change still gets the
-   * leading-edge onChange.
+   * Whether the open window has had its leading-edge onChange. Only markDirty
+   * opens an unled window: the tab change it marks fires its BlockChanged
+   * later, and that event must still lead.
    */
   private windowLed = false;
 
@@ -171,6 +171,13 @@ export class ModificationsObserver extends Module {
   }
 
   /**
+   * Whether a serialization for onSave is running.
+   */
+  public get isSaving(): boolean {
+    return this.savesInFlight > 0;
+  }
+
+  /**
    * Whether onChange/onSave may reach the host right now.
    *
    * Read at DELIVERY time, never at enqueue time: a batch window and a
@@ -258,7 +265,7 @@ export class ModificationsObserver extends Module {
     this.syncUnloadGuard();
     // A disabled observer opens the window in enable().
     if (!this.disabled && this.batchingTimeout === null) {
-      this.openBatchWindow();
+      this.openBatchWindow({ led: false });
     }
   }
 
@@ -400,9 +407,11 @@ export class ModificationsObserver extends Module {
 
   /**
    * Arms the trailing edge of a batch window.
+   * @param options - window options
+   * @param options.led - false lets the next change lead the window
    */
-  private openBatchWindow(): void {
-    this.windowLed = false;
+  private openBatchWindow({ led = true }: { led?: boolean } = {}): void {
+    this.windowLed = led;
     this.batchingTimeout = setTimeout(() => {
       this.batchingTimeout = null;
       this.flushTrailing();

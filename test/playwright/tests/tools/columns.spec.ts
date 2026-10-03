@@ -1144,6 +1144,17 @@ test.describe('Columns tool', () => {
     );
 
     expect(withRatio).toHaveLength(0);
+
+    // The shared document drops it too, after the drop glide, or other tabs keep the old widths.
+    const docRatios = await page.evaluate(() =>
+      (window.blokInstance as unknown as {
+        module: { yjsManager: { toJSON: () => Array<{ type: string; data?: { widthRatio?: number } }> } };
+      }).module.yjsManager.toJSON()
+        .filter(b => b.type === 'column')
+        .map(b => b.data?.widthRatio)
+    );
+
+    expect(docRatios).toEqual([undefined, undefined, undefined]);
   });
 
   test('side-drop indicator spans the full column-row height, not one block', async ({ page }) => {

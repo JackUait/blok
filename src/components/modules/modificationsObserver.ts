@@ -348,7 +348,7 @@ export class ModificationsObserver extends Module {
      * puts the flag back whenever the data never reached the host.
      */
     this.pendingSave = false;
-    this.emitOnSave();
+    void this.emitOnSave();
   }
 
   /**
@@ -400,10 +400,12 @@ export class ModificationsObserver extends Module {
    * frozen, paused or destroyed while the (async) serialization was in flight,
    * and puts the document back to dirty when it does.
    */
-  private emitOnSave(): void {
+  private emitOnSave(outlivesTeardown = false): Promise<void> {
     this.savesInFlight += 1;
 
-    void this.Blok.Saver.save()
+    const serialization = outlivesTeardown ? this.Blok.Saver.saveBeforeTeardown() : this.Blok.Saver.save();
+
+    return serialization
       .then((data) => {
         this.savesInFlight = Math.max(0, this.savesInFlight - 1);
 
@@ -415,7 +417,8 @@ export class ModificationsObserver extends Module {
          * Either way the host never saw this batch, so the document goes back
          * to dirty and the next window retries it.
          */
-        if (this.isDeliverySuppressed || data === undefined) {
+        // The teardown save is the one delivery `destroyed` must not stop.
+        if ((this.isDeliverySuppressed && !outlivesTeardown) || data === undefined) {
           this.pendingSave = true;
           this.syncUnloadGuard();
 
@@ -443,6 +446,26 @@ export class ModificationsObserver extends Module {
         this.pendingSave = true;
         this.syncUnloadGuard();
       });
+  }
+
+  /**
+   * Starts the save for an edit still inside its batch window. Teardown calls
+   * this before marking any module destroyed, because the Saver must read the
+   * blocks while they are still mounted.
+   * @returns the delivery, or null when there was nothing to save
+   */
+  public flushBeforeTeardown(): Promise<void> | null {
+    if (!this.pendingSave || this.isDeliverySuppressed) {
+      return null;
+    }
+
+    if (!isFunction(this.config.onSave)) {
+      return null;
+    }
+
+    this.pendingSave = false;
+
+    return this.emitOnSave(true);
   }
 
   /**

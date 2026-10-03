@@ -64,6 +64,10 @@ function teardown(instance: Blok, blok: Core): void {
   // scoped to a subtree stop counting an editor that is going away.
   unregisterInstance(instance);
 
+  const persistence = blok.config?.persistence;
+  // Before markDestroyed: the last edit must be read while blocks are mounted.
+  const finalSave = blok.moduleInstances.ModificationsObserver?.flushBeforeTeardown?.() ?? null;
+
   // Mark all modules as destroyed first so any in-flight async work stops gracefully
   Object.values(blok.moduleInstances)
     .forEach((moduleInstance) => {
@@ -97,7 +101,12 @@ function teardown(instance: Blok, blok: Core): void {
   // module, so the walk above cannot reach it. Left attached it outlives the
   // editor and asks the user to confirm every later navigation in a
   // single-page app, over a document that is already gone.
-  releasePersistenceQueue(blok.config?.persistence);
+  // Released after the final save reaches the queue, or the queue drops it.
+  if (finalSave === null) {
+    releasePersistenceQueue(persistence);
+  } else {
+    void finalSave.finally(() => releasePersistenceQueue(persistence));
+  }
 
   destroyTooltip();
 

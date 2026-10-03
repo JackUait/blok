@@ -146,6 +146,19 @@ export class Saver extends Module {
   }
 
   /**
+   * The teardown save. Call it BEFORE the editor marks its modules destroyed:
+   * with no render pending, every tool's `save()` runs synchronously inside
+   * this call, so it reads the still-mounted document. Its result is handed
+   * back even though teardown finishes before it settles.
+   *
+   * Skips the in-flight dedup on purpose: that promise read the document
+   * before the newest edit, and a queued follow-up would start after teardown.
+   */
+  public saveBeforeTeardown(): Promise<OutputData | undefined> {
+    return this.doSave({ dialect: 'host', outlivesTeardown: true });
+  }
+
+  /**
    * Runs a serialization and installs it as the in-flight one.
    * @param dialect - output dialect, see {@link Saver.save}
    */
@@ -206,9 +219,13 @@ export class Saver extends Module {
    * Waits for any pending render to complete before reading blocks.
    * @param options - save behaviour, see {@link Saver.save}
    * @param options.dialect - output dialect
+   * @param options.outlivesTeardown - see {@link Saver.saveBeforeTeardown}
    * @returns {OutputData | undefined}
    */
-  private async doSave({ dialect }: { dialect: 'host' | 'internal' }): Promise<OutputData | undefined> {
+  private async doSave({ dialect, outlivesTeardown = false }: {
+    dialect: 'host' | 'internal';
+    outlivesTeardown?: boolean;
+  }): Promise<OutputData | undefined> {
     // Wait for any in-progress render to complete before reading blocks
     const pendingRender = this.Blok.Renderer?.pendingRender;
 
@@ -352,7 +369,7 @@ export class Saver extends Module {
       const orderGuardedData = this.enforceTableCellOrderInvariant(guardedData);
 
       // Check destruction one more time after async block.save() operations
-      if (this.isDestroyed) {
+      if (this.isDestroyed && !outlivesTeardown) {
         return undefined;
       }
 

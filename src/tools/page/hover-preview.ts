@@ -251,8 +251,8 @@ export class PageHoverPreview {
       const row = document.createElement('div');
 
       row.className = line.heading
-        ? 'truncate pl-3 pr-1 py-1.5 text-[10px] leading-[14px] font-semibold'
-        : 'truncate pl-3 pr-1 py-1.5 text-[8px] leading-[12px]';
+        ? 'truncate pl-1 pr-1 py-1.5 text-[10px] leading-[14px] font-semibold'
+        : 'truncate pl-1 pr-1 py-1.5 text-[8px] leading-[12px]';
       row.setAttribute(DATA_ATTR.testid, 'page-hover-preview-line');
       if (line.heading) {
         row.setAttribute('data-blok-preview-heading', 'true');

@@ -130,6 +130,16 @@ describe('Saver — document id', () => {
     expect(saver.getDocumentRecordId()).toBe('leader-id');
     expect(saver.hasMintedDocumentId()).toBe(false);
   });
+
+  it('reset mints a fresh id even though config.data still holds the old one', () => {
+    const saver = createSaver({ data: { id: 'A', blocks: [] } });
+
+    saver.getDocumentRecordId();
+    saver.resetDocumentRecordId();
+
+    expect(saver.getDocumentRecordId()).toMatch(NANOID_21);
+    expect(saver.hasMintedDocumentId()).toBe(true);
+  });
 });
 
 describe('Blok — document id through a real editor', () => {
@@ -141,7 +151,18 @@ describe('Blok — document id through a real editor', () => {
     vi.restoreAllMocks();
   });
 
-  const saveOnce = async (data: BlokConfig['data']): Promise<OutputData> => {
+  type TestEditor = {
+    isReady: Promise<unknown>;
+    save: () => Promise<OutputData>;
+    render: (data: BlokConfig['data']) => Promise<void>;
+    blocks: { render: (data: BlokConfig['data']) => Promise<void> };
+    destroy: () => void;
+  };
+
+  const withEditor = async (
+    data: BlokConfig['data'],
+    act: (editor: TestEditor) => Promise<void> = async () => undefined
+  ): Promise<OutputData> => {
     const holder = document.createElement('div');
 
     document.body.appendChild(holder);
@@ -150,10 +171,11 @@ describe('Blok — document id through a real editor', () => {
       holder,
       tools: { paragraph: Paragraph },
       data,
-    }) as unknown as { isReady: Promise<unknown>; save: () => Promise<OutputData>; destroy: () => void };
+    }) as unknown as TestEditor;
 
     try {
       await editor.isReady;
+      await act(editor);
 
       return await editor.save();
     } finally {
@@ -161,6 +183,10 @@ describe('Blok — document id through a real editor', () => {
       holder.remove();
     }
   };
+
+  const saveOnce = (data: BlokConfig['data']): Promise<OutputData> => withEditor(data);
+
+  const docA = { id: 'A', blocks: [ { id: 'pa', type: 'paragraph', data: { text: 'A' } } ] };
 
   it('keeps the id of a loaded document with blocks', async () => {
     const saved = await saveOnce({ id: 'doc-1', blocks: [ { id: 'p1', type: 'paragraph', data: { text: 'Hi' } } ] });
@@ -172,5 +198,44 @@ describe('Blok — document id through a real editor', () => {
     const saved = await saveOnce({ id: 'doc-1', blocks: [] });
 
     expect(saved.id).toBe('doc-1');
+  }, 60_000);
+
+  it('adopts the id of a document swapped in with editor.render()', async () => {
+    const saved = await withEditor(docA, editor => editor.render({
+      id: 'B',
+      blocks: [ { id: 'pb', type: 'paragraph', data: { text: 'B' } } ],
+    }));
+
+    expect(saved.id).toBe('B');
+  }, 60_000);
+
+  it('adopts the id of a document swapped in with blocks.render()', async () => {
+    const saved = await withEditor(docA, editor => editor.blocks.render({
+      id: 'B',
+      blocks: [ { id: 'pb', type: 'paragraph', data: { text: 'B' } } ],
+    }));
+
+    expect(saved.id).toBe('B');
+  }, 60_000);
+
+  it('mints a fresh id when the swapped-in document has none', async () => {
+    const saved = await withEditor(docA, editor => editor.render({
+      blocks: [ { id: 'pb', type: 'paragraph', data: { text: 'B' } } ],
+    }));
+
+    expect(saved.id).toMatch(NANOID_21);
+    expect(saved.id).not.toBe('A');
+  }, 60_000);
+
+  it('adopts a new id even when the rendered blocks equal the current ones', async () => {
+    const saved = await withEditor(docA, editor => editor.render({ ...docA, id: 'B' }));
+
+    expect(saved.id).toBe('B');
+  }, 60_000);
+
+  it('keeps the id when an id-less echo of the current content is rendered', async () => {
+    const saved = await withEditor(docA, editor => editor.render({ blocks: docA.blocks }));
+
+    expect(saved.id).toBe('A');
   }, 60_000);
 });

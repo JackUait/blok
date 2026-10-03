@@ -305,11 +305,23 @@ export class BlocksAPI extends Module {
      * current saved state and no-op on equality (time/version are ignored).
      */
     const currentContent = await this.Blok.Saver.save();
+    const incomingId = typeof data.id === 'string' && data.id !== '' ? data.id : null;
+
+    // The echo check ignores `id`, so adopt before it: same blocks under a
+    // new id is still a different document.
+    if (incomingId !== null) {
+      this.Blok.Saver.adoptDocumentRecordId(incomingId);
+    }
 
     if (currentContent !== undefined && equalsOutputData(currentContent, data)) {
       this.processPendingHashScroll();
 
       return;
+    }
+
+    // Only a real swap resets: an id-less echo would otherwise churn the id.
+    if (incomingId === null) {
+      this.Blok.Saver.resetDocumentRecordId();
     }
 
     /**

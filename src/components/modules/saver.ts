@@ -141,6 +141,15 @@ export class Saver extends Module {
   }
 
   /**
+   * Mint a fresh id for a new document. Eager, not lazy: `config.data` still
+   * holds the previous document's id.
+   */
+  public resetDocumentRecordId(): void {
+    this.documentRecordId = generateDocumentId();
+    this.mintedDocumentId = true;
+  }
+
+  /**
    * Composes new chain of Promises to fire them alternatelly.
    * Deduplicates concurrent calls — if a save is already in-flight AND the
    * document has not changed since it started reading, returns the same promise.

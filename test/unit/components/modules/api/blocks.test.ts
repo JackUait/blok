@@ -272,6 +272,8 @@ type BlokStub = {
   };
   Saver: {
     save: ReturnType<typeof vi.fn>;
+    adoptDocumentRecordId: ReturnType<typeof vi.fn>;
+    resetDocumentRecordId: ReturnType<typeof vi.fn>;
   };
   BlockSelection: {
     selectBlock: ReturnType<typeof vi.fn>;
@@ -337,6 +339,8 @@ const createBlokStub = (
     // resolving undefined disables the skip so every test exercises a real render.
     Saver: {
       save: vi.fn(async () => undefined) as ReturnType<typeof vi.fn>,
+      adoptDocumentRecordId: vi.fn(),
+      resetDocumentRecordId: vi.fn(),
     },
     Paste: {
       processText: vi.fn(async (_html: string, _sanitize: boolean) => {}) as ReturnType<typeof vi.fn>,

@@ -33,7 +33,7 @@ export const CLAIM_SETTLE_MS = 300;
  */
 export const CLAIM_TIMEOUT_MS = 4000;
 
-/** How long a leader asked to yield waits for its save to land. Below CLAIM_TIMEOUT_MS. */
+/** How long a leader asked to yield waits for its render and its save. Below CLAIM_TIMEOUT_MS. */
 export const YIELD_SAVE_WAIT_MS = 3000;
 
 /** How long a new leader waits for the old leader's last request before its own first save. */
@@ -106,6 +106,9 @@ export class TabSync extends Module {
   /** Lets the last typing out after ReadOnly already reports enabled. */
   private flushingBeforeReadOnly = false;
 
+  /** A render that started while editable: its fill still goes out after read-only. */
+  private renderBeforeReadOnly: Promise<void> | null = null;
+
   /**
    * Local updates not posted yet. One operation can write several (a render
    * clears, then fills); posted apart, other tabs see the empty doc in
@@ -142,6 +145,9 @@ export class TabSync extends Module {
   private wasActive = false;
 
   private settleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Set while a claim waits for a local render to end; cleared to cancel it. */
+  private claimAfterRender: Promise<void> | null = null;
 
   /** Set while this tab's claim waits for a yield; fires the steal. */
   private claimTimer: ReturnType<typeof setTimeout> | null = null;
@@ -367,13 +373,23 @@ export class TabSync extends Module {
    * is already shut; typing made while editable must still go out.
    */
   private postTypingBeforeReadOnly(): void {
+    const { pendingRender } = this.Blok.Renderer;
+
+    if (pendingRender !== null) {
+      this.renderBeforeReadOnly = pendingRender;
+      void pendingRender.then(() => {
+        if (this.renderBeforeReadOnly === pendingRender) {
+          this.renderBeforeReadOnly = null;
+        }
+      });
+    }
     this.flushingBeforeReadOnly = true;
     try {
       this.Blok.YjsManager.flushPendingBlockWrites();
     } finally {
       this.flushingBeforeReadOnly = false;
     }
-    this.postOutbox();
+    this.postOutboxAfterRender();
   }
 
   /** Off with `tabSync: false` and with `collaboration`, whose server already syncs tabs. */
@@ -605,7 +621,9 @@ export class TabSync extends Module {
 
       const role = this.currentRole;
 
-      if ((this.flushingBeforeReadOnly || !this.Blok.ReadOnly.isEnabled) && (role === 'leader' || role === 'follower')) {
+      const editable = this.flushingBeforeReadOnly || this.renderBeforeReadOnly !== null || !this.Blok.ReadOnly.isEnabled;
+
+      if (editable && (role === 'leader' || role === 'follower')) {
         this.queueOutbound(update);
       }
     });
@@ -1077,7 +1095,7 @@ export class TabSync extends Module {
   }
 
   private armClaim(): void {
-    if (!this.canClaim() || this.settleTimer !== null || this.claimTimer !== null) {
+    if (!this.canClaim() || this.settleTimer !== null || this.claimTimer !== null || this.claimAfterRender !== null) {
       return;
     }
     this.settleTimer = setTimeout(() => {
@@ -1093,7 +1111,22 @@ export class TabSync extends Module {
 
       return;
     }
-    if (!this.canClaim() || this.claimTimer !== null) {
+    if (!this.canClaim() || this.claimTimer !== null || this.claimAfterRender !== null) {
+      return;
+    }
+    const { pendingRender } = this.Blok.Renderer;
+
+    // Posting now would send a render's clear without its fill.
+    if (pendingRender !== null) {
+      const wait = pendingRender.then(() => {
+        if (this.claimAfterRender === wait) {
+          this.claimAfterRender = null;
+          this.claim();
+        }
+      });
+
+      this.claimAfterRender = wait;
+
       return;
     }
     // The leader must hold all of this tab's typing before it sees the claim:
@@ -1122,6 +1155,7 @@ export class TabSync extends Module {
   }
 
   private stopClaim(): void {
+    this.claimAfterRender = null;
     this.clearSettleTimer();
     this.clearClaimTimer();
   }
@@ -1264,12 +1298,20 @@ export class TabSync extends Module {
     if (session === null) {
       return;
     }
+    // One deadline for the render and the save: the claimant steals at CLAIM_TIMEOUT_MS.
+    const deadline = Date.now() + YIELD_SAVE_WAIT_MS;
+
     this.yielding = true;
     try {
+      // A render's clear must not go out without its fill. Past the deadline
+      // no yield goes out: the claimant steals, the outbox posts after the render.
+      if (!await this.renderSettled(deadline) || this.session !== session) {
+        return;
+      }
       this.Blok.YjsManager.flushPendingBlockWrites();
       this.postOutbox();
 
-      const saved = await this.saveBeforeYield(session);
+      const saved = await this.saveBeforeYield(session, deadline);
 
       // Teardown meanwhile: nothing left to hand over.
       if (this.session !== session) {
@@ -1320,10 +1362,10 @@ export class TabSync extends Module {
    * Saves what the observer holds, again for edits that land meanwhile,
    * within YIELD_SAVE_WAIT_MS.
    * @param session - the live session
+   * @param deadline - when to give up
    * @returns true when everything landed and nothing waits for a save
    */
-  private async saveBeforeYield(session: Session): Promise<boolean> {
-    const deadline = Date.now() + YIELD_SAVE_WAIT_MS;
+  private async saveBeforeYield(session: Session, deadline: number): Promise<boolean> {
     const { ModificationsObserver } = this.Blok;
 
     // Each pass either awaits a save (waitForSave polls while one runs) or
@@ -1348,6 +1390,34 @@ export class TabSync extends Module {
         return true;
       }
       if (Date.now() >= deadline) {
+        return false;
+      }
+    }
+  }
+
+  /**
+   * Waits until no local render is in flight. A render can start right as
+   * another ends, so it checks again after each.
+   * @param deadline - when to give up
+   * @returns false when a render still runs at the deadline
+   */
+  private async renderSettled(deadline: number): Promise<boolean> {
+    for (;;) {
+      const pending = this.Blok.Renderer.pendingRender;
+
+      if (pending === null) {
+        return true;
+      }
+      const timer: { id: ReturnType<typeof setTimeout> | undefined } = { id: undefined };
+      const ended = await Promise.race([
+        pending.then(() => true),
+        new Promise<boolean>((resolve) => {
+          timer.id = setTimeout(() => resolve(false), Math.max(0, deadline - Date.now()));
+        }),
+      ]);
+
+      clearTimeout(timer.id);
+      if (!ended) {
         return false;
       }
     }
@@ -1485,6 +1555,7 @@ export class TabSync extends Module {
     this.heldUpdates = null;
     this.outbox = [];
     this.outboxScheduled = false;
+    this.renderBeforeReadOnly = null;
     this.waitingForState = false;
     this.savedDuringJoin = null;
     this.leaderId = null;

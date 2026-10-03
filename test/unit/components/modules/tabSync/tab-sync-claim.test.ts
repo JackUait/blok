@@ -204,6 +204,89 @@ describe('TabSync — the leader follows the tab the user works in', () => {
     expect(kinds(seen, 'yield')).toEqual([expect.objectContaining({ to: expect.any(String), version: null })]);
   });
 
+  /** A local render in `tab` that runs until the returned function ends it. */
+  const holdRender = ({ fake }: Tab): (() => void) => {
+    const end = { run: (): void => undefined };
+
+    fake.Renderer.pendingRender = new Promise<void>((resolve) => {
+      end.run = () => {
+        fake.Renderer.pendingRender = null;
+        resolve();
+      };
+    });
+
+    return () => end.run();
+  };
+
+  it('a follower claims only once its local render ends', async () => {
+    const { a, b } = await twoTabs();
+    const seen = listen();
+    const endRender = holdRender(b);
+
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + 1000);
+
+    expect(kinds(seen, 'claim')).toEqual([]);
+
+    endRender();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(kinds(seen, 'claim')).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(b.sync.role).toBe('leader');
+    expect(a.sync.role).toBe('follower');
+  });
+
+  it('a follower that goes inactive while its render runs does not claim when it ends', async () => {
+    const { b } = await twoTabs();
+    const seen = listen();
+    const endRender = holdRender(b);
+
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + 100);
+    b.activity.set(false);
+    endRender();
+    await vi.advanceTimersByTimeAsync(CLAIM_TIMEOUT_MS * 2);
+
+    expect(kinds(seen, 'claim')).toEqual([]);
+    expect(b.sync.role).toBe('follower');
+  });
+
+  it('a leader yields only once its local render ends', async () => {
+    const { a, b } = await twoTabs();
+    const seen = listen();
+    const endRender = holdRender(a);
+
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + 1000);
+
+    expect(kinds(seen, 'yield')).toEqual([]);
+    expect(a.sync.role).toBe('leader');
+
+    endRender();
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(kinds(seen, 'yield')).toHaveLength(1);
+    expect(b.sync.role).toBe('leader');
+  });
+
+  it('a leader whose render outlasts the yield deadline posts no yield; the claimant steals', async () => {
+    const { a, b } = await twoTabs();
+    const seen = listen();
+
+    holdRender(a);
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 100);
+
+    expect(kinds(seen, 'yield')).toEqual([]);
+
+    await vi.advanceTimersByTimeAsync(CLAIM_TIMEOUT_MS);
+
+    expect(kinds(seen, 'yield')).toEqual([]);
+    expect(b.sync.role).toBe('leader');
+    expect(a.sync.role).toBe('follower');
+  });
+
   it('a follower that loses focus within the settle delay does not claim', async () => {
     const { a, b } = await twoTabs();
     const seen = listen();

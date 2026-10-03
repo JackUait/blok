@@ -1666,6 +1666,24 @@ describe('TableCellSelection', () => {
       expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
     });
 
+    it('moves the box to a newly pressed cell before the button is released', () => {
+      simulateClick(grid, 0, 0);
+
+      const next = grid.querySelectorAll(`[${ROW_ATTR}]`)[1]
+        ?.querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+
+      next.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(1);
+      expect(next.hasAttribute(SELECTED_ATTR)).toBe(true);
+      expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).not.toBeNull();
+
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      expect(next.hasAttribute(SELECTED_ATTR)).toBe(true);
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(1);
+    });
+
     it('marks the clicked cell as selected', () => {
       simulateClick(grid, 1, 1);
 
@@ -2195,7 +2213,10 @@ describe('TableCellSelection', () => {
         }
         observe(el: Element): void { observedElements.push(el); }
         unobserve(): void { /* no-op */ }
-        disconnect(): void { disconnectCalls++; }
+        disconnect(): void {
+          disconnectCalls++;
+          observedElements = [];
+        }
       };
 
       // Re-create selection with the mocked ResizeObserver
@@ -2219,12 +2240,13 @@ describe('TableCellSelection', () => {
 
     it('disconnects observer when selection is cleared', () => {
       simulateDrag(grid, 0, 0, 1, 1);
-      expect(disconnectCalls).toBe(0);
+
+      const callsAfterDrag = disconnectCalls;
 
       // Click outside to clear selection
       document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
 
-      expect(disconnectCalls).toBeGreaterThan(0);
+      expect(disconnectCalls).toBeGreaterThan(callsAfterDrag);
     });
 
     it('repositions overlay when resize observer fires', () => {

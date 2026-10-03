@@ -479,6 +479,20 @@ export class TableCellSelection {
     }
 
     this.anchorCell = cell;
+
+    if (!clickedSameCell) {
+      /**
+       * Draw the box on the pressed cell now, without making it a selection
+       * yet — pointerup still decides that. Leaving the table with no box while
+       * the button is held reads as a blink.
+       */
+      this.extentCell = cell;
+      this.paintSelection();
+      // The old box's document clear handler runs after this one and would
+      // wipe the box just drawn. That box is already cleared above.
+      document.removeEventListener('pointerdown', this.boundClearSelection);
+    }
+
     this.isSelecting = false;
     this.dragAxis = inlineAxis(getElementDirection(this.grid));
 
@@ -607,6 +621,10 @@ export class TableCellSelection {
           this.anchorCell.row,
           this.anchorCell.col,
         );
+      } else {
+        // Drop the box pointerdown drew; the inner selection wins.
+        this.restoreModifiedCells();
+        this.lastPaintedRange = null;
       }
     }
 
@@ -1313,10 +1331,26 @@ export class TableCellSelection {
     }
 
     if (this.pill) {
-      // Centre of the 2px inline-end border; translate(-50%,-50%) handles centering
       const isRtl = gridStyle.direction === 'rtl';
+      const borderRight = parseFloat(gridStyle.borderRightWidth) || 0;
+      /**
+       * At the grid's inline-end edge a centred pill hangs half outside, and the
+       * table's scroll container clips that half. There the pill's outer edge
+       * sits on the border instead, so it grows inward when hovered.
+       */
+      const atInlineEnd = isRtl
+        ? rangeLeft <= gridRect.left + borderLeft + 1
+        : rangeRight >= gridRect.right - borderRight - 1;
 
-      this.pill.style.left = `${isRtl ? left + 1 : left + width - 1}px`;
+      if (atInlineEnd) {
+        this.pill.style.left = `${isRtl ? left : left + width}px`;
+        this.pill.style.transform = isRtl ? 'translate(0, -50%)' : 'translate(-100%, -50%)';
+      } else {
+        // Centre of the 2px inline-end border
+        this.pill.style.left = `${isRtl ? left + 1 : left + width - 1}px`;
+        this.pill.style.transform = 'translate(-50%, -50%)';
+      }
+
       this.pill.style.top = `${top + height / 2}px`;
     }
   }

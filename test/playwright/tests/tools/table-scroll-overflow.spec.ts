@@ -187,4 +187,36 @@ test.describe('table horizontal overflow', () => {
     // never be dragged.
     expect(handleRight).toBeGreaterThanOrEqual(gridRight - 2);
   });
+
+  test('the cell pill of a last-column cell is not cut by the scroll container', async ({ page }) => {
+    await createBlok(page, { data: fluidTable(3) });
+
+    await page.locator(`${SCROLL_SELECTOR} [data-blok-table-cell]`).nth(2).click();
+
+    const pill = page.locator(`${SCROLL_SELECTOR} [data-blok-table-selection-pill]`);
+
+    await expect(pill).toBeVisible();
+
+    const pillInsideScroll = async (): Promise<{ pillRight: number; scrollRight: number }> =>
+      pill.evaluate((el) => {
+        const sc = el.closest('[data-blok-table-scroll]');
+
+        if (!(sc instanceof HTMLElement)) {
+          throw new Error('scroll container not found');
+        }
+
+        return { pillRight: el.getBoundingClientRect().right, scrollRight: sc.getBoundingClientRect().right };
+      });
+
+    const idle = await pillInsideScroll();
+
+    expect(idle.pillRight).toBeLessThanOrEqual(idle.scrollRight);
+
+    await pill.hover();
+    await expect.poll(async () => (await pill.boundingBox())?.width ?? 0).toBeGreaterThan(4);
+
+    const hovered = await pillInsideScroll();
+
+    expect(hovered.pillRight).toBeLessThanOrEqual(hovered.scrollRight);
+  });
 });

@@ -1551,12 +1551,14 @@ export class TabSync extends Module {
 
       return;
     }
+    const timer: { id: ReturnType<typeof setTimeout> | undefined } = { id: undefined };
     const wait = Promise.race([
       Promise.all([this.Blok.ModificationsObserver.whenSavesSettled(), request]),
       new Promise((resolve) => {
-        setTimeout(resolve, TAKEOVER_SETTLE_WAIT_MS);
+        timer.id = setTimeout(resolve, TAKEOVER_SETTLE_WAIT_MS);
       }),
     ]).then(() => {
+      clearTimeout(timer.id);
       if (this.releaseWait === wait && this.session === session && this.currentRole === 'follower') {
         this.cancelQueue(session);
       }

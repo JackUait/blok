@@ -205,12 +205,13 @@ describe('TabSync — the leader follows the tab the user works in', () => {
   });
 
   /** A local render in `tab` that runs until the returned function ends it. */
-  const holdRender = ({ fake }: Tab): (() => void) => {
+  const holdRender = (t: Tab): (() => void) => {
+    const { Renderer } = t.fake;
     const end = { run: (): void => undefined };
 
-    fake.Renderer.pendingRender = new Promise<void>((resolve) => {
+    Renderer.pendingRender = new Promise<void>((resolve) => {
       end.run = () => {
-        fake.Renderer.pendingRender = null;
+        Renderer.pendingRender = null;
         resolve();
       };
     });

@@ -6,6 +6,8 @@ import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, MIN_COL_WIDTH, ROW_ATTR } from 
 import { gridX } from './table-direction';
 
 const RESIZE_ATTR = 'data-blok-table-resize';
+/** Set by TableCellSelection on the box it draws around the selected cells. */
+const SELECTION_OVERLAY_SELECTOR = ':scope > [data-blok-table-selection-overlay]';
 const HANDLE_HIT_WIDTH = 16;
 const RESIZE_LINE_WIDTH = 2;
 /** Two clicks on the same handle within this window count as a double-click. */
@@ -137,12 +139,16 @@ export class TableResize {
     handle.style.opacity = '0';
     handle.style.transition = 'opacity 150ms ease';
     handle.setAttribute('contenteditable', 'false');
+    this.roundOuterEdge(handle, colIndex);
 
-    handle.addEventListener('mouseenter', () => {
+    const showUnlessOnSelection = (e: MouseEvent): void => {
       if (!this.isDragging) {
-        handle.style.opacity = '1';
+        handle.style.opacity = this.isOnSelectionEdge(handle, e.clientY) ? '0' : '1';
       }
-    });
+    };
+
+    handle.addEventListener('mouseenter', showUnlessOnSelection);
+    handle.addEventListener('mousemove', showUnlessOnSelection);
 
     handle.addEventListener('mouseleave', () => {
       if (!this.isDragging) {
@@ -151,6 +157,47 @@ export class TableResize {
     });
 
     return handle;
+  }
+
+  /**
+   * The selected cell's box draws its own inline-end border with the options
+   * pill on it, so the resize line there would paint over both. The overlay
+   * edge sits within the hit width of exactly one handle.
+   */
+  private isOnSelectionEdge(handle: HTMLElement, clientY: number): boolean {
+    const overlay = this.gridEl.querySelector<HTMLElement>(SELECTION_OVERLAY_SELECTOR);
+
+    if (overlay === null) {
+      return false;
+    }
+
+    const box = overlay.getBoundingClientRect();
+
+    if (clientY < box.top || clientY > box.bottom) {
+      return false;
+    }
+
+    const edgeX = getElementDirection(this.gridEl) === 'rtl' ? box.left : box.right;
+    const handleRect = handle.getBoundingClientRect();
+
+    return edgeX >= handleRect.left && edgeX <= handleRect.right;
+  }
+
+  /**
+   * The last handle's line runs along the table's outer edge, so its outer
+   * corners follow the table's rounding.
+   */
+  private roundOuterEdge(handle: HTMLElement, colIndex: number): void {
+    const isOuter = colIndex === this.colWidths.length - 1;
+    const isRtl = getElementDirection(this.gridEl) === 'rtl';
+    const right = isOuter && !isRtl ? 'var(--blok-radius-table)' : '';
+    const left = isOuter && isRtl ? 'var(--blok-radius-table)' : '';
+    const el: HTMLElement = handle;
+
+    el.style.borderTopRightRadius = right;
+    el.style.borderBottomRightRadius = right;
+    el.style.borderTopLeftRadius = left;
+    el.style.borderBottomLeftRadius = left;
   }
 
   /**
@@ -327,6 +374,7 @@ export class TableResize {
 
       handleEl.style.left = `${this.getHandleOffsetPx(i)}px`;
       handleEl.style.setProperty('--blok-table-resize-line-x', `${this.getLineOffsetPx(i)}px`);
+      this.roundOuterEdge(handleEl, i);
     });
   }
 
@@ -437,7 +485,7 @@ export class TableResize {
    * render/save. Committing keeps model and DOM in agreement and keeps the
    * result the user was looking at when the gesture was taken away.
    */
-  private onPointerEnd(): void {
+  private onPointerEnd(e: PointerEvent): void {
     if (!this.isDragging) {
       return;
     }
@@ -454,7 +502,7 @@ export class TableResize {
 
     // Released still on the border: keep the line. Hiding it here and letting
     // the next mouseenter bring it back blinks it.
-    if (activeHandle && !activeHandle.matches(':hover')) {
+    if (activeHandle && (!activeHandle.matches(':hover') || this.isOnSelectionEdge(activeHandle, e.clientY))) {
       activeHandle.style.opacity = '0';
     }
 

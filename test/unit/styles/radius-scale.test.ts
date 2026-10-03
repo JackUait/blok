@@ -48,6 +48,7 @@ const ROLES: Record<string, string> = {
   'control-sm': '4',
   mark: '2',
   floor: '4',
+  table: '2',
 };
 
 describe('radius primitives', () => {
@@ -86,10 +87,6 @@ describe('radius roles', () => {
 
   it('keeps sub-step notches (crop handles, carets) on one micro token', () => {
     expect(toPx(declared(colors, '--blok-radius-notch') ?? '')).toBe(1.5);
-  });
-
-  it('softens the table frame by just 1px, below the scale', () => {
-    expect(toPx(declared(colors, '--blok-radius-table') ?? '')).toBe(1);
   });
 });
 

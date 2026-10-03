@@ -373,9 +373,9 @@
   --blok-radius-floor: var(--blok-radius-4);
   /* Below the scale on purpose: chevron and caret stroke ends, and the find lens. */
   --blok-radius-notch: 0.09375rem;
-  /* Below the scale on purpose: only softens the table frame. Corner cells
-     reuse it as is; at 1px the inside-the-line difference is not visible. */
-  --blok-radius-table: 0.0625rem;
+  /* Table frame. Corner cells reuse it as is: at this size the 1px inside-the-line
+     difference is not visible. */
+  --blok-radius-table: var(--blok-radius-2);
 
   /* Image resize-handle surface colors (Notion-style dark pill + white rim). */
   --blok-handle-bg-default: rgba(15, 15, 15, 0.6);

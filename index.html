@@ -1756,6 +1756,7 @@
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
     import { PAGE_HEADER_MORPH, PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkMorph, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
+    import { mountPageTree } from './src/playground/page-tree.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
@@ -2008,6 +2009,8 @@
      * is one page from the registry, each its own document and its own editor.
      */
     const pages = new PageRegistry(SEED_PAGES);
+    // Set once the editor is up; renderHeader and storeBlocks run before that.
+    let pageTree = null;
     const pageHeader = document.getElementById('page-header');
     const baseDocumentTitle = document.title;
     let currentPageId = pageIdFromPath(window.location.pathname);
@@ -2031,6 +2034,7 @@
     function storeBlocks(pageId, blocks) {
       if (pageId === null) rootBlocks = blocks;
       else pages.setBlocks(pageId, blocks);
+      pageTree?.refresh();
     }
 
     /**
@@ -2124,6 +2128,7 @@
       });
       updateDocumentTitle();
       alignPageHeader(pageHeader, document.getElementById('blok'));
+      pageTree?.refresh();
     }
     keepPageHeaderAligned(pageHeader, document.getElementById('blok'));
     // Capture: runs before the editor's own Backspace and ArrowUp handling.
@@ -2280,6 +2285,14 @@
     });
     renderHeader();
 
+    pageTree = mountPageTree({
+      pages,
+      blocksOf: (id) => (id === null ? (rootBlocks ?? DEFAULT_BLOCKS) : pages.get(id)?.blocks),
+      currentPageId: () => currentPageId,
+      href: (id) => pagePath(id, window.location.search),
+      navigate: (id) => goToPage(id),
+    });
+
     /**
      * Reinitialize editor with current state.
      * Debounced to prevent zombie instances when toggling multiple checkboxes rapidly.
@@ -2347,6 +2360,7 @@
       }
       if (activeTab && activeTab.parentElement === playgroundNav) navIndicator.select(activeTab);
       document.getElementById('tab-editor').classList.toggle('hidden', page !== 'editor');
+      pageTree.setAvailable(page === 'editor');
       document.getElementById('tab-block-states').classList.toggle('hidden', page !== 'block-states');
       document.getElementById('tab-icons').classList.toggle('hidden', page !== 'icons');
       document.getElementById('tab-rounding').classList.toggle('hidden', page !== 'rounding');
@@ -2500,6 +2514,7 @@
           sel.dispatchEvent(new Event('change'));
         },
         KeyX: () => document.getElementById('reset-content').click(),
+        KeyP: () => pageTree.toggle(),
       };
 
       const toolMatch = e.code.match(/^Digit([1-9])$/);

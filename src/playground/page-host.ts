@@ -234,6 +234,13 @@ export class PageRegistry {
     return Object.keys(this.pages).filter((id) => this.pages[id].restorePending === true && this.pages[id].parentId === parentId);
   }
 
+  /** The pages directly under `parentId` (null = the root document), trashed ones included. */
+  public children(parentId: string | null): Array<PageRecord & { id: string }> {
+    return Object.entries(this.pages)
+      .filter(([, page]) => page.parentId === parentId)
+      .map(([id, page]) => ({ ...page, id }));
+  }
+
   public restored(pageId: string): void {
     this.edit(pageId, ({ restorePending: _old, ...page }) => page);
   }

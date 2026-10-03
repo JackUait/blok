@@ -237,6 +237,26 @@ test.describe('table in RTL', () => {
       expect(Math.abs(center(rowGrip).x - startEdge)).toBeLessThanOrEqual(TOLERANCE);
     });
 
+    // The frame line is 1px wide and starts at the grid edge, so its centre is
+    // 0.5px INSIDE the grid. A grip centred 0.5px outside sits 1px off the line.
+    test(`${direction}: column and row grips are centred on the frame line`, async ({ page }) => {
+      await createBlok(page, tableData([['A', 'B'], ['C', 'D']]), direction);
+
+      const target = await box(page, cell(1, 0));
+
+      await page.mouse.move(center(target).x, center(target).y);
+      await expect(page.locator('[data-blok-table-grip-col="0"]')).toBeVisible();
+      await expect(page.locator('[data-blok-table-grip-row="1"]')).toBeVisible();
+
+      const grid = await box(page, GRID);
+      const colGrip = center(await box(page, '[data-blok-table-grip-col="0"]'));
+      const rowGrip = center(await box(page, '[data-blok-table-grip-row="1"]'));
+      const startLine = direction === 'rtl' ? grid.x + grid.width - 0.5 : grid.x + 0.5;
+
+      expect(Math.abs(colGrip.y - (grid.y + 0.5))).toBeLessThan(0.25);
+      expect(Math.abs(rowGrip.x - startLine)).toBeLessThan(0.25);
+    });
+
     test(`${direction}: dragging a column grip reorders toward the inline end`, async ({ page }) => {
       await createBlok(page, tableData([['A', 'B', 'C'], ['D', 'E', 'F']], [200, 200, 200]), direction);
 

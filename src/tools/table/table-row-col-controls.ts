@@ -489,7 +489,7 @@ export class TableRowColControls {
       const adjustedX = centerX + frame.gridOffset;
       const style = grip.style;
 
-      style.top = `${-BORDER_WIDTH / 2}px`;
+      style.top = `${BORDER_WIDTH / 2}px`;
       style.left = `${adjustedX}px`;
 
       // Hide grips scrolled out of the visible area
@@ -515,6 +515,8 @@ export class TableRowColControls {
 
   /**
    * Where the grid and the visible strip sit inside the grip container.
+   * A frame line starts at the grid edge and runs inward, so a grip centred on
+   * it sits BORDER_WIDTH / 2 inside that edge.
    * Row grips ride the scroller's inline-start edge, so they stay put while
    * the grid scrolls under them.
    */
@@ -524,11 +526,11 @@ export class TableRowColControls {
     if (!scroller) {
       const gridWidth = this.grid.offsetWidth;
 
-      return { gridOffset: 0, visibleStart: 0, visibleWidth: Infinity, rowGripX: gridX(-BORDER_WIDTH / 2, gridWidth, direction) };
+      return { gridOffset: 0, visibleStart: 0, visibleWidth: Infinity, rowGripX: gridX(BORDER_WIDTH / 2, gridWidth, direction) };
     }
 
     if (direction === 'ltr') {
-      return { gridOffset: -scroller.scrollLeft, visibleStart: 0, visibleWidth: scroller.clientWidth, rowGripX: -BORDER_WIDTH / 2 };
+      return { gridOffset: -scroller.scrollLeft, visibleStart: 0, visibleWidth: scroller.clientWidth, rowGripX: BORDER_WIDTH / 2 };
     }
 
     const containerLeft = (this.overlay ?? scroller).getBoundingClientRect().left;
@@ -538,7 +540,7 @@ export class TableRowColControls {
       gridOffset: this.grid.getBoundingClientRect().left - containerLeft,
       visibleStart: scrollerRect.left - containerLeft,
       visibleWidth: scroller.clientWidth,
-      rowGripX: scrollerRect.right - containerLeft + BORDER_WIDTH / 2,
+      rowGripX: scrollerRect.right - containerLeft - BORDER_WIDTH / 2,
     };
   }
 

@@ -289,9 +289,9 @@ describe('TableRowColControls', () => {
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
 
-      // The 1px border center is at y=-0.5px.
+      // The 1px top line spans y=0..1, so its centre is y=0.5px.
       // translate(-50%, -50%) handles offset from the center point.
-      expect(colGrips[0].style.top).toBe('-0.5px');
+      expect(colGrips[0].style.top).toBe('0.5px');
     });
 
     it('centers row grips on the left border line', () => {
@@ -310,9 +310,9 @@ describe('TableRowColControls', () => {
 
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
 
-      // The 1px border center is at x=-0.5px.
+      // The 1px start line spans x=0..1, so its centre is x=0.5px.
       // translate(-50%, -50%) handles offset from the center point.
-      expect(rowGrips[0].style.left).toBe('-0.5px');
+      expect(rowGrips[0].style.left).toBe('0.5px');
     });
   });
 

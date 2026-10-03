@@ -125,7 +125,7 @@ describe('TableRowColControls — geometry and grip state', () => {
       // change (sum→difference, ÷2→×2, edge index shift) moves the grip off
       // its column and the insert/delete it opens lands on the wrong one.
       expect(colGrips.map(g => g.style.left)).toEqual(['50px', '150px', '250px']);
-      expect(colGrips.map(g => g.style.top)).toEqual(['-0.5px', '-0.5px', '-0.5px']);
+      expect(colGrips.map(g => g.style.top)).toEqual(['0.5px', '0.5px', '0.5px']);
     });
 
     it('leaves a grip unpositioned when its column no longer has edges', () => {
@@ -1761,7 +1761,7 @@ describe('TableRowColControls — geometry and grip state', () => {
 
       // Row centre 400 + 40/2; the merged cell centre (160) would sit on a later row.
       expect(rowGrip.style.top).toBe('420px');
-      expect(rowGrip.style.left).toBe('-0.5px');
+      expect(rowGrip.style.left).toBe('0.5px');
     });
   });
 });

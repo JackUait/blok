@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid';
+import { mergeUpdates } from 'yjs';
 
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { I18nChanged, SettingChanged } from '../../events';
@@ -85,6 +86,15 @@ export class TabSync extends Module {
 
   /** Lets the last typing out after ReadOnly already reports enabled. */
   private flushingBeforeReadOnly = false;
+
+  /**
+   * Local updates not posted yet. One operation can write several (a render
+   * clears, then fills); posted apart, other tabs see the empty doc in
+   * between and each adds its own default block.
+   */
+  private outbox: Uint8Array[] = [];
+
+  private outboxScheduled = false;
 
   /** A tab update or diff changed this tab's document. */
   private receivedTabChange = false;
@@ -228,6 +238,7 @@ export class TabSync extends Module {
 
     // First: buffered typing sets dirtySinceSaved as it lands.
     this.Blok.YjsManager.flushPendingBlockWrites();
+    this.postOutbox();
     if (this.currentRole === 'leader' && this.hasUnsavedWork()) {
       this.Blok.ModificationsObserver.flushNow();
     }
@@ -297,6 +308,7 @@ export class TabSync extends Module {
     } finally {
       this.flushingBeforeReadOnly = false;
     }
+    this.postOutbox();
   }
 
   /** Off with `tabSync: false` and with `collaboration`, whose server already syncs tabs. */
@@ -528,9 +540,44 @@ export class TabSync extends Module {
       const role = this.currentRole;
 
       if ((this.flushingBeforeReadOnly || !this.Blok.ReadOnly.isEnabled) && (role === 'leader' || role === 'follower')) {
-        this.post({ kind: 'update', from: this.id, update });
+        this.queueOutbound(update);
       }
     });
+  }
+
+  /**
+   * Posts on a microtask, merged with the rest of the same task's updates.
+   * @param update - a local update
+   */
+  private queueOutbound(update: Uint8Array): void {
+    this.outbox.push(update);
+    if (this.outboxScheduled) {
+      return;
+    }
+    this.outboxScheduled = true;
+    queueMicrotask(() => this.postOutboxAfterRender());
+  }
+
+  /** A local render() spans awaits: its clear and its blocks go out as one update. */
+  private postOutboxAfterRender(): void {
+    const { pendingRender } = this.Blok.Renderer;
+
+    if (pendingRender !== null) {
+      void pendingRender.then(() => this.postOutboxAfterRender());
+
+      return;
+    }
+    this.postOutbox();
+  }
+
+  private postOutbox(): void {
+    const updates = this.outbox;
+
+    this.outbox = [];
+    this.outboxScheduled = false;
+    if (updates.length > 0) {
+      this.post({ kind: 'update', from: this.id, update: updates.length === 1 ? updates[0] : mergeUpdates(updates) });
+    }
   }
 
   /**
@@ -926,6 +973,7 @@ export class TabSync extends Module {
     this.queueAbort?.abort();
     this.queueAbort = null;
     this.heldUpdates = null;
+    this.outbox = [];
     this.waitingForState = false;
     this.savedDuringJoin = null;
     this.leaderId = null;

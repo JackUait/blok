@@ -306,6 +306,7 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
       }),
     },
     ReadOnly: { isEnabled: options.readOnly ?? false },
+    Renderer: { pendingRender: null as Promise<void> | null },
     I18n: { getLocale: (): string => 'en', update: vi.fn(async (_options: { locale: string }): Promise<void> => undefined) },
   };
 };

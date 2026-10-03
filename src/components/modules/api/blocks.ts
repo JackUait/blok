@@ -380,7 +380,8 @@ export class BlocksAPI extends Module {
     try {
       await this.Blok.BlockManager.clear();
 
-      return this.Blok.Paste.processText(data, true);
+      // Awaited: a bare return runs the finally before the paste lands.
+      return await this.Blok.Paste.processText(data, true);
     } finally {
       this.Blok.Renderer.markRenderEnd();
     }

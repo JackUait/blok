@@ -33,7 +33,11 @@ export class ViewStateAPI extends Module {
       ?? this.Blok.Saver.getDocumentRecordId();
 
     if (this.store === null) {
-      this.store = createViewStateStore({ scope });
+      this.store = createViewStateStore({
+        scope,
+        // Live follow is tab sync: off with `tabSync: false` and with collaboration.
+        followOtherTabs: this.config.tabSync !== false && this.config.collaboration === undefined,
+      });
       this.currentScope = scope;
     } else if (scope !== this.currentScope) {
       this.store.setScope(scope);

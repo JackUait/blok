@@ -41,6 +41,8 @@ export const createViewStateStore = (options: {
   scope: string | null;
   storage?: Storage | null;
   now?: () => number;
+  /** Off: other tabs' writes are not followed live; `get` still reads storage. */
+  followOtherTabs?: boolean;
 }): ViewStateStore => {
   const storage = options.storage === undefined ? defaultStorage() : options.storage;
   const now = options.now ?? Date.now;
@@ -137,8 +139,12 @@ export const createViewStateStore = (options: {
     }
   };
 
+  const follow = options.followOtherTabs !== false;
+
   sweep();
-  window.addEventListener('storage', onStorage);
+  if (follow) {
+    window.addEventListener('storage', onStorage);
+  }
 
   return {
     get: (blockId, key) => {

@@ -65,6 +65,23 @@ describe('ViewStateStore', () => {
     expect(listener).toHaveBeenCalledWith(true);
   });
 
+  it('ignores other tabs when live follow is off, but still reads the stored value', () => {
+    const store = createViewStateStore({ scope: 'd', followOtherTabs: false });
+    const listener = vi.fn();
+
+    store.subscribe('b1', 'open', listener);
+    localStorage.setItem('blok:view:d:b1:open', JSON.stringify({ v: true, t: Date.now() }));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'blok:view:d:b1:open',
+      newValue: JSON.stringify({ v: true, t: Date.now() }),
+      storageArea: localStorage,
+    }));
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(store.get('b1', 'open')).toBe(true);
+    store.destroy();
+  });
+
   it('drops entries older than the max age on creation', () => {
     localStorage.setItem('blok:view:d:old:open', JSON.stringify({ v: true, t: 0 }));
     createViewStateStore({ scope: 'd', now: () => VIEW_STATE_MAX_AGE_MS + 1 });

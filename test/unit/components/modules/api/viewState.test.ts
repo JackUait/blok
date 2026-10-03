@@ -117,6 +117,24 @@ describe('ViewStateAPI', () => {
     api.destroy();
   });
 
+  it.each([
+    ['default config', { documentId: 'doc-1' }, 1],
+    ['tabSync: false', { documentId: 'doc-1', tabSync: false }, 0],
+    ['collaboration', { documentId: 'doc-1', collaboration: { doc: 'room-1' }, server: '/s' }, 0],
+  ])('follows other tabs live only while tab sync is on (%s)', (_name, config, calls) => {
+    const api = createViewStateApi(config);
+    const listener = vi.fn();
+
+    api.methods.onChange('b1', 'open', listener);
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'blok:view:doc-1:b1:open',
+      newValue: JSON.stringify({ v: true, t: Date.now() }),
+    }));
+
+    expect(listener).toHaveBeenCalledTimes(calls);
+    api.destroy();
+  });
+
   it('stops hearing other tabs after destroy', () => {
     const api = createViewStateApi({ documentId: 'doc-1' });
     const listener = vi.fn();

@@ -378,6 +378,28 @@ describe('Core — a demoted leader never saves', () => {
     expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a by follower');
   }, 20_000);
 
+  it('a read-only tab set read-only again with a request out keeps the lock until the request lands', async () => {
+    const { leader, follower, store } = await twoStoredEditors('read-only-twice-request-out');
+
+    store.delayNext('leader', 1500);
+    await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a edited' });
+    await oneWindow();
+    expect(store.writes).toEqual([]);
+
+    await leader.moduleInstances.ReadOnly.set(true);
+    await wait(100);
+    // What an adapter does when only hideControls changes.
+    await leader.moduleInstances.ReadOnly.set(true, { hideControls: true });
+    await wait(300);
+    expect(follower.moduleInstances.TabSync.role).toBe('follower');
+    expect(store.writes).toEqual([]);
+
+    await until(() => expect(follower.moduleInstances.TabSync.role).toBe('leader'));
+    expect(store.writes[0]).toEqual(expect.objectContaining({ by: 'leader', ok: true }));
+    await until(() => expect(store.writes.some((write) => write.by === 'follower')).toBe(true));
+    expect(store.writes.every((write) => write.ok)).toBe(true);
+  }, 20_000);
+
   it('a leader whose lock is stolen while it serializes never delivers that save', async () => {
     const channel = vi.spyOn(browserTabPlatform, 'channel');
     const { leader, follower, followerActivity, store, hostSaves } = await twoStoredEditors('stolen-mid-serialization');

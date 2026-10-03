@@ -354,7 +354,9 @@ export class TabSync extends Module {
       this.stopClaim();
       if (this.currentRole === 'leader') {
         this.stepDown(session);
-      } else if (this.currentRole === 'follower') {
+      } else if (this.currentRole === 'follower' && this.releaseWait === null) {
+        // A repeat read-only call must keep stepDown's hold: the next leader
+        // would race the request still out.
         this.cancelQueue(session);
       }
 
@@ -1288,7 +1290,15 @@ export class TabSync extends Module {
    */
   private finishTakeover(): void {
     this.clearAwaitingSettle();
-    if (!this.holdsLock || !this.mayLead()) {
+    if (!this.holdsLock) {
+      return;
+    }
+    if (!this.mayLead()) {
+      // Never hold the lock without leading.
+      if (this.session !== null && this.currentRole === 'follower') {
+        this.cancelQueue(this.session);
+      }
+
       return;
     }
     // Only followers read leaderId; a `saved` heard while waiting may have set it.

@@ -432,6 +432,23 @@ describe('TabSync — the leader follows the tab the user works in', () => {
     endSerialization();
   });
 
+  it('a claimant that can no longer lead when its wait ends gives the lock up', async () => {
+    const { a, b } = await twoTabs();
+    const endSerialization = holdSerialization(a);
+
+    b.activity.set(true);
+    await vi.advanceTimersByTimeAsync(CLAIM_SETTLE_MS + YIELD_SAVE_WAIT_MS + 100);
+    expect(b.sync.role).toBe('follower');
+
+    // Read-only, but TabSync not told yet: only finishTakeover sees it.
+    b.fake.ReadOnly.isEnabled = true;
+    endSerialization();
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(b.sync.role).toBe('follower');
+    expect(a.sync.role).toBe('leader');
+  });
+
   it('a serialization and a request both out at the deadline: one report, after both', async () => {
     const { a, b } = await twoTabs();
     const request = holdRequest(a, 'v-slow');
@@ -633,6 +650,32 @@ describe('TabSync — the leader follows the tab the user works in', () => {
 
       expect(b.sync.role).toBe('leader');
       expect(b.save).toHaveBeenCalledWith({ blocks: [] }, { version: 'v-a2' });
+    });
+
+    it('keeps the lock when it is set read-only again before the request settles', async () => {
+      const { a, b, request } = await readOnlyWithRequestOut();
+
+      turnReadOnly(a);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(b.sync.role).toBe('follower');
+      expect(b.save).not.toHaveBeenCalled();
+
+      request.land();
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(b.sync.role).toBe('leader');
+      expect(b.save).toHaveBeenCalledWith({ blocks: [] }, { version: 'v-a2' });
+    });
+
+    it('still gives the lock up after 10 s when it is set read-only again and the request never settles', async () => {
+      const { a, b } = await readOnlyWithRequestOut();
+
+      turnReadOnly(a);
+      await vi.advanceTimersByTimeAsync(TAKEOVER_SETTLE_WAIT_MS - 1100);
+      expect(b.sync.role).toBe('follower');
+
+      await vi.advanceTimersByTimeAsync(200);
+      expect(b.sync.role).toBe('leader');
     });
 
     it('never retries a request that fails; the next leader leads once it does', async () => {

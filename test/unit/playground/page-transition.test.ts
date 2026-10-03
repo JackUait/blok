@@ -44,6 +44,12 @@ describe('page transition styles', () => {
     expect(orphan).toBeLessThanOrEqual(leave);
   });
 
+  it.each(['pg-page-title', 'pg-page-icon'])('flies the %s above the arriving page, whose opaque fill would cover it mid-flight', (name) => {
+    const zIndex = /z-index:\s*(\d+)/.exec(rule(`html.pg-page-nav::view-transition-group(${name})`));
+
+    expect(Number(zIndex?.[1] ?? 0)).toBeGreaterThan(0);
+  });
+
   it('keeps the page chrome (the root) crossfading instead of popping in at the new scroll', () => {
     expect(css).not.toMatch(/view-transition-(?:old|new)\(root\)[^{]*\{[^}]*animation:\s*none/);
   });

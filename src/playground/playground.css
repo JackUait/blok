@@ -199,6 +199,8 @@ html.pg-page-nav::view-transition-new(pg-page-in) {
 }
 html.pg-page-nav::view-transition-group(pg-page-title),
 html.pg-page-nav::view-transition-group(pg-page-icon) {
+  /* pg-page-in is named only after the swap, so its group stacks above these and its opaque fill hides them. */
+  z-index: 1;
   animation-duration: 460ms;
   animation-timing-function: var(--pg-page-glide);
 }

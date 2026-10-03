@@ -69,13 +69,24 @@ describe("tab sync guide", () => {
     expect(text).toContain("whatever `tabSync` says");
   });
 
-  it("says only the main tab saves and names the adapter bindings", () => {
+  it("says the tab you work in saves and names the adapter bindings", () => {
     const text = body("saving");
 
+    expect(text).toContain("the tab you are working in");
     expect(text).toContain("onSave");
     expect(text).toContain("v-model:data");
     expect(text).toContain("[formControl]");
     expect(text).toContain("editor.save()");
+    expect(text.toLowerCase()).toContain("background");
+    expect(at(en as Bundle, "api.tabSync.saving.title")).toBe("The tab you work in saves");
+  });
+
+  it("no longer speaks of a fixed main tab", () => {
+    for (const part of GUIDE_PARTS) {
+      expect(body(part), part).not.toContain("main tab");
+    }
+    expect(at(ru as Bundle, "api.tabSync.saving.body")).not.toContain("главн");
+    expect(at(ru as Bundle, "api.tabSync.limits.body")).not.toContain("главн");
   });
 
   it("says toggles start collapsed and isOpen is gone", () => {
@@ -130,11 +141,13 @@ describe("configuration rows for tab sync", () => {
     expect(enTable.onChange?.description).toBe(row?.description);
   });
 
-  it("says onSave runs only in the main tab", () => {
+  it("says onSave runs only in the tab you are working in", () => {
     const row = table.find((r) => r.option === "onSave");
 
-    expect(row?.description).toContain("main tab");
+    expect(row?.description).toContain("the tab you are working in");
+    expect(row?.description).not.toContain("main tab");
     expect(enTable.onSave?.description).toBe(row?.description);
+    expect(ruTable.onSave?.description).not.toContain("главн");
   });
 });
 

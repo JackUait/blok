@@ -400,6 +400,9 @@ export interface BlokState {
    * Never fires while the editor is in read-only mode (honored at delivery
    * time), so the handler needs no `api.readOnly.isEnabled` guard.
    *
+   * With tab sync, only the tab the user is working in calls it; background
+   * tabs of the same document stay passive.
+   *
    * Its PRESENCE is load-bearing: setting it makes blok serialize the whole
    * document once per change batch. Set it only when you consume the output —
    * wrapping an optional host callback in an always-truthy arrow (`onSave={(d) =>
@@ -738,7 +741,8 @@ export interface BlokMountOptions {
   /**
    * Live sync between tabs of this browser. On by default; `false` turns it
    * off. `{ settings: false }` keeps document sync but stops syncing locale,
-   * theme mode and width. Never active with `collaboration`.
+   * theme mode and width. Never active with `collaboration`. Only the tab the
+   * user is working in saves (`persistence.save`, `onSave`).
    * @default true
    */
   tabSync?: boolean | { settings?: boolean };

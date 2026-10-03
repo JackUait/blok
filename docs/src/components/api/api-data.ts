@@ -527,7 +527,7 @@ const editor = new Blok(config);`,
         type: "(data: OutputData, api: API) => void",
         default: "undefined",
         description:
-          "Reactive save callback. It fires automatically with the full serialized content on every batched content change, so you do not have to call save() by hand.\n\nIt rides the trailing edge of the batch window only. Unlike onChange it never leads the window, because serializing the whole document is too expensive to front-run the batch with.\n\nLive field: install, replace or unset it at runtime via `handlers.set({ onSave })`. Its mere presence makes Blok serialize the document once per change batch.\n\nWith tab sync, only the main tab calls it. In other tabs, read the document with `editor.save()`.",
+          "Reactive save callback. It fires automatically with the full serialized content on every batched content change, so you do not have to call save() by hand.\n\nIt rides the trailing edge of the batch window only. Unlike onChange it never leads the window, because serializing the whole document is too expensive to front-run the batch with.\n\nLive field: install, replace or unset it at runtime via `handlers.set({ onSave })`. Its mere presence makes Blok serialize the document once per change batch.\n\nWith tab sync, only the tab you are working in calls it. In background tabs, read the document with `editor.save()`.",
       },
       {
         option: "onReady",

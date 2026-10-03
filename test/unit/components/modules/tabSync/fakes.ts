@@ -247,7 +247,14 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
       }),
     },
     BlockManager: { clear: vi.fn(async () => {}), setRemoteOriginLabel: vi.fn() },
-    ModificationsObserver: { disable: vi.fn(), enable: vi.fn(), discardPendingChanges: vi.fn(), onRoleChanged: vi.fn(), flushNow: vi.fn() },
+    ModificationsObserver: {
+      disable: vi.fn(),
+      enable: vi.fn(),
+      discardPendingChanges: vi.fn(),
+      onRoleChanged: vi.fn(),
+      flushNow: vi.fn(),
+      hasUnsavedChanges: false,
+    },
     Saver: {
       getDocumentRecordId: () => recordId,
       hasMintedDocumentId: () => minted,

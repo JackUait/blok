@@ -5,6 +5,7 @@ import { resolveTabKey } from '../../../../../src/components/modules/tabSync/ide
 import type { LeaderLock, TabChannel } from '../../../../../src/components/modules/tabSync/platform';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import { expandPersistenceConfig, persistenceVersionAccess } from '../../../../../src/components/utils/persistence';
+import type { TabMessage } from '../../../../../src/components/modules/tabSync/messages';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { API, BlokConfig } from '../../../../../types';
@@ -110,6 +111,15 @@ describe('TabSync — edits, adopt, wake diff and hand-off', () => {
     return { a, b };
   };
 
+  /** Everything posted on KEY from now on, seen by a bystander channel. */
+  const listen = (): TabMessage[] => {
+    const seen: TabMessage[] = [];
+
+    platform.channel(KEY)?.onMessage((message) => seen.push(message));
+
+    return seen;
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -200,7 +210,7 @@ describe('TabSync — edits, adopt, wake diff and hand-off', () => {
     expect(persistenceVersionAccess(b.config.persistence)?.get()).toBe('v-later');
   });
 
-  it('a woken leader re-posts its saved version instead of asking for state', async () => {
+  it('a clean woken leader re-posts its saved version, without a reset', async () => {
     const { a, b } = await twoTabs();
 
     persistenceVersionAccess(a.config.persistence)?.set('v-leader');
@@ -208,7 +218,7 @@ describe('TabSync — edits, adopt, wake diff and hand-off', () => {
     await flush();
 
     expect(persistenceVersionAccess(b.config.persistence)?.get()).toBe('v-leader');
-    expect(a.fake.YjsManager.applyRemoteUpdate).not.toHaveBeenCalled();
+    expect(a.fake.YjsManager.resetForRelineage).not.toHaveBeenCalled();
     expect(a.sync.role).toBe('leader');
   });
 
@@ -239,7 +249,7 @@ describe('TabSync — edits, adopt, wake diff and hand-off', () => {
     expect(b.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
   });
 
-  it('a successor with nothing unsaved does not save again', async () => {
+  it('a successor saves once even after the leader said it saved', async () => {
     const { a, b } = await twoTabs({ persistence: true });
 
     b.fake.type('saved soon');
@@ -249,22 +259,120 @@ describe('TabSync — edits, adopt, wake diff and hand-off', () => {
     a.sync.destroy();
     await flush();
 
+    // Promotion always saves: `saved` can predate an edit the leader never saved.
     expect(b.sync.role).toBe('leader');
-    expect(b.fake.ModificationsObserver.flushNow).not.toHaveBeenCalled();
+    expect(b.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
   });
 
-  it('a woken leader with unsaved edits does not tell followers they are saved', async () => {
-    const { a, b } = await twoTabs();
+  it('the successor saves the old leader edits it adopted at join', async () => {
+    const a = await tab({ recordId: 'A' });
 
-    b.fake.type('x');
+    a.fake.type('x');
+    const b = await tab({ recordId: 'B' });
+
     await flush();
-    await a.sync.resync();
-    await flush();
+    expect(b.fake.text()).toBe('x');
     a.sync.destroy();
     await flush();
 
     expect(b.sync.role).toBe('leader');
     expect(b.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('a woken leader asks the followers for the edits it missed, without a reset', async () => {
+    const { a, b } = await twoTabs();
+
+    a.pauseInbound();
+    b.fake.type('from b');
+    await flush();
+    a.resumeInbound();
+    expect(a.fake.text()).toBe('');
+    await a.sync.resync();
+    await flush();
+
+    expect(a.fake.text()).toContain('from b');
+    expect(a.fake.YjsManager.resetForRelineage).not.toHaveBeenCalled();
+    expect(a.sync.role).toBe('leader');
+  });
+
+  it('a woken leader keeps its own version, not a follower one', async () => {
+    const { a, b } = await twoTabs();
+
+    persistenceVersionAccess(a.config.persistence)?.set('v-leader');
+    persistenceVersionAccess(b.config.persistence)?.set('v-stale');
+    a.pauseInbound();
+    b.fake.type('from b');
+    await flush();
+    a.resumeInbound();
+    await a.sync.resync();
+    await flush();
+
+    expect(a.fake.text()).toContain('from b');
+    expect(persistenceVersionAccess(a.config.persistence)?.get()).toBe('v-leader');
+  });
+
+  it('only the leader answers a woken follower', async () => {
+    const { b } = await twoTabs();
+
+    await tab({ recordId: 'C' });
+    await flush();
+    const seen = listen();
+
+    await b.sync.resync();
+    await flush();
+
+    expect(seen.filter((m) => m.kind === 'state')).toHaveLength(1);
+  });
+
+  it('followers answer a woken successor that has saved once', async () => {
+    const { a, b } = await twoTabs({ persistence: true });
+    const c = await tab({ recordId: 'C', persistence: true });
+
+    await flush();
+    a.sync.destroy();
+    await flush();
+    expect(b.sync.role).toBe('leader');
+    b.config.onSave?.({ blocks: [] }, apiStub);
+    await flush();
+    b.pauseInbound();
+    c.fake.type('from c');
+    await flush();
+    b.resumeInbound();
+    await b.sync.resync();
+    await flush();
+
+    expect(b.fake.text()).toContain('from c');
+  });
+
+  it('a leader with an edit that came in during its save still saves on unload and sends no heartbeat', async () => {
+    const { a } = await twoTabs({ persistence: true });
+    const seen = listen();
+
+    a.fake.type('x');
+    await flush();
+    a.config.onSave?.({ blocks: [] }, apiStub);
+    // The edit that landed while that save was in flight: the observer re-armed for it.
+    a.fake.ModificationsObserver.hasUnsavedChanges = true;
+    await flush();
+    seen.length = 0;
+    await a.sync.resync();
+    await flush();
+    a.sync.flushBeforeUnload();
+
+    expect(seen.filter((m) => m.kind === 'saved')).toEqual([]);
+    expect(a.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('a woken leader with unsaved edits does not tell followers they are saved', async () => {
+    const { a, b } = await twoTabs();
+    const seen = listen();
+
+    b.fake.type('x');
+    await flush();
+    await a.sync.resync();
+    await flush();
+
+    expect(seen.filter((m) => m.kind === 'saved')).toEqual([]);
   });
 
   it('a joiner takes a version the leader saved while it was adopting', async () => {

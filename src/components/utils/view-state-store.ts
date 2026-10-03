@@ -44,13 +44,47 @@ export const createViewStateStore = (options: {
 }): ViewStateStore => {
   const storage = options.storage === undefined ? defaultStorage() : options.storage;
   const now = options.now ?? Date.now;
-  const memory = new Map<string, unknown>();
+  // One bucket per scope, so a scope switch never reads another document's values.
+  const memory = new Map<string | null, Map<string, unknown>>();
   const listeners = new Map<string, Set<(value: unknown) => void>>();
   const current = { scope: options.scope };
 
   const memoryKey = (blockId: string, key: string): string => `${blockId}:${key}`;
-  const storageKey = (blockId: string, key: string): string | null =>
-    current.scope === null ? null : `${VIEW_STATE_PREFIX}${current.scope}:${blockId}:${key}`;
+  const storageKey = (id: string): string | null =>
+    current.scope === null ? null : `${VIEW_STATE_PREFIX}${current.scope}:${id}`;
+
+  const bucket = (scope: string | null): Map<string, unknown> => {
+    const existing = memory.get(scope);
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const created = new Map<string, unknown>();
+
+    memory.set(scope, created);
+
+    return created;
+  };
+
+  const persist = (id: string, value: unknown): void => {
+    const persisted = storageKey(id);
+
+    if (persisted === null || storage === null) {
+      return;
+    }
+
+    try {
+      storage.setItem(persisted, JSON.stringify({ v: value, t: now() }));
+    } catch {
+      // A stale stored entry would beat the newer value held in memory.
+      try {
+        storage.removeItem(persisted);
+      } catch {
+        // Storage blocked entirely: memory already wins.
+      }
+    }
+  };
 
   const notify = (id: string, value: unknown): void => {
     listeners.get(id)?.forEach((listener) => listener(value));
@@ -87,7 +121,7 @@ export const createViewStateStore = (options: {
     const id = event.key.slice(prefix.length);
     const value = parse(event.newValue)?.v;
 
-    memory.set(id, value);
+    bucket(current.scope).set(id, value);
     notify(id, value);
   };
 
@@ -108,23 +142,17 @@ export const createViewStateStore = (options: {
 
   return {
     get: (blockId, key) => {
-      const persisted = storageKey(blockId, key);
+      const id = memoryKey(blockId, key);
+      const persisted = storageKey(id);
       const entry = persisted === null ? null : readPersisted(persisted);
 
-      return entry === null ? memory.get(memoryKey(blockId, key)) : entry.v;
+      return entry === null ? memory.get(current.scope)?.get(id) : entry.v;
     },
     set: (blockId, key, value) => {
       const id = memoryKey(blockId, key);
-      const persisted = storageKey(blockId, key);
 
-      memory.set(id, value);
-      if (persisted !== null && storage !== null) {
-        try {
-          storage.setItem(persisted, JSON.stringify({ v: value, t: now() }));
-        } catch {
-          // Quota or blocked storage: memory still holds it for this tab.
-        }
-      }
+      bucket(current.scope).set(id, value);
+      persist(id, value);
       notify(id, value);
     },
     subscribe: (blockId, key, listener) => {
@@ -139,7 +167,19 @@ export const createViewStateStore = (options: {
       };
     },
     setScope: (next) => {
+      const adopting = current.scope === null && next !== null;
+      const pending = adopting ? memory.get(null) : undefined;
+
       current.scope = next;
+      if (pending === undefined) {
+        return;
+      }
+      // Values set before the document key was known move into the new scope.
+      memory.delete(null);
+      pending.forEach((value, id) => {
+        bucket(next).set(id, value);
+        persist(id, value);
+      });
     },
     destroy: () => {
       window.removeEventListener('storage', onStorage);

@@ -72,6 +72,54 @@ describe('ViewStateStore', () => {
     expect(localStorage.getItem('blok:view:d:old:open')).toBeNull();
   });
 
+  it('does not leak one document\'s state into another after a scope switch', () => {
+    const store = createViewStateStore({ scope: 'a' });
+
+    store.set('b1', 'open', true);
+    store.setScope('b');
+
+    expect(store.get('b1', 'open')).toBeUndefined();
+  });
+
+  it('persists values set before the scope was known once it is set', () => {
+    const store = createViewStateStore({ scope: null });
+
+    store.set('b1', 'open', true);
+    store.setScope('d');
+
+    expect(createViewStateStore({ scope: 'd' }).get('b1', 'open')).toBe(true);
+    expect(store.get('b1', 'open')).toBe(true);
+  });
+
+  it('returns the new value when the write fails over an older stored one', () => {
+    const backing = new Map<string, string>();
+    const failing = { writes: false };
+    const storage: Storage = {
+      getItem: (key) => backing.get(key) ?? null,
+      setItem: (key, value) => {
+        if (failing.writes) {
+          throw new Error('quota');
+        }
+        backing.set(key, value);
+      },
+      removeItem: (key) => {
+        backing.delete(key);
+      },
+      key: (index) => Array.from(backing.keys())[index] ?? null,
+      clear: () => backing.clear(),
+      get length() {
+        return backing.size;
+      },
+    };
+    const store = createViewStateStore({ scope: 'd', storage });
+
+    store.set('b1', 'open', true);
+    failing.writes = true;
+    store.set('b1', 'open', false);
+
+    expect(store.get('b1', 'open')).toBe(false);
+  });
+
   it('stops listening after destroy', () => {
     const store = createViewStateStore({ scope: 'd' });
     const listener = vi.fn();

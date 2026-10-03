@@ -151,6 +151,30 @@ describe('ModificationsObserver — tab role', () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
+  it('hasPendingSave is set by an edit waiting for its save, not by a save in flight', async () => {
+    const { observer, save, emitBlockChanged } = setup({ role: 'leader' });
+
+    save.mockReturnValueOnce(new Promise<OutputData>(() => undefined));
+    expect(observer.hasPendingSave).toBe(false);
+    emitBlockChanged({ origin: 'local' });
+    expect(observer.hasPendingSave).toBe(true);
+
+    await flushWindow();
+    expect(observer.isSaving).toBe(true);
+    expect(observer.hasPendingSave).toBe(false);
+  });
+
+  it('onRoleChanged says whether it started a save', async () => {
+    const { observer, emitBlockChanged } = setup({ role: 'joining' });
+
+    expect(observer.onRoleChanged('leader')).toBe(false);
+    emitBlockChanged({ origin: 'local' });
+    await flushWindow();
+
+    expect(observer.onRoleChanged('follower', { keepPendingSave: true })).toBe(false);
+    expect(observer.onRoleChanged('leader')).toBe(true);
+  });
+
   it('a joining tab that becomes follower drops its held save and the close prompt', async () => {
     const { observer, onSave, emitBlockChanged } = setup({ role: 'joining' });
 

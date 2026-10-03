@@ -175,6 +175,8 @@ export interface PersistenceVersionAccess {
   set(version: string | null): void;
   /** Called after each successful save with the version the endpoint reported (or the one it kept). */
   onSaved(listener: (version: string | null) => void): () => void;
+  /** `saving` covers retries; `failed` = the payload is parked until the next save. */
+  saveState(): 'idle' | 'saving' | 'failed';
 }
 
 /**
@@ -663,6 +665,13 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
       return () => {
         savedListeners.delete(listener);
       };
+    },
+    saveState: () => {
+      if (queue.parked) {
+        return 'failed';
+      }
+
+      return queue.inFlight !== null || queue.pending !== null ? 'saving' : 'idle';
     },
   });
 

@@ -149,6 +149,40 @@ describe('persistenceVersionAccess', () => {
     expect(save).toHaveBeenCalledTimes(1);
   });
 
+  it('reports a save as running from the hand-off until it lands', async () => {
+    const landed: { resolve: () => void } = { resolve: () => undefined };
+    const save = vi.fn(() => new Promise<{ version: string }>((resolve) => {
+      landed.resolve = () => resolve({ version: 'v7' });
+    }));
+    const config = expand({ persistence: { load: async () => null, save } });
+    const access = persistenceVersionAccess(config.persistence);
+
+    expect(access?.saveState()).toBe('idle');
+    config.onSave?.({ blocks: [] }, apiStub);
+    expect(access?.saveState()).toBe('saving');
+
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    landed.resolve();
+
+    await vi.waitFor(() => expect(access?.saveState()).toBe('idle'));
+  });
+
+  it('reports a save as running through its retries, then failed once they run out', async () => {
+    vi.useFakeTimers();
+    const save = vi.fn().mockRejectedValue(new Error('down'));
+    const config = expand({ persistence: { load: async () => null, save, onError: () => undefined } });
+    const access = persistenceVersionAccess(config.persistence);
+
+    config.onSave?.({ blocks: [] }, apiStub);
+    await vi.advanceTimersByTimeAsync(600);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(access?.saveState()).toBe('saving');
+
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(save).toHaveBeenCalledTimes(3);
+    expect(access?.saveState()).toBe('failed');
+  });
+
   it('answers null for an editor without persistence', () => {
     expect(persistenceVersionAccess(undefined)).toBeNull();
   });

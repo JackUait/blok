@@ -234,6 +234,33 @@ describe('TabSync — edits, adopt, wake diff and hand-off', () => {
     expect(b.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
   });
 
+  it('the successor saves even when a save of its own was already in flight', async () => {
+    const { a, b } = await twoTabs();
+
+    b.fake.type('unsaved');
+    await flush();
+    // Only a save the promotion itself starts may stand in for this one.
+    b.fake.ModificationsObserver.isSaving = true;
+    a.sync.destroy();
+    await flush();
+
+    expect(b.sync.role).toBe('leader');
+    expect(b.fake.ModificationsObserver.flushNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('the successor does not save twice when its promotion already started a save', async () => {
+    const { a, b } = await twoTabs();
+
+    b.fake.type('unsaved');
+    await flush();
+    b.fake.ModificationsObserver.onRoleChanged.mockImplementation((role) => role === 'leader');
+    a.sync.destroy();
+    await flush();
+
+    expect(b.sync.role).toBe('leader');
+    expect(b.fake.ModificationsObserver.flushNow).not.toHaveBeenCalled();
+  });
+
   it('the successor saves a third tab edit the old leader never saved', async () => {
     const { a, b } = await twoTabs();
     const c = await tab({ recordId: 'C' });

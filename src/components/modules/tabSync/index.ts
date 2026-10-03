@@ -13,7 +13,7 @@ import { resolveTabKey } from './identity';
 import type { IdSource } from './identity';
 import type { TabMessage } from './messages';
 import { browserTabPlatform } from './platform';
-import type { LeaderLock, TabChannel, TabPlatform } from './platform';
+import type { LeaderLock, TabActivity, TabChannel, TabPlatform } from './platform';
 import { createSettingsChannel } from './settings-channel';
 import type { SettingMessage } from './settings-channel';
 
@@ -24,6 +24,20 @@ export type TabRole = 'solo' | 'joining' | 'leader' | 'follower';
 
 export const JOIN_TIMEOUT_MS = 3000;
 
+/** How long a follower stays visible and focused before it claims: debounces focus ping-pong. */
+export const CLAIM_SETTLE_MS = 300;
+
+/**
+ * A claimant that hears no yield by then steals the lock (a frozen leader).
+ * Also how long a tab that yielded waits for the claimant to take the lock.
+ */
+export const CLAIM_TIMEOUT_MS = 4000;
+
+/** How long a leader asked to yield waits for its save to land. Below CLAIM_TIMEOUT_MS. */
+export const YIELD_SAVE_WAIT_MS = 3000;
+
+const SAVE_POLL_MS = 50;
+
 interface StartContext { loadedFromPersistence: boolean; isEmpty: boolean }
 
 /** One live connection to the other tabs of this document. */
@@ -32,6 +46,8 @@ interface Session { key: string; channel: TabChannel; lock: LeaderLock; recordId
 /**
  * Keeps the open tabs of one document in sync over a BroadcastChannel. A Web
  * Lock picks the leader: it answers joining tabs and is the only tab that saves.
+ * The leader moves to the tab the user works in: a follower that turns visible
+ * and focused claims, the leader saves and yields, the claimant steals the lock.
  */
 export class TabSync extends Module {
   /** Sender id on the channel; a `state` answer is addressed to it. */
@@ -113,6 +129,41 @@ export class TabSync extends Module {
 
   private destroyed = false;
 
+  private activity: TabActivity | null = null;
+
+  private unsubscribeActivity: (() => void) | null = null;
+
+  private unsubscribeLost: (() => void) | null = null;
+
+  /** Activity as last seen: only a change to active arms a claim. */
+  private wasActive = false;
+
+  private settleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Set while this tab's claim waits for a yield; fires the steal. */
+  private claimTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Who changed this tab's document since it claimed (its own id for local
+   * edits). The yielding leader's save covers its own changes, not the rest.
+   */
+  private changedSinceClaim = new Set<string>();
+
+  /** True while this leader saves before it yields; one hand-over at a time. */
+  private yielding = false;
+
+  /** After a yield: leads again if the claimant never takes the lock. */
+  private handOverTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** This tab holds the lock, as leader or as a follower that yielded. */
+  private holdsLock = false;
+
+  /** The tab that yielded to this one; its late `saved` carries the version until this tab saves. */
+  private takeoverFrom: string | null = null;
+
+  /** The last tab seen yielding; its late `saved` must not make it the leader again. */
+  private yieldedBy: string | null = null;
+
   /** Lives apart from the document session: a failed join must not close it. */
   private settings: { channel: { close(): void }; documentKey: string | undefined } | null = null;
 
@@ -179,6 +230,8 @@ export class TabSync extends Module {
       this.unsubscribeSaved = persistenceVersionAccess(this.config.persistence)?.onSaved((version) => this.onSaved(version)) ?? null;
       this.Blok.BlockManager.setRemoteOriginLabel('tab');
       this.attachLifecycle();
+      this.unsubscribeLost = lock.onLost(() => this.onLockLost());
+      this.watchActivity();
 
       await this.enter();
     } catch (error) {
@@ -277,6 +330,7 @@ export class TabSync extends Module {
 
     if (readOnly) {
       this.postTypingBeforeReadOnly();
+      this.stopClaim();
       if (this.currentRole === 'leader' || this.currentRole === 'follower') {
         this.cancelQueue(session);
         // Its edit stays unsaved here: it is saved once this tab leads again.
@@ -288,6 +342,7 @@ export class TabSync extends Module {
 
     if (this.currentRole === 'follower' && this.queueAbort === null) {
       this.queueForLock(session);
+      this.claimIfActive();
     } else if (this.currentRole === 'solo' && !this.entering && !this.editedSinceStart) {
       // A solo tab with edits keeps saving on its own: leading would make the
       // others adopt them, and joining would drop them.
@@ -502,6 +557,7 @@ export class TabSync extends Module {
         // Went read-only while asking: a read-only leader saves nothing.
         session.lock.release();
       } else if (acquired) {
+        this.holdsLock = true;
         this.setRole('leader');
 
         return;
@@ -537,6 +593,7 @@ export class TabSync extends Module {
     this.unsubscribeOutbound = this.Blok.YjsManager.onDocUpdate((update) => {
       this.editedSinceStart = true;
       this.dirtySinceSaved = true;
+      this.changedSinceClaim.add(this.id);
 
       const role = this.currentRole;
 
@@ -612,22 +669,45 @@ export class TabSync extends Module {
 
         return;
       case 'update':
-        this.onUpdate(message.update);
+        this.onUpdate(message.update, message.from);
 
         return;
       case 'saved':
-        if (this.currentRole === 'follower') {
-          this.leaderId = message.from;
-          // A successor then saves with the right If-Match.
-          persistenceVersionAccess(this.config.persistence)?.set(message.version);
-          this.dirtySinceSaved = false;
-        } else if (this.currentRole === 'joining' && !this.waitingForState) {
-          this.savedDuringJoin = { version: message.version };
-        } else {
-          this.rejoinIfClean();
+        this.onSavedMessage(message);
+
+        return;
+      case 'claim':
+        if (this.currentRole === 'leader' && !this.yielding && !this.Blok.ReadOnly.isEnabled) {
+          void this.yieldTo(message.from);
         }
 
         return;
+      case 'yield':
+        this.onYield(message);
+
+        return;
+    }
+  }
+
+  /**
+   * @param message - another tab's report of a landed save
+   */
+  private onSavedMessage(message: Extract<TabMessage, { kind: 'saved' }>): void {
+    if (this.currentRole === 'follower') {
+      // A tab that yielded still reports its last save; it no longer leads.
+      if (message.from !== this.yieldedBy) {
+        this.leaderId = message.from;
+      }
+      // A successor then saves with the right If-Match.
+      persistenceVersionAccess(this.config.persistence)?.set(message.version);
+      this.dirtySinceSaved = false;
+    } else if (this.currentRole === 'leader' && message.from === this.takeoverFrom) {
+      // The old leader's save landed after it yielded; this tab saves next.
+      persistenceVersionAccess(this.config.persistence)?.set(message.version);
+    } else if (this.currentRole === 'joining' && !this.waitingForState) {
+      this.savedDuringJoin = { version: message.version };
+    } else {
+      this.rejoinIfClean();
     }
   }
 
@@ -656,20 +736,26 @@ export class TabSync extends Module {
 
   /**
    * @param update - a tab update
+   * @param from - the sending tab, when known
    */
-  private onUpdate(update: Uint8Array): void {
+  private onUpdate(update: Uint8Array, from: string | null): void {
     if (this.heldUpdates !== null) {
       this.heldUpdates.push(update);
 
       return;
     }
     if (this.currentRole === 'leader' || this.currentRole === 'follower') {
+      const applied = { changed: false };
+
       try {
-        this.applyTabUpdate(update);
+        applied.changed = this.applyTabUpdate(update);
       } catch (error) {
         this.fail('Tab sync could not apply a change from another tab; this tab works on its own.', error);
 
         return;
+      }
+      if (applied.changed && from !== null) {
+        this.changedSinceClaim.add(from);
       }
       // The leader may close before it saves this; its successor must know.
       this.dirtySinceSaved = true;
@@ -697,6 +783,9 @@ export class TabSync extends Module {
     }
     // Only from the leader: a follower's version may be stale. A frozen
     // follower missed every `saved` meanwhile.
+    if (changed.value) {
+      this.changedSinceClaim.add(message.from);
+    }
     if (this.currentRole === 'follower') {
       this.leaderId = message.from;
       persistenceVersionAccess(this.config.persistence)?.set(message.version);
@@ -740,7 +829,10 @@ export class TabSync extends Module {
    */
   private onSaved(version: string | null): void {
     this.dirtySinceSaved = false;
-    if (this.currentRole === 'leader') {
+    this.takeoverFrom = null;
+    // A follower that saves here started that save as leader, before it
+    // yielded: the new leader needs this version.
+    if (this.currentRole === 'leader' || this.currentRole === 'follower') {
       this.post({ kind: 'saved', from: this.id, version });
     }
   }
@@ -815,6 +907,7 @@ export class TabSync extends Module {
       // Before the held updates: one of them can throw.
       this.queueForLock(session);
       this.flushHeldUpdates();
+      this.claimIfActive();
     } catch (error) {
       this.fail('Tab sync could not take the other tab\'s document; this tab works on its own.', error);
     }
@@ -888,7 +981,7 @@ export class TabSync extends Module {
     const held = this.heldUpdates ?? [];
 
     this.heldUpdates = null;
-    held.forEach((update) => this.onUpdate(update));
+    held.forEach((update) => this.onUpdate(update, null));
   }
 
   /**
@@ -908,23 +1001,307 @@ export class TabSync extends Module {
       if (this.queueAbort === abort) {
         this.queueAbort = null;
       }
+      this.holdsLock = this.session === session;
       // isSameDocument() leaves when the host swapped the document meanwhile.
       if (this.session === session && this.currentRole === 'follower' && this.isSameDocument()) {
-        // Role first: the observer reads it live and saves only as leader.
-        this.setRole('leader');
-        // The adopted state, a wake diff or a `saved` that came before an edit
-        // can all hold changes the old leader never saved. An empty document
-        // nobody changed is skipped: it may be a boot doc, not the real one.
-        // A save the promotion just started already covers them.
-        const { ModificationsObserver } = this.Blok;
-
-        if (!ModificationsObserver.isSaving && (this.editedSinceStart || this.receivedTabChange || !this.isDocumentEmpty())) {
-          ModificationsObserver.flushNow();
-        }
+        this.promote();
       }
     }, () => {
       // Aborted or released by teardown.
     });
+  }
+
+  /**
+   * Leads after the lock came to this tab without a yield.
+   */
+  private promote(): void {
+    // Role first: the observer reads it live and saves only as leader. A save
+    // that promotion started already covers the changes below.
+    const started = this.setRole('leader');
+
+    // The adopted state, a wake diff or a `saved` that came before an edit
+    // can all hold changes the old leader never saved. An empty document
+    // nobody changed is skipped: it may be a boot doc, not the real one.
+    if (started) {
+      return;
+    }
+    if (this.editedSinceStart || this.receivedTabChange || !this.isDocumentEmpty()) {
+      this.Blok.ModificationsObserver.flushNow();
+    } else {
+      // Tells the followers who leads now.
+      this.postSaved();
+    }
+  }
+
+  /**
+   * Starts the settle delay when this follower is active now: it just joined
+   * or became editable.
+   */
+  private claimIfActive(): void {
+    if (this.activity?.isActive() === true) {
+      this.wasActive = true;
+      this.armClaim();
+    }
+  }
+
+  private watchActivity(): void {
+    this.activity = this.platform.activity();
+    this.wasActive = this.activity?.isActive() ?? false;
+    this.unsubscribeActivity = this.activity?.onChange(() => this.onActivityChange()) ?? null;
+  }
+
+  private onActivityChange(): void {
+    const active = this.activity?.isActive() ?? false;
+    const became = active && !this.wasActive;
+
+    this.wasActive = active;
+    if (!active) {
+      this.clearSettleTimer();
+    } else if (became) {
+      this.armClaim();
+    }
+  }
+
+  /** Read-only, solo and joining tabs never claim. */
+  private canClaim(): boolean {
+    return this.session !== null && this.currentRole === 'follower' && !this.Blok.ReadOnly.isEnabled;
+  }
+
+  private armClaim(): void {
+    if (!this.canClaim() || this.settleTimer !== null || this.claimTimer !== null) {
+      return;
+    }
+    this.settleTimer = setTimeout(() => {
+      this.settleTimer = null;
+      this.claim();
+    }, CLAIM_SETTLE_MS);
+  }
+
+  private claim(): void {
+    if (this.activity?.isActive() !== true) {
+      // A blur event may have read focus before it moved.
+      this.wasActive = false;
+
+      return;
+    }
+    if (!this.canClaim() || this.claimTimer !== null) {
+      return;
+    }
+    // The leader must hold all of this tab's typing before it sees the claim:
+    // one sender's messages arrive in order.
+    this.Blok.YjsManager.flushPendingBlockWrites();
+    this.postOutbox();
+    this.changedSinceClaim.clear();
+    this.claimTimer = setTimeout(() => {
+      this.claimTimer = null;
+      void this.takeOver(null);
+    }, CLAIM_TIMEOUT_MS);
+    this.post({ kind: 'claim', from: this.id });
+  }
+
+  private clearSettleTimer(): void {
+    if (this.settleTimer !== null) {
+      clearTimeout(this.settleTimer);
+      this.settleTimer = null;
+    }
+  }
+
+  private clearClaimTimer(): void {
+    if (this.claimTimer !== null) {
+      clearTimeout(this.claimTimer);
+      this.claimTimer = null;
+    }
+  }
+
+  private stopClaim(): void {
+    this.clearSettleTimer();
+    this.clearClaimTimer();
+  }
+
+  /**
+   * @param message - a yield, to this tab or to another
+   */
+  private onYield(message: Extract<TabMessage, { kind: 'yield' }>): void {
+    this.yieldedBy = message.from;
+    if (message.to === this.id) {
+      if (this.claimTimer !== null && this.canClaim()) {
+        this.clearClaimTimer();
+        void this.takeOver(message);
+      }
+
+      return;
+    }
+    if (this.currentRole === 'follower') {
+      this.leaderId = message.to;
+      persistenceVersionAccess(this.config.persistence)?.set(message.version);
+    }
+    // Another tab won; claim from it instead of stealing from it.
+    if (this.claimTimer !== null) {
+      this.clearClaimTimer();
+      this.claimIfActive();
+    }
+  }
+
+  /**
+   * Takes the lock from the leader.
+   * @param message - the leader's yield; null when it never answered
+   */
+  private async takeOver(message: Extract<TabMessage, { kind: 'yield' }> | null): Promise<void> {
+    const session = this.session;
+
+    if (session === null || !this.canClaim()) {
+      return;
+    }
+    // steal() drops this tab's place in line.
+    this.queueAbort?.abort();
+    this.queueAbort = null;
+    try {
+      await session.lock.steal();
+    } catch (error) {
+      log('Tab sync could not take the lock from the other tab.', 'debug', error);
+
+      return;
+    }
+    if (this.session !== session) {
+      return;
+    }
+    this.holdsLock = true;
+    if (!this.canClaim()) {
+      // Went read-only meanwhile: a read-only leader saves nothing.
+      this.holdsLock = false;
+      session.lock.release();
+
+      return;
+    }
+    if (message === null) {
+      // The leader never answered; its state is unknown.
+      this.promote();
+
+      return;
+    }
+    persistenceVersionAccess(this.config.persistence)?.set(message.version);
+    this.takeoverFrom = message.from;
+    this.leaderId = null;
+
+    const started = this.setRole('leader');
+
+    // The old leader saved what it had; only what others changed after the
+    // claim, or what its save missed, is left.
+    const changedByOthers = [...this.changedSinceClaim].some((tab) => tab !== message.from);
+
+    if (!started && (this.hasUnsavedWork() || changedByOthers)) {
+      this.Blok.ModificationsObserver.flushNow();
+    }
+  }
+
+  /**
+   * Saves, posts the version, then hands the lock to the claimant.
+   * @param to - the claiming tab
+   */
+  private async yieldTo(to: string): Promise<void> {
+    const session = this.session;
+
+    if (session === null) {
+      return;
+    }
+    this.yielding = true;
+    try {
+      this.Blok.YjsManager.flushPendingBlockWrites();
+      this.postOutbox();
+      // The observer, not dirtySinceSaved: the write buffer lands typing in
+      // the document after the save that already read it from the page.
+      if (this.Blok.ModificationsObserver.hasPendingSave) {
+        this.Blok.ModificationsObserver.flushNow();
+      }
+      const saved = await this.waitForSave(session);
+
+      // Read-only or teardown meanwhile: no hand-over; the claimant steals.
+      if (this.session !== session || this.currentRole !== 'leader') {
+        return;
+      }
+      // Without persistence no `saved` goes out on its own; the claimant would
+      // then save everything again.
+      if (saved && !this.Blok.ModificationsObserver.hasUnsavedChanges) {
+        this.postSaved();
+      }
+      this.post({ kind: 'yield', from: this.id, to, version: persistenceVersionAccess(this.config.persistence)?.get() ?? null });
+      this.leaderId = to;
+      if (saved) {
+        this.setRole('follower');
+      } else {
+        // The save may never land: keep the edit, as a read-only demotion does.
+        this.setRole('follower', { keepPendingSave: true });
+      }
+      this.watchHandOver(session);
+    } finally {
+      this.yielding = false;
+    }
+  }
+
+  /**
+   * Waits for the serialization and the store save to settle. Edits that come
+   * in meanwhile are the claimant's to save.
+   * @param session - the live session
+   * @returns false when the save failed or still runs at the deadline
+   */
+  private async waitForSave(session: Session): Promise<boolean> {
+    const access = persistenceVersionAccess(this.config.persistence);
+    const deadline = Date.now() + YIELD_SAVE_WAIT_MS;
+
+    for (;;) {
+      const state = access?.saveState() ?? 'idle';
+
+      if (!this.Blok.ModificationsObserver.isSaving && state !== 'saving') {
+        return state === 'idle';
+      }
+      if (Date.now() >= deadline || this.session !== session) {
+        return false;
+      }
+      await new Promise((resolve) => {
+        setTimeout(resolve, SAVE_POLL_MS);
+      });
+    }
+  }
+
+  /**
+   * A claimant that closed or turned read-only never takes the lock. This tab
+   * still holds it, so it leads again.
+   * @param session - the live session
+   */
+  private watchHandOver(session: Session): void {
+    this.clearHandOverTimer();
+    this.handOverTimer = setTimeout(() => {
+      this.handOverTimer = null;
+      if (this.session === session && this.holdsLock && this.currentRole === 'follower' && !this.Blok.ReadOnly.isEnabled) {
+        this.promote();
+      }
+    }, CLAIM_TIMEOUT_MS);
+  }
+
+  private clearHandOverTimer(): void {
+    if (this.handOverTimer !== null) {
+      clearTimeout(this.handOverTimer);
+      this.handOverTimer = null;
+    }
+  }
+
+  /**
+   * Another tab stole the lock: this tab saves nothing more and waits in line.
+   */
+  private onLockLost(): void {
+    const session = this.session;
+
+    this.holdsLock = false;
+    this.clearHandOverTimer();
+    if (session === null) {
+      return;
+    }
+    if (this.currentRole === 'leader') {
+      this.setRole('follower');
+    }
+    if (this.currentRole === 'follower' && this.queueAbort === null) {
+      this.queueForLock(session);
+    }
   }
 
   /**
@@ -934,6 +1311,8 @@ export class TabSync extends Module {
   private cancelQueue(session: Session): void {
     this.queueAbort?.abort();
     this.queueAbort = null;
+    this.holdsLock = false;
+    this.clearHandOverTimer();
     session.lock.release();
   }
 
@@ -982,6 +1361,16 @@ export class TabSync extends Module {
     this.waitingForState = false;
     this.savedDuringJoin = null;
     this.leaderId = null;
+    this.takeoverFrom = null;
+    this.yieldedBy = null;
+    this.holdsLock = false;
+    this.stopClaim();
+    this.clearHandOverTimer();
+    this.unsubscribeActivity?.();
+    this.unsubscribeActivity = null;
+    this.activity = null;
+    this.unsubscribeLost?.();
+    this.unsubscribeLost = null;
     this.stopSettleWait();
     this.unsubscribeOutbound?.();
     this.unsubscribeOutbound = null;
@@ -1010,16 +1399,22 @@ export class TabSync extends Module {
    * @param role - the new role
    * @param options - passed on to the observer
    * @param options.keepPendingSave - keep this tab's unsaved edit
+   * @returns whether the observer started a save for the new role
    */
-  private setRole(role: TabRole, options?: { keepPendingSave: boolean }): void {
+  private setRole(role: TabRole, options?: { keepPendingSave: boolean }): boolean {
     if (this.currentRole === role) {
-      return;
+      return false;
     }
     this.currentRole = role;
-    if (options === undefined) {
-      this.Blok.ModificationsObserver.onRoleChanged(role);
-    } else {
-      this.Blok.ModificationsObserver.onRoleChanged(role, options);
+    if (role !== 'follower') {
+      this.stopClaim();
     }
+    if (role === 'leader') {
+      this.clearHandOverTimer();
+    }
+
+    return options === undefined
+      ? this.Blok.ModificationsObserver.onRoleChanged(role)
+      : this.Blok.ModificationsObserver.onRoleChanged(role, options);
   }
 }

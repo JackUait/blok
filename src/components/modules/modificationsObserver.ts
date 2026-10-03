@@ -171,6 +171,13 @@ export class ModificationsObserver extends Module {
   }
 
   /**
+   * Whether an edit waits for a save that has not started yet.
+   */
+  public get hasPendingSave(): boolean {
+    return this.pendingSave;
+  }
+
+  /**
    * Whether a serialization for onSave is running.
    */
   public get isSaving(): boolean {
@@ -213,8 +220,9 @@ export class ModificationsObserver extends Module {
    * @param options - role change details
    * @param options.keepPendingSave - true when a leader turned read-only: its
    * edit cannot be saved now and nobody is known to have saved it
+   * @returns whether this call started a save
    */
-  public onRoleChanged(role: TabRole, { keepPendingSave = false }: { keepPendingSave?: boolean } = {}): void {
+  public onRoleChanged(role: TabRole, { keepPendingSave = false }: { keepPendingSave?: boolean } = {}): boolean {
     this.keepsOwnEdit = role === 'follower' && keepPendingSave;
 
     if (role === 'follower') {
@@ -222,12 +230,10 @@ export class ModificationsObserver extends Module {
         this.discardPendingSave();
       }
 
-      return;
+      return false;
     }
 
-    if (role === 'solo' || role === 'leader') {
-      this.saveIfPending();
-    }
+    return (role === 'solo' || role === 'leader') && this.saveIfPending();
   }
 
   /**
@@ -470,17 +476,18 @@ export class ModificationsObserver extends Module {
 
   /**
    * Serializes once if an edit is waiting and the host can still receive it.
+   * @returns whether a serialization started
    */
-  private saveIfPending(): void {
+  private saveIfPending(): boolean {
     if (!this.pendingSave || this.isDeliverySuppressed) {
-      return;
+      return false;
     }
 
     if (!isFunction(this.config.onSave)) {
       this.pendingSave = false;
       this.syncUnloadGuard();
 
-      return;
+      return false;
     }
 
     /**
@@ -491,6 +498,8 @@ export class ModificationsObserver extends Module {
      */
     this.pendingSave = false;
     this.emitOnSave();
+
+    return true;
   }
 
   /**

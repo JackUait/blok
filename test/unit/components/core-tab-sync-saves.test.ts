@@ -4,7 +4,9 @@ import { Core } from '../../../src/components/core';
 import { modificationsObserverBatchTimeout } from '../../../src/components/constants';
 import { releasePersistenceQueue } from '../../../src/components/utils/persistence';
 import { Paragraph, Toggle } from '../../../src/tools';
+import { browserTabPlatform } from '../../../src/components/modules/tabSync/platform';
 import type * as PlatformModule from '../../../src/components/modules/tabSync/platform';
+import { CLAIM_SETTLE_MS } from '../../../src/components/modules/tabSync';
 import type { BlokConfig, OutputBlockData, OutputData } from '../../../types';
 import type { BlockMutationEvent } from '../../../types/events/block';
 
@@ -426,5 +428,58 @@ describe('Core — the leader saves structural changes made in a follower', () =
     const saved = (onSave.mock.lastCall?.[0] as OutputData).blocks.find((block) => block.id === 'b');
 
     expect(saved?.data.text).toBe('six');
+  });
+});
+
+describe('Core — the tab the user works in saves', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    cores.splice(0).forEach(destroyCore);
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('a follower the user turns to takes over: the old leader saves its edit once, then only the new one saves', async () => {
+    const { createFakeActivity } = await import('./modules/tabSync/fakes');
+    const followerActivity = createFakeActivity();
+    const leaderSave = vi.fn();
+    const followerSave = vi.fn();
+    const activity = vi.spyOn(browserTabPlatform, 'activity');
+    const leader = createCore({ documentId: 'work-tab', data: document3(), onSave: leaderSave });
+
+    activity.mockImplementationOnce(() => createFakeActivity());
+    await leader.isReady;
+    await wait(50);
+    activity.mockImplementationOnce(() => followerActivity);
+    const follower = createCore({ documentId: 'work-tab', data: document3(), onSave: followerSave });
+
+    await follower.isReady;
+    await wait(100);
+    expect(follower.moduleInstances.TabSync.role).toBe('follower');
+    leaderSave.mockClear();
+
+    await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a by leader' });
+    followerActivity.set(true);
+    await wait(CLAIM_SETTLE_MS + 150);
+
+    expect(follower.moduleInstances.TabSync.role).toBe('leader');
+    expect(leader.moduleInstances.TabSync.role).toBe('follower');
+    expect(leaderSave).toHaveBeenCalledTimes(1);
+    expect((leaderSave.mock.lastCall?.[0] as OutputData).blocks[0].data.text).toBe('a by leader');
+
+    await oneWindow();
+    // Nothing changed after the hand-over, so the new leader adds no save of its own.
+    expect(followerSave).not.toHaveBeenCalled();
+
+    await follower.moduleInstances.API.methods.blocks.update('b', { text: 'b by follower' });
+    await oneWindow();
+
+    expect(followerSave).toHaveBeenCalledTimes(1);
+    expect((followerSave.mock.lastCall?.[0] as OutputData).blocks[1].data.text).toBe('b by follower');
+    expect(leaderSave).toHaveBeenCalledTimes(1);
   });
 });

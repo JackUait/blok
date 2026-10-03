@@ -642,9 +642,9 @@ exports[`column and database placement — characterization > adds a column on t
     ],
   },
   "events": [
-    "block-added n1 parentId=cl previousSiblingId=null index=2",
-    "block-moved z parentId=n1 previousSiblingId=null fromIndex=3 toIndex=3 oldParentId=null",
-    "block-changed t1 index=5",
+    "block-added n1 parentId=cl previousSiblingId=null index=2 origin=local",
+    "block-moved z parentId=n1 previousSiblingId=null fromIndex=3 toIndex=3 oldParentId=null origin=local",
+    "block-changed t1 index=5 origin=local",
   ],
   "undoSteps": 1,
 }
@@ -1292,9 +1292,9 @@ exports[`column and database placement — characterization > adds a column on t
     ],
   },
   "events": [
-    "block-added n1 parentId=cl previousSiblingId=c1 index=5",
-    "block-moved z parentId=n1 previousSiblingId=null fromIndex=6 toIndex=6 oldParentId=null",
-    "block-changed t1 index=3",
+    "block-added n1 parentId=cl previousSiblingId=c1 index=5 origin=local",
+    "block-moved z parentId=n1 previousSiblingId=null fromIndex=6 toIndex=6 oldParentId=null origin=local",
+    "block-changed t1 index=3 origin=local",
   ],
   "undoSteps": 1,
 }
@@ -2124,8 +2124,8 @@ exports[`column and database placement — characterization > adds a database ro
     ],
   },
   "events": [
-    "block-added n1 parentId=db previousSiblingId=r2 index=4",
-    "block-changed db index=1",
+    "block-added n1 parentId=db previousSiblingId=r2 index=4 origin=local",
+    "block-changed db index=1 origin=local",
   ],
   "undoSteps": 1,
 }
@@ -2951,8 +2951,8 @@ exports[`column and database placement — characterization > adds a database ro
     ],
   },
   "events": [
-    "block-added n1 parentId=db previousSiblingId=r2 index=4",
-    "block-changed db index=1",
+    "block-added n1 parentId=db previousSiblingId=r2 index=4 origin=local",
+    "block-changed db index=1 origin=local",
   ],
   "undoSteps": 1,
 }
@@ -3600,8 +3600,8 @@ exports[`column and database placement — characterization > appends a paragrap
     ],
   },
   "events": [
-    "block-added n1 parentId=c1 previousSiblingId=t1 index=5",
-    "block-changed t1 index=3",
+    "block-added n1 parentId=c1 previousSiblingId=t1 index=5 origin=local",
+    "block-changed t1 index=3 origin=local",
   ],
   "undoSteps": 1,
 }
@@ -4115,13 +4115,13 @@ exports[`column and database placement — characterization > seeds a three-colu
     ],
   },
   "events": [
-    "block-added n3 parentId=n2 previousSiblingId=null index=3",
-    "block-added n2 parentId=n1 previousSiblingId=null index=2",
-    "block-added n5 parentId=n4 previousSiblingId=null index=5",
-    "block-added n4 parentId=n1 previousSiblingId=n2 index=4",
-    "block-added n7 parentId=n6 previousSiblingId=null index=7",
-    "block-added n6 parentId=n1 previousSiblingId=n4 index=6",
-    "block-added n1 parentId=null previousSiblingId=a index=1",
+    "block-added n3 parentId=n2 previousSiblingId=null index=3 origin=local",
+    "block-added n2 parentId=n1 previousSiblingId=null index=2 origin=local",
+    "block-added n5 parentId=n4 previousSiblingId=null index=5 origin=local",
+    "block-added n4 parentId=n1 previousSiblingId=n2 index=4 origin=local",
+    "block-added n7 parentId=n6 previousSiblingId=null index=7 origin=local",
+    "block-added n6 parentId=n1 previousSiblingId=n4 index=6 origin=local",
+    "block-added n1 parentId=null previousSiblingId=a index=1 origin=local",
   ],
   "undoSteps": 1,
 }
@@ -4653,12 +4653,12 @@ exports[`column and database placement — characterization > side-drop left of 
     ],
   },
   "events": [
-    "block-added n1 parentId=null previousSiblingId=t index=2",
-    "block-added n2 parentId=n1 previousSiblingId=null index=3",
-    "block-added n3 parentId=n1 previousSiblingId=n2 index=4",
-    "block-moved target parentId=n3 previousSiblingId=null fromIndex=5 toIndex=5 oldParentId=null",
-    "block-moved s parentId=n2 previousSiblingId=null fromIndex=4 toIndex=4 oldParentId=null",
-    "block-changed t index=0",
+    "block-added n1 parentId=null previousSiblingId=t index=2 origin=local",
+    "block-added n2 parentId=n1 previousSiblingId=null index=3 origin=local",
+    "block-added n3 parentId=n1 previousSiblingId=n2 index=4 origin=local",
+    "block-moved target parentId=n3 previousSiblingId=null fromIndex=5 toIndex=5 oldParentId=null origin=local",
+    "block-moved s parentId=n2 previousSiblingId=null fromIndex=4 toIndex=4 oldParentId=null origin=local",
+    "block-changed t index=0 origin=local",
   ],
   "undoSteps": 1,
 }
@@ -5190,12 +5190,12 @@ exports[`column and database placement — characterization > side-drop right of
     ],
   },
   "events": [
-    "block-added n1 parentId=null previousSiblingId=t index=2",
-    "block-added n2 parentId=n1 previousSiblingId=null index=3",
-    "block-added n3 parentId=n1 previousSiblingId=n2 index=4",
-    "block-moved target parentId=n2 previousSiblingId=null fromIndex=4 toIndex=4 oldParentId=null",
-    "block-moved s parentId=n3 previousSiblingId=null fromIndex=6 toIndex=6 oldParentId=null",
-    "block-changed t index=0",
+    "block-added n1 parentId=null previousSiblingId=t index=2 origin=local",
+    "block-added n2 parentId=n1 previousSiblingId=null index=3 origin=local",
+    "block-added n3 parentId=n1 previousSiblingId=n2 index=4 origin=local",
+    "block-moved target parentId=n2 previousSiblingId=null fromIndex=4 toIndex=4 oldParentId=null origin=local",
+    "block-moved s parentId=n3 previousSiblingId=null fromIndex=6 toIndex=6 oldParentId=null origin=local",
+    "block-changed t index=0 origin=local",
   ],
   "undoSteps": 1,
 }
@@ -5661,12 +5661,12 @@ exports[`column and database placement — characterization > wraps a selection 
     ],
   },
   "events": [
-    "block-added n1 parentId=null previousSiblingId=null index=0",
-    "block-added n2 parentId=n1 previousSiblingId=null index=1",
-    "block-added n3 parentId=n1 previousSiblingId=n2 index=2",
-    "block-moved t parentId=n2 previousSiblingId=null fromIndex=2 toIndex=2 oldParentId=null",
-    "block-moved p parentId=n3 previousSiblingId=null fromIndex=5 toIndex=5 oldParentId=null",
-    "block-changed t index=2",
+    "block-added n1 parentId=null previousSiblingId=null index=0 origin=local",
+    "block-added n2 parentId=n1 previousSiblingId=null index=1 origin=local",
+    "block-added n3 parentId=n1 previousSiblingId=n2 index=2 origin=local",
+    "block-moved t parentId=n2 previousSiblingId=null fromIndex=2 toIndex=2 oldParentId=null origin=local",
+    "block-moved p parentId=n3 previousSiblingId=null fromIndex=5 toIndex=5 oldParentId=null origin=local",
+    "block-changed t index=2 origin=local",
   ],
   "undoSteps": 1,
 }

@@ -14,6 +14,7 @@ interface TestEditor {
   module: {
     yjsManager: {
       stopCapturing: () => void;
+      undo: () => void;
       getBlockDataObject: (id: string) => Record<string, unknown> | undefined;
     };
   };
@@ -59,7 +60,6 @@ const savedData = async (instance: TestEditor, id: string): Promise<Record<strin
 describe('adding a column re-splits the row evenly in the shared document', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv('NODE_ENV', 'test');
     holder = document.createElement('div');
     document.body.appendChild(holder);
     vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue(
@@ -71,7 +71,6 @@ describe('adding a column re-splits the row evenly in the shared document', () =
     editor?.destroy();
     editor = undefined;
     holder?.remove();
-    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -85,6 +84,9 @@ describe('adding a column re-splits the row evenly in the shared document', () =
 
     await vi.waitFor(() => expect(yjs.getBlockDataObject('left')).not.toHaveProperty('widthRatio'));
     expect(await savedData(instance, 'left')).not.toHaveProperty('widthRatio');
+
+    yjs.undo();
+    await vi.waitFor(() => expect(yjs.getBlockDataObject('left')).toHaveProperty('widthRatio', 0.7));
   });
 
   it('removes a widthRatio a resize in this session wrote', async () => {
@@ -97,11 +99,18 @@ describe('adding a column re-splits the row evenly in the shared document', () =
     }
     resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await vi.waitFor(() => expect(yjs.getBlockDataObject('left')).toHaveProperty('widthRatio'));
+    const resizedRatio = yjs.getBlockDataObject('left')?.widthRatio;
+
+    // Ends the resize's undo step, so the undo below takes back only the add.
+    yjs.stopCapturing();
 
     expect(addColumnToList(instance as unknown as API, 'right', ['src'], 'right')).not.toBeNull();
 
     await vi.waitFor(() => expect(yjs.getBlockDataObject('left')).not.toHaveProperty('widthRatio'));
     await vi.waitFor(() => expect(yjs.getBlockDataObject('right')).not.toHaveProperty('widthRatio'));
     expect(await savedData(instance, 'left')).not.toHaveProperty('widthRatio');
+
+    yjs.undo();
+    await vi.waitFor(() => expect(yjs.getBlockDataObject('left')).toHaveProperty('widthRatio', resizedRatio));
   });
 });

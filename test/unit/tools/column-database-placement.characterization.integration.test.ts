@@ -167,7 +167,8 @@ const state = async (instance: TestEditor, name: Name): Promise<Record<string, u
 const eventLog = (name: Name): string[] => events.map(event => {
   const { target, ...rest } = event.detail as unknown as Record<string, unknown> & { target: { id: string } };
   const extra = Object.entries(rest)
-    .map(([key, value]) => `${key}=${typeof value === 'string' ? name(value) : String(value)}`)
+    // origin is a fixed word ('local' | 'tab' | 'remote'), not a block id.
+    .map(([key, value]) => `${key}=${typeof value === 'string' && key !== 'origin' ? name(value) : String(value)}`)
     .join(' ');
 
   return `${event.type} ${name(target.id)} ${extra}`.trim();

@@ -132,7 +132,6 @@ export const blokDocumentSchema = {
         text: { type: 'string', description: 'Inline HTML of the heading.' },
         level: { type: 'integer', minimum: 1, maximum: 6 },
         isToggleable: { type: 'boolean', description: 'Heading collapses/expands its children.' },
-        isOpen: { type: 'boolean', description: 'Expanded state of a toggle heading.' },
         textColor: { type: 'string' },
         backgroundColor: { type: 'string' },
         anchor: { type: 'string', description: 'Anchor id rendered as the heading element\'s `id`.' },
@@ -217,7 +216,6 @@ export const blokDocumentSchema = {
       additionalProperties: false,
       properties: {
         text: { type: 'string', description: 'Inline HTML of the summary.' },
-        isOpen: { type: 'boolean' },
       },
     },
 

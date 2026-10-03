@@ -2145,7 +2145,7 @@
         }
       },
       "toggle": {
-        "description": "A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when it is collapsed.\n\nYou toggle it by clicking the arrow icon, or programmatically through the public Block API: `api.blocks.getById(id)?.call(\"expand\")` / `.call(\"collapse\")`. Toggle headings (Header blocks with `isToggleable: true`) accept the same two commands. These are string-addressed commands routed through `BlockAPI.call()`. They are not declared as methods on the exported tool classes.\n\nThe open or collapsed state is saved in `isOpen` and restored on reload. Toggles default to open.",
+        "description": "A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when it is collapsed.\n\nYou toggle it by clicking the arrow icon, or programmatically through the public Block API: `api.blocks.getById(id)?.call(\"expand\")` / `.call(\"collapse\")`. Toggle headings (Header blocks with `isToggleable: true`) accept the same two commands. These are string-addressed commands routed through `BlockAPI.call()`. They are not declared as methods on the exported tool classes.\n\nThe open or collapsed state is personal. Each browser remembers it for itself, and it is never saved. A toggle starts collapsed, except for the person who just created it.",
         "options": {
           "placeholder": {
             "description": "Placeholder text shown in an empty toggle block."

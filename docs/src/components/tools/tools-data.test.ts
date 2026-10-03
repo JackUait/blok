@@ -176,3 +176,27 @@ describe('pasted code language', () => {
     expect(description).toContain('Gemini');
   });
 });
+
+describe('toggle open state', () => {
+  /** The open state lives in each browser, not in saved data. */
+  const toggleDescriptionIn = (locale: string): string => {
+    const catalogue = JSON.parse(readSource(`docs/src/i18n/${locale}.json`)) as {
+      tools?: { docs?: { toggle?: { description?: string } } };
+    };
+
+    return catalogue.tools?.docs?.toggle?.description ?? '';
+  };
+
+  it.each([
+    ['tools-data.ts', TOOL_SECTIONS.find((s) => s.id === 'toggle')?.description ?? ''],
+    ['en.json', toggleDescriptionIn('en')],
+    ['ru.json', toggleDescriptionIn('ru')],
+  ])('does not document a saved isOpen in %s', (_file, text) => {
+    expect(text.length).toBeGreaterThan(0);
+    expect(text).not.toContain('isOpen');
+  });
+
+  it.each(['toggle', 'header'])('leaves isOpen out of the %s saved data shape', (id) => {
+    expect(TOOL_SECTIONS.find((s) => s.id === id)?.saveDataShape ?? '').not.toContain('isOpen');
+  });
+});

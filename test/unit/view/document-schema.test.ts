@@ -37,6 +37,7 @@ import {
   defaultBlockTools,
 } from '../../../src/tools';
 import { blokDocumentSchema } from '../../../src/view/document-schema';
+import { createMemoryViewState } from '../../helpers/view-state';
 
 import type { API, BlockToolConstructorOptions, OutputData } from '../../../types';
 
@@ -68,6 +69,7 @@ const blockSchema = (schema.properties?.blocks ?? {}) as JsonSchema;
 const api = {
   styles: {},
   i18n: { t: (key: string) => key },
+  viewState: createMemoryViewState(),
   events: { on: () => {}, off: () => {}, emit: () => {} },
   blocks: {
     getById: () => null,
@@ -122,7 +124,7 @@ const savedData: Record<string, Record<string, unknown>> = {
 
   header: ((): Record<string, unknown> => {
     const tool = new Header(options({
-      text: 'Title', level: 2, isToggleable: true, isOpen: true,
+      text: 'Title', level: 2, isToggleable: true,
       textColor: 'red', backgroundColor: 'blue', anchor: 'title',
     }));
 
@@ -150,7 +152,7 @@ const savedData: Record<string, Record<string, unknown>> = {
   })).save(contentElement('')),
 
   toggle: ((): Record<string, unknown> => {
-    const tool = new Toggle(options({ text: 'Summary', isOpen: true }));
+    const tool = new Toggle(options({ text: 'Summary' }));
 
     tool.render();
 

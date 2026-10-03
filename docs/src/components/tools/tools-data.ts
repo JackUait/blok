@@ -149,7 +149,6 @@ const editor = new Blok({
   text: string;             // Heading HTML content
   level: number;            // 1–6
   isToggleable?: boolean;   // true when the heading has toggle (collapse/expand)
-  isOpen?: boolean;         // Persisted toggle state, present when toggleable
   textColor?: string;       // Block colour preset, present when set
   backgroundColor?: string; // Block background colour preset, present when set
   anchor?: string;          // Anchor id for in-document links, present when set
@@ -346,7 +345,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Toggle',
     description:
-      'A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when it is collapsed.\n\nYou toggle it by clicking the arrow icon, or programmatically through the public Block API: `api.blocks.getById(id)?.call("expand")` / `.call("collapse")`. Toggle headings (Header blocks with `isToggleable: true`) accept the same two commands. These are string-addressed commands routed through `BlockAPI.call()`. They are not declared as methods on the exported tool classes.\n\nThe open or collapsed state is saved in `isOpen` and restored on reload. Toggles default to open.',
+      'A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when it is collapsed.\n\nYou toggle it by clicking the arrow icon, or programmatically through the public Block API: `api.blocks.getById(id)?.call("expand")` / `.call("collapse")`. Toggle headings (Header blocks with `isToggleable: true`) accept the same two commands. These are string-addressed commands routed through `BlockAPI.call()`. They are not declared as methods on the exported tool classes.\n\nThe open or collapsed state is personal. Each browser remembers it for itself, and it is never saved. A toggle starts collapsed, except for the person who just created it.',
     importExample: `import { Toggle } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -357,8 +356,7 @@ const editor = new Blok({
       },
     ],
     saveDataShape: `interface ToggleData {
-  text: string;     // Toggle title HTML content
-  isOpen?: boolean; // Whether the toggle is expanded — persisted and restored on reload
+  text: string; // Toggle title HTML content
 }`,
     saveDataExample: `{
   "id": "mno345",

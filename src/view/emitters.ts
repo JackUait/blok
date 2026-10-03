@@ -456,10 +456,9 @@ export const builtinEmitters: Record<string, Emitter> = {
     const anchorAttr = anchor === undefined ? '' : ` id="${env.escape(anchor)}"`;
     const heading = `<h${level}${env.rootAttrs(block)}${anchorAttr}${levelAttr}>${env.inline(block.data.text)}</h${level}>`;
 
+    /** Open state is personal to each browser, so the view always starts collapsed. */
     if (block.data.isToggleable === true) {
-      const open = block.data.isOpen === true ? ' open' : '';
-
-      return `<details${open}><summary>${heading}</summary>${childrenOnly(block, env)}</details>`;
+      return `<details><summary>${heading}</summary>${childrenOnly(block, env)}</details>`;
     }
 
     return trail(heading, block, env);
@@ -552,14 +551,13 @@ export const builtinEmitters: Record<string, Emitter> = {
   },
 
   toggle: (block, env) => {
-    const open = block.data.isOpen === true ? ' open' : '';
     const summary = `<summary${env.classList([...TOGGLE_HEADER_ROW_CLASSES, ...TOGGLE_CONTENT_CLASSES])}>${env.inline(block.data.text)}</summary>`;
     const children = childrenOnly(block, env);
     const body = env.classesEnabled
       ? `<div${env.classList(TOGGLE_CHILDREN_CLASSES)}${CHILDREN_CONTAINER_ATTR}>${children}</div>`
       : children;
 
-    return `<details${open}>${summary}${body}</details>`;
+    return `<details>${summary}${body}</details>`;
   },
 
   image: (block, env) => {

@@ -109,9 +109,9 @@ describe('htmlToBlocks — structure', () => {
     ]);
   });
 
-  it('converts details into a toggle whose body blocks reference it', () => {
+  it('converts details into a toggle whose body blocks reference it, dropping the open state', () => {
     expect(shape(htmlToBlocks('<details open><summary>More</summary><p>body</p></details>'))).toEqual([
-      { type: 'toggle', data: { text: 'More', isOpen: true } },
+      { type: 'toggle', data: { text: 'More' } },
       { type: 'paragraph', data: { text: 'body' }, parent: 0 },
     ]);
   });
@@ -558,7 +558,7 @@ describe('htmlToBlocks — single-field containers', () => {
     );
 
     expect(shape(report.blocks)).toEqual([
-      { type: 'toggle', data: { text: 'S', isOpen: false } },
+      { type: 'toggle', data: { text: 'S' } },
       { type: 'image', data: { url: 'https://x.dev/s.png' }, parent: 0 },
       { type: 'paragraph', data: { text: 'body' }, parent: 0 },
     ]);

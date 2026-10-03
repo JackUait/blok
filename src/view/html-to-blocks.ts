@@ -613,7 +613,6 @@ const emitToggle = (ctx: Ctx, element: P5Element): void => {
   const segments = summary === undefined ? [] : splitOnImages(ctx, summary.childNodes);
   const toggle = push(ctx, 'toggle', {
     text: inlineHtml(ctx, segments.flatMap((segment) => 'inline' in segment ? segment.inline : [])),
-    isOpen: attr(element, 'open') !== undefined,
   });
 
   const body = element.childNodes.filter((node) => node !== summary);

@@ -185,13 +185,13 @@ describe('blocksToHtml', () => {
       expect(blocksToHtml(doc([{ type: 'header', data: { text: 'T', level: 2, anchor: 'two words' } }]))).toBe('<h2>T</h2>');
     });
 
-    it('renders a toggleable header as details/summary with children inside', () => {
+    it('renders a toggleable header as collapsed details/summary with children inside, whatever isOpen says', () => {
       const html = blocksToHtml(doc([
         { id: 'h1', type: 'header', data: { text: 'Sec', level: 2, isToggleable: true, isOpen: true } },
         { id: 'c1', type: 'paragraph', parent: 'h1', data: { text: 'Body' } },
       ]));
 
-      expect(html).toBe('<details open><summary><h2>Sec</h2></summary><p>Body</p></details>');
+      expect(html).toBe('<details><summary><h2>Sec</h2></summary><p>Body</p></details>');
     });
   });
 
@@ -329,13 +329,14 @@ describe('blocksToHtml', () => {
   });
 
   describe('toggle', () => {
-    it('renders details/summary with children, open when isOpen', () => {
+    it('renders every toggle collapsed, whatever the input says', () => {
       const html = blocksToHtml(doc([
         { id: 'tg', type: 'toggle', data: { text: 'More', isOpen: true } },
         { id: 'c1', type: 'paragraph', parent: 'tg', data: { text: 'Hidden' } },
       ]));
 
-      expect(html).toBe('<details open><summary>More</summary><p>Hidden</p></details>');
+      expect(html).toBe('<details><summary>More</summary><p>Hidden</p></details>');
+      expect(html).not.toMatch(/<details[^>]* open/);
     });
 
     it('renders closed when isOpen is absent', () => {
@@ -1326,7 +1327,7 @@ describe('blocksToHtml', () => {
     });
 
     it.each([
-      ['toggle', { type: 'toggle', data: { text: 'T', isOpen: true } }],
+      ['toggle', { type: 'toggle', data: { text: 'T' } }],
       ['callout', { type: 'callout', data: { emoji: '💡' } }],
     ])('marks the %s children container so nested headings lose their root margin', (_tool, block) => {
       const html = blocksToHtml(doc([block]), { classes: true });

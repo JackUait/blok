@@ -144,11 +144,9 @@ const withCurrentShape = (block: ViewBlock): ViewBlock => {
   }
 
   if (type === 'toggleList' && 'title' in data) {
-    const isOpen = typeof data.isExpanded === 'boolean' ? { isOpen: data.isExpanded } : {};
-
     return typeof data.titleVariant === 'number'
-      ? { ...block, type: 'header', data: { text: data.title, level: data.titleVariant, isToggleable: true, ...isOpen } }
-      : { ...block, type: 'toggle', data: { text: data.title, ...isOpen } };
+      ? { ...block, type: 'header', data: { text: data.title, level: data.titleVariant, isToggleable: true } }
+      : { ...block, type: 'toggle', data: { text: data.title } };
   }
 
   if (type === 'callout' && 'body' in data) {

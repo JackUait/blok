@@ -344,6 +344,34 @@ describe('public blocks.move keeps tree order', () => {
     expect(JSON.parse(localStorage.getItem('blok:view:doc:t:open') ?? 'null')).toMatchObject({ v: true });
   }, 60_000);
 
+  it('undo of a move out of a collapsed toggle hides the block again when the caret was elsewhere', async () => {
+    const caretInA = (editor: Runtime): void => {
+      const holder = editor.module.blockManager.blocks[indexOf(editor, 'a')].holder;
+      // jsdom does not reflect the contentEditable property to the attribute.
+      const input = Array.from(holder.querySelectorAll<HTMLElement>('*')).find(element => element.contentEditable === 'true');
+      const range = document.createRange();
+
+      if (input === undefined) {
+        throw new Error('a has no input');
+      }
+      input.setAttribute('contenteditable', 'true');
+      range.setStart(input, 0);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+      const manager = editor.module.blockManager;
+
+      manager.currentBlockIndex = indexOf(editor, 'a');
+      apiMove('tc', 3)(editor);
+    };
+
+    await expectMove(
+      [P('a'), T('t', ['tc'], false), P('tc', 't'), P('b')],
+      caretInA,
+      ['a^-', 't^-', 'b^-', 'tc^-'],
+      ['a^-', 't^-', 'tc^t hidden', 'b^-']
+    );
+  }, 60_000);
+
   it('a move of a toggle child to the top of the document shows it first', async () => {
     await expectMove(
       [P('a'), T('t', ['c1', 'tc']), P('c1', 't'), P('tc', 't'), P('b')],

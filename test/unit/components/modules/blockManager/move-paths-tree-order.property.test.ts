@@ -28,6 +28,7 @@ interface Runtime {
     blockManager: {
       blocks: Block[];
       currentBlockIndex: number;
+      currentBlock: Block | undefined;
       moveCurrentBlockUp: () => void;
       moveCurrentBlockDown: () => void;
     };
@@ -123,6 +124,12 @@ const snapshot = (editor: Runtime): string[] => editor.module.blockManager.block
 const openToggles = (editor: Runtime): string[] => editor.module.blockManager.blocks
   .filter(block => block.name === 'toggle' && !isCollapsedToggleBlock(block))
   .map(block => block.id);
+
+const ancestorsOf = (editor: Runtime, block: Block): string[] => {
+  const parent = block.parentId === null ? undefined : editor.module.blockManager.blocks.find(candidate => candidate.id === block.parentId);
+
+  return parent === undefined ? [] : [parent.id, ...ancestorsOf(editor, parent)];
+};
 
 const treeViolations = (editor: Runtime): string[] => {
   const blocks = editor.module.blockManager.blocks;
@@ -287,9 +294,24 @@ const runSeed = async (seed: number, withApi: boolean, reparent: boolean, treeOr
       return failure;
     }
 
+    // A toggle an undo opens must sit above the block that undo put the caret in.
+    // jsdom blocks have no inputs, so the caret falls back to the restored
+    // block's parent; that parent may be the toggle just opened.
+    const strayOpened: string[] = [];
+    let openBefore = initiallyOpen;
+
     for (const _step of steps) {
       editor.history.undo();
       await settle();
+
+      const openAfter = openToggles(editor);
+      const caretBlock = editor.module.blockManager.currentBlock;
+      const ancestorIds = caretBlock === undefined ? [] : [caretBlock.id, ...ancestorsOf(editor, caretBlock)];
+
+      strayOpened.push(...openAfter
+        .filter(id => !openBefore.includes(id) && !ancestorIds.includes(id))
+        .map(id => `${id} opened outside the caret ${caretBlock?.id ?? 'none'}`));
+      openBefore = openAfter;
     }
 
     logTreeOrder('undo of');
@@ -299,7 +321,7 @@ const runSeed = async (seed: number, withApi: boolean, reparent: boolean, treeOr
     // may differ; treeViolations still checks them against the toggles.
     const tree = (entries: string[]): string => entries.map(entry => entry.replace(' hidden', '')).join(' ');
     const closed = initiallyOpen.filter(id => !nowOpen.includes(id)).map(id => `${id} was closed`);
-    const problems = [...treeViolations(editor), ...closed];
+    const problems = [...treeViolations(editor), ...closed, ...strayOpened];
 
     return tree(undone) === tree(initial) && problems.length === 0
       ? null

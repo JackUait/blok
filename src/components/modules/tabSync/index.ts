@@ -49,6 +49,13 @@ export class TabSync extends Module {
 
   private unsubscribeSaved: (() => void) | null = null;
 
+  /** Waits for a minted id's save: only a saved id is safe to share. */
+  private unsubscribeFirstSave: (() => void) | null = null;
+
+  private hasSaved = false;
+
+  private detachLifecycle: (() => void) | null = null;
+
   /** Stops the join's wait for in-flight block saves. */
   private cancelSettleWait: (() => void) | null = null;
 
@@ -111,15 +118,22 @@ export class TabSync extends Module {
    * @param context - how the document reached this tab
    */
   public async start(context: StartContext): Promise<void> {
-    if (this.session !== null || !this.isAllowed()) {
+    if (this.session !== null || this.destroyed || !this.isAllowed()) {
       return;
     }
 
     try {
       const key = this.resolveKey(context);
-      const channel = key === null ? null : this.platform.channel(key);
 
-      if (key === null || channel === null) {
+      if (key === null) {
+        this.waitForFirstSave(context);
+
+        return;
+      }
+
+      const channel = this.platform.channel(key);
+
+      if (channel === null) {
         return;
       }
 
@@ -132,12 +146,13 @@ export class TabSync extends Module {
       }
 
       this.session = { key, channel, lock, recordId: this.Blok.Saver.getDocumentRecordId() };
-      this.editedSinceStart = false;
-      this.dirtySinceSaved = false;
+      this.stopWaitingForFirstSave();
+      // No reset of editedSinceStart: a failed or edited tab must never adopt.
       this.unlisten = channel.onMessage((message) => this.receive(message));
       this.subscribeOutbound();
       this.unsubscribeSaved = persistenceVersionAccess(this.config.persistence)?.onSaved((version) => this.onSaved(version)) ?? null;
       this.Blok.BlockManager.setRemoteOriginLabel('tab');
+      this.attachLifecycle();
 
       await this.enter();
     } catch (error) {
@@ -212,6 +227,7 @@ export class TabSync extends Module {
 
   public destroy(): void {
     this.destroyed = true;
+    this.stopWaitingForFirstSave();
     this.teardown();
     this.setRole('solo');
   }
@@ -265,8 +281,7 @@ export class TabSync extends Module {
       documentId: this.config.documentId,
       recordId,
       idSource: this.idSource(context),
-      // Task 15 restarts a minted-id tab after its first save.
-      hasSaved: false,
+      hasSaved: this.hasSaved,
       isEmpty: context.isEmpty,
       pathname: typeof location === 'undefined' ? '' : location.pathname,
     });
@@ -284,6 +299,61 @@ export class TabSync extends Module {
     }
 
     return context.loadedFromPersistence ? 'persistence' : 'data';
+  }
+
+  /**
+   * A minted id joins only once it is saved, so another tab can load it.
+   * Stays subscribed until a save opens a session: an empty document stays
+   * unshared.
+   * @param context - how the document reached this tab
+   */
+  private waitForFirstSave(context: StartContext): void {
+    if (this.unsubscribeFirstSave !== null || this.idSource(context) !== 'minted') {
+      return;
+    }
+
+    this.unsubscribeFirstSave = persistenceVersionAccess(this.config.persistence)?.onSaved(() => {
+      this.hasSaved = true;
+      // This tab wrote what it saved; it must lead or stay solo, never adopt.
+      this.editedSinceStart = true;
+      void this.start({
+        loadedFromPersistence: false,
+        isEmpty: this.Blok.BlockManager.blocks.every((block) => block.isEmpty),
+      });
+    }) ?? null;
+  }
+
+  private stopWaitingForFirstSave(): void {
+    this.unsubscribeFirstSave?.();
+    this.unsubscribeFirstSave = null;
+  }
+
+  private attachLifecycle(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const onShow = (event: Event): void => {
+      // Only a page back from the back/forward cache: it missed every message.
+      if ('persisted' in event && event.persisted === true) {
+        void this.resync();
+      }
+    };
+    const onVisibility = (): void => {
+      if (document.visibilityState === 'visible') {
+        void this.resync();
+      }
+    };
+    const onHide = (): void => this.flushBeforeUnload();
+
+    window.addEventListener('pageshow', onShow);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onHide);
+    this.detachLifecycle = () => {
+      window.removeEventListener('pageshow', onShow);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onHide);
+    };
   }
 
   /**
@@ -468,6 +538,9 @@ export class TabSync extends Module {
     if (this.currentRole === 'follower') {
       this.leaderId = message.from;
       persistenceVersionAccess(this.config.persistence)?.set(message.version);
+    } else {
+      // The followers' edits in it are unsaved until this leader saves.
+      this.dirtySinceSaved = true;
     }
   }
 
@@ -716,6 +789,8 @@ export class TabSync extends Module {
     this.unsubscribeSaved = null;
     this.unlisten?.();
     this.unlisten = null;
+    this.detachLifecycle?.();
+    this.detachLifecycle = null;
     session?.lock.release();
     session?.channel.close();
     if (session !== null) {

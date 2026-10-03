@@ -246,7 +246,7 @@ export const createFakeBlok = (options: { recordId?: string; minted?: boolean; r
         bind();
       }),
     },
-    BlockManager: { clear: vi.fn(async () => {}), setRemoteOriginLabel: vi.fn() },
+    BlockManager: { clear: vi.fn(async () => {}), setRemoteOriginLabel: vi.fn(), blocks: [{ isEmpty: false }] },
     ModificationsObserver: {
       disable: vi.fn(),
       enable: vi.fn(),

@@ -75,9 +75,14 @@ export class Core {
           await this.start();
           await this.render();
 
-          const { BlockManager, Caret, UI, ModificationsObserver } = this.moduleInstances;
+          const { BlockManager, Caret, UI, ModificationsObserver, TabSync } = this.moduleInstances;
 
           UI.checkEmptiness();
+          // Optional: unit fixtures build Core without the module.
+          void TabSync?.start({
+            loadedFromPersistence: this.loadedFromPersistence,
+            isEmpty: BlockManager.blocks.every((block) => block.isEmpty),
+          });
           ModificationsObserver.enable();
 
           /**
@@ -115,6 +120,9 @@ export class Core {
    * with — the envelope is unwrapped where it is awaited.
    */
   private pendingPersistedLoad: (() => Promise<OutputData | PersistedDocument | null>) | null = null;
+
+  /** True when the rendered document came from `persistence.load`; tab sync trusts only that id. */
+  private loadedFromPersistence = false;
 
   public set configuration(config: BlokConfig|string|undefined) {
     /**
@@ -521,6 +529,7 @@ export class Core {
         const cloned = cloneOutputBlocks(normalizeOutputBlocks(blocks));
 
         this.config.data = { ...loaded, blocks: cloned };
+        this.loadedFromPersistence = true;
 
         return renderer.render(cloned);
       }

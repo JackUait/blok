@@ -22,20 +22,6 @@ const blocksOf = (pages: PageRegistry) => (id: string | null): OutputBlockData[]
 
 const titles = (nodes: Array<{ title: string }>): string[] => nodes.map((node) => node.title);
 
-describe('PageRegistry.children', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    localStorage.clear();
-  });
-
-  it('lists the pages directly under a parent, the root document included', () => {
-    const pages = new PageRegistry(seed());
-
-    expect(pages.children(null).map((page) => page.id).sort()).toEqual(['guide', 'notes']);
-    expect(pages.children('guide').map((page) => page.id).sort()).toEqual(['keys', 'later']);
-  });
-});
-
 describe('buildPageTree', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -70,14 +56,43 @@ describe('buildPageTree', () => {
     expect(titles(guide.children)).toEqual(['Untitled']);
   });
 
-  it('stops at a parent cycle', () => {
+  it('stops when pages link each other in a loop', () => {
     const pages = new PageRegistry({
-      a: { title: 'A', parentId: null, blocks: [] },
-      b: { title: 'B', parentId: 'c', blocks: [pointer('c')] },
-      c: { title: 'C', parentId: 'b', blocks: [pointer('b')] },
+      a: { title: 'A', parentId: null, blocks: [pointer('b')] },
+      b: { title: 'B', parentId: 'a', blocks: [pointer('a')] },
     });
+    const tree = buildPageTree(pages, (id) => (id === null ? [pointer('a')] : pages.get(id)?.blocks));
 
-    expect(titles(buildPageTree(pages, (id) => (id === null ? [pointer('a')] : pages.get(id)?.blocks)).children)).toEqual(['A']);
+    expect(titles(tree.children)).toEqual(['A']);
+    expect(titles(tree.children[0].children)).toEqual(['B']);
+    expect(tree.children[0].children[0].children).toEqual([]);
+  });
+
+  it('shows a linked page this browser has no record of, titled from its block', () => {
+    const pages = new PageRegistry(seed());
+    const linked: OutputBlockData = {
+      id: 'p-elsewhere',
+      type: 'page',
+      data: { pageId: 'elsewhere', cache: { title: 'Made elsewhere', icon: { type: 'emoji', value: '🧭' } } },
+    };
+    const bare: OutputBlockData = { id: 'p-bare', type: 'page', data: { pageId: 'bare' } };
+    const tree = buildPageTree(pages, (id) => (id === null ? [linked, bare, pointer('notes')] : pages.get(id)?.blocks));
+
+    expect(titles(tree.children)).toEqual(['Made elsewhere', 'Untitled', 'Notes']);
+    expect(tree.children[0].icon).toBe('🧭');
+  });
+
+  it('prefers the record over the block cache, which can lag behind a rename', () => {
+    const pages = new PageRegistry(seed());
+    const stale: OutputBlockData = { id: 'p-notes', type: 'page', data: { pageId: 'notes', cache: { title: 'Old name' } } };
+
+    expect(titles(buildPageTree(pages, (id) => (id === null ? [stale] : [])).children)).toEqual(['Notes']);
+  });
+
+  it('lists a page once even when its parent links it twice', () => {
+    const pages = new PageRegistry(seed());
+
+    expect(titles(buildPageTree(pages, (id) => (id === null ? [pointer('notes'), pointer('notes')] : [])).children)).toEqual(['Notes']);
   });
 });
 
@@ -162,6 +177,46 @@ describe('mountPageTree', () => {
 
     panel().querySelector<HTMLButtonElement>('.pg-pages-close')?.click();
     expect(tree.isOpen()).toBe(false);
+  });
+
+  it('expands the ancestors of an open page this browser has no record of', () => {
+    tree.destroy();
+    localStorage.clear();
+    const linked: OutputBlockData = { id: 'p-x', type: 'page', data: { pageId: 'x', cache: { title: 'X' } } };
+    const inner: OutputBlockData = { id: 'p-y', type: 'page', data: { pageId: 'y', cache: { title: 'Y' } } };
+
+    current = 'y';
+    tree = mountPageTree({
+      pages,
+      blocksOf: (id) => ({ root: [linked], x: [inner] }[id ?? 'root'] ?? []),
+      currentPageId: () => current,
+      href: () => '#',
+      navigate,
+    });
+
+    expect(visibleTitles()).toEqual(['Blok', 'X', 'Y']);
+    expect(row('Y').getAttribute('aria-current')).toBe('page');
+  });
+
+  it('expands the ancestors once the open page shows up, when its document loads late', () => {
+    tree.destroy();
+    localStorage.clear();
+    const linked: OutputBlockData = { id: 'p-x', type: 'page', data: { pageId: 'x', cache: { title: 'X' } } };
+    const inner: OutputBlockData = { id: 'p-y', type: 'page', data: { pageId: 'y', cache: { title: 'Y' } } };
+    const state = { loaded: false };
+
+    current = 'y';
+    tree = mountPageTree({
+      pages,
+      blocksOf: (id) => (state.loaded ? ({ root: [linked], x: [inner] }[id ?? 'root'] ?? []) : []),
+      currentPageId: () => current,
+      href: () => '#',
+      navigate,
+    });
+    state.loaded = true;
+    tree.refresh();
+
+    expect(visibleTitles()).toEqual(['Blok', 'X', 'Y']);
   });
 
   it('expands the ancestors of the open page and marks it current', () => {

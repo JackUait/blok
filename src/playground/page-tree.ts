@@ -19,20 +19,40 @@ export interface PageTreeNode {
 /** What the tree reads from the page registry. */
 export interface PageTreeSource {
   root(): RootRecord;
-  children(parentId: string | null): Array<PageRecord & { id: string }>;
-  trail(pageId: string): Array<PageRecord & { id: string }>;
+  get(pageId: string): PageRecord | undefined;
 }
 
 const untitled = (title: string): string => (title.trim() === '' ? 'Untitled' : title);
 
-const pointerOrder = (blocks: OutputBlockData[]): string[] =>
-  blocks.flatMap((block) => (block.type === 'page' && typeof block.data?.pageId === 'string' ? [block.data.pageId] : []));
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+interface PageLink {
+  pageId: string;
+  title: string;
+  icon?: string;
+}
+
+/** The page blocks in `blocks`, with the title and icon each one caches. */
+const pageLinks = (blocks: OutputBlockData[]): PageLink[] => blocks.flatMap((block) => {
+  const pageId: unknown = block.type === 'page' ? block.data?.pageId : undefined;
+
+  if (typeof pageId !== 'string' || pageId === '') {
+    return [];
+  }
+
+  const cache: unknown = block.data?.cache;
+  const title = isRecord(cache) && typeof cache.title === 'string' ? cache.title : '';
+  const icon = isRecord(cache) && isRecord(cache.icon) && typeof cache.icon.value === 'string' ? cache.icon.value : undefined;
+
+  return [{ pageId, title, ...(icon !== undefined && { icon }) }];
+});
 
 /**
- * Sub-pages sit in the order of their blocks in the parent, like Notion's
- * sidebar. A page with no block there is left out: the root document forgets
- * its edits on reload, so its old pages stay in the registry unlinked.
- * Trashed pages drop out with their whole subtree.
+ * The tree follows the page blocks, like Notion's sidebar: a page sits where
+ * its block sits, in block order. Page records live in this browser only, so a
+ * page made elsewhere (another browser, a peer, before a reset) has none; its
+ * block's cache names it then. A record still wins, as the cache can lag a rename.
  */
 export const buildPageTree = (
   pages: PageTreeSource,
@@ -40,23 +60,24 @@ export const buildPageTree = (
 ): PageTreeNode => {
   const seen = new Set<string>();
 
-  const grow = (parentId: string | null): PageTreeNode[] => {
-    const order = pointerOrder(blocksOf(parentId) ?? []);
+  const grow = (parentId: string | null): PageTreeNode[] => pageLinks(blocksOf(parentId) ?? []).flatMap((link) => {
+    const record = pages.get(link.pageId);
 
-    return pages.children(parentId)
-      .filter((page) => page.trashed !== true && !seen.has(page.id) && order.includes(page.id))
-      .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
-      .map((page) => {
-        seen.add(page.id);
+    // One page linked twice, or pages linking each other, would repeat forever.
+    if (seen.has(link.pageId) || record?.trashed === true) {
+      return [];
+    }
+    seen.add(link.pageId);
 
-        return {
-          id: page.id,
-          title: untitled(page.title),
-          ...(page.icon !== undefined && { icon: page.icon }),
-          children: grow(page.id),
-        };
-      });
-  };
+    const icon = record === undefined ? link.icon : record.icon;
+
+    return [{
+      id: link.pageId,
+      title: untitled(record?.title ?? link.title),
+      ...(icon !== undefined && { icon }),
+      children: grow(link.pageId),
+    }];
+  });
 
   const root = pages.root();
 
@@ -66,6 +87,25 @@ export const buildPageTree = (
     ...(root.icon !== undefined && { icon: root.icon }),
     children: grow(null),
   };
+};
+
+/** The pages from the top down to `pageId`, the root document and the page itself left out; null when it is not in the tree. */
+const ancestorsIn = (node: PageTreeNode, pageId: string, above: string[] = []): string[] | null => {
+  if (node.id === pageId) {
+    return above;
+  }
+
+  const path = node.id === null ? above : [...above, node.id];
+
+  for (const child of node.children) {
+    const found = ancestorsIn(child, pageId, path);
+
+    if (found !== null) {
+      return found;
+    }
+  }
+
+  return null;
 };
 
 /* ------------------------------------------------------------------ drawer */
@@ -255,20 +295,26 @@ export const mountPageTree = (options: PageTreeOptions): PageTree => {
 
   const refresh = (): void => {
     const current = options.currentPageId();
+    const root = buildPageTree(options.pages, options.blocksOf);
 
-    // Only on a page change, so a branch the user folded stays folded.
-    if (current !== state.lastCurrent && current !== null) {
-      options.pages.trail(current).slice(0, -1).forEach((page) => expanded.add(page.id));
+    // Once per page, so a branch the user folded stays folded. A shared
+    // document loads late, so the page may not be in the tree yet.
+    const ancestors = current === null || current === state.lastCurrent ? null : ancestorsIn(root, current);
+
+    if (ancestors !== null) {
+      ancestors.forEach((id) => expanded.add(id));
       persistExpanded();
     }
-    state.lastCurrent = current;
+    if (current === null || ancestors !== null) {
+      state.lastCurrent = current;
+    }
 
     // A redraw mid-keyboard-walk must not drop focus to <body>.
     const focused = document.activeElement instanceof HTMLElement && list.contains(document.activeElement)
       ? document.activeElement.dataset.pgTreeFocus
       : undefined;
 
-    list.replaceChildren(renderNode(buildPageTree(options.pages, options.blocksOf), 0, current));
+    list.replaceChildren(renderNode(root, 0, current));
 
     if (focused !== undefined) {
       [...list.querySelectorAll<HTMLElement>('[data-pg-tree-focus]')].find((node) => node.dataset.pgTreeFocus === focused)?.focus();

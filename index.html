@@ -2078,6 +2078,8 @@
       persistTimer = setTimeout(async () => {
         persistPending = false;
         syncPointers(api, pageId, pointers);
+        // Before the save: the tree reads the live page blocks, and a failed save must not freeze it.
+        pageTree?.refresh();
         try {
           storeBlocks(pageId, (await api.saver.save()).blocks);
         } catch (error) {
@@ -2293,7 +2295,17 @@
 
     pageTree = mountPageTree({
       pages,
-      blocksOf: (id) => (id === null ? (rootBlocks ?? DEFAULT_BLOCKS) : pages.get(id)?.blocks),
+      // The open page reads the live editor: its saved blocks lag behind it.
+      blocksOf: (id) => {
+        if (id === editorPageId) {
+          try {
+            return livePagePointers(blok);
+          } catch {
+            // An editor mid-swap: its saved blocks below.
+          }
+        }
+        return id === null ? (rootBlocks ?? DEFAULT_BLOCKS) : pages.get(id)?.blocks;
+      },
       currentPageId: () => currentPageId,
       href: (id) => pagePath(id, window.location.search),
       navigate: (id) => goToPage(id),

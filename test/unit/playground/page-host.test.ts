@@ -747,6 +747,7 @@ describe('playground saves a pending page edit when the tab goes away', () => {
       livePointers: null as unknown,
       syncPointers: (_api: unknown, _pageId: unknown, pointers: { observe(blocks: unknown[]): void } | null | undefined) => pointers?.observe(livePages),
       editorPageId: 'guide',
+      pageTree: { refresh: vi.fn() },
       collaborationConfig: () => (options.collab === true ? { doc: 'x' } : null),
       storeBlocks: (_pageId: string | null, blocks: unknown[]) => stored.push(blocks),
       setTimeout: (fn: () => void) => {
@@ -830,6 +831,8 @@ describe('playground saves a pending page edit when the tab goes away', () => {
     await settle();
 
     expect(watch.observe).toHaveBeenCalledWith(livePages);
+    // The page tree reads the live page blocks, so a failed save must not freeze it.
+    expect(page.context.pageTree.refresh).toHaveBeenCalledTimes(1);
   });
 
   it('checks page blocks when leaving a collaborative page before the debounce ran', async () => {

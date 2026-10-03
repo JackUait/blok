@@ -65,7 +65,7 @@ const installDroppableChannel = (): void => {
   };
 };
 
-const openTab = async (context: BrowserContext, options: { droppableChannel?: boolean } = {}): Promise<Page> => {
+const openTab = async (context: BrowserContext, options: { droppableChannel?: boolean; source?: OutputData } = {}): Promise<Page> => {
   const page = await context.newPage();
 
   if (options.droppableChannel === true) {
@@ -103,7 +103,7 @@ const openTab = async (context: BrowserContext, options: { droppableChannel?: bo
 
     await editor.isReady;
     window.blokInstance = editor;
-  }, { source: SOURCE, holderId: HOLDER_ID, storeKey: STORE_KEY });
+  }, { source: options.source ?? SOURCE, holderId: HOLDER_ID, storeKey: STORE_KEY });
 
   return page;
 };
@@ -148,6 +148,20 @@ const appendToFirst = async (page: Page, text: string): Promise<void> => {
   await page.keyboard.press('End');
   await page.keyboard.type(text);
 };
+
+/** The ids and parents of the tab's saved blocks, in order. */
+const savedOrder = (page: Page): Promise<string[]> => page.evaluate(async () => {
+  const saved = await window.blokInstance?.save();
+
+  return (saved?.blocks ?? []).map((block) => `${block.id ?? ''}<${block.parent ?? ''}`);
+});
+
+/** The saved column widths of the tab's first table. */
+const savedColWidths = (page: Page): Promise<unknown> => page.evaluate(async () => {
+  const saved = await window.blokInstance?.save();
+
+  return saved?.blocks.find((block) => block.type === 'table')?.data.colWidths;
+});
 
 const arrowIn = (page: Page): Locator =>
   editorIn(page).getByRole('button', { name: /^(Expand|Collapse)$/ });
@@ -294,6 +308,75 @@ test.describe('tab sync', () => {
     await arrowIn(b).click();
     await expect(arrowIn(a)).toHaveAttribute('aria-expanded', 'false');
     await expect(editorIn(a).getByText('inside')).toBeHidden();
+    await context.close();
+  });
+
+  test('a table column resized in one tab has the same width in the other', async ({ browser }) => {
+    const context = await browser.newContext();
+    const source: OutputData = {
+      blocks: [{ id: 'tb', type: 'table', data: { withHeadings: false, content: [['A', 'B'], ['C', 'D']] } }],
+    };
+    const a = await openTab(context, { source });
+    const b = await openTab(context, { source });
+    const before = await savedColWidths(a);
+
+    // Pointer drag of the first column's resize handle; it has no test id.
+    const handle = editorIn(a).locator('[data-blok-table-resize]').first();
+    const box = await handle.boundingBox();
+
+    if (box === null) {
+      throw new Error('no resize handle');
+    }
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await a.mouse.move(x, y);
+    await a.mouse.down();
+    await a.mouse.move(x + 100, y, { steps: 5 });
+    await a.mouse.up();
+
+    // The resize really happened in A, so equal widths below are not two untouched tables.
+    await expect.poll(() => savedColWidths(a)).not.toEqual(before);
+    const resized = await savedColWidths(a);
+
+    expect(Array.isArray(resized)).toBe(true);
+    await expect.poll(() => savedColWidths(b)).toEqual(resized);
+    await context.close();
+  });
+
+  test('a block dragged in one tab lands at the same place in the other', async ({ browser }) => {
+    const context = await browser.newContext();
+    const source: OutputData = {
+      blocks: [
+        { id: 'b1', type: 'paragraph', data: { text: 'one' } },
+        { id: 'b2', type: 'paragraph', data: { text: 'two' } },
+        { id: 'b3', type: 'paragraph', data: { text: 'three' } },
+      ],
+    };
+    const a = await openTab(context, { source });
+    const b = await openTab(context, { source });
+    const blockIn = (page: Page, text: string): Locator =>
+      editorIn(page).getByTestId('block-wrapper').filter({ hasText: text });
+
+    await blockIn(a, 'one').hover();
+    const handle = a.getByTestId('settings-toggler');
+
+    await expect(handle).toBeVisible();
+    const from = await handle.boundingBox();
+    const to = await blockIn(a, 'three').boundingBox();
+
+    if (from === null || to === null) {
+      throw new Error('no drag handle or target');
+    }
+    await a.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await a.mouse.down();
+    await a.mouse.move(to.x + to.width / 2, to.y + to.height - 1, { steps: 15 });
+    await a.mouse.up();
+
+    // The drop really moved the block in A, so a match below is not two untouched documents.
+    await expect(editorIn(a).getByTestId('block-wrapper')).toHaveText(['two', 'three', 'one']);
+    await expect.poll(() => savedOrder(b)).toEqual(await savedOrder(a));
+    await expect(editorIn(b).getByTestId('block-wrapper')).toHaveText(['two', 'three', 'one']);
     await context.close();
   });
 });

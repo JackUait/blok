@@ -13,11 +13,19 @@ export interface TabChannel {
   close(): void;
 }
 
+/**
+ * One acquisition at a time: `tryAcquire` or `queue` while this object is
+ * already waiting or holding rejects with an InvalidStateError.
+ */
 export interface LeaderLock {
   /** Resolves true when this tab got the lock without waiting. */
   tryAcquire(): Promise<boolean>;
-  /** Waits in line; resolves when this tab becomes leader. Abortable. */
+  /**
+   * Waits in line; resolves when this tab becomes leader.
+   * Rejects with an AbortError when `signal` aborts or `release()` is called first.
+   */
   queue(signal: AbortSignal): Promise<void>;
+  /** Frees a held lock, or cancels a pending `tryAcquire` / `queue`. */
   release(): void;
 }
 
@@ -77,31 +85,89 @@ const lock = (key: string): LeaderLock | null => {
     return null;
   }
 
-  const held: { release: (() => void) | null } = { release: null };
+  interface Attempt { cancelled: boolean; free: (() => void) | null; abort: AbortController }
 
-  // The lock stays held while the callback's promise is pending.
-  const hold = (): Promise<void> => new Promise<void>((resolve) => {
-    held.release = resolve;
-  });
+  const current: { attempt: Attempt | null } = { attempt: null };
+
+  const busy = (): Promise<never> =>
+    Promise.reject(new DOMException('LeaderLock is already waiting or holding', 'InvalidStateError'));
+
+  /**
+   * Requests the lock. `settle` gets the outcome; the lock stays held while the
+   * callback's promise is pending, until `release()` frees it.
+   * @param options - lock request options, given this attempt's abort signal
+   * @param settle - called with true when granted, false when missed or cancelled
+   */
+  const request = (options: (signal: AbortSignal) => LockOptions, settle: (granted: boolean) => void): Promise<unknown> => {
+    const attempt: Attempt = { cancelled: false, free: null, abort: new AbortController() };
+
+    current.attempt = attempt;
+
+    return locks.request(key, options(attempt.abort.signal), (granted) => {
+      if (granted === null || attempt.cancelled) {
+        settle(false);
+
+        return undefined;
+      }
+      settle(true);
+
+      return new Promise<void>((resolve) => {
+        attempt.free = resolve;
+      });
+    }).finally(() => {
+      if (current.attempt === attempt) {
+        current.attempt = null;
+      }
+    });
+  };
 
   return {
-    tryAcquire: () => new Promise<boolean>((resolve, reject) => {
-      locks.request(key, { ifAvailable: true }, (granted) => {
-        resolve(granted !== null);
+    tryAcquire: () => {
+      if (current.attempt !== null) {
+        return busy();
+      }
 
-        return granted === null ? undefined : hold();
-      }).catch(reject);
-    }),
-    queue: (signal) => new Promise<void>((resolve, reject) => {
-      locks.request(key, { signal }, () => {
-        resolve();
+      // No signal here: the Web Locks API rejects `ifAvailable` with `signal`.
+      return new Promise<boolean>((resolve, reject) => {
+        request(() => ({ ifAvailable: true }), resolve).catch(reject);
+      });
+    },
+    queue: (signal) => {
+      if (current.attempt !== null) {
+        return busy();
+      }
+      if (signal.aborted) {
+        return Promise.reject(signal.reason);
+      }
 
-        return hold();
-      }).catch(reject);
-    }),
+      return new Promise<void>((resolve, reject) => {
+        const settle = (granted: boolean): void => {
+          if (granted) {
+            resolve();
+          } else {
+            reject(new DOMException('LeaderLock released while waiting', 'AbortError'));
+          }
+        };
+        const pending = request((own) => ({ signal: own }), settle);
+        const attempt = current.attempt;
+        const forward = (): void => attempt?.abort.abort(signal.reason);
+
+        signal.addEventListener('abort', forward, { once: true });
+        pending
+          .catch(reject)
+          .finally(() => signal.removeEventListener('abort', forward));
+      });
+    },
     release: () => {
-      held.release?.();
-      held.release = null;
+      const attempt = current.attempt;
+
+      current.attempt = null;
+      if (attempt === null) {
+        return;
+      }
+      attempt.cancelled = true;
+      attempt.abort.abort();
+      attempt.free?.();
     },
   };
 };

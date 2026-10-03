@@ -14,6 +14,9 @@ const installFakeLocks = (): void => {
   const run = async (name: string, cb: FakeLockCallback): Promise<unknown> => {
     held.add(name);
     try {
+      // Real lock callbacks run in a later task, never synchronously.
+      await Promise.resolve();
+
       return await cb({ name });
     } finally {
       held.delete(name);
@@ -22,6 +25,9 @@ const installFakeLocks = (): void => {
   };
 
   const request = (name: string, options: FakeLockOptions, cb: FakeLockCallback): Promise<unknown> => {
+    if (options.signal?.aborted === true) {
+      return Promise.reject(options.signal.reason);
+    }
     if (!held.has(name)) {
       return run(name, cb);
     }
@@ -37,7 +43,7 @@ const installFakeLocks = (): void => {
       };
       const onAbort = (): void => {
         line.splice(line.indexOf(go), 1);
-        reject(new DOMException('Aborted', 'AbortError'));
+        reject(options.signal?.reason);
       };
 
       options.signal?.addEventListener('abort', onAbort, { once: true });
@@ -199,13 +205,87 @@ describe('browserTabPlatform', () => {
       const waiting = second?.queue(controller.signal);
 
       controller.abort();
-      await expect(waiting).rejects.toThrow();
+      await expect(waiting).rejects.toMatchObject({ name: 'AbortError' });
       first?.release();
 
       // Release frees the lock a tick later, as in browsers.
       const third = browserTabPlatform.lock('k');
 
       await vi.waitFor(async () => expect(await third?.tryAcquire()).toBe(true));
+    });
+
+    it('cancels a waiting queue on release, so the lock never lands on it', async () => {
+      installFakeLocks();
+      const a = browserTabPlatform.lock('k');
+      const b = browserTabPlatform.lock('k');
+
+      expect(await a?.tryAcquire()).toBe(true);
+      const waiting = b?.queue(new AbortController().signal);
+
+      b?.release();
+      await expect(waiting).rejects.toMatchObject({ name: 'AbortError' });
+      a?.release();
+
+      const c = browserTabPlatform.lock('k');
+
+      await vi.waitFor(async () => expect(await c?.tryAcquire()).toBe(true));
+    });
+
+    it('rejects a second acquisition on the same lock while it is held', async () => {
+      installFakeLocks();
+      const a = browserTabPlatform.lock('k');
+
+      expect(await a?.tryAcquire()).toBe(true);
+      await expect(a?.tryAcquire()).rejects.toMatchObject({ name: 'InvalidStateError' });
+      await expect(a?.queue(new AbortController().signal)).rejects.toMatchObject({ name: 'InvalidStateError' });
+    });
+
+    it('rejects a second acquisition on the same lock while it is waiting', async () => {
+      installFakeLocks();
+      const a = browserTabPlatform.lock('k');
+      const b = browserTabPlatform.lock('k');
+
+      await a?.tryAcquire();
+      const waiting = b?.queue(new AbortController().signal);
+
+      await expect(b?.queue(new AbortController().signal)).rejects.toMatchObject({ name: 'InvalidStateError' });
+      await expect(b?.tryAcquire()).rejects.toMatchObject({ name: 'InvalidStateError' });
+      a?.release();
+      await expect(waiting).resolves.toBeUndefined();
+    });
+
+    it('rejects a queue whose signal is already aborted and never takes the lock', async () => {
+      installFakeLocks();
+      const a = browserTabPlatform.lock('k');
+      const controller = new AbortController();
+
+      controller.abort();
+      await expect(a?.queue(controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+
+      expect(await browserTabPlatform.lock('k')?.tryAcquire()).toBe(true);
+    });
+
+    it('cancels a pending tryAcquire on release and frees the lock', async () => {
+      installFakeLocks();
+      const a = browserTabPlatform.lock('k');
+      const pending = a?.tryAcquire();
+
+      a?.release();
+      expect(await pending).toBe(false);
+
+      const b = browserTabPlatform.lock('k');
+
+      await vi.waitFor(async () => expect(await b?.tryAcquire()).toBe(true));
+    });
+
+    it('can acquire again after release', async () => {
+      installFakeLocks();
+      const a = browserTabPlatform.lock('k');
+
+      expect(await a?.tryAcquire()).toBe(true);
+      a?.release();
+
+      await vi.waitFor(async () => expect(await a?.tryAcquire()).toBe(true));
     });
   });
 });

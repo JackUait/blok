@@ -251,18 +251,31 @@ const activity = (): TabActivity | null => {
     return null;
   }
 
+  // hasFocus() inside a blur handler is not proven to have moved yet; the
+  // events are. Updated only while someone listens (TabSync always does).
+  const focus = { has: document.hasFocus() };
+
   return {
-    isActive: () => document.visibilityState === 'visible' && document.hasFocus(),
+    isActive: () => document.visibilityState === 'visible' && focus.has,
     onChange: (listener) => {
+      const onFocus = (): void => {
+        focus.has = true;
+        listener();
+      };
+      const onBlur = (): void => {
+        focus.has = false;
+        listener();
+      };
+
       // Window focus only: element focus events do not reach a bubbling window listener.
       document.addEventListener('visibilitychange', listener);
-      window.addEventListener('focus', listener);
-      window.addEventListener('blur', listener);
+      window.addEventListener('focus', onFocus);
+      window.addEventListener('blur', onBlur);
 
       return () => {
         document.removeEventListener('visibilitychange', listener);
-        window.removeEventListener('focus', listener);
-        window.removeEventListener('blur', listener);
+        window.removeEventListener('focus', onFocus);
+        window.removeEventListener('blur', onBlur);
       };
     },
   };

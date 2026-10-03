@@ -444,7 +444,7 @@ test.describe('tab sync', () => {
     await context.close();
   });
 
-  test('a focused tab takes saving from a main tab that hears nothing', async ({ browser }) => {
+  test('a focused tab takes over from a saving tab that hears nothing', async ({ browser }) => {
     const context = await browser.newContext();
     const a = await openTab(context, { droppableChannel: true });
     const b = await openTab(context);

@@ -481,19 +481,32 @@ describe('browserTabPlatform', () => {
     });
 
     it('is active only while the page is visible and has focus', () => {
-      const activity = browserTabPlatform.activity();
       const focus = vi.spyOn(document, 'hasFocus');
 
       setVisibility('visible');
       focus.mockReturnValue(true);
-      expect(activity?.isActive()).toBe(true);
+      expect(browserTabPlatform.activity()?.isActive()).toBe(true);
 
       focus.mockReturnValue(false);
-      expect(activity?.isActive()).toBe(false);
+      expect(browserTabPlatform.activity()?.isActive()).toBe(false);
 
       setVisibility('hidden');
       focus.mockReturnValue(true);
+      expect(browserTabPlatform.activity()?.isActive()).toBe(false);
+    });
+
+    it('trusts window blur and focus over hasFocus(), which may lag the event', () => {
+      setVisibility('visible');
+      vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+      const activity = browserTabPlatform.activity();
+      const off = activity?.onChange(() => undefined);
+
+      window.dispatchEvent(new FocusEvent('blur'));
       expect(activity?.isActive()).toBe(false);
+
+      window.dispatchEvent(new FocusEvent('focus'));
+      expect(activity?.isActive()).toBe(true);
+      off?.();
     });
 
     it('reports visibility and window focus changes until unsubscribed', () => {

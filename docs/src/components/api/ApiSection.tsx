@@ -5,6 +5,7 @@ import { ConceptsContent } from "./ConceptsContent";
 import { TutorialContent } from "./TutorialContent";
 import { HowToCustomToolContent } from "./HowToCustomToolContent";
 import { DevOverrideSeamContent } from "./DevOverrideSeamContent";
+import { TabSyncContent } from "./TabSyncContent";
 import { EditorAccessNote } from "./EditorAccessNote";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
@@ -48,6 +49,7 @@ const EDIT_PATH_BY_CUSTOM_TYPE: Record<NonNullable<ApiSectionType["customType"]>
   tutorial: "docs/src/components/api/TutorialContent.tsx",
   concepts: "docs/src/components/api/ConceptsContent.tsx",
   "how-to-custom-tool": "docs/src/components/api/HowToCustomToolContent.tsx",
+  "tab-sync": "docs/src/components/api/TabSyncContent.tsx",
   "dev-override-seam": "docs/src/components/api/DevOverrideSeamContent.tsx",
 };
 
@@ -313,6 +315,17 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
           <SectionHeader section={section} />
         </div>
         <HowToCustomToolContent />
+      </section>
+    );
+  }
+
+  if (section.customType === "tab-sync") {
+    return (
+      <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <div className="mb-10">
+          <SectionHeader section={section} />
+        </div>
+        <TabSyncContent />
       </section>
     );
   }

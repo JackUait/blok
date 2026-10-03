@@ -81,7 +81,7 @@ export interface ApiSection {
     default: string;
     description: string;
   }[];
-  customType?: "quick-start" | "tutorial" | "concepts" | "how-to-custom-tool" | "dev-override-seam";
+  customType?: "quick-start" | "tutorial" | "concepts" | "how-to-custom-tool" | "tab-sync" | "dev-override-seam";
   example?: string;
 }
 
@@ -120,6 +120,15 @@ export const API_SECTIONS: ApiSection[] = [
       "Build a block tool from scratch: a callout box that renders, edits, and saves like any built-in block.",
     lastUpdated: "2026-06-30",
     customType: "how-to-custom-tool",
+  },
+  {
+    id: "tab-sync",
+    badge: "Guide",
+    title: "Tab sync",
+    description:
+      "Keep one document live across the tabs of one browser, with no server.",
+    lastUpdated: "2026-10-03",
+    customType: "tab-sync",
   },
   {
     id: "core",
@@ -511,14 +520,14 @@ const editor = new Blok(config);`,
         type: "(api: API, event: BlockMutationEvent | BlockMutationEvent[]) => void",
         default: "undefined",
         description:
-          "Change callback function. The event argument carries the mutation that occurred, or an array of them when several fire at once.\n\nLatency is bounded, so it is safe to drive UI from. The first change of an idle document arrives on the next microtask, in the same frame the user typed in. The changes after it are coalesced into one further call at the end of a short batch window, and later changes never extend that window.\n\nLive field: install, replace or unset it at runtime via `handlers.set({ onChange })`. Its presence, together with `onSave`, is what arms Blok's change-observation pipeline at all.",
+          "Change callback function. The event argument carries the mutation that occurred, or an array of them when several fire at once.\n\nLatency is bounded, so it is safe to drive UI from. The first change of an idle document arrives on the next microtask, in the same frame the user typed in. The changes after it are coalesced into one further call at the end of a short batch window, and later changes never extend that window.\n\nEach event's `detail.origin` says who made the change. It is `'local'` for this tab, including its undo and redo, `'tab'` for another tab of this browser, and `'remote'` for a collaborator.\n\nLive field: install, replace or unset it at runtime via `handlers.set({ onChange })`. Its presence, together with `onSave`, is what arms Blok's change-observation pipeline at all.",
       },
       {
         option: "onSave",
         type: "(data: OutputData, api: API) => void",
         default: "undefined",
         description:
-          "Reactive save callback. It fires automatically with the full serialized content on every batched content change, so you do not have to call save() by hand.\n\nIt rides the trailing edge of the batch window only. Unlike onChange it never leads the window, because serializing the whole document is too expensive to front-run the batch with.\n\nLive field: install, replace or unset it at runtime via `handlers.set({ onSave })`. Its mere presence makes Blok serialize the document once per change batch.",
+          "Reactive save callback. It fires automatically with the full serialized content on every batched content change, so you do not have to call save() by hand.\n\nIt rides the trailing edge of the batch window only. Unlike onChange it never leads the window, because serializing the whole document is too expensive to front-run the batch with.\n\nLive field: install, replace or unset it at runtime via `handlers.set({ onSave })`. Its mere presence makes Blok serialize the document once per change batch.\n\nWith tab sync, only the main tab calls it. In other tabs, read the document with `editor.save()`.",
       },
       {
         option: "onReady",
@@ -652,6 +661,20 @@ const editor = new Blok(config);`,
         default: "undefined",
         description:
           "Real-time multiplayer editing against the sync service `server` points at. Two editors opened on the same `doc` see each other's edits live.\n\n`doc` is the shared document id, and it becomes one path segment of the sync URL. It must therefore be a single path segment: no `/`, no encoded slash, no `.` or `..`. Anything else is refused at construction rather than failing at the door.\n\n`user` is the DISPLAY identity the other people see. It is the name on their avatar, and the color of their cursor and of the small face parked in the margin beside the block they are in. It is also what the `user: { id }` option, which records edit attribution, gets NAMED by.\n\nSet both and peers can read \"Last edited by <name>\" on the blocks you edited, because the id rides into the presence state alongside that name. The name is published to the room. `user.name` is not, so a host that sets only `user.name` names itself and nobody else.\n\nEveryone in the room also sees when you were last active, alongside where your cursor is. Set neither and you are present as an anonymous avatar with no id published at all.\n\n`color` is HEX only (`#rgb`, `#rrggbb`, with or without alpha). Anything else is replaced with a color from the built-in palette.\n\n`offline` keeps a copy of the document in that browser, so edits made while disconnected survive a reload. It is off by default, because it writes document content into browser storage, and it is dropped whenever the service resets the document.\n\nIt REQUIRES `offlineScope`, an opaque stable id for the signed-in account. Browser storage belongs to the browser rather than to a person, so without a partition the next person on a shared profile is handed the previous one's document.\n\nIt is never an authorization claim, because the server never sees it, and it is never the display identity. Do not derive it from anything that rotates: a new partition on every refresh strands every copy before it.\n\nIt requires `server`, and is mutually exclusive with `persistence`. The sync service owns the whole document round-trip, so a second load/save pair would give the document two owners. Both pairings are refused at construction.\n\nAbsent, it costs nothing: Blok opens no socket. Mount-only: changing it means recreating the editor.\n\n- React and Vue take it as a `collaboration` prop.\n- Angular has no dedicated input, so it goes through `[config]`.\n\nConnection state and the people present arrive on the `collaboration:status` event.",
+      },
+      {
+        option: "documentId",
+        type: "string",
+        default: "undefined",
+        description:
+          "Your app's id for this document. Tabs of one browser that show the same `documentId` stay in sync live, with no server.\n\nUse the id your app already loads and saves the document by, such as a route param or a record key. It must be unique across the whole site.\n\nWithout it, Blok uses the `id` it writes into saved data, plus the page path. That only covers a document loaded through `persistence`.\n\nMount-only: to show another document, recreate the editor. The Tab sync guide covers where the id comes from.",
+      },
+      {
+        option: "tabSync",
+        type: "boolean | { settings?: boolean }",
+        default: "true",
+        description:
+          "Live sync between the tabs of one browser. It is on by default.\n\n- `false` turns it off.\n- `{ settings: false }` keeps document sync but stops syncing locale, theme mode and width.\n\nIt never runs with `collaboration`, whose server already syncs every tab. Mount-only: changing it means recreating the editor.",
       },
       {
         option: "theme",
@@ -3147,6 +3170,55 @@ editor.listeners.offById(listenerId);`,
     ],
   },
   {
+    id: "view-state-api",
+    badge: "ViewState",
+    title: "ViewState API",
+    description:
+      "Personal state for a block that belongs to this browser, not to the document. The toggle keeps its open state here under the key `'open'`. Inside a tool it is `api.viewState`.\n\nValues are stored as JSON in `localStorage`, under the document's id. They are never saved in the document and never sent to collaborators. An entry not written for 90 days is removed.\n\nWithout `localStorage`, values live in memory for this tab only.",
+    methods: [
+      {
+        name: "viewState.get(blockId, key)",
+        returnType: "unknown",
+        description:
+          "This browser's value for a block under `key`, or `undefined` when none is set.",
+        example: `const open = editor.viewState.get(blockId, 'open') === true;`,
+      },
+      {
+        name: "viewState.set(blockId, key, value)",
+        returnType: "void",
+        description:
+          "Stores a value for a block in this browser. Use a value JSON can hold. It works in read-only mode and never enters the undo history.",
+        example: `editor.viewState.set(blockId, 'open', true);`,
+      },
+      {
+        name: "viewState.onChange(blockId, key, listener)",
+        returnType: "() => void",
+        description:
+          "Calls `listener` with the new value when this tab or another tab of this browser sets it. The other tab must show the same document. Returns a function that unsubscribes.",
+        example: `const unsubscribe = editor.viewState.onChange(blockId, 'open', (value) => {
+  setOpen(value === true);
+});
+
+// Later
+unsubscribe();`,
+      },
+      {
+        name: "viewState.isCreatedHere(blockId)",
+        returnType: "boolean",
+        description:
+          "`true` for a block this tab created after the document rendered: from the toolbox, a shortcut, paste, convert or split. `false` for blocks from the saved document, another tab, a collaborator, or undo and redo. Use it to open a new block for the person who made it.",
+        example: `// In a block tool
+rendered() {
+  const { viewState } = this.api;
+
+  if (viewState.get(this.blockId, 'open') === undefined && viewState.isCreatedHere(this.blockId)) {
+    viewState.set(this.blockId, 'open', true);
+  }
+}`,
+      },
+    ],
+  },
+  {
     id: "tools-api",
     badge: "Tools",
     title: "Tools API",
@@ -3480,6 +3552,7 @@ const data = await editor.save();
 
 // Result structure:
 interface OutputData {
+  id?: string;         // Document id, used by tab sync
   version?: string;    // Editor version
   time?: number;       // Save timestamp
   blocks: OutputBlockData[]; // Array of block data
@@ -3503,6 +3576,13 @@ interface OutputData {
   ]
 }`,
     table: [
+      {
+        option: "id",
+        type: "string (optional)",
+        default: "—",
+        description:
+          "The document's id. Blok writes one on the first save when the loaded document has none, and keeps it. Tab sync uses it to find other tabs showing this document. `equalsOutputData` ignores it.",
+      },
       {
         option: "version",
         type: "string (optional)",

@@ -91,6 +91,7 @@
       "i18n": "I18n",
       "ui": "UI",
       "listeners": "Listeners",
+      "viewState": "ViewState",
       "tools": "Tools",
       "uploader": "Uploader",
       "devOverrideSeam": "Dev override seam",
@@ -99,6 +100,7 @@
       "everythingIsABlock": "Everything is a block",
       "tutorial": "Build your first editor",
       "customBlockTool": "Create a custom block tool",
+      "tabSync": "Tab sync",
       "blokEditor": "BlokEditor component",
       "useBlocks": "useBlocks",
       "useBlokReady": "useBlokReady",
@@ -244,10 +246,10 @@
           "description": "Enable read-only mode. Pass `{ hideControls: true }` to also hide the hover toolbar, block settings, and inline toolbar. Live field: change it at runtime via `readOnly.set(state, { hideControls })`. The same instance flips modes in place, preserving caret, undo history and scroll."
         },
         "onChange": {
-          "description": "Change callback function. The event argument carries the mutation that occurred, or an array of them when several fire at once.\n\nLatency is bounded, so it is safe to drive UI from. The first change of an idle document arrives on the next microtask, in the same frame the user typed in. The changes after it are coalesced into one further call at the end of a short batch window, and later changes never extend that window.\n\nLive field: install, replace or unset it at runtime via `handlers.set({ onChange })`. Its presence, together with `onSave`, is what arms Blok's change-observation pipeline at all."
+          "description": "Change callback function. The event argument carries the mutation that occurred, or an array of them when several fire at once.\n\nLatency is bounded, so it is safe to drive UI from. The first change of an idle document arrives on the next microtask, in the same frame the user typed in. The changes after it are coalesced into one further call at the end of a short batch window, and later changes never extend that window.\n\nEach event's `detail.origin` says who made the change. It is `'local'` for this tab, including its undo and redo, `'tab'` for another tab of this browser, and `'remote'` for a collaborator.\n\nLive field: install, replace or unset it at runtime via `handlers.set({ onChange })`. Its presence, together with `onSave`, is what arms Blok's change-observation pipeline at all."
         },
         "onSave": {
-          "description": "Reactive save callback. It fires automatically with the full serialized content on every batched content change, so you do not have to call save() by hand.\n\nIt rides the trailing edge of the batch window only. Unlike onChange it never leads the window, because serializing the whole document is too expensive to front-run the batch with.\n\nLive field: install, replace or unset it at runtime via `handlers.set({ onSave })`. Its mere presence makes Blok serialize the document once per change batch."
+          "description": "Reactive save callback. It fires automatically with the full serialized content on every batched content change, so you do not have to call save() by hand.\n\nIt rides the trailing edge of the batch window only. Unlike onChange it never leads the window, because serializing the whole document is too expensive to front-run the batch with.\n\nLive field: install, replace or unset it at runtime via `handlers.set({ onSave })`. Its mere presence makes Blok serialize the document once per change batch.\n\nWith tab sync, only the main tab calls it. In other tabs, read the document with `editor.save()`."
         },
         "onReady": {
           "description": "Fires once when the editor becomes ready, receiving the fully-initialized Blok instance"
@@ -296,6 +298,12 @@
         },
         "collaboration": {
           "description": "Real-time multiplayer editing against the sync service `server` points at. Two editors opened on the same `doc` see each other's edits live.\n\n`doc` is the shared document id, and it becomes one path segment of the sync URL. It must therefore be a single path segment: no `/`, no encoded slash, no `.` or `..`. Anything else is refused at construction rather than failing at the door.\n\n`user` is the DISPLAY identity the other people see. It is the name on their avatar, and the color of their cursor and of the small face parked in the margin beside the block they are in. It is also what the `user: { id }` option, which records edit attribution, gets NAMED by.\n\nSet both and peers can read \"Last edited by <name>\" on the blocks you edited, because the id rides into the presence state alongside that name. The name is published to the room. `user.name` is not, so a host that sets only `user.name` names itself and nobody else.\n\nEveryone in the room also sees when you were last active, alongside where your cursor is. Set neither and you are present as an anonymous avatar with no id published at all.\n\n`color` is HEX only (`#rgb`, `#rrggbb`, with or without alpha). Anything else is replaced with a color from the built-in palette.\n\n`offline` keeps a copy of the document in that browser, so edits made while disconnected survive a reload. It is off by default, because it writes document content into browser storage, and it is dropped whenever the service resets the document.\n\nIt REQUIRES `offlineScope`, an opaque stable id for the signed-in account. Browser storage belongs to the browser rather than to a person, so without a partition the next person on a shared profile is handed the previous one's document.\n\nIt is never an authorization claim, because the server never sees it, and it is never the display identity. Do not derive it from anything that rotates: a new partition on every refresh strands every copy before it.\n\nIt requires `server`, and is mutually exclusive with `persistence`. The sync service owns the whole document round-trip, so a second load/save pair would give the document two owners. Both pairings are refused at construction.\n\nAbsent, it costs nothing: Blok opens no socket. Mount-only: changing it means recreating the editor.\n\n- React and Vue take it as a `collaboration` prop.\n- Angular has no dedicated input, so it goes through `[config]`.\n\nConnection state and the people present arrive on the `collaboration:status` event."
+        },
+        "documentId": {
+          "description": "Your app's id for this document. Tabs of one browser that show the same `documentId` stay in sync live, with no server.\n\nUse the id your app already loads and saves the document by, such as a route param or a record key. It must be unique across the whole site.\n\nWithout it, Blok uses the `id` it writes into saved data, plus the page path. That only covers a document loaded through `persistence`.\n\nMount-only: to show another document, recreate the editor. The Tab sync guide covers where the id comes from."
+        },
+        "tabSync": {
+          "description": "Live sync between the tabs of one browser. It is on by default.\n\n- `false` turns it off.\n- `{ settings: false }` keeps document sync but stops syncing locale, theme mode and width.\n\nIt never runs with `collaboration`, whose server already syncs every tab. Mount-only: changing it means recreating the editor."
         },
         "persistence": {
           "description": "Load the document on mount and save it as it changes, against your own endpoint. The Blok service stores no documents. It takes two callbacks rather than a URL, because the endpoint shape, its auth and the document id are yours.\n\nSaves never run in parallel, and only the newest pending document follows the one in flight. So a slow save finishing after a fast one cannot bring stale content back. Loading only happens when you passed no `data`, and setting `onSave` yourself wins.\n\n`load` may answer with a version alongside the document. Each `save` is told the version it is overwriting and may report the one it wrote. Blok only carries that version between the two calls, so your endpoint stays the only place a stale write is detected."
@@ -988,6 +996,27 @@
         }
       }
     },
+    "viewStateApi": {
+      "title": "ViewState API",
+      "badge": "ViewState",
+      "description": "Personal state for a block that belongs to this browser, not to the document. The toggle keeps its open state here under the key `'open'`. Inside a tool it is `api.viewState`.\n\nValues are stored as JSON in `localStorage`, under the document's id. They are never saved in the document and never sent to collaborators. An entry not written for 90 days is removed.\n\nWithout `localStorage`, values live in memory for this tab only.",
+      "methods": {
+        "viewState": {
+          "get": {
+            "description": "This browser's value for a block under `key`, or `undefined` when none is set."
+          },
+          "set": {
+            "description": "Stores a value for a block in this browser. Use a value JSON can hold. It works in read-only mode and never enters the undo history."
+          },
+          "onChange": {
+            "description": "Calls `listener` with the new value when this tab or another tab of this browser sets it. The other tab must show the same document. Returns a function that unsubscribes."
+          },
+          "isCreatedHere": {
+            "description": "`true` for a block this tab created after the document rendered: from the toolbox, a shortcut, paste, convert or split. `false` for blocks from the saved document, another tab, a collaborator, or undo and redo. Use it to open a new block for the person who made it."
+          }
+        }
+      }
+    },
     "toolsApi": {
       "title": "Tools API",
       "badge": "Tools",
@@ -1086,6 +1115,11 @@
         },
         "toRenderableData": {
           "description": "Maps a controlled `data` value to something render()/blocks.render() accepts, exported from the main entry. A whole-document `null`, which is a controlled \"clear to empty\", becomes `{ blocks: [] }`. Any real document passes through untouched.\n\nThe strict guard in render() reads `data.blocks` and would throw on `null`, so route a nullable controlled value through this first."
+        }
+      },
+      "table": {
+        "id": {
+          "description": "The document's id. Blok writes one on the first save when the loaded document has none, and keeps it. Tab sync uses it to find other tabs showing this document. `equalsOutputData` ignores it."
         }
       }
     },
@@ -1405,6 +1439,35 @@
         "middle": "and check",
         "blockDataLink": "BlockData",
         "suffix": "for the exact shape your `save()` feeds into."
+      }
+    },
+    "tabSync": {
+      "title": "Tab sync",
+      "badge": "Guide",
+      "description": "Keep one document live across the tabs of one browser, with no server.",
+      "whatItDoes": {
+        "title": "What it does",
+        "body": "Open the same document in two tabs of one browser. A change in one tab shows up in the others. No server is involved.\n\nTab sync is on by default. `tabSync: false` turns it off. `tabSync: { settings: false }` keeps the document in sync but stops sharing locale, theme mode and width.\n\nWith `collaboration` set, tab sync stays off. The collaboration server already keeps every tab in sync."
+      },
+      "documentId": {
+        "title": "Where the document id comes from",
+        "body": "Tabs find each other by a document id. Pass it as `documentId`. Use the id your app already loads and saves the document by:\n\n- A route param, such as `/notes/:id`.\n- The id inside your `persistence` URLs.\n- The key of the database record.\n- A fixed name, such as `'notes'`, when the site has a single editor.\n- A new unique id for a new document.\n\nFor a new id, `crypto.randomUUID()` works on HTTPS and on localhost. It is missing on a plain-http page, because it needs a secure context. Any unique string works just as well.\n\nThe id must be unique across the whole site. If two of your customers can share an id, add a prefix, such as `'acme:42'`.\n\nWithout `documentId`, Blok uses the `id` it writes into saved data, plus the page path. That covers a document loaded through `persistence`. A document passed as `data` never joins on its own, and neither does an empty one. Pass `documentId` there."
+      },
+      "whatSyncs": {
+        "title": "What syncs",
+        "body": "These follow across the tabs that show the same document:\n\n- The document content.\n- The content width.\n- Whether each toggle is open. This is personal to the browser and never saved in the document.\n\nLocale and theme mode follow across every tab of the site that runs Blok. Recent colors, links and code languages, the emoji skin tone, and media volume, speed and loop are shared too.\n\nThese never sync:\n\n- Selection and caret.\n- Scroll position.\n- Open menus and popovers.\n- Find in page.\n- Read-only mode.\n- Theme tokens and other host config.\n- Media playback position."
+      },
+      "saving": {
+        "title": "Only the main tab saves",
+        "body": "One tab is the main tab. Only it calls `persistence.save` and `onSave`, including the save handlers inside the framework adapters. When the main tab closes, another open tab takes over.\n\nSo a binding that rides `onSave` updates only in the main tab:\n\n- Vue `v-model:data`.\n- Angular `[formControl]`.\n- A React `onSave` that feeds your state.\n\nIn any other tab, read the document with `editor.save()`.\n\n`onChange` still fires in every tab. Its events carry `origin`, which is `'tab'` for a change made in another tab."
+      },
+      "toggles": {
+        "title": "Toggles",
+        "body": "Whether a toggle is open is personal. Each browser keeps its own state, and it is never saved in the document. The same holds for toggleable headings.\n\n- A toggle starts collapsed.\n- A toggle you create starts open for you in this browser.\n- Opening a toggle in one tab opens it in the other tabs of this browser that show the same document.\n\n`isOpen` is no longer saved or read. A document saved with `isOpen` opens with its toggles collapsed. The state lives in `api.viewState` under the key `'open'`."
+      },
+      "limits": {
+        "title": "Limits",
+        "body": "The document stays separate in each tab in these cases:\n\n- Inside a third-party iframe in Chrome and Firefox. Those browsers split tab channels by the top-level site.\n- On a plain-http page. Web Locks need a secure context, and localhost counts as one.\n- Across Blok versions that use different tab sync protocols.\n- In a tab where the user typed before it joined. It stays separate until reload.\n\nA tab opened while the main tab is frozen in the background works on its own. It joins when the main tab wakes, unless the user typed in it meanwhile.\n\nTyping reaches the other tabs within about 400 ms.\n\nIf your app copies stored documents and opens every document at one path, the copies share an id. Pass `documentId`, or remove `id` when you copy.\n\n`documentId` and `tabSync` are fixed for the editor's life. To switch documents, recreate the editor. In React, change its `key` or the `useBlok` deps. In Vue and Angular, change `recreateKey`."
       }
     },
     "whenToUse": "When to use",

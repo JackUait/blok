@@ -296,6 +296,18 @@ const MODULE_COPY: Record<string, Copy> = {
       'Supply translations for tool names, toolbar labels, and the accessibility strings Blok renders.',
     h1: "i18n API: translate Blok's interface",
   },
+  'tab-sync': {
+    title: 'Blok Tab Sync — One Document Across Browser Tabs',
+    description:
+      'Keep a Blok document live across the tabs of one browser with documentId: what syncs, what never does, and the limits.',
+    h1: 'Tab sync: one document in every tab',
+  },
+  'view-state-api': {
+    title: 'Blok ViewState API — Personal Per-Browser Block State',
+    description:
+      'Store per-browser block state, such as whether a toggle is open, outside the saved document.',
+    h1: 'ViewState API: personal block state',
+  },
   'dev-override-seam': {
     title: 'Blok Dev Override Seam — Threat Model & Opt-Out',
     description:

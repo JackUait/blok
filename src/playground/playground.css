@@ -186,14 +186,15 @@ html.pg-page-nav {
   --pg-page-glide: cubic-bezier(0.22, 1, 0.36, 1);
 }
 html.pg-page-nav[data-pg-page-dir="back"] { --pg-page-shift: -24px; }
-html.pg-page-nav #tab-editor { view-transition-name: pg-page-body; }
+/* The chrome around the page crossfades: the top bar may scroll in or out. */
+html.pg-page-nav::view-transition-group(root) { animation-duration: 300ms; }
 html.pg-page-nav::view-transition-old(root),
-html.pg-page-nav::view-transition-new(root) { animation: none; }
+html.pg-page-nav::view-transition-new(root) { animation-duration: 300ms; }
 /* The old page is gone before the new one shows, so the two never stack. */
-html.pg-page-nav::view-transition-old(pg-page-body) {
+html.pg-page-nav::view-transition-old(pg-page-out) {
   animation: pg-page-leave 120ms cubic-bezier(0.4, 0, 1, 1) both;
 }
-html.pg-page-nav::view-transition-new(pg-page-body) {
+html.pg-page-nav::view-transition-new(pg-page-in) {
   animation: pg-page-enter 420ms var(--pg-page-glide) 90ms both;
 }
 html.pg-page-nav::view-transition-group(pg-page-title),

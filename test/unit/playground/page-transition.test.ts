@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PAGE_HEADER_MORPH, pageLinkMorph, runPageTransition } from '../../../src/playground/page-host';
+import { PAGE_HEADER_MORPH, holdPageHeight, pageLinkMorph, runPageTransition } from '../../../src/playground/page-host';
 
 const css = readFileSync(resolve(__dirname, '../../../src/playground/playground.css'), 'utf-8');
 
@@ -38,15 +38,19 @@ describe('page transition styles', () => {
   });
 
   it.each(['pg-page-title', 'pg-page-icon'])('makes a %s with no end on the new page leave with the old page, not linger over it', (name) => {
-    const leave = ms(rule('html.pg-page-nav::view-transition-old(pg-page-body)'), 0);
+    const leave = ms(rule('html.pg-page-nav::view-transition-old(pg-page-out)'), 0);
     const orphan = ms(rule(`html.pg-page-nav::view-transition-old(${name}):only-child`), 0);
 
     expect(orphan).toBeLessThanOrEqual(leave);
   });
 
+  it('keeps the page chrome (the root) crossfading instead of popping in at the new scroll', () => {
+    expect(css).not.toMatch(/view-transition-(?:old|new)\(root\)[^{]*\{[^}]*animation:\s*none/);
+  });
+
   it('lets the old page leave before the new page arrives', () => {
-    const leave = ms(rule('html.pg-page-nav::view-transition-old(pg-page-body)'), 0);
-    const enterDelay = ms(rule('html.pg-page-nav::view-transition-new(pg-page-body)'), 1);
+    const leave = ms(rule('html.pg-page-nav::view-transition-old(pg-page-out)'), 0);
+    const enterDelay = ms(rule('html.pg-page-nav::view-transition-new(pg-page-in)'), 1);
 
     expect(leave - enterDelay).toBeLessThanOrEqual(40);
   });
@@ -103,7 +107,20 @@ describe('runPageTransition', () => {
       document.body.innerHTML = header;
     }, { direction: 'forward', from: pageLinkMorph('go'), to: PAGE_HEADER_MORPH });
 
-    expect(sheets[0]).not.toContain('view-transition-name');
+    expect(sheets[0]).not.toContain('pg-page-title');
+    expect(sheets[0]).not.toContain('pg-page-icon');
+  });
+
+  it('snapshots the leaving and arriving bodies under different names, so neither slides by the scroll distance', async () => {
+    document.body.innerHTML = row('go');
+
+    await runPageTransition(async () => {
+      document.body.innerHTML = header;
+    }, { direction: 'forward', from: pageLinkMorph('go'), to: PAGE_HEADER_MORPH });
+
+    expect(sheets[0]).toContain('#tab-editor { view-transition-name: pg-page-out; }');
+    expect(sheets[1]).toContain('#tab-editor { view-transition-name: pg-page-in; }');
+    expect(sheets[1]).not.toContain('pg-page-out');
   });
 
   it('removes the naming sheet once the transition ends', async () => {
@@ -115,5 +132,62 @@ describe('runPageTransition', () => {
 
     expect(document.head.querySelector('style')).toBeNull();
     expect(document.documentElement.classList.contains('pg-page-nav')).toBe(false);
+  });
+});
+
+describe('holdPageHeight', () => {
+  let resize: () => void = () => undefined;
+  let bodyHeight = 0;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    bodyHeight = 900;
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) {
+        resize = callback;
+      }
+
+      observe(): void {}
+
+      disconnect(): void {}
+    });
+    vi.spyOn(document.body, 'getBoundingClientRect').mockImplementation(() => ({ height: bodyHeight } as DOMRect));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.documentElement.style.removeProperty('min-height');
+  });
+
+  it('keeps the document as tall as the page was, so a saved scroll is not clamped while it loads', () => {
+    holdPageHeight(7800);
+
+    expect(document.documentElement.style.minHeight).toBe('7800px');
+  });
+
+  it('lets go once the content is that tall again', () => {
+    holdPageHeight(7800);
+    bodyHeight = 7800;
+    resize();
+
+    expect(document.documentElement.style.minHeight).toBe('');
+  });
+
+  it('keeps holding while the content is still shorter', () => {
+    holdPageHeight(7800);
+    bodyHeight = 3000;
+    resize();
+
+    expect(document.documentElement.style.minHeight).toBe('7800px');
+  });
+
+  it('lets go after a while when the page came back shorter than it was', () => {
+    holdPageHeight(7800);
+    vi.advanceTimersByTime(5000);
+
+    expect(document.documentElement.style.minHeight).toBe('');
   });
 });

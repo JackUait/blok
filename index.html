@@ -1754,7 +1754,7 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
-    import { PAGE_HEADER_MORPH, PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkMorph, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
+    import { PAGE_HEADER_MORPH, PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkMorph, holdPageHeight, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountPageTree } from './src/playground/page-tree.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
@@ -2253,14 +2253,17 @@
         // A page deleted for good goes up to its parent, so it slides back too.
         const back = from !== null && (target === null || !pages.has(from) || pages.trail(from).some((page) => page.id === target));
 
-        scrollByPage.set(from, window.scrollY);
+        scrollByPage.set(from, { y: window.scrollY, height: document.body.getBoundingClientRect().height });
         await snapshotEditor();
         currentPageId = target;
 
         await runPageTransition(async () => {
           await swapEditor();
           renderHeader();
-          window.scrollTo(0, back ? (scrollByPage.get(target) ?? 0) : 0);
+          const saved = back ? scrollByPage.get(target) : undefined;
+          // The page's blocks may still be loading; without the hold the offset clamps to the empty page.
+          if (saved !== undefined) holdPageHeight(saved.height);
+          window.scrollTo(0, saved?.y ?? 0);
           // A brand-new page starts at its title, like Notion.
           if (target !== null && pages.get(target)?.title === '' && !state.readOnly) {
             document.querySelector(PAGE_TITLE_SELECTOR)?.focus();
@@ -2396,6 +2399,9 @@
       });
     });
 
+    // goToPage restores each page's scroll; the browser's own restore would
+    // scroll the page being left before the transition snapshots it.
+    history.scrollRestoration = 'manual';
     window.addEventListener('popstate', () => {
       const { page, subpath } = parseRoute(window.location.pathname);
       navigateTo(page, subpath);

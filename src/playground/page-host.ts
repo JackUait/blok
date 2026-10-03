@@ -927,6 +927,38 @@ const morphRules = (morph: PageMorph | null): string => {
     .join('\n');
 };
 
+/*
+ * The leaving and arriving bodies get different names. One shared name would
+ * animate the body's box from the old scroll offset to the new one, sliding
+ * the page by the whole scroll distance.
+ */
+const bodyRule = (side: 'out' | 'in'): string => `#tab-editor { view-transition-name: pg-page-${side}; }`;
+
+/* A page that came back shorter (a peer deleted blocks) must not keep a blank tail forever. */
+const HOLD_LIMIT_MS = 4000;
+
+/**
+ * Keeps the document `height` tall until the content fills it again, so
+ * restoring a scroll offset on a page that is still loading is not clamped.
+ */
+export const holdPageHeight = (height: number): void => {
+  const root = document.documentElement;
+  const release = (): void => {
+    watch.disconnect();
+    clearTimeout(timer);
+    root.style.removeProperty('min-height');
+  };
+  const watch = new ResizeObserver(() => {
+    if (document.body.getBoundingClientRect().height >= height) {
+      release();
+    }
+  });
+  const timer = setTimeout(release, HOLD_LIMIT_MS);
+
+  root.style.setProperty('min-height', `${height}px`);
+  watch.observe(document.body);
+};
+
 /**
  * Runs `update` inside a view transition: the body slides, and the `from`
  * title and icon morph into the `to` ones (a page row into the page header).
@@ -946,14 +978,14 @@ export const runPageTransition = async (update: () => Promise<void>, options: Pa
   // still live when the old snapshot is taken.
   const morph = document.createElement('style');
 
-  morph.textContent = morphRules(options.from);
+  morph.textContent = [bodyRule('out'), morphRules(options.from)].join('\n');
   document.head.append(morph);
   root.classList.add('pg-page-nav');
   root.setAttribute('data-pg-page-dir', options.direction);
 
   const transition = document.startViewTransition(async () => {
     await update();
-    morph.textContent = morphRules(options.to);
+    morph.textContent = [bodyRule('in'), morphRules(options.to)].join('\n');
   });
 
   try {

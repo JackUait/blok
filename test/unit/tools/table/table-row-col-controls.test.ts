@@ -1702,6 +1702,28 @@ describe('TableRowColControls', () => {
       controls = mountControls(table);
       controls.pinCell({ row: 1, col: 2 });
 
+    it('keeps the pinned column grip on one column when rows sit above the merged cell', () => {
+      const { table } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+      controls.pinCell({ row: 1, col: 0, rowSpan: 2, colSpan: 2 });
+
+      expect(colGripLeft(table, 0)).toBe('50px');
+    });
+
+    it('keeps the hovered column grip on one column when rows sit above the merged cell', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+      origin.setAttribute(CELL_ROW_ATTR, '1');
+
+      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 150, clientY: 100 }));
+
+      expect(colGripLeft(table, 0)).toBe('50px');
+    });
+
       origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 50, clientY: 10 }));
 
       expect(visibleRowGrips(table)).toEqual(['0']);

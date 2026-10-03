@@ -97,6 +97,12 @@ export const GRIP_ACTIVE_CLASSES = [
 ];
 
 /**
+ * The column grip sits on the top row. A merged cell below it shares no edge
+ * with that grip, so its columns get the usual one-column grip.
+ */
+const colGripSpan = (row: number, colSpan: number): number => row > 0 ? 1 : colSpan;
+
+/**
  * Manages row and column grip handles with popover menus and drag-to-reorder.
  */
 export class TableRowColControls {
@@ -259,7 +265,7 @@ export class TableRowColControls {
     this.pinnedRowIndex = cell?.row ?? -1;
     this.pinnedColIndex = cell?.col ?? -1;
     this.pinnedRowSpan = cell?.rowSpan ?? 1;
-    this.pinnedColSpan = cell?.colSpan ?? 1;
+    this.pinnedColSpan = colGripSpan(this.pinnedRowIndex, cell?.colSpan ?? 1);
 
     if (prevCol >= 0 && prevCol !== this.pinnedColIndex && prevCol !== this.activeColGripIndex && prevCol < this.colGrips.length) {
       this.applyIdleClasses(this.colGrips[prevCol]);
@@ -759,7 +765,7 @@ export class TableRowColControls {
     return {
       ...position,
       rowSpan: (cell as HTMLTableCellElement).rowSpan || 1,
-      colSpan: (cell as HTMLTableCellElement).colSpan || 1,
+      colSpan: colGripSpan(position.row, (cell as HTMLTableCellElement).colSpan || 1),
     };
   }
 

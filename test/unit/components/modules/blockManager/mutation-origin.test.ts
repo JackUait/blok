@@ -219,6 +219,23 @@ describe('block mutation events carry origin', () => {
     expect(seen.every((event) => event.origin === 'tab')).toBe(true);
   });
 
+  it('labels blocks added together by one tab update', async () => {
+    await boot('paragraph');
+    requireBlockManager().setRemoteOriginLabel('tab');
+
+    // One update carrying two adds reaches the reconciler as one batch-add.
+    requirePeer().addBlock({ id: 'second', type: 'paragraph', data: { text: 'two' } });
+    requirePeer().addBlock({ id: 'third', type: 'paragraph', data: { text: 'three' } });
+    sendPeerUpdate();
+    await settle();
+
+    expect(seen.filter((event) => event.type === 'block-added')).toEqual([
+      { type: 'block-added', origin: 'tab' },
+      { type: 'block-added', origin: 'tab' },
+    ]);
+    expect(seen.every((event) => event.origin === 'tab')).toBe(true);
+  });
+
   it('labels a block removed by a tab update', async () => {
     await boot('paragraph');
     requirePeer().addBlock({ id: 'second', type: 'paragraph', data: { text: 'new' } });

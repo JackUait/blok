@@ -12,6 +12,7 @@ import { test as isolatedTest } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const UNDO = `${MOD}+z`;
@@ -67,6 +68,7 @@ const mount = async (page: Page, blocks: OutputData['blocks'], withTools = true)
     window.blokInstance = blok;
     await blok.isReady;
   }, { list: blocks, tools: withTools });
+  await openFixtureToggles(page, { blocks });
 };
 
 /*

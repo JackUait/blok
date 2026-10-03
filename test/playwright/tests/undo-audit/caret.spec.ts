@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -52,6 +53,7 @@ const createBlok = async (page: Page, blocks: OutputData['blocks']): Promise<voi
     window.blokInstance = blok;
     await blok.isReady;
   }, { holder: HOLDER_ID, blocks });
+  await openFixtureToggles(page, { blocks });
 };
 
 const wait = async (page: Page, ms: number): Promise<void> => {
@@ -206,8 +208,8 @@ test.describe('undo audit — caret, scroll, selection', () => {
   });
 
   test.describe('works (no other coverage)', () => {
-    // Collapsing is its own undo step (isOpen is saved data), so undo reopens first.
-    test('undo after collapsing a toggle reopens it, then reverts the child edit', async ({ page }) => {
+    // Open/close is personal state, not an undo step, so the first undo reverts the child edit.
+    test('undo after collapsing a toggle reverts the child edit, not the collapse', async ({ page }) => {
       await createBlok(page, [
         { id: 'tg', type: 'toggle', data: { text: 'Toggle', isOpen: true }, content: ['ch'] },
         { id: 'ch', type: 'paragraph', data: { text: 'child' }, parent: 'tg' },
@@ -219,14 +221,13 @@ test.describe('undo audit — caret, scroll, selection', () => {
       await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-id="ch"]`)).toBeHidden();
 
       await undo(page);
-      const afterReopen = await caretInfo(page);
 
-      expect([afterReopen.blockId, afterReopen.offset, afterReopen.anchorVisible]).toEqual(['ch', 7, true]);
-      await undo(page);
+      await expect(editableOf(page, 'ch')).toHaveText('child');
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-id="tg"] [data-blok-toggle-arrow]`).first()).toHaveAttribute('aria-expanded', 'false');
       const afterUndo = await caretInfo(page);
 
-      expect([afterUndo.blockId, afterUndo.offset, afterUndo.anchorVisible]).toEqual(['ch', 5, true]);
-      await expect(editableOf(page, 'ch')).toHaveText('child');
+      // The caret goes back into the edited block, which stays hidden in the collapsed toggle.
+      expect([afterUndo.blockId, afterUndo.offset]).toEqual(['ch', 5]);
     });
 
     test('undo/redo in a code block keeps the offset after newlines', async ({ page }) => {

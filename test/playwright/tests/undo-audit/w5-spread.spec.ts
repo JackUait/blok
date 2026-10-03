@@ -698,15 +698,6 @@ test.describe('W5F: spread of the wave-4 families', () => {
       },
     },
     {
-      id: 'W5F-64',
-      title: 'a toggle arrow click',
-      blocks: () => [P('a', 'Alpha one'), P('m', 'Middle'), { id: 'b', type: 'toggle', data: { text: 'Bravo two', isOpen: true }, content: ['bk'] }, P('bk', 'kid', 'b'), P('c', 'Charlie')],
-      target: 'b',
-      gesture: async (page) => {
-        await page.locator('[data-blok-id="b"] [data-blok-toggle-arrow]').first().click();
-      },
-    },
-    {
       id: 'W5F-65',
       title: 'a paste',
       blocks: C_DOC,
@@ -772,6 +763,23 @@ test.describe('W5F: spread of the wave-4 families', () => {
       },
     },
   ];
+
+  // Open/close is personal state, so an arrow click adds no undo step and undo leaves it as clicked.
+  test('W5F-64: a toggle arrow click is not an undo step', async ({ page }) => {
+    await create(page, [P('a', 'Alpha one'), P('m', 'Middle'), { id: 'b', type: 'toggle', data: { text: 'Bravo two' }, content: ['bk'] }, P('bk', 'kid', 'b'), P('c', 'Charlie')]);
+    await gap(page);
+    await caretAt(page, 'b', 3);
+    await gap(page, 200);
+    const arrow = page.locator('[data-blok-id="b"] [data-blok-toggle-arrow]').first();
+
+    await arrow.click();
+    await gap(page);
+    await expect(arrow).toHaveAttribute('aria-expanded', 'true');
+    expect(await page.evaluate(() => window.blokInstance?.history.canUndo()), 'the click is not undoable').toBe(false);
+    await undo(page);
+
+    await expect(arrow).toHaveAttribute('aria-expanded', 'true');
+  });
 
   for (const c of C) {
     for (const withNoOp of [true, false]) {

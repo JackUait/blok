@@ -11,6 +11,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -49,6 +50,7 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
     window.blokInstance = blok;
     await blok.isReady;
   }, { holder: HOLDER_ID, initialData: data });
+  await openFixtureToggles(page, data);
 };
 
 const save = async (page: Page): Promise<SavedBlock[]> => page.evaluate(async () => {
@@ -472,10 +474,15 @@ test.describe('CON toggle / callout', () => {
     await gap(page);
     expect(await save(page)).toEqual(before);
 
-    await page.locator('[data-blok-id="box"] [data-blok-toggle-arrow]').first().click();
+    const arrow = page.locator('[data-blok-id="box"] [data-blok-toggle-arrow]').first();
+
+    // The open state is personal, so it survives the delete and its undo.
+    await expect(arrow).toHaveAttribute('aria-expanded', 'true');
+    await arrow.click();
     await gap(page);
-    expect((await save(page)).find(b => b.id === 'box')?.data.isOpen).toBe(false);
+    await expect(arrow).toHaveAttribute('aria-expanded', 'false');
     await expect(page.getByText('kid one')).toBeHidden();
+    expect((await save(page)).find(b => b.id === 'box')?.data).not.toHaveProperty('isOpen');
   });
 });
 

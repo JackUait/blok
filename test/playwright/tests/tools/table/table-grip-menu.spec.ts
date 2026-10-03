@@ -334,5 +334,12 @@ test.describe('Table grips over a merged cell', () => {
     await expect(page.getByText('R3', { exact: true })).toBeVisible();
     await expect(page.getByText('R0', { exact: true })).toHaveCount(0);
     await expect(page.getByText('R2', { exact: true })).toHaveCount(0);
+
+    // One gesture, one undo step: a single undo brings back every row and the merge.
+    await page.keyboard.press('ControlOrMeta+z');
+
+    await expect(page.locator('[data-blok-table-row]')).toHaveCount(4);
+    await expect(page.getByText('R2', { exact: true })).toBeVisible();
+    await expect(getCell(page, 0, 0)).toHaveAttribute('rowspan', '3');
   });
 });

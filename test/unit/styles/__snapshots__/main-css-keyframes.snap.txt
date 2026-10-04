@@ -340,6 +340,11 @@
   70% { transform: rotate(45deg) scaleY(1.12) rotate(-45deg) }
 }
 
+@keyframes blok-media-preview-hover {
+  0%, 100% { translate: 0 0 }
+  50% { translate: -1.5px -2.5px }
+}
+
 @keyframes blok-media-preview-pan {
   0%, 100% { transform: translateX(0) }
   50% { transform: translateX(-34px) }

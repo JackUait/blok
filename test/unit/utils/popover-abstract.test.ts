@@ -4,6 +4,10 @@ vi.mock('../../../src/components/icons', () => ({
   IconChevronRight: '<svg data-blok-testid="chevron-right"></svg>',
 }));
 
+vi.mock('../../../src/components/utils/media-preview-3d', () => ({
+  leanPreview: vi.fn(),
+}));
+
 import { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
 import type {
   PopoverParams,
@@ -26,6 +30,7 @@ import type { SearchInput } from '../../../src/components/utils/popover/componen
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import { PopoverRegistry } from '../../../src/components/utils/popover/popover-registry';
 import { REEL_DISTORTION } from '../../../src/components/utils/popover/popover.const';
+import { leanPreview } from '../../../src/components/utils/media-preview-3d';
 
 /**
  * Test implementation of PopoverAbstract for unit testing
@@ -896,6 +901,135 @@ describe('PopoverAbstract', () => {
       popover.invokeToggleNothingFoundMessage(false);
 
       expect(nodes.nothingFoundMessage.classList.contains('hidden')).toBe(true);
+    });
+  });
+
+  describe('nothing found drawing', () => {
+    const installAnimate = (): ReturnType<typeof vi.fn> => {
+      const animate = vi.fn(() => ({ cancel: vi.fn() }) as unknown as Animation);
+
+      Object.defineProperty(Element.prototype, 'animate', { configurable: true, writable: true, value: animate });
+
+      return animate;
+    };
+
+    const preferReducedMotion = (): void => {
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        writable: true,
+        value: vi.fn((query: string) => ({ matches: query.includes('reduce') })),
+      });
+    };
+
+    const stageOf = (message: HTMLElement): HTMLElement => {
+      const stage = message.querySelector<HTMLElement>('[data-blok-media-preview="search"]');
+
+      if (stage === null) {
+        throw new Error('No search drawing');
+      }
+
+      return stage;
+    };
+
+    afterEach(() => {
+      // jsdom has neither; the tests below install them.
+      delete (Element.prototype as Partial<Element>).animate;
+      delete (window as Partial<Window>).matchMedia;
+      vi.restoreAllMocks();
+    });
+
+    it('draws a menu with an empty slot and a loupe floating above it', () => {
+      const stage = stageOf(createPopover().getNodesForTests().nothingFoundMessage);
+      const depthOf = (selector: string): number => Number(
+        stage.querySelector(selector)?.closest<SVGGElement>('.blok-media-preview__layer')?.style.getPropertyValue('--d')
+      );
+
+      expect(stage).toHaveAttribute('aria-hidden', 'true');
+      expect(stage.querySelector('.blok-media-preview__slot')).not.toBeNull();
+      expect(depthOf('.blok-media-preview__loupe')).toBeGreaterThan(depthOf('.blok-media-preview__slot'));
+    });
+
+    it('keeps each drawing\'s shadow ids to itself', () => {
+      const stages = [createPopover(), createPopover()].map((popover) => stageOf(popover.getNodesForTests().nothingFoundMessage));
+      const idsOf = (stage: HTMLElement): string[] => Array.from(stage.querySelectorAll('[id]'), (el) => el.id);
+
+      expect(idsOf(stages[0]).filter((id) => idsOf(stages[1]).includes(id))).toEqual([]);
+      stages.forEach((stage) => {
+        const references = Array.from(stage.innerHTML.matchAll(/(?:url\(#|href="#)([^)"]+)/g), (match) => match[1]);
+
+        expect(references.length).toBeGreaterThan(0);
+        references.forEach((id) => expect(idsOf(stage)).toContain(id));
+      });
+    });
+
+    it('fans the stack out and lands the loupe when the message appears', () => {
+      const animate = installAnimate();
+      const popover = createPopover();
+      const stage = stageOf(popover.getNodesForTests().nothingFoundMessage);
+
+      popover.invokeToggleNothingFoundMessage(true);
+
+      const animated = animate.mock.contexts;
+
+      expect(animated).toContain(stage.querySelector('.blok-media-preview__loupe'));
+      expect(animated).toContain(stage.querySelector('.blok-media-preview__sheet--back'));
+    });
+
+    it('flies the loupe\'s shadow with the loupe, not ahead of it', () => {
+      const animate = installAnimate();
+      const popover = createPopover();
+      const stage = stageOf(popover.getNodesForTests().nothingFoundMessage);
+
+      popover.invokeToggleNothingFoundMessage(true);
+
+      // The shadow is a <use> copy: it does not inherit the loupe's animation.
+      const flightOf = (selector: string): unknown[] | undefined => {
+        const index = animate.mock.contexts.indexOf(stage.querySelector(selector));
+
+        return index === -1
+          ? undefined
+          : (animate.mock.calls[index][0] as Keyframe[]).map((frame) => [frame.translate, frame.rotate]);
+      };
+
+      expect(flightOf('.blok-media-preview__drop')).toEqual(flightOf('.blok-media-preview__loupe'));
+    });
+
+    it('does not animate the entrance when reduced motion is preferred', () => {
+      preferReducedMotion();
+      const animate = installAnimate();
+      const popover = createPopover();
+
+      popover.invokeToggleNothingFoundMessage(true);
+
+      expect(animate).not.toHaveBeenCalled();
+    });
+
+    it('tilts the drawing toward the pointer and back to rest when it leaves', () => {
+      const popover = createPopover();
+      const message = popover.getNodesForTests().nothingFoundMessage;
+      const stage = stageOf(message);
+
+      popover.invokeToggleNothingFoundMessage(true);
+      vi.spyOn(message, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 100));
+
+      message.dispatchEvent(new MouseEvent('pointermove', { clientX: 200, clientY: 0 }));
+
+      expect(leanPreview).toHaveBeenLastCalledWith(stage, 1, -1);
+
+      message.dispatchEvent(new MouseEvent('pointerleave'));
+
+      expect(leanPreview).toHaveBeenLastCalledWith(stage, 0, 0);
+    });
+
+    it('does not tilt when reduced motion is preferred', () => {
+      preferReducedMotion();
+      const popover = createPopover();
+      const message = popover.getNodesForTests().nothingFoundMessage;
+
+      popover.invokeToggleNothingFoundMessage(true);
+      message.dispatchEvent(new MouseEvent('pointermove', { clientX: 10, clientY: 10 }));
+
+      expect(leanPreview).not.toHaveBeenCalled();
     });
   });
 

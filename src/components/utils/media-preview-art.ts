@@ -155,5 +155,38 @@ function uid(): string {
   return Math.random().toString(36).slice(2, 9);
 }
 
+// Popover "Nothing found": a menu whose result is a dashed empty slot, a
+// second menu fanned behind it, and a loupe floating over the slot.
+const searchRow = (y: number, width: number, soft: boolean): string =>
+  `<rect class="blok-media-preview__cell" x="58" y="${y}" width="12" height="12" rx="3.5"/>`
+  + `<rect class="blok-media-preview__line${soft ? ' blok-media-preview__line--soft' : ''}" x="78" y="${y + 4}" width="${width}" height="4" rx="2"/>`;
+
+const search = (id: string): string => `
+    <defs>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(1, `<rect class="blok-media-preview__frame blok-media-preview__sheet blok-media-preview__sheet--back" x="48" y="14" width="104" height="88" rx="12"/>`)}
+    ${layer(3, `
+      <rect id="${id}-s" class="blok-media-preview__frame" x="48" y="14" width="104" height="88" rx="12"/>
+      <rect class="blok-media-preview__field" x="56" y="22" width="88" height="14" rx="5"/>
+      <rect class="blok-media-preview__line blok-media-preview__line--soft" x="62" y="27.5" width="26" height="3" rx="1.5"/>
+      ${searchRow(45, 50, false)}
+      <rect class="blok-media-preview__slot" x="56" y="62.5" width="88" height="15" rx="5"/>
+      ${searchRow(84, 34, true)}
+      ${drop(id)}`)}
+    ${layer(8, `
+      <g id="${id}-f" class="blok-media-preview__loupe">
+        <path class="blok-media-preview__frame" d="M139.2 82.6l11.3 11.3a4 4 0 0 1-5.6 5.6l-11.3-11.3z"/>
+        <circle class="blok-media-preview__frame" cx="126" cy="70" r="17"/>
+        <circle class="blok-media-preview__lens" cx="126" cy="70" r="12"/>
+        <path class="blok-media-preview__glint" d="M118 66a9 9 0 0 1 5.5-5.5"/>
+      </g>`)}`;
+
+// Whitespace between tags is stripped: it would become text and leak into the
+// popover message's textContent, next to the "Nothing found" label.
+export const searchPreviewSvg = (): string =>
+  `<svg viewBox="0 0 200 120" width="200" height="120" fill="none" aria-hidden="true" focusable="false">${search(`blok-media-preview-${uid()}`)}</svg>`
+    .replace(/>\s+</g, '><')
+    .trim();
+
 export const previewSvg = (kind: MediaPreviewKind): string =>
   `<svg viewBox="0 0 200 120" width="200" height="120" fill="none" focusable="false">${drawings[kind](`blok-media-preview-${uid()}`)}</svg>`;

@@ -610,6 +610,11 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // plus the centered uploading layout in image.css and file.css, and the
     // --blok-media-preview-shadow token in the colors.css palettes.
     const MEDIA_EMPTY_PREVIEW_BYTES = 22_434;
+    // Popover "Nothing found" search drawing: its part fills, dashed slot and
+    // the loupe's idle hover keyframes in media-empty.css.
+    const NOTHING_FOUND_SEARCH_PREVIEW_BYTES = 549;
+    // The + button's search slash pill rule (93b5e58f), landed without a budget entry.
+    const PLUS_BUTTON_SEARCH_PILL_BYTES = 62;
     // Image chrome (frame and islands): island cards and their split motion,
     // selection ring, dot handles, width readout, snap guides, hover bridge,
     // table-cell insets and the on-image alt pill in
@@ -700,6 +705,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + INLINE_TOOLBAR_CARD_BYTES
       + INLINE_TOOLBAR_ENTRANCE_BYTES
       + MEDIA_EMPTY_PREVIEW_BYTES
+      + NOTHING_FOUND_SEARCH_PREVIEW_BYTES
+      + PLUS_BUTTON_SEARCH_PILL_BYTES
       + IMAGE_CHROME_ISLANDS_BYTES
       + IMAGE_MEND_BYTES
       + IMAGE_ERROR_SHAPES_BYTES

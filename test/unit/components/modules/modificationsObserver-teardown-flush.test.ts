@@ -6,7 +6,7 @@ import { Header } from '../../../../src/tools/header';
 import { Renderer } from '../../../../src/components/modules/renderer';
 import { ModificationsObserver } from '../../../../src/components/modules/modificationsObserver';
 import { Saver } from '../../../../src/components/modules/saver';
-import type { OutputBlockData, OutputData } from '../../../../types';
+import type { BlokConfig, OutputBlockData, OutputData } from '../../../../types';
 
 /**
  * A real editor torn down inside the last batch window: the edit must still
@@ -305,7 +305,7 @@ describe('ModificationsObserver — final flush on teardown (real editor)', () =
     expect(onSave.mock.calls.map(([data]) => textOf(data, 'p1'))).toEqual(['typed']);
   }, 60_000);
 
-  describe.each([
+  describe.each<{ path: string; tools: BlokConfig['tools'] }>([
     { path: 'in-place', tools: { paragraph: Paragraph } },
     { path: 'full re-render', tools: { paragraph: Paragraph, plain: NoInPlaceToggleTool } },
   ])('read-only turned on right before destroy() ($path)', ({ tools }) => {

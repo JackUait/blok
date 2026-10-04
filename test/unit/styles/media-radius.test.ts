@@ -65,9 +65,7 @@ const RADII: Array<[string, string, string]> = [
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-inner img', role('block')],
   ['styles/image.css', '[data-blok-element-content].bg-selection:has([data-blok-tool="image"]) .blok-image-inner', role('block')],
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-alt-pill', role('pill')],
-  ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar__island', role('surface')],
-  ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar__island::before', role('surface')],
-  ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar::after', role('surface')],
+  ['styles/main.css', '[data-blok-tool="image"] .blok-image-toolbar', role('surface')],
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar button', nested('control')],
   ['styles/image.css', '[data-blok-tool="image"] [data-role="image-selection-ring"]', 'calc(var(--blok-radius-block) + var(--blok-image-ring-gap))'],
   ['styles/image.css', '[data-blok-tool="image"][data-rounded="off"] [data-role="image-selection-ring"]', '0'],
@@ -172,7 +170,7 @@ const RADII: Array<[string, string, string]> = [
 
 /** Containers publish --blok-radius-inner from their own role, border and padding tokens. */
 const INNER: Array<[string, string, string]> = [
-  ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar__island', inner('surface', '--blok-space-0-75')],
+  ['styles/main.css', '[data-blok-tool="image"] .blok-image-toolbar', inner('surface', '--blok-space-0-75')],
   ['styles/image.css', '.blok-image-uploading__header', inner('block', BORDER, '--blok-space-2')],
   ['styles/main.css', '[data-blok-tool="image"] .blok-image-toolbar__align-popover', inner('surface', '--blok-space-1')],
   ['styles/main.css', '.blok-image-lightbox__bar', inner('surface', '--blok-space-1-5')],
@@ -235,11 +233,5 @@ describe('media files hold no off-system radius', () => {
   it('no dead image popover, toolbar pill or audio radius CSS is left', () => {
     expect(read('styles/image.css')).not.toMatch(/blok-image-popover|blok-image-toolbar__pill/);
     expect(read('styles/audio.css')).not.toContain('--blok-audio-radius');
-  });
-
-  it('the island neck overlaps each card by exactly its corner radius', () => {
-    const neck = declared(cssOf('styles/image.css'), '[data-blok-tool="image"] .blok-image-toolbar__island::after', 'left');
-
-    expect(neck).toBe('calc(100% - var(--blok-radius-surface))');
   });
 });

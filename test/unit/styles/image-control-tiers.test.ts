@@ -70,43 +70,35 @@ describe('Image control size tiers (src/styles/image.css)', () => {
 
 const mainCss = readFileSync(resolve(__dirname, '../../../src/styles/main.css'), 'utf-8');
 
-describe('image islands (frame and islands design)', () => {
-  it('the toolbar is a transparent row; each island paints its card behind its buttons', () => {
-    const island = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__island');
-    const card = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__island::before');
-
-    expect(island).not.toContain('background:');
-    expect(island).toContain('position: relative');
-    expect(card).toContain('background: var(--blok-overlay-surface)');
-    expect(card).toContain('z-index: -1');
-    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*background: transparent/);
+describe('image toolbar (one bar)', () => {
+  it('the toolbar itself is the card; groups have none', () => {
+    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*background: var\(--blok-overlay-surface\)/);
+    expect(findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__island')).not.toContain('background');
+    expect(css).not.toContain('.blok-image-toolbar::after');
+    expect(css).not.toContain('.blok-image-toolbar__island::after');
+    expect(css).not.toContain('blok-image-islands');
   });
 
-  it('the merged bar lies over the cards, so the join is hidden until it pinches', () => {
-    const bar = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar::after');
-
-    expect(bar).toContain('background-color: var(--blok-overlay-surface)');
-    expect(bar).toContain('z-index: -1');
-    expect(css).not.toContain('.blok-image-toolbar::before');
-  });
-
-  it('a neck joins each island to the next and pinches off; the last island has none', () => {
-    const neck = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__island::after');
-    const show = css.match(/[^}]*\.blok-image-toolbar__island::after \{[^}]*animation:[^}]*\}/g) ?? [];
-
-    expect(neck).toContain('background: var(--blok-overlay-surface)');
-    expect(findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__island[data-island="view"]::after')).toContain('content: none');
-    expect(show).toHaveLength(1);
-    expect(show[0]).toContain('blok-image-islands-pinch');
-  });
-
-  it('always sits 10px inside the top of the picture', () => {
-    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*top: 10px/);
+  it('sits 8px inside the top of the picture', () => {
+    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*top: 8px/);
     expect(mainCss).not.toMatch(/\.blok-image-toolbar \{[^}]*bottom:/);
-    expect(css).not.toContain('data-islands-placement');
   });
 
-  it('medium tier shows only the edit island and more', () => {
+  it('fades in by opacity only, so a placed tooltip never ends up off its button', () => {
+    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*transition: opacity 120ms ease/);
+    const animated = (css.match(/\.blok-image-toolbar[^{]*\{[^}]*animation:[^;]*/g) ?? [])
+      .filter((rule) => !rule.includes('animation: none'));
+
+    expect(animated).toHaveLength(0);
+  });
+
+  it('a divider opens a group only after the first visible one', () => {
+    expect(css).toContain('.blok-image-toolbar:not([data-tier="medium"]):not([data-compact="true"]) [data-island="edit"]::before');
+    expect(css).toContain('.blok-image-toolbar:not([data-compact="true"]) [data-island="view"]::before');
+    expect(css).not.toMatch(/\[data-island\] \+ \[data-island\]/);
+  });
+
+  it('medium tier shows only the edit group and more', () => {
     expect(css).toMatch(/\.blok-image-toolbar\[data-tier="medium"\] \[data-island="layout"\] \{\s*display: none/);
     expect(css).toMatch(/\.blok-image-toolbar\[data-tier="medium"\] \[data-island="view"\] > :not\(\[data-action="more"\]\)/);
   });
@@ -118,38 +110,6 @@ describe('image islands (frame and islands design)', () => {
   it('selection is read from the block holder, not the dead data-selected', () => {
     expect(css).toContain('[data-blok-selected="true"] [data-blok-tool="image"] [data-role="image-selection-ring"]');
     expect(css).toContain('[data-blok-selected="true"] [data-blok-tool="image"] [data-role="resize-handle"]');
-  });
-
-  it('one show rule per element, so hover then select does not replay the split', () => {
-    const island = css.match(/[^}]*\.blok-image-toolbar__island::before \{[^}]*animation:[^}]*\}/g) ?? [];
-    const row = (css.match(/[^}]*\.blok-image-toolbar \{[^}]*animation:[^}]*\}/g) ?? [])
-      .filter((rule) => !rule.includes('animation: none'));
-
-    expect(island).toHaveLength(1);
-    expect(island[0]).toContain('blok-image-islands-split');
-    expect(row).toHaveLength(1);
-    expect(row[0]).toContain('blok-image-islands-rise');
-  });
-
-  it('never animates layout, so buttons do not slide under a placed tooltip', () => {
-    const frames = css.match(/@keyframes blok-image-islands[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g) ?? [];
-
-    expect(frames.length).toBeGreaterThanOrEqual(4);
-    frames.forEach((frame) => {
-      expect(frame).not.toMatch(/(^|[\s;{])(gap|padding|margin|width|height|inset|left|right|top|bottom):/);
-    });
-  });
-
-  it('reduced motion switches the rise, merge, split and pinch off', () => {
-    const reduced = css.slice(css.indexOf('prefers-reduced-motion: reduce'));
-    const block = reduced.slice(0, reduced.indexOf('animation: none'));
-
-    [
-      '.blok-image-toolbar,',
-      '.blok-image-toolbar::after,',
-      '.blok-image-toolbar__island::before,',
-      '.blok-image-toolbar__island::after,',
-    ].forEach((selector) => expect(block).toContain(selector));
   });
 });
 

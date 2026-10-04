@@ -1219,8 +1219,6 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   tooltipOnHover(more, moreLabel);
   view.appendChild(more);
 
-  reanchorTooltipAfterSplit(root);
-
   // Delete is reachable from the popover; expose an invisible legacy button for consumers/tests.
   const deleteAlias = document.createElement('button');
   deleteAlias.type = 'button';
@@ -1325,22 +1323,6 @@ function appendAlignCtrl(parent: HTMLElement, opts: OverlayOptions): void {
     event.stopPropagation();
     if (popover.hidden) openPopover();
     else closePopover();
-  });
-}
-
-/**
- * The row rises into place, and a tooltip stays where it was first placed.
- * Once the row's own animation ends, show the hovered button's tooltip again at its final spot.
- */
-function reanchorTooltipAfterSplit(root: HTMLElement): void {
-  const pointer: { over: HTMLElement | null } = { over: null };
-  root.querySelectorAll<HTMLElement>('[data-island] button[data-action]').forEach((btn) => {
-    btn.addEventListener('mouseenter', () => { pointer.over = btn; });
-    btn.addEventListener('mouseleave', () => { if (pointer.over === btn) pointer.over = null; });
-  });
-  root.addEventListener('animationend', (event) => {
-    if (event.target !== root || pointer.over === null) return;
-    tooltipShow(pointer.over, pointer.over.getAttribute('aria-label') ?? '');
   });
 }
 

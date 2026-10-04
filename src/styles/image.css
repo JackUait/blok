@@ -236,155 +236,32 @@
 /* toolbar base rule lives in main.css to satisfy direct readFileSync audits.
    Additional toolbar states/children remain here. */
 [data-blok-tool="image"] .blok-image-toolbar__island {
-  position: relative;
   display: inline-flex;
+  align-items: center;
   gap: var(--blok-space-0-25);
-  padding: var(--blok-space-0-75);
-  border-radius: var(--blok-radius-surface);
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-0-75)));
-  --blok-image-island-merged-radius: var(--blok-radius-floor);
 }
-/* The islands grow out of one bar. Only these pseudo-elements move: a button that moved would leave its tooltip behind.
-   Resting styles are the split state, so with motion off the islands simply sit apart. */
-[data-blok-tool="image"] .blok-image-toolbar__island::before {
+/* Tiers hide whole groups, so a plain `+` rule would draw a divider at the bar's edge. */
+[data-blok-tool="image"] .blok-image-toolbar:not([data-tier="medium"]):not([data-compact="true"]) [data-island="edit"]::before,
+[data-blok-tool="image"] .blok-image-toolbar:not([data-compact="true"]) [data-island="view"]::before {
   content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: var(--blok-radius-surface);
-  background: var(--blok-overlay-surface);
-  box-shadow:
-    inset 0 0 0 1px var(--blok-overlay-ring),
-    var(--blok-image-shadow-toolbar);
-  pointer-events: none;
+  width: 1px;
+  height: 14px;
+  margin-inline: var(--blok-space-0-75);
+  background: var(--blok-overlay-divider);
 }
-/* Inner corners start square so the cards join into one bar; outer ones stay round. The recoil pulls away from the neck. */
-[data-blok-tool="image"] .blok-image-toolbar__island[data-island="layout"],
-[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-island="edit"] {
-  --blok-image-island-merged-radius: var(--blok-radius-surface) var(--blok-radius-floor) var(--blok-radius-floor) var(--blok-radius-surface);
-}
-[data-blok-tool="image"] .blok-image-toolbar__island[data-island="view"] {
-  --blok-image-island-merged-radius: var(--blok-radius-floor) var(--blok-radius-surface) var(--blok-radius-surface) var(--blok-radius-floor);
-}
-[data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] [data-island="view"] {
-  --blok-image-island-merged-radius: var(--blok-radius-surface);
-}
-[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-island="edit"]::before,
-[data-blok-tool="image"] .blok-image-toolbar__island[data-island="layout"]::before {
-  transform-origin: left center;
-}
-[data-blok-tool="image"] .blok-image-toolbar__island[data-island="view"]::before {
-  transform-origin: right center;
-}
-/* The liquid neck to the next island. It overlaps both cards by a corner radius, so a full neck hides the gap. */
-[data-blok-tool="image"] .blok-image-toolbar__island::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(100% - var(--blok-radius-surface));
-  z-index: -1;
-  width: calc(var(--blok-space-1-5) + 2 * var(--blok-radius-surface));
-  background: var(--blok-overlay-surface);
-  /* Full height at both ends (hidden inside the cards), a waist over the gap: the concave sides of a liquid bridge. */
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 34' preserveAspectRatio='none'%3E%3Cpath d='M0 0C8 0 9 11 12 11S16 0 24 0V34C16 34 15 23 12 23S8 34 0 34Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 34' preserveAspectRatio='none'%3E%3Cpath d='M0 0C8 0 9 11 12 11S16 0 24 0V34C16 34 15 23 12 23S8 34 0 34Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
-  transform: scaleY(0);
-  pointer-events: none;
-}
-[data-blok-tool="image"] .blok-image-toolbar__island[data-island="view"]::after {
-  content: none;
-}
-/* The one bar. It paints after the cards, so it hides their inner edges until the necks start to pinch. */
-[data-blok-tool="image"] .blok-image-toolbar::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: var(--blok-radius-surface);
-  background-color: var(--blok-overlay-surface);
-  box-shadow:
-    inset 0 0 0 1px var(--blok-overlay-ring),
-    var(--blok-image-shadow-toolbar);
-  opacity: 0;
-  pointer-events: none;
-}
-/* Buttons never move sideways (a tooltip is placed once, where its button is at that moment);
-   only the whole row rises, and tools/image/ui.ts re-anchors the tooltip when that ends.
-   One animation per element for every show state, so hover -> select does not replay it. */
-[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar ,
-[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar ,
-[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar ,
-[data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar ,
+[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar,
+[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar,
+[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar,
+[data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar,
 [data-blok-tool="image"][data-alt-open="true"] .blok-image-toolbar {
   opacity: 1;
   pointer-events: auto;
-  animation: blok-image-islands-rise 300ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
-}
-[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar::after ,
-[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar::after ,
-[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar::after ,
-[data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar::after ,
-[data-blok-tool="image"][data-alt-open="true"] .blok-image-toolbar::after {
-  animation: blok-image-islands-merged 330ms linear both;
-}
-[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar__island::after ,
-[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar__island::after ,
-[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar__island::after ,
-[data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar__island::after ,
-[data-blok-tool="image"][data-alt-open="true"] .blok-image-toolbar__island::after {
-  animation: blok-image-islands-pinch 220ms cubic-bezier(0.6, 0, 0.9, 0.4) 240ms both;
-}
-[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar__island::before ,
-[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar__island::before ,
-[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar__island::before ,
-[data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar__island::before ,
-[data-blok-tool="image"][data-alt-open="true"] .blok-image-toolbar__island::before {
-  animation: blok-image-islands-split 480ms linear 240ms both;
-}
-@keyframes blok-image-islands-rise {
-  from { opacity: 0; translate: 0 10px; filter: blur(6px); }
-  to { opacity: 1; translate: 0 0; filter: none; }
-}
-@keyframes blok-image-islands-merged {
-  0%, 78% { opacity: 1; }
-  100% { opacity: 0; }
-}
-/* Thins to a thread, then snaps at 220ms: the moment the cards recoil. */
-@keyframes blok-image-islands-pinch {
-  from { transform: scaleY(1); }
-}
-/* 0-46%: the neck pulls the cards toward it. 46%: it snaps, they recoil like jelly, then settle.
-   No drop shadow while joined: the bar casts it, and a card's shadow would smear across the neck. */
-@keyframes blok-image-islands-split {
-  0% {
-    border-radius: var(--blok-image-island-merged-radius);
-    box-shadow: inset 0 0 0 1px transparent;
-    transform: scale(1, 1);
-    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
-  }
-  46% {
-    box-shadow: inset 0 0 0 1px transparent;
-    transform: scale(1.035, 0.97);
-    animation-timing-function: cubic-bezier(0.1, 0.8, 0.3, 1);
-  }
-  64% {
-    transform: scale(0.95, 1.05);
-    animation-timing-function: cubic-bezier(0.4, 0, 0.4, 1);
-  }
-  82% {
-    transform: scale(1.012, 0.992);
-    animation-timing-function: cubic-bezier(0.4, 0, 0.4, 1);
-  }
 }
 [data-blok-tool="image"][data-resizing="true"] .blok-image-inner .blok-image-toolbar {
-  /* The rise animation's fill would otherwise hold opacity at 1; it replays when the drag ends. */
-  animation: none;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 150ms ease;
 }
-/* While the image bytes are still loading, keep the islands off the loading placeholder. */
+/* While the image bytes are still loading, keep the toolbar off the loading placeholder. */
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"] .blok-image-toolbar {
   opacity: 0;
   pointer-events: none;
@@ -1035,9 +912,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="image"] .blok-image-toolbar,
-  [data-blok-tool="image"] .blok-image-toolbar::after,
-  [data-blok-tool="image"] .blok-image-toolbar__island::before,
-  [data-blok-tool="image"] .blok-image-toolbar__island::after,
   [data-blok-tool="image"] [data-role="resize-handle"],
   [data-blok-tool="image"] [data-role="image-selection-ring"],
   [data-blok-tool="image"] .blok-image-alt-pill,

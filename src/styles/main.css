@@ -767,13 +767,20 @@
 [data-blok-tool="image"] .blok-image-toolbar {
   position: absolute;
   left: 50%;
-  top: 10px;
+  top: 8px;
   transform: translateX(-50%);
   display: inline-flex;
-  gap: var(--blok-space-1-5);
-  background: transparent;
+  align-items: center;
+  padding: var(--blok-space-0-75);
+  border-radius: var(--blok-radius-surface);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-0-75)));
+  background: var(--blok-overlay-surface);
+  box-shadow:
+    inset 0 0 0 1px var(--blok-overlay-ring),
+    var(--blok-image-shadow-toolbar);
   opacity: 0;
   pointer-events: none;
+  transition: opacity 120ms ease;
   z-index: 2;
 }
 [data-blok-tool="image"] .blok-image-toolbar__align-popover {

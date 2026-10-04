@@ -241,6 +241,7 @@ test('Cmd+Z inside the darkroom undoes the crop edit, not the document', async (
 });
 
 test('the photo flies back into the block after Done', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   const { dialog } = await openDarkroom(page, { x: 10, y: 10, w: 60, h: 60 });
 
   await recordFlights(page);

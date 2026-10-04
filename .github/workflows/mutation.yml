@@ -59,19 +59,31 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BASELINE_TAG: mutation-baseline
         run: |
-          run_id=$(gh run list --workflow mutation.yml --branch main \
-            --status success --limit 1 --json databaseId -q '.[0].databaseId' || true)
+          run_ids=$(gh run list --workflow mutation.yml --branch main \
+            --status success --limit 20 --json databaseId -q '.[].databaseId' || true)
+          restored=false
 
-          if [ -n "$run_id" ] && gh run download "$run_id" \
-            --name mutation-state --dir .mutation-state; then
-            echo "Restored mutation state from run $run_id"
-          elif gh release download "$BASELINE_TAG" \
-            --pattern mutation-state.tar.gz --dir .; then
-            mkdir -p .mutation-state
-            tar -xzf mutation-state.tar.gz -C .mutation-state
-            echo "Restored mutation state from release $BASELINE_TAG"
-          else
-            echo "No mutation state anywhere. Build one with 'yarn mutate:seed'."
+          for run_id in $run_ids; do
+            rm -rf .mutation-state
+            if gh run download "$run_id" --name mutation-state --dir .mutation-state &&
+              node scripts/mutation-scope.mjs validate; then
+              echo "Restored mutation state from run $run_id"
+              restored=true
+              break
+            fi
+          done
+
+          if [ "$restored" != true ]; then
+            rm -rf .mutation-state
+            if gh release download "$BASELINE_TAG" \
+              --pattern mutation-state.tar.gz --dir .; then
+              mkdir -p .mutation-state
+              tar -xzf mutation-state.tar.gz -C .mutation-state
+              node scripts/mutation-scope.mjs validate
+              echo "Restored mutation state from release $BASELINE_TAG"
+            else
+              echo "No mutation state anywhere. Build one with 'yarn mutate:seed'."
+            fi
           fi
 
       - name: Run mutation testing
@@ -124,19 +136,31 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BASELINE_TAG: mutation-baseline
         run: |
-          run_id=$(gh run list --workflow mutation.yml --branch main \
-            --status success --limit 1 --json databaseId -q '.[0].databaseId' || true)
+          run_ids=$(gh run list --workflow mutation.yml --branch main \
+            --status success --limit 20 --json databaseId -q '.[].databaseId' || true)
+          restored=false
 
-          if [ -n "$run_id" ] && gh run download "$run_id" \
-            --name mutation-state --dir .mutation-state; then
-            echo "Restored mutation state from run $run_id"
-          elif gh release download "$BASELINE_TAG" \
-            --pattern mutation-state.tar.gz --dir .; then
-            mkdir -p .mutation-state
-            tar -xzf mutation-state.tar.gz -C .mutation-state
-            echo "Restored mutation state from release $BASELINE_TAG"
-          else
-            echo "No mutation state anywhere. Build one with 'yarn mutate:seed'."
+          for run_id in $run_ids; do
+            rm -rf .mutation-state
+            if gh run download "$run_id" --name mutation-state --dir .mutation-state &&
+              node scripts/mutation-scope.mjs validate; then
+              echo "Restored mutation state from run $run_id"
+              restored=true
+              break
+            fi
+          done
+
+          if [ "$restored" != true ]; then
+            rm -rf .mutation-state
+            if gh release download "$BASELINE_TAG" \
+              --pattern mutation-state.tar.gz --dir .; then
+              mkdir -p .mutation-state
+              tar -xzf mutation-state.tar.gz -C .mutation-state
+              node scripts/mutation-scope.mjs validate
+              echo "Restored mutation state from release $BASELINE_TAG"
+            else
+              echo "No mutation state anywhere. Build one with 'yarn mutate:seed'."
+            fi
           fi
 
       - name: Run mutation testing

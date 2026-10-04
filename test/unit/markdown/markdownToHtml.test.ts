@@ -103,6 +103,25 @@ describe('markdownToHtml', () => {
     expect(html).not.toContain('$2x$');
   });
 
+  it.each([
+    ['Plans: $5/$month'],
+    ['$5-$10'],
+    ['$5 and $10'],
+    ['$5,$6'],
+    ['costs $5'],
+  ])('leaves the price in %s as text', async (md) => {
+    const html = await markdownToHtml(md);
+
+    expect(html).toBe(`<p>${md}</p>`);
+  });
+
+  it('keeps prices as text next to real math', async () => {
+    const html = await markdownToHtml('Plans: $5/$month or $5 and $10.\n\nArea $x^2$ here.');
+
+    expect(html).toContain('<p>Plans: $5/$month or $5 and $10.</p>');
+    expect(html).toContain('katex');
+  });
+
   it('leaves a price range alone instead of rendering it as math', async () => {
     const html = await markdownToHtml('\u0446\u0435\u043d\u0430 $5-$10 \u0437\u0430 \u0448\u0442\u0443\u043a\u0443');
 

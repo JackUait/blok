@@ -15,6 +15,7 @@ import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
 import { sanitizeBlockHtml } from './sanitize-html';
 import { matchAlert } from './alerts';
 import { isBareBreak } from './phrasing-to-html';
+import { hasMathSignal, loadMathExtensions } from './math-syntax';
 
 /**
  * Math mdast nodes (block `math`, `inlineMath`) come from mdast-util-math and
@@ -27,13 +28,6 @@ interface MathNode {
 }
 type BlockNode = RootContent | MathNode;
 type InlineNode = PhrasingContent | MathNode;
-
-/**
- * Detects whether a document contains `$…$`/`$$…$$` worth loading KaTeX for.
- * A closing `$` needs a non-space before it and no digit after it, so
- * `$5-$10` stays prose. Keep in sync with `MATH_SIGNAL` in `index.ts`.
- */
-const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?![\s$])[^$]+(?<=\S)\$(?![\d$])/;
 
 /**
  * Per-render state. Markdown features like references and footnotes resolve a
@@ -101,18 +95,6 @@ function textContent(nodes: InlineNode[]): string {
   }).join('');
 }
 
-async function loadMathExtensions(): Promise<{
-  mathSyntax: MicromarkExtension;
-  mathFromMarkdown: MdastExtension;
-}> {
-  const [{ math }, { mathFromMarkdown }] = await Promise.all([
-    import('micromark-extension-math'),
-    import('mdast-util-math'),
-  ]);
-
-  return { mathSyntax: math(), mathFromMarkdown: mathFromMarkdown() };
-}
-
 /**
  * Render a Markdown string to a sanitized HTML string for inline preview.
  * Inline content is escaped and URLs validated. Block-level raw HTML is passed
@@ -124,7 +106,7 @@ export async function markdownToHtml(md: string, opts: MarkdownPreviewOptions = 
   const extensions: MicromarkExtension[] = [gfm()];
   const mdastExtensions: Array<MdastExtension | MdastExtension[]> = [gfmFromMarkdown()];
 
-  if (MATH_SIGNAL.test(md)) {
+  if (hasMathSignal(md)) {
     const { mathSyntax, mathFromMarkdown } = await loadMathExtensions();
 
     extensions.push(mathSyntax);

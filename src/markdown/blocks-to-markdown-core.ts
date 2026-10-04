@@ -321,11 +321,35 @@ const warn = (
  */
 export const HARD_BREAK = '  \n';
 
+const BLANK_LINE = /^[ \t]*$/;
+
 /**
  * CommonMark has no hard break at the end of a block: it is dropped (or, as
  * `\`, read as a literal backslash). Editables often end in a filler `<br>`.
+ *
+ * Strips what `/(?: {2}\n[ \t]*)+$/` would, line by line: that regex retries
+ * from every break and goes quadratic on many breaks followed by text.
+ * @param markdown - an inline field's Markdown
  */
-const TRAILING_HARD_BREAKS = /(?: {2}\n[ \t]*)+$/;
+const stripTrailingHardBreaks = (markdown: string): string => {
+  const lines = markdown.split('\n');
+  const body = lines.slice(0, -1);
+
+  if (body.length === 0 || !BLANK_LINE.test(lines[lines.length - 1])) {
+    return markdown;
+  }
+
+  const blankBreaks = body.reduceRight((count, line, index) =>
+    count === body.length - 1 - index && BLANK_LINE.test(line) && line.endsWith('  ') ? count + 1 : count, 0);
+  const before = body.length - 1 - blankBreaks;
+  const start = before >= 0 && body[before].endsWith('  ') ? before : before + 1;
+
+  if (start === body.length) {
+    return markdown;
+  }
+
+  return [...body.slice(0, start), body[start].slice(0, -2)].join('\n');
+};
 
 /**
  * A break with nothing before it on its line would leave a whitespace-only
@@ -346,14 +370,14 @@ const HARD_BREAKS = /(?: {2}|\\)\n/g;
  * @param html - the field's inline HTML
  */
 const inlineMarkdown = (context: SerializationContext, html: string): string =>
-  escapeLineStarts(context.inline.inlineToMarkdown(html, (construct: string): void => {
+  escapeLineStarts(stripTrailingHardBreaks(context.inline.inlineToMarkdown(html, (construct: string): void => {
     if (context.inlineSeen.has(construct)) {
       return;
     }
 
     context.inlineSeen.add(construct);
     warn(context, construct, 'degraded', INLINE_LOSS_DETAILS[construct] ?? `${construct} has no Markdown equivalent`);
-  }).replace(TRAILING_HARD_BREAKS, '').replace(BREAK_ONLY_LINES, '\\\n'));
+  })).replace(BREAK_ONLY_LINES, '\\\n'));
 
 /**
  * Join loss names into a readable list: `a`, `a and b`, `a, b and c`.
@@ -537,19 +561,26 @@ const tablePresentationLosses = (
  * @param markdown - the cell's Markdown
  * @param onLossy - called when a raw backslash run sits before a pipe
  */
-const escapeTableCell = (markdown: string, onLossy: () => void): string =>
-  markdown
-    .replace(HARD_BREAKS, '\n')
-    .replace(/(\\*)\|/g, (_match: string, run: string) => {
-      if (run.length % 2 === 1) {
-        onLossy();
+const escapeTableCell = (markdown: string, onLossy: () => void): string => {
+  // Split on pipes by hand: `/(\\*)\|/g` rescans a backslash run from every offset.
+  const parts = markdown.replace(HARD_BREAKS, '\n').split('|');
 
-        return `${run}\\\\|`;
-      }
+  return parts.map((part, index) => {
+    if (index === parts.length - 1) {
+      return part;
+    }
 
-      return `${run}\\|`;
-    })
-    .replace(/\n/g, '<br>');
+    const run = Array.from(part).reduce((count, character) => (character === '\\' ? count + 1 : 0), 0);
+
+    if (run % 2 === 1) {
+      onLossy();
+
+      return `${part}\\\\|`;
+    }
+
+    return `${part}\\|`;
+  }).join('').replace(/\n/g, '<br>');
+};
 
 /**
  * Serialize one cell child block plus its structural descendants.

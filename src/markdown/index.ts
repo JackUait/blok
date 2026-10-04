@@ -1,8 +1,6 @@
 import { fromMarkdown } from 'mdast-util-from-markdown';
-import type { Extension as MdastExtension } from 'mdast-util-from-markdown';
 import { gfm } from 'micromark-extension-gfm';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
-import type { Extension as MicromarkExtension } from 'micromark-util-types';
 import type { Root, RootContent } from 'mdast';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { InternalMarkdownImportConfig, MarkdownImportConfig } from './types';
@@ -11,6 +9,7 @@ import { safeHref, safeImageSrc, urlScheme } from '../components/utils/sanitize-
 import type { MarkdownDegradation } from './blocks-to-markdown-core';
 import { isBareBreak } from './phrasing-to-html';
 import { matchAlert } from './alerts';
+import { hasMathSignal, loadMathExtensions } from './math-syntax';
 
 export type { MarkdownImportConfig, ToolMapEntry } from './types';
 export type { MarkdownDegradation } from './blocks-to-markdown-core';
@@ -21,31 +20,6 @@ export interface MarkdownImportResult {
   blocks: OutputBlockData[];
   /** Constructs that arrived degraded, in document order. */
   warnings: MarkdownDegradation[];
-}
-
-/**
- * Does the source look like it carries math? Gates the extension load.
- *
- * A closing `$` needs a non-space before it and no digit after it (pandoc's
- * rule), so `$5-$10` and `$5 and $10` stay prices while `$2x$` is math.
- * Without that guard a price range parses as inline math and tears the
- * paragraph into a latex code block plus two fragments.
- */
-const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?![\s$])[^$]+(?<=\S)\$(?![\d$])/;
-
-/**
- * Lazily load math micromark/mdast extensions only when needed.
- */
-async function loadMathExtensions(): Promise<{
-  mathSyntax: MicromarkExtension;
-  mathFromMarkdown: MdastExtension;
-}> {
-  const [{ math }, { mathFromMarkdown }] = await Promise.all([
-    import('micromark-extension-math'),
-    import('mdast-util-math'),
-  ]);
-
-  return { mathSyntax: math(), mathFromMarkdown: mathFromMarkdown() };
 }
 
 /**
@@ -226,7 +200,7 @@ export async function markdownToBlocksWithReport(
   config: MarkdownImportConfig = {}
 ): Promise<MarkdownImportResult> {
   const enableGfm = config.gfm !== false;
-  const hasMath = MATH_SIGNAL.test(md);
+  const hasMath = hasMathSignal(md);
 
   const extensions = [
     ...(enableGfm ? [gfm()] : []),

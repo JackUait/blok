@@ -366,6 +366,18 @@ describe('htmlToBlocks — tables', () => {
     expect(row[2]).toEqual({ blocks: [expect.any(String)], textColor: '#d9730d' });
   });
 
+  it.each([
+    ['rgb(31, 31, 31)'],
+    ['#202124'],
+    ['rgba(40, 40, 40, 1)'],
+  ])('drops the near-black body ink %s like the editor paste does', (text) => {
+    const [table] = htmlToBlocks(`<table><tr><td style="color:${text}">a</td><td style="color:rgb(41, 41, 41)">b</td></tr></table>`);
+    const [row] = table.data.content as Array<Array<Record<string, unknown>>>;
+
+    expect(row[0]).toEqual({ blocks: [expect.any(String)] });
+    expect(row[1]).toEqual({ blocks: [expect.any(String)], textColor: 'rgb(41, 41, 41)' });
+  });
+
   it('round-trips every light and dark cell colour preset exactly', () => {
     const presets = [...COLOR_PRESETS, ...COLOR_PRESETS_DARK];
     const doc = {

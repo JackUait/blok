@@ -279,6 +279,11 @@ describe('markdownToBlocks — currency is not math', () => {
     ['I have $50 and $30'],
     ['costs $5'],
     ['$5,$6 each'],
+    ['Plans: $5/$month'],
+    ['$5-$10'],
+    ['$5 and $10'],
+    ['$5,$6'],
+    ['from $5k-$10k a year'],
   ])('keeps %s as one plain paragraph', async (md) => {
     const { blocks, warnings } = await markdownToBlocksWithReport(md);
 
@@ -286,6 +291,28 @@ describe('markdownToBlocks — currency is not math', () => {
     expect(blocks[0].type).toBe('paragraph');
     expect(blocks[0].data.text).toBe(md);
     expect(warnings).toEqual([]);
+  });
+
+  it('keeps prices as text in a document that also holds real math', async () => {
+    const blocks = await markdownToBlocks('Plans: $5/$month or $5 and $10.\n\nArea $x^2$ here.');
+
+    expect(blocks[0]).toMatchObject({ type: 'paragraph', data: { text: 'Plans: $5/$month or $5 and $10.' } });
+    expect(blocks.filter(b => b.type === 'code').map(b => b.data.code)).toEqual(['x^2']);
+  });
+
+  it('finds the real math after a price in the same paragraph', async () => {
+    const blocks = await markdownToBlocks('costs $5 and later $x^2$');
+
+    expect(blocks.map(b => [b.type, b.data.text ?? b.data.code])).toEqual([
+      ['paragraph', 'costs $5 and later'],
+      ['code', 'x^2'],
+    ]);
+  });
+
+  it('reads a padded $ x $ as text, not math', async () => {
+    const blocks = await markdownToBlocks('Area $x^2$ and $ y $ here.');
+
+    expect(blocks.filter(b => b.type === 'code').map(b => b.data.code)).toEqual(['x^2']);
   });
 
   it('still parses genuine inline math', async () => {

@@ -23,7 +23,7 @@ import type { OutputBlockData } from '../../types';
 import type { ImageAlignment } from '../../types/tools/image';
 import { INLINE_TEXT_SANITIZE } from '../components/shared/inline-content-sanitize';
 import { safeImageSrc } from '../components/utils/sanitize-url';
-import { isInvisibleBackground } from '../components/utils/default-page-colors';
+import { isInvisibleBackground, isNearBlackText } from '../components/utils/default-page-colors';
 import { isSafeCssColor } from '../shared/css-color';
 import { normalizeFenceLang } from '../markdown/fence-language';
 import type { MarkdownDegradation } from '../markdown/blocks-to-markdown-core';
@@ -767,8 +767,6 @@ interface CellStyle {
 
 const CELL_VERTICAL = new Set(['top', 'middle', 'bottom']);
 
-const DEFAULT_BLACK = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgba(0,0,0,1)']);
-
 /**
  * Horizontal placement from `text-align`. Placement left/right are the grid's
  * start/end: physical `left`/`right` swap in an RTL grid, while the logical
@@ -819,12 +817,13 @@ const readCellStyle = (cell: P5Element, rtl: boolean): CellStyle => {
 
   // Same filter as the editor's cell paste (readPastedCellStyle): external
   // tables put the page's white bg and black text on every cell. No Blok
-  // preset hits it, so Blok's own output still round-trips.
+  // preset hits it, so Blok's own output still round-trips. The `black`
+  // keyword is checked here too: isNearBlackText reads only hex and rgb().
   if (isSafeCssColor(background) && !isInvisibleBackground(background)) {
     style.color = background;
   }
 
-  if (isSafeCssColor(text) && !DEFAULT_BLACK.has(text.replace(/\s/g, '').toLowerCase())) {
+  if (isSafeCssColor(text) && text.trim().toLowerCase() !== 'black' && !isNearBlackText(text)) {
     style.textColor = text;
   }
 
@@ -840,20 +839,26 @@ const readCellStyle = (cell: P5Element, rtl: boolean): CellStyle => {
 };
 
 /**
- * Whether the nearest `dir` at or above the table says right to left. A
- * cell's own `dir` is its text's, not the grid's, so start at the table.
+ * Whether the nearest inline `direction` or `dir` at or above the table says
+ * right to left; on one element the inline style wins. A cell's own `dir` is
+ * its text's, not the grid's, so start at the table. Mirrors the editor's
+ * `pastedGridDirection` (a DOM helper /view cannot import).
  * @param table - the `table` element
  */
 const isRtlGrid = (table: P5Element): boolean => {
-  const dir = (node: DefaultTreeAdapterMap['parentNode'] | null): string | undefined => {
+  const direction = (node: DefaultTreeAdapterMap['parentNode'] | null): string | undefined => {
     if (node === null || !('tagName' in node)) {
       return undefined;
     }
 
-    return attr(node, 'dir')?.trim().toLowerCase() ?? dir(node.parentNode);
+    // Lookbehind keeps flex-direction out.
+    const styled = /(?<![a-z-])direction\s*:\s*(rtl|ltr)\b/i.exec(attr(node, 'style') ?? '')?.[1];
+    const value = (styled ?? attr(node, 'dir'))?.trim().toLowerCase();
+
+    return value === 'rtl' || value === 'ltr' ? value : direction(node.parentNode);
   };
 
-  return dir(table) === 'rtl';
+  return direction(table) === 'rtl';
 };
 
 /**
@@ -1061,7 +1066,6 @@ const emitTable = (ctx: Ctx, element: P5Element): void => {
 const convertCell = (ctx: Ctx, cell: P5Element): void => {
   const before = ctx.blocks.length;
 
-  // Same blocks and warnings arrays; only the flag differs.
   convertNodes({ ...ctx, inCell: true }, cell.childNodes);
 
   if (ctx.blocks.length === before) {

@@ -6,7 +6,8 @@ import { convertBlockDataToString, convertStringToBlockData } from '../../../uti
 import { linkToBlock, takeCut, type CopyLink } from '../../../utils/copy-as-link';
 import { sanitizeBlocks } from '../../../utils/sanitizer';
 import { safeHref } from '../../../utils/sanitize-url';
-import { getRestrictedTools, isInsideTableCell } from '../../../../tools/table/table-restrictions';
+import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
+import { enclosingCellTable } from '../../../utils/enclosing-cell-table';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PatternMatch } from '../types';
@@ -229,17 +230,11 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     const currentBlock = BlockManager.currentBlock;
     const restricted = new Set(getRestrictedTools());
 
-    if (currentBlock?.parentId == null || !blocks.some(block => restricted.has(block.tool)) || !isInsideTableCell(currentBlock)) {
+    if (currentBlock === undefined || !blocks.some(block => restricted.has(block.tool))) {
       return undefined;
     }
 
-    const walk = (parentId: string | null): Block | undefined => {
-      const parent = parentId !== null ? BlockManager.getBlockById(parentId) : undefined;
-
-      return parent === undefined || parent.name === 'table' ? parent : walk(parent.parentId);
-    };
-
-    return walk(currentBlock.parentId);
+    return enclosingCellTable(currentBlock, id => BlockManager.getBlockById(id));
   }
 
   /**

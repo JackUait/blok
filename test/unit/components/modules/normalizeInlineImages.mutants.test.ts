@@ -1,25 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-/**
- * Deterministic ids so whole-array assertions can name the generated blocks.
- */
-let idCounter = 0;
-
-/**
- * The mocked generator, held in a variable so one test can make it yield
- * nothing — the only route to the `?? ''` id fallback in the source.
- */
-let nextGeneratedId: () => string | undefined;
-
-vi.mock('../../../../src/components/utils/id-generator', () => ({
-  generateBlockId: () => nextGeneratedId(),
-}));
-
-/**
- * Imported after the mock is registered, so the type is taken, not the value.
- */
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- dynamic import after mock
-type NormalizeModule = typeof import('../../../../src/components/modules/normalizeInlineImages');
+import { normalizeInlineImages as normalize } from '../../../../src/components/modules/normalizeInlineImages';
 
 /**
  * Block shape the normalizer accepts. `id`, `data` and `contentIds` stay
@@ -68,21 +48,47 @@ const makeCellParagraph = (id: string, text: string, parentId = 't'): BlockEntry
  * The splitter was rewritten on a DOM Range; re-run `yarn mutate` on this
  * module before marking any new live mutant equivalent.
  */
-describe('normalizeInlineImages — mutation coverage', () => {
-  let normalizeInlineImages: NormalizeModule['normalizeInlineImages'];
+/**
+ * Runs the normalizer and renames each minted id to `img-N` in output order,
+ * so whole-array assertions can name the new blocks. Minted ids are hashes.
+ */
+const normalizeInlineImages = (input: BlockEntry[]): BlockEntry[] => {
+  const result = normalize(input);
 
-  beforeEach(async () => {
-    vi.clearAllMocks();
-    idCounter = 0;
-    nextGeneratedId = (): string => {
-      idCounter += 1;
+  if (result === input) {
+    return result;
+  }
 
-      return `img-${idCounter}`;
+  const before = new Set(input.map((b) => b.id));
+  const names = new Map<string, string>();
+
+  for (const { id } of result) {
+    if (id !== undefined && !before.has(id)) {
+      names.set(id, `img-${names.size + 1}`);
+    }
+  }
+
+  const rename = (id: string): string => names.get(id) ?? id;
+  const content = (data: Record<string, unknown> | undefined): Cell[][] | undefined =>
+    Array.isArray(data?.content) ? (data.content as Cell[][]) : undefined;
+
+  return result.map((block) => {
+    const grid = content(block.data);
+
+    return {
+      ...block,
+      ...(block.id !== undefined ? { id: rename(block.id) } : {}),
+      ...(block.contentIds !== undefined ? { contentIds: block.contentIds.map(rename) } : {}),
+      ...(grid !== undefined
+        ? { data: { ...block.data, content: grid.map((row) => row.map((cell) => ({ ...cell, blocks: cell.blocks.map(rename) }))) } }
+        : {}),
     };
+  });
+};
 
-    const mod = await import('../../../../src/components/modules/normalizeInlineImages');
-
-    normalizeInlineImages = mod.normalizeInlineImages;
+describe('normalizeInlineImages — mutation coverage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   it('produces the exact document, whatever the attribute order inside the tag', () => {
@@ -346,24 +352,5 @@ describe('normalizeInlineImages — mutation coverage', () => {
     const input = [list, orphan, makeCellParagraph('p-1', '<img src="a.png">', 'list-1')];
 
     expect(normalizeInlineImages(input)).toBe(input);
-  });
-
-  it('references an image with an empty id when the generator yields none', () => {
-    nextGeneratedId = (): undefined => undefined;
-
-    const table = makeTable([[{ blocks: ['p-1'] }]], ['p-1']);
-    const result = normalizeInlineImages([table, makeCellParagraph('p-1', '<img src="a.png">')]);
-
-    expect(result).toStrictEqual([
-      {
-        id: 't',
-        tool: 'table',
-        data: { withHeadings: false, content: [[{ blocks: ['', 'p-1'] }]] },
-        isValid: true,
-        contentIds: ['', 'p-1'],
-      },
-      { id: undefined, tool: 'image', data: { url: 'a.png' }, isValid: true, parentId: 't' },
-      { id: 'p-1', tool: 'paragraph', data: { text: '' }, isValid: true, parentId: 't' },
-    ]);
   });
 });

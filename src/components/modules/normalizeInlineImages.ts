@@ -1,5 +1,3 @@
-import { generateBlockId } from '../utils/id-generator';
-
 /**
  * Minimal block shape expected by the normalizer.
  * Matches the SaverValidatedData shape from the saver pipeline.
@@ -90,28 +88,78 @@ const splitAroundImages = (text: string): Piece[] | null => {
   return pieces;
 };
 
+const ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+
+/**
+ * Hashes a seed into a 10-char id in the generateBlockId alphabet.
+ * Two 32-bit lanes (cyrb53 mixing) give 5 chars of 6 bits each.
+ *
+ * @param seed - any string
+ */
+const hashToBlockId = (seed: string): string => {
+  const [a, b] = Array.from(seed).reduce(
+    ([h1, h2], char) => {
+      const code = char.charCodeAt(0);
+
+      return [Math.imul(h1 ^ code, 2654435761), Math.imul(h2 ^ code, 1597334677)];
+    },
+    [0xdeadbeef, 0x41c6ce57]
+  );
+  const h1 = Math.imul(a ^ (a >>> 16), 2246822507) ^ Math.imul(b ^ (b >>> 13), 3266489909);
+  const h2 = Math.imul(b ^ (b >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+
+  return [h1, h2]
+    .flatMap((lane) => [0, 6, 12, 18, 24].map((shift) => ID_ALPHABET[(lane >>> shift) & 63]))
+    .join('');
+};
+
+/**
+ * Mints the id of one extracted block. The save never rewrites the live
+ * document, so a random id would change on every save of the same content.
+ *
+ * @param sourceId - id of the paragraph being split
+ * @param pieceIndex - position of the piece in that paragraph
+ * @param taken - ids already used; the new id is added to it
+ * @param attempt - bumped past each id that is already taken
+ */
+const deriveId = (sourceId: string, pieceIndex: number, taken: Set<string>, attempt = 0): string => {
+  const id = hashToBlockId(`${sourceId}:${pieceIndex}:${attempt}`);
+
+  if (taken.has(id)) {
+    return deriveId(sourceId, pieceIndex, taken, attempt + 1);
+  }
+
+  taken.add(id);
+
+  return id;
+};
+
 /**
  * Builds the blocks that replace a table cell paragraph holding images.
  * The paragraph keeps its id on the first non-empty text run; later runs
  * become new paragraphs. With no text left it stays, empty, after the images.
  *
  * @param paragraph - the source paragraph
+ * @param sourceId - its id
  * @param parentTableId - id of the table that holds it
  * @param pieces - its text cut around the images
+ * @param taken - ids already used in the document
  * @returns blocks in document order
  */
 const buildReplacement = (
   paragraph: NormalizableBlock,
+  sourceId: string,
   parentTableId: string,
-  pieces: Piece[]
+  pieces: Piece[],
+  taken: Set<string>
 ): NormalizableBlock[] => {
   const blocks: NormalizableBlock[] = [];
   const firstText = pieces.find((piece) => piece.kind === 'text' && !piece.empty);
 
-  for (const piece of pieces) {
+  for (const [index, piece] of pieces.entries()) {
     if (piece.kind === 'image') {
       blocks.push({
-        id: generateBlockId(),
+        id: deriveId(sourceId, index, taken),
         tool: 'image',
         data: piece.alt !== null && piece.alt !== '' ? { url: piece.url, alt: piece.alt } : { url: piece.url },
         isValid: true,
@@ -129,7 +177,7 @@ const buildReplacement = (
       continue;
     }
 
-    const copy: NormalizableBlock = { ...paragraph, id: generateBlockId(), data: { ...paragraph.data, text: piece.html } };
+    const copy: NormalizableBlock = { ...paragraph, id: deriveId(sourceId, index, taken), data: { ...paragraph.data, text: piece.html } };
 
     // Children belong to the original paragraph only.
     delete copy.contentIds;
@@ -169,6 +217,7 @@ export const normalizeInlineImages = <T extends NormalizableBlock>(blocks: T[]):
   }
 
   const replacements = new Map<string, Replacement>();
+  const taken = new Set(blockById.keys());
 
   for (const block of blocks) {
     if (block.tool !== 'paragraph' || block.id === undefined || block.parentId === undefined || block.parentId === null) {
@@ -190,7 +239,7 @@ export const normalizeInlineImages = <T extends NormalizableBlock>(blocks: T[]):
 
     replacements.set(block.id, {
       parentTableId: block.parentId,
-      blocks: buildReplacement(block, block.parentId, pieces),
+      blocks: buildReplacement(block, block.id, block.parentId, pieces, taken),
     });
   }
 

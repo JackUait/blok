@@ -30,7 +30,7 @@ const ALLOWED: Record<string, Set<string> | true> = {
   ASIDE: new Set(['style']),
   DETAILS: true,
   SUMMARY: true,
-  IMG: new Set(['src', 'style']),
+  IMG: new Set(['src', 'alt', 'style']),
 };
 
 /**

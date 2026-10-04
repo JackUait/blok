@@ -3,6 +3,7 @@ import { convertHtml } from '../../../../../src/cli/commands/convert-html/index'
 import { convertGdocs } from '../../../../../src/cli/commands/convert-gdocs/index';
 import type { OutputBlockData, OutputData } from '../../../../../types';
 import { boot, viewTable, type Booted } from './roundtrip-harness';
+import { Image } from '../../../../../src/tools';
 
 const run = (html: string, via: (html: string) => string = convertHtml): OutputData => JSON.parse(via(html)) as OutputData;
 
@@ -168,6 +169,43 @@ describe('CLI --convert-html: table data', () => {
     expect(cellsOf(out)[0][0].placement).toBe('top-center');
     expect(cellsOf(out)[0][1].placement).toBe('top-right');
     expect(cellTexts(out)).toEqual(['c']);
+  });
+
+  const cellBlocks = (out: OutputData | undefined, row = 0, col = 0): OutputBlockData[] => {
+    const blocks = out?.blocks ?? [];
+    const table = blocks.find(b => b.type === 'table');
+    const ids = (table?.data as { content: Array<Array<{ blocks: string[] }>> } | undefined)?.content[row][col].blocks ?? [];
+
+    return ids.flatMap(id => blocks.filter(b => b.id === id));
+  };
+
+  it('splits an image in a cell out of its paragraph, keeping its alt', () => {
+    const out = run('<table><tr><td>before <img src="https://x.test/cat.png" alt="a cat"> after</td></tr></table>');
+
+    expect(cellBlocks(out).map(b => b.type === 'image' ? b.data : b.data.text)).toEqual([
+      'before ',
+      { url: 'https://x.test/cat.png', alt: 'a cat' },
+      ' after',
+    ]);
+  });
+
+  it('keeps the alt of a top-level image', () => {
+    const out = run('<img src="https://x.test/cat.png" alt="a cat">');
+
+    expect(out.blocks[0].data).toEqual({ url: 'https://x.test/cat.png', alt: 'a cat' });
+  });
+
+  it('an image in a cell keeps its alt after the editor loads and saves it', async () => {
+    const out = run('<table><tr><td>before <img src="https://x.test/cat.png" alt="a cat"> after</td></tr></table>');
+
+    booted = await boot(out, { tools: { image: Image } });
+    const saved = await booted.editor.save();
+
+    expect(cellBlocks(saved).map(b => b.type === 'image' ? b.data : b.data.text)).toEqual([
+      'before ',
+      expect.objectContaining({ url: 'https://x.test/cat.png', alt: 'a cat' }),
+      ' after',
+    ]);
   });
 
   it('--convert-gdocs keeps a colspan merge', () => {

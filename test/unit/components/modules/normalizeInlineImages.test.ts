@@ -1,23 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-/**
- * Mock generateBlockId to produce deterministic IDs for assertions.
- */
-let idCounter = 0;
-
-vi.mock('../../../../src/components/utils/id-generator', () => ({
-  generateBlockId: (): string => {
-    idCounter += 1;
-
-    return `img-generated-${idCounter}`;
-  },
-}));
-
-/**
- * Import after mock registration so the mock is in place.
- */
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- dynamic import after mock
-type NormalizeModule = typeof import('../../../../src/components/modules/normalizeInlineImages');
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { normalizeInlineImages } from '../../../../src/components/modules/normalizeInlineImages';
+import { isValidBlockId } from '../../../../src/components/utils/id-generator';
+import Blok from '../../../../src/blok';
+import { Paragraph } from '../../../../src/tools/paragraph';
+import { Table } from '../../../../src/tools/table';
+import { Image } from '../../../../src/tools';
+import type { OutputData } from '../../../../types';
 
 /**
  * Shared type for the validated block data that flows through the saver pipeline.
@@ -73,15 +61,22 @@ const makeRootParagraph = (id: string, text: string): BlockEntry => ({
   isValid: true,
 });
 
+/**
+ * Ids the normalizer minted: every id in the output that was not in the input.
+ */
+const mintedIds = (input: BlockEntry[], output: BlockEntry[]): string[] => {
+  const before = new Set(input.map((b) => b.id));
+
+  return output.map((b) => b.id ?? '').filter((id) => !before.has(id));
+};
+
 describe('normalizeInlineImages', () => {
-  let normalizeInlineImages: NormalizeModule['normalizeInlineImages'];
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-  beforeEach(async () => {
-    idCounter = 0;
-
-    const mod = await import('../../../../src/components/modules/normalizeInlineImages');
-
-    normalizeInlineImages = mod.normalizeInlineImages;
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('extracts a single <img> from a table cell paragraph', () => {
@@ -93,12 +88,13 @@ describe('normalizeInlineImages', () => {
     const paragraph = makeCellParagraph('p-1', '<img src="https://example.com/photo.jpg">', 'table-1');
 
     const result = normalizeInlineImages([table, paragraph]);
+    const [imageId] = mintedIds([table, paragraph], result);
 
     // New image block should be created
     const imageBlock = result.find((b) => b.tool === 'image');
 
     expect(imageBlock).toEqual({
-      id: 'img-generated-1',
+      id: imageId,
       tool: 'image',
       data: { url: 'https://example.com/photo.jpg' },
       isValid: true,
@@ -113,12 +109,12 @@ describe('normalizeInlineImages', () => {
     // Table contentIds should include the new image block ID
     const updatedTable = result.find((b) => b.id === 'table-1');
 
-    expect(updatedTable?.contentIds).toContain('img-generated-1');
+    expect(updatedTable?.contentIds).toContain(imageId);
 
     // The cell's blocks array in table data should include the image block ID before the paragraph
     const tableData = updatedTable?.data as { content: Array<Array<{ blocks: string[] }>> };
 
-    expect(tableData.content[0][0].blocks).toEqual(['img-generated-1', 'p-1']);
+    expect(tableData.content[0][0].blocks).toEqual([imageId, 'p-1']);
   });
 
   it('extracts multiple <img> tags from one paragraph', () => {
@@ -134,19 +130,20 @@ describe('normalizeInlineImages', () => {
     );
 
     const result = normalizeInlineImages([table, paragraph]);
+    const [firstId, secondId] = mintedIds([table, paragraph], result);
 
     const imageBlocks = result.filter((b) => b.tool === 'image');
 
     expect(imageBlocks).toHaveLength(2);
 
     expect(imageBlocks[0]).toEqual(expect.objectContaining({
-      id: 'img-generated-1',
+      id: firstId,
       data: { url: 'https://example.com/a.jpg' },
       parentId: 'table-1',
     }));
 
     expect(imageBlocks[1]).toEqual(expect.objectContaining({
-      id: 'img-generated-2',
+      id: secondId,
       data: { url: 'https://example.com/b.png' },
       parentId: 'table-1',
     }));
@@ -160,7 +157,7 @@ describe('normalizeInlineImages', () => {
     const updatedTable = result.find((b) => b.id === 'table-1');
     const tableData = updatedTable?.data as { content: Array<Array<{ blocks: string[] }>> };
 
-    expect(tableData.content[0][0].blocks).toEqual(['img-generated-1', 'img-generated-2', 'p-1']);
+    expect(tableData.content[0][0].blocks).toEqual([firstId, secondId, 'p-1']);
   });
 
   it('preserves remaining text when extracting an image', () => {
@@ -274,6 +271,7 @@ describe('normalizeInlineImages', () => {
     );
 
     const result = normalizeInlineImages([table, paragraph1, paragraph2]);
+    const [firstId, secondId] = mintedIds([table, paragraph1, paragraph2], result);
 
     const imageBlocks = result.filter((b) => b.tool === 'image');
 
@@ -281,13 +279,13 @@ describe('normalizeInlineImages', () => {
 
     // First cell image
     expect(imageBlocks[0]).toEqual(expect.objectContaining({
-      id: 'img-generated-1',
+      id: firstId,
       data: { url: 'https://example.com/a.jpg' },
     }));
 
     // Second cell image
     expect(imageBlocks[1]).toEqual(expect.objectContaining({
-      id: 'img-generated-2',
+      id: secondId,
       data: { url: 'https://example.com/b.jpg' },
     }));
 
@@ -295,12 +293,12 @@ describe('normalizeInlineImages', () => {
     const updatedTable = result.find((b) => b.id === 'table-1');
     const tableData = updatedTable?.data as { content: Array<Array<{ blocks: string[] }>> };
 
-    expect(tableData.content[0][0].blocks).toEqual(['img-generated-1', 'p-1']);
-    expect(tableData.content[0][1].blocks).toEqual(['img-generated-2', 'p-2']);
+    expect(tableData.content[0][0].blocks).toEqual([firstId, 'p-1']);
+    expect(tableData.content[0][1].blocks).toEqual([secondId, 'p-2']);
 
     // Table contentIds should include all new image block IDs
     expect(updatedTable?.contentIds).toEqual(
-      expect.arrayContaining(['img-generated-1', 'img-generated-2', 'p-1', 'p-2'])
+      expect.arrayContaining([firstId, secondId, 'p-1', 'p-2'])
     );
   });
 
@@ -321,14 +319,16 @@ describe('normalizeInlineImages', () => {
       tunes: { align: 'center' },
     };
 
-    const result = normalizeInlineImages([
+    const input = [
       table,
       makeCellParagraph('p-0', 'first', 'table-1'),
       paragraph,
       makeCellParagraph('p-9', 'last', 'table-1'),
-    ]);
+    ];
+    const result = normalizeInlineImages(input);
+    const minted = mintedIds(input, result);
 
-    const order = ['p-0', 'p-1', 'img-generated-1', 'img-generated-2', 'img-generated-3', 'img-generated-4', 'p-9'];
+    const order = ['p-0', 'p-1', ...minted, 'p-9'];
     const updatedTable = result.find((b) => b.id === 'table-1');
     const tableData = updatedTable?.data as { content: Array<Array<{ blocks: string[] }>> };
 
@@ -338,8 +338,9 @@ describe('normalizeInlineImages', () => {
     expect(result.slice(1).map((b) => b.tool === 'image' ? b.data.url : b.data.text)).toEqual(
       ['first', 'one ', 'a.png', ' two ', 'b.png', ' three', 'last']
     );
-    expect(result.find((b) => b.id === 'img-generated-4')).toEqual({
-      id: 'img-generated-4',
+    expect(minted).toHaveLength(4);
+    expect(result.find((b) => b.id === minted[3])).toEqual({
+      id: minted[3],
       tool: 'paragraph',
       data: { text: ' three', textColor: 'red' },
       tunes: { align: 'center' },
@@ -366,7 +367,7 @@ describe('normalizeInlineImages', () => {
     const result = normalizeInlineImages([table, paragraph]);
 
     expect(result.slice(1).map((b) => b.tool === 'image' ? b.data.url : b.data.text)).toEqual(['a.png', '<b>after</b>']);
-    expect(result.slice(1).map((b) => b.id)).toEqual(['img-generated-1', 'p-1']);
+    expect(result.slice(1).map((b) => b.id)).toEqual([...mintedIds([table, paragraph], result), 'p-1']);
   });
 
   it('extracts nothing on a second pass over its own output', () => {
@@ -384,5 +385,75 @@ describe('normalizeInlineImages', () => {
     const result = normalizeInlineImages(input);
 
     expect(result).toEqual(input);
+  });
+
+  it('mints the same ids every time it runs over the same document', () => {
+    const input = [
+      makeTable('table-1', [[{ blocks: ['p-1'] }]], ['p-1']),
+      makeCellParagraph('p-1', 'one <img src="a.png"> two <img src="b.png"> three', 'table-1'),
+    ];
+
+    const first = normalizeInlineImages(input);
+    const second = normalizeInlineImages(input);
+
+    expect(second).toEqual(first);
+    expect(mintedIds(input, first)).toHaveLength(4);
+  });
+
+  it('mints ids in the editor block id format', () => {
+    const input = [
+      makeTable('table-1', [[{ blocks: ['p-1'] }]], ['p-1']),
+      makeCellParagraph('p-1', 'one <img src="a.png"> two', 'table-1'),
+    ];
+
+    expect(mintedIds(input, normalizeInlineImages(input)).every(isValidBlockId)).toBe(true);
+  });
+
+  it('never mints an id another block already uses', () => {
+    const table = makeTable('table-1', [[{ blocks: ['p-1'] }]], ['p-1']);
+    const paragraph = makeCellParagraph('p-1', 'one <img src="a.png"> two', 'table-1');
+    const minted = mintedIds([table, paragraph], normalizeInlineImages([table, paragraph]));
+    const squatters = minted.map((id) => makeRootParagraph(id, 'already here'));
+    const input = [...squatters, table, paragraph];
+
+    const result = normalizeInlineImages(input);
+    const ids = result.map((b) => b.id);
+
+    expect(mintedIds(input, result)).toHaveLength(2);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe('normalizeInlineImages in a live editor', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('two saves of an unchanged document are identical, ids included', async () => {
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+
+    const editor = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, table: Table, image: Image },
+      data: {
+        blocks: [
+          { id: 't', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['p'] }]] } },
+          { id: 'p', type: 'paragraph', data: { text: 'before <img src="https://x.test/cat.png" alt="cat"> after' }, parent: 't' },
+        ],
+      },
+    }) as unknown as { isReady: Promise<unknown>; save: () => Promise<OutputData>; destroy: () => void };
+
+    await editor.isReady;
+
+    const first = await editor.save();
+    const second = await editor.save();
+
+    editor.destroy();
+
+    expect(first.blocks.some((b) => b.type === 'image')).toBe(true);
+    expect(second.blocks).toEqual(first.blocks);
   });
 });

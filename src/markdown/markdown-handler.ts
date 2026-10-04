@@ -7,7 +7,9 @@ import type { PasteHandler } from '../components/modules/paste/handlers/base';
 import { BasePasteHandler } from '../components/modules/paste/handlers/base';
 import { Block } from '../components/block';
 import { normalizeTableChildParents } from '../components/utils/data-model-transform';
-import { getRestrictedTools, isInsideTableCell } from '../tools/table/table-restrictions';
+import { getRestrictedTools } from '../tools/table/table-restrictions';
+import { enclosingCellTable } from '../components/utils/enclosing-cell-table';
+import { subtreeEndIndex } from '../components/utils/blocks-tree';
 import type { InternalMarkdownImportConfig } from './types';
 
 /**
@@ -132,7 +134,7 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     const isInContainerTitle = childContainer !== null &&
       !childContainer.contains(currentBlock?.currentInput ?? null);
 
-    const table = currentBlock !== undefined ? this.enclosingCellTable(currentBlock) : undefined;
+    const table = currentBlock !== undefined ? enclosingCellTable(currentBlock, id => BlockManager.getBlockById(id)) : undefined;
     const restricted = new Set(getRestrictedTools());
     // A tool barred from cells sends the whole batch out of the table, right
     // after its subtree, as BasePasteHandler.redirectToTableParentIfNeeded does.
@@ -201,40 +203,14 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
-   * The nearest table above `block` when `block` sits in one of its cells.
-   * @param block - the caret block
-   */
-  private enclosingCellTable(block: Block): Block | undefined {
-    if (block.parentId == null || !isInsideTableCell(block)) {
-      return undefined;
-    }
-
-    const { BlockManager } = this.Blok;
-    const walk = (parentId: string | null): Block | undefined => {
-      const parent = parentId !== null ? BlockManager.getBlockById(parentId) : undefined;
-
-      return parent === undefined || parent.name === 'table' ? parent : walk(parent.parentId);
-    };
-
-    return walk(block.parentId);
-  }
-
-  /**
    * Flat index right after `block` and all its descendants.
    * @param block - the subtree root
    */
   private indexAfterSubtree(block: Block): number {
-    const { BlockManager } = this.Blok;
-    const isUnder = (candidate: Block): boolean => {
-      const parent = candidate.parentId !== null ? BlockManager.getBlockById(candidate.parentId) : undefined;
+    const { blocks } = this.Blok.BlockManager;
+    const reader = { getBlocksCount: (): number => blocks.length, getBlockByIndex: (i: number): Block | undefined => blocks[i] };
 
-      return parent !== undefined && (parent === block || isUnder(parent));
-    };
-    const blocks = BlockManager.blocks;
-    const start = BlockManager.getBlockIndex(block) + 1;
-    const offset = blocks.slice(start).findIndex(candidate => !isUnder(candidate));
-
-    return offset === -1 ? blocks.length : start + offset;
+    return subtreeEndIndex(reader, this.Blok.BlockManager.getBlockIndex(block)) + 1;
   }
 
   /**

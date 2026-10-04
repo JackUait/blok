@@ -662,9 +662,6 @@ describe('Saver module', () => {
   it('normalizes inline images in table cell paragraphs during save', async () => {
     vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
 
-    const { generateBlockId } = await import('../../../../src/components/utils/id-generator');
-    vi.mocked(generateBlockId).mockReturnValue('img-norm-1');
-
     const tableBlock = createBlockMock({
       id: 'table-1',
       tool: 'table',
@@ -695,8 +692,11 @@ describe('Saver module', () => {
 
     // Image block should be extracted
     const imageOutputBlock = result?.blocks.find(b => b.type === 'image');
+    const imageId = imageOutputBlock?.id;
+
+    expect(imageId).toEqual(expect.any(String));
     expect(imageOutputBlock).toEqual(expect.objectContaining({
-      id: 'img-norm-1',
+      id: imageId,
       type: 'image',
       data: { url: 'https://example.com/photo.jpg' },
       parent: 'table-1',
@@ -709,11 +709,11 @@ describe('Saver module', () => {
     // Table cell content should reference the new image block before the paragraph
     const tableOutputBlock = result?.blocks.find(b => b.id === 'table-1');
     const cellBlocks = (tableOutputBlock?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks;
-    expect(cellBlocks[0]).toBe('img-norm-1');
+    expect(cellBlocks[0]).toBe(imageId);
     expect(cellBlocks[1]).toBe('para-1');
 
     // Table content field should include new image block ID
-    expect(tableOutputBlock?.content).toContain('img-norm-1');
+    expect(tableOutputBlock?.content).toContain(imageId);
   });
 
   it('derives callout content[] from children parentId when contentIds is stale', async () => {

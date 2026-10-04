@@ -1,4 +1,5 @@
 import { createIdGenerator } from './id-generator';
+import { normalizeInlineImages } from '../../../components/modules/normalizeInlineImages';
 import { mapToNearestPresetName } from '../../../components/utils/color-mapping';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../../components/utils/default-page-colors';
 import { mapPastedTableCells } from '../../../tools/table/table-operations';
@@ -24,7 +25,45 @@ export function buildBlocks(wrapper: HTMLElement): OutputBlockData[] {
     convertNode(node, blocks, nextId);
   }
 
-  return blocks;
+  return extractCellImages(blocks);
+}
+
+/**
+ * Splits images out of table cell paragraphs, as the editor's save does.
+ * The CLI never runs that save, so without this the image stays inline.
+ */
+function extractCellImages(blocks: OutputBlockData[]): OutputBlockData[] {
+  const byId = new Map(blocks.map((block) => [block.id, block]));
+  const shapes = blocks.map((block) => ({
+    id: block.id,
+    tool: block.type,
+    data: block.data,
+    parentId: block.parent,
+    contentIds: block.content,
+    isValid: true,
+  }));
+  const normalized = normalizeInlineImages(shapes);
+
+  if (normalized === shapes) {
+    return blocks;
+  }
+
+  const untouched = new Set(shapes);
+
+  return normalized.map((shape) => {
+    const source = byId.get(shape.id);
+
+    if (source !== undefined && untouched.has(shape)) {
+      return source;
+    }
+
+    return {
+      ...(source ?? { id: shape.id, type: shape.tool, parent: shape.parentId }),
+      data: shape.data,
+      // A CLI table has no content list: cells name their children.
+      ...(source?.content !== undefined ? { content: shape.contentIds } : {}),
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -95,12 +134,13 @@ function convertNode(
 
   if (tag === 'IMG') {
     const src = el.getAttribute('src') ?? '';
+    const alt = el.getAttribute('alt') ?? '';
     const width = parseIntFromStyle(el, 'width');
 
     blocks.push({
       id: nextId('image'),
       type: 'image',
-      data: { url: src },
+      data: alt !== '' ? { url: src, alt } : { url: src },
       stretched: null,
       key: null,
       width,

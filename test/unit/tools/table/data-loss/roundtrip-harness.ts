@@ -28,6 +28,7 @@ export interface BootOptions {
   readOnly?: boolean;
   dataModel?: 'auto' | 'legacy' | 'flat' | 'hierarchical';
   detached?: boolean;
+  tools?: Record<string, unknown>;
 }
 
 export interface Booted {
@@ -48,7 +49,7 @@ export const boot = async (data: OutputData, options: BootOptions = {}): Promise
     holder,
     readOnly: options.readOnly ?? false,
     dataModel: options.dataModel,
-    tools: { table: Table, paragraph: Paragraph, list: ListItem, toggle: ToggleItem, callout: CalloutTool },
+    tools: { table: Table, paragraph: Paragraph, list: ListItem, toggle: ToggleItem, callout: CalloutTool, ...options.tools },
     data,
     onError,
   } as never) as unknown as TestEditor;

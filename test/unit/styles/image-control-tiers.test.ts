@@ -45,13 +45,30 @@ describe('Image control size tiers (src/styles/image.css)', () => {
     expect(body).toContain('height: 14px');
   });
 
-  it('handles are 9px dots, not 6px bars', () => {
+  it('handles are 3x32 bars 8px inside the picture, in the handle ink', () => {
     const body = findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"]');
 
     expect(body).not.toBeNull();
-    expect(body).toContain('width: 9px');
-    expect(body).toContain('height: 9px');
-    expect(body).toContain('border-radius: 50%');
+    expect(body).toContain('width: 3px');
+    expect(body).toContain('height: 32px');
+    expect(body).toContain('background: var(--blok-image-handle-ink)');
+    expect(findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]')).toContain('left: var(--blok-space-2)');
+    expect(findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"]')).toContain('right: var(--blok-space-2)');
+  });
+
+  it('a hidden handle keeps its box, so tone-sampler can read what is under it', () => {
+    const body = findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"]');
+
+    expect(body).toContain('transform: translateY(-50%)');
+    expect(css).not.toMatch(/\[data-role="resize-handle"\][^{]*\{[^}]*scale\(/);
+  });
+
+  it('the hit area is 16px wide', () => {
+    expect(findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"]::before')).toContain('inset: -4px -6.5px');
+  });
+
+  it('a table cell needs no handle override: the handles are already inside', () => {
+    expect(css).not.toMatch(/\[data-blok-table-cell\][^{]*\[data-role="resize-handle"\]/);
   });
 
   it('caption steps between exactly two fixed sizes at the medium breakpoint', () => {
@@ -138,10 +155,8 @@ describe('alt hint and pill width', () => {
 });
 
 describe('image chrome inside a table cell (the cell clips overflow)', () => {
-  it('keeps the ring and the dots inside the figure', () => {
+  it('keeps the ring inside the figure', () => {
     expect(css).toMatch(/\[data-blok-table-cell\] \[data-blok-tool="image"\] \[data-role="image-selection-ring"\][^{]*\{[^}]*left: 0/);
-    expect(css).toMatch(/\[data-blok-table-cell\] \[data-blok-tool="image"\] \[data-role="resize-handle"\]\[data-edge="left"\]\s*\{\s*left: var\(--blok-space-1\)/);
-    expect(css).toMatch(/\[data-blok-table-cell\] \[data-blok-tool="image"\] \[data-role="resize-handle"\]\[data-edge="right"\]\s*\{\s*right: var\(--blok-space-1\)/);
   });
 });
 

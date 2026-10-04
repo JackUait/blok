@@ -477,6 +477,18 @@ describe('blocksToHtml', () => {
       expect(html).toBe('<table><tbody><tr><td>x</td><td><b>y</b></td></tr></tbody></table>');
     });
 
+    it('stamps valid column widths and stretched on the table element', () => {
+      const html = blocksToHtml(doc([
+        { type: 'table', data: { withHeadings: false, stretched: true, colWidths: [120, 360.5], content: [['x', 'y']] } },
+        { type: 'table', data: { withHeadings: false, stretched: false, colWidths: [120, 'wide'], content: [['x', 'y']] } },
+      ]));
+
+      expect(html).toBe(
+        '<table data-blok-col-widths="120,360.5" data-blok-stretched="true"><tbody><tr><td>x</td><td>y</td></tr></tbody></table>'
+        + '<table><tbody><tr><td>x</td><td>y</td></tr></tbody></table>'
+      );
+    });
+
     it('emits colspan/rowspan from merged-cell data and skips covered cells', () => {
       const html = blocksToHtml(doc([
         {

@@ -13,7 +13,8 @@
  * storing the result has to be able to tell what did not survive.
  *
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*, parse5, and the
- * DOM-free leaves of src/markdown + src/components/utils/sanitize-url).
+ * DOM-free leaves of src/markdown + src/components/utils/sanitize-url and
+ * default-page-colors).
  */
 import { parse, serialize } from 'parse5';
 import type { DefaultTreeAdapterMap } from 'parse5';
@@ -22,6 +23,8 @@ import type { OutputBlockData } from '../../types';
 import type { ImageAlignment } from '../../types/tools/image';
 import { INLINE_TEXT_SANITIZE } from '../components/shared/inline-content-sanitize';
 import { safeImageSrc } from '../components/utils/sanitize-url';
+import { isInvisibleBackground } from '../components/utils/default-page-colors';
+import { isSafeCssColor } from '../shared/css-color';
 import { normalizeFenceLang } from '../markdown/fence-language';
 import type { MarkdownDegradation } from '../markdown/blocks-to-markdown-core';
 import { sanitizeHtmlFragment } from './sanitize';
@@ -88,6 +91,8 @@ interface Ctx {
   nextId: () => string;
   warnings: MarkdownDegradation[];
   blocks: OutputBlockData[];
+  /** Set while a table cell converts: a table met there is flattened. */
+  inCell: boolean;
 }
 
 /**
@@ -746,12 +751,131 @@ const emitList = (ctx: Ctx, element: P5Element, depth: number): void => {
 };
 
 /** A cell as Blok stores it. */
-interface GridCell {
+interface GridCell extends CellStyle {
   blocks: string[];
   colspan?: number;
   rowspan?: number;
   mergedInto?: [number, number];
 }
+
+/** Cell colours and placement read back from a cell's inline style. */
+interface CellStyle {
+  color?: string;
+  textColor?: string;
+  placement?: string;
+}
+
+const CELL_VERTICAL = new Set(['top', 'middle', 'bottom']);
+
+const DEFAULT_BLACK = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgba(0,0,0,1)']);
+
+/**
+ * Horizontal placement from `text-align`. Placement left/right are the grid's
+ * start/end: physical `left`/`right` swap in an RTL grid, while the logical
+ * forms (`start`/`end`, and the end-side var `blocksToHtml` writes) never do.
+ * @param value - the `text-align` value
+ * @param rtl - whether the grid runs right to left
+ */
+const horizontalPlacement = (value: string | undefined, rtl: boolean): string | undefined => {
+  switch ((value ?? '').replace(/\s+/g, '')) {
+    case 'center':
+      return 'center';
+    case 'start':
+      return 'left';
+    case 'end':
+    case 'var(--_blok-end-side,right)':
+      return 'right';
+    case 'left':
+      return rtl ? 'right' : 'left';
+    case 'right':
+      return rtl ? 'left' : 'right';
+    default:
+      return undefined;
+  }
+};
+
+/**
+ * Read a cell's colours and placement from its inline style, the inverse of
+ * `tableCellStyle` in emitters.ts. Colours keep their exact value, so a Blok
+ * round trip is lossless; unsafe ones are dropped.
+ * @param cell - the `td`/`th` element
+ * @param rtl - whether the grid runs right to left
+ */
+const readCellStyle = (cell: P5Element, rtl: boolean): CellStyle => {
+  const declarations = new Map<string, string>();
+
+  // Split by hand: a property regex would match `color` inside `border-color`.
+  for (const declaration of (attr(cell, 'style') ?? '').split(';')) {
+    const colon = declaration.indexOf(':');
+
+    if (colon > 0) {
+      declarations.set(declaration.slice(0, colon).trim().toLowerCase(), declaration.slice(colon + 1).trim());
+    }
+  }
+
+  const style: CellStyle = {};
+  const background = declarations.get('background-color') ?? declarations.get('background');
+  const text = declarations.get('color');
+
+  // Same filter as the editor's cell paste (readPastedCellStyle): external
+  // tables put the page's white bg and black text on every cell. No Blok
+  // preset hits it, so Blok's own output still round-trips.
+  if (isSafeCssColor(background) && !isInvisibleBackground(background)) {
+    style.color = background;
+  }
+
+  if (isSafeCssColor(text) && !DEFAULT_BLACK.has(text.replace(/\s/g, '').toLowerCase())) {
+    style.textColor = text;
+  }
+
+  const horizontal = horizontalPlacement(declarations.get('text-align')?.toLowerCase(), rtl) ?? 'left';
+  const verticalValue = declarations.get('vertical-align')?.toLowerCase() ?? '';
+  const vertical = CELL_VERTICAL.has(verticalValue) ? verticalValue : 'top';
+
+  if (horizontal !== 'left' || vertical !== 'top') {
+    style.placement = `${vertical}-${horizontal}`;
+  }
+
+  return style;
+};
+
+/**
+ * Whether the nearest `dir` at or above the table says right to left. A
+ * cell's own `dir` is its text's, not the grid's, so start at the table.
+ * @param table - the `table` element
+ */
+const isRtlGrid = (table: P5Element): boolean => {
+  const dir = (node: DefaultTreeAdapterMap['parentNode'] | null): string | undefined => {
+    if (node === null || !('tagName' in node)) {
+      return undefined;
+    }
+
+    return attr(node, 'dir')?.trim().toLowerCase() ?? dir(node.parentNode);
+  };
+
+  return dir(table) === 'rtl';
+};
+
+/**
+ * Column widths and `stretched` from the data attributes `blocksToHtml`
+ * stamps. Widths that do not fit the grid are dropped rather than guessed.
+ * @param table - the `table` element
+ * @param width - the grid's column count
+ */
+const readTableLayout = (table: P5Element, width: number): { colWidths?: number[]; stretched?: boolean } => {
+  const layout: { colWidths?: number[]; stretched?: boolean } = {};
+  const widths = attr(table, 'data-blok-col-widths')?.split(',').map(Number) ?? [];
+
+  if (widths.length === width && widths.every((value) => Number.isFinite(value) && value > 0)) {
+    layout.colWidths = widths;
+  }
+
+  if (attr(table, 'data-blok-stretched') === 'true') {
+    layout.stretched = true;
+  }
+
+  return layout;
+};
 
 /**
  * Every `tr` under a table, in document order, reading through
@@ -819,6 +943,7 @@ const emitTable = (ctx: Ctx, element: P5Element): void => {
   }
 
   const table = push(ctx, 'table', {});
+  const rtl = isRtlGrid(element);
   const grid: Array<Array<GridCell | undefined>> = rows.map(() => []);
 
   /**
@@ -891,6 +1016,7 @@ const emitTable = (ctx: Ctx, element: P5Element): void => {
 
       rowAt(rowIndex)[cursor.column] = {
         blocks,
+        ...readCellStyle(cell, rtl),
         ...(colspan > 1 ? { colspan } : {}),
         ...(rowspan > 1 ? { rowspan } : {}),
       };
@@ -911,42 +1037,49 @@ const emitTable = (ctx: Ctx, element: P5Element): void => {
     return cells.length > 0 && cells.every((cell) => cell.tagName === 'th');
   };
 
+  const withHeadingColumn = rows.length > 1 && rows.every((row) => rowCells(row)[0]?.tagName === 'th');
+  const firstRow: P5Element | undefined = rows[0];
+  // A first row of one th is what a heading column alone looks like (one
+  // column, or a full-width colspan), so only a thead marks it a heading row.
+  const headingColumnExplainsFirstRow = withHeadingColumn && firstRow !== undefined && rowCells(firstRow).length === 1;
+
   table.data = {
-    withHeadings: headRow || (rows.length > 1 && rows[0] !== undefined && allTh(rows[0])),
-    withHeadingColumn: rows.length > 1 && rows.every((row) => rowCells(row)[0]?.tagName === 'th'),
+    withHeadings: headRow || (rows.length > 1 && firstRow !== undefined && allTh(firstRow) && !headingColumnExplainsFirstRow),
+    withHeadingColumn,
     content,
+    ...readTableLayout(element, width),
   };
 };
 
 /**
  * Convert one cell's content. A cell holds blocks, so a paragraph, list or
- * image inside it converts normally; a nested table does not, because its own
- * cells would need a second level of parenting Blok's grid cannot express.
+ * image inside it converts normally; a nested table, at any depth, is
+ * flattened by {@link emitNestedTable}.
  * @param ctx - conversion state
  * @param cell - the `td`/`th` element
  */
 const convertCell = (ctx: Ctx, cell: P5Element): void => {
-  const nested = cell.childNodes.filter((node): node is P5Element => isElement(node) && node.tagName === 'table');
+  const before = ctx.blocks.length;
 
-  if (nested.length === 0) {
-    const before = ctx.blocks.length;
+  // Same blocks and warnings arrays; only the flag differs.
+  convertNodes({ ...ctx, inCell: true }, cell.childNodes);
 
-    convertNodes(ctx, cell.childNodes);
-
-    if (ctx.blocks.length === before) {
-      push(ctx, 'paragraph', { text: '' });
-    }
-
-    return;
+  if (ctx.blocks.length === before) {
+    push(ctx, 'paragraph', { text: '' });
   }
+};
 
+/**
+ * A table inside a cell becomes its cells' content, in row order, as the
+ * editor's paste does: `table` is a restricted cell tool, and its cells would
+ * need a second level of parenting Blok's grid cannot express.
+ * @param ctx - conversion state
+ * @param table - the nested `table` element
+ */
+const emitNestedTable = (ctx: Ctx, table: P5Element): void => {
   warn(ctx, 'table', 'degraded', 'A nested table is flattened into the cell\'s paragraphs; a Blok cell holds blocks, not another grid');
 
-  convertNodes(ctx, cell.childNodes.filter((node) => !nested.includes(node as P5Element)));
-
-  const innerCells = nested.flatMap((inner) => tableRows(inner).flatMap(rowCells));
-
-  for (const innerCell of innerCells) {
+  for (const innerCell of tableRows(table).flatMap(rowCells)) {
     emitInlineRun(ctx, innerCell.childNodes);
   }
 };
@@ -1078,7 +1211,11 @@ const convertElement = (ctx: Ctx, element: P5Element): void => {
 
       return;
     case 'table':
-      emitTable(ctx, element);
+      if (ctx.inCell) {
+        emitNestedTable(ctx, element);
+      } else {
+        emitTable(ctx, element);
+      }
 
       return;
     case 'details':
@@ -1175,7 +1312,7 @@ const reportTitle = (ctx: Ctx, head: P5ChildNode | undefined): void => {
  * @returns the blocks and their degradations
  */
 export const htmlToBlocksWithReport = (html: string): HtmlImportResult => {
-  const ctx: Ctx = { nextId: createIdGenerator(), warnings: [], blocks: [] };
+  const ctx: Ctx = { nextId: createIdGenerator(), warnings: [], blocks: [], inCell: false };
   const document = parse(html);
   const root = document.childNodes.find((node): node is P5Element => isElement(node) && node.tagName === 'html');
   const head = root?.childNodes.find((node) => isElement(node) && node.tagName === 'head');

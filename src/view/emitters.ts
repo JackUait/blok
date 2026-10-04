@@ -400,6 +400,20 @@ const tableCellStyle = (cell: unknown, env: EmitterEnv): string => {
 };
 
 /**
+ * Column widths and `stretched` as data attributes, so `htmlToBlocks` can
+ * restore them. Widths are stamped only when every one is a positive number.
+ * @param data - the table block's data
+ */
+const tableLayoutAttrs = (data: Record<string, unknown>): string => {
+  const widths = data.colWidths;
+  const validWidths = Array.isArray(widths) && widths.length > 0
+    && widths.every((width): width is number => typeof width === 'number' && Number.isFinite(width) && width > 0);
+  const widthsAttr = validWidths ? ` data-blok-col-widths="${widths.join(',')}"` : '';
+
+  return widthsAttr + (data.stretched === true ? ' data-blok-stretched="true"' : '');
+};
+
+/**
  * Table emitter: `<thead>` when `withHeadings`, `<th>` first column when
  * `withHeadingColumn`, colspan/rowspan from merged-cell origin data, covered
  * cells (`mergedInto`) skipped. Children are consumed via the grid — never
@@ -440,7 +454,7 @@ const emitTable = (block: ViewBlock, env: EmitterEnv): string => {
   const bodyRows = withHeadings ? rows.slice(1) : rows;
   const body = `<tbody>${bodyRows.map((row) => renderRow(row, false)).join('')}</tbody>`;
 
-  return `<table>${head}${body}</table>`;
+  return `<table${tableLayoutAttrs(block.data)}>${head}${body}</table>`;
 };
 
 /**

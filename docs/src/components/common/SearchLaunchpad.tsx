@@ -1,25 +1,19 @@
-import { useEffect, useState } from "react";
 import { ModuleIcon } from "./ModuleIcon";
 import { GROUP_TITLES_EN } from "../api/api-nav";
 import { SECTION_ICONS } from "../api/section-icons";
 import { useI18n } from "../../contexts/I18nContext";
 import { cn } from "@/lib/utils";
-
-export interface ModuleTile {
-  module: string;
-  count: number;
-}
+import type { SearchIndexItem, SearchResult } from "@/types/search";
 
 export type LaunchpadItem =
   | { kind: "query"; value: string }
   | { kind: "module"; module: string; count: number };
 
-interface SearchLaunchpadProps {
-  items: LaunchpadItem[];
-  activeIndex: number;
-  countLabel: (count: number) => string;
-  onPick: (item: LaunchpadItem) => void;
-}
+/** What the preview pane describes: a launchpad item or a search result. */
+export type PreviewTarget =
+  | { kind: "query"; value: string; top: SearchResult[] }
+  | { kind: "module"; module: string; count: number; total: number; entries: SearchIndexItem[] }
+  | { kind: "result"; result: SearchResult; related: SearchResult[] };
 
 // Index modules are sidebar group titles; reuse the sidebar's icon for each.
 const GROUP_KEY_BY_TITLE = new Map(
@@ -40,162 +34,235 @@ export const useModuleTitle = (): ((module: string) => string) => {
   };
 };
 
-// Delay before the first chip/tile rises, so content lands after the panel opens.
-const RISE_BASE_MS = 80;
-const RISE_STEP_MS = 28;
+/** Methods, properties and options are code; pages and sections are prose. */
+export const isCodeKind = (kind: SearchResult["kind"]): boolean =>
+  kind === "method" || kind === "property" || kind === "option";
 
-const SECTION_LABEL_CLASS =
-  "px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground/70";
+/** "blocks.insert(type?, data?)" → "blocks.insert()" for a one-line list row. */
+export const shortTitle = (title: string): string => {
+  const paren = title.indexOf("(");
+  return paren === -1 ? title : `${title.slice(0, paren)}()`;
+};
 
-export const SearchLaunchpad: React.FC<SearchLaunchpadProps> = ({
+export const GROUP_LABEL_CLASS =
+  "px-2 pb-1 pt-2.5 text-[10.5px] font-semibold tracking-[0.02em] text-muted-foreground/70";
+
+// The selected row shows ↵ at its end. It is drawn with ::after so it never
+// joins the row's text or accessible name (a suggestion's text is its query).
+export const ROW_CLASS =
+  "flex h-[30px] w-full cursor-pointer items-center gap-2.5 rounded-[7px] px-2 text-left text-[13px] text-foreground data-[selected=true]:bg-secondary data-[selected=true]:after:ml-auto data-[selected=true]:after:pl-2 data-[selected=true]:after:font-mono data-[selected=true]:after:text-[11px] data-[selected=true]:after:text-muted-foreground data-[selected=true]:after:content-['↵']";
+
+interface LaunchpadListProps {
+  items: LaunchpadItem[];
+  activeIndex: number;
+  onPick: (item: LaunchpadItem) => void;
+  onHover: (index: number) => void;
+}
+
+export const LaunchpadList: React.FC<LaunchpadListProps> = ({
   items,
   activeIndex,
-  countLabel,
   onPick,
+  onHover,
 }) => {
   const { t } = useI18n();
   const moduleTitle = useModuleTitle();
-  const tiles = items.filter((item) => item.kind === "module");
-
-  // Indices are shared with keyboard navigation, so chips and tiles are
-  // rendered from one flat list in one order.
-  const renderItem = (item: LaunchpadItem, index: number) => {
-    const selected = index === activeIndex;
-    const style = { animationDelay: `${RISE_BASE_MS + index * RISE_STEP_MS}ms` };
-
-    if (item.kind === "query") {
-      return (
-        <button
-          key={`q-${item.value}`}
-          type="button"
-          data-blok-testid="search-suggestion"
-          data-selected={selected}
-          onClick={() => onPick(item)}
-          style={style}
-          className={cn(
-            "search-rise inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border px-3 py-1.5 font-mono text-[12.5px] font-medium text-foreground transition-colors",
-            selected ? "bg-secondary" : "bg-card hover:bg-secondary/60",
-          )}
-        >
-          {item.value}
-        </button>
-      );
-    }
-
-    // Each tile takes its own stop along the brand sunrise (rose → orange).
-    const position = tiles.length > 1 ? tiles.indexOf(item) / (tiles.length - 1) : 0;
-    const hue = `color-mix(in srgb, var(--brand-from) ${Math.round((1 - position) * 100)}%, var(--brand-to))`;
-
-    return (
-      <button
-        key={`m-${item.module}`}
-        type="button"
-        data-blok-testid="search-module-tile"
-        data-module={item.module}
-        data-selected={selected}
-        onClick={() => onPick(item)}
-        style={{ ...style, ["--tile-hue" as string]: hue }}
-        className={cn(
-          "search-rise search-tile group relative flex cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-border p-2.5 text-left text-foreground transition-colors",
-          selected ? "bg-secondary" : "bg-card hover:bg-secondary/60",
-        )}
-      >
-        <span className="search-tile-icon flex size-8 shrink-0 items-center justify-center rounded-lg">
-          {moduleIcon(item.module)}
-        </span>
-        <span className="flex min-w-0 flex-col">
-          <span className="line-clamp-2 hyphens-auto text-[13px] font-semibold leading-[1.2] [overflow-wrap:anywhere]">
-            {moduleTitle(item.module)}
-          </span>
-          <span className="text-[11.5px] tabular-nums text-muted-foreground">
-            {item.count} {countLabel(item.count)}
-          </span>
-        </span>
-      </button>
-    );
-  };
-
-  const chipItems = items
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => item.kind === "query");
-  const tileItems = items
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => item.kind === "module");
+  const firstModule = items.findIndex((item) => item.kind === "module");
 
   return (
-    <div className="px-1.5 pb-2 pt-2.5" data-blok-testid="search-launchpad">
-      <div className={SECTION_LABEL_CLASS}>{t("search.try")}</div>
-      <div className="flex flex-wrap gap-1.5 px-1.5">
-        {chipItems.map(({ item, index }) => renderItem(item, index))}
-      </div>
-      <div className={cn(SECTION_LABEL_CLASS, "mt-4")}>{t("search.browse")}</div>
-      <div className="grid grid-cols-2 gap-2 px-1.5 sm:grid-cols-3">
-        {tileItems.map(({ item, index }) => renderItem(item, index))}
-      </div>
+    <div data-blok-testid="search-launchpad">
+      {items.map((item, index) => {
+        const selected = index === activeIndex;
+        const common = {
+          type: "button" as const,
+          "data-selected": selected,
+          onClick: () => onPick(item),
+          onMouseEnter: () => onHover(index),
+          className: ROW_CLASS,
+        };
+
+        return (
+          <div key={item.kind === "query" ? `q-${item.value}` : `m-${item.module}`}>
+            {index === 0 && <div className={GROUP_LABEL_CLASS}>{t("search.suggested")}</div>}
+            {index === firstModule && <div className={GROUP_LABEL_CLASS}>{t("search.sections")}</div>}
+            {item.kind === "query" ? (
+              <button {...common} data-blok-testid="search-suggestion">
+                <svg aria-hidden="true" className="shrink-0 text-muted-foreground" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-4-4" />
+                </svg>
+                <span className="truncate font-mono text-[12px]">{item.value}</span>
+              </button>
+            ) : (
+              <button {...common} data-blok-testid="search-module-tile" data-module={item.module}>
+                <span className="flex shrink-0 text-muted-foreground [&_svg]:size-[15px]">
+                  {moduleIcon(item.module)}
+                </span>
+                <span className="truncate">{moduleTitle(item.module)}</span>
+                {!selected && (
+                  <span className="ml-auto font-mono text-[11px] tabular-nums text-muted-foreground/70">
+                    {item.count}
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
 
-const GHOST_START_MS = 600;
-const GHOST_TYPE_MS = 75;
-const GHOST_DELETE_MS = 32;
-const GHOST_HOLD_MS = 1500;
-const GHOST_GAP_MS = 350;
+const KEYCAP =
+  "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] border border-b-2 border-border bg-secondary px-1 font-mono text-[10.5px] text-muted-foreground";
 
-const prefersReducedMotion = (): boolean =>
-  typeof window !== "undefined" &&
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const Signature: React.FC<{ title: string }> = ({ title }) => {
+  const paren = title.indexOf("(");
+  if (paren === -1) return <span className="font-semibold text-foreground">{title}</span>;
 
-/**
- * Types and erases each phrase in turn. Returns null when not running
- * (inactive, or the user prefers reduced motion), so callers can drop the
- * ghost entirely and fall back to the real placeholder.
- */
-export const useGhostTyping = (
-  phrases: readonly string[],
-  active: boolean,
-): string | null => {
-  const [reducedMotion] = useState(prefersReducedMotion);
-  const enabled = active && !reducedMotion && phrases.length > 0;
-  const [text, setText] = useState("");
+  return (
+    <>
+      <span className="font-semibold text-foreground">{title.slice(0, paren)}</span>
+      <span className="text-muted-foreground">(</span>
+      <span className="text-primary">{title.slice(paren + 1, title.lastIndexOf(")"))}</span>
+      <span className="text-muted-foreground">)</span>
+    </>
+  );
+};
 
-  useEffect(() => {
-    if (!enabled) {
-      setText("");
-      return;
-    }
+interface PreviewRow {
+  id: string;
+  label: string;
+  title: string;
+  code: boolean;
+}
 
-    let phrase = 0;
-    let length = 0;
-    let deleting = false;
-    let timer: ReturnType<typeof setTimeout>;
+/** Rows in the preview are plain text, never links: results stay the only anchors. */
+const PreviewRows: React.FC<{ rows: PreviewRow[] }> = ({ rows }) => (
+  <div className="flex flex-col border-t border-border">
+    {rows.map((row) => (
+      <div key={row.id} className="flex items-baseline gap-2.5 border-b border-border py-[7px]">
+        <span className="w-14 shrink-0 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground/70">
+          {row.label}
+        </span>
+        <span className={cn("min-w-0 truncate", row.code ? "font-mono text-[12px]" : "text-[12.5px]")}>
+          {row.title}
+        </span>
+      </div>
+    ))}
+  </div>
+);
 
-    const tick = () => {
-      const word = phrases[phrase];
+const targetKey = (target: PreviewTarget): string =>
+  target.kind === "result"
+    ? `r:${target.result.id}`
+    : target.kind === "module"
+      ? `m:${target.module}`
+      : `q:${target.value}`;
 
-      if (!deleting) {
-        length += 1;
-        setText(word.slice(0, length));
-        deleting = length >= word.length;
-        timer = setTimeout(tick, deleting ? GHOST_HOLD_MS : GHOST_TYPE_MS);
-        return;
-      }
+interface SearchPreviewProps {
+  target: PreviewTarget | null;
+  countLabel: (count: number) => string;
+  className?: string;
+}
 
-      length -= 1;
-      setText(word.slice(0, length));
-      if (length > 0) {
-        timer = setTimeout(tick, GHOST_DELETE_MS);
-        return;
-      }
-      deleting = false;
-      phrase = (phrase + 1) % phrases.length;
-      timer = setTimeout(tick, GHOST_GAP_MS);
-    };
+export const SearchPreview: React.FC<SearchPreviewProps> = ({ target, countLabel, className }) => {
+  const { t } = useI18n();
+  const moduleTitle = useModuleTitle();
+  if (!target) return null;
 
-    timer = setTimeout(tick, GHOST_START_MS);
-    return () => clearTimeout(timer);
-  }, [enabled, phrases]);
+  const kindLabel = (kind: SearchResult["kind"]) => t(`search.kind.${kind}`);
+  const toRow = (item: SearchIndexItem | SearchResult): PreviewRow => ({
+    id: item.id,
+    label: kindLabel(item.kind),
+    title: isCodeKind(item.kind) ? shortTitle(item.title) : item.title,
+    code: isCodeKind(item.kind),
+  });
 
-  return enabled ? text : null;
+  let crumb: React.ReactNode;
+  let body: React.ReactNode;
+  let action: string;
+
+  if (target.kind === "module") {
+    crumb = (
+      <>
+        <span className="flex [&_svg]:size-[13px]">{moduleIcon(target.module)}</span>
+        {kindLabel("section")}
+      </>
+    );
+    action = t("search.browseSection");
+    body = (
+      <>
+        <h3 className="text-[19px] font-bold tracking-[-0.02em]">{moduleTitle(target.module)}</h3>
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] tabular-nums text-muted-foreground">
+            {target.count} {countLabel(target.count)}
+          </span>
+          {/* Share of the whole index. */}
+          <span aria-hidden="true" className="relative h-0.5 overflow-hidden rounded-full bg-border">
+            <span
+              className="absolute inset-y-0 left-0 rounded-full bg-primary"
+              style={{ width: `${(target.count / target.total) * 100}%` }}
+            />
+          </span>
+        </div>
+        <PreviewRows rows={target.entries.map(toRow)} />
+      </>
+    );
+  } else if (target.kind === "query") {
+    crumb = t("search.suggested");
+    action = t("search.searchAction");
+    body = (
+      <>
+        <h3 className="font-mono text-[17px] font-semibold tracking-[-0.01em]">{target.value}</h3>
+        <PreviewRows rows={target.top.map(toRow)} />
+      </>
+    );
+  } else {
+    const { result } = target;
+    crumb = (
+      <>
+        <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" />
+        <span className="truncate">
+          {kindLabel(result.kind)} · {moduleTitle(result.module)}
+          {result.section && <> › {result.section}</>}
+        </span>
+      </>
+    );
+    action = t("search.open");
+    body = (
+      <>
+        {isCodeKind(result.kind) ? (
+          <div className="overflow-x-auto whitespace-nowrap rounded-lg bg-secondary px-3 py-2.5 font-mono text-[12.5px] leading-relaxed">
+            <Signature title={result.title} />
+          </div>
+        ) : (
+          <h3 className="text-[19px] font-bold tracking-[-0.02em]">{result.title}</h3>
+        )}
+        {result.description && (
+          <p className="text-[13px] leading-relaxed text-muted-foreground">{result.description}</p>
+        )}
+        {target.related.length > 0 && (
+          <PreviewRows rows={target.related.map((item) => ({ ...toRow(item), label: t("search.also") }))} />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div
+      data-blok-testid="search-preview"
+      className={cn("min-w-0 flex-1 flex-col overflow-y-auto px-5 py-4", className)}
+    >
+      {/* Keyed by target so the pane crossfades as the selection moves. */}
+      <div key={targetKey(target)} className="search-fade flex min-h-full flex-col gap-3.5">
+        <div className="flex min-w-0 items-center gap-1.5 text-[11.5px] text-muted-foreground/80">{crumb}</div>
+        {body}
+        <div className="mt-auto flex items-center gap-1.5 pt-2 text-xs text-muted-foreground">
+          <kbd className={KEYCAP}>↵</kbd>
+          {action}
+        </div>
+      </div>
+    </div>
+  );
 };

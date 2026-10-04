@@ -17,11 +17,16 @@ import { useI18n, useLocalizedHref } from "../../contexts/I18nContext";
 import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import {
-  SearchLaunchpad,
+  GROUP_LABEL_CLASS,
+  LaunchpadList,
+  ROW_CLASS,
+  SearchPreview,
+  isCodeKind,
   moduleIcon,
-  useGhostTyping,
+  shortTitle,
   useModuleTitle,
   type LaunchpadItem,
+  type PreviewTarget,
 } from "./SearchLaunchpad";
 
 interface SearchProps {
@@ -65,7 +70,7 @@ const resultHref = (result: SearchResult): string =>
 
 // Keycap chip — mirrors the ⌘K kbd in the search input.
 const KEYCAP_CLASS =
-  "inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-secondary px-1 font-mono text-[10px] font-semibold leading-none text-muted-foreground/70";
+  "inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] border border-b-2 border-border bg-secondary px-1 font-mono text-[10.5px] leading-none text-muted-foreground";
 
 // Highlight matching text in search results
 // Matches the query term OR words that share a common prefix with it
@@ -111,7 +116,7 @@ const highlightMatch = (text: string, query: string): React.ReactNode => {
     testRegex.test(part) ? (
       <mark
         key={index}
-        className="rounded-[3px] bg-primary/12 px-0.5 font-semibold text-primary"
+        className="bg-transparent font-semibold text-primary"
       >
         {part}
       </mark>
@@ -177,7 +182,7 @@ const getResultsPluralForm = (count: number, locale: string): ResultsPluralForm 
 
 const MORPH_MS = 420;
 const CLOSE_ANIMATION_MS = MORPH_MS;
-const PANEL_MAX_WIDTH = 560;
+const PANEL_MAX_WIDTH = 640;
 // easeOutExpo: a strong, smooth deceleration. The surface flies open then gently
 // settles — reads as a soft morph instead of an abrupt pop.
 const MORPH_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
@@ -204,8 +209,8 @@ export const Search: React.FC<SearchProps> = ({
   const [targetWidth, setTargetWidth] = useState<number | null>(null);
   // Module picked from a launchpad tile: lists its entries and scopes typing.
   const [scope, setScope] = useState<string | null>(null);
-  // -1 until an arrow key is pressed, so nothing looks selected on open.
-  const [launchpadIndex, setLaunchpadIndex] = useState(-1);
+  // Starts on the first item so the preview pane is never empty.
+  const [launchpadIndex, setLaunchpadIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -235,7 +240,6 @@ export const Search: React.FC<SearchProps> = ({
   }, [open]);
 
   const showLaunchpad = !query.trim() && !scope;
-  const ghostText = useGhostTyping(SUGGESTED_QUERIES, open && !query && !scope);
 
   // Focus input when opened
   useEffect(() => {
@@ -360,7 +364,7 @@ export const Search: React.FC<SearchProps> = ({
     setPillWidth(null);
     setTargetWidth(null);
     setScope(null);
-    setLaunchpadIndex(-1);
+    setLaunchpadIndex(0);
 
     // Only return focus on an actual close (Escape, outside click, or
     // selecting a result) — not on first mount while already closed.
@@ -525,7 +529,7 @@ export const Search: React.FC<SearchProps> = ({
     } else {
       setScope(item.module);
     }
-    setLaunchpadIndex(-1);
+    setLaunchpadIndex(0);
     inputRef.current?.focus();
   }, []);
 
@@ -700,6 +704,36 @@ export const Search: React.FC<SearchProps> = ({
     scrollSelectedIntoView();
   }, [scrollSelectedIntoView, isKeyboardNavMode]);
 
+  const previewTarget = ((): PreviewTarget | null => {
+    if (showLaunchpad) {
+      const item = launchpadItems[launchpadIndex];
+      if (!item) return null;
+      if (item.kind === "query") {
+        return { kind: "query", value: item.value, top: search(item.value, getSearchIndex()).slice(0, 4) };
+      }
+      const index = getSearchIndex();
+      return {
+        kind: "module",
+        module: item.module,
+        count: item.count,
+        total: index.length,
+        entries: index.filter((entry) => entry.module === item.module).slice(0, 4),
+      };
+    }
+    const result = results[selectedIndex];
+    if (!result) return null;
+    return {
+      kind: "result",
+      result,
+      related: results
+        .filter((other) => other.id !== result.id && other.module === result.module && other.section === result.section)
+        .slice(0, 2),
+    };
+  })();
+
+  const countLabel = (count: number) =>
+    t(`search.entry_${getResultsPluralForm(count, locale)}`);
+
   if (!open) return null;
 
   // Inline morph: a single surface that grows out of the nav pill. The collapsed
@@ -744,25 +778,15 @@ export const Search: React.FC<SearchProps> = ({
         className="pointer-events-none absolute left-1/2 top-0 z-50 -translate-x-1/2"
         style={{ width: expandedWidth }}
       >
-      {/* Sunrise glow behind the panel. -z-10 works because the wrapper's
-          transform + z-index make it the stacking context. */}
       <div
-        aria-hidden="true"
-        className="search-aura pointer-events-none absolute -inset-5 -z-10 rounded-[2.5rem]"
-        style={{
-          opacity: entered ? (query || scope ? 0.75 : 0.5) : 0,
-          transition: `opacity ${MORPH_MS}ms ${MORPH_EASE}`,
-        }}
-      />
-      <div
-        className="search-sheen pointer-events-auto mx-auto overflow-hidden"
+        className="pointer-events-auto mx-auto overflow-hidden border border-border bg-card"
         style={{
           width: dialogWidth,
           // 1.5rem == half the 48px collapsed height, so it reads as a full-round pill at
           // rest but never balloons into an ellipse as the box grows (unlike 9999px).
-          borderRadius: entered ? "1rem" : "1.5rem",
+          borderRadius: entered ? "0.875rem" : "1.5rem",
           boxShadow: entered
-            ? "0 16px 48px -12px rgba(17,17,17,0.22)"
+            ? "0 0 0 0.5px rgba(17,17,17,0.04), 0 24px 60px -24px rgba(40,20,25,0.32)"
             : "0 2px 8px rgba(17,17,17,0.07)",
           transition: `width ${MORPH_MS}ms ${MORPH_EASE}, border-radius ${MORPH_MS}ms ${MORPH_EASE}, box-shadow ${MORPH_MS}ms ${MORPH_EASE}`,
         }}
@@ -784,7 +808,7 @@ export const Search: React.FC<SearchProps> = ({
         >
           {scope && (
             <span
-              className="search-rise mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-full bg-secondary py-1 pl-2 pr-1 text-xs font-semibold text-foreground"
+              className="mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-full bg-secondary py-1 pl-2 pr-1 text-xs font-semibold text-foreground"
               data-blok-testid="search-scope"
             >
               <span className="flex [&_svg]:size-3.5">{moduleIcon(scope)}</span>
@@ -804,37 +828,19 @@ export const Search: React.FC<SearchProps> = ({
               </button>
             </span>
           )}
-          <div className="relative flex min-w-0 flex-1 items-center">
-            <input
-              ref={inputRef}
-              type="text"
-              className={cn(
-                "min-w-0 flex-1 rounded-md bg-transparent text-[15px] font-semibold tracking-[-0.01em] text-foreground placeholder:font-semibold outline-none",
-                ghostText === null
-                  ? "placeholder:text-foreground/55"
-                  : "placeholder:text-transparent",
-              )}
-              placeholder={t("search.placeholder")}
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setLaunchpadIndex(-1);
-              }}
-              onKeyDown={handleKeyDown}
-              autoComplete="off"
-            />
-            {/* Visual only: the input keeps its real placeholder for assistive tech. */}
-            {ghostText !== null && (
-              <span
-                aria-hidden="true"
-                data-blok-testid="search-ghost"
-                className="pointer-events-none absolute inset-y-0 left-0 flex items-center whitespace-pre text-[15px] font-semibold tracking-[-0.01em] text-foreground/40"
-              >
-                {ghostText}
-                <span className="search-caret ml-px inline-block h-[1.1em] w-[2px] rounded-full" />
-              </span>
-            )}
-          </div>
+          <input
+            ref={inputRef}
+            type="text"
+            className="min-w-0 flex-1 rounded-md bg-transparent text-[15px] font-semibold tracking-[-0.01em] text-foreground caret-primary placeholder:font-semibold placeholder:text-foreground/55 outline-none"
+            placeholder={t("search.placeholder")}
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setLaunchpadIndex(0);
+            }}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+          />
           <div className="ml-3 flex shrink-0 items-center gap-2.5">
             {query ? (
               <button
@@ -906,15 +912,20 @@ export const Search: React.FC<SearchProps> = ({
                 : `opacity ${Math.round(MORPH_MS * 0.5)}ms ease-out, transform ${MORPH_MS}ms ${MORPH_EASE}`,
             }}
           >
-            <div className="max-h-[60vh] overflow-y-auto p-2" ref={resultsRef}>
+            <div className="flex sm:h-[min(64vh,440px)]">
+            <div
+              ref={resultsRef}
+              className={cn(
+                "max-h-[64vh] w-full min-w-0 overflow-y-auto p-1.5",
+                previewTarget && "sm:w-[248px] sm:shrink-0 sm:border-r sm:border-border",
+              )}
+            >
               {showLaunchpad ? (
-                <SearchLaunchpad
+                <LaunchpadList
                   items={launchpadItems}
                   activeIndex={launchpadIndex}
-                  countLabel={(count) =>
-                    t(`search.entry_${getResultsPluralForm(count, locale)}`)
-                  }
                   onPick={pickLaunchpadItem}
+                  onHover={setLaunchpadIndex}
                 />
               ) : results.length === 0 ? (
                 <div className="flex flex-col items-center px-6 py-12 text-center">
@@ -958,52 +969,25 @@ export const Search: React.FC<SearchProps> = ({
                   ) : null}
                 </div>
               ) : (
-                <div key={`${scope ?? ""}|${debouncedQuery}`}>
-                  <div className="px-3 pb-1.5 pt-1.5">
-                    <span
-                      className="text-xs text-muted-foreground"
-                      data-blok-testid="search-results-count"
-                    >
-                      {results.length}{" "}
-                      {t(
-                        `search.result_${getResultsPluralForm(results.length, locale)}`,
-                      )}
-                    </span>
-                  </div>
+                <div>
                   {results.map((result, index) => {
                     const showModuleHeader =
                       index === 0 ||
                       result.module !== results[index - 1].module;
                     const isSelected = index === selectedIndex;
+                    const code = isCodeKind(result.kind);
 
                     return (
-                      <div
-                        key={result.id}
-                        className="search-rise"
-                        style={{ animationDelay: `${Math.min(index, 12) * 22}ms` }}
-                      >
+                      <div key={result.id}>
                         {showModuleHeader && (
-                          <div
-                            className={cn(
-                              "flex items-center gap-2 px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground/70",
-                              index === 0 ? "pt-1" : "pt-3",
-                            )}
-                            data-blok-testid="search-module-header"
-                          >
-                            <span className="flex [&_svg]:size-4">
-                              {moduleIcon(result.module)}
-                            </span>
-                            <span>{moduleTitle(result.module)}</span>
+                          <div className={GROUP_LABEL_CLASS} data-blok-testid="search-module-header">
+                            {moduleTitle(result.module)}
                           </div>
                         )}
                         <Link
                           to={resultHref(result)}
-                          className={cn(
-                            "group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors",
-                            isSelected
-                              ? "bg-secondary"
-                              : "hover:bg-secondary/60",
-                          )}
+                          className={ROW_CLASS}
+                          data-selected={isSelected}
                           onClick={() => trackResultSelect(result, index)}
                           onMouseEnter={() => {
                             if (!isKeyboardNavMode) {
@@ -1013,72 +997,12 @@ export const Search: React.FC<SearchProps> = ({
                           data-search-result-index={index}
                           data-keyboard-nav={isKeyboardNavMode}
                         >
-                          <span
-                            aria-hidden="true"
-                            className="search-row-accent absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full transition-opacity duration-150"
-                            style={{ opacity: isSelected ? 1 : 0 }}
-                          />
-                          {/* Kind tile: a glyph that's the same for every result of a
-                              kind, so the eye groups methods / options / pages before
-                              reading a word. Methods carry the coral accent (callable). */}
-                          <span
-                            className={cn(
-                              "flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors",
-                              result.kind === "method"
-                                ? "bg-primary/10 text-primary"
-                                : isSelected
-                                  ? "bg-background text-muted-foreground"
-                                  : "bg-secondary text-muted-foreground group-hover:bg-background",
-                            )}
-                            data-blok-testid="search-result-kind"
-                            data-kind={result.kind}
-                          >
-                            <KindIcon kind={result.kind} />
+                          <span className="flex shrink-0 text-muted-foreground" data-kind={result.kind}>
+                            <KindIcon kind={result.kind} size={14} />
                           </span>
-                          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                            <span className="flex min-w-0 items-center gap-2">
-                              <span className="truncate text-sm font-medium text-foreground">
-                                {highlightMatch(result.title, query)}
-                              </span>
-                              <span
-                                className={cn(
-                                  "shrink-0 text-[10px] font-semibold uppercase tracking-[0.05em]",
-                                  result.kind === "method"
-                                    ? "text-primary/80"
-                                    : "text-muted-foreground/60",
-                                )}
-                              >
-                                {t(`search.kind.${result.kind}`)}
-                              </span>
-                            </span>
-                            <p className="truncate text-xs text-muted-foreground">
-                              {result.section && (
-                                <span className="font-medium text-foreground/65">
-                                  {result.section}
-                                  {result.description ? " · " : ""}
-                                </span>
-                              )}
-                              {highlightMatch(result.description || "", query)}
-                            </p>
-                          </div>
-                          <svg
-                            className={cn(
-                              "shrink-0 text-muted-foreground/50 transition-opacity duration-150",
-                              isSelected ? "opacity-100" : "opacity-0",
-                            )}
-                            width="14"
-                            height="14"
-                            viewBox="0 0 16 16"
-                            fill="none"
-                          >
-                            <path
-                              d="M6 3l5 5-5 5"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
+                          <span className={cn("min-w-0 truncate", code && "font-mono text-[12px]")}>
+                            {highlightMatch(code ? shortTitle(result.title) : result.title, query)}
+                          </span>
                         </Link>
                       </div>
                     );
@@ -1086,22 +1010,31 @@ export const Search: React.FC<SearchProps> = ({
                 </div>
               )}
             </div>
+            <SearchPreview
+              target={previewTarget}
+              countLabel={countLabel}
+              className="hidden sm:flex"
+            />
+            </div>
 
-            <div className="flex items-center justify-center gap-4 border-t border-border bg-secondary/40 px-5 py-2.5">
-              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <kbd className={KEYCAP_CLASS}>↑</kbd>
-                  <kbd className={KEYCAP_CLASS}>↓</kbd>
+            <div className="flex h-[34px] items-center gap-3.5 border-t border-border px-3.5 text-[11.5px] text-muted-foreground/80">
+              {results.length > 0 && (
+                <span className="tabular-nums" data-blok-testid="search-results-count">
+                  {results.length}{" "}
+                  {t(`search.result_${getResultsPluralForm(results.length, locale)}`)}
                 </span>
+              )}
+              <span className="flex-1" />
+              <span className="flex items-center gap-1.5">
+                <kbd className={KEYCAP_CLASS}>↑</kbd>
+                <kbd className={KEYCAP_CLASS}>↓</kbd>
                 {t("search.navigate")}
               </span>
-              <span className="h-3 w-px bg-border" />
-              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <span className="flex items-center gap-1.5">
                 <kbd className={KEYCAP_CLASS}>↵</kbd>
                 {t("search.select")}
               </span>
-              <span className="h-3 w-px bg-border" />
-              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <span className="hidden items-center gap-1.5 sm:flex">
                 <kbd className={KEYCAP_CLASS}>{t("search.escKey")}</kbd>
                 {t("search.close")}
               </span>

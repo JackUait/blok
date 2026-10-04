@@ -1529,95 +1529,15 @@
   }
 }
 
-/* Search palette — a sunrise glow behind the panel, a light that travels
-   around its edge, and content that rises in. Colours come from the brand
-   gradient tokens, so dark mode follows .dark automatically. */
-@property --search-sheen-angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
+/* Search palette: the preview pane crossfades as the selection moves. */
+.search-fade {
+  animation: search-fade 120ms ease-out both;
 }
 
-.search-aura {
-  background:
-    radial-gradient(55% 60% at 18% 22%, color-mix(in srgb, var(--brand-from) 60%, transparent), transparent 72%),
-    radial-gradient(50% 55% at 85% 35%, color-mix(in srgb, var(--brand-via) 45%, transparent), transparent 72%),
-    radial-gradient(60% 55% at 60% 95%, color-mix(in srgb, var(--brand-to) 50%, transparent), transparent 72%);
-  filter: blur(32px);
-  animation: search-aura-breathe 7s ease-in-out infinite;
-}
-
-@keyframes search-aura-breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.035) translateY(-3px);
-  }
-}
-
-/* The border is painted as a gradient behind a card-coloured padding box, so
-   a short arc of brand colour can circle the edge. Without @property support
-   the angle stays at 0deg and the edge is simply static. */
-.search-sheen {
-  border: 1px solid transparent;
-  background:
-    linear-gradient(var(--card), var(--card)) padding-box,
-    conic-gradient(
-        from var(--search-sheen-angle),
-        var(--border) 0deg,
-        var(--border) 200deg,
-        color-mix(in srgb, var(--brand-from) 70%, var(--border)) 260deg,
-        color-mix(in srgb, var(--brand-to) 70%, var(--border)) 310deg,
-        var(--border) 360deg
-      )
-      border-box;
-  animation: search-sheen-spin 8s linear infinite;
-}
-
-@keyframes search-sheen-spin {
-  to {
-    --search-sheen-angle: 360deg;
-  }
-}
-
-.search-rise {
-  animation: search-rise 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes search-rise {
+@keyframes search-fade {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
-}
-
-.search-caret {
-  background: linear-gradient(var(--brand-from), var(--brand-to));
-  animation: search-caret 1s steps(1) infinite;
-}
-
-@keyframes search-caret {
-  50% {
-    opacity: 0;
-  }
-}
-
-.search-row-accent {
-  background: linear-gradient(var(--brand-from), var(--brand-to));
-}
-
-/* --tile-hue is this tile's stop on the brand gradient, set inline. */
-.search-tile-icon {
-  color: var(--tile-hue);
-  background: color-mix(in srgb, var(--tile-hue) 12%, transparent);
-  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.search-tile:hover .search-tile-icon,
-.search-tile[data-selected="true"] .search-tile-icon {
-  transform: scale(1.08) rotate(-4deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1647,15 +1567,8 @@
   .hero-horizon-glow,
   .hero-horizon-glint,
   .hero-page::after,
-  .search-aura,
-  .search-sheen,
-  .search-rise,
-  .search-caret {
+  .search-fade {
     animation: none;
-  }
-
-  .search-tile-icon {
-    transition: none;
   }
 }
 

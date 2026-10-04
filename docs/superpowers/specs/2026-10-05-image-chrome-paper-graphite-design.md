@@ -14,7 +14,10 @@ No tints, glows or outlines. Saved data and features do not change.
 
 1. Direction: **image-aware**, then **calm**. Colour-tinted, glowing and outline variants were rejected as "slop".
 2. Variant: **paper and graphite**. The image decides only light or dark.
-3. Unreadable image (cross-origin without CORS): chrome **follows the editor theme**.
+3. Unreadable image: chrome **follows the editor theme**.
+3a. Cross-origin images are read through a hidden **sampling copy** loaded with `crossOrigin="anonymous"`.
+    Measured in Chromium: an `<img>` without `crossOrigin` taints the canvas for EVERY cross-origin
+    image, even one whose server sends CORS. Without the copy only same-origin images could be read.
 4. Each control reads **the area under itself**, not the whole image.
 5. Take all of mockup A's shapes: **one bar**, **thin bar handles inside the picture**, **ALT tag**.
 6. Selection keeps today's soft grey frame.
@@ -58,7 +61,9 @@ Not breaking: the islands, the split and the Alt pill landed after v1.15.2 (last
 
 Handles have no card, so their ink is inverted: a bright area gets a dark grey bar, a dark area a white bar.
 
-New tokens live in `src/styles/colors.css`, defined for light, system-dark and forced-dark.
+Paper and graphite are theme-independent (like the lightbox tokens), so their tokens are defined once
+in `src/styles/colors.css`. The un-toned fallback reuses the existing theme-aware `--blok-overlay-*`
+tokens, plus one new theme token for handle ink (defined for light, system-dark and forced-dark).
 None may be blue.
 
 ## Reading the picture
@@ -81,20 +86,29 @@ None may be blue.
 ### How a control decides
 
 - Average the grid cells under the control's box: toolbar, Alt tag, left handle, right handle.
-- Pick paper or graphite, whichever has more WCAG contrast against that average.
+- Pick the tone that sits closer to the area: paper or graphite, whichever has LESS WCAG contrast
+  against that average. A light area gets paper, a dark area graphite (as in mockup A).
+  The switch point is at relative luminance ≈ 0.218.
 - Write `data-tone="paper" | "graphite"` on the control.
 - Re-map on resize (`observeOverlayWidth` sync) and tier change.
 
+### Source of the pixels
+
+- Same-origin, `data:` or `blob:` URL: read the visible `<img>` itself. No extra request.
+- Cross-origin: load a hidden `Image` with `crossOrigin="anonymous"` and the visible image's
+  `currentSrc`. The visible `<img>` never gets `crossOrigin`, so nothing that loads today stops loading.
+  Whether the copy is served from the HTTP cache is unverified; measure it during implementation.
+
 ### Can't read
 
-- Canvas read throws (tainted by cross-origin without CORS): write no `data-tone`.
+- The copy fails to load (host sends no CORS), or the canvas read throws: write no `data-tone`.
 - No `data-tone` → CSS uses theme tokens: paper in light, graphite in dark. Same before load.
-- No `crossOrigin` on the visible `<img>`: it would stop non-CORS images loading.
 
 ### Code
 
 - `src/tools/image/tone.ts`: pure functions — brightness grid from pixel data, region average, tone choice.
-- A thin wrapper does the canvas draw and catches `SecurityError`.
+- `src/tools/image/tone-sampler.ts`: picks the pixel source, draws the canvas, catches
+  `SecurityError`, finds the page colour, stamps `data-tone`.
 - `index.ts` calls it from the existing `load` handler and from `observeOverlayWidth`'s sync.
 
 ## Removed
@@ -111,13 +125,14 @@ alt hint, alt editor, block settings menu.
 1. `tone.ts` units on synthetic pixels: white → paper; near-black → graphite; transparent takes the
    page colour; sky-over-ground gives toolbar and Alt different tones; a boundary case checked
    against the WCAG formula.
-2. Wrapper unit: a throwing canvas read writes no `data-tone`.
-3. CSS: paper/graphite tokens defined three times and not blue; no `::before`/`::after` card
+2. Sampler units: a throwing canvas read and a failed copy both give no grid; a cross-origin URL
+   loads a copy with `crossOrigin="anonymous"`; a same-origin URL loads none.
+3. CSS: paper/graphite tokens defined once and not blue; handle-ink token defined three times; no `::before`/`::after` card
    animation left on the toolbar; tier test still hides the same groups.
 4. `test/playwright/tests/tools/image-chrome.spec.ts` rewritten:
    dark same-origin image → graphite toolbar; bright → paper; handles inverted;
-   cross-origin without CORS → theme (if the e2e server cannot serve a second origin, say so and
-   rely on the unit test); "buttons don't move while the toolbar fades in";
+   cross-origin with CORS (`127.0.0.1:4444` via `page.route` adding the header) → toned;
+   cross-origin without CORS (`127.0.0.1:4444` as served) → no `data-tone`, theme look; "buttons don't move while the toolbar fades in";
    table-cell, first-block, resize, alt and reduced-motion tests kept and updated.
 5. Runtime check in a real browser at DPR 2: Blok logo and a dark photo, light and dark themes,
    plus a WebKit pass for `ctx.filter`.

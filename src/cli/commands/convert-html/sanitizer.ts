@@ -20,9 +20,10 @@ const ALLOWED: Record<string, Set<string> | true> = {
   UL: true,
   OL: true,
   LI: new Set(['aria-level']),
-  TABLE: true, THEAD: true, TBODY: true, TR: true,
-  TD: new Set(['style']),
-  TH: new Set(['style']),
+  // The table reads dir and the legacy cell attributes the way the editor's paste does.
+  TABLE: new Set(['dir']), THEAD: true, TBODY: true, TR: true, CAPTION: true,
+  TD: new Set(['style', 'colspan', 'rowspan', 'align', 'valign', 'bgcolor']),
+  TH: new Set(['style', 'colspan', 'rowspan', 'align', 'valign', 'bgcolor']),
   BLOCKQUOTE: true,
   PRE: true,
   HR: true,

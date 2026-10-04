@@ -13,6 +13,10 @@ const mockJSDOM = vi.fn(function MockJSDOM() {
     window: {
       DOMParser: class MockDOMParser {},
       Node: { TEXT_NODE: 3, ELEMENT_NODE: 1 },
+      // Handed back so the CLI does not blank out jsdom's own globals for the rest of this file.
+      document: globalThis.document,
+      HTMLElement: globalThis.HTMLElement,
+      HTMLInputElement: globalThis.HTMLInputElement,
     },
   };
 });

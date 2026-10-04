@@ -1,6 +1,15 @@
 import { createIdGenerator } from './id-generator';
 import { mapToNearestPresetName } from '../../../components/utils/color-mapping';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../../components/utils/default-page-colors';
+import { mapPastedTableCells } from '../../../tools/table/table-operations';
+import {
+  ownPastedCells,
+  ownPastedRows,
+  parseCellContentToBlocks,
+  unwrapCellHeadingsAndQuotes,
+} from '../../../tools/table/table-cell-paste';
+import { pastedGridDirection, readPastedCell } from '../../../tools/table/table-cell-clipboard';
+import type { TextDirection } from '../../../components/utils/direction';
 import type { OutputBlockData } from './types';
 
 /**
@@ -193,35 +202,60 @@ function flattenList(
 // Table conversion
 // ---------------------------------------------------------------------------
 
+type GridSlot =
+  | { kind: 'cell'; el: HTMLElement; colspan: number; rowspan: number }
+  | { kind: 'covered'; origin: [number, number] }
+  | { kind: 'filler' };
+
 function convertTable(
   tableEl: HTMLElement,
   blocks: OutputBlockData[],
   nextId: (prefix: string) => string
 ): void {
-  const tableId = nextId('table');
-  const rows = Array.from(tableEl.querySelectorAll('tr'));
-  const content: Record<string, unknown>[][] = [];
+  const caption = Array.from(tableEl.children).find((child) => child.tagName === 'CAPTION');
+  const captionText = caption?.innerHTML.trim() ?? '';
 
-  for (const row of rows) {
-    const cells = Array.from(row.querySelectorAll('td, th'));
-    const rowData = cells.map((cell) => convertTableCell(cell as HTMLElement, tableId, blocks, nextId));
-
-    content.push(rowData);
+  // Pushed before the cells so the table lands after it, before its own children.
+  if (captionText) {
+    blocks.push({ id: nextId('paragraph'), type: 'paragraph', data: { text: captionText } });
   }
 
-  // Parse column widths and headings from first row cells
-  const firstRowCells = rows[0] ? Array.from(rows[0].querySelectorAll('td, th')) : [];
-  const withHeadings = firstRowCells.some((c) => c.tagName === 'TH');
-  const colWidths = firstRowCells.map((cell) => {
-    const width = parseCssProperty(cell as HTMLElement, 'width');
+  unwrapCellHeadingsAndQuotes(tableEl);
 
-    if (width) {
-      const px = parseInt(width, 10);
-
-      return isNaN(px) ? null : px;
+  const tableId = nextId('table');
+  const rows = ownPastedRows(tableEl);
+  const grid = mapPastedTableCells<GridSlot>(rows, {
+    cell: (el, span) => ({ kind: 'cell', el: el as HTMLElement, ...span }),
+    covered: (origin) => ({ kind: 'covered', origin }),
+    filler: () => ({ kind: 'filler' }),
+  });
+  const direction = pastedGridDirection(tableEl);
+  const content = grid.map((row) => row.map((slot) => {
+    if (slot.kind === 'covered') {
+      return { blocks: [], mergedInto: slot.origin };
     }
 
-    return null;
+    if (slot.kind === 'filler') {
+      return { blocks: [], color: null, textColor: null };
+    }
+
+    return convertTableCell(slot, direction, tableId, blocks, nextId);
+  }));
+
+  const isTh = (cell: Element | undefined): boolean => cell?.tagName === 'TH';
+  const firstRowCells = rows[0] ? ownPastedCells(rows[0]) : [];
+  const withHeadings = rows.some((row) => row.parentElement?.tagName === 'THEAD')
+    || (firstRowCells.length > 0 && firstRowCells.every(isTh));
+  const withHeadingColumn = rows.length >= 2 && rows.every((row) => isTh(ownPastedCells(row)[0]));
+  // Widths by logical column: a merged slot has no single column width.
+  const colWidths = (grid[0] ?? []).map((slot) => {
+    if (slot.kind !== 'cell' || slot.colspan > 1) {
+      return null;
+    }
+
+    const px = parseInt(parseCssProperty(slot.el, 'width') ?? '', 10);
+
+    return isNaN(px) ? null : px;
   });
   const hasWidths = colWidths.some((w) => w !== null);
 
@@ -231,7 +265,7 @@ function convertTable(
     type: 'table',
     data: {
       withHeadings,
-      withHeadingColumn: false,
+      withHeadingColumn,
       content,
       ...(hasWidths ? { colWidths } : {}),
     },
@@ -299,38 +333,32 @@ function convertCallout(
 // ---------------------------------------------------------------------------
 
 function convertTableCell(
-  cellEl: HTMLElement,
+  slot: { el: HTMLElement; colspan: number; rowspan: number },
+  direction: TextDirection,
   tableId: string,
   blocks: OutputBlockData[],
   nextId: (prefix: string) => string
 ): Record<string, unknown> {
-  const cellText = cellEl.innerHTML.trim();
+  const cellEl = slot.el;
+  const { color, textColor, placement } = readPastedCell(cellEl, direction);
+  const cellHtml = cellEl.innerHTML.trim();
+  // A blank cell stays empty: the parser would give it one empty paragraph.
+  const childIds = cellHtml ? parseCellContentToBlocks(cellHtml).map((insert) => {
+    const childId = nextId(insert.tool);
 
-  if (!cellText) {
-    return { blocks: [], color: null, textColor: null };
-  }
+    blocks.push({ id: childId, type: insert.tool, parent: tableId, data: insert.data });
 
-  const childId = nextId('paragraph');
-
-  blocks.push({
-    id: childId,
-    type: 'paragraph',
-    parent: tableId,
-    data: { text: cellText },
-  });
-
-  const bgColor = parseCssProperty(cellEl, 'background-color');
-  const textColor = parseCssProperty(cellEl, 'color');
-  // Skip default page backgrounds so white/dark pass-throughs don't map to a gray preset.
-  const mappedBg =
-    bgColor && !isDefaultWhiteBackground(bgColor) && !isDefaultDarkBackground(bgColor)
-      ? mapToNearestPresetName(bgColor, 'bg')
-      : null;
+    return childId;
+  }) : [];
 
   return {
-    blocks: [childId],
-    color: mappedBg,
-    textColor: textColor ? mapToNearestPresetName(textColor, 'text') : null,
+    blocks: childIds,
+    // readPastedCell gives a preset hex; the CLI stores the preset name.
+    color: color === undefined ? null : mapToNearestPresetName(color, 'bg'),
+    textColor: textColor === undefined ? null : mapToNearestPresetName(textColor, 'text'),
+    ...(placement !== undefined ? { placement } : {}),
+    ...(slot.colspan > 1 ? { colspan: slot.colspan } : {}),
+    ...(slot.rowspan > 1 ? { rowspan: slot.rowspan } : {}),
   };
 }
 

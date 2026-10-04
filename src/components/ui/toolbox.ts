@@ -688,7 +688,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   }
 
   /**
-   * Shows the entry's hover card for whichever row the popover treats as current.
+   * Shows the entry's hover card for the row under the pointer.
    * @param popover - the desktop toolbox popover
    */
   private initPreview(popover: PopoverDesktop): void {
@@ -699,7 +699,8 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.stopPreviewTracking = popover.onCurrentItemChange((current) => {
       const config = current?.name === undefined ? undefined : this.previewConfigs.get(current.name);
 
-      if (current === null || config === undefined) {
+      // Pointer only: typing a query and arrow keys also move the current row.
+      if (current === null || current.source !== 'pointer' || config === undefined) {
         preview.hide();
 
         return;

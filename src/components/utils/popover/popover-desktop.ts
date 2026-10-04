@@ -2111,6 +2111,8 @@ export class PopoverDesktop extends PopoverAbstract {
   }): void => {
     const isEmptyQuery = data.query === '';
 
+    // Filtering slides rows under a resting pointer; that hover is not the user's.
+    this.armSuppressSyncHover();
     this.isSearching = !isEmptyQuery;
     const allTopLevel = data.topLevelItems as unknown as PopoverItemDefault[];
 

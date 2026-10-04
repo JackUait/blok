@@ -89,42 +89,56 @@ test.describe('Toolbox hover preview', () => {
     await expect(page.getByTestId('toolbox-preview')).toContainText('Medium section heading');
   });
 
-  test('follows keyboard focus', async ({ page }) => {
+  test('does not show a card while the user types a search query', async ({ page }) => {
     await openToolbox(page);
-    await page.keyboard.press('ArrowDown');
+    await page.locator(PARAGRAPH_SELECTOR).type('page');
+    await expect(option(page, 'page')).toBeVisible();
+    // Absence needs a window longer than the card's open delay (PREVIEW_OPEN_DELAY = 320ms).
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 600)));
 
-    await expect(page.getByTestId('toolbox-preview')).toBeVisible();
+    await expect(page.getByTestId('toolbox-preview')).toBeHidden();
   });
 
-  test('stays open while arrow keys scroll the menu list', async ({ page }) => {
+  test('a search query closes the card the pointer opened', async ({ page }) => {
     await openToolbox(page);
-
-    const list = page.getByTestId('toolbox-popover').locator('[data-blok-popover-items]');
-    const before = await list.evaluate((el) => el.scrollTop);
-
-    for (let i = 0; i < 15; i++) {
-      await page.keyboard.press('ArrowDown');
-    }
-
-    expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(before);
+    await option(page, 'header-1').hover();
     await expect(page.getByTestId('toolbox-preview')).toBeVisible();
+    await page.locator(PARAGRAPH_SELECTOR).type('p');
+
+    await expect(page.getByTestId('toolbox-preview')).toBeHidden();
+  });
+
+  test('does not follow keyboard focus', async ({ page }) => {
+    await openToolbox(page);
+    await page.keyboard.press('ArrowDown');
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 600)));
+
+    await expect(page.getByTestId('toolbox-preview')).toBeHidden();
   });
 
   test('the live card keeps its 232x156 paper on every row', async ({ page }) => {
     await openToolbox(page);
 
-    const rows = await page.getByTestId('toolbox-popover').locator('[data-blok-item-name]').count();
+    const rows = page.getByTestId('toolbox-popover').getByRole('option');
+    const card = page.getByTestId('toolbox-preview');
     const seen = new Map<string, string>();
 
-    for (let i = 0; i < rows; i++) {
-      await page.keyboard.press('ArrowDown');
+    for (let i = 0; i < await rows.count(); i++) {
+      const name = await rows.nth(i).getAttribute('data-blok-item-name');
 
-      // Color rows have no preview, so the card is closed there.
+      // Color rows have no preview.
+      if (!await rows.nth(i).isVisible() || name === null || /color|background/i.test(name)) {
+        continue;
+      }
+
+      await rows.nth(i).hover();
+
+      await expect(card, name).toHaveAttribute('data-state', 'open');
+
       const measured = await page.evaluate(() => {
-        const root = document.querySelector('[data-blok-testid="toolbox-preview"]');
-        const paper = root?.querySelector<HTMLElement>('[data-blok-preview-paper]');
+        const paper = document.querySelector<HTMLElement>('[data-blok-testid="toolbox-preview"] [data-blok-preview-paper]');
 
-        if (root?.getAttribute('data-state') !== 'open' || paper === undefined || paper === null) {
+        if (paper === null) {
           return null;
         }
 

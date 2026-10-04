@@ -426,6 +426,35 @@
   display: none;
 }
 
+/* Paper or graphite, picked per control from the pixels under it (tone-sampler.ts).
+   No data-tone: the theme's overlay tokens apply. */
+[data-blok-tool="image"] [data-tone="paper"] {
+  --blok-overlay-surface: var(--blok-image-paper-surface);
+  --blok-overlay-ring: var(--blok-image-paper-ring);
+  --blok-overlay-fg: var(--blok-image-paper-fg);
+  --blok-overlay-fg-strong: var(--blok-image-paper-fg-strong);
+  --blok-overlay-fg-hover: var(--blok-image-paper-fg-hover);
+  --blok-overlay-divider: var(--blok-image-paper-divider);
+  --blok-image-handle-ink: var(--blok-image-paper-handle);
+  /* A pressed button stays gray with primary ink (selected-state law); primary ink follows the card. */
+  --blok-text-primary: var(--blok-image-paper-fg-strong);
+  --blok-icon-active-bg: rgba(15, 15, 14, 0.06);
+  --blok-icon-active-text: var(--blok-text-primary);
+}
+[data-blok-tool="image"] [data-tone="graphite"] {
+  --blok-overlay-surface: var(--blok-image-graphite-surface);
+  --blok-overlay-ring: var(--blok-image-graphite-ring);
+  --blok-overlay-fg: var(--blok-image-graphite-fg);
+  --blok-overlay-fg-strong: var(--blok-image-graphite-fg-strong);
+  --blok-overlay-fg-hover: var(--blok-image-graphite-fg-hover);
+  --blok-overlay-divider: var(--blok-image-graphite-divider);
+  --blok-image-handle-ink: var(--blok-image-graphite-handle);
+  /* A pressed button stays gray with primary ink (selected-state law); primary ink follows the card. */
+  --blok-text-primary: var(--blok-image-graphite-fg-strong);
+  --blok-icon-active-bg: rgba(255, 255, 255, 0.14);
+  --blok-icon-active-text: var(--blok-text-primary);
+}
+
 /* The ring sits --blok-image-ring-gap outside the picture; its radius grows by
    the same gap so the two curves stay concentric. */
 [data-blok-tool="image"] [data-role="image-selection-ring"] {

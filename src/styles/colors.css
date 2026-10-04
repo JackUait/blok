@@ -258,6 +258,23 @@
   --blok-image-readout-bg: #191919;
   --blok-image-readout-fg: #ffffff;
   --blok-image-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  /* Image chrome tones. Theme-independent: the picture under a control picks them (tone-sampler.ts).
+     The surfaces must match PAPER and GRAPHITE in src/tools/image/tone.ts. */
+  --blok-image-paper-surface: #ffffff;
+  --blok-image-paper-ring: rgba(15, 15, 14, 0.06);
+  --blok-image-paper-fg: rgba(15, 15, 14, 0.62);
+  --blok-image-paper-fg-strong: #1d1d1d;
+  --blok-image-paper-fg-hover: rgba(15, 15, 14, 0.06);
+  --blok-image-paper-divider: rgba(15, 15, 14, 0.1);
+  --blok-image-paper-handle: rgba(55, 53, 47, 0.55);
+  --blok-image-graphite-surface: #252525;
+  --blok-image-graphite-ring: rgba(255, 255, 255, 0.08);
+  --blok-image-graphite-fg: rgba(255, 255, 255, 0.86);
+  --blok-image-graphite-fg-strong: #ffffff;
+  --blok-image-graphite-fg-hover: rgba(255, 255, 255, 0.14);
+  --blok-image-graphite-divider: rgba(255, 255, 255, 0.14);
+  --blok-image-graphite-handle: rgba(255, 255, 255, 0.85);
+  --blok-image-handle-ink: rgba(55, 53, 47, 0.55);
   --blok-overlay-fg: rgba(15, 15, 14, 0.62);
   --blok-overlay-fg-strong: #1d1d1d;
   --blok-overlay-fg-hover: rgba(15, 15, 14, 0.06);
@@ -689,6 +706,7 @@
     --blok-image-readout-bg: #f1f1ef;
     --blok-image-readout-fg: #191919;
     --blok-image-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --blok-image-handle-ink: rgba(255, 255, 255, 0.85);
     --blok-overlay-fg: rgba(255, 255, 255, 0.86);
     --blok-overlay-fg-strong: #ffffff;
     --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
@@ -889,6 +907,7 @@
   --blok-image-readout-bg: #f1f1ef;
   --blok-image-readout-fg: #191919;
   --blok-image-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --blok-image-handle-ink: rgba(255, 255, 255, 0.85);
   --blok-overlay-fg: rgba(255, 255, 255, 0.86);
   --blok-overlay-fg-strong: #ffffff;
   --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);

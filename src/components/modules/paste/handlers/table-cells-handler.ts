@@ -1,7 +1,7 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
-import { parseClipboardHtml } from '../../../../tools/table/table-cell-clipboard';
+import { isTextSerializable, parseClipboardHtml } from '../../../../tools/table/table-cell-clipboard';
 import { serializeCellBlocksToHtml } from '../../../../tools/table/table-cell-paste';
-import type { CellContent, ClipboardBlockData, LegacyCellContent, TableCellsClipboard, TableClipboardCell } from '../../../../tools/table/types';
+import type { CellContent, LegacyCellContent, TableCellsClipboard, TableClipboardCell } from '../../../../tools/table/types';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext } from '../types';
@@ -22,29 +22,6 @@ const clampSpans = (
   colspan: Math.min(cell.colspan ?? 1, payload.cols - col),
   rowspan: Math.min(cell.rowspan ?? 1, payload.rows - row),
 });
-
-/**
- * Data keys serializeCellBlocksToHtml writes and parseCellContentToBlocks reads
- * back. Any other key (a block color, a list `start`) is lost on that channel.
- */
-const TEXT_CHANNEL_KEYS: Record<string, ReadonlySet<string>> = {
-  paragraph: new Set(['text']),
-  list: new Set(['text', 'style', 'checked', 'depth']),
-};
-
-/**
- * Whether a payload block survives the HTML `text` channel losslessly.
- * Everything else needs the structured `blockData` seed.
- */
-const isTextSerializable = (block: ClipboardBlockData): boolean => {
-  const keys = TEXT_CHANNEL_KEYS[block.tool];
-
-  return keys !== undefined
-    && typeof block.data.text === 'string'
-    && block.tunes === undefined
-    && (block.children === undefined || block.children.length === 0)
-    && Object.entries(block.data).every(([key, value]) => value === undefined || keys.has(key));
-};
 
 /**
  * Map every position covered by a payload merge footprint (excluding origins)

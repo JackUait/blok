@@ -228,6 +228,52 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
     expect(first?.data).toMatchObject({ text: 'red', textColor: 'red' });
   });
 
+  it('a single copied cell holding a colored paragraph keeps the color when pasted into another cell', async () => {
+    const editor = await boot([
+      { id: 'src', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['c1'] }, { blocks: ['c2'] }]] } },
+      { id: 'c1', type: 'paragraph', data: { text: 'red', textColor: 'red', backgroundColor: 'yellow' }, parent: 'src' },
+      { id: 'c2', type: 'paragraph', data: { text: 'plain' }, parent: 'src' },
+      { id: 'dst', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['d1'] }, { blocks: ['d2'] }]] } },
+      { id: 'd1', type: 'paragraph', data: { text: '' }, parent: 'dst' },
+      { id: 'd2', type: 'paragraph', data: { text: '' }, parent: 'dst' },
+    ]);
+
+    await paste(cellEditable('dst', 0, 1), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 }));
+    const saved = await editor.save();
+    const dst = saved.blocks.find(block => block.id === 'dst');
+
+    if (dst === undefined) {
+      throw new Error('no dst');
+    }
+    const pasted = blocksIn(saved, cellOf(dst, 0, 1));
+
+    expect(pasted.map(block => block.data)).toStrictEqual([
+      expect.objectContaining({ text: 'red', textColor: 'red', backgroundColor: 'yellow' }),
+    ]);
+  });
+
+  it('control: a single copied plain cell is inserted inline into the target paragraph', async () => {
+    const editor = await boot([
+      { id: 'src', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['c1'] }, { blocks: ['c2'] }]] } },
+      { id: 'c1', type: 'paragraph', data: { text: 'plain' }, parent: 'src' },
+      { id: 'c2', type: 'paragraph', data: { text: 'x' }, parent: 'src' },
+      { id: 'dst', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['d1'] }, { blocks: ['d2'] }]] } },
+      { id: 'd1', type: 'paragraph', data: { text: '' }, parent: 'dst' },
+      { id: 'd2', type: 'paragraph', data: { text: 'kept ' }, parent: 'dst' },
+    ]);
+
+    await paste(cellEditable('dst', 0, 1), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 }));
+    const saved = await editor.save();
+    const dst = saved.blocks.find(block => block.id === 'dst');
+
+    if (dst === undefined) {
+      throw new Error('no dst');
+    }
+
+    expect(cellOf(dst, 0, 1).blocks).toStrictEqual(['d2']);
+    expect(saved.blocks.find(block => block.id === 'd2')?.data.text).toBe('plainkept ');
+  });
+
   it('an ordered list starting at 5 keeps its start number when cells are pasted outside a table', async () => {
     const editor = await boot([
       { id: 'src', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['l1', 'l2'] }, { blocks: ['c2'] }]] } },

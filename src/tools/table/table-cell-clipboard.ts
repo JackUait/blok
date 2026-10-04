@@ -102,6 +102,29 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
 }
 
 /**
+ * Data keys serializeCellBlocksToHtml writes and parseCellContentToBlocks reads
+ * back. Any other key (a block color, a list `start`) is lost on that channel.
+ */
+const TEXT_CHANNEL_KEYS: Record<string, ReadonlySet<string>> = {
+  paragraph: new Set(['text']),
+  list: new Set(['text', 'style', 'checked', 'depth']),
+};
+
+/**
+ * Whether a payload block survives the HTML `text` channel losslessly.
+ * Everything else needs the structured `blockData` seed.
+ */
+export const isTextSerializable = (block: ClipboardBlockData): boolean => {
+  const keys = TEXT_CHANNEL_KEYS[block.tool];
+
+  return keys !== undefined
+    && typeof block.data.text === 'string'
+    && block.tunes === undefined
+    && (block.children === undefined || block.children.length === 0)
+    && Object.entries(block.data).every(([key, value]) => value === undefined || keys.has(key));
+};
+
+/**
  * Escape a string for safe interpolation into clipboard HTML markup
  * (attribute values and text content alike).
  */
@@ -596,6 +619,29 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
     rows: cellGrid.length,
     cols: maxCols,
     cells: cellGrid,
+  };
+}
+
+/**
+ * Parse tab/newline-separated plain text (a terminal or CSV tool copy) into a
+ * {@link TableCellsClipboard} payload, or `null` when it holds no tab: text
+ * without tabs is not a grid. Short rows are padded with empty cells.
+ */
+export function parsePlainTextGrid(text: string): TableCellsClipboard | null {
+  if (!text.includes('\t')) {
+    return null;
+  }
+
+  const rows = text.replace(/\r?\n$/, '').split(/\r?\n/).map(line => line.split('\t'));
+  const cols = Math.max(...rows.map(row => row.length));
+
+  return {
+    rows: rows.length,
+    cols,
+    cells: rows.map(row => Array.from({ length: cols }, (_, col) => ({
+      // Plain text is not markup: escape it before the shared cell parser reads it.
+      blocks: parseCellContentToBlocks(escapeHtml(row[col] ?? '')),
+    }))),
   };
 }
 

@@ -323,4 +323,67 @@ describe('app paste: spreadsheet tables', { timeout: 60_000 }, () => {
     });
   });
 
+  describe('tsv-only clipboard (text/plain, no html)', () => {
+    const TSV = 'a\tb\tx<&y\nc\td\n';
+
+    it('into an existing table, tab/newline-separated values spread across cells', async () => {
+      const editor = await bootWithTable();
+
+      await paste(editableOf('c00'), { 'text/plain': 'a\tb\nc\td\te\tf\n' });
+      const saved = await stableSave(editor);
+      const table = saved.blocks.find(block => block.id === 'dst');
+
+      if (table === undefined) {
+        throw new Error('no dst');
+      }
+
+      expect([textOfCell(saved, table, 0, 0), textOfCell(saved, table, 0, 1), textOfCell(saved, table, 1, 0), textOfCell(saved, table, 1, 1)])
+        .toStrictEqual(['a', 'b', 'c', 'd']);
+      expect((table.data as TableData).content[1]).toHaveLength(4);
+      expect([textOfCell(saved, table, 1, 2), textOfCell(saved, table, 1, 3)]).toStrictEqual(['e', 'f']);
+      expect(textOfCell(saved, table, 0, 3)).toBe('');
+    });
+
+    it('into an existing table, a cell value is kept as text, not markup', async () => {
+      const editor = await bootWithTable();
+
+      await paste(editableOf('c00'), { 'text/plain': TSV });
+      const saved = await stableSave(editor);
+      const table = saved.blocks.find(block => block.id === 'dst');
+
+      if (table === undefined) {
+        throw new Error('no dst');
+      }
+
+      expect(textOfCell(saved, table, 0, 2)).toBe('x&lt;&amp;y');
+    });
+
+    it('control: multi-line text without tabs stays in the one cell', async () => {
+      const editor = await bootWithTable();
+
+      await paste(editableOf('c00'), { 'text/plain': 'one\ntwo' });
+      const saved = await stableSave(editor);
+      const table = saved.blocks.find(block => block.id === 'dst');
+
+      if (table === undefined) {
+        throw new Error('no dst');
+      }
+      const cell = textOfCell(saved, table, 0, 0);
+
+      expect(cell).toContain('one');
+      expect(cell).toContain('two');
+      expect([textOfCell(saved, table, 0, 1), textOfCell(saved, table, 1, 0)]).toStrictEqual(['', '']);
+    });
+
+    it('a top-level paste keeps every character as text and makes no table', async () => {
+      const editor = await bootEmpty();
+
+      await paste(editableOf('p1'), { 'text/plain': TSV });
+      const saved = await stableSave(editor);
+
+      expect(saved.blocks.map(block => block.type)).not.toContain('table');
+      expect(saved.blocks.map(block => block.data.text)).toStrictEqual(['a\tb\tx&lt;&amp;y', 'c\td']);
+    });
+  });
+
 });

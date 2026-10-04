@@ -10,8 +10,10 @@ import {
   serializeCellsToClipboard,
   buildClipboardHtml,
   buildClipboardPlainText,
+  isTextSerializable,
   parseClipboardHtml,
   parseGenericHtmlTable,
+  parsePlainTextGrid,
   pastedContentOutsideTable,
 } from './table-cell-clipboard';
 import type { CellColorMode } from './table-cell-color-picker';
@@ -1620,7 +1622,8 @@ export class TableSubsystems {
     // Raw clipboard HTML skips the paste module's pre-passes.
     const preprocessed = blokPayload === null && html !== '' ? preprocessPastedHtml(html, { keepTables: true }) : '';
     const externalPayload = blokPayload === null ? parseGenericHtmlTable(preprocessed) : null;
-    const payload = blokPayload ?? externalPayload;
+    const plainTextPayload = html === '' ? parsePlainTextGrid(e.clipboardData.getData('text/plain')) : null;
+    const payload = blokPayload ?? externalPayload ?? plainTextPayload;
 
     if (!payload) {
       return;
@@ -1675,12 +1678,10 @@ export class TableSubsystems {
       ? pastedContentOutsideTable(html)
       : null;
 
-    // Inline caret-insert only works for plain text blocks. Anything else
-    // (image/embed/code, and list items — which DO carry data.text but would
-    // lose their list structure in a text join) must be recreated as real
-    // blocks in the target cell instead.
+    // Inline caret-insert keeps only text. A list item, a block colour or any
+    // other block data would be lost, so those blocks are recreated instead.
     const isTextOnlySingleCell = payload.rows === 1 && payload.cols === 1 && payload.cells[0][0].blocks.every(
-      block => block.tool === 'paragraph' && typeof block.data.text === 'string' && block.children === undefined
+      block => block.tool === 'paragraph' && isTextSerializable(block)
     );
 
     const pasteCells = (): void => {

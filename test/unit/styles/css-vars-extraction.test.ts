@@ -101,6 +101,10 @@ function stripComments(source: string): string {
 
 const sourceClean = stripComments(css);
 const tokenRanges = findBlockRanges(sourceClean);
+// Mask colors encode alpha; SVG cursors are not CSS theme colors.
+const paintedColorSource = sourceClean
+  .replace(/cursor:\s*url\((["'])data:[\s\S]*?\1\)/g, (match) => match.replace(/[^\n]/g, ' '))
+  .replace(/(?:-webkit-)?mask-image\s*:[^;]*;/g, (match) => match.replace(/[^\n]/g, ' '));
 
 /**
  * Keywords that look like colors but are not extractable literals.
@@ -131,13 +135,13 @@ describe('R1 — colors must live in palette blocks', () => {
     it(`no raw ${kind} literal outside palette / token blocks`, () => {
       const violations: Array<{ line: number; match: string }> = [];
 
-      for (const m of sourceClean.matchAll(regex)) {
+      for (const m of paintedColorSource.matchAll(regex)) {
         const idx = m.index;
         if (inAnyRange(idx, tokenRanges)) continue;
 
         // Allowlist: literal lives inside a `var(--x, <literal>)` fallback.
         // Fallbacks are acceptable short-term but flagged by R3/R4 later.
-        const pre = sourceClean.slice(Math.max(0, idx - 40), idx);
+        const pre = paintedColorSource.slice(Math.max(0, idx - 40), idx);
         if (/var\(\s*--[\w-]+\s*,\s*$/.test(pre)) continue;
 
         violations.push({ line: lineOf(sourceClean, idx), match: m[0] });
@@ -157,7 +161,7 @@ describe('R1 — colors must live in palette blocks', () => {
       /:\s*(black|white|red|blue|green|gray|grey|silver|purple|yellow|orange|pink|aqua|fuchsia|lime|maroon|navy|olive|teal)\b/g;
     const violations: Array<{ line: number; match: string }> = [];
 
-    for (const m of sourceClean.matchAll(namedRegex)) {
+    for (const m of paintedColorSource.matchAll(namedRegex)) {
       const idx = m.index;
       if (inAnyRange(idx, tokenRanges)) continue;
       if (COLOR_KEYWORD_ALLOWLIST.has(m[1])) continue;
@@ -218,6 +222,12 @@ describe('R2 — repeated length literals in themeable properties must be tokeni
     `(?<![-\\w])(${THEMEABLE_PROPERTIES.join('|')})\\s*:\\s*([^;]+)`,
     'g',
   );
+  // These margins center fixed-size parts or match the heading's fixed mt-px.
+  const FIXED_GEOMETRY = new Set([
+    '[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child :is(h1, h2, h3))|margin-top',
+    '[data-blok-tool="video"] .blok-video-controls__speed-needle|margin-left',
+    '[data-blok-tool="video"] .blok-video-controls__speed-needle::before|margin-left',
+  ]);
 
   it('no non-zero length repeats across themeable-property declarations', () => {
     const lengthRegex = /\b-?\d*\.?\d+(?:px|rem|em|%|vh|vw|vmin|vmax|ch)\b/g;
@@ -227,6 +237,11 @@ describe('R2 — repeated length literals in themeable properties must be tokeni
       // Skip declarations that are already a single var() call — the
       // end-state we're chasing.
       if (/^\s*var\(/.test(m[2])) continue;
+
+      const ruleOpen = sourceClean.lastIndexOf('{', m.index);
+      const selector = sourceClean.slice(sourceClean.lastIndexOf('}', ruleOpen) + 1, ruleOpen).trim();
+
+      if (FIXED_GEOMETRY.has(`${selector}|${m[1]}`)) continue;
 
       const valueStart = m.index + m[0].indexOf(m[2]);
 
@@ -260,9 +275,8 @@ describe('R2 — repeated length literals in themeable properties must be tokeni
 // main.css itself never references them.
 
 /**
- * Vars that are intentionally referenced without being declared — they exist
- * purely as consumer-overridable hooks. Each must have a fallback in its
- * var() call so the reference resolves.
+ * Vars supplied by consumers or set on an element at runtime are not
+ * declared in the stylesheet.
  */
 const DANGLING_VAR_ALLOWLIST = new Set([
   // Published by a rounded container for the child at its corner (radius
@@ -337,6 +351,13 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   '--blok-bookmark-title-font-size',
   '--blok-bookmark-description-font-size',
   '--blok-bookmark-link-font-size',
+  // The loading controller sets this on the skeleton before it animates.
+  '--blok-skeleton-delay',
+  // Video controls set these on the ruler, ticks and preset row.
+  '--blok-speed-pos',
+  '--blok-speed-puck',
+  '--blok-speed-step-px',
+  '--blok-speed-tick',
 ]);
 
 describe('R3 — every var() reference resolves to a declared token', () => {

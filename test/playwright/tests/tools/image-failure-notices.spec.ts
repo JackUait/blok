@@ -124,7 +124,7 @@ test.describe('image failure notices', () => {
       if (retried.now) await new Promise((resolve) => setTimeout(resolve, 1500));
       await route.fulfill({ status: 404, body: '' });
     });
-    await createBlok(page, { blocks: [ { id: 'img1', type: 'image', data: { url: 'https://media.test/a.jpg' } } ] });
+    await createBlok(page, { blocks: [ { id: 'img1', type: 'image', data: { url: 'https://media.test/slow-retry.jpg' } } ] });
 
     const block = page.locator('[data-blok-id="img1"]');
 
@@ -153,7 +153,7 @@ test.describe('image failure notices', () => {
 
   test('confirmLeave shows the banner and each button answers', async ({ page }) => {
     await page.route('https://media.test/**', (route) => route.fulfill({ status: 404, body: '' }));
-    await createBlok(page, { blocks: [ { type: 'image', data: { url: 'https://media.test/a.jpg' } } ] });
+    await createBlok(page, { blocks: [ { type: 'image', data: { url: 'https://media.test/confirm-leave.jpg' } } ] });
     await expect(page.getByTestId('notification-error')).toBeVisible();
 
     const banner = page.getByRole('alertdialog', { name: 'Some images have problems' });

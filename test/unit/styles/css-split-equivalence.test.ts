@@ -11,7 +11,7 @@
  *   2. Source-order preservation (declarations remain in emission order;
  *      rules are listed in resolved-@import order).
  *   3. @keyframes name uniqueness (silent shadow = silent breakage).
- *   4. Total byte budget (split ≤ pre-split × 1.01).
+ *   4. Total authored CSS byte budget.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync, statSync } from 'node:fs';
@@ -212,7 +212,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     );
   });
 
-  it('total local CSS byte size stays within +2% of the pre-split baseline', () => {
+  it('total local CSS byte size stays within the measured budget', () => {
     // Pre-split baseline captured 2026-04-22 immediately before the split refactor
     // started. Overhead budget covers per-file headers/comments added during
     // extraction plus later feature additions (crop-modal close animation,
@@ -675,6 +675,18 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Table cells: no placeholder ::before paints inside a cell, whatever path
     // left the placeholder attributes on a block.
     const CELL_PLACEHOLDER_BYTES = 497;
+    // Speed ruler spacing and its preset puck.
+    const VIDEO_SPEED_PRESET_BYTES = 33 + 1_972;
+    // Darkroom keys, view-only zoom, and the shortcuts sheet.
+    const DARKROOM_NAVIGATION_BYTES = 264 + 320 + 1_957;
+    // Table corner arcs and pill room, net of the simpler heading row.
+    const TABLE_CORNER_AND_PILL_BYTES = 1_025 - 427 + 470;
+    // Keyboard-only focus modality rules.
+    const FOCUS_MODALITY_BYTES = 1_286 + 4;
+    // The find options CSS shrank by 238 authored bytes.
+    const FIND_OPTIONS_SAVINGS_BYTES = -238;
+    // Three themeable 2px spacing literals became token references.
+    const SPACING_TOKEN_REFERENCES_BYTES = 54;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -701,7 +713,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + LOADING_SKELETON_BYTES
       + TOOLBOX_HOVER_PREVIEWS_BYTES
       + TABLE_FRAME_BYTES
-      + CELL_PLACEHOLDER_BYTES;
+      + CELL_PLACEHOLDER_BYTES
+      + VIDEO_SPEED_PRESET_BYTES
+      + DARKROOM_NAVIGATION_BYTES
+      + TABLE_CORNER_AND_PILL_BYTES
+      + FOCUS_MODALITY_BYTES
+      + FIND_OPTIONS_SAVINGS_BYTES
+      + SPACING_TOKEN_REFERENCES_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

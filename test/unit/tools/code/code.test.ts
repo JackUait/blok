@@ -1464,6 +1464,7 @@ describe('CodeTool', () => {
 
       expect(event.defaultPrevented).toBe(true);
       expect(codeEl.textContent).toBe('x  ');
+      tool.removed();
     });
 
     it('does not stack listeners when made editable twice', async () => {
@@ -1481,6 +1482,7 @@ describe('CodeTool', () => {
       simulateKeydown(codeEl, 'Tab', { cancelable: true });
 
       expect(codeEl.textContent).toBe('x  ');
+      tool.removed();
     });
 
     it('ends with the same DOM and saved data as an editable-boot block', async () => {
@@ -1689,18 +1691,11 @@ describe('CodeTool', () => {
 
       const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
 
-      // Zero the counter immediately before the rapid inputs so the assertion
-      // measures only the detections THESE inputs trigger. Sibling tests fire
-      // input on real timers without flushing the 600ms detection (vi.clearAllTimers
-      // only clears fake timers), so under a loaded full-suite run a straggler can
-      // resolve during this test's slow `await import` and inflate the shared mock.
-      mockDetectLanguage.mockClear();
-
       simulateInput(codeEl);
       simulateInput(codeEl);
       simulateInput(codeEl);
       await vi.advanceTimersByTimeAsync(600);
-      expect(mockDetectLanguage).toHaveBeenCalledTimes(1);
+      expect(mockDetectLanguage.mock.calls).toEqual([['']]);
 
       // Observable: after the single detection resolves, settings includes detected language
       await vi.advanceTimersByTimeAsync(0);

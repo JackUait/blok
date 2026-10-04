@@ -105,7 +105,8 @@ test('Shift draws a square rectangle', async ({ page }) => {
   await seedImage(page);
   const { dialog, frame } = await openMarkup(page);
 
-  await dialog.getByRole('radio', { name: 'Rectangle' }).click();
+  await dialog.getByRole('radio', { name: 'Shapes' }).click();
+  await page.getByRole('dialog', { name: 'Shapes' }).getByRole('radio', { name: 'Rectangle', exact: true }).click();
   await page.keyboard.down('Shift');
   await stroke(page, within(frame, 0.2, 0.2), within(frame, 0.6, 0.4));
   await page.keyboard.up('Shift');

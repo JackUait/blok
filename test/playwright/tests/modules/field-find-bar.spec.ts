@@ -53,7 +53,7 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
       await expectBlokField(page.getByTestId('find-replace-field'), page.getByTestId('find-replace-input'), 'text');
     });
 
-    test('the find field is 186px wide, with the replace field under it', async ({ page }) => {
+    test('the find and replace fields share the expected width', async ({ page }) => {
       await openReplace(page, theme);
 
       const [find, replace] = await Promise.all([
@@ -62,10 +62,10 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
       ]);
 
       // Phones cap the bar at the viewport, so the field fills what is left.
-      const expected = width < 651 ? 159 : 186;
+      const expected = width < 651 ? 166 : 193;
 
-      expect(find?.width).toBe(expected);
-      expect(replace?.width).toBe(expected);
+      expect(Math.round(find?.width ?? 0)).toBe(expected);
+      expect(replace?.width).toBe(find?.width);
     });
 
     test('a long query runs up to the counter digits', async ({ page }) => {

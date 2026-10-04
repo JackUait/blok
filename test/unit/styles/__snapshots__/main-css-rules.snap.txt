@@ -7975,7 +7975,7 @@ span[data-blok-slash-search] {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 2px;
+  gap: var(--blok-space-0-5);
   margin: var(--blok-space-2-5) 0 var(--blok-space-1);
   font-size: 38px;
   font-weight: 600;
@@ -8035,7 +8035,7 @@ span[data-blok-slash-search] {
 [data-blok-tool="video"] .blok-video-controls__speed-tick-label {
   position: absolute;
   top: 100%;
-  margin-top: 2px;
+  margin-top: var(--blok-space-0-5);
   left: 50%;
   transform: translateX(-50%);
   font-size: 9.5px;
@@ -8454,7 +8454,7 @@ span[data-blok-slash-search] {
   position: absolute;
   top: var(--blok-space-2);
   left: var(--blok-space-2);
-  padding: 2px var(--blok-space-2);
+  padding: var(--blok-space-0-5) var(--blok-space-2);
   border-radius: var(--blok-radius-control-sm);
   background: var(--blok-video-burst-bg);
   box-shadow: var(--blok-video-burst-shadow);

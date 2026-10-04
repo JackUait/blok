@@ -2259,7 +2259,7 @@ describe('PopoverDesktop — filterItems and search', () => {
     expect(separator?.getAttribute('role')).toBe('separator');
     expect(separator?.getAttribute(ATTR_PROMOTED_GROUP)).toBe('');
     expect(separator?.tagName).toBe('DIV');
-    expect(separator?.className).toBe('pl-2 pr-3 pt-2.5 pb-1 text-xs font-medium text-gray-text cursor-default');
+    expect(separator?.className).toBe('pl-2 pr-3 pt-2.5 pb-2 text-xs font-medium text-menu-section-label cursor-default');
 
     // Same title at the top level is deduplicated away; the plain row hides.
     expect(itemByName(popover, 'c-parent').getElement()).toHaveAttribute(ATTR_HIDDEN, 'true');

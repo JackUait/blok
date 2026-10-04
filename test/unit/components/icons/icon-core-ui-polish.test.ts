@@ -177,7 +177,7 @@ describe('Blok Line core UI polish', () => {
 
 
   it('keeps the slash-search CSS glyph identical to IconSearch', () => {
-    const css = readFileSync(resolve(__dirname, '../../../../src/styles/popover-animation.css'), 'utf8');
+    const css = readFileSync(resolve(__dirname, '../../../../src/styles/field.css'), 'utf8');
     const dataUrl = css.match(/--_blok-search-glyph: url\("data:image\/svg\+xml,([^"]+)"\)/)?.[1];
 
     if (dataUrl === undefined) {

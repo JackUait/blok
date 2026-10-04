@@ -841,7 +841,7 @@ test.describe('Table merge browser audit', () => {
     const lastCell = getCellAt(page, 2, 2);
     const lastBox = assertBoundingBox(await lastCell.boundingBox(), 'cell 2,2');
 
-    await lastCell.hover({ position: { x: lastBox.width - 8, y: 8 } });
+    await lastCell.hover({ position: { x: lastBox.width - 24, y: 8 } });
     await page.locator('[data-blok-table-add-col]').click();
     const counts = await rowCellCounts(page);
 

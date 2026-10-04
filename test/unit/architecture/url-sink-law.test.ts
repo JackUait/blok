@@ -49,6 +49,10 @@ const SAFE_HELPERS = [
 const EXEMPT_SINKS: Record<string, string> = {
   'tools/image/index.ts » src':
     'HTMLImageElement src — <img> is not a script-execution sink (javascript: URLs do not run in img)',
+  'tools/image/error-state.ts » file.preview':
+    'HTMLImageElement src for a failed-upload thumbnail — image-resource loads cannot run script',
+  'tools/image/markup/render.ts » src':
+    'SVGImageElement href copied from an img src — SVG image resources disable scripting in secure image mode',
   'tools/image/ui.ts » data.url':
     'HTMLImageElement src — <img> is not a script-execution sink',
   'tools/image/ui.ts » item.url':

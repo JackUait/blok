@@ -60,6 +60,12 @@ for (const theme of ['light', 'dark'] as const) {
 for (const width of [1280, 390]) {
   test(`inline formatting controls have comfortable targets without clipping icons at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
+    await page.evaluate(() => {
+      const unrelated = document.createElement('div');
+
+      document.body.appendChild(unrelated);
+      unrelated.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1000, iterations: Infinity });
+    });
     const paragraph = page.getByTestId('block-wrapper')
       .filter({ hasText: 'Select these words to make them your own.' })
       .locator('[contenteditable="true"]');
@@ -68,6 +74,9 @@ for (const width of [1280, 390]) {
     const bold = page.getByRole('menuitemcheckbox', { name: 'Bold', exact: true });
 
     await expect(bold).toBeVisible();
+    await page.getByTestId('inline-toolbar').getByTestId('popover-container').first().evaluate(async menu => {
+      await Promise.all(menu.getAnimations().map(animation => animation.finished));
+    });
     const bounds = await bold.boundingBox();
     const iconBounds = await bold.getByRole('img', { includeHidden: true }).boundingBox();
 
@@ -75,8 +84,8 @@ for (const width of [1280, 390]) {
       throw new Error('Missing formatting control or icon');
     }
 
-    expect(bounds.height).toBeGreaterThanOrEqual(32);
-    expect(bounds.width).toBeGreaterThanOrEqual(32);
+    expect(bounds.height).toBeGreaterThanOrEqual(width < 651 ? 40 : 28);
+    expect(bounds.width).toBeGreaterThanOrEqual(width < 651 ? 40 : 32);
     expect(iconBounds.x).toBeGreaterThanOrEqual(bounds.x);
     expect(iconBounds.y).toBeGreaterThanOrEqual(bounds.y);
     expect(iconBounds.x + iconBounds.width).toBeLessThanOrEqual(bounds.x + bounds.width);

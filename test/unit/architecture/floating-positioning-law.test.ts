@@ -127,6 +127,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/toolbar/index.ts': 'Editor-owned toolbar wrapper uses locally resolved offsets supplied by the toolbar positioner.',
   'components/modules/toolbar/positioning.ts': 'Toolbar geometry is converted into offsets local to the editor-owned wrapper.',
   'components/utils/link-hover-card.ts': 'Fixed top-layer hover card continuously tracks its live anchor and viewport bounds.',
+  'components/utils/notifier/draw.ts': 'Toast exit ghosts subtract the card rect from each part rect and write offsets inside the card; they fade out and are removed.',
   'components/utils/popover/anchored-position.ts': 'Shared coordinate-space engine and the only approved root anchored style writer.',
   'components/utils/popover/popover-desktop.ts': 'Shared root popover delegates boundary resolution and continuously tracks movement.',
   'components/utils/tooltip.ts': 'Fixed tooltip uses viewport coordinates and intentionally dismisses on capture-phase scroll.',
@@ -151,6 +152,7 @@ const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/blockManager/hierarchy.ts': 'Writes the block-depth multiplier custom property; the indent itself is resolved by the stylesheet, never as a coordinate.',
   'components/modules/find/find-bar.ts': 'Writes the host-configured --blok-find-offset-x/y custom properties, finite numbers only; which window edge they measure from is decided by find.css.',
   'components/modules/find/find-lens.ts': 'Copies three named theme custom properties from the editor onto the body-mounted lens; none set coordinates.',
+  'components/modules/paste/excel-class-styles-preprocessor.ts': 'Copies whitelisted class styles onto detached pasted HTML before sanitizing; it never positions live editor DOM.',
   'components/modules/collaboration/presence-avatars.ts': 'Writes one presence colour custom property per gutter face, validated hex-only; where the strip sits is decided entirely by presence.css.',
   'components/modules/collaboration/presence-carets.ts': 'Writes one presence colour custom property per caret, validated hex-only; the caret line is shaped entirely by presence.css.',
   'components/utils/color-migration.ts': 'Writes a validated CSS custom-property name during legacy color migration.',
@@ -167,6 +169,7 @@ const SHARED_POSITION_CALL_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-property-type-popover.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
   'tools/database/database-tab-bar.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
   'tools/image/alt-popover.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
+  'tools/image/darkroom/markup-panel.ts': 'Shape picker uses shared fixed placement above its rail button and a position tracker while open.',
   'tools/page/hover-preview.ts': 'Uses shared fixed anchored placement and continuous position tracking.',
   'tools/table/table-operations.ts': 'Uses the shared pure resolver for a locally-contained table operation surface.',
 };

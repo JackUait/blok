@@ -50,7 +50,20 @@ describe('video speed ruler — focus ring', () => {
 
 describe('video speed ruler — size', () => {
   const px = (selector: string, prop: string): number =>
-    Number(block(selector).match(new RegExp(`(?:^|;|\\s)${prop}:\\s*([\\d.]+)px`))?.[1] ?? NaN);
+    Number(block(selector).match(new RegExp(`(?:^|;|\\s)${prop}:\\s*(-?[\\d.]+)px`))?.[1] ?? NaN);
+
+  it('keeps the fixed-width needle and tip centered when spacing tokens change', () => {
+    for (const selector of [
+      '[data-blok-tool="video"] .blok-video-controls__speed-needle',
+      '[data-blok-tool="video"] .blok-video-controls__speed-needle::before',
+    ]) {
+      const width = px(selector, 'width');
+
+      expect(width).toBeGreaterThan(0);
+      expect(px(selector, 'margin-left')).toBe(-width / 2);
+      expect(block(selector)).toMatch(/left:\s*50%/);
+    }
+  });
 
   it('stays a compact strip, not taller than the preset bar plus its gap', () => {
     expect(px('[data-blok-tool="video"] .blok-video-controls__speed-ruler', 'height')).toBeLessThanOrEqual(32);

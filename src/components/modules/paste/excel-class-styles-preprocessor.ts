@@ -16,8 +16,12 @@ const UNSAFE_VALUE = /url\s*\(|expression|javascript|[\\<>"'{}]/i;
 // Office color keywords meaning "default text": not a real color.
 const DEFAULT_COLOR = /^(windowtext|auto|inherit)$/i;
 
-// Inline runs between these are wrapped one by one.
-const BLOCK_TAGS = new Set(['P', 'DIV', 'LI', 'UL', 'OL', 'TABLE', 'BLOCKQUOTE', 'PRE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
+// Inline runs between these are wrapped one by one. Table parts are never
+// wrapped: a <b> around a row is hoisted out of the table when re-parsed.
+const BLOCK_TAGS = new Set([
+  'P', 'DIV', 'LI', 'UL', 'OL', 'BLOCKQUOTE', 'PRE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+  'TABLE', 'CAPTION', 'COLGROUP', 'COL', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH',
+]);
 
 type Declarations = Map<string, string>;
 
@@ -44,12 +48,61 @@ const parseDeclarations = (body: string): Declarations => {
   return result;
 };
 
+// Hand scans, not regexes: a regex for these goes quadratic on a long
+// <style> with no closing brace or comment end, and freezes the tab.
+
+/** Drops CSS comments. An unclosed one, and everything after it, stays. */
+const stripComments = (text: string): string => {
+  const parts: string[] = [];
+  const cursor = { at: 0, done: false };
+
+  while (!cursor.done) {
+    const open = text.indexOf('/*', cursor.at);
+    const close = open === -1 ? -1 : text.indexOf('*/', open + 2);
+
+    if (close === -1) {
+      parts.push(text.slice(cursor.at));
+      cursor.done = true;
+    } else {
+      parts.push(text.slice(cursor.at, open), ' ');
+      cursor.at = close + 2;
+    }
+  }
+
+  return parts.join('');
+};
+
+/**
+ * Every `selector { body }` with no brace inside. A selector starts after the
+ * last brace of either kind, so in `@media x { .a { … } }` the rule is `.a`.
+ */
+const splitRules = (text: string): Array<[string, string]> => {
+  const rules: Array<[string, string]> = [];
+  const state = { selectorStart: 0, open: -1 };
+
+  for (const { index, 0: brace } of text.matchAll(/[{}]/g)) {
+    if (brace === '}' && state.open !== -1) {
+      rules.push([text.slice(state.selectorStart, state.open), text.slice(state.open + 1, index)]);
+    }
+
+    if (brace === '{') {
+      state.selectorStart = state.open === -1 ? state.selectorStart : state.open + 1;
+      state.open = index;
+    } else {
+      state.selectorStart = index + 1;
+      state.open = -1;
+    }
+  }
+
+  return rules;
+};
+
 /** Rules whose whole selector is one class, e.g. `.xl65`. Everything else is skipped. */
 const readClassRules = (styleText: string): Map<string, Declarations> => {
   const rules = new Map<string, Declarations>();
-  const text = styleText.replace(/<!--|-->/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const text = stripComments(styleText.replace(/<!--|-->/g, ' '));
 
-  for (const [, selector, body] of text.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
+  for (const [selector, body] of splitRules(text)) {
     const className = /^\s*\.([A-Za-z_][\w-]*)\s*$/.exec(selector)?.[1];
 
     if (className === undefined) {
@@ -109,11 +162,21 @@ const wrapInlineRuns = (element: Element, tags: string[]): void => {
  * is later split on `<br>` and `<p>`.
  */
 export function wrapCellTextMarks(element: Element, declarations: string): void {
+  // Per declaration, not one regex over the string: `[^;]*underline` over a
+  // raw style attribute goes quadratic.
+  const values = (props: string[]): string[] => declarations.split(';').flatMap(part => {
+    const colon = part.indexOf(':');
+
+    return colon !== -1 && props.includes(part.slice(0, colon).trim().toLowerCase())
+      ? [part.slice(colon + 1).trim().toLowerCase()]
+      : [];
+  });
+  const decorations = values(['text-decoration', 'text-decoration-line']);
   const tags = [
-    /font-weight\s*:\s*(bold|bolder|[6-9]00)\b/i.test(declarations) ? 'b' : '',
-    /font-style\s*:\s*(italic|oblique)\b/i.test(declarations) ? 'i' : '',
-    /text-decoration(?:-line)?\s*:[^;]*underline/i.test(declarations) ? 'u' : '',
-    /text-decoration(?:-line)?\s*:[^;]*line-through/i.test(declarations) ? 's' : '',
+    values(['font-weight']).some(value => /^(bold|bolder|[6-9]00)\b/.test(value)) ? 'b' : '',
+    values(['font-style']).some(value => /^(italic|oblique)\b/.test(value)) ? 'i' : '',
+    decorations.some(value => value.includes('underline')) ? 'u' : '',
+    decorations.some(value => value.includes('line-through')) ? 's' : '',
   ].filter(Boolean);
 
   if (tags.length > 0) {

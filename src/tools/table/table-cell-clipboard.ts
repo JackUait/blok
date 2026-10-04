@@ -5,11 +5,9 @@ import {
   ownPastedRows,
   parseCellContentToBlocks,
   serializeCellBlocksToHtml,
-  unwrapCellHeadingsAndQuotes,
 } from './table-cell-paste';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import {
-  carryParagraphAlignmentToCell,
   convertSpanToSemanticHtml,
   isDefaultDarkBackground,
   isDefaultWhiteBackground,
@@ -525,8 +523,6 @@ function sanitizeCellHtml(td: Element): string {
     el.style.removeProperty('background-color');
   }
 
-  unwrapCellHeadingsAndQuotes(clone);
-
   // Convert <p> boundaries to <br> line breaks
   for (const p of Array.from(clone.querySelectorAll('p'))) {
     const fragment = p.ownerDocument.createRange().createContextualFragment(p.innerHTML + '<br>');
@@ -548,6 +544,9 @@ function sanitizeCellHtml(td: Element): string {
  * the table has no rows, or when the table already carries our custom
  * `data-blok-table-cells` attribute (those should be handled by
  * {@link parseClipboardHtml} instead).
+ *
+ * Takes HTML already run through `preprocessPastedHtml`: cell headings,
+ * quotes and paragraph alignment are handled there, not here.
  */
 export function parseGenericHtmlTable(html: string): TableCellsClipboard | null {
   if (!html) {
@@ -753,9 +752,6 @@ export function readPastedCell(
 function buildCellPayloadFromTd(td: Element): TableClipboardCell {
   const blocks: ClipboardBlockData[] = parseCellContentToBlocks(sanitizeCellHtml(td));
   const direction = pastedGridDirection(td.closest('table') ?? td);
-
-  // Raw clipboard HTML skips the Docs preprocessor, which does this for a new table.
-  carryParagraphAlignmentToCell(td);
 
   const cell: TableClipboardCell = { blocks, ...readPastedCell(td, direction) };
 

@@ -1,3 +1,5 @@
+import { pastedGridDirection } from '../../../tools/table/table-cell-clipboard';
+
 /**
  * Carry a pasted table's column direction onto the `<table>` itself.
  *
@@ -12,8 +14,6 @@
  * @param html - raw clipboard HTML string
  * @returns the HTML with `dir` stamped on tables, or the input when none needs it
  */
-import { pastedGridDirection } from '../../../tools/table/table-cell-clipboard';
-
 export function stampPastedTableDirection(html: string): string {
   if (!/<table[\s>]/i.test(html)) {
     return html;

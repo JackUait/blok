@@ -70,6 +70,36 @@ describe('preprocessExcelClassStyles', () => {
     expect(cell.innerHTML).toBe('<i><u><s>a</s></u></i><br><i><u><s>b</s></u></i>');
   });
 
+  describe('a mark rule on a table part or a wrapper', () => {
+    const page = (rules: string, body: string): string =>
+      `<html><head><style>${rules}</style></head><body>${body}</body></html>`;
+
+    /** Re-parsed, as the next pass does: a <b> around a row is hoisted out of the table there. */
+    const reparsed = (html: string): HTMLElement => parseUntrustedHtml(preprocessExcelClassStyles(html));
+
+    const expectEveryCellBold = (root: HTMLElement): void => {
+      const cells = Array.from(root.querySelectorAll('td'));
+
+      expect(cells.map(cell => cell.innerHTML)).toEqual(cells.map(cell => `<b>${cell.textContent ?? ''}</b>`));
+      expect(root.querySelector('b tr, b tbody, b table')).toBeNull();
+      expect(Array.from(root.querySelectorAll('b')).filter(b => (b.textContent ?? '') === '')).toEqual([]);
+    };
+
+    it.each([
+      ['a row', '<table><tr class=r><td>A</td><td>B</td></tr></table>'],
+      ['the table', '<table class=r><tr><td>A</td><td>B</td></tr></table>'],
+      ['a wrapper div', '<div class=r><table><tr><td>A</td><td>B</td></tr></table></div>'],
+    ])('bolds the text of every cell for a rule on %s', (_label, body) => {
+      expectEveryCellBold(reparsed(page('.r {font-weight:700;}', body)));
+    });
+
+    it('wraps a caption\'s text, not the caption', () => {
+      const root = reparsed(page('.r {font-weight:700;}', '<table class=r><caption>Cap</caption><tr><td>A</td></tr></table>'));
+
+      expect(root.querySelector('caption')?.innerHTML).toBe('<b>Cap</b>');
+    });
+  });
+
   it('removes the <style> block once its rules are applied', () => {
     expect(run(excel('.xl65 {font-weight:700;}', '<tr><td class=xl65>A</td></tr>')).querySelector('style')).toBeNull();
   });
@@ -96,7 +126,56 @@ describe('preprocessExcelClassStyles', () => {
   });
 });
 
+describe('preprocessExcelClassStyles rule reading', () => {
+  const boldIn = (styleText: string): string =>
+    td(run(`<html><head><style>${styleText}</style></head><body><table><tr><td class=a>A</td></tr></table></body></html>`)).innerHTML;
+
+  it.each([
+    ['a rule inside @media', '@media print { .a { font-weight:700 } }', '<b>A</b>'],
+    ['a stray } before the rule', '} .a {font-weight:700}', '<b>A</b>'],
+    ['an unclosed { after the rule', '.a {font-weight:700} .b {color:red', '<b>A</b>'],
+    ['an unclosed rule before it swallows it', '.b {color:red .a {font-weight:700}', 'A'],
+    ['braces inside a comment', '/* { } */ .a {font-weight:700}', '<b>A</b>'],
+    ['an empty rule body', '.a {} .a {font-style:italic}', '<i>A</i>'],
+    ['two rules for one class merge', '.a {font-weight:700} .a {font-style:italic}', '<b><i>A</i></b>'],
+    ['an unclosed comment hides the rest', '.a {font-weight:700} /* .a {font-style:italic}', '<b>A</b>'],
+  ])('reads %s', (_label, styleText, expected) => {
+    expect(boldIn(styleText)).toBe(expected);
+  });
+
+  // A hostile clipboard must not freeze the tab. Each shape never completes a match.
+  it.each([
+    ['no brace at all', 'a'.repeat(200_000)],
+    ['a rule that never closes', `.a {${'b'.repeat(200_000)}`],
+    ['many comments that never close', '/*a'.repeat(66_000)],
+  ])('reads a 200k <style> with %s in linear time', (_label, styleText) => {
+    const html = `<html><head><style>${styleText}</style></head><body><table><tr><td class=a>A</td></tr></table></body></html>`;
+    const start = performance.now();
+
+    preprocessExcelClassStyles(html);
+
+    expect(performance.now() - start).toBeLessThan(200);
+  });
+});
+
 describe('wrapCellTextMarks', () => {
+  it('reads a 200k declaration string in linear time', () => {
+    const cell = parseUntrustedHtml('A');
+    const start = performance.now();
+
+    wrapCellTextMarks(cell, 'text-decoration:'.repeat(12_500));
+
+    expect(performance.now() - start).toBeLessThan(200);
+  });
+
+  it('reads each mark from its own declaration', () => {
+    const cell = parseUntrustedHtml('A');
+
+    wrapCellTextMarks(cell, 'font-weight: 700 !important; font-style: oblique; text-decoration-line: underline line-through');
+
+    expect(cell.innerHTML).toBe('<b><i><u><s>A</s></u></i></b>');
+  });
+
   it('wraps inline runs inside block children, not around them', () => {
     const cell = parseUntrustedHtml('<p>one</p><p>two</p>');
 

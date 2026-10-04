@@ -410,6 +410,22 @@ describe('preprocessGoogleDocsHtml', () => {
     expect(result).not.toContain('<mark');
   });
 
+  it.each([
+    ['Gemini body ink on a span', '<span style="color: rgb(31, 31, 31)">body text</span>'],
+    ['Google body ink in a Docs paste', gdocs('<span style="color: #202124">body text</span>')],
+  ])('does not create <mark> for near-black text: %s', (_label, html) => {
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).not.toContain('<mark');
+    expect(result).toContain('body text');
+  });
+
+  it('still creates <mark> for a dark but real text color', () => {
+    const result = preprocessGoogleDocsHtml('<span style="color: rgb(120, 60, 20)">brown</span>');
+
+    expect(result).toContain('<mark');
+  });
+
   it('converts span with both color and background-color to <mark> with both styles', () => {
     const html = gdocs('<span style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0)">colored highlighted</span>');
     const result = preprocessGoogleDocsHtml(html);

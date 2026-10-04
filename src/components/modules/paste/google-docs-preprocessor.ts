@@ -4,6 +4,7 @@ import {
   isDefaultDarkBackground as isDefaultDarkBackgroundShared,
   isDefaultWhiteBackground as isDefaultWhiteBackgroundShared,
   isInvisibleBackground,
+  isNearBlackText,
 } from '../../utils/default-page-colors';
 
 import { COLUMNS_CANDIDATE_ATTR } from './constants';
@@ -238,17 +239,6 @@ function resolveBackgroundStyle(hasBgColor: boolean, hasColor: boolean, mappedBg
 }
 
 /**
- * Check whether a CSS color value is the default black text color.
- * Google Docs uses different formats: `rgb(0, 0, 0)`, `rgb(0,0,0)`, or `#000000`.
- * Spans with only this color should not be converted to `<mark>`.
- */
-function isDefaultBlack(color: string): boolean {
-  const normalized = color.replace(/\s/g, '');
-
-  return normalized === 'rgb(0,0,0)' || normalized === '#000000';
-}
-
-/**
  * Whether an element's text is entirely a link's text.
  *
  * Editors color link text with their own link color (Google Docs `#1155cc`,
@@ -480,8 +470,8 @@ export function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean):
   const isLinkColor = color !== undefined && isLinkContent(span);
 
   const hasColor = !isLinkColor && (isGoogleDocs
-    ? color !== undefined && !isDefaultBlack(color)
-    : color !== undefined && !isDefaultBlack(color) && !isDefaultLightText(color));
+    ? color !== undefined && !isNearBlackText(color)
+    : color !== undefined && !isNearBlackText(color) && !isDefaultLightText(color));
   /**
    * Invisible backgrounds (transparent, near-white light-page bg, near-black
    * dark-page bg) are filtered for both branches. Google Docs writes the page

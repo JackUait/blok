@@ -46,6 +46,7 @@ import { movePlacementWithMotion } from './table-cell-placement-motion';
 import { preprocessPastedHtml } from '../../components/modules/paste/preprocess-pasted-html';
 import { findOwn } from '../../components/utils/own-element';
 import { markPasteContinuation, pasteContinuationSettled } from '../../components/utils/paste-continuation';
+import { logLabeled } from '../../components/utils/logger';
 
 /**
  * Tags each bulk-formattable mark produces. The first entry is what we WRITE;
@@ -59,6 +60,9 @@ const MARK_TAGS: Record<CellMark, string[]> = {
   strikethrough: ['s'],
   code: ['code'],
 };
+
+/** How long the paste after a pasted table may hold its undo step open. */
+const PASTE_CONTINUATION_TIMEOUT_MS = 5000;
 
 /**
  * Child nodes that carry meaning (whitespace-only text nodes don't).
@@ -1697,8 +1701,13 @@ export class TableSubsystems {
     // undo step. The paste lands async, so the step stays open until it does.
     this.host.api.blocks.beginTransaction?.();
 
+    // Called from several exits (timeout, settle, failure); the pair must stay balanced.
+    const transaction = { open: true };
     const endTransaction = (): void => {
-      this.host.api.blocks.endTransaction?.();
+      if (transaction.open) {
+        transaction.open = false;
+        this.host.api.blocks.endTransaction?.();
+      }
     };
 
     try {
@@ -1708,7 +1717,7 @@ export class TableSubsystems {
       throw error;
     }
 
-    void this.pasteAfterTable(contentOutsideTable).finally(endTransaction);
+    void this.pasteAfterTable(contentOutsideTable, endTransaction);
   }
 
   /**
@@ -1716,32 +1725,61 @@ export class TableSubsystems {
    * table, at its level, in their original order. It goes through the editor's
    * paste handling, the only way a tool can turn HTML into blocks; the empty
    * default block it lands on is replaced by the pasted blocks.
+   * Never rejects: the caller does not await it.
    */
-  private async pasteAfterTable(content: { html: string; text: string }): Promise<void> {
+  private async pasteAfterTable(content: { html: string; text: string }, endTransaction: () => void): Promise<void> {
     const tableId = this.host.blockId;
+    const placeholder: { block: BlockAPI | null } = { block: null };
 
-    if (tableId === undefined) {
+    try {
+      if (tableId === undefined) {
+        return;
+      }
+
+      const block = this.host.api.blocks.insertAt(undefined, {}, { position: { after: tableId } });
+      const target = findOwn(block.holder, '[contenteditable="true"]') ?? block.holder;
+
+      placeholder.block = block;
+      // Moves the selection out of the cell: a paste merges into the caret's block.
+      this.host.api.caret.setToBlock(block, 'start');
+
+      const event = new Event('paste', { bubbles: true, cancelable: true });
+      const flavors: Record<string, string> = { 'text/html': content.html, 'text/plain': content.text };
+
+      Object.defineProperty(event, 'clipboardData', {
+        value: { types: Object.keys(flavors), getData: (type: string): string => flavors[type] ?? '' },
+      });
+      // Unmarked, it would start a gesture and close the undo step mid-paste.
+      markPasteContinuation(event);
+      target.dispatchEvent(event);
+
+      // A stalled paste (a lazy chunk that never loads) must not hold the undo
+      // step open, or the user's next edits join the paste's step.
+      const timer = setTimeout(endTransaction, PASTE_CONTINUATION_TIMEOUT_MS);
+
+      await pasteContinuationSettled(event).finally(() => clearTimeout(timer));
+    } catch (error) {
+      logLabeled('Table: could not paste the content around the pasted table', 'warn', error);
+    }
+
+    try {
+      if (placeholder.block !== null) {
+        await this.removeEmptyPlaceholder(placeholder.block);
+      }
+    } catch (error) {
+      logLabeled('Table: could not remove the empty block after the table', 'warn', error);
+    } finally {
+      endTransaction();
+    }
+  }
+
+  /** Nothing was pasted into it: the empty block must not stay behind. */
+  private async removeEmptyPlaceholder(block: BlockAPI): Promise<void> {
+    // Editor teardown detaches every holder; its blocks API is gone with it.
+    if (!block.holder.isConnected) {
       return;
     }
 
-    const block = this.host.api.blocks.insertAt(undefined, {}, { position: { after: tableId } });
-    const target = findOwn(block.holder, '[contenteditable="true"]') ?? block.holder;
-
-    // Moves the selection out of the cell: a paste merges into the caret's block.
-    this.host.api.caret.setToBlock(block, 'start');
-
-    const event = new Event('paste', { bubbles: true, cancelable: true });
-    const flavors: Record<string, string> = { 'text/html': content.html, 'text/plain': content.text };
-
-    Object.defineProperty(event, 'clipboardData', {
-      value: { types: Object.keys(flavors), getData: (type: string): string => flavors[type] ?? '' },
-    });
-    // Unmarked, it would start a gesture and close the undo step mid-paste.
-    markPasteContinuation(event);
-    target.dispatchEvent(event);
-    await pasteContinuationSettled(event);
-
-    // Nothing was pasted into it: the empty block must not stay behind.
     const index = this.host.api.blocks.getBlockIndex(block.id);
 
     if (index !== undefined && this.host.api.blocks.getById(block.id)?.isEmpty === true) {

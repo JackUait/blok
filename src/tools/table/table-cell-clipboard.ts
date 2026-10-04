@@ -230,7 +230,9 @@ export function placementFromAlignment(
   const keyword = textAlign?.trim().toLowerCase();
   const physical = HORIZONTAL_ALIGNMENTS.find(value => value === keyword);
   // start/end are already grid-logical, like placement, so no mirroring.
-  const logical = keyword === 'end' ? 'right' : 'left';
+  // blocksToHtml writes the end side as this var (CELL_HORIZONTAL in src/view/emitters.ts).
+  const isEnd = keyword === 'end' || keyword?.replace(/\s+/g, '') === 'var(--_blok-end-side,right)';
+  const logical = isEnd ? 'right' : 'left';
   const horizontal = physical === undefined ? logical : mirrorSide(physical, direction);
   const vertical = VERTICAL_ALIGNMENTS.find(value => value === verticalAlign?.trim().toLowerCase()) ?? 'top';
 

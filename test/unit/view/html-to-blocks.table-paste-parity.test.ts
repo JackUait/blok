@@ -68,15 +68,17 @@ describe('htmlToBlocks table placement matches the editor paste', () => {
     expect(viewPlacement(html)).toBe(placementFromAlignment(horizontal, vertical, dir === 'rtl' ? 'rtl' : 'ltr'));
   });
 
-  /*
-   * Known gap on the editor side: `blocksToHtml` writes the end side as this
-   * var, and only /view reads it back. Pasting that HTML into the editor
-   * loses right placement.
-   */
-  it('reads the end-side var blocksToHtml writes, which the editor paste does not', () => {
-    const html = '<table><tr><td style="text-align: var(--_blok-end-side, right)">a</td></tr></table>';
+  // blocksToHtml writes the end side as this var; it is logical, so RTL does not mirror it.
+  it.each(['ltr', 'rtl'] as const)('maps the end-side var blocksToHtml writes in %s', dir => {
+    for (const value of ['var(--_blok-end-side, right)', 'var(--_blok-end-side,right)', ' var( --_blok-end-side ,  right ) ']) {
+      const html = `<table dir="${dir}"><tr><td style="text-align: ${value}">a</td></tr></table>`;
 
-    expect(viewPlacement(html)).toBe('top-right');
-    expect(placementFromAlignment('var(--_blok-end-side, right)', undefined, 'ltr')).toBeUndefined();
+      expect(viewPlacement(html)).toBe('top-right');
+      expect(placementFromAlignment(value, undefined, dir)).toBe('top-right');
+    }
+  });
+
+  it('ignores any other var in text-align', () => {
+    expect(placementFromAlignment('var(--other-side, right)', undefined, 'ltr')).toBeUndefined();
   });
 });

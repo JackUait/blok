@@ -21,6 +21,7 @@ import {
   Underline,
 } from '../../../../../src/tools';
 import { isCellWithBlocks } from '../../../../../src/tools/table/types';
+import { blocksToHtml } from '../../../../../src/view';
 import type { TableData } from '../../../../../src/tools/table/types';
 import type { OutputBlockData, OutputData } from '../../../../../types';
 
@@ -169,6 +170,25 @@ const gdocsTable = (rows: string[][]): string =>
   + rows.map(row => `<tr style="height:0pt">${row.map(cell => `<td style="${GDOCS_TD}">${cell}</td>`).join('')}</tr>`).join('')
   + '</tbody></table></div></b>';
 
+const PLACEMENTS = [['top-right', 'bottom-center'], ['middle-right', undefined]];
+
+// Blok's own /view HTML for a table whose cells carry PLACEMENTS.
+const viewTableHtml = (direction: 'ltr' | 'rtl'): string => {
+  const ids = PLACEMENTS.map((row, r) => row.map((_, c) => `v${r}${c}`));
+  const content = PLACEMENTS.map((row, r) => row.map((placement, c) => ({
+    blocks: [ids[r][c]],
+    ...(placement === undefined ? {} : { placement }),
+  })));
+  const text = direction === 'rtl' ? 'نص' : 'text';
+
+  return blocksToHtml({
+    blocks: [
+      { id: 'vt', type: 'table', data: { withHeadings: false, content }, content: ids.flat() },
+      ...ids.flat().map(id => ({ id, type: 'paragraph', parent: 'vt', data: { text } })),
+    ],
+  }, { direction, root: true });
+};
+
 describe('clipboard data loss: html pasted into cells of an existing table', { timeout: 60_000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -315,6 +335,17 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
     expect(placementAt(saved, 0, 1)).toBe('top-right');
     expect(placementAt(saved, 1, 0)).toBeUndefined();
     expect(placementAt(saved, 1, 1)).toBe('top-center');
+  });
+
+  it.each(['ltr', 'rtl'] as const)('blok /view html (%s): end-side cells keep their placement', async direction => {
+    const editor = await bootWithTable();
+    const html = viewTableHtml(direction);
+
+    expect(html).toContain('text-align:var(--_blok-end-side, right)');
+    await pasteIntoCell(html, 'a\tb\nc\td');
+    const saved = await editor.save();
+
+    expect(PLACEMENTS.map((row, r) => row.map((_, c) => placementAt(saved, r, c)))).toStrictEqual(PLACEMENTS);
   });
 
   it('google docs: paragraphs that disagree leave the placement alone', async () => {

@@ -21,6 +21,7 @@ import {
   Underline,
 } from '../../../../../src/tools';
 import { isCellWithBlocks } from '../../../../../src/tools/table/types';
+import { blocksToHtml } from '../../../../../src/view';
 import type { CellContent, TableData } from '../../../../../src/tools/table/types';
 import type { OutputBlockData, OutputData } from '../../../../../types';
 
@@ -147,6 +148,25 @@ const gdocsTable = (rows: string[][]): string =>
   + rows.map(row => `<tr style="height:0pt">${row.map(cell => `<td style="${GDOCS_TD}">${cell}</td>`).join('')}</tr>`).join('')
   + '</tbody></table></div></b>';
 
+const PLACEMENTS = [['top-right', 'bottom-center'], ['middle-right', undefined]];
+
+// Blok's own /view HTML for a table whose cells carry PLACEMENTS.
+const viewTableHtml = (direction: 'ltr' | 'rtl'): string => {
+  const ids = PLACEMENTS.map((row, r) => row.map((_, c) => `v${r}${c}`));
+  const content = PLACEMENTS.map((row, r) => row.map((placement, c) => ({
+    blocks: [ids[r][c]],
+    ...(placement === undefined ? {} : { placement }),
+  })));
+  const text = direction === 'rtl' ? 'نص' : 'text';
+
+  return blocksToHtml({
+    blocks: [
+      { id: 'vt', type: 'table', data: { withHeadings: false, content }, content: ids.flat() },
+      ...ids.flat().map(id => ({ id, type: 'paragraph', parent: 'vt', data: { text } })),
+    ],
+  }, { direction, root: true });
+};
+
 describe('clipboard data loss: external tables pasted through a real Blok', { timeout: 60_000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -217,6 +237,17 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
     expect(cellHtml(saved, 0, 0)).toBe('centered');
     expect(cellAt(saved, 0, 0).placement).toBe('top-center');
     expect(cellAt(saved, 0, 1).placement).toBe('top-right');
+  });
+
+  it.each(['ltr', 'rtl'] as const)('blok /view html (%s): end-side cells keep their placement', async direction => {
+    const editor = await boot([{ id: 'p', type: 'paragraph', data: { text: '' } }]);
+    const html = viewTableHtml(direction);
+
+    expect(html).toContain('text-align:var(--_blok-end-side, right)');
+    await pasteHtml(editableOf('p'), html, 'a\tb\nc\td');
+    const saved = await editor.save();
+
+    expect(PLACEMENTS.map((row, r) => row.map((_, c) => cellAt(saved, r, c).placement))).toStrictEqual(PLACEMENTS);
   });
 
   it('web page: an image inside a cell is kept', async () => {

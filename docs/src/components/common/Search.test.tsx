@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { Search } from './Search';
@@ -676,6 +676,171 @@ describe('Search', () => {
 
       const link = await screen.findByRole('link', { name: /Result 0/ }, { timeout: 3000 });
       expect(link).toHaveAttribute('href', '/docs/');
+    });
+  });
+  describe('launchpad', () => {
+    const renderSearch = () =>
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+    const realIndex = async () => {
+      const actual = await vi.importActual<typeof import('@/utils/search')>('@/utils/search');
+      return actual.getSearchIndex();
+    };
+
+    it('offers suggestion chips that each find real results', async () => {
+      renderSearch();
+      const chips = screen.getAllByTestId('search-suggestion');
+      expect(chips.length).toBeGreaterThanOrEqual(3);
+
+      const actual = await vi.importActual<typeof import('@/utils/search')>('@/utils/search');
+      for (const chip of chips) {
+        const text = chip.textContent ?? '';
+        expect(actual.search(text, actual.getSearchIndex()).length).toBeGreaterThan(0);
+      }
+    });
+
+    it('fills the query when a suggestion is clicked', async () => {
+      renderSearch();
+      const chip = screen.getAllByTestId('search-suggestion')[0];
+      fireEvent.click(chip);
+
+      const input = screen.getByPlaceholderText('Search docs...');
+      expect(input).toHaveValue(chip.textContent);
+      await waitFor(() => expect(screen.getByTestId('search-results-count')).toBeInTheDocument());
+    });
+
+    it('shows one tile per module with its real entry count', async () => {
+      renderSearch();
+      const index = await realIndex();
+      const modules = [...new Set(index.map(item => item.module))];
+      const tiles = screen.getAllByTestId('search-module-tile');
+
+      expect(tiles.map(t => t.dataset.module).sort()).toEqual([...modules].sort());
+      for (const tile of tiles) {
+        const count = index.filter(item => item.module === tile.dataset.module).length;
+        expect(tile).toHaveTextContent(String(count));
+      }
+    });
+
+    it('gives every module tile its own icon', () => {
+      renderSearch();
+      const icons = screen
+        .getAllByTestId('search-module-tile')
+        .map(tile => tile.querySelector('svg')?.innerHTML ?? '');
+
+      expect(icons.every(Boolean)).toBe(true);
+      expect(new Set(icons).size).toBe(icons.length);
+    });
+
+    it('browses a module when its tile is clicked, and Backspace leaves it', async () => {
+      renderSearch();
+      const index = await realIndex();
+      const tile = screen.getAllByTestId('search-module-tile')[0];
+      const module = tile.dataset.module;
+      fireEvent.click(tile);
+
+      expect(screen.getByTestId('search-scope')).toHaveTextContent(module ?? '');
+      const links = screen.getAllByRole('link');
+      expect(links).toHaveLength(index.filter(item => item.module === module).length);
+
+      fireEvent.keyDown(screen.getByPlaceholderText('Search docs...'), { key: 'Backspace' });
+      expect(screen.queryByTestId('search-scope')).not.toBeInTheDocument();
+      expect(screen.getAllByTestId('search-module-tile').length).toBeGreaterThan(0);
+    });
+
+    it('keeps typed results inside the browsed module', async () => {
+      vi.mocked(searchUtils.search).mockReturnValue([
+        ...buildResults(2, 'core'),
+        { ...buildResults(1, 'other')[0], module: 'Somewhere else' },
+      ]);
+      vi.mocked(searchUtils.getSearchIndex).mockReturnValue([
+        { ...buildResults(1, 'core')[0], keywords: [] },
+        { ...buildResults(1, 'other')[0], module: 'Somewhere else', keywords: [] },
+      ]);
+      renderSearch();
+
+      const coreTile = screen.getAllByTestId('search-module-tile').find(t => t.dataset.module === 'Core');
+      if (!coreTile) throw new Error('Core tile missing');
+      fireEvent.click(coreTile);
+      fireEvent.change(screen.getByPlaceholderText('Search docs...'), { target: { value: 'Result' } });
+
+      await waitFor(() => expect(screen.getByTestId('search-results-count')).toHaveTextContent('2'));
+      expect(screen.queryByRole('link', { name: /other/ })).not.toBeInTheDocument();
+    });
+
+    it('moves through launchpad items with the arrow keys and Enter picks one', () => {
+      renderSearch();
+      const input = screen.getByPlaceholderText('Search docs...');
+      const second = screen.getAllByTestId('search-suggestion')[1];
+
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      expect(second).toHaveAttribute('data-selected', 'true');
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(input).toHaveValue(second.textContent);
+    });
+
+    it('paints the selected launchpad item gray, not coloured', () => {
+      renderSearch();
+      const input = screen.getByPlaceholderText('Search docs...');
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+
+      const selected = screen.getAllByTestId('search-suggestion')[0];
+      const other = screen.getAllByTestId('search-suggestion')[1];
+      expect(selected.className).toMatch(/\bbg-secondary\b/);
+      expect(selected.className).not.toMatch(/bg-(primary|blue)/);
+      expect(selected.className.match(/\btext-\S+/g)).toEqual(other.className.match(/\btext-\S+/g));
+    });
+
+    it('ghost-types example queries without touching the accessible placeholder', () => {
+      vi.useFakeTimers();
+      try {
+        renderSearch();
+        act(() => vi.advanceTimersByTime(2000));
+
+        const ghost = screen.getByTestId('search-ghost');
+        expect(ghost).toHaveAttribute('aria-hidden', 'true');
+        expect(ghost.textContent?.length).toBeGreaterThan(0);
+        expect(screen.getByRole('textbox')).toHaveAttribute('placeholder', 'Search docs...');
+
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'x' } });
+        expect(screen.queryByTestId('search-ghost')).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not ghost-type when the user prefers reduced motion', () => {
+      const original = window.matchMedia;
+      window.matchMedia = vi.fn((query: string) => ({
+        matches: query.includes('reduce'),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+      try {
+        renderSearch();
+        act(() => {});
+        expect(screen.queryByTestId('search-ghost')).not.toBeInTheDocument();
+      } finally {
+        window.matchMedia = original;
+      }
+    });
+
+    it('shows an Escape hint in the footer', () => {
+      renderSearch();
+      expect(screen.getByText('close')).toBeInTheDocument();
     });
   });
 });

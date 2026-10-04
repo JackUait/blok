@@ -1529,65 +1529,95 @@
   }
 }
 
-/* Search empty-state glyph — the doc page's corner folds and unfolds from time
-   to time. The flap pivots around the diagonal crease (axis 1,1,0). Resting
-   state is the folded dog-ear (rotate 180° reflects the corner onto the page);
-   periodically it opens flat and folds back. The base transform keeps the
-   dog-ear correct even when the animation is off / 3D is unsupported. */
-.paper-fold {
-  transform-box: fill-box;
-  transform-origin: left top;
-  transform-style: preserve-3d;
-  transform: rotate3d(1, 1, 0, 180deg);
-  animation: paper-fold 5.5s ease-in-out infinite;
+/* Search palette — a sunrise glow behind the panel, a light that travels
+   around its edge, and content that rises in. Colours come from the brand
+   gradient tokens, so dark mode follows .dark automatically. */
+@property --search-sheen-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
 }
 
-@keyframes paper-fold {
+.search-aura {
+  background:
+    radial-gradient(55% 60% at 18% 22%, color-mix(in srgb, var(--brand-from) 60%, transparent), transparent 72%),
+    radial-gradient(50% 55% at 85% 35%, color-mix(in srgb, var(--brand-via) 45%, transparent), transparent 72%),
+    radial-gradient(60% 55% at 60% 95%, color-mix(in srgb, var(--brand-to) 50%, transparent), transparent 72%);
+  filter: blur(32px);
+  animation: search-aura-breathe 7s ease-in-out infinite;
+}
+
+@keyframes search-aura-breathe {
   0%,
-  55%,
   100% {
-    transform: rotate3d(1, 1, 0, 180deg);
+    transform: scale(1);
   }
-  75%,
-  84% {
-    transform: rotate3d(1, 1, 0, 0deg);
-  }
-}
-
-/* The flap face is the page underside (secondary) when folded, and blends to
-   the page colour (card) as it lays flat so the corner reads as unfolded. */
-.paper-fold-face {
-  animation: paper-fold-face 5.5s ease-in-out infinite;
-}
-
-@keyframes paper-fold-face {
-  0%,
-  62%,
-  100% {
-    fill: var(--secondary);
-  }
-  72%,
-  87% {
-    fill: var(--card);
+  50% {
+    transform: scale(1.035) translateY(-3px);
   }
 }
 
-/* The crease line is the cut edge: shown while folded, faded out as the corner
-   lays flat so the unfolded page reads as a seamless rectangle. */
-.paper-crease {
-  animation: paper-crease 5.5s ease-in-out infinite;
+/* The border is painted as a gradient behind a card-coloured padding box, so
+   a short arc of brand colour can circle the edge. Without @property support
+   the angle stays at 0deg and the edge is simply static. */
+.search-sheen {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    conic-gradient(
+        from var(--search-sheen-angle),
+        var(--border) 0deg,
+        var(--border) 200deg,
+        color-mix(in srgb, var(--brand-from) 70%, var(--border)) 260deg,
+        color-mix(in srgb, var(--brand-to) 70%, var(--border)) 310deg,
+        var(--border) 360deg
+      )
+      border-box;
+  animation: search-sheen-spin 8s linear infinite;
 }
 
-@keyframes paper-crease {
-  0%,
-  58%,
-  100% {
-    opacity: 1;
+@keyframes search-sheen-spin {
+  to {
+    --search-sheen-angle: 360deg;
   }
-  74%,
-  85% {
+}
+
+.search-rise {
+  animation: search-rise 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes search-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.search-caret {
+  background: linear-gradient(var(--brand-from), var(--brand-to));
+  animation: search-caret 1s steps(1) infinite;
+}
+
+@keyframes search-caret {
+  50% {
     opacity: 0;
   }
+}
+
+.search-row-accent {
+  background: linear-gradient(var(--brand-from), var(--brand-to));
+}
+
+/* --tile-hue is this tile's stop on the brand gradient, set inline. */
+.search-tile-icon {
+  color: var(--tile-hue);
+  background: color-mix(in srgb, var(--tile-hue) 12%, transparent);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.search-tile:hover .search-tile-icon,
+.search-tile[data-selected="true"] .search-tile-icon {
+  transform: scale(1.08) rotate(-4deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1617,10 +1647,15 @@
   .hero-horizon-glow,
   .hero-horizon-glint,
   .hero-page::after,
-  .paper-fold,
-  .paper-fold-face,
-  .paper-crease {
+  .search-aura,
+  .search-sheen,
+  .search-rise,
+  .search-caret {
     animation: none;
+  }
+
+  .search-tile-icon {
+    transition: none;
   }
 }
 

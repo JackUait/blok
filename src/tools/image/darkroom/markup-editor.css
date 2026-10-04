@@ -50,6 +50,16 @@
   touch-action: none;
 }
 
+/* Drag-to-select box. Neutral, like the selection box: blue is for links and focus only. */
+.blok-markup-marquee {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px dashed var(--blok-markup-box-ink);
+  box-shadow: 0 0 0 1px var(--blok-markup-box-shade);
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
 /* The visible dot is small; the press target around it is finger sized. */
 .blok-markup-selection__handle::after {
   content: '';

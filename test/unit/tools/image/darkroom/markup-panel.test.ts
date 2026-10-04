@@ -265,7 +265,7 @@ describe('markup panel', () => {
 
     it('renders the fill toggle and delete button with names', () => {
       make({ tool: 'rect', fill: true });
-      panel.setSelection('rect');
+      panel.setSelection(['rect']);
 
       expect(q('markup-fill').getAttribute('aria-label')).toBe('Fill');
       expect(q('markup-fill').getAttribute('aria-pressed')).toBe('true');
@@ -286,7 +286,7 @@ describe('markup panel', () => {
 
     it('gives every button an accessible name and type=button', () => {
       make({ tool: 'text' });
-      panel.setSelection('text');
+      panel.setSelection(['text']);
 
       panel.el.querySelectorAll('button').forEach((b) => {
         expect(b.type).toBe('button');
@@ -358,7 +358,7 @@ describe('markup panel', () => {
 
     it('calls onDelete and onClear from their buttons', () => {
       make();
-      panel.setSelection('pen');
+      panel.setSelection(['pen']);
       panel.setHasMarkup(true);
       q('markup-delete').click();
       q('markup-reset').click();
@@ -640,7 +640,7 @@ describe('markup panel', () => {
     const sizes = (): HTMLElement => group('Stroke width');
     const styles = (): HTMLElement => group('Text style');
 
-    interface Case { tool: MarkupTool; sel: MarkupSelectionKind; color: boolean; style: boolean; fill: boolean; del: boolean }
+    interface Case { tool: MarkupTool; sel: MarkupSelectionKind[number] | null; color: boolean; style: boolean; fill: boolean; del: boolean }
 
     const sizeShown = (c: Case): boolean => c.color || (c.tool === 'eraser' && c.sel === null);
 
@@ -674,7 +674,7 @@ describe('markup panel', () => {
 
     it.each(CASES)('tool $tool, selection $sel', (c) => {
       make({ tool: c.tool });
-      panel.setSelection(c.sel);
+      panel.setSelection(c.sel === null ? [] : [c.sel]);
 
       expect(shown(colors())).toBe(c.color);
       expect(shown(sizes())).toBe(sizeShown(c));
@@ -684,12 +684,24 @@ describe('markup panel', () => {
       expect(panel.el.hasAttribute('data-context-empty')).toBe(!sizeShown(c) && !c.style && !c.fill && !c.del);
     });
 
+    it('a mixed selection shows each control any of its marks takes', () => {
+      make({ tool: 'select' });
+      panel.setSelection(['rect', 'text', 'spotlight']);
+
+      expect(shown(colors())).toBe(true);
+      expect(shown(styles())).toBe(true);
+      expect(shown(q('markup-fill'))).toBe(true);
+      expect(shown(q('markup-delete'))).toBe(true);
+      panel.setSelection(['spotlight', 'magnifier']);
+      expect(shown(colors())).toBe(false);
+    });
+
     it('flags an empty context row as the user picks, so the rail can take its room', () => {
       make({ tool: 'pen' });
       expect(panel.el.hasAttribute('data-context-empty')).toBe(false);
       tool('select').click();
       expect(panel.el.hasAttribute('data-context-empty')).toBe(true);
-      panel.setSelection('rect');
+      panel.setSelection(['rect']);
       expect(panel.el.hasAttribute('data-context-empty')).toBe(false);
     });
 
@@ -727,27 +739,27 @@ describe('markup panel', () => {
 
     it('moves focus to the checked tool when a focused control hides', () => {
       make({ tool: 'select' });
-      panel.setSelection('rect');
+      panel.setSelection(['rect']);
       q('markup-delete').focus();
-      panel.setSelection(null);
+      panel.setSelection([]);
 
       expect(tool('select')).toHaveFocus();
     });
 
     it('moves focus to the checked tool when a focused swatch hides', () => {
       make({ tool: 'select' });
-      panel.setSelection('pen');
+      panel.setSelection(['pen']);
       swatch(RED).focus();
-      panel.setSelection(null);
+      panel.setSelection([]);
 
       expect(tool('select')).toHaveFocus();
     });
 
     it('leaves focus alone when the focused control stays', () => {
       make({ tool: 'select' });
-      panel.setSelection('pen');
+      panel.setSelection(['pen']);
       swatch(RED).focus();
-      panel.setSelection('arrow');
+      panel.setSelection(['arrow']);
 
       expect(swatch(RED)).toHaveFocus();
     });

@@ -512,7 +512,7 @@ describe('createMarkupEditor', () => {
       type('Hi');
       key(document.body, 'Escape');
 
-      expect(onSelectionChange).toHaveBeenLastCalledWith('text', expect.objectContaining({ text: 'Hi' }));
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['text'], expect.objectContaining({ text: 'Hi' }));
       expect(stage).toHaveFocus();
     });
 
@@ -695,7 +695,7 @@ describe('createMarkupEditor', () => {
       fire(layer, 'pointerdown', 200, 150);
       fire(layer, 'pointerup', 200, 150);
 
-      expect(onSelectionChange).toHaveBeenLastCalledWith('rect', expect.objectContaining({ id: 'r1' }));
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['rect'], expect.objectContaining({ id: 'r1' }));
       expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(8);
     });
 
@@ -708,7 +708,7 @@ describe('createMarkupEditor', () => {
       fire(layer, 'pointerdown', 550, 280);
       fire(layer, 'pointerup', 550, 280);
 
-      expect(onSelectionChange).toHaveBeenLastCalledWith(null, null);
+      expect(onSelectionChange).toHaveBeenLastCalledWith([], null);
       expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(0);
     });
 
@@ -761,7 +761,7 @@ describe('createMarkupEditor', () => {
       fire(layer, 'pointerdown', 200, 150);
       fire(layer, 'pointerup', 200, 150);
       key(document.body, 'Escape');
-      expect(onSelectionChange).toHaveBeenLastCalledWith(null, null);
+      expect(onSelectionChange).toHaveBeenLastCalledWith([], null);
       expect(below).not.toHaveBeenCalled();
       key(document.body, 'Escape');
 
@@ -819,7 +819,245 @@ describe('createMarkupEditor', () => {
       fire(layer, 'pointerup', 200, 150);
       editor.set([]);
 
-      expect(onSelectionChange).toHaveBeenLastCalledWith(null, null);
+      expect(onSelectionChange).toHaveBeenLastCalledWith([], null);
+    });
+  });
+
+  describe('multi-select', () => {
+    // Screen boxes: r1 (200, 100)-(300, 200), r2 (400, 100)-(500, 200); t1 is centred on (350, 175).
+    const r2 = (): ImageMarkupShape => rect({ id: 'r2', x1: 0.6, x2: 0.8 });
+    const boxes = (stage: HTMLElement): HTMLElement[] => [...stage.querySelectorAll<HTMLElement>('[data-role="markup-selection"]')];
+    const click = (layer: Element, x: number, y: number, init: PointerInit = {}): void => {
+      fire(layer, 'pointerdown', x, y, init);
+      fire(layer, 'pointerup', x, y, init);
+    };
+    const selectTool = (over: Partial<MarkupEditorOptions> = {}) => {
+      const s = setup({ markup: [rect(), r2(), text()], ...over });
+
+      s.editor.setState({ ...BASE, tool: 'select' });
+
+      return s;
+    };
+
+    it('Ctrl+Click adds a mark: one handle-free box per mark', () => {
+      const { layer, stage, onSelectionChange } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['rect'], expect.objectContaining({ id: 'r2' }));
+      expect(boxes(stage)).toHaveLength(2);
+      expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(0);
+    });
+
+    it('Cmd+Click and Shift+Click add too, and the kinds are listed once each', () => {
+      const { layer, onSelectionChange } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { metaKey: true });
+      click(layer, 350, 175, { shiftKey: true });
+
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['rect', 'text'], expect.objectContaining({ id: 't1' }));
+    });
+
+    it('Ctrl+Click on a selected mark takes it out, and a lone mark gets its handles back', () => {
+      const { layer, stage } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      click(layer, 400, 150, { ctrlKey: true });
+
+      expect(boxes(stage)).toHaveLength(1);
+      expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(8);
+    });
+
+    it('a drag on empty space draws a marquee and selects what it touches, live', () => {
+      const { layer, stage, onCommit } = selectTool();
+
+      fire(layer, 'pointerdown', 150, 80);
+      fire(layer, 'pointermove', 300, 100);
+      fire(layer, 'pointermove', 450, 120);
+      expect(stage.querySelector('[data-role="markup-marquee"]')).not.toBeNull();
+      expect(boxes(stage)).toHaveLength(2);
+      fire(layer, 'pointerup', 450, 120);
+
+      expect(stage.querySelector('[data-role="markup-marquee"]')).toBeNull();
+      expect(boxes(stage)).toHaveLength(2);
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    it('a box already shown stays put as the marquee takes in more marks', () => {
+      const { layer, stage } = selectTool();
+
+      fire(layer, 'pointerdown', 150, 80);
+      fire(layer, 'pointermove', 250, 120);
+      const first = boxes(stage)[0];
+
+      fire(layer, 'pointermove', 450, 120);
+
+      expect(boxes(stage)).toHaveLength(2);
+      expect(boxes(stage)).toContain(first);
+    });
+
+    it('a marquee that catches one mark gives it handles once the pointer lifts', () => {
+      const { layer, stage } = selectTool();
+
+      fire(layer, 'pointerdown', 150, 80);
+      fire(layer, 'pointermove', 250, 120);
+      expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(0);
+      fire(layer, 'pointerup', 250, 120);
+
+      expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(8);
+    });
+
+    it('the marquee box sits where the pointer went', () => {
+      const { layer, stage } = selectTool();
+
+      fire(layer, 'pointerdown', 450, 120);
+      fire(layer, 'pointermove', 150, 80);
+      const m = stage.querySelector<HTMLElement>('[data-role="markup-marquee"]');
+
+      // The layer sits at (0, 0).
+      expect([m?.style.left, m?.style.top, m?.style.width, m?.style.height]).toStrictEqual(['150px', '80px', '300px', '40px']);
+    });
+
+    it('a marquee started with Ctrl adds to the selection', () => {
+      const { layer, onSelectionChange } = selectTool();
+
+      click(layer, 350, 175);
+      drag(layer, [150, 80], [450, 120], { ctrlKey: true });
+
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['text', 'rect'], expect.anything());
+    });
+
+    it('a marquee without a modifier replaces the selection', () => {
+      const { layer, onSelectionChange } = selectTool();
+
+      click(layer, 350, 175);
+      drag(layer, [150, 80], [450, 120]);
+
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['rect'], expect.anything());
+    });
+
+    it('a cancelled marquee puts the old selection back', () => {
+      const { layer, stage } = selectTool();
+
+      click(layer, 350, 175);
+      fire(layer, 'pointerdown', 150, 80);
+      fire(layer, 'pointermove', 450, 120);
+      fire(layer, 'pointercancel', 450, 120);
+
+      expect(stage.querySelector('[data-role="markup-marquee"]')).toBeNull();
+      expect(boxes(stage)).toHaveLength(1);
+      expect(stage.querySelector('[data-markup-handle="rotate"]')).not.toBeNull();
+    });
+
+    it('a drag on one selected mark moves them all in one step', () => {
+      const { layer, onCommit } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      drag(layer, [200, 150], [250, 175]);
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      const [a, b, t] = lastCommit(onCommit);
+
+      expect(a).toMatchObject({ id: 'r1', x1: 0.3, y1: 0.3 });
+      expect(b).toMatchObject({ id: 'r2', x1: 0.7, y1: 0.3 });
+      expect(t).toStrictEqual(text());
+    });
+
+    it('a plain click on one selected mark narrows the selection to it', () => {
+      const { layer, stage, onSelectionChange } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      click(layer, 200, 150);
+
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['rect'], expect.objectContaining({ id: 'r1' }));
+      expect(boxes(stage)).toHaveLength(1);
+    });
+
+    it('Delete removes every selected mark in one step', () => {
+      const { layer, stage, onCommit, onSelectionChange } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      key(stage, 'Delete');
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(lastCommit(onCommit)).toStrictEqual([text()]);
+      expect(onSelectionChange).toHaveBeenLastCalledWith([], null);
+    });
+
+    it('arrow keys nudge every selected mark, committed once', () => {
+      vi.useFakeTimers();
+      const { layer, stage, onCommit } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      key(stage, 'ArrowDown');
+      key(stage, 'ArrowDown');
+      vi.advanceTimersByTime(400);
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      // 2 screen px at scale 0.5 = 4 O px = 0.008 of 500.
+      const [a, b] = lastCommit(onCommit) as ImageMarkupShape[];
+
+      expect(a?.y1).toBeCloseTo(0.208, 4);
+      expect(b?.y1).toBeCloseTo(0.208, 4);
+      vi.useRealTimers();
+    });
+
+    it('a panel colour change restyles every selected mark in one step', () => {
+      const { layer, editor, onCommit } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 350, 175, { ctrlKey: true });
+      editor.setState({ ...BASE, tool: 'select', color: '#34c759' });
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(lastCommit(onCommit).map((m) => m.color)).toStrictEqual(['#34c759', '#0a84ff', '#34c759']);
+    });
+
+    it('Cmd+D duplicates every selected mark and selects the copies', () => {
+      const { layer, stage, onCommit } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      key(stage, 'd', { metaKey: true });
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      const list = lastCommit(onCommit);
+
+      expect(list).toHaveLength(5);
+      expect(list.slice(3).map((m) => m.type)).toStrictEqual(['rect', 'rect']);
+      expect(boxes(stage)).toHaveLength(2);
+    });
+
+    it('one Escape clears the whole selection, the next goes on', () => {
+      const { layer, onSelectionChange } = selectTool();
+      const below = vi.fn();
+
+      document.addEventListener('keydown', below);
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      key(document.body, 'Escape');
+      expect(onSelectionChange).toHaveBeenLastCalledWith([], null);
+      expect(below).not.toHaveBeenCalled();
+      key(document.body, 'Escape');
+
+      expect(below).toHaveBeenCalledTimes(1);
+      document.removeEventListener('keydown', below);
+    });
+
+    it('Ctrl+Click opens no context menu over the stage', () => {
+      const { layer } = selectTool();
+      const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, ctrlKey: true });
+
+      layer.dispatchEvent(e);
+
+      expect(e.defaultPrevented).toBe(true);
     });
   });
 

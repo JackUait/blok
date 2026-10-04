@@ -313,9 +313,9 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       st.markup = next;
       commit();
     },
-    onSelectionChange: (kind, item) => {
+    onSelectionChange: (kinds, item) => {
       if (item) setMarkupState(stateForMark(st.markupState, item));
-      markupPanel.setSelection(kind);
+      markupPanel.setSelection(kinds);
     },
     // Space held: the press pans the view instead of drawing.
     suspended: () => st.space,

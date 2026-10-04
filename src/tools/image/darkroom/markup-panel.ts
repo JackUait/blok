@@ -42,7 +42,8 @@ export interface MarkupPanelState {
 }
 
 /** What is selected on the stage, so the panel can show context controls. */
-export type MarkupSelectionKind = null | ImageMarkup['type'];
+/** The kinds of the selected marks, each once; empty when nothing is selected. */
+export type MarkupSelectionKind = readonly ImageMarkup['type'][];
 
 export interface MarkupPanelOptions {
   i18n?: I18nInstance;
@@ -51,7 +52,7 @@ export interface MarkupPanelOptions {
   url?: string;
   /** The user picked something. */
   onChange(next: MarkupPanelState, changed: keyof MarkupPanelState): void;
-  /** Delete the selected mark. */
+  /** Delete the selected marks. */
   onDelete(): void;
   /** The "Clear markup" panel reset. */
   onClear(): void;
@@ -61,7 +62,7 @@ export interface MarkupPanel {
   el: HTMLElement;
   /** Updates every control without callbacks. */
   set(state: MarkupPanelState): void;
-  setSelection(kind: MarkupSelectionKind): void;
+  setSelection(kinds: MarkupSelectionKind): void;
   /** Picks a tool as a click on the rail would, colour and size included. */
   pickTool(tool: MarkupTool): void;
   /** One size up or down, as a click on the next size would; a no-op while the sizes are hidden. */
@@ -111,7 +112,7 @@ const SHAPE_DEFS: ToolDef[] = [
 
 /** These frame the photo instead of drawing on it: no ink to pick, and a hairline above them in the grid. */
 const FRAMING_TOOLS: readonly MarkupTool[] = ['spotlight', 'magnifier'];
-const isFraming = (t: MarkupTool | MarkupSelectionKind): boolean => FRAMING_TOOLS.some((f) => f === t);
+const isFraming = (t: MarkupTool): boolean => FRAMING_TOOLS.some((f) => f === t);
 
 const isShapeTool = (t: MarkupTool): boolean => SHAPE_DEFS.some((d) => d.tool === t);
 
@@ -169,7 +170,7 @@ const remembers = (t: MarkupTool): boolean => defaultColorFor(t) !== null;
 export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
   const t = (key: string): string => tr(o.i18n, key);
   const st: MarkupPanelState = { ...o.state };
-  const ui: { selection: MarkupSelectionKind; shape: MarkupTool } = { selection: null, shape: isShapeTool(o.state.tool) ? o.state.tool : 'rect' };
+  const ui: { selection: MarkupSelectionKind; shape: MarkupTool } = { selection: [], shape: isShapeTool(o.state.tool) ? o.state.tool : 'rect' };
   const picked: Partial<Record<MarkupTool, string>> = {};
   // The eraser keeps its own size, so picking a big eraser never thickens the pen.
   const sizes: { ink: MarkupSizeIndex; eraser: MarkupSizeIndex } = { ink: st.size, eraser: st.tool === 'eraser' ? st.size : 1 };
@@ -398,11 +399,12 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     root.style.setProperty('--blok-markup-color', st.color);
     root.style.setProperty('--blok-markup-ink', contrastInk(st.color));
 
-    const showColors = sel !== null ? !isFraming(sel) : st.tool !== 'eraser' && st.tool !== 'select' && !isFraming(st.tool);
+    const any = sel.length > 0;
+    const showColors = any ? sel.some((k) => !isFraming(k)) : st.tool !== 'eraser' && st.tool !== 'select' && !isFraming(st.tool);
     const showPaint = showColors || st.tool === 'eraser';
-    const showStyles = st.tool === 'text' || sel === 'text';
-    const showFill = sel !== null ? takesFill(sel) : takesFill(st.tool);
-    const showDelete = sel !== null;
+    const showStyles = st.tool === 'text' || sel.includes('text');
+    const showFill = any ? sel.some((k) => takesFill(k)) : takesFill(st.tool);
+    const showDelete = any;
 
     root.setAttribute('data-tool', st.tool);
     setShown(paint, showPaint);
@@ -610,8 +612,8 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
       Object.assign(st, state);
       render();
     },
-    setSelection(kind: MarkupSelectionKind): void {
-      ui.selection = kind;
+    setSelection(kinds: MarkupSelectionKind): void {
+      ui.selection = kinds;
       render();
     },
     pickTool,

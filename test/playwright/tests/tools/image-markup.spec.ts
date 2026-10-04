@@ -189,6 +189,47 @@ test('a saved text shows again on reopen and a double-click edits it', async ({ 
   await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="image-markup"] [data-markup-type="text"]`)).toHaveText('Bye');
 });
 
+const TWO_RECTS = [
+  { id: 'r1', type: 'rect', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.3, y2: 0.5, size: 0.012 },
+  { id: 'r2', type: 'rect', color: '#0a84ff', x1: 0.6, y1: 0.2, x2: 0.8, y2: 0.5, size: 0.012 },
+];
+
+const selectionBoxes = (page: Page): Locator => page.locator('[data-role="markup-selection"]');
+
+test('Ctrl+Click picks several marks and Delete removes them all', async ({ page }) => {
+  await seedImage(page, TWO_RECTS);
+  const { dialog, frame } = await openMarkup(page);
+
+  await dialog.getByRole('radio', { name: 'Select' }).click();
+  await page.mouse.click(...within(frame, 0.1, 0.35));
+  await page.keyboard.down('Control');
+  await page.mouse.click(...within(frame, 0.6, 0.35));
+  await page.keyboard.up('Control');
+  await expect(selectionBoxes(page)).toHaveCount(2);
+  await page.keyboard.press('Delete');
+  await expect(darkroomMarks(page)).toHaveCount(0);
+});
+
+test('a drag on empty space selects what it crosses, and dragging one moves them all', async ({ page }) => {
+  await seedImage(page, TWO_RECTS);
+  const { dialog, frame } = await openMarkup(page);
+
+  await dialog.getByRole('radio', { name: 'Select' }).click();
+  await stroke(page, within(frame, 0.05, 0.1), within(frame, 0.9, 0.25));
+  await expect(selectionBoxes(page)).toHaveCount(2);
+  await expect(page.locator('[data-role="markup-marquee"]')).toHaveCount(0);
+  await stroke(page, within(frame, 0.1, 0.35), within(frame, 0.2, 0.45));
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(dialog).toHaveCount(0);
+
+  const [a, b] = await marksOf(page);
+
+  expect(a.x1).toBeCloseTo(0.2, 1);
+  expect(b.x1).toBeCloseTo(0.7, 1);
+  expect(a.y1).toBeCloseTo(0.3, 1);
+  expect(b.y1).toBeCloseTo(0.3, 1);
+});
+
 test('Z zooms the view only: a rectangle drawn zoomed lands where the pointer was, and 100% is one image px per CSS px', async ({ page }) => {
   await seedImage(page);
   const { dialog } = await openMarkup(page);

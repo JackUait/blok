@@ -36,6 +36,8 @@ import {
 } from '../../components/icons';
 import { DEFAULT_RELOAD_ATTEMPTS, IMAGE_SNAP_POINTS, URL_PATTERN } from './constants';
 import { syncMediaHeight } from './media-height';
+import { applyTones, sampleToneGrid } from './tone-sampler';
+import type { ToneGrid } from './tone';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { resolveUploadError } from '../../components/utils/media-upload-error';
@@ -98,6 +100,7 @@ export class ImageTool implements BlockTool {
   private uploadingEl: UploadingStateElement | null = null;
   private resizeDetach: (() => void)[] = [];
   private overlayResizeObserver: ResizeObserver | null = null;
+  private toneGrid: ToneGrid | null = null;
   private cropDetach: (() => void) | null = null;
   private altPopoverDetach: (() => void) | null = null;
   private errorMessage: string | null = null;
@@ -1120,6 +1123,8 @@ export class ImageTool implements BlockTool {
     if (!this.root) return;
     // The card goes first so the hidden figure below it takes no room.
     if (this.mending) this.root.appendChild(this.buildErrorCard(true, true));
+    // A grid read from the previous picture must not tone this one.
+    this.toneGrid = null;
     const figure = renderImage(this.data, this.filters);
     const natural = naturalOf(this.data);
     if (natural) {
@@ -1145,6 +1150,7 @@ export class ImageTool implements BlockTool {
         figure.style.removeProperty('min-height');
         imgEl.style.removeProperty('min-height');
         this.cacheNaturalDimensions(imgEl);
+        if (!this.readOnly) this.refreshTone(imgEl, figure);
       });
       if (imgEl.complete && imgEl.naturalWidth === 0) {
         this.applyBrokenImage();
@@ -1255,6 +1261,8 @@ export class ImageTool implements BlockTool {
       }
       updateOverlayTier(overlay, figure.clientWidth, figure.clientHeight);
       syncMediaHeight(figure);
+      // Tier and size change where each control sits over the picture.
+      if (this.toneGrid) applyTones(figure, this.toneGrid);
     };
     sync();
     if (img && !img.complete) {
@@ -1263,6 +1271,15 @@ export class ImageTool implements BlockTool {
     if (typeof ResizeObserver === 'undefined') return;
     this.overlayResizeObserver = new ResizeObserver(sync);
     this.overlayResizeObserver.observe(figure);
+  }
+
+  private refreshTone(img: HTMLImageElement, figure: HTMLElement): void {
+    void sampleToneGrid(img, this.data, this.filters).then((grid) => {
+      // A re-render replaced this figure while the copy loaded.
+      if (!figure.isConnected) return;
+      this.toneGrid = grid;
+      applyTones(figure, grid);
+    });
   }
 
   private attachResizeHandles(figure: HTMLElement): void {

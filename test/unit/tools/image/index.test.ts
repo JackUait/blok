@@ -17,6 +17,12 @@ vi.mock('../../../../src/components/media-variants/image-variants', () => ({
 import { produceImageVariants } from '../../../../src/components/media-variants/image-variants';
 const mockProduce = vi.mocked(produceImageVariants);
 
+vi.mock('../../../../src/tools/image/tone-sampler', () => ({
+  sampleToneGrid: vi.fn(async () => ({ width: 1, height: 1, luminance: new Float32Array([1]) })),
+  applyTones: vi.fn(),
+}));
+import { applyTones, sampleToneGrid } from '../../../../src/tools/image/tone-sampler';
+
 const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
   media: { reportFailure: vi.fn(), clearFailure: vi.fn(), confirmLeave: vi.fn() },
@@ -2754,5 +2760,55 @@ describe('ImageTool — save() geometry and adjust', () => {
     const saved = new ImageTool(createOptions({ url: 'https://x/y.png' })).save();
 
     expect(Object.keys(saved)).toEqual(['url']);
+  });
+});
+
+describe('ImageTool — paper and graphite', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const flush = (): Promise<void> => new Promise((r) => { setTimeout(r, 0); });
+
+  it('reads the picture once it loads and tones the chrome', async () => {
+    const { root } = renderRenderedImage();
+    const img = root.querySelector('img');
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!img || !figure) throw new Error('image missing');
+
+    img.dispatchEvent(new Event('load'));
+    await flush();
+
+    expect(sampleToneGrid).toHaveBeenCalledWith(img, expect.objectContaining({ url: 'https://x/y.png' }), expect.anything());
+    expect(applyTones).toHaveBeenLastCalledWith(figure, expect.objectContaining({ width: 1 }));
+  });
+
+  it('read-only has no chrome, so it reads nothing', async () => {
+    const { root } = renderRenderedImage({}, { readOnly: true });
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+
+    expect(sampleToneGrid).not.toHaveBeenCalled();
+  });
+
+  it('a sample that lands after a re-render does not tone the old, detached figure', async () => {
+    const pending: Array<(g: { width: number; height: number; luminance: Float32Array }) => void> = [];
+
+    vi.mocked(sampleToneGrid).mockImplementationOnce(() => new Promise((r) => { pending.push(r); }));
+    const { root } = renderRenderedImage();
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    root.querySelector<HTMLButtonElement>('[data-action="caption-toggle"]')?.click();
+    vi.mocked(applyTones).mockClear();
+    pending.forEach((resolve) => resolve({ width: 1, height: 1, luminance: new Float32Array([0]) }));
+    await flush();
+
+    const detached = vi.mocked(applyTones).mock.calls.filter(([fig]) => !fig.isConnected);
+
+    expect(pending).toHaveLength(1);
+    expect(detached).toHaveLength(0);
   });
 });

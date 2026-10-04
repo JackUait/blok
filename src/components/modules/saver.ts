@@ -535,11 +535,10 @@ export class Saver extends Module {
    * save-boundary backstop that catches the WHOLE class, including future
    * vectors:
    *   - test/dev: THROW so the offending mutation path is fixed before it ships.
-   *   - production: repair the OUTPUT to what the user actually saw and log an
-   *     error. An orphan child whose holder is disconnected is invisible →
-   *     pruned; a connected orphan is visible somewhere → promoted to root so
-   *     it stays a normal, selectable block. Dangling grid references are
-   *     removed from the emitted table data. The live model is left untouched
+   *   - production: repair the OUTPUT and log an error. An empty orphan child
+   *     is pruned; an orphan with content is promoted to root, visible or not,
+   *     matching what Table does on load, so its text is never lost. Dangling
+   *     grid references are removed from the emitted table data. The live model is left untouched
    *     (save() is a read path).
    *
    * Legacy string-cell tables are skipped — they carry no block references.
@@ -607,8 +606,8 @@ export class Saver extends Module {
     const savedIds = new Set(extracted.map(item => item.id).filter((id): id is string => typeof id === 'string'));
     const liveBlockById = new Map(this.Blok.BlockManager.blocks.map(block => [block.id, block]));
     const problems: string[] = [];
-    /** Orphan child ids → whether their holder is still connected (visible). */
-    const orphanVisibility = new Map<string, boolean>();
+    /** Orphan child ids → whether the block is empty. */
+    const orphanEmptiness = new Map<string, boolean>();
     /** Table item ids that carry at least one dangling grid reference. */
     const tablesWithDanglingRefs = new Set<string>();
 
@@ -638,11 +637,12 @@ export class Saver extends Module {
         .filter(id => !refs.has(id));
 
       for (const orphanId of orphanIds) {
-        const liveHolder: unknown = liveBlockById.get(orphanId)?.holder;
+        const liveBlock = liveBlockById.get(orphanId);
+        const liveHolder: unknown = liveBlock?.holder;
         const isVisible = liveHolder instanceof HTMLElement && liveHolder.isConnected;
 
         problems.push(`block ${orphanId} is a child of table ${tableId} but is not referenced by any cell (${isVisible ? 'visible' : 'invisible'} ghost)`);
-        orphanVisibility.set(orphanId, isVisible);
+        orphanEmptiness.set(orphanId, liveBlock?.isEmpty === true);
       }
     }
 
@@ -660,20 +660,21 @@ export class Saver extends Module {
 
     logLabeled(message, 'error');
 
-    // Production repair — emit what the user actually saw.
+    // Production repair: an orphan with content goes to the root, visible or
+    // not, as the table does on load; an empty one is dropped.
     const droppedIds = new Set(
-      [...orphanVisibility.entries()].filter(([, visible]) => !visible).map(([id]) => id)
+      [...orphanEmptiness.entries()].filter(([, empty]) => empty).map(([id]) => id)
     );
 
     return extracted
       .filter(item => typeof item.id !== 'string' || !droppedIds.has(item.id))
       .map(item => {
-        const isVisibleOrphan = typeof item.id === 'string' && orphanVisibility.get(item.id) === true;
-        const hasOrphanContentIds = item.contentIds !== undefined && item.contentIds.some(id => orphanVisibility.has(id));
+        const isKeptOrphan = typeof item.id === 'string' && orphanEmptiness.get(item.id) === false;
+        const hasOrphanContentIds = item.contentIds !== undefined && item.contentIds.some(id => orphanEmptiness.has(id));
         const base: SaverValidatedData = {
           ...item,
-          ...(isVisibleOrphan && { parentId: null }),
-          ...(hasOrphanContentIds && { contentIds: item.contentIds?.filter(id => !orphanVisibility.has(id)) }),
+          ...(isKeptOrphan && { parentId: null }),
+          ...(hasOrphanContentIds && { contentIds: item.contentIds?.filter(id => !orphanEmptiness.has(id)) }),
         };
 
         return typeof base.id === 'string' && tablesWithDanglingRefs.has(base.id)

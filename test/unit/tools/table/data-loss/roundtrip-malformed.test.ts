@@ -84,6 +84,34 @@ describe('malformed table data: what a load → save keeps', () => {
       expect(cellTexts(out)).toEqual([['paragraph:A', 'paragraph:B']]);
     });
 
+    it(`${mode}: a child of the table that no cell references keeps its text`, async () => {
+      const out = await loadAndSave({
+        blocks: [
+          table([[{ blocks: ['a'] }, { blocks: ['b'] }]]),
+          para('a', 'A', 't'),
+          para('b', 'B', 't'),
+          para('ghost', 'Ghost', 't'),
+        ],
+      }, readOnly);
+
+      expect(allTexts(out)).toContain('paragraph:Ghost');
+      expect(cellTexts(out)).toEqual([['paragraph:A', 'paragraph:B']]);
+    });
+
+    it(`${mode}: the hierarchical content[] of the table lists a child no cell has`, async () => {
+      const out = await loadAndSave({
+        blocks: [
+          table([[{ blocks: ['a'] }, { blocks: ['b'] }]], {}, { content: ['a', 'b', 'ghost'] }),
+          para('a', 'A'),
+          para('b', 'B'),
+          para('ghost', 'Ghost'),
+        ],
+      }, readOnly);
+
+      expect(allTexts(out)).toContain('paragraph:Ghost');
+      expect(cellTexts(out)).toEqual([['paragraph:A', 'paragraph:B']]);
+    });
+
     it(`${mode}: ragged rows keep every cell`, async () => {
       const out = await loadAndSave({
         blocks: [

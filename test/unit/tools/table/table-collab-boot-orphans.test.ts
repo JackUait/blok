@@ -216,6 +216,14 @@ const roomWith = (blocks: OutputBlockData[]): DocumentStore => {
   return store;
 };
 
+const roomWithParents = (blocks: OutputBlockData[]): DocumentStore => {
+  const store = new DocumentStore(new YBlockSerializer());
+
+  store.fromJSON(blocks.map((block) => ({ id: block.id ?? '', type: block.type, data: block.data, parent: block.parent })));
+
+  return store;
+};
+
 const childrenOf = (server: DocumentStore, parentId: string): string[] =>
   server.toJSON().filter((block) => block.parent === parentId).map((block) => block.id ?? '');
 
@@ -341,5 +349,72 @@ describe('table — collaborative boot writes its cell references', () => {
     expect(canUndo).toBe(false);
 
     server.destroy();
+  });
+
+  describe('a table child no cell references', () => {
+    const ghostRoom = (): DocumentStore => roomWithParents([
+      { id: 'table-1', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['a'] }, { blocks: ['b'] }]] } },
+      { id: 'a', type: 'paragraph', data: { text: 'A' }, parent: 'table-1' },
+      { id: 'b', type: 'paragraph', data: { text: 'B' }, parent: 'table-1' },
+      { id: 'ghost', type: 'paragraph', data: { text: 'Ghost text' }, parent: 'table-1' },
+      { id: 'empty-ghost', type: 'paragraph', data: { text: '' }, parent: 'table-1' },
+    ]);
+
+    const ghostIn = (blocks: OutputBlockData[]): OutputBlockData[] => blocks.filter((block) => block.id === 'ghost');
+
+    it('a collaborative boot moves one with text to the root in the shared doc and drops an empty one', async () => {
+      const server = ghostRoom();
+
+      await bootAgainst(server);
+
+      const ghosts = ghostIn(server.toJSON());
+
+      expect(ghosts).toHaveLength(1);
+      expect(ghosts[0].parent ?? null).toBeNull();
+      expect(ghosts[0].data).toEqual(expect.objectContaining({ text: 'Ghost text' }));
+      expect(server.toJSON().map((block) => block.id)).not.toContain('empty-ghost');
+
+      server.destroy();
+    });
+
+    it('two peers booting the same doc keep it exactly once, at the root', async () => {
+      const server = ghostRoom();
+      const first = await bootLive(server);
+      const second = await bootLive(server);
+
+      first.flushTo(server);
+      second.flushTo(server);
+
+      // The server relays the merged state; a client ignores what it already has.
+      const merged = server.encodeStateAsUpdate();
+
+      first.receive(merged);
+      second.receive(merged);
+      await settle();
+      first.flushTo(server);
+      second.flushTo(server);
+
+      for (const blocks of [
+        server.toJSON(),
+        first.core.moduleInstances.YjsManager.toJSON(),
+        second.core.moduleInstances.YjsManager.toJSON(),
+      ]) {
+        const ghosts = ghostIn(blocks);
+
+        expect(ghosts).toHaveLength(1);
+        expect(ghosts[0].parent ?? null).toBeNull();
+        expect(blocks.filter((block) => (block.parent ?? null) === null).map((block) => block.id)).toEqual(['table-1', 'ghost']);
+      }
+
+      for (const client of [first, second]) {
+        const saved = await client.core.moduleInstances.Saver.save();
+
+        expect(saved?.blocks.filter((block) => block.id === 'ghost')).toEqual([
+          expect.objectContaining({ data: expect.objectContaining({ text: 'Ghost text' }) }),
+        ]);
+      }
+
+      server.destroy();
+    });
   });
 });

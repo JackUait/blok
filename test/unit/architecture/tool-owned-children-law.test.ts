@@ -86,10 +86,11 @@ const RENDER_DEFENSE: Record<string, { pattern: RegExp; mechanism: string }> = {
     mechanism: 'rendered() renders only children whose name === COLUMN_TOOL',
   },
   table: {
-    // The grid renders from the model by coordinate; removeGhostChildren() then
-    // deletes any child the model does not place in a cell (findCellForBlock null).
+    // The grid renders from the model by coordinate; removeEmptyGhostChildren()
+    // then finds every child the model does not place in a cell (findCellForBlock
+    // null): an empty one is deleted, one with content moves to the root.
     pattern: /findCellForBlock\(\s*\w+\.id\s*\)\s*===\s*null/,
-    mechanism: 'removeGhostChildren() evicts children not referenced by any cell',
+    mechanism: 'removeEmptyGhostChildren() + promoteGhostChildren() evict children not referenced by any cell',
   },
 };
 

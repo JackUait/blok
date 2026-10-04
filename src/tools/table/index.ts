@@ -849,7 +849,7 @@ export class Table implements BlockTool {
 
     this.initialContent = null;
 
-    this.runTransactedStructuralOp(() => {
+    const ghostIds = this.runTransactedStructuralOp(() => {
       const initializedContent = this.cellBlocks?.initializeCells(this.withModelBlocks(content)) ?? content;
 
       // When a new table is created with empty content, the DOM grid already has
@@ -873,8 +873,10 @@ export class Table implements BlockTool {
         populateNewCells(gridEl, this.cellBlocks);
       }
 
-      this.removeGhostChildren();
+      return this.removeEmptyGhostChildren();
     }, true);
+
+    this.promoteGhostChildren(ghostIds);
 
     // A document render runs inside the sync window too, so a dangling
     // reference is kept like a replay's and must be filled the same way.
@@ -971,7 +973,7 @@ export class Table implements BlockTool {
 
       this.initialContent = null;
 
-      this.runTransactedStructuralOp(() => {
+      const ghostIds = this.runTransactedStructuralOp(() => {
         if (pendingContent !== null) {
           // Detach the read-only markup before converting. Whatever is left in a
           // container is either an inert text div that would keep rendering the
@@ -992,7 +994,11 @@ export class Table implements BlockTool {
         gridEl.querySelectorAll<HTMLElement>(ownCells()).forEach(cell => {
           this.cellBlocks?.ensureCellHasBlock(cell);
         });
+
+        return this.removeEmptyGhostChildren();
       }, true);
+
+      this.promoteGhostChildren(ghostIds);
 
       this.keyboardNavCleanup = setupKeyboardNavigation(gridEl, this.cellBlocks);
       this.subsystems.initAll(gridEl);
@@ -1000,38 +1006,54 @@ export class Table implements BlockTool {
   }
 
   /**
-   * Remove blocks that claim this table as parent but are not referenced in any cell.
-   *
-   * These "ghost children" can appear when stale data is saved — e.g. a paste or split
-   * creates a child block that never gets placed into a cell. On the next load, the
-   * Renderer creates Block instances for every saved block and appends their holders to
-   * the working area. initializeCells() only claims blocks actually listed in a cell's
-   * `blocks` array, leaving ghosts visible below the table.
+   * Blocks that claim this table as parent but no cell lists ("ghost
+   * children", e.g. left by stale saved data). An empty ghost is deleted, so a
+   * damaged doc with many empty copies does not flood the page. A ghost with
+   * content is returned for {@link promoteGhostChildren}: deleting it would
+   * lose text that read-only boot and the Saver keep.
    *
    * Must be called after initializeCells() and model.replaceAll() so the model's
    * blockCellMap is fully populated.
    */
-  private removeGhostChildren(): void {
+  private removeEmptyGhostChildren(): string[] {
     const tableId = this.blockId;
 
     if (tableId === undefined) {
+      return [];
+    }
+
+    const ghosts = this.api.blocks.getChildren(tableId)
+      .filter(child => this.model.findCellForBlock(child.id) === null);
+
+    // Reverse index order so removals don't shift indices
+    ghosts
+      .filter(child => child.isEmpty)
+      .map(child => this.api.blocks.getBlockIndex(child.id))
+      .filter((index): index is number => index !== undefined)
+      .sort((a, b) => b - a)
+      .forEach(index => {
+        void this.api.blocks.delete(index);
+      });
+
+    return ghosts.filter(child => !child.isEmpty).map(child => child.id);
+  }
+
+  /**
+   * Moves ghost children to the root right after the table: a repair written
+   * to the doc, not an undo step of its own.
+   */
+  private promoteGhostChildren(ids: string[]): void {
+    if (ids.length === 0) {
       return;
     }
 
-    const allChildren = this.api.blocks.getChildren(tableId);
+    // Last first: each one lands right after the table, so order is kept.
+    const promote = (): void => [...ids].reverse().forEach(id => this.api.blocks.setBlockParent(id, null));
 
-    // Delete ghost children in reverse index order so removals don't shift indices
-    const ghostEntries = allChildren
-      .filter(child => this.model.findCellForBlock(child.id) === null)
-      .map(child => ({
-        id: child.id,
-        index: this.api.blocks.getBlockIndex(child.id),
-      }))
-      .filter((entry): entry is { id: string; index: number } => entry.index !== undefined)
-      .sort((a, b) => b.index - a.index);
-
-    for (const { index } of ghostEntries) {
-      void this.api.blocks.delete(index);
+    if (this.api.blocks.transactWithoutCapture) {
+      this.api.blocks.transactWithoutCapture(promote);
+    } else {
+      promote();
     }
   }
 

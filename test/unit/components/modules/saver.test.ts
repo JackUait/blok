@@ -1390,11 +1390,11 @@ describe('Saver module', () => {
     // rendered below the table after a save → re-render round trip. This guard
     // makes the saver the last line of defense for the WHOLE class: dev/test
     // saves THROW when a table's children diverge from its grid references;
-    // production saves repair the output to what the user actually saw.
+    // production saves drop an empty orphan and move one with content to root.
 
     type TableFixtureOptions = {
       /** Extra child of the table that no grid cell references. */
-      ghost?: { id: string; connected: boolean };
+      ghost?: { id: string; connected: boolean; empty?: boolean };
       /** Grid cell reference pointing at a block that does not exist. */
       danglingRef?: string;
       /** Use legacy string cells instead of blocks-format cells. */
@@ -1456,9 +1456,10 @@ describe('Saver module', () => {
         const ghost = createBlockMock({
           id: options.ghost.id,
           tool: 'paragraph',
-          data: { text: 'GHOST' },
+          data: { text: options.ghost.empty === true ? '' : 'GHOST' },
           parentId: 'tbl1',
           holder: ghostHolder,
+          isEmpty: options.ghost.empty === true,
         });
 
         blocks.push(ghost.block);
@@ -1515,7 +1516,7 @@ describe('Saver module', () => {
       cleanup();
     });
 
-    it('production: prunes an invisible (disconnected) orphan child from the output', async () => {
+    it('production: promotes an invisible (disconnected) orphan child with content to root', async () => {
       vi.stubEnv('NODE_ENV', 'production');
       vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
       const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
@@ -1527,14 +1528,37 @@ describe('Saver module', () => {
       });
 
       const result = await saver.save();
+      const ghost = result?.blocks.find(b => b.id === 'ghost1');
 
       expect(saver.getLastSaveError()).toBeUndefined();
-      expect(result?.blocks.find(b => b.id === 'ghost1')).toBeUndefined();
+      expect(ghost?.data).toEqual({ text: 'GHOST' });
+      expect(ghost).not.toHaveProperty('parent');
       expect(result?.blocks.find(b => b.id === 'tbl1')?.content).toEqual(['cellA', 'cellB']);
       expect(logLabeledSpy).toHaveBeenCalledWith(expect.stringMatching(/not referenced by any cell/), 'error');
 
       cleanup();
     });
+
+    for (const connected of [false, true]) {
+      it(`production: prunes an empty ${connected ? 'visible' : 'invisible'} orphan child from the output`, async () => {
+        vi.stubEnv('NODE_ENV', 'production');
+        vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+        vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+        const { blocks, cleanup } = tableFixture({ ghost: { id: 'ghost1', connected, empty: true } });
+        const { saver } = createSaver({
+          blocks,
+          toolSanitizeConfigs: { paragraph: {}, table: {} },
+        });
+
+        const result = await saver.save();
+
+        expect(result?.blocks.find(b => b.id === 'ghost1')).toBeUndefined();
+        expect(result?.blocks.find(b => b.id === 'tbl1')?.content).toEqual(['cellA', 'cellB']);
+
+        cleanup();
+      });
+    }
 
     it('production: promotes a visible (connected) orphan child to root in the output', async () => {
       vi.stubEnv('NODE_ENV', 'production');

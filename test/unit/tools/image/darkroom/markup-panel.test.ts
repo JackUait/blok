@@ -443,6 +443,13 @@ describe('markup panel', () => {
       expect(tool('shapes')).toHaveFocus();
     });
 
+    it('the rail button shows only the last shape, with no dropdown arrow', () => {
+      make({ tool: 'star' });
+
+      expect(tool('shapes').querySelectorAll('svg')).toHaveLength(1);
+      expect(tool('shapes').getAttribute('aria-haspopup')).toBe('dialog');
+    });
+
     it('the rail button follows a shape picked elsewhere, like a tool key', () => {
       make();
       panel.pickTool('ellipse');

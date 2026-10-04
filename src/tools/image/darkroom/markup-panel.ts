@@ -2,7 +2,6 @@ import type { ImageMarkup, ImageMarkupTextStyle } from '../../../../types/tools/
 import {
   IconArrowDiagonal,
   IconCheck,
-  IconChevronDown,
   IconCursor,
   IconEllipse,
   IconEmojiStar,
@@ -242,16 +241,13 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
       if (slot === SHAPES_SLOT) {
         const label = t('tools.image.markupShapes');
         const btn = makeRadio('blok-darkroom__markup-tool blok-darkroom__markup-shapes-btn', 'markup-tool-shapes', label);
-        const chevron = document.createElement('span');
 
         btn.setAttribute('data-tool', SHAPES_SLOT);
         btn.setAttribute('aria-haspopup', 'dialog');
         btn.setAttribute('aria-expanded', 'false');
         btn.title = label;
         shapeIcon.className = 'blok-darkroom__markup-shapes-icon';
-        chevron.className = 'blok-darkroom__markup-shapes-chevron';
-        chevron.innerHTML = IconChevronDown;
-        btn.append(shapeIcon, chevron);
+        btn.append(shapeIcon);
         rail.appendChild(btn);
 
         return btn;

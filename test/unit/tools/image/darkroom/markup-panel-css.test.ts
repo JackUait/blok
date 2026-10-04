@@ -73,10 +73,6 @@ describe('markup-panel.css', () => {
     expect(rule).toMatch(/height:\s*1px/);
   });
 
-  it('the shape button chevron is small and muted next to the shape', () => {
-    expect(body(css, '.blok-darkroom__markup-shapes-chevron')).toMatch(/width:\s*1[0-2]px/);
-  });
-
   it('eraser size dots are hollow rings, not the last ink colour', () => {
     const rule = body(css, '.blok-darkroom__markup[data-tool="eraser"] .blok-darkroom__markup-dot');
 

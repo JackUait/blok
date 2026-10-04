@@ -695,8 +695,6 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Live ink shape tiles in markup-panel.css: ink/width/fill glyphs, the photo
     // spotlight and lens tiles, the trace-on keyframes and their reduced motion.
     const SHAPE_PICKER_LIVE_INK_BYTES = 5_732;
-    // The Shapes button chevron sized and tucked inside its round puck.
-    const SHAPES_CHEVRON_INSIDE_PUCK_BYTES = 234;
     // Shape picker timing tokens (lead, step, trace) shared by every open animation.
     const SHAPE_PICKER_TIMING_TOKENS_BYTES = 268;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
@@ -735,7 +733,6 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + FIND_OPTIONS_SAVINGS_BYTES
       + SPACING_TOKEN_REFERENCES_BYTES
       + SHAPE_PICKER_LIVE_INK_BYTES
-      + SHAPES_CHEVRON_INSIDE_PUCK_BYTES
       + SHAPE_PICKER_TIMING_TOKENS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 

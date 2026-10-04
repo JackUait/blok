@@ -613,7 +613,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Popover "Nothing found" search drawing: its part fills, dashed slot and
     // the loupe's idle hover keyframes in media-empty.css.
     const NOTHING_FOUND_SEARCH_PREVIEW_BYTES = 549;
-    // The + button's search slash pill rule (93b5e58f), landed without a budget entry.
+    // The slash pill's `width: auto !important`, so the + button's search shows it.
     const PLUS_BUTTON_SEARCH_PILL_BYTES = 62;
     // Image chrome (frame and islands): island cards and their split motion,
     // selection ring, dot handles, width readout, snap guides, hover bridge,

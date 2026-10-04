@@ -171,6 +171,23 @@ describe('markup-panel.css', () => {
     expect(css).toMatch(/@keyframes blok-markup-trace\s*\{[^}]*stroke-dashoffset:\s*1/);
   });
 
+  it('finishes the whole open sequence within half a second', () => {
+    const tokens = body(css, '.blok-darkroom__markup-shapes');
+    const ms = (name: string): number => {
+      const m = tokens.match(new RegExp(`${name}:\\s*(\\d+)ms`));
+
+      if (m === null) throw new Error(`no ${name}`);
+
+      return Number(m[1]);
+    };
+    // Eight drawn glyphs: the last one starts seven steps after the first.
+    const lastGlyphDone = ms('--blok-markup-shape-lead') + 7 * ms('--blok-markup-shape-step') + ms('--blok-markup-shape-trace');
+
+    expect(lastGlyphDone).toBeLessThanOrEqual(500);
+    expect(body(css, '.blok-darkroom__markup-shape svg > *')).toMatch(/var\(--blok-markup-shape-trace\)/);
+    expect(body(css, '.blok-darkroom__markup-shape svg > *')).toMatch(/var\(--blok-markup-shape-lead\)/);
+  });
+
   it('crops the photo tiles to the tile, with a spotlight window and a round lens', () => {
     expect(body(css, '.blok-darkroom__markup-shape[data-photo] img')).toMatch(/object-fit:\s*cover/);
     expect(body(css, '.blok-darkroom__markup-spot::before')).toMatch(/box-shadow:/);

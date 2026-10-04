@@ -167,8 +167,9 @@
 
 .blok-darkroom__markup-shapes-chevron {
   position: absolute;
-  inset-inline-end: 1px;
-  bottom: 3px;
+  /* Tucked into the round puck; the square box's corner falls outside it. */
+  inset-inline-end: 4px;
+  bottom: 4px;
   display: flex;
   width: 10px;
   height: 10px;
@@ -176,7 +177,8 @@
   pointer-events: none;
 }
 
-.blok-darkroom__markup-shapes-chevron svg {
+/* Outranks .blok-darkroom__markup-tool svg, which sizes the shape glyph and would push this one onto the puck's edge. */
+.blok-darkroom__markup-shapes-btn .blok-darkroom__markup-shapes-chevron svg {
   width: 100%;
   height: 100%;
 }

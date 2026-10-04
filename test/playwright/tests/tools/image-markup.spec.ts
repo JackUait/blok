@@ -293,3 +293,28 @@ test('the shape picker draws its glyphs in the current ink, shows the photo in i
 
   expect(mark.type).toBe('rounded-rect');
 });
+
+test('the Shapes button chevron sits inside the round puck, not on its edge', async ({ page }) => {
+  await seedImage(page);
+  const { dialog } = await openMarkup(page);
+  const shapesBtn = dialog.getByRole('radio', { name: 'Shapes' });
+
+  await shapesBtn.click();
+  await page.getByRole('dialog', { name: 'Shapes' }).getByRole('radio', { name: 'Ellipse' }).click();
+  await expect(shapesBtn).toHaveAttribute('aria-checked', 'true');
+
+  const { btn, marks } = await shapesBtn.evaluate((b) => ({
+    btn: b.getBoundingClientRect().toJSON() as DOMRect,
+    marks: [...b.querySelectorAll('.blok-darkroom__markup-shapes-chevron svg > *')].map((m) => m.getBoundingClientRect().toJSON() as DOMRect),
+  }));
+  const cx = btn.x + btn.width / 2;
+  const cy = btn.y + btn.height / 2;
+  const r = btn.width / 2;
+
+  expect(marks.length).toBeGreaterThan(0);
+  for (const m of marks) {
+    for (const [x, y] of [[m.left, m.top], [m.right, m.top], [m.left, m.bottom], [m.right, m.bottom]]) {
+      expect(Math.hypot(x - cx, y - cy), `chevron corner ${x},${y}`).toBeLessThanOrEqual(r - 2);
+    }
+  }
+});

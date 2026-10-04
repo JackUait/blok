@@ -695,6 +695,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Live ink shape tiles in markup-panel.css: ink/width/fill glyphs, the photo
     // spotlight and lens tiles, the trace-on keyframes and their reduced motion.
     const SHAPE_PICKER_LIVE_INK_BYTES = 5_732;
+    // The Shapes button chevron sized and tucked inside its round puck.
+    const SHAPES_CHEVRON_INSIDE_PUCK_BYTES = 234;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -730,7 +732,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + FOCUS_MODALITY_BYTES
       + FIND_OPTIONS_SAVINGS_BYTES
       + SPACING_TOKEN_REFERENCES_BYTES
-      + SHAPE_PICKER_LIVE_INK_BYTES;
+      + SHAPE_PICKER_LIVE_INK_BYTES
+      + SHAPES_CHEVRON_INSIDE_PUCK_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

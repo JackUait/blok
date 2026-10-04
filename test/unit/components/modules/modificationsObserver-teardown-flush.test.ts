@@ -5,6 +5,7 @@ import { Table } from '../../../../src/tools/table';
 import { Header } from '../../../../src/tools/header';
 import { Renderer } from '../../../../src/components/modules/renderer';
 import { ModificationsObserver } from '../../../../src/components/modules/modificationsObserver';
+import { Saver } from '../../../../src/components/modules/saver';
 import type { OutputBlockData, OutputData } from '../../../../types';
 
 /**
@@ -304,6 +305,101 @@ describe('ModificationsObserver — final flush on teardown (real editor)', () =
     expect(onSave.mock.calls.map(([data]) => textOf(data, 'p1'))).toEqual(['typed']);
   }, 60_000);
 
+  describe.each([
+    { path: 'in-place', tools: { paragraph: Paragraph } },
+    { path: 'full re-render', tools: { paragraph: Paragraph, plain: NoInPlaceToggleTool } },
+  ])('read-only turned on right before destroy() ($path)', ({ tools }) => {
+    it('delivers the edit made while editable', async () => {
+      const onSave = vi.fn<(data: OutputData) => void>();
+      const live = new Blok({
+        holder,
+        tools,
+        data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'before' } }] },
+        onSave,
+      }) as unknown as LiveEditor;
+
+      editor = live;
+      await live.isReady;
+      await wait(600);
+
+      typeInto('p1', 'typed');
+      await wait(20);
+      await live.readOnly.set(true);
+      live.destroy();
+      editor = undefined;
+      await wait(600);
+
+      expect(onSave.mock.calls.map(([data]) => textOf(data, 'p1'))).toEqual(['typed']);
+    }, 60_000);
+
+    it('delivers the edit when destroy() lands before the read-only switch settles', async () => {
+      const onSave = vi.fn<(data: OutputData) => void>();
+      const live = new Blok({
+        holder,
+        tools,
+        data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'before' } }] },
+        onSave,
+      }) as unknown as LiveEditor;
+
+      editor = live;
+      await live.isReady;
+      await wait(600);
+
+      typeInto('p1', 'typed');
+      await wait(20);
+      void live.readOnly.set(true).catch(() => undefined);
+      live.destroy();
+      editor = undefined;
+      await wait(600);
+
+      expect(onSave.mock.calls.map(([data]) => textOf(data, 'p1'))).toEqual(['typed']);
+    }, 60_000);
+
+    it('delivers the edit once across a read-only round trip', async () => {
+      const onSave = vi.fn<(data: OutputData) => void>();
+      const live = new Blok({
+        holder,
+        tools,
+        data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'before' } }] },
+        onSave,
+      }) as unknown as LiveEditor;
+
+      editor = live;
+      await live.isReady;
+      await wait(600);
+
+      typeInto('p1', 'typed');
+      await wait(20);
+      await live.readOnly.set(true);
+      await wait(600);
+      await live.readOnly.set(false);
+      await wait(600);
+
+      expect(onSave.mock.calls.map(([data]) => textOf(data, 'p1'))).toEqual(['typed']);
+    }, 60_000);
+
+    it('does not call onSave when nothing was typed', async () => {
+      const onSave = vi.fn();
+      const live = new Blok({
+        holder,
+        tools,
+        data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'before' } }] },
+        onSave,
+      }) as unknown as LiveEditor;
+
+      editor = live;
+      await live.isReady;
+      await wait(600);
+
+      await live.readOnly.set(true);
+      live.destroy();
+      editor = undefined;
+      await wait(600);
+
+      expect(onSave).not.toHaveBeenCalled();
+    }, 60_000);
+  });
+
   it('delivers an edit held through read-only when leaving read-only is interrupted by destroy()', async () => {
     const onSave = vi.fn<(data: OutputData) => void>();
     const live = new Blok({
@@ -320,6 +416,9 @@ describe('ModificationsObserver — final flush on teardown (real editor)', () =
     typeInto('p1', 'typed');
     await wait(20);
 
+    // The save made on the way into read-only fails, so the edit is still
+    // unsaved while read-only.
+    vi.spyOn(Saver.prototype, 'saveBeforeTeardown').mockResolvedValueOnce(undefined);
     await live.readOnly.set(true);
     await wait(600);
 

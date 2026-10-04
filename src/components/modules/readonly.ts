@@ -181,6 +181,8 @@ export class ReadOnly extends Module {
     // destroying the selection this reads.
     if (state && !oldState) {
       this.captureCaretBeforeReadOnly();
+      // Before the flip: once read-only is on, the pending save is suppressed.
+      this.Blok.ModificationsObserver.flushBeforeReadOnly();
     }
 
     this.readOnlyEnabled = state;

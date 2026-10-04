@@ -364,8 +364,9 @@ export class ModificationsObserver extends Module {
     /**
      * Read-only is honored at DELIVERY time, not just at enqueue: a change can
      * be queued while editable and read-only toggled on before this batch
-     * fires. Consumers can therefore rely on onChange/onSave never firing in
-     * read-only mode without guarding on `api.readOnly.isEnabled` themselves.
+     * fires. Consumers can therefore rely on onChange never firing in
+     * read-only mode. onSave has one exception: the save started by
+     * `flushBeforeReadOnly` for an edit made while editable.
      *
      * `destroyed` and `disabled` are checked here too because a queued
      * microtask, unlike the batching timeout, cannot be cancelled.
@@ -405,7 +406,7 @@ export class ModificationsObserver extends Module {
    * frozen, paused or destroyed while the (async) serialization was in flight,
    * and puts the document back to dirty when it does.
    */
-  private emitOnSave(outlivesTeardown = false): Promise<void> {
+  private emitOnSave(outlivesTeardown = false, outlivesReadOnly = false): Promise<void> {
     this.savesInFlight += 1;
 
     const serialization = outlivesTeardown ? this.Blok.Saver.saveBeforeTeardown() : this.Blok.Saver.save();
@@ -423,8 +424,11 @@ export class ModificationsObserver extends Module {
          * to dirty and the next window retries it.
          */
         // This save must outlive `destroyed` and the render's `disable()`, but
-        // read-only still blocks it.
-        const suppressed = outlivesTeardown ? this.Blok.ReadOnly.isEnabled : this.isDeliverySuppressed;
+        // read-only still blocks it — unless the document was read before
+        // read-only engaged.
+        const suppressed = outlivesTeardown
+          ? !outlivesReadOnly && this.Blok.ReadOnly.isEnabled
+          : this.isDeliverySuppressed;
 
         if (suppressed || data === undefined) {
           this.pendingSave = true;
@@ -460,9 +464,10 @@ export class ModificationsObserver extends Module {
    * Starts the save for an edit still inside its batch window. Teardown calls
    * this before marking any module destroyed, because the Saver must read the
    * blocks while they are still mounted.
+   * @param outlivesReadOnly - deliver even if read-only engages before it lands
    * @returns the delivery still to land, or null when there is none
    */
-  public flushBeforeTeardown(): Promise<void> | null {
+  public flushBeforeTeardown(outlivesReadOnly = false): Promise<void> | null {
     // An early save from flushPendingBeforeRender may still be running: hand it
     // back so teardown keeps the persistence queue until it lands.
     if (!this.pendingSave || this.isDeliverySuppressed || !isFunction(this.config.onSave)) {
@@ -471,7 +476,7 @@ export class ModificationsObserver extends Module {
 
     this.pendingSave = false;
 
-    const delivery = this.emitOnSave(true).finally(() => {
+    const delivery = this.emitOnSave(true, outlivesReadOnly).finally(() => {
       if (this.teardownSafeSave === delivery) {
         this.teardownSafeSave = null;
       }
@@ -493,6 +498,20 @@ export class ModificationsObserver extends Module {
   public flushPendingBeforeRender(): void {
     this.deliverQueuedChanges();
     void this.flushBeforeTeardown();
+  }
+
+  /**
+   * Starts the save for an edit made while editable, right before read-only
+   * engages. Read-only suppresses every later delivery, so without this a
+   * destroy inside the window drops the edit. Call it while
+   * `ReadOnly.isEnabled` is still false. With no render pending the Saver reads
+   * the blocks inside this call, so nothing made in read-only reaches onSave;
+   * the onSave call itself lands after read-only is on.
+   *
+   * Only the save: queued onChange events are still dropped, as documented.
+   */
+  public flushBeforeReadOnly(): void {
+    void this.flushBeforeTeardown(true);
   }
 
   /**

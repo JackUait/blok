@@ -397,8 +397,10 @@ export interface BlokState {
    * (the change observer is disabled during render), so a controlled
    * `data → render → onSave → setData` round-trip won't recurse.
    *
-   * Never fires while the editor is in read-only mode (honored at delivery
-   * time), so the handler needs no `api.readOnly.isEnabled` guard.
+   * Never fires for a change made in read-only mode (honored at delivery
+   * time). An edit made just before read-only turns on is still saved, so a
+   * destroy right after does not lose it — that call can land after
+   * `api.readOnly.isEnabled` is already true.
    *
    * Its PRESENCE is load-bearing: setting it makes blok serialize the whole
    * document once per change batch. Set it only when you consume the output —

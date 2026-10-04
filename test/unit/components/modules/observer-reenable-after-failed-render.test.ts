@@ -20,6 +20,7 @@ type ObserverMock = {
   enable: ReturnType<typeof vi.fn>;
   discardPendingChanges: ReturnType<typeof vi.fn>;
   flushPendingBeforeRender: ReturnType<typeof vi.fn>;
+  flushBeforeReadOnly: ReturnType<typeof vi.fn>;
 };
 
 const createObserverMock = (): ObserverMock => ({
@@ -27,6 +28,7 @@ const createObserverMock = (): ObserverMock => ({
   enable: vi.fn(),
   discardPendingChanges: vi.fn(),
   flushPendingBeforeRender: vi.fn(),
+  flushBeforeReadOnly: vi.fn(),
 });
 
 const createBlocksApi = (

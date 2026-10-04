@@ -27,6 +27,7 @@ type ReadOnlyMocks = {
     disable: MockInstance<() => void>;
     enable: MockInstance<() => void>;
     flushPendingBeforeRender: MockInstance<() => void>;
+    flushBeforeReadOnly: MockInstance<() => void>;
   };
   saver: {
     save: MockInstance<(options?: unknown) => Promise<{ blocks: unknown[] }>>;
@@ -78,6 +79,7 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
     disable: vi.fn<() => void>(() => undefined),
     enable: vi.fn<() => void>(() => undefined),
     flushPendingBeforeRender: vi.fn<() => void>(() => undefined),
+    flushBeforeReadOnly: vi.fn<() => void>(() => undefined),
   };
 
   const saver: ReadOnlyMocks['saver'] = {

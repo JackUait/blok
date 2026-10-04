@@ -297,14 +297,37 @@
   to { opacity: 1; transform: translateY(0) }
 }
 
+@keyframes blok-markup-develop {
+  from { opacity: 0; filter: blur(4px) saturate(0); scale: 1.25 }
+}
+
+@keyframes blok-markup-lens-in {
+  from { opacity: 0; scale: 0.3 }
+}
+
 @keyframes blok-markup-selection-in {
   from { opacity: 0 }
   to { opacity: 1 }
 }
 
+@keyframes blok-markup-shapes-in {
+  from { opacity: 0; scale: 0.82; translate: 0 10px }
+  40% { opacity: 1 }
+}
+
+@keyframes blok-markup-spot-open {
+  from { inset: 50% 50% }
+}
+
 @keyframes blok-markup-text-in {
   from { opacity: 0.4 }
   to { opacity: 1 }
+}
+
+@keyframes blok-markup-trace {
+  from { opacity: 0; stroke-dasharray: 1 1; stroke-dashoffset: 1 }
+  12% { opacity: 1 }
+  to { stroke-dasharray: 1 1; stroke-dashoffset: 0 }
 }
 
 @keyframes blok-media-empty-host-in {

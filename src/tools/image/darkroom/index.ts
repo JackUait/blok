@@ -508,6 +508,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   const markupPanel = createMarkupPanel({
     i18n: opts.i18n,
+    url: opts.url,
     state: st.markupState,
     onChange: (next) => {
       st.markupState = next;

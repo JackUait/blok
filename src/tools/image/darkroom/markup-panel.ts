@@ -48,6 +48,8 @@ export type MarkupSelectionKind = null | ImageMarkup['type'];
 export interface MarkupPanelOptions {
   i18n?: I18nInstance;
   state: MarkupPanelState;
+  /** The photo, so the framing shape tiles can show it. */
+  url?: string;
   /** The user picked something. */
   onChange(next: MarkupPanelState, changed: keyof MarkupPanelState): void;
   /** Delete the selected mark. */
@@ -390,6 +392,7 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
       shapeIcon.innerHTML = SHAPE_DEFS.find((d) => d.tool === ui.shape)?.icon ?? '';
     }
     picker.items.forEach((b, i) => b.setAttribute('aria-checked', String(SHAPE_DEFS[i]?.tool === st.tool)));
+    paintPicker();
     rail.style.setProperty('--blok-markup-puck-i', String(toolIndex));
     rail.style.setProperty('--blok-markup-puck-s', String(groupIndex));
     check(swatchBtns, (i) => MARKUP_COLORS[i] === st.color);
@@ -417,8 +420,40 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     rovings.forEach((r) => r.refresh());
   };
 
-  const picker: { handle: ModalDialogHandle | null; items: HTMLElement[]; roving: RovingRadioGroup | null } = {
-    handle: null, items: [], roving: null,
+  const picker: { handle: ModalDialogHandle | null; el: HTMLElement | null; items: HTMLElement[]; roving: RovingRadioGroup | null } = {
+    handle: null, el: null, items: [], roving: null,
+  };
+
+  /** The tiles draw in the ink the user will draw with. */
+  const paintPicker = (): void => {
+    const el = picker.el;
+
+    if (el === null) return;
+    el.style.setProperty('--blok-markup-color', st.color);
+    el.setAttribute('data-size', String(st.size));
+    el.toggleAttribute('data-fill', st.fill);
+    // Ink that takes a light contrast ink is too dark to read on the dark glass.
+    el.toggleAttribute('data-ink-dark', contrastInk(st.color) !== contrastInk('#ffffff'));
+  };
+
+  const photoTile = (btn: HTMLElement, tool: MarkupTool, url: string): void => {
+    const photo = (): HTMLImageElement => {
+      const img = document.createElement('img');
+
+      img.alt = '';
+      img.draggable = false;
+      img.decoding = 'async';
+      img.src = url;
+
+      return img;
+    };
+    const mark = document.createElement('span');
+
+    mark.className = tool === 'magnifier' ? 'blok-darkroom__markup-lens' : 'blok-darkroom__markup-spot';
+    mark.setAttribute('aria-hidden', 'true');
+    if (tool === 'magnifier') mark.appendChild(photo());
+    btn.setAttribute('data-photo', '');
+    btn.append(photo(), mark);
   };
 
   const closePicker = (): void => picker.handle?.close();
@@ -434,10 +469,19 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     content.addEventListener('keydown', (e) => {
       if (NAV_KEYS.has(e.key)) content.setAttribute('data-blok-keyboard-navigated', '');
     });
-    picker.items = SHAPE_DEFS.map((d) => {
+    picker.el = content;
+    picker.items = SHAPE_DEFS.map((d, i) => {
       const btn = makeRadio('blok-darkroom__markup-shape', `markup-shape-${d.tool}`, t(`tools.image.${d.key}`));
+      const url = isFraming(d.tool) ? o.url : undefined;
 
-      titled(btn, d);
+      titled(btn, url === undefined ? d : { ...d, icon: '' });
+      if (url !== undefined) photoTile(btn, d.tool, url);
+      // pathLength 1 lets one dash length trace every glyph, whatever its real length.
+      btn.querySelectorAll('svg > *').forEach((m) => m.setAttribute('pathLength', '1'));
+      btn.style.setProperty('--blok-markup-shape-i', String(i));
+      // Framing tiles have no ink to pick.
+      if (!isFraming(d.tool)) btn.setAttribute('data-ink', '');
+      if (takesFill(d.tool)) btn.setAttribute('data-fillable', '');
       btn.setAttribute('aria-checked', String(d.tool === st.tool));
       btn.addEventListener('click', () => {
         pickTool(d.tool);
@@ -449,6 +493,7 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
       return btn;
     });
     content.appendChild(grid);
+    paintPicker();
     picker.roving = rovingRadioGroup({
       radios: picker.items,
       orientation: 'both',
@@ -473,6 +518,7 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
         picker.roving?.destroy();
         picker.roving = null;
         picker.items = [];
+        picker.el = null;
         picker.handle = null;
         shapesBtn.setAttribute('aria-expanded', 'false');
         // A click does not focus a button in Safari, so focus restore alone could land on body.

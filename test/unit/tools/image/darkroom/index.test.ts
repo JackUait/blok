@@ -2032,6 +2032,15 @@ describe('openDarkroom markup', () => {
     expect(document.querySelector('[data-role="markup-layer"]:not([hidden])')).toBeNull();
   });
 
+  it('the spotlight and magnifier tiles in the shape picker show the photo being edited', () => {
+    open();
+    tab('markup');
+    q<HTMLButtonElement>('[data-blok-testid="markup-tool-shapes"]').click();
+
+    expect(q('[data-blok-testid="markup-shape-spotlight"] img').getAttribute('src')).toBe('x.png');
+    expect(q('[data-blok-testid="markup-shape-magnifier"] img').getAttribute('src')).toBe('x.png');
+  });
+
   it('a tool key on the stage picks the tool in the panel', () => {
     open();
     tab('markup');

@@ -692,6 +692,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const FIND_OPTIONS_SAVINGS_BYTES = -238;
     // Three themeable 2px spacing literals became token references.
     const SPACING_TOKEN_REFERENCES_BYTES = 54;
+    // Live ink shape tiles in markup-panel.css: ink/width/fill glyphs, the photo
+    // spotlight and lens tiles, the trace-on keyframes and their reduced motion.
+    const SHAPE_PICKER_LIVE_INK_BYTES = 5_732;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -726,7 +729,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + TABLE_CORNER_AND_PILL_BYTES
       + FOCUS_MODALITY_BYTES
       + FIND_OPTIONS_SAVINGS_BYTES
-      + SPACING_TOKEN_REFERENCES_BYTES;
+      + SPACING_TOKEN_REFERENCES_BYTES
+      + SHAPE_PICKER_LIVE_INK_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

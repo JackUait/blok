@@ -263,3 +263,33 @@ test('the ? button opens the sheet and a second click closes it; a click outside
   await expect(dialog).toBeVisible();
   expect(await page.locator('[data-role="darkroom-frame"]').boundingBox()).toEqual(frameBefore);
 });
+
+test('the shape picker draws its glyphs in the current ink, shows the photo in its framing tiles, and picks by keyboard', async ({ page }) => {
+  await seedImage(page);
+  const { dialog, frame } = await openMarkup(page);
+
+  await dialog.getByRole('radio', { name: 'Shapes' }).click();
+  const shapes = page.getByRole('dialog', { name: 'Shapes' });
+  const rect = shapes.getByRole('radio', { name: 'Rectangle', exact: true });
+
+  // The default pen ink is red (#ff3b30).
+  await expect(rect.locator('svg')).toHaveCSS('color', 'rgb(255, 59, 48)');
+  await expect(shapes.getByRole('radio', { name: 'Spotlight' }).locator('img').first()).toHaveAttribute('src', SAMPLE_IMAGE_URL);
+  await expect(shapes.getByRole('radio', { name: 'Magnifier' }).locator('img').first()).toHaveAttribute('src', SAMPLE_IMAGE_URL);
+
+  await expect(rect).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  const rounded = shapes.getByRole('radio', { name: 'Rounded rectangle' });
+
+  await expect(rounded).toBeFocused();
+  await expect(rounded).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('Escape');
+  await expect(shapes).toHaveCount(0);
+
+  await stroke(page, within(frame, 0.2, 0.2), within(frame, 0.6, 0.5));
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(dialog).toHaveCount(0);
+  const [mark] = await marksOf(page);
+
+  expect(mark.type).toBe('rounded-rect');
+});

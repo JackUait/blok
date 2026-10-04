@@ -356,3 +356,118 @@ describe('markdown import: code fence title', () => {
     expect(await importCode('```text\nx\n```')).toEqual({ code: 'x', language: 'text' });
   });
 });
+
+describe('markdown round trip: literal text is escaped', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const roundTripText = async (text: string, tool = 'paragraph'): Promise<string> => {
+    const { blocks } = await reimport(exportBoth([{ tool, data: { text } }]));
+
+    expect(blocks).toHaveLength(1);
+
+    return String(blocks[0].data.text);
+  };
+
+  it.each([
+    ['*not italic*'],
+    ['_not italic_ either'],
+    ['**not bold**'],
+    ['~~not struck~~ and ~one~'],
+    ['a `tick` b'],
+    ['[not a link](x)'],
+    ['![not an image](x.png)'],
+    ['a &lt;br&gt; b'],
+    ['a &lt;b&gt;bold?&lt;/b&gt; b'],
+    ['&lt;span&gt; and &lt;/p&gt;'],
+    ['the &amp;copy; entity, &amp;#169; too'],
+    ['back\\slash \\* and C:\\path\\'],
+    ['# not a heading'],
+    ['&gt; not a quote'],
+    ['- not a list'],
+    ['+ not a list'],
+    ['1. not ordered'],
+    ['2) not ordered'],
+    ['---'],
+    ['==='],
+    ['line<br># not a heading<br>- not a list<br>---'],
+    ['$x$ is not math'],
+    ['from $5 to $10'],
+  ])('keeps %s literal', async (text) => {
+    expect(await roundTripText(text)).toBe(text);
+  });
+
+  it('keeps literal markup in a heading, a quote and a list item', async () => {
+    expect(await roundTripText('*a* [b]', 'header')).toBe('*a* [b]');
+    expect(await roundTripText('*a* [b]', 'quote')).toBe('*a* [b]');
+    expect(await roundTripText('*a* [b]', 'list')).toBe('*a* [b]');
+  });
+
+  it('keeps a heading that ends in a hash', async () => {
+    expect(await roundTripText('Issue #', 'header')).toBe('Issue #');
+    expect(await roundTripText('C# and F##', 'header')).toBe('C# and F##');
+  });
+
+  it('keeps literal markup in a page title and in a file name used as a link label', async () => {
+    const markdown = exportBoth([
+      { tool: 'page', data: { pageId: 'p1', cache: { title: '*draft* [v2]' } } },
+      { tool: 'file', data: { url: 'https://e.test/f.pdf', fileName: 'a]b *c*.pdf' } },
+    ]);
+    const { blocks } = await reimport(markdown);
+
+    expect(blocks[0].data.text).toBe('*draft* [v2]');
+    expect(blocks[1].data.text).toContain('>a]b *c*.pdf</a>');
+  });
+
+  it('trims spaces around an equation source so it still reads as math', () => {
+    expect(exportBoth([{ tool: 'paragraph', data: { text: 'E <span data-latex=" x^2 "></span>' } }])).toBe('E $x^2$');
+  });
+
+  it('leaves text that carries no Markdown meaning unescaped', () => {
+    const plain = 'snake_case_name, 2 * 3 = 6, AT&T, a < b, costs $5, 3.14 and -5 and https://e.test/a_b_c~d?x=1&y=2';
+
+    expect(exportBoth([{ tool: 'paragraph', data: { text: plain.replace(/&/g, '&amp;').replace(/</g, '&lt;') } }])).toBe(plain);
+  });
+
+  it('keeps the characters of a bare URL in text, which GFM still links', async () => {
+    const text = 'see https://e.test/_a_/b~c~d?x=1&amp;y=*2* now';
+    const back = await roundTripText(text);
+
+    expect(back.replace(/<[^>]*>/g, '')).toBe(text);
+  });
+
+  it('does not escape inside inline code or a link target', async () => {
+    const text = '<code>*a* [b] &lt;c&gt;</code> <a href="https://e.test/?q=*a*_b_">*l*</a>';
+    const markdown = exportBoth([{ tool: 'paragraph', data: { text } }]);
+
+    expect(markdown).toBe('`*a* [b] <c>` [\\*l\\*](https://e.test/?q=*a*_b_)');
+
+    const back = await roundTripText(text);
+
+    expect(back).toContain('<code>*a* [b] &lt;c&gt;</code>');
+    expect(back).toContain('href="https://e.test/?q=*a*_b_"');
+    expect(back).toContain('>*l*</a>');
+  });
+
+  it('writes inline code holding a backtick with a longer fence', async () => {
+    expect(await roundTripText('<code>a`b</code>')).toBe('<code>a`b</code>');
+  });
+
+  it('exports an inline equation in $ delimiters', () => {
+    expect(exportBoth([{ tool: 'paragraph', data: { text: 'E <span data-latex="x^2"></span> end' } }])).toBe('E $x^2$ end');
+  });
+
+  it('keeps a price range next to an equation as text', async () => {
+    const markdown = exportBoth([{ tool: 'paragraph', data: { text: 'E <span data-latex="x"></span> costs $5-$10 or $3' } }]);
+    const { blocks } = await reimport(markdown);
+    const texts = blocks.map((block) => String(block.data.text ?? block.data.code));
+
+    expect(texts.join('|')).toContain('costs $5-$10 or $3');
+    expect(blocks.some((block) => block.data.code === 'x')).toBe(true);
+  });
+});

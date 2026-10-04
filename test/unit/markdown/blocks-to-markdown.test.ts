@@ -106,10 +106,10 @@ describe('blocksToMarkdown', () => {
 
   /** The page body is another document, so a copied page is its title line. */
   describe('page', () => {
-    it('serializes the cached title verbatim', () => {
+    it('serializes the cached title as plain text, escaping only what Markdown would read', () => {
       expect(blocksToMarkdown([
         { tool: 'page', data: { pageId: 'p1', cache: { title: 'Q3 <plan> & notes' } } },
-      ])).toBe('Q3 <plan> & notes');
+      ])).toBe('Q3 \\<plan> & notes');
     });
 
     it('serializes a page with no title as "New page"', () => {

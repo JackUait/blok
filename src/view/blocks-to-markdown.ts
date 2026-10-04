@@ -10,8 +10,16 @@
 import type { DefaultTreeAdapterMap } from 'parse5';
 
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
-import { HARD_BREAK, inlineLosses, serializeBlocksToMarkdown } from '../markdown/blocks-to-markdown-core';
-import type { InlineBackend, MarkdownDegradation, SerializableBlock } from '../markdown/blocks-to-markdown-core';
+import {
+  HARD_BREAK,
+  RAW_TEXT,
+  codeSpan,
+  inlineEquation,
+  inlineLosses,
+  markdownTextEscaper,
+  serializeBlocksToMarkdown
+} from '../markdown/blocks-to-markdown-core';
+import type { InlineBackend, MarkdownDegradation, SerializableBlock, TextEscaper } from '../markdown/blocks-to-markdown-core';
 import { buildDocumentModel } from './document-model';
 import type { ViewBlock } from './document-model';
 import { needsTokenizing, parseInlineFragment } from './html-text';
@@ -51,19 +59,21 @@ const attr = (node: P5ChildNode, name: string): string | null => {
  * Serialize parse5 child nodes to inline Markdown.
  * @param nodes - nodes to walk
  * @param onLoss - receives every unwrapped inline construct
+ * @param escape - escapes text node values
  */
-const serializeNodes = (nodes: P5ChildNode[], onLoss: LossReporter): string =>
-  nodes.map((node) => serializeNode(node, onLoss)).join('');
+const serializeNodes = (nodes: P5ChildNode[], onLoss: LossReporter, escape: TextEscaper): string =>
+  nodes.map((node) => serializeNode(node, onLoss, escape)).join('');
 
 /**
  * Serialize one parse5 node to inline Markdown. Mirrors the tag handling of the
  * DOM backend exactly — the parity test fails on any divergence.
  * @param node - the node to serialize
  * @param onLoss - receives every unwrapped inline construct
+ * @param escape - escapes text node values
  */
-const serializeNode = (node: P5ChildNode, onLoss: LossReporter): string => {
+const serializeNode = (node: P5ChildNode, onLoss: LossReporter, escape: TextEscaper): string => {
   if (node.nodeName === '#text') {
-    return (node as DefaultTreeAdapterMap['textNode']).value;
+    return escape((node as DefaultTreeAdapterMap['textNode']).value);
   }
 
   if (!('childNodes' in node)) {
@@ -77,10 +87,10 @@ const serializeNode = (node: P5ChildNode, onLoss: LossReporter): string => {
   const latex = attr(node, EQUATION_SOURCE_ATTR);
 
   if (latex !== null) {
-    return latex;
+    return inlineEquation(latex);
   }
 
-  const inner = serializeNodes(node.childNodes, onLoss);
+  const inner = serializeNodes(node.childNodes, onLoss, node.nodeName === 'code' ? RAW_TEXT : escape);
 
   switch (node.nodeName) {
     case 'br':
@@ -92,7 +102,7 @@ const serializeNode = (node: P5ChildNode, onLoss: LossReporter): string => {
     case 'em':
       return inner.trim() === '' ? inner : `*${inner}*`;
     case 'code':
-      return inner.trim() === '' ? inner : `\`${inner}\``;
+      return inner.trim() === '' ? inner : codeSpan(inner);
     case 's':
     case 'del':
     case 'strike':
@@ -104,13 +114,13 @@ const serializeNode = (node: P5ChildNode, onLoss: LossReporter): string => {
     }
     /**
      * An image has no child nodes, so the `default` branch serializes it to
-     * nothing and the image is lost. `alt` and `src` are written raw, exactly
-     * as `a` writes its label and `href`.
+     * nothing and the image is lost. `alt` is text, escaped like a link's
+     * label; `src` is written raw, like `href`.
      */
     case 'img': {
       const src = attr(node, 'src');
 
-      return src ? `![${attr(node, 'alt') ?? ''}](${src})` : '';
+      return src ? `![${escape(attr(node, 'alt') ?? '')}](${src})` : '';
     }
     default:
       inlineLosses(node.nodeName, attr(node, 'style')).forEach(onLoss);
@@ -128,18 +138,18 @@ const parse5InlineBackend: InlineBackend = {
    */
   inlineToMarkdown(html: string, onLoss: LossReporter = (): void => {}): string {
     const source = html ?? '';
+    const escape = markdownTextEscaper(source);
 
     /**
-     * A lone text node serializes to its raw value with no Markdown escaping,
-     * so a field the tokenizer would not have changed is already its own
-     * Markdown. Reads inline HTML through its own `parseFragment` rather than
-     * through `htmlTextContent`, so it needs the guard of its own.
+     * A field the tokenizer would not change is one text node, so it is
+     * escaped directly. Reads inline HTML through its own `parseFragment`
+     * rather than through `htmlTextContent`, so it needs the guard of its own.
      */
     if (!needsTokenizing(source)) {
-      return source;
+      return escape(source);
     }
 
-    return serializeNodes(parseInlineFragment(source).childNodes, onLoss);
+    return serializeNodes(parseInlineFragment(source).childNodes, onLoss, escape);
   },
 };
 

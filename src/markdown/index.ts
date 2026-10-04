@@ -26,11 +26,12 @@ export interface MarkdownImportResult {
 /**
  * Does the source look like it carries math? Gates the extension load.
  *
- * A `$` followed by a digit opens a price, not a formula: without that guard
- * `$5-$10` parses as inline math and tears the paragraph into a latex code
- * block plus two fragments. Real math almost never opens on a bare digit.
+ * A closing `$` needs a non-space before it and no digit after it (pandoc's
+ * rule), so `$5-$10` and `$5 and $10` stay prices while `$2x$` is math.
+ * Without that guard a price range parses as inline math and tears the
+ * paragraph into a latex code block plus two fragments.
  */
-const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?![\s\d$])[^$]+(?<=\S)\$(?!\$)/;
+const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?![\s$])[^$]+(?<=\S)\$(?![\d$])/;
 
 /**
  * Lazily load math micromark/mdast extensions only when needed.
@@ -74,7 +75,7 @@ const IMPORT_DEGRADATIONS: Record<string, MarkdownDegradation> = {
   inlineMath: {
     construct: 'inlineMath',
     action: 'degraded',
-    detail: 'Inline math becomes a latex code block, splitting the paragraph around it',
+    detail: 'Inline math in a paragraph becomes a latex code block, splitting the paragraph around it',
   },
   footnoteReference: {
     construct: 'footnoteReference',
@@ -142,6 +143,20 @@ function blockquoteDegradation(node: RootContent): MarkdownDegradation | null {
 }
 
 /**
+ * Whether a node that is lossy elsewhere arrives intact here: a bare `<br>`, or
+ * inline math in a table cell or heading, which keep it as an equation mark.
+ * @param node - the node to inspect
+ * @param parent - its parent, or null at the top level
+ */
+function keptInline(node: RootContent, parent: RootContent | null): boolean {
+  if (node.type === 'html') {
+    return isBareBreak(node.value);
+  }
+
+  return node.type === 'inlineMath' && (parent?.type === 'tableCell' || parent?.type === 'heading');
+}
+
+/**
  * Collect every degradation the import leaves behind.
  *
  * @param tree - the parsed Markdown tree
@@ -153,9 +168,10 @@ function collectImportWarnings(tree: Root): MarkdownDegradation[] {
   /**
    * Visit one node and its children.
    * @param node - the node to visit
+   * @param parent - its parent, or null at the top level
    */
-  const visit = (node: RootContent): void => {
-    const degradation = node.type === 'html' && isBareBreak(node.value)
+  const visit = (node: RootContent, parent: RootContent | null): void => {
+    const degradation = keptInline(node, parent)
       ? null
       : IMPORT_DEGRADATIONS[node.type] ?? unsafeUrlDegradation(node) ?? blockquoteDegradation(node);
 
@@ -164,11 +180,11 @@ function collectImportWarnings(tree: Root): MarkdownDegradation[] {
     }
 
     if ('children' in node && Array.isArray(node.children)) {
-      node.children.forEach(visit);
+      node.children.forEach((child: RootContent) => visit(child, node));
     }
   };
 
-  tree.children.forEach(visit);
+  tree.children.forEach((child) => visit(child, null));
 
   return warnings;
 }

@@ -30,10 +30,10 @@ type InlineNode = PhrasingContent | MathNode;
 
 /**
  * Detects whether a document contains `$…$`/`$$…$$` worth loading KaTeX for.
- * A `$` followed by a digit opens a price, not a formula: `$5-$10` must stay
- * prose. Keep in sync with `MATH_SIGNAL` in `index.ts`.
+ * A closing `$` needs a non-space before it and no digit after it, so
+ * `$5-$10` stays prose. Keep in sync with `MATH_SIGNAL` in `index.ts`.
  */
-const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?![\s\d$])[^$]+(?<=\S)\$(?!\$)/;
+const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?![\s$])[^$]+(?<=\S)\$(?![\d$])/;
 
 /**
  * Per-render state. Markdown features like references and footnotes resolve a

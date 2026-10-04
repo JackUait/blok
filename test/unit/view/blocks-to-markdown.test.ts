@@ -70,9 +70,9 @@ describe('blocksToMarkdown (view)', () => {
      * same. Escaping only one of the two would make the backends disagree with
      * how every other inline construct is written.
      */
-    it('leaves Markdown-meaningful characters in alt and src unescaped, matching link serialization', () => {
-      expect(inline('<img src="https://i/x(1).png" alt="a]b">')).toBe('![a]b](https://i/x(1).png)');
-      expect(inline('<a href="https://x.com/(1)">a]b</a>')).toBe('[a]b](https://x.com/(1))');
+    it('escapes Markdown-meaningful characters in alt and link text, leaving src and href raw', () => {
+      expect(inline('<img src="https://i/x(1).png" alt="a]b">')).toBe('![a\\]b](https://i/x(1).png)');
+      expect(inline('<a href="https://x.com/(1)">a]b</a>')).toBe('[a\\]b](https://x.com/(1))');
     });
 
     it('decodes HTML entities in alt and src', () => {
@@ -154,13 +154,13 @@ describe('blocksToMarkdown (view)', () => {
    * link: a page exports as its title line.
    */
   describe('page', () => {
-    it('exports the cached title, verbatim', () => {
+    it('exports the cached title as plain text, escaping only what Markdown would read', () => {
       const md = blocksToMarkdown(doc([
         { type: 'paragraph', data: { text: 'Before' } },
         { type: 'page', data: { pageId: 'p1', cache: { title: 'Q3 <plan> & notes' } } },
       ]));
 
-      expect(md).toBe('Before\n\nQ3 <plan> & notes');
+      expect(md).toBe('Before\n\nQ3 \\<plan> & notes');
     });
 
     it('exports an untitled page as "New page", like the rendered card', () => {
@@ -317,13 +317,13 @@ describe('blocksToMarkdown (view)', () => {
     expect(md).toBe('| First |  |\n| --- | --- |');
   });
 
-  it('keeps a null first row as the empty header row, as the editor does', () => {
+  it('keeps a null first row as a blank heading row, marked so it is not read back as headless', () => {
     const md = blocksToMarkdown(doc([
       { id: 't', type: 'table', data: { withHeadings: true, content: [null, [{ blocks: ['x'] }]] } },
       { id: 'x', type: 'paragraph', parent: 't', data: { text: 'X' } },
     ]));
 
-    expect(md).toBe('|  |\n| --- |\n| X |');
+    expect(md).toBe('| <br> |\n| --- |\n| X |');
   });
 
   it('moves covered blocks into a merged cell without reviving stale text', () => {

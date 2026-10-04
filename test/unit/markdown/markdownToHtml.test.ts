@@ -96,6 +96,13 @@ describe('markdownToHtml', () => {
     expect(html).not.toContain('$e^');
   });
 
+  it('renders inline math that opens on a digit', async () => {
+    const html = await markdownToHtml('Area $2x$ here');
+
+    expect(html).toContain('class="katex"');
+    expect(html).not.toContain('$2x$');
+  });
+
   it('leaves a price range alone instead of rendering it as math', async () => {
     const html = await markdownToHtml('\u0446\u0435\u043d\u0430 $5-$10 \u0437\u0430 \u0448\u0442\u0443\u043a\u0443');
 

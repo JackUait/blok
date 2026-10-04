@@ -14,8 +14,16 @@
  */
 
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
-import { HARD_BREAK, inlineLosses, serializeBlocksToMarkdown } from './blocks-to-markdown-core';
-import type { InlineBackend, SerializableBlock } from './blocks-to-markdown-core';
+import {
+  HARD_BREAK,
+  RAW_TEXT,
+  codeSpan,
+  inlineEquation,
+  inlineLosses,
+  markdownTextEscaper,
+  serializeBlocksToMarkdown
+} from './blocks-to-markdown-core';
+import type { InlineBackend, SerializableBlock, TextEscaper } from './blocks-to-markdown-core';
 
 export type { SerializableBlock, MarkdownDegradation } from './blocks-to-markdown-core';
 
@@ -26,18 +34,20 @@ type LossReporter = (construct: string) => void;
  * Serialize all child nodes of an element to inline Markdown.
  * @param node - parent node
  * @param onLoss - receives every unwrapped inline construct
+ * @param escape - escapes text node values
  */
-const serializeChildren = (node: Node, onLoss: LossReporter): string =>
-  Array.from(node.childNodes).map((child) => serializeInlineNode(child, onLoss)).join('');
+const serializeChildren = (node: Node, onLoss: LossReporter, escape: TextEscaper): string =>
+  Array.from(node.childNodes).map((child) => serializeInlineNode(child, onLoss, escape)).join('');
 
 /**
  * Serialize a single inline DOM node to Markdown.
  * @param node - the node to serialize
  * @param onLoss - receives every unwrapped inline construct
+ * @param escape - escapes text node values
  */
-const serializeInlineNode = (node: Node, onLoss: LossReporter): string => {
+const serializeInlineNode = (node: Node, onLoss: LossReporter, escape: TextEscaper): string => {
   if (node.nodeType === Node.TEXT_NODE) {
-    return node.textContent ?? '';
+    return escape(node.textContent ?? '');
   }
 
   if (node.nodeType !== Node.ELEMENT_NODE) {
@@ -55,12 +65,13 @@ const serializeInlineNode = (node: Node, onLoss: LossReporter): string => {
   const latex = element.getAttribute(EQUATION_SOURCE_ATTR);
 
   if (latex !== null) {
-    return latex;
+    return inlineEquation(latex);
   }
 
-  const inner = serializeChildren(element, onLoss);
+  const tag = element.tagName.toLowerCase();
+  const inner = serializeChildren(element, onLoss, tag === 'code' ? RAW_TEXT : escape);
 
-  switch (element.tagName.toLowerCase()) {
+  switch (tag) {
     case 'br':
       return HARD_BREAK;
     case 'b':
@@ -70,7 +81,7 @@ const serializeInlineNode = (node: Node, onLoss: LossReporter): string => {
     case 'em':
       return inner.trim() === '' ? inner : `*${inner}*`;
     case 'code':
-      return inner.trim() === '' ? inner : `\`${inner}\``;
+      return inner.trim() === '' ? inner : codeSpan(inner);
     case 's':
     case 'del':
     case 'strike':
@@ -82,16 +93,16 @@ const serializeInlineNode = (node: Node, onLoss: LossReporter): string => {
     }
     /**
      * An image has no child nodes, so the `default` branch serializes it to
-     * nothing and the image is lost. `alt` and `src` are written raw, exactly
-     * as `a` writes its label and `href`.
+     * nothing and the image is lost. `alt` is text, escaped like a link's
+     * label; `src` is written raw, like `href`.
      */
     case 'img': {
       const src = element.getAttribute('src');
 
-      return src ? `![${element.getAttribute('alt') ?? ''}](${src})` : '';
+      return src ? `![${escape(element.getAttribute('alt') ?? '')}](${src})` : '';
     }
     default:
-      inlineLosses(element.tagName.toLowerCase(), element.getAttribute('style')).forEach(onLoss);
+      inlineLosses(tag, element.getAttribute('style')).forEach(onLoss);
 
       return inner;
   }
@@ -109,7 +120,7 @@ const domInlineBackend: InlineBackend = {
 
     container.innerHTML = html ?? '';
 
-    return serializeChildren(container, onLoss);
+    return serializeChildren(container, onLoss, markdownTextEscaper(html ?? ''));
   },
 };
 

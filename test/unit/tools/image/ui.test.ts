@@ -194,7 +194,7 @@ describe('renderAltPill', () => {
 
   afterEach(() => vi.clearAllMocks());
 
-  it('reads "Add alt text" with a help mark when alt is missing', () => {
+  it('reads "Add alt text" when alt is missing, with no tag and no extra marks', () => {
     const pill = renderAltPill({ onOpen: noopFn, isEditorOpen: () => false });
 
     expect(pill.getAttribute('data-action')).toBe('alt-edit');
@@ -202,20 +202,20 @@ describe('renderAltPill', () => {
     expect(pill.getAttribute('aria-pressed')).toBe('false');
     // Named by its visible text, so a voice user saying "click Add alt text" hits it.
     expect(pill.hasAttribute('aria-label')).toBe(false);
-    expect(pill.textContent).toContain('Add alt text');
-    expect(pill.querySelector('.blok-image-alt-pill__help')).not.toBeNull();
+    expect(pill.textContent).toBe('Add alt text');
+    expect(pill.querySelector('.blok-image-alt-pill__label')).toBeNull();
+    expect(pill.querySelector('.blok-image-alt-pill__help, .blok-image-alt-pill__mark')).toBeNull();
   });
 
-  it('shows "Alt" and the start of the text when alt is set, with no help mark', () => {
+  it('shows the Alt tag then the text, with a real space between them', () => {
     const pill = renderAltPill({ alt: 'Pink yarn mascot', onOpen: noopFn, isEditorOpen: () => false });
 
+    expect(pill.textContent).toBe('Alt Pink yarn mascot');
     expect(pill.getAttribute('data-state')).toBe('set');
     expect(pill.getAttribute('aria-pressed')).toBe('true');
-    expect(pill.textContent).toContain('Alt');
-    expect(pill.textContent).toContain('Pink yarn mascot');
-    expect(pill.querySelector('.blok-image-alt-pill__help')).toBeNull();
-    expect(pill.querySelector('.blok-image-alt-pill__mark svg')).not.toBeNull();
-    expect(pill.hasAttribute('aria-label')).toBe(false);
+    expect(pill.querySelector('.blok-image-alt-pill__label')?.textContent).toBe('Alt');
+    expect(pill.querySelector('.blok-image-alt-pill__text')?.textContent).toBe('Pink yarn mascot');
+    expect(pill.querySelector('svg')).toBeNull();
   });
 
   it('opens the editor on click without bubbling to the block', () => {

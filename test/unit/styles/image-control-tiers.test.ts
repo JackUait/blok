@@ -149,8 +149,19 @@ describe('alt hint and pill width', () => {
     expect(body).toContain('white-space: normal');
   });
 
-  it('caps the alt pill so a long description does not cover the picture', () => {
-    expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill')).toContain('max-width: min(calc(100% - 20px), 240px)');
+  it('caps the alt tag so a long description does not cover the picture', () => {
+    expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill')).toContain('max-width: min(calc(100% - 16px), 240px)');
+  });
+
+  it('the alt tag is painted from the overlay tokens, so data-tone repaints it', () => {
+    const body = findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill');
+
+    expect(body).toContain('background: var(--blok-overlay-surface)');
+    expect(body).toContain('color: var(--blok-overlay-fg-strong)');
+    expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill__text')).toContain('color: var(--blok-overlay-fg)');
+    expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill__label')).toContain('text-transform: uppercase');
+    expect(css).not.toContain('blok-image-alt-pill__mark');
+    expect(css).not.toContain('blok-image-alt-pill__help');
   });
 });
 

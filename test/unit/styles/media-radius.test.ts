@@ -64,7 +64,7 @@ const BORDER = '--blok-border-width-hairline';
 const RADII: Array<[string, string, string]> = [
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-inner img', role('block')],
   ['styles/image.css', '[data-blok-element-content].bg-selection:has([data-blok-tool="image"]) .blok-image-inner', role('block')],
-  ['styles/image.css', '[data-blok-tool="image"] .blok-image-alt-pill', role('pill')],
+  ['styles/image.css', '[data-blok-tool="image"] .blok-image-alt-pill', role('control')],
   ['styles/main.css', '[data-blok-tool="image"] .blok-image-toolbar', role('surface')],
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar button', nested('control')],
   ['styles/image.css', '[data-blok-tool="image"] [data-role="image-selection-ring"]', 'calc(var(--blok-radius-block) + var(--blok-image-ring-gap))'],

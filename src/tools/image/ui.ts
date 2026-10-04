@@ -11,7 +11,6 @@ import { onHover as tooltipOnHover, hide as tooltipHide, show as tooltipShow } f
 import type { I18nInstance } from '../../components/utils/tools';
 import {
   IconCaption,
-  IconCheck,
   IconChevronLeft,
   IconChevronRight,
   IconCollapseFullscreen,
@@ -215,30 +214,17 @@ export function renderAltPill(opts: AltPillOptions): HTMLButtonElement {
   btn.setAttribute('data-state', hasAlt ? 'set' : 'missing');
   btn.setAttribute('aria-pressed', hasAlt ? 'true' : 'false');
 
-  const mark = document.createElement('span');
-  mark.className = 'blok-image-alt-pill__mark';
-  mark.setAttribute('aria-hidden', 'true');
-  if (hasAlt) mark.innerHTML = IconCheck;
-  btn.appendChild(mark);
-
+  if (hasAlt) {
+    const label = document.createElement('span');
+    label.className = 'blok-image-alt-pill__label';
+    label.textContent = tr(opts.i18n, 'tools.image.altButton');
+    // A real space, not a CSS gap: the accessible name is built from text, and it read "AltPink…".
+    btn.append(label, ' ');
+  }
   const text = document.createElement('span');
   text.className = 'blok-image-alt-pill__text';
-  if (hasAlt) {
-    const label = document.createElement('b');
-    label.textContent = tr(opts.i18n, 'tools.image.altButton');
-    text.append(label, opts.alt ?? '');
-  } else {
-    text.textContent = tr(opts.i18n, 'tools.image.altAdd');
-  }
+  text.textContent = hasAlt ? opts.alt ?? '' : tr(opts.i18n, 'tools.image.altAdd');
   btn.appendChild(text);
-
-  if (!hasAlt) {
-    const help = document.createElement('span');
-    help.className = 'blok-image-alt-pill__help';
-    help.setAttribute('aria-hidden', 'true');
-    help.textContent = '?';
-    btn.appendChild(help);
-  }
 
   const hint = document.createElement('div');
   hint.className = 'blok-image-alt-hint';

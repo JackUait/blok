@@ -697,6 +697,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const SHAPE_PICKER_LIVE_INK_BYTES = 5_732;
     // Shape picker timing tokens (lead, step, trace) shared by every open animation.
     const SHAPE_PICKER_TIMING_TOKENS_BYTES = 268;
+    // Image chrome paper and graphite: one bar, bar handles and an ALT tag replace the
+    // islands' split motion; tone tokens added. Net, measured against 80722a4e.
+    const IMAGE_CHROME_PAPER_GRAPHITE_BYTES = -4_645;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -733,7 +736,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + FIND_OPTIONS_SAVINGS_BYTES
       + SPACING_TOKEN_REFERENCES_BYTES
       + SHAPE_PICKER_LIVE_INK_BYTES
-      + SHAPE_PICKER_TIMING_TOKENS_BYTES;
+      + SHAPE_PICKER_TIMING_TOKENS_BYTES
+      + IMAGE_CHROME_PAPER_GRAPHITE_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

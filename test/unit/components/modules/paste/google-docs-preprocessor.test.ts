@@ -20,6 +20,17 @@ describe('preprocessGoogleDocsHtml', () => {
       expect(result).not.toContain('<mark');
     });
 
+    it('keeps a span highlight written as the background shorthand (Word, Writer)', () => {
+      expect(preprocessGoogleDocsHtml('<span style="background:yellow;mso-highlight:yellow">Hl</span>')).toMatch(/<mark style="[^"]*background-color: yellow/);
+      expect(preprocessGoogleDocsHtml('<span style="background: #ffff00">Hl</span>')).toMatch(/<mark style="[^"]*background-color: #/);
+    });
+
+    it('drops an invisible or non-colour background shorthand', () => {
+      expect(preprocessGoogleDocsHtml('<span style="background: white">a</span>')).not.toContain('<mark');
+      expect(preprocessGoogleDocsHtml('<span style="background: url(x.png)">a</span>')).not.toContain('<mark');
+      expect(preprocessGoogleDocsHtml('<span style="background: currentcolor">a</span>')).not.toContain('<mark');
+    });
+
     it('should not convert plain browser span with only font styles', () => {
       const html = '<span style="font-size: 16px; font-family: sans-serif;">text</span>';
       const result = preprocessGoogleDocsHtml(html);
@@ -465,6 +476,18 @@ describe('preprocessGoogleDocsHtml', () => {
       expect(cellStyleAfter(
         '<td style="text-align:right"><p style="text-align:center">a</p></td>'
       )).toBe('text-align:right');
+    });
+
+    it('reads LibreOffice Writer\'s align attribute on the paragraphs', () => {
+      expect(cellStyleAfter('<td><p align="center">a</p></td>')).toMatch(/text-align:\s*center/);
+    });
+
+    it('lets a paragraph\'s style win over its align attribute', () => {
+      expect(cellStyleAfter('<td><p align="right" style="text-align:center">a</p></td>')).toMatch(/text-align:\s*center/);
+    });
+
+    it('ignores an align attribute that is not a keyword', () => {
+      expect(cellStyleAfter('<td><p align="center;color:red">a</p></td>')).toBeNull();
     });
 
     it('does not give a nested table\'s alignment to the outer cell', () => {

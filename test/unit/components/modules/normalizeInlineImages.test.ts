@@ -183,10 +183,11 @@ describe('normalizeInlineImages', () => {
     expect(imageBlock).toBeDefined();
     expect(imageBlock?.data.url).toBe('https://example.com/photo.jpg');
 
-    // Paragraph text preserves surrounding text with img tag removed
-    const updatedParagraph = result.find((b) => b.id === 'p-1');
-
-    expect(updatedParagraph?.data.text).toBe('Hello  World');
+    // Text on each side of the image stays on that side
+    expect(result.slice(1).map((b) => b.tool === 'image' ? b.data.url : b.data.text)).toEqual(
+      ['Hello ', 'https://example.com/photo.jpg', ' World']
+    );
+    expect(result[1].id).toBe('p-1');
   });
 
   it('does not modify a paragraph with no <img> tags', () => {
@@ -301,6 +302,78 @@ describe('normalizeInlineImages', () => {
     expect(updatedTable?.contentIds).toEqual(
       expect.arrayContaining(['img-generated-1', 'img-generated-2', 'p-1', 'p-2'])
     );
+  });
+
+  it('keeps the alt text of an extracted image', () => {
+    const table = makeTable('table-1', [[{ blocks: ['p-1'] }]], ['p-1']);
+    const paragraph = makeCellParagraph('p-1', '<img src="https://example.com/cat.png" alt="a &amp; cat">', 'table-1');
+
+    const result = normalizeInlineImages([table, paragraph]);
+
+    expect(result.find((b) => b.tool === 'image')?.data).toEqual({ url: 'https://example.com/cat.png', alt: 'a & cat' });
+  });
+
+  it('keeps text written before an image ahead of it, and text after it behind it', () => {
+    const table = makeTable('table-1', [[{ blocks: ['p-0', 'p-1', 'p-9'] }]], ['p-0', 'p-1', 'p-9']);
+    const paragraph: BlockEntry = {
+      ...makeCellParagraph('p-1', 'one <img src="a.png"> two <img src="b.png"> three', 'table-1'),
+      data: { text: 'one <img src="a.png"> two <img src="b.png"> three', textColor: 'red' },
+      tunes: { align: 'center' },
+    };
+
+    const result = normalizeInlineImages([
+      table,
+      makeCellParagraph('p-0', 'first', 'table-1'),
+      paragraph,
+      makeCellParagraph('p-9', 'last', 'table-1'),
+    ]);
+
+    const order = ['p-0', 'p-1', 'img-generated-1', 'img-generated-2', 'img-generated-3', 'img-generated-4', 'p-9'];
+    const updatedTable = result.find((b) => b.id === 'table-1');
+    const tableData = updatedTable?.data as { content: Array<Array<{ blocks: string[] }>> };
+
+    expect(tableData.content[0][0].blocks).toEqual(order);
+    expect(updatedTable?.contentIds).toEqual(order);
+    expect(result.slice(1).map((b) => b.id)).toEqual(order);
+    expect(result.slice(1).map((b) => b.tool === 'image' ? b.data.url : b.data.text)).toEqual(
+      ['first', 'one ', 'a.png', ' two ', 'b.png', ' three', 'last']
+    );
+    expect(result.find((b) => b.id === 'img-generated-4')).toEqual({
+      id: 'img-generated-4',
+      tool: 'paragraph',
+      data: { text: ' three', textColor: 'red' },
+      tunes: { align: 'center' },
+      isValid: true,
+      parentId: 'table-1',
+    });
+  });
+
+  it('keeps inline marks whole on both sides of an image they wrap', () => {
+    const table = makeTable('table-1', [[{ blocks: ['p-1'] }]], ['p-1']);
+    const paragraph = makeCellParagraph('p-1', '<b>bold <img src="a.png"> still bold</b>', 'table-1');
+
+    const result = normalizeInlineImages([table, paragraph]);
+
+    expect(result.slice(1).map((b) => b.tool === 'image' ? b.data.url : b.data.text)).toEqual(
+      ['<b>bold </b>', 'a.png', '<b> still bold</b>']
+    );
+  });
+
+  it('drops the empty mark left at the edge of an image', () => {
+    const table = makeTable('table-1', [[{ blocks: ['p-1'] }]], ['p-1']);
+    const paragraph = makeCellParagraph('p-1', '<b><img src="a.png">after</b>', 'table-1');
+
+    const result = normalizeInlineImages([table, paragraph]);
+
+    expect(result.slice(1).map((b) => b.tool === 'image' ? b.data.url : b.data.text)).toEqual(['a.png', '<b>after</b>']);
+    expect(result.slice(1).map((b) => b.id)).toEqual(['img-generated-1', 'p-1']);
+  });
+
+  it('extracts nothing on a second pass over its own output', () => {
+    const table = makeTable('table-1', [[{ blocks: ['p-1'] }]], ['p-1']);
+    const once = normalizeInlineImages([table, makeCellParagraph('p-1', 'a <img src="a.png" alt="x"> b', 'table-1')]);
+
+    expect(normalizeInlineImages(once)).toBe(once);
   });
 
   it('returns input unchanged when there are no table blocks', () => {

@@ -12,6 +12,7 @@ import {
   buildClipboardPlainText,
   parseClipboardHtml,
   parseGenericHtmlTable,
+  pastedContentOutsideTable,
 } from './table-cell-clipboard';
 import type { CellColorMode } from './table-cell-color-picker';
 import { TableCellSelection } from './table-cell-selection';
@@ -42,6 +43,9 @@ import { TableScrollHaze } from './table-scroll-haze';
 import { scrollToInlineEnd } from './table-direction';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard } from './types';
 import { movePlacementWithMotion } from './table-cell-placement-motion';
+import { preprocessPastedHtml } from '../../components/modules/paste/preprocess-pasted-html';
+import { findOwn } from '../../components/utils/own-element';
+import { markPasteContinuation, pasteContinuationSettled } from '../../components/utils/paste-continuation';
 
 /**
  * Tags each bulk-formattable mark produces. The first entry is what we WRITE;
@@ -1609,7 +1613,9 @@ export class TableSubsystems {
 
     const html = e.clipboardData.getData('text/html');
     const blokPayload = parseClipboardHtml(html, tool => this.toolSanitizeConfig(tool));
-    const externalPayload = blokPayload === null ? parseGenericHtmlTable(html) : null;
+    // Raw clipboard HTML skips the paste module's pre-passes.
+    const preprocessed = blokPayload === null && html !== '' ? preprocessPastedHtml(html, { keepTables: true }) : '';
+    const externalPayload = blokPayload === null ? parseGenericHtmlTable(preprocessed) : null;
     const payload = blokPayload ?? externalPayload;
 
     if (!payload) {
@@ -1624,7 +1630,7 @@ export class TableSubsystems {
      */
     if (
       externalPayload !== null &&
-      Array.from(new DOMParser().parseFromString(html, 'text/html').querySelectorAll('table'))
+      Array.from(new DOMParser().parseFromString(preprocessed, 'text/html').querySelectorAll('table'))
         .filter(table => (table.parentElement?.closest('table') ?? null) === null).length > 1
     ) {
       return;
@@ -1659,28 +1665,88 @@ export class TableSubsystems {
     const targetRowIndex = parseInt(targetCell.getAttribute(CELL_ROW_ATTR) ?? '0', 10);
     const targetColIndex = parseInt(targetCell.getAttribute(CELL_COL_ATTR) ?? '0', 10);
 
-    if (payload.rows === 1 && payload.cols === 1) {
-      const singleCell = payload.cells[0][0];
-      // Inline caret-insert only works for plain text blocks. Anything else
-      // (image/embed/code, and list items — which DO carry data.text but would
-      // lose their list structure in a text join) must be recreated as real
-      // blocks in the target cell instead.
-      const isTextOnly = singleCell.blocks.every(
-        block => block.tool === 'paragraph' && typeof block.data.text === 'string' && block.children === undefined
-      );
+    // Decided on the pre-passed HTML, where app chrome (copy buttons) is gone;
+    // taken from the raw HTML so the paste module runs its pre-passes once.
+    const contentOutsideTable = externalPayload !== null && pastedContentOutsideTable(preprocessed) !== null
+      ? pastedContentOutsideTable(html)
+      : null;
 
-      if (isTextOnly) {
-        this.insertSingleCellPayloadInline(singleCell);
+    // Inline caret-insert only works for plain text blocks. Anything else
+    // (image/embed/code, and list items — which DO carry data.text but would
+    // lose their list structure in a text join) must be recreated as real
+    // blocks in the target cell instead.
+    const isTextOnlySingleCell = payload.rows === 1 && payload.cols === 1 && payload.cells[0][0].blocks.every(
+      block => block.tool === 'paragraph' && typeof block.data.text === 'string' && block.children === undefined
+    );
 
-        return;
+    const pasteCells = (): void => {
+      if (isTextOnlySingleCell) {
+        this.insertSingleCellPayloadInline(payload.cells[0][0]);
+      } else {
+        this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
       }
+    };
 
-      this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
+    if (contentOutsideTable === null) {
+      pasteCells();
 
       return;
     }
 
-    this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
+    // The cells, the block after the table and the paste into it are one
+    // undo step. The paste lands async, so the step stays open until it does.
+    this.host.api.blocks.beginTransaction?.();
+
+    const endTransaction = (): void => {
+      this.host.api.blocks.endTransaction?.();
+    };
+
+    try {
+      pasteCells();
+    } catch (error) {
+      endTransaction();
+      throw error;
+    }
+
+    void this.pasteAfterTable(contentOutsideTable).finally(endTransaction);
+  }
+
+  /**
+   * Paste the content that came around a pasted table as blocks after this
+   * table, at its level, in their original order. It goes through the editor's
+   * paste handling, the only way a tool can turn HTML into blocks; the empty
+   * default block it lands on is replaced by the pasted blocks.
+   */
+  private async pasteAfterTable(content: { html: string; text: string }): Promise<void> {
+    const tableId = this.host.blockId;
+
+    if (tableId === undefined) {
+      return;
+    }
+
+    const block = this.host.api.blocks.insertAt(undefined, {}, { position: { after: tableId } });
+    const target = findOwn(block.holder, '[contenteditable="true"]') ?? block.holder;
+
+    // Moves the selection out of the cell: a paste merges into the caret's block.
+    this.host.api.caret.setToBlock(block, 'start');
+
+    const event = new Event('paste', { bubbles: true, cancelable: true });
+    const flavors: Record<string, string> = { 'text/html': content.html, 'text/plain': content.text };
+
+    Object.defineProperty(event, 'clipboardData', {
+      value: { types: Object.keys(flavors), getData: (type: string): string => flavors[type] ?? '' },
+    });
+    // Unmarked, it would start a gesture and close the undo step mid-paste.
+    markPasteContinuation(event);
+    target.dispatchEvent(event);
+    await pasteContinuationSettled(event);
+
+    // Nothing was pasted into it: the empty block must not stay behind.
+    const index = this.host.api.blocks.getBlockIndex(block.id);
+
+    if (index !== undefined && this.host.api.blocks.getById(block.id)?.isEmpty === true) {
+      await this.host.api.blocks.delete(index);
+    }
   }
 
   /**

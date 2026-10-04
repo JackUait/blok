@@ -1088,6 +1088,22 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[0][0].textColor).toBeUndefined();
     });
 
+    it('should not set textColor when td has near-black body text (Gemini rgb(31, 31, 31))', () => {
+      const html = '<table><tr><td style="color: rgb(31, 31, 31)">a</td><td style="color: #202124">b</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].textColor).toBeUndefined();
+      expect(result?.cells[0][1].textColor).toBeUndefined();
+    });
+
+    it('should keep every text color preset while dropping near-black', () => {
+      const presets = ['#787774', '#9f6b53', '#d9730d', '#cb9b00', '#448361', '#337ea9', '#9065b0', '#c14c8a', '#d44c47'];
+      const html = `<table><tr>${presets.map(color => `<td style="color: ${color}">x</td>`).join('')}</tr></table>`;
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0].map(cell => cell.textColor)).toEqual(presets);
+    });
+
     it('should still extract non-black text color from td alongside default-black filtering', () => {
       const html = `<table><tr>
         <td style="color: rgb(0, 0, 0)">black text</td>
@@ -1488,6 +1504,53 @@ describe('table-cell-clipboard', () => {
       );
 
       expect(result?.cells[0][0].placement).toBe('top-right');
+    });
+
+    it('takes the grid direction from the clipboard document body', () => {
+      const result = parseGenericHtmlTable(
+        '<html><body dir="rtl"><table><tr><td style="text-align: left">A</td></tr></table></body></html>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('top-right');
+    });
+
+    it('takes the grid direction from an inline direction style on the table or a wrapper', () => {
+      const onTable = parseGenericHtmlTable(
+        '<table style="direction: rtl"><tr><td style="text-align: left">A</td></tr></table>'
+      );
+      const onWrapper = parseGenericHtmlTable(
+        '<div style="direction:rtl"><table><tr><td style="text-align: left">A</td></tr></table></div>'
+      );
+
+      expect(onTable?.cells[0][0].placement).toBe('top-right');
+      expect(onWrapper?.cells[0][0].placement).toBe('top-right');
+    });
+
+    it('lets a table own dir="ltr" win over an RTL wrapper', () => {
+      const result = parseGenericHtmlTable(
+        '<div dir="rtl"><table dir="ltr"><tr><td style="text-align: right">A</td></tr></table></div>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('top-right');
+    });
+
+    it('does not read flex-direction as the grid direction', () => {
+      const result = parseGenericHtmlTable(
+        '<div dir="rtl" style="flex-direction: row"><table><tr><td style="text-align: left">A</td></tr></table></div>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('top-right');
+    });
+
+    it('reads text-align start/end as the grid start/end in both directions', () => {
+      const row = '<tr><td style="text-align: start">A</td><td style="text-align: end">B</td></tr>';
+
+      for (const dir of ['ltr', 'rtl']) {
+        const result = parseGenericHtmlTable(`<table dir="${dir}">${row}</table>`);
+
+        expect(result?.cells[0][0].placement).toBeUndefined();
+        expect(result?.cells[0][1].placement).toBe('top-right');
+      }
     });
   });
 

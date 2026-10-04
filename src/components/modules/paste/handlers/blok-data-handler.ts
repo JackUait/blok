@@ -6,6 +6,7 @@ import { convertBlockDataToString, convertStringToBlockData } from '../../../uti
 import { linkToBlock, takeCut, type CopyLink } from '../../../utils/copy-as-link';
 import { sanitizeBlocks } from '../../../utils/sanitizer';
 import { safeHref } from '../../../utils/sanitize-url';
+import { getRestrictedTools, isInsideTableCell } from '../../../../tools/table/table-restrictions';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PatternMatch } from '../types';
@@ -220,6 +221,28 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
+   * The table enclosing the caret cell, when the batch holds a tool barred from cells.
+   * @param blocks - the clipboard entries, nested ones included
+   */
+  private tableToLeave(blocks: BlokClipboardBlock[]): Block | undefined {
+    const { BlockManager } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+    const restricted = new Set(getRestrictedTools());
+
+    if (currentBlock?.parentId == null || !blocks.some(block => restricted.has(block.tool)) || !isInsideTableCell(currentBlock)) {
+      return undefined;
+    }
+
+    const walk = (parentId: string | null): Block | undefined => {
+      const parent = parentId !== null ? BlockManager.getBlockById(parentId) : undefined;
+
+      return parent === undefined || parent.name === 'table' ? parent : walk(parent.parentId);
+    };
+
+    return walk(currentBlock.parentId);
+  }
+
+  /**
    * Insert Blok JSON blocks using a two-pass approach:
    *
    * Pass 1 — TABLE cell children (blocks whose parentId is a pasted table) are
@@ -257,8 +280,18 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       this.config.sanitizer
     );
 
+    // A tool barred from cells sends the whole batch out of the table, right
+    // after its subtree, as BasePasteHandler.redirectToTableParentIfNeeded does.
+    const redirectTable = this.tableToLeave(blocks);
+
+    if (redirectTable !== undefined) {
+      // An insert after a table goes after its whole run, at its level.
+      BlockManager.currentBlock = redirectTable;
+    }
+
     // Capture replace intent before any insertions move the current block pointer.
     const shouldReplaceFirst =
+      redirectTable === undefined &&
       canReplace &&
       Boolean(BlockManager.currentBlock?.tool.isDefault) &&
       Boolean(BlockManager.currentBlock?.isEmpty);
@@ -281,9 +314,10 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
     const isInContainerTitle = childContainer !== null &&
       !childContainer.contains(currentBlock?.currentInput ?? null);
-    const contextParentId = isInContainerTitle
+    const caretParentId = isInContainerTitle
       ? (currentBlock?.id ?? null)
       : (currentBlock?.parentId ?? null);
+    const contextParentId = redirectTable !== undefined ? redirectTable.parentId : caretParentId;
 
     // IDs of pasted table blocks. ONLY a table's cell children must be inserted
     // before their parent: the table block's `data.content` references its cell

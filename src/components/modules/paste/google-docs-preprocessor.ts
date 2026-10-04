@@ -11,6 +11,7 @@ import { parseUntrustedHtml } from '../../utils/inert-html';
 import { trimTrailingBreaks } from '../../utils/trailing-breaks';
 import { isSpacerParagraph } from '../../utils/spacer-paragraph';
 import { ownPastedCells, ownPastedRows } from '../../../tools/table/table-cell-paste';
+import { isSafeCssColor } from '../../../shared/css-color';
 
 /**
  * Pre-process Google Docs clipboard HTML before sanitization.
@@ -22,16 +23,18 @@ import { ownPastedCells, ownPastedRows } from '../../../tools/table/table-cell-p
  * spans to `<b>`/`<i>`/`<mark>` BEFORE the sanitizer runs.
  *
  * @param html - raw clipboard HTML string
+ * @param options.keepTables - skip the layout-table passes (unwrap, columns
+ *   stamp): a paste into a table cell keeps every table a table
  * @returns preprocessed HTML string
  */
-export function preprocessGoogleDocsHtml(html: string): string {
+export function preprocessGoogleDocsHtml(html: string, { keepTables = false }: { keepTables?: boolean } = {}): string {
   const wrapper = parseUntrustedHtml(html);
 
   const isGoogleDocs = unwrapGoogleDocsContent(wrapper);
 
   convertGoogleDocsStyles(wrapper, isGoogleDocs);
 
-  if (isGoogleDocs) {
+  if (isGoogleDocs && !keepTables) {
     unwrapLayoutSingleColumnTables(wrapper);
   }
 
@@ -45,8 +48,11 @@ export function preprocessGoogleDocsHtml(html: string): string {
    */
   convertTableCellParagraphs(wrapper);
 
-  if (isGoogleDocs) {
+  if (isGoogleDocs && !keepTables) {
     stampColumnsCandidateTables(wrapper);
+  }
+
+  if (isGoogleDocs) {
     promoteImages(wrapper);
   }
 
@@ -423,6 +429,33 @@ function hasHeadingAncestor(node: Element): boolean {
 
 const SCRIPT_TAGS: Record<string, string | undefined> = { super: 'sup', sub: 'sub' };
 
+/**
+ * A style's background colour: the `background-color` longhand, else the
+ * colour in a `background` shorthand (Word and Writer highlights). The
+ * shorthand is read by a style parser in an inert document, so a `url()`
+ * in it is never fetched.
+ */
+function readBackgroundColor(style: string): string | undefined {
+  const longhand = /background-color\s*:\s*([^;]+)/i.exec(style)?.[1];
+
+  if (longhand !== undefined) {
+    return longhand.trim();
+  }
+
+  if (!/(?<![a-z-])background\s*:/i.test(style)) {
+    return undefined;
+  }
+
+  const probe = document.implementation.createHTMLDocument('').createElement('div');
+
+  probe.style.cssText = style;
+
+  const color = probe.style.backgroundColor;
+
+  // currentcolor is valid but paints the text's own colour behind it.
+  return isSafeCssColor(color) && color.toLowerCase() !== 'currentcolor' ? color : undefined;
+}
+
 export function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string | null {
   const style = span.getAttribute('style') ?? '';
   /**
@@ -435,10 +468,9 @@ export function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean):
   const isItalic = /font-style\s*:\s*italic/i.test(style);
 
   const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
-  const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
 
   const color = colorMatch?.[1]?.trim();
-  const bgColor = bgMatch?.[1]?.trim();
+  const bgColor = readBackgroundColor(style);
 
   /**
    * A link's own color is dropped so the link falls back to the default link
@@ -665,8 +697,17 @@ function unwrapCellParagraph(p: Element): void {
 
 const TEXT_ALIGN = /(?<![a-z-])text-align\s*:\s*([^;]+)/i;
 
+/** A paragraph's text-align: its style, else Writer's `align` attribute (keywords only). */
+function paragraphAlignment(p: Element): string | undefined {
+  const styled = TEXT_ALIGN.exec(p.getAttribute('style') ?? '')?.[1];
+  const attribute = p.getAttribute('align')?.trim();
+  const alignment = styled ?? (attribute !== undefined && /^[a-z]+$/i.test(attribute) ? attribute : undefined);
+
+  return alignment?.trim().toLowerCase();
+}
+
 /**
- * Docs and Word put a cell's alignment on its `<p>`s, which the unwrap below
+ * Docs, Word and Writer put a cell's alignment on its `<p>`s, which the unwrap below
  * drops. Copy it onto the cell's own style (the table reads it there) when
  * every content paragraph agrees and the cell has no text-align of its own.
  */
@@ -680,7 +721,7 @@ export function carryParagraphAlignmentToCell(cell: Element): void {
   // A nested table's paragraphs belong to its own cells.
   const paragraphs = Array.from(cell.querySelectorAll('p'))
     .filter(p => p.closest('td, th') === cell && !isSpacerParagraph(p));
-  const alignments = new Set(paragraphs.map(p => TEXT_ALIGN.exec(p.getAttribute('style') ?? '')?.[1]?.trim().toLowerCase()));
+  const alignments = new Set(paragraphs.map(paragraphAlignment));
   const [alignment] = alignments;
 
   if (alignments.size !== 1 || alignment === undefined) {

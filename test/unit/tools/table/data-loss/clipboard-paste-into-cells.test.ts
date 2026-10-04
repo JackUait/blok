@@ -251,8 +251,9 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
     await pasteIntoCell(tableWithFirstCell('a<img src="https://example.com/x.png" alt="x">b'), 'ab\tz\nq\tw');
     const blocks = cellBlocksAt(await editor.save(), 0, 0);
 
-    expect(blocks.find(block => block.type === 'image')?.data).toMatchObject({ url: 'https://example.com/x.png' });
-    expect(blocks.find(block => block.type === 'paragraph')?.data.text).toBe('ab');
+    expect(blocks.find(block => block.type === 'image')?.data).toMatchObject({ url: 'https://example.com/x.png', alt: 'x' });
+    expect(blocks.map(block => block.type === 'paragraph' ? `paragraph:${String(block.data.text)}` : block.type))
+      .toEqual(['paragraph:a', 'image', 'paragraph:b']);
   });
 
   it('a raster data: image src is kept', async () => {
@@ -327,5 +328,25 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
 
     expect(placementAt(saved, 0, 0)).toBeUndefined();
     expect(cellHtml(saved, 0, 0)).toContain('a');
+  });
+
+  it('a heading or blockquote in a pasted cell becomes its own paragraph, not glued to the next text', async () => {
+    const editor = await bootWithTable();
+
+    await pasteIntoCell(
+      '<table><tbody><tr><td><h2>Title</h2><p>body</p></td><td><blockquote><b>Said</b></blockquote>after</td></tr>'
+        + '<tr><td>q</td><td>w</td></tr></tbody></table>',
+      'Title body\tSaid after\nq\tw'
+    );
+    const saved = await editor.save();
+
+    expect(cellBlocksAt(saved, 0, 0).map(block => [block.type, block.data.text])).toStrictEqual([
+      ['paragraph', 'Title'],
+      ['paragraph', 'body'],
+    ]);
+    expect(cellBlocksAt(saved, 0, 1).map(block => [block.type, block.data.text])).toStrictEqual([
+      ['paragraph', expect.stringMatching(/^<(b|strong)>Said<\/(b|strong)>$/)],
+      ['paragraph', 'after'],
+    ]);
   });
 });

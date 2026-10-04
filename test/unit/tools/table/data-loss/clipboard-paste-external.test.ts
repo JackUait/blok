@@ -456,4 +456,24 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
 
     expect(texts.filter(text => /A1A2|A2B1|B1B2|C1C2/.test(text))).toStrictEqual([]);
   });
+
+  it('a heading or blockquote in a cell becomes its own paragraph, not glued to the next text', async () => {
+    const editor = await boot([{ id: 'p', type: 'paragraph', data: { text: '' } }]);
+    const html = '<table><tbody>'
+      + '<tr><td><h2>Title</h2><p>body</p></td><td><blockquote><b>Said</b></blockquote>after</td></tr>'
+      + '<tr><td>a</td><td>b</td></tr>'
+      + '</tbody></table>';
+
+    await pasteHtml(editableOf('p'), html, 'Title body\tSaid after\na\tb');
+    const saved = await editor.save();
+
+    expect(cellBlocks(saved, 0, 0).map(block => [block.type, block.data.text])).toStrictEqual([
+      ['paragraph', 'Title'],
+      ['paragraph', 'body'],
+    ]);
+    expect(cellBlocks(saved, 0, 1).map(block => [block.type, block.data.text])).toStrictEqual([
+      ['paragraph', expect.stringMatching(/^<(b|strong)>Said<\/(b|strong)>$/)],
+      ['paragraph', 'after'],
+    ]);
+  });
 });

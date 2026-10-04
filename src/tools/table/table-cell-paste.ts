@@ -93,17 +93,40 @@ const preText = (pre: HTMLElement): string => {
   return copy.textContent ?? '';
 };
 
+const CELL_TEXT_BLOCKS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote']
+  .flatMap(tag => [`td ${tag}`, `th ${tag}`])
+  .join(', ');
+
 /**
- * Swap each `<pre>` inside a pasted table cell for {@link CELL_CODE_TAG} so the
- * paste sanitizer keeps it. Runs on raw clipboard HTML, before that sanitizer.
+ * A cell holds no header or quote block, and sanitizers unwrap them with no
+ * boundary, gluing them to the next text. Swap each for its content between
+ * `<br>`s so it parses as its own paragraph; the parser drops the empty runs.
+ *
+ * @param root - holds the table(s), or is a cell itself
  */
-export const protectCellCodeBlocks = (html: string): string => {
+export const unwrapCellHeadingsAndQuotes = (root: Element): void => {
+  for (const el of Array.from(root.querySelectorAll(CELL_TEXT_BLOCKS))) {
+    const doc = el.ownerDocument;
+
+    el.replaceWith(doc.createElement('br'), ...Array.from(el.childNodes), doc.createElement('br'));
+  }
+};
+
+/**
+ * Ready a pasted table's cells for the paste sanitizer: swap each `<pre>` for
+ * {@link CELL_CODE_TAG} so it is kept, and see {@link unwrapCellHeadingsAndQuotes}.
+ * Runs on raw clipboard HTML, before that sanitizer.
+ */
+export const protectPastedCellBlocks = (html: string): string => {
   const wrapper = parseUntrustedHtml(html);
   const pres = wrapper.querySelectorAll<HTMLElement>('td pre, th pre');
+  const textBlocks = wrapper.querySelector(CELL_TEXT_BLOCKS);
 
-  if (pres.length === 0) {
+  if (pres.length === 0 && textBlocks === null) {
     return html;
   }
+
+  unwrapCellHeadingsAndQuotes(wrapper);
 
   pres.forEach(pre => {
     const stand = pre.ownerDocument.createElement(CELL_CODE_TAG);

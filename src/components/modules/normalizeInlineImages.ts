@@ -23,38 +23,139 @@ interface TableCell {
 }
 
 /**
- * Tracking info for a paragraph whose inline images need extraction.
+ * One run of a paragraph's text, cut at each extracted image.
  */
-interface ExtractionInfo {
-  parentTableId: string;
-  imgSrcs: string[];
-  cleanedText: string;
-}
+type Piece =
+  | { kind: 'text'; html: string; empty: boolean }
+  | { kind: 'image'; url: string; alt: string | null };
 
 /**
- * Regex to match <img> tags and capture their src attribute.
- * Handles both single and double quotes around src value.
+ * Blocks that replace one paragraph, in document order.
  */
-const IMG_TAG_REGEX = /<img\s+[^>]*src=["']([^"']+)["'][^>]*>/g;
+interface Replacement {
+  parentTableId: string;
+  blocks: NormalizableBlock[];
+}
+
+const serialize = (fragment: DocumentFragment): Pick<Extract<Piece, { kind: 'text' }>, 'html' | 'empty'> => {
+  const template = document.createElement('template');
+
+  template.content.append(fragment);
+
+  return {
+    html: template.innerHTML,
+    // A Range cut leaves empty clones of marks that wrapped the image.
+    empty: (template.content.textContent ?? '').trim() === '' && template.content.querySelector('img') === null,
+  };
+};
+
+/**
+ * Cuts paragraph HTML at every `<img src>`. Uses a Range so a mark that wraps
+ * an image is closed on one side and reopened on the other.
+ *
+ * @param text - paragraph HTML
+ * @returns pieces in order, or null when there is no image to extract
+ */
+const splitAroundImages = (text: string): Piece[] | null => {
+  if (!/<img\b/i.test(text)) {
+    return null;
+  }
+
+  // A template parses inertly: no image loads, no onerror.
+  const template = document.createElement('template');
+
+  template.innerHTML = text;
+
+  const root = template.content;
+  const images = Array.from(root.querySelectorAll('img')).filter((img) => (img.getAttribute('src') ?? '') !== '');
+
+  if (images.length === 0) {
+    return null;
+  }
+
+  const pieces: Piece[] = [];
+  const range = (root.ownerDocument ?? document).createRange();
+
+  for (const img of images) {
+    range.setStart(root, 0);
+    range.setEndBefore(img);
+    pieces.push({ kind: 'text', ...serialize(range.extractContents()) });
+    pieces.push({ kind: 'image', url: img.getAttribute('src') ?? '', alt: img.getAttribute('alt') });
+    img.remove();
+  }
+
+  range.selectNodeContents(root);
+  pieces.push({ kind: 'text', ...serialize(range.extractContents()) });
+
+  return pieces;
+};
+
+/**
+ * Builds the blocks that replace a table cell paragraph holding images.
+ * The paragraph keeps its id on the first non-empty text run; later runs
+ * become new paragraphs. With no text left it stays, empty, after the images.
+ *
+ * @param paragraph - the source paragraph
+ * @param parentTableId - id of the table that holds it
+ * @param pieces - its text cut around the images
+ * @returns blocks in document order
+ */
+const buildReplacement = (
+  paragraph: NormalizableBlock,
+  parentTableId: string,
+  pieces: Piece[]
+): NormalizableBlock[] => {
+  const blocks: NormalizableBlock[] = [];
+  const firstText = pieces.find((piece) => piece.kind === 'text' && !piece.empty);
+
+  for (const piece of pieces) {
+    if (piece.kind === 'image') {
+      blocks.push({
+        id: generateBlockId(),
+        tool: 'image',
+        data: piece.alt !== null && piece.alt !== '' ? { url: piece.url, alt: piece.alt } : { url: piece.url },
+        isValid: true,
+        parentId: parentTableId,
+      });
+      continue;
+    }
+
+    if (piece.empty) {
+      continue;
+    }
+
+    if (piece === firstText) {
+      blocks.push({ ...paragraph, data: { ...paragraph.data, text: piece.html } });
+      continue;
+    }
+
+    const copy: NormalizableBlock = { ...paragraph, id: generateBlockId(), data: { ...paragraph.data, text: piece.html } };
+
+    // Children belong to the original paragraph only.
+    delete copy.contentIds;
+    blocks.push(copy);
+  }
+
+  if (firstText === undefined) {
+    blocks.push({ ...paragraph, data: { ...paragraph.data, text: '' } });
+  }
+
+  return blocks;
+};
 
 /**
  * Normalizes inline images in table cell paragraphs by extracting `<img>` tags
  * into standalone image blocks.
  *
- * For each paragraph block whose parent is a table:
- * 1. Extracts all `<img>` tags from the paragraph's text
- * 2. Creates a new image block for each extracted `<img>`
- * 3. Removes the `<img>` tags from the paragraph text
- * 4. Inserts the new image block IDs before the paragraph in the table cell's blocks array
- * 5. Adds the new image block IDs to the table's contentIds
+ * For each paragraph block whose parent is a table, the paragraph is split at
+ * every `<img>`: text before an image stays before it, text after stays after.
+ * The new blocks take the paragraph's place in the cell's `blocks` array, in
+ * the table's `contentIds`, and in the returned array.
  *
  * @param blocks - array of saved block data
  * @returns new array with inline images extracted into standalone blocks
  */
 export const normalizeInlineImages = <T extends NormalizableBlock>(blocks: T[]): T[] => {
-  /**
-   * Build a lookup of block id → block for quick parent resolution.
-   */
   const blockById = new Map<string, T>();
 
   for (const block of blocks) {
@@ -63,101 +164,49 @@ export const normalizeInlineImages = <T extends NormalizableBlock>(blocks: T[]):
     }
   }
 
-  /**
-   * Check if there are any table blocks at all. If not, return input unchanged.
-   */
-  const hasTable = blocks.some((b) => b.tool === 'table');
-
-  if (!hasTable) {
+  if (!blocks.some((b) => b.tool === 'table')) {
     return blocks;
   }
 
-  const extractionMap = new Map<string, ExtractionInfo>();
+  const replacements = new Map<string, Replacement>();
 
   for (const block of blocks) {
-    if (block.tool !== 'paragraph' || block.parentId === undefined || block.parentId === null) {
+    if (block.tool !== 'paragraph' || block.id === undefined || block.parentId === undefined || block.parentId === null) {
       continue;
     }
 
     const parent = blockById.get(block.parentId);
-
-    if (parent === undefined || parent.tool !== 'table') {
-      continue;
-    }
-
     const text = block.data?.text;
 
-    if (typeof text !== 'string') {
+    if (parent === undefined || parent.tool !== 'table' || typeof text !== 'string') {
       continue;
     }
 
-    const imgSrcs = Array.from(text.matchAll(IMG_TAG_REGEX), (m) => m[1]);
+    const pieces = splitAroundImages(text);
 
-    if (imgSrcs.length === 0) {
+    if (pieces === null) {
       continue;
     }
 
-    /**
-     * Remove all <img> tags from text.
-     */
-    IMG_TAG_REGEX.lastIndex = 0;
-    const cleanedText = text.replace(IMG_TAG_REGEX, '');
-
-    if (block.id !== undefined) {
-      extractionMap.set(block.id, {
-        parentTableId: block.parentId,
-        imgSrcs,
-        cleanedText,
-      });
-    }
+    replacements.set(block.id, {
+      parentTableId: block.parentId,
+      blocks: buildReplacement(block, block.parentId, pieces),
+    });
   }
 
-  /**
-   * If no paragraphs need extraction, return input unchanged.
-   */
-  if (extractionMap.size === 0) {
+  if (replacements.size === 0) {
     return blocks;
   }
 
   /**
-   * Generate image block IDs and build new image blocks.
-   * Maps paragraph id → array of new image block entries.
+   * Clone each touched table so the caller's data stays untouched.
    */
-  const newImageBlocksPerParagraph = new Map<string, T[]>();
-
-  for (const [paragraphId, info] of extractionMap) {
-    const imageBlocks: T[] = [];
-
-    for (const src of info.imgSrcs) {
-      const imageBlock = {
-        id: generateBlockId(),
-        tool: 'image',
-        data: { url: src },
-        isValid: true,
-        parentId: info.parentTableId,
-      } as unknown as T;
-
-      imageBlocks.push(imageBlock);
-    }
-
-    newImageBlocksPerParagraph.set(paragraphId, imageBlocks);
-  }
-
-  /**
-   * Clone table blocks and update their content/contentIds with new image block references.
-   */
-  const updatedTableIds = new Set<string>();
-
-  for (const info of extractionMap.values()) {
-    updatedTableIds.add(info.parentTableId);
-  }
-
   const clonedTables = new Map<string, T>();
 
-  for (const tableId of updatedTableIds) {
-    const original = blockById.get(tableId);
+  for (const { parentTableId } of replacements.values()) {
+    const original = blockById.get(parentTableId);
 
-    if (original === undefined) {
+    if (original === undefined || clonedTables.has(parentTableId)) {
       continue;
     }
 
@@ -165,94 +214,65 @@ export const normalizeInlineImages = <T extends NormalizableBlock>(blocks: T[]):
     const originalData = original.data as { content: TableCell[][] } | undefined;
 
     if (originalData?.content !== undefined) {
-      /**
-       * Deep clone the content array so we can mutate cell blocks arrays.
-       */
-      const clonedContent: TableCell[][] = originalData.content.map(
-        (row) => row.map((cell) => ({ ...cell, blocks: [...cell.blocks] }))
-      );
-
-      cloned.data = { ...original.data, content: clonedContent };
+      cloned.data = {
+        ...original.data,
+        content: originalData.content.map((row) => row.map((cell) => ({ ...cell, blocks: [...cell.blocks] }))),
+      };
     }
 
     cloned.contentIds = original.contentIds !== undefined ? [...original.contentIds] : [];
-    clonedTables.set(tableId, cloned);
+    clonedTables.set(parentTableId, cloned);
   }
 
-  /**
-   * Update cloned table cell blocks arrays and contentIds.
-   */
-  for (const [paragraphId, imageBlocks] of newImageBlocksPerParagraph) {
-    const info = extractionMap.get(paragraphId);
-
-    if (info === undefined) {
-      continue;
-    }
-
-    const clonedTable = clonedTables.get(info.parentTableId);
+  for (const [paragraphId, replacement] of replacements) {
+    const clonedTable = clonedTables.get(replacement.parentTableId);
 
     if (clonedTable === undefined) {
       continue;
     }
 
+    const orderedIds = replacement.blocks.map((b) => b.id ?? '');
     const tableData = clonedTable.data as { content: TableCell[][] } | undefined;
 
+    // No grid to place them in: leave contentIds alone so no child goes unreferenced.
     if (tableData?.content === undefined) {
       continue;
     }
 
-    const imageBlockIds = imageBlocks.map((b) => b.id ?? '');
-
-    /**
-     * Find the cell containing this paragraph and insert image IDs before the paragraph.
-     */
     tableData.content.flat().forEach((cell) => {
-      const paragraphIndex = cell.blocks.indexOf(paragraphId);
+      const index = cell.blocks.indexOf(paragraphId);
 
-      if (paragraphIndex !== -1) {
-        cell.blocks.splice(paragraphIndex, 0, ...imageBlockIds);
+      if (index !== -1) {
+        cell.blocks.splice(index, 1, ...orderedIds);
       }
     });
 
-    /**
-     * Add image block IDs to the table's contentIds.
-     */
-    if (clonedTable.contentIds !== undefined) {
-      clonedTable.contentIds.push(...imageBlockIds);
+    const contentIds = clonedTable.contentIds ?? [];
+    const index = contentIds.indexOf(paragraphId);
+
+    if (index !== -1) {
+      contentIds.splice(index, 1, ...orderedIds);
+    } else {
+      contentIds.push(...orderedIds.filter((id) => id !== paragraphId));
     }
+
+    clonedTable.contentIds = contentIds;
   }
 
-  /**
-   * Build the result array:
-   * - Replace table blocks with cloned versions
-   * - Replace paragraph blocks with cleaned text versions
-   * - Insert image blocks before their source paragraph
-   */
   const result: T[] = [];
 
   for (const block of blocks) {
-    /**
-     * If this is a table that was updated, use the cloned version.
-     */
-    if (block.id !== undefined && clonedTables.has(block.id)) {
-      result.push(clonedTables.get(block.id) as T);
+    const id = block.id;
+
+    if (id !== undefined && clonedTables.has(id)) {
+      result.push(clonedTables.get(id) as T);
       continue;
     }
 
-    /**
-     * If this is a paragraph with images to extract, insert image blocks before it
-     * and update its text.
-     */
-    if (block.id !== undefined && extractionMap.has(block.id)) {
-      result.push(...(newImageBlocksPerParagraph.get(block.id) ?? []));
+    const replacement = id !== undefined ? replacements.get(id) : undefined;
 
-      const info = extractionMap.get(block.id);
-      const updatedParagraph = {
-        ...block,
-        data: { ...block.data, text: info?.cleanedText ?? '' },
-      };
-
-      result.push(updatedParagraph);
+    if (replacement !== undefined) {
+      result.push(...(replacement.blocks as T[]));
       continue;
     }
 

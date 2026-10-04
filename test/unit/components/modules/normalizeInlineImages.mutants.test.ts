@@ -64,40 +64,9 @@ const makeCellParagraph = (id: string, text: string, parentId = 't'): BlockEntry
 });
 
 /*
- * Mutants left alive on purpose, each unobservable through the public function:
- *
- * - `\s+` -> `\s` in IMG_TAG_REGEX: `\s+[^>]*` and `\s[^>]*` accept the same
- *   strings, because whitespace is never `>` so the `[^>]*` absorbs the rest of
- *   the run. Measured: 2 162 688 exhaustive strings over a `<img s=`-sized
- *   alphabet (to length 7) plus 1 296 tag shapes, no input differs in match,
- *   capture or `replace` result.
- * - `block.id !== undefined` -> `true` when filling `blockById`: the extra entry
- *   is keyed `undefined`, and every later `.get()` is passed a string
- *   (`block.parentId` past its undefined/null guard, or a `parentTableId`).
- * - `hasTable` (both the `===` -> `!==` flip and the `true` literal) and the
- *   `if (!hasTable) return blocks` early exit: a paragraph can only be extracted
- *   when `blockById.get(parentId).tool === 'table'`, which is exactly what makes
- *   `hasTable` true, so with no table the loop always falls through, the
- *   extraction map stays empty and line 118 returns the same array reference.
- * - `block.parentId === undefined` -> `false` and `block.parentId === null` ->
- *   `false` in the skip guard: `blockById` can hold neither key (it is only ever
- *   written with an `id` that passed `!== undefined`, and a null id is outside
- *   the published type, `id?: string`), so the lookup returns undefined and the
- *   next guard performs the same `continue`.
- * - `original === undefined` and its block (line 160): `parentTableId` is copied
- *   from a `parentId` that already resolved to a table in this same map, and
- *   `blockById` is never written after the fill loop.
- * - `info === undefined` (187) and `clonedTable === undefined` (193) and their
- *   blocks: `newImageBlocksPerParagraph` is built by iterating `extractionMap`,
- *   and `clonedTables` by iterating the same infos; nothing deletes from either.
- * - `clonedTable.contentIds !== undefined` -> `true` (220): line 178 assigns an
- *   array to every cloned table unconditionally.
- * - `block.id !== undefined` -> `true` at 237 and 246: the surviving
- *   `clonedTables.has(...)` / `extractionMap.has(...)` returns false for an
- *   undefined key, so the branch is not entered either way.
- * - `?? []` at 247 and `?? ''` at 252 plus `info?.cleanedText` -> `info.cleanedText`:
- *   both maps are keyed by the very id whose `has()` just returned true, and
- *   `cleanedText` is a `String.replace` result.
+ * The list of equivalent mutants was measured against the old regex version.
+ * The splitter was rewritten on a DOM Range; re-run `yarn mutate` on this
+ * module before marking any new live mutant equivalent.
  */
 describe('normalizeInlineImages — mutation coverage', () => {
   let normalizeInlineImages: NormalizeModule['normalizeInlineImages'];
@@ -133,14 +102,16 @@ describe('normalizeInlineImages — mutation coverage', () => {
         tool: 'table',
         data: {
           withHeadings: false,
-          content: [[{ blocks: ['img-1', 'img-2', 'p-1'] }, { blocks: ['p-2'] }]],
+          content: [[{ blocks: ['p-1', 'img-1', 'img-2', 'img-3', 'img-4'] }, { blocks: ['p-2'] }]],
         },
         isValid: true,
-        contentIds: ['p-1', 'p-2', 'img-1', 'img-2'],
+        contentIds: ['p-1', 'img-1', 'img-2', 'img-3', 'img-4', 'p-2'],
       },
-      { id: 'img-1', tool: 'image', data: { url: 'a.png' }, isValid: true, parentId: 't' },
-      { id: 'img-2', tool: 'image', data: { url: 'b.png' }, isValid: true, parentId: 't' },
-      { id: 'p-1', tool: 'paragraph', data: { text: 'Before  mid  after' }, isValid: true, parentId: 't' },
+      { id: 'p-1', tool: 'paragraph', data: { text: 'Before ' }, isValid: true, parentId: 't' },
+      { id: 'img-1', tool: 'image', data: { url: 'a.png', alt: 'q' }, isValid: true, parentId: 't' },
+      { id: 'img-2', tool: 'paragraph', data: { text: ' mid ' }, isValid: true, parentId: 't' },
+      { id: 'img-3', tool: 'image', data: { url: 'b.png', alt: 'q' }, isValid: true, parentId: 't' },
+      { id: 'img-4', tool: 'paragraph', data: { text: ' after' }, isValid: true, parentId: 't' },
       { id: 'p-2', tool: 'paragraph', data: { text: 'plain' }, isValid: true, parentId: 't' },
       { id: 'p-root', tool: 'paragraph', data: { text: 'root' }, isValid: true },
     ]);
@@ -305,13 +276,7 @@ describe('normalizeInlineImages — mutation coverage', () => {
     ]);
   });
 
-  it('reads a hidden "src=" as the source when an attribute before it ends in "src="', () => {
-    /**
-     * Pins a defect, not a contract: the leading `[^>]*` in IMG_TAG_REGEX is
-     * greedy and backtracks to the LAST `src=` in the tag, so `data-src` is
-     * captured and the real url is dropped. This test exists to describe what
-     * the regex does today; a fix changes the url to `real.png`.
-     */
+  it('reads the src attribute, not a data-src written after it', () => {
     const table = makeTable([[{ blocks: ['p-1'] }]], ['p-1']);
     const result = normalizeInlineImages([
       table,
@@ -324,9 +289,9 @@ describe('normalizeInlineImages — mutation coverage', () => {
         tool: 'table',
         data: { withHeadings: false, content: [[{ blocks: ['img-1', 'p-1'] }]] },
         isValid: true,
-        contentIds: ['p-1', 'img-1'],
+        contentIds: ['img-1', 'p-1'],
       },
-      { id: 'img-1', tool: 'image', data: { url: 'lazy.png' }, isValid: true, parentId: 't' },
+      { id: 'img-1', tool: 'image', data: { url: 'real.png' }, isValid: true, parentId: 't' },
       { id: 'p-1', tool: 'paragraph', data: { text: '' }, isValid: true, parentId: 't' },
     ]);
   });
@@ -345,13 +310,13 @@ describe('normalizeInlineImages — mutation coverage', () => {
         tool: 'table',
         data: {
           withHeadings: false,
-          content: [[{ blocks: ['img-1', 'p-1'] }], [{ blocks: ['img-2', 'p-2'] }]],
+          content: [[{ blocks: ['p-1', 'img-1'] }], [{ blocks: ['img-2', 'p-2'] }]],
         },
         isValid: true,
-        contentIds: ['p-1', 'p-2', 'img-1', 'img-2'],
+        contentIds: ['p-1', 'img-1', 'img-2', 'p-2'],
       },
-      { id: 'img-1', tool: 'image', data: { url: 'a.png' }, isValid: true, parentId: 't' },
       { id: 'p-1', tool: 'paragraph', data: { text: 'x' }, isValid: true, parentId: 't' },
+      { id: 'img-1', tool: 'image', data: { url: 'a.png' }, isValid: true, parentId: 't' },
       { id: 'img-2', tool: 'image', data: { url: 'b.png' }, isValid: true, parentId: 't' },
       { id: 'p-2', tool: 'paragraph', data: { text: 'y' }, isValid: true, parentId: 't' },
     ]);
@@ -395,7 +360,7 @@ describe('normalizeInlineImages — mutation coverage', () => {
         tool: 'table',
         data: { withHeadings: false, content: [[{ blocks: ['', 'p-1'] }]] },
         isValid: true,
-        contentIds: ['p-1', ''],
+        contentIds: ['', 'p-1'],
       },
       { id: undefined, tool: 'image', data: { url: 'a.png' }, isValid: true, parentId: 't' },
       { id: 'p-1', tool: 'paragraph', data: { text: '' }, isValid: true, parentId: 't' },

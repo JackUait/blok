@@ -1,7 +1,12 @@
 import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard, TableClipboardCell } from './types';
 import { mapPastedTableCells } from './table-operations';
-import { ownPastedRows, parseCellContentToBlocks, serializeCellBlocksToHtml } from './table-cell-paste';
+import {
+  ownPastedRows,
+  parseCellContentToBlocks,
+  serializeCellBlocksToHtml,
+  unwrapCellHeadingsAndQuotes,
+} from './table-cell-paste';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import {
   carryParagraphAlignmentToCell,
@@ -9,7 +14,8 @@ import {
   isDefaultDarkBackground,
   isDefaultWhiteBackground,
 } from '../../components/modules/paste/google-docs-preprocessor';
-import { isInvisibleBackground } from '../../components/utils/default-page-colors';
+import { isInvisibleBackground, isNearBlackText } from '../../components/utils/default-page-colors';
+import { CELL_CODE_TAG } from '../../components/modules/paste/constants';
 import { isSafeCssColor } from '../../shared/css-color';
 import { clean, sanitizeBlocks } from '../../components/utils/sanitizer';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
@@ -223,8 +229,11 @@ export function placementFromAlignment(
   verticalAlign: string | undefined,
   direction: TextDirection = 'ltr',
 ): CellPlacement | undefined {
-  const physical = HORIZONTAL_ALIGNMENTS.find(value => value === textAlign?.trim().toLowerCase());
-  const horizontal = physical === undefined ? 'left' : mirrorSide(physical, direction);
+  const keyword = textAlign?.trim().toLowerCase();
+  const physical = HORIZONTAL_ALIGNMENTS.find(value => value === keyword);
+  // start/end are already grid-logical, like placement, so no mirroring.
+  const logical = keyword === 'end' ? 'right' : 'left';
+  const horizontal = physical === undefined ? logical : mirrorSide(physical, direction);
   const vertical = VERTICAL_ALIGNMENTS.find(value => value === verticalAlign?.trim().toLowerCase()) ?? 'top';
 
   if (horizontal === 'left' && vertical === 'top') {
@@ -453,23 +462,13 @@ const PASTED_CELL_SANITIZE_CONFIG: SanitizerConfig = {
   tr: {},
   th: {},
   td: {},
-  // parseCellContentToBlocks makes a code block from it.
+  // parseCellContentToBlocks makes a code block from both.
   pre: {},
+  [CELL_CODE_TAG]: {},
   // Same as the new-table paste: the saver's normalizeInlineImages turns it
   // into an image block. clean() drops unsafe src schemes.
-  img: { src: true },
+  img: { src: true, alt: true },
 };
-
-/**
- * Check whether a CSS color value is the default black text color.
- * Google Docs uses different formats: `rgb(0, 0, 0)`, `rgb(0,0,0)`, or `#000000`.
- * Spans with only this color should not be converted to `<mark>`.
- */
-export function isDefaultBlack(color: string): boolean {
-  const normalized = color.replace(/\s/g, '');
-
-  return normalized === 'rgb(0,0,0)' || normalized === '#000000';
-}
 
 /**
  * Extract HTML content from a `<td>`/`<th>` element, converting Google Docs
@@ -525,6 +524,8 @@ function sanitizeCellHtml(td: Element): string {
     el.innerHTML = `<mark style="background-color: ${mappedBg};">${el.innerHTML}</mark>`;
     el.style.removeProperty('background-color');
   }
+
+  unwrapCellHeadingsAndQuotes(clone);
 
   // Convert <p> boundaries to <br> line breaks
   for (const p of Array.from(clone.querySelectorAll('p'))) {
@@ -597,6 +598,41 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
   };
 }
 
+/** Pasted tags that carry no content of their own. */
+const PASTED_NON_CONTENT = 'style, script, meta, title, link, template';
+
+/** Content with no text that still makes a block. */
+const PASTED_TEXTLESS_CONTENT = 'img, picture, video, audio, iframe, embed, object, svg, canvas, hr';
+
+/**
+ * The pasted document with its first (outer) table removed, as HTML and as
+ * plain text, or `null` when only whitespace and wrappers (Docs
+ * `<b id=docs-internal-guid>`, `<meta>`, empty divs) sit outside that table.
+ */
+export function pastedContentOutsideTable(html: string): { html: string; text: string } | null {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const table = doc.querySelector('table');
+
+  if (table === null) {
+    return null;
+  }
+
+  // A line break, so bare text on both sides does not glue into one word.
+  table.replaceWith('\n');
+
+  const probe = doc.body.cloneNode(true) as HTMLElement;
+
+  probe.querySelectorAll(PASTED_NON_CONTENT).forEach(el => el.remove());
+
+  const text = (probe.textContent ?? '').trim();
+
+  if (text === '' && probe.querySelector(PASTED_TEXTLESS_CONTENT) === null) {
+    return null;
+  }
+
+  return { html: doc.documentElement.outerHTML, text };
+}
+
 /**
  * A pasted cell's background: the `background-color` longhand, else the
  * `background` shorthand resolved by a style parser in an inert document
@@ -621,12 +657,21 @@ function pastedBackground(style: string): string | undefined {
 }
 
 /**
- * Column order of a pasted table, from the nearest `dir` at or above it.
- * Pasted HTML is inert (no computed style), so the attribute is all there is.
+ * Column order of a pasted table, from the nearest inline `direction` or `dir`
+ * at or above it. Pasted HTML is inert (no computed style), so walk by hand;
+ * on one element the inline style wins, as it does in CSS.
  * A cell's own `dir` is its text's, not the grid's, so start at the table.
  */
 export function pastedGridDirection(table: Element): TextDirection {
-  return table.closest('[dir]')?.getAttribute('dir')?.trim().toLowerCase() === 'rtl' ? 'rtl' : 'ltr';
+  // Lookbehind keeps flex-direction out.
+  const styled = /(?<![a-z-])direction\s*:\s*(rtl|ltr)\b/i.exec(table.getAttribute('style') ?? '')?.[1];
+  const value = (styled ?? table.getAttribute('dir'))?.trim().toLowerCase();
+
+  if (value === 'rtl' || value === 'ltr') {
+    return value;
+  }
+
+  return table.parentElement === null ? 'ltr' : pastedGridDirection(table.parentElement);
 }
 
 /**
@@ -648,7 +693,7 @@ export function readPastedCellStyle(
 
   const textColor = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style)?.[1]?.trim();
 
-  if (textColor !== undefined && !isDefaultBlack(textColor)) {
+  if (textColor !== undefined && !isNearBlackText(textColor)) {
     result.textColor = mapToNearestPresetColor(textColor, 'text');
   }
 

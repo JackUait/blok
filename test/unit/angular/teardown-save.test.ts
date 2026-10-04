@@ -1,7 +1,7 @@
 /**
  * Core sends one last save on destroy for an edit still in its batch window.
- * That save settles after Angular has torn down the template listeners, so
- * these tests boot the REAL core and check the host still receives it.
+ * These tests boot the REAL core and check the host receives it, both when it
+ * lands inside destroy and when an async tool makes it land afterwards.
  */
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
@@ -9,7 +9,7 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Blok, OutputData } from '@/types';
 import { BlokEditorComponent } from '../../../packages/angular/src/blok-editor.component';
-import { Paragraph } from '../../../src/tools/paragraph';
+import { Paragraph, type ParagraphData } from '../../../src/tools/paragraph';
 import { Table } from '../../../src/tools/table/index';
 
 const TOOLS = { paragraph: { class: Paragraph }, table: { class: Table } };
@@ -75,6 +75,49 @@ class NgModelHost {
   shown = true;
   tools = TOOLS;
   model: OutputData = DOC;
+  editor: Blok | null = null;
+}
+
+@Component({
+  changeDetection: ChangeDetectionStrategy.Default,
+  standalone: true,
+  imports: [BlokEditorComponent],
+  template: `<blok-editor
+    [tools]="tools"
+    [recreateKey]="key"
+    [(data)]="data"
+    (save)="saves.push($event)"
+    (ready)="editor = $event"
+  ></blok-editor>`,
+})
+class RecreateHost {
+  key = 'a';
+  tools = TOOLS;
+  data: OutputData = DOC;
+  saves: OutputData[] = [];
+  editor: Blok | null = null;
+}
+
+/** Returns its data through a promise, so no save can finish synchronously. */
+class AsyncParagraph extends Paragraph {
+  public override save(toolsContent: HTMLDivElement): ParagraphData {
+    return Promise.resolve(super.save(toolsContent)) as unknown as ParagraphData;
+  }
+}
+
+@Component({
+  changeDetection: ChangeDetectionStrategy.Default,
+  standalone: true,
+  imports: [BlokEditorComponent],
+  template: `@if (shown) {
+    <blok-editor [tools]="tools" [data]="data" (save)="saves.push($event)" (ready)="editor = $event"></blok-editor>
+  }`,
+})
+class AsyncToolHost {
+  shown = true;
+  tools = { paragraph: { class: AsyncParagraph } };
+  data: OutputData = { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'x' } }] };
+  saves: OutputData[] = [];
   editor: Blok | null = null;
 }
 
@@ -174,9 +217,10 @@ describe('BlokEditorComponent final save on destroy (real core)', () => {
     fixture.destroy();
   });
 
-  // Known gap: NgModel writes the host model through its own ngModelChange
-  // emitter, whose template listener is gone by then. The adapter can't reach it.
-  it.fails('delivers the final save to [(ngModel)] after the editor is removed', async () => {
+  // NgModel writes the host model through its own ngModelChange listener,
+  // which is gone once destroy finishes, so only a save delivered inside
+  // destroy reaches it.
+  it('delivers the final save to [(ngModel)] after the editor is removed', async () => {
     const fixture = await mountReady(NgModelHost);
     const host = fixture.componentInstance;
 
@@ -187,6 +231,59 @@ describe('BlokEditorComponent final save on destroy (real core)', () => {
     await wait(1000);
 
     expect(textOf(host.model, 'c01')).toBe('b-model');
+    fixture.destroy();
+  });
+
+  it('delivers the final save exactly once', async () => {
+    const fixture = await mountReady();
+    const host = fixture.componentInstance;
+
+    host.saves = [];
+    typeInto(fixture.nativeElement as HTMLElement, 'c01', 'b-once');
+    await wait(50);
+    host.shown = false;
+    fixture.detectChanges();
+    await wait(1000);
+
+    expect(host.saves.map((doc) => textOf(doc, 'c01'))).toStrictEqual(['b-once']);
+    fixture.destroy();
+  });
+
+  it('still delivers the final save of a tool whose save() is async', async () => {
+    const fixture = await mountReady(AsyncToolHost);
+    const host = fixture.componentInstance;
+
+    host.saves = [];
+    typeInto(fixture.nativeElement as HTMLElement, 'p1', 'x-async');
+    await wait(50);
+    host.shown = false;
+    fixture.detectChanges();
+    await wait(1000);
+
+    expect(host.saves.map((doc) => textOf(doc, 'p1'))).toStrictEqual(['x-async']);
+    fixture.destroy();
+  });
+
+  it('delivers the save of an edit cut short by a recreateKey bump without a change-detection error', async () => {
+    const fixture = await mountReady(RecreateHost);
+    const host = fixture.componentInstance;
+
+    const consoleError = vi.spyOn(console, 'error');
+
+    host.saves = [];
+    typeInto(fixture.nativeElement as HTMLElement, 'c01', 'b-recreate');
+    await wait(50);
+    host.key = 'b';
+
+    expect(() => fixture.detectChanges()).not.toThrow();
+    // Delivered inside this change-detection pass, not after it.
+    expect(host.saves.map((doc) => textOf(doc, 'c01'))).toStrictEqual(['b-recreate']);
+
+    await wait(1000);
+
+    const cdErrors = consoleError.mock.calls.filter((args) => /NG0100|ExpressionChanged/.test(args.map(String).join(' ')));
+
+    expect(cdErrors).toStrictEqual([]);
     fixture.destroy();
   });
 

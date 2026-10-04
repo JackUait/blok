@@ -1,4 +1,4 @@
-import type { BlockId } from '../../../types';
+import type { BlockId, OutputData } from '../../../types';
 import type { BlockMutationEvent, BlockMutationType } from '../../../types/events/block';
 import type { ModuleConfig } from '../../types-internal/module-config';
 import { Module } from '../__module';
@@ -413,40 +413,7 @@ export class ModificationsObserver extends Module {
 
     return serialization
       .then((data) => {
-        this.savesInFlight = Math.max(0, this.savesInFlight - 1);
-
-        /**
-         * Re-checked after the await: the host can freeze or tear down the
-         * document while the serialization runs. `data` is undefined when the
-         * Saver swallowed a failure of its own.
-         *
-         * Either way the host never saw this batch, so the document goes back
-         * to dirty and the next window retries it.
-         */
-        // This save must outlive `destroyed` and the render's `disable()`, but
-        // read-only still blocks it — unless the document was read before
-        // read-only engaged.
-        const suppressed = outlivesTeardown
-          ? !outlivesReadOnly && this.Blok.ReadOnly.isEnabled
-          : this.isDeliverySuppressed;
-
-        if (suppressed || data === undefined) {
-          this.pendingSave = true;
-          this.syncUnloadGuard();
-
-          return;
-        }
-
-        const { onSave } = this.config;
-
-        if (isFunction(onSave)) {
-          onSave(data, this.Blok.API.methods);
-        }
-
-        // After onSave, never before: the queue's pump IS an onSave, so syncing
-        // first would drop the guard for an instant and re-attach it — and a
-        // browser that unloads in that gap asks nothing.
-        this.syncUnloadGuard();
+        this.deliverSave(data, outlivesTeardown, outlivesReadOnly);
       })
       .catch(() => {
         /**
@@ -454,10 +421,68 @@ export class ModificationsObserver extends Module {
          * own channel, so swallow here to avoid an unhandled rejection. The
          * batch is not swallowed with it.
          */
-        this.savesInFlight = Math.max(0, this.savesInFlight - 1);
-        this.pendingSave = true;
-        this.syncUnloadGuard();
+        this.markUndelivered();
       });
+  }
+
+  /**
+   * Hands a finished serialization to onSave, or puts the document back to
+   * dirty when it cannot. Ends one of the {@link savesInFlight}.
+   * @param data - the serialization, undefined when the Saver failed
+   * @param outlivesTeardown - see {@link emitOnSave}
+   * @param outlivesReadOnly - see {@link flushBeforeTeardown}
+   */
+  private deliverSave(data: OutputData | undefined, outlivesTeardown: boolean, outlivesReadOnly: boolean): void {
+    this.savesInFlight = Math.max(0, this.savesInFlight - 1);
+
+    /**
+     * Re-checked after the await: the host can freeze or tear down the
+     * document while the serialization runs. `data` is undefined when the
+     * Saver swallowed a failure of its own.
+     *
+     * Either way the host never saw this batch, so the document goes back
+     * to dirty and the next window retries it.
+     */
+    // This save must outlive `destroyed` and the render's `disable()`, but
+    // read-only still blocks it — unless the document was read before
+    // read-only engaged.
+    const suppressed = outlivesTeardown
+      ? !outlivesReadOnly && this.Blok.ReadOnly.isEnabled
+      : this.isDeliverySuppressed;
+
+    if (suppressed || data === undefined) {
+      this.pendingSave = true;
+      this.syncUnloadGuard();
+
+      return;
+    }
+
+    const { onSave } = this.config;
+
+    if (isFunction(onSave)) {
+      onSave(data, this.Blok.API.methods);
+    }
+
+    // After onSave, never before: the queue's pump IS an onSave, so syncing
+    // first would drop the guard for an instant and re-attach it — and a
+    // browser that unloads in that gap asks nothing.
+    this.syncUnloadGuard();
+  }
+
+  /**
+   * A started save never reached the host: the document is dirty again.
+   */
+  private markUndelivered(): void {
+    this.savesInFlight = Math.max(0, this.savesInFlight - 1);
+    this.pendingSave = true;
+    this.syncUnloadGuard();
+  }
+
+  /**
+   * Whether an edit is waiting for onSave and the host can still receive it.
+   */
+  private get hasFlushableSave(): boolean {
+    return this.pendingSave && !this.isDeliverySuppressed && isFunction(this.config.onSave);
   }
 
   /**
@@ -470,7 +495,7 @@ export class ModificationsObserver extends Module {
   public flushBeforeTeardown(outlivesReadOnly = false): Promise<void> | null {
     // An early save from flushPendingBeforeRender may still be running: hand it
     // back so teardown keeps the persistence queue until it lands.
-    if (!this.pendingSave || this.isDeliverySuppressed || !isFunction(this.config.onSave)) {
+    if (!this.hasFlushableSave) {
       return this.teardownSafeSave;
     }
 
@@ -485,6 +510,34 @@ export class ModificationsObserver extends Module {
     this.teardownSafeSave = delivery;
 
     return delivery;
+  }
+
+  /**
+   * The flush `destroy()` runs. When every block saves synchronously, onSave
+   * gets the data before this returns: a host's own teardown may drop its
+   * listeners right after it, as Angular does for `[(ngModel)]`. Otherwise
+   * it falls back to {@link flushBeforeTeardown}. Either way the edit is
+   * delivered once.
+   * @returns the delivery still to land, or null when there is none
+   */
+  public flushOnDestroy(): Promise<void> | null {
+    const data = this.hasFlushableSave ? this.Blok.Saver.saveSyncBeforeTeardown() : undefined;
+
+    if (data === undefined) {
+      return this.flushBeforeTeardown();
+    }
+
+    this.pendingSave = false;
+    this.savesInFlight += 1;
+
+    // A throwing onSave must not abort the teardown that called this.
+    try {
+      this.deliverSave(data, true, false);
+    } catch {
+      this.markUndelivered();
+    }
+
+    return this.teardownSafeSave;
   }
 
   /**

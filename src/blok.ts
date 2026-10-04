@@ -66,7 +66,7 @@ function teardown(instance: Blok, blok: Core): void {
 
   const persistence = blok.config?.persistence;
   // Before markDestroyed: the last edit must be read while blocks are mounted.
-  const finalSave = blok.moduleInstances.ModificationsObserver?.flushBeforeTeardown?.() ?? null;
+  const finalSave = blok.moduleInstances.ModificationsObserver?.flushOnDestroy?.() ?? null;
 
   // Mark all modules as destroyed first so any in-flight async work stops gracefully
   Object.values(blok.moduleInstances)

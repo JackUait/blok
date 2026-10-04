@@ -10,6 +10,7 @@ import type { SavedData, ValidatedData } from '../../../types/data-formats';
 import type { ModuleConfig } from '../../types-internal/module-config';
 import { Module } from '../__module';
 import type { Block } from '../block';
+import { NOT_SYNC } from '../block/data-persistence-manager';
 import { BlockChanged, SaveFailed } from '../events';
 import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
@@ -159,6 +160,58 @@ export class Saver extends Module {
   }
 
   /**
+   * {@link saveBeforeTeardown} finished inside this call, so a host can get
+   * the data while its own teardown is still running.
+   *
+   * Returns undefined, with nothing reported, whenever the async save is
+   * needed instead: a render is pending, a tool's `save()` or `validate()`
+   * returned a promise, or the save threw. The async save then reports any
+   * error once.
+   */
+  public saveSyncBeforeTeardown(): OutputData | undefined {
+    if (this.isDestroyed || (this.Blok.Renderer?.pendingRender ?? null) !== null) {
+      return undefined;
+    }
+
+    try {
+      const plan = this.planSave();
+
+      if (plan.kind === 'empty') {
+        return plan.output;
+      }
+
+      const orderedBlocks = this.enforceDomOrderInvariant(plan.treeOrdered, plan.effectiveParentId, plan.childrenByParent);
+      const extractedData: SaverValidatedData[] = [];
+      // Stops at the first async tool: the async save will ask every tool again.
+      const allSync = orderedBlocks.every((block) => {
+        const item = this.getSavedDataSync(
+          block,
+          plan.childrenByParent.get(block.id) ?? [],
+          plan.effectiveParentId.get(block.id) ?? null
+        );
+
+        if (item !== NOT_SYNC) {
+          extractedData.push(item);
+        }
+
+        return item !== NOT_SYNC;
+      });
+
+      if (!allSync) {
+        return undefined;
+      }
+
+      const output = this.serializeExtracted(extractedData, 'host', true);
+
+      this.lastSaveError = undefined;
+
+      return output;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Runs a serialization and installs it as the in-flight one.
    * @param dialect - output dialect, see {@link Saver.save}
    */
@@ -238,8 +291,66 @@ export class Saver extends Module {
       return undefined;
     }
 
-    const { BlockManager, Tools } = this.Blok;
-    const blocks = BlockManager.blocks;
+    const plan = this.planSave();
+
+    if (plan.kind === 'empty') {
+      return plan.output;
+    }
+
+    this.lastSaveError = undefined;
+
+    try {
+      /**
+       * WYSIWYG order guard: the flat-array order of a container's children
+       * must match their DOM order (what the user sees). See
+       * {@link enforceDomOrderInvariant} for semantics — throws in dev/test,
+       * repairs the output to DOM order in production.
+       */
+      const orderedBlocks = this.enforceDomOrderInvariant(plan.treeOrdered, plan.effectiveParentId, plan.childrenByParent);
+
+      const chainData: Array<Promise<SaverValidatedData>> = orderedBlocks.map((block: Block) => {
+        return this.getSavedData(
+          block,
+          plan.childrenByParent.get(block.id) ?? [],
+          plan.effectiveParentId.get(block.id) ?? null
+        );
+      });
+
+      const extractedData = await Promise.all(chainData);
+
+      return this.serializeExtracted(extractedData, dialect, outlivesTeardown);
+    } catch (error: unknown) {
+      this.lastSaveError = error;
+
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+
+      logLabeled(`Saving failed due to the Error %o`, 'error', normalizedError);
+
+      /**
+       * Surface the failure instead of only logging it: this is the single
+       * choke point for every save (the debounced auto-save AND explicit
+       * `save()`), so both the `onError` config hook and the `SaveFailed`
+       * event fire here exactly once per failed attempt.
+       */
+      this.config.onError?.(normalizedError, { source: 'save' });
+      this.eventsDispatcher.emit(SaveFailed, { error: normalizedError });
+
+      return undefined;
+    }
+  }
+
+  /**
+   * The read-only part of a save that runs before any tool is asked for data.
+   * Shared by the async and the sync save.
+   * @returns the empty-document output, or the tree to serialize
+   */
+  private planSave(): { kind: 'empty'; output: OutputData } | {
+    kind: 'tree';
+    treeOrdered: Block[];
+    effectiveParentId: Map<string, string | null>;
+    childrenByParent: Map<string, string[]>;
+  } {
+    const blocks = this.Blok.BlockManager.blocks;
 
     this.assertNoStrandedHolders(blocks);
     this.assertTreePlacement(blocks);
@@ -252,9 +363,12 @@ export class Saver extends Module {
 
     if (shouldFilterSingleBlock) {
       return {
-        time: +new Date(),
-        blocks: [],
-        version: getBlokVersion(),
+        kind: 'empty',
+        output: {
+          time: +new Date(),
+          blocks: [],
+          version: getBlokVersion(),
+        },
       };
     }
 
@@ -324,74 +438,51 @@ export class Saver extends Module {
       }
     }
 
-    this.lastSaveError = undefined;
+    return { kind: 'tree', treeOrdered, effectiveParentId, childrenByParent };
+  }
 
-    try {
-      /**
-       * WYSIWYG order guard: the flat-array order of a container's children
-       * must match their DOM order (what the user sees). See
-       * {@link enforceDomOrderInvariant} for semantics — throws in dev/test,
-       * repairs the output to DOM order in production.
-       */
-      const orderedBlocks = this.enforceDomOrderInvariant(treeOrdered, effectiveParentId, childrenByParent);
+  /**
+   * Everything after the tools have answered: sanitize, inline images, table
+   * guards and the output. Shared by the async and the sync save.
+   * @param extractedData - one entry per block, in output order
+   * @param dialect - output dialect, see {@link Saver.save}
+   * @param outlivesTeardown - see {@link Saver.saveBeforeTeardown}
+   */
+  private serializeExtracted(
+    extractedData: SaverValidatedData[],
+    dialect: 'host' | 'internal',
+    outlivesTeardown: boolean
+  ): OutputData | undefined {
+    const sanitizedData = this.sanitizeExtractedData(
+      extractedData,
+      (name) => this.Blok.Tools.blockTools.get(name)?.sanitizeConfig,
+      this.config.sanitizer as SanitizerConfig
+    );
 
-      const chainData: Array<Promise<SaverValidatedData>> = orderedBlocks.map((block: Block) => {
-        return this.getSavedData(
-          block,
-          childrenByParent.get(block.id) ?? [],
-          effectiveParentId.get(block.id) ?? null
-        );
-      });
+    const normalizedData = normalizeInlineImages(sanitizedData);
 
-      const extractedData = await Promise.all(chainData);
-      const sanitizedData = this.sanitizeExtractedData(
-        extractedData,
-        (name) => Tools.blockTools.get(name)?.sanitizeConfig,
-        this.config.sanitizer as SanitizerConfig
-      );
+    /**
+     * Table view-reference guard: every child of a table must be referenced
+     * by a grid cell and every grid reference must resolve. See
+     * {@link enforceTableViewReferenceInvariant} — throws in dev/test,
+     * repairs the output in production.
+     */
+    const guardedData = this.enforceTableViewReferenceInvariant(normalizedData);
 
-      const normalizedData = normalizeInlineImages(sanitizedData);
+    /**
+     * Table cell order guard: within each grid cell, the saved block order
+     * must match the visible DOM order of the mounted holders. See
+     * {@link enforceTableCellOrderInvariant} — throws in dev/test, repairs
+     * the output in production.
+     */
+    const orderGuardedData = this.enforceTableCellOrderInvariant(guardedData);
 
-      /**
-       * Table view-reference guard: every child of a table must be referenced
-       * by a grid cell and every grid reference must resolve. See
-       * {@link enforceTableViewReferenceInvariant} — throws in dev/test,
-       * repairs the output in production.
-       */
-      const guardedData = this.enforceTableViewReferenceInvariant(normalizedData);
-
-      /**
-       * Table cell order guard: within each grid cell, the saved block order
-       * must match the visible DOM order of the mounted holders. See
-       * {@link enforceTableCellOrderInvariant} — throws in dev/test, repairs
-       * the output in production.
-       */
-      const orderGuardedData = this.enforceTableCellOrderInvariant(guardedData);
-
-      // Check destruction one more time after async block.save() operations
-      if (this.isDestroyed && !outlivesTeardown) {
-        return undefined;
-      }
-
-      return this.makeOutput(orderGuardedData, dialect);
-    } catch (error: unknown) {
-      this.lastSaveError = error;
-
-      const normalizedError = error instanceof Error ? error : new Error(String(error));
-
-      logLabeled(`Saving failed due to the Error %o`, 'error', normalizedError);
-
-      /**
-       * Surface the failure instead of only logging it: this is the single
-       * choke point for every save (the debounced auto-save AND explicit
-       * `save()`), so both the `onError` config hook and the `SaveFailed`
-       * event fire here exactly once per failed attempt.
-       */
-      this.config.onError?.(normalizedError, { source: 'save' });
-      this.eventsDispatcher.emit(SaveFailed, { error: normalizedError });
-
+    // Check destruction one more time after async block.save() operations
+    if (this.isDestroyed && !outlivesTeardown) {
       return undefined;
     }
+
+    return this.makeOutput(orderGuardedData, dialect);
   }
 
   /**
@@ -828,23 +919,78 @@ export class Saver extends Module {
     derivedContentIds: string[],
     effectiveParentId: string | null
   ): Promise<SaverValidatedData> {
-    const blockData = await block.save();
-    const toolName = block.name;
-    const normalizedData = blockData?.data !== undefined
-      ? blockData
-      : this.getPreservedSavedData(block);
+    const savedData = this.withPreservedFallback(block, await block.save());
 
-    if (normalizedData === undefined) {
-      return {
-        tool: toolName,
-        isValid: false,
-      };
+    if (savedData === undefined) {
+      return { tool: block.name, isValid: false };
     }
 
-    const isValid = await block.validate(normalizedData.data);
+    const isValid = await block.validate(savedData.data);
 
+    return this.toValidatedData(block, savedData, isValid, derivedContentIds, effectiveParentId);
+  }
+
+  /**
+   * {@link getSavedData} without awaiting.
+   * @param block - block to save
+   * @param derivedContentIds - see {@link getSavedData}
+   * @param effectiveParentId - see {@link getSavedData}
+   * @returns the entry, or NOT_SYNC when the tool answered with a promise
+   */
+  private getSavedDataSync(
+    block: Block,
+    derivedContentIds: string[],
+    effectiveParentId: string | null
+  ): SaverValidatedData | typeof NOT_SYNC {
+    const blockData = block.saveSync();
+
+    if (blockData === NOT_SYNC) {
+      return NOT_SYNC;
+    }
+
+    const savedData = this.withPreservedFallback(block, blockData);
+
+    if (savedData === undefined) {
+      return { tool: block.name, isValid: false };
+    }
+
+    const isValid = block.validateSync(savedData.data);
+
+    if (isValid === NOT_SYNC) {
+      return NOT_SYNC;
+    }
+
+    return this.toValidatedData(block, savedData, isValid, derivedContentIds, effectiveParentId);
+  }
+
+  /**
+   * @param block - the saved block
+   * @param blockData - what the block's save returned
+   * @returns that data, else the block's last saved data, else undefined
+   */
+  private withPreservedFallback(
+    block: Block,
+    blockData: Awaited<ReturnType<Block['save']>>
+  ): (SavedData & { tunes?: Record<string, BlockTuneData> }) | undefined {
+    return blockData?.data !== undefined ? blockData : this.getPreservedSavedData(block);
+  }
+
+  /**
+   * @param block - the saved block
+   * @param savedData - its data
+   * @param isValid - the tool's verdict on that data
+   * @param derivedContentIds - see {@link getSavedData}
+   * @param effectiveParentId - see {@link getSavedData}
+   */
+  private toValidatedData(
+    block: Block,
+    savedData: SavedData & { tunes?: Record<string, BlockTuneData> },
+    isValid: boolean,
+    derivedContentIds: string[],
+    effectiveParentId: string | null
+  ): SaverValidatedData {
     return {
-      ...normalizedData,
+      ...savedData,
       isValid,
       parentId: effectiveParentId,
       contentIds: derivedContentIds,

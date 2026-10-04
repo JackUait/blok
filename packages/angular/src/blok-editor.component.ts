@@ -55,8 +55,9 @@ const collaborationDataIgnoredMessage = (doc?: string): string =>
 
 /**
  * An EventEmitter that remembers its subscribed handlers. Core's final save on
- * destroy settles after Angular has unsubscribed the template listeners, so the
- * component reads the handlers it saw at destroy and calls them directly.
+ * destroy settles after Angular has unsubscribed the template listeners when a
+ * tool saves asynchronously, so the component reads the handlers it saw at
+ * destroy and calls them directly.
  */
 class SaveEmitter<T> extends EventEmitter<T> {
   private readonly handlers = new Set<(value: T) => void>();

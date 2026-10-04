@@ -31,6 +31,15 @@ export const moduleIcon = (module: string): React.ReactNode => {
   return (key && SECTION_ICONS[key]) || <ModuleIcon module={module} size={17} />;
 };
 
+/** Index modules are English group titles; this shows them in the reader's language. */
+export const useModuleTitle = (): ((module: string) => string) => {
+  const { t } = useI18n();
+  return (module) => {
+    const key = GROUP_KEY_BY_TITLE.get(module);
+    return key ? t(`api.sections.${key}`) : module;
+  };
+};
+
 // Delay before the first chip/tile rises, so content lands after the panel opens.
 const RISE_BASE_MS = 80;
 const RISE_STEP_MS = 28;
@@ -45,6 +54,7 @@ export const SearchLaunchpad: React.FC<SearchLaunchpadProps> = ({
   onPick,
 }) => {
   const { t } = useI18n();
+  const moduleTitle = useModuleTitle();
   const tiles = items.filter((item) => item.kind === "module");
 
   // Indices are shared with keyboard navigation, so chips and tiles are
@@ -94,8 +104,8 @@ export const SearchLaunchpad: React.FC<SearchLaunchpadProps> = ({
           {moduleIcon(item.module)}
         </span>
         <span className="flex min-w-0 flex-col">
-          <span className="line-clamp-2 text-[13px] font-semibold leading-[1.2]">
-            {item.module}
+          <span className="line-clamp-2 hyphens-auto text-[13px] font-semibold leading-[1.2] [overflow-wrap:anywhere]">
+            {moduleTitle(item.module)}
           </span>
           <span className="text-[11.5px] tabular-nums text-muted-foreground">
             {item.count} {countLabel(item.count)}

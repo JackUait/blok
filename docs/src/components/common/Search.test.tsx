@@ -738,6 +738,22 @@ describe('Search', () => {
       expect(new Set(icons).size).toBe(icons.length);
     });
 
+    it('names section tiles and the scope chip in the reader\'s language', () => {
+      render(
+        <I18nProvider locale="ru">
+          <MemoryRouter>
+            <Search open onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+      const tile = screen.getAllByTestId('search-module-tile').find(t => t.dataset.module === 'Editing');
+      if (!tile) throw new Error('Editing tile missing');
+
+      expect(tile).toHaveTextContent('Редактирование');
+      fireEvent.click(tile);
+      expect(screen.getByTestId('search-scope')).toHaveTextContent('Редактирование');
+    });
+
     it('browses a module when its tile is clicked, and Backspace leaves it', async () => {
       renderSearch();
       const index = await realIndex();

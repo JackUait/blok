@@ -20,6 +20,7 @@ import {
   SearchLaunchpad,
   moduleIcon,
   useGhostTyping,
+  useModuleTitle,
   type LaunchpadItem,
 } from "./SearchLaunchpad";
 
@@ -190,6 +191,7 @@ export const Search: React.FC<SearchProps> = ({
   const navigate = useNavigate();
   const localizedHref = useLocalizedHref();
   const { t, locale } = useI18n();
+  const moduleTitle = useModuleTitle();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -786,7 +788,7 @@ export const Search: React.FC<SearchProps> = ({
               data-blok-testid="search-scope"
             >
               <span className="flex [&_svg]:size-3.5">{moduleIcon(scope)}</span>
-              {scope}
+              {moduleTitle(scope)}
               <button
                 type="button"
                 className="flex size-4 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
@@ -991,7 +993,7 @@ export const Search: React.FC<SearchProps> = ({
                             <span className="flex [&_svg]:size-4">
                               {moduleIcon(result.module)}
                             </span>
-                            <span>{result.module}</span>
+                            <span>{moduleTitle(result.module)}</span>
                           </div>
                         )}
                         <Link
@@ -1100,7 +1102,7 @@ export const Search: React.FC<SearchProps> = ({
               </span>
               <span className="h-3 w-px bg-border" />
               <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <kbd className={KEYCAP_CLASS}>esc</kbd>
+                <kbd className={KEYCAP_CLASS}>{t("search.escKey")}</kbd>
                 {t("search.close")}
               </span>
             </div>

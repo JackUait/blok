@@ -1,5 +1,6 @@
 import type { VideoAlignment, VideoData } from '../../../types/tools/video';
 import { readVariants } from '../../shared/read-variants';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 
 const ALIGN_TO_TEXT_ALIGN: Record<VideoAlignment, string> = {
   left: 'left',
@@ -34,6 +35,7 @@ export function renderVideo(data: Partial<VideoData> & { url: string }): HTMLEle
   // No native `controls` — a custom Airbnb-style control surface is attached
   // separately (see controls.ts) and fully replaces the browser chrome.
   const video = document.createElement('video');
+  video.setAttribute(DATA_ATTR.blockContextMenu, '');
   video.setAttribute('data-blok-testid', 'video-player');
   video.setAttribute('playsinline', '');
   video.setAttribute('preload', 'metadata');

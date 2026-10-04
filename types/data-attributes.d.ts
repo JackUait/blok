@@ -51,6 +51,7 @@ export const DATA_ATTR: {
   readonly component: 'data-blok-component';
   /** Tool type attribute */
   readonly tool: 'data-blok-tool';
+  readonly blockContextMenu: 'data-blok-block-context-menu';
   /** Block nesting depth (derived from the parentId chain) */
   readonly depth: 'data-blok-depth';
   /** Flat list-nesting indentation level (0 = root); tool-agnostic, mirrors list depth */

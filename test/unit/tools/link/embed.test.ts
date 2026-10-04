@@ -307,6 +307,50 @@ describe('Embed tool — generic embed', () => {
   });
 });
 
+describe('Embed tool — link-card context menu', () => {
+  it('marks only the generic link card as a block-menu surface', () => {
+    const linkCard = new Embed(createOptions({
+      service: '',
+      source: 'https://example.com/page',
+      embed: 'https://example.com/page',
+    })).render();
+    const provider = new Embed(createOptions(iframeData())).render();
+
+    expect(linkCard.querySelector('[data-role="embed-link-card-anchor"]')?.hasAttribute('data-blok-block-context-menu')).toBe(true);
+    expect(provider.querySelector('[data-blok-block-context-menu]')).toBeNull();
+  });
+
+  it('opens the original generic link in a new tab alongside copy URL', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const tool = new Embed(createOptions({
+      service: '',
+      source: 'https://example.com/page',
+      embed: 'https://example.com/page',
+    }));
+    const settings = tool.renderSettings() as Array<{ name?: string; title?: string; onActivate?: () => void }>;
+    const action = settings.find((item) => item.name === 'embed-open-original');
+
+    expect(action?.title).toBe('tools.embed.openOriginal');
+    expect(settings.map((item) => item.name)).toContain('embed-copy-url');
+    action?.onActivate?.();
+    expect(open).toHaveBeenCalledWith('https://example.com/page', '_blank', 'noopener,noreferrer');
+  });
+
+  it('does not add open original to a provider iframe or unsafe stored URL', () => {
+    const provider = new Embed(createOptions(iframeData()));
+    const unsafe = new Embed(createOptions({
+      service: '',
+      source: 'javascript:alert(1)',
+      embed: '',
+    }));
+    const names = (tool: Embed): Array<string | undefined> =>
+      (tool.renderSettings() as Array<{ name?: string }>).map((item) => item.name);
+
+    expect(names(provider)).not.toContain('embed-open-original');
+    expect(names(unsafe)).not.toContain('embed-open-original');
+  });
+});
+
 describe('Embed tool — replace source', () => {
   const mount = (tool: Embed): HTMLElement => {
     const el = tool.render();

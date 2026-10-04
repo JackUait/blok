@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../../../src/components/utils/tooltip', () => ({
   onHover: vi.fn(),
@@ -11,6 +11,15 @@ import * as tooltip from '../../../../src/components/utils/tooltip';
 import { simulateKeydown, simulateMousedown } from '../../../helpers/simulate';
 
 describe('renderImage', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('marks the image as a block-menu surface', () => {
+    const image = renderImage({ url: 'https://x/y.png' }).querySelector('img');
+
+    expect(image?.hasAttribute('data-blok-block-context-menu')).toBe(true);
+  });
+
   it('returns figure with <img> carrying url and alt; width is set on figure so container fits image', () => {
     const fig = renderImage({ url: 'https://x/y.png', alt: 'photo', width: 60, alignment: 'center' });
     const img = fig.querySelector('img');

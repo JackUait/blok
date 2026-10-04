@@ -1,6 +1,7 @@
 import type { ImageCrop, ImageData, ImageSize } from '../../../types/tools/image';
 import type { MediaVariant } from '../../../types/configs/media';
 import { readVariants } from '../../shared/read-variants';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 /**
  * Mirror of the upstream ImageAlign* union from types/tools/image.d.ts,
  * kept local so the i18n regression scan finds no stray hardcoded copy.
@@ -103,6 +104,7 @@ export function renderImage(
   }
 
   const img = document.createElement('img');
+  img.setAttribute(DATA_ATTR.blockContextMenu, '');
   img.setAttribute('src', data.url);
   img.setAttribute('alt', data.alt ?? '');
   img.draggable = false;

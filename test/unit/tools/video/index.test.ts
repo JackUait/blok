@@ -13,7 +13,8 @@ const mockProduce = vi.mocked(produceVideoVariant);
 const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
   i18n: {
-    t: (k: string) => messages[k] ?? k,
+    t: (k: string, vars?: Record<string, string | number>) =>
+      (messages[k] ?? k).replace(/\{(\w+)\}/g, (match, name: string) => String(vars?.[name] ?? match)),
     has: (k: string) => k in messages,
   },
 } as unknown as API);
@@ -119,6 +120,80 @@ describe('VideoTool — RENDERED state', () => {
     expect(root.getAttribute('data-state')).toBe('rendered');
     expect(root.getAttribute('data-align')).toBe('right');
     expect(root.getAttribute('data-caption')).toBe('off');
+  });
+});
+
+describe('VideoTool — read-only playback menu', () => {
+  beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); });
+  afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  it('keeps the playback menu and Loop action for read-only viewers', () => {
+    const tool = new VideoTool({ ...createOptions({ url: 'https://x/y.mp4' }), readOnly: true });
+    const root = tool.render();
+    const video = root.querySelector('video');
+    if (!video) throw new Error('video missing');
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+
+    video.dispatchEvent(event);
+
+    const menu = root.querySelector<HTMLElement>('[data-role="video-menu"]');
+    expect(event.defaultPrevented).toBe(true);
+    expect(menu?.hidden).toBe(false);
+    root.querySelector<HTMLButtonElement>('[data-action="ctx-loop"]')?.click();
+    expect(video.loop).toBe(true);
+  });
+
+  it('keeps a read-only playback-menu Loop choice after rerender', () => {
+    localStorage.setItem('blok:video:loop', 'false');
+    const block = createMockBlock();
+    const tool = new VideoTool({ ...createOptions({ url: 'https://x/y.mp4', loop: true }, {}, block), readOnly: true });
+    const root = tool.render();
+    const video = root.querySelector('video');
+    if (!video) throw new Error('video missing');
+
+    video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    root.querySelector<HTMLButtonElement>('[data-action="ctx-loop"]')?.click();
+    tool.setReadOnly(true);
+
+    expect(root.querySelector('video')?.loop).toBe(false);
+    expect(tool.save().loop).toBe(true);
+    expect(block.dispatchChange).not.toHaveBeenCalled();
+    expect(localStorage.getItem('blok:video:loop')).toBe('false');
+  });
+
+  it('keeps playback URL and current-time copying for read-only viewers', () => {
+    const writeText = vi.fn();
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const tool = new VideoTool({ ...createOptions({ url: 'https://x/y.mp4' }), readOnly: true });
+    const root = tool.render();
+    const video = root.querySelector('video');
+    if (!video) throw new Error('video missing');
+    Object.defineProperty(video, 'currentSrc', { value: 'https://x/variant.webm', configurable: true });
+    video.currentTime = 95.9;
+
+    video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    root.querySelector<HTMLButtonElement>('[data-action="copy-url"]')?.click();
+    video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    root.querySelector<HTMLButtonElement>('[data-action="copy-url-at-time"]')?.click();
+
+    expect(writeText).toHaveBeenNthCalledWith(1, 'https://x/variant.webm');
+    expect(writeText).toHaveBeenNthCalledWith(2, 'https://x/variant.webm#t=95');
+  });
+
+  it('keeps playback statistics for read-only viewers', () => {
+    const tool = new VideoTool({ ...createOptions({ url: 'https://x/y.mp4' }), readOnly: true });
+    const root = tool.render();
+    const video = root.querySelector('video');
+    if (!video) throw new Error('video missing');
+    Object.defineProperty(video, 'videoWidth', { value: 1920, configurable: true });
+    Object.defineProperty(video, 'videoHeight', { value: 1080, configurable: true });
+
+    video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    root.querySelector<HTMLButtonElement>('[data-action="stats"]')?.click();
+
+    const stats = root.querySelector<HTMLElement>('[data-role="video-stats"]');
+    expect(stats?.hidden).toBe(false);
+    expect(stats?.textContent).toContain('1920×1080');
   });
 });
 
@@ -402,6 +477,160 @@ describe('VideoTool — editor actions (block settings)', () => {
     expect(tool.save().autoplay).toBeUndefined();
   });
 
+  it('Block Settings Loop follows live playback and changes only this video', () => {
+    localStorage.setItem('blok:video:loop', 'true');
+    try {
+      const first = new VideoTool(createOptions({ url: 'https://x/first.mp4' }));
+      const second = new VideoTool(createOptions({ url: 'https://x/second.mp4' }));
+      const firstRoot = first.render();
+      const secondRoot = second.render();
+
+      expect(firstRoot.querySelector('video')?.loop).toBe(true);
+      expect(find(settings(first), 'video-loop')?.isActive).toBe(true);
+      find(settings(first), 'video-loop')?.onActivate?.();
+
+      expect(firstRoot.querySelector('video')?.loop).toBe(false);
+      expect(secondRoot.querySelector('video')?.loop).toBe(true);
+      expect(localStorage.getItem('blok:video:loop')).toBe('true');
+    } finally {
+      localStorage.removeItem('blok:video:loop');
+    }
+  });
+
+  it('Block Settings Loop applies even after a saved playback preference', () => {
+    localStorage.setItem('blok:video:loop', 'false');
+    try {
+      const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+      const root = tool.render();
+
+      find(settings(tool), 'video-loop')?.onActivate?.();
+
+      expect(root.querySelector('video')?.loop).toBe(true);
+      expect(tool.save().loop).toBe(true);
+    } finally {
+      localStorage.removeItem('blok:video:loop');
+    }
+  });
+
+  it('restores an enabled Block Settings Loop choice after reload', () => {
+    localStorage.setItem('blok:video:loop', 'false');
+    try {
+      const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+      tool.render();
+      find(settings(tool), 'video-loop')?.onActivate?.();
+
+      const restored = new VideoTool(createOptions(tool.save()));
+      const root = restored.render();
+
+      expect(root.querySelector('video')?.loop).toBe(true);
+      expect(root.querySelector('[data-action="loop"]')?.getAttribute('aria-checked')).toBe('true');
+      expect(localStorage.getItem('blok:video:loop')).toBe('false');
+    } finally {
+      localStorage.removeItem('blok:video:loop');
+    }
+  });
+
+  it('restores a disabled Block Settings Loop choice after reload', () => {
+    localStorage.setItem('blok:video:loop', 'true');
+    try {
+      const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4', loop: true }));
+      tool.render();
+      find(settings(tool), 'video-loop')?.onActivate?.();
+
+      const saved = tool.save();
+      expect(saved.loop).toBe(false);
+      const restored = new VideoTool(createOptions(saved));
+      expect(restored.render().querySelector('video')?.loop).toBe(false);
+      expect(localStorage.getItem('blok:video:loop')).toBe('true');
+    } finally {
+      localStorage.removeItem('blok:video:loop');
+    }
+  });
+
+  it('keeps gear-only Loop as a shared preference without changing block data', () => {
+    localStorage.setItem('blok:video:loop', 'false');
+    try {
+      const block = createMockBlock();
+      const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }, {}, block));
+      const root = tool.render();
+      const gearLoop = root.querySelector<HTMLButtonElement>('[data-action="loop"]');
+      if (!gearLoop) throw new Error('gear Loop missing');
+      gearLoop.click();
+
+      const restored = new VideoTool(createOptions(tool.save()));
+
+      expect(restored.render().querySelector('video')?.loop).toBe(true);
+      expect(tool.save().loop).toBeUndefined();
+      expect(block.dispatchChange).not.toHaveBeenCalled();
+      expect(localStorage.getItem('blok:video:loop')).toBe('true');
+    } finally {
+      localStorage.removeItem('blok:video:loop');
+    }
+  });
+
+  it('keeps a later player-gear Loop choice after reloading a saved looping block', () => {
+    localStorage.setItem('blok:video:loop', 'true');
+    try {
+      const block = createMockBlock();
+      const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4', loop: true }, {}, block));
+      const root = tool.render();
+      const gearLoop = root.querySelector<HTMLButtonElement>('[data-action="loop"]');
+      if (!gearLoop) throw new Error('gear Loop missing');
+      gearLoop.click();
+
+      const saved = tool.save();
+      const restored = new VideoTool(createOptions(saved));
+
+      expect(restored.render().querySelector('video')?.loop).toBe(false);
+      expect(saved.loop).toBeUndefined();
+      expect(localStorage.getItem('blok:video:loop')).toBe('false');
+      expect(block.dispatchChange).toHaveBeenCalledTimes(1);
+    } finally {
+      localStorage.removeItem('blok:video:loop');
+    }
+  });
+
+  it('keeps a later player-gear Loop choice after rerender', () => {
+    localStorage.setItem('blok:video:loop', 'false');
+    try {
+      const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+      const root = tool.render();
+      find(settings(tool), 'video-loop')?.onActivate?.();
+
+      const gearLoop = root.querySelector<HTMLButtonElement>('[data-action="loop"]');
+      if (!gearLoop) throw new Error('gear Loop missing');
+      gearLoop.click();
+      expect(root.querySelector('video')?.loop).toBe(false);
+
+      find(settings(tool), 'video-caption')?.onActivate?.();
+
+      expect(root.querySelector('video')?.loop).toBe(false);
+      expect(root.querySelector('[data-action="loop"]')?.getAttribute('aria-checked')).toBe('false');
+      const restored = new VideoTool(createOptions(tool.save()));
+      expect(restored.render().querySelector('video')?.loop).toBe(false);
+    } finally {
+      localStorage.removeItem('blok:video:loop');
+    }
+  });
+
+  it('does not change another video when this block toggles Loop', () => {
+    localStorage.setItem('blok:video:loop', 'false');
+    try {
+      const first = new VideoTool(createOptions({ url: 'https://x/first.mp4' }));
+      const second = new VideoTool(createOptions({ url: 'https://x/second.mp4' }));
+      const firstRoot = first.render();
+      const secondRoot = second.render();
+
+      find(settings(first), 'video-loop')?.onActivate?.();
+      second.setReadOnly(true);
+
+      expect(secondRoot.querySelector('video')?.loop).toBe(false);
+      expect(firstRoot.querySelector('video')?.loop).toBe(true);
+    } finally {
+      localStorage.removeItem('blok:video:loop');
+    }
+  });
+
   it('exposes a Hide controls block tune reflecting the persisted state', () => {
     const tool = new VideoTool(createOptions({ url: 'u', hideControls: true }));
     tool.render();
@@ -567,7 +796,7 @@ describe('VideoTool — setReadOnly', () => {
 
 describe('VideoTool — renderSettings', () => {
   beforeEach(() => vi.clearAllMocks());
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
   const names = (cfg: unknown[]): string[] => cfg.map((i) => (i as { name?: string }).name ?? '');
 
@@ -588,13 +817,208 @@ describe('VideoTool — renderSettings', () => {
 
   it('activating copy-url writes the video URL to the clipboard', () => {
     const writeText = vi.fn();
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
     const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
     tool.render();
     const items = tool.renderSettings() as unknown[];
     const copy = items.find((i) => (i as { name?: string }).name === 'video-copy-url') as { onActivate?: () => void };
     copy.onActivate?.();
     expect(writeText).toHaveBeenCalledWith('https://x/y.mp4');
+  });
+
+  it('copies the mounted variant URL from Block Settings', () => {
+    const writeText = vi.fn();
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const tool = new VideoTool(createOptions({
+      url: 'https://x/original.mp4',
+      variants: [
+        { url: 'https://x/variant.webm', mimeType: 'video/webm' },
+        { url: 'https://x/original.mp4', mimeType: 'video/mp4' },
+      ],
+    }));
+    const video = tool.render().querySelector('video');
+    if (!video) throw new Error('video missing');
+    Object.defineProperty(video, 'currentSrc', { value: 'https://x/variant.webm', configurable: true });
+
+    action(tool, 'video-copy-url')?.onActivate?.();
+
+    expect(writeText).toHaveBeenCalledWith('https://x/variant.webm');
+  });
+
+  type Action = { name?: string; title?: string; isDisabled?: boolean; onActivate?: () => void };
+  const action = (tool: VideoTool, name: string): Action | undefined =>
+    (tool.renderSettings() as unknown as Action[]).find((item) => item.name === name);
+
+  it('disables current-time URL copying when no video is mounted', () => {
+    const tool = new VideoTool(createOptions());
+    tool.render();
+
+    expect(action(tool, 'video-copy-url-at-time')?.isDisabled).toBe(true);
+  });
+
+  it('copies the playing source at the current second from Block Settings', () => {
+    const writeText = vi.fn();
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const tool = new VideoTool(createOptions({ url: 'https://x/original.mp4' }));
+    const video = tool.render().querySelector('video');
+    if (!video) throw new Error('video missing');
+    Object.defineProperty(video, 'currentSrc', { value: 'https://x/variant.webm', configurable: true });
+    video.currentTime = 95.9;
+
+    action(tool, 'video-copy-url-at-time')?.onActivate?.();
+
+    expect(writeText).toHaveBeenCalledWith('https://x/variant.webm#t=95');
+  });
+
+  it('uses the saved URL for current-time links before a source loads', () => {
+    const writeText = vi.fn();
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const tool = new VideoTool(createOptions({ url: 'https://x/original.mp4' }));
+    const video = tool.render().querySelector('video');
+    if (!video) throw new Error('video missing');
+    video.currentTime = 12;
+
+    action(tool, 'video-copy-url-at-time')?.onActivate?.();
+
+    expect(writeText).toHaveBeenCalledWith('https://x/original.mp4#t=12');
+  });
+
+  it('replaces an existing URL fragment with the current playback time', () => {
+    const writeText = vi.fn();
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const tool = new VideoTool(createOptions({ url: 'https://x/original.mp4' }));
+    const video = tool.render().querySelector('video');
+    if (!video) throw new Error('video missing');
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'https://x/variant.webm?token=abc#old',
+      configurable: true,
+    });
+    video.currentTime = 95.9;
+
+    action(tool, 'video-copy-url-at-time')?.onActivate?.();
+
+    expect(writeText).toHaveBeenCalledWith('https://x/variant.webm?token=abc#t=95');
+  });
+
+  it('omits playback statistics when the video has no control surface', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4', hideControls: true }));
+    tool.render();
+
+    expect(action(tool, 'video-statistics')).toBeUndefined();
+  });
+
+  it('opens and closes playback statistics from Block Settings', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+    const root = tool.render();
+    const video = root.querySelector('video');
+    if (!video) throw new Error('video missing');
+    Object.defineProperty(video, 'videoWidth', { value: 1920, configurable: true });
+    Object.defineProperty(video, 'videoHeight', { value: 1080, configurable: true });
+    Object.defineProperty(video, 'getVideoPlaybackQuality', {
+      value: () => ({ droppedVideoFrames: 3, totalVideoFrames: 300 }),
+      configurable: true,
+    });
+
+    action(tool, 'video-statistics')?.onActivate?.();
+    const stats = root.querySelector<HTMLElement>('[data-role="video-stats"]');
+    expect(stats?.hidden).toBe(false);
+    expect(stats?.textContent).toContain('1920×1080');
+    expect(stats?.textContent).toContain('3 / 300');
+
+    action(tool, 'video-statistics')?.onActivate?.();
+    expect(stats?.hidden).toBe(true);
+  });
+
+  it('uses canonical English fallback lines for playback statistics', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+    const root = tool.render();
+
+    action(tool, 'video-statistics')?.onActivate?.();
+
+    const lines = Array.from(root.querySelector<HTMLElement>('[data-role="video-stats"]')?.children ?? [])
+      .map((line) => line.textContent);
+    expect(lines).toEqual([
+      'Resolution: Not available',
+      'Dropped frames: Not available',
+      'Buffer health: 0.0 s',
+      'Viewport: 0×0',
+    ]);
+  });
+
+  it('localizes playback-statistics values from Block Settings', () => {
+    const tool = new VideoTool({
+      ...createOptions({ url: 'https://x/y.mp4' }),
+      api: createMockApi({
+        'tools.video.statsResolution': 'Définition : {value}',
+        'tools.video.statsDroppedFrames': 'Images perdues : {value}',
+        'tools.video.statsBufferHealth': 'Tampon : {seconds} s',
+        'tools.video.statsViewport': 'Zone d’affichage : {value}',
+        'tools.video.statsUnavailable': 'Indisponible',
+      }),
+    });
+    const root = tool.render();
+    const video = root.querySelector('video');
+    if (!video) throw new Error('video missing');
+    Object.defineProperty(video, 'buffered', {
+      value: { length: 1, start: () => 0, end: () => 12.5 },
+      configurable: true,
+    });
+    video.currentTime = 10;
+
+    action(tool, 'video-statistics')?.onActivate?.();
+
+    const lines = Array.from(root.querySelector<HTMLElement>('[data-role="video-stats"]')?.children ?? [])
+      .map((line) => line.textContent);
+    expect(lines).toEqual([
+      'Définition : Indisponible',
+      'Images perdues : Indisponible',
+      'Tampon : 2.5 s',
+      'Zone d’affichage : 0×0',
+    ]);
+  });
+
+  it('renders translated playback statistics as text, not HTML', () => {
+    const tool = new VideoTool({
+      ...createOptions({ url: 'https://x/y.mp4' }),
+      api: createMockApi({
+        'tools.video.statsResolution': '<img src=x onerror=alert(1)> {value}',
+      }),
+    });
+    const root = tool.render();
+
+    action(tool, 'video-statistics')?.onActivate?.();
+
+    const stats = root.querySelector<HTMLElement>('[data-role="video-stats"]');
+    expect(stats?.querySelector('img')).toBeNull();
+    expect(stats?.firstElementChild?.textContent)
+      .toBe('<img src=x onerror=alert(1)> Not available');
+  });
+
+  it('uses the existing translations for migrated playback actions', () => {
+    const tool = new VideoTool({
+      ...createOptions({ url: 'https://x/y.mp4' }),
+      api: createMockApi({
+        'tools.video.ctxCopyUrlAtTime': 'URL mit Zeit kopieren',
+        'tools.video.ctxStats': 'Wiedergabestatistik',
+      }),
+    });
+    tool.render();
+
+    expect(action(tool, 'video-copy-url-at-time')?.title).toBe('URL mit Zeit kopieren');
+    expect(action(tool, 'video-statistics')?.title).toBe('Wiedergabestatistik');
+  });
+
+  it('lets the shared block menu handle right-click without stacking a video menu', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+    const root = tool.render();
+    const video = root.querySelector('video');
+    if (!video) throw new Error('video missing');
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+
+    video.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(root.querySelector('[data-role="video-menu"]')).toBeNull();
   });
 });
 

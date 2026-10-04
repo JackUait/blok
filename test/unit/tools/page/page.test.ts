@@ -221,6 +221,73 @@ describe('Page tool', () => {
     });
   });
 
+  describe('context menu actions', () => {
+    it('marks the page link as a block-menu surface', () => {
+      const root = new PageTool(createOptions({
+        config: { href: (id) => `/pages/${id}` },
+      })).render();
+
+      expect(anchorOf(root).hasAttribute('data-blok-block-context-menu')).toBe(true);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('opens a page URL in a new tab', async () => {
+      const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const tool = new PageTool(createOptions({
+        config: { resolve: () => ({}), href: (id) => `https://workspace.test/pages/${id}` },
+      }));
+
+      tool.render();
+      tool.rendered();
+      await flush();
+      const settings = tool.renderSettings() as Array<{ name?: string; title?: string; onActivate?: () => void }>;
+      const action = settings.find((item) => item.name === 'page-open-new-tab');
+
+      expect(action?.title).toBe('tools.file.previewOpenInNewTab');
+      action?.onActivate?.();
+      expect(open).toHaveBeenCalledWith('https://workspace.test/pages/p1', '_blank', 'noopener,noreferrer');
+    });
+
+    it('does not duplicate the built-in copy-link tune', async () => {
+      const tool = new PageTool(createOptions({
+        config: { resolve: () => ({}), href: (id) => `https://workspace.test/pages/${id}` },
+      }));
+
+      tool.render();
+      tool.rendered();
+      await flush();
+      const settings = tool.renderSettings() as Array<{ name?: string }>;
+
+      expect(settings.some((item) => item.name === 'page-copy-url')).toBe(false);
+      expect(PageTool.copyAsLink({ pageId: 'p1' }, { href: (id) => `https://workspace.test/pages/${id}` })?.url)
+        .toBe('https://workspace.test/pages/p1');
+    });
+
+    it('does not offer navigation for a missing page or unsafe URL', async () => {
+      const missing = new PageTool(createOptions({
+        config: { href: () => 'https://workspace.test/pages/p1', resolve: () => null },
+      }));
+      missing.render();
+      missing.rendered();
+      await flush();
+      const missingSettings = missing.renderSettings() as Array<{ name?: string }>;
+      const unsafe = new PageTool(createOptions({
+        config: { resolve: () => ({}), href: () => 'javascript:alert(1)' },
+      }));
+
+      unsafe.render();
+      unsafe.rendered();
+      await flush();
+      const unsafeSettings = unsafe.renderSettings() as Array<{ name?: string }>;
+
+      expect(missingSettings.some((item) => item.name === 'page-open-new-tab')).toBe(false);
+      expect(unsafeSettings.some((item) => item.name === 'page-open-new-tab')).toBe(false);
+    });
+  });
+
   describe('onNavigationEnter (Enter in navigation mode)', () => {
     const enter = (init: KeyboardEventInit = {}): KeyboardEvent =>
       new KeyboardEvent('keydown', { key: 'Enter', ...init });

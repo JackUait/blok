@@ -12,7 +12,8 @@ import type {
 } from '../../../../types';
 import { PLAINTEXT } from '../../../components/utils/sanitizer';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
-import { IconCopy, IconGlobe, IconLink, IconReplace, IconTrash } from '../../../components/icons';
+import { IconCopy, IconGlobe, IconLink, IconLinkExternal, IconReplace, IconTrash } from '../../../components/icons';
+import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import { setFieldValidity } from '../../../components/utils/field-validity';
 import { attachResizeHandle, attachHeightResizeHandle, type ResizeEdge } from '../../image/resizer';
 import { figureInsets } from '../../image/figure-insets';
@@ -519,6 +520,7 @@ export class Embed implements BlockTool {
     const anchor = document.createElement('a');
 
     anchor.setAttribute('data-role', 'embed-link-card-anchor');
+    anchor.setAttribute(DATA_ATTR.blockContextMenu, '');
     anchor.className = 'blok-embed-linkcard__anchor';
     anchor.target = '_blank';
     anchor.rel = 'noopener noreferrer';
@@ -954,8 +956,18 @@ export class Embed implements BlockTool {
 
   public renderSettings(): MenuConfig {
     const i18n = this.api.i18n;
+    const source = this.data.source ?? '';
 
     return [
+      ...(this.embedRender().mode === 'link' ? [{
+        icon: IconLinkExternal,
+        title: i18n.t('tools.embed.openOriginal'),
+        name: 'embed-open-original',
+        closeOnActivate: true,
+        onActivate: (): void => {
+          window.open(source, '_blank', 'noopener,noreferrer');
+        },
+      }] : []),
       {
         icon: IconReplace,
         title: i18n.t('tools.embed.replace'),

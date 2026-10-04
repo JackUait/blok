@@ -54,6 +54,7 @@ export const DATA_ATTR = {
   component: 'data-blok-component',
   /** Tool type attribute */
   tool: 'data-blok-tool',
+  blockContextMenu: 'data-blok-block-context-menu',
   /** Block nesting depth (derived from the parentId chain) */
   depth: 'data-blok-depth',
   /** Flat list-nesting indentation level (0 = root); tool-agnostic, mirrors list depth */

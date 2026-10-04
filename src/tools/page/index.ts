@@ -8,10 +8,11 @@ import type {
   ToolboxConfig,
 } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconPage } from '../../components/icons';
+import { IconLinkExternal, IconPage } from '../../components/icons';
 import { generateBlockId } from '../../components/utils/id-generator';
 import { PLAINTEXT } from '../../components/utils/sanitizer';
 import { safeHref } from '../../components/utils/sanitize-url';
+import type { MenuConfig } from '../../../types/tools/menu-config';
 import {
   PAGE_ICON_CLASSES,
   PAGE_LINK_CLASSES,
@@ -264,6 +265,26 @@ export class PageTool implements BlockTool {
     this.preview.hide();
   }
 
+  public renderSettings(): MenuConfig {
+    const link = this.isNavigable ? PageTool.copyAsLink(this.data, this.config) : null;
+
+    if (link === null) {
+      return [];
+    }
+
+    return [
+      {
+        icon: IconLinkExternal,
+        title: this.api.i18n.t('tools.file.previewOpenInNewTab'),
+        name: 'page-open-new-tab',
+        closeOnActivate: true,
+        onActivate: (): void => {
+          window.open(link.url, '_blank', 'noopener,noreferrer');
+        },
+      },
+    ];
+  }
+
   /**
    * Enter on the selected block opens the page. A missing or locked page
    * returns false: the block has no inputs, so core just keeps it selected.
@@ -460,6 +481,7 @@ export class PageTool implements BlockTool {
     const link = document.createElement('a');
 
     link.className = `${PAGE_LINK_CLASSES} ${this.isNavigable ? PAGE_LINK_ENABLED_CLASSES : PAGE_LINK_DISABLED_CLASSES}`;
+    link.setAttribute(DATA_ATTR.blockContextMenu, '');
     link.setAttribute(DATA_ATTR.testid, 'page-link');
     link.setAttribute('data-blok-page-state', state);
     // Never focused, so Blok keeps its keys (undo, Escape, arrows). Tab is

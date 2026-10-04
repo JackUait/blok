@@ -16,6 +16,7 @@ import {
 import { promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../../components/utils/top-layer';
 import { isKeyboardModality } from '../../components/utils/input-modality';
 import { getElementDirection } from '../../components/utils/direction';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { tr } from './i18n';
 import type { I18nInstance } from '../../components/utils/tools';
 import type { VideoGlow } from '../../../types/tools/video';
@@ -36,8 +37,13 @@ export interface ControlsOptions {
   glow?: VideoGlow;
   /** Initial loop state (persisted via the block's Loop tune). Default false. */
   loop?: boolean;
+  /** Explicit block choice wins over the shared preference on attach. */
+  loopOverride?: boolean;
+  /** Called when the player changes the shared Loop preference. */
+  onLoopChange?: () => void;
   /** Editor i18n instance used to translate control labels. */
   i18n?: I18nInstance;
+  readOnly?: boolean;
 }
 
 export interface ControlsHandle {
@@ -45,6 +51,7 @@ export interface ControlsHandle {
   /** Enter/leave theater (cinema) mode programmatically — used by the tool to
    *  re-apply theater after a re-render. */
   setTheater(on: boolean): void;
+  toggleStats(): void;
   destroy(): void;
 }
 
@@ -107,7 +114,7 @@ function button(action: string, label: string, icon: string, extraClass = ''): H
  * fullscreen). Returns the control element plus a teardown that detaches every
  * media listener.
  */
-export function attachControls({ video, figure, storage, glow = 'minimal', loop = false, i18n }: ControlsOptions): ControlsHandle {
+export function attachControls({ video, figure, storage, glow = 'minimal', loop = false, loopOverride, onLoopChange, i18n, readOnly = false }: ControlsOptions): ControlsHandle {
   // Resolve a control label through i18n with an English fallback (mirrors the
   // block's tunes). Named `i18nLabel` to avoid shadowing the local `t`/`label`
   // loop variables used by the speed glide + seek-flash helpers below.
@@ -115,6 +122,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const root = document.createElement('div');
   root.className = 'blok-video-controls';
   root.setAttribute('data-role', 'video-controls');
+  if (!readOnly) root.setAttribute(DATA_ATTR.blockContextMenu, '');
 
   // Momentary centre burst — flashes the action's glyph (à la native players)
   // each time playback toggles, then animates out.
@@ -936,7 +944,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   loopRow.append(menuIcon(IconPlayerLoop), loopLabel, loopSwitch);
   // setLoop lives in the persistence section below (it also stores the shared
   // preference); the listener only fires after attach, so the late const is safe.
-  loopRow.addEventListener('click', () => setLoop(!media.loop));
+  loopRow.addEventListener('click', () => { setLoop(!media.loop); onLoopChange?.(); });
 
   const menuDivider = document.createElement('div');
   menuDivider.className = 'blok-video-controls__menu-divider';
@@ -1244,36 +1252,12 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     if (isKeyboardModality()) revealControls();
   };
 
-  // ----- right-click context menu + stats overlay -----
-  const ctxMenu = document.createElement('div');
-  ctxMenu.className = 'blok-video-controls__ctx';
-  ctxMenu.setAttribute('data-role', 'video-menu');
-  ctxMenu.setAttribute('role', 'menu');
-  ctxMenu.hidden = true;
-  const ctxItem = (action: string, label: string): HTMLButtonElement => {
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'blok-video-controls__ctx-item';
-    item.setAttribute('data-action', action);
-    item.setAttribute('role', 'menuitem');
-    item.textContent = label;
-    return item;
-  };
-  const ctxLoop = ctxItem('ctx-loop', i18nLabel('loop', 'Loop'));
-  ctxLoop.setAttribute('role', 'menuitemcheckbox');
-  const ctxCopy = ctxItem('copy-url', i18nLabel('ctxCopyUrl', 'Copy video URL'));
-  const ctxCopyAt = ctxItem('copy-url-at-time', i18nLabel('ctxCopyUrlAtTime', 'Copy video URL at current time'));
-  const ctxStats = ctxItem('stats', i18nLabel('ctxStats', 'Playback statistics'));
-  ctxMenu.append(ctxLoop, ctxCopy, ctxCopyAt, ctxStats);
-  root.appendChild(ctxMenu);
-
   const statsOverlay = document.createElement('div');
   statsOverlay.className = 'blok-video-controls__stats';
   statsOverlay.setAttribute('data-role', 'video-stats');
   statsOverlay.hidden = true;
   root.appendChild(statsOverlay);
 
-  const clipboardWrite = (text: string): void => { void navigator.clipboard?.writeText?.(text); };
   const renderStats = (): void => {
     const quality = video.getVideoPlaybackQuality?.();
     const unavailable = tr(
@@ -1311,32 +1295,61 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   };
   const refreshStats = (): void => { if (!statsOverlay.hidden) renderStats(); };
 
-  const onCtxOutside = (event: MouseEvent): void => {
-    if (!ctxMenu.contains(event.target as Node)) closeCtxMenu();
-  };
-  const onCtxKeydown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') closeCtxMenu();
-  };
-  const closeCtxMenu = (): void => {
-    if (ctxMenu.hidden) return;
+  const detachReadOnlyContextMenu = readOnly ? (() => {
+    const ctxMenu = document.createElement('div');
+    ctxMenu.className = 'blok-video-controls__ctx';
+    ctxMenu.setAttribute('data-role', 'video-menu');
+    ctxMenu.setAttribute('role', 'menu');
     ctxMenu.hidden = true;
-    document.removeEventListener('mousedown', onCtxOutside);
-    document.removeEventListener('keydown', onCtxKeydown);
-  };
-  const onContextMenu = (event: MouseEvent): void => {
-    event.preventDefault();
-    ctxLoop.setAttribute('aria-checked', String(media.loop));
-    ctxMenu.style.setProperty('--blok-ctx-x', `${event.offsetX}px`);
-    ctxMenu.style.setProperty('--blok-ctx-y', `${event.offsetY}px`);
-    ctxMenu.hidden = false;
-    document.addEventListener('mousedown', onCtxOutside);
-    document.addEventListener('keydown', onCtxKeydown);
-  };
-  ctxLoop.addEventListener('click', () => { setLoop(!media.loop); ctxLoop.setAttribute('aria-checked', String(media.loop)); closeCtxMenu(); });
-  ctxCopy.addEventListener('click', () => { clipboardWrite(video.currentSrc); closeCtxMenu(); });
-  ctxCopyAt.addEventListener('click', () => { clipboardWrite(`${video.currentSrc}#t=${Math.floor(video.currentTime)}`); closeCtxMenu(); });
-  ctxStats.addEventListener('click', () => { toggleStats(); closeCtxMenu(); });
-  video.addEventListener('contextmenu', onContextMenu);
+    const ctxItem = (action: string, label: string): HTMLButtonElement => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'blok-video-controls__ctx-item';
+      item.setAttribute('data-action', action);
+      item.setAttribute('role', 'menuitem');
+      item.textContent = label;
+      return item;
+    };
+    const ctxLoop = ctxItem('ctx-loop', i18nLabel('loop', 'Loop'));
+    ctxLoop.setAttribute('role', 'menuitemcheckbox');
+    const ctxCopy = ctxItem('copy-url', i18nLabel('ctxCopyUrl', 'Copy video URL'));
+    const ctxCopyAt = ctxItem('copy-url-at-time', i18nLabel('ctxCopyUrlAtTime', 'Copy video URL at current time'));
+    const ctxStats = ctxItem('stats', i18nLabel('ctxStats', 'Playback statistics'));
+    ctxMenu.append(ctxLoop, ctxCopy, ctxCopyAt, ctxStats);
+    root.appendChild(ctxMenu);
+
+    const clipboardWrite = (value: string): void => { void navigator.clipboard?.writeText?.(value); };
+    const closeCtxMenu = (): void => {
+      ctxMenu.hidden = true;
+      document.removeEventListener('mousedown', onCtxOutside);
+      document.removeEventListener('keydown', onCtxKeydown);
+    };
+    const onCtxOutside = (event: MouseEvent): void => {
+      if (!ctxMenu.contains(event.target instanceof Node ? event.target : null)) closeCtxMenu();
+    };
+    const onCtxKeydown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') closeCtxMenu();
+    };
+    const onContextMenu = (event: MouseEvent): void => {
+      event.preventDefault();
+      ctxLoop.setAttribute('aria-checked', String(media.loop));
+      ctxMenu.style.setProperty('--blok-ctx-x', `${event.offsetX}px`);
+      ctxMenu.style.setProperty('--blok-ctx-y', `${event.offsetY}px`);
+      ctxMenu.hidden = false;
+      document.addEventListener('mousedown', onCtxOutside);
+      document.addEventListener('keydown', onCtxKeydown);
+    };
+    ctxLoop.addEventListener('click', () => { setLoop(!media.loop); onLoopChange?.(); ctxLoop.setAttribute('aria-checked', String(media.loop)); closeCtxMenu(); });
+    ctxCopy.addEventListener('click', () => { clipboardWrite(video.currentSrc); closeCtxMenu(); });
+    ctxCopyAt.addEventListener('click', () => { clipboardWrite(`${video.currentSrc}#t=${Math.floor(video.currentTime)}`); closeCtxMenu(); });
+    ctxStats.addEventListener('click', () => { toggleStats(); closeCtxMenu(); });
+    video.addEventListener('contextmenu', onContextMenu);
+    return (): void => {
+      document.removeEventListener('mousedown', onCtxOutside);
+      document.removeEventListener('keydown', onCtxKeydown);
+      video.removeEventListener('contextmenu', onContextMenu);
+    };
+  })() : undefined;
 
   // ----- volume / rate / loop / position persistence -----
   // Volume, rate and loop are shared across every video block; position is per-source.
@@ -1369,18 +1382,17 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
       if (Number.isFinite(target) && target > 0 && (dur === 0 || target < dur - 5)) media.currentTime = target;
     }
   };
-  const setLoop = (next: boolean): void => {
+  const setLoop = (next: boolean, persist = true): void => {
     media.loop = next;
     loopRow.setAttribute('aria-checked', String(next));
-    safeSet(LOOP_KEY, String(next));
+    if (persist) safeSet(LOOP_KEY, String(next));
   };
-  // Rate and loop restore immediately on attach (they don't depend on metadata).
-  // Rate goes through setRate so the gear menu UI stays in sync; the stored loop
-  // preference wins over the block's Loop tune seed.
+  // Restore shared preferences before applying this block's Loop edit.
   const storedRate = Number(safeGet(RATE_KEY) ?? NaN);
   if (Number.isFinite(storedRate) && storedRate > 0) setRate(storedRate);
   const storedLoop = safeGet(LOOP_KEY);
   if (storedLoop !== null) setLoop(storedLoop === 'true');
+  if (loopOverride !== undefined) setLoop(loopOverride, false);
 
   playToggle.addEventListener('click', togglePlay);
   centerPlay.addEventListener('click', () => { void media.play(); });
@@ -1441,10 +1453,8 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     if (hold.timer) clearTimeout(hold.timer);
     if (state.idleTimer) clearTimeout(state.idleTimer);
     document.removeEventListener('mousedown', onMenuOutside);
-    document.removeEventListener('mousedown', onCtxOutside);
-    document.removeEventListener('keydown', onCtxKeydown);
+    detachReadOnlyContextMenu?.();
     window.removeEventListener('keydown', onTheaterKey, true);
-    video.removeEventListener('contextmenu', onContextMenu);
     cancelAnimationFrame(speedGlide.raf);
     stopSeekLoop();
     video.removeEventListener('play', startSeekLoop);
@@ -1507,5 +1517,5 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     root.remove();
   };
 
-  return { element: root, setTheater, destroy };
+  return { element: root, setTheater, toggleStats, destroy };
 }

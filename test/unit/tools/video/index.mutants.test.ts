@@ -312,6 +312,8 @@ describe('VideoTool — block settings copy', () => {
     'tools.video.replace': 'L10n replace',
     'tools.video.download': 'L10n download',
     'tools.video.copyUrl': 'L10n copy url',
+    'tools.video.ctxCopyUrlAtTime': 'L10n copy url at time',
+    'tools.video.ctxStats': 'L10n statistics',
   };
 
   beforeEach(() => vi.clearAllMocks());
@@ -348,6 +350,8 @@ describe('VideoTool — block settings copy', () => {
       'video-replace': 'L10n replace',
       'video-download': 'L10n download',
       'video-copy-url': 'L10n copy url',
+      'video-copy-url-at-time': 'L10n copy url at time',
+      'video-statistics': 'L10n statistics',
     });
   });
 
@@ -368,6 +372,8 @@ describe('VideoTool — block settings copy', () => {
       'video-replace': 'Replace video',
       'video-download': 'Download',
       'video-copy-url': 'Copy URL',
+      'video-copy-url-at-time': 'Copy video URL at current time',
+      'video-statistics': 'Playback statistics',
     });
   });
 
@@ -384,6 +390,8 @@ describe('VideoTool — block settings copy', () => {
       'video-replace',
       'video-download',
       'video-copy-url',
+      'video-copy-url-at-time',
+      'video-statistics',
     ];
 
     for (const name of leaves) {
@@ -1137,14 +1145,14 @@ describe('VideoTool — tunes and lifecycle', () => {
     expect(block.dispatchChange).toHaveBeenCalledTimes(1);
   });
 
-  it('toggling Loop off clears the stored flag', () => {
+  it('toggling Loop off saves an explicit false choice', () => {
     const block = createMockBlock();
     const tool = new VideoTool(createOptions({ url: 'u', loop: true }, {}, block));
 
     tool.render();
     findItem(tool, 'video-loop')?.onActivate?.();
 
-    expect(tool.save().loop).toBeUndefined();
+    expect(tool.save().loop).toBe(false);
     expect(block.dispatchChange).toHaveBeenCalledTimes(1);
   });
 

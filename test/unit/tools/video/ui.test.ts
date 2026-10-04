@@ -1,12 +1,22 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { renderVideo, renderCaptionRow } from '../../../../src/tools/video/ui';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 describe('renderVideo', () => {
+  it('marks the video as a block-menu surface', () => {
+    const video = renderVideo({ url: 'https://example.com/clip.mp4' }).querySelector('video');
+
+    expect(video?.hasAttribute('data-blok-block-context-menu')).toBe(true);
+  });
+
   it('returns figure with <video> carrying the src url', () => {
     const fig = renderVideo({ url: 'https://example.com/clip.mp4' });
     const video = fig.querySelector('video');

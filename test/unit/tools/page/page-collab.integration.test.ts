@@ -1,8 +1,3 @@
-/**
- * A real editor and a real Yjs peer. A peer's cache write must land in place:
- * re-creating the block re-runs resolve, and two viewers whose resolve
- * disagrees would then rewrite each other forever.
- */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../../src/blok';
@@ -15,6 +10,7 @@ import type { OutputData } from '../../../../types';
 interface YjsSide {
   getStateVector: () => Uint8Array;
   encodeStateAsUpdate: (stateVector?: Uint8Array) => Uint8Array;
+  onDocUpdate: (callback: (update: Uint8Array, origin: unknown) => void) => () => void;
   applyRemoteUpdate: (update: Uint8Array) => void;
   toJSON: () => Array<{ id?: string; data: unknown }>;
 }
@@ -61,7 +57,7 @@ describe('a page block edited by a peer', () => {
     vi.restoreAllMocks();
   });
 
-  it('takes the peer cache in place: no resolve, no write back', async () => {
+  it('keeps host metadata when a peer sends a legacy cache', async () => {
     // This viewer's host disagrees with the peer's on purpose.
     const resolve = vi.fn().mockResolvedValue({ title: 'Mine' });
     const instance = new Blok({
@@ -93,6 +89,44 @@ describe('a page block edited by a peer', () => {
     other.applyRemoteUpdate(receiver.encodeStateAsUpdate(before));
     expect(dataOf(other, 'pg')).toEqual({ pageId: 'p1', cache: { title: 'Theirs' } });
     expect(dataOf(receiver, 'pg')).toEqual({ pageId: 'p1', cache: { title: 'Theirs' } });
-    expect(holder?.querySelector('[data-blok-testid="page-title"]')?.textContent).toBe('Theirs');
+    expect(holder?.querySelector('[data-blok-testid="page-title"]')?.textContent).toBe('Mine');
+  }, 30_000);
+
+  it('does not echo a peer legacy cache during replay', async () => {
+    const resolve = vi.fn().mockResolvedValue({ title: 'Mine' });
+    const instance = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, page: { class: PageTool, config: { resolve } } },
+      data: { blocks: [{ id: 'pg', type: 'page', data: { pageId: 'p1' } }] },
+    }) as unknown as Runtime;
+
+    editor = instance;
+    await instance.isReady;
+    await settleFrame();
+
+    const receiver = instance.module.yjsManager;
+    const other = new DocumentStore(new YBlockSerializer());
+
+    peer = other;
+    other.applyRemoteUpdate(receiver.encodeStateAsUpdate(other.getStateVector()));
+    const before = other.getStateVector();
+    const outbound = vi.fn();
+    const unsubscribe = receiver.onDocUpdate(outbound);
+
+    resolve.mockClear();
+    other.updateBlockData('pg', 'cache', { title: 'Theirs' });
+    receiver.applyRemoteUpdate(other.encodeStateAsUpdate(receiver.getStateVector()));
+    await settleFrame();
+    await settle(50);
+    await settleFrame();
+
+    expect(outbound).not.toHaveBeenCalled();
+    expect(resolve).not.toHaveBeenCalled();
+    other.applyRemoteUpdate(receiver.encodeStateAsUpdate(before));
+    expect(dataOf(other, 'pg')).toEqual({ pageId: 'p1', cache: { title: 'Theirs' } });
+    expect(dataOf(receiver, 'pg')).toEqual({ pageId: 'p1', cache: { title: 'Theirs' } });
+    expect(holder?.querySelector('[data-blok-testid="page-title"]')?.textContent).toBe('Mine');
+    expect((await instance.save()).blocks[0]?.data).toEqual({ pageId: 'p1' });
+    unsubscribe();
   }, 30_000);
 });

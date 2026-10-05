@@ -453,6 +453,16 @@ const main = async () => {
     toolAttributes: true,
     /** Without it a page card is a `<span>`, and `<a>`-only rules would be pruned. */
     pageHref: (pageId) => `/pages/${pageId}`,
+    pageInfo: (pageId) => {
+      if (pageId === 'p2') {
+        return { title: 'Emoji page', icon: { type: 'emoji', value: '🗺' } };
+      }
+      if (pageId === 'p3') {
+        return { icon: { type: 'image', url: 'https://example.com/icon.png' } };
+      }
+
+      return { title: 'Sub-page' };
+    },
   });
 
   const { window } = new JSDOM(`<!doctype html><html><body>${html}</body></html>`);

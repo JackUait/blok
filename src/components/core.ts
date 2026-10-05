@@ -414,6 +414,7 @@ export class Core {
       'ReadOnly',
       'ThemeManager',
       'Find',
+      'PageReferences',
     ];
 
     await modulesToPrepare.reduce(

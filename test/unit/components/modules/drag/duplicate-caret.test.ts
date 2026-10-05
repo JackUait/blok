@@ -12,6 +12,8 @@ import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { Block } from '../../../../../src/components/block';
+import { BlockToolAdapter } from '../../../../../src/components/tools/block';
+import type { API } from '../../../../../types';
 import * as tooltip from '../../../../../src/components/utils/tooltip';
 import * as announcer from '../../../../../src/components/utils/announcer';
 
@@ -72,13 +74,15 @@ type DupSetup = {
   insert: Mock;
 };
 
-const createSetup = (dups: Block | Block[]): DupSetup => {
+const createSetup = (
+  dups: Block | Block[],
+  blocks: Block[] = [createBlockStub('block-1'), createBlockStub('block-2')]
+): DupSetup => {
   const dupQueue = Array.isArray(dups) ? [...dups] : [dups];
   const wrapper = document.createElement('div');
 
   wrapper.setAttribute('data-blok-editor', '');
 
-  const blocks = [createBlockStub('block-1'), createBlockStub('block-2')];
   const allBlocks = [...blocks, ...dupQueue];
 
   // Hand out one fresh copy per insert() call so a multi-block selection yields
@@ -156,13 +160,13 @@ const createSetup = (dups: Block | Block[]): DupSetup => {
 
 describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
     vi.spyOn(tooltip, 'hide').mockImplementation(() => undefined);
     vi.spyOn(announcer, 'announce').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('places the caret into the duplicated copy instead of block-selecting it', async () => {
@@ -195,6 +199,92 @@ describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
       tool: 'paragraph',
       data: { text: '<a href="https://x.test/p1">Plans</a>' },
     });
+  });
+
+  it('duplicates a custom block with its ordinary data when copyAsLink throws', async () => {
+    class CustomTool {
+      public static copyAsLink(): never {
+        throw new Error('link lookup failed');
+      }
+
+      public render(): HTMLElement {
+        return document.createElement('div');
+      }
+
+      public save(): { text: string } {
+        return { text: 'ordinary copy' };
+      }
+    }
+
+    const dup = createBlockStub('dup-1');
+    const { dragManager, blocks, tools, insert } = createSetup(dup);
+
+    Object.assign(blocks[0], {
+      name: 'custom',
+      save: vi.fn().mockResolvedValue({ data: { text: 'ordinary copy' }, tunes: { alignment: { alignment: 'center' } } }),
+    });
+    tools.blockTools.set('custom', new BlockToolAdapter({
+      name: 'custom',
+      constructable: CustomTool,
+      config: {},
+      api: {} as API,
+      isDefault: false,
+      isInternal: false,
+    }));
+
+    const copied = await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'custom',
+      data: { text: 'ordinary copy' },
+      tunes: { alignment: { alignment: 'center' } },
+    }));
+    expect(copied).toEqual([dup]);
+  });
+
+  it('does not duplicate an owning page when no link URL is available', async () => {
+    const dup = createBlockStub('dup-1');
+    const { dragManager, blocks, tools, insert } = createSetup(dup);
+
+    Object.assign(blocks[0], {
+      name: 'page',
+      save: vi.fn().mockResolvedValue({ data: { pageId: 'p1' }, tunes: {} }),
+    });
+    tools.blockTools.set('page', { copyAsLink: () => null });
+
+    const copied = await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+    expect(insert).not.toHaveBeenCalled();
+    expect(copied).toEqual([]);
+  });
+
+  it('keeps a selected paragraph in place when a preceding page has no link URL', async () => {
+    const container = createBlockStub('container');
+    const page = createBlockStub('page-1');
+    const paragraph = createBlockStub('para-1');
+    const dup = createBlockStub('dup-1');
+    const { dragManager, tools, insert, blockSelection } = createSetup(dup, [container, page, paragraph]);
+
+    container.contentIds = [page.id];
+    Object.assign(page, {
+      name: 'page',
+      parentId: container.id,
+      save: vi.fn().mockResolvedValue({ data: { pageId: 'p1' }, tunes: {} }),
+    });
+    page.selected = true;
+    paragraph.selected = true;
+    blockSelection.selectedBlocks = [page, paragraph];
+    tools.blockTools.set('page', { copyAsLink: () => null });
+
+    const copied = await dragManager.duplicateBlocksInPlace(page);
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'paragraph',
+      data: { text: 'para-1' },
+      placement: { parentId: null, afterId: paragraph.id },
+    }));
+    expect(copied).toEqual([dup]);
   });
 
   it('briefly highlights the duplicated copy as just-added (blue arrival pulse)', async () => {

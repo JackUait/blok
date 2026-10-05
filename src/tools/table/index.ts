@@ -21,6 +21,7 @@ import {
 } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
+import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../shared/page-reference';
 
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
 import type { ConvertedBlock, InitCellContent } from './table-cell-blocks';
@@ -565,7 +566,9 @@ export class Table implements BlockTool {
 
           return style.length > 0 ? { style: true } : {};
         },
-        a: { href: true, target: '_blank', rel: 'nofollow' },
+        a: (node: Element) => node.getAttribute(PAGE_REFERENCE_ATTR)
+          ? preservePageReferenceAnchor(node)
+          : { href: true, target: '_blank', rel: 'nofollow' },
         // Legacy string cells may hold lists and lines; this runs before
         // parseCellContentToBlocks reads them.
         ...CELL_BLOCK_TAGS_SANITIZE,

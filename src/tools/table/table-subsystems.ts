@@ -2,6 +2,9 @@ import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { getElementDirection } from '../../components/utils/direction';
 import type { TextDirection } from '../../components/utils/direction';
+import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
+import { clean } from '../../components/utils/sanitizer';
+import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
 
 import { TableAddControls } from './table-add-controls';
 import type { TableCellBlocks } from './table-cell-blocks';
@@ -1145,7 +1148,23 @@ export class TableSubsystems {
    * Heading flags travel only when the range holds the heading row/column.
    */
   private buildCellClipboardPayload(cells: HTMLElement[]): TableCellsClipboard | null {
-    const entries = this.collectCellBlockData(cells);
+    const sanitizeReference = (block: ClipboardBlockData): ClipboardBlockData => {
+      const text = block.data.text;
+
+      return {
+        ...block,
+        data: typeof text === 'string' && text.includes(PAGE_REFERENCE_ATTR)
+          ? { ...block.data, text: clean(text, INLINE_TEXT_SANITIZE) }
+          : block.data,
+        ...(block.children === undefined ? {} : { children: block.children.map(sanitizeReference) }),
+      };
+    };
+
+    // Copy reads preservedData before save; leave that live object untouched.
+    const entries = this.collectCellBlockData(cells).map(entry => ({
+      ...entry,
+      blocks: entry.blocks.map(sanitizeReference),
+    }));
 
     if (entries.length === 0) {
       return null;

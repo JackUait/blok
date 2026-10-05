@@ -565,18 +565,21 @@ describe('extractTexts / injectTexts', () => {
     });
   });
 
-  it('extracts a page block\'s cached title and injects its translation back', () => {
+  it('never extracts or translates a page block\'s legacy cached metadata', () => {
+    const cachedPage = { type: 'page', data: { pageId: 'p1', cache: { title: 'Private title', icon: { type: 'emoji', value: '🗺' } } } };
     const data = {
       blocks: [
-        { type: 'page', data: { pageId: 'p1', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } } },
+        cachedPage,
+        { type: 'paragraph', data: { text: 'Hello' } },
         { type: 'page', data: { pageId: 'p2' } },
       ],
     };
 
-    expect(extractTexts(data)).toEqual(['Roadmap']);
-    expect(injectTexts(data, ['Дорожная карта'])).toEqual({
+    expect(extractTexts(data)).toEqual(['Hello']);
+    expect(injectTexts(data, ['Привет'])).toEqual({
       blocks: [
-        { type: 'page', data: { pageId: 'p1', cache: { title: 'Дорожная карта', icon: { type: 'emoji', value: '🗺' } } } },
+        cachedPage,
+        { type: 'paragraph', data: { text: 'Привет' } },
         { type: 'page', data: { pageId: 'p2' } },
       ],
     });

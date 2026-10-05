@@ -324,6 +324,11 @@ export class KeyboardController extends Controller {
       }
     }
 
+    if (key === 'Enter' && this.Blok.PageReferences.ownsTarget(target)) {
+      // The reference module rechecks access before opening.
+      return;
+    }
+
     if (historyKey && !this.ownsHistoryKeyTarget(target)) {
       return;
     }
@@ -790,6 +795,13 @@ export class KeyboardController extends Controller {
     if (this.Blok.BlockEvents.emojiTrigger.opened) {
       event.stopPropagation();
       this.Blok.BlockEvents.emojiTrigger.close();
+
+      return;
+    }
+
+    if (this.Blok.BlockEvents.pageReferenceTrigger.opened) {
+      event.stopPropagation();
+      this.Blok.BlockEvents.pageReferenceTrigger.close();
 
       return;
     }

@@ -413,15 +413,25 @@ describe('markdown round trip: literal text is escaped', () => {
     expect(await roundTripText('C# and F##', 'header')).toBe('C# and F##');
   });
 
-  it('keeps literal markup in a page title and in a file name used as a link label', async () => {
+  it('does not carry a legacy cached page title into Markdown or its import', async () => {
     const markdown = exportBoth([
-      { tool: 'page', data: { pageId: 'p1', cache: { title: '*draft* [v2]' } } },
+      { tool: 'page', data: { pageId: 'p1', cache: { title: '*restricted* [title]' } } },
+    ]);
+
+    expect(markdown).toBe('Page');
+
+    const { blocks } = await reimport(markdown);
+
+    expect(blocks[0].data.text).toBe('Page');
+  });
+
+  it('keeps literal markup in a file name used as a link label', async () => {
+    const markdown = exportBoth([
       { tool: 'file', data: { url: 'https://e.test/f.pdf', fileName: 'a]b *c*.pdf' } },
     ]);
     const { blocks } = await reimport(markdown);
 
-    expect(blocks[0].data.text).toBe('*draft* [v2]');
-    expect(blocks[1].data.text).toContain('>a]b *c*.pdf</a>');
+    expect(blocks[0].data.text).toContain('>a]b *c*.pdf</a>');
   });
 
   it('trims spaces around an equation source so it still reads as math', () => {

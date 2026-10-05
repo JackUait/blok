@@ -14,6 +14,7 @@ import { classesFor } from '../shared/tool-classes';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 import { firstStrongDirection } from '../shared/text-direction';
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
+import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
 import { buildDocumentModel, normalizeViewBlock } from './document-model';
 import type { DocumentModel, ViewBlock } from './document-model';
 import { builtinEmitters, renderListRun } from './emitters';
@@ -24,6 +25,7 @@ import type { ViewInlineRenderer } from './inline-renderers';
 import { escapeHtml, sanitizeHtmlFragment } from './sanitize';
 
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, SanitizerConfig } from '../../types';
+import type { PageInfo } from '../../types/tools/page';
 import { isPagePointer } from '../shared/page-pointer';
 
 /**
@@ -166,10 +168,12 @@ export interface BlocksToHtmlOptions {
   /**
    * Build the link for a `page` block from its `pageId`. The page body lives in
    * a separate document, so the view renders a page as a one-line card; it is a
-   * link only when this is given. The result still passes through
+   * link only when this and authorized {@link pageInfo} are given. The result still passes through
    * {@link BlocksToHtmlOptions.transformUrl} and the unsafe-scheme strip.
    */
   pageHref?: (pageId: string) => string;
+  /** Authorized metadata for page cards. Missing metadata stays neutral and unlinked. */
+  pageInfo?: (pageId: string) => PageInfo | null | undefined;
   /**
    * Base direction of the document (default: none).
    *
@@ -340,13 +344,40 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     ? undefined
     : (url: string, attr: 'href' | 'src'): string => transformUrl(url, { attr, blockType: undefined });
 
-  /**
-   * Inline renderers run on the SANITIZED fragment, so a renderer can only see
-   * what the allowlist kept. Skipped entirely when none are configured — the
-   * pass costs a parse/serialize round trip per inline field.
-   */
+  /** Inline renderers see only attributes that survived sanitization. */
   const inlineRenderers = options.inlineRenderers ?? {};
   const hasInlineRenderers = Object.keys(inlineRenderers).length > 0;
+  const ownAnchorRenderer = inlineRenderers.a;
+  const pageReferenceRenderers: Record<string, ViewInlineRenderer> = {
+    ...inlineRenderers,
+    a: (element) => {
+      const rendered = ownAnchorRenderer?.(element);
+      const pageId = element.attrs[PAGE_REFERENCE_ATTR];
+
+      if (typeof rendered === 'string' || !pageId) {
+        return rendered;
+      }
+
+      const info = options.pageInfo?.(pageId);
+
+      if (info === null || info === undefined || info.access === 'none') {
+        return rendered;
+      }
+
+      const title = typeof info.title === 'string' && info.title.trim() !== ''
+        ? info.title
+        : PAGE_REFERENCE_FALLBACK;
+      const rawHref = options.pageHref?.(pageId);
+      const href = typeof rawHref === 'string' && inlineUrlTransform !== undefined
+        ? inlineUrlTransform(rawHref, 'href')
+        : rawHref;
+      const hrefAttr = typeof href === 'string' && href !== '' && !hasUnsafeUrlProtocol(href, 'href')
+        ? ` href="${escapeHtml(href)}"`
+        : '';
+
+      return `<a ${PAGE_REFERENCE_ATTR}="${escapeHtml(pageId)}"${hrefAttr}>${escapeHtml(title)}</a>`;
+    },
+  };
 
   /**
    * With a direction set, an inline equation is pinned LTR so math never
@@ -355,7 +386,7 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
    */
   const ownSpanRenderer = inlineRenderers.span;
   const mathPinningRenderers: Record<string, ViewInlineRenderer> = {
-    ...inlineRenderers,
+    ...pageReferenceRenderers,
     span: (element) => {
       const rendered = ownSpanRenderer?.(element);
 
@@ -386,7 +417,9 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
         return applyInlineRenderers(sanitized, mathPinningRenderers);
       }
 
-      return hasInlineRenderers ? applyInlineRenderers(sanitized, inlineRenderers) : sanitized;
+      return hasInlineRenderers || ((pageHref !== undefined || options.pageInfo !== undefined) && sanitized.includes(PAGE_REFERENCE_ATTR))
+        ? applyInlineRenderers(sanitized, pageReferenceRenderers)
+        : sanitized;
     },
     escape: (value) => escapeHtml(typeof value === 'string' ? value : ''),
     childrenOf: (id) => model.childrenOf(id),
@@ -415,10 +448,13 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 
       return ` ${name}="${escapeHtml(resolved)}"`;
     },
-    pageHrefAttr: (pageId) => (
+    pageHrefAttr: (pageId, blockType) => (
       pageHref === undefined || typeof pageId !== 'string' || pageId === ''
         ? ''
-        : env.url('href', pageHref(pageId), 'page')
+        : env.url('href', pageHref(pageId), blockType)
+    ),
+    pageInfo: (pageId) => (
+      typeof pageId === 'string' && pageId !== '' ? options.pageInfo?.(pageId) : undefined
     ),
     idAttr: (block) => (blockIds && block.id !== undefined ? ` data-blok-id="${escapeHtml(block.id)}"` : ''),
     rootAttrs: (block) => {

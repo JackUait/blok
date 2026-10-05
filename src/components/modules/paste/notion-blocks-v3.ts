@@ -24,6 +24,7 @@ import { COLOR_PRESETS, colorVarName } from '../../shared/color-presets';
 import { DEFAULT_EMOJI } from '../../../tools/callout/constants';
 import { DEFAULT_LANGUAGE, LANGUAGES } from '../../../tools/code/constants';
 import { matchEmbedService } from '../../../tools/link/registry';
+import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../shared/page-reference';
 
 /** MIME flavour that carries Notion's lossless block record-map. */
 export const NOTION_BLOCKS_V3_MIME = 'text/_notion-blocks-v3-production';
@@ -59,9 +60,12 @@ interface Mapped {
  * Parse the `text/_notion-blocks-v3-production` clipboard payload into a flat
  * array of Blok-ready blocks.  Returns `null` when the payload is not valid
  * JSON or does not look like the Notion record-map (so callers can fall back
- * to the HTML path).
+ * to the HTML path). Unregistered page tools fall back to Notion links.
  */
-export function parseNotionBlocksV3(json: string): NotionParsedBlock[] | null {
+export function parseNotionBlocksV3(
+  json: string,
+  hasTool?: (tool: 'page' | 'page-link' | 'bookmark') => boolean
+): NotionParsedBlock[] | null {
   const parsed = safeJsonParse(json);
 
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -133,7 +137,7 @@ export function parseNotionBlocksV3(json: string): NotionParsedBlock[] | null {
       return;
     }
 
-    const mapped = mapValue(value, byId);
+    const mapped = mapValue(value, byId, hasTool);
     const children = Array.isArray(value.content) ? value.content : [];
 
     if (mapped === null) {
@@ -263,7 +267,11 @@ function resolveColumnOrder(
  * Map one Notion block value to a Blok tool + data, or `null` for structural
  * wrappers that should be dropped while their children are promoted.
  */
-function mapValue(value: NotionValue, byId: Map<string, NotionValue>): Mapped | null {
+function mapValue(
+  value: NotionValue,
+  byId: Map<string, NotionValue>,
+  hasTool?: (tool: 'page' | 'page-link' | 'bookmark') => boolean
+): Mapped | null {
   const props = value.properties ?? {};
   const text = richText(props.title, byId);
 
@@ -345,10 +353,9 @@ function mapValue(value: NotionValue, byId: Map<string, NotionValue>): Mapped | 
       return { tool: 'callout', data: { emoji, textColor, backgroundColor } };
     }
     case 'page':
-      // A `page` block inside content is a SUB-PAGE reference: its body lives on
-      // a separate Notion page that is not in the clipboard. Emit a bookmark
-      // linking to that page so the reference is not silently dropped.
-      return { tool: 'bookmark', data: { url: notionPageUrl(value.id), ...(text.length > 0 ? { title: text } : {}) } };
+      return hasTool?.('page') === false
+        ? pageReferenceFallback(value.id, text, hasTool)
+        : { tool: 'page', data: { pageId: value.id } };
     case 'tab':
       // Tab wrapper — skip, promote children to the same level.
       return null;
@@ -360,18 +367,41 @@ function mapValue(value: NotionValue, byId: Map<string, NotionValue>): Mapped | 
       // Synced-block duplicate: a pointer only; the referenced content is not
       // in the clipboard. Drop it rather than leave a stray empty paragraph.
       return null;
+    case 'alias': {
+      const pointer = value.format?.alias_pointer;
+
+      if (isPlainObject(pointer) && pointer.table === 'block' && typeof pointer.id === 'string' && pointer.id.trim() !== '') {
+        return hasTool?.('page-link') === false
+          ? pageReferenceFallback(pointer.id, text, hasTool)
+          : { tool: 'page-link', data: { pageId: pointer.id } };
+      }
+
+      return null;
+    }
     case 'table_of_contents':
     case 'breadcrumb':
     case 'copy_indicator':
     case 'link_to_page':
-    case 'alias':
-      // Structure-only / derived blocks carry no migratable content — drop them
-      // (a paragraph fallback would leave an empty stray block).
       return null;
     default:
       // Unmapped types fall back to a paragraph carrying their title text.
       return { tool: 'paragraph', data: { text } };
   }
+}
+
+/** Keep a page reference navigable when its opt-in block tool is absent. */
+function pageReferenceFallback(
+  id: string,
+  text: string,
+  hasTool?: (tool: 'page' | 'page-link' | 'bookmark') => boolean
+): Mapped {
+  const url = notionPageUrl(id);
+
+  if (hasTool?.('bookmark') !== false) {
+    return { tool: 'bookmark', data: { url, ...(text.length > 0 ? { title: text } : {}) } };
+  }
+
+  return { tool: 'paragraph', data: { text: `<a href="${escapeAttr(url)}">${text || PAGE_REFERENCE_FALLBACK}</a>` } };
 }
 
 /** Parse JSON, returning `null` instead of throwing on malformed input. */
@@ -646,11 +676,6 @@ function plainText(title: unknown): string {
   return title.map((seg) => (Array.isArray(seg) && typeof seg[0] === 'string' ? seg[0] : '')).join('');
 }
 
-/**
- * Convert a Notion rich-text array into Blok inline HTML. `byId` resolves
- * page-mention (`p`) flags to their referenced page title when that page is
- * present in the pasted payload.
- */
 function richText(title: unknown, byId?: Map<string, NotionValue>): string {
   if (!Array.isArray(title)) {
     return '';
@@ -682,12 +707,7 @@ function segmentHtml(segment: unknown, byId?: Map<string, NotionValue>): string 
   return style.length > 0 ? `<mark style="${style}">${inner}</mark>` : inner;
 }
 
-/**
- * The base inner content of a segment: an inline `<code>` LaTeX equation (`e`),
- * a resolved page-mention title (`p`), or the plain escaped text. Equation and
- * mention flags carry their content in the flag args / record-map, so they
- * replace the segment's placeholder glyph (`⁍` / `‣`) entirely.
- */
+/** Equation and page flags replace Notion's placeholder glyph. */
 function segmentContent(raw: string, annotations: unknown[], byId?: Map<string, NotionValue>): string {
   const latex = flagArg(annotations, 'e');
 
@@ -822,18 +842,8 @@ function attachmentName(source: unknown): string {
   }
 }
 
-/**
- * Render an inline page-mention as a link to the referenced Notion page. Uses
- * the page title when it is present in the pasted payload, otherwise `Untitled`
- * (mentions usually point at pages outside the copied selection). Linking — vs
- * the old behaviour of leaking the raw `‣` glyph — keeps the reference
- * navigable so the user can still reach the source page after migration.
- */
-function pageMentionContent(pageId: string, raw: string, byId?: Map<string, NotionValue>): string {
-  const titleText = plainText(byId?.get(pageId)?.properties?.title);
-  const label = titleText.length > 0 ? titleText : 'Untitled';
-
-  return `<a href="${escapeAttr(notionPageUrl(pageId))}">${escapeHtml(label)}</a>`;
+function pageMentionContent(pageId: string, _raw: string, _byId?: Map<string, NotionValue>): string {
+  return `<a ${PAGE_REFERENCE_ATTR}="${escapeAttr(pageId)}">${PAGE_REFERENCE_FALLBACK}</a>`;
 }
 
 /** A parsed Notion colour token: a preset name applied as text or background. */

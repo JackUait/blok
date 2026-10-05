@@ -141,6 +141,7 @@ export declare const IconChart: string;
 export declare const IconMessage: string;
 export declare const IconFile: string;
 export declare const IconPage: string;
+export declare const IconLock: string;
 export declare const IconFileDoc: string;
 export declare const IconFileSheet: string;
 export declare const IconFileSlides: string;

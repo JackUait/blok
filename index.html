@@ -1758,7 +1758,7 @@
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
     import { PAGE_TITLE_SELECTOR, PAGES_STORAGE_KEY, ROOT_STORAGE_KEY, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
-    import { findPageLink, mountPageTree } from './src/playground/page-tree.ts';
+    import { mountPageTree } from './src/playground/page-tree.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
@@ -2065,7 +2065,7 @@
       if (!restore || api.readOnly?.isEnabled) return;
       for (const id of pages.pendingRestores(pageId)) {
         if (!hasPointer(blocks, id)) {
-          const { type, data } = pointerBlock(id, pages);
+          const { type, data } = pointerBlock(id);
           api.blocks.insert(type, data, undefined, api.blocks.getBlocksCount(), false);
         }
         pages.restored(id);
@@ -2160,7 +2160,7 @@
       // A collaborative parent gets its block when it next opens (syncPointers).
       if (collaborationConfig(parentId) === null) {
         const blocks = blocksFor(parentId);
-        if (!hasPointer(blocks, id)) storeBlocks(parentId, [...blocks, pointerBlock(id, pages)]);
+        if (!hasPointer(blocks, id)) storeBlocks(parentId, [...blocks, pointerBlock(id)]);
         pages.restored(id);
       }
       renderHeader();
@@ -2184,15 +2184,22 @@
     let titleHistory = null;
 
     function wireTitleHistory(editor) {
+      const shared = collaborationConfig(editorPageId) !== null;
+      let hostTitle = '';
       const tracked = editor.history.track('title', (value, { source }) => {
-        pages.setTitle(currentPageId, value ?? '');
-        const title = document.querySelector(PAGE_TITLE_SELECTOR);
-        // A peer's change must not pull the caret out of what this user is typing.
         if (source === 'remote') {
-          if (title !== null) replaceTitleText(title, value ?? '');
+          pages.reload();
+          const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
+          const canonical = page?.title ?? '';
+          hostTitle = canonical;
+          const title = document.querySelector(PAGE_TITLE_SELECTOR);
+          // Keep the caret while restoring the host title after a peer update.
+          if (title !== null) replaceTitleText(title, canonical);
           updateDocumentTitle();
           return;
         }
+        hostTitle = value ?? '';
+        pages.setTitle(currentPageId, hostTitle);
         renderHeader();
         const fresh = document.querySelector(PAGE_TITLE_SELECTOR);
         if (fresh === null) return;
@@ -2202,24 +2209,33 @@
       });
       const seed = () => {
         if (titleHistory !== null) return;
-        titleHistory = tracked;
         const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
-        // A shared document may already carry the title a peer gave it.
-        const shared = tracked.get();
-        if (shared === undefined) {
-          tracked.set(page?.title ?? '', { record: false });
-        } else if (shared !== page?.title) {
-          pages.setTitle(currentPageId, shared);
-          renderHeader();
-        }
+        hostTitle = page?.title ?? '';
+        // The host record is not shared by the playground's page registry.
+        if (!shared && tracked.get() !== hostTitle) tracked.set(hostTitle, { record: false });
+        titleHistory = {
+          set(value, options) {
+            // Rebase only for a local edit, so its undo returns to this host title.
+            if (shared && tracked.get() !== hostTitle) tracked.set(hostTitle, { record: false });
+            tracked.set(value, options);
+            hostTitle = value;
+          },
+        };
       };
-      // A shared document is whole only after its first sync; seeding earlier
-      // would write this tab's saved title over the one peers already have.
-      if (collaborationConfig(editorPageId) === null) {
+      // A shared history value cannot be seeded from this profile's local title.
+      if (!shared) {
         seed();
       } else {
         editor.on('collaboration:status', ({ status }) => {
-          if (status === 'connected') seed();
+          if (status !== 'connected') return;
+          const before = JSON.stringify(currentPageId === null ? pages.root() : pages.info(currentPageId));
+          pages.reload();
+          seed();
+          const after = JSON.stringify(currentPageId === null ? pages.root() : pages.info(currentPageId));
+          if (before !== after) {
+            if (document.activeElement?.matches(PAGE_TITLE_SELECTOR) === true) updateDocumentTitle();
+            else renderHeader();
+          }
         });
       }
     }
@@ -2261,10 +2277,9 @@
      */
     function goToPage(pageId, { push = true, from: opener } = {}) {
       return queueEditorWork(async () => {
-        // A page made in another tab or by a peer has a block here but no record yet.
-        const link = pageId !== null && !pages.has(pageId) ? findPageLink(pageBlocksOf, pageId) : null;
-        if (link !== null) pages.adopt(pageId, link);
-        const target = pageId !== null && pages.has(pageId) ? pageId : null;
+        if (pageId !== null && !pages.has(pageId)) pages.reload();
+        if (pageId !== null && !pages.has(pageId)) return;
+        const target = pageId;
 
         if (push) history.pushState(null, '', pagePath(target, window.location.search));
         if (target === editorPageId) {
@@ -3081,7 +3096,7 @@
       'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCrop', 'IconSliders', 'IconRotateLeft', 'IconFlipHorizontal', 'IconExpandFullscreen', 'IconCollapseFullscreen', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerBackward', 'IconPlayerForward', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconPlayerSettings', 'IconPlayerSpeed', 'IconPlayerLoop', 'IconPlayerPip', 'IconPlayerTheater', 'IconDownload', 'IconUpload'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3', 'IconToggleH4', 'IconToggleH5', 'IconToggleH6'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconArrowUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight', 'IconMergeCells', 'IconSplitCell', 'IconPlacement', 'IconTextSizeSmall', 'IconTextSizeLarge'],
-      'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconPaintRoller', 'IconPreview', 'IconSplitView', 'IconDotsHorizontal'],
+      'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconLock', 'IconPaintRoller', 'IconPreview', 'IconSplitView', 'IconDotsHorizontal'],
       'Emoji Picker': ['IconEmojiSparkles', 'IconEmojiWink', 'IconEmojiBowl', 'IconEmojiGamepad', 'IconEmojiMap', 'IconEmojiHearts', 'IconEmojiStar', 'IconEmojiSmile', 'IconEmojiSprout', 'IconEmojiUtensils', 'IconEmojiBall', 'IconEmojiGlobe', 'IconEmojiLightbulb', 'IconEmojiHeart', 'IconEmojiFlag', 'IconEmojiDice'],
       'Link Types': ['IconVideo', 'IconMusic', 'IconMap', 'IconChart', 'IconMessage', 'IconFile'],
       'File Types': ['IconFile', 'IconFileDoc', 'IconFileSheet', 'IconFileSlides', 'IconFileArchive'],

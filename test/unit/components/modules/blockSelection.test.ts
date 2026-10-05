@@ -469,9 +469,11 @@ describe('BlockSelection', () => {
         tool: { copyAsLink: (data: { pageId: string }) => ({ url: `https://x.test/editor/page/${data.pageId}`, text: 'Plans' }) },
       });
 
+      const paragraph = { name: 'paragraph', conversionConfig: { import: 'text', export: 'text' }, settings: {} };
       const setup = createBlockSelection({
         Tools: {
-          defaultTool: { name: 'paragraph', conversionConfig: { import: 'text', export: 'text' }, settings: {} },
+          defaultTool: paragraph,
+          blockTools: new Map([['paragraph', paragraph]]),
         } as unknown as BlokModules['Tools'],
       });
 
@@ -544,7 +546,7 @@ describe('BlockSelection', () => {
       expect(writeText).toHaveBeenCalledWith(`[Plans](${PAGE_URL})`);
     });
 
-    it('copies the block itself when the tool has nothing to link to', async () => {
+    it('copies a page without an href as a non-owning page reference', async () => {
       const { setup, page } = setupPage();
       const setData = vi.fn();
 
@@ -552,7 +554,12 @@ describe('BlockSelection', () => {
 
       await setup.blockSelection.copySelectedBlocks(clipboardEventWith(setData));
 
-      expect(payloadOf(setData)[0]).toMatchObject({ tool: 'page', data: { pageId: 'p1' } });
+      expect(payloadOf(setData)).toEqual([expect.objectContaining({
+        tool: 'paragraph',
+        data: { text: '<a data-blok-page-id="p1">Page</a>' },
+      })]);
+      expect(flavorOf(setData, 'text/html')).toBe('<p><a data-blok-page-id="p1">Page</a></p>');
+      expect(flavorOf(setData, 'text/plain')).toBe('Page');
     });
   });
 

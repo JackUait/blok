@@ -14,6 +14,7 @@
  */
 
 import type { BlockToolData } from '../../types';
+import type { PageInfo } from '../../types/tools/page';
 import { orderByContent } from '../shared/content-order';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from '../shared/table-grid';
 import { isPagePointer } from '../shared/page-pointer';
@@ -287,6 +288,8 @@ interface SerializationContext {
   childrenOf: Map<string, SerializableBlock[]>;
   /** Reads inline HTML. */
   inline: InlineBackend;
+  /** Authorized page metadata for the static view. */
+  pageInfo?: (pageId: string) => PageInfo | null | undefined;
   /** Collects degradations; discarded when the caller asked for no report. */
   warnings: MarkdownDegradation[];
   /** Ids already on the render stack — breaks parent-reference cycles. */
@@ -1234,17 +1237,25 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
 
       return `${flatIndent}[${label}](${url})`;
     }
-    /**
-     * A page points at a separate document, so only its title line is here.
-     * The title is plain text: escaped, never read as inline HTML.
-     * "New page" matches the view's card.
-     */
-    case 'page': {
-      warn(context, block.tool, 'degraded', 'page is rendered as its title; the link to the sub-page is lost');
+    case 'page':
+    case 'page-link': {
+      warn(context, block.tool, 'degraded', 'page link is lost');
+      const pageId = data.pageId;
+      const info = typeof pageId === 'string' && pageId !== '' ? context.pageInfo?.(pageId) : undefined;
 
-      const title = isRecord(data.cache) ? asString(data.cache.title) : '';
+      if (info === null) {
+        return `${flatIndent}Page not found`;
+      }
+      if (info === undefined) {
+        return `${flatIndent}Page`;
+      }
+      if (info.access === 'none') {
+        return `${flatIndent}No access`;
+      }
 
-      return `${flatIndent}${title === '' ? 'New page' : escapePlainText(title)}`;
+      const title = typeof info.title === 'string' && info.title !== '' ? info.title : 'New page';
+
+      return `${flatIndent}${escapePlainText(title)}`;
     }
     default: {
       const fallback = `${flatIndent}${text}`;
@@ -1274,7 +1285,8 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
 const buildContext = (
   blocks: SerializableBlock[],
   inline: InlineBackend,
-  warnings: MarkdownDegradation[]
+  warnings: MarkdownDegradation[],
+  pageInfo?: (pageId: string) => PageInfo | null | undefined
 ): SerializationContext => {
   const byId = new Map<string, SerializableBlock>();
   const childrenOf = new Map<string, SerializableBlock[]>();
@@ -1305,6 +1317,7 @@ const buildContext = (
   return { byId,
     childrenOf,
     inline,
+    pageInfo,
     warnings,
     active: new Set<string>(),
     inlineSeen: new Set<string>() };
@@ -1379,10 +1392,11 @@ const collectOwnedIds = (blocks: SerializableBlock[], context: SerializationCont
  */
 export const serializeBlocksToMarkdown = (
   blocks: SerializableBlock[],
-  inline: InlineBackend
+  inline: InlineBackend,
+  pageInfo?: (pageId: string) => PageInfo | null | undefined
 ): { markdown: string; warnings: MarkdownDegradation[] } => {
   const warnings: MarkdownDegradation[] = [];
-  const context = buildContext(blocks, inline, warnings);
+  const context = buildContext(blocks, inline, warnings, pageInfo);
   const ownedIds = collectOwnedIds(blocks, context);
   const topLevel = blocks.filter((block) => block.id === undefined || !ownedIds.has(block.id));
 

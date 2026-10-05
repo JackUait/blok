@@ -45,6 +45,10 @@ export { TEST_ID } from './components/constants/test-ids';
  */
 export { BLOK_FONT_SIZE_TOKENS } from './components/utils/font-size-tokens';
 
+export { inspectOfflineScope, forgetOfflineScope } from './components/modules/collaboration/offline-scope';
+export { listOfflinePages, forgetOfflinePage } from './components/modules/collaboration/offline-pages';
+export { downloadOfflinePage } from './components/modules/collaboration/headless-offline-page';
+
 /**
  * Full teardown of an instance: modules and their listeners, the save queue's
  * `beforeunload` guard, the shared tooltip, and the readiness-registry entry

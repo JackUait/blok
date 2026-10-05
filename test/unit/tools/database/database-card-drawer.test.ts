@@ -785,6 +785,26 @@ describe('DatabaseCardDrawer', () => {
       expect(onTitleChange).toHaveBeenCalledWith('row-2', 'Edited');
     });
 
+    it('ignores a late migration sync for a card the user switched away from', () => {
+      const onTitleChange = vi.fn();
+      const options = createOptions({ onTitleChange });
+      const drawer = new DatabaseCardDrawer(options);
+      const rowA = makeRow({ id: 'row-a', properties: { 'prop-title': 'Card A' } });
+      const rowB = makeRow({ id: 'row-b', properties: { 'prop-title': 'Card B' } });
+
+      drawer.open(rowA);
+      drawer.open(rowB);
+      drawer.syncOpenRow({ ...rowA, pageId: 'page-a' });
+
+      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
+
+      expect(titleInput.value).toBe('Card B');
+      titleInput.value = 'Edited B';
+      titleInput.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(onTitleChange).toHaveBeenCalledWith('row-b', 'Edited B');
+      expect(drawer.openRowId).toBe('row-b');
+    });
+
     it('only has one drawer element in the DOM after switching', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
@@ -1226,6 +1246,181 @@ describe('DatabaseCardDrawer', () => {
     });
   });
 
+  it('keeps the page body mounted when a prior card editor import finishes', async () => {
+    await vi.dynamicImportSettled();
+
+    const gate = { release: () => {} };
+    const blockedImport = new Promise<void>((resolve) => { gate.release = resolve; });
+    const mockBlokConstructor = vi.fn(function mockNestedEditor(config: { holder: HTMLElement }) {
+      config.holder.replaceChildren(document.createTextNode('Legacy A'));
+
+      return { isReady: Promise.resolve(), save: vi.fn().mockResolvedValue({ blocks: [] }), destroy: vi.fn() };
+    });
+    const importFactory = vi.fn(async () => {
+      await blockedImport;
+
+      return { Blok: mockBlokConstructor };
+    });
+
+    vi.resetModules();
+    vi.doMock('../../../../src/blok', importFactory);
+
+    const { DatabaseCardDrawer: DrawerWithMock } = await import('../../../../src/tools/database/database-card-drawer');
+    const rowPages = {
+      copyFromLegacy: vi.fn(async () => ({
+        pageId: 'unused',
+        transactionId: 'unused',
+        acceptedBody: { blocks: [] },
+      })),
+      mount: vi.fn((_pageId: string, holder: HTMLElement) => {
+        holder.replaceChildren(document.createTextNode('Page B'));
+
+        return { destroy: vi.fn() };
+      }),
+    };
+    const options = createOptions({ rowPages });
+    const drawer = new DrawerWithMock(options);
+
+    try {
+      drawer.open(makeRow({ id: 'row-a', properties: { 'prop-title': 'Card A' } }));
+      await vi.waitFor(() => { expect(importFactory).toHaveBeenCalled(); });
+      drawer.open(makeRow({ id: 'row-b', pageId: 'page-b', properties: { 'prop-title': 'Card B' } }));
+
+      gate.release();
+      await vi.dynamicImportSettled();
+
+      const holder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
+
+      expect(holder?.textContent).toBe('Page B');
+      expect(drawer.openRowId).toBe('row-b');
+    } finally {
+      gate.release();
+      await vi.dynamicImportSettled();
+      drawer.destroy();
+      vi.doUnmock('../../../../src/blok');
+    }
+  }, 20000);
+
+  it('destroys a legacy editor closed before it becomes ready', async () => {
+    await vi.dynamicImportSettled();
+
+    const mockBlokConstructor = vi.fn(function fakeNestedEditor(config: { holder: HTMLElement }) {
+      const body = document.createElement('div');
+
+      body.textContent = 'Legacy A';
+      config.holder.appendChild(body);
+
+      return {
+        isReady: new Promise<void>(() => {}),
+        destroy: () => { body.remove(); },
+      };
+    });
+
+    vi.resetModules();
+    vi.doMock('../../../../src/blok', () => ({ Blok: mockBlokConstructor }));
+
+    const { DatabaseCardDrawer: DrawerWithMock } = await import('../../../../src/tools/database/database-card-drawer');
+    const options = createOptions();
+    const drawer = new DrawerWithMock(options);
+
+    try {
+      drawer.open(makeRow({ id: 'row-a' }));
+
+      const holder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
+
+      await vi.waitFor(() => { expect(holder?.textContent).toBe('Legacy A'); }, { timeout: 20000 });
+
+      drawer.close();
+
+      expect(holder?.textContent).toBe('');
+    } finally {
+      await vi.dynamicImportSettled();
+      drawer.destroy();
+      vi.doUnmock('../../../../src/blok');
+    }
+  }, 20000);
+
+  it('keeps a page-backed card mounted while the prior legacy save finishes', async () => {
+    await vi.dynamicImportSettled();
+
+    const savedBody: OutputData = {
+      blocks: [{ id: 'a-body', type: 'paragraph', data: { text: 'Changed A' } }],
+    };
+    const gate = { release: (_data: OutputData) => {} };
+    const pendingSave = new Promise<OutputData>((resolve) => { gate.release = resolve; });
+    const mockBlokConstructor = vi.fn(function fakeNestedEditor(config: { holder: HTMLElement }) {
+      const holder = config.holder;
+
+      holder.textContent = 'Legacy A';
+
+      return {
+        isReady: Promise.resolve(),
+        save: () => pendingSave,
+        destroy: () => { holder.replaceChildren(); },
+      };
+    });
+
+    vi.resetModules();
+    vi.doMock('../../../../src/blok', () => ({ Blok: mockBlokConstructor }));
+
+    const { DatabaseCardDrawer: DrawerWithMock } = await import('../../../../src/tools/database/database-card-drawer');
+    const rowPages = {
+      copyFromLegacy: vi.fn(async () => ({
+        pageId: 'unused',
+        transactionId: 'unused',
+        acceptedBody: { blocks: [] },
+      })),
+      mount: vi.fn((_pageId: string, holder: HTMLElement) => {
+        const pageContent = document.createElement('div');
+
+        pageContent.textContent = 'Page B';
+        holder.replaceChildren(pageContent);
+
+        return { destroy: () => { holder.replaceChildren(); } };
+      }),
+    };
+    const options = createOptions({ descriptionPropertyId: 'prop-desc', rowPages });
+
+    document.body.appendChild(options.wrapper);
+
+    const drawer = new DrawerWithMock(options);
+
+    try {
+      drawer.open(makeRow({ id: 'row-a' }));
+
+      const firstHolder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
+
+      await vi.waitFor(() => { expect(firstHolder?.textContent).toBe('Legacy A'); }, { timeout: 20000 });
+
+      drawer.open(makeRow({ id: 'row-b', pageId: 'page-b' }));
+
+      const activeHolder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
+
+      expect(activeHolder?.textContent).toBe('Page B');
+
+      gate.release(savedBody);
+      await pendingSave;
+
+      expect(options.onDescriptionChange).toHaveBeenCalledWith('row-a', savedBody);
+      expect(activeHolder?.textContent).toBe('Page B');
+
+      const pageContent = activeHolder?.firstElementChild;
+
+      if (pageContent === null || pageContent === undefined) {
+        throw new Error('Page B was not mounted');
+      }
+
+      pageContent.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(drawer.openRowId).toBe('row-b');
+    } finally {
+      gate.release(savedBody);
+      await pendingSave;
+      drawer.destroy();
+      options.wrapper.remove();
+      vi.doUnmock('../../../../src/blok');
+    }
+  }, 20000);
+
   describe('page body writes', () => {
     type NestedConfig = { holder: HTMLElement; onChange: () => Promise<void> };
 
@@ -1238,7 +1433,7 @@ describe('DatabaseCardDrawer', () => {
     /** Opens a card over a fake nested editor whose save() returns `saves` in turn. */
     const openWithNestedEditor = async (
       row: DatabaseRow,
-      saves: Array<Record<string, unknown>>
+      saves: Array<Record<string, unknown> | Promise<Record<string, unknown>>>
     ): Promise<{ drawer: DatabaseCardDrawer; options: CardDrawerOptions; config: NestedConfig }> => {
       await new Promise((resolve) => setTimeout(resolve, 50));
       const save = vi.fn();
@@ -1309,6 +1504,33 @@ describe('DatabaseCardDrawer', () => {
       await flush();
 
       expect(options.onDescriptionChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('delivers an earlier successful body when the newer save fails', async () => {
+      const firstBody = body(1, [{ id: 'b1', type: 'paragraph', data: { text: 'first edit' } }]);
+      const gate = { release: () => {} };
+      const pendingLatest = new Promise<void>((resolve) => { gate.release = resolve; })
+        .then(() => { throw new Error('newer save failed'); });
+      const { drawer, options, config } = await openWithNestedEditor(makeRow(), [
+        firstBody,
+        pendingLatest,
+        firstBody,
+      ]);
+
+      const firstSave = config.onChange();
+      const secondSave = config.onChange();
+
+      await firstSave;
+      const deliveredWhilePending = vi.mocked(options.onDescriptionChange).mock.calls.length;
+
+      gate.release();
+      await secondSave;
+      drawer.destroy();
+      await flush();
+
+      expect(options.onDescriptionChange).toHaveBeenCalledWith('row-1', firstBody);
+      expect(options.onDescriptionChange).toHaveBeenCalledTimes(1);
+      expect(deliveredWhilePending).toBe(0);
     });
 
     it('drops the old page body instead of writing it back when undo or a peer changed it', async () => {
@@ -1666,4 +1888,43 @@ describe('DatabaseCardDrawer', () => {
       expect(document.body.querySelector('[data-blok-database-property-type-popover]')).toBeNull();
     });
   });
+
+  it('mounts one legacy body after opening A, B, then A before imports settle', async () => {
+    vi.resetModules();
+    vi.doUnmock('../../../../src/blok');
+
+    const { Paragraph } = await import('../../../../src/tools/paragraph');
+    const { DatabaseCardDrawer: DrawerWithRealBlok } = await import('../../../../src/tools/database/database-card-drawer');
+    const options = createOptions({
+      toolsConfig: { tools: { paragraph: { class: Paragraph } } },
+    });
+
+    document.body.appendChild(options.wrapper);
+
+    const drawer = new DrawerWithRealBlok(options);
+    const rowA = makeRow({ id: 'row-a' });
+    const rowB = makeRow({ id: 'row-b' });
+
+    try {
+      drawer.open(rowA);
+      drawer.open(rowB);
+      drawer.open(rowA);
+
+      const holder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
+
+      if (holder === null) {
+        throw new Error('Editor holder was not mounted');
+      }
+
+      expect(holder.querySelector('[data-blok-editor]')).toBeNull();
+      await vi.dynamicImportSettled();
+      await vi.waitFor(() => { expect(holder.querySelector('[data-blok-editor]')).not.toBeNull(); });
+
+      expect(holder.querySelectorAll('[data-blok-editor]')).toHaveLength(1);
+    } finally {
+      await vi.dynamicImportSettled();
+      drawer.destroy();
+      options.wrapper.remove();
+    }
+  }, 20000);
 });

@@ -228,6 +228,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
     // French "page" is the native noun, spelled as in English.
     'toolNames.page',
+    'tools.page.unresolved',
   ]),
   // "Oval" is the standard Croatian geometric noun, identical to English.
   hr: new Set(['tools.image.cropRatioOval']),

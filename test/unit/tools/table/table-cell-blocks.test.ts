@@ -1,6 +1,6 @@
 import type { API } from '../../../../types';
 import type { TableModel } from '../../../../src/tools/table/table-model';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const createMockModel = (): TableModel => ({
   findCellForBlock: vi.fn(() => null),
@@ -30,6 +30,10 @@ const createMockModel = (): TableModel => ({
 describe('TableCellBlocks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('CellContent type', () => {
@@ -137,6 +141,31 @@ describe('TableCellBlocks', () => {
 
       expect(mockApi.blocks.insert).toHaveBeenCalledWith(
         'paragraph', { text: 'a' }, {}, 3, false, false, undefined, { align: 'center' }
+      );
+    });
+
+    it('copies an owning cell block into the configured default tool', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+      const api = {
+        ...mockApi,
+        tools: {
+          getBlockTools: () => [
+            { name: 'owner', isDefault: false, copyAsLink: () => ({ url: 'https://x.test/p1', text: 'Page' }) },
+            { name: 'custom', isDefault: true, conversionConfig: { import: (html: string) => ({ body: html }) }, settings: {} },
+          ],
+        },
+      } as unknown as API;
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        model: createMockModel(),
+      });
+
+      cellBlocks.insertClipboardBlock({ tool: 'owner', data: { pageId: 'p1' } }, 3);
+
+      expect(mockApi.blocks.insert).toHaveBeenCalledWith(
+        'custom', { body: '<a href="https://x.test/p1">Page</a>' }, {}, 3, false, false, undefined, undefined
       );
     });
 

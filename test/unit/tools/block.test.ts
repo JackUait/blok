@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type {
   BlockAPI,
   BlockToolData,
@@ -217,6 +217,10 @@ const createInlineTool = (sanitize: Record<string, unknown>): InlineToolAdapter 
 };
 
 describe('BlockToolAdapter', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -462,7 +466,7 @@ describe('BlockToolAdapter', () => {
       expect(tool.copyAsLink({})).toBeNull();
     });
 
-    it('returns null when copyAsLink throws, so a copy still writes the clipboard', () => {
+    it('returns undefined when copyAsLink throws, so copies use ordinary block data', () => {
       const constructable = createConstructable({
         copyAsLink: () => {
           throw new Error('bad host href');
@@ -470,7 +474,7 @@ describe('BlockToolAdapter', () => {
       });
       const { tool } = createBlockTool({ constructable });
 
-      expect(tool.copyAsLink({})).toBeNull();
+      expect(tool.copyAsLink({})).toBeUndefined();
     });
   });
 

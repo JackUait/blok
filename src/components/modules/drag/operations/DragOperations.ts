@@ -3,8 +3,10 @@
  */
 
 import type { BlockOrigin } from '../../../../../types';
+import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../../shared/page-reference';
 import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
+import { parseUntrustedHtml } from '../../../utils/inert-html';
 import type { TreePlacement } from '../../../utils/tree-order';
 import { isSelfPlacedParent } from '../../blockManager/new-block-placement';
 import { resolveMoveDestination } from '../utils/moveDestination';
@@ -33,6 +35,7 @@ export interface DuplicatePreparation {
   validResults: Array<{
     saved: { data: Record<string, unknown>; tunes: Record<string, unknown> };
     toolName: string;
+    link?: { tool: string; data: Record<string, unknown> };
   }>;
   baseInsertIndex: number;
   /** null when pre-save stale guards aborted or post-save liveTargetIndex was -1. */
@@ -87,10 +90,10 @@ const withoutSelfCopiedChildren = (sourceBlocks: Block[]): Block[] => {
 };
 
 /**
- * The block to insert instead of a copy of a `copyAsLink` block (a page must
- * exist once), or null to copy the block itself.
+ * The block to insert for a `copyAsLink` block, null when there is no hook,
+ * or false when its hook has no valid link and the owner must not be copied.
  */
-export type CopyAsLinkResolver = (toolName: string, data: Record<string, unknown>) => { tool: string; data: Record<string, unknown> } | null;
+export type CopyAsLinkResolver = (toolName: string, data: Record<string, unknown>) => { tool: string; data: Record<string, unknown> } | null | false;
 
 export class DragOperations {
   private blockManager: BlockManagerAdapter;
@@ -205,10 +208,13 @@ export class DragOperations {
           return null;
         }
 
-        return {
-          saved,
-          toolName: block.name,
-        };
+        const link = this.asLink?.(block.name, saved.data);
+
+        if (link === false) {
+          return null;
+        }
+
+        return link ? { saved, toolName: block.name, link } : { saved, toolName: block.name };
       })
     );
 
@@ -243,10 +249,11 @@ export class DragOperations {
     const validResults = saveResults.filter(
       (result): result is NonNullable<typeof result> => result !== null
     );
+    const copyableBlocks = sortedBlocks.filter((_, index) => saveResults[index] !== null);
 
     return {
-      sortedBlocks,
-      sourceIds: new Set(sortedBlocks.map((b) => b.id)),
+      sortedBlocks: copyableBlocks,
+      sourceIds: new Set(copyableBlocks.map((block) => block.id)),
       validResults,
       baseInsertIndex,
       aborted: false,
@@ -285,13 +292,38 @@ export class DragOperations {
     const copiedParentIds = new Set(prep.sortedBlocks.map(block => block.parentId));
     // A `copyAsLink` block (a page) is copied as its link. One insert per
     // result either way: callers pair duplicatedBlocks with sortedBlocks by index.
-    const duplicatedBlocks = prep.validResults.map(({ saved, toolName }, index) => {
-      const link = this.asLink?.(toolName, saved.data) ?? null;
+    const duplicatedBlocks = prep.validResults.map(({ saved, toolName, link }, index) => {
+      const data = link?.data ?? structuredClone(saved.data);
+      const text = data.text;
+
+      if (link === undefined && typeof text === 'string' && text.includes(PAGE_REFERENCE_ATTR)) {
+        const wrapper = parseUntrustedHtml(text);
+        const changed = Array.from(wrapper.querySelectorAll(`a[${PAGE_REFERENCE_ATTR}]`)).reduce((found, anchor) => {
+          const allowed = preservePageReferenceAnchor(anchor);
+
+          if (typeof allowed !== 'object' || allowed[PAGE_REFERENCE_ATTR] !== true) {
+            return found;
+          }
+
+          for (const name of anchor.getAttributeNames()) {
+            if (allowed[name] !== true) {
+              anchor.removeAttribute(name);
+            }
+          }
+
+          return true;
+        }, false);
+
+        if (changed) {
+          // Painted labels and URLs must not enter the copied document.
+          data.text = wrapper.innerHTML;
+        }
+      }
 
       return this.blockManager.insert({
         tool: link?.tool ?? toolName,
-        data: link?.data ?? structuredClone(saved.data),
-        tunes: link === null ? structuredClone(saved.tunes) : {},
+        data,
+        tunes: link === undefined ? structuredClone(saved.tunes) : {},
         ...this.duplicatePosition(prep, index, rootParentOf),
         needToFocus: false,
         origin: copiedParentIds.has(prep.sortedBlocks[index].id) ? 'paste' : undefined,

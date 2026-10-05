@@ -5,6 +5,7 @@ import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 import { normalizeInlineMarkupHtml } from '../../utils/inline-normalization';
 import { findOwn } from '../../utils/own-element';
 import { recordPasteHandling } from '../../utils/paste-continuation';
+import { preservePageReferenceAnchor } from '../../../shared/page-reference';
 
 import { SAFE_STRUCTURAL_TAGS } from './constants';
 import { preprocessPastedHtml } from './preprocess-pasted-html';
@@ -168,7 +169,7 @@ export class Paste extends Module {
       return '';
     }
 
-    const parsed = parseNotionBlocksV3(raw);
+    const parsed = parseNotionBlocksV3(raw, tool => this.Blok.Tools.blockTools.has(tool));
 
     if (parsed === null || parsed.length === 0) {
       return '';
@@ -308,7 +309,7 @@ export class Paste extends Module {
       structuralTagsConfig,
       toolsTags,
       inlineSanitizeConfig,
-      { br: {} },
+      { a: preservePageReferenceAnchor, br: {} },
       this.config.sanitizer as SanitizerConfig
     );
 

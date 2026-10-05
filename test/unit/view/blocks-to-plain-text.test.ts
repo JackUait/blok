@@ -26,6 +26,18 @@ describe('blocksToPlainText', () => {
     expect(blocksToPlainText(doc([{ type: 'paragraph', data: { text: 'Hello <b>world</b>' } }]))).toBe('Hello world');
   });
 
+  it('reads inline page references from authorized metadata, not saved labels', () => {
+    const data = doc([{
+      type: 'paragraph',
+      data: { text: 'See <a data-blok-page-id="p1" href="/private" title="Private"><strong>Private</strong></a>' },
+    }]);
+
+    expect(blocksToPlainText(data, { pageInfo: () => ({ title: 'Roadmap & plans' }) })).toBe('See Roadmap & plans');
+    expect(blocksToPlainText(data, { pageInfo: () => ({ access: 'none', title: 'Private' }) })).toBe('See Page');
+    expect(blocksToPlainText(data, { pageInfo: () => null })).toBe('See Page');
+    expect(blocksToPlainText(data)).toBe('See Page');
+  });
+
   /**
    * An equation span's children are a rendering cache of its `data-latex`
    * source. Legacy documents carry the text KaTeX's MathML and HTML layers left
@@ -305,43 +317,54 @@ describe('blocksToPlainText', () => {
     expect(blocksToPlainText(doc([{ type: 'quote', data: { text: 'Wise words' } }]))).toBe('Wise words');
   });
 
-  /**
-   * A page block points at a separate document. Its title is all of it that
-   * lives here, and nothing below it may be read as this document's text.
-   */
   describe('page', () => {
-    it('reads the cached title as plain text, verbatim', () => {
-      expect(blocksToPlainText(doc([
+    it('ignores a legacy cached title and reads authorized host metadata verbatim', () => {
+      const data = doc([
         { type: 'paragraph', data: { text: 'Before' } },
-        { type: 'page', data: { pageId: 'p1', cache: { title: 'Q3 <plan> & notes' } } },
-      ]))).toBe('Before\n\nQ3 <plan> & notes');
+        { type: 'page', data: { pageId: 'p1', cache: { title: 'Private title' } } },
+      ]);
+
+      expect(blocksToPlainText(data)).toBe('Before\n\nPage');
+      expect(blocksToPlainText(data, {
+        pageInfo: () => ({ title: 'Q3 <plan> & notes' }),
+      })).toBe('Before\n\nQ3 <plan> & notes');
     });
 
-    it('reads an untitled page as nothing, not as a placeholder', () => {
+    it('uses a neutral label for unresolved pages', () => {
       expect(blocksToPlainText(doc([
         { type: 'page', data: { pageId: 'p1' } },
         { type: 'paragraph', data: { text: 'After' } },
-      ]))).toBe('After');
+      ]))).toBe('Page\n\nAfter');
+    });
+
+    it('distinguishes missing and denied pages without revealing titles', () => {
+      const data = doc([{ type: 'page', data: { pageId: 'p1', cache: { title: 'Cached title' } } }]);
+
+      expect(blocksToPlainText(data, { pageInfo: () => null })).toBe('Page not found');
+      expect(blocksToPlainText(data, { pageInfo: () => ({ access: 'none', title: 'Secret' }) })).toBe('No access');
+      expect(blocksToPlainText(data, { pageInfo: () => ({ title: '' }) })).toBe('New page');
     });
 
     it('never reads children a malformed document hangs off a page', () => {
       const blocks = [
-        { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'T' } }, content: ['c1'] },
+        { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'Cached title' } }, content: ['c1'] },
         { id: 'c1', type: 'paragraph', parent: 'pg', data: { text: 'Leaked body' } },
       ] as OutputBlockData[];
+      const data = doc(blocks);
+      const pageInfo = () => ({ title: 'T' });
 
-      expect(blocksToPlainText(doc(blocks))).toBe('T');
-      expect(blocksToPlainText(doc(blocks), { includeHiddenText: true })).toBe('T');
+      expect(blocksToPlainText(data, { pageInfo })).toBe('T');
+      expect(blocksToPlainText(data, { pageInfo, includeHiddenText: true })).toBe('T');
     });
 
     it('never reads a page\'s children inside a table cell', () => {
       const blocks = [
         { id: 't', type: 'table', data: { content: [[{ blocks: ['pg'] }]] }, content: ['pg'] },
-        { id: 'pg', type: 'page', parent: 't', data: { pageId: 'p1', cache: { title: 'T' } }, content: ['c1'] },
+        { id: 'pg', type: 'page', parent: 't', data: { pageId: 'p1', cache: { title: 'Cached title' } }, content: ['c1'] },
         { id: 'c1', type: 'paragraph', parent: 'pg', data: { text: 'Leaked body' } },
       ] as OutputBlockData[];
 
-      expect(blocksToPlainText(doc(blocks))).toBe('T');
+      expect(blocksToPlainText(doc(blocks), { pageInfo: () => ({ title: 'T' }) })).toBe('T');
     });
   });
 

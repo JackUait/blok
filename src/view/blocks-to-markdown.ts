@@ -25,7 +25,9 @@ import type { ViewBlock } from './document-model';
 import { needsTokenizing, parseInlineFragment } from './html-text';
 
 import type { LooseOutputData, OutputData } from '../../types';
+import type { BlocksToHtmlOptions } from './blocks-to-html';
 import { isPagePointer } from '../shared/page-pointer';
+import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
 
 export type { MarkdownDegradation } from '../markdown/blocks-to-markdown-core';
 
@@ -61,8 +63,12 @@ const attr = (node: P5ChildNode, name: string): string | null => {
  * @param onLoss - receives every unwrapped inline construct
  * @param escape - escapes text node values
  */
-const serializeNodes = (nodes: P5ChildNode[], onLoss: LossReporter, escape: TextEscaper): string =>
-  nodes.map((node) => serializeNode(node, onLoss, escape)).join('');
+const serializeNodes = (
+  nodes: P5ChildNode[],
+  onLoss: LossReporter,
+  escape: TextEscaper,
+  pageInfo: BlocksToHtmlOptions['pageInfo']
+): string => nodes.map((node) => serializeNode(node, onLoss, escape, pageInfo)).join('');
 
 /**
  * Serialize one parse5 node to inline Markdown. Mirrors the tag handling of the
@@ -71,7 +77,12 @@ const serializeNodes = (nodes: P5ChildNode[], onLoss: LossReporter, escape: Text
  * @param onLoss - receives every unwrapped inline construct
  * @param escape - escapes text node values
  */
-const serializeNode = (node: P5ChildNode, onLoss: LossReporter, escape: TextEscaper): string => {
+const serializeNode = (
+  node: P5ChildNode,
+  onLoss: LossReporter,
+  escape: TextEscaper,
+  pageInfo: BlocksToHtmlOptions['pageInfo']
+): string => {
   if (node.nodeName === '#text') {
     return escape((node as DefaultTreeAdapterMap['textNode']).value);
   }
@@ -90,7 +101,18 @@ const serializeNode = (node: P5ChildNode, onLoss: LossReporter, escape: TextEsca
     return inlineEquation(latex);
   }
 
-  const inner = serializeNodes(node.childNodes, onLoss, node.nodeName === 'code' ? RAW_TEXT : escape);
+  const pageId = node.nodeName === 'a' ? attr(node, PAGE_REFERENCE_ATTR) : null;
+
+  if (pageId) {
+    const info = pageInfo?.(pageId);
+    const title = info !== null && info !== undefined && info.access !== 'none' && typeof info.title === 'string' && info.title.trim() !== ''
+      ? info.title
+      : PAGE_REFERENCE_FALLBACK;
+
+    return markdownTextEscaper(title)(title);
+  }
+
+  const inner = serializeNodes(node.childNodes, onLoss, node.nodeName === 'code' ? RAW_TEXT : escape, pageInfo);
 
   switch (node.nodeName) {
     case 'br':
@@ -130,7 +152,7 @@ const serializeNode = (node: P5ChildNode, onLoss: LossReporter, escape: TextEsca
 };
 
 /** Reads inline HTML through parse5. Runs anywhere, including bare Node and Jint. */
-const parse5InlineBackend: InlineBackend = {
+const parse5InlineBackend = (pageInfo: BlocksToHtmlOptions['pageInfo']): InlineBackend => ({
   /**
    * Convert a fragment of inline HTML (a block's `text`) into inline Markdown.
    * @param html - inline HTML string
@@ -149,9 +171,9 @@ const parse5InlineBackend: InlineBackend = {
       return escape(source);
     }
 
-    return serializeNodes(parseInlineFragment(source).childNodes, onLoss, escape);
+    return serializeNodes(parseInlineFragment(source).childNodes, onLoss, escape, pageInfo);
   },
-};
+});
 
 /**
  * Flatten a saved document into the core's block list, in reading order —
@@ -178,8 +200,8 @@ const flattenDocument = (data: OutputData | LooseOutputData | null | undefined):
       seen.add(block.id);
     }
 
-    const isPage = isPagePointer(block.type, block.data);
-    const unresolvedChildIds = isPage ? [] : model.unresolvedContentOf(block.id);
+    const leafPage = isPagePointer(block.type, block.data) || block.type === 'page-link';
+    const unresolvedChildIds = leafPage ? [] : model.unresolvedContentOf(block.id);
 
     out.push({ ...(block.id === undefined ? {} : { id: block.id }),
       parentId,
@@ -188,8 +210,7 @@ const flattenDocument = (data: OutputData | LooseOutputData | null | undefined):
       indent,
       ...(unresolvedChildIds.length > 0 ? { unresolvedChildIds } : {}) });
 
-    /** A page's body lives in another document; children here are malformed. */
-    if (isPage) {
+    if (leafPage) {
       return;
     }
 
@@ -210,8 +231,10 @@ const flattenDocument = (data: OutputData | LooseOutputData | null | undefined):
  * @param data - saved document (strict or loose wire shape; nullish tolerated)
  * @returns Markdown ('' for empty/malformed documents)
  */
-export const blocksToMarkdown = (data: OutputData | LooseOutputData | null | undefined): string =>
-  serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend).markdown;
+export const blocksToMarkdown = (
+  data: OutputData | LooseOutputData | null | undefined,
+  options: Pick<BlocksToHtmlOptions, 'pageInfo'> = {}
+): string => serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend(options.pageInfo), options.pageInfo).markdown;
 
 /**
  * Serialize a saved Blok document to Markdown and report what degraded.
@@ -225,5 +248,6 @@ export const blocksToMarkdown = (data: OutputData | LooseOutputData | null | und
  * @returns the Markdown and its degradations
  */
 export const blocksToMarkdownWithReport = (
-  data: OutputData | LooseOutputData | null | undefined
-): MarkdownSerializationResult => serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend);
+  data: OutputData | LooseOutputData | null | undefined,
+  options: Pick<BlocksToHtmlOptions, 'pageInfo'> = {}
+): MarkdownSerializationResult => serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend(options.pageInfo), options.pageInfo);

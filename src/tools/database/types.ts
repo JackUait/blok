@@ -33,6 +33,7 @@ export interface DatabaseRow {
   id: string;
   position: string;
   properties: Record<string, PropertyValue>;
+  pageId?: string;
 }
 
 export interface DatabaseRowData extends BlockToolData {
@@ -47,6 +48,7 @@ export interface DatabaseRowData extends BlockToolData {
    * on load.
    */
   title?: string;
+  pageId?: string;
 }
 
 // ─── View config ───
@@ -172,6 +174,16 @@ export interface DatabaseAdapter {
   }): Promise<void>;
 }
 
+export interface DatabaseRowPages {
+  copyFromLegacy(input: { rowId: string; operationId: string; body: OutputData }): Promise<{
+    pageId: string;
+    transactionId: string;
+    acceptedBody: OutputData;
+  }>;
+  mount(pageId: string, holder: HTMLElement): { destroy(): void };
+}
+
 export interface DatabaseConfig {
   adapter?: DatabaseAdapter;
+  rowPages?: DatabaseRowPages;
 }

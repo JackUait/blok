@@ -10,6 +10,7 @@
  */
 import type { SanitizerConfig } from '../../../types';
 import { EQUATION_SOURCE_ATTR } from '../../shared/equation-mark';
+import { preservePageReferenceAnchor } from '../../shared/page-reference';
 
 /**
  * CSS properties that may remain on color-bearing inline elements (<mark>).
@@ -89,7 +90,7 @@ export const INLINE_TEXT_SANITIZE = {
   u: {},
   s: {},
   del: {},
-  a: { href: true, target: true, rel: true },
+  a: preservePageReferenceAnchor,
   code: {},
   sup: {},
   sub: {},

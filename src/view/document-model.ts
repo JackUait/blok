@@ -36,6 +36,8 @@ export interface DocumentModel {
   topLevel: ViewBlock[];
   /** Every identified block, keyed by id (first occurrence wins). */
   byId: Map<string, ViewBlock>;
+  /** Ids generated only to connect id-less legacy children. */
+  syntheticIds: ReadonlySet<string>;
   /**
    * Structural children of a block, in document order.
    * @param id - parent block id (undefined → no children)
@@ -325,6 +327,7 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
   }
 
   const synthetic = { count: 0 };
+  const syntheticIds = new Set<string>();
 
   /** An id for a legacy container that has none — children hang off an id. */
   const nextSyntheticId = (): string => {
@@ -380,6 +383,7 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
      */
     if (block.id === undefined && (children.length > 0 || nestedParentId !== null)) {
       block.id = nextSyntheticId();
+      syntheticIds.add(block.id);
     }
 
     entries.push({ block, parentId });
@@ -506,6 +510,7 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
   return {
     topLevel,
     byId,
+    syntheticIds,
     childrenOf: (id: string | undefined): ViewBlock[] => (id === undefined ? [] : children.get(id) ?? []),
     unresolvedContentOf: (id: string | undefined): string[] =>
       (id === undefined ? [] : unresolvedContent.get(id) ?? []),

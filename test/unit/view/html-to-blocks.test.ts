@@ -35,6 +35,12 @@ describe('htmlToBlocks — structure', () => {
     ]);
   });
 
+  it('imports a page reference without its stale URL or title', () => {
+    expect(shape(htmlToBlocks('<p>See <a data-blok-page-id="p1" href="/old-title" title="Old title">Old title</a></p>'))).toEqual([
+      { type: 'paragraph', data: { text: 'See <a data-blok-page-id="p1">Page</a>' } },
+    ]);
+  });
+
   it('strips an unsafe href while keeping the link text', () => {
     const [block] = htmlToBlocks('<p><a href="javascript:alert(1)">x</a></p>');
 

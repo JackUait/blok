@@ -15,6 +15,9 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   if (typeof data.title === 'string') {
     row.title = data.title;
   }
+  if (typeof data.pageId === 'string' && data.pageId.length > 0) {
+    row.pageId = data.pageId;
+  }
 
   return row;
 };
@@ -58,6 +61,9 @@ export class DatabaseRowTool implements BlockTool {
     if (this._data.title !== undefined) {
       saved.title = this._data.title;
     }
+    if (this._data.pageId !== undefined) {
+      saved.pageId = this._data.pageId;
+    }
 
     return saved;
   }
@@ -73,7 +79,8 @@ export class DatabaseRowTool implements BlockTool {
   }
 
   public validate(data: DatabaseRowData): boolean {
-    return data.properties !== null && data.properties !== undefined && typeof data.properties === 'object';
+    return data.properties !== null && data.properties !== undefined && typeof data.properties === 'object'
+      && (data.pageId === undefined || (typeof data.pageId === 'string' && data.pageId.length > 0));
   }
 
   public updateProperties(changes: Record<string, PropertyValue>): void {
@@ -101,6 +108,12 @@ export class DatabaseRowTool implements BlockTool {
 
   public getTitle(): string | undefined {
     return this._data.title;
+  }
+
+  public updatePageId(param: { pageId: string }): void {
+    if (param.pageId.length > 0) {
+      this._data.pageId = param.pageId;
+    }
   }
 
   public updatePosition(param: { position: string }): void {
@@ -134,6 +147,7 @@ export class DatabaseRowTool implements BlockTool {
       title: PLAINTEXT,
       properties: PLAINTEXT,
       position: PLAINTEXT,
+      pageId: PLAINTEXT,
     };
   }
 

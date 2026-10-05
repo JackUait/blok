@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 
 import { blocksToMarkdown as domBlocksToMarkdown } from '../../../src/markdown/blocks-to-markdown';
 import { blocksToMarkdown as viewBlocksToMarkdown } from '../../../src/view/blocks-to-markdown';
@@ -181,6 +181,10 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
     ]),
   },
   {
+    name: 'a non-owning page reference',
+    document: doc([{ id: 'r1', type: 'page-link', data: { pageId: 'p1' } }]),
+  },
+  {
     name: 'a spacer between paragraphs',
     document: doc([
       { type: 'paragraph', data: { text: 'A' } },
@@ -191,6 +195,14 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
 ];
 
 describe('blocksToMarkdown backend parity', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it.each(FIXTURES)('DOM and parse5 agree on $name', ({ document: fixture }) => {
     expect(viewBlocksToMarkdown(fixture)).toBe(domBlocksToMarkdown(toSerializable(fixture)));
   });
@@ -198,7 +210,7 @@ describe('blocksToMarkdown backend parity', () => {
   it('covers every tool that has a dedicated serialization case', () => {
     const covered = new Set(FIXTURES.flatMap(({ document: fixture }) => fixture.blocks.map((block) => block.type)));
 
-    for (const tool of ['header', 'quote', 'divider', 'list', 'code', 'table', 'callout', 'toggle', 'column_list', 'column', 'spacer', 'image', 'video', 'file', 'bookmark', 'embed']) {
+    for (const tool of ['header', 'quote', 'divider', 'list', 'code', 'table', 'callout', 'toggle', 'column_list', 'column', 'spacer', 'image', 'video', 'file', 'bookmark', 'embed', 'page-link']) {
       expect(covered, `no parity fixture exercises the \`${tool}\` tool`).toContain(tool);
     }
   });

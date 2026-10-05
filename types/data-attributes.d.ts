@@ -47,6 +47,7 @@ export const DATA_ATTR: {
 
   /** Block unique identifier */
   readonly id: 'data-blok-id';
+  readonly pageId: 'data-blok-page-id';
   /** Block component/tool type */
   readonly component: 'data-blok-component';
   /** Tool type attribute */

@@ -28,6 +28,7 @@ import {
 } from '../shared/tool-classes/list';
 import {
   PAGE_FALLBACK_ICON,
+  PAGE_LOCK_ICON,
   PAGE_ICON_CLASSES,
   PAGE_LINK_CLASSES,
   PAGE_LINK_INK_CLASSES,
@@ -35,6 +36,7 @@ import {
   PAGE_TITLE_MUTED_CLASSES,
 } from '../shared/tool-classes/page';
 import { TOGGLE_CHILDREN_CLASSES, TOGGLE_CONTENT_CLASSES, TOGGLE_HEADER_ROW_CLASSES } from '../shared/tool-classes/toggle';
+import type { PageInfo } from '../../types/tools/page';
 import type { ViewBlock } from './document-model';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from './table-grid';
 
@@ -60,11 +62,12 @@ export interface EmitterEnv {
    */
   url(name: 'href' | 'src', value: unknown, blockType: string): string;
   /**
-   * Build the ` href="…"` attribute for a page block from the `pageHref`
-   * option, gated like {@link EmitterEnv.url}. Empty when the option is absent,
-   * the id is not a non-empty string, or the URL is unsafe.
+   * Build a page or page-link href from `pageHref`, gated like
+   * {@link EmitterEnv.url}. Empty for an absent callback, invalid id or unsafe URL.
    */
-  pageHrefAttr(pageId: unknown): string;
+  pageHrefAttr(pageId: unknown, blockType: string): string;
+  /** Authorized page metadata, when the host has resolved it. */
+  pageInfo(pageId: unknown): PageInfo | null | undefined;
   /**
    * Build the ` data-blok-id="<id>"` attribute for a block when the `blockIds`
    * option is on and the block carries an id; empty string otherwise.
@@ -459,7 +462,7 @@ const emitTable = (block: ViewBlock, env: EmitterEnv): string => {
 
 /**
  * Page emitter: a one-line card (icon + title) pointing at a SEPARATE
- * document. It is a link only when the consumer supplies `pageHref`.
+ * document. It is a link only with authorized metadata and `pageHref`.
  *
  * Deliberately never renders children: the page body is not in this
  * document, so any child a malformed document hangs off a page would
@@ -468,19 +471,33 @@ const emitTable = (block: ViewBlock, env: EmitterEnv): string => {
  * @param env - emitter environment
  */
 const emitPage = (block: ViewBlock, env: EmitterEnv): string => {
-  const cache = isRecord(block.data.cache) ? block.data.cache : {};
-  const icon = isRecord(cache.icon) ? cache.icon : {};
-  const title = str(cache, 'title');
-  const emoji = icon.type === 'emoji' ? str(icon, 'value') : '';
-  const src = icon.type === 'image' ? env.url('src', icon.url, block.type) : '';
-  const fallback = emoji === '' ? PAGE_FALLBACK_ICON.trim() : env.escape(emoji);
+  const info = env.pageInfo(block.data.pageId);
+  const allowed = info !== null && info !== undefined && info.access !== 'none';
+  const icon = allowed && isRecord(info.icon) ? info.icon : null;
+  const emoji = icon?.type === 'emoji' ? str(icon, 'value') : '';
+  const src = icon?.type === 'image' ? env.url('src', icon.url, block.type) : '';
+  const pageFallback = emoji === '' ? PAGE_FALLBACK_ICON.trim() : env.escape(emoji);
+  const fallback = info?.access === 'none' ? PAGE_LOCK_ICON.trim() : pageFallback;
   const glyph = src === '' ? fallback : `<img${src} alt="">`;
   const iconSlot = `<span${env.classList(PAGE_ICON_CLASSES)} aria-hidden="true">${glyph}</span>`;
-  /** Matches the editor's placeholder; the view has no i18n layer. */
-  const titleClasses = title === '' ? [...PAGE_TITLE_CLASSES, ...PAGE_TITLE_MUTED_CLASSES] : PAGE_TITLE_CLASSES;
-  const label = `<span${env.classList(titleClasses)}>${env.escape(title === '' ? 'New page' : title)}</span>`;
+  const title = (() => {
+    if (info === null) {
+      return 'Page not found';
+    }
+    if (info === undefined) {
+      return 'Page';
+    }
+    if (info.access === 'none') {
+      return 'No access';
+    }
+
+    return typeof info.title === 'string' && info.title !== '' ? info.title : 'New page';
+  })();
+  const muted = !allowed || title === 'New page';
+  const titleClasses = muted ? [...PAGE_TITLE_CLASSES, ...PAGE_TITLE_MUTED_CLASSES] : PAGE_TITLE_CLASSES;
+  const label = `<span${env.classList(titleClasses)}>${env.escape(title)}</span>`;
   const cardClasses = env.classList([...PAGE_LINK_CLASSES, ...PAGE_LINK_INK_CLASSES]);
-  const href = env.pageHrefAttr(block.data.pageId);
+  const href = allowed ? env.pageHrefAttr(block.data.pageId, block.type) : '';
 
   return href === ''
     ? `<div><span${cardClasses}>${iconSlot}${label}</span></div>`
@@ -701,4 +718,5 @@ export const builtinEmitters: Record<string, Emitter> = {
   'database-row': childrenOnly,
 
   page: emitPage,
+  'page-link': emitPage,
 };

@@ -31,10 +31,12 @@ export const PAGE_LINK_CLASSES = [
 export const PAGE_LINK_ENABLED_CLASSES = [...SHARED_LINK_INK_CLASSES, 'cursor-pointer can-hover:hover:bg-item-hover-bg'].join(' ');
 
 /**
- * Missing or no-access page: muted and not a link. Important for the same
+ * Missing or unresolved page: muted and not a link. Important for the same
  * reason as the enabled ink: the holder's `[&_a]:text-link` outranks a plain utility.
  */
 export const PAGE_LINK_DISABLED_CLASSES = 'text-text-secondary! cursor-default';
+
+export const PAGE_LINK_DENIED_CLASSES = 'text-text-secondary! cursor-pointer can-hover:hover:bg-item-hover-bg';
 
 export const PAGE_ICON_CLASSES = SHARED_ICON_CLASSES.join(' ');
 

@@ -34,6 +34,18 @@ describe('blocksToMarkdown (view)', () => {
     );
   });
 
+  it('exports inline page references from authorized metadata, not saved labels or URLs', () => {
+    const data = doc([{
+      type: 'paragraph',
+      data: { text: 'See <a data-blok-page-id="p1" href="/private" title="Private"><strong>Private</strong></a>' },
+    }]);
+
+    expect(blocksToMarkdown(data, { pageInfo: () => ({ title: 'Roadmap [Q4]' }) })).toBe('See Roadmap \\[Q4\\]');
+    expect(blocksToMarkdown(data, { pageInfo: () => ({ access: 'none', title: 'Private' }) })).toBe('See Page');
+    expect(blocksToMarkdown(data, { pageInfo: () => null })).toBe('See Page');
+    expect(blocksToMarkdown(data)).toBe('See Page');
+  });
+
   it('decodes HTML entities in inline text', () => {
     expect(blocksToMarkdown(doc([{ type: 'paragraph', data: { text: 'a &lt; b &amp; c' } }]))).toBe('a < b & c');
   });
@@ -149,31 +161,41 @@ describe('blocksToMarkdown (view)', () => {
     expect(md).toBe('- Step one\n\n    More about step one');
   });
 
-  /**
-   * `blocksToMarkdown` takes no options, so it has no way to build the page's
-   * link: a page exports as its title line.
-   */
   describe('page', () => {
-    it('exports the cached title as plain text, escaping only what Markdown would read', () => {
+    it('ignores legacy cached titles without host metadata', () => {
       const md = blocksToMarkdown(doc([
         { type: 'paragraph', data: { text: 'Before' } },
-        { type: 'page', data: { pageId: 'p1', cache: { title: 'Q3 <plan> & notes' } } },
+        { type: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } } },
       ]));
 
-      expect(md).toBe('Before\n\nQ3 \\<plan> & notes');
+      expect(md).toBe('Before\n\nPage');
     });
 
-    it('exports an untitled page as "New page", like the rendered card', () => {
-      expect(blocksToMarkdown(doc([{ type: 'page', data: { pageId: 'p1' } }]))).toBe('New page');
+    it('exports only the host-authorized title as escaped plain text', () => {
+      const md = blocksToMarkdown(doc([
+        { type: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } } },
+      ]), { pageInfo: (pageId) => pageId === 'p1' ? { title: 'Q3 <plan> & notes' } : undefined });
+
+      expect(md).toBe('Q3 \\<plan> & notes');
+    });
+
+    it('uses neutral labels for unresolved, missing, denied, and untitled pages', () => {
+      const page = doc([{ type: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } } }]);
+
+      expect(blocksToMarkdown(page)).toBe('Page');
+      expect(blocksToMarkdown(page, { pageInfo: () => undefined })).toBe('Page');
+      expect(blocksToMarkdown(page, { pageInfo: () => null })).toBe('Page not found');
+      expect(blocksToMarkdown(page, { pageInfo: () => ({ access: 'none', title: 'Host secret' }) })).toBe('No access');
+      expect(blocksToMarkdown(page, { pageInfo: () => ({ title: '' }) })).toBe('New page');
     });
 
     it('never exports children a malformed document hangs off a page', () => {
       const md = blocksToMarkdown(doc([
-        { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'T' } }, content: ['c1'] },
+        { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } }, content: ['c1'] },
         { id: 'c1', type: 'paragraph', parent: 'pg', data: { text: 'Leaked body' } },
       ]));
 
-      expect(md).toBe('T');
+      expect(md).toBe('Page');
     });
 
     it('does not report the page as dropped', () => {

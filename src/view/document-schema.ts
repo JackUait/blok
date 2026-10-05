@@ -101,6 +101,7 @@ export const blokDocumentSchema = {
           { if: { required: ['type'], properties: { type: { const: 'embed' } } }, then: { properties: { data: { $ref: '#/$defs/embed' } } } },
           { if: { required: ['type'], properties: { type: { const: 'bookmark' } } }, then: { properties: { data: { $ref: '#/$defs/bookmark' } } } },
           { if: { required: ['type'], properties: { type: { const: 'page' } } }, then: { properties: { data: { $ref: '#/$defs/page' } } } },
+          { if: { required: ['type'], properties: { type: { const: 'page-link' } } }, then: { properties: { data: { $ref: '#/$defs/page-link' } } } },
         ],
       },
     },
@@ -324,7 +325,7 @@ export const blokDocumentSchema = {
 
     'database-row': {
       type: 'object',
-      description: 'One row of a database block. Rich page content lives in this block\'s children, not here.',
+      description: 'One row of a database block. Optional pageId points to a separate body document.',
       required: ['properties', 'position'],
       additionalProperties: false,
       properties: {
@@ -338,6 +339,7 @@ export const blokDocumentSchema = {
           type: 'string',
           description: 'Row title, mirrored from the title column. Absent on rows written before this key existed.',
         },
+        pageId: { type: 'string', minLength: 1, description: 'Id of the separate document that holds the row page body.' },
       },
     },
 
@@ -619,30 +621,16 @@ export const blokDocumentSchema = {
       additionalProperties: false,
       properties: {
         pageId: { type: 'string', description: 'Id of the separate document that holds the page.' },
-        cache: {
-          type: 'object',
-          description: 'Copy of the page\'s title and icon, for display without loading the page. May be stale.',
-          additionalProperties: false,
-          properties: {
-            title: { type: 'string', description: 'Plain text. Absent or empty means untitled.' },
-            icon: {
-              oneOf: [
-                {
-                  type: 'object',
-                  required: ['type', 'value'],
-                  additionalProperties: false,
-                  properties: { type: { const: 'emoji' }, value: { type: 'string' } },
-                },
-                {
-                  type: 'object',
-                  required: ['type', 'url'],
-                  additionalProperties: false,
-                  properties: { type: { const: 'image' }, url: { type: 'string' } },
-                },
-              ],
-            },
-          },
-        },
+      },
+    },
+
+    'page-link': {
+      type: 'object',
+      description: 'A non-owning reference to a page. It has no children.',
+      required: ['pageId'],
+      additionalProperties: false,
+      properties: {
+        pageId: { type: 'string', minLength: 1, description: 'Id of the referenced page.' },
       },
     },
   },

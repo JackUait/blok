@@ -71,3 +71,11 @@ export const PAGE_FALLBACK_ICON = `
   <path d="M7.5 10.5h5M7.5 13.5h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
+
+export const PAGE_LOCK_ICON = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M7 8V6.5a3 3 0 0 1 6 0V8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="5" y="8" width="10" height="9" rx="2" stroke="currentColor" stroke-width="1.25"/>
+  <circle cx="10" cy="12.5" r="0.75" fill="currentColor"/>
+</svg>
+`;

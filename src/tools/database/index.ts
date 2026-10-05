@@ -6,6 +6,7 @@ import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { firstStrongDirection } from '../../shared/text-direction';
+import { equalsOutputData } from '../../shared/output-data';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { DatabaseBackendSync } from './database-backend-sync';
 import { DatabaseCardDrag } from './database-card-drag';
@@ -73,6 +74,9 @@ export class DatabaseTool implements BlockTool {
   private columnControls: DatabaseColumnControls | null = null;
   private listRowDrag: DatabaseListRowDrag | null = null;
   private cardDrawer: DatabaseCardDrawer | null = null;
+  private descriptionPropertyCreation: ReturnType<DatabaseBackendSync['syncCreateProperty']> | null = null;
+  private descriptionPropertyNeedsCreate = false;
+  private readonly pendingDescriptions = new Map<string, OutputData>();
   private keyboard: DatabaseKeyboard | null = null;
   private cardMenuPopover: PopoverDesktop | null = null;
   private reprojectQueued = false;
@@ -366,6 +370,7 @@ export class DatabaseTool implements BlockTool {
           id: child.id,
           position: rowData?.position ?? '',
           properties,
+          ...(typeof rowData?.pageId === 'string' && rowData.pageId.length > 0 ? { pageId: rowData.pageId } : {}),
         };
       });
     this.model.setRows(rows);
@@ -553,6 +558,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private deleteRowBlock(rowId: string): void {
+    this.pendingDescriptions.delete(rowId);
     const blockIndex = this.api.blocks.getBlockIndex(rowId);
 
     if (blockIndex !== undefined) {
@@ -574,6 +580,68 @@ export class DatabaseTool implements BlockTool {
     this.syncRowsFromBlocks();
   }
 
+  private async copyLegacyRowBody(rowId: string, propertyId: string, body: OutputData): Promise<void> {
+    const rowPages = this.config.rowPages;
+
+    if (rowPages === undefined) return;
+
+    const propertyCreation = this.descriptionPropertyCreation;
+    const failure: { generic: boolean; backend?: { error: unknown } } = { generic: false };
+
+    this.cardDrawer?.setBodyMigrationPending(rowId, true);
+    try {
+      const created = propertyCreation === null ? undefined : await propertyCreation;
+
+      if (propertyCreation !== null && created === undefined && this.config.adapter !== undefined) return;
+      if (this.model.getRow(rowId) === undefined) return;
+      const written = this.config.adapter === undefined
+        ? undefined
+        : await this.sync.syncUpdateRowNow({ rowId, properties: { [propertyId]: body } }, (error) => {
+          failure.backend = { error };
+        });
+
+      if (this.config.adapter !== undefined && written === undefined) {
+        failure.generic = true;
+        return;
+      }
+      const beforeCopy = this.model.getRow(rowId)?.properties[propertyId];
+
+      if (beforeCopy === null || typeof beforeCopy !== 'object' || Array.isArray(beforeCopy)
+        || !equalsOutputData(beforeCopy, body)) return;
+
+      const request = { rowId, operationId: nanoid(), body };
+      const receipt = await rowPages.copyFromLegacy(request).catch(() => rowPages.copyFromLegacy(request));
+      const current = this.model.getRow(rowId)?.properties[propertyId];
+
+      if (typeof receipt.pageId !== 'string' || receipt.pageId.length === 0
+        || typeof receipt.transactionId !== 'string' || receipt.transactionId.length === 0
+        || !equalsOutputData(receipt.acceptedBody, body)
+        || current === null || typeof current !== 'object' || Array.isArray(current)
+        || !equalsOutputData(current, body)) {
+        throw new Error('Copy receipt did not match the current row body');
+      }
+
+      const rowBlock = this.api.blocks.getChildren(this.block.id).find((child) => child.id === rowId);
+
+      if (rowBlock === undefined) return;
+      rowBlock.call('updatePageId', { pageId: receipt.pageId });
+      rowBlock.dispatchChange();
+      this.syncRowsFromBlocks();
+      if (this.cardDrawer?.openRowId === rowId) {
+        this.cardDrawer.syncOpenRow(this.model.getRow(rowId));
+      }
+    } catch {
+      failure.generic = true;
+    } finally {
+      this.cardDrawer?.setBodyMigrationPending(rowId, false);
+      if (failure.backend !== undefined) {
+        this.showBackendError(failure.backend.error);
+      } else if (failure.generic) {
+        this.api.notifier.show({ message: this.api.i18n.t('tools.stub.error'), style: 'error' });
+      }
+    }
+  }
+
   private moveRowBlock(rowId: string, position: string): void {
     const children = this.api.blocks.getChildren(this.block.id);
     const rowBlock = children.find((child) => child.id === rowId);
@@ -590,6 +658,18 @@ export class DatabaseTool implements BlockTool {
   // View management
   // ---------------------------------------------------------------------------
 
+  private showBackendError(error: unknown): void {
+    // Adapter errors are untrusted; the notifier renders HTML.
+    const message = String(error)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    this.api.notifier.show({ message, style: 'error' });
+  }
+
   private activateView(viewId: string): void {
     const viewConfig = this.model.getView(viewId);
 
@@ -598,25 +678,7 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.activeViewId = viewId;
-    this.sync = new DatabaseBackendSync(
-      this.config.adapter,
-      (error) => {
-        // The notifier renders `message` as raw HTML (innerHTML). The error
-        // comes from a consumer-supplied backend adapter (untrusted), so escape
-        // it to inert text before display to prevent HTML/script injection.
-        const message = String(error)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
-
-        this.api.notifier.show({
-          message,
-          style: 'error',
-        });
-      },
-    );
+    this.sync = new DatabaseBackendSync(this.config.adapter, (error) => this.showBackendError(error));
   }
 
   private switchView(viewId: string): void {
@@ -1160,6 +1222,7 @@ export class DatabaseTool implements BlockTool {
         i18n: this.api.i18n,
         events: this.api.events,
         toolsConfig: this.api.tools.getToolsConfig(),
+        rowPages: this.config.rowPages,
         titlePropertyId: titlePropId,
         descriptionPropertyId: descriptionPropId,
         schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
@@ -1175,9 +1238,56 @@ export class DatabaseTool implements BlockTool {
           this.sync.syncUpdateRow({ rowId, properties: { [titlePropId]: title } });
         },
         onDescriptionChange: (rowId, description: OutputData) => {
-          if (descriptionPropId !== undefined) {
-            this.updateRowBlock(rowId, { [descriptionPropId]: description });
-            this.sync.syncUpdateRow({ rowId, properties: { [descriptionPropId]: description } });
+          const row = this.model.getRow(rowId);
+
+          if (row === undefined || (this.config.rowPages !== undefined && row.pageId !== undefined)) return;
+          const schema = this.model.getSchema();
+          const designated = schema.find((property) => property.type === 'richText');
+          const existing = schema.find((property) => property.type === 'richText'
+            && property.name === designated?.name
+            && row?.properties[property.id] !== undefined && row?.properties[property.id] !== null)
+            ?? designated;
+          const property = existing ?? this.model.addProperty(this.api.i18n.t('tools.database.cardDetails'), 'richText');
+
+          if (existing === undefined) {
+            this.block.dispatchChange();
+            this.descriptionPropertyNeedsCreate = true;
+          }
+
+          if (this.descriptionPropertyNeedsCreate && this.descriptionPropertyCreation === null) {
+            const creation = this.sync.syncCreateProperty({
+              id: property.id,
+              name: property.name,
+              type: property.type,
+              position: property.position,
+            });
+
+            this.descriptionPropertyCreation = creation;
+            void creation.then((created) => {
+              this.descriptionPropertyCreation = null;
+              if (created === undefined && this.config.adapter !== undefined) {
+                return;
+              }
+              this.descriptionPropertyNeedsCreate = false;
+
+              if (this.config.rowPages === undefined) {
+                for (const [pendingRowId, pendingDescription] of this.pendingDescriptions) {
+                  this.sync.syncUpdateRow({ rowId: pendingRowId, properties: { [property.id]: pendingDescription } });
+                }
+                this.pendingDescriptions.clear();
+                this.sync.flushPendingUpdates();
+              }
+            });
+          }
+
+          this.cardDrawer?.setDescriptionPropertyId(property.id);
+          this.updateRowBlock(rowId, { [property.id]: description });
+          if (this.config.rowPages !== undefined) {
+            void this.copyLegacyRowBody(rowId, property.id, description);
+          } else if (this.descriptionPropertyCreation !== null) {
+            this.pendingDescriptions.set(rowId, description);
+          } else {
+            this.sync.syncUpdateRow({ rowId, properties: { [property.id]: description } });
           }
         },
         onClose: () => { /* no-op; drawer handles its own DOM cleanup */ },

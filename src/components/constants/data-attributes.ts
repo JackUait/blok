@@ -50,6 +50,7 @@ export const DATA_ATTR = {
 
   /** Block unique identifier */
   id: 'data-blok-id',
+  pageId: 'data-blok-page-id',
   /** Block component/tool type */
   component: 'data-blok-component',
   /** Tool type attribute */

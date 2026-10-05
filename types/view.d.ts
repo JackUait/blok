@@ -1,6 +1,7 @@
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData } from './data-formats/output-data';
 import type { PlaintextRule, SanitizerConfig } from './configs/sanitizer-config';
 import type { BlokViewSchema } from './index';
+import type { PageIcon, PageInfo } from './tools/page';
 
 /**
  * Hand-authored declarations for the `@bloklabs/core/view` subpath — the
@@ -171,14 +172,20 @@ export interface BlocksToHtmlOptions {
    *
    * A page's body lives in a separate document, so the view renders a page
    * block as a one-line card (icon + title) and never renders children under
-   * it. The card is a link only when this is given. The returned URL still
-   * passes through {@link transformUrl} (with `blockType: 'page'`) and the
-   * unsafe-scheme strip, so a `javascript:` result renders a plain card.
+   * it. The card is a link only when this and {@link pageInfo} return
+   * authorized metadata. The returned URL still passes through
+   * {@link transformUrl} (with `blockType: 'page'`) and the unsafe-scheme
+   * strip, so a `javascript:` result renders a plain card.
    *
    * @example
-   * blocksToHtml(data, { pageHref: (pageId) => `/pages/${pageId}` });
+   * blocksToHtml(data, {
+   *   pageInfo: (pageId) => hostPageInfo(pageId),
+   *   pageHref: (pageId) => `/pages/${pageId}`,
+   * });
    */
   pageHref?: (pageId: string) => string;
+  /** Authorized page metadata; absent results render neutral, unlinked cards. */
+  pageInfo?: (pageId: string) => PageInfo | null | undefined;
   /**
    * Base direction of the document (default: none).
    *
@@ -246,6 +253,70 @@ export declare function blocksToPlainText(
   data: OutputData | LooseOutputData | null | undefined,
   options?: BlocksToPlainTextOptions
 ): string;
+
+/** An owning page pointer in one saved document. */
+export interface PageOwnerEdge {
+  pageId: string;
+  sourceBlockId: string;
+  order: number;
+}
+
+/** Searchable text attributed to a visible block. */
+export interface PageTextEntry {
+  blockId: string | null;
+  order: number;
+  text: string;
+}
+
+/** A non-owning reference to a page in one saved document. */
+export interface PageReference {
+  pageId: string;
+  sourceBlockId: string | null;
+  order: number;
+}
+
+/** Document facts for a host-owned page catalog. */
+export interface PageIndex {
+  owners: PageOwnerEdge[];
+  text: PageTextEntry[];
+  references: PageReference[];
+}
+
+/** Extract page ownership, text and references without a DOM or workspace state. */
+export declare function pageIndex(data: OutputData | LooseOutputData | null | undefined): PageIndex;
+
+export interface HostPageEdge extends PageOwnerEdge {
+  /** Null for a root document. */
+  ownerPageId: string | null;
+}
+
+export interface PageTreeNode {
+  pageId: string;
+  sourceBlockId: string;
+  order: number;
+  access: 'allowed' | 'none' | 'missing';
+  title?: string;
+  icon?: PageIcon;
+  children: PageTreeNode[];
+}
+
+export type PageTreeDiagnostic =
+  | { kind: 'duplicate-owner'; pageId: string; edges: HostPageEdge[] }
+  | { kind: 'cycle'; pageId: string; path: string[] }
+  | { kind: 'missing-page'; pageId: string; sourceBlockId: string }
+  | { kind: 'missing-owner'; pageId: string }
+  | { kind: 'unreachable'; pageId: string; sourceBlockId: string };
+
+export interface PageTreeProjection {
+  roots: PageTreeNode[];
+  diagnostics: PageTreeDiagnostic[];
+}
+
+/** Metadata must already be filtered for the current viewer. */
+export declare function projectPageTree(
+  edges: readonly HostPageEdge[],
+  metadata: Readonly<Record<string, PageInfo | null | undefined>>
+): PageTreeProjection;
 
 /** Options for {@link extractTexts} / {@link injectTexts}. */
 export interface DocumentTextsOptions {
@@ -322,7 +393,8 @@ export interface MarkdownSerializationResult {
  * @returns Markdown ('' for empty/malformed documents)
  */
 export declare function blocksToMarkdown(
-  data: OutputData | LooseOutputData | null | undefined
+  data: OutputData | LooseOutputData | null | undefined,
+  options?: Pick<BlocksToHtmlOptions, 'pageInfo'>
 ): string;
 
 /**
@@ -335,7 +407,8 @@ export declare function blocksToMarkdown(
  * @returns the Markdown and its degradations
  */
 export declare function blocksToMarkdownWithReport(
-  data: OutputData | LooseOutputData | null | undefined
+  data: OutputData | LooseOutputData | null | undefined,
+  options?: Pick<BlocksToHtmlOptions, 'pageInfo'>
 ): MarkdownSerializationResult;
 
 /**
@@ -599,3 +672,119 @@ export declare function htmlToBlocks(html: string): OutputBlockData[];
  * @returns the blocks and their degradations
  */
 export declare function htmlToBlocksWithReport(html: string): HtmlImportResult;
+
+/** Where moved root blocks are inserted in the target document. */
+export interface PageBlockPlacement {
+  parentId: string | null;
+  afterId: string | null;
+}
+
+/** New document snapshots after moving blocks between pages. */
+export interface PageBlockMove {
+  source: OutputData;
+  target: OutputData;
+  movedIds: string[];
+}
+
+/** Move complete block subtrees without changing either input document. */
+export declare function movePageBlocks(
+  source: OutputData,
+  target: OutputData,
+  roots: readonly string[],
+  place: PageBlockPlacement
+): PageBlockMove;
+
+/** Build a new page body and replace adjacent blocks with its owning pointer. */
+export declare function turnBlocksIntoPage(
+  source: OutputData,
+  roots: readonly string[],
+  ids: { pageId: string; pointerId: string }
+): { source: OutputData; pageBody: OutputData; pointerId: string };
+
+/** Replace an owning pointer only after its matching page body has loaded. */
+export declare function turnPageIntoBlocks(
+  source: OutputData,
+  pointerId: string,
+  loaded: { pageId: string; body: OutputData } | null
+): { source: OutputData; retiredPageId: string; movedIds: string[] };
+
+interface PageTransferBase {
+  operationId: string;
+  sourcePageId: string;
+  targetPageId: string;
+}
+
+/** A host request for one cross-document page operation. */
+export type PageTransferRequest =
+  | (PageTransferBase & {
+    kind: 'move-blocks' | 'reparent-page';
+    rootIds: string[];
+    place: PageBlockPlacement;
+  })
+  | (PageTransferBase & {
+    kind: 'turn-into-page';
+    rootIds: string[];
+    pointerId: string;
+  })
+  | (PageTransferBase & {
+    kind: 'turn-into-blocks';
+    pointerId: string;
+  })
+  | (PageTransferBase & {
+    kind: 'duplicate-page';
+    pointerId: string;
+    place: PageBlockPlacement;
+  });
+
+/** Proof claimed by a host after atomically committing the operation. */
+export interface PageTransferReceipt {
+  operationId: string;
+  kind: PageTransferRequest['kind'];
+  sourcePageId: string;
+  targetPageId: string;
+  rootIds: string[];
+  undoToken: string;
+  durability: { kind: 'transaction'; transactionId: string };
+}
+
+/** Host persistence adapter. A live transaction must cover authoritative rooms. */
+export interface PageTransferHost {
+  mode: 'saved-transaction' | 'live-transaction';
+  run(request: PageTransferRequest): Promise<PageTransferReceipt>;
+}
+
+/** Refuse collaboration without a live transaction and validate the host receipt. */
+export declare function executePageTransfer(
+  host: PageTransferHost,
+  request: PageTransferRequest,
+  context: { collaboration: boolean }
+): Promise<PageTransferReceipt>;
+
+export interface PageTransferUndoRequest {
+  operationId: string;
+  undoOf: PageTransferReceipt;
+}
+
+export interface PageTransferUndoReceipt {
+  operationId: string;
+  undoOfOperationId: string;
+  undoToken: string;
+  durability: { kind: 'transaction'; transactionId: string };
+}
+
+export interface PageTransferUndoHost extends PageTransferHost {
+  undo(request: PageTransferUndoRequest): Promise<PageTransferUndoReceipt>;
+}
+
+/** Validate a receipt-scoped host Undo; the host owns the inverse transaction. */
+export declare function undoPageTransfer(
+  host: PageTransferUndoHost,
+  request: PageTransferUndoRequest,
+  context: { collaboration: boolean }
+): Promise<PageTransferUndoReceipt>;
+
+/** Copy one page document, rewriting only known block and page references. */
+export declare function remapPageDocument(
+  data: OutputData,
+  ids: { blockIds: ReadonlyMap<string, string>; pageIds: ReadonlyMap<string, string> }
+): OutputData;

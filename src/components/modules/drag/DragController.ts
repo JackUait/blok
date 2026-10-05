@@ -114,7 +114,15 @@ export class DragController extends Module {
       (toolName, data) => {
         const link = this.Blok.Tools.blockTools.get(toolName)?.copyAsLink(data);
 
-        return link === undefined || link === null ? null : linkToBlock(link, this.Blok.Tools.defaultTool);
+        if (link === undefined) {
+          return null;
+        }
+
+        if (link === null) {
+          return false;
+        }
+
+        return linkToBlock(link, this.Blok.Tools.defaultTool);
       }
     );
 

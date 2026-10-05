@@ -205,6 +205,7 @@ const POPOVER_DESKTOP_CONSUMERS = [
   'tools/database/database-view-popover.ts',
   'tools/database/index.ts',
   'tools/link/paste-menu/controller.ts',
+  'tools/page/page-picker.ts',
   'tools/table/table-cell-selection.ts',
   'tools/table/table-row-col-popover.ts',
 ].sort();

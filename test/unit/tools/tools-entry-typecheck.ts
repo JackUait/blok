@@ -13,7 +13,7 @@ import type {
   FileData, FileConfig, FileUploader,
   AudioData, AudioConfig, AudioUploader,
   VideoData, VideoConfig, VideoUploader,
-  PageData, PageConfig, PageInfo, PageIcon,
+  PageData, PageConfig, PageInfo, PageIcon, PageSearchResult,
 } from '../../../types/tools-entry';
 
 // defaultBlockTools must include 'database' and 'database-row' entries
@@ -31,7 +31,7 @@ const _bookmark: typeof Bookmark = {} as typeof Bookmark;
 
 // Page is exported from the runtime tools entry.
 const _page: typeof Page = {} as typeof Page;
-const _pageTypes: [PageData, PageConfig, PageInfo, PageIcon] = [] as never;
+const _pageTypes: [PageData, PageConfig, PageInfo, PageIcon, PageSearchResult] = [] as never;
 
 // defaultBlockTools must include the 'embed' and 'bookmark' entries the runtime emits
 const _embedDefault: typeof defaultBlockTools.embed = {} as const;

@@ -8,6 +8,9 @@ import { Blok } from '../../../../../src/blok';
 import type { Block } from '../../../../../src/components/block';
 import { Table } from '../../../../../src/tools/table/index';
 import { Paragraph } from '../../../../../src/tools/paragraph';
+import { PageTool } from '../../../../../src/tools/page';
+import { PageLink } from '../../../../../src/tools/page-link';
+import type { PageConfig } from '../../../../../src/tools/page/types';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
 
@@ -58,10 +61,17 @@ class MarkerTune {
   }
 }
 
-const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
+const boot = async (blocks: OutputBlockData[], pageConfig?: PageConfig & Record<string, unknown>): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
-    tools: { paragraph: Paragraph, toggle: ToggleItem, table: Table, marker: MarkerTune },
+    tools: {
+      paragraph: Paragraph,
+      toggle: ToggleItem,
+      table: Table,
+      page: pageConfig === undefined ? PageTool : { class: PageTool, config: pageConfig },
+      ...(pageConfig === undefined ? {} : { 'page-link': { class: PageLink, config: pageConfig } }),
+      marker: MarkerTune,
+    },
     tunes: ['marker'],
     data: { blocks },
   }) as unknown as TestEditor;
@@ -189,6 +199,104 @@ describe('duplicating a table block', () => {
     const cellTexts = grids.map(g => Array.from(g.querySelectorAll('td')).map(td => (td.textContent ?? '').trim()));
 
     expect(cellTexts).toEqual([['A', 'B', 'C', 'D'], ['A', 'B', 'C', 'D']]);
+  }, 30_000);
+
+  it('does not clone a page child when duplicating a table without a link URL', async () => {
+    const instance = await boot([
+      {
+        id: 'tbl',
+        type: 'table',
+        data: { withHeadings: false, content: [[{ blocks: ['pg'] }]] },
+        content: ['pg'],
+      },
+      { id: 'pg', type: 'page', parent: 'tbl', data: { pageId: 'p1' } },
+      P('z', undefined, 'after'),
+    ]);
+    const tbl = instance.module.blockManager.blocks.find(b => b.id === 'tbl') as Block;
+
+    await instance.module.dragManager.duplicateBlocksInPlace(tbl);
+    await flush();
+    const out = await saveAsProduction(instance);
+
+    expect(out.blocks.filter(b => b.type === 'page' && b.data.pageId === 'p1')).toHaveLength(1);
+    expect(tablesIn(out)).toHaveLength(2);
+  }, 30_000);
+
+  it('duplicates an open-only page cell as a non-owning page reference', async () => {
+    const instance = await boot([
+      {
+        id: 'tbl',
+        type: 'table',
+        data: { withHeadings: false, content: [[{ blocks: ['pg'] }]] },
+        content: ['pg'],
+      },
+      { id: 'pg', type: 'page', parent: 'tbl', data: { pageId: 'p1' } },
+      P('z', undefined, 'after'),
+    ], { open: () => undefined });
+    const tbl = instance.module.blockManager.blocks.find(block => block.id === 'tbl') as Block;
+
+    const copies = await instance.module.dragManager.duplicateBlocksInPlace(tbl);
+    await flush();
+    const saved = await saveAsProduction(instance);
+    const copiedTable = saved.blocks.find(block => block.id === copies[0]?.id);
+    const copiedId = (copiedTable?.data as { content?: Array<Array<{ blocks: string[] }>> } | undefined)
+      ?.content?.[0]?.[0]?.blocks[0];
+
+    expect(saved.blocks.find(block => block.id === copiedId)).toMatchObject({
+      type: 'page-link', data: { pageId: 'p1' },
+    });
+    expect(saved.blocks.filter(block => block.type === 'page' && block.data.pageId === 'p1')).toHaveLength(1);
+  }, 30_000);
+
+  it('does not clone a nested page child when duplicating a table', async () => {
+    const instance = await boot([
+      {
+        id: 'tbl',
+        type: 'table',
+        data: { withHeadings: false, content: [[{ blocks: ['tg'] }]] },
+        content: ['tg'],
+      },
+      { id: 'tg', type: 'toggle', parent: 'tbl', data: { text: 'T', isOpen: true }, content: ['pg'] },
+      { id: 'pg', type: 'page', parent: 'tg', data: { pageId: 'p1' } },
+      P('z', undefined, 'after'),
+    ]);
+    const tbl = instance.module.blockManager.blocks.find(b => b.id === 'tbl') as Block;
+
+    await instance.module.dragManager.duplicateBlocksInPlace(tbl);
+    await flush();
+    const out = await saveAsProduction(instance);
+
+    expect(out.blocks.filter(b => b.type === 'page' && b.data.pageId === 'p1')).toHaveLength(1);
+    expect(tablesIn(out)).toHaveLength(2);
+  }, 30_000);
+
+  it('duplicates a nested open-only page as a non-owning child reference', async () => {
+    const instance = await boot([
+      {
+        id: 'tbl',
+        type: 'table',
+        data: { withHeadings: false, content: [[{ blocks: ['tg'] }]] },
+        content: ['tg'],
+      },
+      { id: 'tg', type: 'toggle', parent: 'tbl', data: { text: 'T', isOpen: true }, content: ['pg'] },
+      { id: 'pg', type: 'page', parent: 'tg', data: { pageId: 'p1' } },
+      P('z', undefined, 'after'),
+    ], { open: () => undefined });
+    const tbl = instance.module.blockManager.blocks.find(block => block.id === 'tbl') as Block;
+
+    const copies = await instance.module.dragManager.duplicateBlocksInPlace(tbl);
+    await flush();
+    const saved = await saveAsProduction(instance);
+    const copiedTable = saved.blocks.find(block => block.id === copies[0]?.id);
+    const copiedToggleId = (copiedTable?.data as { content?: Array<Array<{ blocks: string[] }>> } | undefined)
+      ?.content?.[0]?.[0]?.blocks[0];
+    const copiedToggle = saved.blocks.find(block => block.id === copiedToggleId);
+    const copiedPageId = copiedToggle?.content?.[0];
+
+    expect(saved.blocks.find(block => block.id === copiedPageId)).toMatchObject({
+      type: 'page-link', data: { pageId: 'p1' },
+    });
+    expect(saved.blocks.filter(block => block.type === 'page' && block.data.pageId === 'p1')).toHaveLength(1);
   }, 30_000);
 
   it('undo of Cmd+D on a table leaves exactly the original document', async () => {

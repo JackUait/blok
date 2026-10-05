@@ -400,11 +400,11 @@ describe('parseNotionBlocksV3 — block type mapping', () => {
     ]);
   });
 
-  it('omits the title of an untitled sub-page reference', () => {
+  it('keeps only the ID of an untitled sub-page', () => {
     const json = siblings(value('pg', 'page'));
 
     expect(parseNotionBlocksV3(json)).toStrictEqual([
-      { id: 'pg', tool: 'bookmark', data: { url: 'https://www.notion.so/pg' } },
+      { id: 'pg', tool: 'page', data: { pageId: 'pg' } },
     ]);
   });
 
@@ -799,7 +799,7 @@ describe('parseNotionBlocksV3 — inline rich text', () => {
     expect(paragraphText([['x', [['h', '']]]])).toBe('x');
   });
 
-  it('labels a page mention whose target has no properties', () => {
+  it('keeps a page mention ID when its target has no properties', () => {
     const json = payload([
       richTextParagraph('p', [['‣', [['p', 'pageref']]]]),
       value('pageref', 'page'),
@@ -809,7 +809,7 @@ describe('parseNotionBlocksV3 — inline rich text', () => {
       {
         id: 'p',
         tool: 'paragraph',
-        data: { text: '<a href="https://www.notion.so/pageref">Untitled</a>' },
+        data: { text: '<a data-blok-page-id="pageref">Page</a>' },
       },
     ]);
   });

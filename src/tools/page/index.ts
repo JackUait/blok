@@ -8,14 +8,18 @@ import type {
   ToolboxConfig,
 } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconLinkExternal, IconPage } from '../../components/icons';
+import { IconLinkExternal, IconLock, IconPage } from '../../components/icons';
+import { openModalDialog, type ModalDialogHandle } from '../../components/utils/modal-dialog';
+import { CSS } from '../../components/utils/notifier/draw';
+import { twJoin } from '../../components/utils/tw';
+import type { MenuConfig } from '../../../types/tools/menu-config';
 import { generateBlockId } from '../../components/utils/id-generator';
 import { PLAINTEXT } from '../../components/utils/sanitizer';
 import { safeHref } from '../../components/utils/sanitize-url';
-import type { MenuConfig } from '../../../types/tools/menu-config';
 import {
   PAGE_ICON_CLASSES,
   PAGE_LINK_CLASSES,
+  PAGE_LINK_DENIED_CLASSES,
   PAGE_LINK_DISABLED_CLASSES,
   PAGE_LINK_ENABLED_CLASSES,
   PAGE_TITLE_CLASSES,
@@ -24,16 +28,15 @@ import {
 } from './constants';
 import { PageHoverPreview, pageIconNode, previewLines, type PageHoverContent, type PagePreviewLine } from './hover-preview';
 import { renderPagePreview } from './preview';
-import type { PageCache, PageConfig, PageData, PageIcon, PageInfo } from './types';
+import type { PageConfig, PageData, PageIcon, PageInfo } from './types';
 
-export type { PageCache, PageConfig, PageData, PageIcon, PageInfo } from './types';
+export type { PageCache, PageConfig, PageData, PageIcon, PageInfo, PageSearchResult } from './types';
 
-type PageState = 'normal' | 'untitled' | 'missing' | 'no-access';
+type PageState = 'unresolved' | 'normal' | 'untitled' | 'missing' | 'no-access';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-/** Saved data is wire data: keep only a well-formed icon. */
 const readIcon = (value: unknown): PageIcon | undefined => {
   if (!isRecord(value)) {
     return undefined;
@@ -48,61 +51,29 @@ const readIcon = (value: unknown): PageIcon | undefined => {
   return undefined;
 };
 
-const readCache = (value: unknown): PageCache | undefined => {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-
-  const icon = readIcon(value.icon);
-  const cache: PageCache = {
-    ...(typeof value.title === 'string' && { title: value.title }),
-    ...(icon !== undefined && { icon }),
-  };
-
-  return Object.keys(cache).length > 0 ? cache : undefined;
-};
-
-const sameCache = (a: PageCache | undefined, b: PageCache | undefined): boolean =>
-  JSON.stringify(readCache(a) ?? {}) === JSON.stringify(readCache(b) ?? {});
-
-const escapeText = (text: string): string =>
-  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-/**
- * Page block: a link to another page, like Notion's sub-page block.
- *
- * The block only points at the page (`pageId`). The host owns the page and
- * its title; `cache` is a display copy refreshed from `config.resolve`.
- */
+/** A page block points to a host-owned page. Only its ID is saved. */
 export class PageTool implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: PageConfig;
-  private data: { pageId: string; cache?: PageCache };
-  private readOnly: boolean;
+  private data: { pageId: string };
   /** Minted here: this instance is the user's or the API's new page. */
   private readonly isNew: boolean;
   private readonly opensWhenCreated: boolean;
   private readonly isProbe: boolean;
   private root: HTMLElement | null = null;
-  private found: 'yes' | 'missing' | 'no-access' = 'yes';
-  /**
-   * What read-only mode shows from `resolve` without saving it. Wrapped so
-   * a page with no title or icon still hides the old cache.
-   */
-  private shown: { cache: PageCache | undefined } | undefined;
+  private info: PageInfo | null | undefined;
+  private requestVersion = 0;
   private started = false;
   private detached = false;
   private unsubscribe: (() => void) | undefined;
-  /** Titles above the page, from the last `resolve`. Shown only in the hover preview. */
-  private path: string[] = [];
+  private accessDialog: ModalDialogHandle | null = null;
   private readonly preview = new PageHoverPreview(() => this.previewContent(), () => this.previewBody());
 
   constructor(options: BlockToolConstructorOptions<PageData, PageConfig>) {
     this.api = options.api;
     this.block = options.block;
     this.config = options.config ?? {};
-    this.readOnly = options.readOnly;
 
     const pageId = typeof options.data?.pageId === 'string' ? options.data.pageId : '';
     const origin = options.origin ?? 'api';
@@ -112,10 +83,7 @@ export class PageTool implements BlockTool {
     this.isNew = pageId === '' && !options.readOnly && (origin === 'user' || origin === 'api');
     this.opensWhenCreated = origin === 'user';
     this.isProbe = origin === 'probe';
-    this.data = {
-      pageId: this.isNew ? generateBlockId() : pageId,
-      cache: readCache(options.data?.cache),
-    };
+    this.data = { pageId: this.isNew ? generateBlockId() : pageId };
   }
 
   public static get toolbox(): ToolboxConfig {
@@ -151,24 +119,18 @@ export class PageTool implements BlockTool {
    */
   public static copyAsLink(data: PageData, config: PageConfig): { url: string; text: string } | null {
     const pageId = typeof data.pageId === 'string' ? data.pageId : '';
-    const href = config.href === undefined || pageId === '' ? null : safeHref(config.href(pageId));
-
-    if (href === null) {
-      return null;
-    }
 
     try {
-      return { url: new URL(href, document.baseURI).href, text: readCache(data.cache)?.title ?? '' };
+      const href = config.href === undefined || pageId === '' ? null : safeHref(config.href(pageId));
+
+      return href === null ? null : { url: new URL(href, document.baseURI).href, text: 'Page' };
     } catch {
       return null;
     }
   }
 
-  /** Turn into text keeps the title as literal text. */
   public static get conversionConfig(): ConversionConfig {
-    return {
-      export: (data): string => escapeText(readCache(data.cache)?.title ?? ''),
-    };
+    return { export: (): string => 'Page' };
   }
 
   public render(): HTMLElement {
@@ -205,12 +167,7 @@ export class PageTool implements BlockTool {
   }
 
   public save(): PageData {
-    const cache = readCache(this.data.cache);
-
-    return {
-      pageId: this.data.pageId,
-      ...(cache !== undefined && { cache }),
-    };
+    return { pageId: this.data.pageId };
   }
 
   /** A block failing this is dropped on save, so only an empty id fails. */
@@ -228,41 +185,32 @@ export class PageTool implements BlockTool {
     const moved = pageId !== this.data.pageId;
 
     if (moved) {
-      // The missing or locked verdict was about the old page.
-      this.found = 'yes';
-      this.shown = undefined;
+      ++this.requestVersion;
+      this.info = undefined;
     }
-    this.data = { pageId, cache: readCache(data.cache) };
-    if (moved && this.unsubscribe !== undefined) {
+    this.data = { pageId };
+    if (moved && this.started) {
       this.listen();
+      void this.refresh();
+    } else {
+      this.renderView();
     }
-    this.renderView();
 
     return true;
   }
 
-  public setReadOnly(state: boolean): void {
-    this.readOnly = state;
-
-    const shown = this.shown;
-
-    if (state || shown === undefined) {
-      return;
-    }
-    // Read-only showed a fresher cache than the document holds; save it now.
-    this.shown = undefined;
-    this.writeCache(shown.cache);
-  }
+  public setReadOnly(_state: boolean): void {}
 
   public removed(): void {
     this.detached = true;
+    ++this.requestVersion;
     this.stopListening();
     this.preview.hide();
+    this.accessDialog?.close();
   }
 
   public destroy(): void {
-    this.stopListening();
-    this.preview.hide();
+    this.removed();
   }
 
   public renderSettings(): MenuConfig {
@@ -279,17 +227,21 @@ export class PageTool implements BlockTool {
         name: 'page-open-new-tab',
         closeOnActivate: true,
         onActivate: (): void => {
-          window.open(link.url, '_blank', 'noopener,noreferrer');
+          if (this.isNavigable) {
+            window.open(link.url, '_blank', 'noopener,noreferrer');
+          }
         },
       },
     ];
   }
 
-  /**
-   * Enter on the selected block opens the page. A missing or locked page
-   * returns false: the block has no inputs, so core just keeps it selected.
-   */
+  /** Enter on the selected block opens the page or explains denied access. */
   public onNavigationEnter(event: KeyboardEvent): boolean {
+    if (this.state === 'no-access') {
+      this.showNoAccessDialog();
+
+      return true;
+    }
     if (!this.isNavigable) {
       return false;
     }
@@ -325,7 +277,7 @@ export class PageTool implements BlockTool {
     // One microtask: the insert adds the block to the document synchronously,
     // and the id write must land after it.
     await Promise.resolve();
-    if (this.detached) {
+    if (this.detached || pageId !== this.data.pageId) {
       return;
     }
     // Core's post-insert normalise fills only keys the insert lacked, so an
@@ -335,19 +287,19 @@ export class PageTool implements BlockTool {
     try {
       await this.config.create?.({ pageId });
     } catch {
-      if (this.detached) {
+      if (this.detached || pageId !== this.data.pageId) {
         return;
       }
-      // The host failed to make the page: show it missing, unless resolve
-      // finds it after all.
-      this.found = 'missing';
+      this.info = null;
       this.renderView();
-      await this.refresh();
+      if (this.config.resolve !== undefined) {
+        await this.refresh(null);
+      }
 
       return;
     }
 
-    if (this.detached) {
+    if (this.detached || pageId !== this.data.pageId) {
       return;
     }
     if (this.opensWhenCreated) {
@@ -361,7 +313,11 @@ export class PageTool implements BlockTool {
     this.stopListening();
 
     const { pageId } = this.data;
-    const stop = pageId === '' ? undefined : this.config.subscribe?.(pageId, () => void this.refresh());
+    const stop = pageId === '' ? undefined : this.config.subscribe?.(pageId, () => {
+      if (pageId === this.data.pageId && !this.detached) {
+        void this.refresh();
+      }
+    });
 
     // A no-op still marks the block as listening, so setData moves it to a new page.
     this.unsubscribe = typeof stop === 'function' ? stop : (): void => undefined;
@@ -372,76 +328,42 @@ export class PageTool implements BlockTool {
     this.unsubscribe = undefined;
   }
 
-  private async refresh(): Promise<void> {
-    const { pageId } = this.data;
-    const resolve = this.config.resolve;
+  private async refresh(fallback: null | undefined = undefined): Promise<void> {
+    const pageId = this.data.pageId;
+    const version = ++this.requestVersion;
 
-    if (resolve === undefined || pageId === '') {
+    this.info = fallback;
+    this.renderView();
+    if (pageId === '' || this.config.resolve === undefined) {
       return;
     }
 
     const info = await Promise.resolve()
-      .then(() => resolve(pageId))
+      .then(() => this.config.resolve?.(pageId))
       .catch((): undefined => undefined);
 
-    if (this.detached || pageId !== this.data.pageId || info === undefined) {
+    if (this.detached || version !== this.requestVersion || pageId !== this.data.pageId) {
       return;
     }
 
-    this.applyInfo(info);
-  }
-
-  private applyInfo(info: PageInfo | null): void {
-    if (info === null || info.access === 'none') {
-      this.found = info === null ? 'missing' : 'no-access';
-      this.renderView();
-
-      return;
-    }
-
-    this.found = 'yes';
-    this.path = Array.isArray(info.path) ? info.path.filter((title): title is string => typeof title === 'string') : [];
-
-    const fresh = readCache({ title: info.title, icon: info.icon });
-
-    if (this.readOnly) {
-      this.shown = { cache: fresh };
-      this.renderView();
-
-      return;
-    }
-
-    this.shown = undefined;
-    this.writeCache(fresh);
-  }
-
-  private writeCache(cache: PageCache | undefined): void {
-    if (sameCache(cache, this.data.cache)) {
-      this.renderView();
-
-      return;
-    }
-
-    this.data = { pageId: this.data.pageId, cache };
+    this.info = info === undefined ? fallback : info;
     this.renderView();
-    this.block.dispatchChange({ derived: true });
   }
 
   private get state(): PageState {
-    if (this.found === 'missing') {
+    if (this.info === undefined) {
+      return 'unresolved';
+    }
+    if (this.info === null) {
       return 'missing';
     }
-    if (this.found === 'no-access') {
+    if (this.info.access === 'none') {
       return 'no-access';
     }
 
-    const title = this.visibleCache()?.title;
+    const title = this.info.title;
 
-    return title !== undefined && title.trim() !== '' ? 'normal' : 'untitled';
-  }
-
-  private visibleCache(): PageCache | undefined {
-    return this.shown === undefined ? this.data.cache : this.shown.cache;
+    return typeof title === 'string' && title.trim() !== '' ? 'normal' : 'untitled';
   }
 
   private get isNavigable(): boolean {
@@ -449,6 +371,9 @@ export class PageTool implements BlockTool {
   }
 
   private renderView(): void {
+    if (this.state !== 'no-access') {
+      this.accessDialog?.close();
+    }
     // The preview is anchored to the link being replaced.
     this.preview.hide();
     this.root?.replaceChildren(this.buildLink());
@@ -473,16 +398,25 @@ export class PageTool implements BlockTool {
 
     const state = this.state;
 
-    return { icon: this.visibleCache()?.icon, title: this.titleText(state), path: this.path };
+    const path = this.info?.path;
+
+    return {
+      icon: readIcon(this.info?.icon),
+      title: this.titleText(state),
+      path: Array.isArray(path) ? path.filter((title): title is string => typeof title === 'string') : [],
+    };
   }
 
   private buildLink(): HTMLAnchorElement {
     const state = this.state;
     const link = document.createElement('a');
 
-    link.className = `${PAGE_LINK_CLASSES} ${this.isNavigable ? PAGE_LINK_ENABLED_CLASSES : PAGE_LINK_DISABLED_CLASSES}`;
-    link.setAttribute(DATA_ATTR.blockContextMenu, '');
+    const nonNavigableClasses = state === 'no-access' ? PAGE_LINK_DENIED_CLASSES : PAGE_LINK_DISABLED_CLASSES;
+    const stateClasses = this.isNavigable ? PAGE_LINK_ENABLED_CLASSES : nonNavigableClasses;
+
+    link.className = `${PAGE_LINK_CLASSES} ${stateClasses}`;
     link.setAttribute(DATA_ATTR.testid, 'page-link');
+    link.setAttribute(DATA_ATTR.blockContextMenu, '');
     link.setAttribute('data-blok-page-state', state);
     // Never focused, so Blok keeps its keys (undo, Escape, arrows). Tab is
     // Blok's indent; the keyboard opens the page from navigation mode.
@@ -491,11 +425,20 @@ export class PageTool implements BlockTool {
     link.draggable = false;
 
     if (this.isNavigable) {
-      const href = this.config.href === undefined ? null : safeHref(this.config.href(this.data.pageId));
+      const href = (() => {
+        try {
+          return this.config.href === undefined ? null : safeHref(this.config.href(this.data.pageId));
+        } catch {
+          return null;
+        }
+      })();
 
       if (href !== null) {
         link.setAttribute('href', href);
       }
+    } else if (state === 'no-access') {
+      link.setAttribute('role', 'button');
+      link.setAttribute('aria-haspopup', 'dialog');
     } else {
       link.setAttribute('aria-disabled', 'true');
     }
@@ -515,7 +458,11 @@ export class PageTool implements BlockTool {
     slot.setAttribute(DATA_ATTR.testid, 'page-icon');
     slot.setAttribute('aria-hidden', 'true');
 
-    slot.replaceChildren(pageIconNode(this.isNavigable ? this.visibleCache()?.icon : undefined));
+    if (this.state === 'no-access') {
+      slot.innerHTML = IconLock;
+    } else {
+      slot.replaceChildren(pageIconNode(this.isNavigable ? readIcon(this.info?.icon) : undefined));
+    }
 
     return slot;
   }
@@ -533,6 +480,8 @@ export class PageTool implements BlockTool {
 
   private titleText(state: PageState): string {
     switch (state) {
+      case 'unresolved':
+        return this.api.i18n.t('tools.page.unresolved');
       case 'missing':
         return this.api.i18n.t('tools.page.missing');
       case 'no-access':
@@ -540,8 +489,56 @@ export class PageTool implements BlockTool {
       case 'untitled':
         return this.api.i18n.t('tools.page.untitled');
       case 'normal':
-        return this.visibleCache()?.title ?? '';
+        return this.info?.title ?? '';
     }
+  }
+
+  private showNoAccessDialog(): void {
+    if (this.detached || this.state !== 'no-access' || this.accessDialog !== null) {
+      return;
+    }
+
+    const backdrop = document.createElement('div');
+    const panel = document.createElement('div');
+    const title = document.createElement('h2');
+    const body = document.createElement('p');
+    const closeButton = document.createElement('button');
+    const id = generateBlockId();
+
+    backdrop.className = 'fixed flex items-center justify-center bg-black/50 p-4';
+    // The top-layer reset clears class-based inset.
+    backdrop.style.inset = '0';
+    backdrop.setAttribute(DATA_ATTR.testid, 'page-access-dialog');
+    backdrop.setAttribute(DATA_ATTR.interface, 'page-access-dialog');
+    panel.className = twJoin(
+      CSS.notification,
+      CSS.dialog,
+      'w-[420px] max-w-[calc(100vw-32px)] flex-col items-start gap-4 py-5'
+    );
+    title.id = `blok-page-access-title-${id}`;
+    title.className = 'text-[17px] font-medium';
+    title.textContent = this.api.i18n.t('tools.page.accessDialogTitle');
+    body.id = `blok-page-access-body-${id}`;
+    body.textContent = this.api.i18n.t('tools.page.accessDialogBody');
+    closeButton.type = 'button';
+    closeButton.className = twJoin(CSS.btn, CSS.okBtn);
+    closeButton.textContent = this.api.i18n.t('tools.page.accessDialogClose');
+
+    const close = (): void => this.accessDialog?.close();
+
+    closeButton.addEventListener('click', close);
+    panel.append(title, body, closeButton);
+    backdrop.append(panel);
+    this.accessDialog = openModalDialog({
+      content: backdrop,
+      surface: panel,
+      labelledBy: title.id,
+      describedBy: body.id,
+      initialFocus: () => closeButton,
+      directionSource: this.root,
+      onDismiss: close,
+      onClose: () => { this.accessDialog = null; },
+    });
   }
 
   /** A browser focuses a link on mousedown; tabIndex -1 alone does not stop that. */
@@ -552,6 +549,14 @@ export class PageTool implements BlockTool {
   };
 
   private readonly handleClick = (event: MouseEvent): void => {
+    if (this.state === 'no-access') {
+      event.preventDefault();
+      if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+        this.showNoAccessDialog();
+      }
+
+      return;
+    }
     if (!this.isNavigable) {
       event.preventDefault();
 

@@ -15,7 +15,6 @@
  */
 import type { OutputData } from '../../types';
 import { repairedTableRows, sourceCellsInDisplayOrder, tableRows } from './table-grid';
-import { isPagePointer } from '../shared/page-pointer';
 
 /** Options shared by extraction and injection — they must match, or the counts will not. */
 export interface DocumentTextsOptions {
@@ -56,7 +55,6 @@ const PROSE_FIELDS: Record<string, string[]> = {
   callout: ['title'],
   /** Legacy only: the editor migrates a warning to a callout with these as paragraphs. */
   warning: ['title', 'message'],
-  /** The title is nested in `cache`; `walkBlock` reads it there. */
   page: [],
 };
 
@@ -256,10 +254,6 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
 
     if (entry.type === 'table') {
       walkTable(data);
-    }
-
-    if (isPagePointer(entry.type, data) && isRecord(data.cache)) {
-      pushSlot(data.cache, 'title');
     }
 
     if (LEGACY_ITEM_TYPES.has(entry.type) && Array.isArray(data.items)) {

@@ -104,24 +104,23 @@ describe('blocksToMarkdown', () => {
       .toBe('[youtube](https://youtu.be/1)');
   });
 
-  /** The page body is another document, so a copied page is its title line. */
   describe('page', () => {
-    it('serializes the cached title as plain text, escaping only what Markdown would read', () => {
+    it('does not serialize a legacy cached title', () => {
       expect(blocksToMarkdown([
-        { tool: 'page', data: { pageId: 'p1', cache: { title: 'Q3 <plan> & notes' } } },
-      ])).toBe('Q3 \\<plan> & notes');
+        { tool: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } } },
+      ])).toBe('Page');
     });
 
-    it('serializes a page with no title as "New page"', () => {
-      expect(blocksToMarkdown([{ tool: 'page', data: { pageId: 'p1' } }])).toBe('New page');
-      expect(blocksToMarkdown([{ tool: 'page', data: { pageId: 'p1', cache: { title: '' } } }])).toBe('New page');
+    it('serializes a page without host metadata as a neutral label', () => {
+      expect(blocksToMarkdown([{ tool: 'page', data: { pageId: 'p1' } }])).toBe('Page');
+      expect(blocksToMarkdown([{ tool: 'page', data: { pageId: 'p1', cache: { title: '' } } }])).toBe('Page');
     });
 
     it('keeps the list-continuation indent under a list item', () => {
       expect(blocksToMarkdown([
         { id: 'l1', tool: 'list', data: { text: 'Item', style: 'unordered' } },
-        { id: 'pg', parentId: 'l1', tool: 'page', data: { pageId: 'p1', cache: { title: 'Sub' } }, indent: 1 },
-      ])).toBe('- Item\n\n    Sub');
+        { id: 'pg', parentId: 'l1', tool: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } }, indent: 1 },
+      ])).toBe('- Item\n\n    Page');
     });
   });
 });

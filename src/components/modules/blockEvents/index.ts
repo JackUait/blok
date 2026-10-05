@@ -12,6 +12,7 @@ import { EmojiTrigger } from './composers/emojiTrigger';
 import { KeyboardNavigation } from './composers/keyboardNavigation';
 import { MarkdownShortcuts } from './composers/markdownShortcuts';
 import { NavigationMode } from './composers/navigationMode';
+import { PageReferenceTrigger } from './composers/pageReferenceTrigger';
 import { horizontalArrowIntent, isPrintableKeyEvent, isInsideKeyboardOwner, keyCodeFromEvent } from './utils/keyboard';
 import { isTextLikeBlock } from './utils/text-like-block';
 
@@ -28,6 +29,7 @@ export class BlockEvents extends Module {
   private _blockSelectionKeys?: BlockSelectionKeys;
   private _keyboardNavigation?: KeyboardNavigation;
   private _emojiTrigger?: EmojiTrigger;
+  private _pageReferenceTrigger?: PageReferenceTrigger;
 
   /**
    * Get the NavigationMode composer instance
@@ -60,6 +62,13 @@ export class BlockEvents extends Module {
       this._emojiTrigger = new EmojiTrigger(this.Blok);
     }
     return this._emojiTrigger;
+  }
+
+  public get pageReferenceTrigger(): PageReferenceTrigger {
+    if (!this._pageReferenceTrigger) {
+      this._pageReferenceTrigger = new PageReferenceTrigger(this.Blok);
+    }
+    return this._pageReferenceTrigger;
   }
 
   /**
@@ -111,6 +120,14 @@ export class BlockEvents extends Module {
      */
     if (this.emojiTrigger.opened && this.emojiTrigger.handleKeydown(event)) {
       return;
+    }
+    if (this.pageReferenceTrigger.opened) {
+      const handled = this.pageReferenceTrigger.handleKeydown(event);
+
+      // Tab keeps its browser default, not block indentation.
+      if (handled || event.key === 'Tab') {
+        return;
+      }
     }
 
     /**
@@ -347,6 +364,7 @@ export class BlockEvents extends Module {
     if (isInlineEmojiEnabled(this.config)) {
       void this.emojiTrigger.handleInput(event);
     }
+    void this.pageReferenceTrigger.handleInput(event);
   }
 
   /**
@@ -680,5 +698,6 @@ export class BlockEvents extends Module {
    */
   public destroy(): void {
     this._emojiTrigger?.destroy();
+    this._pageReferenceTrigger?.destroy();
   }
 }

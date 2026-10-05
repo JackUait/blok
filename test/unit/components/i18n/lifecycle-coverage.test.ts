@@ -262,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 571 + 115 + 61 + 4 closure for all 751 keys', () => {
+  it('rebuilds a disjoint 576 + 114 + 61 + 4 closure for all 755 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -276,7 +276,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(751);
+    expect(lifecycle.size).toBe(755);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -310,11 +310,11 @@ describe('current English catalog lifecycle coverage', () => {
       // +9: that sheet also names markup tools by literal (see below).
       // +2: the table grips name their merge-lock tooltips by literal.
       // The video context menu calls ctxCopyUrlAtTime and ctxStats by literal.
-      'executable-literal': 571,
-      // +1: toolNames.page comes from the page tool's titleKey.
+      'executable-literal': 576,
+      // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
       // when the video settings became one pane (1b400077); still shipped.
-      'finite-dynamic': 115,
+      'finite-dynamic': 114,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.

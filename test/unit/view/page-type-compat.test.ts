@@ -25,6 +25,14 @@ describe('a foreign block saved as type "page"', () => {
     expect(blocksToMarkdown(foreignPage())).toContain('Inside heading');
   });
 
+  it('blocksToMarkdown keeps foreign page text when pageId is empty', () => {
+    const page: OutputData = {
+      blocks: [{ type: 'page', data: { pageId: '', text: 'Custom page content' } }],
+    };
+
+    expect(blocksToMarkdown(page)).toBe('Custom page content');
+  });
+
   it('blocksToPlainText still reads its children', () => {
     expect(blocksToPlainText(foreignPage())).toContain('Inside heading');
   });
@@ -33,16 +41,16 @@ describe('a foreign block saved as type "page"', () => {
     expect(outlineFromOutputData(foreignPage()).map((entry) => entry.text)).toEqual(['Inside heading']);
   });
 
-  it('extractTexts reads no page title slot from it', () => {
+  it('extractTexts ignores cached titles on foreign and real page blocks', () => {
     const texts = extractTexts({
       blocks: [
         { id: 'pg', type: 'page', data: { cache: { title: 'Not a pointer' } } },
         { id: 'pp', type: 'page', data: { pageId: 'p1', cache: { title: 'Real pointer' } } },
+        { id: 'body', type: 'paragraph', data: { text: 'Visible body' } },
       ],
     });
 
-    expect(JSON.stringify(texts)).toContain('Real pointer');
-    expect(JSON.stringify(texts)).not.toContain('Not a pointer');
+    expect(texts).toEqual(['Visible body']);
   });
 
   it('the shared markdown core does not write it as "New page"', () => {

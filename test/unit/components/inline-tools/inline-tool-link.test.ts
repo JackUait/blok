@@ -4,6 +4,7 @@ import { IconLink } from '../../../../src/components/icons';
 
 import defaultDictionary from '../../../../src/components/i18n/locales/en.json';
 import { LinkInlineTool } from '../../../../src/components/inline-tools/inline-tool-link';
+import { clean } from '../../../../src/components/utils/sanitizer';
 import type { SelectionUtils } from '../../../../src/components/selection';
 import type { API } from '../../../../types';
 
@@ -210,26 +211,29 @@ const createEnterEventStubs = (): KeyboardEventStub => {
 
 describe('LinkInlineTool', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
     document.body.innerHTML = '';
     setDocumentCommand(vi.fn());
     localStorage.removeItem('blok-recent-links');
     documentBlocks.length = 0;
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('exposes inline metadata and shortcut', () => {
     expect(LinkInlineTool.isInline).toBe(true);
     expect(LinkInlineTool.title).toBe('Link');
-    // target/rel pass through so consumer-configured BlokConfig.link values
-    // survive sanitization; created anchors still default via insertLink().
-    expect(LinkInlineTool.sanitize).toEqual({
-      a: {
-        href: true,
-        target: true,
-        rel: true,
-      },
-    });
     expect(LinkInlineTool.shortcut).toBe('CMD+K');
+  });
+
+  it('keeps ordinary link attributes but strips stale page-reference metadata', () => {
+    const ordinary = '<a href="#section" target="_self" rel="noopener">Jump</a>';
+    const staleReference = '<a data-blok-page-id="p1" href="/old" title="Old">Old</a>';
+
+    expect(clean(staleReference, LinkInlineTool.sanitize)).toBe('<a data-blok-page-id="p1">Page</a>');
+    expect(clean(ordinary, LinkInlineTool.sanitize)).toBe(ordinary);
   });
 
   it('renders menu config with correct properties', () => {

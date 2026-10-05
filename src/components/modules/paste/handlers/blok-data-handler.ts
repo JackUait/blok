@@ -6,6 +6,7 @@ import { convertBlockDataToString, convertStringToBlockData } from '../../../uti
 import { linkToBlock, takeCut, type CopyLink } from '../../../utils/copy-as-link';
 import { sanitizeBlocks } from '../../../utils/sanitizer';
 import { safeHref } from '../../../utils/sanitize-url';
+import { isPagePointer } from '../../../../shared/page-pointer';
 import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
 import { enclosingCellTable } from '../../../utils/enclosing-cell-table';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
@@ -148,7 +149,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   private linksForSingletons(entries: BlokClipboardBlock[]): BlokClipboardBlock[] {
     const { Tools, BlockManager } = this.Blok;
     // Built on first need: most pastes hold no such block.
-    const live = { urls: undefined as Set<string> | undefined };
+    const live = { urls: undefined as Set<string> | undefined, pageIds: undefined as Set<string> | undefined };
     const liveUrls = (): Set<string> => {
       live.urls ??= new Set(
         BlockManager.blocks
@@ -157,6 +158,16 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       );
 
       return live.urls;
+    };
+    const livePageIds = (): Set<string> => {
+      live.pageIds ??= new Set(
+        BlockManager.blocks
+          .filter((block) => isPagePointer(block.name, block.preservedData))
+          .map((block) => block.preservedData.pageId)
+          .filter((pageId): pageId is string => typeof pageId === 'string')
+      );
+
+      return live.pageIds;
     };
     // Each token is taken once per paste, so every entry of one cut agrees.
     const cuts = new Map<string, boolean>();
@@ -189,12 +200,18 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       }
 
       const link = isCopyLink(entry.link) ? entry.link : built;
+      const pageId = isPagePointer(entry.tool, entry.data) && typeof entry.data.pageId === 'string'
+        ? entry.data.pageId
+        : undefined;
       // The cut is taken even when a live block wins, so a later paste of it links too.
       const fresh = isFreshCut(entry.cut);
 
-      if (fresh && (link === null || !liveUrls().has(link.url))) {
+      if (fresh && (link === null || !liveUrls().has(link.url)) && (pageId === undefined || !livePageIds().has(pageId))) {
         if (link !== null) {
           liveUrls().add(link.url);
+        }
+        if (pageId !== undefined) {
+          livePageIds().add(pageId);
         }
 
         return [entry];
@@ -206,6 +223,12 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
 
       if (link !== null) {
         return [{ ...shape, ...linkToBlock(link, Tools.defaultTool) }];
+      }
+
+      const pageLink = pageId === undefined ? undefined : Tools.blockTools.get('page-link');
+
+      if (pageId !== undefined && pageLink?.name === 'page-link') {
+        return [{ ...shape, tool: pageLink.name, data: { pageId } }];
       }
 
       const exported: unknown = convertBlockDataToString(entry.data, tool.conversionConfig);

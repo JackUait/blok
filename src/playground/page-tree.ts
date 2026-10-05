@@ -24,31 +24,18 @@ export interface PageTreeSource {
 
 const untitled = (title: string): string => (title.trim() === '' ? 'New page' : title);
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
 interface PageLink {
   pageId: string;
-  title: string;
-  icon?: string;
 }
 
-/** The page blocks in `blocks`, with the title and icon each one caches. */
+/** The page IDs in `blocks`. Pointer metadata is not authoritative. */
 const pageLinks = (blocks: OutputBlockData[]): PageLink[] => blocks.flatMap((block) => {
   const pageId: unknown = block.type === 'page' ? block.data?.pageId : undefined;
 
-  if (typeof pageId !== 'string' || pageId === '') {
-    return [];
-  }
-
-  const cache: unknown = block.data?.cache;
-  const title = isRecord(cache) && typeof cache.title === 'string' ? cache.title : '';
-  const icon = isRecord(cache) && isRecord(cache.icon) && typeof cache.icon.value === 'string' ? cache.icon.value : undefined;
-
-  return [{ pageId, title, ...(icon !== undefined && { icon }) }];
+  return typeof pageId === 'string' && pageId !== '' ? [{ pageId }] : [];
 });
 
-/** The page whose blocks link to `pageId`, with the link's cached title and icon; null when no page block points at it. */
+/** The page whose blocks link to `pageId`; null when no page block points at it. */
 export const findPageLink = (
   blocksOf: (pageId: string | null) => OutputBlockData[] | undefined,
   pageId: string
@@ -66,7 +53,7 @@ export const findPageLink = (
     const link = links.find((candidate) => candidate.pageId === pageId);
 
     if (link !== undefined) {
-      return { parentId, title: link.title, ...(link.icon !== undefined && { icon: link.icon }) };
+      return { parentId, title: '' };
     }
 
     for (const child of links) {
@@ -84,10 +71,8 @@ export const findPageLink = (
 };
 
 /**
- * The tree follows the page blocks, like Notion's sidebar: a page sits where
- * its block sits, in block order. Page records live in this browser only, so a
- * page made elsewhere (another browser, a peer, before a reset) has none; its
- * block's cache names it then. A record still wins, as the cache can lag a rename.
+ * The tree follows page blocks for order and page records for metadata.
+ * Unknown pages stay neutral until the registry has a record.
  */
 export const buildPageTree = (
   pages: PageTreeSource,
@@ -104,12 +89,10 @@ export const buildPageTree = (
     }
     seen.add(link.pageId);
 
-    const icon = record === undefined ? link.icon : record.icon;
-
     return [{
       id: link.pageId,
-      title: untitled(record?.title ?? link.title),
-      ...(icon !== undefined && { icon }),
+      title: untitled(record?.title ?? ''),
+      ...(record?.icon !== undefined && { icon: record.icon }),
       children: grow(link.pageId),
     }];
   });

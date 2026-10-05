@@ -2039,11 +2039,11 @@ export class BlockManager extends Module {
     // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
     // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
     if (mutationType === BlockChangedMutationType && !this._isPointerDragActive) {
-      if (isEcho) {
-        // Not necessarily an echo: the window is open across setData's await
-        // and one frame, so the user can type into it. Re-checked on close.
+      // A replay announcement is not a local edit; only a real mutation
+      // needs checking when the window closes.
+      if (isEcho && source === 'mutation') {
         this.yjsSync.noteSuppressedMutation(block);
-      } else {
+      } else if (!isEcho) {
         void this.syncBlockDataToYjs(block, block.isDerivedChange ? { untracked: true, normalize: 'all', derivedFrom: block.derivedFrom } : undefined);
       }
     }

@@ -28,6 +28,7 @@ import {
   Image as ImageTool,
   List,
   Page,
+  PageLink,
   Paragraph,
   Quote,
   Spacer,
@@ -55,7 +56,7 @@ type JsonSchema = {
  * is registered by hand. Export names cannot stand in for this list — they are
  * class names (`Columns`), not the registry keys a saved block's `type` holds.
  */
-const BUILT_IN_BLOCK_TOOLS: readonly string[] = [...Object.keys(defaultBlockTools), 'page'];
+const BUILT_IN_BLOCK_TOOLS: readonly string[] = [...Object.keys(defaultBlockTools), 'page', 'page-link'];
 
 const schema = blokDocumentSchema as unknown as JsonSchema;
 const defs = schema.$defs ?? {};
@@ -171,10 +172,11 @@ const savedData: Record<string, Record<string, unknown>> = {
 
   // A row as the tool writes one today: a top-level `title` beside the
   // properties mirror. A row saved before that key existed still omits it.
-  'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it' }))
+  'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it', pageId: 'row-page' }))
     .save(contentElement('')),
 
   page: new Page(options({ pageId: 'p1', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } })).save(),
+  'page-link': new PageLink(options({ pageId: 'p1' })).save(),
 
   divider: new Divider(options({})).save(),
 
@@ -278,23 +280,26 @@ describe('blokDocumentSchema', () => {
     });
   });
 
-  /**
-   * A page block is a pointer: its body is a separate document, so the def
-   * describes only the id and the cached title/icon.
-   */
+  describe('database-row', () => {
+    it('declares a nonempty optional page pointer saved beside row data', () => {
+      const row = defs['database-row'];
+
+      expect(savedData['database-row']).toHaveProperty('pageId', 'row-page');
+      expect(row.properties?.pageId).toMatchObject({ type: 'string', minLength: 1 });
+      expect(row.required).not.toContain('pageId');
+      expect(row.additionalProperties).toBe(false);
+    });
+  });
+
   describe('page', () => {
-    it('describes the pointer and its cached title and icon', () => {
+    it('describes only the saved pointer id, not legacy cached metadata', () => {
       const page = defs.page;
 
+      expect(savedData.page).toEqual({ pageId: 'p1' });
       expect(page.required).toEqual(['pageId']);
       expect(page.additionalProperties).toBe(false);
-      expect(Object.keys(page.properties ?? {}).sort()).toEqual(['cache', 'pageId']);
+      expect(Object.keys(page.properties ?? {})).toEqual(['pageId']);
       expect(page.description).toMatch(/separate document/);
-
-      const cache = page.properties?.cache as JsonSchema;
-
-      expect(cache.additionalProperties).toBe(false);
-      expect(Object.keys(cache.properties ?? {}).sort()).toEqual(['icon', 'title']);
     });
 
     it('routes the page type to its def', () => {
@@ -306,6 +311,18 @@ describe('blokDocumentSchema', () => {
       expect(branches.some(branch =>
         branch.if.properties.type.const === 'page' && branch.then.properties.data.$ref === '#/$defs/page'
       )).toBe(true);
+    });
+  });
+
+  describe('page-link', () => {
+    it('requires a nonempty target and rejects saved metadata', () => {
+      const link = defs['page-link'];
+
+      expect(savedData['page-link']).toEqual({ pageId: 'p1' });
+      expect(link.required).toEqual(['pageId']);
+      expect(link.additionalProperties).toBe(false);
+      expect(Object.keys(link.properties ?? {})).toEqual(['pageId']);
+      expect(link.properties?.pageId).toMatchObject({ type: 'string', minLength: 1 });
     });
   });
 

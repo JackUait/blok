@@ -17,6 +17,7 @@ import { CELL_CODE_TAG } from '../../components/modules/paste/constants';
 import { isSafeCssColor } from '../../shared/css-color';
 import { clean, sanitizeBlocks } from '../../components/utils/sanitizer';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
+import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../shared/page-reference';
 import { resolvePresetColorVars, resolvePresetColors } from '../../components/shared/resolve-preset-colors';
 import { parseUntrustedHtml } from '../../components/utils/inert-html';
 import { trimTrailingBreaks } from '../../components/utils/trailing-breaks';
@@ -457,7 +458,9 @@ const CELL_SANITIZE_CONFIG: SanitizerConfig = {
   ol: true,
   li: { style: true, 'aria-level': true, 'data-list-style': true },
   input: { type: true, checked: true },
-  a: { href: true, target: '_blank', rel: 'nofollow' },
+  a: (node: Element) => node.getAttribute(PAGE_REFERENCE_ATTR)
+    ? preservePageReferenceAnchor(node)
+    : { href: true, target: '_blank', rel: 'nofollow' },
   mark: (node: Element): { [attr: string]: boolean | string } => {
     const el = node as HTMLElement;
     const style = el.style;

@@ -166,9 +166,8 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
-   * The link a copy of this block carries, or undefined when the Tool declares
-   * no `copyAsLink`. A throwing hook gives null, so a copy still writes the
-   * clipboard.
+   * The link a copy carries. Undefined means no hook or a throwing hook;
+   * null means the hook returned no valid link.
    * @param data - the block's saved data
    */
   public copyAsLink(data: BlockToolData): { url: string; text: string } | null | undefined {
@@ -185,7 +184,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
     } catch (error) {
       log(`Tool «${this.name}» copyAsLink() threw; copying the block without a link.`, 'warn', error);
 
-      return null;
+      return undefined;
     }
   }
 

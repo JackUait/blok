@@ -210,6 +210,7 @@ const createHarness = (options?: {
       // handleEscape reads this before the PopoverRegistry branch (see the
       // emoji-menu Escape fix); every Escape now touches it.
       emojiTrigger: { opened: false, close: vi.fn() },
+      pageReferenceTrigger: { opened: false, close: vi.fn() },
     },
     Caret: {
       setToBlock: vi.fn(),
@@ -232,6 +233,7 @@ const createHarness = (options?: {
         return state.isDragging;
       },
     },
+    PageReferences: { ownsTarget: vi.fn(() => false) },
     Find: { isOpen: false, close: vi.fn() },
     Saver: {
       save: vi.fn(() => Promise.resolve({ blocks: [] } as unknown as OutputData)),

@@ -9,38 +9,25 @@ import { ToolboxConfig } from './tool-settings';
  */
 export type PageIcon = { type: 'emoji'; value: string } | { type: 'image'; url: string };
 
-/**
- * A display copy of the page's title and icon.
- * The page itself holds the real ones; this copy can be stale.
- */
+/** Legacy input metadata, ignored by the page tool. */
 export interface PageCache {
   title?: string;
   icon?: PageIcon;
 }
 
-/**
- * Page Tool's saved data. The block points at a page; it does not hold it.
- *
- * There is no top-level `title`. Top-level string keys merge per character
- * in collaboration, so two clients refreshing the same copy could double it.
- */
+/** Page pointer data. New saves contain only `pageId`. */
 export interface PageData extends BlockToolData {
   /** Id of the page this block points at. Blok mints it for a new page. */
   pageId: string;
-  /** Display copy, refreshed from `PageConfig.resolve`. */
+  /** @deprecated Legacy input only. New saves omit this field. */
   cache?: PageCache;
 }
 
-/**
- * What the host knows about a page right now.
- *
- * Return the full picture: a missing `title` or `icon` means the page has none,
- * and the block's cached copy loses it.
- */
+/** Authorized metadata from the host. Missing fields mean the page has none. */
 export interface PageInfo {
   title?: string;
   icon?: PageIcon;
-  /** `'none'`: this user may not see the page. The block shows "No access" and hides the cached title. */
+  /** `'none'`: this user may not see the page. The block shows “No access”. */
   access?: 'none';
   /**
    * Titles of the pages above this one, top first, e.g. `['Home', 'Plans']`.
@@ -49,10 +36,20 @@ export interface PageInfo {
   path?: string[];
 }
 
+/** A page the host offers for an inline reference. */
+export interface PageSearchResult {
+  pageId: string;
+  title?: string;
+  icon?: PageIcon;
+  access?: 'none';
+}
+
 /**
  * Page Tool's configuration. The host owns pages; Blok only links to them.
  */
 export interface PageConfig {
+  /** Searches visible pages for an inline reference. */
+  search?(query: string): Promise<readonly PageSearchResult[]>;
   /**
    * The page's URL. Used for the link, middle click and Cmd/Ctrl click.
    * Without it the link has no href. Unsafe schemes (`javascript:` and the like) are dropped.
@@ -65,19 +62,15 @@ export interface PageConfig {
    */
   open?(pageId: string, ctx: { event?: MouseEvent | KeyboardEvent }): void;
   /**
-   * Fresh title and icon, asked when the block renders and on each `subscribe` change.
-   * - `null`: the page does not exist. The block shows "Page not found" and stays.
-   * - `undefined`: nothing known. The cached copy stays.
-   * - `{ access: 'none' }`: no access.
-   * The cached copy is saved only when it changed. Read-only mode shows it
-   * and saves it once editing turns on.
+   * Authorized metadata, asked on render and on each `subscribe` change.
+   * `null` means missing; `undefined` means unresolved; `access: 'none'` means denied.
+   * Old metadata is hidden while a new access check is pending. Metadata is never saved.
    */
   resolve?(pageId: string): PageInfo | null | undefined | Promise<PageInfo | null | undefined>;
   /**
-   * Hears about title and icon changes made outside this editor: another
-   * tab, a peer, a rename in your own UI. Call `onChange` and the block asks
-   * `resolve` again. Return a function that stops it; Blok calls it when the
-   * block goes away or points at another page.
+   * Hears about metadata and access changes, including in the same tab.
+   * Call `onChange` to recheck access. Return a function that stops it when
+   * the block goes away or points at another page.
    */
   subscribe?(pageId: string, onChange: () => void): (() => void) | void;
   /**
@@ -115,14 +108,10 @@ export declare class Page implements BlockTool {
    */
   static isReadOnlySupported?: boolean;
 
-  /**
-   * Cached text and ids, declared PLAINTEXT so load and save never parse them as HTML
-   */
+  /** Page ID and legacy cache use plain-text sanitization. */
   static sanitize?: SanitizerConfig;
 
-  /**
-   * Exports the cached title, so a page can be turned into text
-   */
+  /** Does not export legacy cached metadata. */
   static conversionConfig?: ConversionConfig;
 
   /**
@@ -131,9 +120,9 @@ export declare class Page implements BlockTool {
   static acceptsChildren?: boolean;
 
   /**
-   * A link to the page: the absolute `config.href` url and the cached title.
-   * Copy, Duplicate and Alt-drag carry it instead of a second block for the
-   * same page. Null without `href`.
+   * A link to the page with neutral text; legacy cached titles are ignored.
+   * Copy, Duplicate and Alt-drag carry it instead of a second block.
+   * Null without `href`.
    */
   static copyAsLink(data: PageData, config: PageConfig): { url: string; text: string } | null;
 
@@ -145,12 +134,12 @@ export declare class Page implements BlockTool {
   render(): HTMLElement;
 
   /**
-   * Starts creating a new page, or refreshes the cached copy
+   * Starts creating a new page or resolving its metadata
    */
   rendered(): void;
 
   /**
-   * Extract Tool's data
+   * Saves only the page ID
    */
   save(): PageData;
 

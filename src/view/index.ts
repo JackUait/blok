@@ -17,6 +17,10 @@ export type {
 export type { ViewInlineElement, ViewInlineRenderer } from './inline-renderers';
 export { blocksToPlainText } from './blocks-to-plain-text';
 export type { BlocksToPlainTextOptions } from './blocks-to-plain-text';
+export { pageIndex } from './page-index';
+export type { PageIndex, PageOwnerEdge, PageReference, PageTextEntry } from './page-index';
+export { projectPageTree } from './page-tree';
+export type { HostPageEdge, PageTreeNode, PageTreeDiagnostic, PageTreeProjection } from './page-tree';
 export { blokDocumentSchema } from './document-schema';
 export { extractTexts, injectTexts } from './document-texts';
 export type { DocumentTextsOptions } from './document-texts';
@@ -52,3 +56,15 @@ export { defineBlokSchema, composeBaseSanitizeConfig } from '../shared/sanitize-
 export type { BlokViewSchema, DefinedBlokSchema, BlokSchemaConfig, ResolvedSchemaTool } from '../shared/sanitize-schema';
 export { htmlToBlocks, htmlToBlocksWithReport } from './html-to-blocks';
 export type { HtmlImportResult } from './html-to-blocks';
+export { movePageBlocks, turnBlocksIntoPage, turnPageIntoBlocks } from './page-transfer';
+export type { PageBlockPlacement, PageBlockMove } from './page-transfer';
+export { executePageTransfer, undoPageTransfer } from './page-transfer-host';
+export type {
+  PageTransferRequest,
+  PageTransferReceipt,
+  PageTransferHost,
+  PageTransferUndoRequest,
+  PageTransferUndoReceipt,
+  PageTransferUndoHost,
+} from './page-transfer-host';
+export { remapPageDocument } from './page-document-remap';

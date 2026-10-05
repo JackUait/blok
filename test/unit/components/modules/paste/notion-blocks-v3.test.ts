@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+
+import Blok from '../../../../../src/blok';
+import { defaultTools } from '../../../../../src/full';
+import { Bookmark } from '../../../../../src/tools/link/bookmark';
+import { PageTool } from '../../../../../src/tools/page';
+import { Paragraph } from '../../../../../src/tools/paragraph';
+import type { API, OutputData } from '../../../../../types';
 
 import {
   parseNotionBlocksV3,
@@ -72,6 +79,9 @@ function title(...segments: unknown[][]): { title: unknown[] } {
 }
 
 describe('parseNotionBlocksV3', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
   describe('guards', () => {
     it('returns null for non-JSON input', () => {
       expect(parseNotionBlocksV3('<p>not json</p>')).toBeNull();
@@ -414,7 +424,7 @@ describe('parseNotionBlocksV3', () => {
       expect(out?.[0].data.text).toBe('<b><code>x^2</code></b>');
     });
 
-    it('resolves a page mention to a link carrying the referenced page title', () => {
+    it('keeps the page ID instead of a title or URL when the page is in the payload', () => {
       const out = parseNotionBlocksV3(
         v3Tree(
           value('p1', 'text', { properties: title(['see '], ['‣', [['p', 'pg']]]) }),
@@ -422,10 +432,10 @@ describe('parseNotionBlocksV3', () => {
         )
       );
 
-      expect(out?.[0].data.text).toBe('see <a href="https://www.notion.so/pg">My Page</a>');
+      expect(out?.[0].data.text).toBe('see <a data-blok-page-id="pg">Page</a>');
     });
 
-    it('escapes the resolved page-mention title', () => {
+    it('does not save the referenced page title as inline content', () => {
       const out = parseNotionBlocksV3(
         v3Tree(
           value('p1', 'text', { properties: title(['‣', [['p', 'pg']]]) }),
@@ -433,22 +443,18 @@ describe('parseNotionBlocksV3', () => {
         )
       );
 
-      expect(out?.[0].data.text).toBe('<a href="https://www.notion.so/pg">A &amp; B &lt;x&gt;</a>');
+      expect(out?.[0].data.text).toBe('<a data-blok-page-id="pg">Page</a>');
     });
 
-    it('links an unresolved page mention to the Notion page instead of leaking the glyph', () => {
+    it('keeps the ID of an unresolved page mention without leaking the glyph', () => {
       const out = parseNotionBlocksV3(
         v3(value('p1', 'text', { properties: title(['see '], ['‣', [['p', 'missing']]]) }))
       );
 
-      expect(out?.[0].data.text).toBe('see <a href="https://www.notion.so/missing">Untitled</a>');
-      expect(out?.[0].data.text).not.toContain('‣');
+      expect(out?.[0].data.text).toBe('see <a data-blok-page-id="missing">Page</a>');
     });
 
-    // Real Notion clipboard mentions are 3-element `[p, pageId, spaceId]` and
-    // reference a page that is NOT included in a single-page copy — so the
-    // realistic path is "extra args ignored, link to the absent page".
-    it('reads the page id from a real 3-element mention and links to it when absent', () => {
+    it('reads the page ID from a three-element mention', () => {
       const out = parseNotionBlocksV3(
         v3(
           value('a', 'text', {
@@ -461,11 +467,11 @@ describe('parseNotionBlocksV3', () => {
       );
 
       expect(out?.[0].data.text).toBe(
-        '<a href="https://www.notion.so/b0f73136810b4d028d9dfeebc2fa5eb2">Untitled</a> '
+        '<a data-blok-page-id="b0f73136-810b-4d02-8d9d-feebc2fa5eb2">Page</a> '
       );
     });
 
-    it('resolves a 3-element mention to a link when the referenced page IS in the payload', () => {
+    it('keeps a three-element mention when the page is in the payload', () => {
       const out = parseNotionBlocksV3(
         v3Tree(
           value('p1', 'text', { properties: title(['‣', [['p', 'pg', 'space-id']]]) }),
@@ -473,22 +479,58 @@ describe('parseNotionBlocksV3', () => {
         )
       );
 
-      expect(out?.[0].data.text).toBe('<a href="https://www.notion.so/pg">Linked</a>');
+      expect(out?.[0].data.text).toBe('<a data-blok-page-id="pg">Page</a>');
+    });
+
+    it('escapes a page ID inside the reference attribute', () => {
+      const out = parseNotionBlocksV3(v3(value('p1', 'text', {
+        properties: title(['‣', [['p', 'pg" data-extra="x']]]),
+      })));
+
+      expect(out?.[0].data.text).toBe('<a data-blok-page-id="pg&quot; data-extra=&quot;x">Page</a>');
     });
   });
 
-  describe('Notion-internal references → links (so nothing is silently dropped)', () => {
-    it('maps a top-level sub-page (page block) to a bookmark linking to the Notion page', () => {
+  describe('Notion-internal page references', () => {
+    it('maps a top-level sub-page to an owning page pointer', () => {
       const out = parseNotionBlocksV3(
         v3(value('33cc2586-eb6d-80f3-841e-d78fd95462d6', 'page', { properties: title(['Test']) }))
-      )!;
+      );
 
-      expect(out).toHaveLength(1);
-      expect(out[0].tool).toBe('bookmark');
-      expect(out[0].data).toMatchObject({
-        url: 'https://www.notion.so/33cc2586eb6d80f3841ed78fd95462d6',
-        title: 'Test',
-      });
+      expect(out).toEqual([{
+        id: '33cc2586-eb6d-80f3-841e-d78fd95462d6',
+        tool: 'page',
+        data: { pageId: '33cc2586-eb6d-80f3-841e-d78fd95462d6' },
+      }]);
+    });
+
+    it('maps a captured link-to-page alias to its non-owning target', () => {
+      const fixture = readFileSync(
+        resolve(dirname(fileURLToPath(import.meta.url)), '../../../../fixtures/notion/link-to-page.blocks-v3.json'),
+        'utf8'
+      );
+
+      expect(parseNotionBlocksV3(fixture)).toEqual([{
+        id: 'link-block-id',
+        tool: 'page-link',
+        data: { pageId: 'target-page-id' },
+      }]);
+    });
+
+    it('drops a link-to-page alias with a whitespace-only target ID', () => {
+      const out = parseNotionBlocksV3(v3(value('link-block-id', 'alias', {
+        format: { alias_pointer: { table: 'block', id: '   ', spaceId: 'redacted-space-id' } },
+      })));
+
+      expect(out).toEqual([]);
+    });
+
+    it('does not infer a target from an alias block without a block pointer', () => {
+      const out = parseNotionBlocksV3(v3(value('link-block-id', 'alias', {
+        format: { alias_pointer: { table: 'collection', id: 'target-id' } },
+      })));
+
+      expect(out).toEqual([]);
     });
 
     it('maps a top-level block with an EMPTY subtree (linked database) to a bookmark', () => {
@@ -1096,7 +1138,7 @@ describe('parseNotionBlocksV3', () => {
       expect(out).toEqual([]);
     });
 
-    it.each(['table_of_contents', 'breadcrumb', 'copy_indicator', 'link_to_page', 'alias'])(
+    it.each(['table_of_contents', 'breadcrumb', 'copy_indicator', 'link_to_page'])(
       'drops the structure-only block type "%s" instead of leaving a stray paragraph',
       (type) => {
         const out = parseNotionBlocksV3(v3(value('x', type, { properties: title(['ignored']) })));
@@ -1129,5 +1171,114 @@ describe('parseNotionBlocksV3', () => {
         expect(typeof b.id).toBe('string');
       });
     });
+  });
+});
+
+describe('Notion v3 paste with optional page tools', () => {
+  interface TestEditor {
+    isReady: Promise<unknown>;
+    save: () => Promise<OutputData>;
+    destroy: () => void;
+    caret: API['caret'];
+  }
+
+  let holder: HTMLDivElement;
+  let editor: TestEditor | undefined;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.append(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    holder.remove();
+    vi.restoreAllMocks();
+  });
+
+  async function pasteV3(instance: TestEditor, raw: string): Promise<OutputData> {
+    await instance.isReady;
+    const target = Array.from(holder.querySelectorAll<HTMLElement>('[data-blok-id="before"] *'))
+      .find(element => element.contentEditable === 'true');
+
+    if (target === undefined) {
+      throw new Error('no paragraph input');
+    }
+
+    target.setAttribute('contenteditable', 'true');
+    target.focus();
+    instance.caret.setToBlock('before', 'end');
+    const data = {
+      'text/_notion-blocks-v3-production': raw,
+      'text/html': '<p>HTML fallback</p>',
+      'text/plain': 'Notion content',
+    };
+
+    target.dispatchEvent(Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
+      clipboardData: { getData: (type: string): string => data[type as keyof typeof data] ?? '', types: Object.keys(data) },
+    }));
+    await new Promise<void>(resolve => { setTimeout(resolve, 0); });
+    await new Promise<void>(resolve => { setTimeout(resolve, 0); });
+
+    return instance.save();
+  }
+
+  it('pastes sub-pages and aliases as Notion bookmarks when page tools are absent', async () => {
+    editor = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, bookmark: Bookmark },
+      data: { blocks: [{ id: 'before', type: 'paragraph', data: { text: '' } }] },
+    }) as unknown as TestEditor;
+    const raw = v3(
+      value('page-id', 'page', { properties: title(['Project']) }),
+      value('alias-id', 'alias', { format: { alias_pointer: { table: 'block', id: 'target-id' } } })
+    );
+
+    const saved = await pasteV3(editor, raw);
+
+    expect(saved.blocks.filter(block => block.type === 'bookmark').map(block => block.data.url)).toEqual([
+      'https://www.notion.so/pageid',
+      'https://www.notion.so/targetid',
+    ]);
+    expect(saved.blocks.some(block => block.type === 'page' || block.type === 'page-link')).toBe(false);
+  });
+
+  it('pastes an alias as a non-owning bookmark when only the page tool is registered', async () => {
+    editor = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, bookmark: Bookmark, page: PageTool },
+      data: { blocks: [{ id: 'before', type: 'paragraph', data: { text: '' } }] },
+    }) as unknown as TestEditor;
+    const raw = v3(value('alias-id', 'alias', {
+      format: { alias_pointer: { table: 'block', id: 'target-id' } },
+    }));
+
+    const saved = await pasteV3(editor, raw);
+
+    expect(saved.blocks.filter(block => block.type !== 'paragraph').map(block => [block.type, block.data.url])).toEqual([
+      ['bookmark', 'https://www.notion.so/targetid'],
+    ]);
+    expect(saved.blocks.some(block => block.type === 'page')).toBe(false);
+  });
+
+  it('pastes sub-pages and aliases as links with the default tools and no bookmark', async () => {
+    editor = new Blok({
+      holder,
+      tools: defaultTools,
+      data: { blocks: [{ id: 'before', type: 'paragraph', data: { text: '' } }] },
+    }) as unknown as TestEditor;
+    const raw = v3(
+      value('page-id', 'page', { properties: title(['Project']) }),
+      value('alias-id', 'alias', { format: { alias_pointer: { table: 'block', id: 'target-id' } } })
+    );
+
+    const saved = await pasteV3(editor, raw);
+
+    expect(saved.blocks.filter(block => block.type === 'paragraph').map(block => block.data.text)).toEqual([
+      '<a href="https://www.notion.so/pageid">Project</a>',
+      '<a href="https://www.notion.so/targetid">Page</a>',
+    ]);
+    expect(saved.blocks.some(block => block.type === 'page' || block.type === 'page-link' || block.type === 'bookmark')).toBe(false);
   });
 });

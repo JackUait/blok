@@ -29,6 +29,8 @@ export interface PageRecord {
 
 export type PageMap = Record<string, PageRecord>;
 
+type PageOperation = (page: PageRecord | undefined) => PageRecord | undefined;
+
 export const PAGES_STORAGE_KEY = 'blok-playground-pages';
 
 /** The root playground document's name, in breadcrumbs and page paths. */
@@ -80,9 +82,9 @@ const readStored = (): PageMap => {
   }
 };
 
-const readRoot = (): RootRecord => {
+const parseRoot = (stored: string | null): RootRecord => {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(ROOT_STORAGE_KEY) ?? '{}');
+    const parsed: unknown = JSON.parse(stored ?? '{}');
 
     if (isRecord(parsed)) {
       // A missing title is the default. 'Playground' was the old default, saved
@@ -95,10 +97,18 @@ const readRoot = (): RootRecord => {
       };
     }
   } catch {
-    // Unreadable storage: the default below.
+    return { title: ROOT_LABEL };
   }
 
   return { title: ROOT_LABEL };
+};
+
+const readRoot = (fallback: RootRecord = { title: ROOT_LABEL }): RootRecord => {
+  try {
+    return parseRoot(localStorage.getItem(ROOT_STORAGE_KEY));
+  } catch {
+    return fallback;
+  }
 };
 
 const readPurged = (): string[] => {
@@ -114,7 +124,13 @@ const readPurged = (): string[] => {
 export class PageRegistry {
   private pages: PageMap;
 
+  private readonly pendingPageOperations = new Map<string, PageOperation[]>();
+
+  private readonly pendingPurges = new Set<string>();
+
   private rootPage: RootRecord = readRoot();
+
+  private readonly pendingRootOperations: Array<(root: RootRecord) => RootRecord> = [];
 
   private readonly listeners = new Map<string, Set<() => void>>();
 
@@ -127,15 +143,11 @@ export class PageRegistry {
    * whose title, icon or path changed.
    */
   public reload(): void {
-    const before = new Map([...this.listeners.keys()].map((id) => [id, JSON.stringify(this.info(id))]));
+    const before = this.captureInfo();
 
     this.pages = this.read();
-    this.rootPage = readRoot();
-    before.forEach((info, id) => {
-      if (JSON.stringify(this.info(id)) !== info) {
-        this.listeners.get(id)?.forEach((listener) => listener());
-      }
-    });
+    this.rootPage = this.pendingRootOperations.reduce((root, change) => change(root), readRoot(this.rootPage));
+    this.notifyChanged(before);
   }
 
   /** What the page block's `subscribe` gets. */
@@ -184,11 +196,19 @@ export class PageRegistry {
   }
 
   public create(pageId: string, parentId: string | null): void {
-    if (this.has(pageId)) {
+    const before = this.captureInfo();
+
+    this.mergeStored();
+    if (this.has(pageId) || this.pendingPurges.has(pageId) || readPurged().includes(pageId)) {
+      this.notifyChanged(before);
+
       return;
     }
-    this.pages[pageId] = { title: '', parentId, blocks: [] };
-    this.persist();
+    const created: PageRecord = { title: '', parentId, blocks: [] };
+
+    this.pages[pageId] = created;
+    this.persist({ id: pageId, operation: (page) => page ?? created });
+    this.notifyChanged(before);
   }
 
   /**
@@ -197,21 +217,28 @@ export class PageRegistry {
    * came from a peer, and the link is all this browser knows about it.
    */
   public adopt(pageId: string, link: { parentId: string | null; title: string; icon?: string }): void {
-    if (this.has(pageId)) {
+    const before = this.captureInfo();
+
+    this.mergeStored();
+    if (this.has(pageId) || this.pendingPurges.has(pageId) || readPurged().includes(pageId)) {
+      this.notifyChanged(before);
+
       return;
     }
     const stored = readStored();
-
-    this.pages[pageId] = Object.hasOwn(stored, pageId)
+    const adopted: PageRecord = Object.hasOwn(stored, pageId)
       ? stored[pageId]
       : { title: link.title, parentId: link.parentId, blocks: [], ...(link.icon !== undefined && { icon: link.icon }) };
-    this.persist();
+
+    this.pages[pageId] = adopted;
+    this.persist({ id: pageId, operation: (page) => page ?? adopted });
+    this.notifyChanged(before);
   }
 
   /** `null` is the root document. */
   public setTitle(pageId: string | null, title: string): void {
     if (pageId === null) {
-      this.editRoot({ ...this.rootPage, title });
+      this.editRoot((root) => ({ ...root, title }));
 
       return;
     }
@@ -224,7 +251,7 @@ export class PageRegistry {
       icon === undefined ? page : { ...page, icon };
 
     if (pageId === null) {
-      this.editRoot(withIcon(this.rootPage));
+      this.editRoot(withIcon);
 
       return;
     }
@@ -285,6 +312,9 @@ export class PageRegistry {
 
   /** Deletes the page and its sub-pages for good. Returns its parent, the page to show next. */
   public purge(pageId: string): string | null {
+    const before = this.captureInfo();
+
+    this.mergeStored();
     const parentId = this.get(pageId)?.parentId ?? null;
     const doomed = new Set([pageId]);
 
@@ -302,17 +332,19 @@ export class PageRegistry {
 
     collect();
     this.pages = Object.fromEntries(Object.entries(this.pages).filter(([id]) => !doomed.has(id)));
+    doomed.forEach((id) => {
+      this.pendingPageOperations.delete(id);
+      this.pendingPurges.add(id);
+    });
     this.persist();
-    try {
-      localStorage.setItem(PURGED_STORAGE_KEY, JSON.stringify([...new Set([...readPurged(), ...doomed])]));
-    } catch {
-      // Blocked storage: the page is gone for this tab only.
-    }
+    this.notifyChanged(before);
 
     return parentId;
   }
 
   public reset(): void {
+    const before = this.captureInfo();
+
     try {
       localStorage.removeItem(PAGES_STORAGE_KEY);
       localStorage.removeItem(PURGED_STORAGE_KEY);
@@ -321,44 +353,112 @@ export class PageRegistry {
       // Storage blocked: the in-memory reset below still applies.
     }
     this.pages = structuredClone(this.seed);
+    this.pendingPageOperations.clear();
+    this.pendingPurges.clear();
     this.rootPage = { title: ROOT_LABEL };
+    this.pendingRootOperations.length = 0;
+    this.notifyChanged(before);
   }
 
   private read(): PageMap {
     // Stored edits win, but a page added to the seed later still shows up.
-    const purged = readPurged();
-
-    return Object.fromEntries(
-      Object.entries({ ...structuredClone(this.seed), ...readStored() }).filter(([id]) => !purged.includes(id))
-    );
+    return this.applyPending({ ...structuredClone(this.seed), ...readStored() });
   }
 
-  private editRoot(root: RootRecord): void {
-    this.rootPage = root;
-    try {
-      const { title, ...rest } = root;
+  private editRoot(change: (root: RootRecord) => RootRecord): void {
+    const before = this.captureInfo();
 
-      localStorage.setItem(ROOT_STORAGE_KEY, JSON.stringify(title === ROOT_LABEL ? rest : root));
+    this.rootPage = this.pendingRootOperations.reduce((root, operation) => operation(root), readRoot(this.rootPage));
+    this.rootPage = change(this.rootPage);
+    try {
+      const { title, ...rest } = this.rootPage;
+
+      localStorage.setItem(ROOT_STORAGE_KEY, JSON.stringify(title === ROOT_LABEL ? rest : this.rootPage));
+      this.pendingRootOperations.length = 0;
     } catch {
-      // Quota or blocked storage: the title still works for this tab.
+      this.pendingRootOperations.push(change);
     }
+    this.notifyChanged(before);
   }
 
   private edit(pageId: string, change: (page: PageRecord) => PageRecord): void {
+    const before = this.captureInfo();
+
+    this.mergeStored();
     const page = this.get(pageId);
 
     if (page === undefined) {
+      this.notifyChanged(before);
+
       return;
     }
     this.pages[pageId] = change(page);
-    this.persist();
+    this.persist({ id: pageId, operation: (stored) => stored === undefined ? undefined : change(stored) });
+    this.notifyChanged(before);
   }
 
-  private persist(): void {
+  private mergeStored(): void {
+    this.pages = this.applyPending({ ...this.pages, ...readStored() });
+  }
+
+  private applyPending(pages: PageMap): PageMap {
+    const storedPurges = readPurged();
+
+    // A durable purge cancels edits made before it.
+    storedPurges.forEach((id) => this.pendingPageOperations.delete(id));
+    const purged = new Set([...storedPurges, ...this.pendingPurges]);
+    const merged: PageMap = Object.fromEntries(Object.entries(pages).filter(([id]) => !purged.has(id)));
+
+    this.pendingPageOperations.forEach((operations, id) => {
+      if (purged.has(id)) {
+        return;
+      }
+      const page = operations.reduce<PageRecord | undefined>(
+        (current, operation) => operation(current),
+        Object.hasOwn(merged, id) ? merged[id] : undefined
+      );
+
+      if (page !== undefined) {
+        merged[id] = page;
+      }
+    });
+
+    return merged;
+  }
+
+  private captureInfo(): Map<string, string> {
+    return new Map([...this.listeners.keys()].map((id) => [id, JSON.stringify(this.info(id))]));
+  }
+
+  private notifyChanged(before: Map<string, string>): void {
+    before.forEach((info, id) => {
+      if (JSON.stringify(this.info(id)) !== info) {
+        this.listeners.get(id)?.forEach((listener) => listener());
+      }
+    });
+  }
+
+  private persist(pending?: { id: string; operation: PageOperation }): void {
     try {
       localStorage.setItem(PAGES_STORAGE_KEY, JSON.stringify(this.pages));
+      this.pendingPageOperations.clear();
     } catch {
-      // Quota or blocked storage: the page still works for this tab.
+      if (pending !== undefined) {
+        const operations = this.pendingPageOperations.get(pending.id) ?? [];
+
+        operations.push(pending.operation);
+        this.pendingPageOperations.set(pending.id, operations);
+      }
+    }
+
+    if (this.pendingPurges.size === 0) {
+      return;
+    }
+    try {
+      localStorage.setItem(PURGED_STORAGE_KEY, JSON.stringify([...new Set([...readPurged(), ...this.pendingPurges])]));
+      this.pendingPurges.clear();
+    } catch {
+      // Keep the tombstones in this tab until they are stored.
     }
   }
 }
@@ -398,21 +498,11 @@ export class PointerWatch {
 export const hasPointer = (blocks: OutputBlockData[], pageId: string): boolean => pointedPages(blocks).includes(pageId);
 
 /** A page block for `pageId`, to put back into its parent on restore. */
-export const pointerBlock = (pageId: string, pages: PageRegistry): OutputBlockData => {
-  const page = pages.get(pageId);
-
-  return {
-    id: `page-${pageId}-${Date.now().toString(36)}`,
-    type: 'page',
-    data: {
-      pageId,
-      cache: {
-        title: page?.title ?? '',
-        ...(page?.icon !== undefined && { icon: { type: 'emoji', value: page.icon } }),
-      },
-    },
-  };
-};
+export const pointerBlock = (pageId: string): OutputBlockData => ({
+  id: `page-${pageId}-${Date.now().toString(36)}`,
+  type: 'page',
+  data: { pageId },
+});
 
 /** What `firstBlockKeydown` needs from the editor. */
 export interface FirstBlockEditor {

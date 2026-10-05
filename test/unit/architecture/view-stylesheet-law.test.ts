@@ -86,6 +86,12 @@ describe('view baseline stylesheet law', () => {
     expect(css).toContain('var(--blok-block-padding-inline, 2px)');
   });
 
+  it('constrains static images and videos to their container', () => {
+    const css = readFileSync(join(repoRoot, 'view.css'), 'utf-8');
+
+    expect(css.match(/:where\(\[data-blok-interface\], \[data-blok-popover\]\) :is\(img, video\)\s*\{\s*max-width:\s*100%;\s*height:\s*auto;/)?.[0]).toBeDefined();
+  });
+
   it('reads the same padding-token defaults the editor declares', () => {
     // Single source of truth: the defaults baked into the fallback must match
     // what main.css applies to each editable block, or the view drifts.

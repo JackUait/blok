@@ -343,68 +343,6 @@
   background: var(--blok-border-secondary);
 }
 
-/* ─── Match map ─── */
-
-/* The margin equals the line's overhang: the line spans field edge to close button. */
-[data-blok-find-map] {
-  --blok-find-map-overhang: 4px;
-
-  position: relative;
-  grid-column: 2 / -1;
-  height: 16px;
-  margin: var(--blok-space-1-5) var(--blok-find-map-overhang) 0;
-  cursor: pointer;
-}
-
-/*
-  A hairline baseline. It runs past the box by half the active mark and its
-  ring, so a mark at 0% or 100% still sits on it. The 16px box is the hit area.
-*/
-[data-blok-find-map]::before {
-  content: '';
-  position: absolute;
-  inset-inline: calc(-1 * var(--blok-find-map-overhang));
-  top: 50%;
-  height: 1px;
-  background: var(--blok-find-track);
-  transform: translateY(-50%);
-}
-
-/* The tick colour is opaque: stacked translucent ticks would paint darker. */
-/* Positioned from the inline start (find-bar.ts sets the variable), so the map mirrors in RTL. */
-[data-blok-find-tick] {
-  position: absolute;
-  inset-inline-start: var(--_blok-find-tick-at, 0%);
-  top: 50%;
-  width: 2px;
-  height: 10px;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-find-tick);
-  transform: translate(-50%, -50%);
-  transition:
-    width var(--blok-duration-slow) var(--blok-ease-popover),
-    height var(--blok-duration-slow) var(--blok-ease-popover),
-    background-color var(--blok-duration-slow) var(--blok-ease-popover);
-}
-
-[data-blok-find][dir="rtl"] [data-blok-find-tick] {
-  transform: translate(50%, -50%);
-}
-
-[data-blok-find-tick]:hover {
-  height: 14px;
-  background: var(--blok-text-secondary);
-}
-
-/* The ring is the bar's own colour: it cuts the mark out of the baseline and its neighbours. */
-[data-blok-find-tick][data-blok-find-active] {
-  z-index: 1;
-  width: 3px;
-  height: 16px;
-  background: var(--blok-find-tick-active);
-  box-shadow: 0 0 0 2px var(--blok-popover-bg);
-}
-
 /* ─── Replace row ─── */
 
 /* 0fr → 1fr grid rows animate an auto height; the inner row clips while it grows. */
@@ -540,7 +478,6 @@
   [data-blok-find][hidden] [data-blok-find-bar],
   [data-blok-find-icon-button],
   [data-blok-find-icon-button] svg,
-  [data-blok-find-tick],
   [data-blok-find-replace-row],
   [data-blok-find-text-button] {
     transition: none;

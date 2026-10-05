@@ -17,7 +17,6 @@ const makeCallbacks = (): { [K in keyof FindBarCallbacks]: ReturnType<typeof vi.
     onOptionsChange: vi.fn(),
     onReplace: vi.fn(),
     onReplaceAll: vi.fn(),
-    onSeek: vi.fn(),
     onReplaceChange: vi.fn(),
   };
 
@@ -251,7 +250,7 @@ describe('FindBar', () => {
 
     it('stops reacting to its buttons after closing', () => {
       bar.open({ readOnly: false });
-      bar.setResults({ current: 0, total: 3, positions: [0, 0.5, 1] });
+      bar.setResults({ current: 0, total: 3 });
       bar.close();
 
       button(bar.element, 'find.next').click();
@@ -464,14 +463,14 @@ describe('FindBar', () => {
     });
 
     it('are disabled with no matches', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(button(bar.element, 'find.next').disabled).toBe(true);
       expect(button(bar.element, 'find.previous').disabled).toBe(true);
     });
 
     it('call next and previous', () => {
-      bar.setResults({ current: 0, total: 2, positions: [0, 1] });
+      bar.setResults({ current: 0, total: 2 });
 
       button(bar.element, 'find.next').click();
       button(bar.element, 'find.previous').click();
@@ -495,21 +494,21 @@ describe('FindBar', () => {
     });
 
     it('is empty with no query', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(counter()).toBe('');
     });
 
     it('shows a one-based position out of the total', () => {
       type(findInput(), 'a');
-      bar.setResults({ current: 2, total: 7, positions: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6] });
+      bar.setResults({ current: 2, total: 7 });
 
       expect(counter()).toBe('find.count{"current":3,"total":7}');
     });
 
     it('says there are no results for a query that matches nothing', () => {
       type(findInput(), 'zzz');
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(counter()).toBe('find.noResults');
     });
@@ -518,7 +517,6 @@ describe('FindBar', () => {
   describe('counter roll', () => {
     const interpolate = (key: string, vars?: Record<string, string | number>): string =>
       key === 'find.count' && vars !== undefined ? `${vars.current} of ${vars.total}` : key;
-    const positions = Array.from({ length: 20 }, (_, index) => index / 20);
     const counter = (): HTMLElement => byTestId(bar.element, 'find-counter');
     const roll = (): HTMLElement | null => counter().querySelector('[data-blok-find-roll]');
 
@@ -528,11 +526,11 @@ describe('FindBar', () => {
       document.body.appendChild(bar.element);
       bar.open({ readOnly: false });
       type(findInput(), 'a');
-      bar.setResults({ current: 15, total: 20, positions });
+      bar.setResults({ current: 15, total: 20 });
     });
 
     it('rolls only the digits that changed, up when the number grows', () => {
-      bar.setResults({ current: 18, total: 20, positions });
+      bar.setResults({ current: 18, total: 20 });
 
       expect(roll()?.textContent).toBe('9');
       expect(roll()?.getAttribute('data-blok-find-roll')).toBe('up');
@@ -541,7 +539,7 @@ describe('FindBar', () => {
     });
 
     it('rolls down when the number shrinks', () => {
-      bar.setResults({ current: 13, total: 20, positions });
+      bar.setResults({ current: 13, total: 20 });
 
       expect(roll()?.textContent).toBe('4');
       expect(roll()?.getAttribute('data-blok-find-roll')).toBe('down');
@@ -550,7 +548,7 @@ describe('FindBar', () => {
     });
 
     it('rolls the whole number when its length changes', () => {
-      bar.setResults({ current: 8, total: 20, positions });
+      bar.setResults({ current: 8, total: 20 });
 
       expect(roll()?.textContent).toBe('9');
       expect(roll()?.getAttribute('data-blok-find-roll-from')).toBe('16');
@@ -558,7 +556,7 @@ describe('FindBar', () => {
     });
 
     it('does not roll when the total changes', () => {
-      bar.setResults({ current: 16, total: 21, positions: [...positions, 1] });
+      bar.setResults({ current: 16, total: 21 });
 
       expect(roll()).toBeNull();
       expect(counter().textContent).toBe('17 of 21');
@@ -574,7 +572,7 @@ describe('FindBar', () => {
     });
 
     it('tints the field and shakes it once', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(field().hasAttribute('data-blok-find-empty')).toBe(true);
       expect(field().hasAttribute('data-blok-find-shake')).toBe(true);
@@ -582,33 +580,33 @@ describe('FindBar', () => {
     });
 
     it('does not shake again while it stays at zero', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
       field().dispatchEvent(new Event('animationend'));
 
       expect(field().hasAttribute('data-blok-find-shake')).toBe(false);
 
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(field().hasAttribute('data-blok-find-shake')).toBe(false);
     });
 
     it('shakes again after leaving zero and coming back', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
       field().dispatchEvent(new Event('animationend'));
 
-      bar.setResults({ current: 0, total: 1, positions: [0.5] });
+      bar.setResults({ current: 0, total: 1 });
 
       expect(field().hasAttribute('data-blok-find-empty')).toBe(false);
       expect(findInput().hasAttribute('aria-invalid')).toBe(false);
 
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(field().hasAttribute('data-blok-find-shake')).toBe(true);
     });
 
     it('is not a no-results state when the query is empty', () => {
       type(findInput(), '');
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(field().hasAttribute('data-blok-find-empty')).toBe(false);
       expect(field().hasAttribute('data-blok-find-shake')).toBe(false);
@@ -723,17 +721,17 @@ describe('FindBar', () => {
       { name: 'Next', testId: 'find-next', field: 'find' },
     ])('keeps focus in the bar when $name disables itself', ({ testId, field }) => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 1, positions: [0] });
+      bar.setResults({ current: 0, total: 1 });
       byTestId<HTMLButtonElement>(bar.element, testId).focus();
 
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(field === 'replace' ? replaceInput() : findInput()).toHaveFocus();
     });
 
     it('disables both replace buttons with no matches', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace').disabled).toBe(true);
       expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-all').disabled).toBe(true);
@@ -741,7 +739,7 @@ describe('FindBar', () => {
 
     it('replaces from the buttons with the typed text', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 2, positions: [0, 1] });
+      bar.setResults({ current: 0, total: 2 });
       replaceInput().value = 'new';
 
       byTestId(bar.element, 'find-replace').click();
@@ -755,7 +753,7 @@ describe('FindBar', () => {
 
     it('replaces one on Enter in the replace field', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 2, positions: [0, 1] });
+      bar.setResults({ current: 0, total: 2 });
       replaceInput().value = 'x';
 
       press(replaceInput(), { key: 'Enter' });
@@ -767,7 +765,7 @@ describe('FindBar', () => {
 
     it('replaces all on Cmd+Enter on a Mac', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 2, positions: [0, 1] });
+      bar.setResults({ current: 0, total: 2 });
       replaceInput().value = 'x';
 
       press(replaceInput(), { key: 'Enter', ctrlKey: true });
@@ -784,7 +782,7 @@ describe('FindBar', () => {
       bar.destroy();
       bar = create(false);
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 2, positions: [0, 1] });
+      bar.setResults({ current: 0, total: 2 });
       replaceInput().value = 'x';
 
       press(replaceInput(), { key: 'Enter', metaKey: true });
@@ -798,7 +796,7 @@ describe('FindBar', () => {
 
     it('does not replace from the keyboard with no matches', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       press(replaceInput(), { key: 'Enter' });
       press(replaceInput(), { key: 'Enter', metaKey: true });
@@ -847,7 +845,7 @@ describe('FindBar', () => {
 
     it('ignores replace keys while read-only', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 1, positions: [0] });
+      bar.setResults({ current: 0, total: 1 });
       bar.setReadOnly(true);
 
       press(replaceInput(), { key: 'Enter' });
@@ -857,80 +855,12 @@ describe('FindBar', () => {
   });
 
   describe('match map', () => {
-    const ticks = (): HTMLElement[] =>
-      Array.from(bar.element.querySelectorAll<HTMLElement>('[data-blok-testid="find-map-tick"]'));
-    const map = (): HTMLElement => byTestId(bar.element, 'find-map');
-
-    beforeEach(() => {
+    it('draws no match map under the find row', () => {
       bar.open({ readOnly: false });
       type(findInput(), 'a');
-    });
+      bar.setResults({ current: 1, total: 3 });
 
-    it('draws one tick per match at its position', () => {
-      bar.setResults({ current: 1, total: 3, positions: [0, 0.25, 1] });
-
-      expect(ticks()).toHaveLength(3);
-      // A custom property feeds inset-inline-start, so ticks mirror in RTL (and on a runtime flip).
-      expect(ticks()[1].style.getPropertyValue('--_blok-find-tick-at')).toBe('25%');
-      expect(ticks()[1].style.left).toBe('');
-      expect(map().hidden).toBe(false);
-    });
-
-    it('marks the active tick', () => {
-      bar.setResults({ current: 1, total: 3, positions: [0, 0.25, 1] });
-
-      expect(ticks().map((tick) => tick.hasAttribute('data-blok-find-active'))).toEqual([false, true, false]);
-    });
-
-    it('hides with no matches', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
-
-      expect(map().hidden).toBe(true);
-    });
-
-    it('buckets a large match set to at most 200 ticks', () => {
-      const positions = Array.from({ length: 1000 }, (_, i) => i / 999);
-
-      bar.setResults({ current: 999, total: 1000, positions });
-
-      expect(ticks().length).toBeLessThanOrEqual(200);
-      expect(ticks().length).toBeGreaterThan(100);
-      expect(ticks().filter((tick) => tick.hasAttribute('data-blok-find-active'))).toHaveLength(1);
-    });
-
-    it('keeps the 200 cap when positions arrive out of order', () => {
-      const positions = Array.from({ length: 1000 }, (_, i) => (i * 7919 % 1000) / 999);
-
-      bar.setResults({ current: 0, total: 1000, positions });
-
-      expect(ticks().length).toBeLessThanOrEqual(200);
-    });
-
-    it('seeks to the match under a clicked tick', () => {
-      bar.setResults({ current: 0, total: 3, positions: [0, 0.25, 1] });
-
-      ticks()[2].click();
-
-      expect(callbacks.onSeek).toHaveBeenCalledWith(2);
-    });
-
-    it('seeks to the nearest match when a click lands on the track', () => {
-      bar.setResults({ current: 0, total: 3, positions: [0, 0.25, 1] });
-      vi.spyOn(map(), 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 0, 200, 8));
-
-      map().dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 100 + 200 * 0.3 }));
-
-      expect(callbacks.onSeek).toHaveBeenCalledWith(1);
-    });
-
-    it('measures a track click from the right edge in RTL', () => {
-      bar.setResults({ current: 0, total: 3, positions: [0, 0.25, 1] });
-      map().style.direction = 'rtl';
-      vi.spyOn(map(), 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 0, 200, 8));
-
-      map().dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 300 - 200 * 0.3 }));
-
-      expect(callbacks.onSeek).toHaveBeenCalledWith(1);
+      expect(bar.element.querySelector('[data-blok-find-map], [data-blok-find-tick]')).toBeNull();
     });
   });
 

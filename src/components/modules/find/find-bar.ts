@@ -3,7 +3,6 @@ import type { FindConfig, FindPlacement } from '../../../../types';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
 import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
 import { IconCheck, IconChevronDown, IconChevronRight, IconCross, IconPlayerSettings } from '../../icons';
-import { getElementDirection, inlineStartOffset } from '../../utils/direction';
 import { hide as hideTooltip, onHover } from '../../utils/tooltip';
 import { PopoverDesktop } from '../../utils/popover';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
@@ -19,7 +18,6 @@ export interface FindBarCallbacks {
   onOptionsChange(options: FindOptions): void;
   onReplace(replacement: string): void;
   onReplaceAll(replacement: string): void;
-  onSeek(index: number): void;
   /** The replacement to preview changed; read it from `FindBar.replacement`. */
   onReplaceChange(): void;
 }
@@ -28,8 +26,6 @@ export interface FindBarResults {
   /** 0-based index of the active match, -1 when none. */
   current: number;
   total: number;
-  /** One per match, 0..1 down the document. */
-  positions: number[];
 }
 
 export interface FindBarInit {
@@ -40,9 +36,6 @@ export interface FindBarInit {
   placement?: FindPlacement;
   offset?: FindConfig['offset'];
 }
-
-/** Above this the map draws buckets, not one tick per match. */
-const MAX_TICKS = 200;
 
 const ATTR = {
   dock: 'data-blok-find',
@@ -59,8 +52,6 @@ const ATTR = {
   replaceToggle: 'data-blok-find-replace-toggle',
   replaceRow: 'data-blok-find-replace-row',
   textButton: 'data-blok-find-text-button',
-  map: 'data-blok-find-map',
-  tick: 'data-blok-find-tick',
   active: 'data-blok-find-active',
   empty: 'data-blok-find-empty',
   overflow: 'data-blok-find-overflow',
@@ -72,8 +63,6 @@ const ATTR = {
   readOnly: 'data-blok-find-read-only',
   placement: 'data-blok-find-placement',
 } as const;
-
-const TICK_INDEX = 'data-blok-find-index';
 
 /** Stands in for the current number, to find where a locale puts it. */
 const CURRENT_MARK = '\uE000';
@@ -137,14 +126,10 @@ export class FindBar {
   private readonly previousButton: HTMLButtonElement;
   private readonly nextButton: HTMLButtonElement;
   private readonly closeButton: HTMLButtonElement;
-  private readonly map: HTMLElement;
   private readonly replaceRow: HTMLElement;
   private readonly replaceInput: HTMLInputElement;
   private readonly replaceButton: HTMLButtonElement;
   private readonly replaceAllButton: HTMLButtonElement;
-
-  private ticks: HTMLElement[] = [];
-  private positions: number[] = [];
 
   private opened = false;
   private readOnly = false;
@@ -237,10 +222,6 @@ export class FindBar {
     );
     row.append(this.replaceToggle, this.field, controls);
 
-    // Pointer shortcut only; keyboard users step with Enter / Shift+Enter.
-    this.map = build('div', { [ATTR.map]: '', 'aria-hidden': 'true', 'data-blok-testid': 'find-map' });
-    this.map.hidden = true;
-
     this.replaceRow = build('div', { [ATTR.replaceRow]: '', id: replaceRowId, 'data-blok-testid': 'find-replace-row' });
     this.replaceRow.hidden = true;
 
@@ -265,7 +246,7 @@ export class FindBar {
     replaceInner.append(replaceField, replaceControls);
     this.replaceRow.append(replaceInner);
 
-    this.bar.append(row, this.replaceRow, this.map);
+    this.bar.append(row, this.replaceRow);
     this.element.append(this.bar);
 
     this.bindTooltip(this.optionsButton, 'find.options');
@@ -287,7 +268,6 @@ export class FindBar {
     this.listen(this.replaceButton, 'click', () => this.callbacks.onReplace(this.replaceInput.value));
     this.listen(this.replaceAllButton, 'click', () => this.callbacks.onReplaceAll(this.replaceInput.value));
     this.listen(this.replaceInput, 'input', () => this.callbacks.onReplaceChange());
-    this.listen(this.map, 'click', (event) => this.handleMapClick(event));
     this.listen(this.field, 'animationend', (event) => {
       if (event.target === this.field) {
         this.field.removeAttribute(ATTR.shake);
@@ -379,7 +359,6 @@ export class FindBar {
 
   public setResults(results: FindBarResults): void {
     this.total = results.total;
-    this.positions = results.positions;
     this.renderResults(results.current);
   }
 
@@ -424,7 +403,6 @@ export class FindBar {
 
     if (this.input.value === '') {
       this.total = 0;
-      this.positions = [];
       this.renderResults();
     }
 
@@ -654,8 +632,6 @@ export class FindBar {
     this.nextButton.disabled = none;
     this.replaceButton.disabled = none;
     this.replaceAllButton.disabled = none;
-
-    this.renderMap(current);
   }
 
   private counterText(current: number, noResults: boolean): string {
@@ -701,78 +677,6 @@ export class FindBar {
     this.counter.replaceChildren(before + next.slice(0, kept), roll, after);
 
     return true;
-  }
-
-  private renderMap(current: number): void {
-    const total = this.total;
-    const buckets = Math.min(total, MAX_TICKS);
-    const positionOf = (index: number): number => Math.min(1, Math.max(0, this.positions[index] ?? 0));
-    const bucketFor = (index: number): number =>
-      total <= MAX_TICKS ? index : Math.min(buckets - 1, Math.floor(positionOf(index) * buckets));
-
-    this.map.hidden = total === 0;
-
-    // One tick per bucket; each keeps the first match that fell into it.
-    const seen = new Set<number>();
-    const firstIndex = Array.from({ length: total }, (_, index) => index).filter((index) => {
-      const bucket = bucketFor(index);
-      const isFirst = !seen.has(bucket);
-
-      seen.add(bucket);
-
-      return isFirst;
-    });
-    const tickOfBucket = new Map(firstIndex.map((matchIndex, tickIndex) => [bucketFor(matchIndex), tickIndex]));
-    const activeTick = current >= 0 && current < total ? tickOfBucket.get(bucketFor(current)) ?? -1 : -1;
-
-    while (this.ticks.length > firstIndex.length) {
-      this.ticks.pop()?.remove();
-    }
-
-    firstIndex.forEach((matchIndex, tickIndex) => {
-      const tick = this.ticks[tickIndex] ?? this.makeTick();
-
-      tick.style.setProperty('--_blok-find-tick-at', `${positionOf(matchIndex) * 100}%`);
-      tick.setAttribute(TICK_INDEX, String(matchIndex));
-      tick.toggleAttribute(ATTR.active, tickIndex === activeTick);
-    });
-
-  }
-
-  private makeTick(): HTMLElement {
-    const tick = build('span', { [ATTR.tick]: '', 'data-blok-testid': 'find-map-tick' });
-
-    this.map.append(tick);
-    this.ticks.push(tick);
-
-    return tick;
-  }
-
-  private handleMapClick(event: MouseEvent): void {
-    if (!this.opened || this.total === 0) {
-      return;
-    }
-
-    const tick = event.target instanceof Element ? event.target.closest(`[${ATTR.tick}]`) : null;
-    const index = tick?.getAttribute(TICK_INDEX);
-
-    if (index !== undefined && index !== null) {
-      this.callbacks.onSeek(Number(index));
-
-      return;
-    }
-
-    const box = this.map.getBoundingClientRect();
-
-    if (box.width === 0) {
-      return;
-    }
-
-    const ratio = inlineStartOffset(event.clientX, box, getElementDirection(this.map)) / box.width;
-    const nearest = this.positions.reduce((best, position, i) =>
-      Math.abs(position - ratio) < Math.abs(this.positions[best] - ratio) ? i : best, 0);
-
-    this.callbacks.onSeek(nearest);
   }
 
   private makeIconButton(labelKey: string, icon: string, testId: string): HTMLButtonElement {

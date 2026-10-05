@@ -414,10 +414,6 @@ export class Find extends Module {
             this.render({ reveal: false });
           }
         },
-        onSeek: (index) => {
-          this.active = Math.max(0, Math.min(index, this.ranges.length - 1));
-          this.render({ reveal: true, pulse: true, expand: true });
-        },
       },
     });
     this.bar.setReadOnly(this.Blok.ReadOnly.isEnabled);
@@ -622,7 +618,6 @@ export class Find extends Module {
     this.bar?.setResults({
       current: this.active,
       total: this.ranges.length,
-      positions: this.positions(),
     });
 
     if (current === null) {
@@ -737,37 +732,6 @@ export class Find extends Module {
     }
 
     this.lens?.moveTo(rects, { pulse });
-  }
-
-  /**
-   * Each match's place on the page, 0 (top) to 1 (bottom), for the match
-   * map. A match inside a collapsed toggle takes its nearest visible ancestor's.
-   */
-  private positions(): number[] {
-    const height = document.documentElement.scrollHeight;
-
-    if (height === 0) {
-      return this.ranges.map((_, index) => (index + 0.5) / this.ranges.length);
-    }
-
-    return this.ranges.map((range) => {
-      const [rect] = rectsOf(this.onScreen(range));
-      const top = rect?.top ?? this.visibleAncestorTop(range.startContainer);
-
-      return Math.min(1, Math.max(0, (top + window.scrollY) / height));
-    });
-  }
-
-  private visibleAncestorTop(node: Node): number {
-    const element = node.parentElement;
-
-    if (element === null) {
-      return 0;
-    }
-
-    const [rect] = element.getClientRects();
-
-    return rect?.top ?? this.visibleAncestorTop(element);
   }
 
   /**

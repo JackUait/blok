@@ -296,12 +296,12 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-replace-toggle')).toHaveAttribute('aria-expanded', 'true');
     });
 
-    test('the replace row lines up under the find row, above the match map', async ({ page }) => {
+    test('the replace row lines up under the find row', async ({ page }) => {
       await createEditor(page, paragraphs('foo one', 'foo two'));
       await focusParagraph(page, 'foo one');
       await page.keyboard.press(REPLACE_KEY);
       await page.getByTestId('find-input').fill('foo');
-      await expect(page.getByTestId('find-map')).toBeVisible();
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
       // The row grows open; measure once it has settled.
       await page.waitForFunction(() =>
         document.getAnimations().every((animation) => animation.playState !== 'running'));
@@ -319,36 +319,10 @@ test.describe('find in page', () => {
       const replaceField = await box('find-replace-field');
       const close = await box('find-close');
       const replaceAll = await box('find-replace-all');
-      const map = await box('find-map');
 
       expect(replaceField.left).toBeCloseTo(findField.left, 0);
       expect(replaceField.right).toBeCloseTo(findField.right, 0);
       expect(replaceAll.right).toBeCloseTo(close.right, 0);
-      expect(map.top).toBeGreaterThanOrEqual(replaceField.bottom);
-    });
-
-    test('the match map line spans from the find field to the close button', async ({ page }) => {
-      await createEditor(page, paragraphs('foo one', 'foo two'));
-      await focusParagraph(page, 'foo one');
-      await openFind(page, 'foo');
-      await expect(page.getByTestId('find-map')).toBeVisible();
-
-      const geometry = await page.getByTestId('find-map').evaluate((map) => {
-        const box = map.getBoundingClientRect();
-        const line = getComputedStyle(map, '::before');
-        const field = document.querySelector('[data-blok-testid="find-field"]')?.getBoundingClientRect();
-        const close = document.querySelector('[data-blok-testid="find-close"]')?.getBoundingClientRect();
-
-        return {
-          lineLeft: box.left + parseFloat(line.left),
-          lineRight: box.right - parseFloat(line.right),
-          fieldLeft: field?.left ?? Number.NaN,
-          closeRight: close?.right ?? Number.NaN,
-        };
-      });
-
-      expect(geometry.lineLeft).toBeCloseTo(geometry.fieldLeft, 0);
-      expect(geometry.lineRight).toBeCloseTo(geometry.closeRight, 0);
     });
   });
 
@@ -406,16 +380,6 @@ test.describe('find in page', () => {
       expect(paint.active).toEqual(['foo']);
       expect(paint.matches).toEqual(['foo', 'foo']);
       expect(paint.activeBlockId).toBe('find-p0');
-    });
-
-    test('the match map draws one tick per match', async ({ page }) => {
-      await createEditor(page, paragraphs('foo one', 'foo two', 'foo three'));
-      await focusParagraph(page, 'foo one');
-
-      await openFind(page, 'foo');
-
-      await expect(page.getByTestId('find-map-tick')).toHaveCount(3);
-      await expect(page.getByTestId('find-map')).toBeVisible();
     });
   });
 
@@ -1043,30 +1007,6 @@ test.describe('find in page', () => {
           document.body.style.transform = '';
         });
       }
-    });
-
-    test('places host matches at different points on the match map', async ({ page }) => {
-      await page.evaluate(() => {
-        const first = document.createElement('p');
-        const spacer = document.createElement('div');
-        const second = document.createElement('p');
-
-        first.textContent = 'mapneedle first';
-        spacer.style.height = '500px';
-        second.textContent = 'mapneedle second';
-        document.body.append(first, spacer, second);
-      });
-      await createEditor(page, paragraphs('other words'));
-      await focusParagraph(page, 'other words');
-
-      await openFind(page, 'mapneedle');
-
-      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
-      const positions = await page.getByTestId('find-map-tick').evaluateAll((ticks) =>
-        ticks.map((tick) => tick.getBoundingClientRect().left)
-      );
-
-      expect(positions[1] - positions[0]).toBeGreaterThan(10);
     });
 
     test('paints host-page matches', async ({ page }) => {

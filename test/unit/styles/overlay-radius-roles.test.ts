@@ -107,9 +107,8 @@ describe('find', () => {
     expect(radius(css, '[data-blok-find-text-button]')).toBe(inner('control'));
   });
 
-  it('micro shapes use the notch; the tick is a pill', () => {
+  it('micro shapes use the notch', () => {
     expect(radius(css, '[data-blok-find-lens-box]')).toBe('var(--blok-radius-notch)');
-    expect(radius(css, '[data-blok-find-tick]')).toBe('var(--blok-radius-pill)');
   });
 });
 

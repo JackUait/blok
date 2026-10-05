@@ -279,6 +279,37 @@ describe('playground block states spec (index.html)', () => {
     });
   });
 
+  describe('tabs entry', () => {
+    test.each([
+      'Three tabs',
+      'With icons',
+      'Empty tab',
+      'Single tab',
+      'Untitled tab',
+      'Long titles',
+      'Overflowing strip',
+      'Rich content',
+      'Tabs inside a tab',
+      'Inside columns',
+      'Read-only',
+      'Right-to-left',
+    ])('covers the "%s" state', (label) => {
+      expect(sectionFor('tabs')).toContain(`label: '${label}'`);
+    });
+
+    test('the read-only state renders without the editing chrome', () => {
+      expect(sectionFor('tabs')).toMatch(/label: 'Read-only', readOnly: true/);
+    });
+
+    test('the right-to-left state sets the editor direction', () => {
+      expect(sectionFor('tabs')).toMatch(/label: 'Right-to-left', editorConfig: \{ i18n: \{ direction: 'rtl' \} \}/);
+    });
+
+    test('the overflowing strip is narrow enough to scroll', () => {
+      expect(sectionFor('tabs')).toMatch(/label: 'Overflowing strip', width: \d+/);
+    });
+  });
+
   describe('gallery preview tools', () => {
     test('mountStatePreview registers the embed tool', () => {
       expect(mountTools).toContain('embed: Embed');

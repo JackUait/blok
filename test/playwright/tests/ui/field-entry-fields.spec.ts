@@ -113,7 +113,6 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
           border: style.borderTopWidth,
           radius: style.borderTopLeftRadius,
           height: element instanceof HTMLElement ? element.offsetHeight : 0,
-          buttonFill: submit ? getComputedStyle(submit).backgroundColor : '',
           buttonHeight: submit?.offsetHeight ?? 0,
           phone: window.innerWidth < 651,
         };
@@ -124,8 +123,9 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
       expect(look.border).toBe('1px');
       expect(look.radius).toBe('8px');
       expect(look.height).toBe(look.phone ? 36 : 34);
-      expect(look.buttonFill).toBe(look.expected.button);
       expect(look.buttonHeight).toBe(26);
+      // The button fades its fill, and the theme is switched after mount.
+      await expect(bar.locator('[data-role="embed-url-submit"]')).toHaveCSS('background-color', look.expected.button);
     });
 
     test('focusing the embed URL input darkens the hairline', async ({ page }) => {

@@ -81,6 +81,7 @@ describe('FindBar', () => {
 
   const findInput = (): HTMLInputElement => byTestId<HTMLInputElement>(bar.element, 'find-input');
   const replaceInput = (): HTMLInputElement => byTestId<HTMLInputElement>(bar.element, 'find-replace-input');
+  const replaceAllRow = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-item-name="replace-all"]');
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -727,7 +728,7 @@ describe('FindBar', () => {
     });
 
     it.each([
-      { name: 'Replace all', testId: 'find-replace-all', field: 'replace' },
+      { name: 'the replace menu', testId: 'find-replace-menu', field: 'replace' },
       { name: 'Replace', testId: 'find-replace', field: 'replace' },
       { name: 'Next', testId: 'find-next', field: 'find' },
     ])('keeps focus in the bar when $name disables itself', ({ testId, field }) => {
@@ -745,7 +746,7 @@ describe('FindBar', () => {
       bar.setResults({ current: -1, total: 0 });
 
       expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace').disabled).toBe(true);
-      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-all').disabled).toBe(true);
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-menu').disabled).toBe(true);
     });
 
     it('disables both replace buttons when no match can be replaced', () => {
@@ -757,7 +758,7 @@ describe('FindBar', () => {
       press(replaceInput(), { key: 'Enter', metaKey: true });
 
       expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace').disabled).toBe(true);
-      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-all').disabled).toBe(true);
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-menu').disabled).toBe(true);
       expect(byTestId<HTMLButtonElement>(bar.element, 'find-next').disabled).toBe(false);
       expect(callbacks.onReplace).not.toHaveBeenCalled();
       expect(callbacks.onReplaceAll).not.toHaveBeenCalled();
@@ -771,7 +772,7 @@ describe('FindBar', () => {
       press(replaceInput(), { key: 'Enter' });
 
       expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace').disabled).toBe(true);
-      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-all').disabled).toBe(false);
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-menu').disabled).toBe(false);
       expect(callbacks.onReplace).not.toHaveBeenCalled();
     });
 
@@ -804,7 +805,7 @@ describe('FindBar', () => {
       it('says no match can be edited', () => {
         bar.setResults({ current: 0, total: 3, replaceable: 0, currentReplaceable: false });
 
-        expect(hoverText('find-replace-all')).toContain('find.replaceAllUnavailable');
+        expect(hoverText('find-replace-menu')).toContain('find.replaceAllUnavailable');
       });
 
       it('says there are no results', () => {
@@ -841,12 +842,76 @@ describe('FindBar', () => {
       replaceInput().value = 'new';
 
       byTestId(bar.element, 'find-replace').click();
-      byTestId(bar.element, 'find-replace-all').click();
+      byTestId(bar.element, 'find-replace-menu').click();
+      replaceAllRow()?.click();
 
       expect(callbacks.onReplace).toHaveBeenCalledWith('new');
       expect(callbacks.onReplaceAll).toHaveBeenCalledWith('new');
       expect(byTestId(bar.element, 'find-replace').textContent).toBe('find.replace');
-      expect(byTestId(bar.element, 'find-replace-all').textContent).toBe('find.replaceAll');
+    });
+
+    describe('replace split button', () => {
+      const menuButton = (): HTMLButtonElement => byTestId<HTMLButtonElement>(bar.element, 'find-replace-menu');
+
+      beforeEach(() => {
+        bar.open({ replace: true, readOnly: false });
+        bar.setResults({ current: 0, total: 2 });
+      });
+
+      it('has Replace as the click and Replace all behind a menu button', () => {
+        expect(menuButton().getAttribute('aria-haspopup')).toBe('menu');
+        expect(menuButton().getAttribute('aria-expanded')).toBe('false');
+        expect(menuButton().getAttribute('aria-label')).toBe('find.replaceAll');
+        expect(bar.element.querySelector('[data-blok-testid="find-replace-all"]')).toBeNull();
+        expect(replaceAllRow()).toBeNull();
+      });
+
+      it('opens a menu whose row replaces all and closes it', () => {
+        replaceInput().value = 'new';
+        menuButton().click();
+
+        expect(menuButton().getAttribute('aria-expanded')).toBe('true');
+        expect(replaceAllRow()?.textContent).toContain('find.replaceAll');
+        expect(replaceAllRow()?.textContent).toContain('⌘⏎');
+
+        replaceAllRow()?.click();
+
+        expect(callbacks.onReplaceAll).toHaveBeenCalledWith('new');
+        expect(callbacks.onReplace).not.toHaveBeenCalled();
+        expect(replaceAllRow()).toBeNull();
+        expect(menuButton().getAttribute('aria-expanded')).toBe('false');
+      });
+
+      it('closes only the menu on Escape', () => {
+        menuButton().click();
+        press(menuButton(), { key: 'Escape' });
+
+        expect(replaceAllRow()).toBeNull();
+        expect(callbacks.onClose).not.toHaveBeenCalled();
+        expect(bar.isOpen).toBe(true);
+      });
+
+      it('closes the menu when no match can be replaced any more', () => {
+        menuButton().click();
+        bar.setResults({ current: 0, total: 2, replaceable: 0, currentReplaceable: false });
+
+        expect(replaceAllRow()).toBeNull();
+        expect(menuButton().disabled).toBe(true);
+      });
+
+      it('closes the menu with the replace row', () => {
+        menuButton().click();
+        button(bar.element, 'find.toggleReplace').click();
+
+        expect(replaceAllRow()).toBeNull();
+      });
+
+      it('closes the menu with the bar', () => {
+        menuButton().click();
+        bar.close();
+
+        expect(replaceAllRow()).toBeNull();
+      });
     });
 
     it('replaces one on Enter in the replace field', () => {

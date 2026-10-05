@@ -318,11 +318,14 @@ test.describe('find in page', () => {
       const findField = await box('find-field');
       const replaceField = await box('find-replace-field');
       const close = await box('find-close');
-      const replaceAll = await box('find-replace-all');
+      const replaceMenu = await box('find-replace-menu');
+      const replace = await box('find-replace');
+      const options = await box('find-options');
 
       expect(replaceField.left).toBeCloseTo(findField.left, 0);
       expect(replaceField.right).toBeCloseTo(findField.right, 0);
-      expect(replaceAll.right).toBeCloseTo(close.right, 0);
+      expect(replaceMenu.right).toBeCloseTo(close.right, 0);
+      expect(replace.left).toBeCloseTo(options.left, 0);
     });
 
     test('opening the replace row moves nothing in the find row', async ({ page }) => {
@@ -358,7 +361,7 @@ test.describe('find in page', () => {
       expect(await edge('find-options', 'left')).toBeCloseTo(closedOptions, 0);
       expect(await edge('find-field', 'right')).toBeCloseTo(closedField, 0);
       expect(await fieldToOptions()).toBeCloseTo(closedGap, 0);
-      expect(await edge('find-close', 'right')).toBeCloseTo(await edge('find-replace-all', 'right'), 0);
+      expect(await edge('find-close', 'right')).toBeCloseTo(await edge('find-replace-menu', 'right'), 0);
     });
   });
 
@@ -886,7 +889,8 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
       await page.getByTestId('find-replace-input').fill('changed');
 
-      await page.getByTestId('find-replace-all').click();
+      await page.getByTestId('find-replace-menu').click();
+      await page.getByRole('menuitem', { name: /Replace all/ }).click();
 
       await expect.poll(() => savedTexts(page)).toEqual(['changed in editor']);
       await expect(page.getByTestId('host-editable')).toHaveText('amberneedle outside');
@@ -1296,9 +1300,9 @@ test.describe('find in page', () => {
       await page.keyboard.press(REPLACE_KEY);
       await page.getByTestId('find-input').fill('hostneedle');
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
-      await expect(page.getByTestId('find-replace-all')).toBeDisabled();
+      await expect(page.getByTestId('find-replace-menu')).toBeDisabled();
 
-      await page.getByTestId('find-replace-all').hover();
+      await page.getByTestId('find-replace-menu').hover();
 
       await expect(page.getByRole('tooltip')).toContainText('None of the matches can be edited');
     });
@@ -1358,7 +1362,8 @@ test.describe('find in page', () => {
       await page.getByTestId('find-input').fill('foo');
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
       await page.getByTestId('find-replace-input').fill('bar');
-      await page.getByTestId('find-replace-all').click();
+      await page.getByTestId('find-replace-menu').click();
+      await page.getByRole('menuitem', { name: /Replace all/ }).click();
       await expect.poll(() => savedTexts(page)).toEqual(['bar one', 'two bar']);
 
       await page.keyboard.press('Escape');

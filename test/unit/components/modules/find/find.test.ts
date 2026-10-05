@@ -126,6 +126,12 @@ const openBar = (): HTMLElement => {
   return dock;
 };
 
+/** Replace all lives in the menu behind the Replace split button. */
+const clickReplaceAll = (): void => {
+  openBar().querySelector<HTMLButtonElement>('[data-blok-testid="find-replace-menu"]')?.click();
+  document.querySelector<HTMLElement>('[data-blok-item-name="replace-all"]')?.click();
+};
+
 const searchInput = (_wrapper?: HTMLElement): HTMLInputElement => {
   const input = openBar().querySelector('input[type="search"], input[role="searchbox"]');
 
@@ -503,9 +509,7 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
     typeQuery(wrapper, 'cat');
     setReplacement(wrapper, 'dog');
-    const replaceAll = [...openBar().querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'find.replaceAll' || button.textContent === 'find.replaceAll');
-
-    replaceAll?.click();
+    clickReplaceAll();
 
     expect(blocks.map((block) => block.holder.textContent)).toEqual(['dog one', 'two dog, dog']);
     expect(blockManager.beginToolTransaction).toHaveBeenCalledTimes(1);
@@ -537,7 +541,7 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
     typeQuery(wrapper, 'bold');
     setReplacement(wrapper, 'brave');
-    [...openBar().querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'find.replaceAll' || button.textContent === 'find.replaceAll')?.click();
+    clickReplaceAll();
 
     expect(input.textContent).toBe('a brave move');
     expect(input.querySelector('b')?.textContent).toBe('brave');
@@ -545,7 +549,7 @@ describe('Find module', () => {
 
   describe('replace buttons', () => {
     const replaceButton = (): HTMLButtonElement => byTestIdIn(openBar(), 'find-replace');
-    const replaceAllButton = (): HTMLButtonElement => byTestIdIn(openBar(), 'find-replace-all');
+    const replaceAllButton = (): HTMLButtonElement => byTestIdIn(openBar(), 'find-replace-menu');
     const byTestIdIn = (root: Element, testId: string): HTMLButtonElement => {
       const button = root.querySelector(`[data-blok-testid="${testId}"]`);
 
@@ -733,7 +737,7 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
     typeQuery(wrapper, 'cat');
     setReplacement(wrapper, 'dog');
-    [...openBar().querySelectorAll('button')].find((button) => button.textContent === 'find.replaceAll')?.click();
+    clickReplaceAll();
 
     expect(onEditor).not.toHaveBeenCalled();
     expect(onHost).toHaveBeenCalled();
@@ -1011,7 +1015,7 @@ describe('Find module', () => {
       const preview = previewOf(blocks[0].holder).cloneNode(true) as HTMLElement;
 
       preview.querySelectorAll('[data-blok-find-preview-old]').forEach((old) => old.remove());
-      [...openBar().querySelectorAll('button')].find((button) => button.textContent === 'find.replaceAll')?.click();
+      clickReplaceAll();
 
       expect(blocks[0].holder.querySelector('[contenteditable]')?.textContent).toBe(preview.textContent);
       expect(redactor.querySelector(PREVIEW)).toBeNull();

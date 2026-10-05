@@ -56,6 +56,8 @@ const ATTR = {
   options: 'data-blok-find-options',
   optionsActive: 'data-blok-find-options-active',
   optionsMenu: 'data-blok-find-options-menu',
+  split: 'data-blok-find-split',
+  replaceMenu: 'data-blok-find-replace-menu',
   divider: 'data-blok-find-divider',
   controls: 'data-blok-find-controls',
   replaceToggle: 'data-blok-find-replace-toggle',
@@ -139,7 +141,8 @@ export class FindBar {
   private readonly replaceRow: HTMLElement;
   private readonly replaceInput: HTMLInputElement;
   private readonly replaceButton: HTMLButtonElement;
-  private readonly replaceAllButton: HTMLButtonElement;
+  /** Opens the menu that holds Replace all. */
+  private readonly replaceMenuButton: HTMLButtonElement;
 
   private opened = false;
   private readOnly = false;
@@ -157,6 +160,7 @@ export class FindBar {
   private noResults = false;
 
   private optionsMenu: PopoverDesktop | null = null;
+  private replaceMenu: PopoverDesktop | null = null;
   private readonly replaceField: HTMLElement;
   private motion: Animation[] = [];
   private flight: Hop | null = null;
@@ -258,10 +262,16 @@ export class FindBar {
     this.replaceField.append(this.replaceInput);
 
     this.replaceButton = this.makeTextButton('find.replace', 'find-replace');
-    this.replaceAllButton = this.makeTextButton('find.replaceAll', 'find-replace-all');
+    // Its label names the one thing the menu does, so it reads as "Replace all, menu".
+    this.replaceMenuButton = this.makeIconButton('find.replaceAll', IconChevronDown, 'find-replace-menu');
+    this.replaceMenuButton.setAttribute(ATTR.replaceMenu, '');
+    this.replaceMenuButton.setAttribute('aria-haspopup', 'menu');
+    this.replaceMenuButton.setAttribute('aria-expanded', 'false');
+    const split = build('div', { [ATTR.split]: '' });
     const replaceControls = build('div', { [ATTR.controls]: '' });
 
-    replaceControls.append(this.replaceButton, this.replaceAllButton);
+    split.append(this.replaceButton, this.replaceMenuButton);
+    replaceControls.append(split);
     replaceInner.append(this.replaceField, replaceControls);
     this.replaceRow.append(replaceInner);
 
@@ -293,7 +303,7 @@ export class FindBar {
     this.listen(this.nextButton, 'click', () => this.callbacks.onNext());
     this.listen(this.closeButton, 'click', () => this.callbacks.onClose());
     this.listen(this.replaceButton, 'click', () => this.callbacks.onReplace(this.replaceInput.value));
-    this.listen(this.replaceAllButton, 'click', () => this.callbacks.onReplaceAll(this.replaceInput.value));
+    this.listen(this.replaceMenuButton, 'click', () => this.toggleReplaceMenu());
     this.listen(this.replaceInput, 'input', () => this.callbacks.onReplaceChange());
     this.listen(this.field, 'animationend', (event) => {
       if (event.target === this.field) {
@@ -389,6 +399,7 @@ export class FindBar {
     this.opened = false;
     hideTooltip();
     this.optionsMenu?.hide();
+    this.replaceMenu?.hide();
     // `hidden` and `inert` land now; the exit animation rides a discrete `display` transition in find.css.
     this.element.toggleAttribute('inert', true);
     this.element.hidden = true;
@@ -418,6 +429,7 @@ export class FindBar {
     this.opened = false;
     hideTooltip();
     this.optionsMenu?.destroy();
+    this.replaceMenu?.destroy();
     this.listeners.forEach((remove) => remove());
     this.listeners.length = 0;
     this.inputResize?.disconnect();
@@ -537,10 +549,12 @@ export class FindBar {
       return;
     }
 
-    const button = mod ? this.replaceAllButton : this.replaceButton;
+    if (mod && !this.replaceMenuButton.disabled) {
+      this.replaceAll();
+    }
 
-    if (!button.disabled) {
-      button.click();
+    if (!mod && !this.replaceButton.disabled) {
+      this.replaceButton.click();
     }
   }
 
@@ -578,14 +592,59 @@ export class FindBar {
       onActivate: () => this.toggleOption(option, true),
     });
 
-    const menu = new PopoverDesktop({
-      items: [
-        row('matchCase', 'find.matchCase', shortcuts.matchCase),
-        row('wholeWord', 'find.wholeWord', shortcuts.wholeWord),
-      ],
-      trigger: this.optionsButton,
-      flippable: true,
+    this.optionsMenu = this.openMenu(this.optionsButton, ATTR.optionsMenu, [
+      row('matchCase', 'find.matchCase', shortcuts.matchCase),
+      row('wholeWord', 'find.wholeWord', shortcuts.wholeWord),
+    ], (menu) => {
+      if (this.optionsMenu !== menu) {
+        return false;
+      }
+      this.optionsMenu = null;
+
+      return true;
     });
+    this.optionsMenu.show();
+  }
+
+  private toggleReplaceMenu(): void {
+    if (this.replaceMenu !== null) {
+      this.replaceMenu.hide();
+
+      return;
+    }
+
+    this.replaceMenu = this.openMenu(this.replaceMenuButton, ATTR.replaceMenu, [{
+      title: this.t('find.replaceAll'),
+      name: 'replace-all',
+      secondaryLabel: this.shortcuts.replaceAll,
+      closeOnActivate: true,
+      onActivate: () => this.replaceAll(),
+    }], (menu) => {
+      if (this.replaceMenu !== menu) {
+        return false;
+      }
+      this.replaceMenu = null;
+
+      return true;
+    });
+    this.replaceMenu.show();
+  }
+
+  private replaceAll(): void {
+    this.callbacks.onReplaceAll(this.replaceInput.value);
+  }
+
+  /**
+   * Build a menu for one of the bar's buttons. The caller stores it, then shows it.
+   * @param release - clears the caller's slot; false when the menu is no longer the current one
+   */
+  private openMenu(
+    trigger: HTMLButtonElement,
+    attribute: string,
+    items: PopoverItemParams[],
+    release: (menu: PopoverDesktop) => boolean
+  ): PopoverDesktop {
+    const menu = new PopoverDesktop({ items, trigger, flippable: true });
 
     // One Escape closes one layer: the menu, not the bar. Window capture runs
     // before the bar's own handler and the popover registry's.
@@ -597,29 +656,31 @@ export class FindBar {
       }
     };
 
-    menu.getElement().setAttribute(ATTR.optionsMenu, '');
+    menu.getElement().setAttribute(attribute, '');
     menu.on(PopoverEvent.Closed, () => {
       window.removeEventListener('keydown', onKeydown, true);
 
-      if (this.optionsMenu !== menu) {
+      if (!release(menu)) {
         return;
       }
 
-      this.optionsMenu = null;
-      this.optionsButton.setAttribute('aria-expanded', 'false');
+      trigger.setAttribute('aria-expanded', 'false');
 
       // A row click or Escape would leave focus on <body>, where the bar's keys stop working.
+      // A row's action can disable the trigger (Replace all left nothing), so fall back to its field.
       if (this.opened && (document.activeElement === document.body || (document.activeElement !== null && menu.hasNode(document.activeElement)))) {
-        this.optionsButton.focus({ preventScroll: true });
+        const fallback = trigger === this.replaceMenuButton ? this.replaceInput : this.input;
+
+        (trigger.disabled ? fallback : trigger).focus({ preventScroll: true });
       }
 
       menu.destroy();
     });
 
     window.addEventListener('keydown', onKeydown, true);
-    this.optionsMenu = menu;
-    this.optionsButton.setAttribute('aria-expanded', 'true');
-    menu.show();
+    trigger.setAttribute('aria-expanded', 'true');
+
+    return menu;
   }
 
   private corner(): Corner {
@@ -702,6 +763,10 @@ export class FindBar {
 
     this.replaceOpen = next;
     this.replaceRow.hidden = !next;
+
+    if (!next) {
+      this.replaceMenu?.hide();
+    }
     this.replaceToggle.setAttribute('aria-expanded', String(next));
     this.bar.toggleAttribute(ATTR.open, next);
 
@@ -711,7 +776,7 @@ export class FindBar {
         dock: this.element,
         bar: this.bar,
         field: this.replaceField,
-        buttons: [this.replaceButton, this.replaceAllButton],
+        buttons: [this.replaceButton, this.replaceMenuButton],
       }, from, this.corner());
     }
 
@@ -763,13 +828,13 @@ export class FindBar {
       [this.previousButton, none],
       [this.nextButton, none],
       [this.replaceButton, none || !this.currentReplaceable],
-      [this.replaceAllButton, none || this.replaceable === 0],
+      [this.replaceMenuButton, none || this.replaceable === 0],
     ]);
     const focused = document.activeElement;
 
     // A disabled button drops focus to <body>, where Escape no longer reaches the bar.
     if (focused instanceof HTMLButtonElement && disabled.get(focused) === true) {
-      const isReplace = focused === this.replaceButton || focused === this.replaceAllButton;
+      const isReplace = focused === this.replaceButton || focused === this.replaceMenuButton;
 
       (isReplace ? this.replaceInput : this.input).focus({ preventScroll: true });
     }
@@ -778,11 +843,15 @@ export class FindBar {
       button.disabled = isDisabled;
     }
 
+    if (this.replaceMenuButton.disabled) {
+      this.replaceMenu?.hide();
+    }
+
     const replaceHint = this.currentReplaceable ? null : 'find.replaceUnavailable';
     const replaceAllHint = this.replaceable > 0 ? null : 'find.replaceAllUnavailable';
 
     this.syncReplaceHint(this.replaceButton, 'find.replace', this.shortcuts.replace, none ? 'find.noResults' : replaceHint);
-    this.syncReplaceHint(this.replaceAllButton, 'find.replaceAll', this.shortcuts.replaceAll, none ? 'find.noResults' : replaceAllHint);
+    this.syncReplaceHint(this.replaceMenuButton, 'find.replaceAll', this.shortcuts.replaceAll, none ? 'find.noResults' : replaceAllHint);
   }
 
   /** Rebind only on change: renderResults runs on every search and resize. */

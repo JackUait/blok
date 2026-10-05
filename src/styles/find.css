@@ -170,10 +170,6 @@
   gap: var(--blok-space-0-5);
 }
 
-[data-blok-find-replace-row] [data-blok-find-controls] {
-  gap: var(--blok-space-1);
-}
-
 /* ─── Field ─── */
 
 /* The box itself is the shared field look (field.css, data-blok-field). */
@@ -424,6 +420,38 @@
 [data-blok-find-text-button]:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+/* Replace and its chevron read as one button, split by a hairline. It fills
+   the column, so Replace starts under the options button. */
+[data-blok-find-split] {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 1px;
+}
+
+[data-blok-find-split] > [data-blok-find-text-button] {
+  flex: 1 1 auto;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+[data-blok-find-split] > [data-blok-find-replace-menu] {
+  width: 22px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  background: var(--blok-icon-bg);
+  color: var(--blok-text-primary);
+}
+
+[data-blok-find-split] > [data-blok-find-replace-menu] svg {
+  width: 14px;
+  height: 14px;
+}
+
+[data-blok-find-replace-menu][aria-expanded='true'] {
+  background: var(--blok-popover-icon-active-bg);
+  color: var(--blok-icon-active-text);
 }
 
 /* ─── Word hop ─── */

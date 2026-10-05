@@ -8,13 +8,13 @@ import {
   HOP_MS,
   hop,
   hopSourceFromRange,
-  prefersReducedMotion,
   settleMs,
   springAt,
   springEasing,
   SPRINGS,
   stretch,
 } from '../../../../../src/components/modules/find/find-motion';
+import { prefersReducedMotion } from '../../../../../src/components/utils/reduced-motion';
 
 const insetOf = (frame: Keyframe): number[] => {
   const match = String(frame.clipPath).match(/^inset\((\S+)px (\S+)px (\S+)px (\S+)px round (\S+)px\)$/);

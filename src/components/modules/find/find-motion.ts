@@ -3,6 +3,8 @@
  * moves, so the host's placement stays exact from the first frame.
  */
 
+import { prefersReducedMotion } from '../../utils/reduced-motion';
+
 export interface Spring {
   stiffness: number;
   damping: number;
@@ -145,9 +147,6 @@ export interface BloomParts {
   /** In reading order. */
   controls: HTMLElement[];
 }
-
-export const prefersReducedMotion = (): boolean =>
-  typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export const canAnimate = (element: Element): boolean => typeof element.animate === 'function';
 

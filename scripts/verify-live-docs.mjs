@@ -7,13 +7,31 @@
 // invisible to the unit suite: a sitemap whose 148 `lastmod` values were all
 // identical (shallow CI clone), and three days of deploys that published
 // nothing at all.
+//
+// Usage: verify-live-docs.mjs [site] [--crawl] [--report <file.json>] [--concurrency <n>]
+//        verify-live-docs.mjs [site] --status   (which commit is live, how far behind main)
+import { execFileSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import { parseArgs } from 'node:util';
+import { awaitBuildInfo, crawlUrls, deployLag } from './live-docs-checks.mjs';
 import { firstArchivePath, versionedSitemapUrls } from './live-docs-versions.mjs';
 
-const SITE = (process.argv[2] ?? 'https://blokeditor.com').replace(/\/$/, '');
+const { values: options, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    crawl: { type: 'boolean', default: false },
+    report: { type: 'string' },
+    concurrency: { type: 'string', default: '4' },
+    status: { type: 'boolean', default: false },
+  },
+});
+
+const SITE = (positionals[0] ?? 'https://blokeditor.com').replace(/\/$/, '');
 
 const waitFor = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const fetchNoRedirect = (url) => fetch(url, { redirect: 'manual' });
+// Bounded so a stalled connection fails the check instead of hanging the job.
+const fetchNoRedirect = (url) => fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(20_000) });
 
 const failures = [];
 const check = (name, ok, detail) => {
@@ -39,9 +57,74 @@ const awaitDeployment = async (marker, attempts = 20, delayMs = 15_000) => {
   throw new Error(`${marker} never became available; the deploy did not reach the edge`);
 };
 
+const git = (args) => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+
+const readLiveBuildInfo = async () => {
+  const response = await fetchNoRedirect(`${SITE}/build-info.json?cb=${Date.now()}`);
+  if (response.status !== 200) return { info: null, problem: `build-info.json answered ${response.status}` };
+  try {
+    return { info: JSON.parse(await response.text()), problem: null };
+  } catch {
+    return { info: null, problem: 'build-info.json is not JSON' };
+  }
+};
+
+const printLag = (info) => {
+  const lag = deployLag(info.sha, git);
+  process.stdout.write(
+    `live: ${info.sha} (version ${info.version}, root snapshot ${info.root}, built ${info.builtAt}, run ${info.runId})\n`
+    + (lag.behind === null
+      ? `lag:  unknown — ${lag.error}\n`
+      : `lag:  ${lag.behind} commit(s) behind origin/main ${lag.mainSha} (git fetch first for current numbers)\n`),
+  );
+  return lag;
+};
+
+/** --status: tell a maintainer what is live without running the checks. */
+const status = async () => {
+  const { info, problem } = await readLiveBuildInfo();
+  if (info) {
+    printLag(info);
+    return;
+  }
+  const home = await fetchNoRedirect(`${SITE}/`);
+  process.stdout.write(
+    `live: unknown — ${problem}; the deploy predates build-info.json. `
+    + `${SITE}/ last-modified: ${home.headers.get('last-modified')}\n`,
+  );
+};
+
 const main = async () => {
+  if (options.status) {
+    await status();
+    return;
+  }
+
+  const report = { site: SITE, startedAt: new Date().toISOString() };
   const marker = process.env.DEPLOY_MARKER;
   if (marker) await awaitDeployment(marker);
+
+  // Set by the deploy workflow from the artifact it just uploaded. Without
+  // them (a local run) build info is reported, not enforced.
+  const expected = {
+    sha: process.env.EXPECTED_BUILD_SHA ?? '',
+    manifestHash: process.env.EXPECTED_MANIFEST_HASH ?? '',
+  };
+  if (expected.sha || expected.manifestHash) {
+    try {
+      // The marker poll above already waited for the deploy; this covers CDN
+      // lag on one file. Sized with the crawl deadline to fit timeout-minutes: 10.
+      report.buildInfo = await awaitBuildInfo({ site: SITE, expected, attempts: 6, timeoutMs: 10_000 });
+      check('live build-info.json matches the artifact just built', true, '');
+    } catch (error) {
+      check('live build-info.json matches the artifact just built', false, error.message);
+    }
+  } else {
+    const { info, problem } = await readLiveBuildInfo();
+    report.buildInfo = info;
+    if (!info) process.stdout.write(`note  no build info: ${problem}\n`);
+  }
+  if (report.buildInfo?.sha) report.lag = printLag(report.buildInfo);
 
   const home = await fetchNoRedirect(`${SITE}/`);
   check('home answers 200', home.status === 200, `got ${home.status}`);
@@ -129,12 +212,30 @@ const main = async () => {
     check(`newest archive answers 200: ${archive}`, response.status === 200, `got ${response.status}`);
   }
 
-  // A canonical that redirects is a canonical Google ignores. Sampled, not
-  // exhaustive: 148 sequential requests would dominate the job's runtime.
-  const sample = locs.filter((_, index) => index % 25 === 0).slice(0, 6);
-  for (const loc of sample) {
-    const response = await fetchNoRedirect(loc);
-    check(`sitemap URL answers 200 directly: ${loc}`, response.status === 200, `got ${response.status}`);
+  // A canonical that redirects is a canonical Google ignores. --crawl checks
+  // every sitemap URL under a concurrency cap; without it, a sequential sample.
+  if (options.crawl) {
+    const crawl = await crawlUrls(locs, {
+      concurrency: Number(options.concurrency),
+      timeoutMs: 10_000,
+      deadlineMs: 90_000,
+    });
+    report.crawl = crawl;
+    for (const { url, kind, detail } of crawl.failures) {
+      check(`sitemap URL is a sound canonical page (${kind}): ${url}`, false, detail);
+    }
+    const { total, ok, failed, transient } = crawl.summary;
+    check(
+      `crawled all ${total} sitemap URLs`,
+      ok === total,
+      `${failed} deterministic failure(s), ${transient} transient failure(s) after retries`,
+    );
+  } else {
+    const sample = locs.filter((_, index) => index % 25 === 0).slice(0, 6);
+    for (const loc of sample) {
+      const response = await fetchNoRedirect(loc);
+      check(`sitemap URL answers 200 directly: ${loc}`, response.status === 200, `got ${response.status}`);
+    }
   }
 
   const robots = await fetchNoRedirect(`${SITE}/robots.txt`);
@@ -145,6 +246,9 @@ const main = async () => {
     'sitemap line missing',
   );
 
+  if (options.report) {
+    writeFileSync(options.report, `${JSON.stringify({ ...report, failures }, null, 2)}\n`);
+  }
   if (failures.length > 0) {
     throw new Error(`Live docs verification failed:\n  ${failures.join('\n  ')}`);
   }

@@ -126,8 +126,18 @@ jobs:
           yarn build
           minor="$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")"
           node docs/scripts/build-snapshot.mjs --version "$minor" --base / --out docs-root.tgz
+          # Audits the root build left in docs/dist: the next build-snapshot deletes it.
+          node docs/scripts/audit-build-output.mjs --report docs-build-audit.json
           node docs/scripts/build-snapshot.mjs --version "$minor" --base "/v/$minor/" --out "docs-v$minor.tgz"
           echo "minor=$minor" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build audit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docs-build-audit
+          path: docs-build-audit.json
+          if-no-files-found: ignore
 
       - name: Attach snapshots to the release
         env:
@@ -145,6 +155,8 @@ jobs:
     timeout-minutes: 15
     outputs:
       marker: ${{ steps.marker.outputs.path }}
+      build_sha: ${{ steps.build-info.outputs.sha }}
+      manifest_hash: ${{ steps.build-info.outputs.manifest }}
     permissions:
       contents: read
       pages: read
@@ -196,6 +208,13 @@ jobs:
           node docs/scripts/assemble-site.mjs --next next.tgz --out site
           cp CHANGELOG.md site/CHANGELOG.md
 
+      # Names the commit and a hash of every page in this artifact. The live
+      # check fails unless the host serves this exact file. Must run last: a
+      # file written into site/ after it would not be in the hash.
+      - name: Record build info
+        id: build-info
+        run: node scripts/docs-build-info.mjs site
+
       # A prerender regression is invisible from a green build: the files are
       # still emitted, they are just empty shells again, and every crawler that
       # does not run JavaScript sees a blank page. Probe one real page for
@@ -210,6 +229,7 @@ jobs:
           grep -q 'Blok' "$page"
           test -s site/robots.txt
           test -s site/sitemap.xml
+          test -s site/build-info.json
           test -f site/next/docs/quick-start/index.html
           grep -q 'noindex' site/next/docs/quick-start/index.html
           test -s site/versions.json
@@ -291,4 +311,14 @@ jobs:
       - name: Verify the live site
         env:
           DEPLOY_MARKER: ${{ needs.build.outputs.marker }}
-        run: node scripts/verify-live-docs.mjs "https://blokeditor.com"
+          EXPECTED_BUILD_SHA: ${{ needs.build.outputs.build_sha }}
+          EXPECTED_MANIFEST_HASH: ${{ needs.build.outputs.manifest_hash }}
+        run: node scripts/verify-live-docs.mjs "https://blokeditor.com" --crawl --report live-docs-report.json
+
+      - name: Upload live check report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: live-docs-report
+          path: live-docs-report.json
+          if-no-files-found: ignore

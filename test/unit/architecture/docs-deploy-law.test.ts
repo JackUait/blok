@@ -12,13 +12,14 @@
  * Unit tests cannot see `docs/dist` during a unit run, so the artifact assertion
  * lives in the workflow and this law asserts that the workflow still carries it.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { PRERENDER_PATHS } from '../../../docs/src/prerender-paths';
 
 type Step = {
+  id?: string;
   name?: string;
   run?: string;
   uses?: string;
@@ -272,6 +273,97 @@ describe('docs deploy law — reachable without a release', () => {
       getJob('deploy').if,
       'deploy must override the transitive skip, or a green docs build publishes nothing',
     ).toContain("needs.build.result == 'success'");
+  });
+});
+
+/** Where the deploy writes what it built, and what verify-live-docs.mjs compares the host against. */
+const BUILD_INFO_FILE = `${ARTIFACT_ROOT}/build-info.json`;
+const LIVE_REPORT = 'live-docs-report.json';
+const AUDIT_REPORT = 'docs-build-audit.json';
+
+const stepIndex = (steps: Step[], match: (step: Step) => boolean): number => steps.findIndex(match);
+
+describe('docs deploy law — the live site is proven to be the build just deployed', () => {
+  const buildInfoStep = buildSteps.find((step) => step.run?.includes(`node scripts/docs-build-info.mjs ${ARTIFACT_ROOT}`));
+  const smoke = getJob('seo-smoke');
+  const verifyStep = smoke.steps?.find((step) => step.run?.includes('verify-live-docs.mjs'));
+
+  it('records build-info.json into the artifact before verifying and uploading it', () => {
+    expect(buildInfoStep, `the build job does not write ${BUILD_INFO_FILE}`).toBeDefined();
+    expect(buildInfoStep?.id, 'the build-info step needs an id so its outputs can be read').toBeTruthy();
+
+    const assemble = stepIndex(buildSteps, (step) => step.run?.includes('assemble-site.mjs') ?? false);
+    const info = stepIndex(buildSteps, (step) => step === buildInfoStep);
+    const guard = stepIndex(buildSteps, (step) => step === guardStep);
+    const upload = stepIndex(buildSteps, (step) => step.uses?.startsWith('actions/upload-pages-artifact') ?? false);
+
+    // The manifest hash covers every page, so nothing may write into the site after it.
+    expect(info, 'build info must be taken after the site is fully assembled').toBeGreaterThan(assemble);
+    expect(info, 'build info must exist before the artifact guard runs').toBeLessThan(guard);
+    expect(guard).toBeLessThan(upload);
+    expect(guardStep?.run, 'the artifact guard must check build-info.json shipped').toContain(`test -s ${BUILD_INFO_FILE}`);
+  });
+
+  it('hands the built SHA and manifest hash to the live check', () => {
+    const id = buildInfoStep?.id ?? 'missing';
+
+    expect(build.outputs?.build_sha).toBe(`\${{ steps.${id}.outputs.sha }}`);
+    expect(build.outputs?.manifest_hash).toBe(`\${{ steps.${id}.outputs.manifest }}`);
+    expect(verifyStep?.env).toMatchObject({
+      EXPECTED_BUILD_SHA: '${{ needs.build.outputs.build_sha }}',
+      EXPECTED_MANIFEST_HASH: '${{ needs.build.outputs.manifest_hash }}',
+    });
+  });
+
+  it('enforces the expected build in the verifier the workflow runs', () => {
+    // The env names above are only a contract if the script reads them.
+    const verifier = readFileSync(resolve(REPO_ROOT, 'scripts/verify-live-docs.mjs'), 'utf8');
+
+    expect(verifier).toContain('process.env.EXPECTED_BUILD_SHA');
+    expect(verifier).toContain('process.env.EXPECTED_MANIFEST_HASH');
+    expect(verifier).toContain('awaitBuildInfo(');
+  });
+
+  it('crawls the whole sitemap and keeps the report even when the check fails', () => {
+    expect(verifyStep?.run).toContain('--crawl');
+    expect(verifyStep?.run).toContain(`--report ${LIVE_REPORT}`);
+
+    const upload = smoke.steps?.find((step) => step.uses?.startsWith('actions/upload-artifact@'));
+
+    expect(upload?.with?.path).toBe(LIVE_REPORT);
+    expect(upload?.if, 'a failed crawl is exactly when the report matters').toBe('${{ !cancelled() }}');
+  });
+});
+
+describe('docs deploy law — the indexed snapshot is audited before it is attached', () => {
+  const snapshotSteps = getJob('snapshot').steps ?? [];
+  const buildStep = snapshotSteps.find((step) => step.name === 'Build snapshots');
+  const run = buildStep?.run ?? '';
+
+  it('audits the root build, after it is built and before the archive build wipes it', () => {
+    const audit = run.indexOf(`node docs/scripts/audit-build-output.mjs --report ${AUDIT_REPORT}`);
+    const root = run.indexOf('--base / --out docs-root.tgz');
+    const archive = run.indexOf('--base "/v/$minor/"');
+
+    expect(audit, 'the snapshot job does not audit the root build').toBeGreaterThan(-1);
+    expect(audit).toBeGreaterThan(root);
+    expect(audit, 'build-snapshot.mjs deletes docs/dist before each build').toBeLessThan(archive);
+  });
+
+  it('uploads the audit report even when the audit fails', () => {
+    const upload = snapshotSteps.find((step) => step.uses?.startsWith('actions/upload-artifact@'));
+
+    expect(upload?.with?.path).toBe(AUDIT_REPORT);
+    expect(upload?.if).toBe('${{ !cancelled() }}');
+    expect(stepIndex(snapshotSteps, (step) => step === upload)).toBeGreaterThan(
+      stepIndex(snapshotSteps, (step) => step === buildStep),
+    );
+  });
+
+  it('runs scripts that exist', () => {
+    for (const file of ['docs/scripts/audit-build-output.mjs', 'scripts/docs-build-info.mjs', 'scripts/verify-live-docs.mjs']) {
+      expect(existsSync(resolve(REPO_ROOT, file)), `${file} is missing`).toBe(true);
+    }
   });
 });
 

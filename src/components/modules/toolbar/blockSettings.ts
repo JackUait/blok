@@ -22,7 +22,7 @@ import { runConvert } from '../../utils/convert-refusal';
 import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
-import { isToolConvertable } from '../../utils/tools';
+import { isToolConvertable, translateToolTitle } from '../../utils/tools';
 import { prepareImportString } from '../blockManager/block-mutation';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
@@ -488,11 +488,23 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     /**
-     * Tool-specific tunes come first (e.g. heading level selector)
+     * Tool-specific tunes come first (e.g. heading level selector). A tool that
+     * declares a titled menu instead heads it with its own name and puts Turn
+     * into first, like Notion's page menu.
      */
     const hasToolTunes = !hasMultipleBlocksSelected && toolTunes !== undefined && toolTunes.length > 0;
+    const blockMenu = hasMultipleBlocksSelected ? undefined : currentBlock.tool?.blockMenu;
+    const titled = blockMenu?.titled === true;
 
-    if (hasToolTunes) {
+    if (titled) {
+      items.push({
+        type: PopoverItemType.Html,
+        element: this.createMenuTitle(currentBlock),
+        name: 'block-menu-title',
+      });
+    }
+
+    if (hasToolTunes && !titled) {
       items.push(...toolTunes);
     }
 
@@ -601,7 +613,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     // The current type alone is not a choice.
-    if (convertToItems.some(item => !('isActive' in item && item.isActive === true))) {
+    const hasConvert = convertToItems.some(item => !('isActive' in item && item.isActive === true));
+
+    if (hasConvert) {
       items.push({
         icon: IconReplace,
         name: 'convert-to',
@@ -612,12 +626,15 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           width: '320px',
         },
       });
-      items.push({
-        type: PopoverItemType.Separator,
-      });
-    } else if (hasToolTunes) {
-      // Formatting still needs a boundary before the actions when the block
-      // converts to nothing (image, table, file, audio).
+    }
+
+    if (titled && hasToolTunes) {
+      items.push(...toolTunes);
+    }
+
+    // Formatting still needs a boundary before the actions when the block
+    // converts to nothing (image, table, file, audio).
+    if (hasConvert || hasToolTunes) {
       items.push({
         type: PopoverItemType.Separator,
       });
@@ -655,20 +672,36 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       },
     };
 
+    // A block standing for something else (a page) copies that thing's link.
+    // Decided from the declaration alone: asking for the link calls the host's
+    // href, which must not run for a page this user cannot open.
+    const actionTunes = !hasMultipleBlocksSelected && currentBlock.tool?.hasCopyAsLink
+      ? commonTunes.map((tune) => 'name' in tune && tune.name === 'copy-link'
+        ? { ...tune, title: this.Blok.I18n.t('blockSettings.copyPageLink') } as MenuConfigItem
+        : tune)
+      : commonTunes;
+
     // Keep custom actions in registration order, with deletion isolated last.
     if (!hasMultipleBlocksSelected) {
-      const deleteIndex = commonTunes.findIndex(
+      const deleteIndex = actionTunes.findIndex(
         (tune) => 'name' in tune && tune.name === 'delete'
       );
 
       if (deleteIndex === -1) {
-        items.push(...commonTunes);
+        items.push(...actionTunes);
+      } else if (blockMenu?.trash === true) {
+        // Trashing is an ordinary action beside Duplicate, as in Notion's page menu.
+        items.push(
+          ...actionTunes.filter((_tune, index) => index !== deleteIndex),
+          duplicateItem,
+          { ...actionTunes[deleteIndex], title: this.Blok.I18n.t('blockSettings.moveToTrash') } as MenuConfigItem
+        );
       } else {
         items.push(
-          ...commonTunes.filter((_tune, index) => index !== deleteIndex),
+          ...actionTunes.filter((_tune, index) => index !== deleteIndex),
           duplicateItem,
           { type: PopoverItemType.Separator },
-          commonTunes[deleteIndex]
+          actionTunes[deleteIndex]
         );
       }
     } else {
@@ -717,6 +750,24 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     });
 
     return items;
+  }
+
+  /**
+   * The section label heading a titled block menu: the tool's own name.
+   * @param block - the block the menu is for
+   */
+  private createMenuTitle(block: Block): HTMLElement {
+    const element = document.createElement('div');
+    const entry = block.tool.toolbox?.[0];
+
+    // Same look as the toolbox section labels. Presentation, not separator:
+    // the menu's list may only own items and groups.
+    element.className = 'pl-2 pr-3 pt-0.5 pb-1 text-xs font-medium text-menu-section-label cursor-default select-none';
+    element.setAttribute('role', 'presentation');
+    element.setAttribute('data-blok-testid', 'block-menu-title');
+    element.textContent = entry === undefined ? block.name : translateToolTitle(this.Blok.I18n, entry, block.name);
+
+    return element;
   }
 
   /**

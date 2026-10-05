@@ -175,7 +175,7 @@ const savedData: Record<string, Record<string, unknown>> = {
   'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it', pageId: 'row-page' }))
     .save(contentElement('')),
 
-  page: new Page(options({ pageId: 'p1', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } })).save(),
+  page: new Page(options({ pageId: 'p1', textColor: 'red', backgroundColor: 'blue', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } })).save(),
   'page-link': new PageLink(options({ pageId: 'p1' })).save(),
 
   divider: new Divider(options({})).save(),
@@ -292,13 +292,13 @@ describe('blokDocumentSchema', () => {
   });
 
   describe('page', () => {
-    it('describes only the saved pointer id, not legacy cached metadata', () => {
+    it('describes the saved pointer id and block color, not legacy cached metadata', () => {
       const page = defs.page;
 
-      expect(savedData.page).toEqual({ pageId: 'p1' });
+      expect(savedData.page).toEqual({ pageId: 'p1', textColor: 'red', backgroundColor: 'blue' });
       expect(page.required).toEqual(['pageId']);
       expect(page.additionalProperties).toBe(false);
-      expect(Object.keys(page.properties ?? {})).toEqual(['pageId']);
+      expect(Object.keys(page.properties ?? {})).toEqual(['pageId', 'textColor', 'backgroundColor']);
       expect(page.description).toMatch(/separate document/);
     });
 

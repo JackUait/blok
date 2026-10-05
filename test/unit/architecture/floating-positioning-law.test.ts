@@ -95,6 +95,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/popover/popover-desktop.ts': 'Shared root implementation registered in ROOT_SURFACE_CONTRACTS.',
   'components/utils/tooltip.ts': 'Dismiss-on-scroll fixed surface registered in ROOT_SURFACE_CONTRACTS.',
   'tools/page/hover-preview.ts': 'Shared-placement page preview card registered in ROOT_SURFACE_CONTRACTS.',
+  'tools/page/index.ts': 'Mount owner for the tracked emoji-picker root surface (Edit icon).',
   'tools/audio/cover-picker.ts': 'Shared anchored root surface registered in ROOT_SURFACE_CONTRACTS.',
   'tools/audio/index.ts': 'Transient styleless download anchor clicked and removed synchronously.',
   'tools/callout/index.ts': 'Mount owner for the tracked emoji-picker root surface.',

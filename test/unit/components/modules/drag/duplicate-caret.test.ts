@@ -201,6 +201,25 @@ describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
     });
   });
 
+  it('duplicates a page as a new page when its tool gives duplicate data', async () => {
+    const dup = createBlockStub('dup-1');
+    const { dragManager, blocks, tools, insert } = createSetup(dup);
+
+    Object.assign(blocks[0], {
+      name: 'page',
+      save: vi.fn().mockResolvedValue({ data: { pageId: 'p1' }, tunes: {} }),
+    });
+    tools.blockTools.set('page', {
+      duplicateData: (data: { pageId: string }) => ({ pageId: `${data.pageId}-copy` }),
+      copyAsLink: () => ({ url: 'https://x.test/p1', text: 'Page' }),
+    });
+
+    await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert.mock.calls[0][0]).toMatchObject({ tool: 'page', data: { pageId: 'p1-copy' } });
+  });
+
   it('duplicates a custom block with its ordinary data when copyAsLink throws', async () => {
     class CustomTool {
       public static copyAsLink(): never {

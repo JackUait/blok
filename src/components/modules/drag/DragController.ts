@@ -112,7 +112,14 @@ export class DragController extends Module {
       this.Blok.YjsManager,
       this.Blok.BlockSelection,
       (toolName, data) => {
-        const link = this.Blok.Tools.blockTools.get(toolName)?.copyAsLink(data);
+        const tool = this.Blok.Tools.blockTools.get(toolName);
+        const copy = tool?.duplicateData?.(data);
+
+        if (copy !== undefined) {
+          return { tool: toolName, data: copy };
+        }
+
+        const link = tool?.copyAsLink(data);
 
         if (link === undefined) {
           return null;

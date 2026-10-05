@@ -621,6 +621,8 @@ export const blokDocumentSchema = {
       additionalProperties: false,
       properties: {
         pageId: { type: 'string', description: 'Id of the separate document that holds the page.' },
+        textColor: { type: 'string', description: 'Text color preset name, e.g. "red".' },
+        backgroundColor: { type: 'string', description: 'Background color preset name.' },
       },
     },
 

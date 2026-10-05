@@ -44,7 +44,7 @@ describe('page safe outputs', () => {
     expect(convertBlockDataToString(legacyPageData, PageTool.conversionConfig)).toBe('Page');
   });
 
-  it('declares only the ID in the saved page schema', () => {
-    expect(Object.keys(blokDocumentSchema.$defs.page.properties)).toEqual(['pageId']);
+  it('declares the ID and block color, never page metadata, in the saved page schema', () => {
+    expect(Object.keys(blokDocumentSchema.$defs.page.properties)).toEqual(['pageId', 'textColor', 'backgroundColor']);
   });
 });

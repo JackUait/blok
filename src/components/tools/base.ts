@@ -109,6 +109,16 @@ export enum InternalBlockToolSettings {
    */
   CopyAsLink = 'copyAsLink',
   /**
+   * The data a duplicate gets instead of a copy or a link (a page copied by
+   * its host). Duplicate and Alt-drag only; copy and paste still use the link.
+   */
+  DuplicateData = 'duplicateData',
+  /**
+   * The block menu layout: `{ titled, trash }`. Titled heads the menu with the
+   * tool's name and puts Turn into first; trash reads Delete as "Move to Trash".
+   */
+  BlockMenu = 'blockMenu',
+  /**
    * A copy of this Tool's block rebuilds its children from its own data (a
    * table's cells), so Duplicate and Alt-drag must not copy them again
    */

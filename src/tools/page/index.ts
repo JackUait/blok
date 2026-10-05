@@ -8,11 +8,26 @@ import type {
   ToolboxConfig,
 } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconLinkExternal, IconLock, IconPage } from '../../components/icons';
+import {
+  IconArrowDiagonal,
+  IconEmojiSmile,
+  IconLock,
+  IconPage,
+  IconPaintRoller,
+  IconPencil,
+  IconSplitView,
+} from '../../components/icons';
+import { buildBlockColorTunes, type BlockColorData } from '../../components/shared/block-color';
+import { COLOR_PRESETS, colorVarName } from '../../components/shared/color-presets';
+import { getUserOS } from '../../components/utils/browser';
+import { startInlineRename } from '../../components/utils/inline-rename';
+import { beautifyShortcut } from '../../components/utils/string';
+import { EmojiPicker } from '../callout/emoji-picker';
 import { openModalDialog, type ModalDialogHandle } from '../../components/utils/modal-dialog';
 import { CSS } from '../../components/utils/notifier/draw';
 import { twJoin } from '../../components/utils/tw';
-import type { MenuConfig } from '../../../types/tools/menu-config';
+import type { MenuConfig, MenuConfigItem } from '../../../types/tools/menu-config';
+import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { generateBlockId } from '../../components/utils/id-generator';
 import { PLAINTEXT } from '../../components/utils/sanitizer';
 import { safeHref } from '../../components/utils/sanitize-url';
@@ -37,6 +52,25 @@ type PageState = 'unresolved' | 'normal' | 'untitled' | 'missing' | 'no-access';
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const COLOR_NAMES = new Set(COLOR_PRESETS.map((preset) => preset.name));
+
+/** Only a preset name reaches a style: a raw value could carry CSS. */
+const readColors = (data: Partial<PageData> | undefined): BlockColorData => {
+  const colors: BlockColorData = {};
+
+  if (typeof data?.textColor === 'string' && COLOR_NAMES.has(data.textColor)) {
+    colors.textColor = data.textColor;
+  }
+  if (typeof data?.backgroundColor === 'string' && COLOR_NAMES.has(data.backgroundColor)) {
+    colors.backgroundColor = data.backgroundColor;
+  }
+
+  return colors;
+};
+
+const isRenameShortcut = (event: KeyboardEvent): boolean =>
+  event.code === 'KeyR' && event.shiftKey && !event.altKey && (event.metaKey || event.ctrlKey);
+
 const readIcon = (value: unknown): PageIcon | undefined => {
   if (!isRecord(value)) {
     return undefined;
@@ -56,7 +90,7 @@ export class PageTool implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: PageConfig;
-  private data: { pageId: string };
+  private data: { pageId: string } & BlockColorData;
   /** Minted here: this instance is the user's or the API's new page. */
   private readonly isNew: boolean;
   private readonly opensWhenCreated: boolean;
@@ -68,6 +102,9 @@ export class PageTool implements BlockTool {
   private detached = false;
   private unsubscribe: (() => void) | undefined;
   private accessDialog: ModalDialogHandle | null = null;
+  private readOnly: boolean;
+  private renaming = false;
+  private emojiPicker: EmojiPicker | null = null;
   private readonly preview = new PageHoverPreview(() => this.previewContent(), () => this.previewBody());
 
   constructor(options: BlockToolConstructorOptions<PageData, PageConfig>) {
@@ -83,7 +120,34 @@ export class PageTool implements BlockTool {
     this.isNew = pageId === '' && !options.readOnly && (origin === 'user' || origin === 'api');
     this.opensWhenCreated = origin === 'user';
     this.isProbe = origin === 'probe';
-    this.data = { pageId: this.isNew ? generateBlockId() : pageId };
+    this.data = { pageId: this.isNew ? generateBlockId() : pageId, ...readColors(options.data) };
+    this.readOnly = Boolean(options.readOnly);
+  }
+
+  /** The block menu is a "Page" section with Turn into first, and Delete reads "Move to Trash". */
+  public static get blockMenu(): { titled: boolean; trash: boolean } {
+    return { titled: true, trash: true };
+  }
+
+  /**
+   * Duplicate and Alt-drag copy the page itself when the host can: the copy
+   * points at a new id, and the host fills that page from the source.
+   * Null without the hook, so the copy stays a link.
+   */
+  public static duplicateData(data: PageData, config: PageConfig): PageData | null {
+    const duplicate = config.duplicate;
+    const sourcePageId = typeof data.pageId === 'string' ? data.pageId : '';
+
+    if (duplicate === undefined || sourcePageId === '') {
+      return null;
+    }
+
+    const pageId = generateBlockId();
+
+    // The copy shows "Page not found" until the host notifies that it exists.
+    new Promise<void>((resolve) => resolve(duplicate({ sourcePageId, pageId }))).catch(() => undefined);
+
+    return { pageId, ...readColors(data) };
   }
 
   public static get toolbox(): ToolboxConfig {
@@ -156,6 +220,7 @@ export class PageTool implements BlockTool {
     }
     this.started = true;
     this.listen();
+    document.addEventListener('keydown', this.handleDocumentKeydown);
 
     if (this.isNew) {
       void this.createPage();
@@ -167,7 +232,7 @@ export class PageTool implements BlockTool {
   }
 
   public save(): PageData {
-    return { pageId: this.data.pageId };
+    return { ...this.data };
   }
 
   /** A block failing this is dropped on save, so only an empty id fails. */
@@ -188,7 +253,7 @@ export class PageTool implements BlockTool {
       ++this.requestVersion;
       this.info = undefined;
     }
-    this.data = { pageId };
+    this.data = { pageId, ...readColors(data) };
     if (moved && this.started) {
       this.listen();
       void this.refresh();
@@ -199,14 +264,20 @@ export class PageTool implements BlockTool {
     return true;
   }
 
-  public setReadOnly(_state: boolean): void {}
+  public setReadOnly(state: boolean): void {
+    this.readOnly = state;
+  }
 
   public removed(): void {
     this.detached = true;
     ++this.requestVersion;
     this.stopListening();
+    document.removeEventListener('keydown', this.handleDocumentKeydown);
     this.preview.hide();
     this.accessDialog?.close();
+    this.emojiPicker?.close();
+    this.emojiPicker?.getElement().remove();
+    this.emojiPicker = null;
   }
 
   public destroy(): void {
@@ -214,25 +285,68 @@ export class PageTool implements BlockTool {
   }
 
   public renderSettings(): MenuConfig {
-    const link = this.isNavigable ? PageTool.copyAsLink(this.data, this.config) : null;
+    const { t } = this.api.i18n;
+    const navigable = this.isNavigable;
+    const edits: MenuConfigItem[] = this.colorTunes();
+    const opens: MenuConfigItem[] = [];
 
-    if (link === null) {
-      return [];
+    if (navigable && this.config.setIcon !== undefined) {
+      edits.push({
+        icon: IconEmojiSmile,
+        title: t('tools.page.editIcon'),
+        name: 'page-edit-icon',
+        closeOnActivate: true,
+        onActivate: (): void => this.openIconPicker(),
+      });
+    }
+    if (navigable && this.config.rename !== undefined) {
+      edits.push({
+        icon: IconPencil,
+        title: t('tools.page.rename'),
+        name: 'page-rename',
+        secondaryLabel: beautifyShortcut('CMD+SHIFT+R'),
+        closeOnActivate: true,
+        onActivate: (): void => this.startRename(),
+      });
     }
 
-    return [
-      {
-        icon: IconLinkExternal,
-        title: this.api.i18n.t('tools.file.previewOpenInNewTab'),
+    const link = navigable ? PageTool.copyAsLink(this.save(), this.config) : null;
+
+    if (link !== null) {
+      opens.push({
+        icon: IconArrowDiagonal,
+        title: t('tools.file.previewOpenInNewTab'),
         name: 'page-open-new-tab',
+        secondaryLabel: beautifyShortcut('CMD+SHIFT+ENTER'),
         closeOnActivate: true,
         onActivate: (): void => {
           if (this.isNavigable) {
             window.open(link.url, '_blank', 'noopener,noreferrer');
           }
         },
-      },
-    ];
+      });
+    }
+
+    const peek = this.config.peek;
+
+    if (navigable && peek !== undefined) {
+      const click = t('blockSettings.clickAction');
+
+      opens.push({
+        icon: IconSplitView,
+        title: t('tools.page.openInSidePeek'),
+        name: 'page-open-side-peek',
+        secondaryLabel: getUserOS().mac ? `⌥${click}` : `Alt+${click}`,
+        closeOnActivate: true,
+        onActivate: (): void => {
+          if (this.isNavigable) {
+            peek(this.data.pageId, {});
+          }
+        },
+      });
+    }
+
+    return opens.length === 0 ? edits : [...edits, { type: PopoverItemType.Separator }, ...opens];
   }
 
   /** Enter on the selected block opens the page or explains denied access. */
@@ -244,6 +358,18 @@ export class PageTool implements BlockTool {
     }
     if (!this.isNavigable) {
       return false;
+    }
+
+    // Cmd/Ctrl+Shift+Enter is "Open in new tab" from the block menu, so it
+    // wins over the host's own open.
+    const newTab = event.shiftKey && (event.metaKey || event.ctrlKey)
+      ? PageTool.copyAsLink(this.save(), this.config)
+      : null;
+
+    if (newTab !== null) {
+      window.open(newTab.url, '_blank', 'noopener,noreferrer');
+
+      return true;
     }
 
     const open = this.config.open;
@@ -269,6 +395,111 @@ export class PageTool implements BlockTool {
     link.click();
 
     return true;
+  }
+
+  private colorTunes(): MenuConfigItem[] {
+    return (buildBlockColorTunes({
+      data: this.data,
+      i18n: this.api.i18n,
+      onPick: (field, value): void => {
+        const { [field]: _old, ...rest } = this.data;
+
+        this.data = value === undefined ? rest : { ...rest, [field]: value };
+        this.renderView();
+        this.block.dispatchChange();
+      },
+    }) as MenuConfigItem[]).map((item) => ({ ...item, icon: IconPaintRoller }) as MenuConfigItem);
+  }
+
+  private startRename(): void {
+    const rename = this.config.rename;
+    const link = this.root?.querySelector('a');
+
+    if (rename === undefined || this.renaming || !this.isNavigable || !(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    const { pageId } = this.data;
+    const current = this.info?.title ?? '';
+
+    this.preview.hide();
+    this.renaming = true;
+    startInlineRename({
+      target: link,
+      currentValue: current,
+      label: this.api.i18n.t('tools.page.rename'),
+      configureInput: (input) => {
+        input.setAttribute('class', `${PAGE_LINK_CLASSES} ${PAGE_TITLE_CLASSES} bg-transparent outline-none`);
+        input.setAttribute('placeholder', this.api.i18n.t('tools.page.untitled'));
+        input.setAttribute(DATA_ATTR.testid, 'page-rename-input');
+        // The field's own keys (arrows, Escape, Backspace) must not move blocks.
+        input.setAttribute(DATA_ATTR.keyboardOwner, '');
+      },
+      buildRestored: () => {
+        this.renaming = false;
+
+        return this.buildLink();
+      },
+      onCancel: () => {
+        this.renaming = false;
+      },
+      onCommit: (title) => {
+        this.renaming = false;
+        if (title === current || pageId !== this.data.pageId || this.detached) {
+          return;
+        }
+        this.info = { ...this.info, title };
+        this.renderView();
+        void this.saveToHost(() => rename(pageId, title));
+      },
+    });
+  }
+
+  /**
+   * Shows the edit at once, then asks the host again: a failed save brings
+   * back the host's value. The hook runs now, so a throw is caught too.
+   */
+  private async saveToHost(write: () => void | Promise<void>): Promise<void> {
+    try {
+      await new Promise<void>((resolve) => resolve(write()));
+    } catch {
+      // The refresh below shows what the host kept.
+    }
+    await this.refresh(this.info);
+  }
+
+  private openIconPicker(): void {
+    const setIcon = this.config.setIcon;
+    const anchor = this.root?.querySelector<HTMLElement>(`[${DATA_ATTR.testid}="page-icon"]`);
+
+    if (setIcon === undefined || !this.isNavigable || anchor === null || anchor === undefined) {
+      return;
+    }
+
+    const { pageId } = this.data;
+    const save = (icon: PageIcon | null): void => {
+      if (pageId !== this.data.pageId || this.detached) {
+        return;
+      }
+      this.info = { ...this.info, icon: icon ?? undefined };
+      this.renderView();
+      void this.saveToHost(() => setIcon(pageId, icon));
+    };
+    const handlers = {
+      onSelect: (native: string): void => save({ type: 'emoji', value: native }),
+      onRemove: (): void => save(null),
+    };
+
+    if (this.emojiPicker === null) {
+      this.emojiPicker = new EmojiPicker({ ...handlers, i18n: this.api.i18n, locale: this.api.i18n.getLocale() });
+    }
+
+    const element = this.emojiPicker.getElement();
+
+    if (!element.isConnected) {
+      document.body.appendChild(element);
+    }
+    void this.emojiPicker.open(anchor, undefined, handlers);
   }
 
   private async createPage(): Promise<void> {
@@ -328,7 +559,8 @@ export class PageTool implements BlockTool {
     this.unsubscribe = undefined;
   }
 
-  private async refresh(fallback: null | undefined = undefined): Promise<void> {
+  /** `fallback` is shown while the host answers; a saved edit passes what it just showed. */
+  private async refresh(fallback: PageInfo | null | undefined = undefined): Promise<void> {
     const pageId = this.data.pageId;
     const version = ++this.requestVersion;
 
@@ -371,6 +603,10 @@ export class PageTool implements BlockTool {
   }
 
   private renderView(): void {
+    // The rename field stands where the link was; it rebuilds the link itself.
+    if (this.renaming) {
+      return;
+    }
     if (this.state !== 'no-access') {
       this.accessDialog?.close();
     }
@@ -443,12 +679,25 @@ export class PageTool implements BlockTool {
       link.setAttribute('aria-disabled', 'true');
     }
 
+    this.paintColor(link);
     link.addEventListener('mousedown', this.handleMouseDown);
     link.addEventListener('click', this.handleClick);
     link.append(this.buildIcon(), this.buildTitle(state));
     this.preview.attach(link);
 
     return link;
+  }
+
+  /** Important: the link's own ink class is important too, or it would win. */
+  private paintColor(link: HTMLElement): void {
+    const { textColor, backgroundColor } = this.data;
+
+    if (textColor !== undefined) {
+      link.style.setProperty('color', colorVarName(textColor, 'text'), 'important');
+    }
+    if (backgroundColor !== undefined) {
+      link.style.setProperty('background-color', colorVarName(backgroundColor, 'bg'));
+    }
   }
 
   private buildIcon(): HTMLElement {
@@ -548,6 +797,15 @@ export class PageTool implements BlockTool {
     }
   };
 
+  private readonly handleDocumentKeydown = (event: KeyboardEvent): void => {
+    if (!isRenameShortcut(event) || this.readOnly || !this.block.selected || this.config.rename === undefined || !this.isNavigable) {
+      return;
+    }
+    // Ahead of the browser's hard reload on the same keys.
+    event.preventDefault();
+    this.startRename();
+  };
+
   private readonly handleClick = (event: MouseEvent): void => {
     if (this.state === 'no-access') {
       event.preventDefault();
@@ -559,6 +817,16 @@ export class PageTool implements BlockTool {
     }
     if (!this.isNavigable) {
       event.preventDefault();
+
+      return;
+    }
+
+    const peek = this.config.peek;
+
+    // Alt+click would download the link; the host's side peek replaces that.
+    if (peek !== undefined && event.button === 0 && event.altKey && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
+      event.preventDefault();
+      peek(this.data.pageId, { event });
 
       return;
     }

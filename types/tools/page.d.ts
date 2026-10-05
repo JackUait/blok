@@ -19,6 +19,10 @@ export interface PageCache {
 export interface PageData extends BlockToolData {
   /** Id of the page this block points at. Blok mints it for a new page. */
   pageId: string;
+  /** Block text color preset name, e.g. `'red'`. Set from the block menu's Color. */
+  textColor?: string;
+  /** Block background color preset name. Set from the block menu's Color. */
+  backgroundColor?: string;
   /** @deprecated Legacy input only. New saves omit this field. */
   cache?: PageCache;
 }
@@ -81,6 +85,32 @@ export interface PageConfig {
    */
   create?(init: { pageId: string }): void | Promise<void>;
   /**
+   * Saves a new title. Called by the block menu's Rename and Cmd/Ctrl+Shift+R
+   * on the selected block. Without it, Rename is not offered. Blok shows the
+   * new title at once, then asks `resolve` again; a rejection brings back the
+   * host's title.
+   */
+  rename?(pageId: string, title: string): void | Promise<void>;
+  /**
+   * Saves a new icon picked in the block menu's Edit icon. `null` removes it.
+   * Without it, Edit icon is not offered. Settles like `rename`.
+   */
+  setIcon?(pageId: string, icon: PageIcon | null): void | Promise<void>;
+  /**
+   * Opens the page in a side panel. Called by the block menu's
+   * "Open in side peek" and by Alt+click on the block. Without it, the item
+   * is not offered and Alt+click keeps the browser's meaning.
+   */
+  peek?(pageId: string, ctx: { event?: MouseEvent }): void;
+  /**
+   * Copies a page for Duplicate (Cmd/Ctrl+D) and Alt-drag. Blok mints the new
+   * `pageId`, inserts a page block pointing at it, and calls this to fill it
+   * from `sourcePageId`. The copy shows "Page not found" until `subscribe`
+   * reports the page. Without it, a duplicate is a link to the same page.
+   * Copy and paste always carry a link.
+   */
+  duplicate?(init: { sourcePageId: string; pageId: string }): void | Promise<void>;
+  /**
    * The page's opening blocks, asked for when a hover on the block starts.
    * The hover preview shows the first few as small lines of text under the
    * title, like Notion. Without it the preview shows only icon, path and title.
@@ -125,6 +155,12 @@ export declare class Page implements BlockTool {
    * Null without `href`.
    */
   static copyAsLink(data: PageData, config: PageConfig): { url: string; text: string } | null;
+
+  /** A titled "Page" menu with Turn into first; Delete reads "Move to Trash". */
+  static blockMenu?: { titled: boolean; trash: boolean };
+
+  /** A new page id for Duplicate and Alt-drag. Null without `config.duplicate`. */
+  static duplicateData(data: PageData, config: PageConfig): PageData | null;
 
   constructor(options: PageConstructorOptions);
 

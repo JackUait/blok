@@ -158,11 +158,51 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * How the block menu is laid out: `titled` heads it with the tool's name
+   * and puts Turn into first; `trash` reads Delete as "Move to Trash".
+   */
+  public get blockMenu(): { titled: boolean; trash: boolean } {
+    const menu: unknown = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.BlockMenu];
+    const read = (key: 'titled' | 'trash'): boolean =>
+      typeof menu === 'object' && menu !== null && (menu as Record<string, unknown>)[key] === true;
+
+    return { titled: read('titled'), trash: read('trash') };
+  }
+
+  /**
+   * The data Duplicate and Alt-drag insert instead of a copy or a link.
+   * Undefined means no hook, a throwing hook or a null answer.
+   * @param data - the block's saved data
+   */
+  public duplicateData(data: BlockToolData): BlockToolData | undefined {
+    const duplicateData = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.DuplicateData];
+
+    if (typeof duplicateData !== 'function') {
+      return undefined;
+    }
+
+    try {
+      const copy: unknown = duplicateData.call(this.constructable, data, this.settings);
+
+      return typeof copy === 'object' && copy !== null && !Array.isArray(copy) ? copy as BlockToolData : undefined;
+    } catch (error) {
+      log(`Tool «${this.name}» duplicateData() threw; copying the block as usual.`, 'warn', error);
+
+      return undefined;
+    }
+  }
+
+  /**
    * True when a copy of the Tool's block rebuilds its children from its own
    * data, so Duplicate and Alt-drag leave them out.
    */
   public get copiesOwnChildren(): boolean {
     return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.CopiesOwnChildren] === true;
+  }
+
+  /** True when the Tool declares `copyAsLink`, without calling it. */
+  public get hasCopyAsLink(): boolean {
+    return typeof (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.CopyAsLink] === 'function';
   }
 
   /**

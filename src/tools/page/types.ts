@@ -15,6 +15,10 @@ export interface PageCache {
  */
 export interface PageData extends BlockToolData {
   pageId: string;
+  /** Block text color preset, e.g. 'red'. Lives in the parent document, not the page. */
+  textColor?: string;
+  /** Block background color preset. */
+  backgroundColor?: string;
   /** @deprecated Legacy input only. New saves omit this field. */
   cache?: PageCache;
 }
@@ -53,6 +57,14 @@ export interface PageConfig {
   create?(init: { pageId: string }): void | Promise<void>;
   /** Calls `onChange` for local-tab and remote metadata or access changes. */
   subscribe?(pageId: string, onChange: () => void): (() => void) | void;
+  /** Saves a new title from the block menu's Rename. */
+  rename?(pageId: string, title: string): void | Promise<void>;
+  /** Saves a new icon from the block menu's Edit icon; `null` removes it. */
+  setIcon?(pageId: string, icon: PageIcon | null): void | Promise<void>;
+  /** Opens the page in a side panel, from the menu or Alt+click. */
+  peek?(pageId: string, ctx: { event?: MouseEvent }): void;
+  /** Copies `sourcePageId` into a new page with the id Blok minted, for Duplicate and Alt-drag. */
+  duplicate?(init: { sourcePageId: string; pageId: string }): void | Promise<void>;
   /** The page's opening blocks, for the hover preview. */
   preview?(pageId: string): OutputBlockData[] | null | undefined | Promise<OutputBlockData[] | null | undefined>;
 }

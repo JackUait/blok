@@ -365,8 +365,9 @@ describe('Page tool', () => {
 
       await renderResolved(tool);
       failHref = true;
+      const settings = tool.renderSettings() as Array<{ name?: string }>;
 
-      expect(tool.renderSettings()).toEqual([]);
+      expect(settings.some((item) => item.name === 'page-open-new-tab')).toBe(false);
     });
 
     it('does not offer navigation for a missing page or unsafe URL', async () => {

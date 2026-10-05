@@ -320,6 +320,25 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   copyAsLink?(data: BlockToolData, config: ToolConfig): { url: string; text: string } | null;
 
   /**
+   * The data Duplicate and Alt-drag insert for this Tool's block, instead of
+   * a copy or the `copyAsLink` link — for example a page the host copies to
+   * a new id. Return null to fall back. Copy and paste never call it.
+   *
+   * @param data - the block's saved data
+   * @param config - the Tool's config
+   */
+  duplicateData?(data: BlockToolData, config: ToolConfig): BlockToolData | null;
+
+  /**
+   * How this Tool's block menu is laid out.
+   * `titled` heads the menu with the Tool's toolbox title and puts Turn into
+   * before the Tool's own items, like Notion's page menu.
+   * `trash` reads Delete as "Move to Trash", for a block that stands for
+   * something the host keeps, like a page.
+   */
+  blockMenu?: { titled?: boolean; trash?: boolean };
+
+  /**
    * Set to true when Enter on this container's empty LAST child must create the
    * new line INSIDE the container instead of leaving it.
    *

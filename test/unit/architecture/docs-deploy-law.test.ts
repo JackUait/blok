@@ -83,7 +83,8 @@ const RELEASE_GATED_JOBS: Record<string, string> = {
     '`skipped` so content still ships.',
   snapshot:
     'Builds the root and archive snapshots of a stable release and attaches them to that ' +
-    'release, which is where the build job downloads them from. A CI run has no release to ' +
+    'release, which is where the build job downloads them from. It runs for the release event ' +
+    'and for the release_tag dispatch that release-server.yml sends. A CI run has no release to ' +
     'attach to; it rebuilds only /next/ and reuses the published snapshots. The build job ' +
     'accepts `skipped` so content still ships.',
 };
@@ -173,7 +174,8 @@ describe('docs deploy law — reachable without a release', () => {
 
   it('gates only the exempted jobs on a release event', () => {
     const releaseGated = Object.entries(workflow.jobs)
-      .filter(([, job]) => job.if?.includes("github.event_name == 'release'"))
+      // release-server.yml dispatches releases, so a gate may key on the tag alone.
+      .filter(([, job]) => /github\.event_name == 'release'|github\.event\.release\.|inputs\.release_tag/.test(job.if ?? ''))
       .map(([id]) => id)
       .sort();
 

@@ -23,9 +23,11 @@ permissions:
   contents: read
 
 # Release runs get their own group: a main push cancelling one mid-snapshot
-# leaves its assets missing, and every later build fails on them.
+# leaves its assets missing, and every later build fails on them. Real
+# releases arrive as a release_tag dispatch from release-server.yml, so the
+# group keys on the tag, not on the event name.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'release' && github.event.release.tag_name || 'deploy' }}
+  group: ${{ github.workflow }}-${{ github.event.release.tag_name || inputs.release_tag || 'deploy' }}
   cancel-in-progress: true
 
 jobs:
@@ -90,11 +92,17 @@ jobs:
 
   # Builds this release's root and archive snapshots and attaches them to the
   # release, where `build` downloads them. Prereleases never become the root.
+  # release-server.yml publishes with GITHUB_TOKEN, which starts no `release`
+  # run, then dispatches every v* tag (betas too) with release_tag. A dispatch
+  # has no prerelease flag, so the tag's `-` is what keeps betas out.
   snapshot:
     name: Snapshot Release Docs
     runs-on: ubuntu-latest
     needs: [docs-tests, verify-release]
-    if: github.event_name == 'release' && !github.event.release.prerelease
+    if: >-
+      (github.event.release.tag_name || inputs.release_tag) != ''
+      && !github.event.release.prerelease
+      && !contains(github.event.release.tag_name || inputs.release_tag, '-')
     timeout-minutes: 7
     permissions:
       contents: write
@@ -102,7 +110,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || inputs.release_tag }}
           # The root snapshot is the live site, and its sitemap dates each page
           # from `git log`. A shallow clone collapses every lastmod to one date.
           fetch-depth: 0
@@ -125,7 +133,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
           MINOR: ${{ steps.snapshots.outputs.minor }}
         run: |
           gh release upload "$TAG" docs-root.tgz "docs-v$MINOR.tgz" --clobber

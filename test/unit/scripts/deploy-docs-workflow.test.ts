@@ -28,6 +28,30 @@ const workflow = parse(source) as Workflow;
 const stepNamed = (job: string, name: string) =>
   workflow.jobs[job].steps?.find((step) => step.name === name);
 
+// release-server.yml publishes with GITHUB_TOKEN, which triggers no `release`
+// run, then dispatches this workflow with release_tag. Both paths carry the tag.
+const RELEASE_TAG = 'github.event.release.tag_name || inputs.release_tag';
+
+type Context = { event: { release?: { tag_name: string } }; inputs: { release_tag?: string } };
+
+/** Resolves an `a || b || 'literal'` chain the way GitHub does: first non-empty operand. */
+const firstTruthy = (chain: string, context: Context): string => {
+  for (const operand of chain.split(' || ')) {
+    const values: Record<string, string | undefined> = {
+      'github.event.release.tag_name': context.event.release?.tag_name,
+      'inputs.release_tag': context.inputs.release_tag,
+    };
+    const value = /^'(.*)'$/.exec(operand)?.[1] ?? values[operand];
+
+    if (value) return value;
+  }
+
+  return '';
+};
+
+const mainPush: Context = { event: {}, inputs: {} };
+const dispatched = (tag: string): Context => ({ event: {}, inputs: { release_tag: tag } });
+
 describe('docs deployment workflow', () => {
   it('runs after the CI workflow completes on main', () => {
     expect(workflow.on.workflow_run).toEqual({
@@ -148,17 +172,22 @@ describe('docs deployment workflow', () => {
     const build = job.steps?.find((step) => step.name === 'Build snapshots');
     const upload = job.steps?.find((step) => step.name === 'Attach snapshots to the release');
 
-    expect(job.if).toBe("github.event_name == 'release' && !github.event.release.prerelease");
+    expect(job.if).toBe(
+      `(${RELEASE_TAG}) != ''`
+      + ' && !github.event.release.prerelease'
+      + ` && !contains(${RELEASE_TAG}, '-')`,
+    );
     expect(job.needs).toEqual(['docs-tests', 'verify-release']);
     expect(job.permissions).toEqual({ contents: 'write' });
     expect(job['timeout-minutes']).toBe(7);
     expect(checkout?.with).toMatchObject({
-      ref: '${{ github.event.release.tag_name }}',
+      ref: `\${{ ${RELEASE_TAG} }}`,
       // The root snapshot's sitemap dates pages from `git log`; a shallow tag
       // checkout collapses every lastmod to the release date.
       'fetch-depth': 0,
       'persist-credentials': false,
     });
+    expect(build?.env).toBeUndefined();
     expect(build?.run).toContain('yarn build\n');
     expect(build?.run).toContain('node docs/scripts/build-snapshot.mjs --version "$minor" --base / --out docs-root.tgz');
     expect(build?.run).toContain(
@@ -168,10 +197,29 @@ describe('docs deployment workflow', () => {
     expect(upload?.env).toEqual({
       GH_TOKEN: '${{ github.token }}',
       GH_REPO: '${{ github.repository }}',
-      TAG: '${{ github.event.release.tag_name }}',
+      TAG: `\${{ ${RELEASE_TAG} }}`,
       MINOR: `\${{ steps.${build?.id ?? 'missing'}.outputs.minor }}`,
     });
     expect(upload?.run).toBe('gh release upload "$TAG" docs-root.tgz "docs-v$MINOR.tgz" --clobber\n');
+  });
+
+  it('snapshots a stable release that release-server dispatches', () => {
+    const gate = workflow.jobs.snapshot.if ?? '';
+
+    // Nothing in the gate may require the `release` event itself.
+    expect(gate).not.toContain('github.event_name');
+    expect(gate).toContain(`(${RELEASE_TAG}) != ''`);
+    expect(firstTruthy(RELEASE_TAG, dispatched('v1.16.0'))).toBe('v1.16.0');
+    expect(firstTruthy(RELEASE_TAG, dispatched('v1.16.0')).includes('-')).toBe(false);
+  });
+
+  it('never snapshots a dispatched beta tag', () => {
+    const gate = workflow.jobs.snapshot.if ?? '';
+
+    // release-server dispatches every v* tag; a beta has no `prerelease` flag
+    // on that path, so the tag's `-` is the only thing that keeps it off root.
+    expect(gate).toContain(`!contains(${RELEASE_TAG}, '-')`);
+    expect(firstTruthy(RELEASE_TAG, dispatched('v1.16.0-beta.1')).includes('-')).toBe(true);
   });
 
   it('assembles root, next and archives into one site and publishes that', () => {
@@ -228,9 +276,20 @@ describe('docs deployment workflow', () => {
 
   it('keeps release runs out of the group a main push cancels', () => {
     expect(workflow.concurrency).toEqual({
-      group: "${{ github.workflow }}-${{ github.event_name == 'release' && github.event.release.tag_name || 'deploy' }}",
+      group: `\${{ github.workflow }}-\${{ ${RELEASE_TAG} || 'deploy' }}`,
       'cancel-in-progress': true,
     });
+  });
+
+  it('gives a dispatched release its own concurrency group, apart from main pushes', () => {
+    const group = workflow.concurrency?.group;
+    if (typeof group !== 'string') throw new Error('deploy-docs has no concurrency group');
+
+    const chain = /-\$\{\{ (.+) \}\}$/.exec(group)?.[1] ?? '';
+
+    expect(firstTruthy(chain, mainPush)).toBe('deploy');
+    expect(firstTruthy(chain, dispatched('v1.16.0'))).toBe('v1.16.0');
+    expect(firstTruthy(chain, { event: { release: { tag_name: 'v1.16.0' } }, inputs: {} })).toBe('v1.16.0');
   });
 
   // Build and dependency scripts run arbitrary package code; a token in their

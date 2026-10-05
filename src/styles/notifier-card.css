@@ -15,6 +15,26 @@
   --blok-toast-peek-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 4px 12px rgb(0 0 0 / 0.25);
 
   width: max-content;
+  /* One shared cell: a leaving card stays where it was while the next card fills in under it. */
+  display: grid;
+  justify-items: center;
+  align-items: end;
+}
+
+[data-blok-interface='notifier'][data-blok-position$='left']:has(> [data-blok-toast='card']) {
+  justify-items: start;
+}
+
+[data-blok-interface='notifier'][data-blok-position$='right']:has(> [data-blok-toast='card']) {
+  justify-items: end;
+}
+
+[data-blok-interface='notifier'][data-blok-position^='top']:has(> [data-blok-toast='card']) {
+  align-items: start;
+}
+
+[data-blok-interface='notifier']:has(> [data-blok-toast='card']) > * {
+  grid-area: 1 / 1;
 }
 
 /*

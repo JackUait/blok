@@ -80,27 +80,6 @@ const unqueue = (options: NotifierOptions): boolean => {
 };
 
 /**
- * Pins a leaving card where it is, so the next card can take its place underneath it.
- * Measures first: out of the flow the card would shrink to fit. Places it after
- * `mountNext`: a centred wrapper resizes to the next card and would drag it sideways.
- * @param notify - the leaving card
- * @param mountNext - puts the next card in the wrapper
- */
-const pinInPlace = (notify: HTMLElement, mountNext: () => void): void => {
-  const box = notify.getBoundingClientRect();
-
-  notify.style.setProperty('position', 'absolute');
-  notify.style.setProperty('width', `${box.width}px`);
-  notify.style.setProperty('margin', '0');
-  mountNext();
-
-  const origin = notify.parentElement?.getBoundingClientRect() ?? new DOMRect();
-
-  notify.style.setProperty('left', `${box.left - origin.left}px`);
-  notify.style.setProperty('top', `${box.top - origin.top}px`);
-};
-
-/**
  * A pausable auto-dismiss timer. Instead of a fixed `setTimeout` (which keeps
  * counting while the user reads or interacts — a WCAG 2.2.1 failure), it tracks
  * the wall-clock `deadline` and the `remaining` time so it can be paused on
@@ -265,7 +244,7 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
     if (next !== undefined) {
       const hadFocus = notify.contains(document.activeElement);
 
-      pinInPlace(notify, next.mount);
+      next.mount();
       syncBehind();
       if (hadFocus) {
         frontCard()?.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]')?.focus();

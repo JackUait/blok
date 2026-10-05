@@ -30,8 +30,8 @@ test.beforeAll(() => {
  * Boot an editor whose image tool gives up on the first load error, so a dead
  * link fails at once instead of after five reloads.
  */
-const createBlok = async (page: Page, data: OutputData, failUploads = false): Promise<void> => {
-  await page.evaluate(async ({ holder, initialData, rejectUploads }) => {
+const createBlok = async (page: Page, data: OutputData, failUploads = false, notifierPosition = 'bottom-left', locale = 'en'): Promise<void> => {
+  await page.evaluate(async ({ holder, initialData, rejectUploads, position, language }) => {
     await window.blokInstance?.destroy?.();
     window.blokInstance = undefined;
     document.getElementById(holder)?.remove();
@@ -44,6 +44,8 @@ const createBlok = async (page: Page, data: OutputData, failUploads = false): Pr
     const blok = new window.Blok({
       holder,
       data: initialData,
+      notifierPosition: position,
+      i18n: { locale: language },
       onChange: () => {
         window.__imageFailureChanges = (window.__imageFailureChanges ?? 0) + 1;
       },
@@ -62,7 +64,7 @@ const createBlok = async (page: Page, data: OutputData, failUploads = false): Pr
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, initialData: data, rejectUploads: failUploads });
+  }, { holder: HOLDER_ID, initialData: data, rejectUploads: failUploads, position: notifierPosition, language: locale });
 };
 
 test.describe('image failure notices', () => {
@@ -144,6 +146,33 @@ test.describe('image failure notices', () => {
     await expect(front).toHaveCount(0);
     // A card that rose from the stack must still slide out and leave the page.
     await expect(page.locator('[data-blok-toast="card"]')).toHaveCount(0);
+  });
+
+  test('a closed card leaves from where it was, while the next one fills in', async ({ page }) => {
+    await page.route('https://media.test/**', (route) => route.fulfill({ status: 404, body: '' }));
+    await createBlok(page, { blocks: [ 'one', 'two' ].map((name) => ({
+      id: name,
+      type: 'image',
+      data: { url: `https://media.test/drift-${name}.jpg` },
+    // Russian titles are wider than an empty card, so the next card grows once its text lands.
+    })) }, false, 'bottom-center', 'ru');
+    await expect(page.getByTestId('notifier-container')).toHaveAttribute('data-blok-toast-behind', '1');
+
+    const drift = await page.evaluate(async () => {
+      const card = document.querySelector<HTMLElement>('[data-blok-toast="card"][data-state="open"]');
+      const left = card?.getBoundingClientRect().left ?? 0;
+      const lefts: number[] = [];
+
+      card?.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]')?.click();
+      for (const _frame of [ 1, 2, 3, 4 ]) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        lefts.push(card?.getBoundingClientRect().left ?? 0);
+      }
+
+      return Math.max(...lefts.map((value) => Math.abs(value - left)));
+    });
+
+    expect(drift).toBeLessThan(1);
   });
 
   test('Show on a stacked card scrolls to that card\'s own image', async ({ page }) => {

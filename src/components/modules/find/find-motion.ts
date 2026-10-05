@@ -267,9 +267,9 @@ export interface Hop {
   end(): void;
 }
 
-export const HOP_MS = 560;
+export const HOP_MS = 340;
 /** The bar starts blooming first, so there is a field to land in. */
-export const HOP_DELAY = 120;
+export const HOP_DELAY = 60;
 
 const ARC_LIFT = 70;
 const ARC_SPIN = -14;
@@ -362,7 +362,7 @@ export const hop = (
   const steps = Array.from({ length: ARC_STEPS + 1 }, (_, i) => {
     const progress = i / ARC_STEPS;
 
-    return { progress, travel: 1 - Math.pow(1 - progress, 2.2), lift: Math.sin(progress * Math.PI) };
+    return { progress, travel: 1 - Math.pow(1 - progress, 3.2), lift: Math.sin(progress * Math.PI) };
   });
   // One factor for the whole arc, so a field near the top flattens it instead of clipping it.
   const room = Math.min(1, ...steps

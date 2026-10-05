@@ -562,7 +562,17 @@ describe('hop', () => {
     expect(scaleOf(arc[arc.length - 1])).toBeCloseTo(13 / 16, 3);
   });
 
-  it('lasts long enough to read as a hop', () => {
-    expect(HOP_MS).toBeGreaterThanOrEqual(400);
+  it('is snappy but still reads as a hop', () => {
+    expect(HOP_MS).toBeLessThanOrEqual(360);
+    expect(HOP_MS).toBeGreaterThanOrEqual(250);
+    expect(HOP_DELAY).toBeLessThanOrEqual(60);
+  });
+
+  it('leaves fast and eases into the field', () => {
+    const arc = flyTo(source.rect.top, { input: '16px' });
+    const dxOf = (frame: Keyframe): number => Number(/translate\((\S+)px,/.exec(String(frame.transform))?.[1]);
+    const total = dxOf(arc[arc.length - 1]);
+
+    expect(dxOf(arc[Math.floor(arc.length / 4)]) / total).toBeGreaterThan(0.55);
   });
 });

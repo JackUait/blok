@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getBlokVersion } from '../../../src/components/utils/version';
+import { pageIndex } from '../../../src/view/page-index';
 import { invoke } from '../../../src/view/server-runtime';
 
 describe('server runtime boundary', () => {
@@ -543,6 +544,62 @@ describe('server runtime boundary', () => {
 
       expect(html).toBe('<div><span><span aria-hidden="true"></span><span>Page</span></span></div>');
       expect(markdown.markdown).toBe('Page');
+    });
+  });
+
+  describe('pageIndex', () => {
+    const indexedDocument = {
+      blocks: [
+        { id: 'own', type: 'page', data: { pageId: 'pg-child' } },
+        { id: 'p', type: 'paragraph', data: { text: 'See <a data-blok-page-id="pg-ref">x</a>' } },
+        { id: 'lnk', type: 'page-link', data: { pageId: 'pg-link' } },
+      ],
+    };
+
+    it('indexes the document inside the envelope', async () => {
+      const output = JSON.parse(await invoke('pageIndex', JSON.stringify({ document: indexedDocument }))) as unknown;
+
+      expect(output).toEqual(pageIndex(indexedDocument));
+      expect(output).toEqual({
+        owners: [{ pageId: 'pg-child', sourceBlockId: 'own', order: 0 }],
+        text: [
+          { blockId: 'own', order: 0, text: '' },
+          { blockId: 'p', order: 1, text: 'See Page' },
+          { blockId: 'lnk', order: 2, text: 'Page' },
+        ],
+        references: [
+          { pageId: 'pg-ref', sourceBlockId: 'p', order: 1 },
+          { pageId: 'pg-link', sourceBlockId: 'lnk', order: 2 },
+        ],
+      });
+    });
+
+    /** A Node host calls pageIndex on the raw document; dropping bad blocks first would shift every order. */
+    it('keeps the raw block orders of a document with malformed blocks', async () => {
+      const malformed = {
+        blocks: [
+          null,
+          5,
+          { type: 'paragraph', data: 'x' },
+          { id: 3, type: 'page', data: { pageId: 'z' } },
+          { id: 'ok', type: 'page', data: { pageId: 'y' } },
+          { id: 'p', type: 'paragraph', data: { text: '<a data-blok-page-id="r">x</a>' } },
+        ],
+      };
+      const output = JSON.parse(await invoke('pageIndex', JSON.stringify({ document: malformed }))) as ReturnType<typeof pageIndex>;
+
+      expect(output.owners).toEqual([{ pageId: 'y', sourceBlockId: 'ok', order: 2 }]);
+      expect(output.references).toEqual([{ pageId: 'r', sourceBlockId: 'p', order: 3 }]);
+      expect(output).toEqual(pageIndex(malformed as never));
+    });
+
+    it.each([
+      ['a bare document', { blocks: [] }],
+      ['no blocks array', { document: { blocks: 'x' } }],
+      ['a document that is not a record', { document: [] }],
+    ])('refuses %s', async (_name, input) => {
+      await expect(invoke('pageIndex', JSON.stringify(input)))
+        .rejects.toThrow(new TypeError('pageIndex input requires a `document` with a `blocks` array.'));
     });
   });
 });

@@ -12,6 +12,7 @@ import { blocksToPlainText, blocksToPlainTextWithReport } from './blocks-to-plai
 import { blokDocumentSchema } from './document-schema';
 import type { DocumentTextsOptions } from './document-texts';
 import { extractTexts, injectTexts } from './document-texts';
+import { pageIndex } from './page-index';
 import type { PageIcon, PageInfo } from '../../types/tools/page';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -256,6 +257,23 @@ const parsePagesRequest = (inputJson: string): ParsedDocument & {
 };
 
 /**
+ * The `document` of a page-function envelope, passed on RAW. `readDocument`
+ * drops malformed blocks, which would shift every `order` pageIndex reports and
+ * lose unknown keys from the document remap returns to be stored.
+ * @param input - the parsed envelope
+ * @param operation - names the operation in the error
+ */
+const readRawDocument = (input: Record<string, unknown>, operation: string): LooseOutputData => {
+  const document = input.document;
+
+  if (!isRecord(document) || !Array.isArray(document.blocks)) {
+    throw new TypeError(`${operation} input requires a \`document\` with a \`blocks\` array.`);
+  }
+
+  return document as unknown as LooseOutputData;
+};
+
+/**
  * Wraps its result because the one failure a caller can cause — a translation
  * list that does not match the document — has to cross the host boundary as
  * data. An engine exception would arrive as whatever the host makes of a
@@ -378,6 +396,8 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
     }
     case 'injectTexts':
       return injectTextsResult(inputJson);
+    case 'pageIndex':
+      return JSON.stringify(pageIndex(readRawDocument(parseRecord(inputJson), 'pageIndex')));
     default:
       throw new TypeError(`Unsupported Blok runtime operation: ${operation}`);
   }

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Embed, type EmbedData } from '../../../../src/tools/link/embed';
+import { embedPreviewSvg } from '../../../../src/components/utils/media-preview-art';
 import type { API, BlockToolConstructorOptions, PatternPasteEvent } from '../../../../types';
 
 const createMockAPI = (
@@ -712,6 +713,20 @@ describe('Embed tool — empty state', () => {
     expect(brandOf(root)?.closest('.blok-media-preview')).toBeNull();
   });
 
+  it('keeps the badge on the drawing when the provider changes, and swaps only its logo', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    const badge = brandOf(root);
+    const youtubeLogo = badge?.innerHTML;
+
+    type(root, 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC');
+
+    expect(brandOf(root)).toBe(badge);
+    expect(brandOf(root)?.querySelectorAll('[data-role="embed-brand-mark"]')).toHaveLength(1);
+    expect(brandOf(root)?.querySelector('[data-role="embed-brand-mark"]')?.innerHTML).not.toBe(youtubeLogo);
+  });
+
   it('takes the logo away when the link stops naming a branded service', () => {
     const root = mount(new Embed(createOptions({}, { allowGenericEmbed: true })));
 
@@ -739,6 +754,26 @@ describe('Embed tool — empty state', () => {
 
   describe('scene morph', () => {
     const animate = vi.fn(() => ({ cancel: vi.fn(), finished: Promise.resolve() }));
+    const identity = {
+      a: 1, b: 0, c: 0, d: 1, e: 0, f: 0,
+      inverse: () => identity,
+      multiply: () => identity,
+    };
+    // Tag names of every element in the window's drawing(s), in order.
+    const shapesIn = (root: Element | null | undefined): string[] =>
+      Array.from(root?.querySelectorAll('svg *') ?? []).map((el) => el.tagName);
+    const freshScene = (kind: 'video'): string[] => {
+      const holder = document.createElement('div');
+
+      holder.innerHTML = embedPreviewSvg(kind);
+
+      return shapesIn(holder);
+    };
+    const settle = async (): Promise<void> => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    };
 
     beforeEach(() => {
       Object.defineProperty(SVGElement.prototype, 'getBBox', {
@@ -746,10 +781,12 @@ describe('Embed tool — empty state', () => {
         value: () => ({ x: 0, y: 0, width: 10, height: 10 }),
       });
       Object.defineProperty(Element.prototype, 'animate', { configurable: true, value: animate });
+      Object.defineProperty(SVGElement.prototype, 'getScreenCTM', { configurable: true, value: () => identity });
     });
 
     afterEach(() => {
       Reflect.deleteProperty(SVGElement.prototype, 'getBBox');
+      Reflect.deleteProperty(SVGElement.prototype, 'getScreenCTM');
       Reflect.deleteProperty(Element.prototype, 'animate');
       Reflect.deleteProperty(window, 'matchMedia');
     });
@@ -768,6 +805,34 @@ describe('Embed tool — empty state', () => {
       type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
 
       expect(animate).toHaveBeenCalled();
+    });
+
+    it('leaves only the new scene once the morph lands', async () => {
+      prefersReducedMotion(false);
+      const root = mount(new Embed(createOptions({})));
+
+      type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+      await settle();
+
+      expect(stagesOf(root)).toHaveLength(1);
+      expect(shapesIn(stagesOf(root)[0])).toEqual(freshScene('video'));
+    });
+
+    it('cleans up a morph cut short by the next link', () => {
+      prefersReducedMotion(false);
+      animate.mockImplementation(() => ({ cancel: vi.fn(), finished: new Promise(() => undefined) }));
+      const root = mount(new Embed(createOptions({})));
+
+      type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+      type(root, 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC');
+
+      const [, current] = stagesOf(root);
+
+      expect(windowOf(root)?.getAttribute('data-kind')).toBe('audio');
+      // Only the scene being left (video) and the scene arriving (audio): no trace of idle.
+      expect(stagesOf(root)).toHaveLength(2);
+      expect(current?.querySelectorAll('[class*="chip-float"]')).toHaveLength(0);
+      animate.mockImplementation(() => ({ cancel: vi.fn(), finished: Promise.resolve() }));
     });
 
     it('swaps the scene without motion when the user prefers reduced motion', () => {

@@ -1,7 +1,7 @@
 import { embedPreviewSvg } from '../../../components/utils/media-preview-art';
 import { leanPreview } from '../../../components/utils/media-preview-3d';
 import type { EmbedServiceType } from '../registry';
-import { canMorph, morphScene } from './morph';
+import { canMorph, morphScene, type Morph } from './morph';
 
 export type EmbedWindowKind = EmbedServiceType | 'generic' | 'idle';
 
@@ -12,8 +12,6 @@ export interface EmbedWindow {
   brand(mark: HTMLElement | null): void;
   play(anim: 'caught' | 'rejected'): void;
 }
-
-const FADE_OUT_MS = 180;
 
 const prefersReducedMotion = (): boolean =>
   typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -30,9 +28,9 @@ const makeStage = (kind: EmbedWindowKind): HTMLElement => {
 /** The decorative frame above the URL bar that becomes whatever the typed link will embed. */
 export const createEmbedWindow = (): EmbedWindow => {
   const element = document.createElement('div');
-  const state: { stage: HTMLElement | null; running: Animation[]; morphing: boolean } = {
+  const state: { stage: HTMLElement | null; morph: Morph | null; morphing: boolean } = {
     stage: null,
-    running: [],
+    morph: null,
     morphing: false,
   };
 
@@ -77,12 +75,14 @@ export const createEmbedWindow = (): EmbedWindow => {
       return;
     }
 
+    // A morph cut short lands at once, so the next one starts from a whole scene.
+    state.morph?.cleanup();
+    state.morph = null;
+
     const prev = state.stage;
     const next = makeStage(kind);
     const prevSvg = prev?.querySelector('svg') ?? null;
 
-    state.running.forEach((animation) => animation.cancel());
-    state.running = [];
     element.querySelectorAll('.blok-media-preview').forEach((stage) => {
       if (stage !== prev) {
         stage.remove();
@@ -103,35 +103,84 @@ export const createEmbedWindow = (): EmbedWindow => {
       return;
     }
 
+    // The old scene's parts ride inside the new scene; its stage stays only for the defs they use.
     prev.after(next);
+    prev.style.opacity = '0';
     state.morphing = true;
 
-    const landed = morphScene(prevSvg, nextSvg);
-    const fade = prev.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(0.96)' }], { duration: FADE_OUT_MS, fill: 'forwards' });
+    const morph = morphScene(prevSvg, nextSvg);
+    const running: Morph = {
+      animations: morph.animations,
+      cleanup: () => {
+        morph.cleanup();
+        prev.remove();
 
-    state.running = [...landed, fade];
-    void fade.finished.catch(() => undefined).then(() => prev.remove());
-    void Promise.all(landed.map((animation) => animation.finished)).catch(() => undefined).then(() => {
-      if (state.stage === next) {
-        state.morphing = false;
-      }
-    });
+        if (state.morph === running) {
+          state.morph = null;
+          state.morphing = false;
+        }
+      },
+    };
+
+    state.morph = running;
+    void Promise.all(morph.animations.map((animation) => animation.finished))
+      .catch(() => undefined)
+      .then(() => {
+        if (state.morph === running) {
+          running.cleanup();
+        }
+      });
   };
 
   const brand = (mark: HTMLElement | null): void => {
-    element.querySelector('[data-role="embed-brand"]')?.remove();
+    const current = element.querySelector<HTMLElement>('[data-role="embed-brand"]');
 
     if (mark === null) {
+      current?.remove();
+
       return;
     }
 
-    const badge = document.createElement('span');
+    const logo = document.createElement('span');
 
-    badge.className = 'blok-embed-window__brand';
-    badge.setAttribute('data-role', 'embed-brand');
-    badge.setAttribute('aria-hidden', 'true');
-    badge.appendChild(mark);
-    element.appendChild(badge);
+    logo.className = 'blok-embed-window__brand-mark';
+    logo.setAttribute('data-role', 'embed-brand-mark');
+    logo.appendChild(mark);
+
+    if (current === null) {
+      const badge = document.createElement('span');
+
+      badge.className = 'blok-embed-window__brand';
+      badge.setAttribute('data-role', 'embed-brand');
+      badge.setAttribute('aria-hidden', 'true');
+      badge.appendChild(logo);
+      element.appendChild(badge);
+
+      return;
+    }
+
+    // The badge glides to the new scene's corner (CSS) while the logo inside spins over.
+    const old = current.querySelector<HTMLElement>('[data-role="embed-brand-mark"]');
+
+    logo.setAttribute('data-swap', '');
+    current.appendChild(logo);
+
+    if (old === null) {
+      return;
+    }
+
+    old.removeAttribute('data-role');
+
+    if (prefersReducedMotion() || typeof old.animate !== 'function') {
+      old.remove();
+
+      return;
+    }
+
+    void old.animate(
+      [{ opacity: 1 }, { opacity: 0, scale: '0.4', rotate: '30deg' }],
+      { duration: 160, fill: 'forwards' }
+    ).finished.catch(() => undefined).then(() => old.remove());
   };
 
   const play = (anim: 'caught' | 'rejected'): void => {

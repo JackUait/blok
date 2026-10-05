@@ -109,6 +109,10 @@
   from { opacity: 0; transform: translateY(-18px) scale(.4) rotate(-14deg) }
 }
 
+@keyframes blok-embed-brand-swap {
+  from { opacity: 0; scale: .4; rotate: -30deg }
+}
+
 @keyframes blok-embed-caught {
   40% { transform: scale(1.025) }
 }

@@ -1,7 +1,9 @@
 // The module lives in docs/scripts/ (a build step), but vitest only collects src/**.
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildVersionsManifest,
@@ -116,5 +118,82 @@ describe('pruneToBudget', () => {
       100 * mb,
     );
     expect(keep).toEqual(['1.14', '1.13']);
+  });
+});
+
+describe('assemble-site', () => {
+  // jsdom swaps the global URL class, which node's fileURLToPath rejects.
+  const docsDir = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  let dir: string;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dir = mkdtempSync(join(tmpdir(), 'assemble-site-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  const tgz = (srcDir: string, out: string) => execFileSync('tar', ['-czf', out, '-C', srcDir, '.']);
+
+  const page = (srcName: string, path: string, html: string) => {
+    const target = join(dir, 'src', srcName, path);
+    mkdirSync(join(target, '..'), { recursive: true });
+    writeFileSync(target, html);
+  };
+
+  const fixtures = () => {
+    const releases = join(dir, 'releases');
+    mkdirSync(join(releases, 'v1.15.2'), { recursive: true });
+    mkdirSync(join(releases, 'v1.14.0'), { recursive: true });
+    page('root', 'index.html', 'ROOT');
+    tgz(join(dir, 'src', 'root'), join(releases, 'v1.15.2', 'docs-root.tgz'));
+    page('arch', 'v/1.14/index.html', 'OLD');
+    tgz(join(dir, 'src', 'arch'), join(releases, 'v1.14.0', 'docs-v1.14.tgz'));
+    page('next', 'next/index.html', 'NEXT');
+    tgz(join(dir, 'src', 'next'), join(dir, 'next.tgz'));
+    return releases;
+  };
+
+  const assemble = (releases: string, out: string) =>
+    spawnSync(
+      'node',
+      [
+        'scripts/assemble-site.mjs',
+        '--next',
+        join(dir, 'next.tgz'),
+        '--out',
+        out,
+        '--local-dir',
+        releases,
+        '--tags',
+        'v1.15.2,v1.14.0',
+      ],
+      { cwd: docsDir, encoding: 'utf8' },
+    );
+
+  it('assembles root, next and archives from release tarballs', () => {
+    const releases = fixtures();
+    const out = join(dir, 'site');
+    const result = assemble(releases, out);
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+
+    expect(readFileSync(join(out, 'index.html'), 'utf8')).toBe('ROOT');
+    expect(readFileSync(join(out, 'next', 'index.html'), 'utf8')).toBe('NEXT');
+    expect(readFileSync(join(out, 'v', '1.14', 'index.html'), 'utf8')).toBe('OLD');
+    expect(JSON.parse(readFileSync(join(out, 'versions.json'), 'utf8'))).toEqual(
+      buildVersionsManifest(selectSnapshots(['v1.15.2', 'v1.14.0'])),
+    );
+  });
+
+  it('fails naming the tag whose snapshot is missing', () => {
+    const releases = fixtures();
+    rmSync(join(releases, 'v1.14.0', 'docs-v1.14.tgz'));
+    const result = assemble(releases, join(dir, 'site'));
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('v1.14.0');
   });
 });

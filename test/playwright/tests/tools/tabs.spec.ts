@@ -268,4 +268,41 @@ test.describe('Tabs tool', () => {
     await expect(tab(page, 'Beta')).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByText('secret needle')).toBeVisible();
   });
+
+  // The hint stands in for the first block: when a click swaps it for an
+  // empty paragraph, nothing below the tabs may move and the text must not jump.
+  test('clicking the empty-tab hint adds a paragraph without resizing the tab', async ({ page }) => {
+    await createBlok(page, [
+      { id: 'tabs1', type: 'tabs', data: {}, content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: 'Alpha' }, parent: 'tabs1', content: [] },
+      { id: 'below', type: 'paragraph', data: { text: 'Below the tabs' } },
+    ]);
+
+    const hint = panel(page, 'Alpha').getByText(EMPTY_TAB_TEXT);
+    const below = page.getByText('Below the tabs');
+    const textStart = (locator: ReturnType<Page['getByText']>): Promise<number> =>
+      locator.evaluate((element) => {
+        const range = document.createRange();
+
+        range.selectNodeContents(element);
+
+        return range.getClientRects()[0]?.left ?? element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingInlineStart);
+      });
+
+    const belowBefore = await below.boundingBox();
+    const hintTextStart = await textStart(hint);
+
+    await hint.click();
+
+    const paragraph = panel(page, 'Alpha').locator('[contenteditable="true"]');
+
+    await expect(paragraph).toBeFocused();
+
+    const belowAfter = await below.boundingBox();
+    const paragraphTextStart = await paragraph.evaluate(element =>
+      element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingInlineStart));
+
+    expect(belowAfter?.y).toBeCloseTo(belowBefore?.y ?? Number.NaN, 0);
+    expect(paragraphTextStart).toBeCloseTo(hintTextStart, 0);
+  });
 });

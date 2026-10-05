@@ -724,6 +724,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const TABS_FOLDER_LOOK_BYTES = 2_897;
     // Tabs focus ring drawn inside the pill, clear of the scroller's clip.
     const TABS_FOCUS_RING_BYTES = 208;
+    // Tabs empty hint takes the empty paragraph's box, so the first block never resizes the tab.
+    const TABS_EMPTY_HINT_BYTES = 523;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -773,7 +775,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + TABS_TOOLBOX_PREVIEW_BYTES
       + TABS_BLOCK_BYTES
       + TABS_FOLDER_LOOK_BYTES
-      + TABS_FOCUS_RING_BYTES;
+      + TABS_FOCUS_RING_BYTES
+      + TABS_EMPTY_HINT_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

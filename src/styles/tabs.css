@@ -248,10 +248,18 @@
   background-color: var(--blok-tabs-sheet);
 }
 
+/* The hint stands in for the first block, so it takes the box of the empty
+ * paragraph a click puts there (PARAGRAPH_CLASSES + .blok-block): the tab
+ * keeps its height and the text does not jump. The hover fill reaches out
+ * past the text with a negative margin, so the text stays put. */
 [data-blok-tab-empty] {
-  padding: var(--blok-space-1-5) var(--blok-space-2);
+  margin-block: 1px;
+  margin-inline: calc(-1 * var(--blok-space-1-5));
+  padding-block: var(--blok-block-padding-top, 7px) var(--blok-block-padding-bottom, 7px);
+  padding-inline: calc(var(--blok-block-padding-inline, 2px) + var(--blok-space-1-5));
   border-radius: var(--blok-radius-control);
-  font-size: var(--blok-font-size-body);
+  font-size: var(--blok-paragraph-font-size, inherit);
+  line-height: 1.5;
   color: var(--blok-text-secondary);
   cursor: text;
   user-select: none;

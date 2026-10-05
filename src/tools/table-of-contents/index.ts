@@ -37,6 +37,11 @@ const readColors = (data: Partial<TableOfContentsData> | undefined): BlockColorD
 
 const signature = (headings: TocHeading[]): string => JSON.stringify(headings);
 
+/** The raw block id: `link.hash` is percent-encoded. */
+const TARGET = 'data-blok-toc-target';
+
+const targetOf = (link: Element): string => link.getAttribute(TARGET) ?? '';
+
 /**
  * Table of contents block — Notion's outline of the page's headings.
  *
@@ -56,7 +61,11 @@ export class TableOfContentsTool implements BlockTool {
   private outline = '';
   private started = false;
   private frame: number | null = null;
+  private viewportFrame: number | null = null;
   private activeId: string | null = null;
+  private forceThumb = false;
+  /** Each entry's heading holder, looked up once per outline instead of on every scroll. */
+  private targets: Array<{ link: HTMLAnchorElement; holder: Element | null }> = [];
 
   constructor(options: BlockToolConstructorOptions<TableOfContentsData>) {
     this.api = options.api;
@@ -102,6 +111,8 @@ export class TableOfContentsTool implements BlockTool {
     root.setAttribute('data-blok-toc', '');
 
     list.setAttribute('data-blok-toc-list', '');
+    // `list-style: none` drops list semantics in WebKit.
+    list.setAttribute('role', 'list');
     thumb.setAttribute('data-blok-toc-thumb', '');
     thumb.setAttribute('aria-hidden', 'true');
     empty.setAttribute('data-blok-toc-empty', '');
@@ -110,6 +121,7 @@ export class TableOfContentsTool implements BlockTool {
     root.append(thumb, list, empty);
     root.addEventListener('click', this.onClick);
     root.addEventListener('keydown', this.onKeydown);
+    root.addEventListener('animationend', this.onAnimationEnd);
 
     this.root = root;
     this.list = list;
@@ -128,8 +140,8 @@ export class TableOfContentsTool implements BlockTool {
     this.started = true;
     this.api.events.on('block changed', this.schedule);
     this.api.events.on('blocks:rendered', this.schedule);
-    document.addEventListener('scroll', this.onViewportChange, { capture: true, passive: true });
-    window.addEventListener('resize', this.onViewportChange, { passive: true });
+    document.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
+    window.addEventListener('resize', this.onResize, { passive: true });
     this.refresh();
   }
 
@@ -170,12 +182,28 @@ export class TableOfContentsTool implements BlockTool {
     this.started = false;
     this.api.events.off('block changed', this.schedule);
     this.api.events.off('blocks:rendered', this.schedule);
-    document.removeEventListener('scroll', this.onViewportChange, { capture: true });
-    window.removeEventListener('resize', this.onViewportChange);
-    if (this.frame !== null) {
-      window.cancelAnimationFrame(this.frame);
-      this.frame = null;
+    document.removeEventListener('scroll', this.onScroll, { capture: true });
+    window.removeEventListener('resize', this.onResize);
+    [this.frame, this.viewportFrame].forEach((frame) => {
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame);
+      }
+    });
+    this.frame = null;
+    this.viewportFrame = null;
+  }
+
+  /** Enter on the selected block (block navigation) moves focus into the outline. */
+  public onNavigationEnter(): boolean {
+    const links = this.targets.map((target) => target.link);
+    const link = links.find((candidate) => candidate.hasAttribute('aria-current')) ?? links[0];
+
+    if (link === undefined) {
+      return false;
     }
+    link.focus();
+
+    return true;
   }
 
   public destroy(): void {
@@ -193,8 +221,38 @@ export class TableOfContentsTool implements BlockTool {
     });
   };
 
-  private readonly onViewportChange = (): void => {
-    this.markActive();
+  /** Scrolls inside a popover or a code block cannot move the page's headings. */
+  private readonly onScroll = (event: Event): void => {
+    const redactor = this.redactor;
+
+    if (event.target instanceof Element && redactor !== null && !event.target.contains(redactor)) {
+      return;
+    }
+    this.scheduleViewport(false);
+  };
+
+  /** A reflow moves the rows under an unchanged section, so the thumb is measured again. */
+  private readonly onResize = (): void => {
+    this.scheduleViewport(true);
+  };
+
+  private scheduleViewport(force: boolean): void {
+    this.forceThumb ||= force;
+    if (this.viewportFrame !== null) {
+      return;
+    }
+    this.viewportFrame = window.requestAnimationFrame(() => {
+      this.viewportFrame = null;
+      this.markActive(this.forceThumb);
+      this.forceThumb = false;
+    });
+  }
+
+  private readonly onAnimationEnd = (event: AnimationEvent): void => {
+    const row = event.target instanceof Element ? event.target.closest('li') : null;
+
+    row?.removeAttribute('data-revealing');
+    row?.removeAttribute('data-entering');
   };
 
   private get redactor(): Element | null {
@@ -215,6 +273,11 @@ export class TableOfContentsTool implements BlockTool {
       this.renderEntries(headings, this.outline === '');
       this.outline = next;
     }
+    // Holders are replaced when a block is re-rendered, so look them up again on every change.
+    this.targets = Array.from(this.list.querySelectorAll<HTMLAnchorElement>('a'), (link) => ({
+      link,
+      holder: redactor.querySelector(`[${DATA_ATTR.id}="${CSS.escape(targetOf(link))}"]`),
+    }));
     this.markActive();
   }
 
@@ -223,7 +286,7 @@ export class TableOfContentsTool implements BlockTool {
       return;
     }
 
-    const known = new Set(Array.from(this.list.querySelectorAll('a'), (a) => a.hash.slice(1)));
+    const known = new Set(this.targets.map((target) => targetOf(target.link)));
     const depths = outlineDepths(headings.map((heading) => heading.level));
 
     this.list.replaceChildren(...headings.map((heading, index) => {
@@ -241,7 +304,8 @@ export class TableOfContentsTool implements BlockTool {
       }
 
       label.textContent = heading.text;
-      link.href = `#${heading.id}`;
+      link.href = `#${encodeURIComponent(heading.id)}`;
+      link.setAttribute(TARGET, heading.id);
       link.setAttribute('data-blok-toc-link', '');
       link.appendChild(label);
       item.appendChild(link);
@@ -259,6 +323,7 @@ export class TableOfContentsTool implements BlockTool {
     }
     applyBlockColor(this.root, this.data);
     this.root.toggleAttribute('data-tinted', this.data.textColor !== undefined);
+    this.root.toggleAttribute('data-filled', this.data.backgroundColor !== undefined);
   }
 
   private showEmpty(isEmpty: boolean): void {
@@ -268,24 +333,18 @@ export class TableOfContentsTool implements BlockTool {
   }
 
   /** The section being read: the last heading above a line a quarter of the way down the viewport. */
-  private markActive(): void {
-    const redactor = this.redactor;
-
-    if (redactor === null || this.list === null) {
-      return;
-    }
-
+  private markActive(forceThumb = false): void {
     const line = window.innerHeight * READING_LINE;
-    const links = Array.from(this.list.querySelectorAll<HTMLAnchorElement>('a'));
-    const passed = links.filter((link) => {
-      const holder = redactor.querySelector(`[${DATA_ATTR.id}="${CSS.escape(link.hash.slice(1))}"]`);
-
-      return holder !== null && holder.getBoundingClientRect().top <= line;
-    });
-    const active = passed.length > 0 ? passed[passed.length - 1] : null;
-    const activeId = active?.hash.slice(1) ?? null;
+    const links = this.targets.map((target) => target.link);
+    const passed = this.targets.filter(({ holder }) => holder !== null && holder.getBoundingClientRect().top <= line);
+    const active = passed.length > 0 ? passed[passed.length - 1].link : null;
+    const activeId = active === null ? null : targetOf(active);
 
     if (activeId === this.activeId) {
+      if (forceThumb) {
+        this.moveThumb(active);
+      }
+
       return;
     }
     this.activeId = activeId;
@@ -316,8 +375,8 @@ export class TableOfContentsTool implements BlockTool {
     if (row === null) {
       return;
     }
-    // The row is the positioned box, so its offsetTop is relative to the nav.
-    this.thumb.style.setProperty('--blok-toc-thumb-y', `${row.offsetTop + row.offsetHeight / 2}px`);
+    // The row is the positioned box, so its offsetTop is relative to the nav. CSS adds the first line's centre.
+    this.thumb.style.setProperty('--blok-toc-thumb-y', `${row.offsetTop}px`);
     this.thumb.style.setProperty('--blok-toc-thumb-depth', row.getAttribute('data-depth') ?? '0');
     this.thumb.setAttribute('data-visible', '');
   }
@@ -329,27 +388,27 @@ export class TableOfContentsTool implements BlockTool {
       return;
     }
     event.preventDefault();
-    this.api.blocks.scrollToBlock?.(link.hash.slice(1));
-    // scrollToBlock selects the heading. WebKit leaves focus on <body> after a link click,
-    // where Backspace deletes a selected block; inside this keyboard-owned nav it does nothing.
+    // A selected heading would be deleted by the next Backspace once focus leaves the outline.
+    this.api.blocks.scrollToBlock?.(targetOf(link), { select: false });
+    // WebKit does not focus a clicked link; keep the arrow keys working from here.
     link.focus({ preventScroll: true });
   };
 
   private readonly onKeydown = (event: KeyboardEvent): void => {
-    const links = Array.from(this.list?.querySelectorAll<HTMLAnchorElement>('a') ?? []);
+    const links = this.targets.map((target) => target.link);
     const index = links.findIndex((link) => link === document.activeElement);
 
     if (index === -1) {
       return;
     }
 
-    const targets: Record<string, number> = {
+    const moves: Partial<Record<string, number>> = {
       ArrowDown: Math.min(links.length - 1, index + 1),
       ArrowUp: Math.max(0, index - 1),
       Home: 0,
       End: links.length - 1,
     };
-    const target = targets[event.key];
+    const target = moves[event.key];
 
     if (target === undefined) {
       return;

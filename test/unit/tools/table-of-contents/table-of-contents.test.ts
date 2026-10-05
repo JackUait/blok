@@ -27,9 +27,13 @@ const createApi = (): { api: API; handlers: Map<string, Set<Handler>>; scrollToB
 
 const frames: FrameRequestCallback[] = [];
 
+const flushFrames = (): void => {
+  frames.splice(0).forEach((cb) => cb(0));
+};
+
 const emit = (handlers: Map<string, Set<Handler>>, name: string, payload: unknown = {}): void => {
   handlers.get(name)?.forEach((cb) => cb(payload));
-  frames.splice(0).forEach((cb) => cb(0));
+  flushFrames();
 };
 
 const holder = (id: string, tool: string, child?: HTMLElement): HTMLElement => {
@@ -174,8 +178,66 @@ describe('TableOfContentsTool', () => {
 
     links(root)[0].dispatchEvent(click);
 
-    expect(scrollToBlock).toHaveBeenCalledWith('a');
+    expect(scrollToBlock).toHaveBeenCalledWith('a', { select: false });
     expect(click.defaultPrevented).toBe(true);
+  });
+
+  it('links a block id that needs percent-encoding and jumps to the raw id', () => {
+    const { root, scrollToBlock } = setup([ heading('заголовок 1', 1, 'Intro') ]);
+
+    links(root)[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+
+    expect(scrollToBlock).toHaveBeenCalledWith('заголовок 1', { select: false });
+  });
+
+  it('takes keyboard focus to the current entry when Enter is pressed on the selected block', () => {
+    const { tool, root } = setup([ heading('a', 1, 'A'), heading('b', 1, 'B') ]);
+
+    links(root)[1].setAttribute('aria-current', 'location');
+
+    expect(tool.onNavigationEnter()).toBe(true);
+    expect(links(root)[1]).toHaveFocus();
+  });
+
+  it('takes keyboard focus to the first entry when no section is current', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ top: 5000 } as DOMRect);
+    const { tool, root } = setup([ heading('a', 1, 'A'), heading('b', 1, 'B') ]);
+
+    expect(root.querySelector('[aria-current]')).toBeNull();
+
+    expect(tool.onNavigationEnter()).toBe(true);
+    expect(links(root)[0]).toHaveFocus();
+  });
+
+  it('leaves Enter to the editor when there is nothing to focus', () => {
+    const { tool } = setup([]);
+
+    expect(tool.onNavigationEnter()).toBe(false);
+  });
+
+  it('keeps list semantics even when the list is unstyled', () => {
+    const { root } = setup([ heading('a', 1, 'A') ]);
+
+    expect(root.querySelector('ol')?.getAttribute('role')).toBe('list');
+  });
+
+  it('moves the reading marker when the entries reflow, even if the section stays the same', () => {
+    const { root, redactor } = setup([ heading('a', 1, 'A') ]);
+    const row = root.querySelector('li') as HTMLLIElement;
+    const offset = { top: 10 };
+
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800);
+    vi.spyOn(redactor.querySelector('[data-blok-id="a"]') as HTMLElement, 'getBoundingClientRect').mockReturnValue({ top: -10 } as DOMRect);
+    vi.spyOn(row, 'offsetTop', 'get').mockImplementation(() => offset.top);
+    document.dispatchEvent(new Event('scroll'));
+    flushFrames();
+    offset.top = 50;
+    window.dispatchEvent(new Event('resize'));
+    flushFrames();
+
+    const thumb = root.querySelector<HTMLElement>('[data-blok-toc-thumb]');
+
+    expect(thumb?.style.getPropertyValue('--blok-toc-thumb-y')).toBe('50px');
   });
 
   it('keeps focus on the clicked entry, so a following key cannot reach the selected heading', () => {
@@ -228,6 +290,7 @@ describe('TableOfContentsTool', () => {
       vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({ top: tops[el.getAttribute('data-blok-id') ?? ''] } as DOMRect);
     });
     document.dispatchEvent(new Event('scroll'));
+    flushFrames();
 
     const current = links(root).filter((a) => a.getAttribute('aria-current') === 'location');
 
@@ -243,6 +306,7 @@ describe('TableOfContentsTool', () => {
       vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({ top: tops[el.getAttribute('data-blok-id') ?? ''] } as DOMRect);
     });
     document.dispatchEvent(new Event('scroll'));
+    flushFrames();
 
     expect(Array.from(root.querySelectorAll('li')).map((li) => li.hasAttribute('data-read'))).toEqual([true, false, false]);
   });
@@ -253,6 +317,7 @@ describe('TableOfContentsTool', () => {
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800);
     vi.spyOn(redactor.querySelector('[data-blok-id="a"]') as HTMLElement, 'getBoundingClientRect').mockReturnValue({ top: 500 } as DOMRect);
     document.dispatchEvent(new Event('scroll'));
+    flushFrames();
 
     expect(links(root)[0].hasAttribute('aria-current')).toBe(false);
   });

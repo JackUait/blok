@@ -815,11 +815,12 @@
 }
 
 @keyframes blok-preview-structure-toc-read {
-  0%, 16% { top: calc(10% - 1.5px); left: var(--blok-preview-space-2); width: 14px }
-  24%, 40% { top: calc(30% - 1.5px); left: var(--blok-preview-space-4); width: 10px }
-  48%, 64% { top: calc(50% - 1.5px); left: var(--blok-preview-space-4); width: 10px }
-  72%, 88% { top: calc(70% - 1.5px); left: var(--blok-preview-space-2); width: 14px }
-  100% { top: calc(10% - 1.5px); left: var(--blok-preview-space-2); width: 14px }
+  0%, 12% { top: calc(10% - 1.5px); width: 12px }
+  20%, 30% { top: calc(30% - 1.5px); width: 8px }
+  38%, 48% { top: calc(50% - 1.5px); width: 8px }
+  56%, 66% { top: calc(70% - 1.5px); width: 12px }
+  74%, 84% { top: calc(90% - 1.5px); width: 8px }
+  100% { top: calc(10% - 1.5px); width: 12px }
 }
 
 @keyframes blok-preview-structure-type {

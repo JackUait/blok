@@ -79,7 +79,7 @@ export class BlocksAPI extends Module {
       beginTransaction: (): void => this.beginTransaction(),
       endTransaction: (): void => this.endTransaction(),
       setPointerDragActive: (active: boolean): void => this.setPointerDragActive(active),
-      scrollToBlock: (id: string): void => this.scrollToBlock(id),
+      scrollToBlock: (id: string, options?: { select?: boolean }): void => this.scrollToBlock(id, options),
     };
   }
 
@@ -965,8 +965,10 @@ export class BlocksAPI extends Module {
    * Those adapters can drain that deferred navigation by calling this once the
    * holder connects, instead of hand-rolling a DOM-polling hook.
    * @param id - target block id
+   * @param options - `select: false` jumps without selecting the block, so a
+   *   following Backspace cannot delete it (in-page navigation such as a table of contents)
    */
-  public scrollToBlock(id: string): void {
+  public scrollToBlock(id: string, options: { select?: boolean } = {}): void {
     /**
      * `id` is a block id for every caller that knows one, but the deferred
      * boot-time hash lands here too — and that hash can be a heading anchor
@@ -1002,7 +1004,8 @@ export class BlocksAPI extends Module {
       ? undefined
       : this.Blok.BlockManager.getBlockById(target.blockId);
 
-    if (block !== undefined) {
+    if (block !== undefined && options.select !== false) {
+      this.Blok.BlockSelection.clearSelection();
       this.Blok.BlockSelection.selectBlock(block);
     }
 

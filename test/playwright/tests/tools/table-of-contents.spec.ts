@@ -145,6 +145,48 @@ test.describe('Table of contents block', () => {
     await expect(page.getByRole('heading', { name: 'Setup' })).toHaveCount(1);
   });
 
+  test('jumping selects no heading, so Backspace after leaving the outline deletes none', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'toc', type: 'table_of_contents', data: {} },
+        { id: 'after', type: 'paragraph', data: { text: 'Read me' } },
+        ...longDocument.blocks.slice(1),
+      ],
+    });
+
+    const before = await blockCount(page);
+
+    await entries(page).first().focus();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('End');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('End');
+    await page.keyboard.press('Backspace');
+
+    expect(await blockCount(page)).toBe(before);
+    await expect(page.getByRole('heading', { name: 'Introduction' })).toHaveCount(1);
+    await expect(page.getByRole('heading', { name: 'Setup' })).toHaveCount(1);
+  });
+
+  test('a keyboard user reaches the entries from the block above', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'p0', type: 'paragraph', data: { text: 'Start here' } },
+        { id: 'toc', type: 'table_of_contents', data: {} },
+        { id: 'h1', type: 'header', data: { text: 'Goals', level: 2 } },
+      ],
+    });
+
+    await page.getByText('Start here').click();
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+
+    await expect(entries(page).first()).toBeFocused();
+  });
+
   test('arrow keys walk the entries', async ({ page }) => {
     await createBlok(page, longDocument);
 

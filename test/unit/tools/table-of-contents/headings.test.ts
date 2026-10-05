@@ -89,6 +89,20 @@ describe('collectHeadings', () => {
     expect(collectHeadings(root).map((h) => h.id)).toEqual(['section']);
   });
 
+  it('reads an inline equation as its source, not as the rendered math', () => {
+    const root = mount([ header('a', 2, 'Energy <span data-latex="E=mc^2"><span class="katex">E=mc2</span></span>') ]);
+
+    expect(collectHeadings(root)[0].text).toBe('Energy E=mc^2');
+  });
+
+  it('reads headings in a callout registered under another name', () => {
+    const root = mount([ { tool: 'note', id: 'n', children: [ header('in-note', 2, 'Inside') ] } ]);
+
+    root.querySelector('[data-blok-id="n"] [data-blok-tool="note"]')?.setAttribute('data-blok-tool', 'callout');
+
+    expect(collectHeadings(root).map((h) => h.id)).toEqual(['in-note']);
+  });
+
   it('skips a heading with no text', () => {
     const root = mount([ header('empty', 1, ' <br>'), header('full', 1, 'Full') ]);
 

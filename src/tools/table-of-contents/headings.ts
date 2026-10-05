@@ -28,6 +28,13 @@ const readLevel = (root: Element): number => {
   return Number.isFinite(level) ? Math.min(6, Math.max(1, level)) : 1;
 };
 
+/** The registered name, or the stamp a tool puts on its root: a host may register callout as `note`. */
+const isOutlineContainer = (holder: Element): boolean => {
+  const stamp = holder.querySelector(`:scope > [${DATA_ATTR.elementContent}] > [${DATA_ATTR.tool}]`)?.getAttribute(DATA_ATTR.tool);
+
+  return OUTLINE_CONTAINERS.has(holder.getAttribute(DATA_ATTR.component) ?? '') || OUTLINE_CONTAINERS.has(stamp ?? '');
+};
+
 /** True when every block holder between `holder` and `root` is an outline container. */
 const isOnOutlinePath = (holder: Element, root: Element): boolean => {
   const parent = holder.parentElement?.closest(HOLDER) ?? null;
@@ -36,7 +43,22 @@ const isOnOutlinePath = (holder: Element, root: Element): boolean => {
     return true;
   }
 
-  return OUTLINE_CONTAINERS.has(parent.getAttribute(DATA_ATTR.component) ?? '') && isOnOutlinePath(parent, root);
+  return isOutlineContainer(parent) && isOnOutlinePath(parent, root);
+};
+
+/** An inline equation's children are a KaTeX render cache; its source lives in `data-latex`. */
+const readText = (heading: Element): string => {
+  if (heading.querySelector('[data-latex]') === null) {
+    return (heading.textContent ?? '').replace(/\s+/g, ' ').trim();
+  }
+
+  const copy = heading.cloneNode(true) as Element;
+
+  copy.querySelectorAll('[data-latex]').forEach((equation) => {
+    equation.replaceWith(equation.getAttribute('data-latex') ?? '');
+  });
+
+  return (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
 };
 
 /**
@@ -52,7 +74,7 @@ export const collectHeadings = (root: Element): TocHeading[] => {
   return Array.from(root.querySelectorAll(HEADER_ROOT)).flatMap((heading): TocHeading[] => {
     const holder = heading.closest(HOLDER);
     const id = holder?.getAttribute(DATA_ATTR.id) ?? '';
-    const text = (heading.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const text = readText(heading);
 
     if (holder === null || !root.contains(holder) || id === '' || text === '' || !isOnOutlinePath(holder, root)) {
       return [];

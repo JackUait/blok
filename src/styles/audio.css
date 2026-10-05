@@ -20,6 +20,8 @@
   --blok-audio-pad: var(--blok-space-3-5);
   --blok-audio-wave-height: 56px;
   --blok-audio-bar-height: 4px;
+  /* bar height of the dead waveform on the error card */
+  --blok-audio-flatline: 2px;
   /* lift the slim slider thumbs (volume + speed) off the track so they read as
      tactile pucks rather than flat dots */
   --blok-audio-thumb-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
@@ -746,31 +748,116 @@
   pointer-events: none;
 }
 
-/* ----- empty / loading / error states --------------------- */
+/* ----- empty / loading states ---------------------------- */
 [data-blok-tool="audio"][data-state="empty"] .blok-audio-inner,
 [data-blok-tool="audio"][data-state="loading"] .blok-audio-inner {
   opacity: 0.7;
 }
-[data-blok-tool="audio"][data-state="error"] .blok-audio-inner {
-  border-color: color-mix(in srgb, var(--blok-color-danger) 30%, var(--blok-border-subtle));
-  background: color-mix(in srgb, var(--blok-color-danger) 4%, var(--blok-bg-primary));
-}
 
-/* ----- error state — flat soft-danger callout (mirrors video error) ----- */
+/* ----- error state — the player, broken -------------------
+   Same card as a working track, so the failure reads as "this player", not a
+   generic alert: a cracked record that skips, and a dead waveform with a red
+   glitch where the sound should be. */
 [data-blok-tool="audio"] .blok-audio-error-state {
-  padding: var(--blok-space-3);
-  background: color-mix(in srgb, var(--blok-color-danger) 6%, var(--blok-bg-secondary));
-  border: 1px solid color-mix(in srgb, var(--blok-color-danger) 18%, var(--blok-border-subtle));
+  --blok-audio-error-ink: var(--blok-color-danger);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--blok-audio-gap);
+  padding: var(--blok-audio-pad);
+  background: var(--blok-bg-primary);
+  border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-block);
-  display: flex; gap: var(--blok-space-3); align-items: center;
+  box-shadow: var(--blok-image-shadow-resting);
   color: var(--blok-text-primary);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   text-align: start;
+  animation: blok-audio-rise var(--blok-duration-slow) var(--blok-ease-popover) both;
 }
+/* the disc is set at an angle and twitches back, like a needle stuck in a groove */
+[data-blok-tool="audio"] .blok-audio-error-state .blok-audio-cover__disc {
+  transform: rotate(-14deg);
+  animation: blok-audio-skip 2.4s steps(1) infinite;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__crack {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: var(--blok-audio-disc-size);
+  height: var(--blok-audio-disc-size);
+  /* sits above the specular glint so the crack stays crisp */
+  z-index: 1;
+  color: var(--blok-audio-disc-label-hi);
+  opacity: 0.85;
+  pointer-events: none;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding-block: var(--blok-space-1);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  margin-block-end: var(--blok-space-2);
+  padding: var(--blok-space-0-5) var(--blok-space-2) var(--blok-space-0-5) var(--blok-space-1-5);
+  border-radius: var(--blok-radius-pill);
+  background: color-mix(in srgb, var(--blok-audio-error-ink) 9%, transparent);
+  color: color-mix(in srgb, var(--blok-audio-error-ink) 82%, var(--blok-text-primary));
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 16px;
+}
+/* a red "signal lost" dot that keeps pinging */
+[data-blok-tool="audio"] .blok-audio-error-state__source::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-audio-error-ink);
+  animation: blok-audio-ping 1.6s ease-out infinite;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__wave {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  align-self: stretch;
+  height: 24px;
+  margin-block: var(--blok-space-2-5);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__wave span {
+  flex: 1;
+  height: var(--blok-audio-flatline);
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-audio-bar);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__wave span[data-glitch] {
+  background: var(--blok-audio-error-ink);
+  animation: blok-audio-glitch 2.4s steps(1) infinite;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__wave span[data-glitch] + span[data-glitch] {
+  animation-delay: 80ms;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blok-space-2);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__upload,
 [data-blok-tool="audio"] .blok-audio-retry {
-  margin-inline-start: auto;
-  flex-shrink: 0;
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
   padding: var(--blok-space-1-5) var(--blok-space-3);
   border-radius: var(--blok-radius-control);
   border: 1px solid var(--blok-border-subtle);
@@ -780,15 +867,59 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background var(--blok-duration-base) ease, border-color var(--blok-duration-base) ease;
+  transition: background var(--blok-duration-base) ease, border-color var(--blok-duration-base) ease, transform var(--blok-duration-base) ease;
+}
+/* the way out wears the play button's ink */
+[data-blok-tool="audio"] .blok-audio-error-state__upload {
+  border-color: transparent;
+  background: var(--blok-text-primary);
+  color: var(--blok-bg-primary);
+  box-shadow: var(--blok-image-shadow-resting);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__upload svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__upload:hover {
+  transform: translateY(-1px);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__upload:active {
+  transform: scale(0.97);
 }
 [data-blok-tool="audio"] .blok-audio-retry:hover {
   background: var(--blok-bg-hover);
   border-color: var(--blok-border-primary);
 }
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"] .blok-audio-error-state__upload:focus-visible,
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"] .blok-audio-retry:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
+}
+@keyframes blok-audio-skip {
+  0%, 82% { transform: rotate(-14deg); }
+  86% { transform: rotate(-9deg); }
+  90% { transform: rotate(-14deg); }
+  94% { transform: rotate(-10deg); }
+}
+@keyframes blok-audio-glitch {
+  0%, 80%, 96% { height: var(--blok-audio-flatline); }
+  84% { height: 16px; }
+  88% { height: 6px; }
+  92% { height: 20px; }
+}
+@keyframes blok-audio-ping {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--blok-audio-error-ink) 45%, transparent); }
+  100% { box-shadow: 0 0 0 6px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tool="audio"] .blok-audio-error-state,
+  [data-blok-tool="audio"] .blok-audio-error-state .blok-audio-cover__disc,
+  [data-blok-tool="audio"] .blok-audio-error-state__source::before,
+  [data-blok-tool="audio"] .blok-audio-error-state__wave span[data-glitch] {
+    animation: none;
+  }
+  [data-blok-tool="audio"] .blok-audio-error-state__upload { transition: none; }
 }
 
 /* ----- hide caption in non-rendered states --------------- */

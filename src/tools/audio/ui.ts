@@ -1,5 +1,5 @@
 import type { AudioData } from '../../../types/tools/audio';
-import { IconImage } from '../../components/icons';
+import { IconImage, IconUpload } from '../../components/icons';
 
 export interface NowPlayingOptions {
   editable: boolean;
@@ -131,4 +131,118 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
   inner.appendChild(cap);
   row.appendChild(inner);
   return row;
+}
+
+export type ErrorService = 'google-drive' | 'onedrive';
+
+const SERVICE_NAMES: Record<ErrorService, string> = {
+  'google-drive': 'Google Drive',
+  onedrive: 'OneDrive',
+};
+
+/** Bars in the dead waveform; the glitch sits a little before the middle. */
+const FLATLINE_BARS = 48;
+const GLITCH_BARS = [19, 20, 21];
+
+export interface ErrorStateOptions {
+  message: string;
+  /** The share service the link came from, when that is why it failed. */
+  service?: ErrorService;
+  replaceLabel: string;
+  onReplace(): void;
+  /** Offer a file picker right on the card. Omit when uploading is not allowed. */
+  upload?: { label: string; accept: string; onFile(file: File): void };
+}
+
+/**
+ * The failed player: the same card as a working track, but the record is
+ * cracked and the waveform is flat. Only the message and buttons are read out.
+ */
+export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'blok-audio-error-state';
+  wrap.setAttribute('data-role', 'audio-error');
+  if (opts.service) wrap.setAttribute('data-reason', opts.service);
+
+  const art = document.createElement('div');
+  art.className = 'blok-audio-cover blok-audio-error-state__art';
+  art.setAttribute('data-role', 'audio-error-art');
+  art.setAttribute('aria-hidden', 'true');
+  const placeholder = document.createElement('span');
+  placeholder.className = 'blok-audio-cover__placeholder';
+  const disc = document.createElement('span');
+  disc.className = 'blok-audio-cover__disc';
+  placeholder.append(disc);
+  // Drawn in the disc's 92px box (--blok-audio-disc-size).
+  placeholder.insertAdjacentHTML(
+    'beforeend',
+    '<svg class="blok-audio-error-state__crack" viewBox="0 0 92 92" fill="none">'
+      + '<path d="M8 30 24 36 30 31 41 42 39 47M24 36l-2 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
+      + '</svg>',
+  );
+  art.append(placeholder);
+
+  const body = document.createElement('div');
+  body.className = 'blok-audio-error-state__body';
+
+  if (opts.service) {
+    const source = document.createElement('span');
+    source.className = 'blok-audio-error-state__source';
+    source.setAttribute('data-role', 'audio-error-source');
+    source.setAttribute('aria-hidden', 'true');
+    source.textContent = SERVICE_NAMES[opts.service];
+    body.append(source);
+  }
+
+  const message = document.createElement('p');
+  message.className = 'blok-audio-error-state__message';
+  message.setAttribute('data-role', 'audio-error-message');
+  message.textContent = opts.message;
+
+  const wave = document.createElement('div');
+  wave.className = 'blok-audio-error-state__wave';
+  wave.setAttribute('data-role', 'audio-error-wave');
+  wave.setAttribute('aria-hidden', 'true');
+  wave.append(...Array.from({ length: FLATLINE_BARS }, (_, i) => {
+    const bar = document.createElement('span');
+    if (GLITCH_BARS.includes(i)) bar.setAttribute('data-glitch', '');
+
+    return bar;
+  }));
+
+  const actions = document.createElement('div');
+  actions.className = 'blok-audio-error-state__actions';
+
+  if (opts.upload) {
+    const { label, accept, onFile } = opts.upload;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.hidden = true;
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (file) onFile(file);
+    });
+    const upload = document.createElement('button');
+    upload.type = 'button';
+    upload.className = 'blok-audio-error-state__upload';
+    upload.setAttribute('data-action', 'upload');
+    upload.innerHTML = IconUpload;
+    upload.append(label);
+    upload.addEventListener('click', () => input.click());
+    actions.append(upload, input);
+  }
+
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.className = 'blok-audio-retry';
+  retry.setAttribute('data-action', 'replace');
+  retry.textContent = opts.replaceLabel;
+  retry.addEventListener('click', () => opts.onReplace());
+  actions.append(retry);
+
+  body.append(message, wave, actions);
+  wrap.append(art, body);
+
+  return wrap;
 }

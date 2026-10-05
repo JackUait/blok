@@ -3,9 +3,28 @@
   to { opacity: 1; transform: translateY(0) scale(1) }
 }
 
+@keyframes blok-audio-glitch {
+  0%, 80%, 96% { height: var(--blok-audio-flatline) }
+  84% { height: 16px }
+  88% { height: 6px }
+  92% { height: 20px }
+}
+
+@keyframes blok-audio-ping {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--blok-audio-error-ink) 45%, transparent) }
+  100% { box-shadow: 0 0 0 6px transparent }
+}
+
 @keyframes blok-audio-rise {
   from { opacity: 0; transform: translateY(6px) }
   to { opacity: 1; transform: translateY(0) }
+}
+
+@keyframes blok-audio-skip {
+  0%, 82% { transform: rotate(-14deg) }
+  86% { transform: rotate(-9deg) }
+  90% { transform: rotate(-14deg) }
+  94% { transform: rotate(-10deg) }
 }
 
 @keyframes blok-block-target-pulse {

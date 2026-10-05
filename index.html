@@ -1762,6 +1762,7 @@
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
+    import { renderErrorState as renderAudioErrorState } from './src/tools/audio/ui.ts';
     // Default import only — the json-as-string vite plugin rewrites JSON
     // modules to a lone default export, so named JSON imports throw on load.
     import pkg from './package.json';
@@ -3840,19 +3841,13 @@
         const audioDriveErrRoot = holder.querySelector('[data-blok-id="au-drive-error"] [data-blok-tool="audio"]');
         if (audioDriveErrRoot) {
           audioDriveErrRoot.setAttribute('data-state', 'error');
-          audioDriveErrRoot.replaceChildren();
-          const wrap = document.createElement('div');
-          wrap.className = 'blok-audio-error-state';
-          wrap.setAttribute('data-role', 'audio-error');
-          const msg = document.createElement('span');
-          msg.textContent = 'Google Drive links can’t be played directly — download the file and upload it here instead.';
-          const retry = document.createElement('button');
-          retry.type = 'button';
-          retry.className = 'blok-audio-retry';
-          retry.setAttribute('data-action', 'replace');
-          retry.textContent = 'Replace';
-          wrap.append(msg, retry);
-          audioDriveErrRoot.appendChild(wrap);
+          audioDriveErrRoot.replaceChildren(renderAudioErrorState({
+            message: 'Audio from Google Drive can’t be played directly. Download the file and upload it here instead.',
+            service: 'google-drive',
+            replaceLabel: 'Replace',
+            onReplace: () => {},
+            upload: { label: 'Choose audio', accept: 'audio/*', onFile: () => {} },
+          }));
         }
 
         // Force the transient file-upload loading state. The uploader resolves

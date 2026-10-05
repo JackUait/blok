@@ -29,10 +29,10 @@ import {
 } from '../../components/icons';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
-import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
+import { DEFAULT_CAPTION_PLACEHOLDER, DEFAULT_MIME_TYPES, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
-import { renderCaptionRow, renderNowPlaying } from './ui';
+import { renderCaptionRow, renderErrorState, renderNowPlaying, type ErrorService } from './ui';
 import { openCoverPicker, validateCoverFile, type CoverPickerHandle } from './cover-picker';
 import { attachControls, type ControlsHandle } from './controls';
 import { attachWaveform, decodePeaks, type WaveformHandle } from './waveform';
@@ -61,6 +61,7 @@ export class AudioTool implements BlockTool {
   private uploadingEl: UploadingStateElement | null = null;
   private lastFileName: string | null = null;
   private errorMessage: string | null = null;
+  private errorService: ErrorService | undefined;
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private controlsHandle: ControlsHandle | null = null;
   private waveformHandle: WaveformHandle | null = null;
@@ -496,6 +497,7 @@ export class AudioTool implements BlockTool {
     });
 
     this.errorMessage = outcome.kind === 'message' ? outcome.message : null;
+    this.errorService = errorServiceOf(own);
     this.state = outcome.kind === 'message' ? 'ERROR' : 'EMPTY';
     this.renderState();
   }
@@ -588,22 +590,22 @@ export class AudioTool implements BlockTool {
 
   private renderError(): void {
     if (!this.root) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'blok-audio-error-state';
-    wrap.setAttribute('data-role', 'audio-error');
-
-    const message = document.createElement('span');
-    message.textContent = this.errorMessage ?? tr(this.api.i18n, 'tools.audio.errorUploadFailed', 'Upload failed');
-
-    const retry = document.createElement('button');
-    retry.type = 'button';
-    retry.className = 'blok-audio-retry';
-    retry.setAttribute('data-action', 'replace');
-    retry.textContent = tr(this.api.i18n, 'tools.audio.errorReplace', 'Replace');
-    retry.addEventListener('click', () => this.transitionToEmpty());
-
-    wrap.append(message, retry);
-    this.root.appendChild(wrap);
+    const canUpload = !this.readOnly && this.config.sources !== 'url';
+    this.root.appendChild(renderErrorState({
+      message: this.errorMessage ?? tr(this.api.i18n, 'tools.audio.errorUploadFailed', 'Upload failed'),
+      service: this.errorService,
+      replaceLabel: tr(this.api.i18n, 'tools.audio.errorReplace', 'Replace'),
+      onReplace: () => this.transitionToEmpty(),
+      ...(canUpload
+        ? {
+          upload: {
+            label: tr(this.api.i18n, 'tools.audio.emptyChooseFile', 'Choose audio'),
+            accept: (this.config.types ?? [...DEFAULT_MIME_TYPES]).join(','),
+            onFile: (file: File) => this.startUpload(file),
+          },
+        }
+        : {}),
+    }));
   }
 
   private renderRendered(): void {
@@ -884,4 +886,11 @@ export class AudioTool implements BlockTool {
     this.renderState();
     this.block.dispatchChange();
   }
+}
+
+function errorServiceOf(err: AudioUploadError | null): ErrorService | undefined {
+  if (err?.code === 'GOOGLE_DRIVE_NEEDS_UPLOADER') return 'google-drive';
+  if (err?.code === 'ONEDRIVE_NEEDS_UPLOADER') return 'onedrive';
+
+  return undefined;
 }

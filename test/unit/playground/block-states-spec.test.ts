@@ -136,7 +136,7 @@ describe('playground block states spec (index.html)', () => {
 
     test('the Google Drive error demo is force-rendered after mount', () => {
       expect(html).toContain('[data-blok-id="au-drive-error"] [data-blok-tool="audio"]');
-      expect(html).toContain('blok-audio-error-state');
+      expect(html).toContain('renderAudioErrorState({');
     });
   });
 

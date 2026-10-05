@@ -3182,15 +3182,25 @@
           type: 'header',
           data: { text: state.label, level: 3 },
         };
-        if (state.toolConfig) {
-          segments.push({ blocks: [header, ...state.blocks], toolConfig: state.toolConfig });
+        // A typed draft is filled into the first block's URL field after mount.
+        const drafts = state.draft ? [{ id: state.blocks[0].id, ...state.draft }] : [];
+        if (state.toolConfig || state.readOnly || state.editorConfig || state.width) {
+          segments.push({
+            blocks: [header, ...state.blocks],
+            toolConfig: state.toolConfig,
+            readOnly: state.readOnly,
+            editorConfig: state.editorConfig,
+            width: state.width,
+            drafts,
+          });
           current = null;
         } else {
           if (!current) {
-            current = { blocks: [] };
+            current = { blocks: [], drafts: [] };
             segments.push(current);
           }
           current.blocks.push(header, ...state.blocks);
+          current.drafts.push(...drafts);
         }
       });
       return { tool, label, segments };
@@ -3711,6 +3721,26 @@
         label: 'Embed',
         states: [
           { label: 'Empty', blocks: [{ id: 'em-empty', type: 'embed', data: {} }] },
+          { label: 'Typing · YouTube (video)', draft: { url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ' }, blocks: [{ id: 'em-typing-youtube', type: 'embed', data: {} }] },
+          { label: 'Typing · Spotify (audio)', draft: { url: 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC' }, blocks: [{ id: 'em-typing-spotify', type: 'embed', data: {} }] },
+          { label: 'Typing · GIPHY (image)', draft: { url: 'https://giphy.com/gifs/cat-JIX9t2j0ZTN9S' }, blocks: [{ id: 'em-typing-giphy', type: 'embed', data: {} }] },
+          { label: 'Typing · Instagram (social)', draft: { url: 'https://www.instagram.com/p/C1a2B3c4D5e/' }, blocks: [{ id: 'em-typing-instagram', type: 'embed', data: {} }] },
+          { label: 'Typing · Google Docs (document)', draft: { url: 'https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/edit' }, blocks: [{ id: 'em-typing-googledocs', type: 'embed', data: {} }] },
+          { label: 'Typing · Airtable (table)', draft: { url: 'https://airtable.com/shrAbCdEfGh123456' }, blocks: [{ id: 'em-typing-airtable', type: 'embed', data: {} }] },
+          { label: 'Typing · Typeform (form)', draft: { url: 'https://form.typeform.com/to/abc123' }, blocks: [{ id: 'em-typing-typeform', type: 'embed', data: {} }] },
+          { label: 'Typing · CodePen (code)', draft: { url: 'https://codepen.io/team/codepen/pen/PNaGbb' }, blocks: [{ id: 'em-typing-codepen', type: 'embed', data: {} }] },
+          { label: 'Typing · Figma (design)', draft: { url: 'https://www.figma.com/file/abc123XYZ/Design-system' }, blocks: [{ id: 'em-typing-figma', type: 'embed', data: {} }] },
+          { label: 'Typing · Flourish (chart)', draft: { url: 'https://public.flourish.studio/visualisation/1234567/' }, blocks: [{ id: 'em-typing-flourish', type: 'embed', data: {} }] },
+          { label: 'Typing · OpenStreetMap (map)', draft: { url: 'https://www.openstreetmap.org/#map=13/51.5072/-0.1276' }, blocks: [{ id: 'em-typing-osm', type: 'embed', data: {} }] },
+          { label: 'Typing · Calendly (calendar)', draft: { url: 'https://calendly.com/acme/intro-call' }, blocks: [{ id: 'em-typing-calendly', type: 'embed', data: {} }] },
+          { label: 'Typing · Unknown site (generic)', draft: { url: 'https://dashboards.example.com/q3' }, editorConfig: { linkPaste: { allowGenericEmbed: true } }, blocks: [{ id: 'em-typing-generic', type: 'embed', data: {} }] },
+          { label: 'Typing · Not embeddable', draft: { url: 'https://example.com/page' }, blocks: [{ id: 'em-typing-plain', type: 'embed', data: {} }] },
+          { label: 'Rejected link', draft: { url: 'https://example.com/rejected', submit: true }, blocks: [{ id: 'em-rejected', type: 'embed', data: {} }] },
+          { label: 'Narrow (window hidden)', width: 320, blocks: [{ id: 'em-narrow', type: 'embed', data: {} }] },
+          { label: 'Read-only empty', readOnly: true, blocks: [{ id: 'em-readonly', type: 'embed', data: {} }] },
+          { label: 'Link card (not embeddable)', blocks: [{ id: 'em-link-card', type: 'embed', data: { source: 'https://example.com/articles/blocks', embed: 'https://example.com/articles/blocks' } }] },
+          // A registry service whose source no longer matches it renders inert.
+          { label: 'Tampered data (inert)', blocks: [{ id: 'em-tampered', type: 'embed', data: { service: 'youtube', source: 'https://example.com/not-youtube', embed: 'https://example.com/not-youtube' } }] },
           { label: 'YouTube', blocks: [{ id: 'em-youtube', type: 'embed', data: {
             service: 'youtube',
             source: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
@@ -3793,8 +3823,9 @@
       segments.forEach((segment) => mountStateSegment(container, segment));
     }
 
-    function mountStateSegment(container, { blocks, toolConfig = {} }) {
+    function mountStateSegment(container, { blocks, toolConfig = {}, readOnly = false, editorConfig = {}, width, drafts = [] }) {
       const holder = document.createElement('div');
+      if (width) holder.style.maxWidth = `${width}px`;
       container.appendChild(holder);
       const tools = {
           paragraph: { class: Paragraph, preserveBlank: true },
@@ -3879,12 +3910,25 @@
       });
 
       const instance = new Blok({
+        ...editorConfig,
         holder,
         data: { blocks },
         tools,
+        readOnly,
         minHeight: 0,
       });
       blockStatesInstances.push(instance);
+
+      // Embed drafts: type the link the way a user would, so the window shows its scene.
+      if (drafts.length > 0) instance.isReady.then(() => {
+        drafts.forEach(({ id, url, submit }) => {
+          const input = holder.querySelector(`[data-blok-id="${id}"] [data-role="embed-url-input"]`);
+          if (!input) return;
+          input.value = url;
+          input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+          if (submit) input.form?.requestSubmit();
+        });
+      });
 
       // The broken demo image 404s at once; keep Retry's loading state visible
       // and let half the retries succeed.

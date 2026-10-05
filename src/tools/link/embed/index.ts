@@ -747,6 +747,7 @@ export class Embed implements BlockTool {
       if (key === null) {
         readback.hidden = true;
         embedWindow.show('idle');
+        embedWindow.brand(null);
         fieldIcon.innerHTML = IconLink;
 
         return;
@@ -756,6 +757,7 @@ export class Embed implements BlockTool {
 
       if (match === null) {
         embedWindow.show('generic');
+        embedWindow.brand(null);
         fieldIcon.innerHTML = IconGlobe;
         readbackIcon.innerHTML = IconGlobe;
         readbackName.textContent = host;
@@ -767,6 +769,7 @@ export class Embed implements BlockTool {
       const mark = brandMarkElement(match.service, typeIcon);
 
       embedWindow.show(match.type);
+      embedWindow.brand(brandMarkElement(match.service, typeIcon));
       readbackIcon.innerHTML = typeIcon;
       readbackName.textContent = resolveEmbedServiceTitle(
         EMBED_SERVICES[match.service],

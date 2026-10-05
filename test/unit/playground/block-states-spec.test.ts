@@ -89,6 +89,64 @@ describe('playground block states spec (index.html)', () => {
     test('script state uses the script kind', () => {
       expect(sectionFor('embed')).toContain("kind: 'script'");
     });
+
+    test.each([
+      ['Typing · YouTube (video)', 'https://www.youtube.com/watch?v=aqz-KE-bpKQ'],
+      ['Typing · Spotify (audio)', 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC'],
+      ['Typing · GIPHY (image)', 'https://giphy.com/gifs/cat-JIX9t2j0ZTN9S'],
+      ['Typing · Instagram (social)', 'https://www.instagram.com/p/C1a2B3c4D5e/'],
+      ['Typing · Google Docs (document)', 'https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/edit'],
+      ['Typing · Airtable (table)', 'https://airtable.com/shrAbCdEfGh123456'],
+      ['Typing · Typeform (form)', 'https://form.typeform.com/to/abc123'],
+      ['Typing · CodePen (code)', 'https://codepen.io/team/codepen/pen/PNaGbb'],
+      ['Typing · Figma (design)', 'https://www.figma.com/file/abc123XYZ/Design-system'],
+      ['Typing · Flourish (chart)', 'https://public.flourish.studio/visualisation/1234567/'],
+      ['Typing · OpenStreetMap (map)', 'https://www.openstreetmap.org/#map=13/51.5072/-0.1276'],
+      ['Typing · Calendly (calendar)', 'https://calendly.com/acme/intro-call'],
+      ['Typing · Unknown site (generic)', 'https://dashboards.example.com/q3'],
+      ['Typing · Not embeddable', 'https://example.com/page'],
+      ['Rejected link', 'https://example.com/rejected'],
+    ])('covers the "%s" empty state with a typed draft', (label, url) => {
+      const section = sectionFor('embed');
+      const start = section.indexOf(`label: '${label}'`);
+
+      expect(start, `state '${label}'`).toBeGreaterThan(-1);
+      expect(section.slice(start, section.indexOf('\n', start))).toContain(`url: '${url}'`);
+    });
+
+    test('the rejected state submits its draft', () => {
+      const section = sectionFor('embed');
+      const start = section.indexOf("label: 'Rejected link'");
+
+      expect(section.slice(start, section.indexOf('\n', start))).toContain('submit: true');
+    });
+
+    test('the generic draft runs with generic embeds allowed', () => {
+      const section = sectionFor('embed');
+      const start = section.indexOf("label: 'Typing · Unknown site (generic)'");
+
+      expect(section.slice(start, section.indexOf('\n', start))).toContain('linkPaste: { allowGenericEmbed: true }');
+    });
+
+    test.each([
+      ['Read-only empty', 'readOnly: true'],
+      ['Narrow (window hidden)', 'width: 320'],
+      ['Link card (not embeddable)', "source: 'https://example.com/"],
+      ['Tampered data (inert)', "service: 'youtube'"],
+    ])('covers the "%s" state', (label, marker) => {
+      const section = sectionFor('embed');
+      const start = section.indexOf(`label: '${label}'`);
+
+      expect(start, `state '${label}'`).toBeGreaterThan(-1);
+      expect(section.slice(start, section.indexOf('] },', start))).toContain(marker);
+    });
+
+    test('mountStateSegment honours drafts, read-only, editor config and width', () => {
+      expect(mountTools).toContain('readOnly');
+      expect(mountTools).toContain('editorConfig');
+      expect(mountTools).toContain('style.maxWidth');
+      expect(html).toContain('[data-role="embed-url-input"]');
+    });
   });
 
   describe('file entry', () => {

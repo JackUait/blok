@@ -1,38 +1,40 @@
+import { embedPreviewSvg } from '../../../components/utils/media-preview-art';
+import { leanPreview } from '../../../components/utils/media-preview-3d';
 import type { EmbedServiceType } from '../registry';
+import { canMorph, morphScene } from './morph';
 
 export type EmbedWindowKind = EmbedServiceType | 'generic' | 'idle';
-
-/**
- * Parts drawn inside the window for each kind; embed.css paints them by
- * `[data-kind] [data-part]`. A part listed twice is drawn twice, and `--i`
- * (its index among same-named parts) staggers and offsets the copies.
- */
-const SCENES: Record<EmbedWindowKind, readonly string[]> = {
-  idle: ['frame', 'line', 'line', 'line'],
-  generic: ['bar', 'line', 'line', 'line'],
-  video: ['play', 'track'],
-  audio: ['cover', 'wave', 'wave', 'wave', 'wave', 'wave'],
-  image: ['sun', 'hill', 'hill'],
-  social: ['avatar', 'line', 'line', 'heart'],
-  document: ['page', 'line', 'line', 'line', 'line'],
-  table: ['cell', 'cell', 'cell', 'cell', 'cell', 'cell', 'cell', 'cell', 'cell'],
-  form: ['field', 'field', 'button'],
-  code: ['line', 'line', 'line', 'line', 'line'],
-  design: ['shape', 'shape', 'cursor'],
-  chart: ['col', 'col', 'col', 'col', 'col'],
-  map: ['road', 'road', 'pin'],
-  calendar: ['day', 'day', 'day', 'day', 'day', 'day', 'day', 'day', 'day', 'day', 'day', 'day', 'day', 'day'],
-};
 
 export interface EmbedWindow {
   element: HTMLElement;
   show(kind: EmbedWindowKind): void;
+  /** Lands a provider logo on the drawing; null takes it away. */
+  brand(mark: HTMLElement | null): void;
   play(anim: 'caught' | 'rejected'): void;
 }
+
+const FADE_OUT_MS = 180;
+
+const prefersReducedMotion = (): boolean =>
+  typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const makeStage = (kind: EmbedWindowKind): HTMLElement => {
+  const stage = document.createElement('span');
+
+  stage.className = 'blok-media-preview';
+  stage.innerHTML = embedPreviewSvg(kind);
+
+  return stage;
+};
 
 /** The decorative frame above the URL bar that becomes whatever the typed link will embed. */
 export const createEmbedWindow = (): EmbedWindow => {
   const element = document.createElement('div');
+  const state: { stage: HTMLElement | null; running: Animation[]; morphing: boolean } = {
+    stage: null,
+    running: [],
+    morphing: false,
+  };
 
   element.setAttribute('data-role', 'embed-window');
   element.setAttribute('aria-hidden', 'true');
@@ -45,27 +47,91 @@ export const createEmbedWindow = (): EmbedWindow => {
     }
   });
 
+  // leanPreview swaps every shape for a projected path, which would drop the
+  // morph's animations, so the tilt waits until the morph lands.
+  element.addEventListener('pointermove', (event) => {
+    if (state.stage === null || state.morphing || prefersReducedMotion()) {
+      return;
+    }
+
+    const rect = element.getBoundingClientRect();
+
+    if (rect.width === 0 || rect.height === 0) {
+      return;
+    }
+
+    leanPreview(
+      state.stage,
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      ((event.clientY - rect.top) / rect.height) * 2 - 1
+    );
+  });
+  element.addEventListener('pointerleave', () => {
+    if (state.stage !== null && !state.morphing) {
+      leanPreview(state.stage, 0, 0);
+    }
+  });
+
   const show = (kind: EmbedWindowKind): void => {
     if (element.getAttribute('data-kind') === kind) {
       return;
     }
 
-    const scene = document.createElement('div');
-    const seen = new Map<string, number>();
+    const prev = state.stage;
+    const next = makeStage(kind);
+    const prevSvg = prev?.querySelector('svg') ?? null;
 
-    scene.className = 'blok-embed-window__scene';
-    SCENES[kind].forEach((name) => {
-      const part = document.createElement('span');
-      const index = seen.get(name) ?? 0;
-
-      seen.set(name, index + 1);
-      part.setAttribute('data-part', name);
-      part.style.setProperty('--i', String(index));
-      scene.appendChild(part);
+    state.running.forEach((animation) => animation.cancel());
+    state.running = [];
+    element.querySelectorAll('.blok-media-preview').forEach((stage) => {
+      if (stage !== prev) {
+        stage.remove();
+      }
     });
-
     element.setAttribute('data-kind', kind);
-    element.replaceChildren(scene);
+    state.stage = next;
+
+    const nextSvg = next.querySelector('svg');
+    const animated = prev !== null && prevSvg !== null && nextSvg !== null
+      && element.isConnected && !prefersReducedMotion() && canMorph(prevSvg);
+
+    if (!animated) {
+      state.morphing = false;
+      prev?.remove();
+      element.prepend(next);
+
+      return;
+    }
+
+    prev.after(next);
+    state.morphing = true;
+
+    const landed = morphScene(prevSvg, nextSvg);
+    const fade = prev.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(0.96)' }], { duration: FADE_OUT_MS, fill: 'forwards' });
+
+    state.running = [...landed, fade];
+    void fade.finished.catch(() => undefined).then(() => prev.remove());
+    void Promise.all(landed.map((animation) => animation.finished)).catch(() => undefined).then(() => {
+      if (state.stage === next) {
+        state.morphing = false;
+      }
+    });
+  };
+
+  const brand = (mark: HTMLElement | null): void => {
+    element.querySelector('[data-role="embed-brand"]')?.remove();
+
+    if (mark === null) {
+      return;
+    }
+
+    const badge = document.createElement('span');
+
+    badge.className = 'blok-embed-window__brand';
+    badge.setAttribute('data-role', 'embed-brand');
+    badge.setAttribute('aria-hidden', 'true');
+    badge.appendChild(mark);
+    element.appendChild(badge);
   };
 
   const play = (anim: 'caught' | 'rejected'): void => {
@@ -77,5 +143,5 @@ export const createEmbedWindow = (): EmbedWindow => {
 
   show('idle');
 
-  return { element, show, play };
+  return { element, show, brand, play };
 };

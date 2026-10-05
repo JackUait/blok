@@ -679,6 +679,96 @@ describe('Embed tool — empty state', () => {
 
     expect(windowOf(root)).toBeNull();
   });
+
+  const stagesOf = (root: HTMLElement): HTMLElement[] =>
+    Array.from(windowOf(root)?.querySelectorAll<HTMLElement>('.blok-media-preview') ?? []);
+
+  const brandOf = (root: HTMLElement): HTMLElement | null =>
+    windowOf(root)?.querySelector<HTMLElement>('[data-role="embed-brand"]') ?? null;
+
+  it('draws the idle scene as a media preview drawing', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    expect(stagesOf(root)).toHaveLength(1);
+    expect(stagesOf(root)[0]?.querySelector('svg')).not.toBeNull();
+  });
+
+  it('replaces the drawing with the scene of the typed provider', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+    expect(stagesOf(root)).toHaveLength(1);
+    expect(stagesOf(root)[0]?.querySelector('.blok-media-preview__knob')).not.toBeNull();
+  });
+
+  it('lands the provider logo on the window, outside the drawing', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+    expect(brandOf(root)).not.toBeNull();
+    expect(brandOf(root)?.getAttribute('aria-hidden')).toBe('true');
+    expect(brandOf(root)?.closest('.blok-media-preview')).toBeNull();
+  });
+
+  it('takes the logo away when the link stops naming a branded service', () => {
+    const root = mount(new Embed(createOptions({}, { allowGenericEmbed: true })));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    type(root, 'https://dashboards.example.com/page');
+
+    expect(brandOf(root)).toBeNull();
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    type(root, '');
+
+    expect(brandOf(root)).toBeNull();
+  });
+
+  describe('scene morph', () => {
+    const animate = vi.fn(() => ({ cancel: vi.fn(), finished: Promise.resolve() }));
+
+    beforeEach(() => {
+      Object.defineProperty(SVGElement.prototype, 'getBBox', {
+        configurable: true,
+        value: () => ({ x: 0, y: 0, width: 10, height: 10 }),
+      });
+      Object.defineProperty(Element.prototype, 'animate', { configurable: true, value: animate });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(SVGElement.prototype, 'getBBox');
+      Reflect.deleteProperty(Element.prototype, 'animate');
+      Reflect.deleteProperty(window, 'matchMedia');
+    });
+
+    const prefersReducedMotion = (reduce: boolean): void => {
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        value: (query: string) => ({ matches: reduce && query.includes('reduce'), media: query }),
+      });
+    };
+
+    it('flies the new scene in from the old one', () => {
+      prefersReducedMotion(false);
+      const root = mount(new Embed(createOptions({})));
+
+      type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+      expect(animate).toHaveBeenCalled();
+    });
+
+    it('swaps the scene without motion when the user prefers reduced motion', () => {
+      prefersReducedMotion(true);
+      const root = mount(new Embed(createOptions({})));
+
+      type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+      expect(animate).not.toHaveBeenCalled();
+      expect(stagesOf(root)).toHaveLength(1);
+    });
+  });
 });
 
 describe('Embed sizing & resize', () => {

@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import {
-  IconMarker,
   IconBold,
   IconItalic,
   IconUnderline,
@@ -16,7 +15,6 @@ import {
 
 
 const INLINE_ICONS = {
-  IconMarker,
   IconBold,
   IconItalic,
   IconUnderline,
@@ -150,10 +148,6 @@ describe('inline-toolbar icon unity', () => {
       expect(span.x).toBeCloseTo(3.4, 10);
       expect(span.y).toBeCloseTo(3.4, 10);
     }
-  });
-
-  it('marker chip uses the shared 14 by 12 panel', () => {
-    expect(IconMarker).toContain('x="3" y="4" width="14" height="12"');
   });
 
   it('sup/sub × crosses are the same 6.5-unit glyph on the shared letterform lines', () => {

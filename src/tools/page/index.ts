@@ -13,7 +13,6 @@ import {
   IconEmojiSmile,
   IconLock,
   IconPage,
-  IconPaintRoller,
   IconPencil,
   IconSplitView,
 } from '../../components/icons';
@@ -398,7 +397,7 @@ export class PageTool implements BlockTool {
   }
 
   private colorTunes(): MenuConfigItem[] {
-    return (buildBlockColorTunes({
+    return buildBlockColorTunes({
       data: this.data,
       i18n: this.api.i18n,
       onPick: (field, value): void => {
@@ -408,7 +407,7 @@ export class PageTool implements BlockTool {
         this.renderView();
         this.block.dispatchChange();
       },
-    }) as MenuConfigItem[]).map((item) => ({ ...item, icon: IconPaintRoller }) as MenuConfigItem);
+    }) as MenuConfigItem[];
   }
 
   private startRename(): void {

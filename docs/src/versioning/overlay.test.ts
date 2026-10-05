@@ -1,6 +1,5 @@
 // The module lives in docs/scripts/ (a build step), but vitest only collects src/**.
-import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,11 +11,15 @@ const FILES = ['react-router.config.ts', 'vite.config.ts', 'src/components/layou
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const sourceDocsDir = join(repoRoot, 'docs');
 
+// Verbatim copies of tag v1.7.0 (`git show v1.7.0:docs/<path>`), so CI's tagless checkout works.
+// The `.fixture` suffix keeps docs tsc and vitest from treating them as source.
+const fixturesDir = join(sourceDocsDir, 'src', 'versioning', '__fixtures__');
+
 const checkoutTag = (tag: string, into: string): void => {
   for (const file of FILES) {
-    const body = execFileSync('git', ['show', `${tag}:docs/${file}`], { cwd: repoRoot });
+    const name = file.split('/').pop() ?? file;
     mkdirSync(join(into, file, '..'), { recursive: true });
-    writeFileSync(join(into, file), body);
+    copyFileSync(join(fixturesDir, tag, `${name}.fixture`), join(into, file));
   }
 };
 

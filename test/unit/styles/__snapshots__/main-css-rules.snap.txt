@@ -6288,7 +6288,6 @@ span[data-blok-slash-search] {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1;
-  white-space: pre;
   cursor: pointer;
   opacity: 0;
   transition: opacity 120ms ease;
@@ -6310,6 +6309,7 @@ span[data-blok-slash-search] {
 
 [data-blok-tool="image"] .blok-image-alt-pill__label {
   flex: none;
+  margin-inline-end: var(--blok-space-1-5);
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;

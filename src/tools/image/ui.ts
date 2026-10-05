@@ -218,7 +218,7 @@ export function renderAltPill(opts: AltPillOptions): HTMLButtonElement {
     const label = document.createElement('span');
     label.className = 'blok-image-alt-pill__label';
     label.textContent = tr(opts.i18n, 'tools.image.altButton');
-    // A real space, not a CSS gap: the accessible name is built from text, and it read "AltPink…".
+    // The accessible name is built from text, so it needs a real space; CSS draws the visual gap.
     btn.append(label, ' ');
   }
   const text = document.createElement('span');

@@ -235,6 +235,22 @@ test('alt: hint on hover, no hint while editing, Enter saves', async ({ page }) 
   await expect(updated).toContainText('Pink yarn mascot');
 });
 
+test('the ALT label and the alt text are drawn apart, not run together', async ({ page }) => {
+  await createBlok(page, { blocks: [...ROOM_ABOVE, { id: 'img', type: 'image', data: { ...IMAGE, alt: 'Blok logotype' } }] });
+  await hoverLoadedFigure(page);
+  const tag = imageBlock(page).locator('[data-action="alt-edit"]');
+  // A flex row drops a whitespace-only text run, so the space in the text alone draws no gap.
+  const gap = await tag.evaluate((el) => {
+    const label = el.firstElementChild?.getBoundingClientRect();
+    const text = el.lastElementChild?.getBoundingClientRect();
+
+    return label && text ? text.left - label.right : Number.NaN;
+  });
+
+  expect(gap).toBeGreaterThanOrEqual(4);
+  await expect(tag).toHaveAccessibleName('Alt Blok logotype');
+});
+
 test('the alt tag stays when the caption is hidden', async ({ page }) => {
   await createBlok(page, { blocks: [...ROOM_ABOVE, { id: 'img', type: 'image', data: { ...IMAGE, captionVisible: false } }] });
   await hoverLoadedFigure(page);

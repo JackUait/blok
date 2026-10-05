@@ -1759,6 +1759,7 @@
     import { PAGE_TITLE_SELECTOR, PAGES_STORAGE_KEY, ROOT_STORAGE_KEY, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountPageTree } from './src/playground/page-tree.ts';
+    import { remotePagePlayground } from './src/playground/remote-page-host.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
@@ -1943,10 +1944,12 @@
           href: (id) => pagePath(id, window.location.search),
           // Deferred: the tool keeps working on its block right after `open`.
           open: (id) => setTimeout(() => goToPage(id), 0),
-          resolve: (id) => pages.info(id),
-          subscribe: (id, onChange) => pages.subscribe(id, onChange),
-          create: ({ pageId: id }) => pages.create(id, pageId),
-          preview: (id) => pages.get(id)?.blocks,
+          ...(remotePages !== null ? remotePages.pageTool(pageId) : {
+            resolve: (id) => pages.info(id),
+            subscribe: (id, onChange) => pages.subscribe(id, onChange),
+            create: ({ pageId: id }) => pages.create(id, pageId),
+            preview: (id) => pages.get(id)?.blocks,
+          }),
         },
       };
 
@@ -2013,7 +2016,32 @@
      * Pages. `/editor` is the root playground document; `/editor/page/<id>`
      * is one page from the registry, each its own document and its own editor.
      */
-    const pages = new PageRegistry(SEED_PAGES);
+    const localPages = new PageRegistry(SEED_PAGES);
+    /**
+     * `?host=remote`: page titles, icons and access come from the reference
+     * page host (scripts/dev-page-host.mjs) at `?hostUrl=`, or the one
+     * `yarn serve` started. The local registry keeps the tree and page bodies.
+     */
+    const remotePages = (() => {
+      const params = new URLSearchParams(window.location.search);
+      const baseUrl = params.get('hostUrl') ?? import.meta.env.VITE_BLOK_PAGE_HOST_URL;
+
+      if (params.get('host') !== 'remote') return null;
+      if (!baseUrl) {
+        console.warn('?host=remote needs a page host: run `yarn serve` or pass ?hostUrl=.');
+        return null;
+      }
+      return remotePagePlayground({
+        baseUrl,
+        user: userConfig().id,
+        local: localPages,
+        rerender: () => {
+          if (document.activeElement?.matches(PAGE_TITLE_SELECTOR) === true) updateDocumentTitle();
+          else renderHeader();
+        },
+      });
+    })();
+    const pages = remotePages?.pages ?? localPages;
     // Set once the editor is up; renderHeader and storeBlocks run before that.
     let pageTree = null;
     const pageHeader = document.getElementById('page-header');
@@ -2253,13 +2281,23 @@
       editorPageId = currentPageId;
       try {
         await editor.isReady;
-        wireTitleHistory(editor);
+        wirePageTitle(editor);
         refreshBlokView();
         wireCollaborationPresence(editor);
         syncLoadedPointers(editor);
       } catch (error) {
         console.error('Editor failed to start', error);
       }
+    }
+
+    /** Under `?host=remote` a page's title is the host's; the root document's stays local. */
+    function wirePageTitle(editor) {
+      if (remotePages === null) return wireTitleHistory(editor);
+      // The host is canonical: a peer's mirror change reloads it, never local storage.
+      void remotePages.wire(editorPageId, editor.history).then((wired) => {
+        if (wired !== null && blok === editor) titleHistory = wired;
+      });
+      if (editorPageId === null) wireTitleHistory(editor);
     }
 
     // Navigation, tool toggles and reset all rebuild the editor; one queue keeps
@@ -2327,7 +2365,7 @@
     let blok = new Blok(buildConfig());
     window.blok = blok;
     blok.isReady.then(() => {
-      wireTitleHistory(blok);
+      wirePageTitle(blok);
       wireCollaborationPresence(blok);
       syncLoadedPointers(blok);
       alignPageHeader(pageHeader, document.getElementById('blok'));

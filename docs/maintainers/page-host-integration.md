@@ -139,7 +139,20 @@ If the reload also fails, this example clears the title and stops subscriptions 
 
 The history value is only an Undo/Redo and collaboration mirror; bootstrap it from the host record, not the other way around. A remote mirror event reloads the host record and never writes the mirror value as canonical. The peer that originated an edit must write it to the host. A production host still needs an explicit conflict policy for edits from different devices. It must not silently overwrite a peer's accepted title after a version conflict.
 
-On access loss, clear the open page and stop this wiring before showing another title. Recheck access for every server event and every save. An inaccessible page's `resolve` result must be `{ access: 'none' }`, even if this tab held an earlier allowed title. The playground's `localStorage` registry demonstrates same-profile tab notifications only. It merges stored records before each write, but it has no atomic version check for simultaneous edits. It cannot prove cross-device authority or enforce access. Real-host acceptance remains blocked until authorized and denied users are checked across tabs and devices through rename, Undo, rejected save, access loss, reload, and a stale resolve.
+On access loss, clear the open page and stop this wiring before showing another title. Recheck access for every server event and every save. An inaccessible page's `resolve` result must be `{ access: 'none' }`, even if this tab held an earlier allowed title. The playground's `localStorage` registry demonstrates same-profile tab notifications only. It merges stored records before each write, but it has no atomic version check for simultaneous edits. It cannot prove cross-device authority or enforce access. With two browser profiles, a peer's rename that arrives through the title mirror is replaced by this profile's stored title, because this profile's storage never holds that rename.
+
+The executable acceptance check runs against a reference host instead:
+
+- `scripts/dev-page-host.mjs` is a dev-only host. It keeps `{ pageId, title, icon, version }` and per-user access, saves titles with compare-and-swap, and sends page-id-only events. `yarn serve` starts it, and `?host=remote` makes the playground use it.
+- `src/playground/remote-page-host.ts` runs a typed copy of the `wireTitle` sample above against that host. The code block in this file is still not compiled; keep the two in step.
+- `test/playwright/tests/tools/page-real-host.spec.ts` checks two users in separate browser contexts and a second tab. It covers rename, Undo, a rejected stale save, a failed save, access loss, a stale resolve after a denial, and reload.
+
+What it does not prove:
+
+- The C# sidecar's live socket revocation in standalone mode. The spec runs with collaboration off.
+- Persistence across devices or restarts. The host is in memory on one machine.
+- Real authentication. The host trusts an `X-Dev-User` header.
+- Access to page bodies. The playground still keeps bodies in each profile's `localStorage`.
 
 ## Importing page pointers
 

@@ -210,6 +210,14 @@ internal static class EditEndpoint
   {
     context.Response.Headers[LineageHeader] = lineage;
     context.Response.Headers[SequenceHeader] = sequence.ToString(CultureInfo.InvariantCulture);
+
+    // A browser hides non-safelisted headers from a cross-origin page unless
+    // they are exposed; without this it cannot build If-Match or read a 412.
+    if (context.Response.Headers.ContainsKey(HeaderNames.AccessControlAllowOrigin))
+    {
+      context.Response.Headers.AccessControlExposeHeaders =
+          $"{LineageHeader}, {SequenceHeader}, {HeaderNames.ETag}";
+    }
   }
 
   /// <summary>The strong entity tag for one journal head: <c>"&lt;lineage&gt;:&lt;sequence&gt;"</c>.</summary>

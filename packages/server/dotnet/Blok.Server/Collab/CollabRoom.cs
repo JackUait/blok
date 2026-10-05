@@ -990,6 +990,10 @@ internal sealed class CollabRoom : IDisposable
             try
             {
               var next = await ResetJournalLocked(current);
+
+              // A reset takes the endpoint's copy; a working set left behind
+              // would be adopted again if the journal were ever lost.
+              await DropWorkingSetLocked();
               await CloseRoomLocked(CollabCloseReason.Reset);
 
               return new CollabResetResult(CollabResetStatus.Reset, next, null);
@@ -1606,6 +1610,10 @@ internal sealed class CollabRoom : IDisposable
     HydrateCommittedLocked(
         [.. opened.Tail.Select(record => record.Update)]);
 
+    // The journal is the record now, so a working set beside it is stale: a
+    // lost journal or a swapped store would otherwise adopt it again.
+    await DropWorkingSetLocked();
+
     // The previous room may have died with a projection owed — a crash, a
     // drain the endpoint refused, a converter refusal — and nothing else
     // would ever notice. This load-time PUT buys the record catching up
@@ -1744,6 +1752,11 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private async Task SeedJournalLocked()
   {
+    if (await TryAdoptWorkingSetLocked())
+    {
+      return;
+    }
+
     var loaded = await endpoint.LoadAsync(DocId, lifetime.Token);
     version = loaded.Version;
     localUpdates.Clear();
@@ -1771,6 +1784,85 @@ internal sealed class CollabRoom : IDisposable
             baseline),
         lifetime.Token);
     tag = new CollabWorkingSetTag(head.Format, head.Epoch, head.Lineage);
+  }
+
+  /// <summary>
+  /// A working set left by a room that ran without the journal can hold edits
+  /// the endpoint never got (a failed write-back, a hard kill). Its own frames
+  /// and tag become the journal's baseline, so cached clients still merge.
+  /// False when there is nothing to adopt; an unreadable one throws, like the
+  /// working-copy load, and is left in place.
+  /// </summary>
+  private async Task<bool> TryAdoptWorkingSetLocked()
+  {
+    var stored = await store.ReadAsync(DocId, lifetime.Token);
+
+    if (stored is null)
+    {
+      return false;
+    }
+
+    if (stored.Tag.Format != CollabWorkingSetTag.SchemaV2)
+    {
+      throw new InvalidDataException(
+          $"collab: the stored working set for \"{DocId}\" has format {stored.Tag.Format}; " +
+          $"this server reads format {CollabWorkingSetTag.SchemaV2}.");
+    }
+
+    if (!CollabWorkingSetCodec.TryDecodeFrames(stored.Updates, out var frames))
+    {
+      throw new InvalidDataException(
+          $"collab: the stored working set for \"{DocId}\" is not a valid update log.");
+    }
+
+    if (frames.Count == 0)
+    {
+      return false;
+    }
+
+    foreach (var frame in frames)
+    {
+      if (ApplyRemoteLocked(frame) is null)
+      {
+        throw new InvalidDataException(
+            $"collab: a stored update for \"{DocId}\" could not be applied.");
+      }
+    }
+
+    var adopted = stored.Tag.IsAnnounceable()
+      ? stored.Tag
+      : new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2, 0, CollabWorkingSetTag.NewLineage());
+    var head = await session!.ResetAsync(
+        new CollabOperationReset(
+            adopted.Format,
+            adopted.Epoch,
+            adopted.Lineage,
+            [.. frames.Select(frame => (ReadOnlyMemory<byte>)frame)]),
+        lifetime.Token);
+    tag = new CollabWorkingSetTag(head.Format, head.Epoch, head.Lineage);
+
+    // The endpoint may be behind what was adopted, so a projection is owed,
+    // and write-backs need its version handle.
+    StartVersionReadLocked();
+    MarkDirtyLocked();
+
+    // Only after the reset is durable: before it, the working set is the only copy.
+    await DropWorkingSetLocked();
+
+    return true;
+  }
+
+  /// <summary>Best effort: a failed delete is retried by the next load, which drops it again.</summary>
+  private async Task DropWorkingSetLocked()
+  {
+    try
+    {
+      await store.DeleteAsync(DocId, lifetime.Token);
+    }
+    catch (Exception error) when (!lifetime.IsCancellationRequested)
+    {
+      log?.Invoke($"collab: room \"{DocId}\" could not drop its stale working set: {error.Message}");
+    }
   }
 
   /// <summary>Builds a standalone baseline; seeding the old doc would only make a diff.</summary>

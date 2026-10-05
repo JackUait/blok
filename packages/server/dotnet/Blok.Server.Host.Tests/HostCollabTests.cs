@@ -421,6 +421,55 @@ public sealed class HostCollabTests
     }
   }
 
+  /// <summary>
+  /// The fixture endpoint's GET always answers null, so after the switch the
+  /// edit can only come from the working set the first boot left behind. Once
+  /// adopted the working-set file goes: left beside the journal, a lost
+  /// journal would import that stale copy again.
+  /// </summary>
+  [Fact]
+  public async Task TurningTheJournalOnKeepsWhatTheWorkingSetHeld()
+  {
+    var root = UniqueDirectory("blok-host-journal-switch");
+    var collab = Path.Combine(root, "collab");
+    await using var endpoint = await FixtureDocEndpoint.StartAsync();
+
+    try
+    {
+      await using (var before = await StartCollabHostAsync(
+          endpoint,
+          collab,
+          HostRequestTimeouts.DefaultRequestTimeout,
+          HostRequestTimeouts.DefaultKeepAliveTimeout))
+      {
+        using var client = new HttpClient { BaseAddress = new Uri($"http://{ListenAddress(before)}") };
+        using var edit = await PostEditAsync(client, "before-switch", "kept");
+        Assert.Equal(HttpStatusCode.NoContent, edit.StatusCode);
+        await before.StopAsync();
+      }
+
+      await using var after = await StartCollabHostAsync(
+          endpoint,
+          collab,
+          HostRequestTimeouts.DefaultRequestTimeout,
+          HostRequestTimeouts.DefaultKeepAliveTimeout,
+          configure: options => options.CollabJournal = true);
+      using var journalClient = new HttpClient { BaseAddress = new Uri($"http://{ListenAddress(after)}") };
+
+      using var state = await journalClient.GetAsync($"/sync/{DocId}/state");
+
+      Assert.Equal(HttpStatusCode.OK, state.StatusCode);
+      Assert.Equal(["kept"], BlockIds(JsonNode.Parse(await state.Content.ReadAsStringAsync())));
+      Assert.Equal("0", Assert.Single(state.Headers.GetValues("Blok-Doc-Sequence")));
+      Assert.Empty(Directory.GetFiles(collab));
+      Assert.Single(Directory.GetDirectories(collab, "*.journal"));
+    }
+    finally
+    {
+      DeleteDirectory(root);
+    }
+  }
+
   [Fact]
   public async Task WithoutTheCollabJournalFlagAnEditCarriesNoReceipt()
   {

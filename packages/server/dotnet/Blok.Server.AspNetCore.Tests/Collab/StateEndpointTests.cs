@@ -36,6 +36,36 @@ public sealed class StateEndpointTests
     Assert.Equal("no-store", state.Headers.CacheControl?.ToString());
   }
 
+  /// <summary>
+  /// A browser hides every response header CORS does not expose, so a
+  /// cross-origin page could not build If-Match from /state or recover from a 412.
+  /// </summary>
+  [Fact]
+  public async Task ACrossOriginPageCanReadTheHeadHeadersOnStateAndEdit()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartWithOperationStore(operations);
+
+    using var state = await State(app);
+    using var applied = await Edit(app, "exposed-edit");
+    using var stale = await Edit(app, "exposed-stale", ifMatch: Assert.Single(state.Headers.GetValues("ETag")));
+
+    Assert.Equal(HttpStatusCode.NoContent, applied.StatusCode);
+    Assert.Equal(HttpStatusCode.PreconditionFailed, stale.StatusCode);
+    Assert.Equal(["Blok-Doc-Lineage", "Blok-Doc-Sequence", "ETag"], ExposedHeaders(state));
+    Assert.Equal(["Blok-Doc-Lineage", "Blok-Doc-Sequence", "ETag"], ExposedHeaders(applied));
+    Assert.Equal(["Blok-Doc-Lineage", "Blok-Doc-Sequence", "ETag"], ExposedHeaders(stale));
+  }
+
+  private static string[] ExposedHeaders(HttpResponseMessage response)
+  {
+    Assert.Equal(SyncApp.AllowedOrigin, Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin")));
+
+    return response.Headers.TryGetValues("Access-Control-Expose-Headers", out var values)
+      ? [.. values.SelectMany(value => value.Split(',', StringSplitOptions.TrimEntries)).Order(StringComparer.Ordinal)]
+      : [];
+  }
+
   [Fact]
   public async Task TheStateETagIsAnIfMatchTheNextEditAccepts()
   {

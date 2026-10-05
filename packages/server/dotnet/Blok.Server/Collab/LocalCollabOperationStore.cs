@@ -413,8 +413,10 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore, ICollab
   /// earlier step leaves the document exactly as it was — the old file
   /// untouched, the journal directory still unseeded — and the next open
   /// migrates again from the same source. That ordering is also why the old
-  /// file is not removed once publication lands: nothing reads it any more,
-  /// and leaving it is what makes a half-finished migration cost nothing.
+  /// file is not removed here once publication lands: leaving it is what makes
+  /// a half-finished migration cost nothing. The room deletes it after it has
+  /// loaded from the published head, because a stale copy beside a journal
+  /// would be imported again if the journal were ever lost.
   /// </para>
   /// <para>
   /// A FILE THAT DOES NOT DECODE THROWS, and is never treated as absent the

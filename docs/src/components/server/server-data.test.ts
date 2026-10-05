@@ -618,6 +618,8 @@ describe('server docs data', () => {
     expect(body).toMatch(/local disk/i);
     expect(body).toMatch(inOrder('--collab-journal', 'needs --collab', 'refused', '--collab-s3-prefix'));
     expect(body).toContain('options.CollabJournal');
+    // Switching on must not drop what the working copy held.
+    expect(body).toMatch(inOrder('first open', 'adopts', 'working copy', 'deletes'));
     expect(body).toContain('--collab-dir');
     expect(body).toContain('--collab-s3-prefix');
     expect(body).toContain('ICollabOperationStore');
@@ -643,6 +645,7 @@ describe('server docs data', () => {
     expect(getTranslation('ru', key)).toContain('--collab-journal');
     expect(getTranslation('ru', key)).toContain('BLOK_COLLAB_JOURNAL');
     expect(getTranslation('ru', key)).toMatch(/локальном диске/);
+    expect(getTranslation('ru', key)).toMatch(/первое открытие/i);
     expect(getTranslation('ru', key)).not.toMatch(/Никакой флаг/);
     expect(getTranslation('ru', 'server.limits.collab-operation-journal.title')).not.toMatch(/пишете вы/);
   });
@@ -704,6 +707,12 @@ describe('server docs data', () => {
     // rollback that has a shipped referent is unregistering the store.
     expect(body).toMatch(/ceiling/i);
     expect(body).toMatch(/never had it/i);
+    // The first journal open adopts a document's working copy and deletes it,
+    // so the day-of-switch landing is left only for documents nobody opened.
+    expect(body).toMatch(inOrder('first open', 'adopts', 'deletes'));
+    expect(body).toMatch(/not been opened since/i);
+    expect(getTranslation('en', 'server.limits.collab-rollback-boundary.body')).toBe(body);
+    expect(getTranslation('ru', 'server.limits.collab-rollback-boundary.body')).toMatch(/первое открытие/i);
   });
 
   // What the page renders. The entry is worthless in `server-data.ts` alone.

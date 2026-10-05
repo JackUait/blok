@@ -814,18 +814,22 @@ implementation MUST accept an unrecognised code as a final rejection.
 ## 12. HTTP edit and state
 
 A backend that is not a socket peer edits through `POST /sync/{doc}/edit` and
-reads through `GET /sync/{doc}/state`. On a journal-backed document both name
-the journal head with the same two values:
+reads through `GET /sync/{doc}/state`. On a journal-backed document both carry
+the same two headers:
 
 | Header | Value |
 | --- | --- |
 | `Blok-Doc-Lineage` | The lineage, `^[0-9a-f]{32}$`. |
-| `Blok-Doc-Sequence` | The highest committed sequence on that lineage, in decimal with no sign and no leading zero. `0` means nothing is committed yet. |
+| `Blok-Doc-Sequence` | A sequence on that lineage, in decimal with no sign and no leading zero. What it names depends on the response: the sequence an edit committed at (12.1), or the document's head on a 412 and on `/state`. `0` means nothing is committed yet. |
+
+For an allowed origin, both routes list `Blok-Doc-Lineage`, `Blok-Doc-Sequence`
+and `ETag` in `Access-Control-Expose-Headers`, so a browser page can read them.
 
 ### 12.1 Edit receipts
 
 A 204 from the edit route means the edit is committed. It carries the lineage
-and the sequence the edit committed at. `Blok-Idempotency-Key` identifies the
+and the sequence that edit committed at. That is the receipt, not the head: a
+replayed key returns its original sequence even after later edits. `Blok-Idempotency-Key` identifies the
 edit; the server derives the journal's operation id from it. The same key with
 the same canonical body returns the first receipt without applying anything.
 The same key with a different body answers 409. A server without a journal
@@ -842,8 +846,20 @@ If-Match: "<lineage>:<sequence>"
 `<lineage>` and `<sequence>` are written exactly as the two headers above print
 them. The server MUST answer 400 for anything else: a list, `*`, a weak `W/`
 tag, an unquoted value, a lineage that is not 32 lowercase hex, or a sequence
-with a sign or a leading zero. This check comes first, with or without a
-journal.
+with a sign or a leading zero. The server checks it with or without a journal.
+
+The reference server refuses a request in this order:
+
+1. The guard: a disallowed origin (403), a missing or invalid pass (401), a
+   read-only pass (403), the rate limit (429).
+2. A document id that is not one path segment (400).
+3. A pass for another document (403).
+4. The application's read and write checks (403).
+5. A missing or invalid `Blok-Idempotency-Key` (400).
+6. A malformed `If-Match` (400).
+7. A body over the size limit (413), then an invalid edit body (422).
+
+Only then does it reach the document, where 428 and 412 are decided.
 
 On a journal-backed document the server checks the tag after the key lookup and
 before it applies anything, in one step with the apply:
@@ -874,4 +890,8 @@ exact head the body reflects: the server reads the body and the head together.
 The `ETag` is a valid `If-Match` for the next edit. A server without a journal
 sends the body without those three headers.
 
-A purged document answers 403. A server that is shutting down answers 503.
+| Status | When |
+| --- | --- |
+| 403 | The document was purged, or the caller may not read it. |
+| 500 | The service cannot write this document as JSON. |
+| 503 | The document could not be loaded, another process holds it, or the server is shutting down. Retry later. |

@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Blok.Server.AspNetCore;
+using Blok.Server.AspNetCore.Collab;
 using Blok.Server.Collab;
 using Blok.Server.Outbound;
 using Blok.Server.Storage;
@@ -293,29 +294,84 @@ public sealed class BlokServerRegistrationTests
   [Fact]
   public void TheCollabJournalOptionRegistersTheLocalJournalUnlessAStoreReplacesIt()
   {
-    static void Journal(BlokServerOptions options)
-    {
-      options.CollabEnabled = true;
-      options.DocEndpoint = "https://app.example.com/api/blok-docs";
-      options.CollabDirectory = "/srv/blok/collab";
-      options.CollabJournal = true;
-    }
-
     var services = new ServiceCollection();
     services.AddBlokServer(Journal);
 
     using (var provider = services.BuildServiceProvider())
     {
-      Assert.IsType<LocalCollabOperationStore>(
-          provider.GetRequiredService<ICollabOperationStore>());
+      Assert.IsType<LocalCollabOperationStore>(OperationStore(provider));
+      Assert.Same(OperationStore(provider), OperationStore(provider));
     }
 
     var replaced = new ServiceCollection();
     replaced.AddBlokServer(Journal).UseCollabOperationStore<StubCollabOperationStore>();
 
     using var replacedProvider = replaced.BuildServiceProvider();
-    Assert.IsType<StubCollabOperationStore>(
-        replacedProvider.GetRequiredService<ICollabOperationStore>());
+    Assert.IsType<StubCollabOperationStore>(OperationStore(replacedProvider));
+  }
+
+  [Fact]
+  public void WithoutTheCollabJournalOptionNoStoreIsResolved()
+  {
+    var services = new ServiceCollection();
+    services.AddBlokServer(options =>
+    {
+      Journal(options);
+      options.CollabJournal = false;
+    });
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.Null(OperationStore(provider));
+    Assert.DoesNotContain(services, candidate => candidate.ServiceType == typeof(ICollabOperationStore));
+  }
+
+  /// <summary>
+  /// Every other collab service reads the options the provider holds, so the
+  /// journal must too: a host may register its own instance first, or set the
+  /// switch after AddBlokServer.
+  /// </summary>
+  [Fact]
+  public void TheCollabJournalFollowsTheOptionsTheProviderHolds()
+  {
+    var hostOptions = new BlokServerOptions();
+    Journal(hostOptions);
+    var hostRegistered = new ServiceCollection();
+    hostRegistered.AddSingleton(hostOptions);
+    hostRegistered.AddBlokServer(options =>
+    {
+      Journal(options);
+      options.CollabJournal = false;
+    });
+
+    using (var provider = hostRegistered.BuildServiceProvider())
+    {
+      Assert.IsType<LocalCollabOperationStore>(OperationStore(provider));
+    }
+
+    var later = new BlokServerOptions();
+    Journal(later);
+    later.CollabJournal = false;
+    var changedLater = new ServiceCollection();
+    changedLater.AddBlokServer(later);
+    later.CollabJournal = true;
+
+    using var laterProvider = changedLater.BuildServiceProvider();
+    Assert.IsType<LocalCollabOperationStore>(OperationStore(laterProvider));
+  }
+
+  private static void Journal(BlokServerOptions options)
+  {
+    options.CollabEnabled = true;
+    options.DocEndpoint = "https://app.example.com/api/blok-docs";
+    options.CollabDirectory = "/srv/blok/collab";
+    options.CollabJournal = true;
+  }
+
+  /// <summary>The store the room manager and the handshake are built with.</summary>
+  private static ICollabOperationStore? OperationStore(IServiceProvider provider)
+  {
+    return provider.GetRequiredService<CollabOperationStoreSource>().Store;
   }
 
   [Fact]

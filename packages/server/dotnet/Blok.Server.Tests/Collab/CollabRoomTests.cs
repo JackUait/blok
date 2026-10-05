@@ -2366,6 +2366,132 @@ public sealed class CollabRoomTests
     Assert.Equal("hello", await ExportedTextAsync(manager));
   }
 
+  /// <summary>
+  /// Turning a journal on must not lose what the working copy holds and the
+  /// endpoint does not (a failed write-back, a hard kill). The working set's
+  /// own frames and lineage become the baseline, so cached clients still merge.
+  /// </summary>
+  [Fact]
+  public async Task AHeadlessJournalAdoptsTheWorkingSetAndThenDropsIt()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("from-ws"))], Tags.At(3));
+    var manager = CreateJournalManager();
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("""{"text":"from-ws"}""", Encoding.UTF8.GetString(state.Json));
+    var head = Assert.IsType<CollabDocumentHead>(operations.Head(DocId));
+    Assert.Equal(Tags.Lineage, head.Lineage);
+    Assert.Equal(3, head.Epoch);
+    Assert.False(store.Holds(DocId));
+
+    // The adopted content is owed to the endpoint, and the journal serves it after a reload.
+    await manager.DrainAsync(CancellationToken.None);
+    Assert.Equal("from-ws", endpoint.Saves[^1].Data["text"]?.GetValue<string>());
+    var reloaded = await CreateJournalManager().StateAsync(DocId, CancellationToken.None);
+    Assert.Equal("""{"text":"from-ws"}""", Encoding.UTF8.GetString(reloaded.Json));
+  }
+
+  [Fact]
+  public async Task AHeadlessJournalWithAnEmptyWorkingSetSeedsFromTheEndpoint()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [], Tags.At(3));
+    var manager = CreateJournalManager();
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("""{"text":"from-endpoint"}""", Encoding.UTF8.GetString(state.Json));
+    Assert.NotEqual(Tags.Lineage, Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Lineage);
+  }
+
+  [Fact]
+  public async Task AWorkingSetInAnotherFormatFailsTheOpenAndIsKept()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(
+        DocId,
+        [YDocs.FullState(YDocs.DocWith("from-ws"))],
+        new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2 + 1, 0, Tags.Lineage));
+    var manager = CreateJournalManager();
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.SeedFailed, state.Status);
+    Assert.True(store.Holds(DocId));
+    Assert.Null(operations.Head(DocId));
+  }
+
+  [Fact]
+  public async Task AFailedWorkingSetDeleteStillOpensAndTheNextLoadRetriesIt()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("from-ws"))], Tags.At(3));
+    store.FailDeletes = _ => new IOException("the disk is busy");
+    var manager = CreateJournalManager();
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Ready, state.Status);
+    Assert.Equal("""{"text":"from-ws"}""", Encoding.UTF8.GetString(state.Json));
+    Assert.True(store.Holds(DocId));
+
+    await manager.DrainAsync(CancellationToken.None);
+    store.FailDeletes = null;
+    var reloaded = await CreateJournalManager().StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("""{"text":"from-ws"}""", Encoding.UTF8.GetString(reloaded.Json));
+    Assert.False(store.Holds(DocId));
+  }
+
+  /// <summary>
+  /// A working set beside a journal head is stale by definition. Left there, a
+  /// lost journal or a swapped store would adopt it and bring old content back.
+  /// </summary>
+  [Fact]
+  public async Task AStaleWorkingSetBesideAJournalHeadIsIgnoredAndDropped()
+  {
+    endpoint.Holds(DocId, "hello");
+    var first = CreateJournalManager();
+    await HttpEdit(first, OpOne, "!");
+    await first.DrainAsync(CancellationToken.None);
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("stale"))], Tags.At(0));
+
+    var state = await CreateJournalManager().StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("""{"text":"hello!"}""", Encoding.UTF8.GetString(state.Json));
+    Assert.False(store.Holds(DocId));
+  }
+
+  [Fact]
+  public async Task AResetOfAHeadlessDocumentDropsItsWorkingSet()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("from-ws"))], Tags.At(3));
+    var manager = CreateJournalManager();
+
+    await manager.ResetAsync(DocId);
+
+    Assert.False(store.Holds(DocId));
+    Assert.Equal(
+        """{"text":"from-endpoint"}""",
+        Encoding.UTF8.GetString((await manager.StateAsync(DocId, CancellationToken.None)).Json));
+  }
+
+  [Fact]
+  public async Task AJournalRoomNeverWritesTheWorkingSet()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await HttpEdit(manager, OpOne, "!");
+
+    await manager.DrainAsync(CancellationToken.None);
+
+    Assert.Equal(0, store.Writes);
+    Assert.False(store.Holds(DocId));
+  }
+
   [Fact]
   public async Task StateIsTheLiveExportAndTheHeadItReflects()
   {
@@ -4325,9 +4451,9 @@ public sealed class CollabRoomTests
 
   /// <summary>
   /// Load comes from the fenced session: the baseline first, then the tail
-  /// that came after it. The blob is neither read nor written, so a decoy
-  /// working set survives the room's whole life untouched — which is what
-  /// "no second copy" means from the store's side.
+  /// that came after it. The blob is neither read nor written. A decoy beside
+  /// a head is stale by definition, so the load drops it: kept, a lost
+  /// journal or a swapped store would adopt it and serve the wrong history.
   /// </summary>
   [Fact]
   public async Task OperationStoreRoomLoadsBaselineAndTailThroughTheFencedSession()
@@ -4365,10 +4491,9 @@ public sealed class CollabRoomTests
     await manager.DrainAsync(CancellationToken.None);
 
     Assert.Equal("base-tail", served);
-    Assert.Equal("blob", YDocs.Replay(store.FramesOf(DocId)));
-    Assert.Equal(Tags.At(9), store.Stored(DocId).Tag);
     Assert.Equal(0, store.Reads);
     Assert.Equal(0, store.Writes);
+    Assert.False(store.Holds(DocId));
   }
 
   /// <summary>

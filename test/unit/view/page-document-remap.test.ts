@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OutputBlockData, OutputData } from '../../../types';
-import { blocksToHtml, remapPageDocument } from '../../../src/view';
+import { blocksToHtml, pageIndex, remapPageDocument } from '../../../src/view';
+import type { PageIndex } from '../../../src/view';
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => {
@@ -365,5 +366,190 @@ describe('remapPageDocument', () => {
       pageIds: new Map(),
     })).toThrow(/duplicate/i);
     expect(original.blocks.map((block) => block.id)).toEqual(['a', 'b']);
+  });
+});
+
+type Ids = { blockIds: Map<string, string>; pageIds: Map<string, string> };
+
+/** Legacy shapes the saver's collapseToLegacy writes and pageIndex expands. */
+const legacy = {
+  callout: {
+    doc: doc([{
+      id: 'co',
+      type: 'callout',
+      data: {
+        title: '<a data-blok-page-id="P-title">Title</a>',
+        body: { blocks: [
+          { id: 'np', type: 'page', data: { pageId: 'P-nested' } },
+          { id: 'nt', type: 'paragraph', data: { text: '<a data-blok-page-id="P-ref">Ref</a> <a href="#np">Ptr</a> <a href="#co">Up</a>' } },
+          { type: 'paragraph', data: { text: 'idless child' } },
+        ] },
+      },
+    }]),
+    ids: {
+      blockIds: new Map([['co', 'co2'], ['np', 'np2'], ['nt', 'nt2']]),
+      pageIds: new Map([['P-title', 'Q-title'], ['P-nested', 'Q-nested'], ['P-ref', 'Q-ref']]),
+    },
+  },
+  list: {
+    doc: doc([{
+      id: 'ls',
+      type: 'list',
+      data: { style: 'unordered', items: [
+        { content: '<a data-blok-page-id="P-item">Item</a>', items: [{ content: '<a data-blok-page-id="P-sub">Sub</a>', items: [] }] },
+        '<a data-blok-page-id="P-str">Bare</a>',
+      ] },
+    }]),
+    ids: {
+      blockIds: new Map([['ls', 'ls2']]),
+      pageIds: new Map([['P-item', 'Q-item'], ['P-sub', 'Q-sub'], ['P-str', 'Q-str']]),
+    },
+  },
+  toggleList: {
+    doc: doc([{
+      id: 'tl',
+      type: 'toggleList',
+      data: {
+        title: '<a data-blok-page-id="P-tt">Toggle</a>',
+        body: { blocks: [{ id: 'tc', type: 'page', data: { pageId: 'P-tc' } }] },
+      },
+    }]),
+    ids: {
+      blockIds: new Map([['tl', 'tl2'], ['tc', 'tc2']]),
+      pageIds: new Map([['P-tt', 'Q-tt'], ['P-tc', 'Q-tc']]),
+    },
+  },
+  checklist: {
+    doc: doc([{
+      id: 'ck',
+      type: 'checklist',
+      data: { items: [{ text: '<a data-blok-page-id="P-ck">Check</a>', checked: true }] },
+    }]),
+    ids: { blockIds: new Map([['ck', 'ck2']]), pageIds: new Map([['P-ck', 'Q-ck']]) },
+  },
+  columns: {
+    doc: doc([{
+      id: 'cl',
+      type: 'columns',
+      data: { cols: [{ blocks: [{ id: 'cp', type: 'page', data: { pageId: 'P-col' } }] }] },
+    }]),
+    ids: { blockIds: new Map([['cl', 'cl2'], ['cp', 'cp2']]), pageIds: new Map([['P-col', 'Q-col']]) },
+  },
+  warning: {
+    doc: doc([{
+      id: 'wn',
+      type: 'warning',
+      data: { title: '<a data-blok-page-id="P-wt">Title</a>', message: '<a data-blok-page-id="P-wm">Message</a>' },
+    }]),
+    ids: { blockIds: new Map([['wn', 'wn2']]), pageIds: new Map([['P-wt', 'Q-wt'], ['P-wm', 'Q-wm']]) },
+  },
+} satisfies Record<string, { doc: OutputData; ids: Ids }>;
+
+const pageIdsIn = (index: PageIndex): string[] =>
+  [...index.owners, ...index.references].map((edge) => edge.pageId);
+
+describe('remapPageDocument on legacy nested shapes', () => {
+  it.each(Object.entries(legacy))('pageIndex reads the nested page ids of a legacy %s', (_, { doc: original, ids: map }) => {
+    expect(pageIdsIn(pageIndex(original)).sort()).toEqual([...map.pageIds.keys()].sort());
+  });
+
+  it.each(Object.entries(legacy))('leaves no original page id in a remapped legacy %s', (_, { doc: original, ids: map }) => {
+    const copied = remapPageDocument(original, map);
+
+    expect(pageIdsIn(pageIndex(copied)).sort()).toEqual([...map.pageIds.values()].sort());
+  });
+
+  it('remaps the ids, pointer, refs and anchors inside a legacy callout body', () => {
+    const before = JSON.stringify(legacy.callout.doc);
+    const copied = remapPageDocument(legacy.callout.doc, legacy.callout.ids);
+
+    expect(copied.blocks[0]?.data).toEqual({
+      title: '<a data-blok-page-id="Q-title">Title</a>',
+      body: { blocks: [
+        { id: 'np2', type: 'page', data: { pageId: 'Q-nested' } },
+        { id: 'nt2', type: 'paragraph', data: { text: '<a data-blok-page-id="Q-ref">Ref</a> <a href="#np2">Ptr</a> <a href="#co2">Up</a>' } },
+        { type: 'paragraph', data: { text: 'idless child' } },
+      ] },
+    });
+    expect(pageIndex(copied).owners.map((owner) => owner.pageId)).not.toContain('P-nested');
+    expect(JSON.stringify(legacy.callout.doc)).toBe(before);
+  });
+
+  it('leaves body.blocks alone on a tool that is not a legacy container', () => {
+    const original = doc([{ id: 'x', type: 'custom', data: { body: { blocks: [{ id: 'own', type: 'page', data: { pageId: 'P' } }] } } }]);
+
+    const copied = remapPageDocument(original, { blockIds: new Map([['x', 'x2']]), pageIds: new Map([['P', 'Q']]) });
+
+    expect(copied.blocks[0]?.data).toEqual(original.blocks[0]?.data);
+  });
+
+  it('remaps inline refs in legacy list items at every depth', () => {
+    const copied = remapPageDocument(legacy.list.doc, legacy.list.ids);
+
+    expect(copied.blocks[0]?.data.items).toEqual([
+      { content: '<a data-blok-page-id="Q-item">Item</a>', items: [{ content: '<a data-blok-page-id="Q-sub">Sub</a>', items: [] }] },
+      '<a data-blok-page-id="Q-str">Bare</a>',
+    ]);
+  });
+});
+
+const mapIndex = (index: PageIndex, { blockIds, pageIds }: Ids): PageIndex => {
+  const block = (id: string): string => blockIds.get(id) ?? id;
+  const page = (id: string): string => pageIds.get(id) ?? id;
+
+  return {
+    owners: index.owners.map((owner) => ({ ...owner, pageId: page(owner.pageId), sourceBlockId: block(owner.sourceBlockId) })),
+    text: index.text.map((entry) => ({ ...entry, blockId: entry.blockId === null ? null : block(entry.blockId) })),
+    references: index.references.map((ref) => ({
+      ...ref,
+      pageId: page(ref.pageId),
+      sourceBlockId: ref.sourceBlockId === null ? null : block(ref.sourceBlockId),
+    })),
+  };
+};
+
+const invariantFixtures: Record<string, { doc: OutputData; ids: Ids }> = {
+  ...legacy,
+  modern: {
+    doc: doc([
+      { id: 'old-block', type: 'toggle', content: ['child'], data: { text: 'old-block' } },
+      { id: 'child', type: 'paragraph', parent: 'old-block', data: { text: '<a data-blok-page-id="old-page">Page</a> <a href="#old-block">Top</a> old-page' } },
+      { id: 'ptr', type: 'page', data: { pageId: 'old-page' } },
+      { id: 'link', type: 'page-link', data: { pageId: 'old-page' } },
+      { id: 'q', type: 'quote', data: { text: 'Q', caption: '<a data-blok-page-id="cap-page">Cap</a>' } },
+      { id: 'row', type: 'database-row', data: { pageId: 'row-page' } },
+    ]),
+    ids: {
+      blockIds: new Map([...ids.blockIds, ['q', 'q2'], ['row', 'row2']]),
+      pageIds: new Map([...ids.pageIds, ['cap-page', 'cap-page2'], ['row-page', 'row-page2']]),
+    },
+  },
+  table: {
+    doc: doc([
+      {
+        id: 'tbl',
+        type: 'table',
+        content: ['cell'],
+        data: { content: [
+          [{ blocks: ['cell'], leadingText: '<a data-blok-page-id="P-lead">Lead</a>' }, '<a data-blok-page-id="P-str">Str</a>'],
+          [{ blocks: [], text: '<a data-blok-page-id="P-txt">Txt</a>' }, { blocks: [] }],
+        ] },
+      },
+      { id: 'cell', type: 'page', parent: 'tbl', data: { pageId: 'P-cell' } },
+    ]),
+    ids: {
+      blockIds: new Map([['tbl', 'tbl2'], ['cell', 'cell2']]),
+      pageIds: new Map([['P-lead', 'Q-lead'], ['P-str', 'Q-str'], ['P-txt', 'Q-txt'], ['P-cell', 'Q-cell']]),
+    },
+  },
+  malformedUtf16: {
+    doc: doc([{ id: 'old-block', type: 'paragraph', data: { text: '<a data-blok-page-id="old-page">Page</a>\uDC00\uDC00' } }]),
+    ids: { blockIds: new Map([['old-block', 'new-block']]), pageIds: new Map([['old-page', 'new-page']]) },
+  },
+};
+
+describe('remapPageDocument keeps pageIndex in step', () => {
+  it.each(Object.entries(invariantFixtures))('pageIndex(remap(%s)) is pageIndex of the original with ids mapped', (_, { doc: original, ids: map }) => {
+    expect(pageIndex(remapPageDocument(original, map))).toEqual(mapIndex(pageIndex(original), map));
   });
 });

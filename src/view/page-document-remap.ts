@@ -70,11 +70,136 @@ const rewriteInlineLinks = (html: string, ids: PageDocumentIds): string => {
   return visit(fragment.childNodes) ? serialize(fragment) : html;
 };
 
+type SlotKind = 'blockId' | 'blockRef' | 'pageId' | 'html';
+
+/** One place in a document that holds an id or inline HTML. */
+interface Slot {
+  kind: SlotKind;
+  value: unknown;
+  write: (value: string) => void;
+}
+
+const PAGE_ID_TYPES = new Set(['page', 'page-link', 'database-row']);
+
+/**
+ * Legacy fields that `buildDocumentModel` turns into text blocks, so `pageIndex`
+ * reads refs in them. Keep in step with `legacyChildren` in document-model.ts.
+ */
+const LEGACY_HTML_FIELDS: Record<string, readonly string[]> = {
+  callout: ['title'],
+  toggleList: ['title'],
+  warning: ['title', 'message'],
+};
+
+/** Same sets as document-model.ts: `data.body.blocks[]` and `data.items[]`. */
+const LEGACY_BODY_TYPES = new Set(['callout', 'toggleList']);
+const LEGACY_ITEM_TYPES = new Set(['list', 'checklist']);
+
+const fieldSlot = (kind: SlotKind, holder: Record<string, unknown>, key: string): Slot => ({
+  kind,
+  value: holder[key],
+  write: (value) => {
+    Reflect.set(holder, key, value);
+  },
+});
+
+const itemSlot = (kind: SlotKind, holder: unknown[], index: number): Slot => ({
+  kind,
+  value: holder[index],
+  write: (value) => {
+    Reflect.set(holder, index, value);
+  },
+});
+
+const stringFieldSlots = (holder: Record<string, unknown>, fields: readonly string[]): Slot[] =>
+  fields.filter((field) => typeof holder[field] === 'string').map((field) => fieldSlot('html', holder, field));
+
+const tableSlots = (content: unknown): Slot[] => (Array.isArray(content) ? content : []).flatMap((row: unknown) =>
+  (Array.isArray(row) ? row : []).flatMap((cell: unknown, index, cells: unknown[]): Slot[] => {
+    if (typeof cell === 'string') {
+      return [itemSlot('html', cells, index)];
+    }
+    if (!isRecord(cell)) {
+      return [];
+    }
+
+    const blocks: unknown[] = Array.isArray(cell.blocks) ? cell.blocks : [];
+
+    return [
+      ...blocks.flatMap((id, at) => typeof id === 'string' ? [itemSlot('blockRef', blocks, at)] : []),
+      ...stringFieldSlots(cell, ['text', 'leadingText']),
+    ];
+  }));
+
+/** Legacy list items: a bare string, or `{ content | text, items[] }`. */
+const itemsSlots = (items: unknown): Slot[] => (Array.isArray(items) ? items : []).flatMap((item: unknown, index, all: unknown[]) => {
+  if (typeof item === 'string') {
+    return [itemSlot('html', all, index)];
+  }
+
+  return isRecord(item) ? [...stringFieldSlots(item, ['content', 'text']), ...itemsSlots(item.items)] : [];
+});
+
+/**
+ * Every id and inline-HTML slot in one block, including the child blocks a
+ * legacy block nests in its own data. Legacy children are often id-less, so
+ * only a top-level block must carry an id.
+ */
+const blockSlots = (block: unknown, nested: boolean): Slot[] => {
+  if (!isRecord(block)) {
+    return [];
+  }
+
+  const slots: Slot[] = [];
+
+  if (!nested || (typeof block.id === 'string' && block.id !== '')) {
+    slots.push(fieldSlot('blockId', block, 'id'));
+  }
+  if (block.parent !== undefined) {
+    slots.push(fieldSlot('blockRef', block, 'parent'));
+  }
+  if (Array.isArray(block.content)) {
+    const content: unknown[] = block.content;
+
+    slots.push(...content.map((_, index) => itemSlot('blockRef', content, index)));
+  }
+
+  const data = block.data;
+  const type = block.type;
+
+  if (!isRecord(data) || typeof type !== 'string') {
+    return slots;
+  }
+  if (PAGE_ID_TYPES.has(type) && typeof data.pageId === 'string') {
+    slots.push(fieldSlot('pageId', data, 'pageId'));
+  }
+  if (type === 'table') {
+    slots.push(...tableSlots(data.content));
+  }
+  slots.push(...stringFieldSlots(data, [...INLINE_HTML_FIELDS[type] ?? [], ...LEGACY_HTML_FIELDS[type] ?? []]));
+
+  const body = data.body;
+  const cols: unknown[] = type === 'columns' && Array.isArray(data.cols) ? data.cols : [];
+  const bodyBlocks: unknown[] = LEGACY_BODY_TYPES.has(type) && isRecord(body) && Array.isArray(body.blocks)
+    ? body.blocks
+    : [];
+  const legacyBlocks: unknown[] = [
+    ...bodyBlocks,
+    ...cols.flatMap((column): unknown[] => isRecord(column) && Array.isArray(column.blocks) ? column.blocks : []),
+  ];
+
+  slots.push(...legacyBlocks.flatMap((child) => blockSlots(child, true)));
+  if (LEGACY_ITEM_TYPES.has(type)) {
+    slots.push(...itemsSlots(data.items));
+  }
+
+  return slots;
+};
+
 /** Copy one page document, rewriting only known block and page references. */
 export const remapPageDocument = (data: OutputData, ids: PageDocumentIds): OutputData => {
-  const mappedIds = new Set<string>();
-  const mappedBlockId = (id: string | undefined): string => {
-    const mapped = id === undefined ? undefined : ids.blockIds.get(id);
+  const mappedBlockId = (id: unknown): string => {
+    const mapped = typeof id === 'string' ? ids.blockIds.get(id) : undefined;
 
     if (!mapped) {
       throw new Error('Missing block ID mapping');
@@ -82,44 +207,14 @@ export const remapPageDocument = (data: OutputData, ids: PageDocumentIds): Outpu
 
     return mapped;
   };
+  const mappedIds = new Set<string>();
 
-  const rewriteTableCell = (cell: unknown): unknown => {
-    if (typeof cell === 'string') {
-      return rewriteInlineLinks(cell, ids);
-    }
-    if (!isRecord(cell)) {
-      return cell;
+  for (const slot of data.blocks.flatMap((block) => blockSlots(block, false))) {
+    if (slot.kind !== 'blockId') {
+      continue;
     }
 
-    const copy = { ...cell };
-
-    if (Array.isArray(cell.blocks)) {
-      const blocks: unknown[] = cell.blocks;
-
-      copy.blocks = blocks.map((id) => typeof id === 'string' ? mappedBlockId(id) : id);
-    }
-    if (typeof cell.text === 'string') {
-      copy.text = rewriteInlineLinks(cell.text, ids);
-    }
-    if (typeof cell.leadingText === 'string') {
-      copy.leadingText = rewriteInlineLinks(cell.leadingText, ids);
-    }
-
-    return copy;
-  };
-
-  const rewriteTableRow = (row: unknown): unknown => {
-    if (!Array.isArray(row)) {
-      return row;
-    }
-
-    const cells: unknown[] = row;
-
-    return cells.map(rewriteTableCell);
-  };
-
-  for (const block of data.blocks) {
-    const mapped = mappedBlockId(block.id);
+    const mapped = mappedBlockId(slot.value);
 
     if (mappedIds.has(mapped)) {
       throw new Error('Duplicate mapped block ID');
@@ -127,46 +222,17 @@ export const remapPageDocument = (data: OutputData, ids: PageDocumentIds): Outpu
     mappedIds.add(mapped);
   }
 
-  const blocks: OutputBlockData[] = data.blocks.map((block) => {
-    const copy: OutputBlockData = {
-      ...(cloneJson(block) as OutputBlockData),
-      id: mappedBlockId(block.id),
-    };
+  const blocks = data.blocks.map((block) => cloneJson(block) as OutputBlockData);
 
-    if (block.parent !== undefined) {
-      copy.parent = mappedBlockId(block.parent);
+  for (const slot of blocks.flatMap((block) => blockSlots(block, false))) {
+    const value = slot.value;
+
+    if (slot.kind === 'blockId' || slot.kind === 'blockRef') {
+      slot.write(mappedBlockId(value));
+    } else if (typeof value === 'string') {
+      slot.write(slot.kind === 'pageId' ? ids.pageIds.get(value) ?? value : rewriteInlineLinks(value, ids));
     }
-    if (block.content !== undefined) {
-      copy.content = block.content.map(mappedBlockId);
-    }
-    if (!isRecord(block.data)) {
-      return copy;
-    }
-
-    if (block.type === 'page' || block.type === 'page-link' || block.type === 'database-row') {
-      const pageId = block.data.pageId;
-
-      if (typeof pageId === 'string') {
-        copy.data.pageId = ids.pageIds.get(pageId) ?? pageId;
-      }
-    }
-
-    if (block.type === 'table' && Array.isArray(block.data.content)) {
-      const rows: unknown[] = block.data.content;
-
-      copy.data.content = rows.map(rewriteTableRow);
-    }
-
-    for (const field of INLINE_HTML_FIELDS[block.type] ?? []) {
-      const value = block.data[field];
-
-      if (typeof value === 'string') {
-        copy.data[field] = rewriteInlineLinks(value, ids);
-      }
-    }
-
-    return copy;
-  });
+  }
 
   return { ...data, blocks };
 };

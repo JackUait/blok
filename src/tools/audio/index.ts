@@ -622,7 +622,7 @@ export class AudioTool implements BlockTool {
 
     // Waveform (if peaks are available)
     if (this.data.peaks?.length) {
-      this.waveformHandle = attachWaveform({ mount: waveformMount, media: audio, peaks: this.data.peaks });
+      this.waveformHandle = attachWaveform({ mount: waveformMount, media: audio, peaks: this.data.peaks, stage: figure });
     }
 
     // Transport controls — appended into the right-column body (under waveform)

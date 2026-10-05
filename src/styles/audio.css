@@ -72,6 +72,13 @@
   --blok-audio-disc-inner-shadow: rgba(0, 0, 0, 0.5);
   --blok-audio-label-shadow: rgba(0, 0, 0, 0.35);
   --blok-audio-spindle-catch: rgba(255, 255, 255, 0.4);
+  /* now-playing glow + beat ring, in ink so they stay neutral in both themes.
+     Driven by --blok-audio-level / --blok-audio-kick, which waveform.ts writes
+     on the figure each frame; they stay 0 under reduced motion. */
+  --blok-audio-level: 0;
+  --blok-audio-kick: 0;
+  --blok-audio-halo: color-mix(in srgb, var(--blok-text-primary) 30%, transparent);
+  --blok-audio-beat-ring: color-mix(in srgb, var(--blok-text-primary) 45%, transparent);
   /* cover overlay button — a semi-transparent dark scrim (same near-black as
      the disc, blended down to ~45% opacity so the art shows through) */
   --blok-audio-cover-scrim: color-mix(in srgb, var(--blok-overlay-dark) 50%, transparent);
@@ -315,6 +322,13 @@
       var(--blok-audio-disc-shine) 78%,
       transparent 92% 100%
     ),
+    /* a narrower bright streak opposite it, so the turn reads at a glance */
+    conic-gradient(
+      from 30deg,
+      transparent 0 72%,
+      var(--blok-audio-disc-sheen-soft) 79%,
+      transparent 86% 100%
+    ),
     /* a bright hairline run just inside the edge — the glossy outer bevel */
     radial-gradient(
       circle at center,
@@ -349,6 +363,12 @@
   inset: 36%;
   border-radius: var(--blok-radius-pill);
   background:
+    /* an off-centre printed dot — the label is otherwise round, so this is
+       what shows it turning */
+    radial-gradient(circle at 50% 22%, var(--blok-audio-disc-hole) 0 7%, transparent 9%),
+    /* a short printed line opposite it, like a line of label text */
+    linear-gradient(var(--blok-audio-disc-label-ring), var(--blok-audio-disc-label-ring))
+      50% 72% / 36% 7% no-repeat,
     /* a thin printed ring near the label rim */
     radial-gradient(
       circle at center,
@@ -366,6 +386,41 @@
   box-shadow:
     inset 0 0 0 1px var(--blok-audio-disc-rim),
     0 1px 1px var(--blok-audio-label-shadow);
+}
+
+/* beat motion: the record punches out on each beat and a soft ink halo
+   breathes with the loudness. `scale` is separate from the inline
+   `transform: rotate()` disc.ts writes, so the two never fight. */
+[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover__disc {
+  scale: calc(1 + var(--blok-audio-kick) * 0.04);
+  filter: drop-shadow(0 0 calc(var(--blok-audio-level) * 14px) var(--blok-audio-halo));
+}
+
+/* beat ring — starts at the disc edge on a hit, then grows and fades as the
+   kick decays (kick 1 → scale 1, full ink; kick 0 → scale 1.3, gone) */
+[data-blok-tool="audio"] .blok-audio-cover__placeholder::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--blok-audio-disc-size);
+  height: var(--blok-audio-disc-size);
+  translate: -50% -50%;
+  border-radius: var(--blok-radius-pill);
+  box-shadow: 0 0 0 1.5px var(--blok-audio-beat-ring);
+  scale: calc(1.3 - var(--blok-audio-kick) * 0.3);
+  opacity: var(--blok-audio-kick);
+  pointer-events: none;
+}
+
+/* with cover art there is no disc: the art itself takes the punch and glow */
+[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover img {
+  scale: calc(1 + var(--blok-audio-kick) * 0.025);
+}
+[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover:has(img) {
+  box-shadow:
+    inset 0 0 0 1px var(--blok-border-subtle),
+    0 calc(var(--blok-audio-level) * 6px) calc(var(--blok-audio-level) * 24px) var(--blok-audio-halo);
 }
 
 /* spindle hole — a crisp dark dot with a tiny rim catch */

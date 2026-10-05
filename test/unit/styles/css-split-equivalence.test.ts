@@ -702,6 +702,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const IMAGE_CHROME_PAPER_GRAPHITE_BYTES = -5_778;
     // Audio error card: the cracked, skipping record and the flat waveform.
     const AUDIO_ERROR_PLAYER_BYTES = 5_014;
+    // Audio beat motion: the turning label print, beat ring, halo and art punch.
+    const AUDIO_BEAT_MOTION_BYTES = 2_576;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -740,7 +742,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + SHAPE_PICKER_LIVE_INK_BYTES
       + SHAPE_PICKER_TIMING_TOKENS_BYTES
       + IMAGE_CHROME_PAPER_GRAPHITE_BYTES
-      + AUDIO_ERROR_PLAYER_BYTES;
+      + AUDIO_ERROR_PLAYER_BYTES
+      + AUDIO_BEAT_MOTION_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

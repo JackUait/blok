@@ -1,5 +1,6 @@
 import { WAVEFORM_BUCKETS } from './constants';
 import { liveAmplitude, headColorBlend, entranceEase } from './liveliness';
+import { findBeats, beatsCrossed, rippleLift, rippleInk, smoothLevel, kickAt, MAX_RIPPLES, RIPPLE_LIFE, type Ripple } from './ripples';
 
 /**
  * Reduce raw mono samples to `buckets` peak values normalized to 0..1.
@@ -89,8 +90,10 @@ export function attachWaveform(opts: {
   mount: HTMLElement;
   media: HTMLAudioElement;
   peaks: number[];
+  /** Gets `--blok-audio-level` and `--blok-audio-kick` each frame; audio.css glows and pulses the cover from them. */
+  stage?: HTMLElement;
 }): WaveformHandle {
-  const { mount, media, peaks } = opts;
+  const { mount, media, peaks, stage } = opts;
   const canvas = document.createElement('canvas');
   canvas.setAttribute('data-role', 'audio-waveform-canvas');
   canvas.className = 'blok-audio-waveform__canvas';
@@ -104,9 +107,51 @@ export function attachWaveform(opts: {
   // so the bars glide back to their resting peaks (energy ramps 1→0) instead of
   // snapping. `energy` reflects the current boost multiplier.
   const SETTLE_MS = 420;
+  const HEAD_GLOW_PX = 10;
   // The comet-head colour blooms in over ENTRANCE_MS each time playback starts.
   const ENTRANCE_MS = 650;
   const anim = { playing: false, settling: false, settleStart: 0, entranceStart: 0, rafId: 0 };
+
+  const beats = findBeats(peaks);
+  // `start` is a rAF timestamp; ages are measured against the frame being drawn.
+  const fx: { ripples: Array<Omit<Ripple, 'age'> & { start: number }>; level: number; lastNow: number; lastPlayhead: number } = {
+    ripples: [],
+    level: 0,
+    lastNow: 0,
+    lastPlayhead: 0,
+  };
+  const SEEK_RIPPLE_STRENGTH = 0.6;
+
+  const playheadNow = (): number => (media.duration ? media.currentTime / media.duration : 0) * peaks.length;
+
+  const addRipple = (origin: number, strength: number, now: number): void => {
+    fx.ripples.push({ origin, strength, start: now });
+    if (fx.ripples.length > MAX_RIPPLES) fx.ripples.shift();
+  };
+
+  const ripplesAt = (now: number): Ripple[] =>
+    fx.ripples.map((r) => ({ origin: r.origin, strength: r.strength, age: (now - r.start) / 1000 }));
+
+  const writeStage = (level: number, kick: number): void => {
+    stage?.style.setProperty('--blok-audio-level', level.toFixed(3));
+    stage?.style.setProperty('--blok-audio-kick', kick.toFixed(3));
+  };
+
+  // Advances ripples and the loudness level one frame and hands them to the cover.
+  const stepFx = (now: number): void => {
+    const playheadIndex = playheadNow();
+    if (anim.playing) {
+      beatsCrossed(beats, fx.lastPlayhead, playheadIndex).forEach((b) => addRipple(b.index, b.strength, now));
+    }
+    fx.lastPlayhead = playheadIndex;
+    fx.ripples = fx.ripples.filter((r) => (now - r.start) / 1000 < RIPPLE_LIFE);
+
+    const dt = fx.lastNow ? (now - fx.lastNow) / 1000 : 0;
+    fx.lastNow = now;
+    const under = peaks[Math.min(peaks.length - 1, Math.max(0, Math.floor(playheadIndex)))] ?? 0;
+    fx.level = smoothLevel(fx.level, under * energyAt(now), dt);
+    writeStage(fx.level, kickAt(ripplesAt(now)) * energyAt(now));
+  };
 
   const energyAt = (now: number): number => {
     if (anim.playing) return 1;
@@ -146,6 +191,7 @@ export function attachWaveform(opts: {
     const barW = Math.max(1, slot - gap);
     const radius = Math.min(barW / 2, 2);
     const styles = getComputedStyle(canvas);
+    const ripples = live ? ripplesAt(now) : [];
     const playedColor = styles.getPropertyValue('--blok-audio-bar-played').trim() || '#222';
     const baseColor = styles.getPropertyValue('--blok-audio-bar').trim() || '#ccc';
     const headColor = styles.getPropertyValue('--blok-audio-bar-head').trim() || playedColor;
@@ -161,14 +207,24 @@ export function attachWaveform(opts: {
     };
 
     peaks.forEach((peak, i) => {
+      const wave = ripples.reduce((sum, r) => sum + rippleLift(i - r.origin, r.age, r.strength), 0);
       const amp = live
-        ? liveAmplitude({ basePeak: peak, index: i, playheadIndex, timeSeconds, reduced, energy })
+        ? Math.min(1, liveAmplitude({ basePeak: peak, index: i, playheadIndex, timeSeconds, reduced, energy }) + wave * energy)
         : peak;
       const h = Math.max(2, amp * rect.height * 0.92);
       const x = i * slot;
       const y = (rect.height - h) / 2;
       ctx.fillStyle = i < playheadIndex ? playedColor : baseColor;
       paintBar(x, y, h);
+
+      const ink = i < playheadIndex ? 0 : rippleInk(wave) * energy;
+      if (ink > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = ink;
+        ctx.fillStyle = playedColor;
+        paintBar(x, y, h);
+        ctx.restore();
+      }
 
       // Comet-head colour shift — overlay the head tint, its alpha ramping in
       // with the entrance and fading out on the settle (energy).
@@ -178,6 +234,8 @@ export function attachWaveform(opts: {
           ctx.save();
           ctx.globalAlpha = Math.min(1, blend);
           ctx.fillStyle = headColor;
+          ctx.shadowColor = headColor;
+          ctx.shadowBlur = HEAD_GLOW_PX * blend;
           paintBar(x, y, h);
           ctx.restore();
         }
@@ -193,6 +251,7 @@ export function attachWaveform(opts: {
   };
 
   const loop = (now: number): void => {
+    stepFx(now);
     draw(now);
     // Keep looping while playing, or while the post-pause settle still has energy.
     const keepGoing = anim.playing || (anim.settling && energyAt(now) > 0);
@@ -201,6 +260,10 @@ export function attachWaveform(opts: {
     } else {
       anim.settling = false;
       anim.rafId = 0;
+      fx.ripples = [];
+      fx.level = 0;
+      fx.lastNow = 0;
+      writeStage(0, 0);
     }
   };
 
@@ -210,6 +273,7 @@ export function attachWaveform(opts: {
     anim.settling = false;
     // Restart the head-colour entrance so it blooms in on every play.
     anim.entranceStart = globalThis.performance?.now?.() ?? 0;
+    fx.lastPlayhead = playheadNow();
     // No continuous loop under reduced motion — timeupdate alone advances the
     // played boundary, with no dancing bars.
     if (!anim.rafId && !prefersReducedMotion()) anim.rafId = requestAnimationFrame(loop);
@@ -238,14 +302,19 @@ export function attachWaveform(opts: {
     if (!anim.rafId) draw(0);
   };
 
-  const seek = (clientX: number): void => {
+  const seek = (clientX: number, splash = false): void => {
     if (!media.duration) return;
     media.currentTime = ratioFromPointer(clientX, canvas.getBoundingClientRect()) * media.duration;
     setSeekVar();
+    // A landing splash, only while the loop runs to animate it.
+    if (splash && anim.playing && anim.rafId) {
+      fx.lastPlayhead = playheadNow();
+      addRipple(fx.lastPlayhead, SEEK_RIPPLE_STRENGTH, globalThis.performance?.now?.() ?? 0);
+    }
     if (!anim.rafId) draw(0);
   };
   const drag = { active: false };
-  const onDown = (e: PointerEvent): void => { drag.active = true; seek(e.clientX); };
+  const onDown = (e: PointerEvent): void => { drag.active = true; seek(e.clientX, true); };
   const onMove = (e: PointerEvent): void => { if (drag.active) seek(e.clientX); };
   const onUp = (): void => { drag.active = false; };
 

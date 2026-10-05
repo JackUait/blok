@@ -8561,6 +8561,10 @@ span[data-blok-slash-search] {
   --blok-audio-disc-inner-shadow: rgba(0, 0, 0, 0.5);
   --blok-audio-label-shadow: rgba(0, 0, 0, 0.35);
   --blok-audio-spindle-catch: rgba(255, 255, 255, 0.4);
+  --blok-audio-level: 0;
+  --blok-audio-kick: 0;
+  --blok-audio-halo: color-mix(in srgb, var(--blok-text-primary) 30%, transparent);
+  --blok-audio-beat-ring: color-mix(in srgb, var(--blok-text-primary) 45%, transparent);
   --blok-audio-cover-scrim: color-mix(in srgb, var(--blok-overlay-dark) 50%, transparent);
   position: relative;
   margin: var(--blok-space-2-5) 0;
@@ -8733,7 +8737,7 @@ span[data-blok-slash-search] {
   width: var(--blok-audio-disc-size);
   height: var(--blok-audio-disc-size);
   border-radius: var(--blok-radius-pill);
-  background: conic-gradient( from 210deg, transparent 0 64%, var(--blok-audio-disc-shine) 78%, transparent 92% 100% ), radial-gradient( circle at center, transparent 82%, var(--blok-audio-disc-rim-light) 85% 87%, transparent 90% ), repeating-radial-gradient( circle at center, var(--blok-audio-disc-groove) 0 var(--blok-audio-groove-w), transparent var(--blok-audio-groove-w) var(--blok-audio-groove-gap) ), radial-gradient( circle at center, var(--blok-audio-disc-edge) 0 14%, var(--blok-audio-disc-base) 44%, var(--blok-audio-disc-base) 72%, var(--blok-audio-disc-deep) 100% );
+  background: conic-gradient( from 210deg, transparent 0 64%, var(--blok-audio-disc-shine) 78%, transparent 92% 100% ), conic-gradient( from 30deg, transparent 0 72%, var(--blok-audio-disc-sheen-soft) 79%, transparent 86% 100% ), radial-gradient( circle at center, transparent 82%, var(--blok-audio-disc-rim-light) 85% 87%, transparent 90% ), repeating-radial-gradient( circle at center, var(--blok-audio-disc-groove) 0 var(--blok-audio-groove-w), transparent var(--blok-audio-groove-w) var(--blok-audio-groove-gap) ), radial-gradient( circle at center, var(--blok-audio-disc-edge) 0 14%, var(--blok-audio-disc-base) 44%, var(--blok-audio-disc-base) 72%, var(--blok-audio-disc-deep) 100% );
   box-shadow: inset 0 0 0 1px var(--blok-audio-disc-rim), inset 0 0 7px var(--blok-audio-disc-inner-shadow), var(--blok-image-shadow-resting);
 }
 
@@ -8742,8 +8746,36 @@ span[data-blok-slash-search] {
   position: absolute;
   inset: 36%;
   border-radius: var(--blok-radius-pill);
-  background: radial-gradient( circle at center, transparent 58%, var(--blok-audio-disc-label-ring) 60% 64%, transparent 66% ), radial-gradient( circle at 40% 34%, var(--blok-audio-disc-label-hi), var(--blok-audio-disc-label) 52%, var(--blok-audio-disc-label-edge) );
+  background: radial-gradient(circle at 50% 22%, var(--blok-audio-disc-hole) 0 7%, transparent 9%), linear-gradient(var(--blok-audio-disc-label-ring), var(--blok-audio-disc-label-ring)) 50% 72% / 36% 7% no-repeat, radial-gradient( circle at center, transparent 58%, var(--blok-audio-disc-label-ring) 60% 64%, transparent 66% ), radial-gradient( circle at 40% 34%, var(--blok-audio-disc-label-hi), var(--blok-audio-disc-label) 52%, var(--blok-audio-disc-label-edge) );
   box-shadow: inset 0 0 0 1px var(--blok-audio-disc-rim), 0 1px 1px var(--blok-audio-label-shadow);
+}
+
+[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover__disc {
+  scale: calc(1 + var(--blok-audio-kick) * 0.04);
+  filter: drop-shadow(0 0 calc(var(--blok-audio-level) * 14px) var(--blok-audio-halo));
+}
+
+[data-blok-tool="audio"] .blok-audio-cover__placeholder::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--blok-audio-disc-size);
+  height: var(--blok-audio-disc-size);
+  translate: -50% -50%;
+  border-radius: var(--blok-radius-pill);
+  box-shadow: 0 0 0 1.5px var(--blok-audio-beat-ring);
+  scale: calc(1.3 - var(--blok-audio-kick) * 0.3);
+  opacity: var(--blok-audio-kick);
+  pointer-events: none;
+}
+
+[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover img {
+  scale: calc(1 + var(--blok-audio-kick) * 0.025);
+}
+
+[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover:has(img) {
+  box-shadow: inset 0 0 0 1px var(--blok-border-subtle), 0 calc(var(--blok-audio-level) * 6px) calc(var(--blok-audio-level) * 24px) var(--blok-audio-halo);
 }
 
 [data-blok-tool="audio"] .blok-audio-cover__disc::after {

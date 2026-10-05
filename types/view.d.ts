@@ -841,7 +841,6 @@ export interface SidecarTransferRecord {
   operationId: string;
   digest: string;
   attempt: number;
-  compensationTry: number;
   plan: SidecarTransferPlan;
   copySteps: PageTransferSagaStep[];
   receipt?: PageTransferReceipt;

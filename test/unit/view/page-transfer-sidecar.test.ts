@@ -466,6 +466,36 @@ describe('createSidecarTransferHost', () => {
     expect(server.appliedEdits.filter((edit) => edit.doc === 'target').length).toBeGreaterThan(1);
   });
 
+  it('keeps a peer edit made to the copy between chunks when the source then changes', async () => {
+    const { server, host } = setup({ maxEditBytes: 400 });
+    let targetEdits = 0;
+    let sourceEdited = false;
+
+    server.seed('source', [
+      { id: 'a', type: 'toggle', data: { text: 'A'.repeat(150) }, content: ['a1', 'a2'] },
+      { id: 'a1', type: 'paragraph', parent: 'a', data: { text: '1'.repeat(150) } },
+      { id: 'a2', type: 'paragraph', parent: 'a', data: { text: '2'.repeat(150) } },
+      { id: 'b', type: 'paragraph', data: { text: 'B' } },
+    ]);
+    server.onEdit((edit) => {
+      if (edit.doc === 'target') {
+        targetEdits += 1;
+        if (targetEdits === 2) {
+          server.peerEdit('target', 'a', 'Peer typed in the copy');
+        }
+      }
+      if (edit.doc === 'source' && !sourceEdited) {
+        sourceEdited = true;
+        server.peerEdit('source', 'b', 'Peer');
+      }
+    });
+    const error = await failure(host.run(move));
+
+    expect(server.document('target').blocks.find((block) => block.id === 'a')?.data.text).toBe('Peer typed in the copy');
+    expect(server.ids('source')).toContain('a');
+    expect(messageOf(error)).toMatch(/copy .* left in place/i);
+  });
+
   it('refuses a block larger than one edit request before writing', async () => {
     const { server, host } = setup({ maxEditBytes: 200 });
 
@@ -599,6 +629,85 @@ describe('createSidecarTransferHost', () => {
 
     expect(server.ids('target')).toEqual(['t', 'a', 'a1']);
     expect(messageOf(error)).toMatch(/receipt/i);
+  });
+});
+
+describe('overlapping runs with one operation ID', () => {
+  it('never loses the block when a retry overlaps a run that is mid-compensation', async () => {
+    const server = new FakeSidecar();
+    const log = memoryLog();
+    const ticketFor = (doc: string, access: { write: boolean }): string => `ticket:${doc}:${access.write ? 'write' : 'read'}`;
+    const request: PageTransferRequest = { ...move, operationId: 'overlap-1' };
+    const latch = (): { promise: Promise<void>; open: () => void } => {
+      const opened: Array<() => void> = [];
+      const promise = new Promise<void>((resolve) => {
+        opened.push(resolve);
+      });
+
+      return { promise, open: () => opened.forEach((resolve) => resolve()) };
+    };
+    const aParked = latch();
+    const releaseA = latch();
+    const runs: Array<Promise<unknown>> = [];
+    let aPosts = 0;
+    let bPosts = 0;
+
+    server.seed('source', [
+      { id: 'a', type: 'paragraph', data: { text: 'A' } },
+      { id: 'b', type: 'paragraph', data: { text: 'B' } },
+    ]);
+    server.seed('target', [{ id: 't', type: 'paragraph', data: { text: 'T' } }]);
+
+    const hostB = createSidecarTransferHost({
+      baseUrl: 'https://sidecar.test/api/blok',
+      ticketFor,
+      log,
+      fetch: async (url, init) => {
+        if (init.method === 'POST') {
+          bPosts += 1;
+          if (bPosts === 1) {
+            await aParked.promise;
+          }
+        }
+
+        return server.fetch(url, init);
+      },
+    });
+    const hostA = createSidecarTransferHost({
+      baseUrl: 'https://sidecar.test/api/blok',
+      ticketFor,
+      log,
+      fetch: async (url, init) => {
+        if (init.method === 'POST') {
+          aPosts += 1;
+          if (aPosts === 2) {
+            runs.push(hostB.run(request).catch((error: unknown) => error));
+            server.peerEdit('source', 'b', 'Peer B');
+          }
+          if (aPosts === 3) {
+            server.peerEdit('target', 't', 'Peer T');
+          }
+          if (aPosts === 6) {
+            aParked.open();
+            await releaseA.promise;
+          }
+        }
+
+        return server.fetch(url, init);
+      },
+    });
+
+    const runA = hostA.run(request).catch((error: unknown) => error).finally(() => aParked.open());
+
+    await aParked.promise;
+    await Promise.all(runs);
+    releaseA.open();
+    await runA;
+
+    const holders = ['source', 'target'].filter((doc) => server.ids(doc).includes('a'));
+
+    expect(holders.length).toBeGreaterThan(0);
+    expect(server.ids('source')).toContain('b');
   });
 });
 

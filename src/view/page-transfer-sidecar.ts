@@ -52,7 +52,6 @@ export interface SidecarTransferRecord {
   operationId: string;
   digest: string;
   attempt: number;
-  compensationTry: number;
   plan: SidecarTransferPlan;
   copySteps: PageTransferSagaStep[];
   receipt?: PageTransferReceipt;
@@ -241,22 +240,6 @@ const chunk = (ops: SidecarEditOp[], maxBytes: number): SidecarEditOp[][] => {
 
 type InsertOp = Extract<SidecarEditOp, { op: 'insert' }>;
 
-/** True while every inserted block still present is exactly what this transfer wrote, with no foreign children. */
-const isIntactCopy = (inserted: InsertOp[], current: Map<string, OutputBlockData>): boolean =>
-  inserted.filter((op) => current.has(op.id)).every((op) => {
-    const block = current.get(op.id);
-    const children = inserted
-      .filter((child) => child.parent === op.id && current.has(child.id))
-      .map((child) => child.id);
-
-    return block !== undefined &&
-      block.type === op.block.type &&
-      same(block.data, op.block.data) &&
-      same(block.tunes ?? null, op.block.tunes ?? null) &&
-      (block.parent ?? null) === op.parent &&
-      same(block.content ?? [], children);
-  });
-
 interface DocState {
   data: OutputData;
   head: SidecarDocHead;
@@ -345,7 +328,7 @@ class Saga {
         plan.copyDoc,
         await this.io.key(record, 'copy', index),
         ops,
-        index === 0 ? plan.copyHead : null
+        index === 0 ? plan.copyHead : record.copySteps[index - 1] ?? null
       );
 
       if (outcome instanceof Refused) {
@@ -374,44 +357,41 @@ class Saga {
     throw new Error(`"${plan.copyDoc}" refused the copy with HTTP ${outcome.status}; the source was left intact`);
   }
 
-  /** Removes the copy only while it is exactly what this transfer inserted. */
+  /**
+   * Removes this attempt's copy only while the receiving page is still at the
+   * head of this attempt's last copy receipt. Content alone cannot prove the
+   * copy is ours: an overlapping run with the same operation ID writes the same
+   * IDs and data, and removing that copy loses the blocks once its source
+   * removal lands. Any other head means peer or overlapping work, so the copy stays.
+   */
   private async compensate(): Promise<void> {
     const { record } = this;
-    const { plan } = record;
+    const { plan, copySteps } = record;
+    const last = copySteps[copySteps.length - 1];
 
-    if (record.compensationTry >= this.io.maxAttempts) {
-      throw copyLeft(plan.copyDoc);
+    if (last === undefined) {
+      return;
     }
-    await this.io.log.put(record);
-    const state = await this.io.readState(plan.copyDoc);
-
-    sameLineage(state.head, plan.copyHead, plan.copyDoc);
-    const inserted = plan.copyChunks.flat().filter((op): op is InsertOp => op.op === 'insert');
+    const inserted = plan.copyChunks.slice(0, copySteps.length).flat()
+      .filter((op): op is InsertOp => op.op === 'insert');
     const insertedIds = new Set(inserted.map((op) => op.id));
-    const current = new Map(state.data.blocks.map((block) => [block.id ?? '', block]));
-
-    if (!isIntactCopy(inserted, current)) {
-      throw copyLeft(plan.copyDoc);
-    }
     const roots = inserted
-      .filter((op) => current.has(op.id) && (op.parent === null || !insertedIds.has(op.parent)))
+      .filter((op) => op.parent === null || !insertedIds.has(op.parent))
       .map((op) => op.id);
-    const ops = [...removeOps(roots), ...plan.restoreOps.filter((op) => !current.has(op.id))];
+    const outcome = await this.io.edit(
+      plan.copyDoc,
+      await this.io.key(record, 'compensate', 0),
+      [...removeOps(roots), ...plan.restoreOps],
+      last
+    );
 
-    if (ops.length === 0) {
-      return;
-    }
-    const outcome = await this.io.edit(plan.copyDoc, await this.io.key(record, 'compensate', record.compensationTry), ops, state.head);
-
-    if (!(outcome instanceof Refused)) {
-      return;
-    }
-    if (outcome.status !== 412) {
+    if (outcome instanceof Refused) {
+      if (outcome.head) {
+        sameLineage(outcome.head, plan.copyHead, plan.copyDoc);
+      }
       throw copyLeft(plan.copyDoc);
     }
-    record.compensationTry += 1;
-
-    return this.compensate();
+    sameLineage(outcome, plan.copyHead, plan.copyDoc);
   }
 
   private async nextAttempt(changedDoc: string): Promise<void> {
@@ -422,7 +402,6 @@ class Saga {
     }
     record.plan = await this.build();
     record.attempt += 1;
-    record.compensationTry = 0;
     record.copySteps = [];
     await this.io.log.put(record);
   }
@@ -560,7 +539,6 @@ export function createSidecarTransferHost(options: SidecarTransferHostOptions): 
       operationId,
       digest,
       attempt: 1,
-      compensationTry: 0,
       plan: await build(),
       copySteps: [],
     };

@@ -193,6 +193,43 @@ describe('blocksToMarkdown (view)', () => {
       expect(types).toMatchObject({ link: 1 });
     });
 
+    it('cannot smuggle a script URL through a character reference', () => {
+      const urls: string[] = [];
+
+      /**
+       * Collect every link and image URL, decoded as a renderer reads it.
+       * @param node - mdast node
+       * @param node.url - link or image destination
+       * @param node.children - child nodes
+       */
+      const collect = (node: { url?: string; children?: unknown[] }): void => {
+        if (node.url !== undefined) {
+          urls.push(node.url);
+        }
+        node.children?.forEach((child) => collect(child as { url?: string; children?: unknown[] }));
+      };
+      const markdown = blocksToMarkdown(doc([
+        { type: 'paragraph', data: { text: '<a href="&amp;#106;avascript:alert(1)">a</a> <img src="&amp;#x6A;avascript:x" alt="i">' } },
+        { type: 'image', data: { url: '&#100;ata:text/html,x', alt: 'A' } },
+        { type: 'bookmark', data: { url: '&Tab;javascript:alert(2)', title: 'B' } },
+        { type: 'page', data: { pageId: 'p1' } },
+      ]), { pageInfo: () => ({ title: 'T' }), pageHref: () => '&#106;avascript:alert(3)' });
+
+      collect(fromMarkdown(markdown));
+
+      expect(urls).toEqual([
+        '&#106;avascript:alert(1)',
+        '&#x6A;avascript:x',
+        '&#100;ata:text/html,x',
+        '&Tab;javascript:alert(2)',
+        '&#106;avascript:alert(3)',
+      ]);
+    });
+
+    it('writes an & that starts no character reference as is', () => {
+      expect(inline('<a href="https://x.example/?a=1&amp;b=2">q</a>')).toBe('[q](https://x.example/?a=1&b=2)');
+    });
+
     it('keeps a link whose href holds a space', () => {
       expect(inline('<a href="https://ok.example/a b">space</a>')).toBe('[space](https://ok.example/a%20b)');
     });

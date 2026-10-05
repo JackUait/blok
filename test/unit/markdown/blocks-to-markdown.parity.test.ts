@@ -198,6 +198,12 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
     ]),
   },
   {
+    name: 'URLs holding a character reference',
+    document: doc([
+      { type: 'paragraph', data: { text: '<a href="&amp;#106;avascript:x">a</a> <img src="\\&amp;Tab;x" alt="i"> <a href="https://x/?a=1&amp;b=2">q</a>' } },
+    ]),
+  },
+  {
     name: 'a non-owning page reference',
     document: doc([{ id: 'r1', type: 'page-link', data: { pageId: 'p1' } }]),
   },

@@ -209,6 +209,9 @@ const EQUATION_MARKER = 'data-latex';
 /** Characters a bare destination cannot hold: they end it or start raw HTML. */
 const DESTINATION_BREAKER = /[\u0000-\u0020\u007f<>]/;
 
+/** What follows `&` in a CommonMark character reference. The longest entity name is 31 letters. */
+const CHARACTER_REFERENCE_TAIL = /^(?:#\d{1,7}|#[xX][\da-fA-F]{1,6}|[A-Za-z][A-Za-z\d]{0,31});/;
+
 /**
  * True when the parens in `url` pair up, as CommonMark requires of a bare
  * destination. Every backslash before them is escaped, so all of them count.
@@ -245,9 +248,14 @@ export const markdownDestination = (url: string, kind: 'href' | 'src'): string |
   }
 
   const escapeParens = !parensBalanced(url);
-  const pieces = Array.from(url, (char) => {
+  const chars = Array.from(url);
+  const pieces = chars.map((char, index) => {
     if (DESTINATION_BREAKER.test(char)) {
       return encodeURIComponent(char);
+    }
+    /** A renderer decodes `&#106;` to `j`, so `&#106;avascript:` would pass the check above. */
+    if (char === '&' && CHARACTER_REFERENCE_TAIL.test(chars.slice(index + 1, index + 40).join(''))) {
+      return '\\&';
     }
 
     return escapeParens && (char === '(' || char === ')') ? `\\${char}` : char;

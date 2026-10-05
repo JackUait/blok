@@ -89,6 +89,13 @@ describe('blocksToMarkdown', () => {
     expect(md('<a href="https://en.wikipedia.org/wiki/Foo_(bar)">w</a>')).toBe('[w](https://en.wikipedia.org/wiki/Foo_(bar))');
   });
 
+  it('escapes an & that a renderer would decode as a character reference', () => {
+    const md = (html: string): string => blocksToMarkdown([{ tool: 'paragraph', data: { text: html } }]);
+
+    expect(md('<a href="&amp;#106;avascript:alert(1)">a</a>')).toBe('[a](\\&#106;avascript:alert(1))');
+    expect(md('<a href="https://x.example/?a=1&amp;b=2">q</a>')).toBe('[q](https://x.example/?a=1&b=2)');
+  });
+
   it('drops the link syntax when an anchor has no href', () => {
     expect(blocksToMarkdown([{ tool: 'paragraph', data: { text: '<a>bare</a>' } }])).toBe('bare');
   });

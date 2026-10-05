@@ -36,6 +36,8 @@ const PROSE_FIELDS: Record<string, string[]> = {
   /** A legacy quote's attribution lives in `caption` and renders as a `<cite>`. */
   quote: ['text', 'caption'],
   toggle: ['text'],
+  /** Plain text, not HTML. `icon` is an emoji, not prose. */
+  tab: ['title'],
   list: ['text'],
   /** `alt` is written for a reader who cannot see the image, so it is prose too. */
   image: ['caption', 'alt'],

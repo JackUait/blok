@@ -202,11 +202,10 @@ export class BlockHoverController extends Controller {
       }
 
       /**
-       * Columns are structural containers, not selectable blocks. Skip the
-       * event so neither the column nor its column_list ever gets a toolbar —
-       * only the blocks inside a column are selectable (Notion-style).
+       * Layout pieces are not selectable blocks. Skip the event so none ever
+       * gets a toolbar — only the blocks inside them are (Notion-style).
        */
-      if (BlockHoverController.isColumnContainer(block)) {
+      if (BlockHoverController.isLayoutBlock(block)) {
         return;
       }
 
@@ -264,14 +263,14 @@ export class BlockHoverController extends Controller {
   }
 
   /**
-   * Columns are structural containers, not independent blocks: neither a
-   * `column` nor its `column_list` may own a drag handle, settings menu, or
-   * "convert to" option. Only the blocks inside a column are selectable.
+   * Layout pieces (a column, its column_list, a tab) are not independent
+   * blocks: none may own a drag handle, settings menu, or "convert to" option.
+   * Only the blocks inside them are selectable.
    * @param block - a hovered or candidate block
-   * @returns true when the block is a column layout container
+   * @returns true when the block's Tool declares `isLayout`
    */
-  private static isColumnContainer(block: Block): boolean {
-    return block.name === 'column' || block.name === 'column_list';
+  private static isLayoutBlock(block: Block): boolean {
+    return block.tool.isLayout;
   }
 
   /**
@@ -298,7 +297,7 @@ export class BlockHoverController extends Controller {
      * would shrink the zone. findNearestBlock itself considers nested blocks.
      */
     const topLevelBlocks = blocks.filter(block =>
-      !BlockHoverController.isColumnContainer(block)
+      !BlockHoverController.isLayoutBlock(block)
       && block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
     );
 
@@ -344,7 +343,7 @@ export class BlockHoverController extends Controller {
     const candidates = blocks
       .map(block => ({ block, rect: block.holder.getBoundingClientRect() }))
       .filter(({ block, rect }) =>
-        !BlockHoverController.isColumnContainer(block)
+        !BlockHoverController.isLayoutBlock(block)
         && block.holder.closest('[data-blok-table-cell-blocks]') === null
         && rect.width > 0
         && rect.height > 0

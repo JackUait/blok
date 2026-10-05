@@ -235,6 +235,9 @@ const readPlainText = (
           .join('\n');
       case 'code':
         return typeof block.data.code === 'string' ? block.data.code : '';
+      /** A tab title is plain text, so it is read raw rather than as HTML. */
+      case 'tab':
+        return typeof block.data.title === 'string' ? block.data.title : '';
       case 'image':
         return mediaText(block.data, ['caption'], ['caption', 'alt']);
       case 'video':

@@ -86,11 +86,19 @@ describe('BlockHoverController', () => {
 
     vi.spyOn(holder, 'getBoundingClientRect').mockReturnValue(rect);
 
-    return {
+    const block = {
       id,
       name: 'paragraph',
       holder,
-    } as unknown as Block;
+      tool: {
+        // Mirrors the real column / column_list declarations.
+        get isLayout(): boolean {
+          return block.name === 'column' || block.name === 'column_list';
+        },
+      },
+    };
+
+    return block as unknown as Block;
   };
 
   beforeEach(() => {
@@ -1323,6 +1331,32 @@ describe('BlockHoverController', () => {
         bubbles: true,
       });
       Object.defineProperty(event, 'target', { value: columnWrapper });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    it('does NOT emit a hover for any block whose tool declares isLayout', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const tabBlock = { ...createMockBlock('tab-1', 100, 400), name: 'tab', tool: { isLayout: true } } as unknown as Block;
+      const tabWrapper = tabBlock.holder;
+
+      tabWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      document.body.appendChild(tabWrapper);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [tabBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(tabBlock);
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 200,
+        clientY: 200,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: tabWrapper });
 
       document.dispatchEvent(event);
       vi.runAllTimers();

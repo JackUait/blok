@@ -82,6 +82,8 @@ export { Callout, CalloutConstructorOptions, CalloutConstructable } from './tool
 export { Quote, QuoteConstructorOptions, QuoteConstructable } from './tools/quote';
 export { ColumnList, ColumnListConstructorOptions, ColumnListConstructable } from './tools/column-list';
 export { Column, ColumnConstructorOptions, ColumnConstructable } from './tools/column';
+export { TabsTool, TabsConstructorOptions } from './tools/tabs';
+export { TabTool, TabConstructorOptions } from './tools/tab';
 export { Database, DatabaseConstructorOptions } from './tools/database';
 // DatabaseRow is the block tool class, distinct from the DatabaseRow row-shape interface in types/tools/database.d.ts
 export { DatabaseRow, DatabaseRowConstructorOptions } from './tools/database-row';
@@ -99,6 +101,13 @@ export { PageLink, PageLinkConstructorOptions } from './tools/page-link';
  * `column_list` and `column` block tools. Register as `tools: { columns: Columns }`.
  */
 export const Columns: BlockToolConstructable & {
+  readonly provides: { readonly [blockType: string]: BlockToolConstructable };
+};
+/**
+ * Tabs group manifest: a single registration handle that expands to the
+ * `tabs` and `tab` block tools. Register as `tools: { tabs: Tabs }`.
+ */
+export const Tabs: BlockToolConstructable & {
   readonly provides: { readonly [blockType: string]: BlockToolConstructable };
 };
 
@@ -129,6 +138,8 @@ export { MediaSource } from './tools/media-source';
 export { MediaUploadError, MediaUploadErrorCode, UploadErrorHandler } from './tools/upload-error';
 export { ColumnListData } from './tools/column-list';
 export { ColumnData } from './tools/column';
+export { TabsData } from './tools/tabs';
+export { TabData } from './tools/tab';
 
 // ---------------------------------------------------------------------------
 // Block type → data registry (#10)
@@ -153,6 +164,8 @@ import { AudioData as _AudioData } from './tools/audio';
 import { VideoData as _VideoData } from './tools/video';
 import { ColumnListData as _ColumnListData } from './tools/column-list';
 import { ColumnData as _ColumnData } from './tools/column';
+import { TabsData as _TabsData } from './tools/tabs';
+import { TabData as _TabData } from './tools/tab';
 import { EmbedData as _EmbedData } from './tools/embed';
 import { BookmarkData as _BookmarkData } from './tools/bookmark';
 import { PageData as _PageData } from './tools/page';
@@ -196,6 +209,8 @@ export interface BlokBlockDataMap {
   video: _VideoData;
   column_list: _ColumnListData;
   column: _ColumnData;
+  tabs: _TabsData;
+  tab: _TabData;
   embed: _EmbedData;
   bookmark: _BookmarkData;
   page: _PageData;
@@ -279,6 +294,8 @@ export const defaultBlockTools: {
   readonly video: {};
   readonly column_list: {};
   readonly column: {};
+  readonly tabs: {};
+  readonly tab: {};
   readonly embed: {};
   readonly bookmark: {};
 };

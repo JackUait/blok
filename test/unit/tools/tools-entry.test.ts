@@ -30,6 +30,17 @@ describe('tools entry exports', () => {
     });
   });
 
+  describe('Tabs group export', () => {
+    it('exports the Tabs manifest that provides the tabs and tab block tools', () => {
+      expect(toolsEntry.Tabs.provides).toStrictEqual({ tabs: toolsEntry.TabsTool, tab: toolsEntry.TabTool });
+    });
+
+    it('lists tabs and tab in defaultBlockTools', () => {
+      expect(toolsEntry.defaultBlockTools).toHaveProperty('tabs');
+      expect(toolsEntry.defaultBlockTools).toHaveProperty('tab');
+    });
+  });
+
   describe('block tune exports', () => {
     it('does not export Delete (internal-only tune)', () => {
       expect(toolsEntry).not.toHaveProperty('Delete');

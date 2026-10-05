@@ -14,6 +14,7 @@ interface FakeBlock {
   inputs: HTMLElement[];
   currentInput: HTMLElement | undefined;
   currentInputIndex: number;
+  holder: HTMLElement;
 }
 
 type PlacementCall = [string, BlockPlacement, 'move-undo' | 'move-redo'];
@@ -161,6 +162,7 @@ const addBlock = (
     inputs,
     currentInput: inputs[currentInputIndex],
     currentInputIndex,
+    holder: document.createElement('div'),
   };
 
   harness.blocks.push(block);
@@ -535,6 +537,7 @@ describe('UndoHistory — mutation coverage', () => {
         inputs: [makeInput('later')],
         currentInput: undefined,
         currentInputIndex: 0,
+        holder: document.createElement('div'),
       };
 
       later.currentInput = later.inputs[0];

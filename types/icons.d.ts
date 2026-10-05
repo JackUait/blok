@@ -134,6 +134,7 @@ export declare const IconDownload: string;
 export declare const IconSelect: string;
 export declare const IconMultiSelect: string;
 export declare const IconColumns: string;
+export declare const IconTabs: string;
 export declare const IconVideo: string;
 export declare const IconMusic: string;
 export declare const IconMap: string;

@@ -881,6 +881,11 @@
   100% { --blok-spotlight-tint: transparent }
 }
 
+@keyframes blok-tabs-dwell {
+  from { background-size: 0% 100% }
+  to { background-size: 100% 100% }
+}
+
 @keyframes blok-toast-check-pop {
   40% { scale: 1.1 }
 }

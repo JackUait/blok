@@ -511,6 +511,63 @@ describe('blocksToMarkdown (view)', () => {
       expect(md).toBe('Left\n\nRight');
     });
 
+    it('writes every tab as a bold title line followed by its content', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: 'Overview', icon: '📋' }, parent: 'tabs' },
+        { id: 'p1', type: 'paragraph', data: { text: 'First <b>body</b>' }, parent: 't1' },
+        { id: 'l1', type: 'list', data: { text: 'nested', style: 'unordered' }, parent: 't1' },
+        { id: 't2', type: 'tab', data: { title: 'Details' }, parent: 'tabs' },
+        { id: 'p2', type: 'paragraph', data: { text: 'Second' }, parent: 't2' },
+        { type: 'paragraph', data: { text: 'After' } },
+      ]));
+
+      expect(md).toBe('**📋 Overview**\n\nFirst **body**\n\n- nested\n\n**Details**\n\nSecond\n\nAfter');
+    });
+
+    it('escapes a tab title as plain text, never reading it as HTML or Markdown', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: '<b>a</b> & *b*' }, parent: 'tabs' },
+      ]));
+
+      expect(fromMarkdown(md).children).toMatchObject([
+        { type: 'paragraph', children: [{ type: 'strong', children: [{ type: 'text', value: '<b>a</b> & *b*' }] }] },
+      ]);
+    });
+
+    /** `****` alone on a line is a thematic break, so an empty title must not print it. */
+    it('writes no title line for an untitled tab without an icon', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: '' }, parent: 'tabs' },
+        { id: 'p1', type: 'paragraph', data: { text: 'Body' }, parent: 't1' },
+        { id: 't2', type: 'tab', data: { title: '' }, parent: 'tabs' },
+      ]));
+
+      expect(md).toBe('Body');
+    });
+
+    it('escapes a Markdown-significant icon so the title stays bold', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: 'A', icon: '**' }, parent: 'tabs' },
+      ]));
+
+      expect(fromMarkdown(md).children).toMatchObject([
+        { type: 'paragraph', children: [{ type: 'strong', children: [{ type: 'text', value: '** A' }] }] },
+      ]);
+    });
+
+    it('writes an untitled tab with an icon as the icon alone', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: '', icon: '🔍' }, parent: 'tabs' },
+      ]));
+
+      expect(md).toBe('**🔍**');
+    });
+
     /**
      * The defect these cases exist for: a contentless container carries no
      * `data.text`, so the default branch emitted an empty string — and the
@@ -644,6 +701,18 @@ describe('blocksToMarkdown (view)', () => {
 
       expect(warnings).toEqual([
         { construct: 'callout', action: 'degraded', detail: expect.stringContaining('blockquote') },
+      ]);
+    });
+
+    it('reports tabs as degraded once, not once per tab', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: 'A' }, parent: 'tabs' },
+        { id: 't2', type: 'tab', data: { title: 'B' }, parent: 'tabs' },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'tabs', action: 'degraded', detail: 'tabs are written one after another, each under its bold title; switching between them is lost' },
       ]);
     });
 

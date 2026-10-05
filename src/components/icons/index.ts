@@ -1063,6 +1063,15 @@ export const IconColumns = `
 </svg>
 `;
 
+// Tabs tool: a panel with a raised tab and a lower tab beside it. The lower
+// tab is an open path so the body's top edge is drawn once.
+export const IconTabs = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5 4h1.5a2 2 0 0 1 2 2v2H15a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11 8V6.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1V8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Video / player icon — framed player with a play triangle (link-type: video)
 export const IconVideo = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

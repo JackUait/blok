@@ -716,6 +716,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const NOTIFIER_CARD_LAUNCH_BYTES = 5_099;
     // Table of contents block: its stylesheet and import, then the toolbox preview drawing.
     const TABLE_OF_CONTENTS_BYTES = 6_071 + 35 + 2_544;
+    // Tabs toolbox preview: the tab strip, the open tab's panel and its line motion.
+    const TABS_TOOLBOX_PREVIEW_BYTES = 2_439;
+    // Tabs block: tabs.css (strip, sliding pill, panels, empty tab, dwell motion) and its @import.
+    const TABS_BLOCK_BYTES = 7_064;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -761,7 +765,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + AUDIO_BEAT_MOTION_BYTES
       + EMBED_LIVING_WINDOW_BYTES
       + VIDEO_NO_SIGNAL_BYTES
-      + IMAGE_RESEND_BYTES;
+      + IMAGE_RESEND_BYTES
+      + TABS_TOOLBOX_PREVIEW_BYTES
+      + TABS_BLOCK_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

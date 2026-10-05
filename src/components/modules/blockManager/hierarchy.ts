@@ -13,7 +13,7 @@ import { childrenInTreeOrder, flatIndexForPlacement, placementImpliedByFlat } fr
 import type { TreePlacement } from '../../utils/tree-order';
 import type { Blocks } from '../../blocks';
 
-import { hideUnderCollapsedParent } from './new-block-placement';
+import { hideUnderCollapsedParent, isHiddenByCollapsedParent } from './new-block-placement';
 import type { BlockRepository } from './repository';
 
 /**
@@ -563,13 +563,19 @@ export class BlockHierarchy {
 
     hideUnderCollapsedParent(block, id => this.repository.getBlockById(id));
 
-    // A block leaving a collapsed toggle keeps its `hidden` flag unless the
-    // new parent hides it too.
+    // A block leaving a collapsed toggle keeps its `hidden` flag only if the
+    // new parent hides it too. A hidden parent whose holder holds the block
+    // (an inactive tab) already conceals it; a flag of its own would outlive
+    // the parent being shown. A slotless child sits outside its parent's
+    // holder, so it still needs the flag.
     const hiddenByNewParent = newParent !== undefined && (
-      newParent.holder.classList.contains('hidden')
+      (newParent.holder.classList.contains('hidden') && !newParent.holder.contains(block.holder))
       || findOwn(newParent.holder, '[data-blok-toggle-open="false"]') !== null
-      || newParent.contentIds.some(id =>
-        id !== block.id && this.repository.getBlockById(id)?.holder.classList.contains('hidden') === true)
+      || newParent.contentIds.some(id => {
+        const sibling = id === block.id ? undefined : this.repository.getBlockById(id);
+
+        return sibling !== undefined && isHiddenByCollapsedParent(sibling);
+      })
     );
 
     if (oldParentId !== newParentId && !hiddenByNewParent) {
@@ -758,14 +764,13 @@ export class BlockHierarchy {
   }
 
   /**
-   * Walks the block's parentId chain and returns true if any ancestor is a
-   * `column` or `column_list` block — i.e. the block lives inside a columns
-   * layout in the block tree, regardless of whether its holder has been
-   * mounted into the columns DOM yet. Cycle-safe via a visited set.
+   * Walks the block's parentId chain and returns true if any ancestor's Tool
+   * declares `isLayout` (column, column_list, tab) — read from the block tree,
+   * so it holds before the holder is mounted into the layout DOM. Cycle-safe.
    * @param block - the block to test
-   * @returns true if a column/column_list ancestor exists
+   * @returns true if a layout ancestor exists
    */
-  private hasColumnAncestor(block: Block): boolean {
+  private hasLayoutAncestor(block: Block): boolean {
     const walk = (parentId: string | null, visited: Set<string>): boolean => {
       if (parentId === null || visited.has(parentId)) {
         return false;
@@ -778,7 +783,7 @@ export class BlockHierarchy {
         return false;
       }
 
-      if (parent.name === 'column' || parent.name === 'column_list') {
+      if (parent.tool.isLayout) {
         return true;
       }
 
@@ -863,8 +868,8 @@ export class BlockHierarchy {
       return;
     }
 
-    // Columns are a flex layout: the column_list block, its column children, and
-    // every block inside a column are positioned by flex, not block-tree depth.
+    // Layout pieces (columns, tabs) position their content themselves: the
+    // layout block and every block below it are flush, not depth-indented.
     // Depth-based margin would push the column holders off their even split and
     // indent the column content. Keep them flush.
     //
@@ -874,9 +879,9 @@ export class BlockHierarchy {
     // appends it. The column ancestry is always in the block tree, so consult
     // that too rather than relying on DOM placement timing.
     if (
-      block.name === 'column_list' ||
+      block.tool.isLayout ||
       holder.closest('[data-blok-columns]') ||
-      this.hasColumnAncestor(block)
+      this.hasLayoutAncestor(block)
     ) {
       holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, '0');
       holder.setAttribute('data-blok-depth', '0');

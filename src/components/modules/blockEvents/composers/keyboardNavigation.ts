@@ -12,7 +12,7 @@ import { horizontalArrowIntent, keyCodeFromEvent } from '../utils/keyboard';
 import { findOwn } from '../../../utils/own-element';
 
 import { BlockEventComposer } from './__base';
-import { getIndentTarget, getFollowingSiblings } from './structural-siblings';
+import { canOutdent, getIndentTarget, getFollowingSiblings } from './structural-siblings';
 import { acceptsChildren } from '../../../utils/child-tools';
 
 /**
@@ -269,7 +269,7 @@ export class KeyboardNavigation extends BlockEventComposer {
       return false;
     }
 
-    if (currentBlock.parentId === null) {
+    if (currentBlock.parentId === null || !canOutdent(BlockManager, currentBlock)) {
       return false;
     }
 

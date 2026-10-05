@@ -2,6 +2,7 @@ import * as Y from 'yjs';
 
 import { getCaretOffset } from '../../../components/utils/caret/index';
 import { resolveCaretRange } from '../collaboration/caret-position';
+import { hiddenAncestors } from '../blockManager/new-block-placement';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 
 import { dropPeerPaddingOfRemovedColumn, isPaddingCell, namesOnlyPaddingCells } from './grid-padding';
@@ -2938,6 +2939,14 @@ export class UndoHistory {
     if (block === undefined) {
       return false;
     }
+
+    // Open a closed tab first: the caret cannot land in hidden content. Only
+    // layout pieces: their hiding is UI state history never records. A toggle's
+    // open state is in history, so revealing it would undo a replayed collapse.
+    hiddenAncestors(block, id => BlockManager.getBlockById(id))
+      .filter(parent => parent.tool.isLayout)
+      .reverse()
+      .forEach(parent => parent.call('expand'));
 
     // Get the specific input within the block
     const input = block.inputs[snapshot.inputIndex];

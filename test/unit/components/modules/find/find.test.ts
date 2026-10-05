@@ -38,7 +38,7 @@ interface Harness {
  * `parent` nests the block's holder inside another block's holder.
  */
 const createEditor = (
-  contents: Array<{ id: string; text: string; parent?: string; collapsed?: boolean }>,
+  contents: Array<{ id: string; text: string; parent?: string; collapsed?: boolean; hidden?: boolean }>,
   config: Partial<BlokConfig> = {}
 ): Harness => {
   const wrapper = document.createElement('div');
@@ -48,7 +48,7 @@ const createEditor = (
   wrapper.appendChild(redactor);
   document.body.appendChild(wrapper);
 
-  const blocks: FakeBlock[] = contents.map(({ id, text, parent, collapsed }) => {
+  const blocks: FakeBlock[] = contents.map(({ id, text, parent, collapsed, hidden }) => {
     const holder = document.createElement('div');
     const content = document.createElement('div');
     const toolRoot = document.createElement('div');
@@ -63,6 +63,9 @@ const createEditor = (
     holder.appendChild(content);
     if (collapsed !== undefined) {
       input.setAttribute('data-blok-toggle-open', String(!collapsed));
+    }
+    if (hidden === true) {
+      holder.classList.add('hidden');
     }
 
     return { id, parentId: parent ?? null, holder, call: vi.fn() };
@@ -394,6 +397,43 @@ describe('Find module', () => {
     expect(outer.call).toHaveBeenCalledWith('expand');
     expect(inner.call).toHaveBeenCalledWith('expand');
     expect(leaf.call).not.toHaveBeenCalled();
+  });
+
+  it('reveals a match inside a hidden ancestor by expanding it, outermost first', () => {
+    const { wrapper, redactor, blocks } = editor([
+      { id: 'tabs', text: 'tabs' },
+      { id: 'tab-1', text: 'first', parent: 'tabs' },
+      { id: 'tab-2', text: 'second', parent: 'tabs', hidden: true },
+      { id: 'toggle', text: 'toggle', parent: 'tab-2', collapsed: true },
+      { id: 'leaf', text: 'hidden treasure', parent: 'toggle' },
+    ]);
+
+    press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    typeQuery(wrapper, 'treasure');
+    press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
+
+    const [tabs, tab1, tab2, toggle, leaf] = blocks;
+
+    expect(tab2.call).toHaveBeenCalledWith('expand');
+    expect(toggle.call).toHaveBeenCalledWith('expand');
+    expect(tab2.call.mock.invocationCallOrder[0]).toBeLessThan(toggle.call.mock.invocationCallOrder[0]);
+    expect(tabs.call).not.toHaveBeenCalled();
+    expect(tab1.call).not.toHaveBeenCalled();
+    expect(leaf.call).not.toHaveBeenCalled();
+  });
+
+  it('prefers a visible match over one under a hidden ancestor while typing', () => {
+    const { wrapper, redactor, blocks } = editor([
+      { id: 'tab-1', text: 'tab one', hidden: true },
+      { id: 'inside', text: 'treasure inside', parent: 'tab-1' },
+      { id: 'outside', text: 'treasure outside' },
+    ]);
+
+    press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    typeQuery(wrapper, 'treasure');
+
+    expect(activeText()).toBe('treasure outside');
+    expect(blocks[0].call).not.toHaveBeenCalled();
   });
 
   it('reveals a collapsed match inside a nested editor', () => {

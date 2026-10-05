@@ -408,13 +408,13 @@ describe('parseNotionBlocksV3 — block type mapping', () => {
     ]);
   });
 
-  it('drops a tab wrapper and promotes its child to the top level', () => {
+  it('drops a tab wrapper and promotes its child to the top level when tabs is not registered', () => {
     const json = payload([
-      value('tb', 'tab', { ...titleProps('Tab one'), content: ['ch'] }),
+      value('tb', 'tab', { content: ['ch'] }),
       value('ch', 'text', titleProps('Inside')),
     ]);
 
-    expect(parseNotionBlocksV3(json)).toStrictEqual([{ id: 'ch', tool: 'paragraph', data: { text: 'Inside' } }]);
+    expect(parseNotionBlocksV3(json, (tool) => tool !== 'tabs')).toStrictEqual([{ id: 'ch', tool: 'paragraph', data: { text: 'Inside' } }]);
   });
 
   it('keeps a checklist item unchecked for a No property', () => {

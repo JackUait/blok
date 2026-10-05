@@ -110,6 +110,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'tools/image/ui.ts': 'Viewport modal lightbox, not a surface positioned against a live anchor.',
   'tools/spacer/alignment-guide.ts': 'Pointer-driven fixed guide whose coordinates refresh throughout the drag.',
   'tools/table/table-row-col-drag.ts': 'Pointer-following table ghost and indicator refreshed on every pointer move.',
+  'tools/tabs/index.ts': 'Mount owner for the tracked emoji-picker root surface (tab Edit icon).',
   'tools/video/index.ts': 'Transient styleless download anchor clicked and removed synchronously.',
 };
 
@@ -212,6 +213,7 @@ const POPOVER_DESKTOP_CONSUMERS = [
   'tools/page/page-picker.ts',
   'tools/table/table-cell-selection.ts',
   'tools/table/table-row-col-popover.ts',
+  'tools/tabs/index.ts',
 ].sort();
 
 const TRACKED_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {

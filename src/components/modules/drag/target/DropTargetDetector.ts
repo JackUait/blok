@@ -8,8 +8,8 @@ import { getElementDirection, inlineStartOffset, logicalSide } from '../../../ut
 import { DRAG_CONFIG } from '../utils/drag.constants';
 import { getBlockNestingDepth, getListItemDepth } from '../utils/depthUtils';
 import { deepestLegalStructuralDepth } from '../utils/structuralParent';
-import { acceptsChildren } from '../../../utils/child-tools';
-import { areSourceRootsChildrenOf, isOpenToggleBlock } from '../utils/toggleState';
+import { acceptsChildren, isChildToolAllowed } from '../../../utils/child-tools';
+import { areSourceRootsChildrenOf, findNamedDropIntoZone, hasOwnDropIntoZone, isOpenToggleBlock } from '../utils/toggleState';
 import { resolveTargetDepth, selectPointerDepth } from '../../../../tools/list/depth-validator';
 import { INDENT_PER_LEVEL } from '../../../../tools/list/constants';
 
@@ -18,6 +18,9 @@ export interface DropTarget {
   edge: 'top' | 'bottom' | 'left' | 'right';
   depth: number;
   parentId: string | null;
+  /** Set when a named drop-into zone (a tab pill) took the drop: the dragged
+   *  blocks go to the END of `block`'s children, and the zone shows the indicator. */
+  zone?: HTMLElement;
 }
 
 export interface ContentRect {
@@ -269,10 +272,28 @@ export class DropTargetDetector {
       return gapTarget;
     }
 
+    // A named zone (a closed tab's pill) takes the drop for the block it names.
+    // A refusal must not fall through, or the drop lands beside the host block.
+    const named = findNamedDropIntoZone(elementUnderCursor);
+    const namedOwner = named === null ? undefined : this.blockManager.getBlockById(named.blockId);
+
+    if (named !== null && namedOwner !== undefined) {
+      const target = this.dropIntoTarget(namedOwner, sourceBlock);
+
+      return target === null ? null : { ...target, zone: named.zone };
+    }
+
     const resolved = this.findDropTargetBlock(elementUnderCursor, clientX, clientY);
 
     if (!resolved.holder || !resolved.block || resolved.block === sourceBlock) {
       return null;
+    }
+
+    // An empty container showing a drop-into zone (an empty tab) takes the
+    // drop as its first child from anywhere on it. Without this, a top-half
+    // hover normalizes to the previous sibling — a hidden tab.
+    if (hasOwnDropIntoZone(resolved.block)) {
+      return this.dropIntoTarget(resolved.block, sourceBlock);
     }
 
     // A vertical drop in the EMPTY space below a column's content — the dead
@@ -1075,6 +1096,29 @@ export class DropTargetDetector {
     };
 
     return walk(block.parentId);
+  }
+
+  /**
+   * The first-child drop into a container showing a drop-into zone, or null
+   * when the container is (inside) a dragged block or refuses a dragged tool.
+   * @param owner - the block whose holder shows the zone
+   * @param sourceBlock - the primary dragged block
+   */
+  private dropIntoTarget(owner: Block, sourceBlock: Block): DropTarget | null {
+    const sources = this.sourceBlocks.length > 0 ? this.sourceBlocks : [sourceBlock];
+    const sourceIds = new Set(sources.map(block => block.id));
+    const roots = sources.filter(block => block.parentId === null || !sourceIds.has(block.parentId));
+    const isInsideSource = (block: Block | undefined, seen: Set<string>): boolean =>
+      block !== undefined && !seen.has(block.id) && (
+        sourceIds.has(block.id)
+        || (block.parentId !== null && isInsideSource(this.blockManager.getBlockById(block.parentId), seen.add(block.id)))
+      );
+
+    if (isInsideSource(owner, new Set<string>()) || roots.some(root => !isChildToolAllowed(owner, root.name))) {
+      return null;
+    }
+
+    return { block: owner, edge: 'bottom', depth: 0, parentId: owner.id };
   }
 
   /**

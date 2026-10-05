@@ -731,6 +731,57 @@ describe('blocksToHtml', () => {
     });
   });
 
+  describe('tabs', () => {
+    it('renders every tab as a titled section, in order, with its content', () => {
+      const html = blocksToHtml(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'Overview', icon: '📋' } },
+        { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'A' } },
+        { id: 't2', type: 'tab', parent: 'tabs', data: { title: 'Details' } },
+        { id: 'p2', type: 'paragraph', parent: 't2', data: { text: 'B' } },
+      ]));
+
+      expect(html).toBe(
+        '<div data-blok-tabs>'
+        + '<section data-blok-tab><h4>📋 Overview</h4><p>A</p></section>'
+        + '<section data-blok-tab><h4>Details</h4><p>B</p></section>'
+        + '</div>'
+      );
+    });
+
+    it('escapes the title and icon as plain text', () => {
+      const html = blocksToHtml(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', parent: 'tabs', data: { title: '<img src=x onerror=alert(1)>', icon: '<b>' } },
+      ]));
+
+      expect(html).toBe('<div data-blok-tabs><section data-blok-tab><h4>&lt;b&gt; &lt;img src=x onerror=alert(1)&gt;</h4></section></div>');
+    });
+
+    it('writes no empty heading for an untitled tab without an icon', () => {
+      const html = blocksToHtml(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', parent: 'tabs', data: { title: '' } },
+        { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'A' } },
+      ]));
+
+      expect(html).toBe('<div data-blok-tabs><section data-blok-tab><p>A</p></section></div>');
+    });
+
+    it('stamps the tool hook and id on each own root', () => {
+      const html = blocksToHtml(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'One' } },
+      ]), { toolAttributes: true, blockIds: true });
+
+      expect(html).toBe(
+        '<div data-blok-tool="tabs" data-blok-id="tabs" data-blok-tabs>'
+        + '<section data-blok-tool="tab" data-blok-id="t1" data-blok-tab><h4>One</h4></section>'
+        + '</div>'
+      );
+    });
+  });
+
   describe('database', () => {
     it('renders row children as blocks (minimal fallback)', () => {
       const html = blocksToHtml(doc([

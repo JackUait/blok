@@ -529,6 +529,19 @@ for (const [locale, keys] of Object.entries(IMAGE_MARKUP_COGNATE_RETENTIONS)) {
   for (const key of keys) set.add(key);
 }
 
+// Filipino, Indonesian and Malay borrow "tab" as the UI word for a tab, so
+// "Tab" / "Tab {number}" stay as-is.
+const TABS_COGNATE_RETENTIONS: Record<string, string[]> = {
+  fil: ['toolNames.tab', 'tools.tabs.defaultTitle'],
+  id: ['toolNames.tab', 'tools.tabs.defaultTitle'],
+  ms: ['toolNames.tab', 'tools.tabs.defaultTitle'],
+};
+
+for (const [locale, keys] of Object.entries(TABS_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
 describe('locale values are translated (identical-to-en only when cognate)', () => {
   const english = loadLocaleMessages('en');
   const nonEnglish = listLocaleCodes().filter(code => code !== 'en');

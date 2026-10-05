@@ -154,6 +154,16 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
     ]),
   },
   {
+    name: 'tabs holding blocks',
+    document: doc([
+      { id: 'tabs', type: 'tabs', data: {} },
+      { id: 'tab1', type: 'tab', data: { title: 'One *star*', icon: '📋' }, parent: 'tabs' },
+      { id: 'p1', type: 'paragraph', data: { text: 'First <b>tab</b>' }, parent: 'tab1' },
+      { id: 'tab2', type: 'tab', data: { title: 'Two & <b>three</b>' }, parent: 'tabs' },
+      { id: 'p2', type: 'list', data: { text: 'item', style: 'unordered' }, parent: 'tab2' },
+    ]),
+  },
+  {
     name: 'a table with block-backed and legacy cells',
     document: doc([
       {
@@ -246,7 +256,7 @@ describe('blocksToMarkdown backend parity', () => {
   it('covers every tool that has a dedicated serialization case', () => {
     const covered = new Set(FIXTURES.flatMap(({ document: fixture }) => fixture.blocks.map((block) => block.type)));
 
-    for (const tool of ['header', 'quote', 'divider', 'list', 'code', 'table', 'callout', 'toggle', 'column_list', 'column', 'spacer', 'image', 'video', 'file', 'bookmark', 'embed', 'page-link']) {
+    for (const tool of ['header', 'quote', 'divider', 'list', 'code', 'table', 'callout', 'toggle', 'column_list', 'column', 'tabs', 'tab', 'spacer', 'image', 'video', 'file', 'bookmark', 'embed', 'page-link']) {
       expect(covered, `no parity fixture exercises the \`${tool}\` tool`).toContain(tool);
     }
   });

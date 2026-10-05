@@ -63,6 +63,7 @@ describe('blocksToPlainTextWithReport', () => {
       { type: 'spacer', data: { height: 24 } },
       { type: 'callout', data: { emoji: '💡' } },
       { type: 'column_list', data: {} },
+      { type: 'tabs', data: {} },
       { type: 'database', data: { schema: [], views: [], activeViewId: 'v' } },
     ]));
 

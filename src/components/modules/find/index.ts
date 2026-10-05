@@ -9,7 +9,7 @@
 import { Module } from '../../__module';
 import type { Block } from '../../block';
 import { getUserOS } from '../../utils/browser';
-import { findOwn } from '../../utils/own-element';
+import { hiddenAncestors } from '../blockManager/new-block-placement';
 import { syncPortalDirection } from '../../utils/portal-direction';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { FindBar } from './find-bar';
@@ -26,7 +26,6 @@ import { pointOf, startsAtOrAfter } from './text-point';
 const EDITOR_SELECTOR = '[data-blok-testid="blok-editor"]';
 const editorOf = (node: Node): Element | null =>
   (node instanceof Element ? node : node.parentElement)?.closest(EDITOR_SELECTOR) ?? null;
-const TOGGLE_STATE_SELECTOR = '[data-blok-toggle-open]';
 const QUERY_DEBOUNCE_MS = 40;
 const DOM_DEBOUNCE_MS = 120;
 /** Space kept between a revealed match and the viewport edge (or the find bar). */
@@ -649,29 +648,20 @@ export class Find extends Module {
   }
 
   /**
-   * The collapsed toggles hiding the block that holds `range`, innermost first.
-   * The block itself does not count: its own text shows even when collapsed.
+   * The ancestors hiding the block that holds `range`. See {@link hiddenAncestors}.
    * @param range - a match
    */
   private collapsedAncestors(range: Range): Block[] {
     const editor = editorOf(range.startContainer);
     const owner = Array.from(Find.allInstances).find((instance) => instance.Blok.UI.nodes.wrapper === editor);
     const BlockManager = owner?.Blok.BlockManager;
+    const block = BlockManager?.getBlockByChildNode(range.startContainer);
 
-    if (BlockManager === undefined) {
+    if (BlockManager === undefined || block === undefined) {
       return [];
     }
 
-    const block = BlockManager.getBlockByChildNode(range.startContainer);
-    const ancestorsOf = (parentId: string | null): Block[] => {
-      const parent = parentId === null ? undefined : BlockManager.getBlockById(parentId);
-
-      return parent === undefined ? [] : [parent, ...ancestorsOf(parent.parentId)];
-    };
-
-    return ancestorsOf(block?.parentId ?? null).filter((parent) =>
-      findOwn(parent.holder, TOGGLE_STATE_SELECTOR)?.getAttribute('data-blok-toggle-open') === 'false'
-    );
+    return hiddenAncestors(block, (id) => BlockManager.getBlockById(id));
   }
 
   private isHidden(range: Range): boolean {

@@ -1,0 +1,271 @@
+/*
+ * Tabs block — a card with a strip of pill tabs and the open tab below.
+ *
+ * The active pill is never painted by the pill itself: one shared indicator
+ * glides behind the strip (motion.ts moves it), so the pills only change ink.
+ * Selected = gray fill + primary ink, never blue (selected-state-neutral).
+ */
+[data-blok-tabs] {
+  --blok-tabs-pill-height: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  border: var(--blok-border-width-hairline) solid var(--blok-border-subtle);
+  border-radius: var(--blok-radius-block);
+  transition: border-color var(--blok-duration-slow) var(--blok-ease-standard);
+}
+
+@media (hover: hover) {
+  [data-blok-tabs]:hover {
+    border-color: var(--blok-border-primary);
+  }
+}
+
+[data-blok-tabs-strip] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  padding: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1);
+  user-select: none;
+}
+
+[data-blok-tabs-scroller] {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  min-width: 0;
+  overflow-x: auto;
+  /* Pills scrolled into view stop clear of the edge fades below. */
+  scroll-padding-inline: var(--blok-space-6);
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+}
+
+[data-blok-tabs-scroller]::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fade the edge a hidden pill sits behind, so overflow reads as "more". */
+[data-blok-tabs-scroller][data-overflow-end] {
+  mask-image: linear-gradient(to var(--_blok-end-side, right), black calc(100% - var(--blok-space-6)), transparent);
+}
+
+[data-blok-tabs-scroller][data-overflow-start] {
+  mask-image: linear-gradient(to var(--_blok-start-side, left), black calc(100% - var(--blok-space-6)), transparent);
+}
+
+[data-blok-tabs-scroller][data-overflow-start][data-overflow-end] {
+  mask-image: linear-gradient(
+    to var(--_blok-end-side, right),
+    transparent,
+    black var(--blok-space-6),
+    black calc(100% - var(--blok-space-6)),
+    transparent
+  );
+}
+
+[data-blok-tabs-indicator] {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 0;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-icon-active-bg);
+  box-shadow: inset 0 0 0 var(--blok-border-width-hairline) var(--blok-border-secondary);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--blok-duration-slow) var(--blok-ease-standard);
+}
+
+[data-blok-tabs-indicator][data-placed] {
+  opacity: 1;
+}
+
+[data-blok-tabs-pill] {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  height: var(--blok-tabs-pill-height);
+  padding-inline: var(--blok-space-2-5);
+  border-radius: var(--blok-radius-control);
+  font-size: var(--blok-font-size-body);
+  /* Equal to the height: the block toolbar centers on this line box. */
+  line-height: var(--blok-tabs-pill-height);
+  white-space: nowrap;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--blok-duration-standard) var(--blok-ease-standard),
+    background-color var(--blok-duration-base) var(--blok-ease-standard),
+    transform var(--blok-duration-base) var(--blok-ease-standard);
+}
+
+@media (hover: hover) {
+  [data-blok-tabs-pill]:hover {
+    color: var(--blok-text-primary);
+  }
+
+  [data-blok-tabs-pill][aria-selected="false"]:hover {
+    background-color: var(--blok-item-hover-bg);
+  }
+}
+
+[data-blok-tabs-pill]:active:not([data-renaming]) {
+  transform: scale(0.96);
+}
+
+[data-blok-tabs-pill][aria-selected="true"] {
+  color: var(--blok-text-primary);
+}
+
+[data-blok-tabs-pill-icon] {
+  font-size: var(--blok-font-size-body);
+  line-height: 1;
+}
+
+[data-blok-tabs-pill-label] {
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-blok-tabs-rename-input] {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+[data-blok-tabs-add] {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--blok-tabs-pill-height);
+  height: var(--blok-tabs-pill-height);
+  border-radius: var(--blok-radius-control);
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--blok-duration-slow) var(--blok-ease-standard),
+    background-color var(--blok-duration-base) var(--blok-ease-standard),
+    color var(--blok-duration-base) var(--blok-ease-standard);
+}
+
+[data-blok-tabs-add] svg {
+  width: var(--blok-space-4);
+  height: var(--blok-space-4);
+}
+
+[data-blok-tabs]:hover [data-blok-tabs-add],
+[data-blok-tabs-add]:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  [data-blok-tabs-add] {
+    opacity: 1;
+  }
+}
+
+@media (hover: hover) {
+  [data-blok-tabs-add]:hover {
+    background-color: var(--blok-item-hover-bg);
+    color: var(--blok-text-primary);
+  }
+}
+
+[data-blok-tabs-panels] {
+  padding: 0 var(--blok-space-2) var(--blok-space-2);
+}
+
+[data-blok-tab-empty] {
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
+  font-size: var(--blok-font-size-body);
+  color: var(--blok-text-secondary);
+  cursor: text;
+  user-select: none;
+  transition: background-color var(--blok-duration-base) var(--blok-ease-standard);
+}
+
+@media (hover: hover) {
+  [data-blok-tab-empty]:hover {
+    background-color: var(--blok-item-hover-bg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tabs],
+  [data-blok-tabs-indicator],
+  [data-blok-tabs-pill],
+  [data-blok-tabs-add],
+  [data-blok-tab-empty] {
+    transition: none;
+  }
+
+  [data-blok-tabs-pill]:active:not([data-renaming]) {
+    transform: none;
+  }
+}
+
+/* Reordering: the dragged pill lifts and follows the pointer; the others
+ * slide out of its way (pill-gestures.ts sets their transforms). */
+[data-blok-tabs-strip][data-reordering] [data-blok-tabs-pill] {
+  cursor: grabbing;
+}
+
+[data-blok-tabs-pill][data-shifting] {
+  transition: transform var(--blok-duration-slow) var(--blok-ease-popover);
+}
+
+[data-blok-tabs-pill][data-dragging] {
+  z-index: 2;
+  background-color: var(--blok-bg-primary);
+  color: var(--blok-text-primary);
+  box-shadow: var(--blok-shadow-tab-ghost);
+  transition: box-shadow var(--blok-duration-slow) var(--blok-ease-standard);
+}
+
+/* A dragged block rests on a pill: fill it from the inline start like a
+ * charging bar, then the tab opens. Matches the dwell time in pill-gestures.ts. */
+[data-blok-tabs-pill][data-dwell] {
+  background-image: linear-gradient(to var(--_blok-end-side, right), var(--blok-item-hover-bg), var(--blok-item-hover-bg));
+  background-repeat: no-repeat;
+  background-position: var(--_blok-start-side, left) center;
+  animation: blok-tabs-dwell 450ms linear forwards;
+}
+
+/* The pill is the drop target: the dragged blocks will land at the end of its
+ * tab. Core sets the attribute (DragController); same colour as the drop line. */
+[data-blok-tabs-pill][data-blok-drop-into-active] {
+  box-shadow: inset 0 0 0 2px var(--blok-dnd-drop-indicator-bg);
+}
+
+@keyframes blok-tabs-dwell {
+  from {
+    background-size: 0% 100%;
+  }
+
+  to {
+    background-size: 100% 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tabs-pill][data-shifting] {
+    transition: none;
+  }
+
+  [data-blok-tabs-pill][data-dwell] {
+    animation: none;
+    background-size: 100% 100%;
+  }
+}

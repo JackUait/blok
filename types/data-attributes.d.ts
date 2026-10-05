@@ -301,6 +301,16 @@ export const DATA_ATTR: {
    *  claimed by another container and must not be stolen. */
   readonly nestedBlocks: 'data-blok-nested-blocks';
 
+  /** A drop zone. Empty value: an empty container's placeholder (an empty
+   *  tab); while the block's own holder shows one without the `hidden` class,
+   *  a drop on the block nests the dragged blocks as its first children.
+   *  A block id (a tab pill): a drop on the zone appends the dragged blocks
+   *  as the LAST children of that block. */
+  readonly dropInto: 'data-blok-drop-into';
+
+  /** Set by core on a named drop zone while it is the drop target. */
+  readonly dropIntoActive: 'data-blok-drop-into-active';
+
   // Mutation Tracking
 
   /** Element excluded from mutation tracking */

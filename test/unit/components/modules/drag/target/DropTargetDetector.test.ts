@@ -1162,6 +1162,174 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(toggle.holder);
     });
 
+    describe('drop-into zone', () => {
+      const createZoneOwner = (id: string, parentId: string | null, childTools?: { allow?: string[]; deny?: string[] }): { block: Block; zone: HTMLElement } => {
+        const block = createToggleTestBlock({ id, parentId, name: 'tab' });
+        const zone = document.createElement('div');
+
+        zone.setAttribute('data-blok-drop-into', '');
+        block.holder.appendChild(zone);
+        Object.assign(block, { tool: { childTools } });
+
+        return { block, zone };
+      };
+
+      const mockRect = (block: Block): void => {
+        vi.spyOn(block.holder, 'getBoundingClientRect').mockReturnValue({
+          top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+        });
+      };
+
+      it('nests into the owner as its first child even from the top half, never the previous sibling', () => {
+        const tabs = createToggleTestBlock({ id: 'tabs', contentIds: ['tab-1', 'tab-2'], name: 'tabs' });
+        const hiddenTab = createToggleTestBlock({ id: 'tab-1', parentId: 'tabs', name: 'tab' });
+        const { block: emptyTab, zone } = createZoneOwner('tab-2', 'tabs');
+        const outsider = createToggleTestBlock({ id: 'outsider' });
+
+        hiddenTab.holder.classList.add('hidden');
+
+        const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([tabs, hiddenTab, emptyTab, outsider]));
+
+        det.setSourceBlocks([outsider]);
+        mockRect(emptyTab);
+        document.body.appendChild(emptyTab.holder);
+
+        const result = det.determineDropTarget(zone, 100, 10, outsider);
+
+        expect(result).toStrictEqual({ block: emptyTab, edge: 'bottom', depth: 0, parentId: 'tab-2' });
+
+        document.body.removeChild(emptyTab.holder);
+      });
+
+      it('ignores a zone the owner has hidden (it has children, or is read-only)', () => {
+        const tabs = createToggleTestBlock({ id: 'tabs', contentIds: ['tab-1'], name: 'tabs' });
+        const { block: tab, zone } = createZoneOwner('tab-1', 'tabs');
+        const outsider = createToggleTestBlock({ id: 'outsider' });
+
+        zone.classList.add('hidden');
+
+        const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([tabs, tab, outsider]));
+
+        det.setSourceBlocks([outsider]);
+        mockRect(tab);
+        document.body.appendChild(tab.holder);
+
+        const result = det.determineDropTarget(tab.holder, 100, 90, outsider);
+
+        expect(result?.parentId).not.toBe('tab-1');
+
+        document.body.removeChild(tab.holder);
+      });
+
+      it('refuses a zone owned by a dragged block or one of its descendants', () => {
+        const tabs = createToggleTestBlock({ id: 'tabs', contentIds: ['tab-1'], name: 'tabs' });
+        const { block: tab, zone } = createZoneOwner('tab-1', 'tabs');
+
+        const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([tabs, tab]));
+
+        det.setSourceBlocks([tabs]);
+        mockRect(tab);
+        document.body.appendChild(tab.holder);
+
+        const result = det.determineDropTarget(zone, 100, 50, tabs);
+
+        expect(result?.parentId).not.toBe('tab-1');
+
+        document.body.removeChild(tab.holder);
+      });
+
+      it('refuses a zone whose owner does not allow a dragged tool', () => {
+        const { block: tab, zone } = createZoneOwner('tab-1', null, { deny: ['tabs'] });
+        const nested = createToggleTestBlock({ id: 'nested-tabs', name: 'tabs' });
+
+        const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([tab, nested]));
+
+        det.setSourceBlocks([nested]);
+        mockRect(tab);
+        document.body.appendChild(tab.holder);
+
+        const result = det.determineDropTarget(zone, 100, 50, nested);
+
+        expect(result?.parentId).not.toBe('tab-1');
+
+        document.body.removeChild(tab.holder);
+      });
+
+      describe('named zone (a tab pill)', () => {
+        const createTabsWithPill = (childTools?: { allow?: string[]; deny?: string[] }): { tabs: Block; closedTab: Block; pill: HTMLElement } => {
+          const tabs = createToggleTestBlock({ id: 'tabs', contentIds: ['tab-1', 'tab-2'], name: 'tabs' });
+          const closedTab = createToggleTestBlock({ id: 'tab-2', parentId: 'tabs', name: 'tab' });
+          const pill = document.createElement('button');
+
+          pill.setAttribute('role', 'tab');
+          pill.setAttribute('data-blok-drop-into', 'tab-2');
+          tabs.holder.appendChild(pill);
+          closedTab.holder.classList.add('hidden');
+          tabs.holder.appendChild(closedTab.holder);
+          Object.assign(closedTab, { tool: { childTools } });
+          mockRect(tabs);
+
+          return { tabs, closedTab, pill };
+        };
+
+        it('appends into the block the pill names', () => {
+          const { tabs, closedTab, pill } = createTabsWithPill();
+          const outsider = createToggleTestBlock({ id: 'outsider' });
+          const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([outsider, tabs, closedTab]));
+
+          det.setSourceBlocks([outsider]);
+          document.body.appendChild(tabs.holder);
+
+          const result = det.determineDropTarget(pill, 100, 10, outsider);
+
+          expect(result).toStrictEqual({ block: closedTab, edge: 'bottom', depth: 0, parentId: 'tab-2', zone: pill });
+
+          document.body.removeChild(tabs.holder);
+        });
+
+        it('does not make the block that hosts the pill a drop-into owner', () => {
+          const { tabs, closedTab } = createTabsWithPill();
+          const outsider = createToggleTestBlock({ id: 'outsider' });
+          const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([outsider, tabs, closedTab]));
+
+          det.setSourceBlocks([outsider]);
+          document.body.appendChild(tabs.holder);
+
+          const result = det.determineDropTarget(tabs.holder, 100, 90, outsider);
+
+          expect(result?.parentId).not.toBe('tabs');
+
+          document.body.removeChild(tabs.holder);
+        });
+
+        it('refuses the drop when the named block does not allow a dragged tool', () => {
+          const { tabs, closedTab, pill } = createTabsWithPill({ deny: ['tabs'] });
+          const nested = createToggleTestBlock({ id: 'nested-tabs', name: 'tabs' });
+          const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([nested, tabs, closedTab]));
+
+          det.setSourceBlocks([nested]);
+          document.body.appendChild(tabs.holder);
+
+          expect(det.determineDropTarget(pill, 100, 10, nested)).toBeNull();
+
+          document.body.removeChild(tabs.holder);
+        });
+
+        it('refuses the drop when the named block is inside a dragged block', () => {
+          const { tabs, closedTab, pill } = createTabsWithPill();
+          const other = createToggleTestBlock({ id: 'other' });
+          const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([other, tabs, closedTab]));
+
+          det.setSourceBlocks([other, tabs]);
+          document.body.appendChild(tabs.holder);
+
+          expect(det.determineDropTarget(pill, 100, 10, other)).toBeNull();
+
+          document.body.removeChild(tabs.holder);
+        });
+      });
+    });
+
     it('should set parentId for toggle heading (header with toggle-open)', () => {
       const toggleHeading = createToggleTestBlock({
         id: 'header-1',

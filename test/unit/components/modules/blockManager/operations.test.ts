@@ -46,6 +46,8 @@ const projectRepositoryForInvariant = (repo: BlockRepository): OutputBlockData[]
 /**
  * Create a mock Block for testing
  */
+const isColumnName = (name: string | undefined): boolean => name === 'column' || name === 'column_list';
+
 const createMockBlock = (options: {
   id?: string;
   name?: string;
@@ -61,6 +63,10 @@ const createMockBlock = (options: {
   setData?: (data: BlockToolData) => Promise<boolean>;
   /** Mirrors BlockToolAdapter.childTools (the per-container child allowlist). */
   childTools?: { allow?: string[]; deny?: string[] };
+  /** Mirrors BlockToolAdapter.deletesChildren; column and column_list declare it. */
+  deletesChildren?: boolean;
+  /** Mirrors BlockToolAdapter.isLayout; column and column_list declare it. */
+  isLayout?: boolean;
 } = {}): Block => {
   const holder = document.createElement('div');
   holder.setAttribute('data-blok-element', '');
@@ -103,6 +109,8 @@ const createMockBlock = (options: {
       settings: {},
       supportsInPlaceSetData: options.supportsInPlaceSetData ?? false,
       childTools: options.childTools,
+      deletesChildren: options.deletesChildren ?? isColumnName(options.name),
+      isLayout: options.isLayout ?? isColumnName(options.name),
     },
     tunes,
   } as unknown as Block;
@@ -1414,6 +1422,73 @@ describe('BlockOperations', () => {
       expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith('c1');
       expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith('p1');
       expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalledWith('cl1');
+    });
+
+    it('deletes the whole subtree of a block whose tool declares deletesChildren', async () => {
+      const tabs = createMockBlock({ id: 'tabs', name: 'tabs', contentIds: ['t1'], deletesChildren: true });
+      const tab = createMockBlock({ id: 't1', name: 'tab', parentId: 'tabs', contentIds: ['p1'], deletesChildren: true, isLayout: true });
+      const para = createMockBlock({ id: 'p1', name: 'paragraph', parentId: 't1' });
+      const tail = createMockBlock({ id: 'z', name: 'paragraph' });
+
+      const store = createBlocksStore([tabs, tab, para, tail]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const hier = new BlockHierarchy(repo);
+      const ops = new BlockOperations(dependencies, repo, factory, hier, blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      await ops.removeBlock(tabs, false, false, store);
+
+      expect(repo.getBlockById('t1')).toBeUndefined();
+      expect(repo.getBlockById('p1')).toBeUndefined();
+      expect(repo.blocks.map(block => block.id)).toEqual(['z']);
+      expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith('t1');
+      expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith('p1');
+    });
+
+    it('promotes a column-named block\'s children when its tool does not declare deletesChildren', async () => {
+      const column = createMockBlock({ id: 'c1', name: 'column', contentIds: ['p1'], deletesChildren: false, isLayout: false });
+      const para = createMockBlock({ id: 'p1', name: 'paragraph', parentId: 'c1' });
+
+      const store = createBlocksStore([column, para]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const hier = new BlockHierarchy(repo);
+      const ops = new BlockOperations(dependencies, repo, factory, hier, blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      await ops.removeBlock(column, false, false, store);
+
+      expect(repo.getBlockById('p1')).toBeDefined();
+      expect(para.parentId).toBeNull();
+    });
+
+    /**
+     * A tab is layout AND deletes its children, yet it is a real content
+     * container: it does not collapse when emptied. A toggle deleted inside it
+     * hands its body to the tab, in the toggle's slot.
+     */
+    it('promotes a deleted toggle\'s children into a layout content container at the toggle\'s slot', async () => {
+      const tab = createMockBlock({ id: 't1', name: 'tab', contentIds: ['a', 'toggle', 'b'], deletesChildren: true, isLayout: true });
+      const before = createMockBlock({ id: 'a', name: 'paragraph', parentId: 't1' });
+      const toggle = createMockBlock({ id: 'toggle', name: 'toggle', parentId: 't1', contentIds: ['x1', 'x2'] });
+      const x1 = createMockBlock({ id: 'x1', name: 'paragraph', parentId: 'toggle' });
+      const x2 = createMockBlock({ id: 'x2', name: 'paragraph', parentId: 'toggle' });
+      const after = createMockBlock({ id: 'b', name: 'paragraph', parentId: 't1' });
+
+      const store = createBlocksStore([tab, before, toggle, x1, x2, after]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const hier = new BlockHierarchy(repo);
+      const ops = new BlockOperations(dependencies, repo, factory, hier, blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      await ops.removeBlock(toggle, false, false, store);
+
+      expect(tab.contentIds).toEqual(['a', 'x1', 'x2', 'b']);
+      expect(x1.parentId).toBe('t1');
+      expect(x2.parentId).toBe('t1');
+      expect(repo.getBlockById('t1')).toBeDefined();
     });
 
     it('keeps the parent column when a non-last child is removed', async () => {

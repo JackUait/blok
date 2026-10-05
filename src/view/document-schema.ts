@@ -99,6 +99,8 @@ export const blokDocumentSchema = {
           { if: { required: ['type'], properties: { type: { const: 'video' } } }, then: { properties: { data: { $ref: '#/$defs/video' } } } },
           { if: { required: ['type'], properties: { type: { const: 'column_list' } } }, then: { properties: { data: { $ref: '#/$defs/column_list' } } } },
           { if: { required: ['type'], properties: { type: { const: 'column' } } }, then: { properties: { data: { $ref: '#/$defs/column' } } } },
+          { if: { required: ['type'], properties: { type: { const: 'tabs' } } }, then: { properties: { data: { $ref: '#/$defs/tabs' } } } },
+          { if: { required: ['type'], properties: { type: { const: 'tab' } } }, then: { properties: { data: { $ref: '#/$defs/tab' } } } },
           { if: { required: ['type'], properties: { type: { const: 'embed' } } }, then: { properties: { data: { $ref: '#/$defs/embed' } } } },
           { if: { required: ['type'], properties: { type: { const: 'bookmark' } } }, then: { properties: { data: { $ref: '#/$defs/bookmark' } } } },
           { if: { required: ['type'], properties: { type: { const: 'page' } } }, then: { properties: { data: { $ref: '#/$defs/page' } } } },
@@ -588,6 +590,24 @@ export const blokDocumentSchema = {
       additionalProperties: false,
       properties: {
         widthRatio: { type: 'number', exclusiveMinimum: 0, description: 'Width relative to sibling columns. Omitted for an even split.' },
+      },
+    },
+
+    tabs: {
+      type: 'object',
+      description: 'A set of tabs. Carries no data — the tabs are its `content` children, which are only `tab` blocks. The open tab is not saved.',
+      additionalProperties: false,
+      properties: {},
+    },
+
+    tab: {
+      type: 'object',
+      description: 'One tab of a tabs block. Its content is its `content` children.',
+      required: ['title'],
+      additionalProperties: false,
+      properties: {
+        title: { type: 'string', description: 'Plain text, not HTML. Empty for an untitled tab.' },
+        icon: { type: 'string', description: 'Emoji shown before the title. Omitted when the tab has none.' },
       },
     },
 

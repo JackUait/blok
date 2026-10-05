@@ -293,6 +293,41 @@ describe('movePageBlocks', () => {
     expect({ source, target }).toEqual(before);
   });
 
+  it('rejects a paragraph moved under a tabs block', () => {
+    const source = doc([{ id: 'moved', type: 'paragraph', data: { text: 'Moved' } }]);
+    const target = doc([{ id: 'tabs', type: 'tabs', data: {}, content: [] }]);
+    const before = structuredClone({ source, target });
+
+    expect(() => movePageBlocks(source, target, ['moved'], { parentId: 'tabs', afterId: null }))
+      .toThrow(/tabs only accepts tab children/i);
+    expect({ source, target }).toEqual(before);
+  });
+
+  it('rejects moving one tab out of its tabs block', () => {
+    const source = doc([
+      { id: 'tabs', type: 'tabs', data: {}, content: ['tab'] },
+      { id: 'tab', type: 'tab', parent: 'tabs', data: { title: 'One' } },
+    ]);
+    const before = structuredClone(source);
+
+    expect(() => movePageBlocks(source, doc([]), ['tab'], { parentId: null, afterId: null }))
+      .toThrow(/whole .*tabs/i);
+    expect(source).toEqual(before);
+  });
+
+  it('moves a whole tabs block with its tabs and their content', () => {
+    const source = doc([
+      { id: 'tabs', type: 'tabs', data: {}, content: ['tab'] },
+      { id: 'tab', type: 'tab', parent: 'tabs', data: { title: 'One' }, content: ['p'] },
+      { id: 'p', type: 'paragraph', parent: 'tab', data: { text: 'Body' } },
+    ]);
+
+    const moved = movePageBlocks(source, doc([]), ['tabs'], { parentId: null, afterId: null });
+
+    expect(moved.target.blocks.map((block) => block.id)).toEqual(['tabs', 'tab', 'p']);
+    expect(moved.source.blocks).toEqual([]);
+  });
+
   it('allows a column moved under a column list', () => {
     const source = doc([{ id: 'column', type: 'column', data: {} }]);
     const target = doc([{ id: 'columns', type: 'column_list', data: {}, content: [] }]);

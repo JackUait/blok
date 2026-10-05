@@ -71,6 +71,8 @@ const makeBlock = (spec: Spec): Block => {
     parentId: spec.parentId ?? null,
     contentIds: [],
     call: vi.fn(),
+    // Mirrors the real column / column_list declarations.
+    tool: { isLayout: kind === 'column' || kind === 'column_list' },
   } as unknown as Block;
 };
 

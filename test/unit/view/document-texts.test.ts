@@ -54,6 +54,23 @@ describe('extractTexts / injectTexts', () => {
     expect(injectTexts(original, extractTexts(original))).toEqual(original);
   });
 
+  it('offers each tab title for translation and writes it back in place', () => {
+    const original = {
+      blocks: [
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'Overview', icon: '📋' } },
+        { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'Body' } },
+      ],
+    };
+
+    expect(extractTexts(original)).toEqual(['Overview', 'Body']);
+    expect(injectTexts(original, ['Обзор', 'Текст']).blocks).toEqual([
+      { id: 'tabs', type: 'tabs', data: {} },
+      { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'Обзор', icon: '📋' } },
+      { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'Текст' } },
+    ]);
+  });
+
   it('round-trips with code included too', () => {
     const original = richDocument();
     const options = { includeCode: true };

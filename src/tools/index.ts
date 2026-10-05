@@ -40,6 +40,9 @@ export { VideoTool as Video } from './video';
 export { ColumnList } from './column-list';
 export { Column } from './column';
 export { Columns } from './columns';
+export { TabsTool } from './tabs';
+export { TabTool } from './tab';
+export { Tabs } from './tabs-group';
 export { Embed } from './link/embed';
 export { Bookmark } from './link/bookmark';
 export { PageTool as Page } from './page';
@@ -95,6 +98,8 @@ export const defaultBlockTools = {
   video: {},
   column_list: {},
   column: {},
+  tabs: {},
+  tab: {},
   embed: {},
   bookmark: {},
 } as const;

@@ -7,7 +7,7 @@
  * declaration is wrong.
  */
 
-import type { defaultBlockTools, Columns, Embed, Bookmark, Page, Image, File, Audio, Video, ClearFormat, mountChildBlocks, TableOfContents, BlokBlockDataMap } from '../../../types/tools-entry';
+import type { defaultBlockTools, Columns, Tabs, TabsTool, TabTool, Embed, Bookmark, Page, Image, File, Audio, Video, ClearFormat, mountChildBlocks, TableOfContents, BlokBlockDataMap } from '../../../types/tools-entry';
 import type {
   ImageData, ImageConfig, ImageUploader,
   FileData, FileConfig, FileUploader,
@@ -15,6 +15,7 @@ import type {
   VideoData, VideoConfig, VideoUploader,
   PageData, PageConfig, PageInfo, PageIcon, PageSearchResult,
   TableOfContentsData,
+  TabsData, TabData,
 } from '../../../types/tools-entry';
 
 // defaultBlockTools must include 'database' and 'database-row' entries
@@ -23,6 +24,15 @@ const _dbRow: typeof defaultBlockTools['database-row'] = {} as const;
 
 // Columns must be exported from the public tools entry and usable as a tool value
 const _columns: typeof Columns = {} as typeof Columns;
+
+// Tabs, TabsTool and TabTool are exported from the runtime tools entry.
+const _tabs: typeof Tabs = {} as typeof Tabs;
+const _tabsTool: typeof TabsTool = {} as typeof TabsTool;
+const _tabTool: typeof TabTool = {} as typeof TabTool;
+const _tabData: TabData = { title: 'Tab 1', icon: '🚀' };
+const _tabsData: TabsData = {};
+const _tabsDefault: typeof defaultBlockTools.tabs = {} as const;
+const _tabDefault: typeof defaultBlockTools.tab = {} as const;
 
 // Embed and Bookmark are exported from the runtime tools entry, so their
 // declarations must exist in the published types or `import { Embed, Bookmark }`
@@ -75,6 +85,13 @@ const _tocData: BlokBlockDataMap['table_of_contents'] = { textColor: 'red' } sat
 void _db;
 void _dbRow;
 void _columns;
+void _tabs;
+void _tabsTool;
+void _tabTool;
+void _tabData;
+void _tabsData;
+void _tabsDefault;
+void _tabDefault;
 void _embed;
 void _bookmark;
 void _page;

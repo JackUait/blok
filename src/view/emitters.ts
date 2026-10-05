@@ -714,6 +714,16 @@ export const builtinEmitters: Record<string, Emitter> = {
   columns: childrenDiv,
   column: childrenDiv,
 
+  /** A static page cannot switch tabs, so every tab renders, one after another. */
+  tabs: (block, env) => `<div data-blok-tabs>${env.renderList(env.childrenOf(block.id))}</div>`,
+
+  tab: (block, env) => {
+    const label = [str(block.data, 'icon'), str(block.data, 'title')].filter((part) => part !== '').join(' ');
+    const heading = label === '' ? '' : `<h4>${env.escape(label)}</h4>`;
+
+    return `<section data-blok-tab>${heading}${env.renderList(env.childrenOf(block.id))}</section>`;
+  },
+
   database: childrenOnly,
   'database-row': childrenOnly,
 

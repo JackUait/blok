@@ -617,6 +617,77 @@ describe('parseNotionBlocksV3', () => {
     });
   });
 
+  /**
+   * Notion's API documents a `tab` block as an empty container whose direct
+   * children are paragraphs: each paragraph's text is a tab label, its icon
+   * the tab icon, and its children the tab content. The internal record-map
+   * names a paragraph `text`.
+   */
+  describe('tabs', () => {
+    it('maps a tab container to tabs and each label paragraph to a tab owning its content', () => {
+      const out = parseNotionBlocksV3(
+        v3Tree(
+          value('tb', 'tab', { content: ['l1', 'l2'] }),
+          value('l1', 'text', { properties: title(['Over'], ['view', [['b']]]), format: { page_icon: '📋' }, content: ['c1'], parent_id: 'tb' }),
+          value('l2', 'text', { properties: title(['A & <b>']), content: ['c2'], parent_id: 'tb' }),
+          value('c1', 'text', { properties: title(['first']), parent_id: 'l1' }),
+          value('c2', 'bulleted_list', { properties: title(['second']), parent_id: 'l2' })
+        )
+      );
+
+      expect(out).toEqual([
+        { id: 'tb', tool: 'tabs', data: {} },
+        { id: 'l1', tool: 'tab', data: { title: 'Overview', icon: '📋' }, parentId: 'tb' },
+        { id: 'c1', tool: 'paragraph', data: { text: 'first' }, parentId: 'l1' },
+        { id: 'l2', tool: 'tab', data: { title: 'A & <b>' }, parentId: 'tb' },
+        { id: 'c2', tool: 'list', data: { text: 'second', style: 'unordered' }, parentId: 'l2' },
+      ]);
+    });
+
+    it('keeps a custom image icon off the tab, which only holds an emoji', () => {
+      const out = parseNotionBlocksV3(
+        v3Tree(
+          value('tb', 'tab', { content: ['l1'] }),
+          value('l1', 'text', { properties: title(['One']), format: { page_icon: 'https://example.com/icon.png' }, parent_id: 'tb' })
+        )
+      );
+
+      expect(out).toEqual([
+        { id: 'tb', tool: 'tabs', data: {} },
+        { id: 'l1', tool: 'tab', data: { title: 'One' }, parentId: 'tb' },
+      ]);
+    });
+
+    it('maps a paragraph nested deeper in a tab as an ordinary paragraph', () => {
+      const out = parseNotionBlocksV3(
+        v3Tree(
+          value('tb', 'tab', { content: ['l1'] }),
+          value('l1', 'text', { properties: title(['One']), content: ['c1'], parent_id: 'tb' }),
+          value('c1', 'text', { properties: title(['body']), content: ['c2'], parent_id: 'l1' }),
+          value('c2', 'text', { properties: title(['deeper']), parent_id: 'c1' })
+        )
+      );
+
+      expect(out?.map((block) => block.tool)).toEqual(['tabs', 'tab', 'paragraph', 'paragraph']);
+    });
+
+    it('flattens the tabs into labels and content when the tabs tool is not registered', () => {
+      const out = parseNotionBlocksV3(
+        v3Tree(
+          value('tb', 'tab', { content: ['l1'] }),
+          value('l1', 'text', { properties: title(['One']), content: ['c1'], parent_id: 'tb' }),
+          value('c1', 'text', { properties: title(['body']), parent_id: 'l1' })
+        ),
+        (tool) => tool !== 'tabs'
+      );
+
+      expect(out).toEqual([
+        { id: 'l1', tool: 'paragraph', data: { text: 'One' } },
+        { id: 'c1', tool: 'paragraph', data: { text: 'body' }, parentId: 'l1' },
+      ]);
+    });
+  });
+
   describe('tables (phase 3)', () => {
     it('expands a table into a grid referencing per-cell paragraph blocks', () => {
       const out = parseNotionBlocksV3(

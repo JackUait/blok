@@ -725,6 +725,7 @@
 @import './bookmark.css';
 @import './file.css';
 @import './columns.css';
+@import './tabs.css';
 @import './block-preview.css';
 @import './resize-cue.css';
 @import './presence.css';

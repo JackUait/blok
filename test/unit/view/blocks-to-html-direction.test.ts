@@ -40,6 +40,15 @@ describe('blocksToHtml direction', () => {
     expect(html).toContain('<pre dir="ltr"><code class="language-js">');
   });
 
+  it('stamps a tab from its title', () => {
+    const html = blocksToHtml(doc([
+      { id: 'tabs', type: 'tabs', data: {} },
+      { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'نظرة' } },
+    ]), { direction: 'ltr' });
+
+    expect(html).toContain('<section dir="rtl" data-blok-tab><h4>نظرة</h4></section>');
+  });
+
   describe('code and math read left-to-right in any direction', () => {
     const code = (data: Record<string, unknown>): OutputData => doc([{ id: 'c', type: 'code', data: { code: '\\frac{a}{b} = c - d', language: 'latex', ...data } }]);
 

@@ -1666,6 +1666,51 @@ describe("DragManager - Component Integration", () => {
       );
     });
 
+    it("nests the dropped block as the first child of a block showing its own drop-into zone", () => {
+      const tabBlock = createBlockStub({
+        id: "tab-1",
+        name: "tab",
+        parentId: null,
+      });
+      const zone = document.createElement("div");
+
+      zone.setAttribute("data-blok-drop-into", "");
+      tabBlock.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(zone);
+
+      const paragraphBlock = createBlockStub({
+        id: "paragraph-1",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [paragraphBlock, tabBlock];
+      const blockManagerMock = createBlockManagerMock(allBlocks);
+
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      performDragDrop(
+        dragManager,
+        wrapper,
+        paragraphBlock,
+        tabBlock,
+        "bottom",
+      );
+
+      const paragraphParents = vi
+        .mocked(modules.BlockManager.setBlockParent)
+        .mock.calls.filter(([block]) => block === paragraphBlock)
+        .map(([, parentId]) => parentId);
+
+      expect(paragraphParents.at(-1)).toBe("tab-1");
+    });
+
     it("should set parent to target's parent when dropping on bottom of a child block", () => {
       const toggleBlock = createBlockStub({
         id: "toggle-1",
@@ -3632,6 +3677,150 @@ describe("DragManager - Component Integration", () => {
       const { target } = dragTo(20, 60);
 
       expect(target.holder.getAttribute("data-drop-indicator")).toBe("left");
+    });
+  });
+
+  describe("named drop-into zone (a closed tab's pill)", () => {
+    type Fixture = {
+      blocks: Block[];
+      paragraph: Block;
+      tabs: Block;
+      closedTab: Block;
+      pill: HTMLElement;
+    };
+
+    // Flat order: paragraph, tabs, tab-1, tab-2, c1, c2, g (c2's child), after.
+    const createFixture = (): Fixture => {
+      const paragraph = createBlockStub({ id: "paragraph-1" });
+      const tabs = createBlockStub({ id: "tabs", name: "tabs", contentIds: ["tab-1", "tab-2"] });
+      const openTab = createBlockStub({ id: "tab-1", name: "tab", parentId: "tabs" });
+      const closedTab = createBlockStub({ id: "tab-2", name: "tab", parentId: "tabs", contentIds: ["c1", "c2"] });
+      const c1 = createBlockStub({ id: "c1", parentId: "tab-2" });
+      const c2 = createBlockStub({ id: "c2", name: "toggle", parentId: "tab-2", contentIds: ["g"] });
+      const g = createBlockStub({ id: "g", parentId: "c2" });
+      const after = createBlockStub({ id: "after" });
+      const pill = document.createElement("button");
+
+      pill.setAttribute("role", "tab");
+      pill.setAttribute("data-blok-drop-into", "tab-2");
+      tabs.holder.querySelector("[data-blok-element-content]")!.appendChild(pill);
+      closedTab.holder.classList.add("hidden");
+      (paragraph as unknown as { save: () => Promise<unknown> }).save = vi
+        .fn()
+        .mockResolvedValue({ data: { text: "copy" }, tunes: {} });
+
+      return {
+        blocks: [paragraph, tabs, openTab, closedTab, c1, c2, g, after],
+        paragraph,
+        tabs,
+        closedTab,
+        pill,
+      };
+    };
+
+    const createManager = (all: Block[]): BlokModules["BlockManager"] => {
+      const blocks = [...all];
+      let inserted = 0;
+
+      return {
+        blocks,
+        getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+        getBlockByIndex: vi.fn((index: number) => blocks[index]),
+        getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+        move: vi.fn((toIndex: number, fromIndex: number) => {
+          const [block] = blocks.splice(fromIndex, 1);
+
+          blocks.splice(toIndex, 0, block);
+        }),
+        insert: vi.fn((config: { tool: string } & ({ index: number } | { placement: TreePlacement })) => {
+          inserted++;
+          const copy = createBlockStub({
+            id: `copy-${inserted}`,
+            name: config.tool,
+            parentId: "placement" in config ? config.placement.parentId : null,
+          });
+          const index = "placement" in config
+            ? flatIndexForPlacement({ blocks, getById: (id: string) => blocks.find((b) => b.id === id) }, config.placement)
+            : config.index;
+
+          blocks.splice(index, 0, copy);
+
+          return copy;
+        }),
+        setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
+      } as unknown as BlokModules["BlockManager"];
+    };
+
+    const hoverPill = (dragManager: DragManager, source: Block, pill: HTMLElement): void => {
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, source);
+      dragHandle.dispatchEvent(createMouseEvent("mousedown", { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent("mousemove", { clientX: 110, clientY: 100 }));
+      vi.mocked(document.elementFromPoint).mockReturnValue(pill);
+      document.dispatchEvent(createMouseEvent("mousemove", { clientX: 50, clientY: 20 }));
+    };
+
+    const setUp = (): Fixture & { dragManager: DragManager; modules: BlokModules; wrapper: HTMLDivElement } => {
+      const fixture = createFixture();
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: createManager(fixture.blocks),
+      });
+
+      document.body.appendChild(wrapper);
+      fixture.blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      return { ...fixture, dragManager, modules, wrapper };
+    };
+
+    it("moves the dropped block to the end of the named tab's children", () => {
+      const { dragManager, modules, paragraph, pill } = setUp();
+
+      hoverPill(dragManager, paragraph, pill);
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: false }));
+
+      expect(modules.BlockManager.blocks.map((b) => b.id)).toStrictEqual(
+        ["tabs", "tab-1", "tab-2", "c1", "c2", "g", "paragraph-1", "after"],
+      );
+      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(paragraph, "tab-2");
+    });
+
+    it("duplicates to the end of the named tab's children on an Alt drop", async () => {
+      const { dragManager, modules, paragraph, pill } = setUp();
+
+      hoverPill(dragManager, paragraph, pill);
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: true }));
+      await vi.runAllTimersAsync();
+
+      const ids = modules.BlockManager.blocks.map((b) => b.id);
+
+      expect(ids.indexOf("copy-1")).toBe(ids.indexOf("g") + 1);
+      expect(modules.BlockManager.blocks.find((b) => b.id === "copy-1")?.parentId).toBe("tab-2");
+    });
+
+    it("marks the pill while it is the drop target and clears it on drop", () => {
+      const { dragManager, paragraph, pill, closedTab } = setUp();
+
+      hoverPill(dragManager, paragraph, pill);
+
+      expect(pill).toHaveAttribute(DATA_ATTR.dropIntoActive);
+      expect(closedTab.holder).not.toHaveAttribute("data-drop-indicator");
+
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: false }));
+
+      expect(pill).not.toHaveAttribute(DATA_ATTR.dropIntoActive);
+    });
+
+    it("clears the pill mark when the pointer moves off it", () => {
+      const { dragManager, paragraph, pill, blocks } = setUp();
+      const after = blocks[blocks.length - 1];
+
+      hoverPill(dragManager, paragraph, pill);
+      vi.mocked(document.elementFromPoint).mockReturnValue(after.holder);
+      document.dispatchEvent(createMouseEvent("mousemove", { clientX: 50, clientY: 40 }));
+
+      expect(pill).not.toHaveAttribute(DATA_ATTR.dropIntoActive);
     });
   });
 });

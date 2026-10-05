@@ -330,6 +330,8 @@ const CONTAINER_TOOLS = new Set([
   'column_list',
   'columns',
   'column',
+  'tabs',
+  'tab',
 ]);
 
 /**
@@ -1165,6 +1167,19 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       return childrenToMarkdown(block, context);
     case 'column':
       return childrenToMarkdown(block, context);
+    /** Static Markdown cannot switch tabs, so every tab is written in order. */
+    case 'tabs':
+      warn(context, block.tool, 'degraded', 'tabs are written one after another, each under its bold title; switching between them is lost');
+
+      return childrenToMarkdown(block, context);
+    case 'tab': {
+      const label = escapePlainText([asString(data.icon), asString(data.title)].filter((part) => part !== '').join(' '));
+      const body = childrenToMarkdown(block, context);
+      // `****` alone would be a thematic break, so an empty label prints no line.
+      const title = label === '' ? '' : `**${label}**`;
+
+      return [title, body].filter((part) => part !== '').join('\n\n');
+    }
     /** Pure vertical whitespace — Markdown has no representation for a gap. */
     case 'spacer':
       warn(context, block.tool, 'dropped', 'spacer is purely visual and has no Markdown equivalent');

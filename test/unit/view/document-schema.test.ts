@@ -34,6 +34,8 @@ import {
   Spacer,
   Table,
   TableOfContents,
+  TabTool,
+  TabsTool,
   Toggle,
   Video,
   defaultBlockTools,
@@ -229,6 +231,11 @@ const savedData: Record<string, Record<string, unknown>> = {
 
   column: new Column(options({ widthRatio: 2 })).save(),
 
+  tabs: new TabsTool(options({})).save(),
+
+  // TabData is an interface, so spread it into a plain record.
+  tab: { ...new TabTool(options({ title: 'Overview', icon: '📋' })).save() },
+
   embed: new Embed(options({
     service: 'youtube', source: 'https://youtu.be/x', embed: 'https://www.youtube.com/embed/x',
     kind: 'iframe', width: 580, height: 320, widthPercent: 50, alignment: 'left',
@@ -325,6 +332,32 @@ describe('blokDocumentSchema', () => {
       expect(toc.required ?? []).toEqual([]);
       expect(toc.additionalProperties).toBe(false);
       expect(Object.keys(toc.properties ?? {})).toEqual(['textColor', 'backgroundColor']);
+    });
+  });
+
+  describe('tabs', () => {
+    it('describes an empty tabs container and a tab with a required plain title and optional icon', () => {
+      expect(defs.tabs).toMatchObject({ type: 'object', additionalProperties: false });
+      expect(Object.keys(defs.tabs.properties ?? {})).toEqual([]);
+
+      expect(defs.tab.required).toEqual(['title']);
+      expect(defs.tab.additionalProperties).toBe(false);
+      expect(Object.keys(defs.tab.properties ?? {})).toEqual(['title', 'icon']);
+      expect(defs.tab.properties?.title).toMatchObject({ type: 'string' });
+      expect(defs.tab.properties?.icon).toMatchObject({ type: 'string' });
+    });
+
+    it('routes tabs and tab to their defs', () => {
+      const branches = (blockSchema.items as unknown as { allOf?: Array<{
+        if: { properties: { type: { const: string } } };
+        then: { properties: { data: { $ref: string } } };
+      }> }).allOf ?? [];
+      const routed = Object.fromEntries(
+        branches.map(branch => [branch.if.properties.type.const, branch.then.properties.data.$ref])
+      );
+
+      expect(routed.tabs).toBe('#/$defs/tabs');
+      expect(routed.tab).toBe('#/$defs/tab');
     });
   });
 

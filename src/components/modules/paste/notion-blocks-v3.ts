@@ -50,6 +50,9 @@ interface NotionValue {
   [key: string]: unknown;
 }
 
+/** Opt-in block tools the mapping falls back from when the host lacks them. */
+type NotionHostTool = 'page' | 'page-link' | 'bookmark' | 'table_of_contents' | 'tabs';
+
 /** Result of mapping one Notion value: tool + data, or `null` to skip-promote. */
 interface Mapped {
   tool: string;
@@ -65,7 +68,7 @@ interface Mapped {
  */
 export function parseNotionBlocksV3(
   json: string,
-  hasTool?: (tool: 'page' | 'page-link' | 'bookmark' | 'table_of_contents') => boolean
+  hasTool?: (tool: NotionHostTool) => boolean
 ): NotionParsedBlock[] | null {
   const parsed = safeJsonParse(json);
 
@@ -116,8 +119,10 @@ export function parseNotionBlocksV3(
    * Depth-first emit in document order. `parentId` is the id of the nearest
    * EMITTED ancestor (null at the top), so skip-promoted wrappers (page/tab)
    * lift their children to the grandparent without leaving a dangling parent.
+   * `inTabs` marks a direct child of a mapped tab container: Notion stores each
+   * tab as a paragraph whose text is the label and whose children are the content.
    */
-  const walk = (id: string, parentId: string | null): void => {
+  const walk = (id: string, parentId: string | null, inTabs = false): void => {
     if (visited.has(id)) {
       return;
     }
@@ -138,11 +143,11 @@ export function parseNotionBlocksV3(
       return;
     }
 
-    const mapped = mapValue(value, byId, hasTool);
+    const mapped = inTabs && value.type === 'text' ? mapTab(value) : mapValue(value, byId, hasTool);
     const children = Array.isArray(value.content) ? value.content : [];
 
     if (mapped === null) {
-      // Structural wrapper (page / tab): drop it, promote its children.
+      // Structural wrapper (or a tab container without the tabs tool): drop it, promote its children.
       children.forEach((childId) => walk(childId, parentId));
 
       return;
@@ -167,7 +172,7 @@ export function parseNotionBlocksV3(
       }
     }
 
-    children.forEach((childId) => walk(childId, id));
+    children.forEach((childId) => walk(childId, id, mapped.tool === 'tabs'));
   };
 
   topLevelOrder.forEach((id) => {
@@ -271,7 +276,7 @@ function resolveColumnOrder(
 function mapValue(
   value: NotionValue,
   byId: Map<string, NotionValue>,
-  hasTool?: (tool: 'page' | 'page-link' | 'bookmark' | 'table_of_contents') => boolean
+  hasTool?: (tool: NotionHostTool) => boolean
 ): Mapped | null {
   const props = value.properties ?? {};
   const text = richText(props.title, byId);
@@ -358,8 +363,8 @@ function mapValue(
         ? pageReferenceFallback(value.id, text, hasTool)
         : { tool: 'page', data: { pageId: value.id } };
     case 'tab':
-      // Tab wrapper — skip, promote children to the same level.
-      return null;
+      // Without the tabs tool, drop the wrapper and promote its children.
+      return hasTool?.('tabs') === false ? null : { tool: 'tabs', data: {} };
     case 'transclusion_container':
       // Synced-block original: Blok has no synced primitive, so flatten it —
       // drop the wrapper and promote its children to the same level.
@@ -404,11 +409,22 @@ function mapTableOfContents(format: Record<string, unknown> | undefined): Mapped
   };
 }
 
+/** Map a tab's label paragraph to a Blok tab. A tab icon is an emoji, so an image URL is dropped. */
+function mapTab(value: NotionValue): Mapped {
+  const title = plainText(value.properties?.title);
+  const icon = value.format?.page_icon;
+
+  return {
+    tool: 'tab',
+    data: typeof icon === 'string' && icon !== '' && !icon.includes('/') ? { title, icon } : { title },
+  };
+}
+
 /** Keep a page reference navigable when its opt-in block tool is absent. */
 function pageReferenceFallback(
   id: string,
   text: string,
-  hasTool?: (tool: 'page' | 'page-link' | 'bookmark' | 'table_of_contents') => boolean
+  hasTool?: (tool: NotionHostTool) => boolean
 ): Mapped {
   const url = notionPageUrl(id);
 

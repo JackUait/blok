@@ -287,6 +287,18 @@ describe('blocksToPlainText', () => {
     expect(text).toContain('Right');
   });
 
+  it('reads every tab as its title line followed by its content', () => {
+    const text = blocksToPlainText(doc([
+      { id: 'tabs', type: 'tabs', data: {} },
+      { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'Overview & <more>', icon: '📋' } },
+      { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'First' } },
+      { id: 't2', type: 'tab', parent: 'tabs', data: { title: 'Details' } },
+      { id: 'p2', type: 'paragraph', parent: 't2', data: { text: 'Second' } },
+    ]));
+
+    expect(text).toBe('Overview & <more>\n\nFirst\n\nDetails\n\nSecond');
+  });
+
   it('tolerates loose input', () => {
     expect(blocksToPlainText(null)).toBe('');
     expect(blocksToPlainText({} as unknown as OutputData)).toBe('');

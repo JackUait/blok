@@ -1741,7 +1741,7 @@
     // `data-blok-tool` on its blocks — an unscoped import would double-style the
     // editor. Scoping keeps the sheet affecting only the Blok View render.
     import viewCssText from './view.css?raw';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, TableOfContents, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Page, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, TableOfContents, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, TabsTool, TabTool, Embed, Bookmark, Page, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
@@ -1807,6 +1807,7 @@
         video: true,
         audio: true,
         columns: true,
+        tabs: true,
         page: true,
       },
     };
@@ -1928,6 +1929,10 @@
       if (state.tools.columns) {
         tools.column_list = ColumnList;
         tools.column = Column;
+      }
+      if (state.tools.tabs) {
+        tools.tabs = TabsTool;
+        tools.tab = TabTool;
       }
       // Link-paste tools. Embed works standalone; Bookmark is contract-only and
       // needs a metadata backend at `endpoint` (none here → it shows ERROR state).
@@ -3094,6 +3099,7 @@
       { key: 'table_of_contents', label: 'Table of contents', icon: Icons.IconTableOfContents },
       { key: 'quote', label: 'Quote', icon: Icons.IconQuote },
       { key: 'page', label: 'Page', icon: Icons.IconPage },
+      { key: 'tabs', label: 'Tabs', icon: Icons.IconTabs },
     ];
 
     const toolTogglesContainer = document.getElementById('tool-toggles');
@@ -3134,7 +3140,7 @@
       'UI & Navigation': ['IconCheck', 'IconWand', 'IconCross', 'IconMenu', 'IconPlus', 'IconMinus', 'IconChevronLeft', 'IconChevronRight', 'IconChevronDown', 'IconSearch', 'IconArrowUp', 'IconArrowDownLine'],
       'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconClearFormat', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconEquation', 'IconSuperscript', 'IconSubscript', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconReturn', 'IconCode'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
-      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconSpacer', 'IconTableOfContents', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar', 'IconPage'],
+      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconSpacer', 'IconTableOfContents', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconTabs', 'IconCalendar', 'IconPage'],
       'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCrop', 'IconSliders', 'IconRotateLeft', 'IconFlipHorizontal', 'IconExpandFullscreen', 'IconCollapseFullscreen', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerBackward', 'IconPlayerForward', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconPlayerSettings', 'IconPlayerSpeed', 'IconPlayerLoop', 'IconPlayerPip', 'IconPlayerTheater', 'IconDownload', 'IconUpload'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3', 'IconToggleH4', 'IconToggleH5', 'IconToggleH6'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconArrowUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight', 'IconMergeCells', 'IconSplitCell', 'IconPlacement', 'IconTextSizeSmall', 'IconTextSizeLarge'],
@@ -3390,6 +3396,34 @@
             { id: 'colr-b', type: 'column', data: {}, content: ['colr-b-l1', 'colr-b-l2'], parent: 'colr' },
             { id: 'colr-b-l1', type: 'list', data: { style: 'checklist', text: 'Headers', checked: true }, parent: 'colr-b' },
             { id: 'colr-b-l2', type: 'list', data: { style: 'checklist', text: 'Lists', checked: true }, parent: 'colr-b' },
+          ] },
+        ],
+      },
+      {
+        tool: 'tabs',
+        label: 'Tabs',
+        states: [
+          { label: 'Three tabs', blocks: [
+            { id: 'tabs3', type: 'tabs', data: {}, content: ['tabs3-a', 'tabs3-b', 'tabs3-c'] },
+            { id: 'tabs3-a', type: 'tab', data: { title: 'Overview' }, content: ['tabs3-a-p'], parent: 'tabs3' },
+            { id: 'tabs3-a-p', type: 'paragraph', data: { text: 'The first tab is open by default.' }, parent: 'tabs3-a' },
+            { id: 'tabs3-b', type: 'tab', data: { title: 'Setup' }, content: ['tabs3-b-p'], parent: 'tabs3' },
+            { id: 'tabs3-b-p', type: 'paragraph', data: { text: 'Install, then configure.' }, parent: 'tabs3-b' },
+            { id: 'tabs3-c', type: 'tab', data: { title: 'FAQ' }, content: ['tabs3-c-p'], parent: 'tabs3' },
+            { id: 'tabs3-c-p', type: 'paragraph', data: { text: 'Answers to common questions.' }, parent: 'tabs3-c' },
+          ] },
+          { label: 'With icons', blocks: [
+            { id: 'tabsi', type: 'tabs', data: {}, content: ['tabsi-a', 'tabsi-b'] },
+            { id: 'tabsi-a', type: 'tab', data: { title: 'Docs', icon: '📘' }, content: ['tabsi-a-p'], parent: 'tabsi' },
+            { id: 'tabsi-a-p', type: 'paragraph', data: { text: 'Each tab can carry an emoji.' }, parent: 'tabsi-a' },
+            { id: 'tabsi-b', type: 'tab', data: { title: 'Ideas', icon: '💡' }, content: ['tabsi-b-p'], parent: 'tabsi' },
+            { id: 'tabsi-b-p', type: 'paragraph', data: { text: 'Second tab content.' }, parent: 'tabsi-b' },
+          ] },
+          { label: 'Empty tab', blocks: [
+            { id: 'tabse', type: 'tabs', data: {}, content: ['tabse-a', 'tabse-b'] },
+            { id: 'tabse-a', type: 'tab', data: { title: 'Empty' }, parent: 'tabse' },
+            { id: 'tabse-b', type: 'tab', data: { title: 'Filled' }, content: ['tabse-b-p'], parent: 'tabse' },
+            { id: 'tabse-b-p', type: 'paragraph', data: { text: 'Only this tab has content.' }, parent: 'tabse-b' },
           ] },
         ],
       },
@@ -3902,6 +3936,8 @@
           },
           column_list: ColumnList,
           column: Column,
+          tabs: TabsTool,
+          tab: TabTool,
           embed: Embed,
           bookmark: { class: Bookmark, config: { endpoint: '/unfurl' } },
           page: {

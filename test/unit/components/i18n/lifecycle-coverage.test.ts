@@ -199,6 +199,9 @@ const deriveLifecycle = (): {
   for (const level of [1, 2, 3, 4, 5, 6]) addDynamic(`toolbox.preview.heading${level}`);
   addDynamic('tools.image.errorRetry');
   addDynamic('tools.image.errorReplace');
+  // The tab block has no toolbox entry. Its name is read as toolNames.<block.name>
+  // by translateToolName (blockSelection.ts, inline-tool-convert.ts).
+  addDynamic('toolNames.tab');
 
   for (const key of literal) dynamic.delete(key);
 
@@ -262,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 583 + 114 + 61 + 4 closure for all 762 keys', () => {
+  it('rebuilds a disjoint 593 + 117 + 61 + 4 closure for all 775 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -276,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(762);
+    expect(lifecycle.size).toBe(775);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -315,11 +318,13 @@ describe('current English catalog lifecycle coverage', () => {
       // tools.page.editIcon/rename/openInSidePeek) are called by literal.
       // +3: the table-of-contents block calls its toolNames, tools and
       // toolbox.preview keys by literal.
-      'executable-literal': 583,
+      'executable-literal': 593,
+      // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
       // when the video settings became one pane (1b400077); still shipped.
-      'finite-dynamic': 114,
+      // +3: toolNames.tabs (titleKey), searchTerms.tabs, toolNames.tab (block name).
+      'finite-dynamic': 117,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.

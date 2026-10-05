@@ -265,6 +265,34 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * True when deleting this Tool's block deletes its whole subtree rather than
+   * promoting its children to the block's parent.
+   */
+  public get deletesChildren(): boolean {
+    return this.layoutLever(InternalBlockToolSettings.DeletesChildren);
+  }
+
+  /**
+   * True when the block is a pure layout piece: no hover toolbar, never a
+   * selection unit, and its descendants are laid out flush (no depth indent).
+   */
+  public get isLayout(): boolean {
+    return this.layoutLever(InternalBlockToolSettings.IsLayout);
+  }
+
+  /**
+   * A declared lever wins. Undeclared, the names `column` and `column_list`
+   * keep the rules core applied to them by name before these levers existed,
+   * so a host tool registered under those names behaves as it did.
+   * @param setting - the static to read
+   */
+  private layoutLever(setting: InternalBlockToolSettings): boolean {
+    const declared = (this.constructable as unknown as Record<string, boolean | undefined>)[setting];
+
+    return declared ?? (this.name === 'column' || this.name === 'column_list');
+  }
+
+  /**
    * Returns the media asset kind the Tool stores at `data.url`, or undefined
    * for non-media tools. Lets consumers enumerate the media-bearing tool set
    * (via `api.tools.getBlockTools()`) for orphaned-asset cleanup without

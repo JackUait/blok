@@ -238,6 +238,7 @@ const DIRECTION_FIELDS: Record<string, readonly string[]> = {
   paragraph: ['text'],
   header: ['text'],
   toggle: ['text'],
+  tab: ['title'],
   list: ['text'],
   quote: ['text', 'caption'],
   image: ['caption'],

@@ -134,6 +134,16 @@ export enum InternalBlockToolSettings {
    */
   KeepsChildrenOnEnter = 'keepsChildrenOnEnter',
   /**
+   * Deleting this Tool's block deletes its whole subtree instead of promoting
+   * its children (a column, a tab: the children make no sense outside it)
+   */
+  DeletesChildren = 'deletesChildren',
+  /**
+   * The block is a pure layout piece (a column, a tab): no hover toolbar, never
+   * a selection unit, and its descendants take no depth indent
+   */
+  IsLayout = 'isLayout',
+  /**
    * Tool stores a host-uploaded asset URL at `data.url` (image, video, audio,
    * file). Lets consumers discover the media-bearing tool set for orphaned-CDN
    * cleanup without hardcoding each tool's data shape.

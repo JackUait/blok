@@ -373,6 +373,25 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   keepsChildrenOnEnter?: boolean;
 
   /**
+   * Set to true when deleting this Tool's block must delete its whole subtree.
+   *
+   * By default Blok keeps a deleted container's body: its children move up one
+   * level into the container's slot (a toggle, a callout). A layout container
+   * whose children only make sense inside it — a column, a tab — declares this
+   * so its children are removed with it instead of leaking out.
+   */
+  deletesChildren?: boolean;
+
+  /**
+   * Set to true when the block is a pure layout piece, like a column or a tab.
+   *
+   * A layout block never gets the hover toolbar (no drag handle, no block
+   * menu) and is never a selection unit: only the blocks inside it are. Blocks
+   * inside it take no depth indent, since the layout positions them.
+   */
+  isLayout?: boolean;
+
+  /**
    * Declares that this Tool stores a host-uploaded asset URL at `data.url`.
    *
    * Set it on media tools (image, video, audio, file) so consumers can discover

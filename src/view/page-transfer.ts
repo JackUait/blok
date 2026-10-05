@@ -140,6 +140,9 @@ export function movePageBlocks(
   if (parent?.type === 'column_list' && roots.some((id) => sourceById.get(id)?.type !== 'column')) {
     throw new Error('Column list only accepts column children');
   }
+  if (parent?.type === 'tabs' && roots.some((id) => sourceById.get(id)?.type !== 'tab')) {
+    throw new Error('Tabs only accepts tab children');
+  }
 
   const sibling = place.afterId === null ? null : targetById.get(place.afterId);
 
@@ -166,8 +169,8 @@ export function movePageBlocks(
     const parentId = sourceById.get(rootId)?.parent;
     const parent = parentId ? sourceById.get(parentId) : undefined;
 
-    if (parent?.type === 'column_list' || isInsideTableOrDatabase(rootId)) {
-      throw new Error('Move the whole table, database or column');
+    if (parent?.type === 'column_list' || parent?.type === 'tabs' || isInsideTableOrDatabase(rootId)) {
+      throw new Error('Move the whole table, database, column or tabs');
     }
   }
 

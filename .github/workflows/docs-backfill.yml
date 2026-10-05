@@ -59,6 +59,8 @@ jobs:
           ref: ${{ matrix.tag }}
           path: tag
           persist-credentials: false
+          # The root snapshot's sitemap dates each page by `git log -1`; a shallow clone collapses them.
+          fetch-depth: 0
       # setup-node-deps has no working-directory input, so install by hand in tag/.
       # Corepack must be enabled before setup-node switches Node, or `yarn` is missing.
       - name: Enable Corepack
@@ -78,17 +80,29 @@ jobs:
       - name: Build library and docs deps
         working-directory: tag
         run: yarn build && (cd docs && yarn install --frozen-lockfile)
-      - name: Build snapshots and attach them to the release
+      # No token here: the tag's build scripts would see the write token.
+      - name: Build snapshots
+        id: snapshots
         working-directory: tag
         env:
-          GH_TOKEN: ${{ github.token }}
           TAG: ${{ matrix.tag }}
           ROOT_TAG: ${{ inputs.root_tag }}
         run: |
           minor="$(echo "${TAG#v}" | cut -d. -f1,2)"
           node docs/scripts/build-snapshot.mjs --version "$minor" --base "/v/$minor/" --out "docs-v$minor.tgz"
-          gh release upload "$TAG" "docs-v$minor.tgz" --clobber --repo "$GITHUB_REPOSITORY"
           if [ "$TAG" = "$ROOT_TAG" ]; then
             node docs/scripts/build-snapshot.mjs --version "$minor" --base / --out docs-root.tgz
+          fi
+          echo "minor=$minor" >> "$GITHUB_OUTPUT"
+      - name: Attach snapshots to the release
+        working-directory: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ matrix.tag }}
+          ROOT_TAG: ${{ inputs.root_tag }}
+          MINOR: ${{ steps.snapshots.outputs.minor }}
+        run: |
+          gh release upload "$TAG" "docs-v$MINOR.tgz" --clobber --repo "$GITHUB_REPOSITORY"
+          if [ "$TAG" = "$ROOT_TAG" ]; then
             gh release upload "$TAG" docs-root.tgz --clobber --repo "$GITHUB_REPOSITORY"
           fi

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 interface Workflow {
+  concurrency?: Record<string, unknown>;
   on: Record<string, unknown>;
   jobs: Record<string, {
     if?: string;
@@ -12,6 +13,7 @@ interface Workflow {
     'timeout-minutes'?: number;
     steps?: Array<{
       env?: Record<string, unknown>;
+      id?: string;
       name?: string;
       run?: string;
       uses?: string;
@@ -143,7 +145,8 @@ describe('docs deployment workflow', () => {
   it('snapshots only stable releases, from the release tag with full history', () => {
     const job = workflow.jobs.snapshot;
     const checkout = job.steps?.find((step) => step.name === 'Checkout code');
-    const upload = job.steps?.find((step) => step.name === 'Build and attach snapshots');
+    const build = job.steps?.find((step) => step.name === 'Build snapshots');
+    const upload = job.steps?.find((step) => step.name === 'Attach snapshots to the release');
 
     expect(job.if).toBe("github.event_name == 'release' && !github.event.release.prerelease");
     expect(job.needs).toEqual(['docs-tests', 'verify-release']);
@@ -156,31 +159,34 @@ describe('docs deployment workflow', () => {
       'fetch-depth': 0,
       'persist-credentials': false,
     });
-    expect(upload?.env).toMatchObject({
+    expect(build?.run).toContain('yarn build\n');
+    expect(build?.run).toContain('node docs/scripts/build-snapshot.mjs --version "$minor" --base / --out docs-root.tgz');
+    expect(build?.run).toContain(
+      'node docs/scripts/build-snapshot.mjs --version "$minor" --base "/v/$minor/" --out "docs-v$minor.tgz"',
+    );
+    expect(build?.run).toContain('echo "minor=$minor" >> "$GITHUB_OUTPUT"');
+    expect(upload?.env).toEqual({
       GH_TOKEN: '${{ github.token }}',
       GH_REPO: '${{ github.repository }}',
       TAG: '${{ github.event.release.tag_name }}',
+      MINOR: `\${{ steps.${build?.id ?? 'missing'}.outputs.minor }}`,
     });
-    expect(upload?.run).toContain('yarn build\n');
-    expect(upload?.run).toContain('node docs/scripts/build-snapshot.mjs --version "$minor" --base / --out docs-root.tgz');
-    expect(upload?.run).toContain(
-      'node docs/scripts/build-snapshot.mjs --version "$minor" --base "/v/$minor/" --out "docs-v$minor.tgz"',
-    );
-    expect(upload?.run).toContain('gh release upload "$TAG" docs-root.tgz "docs-v$minor.tgz" --clobber');
+    expect(upload?.run).toBe('gh release upload "$TAG" docs-root.tgz "docs-v$MINOR.tgz" --clobber\n');
   });
 
   it('assembles root, next and archives into one site and publishes that', () => {
+    const next = stepNamed('build', 'Build next snapshot');
     const assemble = stepNamed('build', 'Assemble versioned site');
     const upload = stepNamed('build', 'Upload Pages artifact');
 
     expect(stepNamed('build', 'Build docs')).toBeUndefined();
-    expect(assemble?.env).toMatchObject({
+    expect(next?.run).toBe('node docs/scripts/build-snapshot.mjs --version next --base /next/ --out next.tgz\n');
+    expect(assemble?.env).toEqual({
       GH_TOKEN: '${{ github.token }}',
       GH_REPO: '${{ github.repository }}',
     });
     expect(assemble?.run).toBe(
-      'node docs/scripts/build-snapshot.mjs --version next --base /next/ --out next.tgz\n'
-      + 'node docs/scripts/assemble-site.mjs --next next.tgz --out site\n'
+      'node docs/scripts/assemble-site.mjs --next next.tgz --out site\n'
       + 'cp CHANGELOG.md site/CHANGELOG.md\n',
     );
     expect(upload?.with?.path).toBe('site/');
@@ -218,6 +224,25 @@ describe('docs deployment workflow', () => {
     expect(workflow.jobs['seo-smoke'].if).toBe(
       "${{ !cancelled() && needs.deploy.result == 'success' && !inputs.dry_run }}",
     );
+  });
+
+  it('keeps release runs out of the group a main push cancels', () => {
+    expect(workflow.concurrency).toEqual({
+      group: "${{ github.workflow }}-${{ github.event_name == 'release' && github.event.release.tag_name || 'deploy' }}",
+      'cancel-in-progress': true,
+    });
+  });
+
+  // Build and dependency scripts run arbitrary package code; a token in their
+  // env is readable by all of it, and the release jobs hold contents: write.
+  it.each(['deploy-docs.yml', 'docs-backfill.yml'])('keeps GH_TOKEN out of every build step in %s', (file) => {
+    const parsed = parse(readFileSync(join(__dirname, '../../../.github/workflows', file), 'utf-8')) as Workflow;
+    const buildSteps = Object.values(parsed.jobs)
+      .flatMap((job) => job.steps ?? [])
+      .filter((step) => /yarn build|build-snapshot\.mjs/.test(step.run ?? ''));
+
+    expect(buildSteps.length).toBeGreaterThan(0);
+    expect(buildSteps.filter((step) => step.env?.GH_TOKEN !== undefined).map((step) => step.name)).toEqual([]);
   });
 
   it('never interpolates expressions inside run scripts', () => {

@@ -220,6 +220,21 @@ describe('docs deploy law — reachable without a release', () => {
     }
   });
 
+  // The backfill builds the root snapshot the live site serves until the next
+  // stable release, so its tag checkout needs the same history.
+  it('backfills root snapshots from a full-history tag checkout', () => {
+    const backfill = parse(
+      readFileSync(resolve(REPO_ROOT, '.github/workflows/docs-backfill.yml'), 'utf8'),
+    ) as Workflow;
+    const tagCheckout = backfill.jobs.snapshot?.steps?.find(
+      (step) => step.uses?.startsWith('actions/checkout') && step.with?.path === 'tag',
+    );
+
+    expect(tagCheckout, 'docs-backfill no longer checks out the tag into tag/').toBeDefined();
+    expect(tagCheckout?.with?.['fetch-depth']).toBe(0);
+    expect(tagCheckout?.with?.['persist-credentials']).toBe(false);
+  });
+
   // Everything else here checks bytes on the runner. Neither of the two worst
   // SEO defects this repo shipped — a sitemap whose 148 lastmod values were all
   // identical, and three days of deploys that published nothing — was visible

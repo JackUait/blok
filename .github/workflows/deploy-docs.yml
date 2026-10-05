@@ -22,8 +22,10 @@ on:
 permissions:
   contents: read
 
+# Release runs get their own group: a main push cancelling one mid-snapshot
+# leaves its assets missing, and every later build fails on them.
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'release' && github.event.release.tag_name || 'deploy' }}
   cancel-in-progress: true
 
 jobs:
@@ -109,17 +111,24 @@ jobs:
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
-      - name: Build and attach snapshots
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.event.release.tag_name }}
+      # No token here: build and dependency scripts would see the write token.
+      - name: Build snapshots
+        id: snapshots
         run: |
           yarn build
           minor="$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")"
           node docs/scripts/build-snapshot.mjs --version "$minor" --base / --out docs-root.tgz
           node docs/scripts/build-snapshot.mjs --version "$minor" --base "/v/$minor/" --out "docs-v$minor.tgz"
-          gh release upload "$TAG" docs-root.tgz "docs-v$minor.tgz" --clobber
+          echo "minor=$minor" >> "$GITHUB_OUTPUT"
+
+      - name: Attach snapshots to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+          MINOR: ${{ steps.snapshots.outputs.minor }}
+        run: |
+          gh release upload "$TAG" docs-root.tgz "docs-v$MINOR.tgz" --clobber
 
   build:
     name: Build Docs
@@ -167,12 +176,15 @@ jobs:
       # and `/dist/tools.mjs` imports are resolved and bundled at build time by
       # docs/vite.config.ts's external-dist plugin, so the deployed site never
       # requests /dist from its own origin — the copy was 47 MB of dead weight.
+      - name: Build next snapshot
+        run: |
+          node docs/scripts/build-snapshot.mjs --version next --base /next/ --out next.tgz
+
       - name: Assemble versioned site
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          node docs/scripts/build-snapshot.mjs --version next --base /next/ --out next.tgz
           node docs/scripts/assemble-site.mjs --next next.tgz --out site
           cp CHANGELOG.md site/CHANGELOG.md
 

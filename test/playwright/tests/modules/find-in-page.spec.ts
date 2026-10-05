@@ -1594,8 +1594,9 @@ test.describe('find in page', () => {
   });
 
   test.describe('motion', () => {
-    const settle = (page: Page): Promise<void> => page.waitForFunction(() =>
-      document.getAnimations().every((animation) => animation.playState !== 'running'));
+    const settle = async (page: Page): Promise<void> => {
+      await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
+    };
 
     const selectWord = async (page: Page, text: string, start: number, end: number): Promise<void> => {
       await page.getByText(text, { exact: true }).evaluate((element, range) => {

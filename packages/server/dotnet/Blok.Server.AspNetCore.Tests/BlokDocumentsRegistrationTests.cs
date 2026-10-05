@@ -324,6 +324,11 @@ public sealed class BlokDocumentsRegistrationTests
     public ValueTask<string> ToHtmlAsync(string documentJson, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
+    public ValueTask<BlokPageIndex> GetPageIndexAsync(
+        string documentJson,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
     public ValueTask<string> ToHtmlAsync(
         string documentJson,
         IReadOnlyDictionary<string, BlokPageInfo?> pages,

@@ -221,6 +221,32 @@ public interface IBlokDocumentConverter
       bool includeCode = false,
       CancellationToken cancellationToken = default);
 
+  /// <summary>
+  /// The page facts in a saved document: the pages it owns, the pages it links
+  /// to, and each block's searchable text.
+  /// </summary>
+  /// <remarks>
+  /// Gives the same rows as Blok's <c>pageIndex</c> in Node, so a .NET host and
+  /// a Node host can write one catalog. Use the owners and references to build
+  /// the <c>pages</c> map an export needs.
+  /// <para>
+  /// It costs about twice <see cref="ToPlainTextAsync"/>. On a very large
+  /// document it can run past the timeout: a 730 KB article was measured
+  /// timing out at the 10 s default on a busy machine. If you index on every
+  /// save, raise the timeout, or index outside the save transaction and retry.
+  /// </para>
+  /// </remarks>
+  /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
+  /// <param name="cancellationToken">Cancels the indexing.</param>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says whether the input was unusable, the timeout was reached, or the
+  /// allocation budget was.
+  /// </exception>
+  ValueTask<BlokPageIndex> GetPageIndexAsync(
+      string documentJson,
+      CancellationToken cancellationToken = default);
+
   /// <summary>Converts a saved document to HTML.</summary>
   /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
   /// <param name="cancellationToken">Cancels the conversion.</param>

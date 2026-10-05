@@ -119,6 +119,21 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
         ?? throw new InvalidOperationException("The Blok runtime returned no document.");
   }
 
+  public async ValueTask<BlokPageIndex> GetPageIndexAsync(
+      string documentJson,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentNullException.ThrowIfNull(documentJson);
+
+    var output = await runtime.InvokeAsync(
+        "pageIndex",
+        new JsonObject { ["document"] = ParseDocument(documentJson) }.ToJsonString(),
+        cancellationToken);
+
+    return JsonSerializer.Deserialize<BlokPageIndex>(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no page index.");
+  }
+
   /// <summary>
   /// The translation operations carry options and a translation list beside the
   /// document, so the document is a field rather than the whole request.

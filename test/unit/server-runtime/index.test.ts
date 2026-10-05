@@ -404,4 +404,134 @@ describe('server runtime boundary', () => {
     await expect(invoke('blocksToPlainText', JSON.stringify({ document: { notBlocks: [] } })))
       .rejects.toThrow(TypeError);
   });
+
+  describe('page-aware export', () => {
+    /** The page glyph and lock are SVG; the labels and links are what matter. */
+    const stripSvg = (html: string): string => html.replace(/<svg[\s\S]*?<\/svg>/g, '');
+
+    const pageDocument = {
+      blocks: [
+        { id: 'b1', type: 'page', data: { pageId: 'p-ok' } },
+        { id: 'b2', type: 'page-link', data: { pageId: 'p-denied' } },
+        { id: 'b3', type: 'page-link', data: { pageId: 'p-missing' } },
+        { id: 'b4', type: 'page', data: { pageId: 'p-absent' } },
+        { id: 'b5', type: 'paragraph', data: { text: 'See <a data-blok-page-id="p-ok">x</a> and <a data-blok-page-id="p-denied">x</a>.' } },
+      ],
+    };
+    const pages = {
+      'p-ok': { title: 'Roadmap', icon: { type: 'emoji', value: '🚀' }, href: '/p/ok' },
+      'p-denied': { access: 'none', title: 'Secret', href: '/p/denied' },
+      'p-missing': null,
+    };
+
+    it('renders allowed, denied, missing and unlisted pages to HTML', async () => {
+      const html = stripSvg(await invoke('blocksToHtmlWithPages', JSON.stringify({ document: pageDocument, pages })));
+
+      expect(html).toBe(
+        '<div><a href="/p/ok"><span aria-hidden="true">🚀</span><span>Roadmap</span></a></div>'
+        + '<div><span><span aria-hidden="true"></span><span>No access</span></span></div>'
+        + '<div><span><span aria-hidden="true"></span><span>Page not found</span></span></div>'
+        + '<div><span><span aria-hidden="true"></span><span>Page</span></span></div>'
+        + '<p>See <a data-blok-page-id="p-ok" href="/p/ok">Roadmap</a> and <a data-blok-page-id="p-denied">Page</a>.</p>'
+      );
+      expect(html).not.toContain('Secret');
+      expect(html).not.toContain('/p/denied');
+    });
+
+    it('gives Markdown the page titles', async () => {
+      const output = await invoke('blocksToMarkdownWithPages', JSON.stringify({
+        document: pageDocument,
+        pages: { 'p-ok': { title: 'Roadmap' }, 'p-denied': { access: 'none' }, 'p-missing': null },
+      }));
+      const result = JSON.parse(output) as { markdown: string };
+
+      expect(result.markdown).toBe('Roadmap\n\nNo access\n\nPage not found\n\nPage\n\nSee Roadmap and Page.');
+    });
+
+    it('still skips and reports a malformed block inside the envelope', async () => {
+      const output = await invoke('blocksToMarkdownWithPages', JSON.stringify({
+        document: { blocks: [{ type: 'paragraph', data: { text: 'Kept' } }, null] },
+        pages: {},
+      }));
+      const result = JSON.parse(output) as { markdown: string; warnings: Array<{ detail: string }> };
+
+      expect(result.markdown).toBe('Kept');
+      expect(result.warnings.map((warning) => warning.detail)).toEqual(['1 malformed block was skipped']);
+    });
+
+    it('drops a script-capable page href', async () => {
+      const html = await invoke('blocksToHtmlWithPages', JSON.stringify({
+        document: pageDocument,
+        pages: { 'p-ok': { title: 'T', href: 'javascript:alert(1)' } },
+      }));
+
+      expect(html).not.toContain('href=');
+      expect(html).toContain('<span>T</span>');
+    });
+
+    it('never resolves a prototype key the map does not own', async () => {
+      const html = stripSvg(await invoke('blocksToHtmlWithPages', JSON.stringify({
+        document: {
+          blocks: ['__proto__', 'toString', 'constructor'].map((pageId) => ({ type: 'page-link', data: { pageId } })),
+        },
+        pages: {},
+      })));
+
+      expect(html).toBe('<div><span><span aria-hidden="true"></span><span>Page</span></span></div>'.repeat(3));
+    });
+
+    /** `JSON.stringify({ __proto__: … })` would set the prototype, so this is a literal. */
+    it('resolves an own __proto__ key in the map', async () => {
+      const html = stripSvg(await invoke(
+        'blocksToHtmlWithPages',
+        '{"document":{"blocks":[{"type":"page-link","data":{"pageId":"__proto__"}},{"type":"page-link","data":{"pageId":"toString"}}]},'
+        + '"pages":{"__proto__":{"title":"OwnProto","href":"/p/__proto__"}}}'
+      ));
+
+      expect(html).toBe(
+        '<div><a href="/p/__proto__"><span aria-hidden="true"></span><span>OwnProto</span></a></div>'
+        + '<div><span><span aria-hidden="true"></span><span>Page</span></span></div>'
+      );
+    });
+
+    it.each([['an array', []], ['a string', 'x'], ['null', null]])('ignores pages that are %s', async (_name, value) => {
+      const html = stripSvg(await invoke('blocksToHtmlWithPages', JSON.stringify({
+        document: { blocks: [{ type: 'page-link', data: { pageId: '0' } }] },
+        pages: value,
+      })));
+
+      expect(html).toBe('<div><span><span aria-hidden="true"></span><span>Page</span></span></div>');
+    });
+
+    it('reads pages only from the envelope, never from inside the document', async () => {
+      const html = stripSvg(await invoke('blocksToHtmlWithPages', JSON.stringify({
+        document: { blocks: [{ type: 'page-link', data: { pageId: 'p1' } }], pages: { p1: { title: 'Forged', href: '/forged' } } },
+        pages: {},
+      })));
+
+      expect(html).toBe('<div><span><span aria-hidden="true"></span><span>Page</span></span></div>');
+    });
+
+    it('refuses input with no document record', async () => {
+      await expect(invoke('blocksToHtmlWithPages', JSON.stringify(pageDocument))).rejects.toThrow(TypeError);
+      await expect(invoke('blocksToMarkdownWithPages', JSON.stringify({ document: [], pages }))).rejects.toThrow(TypeError);
+    });
+
+    /** The shipped ops stay bare-only: an envelope there must not set page metadata. */
+    it('keeps the old operations bare-only', async () => {
+      await expect(invoke('blocksToHtml', JSON.stringify({ document: pageDocument, pages })))
+        .rejects.toThrow('Document input requires a `blocks` array');
+      await expect(invoke('blocksToMarkdown', JSON.stringify({ document: pageDocument, pages })))
+        .rejects.toThrow('Document input requires a `blocks` array');
+    });
+
+    it('ignores top-level pages on a bare document sent to the old operations', async () => {
+      const forged = { blocks: [{ type: 'page-link', data: { pageId: 'p1' } }], pages: { p1: { title: 'Forged', href: '/forged' } } };
+      const html = stripSvg(await invoke('blocksToHtml', JSON.stringify(forged)));
+      const markdown = JSON.parse(await invoke('blocksToMarkdown', JSON.stringify(forged))) as { markdown: string };
+
+      expect(html).toBe('<div><span><span aria-hidden="true"></span><span>Page</span></span></div>');
+      expect(markdown.markdown).toBe('Page');
+    });
+  });
 });

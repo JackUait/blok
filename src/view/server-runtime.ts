@@ -12,6 +12,7 @@ import { blocksToPlainText, blocksToPlainTextWithReport } from './blocks-to-plai
 import { blokDocumentSchema } from './document-schema';
 import type { DocumentTextsOptions } from './document-texts';
 import { extractTexts, injectTexts } from './document-texts';
+import type { PageIcon, PageInfo } from '../../types/tools/page';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -185,6 +186,75 @@ const parsePlainTextRequest = (inputJson: string): {
   };
 };
 
+const hasOwn = (record: Record<string, unknown>, key: string): boolean =>
+  Object.prototype.hasOwnProperty.call(record, key);
+
+const readPageIcon = (value: unknown): PageIcon | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  if (value.type === 'emoji' && typeof value.value === 'string') {
+    return { type: 'emoji', value: value.value };
+  }
+
+  return value.type === 'image' && typeof value.url === 'string' ? { type: 'image', url: value.url } : undefined;
+};
+
+/**
+ * One `pages` entry: JSON `null` is a missing page, a record is metadata, and
+ * anything else is as good as unlisted.
+ * @param entry - the raw entry
+ */
+const readPageInfo = (entry: unknown): PageInfo | null | undefined => {
+  if (entry === null) {
+    return null;
+  }
+
+  if (!isRecord(entry)) {
+    return undefined;
+  }
+
+  const icon = readPageIcon(entry.icon);
+
+  return {
+    ...(typeof entry.title === 'string' ? { title: entry.title } : {}),
+    ...(icon === undefined ? {} : { icon }),
+    ...(entry.access === 'none' ? { access: 'none' as const } : {}),
+  };
+};
+
+/**
+ * The page-aware export operations take ONLY an envelope, and read `pages`
+ * only from its root. The shipped `blocksToHtml`/`blocksToMarkdown` stay
+ * bare-only, so a document string cannot carry page metadata of its own.
+ * @param inputJson - the serialized `{ document, pages }` envelope
+ */
+const parsePagesRequest = (inputJson: string): ParsedDocument & {
+  pageInfo: (pageId: string) => PageInfo | null | undefined;
+  pageHref: (pageId: string) => string;
+} => {
+  const input = parseRecord(inputJson);
+
+  if (!isRecord(input.document)) {
+    throw new TypeError('Page export input requires a `document` record.');
+  }
+
+  const pages = isRecord(input.pages) ? input.pages : {};
+  /** Own keys only: `pages.toString` would otherwise answer for an unlisted id. */
+  const entry = (pageId: string): unknown => (hasOwn(pages, pageId) ? pages[pageId] : undefined);
+
+  return {
+    ...readDocument(input.document),
+    pageInfo: (pageId) => readPageInfo(entry(pageId)),
+    pageHref: (pageId) => {
+      const raw = entry(pageId);
+
+      return isRecord(raw) && typeof raw.href === 'string' ? raw.href : '';
+    },
+  };
+};
+
 /**
  * Wraps its result because the one failure a caller can cause — a translation
  * list that does not match the document — has to cross the host boundary as
@@ -229,6 +299,21 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
     case 'blocksToMarkdown': {
       const { document, skipped } = parseDocument(inputJson);
       const report = blocksToMarkdownWithReport(document);
+
+      if (skipped > 0) {
+        report.warnings.push(skippedBlockWarning(skipped));
+      }
+
+      return JSON.stringify(report);
+    }
+    case 'blocksToHtmlWithPages': {
+      const { document, pageInfo, pageHref } = parsePagesRequest(inputJson);
+
+      return blocksToHtml(document, { pageInfo, pageHref });
+    }
+    case 'blocksToMarkdownWithPages': {
+      const { document, skipped, pageInfo } = parsePagesRequest(inputJson);
+      const report = blocksToMarkdownWithReport(document, { pageInfo });
 
       if (skipped > 0) {
         report.warnings.push(skippedBlockWarning(skipped));

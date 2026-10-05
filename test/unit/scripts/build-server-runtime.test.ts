@@ -68,6 +68,26 @@ describe('buildServerRuntime', () => {
     expect(output).toContain('"data":{"text":"y","__proto__":{"keep":"me"}}');
   });
 
+  /** Own-key lookups and the unsafe-scheme strip must hold in the bare realm too. */
+  it('renders page metadata from an envelope in a realm with no host globals', async () => {
+    const outputPath = await buildServerRuntime(outDir);
+    const source = readFileSync(outputPath, 'utf8');
+    const sandbox: Record<string, unknown> = {};
+
+    runInContext(source, createContext(sandbox));
+
+    const invoke = sandbox.blokServerInvoke as (op: string, input: string) => Promise<string>;
+    const html = await invoke(
+      'blocksToHtmlWithPages',
+      '{"document":{"blocks":[{"type":"paragraph","data":{"text":"<a data-blok-page-id=\\"__proto__\\">x</a> <a data-blok-page-id=\\"toString\\">x</a> <a data-blok-page-id=\\"js\\">x</a>"}}]},'
+      + '"pages":{"__proto__":{"title":"Own","href":"/p/own"},"js":{"title":"Js","href":"javascript:alert(1)"}}}'
+    );
+
+    expect(html).toBe(
+      '<p><a data-blok-page-id="__proto__" href="/p/own">Own</a> <a data-blok-page-id="toString">Page</a> <a data-blok-page-id="js">Js</a></p>'
+    );
+  });
+
   /**
    * The stored `version` of a document has to be the same string whichever side
    * wrote it, so the bundle reports the editor's own version rather than a

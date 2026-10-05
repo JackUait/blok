@@ -267,12 +267,16 @@ export class FindBar {
     this.listen(this.input, 'scroll', () => this.syncOverflow());
     this.listen(this.bar, 'keydown', (event) => this.handleKeydown(event));
     this.listen(this.replaceToggle, 'click', () => this.setReplaceOpen(!this.replaceOpen));
-    // close() froze the motion for the fade; once faded, let it go.
-    this.listen(this.element, 'transitionend', (event) => {
+    // close() froze the motion for the fade; once faded, let it go. Chrome ends
+    // the fade with transitioncancel, as display:none lands when it finishes.
+    const faded = (event: TransitionEvent): void => {
       if (event.target === this.element && !this.opened) {
         this.stopMotion();
       }
-    });
+    };
+
+    this.listen(this.element, 'transitionend', faded);
+    this.listen(this.element, 'transitioncancel', faded);
     this.listen(this.optionsButton, 'click', () => this.toggleOptionsMenu());
     this.listen(this.previousButton, 'click', () => this.callbacks.onPrevious());
     this.listen(this.nextButton, 'click', () => this.callbacks.onNext());

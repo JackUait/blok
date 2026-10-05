@@ -973,6 +973,28 @@ describe('FindBar', () => {
       expect(opened.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
     });
 
+    // Chrome ends the fade with transitioncancel, not transitionend: display:none lands as it finishes.
+    it('drops the frozen bloom when the fade ends by display:none', () => {
+      bar.open({ readOnly: false });
+      const opened = made.slice();
+
+      bar.close();
+      bar.element.dispatchEvent(new Event('transitioncancel', { bubbles: true }));
+
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
+    });
+
+    it('keeps its motion when a fade is cut short by a reopen', () => {
+      bar.open({ readOnly: false });
+      bar.close();
+      bar.open({ readOnly: false });
+      const reopened = made.slice(-3);
+
+      bar.element.dispatchEvent(new Event('transitioncancel', { bubbles: true }));
+
+      expect(reopened.every((animation) => animation.cancel.mock.calls.length === 0)).toBe(true);
+    });
+
     it('drops the frozen bloom when destroyed', () => {
       bar.open({ readOnly: false });
       const opened = made.slice();

@@ -748,6 +748,43 @@ describe('FindBar', () => {
       expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-all').disabled).toBe(true);
     });
 
+    it('disables both replace buttons when no match can be replaced', () => {
+      bar.open({ replace: true, readOnly: false });
+      bar.setResults({ current: 0, total: 3, replaceable: 0, currentReplaceable: false });
+      replaceInput().value = 'x';
+
+      press(replaceInput(), { key: 'Enter' });
+      press(replaceInput(), { key: 'Enter', metaKey: true });
+
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace').disabled).toBe(true);
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-all').disabled).toBe(true);
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-next').disabled).toBe(false);
+      expect(callbacks.onReplace).not.toHaveBeenCalled();
+      expect(callbacks.onReplaceAll).not.toHaveBeenCalled();
+    });
+
+    it('disables only Replace when the current match cannot be replaced but others can', () => {
+      bar.open({ replace: true, readOnly: false });
+      bar.setResults({ current: 0, total: 3, replaceable: 2, currentReplaceable: false });
+      replaceInput().value = 'x';
+
+      press(replaceInput(), { key: 'Enter' });
+
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace').disabled).toBe(true);
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-all').disabled).toBe(false);
+      expect(callbacks.onReplace).not.toHaveBeenCalled();
+    });
+
+    it('moves focus to the replace field when the focused Replace stops applying', () => {
+      bar.open({ replace: true, readOnly: false });
+      bar.setResults({ current: 0, total: 2 });
+      byTestId<HTMLButtonElement>(bar.element, 'find-replace').focus();
+
+      bar.setResults({ current: 1, total: 2, replaceable: 1, currentReplaceable: false });
+
+      expect(replaceInput()).toHaveFocus();
+    });
+
     it('replaces from the buttons with the typed text', () => {
       bar.open({ replace: true, readOnly: false });
       bar.setResults({ current: 0, total: 2 });

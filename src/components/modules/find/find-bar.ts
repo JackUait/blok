@@ -28,6 +28,10 @@ export interface FindBarResults {
   /** 0-based index of the active match, -1 when none. */
   current: number;
   total: number;
+  /** Matches Replace all can edit. Defaults to `total`. */
+  replaceable?: number;
+  /** Whether Replace can edit the active match. Defaults to true when there is one. */
+  currentReplaceable?: boolean;
 }
 
 export interface FindBarInit {
@@ -143,6 +147,8 @@ export class FindBar {
   private matchCase = false;
   private wholeWord = false;
   private total = 0;
+  private replaceable = 0;
+  private currentReplaceable = false;
   /** The count the counter shows now, -1 when it shows none. */
   private shown = { current: -1, total: 0 };
   private noResults = false;
@@ -399,6 +405,8 @@ export class FindBar {
 
   public setResults(results: FindBarResults): void {
     this.total = results.total;
+    this.replaceable = results.replaceable ?? results.total;
+    this.currentReplaceable = results.currentReplaceable ?? results.current >= 0;
     this.renderResults(results.current);
   }
 
@@ -516,7 +524,7 @@ export class FindBar {
 
     event.preventDefault();
 
-    if (this.readOnly || this.total === 0) {
+    if (this.readOnly) {
       return;
     }
 
@@ -527,10 +535,10 @@ export class FindBar {
       return;
     }
 
-    if (mod) {
-      this.callbacks.onReplaceAll(this.replaceInput.value);
-    } else {
-      this.callbacks.onReplace(this.replaceInput.value);
+    const button = mod ? this.replaceAllButton : this.replaceButton;
+
+    if (!button.disabled) {
+      button.click();
     }
   }
 
@@ -749,22 +757,24 @@ export class FindBar {
     this.noResults = noResults;
 
     const none = this.total === 0;
+    const disabled = new Map([
+      [this.previousButton, none],
+      [this.nextButton, none],
+      [this.replaceButton, none || !this.currentReplaceable],
+      [this.replaceAllButton, none || this.replaceable === 0],
+    ]);
+    const focused = document.activeElement;
 
     // A disabled button drops focus to <body>, where Escape no longer reaches the bar.
-    if (none && document.activeElement instanceof HTMLButtonElement) {
-      const focused = document.activeElement;
+    if (focused instanceof HTMLButtonElement && disabled.get(focused) === true) {
+      const isReplace = focused === this.replaceButton || focused === this.replaceAllButton;
 
-      if (focused === this.replaceButton || focused === this.replaceAllButton) {
-        this.replaceInput.focus({ preventScroll: true });
-      } else if (focused === this.previousButton || focused === this.nextButton) {
-        this.input.focus({ preventScroll: true });
-      }
+      (isReplace ? this.replaceInput : this.input).focus({ preventScroll: true });
     }
 
-    this.previousButton.disabled = none;
-    this.nextButton.disabled = none;
-    this.replaceButton.disabled = none;
-    this.replaceAllButton.disabled = none;
+    for (const [button, isDisabled] of disabled) {
+      button.disabled = isDisabled;
+    }
   }
 
   private counterText(current: number, noResults: boolean): string {

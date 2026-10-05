@@ -543,6 +543,69 @@ describe('Find module', () => {
     expect(input.querySelector('b')?.textContent).toBe('brave');
   });
 
+  describe('replace buttons', () => {
+    const replaceButton = (): HTMLButtonElement => byTestIdIn(openBar(), 'find-replace');
+    const replaceAllButton = (): HTMLButtonElement => byTestIdIn(openBar(), 'find-replace-all');
+    const byTestIdIn = (root: Element, testId: string): HTMLButtonElement => {
+      const button = root.querySelector(`[data-blok-testid="${testId}"]`);
+
+      if (!(button instanceof HTMLButtonElement)) {
+        throw new Error(`${testId} missing`);
+      }
+
+      return button;
+    };
+    const hostText = (text: string): HTMLElement => {
+      const paragraph = document.createElement('p');
+
+      paragraph.textContent = text;
+      document.body.prepend(paragraph);
+
+      return paragraph;
+    };
+
+    it('are disabled when every match is outside the editor', () => {
+      const { wrapper, redactor } = editor([{ id: 'a', text: 'nothing here' }]);
+
+      hostText('a cat on the host page');
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+
+      expect(replaceButton().disabled).toBe(true);
+      expect(replaceAllButton().disabled).toBe(true);
+    });
+
+    it('are disabled when every match is in text that is not editable', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat' }]);
+
+      blocks[0].holder.querySelector('[contenteditable]')?.setAttribute('contenteditable', 'false');
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+
+      expect(replaceButton().disabled).toBe(true);
+      expect(replaceAllButton().disabled).toBe(true);
+    });
+
+    it('enable Replace only on a match it can replace, and Replace all while any is left', () => {
+      const { wrapper, redactor, blocks, find } = editor([{ id: 'a', text: 'cat in the editor' }]);
+      const host = hostText('a cat on the host page');
+      const activeIn = (): Node | undefined => [...highlights.get('blok-find-match-active') ?? []][0]?.startContainer;
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+
+      expect(host.contains(activeIn() ?? null)).toBe(true);
+      expect(replaceButton().disabled).toBe(true);
+      expect(replaceAllButton().disabled).toBe(false);
+
+      find.move(1);
+
+      expect(blocks[0].holder.contains(activeIn() ?? null)).toBe(true);
+      expect(replaceButton().disabled).toBe(false);
+      expect(replaceAllButton().disabled).toBe(false);
+    });
+  });
+
   it('never replaces in read-only mode', () => {
     const { wrapper, redactor, blocks, readOnly, find } = editor([{ id: 'a', text: 'cat' }]);
 

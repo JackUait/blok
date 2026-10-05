@@ -230,7 +230,7 @@ export class Find extends Module {
       return;
     }
 
-    const host = this.ownsRange(current) ? editableHostOf(current) : null;
+    const host = this.canReplace(current) ? editableHostOf(current) : null;
 
     if (host === null) {
       this.move(1);
@@ -248,7 +248,7 @@ export class Find extends Module {
    * @param replacement - the new text
    */
   public replaceAll(replacement: string): void {
-    const editable = this.ranges.filter((range) => this.ownsRange(range) && editableHostOf(range) !== null);
+    const editable = this.ranges.filter((range) => this.canReplace(range));
 
     if (this.Blok.ReadOnly.isEnabled || editable.length === 0) {
       return;
@@ -436,6 +436,11 @@ export class Find extends Module {
     return redactor.contains(range.commonAncestorContainer) &&
       editorOf(range.startContainer) === wrapper &&
       editorOf(range.endContainer) === wrapper;
+  }
+
+  /** In this editor's editable text. Host text, read-only content and other editors are not. */
+  private canReplace(range: Range): boolean {
+    return this.ownsRange(range) && editableHostOf(range) !== null;
   }
 
   /** Host page text: outside every editor and outside the bar. */
@@ -633,6 +638,8 @@ export class Find extends Module {
     this.bar?.setResults({
       current: this.active,
       total: this.ranges.length,
+      replaceable: this.ranges.filter((range) => this.canReplace(range)).length,
+      currentReplaceable: current !== null && this.canReplace(current),
     });
 
     if (current === null) {

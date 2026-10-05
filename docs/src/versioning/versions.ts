@@ -18,10 +18,14 @@ export const VERSIONS_URL = '/versions.json';
 
 export const currentVersionId = (): string => import.meta.env.VITE_DOCS_VERSION || 'next';
 
+// The path becomes an href: "//host/" would leave the site, and versionHref needs the trailing slash.
+const isSitePath = (path: unknown): path is string =>
+  typeof path === 'string' && path.startsWith('/') && !path.startsWith('//') && path.endsWith('/');
+
 const isVersion = (value: unknown): value is DocsVersion => {
   if (typeof value !== 'object' || value === null) return false;
   const record = value as Record<string, unknown>;
-  return typeof record.id === 'string' && typeof record.label === 'string' && typeof record.path === 'string';
+  return typeof record.id === 'string' && typeof record.label === 'string' && isSitePath(record.path);
 };
 
 export const parseVersionsManifest = (json: unknown): VersionsManifest | null => {

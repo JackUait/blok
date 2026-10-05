@@ -369,7 +369,7 @@
   "tools.image.zoomIn": "जुम इन",
   "tools.image.zoomOut": "जुम आउट",
   "tools.image.resetZoom": "जुम रिसेट",
-  "tools.image.errorUploadFailed": "अपलोड असफल",
+  "tools.image.errorUploadFailed": "सर्भरमा अपलोड गर्न सकिएन",
   "tools.image.errorFileTooLarge": "तस्बिर धेरै ठूलो छ। {size} ले {max} सीमा नाघेको छ।",
   "tools.image.errorUploadFailedTitle": "अपलोड असफल",
   "tools.image.errorSourceOffline": "स्रोत फाइल सारिएको वा अफलाइन हुन सक्छ।",

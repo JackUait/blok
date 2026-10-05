@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Збільшити",
   "tools.image.zoomOut": "Зменшити",
   "tools.image.resetZoom": "Скинути масштаб",
-  "tools.image.errorUploadFailed": "Не вдалося завантажити",
+  "tools.image.errorUploadFailed": "Не вдалося завантажити на сервер",
   "tools.image.errorFileTooLarge": "Зображення завелике. {size} перевищує ліміт {max}.",
   "tools.image.errorUploadFailedTitle": "Помилка завантаження",
   "tools.image.errorSourceOffline": "Вихідний файл могли перемістити або він може бути офлайн.",

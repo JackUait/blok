@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "ޒޫމް އިން",
   "tools.image.zoomOut": "ޒޫމް އައުޓް",
   "tools.image.resetZoom": "ޒޫމް ރީސެޓް",
-  "tools.image.errorUploadFailed": "އަޕްލޯޑް ނާކާމިޔާބު",
+  "tools.image.errorUploadFailed": "ސާވަރަށް އަޕްލޯޑް ނާކާމިޔާބު",
   "tools.image.errorFileTooLarge": "ފޮޓޯ މާ ބޮޑު. {max} ގެ ލިމިޓަށްވުރެ {size} ބޮޑު.",
   "tools.image.errorUploadFailedTitle": "އަޕްލޯޑް ނާކާމިޔާބު",
   "tools.image.errorSourceOffline": "މަޞްދަރު ފައިލު ބަދަލުވެފައި ނުވަތަ އޮފްލައިންގައި ވެދާނެ.",

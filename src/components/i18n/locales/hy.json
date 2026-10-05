@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Մեծացնել",
   "tools.image.zoomOut": "Փոքրացնել",
   "tools.image.resetZoom": "Վերականգնել մասշտաբը",
-  "tools.image.errorUploadFailed": "Վերբեռնումը ձախողվեց",
+  "tools.image.errorUploadFailed": "Չհաջողվեց վերբեռնել սերվեր",
   "tools.image.errorFileTooLarge": "Պատկերը չափազանց մեծ է։ {size}-ը գերազանցում է {max} սահմանաչափը։",
   "tools.image.errorUploadFailedTitle": "Վերբեռնումը ձախողվեց",
   "tools.image.errorSourceOffline": "Աղբյուրի ֆայլը գուցե տեղափոխվել է կամ հասանելի չէ։",

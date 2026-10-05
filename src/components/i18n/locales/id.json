@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Perbesar",
   "tools.image.zoomOut": "Perkecil",
   "tools.image.resetZoom": "Setel ulang zoom",
-  "tools.image.errorUploadFailed": "Unggahan gagal",
+  "tools.image.errorUploadFailed": "Gagal mengunggah ke server",
   "tools.image.errorFileTooLarge": "Gambar terlalu besar. {size} melebihi batas {max}.",
   "tools.image.errorUploadFailedTitle": "Unggahan gagal",
   "tools.image.errorSourceOffline": "Berkas sumber mungkin telah dipindahkan atau sedang offline.",

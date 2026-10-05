@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Zmadho",
   "tools.image.zoomOut": "Zvogëlo",
   "tools.image.resetZoom": "Rivendos zmadhimin",
-  "tools.image.errorUploadFailed": "Ngarkimi dështoi",
+  "tools.image.errorUploadFailed": "Ngarkimi në server dështoi",
   "tools.image.errorFileTooLarge": "Imazhi është shumë i madh. {size} tejkalon kufirin prej {max}.",
   "tools.image.errorUploadFailedTitle": "Ngarkimi dështoi",
   "tools.image.errorSourceOffline": "Skedari burimor mund të jetë zhvendosur ose jashtë linje.",

@@ -371,7 +371,7 @@
   "tools.image.zoomIn": "ಝೂಮ್ ಇನ್",
   "tools.image.zoomOut": "ಝೂಮ್ ಔಟ್",
   "tools.image.resetZoom": "ಝೂಮ್ ಮರುಹೊಂದಿಸಿ",
-  "tools.image.errorUploadFailed": "ಅಪ್‌ಲೋಡ್ ವಿಫಲವಾಗಿದೆ",
+  "tools.image.errorUploadFailed": "ಸರ್ವರ್‌ಗೆ ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
   "tools.image.errorFileTooLarge": "ಚಿತ್ರ ತುಂಬಾ ದೊಡ್ಡದಾಗಿದೆ. ಗಾತ್ರ: {size}. ಗರಿಷ್ಠ ಮಿತಿ: {max}.",
   "tools.image.errorUploadFailedTitle": "ಅಪ್‌ಲೋಡ್ ವಿಫಲವಾಗಿದೆ",
   "tools.image.errorSourceOffline": "ಮೂಲ ಫೈಲ್ ಸ್ಥಳಾಂತರಗೊಂಡಿರಬಹುದು ಅಥವಾ ಆಫ್‌ಲೈನ್ ಆಗಿರಬಹುದು.",

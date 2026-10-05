@@ -369,7 +369,7 @@
   "tools.image.zoomIn": "Зголеми",
   "tools.image.zoomOut": "Намали",
   "tools.image.resetZoom": "Ресетирај зум",
-  "tools.image.errorUploadFailed": "Прикачувањето не успеа",
+  "tools.image.errorUploadFailed": "Прикачувањето на серверот не успеа",
   "tools.image.errorFileTooLarge": "Сликата е преголема. {size} го надминува ограничувањето од {max}.",
   "tools.image.errorUploadFailedTitle": "Прикачувањето не успеа",
   "tools.image.errorSourceOffline": "Изворната датотека можеби е преместена или офлајн.",

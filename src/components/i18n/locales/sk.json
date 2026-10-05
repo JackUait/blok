@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Priblížiť",
   "tools.image.zoomOut": "Oddialiť",
   "tools.image.resetZoom": "Obnoviť priblíženie",
-  "tools.image.errorUploadFailed": "Nahrávanie zlyhalo",
+  "tools.image.errorUploadFailed": "Nahratie na server zlyhalo",
   "tools.image.errorFileTooLarge": "Obrázok je príliš veľký. {size} presahuje limit {max}.",
   "tools.image.errorUploadFailedTitle": "Nahrávanie zlyhalo",
   "tools.image.errorSourceOffline": "Zdrojový súbor mohol byť presunutý alebo môže byť offline.",

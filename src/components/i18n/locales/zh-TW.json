@@ -371,7 +371,7 @@
   "tools.image.zoomIn": "放大",
   "tools.image.zoomOut": "縮小",
   "tools.image.resetZoom": "重設縮放",
-  "tools.image.errorUploadFailed": "上傳失敗",
+  "tools.image.errorUploadFailed": "無法上傳到伺服器",
   "tools.image.errorFileTooLarge": "圖片太大。{size} 超過 {max} 上限。",
   "tools.image.errorUploadFailedTitle": "上傳失敗",
   "tools.image.errorSourceOffline": "來源檔案可能已移動或處於離線狀態。",

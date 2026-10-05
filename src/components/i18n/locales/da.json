@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Zoom ind",
   "tools.image.zoomOut": "Zoom ud",
   "tools.image.resetZoom": "Nulstil zoom",
-  "tools.image.errorUploadFailed": "Upload mislykkedes",
+  "tools.image.errorUploadFailed": "Kunne ikke uploade til serveren",
   "tools.image.errorFileTooLarge": "Billedet er for stort. {size} overskrider grænsen på {max}.",
   "tools.image.errorUploadFailedTitle": "Upload mislykkedes",
   "tools.image.errorSourceOffline": "Kildefilen kan være flyttet eller ikke længere tilgængelig.",

@@ -369,7 +369,7 @@
   "tools.image.zoomIn": "Томруулах",
   "tools.image.zoomOut": "Жижигрүүлэх",
   "tools.image.resetZoom": "Томруулалтыг дахин тохируулах",
-  "tools.image.errorUploadFailed": "Байршуулахад алдаа гарлаа",
+  "tools.image.errorUploadFailed": "Сервер рүү байршуулж чадсангүй",
   "tools.image.errorFileTooLarge": "Зураг хэтэрхий том байна. {size} нь {max} хязгаараас хэтэрсэн.",
   "tools.image.errorUploadFailedTitle": "Байршуулж чадсангүй",
   "tools.image.errorSourceOffline": "Эх файл зөөгдсөн эсвэл офлайн байж магадгүй.",

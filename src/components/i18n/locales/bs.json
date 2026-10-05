@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Uvećaj",
   "tools.image.zoomOut": "Umanji",
   "tools.image.resetZoom": "Vrati izvorno uvećanje",
-  "tools.image.errorUploadFailed": "Otpremanje nije uspjelo",
+  "tools.image.errorUploadFailed": "Otpremanje na server nije uspjelo",
   "tools.image.errorFileTooLarge": "Slika je prevelika. {size} premašuje ograničenje od {max}.",
   "tools.image.errorUploadFailedTitle": "Otpremanje nije uspjelo",
   "tools.image.errorSourceOffline": "Izvorna datoteka je možda premještena ili više nije dostupna.",

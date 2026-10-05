@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Приближи",
   "tools.image.zoomOut": "Отдалечи",
   "tools.image.resetZoom": "Нулирай мащаба",
-  "tools.image.errorUploadFailed": "Качването е неуспешно",
+  "tools.image.errorUploadFailed": "Неуспешно качване на сървъра",
   "tools.image.errorFileTooLarge": "Изображението е твърде голямо. Размерът му ({size}) надвишава ограничението от {max}.",
   "tools.image.errorUploadFailedTitle": "Качването не бе успешно",
   "tools.image.errorSourceOffline": "Файлът източник може да е преместен или офлайн.",

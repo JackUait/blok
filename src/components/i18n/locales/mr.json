@@ -369,7 +369,7 @@
   "tools.image.zoomIn": "झूम इन",
   "tools.image.zoomOut": "झूम आउट",
   "tools.image.resetZoom": "झूम रीसेट",
-  "tools.image.errorUploadFailed": "अपलोड अयशस्वी",
+  "tools.image.errorUploadFailed": "सर्व्हरवर अपलोड करता आले नाही",
   "tools.image.errorFileTooLarge": "प्रतिमा खूप मोठी आहे. {size} हे {max} मर्यादेपेक्षा जास्त आहे.",
   "tools.image.errorUploadFailedTitle": "अपलोड अयशस्वी",
   "tools.image.errorSourceOffline": "स्रोत फाइल हलवली गेली असावी किंवा उपलब्ध नसावी.",

@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Povečaj",
   "tools.image.zoomOut": "Pomanjšaj",
   "tools.image.resetZoom": "Ponastavi povečavo",
-  "tools.image.errorUploadFailed": "Nalaganje ni uspelo",
+  "tools.image.errorUploadFailed": "Nalaganje na strežnik ni uspelo",
   "tools.image.errorFileTooLarge": "Slika je prevelika. {size} presega omejitev {max}.",
   "tools.image.errorUploadFailedTitle": "Nalaganje ni uspelo",
   "tools.image.errorSourceOffline": "Izvorna datoteka je bila morda premaknjena ali je nedosegljiva.",

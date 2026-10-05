@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Powiększ",
   "tools.image.zoomOut": "Pomniejsz",
   "tools.image.resetZoom": "Resetuj powiększenie",
-  "tools.image.errorUploadFailed": "Wysyłanie nie powiodło się",
+  "tools.image.errorUploadFailed": "Nie udało się wysłać na serwer",
   "tools.image.errorFileTooLarge": "Obraz jest za duży. Rozmiar {size} przekracza limit {max}.",
   "tools.image.errorUploadFailedTitle": "Wysyłanie nie powiodło się",
   "tools.image.errorSourceOffline": "Plik źródłowy mógł zostać przeniesiony lub jest niedostępny.",

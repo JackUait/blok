@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Kuza",
   "tools.image.zoomOut": "Punguza",
   "tools.image.resetZoom": "Weka upya ukuzaji",
-  "tools.image.errorUploadFailed": "Upakiaji umeshindikana",
+  "tools.image.errorUploadFailed": "Imeshindikana kupakia kwenye seva",
   "tools.image.errorFileTooLarge": "Picha ni kubwa mno. {size} imezidi kikomo cha {max}.",
   "tools.image.errorUploadFailedTitle": "Upakiaji umeshindwa",
   "tools.image.errorSourceOffline": "Faili ya chanzo huenda imehamishwa au haipo mtandaoni.",

@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "زوم ان",
   "tools.image.zoomOut": "زوم آؤٹ",
   "tools.image.resetZoom": "زوم ری سیٹ",
-  "tools.image.errorUploadFailed": "اپ لوڈ ناکام",
+  "tools.image.errorUploadFailed": "سرور پر اپ لوڈ نہیں ہو سکا",
   "tools.image.errorFileTooLarge": "تصویر بہت بڑی ہے۔ {size}، {max} کی حد سے زیادہ ہے۔",
   "tools.image.errorUploadFailedTitle": "اپ لوڈ ناکام",
   "tools.image.errorSourceOffline": "ممکن ہے ماخذ فائل منتقل ہو گئی ہو یا آف لائن ہو۔",

@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "ઝૂમ ઇન",
   "tools.image.zoomOut": "ઝૂમ આઉટ",
   "tools.image.resetZoom": "ઝૂમ રીસેટ કરો",
-  "tools.image.errorUploadFailed": "અપલોડ નિષ્ફળ",
+  "tools.image.errorUploadFailed": "સર્વર પર અપલોડ કરી શકાયું નહીં",
   "tools.image.errorFileTooLarge": "છબી ખૂબ મોટી છે. {size} એ {max} મર્યાદા કરતાં વધારે છે.",
   "tools.image.errorUploadFailedTitle": "અપલોડ નિષ્ફળ",
   "tools.image.errorSourceOffline": "સ્રોત ફાઇલ ખસેડાઈ હોઈ શકે છે અથવા ઑફલાઇન હોઈ શકે છે.",

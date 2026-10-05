@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Yakınlaştır",
   "tools.image.zoomOut": "Uzaklaştır",
   "tools.image.resetZoom": "Yakınlaştırmayı sıfırla",
-  "tools.image.errorUploadFailed": "Yükleme başarısız",
+  "tools.image.errorUploadFailed": "Sunucuya yüklenemedi",
   "tools.image.errorFileTooLarge": "Görsel çok büyük. {size} boyutuyla {max} sınırını aşıyor.",
   "tools.image.errorUploadFailedTitle": "Yükleme başarısız",
   "tools.image.errorSourceOffline": "Kaynak dosya taşınmış veya çevrimdışı olabilir.",

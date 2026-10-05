@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "زوم ان",
   "tools.image.zoomOut": "زوم آئوٽ",
   "tools.image.resetZoom": "زوم ٻيهر سيٽ ڪريو",
-  "tools.image.errorUploadFailed": "اپ لوڊ ناڪام",
+  "tools.image.errorUploadFailed": "سرور تي اپ لوڊ نه ٿي سگهيو",
   "tools.image.errorFileTooLarge": "تصوير تمام وڏي آهي. {size}، {max} جي حد کان وڌيڪ آهي.",
   "tools.image.errorUploadFailedTitle": "اپلوڊ ناڪام",
   "tools.image.errorSourceOffline": "ماخذ فائل شايد منتقل ٿي وئي هجي يا آف لائن هجي.",

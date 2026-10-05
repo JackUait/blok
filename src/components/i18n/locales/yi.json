@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "גרעסערן",
   "tools.image.zoomOut": "פארקלענערן",
   "tools.image.resetZoom": "ריסעט זום",
-  "tools.image.errorUploadFailed": "דאָס אַרויפֿלאָדן איז דורכגעפֿאַלן",
+  "tools.image.errorUploadFailed": "דאָס אַרויפֿלאָדן אויפֿן סערווער איז דורכגעפֿאַלן",
   "tools.image.errorFileTooLarge": "דאס בילד איז צו גרויס. {size} גייט אריבער דעם {max} לימיט.",
   "tools.image.errorUploadFailedTitle": "אַרויפֿלאָדן דורכגעפֿאַלן",
   "tools.image.errorSourceOffline": "די מקור־טעקע קען זײַן אַריבערגעפֿירט געוואָרן אָדער אָפֿלײַן.",

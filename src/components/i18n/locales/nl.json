@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Inzoomen",
   "tools.image.zoomOut": "Uitzoomen",
   "tools.image.resetZoom": "Zoom herstellen",
-  "tools.image.errorUploadFailed": "Uploaden mislukt",
+  "tools.image.errorUploadFailed": "Uploaden naar de server mislukt",
   "tools.image.errorFileTooLarge": "De afbeelding is te groot. {size} overschrijdt de limiet van {max}.",
   "tools.image.errorUploadFailedTitle": "Uploaden mislukt",
   "tools.image.errorSourceOffline": "Het bronbestand is mogelijk verplaatst of niet beschikbaar.",

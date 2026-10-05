@@ -369,7 +369,7 @@
   "tools.image.zoomIn": "Tuvināt",
   "tools.image.zoomOut": "Tālināt",
   "tools.image.resetZoom": "Atiestatīt tālummaiņu",
-  "tools.image.errorUploadFailed": "Augšupielāde neizdevās",
+  "tools.image.errorUploadFailed": "Neizdevās augšupielādēt serverī",
   "tools.image.errorFileTooLarge": "Attēls ir pārāk liels. {size} pārsniedz ierobežojumu {max}.",
   "tools.image.errorUploadFailedTitle": "Augšupielāde neizdevās",
   "tools.image.errorSourceOffline": "Avota fails, iespējams, ir pārvietots vai nav pieejams.",

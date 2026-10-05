@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "பெரிதாக்கு",
   "tools.image.zoomOut": "சிறிதாக்கு",
   "tools.image.resetZoom": "பெரிதாக்கத்தை மீட்டமை",
-  "tools.image.errorUploadFailed": "பதிவேற்றம் தோல்வியடைந்தது",
+  "tools.image.errorUploadFailed": "சேவையகத்தில் பதிவேற்ற முடியவில்லை",
   "tools.image.errorFileTooLarge": "படம் மிகப் பெரியது. {size} என்பது {max} வரம்பை மீறுகிறது.",
   "tools.image.errorUploadFailedTitle": "பதிவேற்றம் தோல்வியடைந்தது",
   "tools.image.errorSourceOffline": "மூலக் கோப்பு நகர்த்தப்பட்டிருக்கலாம் அல்லது கிடைக்காமல் இருக்கலாம்.",

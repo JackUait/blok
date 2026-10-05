@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Zoom inn",
   "tools.image.zoomOut": "Zoom ut",
   "tools.image.resetZoom": "Tilbakestill zoom",
-  "tools.image.errorUploadFailed": "Opplasting mislyktes",
+  "tools.image.errorUploadFailed": "Kunne ikke laste opp til serveren",
   "tools.image.errorFileTooLarge": "Bildet er for stort. {size} overskrider grensen på {max}.",
   "tools.image.errorUploadFailedTitle": "Opplasting mislyktes",
   "tools.image.errorSourceOffline": "Kildefilen kan ha blitt flyttet eller være utilgjengelig.",

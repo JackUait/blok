@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Phóng to",
   "tools.image.zoomOut": "Thu nhỏ",
   "tools.image.resetZoom": "Đặt lại thu phóng",
-  "tools.image.errorUploadFailed": "Tải lên thất bại",
+  "tools.image.errorUploadFailed": "Không thể tải lên máy chủ",
   "tools.image.errorFileTooLarge": "Hình ảnh quá lớn. {size} vượt quá giới hạn {max}.",
   "tools.image.errorUploadFailedTitle": "Tải lên thất bại",
   "tools.image.errorSourceOffline": "Tệp nguồn có thể đã được di chuyển hoặc đang ngoại tuyến.",

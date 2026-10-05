@@ -369,7 +369,7 @@
   "tools.image.zoomIn": "സൂം ഇൻ",
   "tools.image.zoomOut": "സൂം ഔട്ട്",
   "tools.image.resetZoom": "സൂം റീസെറ്റ്",
-  "tools.image.errorUploadFailed": "അപ്‌ലോഡ് പരാജയപ്പെട്ടു",
+  "tools.image.errorUploadFailed": "സെർവറിലേക്ക് അപ്‌ലോഡ് ചെയ്യാനായില്ല",
   "tools.image.errorFileTooLarge": "ചിത്രം വളരെ വലുതാണ്. {size} എന്നത് {max} പരിധി കവിയുന്നു.",
   "tools.image.errorUploadFailedTitle": "അപ്‌ലോഡ് പരാജയപ്പെട്ടു",
   "tools.image.errorSourceOffline": "ഉറവിട ഫയൽ മാറ്റിയതോ ഓഫ്‌ലൈനിലോ ആകാം.",

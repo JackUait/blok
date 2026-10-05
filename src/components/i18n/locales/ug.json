@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "چوڭايتىش",
   "tools.image.zoomOut": "كىچىكلىتىش",
   "tools.image.resetZoom": "چوڭايتىشنى ئەسلىگە كەلتۈرۈش",
-  "tools.image.errorUploadFailed": "يۈكلەش مەغلۇپ بولدى",
+  "tools.image.errorUploadFailed": "مۇلازىمېتىرغا يۈكلىگىلى بولمىدى",
   "tools.image.errorFileTooLarge": "رەسىم بەك چوڭ. {size} بولسا {max} چېكىدىن ئېشىپ كەتتى.",
   "tools.image.errorUploadFailedTitle": "يۈكلەش مەغلۇپ بولدى",
   "tools.image.errorSourceOffline": "مەنبە ھۆججەت يۆتكەلگەن ياكى تورسىز بولۇشى مۇمكىن.",

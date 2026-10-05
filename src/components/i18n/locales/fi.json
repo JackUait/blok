@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Lähennä",
   "tools.image.zoomOut": "Loitonna",
   "tools.image.resetZoom": "Nollaa zoomaus",
-  "tools.image.errorUploadFailed": "Lataus epäonnistui",
+  "tools.image.errorUploadFailed": "Lataus palvelimelle epäonnistui",
   "tools.image.errorFileTooLarge": "Kuva on liian suuri. Koko {size} ylittää rajan {max}.",
   "tools.image.errorUploadFailedTitle": "Lataus epäonnistui",
   "tools.image.errorSourceOffline": "Lähdetiedosto on ehkä siirretty tai se ei ehkä ole käytettävissä.",

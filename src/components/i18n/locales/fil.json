@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Mag-zoom in",
   "tools.image.zoomOut": "Mag-zoom out",
   "tools.image.resetZoom": "I-reset ang zoom",
-  "tools.image.errorUploadFailed": "Nabigo ang pag-upload",
+  "tools.image.errorUploadFailed": "Hindi ma-upload sa server",
   "tools.image.errorFileTooLarge": "Masyadong malaki ang larawan. Lumampas ang {size} sa limitasyon na {max}.",
   "tools.image.errorUploadFailedTitle": "Nabigo ang pag-upload",
   "tools.image.errorSourceOffline": "Maaaring nailipat o offline ang source file.",

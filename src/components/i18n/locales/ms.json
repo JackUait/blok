@@ -369,7 +369,7 @@
   "tools.image.zoomIn": "Zum masuk",
   "tools.image.zoomOut": "Zum keluar",
   "tools.image.resetZoom": "Tetapkan semula zum",
-  "tools.image.errorUploadFailed": "Muat naik gagal",
+  "tools.image.errorUploadFailed": "Tidak dapat memuat naik ke pelayan",
   "tools.image.errorFileTooLarge": "Imej terlalu besar. {size} melebihi had {max}.",
   "tools.image.errorUploadFailedTitle": "Muat naik gagal",
   "tools.image.errorSourceOffline": "Fail sumber mungkin telah dipindahkan atau tidak dapat dicapai.",

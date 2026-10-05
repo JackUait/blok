@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Zooma in",
   "tools.image.zoomOut": "Zooma ut",
   "tools.image.resetZoom": "Återställ zoom",
-  "tools.image.errorUploadFailed": "Uppladdningen misslyckades",
+  "tools.image.errorUploadFailed": "Det gick inte att ladda upp till servern",
   "tools.image.errorFileTooLarge": "Bilden är för stor. {size} överskrider gränsen på {max}.",
   "tools.image.errorUploadFailedTitle": "Uppladdningen misslyckades",
   "tools.image.errorSourceOffline": "Källfilen kan ha flyttats eller vara otillgänglig.",

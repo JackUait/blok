@@ -371,7 +371,7 @@
   "tools.image.zoomIn": "نزیککردنەوە",
   "tools.image.zoomOut": "دوورکردنەوە",
   "tools.image.resetZoom": "ڕیسێتی زووم",
-  "tools.image.errorUploadFailed": "بارکردن سەرکەوتوو نەبوو",
+  "tools.image.errorUploadFailed": "نەتوانرا بۆ ڕاژەکار باربکرێت",
   "tools.image.errorFileTooLarge": "وێنەکە زۆر گەورەیە. {size} لە سنووری {max} تێدەپەڕێت.",
   "tools.image.errorUploadFailedTitle": "بارکردن سەرکەوتوو نەبوو",
   "tools.image.errorSourceOffline": "لەوانەیە فایلی سەرچاوە گواستراوەتەوە یان دەرهێڵ بێت.",

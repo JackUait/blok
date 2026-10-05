@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "විශාලනය",
   "tools.image.zoomOut": "කුඩාකරණය",
   "tools.image.resetZoom": "විශාලනය යළි සකසන්න",
-  "tools.image.errorUploadFailed": "උඩුගත කිරීම අසාර්ථකයි",
+  "tools.image.errorUploadFailed": "සේවාදායකයට උඩුගත කළ නොහැකි විය",
   "tools.image.errorFileTooLarge": "රූපය ඉතා විශාලයි. {size} ප්‍රමාණය {max} සීමාව ඉක්මවයි.",
   "tools.image.errorUploadFailedTitle": "උඩුගත කිරීම අසාර්ථකයි",
   "tools.image.errorSourceOffline": "මූලාශ්‍ර ගොනුව ගෙන ගොස් හෝ නොබැඳිව තිබිය හැකිය.",

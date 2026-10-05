@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Vergrößern",
   "tools.image.zoomOut": "Verkleinern",
   "tools.image.resetZoom": "Zoom zurücksetzen",
-  "tools.image.errorUploadFailed": "Upload fehlgeschlagen",
+  "tools.image.errorUploadFailed": "Upload auf den Server fehlgeschlagen",
   "tools.image.errorFileTooLarge": "Das Bild ist zu groß. {size} überschreitet die Höchstgrenze von {max}.",
   "tools.image.errorUploadFailedTitle": "Upload fehlgeschlagen",
   "tools.image.errorSourceOffline": "Die Quelldatei wurde möglicherweise verschoben oder ist offline.",

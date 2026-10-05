@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "አጉላ",
   "tools.image.zoomOut": "አሳንስ",
   "tools.image.resetZoom": "ማጉላት እንደገና አስጀምር",
-  "tools.image.errorUploadFailed": "መስቀል አልተሳካም",
+  "tools.image.errorUploadFailed": "ወደ አገልጋዩ መስቀል አልተሳካም",
   "tools.image.errorFileTooLarge": "ምስሉ በጣም ትልቅ ነው። {size} ከ{max} ገደብ ይበልጣል።",
   "tools.image.errorUploadFailedTitle": "ሰቀላ አልተሳካም",
   "tools.image.errorSourceOffline": "የምንጭ ፋይሉ ተንቀሳቅሶ ሊሆን ወይም ላይገኝ ይችላል።",

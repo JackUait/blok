@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Ampliar",
   "tools.image.zoomOut": "Reducir",
   "tools.image.resetZoom": "Restablecer zoom",
-  "tools.image.errorUploadFailed": "Error al subir",
+  "tools.image.errorUploadFailed": "No se pudo subir al servidor",
   "tools.image.errorFileTooLarge": "La imagen es demasiado grande. {size} supera el límite de {max}.",
   "tools.image.errorUploadFailedTitle": "Error al subir",
   "tools.image.errorSourceOffline": "Puede que el archivo de origen se haya movido o esté sin conexión.",

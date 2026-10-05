@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Suumi sisse",
   "tools.image.zoomOut": "Suumi välja",
   "tools.image.resetZoom": "Lähtesta suum",
-  "tools.image.errorUploadFailed": "Üleslaadimine ebaõnnestus",
+  "tools.image.errorUploadFailed": "Serverisse üleslaadimine ebaõnnestus",
   "tools.image.errorFileTooLarge": "Pilt on liiga suur. {size} ületab {max} piiri.",
   "tools.image.errorUploadFailedTitle": "Üleslaadimine ebaõnnestus",
   "tools.image.errorSourceOffline": "Lähtefail võib olla teisaldatud või kättesaamatu.",

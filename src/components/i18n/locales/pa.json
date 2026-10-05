@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "ਜ਼ੂਮ ਇਨ",
   "tools.image.zoomOut": "ਜ਼ੂਮ ਆਊਟ",
   "tools.image.resetZoom": "ਜ਼ੂਮ ਮੁੜ-ਸੈੱਟ ਕਰੋ",
-  "tools.image.errorUploadFailed": "ਅੱਪਲੋਡ ਅਸਫਲ",
+  "tools.image.errorUploadFailed": "ਸਰਵਰ ’ਤੇ ਅੱਪਲੋਡ ਨਹੀਂ ਹੋ ਸਕਿਆ",
   "tools.image.errorFileTooLarge": "ਤਸਵੀਰ ਬਹੁਤ ਵੱਡੀ ਹੈ। ਆਕਾਰ: {size}; ਸੀਮਾ: {max}।",
   "tools.image.errorUploadFailedTitle": "ਅੱਪਲੋਡ ਅਸਫਲ",
   "tools.image.errorSourceOffline": "ਸਰੋਤ ਫ਼ਾਈਲ ਕਿਤੇ ਹੋਰ ਭੇਜੀ ਗਈ ਜਾਂ ਔਫਲਾਈਨ ਹੋ ਸਕਦੀ ਹੈ।",

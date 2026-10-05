@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Ampliar",
   "tools.image.zoomOut": "Reduzir",
   "tools.image.resetZoom": "Redefinir zoom",
-  "tools.image.errorUploadFailed": "Falha no envio",
+  "tools.image.errorUploadFailed": "Não foi possível enviar para o servidor",
   "tools.image.errorFileTooLarge": "A imagem é muito grande. {size} excede o limite de {max}.",
   "tools.image.errorUploadFailedTitle": "Falha no envio",
   "tools.image.errorSourceOffline": "O arquivo de origem pode ter sido movido ou estar offline.",

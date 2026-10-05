@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "Nagyítás",
   "tools.image.zoomOut": "Kicsinyítés",
   "tools.image.resetZoom": "Nagyítás visszaállítása",
-  "tools.image.errorUploadFailed": "A feltöltés sikertelen",
+  "tools.image.errorUploadFailed": "Nem sikerült feltölteni a szerverre",
   "tools.image.errorFileTooLarge": "A kép túl nagy: {size}. A megengedett legnagyobb méret {max}.",
   "tools.image.errorUploadFailedTitle": "A feltöltés sikertelen",
   "tools.image.errorSourceOffline": "Lehet, hogy a forrásfájlt áthelyezték, vagy nem érhető el.",

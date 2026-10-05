@@ -371,7 +371,7 @@
   "tools.image.zoomIn": "Zoom in",
   "tools.image.zoomOut": "Zoom out",
   "tools.image.resetZoom": "Reset zoom",
-  "tools.image.errorUploadFailed": "Upload failed",
+  "tools.image.errorUploadFailed": "Couldn’t upload to the server",
   "tools.image.errorFileTooLarge": "Image is too large. {size} exceeds the {max} limit.",
   "tools.image.errorUploadFailedTitle": "Upload failed",
   "tools.image.errorSourceOffline": "The source file may have moved or be offline.",

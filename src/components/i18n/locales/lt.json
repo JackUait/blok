@@ -371,7 +371,7 @@
   "tools.image.zoomIn": "Priartinti",
   "tools.image.zoomOut": "Atitolinti",
   "tools.image.resetZoom": "Atkurti mastelį",
-  "tools.image.errorUploadFailed": "Įkelti nepavyko",
+  "tools.image.errorUploadFailed": "Nepavyko įkelti į serverį",
   "tools.image.errorFileTooLarge": "Paveikslas per didelis. {size} viršija {max} ribą.",
   "tools.image.errorUploadFailedTitle": "Įkelti nepavyko",
   "tools.image.errorSourceOffline": "Šaltinio failas galėjo būti perkeltas arba yra nepasiekiamas.",

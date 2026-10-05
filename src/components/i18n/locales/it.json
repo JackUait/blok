@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Zoom avanti",
   "tools.image.zoomOut": "Zoom indietro",
   "tools.image.resetZoom": "Reimposta zoom",
-  "tools.image.errorUploadFailed": "Caricamento non riuscito",
+  "tools.image.errorUploadFailed": "Impossibile caricare sul server",
   "tools.image.errorFileTooLarge": "L’immagine è troppo grande. {size} supera il limite di {max}.",
   "tools.image.errorUploadFailedTitle": "Caricamento non riuscito",
   "tools.image.errorSourceOffline": "Il file di origine potrebbe essere stato spostato o non essere disponibile.",

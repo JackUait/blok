@@ -371,7 +371,7 @@
   "tools.image.zoomIn": "확대",
   "tools.image.zoomOut": "축소",
   "tools.image.resetZoom": "확대/축소 초기화",
-  "tools.image.errorUploadFailed": "업로드 실패",
+  "tools.image.errorUploadFailed": "서버에 업로드하지 못했습니다",
   "tools.image.errorFileTooLarge": "이미지가 너무 큽니다. 현재 크기: {size}. 최대 크기: {max}.",
   "tools.image.errorUploadFailedTitle": "업로드 실패",
   "tools.image.errorSourceOffline": "원본 파일이 이동되었거나 오프라인일 수 있습니다.",

@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "زوم زیات کړئ",
   "tools.image.zoomOut": "زوم کم کړئ",
   "tools.image.resetZoom": "زوم بیا تنظیم کړئ",
-  "tools.image.errorUploadFailed": "اپلوډ ناکام شو",
+  "tools.image.errorUploadFailed": "سرور ته اپلوډ نشو",
   "tools.image.errorFileTooLarge": "انځور ډېر لوی دی. {size} د {max} له حده اوړي.",
   "tools.image.errorUploadFailedTitle": "اپلوډول ناکام شو",
   "tools.image.errorSourceOffline": "د سرچینې فایل ښايي لېږدول شوی یا آفلاین وي.",

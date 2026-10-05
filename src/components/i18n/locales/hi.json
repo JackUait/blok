@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "ज़ूम इन",
   "tools.image.zoomOut": "ज़ूम आउट",
   "tools.image.resetZoom": "ज़ूम रीसेट करें",
-  "tools.image.errorUploadFailed": "अपलोड विफल",
+  "tools.image.errorUploadFailed": "सर्वर पर अपलोड नहीं हो सका",
   "tools.image.errorFileTooLarge": "छवि बहुत बड़ी है। इसका आकार {size} है, जो {max} की सीमा से ज़्यादा है।",
   "tools.image.errorUploadFailedTitle": "अपलोड विफल",
   "tools.image.errorSourceOffline": "हो सकता है कि स्रोत फ़ाइल को कहीं और ले जाया गया हो या वह उपलब्ध न हो।",

@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "გადიდება",
   "tools.image.zoomOut": "დაპატარავება",
   "tools.image.resetZoom": "მასშტაბის საწყისზე დაბრუნება",
-  "tools.image.errorUploadFailed": "ატვირთვა ვერ მოხერხდა",
+  "tools.image.errorUploadFailed": "სერვერზე ატვირთვა ვერ მოხერხდა",
   "tools.image.errorFileTooLarge": "სურათი ძალიან დიდია. ზომა: {size}; ლიმიტი: {max}.",
   "tools.image.errorUploadFailedTitle": "ატვირთვა ვერ მოხერხდა",
   "tools.image.errorSourceOffline": "წყაროს ფაილი შესაძლოა გადატანილი ან ხაზგარეშე იყოს.",

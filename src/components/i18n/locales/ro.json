@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Mărește",
   "tools.image.zoomOut": "Micșorează",
   "tools.image.resetZoom": "Resetează zoomul",
-  "tools.image.errorUploadFailed": "Încărcarea a eșuat",
+  "tools.image.errorUploadFailed": "Încărcarea pe server a eșuat",
   "tools.image.errorFileTooLarge": "Imaginea este prea mare. {size} depășește limita de {max}.",
   "tools.image.errorUploadFailedTitle": "Încărcare eșuată",
   "tools.image.errorSourceOffline": "Fișierul sursă poate să fi fost mutat sau să fie offline.",

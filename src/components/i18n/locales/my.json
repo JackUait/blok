@@ -369,7 +369,7 @@
   "tools.image.zoomIn": "ချဲ့",
   "tools.image.zoomOut": "ချုံ့",
   "tools.image.resetZoom": "ဇူးမ်ပြန်လည်သတ်မှတ်",
-  "tools.image.errorUploadFailed": "အပ်လုဒ်မအောင်မြင်",
+  "tools.image.errorUploadFailed": "ဆာဗာသို့ အပ်လုဒ်မလုပ်နိုင်ပါ",
   "tools.image.errorFileTooLarge": "ပုံ အလွန်ကြီးနေသည်။ {size} သည် ကန့်သတ်ချက် {max} ကို ကျော်လွန်နေသည်။",
   "tools.image.errorUploadFailedTitle": "တင်ခြင်း မအောင်မြင်ပါ",
   "tools.image.errorSourceOffline": "ရင်းမြစ်ဖိုင်ကို ရွှေ့ထားခြင်း သို့မဟုတ် အွန်လိုင်းတွင် မရနိုင်ခြင်း ဖြစ်နိုင်သည်။",

@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "تكبير",
   "tools.image.zoomOut": "تصغير",
   "tools.image.resetZoom": "إعادة ضبط التكبير",
-  "tools.image.errorUploadFailed": "فشل الرفع",
+  "tools.image.errorUploadFailed": "تعذّر الرفع إلى الخادم",
   "tools.image.errorFileTooLarge": "الصورة كبيرة جدًا. حجمها {size}، وهو يتجاوز الحد الأقصى {max}.",
   "tools.image.errorUploadFailedTitle": "فشل الرفع",
   "tools.image.errorSourceOffline": "ربما نُقل ملف المصدر أو لم يعد متاحًا.",

@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Μεγέθυνση",
   "tools.image.zoomOut": "Σμίκρυνση",
   "tools.image.resetZoom": "Επαναφορά ζουμ",
-  "tools.image.errorUploadFailed": "Η μεταφόρτωση απέτυχε",
+  "tools.image.errorUploadFailed": "Δεν ήταν δυνατή η μεταφόρτωση στον διακομιστή",
   "tools.image.errorFileTooLarge": "Η εικόνα είναι πολύ μεγάλη. Το μέγεθος {size} υπερβαίνει το όριο των {max}.",
   "tools.image.errorUploadFailedTitle": "Η μεταφόρτωση απέτυχε",
   "tools.image.errorSourceOffline": "Το αρχείο προέλευσης μπορεί να έχει μετακινηθεί ή να μην είναι πλέον διαθέσιμο.",

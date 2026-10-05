@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "拡大",
   "tools.image.zoomOut": "縮小",
   "tools.image.resetZoom": "ズームをリセット",
-  "tools.image.errorUploadFailed": "アップロードに失敗しました",
+  "tools.image.errorUploadFailed": "サーバーにアップロードできませんでした",
   "tools.image.errorFileTooLarge": "画像が大きすぎます。{size}は上限の{max}を超えています。",
   "tools.image.errorUploadFailedTitle": "アップロードに失敗しました",
   "tools.image.errorSourceOffline": "元のファイルが移動されたか、利用できない可能性があります。",

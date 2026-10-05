@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "بزرگ‌نمایی",
   "tools.image.zoomOut": "کوچک‌نمایی",
   "tools.image.resetZoom": "بازنشانی بزرگ‌نمایی",
-  "tools.image.errorUploadFailed": "بارگذاری ناموفق بود",
+  "tools.image.errorUploadFailed": "بارگذاری در سرور انجام نشد",
   "tools.image.errorFileTooLarge": "تصویر بسیار بزرگ است. {size} از حد مجاز {max} فراتر می‌رود.",
   "tools.image.errorUploadFailedTitle": "بارگذاری ناموفق بود",
   "tools.image.errorSourceOffline": "ممکن است فایل منبع جابه‌جا شده یا آفلاین باشد.",

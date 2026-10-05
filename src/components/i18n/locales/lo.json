@@ -371,7 +371,7 @@
   "tools.image.zoomIn": "ຂະຫຍາຍ",
   "tools.image.zoomOut": "ຊູມອອກ",
   "tools.image.resetZoom": "ຕັ້ງຄ່າຊູມໃໝ່",
-  "tools.image.errorUploadFailed": "ການອັບໂຫຼດບໍ່ສຳເລັດ",
+  "tools.image.errorUploadFailed": "ບໍ່ສາມາດອັບໂຫຼດໄປຫາເຊີບເວີໄດ້",
   "tools.image.errorFileTooLarge": "ຮູບໃຫຍ່ເກີນໄປ. {size} ເກີນຂີດຈຳກັດ {max}.",
   "tools.image.errorUploadFailedTitle": "ອັບໂຫຼດບໍ່ສຳເລັດ",
   "tools.image.errorSourceOffline": "ໄຟລ໌ຕົ້ນສະບັບອາດຖືກຍ້າຍ ຫຼື ອອບລາຍ.",

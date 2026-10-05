@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "ពង្រីក",
   "tools.image.zoomOut": "បង្រួម",
   "tools.image.resetZoom": "កំណត់កម្រិតពង្រីកឡើងវិញ",
-  "tools.image.errorUploadFailed": "ការបង្ហោះបានបរាជ័យ",
+  "tools.image.errorUploadFailed": "ការបង្ហោះទៅម៉ាស៊ីនមេបានបរាជ័យ",
   "tools.image.errorFileTooLarge": "រូបភាពធំពេក។ {size} លើសពីដែនកំណត់ {max}។",
   "tools.image.errorUploadFailedTitle": "ការបង្ហោះបានបរាជ័យ",
   "tools.image.errorSourceOffline": "ឯកសារប្រភពអាចត្រូវបានផ្លាស់ទី ឬនៅក្រៅបណ្ដាញ។",

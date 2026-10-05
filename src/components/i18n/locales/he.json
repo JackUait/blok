@@ -358,7 +358,7 @@
   "tools.image.zoomIn": "התקרב",
   "tools.image.zoomOut": "התרחק",
   "tools.image.resetZoom": "אפס את גודל התצוגה",
-  "tools.image.errorUploadFailed": "ההעלאה נכשלה",
+  "tools.image.errorUploadFailed": "לא ניתן להעלות לשרת",
   "tools.image.errorFileTooLarge": "התמונה גדולה מדי. {size} חורג מהמגבלה של {max}.",
   "tools.image.errorUploadFailedTitle": "ההעלאה נכשלה",
   "tools.image.errorSourceOffline": "ייתכן שקובץ המקור הועבר או שאינו מקוון.",

@@ -973,7 +973,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Page',
     description:
-      'A one-line link to a sub-page, like a sub-page in Notion. It shows the page\'s icon and title. Each page is its own document, and your app stores it. The block saves only the page id and a display copy of the title and icon.\n\nBlok never loads or saves a page. Your app connects pages through the four config members below.\n\nThe block has three special states:\n\n- New page: the page has no title, so the block shows New page instead. It is still a link.\n- Page not found: `resolve` returned `null`.\n- No access: `resolve` returned `{ access: \'none\' }`. The cached title is hidden.\n\nA page that is not found or not accessible is never removed automatically. The block stays, but it stops working as a link.\n\nA plain click calls `open`. So does Enter when the block is selected from the keyboard. Without `open`, the link follows `href`.\n\nCmd/Ctrl-click, Shift-click and middle click keep their browser meaning, such as opening a new tab. New-tab clicks need `href`. The link never takes focus, so undo and Escape still work after a click.\n\n`page` is not in `defaultBlockTools`. Register it yourself, with a config.\n\nFor read-only HTML, call `blocksToHtml(data, { pageHref })` from `@bloklabs/core/view`. It renders the block as an icon and a title, and it is a link only when you pass `pageHref`. The view reads only the saved cache, so it cannot show the not-found or no-access states. It never renders the page\'s body.',
+      'An owning `page` block saves only `data.pageId`; its body, title, icon, and access live in your host. A `page-link` block and an inline `<a data-blok-page-id="p1">Page</a>` are non-owning references. Neither stores a title, icon, URL, or access verdict.\n\nUse `resolve` for authorized metadata and `subscribe` to refresh it after a host change. The host publishes same-tab notifications after local edits and remote changes. `null` means missing, `undefined` stays neutral, and `{ access: \'none\' }` means denied. A denied page hides its title, shows a lock, and explains No access on click or Enter.\n\nUse `search` to offer only accessible pages for `@` and `[[` insertion. Your host owns global search and backlink screens. Ordinary URL mentions remain URL-backed. Register `Page` and `PageLink` with the same `PageConfig`; only `Page` can call `create` for a new owning page.\n\nFor static HTML, pass `blocksToHtml(data, { pageInfo, pageHref })`. `pageInfo` must supply authorized metadata synchronously. Missing, denied, or unresolved pages never receive a `pageHref` URL. The renderer ignores legacy saved `cache`.\n\n`href` builds a title-free URL from the opaque ID. `open` handles ordinary clicks and Enter; modified clicks follow the browser link. Blok does not load or save the page body.',
     importExample: `import { Page } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -995,7 +995,7 @@ const editor = new Blok({
         type: '(pageId: string) => PageInfo | null | undefined | Promise<…>',
         default: 'undefined',
         description:
-          'Returns the page\'s current title and icon. Blok asks once, when the block renders. It may return a value or a promise:\n\n- `{ title, icon }`: the cached copy is updated if it changed.\n- `null`: the page does not exist. The block shows "Page not found".\n- `{ access: \'none\' }`: this user may not see the page. The block shows "No access".\n- `undefined`: nothing is known. The cached copy stays.\n\nReturn the full picture. A missing `title` or `icon` means the page has none. In read-only mode the fresh copy is shown but not saved. It is saved when editing turns on. If `resolve` throws, the cached copy stays.',
+          'Returns authorized current page metadata. `null` means the page does not exist; `{ access: \'none\' }` hides the title and icon and shows No access; `undefined` leaves a neutral label. A returned title or icon is displayed but never saved in the page block.\n\nThe host must check permissions before returning metadata. `subscribe` triggers another lookup when access or metadata changes.',
       },
       {
         option: 'create',
@@ -1004,50 +1004,99 @@ const editor = new Blok({
         description:
           'Makes the page in your app. Blok calls it once with the id it minted, when a page block is inserted without a `pageId`. That happens when a user picks Page in the toolbox, or when your code inserts one through the API.\n\nIt is never called on load, paste, undo, redo or a collaborator\'s change, or in read-only mode. If it throws, the block stays with its id and shows "Page not found". Blok still asks `resolve`, so a page your app made after all shows up.',
       },
+      {
+        option: 'search',
+        type: '(query: string) => Promise<readonly PageSearchResult[]>',
+        default: 'undefined',
+        description: 'Offers accessible pages for inline `@` and `[[` references. Filter results by the current user before returning them; Blok does not own global search.',
+      },
+      {
+        option: 'subscribe',
+        type: '(pageId: string, onChange: () => void) => (() => void) | void',
+        default: 'undefined',
+        description: 'Calls `onChange` when page metadata or access changes. Blok re-runs `resolve` and uses the returned function to stop listening.',
+      },
+      {
+        option: 'preview',
+        type: '(pageId: string) => OutputBlockData[] | null | undefined | Promise<…>',
+        default: 'undefined',
+        description: 'Supplies authorized opening blocks for the hover preview. Blok requests them only for an accessible page.',
+      },
     ],
     saveDataShape: `interface PageData {
-  pageId: string; // Id of the page. Blok mints one for a new page.
-  cache?: {       // Display copy, refreshed from resolve(). It can be stale.
-    title?: string;
-    icon?: { type: 'emoji'; value: string } | { type: 'image'; url: string };
-  };
-}
-// The page's body is NOT here. It is a separate document your app stores.`,
+  pageId: string;
+}`,
     saveDataExample: `{
   "id": "pg001",
   "type": "page",
-  "data": {
-    "pageId": "p1",
-    "cache": {
-      "title": "Roadmap",
-      "icon": { "type": "emoji", "value": "🗺" }
-    }
-  }
+  "data": { "pageId": "p1" }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
-import { Page } from '@bloklabs/core/tools';
+import { Page, PageLink } from '@bloklabs/core/tools';
 import { blocksToHtml } from '@bloklabs/core/view';
 
 const pageUrl = (pageId) => \`/pages/\${pageId}\`;
+const pageConfig = {
+  href: pageUrl,
+  open: (pageId) => router.push(pageUrl(pageId)),
+  resolve: (pageId) => myApi.getAuthorizedPageInfo(pageId),
+  search: (query) => myApi.searchAccessiblePages(query),
+  subscribe: (pageId, onChange) => myApi.subscribePage(pageId, onChange),
+};
 
 const editor = new Blok({
   holder: 'editor',
   tools: {
-    // Not in defaultBlockTools: register it with your own config.
     page: {
       class: Page,
       config: {
-        href: pageUrl,
-        open: (pageId) => router.push(pageUrl(pageId)),
-        resolve: (pageId) => myApi.getPageInfo(pageId), // { title, icon } | null
+        ...pageConfig,
         create: ({ pageId }) => myApi.createPage(pageId),
       },
     },
+    'page-link': { class: PageLink, config: pageConfig },
   },
 });
 
-// Read-only HTML: pass the same URL builder.
-const html = blocksToHtml(savedData, { pageHref: pageUrl });`,
+const authorizedPageInfo = myApi.getAuthorizedPageInfoSnapshot();
+const html = blocksToHtml(savedData, {
+  pageInfo: (pageId) => authorizedPageInfo.get(pageId),
+  pageHref: pageUrl,
+});`,
+  },
+  {
+    id: 'page-link',
+    exportName: 'PageLink',
+    type: 'block',
+    title: 'Page link',
+    description:
+      'A non-owning reference to a host page. It saves only `data.pageId` and never creates or owns a page. Use it for links to an existing page; an owning `page` block is the page tree edge.\n\nRegister `PageLink` with the same authorized `PageConfig` as `Page`. Missing or denied metadata shows a neutral or locked label without the page title or URL.',
+    importExample: `import { PageLink } from '@bloklabs/core/tools';`,
+    configOptions: [],
+    saveDataShape: `interface PageLinkData {
+  pageId: string;
+}`,
+    saveDataExample: `{
+  "id": "ref001",
+  "type": "page-link",
+  "data": { "pageId": "p1" }
+}`,
+    usageExample: `import { Blok } from '@bloklabs/core';
+import { PageLink } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    'page-link': {
+      class: PageLink,
+      config: {
+        resolve: (pageId) => myApi.getAuthorizedPageInfo(pageId),
+        href: (pageId) => \`/pages/\${pageId}\`,
+        subscribe: (pageId, onChange) => myApi.subscribePage(pageId, onChange),
+      },
+    },
+  },
+});`,
   },
   {
     id: 'file',

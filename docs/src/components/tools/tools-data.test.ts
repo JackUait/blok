@@ -1,5 +1,5 @@
 // docs/src/components/tools/tools-data.test.ts
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { defaultBlockTools, defaultInlineTools } from '../../../../src/tools/index';
@@ -13,6 +13,9 @@ import {
 /** Repo root — docs/src/components/tools → up four levels. */
 const BLOK_ROOT = resolve(__dirname, '..', '..', '..', '..');
 const readSource = (rel: string): string => readFileSync(join(BLOK_ROOT, rel), 'utf8');
+
+beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('tools documentation coverage', () => {
   it('documents every key in defaultBlockTools', () => {
@@ -125,6 +128,71 @@ describe('tools documentation coverage', () => {
       ).not.toMatch(/each resolving to `\{ url, fileName\? \}`/);
     });
   }
+});
+
+describe('page reference documentation', () => {
+  const pageDescriptionIn = (locale: string): string => {
+    const catalogue = JSON.parse(readSource(`docs/src/i18n/${locale}.json`)) as {
+      tools?: { docs?: { page?: { description?: string } } };
+    };
+
+    return catalogue.tools?.docs?.page?.description ?? '';
+  };
+
+  it('shows ID-only owning and non-owning saved shapes', () => {
+    const page = TOOL_SECTIONS.find((section) => section.id === 'page');
+    const pageLink = TOOL_SECTIONS.find((section) => section.id === 'page-link');
+
+    expect(page?.saveDataExample).toContain('"pageId": "p1"');
+    expect(page?.saveDataExample).not.toContain('"cache"');
+    expect(pageLink?.saveDataExample).toContain('"type": "page-link"');
+    expect(pageLink?.saveDataExample).toContain('"pageId"');
+    expect(pageLink?.description).toMatch(/non-owning/i);
+    expect(pageLink?.saveDataExample).not.toContain('"title"');
+    expect(pageLink?.saveDataExample).not.toContain('"href"');
+  });
+
+  it('shows the host hooks and safe inline reference format', () => {
+    const page = TOOL_SECTIONS.find((section) => section.id === 'page');
+    const example = page?.usageExample ?? '';
+
+    expect(example).toContain('PageLink');
+    expect(example).toContain('search:');
+    expect(example).toContain('subscribe:');
+    expect(example).toContain('pageInfo:');
+    expect(example).toContain('pageHref:');
+    expect(page?.configOptions.map((option) => option.option)).toEqual(expect.arrayContaining([
+      'href', 'open', 'resolve', 'create', 'search', 'subscribe',
+    ]));
+    expect(page?.description).toContain('data-blok-page-id');
+    expect(page?.description).toContain('same-tab');
+    expect(page?.description).toContain('global search');
+    expect(page?.description).not.toContain('saved cache');
+  });
+
+  it.each(['en', 'ru'])('explains authorized metadata in %s', (locale) => {
+    const description = pageDescriptionIn(locale);
+
+    expect(description).toContain('pageId');
+    expect(description).toContain('resolve');
+    expect(description).toContain('subscribe');
+    expect(description).toContain('search');
+    expect(description).toContain('pageInfo');
+    expect(description).toContain('pageHref');
+    expect(description).not.toContain('cached copy');
+  });
+
+  it.each(['en', 'ru'])('documents the non-owning page link in %s', (locale) => {
+    const catalogue = JSON.parse(readSource(`docs/src/i18n/${locale}.json`)) as {
+      tools?: {
+        docs?: { 'page-link'?: { description?: string } };
+        links?: { 'page-link'?: string };
+      };
+    };
+
+    expect(catalogue.tools?.docs?.['page-link']?.description ?? '').toContain('pageId');
+    expect(catalogue.tools?.links?.['page-link']).toBe(locale === 'ru' ? 'Ссылка на страницу' : 'Page link');
+  });
 });
 
 describe('callout keyboard exit', () => {

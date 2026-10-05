@@ -450,6 +450,12 @@ const TOOL_COPY: Record<string, Copy> = {
       'A one-line link to a sub-page that your app stores as its own document. Host hooks open, create and refresh each page.',
     h1: 'Page block: links to sub-pages',
   },
+  'page-link': {
+    title: 'Page Link Block — Reference an Existing Page',
+    description:
+      'Add a non-owning page reference by ID. The host supplies an authorized title and URL, while the saved block keeps only the opaque page ID.',
+    h1: 'Page link block: reference an existing page',
+  },
   file: {
     title: 'File Block — Attachments and Downloads',
     description:

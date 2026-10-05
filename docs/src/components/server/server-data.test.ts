@@ -438,7 +438,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(inOrder('--rate-limit', 'ticket', '60', 'otherwise', '0'));
   });
 
-  it('states the thirty service limits the design refuses to bury', () => {
+  it('states the thirty-one service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -446,6 +446,7 @@ describe('server docs data', () => {
       'collab-operation-journal',
       'collab-rollback-boundary',
       'collab-reset',
+      'collab-access-lifecycle',
       'doc-endpoint-auth',
       'collab-new-documents',
       'file-origin',
@@ -777,6 +778,65 @@ describe('server docs data', () => {
     expect(body).toContain('has no children list, so nothing can be placed under it.');
     expect(body).toContain('is not in the document order, so nothing can be placed after it.');
     expect(body).toMatch(/422/);
+  });
+
+  it('shows the host access lifecycle without suggesting reset or host UI', () => {
+    const body = serverLimits.find((limit) => limit.id === 'collab-access-lifecycle')?.body ?? '';
+
+    expect(body).toMatch(inOrder('CommitRevocationAsync', 'RecheckAccessAsync'));
+    expect(body).toContain('ICollabRoomManager');
+    expect(body).toContain('ICollabDocumentPurger');
+    expect(body).toMatch(/each server instance serving the document/i);
+    expect(body).toMatch(/4403/);
+    expect(body).toMatch(/do not.*reset/i);
+    expect(body).toMatch(inOrder('trash', 'keep', 'restore'));
+    expect(body).toMatch(inOrder('CommitPermanentTombstoneAsync', 'PurgeDocumentAsync'));
+    expect(body).toMatch(/DocumentOpenElsewhere/);
+    expect(body).toMatch(/retry/i);
+    expect(body).toMatch(/partial.*barred|barred.*retry/i);
+    expect(body).toMatch(/without a journal.*every.*instance|without a journal.*all.*instance/i);
+    expect(body).toMatch(/canonical page record/i);
+    expect(body).toMatch(/parent pointer/i);
+    expect(body).toMatch(/opaque.*id/i);
+    expect(body).toMatch(/not.*physical.*eras|not.*backups/i);
+    expect(body).toMatch(/access-settings.*UI|access UI/i);
+  });
+
+  it('requires host denial of deleted documents even with a journal', () => {
+    const body = serverLimits.find((limit) => limit.id === 'collab-access-lifecycle')?.body ?? '';
+    const beforeJournalCaveat = body.split('Without a journal')[0];
+
+    expect(beforeJournalCaveat).toMatch(/host authorization and consumer GET\/PUT.*deny/i);
+    const russian = getTranslation('ru', 'server.limits.collab-access-lifecycle.body');
+
+    expect(russian).toMatch(/авторизация приложения.*GET\/PUT.*отклонять/i);
+    expect(russian).toMatch(/даже при наличии журнала/i);
+  });
+
+  it('shows complete offline logout and legacy cache cleanup in both locales', () => {
+    const key = 'server.limits.collab-access-lifecycle.body';
+    const body = serverLimits.find((limit) => limit.id === 'collab-access-lifecycle')?.body ?? '';
+    const english = getTranslation('en', key);
+    const russian = getTranslation('ru', key);
+
+    expect(body).toMatch(inOrder(
+      'inspectOfflineScope',
+      'showDiscardWarning',
+      'closeEditorsAndSwitchScope',
+      'forgetOfflineScope',
+    ));
+    expect(body).toContain('forgetOfflineScope(oldScope, { discardPending: true })');
+    expect(body).toMatch(/whole.*scope/i);
+    expect(body).toContain('@bloklabs/core');
+    expect(body).toMatch(/offline device.*cannot.*remotely|cannot.*remotely.*offline device/i);
+    expect(body).toMatch(/page\.data\.cache/);
+    expect(body).toMatch(/consumer record/i);
+    expect(body).toMatch(/working set/i);
+    expect(body).toMatch(/journal/i);
+    expect(body).toMatch(/before.*unauthorized reader/i);
+    expect(english).toBe(body);
+    expect(russian).toContain('PurgeDocumentAsync');
+    expect(russian).toMatch(/доступ|удален|удалён/i);
   });
 
   // Shape is checked at the door, meaning is not. Each of these is a known

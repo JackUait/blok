@@ -891,6 +891,21 @@
   100% { transform: scale(1) }
 }
 
+@keyframes blok-video-ping {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--blok-video-error-ink) 55%, transparent) }
+  100% { box-shadow: 0 0 0 7px transparent }
+}
+
+@keyframes blok-video-rise {
+  from { opacity: 0; transform: translateY(8px) scale(0.98) }
+  to { opacity: 1; transform: none }
+}
+
+@keyframes blok-video-roll {
+  from { background-position: 0 0, 0 100%, 0 0 }
+  to { background-position: 0 0, 0 0, 0 0 }
+}
+
 @keyframes blok-video-seek-flash-back {
   0% { opacity: 0; transform: translate(-16px, -50%) scale(0.9) }
   18% { opacity: 1; transform: translate(3px, -50%) scale(1.03) }
@@ -919,6 +934,23 @@
 
 @keyframes blok-video-spin {
   to { transform: rotate(360deg) }
+}
+
+@keyframes blok-video-static {
+  0% { transform: translate(0, 0) }
+  20% { transform: translate(-7%, 4%) }
+  40% { transform: translate(5%, -6%) }
+  60% { transform: translate(-3%, -9%) }
+  80% { transform: translate(8%, 3%) }
+}
+
+@keyframes blok-video-tear {
+  0% { opacity: 0 }
+  84% { opacity: 1; transform: translateX(-9%); clip-path: inset(0 0 58% 0) }
+  86% { opacity: 1; transform: translateX(6%) scaleY(0.6); clip-path: inset(36% 0 0 0) }
+  88% { opacity: 0.85; transform: translateX(-2%); clip-path: inset(0) }
+  90% { opacity: 1; transform: translate(12%, 140%) scaleY(0.3); clip-path: inset(0 0 40% 0) }
+  92% { opacity: 0; transform: none; clip-path: inset(0) }
 }
 
 @keyframes blok-video-theater-curtain {

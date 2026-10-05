@@ -396,7 +396,7 @@ describe('VideoTool — onPaste', () => {
     Object.defineProperty(event, 'type', { value: 'file' });
     tool.onPaste(event);
     await new Promise((r) => setTimeout(r, 0));
-    const msg = root.querySelector('[data-role="video-error"] span');
+    const msg = root.querySelector('[data-role="video-error-message"]');
     expect(msg?.textContent).toBe('tools.video.errorFileTooLarge');
     expect(msg?.textContent).not.toContain('FILE_TOO_LARGE');
   });
@@ -1104,7 +1104,7 @@ describe('VideoTool — media playback failure', () => {
     video.dispatchEvent(new Event('error'));
 
     expect(root.getAttribute('data-state')).toBe('error');
-    expect(root.querySelector('[data-role="video-error"] span')?.textContent)
+    expect(root.querySelector('[data-role="video-error-message"]')?.textContent)
       .toBe("This video can't be played");
   });
 
@@ -1117,7 +1117,7 @@ describe('VideoTool — media playback failure', () => {
 
     root.querySelector('video')?.dispatchEvent(new Event('error'));
 
-    expect(root.querySelector('[data-role="video-error"] span')?.textContent)
+    expect(root.querySelector('[data-role="video-error-message"]')?.textContent)
       .toBe('Dieses Video kann nicht abgespielt werden');
   });
 
@@ -1172,7 +1172,7 @@ describe('VideoTool — URL field validation', () => {
     await submitUrl(tool, root, 'https://vkvideo.ru/playlist/-226723792_5/video-226723792_456239233?t=11m38s');
 
     expect(root.getAttribute('data-state')).toBe('error');
-    expect(root.querySelector('[data-role="video-error"] span')?.textContent)
+    expect(root.querySelector('[data-role="video-error-message"]')?.textContent)
       .toBe('Link a video file (.mp4, .webm, .mov), or use an embed block');
     expect(root.querySelector('video')).toBeNull();
   });
@@ -1188,7 +1188,7 @@ describe('VideoTool — URL field validation', () => {
 
     await submitUrl(tool, root, 'https://example.com/watch/not-a-file');
 
-    expect(root.querySelector('[data-role="video-error"] span')?.textContent)
+    expect(root.querySelector('[data-role="video-error-message"]')?.textContent)
       .toBe('Verknüpfe eine Videodatei oder verwende einen Einbettungsblock');
   });
 
@@ -1199,7 +1199,7 @@ describe('VideoTool — URL field validation', () => {
     await submitUrl(tool, root, 'https://example.com/watch/some-video');
 
     expect(root.getAttribute('data-state')).toBe('error');
-    expect(root.querySelector('[data-role="video-error"] span')?.textContent)
+    expect(root.querySelector('[data-role="video-error-message"]')?.textContent)
       .toBe('Link a video file (.mp4, .webm, .mov), or use an embed block');
   });
 
@@ -1673,3 +1673,61 @@ describe('VideoTool — background formats', () => {
   });
 });
 
+
+describe('VideoTool — the broken screen', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const failUpload = async (config: VideoConfig = {}, readOnly = false): Promise<HTMLElement> => {
+    const tool = new VideoTool({ ...createOptions({}, { maxSize: 5, ...config }), readOnly });
+    const root = tool.render();
+    const event = new CustomEvent('paste', { detail: { file: new File([new Uint8Array(50)], 'big.mp4', { type: 'video/mp4' }) } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+
+    return root;
+  };
+
+  it('lets the user pick another file straight from the error', async () => {
+    const root = await failUpload();
+    const input = root.querySelector<HTMLInputElement>('[data-role="video-error"] input[type="file"]');
+    if (!input) throw new Error('upload input not rendered');
+    expect(input.accept).toBe('video/*');
+    expect(root.querySelector('[data-role="video-error"] [data-action="upload"]')?.textContent?.trim())
+      .toBe('Choose a video');
+
+    Object.defineProperty(input, 'files', { value: [new File([new Uint8Array(2)], 'small.mp4', { type: 'video/mp4' })] });
+    input.dispatchEvent(new Event('change'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(root.getAttribute('data-state')).toBe('rendered');
+    expect(root.querySelector('video')?.getAttribute('src')).toMatch(/^blob:/);
+  });
+
+  it('limits the picker to the configured types', async () => {
+    const root = await failUpload({ types: ['video/mp4', 'video/webm'] });
+    expect(root.querySelector<HTMLInputElement>('[data-role="video-error"] input[type="file"]')?.accept)
+      .toBe('video/mp4,video/webm');
+  });
+
+  it('offers no upload when the tool only takes links', async () => {
+    const root = await failUpload({ sources: 'url' });
+    expect(root.querySelector('[data-role="video-error"] [data-action="upload"]')).toBeNull();
+  });
+
+  it('keeps the screen at the width the video had', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/broken.mp4', width: 45 }));
+    const root = tool.render();
+    root.querySelector('video')?.dispatchEvent(new Event('error'));
+    expect(root.querySelector<HTMLElement>('[data-role="video-error"]')?.style.width).toBe('45%');
+  });
+
+  it('offers no upload and no Replace to a reader', () => {
+    const tool = new VideoTool({ ...createOptions({ url: 'https://x/broken.mp4' }), readOnly: true });
+    const root = tool.render();
+    root.querySelector('video')?.dispatchEvent(new Event('error'));
+    expect(root.querySelector('[data-role="video-error-message"]')?.textContent).toBe("This video can't be played");
+    expect(root.querySelector('[data-role="video-error"] button')).toBeNull();
+  });
+});

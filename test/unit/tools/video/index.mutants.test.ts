@@ -86,7 +86,7 @@ const mustVideo = (root: HTMLElement): HTMLVideoElement => {
 };
 
 const errorText = (root: HTMLElement): string | null =>
-  root.querySelector('[data-role="video-error"] span')?.textContent ?? null;
+  root.querySelector('[data-role="video-error-message"]')?.textContent ?? null;
 
 const videoFile = (name = 'clip.mp4', type = 'video/mp4', bytes = 8): File =>
   new File([new Uint8Array(bytes)], name, { type });

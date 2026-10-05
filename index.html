@@ -1763,6 +1763,7 @@
     import { mountPositionPicker } from './src/playground/position-picker.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
     import { renderErrorState as renderAudioErrorState } from './src/tools/audio/ui.ts';
+    import { renderErrorState as renderVideoErrorState } from './src/tools/video/ui.ts';
     // Default import only — the json-as-string vite plugin rewrites JSON
     // modules to a lone default export, so named JSON imports throw on load.
     import pkg from './package.json';
@@ -3836,19 +3837,12 @@
         const videoErrRoot = holder.querySelector('[data-blok-id="vd-upload-error"] [data-blok-tool="video"]');
         if (videoErrRoot) {
           videoErrRoot.setAttribute('data-state', 'error');
-          videoErrRoot.replaceChildren();
-          const wrap = document.createElement('div');
-          wrap.className = 'blok-video-error-state';
-          wrap.setAttribute('data-role', 'video-error');
-          const msg = document.createElement('span');
-          msg.textContent = 'Upload failed';
-          const retry = document.createElement('button');
-          retry.type = 'button';
-          retry.className = 'blok-video-retry';
-          retry.setAttribute('data-action', 'replace');
-          retry.textContent = 'Replace';
-          wrap.append(msg, retry);
-          videoErrRoot.appendChild(wrap);
+          videoErrRoot.replaceChildren(renderVideoErrorState({
+            message: 'Upload failed',
+            width: 45,
+            replace: { label: 'Replace', onReplace: () => {} },
+            upload: { label: 'Choose a video', accept: 'video/*', onFile: () => {} },
+          }));
         }
 
         // Force the audio "Google Drive error" state demo — the message shown

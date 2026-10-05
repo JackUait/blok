@@ -31,7 +31,7 @@ import {
 import { attachResizeHandle, type ResizeEdge } from '../image/resizer';
 import { figureInsets } from '../image/figure-insets';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
-import { DEFAULT_CAPTION_PLACEHOLDER, MIN_WIDTH_PX, URL_PATTERN } from './constants';
+import { DEFAULT_CAPTION_PLACEHOLDER, DEFAULT_MIME_TYPES, MIN_WIDTH_PX, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
 import { deliverToRebuiltBlock, isStillInDocument, putBackOnRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
@@ -40,7 +40,7 @@ import type { ConvertedMedia, MediaConfig, VideoFormat } from '../../../types/co
 import { enqueueMediaJob } from '../../components/media-variants/media-queue';
 import { convertVideoInBackground, videoFormatOf } from '../../components/media-variants/video-background';
 import { produceVideoVariant } from '../../components/media-variants/video-variants';
-import { renderCaptionRow, renderVideo } from './ui';
+import { renderCaptionRow, renderErrorState, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
 import { Uploader, VideoUploadError, type UploadResult } from './uploader';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
@@ -723,26 +723,24 @@ export class VideoTool implements BlockTool {
 
   private renderError(): void {
     if (!this.root) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'blok-video-error-state';
-    wrap.setAttribute('data-role', 'video-error');
-
-    const message = document.createElement('span');
-    message.textContent = this.errorMessage ?? tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed');
-
-    wrap.appendChild(message);
-
-    // Viewers cannot replace the source — offering the button would only dead-end.
-    if (!this.readOnly) {
-      const retry = document.createElement('button');
-      retry.type = 'button';
-      retry.className = 'blok-video-retry';
-      retry.setAttribute('data-action', 'replace');
-      retry.textContent = tr(this.api.i18n, 'tools.video.errorReplace', 'Replace');
-      retry.addEventListener('click', () => this.transitionToEmpty());
-      wrap.appendChild(retry);
-    }
-    this.root.appendChild(wrap);
+    // Viewers cannot replace the source — offering either button would only dead-end.
+    const canUpload = !this.readOnly && this.config.sources !== 'url';
+    this.root.appendChild(renderErrorState({
+      message: this.errorMessage ?? tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed'),
+      width: this.data.width,
+      ...(this.readOnly
+        ? {}
+        : { replace: { label: tr(this.api.i18n, 'tools.video.errorReplace', 'Replace'), onReplace: () => this.transitionToEmpty() } }),
+      ...(canUpload
+        ? {
+          upload: {
+            label: tr(this.api.i18n, 'tools.video.emptyChooseFile', 'Choose a video'),
+            accept: (this.config.types ?? [...DEFAULT_MIME_TYPES]).join(','),
+            onFile: (file: File) => this.startUpload(file),
+          },
+        }
+        : {}),
+    }));
   }
 
   private renderRendered(): void {

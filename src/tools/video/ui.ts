@@ -1,6 +1,7 @@
 import type { VideoAlignment, VideoData } from '../../../types/tools/video';
 import { readVariants } from '../../shared/read-variants';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { IconUpload } from '../../components/icons';
 
 const ALIGN_TO_TEXT_ALIGN: Record<VideoAlignment, string> = {
   left: 'left',
@@ -102,4 +103,89 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
 
   row.appendChild(caption);
   return row;
+}
+
+/** SMPTE colour bars, left to right; video.css paints each by position. */
+const TEAR_BARS = 7;
+
+export interface ErrorStateOptions {
+  message: string;
+  /** The player's saved width in percent, so the screen stands where the video did. */
+  width?: number;
+  /** Send the block back to its empty state. Omit for a reader, who cannot change the source. */
+  replace?: { label: string; onReplace(): void };
+  /** Offer a file picker right on the screen. Omit when uploading is not allowed. */
+  upload?: { label: string; accept: string; onFile(file: File): void };
+}
+
+/**
+ * The failed player: a dead screen of static with a colour-bar tear, and a
+ * glass card on top. Only the card's message and buttons are read out.
+ */
+export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'blok-video-error-state';
+  wrap.setAttribute('data-role', 'video-error');
+  if (opts.width !== undefined) wrap.style.width = `${opts.width}%`;
+
+  const screen = document.createElement('div');
+  screen.className = 'blok-video-error-state__screen';
+  screen.setAttribute('data-role', 'video-error-screen');
+  screen.setAttribute('aria-hidden', 'true');
+  const tear = document.createElement('div');
+  tear.className = 'blok-video-error-state__tear';
+  tear.append(...Array.from({ length: TEAR_BARS }, () => document.createElement('span')));
+  screen.append(tear);
+
+  const card = document.createElement('div');
+  card.className = 'blok-video-error-state__card';
+
+  const signal = document.createElement('span');
+  signal.className = 'blok-video-error-state__signal';
+  signal.setAttribute('aria-hidden', 'true');
+
+  const message = document.createElement('p');
+  message.className = 'blok-video-error-state__message';
+  message.setAttribute('data-role', 'video-error-message');
+  message.setAttribute('role', 'status');
+  message.textContent = opts.message;
+
+  const actions = document.createElement('div');
+  actions.className = 'blok-video-error-state__actions';
+
+  if (opts.upload) {
+    const { label, accept, onFile } = opts.upload;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.hidden = true;
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (file) onFile(file);
+    });
+    const upload = document.createElement('button');
+    upload.type = 'button';
+    upload.className = 'blok-video-error-state__upload';
+    upload.setAttribute('data-action', 'upload');
+    upload.innerHTML = IconUpload;
+    upload.append(label);
+    upload.addEventListener('click', () => input.click());
+    actions.append(upload, input);
+  }
+
+  if (opts.replace) {
+    const { label, onReplace } = opts.replace;
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'blok-video-retry';
+    retry.setAttribute('data-action', 'replace');
+    retry.textContent = label;
+    retry.addEventListener('click', () => onReplace());
+    actions.append(retry);
+  }
+
+  card.append(signal, message, actions);
+  wrap.append(screen, card);
+
+  return wrap;
 }

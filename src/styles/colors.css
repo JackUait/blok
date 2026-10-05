@@ -518,6 +518,22 @@
   --blok-video-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   --blok-video-burst-bg: rgba(0, 0, 0, 0.5);
   --blok-video-burst-fg: #ffffff;
+
+  /* Video error screen — a dead TV: scanlines, a rolling band, a dark
+     vignette, SMPTE colour bars for the tear and a red/cyan split on them. */
+  --blok-video-error-scanline: rgba(0, 0, 0, 0.22);
+  --blok-video-error-roll: rgba(255, 255, 255, 0.07);
+  --blok-video-error-vignette: rgba(0, 0, 0, 0.7);
+  --blok-video-error-split-red: rgba(255, 0, 64, 0.55);
+  --blok-video-error-split-cyan: rgba(0, 224, 255, 0.55);
+  --blok-video-error-card-shadow: 0 18px 48px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --blok-video-error-bar-1: #c0c0c0;
+  --blok-video-error-bar-2: #c0c000;
+  --blok-video-error-bar-3: #00c0c0;
+  --blok-video-error-bar-4: #00c000;
+  --blok-video-error-bar-5: #c000c0;
+  --blok-video-error-bar-6: #c00000;
+  --blok-video-error-bar-7: #0000c0;
   --blok-video-burst-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
   --blok-video-burst-ring: rgba(255, 255, 255, 0.4);
   /* Settings popover — near-opaque dark so video never bleeds through the text. */

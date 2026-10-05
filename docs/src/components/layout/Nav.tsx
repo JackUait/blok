@@ -6,6 +6,8 @@ import { Search } from "../common/Search";
 import { ThemeToggle } from "../common/ThemeToggle";
 import { GitHubLink } from "../common/GitHubLink";
 import { LanguageSelector } from "../common/LanguageSelector";
+import { VersionPicker } from "../../versioning/VersionPicker";
+import { VersionBanner } from "../../versioning/VersionBanner";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import { splitLocalePath } from "../../seo/locales";
@@ -202,6 +204,7 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false, staticPos
         data-nav
         data-blok-testid="nav"
       >
+        <VersionBanner />
         {/* The bar morphs between two states: an airy, edge-to-edge transparent
             strip at the very top, and — once scrolled — a compact frosted
             "island" that detaches from the screen edges (rounded, bordered,
@@ -282,6 +285,7 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false, staticPos
 
           {/* Right cluster: language, theme, account/menu pill */}
           <div className="flex shrink-0 items-center gap-0.5">
+            <VersionPicker />
             <LanguageSelector />
             <GitHubLink />
             <ThemeToggle />

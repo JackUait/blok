@@ -31,6 +31,8 @@ export const SPRINGS = {
   tall: { stiffness: 320, damping: 19 },
   soft: { stiffness: 260, damping: 20 },
   bouncy: { stiffness: 380, damping: 16 },
+  /** Critically damped: eases in and never overshoots. */
+  calm: { stiffness: 900, damping: 60 },
 } as const satisfies Record<string, Spring>;
 
 /** The dot the bar blooms from, in px. */
@@ -106,18 +108,16 @@ export const growFrames = (
   full: Size,
   from: Size,
   corner: Corner,
-  options: { springs: { width: Spring; height: Spring }; radius: { from: number; to: number }; pinch?: number; steps?: number }
+  options: { springs: { width: Spring; height: Spring }; radius: { from: number; to: number }; steps?: number }
 ): GrowFrames => {
-  const { springs, radius, pinch = 0, steps = 30 } = options;
+  const { springs, radius, steps = 30 } = options;
   const duration = Math.max(settleMs(springs.width), settleMs(springs.height));
   const frames = Array.from({ length: steps + 1 }, (_, i) => {
     const last = i === steps;
     const seconds = (duration / 1000) * (i / steps);
     const pw = last ? 1 : springAt(springs.width, seconds);
     const ph = last ? 1 : springAt(springs.height, seconds);
-    // A quick inward squeeze that peaks at 18% and is gone by 36%.
-    const squeeze = last ? 0 : pinch * Math.max(0, Math.sin(Math.PI * Math.min(1, i / steps / 0.36)));
-    const width = from.width + (full.width - from.width) * pw - squeeze;
+    const width = from.width + (full.width - from.width) * pw;
     const height = from.height + (full.height - from.height) * ph;
     const left = leftOf(corner.inline, full.width, width);
     const top = corner.block === 'top' ? 0 : full.height - height;
@@ -217,8 +217,8 @@ export const bloom = (parts: BloomParts, corner: Corner): Animation[] => {
 };
 
 /**
- * The bar just grew taller (the replace row snapped open): spring the skin
- * and clip from the old size, pinching in a little as it stretches.
+ * The bar just grew taller (the replace row snapped open): glide the skin
+ * and clip from the old size, with no overshoot.
  */
 export const stretch = (
   parts: { dock: HTMLElement; bar: HTMLElement; field: HTMLElement; buttons: HTMLElement[] },
@@ -233,25 +233,23 @@ export const stretch = (
 
   const round = radiusOf(bar);
   const frames = growFrames(sizeOf(bar), from, corner, {
-    springs: { width: SPRINGS.soft, height: SPRINGS.tall },
+    springs: { width: SPRINGS.calm, height: SPRINGS.calm },
     radius: { from: round, to: round },
-    pinch: 14,
   });
   const sampled = { duration: frames.duration, easing: 'linear' };
-  const soft = springEasing(SPRINGS.soft);
-  const pop = springEasing(SPRINGS.bouncy);
+  const calm = springEasing(SPRINGS.calm);
 
   return [
     dock.animate(frames.skin, { ...sampled, pseudoElement: '::before' }),
     bar.animate(frames.clip, sampled),
     parts.field.animate(
-      [{ transform: 'translateY(-36px) scaleY(0.6)', opacity: 0 }, { transform: 'none', opacity: 1 }],
-      { ...soft, delay: 40, fill: 'backwards' }
+      [{ translate: '0 -8px', opacity: 0 }, { translate: '0 0', opacity: 1 }],
+      { ...calm, fill: 'backwards' }
     ),
     // No end opacity, as in bloom: Replace is disabled until there is a match.
-    ...parts.buttons.map((button, index) => button.animate(
-      [{ transform: 'translateY(-24px) scale(0.6)', opacity: 0 }, { transform: 'none' }],
-      { ...pop, delay: 110 + 60 * index, fill: 'backwards' }
+    ...parts.buttons.map((button) => button.animate(
+      [{ translate: '0 -8px', opacity: 0 }, { translate: '0 0' }],
+      { ...calm, fill: 'backwards' }
     )),
   ];
 };

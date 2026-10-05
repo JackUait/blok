@@ -117,16 +117,6 @@ describe('find-motion', () => {
       // A wider skin than the box means a negative left inset on the clip.
       expect(insetOf(clip[widestIndex])[3]).toBeLessThan(0);
     });
-
-    it('pinches the width in early when asked, and ends at full width', () => {
-      const from = { width: 470, height: 44 };
-      const to = { width: 470, height: 84 };
-      const { skin } = growFrames(to, from, { block: 'top', inline: 'right' }, { ...options, pinch: 14 });
-      const narrowest = Math.min(...skin.map((frame) => parseFloat(String(frame.width))));
-
-      expect(narrowest).toBeLessThan(470 - 10);
-      expect(skin[skin.length - 1]).toMatchObject({ width: '470px', height: '84px' });
-    });
   });
 });
 
@@ -274,6 +264,29 @@ describe('bloom and stretch', () => {
       const keyframes = animate.mock.calls[animate.mock.contexts.indexOf(control)]?.[0];
 
       expect(keyframes.at(-1)).not.toHaveProperty('opacity');
+    });
+  });
+
+  it('opens the replace row without overshoot, pinch or pop', () => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(false);
+    const p = parts();
+    const buttons = [document.createElement('button'), document.createElement('button')];
+
+    stretch({ dock: p.dock, bar: p.bar, field: p.field, buttons }, { width: 470, height: 40 }, { block: 'top', inline: 'right' });
+
+    const skin = animate.mock.calls.find((call) => call[1]?.pseudoElement === '::before')?.[0] ?? [];
+
+    expect(skin.map((frame) => frame.width)).toEqual(skin.map(() => '470px'));
+    expect(skin.every((frame) => parseFloat(String(frame.height)) <= 44)).toBe(true);
+
+    animate.mock.calls.forEach(([keyframes, options]) => {
+      const easing = String(options?.easing ?? '');
+      const points = easing.startsWith('linear(') ? easing.slice(7, -1).split(',').map(Number) : [];
+
+      expect(points.every((point) => point <= 1)).toBe(true);
+      expect(keyframes.some((frame) => /scale|rotate/.test(String(frame.transform ?? '')))).toBe(false);
     });
   });
 

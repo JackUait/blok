@@ -61,10 +61,11 @@ Not breaking: the islands, the split and the Alt pill landed after v1.15.2 (last
 
 Handles have no card, so their ink is inverted: a bright area gets a dark grey bar, a dark area a white bar.
 
-Paper and graphite are theme-independent (like the lightbox tokens), so their tokens are defined once
-in `src/styles/colors.css`. The un-toned fallback reuses the existing theme-aware `--blok-overlay-*`
-tokens, plus one new theme token for handle ink (defined for light, system-dark and forced-dark).
-None may be blue.
+Paper and graphite values live in two `.blok-image-inner [data-tone="…"]` rules in `image.css`, which
+repoint the existing `--blok-overlay-*` tokens. No root tokens: `view.css` keeps every root token and
+every attribute-only token rule, it sat at 55,881 of its 56,000-byte budget, and a static view has no
+chrome. Keyed under a class, the rules prune from it (view.css stays byte-identical).
+Handles paint with `--blok-overlay-fg`, which already inverts against the card. None may be blue.
 
 ## Reading the picture
 
@@ -78,7 +79,8 @@ None may be blue.
 1. Draw the visible picture into a canvas about 24 px on its long side:
    - only the cropped region;
    - the frame's rotation and flip, from the existing geometry helpers in `geometry.ts`, not read back from the DOM;
-   - the image's CSS filter string as `ctx.filter`. **Unverified:** Safari support. Without it Safari reads the unfiltered picture.
+   - the image's CSS filter string as `ctx.filter`. **Measured 2026-10-05:** Chromium applies it;
+     WebKit 26.5 accepts the property but ignores it, so Safari reads the unfiltered picture.
    - markup strokes are ignored.
 2. Composite transparent pixels over the page colour behind the image.
 3. Keep a brightness grid of the result.
@@ -97,7 +99,8 @@ None may be blue.
 - Same-origin, `data:` or `blob:` URL: read the visible `<img>` itself. No extra request.
 - Cross-origin: load a hidden `Image` with `crossOrigin="anonymous"` and the visible image's
   `currentSrc`. The visible `<img>` never gets `crossOrigin`, so nothing that loads today stops loading.
-  Whether the copy is served from the HTTP cache is unverified; measure it during implementation.
+  **Measured 2026-10-05** (CORS host, `Cache-Control: max-age=3600`): Chromium serves the copy from
+  cache (one request to the host); WebKit makes a second request with an `Origin` header.
 
 ### Can't read
 

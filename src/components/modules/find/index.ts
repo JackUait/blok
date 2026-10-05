@@ -628,7 +628,9 @@ export class Find extends Module {
     const anchor = this.anchor;
     const findOptions: FindOptions = this.bar.options;
 
-    this.ranges = findRanges(document.body, this.bar.query, findOptions);
+    // The preview hides the real text it copies; showPreview() puts it back.
+    this.preview?.clear();
+    this.ranges = findRanges(document.body, this.bar.query, findOptions).filter((range) => this.isFindable(range));
 
     const after = anchor === null ? this.ranges : this.ranges.filter((range) => startsAtOrAfter(range, anchor, document.body));
     // While typing, prefer a match the reader can see; hidden ones are one Enter away.
@@ -714,6 +716,20 @@ export class Find extends Module {
 
   private isHidden(range: Range): boolean {
     return this.collapsedAncestors(range).length > 0;
+  }
+
+  /**
+   * Like the browser's find: text that is not rendered does not count, unless
+   * Find can show it by opening what hides it (a collapsed toggle, a tab).
+   * @param range - a match
+   */
+  private isFindable(range: Range): boolean {
+    const element = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
+
+    return element === null
+      || typeof element.checkVisibility !== 'function'
+      || element.checkVisibility({ visibilityProperty: true })
+      || this.isHidden(range);
   }
 
   private scrollIntoView(range: Range): void {

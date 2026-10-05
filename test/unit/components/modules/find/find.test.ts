@@ -407,6 +407,63 @@ describe('Find module', () => {
     expect(activeText()).toBe('apple two');
   });
 
+  describe('text that is not rendered', () => {
+    const matchCount = (): number => painted('blok-find-match').length + painted('blok-find-match-active').length;
+
+    beforeEach(() => {
+      Object.defineProperty(Element.prototype, 'checkVisibility', {
+        configurable: true,
+        value(this: Element): boolean {
+          return this.closest('[hidden], .hidden') === null;
+        },
+      });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(Element.prototype, 'checkVisibility');
+    });
+
+    it('does not count host page text that is not rendered', () => {
+      const { wrapper, redactor } = editor([{ id: 'a', text: 'cat here' }]);
+      const panel = document.createElement('div');
+
+      panel.hidden = true;
+      panel.textContent = 'cat in another tab';
+      document.body.appendChild(panel);
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+
+      expect(matchCount()).toBe(1);
+    });
+
+    it('does not count editor text that is not rendered, like a code block source behind its preview', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat here' }]);
+      const source = document.createElement('pre');
+
+      source.className = 'hidden';
+      source.textContent = 'cat source';
+      blocks[0].holder.querySelector('[data-blok-element-content] > *')?.appendChild(source);
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+
+      expect(matchCount()).toBe(1);
+    });
+
+    it('still counts a match Find can reveal, like one in a hidden tab', () => {
+      const { wrapper, redactor } = editor([
+        { id: 'tabs', text: 'tabs' },
+        { id: 'tab-1', text: 'cat first', parent: 'tabs' },
+        { id: 'tab-2', text: 'second', parent: 'tabs', hidden: true },
+        { id: 'leaf', text: 'cat inside', parent: 'tab-2', hidden: true },
+      ]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+
+      expect(matchCount()).toBe(2);
+    });
+  });
+
   it('never opens a collapsed toggle while the query is being typed', () => {
     const { wrapper, redactor, blocks } = editor([
       { id: 'outer', text: 'outer', collapsed: true },

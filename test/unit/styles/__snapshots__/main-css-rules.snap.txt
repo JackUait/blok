@@ -7225,8 +7225,14 @@ span[data-blok-slash-search] {
   color: var(--blok-text-primary);
   background: color-mix(in srgb, var(--blok-text-primary) 6%, var(--blok-bg-secondary));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-text-primary) 12%, transparent);
-  overflow: hidden;
+  overflow: visible;
   animation: blok-image-mend-tile 520ms ease-out both;
+}
+
+.blok-image-error:is([data-sending="true"], [data-resent="true"]) .blok-image-error__icon img {
+  position: relative;
+  z-index: 1;
+  border-radius: inherit;
 }
 
 .blok-image-error[data-sending="true"] .blok-image-error__icon img {
@@ -7237,6 +7243,8 @@ span[data-blok-slash-search] {
   content: "";
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
   background: linear-gradient( to top, transparent 30%, color-mix(in srgb, var(--blok-bg-primary) 70%, transparent) 50%, transparent 70% ) 0 0 / 100% 300% no-repeat;
   animation: blok-image-send-beam 1.2s linear 260ms infinite;
   pointer-events: none;
@@ -7299,6 +7307,7 @@ span[data-blok-slash-search] {
 }
 
 .blok-image-error[data-resent="true"] .blok-image-error__icon {
+  overflow: visible;
   animation: blok-image-unmend-tile 420ms ease-out both;
 }
 

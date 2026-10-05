@@ -266,9 +266,9 @@
 }
 
 @keyframes blok-image-resend-drop {
-  from { transform: translateY(-120%) scale(0.86); opacity: 0 }
-  35% { opacity: 1 }
-  to { transform: none; opacity: 1 }
+  from { transform: translateY(-72px) scale(0.42); opacity: 0; filter: blur(3px) }
+  35% { opacity: 1; filter: none }
+  to { transform: none; opacity: 1; filter: none }
 }
 
 @keyframes blok-image-resend-ring {
@@ -293,11 +293,12 @@
 }
 
 @keyframes blok-image-send-lift {
-  0% { transform: none; opacity: 1 }
-  20% { transform: translateY(3px) scale(0.94); opacity: 1 }
-  62% { transform: translateY(-120%) scale(0.86); opacity: 1 }
-  63% { transform: translateY(0) scale(0.86); opacity: 0 }
-  100% { transform: translateY(0) scale(0.86); opacity: 0.45 }
+  0% { transform: none; opacity: 1; filter: none }
+  20% { transform: translateY(3px) scale(0.92, 0.94); opacity: 1; filter: none }
+  34% { transform: translateY(-14px) scale(0.86, 1.06); opacity: 1; filter: none }
+  62% { transform: translateY(-72px) scale(0.42); opacity: 0; filter: blur(3px) }
+  63% { transform: scale(0.86); opacity: 0; filter: none }
+  100% { transform: scale(0.86); opacity: 0.45; filter: none }
 }
 
 @keyframes blok-image-send-sweep {

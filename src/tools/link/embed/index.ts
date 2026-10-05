@@ -726,7 +726,7 @@ export class Embed implements BlockTool {
     readbackName.setAttribute('data-role', 'embed-readback-name');
     readback.append(readbackIcon, readbackName);
 
-    let shownKey: string | null = null;
+    const shown: { key: string | null } = { key: null };
 
     /**
      * Shows what the typed URL will become: the window's drawing, the bar icon
@@ -738,11 +738,11 @@ export class Embed implements BlockTool {
       const host = target !== null && match === null ? hostnameOf(url) : '';
       const key = target === null ? null : match?.service ?? `host:${host}`;
 
-      if (shownKey === key) {
+      if (shown.key === key) {
         return;
       }
 
-      shownKey = key;
+      shown.key = key;
 
       if (key === null) {
         readback.hidden = true;
@@ -787,7 +787,7 @@ export class Embed implements BlockTool {
       if (
         event instanceof InputEvent
         && event.inputType === 'insertFromPaste'
-        && shownKey !== null
+        && shown.key !== null
       ) {
         embedWindow.play('caught');
       }

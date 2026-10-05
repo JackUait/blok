@@ -312,8 +312,8 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
       return blocksToHtml(document, { pageInfo, pageHref });
     }
     case 'blocksToMarkdownWithPages': {
-      const { document, skipped, pageInfo } = parsePagesRequest(inputJson);
-      const report = blocksToMarkdownWithReport(document, { pageInfo });
+      const { document, skipped, pageInfo, pageHref } = parsePagesRequest(inputJson);
+      const report = blocksToMarkdownWithReport(document, { pageInfo, pageHref });
 
       if (skipped > 0) {
         report.warnings.push(skippedBlockWarning(skipped));

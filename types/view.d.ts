@@ -389,12 +389,16 @@ export interface MarkdownSerializationResult {
  * tables GFM pipe grids; a callout becomes a blockquote and columns flatten
  * into reading order, since Markdown can express neither.
  *
+ * A page block or inline page reference is written as `[title](href)` when
+ * `pageInfo` allows the page and `pageHref` gives a safe link. Otherwise it is
+ * the label alone.
+ *
  * @param data - saved document (strict or loose wire shape; nullish tolerated)
  * @returns Markdown ('' for empty/malformed documents)
  */
 export declare function blocksToMarkdown(
   data: OutputData | LooseOutputData | null | undefined,
-  options?: Pick<BlocksToHtmlOptions, 'pageInfo'>
+  options?: Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref'>
 ): string;
 
 /**
@@ -408,7 +412,7 @@ export declare function blocksToMarkdown(
  */
 export declare function blocksToMarkdownWithReport(
   data: OutputData | LooseOutputData | null | undefined,
-  options?: Pick<BlocksToHtmlOptions, 'pageInfo'>
+  options?: Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref'>
 ): MarkdownSerializationResult;
 
 /**

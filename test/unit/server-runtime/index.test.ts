@@ -448,6 +448,17 @@ describe('server runtime boundary', () => {
       expect(result.markdown).toBe('Roadmap\n\nNo access\n\nPage not found\n\nPage\n\nSee Roadmap and Page.');
     });
 
+    it('links allowed pages in Markdown, and keeps only the title for a script href', async () => {
+      const output = await invoke('blocksToMarkdownWithPages', JSON.stringify({
+        document: pageDocument,
+        pages: { ...pages, 'p-absent': { title: 'Js', href: 'javascript:alert(1)' } },
+      }));
+      const result = JSON.parse(output) as { markdown: string; warnings: Array<{ construct: string }> };
+
+      expect(result.markdown).toBe('[Roadmap](/p/ok)\n\nNo access\n\nPage not found\n\nJs\n\nSee [Roadmap](/p/ok) and Page.');
+      expect(result.warnings.map((warning) => warning.construct)).toEqual(['page-link', 'page-link', 'page']);
+    });
+
     it('still skips and reports a malformed block inside the envelope', async () => {
       const output = await invoke('blocksToMarkdownWithPages', JSON.stringify({
         document: { blocks: [{ type: 'paragraph', data: { text: 'Kept' } }, null] },

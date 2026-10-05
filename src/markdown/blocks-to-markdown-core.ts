@@ -348,6 +348,8 @@ interface SerializationContext {
   inline: InlineBackend;
   /** Authorized page metadata for the static view. */
   pageInfo?: (pageId: string) => PageInfo | null | undefined;
+  /** Link for an allowed page. Never asked for an unresolved, missing or denied one. */
+  pageHref?: (pageId: string) => string;
   /** Collects degradations; discarded when the caller asked for no report. */
   warnings: MarkdownDegradation[];
   /** Ids already on the render stack — breaks parent-reference cycles. */
@@ -1303,10 +1305,15 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
     }
     case 'page':
     case 'page-link': {
-      warn(context, block.tool, 'degraded', 'page link is lost');
       const pageId = data.pageId;
       const info = typeof pageId === 'string' && pageId !== '' ? context.pageInfo?.(pageId) : undefined;
+      const allowed = info !== null && info !== undefined && info.access !== 'none';
+      const rawHref = allowed && typeof pageId === 'string' ? context.pageHref?.(pageId) : undefined;
+      const href = typeof rawHref === 'string' && rawHref !== '' ? markdownDestination(rawHref, 'href') : null;
 
+      if (href === null) {
+        warn(context, block.tool, 'degraded', 'page link is lost');
+      }
       if (info === null) {
         return `${flatIndent}Page not found`;
       }
@@ -1317,9 +1324,9 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
         return `${flatIndent}No access`;
       }
 
-      const title = typeof info.title === 'string' && info.title !== '' ? info.title : 'New page';
+      const title = escapePlainText(typeof info.title === 'string' && info.title !== '' ? info.title : 'New page');
 
-      return `${flatIndent}${escapePlainText(title)}`;
+      return href === null ? `${flatIndent}${title}` : `${flatIndent}[${title}](${href})`;
     }
     default: {
       const fallback = `${flatIndent}${text}`;
@@ -1350,7 +1357,8 @@ const buildContext = (
   blocks: SerializableBlock[],
   inline: InlineBackend,
   warnings: MarkdownDegradation[],
-  pageInfo?: (pageId: string) => PageInfo | null | undefined
+  pageInfo?: (pageId: string) => PageInfo | null | undefined,
+  pageHref?: (pageId: string) => string
 ): SerializationContext => {
   const byId = new Map<string, SerializableBlock>();
   const childrenOf = new Map<string, SerializableBlock[]>();
@@ -1382,6 +1390,7 @@ const buildContext = (
     childrenOf,
     inline,
     pageInfo,
+    pageHref,
     warnings,
     active: new Set<string>(),
     inlineSeen: new Set<string>() };
@@ -1457,10 +1466,11 @@ const collectOwnedIds = (blocks: SerializableBlock[], context: SerializationCont
 export const serializeBlocksToMarkdown = (
   blocks: SerializableBlock[],
   inline: InlineBackend,
-  pageInfo?: (pageId: string) => PageInfo | null | undefined
+  pageInfo?: (pageId: string) => PageInfo | null | undefined,
+  pageHref?: (pageId: string) => string
 ): { markdown: string; warnings: MarkdownDegradation[] } => {
   const warnings: MarkdownDegradation[] = [];
-  const context = buildContext(blocks, inline, warnings, pageInfo);
+  const context = buildContext(blocks, inline, warnings, pageInfo, pageHref);
   const ownedIds = collectOwnedIds(blocks, context);
   const topLevel = blocks.filter((block) => block.id === undefined || !ownedIds.has(block.id));
 

@@ -45,6 +45,9 @@ type P5ChildNode = DefaultTreeAdapterMap['childNode'];
 /** Receives the name of every inline construct the walk had to unwrap. */
 type LossReporter = (construct: string) => void;
 
+/** Host page metadata and links, as `blocksToHtml` takes them. */
+type PageOptions = Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref'>;
+
 /**
  * Read an attribute off a parse5 element.
  * @param node - the node to read
@@ -68,8 +71,8 @@ const serializeNodes = (
   nodes: P5ChildNode[],
   onLoss: LossReporter,
   escape: TextEscaper,
-  pageInfo: BlocksToHtmlOptions['pageInfo']
-): string => nodes.map((node) => serializeNode(node, onLoss, escape, pageInfo)).join('');
+  pages: PageOptions
+): string => nodes.map((node) => serializeNode(node, onLoss, escape, pages)).join('');
 
 /**
  * Serialize one parse5 node to inline Markdown. Mirrors the tag handling of the
@@ -82,7 +85,7 @@ const serializeNode = (
   node: P5ChildNode,
   onLoss: LossReporter,
   escape: TextEscaper,
-  pageInfo: BlocksToHtmlOptions['pageInfo']
+  pages: PageOptions
 ): string => {
   if (node.nodeName === '#text') {
     return escape((node as DefaultTreeAdapterMap['textNode']).value);
@@ -105,15 +108,19 @@ const serializeNode = (
   const pageId = node.nodeName === 'a' ? attr(node, PAGE_REFERENCE_ATTR) : null;
 
   if (pageId) {
-    const info = pageInfo?.(pageId);
-    const title = info !== null && info !== undefined && info.access !== 'none' && typeof info.title === 'string' && info.title.trim() !== ''
+    const info = pages.pageInfo?.(pageId);
+    const allowed = info !== null && info !== undefined && info.access !== 'none';
+    const title = allowed && typeof info.title === 'string' && info.title.trim() !== ''
       ? info.title
       : PAGE_REFERENCE_FALLBACK;
+    const label = markdownTextEscaper(title)(title);
+    const rawHref = allowed ? pages.pageHref?.(pageId) : undefined;
+    const href = typeof rawHref === 'string' && rawHref !== '' ? markdownDestination(rawHref, 'href') : null;
 
-    return markdownTextEscaper(title)(title);
+    return href === null ? label : `[${label}](${href})`;
   }
 
-  const inner = serializeNodes(node.childNodes, onLoss, node.nodeName === 'code' ? RAW_TEXT : escape, pageInfo);
+  const inner = serializeNodes(node.childNodes, onLoss, node.nodeName === 'code' ? RAW_TEXT : escape, pages);
 
   switch (node.nodeName) {
     case 'br':
@@ -153,7 +160,7 @@ const serializeNode = (
 };
 
 /** Reads inline HTML through parse5. Runs anywhere, including bare Node and Jint. */
-const parse5InlineBackend = (pageInfo: BlocksToHtmlOptions['pageInfo']): InlineBackend => ({
+const parse5InlineBackend = (pages: PageOptions): InlineBackend => ({
   /**
    * Convert a fragment of inline HTML (a block's `text`) into inline Markdown.
    * @param html - inline HTML string
@@ -172,7 +179,7 @@ const parse5InlineBackend = (pageInfo: BlocksToHtmlOptions['pageInfo']): InlineB
       return escape(source);
     }
 
-    return serializeNodes(parseInlineFragment(source).childNodes, onLoss, escape, pageInfo);
+    return serializeNodes(parseInlineFragment(source).childNodes, onLoss, escape, pages);
   },
 });
 
@@ -234,8 +241,8 @@ const flattenDocument = (data: OutputData | LooseOutputData | null | undefined):
  */
 export const blocksToMarkdown = (
   data: OutputData | LooseOutputData | null | undefined,
-  options: Pick<BlocksToHtmlOptions, 'pageInfo'> = {}
-): string => serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend(options.pageInfo), options.pageInfo).markdown;
+  options: PageOptions = {}
+): string => blocksToMarkdownWithReport(data, options).markdown;
 
 /**
  * Serialize a saved Blok document to Markdown and report what degraded.
@@ -250,5 +257,6 @@ export const blocksToMarkdown = (
  */
 export const blocksToMarkdownWithReport = (
   data: OutputData | LooseOutputData | null | undefined,
-  options: Pick<BlocksToHtmlOptions, 'pageInfo'> = {}
-): MarkdownSerializationResult => serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend(options.pageInfo), options.pageInfo);
+  options: PageOptions = {}
+): MarkdownSerializationResult =>
+  serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend(options), options.pageInfo, options.pageHref);

@@ -6,6 +6,7 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
 import { blocksToMarkdown, blocksToMarkdownWithReport } from '../../../src/view';
 
 import type { OutputBlockData, OutputData } from '../../../types';
+import type { PageInfo } from '../../../types/tools/page';
 
 /**
  * Convenience: wrap blocks into an OutputData envelope.
@@ -326,6 +327,84 @@ describe('blocksToMarkdown (view)', () => {
       const { warnings } = blocksToMarkdownWithReport(doc([{ type: 'page', data: { pageId: 'p1' } }]));
 
       expect(warnings).toEqual([expect.objectContaining({ construct: 'page', action: 'degraded' })]);
+    });
+  });
+
+  describe('page links', () => {
+    const pages = doc([
+      { type: 'page', data: { pageId: 'p1' } },
+      { type: 'page-link', data: { pageId: 'p2' } },
+    ]);
+
+    it('links an allowed page that has an href, and reports nothing lost', () => {
+      const result = blocksToMarkdownWithReport(pages, {
+        pageInfo: (pageId) => ({ title: pageId === 'p1' ? 'Road [map]' : '' }),
+        pageHref: (pageId) => `/pages/${pageId}`,
+      });
+
+      expect(result.markdown).toBe('[Road \\[map\\]](/pages/p1)\n\n[New page](/pages/p2)');
+      expect(result.warnings).toEqual([]);
+    });
+
+    it('keeps the title only, and reports the lost link, when there is no href', () => {
+      const result = blocksToMarkdownWithReport(pages, {
+        pageInfo: () => ({ title: 'Roadmap' }),
+        pageHref: () => '',
+      });
+
+      expect(result.markdown).toBe('Roadmap\n\nRoadmap');
+      expect(result.warnings).toEqual([
+        { construct: 'page', action: 'degraded', detail: 'page link is lost' },
+        { construct: 'page-link', action: 'degraded', detail: 'page link is lost' },
+      ]);
+    });
+
+    it.each([
+      ['a script URL', 'javascript:alert(1)'],
+      ['a whitespace-smuggled script URL', ' java\tscript:alert(1)'],
+    ])('never links %s', (_name, href) => {
+      const result = blocksToMarkdownWithReport(pages, { pageInfo: () => ({ title: 'T' }), pageHref: () => href });
+
+      expect(result.markdown).toBe('T\n\nT');
+      expect(result.warnings).toHaveLength(2);
+    });
+
+    it('cannot open a second link through a ) in the href', () => {
+      const markdown = blocksToMarkdown(doc([{ type: 'page', data: { pageId: 'p1' } }]), {
+        pageInfo: () => ({ title: 'T' }),
+        pageHref: () => 'https://ok.example/x) [evil](javascript:alert(1)',
+      });
+
+      const paragraph = fromMarkdown(markdown).children[0] as { children: Array<{ type: string; url?: string }> };
+
+      expect(paragraph.children).toEqual([expect.objectContaining({ type: 'link', url: 'https://ok.example/x)%20[evil](javascript:alert(1)' })]);
+    });
+
+    it('never asks for the href of an unresolved, missing or denied page', () => {
+      const pageHref = vi.fn(() => '/leak');
+      const info: Record<string, PageInfo | null> = { p2: null, p3: { access: 'none', title: 'Secret' } };
+      const markdown = blocksToMarkdown(doc([
+        { type: 'page', data: { pageId: 'p1' } },
+        { type: 'page-link', data: { pageId: 'p2' } },
+        { type: 'page-link', data: { pageId: 'p3' } },
+        { type: 'paragraph', data: { text: '<a data-blok-page-id="p1">x</a> <a data-blok-page-id="p2">x</a> <a data-blok-page-id="p3">x</a>' } },
+      ]), { pageInfo: (pageId) => info[pageId], pageHref });
+
+      expect(markdown).toBe('Page\n\nPage not found\n\nNo access\n\nPage Page Page');
+      expect(pageHref).not.toHaveBeenCalled();
+    });
+
+    it('links an inline reference to an allowed page', () => {
+      const data = doc([{ type: 'paragraph', data: { text: 'See <a data-blok-page-id="p1">x</a> and <a data-blok-page-id="p2">x</a>' } }]);
+
+      expect(blocksToMarkdown(data, {
+        pageInfo: (pageId) => ({ title: pageId === 'p1' ? 'Roadmap' : ' ' }),
+        pageHref: (pageId) => `/pages/${pageId}`,
+      })).toBe('See [Roadmap](/pages/p1) and [Page](/pages/p2)');
+      expect(blocksToMarkdown(data, {
+        pageInfo: () => ({ title: 'Roadmap' }),
+        pageHref: () => 'javascript:alert(1)',
+      })).toBe('See Roadmap and Roadmap');
     });
   });
 

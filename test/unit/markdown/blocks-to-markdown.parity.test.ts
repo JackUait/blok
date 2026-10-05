@@ -201,6 +201,19 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
     name: 'a non-owning page reference',
     document: doc([{ id: 'r1', type: 'page-link', data: { pageId: 'p1' } }]),
   },
+  /**
+   * Saved inline refs are sanitized to the label `Page`, which the DOM backend
+   * reads as text and the view backend writes as its fallback. Page titles and
+   * links come only from `pageInfo`/`pageHref`, which only the view takes: the
+   * editor's clipboard has no host metadata to pass.
+   */
+  {
+    name: 'an owning page block and an inline page reference',
+    document: doc([
+      { id: 'pg', type: 'page', data: { pageId: 'p1' } },
+      { type: 'paragraph', data: { text: 'See <a data-blok-page-id="p2">Page</a>.' } },
+    ]),
+  },
   {
     name: 'a spacer between paragraphs',
     document: doc([

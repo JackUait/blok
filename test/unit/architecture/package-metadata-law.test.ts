@@ -165,6 +165,9 @@ describe('package metadata law', () => {
     expect(readme).toContain('AddBlokServer');
     expect(readme).not.toContain('UseAuthorization<');
     expect(readme).toContain('MapBlokServer');
+    // The verifier compares the header byte for byte, so a .NET backend needs the minter or the exact header.
+    expect(readme).toContain('BlokTicket.Create');
+    expect(readme).toContain('{"alg":"HS256","typ":"JWT"}');
     expect(readme).toContain('npx @bloklabs/server');
     expect(readme).toContain('ghcr.io/jackuait/blok-server');
     expect(readme).not.toContain('UseMySql');

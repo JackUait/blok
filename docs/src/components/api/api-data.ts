@@ -626,7 +626,7 @@ const editor = new Blok(config);`,
         type: "string",
         default: "undefined",
         description:
-          "Endpoint in YOUR app that mints a short-lived access pass for the signed-in user, answering `{ \"ticket\": \"<pass>\" }`. You only need it when `server` points at a standalone service. Routes running inside your own app already know who the caller is.\n\nThe editor caches the pass and replaces it ahead of expiry rather than at it, so no request arrives already invalid. Uploads and link previews share the same pass. `@bloklabs/server/ticket` exports `blokTicket()` for minting it, and any backend can do the same with its own JWT library.",
+          "Endpoint in YOUR app that mints a short-lived access pass for the signed-in user, answering `{ \"ticket\": \"<pass>\" }`. You need it whenever the routes check passes: a standalone service run with `--auth ticket`, or routes inside your own app run with `Auth = \"ticket\"`. With `Auth` set to `none` or `proxy`, no pass is read.\n\nThe editor caches the pass and replaces it ahead of expiry rather than at it, so no request arrives already invalid. Uploads and link previews share the same pass. `@bloklabs/server/ticket` exports `blokTicket()` for minting it, and a .NET backend uses `BlokTicket.Create` from `Blok.Server`. Any other backend can sign one with its own JWT library. The header must then be exactly `{\"alg\":\"HS256\",\"typ\":\"JWT\"}`, because the server compares it byte for byte.",
       },
       {
         option: "persistence",

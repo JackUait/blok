@@ -259,7 +259,19 @@ new Blok({
 
 The editor caches the pass and replaces it ahead of expiry, and uploads and link previews share the same one.
 
-A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed with the secret the service runs with (at least 32 characters). Any backend can mint one with its own JWT library; `blokTicket` exists so a JavaScript one does not have to. Routes running inside your own ASP.NET app need none of this: they already know who the caller is.
+A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed with the secret the service runs with (at least 32 characters). A .NET backend mints one with `BlokTicket.Create` from the `Blok.Server` package:
+
+```csharp
+using Blok.Server.Tickets;
+
+var ticket = BlokTicket.Create(secret, new BlokTicketClaims { User = userId, Doc = docId, Write = true });
+```
+
+`Blok.Server` also brings in Jint, AngleSharp and BouncyCastle, even when you only mint passes.
+
+Any other backend can sign a pass with its own JWT library. The header must be exactly `{"alg":"HS256","typ":"JWT"}`, keys in that order and nothing added, because the server compares it byte for byte.
+
+Passes are needed whenever the routes run with `Auth = "ticket"`, including routes mapped inside your own ASP.NET app. With `Auth` set to `none` or `proxy`, the routes never read a pass.
 
 ## Routes
 

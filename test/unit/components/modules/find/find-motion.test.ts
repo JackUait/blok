@@ -386,6 +386,48 @@ describe('hop', () => {
     expect(dock.childElementCount).toBe(0);
   });
 
+  /** Fly from `source` to an input at `inputTop`, and return the arc keyframes. */
+  const flyTo = (inputTop: number, fonts: { input: string }): Keyframe[] => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(false);
+    const dock = document.createElement('div');
+    const input = document.createElement('input');
+
+    input.style.fontSize = fonts.input;
+    vi.spyOn(input, 'getBoundingClientRect').mockReturnValue(new DOMRect(900, inputTop, 160, 22));
+    dock.append(input);
+    document.body.append(dock);
+    hop(dock, source, input, 0, vi.fn());
+    const arc: unknown = animate.mock.calls[0]?.[0];
+
+    if (!Array.isArray(arc)) {
+      throw new Error('no arc');
+    }
+
+    return arc.filter((frame): frame is Keyframe => typeof frame === 'object' && frame !== null);
+  };
+  const liftOf = (frame: Keyframe): number => Number(/translate\(\S+px, (\S+)px\)/.exec(String(frame.transform))?.[1]);
+  const scaleOf = (frame: Keyframe): number => Number(/scale\((\S+)\)/.exec(String(frame.transform))?.[1]);
+
+  it('keeps the word on screen when the field sits near the top of the window', () => {
+    const arc = flyTo(21, { input: '16px' });
+
+    expect(Math.min(...arc.map((frame) => source.rect.top + liftOf(frame)))).toBeGreaterThanOrEqual(8);
+  });
+
+  it('keeps the full lift when there is room above', () => {
+    const arc = flyTo(source.rect.top, { input: '16px' });
+
+    expect(liftOf(arc[Math.floor(arc.length / 2)])).toBeLessThan(-60);
+  });
+
+  it('lands at the field\'s text size, so the text does not jump when it shows', () => {
+    const arc = flyTo(source.rect.top, { input: '13px' });
+
+    expect(scaleOf(arc[arc.length - 1])).toBeCloseTo(13 / 16, 3);
+  });
+
   it('lasts long enough to read as a hop', () => {
     expect(HOP_MS).toBeGreaterThanOrEqual(400);
   });

@@ -265,6 +265,8 @@ const ARC_LIFT = 70;
 const ARC_SPIN = -14;
 const ARC_GROW = 0.18;
 const ARC_STEPS = 20;
+/** Room the arc keeps from the window's top edge, in px; covers the spin and grow. */
+const ARC_MARGIN = 8;
 
 /** The selected word's first visible line box and text style, or null when it has none on screen. */
 export const hopSourceFromRange = (range: Range, text: string): HopSource | null => {
@@ -330,19 +332,27 @@ export const hop = (
   });
   dock.append(chip);
 
-  const rtl = getComputedStyle(target).direction === 'rtl';
+  const targetStyle = getComputedStyle(target);
+  const rtl = targetStyle.direction === 'rtl';
+  // The start edge stays put as the chip shrinks, so dx and dy still land on the text start.
+  chip.style.transformOrigin = rtl ? 'right center' : 'left center';
+  const land = parseFloat(targetStyle.fontSize) / parseFloat(source.font.size) || 1;
   const dx = (rtl ? targetRect.right - chip.offsetWidth : targetRect.left) - source.rect.left;
   const dy = targetRect.top + (targetRect.height - chip.offsetHeight) / 2 - source.rect.top;
-  const arc: Keyframe[] = Array.from({ length: ARC_STEPS + 1 }, (_, i) => {
+  const steps = Array.from({ length: ARC_STEPS + 1 }, (_, i) => {
     const progress = i / ARC_STEPS;
-    const travel = 1 - Math.pow(1 - progress, 2.2);
-    const lift = Math.sin(progress * Math.PI);
 
-    return {
-      offset: progress,
-      transform: `translate(${dx * travel}px, ${dy * travel - lift * ARC_LIFT}px) rotate(${lift * ARC_SPIN}deg) scale(${1 + lift * ARC_GROW})`,
-    };
+    return { progress, travel: 1 - Math.pow(1 - progress, 2.2), lift: Math.sin(progress * Math.PI) };
   });
+  // One factor for the whole arc, so a field near the top flattens it instead of clipping it.
+  const room = Math.min(1, ...steps
+    .filter((step) => step.lift > 0.01)
+    .map((step) => (source.rect.top + dy * step.travel - ARC_MARGIN) / (step.lift * ARC_LIFT)));
+  const lift = ARC_LIFT * Math.max(0, room);
+  const arc: Keyframe[] = steps.map((step) => ({
+    offset: step.progress,
+    transform: `translate(${dx * step.travel}px, ${dy * step.travel - step.lift * lift}px) rotate(${step.lift * ARC_SPIN}deg) scale(${(1 + step.lift * ARC_GROW) * (1 + (land - 1) * step.travel)})`,
+  }));
   const flight = [
     chip.animate(arc, { duration: HOP_MS, delay, easing: 'linear', fill: 'backwards' }),
     chip.animate([{}, { backgroundColor: 'transparent' }], { duration: HOP_MS, delay, easing: 'ease-in', fill: 'both' }),

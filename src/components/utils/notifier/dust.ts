@@ -98,7 +98,6 @@ const createDust = (host: HTMLElement, notify: HTMLElement, box: DOMRect, rtl: b
   if (context === null) {
     return null;
   }
-  const origin = host.getBoundingClientRect();
   const dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
   const width = box.width + ROOM.side * 2;
   const height = box.height + ROOM.up + ROOM.down;
@@ -117,16 +116,26 @@ const createDust = (host: HTMLElement, notify: HTMLElement, box: DOMRect, rtl: b
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
   canvas.setAttribute('aria-hidden', 'true');
+  /**
+   * Pins the canvas to where the card was on screen. The wrapper moves under it:
+   * a centred one re-centres when the card leaves the layout or the next card widens it.
+   */
+  const anchor = (): void => {
+    const origin = host.getBoundingClientRect();
+
+    canvas.style.left = `${box.left - origin.left - ROOM.side}px`;
+    canvas.style.top = `${box.top - origin.top - ROOM.up}px`;
+  };
+
   Object.assign(canvas.style, {
     position: 'absolute',
-    left: `${box.left - origin.left - ROOM.side}px`,
-    top: `${box.top - origin.top - ROOM.up}px`,
     width: `${width}px`,
     height: `${height}px`,
     pointerEvents: 'none',
     // Above the leaving card, which sits above the next one.
     zIndex: '2',
   });
+  anchor();
   host.appendChild(canvas);
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
 
@@ -165,6 +174,7 @@ const createDust = (host: HTMLElement, notify: HTMLElement, box: DOMRect, rtl: b
 
   return {
     paint: (now, progress) => {
+      anchor();
       const edge = edgeAt(progress, rtl) * box.width;
 
       shed(state.edge, edge, now);

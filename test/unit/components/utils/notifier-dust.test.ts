@@ -108,6 +108,21 @@ describe('notifier dust', () => {
     expect(host.querySelector('canvas')).toBeNull();
   });
 
+  it('keeps the dust where the card was when the wrapper moves under it', () => {
+    const { host, card } = mount();
+
+    dissolve(card, vi.fn());
+    const canvas = host.querySelector('canvas');
+
+    expect(canvas?.style.left).toBe('-56px');
+
+    // A centred wrapper shrinks and re-centres once the card leaves the layout.
+    vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(new DOMRect(300, 560, 0, 0));
+    vi.advanceTimersByTime(DUST_MS + 32);
+
+    expect([ canvas?.style.left, canvas?.style.top ]).toEqual([ '-256px', '-140px' ]);
+  });
+
   it('still sweeps the card away where there is no canvas', () => {
     vi.unstubAllGlobals();
     const { host, card } = mount();

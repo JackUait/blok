@@ -131,7 +131,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/toolbar/positioning.ts': 'Toolbar geometry is converted into offsets local to the editor-owned wrapper.',
   'components/utils/link-hover-card.ts': 'Fixed top-layer hover card continuously tracks its live anchor and viewport bounds.',
   'components/utils/notifier/draw.ts': 'Toast exit ghosts subtract the card rect from each part rect and write offsets inside the card; they fade out and are removed.',
-  'components/utils/notifier/dust.ts': 'The dust canvas subtracts the notifier wrapper rect from the closing card rect once and sits at that offset inside the wrapper; it is removed when the dust settles.',
+  'components/utils/notifier/dust.ts': 'Each frame the dust canvas subtracts the moving notifier wrapper rect from the closing card rect taken at close, so it stays where the card was; it is removed when the dust settles.',
   'components/utils/popover/anchored-position.ts': 'Shared coordinate-space engine and the only approved root anchored style writer.',
   'components/utils/popover/popover-desktop.ts': 'Shared root popover delegates boundary resolution and continuously tracks movement.',
   'components/utils/tooltip.ts': 'Fixed tooltip uses viewport coordinates and intentionally dismisses on capture-phase scroll.',

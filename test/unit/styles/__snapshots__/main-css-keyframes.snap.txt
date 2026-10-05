@@ -886,6 +886,22 @@
   to { opacity: 0; translate: 0 -8px; filter: blur(4px) }
 }
 
+@keyframes blok-toast-launch {
+  from { translate: 0 var(--_blok-toast-launch-from); scale: 0.86; transform: perspective(700px) rotateX(28deg) }
+}
+
+@keyframes blok-toast-launch-fade {
+  from { opacity: 0; filter: blur(12px) brightness(1.8) }
+}
+
+@keyframes blok-toast-part-in {
+  from { opacity: 0; translate: 0 8px; filter: blur(6px) }
+}
+
+@keyframes blok-toast-peek-in {
+  from { translate: 0 0; opacity: 0 }
+}
+
 @keyframes blok-toast-rise {
   from { translate: 0 var(--_blok-toast-rise-y, calc(-1 * var(--blok-toast-peek))); clip-path: inset(0 var(--_blok-toast-rise-right, 12px) var(--_blok-toast-rise-bottom, 0px) var(--_blok-toast-rise-left, 12px) round var(--blok-radius-surface)); filter: brightness(0.5); box-shadow: none }
   72% { translate: 0 0; clip-path: inset(-64px round var(--blok-radius-surface)); filter: brightness(1); box-shadow: none }

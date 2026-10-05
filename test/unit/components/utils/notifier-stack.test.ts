@@ -227,4 +227,117 @@ describe('Notifier card stack', () => {
         .toEqual([ '42px', '42px', '8px', '-4px' ]);
     });
   });
+
+  describe('a card joining the deck', () => {
+    const calls: { card: Element; keyframes: Keyframe[]; options: KeyframeAnimationOptions }[] = [];
+
+    const motion = (reduce: boolean): void => {
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        value: (query: string) => ({ matches: reduce && query.includes('reduce'), media: query }),
+      });
+    };
+
+    beforeEach(() => {
+      calls.length = 0;
+      motion(false);
+      // jsdom has no Web Animations API.
+      Object.defineProperty(HTMLElement.prototype, 'animate', {
+        configurable: true,
+        value(this: HTMLElement, keyframes: Keyframe[], options: KeyframeAnimationOptions) {
+          calls.push({ card: this, keyframes, options });
+        },
+      });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(HTMLElement.prototype, 'animate');
+      Reflect.deleteProperty(window, 'matchMedia');
+    });
+
+    const dips = (): string[] => calls.flatMap((call) => call.keyframes.map((frame) => String(frame.transform ?? '')))
+      .filter((transform) => transform.includes('translateY'));
+
+    it('knocks the front card away from the deck as the new card tucks in behind it', () => {
+      show(card('first'));
+      const first = front();
+
+      show(card('second'));
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].card).toBe(first);
+      expect(dips()[0]).toContain('translateY(3px)');
+      // Added on top, so the card's own entrance keeps running underneath.
+      expect(calls[0].options.composite).toBe('add');
+    });
+
+    it('knocks a top card upward, since its deck peeks out below', () => {
+      show(card('first'), 'top-center');
+      show(card('second'), 'top-center');
+
+      expect(dips()[0]).toContain('translateY(-3px)');
+    });
+
+    it('knocks again for every card that queues later, even past the drawn depth', () => {
+      show(card('first'));
+      [ 'second', 'third', 'fourth' ].forEach((message) => {
+        vi.advanceTimersByTime(1000);
+        show(card(message));
+      });
+
+      expect(calls).toHaveLength(3);
+    });
+
+    it('knocks once for a burst, so the dips do not add up', () => {
+      show(card('first'));
+      show(card('second'));
+      show(card('third'));
+      show(card('fourth'));
+
+      expect(calls).toHaveLength(1);
+    });
+
+    it('holds the deck until a still-launching front card lands', () => {
+      show(card('first'));
+      show(card('second'));
+
+      const wrapper = document.querySelector<HTMLElement>('[data-blok-testid="notifier-container"]');
+
+      expect(calls[0].options.delay).toBe(320);
+      expect(wrapper?.style.getPropertyValue('--_blok-toast-peek-delay')).toBe('320ms');
+    });
+
+    it('waits only for the rest of the launch when the next card comes mid-flight', () => {
+      show(card('first'));
+      vi.advanceTimersByTime(200);
+      show(card('second'));
+
+      expect(calls[0].options.delay).toBe(120);
+    });
+
+    it('springs the deck at once behind a card that has landed', () => {
+      show(card('first'));
+      vi.advanceTimersByTime(1000);
+      show(card('second'));
+
+      const wrapper = document.querySelector<HTMLElement>('[data-blok-testid="notifier-container"]');
+
+      expect(calls[0].options.delay).toBe(0);
+      expect(wrapper?.style.getPropertyValue('--_blok-toast-peek-delay')).toBe('0ms');
+    });
+
+    it('leaves a lone card alone', () => {
+      show(card('first'));
+
+      expect(calls).toHaveLength(0);
+    });
+
+    it('stays still when the reader asks for less motion', () => {
+      motion(true);
+      show(card('first'));
+      show(card('second'));
+
+      expect(calls).toHaveLength(0);
+    });
+  });
 });

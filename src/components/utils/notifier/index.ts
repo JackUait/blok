@@ -1,5 +1,6 @@
 import { registerLayer } from '../dismissable-layer';
 import { syncPortalDirection } from '../portal-direction';
+import { prefersReducedMotion } from '../reduced-motion';
 import { promoteToTopLayer, removeFromTopLayer } from '../top-layer';
 
 import { dissolve } from './dust';
@@ -100,6 +101,53 @@ const shapeRise = (leaving: HTMLElement, next: HTMLElement, position: NotifierPo
     next.style.setProperty('--_blok-toast-rise-bottom', px(next.offsetHeight - leaving.offsetHeight));
     next.style.setProperty('--_blok-toast-rise-y', px(leaving.offsetTop + shift - next.offsetTop));
   });
+};
+
+/** When a launching card reaches its spot; matches the spring's first crossing in blok-toast-launch (notifier-card.css). */
+const LAND_MS = 320;
+
+const NUDGE_MS = 460;
+
+// When each card started its launch, so a card queued mid-flight waits for it to land.
+const launchedAt = new WeakMap<HTMLElement, number>();
+
+// When each front card's dip ends.
+const nudgeEnds = new WeakMap<HTMLElement, number>();
+
+/**
+ * The deck forms behind the front card: the edges spring out and the card dips away from them.
+ * Both wait while a launching card is still on its way, or the edges would show where it lands.
+ * @param position - where the stack sits; a top stack peeks downward, so the card dips up
+ */
+const nudgeFront = (position: NotifierPosition): void => {
+  const card = frontCard();
+
+  if (card === null) {
+    return;
+  }
+  const now = Date.now();
+  const wait = Math.max(0, (launchedAt.get(card) ?? 0) + LAND_MS - now);
+
+  // Only the edge that just appeared reads this; a later write would shift the one already out.
+  if (waiting.length === 1) {
+    card.parentElement?.style.setProperty('--_blok-toast-peek-delay', `${wait}ms`);
+  }
+  // jsdom and old engines have no Web Animations API. Dips in a burst would add up, so one plays at a time.
+  if (prefersReducedMotion() || typeof card.animate !== 'function' || now < (nudgeEnds.get(card) ?? 0)) {
+    return;
+  }
+  nudgeEnds.set(card, now + wait + NUDGE_MS);
+  const dip = position.startsWith('top') ? -3 : 3;
+
+  // Added on top of its CSS animations, so an entrance still running is not cut.
+  card.animate(
+    [
+      { transform: 'none' },
+      { transform: `translateY(${dip}px) scale(0.985)`, offset: 0.3 },
+      { transform: 'none' },
+    ],
+    { duration: NUDGE_MS, delay: wait, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)', composite: 'add' }
+  );
 };
 
 const dropWaiting = (): void => {
@@ -378,6 +426,7 @@ const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: Notif
   } else {
     notify.classList.add(getSlideInClass(position));
     notify.setAttribute('data-blok-bounce-in', 'true');
+    launchedAt.set(notify, Date.now());
   }
 
   // Modal dialogs (confirm/prompt) stay until the user resolves them.
@@ -438,6 +487,7 @@ export const show = (
   if (isCard(options) && frontCard() !== null) {
     waiting.push({ options, mount: () => appendNotify(prepare_(position), buildNotify(), position, time, autoDismiss, sticky, true) });
     syncBehind();
+    nudgeFront(position);
 
     return;
   }

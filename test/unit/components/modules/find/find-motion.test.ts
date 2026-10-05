@@ -188,6 +188,33 @@ describe('bloom and stretch', () => {
     expect(animate.mock.contexts).toContain(p.dock);
   });
 
+  it('fades the skin in, so the dot is not a full-strength disc on the first frame', () => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(false);
+    bloom(parts(), { block: 'top', inline: 'right' });
+
+    const fade = animate.mock.calls.find((call) => call[1]?.pseudoElement === '::before' && 'opacity' in call[0][0]);
+
+    expect(fade?.[0][0]).toMatchObject({ opacity: 0 });
+    expect(fade?.[0].at(-1)).toMatchObject({ opacity: 1 });
+  });
+
+  // The bar is already visible when the row opens, so a fade would flash it.
+  it('does not fade the skin when the row stretches open', () => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(false);
+    const p = parts();
+
+    stretch({ dock: p.dock, bar: p.bar, field: p.field, buttons: [] }, { width: 470, height: 40 }, { block: 'top', inline: 'right' });
+
+    const skinCalls = animate.mock.calls.filter((call) => call[1]?.pseudoElement === '::before');
+
+    expect(skinCalls).toHaveLength(1);
+    expect(skinCalls.some((call) => call[0].some((frame: Keyframe) => 'opacity' in frame))).toBe(false);
+  });
+
   it('lands the parts in reading order: field, then controls one after another', () => {
     const animate = stubAnimate();
 

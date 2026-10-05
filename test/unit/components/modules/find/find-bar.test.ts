@@ -886,7 +886,9 @@ describe('FindBar', () => {
       vi.unstubAllGlobals();
     });
 
-    const skinCalls = (): unknown[][] => animate.mock.calls.filter((call) => call[1]?.pseudoElement === '::before');
+    // The geometry calls only: the bloom also fades the skin on its own ::before animation.
+    const skinCalls = (): unknown[][] => animate.mock.calls.filter((call) =>
+      call[1]?.pseudoElement === '::before' && Array.isArray(call[0]) && 'width' in call[0][0]);
 
     it('blooms when it opens', () => {
       bar.open({ readOnly: false });
@@ -962,12 +964,12 @@ describe('FindBar', () => {
 
     it('hops with no bloom when the bar is already open', () => {
       bar.open({ readOnly: false });
-      const blooms = animate.mock.calls.filter((call) => call[1]?.pseudoElement === '::before').length;
+      const blooms = skinCalls().length;
 
       bar.open({ readOnly: false, query: 'this', hop: source });
 
       expect(chip()).not.toBeNull();
-      expect(animate.mock.calls.filter((call) => call[1]?.pseudoElement === '::before')).toHaveLength(blooms);
+      expect(skinCalls()).toHaveLength(blooms);
     });
 
     it('ends the hop at once when the reader types', () => {

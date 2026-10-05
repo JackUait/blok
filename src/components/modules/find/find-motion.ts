@@ -178,6 +178,8 @@ export const bloom = (parts: BloomParts, corner: Corner): Animation[] => {
   const edge = startEdge(dock);
   const animations = [
     dock.animate(frames.skin, { ...sampled, pseudoElement: '::before' }),
+    // Its own animation, not in growFrames: stretch shares those frames and must not fade.
+    dock.animate([{ opacity: 0 }, { opacity: 1 }], { duration: frames.duration * 0.25, easing: 'ease-out', pseudoElement: '::before' }),
     bar.animate(frames.clip, sampled),
     bar.animate([{ opacity: 0 }, { opacity: 1 }], { duration: frames.duration * 0.25, easing: 'ease-out' }),
     parts.field.animate(

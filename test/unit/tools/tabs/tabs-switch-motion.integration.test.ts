@@ -128,4 +128,33 @@ describe('tabs block: switching cascades the blocks', () => {
 
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it('plays no content animation between two tabs that look the same', async () => {
+    const instance = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, tabs: TabsTool, tab: TabTool },
+      data: { blocks: [
+        { id: 'tabs', type: 'tabs', data: {}, content: ['e1', 'e2', 'full'] },
+        { id: 'e1', type: 'tab', data: { title: 'One' }, parent: 'tabs', content: [] },
+        { id: 'e2', type: 'tab', data: { title: 'Two' }, parent: 'tabs', content: [] },
+        { id: 'full', type: 'tab', data: { title: 'Full' }, parent: 'tabs', content: ['fp'] },
+        { id: 'fp', type: 'paragraph', data: { text: 'filled' }, parent: 'full' },
+      ] },
+    }) as unknown as TestEditor;
+
+    editor = instance;
+    await instance.isReady;
+    await settle();
+
+    const hints = (): HTMLElement[] => Array.from(document.querySelectorAll<HTMLElement>('[data-blok-tab-empty]'));
+
+    calls = [];
+    await openTab('Two');
+
+    expect(calls.filter(call => hints().includes(call.target))).toHaveLength(0);
+
+    await openTab('Full');
+
+    expect(calls.some(call => call.target === holderOf('fp'))).toBe(true);
+  });
 });

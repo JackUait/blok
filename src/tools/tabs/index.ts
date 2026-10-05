@@ -17,7 +17,7 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { mountChildBlocks } from '../nested-blocks';
 import { TABS_ATTR, TAB_TOOL } from './constants';
 import { attachPillGestures } from './pill-gestures';
-import { cascadeIn, foldPill, measurePill, morphPanelsHeight, moveIndicator, panelRows, popInPill, type PillBox } from './motion';
+import { cascadeIn, foldPill, looksTheSame, measurePill, morphPanelsHeight, moveIndicator, panelRows, popInPill, type PillBox } from './motion';
 import { renderTabsPreview } from './preview';
 import { tabRegistry, type TabsHandle } from './registry';
 import type { TabData, TabsData } from './types';
@@ -712,8 +712,9 @@ export class TabsTool implements BlockTool, TabsHandle {
       morphPanelsHeight(panels, fromHeight);
 
       const panel = tabs[nextIndex]?.holder;
+      const closing = tabs[previousIndex]?.holder;
 
-      if (panel !== undefined) {
+      if (panel !== undefined && (closing === undefined || !looksTheSame(panelRows(closing), panelRows(panel)))) {
         cascadeIn(panelRows(panel));
       }
       pill?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TABS_ATTR } from '../../../../src/tools/tabs/constants';
-import { cascadeIn, panelRows } from '../../../../src/tools/tabs/motion';
+import { cascadeIn, looksTheSame, panelRows } from '../../../../src/tools/tabs/motion';
 
 interface Call {
   target: HTMLElement;
@@ -42,13 +42,16 @@ const tabHolder = (rows: string[], empty = false): HTMLElement => {
     const row = document.createElement('div');
     const field = document.createElement('div');
 
+    const content = document.createElement('div');
+
     row.setAttribute('data-blok-element', '');
     row.setAttribute('data-blok-id', id);
     row.setAttribute('data-blok-testid', 'block-wrapper');
+    content.setAttribute('data-blok-element-content', '');
     field.setAttribute('contenteditable', 'true');
-    field.id = `field-${id}`;
-    field.textContent = id;
-    row.append(field);
+    field.textContent = id.replace(/^[^:]*:/, '');
+    content.append(field);
+    row.append(content);
     slot.append(row);
   });
   root.append(slot, hint);
@@ -129,6 +132,28 @@ describe('tabs switch motion', () => {
       cascadeIn(rows);
 
       expect(first.cancel).toHaveBeenCalled();
+    });
+  });
+
+  describe('looksTheSame', () => {
+    it('matches two empty tabs, whose only row is the hint', () => {
+      expect(looksTheSame(panelRows(tabHolder([], true)), panelRows(tabHolder([], true)))).toBe(true);
+    });
+
+    it('matches two tabs whose blocks draw the same content under different ids', () => {
+      expect(looksTheSame(panelRows(tabHolder(['a:Hello'])), panelRows(tabHolder(['b:Hello'])))).toBe(true);
+    });
+
+    it('tells tabs apart when any block draws something else', () => {
+      expect(looksTheSame(panelRows(tabHolder(['a:Hello'])), panelRows(tabHolder(['b:Bye'])))).toBe(false);
+    });
+
+    it('tells tabs apart when one has more blocks', () => {
+      expect(looksTheSame(panelRows(tabHolder(['a:Hello'])), panelRows(tabHolder(['b:Hello', 'c:Hello'])))).toBe(false);
+    });
+
+    it('tells an empty tab from a tab with one empty block', () => {
+      expect(looksTheSame(panelRows(tabHolder([], true)), panelRows(tabHolder(['a:'])))).toBe(false);
     });
   });
 });

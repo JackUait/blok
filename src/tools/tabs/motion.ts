@@ -1,3 +1,4 @@
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { getElementDirection } from '../../components/utils/direction';
 
@@ -230,3 +231,21 @@ export const cascadeIn = (rows: HTMLElement[]): void => {
     running.set(row, animation);
   });
 };
+
+/**
+ * What a row draws. A block's content wrapper carries no block id, so two
+ * blocks that render the same content give the same picture.
+ */
+const rowPicture = (row: HTMLElement): string =>
+  row.hasAttribute(TABS_ATTR.empty)
+    ? TABS_ATTR.empty
+    : row.querySelector(`[${DATA_ATTR.elementContent}]`)?.innerHTML ?? row.innerHTML;
+
+/**
+ * Whether two tabs show the same thing, e.g. two empty tabs and their hints.
+ * Any difference counts, so a doubtful pair still animates.
+ * @param from - the closing tab's rows
+ * @param to - the opening tab's rows
+ */
+export const looksTheSame = (from: HTMLElement[], to: HTMLElement[]): boolean =>
+  from.length === to.length && from.every((row, index) => rowPicture(row) === rowPicture(to[index]));

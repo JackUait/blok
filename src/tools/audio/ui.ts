@@ -173,13 +173,10 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   const disc = document.createElement('span');
   disc.className = 'blok-audio-cover__disc';
   placeholder.append(disc);
-  // Inside the disc so the crack turns with it; drawn in its 92px box (--blok-audio-disc-size).
-  disc.insertAdjacentHTML(
-    'beforeend',
-    '<svg class="blok-audio-error-state__crack" viewBox="0 0 92 92" fill="none">'
-      + '<path d="M8 30 24 36 30 31 41 42 39 47M24 36l-2 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
-      + '</svg>',
-  );
+  // Inside the disc so the crack turns with it; audio.css draws the line.
+  const crack = document.createElement('span');
+  crack.className = 'blok-audio-error-state__crack';
+  disc.append(crack);
   art.append(placeholder);
 
   const body = document.createElement('div');

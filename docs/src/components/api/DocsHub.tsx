@@ -2,9 +2,9 @@ import { Link } from '../common/Link';
 import { Typo } from '../common/Typo';
 import { useI18n } from '../../contexts/I18nContext';
 import { useApiTranslations } from '../../hooks/useApiTranslations';
-import { useToolsTranslations } from '../../hooks/useToolsTranslations';
 import { localizedPath } from '../../seo/locales';
 import { getRouteMetadata } from '../../seo/route-metadata';
+import { DOCS_HUB_SUMMARIES } from './docs-hub-summaries';
 
 /**
  * The `/docs` landing page. It used to be a client-side redirect, which left
@@ -15,8 +15,7 @@ import { getRouteMetadata } from '../../seo/route-metadata';
  */
 export const DocsHub: React.FC = () => {
   const { t, locale } = useI18n();
-  const { apiSections, sidebarSections } = useApiTranslations();
-  const { toolSections } = useToolsTranslations();
+  const { sidebarSections } = useApiTranslations();
 
   // Fall back to English when the hub's own strings have no translation yet, so
   // a missing key never surfaces as a raw `api.hub.*` token on the page.
@@ -34,13 +33,9 @@ export const DocsHub: React.FC = () => {
     getRouteMetadata(localizedPath('/docs', locale))?.h1 ??
     copy('api.hub.title', 'Blok documentation');
 
-  const descriptions = new Map<string, string>();
-  for (const section of apiSections) {
-    if (section.description) descriptions.set(section.id, section.description);
-  }
-  for (const tool of toolSections) {
-    if (!descriptions.has(tool.id)) descriptions.set(tool.id, tool.description);
-  }
+  // No fallback to the full description or to English: either one brings back
+  // a whole article (or English prose) inside every prerendered card.
+  const summaries = DOCS_HUB_SUMMARIES[locale];
 
   return (
     <div className="flex flex-col gap-12" data-blok-testid="docs-hub">
@@ -73,9 +68,9 @@ export const DocsHub: React.FC = () => {
                   <span className="text-sm font-semibold text-foreground">
                     <Typo>{link.label}</Typo>
                   </span>
-                  {descriptions.has(link.id) && (
-                    <span className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                      <Typo>{descriptions.get(link.id)}</Typo>
+                  {summaries[link.id] && (
+                    <span className="text-sm leading-relaxed text-muted-foreground">
+                      <Typo>{summaries[link.id]}</Typo>
                     </span>
                   )}
                 </Link>

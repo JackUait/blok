@@ -11607,6 +11607,10 @@ span[data-blok-slash-search] {
   transform: scale(0.96);
 }
 
+[data-blok-tabs-pill]:focus-visible {
+  outline-offset: -2px;
+}
+
 [data-blok-tabs-pill][aria-selected="true"] {
   color: var(--blok-text-primary);
 }

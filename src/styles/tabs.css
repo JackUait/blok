@@ -168,6 +168,12 @@
   transform: scale(0.96);
 }
 
+/* Inside the pill: the scroller is one pill tall and clips anything outside.
+ * Matches the 2px width of the shared ring in preflight.css. */
+[data-blok-tabs-pill]:focus-visible {
+  outline-offset: -2px;
+}
+
 [data-blok-tabs-pill][aria-selected="true"] {
   color: var(--blok-text-primary);
 }

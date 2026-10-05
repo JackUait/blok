@@ -82,6 +82,17 @@ describe('tabs folder look', () => {
     expect(declaration(ruleBody('[data-blok-tabs-indicator]'), 'inset-block-start')).toBe(hairline);
   });
 
+  // The shared ring sits outside the pill (outline-offset: 1px). The scroller
+  // is exactly one pill tall and clips both axes, so it cut the ring to two
+  // side brackets.
+  it('draws a tab focus ring inside the tab so the scroller cannot clip it', () => {
+    const preflight = readFileSync(resolve(__dirname, '../../../src/styles/preflight.css'), 'utf-8');
+    const width = /outline:\s*(\d+)px solid var\(--blok-focus-ring\)/.exec(preflight)?.[1];
+
+    expect(width).toBeDefined();
+    expect(declaration(ruleBody('[data-blok-tabs-pill]:focus-visible'), 'outline-offset')).toBe(`-${width}px`);
+  });
+
   it('keeps the open tab neutral, never blue', () => {
     const selected = ruleBody('[data-blok-tabs-pill][aria-selected="true"]');
 

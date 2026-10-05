@@ -9,7 +9,9 @@ test.beforeAll(async () => {
   vite = await createServer({
     root: resolve(__dirname, '../../../..'),
     logLevel: 'error',
-    server: { host: '127.0.0.1', port: 0, open: false },
+    // Without hmr off, another session's edit in this shared checkout makes
+    // Vite full-reload every open page mid-test.
+    server: { host: '127.0.0.1', port: 0, open: false, hmr: false },
   });
   await vite.listen();
 

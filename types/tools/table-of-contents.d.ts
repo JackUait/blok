@@ -41,4 +41,5 @@ export declare class TableOfContents implements BlockTool {
   renderSettings(): MenuConfig;
   removed(): void;
   destroy(): void;
+  onNavigationEnter(): boolean;
 }

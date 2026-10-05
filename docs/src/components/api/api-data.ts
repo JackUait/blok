@@ -868,7 +868,7 @@ if (index !== undefined) {
         name: "blocks.scrollToBlock(id)",
         returnType: "void",
         description:
-          "Scrolls a block into view, selects it, pulses the arrival highlight and announces the navigation to assistive tech. It is the public counterpart of the boot-time URL-hash scroll. It does nothing when no block with that id is in the document.\n\nFramework adapters that mount into a detached holder (React/Vue/Angular) render seeded content before it joins the page, so the boot hash scroll defers. @bloklabs/react drains it automatically once the holder connects.\n\nFor deep linking, call this method yourself after the editor is ready.",
+          "Scrolls a block into view, selects it, pulses the arrival highlight and announces the navigation to assistive tech. It is the public counterpart of the boot-time URL-hash scroll. It does nothing when no block with that id is in the document.\n\nA new jump replaces any blocks that are already selected. Pass `{ select: false }` as the second argument to jump without selecting, as in-page navigation such as a table of contents does: a selected block is deleted by the next Backspace.\n\nFramework adapters that mount into a detached holder (React/Vue/Angular) render seeded content before it joins the page, so the boot hash scroll defers. @bloklabs/react drains it automatically once the holder connects.\n\nFor deep linking, call this method yourself after the editor is ready.",
         example: `editor.blocks.scrollToBlock(nodeId);`,
       },
       {

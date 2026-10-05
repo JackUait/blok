@@ -14,7 +14,37 @@ Use one host operation ID for the first attempt and every retry. In a transactio
 
 A failure before commit leaves the source intact. If the response is lost after commit, retry the same operation ID and return the stored receipt without applying the transform again. Retain operation records for at least the host's retry and Undo window.
 
-`executePageTransfer` checks that the host returned a matching transaction receipt. It cannot inspect the host's database or make a false receipt durable. The stock `/sync/{doc}/edit` HTTP 204 is not a transfer receipt. A saved-document adapter is barred while collaboration is active: its consumer projection may lag the live room. A live adapter must transact the authoritative room state, not just consumer GET/PUT snapshots. Until a host supplies and tests that boundary, leave collaborative cross-page transfer disabled.
+`executePageTransfer` checks that the host returned a matching transaction receipt. It cannot inspect the host's database or make a false receipt durable. The stock `/sync/{doc}/edit` HTTP 204 is not a transfer receipt. A saved-document adapter is barred while collaboration is active: its consumer projection may lag the live room. A live adapter must transact the authoritative room state, not just consumer GET/PUT snapshots. Use the sidecar adapter below, or a host transaction you test yourself. Otherwise leave collaborative cross-page transfer disabled.
+
+## The sidecar adapter
+
+`createSidecarTransferHost({ baseUrl, ticketFor, log, fetch?, maxEditBytes?, maxAttempts? })` from `@bloklabs/core/view` returns a `live-saga` host. It works with the stock collab sidecar. `executePageTransfer` and `undoPageTransfer` accept it while collaboration is on.
+
+**Requirement.** The sidecar must run with an operation journal (`--collab-journal`). Without one, `/state` and `/edit` return no `Blok-Doc-Lineage`/`Blok-Doc-Sequence` headers. The adapter then refuses before it writes anything. It also stops on any 428. An edit 204 without those headers has already applied its copy. The adapter stops there and keeps the source, so the receiving page keeps that copy.
+
+The adapter hashes idempotency keys with `crypto.subtle`. Browsers expose it only in a secure context (HTTPS or localhost). Elsewhere it fails before any write.
+
+`/state` needs a read pass and `/edit` a write pass. In `--auth ticket` the server requires an allowed `Origin` on every request. A browser sends it. A Node host does not, so pass a `fetch` that adds an allowed `Origin` header.
+
+`test/unit/view/page-transfer-sidecar.server.test.ts` runs the adapter against the real host. Set `BLOK_CONFORMANCE_SERVER` to a built `Blok.Server.Host` to run it.
+
+**Guarantee.** No blocks are lost. A copy may show in both pages for a short time. The steps are:
+
+1. Read `GET /sync/{doc}/state` for both pages. Run the pure transform on that fresh state.
+2. Insert the copy into the receiving page. Large copies are split into requests under `maxEditBytes` (the server's `CollabMaxMessageBytes`, 1 MiB by default). Parents go first. The first request carries `If-Match`. Each request must return a durable receipt.
+3. Remove the blocks from the giving page in one request, with `If-Match` set to the head read in step 1. For turn-into-page, the same request inserts the pointer.
+4. On 412, a peer changed the giving page. The adapter removes its copy and tries again from a fresh read, up to `maxAttempts` times. It removes the copy only if the copy is exactly what it inserted, with no peer edits or new children. Otherwise it leaves the copy and throws. Both pages then hold the blocks.
+
+**Recovery.** The host supplies `log: { get(operationId), put(record) }` and stores each record as given. Blok stores nothing. The adapter writes the exact request bodies to the log before the first edit. A retry with the same operation ID replays the same bodies and idempotency keys. The journal then returns the first result instead of applying it again. A network error or 5xx is treated as unknown: the adapter throws and keeps the log, and a retry resolves it. It never rebuilds the plan on a retry before the logged plan gets a definite answer. If a page's lineage changed since the record was written, the journal forgot those keys. The adapter refuses, because the outcome is unknown.
+
+**Directions.** For `move-blocks`, `reparent-page` and `turn-into-page`, blocks go from `sourcePageId` to `targetPageId`. For `turn-into-blocks`, `sourcePageId` is the page being emptied and `targetPageId` holds its pointer. The pointer must name `sourcePageId`.
+
+**Limits.**
+
+- `duplicate-page` is refused. It needs every copied body in one transaction.
+- Undo covers `move-blocks` and `reparent-page`. It runs the reverse saga under a new operation ID, using the placements stored in the log. It refuses if the roots are no longer together at the destination. It checks position only. It cannot prove the roots still belong to that transfer. If a peer moves them away and back to the same place, Undo still runs. Undo also does not recheck page owners or cycles. The host must do that before calling it. Undo of `turn-into-page` and `turn-into-blocks` is refused: run the inverse transfer instead.
+- The adapter cannot see the page tree or permissions. `ticketFor(doc, { write })` supplies each pass, and the server checks it. The host must still check owning-page cycles beyond a pointer that names its own target.
+- A block field that an `/edit` insert cannot carry, such as a non-zero `indent`, is refused rather than dropped.
 
 ## Deep page duplication
 

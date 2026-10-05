@@ -736,7 +736,19 @@ export type PageTransferRequest =
     place: PageBlockPlacement;
   });
 
-/** Proof claimed by a host after atomically committing the operation. */
+/** One durable edit receipt from a sidecar journal. */
+export interface PageTransferSagaStep {
+  doc: string;
+  lineage: string;
+  sequence: string;
+}
+
+/** A host transaction, or a chain of durable per-document sidecar edits. */
+export type PageTransferDurability =
+  | { kind: 'transaction'; transactionId: string }
+  | { kind: 'saga'; steps: PageTransferSagaStep[] };
+
+/** Proof claimed by a host after durably committing the operation. */
 export interface PageTransferReceipt {
   operationId: string;
   kind: PageTransferRequest['kind'];
@@ -744,12 +756,12 @@ export interface PageTransferReceipt {
   targetPageId: string;
   rootIds: string[];
   undoToken: string;
-  durability: { kind: 'transaction'; transactionId: string };
+  durability: PageTransferDurability;
 }
 
-/** Host persistence adapter. A live transaction must cover authoritative rooms. */
+/** Host persistence adapter. A live mode must write the authoritative rooms. */
 export interface PageTransferHost {
-  mode: 'saved-transaction' | 'live-transaction';
+  mode: 'saved-transaction' | 'live-transaction' | 'live-saga';
   run(request: PageTransferRequest): Promise<PageTransferReceipt>;
 }
 
@@ -769,7 +781,7 @@ export interface PageTransferUndoReceipt {
   operationId: string;
   undoOfOperationId: string;
   undoToken: string;
-  durability: { kind: 'transaction'; transactionId: string };
+  durability: PageTransferDurability;
 }
 
 export interface PageTransferUndoHost extends PageTransferHost {
@@ -782,6 +794,97 @@ export declare function undoPageTransfer(
   request: PageTransferUndoRequest,
   context: { collaboration: boolean }
 ): Promise<PageTransferUndoReceipt>;
+
+/** A document head from a journalled sidecar. */
+export interface SidecarDocHead {
+  lineage: string;
+  sequence: string;
+}
+
+/** A block as one `/sync/{doc}/edit` insert carries it; its place lives on the op. */
+export interface SidecarEditBlock {
+  id: string;
+  type: string;
+  data: Record<string, unknown>;
+  tunes?: Record<string, unknown>;
+  lastEditedAt?: number;
+  lastEditedBy?: string;
+}
+
+/** One op of a `/sync/{doc}/edit` body. */
+export type SidecarEditOp =
+  | { op: 'insert'; id: string; block: SidecarEditBlock; parent: string | null; after: string | null }
+  | { op: 'remove'; id: string };
+
+export interface SidecarRootPlacement extends PageBlockPlacement {
+  rootId: string;
+}
+
+/** The exact edits of one attempt. Stored so a retry replays the same bodies and keys. */
+export interface SidecarTransferPlan {
+  copyDoc: string;
+  copyHead: SidecarDocHead;
+  copyChunks: SidecarEditOp[][];
+  originDoc: string;
+  originHead: SidecarDocHead;
+  originOps: SidecarEditOp[];
+  /** Ops that put back what the copy step removed (the pointer of turn-into-blocks). */
+  restoreOps: SidecarEditOp[];
+  rootIds: string[];
+  restore?: SidecarRootPlacement[];
+  destination?: PageBlockPlacement;
+}
+
+/** Progress of one transfer or Undo. JSON-safe; the host stores it as given. */
+export interface SidecarTransferRecord {
+  version: 1;
+  operationId: string;
+  digest: string;
+  attempt: number;
+  compensationTry: number;
+  plan: SidecarTransferPlan;
+  copySteps: PageTransferSagaStep[];
+  receipt?: PageTransferReceipt;
+  undoReceipt?: PageTransferUndoReceipt;
+}
+
+/** Host-owned storage for transfer progress. Keep a record for the retry and Undo window. */
+export interface SidecarTransferLog {
+  get(operationId: string): SidecarTransferRecord | undefined | Promise<SidecarTransferRecord | undefined>;
+  put(record: SidecarTransferRecord): void | Promise<void>;
+}
+
+export interface SidecarFetchResponse {
+  status: number;
+  headers: { get(name: string): string | null };
+  json(): Promise<unknown>;
+}
+
+/** The part of `fetch` the adapter uses. The global `fetch` fits. */
+export type SidecarFetch = (
+  url: string,
+  init: { method: 'GET' | 'POST'; headers: Record<string, string>; body?: string }
+) => Promise<SidecarFetchResponse>;
+
+export interface SidecarTransferHostOptions {
+  /** The prefix the sidecar routes are mapped under, e.g. `https://example.com/api/blok`. */
+  baseUrl: string;
+  /** A pass for one document. `write` is true for edits and false for state reads. */
+  ticketFor(doc: string, access: { write: boolean }): string | Promise<string>;
+  log: SidecarTransferLog;
+  fetch?: SidecarFetch;
+  /** The server's `CollabMaxMessageBytes`. Defaults to 1048576. */
+  maxEditBytes?: number;
+  /** Fresh attempts when a peer edits the source mid-transfer. Defaults to 3. */
+  maxAttempts?: number;
+}
+
+/**
+ * A `live-saga` transfer host over the stock collab sidecar. Needs a server
+ * running with an operation journal (`--collab-journal`). It never loses
+ * blocks; a copy may show in both pages for a moment. Refuses `duplicate-page`.
+ */
+export declare function createSidecarTransferHost(options: SidecarTransferHostOptions): PageTransferUndoHost;
 
 /** Copy one page document, rewriting only known block and page references. */
 export declare function remapPageDocument(

@@ -27,6 +27,16 @@ export type PageTransferRequest =
     place: PageBlockPlacement;
   });
 
+export interface PageTransferSagaStep {
+  doc: string;
+  lineage: string;
+  sequence: string;
+}
+
+export type PageTransferDurability =
+  | { kind: 'transaction'; transactionId: string }
+  | { kind: 'saga'; steps: PageTransferSagaStep[] };
+
 export interface PageTransferReceipt {
   operationId: string;
   kind: PageTransferRequest['kind'];
@@ -34,11 +44,11 @@ export interface PageTransferReceipt {
   targetPageId: string;
   rootIds: string[];
   undoToken: string;
-  durability: { kind: 'transaction'; transactionId: string };
+  durability: PageTransferDurability;
 }
 
 export interface PageTransferHost {
-  mode: 'saved-transaction' | 'live-transaction';
+  mode: 'saved-transaction' | 'live-transaction' | 'live-saga';
   run(request: PageTransferRequest): Promise<PageTransferReceipt>;
 }
 
@@ -51,7 +61,7 @@ export interface PageTransferUndoReceipt {
   operationId: string;
   undoOfOperationId: string;
   undoToken: string;
-  durability: { kind: 'transaction'; transactionId: string };
+  durability: PageTransferDurability;
 }
 
 export interface PageTransferUndoHost extends PageTransferHost {
@@ -60,6 +70,26 @@ export interface PageTransferUndoHost extends PageTransferHost {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isFilled = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
+
+const isDurable = (value: unknown): boolean => {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.kind === 'transaction') {
+    return isFilled(value.transactionId);
+  }
+
+  return value.kind === 'saga' &&
+    Array.isArray(value.steps) &&
+    value.steps.length > 0 &&
+    Array.from(value.steps).every((step: unknown) => isRecord(step) &&
+      isFilled(step.doc) && isFilled(step.lineage) && isFilled(step.sequence));
+};
+
+const isLiveMode = (mode: PageTransferHost['mode']): boolean =>
+  mode === 'live-transaction' || mode === 'live-saga';
 
 const matchingReceipt = (
   value: unknown,
@@ -74,10 +104,7 @@ const matchingReceipt = (
       value.undoToken.length === 0 ||
       !Array.isArray(value.rootIds) ||
       !Array.from(value.rootIds).every((id: unknown) => typeof id === 'string' && id.length > 0) ||
-      !isRecord(value.durability) ||
-      value.durability.kind !== 'transaction' ||
-      typeof value.durability.transactionId !== 'string' ||
-      value.durability.transactionId.length === 0) {
+      !isDurable(value.durability)) {
     return false;
   }
 
@@ -97,7 +124,7 @@ export async function executePageTransfer(
   if (!request.operationId.trim()) {
     throw new Error('Transfer operation ID is required');
   }
-  if (context.collaboration && host.mode !== 'live-transaction') {
+  if (context.collaboration && !isLiveMode(host.mode)) {
     throw new Error('Cross-document transfer needs a durable live document adapter');
   }
 
@@ -117,10 +144,7 @@ const isDurableOriginalReceipt = (value: unknown): value is PageTransferReceipt 
   value.operationId.length > 0 &&
   typeof value.undoToken === 'string' &&
   value.undoToken.length > 0 &&
-  isRecord(value.durability) &&
-  value.durability.kind === 'transaction' &&
-  typeof value.durability.transactionId === 'string' &&
-  value.durability.transactionId.length > 0;
+  isDurable(value.durability);
 
 const matchingUndoReceipt = (
   value: unknown,
@@ -130,10 +154,7 @@ const matchingUndoReceipt = (
   value.operationId === request.operationId &&
   value.undoOfOperationId === request.undoOf.operationId &&
   value.undoToken === request.undoOf.undoToken &&
-  isRecord(value.durability) &&
-  value.durability.kind === 'transaction' &&
-  typeof value.durability.transactionId === 'string' &&
-  value.durability.transactionId.length > 0;
+  isDurable(value.durability);
 
 export async function undoPageTransfer(
   host: PageTransferUndoHost,
@@ -143,7 +164,7 @@ export async function undoPageTransfer(
   if (!request.operationId.trim()) {
     throw new Error('Undo operation ID is required');
   }
-  if (context.collaboration && host.mode !== 'live-transaction') {
+  if (context.collaboration && !isLiveMode(host.mode)) {
     throw new Error('Undo needs a durable live document adapter');
   }
   if (!isDurableOriginalReceipt(request.undoOf)) {

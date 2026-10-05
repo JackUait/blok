@@ -31,8 +31,7 @@ const receiptDigest = (receipt: PageTransferReceipt): string => JSON.stringify([
   receipt.targetPageId,
   receipt.rootIds,
   receipt.undoToken,
-  receipt.durability.kind,
-  receipt.durability.transactionId,
+  receipt.durability,
 ]);
 
 export class MemoryTransferHost implements PageTransferUndoHost {

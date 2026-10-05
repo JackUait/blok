@@ -66,5 +66,20 @@ export type {
   PageTransferUndoRequest,
   PageTransferUndoReceipt,
   PageTransferUndoHost,
+  PageTransferDurability,
+  PageTransferSagaStep,
 } from './page-transfer-host';
 export { remapPageDocument } from './page-document-remap';
+export { createSidecarTransferHost } from './page-transfer-sidecar';
+export type {
+  SidecarDocHead,
+  SidecarEditBlock,
+  SidecarEditOp,
+  SidecarFetch,
+  SidecarFetchResponse,
+  SidecarRootPlacement,
+  SidecarTransferHostOptions,
+  SidecarTransferLog,
+  SidecarTransferPlan,
+  SidecarTransferRecord,
+} from './page-transfer-sidecar';

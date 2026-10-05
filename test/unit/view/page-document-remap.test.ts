@@ -337,6 +337,14 @@ describe('remapPageDocument', () => {
     );
   });
 
+  it.each(['constructor', 'toString', '__proto__'])('copies a block whose type is the prototype key %s', (type) => {
+    const block: OutputBlockData = JSON.parse(JSON.stringify({ id: 'old-block', type, data: { text: 'x' } }));
+
+    const copied = remapPageDocument(doc([block]), { blockIds: new Map([['old-block', 'new-block']]), pageIds: new Map() });
+
+    expect(copied.blocks).toEqual([{ id: 'new-block', type, data: { text: 'x' } }]);
+  });
+
   it.each(['page', 'page-link', 'database-row', 'table', 'paragraph', 'header', 'list', 'quote', 'toggle'])(
     'copies a %s block that has no data',
     (type) => {

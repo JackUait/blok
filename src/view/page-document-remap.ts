@@ -95,6 +95,10 @@ const LEGACY_HTML_FIELDS: Record<string, readonly string[]> = {
 const LEGACY_BODY_TYPES = new Set(['callout', 'toggleList']);
 const LEGACY_ITEM_TYPES = new Set(['list', 'checklist']);
 
+/** Own keys only: a block typed `constructor` would otherwise read a prototype function. */
+const fieldsOf = (table: Record<string, readonly string[]>, type: string): readonly string[] =>
+  Object.prototype.hasOwnProperty.call(table, type) ? table[type] : [];
+
 const fieldSlot = (kind: SlotKind, holder: Record<string, unknown>, key: string): Slot => ({
   kind,
   value: holder[key],
@@ -176,7 +180,7 @@ const blockSlots = (block: unknown, nested: boolean): Slot[] => {
   if (type === 'table') {
     slots.push(...tableSlots(data.content));
   }
-  slots.push(...stringFieldSlots(data, [...INLINE_HTML_FIELDS[type] ?? [], ...LEGACY_HTML_FIELDS[type] ?? []]));
+  slots.push(...stringFieldSlots(data, [...fieldsOf(INLINE_HTML_FIELDS, type), ...fieldsOf(LEGACY_HTML_FIELDS, type)]));
 
   const body = data.body;
   const cols: unknown[] = type === 'columns' && Array.isArray(data.cols) ? data.cols : [];

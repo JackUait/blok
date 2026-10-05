@@ -15175,11 +15175,16 @@ span[data-blok-slash-search] {
   opacity: 1;
 }
 
+[data-blok-find-bar]:not([data-blok-find-read-only]) [data-blok-find-replace-row][hidden] {
+  display: grid !important;
+}
+
 [data-blok-find-replace-row][hidden] {
   grid-template-rows: 0fr;
   margin-top: 0;
   opacity: 0;
-  transition: grid-template-rows var(--blok-duration-slow) var(--blok-ease-popover), margin-top var(--blok-duration-slow) var(--blok-ease-popover), opacity var(--blok-duration-slow) var(--blok-ease-popover), display var(--blok-duration-slow) allow-discrete;
+  visibility: hidden;
+  transition: grid-template-rows var(--blok-duration-slow) var(--blok-ease-popover), margin-top var(--blok-duration-slow) var(--blok-ease-popover), opacity var(--blok-duration-slow) var(--blok-ease-popover), visibility var(--blok-duration-slow) allow-discrete;
 }
 
 [data-blok-find-replace-row] > [data-blok-find-row] {

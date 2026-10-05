@@ -365,15 +365,26 @@
   opacity: 1;
 }
 
+/*
+  A closed row stays in layout, flat and invisible, so its wider buttons
+  still size the shared controls column and the find row never moves on
+  toggle. !important beats preflight's [hidden] display: none. Read-only
+  has no replace row, so it keeps display: none.
+*/
+[data-blok-find-bar]:not([data-blok-find-read-only]) [data-blok-find-replace-row][hidden] {
+  display: grid !important;
+}
+
 [data-blok-find-replace-row][hidden] {
   grid-template-rows: 0fr;
   margin-top: 0;
   opacity: 0;
+  visibility: hidden;
   transition:
     grid-template-rows var(--blok-duration-slow) var(--blok-ease-popover),
     margin-top var(--blok-duration-slow) var(--blok-ease-popover),
     opacity var(--blok-duration-slow) var(--blok-ease-popover),
-    display var(--blok-duration-slow) allow-discrete;
+    visibility var(--blok-duration-slow) allow-discrete;
 }
 
 [data-blok-find-replace-row] > [data-blok-find-row] {

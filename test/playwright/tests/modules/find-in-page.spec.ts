@@ -325,7 +325,7 @@ test.describe('find in page', () => {
       expect(replaceAll.right).toBeCloseTo(close.right, 0);
     });
 
-    test('opening the replace row keeps the options button against the find field', async ({ page }) => {
+    test('opening the replace row moves nothing in the find row', async ({ page }) => {
       await createEditor(page, paragraphs('foo one', 'foo two'));
       await focusParagraph(page, 'foo one');
       await page.keyboard.press(FIND_KEY);
@@ -348,11 +348,15 @@ test.describe('find in page', () => {
 
       await settle();
       const closedGap = await fieldToOptions();
+      const closedOptions = await edge('find-options', 'left');
+      const closedField = await edge('find-field', 'right');
 
       await page.getByTestId('find-replace-toggle').click();
       await expect(page.getByTestId('find-replace-row')).toBeVisible();
       await settle();
 
+      expect(await edge('find-options', 'left')).toBeCloseTo(closedOptions, 0);
+      expect(await edge('find-field', 'right')).toBeCloseTo(closedField, 0);
       expect(await fieldToOptions()).toBeCloseTo(closedGap, 0);
       expect(await edge('find-close', 'right')).toBeCloseTo(await edge('find-replace-all', 'right'), 0);
     });

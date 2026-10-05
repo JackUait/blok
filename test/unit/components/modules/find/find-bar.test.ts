@@ -929,6 +929,19 @@ describe('FindBar', () => {
 
       expect(skinCalls()).toHaveLength(1);
     });
+
+    it('stops the stretch when the replace row closes, so the skin follows the row up', () => {
+      bar.open({ readOnly: false });
+      const beforeStretch = cancels.length;
+
+      button(bar.element, 'find.toggleReplace').click();
+      const stretched = cancels.slice(beforeStretch);
+
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(stretched.length).toBeGreaterThan(0);
+      expect(stretched.every((cancel) => cancel.mock.calls.length === 1)).toBe(true);
+    });
   });
 
   describe('destroy', () => {

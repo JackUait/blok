@@ -614,6 +614,11 @@ export class FindBar {
       }, from, this.corner());
     }
 
+    // A stretch left running would paint the tall skin over a collapsing row.
+    if (changed && !next) {
+      this.stopMotion();
+    }
+
     if (changed) {
       this.callbacks.onReplaceChange();
     }

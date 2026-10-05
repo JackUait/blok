@@ -136,7 +136,7 @@ const stubReducedMotion = (reduce: boolean): void => {
   vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: reduce && query.includes('reduce'), media: query })));
 };
 
-describe('bloom', () => {
+describe('bloom and stretch', () => {
   const parts = (): Parameters<typeof bloom>[0] => {
     const dock = document.createElement('div');
     const bar = document.createElement('div');
@@ -156,10 +156,15 @@ describe('bloom', () => {
     };
   };
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     Reflect.deleteProperty(Element.prototype, 'animate');
     vi.unstubAllGlobals();
     document.body.replaceChildren();
+    vi.restoreAllMocks();
   });
 
   it('grows the skin on the dock and clips the bar, from the dot to the full box', () => {

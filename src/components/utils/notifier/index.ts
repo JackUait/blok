@@ -43,20 +43,63 @@ const isCard = (options: NotifierOptions): boolean =>
 const frontCard = (): HTMLElement | null =>
   document.querySelector<HTMLElement>('[data-blok-testid="notifier-container"] > [data-blok-toast="card"][data-state="open"]');
 
+/** How far each waiting card peeks out; matches --blok-toast-peek in notifier-card.css. */
+const PEEK_PX = 8;
+
+/** How much narrower each peek is on each side; matches the peek insets in notifier-card.css. */
+const PEEK_INSET_PX = 12;
+
+const px = (value: number): string => `${value}px`;
+
 /**
  * The wrapper draws the waiting cards as edges peeking out behind the front one.
+ * The edges follow the front card's box: mid-swap the wrapper also spans the leaving card.
+ * Measured a microtask later, once a just-mounted card has its text.
  */
 const syncBehind = (): void => {
-  const wrapper = document.querySelector('[data-blok-testid="notifier-container"]');
+  const wrapper = document.querySelector<HTMLElement>('[data-blok-testid="notifier-container"]');
 
   if (wrapper === null) {
     return;
   }
   if (waiting.length === 0) {
     wrapper.removeAttribute('data-blok-toast-behind');
-  } else {
-    wrapper.setAttribute('data-blok-toast-behind', String(Math.min(waiting.length, MAX_BEHIND)));
+
+    return;
   }
+  wrapper.setAttribute('data-blok-toast-behind', String(Math.min(waiting.length, MAX_BEHIND)));
+  queueMicrotask(() => {
+    const card = frontCard();
+
+    if (card === null || card.parentElement !== wrapper) {
+      return;
+    }
+    // Offsets, not rects: a rising card is translated, and a rect would include that.
+    wrapper.style.setProperty('--_blok-toast-peek-left', px(card.offsetLeft));
+    wrapper.style.setProperty('--_blok-toast-peek-right', px(wrapper.clientWidth - card.offsetLeft - card.offsetWidth));
+    wrapper.style.setProperty('--_blok-toast-peek-top', px(card.offsetTop));
+    wrapper.style.setProperty('--_blok-toast-peek-bottom', px(wrapper.clientHeight - card.offsetTop - card.offsetHeight));
+  });
+};
+
+/**
+ * Starts the next card in the leaving card's peek shape, so the stack reads as one
+ * deck even when the two cards differ in size. CSS unfolds it from there.
+ * @param leaving - the card being closed
+ * @param next - the card taking its place
+ * @param position - where the stack sits; a top stack peeks downward
+ */
+const shapeRise = (leaving: HTMLElement, next: HTMLElement, position: NotifierPosition): void => {
+  queueMicrotask(() => {
+    const shift = position.startsWith('top') ? PEEK_PX : -PEEK_PX;
+    const peekLeft = leaving.offsetLeft + PEEK_INSET_PX;
+    const peekRight = leaving.offsetLeft + leaving.offsetWidth - PEEK_INSET_PX;
+
+    next.style.setProperty('--_blok-toast-rise-left', px(peekLeft - next.offsetLeft));
+    next.style.setProperty('--_blok-toast-rise-right', px(next.offsetLeft + next.offsetWidth - peekRight));
+    next.style.setProperty('--_blok-toast-rise-bottom', px(next.offsetHeight - leaving.offsetHeight));
+    next.style.setProperty('--_blok-toast-rise-y', px(leaving.offsetTop + shift - next.offsetTop));
+  });
 };
 
 const dropWaiting = (): void => {
@@ -247,18 +290,26 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
 
       next.mount();
       syncBehind();
+
+      const risen = frontCard();
+
+      if (risen !== null) {
+        shapeRise(notify, risen, position);
+      }
       if (hadFocus) {
         frontCard()?.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]')?.focus();
       }
     }
     // Release the Top Layer once the toast is gone and no other notification remains.
     const release = (): void => {
+      syncBehind();
       if (wrapper.querySelector(NOTIFICATION_SELECTOR) === null) {
         removeFromTopLayer(wrapper);
       }
     };
 
-    if (notify.getAttribute('data-blok-toast') === 'card' && dissolve(notify, release)) {
+    // The wrapper shrinks once the leaving card is out of the layout, so the peeks re-measure.
+    if (notify.getAttribute('data-blok-toast') === 'card' && dissolve(notify, release, syncBehind)) {
       return;
     }
     dismissWithAnimation(notify, position);

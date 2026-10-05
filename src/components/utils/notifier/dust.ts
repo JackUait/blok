@@ -196,9 +196,10 @@ const createDust = (host: HTMLElement, notify: HTMLElement, box: DOMRect, rtl: b
  * Removal runs on timers, not frames, so a hidden tab still clears the card.
  * @param notify - the closing card
  * @param onGone - called once the card and its dust are gone
+ * @param onRemoved - called when the card leaves the layout, while its dust still drifts
  * @returns false when the card should leave the plain way (reduced motion, or detached)
  */
-export const dissolve = (notify: HTMLElement, onGone: () => void): boolean => {
+export const dissolve = (notify: HTMLElement, onGone: () => void, onRemoved?: () => void): boolean => {
   const host = notify.parentElement;
 
   if (host === null || prefersReducedMotion()) {
@@ -224,7 +225,10 @@ export const dissolve = (notify: HTMLElement, onGone: () => void): boolean => {
   };
 
   requestAnimationFrame(frame);
-  window.setTimeout(() => notify.remove(), DUST_MS);
+  window.setTimeout(() => {
+    notify.remove();
+    onRemoved?.();
+  }, DUST_MS);
   window.setTimeout(() => {
     life.running = false;
     dust?.remove();

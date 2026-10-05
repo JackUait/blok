@@ -74,6 +74,18 @@ describe('notifier dust', () => {
     expect(gone).toHaveBeenCalledTimes(1);
   });
 
+  it('says when the card has left the layout, before its dust settles', () => {
+    const { card } = mount();
+    const removed = vi.fn();
+
+    dissolve(card, vi.fn(), removed);
+    vi.advanceTimersByTime(DUST_MS - 1);
+    expect(removed).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
+    expect(removed).toHaveBeenCalledTimes(1);
+  });
+
   it('sweeps from the left in a right-to-left card, where the close button sits', () => {
     const { card } = mount();
 

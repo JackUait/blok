@@ -47,18 +47,21 @@
   content: '';
   position: absolute;
   z-index: -1;
-  /* The card's top margin (mt-2): the peek sits on the card's box, not the wrapper's. */
-  inset: 8px 12px 0;
+  /* The front card's box inside the wrapper, written by syncBehind; mid-swap the wrapper is wider. */
+  inset: var(--_blok-toast-peek-top, 8px) calc(var(--_blok-toast-peek-right, 0px) + 12px) var(--_blok-toast-peek-bottom, 0px) calc(var(--_blok-toast-peek-left, 0px) + 12px);
   border-radius: var(--blok-radius-surface);
   background: var(--blok-toast-peek-near);
   box-shadow: var(--blok-toast-peek-shadow);
   translate: 0 calc(-1 * var(--blok-toast-peek));
   pointer-events: none;
-  transition: translate 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-property: translate, inset;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 [data-blok-interface='notifier'][data-blok-toast-behind='2']::before {
-  inset-inline: 24px;
+  left: calc(var(--_blok-toast-peek-left, 0px) + 24px);
+  right: calc(var(--_blok-toast-peek-right, 0px) + 24px);
   background: var(--blok-toast-peek-far);
   translate: 0 calc(-2 * var(--blok-toast-peek));
 }
@@ -98,10 +101,6 @@
 [data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
   /* Waits in its peek shape while the closed card turns to dust over it (DUST_MS in dust.ts). */
   animation: blok-toast-rise 480ms cubic-bezier(0.22, 1, 0.36, 1) 320ms backwards;
-}
-
-[data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
-  animation-name: blok-toast-rise-top;
 }
 
 [data-blok-interface='notifier'] [data-blok-toast='card'] {
@@ -489,18 +488,34 @@
 }
 
 /*
-  The next card unfolds from its peek: it starts clipped to the peek's 12px-narrower
-  box and opens to full width, so its text never scales. The end clip is far outside
-  the card: `none` would not interpolate. Fill is backwards only, so the clip lets go after.
+  The next card starts in the leaving card's peek shape — clip box and offset written
+  by shapeRise in notifier/index.ts, so a wider or narrower card still reads as the
+  same deck — then unfolds. Clipped, never scaled, so its text does not wobble. It
+  waits dimmed, not see-through: the page must not show through the deck. The end
+  clip is far outside the card: `none` would not interpolate. Fill is backwards only,
+  so the clip lets go after.
 */
 @keyframes blok-toast-rise {
-  from { opacity: 0.55; translate: 0 calc(-1 * var(--blok-toast-peek)); clip-path: inset(0 12px round var(--blok-radius-surface)); }
-  to { opacity: 1; translate: 0 0; clip-path: inset(-64px round var(--blok-radius-surface)); }
-}
+  from {
+    translate: 0 var(--_blok-toast-rise-y, calc(-1 * var(--blok-toast-peek)));
+    clip-path: inset(0 var(--_blok-toast-rise-right, 12px) var(--_blok-toast-rise-bottom, 0px) var(--_blok-toast-rise-left, 12px) round var(--blok-radius-surface));
+    filter: brightness(0.5);
+    box-shadow: none;
+  }
 
-@keyframes blok-toast-rise-top {
-  from { opacity: 0.55; translate: 0 var(--blok-toast-peek); clip-path: inset(0 12px round var(--blok-radius-surface)); }
-  to { opacity: 1; translate: 0 0; clip-path: inset(-64px round var(--blok-radius-surface)); }
+  /* The shadow waits for the clip to open: a clip edge crossing it draws a hard grey box. */
+  72% {
+    translate: 0 0;
+    clip-path: inset(-64px round var(--blok-radius-surface));
+    filter: brightness(1);
+    box-shadow: none;
+  }
+
+  to {
+    translate: 0 0;
+    clip-path: inset(-64px round var(--blok-radius-surface));
+    filter: brightness(1);
+  }
 }
 
 @keyframes blok-toast-ghost-out {
@@ -514,8 +529,7 @@
   [data-blok-toast='card'] [data-blok-toast-part='check'] svg path,
   [data-blok-toast='card'][data-resolved='true']::after,
   [data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'],
-  [data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'],
-  [data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
+  [data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
     animation: none;
   }
 

@@ -181,4 +181,50 @@ describe('Notifier card stack', () => {
 
     expect([ first?.hasAttribute('data-blok-toast-dust'), first?.classList.contains('animate-notify-slide-out') ]).toEqual([ true, false ]);
   });
+
+  describe('geometry', () => {
+    // Layout offsets, not rects: a card mid-animation is translated and its rect would lie.
+    const place = (element: HTMLElement, left: number, top: number, width: number, height: number): void => {
+      Object.defineProperties(element, {
+        offsetLeft: { configurable: true, value: left },
+        offsetTop: { configurable: true, value: top },
+        offsetWidth: { configurable: true, value: width },
+        offsetHeight: { configurable: true, value: height },
+        clientWidth: { configurable: true, value: width },
+        clientHeight: { configurable: true, value: height },
+      });
+    };
+
+    const container = (): HTMLElement => document.querySelector<HTMLElement>('[data-blok-testid="notifier-container"]') as HTMLElement;
+
+    it('lines the peeking edges up with the front card, not the wider wrapper', async () => {
+      show(card('first'));
+      place(container(), 0, 0, 500, 72);
+      place(front() as HTMLElement, 60, 8, 380, 64);
+      show(card('second'));
+      await Promise.resolve();
+
+      const style = container().style;
+
+      expect([ 'left', 'right', 'top', 'bottom' ].map((side) => style.getPropertyValue(`--_blok-toast-peek-${side}`)))
+        .toEqual([ '60px', '60px', '8px', '0px' ]);
+    });
+
+    it('starts the next card in the closing card\'s peek shape, whatever its own size', async () => {
+      show(card('first'));
+      show(card('second'));
+      const first = front() as HTMLElement;
+
+      closeFront();
+      place(first, 60, 8, 380, 64);
+      place(front() as HTMLElement, 30, 4, 440, 72);
+      await Promise.resolve();
+
+      const style = (front() as HTMLElement).style;
+
+      // The peek is the closing card's box, 12px in on each side and 8px up.
+      expect([ 'left', 'right', 'bottom', 'y' ].map((part) => style.getPropertyValue(`--_blok-toast-rise-${part}`)))
+        .toEqual([ '42px', '42px', '8px', '-4px' ]);
+    });
+  });
 });

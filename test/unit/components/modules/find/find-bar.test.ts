@@ -1013,8 +1013,8 @@ describe('FindBar', () => {
 
       bar.close();
 
-      expect(roll?.cancel).toHaveBeenCalledTimes(1);
       expect(roll?.pause).not.toHaveBeenCalled();
+      expect(roll?.cancel).toHaveBeenCalledTimes(1);
     });
 
     it('forgets ended animations, so hops on an open bar do not pile up', () => {

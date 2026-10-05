@@ -2,7 +2,7 @@ import { registerLayer } from '../dismissable-layer';
 import { syncPortalDirection } from '../portal-direction';
 import { promoteToTopLayer, removeFromTopLayer } from '../top-layer';
 
-import { alert, confirm, drawResolved, getWrapper, modalCleanups, prompt, setToastDismisser } from './draw';
+import { alert, confirm, drawResolved, drawSettled, getWrapper, modalCleanups, prompt, setToastDismisser } from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions, NotifierPosition } from './types';
 import { DEFAULT_NOTIFIER_POSITION } from './types';
 
@@ -23,6 +23,72 @@ const toastCleanups = new WeakMap<HTMLElement, () => void>();
 // Keyed by the caller's options object so `dismiss` closes only the toast that caller showed.
 const toastsByOptions = new WeakMap<NotifierOptions, HTMLElement>();
 const toastDismiss = new WeakMap<HTMLElement, () => void>();
+
+/**
+ * Cards waiting behind the front card, oldest first. Each is drawn only when it
+ * reaches the front: a detached element would read as closed to `isClosed`.
+ */
+const waiting: { options: NotifierOptions; mount: () => void }[] = [];
+
+// Cards dropped from the stack before anyone saw them; `isClosed` reports them closed.
+const dropped = new WeakSet<NotifierOptions>();
+
+/** Cards drawn behind the front one. More waiting cards do not add depth. */
+const MAX_BEHIND = 2;
+
+const isCard = (options: NotifierOptions): boolean =>
+  options.type !== 'confirm' && options.type !== 'prompt' && options.actions !== undefined && options.actions.length > 0;
+
+const frontCard = (): HTMLElement | null =>
+  document.querySelector<HTMLElement>('[data-blok-testid="notifier-container"] > [data-blok-toast="card"][data-state="open"]');
+
+/**
+ * The wrapper draws the waiting cards as edges peeking out behind the front one.
+ */
+const syncBehind = (): void => {
+  const wrapper = document.querySelector('[data-blok-testid="notifier-container"]');
+
+  if (wrapper === null) {
+    return;
+  }
+  if (waiting.length === 0) {
+    wrapper.removeAttribute('data-blok-toast-behind');
+  } else {
+    wrapper.setAttribute('data-blok-toast-behind', String(Math.min(waiting.length, MAX_BEHIND)));
+  }
+};
+
+const dropWaiting = (): void => {
+  waiting.splice(0).forEach((entry) => dropped.add(entry.options));
+  syncBehind();
+};
+
+/**
+ * @param options - the object passed to `show`
+ * @returns true when that card was still waiting and is now out of the stack
+ */
+const unqueue = (options: NotifierOptions): boolean => {
+  const index = waiting.findIndex((entry) => entry.options === options);
+
+  if (index === -1) {
+    return false;
+  }
+  waiting.splice(index, 1);
+  syncBehind();
+
+  return true;
+};
+
+/**
+ * Pins a leaving card where it is, so the next card can take its place underneath it.
+ */
+const pinInPlace = (notify: HTMLElement): void => {
+  notify.style.setProperty('position', 'absolute');
+  notify.style.setProperty('left', `${notify.offsetLeft}px`);
+  notify.style.setProperty('top', `${notify.offsetTop}px`);
+  notify.style.setProperty('width', `${notify.offsetWidth}px`);
+  notify.style.setProperty('margin', '0');
+};
 
 /**
  * A pausable auto-dismiss timer. Instead of a fixed `setTimeout` (which keeps
@@ -183,6 +249,19 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
     }
 
     notify.setAttribute('data-state', 'closed');
+
+    const next = waiting.shift();
+
+    if (next !== undefined) {
+      const hadFocus = notify.contains(document.activeElement);
+
+      pinInPlace(notify);
+      next.mount();
+      syncBehind();
+      if (hadFocus) {
+        frontCard()?.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]')?.focus();
+      }
+    }
     dismissWithAnimation(notify, position);
 
     // Release the Top Layer once the toast has finished animating out and no
@@ -249,10 +328,14 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
  * Appends the notification to the wrapper and, for transient toasts, starts
  * their auto-dismiss lifecycle.
  */
-const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number, autoDismiss: boolean, sticky: boolean): void => {
+const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number, autoDismiss: boolean, sticky: boolean, rise = false): void => {
   wrapper.appendChild(notify);
-  notify.classList.add(getSlideInClass(position));
-  notify.setAttribute('data-blok-bounce-in', 'true');
+  if (rise) {
+    notify.setAttribute('data-blok-toast-rise', 'true');
+  } else {
+    notify.classList.add(getSlideInClass(position));
+    notify.setAttribute('data-blok-bounce-in', 'true');
+  }
 
   // Modal dialogs (confirm/prompt) stay until the user resolves them.
   if (!autoDismiss) {
@@ -309,6 +392,15 @@ export const show = (
     return notify;
   };
 
+  if (isCard(options) && frontCard() !== null) {
+    waiting.push({ options, mount: () => appendNotify(prepare_(position), buildNotify(), position, time, autoDismiss, sticky, true) });
+    syncBehind();
+
+    return;
+  }
+
+  dropWaiting();
+
   const existing = wrapper.querySelector<HTMLElement>('[data-blok-testid]');
 
   if (existing) {
@@ -348,6 +440,9 @@ export const show = (
  * @param options - the object passed to `show`
  */
 export const dismiss = (options: NotifierOptions): void => {
+  if (unqueue(options)) {
+    return;
+  }
   const notify = toastsByOptions.get(options);
 
   if (notify?.isConnected === true) {
@@ -360,6 +455,9 @@ export const dismiss = (options: NotifierOptions): void => {
  * @returns true once that toast was drawn and has closed; false while it is still mounting
  */
 export const isClosed = (options: NotifierOptions): boolean => {
+  if (dropped.has(options)) {
+    return true;
+  }
   const notify = toastsByOptions.get(options);
 
   return notify !== undefined && (!notify.isConnected || notify.getAttribute('data-state') !== 'open');
@@ -376,6 +474,9 @@ export const RESOLVED_HOLD_MS = 1600;
  * @param message - plain text, e.g. "Image restored"
  */
 export const resolve = (options: NotifierOptions, message: string): void => {
+  if (unqueue(options)) {
+    return;
+  }
   const notify = toastsByOptions.get(options);
 
   if (notify?.isConnected !== true || notify.hasAttribute('data-resolved')) {
@@ -385,9 +486,22 @@ export const resolve = (options: NotifierOptions, message: string): void => {
   window.setTimeout(() => toastDismiss.get(notify)?.(), RESOLVED_HOLD_MS);
 };
 
+/**
+ * Stop the busy spinner on the card shown with these options, so its actions work again.
+ * @param options - the object passed to `show`
+ */
+export const settle = (options: NotifierOptions): void => {
+  const notify = toastsByOptions.get(options);
+
+  if (notify?.isConnected === true) {
+    drawSettled(notify);
+  }
+};
+
 export const Notifier = {
   show,
   dismiss,
   resolve,
+  settle,
   isClosed,
 };

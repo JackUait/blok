@@ -15,28 +15,29 @@ type Reason = ImageFailureReport['reason'];
 
 interface Entry extends MediaFailureInput {
   reported: Set<Reason>;
+  card: NotifierOptions | null;
 }
 
 /**
- * Long enough to catch images on one page that run out of reloads together.
+ * Long enough to catch images on one page that run out of reloads together,
+ * so the host is asked once for the whole batch.
  */
 export const COALESCE_MS = 300;
 
 /**
- * Keeps track of failed media and tells the user about them: a toast when
- * they fail, a toast on save, and a leave guard while uploads are lost.
+ * Keeps track of failed media and tells the user about them: a card per failed
+ * image (the notifier stacks them), a toast on save, and a leave guard while uploads are lost.
  */
 export class MediaFailures extends Module {
   private readonly entries = new Map<string, Entry>();
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private holdingLeave = false;
+  private saveNotice: NotifierOptions | null = null;
   /**
-   * The toast the user should see. It is on screen only while they are in this editor.
+   * Cards the user should see are on screen only while they are in this editor.
    */
-  private shownToast: NotifierOptions | null = null;
-  private toastOnScreen = false;
+  private readonly onScreen = new Set<NotifierOptions>();
   private presence: { wrapper: HTMLElement; observer: IntersectionObserver | null; onScreen: boolean; focused: boolean } | null = null;
-  private recoveredSinceToast = 0;
   private leave: { promise: Promise<boolean>; settle(answer: boolean): void; banner: LeaveBanner } | null = null;
 
   /**
@@ -69,7 +70,13 @@ export class MediaFailures extends Module {
     if (this.isDestroyed) {
       return;
     }
-    this.entries.set(input.blockId, { ...input, reported: new Set() });
+    const card = this.liveCard(this.entries.get(input.blockId)?.card ?? null);
+
+    // A failed Retry keeps its card: the card stays where it is in the stack.
+    this.entries.set(input.blockId, { ...input, reported: new Set(card === null ? [] : [ 'fail' ]), card });
+    if (card !== null && this.onScreen.has(card)) {
+      this.Blok.NotifierAPI.settle(card);
+    }
     this.watchPresence();
     this.syncLeaveHold();
     this.flushTimer ??= setTimeout(() => this.flushFail(), COALESCE_MS);
@@ -81,15 +88,19 @@ export class MediaFailures extends Module {
    * @param options - `recovered` when the image now works, so the toast can say so
    */
   public clear(blockId: string, options: { recovered?: boolean } = {}): void {
-    if (!this.entries.delete(blockId)) {
+    const entry = this.entries.get(blockId);
+
+    if (entry === undefined) {
       return;
     }
+    this.entries.delete(blockId);
     this.syncLeaveHold();
-    if (options.recovered === true) {
-      this.recoveredSinceToast += 1;
+    if (entry.card !== null) {
+      this.closeNotice(entry.card, options.recovered === true);
     }
-    if (this.entries.size === 0 && this.shownToast !== null) {
-      this.closeToast(options.recovered === true);
+    if (this.entries.size === 0 && this.saveNotice !== null) {
+      this.closeNotice(this.saveNotice, false);
+      this.saveNotice = null;
     }
     if (this.leave === null) {
       return;
@@ -110,12 +121,25 @@ export class MediaFailures extends Module {
 
   /**
    * Called after each real save. Toasts failures not yet reported on save.
+   * A failure whose card is still up is left for a later save: the card already tells the user.
    */
   public onSave(): void {
-    if (this.isDestroyed || this.Blok.ReadOnly.isEnabled || !this.takeUnreported('save')) {
+    if (this.isDestroyed || this.Blok.ReadOnly.isEnabled) {
       return;
     }
-    this.notify('save', this.summary());
+    const unseen = (entry: Entry): boolean => this.liveCard(entry.card) === null;
+
+    if (this.takeUnreported('save', unseen).length === 0 || this.askHost('save') === false) {
+      return;
+    }
+    if (this.saveNotice !== null) {
+      this.closeNotice(this.saveNotice, false);
+    }
+    this.saveNotice = this.cardOptions(this.summary(), this.detail(), [ ...this.entries.values() ].map((entry) => entry.preview ?? null), {
+      retry: () => this.retryAll(),
+      show: () => this.showFirst(),
+    });
+    this.syncToasts();
   }
 
   /**
@@ -183,30 +207,47 @@ export class MediaFailures extends Module {
 
   private flushFail(): void {
     this.flushTimer = null;
-    if (this.isDestroyed || !this.takeUnreported('fail')) {
+    if (this.isDestroyed) {
       return;
     }
-    const all = [ ...this.entries.values() ];
-    const [ only ] = all;
-    const single = only.kind === 'upload' ? 'imageFailure.uploadFailed' : 'imageFailure.loadFailed';
-    const message = all.length === 1
-      ? this.Blok.I18n.t(single)
-      : this.Blok.I18n.t('imageFailure.failedMany', { count: all.length });
+    const fresh = this.takeUnreported('fail');
 
-    this.notify('fail', message);
+    if (fresh.length === 0 || this.askHost('fail') === false) {
+      return;
+    }
+    const i18n = this.Blok.I18n;
+
+    fresh.forEach((entry) => {
+      const upload = entry.kind === 'upload';
+      const { blockId } = entry;
+      const card = this.cardOptions(
+        i18n.t(upload ? 'imageFailure.uploadFailed' : 'imageFailure.loadFailed'),
+        i18n.t(upload ? 'imageFailure.uploadDetail' : 'imageFailure.loadDetail'),
+        [ entry.preview ?? null ],
+        {
+          // Looked up on click: a repeat failure replaces the entry but keeps this card.
+          retry: () => this.entries.get(blockId)?.retry(),
+          show: () => this.reveal(blockId),
+        }
+      );
+
+      this.entries.set(blockId, { ...entry, card });
+    });
+    this.syncToasts();
   }
 
   /**
-   * Marks every entry as reported for `reason`.
+   * Marks entries as reported for `reason`.
    * @param reason - the report reason
-   * @returns true when at least one entry was new for it
+   * @param take - which of the new entries to mark
+   * @returns the entries that were new for it
    */
-  private takeUnreported(reason: Reason): boolean {
-    const fresh = [ ...this.entries.values() ].filter((entry) => !entry.reported.has(reason));
+  private takeUnreported(reason: Reason, take: (entry: Entry) => boolean = () => true): Entry[] {
+    const fresh = [ ...this.entries.values() ].filter((entry) => !entry.reported.has(reason) && take(entry));
 
     fresh.forEach((entry) => entry.reported.add(reason));
 
-    return fresh.length > 0;
+    return fresh;
   }
 
   /**
@@ -229,29 +270,30 @@ export class MediaFailures extends Module {
   }
 
   /**
-   * @param recovered - the last failure went away because the image now works
+   * @param notice - a card that is going away
+   * @param recovered - its image works now, so the card says so before it closes
    */
-  private closeToast(recovered: boolean): void {
-    const toast = this.shownToast;
-
-    if (toast === null) {
+  private closeNotice(notice: NotifierOptions, recovered: boolean): void {
+    if (!this.onScreen.delete(notice)) {
       return;
     }
-    this.shownToast = null;
-    if (!this.toastOnScreen) {
-      return;
+    if (recovered) {
+      this.Blok.NotifierAPI.resolve(notice, this.Blok.I18n.t('imageFailure.restored'));
+    } else {
+      this.Blok.NotifierAPI.dismiss(notice);
     }
-    this.toastOnScreen = false;
-    if (!recovered) {
-      this.Blok.NotifierAPI.dismiss(toast);
+  }
 
-      return;
+  /**
+   * @param card - the card a failure had before it failed again
+   * @returns the card, or null when the user already closed it
+   */
+  private liveCard(card: NotifierOptions | null): NotifierOptions | null {
+    if (card === null || (this.onScreen.has(card) && this.Blok.NotifierAPI.isClosed(card))) {
+      return null;
     }
-    const message = this.recoveredSinceToast > 1
-      ? this.Blok.I18n.t('imageFailure.restoredMany', { count: this.recoveredSinceToast })
-      : this.Blok.I18n.t('imageFailure.restored');
 
-    this.Blok.NotifierAPI.resolve(toast, message);
+    return card;
   }
 
   /**
@@ -267,59 +309,72 @@ export class MediaFailures extends Module {
     return this.Blok.I18n.t(kinds.has('upload') ? 'imageFailure.uploadDetail' : 'imageFailure.loadDetail');
   }
 
-  private notify(reason: Reason, message: string): void {
-    if (this.askHost(reason) === false) {
-      return;
-    }
-    const options: NotifierOptions = {
+  private cardOptions(message: string, detail: string | undefined, thumbnails: (string | null)[], on: { retry(): void; show(): void }): NotifierOptions {
+    return {
       message,
       style: 'error',
-      detail: this.detail(),
-      thumbnails: [ ...this.entries.values() ].map((entry) => entry.preview ?? null),
+      detail,
+      thumbnails,
       actions: [
-        { label: this.Blok.I18n.t('imageFailure.retry'), onClick: () => this.retryAll(), primary: true, busyOnClick: true },
-        { label: this.Blok.I18n.t('imageFailure.show'), onClick: () => this.showFirst() },
+        { label: this.Blok.I18n.t('imageFailure.retry'), onClick: () => on.retry(), primary: true, busyOnClick: true },
+        { label: this.Blok.I18n.t('imageFailure.show'), onClick: () => on.show() },
       ],
     };
-
-    this.shownToast = options;
-    this.toastOnScreen = false;
-    this.recoveredSinceToast = 0;
-    this.syncToast();
   }
 
   /**
-   * Put the toast up while the user is in this editor, take it down when they leave.
-   * A toast the user closed stays closed.
+   * Cards in the order they failed, then the save toast.
    */
-  private syncToast(): void {
-    const toast = this.shownToast;
+  private notices(): NotifierOptions[] {
+    const cards = [ ...this.entries.values() ].flatMap((entry) => (entry.card === null ? [] : [ entry.card ]));
 
-    if (toast === null || this.isDestroyed) {
+    return this.saveNotice === null ? cards : [ ...cards, this.saveNotice ];
+  }
+
+  private forget(notice: NotifierOptions): void {
+    if (notice === this.saveNotice) {
+      this.saveNotice = null;
+    }
+    this.entries.forEach((entry, blockId) => {
+      if (entry.card === notice) {
+        this.entries.set(blockId, { ...entry, card: null });
+      }
+    });
+  }
+
+  /**
+   * Put the cards up while the user is in this editor, take them down when they leave.
+   * A card the user closed stays closed.
+   */
+  private syncToasts(): void {
+    if (this.isDestroyed) {
       return;
     }
     const present = this.presence === null || this.presence.onScreen || this.presence.focused;
 
-    if (present === this.toastOnScreen) {
+    if (present) {
+      this.notices().filter((notice) => !this.onScreen.has(notice)).forEach((notice) => this.put(notice));
+
       return;
     }
-    if (!present) {
-      this.toastOnScreen = false;
-      if (this.Blok.NotifierAPI.isClosed(toast)) {
-        this.shownToast = null;
-
-        return;
+    // Back cards first: taking the front one down first would bring each next one up just to drop it.
+    this.notices().filter((notice) => this.onScreen.has(notice)).reverse().forEach((notice) => {
+      this.onScreen.delete(notice);
+      if (this.Blok.NotifierAPI.isClosed(notice)) {
+        this.forget(notice);
+      } else {
+        this.Blok.NotifierAPI.dismiss(notice);
       }
-      this.Blok.NotifierAPI.dismiss(toast);
+    });
+  }
 
-      return;
-    }
+  private put(notice: NotifierOptions): void {
     // A host notifier may throw; onSave runs inside the save chain and must not reject it.
     try {
-      this.Blok.NotifierAPI.show(toast);
-      this.toastOnScreen = true;
+      this.Blok.NotifierAPI.show(notice);
+      this.onScreen.add(notice);
     } catch (thrown: unknown) {
-      this.shownToast = null;
+      this.forget(notice);
       log('The notifier threw while showing an image failure notice.', 'warn', thrown);
     }
   }
@@ -341,7 +396,7 @@ export class MediaFailures extends Module {
     wrapper.addEventListener('focusout', this.onFocusOut);
     presence.observer = new IntersectionObserver((entries) => {
       presence.onScreen = entries[entries.length - 1].isIntersecting;
-      this.syncToast();
+      this.syncToasts();
     });
     presence.observer.observe(wrapper);
   }
@@ -373,7 +428,7 @@ export class MediaFailures extends Module {
       return;
     }
     presence.focused = presence.wrapper.contains(target);
-    this.syncToast();
+    this.syncToasts();
   };
 
   /**
@@ -383,7 +438,7 @@ export class MediaFailures extends Module {
   private readonly onFocusOut = (event: FocusEvent): void => {
     if (this.presence !== null && event.relatedTarget === null) {
       this.presence.focused = false;
-      this.syncToast();
+      this.syncToasts();
     }
   };
 

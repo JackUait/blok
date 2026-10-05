@@ -8,7 +8,61 @@
   viewport and squeeze the title onto two lines. The card's max-width bounds it.
 */
 [data-blok-interface='notifier']:has(> [data-blok-toast='card']) {
+  /* Kept beside `width` so the view.css generator, which keeps token-only rules, drops these. */
+  --blok-toast-peek: 8px;
+  --blok-toast-peek-near: #18181b;
+  --blok-toast-peek-far: #121214;
+  --blok-toast-peek-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 4px 12px rgb(0 0 0 / 0.25);
+
   width: max-content;
+}
+
+/*
+  Waiting cards peek out behind the front card (set by syncBehind in notifier/index.ts).
+  The wrapper is the stacking root, so z-index -1 paints them under the card.
+  ::after is the nearer card: it comes later in tree order, so it paints on top.
+*/
+[data-blok-interface='notifier'][data-blok-toast-behind]::after,
+[data-blok-interface='notifier'][data-blok-toast-behind='2']::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  /* The card's top margin (mt-2): the peek sits on the card's box, not the wrapper's. */
+  inset: 8px 12px 0;
+  border-radius: var(--blok-radius-surface);
+  background: var(--blok-toast-peek-near);
+  box-shadow: var(--blok-toast-peek-shadow);
+  translate: 0 calc(-1 * var(--blok-toast-peek));
+  pointer-events: none;
+  transition: translate 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-blok-interface='notifier'][data-blok-toast-behind='2']::before {
+  inset-inline: 24px;
+  background: var(--blok-toast-peek-far);
+  translate: 0 calc(-2 * var(--blok-toast-peek));
+}
+
+/* A top toast stacks downward, away from the screen edge. */
+[data-blok-interface='notifier'][data-blok-position^='top'][data-blok-toast-behind]::after {
+  translate: 0 var(--blok-toast-peek);
+}
+
+[data-blok-interface='notifier'][data-blok-position^='top'][data-blok-toast-behind='2']::before {
+  translate: 0 calc(2 * var(--blok-toast-peek));
+}
+
+/* The leaving card stays above the one rising into its place. */
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='closed'] {
+  z-index: 1;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise] {
+  animation: blok-toast-rise 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise] {
+  animation-name: blok-toast-rise-top;
 }
 
 [data-blok-interface='notifier'] [data-blok-toast='card'] {
@@ -387,6 +441,16 @@
   to { opacity: 1; translate: 0 0; filter: blur(0); }
 }
 
+@keyframes blok-toast-rise {
+  from { opacity: 0.4; translate: 0 calc(-1 * var(--blok-toast-peek)); }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes blok-toast-rise-top {
+  from { opacity: 0.4; translate: 0 var(--blok-toast-peek); }
+  to { opacity: 1; translate: 0 0; }
+}
+
 @keyframes blok-toast-ghost-out {
   to { opacity: 0; translate: 0 -8px; filter: blur(4px); }
 }
@@ -397,8 +461,15 @@
   [data-blok-toast='card'] [data-blok-toast-part='check']::before,
   [data-blok-toast='card'] [data-blok-toast-part='check'] svg path,
   [data-blok-toast='card'][data-resolved='true']::after,
-  [data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'] {
+  [data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'],
+  [data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise],
+  [data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise] {
     animation: none;
+  }
+
+  [data-blok-interface='notifier'][data-blok-toast-behind]::after,
+  [data-blok-interface='notifier'][data-blok-toast-behind]::before {
+    transition: none;
   }
 
   [data-blok-toast='card'] [data-blok-toast-ghost] {

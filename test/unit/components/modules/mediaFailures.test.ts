@@ -61,6 +61,7 @@ const setup = (config: Partial<BlokConfig> = {}, readOnly = false, onScreen = tr
   dismiss: ReturnType<typeof vi.fn<(o: NotifierOptions) => void>>;
   resolve: ReturnType<typeof vi.fn<(o: NotifierOptions, message: string) => void>>;
   isClosed: ReturnType<typeof vi.fn<(o: NotifierOptions) => boolean>>;
+  settle: ReturnType<typeof vi.fn<(o: NotifierOptions) => void>>;
   wrapper: HTMLElement;
   blockOf: (id: string) => { holder: HTMLElement; pluginsContent: HTMLElement };
 } => {
@@ -69,6 +70,7 @@ const setup = (config: Partial<BlokConfig> = {}, readOnly = false, onScreen = tr
   const dismiss = vi.fn<(o: NotifierOptions) => void>();
   const resolve = vi.fn<(o: NotifierOptions, message: string) => void>();
   const isClosed = vi.fn<(o: NotifierOptions) => boolean>(() => false);
+  const settle = vi.fn<(o: NotifierOptions) => void>();
   const wrapper = document.createElement('div');
   const field = document.createElement('div');
 
@@ -89,14 +91,14 @@ const setup = (config: Partial<BlokConfig> = {}, readOnly = false, onScreen = tr
   created.push(module);
 
   module.state = {
-    NotifierAPI: { show, dismiss, resolve, isClosed },
+    NotifierAPI: { show, dismiss, resolve, isClosed, settle },
     UI: { nodes: { wrapper } },
     BlockManager: { getBlockById: (id: string) => blockOf(id) },
     ReadOnly: { isEnabled: readOnly },
     I18n: { t: (key: string, vars?: Record<string, string | number>) => (vars ? `${key}:${String(vars.count)}` : key) },
   } as unknown as BlokModules;
 
-  return { module, eventsDispatcher, show, dismiss, resolve, isClosed, wrapper, blockOf };
+  return { module, eventsDispatcher, show, dismiss, resolve, isClosed, settle, wrapper, blockOf };
 };
 
 const input = (blockId: string, kind: 'upload' | 'load' = 'load', retry = vi.fn()): { blockId: string; tool: string; kind: 'upload' | 'load'; url: string; retry: () => void } =>
@@ -248,13 +250,11 @@ describe('MediaFailures', () => {
     const { module, show, wrapper } = setup({}, false, false);
 
     module.report(input('a', 'upload'));
-    vi.advanceTimersByTime(COALESCE_MS);
     module.onSave();
 
     expect(show).not.toHaveBeenCalled();
     FakeIntersectionObserver.setOnScreen(wrapper, true);
-    expect(show).toHaveBeenCalledTimes(1);
-    expect(show.mock.calls[0][0].message).toBe('imageFailure.notSaved:1');
+    expect(show.mock.calls.map(([ options ]) => options.message)).toEqual([ 'imageFailure.notSaved:1' ]);
   });
 
   it('shows the toast at once where IntersectionObserver is missing', () => {
@@ -267,16 +267,72 @@ describe('MediaFailures', () => {
     expect(show).toHaveBeenCalledTimes(1);
   });
 
-  it('groups failures that arrive together into one toast', () => {
+  it('shows one card per failure, in the order they failed', () => {
     const { module, show } = setup();
 
-    module.report(input('a'));
-    module.report(input('b'));
+    module.report({ ...input('a'), preview: 'blob:https://x/a' });
+    module.report(input('b', 'upload'));
     module.report(input('c'));
     vi.advanceTimersByTime(COALESCE_MS);
 
+    expect(show.mock.calls.map(([ options ]) => [ options.message, options.thumbnails ])).toEqual([
+      [ 'imageFailure.loadFailed', [ 'blob:https://x/a' ] ],
+      [ 'imageFailure.uploadFailed', [ null ] ],
+      [ 'imageFailure.loadFailed', [ null ] ],
+    ]);
+  });
+
+  it('hides every card when the user leaves, the back ones first, and brings them back in order', () => {
+    const { module, show, dismiss, wrapper } = setup();
+
+    module.report(input('a'));
+    module.report(input('b'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    const [ [ first ], [ second ] ] = show.mock.calls;
+
+    FakeIntersectionObserver.setOnScreen(wrapper, false);
+    expect(dismiss.mock.calls.map(([ options ]) => options)).toEqual([ second, first ]);
+    FakeIntersectionObserver.setOnScreen(wrapper, true);
+    expect(show.mock.calls.slice(2).map(([ options ]) => options)).toEqual([ first, second ]);
+  });
+
+  it('brings back only the cards the user did not close', () => {
+    const { module, show, isClosed, wrapper } = setup();
+
+    module.report(input('a'));
+    module.report(input('b'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    const [ [ first ], [ second ] ] = show.mock.calls;
+
+    isClosed.mockImplementation((options) => options === first);
+    FakeIntersectionObserver.setOnScreen(wrapper, false);
+    FakeIntersectionObserver.setOnScreen(wrapper, true);
+
+    expect(show.mock.calls.slice(2).map(([ options ]) => options)).toEqual([ second ]);
+  });
+
+  it('keeps the card of a failure that fails again and stops its spinner', () => {
+    const { module, show, settle } = setup();
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+
     expect(show).toHaveBeenCalledTimes(1);
-    expect(show.mock.calls[0][0].message).toBe('imageFailure.failedMany:3');
+    expect(settle).toHaveBeenCalledWith(show.mock.calls[0][0]);
+  });
+
+  it('shows a new card when a failure fails again after the user closed its card', () => {
+    const { module, show, isClosed } = setup();
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    isClosed.mockReturnValue(true);
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+
+    expect(show).toHaveBeenCalledTimes(2);
   });
 
   it('names the kind for a single failure', () => {
@@ -288,7 +344,7 @@ describe('MediaFailures', () => {
     expect(show.mock.calls[0][0].message).toBe('imageFailure.uploadFailed');
   });
 
-  it('Retry retries every failure and Show scrolls to the first', () => {
+  it('Retry and Show on a card act on its own image only', () => {
     const { module, show, blockOf } = setup();
     const retryA = vi.fn();
     const retryB = vi.fn();
@@ -296,14 +352,14 @@ describe('MediaFailures', () => {
     module.report(input('a', 'load', retryA));
     module.report(input('b', 'load', retryB));
     vi.advanceTimersByTime(COALESCE_MS);
-    const [ retry, showButton ] = actionsOf(show.mock.calls[0][0]);
+    const [ retry, showButton ] = actionsOf(show.mock.calls[1][0]);
 
     retry.onClick();
     showButton.onClick();
 
-    expect(retryA).toHaveBeenCalledTimes(1);
+    expect(retryA).not.toHaveBeenCalled();
     expect(retryB).toHaveBeenCalledTimes(1);
-    expect(revealBlock).toHaveBeenCalledWith(blockOf('a').holder, blockOf('a').pluginsContent);
+    expect(revealBlock).toHaveBeenCalledWith(blockOf('b').holder, blockOf('b').pluginsContent);
     expect(announce).toHaveBeenCalledWith('a11y.navigatedToBlock');
   });
 
@@ -326,7 +382,7 @@ describe('MediaFailures', () => {
     vi.advanceTimersByTime(COALESCE_MS);
 
     expect(show).toHaveBeenCalledTimes(2);
-    expect(show.mock.calls[1][0].message).toBe('imageFailure.failedMany:2');
+    expect(show.mock.calls[1][0].message).toBe('imageFailure.loadFailed');
   });
 
   it('drops a failure when its block is removed', () => {
@@ -340,17 +396,42 @@ describe('MediaFailures', () => {
   });
 
   it('save toast fires once per failure across two saves', () => {
-    const { module, show } = setup();
+    const { module, show, isClosed } = setup();
 
     module.report(input('a', 'upload'));
     module.report(input('b', 'load'));
     vi.advanceTimersByTime(COALESCE_MS);
+    isClosed.mockReturnValue(true);
     show.mockClear();
     module.onSave();
     module.onSave();
 
     expect(show).toHaveBeenCalledTimes(1);
     expect(show.mock.calls[0][0].message).toBe('imageFailure.notSaved:1 · imageFailure.notDisplayed:1');
+  });
+
+  it('skips the save toast while every new failure still has its card up', () => {
+    const { module, show } = setup();
+
+    module.report(input('a', 'upload'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    show.mockClear();
+    module.onSave();
+
+    expect(show).not.toHaveBeenCalled();
+  });
+
+  it('warns on a later save once the user closed the card', () => {
+    const { module, show, isClosed } = setup();
+
+    module.report(input('a', 'upload'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    module.onSave();
+    isClosed.mockReturnValue(true);
+    show.mockClear();
+    module.onSave();
+
+    expect(show.mock.calls.map(([ options ]) => options.message)).toEqual([ 'imageFailure.notSaved:1' ]);
   });
 
   it('reports on save again after the failure recovers and fails again', () => {
@@ -428,25 +509,14 @@ describe('MediaFailures', () => {
     expect(showButton.primary).toBeUndefined();
   });
 
-  it('draws one tile per failure and the shared reason when all failed the same way', () => {
-    const { module, show } = setup();
-
-    module.report(input('a', 'load'));
-    module.report(input('b', 'load'));
-    vi.advanceTimersByTime(COALESCE_MS);
-
-    expect(show.mock.calls[0][0].thumbnails).toEqual([ null, null ]);
-    expect(show.mock.calls[0][0].detail).toBe('imageFailure.loadDetail');
-  });
-
-  it('leaves out the reason when failures differ', () => {
+  it('gives each card the reason its own image failed', () => {
     const { module, show } = setup();
 
     module.report(input('a', 'load'));
     module.report(input('b', 'upload'));
     vi.advanceTimersByTime(COALESCE_MS);
 
-    expect(show.mock.calls[0][0].detail).toBeUndefined();
+    expect(show.mock.calls.map(([ options ]) => options.detail)).toEqual([ 'imageFailure.loadDetail', 'imageFailure.uploadDetail' ]);
   });
 
   it('shows the restored state when the last failure recovers', () => {
@@ -460,16 +530,15 @@ describe('MediaFailures', () => {
     expect(dismiss).not.toHaveBeenCalled();
   });
 
-  it('counts every image that recovered', () => {
-    const { module, resolve } = setup();
+  it('shows the restored state on the card of each image that recovered', () => {
+    const { module, show, resolve } = setup();
 
     module.report(input('a'));
     module.report(input('b'));
     vi.advanceTimersByTime(COALESCE_MS);
-    module.clear('a', { recovered: true });
     module.clear('b', { recovered: true });
 
-    expect(resolve).toHaveBeenCalledWith(expect.anything(), 'imageFailure.restoredMany:2');
+    expect(resolve.mock.calls).toEqual([ [ show.mock.calls[1][0], 'imageFailure.restored' ] ]);
   });
 
   it('closes quietly when the last failure went away without recovering', () => {
@@ -483,7 +552,7 @@ describe('MediaFailures', () => {
     expect(dismiss).toHaveBeenCalledTimes(1);
   });
 
-  it('closes its toast once every failure is gone', () => {
+  it('closes only the card of the failure that went away', () => {
     const { module, show, dismiss } = setup();
 
     module.report(input('a'));
@@ -491,9 +560,7 @@ describe('MediaFailures', () => {
     vi.advanceTimersByTime(COALESCE_MS);
     module.clear('a');
 
-    expect(dismiss).not.toHaveBeenCalled();
-    module.clear('b');
-    expect(dismiss).toHaveBeenCalledWith(show.mock.calls[0][0]);
+    expect(dismiss.mock.calls).toEqual([ [ show.mock.calls[0][0] ] ]);
   });
 
   it('does not let a throwing notifier break the save that triggered it', () => {

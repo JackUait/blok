@@ -47,10 +47,10 @@ describe("analytics", () => {
 
   describe("trackEvent", () => {
     it("forwards the event name and params to gtag", () => {
-      trackEvent("copy_code", { language: "tsx", surface: "docs" });
+      trackEvent("copy_code", { code_language: "tsx", surface: "docs" });
 
       expect(getGtagMock()).toHaveBeenCalledWith("event", "copy_code", {
-        language: "tsx",
+        code_language: "tsx",
         surface: "docs",
       });
     });
@@ -62,7 +62,7 @@ describe("analytics", () => {
     });
 
     it("drops undefined params so GA does not record empty dimensions", () => {
-      trackEvent("copy_code", { language: undefined, surface: "docs" });
+      trackEvent("copy_code", { code_language: undefined, surface: "docs" });
 
       expect(getGtagMock()).toHaveBeenCalledWith("event", "copy_code", {
         surface: "docs",

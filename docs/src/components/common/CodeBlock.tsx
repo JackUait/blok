@@ -280,7 +280,9 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       trackEvent(ANALYTICS_EVENTS.copyCode, {
-        language,
+        // Not `language`: gtag.js takes that as the user's language and drops it
+        // from the event.
+        code_language: language,
         // Only meaningful when the install-command toggle is on screen; omitted
         // (dropped by trackEvent) for plain code blocks.
         package_manager: hasPackageManagerToggle ? packageManager : undefined,

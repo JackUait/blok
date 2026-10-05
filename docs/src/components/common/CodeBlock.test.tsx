@@ -211,7 +211,7 @@ describe('CodeBlock', () => {
   });
 
   describe('analytics', () => {
-    it('tracks a copy_code event with the language on a successful copy', async () => {
+    it('tracks a copy_code event with the code language on a successful copy', async () => {
       stubClipboard('success');
       renderWithI18n(<CodeBlock code="const x = 1;" language="typescript" />);
 
@@ -219,10 +219,25 @@ describe('CodeBlock', () => {
 
       await waitFor(() => {
         expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.copyCode, {
-          language: 'typescript',
+          code_language: 'typescript',
           copy_kind: 'snippet',
         });
       });
+    });
+
+    // gtag.js treats `language` as its own field: it overwrites the user's
+    // language (`ul`) and the value never reaches the event.
+    it('never sends a `language` param', async () => {
+      stubClipboard('success');
+      renderWithI18n(<CodeBlock code="echo hi" language="bash" />);
+
+      fireEvent.click(screen.getByTestId('code-copy-button'));
+
+      await waitFor(() => {
+        expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.copyCode, expect.anything());
+      });
+      const params = gtagMock.mock.calls.find((call) => call[1] === ANALYTICS_EVENTS.copyCode)?.[2];
+      expect(params).not.toHaveProperty('language');
     });
 
     it('includes the selected package manager when the toggle is shown', async () => {
@@ -240,7 +255,7 @@ describe('CodeBlock', () => {
 
       await waitFor(() => {
         expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.copyCode, {
-          language: 'bash',
+          code_language: 'bash',
           package_manager: 'yarn',
           copy_kind: 'install',
         });
@@ -257,7 +272,7 @@ describe('CodeBlock', () => {
 
       await waitFor(() => {
         expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.copyCode, {
-          language: 'bash',
+          code_language: 'bash',
           copy_kind: 'install',
         });
       });

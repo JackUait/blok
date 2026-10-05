@@ -105,6 +105,27 @@
   to { opacity: 1; transform: none }
 }
 
+@keyframes blok-embed-caught {
+  40% { transform: scale(1.025) }
+}
+
+@keyframes blok-embed-idle {
+  to { opacity: .45 }
+}
+
+@keyframes blok-embed-part-in {
+  from { opacity: 0; transform: translateY(6px) scale(.85) }
+}
+
+@keyframes blok-embed-rejected {
+  25%, 75% { transform: translateX(-4px) }
+  50% { transform: translateX(4px) }
+}
+
+@keyframes blok-embed-track {
+  from { inset-inline-end: 100% }
+}
+
 @keyframes blok-emoji-card-in {
   from { opacity: 0; transform: translateY(10px) rotate(0deg) scale(0.8) }
   to { opacity: 1; transform: translateY(0) rotate(var(--emoji-card-tilt)) scale(1) }

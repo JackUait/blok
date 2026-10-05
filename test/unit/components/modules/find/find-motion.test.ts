@@ -127,9 +127,16 @@ describe('find-motion', () => {
   });
 });
 
+interface StubAnimation {
+  cancel: () => void;
+  finished: Promise<void>;
+}
+
+type Animate = (keyframes: Keyframe[], options?: KeyframeAnimationOptions) => StubAnimation;
+
 /** jsdom has no Web Animations; a stub records every call. */
-const stubAnimate = (): ReturnType<typeof vi.fn> => {
-  const animate = vi.fn(() => ({ cancel: vi.fn(), finished: new Promise<void>(() => undefined) }));
+const stubAnimate = (finished = new Promise<void>(() => undefined)): ReturnType<typeof vi.fn<Animate>> => {
+  const animate = vi.fn<Animate>(() => ({ cancel: vi.fn(), finished }));
 
   Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true });
 
@@ -212,7 +219,7 @@ describe('bloom and stretch', () => {
     const skinCalls = animate.mock.calls.filter((call) => call[1]?.pseudoElement === '::before');
 
     expect(skinCalls).toHaveLength(1);
-    expect(skinCalls.some((call) => call[0].some((frame: Keyframe) => 'opacity' in frame))).toBe(false);
+    expect(skinCalls.some((call) => call[0].some((frame) => 'opacity' in frame))).toBe(false);
   });
 
   it('lands the parts in reading order: field, then controls one after another', () => {
@@ -304,8 +311,13 @@ describe('hopSourceFromRange', () => {
     return range;
   };
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     document.body.replaceChildren();
+    vi.restoreAllMocks();
   });
 
   it('takes the first visible line box and the text style', () => {
@@ -357,11 +369,7 @@ describe('hop', () => {
       land = resolve;
     });
 
-    Object.defineProperty(Element.prototype, 'animate', {
-      value: vi.fn(() => ({ cancel: vi.fn(), finished })),
-      configurable: true,
-      writable: true,
-    });
+    stubAnimate(finished);
     stubReducedMotion(false);
     const dock = document.createElement('div');
     const input = document.createElement('input');
@@ -426,13 +434,13 @@ describe('hop', () => {
     dock.append(input);
     document.body.append(dock);
     hop(dock, source, input, 0, vi.fn());
-    const arc: unknown = animate.mock.calls[0]?.[0];
+    const arc = animate.mock.calls[0]?.[0];
 
-    if (!Array.isArray(arc)) {
+    if (arc === undefined) {
       throw new Error('no arc');
     }
 
-    return arc.filter((frame): frame is Keyframe => typeof frame === 'object' && frame !== null);
+    return arc;
   };
   const liftOf = (frame: Keyframe): number => Number(/translate\(\S+px, (\S+)px\)/.exec(String(frame.transform))?.[1]);
   const scaleOf = (frame: Keyframe): number => Number(/scale\((\S+)\)/.exec(String(frame.transform))?.[1]);

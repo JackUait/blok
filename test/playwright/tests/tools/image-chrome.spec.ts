@@ -276,7 +276,7 @@ test('a dark picture gets graphite chrome and light handles, before any hover', 
   await expect(imageBlock(page).locator('[data-role="resize-handle"][data-edge="left"]')).toHaveAttribute('data-tone', 'graphite');
   await hoverLoadedFigure(page);
   await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveCSS('background-color', 'rgb(37, 37, 37)');
-  await expect(imageBlock(page).locator('[data-role="resize-handle"][data-edge="right"]')).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.85)');
+  await expect(imageBlock(page).locator('[data-role="resize-handle"][data-edge="right"]')).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.86)');
 });
 
 test('a bright picture gets paper chrome', async ({ page }) => {

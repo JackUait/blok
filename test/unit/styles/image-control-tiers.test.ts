@@ -45,13 +45,14 @@ describe('Image control size tiers (src/styles/image.css)', () => {
     expect(body).toContain('height: 14px');
   });
 
-  it('handles are 3x32 bars 8px inside the picture, in the handle ink', () => {
+  it('handles are 3x32 bars 8px inside the picture, in the overlay ink', () => {
     const body = findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"]');
 
     expect(body).not.toBeNull();
     expect(body).toContain('width: 3px');
     expect(body).toContain('height: 32px');
-    expect(body).toContain('background: var(--blok-image-handle-ink)');
+    // Inverted against the cards: a paper area gets dark ink, a graphite one light ink.
+    expect(body).toContain('background: var(--blok-overlay-fg)');
     expect(findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]')).toContain('left: var(--blok-space-2)');
     expect(findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"]')).toContain('right: var(--blok-space-2)');
   });

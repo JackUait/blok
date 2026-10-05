@@ -2214,21 +2214,6 @@
   --blok-image-readout-bg: #191919;
   --blok-image-readout-fg: #ffffff;
   --blok-image-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  --blok-image-paper-surface: #ffffff;
-  --blok-image-paper-ring: rgba(15, 15, 14, 0.06);
-  --blok-image-paper-fg: rgba(15, 15, 14, 0.62);
-  --blok-image-paper-fg-strong: #1d1d1d;
-  --blok-image-paper-fg-hover: rgba(15, 15, 14, 0.06);
-  --blok-image-paper-divider: rgba(15, 15, 14, 0.1);
-  --blok-image-paper-handle: rgba(55, 53, 47, 0.55);
-  --blok-image-graphite-surface: #252525;
-  --blok-image-graphite-ring: rgba(255, 255, 255, 0.08);
-  --blok-image-graphite-fg: rgba(255, 255, 255, 0.86);
-  --blok-image-graphite-fg-strong: #ffffff;
-  --blok-image-graphite-fg-hover: rgba(255, 255, 255, 0.14);
-  --blok-image-graphite-divider: rgba(255, 255, 255, 0.14);
-  --blok-image-graphite-handle: rgba(255, 255, 255, 0.85);
-  --blok-image-handle-ink: rgba(55, 53, 47, 0.55);
   --blok-overlay-fg: rgba(15, 15, 14, 0.62);
   --blok-overlay-fg-strong: #1d1d1d;
   --blok-overlay-fg-hover: rgba(15, 15, 14, 0.06);
@@ -2539,7 +2524,6 @@
   --blok-image-readout-bg: #f1f1ef;
   --blok-image-readout-fg: #191919;
   --blok-image-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  --blok-image-handle-ink: rgba(255, 255, 255, 0.85);
   --blok-overlay-fg: rgba(255, 255, 255, 0.86);
   --blok-overlay-fg-strong: #ffffff;
   --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
@@ -2705,7 +2689,6 @@
   --blok-image-readout-bg: #f1f1ef;
   --blok-image-readout-fg: #191919;
   --blok-image-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  --blok-image-handle-ink: rgba(255, 255, 255, 0.85);
   --blok-overlay-fg: rgba(255, 255, 255, 0.86);
   --blok-overlay-fg-strong: #ffffff;
   --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
@@ -6396,28 +6379,26 @@ span[data-blok-slash-search] {
   display: none;
 }
 
-[data-blok-tool="image"] [data-tone="paper"] {
-  --blok-overlay-surface: var(--blok-image-paper-surface);
-  --blok-overlay-ring: var(--blok-image-paper-ring);
-  --blok-overlay-fg: var(--blok-image-paper-fg);
-  --blok-overlay-fg-strong: var(--blok-image-paper-fg-strong);
-  --blok-overlay-fg-hover: var(--blok-image-paper-fg-hover);
-  --blok-overlay-divider: var(--blok-image-paper-divider);
-  --blok-image-handle-ink: var(--blok-image-paper-handle);
-  --blok-text-primary: var(--blok-image-paper-fg-strong);
+.blok-image-inner [data-tone="paper"] {
+  --blok-overlay-surface: #ffffff;
+  --blok-overlay-ring: rgba(15, 15, 14, 0.06);
+  --blok-overlay-fg: rgba(15, 15, 14, 0.62);
+  --blok-overlay-fg-strong: #1d1d1d;
+  --blok-overlay-fg-hover: rgba(15, 15, 14, 0.06);
+  --blok-overlay-divider: rgba(15, 15, 14, 0.1);
+  --blok-text-primary: #1d1d1d;
   --blok-icon-active-bg: rgba(15, 15, 14, 0.06);
   --blok-icon-active-text: var(--blok-text-primary);
 }
 
-[data-blok-tool="image"] [data-tone="graphite"] {
-  --blok-overlay-surface: var(--blok-image-graphite-surface);
-  --blok-overlay-ring: var(--blok-image-graphite-ring);
-  --blok-overlay-fg: var(--blok-image-graphite-fg);
-  --blok-overlay-fg-strong: var(--blok-image-graphite-fg-strong);
-  --blok-overlay-fg-hover: var(--blok-image-graphite-fg-hover);
-  --blok-overlay-divider: var(--blok-image-graphite-divider);
-  --blok-image-handle-ink: var(--blok-image-graphite-handle);
-  --blok-text-primary: var(--blok-image-graphite-fg-strong);
+.blok-image-inner [data-tone="graphite"] {
+  --blok-overlay-surface: #252525;
+  --blok-overlay-ring: rgba(255, 255, 255, 0.08);
+  --blok-overlay-fg: rgba(255, 255, 255, 0.86);
+  --blok-overlay-fg-strong: #ffffff;
+  --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
+  --blok-overlay-divider: rgba(255, 255, 255, 0.14);
+  --blok-text-primary: #ffffff;
   --blok-icon-active-bg: rgba(255, 255, 255, 0.14);
   --blok-icon-active-text: var(--blok-text-primary);
 }
@@ -6467,7 +6448,7 @@ span[data-blok-slash-search] {
   width: 3px;
   height: 32px;
   border-radius: var(--blok-radius-pill);
-  background: var(--blok-image-handle-ink);
+  background: var(--blok-overlay-fg);
   box-shadow: var(--blok-image-handle-shadow);
   cursor: ew-resize;
   opacity: 0;
@@ -6496,7 +6477,7 @@ span[data-blok-slash-search] {
 
 [data-blok-tool="image"] [data-role="resize-handle"]:hover, [data-blok-tool="image"] [data-role="resize-handle"]:active {
   height: 40px;
-  box-shadow: 0 0 0 1px var(--blok-image-handle-ink), var(--blok-image-handle-shadow);
+  box-shadow: 0 0 0 1px var(--blok-overlay-fg), var(--blok-image-handle-shadow);
 }
 
 [data-blok-tool="image"] [data-role="image-resize-readout"] {

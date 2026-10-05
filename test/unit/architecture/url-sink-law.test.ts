@@ -49,6 +49,8 @@ const SAFE_HELPERS = [
 const EXEMPT_SINKS: Record<string, string> = {
   'tools/image/index.ts » src':
     'HTMLImageElement src — <img> is not a script-execution sink (javascript: URLs do not run in img)',
+  'tools/image/tone-sampler.ts » src':
+    'HTMLImageElement src for a hidden CORS copy of the picture already on screen, only read for its tone — image loads cannot run script',
   'tools/image/error-state.ts » file.preview':
     'HTMLImageElement src for a failed-upload thumbnail — image-resource loads cannot run script',
   'tools/image/markup/render.ts » src':

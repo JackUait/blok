@@ -16,7 +16,7 @@ export const relativeLuminance = ({ r, g, b }: Rgb): number =>
 
 const contrast = (a: number, b: number): number => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 
-// Must match --blok-image-paper-surface and --blok-image-graphite-surface in colors.css.
+// Must match the --blok-overlay-surface values of the [data-tone] rules in image.css.
 const PAPER = relativeLuminance({ r: 255, g: 255, b: 255 });
 const GRAPHITE = relativeLuminance({ r: 0x25, g: 0x25, b: 0x25 });
 

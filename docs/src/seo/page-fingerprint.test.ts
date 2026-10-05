@@ -55,6 +55,26 @@ describe('page fingerprints', () => {
       '/ru/docs/table',
     ]);
   });
+
+  it('changes only the docs hub, per locale, when a hub string is edited', () => {
+    const en = clone(base.catalogs);
+    (en.en as { api: { hub: { title: string } } }).api.hub.title += ' Edited.';
+    // The Russian hub has its own title, so it falls back to nothing here.
+    expect(changedRoutes(baseline, fingerprintRoutes(ROUTES, { ...base, catalogs: en }))).toEqual(['/docs']);
+
+    const ru = clone(base.catalogs);
+    (ru.ru as { api: { hub: { title: string } } }).api.hub.title += ' Правка.';
+    expect(changedRoutes(baseline, fingerprintRoutes(ROUTES, { ...base, catalogs: ru }))).toEqual(['/ru/docs']);
+  });
+
+  it('leaves the ledger alone when a release adds a changelog entry', () => {
+    const released: FingerprintSources = {
+      ...base,
+      digestSource: (repoPath) => (repoPath === 'CHANGELOG.md' ? 'new release' : base.digestSource(repoPath)),
+    };
+
+    expect(changedRoutes(baseline, fingerprintRoutes(ROUTES, released))).toEqual([]);
+  });
 });
 
 describe('mergeLedger', () => {

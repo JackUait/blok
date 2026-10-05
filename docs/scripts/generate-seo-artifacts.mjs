@@ -51,6 +51,7 @@ const loadManifest = async () => {
       // Computed while the module server is up: it reads the page sources.
       FINGERPRINTS: fingerprint.fingerprintRoutes(routes, { ...fingerprint.pageData(), ...nodeDigests }),
       LASTMOD_LEDGER: lastmod.LASTMOD_LEDGER,
+      lastModified: lastmod.lastModified,
       STATIC_PATHS: paths.STATIC_PATHS,
       DEFAULT_LOCALE: locales.DEFAULT_LOCALE,
       absoluteUrl: locales.absoluteUrl,
@@ -74,6 +75,7 @@ const main = async () => {
     ROUTES,
     FINGERPRINTS,
     LASTMOD_LEDGER,
+    lastModified,
     DEFAULT_LOCALE,
     absoluteUrl,
     hasMarkdownMirror,
@@ -136,8 +138,8 @@ const main = async () => {
     return {
       route,
       metadata,
-      // Null in the ledger means no page-specific date is known: emit none.
-      lastmod: LASTMOD_LEDGER[route].date ?? undefined,
+      // Undefined means no page-specific date is known: emit none.
+      lastmod: lastModified(route),
       body: htmlToMarkdown(dom.window.document.body, { siteUrl: SITE_URL }),
     };
   });

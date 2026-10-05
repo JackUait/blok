@@ -8,7 +8,7 @@
     "date": null
   },
   "/changelog": {
-    "hash": "2659e250bb989585",
+    "hash": "178ddc8a652182e0",
     "date": "2026-09-17"
   },
   "/demo": {
@@ -16,7 +16,7 @@
     "date": null
   },
   "/docs": {
-    "hash": "5ee2a77b77bc8051",
+    "hash": "a695738eeafc3657",
     "date": "2026-10-05"
   },
   "/docs/audio": {
@@ -76,7 +76,7 @@
     "date": "2026-10-05"
   },
   "/docs/config": {
-    "hash": "9ab1c5e36da1dadd",
+    "hash": "66671f093c14cdef",
     "date": "2026-10-04"
   },
   "/docs/core": {
@@ -192,7 +192,7 @@
     "date": "2026-09-08"
   },
   "/docs/quick-start": {
-    "hash": "1886c3a05c0f0be8",
+    "hash": "b9b8250bf0814ead",
     "date": "2026-09-08"
   },
   "/docs/quote": {
@@ -256,7 +256,7 @@
     "date": "2026-09-08"
   },
   "/docs/tutorial": {
-    "hash": "f45bae87694bc3a1",
+    "hash": "ed3680d14efb29ac",
     "date": "2026-09-08"
   },
   "/docs/ui-api": {
@@ -296,7 +296,7 @@
     "date": "2026-10-05"
   },
   "/migration/reference": {
-    "hash": "ae86c51f90f67eac",
+    "hash": "e304c1a5fb583213",
     "date": "2026-09-08"
   },
   "/presets": {
@@ -308,7 +308,7 @@
     "date": "2026-10-04"
   },
   "/ru/changelog": {
-    "hash": "a84fc5f24d4aae38",
+    "hash": "b0aea1391ee1ce9a",
     "date": "2026-09-17"
   },
   "/ru/demo": {
@@ -316,7 +316,7 @@
     "date": "2026-09-07"
   },
   "/ru/docs": {
-    "hash": "485a120a97e7848d",
+    "hash": "2b7b1d10e3c3e861",
     "date": "2026-10-05"
   },
   "/ru/docs/audio": {
@@ -376,7 +376,7 @@
     "date": "2026-10-05"
   },
   "/ru/docs/config": {
-    "hash": "98a9b1b118698b11",
+    "hash": "743688ca42413e8d",
     "date": "2026-10-04"
   },
   "/ru/docs/core": {
@@ -492,7 +492,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/quick-start": {
-    "hash": "9724f47729f350da",
+    "hash": "455c5be2c5bc627a",
     "date": "2026-09-08"
   },
   "/ru/docs/quote": {
@@ -556,7 +556,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/tutorial": {
-    "hash": "d6440c0ff677d310",
+    "hash": "0b2e4dcca70b23bd",
     "date": "2026-09-08"
   },
   "/ru/docs/ui-api": {
@@ -596,7 +596,7 @@
     "date": "2026-10-05"
   },
   "/ru/migration/reference": {
-    "hash": "13eb44c7e7e9155c",
+    "hash": "547df1f30f3bcfda",
     "date": "2026-09-08"
   },
   "/ru/presets": {
@@ -608,7 +608,7 @@
     "date": "2026-10-05"
   },
   "/ru/tools": {
-    "hash": "8680fbdc41c3143d",
+    "hash": "3bd4ef6b7fe4dc4f",
     "date": null
   },
   "/server": {
@@ -616,7 +616,7 @@
     "date": "2026-10-05"
   },
   "/tools": {
-    "hash": "56e34b776c77fcc3",
+    "hash": "528ca84b37ee943c",
     "date": null
   }
 }

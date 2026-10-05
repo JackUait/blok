@@ -32,7 +32,7 @@ Nothing else renders. `**bold**`, `# heading`, `1. ` and `> ` reach the reader a
 
 After changing page content (data modules, locale strings, route copy, page components), run `node docs/scripts/update-lastmod-ledger.mjs` and commit `docs/src/seo/lastmod-ledger.json`. `docs/src/seo/lastmod-ledger.test.ts` fails until you do. Run it after rebasing, not before.
 
-The ledger drives the sitemap `lastmod`, the mirror `lastmod`, TechArticle `dateModified` and the visible "Last updated" line. If you change what goes into a fingerprint rather than a page's content, keep the old dates and update only the hashes.
+The ledger drives the sitemap `lastmod`, the mirror `lastmod`, TechArticle `dateModified` and the visible "Last updated" line. If you change what goes into a fingerprint rather than a page's content, keep the old dates and update only the hashes. `CHANGELOG.md` is not a fingerprint input: the changelog takes its newest release heading's date, so a release needs no ledger update.
 
 ## Plans Directory
 

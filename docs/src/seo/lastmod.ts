@@ -1,4 +1,6 @@
+import CHANGELOG from '../../../CHANGELOG.md?raw';
 import ledger from './lastmod-ledger.json';
+import { splitLocalePath } from './locales';
 
 /**
  * Route -> the fingerprint of the page's own content and the day it last
@@ -10,8 +12,22 @@ export type Ledger = Record<string, { hash: string; date: string | null }>;
 /** Written by docs/scripts/update-lastmod-ledger.mjs; checked by lastmod-ledger.test.ts. */
 export const LASTMOD_LEDGER = ledger as Ledger;
 
-/** One record behind sitemap lastmod, mirror lastmod and TechArticle dateModified. */
-export const lastModified = (route: string): string | undefined => LASTMOD_LEDGER[route]?.date ?? undefined;
+/** The date on the newest release heading: `## [1.2.0](...) (2026-09-17)`. */
+export const latestReleaseDate = (markdown: string): string | undefined =>
+  /^## \[[^\]]+\]\([^)]*\) \((\d{4}-\d{2}-\d{2})\)/m.exec(markdown)?.[1];
+
+const RELEASE_DATE = latestReleaseDate(CHANGELOG);
+
+/**
+ * One record behind sitemap lastmod, mirror lastmod, TechArticle dateModified
+ * and the visible "Last updated" line. Both changelog trees render
+ * CHANGELOG.md, so their release date counts too; the ledger covers their chrome.
+ */
+export const lastModified = (route: string): string | undefined => {
+  const recorded = LASTMOD_LEDGER[route]?.date ?? undefined;
+  if (splitLocalePath(route).path !== '/changelog') return recorded;
+  return [recorded, RELEASE_DATE].filter((date): date is string => date !== undefined).sort().at(-1);
+};
 
 /**
  * Carries a date forward while the page's fingerprint is unchanged, so a

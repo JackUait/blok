@@ -14,29 +14,56 @@ import { getRouteMetadata } from './route-metadata';
  * chrome (layout, nav, footer, common UI) is left out on purpose: editing it
  * changes no page's content.
  */
-const STATIC_PAGES: Record<string, { files: string[]; catalog: string[] }> = {
+export const STATIC_PAGES: Record<string, { files: string[]; catalog: string[] }> = {
   '/': { files: ['docs/src/pages/HomePage.tsx', 'docs/src/components/home'], catalog: ['home'] },
   '/demo': { files: ['docs/src/pages/DemoPage.tsx', 'docs/src/components/demo'], catalog: ['demo'] },
-  '/docs': { files: ['docs/src/components/api/DocsHub.tsx'], catalog: [] },
-  '/tools': { files: ['docs/src/pages/ToolsPage.tsx', 'docs/src/routes/tools.tsx'], catalog: [] },
+  '/docs': {
+    files: ['docs/src/components/api/DocsHub.tsx', 'docs/src/components/api/docs-hub-summaries.ts'],
+    catalog: ['api.hub'],
+  },
+  '/tools': {
+    files: [
+      'docs/src/pages/ToolsPage.tsx',
+      'docs/src/routes/tools.tsx',
+      'docs/src/components/tools/ToolSection.tsx',
+      'docs/src/components/tools/tools-data.ts',
+    ],
+    catalog: [],
+  },
   '/presets': { files: ['docs/src/pages/PresetsPage.tsx', 'docs/src/components/presets'], catalog: ['presets'] },
   '/server': { files: ['docs/src/pages/ServerPage.tsx', 'docs/src/components/server'], catalog: ['server'] },
   '/migration': {
     files: ['docs/src/pages/MigrationPage.tsx', 'docs/src/components/migration'],
     catalog: ['migration'],
   },
-  '/migration/reference': { files: ['docs/src/pages/MigrationReferencePage.tsx'], catalog: ['migration'] },
-  '/changelog': { files: ['docs/src/pages/ChangelogPage.tsx', 'CHANGELOG.md'], catalog: ['changelog'] },
+  '/migration/reference': {
+    files: [
+      'docs/src/pages/MigrationReferencePage.tsx',
+      'docs/src/components/migration/CodemodCard.tsx',
+      'docs/src/components/migration/Diff.tsx',
+      'docs/src/components/migration/MigrationSectionHeader.tsx',
+      'docs/src/components/migration/MigrationStepRail.tsx',
+      'docs/src/components/migration/MigrationSteps.tsx',
+      'docs/src/components/migration/migration-data.ts',
+    ],
+    catalog: ['migration'],
+  },
+  // CHANGELOG.md is left out: the release heading dates it (lastmod.ts), so a
+  // release needs no ledger update.
+  '/changelog': { files: ['docs/src/pages/ChangelogPage.tsx'], catalog: ['changelog'] },
   '/404': { files: ['docs/src/routes/not-found.tsx'], catalog: [] },
 };
 
-// Mirrors EDIT_PATH_BY_CUSTOM_TYPE in ApiSection.tsx. Quick start is absent:
-// its markup lives in ApiSection.tsx, which renders every reference page.
-const CUSTOM_TYPE_FILES: Partial<Record<NonNullable<ApiSection['customType']>, string>> = {
-  tutorial: 'docs/src/components/api/TutorialContent.tsx',
-  concepts: 'docs/src/components/api/ConceptsContent.tsx',
-  'how-to-custom-tool': 'docs/src/components/api/HowToCustomToolContent.tsx',
-  'dev-override-seam': 'docs/src/components/api/DevOverrideSeamContent.tsx',
+// Page-specific files of API pages, by section id. ApiSection.tsx renders every
+// reference page (quick start's markup included), so it is not listed.
+export const API_PAGE_FILES: Record<string, string[]> = {
+  // framework-snippets.ts is shared by these three pages, so an edit re-dates all three.
+  tutorial: ['docs/src/components/api/TutorialContent.tsx', 'docs/src/components/common/framework-snippets.ts'],
+  'quick-start': ['docs/src/components/common/framework-snippets.ts'],
+  config: ['docs/src/components/common/framework-snippets.ts'],
+  concepts: ['docs/src/components/api/ConceptsContent.tsx'],
+  'custom-block-tool': ['docs/src/components/api/HowToCustomToolContent.tsx'],
+  'dev-override-seam': ['docs/src/components/api/DevOverrideSeamContent.tsx'],
 };
 
 const EXTRA_API_CATALOG: Record<string, string[]> = { 'quick-start': ['api.quickStartSteps'] };
@@ -112,9 +139,7 @@ const pageInput = (route: string, sources: FingerprintSources): unknown => {
   if (MODULE_ORDER.includes(id)) {
     const sections = sources.apiSections.filter((section) => section.id === id);
     const namespace = SECTION_TRANSLATION_KEYS[id];
-    const files = sections
-      .map((section) => (section.customType ? CUSTOM_TYPE_FILES[section.customType] : undefined))
-      .filter((file): file is string => file !== undefined);
+    const files = API_PAGE_FILES[id] ?? [];
     return {
       copy,
       data: sections,

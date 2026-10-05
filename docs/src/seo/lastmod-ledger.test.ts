@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { PRERENDER_PATHS } from '../prerender-paths';
 import { buildJsonLd } from './jsonld';
-import { LASTMOD_LEDGER, lastModified } from './lastmod';
+import CHANGELOG from '../../../CHANGELOG.md?raw';
+import { LASTMOD_LEDGER, lastModified, latestReleaseDate } from './lastmod';
 import { localizedPrerenderPaths } from './locales';
 import { nodeDigests } from '../../scripts/source-digest.mjs';
 import { fingerprintRoutes, pageData } from './page-fingerprint';
@@ -61,5 +62,26 @@ describe('TechArticle dateModified', () => {
 
       expect(articleDate(route, path, ru ? 'ru' : 'en'), route).toBeUndefined();
     }
+  });
+});
+
+describe('changelog date', () => {
+  it('is the newest dated release heading', () => {
+    const markdown =
+      '# Changelog\n\n## [1.2.0](https://example.com/a) (2026-09-17)\n\n- a\n\n## [1.1.0](https://example.com/b) (2026-08-01)\n';
+
+    expect(latestReleaseDate(markdown)).toBe('2026-09-17');
+  });
+
+  it('is absent when no release heading carries a date', () => {
+    expect(latestReleaseDate('# Changelog\n\n## Unreleased\n\n- a\n')).toBeUndefined();
+  });
+
+  // Both trees render the same CHANGELOG.md; only the chrome is translated.
+  it.each(['/changelog', '/ru/changelog'])('dates %s by its newest release, or its chrome if newer', (route) => {
+    const release = latestReleaseDate(CHANGELOG);
+    expect(release).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    expect(lastModified(route)).toBe([release, LASTMOD_LEDGER[route].date].filter(Boolean).sort().at(-1));
   });
 });

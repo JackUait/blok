@@ -1615,8 +1615,8 @@ test.describe('find in page', () => {
       { placement: 'top-end', dir: 'rtl' },
     ] as const) {
       test(`the bloom ends with the skin exactly on the bar (${placement}, ${dir})`, async ({ page }) => {
-        await page.evaluate((direction) => document.documentElement.setAttribute('dir', direction), dir);
-        await createEditor(page, paragraphs('hello there'), { config: { find: { placement } } });
+        // The editor takes its direction from i18n, not from <html dir>.
+        await createEditor(page, paragraphs('hello there'), { config: { find: { placement }, i18n: { direction: dir } } });
         await focusParagraph(page, 'hello there');
         await page.keyboard.press(FIND_KEY);
         await settle(page);
@@ -1644,6 +1644,41 @@ test.describe('find in page', () => {
       });
     }
 
+    for (const dir of ['ltr', 'rtl'] as const) {
+      test(`a top-end bar blooms from its inline-end corner (${dir})`, async ({ page }) => {
+        await createEditor(page, paragraphs('hello there'), { config: { find: { placement: 'top-end' }, i18n: { direction: dir } } });
+        await focusParagraph(page, 'hello there');
+        await page.keyboard.press(FIND_KEY);
+
+        // One synchronous read, at the bloom's first frame.
+        const start = await page.evaluate(() => {
+          const dock = document.querySelector<HTMLElement>('[data-blok-find]');
+          const bar = document.querySelector<HTMLElement>('[data-blok-find-bar]');
+          const skin = dock?.getAnimations({ subtree: true }).find((animation) => {
+            const effect = animation.effect;
+
+            return effect instanceof KeyframeEffect && effect.pseudoElement === '::before' && 'width' in (effect.getKeyframes()[0] ?? {});
+          });
+
+          if (dock === null || bar === null || skin === undefined) {
+            return null;
+          }
+          skin.pause();
+          skin.currentTime = 0;
+          const style = getComputedStyle(dock, '::before');
+          const read = { dir: dock.getAttribute('dir'), left: style.left, width: style.width, barWidth: bar.offsetWidth };
+
+          skin.play();
+
+          return read;
+        });
+
+        expect(start?.dir).toBe(dir);
+        expect(start?.width).toBe('40px');
+        expect(start?.left).toBe(dir === 'rtl' ? '0px' : `${(start?.barWidth ?? 0) - 40}px`);
+      });
+    }
+
     test('Mod+F on a selected word flies it into the field, and writes nothing', async ({ page }) => {
       await createEditor(page, paragraphs('pick this word'));
       await page.evaluate(async () => {
@@ -1665,9 +1700,23 @@ test.describe('find in page', () => {
       await focusParagraph(page, 'pick this word');
       await waitPastOnChangeBatch(page);
       await selectWord(page, 'pick this word', 5, 9);
+      // The chip lives ~680ms, so record it as it is added instead of racing a poll.
+      await page.evaluate(() => {
+        const record = window as Window & { __findChips?: Array<{ text: string | null; animated: boolean }> };
+
+        record.__findChips = [];
+        new MutationObserver((mutations) => {
+          for (const node of mutations.flatMap((mutation) => [...mutation.addedNodes])) {
+            if (node instanceof HTMLElement && node.hasAttribute('data-blok-find-hop-chip')) {
+              record.__findChips?.push({ text: node.textContent, animated: node.getAnimations().length > 0 });
+            }
+          }
+        }).observe(document.body, { childList: true, subtree: true });
+      });
       await page.keyboard.press(FIND_KEY);
 
-      await expect(page.getByTestId('find-hop-chip')).toHaveText('this');
+      await expect.poll(() => page.evaluate(() =>
+        (window as Window & { __findChips?: Array<{ text: string | null; animated: boolean }> }).__findChips)).toEqual([{ text: 'this', animated: true }]);
       await expect(page.getByTestId('find-hop-chip')).toHaveCount(0);
       await expect(page.getByTestId('find-input')).toHaveValue('this');
       await expect(page.getByTestId('find-input')).toBeFocused();
@@ -1704,12 +1753,18 @@ test.describe('find in page', () => {
       await selectWord(page, 'pick this word', 5, 9);
       await page.keyboard.press(FIND_KEY);
 
-      const state = await page.evaluate(() => ({
-        running: document.querySelector('[data-blok-find]')?.getAnimations({ subtree: true }).length ?? -1,
-        chips: document.querySelectorAll('[data-blok-find-hop-chip]').length,
-      }));
+      const state = await page.evaluate(() => {
+        const bar = document.querySelector('[data-blok-find-bar]');
 
-      expect(state).toEqual({ running: 0, chips: 0 });
+        return {
+          running: document.querySelector('[data-blok-find]')?.getAnimations({ subtree: true }).length ?? -1,
+          chips: document.querySelectorAll('[data-blok-find-hop-chip]').length,
+          opacity: bar === null ? null : getComputedStyle(bar).opacity,
+          clip: bar === null ? null : getComputedStyle(bar).clipPath,
+        };
+      });
+
+      expect(state).toEqual({ running: 0, chips: 0, opacity: '1', clip: 'none' });
       await expect(page.getByTestId('find-input')).toHaveValue('this');
     });
   });

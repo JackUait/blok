@@ -69,12 +69,13 @@ style when it ends. A bar reopened mid-close cancels the running animations firs
 
 ### Replace row
 
-- The grid row keeps its real `0fr → 1fr` transition, which gives the layout.
-- The skin carries the spring. It animates its height from the old bar height to the new one with
-  overshoot, plus a small width pinch (−14px at ~18%). Then it returns to `inset: 0`.
+- Opening snaps the layout: the row's `0fr → 1fr` change has no transition on the way open. The
+  skin and the content clip carry the spring instead. They grow from the old bar height to the new
+  one with overshoot, plus a small width pinch (−14px at ~18%), then rest at `inset: 0`. This is the
+  same skin + clip as the bloom, so content never shows outside the skin.
 - The replace field drops from under the find field, then Replace and Replace all follow with
   70ms / 130ms delays.
-- Closing the row keeps today's transition, with no spring.
+- Closing the row keeps today's eased `1fr → 0fr` transition, with no spring.
 
 ### Word hop
 
@@ -110,6 +111,9 @@ style when it ends. A bar reopened mid-close cancels the running animations firs
 - `find-bar.ts`: `open()` takes an optional `hop` source (rect + font). It calls bloom when opening
   from closed and hop when a source is given. `setReplaceOpen` calls `stretchSkin` and staggers the
   replace parts.
+- The bar's paint moves from `[data-blok-find-bar]` to `[data-blok-find]::before`, and the exit fade
+  moves from the bar to the dock. The skin is on the dock rather than the bar because the bar's own
+  `clip-path` would clip a `::before` shadow.
 - `index.ts`: `Find.open()` captures the hop source next to `selectedTextForPrefill()`.
 - `find.css`: the skin `::before`, the in-flight attribute, and the reduced-motion guards. The old
   `@starting-style` bar entrance is removed.

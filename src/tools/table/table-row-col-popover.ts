@@ -6,7 +6,7 @@ import {
   IconInsertBelow,
   IconInsertLeft,
   IconInsertRight,
-  IconMarker,
+  IconPaintRoller,
   IconTrash,
   IconHeaderRow,
   IconHeaderColumn,
@@ -70,7 +70,7 @@ const buildColorItem = (
   });
 
   return {
-    icon: IconMarker,
+    icon: IconPaintRoller,
     title: options.i18n.t('tools.table.cellColor'),
     name: 'cellColor',
     children: {

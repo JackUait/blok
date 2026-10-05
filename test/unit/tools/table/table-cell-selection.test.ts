@@ -62,6 +62,7 @@ vi.mock('../../../../src/tools/table/table-cell-color-picker', () => ({
 }));
 
 import { TableCellSelection } from '../../../../src/tools/table/table-cell-selection';
+import { IconPaintRoller } from '../../../../src/components/icons';
 
 /**
  * Creates a simple grid element with rows and columns for testing.
@@ -1925,6 +1926,35 @@ describe('TableCellSelection', () => {
       const cellColorItem = items?.find(item => item.name === 'cellColor');
 
       expect(cellColorItem?.children?.width).toBeUndefined();
+    });
+
+    it('shows the paint roller icon on the cell color entry', () => {
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onColorChange: vi.fn(),
+      });
+
+      const cell = grid.querySelector(`[${CELL_ATTR}]`) as HTMLElement;
+      const cellRect = cell.getBoundingClientRect();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: cellRect.left + 5,
+        clientY: cellRect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      const items = lastPopoverArgs?.items as Array<{ name?: string; icon?: string }>;
+      const cellColorItem = items?.find(item => item.name === 'cellColor');
+
+      expect(cellColorItem?.icon).toBe(IconPaintRoller);
     });
   });
 

@@ -73,8 +73,8 @@ style when it ends. A bar reopened mid-close cancels the running animations firs
   skin and the content clip carry the spring instead. They grow from the old bar height to the new
   one with overshoot, plus a small width pinch (−14px at ~18%), then rest at `inset: 0`. This is the
   same skin + clip as the bloom, so content never shows outside the skin.
-- The replace field drops from under the find field, then Replace and Replace all follow with
-  70ms / 130ms delays.
+- The replace field drops from under the find field, then Replace and Replace all follow
+  110ms / 170ms after the stretch starts.
 - Closing the row keeps today's eased `1fr → 0fr` transition, with no spring.
 
 ### Word hop

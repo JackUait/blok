@@ -68,6 +68,7 @@ export class TabsTool implements BlockTool, TabsHandle {
   private appliedActive = '';
   private readonly isProbe: boolean;
   private panelsObserver: MutationObserver | null = null;
+  private stripResizeObserver: ResizeObserver | null = null;
 
   constructor({ data, api, block, readOnly, origin }: BlockToolConstructorOptions<TabsData & SeedData>) {
     this.api = api;
@@ -130,6 +131,12 @@ export class TabsTool implements BlockTool, TabsHandle {
     if (!this.isProbe && typeof MutationObserver !== 'undefined') {
       this.panelsObserver = new MutationObserver(this.queueSync);
       this.panelsObserver.observe(panels, { childList: true });
+    }
+
+    // A block that mounts hidden measures a zero-width strip; re-measure when it shows or resizes.
+    if (!this.isProbe && typeof ResizeObserver !== 'undefined') {
+      this.stripResizeObserver = new ResizeObserver(this.updateOverflow);
+      this.stripResizeObserver.observe(scroller);
     }
 
     this.detachGestures = attachPillGestures({
@@ -417,6 +424,8 @@ export class TabsTool implements BlockTool, TabsHandle {
     this.detachGestures = null;
     this.panelsObserver?.disconnect();
     this.panelsObserver = null;
+    this.stripResizeObserver?.disconnect();
+    this.stripResizeObserver = null;
     this.closeMenu();
     this.emojiPicker?.close();
     this.emojiPicker?.getElement().remove();

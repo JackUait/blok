@@ -356,3 +356,43 @@ describe('tabs block', () => {
     expect(pills()[1].textContent).toBe('🚫Avoid');
   });
 });
+
+describe('tabs block: strip overflow', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // A block that mounts hidden (a closed toggle, another tab) measures a
+  // zero-width strip; only a later resize can tell it the tabs overflow.
+  it('re-measures the edge fade when the strip changes size', async () => {
+    const callbacks: ResizeObserverCallback[] = [];
+
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: ResizeObserverCallback) {
+        callbacks.push(callback);
+      }
+
+      public observe(): void {}
+
+      public disconnect(): void {}
+
+      public unobserve(): void {}
+    });
+
+    await boot(doc());
+
+    const scroller = document.querySelector<HTMLElement>('[data-blok-tabs-scroller]');
+
+    if (scroller === null) {
+      throw new Error('no scroller');
+    }
+
+    expect(scroller.hasAttribute('data-overflow-end')).toBe(false);
+
+    Object.defineProperty(scroller, 'scrollWidth', { configurable: true, value: 600 });
+    Object.defineProperty(scroller, 'clientWidth', { configurable: true, value: 300 });
+    callbacks.forEach(callback => callback([], {} as ResizeObserver));
+
+    expect(scroller.hasAttribute('data-overflow-end')).toBe(true);
+  });
+});

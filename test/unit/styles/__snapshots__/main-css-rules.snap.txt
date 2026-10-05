@@ -14551,7 +14551,26 @@ span[data-blok-slash-search] {
   border: 0;
   background: transparent;
   overflow: visible;
-  transition: display var(--blok-duration-base) allow-discrete, overlay var(--blok-duration-base) allow-discrete;
+  transform-origin: top right;
+  transition: opacity var(--blok-duration-base) var(--blok-ease-exit), transform var(--blok-duration-base) var(--blok-ease-exit), display var(--blok-duration-base) allow-discrete, overlay var(--blok-duration-base) allow-discrete;
+}
+
+[data-blok-find]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--blok-radius-surface);
+  background: var(--blok-popover-bg);
+  box-shadow: var(--blok-popover-box-shadow);
+  pointer-events: none;
+}
+
+[data-blok-find][hidden] {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
 }
 
 [data-blok-find][data-blok-find-placement^="top"], [data-blok-find][data-blok-top-layer][popover][data-blok-find-placement^="top"] {
@@ -14585,37 +14604,22 @@ span[data-blok-slash-search] {
   padding: var(--blok-space-1-5);
   border-radius: var(--blok-radius-surface);
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1-5)));
-  background: var(--blok-popover-bg);
   color: var(--blok-text-primary);
-  box-shadow: var(--blok-popover-box-shadow);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   font-size: var(--blok-font-size-ui-label);
   line-height: var(--blok-line-height-body);
-  transform-origin: top right;
-  transition: opacity var(--blok-duration-popover-enter) var(--blok-ease-popover), transform var(--blok-duration-popover-enter) var(--blok-ease-popover);
 }
 
-[data-blok-find][data-blok-find-placement^="bottom"] [data-blok-find-bar] {
+[data-blok-find][data-blok-find-placement^="bottom"] {
   transform-origin: bottom right;
 }
 
-[data-blok-find][dir="rtl"] [data-blok-find-bar] {
+[data-blok-find][dir="rtl"] {
   transform-origin: top left;
 }
 
-[data-blok-find][dir="rtl"][data-blok-find-placement^="bottom"] [data-blok-find-bar] {
+[data-blok-find][dir="rtl"][data-blok-find-placement^="bottom"] {
   transform-origin: bottom left;
-}
-
-[data-blok-find][hidden] [data-blok-find-bar] {
-  opacity: 0;
-  transform: translateY(-4px) scale(0.98);
-  transition: opacity var(--blok-duration-base) var(--blok-ease-exit), transform var(--blok-duration-base) var(--blok-ease-exit);
-}
-
-[@starting-style] [data-blok-find]:not([hidden]) [data-blok-find-bar] {
-  opacity: 0;
-  transform: translateY(-6px) scale(0.97);
 }
 
 [data-blok-find-bar] :where(button, input) {
@@ -14802,19 +14806,13 @@ span[data-blok-slash-search] {
   grid-template-rows: 1fr;
   margin-top: var(--blok-space-1);
   opacity: 1;
-  transition: grid-template-rows var(--blok-duration-slow) var(--blok-ease-popover), margin-top var(--blok-duration-slow) var(--blok-ease-popover), opacity var(--blok-duration-slow) var(--blok-ease-popover), display var(--blok-duration-slow) allow-discrete;
 }
 
 [data-blok-find-replace-row][hidden] {
   grid-template-rows: 0fr;
   margin-top: 0;
   opacity: 0;
-}
-
-[@starting-style] [data-blok-find-replace-row]:not([hidden]) {
-  grid-template-rows: 0fr;
-  margin-top: 0;
-  opacity: 0;
+  transition: grid-template-rows var(--blok-duration-slow) var(--blok-ease-popover), margin-top var(--blok-duration-slow) var(--blok-ease-popover), opacity var(--blok-duration-slow) var(--blok-ease-popover), display var(--blok-duration-slow) allow-discrete;
 }
 
 [data-blok-find-replace-row] > [data-blok-find-row] {
@@ -14872,7 +14870,7 @@ span[data-blok-slash-search] {
   animation: blok-find-arrive var(--blok-duration-popover-enter) var(--blok-ease-popover);
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-find], [data-blok-find-bar], [data-blok-find][hidden] [data-blok-find-bar], [data-blok-find-icon-button], [data-blok-find-icon-button] svg, [data-blok-find-replace-row], [data-blok-find-text-button] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-find], [data-blok-find][hidden], [data-blok-find-icon-button], [data-blok-find-icon-button] svg, [data-blok-find-replace-row][hidden], [data-blok-find-text-button] {
   transition: none;
 }
 

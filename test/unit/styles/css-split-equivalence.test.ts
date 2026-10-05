@@ -708,6 +708,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const EMBED_LIVING_WINDOW_BYTES = 10_195;
     // Video error screen: static, the colour-bar tear, the glass card and its tokens.
     const VIDEO_NO_SIGNAL_BYTES = 8_421;
+    // Image upload resend: the card's lift, progress hairline, attempt pill and the failed send's fall back.
+    const IMAGE_RESEND_BYTES = 6_108;
     // Notifier card stack: the peeking edges of waiting cards, their tokens, the unfold and the dust mask.
     const NOTIFIER_CARD_STACK_BYTES = 5_687;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
@@ -752,7 +754,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + AUDIO_ERROR_PLAYER_BYTES
       + AUDIO_BEAT_MOTION_BYTES
       + EMBED_LIVING_WINDOW_BYTES
-      + VIDEO_NO_SIGNAL_BYTES;
+      + VIDEO_NO_SIGNAL_BYTES
+      + IMAGE_RESEND_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

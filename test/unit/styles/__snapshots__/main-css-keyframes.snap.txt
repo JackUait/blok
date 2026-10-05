@@ -265,8 +265,49 @@
   from { color: var(--blok-color-danger); background: color-mix(in srgb, var(--blok-color-danger) 12%, var(--blok-bg-secondary)) }
 }
 
+@keyframes blok-image-resend-drop {
+  from { transform: translateY(-120%) scale(0.86); opacity: 0 }
+  35% { opacity: 1 }
+  to { transform: none; opacity: 1 }
+}
+
+@keyframes blok-image-resend-ring {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--blok-color-danger) 35%, transparent) }
+  to { box-shadow: 0 0 0 12px color-mix(in srgb, var(--blok-color-danger) 0%, transparent) }
+}
+
+@keyframes blok-image-resend-shake {
+  10%, 90% { translate: -1px 0 }
+  20%, 80% { translate: 3px 0 }
+  30%, 50%, 70% { translate: -5px 0 }
+  40%, 60% { translate: 5px 0 }
+}
+
 @keyframes blok-image-retry-spin {
   to { transform: rotate(360deg) }
+}
+
+@keyframes blok-image-send-beam {
+  from { background-position: 0 0 }
+  to { background-position: 0 100% }
+}
+
+@keyframes blok-image-send-lift {
+  0% { transform: none; opacity: 1 }
+  20% { transform: translateY(3px) scale(0.94); opacity: 1 }
+  62% { transform: translateY(-120%) scale(0.86); opacity: 1 }
+  63% { transform: translateY(0) scale(0.86); opacity: 0 }
+  100% { transform: translateY(0) scale(0.86); opacity: 0.45 }
+}
+
+@keyframes blok-image-send-sweep {
+  from { inset-inline-start: -35% }
+  to { inset-inline-start: 100% }
+}
+
+@keyframes blok-image-send-wait {
+  0%, 100% { transform: scale(0.86); opacity: 0.45 }
+  50% { transform: scale(0.9); opacity: 0.7 }
 }
 
 @keyframes blok-image-shimmer {

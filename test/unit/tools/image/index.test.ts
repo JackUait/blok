@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { ImageTool } from '../../../../src/tools/image';
+import { RESEND_STAGE_MS } from '../../../../src/tools/image/constants';
 import { updateOverlayTier, isTinyImage, applyAutoFull } from '../../../../src/tools/image/ui';
 import type { ImageData, ImageConfig } from '../../../../types/tools/image';
 import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, HTMLPasteEvent, PatternPasteEvent } from '../../../../types';
@@ -1238,8 +1239,10 @@ describe('ImageTool — error state', () => {
     Object.defineProperty(event, 'type', { value: 'file' });
     tool.onPaste(event);
     await new Promise((r) => setTimeout(r, 0));
+    vi.useFakeTimers();
     root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.click();
-    await new Promise((r) => setTimeout(r, 0));
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+    vi.useRealTimers();
     expect(root.getAttribute('data-state')).toBe('error');
     expect(root.getAttribute('data-retrying')).toBeNull();
     expect(root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.disabled).toBe(false);
@@ -1259,6 +1262,133 @@ describe('ImageTool — error state', () => {
     await new Promise((r) => setTimeout(r, 0));
     root.querySelector<HTMLButtonElement>('[data-action="replace"]')?.click();
     expect(root.getAttribute('data-state')).toBe('empty');
+  });
+});
+
+describe('ImageTool — sending a failed upload again', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  const failedUpload = async (
+    uploadByFile: (file: File, options: { onProgress?: (percent: number) => void }) => Promise<{ url: string }>
+  ): Promise<{ tool: ImageTool; root: HTMLElement; options: BlockToolConstructorOptions<ImageData, ImageConfig> }> => {
+    const options = createOptions({}, { uploader: { uploadByFile } });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await vi.advanceTimersByTimeAsync(0);
+
+    return { tool, root, options };
+  };
+  const card = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-role="error-state"]');
+  const retry = (root: HTMLElement): void => {
+    root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.click();
+  };
+
+  it('turns the failed card into a sending card in place', async () => {
+    const { root } = await failedUpload(vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockReturnValueOnce(new Promise(() => undefined)));
+    const failed = card(root);
+
+    retry(root);
+
+    expect(card(root)).toBe(failed);
+    expect(failed?.getAttribute('data-sending')).toBe('true');
+    expect(failed?.getAttribute('aria-busy')).toBe('true');
+    expect(failed?.querySelector('.blok-image-error__msg')?.textContent).toBe('Uploading…');
+    expect(failed?.querySelector('[role="progressbar"]')).not.toBeNull();
+    expect(root.querySelector<HTMLButtonElement>('[data-action="replace"]')?.disabled).toBe(true);
+  });
+
+  it('fills the progress line from the uploader', async () => {
+    const { root } = await failedUpload(vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockImplementationOnce((_file: File, { onProgress }: { onProgress?: (percent: number) => void }) => {
+        onProgress?.(40);
+
+        return new Promise(() => undefined);
+      }));
+
+    retry(root);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const bar = card(root)?.querySelector('[role="progressbar"]');
+
+    expect(bar?.getAttribute('aria-valuenow')).toBe('40');
+    expect(bar?.hasAttribute('data-indeterminate')).toBe(false);
+  });
+
+  it('keeps the sending card up for the whole send even when the server fails at once', async () => {
+    const { root } = await failedUpload(vi.fn().mockRejectedValue(new Error('still broken')));
+
+    retry(root);
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS - 50);
+
+    expect(card(root)?.getAttribute('data-sending')).toBe('true');
+    await vi.advanceTimersByTimeAsync(50);
+    expect(card(root)?.hasAttribute('data-sending')).toBe(false);
+    expect(card(root)?.getAttribute('data-resent')).toBe('true');
+  });
+
+  it('does not hold back a send that works', async () => {
+    const { root } = await failedUpload(vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce({ url: 'https://cdn/ok.png' }));
+
+    retry(root);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(root.getAttribute('data-state')).toBe('rendered');
+  });
+
+  it('counts the tries on the card after each failed send', async () => {
+    const { root } = await failedUpload(vi.fn().mockRejectedValue(new Error('still broken')));
+    const count = (): string | null | undefined => card(root)?.querySelector('.blok-image-error__attempt')?.textContent;
+
+    expect(count()).toBeUndefined();
+    retry(root);
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+    expect(count()).toBe('×2');
+    retry(root);
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+    expect(count()).toBe('×3');
+  });
+
+  it('develops the picture that a send brought back', async () => {
+    const { root } = await failedUpload(vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce({ url: 'https://cdn/ok.png' }));
+
+    retry(root);
+    await vi.advanceTimersByTimeAsync(0);
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+
+    expect(root.querySelector('.blok-image-inner')?.getAttribute('data-developing')).toBe('true');
+  });
+
+  it('drops a held failure when the block is deleted during the send', async () => {
+    const { tool, root, options } = await failedUpload(vi.fn().mockRejectedValue(new Error('still broken')));
+    const report = vi.mocked(options.api.media.reportFailure);
+
+    retry(root);
+    await vi.advanceTimersByTimeAsync(0);
+    report.mockClear();
+    tool.removed();
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+
+    expect(report).not.toHaveBeenCalled();
   });
 });
 
@@ -2547,8 +2677,10 @@ describe('ImageTool — failure reporting', () => {
     tool.render();
     pasteFile(tool);
     await new Promise((r) => setTimeout(r, 0));
+    vi.useFakeTimers();
     vi.mocked(options.api.media.reportFailure).mock.calls[0][0].retry();
-    await new Promise((r) => setTimeout(r, 0));
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+    vi.useRealTimers();
 
     expect(revoke).toHaveBeenCalledWith('blob:first');
   });

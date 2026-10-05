@@ -34,7 +34,7 @@ import {
   IconImage,
   IconReplace,
 } from '../../components/icons';
-import { DEFAULT_RELOAD_ATTEMPTS, IMAGE_SNAP_POINTS, URL_PATTERN } from './constants';
+import { DEFAULT_RELOAD_ATTEMPTS, IMAGE_SNAP_POINTS, RESEND_STAGE_MS, URL_PATTERN } from './constants';
 import { syncMediaHeight } from './media-height';
 import { applyTones, pictureKey, sampleToneGrid, stampTones, type ToneMap } from './tone-sampler';
 import type { ToneGrid } from './tone';
@@ -42,7 +42,7 @@ import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
-import { renderErrorState } from './error-state';
+import { renderErrorState, startSending } from './error-state';
 import { ImageError } from './errors';
 import { alignmentFraction, attachResizeHandle, edgePositionPercent, type ResizeEdge } from './resizer';
 import { resizeFloorPx } from './resize-floor';
@@ -111,6 +111,16 @@ export class ImageTool implements BlockTool {
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private brokenImage = false;
   private retrying = false;
+  /** Tries of the current upload, the first one included. */
+  private uploadTries = 1;
+  /** When the running resend started; a failure that comes sooner waits for the stage. */
+  private sendStartedAt: number | null = null;
+  private sendProgress: ((percent: number) => void) | null = null;
+  private heldFailure: ReturnType<typeof setTimeout> | null = null;
+  /** The next error card ends a resend. */
+  private resentFailure = false;
+  /** Where the resend's thumbnail sat; the picture it brought back opens from there. */
+  private landFrom: DOMRect | null = null;
   /** A broken image's Retry is reloading; the card stays up until it loads or fails. */
   private mending = false;
   private reloadAttempts = 0;
@@ -263,9 +273,11 @@ export class ImageTool implements BlockTool {
 
   private reportProgress = (percent: number): void => {
     this.uploadingEl?.setProgress(percent);
+    this.sendProgress?.(percent);
   };
 
   private startUpload(file: File): void {
+    this.uploadTries = 1;
     const before = this.writePickedFile(file);
 
     if (this.shouldConvertGif(file.type)) {
@@ -401,6 +413,7 @@ export class ImageTool implements BlockTool {
   }
 
   private startUrl(url: string): void {
+    this.uploadTries = 1;
     const before = this.writeEnteredUrl(url);
 
     if (this.shouldConvertGifUrl(url)) {
@@ -510,12 +523,16 @@ export class ImageTool implements BlockTool {
       this.transitionToEmpty();
       return;
     }
+    // The toast's Retry can fire while the card is already sending.
+    if (this.retrying) return;
     this.retrying = true;
     this.syncRetryingAttribute();
-    const retryBtn = this.root?.querySelector<HTMLButtonElement>(
-      '[data-role="error-state"] [data-action="retry"]'
-    );
-    if (retryBtn) retryBtn.disabled = true;
+    this.uploadTries++;
+    const card = this.root?.querySelector<HTMLElement>('[data-role="error-state"]');
+    if (card) {
+      this.sendProgress = startSending(card, this.api.i18n);
+      this.sendStartedAt = performance.now();
+    }
     // A failed pick or link was put back, so the retry makes that edit again.
     if (source.kind === 'file') {
       this.uploadFile(source, this.writePickedFile(source.file));
@@ -579,6 +596,8 @@ export class ImageTool implements BlockTool {
   }
 
   private showResult(result: UploadResult): void {
+    this.landFrom = this.root?.querySelector('[data-sending="true"] .blok-image-error__icon')?.getBoundingClientRect() ?? null;
+    this.endSend();
     this.data = { ...this.data, url: result.url, fileName: result.fileName ?? this.data.fileName, variants: result.variants };
     this.state = 'RENDERED';
     this.errorMessage = null;
@@ -588,6 +607,7 @@ export class ImageTool implements BlockTool {
   }
 
   private applyError(err: unknown, source: { file?: File; url?: string }): void {
+    if (this.holdForStage(() => this.applyError(err, source))) return;
     const own = err instanceof ImageError ? err : null;
     const outcome = resolveUploadError({
       tool: 'image',
@@ -626,6 +646,56 @@ export class ImageTool implements BlockTool {
     if (!(err instanceof ImageError)) {
       console.error('[image] upload failed', err);
     }
+  }
+
+  /**
+   * Holds a resend's failure until the send has been on stage for RESEND_STAGE_MS.
+   * @param apply - shows the failure
+   * @returns true when the failure was held
+   */
+  private holdForStage(apply: () => void): boolean {
+    if (this.sendStartedAt === null) return false;
+    const wait = RESEND_STAGE_MS - (performance.now() - this.sendStartedAt);
+    this.endSend();
+    this.resentFailure = true;
+    if (wait <= 0) return false;
+    this.heldFailure = setTimeout(() => {
+      this.heldFailure = null;
+      if (!this.detached && this.retrying) apply();
+    }, wait);
+    return true;
+  }
+
+  private endSend(): void {
+    this.sendStartedAt = null;
+    this.sendProgress = null;
+  }
+
+  /**
+   * The picture a resend brought back opens out of the thumbnail's spot, then develops.
+   * @param figure - the loaded picture
+   */
+  private landPicture(figure: HTMLElement): void {
+    const from = this.landFrom;
+    if (from === null) return;
+    this.landFrom = null;
+    figure.setAttribute('data-developing', 'true');
+    figure.addEventListener('animationend', (event) => {
+      if (event.animationName === 'blok-image-develop') figure.removeAttribute('data-developing');
+    });
+    const to = figure.getBoundingClientRect();
+    if (prefersReducedMotion() || !canAnimate(figure) || from.width === 0 || to.width === 0) return;
+    const top = Math.max(0, from.top - to.top);
+    const left = Math.max(0, from.left - to.left);
+    const right = Math.max(0, to.right - from.right);
+    const bottom = Math.max(0, to.bottom - from.bottom);
+    figure.animate(
+      [
+        { clipPath: `inset(${top}px ${right}px ${bottom}px ${left}px round 8px)` },
+        { clipPath: 'inset(0px 0px 0px 0px round 0px)' },
+      ],
+      { duration: 620, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }
+    );
   }
 
   private applyBrokenImage(): void {
@@ -959,6 +1029,7 @@ export class ImageTool implements BlockTool {
 
   public removed(): void {
     this.detached = true;
+    if (this.heldFailure !== null) clearTimeout(this.heldFailure);
     this.clearFailure();
     this.detachResize();
     this.detachCrop();
@@ -1095,8 +1166,14 @@ export class ImageTool implements BlockTool {
         : () => this.retryLastSource(),
       onSwap: this.readOnly ? undefined : () => this.transitionToEmpty(),
       i18n: this.api.i18n,
-      ...(isBroken ? { frame: this.data } : this.failedFile()),
+      ...(isBroken ? { frame: this.data } : { ...this.failedFile(), attempt: this.uploadTries, resent: this.takeResent() }),
     });
+  }
+
+  private takeResent(): boolean {
+    const resent = this.resentFailure;
+    this.resentFailure = false;
+    return resent;
   }
 
   /** What the upload card names: the picked file, or the link that failed. */
@@ -1150,6 +1227,7 @@ export class ImageTool implements BlockTool {
       imgEl.addEventListener('error', () => this.handleImgLoadFailure(imgEl, figure));
       imgEl.addEventListener('load', () => {
         this.endMending(figure);
+        this.landPicture(figure);
         this.clearFailure({ recovered: true });
         figure.removeAttribute('data-loading');
         syncMediaHeight(figure);

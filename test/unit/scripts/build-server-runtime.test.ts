@@ -51,6 +51,23 @@ describe('buildServerRuntime', () => {
       .toBe('<p>Hi &amp; bye</p>');
   });
 
+  /** The engine has no structuredClone; the hand clone must still keep an own `__proto__` key. */
+  it('keeps a __proto__ key through injectTexts in a realm with no host globals', async () => {
+    const outputPath = await buildServerRuntime(outDir);
+    const source = readFileSync(outputPath, 'utf8');
+    const sandbox: Record<string, unknown> = {};
+
+    runInContext(source, createContext(sandbox));
+
+    const invoke = sandbox.blokServerInvoke as (op: string, input: string) => Promise<string>;
+    const output = await invoke(
+      'injectTexts',
+      '{"document":{"blocks":[{"type":"paragraph","data":{"text":"x","__proto__":{"keep":"me"}}}]},"texts":["y"]}'
+    );
+
+    expect(output).toContain('"data":{"text":"y","__proto__":{"keep":"me"}}');
+  });
+
   /**
    * The stored `version` of a document has to be the same string whichever side
    * wrote it, so the bundle reports the editor's own version rather than a

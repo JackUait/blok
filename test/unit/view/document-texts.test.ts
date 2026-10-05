@@ -522,6 +522,21 @@ describe('extractTexts / injectTexts', () => {
     });
   });
 
+  /**
+   * The returned document is stored. A `__proto__` key in saved JSON is an own
+   * key; plain assignment would hit the prototype setter and drop it.
+   * Built with JSON.parse: an object literal would set the prototype instead.
+   */
+  it('keeps every __proto__ key of the document it returns', () => {
+    const data: unknown = JSON.parse(
+      '{"__proto__":{"top":1},"blocks":[{"type":"paragraph","data":{"text":"x","other":1,"__proto__":{"keep":"me"},"meta":{"__proto__":{"deep":true}}}}]}'
+    );
+
+    expect(JSON.stringify(injectTexts(data, ['y']))).toBe(
+      '{"__proto__":{"top":1},"blocks":[{"type":"paragraph","data":{"text":"y","other":1,"__proto__":{"keep":"me"},"meta":{"__proto__":{"deep":true}}}}]}'
+    );
+  });
+
   it('does not mutate the input document', () => {
     const data = richDocument();
     const snapshot = richDocument();

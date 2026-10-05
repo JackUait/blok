@@ -60,6 +60,7 @@ describe('applyOverlay', () => {
     expect(existsSync(join(dir, 'src/versioning/VersionPicker.test.tsx'))).toBe(false);
     expect(existsSync(join(dir, 'scripts/docs-versions.mjs'))).toBe(true);
     expect(existsSync(join(dir, 'scripts/build-snapshot.mjs'))).toBe(true);
+    expect(existsSync(join(dir, 'src/versioning/__fixtures__'))).toBe(false);
 
     const before = FILES.map((file) => read(dir, file));
     applyOverlay({ tagDocsDir: dir, sourceDocsDir });
@@ -78,6 +79,20 @@ describe('applyOverlay', () => {
       for (const line of grafted) {
         expect(current).toContain(line);
       }
+    }
+  });
+
+  it('inserts the same Nav lines as the current docs', () => {
+    checkoutTag('v1.7.0', dir);
+    applyOverlay({ tagDocsDir: dir, sourceDocsDir });
+
+    const current = read(sourceDocsDir, 'src/components/layout/Nav.tsx');
+    const grafted = read(dir, 'src/components/layout/Nav.tsx')
+      .split('\n')
+      .filter((l) => /VersionPicker|VersionBanner/.test(l));
+    expect(grafted).toHaveLength(4);
+    for (const line of grafted) {
+      expect(current.split('\n')).toContain(line);
     }
   });
 

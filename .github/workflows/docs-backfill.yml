@@ -13,19 +13,28 @@ on:
         default: v1.15.2
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    permissions: {}
     outputs:
       tags: ${{ steps.split.outputs.tags }}
     steps:
       - id: split
         env:
           TAGS: ${{ inputs.tags }}
-        run: echo "tags=$(jq -cn --arg t "$TAGS" '$t | split(" ") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
+          ROOT_TAG: ${{ inputs.root_tag }}
+        run: |
+          tags="$(jq -cn --arg t "$TAGS" '$t | split(" ") | map(select(length > 0))')"
+          # Otherwise no job builds the root snapshot and the run still looks green.
+          if ! jq -e --arg r "$ROOT_TAG" 'any(.[]; . == $r)' <<<"$tags" >/dev/null; then
+            echo "::error::root_tag '$ROOT_TAG' is not in tags: $TAGS"
+            exit 1
+          fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
 
   snapshot:
     name: Snapshot ${{ matrix.tag }}
@@ -33,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     # One-off manual workflow; the root-tag job builds twice.
     timeout-minutes: 15
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -41,10 +52,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: source
+          # The tag's install and build run old dependency scripts; keep the token off disk.
+          persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ matrix.tag }}
           path: tag
+          persist-credentials: false
       # setup-node-deps has no working-directory input, so install by hand in tag/.
       # Corepack must be enabled before setup-node switches Node, or `yarn` is missing.
       - name: Enable Corepack

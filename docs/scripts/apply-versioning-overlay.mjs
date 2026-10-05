@@ -68,7 +68,8 @@ const applyPatch = (tagDocsDir, { file, anchor, before = [], after = [] }) => {
 export const applyOverlay = ({ tagDocsDir, sourceDocsDir }) => {
   cpSync(join(sourceDocsDir, 'src', 'versioning'), join(tagDocsDir, 'src', 'versioning'), {
     recursive: true,
-    filter: (source) => !/\.test\.[^/]+$/.test(source),
+    // Tests and their fixtures stay behind: the tag's tsc and vitest would pick them up.
+    filter: (source) => !/\.test\.[^/]+$/.test(source) && !/[\\/]__fixtures__([\\/]|$)/.test(source),
   });
   mkdirSync(join(tagDocsDir, 'scripts'), { recursive: true });
   for (const script of SCRIPTS) {

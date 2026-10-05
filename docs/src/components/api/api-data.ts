@@ -67,12 +67,6 @@ export interface ApiSection {
   badge?: string;
   title: string;
   description?: string;
-  /**
-   * ISO date string (e.g. "2026-06-30") shown as a "Last updated" line near
-   * the page header. Kept as a plain static string per section — no
-   * git-log/build-time automation needed.
-   */
-  lastUpdated?: string;
   methods?: ApiMethod[];
   properties?: { name: string; type: string; description: string }[];
   table?: {
@@ -91,7 +85,6 @@ export const API_SECTIONS: ApiSection[] = [
     badge: "Guide",
     title: "Quick Start",
     description: "Get up and running with Blok in a few steps.",
-    lastUpdated: "2026-06-30",
     customType: "quick-start",
   },
   {
@@ -100,7 +93,6 @@ export const API_SECTIONS: ApiSection[] = [
     title: "Build your first editor",
     description:
       "Mount Blok, capture some content, and save it as JSON you can store and load back. The full round-trip in five steps.",
-    lastUpdated: "2026-06-30",
     customType: "tutorial",
   },
   {
@@ -109,7 +101,6 @@ export const API_SECTIONS: ApiSection[] = [
     title: "Everything is a block",
     description:
       "Blok has one core idea. Understand it, and the rest of the API falls into place.",
-    lastUpdated: "2026-06-30",
     customType: "concepts",
   },
   {
@@ -118,13 +109,11 @@ export const API_SECTIONS: ApiSection[] = [
     title: "Create a custom block tool",
     description:
       "Build a block tool from scratch: a callout box that renders, edits, and saves like any built-in block.",
-    lastUpdated: "2026-06-30",
     customType: "how-to-custom-tool",
   },
   {
     id: "core",
     badge: "Core",
-    lastUpdated: "2026-06-30",
     title: "Blok Class",
     description:
       "The main editor class. It creates the Blok editor instance and manages it. Every namespace a tool reaches through `api.*` is also on the instance as `editor.*`. The properties below are that same surface, plus the `width`, `placeholder`, `tokens` and `i18n` namespaces the class declares itself.",
@@ -1880,7 +1869,6 @@ editor.selection.restore();`,
     id: "marks-api",
     badge: "Marks",
     title: "Marks API",
-    lastUpdated: "2026-07-22",
     description:
       "Range-aware inline-mark operations for building inline formatting tools. selection.findParentTag inspects only the selection's two boundary nodes (anchor and focus) and their ancestors. api.marks works on the WHOLE range instead.\n\n- has answers \"is every text node in the selection covered\".\n- apply and remove split partially-covered wrappers at the range boundaries, update fully-covering wrappers in place, and restore the selection afterwards.\n  - apply and remove also extend the range over trailing whitespace that browsers exclude from double-click selections.\n\nA MarkSpec describes a mark declaratively: tag, aliasTags, className, attributes, style. aliasTags lets legacy tag variants match as the SAME mark, for example <b> next to <strong>, or <em> next to <i>. New wrappers always use the canonical tag.\n\nString values are static and take part in the mark's identity. Function-form values are resolved from the state passed to apply/toggle, and are deliberately EXCLUDED from identity. That is what makes a colour picker ONE mark that updates in place, rather than N mutually-cancelling marks.\n\nTwo specs sharing tag, classNames and static attributes belong to the same family. They compose on a single element. A text-colour spec and a background-colour spec can both sit on one <mark>.\n\nEvery method defaults to the live selection's first range when no range is passed.\n\nThe core export markSanitizerConfig(spec) derives the sanitizer rule a mark produces. It allowlists the spec's tag, strips style properties and classes the spec does not declare, and keeps declared attributes. Function-form values are handled by property name, so dynamic values are never dropped on save.\n\nThe React adapter's createReactInlineTool applies the same derivation automatically when a tool declares a mark spec.",
     example: `// One spec = one mark. Static values (tag, className, attribute/style
@@ -3907,7 +3895,6 @@ const listItemBlock: OutputBlockData = {
     id: "blok-editor",
     badge: "Adapters",
     title: "BlokEditor component",
-    lastUpdated: "2026-07-17",
     description:
       "The all-in-one editor component shipped by the framework adapters. It is <BlokEditor> in @bloklabs/react and @bloklabs/vue, and <blok-editor> (BlokEditorComponent) in @bloklabs/angular.\n\nReact and Vue accept every editor config option as a prop. They forward unknown props and attributes to the container div.\n\nAngular works differently. It declares a fixed set of `@Input()`s: tools, data, readOnly, hideToolbar, toolbarPosition, inlineToolbar, theme, width, placeholder, styleTokens, i18n, autofocus, migrations, onBeforeRender, onBeforePaste and onError.\n\nEvery other config key goes through the `[config]` escape hatch. That covers sanitizer, minHeight, defaultBlock, dataModel, link, linkPaste, tunes, user, resolveUser, uploader, server, ticket, persistence, collaboration, notifier, logLevel, onEnter, onSubmit, scrollToBlock and so on. Angular also does not forward host attributes onto the container div.\n\nYou read the live Blok instance in each adapter.\n\n- In React use ref/onReady.\n- In Vue use the `instance` on a template ref or the `@ready` emit.\n- In Angular use the `instance` signal or the `(ready)` output.\n\nThe props below cover the adapter-specific surface. Everything else matches the Configuration options.",
     example: `import { useState } from 'react';
@@ -4118,7 +4105,6 @@ bootstrapApplication(AppComponent, {
     id: "use-blocks",
     badge: "Adapters",
     title: "useBlocks",
-    lastUpdated: "2026-08-07",
     description:
       "A reactive snapshot of the block tree plus a full manipulation API, from the framework adapters. Use the useBlocks(editor, options?) hook in @bloklabs/react, the useBlocks(editor, options?) composable in @bloklabs/vue, or `injectBlocks(editor, options?)` in @bloklabs/angular. In Angular, pass the `instance` signal of BlokEditorComponent/BlokContentDirective, and call it from an injection context (a field initializer or the constructor).\n\nReads re-render reactively as the document changes. Writers are atomic: one undo step. They are also safe to call before the editor is ready, where they no-op.\n\nReturned BlockNode objects ({ id, type, parentId, contentIds }) come from a fresh snapshot and go stale. Read them now, don't stash them in dep arrays.\n\nReactivity is document-wide by default. Pass `{ within: blockId }` to re-render only for changes inside that block's subtree: the block itself or any descendant.\n\nReach for it in a container block that renders only its own children. Unscoped, such a block re-renders on every keystroke anywhere in the document, and a page of N containers turns one keystroke into N re-renders.\n\nThe scope bounds re-renders, not reads: a scoped handle still sees the whole tree, so getById/getChildren keep working on anything. In Vue the scope also accepts a ref or getter, and in Angular a signal. It is read at emit time, so changing it needs no re-subscription.",
     example: `import { useBlok, BlokContent, useBlocks } from '@bloklabs/react';
@@ -4409,7 +4395,6 @@ if (saved) {
     id: "use-blok-ready",
     badge: "Adapters",
     title: "useBlokReady",
-    lastUpdated: "2026-07-22",
     description:
       "Live readiness of the Blok editors inside a DOM subtree, as a boolean you can render from. Use the useBlokReady(options) hook in @bloklabs/react, the useBlokReady(options) composable in @bloklabs/vue, which returns a ref, or injectBlokReady(options) in @bloklabs/angular, which returns a signal.\n\nAll three wrap the same core registry behind Blok.readyState() and Blok.subscribeReady(), so they cannot drift. It answers the question a comments list or a form actually has: are MY editors ready?\n\nScope it with the ref you already hold on the container. Then an unrelated editor elsewhere on the page cannot hold your gate closed.\n\nIt is a live signal, not a one-shot latch.\n\n- An editor mounted later re-closes the gate, and with settleOn: 'rendered' so does every re-render from a changed data prop.\n- A scope holding no editors is ready, so the empty-list case needs no special-casing.\n- It starts false and takes its first real reading once the scope element is attached (React: the mount effect; Vue: onMounted; Angular: afterNextRender).\n- A scope you asked for that has not resolved yet reports false, rather than silently falling back to the whole page.\n\nOver-waiting is safe. Under-waiting is a bug.",
     example: `import { useRef } from 'react';
@@ -4476,7 +4461,6 @@ export function Comments({ comments }) {
     id: "view-api",
     badge: "Core",
     title: "View renderer",
-    lastUpdated: "2026-08-07",
     description:
       "Display saved documents without paying for an editor. The @bloklabs/core/view subpath renders OutputData to semantic HTML or plain text.\n\nIt is synchronous and DOM-free, so it runs in Node, workers, and React Server Components. Display-only surfaces (published pages, previews, search indexing, emails) no longer need an editor instance, its bundle, or its async ready latch.\n\nEvery inline-content field is sanitized against the composed allowlist before interpolation, and the URL scheme policy is identical to the editor's. Pair the functions with defineBlokSchema and documents are displayed under the same sanitize composition that produced them. If you later change the inline-tool set at runtime via tools.setInlineToolbar, recompose the schema so the view keeps up.\n\nFor React, use <BlokView> or the wrapper-free useBlokView as the read-only path. Do not reach for <BlokEditor readOnly>, which ships the full editing runtime (toolbar, history, mutation machinery) to every viewer.\n\nOutput is unstyled by default.\n\n- For editor parity, opt into classes and root together with the opt-in @bloklabs/core/view.css.\n- For the classless baseline, use toolAttributes alone with that stylesheet: it reproduces the editor's block spacing from the same --blok-block-padding-* tokens.\n\nEnable blockIds for copy-link-to-block deep links, and pass transformUrl to rewrite hrefs or CDN image URLs.",
     example: `// schema.ts — pure and module-scope-safe; share it between editor and server
@@ -4856,7 +4840,6 @@ function RowLabel({ saved }: { saved: OutputData }) {
     title: "Dev override seam",
     description:
       "A development seam every published entry ships with: how it works, why it's safe, and how to remove it from your bundle.",
-    lastUpdated: "2026-08-20",
     customType: "dev-override-seam",
   },
 ];

@@ -36,7 +36,7 @@
     "date": "2026-09-24"
   },
   "/docs/blok-editor": {
-    "hash": "2e9fe371b5efe261",
+    "hash": "fde4dd8f0388efce",
     "date": "2026-10-05"
   },
   "/docs/bold": {
@@ -72,7 +72,7 @@
     "date": "2026-09-08"
   },
   "/docs/concepts": {
-    "hash": "1ad1d5899d6844d6",
+    "hash": "33f68c80642ad777",
     "date": "2026-10-05"
   },
   "/docs/config": {
@@ -80,11 +80,11 @@
     "date": "2026-10-04"
   },
   "/docs/core": {
-    "hash": "ed8292108450e477",
+    "hash": "51b50640be162499",
     "date": "2026-09-08"
   },
   "/docs/custom-block-tool": {
-    "hash": "227ac6ce4f39cef5",
+    "hash": "eabe365e74d499c9",
     "date": "2026-09-08"
   },
   "/docs/database": {
@@ -96,7 +96,7 @@
     "date": "2026-09-08"
   },
   "/docs/dev-override-seam": {
-    "hash": "02625814e638e07a",
+    "hash": "bf95aeb17bd158ef",
     "date": "2026-09-08"
   },
   "/docs/divider": {
@@ -164,7 +164,7 @@
     "date": "2026-09-28"
   },
   "/docs/marks-api": {
-    "hash": "363de2b6841dc422",
+    "hash": "758892f944e4c9f6",
     "date": "2026-09-08"
   },
   "/docs/notifier-api": {
@@ -192,7 +192,7 @@
     "date": "2026-09-08"
   },
   "/docs/quick-start": {
-    "hash": "1c751044532de364",
+    "hash": "1886c3a05c0f0be8",
     "date": "2026-09-08"
   },
   "/docs/quote": {
@@ -256,7 +256,7 @@
     "date": "2026-09-08"
   },
   "/docs/tutorial": {
-    "hash": "633f3d78cedd649f",
+    "hash": "f45bae87694bc3a1",
     "date": "2026-09-08"
   },
   "/docs/ui-api": {
@@ -272,11 +272,11 @@
     "date": "2026-09-08"
   },
   "/docs/use-blocks": {
-    "hash": "07e1109a475dc58f",
+    "hash": "5102cd5b20605077",
     "date": "2026-09-27"
   },
   "/docs/use-blok-ready": {
-    "hash": "583616b60dda9e40",
+    "hash": "76036f6e147870be",
     "date": "2026-09-08"
   },
   "/docs/video": {
@@ -284,7 +284,7 @@
     "date": "2026-09-28"
   },
   "/docs/view-api": {
-    "hash": "0f9358bd9bd2f2ab",
+    "hash": "fe92a83671c02aac",
     "date": "2026-09-08"
   },
   "/docs/width-api": {
@@ -336,7 +336,7 @@
     "date": "2026-09-24"
   },
   "/ru/docs/blok-editor": {
-    "hash": "a96838f55145420e",
+    "hash": "e96cb176ed29539c",
     "date": "2026-10-05"
   },
   "/ru/docs/bold": {
@@ -372,7 +372,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/concepts": {
-    "hash": "0612f57ac8307f8e",
+    "hash": "b106e0ff6afe2205",
     "date": "2026-10-05"
   },
   "/ru/docs/config": {
@@ -380,11 +380,11 @@
     "date": "2026-10-04"
   },
   "/ru/docs/core": {
-    "hash": "013da874f2a11b76",
+    "hash": "5431aa7583c7739d",
     "date": "2026-09-08"
   },
   "/ru/docs/custom-block-tool": {
-    "hash": "ba2ff81569ea8437",
+    "hash": "3909dcc05db45d95",
     "date": "2026-09-08"
   },
   "/ru/docs/database": {
@@ -396,7 +396,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/dev-override-seam": {
-    "hash": "65d7e41113ece943",
+    "hash": "84d2178f147dbb9c",
     "date": "2026-09-08"
   },
   "/ru/docs/divider": {
@@ -464,7 +464,7 @@
     "date": "2026-09-28"
   },
   "/ru/docs/marks-api": {
-    "hash": "bc6b1944d367caae",
+    "hash": "13f5dea869be4e00",
     "date": "2026-09-08"
   },
   "/ru/docs/notifier-api": {
@@ -492,7 +492,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/quick-start": {
-    "hash": "a6f104123652601d",
+    "hash": "9724f47729f350da",
     "date": "2026-09-08"
   },
   "/ru/docs/quote": {
@@ -556,7 +556,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/tutorial": {
-    "hash": "e0e2275a41473579",
+    "hash": "d6440c0ff677d310",
     "date": "2026-09-08"
   },
   "/ru/docs/ui-api": {
@@ -572,11 +572,11 @@
     "date": "2026-09-08"
   },
   "/ru/docs/use-blocks": {
-    "hash": "24e3c08de3d7cfce",
+    "hash": "cfa5a9a3424afe7f",
     "date": "2026-09-27"
   },
   "/ru/docs/use-blok-ready": {
-    "hash": "b943240148efe03c",
+    "hash": "ef679caea59d9aa6",
     "date": "2026-09-08"
   },
   "/ru/docs/video": {
@@ -584,7 +584,7 @@
     "date": "2026-09-28"
   },
   "/ru/docs/view-api": {
-    "hash": "5e806c2ff2feb2ef",
+    "hash": "8759be7542449ef3",
     "date": "2026-09-08"
   },
   "/ru/docs/width-api": {

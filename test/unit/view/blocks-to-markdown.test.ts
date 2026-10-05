@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import { fromMarkdown } from 'mdast-util-from-markdown';
+
 import { blocksToMarkdown, blocksToMarkdownWithReport } from '../../../src/view';
 
 import type { OutputBlockData, OutputData } from '../../../types';
@@ -82,7 +84,7 @@ describe('blocksToMarkdown (view)', () => {
      * same. Escaping only one of the two would make the backends disagree with
      * how every other inline construct is written.
      */
-    it('escapes Markdown-meaningful characters in alt and link text, leaving src and href raw', () => {
+    it('escapes Markdown-meaningful characters in alt and link text, leaving a well-formed src and href as is', () => {
       expect(inline('<img src="https://i/x(1).png" alt="a]b">')).toBe('![a\\]b](https://i/x(1).png)');
       expect(inline('<a href="https://x.com/(1)">a]b</a>')).toBe('[a\\]b](https://x.com/(1))');
     });
@@ -137,6 +139,84 @@ describe('blocksToMarkdown (view)', () => {
       expect(blocksToMarkdown(doc([{ type: 'image', data: { url: 'javascript:alert(1)', alt: 'Alt' } }]))).toBe('Alt');
       expect(blocksToMarkdown(doc([{ type: 'bookmark', data: { url: 'javascript:alert(1)', title: 'X' } }]))).toBe('X');
       expect(blocksToMarkdown(doc([{ type: 'embed', data: { source: 'data:text/html,x', service: 'evil' } }]))).toBe('evil');
+    });
+  });
+
+  /**
+   * A destination must stay ONE destination when a CommonMark parser reads it
+   * back. Checked with a real parse, not string matching, so any escape form
+   * that keeps a second link or raw HTML out passes.
+   */
+  describe('URL destinations', () => {
+    /**
+     * Serialize one paragraph's inline HTML.
+     * @param text - the paragraph's `data.text`
+     */
+    const inline = (text: string): string => blocksToMarkdown(doc([{ type: 'paragraph', data: { text } }]));
+
+    /**
+     * Count node types in the CommonMark parse of `markdown`.
+     * @param markdown - the Markdown to parse
+     */
+    const nodeTypes = (markdown: string): Record<string, number> => {
+      const counts: Record<string, number> = {};
+
+      /**
+       * Walk one node and its children.
+       * @param node - mdast node
+       * @param node.type - node type
+       * @param node.children - child nodes
+       */
+      const walk = (node: { type: string; children?: unknown[] }): void => {
+        counts[node.type] = (counts[node.type] ?? 0) + 1;
+        node.children?.forEach((child) => walk(child as { type: string; children?: unknown[] }));
+      };
+
+      walk(fromMarkdown(markdown));
+
+      return counts;
+    };
+
+    it('cannot open a second link through a ) in the href', () => {
+      const markdown = inline('<a href="https://ok.example/x) [evil](javascript:alert(1)">break</a>');
+
+      expect(nodeTypes(markdown)).toMatchObject({ link: 1 });
+      expect(markdown).not.toContain('](javascript:');
+    });
+
+    it('cannot smuggle raw HTML through a space in the href', () => {
+      const markdown = inline('<a href="https://x.example/a <img src=x onerror=alert(1)>">l</a>');
+      const types = nodeTypes(markdown);
+
+      expect(types.html).toBeUndefined();
+      expect(types).toMatchObject({ link: 1 });
+    });
+
+    it('keeps a link whose href holds a space', () => {
+      expect(inline('<a href="https://ok.example/a b">space</a>')).toBe('[space](https://ok.example/a%20b)');
+    });
+
+    it('closes a link whose href ends in a backslash', () => {
+      expect(nodeTypes(inline('<a href="https://x.example/a\\">l</a> tail'))).toMatchObject({ link: 1 });
+    });
+
+    it('keeps one image when the src breaks out', () => {
+      const markdown = inline('<img src="https://i.example/x.png) ![e](https://e.example/y.png" alt="i">');
+
+      expect(nodeTypes(markdown)).toMatchObject({ image: 1 });
+    });
+
+    it('keeps one image for an image block whose url breaks out', () => {
+      const markdown = blocksToMarkdown(doc([{ type: 'image', data: { url: 'https://i.example/x.png) [e](https://e.example', alt: 'A' } }]));
+      const types = nodeTypes(markdown);
+
+      expect(types).toMatchObject({ image: 1 });
+      expect(types.link).toBeUndefined();
+    });
+
+    it('writes a URL with balanced parens byte-identically', () => {
+      expect(inline('<a href="https://en.wikipedia.org/wiki/Foo_(bar)">w</a>'))
+        .toBe('[w](https://en.wikipedia.org/wiki/Foo_(bar))');
     });
   });
 

@@ -81,6 +81,14 @@ describe('blocksToMarkdown', () => {
     expect(blocksToMarkdown([{ tool: 'embed', data: { url: 'javascript:alert(1)', service: 'evil' } }])).toBe('evil');
   });
 
+  it('escapes a link destination that would break out, and leaves balanced parens alone', () => {
+    const md = (html: string): string => blocksToMarkdown([{ tool: 'paragraph', data: { text: html } }]);
+
+    expect(md('<a href="https://ok.example/a b">space</a>')).toBe('[space](https://ok.example/a%20b)');
+    expect(md('<a href="https://ok.example/x) [evil](javascript:alert(1)">b</a>')).not.toContain('](javascript:');
+    expect(md('<a href="https://en.wikipedia.org/wiki/Foo_(bar)">w</a>')).toBe('[w](https://en.wikipedia.org/wiki/Foo_(bar))');
+  });
+
   it('drops the link syntax when an anchor has no href', () => {
     expect(blocksToMarkdown([{ tool: 'paragraph', data: { text: '<a>bare</a>' } }])).toBe('bare');
   });

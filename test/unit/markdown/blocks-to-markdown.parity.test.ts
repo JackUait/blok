@@ -189,6 +189,15 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
     ]),
   },
   {
+    name: 'URLs that would break out of a destination',
+    document: doc([
+      { type: 'paragraph', data: { text: '<a href="https://ok.example/x) [evil](javascript:alert(1)">b</a> <a href="https://x/a b<i>">s</a> <a href="https://x/a\\">t</a> <img src="https://i/(x.png" alt="i">' } },
+      { type: 'image', data: { url: 'https://i/x.png) [e](https://e', alt: 'A' } },
+      { type: 'bookmark', data: { url: 'https://x.com/a b', title: 'X' } },
+      { type: 'paragraph', data: { text: '<a href="https://en.wikipedia.org/wiki/Foo_(bar)">w</a>' } },
+    ]),
+  },
+  {
     name: 'a non-owning page reference',
     document: doc([{ id: 'r1', type: 'page-link', data: { pageId: 'p1' } }]),
   },

@@ -256,6 +256,16 @@ describe('server runtime boundary', () => {
     expect(result.markdown).toBe('js \n\nAlt');
   });
 
+  it('never lets a URL break out of its Markdown destination', async () => {
+    const output = await invoke('blocksToMarkdown', JSON.stringify({
+      blocks: [{ type: 'paragraph', data: { text: '<a href="https://ok.example/x) [evil](javascript:alert(1)">b</a>' } }],
+    }));
+    const result = JSON.parse(output) as { markdown: string };
+
+    expect(result.markdown).not.toContain('](javascript:');
+    expect(result.markdown).not.toContain(' ');
+  });
+
   it('still rejects input that is not a document at all', async () => {
     await expect(invoke('blocksToMarkdown', JSON.stringify({ notBlocks: [] })))
       .rejects.toThrow(TypeError);

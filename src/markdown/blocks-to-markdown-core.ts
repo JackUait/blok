@@ -206,23 +206,69 @@ export const markdownTextEscaper = (html: string): TextEscaper => {
 /** The inline-equation attribute, spelled out: the core stays import-free. Matches `EQUATION_SOURCE_ATTR`. */
 const EQUATION_MARKER = 'data-latex';
 
+/** Characters a bare destination cannot hold: they end it or start raw HTML. */
+const DESTINATION_BREAKER = /[\u0000-\u0020\u007f<>]/;
+
+/**
+ * True when the parens in `url` pair up, as CommonMark requires of a bare
+ * destination. Every backslash before them is escaped, so all of them count.
+ * @param url - the raw URL
+ */
+const parensBalanced = (url: string): boolean => Array.from(url).reduce((depth, char) => {
+  /** Once below zero a `)` has closed the destination; later parens cannot fix it. */
+  if (depth < 0) {
+    return depth;
+  }
+
+  if (char === '(') {
+    return depth + 1;
+  }
+
+  return char === ')' ? depth - 1 : depth;
+}, 0) === 0;
+
+/**
+ * The URL to write as a Markdown destination, or null when it must not be
+ * written. A renderer turns every destination into a live link or image, so a
+ * script-capable URL is refused. `kind` is the Markdown shape: `![..](..)` is
+ * 'src', `[..](..)` is 'href' (a clickable link refuses data: and blob:).
+ *
+ * Only what would end the destination early is escaped, so a well-formed URL
+ * is written byte for byte. `\` is backslash-escaped, not percent-encoded:
+ * browsers read `\` as `/` in http URLs, so `%5C` would change the URL.
+ * @param url - the raw URL
+ * @param kind - 'src' for an image, 'href' for a link
+ */
+export const markdownDestination = (url: string, kind: 'href' | 'src'): string | null => {
+  if (hasUnsafeUrlProtocol(url, kind)) {
+    return null;
+  }
+
+  const escapeParens = !parensBalanced(url);
+  const pieces = Array.from(url, (char) => {
+    if (DESTINATION_BREAKER.test(char)) {
+      return encodeURIComponent(char);
+    }
+
+    return escapeParens && (char === '(' || char === ')') ? `\\${char}` : char;
+  });
+
+  /** Decided on the written next piece: `\%20` would escape the `%`. */
+  return pieces
+    .map((piece, index) => {
+      const next = pieces[index + 1];
+
+      return piece === '\\' && (next === undefined || ASCII_PUNCTUATION.test(next[0])) ? '\\\\' : piece;
+    })
+    .join('');
+};
+
 /**
  * Write an inline equation's source as `$…$` math. An empty source writes
  * nothing: `$$` would open display math. Trimmed, because `$ x $` is not
  * read as math.
  * @param latex - the equation's LaTeX source
  */
-/**
- * The URL to write as a Markdown destination, or null when it must not be
- * written. A renderer turns every destination into a live link or image, so a
- * script-capable URL is refused. `kind` is the Markdown shape: `![..](..)` is
- * 'src', `[..](..)` is 'href' (a clickable link refuses data: and blob:).
- * @param url - the raw URL
- * @param kind - 'src' for an image, 'href' for a link
- */
-export const markdownDestination = (url: string, kind: 'href' | 'src'): string | null =>
-  hasUnsafeUrlProtocol(url, kind) ? null : url;
-
 export const inlineEquation = (latex: string): string => (latex.trim() === '' ? '' : `$${latex.trim()}$`);
 
 /**
@@ -571,7 +617,7 @@ const tablePresentationLosses = (
  *
  * The table splits on a `|` behind an EVEN backslash run, so every pipe must
  * end up behind an odd one. Escaped text always leaves an even run (+1). An
- * odd run is raw — a code span, a link target or an equation — and takes +2:
+ * odd run is raw — a code span or an equation — and takes +2:
  * the grid holds, but the content gains a backslash, so it is reported.
  * @param markdown - the cell's Markdown
  * @param onLossy - called when a raw backslash run sits before a pipe
@@ -710,7 +756,7 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
   warnPresentationLosses(context, block, 'a GFM pipe table', tablePresentationLosses(block.data, readTableGrid(block.data)));
 
   if (rawPipes.found) {
-    warn(context, block.tool, 'degraded', 'a backslash before a pipe inside code, a link target or an equation cannot be written exactly in a pipe table; it gains a backslash');
+    warn(context, block.tool, 'degraded', 'a backslash before a pipe inside code or an equation cannot be written exactly in a pipe table; it gains a backslash');
   }
 
   /** Code reports itself; a paragraph is what a cell reads back as, so it loses nothing. */

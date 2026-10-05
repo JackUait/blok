@@ -180,6 +180,8 @@ describe('page reference documentation', () => {
     expect(description).toContain('pageInfo');
     expect(description).toContain('pageHref');
     expect(description).not.toContain('cached copy');
+    // The page tool never shipped a saved `cache`, so there is no legacy one.
+    expect(description).not.toContain('`cache`');
   });
 
   it.each(['en', 'ru'])('documents the non-owning page link in %s', (locale) => {

@@ -40,6 +40,12 @@ export interface History {
    * The value lives in the editor's document, so collaborators share it. It is
    * not part of `save()` output.
    *
+   * With a collaboration server, the value survives the room closing and
+   * opening again. It is lost when the server builds the document anew from
+   * your record: after a reset, on the first seed, or when the working set is
+   * gone. Keep the value in your own record, and set it again once the
+   * collaboration status is `connected`.
+   *
    * @param key - names the value; tracking a key again replaces its callback
    * @param onChange - called when undo, redo or a peer changes the value; not
    *   for the host's own `set`. `change.source` says which: move focus to the

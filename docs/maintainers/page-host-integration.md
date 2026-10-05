@@ -1,6 +1,6 @@
 # Page metadata in a host
 
-A `page` block is an owning pointer. Save only its opaque `pageId` in the parent document. Keep `{ pageId, title, icon, version }` in a host-owned record. The page body remains a separate Blok document. Do not reconstruct a title or an icon from a pointer's legacy `data.cache` or from `history.track()`.
+A `page` block is an owning pointer. Save only its opaque `pageId` in the parent document. Keep `{ pageId, title, icon, version }` in a host-owned record. The page body remains a separate Blok document. Do not reconstruct a title or an icon from `history.track()`.
 
 Configure the page tool with a stable, title-free `href(pageId)`, an access-filtered `resolve(pageId)`, and `subscribe(pageId, notify)`. Return `null` for a missing page, `{ access: 'none' }` for a denied page, and `undefined` while unresolved. Call each subscriber when the page's title, icon, path, or access changes. Fan out local writes in the same tab as well as server events in other tabs and devices. A title change must redraw the open header and tree and invalidate the page pointers.
 
@@ -140,17 +140,6 @@ If the reload also fails, this example clears the title and stops subscriptions 
 The history value is only an Undo/Redo and collaboration mirror; bootstrap it from the host record, not the other way around. A remote mirror event reloads the host record and never writes the mirror value as canonical. The peer that originated an edit must write it to the host. A production host still needs an explicit conflict policy for edits from different devices. It must not silently overwrite a peer's accepted title after a version conflict.
 
 On access loss, clear the open page and stop this wiring before showing another title. Recheck access for every server event and every save. An inaccessible page's `resolve` result must be `{ access: 'none' }`, even if this tab held an earlier allowed title. The playground's `localStorage` registry demonstrates same-profile tab notifications only. It merges stored records before each write, but it has no atomic version check for simultaneous edits. It cannot prove cross-device authority or enforce access. Real-host acceptance remains blocked until authorized and denied users are checked across tabs and devices through rename, Undo, rejected save, access loss, reload, and a stale resolve.
-
-## Legacy cache deployment gate
-
-Before any unauthorized reader can fetch a parent document:
-
-1. Remove every page pointer's `data.cache` from the authoritative parent record, active collaboration working set, and journal or checkpoint.
-2. Reject old clients that can write `data.cache` back, or strip that field server-side on every accepted write.
-3. Check old and new parent records under an unauthorized identity. Inspect DOM, clipboard, consumer GET, live collaboration payloads, and persisted snapshots for restricted title/icon bytes.
-4. Repeat the check after a rename, Undo, access change, reload, and a second-device sync.
-
-Filtering only consumer GET does not clean an active room or its journal. Slice D's general revocation and purge work is separate from this pre-serve migration.
 
 ## Importing page pointers
 

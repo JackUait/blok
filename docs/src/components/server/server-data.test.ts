@@ -633,6 +633,19 @@ describe('server docs data', () => {
     expect(getTranslation('ru', key)).toMatch(/журнал/i);
   });
 
+  // Purge refuses a custom journal that cannot purge. Hosts must learn that
+  // here, not from a NotSupportedException in production.
+  it('says a custom journal needs ICollabOperationPurgeStore for purge, in both locales', () => {
+    const key = 'server.limits.collab-operation-journal.body';
+    const body = serverLimits.find((l) => l.id === 'collab-operation-journal')?.body ?? '';
+
+    expect(body).toContain('ICollabOperationPurgeStore');
+    expect(body).toContain('NotSupportedException');
+    expect(getTranslation('en', key)).toBe(body);
+    expect(getTranslation('ru', key)).toContain('ICollabOperationPurgeStore');
+    expect(getTranslation('ru', key)).toContain('NotSupportedException');
+  });
+
   // The claim this entry exists to refuse: that a build without the store can
   // be put back the moment a v2 edit is acknowledged. A journal-backed room
   // writes no working copy at all, and its whole-JSON record is written after a
@@ -813,7 +826,7 @@ describe('server docs data', () => {
     expect(russian).toMatch(/даже при наличии журнала/i);
   });
 
-  it('shows complete offline logout and legacy cache cleanup in both locales', () => {
+  it('shows complete offline logout in both locales', () => {
     const key = 'server.limits.collab-access-lifecycle.body';
     const body = serverLimits.find((limit) => limit.id === 'collab-access-lifecycle')?.body ?? '';
     const english = getTranslation('en', key);
@@ -829,14 +842,20 @@ describe('server docs data', () => {
     expect(body).toMatch(/whole.*scope/i);
     expect(body).toContain('@bloklabs/core');
     expect(body).toMatch(/offline device.*cannot.*remotely|cannot.*remotely.*offline device/i);
-    expect(body).toMatch(/page\.data\.cache/);
-    expect(body).toMatch(/consumer record/i);
-    expect(body).toMatch(/working set/i);
-    expect(body).toMatch(/journal/i);
-    expect(body).toMatch(/before.*unauthorized reader/i);
     expect(english).toBe(body);
     expect(russian).toContain('PurgeDocumentAsync');
     expect(russian).toMatch(/доступ|удален|удалён/i);
+  });
+
+  // The page tool never shipped a saved `cache`, so no host holds one to strip.
+  it('does not ask hosts to strip a page cache that never shipped', () => {
+    const key = 'server.limits.collab-access-lifecycle.body';
+    const body = serverLimits.find((limit) => limit.id === 'collab-access-lifecycle')?.body ?? '';
+
+    for (const text of [body, getTranslation('en', key), getTranslation('ru', key)]) {
+      expect(text).not.toMatch(/data\.cache/);
+      expect(text).not.toMatch(/old clients|старым клиентам/i);
+    }
   });
 
   // Shape is checked at the door, meaning is not. Each of these is a known

@@ -1,5 +1,4 @@
 // docs/src/seo/route-metadata.ts
-import { API_SECTIONS } from '../components/api/api-data';
 import { GROUP_TITLES_EN, MODULE_ORDER, SIDEBAR_GROUPS } from '../components/api/api-nav';
 import { DOCUMENTED_TOOL_ROUTE_PATHS, TOOL_SECTIONS } from '../components/tools/tools-data';
 import { getTranslation, type Locale } from '../i18n';
@@ -39,8 +38,6 @@ export interface RouteMetadata {
   ogImage: string;
   /** Set on routes that must not be indexed (client-side redirects, the 404). */
   noindex?: boolean;
-  /** ISO date fed to TechArticle's dateModified; only where the source data carries one. */
-  dateModified?: string;
   /**
    * The linked crumbs of the visible trail, in order. Breadcrumbs.tsx renders
    * these and nothing else; absent on top-level routes, which have no trail.
@@ -596,18 +593,6 @@ const docsBreadcrumbs = (
   { name: crumbGroupTitle, path: localizedPath(groupFirstPath, locale) },
 ];
 
-/**
- * `dateModified` for the reference pages comes from the `lastUpdated` field
- * ApiSection already renders, so the structured data cannot drift away from the
- * date a reader sees on the page.
- */
-const lastUpdatedById = new Map(
-  API_SECTIONS.filter((section) => section.lastUpdated).map((section) => [
-    section.id,
-    section.lastUpdated as string,
-  ]),
-);
-
 const buildRouteMetadata = (locale: Locale): Record<string, RouteMetadata> => {
   const copyTable = COPY_BY_LOCALE[locale];
   const map: Record<string, RouteMetadata> = {};
@@ -642,7 +627,6 @@ const buildRouteMetadata = (locale: Locale): Record<string, RouteMetadata> => {
       ...copy,
       canonical: canonicalFor(path, locale),
       ogImage: OG_IMAGE,
-      ...(lastUpdatedById.has(id) && { dateModified: lastUpdatedById.get(id) }),
       ...(group && {
         breadcrumbs: docsBreadcrumbs(locale, groupTitle(locale, group.key), `/docs/${group.firstId}`),
       }),

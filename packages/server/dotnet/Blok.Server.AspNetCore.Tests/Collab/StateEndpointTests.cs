@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Blok.Server.Collab;
+using Blok.Server.Tickets;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -151,6 +152,22 @@ public sealed class StateEndpointTests
 
     using var readOnly = await State(app, ticket: fixture.ReadOnly);
     Assert.Equal(HttpStatusCode.OK, readOnly.StatusCode);
+  }
+
+  [Fact]
+  public async Task InTicketModeAPassMintedByBlokTicketIsAccepted()
+  {
+    await using var app = await SyncApp.StartAsync("ticket");
+
+    using var otherDocument = await State(
+        app,
+        ticket: BlokTicket.Create(fixture.Secret, new BlokTicketClaims { User = "ü😀<", Doc = "other-doc" }));
+    await AssertError(otherDocument, HttpStatusCode.Forbidden, "pass is for another document\n");
+
+    using var minted = await State(
+        app,
+        ticket: BlokTicket.Create(fixture.Secret, new BlokTicketClaims { User = "ü😀<", Doc = SyncApp.Doc }));
+    Assert.Equal(HttpStatusCode.OK, minted.StatusCode);
   }
 
   [Fact]

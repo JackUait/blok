@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using Blok.Server.Tickets;
 
 namespace Blok.Server.AspNetCore;
 
@@ -283,9 +284,9 @@ public sealed class BlokServerOptions
         throw new InvalidOperationException(
             $"--auth proxy trusts every caller, so it may only bind loopback, not \"{ListenAddress}\"" +
             $"{BindScope(ListenAddress)} — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service");
-      case "ticket" when Secret.Length < 32:
+      case "ticket" when Secret.Length < BlokTicket.MinimumSecretLength:
         throw new InvalidOperationException(
-            $"--secret must be at least 32 characters (got {Secret.Length})");
+            $"--secret must be at least {BlokTicket.MinimumSecretLength} characters (got {Secret.Length})");
       case "ticket" when AllowedOrigins.Count == 0:
         throw new InvalidOperationException(
             "a public service needs --allow-origin: without it anyone who finds this address can drive " +

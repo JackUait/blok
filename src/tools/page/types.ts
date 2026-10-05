@@ -19,7 +19,7 @@ export interface PageData extends BlockToolData {
   textColor?: string;
   /** Block background color preset. */
   backgroundColor?: string;
-  /** @deprecated Legacy input only. New saves omit this field. */
+  /** @deprecated Written only by pre-release builds; ignored on input and never saved. */
   cache?: PageCache;
 }
 

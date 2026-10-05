@@ -23,7 +23,7 @@ export interface PageData extends BlockToolData {
   textColor?: string;
   /** Block background color preset name. Set from the block menu's Color. */
   backgroundColor?: string;
-  /** @deprecated Legacy input only. New saves omit this field. */
+  /** @deprecated Written only by pre-release builds; ignored on input and never saved. */
   cache?: PageCache;
 }
 
@@ -138,10 +138,10 @@ export declare class Page implements BlockTool {
    */
   static isReadOnlySupported?: boolean;
 
-  /** Page ID and legacy cache use plain-text sanitization. */
+  /** Page ID uses plain-text sanitization. */
   static sanitize?: SanitizerConfig;
 
-  /** Does not export legacy cached metadata. */
+  /** Exports a neutral label, never a title. */
   static conversionConfig?: ConversionConfig;
 
   /**
@@ -150,7 +150,7 @@ export declare class Page implements BlockTool {
   static acceptsChildren?: boolean;
 
   /**
-   * A link to the page with neutral text; legacy cached titles are ignored.
+   * A link to the page with neutral text.
    * Copy, Duplicate and Alt-drag carry it instead of a second block.
    * Null without `href`.
    */

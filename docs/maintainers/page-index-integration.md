@@ -1,6 +1,6 @@
 # Page index in a host
 
-Blok returns facts for one saved document. The host owns document storage, the page catalog, access checks, search, and the workspace UI. A `page` block points to another document by `pageId`; its saved position is the ownership edge. Do not infer an owner from a URL, title, or legacy pointer cache.
+Blok returns facts for one saved document. The host owns document storage, the page catalog, access checks, search, and the workspace UI. A `page` block points to another document by `pageId`; its saved position is the ownership edge. Do not infer an owner from a URL or a title.
 
 ## Save and replace document facts
 
@@ -22,7 +22,7 @@ For a move between documents, save and reindex both changed documents in the sam
 
 Attach the source document's page ID to each stored owner edge as `ownerPageId`. Use `null` for a root document. Give `projectPageTree(edges, metadata)` metadata filtered for the current viewer. Do not include a root document's metadata unless it should itself have an owning pointer.
 
-`roots` and `children` follow saved numeric order, with input order breaking ties. A node uses only host metadata: `access: 'none'` contains no title or icon even if the record includes them, while absent metadata yields `access: 'missing'` and a `missing-page` diagnostic. The projection never reads a pointer's old cached title or icon.
+`roots` and `children` follow saved numeric order, with input order breaking ties. A node uses only host metadata: `access: 'none'` contains no title or icon even if the record includes them, while absent metadata yields `access: 'missing'` and a `missing-page` diagnostic. The projection never reads a title or icon from the pointer.
 
 Check `diagnostics` before presenting a definitive parent or breadcrumb. `duplicate-owner` carries every competing source block and document edge; neither owner is selected. `cycle` and `unreachable` identify paths that cannot be placed under a root. `missing-owner` identifies metadata pages with no pointer. Repair the saved owners or catalog data and reproject; do not guess a parent.
 

@@ -282,6 +282,39 @@ test.describe('Toggle Tool', () => {
 
       await expect(placeholder).not.toBeVisible();
     });
+
+    test('hover fill is 8px shorter than the space the placeholder takes, and clicking it does not shift layout', async ({ page }) => {
+      await createBlok(page, createToggleData('Measured toggle'));
+
+      const toggle = page.locator(TOGGLE_BLOCK_SELECTOR);
+      const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);
+
+      await expect(placeholder).toBeVisible();
+
+      const fill = await placeholder.evaluate((el) => {
+        const style = getComputedStyle(el);
+
+        return {
+          height: el.getBoundingClientRect().height,
+          lineHeight: parseFloat(style.lineHeight),
+          marginTop: parseFloat(style.marginTop),
+          marginBottom: parseFloat(style.marginBottom),
+        };
+      });
+
+      expect(fill.height).toBeCloseTo(fill.lineHeight + 8, 0);
+      expect(fill.marginTop + fill.marginBottom).toBe(8);
+
+      const heightBefore = (await toggle.boundingBox())?.height ?? 0;
+
+      await placeholder.click();
+      await expect(page.locator(`${TOGGLE_CHILDREN_SELECTOR} [data-blok-component="paragraph"]`)).toHaveCount(1);
+      await expect(placeholder).not.toBeVisible();
+
+      const heightAfter = (await toggle.boundingBox())?.height ?? 0;
+
+      expect(heightAfter).toBeCloseTo(heightBefore, 0);
+    });
   });
 
   test.describe('save data', () => {

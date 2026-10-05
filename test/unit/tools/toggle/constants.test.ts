@@ -10,12 +10,11 @@ describe('BODY_PLACEHOLDER_STYLES', () => {
     expect(BODY_PLACEHOLDER_STYLES).toContain('leading-[1.5]');
   });
 
-  it('uses pt-[8px] to match paragraph top padding (7px) + top margin (1px)', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('pt-[8px]');
-  });
-
-  it('uses pb-[8px] to match paragraph bottom padding (7px) + bottom margin (1px)', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('pb-[8px]');
+  it('takes 8px per side (4px margin + 4px padding) to match a paragraph, with only the padding under the hover fill', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('my-[4px]');
+    expect(BODY_PLACEHOLDER_STYLES).toContain('py-[4px]');
+    expect(BODY_PLACEHOLDER_STYLES).not.toContain('pt-[8px]');
+    expect(BODY_PLACEHOLDER_STYLES).not.toContain('pb-[8px]');
   });
 
   it('does not contain py-1 (would cause layout shift vs paragraph block)', () => {

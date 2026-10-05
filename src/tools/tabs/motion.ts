@@ -1,6 +1,8 @@
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { getElementDirection } from '../../components/utils/direction';
 
+import { TABS_ATTR } from './constants';
+
 /** Where a pill sits, measured from the strip's inline start. */
 export interface PillBox {
   start: number;
@@ -17,7 +19,51 @@ const EASE_LEAD = 'cubic-bezier(0.3, 0, 0, 1)';
 // How far the trailing edge travels by the time the leading edge lands.
 const TRAIL_LAG = 0.3;
 const LEAD_OFFSET = 0.45;
-const ENTER_SHIFT_PX = 14;
+const CASCADE_MS = 520;
+const CASCADE_STEP_MS = 70;
+// Rows past this land together, so a long tab never makes the reader wait.
+const CASCADE_STAGGERED_ROWS = 8;
+
+const springCache: { easing?: string } = {};
+
+const sampleSpring = (): string => {
+  const stiffness = 170;
+  const damping = 15;
+  const substeps = 4;
+  const dt = 1 / 60 / substeps;
+  const state = { x: 0, v: 0 };
+  const points = Array.from({ length: 60 }, () => {
+    const sample = Math.round(state.x * 1e4) / 1e4;
+
+    Array.from({ length: substeps }).forEach(() => {
+      state.v += (stiffness * (1 - state.x) - damping * state.v) * dt;
+      state.x += state.v * dt;
+    });
+
+    return sample;
+  });
+
+  return `linear(${[...points, 1].join(', ')})`;
+};
+
+/**
+ * A damped spring sampled into a CSS linear() easing. Engines without
+ * linear() get the settle curve, which lands without the overshoot.
+ */
+const spring = (): string => {
+  if (springCache.easing === undefined) {
+    const supported = typeof CSS !== 'undefined'
+      && typeof CSS.supports === 'function'
+      && CSS.supports('transition-timing-function', 'linear(0, 1)');
+
+    springCache.easing = supported ? sampleSpring() : EASE_SETTLE;
+  }
+
+  return springCache.easing;
+};
+
+// Only our own animations: cancelling a row's CSS transitions would break the block.
+const running = new WeakMap<Element, Animation>();
 
 const canAnimate = (element: Element): boolean =>
   typeof (element as HTMLElement).animate === 'function' && !prefersReducedMotion();
@@ -99,30 +145,6 @@ export const morphPanelsHeight = (panels: HTMLElement, fromHeight: number): void
 };
 
 /**
- * Slide the new panel in from the side the user moved toward.
- * Uses the inherited inline sign so RTL slides the mirrored way.
- * @param panel - the tab panel that just became visible
- * @param forward - true when the new tab is after the old one
- */
-export const enterPanel = (panel: HTMLElement, forward: boolean): void => {
-  if (!canAnimate(panel)) {
-    return;
-  }
-
-  const sign = getElementDirection(panel) === 'rtl' ? -1 : 1;
-  const shift = (forward ? 1 : -1) * sign * ENTER_SHIFT_PX;
-
-  panel.getAnimations().forEach(animation => animation.cancel());
-  panel.animate(
-    [
-      { opacity: 0, transform: `translateX(${shift}px)`, filter: 'blur(3px)' },
-      { opacity: 1, transform: 'none', filter: 'none' },
-    ],
-    { duration: ENTER_MS, easing: EASE_SETTLE }
-  );
-};
-
-/**
  * A new pill grows out of the strip.
  * @param pill - the pill that was just added
  */
@@ -162,4 +184,49 @@ export const foldPill = (pill: HTMLElement, done: () => void): void => {
 
   animation.onfinish = done;
   animation.oncancel = done;
+};
+
+/**
+ * The rows a tab shows: its child block holders, or the empty hint.
+ * @param tabHolder - the holder of a `tab` block
+ */
+export const panelRows = (tabHolder: HTMLElement): HTMLElement[] => {
+  const root = tabHolder.querySelector<HTMLElement>(`[${TABS_ATTR.tab}]`);
+
+  if (root === null) {
+    return [];
+  }
+
+  return Array.from(root.querySelectorAll<HTMLElement>(
+    `:scope > [${TABS_ATTR.tabChildren}] > *, :scope > [${TABS_ATTR.empty}]`
+  )).filter(row => !row.classList.contains('hidden'));
+};
+
+/**
+ * Drop the rows of the tab that just opened in one after another.
+ * @param rows - the new tab's rows, top to bottom
+ */
+export const cascadeIn = (rows: HTMLElement[]): void => {
+  rows.forEach((row, index) => {
+    running.get(row)?.cancel();
+
+    if (!canAnimate(row)) {
+      return;
+    }
+
+    const animation = row.animate(
+      [
+        { opacity: 0, transform: 'translateY(14px) scale(0.98)', filter: 'blur(3px)' },
+        { opacity: 1, transform: 'none', filter: 'none' },
+      ],
+      {
+        duration: CASCADE_MS,
+        delay: Math.min(index, CASCADE_STAGGERED_ROWS - 1) * CASCADE_STEP_MS,
+        easing: spring(),
+        fill: 'backwards',
+      }
+    );
+
+    running.set(row, animation);
+  });
 };

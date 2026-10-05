@@ -60,11 +60,12 @@ export const VersionPicker = () => {
   }, []);
 
   return (
-    <div className="relative" ref={containerRef}>
+    // Hidden on phones: the 375px header has no spare width. The banner still links to latest.
+    <div className="relative hidden sm:block" ref={containerRef}>
       <button
         type="button"
         className={cn(
-          'flex h-9 cursor-pointer items-center justify-center gap-1 rounded-full max-sm:w-9 sm:px-3 text-sm font-semibold text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+          'flex h-9 cursor-pointer items-center gap-1 rounded-full px-3 text-sm font-semibold text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
           isOpen && 'bg-secondary text-foreground',
         )}
         onClick={() => setIsOpen(!isOpen)}
@@ -72,7 +73,7 @@ export const VersionPicker = () => {
         aria-haspopup="menu"
         aria-label={`${strings.pickerLabel}: ${self.label}`}
       >
-        <span className="max-sm:hidden">{self.label}</span>
+        {self.label}
         <ChevronDown className="size-3.5" strokeWidth={2} />
       </button>
 

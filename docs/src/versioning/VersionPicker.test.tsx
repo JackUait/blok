@@ -53,6 +53,13 @@ describe('VersionPicker', () => {
     await waitFor(() => expect(latest).toHaveAttribute('href', '/ru/docs/table/'));
   });
 
+  it('is hidden on phones, where the header has no room for it', () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.reject(new Error('offline')));
+    renderAt('/', '/v/1.14');
+    const root = screen.getByRole('button', { name: /1\.14/ }).parentElement;
+    expect(root?.className.split(/\s+/)).toEqual(expect.arrayContaining(['hidden', 'sm:block']));
+  });
+
   it('marks the current version with a check and primary ink, not a fill', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(manifest));
     renderAt('/', '/v/1.14');

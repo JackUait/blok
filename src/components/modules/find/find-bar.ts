@@ -146,6 +146,9 @@ export class FindBar {
   private replaceOpen = false;
   private matchCase = false;
   private wholeWord = false;
+  private readonly shortcuts: Shortcuts;
+  /** Hint each replace button's tooltip shows now; null for the label and shortcut. */
+  private readonly replaceHints = new Map<HTMLButtonElement, string | null | undefined>();
   private total = 0;
   private replaceable = 0;
   private currentReplaceable = false;
@@ -165,8 +168,9 @@ export class FindBar {
     this.t = init.t;
     this.callbacks = init.callbacks;
     this.isMac = init.isMac;
+    this.shortcuts = shortcutsFor(this.isMac);
 
-    const shortcuts = shortcutsFor(this.isMac);
+    const shortcuts = this.shortcuts;
     const replaceRowId = `blok-find-replace-${++idSequence.next}`;
 
     this.element = build('div', {
@@ -268,8 +272,6 @@ export class FindBar {
     this.bindTooltip(this.previousButton, 'find.previous', shortcuts.previous);
     this.bindTooltip(this.nextButton, 'find.next', shortcuts.next);
     this.bindTooltip(this.closeButton, 'find.close', shortcuts.close);
-    this.bindTooltip(this.replaceButton, 'find.replace', shortcuts.replace);
-    this.bindTooltip(this.replaceAllButton, 'find.replaceAll', shortcuts.replaceAll);
 
     this.listen(this.input, 'input', () => this.handleInput());
     this.listen(this.input, 'input', () => this.syncOverflow());
@@ -565,7 +567,7 @@ export class FindBar {
       return;
     }
 
-    const shortcuts = shortcutsFor(this.isMac);
+    const shortcuts = this.shortcuts;
     const row = (option: 'matchCase' | 'wholeWord', labelKey: string, shortcut: string): PopoverItemParams => ({
       title: this.t(labelKey),
       name: option,
@@ -775,6 +777,22 @@ export class FindBar {
     for (const [button, isDisabled] of disabled) {
       button.disabled = isDisabled;
     }
+
+    const replaceHint = this.currentReplaceable ? null : 'find.replaceUnavailable';
+    const replaceAllHint = this.replaceable > 0 ? null : 'find.replaceAllUnavailable';
+
+    this.syncReplaceHint(this.replaceButton, 'find.replace', this.shortcuts.replace, none ? 'find.noResults' : replaceHint);
+    this.syncReplaceHint(this.replaceAllButton, 'find.replaceAll', this.shortcuts.replaceAll, none ? 'find.noResults' : replaceAllHint);
+  }
+
+  /** Rebind only on change: renderResults runs on every search and resize. */
+  private syncReplaceHint(button: HTMLButtonElement, labelKey: string, shortcut: string, hintKey: string | null): void {
+    if (this.replaceHints.get(button) === hintKey) {
+      return;
+    }
+
+    this.replaceHints.set(button, hintKey);
+    this.bindTooltip(button, labelKey, shortcut, hintKey ?? undefined);
   }
 
   private counterText(current: number, noResults: boolean): string {
@@ -843,13 +861,18 @@ export class FindBar {
     return button;
   }
 
-  private bindTooltip(element: HTMLElement, labelKey: string, shortcut?: string): void {
+  /**
+   * @param hintKey - why the button is disabled, shown under the label in place of the shortcut
+   */
+  private bindTooltip(element: HTMLElement, labelKey: string, shortcut?: string, hintKey?: string): void {
     const label = { text: this.t(labelKey), highlight: true };
-    const line = shortcut === undefined
-      ? [label]
-      : [label, { text: '  ', highlight: false }, { text: shortcut, highlight: false, direction: 'ltr' as const }];
+    const lines = hintKey !== undefined
+      ? [[label], this.t(hintKey)]
+      : [shortcut === undefined
+        ? [label]
+        : [label, { text: '  ', highlight: false }, { text: shortcut, highlight: false, direction: 'ltr' as const }]];
 
-    onHover(element, createTooltipContent([line]), { placement: 'bottom', delay: 400 });
+    onHover(element, createTooltipContent(lines), { placement: 'bottom', delay: 400 });
   }
 
   /**

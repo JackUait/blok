@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Badilisha kwa",
   "find.replace": "Badilisha",
   "find.replaceAll": "Badilisha zote",
+  "find.replaceUnavailable": "Linganisho hili haliwezi kuhaririwa",
+  "find.replaceAllUnavailable": "Hakuna linganisho linaloweza kuhaririwa",
   "find.matchCase": "Tofautisha herufi kubwa na ndogo",
   "find.wholeWord": "Maneno kamili pekee",
   "find.options": "Chaguo za utafutaji"

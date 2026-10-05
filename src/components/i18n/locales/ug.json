@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "مۇنىڭغا ئالماشتۇرۇش",
   "find.replace": "ئالماشتۇرۇش",
   "find.replaceAll": "ھەممىنى ئالماشتۇرۇش",
+  "find.replaceUnavailable": "بۇ ماسلىقنى تەھرىرلىگىلى بولمايدۇ",
+  "find.replaceAllUnavailable": "ھېچقانداق ماسلىقنى تەھرىرلىگىلى بولمايدۇ",
   "find.matchCase": "چوڭ-كىچىك ھەرپنى پەرقلەندۈرۈش",
   "find.wholeWord": "پەقەت پۈتۈن سۆز",
   "find.options": "ئىزدەش تاللانمىلىرى"

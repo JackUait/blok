@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Replace with",
   "find.replace": "Replace",
   "find.replaceAll": "Replace all",
+  "find.replaceUnavailable": "This match can't be edited",
+  "find.replaceAllUnavailable": "None of the matches can be edited",
   "find.matchCase": "Match case",
   "find.wholeWord": "Match whole word",
   "find.options": "Search options"

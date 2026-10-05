@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Заменить на",
   "find.replace": "Заменить",
   "find.replaceAll": "Заменить все",
+  "find.replaceUnavailable": "Это совпадение нельзя изменить",
+  "find.replaceAllUnavailable": "Ни одно совпадение нельзя изменить",
   "find.matchCase": "Учитывать регистр",
   "find.wholeWord": "Слово целиком",
   "find.options": "Параметры поиска"

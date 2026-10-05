@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "اس سے تبدیل کریں",
   "find.replace": "تبدیل کریں",
   "find.replaceAll": "سب تبدیل کریں",
+  "find.replaceUnavailable": "اس مماثلت میں ترمیم نہیں کی جا سکتی",
+  "find.replaceAllUnavailable": "کسی بھی مماثلت میں ترمیم نہیں کی جا سکتی",
   "find.matchCase": "حروف کا کیس ملائیں",
   "find.wholeWord": "پورا لفظ ملائیں",
   "find.options": "تلاش کے اختیارات"

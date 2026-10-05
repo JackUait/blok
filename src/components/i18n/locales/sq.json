@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Zëvendëso me",
   "find.replace": "Zëvendëso",
   "find.replaceAll": "Zëvendësoji të gjitha",
+  "find.replaceUnavailable": "Kjo përputhje nuk mund të redaktohet",
+  "find.replaceAllUnavailable": "Asnjë përputhje nuk mund të redaktohet",
   "find.matchCase": "Dallo shkronjat e mëdha/të vogla",
   "find.wholeWord": "Vetëm fjalë të plota",
   "find.options": "Opsionet e kërkimit"

@@ -775,6 +775,56 @@ describe('FindBar', () => {
       expect(callbacks.onReplace).not.toHaveBeenCalled();
     });
 
+    describe('hint on a disabled replace button', () => {
+      const hoverText = (testId: string): string => {
+        vi.useFakeTimers();
+        try {
+          byTestId<HTMLButtonElement>(bar.element, testId).dispatchEvent(new MouseEvent('mouseenter'));
+          vi.runAllTimers();
+        } finally {
+          vi.useRealTimers();
+        }
+
+        return document.getElementById('blok-tooltip')?.textContent ?? '';
+      };
+
+      beforeEach(() => {
+        bar.destroy();
+        destroyTooltip();
+        bar = create();
+        bar.open({ replace: true, readOnly: false });
+      });
+
+      it('says the current match cannot be edited', () => {
+        bar.setResults({ current: 0, total: 3, replaceable: 2, currentReplaceable: false });
+
+        expect(hoverText('find-replace')).toContain('find.replaceUnavailable');
+      });
+
+      it('says no match can be edited', () => {
+        bar.setResults({ current: 0, total: 3, replaceable: 0, currentReplaceable: false });
+
+        expect(hoverText('find-replace-all')).toContain('find.replaceAllUnavailable');
+      });
+
+      it('says there are no results', () => {
+        bar.setResults({ current: -1, total: 0 });
+
+        expect(hoverText('find-replace')).toContain('find.noResults');
+      });
+
+      it('goes back to the label and shortcut once the button works again', () => {
+        bar.setResults({ current: 0, total: 3, replaceable: 2, currentReplaceable: false });
+        bar.setResults({ current: 1, total: 3, replaceable: 2, currentReplaceable: true });
+
+        const text = hoverText('find-replace');
+
+        expect(text).not.toContain('find.replaceUnavailable');
+        expect(text).toContain('find.replace');
+        expect(text).toContain('⏎');
+      });
+    });
+
     it('moves focus to the replace field when the focused Replace stops applying', () => {
       bar.open({ replace: true, readOnly: false });
       bar.setResults({ current: 0, total: 2 });

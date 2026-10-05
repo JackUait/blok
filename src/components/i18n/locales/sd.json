@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "هن سان مٽايو",
   "find.replace": "مٽايو",
   "find.replaceAll": "سڀ مٽايو",
+  "find.replaceUnavailable": "هي ميل ايڊٽ نٿو ٿي سگهي",
+  "find.replaceAllUnavailable": "ڪو به ميل ايڊٽ نٿو ٿي سگهي",
   "find.matchCase": "وڏن ننڍن اکرن جو فرق",
   "find.wholeWord": "رڳو پورا لفظ",
   "find.options": "ڳولا جا اختيار"

@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "په دې بدل کړئ",
   "find.replace": "بدل یې کړئ",
   "find.replaceAll": "ټول بدل کړئ",
+  "find.replaceUnavailable": "دا پایله نشي سمولای",
+  "find.replaceAllUnavailable": "هېڅ پایله نشي سمولای",
   "find.matchCase": "د لویو او کوچنیو تورو توپیر",
   "find.wholeWord": "یوازې بشپړ ټکي",
   "find.options": "د لټون اختیارونه"

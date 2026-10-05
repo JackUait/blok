@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "استبدال بـ",
   "find.replace": "استبدال",
   "find.replaceAll": "استبدال الكل",
+  "find.replaceUnavailable": "لا يمكن تعديل هذه النتيجة",
+  "find.replaceAllUnavailable": "لا يمكن تعديل أي من النتائج",
   "find.matchCase": "مطابقة حالة الأحرف",
   "find.wholeWord": "مطابقة الكلمة بأكملها",
   "find.options": "خيارات البحث"

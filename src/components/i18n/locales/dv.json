@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "މިއާ ބަދަލުކުރޭ",
   "find.replace": "ބަދަލުކުރޭ",
   "find.replaceAll": "ހުރިހާ ބަދަލުކުރޭ",
+  "find.replaceUnavailable": "މި ނަތީޖާ ބަދަލުކުރެވޭކަށް ނެތް",
+  "find.replaceAllUnavailable": "އެއްވެސް ނަތީޖާއެއް ބަދަލުކުރެވޭކަށް ނެތް",
   "find.matchCase": "ބޮޑު ކުޑަ އަކުރު ދިމާކުރޭ",
   "find.wholeWord": "ފުރިހަމަ ބަސް ދިމާކުރޭ",
   "find.options": "ހޯދުމުގެ ޚިޔާރުތައް"

@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Asendustekst",
   "find.replace": "Asenda",
   "find.replaceAll": "Asenda kõik",
+  "find.replaceUnavailable": "Seda vastet ei saa muuta",
+  "find.replaceAllUnavailable": "Ühtegi vastet ei saa muuta",
   "find.matchCase": "Tõstutundlik",
   "find.wholeWord": "Ainult terved sõnad",
   "find.options": "Otsingu valikud"

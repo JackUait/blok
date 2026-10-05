@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Փոխարինել հետևյալով",
   "find.replace": "Փոխարինել",
   "find.replaceAll": "Փոխարինել բոլորը",
+  "find.replaceUnavailable": "Այս համընկնումը հնարավոր չէ խմբագրել",
+  "find.replaceAllUnavailable": "Համընկնումներից ոչ մեկը հնարավոր չէ խմբագրել",
   "find.matchCase": "Հաշվի առնել մեծատառերը",
   "find.wholeWord": "Միայն ամբողջական բառեր",
   "find.options": "Որոնման ընտրանքներ"

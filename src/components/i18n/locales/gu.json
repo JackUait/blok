@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "આનાથી બદલો",
   "find.replace": "બદલો",
   "find.replaceAll": "બધું બદલો",
+  "find.replaceUnavailable": "આ મેળ સંપાદિત કરી શકાતો નથી",
+  "find.replaceAllUnavailable": "કોઈ પણ મેળ સંપાદિત કરી શકાતો નથી",
   "find.matchCase": "અક્ષરનું કદ મેળવો",
   "find.wholeWord": "આખો શબ્દ મેળવો",
   "find.options": "શોધ વિકલ્પો"

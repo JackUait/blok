@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Ganti dengan",
   "find.replace": "Ganti",
   "find.replaceAll": "Ganti semua",
+  "find.replaceUnavailable": "Padanan ini tidak boleh disunting",
+  "find.replaceAllUnavailable": "Tiada padanan yang boleh disunting",
   "find.matchCase": "Padankan huruf besar/kecil",
   "find.wholeWord": "Padankan seluruh perkataan",
   "find.options": "Pilihan carian"

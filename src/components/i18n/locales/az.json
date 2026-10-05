@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Bununla dəyişdir",
   "find.replace": "Dəyişdir",
   "find.replaceAll": "Hamısını dəyişdir",
+  "find.replaceUnavailable": "Bu uyğunluğu redaktə etmək olmur",
+  "find.replaceAllUnavailable": "Uyğunluqların heç birini redaktə etmək olmur",
   "find.matchCase": "Böyük-kiçik hərfə uyğun",
   "find.wholeWord": "Yalnız bütöv söz",
   "find.options": "Axtarış seçimləri"

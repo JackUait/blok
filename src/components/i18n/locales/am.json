@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "በዚህ ተካ",
   "find.replace": "ተካ",
   "find.replaceAll": "ሁሉንም ተካ",
+  "find.replaceUnavailable": "ይህ ውጤት ሊስተካከል አይችልም",
+  "find.replaceAllUnavailable": "ከውጤቶቹ አንዱም ሊስተካከል አይችልም",
   "find.matchCase": "የፊደል መጠን አዛምድ",
   "find.wholeWord": "ሙሉ ቃል አዛምድ",
   "find.options": "የፍለጋ አማራጮች"

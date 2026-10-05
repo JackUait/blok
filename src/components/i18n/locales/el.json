@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Αντικατάσταση με",
   "find.replace": "Αντικατάσταση",
   "find.replaceAll": "Αντικατάσταση όλων",
+  "find.replaceUnavailable": "Αυτό το αποτέλεσμα δεν μπορεί να επεξεργαστεί",
+  "find.replaceAllUnavailable": "Κανένα από τα αποτελέσματα δεν μπορεί να επεξεργαστεί",
   "find.matchCase": "Διάκριση πεζών-κεφαλαίων",
   "find.wholeWord": "Μόνο ολόκληρες λέξεις",
   "find.options": "Επιλογές αναζήτησης"

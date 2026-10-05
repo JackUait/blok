@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "దీనితో భర్తీ చేయి",
   "find.replace": "భర్తీ చేయి",
   "find.replaceAll": "అన్నీ భర్తీ చేయి",
+  "find.replaceUnavailable": "ఈ సరిపోలికను సవరించలేరు",
+  "find.replaceAllUnavailable": "ఏ సరిపోలికనూ సవరించలేరు",
   "find.matchCase": "అక్షర కేస్‌ను సరిపోల్చు",
   "find.wholeWord": "పూర్తి పదాన్ని సరిపోల్చు",
   "find.options": "శోధన ఎంపికలు"

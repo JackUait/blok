@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "ഇതുപയോഗിച്ച് മാറ്റുക",
   "find.replace": "മാറ്റുക",
   "find.replaceAll": "എല്ലാം മാറ്റുക",
+  "find.replaceUnavailable": "ഈ പൊരുത്തം എഡിറ്റ് ചെയ്യാനാകില്ല",
+  "find.replaceAllUnavailable": "ഒരു പൊരുത്തവും എഡിറ്റ് ചെയ്യാനാകില്ല",
   "find.matchCase": "അക്ഷരവലുപ്പം പൊരുത്തപ്പെടുത്തുക",
   "find.wholeWord": "മുഴുവൻ വാക്ക് പൊരുത്തപ്പെടുത്തുക",
   "find.options": "തിരയൽ ഓപ്ഷനുകൾ"

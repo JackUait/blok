@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Үүгээр солих",
   "find.replace": "Солих",
   "find.replaceAll": "Бүгдийг солих",
+  "find.replaceUnavailable": "Энэ илэрцийг засах боломжгүй",
+  "find.replaceAllUnavailable": "Аль ч илэрцийг засах боломжгүй",
   "find.matchCase": "Том жижиг үсгийг ялгах",
   "find.wholeWord": "Зөвхөн бүтэн үг",
   "find.options": "Хайлтын сонголтууд"

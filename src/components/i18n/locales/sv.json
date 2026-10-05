@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Ersätt med",
   "find.replace": "Ersätt",
   "find.replaceAll": "Ersätt alla",
+  "find.replaceUnavailable": "Den här träffen kan inte redigeras",
+  "find.replaceAllUnavailable": "Ingen av träffarna kan redigeras",
   "find.matchCase": "Matcha gemener/versaler",
   "find.wholeWord": "Endast hela ord",
   "find.options": "Sökalternativ"

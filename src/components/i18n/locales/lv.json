@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Aizstāt ar",
   "find.replace": "Aizstāt",
   "find.replaceAll": "Aizstāt visu",
+  "find.replaceUnavailable": "Šo atbilstību nevar rediģēt",
+  "find.replaceAllUnavailable": "Nevienu atbilstību nevar rediģēt",
   "find.matchCase": "Reģistrjutīgs",
   "find.wholeWord": "Tikai veseli vārdi",
   "find.options": "Meklēšanas opcijas"

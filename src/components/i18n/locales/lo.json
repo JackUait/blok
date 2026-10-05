@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "ປ່ຽນແທນດ້ວຍ",
   "find.replace": "ປ່ຽນແທນ",
   "find.replaceAll": "ປ່ຽນແທນທັງໝົດ",
+  "find.replaceUnavailable": "ບໍ່ສາມາດແກ້ໄຂຜົນນີ້ໄດ້",
+  "find.replaceAllUnavailable": "ບໍ່ສາມາດແກ້ໄຂຜົນໃດໆໄດ້",
   "find.matchCase": "ກົງກັບຕົວພິມໃຫຍ່-ນ້ອຍ",
   "find.wholeWord": "ກົງກັບຄຳທັງໝົດ",
   "find.options": "ຕົວເລືອກການຊອກຫາ"

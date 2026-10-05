@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "แทนที่ด้วย",
   "find.replace": "แทนที่",
   "find.replaceAll": "แทนที่ทั้งหมด",
+  "find.replaceUnavailable": "แก้ไขรายการที่ตรงกันนี้ไม่ได้",
+  "find.replaceAllUnavailable": "แก้ไขรายการที่ตรงกันไม่ได้เลย",
   "find.matchCase": "ตรงตามตัวพิมพ์เล็ก-ใหญ่",
   "find.wholeWord": "ตรงทั้งคำ",
   "find.options": "ตัวเลือกการค้นหา"

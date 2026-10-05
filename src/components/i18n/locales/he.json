@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "החלף ב",
   "find.replace": "החלף",
   "find.replaceAll": "החלף הכול",
+  "find.replaceUnavailable": "לא ניתן לערוך את ההתאמה הזו",
+  "find.replaceAllUnavailable": "לא ניתן לערוך אף אחת מההתאמות",
   "find.matchCase": "התאמת רישיות",
   "find.wholeWord": "מילה שלמה בלבד",
   "find.options": "אפשרויות חיפוש"

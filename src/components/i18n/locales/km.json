@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "ជំនួសដោយ",
   "find.replace": "ជំនួស",
   "find.replaceAll": "ជំនួសទាំងអស់",
+  "find.replaceUnavailable": "មិនអាចកែសម្រួលលទ្ធផលនេះបានទេ",
+  "find.replaceAllUnavailable": "មិនអាចកែសម្រួលលទ្ធផលណាមួយបានទេ",
   "find.matchCase": "ផ្គូផ្គងអក្សរធំតូច",
   "find.wholeWord": "ផ្គូផ្គងពាក្យទាំងមូល",
   "find.options": "ជម្រើសស្វែងរក"

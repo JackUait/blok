@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "置換後の文字列",
   "find.replace": "置換",
   "find.replaceAll": "すべて置換",
+  "find.replaceUnavailable": "この一致箇所は編集できません",
+  "find.replaceAllUnavailable": "編集できる一致箇所がありません",
   "find.matchCase": "大文字と小文字を区別",
   "find.wholeWord": "単語単位で検索",
   "find.options": "検索オプション"

@@ -1248,6 +1248,25 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
     });
 
+    test('a disabled replace button says on hover why nothing can be replaced', async ({ page }) => {
+      await createEditor(page, paragraphs('alpha'));
+      await page.evaluate(() => {
+        const note = document.createElement('p');
+
+        note.textContent = 'hostneedle on the page';
+        document.body.prepend(note);
+      });
+      await focusParagraph(page, 'alpha');
+      await page.keyboard.press(REPLACE_KEY);
+      await page.getByTestId('find-input').fill('hostneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+      await expect(page.getByTestId('find-replace-all')).toBeDisabled();
+
+      await page.getByTestId('find-replace-all').hover();
+
+      await expect(page.getByRole('tooltip')).toContainText('None of the matches can be edited');
+    });
+
     test('the Replace button replaces the current match only', async ({ page }) => {
       await createEditor(page, paragraphs('foo one', 'foo two'));
       await focusParagraph(page, 'foo one');

@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Замени са",
   "find.replace": "Замени",
   "find.replaceAll": "Замени све",
+  "find.replaceUnavailable": "Ово подударање не може да се уређује",
+  "find.replaceAllUnavailable": "Ниједно подударање не може да се уређује",
   "find.matchCase": "Разликуј велика и мала слова",
   "find.wholeWord": "Само целе речи",
   "find.options": "Опције претраге"

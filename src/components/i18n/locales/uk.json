@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Замінити на",
   "find.replace": "Замінити",
   "find.replaceAll": "Замінити все",
+  "find.replaceUnavailable": "Цей збіг не можна змінити",
+  "find.replaceAllUnavailable": "Жоден збіг не можна змінити",
   "find.matchCase": "Враховувати регістр",
   "find.wholeWord": "Слово цілком",
   "find.options": "Параметри пошуку"

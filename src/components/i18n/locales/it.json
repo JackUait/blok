@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "Sostituisci con",
   "find.replace": "Sostituisci",
   "find.replaceAll": "Sostituisci tutto",
+  "find.replaceUnavailable": "Questa corrispondenza non è modificabile",
+  "find.replaceAllUnavailable": "Nessuna corrispondenza è modificabile",
   "find.matchCase": "Maiuscole/minuscole",
   "find.wholeWord": "Solo parole intere",
   "find.options": "Opzioni di ricerca"

@@ -771,6 +771,8 @@
   "find.replacePlaceholder": "ಇದರೊಂದಿಗೆ ಬದಲಾಯಿಸಿ",
   "find.replace": "ಬದಲಾಯಿಸಿ",
   "find.replaceAll": "ಎಲ್ಲವನ್ನೂ ಬದಲಾಯಿಸಿ",
+  "find.replaceUnavailable": "ಈ ಹೊಂದಾಣಿಕೆಯನ್ನು ಸಂಪಾದಿಸಲಾಗುವುದಿಲ್ಲ",
+  "find.replaceAllUnavailable": "ಯಾವುದೇ ಹೊಂದಾಣಿಕೆಯನ್ನು ಸಂಪಾದಿಸಲಾಗುವುದಿಲ್ಲ",
   "find.matchCase": "ಅಕ್ಷರದ ಕೇಸ್ ಹೊಂದಿಸಿ",
   "find.wholeWord": "ಪೂರ್ಣ ಪದ ಹೊಂದಿಸಿ",
   "find.options": "ಹುಡುಕಾಟ ಆಯ್ಕೆಗಳು"

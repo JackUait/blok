@@ -1170,6 +1170,11 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       warn(context, block.tool, 'dropped', 'spacer is purely visual and has no Markdown equivalent');
 
       return '';
+    /** Its outline is derived from the headings, which serialize themselves. */
+    case 'table_of_contents':
+      warn(context, block.tool, 'dropped', 'a table of contents is built from the headings, which are exported on their own');
+
+      return '';
     default:
       break;
   }

@@ -30,6 +30,7 @@ export { DatabaseTool as Database } from './database';
 export { DatabaseRowTool as DatabaseRow } from './database-row';
 export { DividerTool as Divider } from './divider';
 export { SpacerTool as Spacer } from './spacer';
+export { TableOfContentsTool as TableOfContents } from './table-of-contents';
 export { Quote } from './quote';
 export { CodeTool as Code } from './code';
 export { ImageTool as Image } from './image';
@@ -85,6 +86,7 @@ export const defaultBlockTools = {
   'database-row': {},
   divider: {},
   spacer: {},
+  table_of_contents: {},
   quote: {},
   code: { inlineToolbar: false },
   image: {},

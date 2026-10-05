@@ -262,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 580 + 114 + 61 + 4 closure for all 759 keys', () => {
+  it('rebuilds a disjoint 583 + 114 + 61 + 4 closure for all 762 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -276,7 +276,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(759);
+    expect(lifecycle.size).toBe(762);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -313,7 +313,9 @@ describe('current English catalog lifecycle coverage', () => {
       // -2: imageFailure.failedMany/restoredMany left the catalog.
       // +5: the page menu keys (blockSettings.copyPageLink/moveToTrash,
       // tools.page.editIcon/rename/openInSidePeek) are called by literal.
-      'executable-literal': 580,
+      // +3: the table-of-contents block calls its toolNames, tools and
+      // toolbox.preview keys by literal.
+      'executable-literal': 583,
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
       // when the video settings became one pane (1b400077); still shipped.

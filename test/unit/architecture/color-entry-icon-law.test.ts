@@ -33,6 +33,7 @@ const SITES: Record<string, Site> = {
   'src/tools/header/index.ts': { inherits: 'buildBlockColorTunes builds the entry' },
   'src/tools/toggle/index.ts': { inherits: 'buildBlockColorTunes builds the entry' },
   'src/tools/page/index.ts': { inherits: 'buildBlockColorTunes builds the entry' },
+  'src/tools/table-of-contents/index.ts': { inherits: 'buildBlockColorTunes builds the entry' },
 };
 
 const walk = (dir: string): string[] =>

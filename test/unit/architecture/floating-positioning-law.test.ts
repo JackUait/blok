@@ -183,6 +183,7 @@ const CAPTURE_SCROLL_CLASSIFICATIONS: Record<string, string> = {
   'components/ui/toolbox-preview.ts': 'Capture-phase scroll listener re-places the toolbox hover card when the menu list scrolls and closes it on any other scroll.',
   'components/utils/tooltip.ts': 'Capture-phase scroll listener intentionally dismisses the snapshot tooltip.',
   'tools/file/preview-scroll-haze.ts': 'Capture-phase listener refreshes local file-preview scroll haze state.',
+  'tools/table-of-contents/index.ts': 'Capture-phase listener marks which heading is being read as any scroller moves; the thumb sits at the row offset inside the nav, never at viewport coordinates.',
 };
 
 type SurfaceContract = 'shared' | 'popover-core' | 'tracked-manual' | 'dismiss-on-scroll';

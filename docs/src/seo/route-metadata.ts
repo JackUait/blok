@@ -399,6 +399,12 @@ const TOOL_COPY: Record<string, Copy> = {
       'A resizable vertical space block for controlling page rhythm, and the height it stores in its data.',
     h1: 'Spacer block: adjustable vertical space',
   },
+  table_of_contents: {
+    title: 'Table of Contents Block — Live Heading Outline',
+    description:
+      'A block that lists the page headings and jumps to each one. The list is built live and never saved.',
+    h1: 'Table of contents block: a live heading outline',
+  },
   quote: {
     title: 'Quote Block — Blockquotes with Captions',
     description:

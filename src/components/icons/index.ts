@@ -250,6 +250,13 @@ export const IconToggleList = `
 </svg>
 `;
 
+// Table of contents icon — rules stepped in by outline depth
+export const IconTableOfContents = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 5.5H14M6.5 10H17M10 14.5H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Bulleted List icon
 export const IconListBulleted = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

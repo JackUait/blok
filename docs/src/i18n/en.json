@@ -1656,7 +1656,7 @@
         "htmlOrJson": "HTML / JSON",
         "flat": "Flat",
         "nodes": "Nodes",
-        "builtInCount": "20 built-in",
+        "builtInCount": "21 built-in",
         "paragraphOnly": "Paragraph only",
         "basicsOnly": "Basics only",
         "primitives": "Primitives",
@@ -2041,6 +2041,7 @@
       "database-row": "Database Row",
       "divider": "Divider",
       "spacer": "Spacer",
+      "table_of_contents": "Table of contents",
       "quote": "Quote",
       "code": "Code",
       "image": "Image",
@@ -2186,6 +2187,9 @@
       },
       "spacer": {
         "description": "An adjustable vertical gap. To resize it, drag either edge grip, or focus one and press ArrowUp/ArrowDown. Its main job is lining up content across sibling columns of unequal length, so it replaces piles of empty paragraphs. It is invisible in read-only mode."
+      },
+      "table_of_contents": {
+        "description": "A list of the page's headings. Each entry links to its heading. Insert it from the toolbox, or type `/toc`.\n\nThe list is built from the page on the fly, so it is never saved. It updates as you add, rename, move, or delete headings. It shows headings at the top level and inside columns and callouts. It skips headings inside toggles, lists, and toggle headings. Entries are indented by heading level, and a skipped level does not add extra indent.\n\nClick an entry, or focus it and press Enter, to scroll to that heading. ArrowUp/ArrowDown, Home, and End move between entries. The entry for the section you are reading is marked with `aria-current=\"location\"`.\n\nWith no headings, the block shows \"Add headings to create a table of contents.\" It works in read-only mode. Pasting a table of contents from Notion creates this block. Markdown export drops it, since the headings export on their own."
       },
       "quote": {
         "description": "A blockquote with a left border accent. It supports two sizes, default and large. You switch between them in the block settings menu. Pasting a `<blockquote>` element automatically creates a quote block."

@@ -539,6 +539,16 @@ describe('blocksToMarkdown (view)', () => {
     expect(md).toBe('A\n\nB');
   });
 
+  it('drops a table of contents, even one carrying stray text', () => {
+    const md = blocksToMarkdown(doc([
+      { type: 'paragraph', data: { text: 'A' } },
+      { type: 'table_of_contents', data: { text: 'stray', textColor: 'red' } },
+      { type: 'paragraph', data: { text: 'B' } },
+    ]));
+
+    expect(md).toBe('A\n\nB');
+  });
+
   it('serializes media and embeds as links', () => {
     expect(blocksToMarkdown(doc([{ type: 'image', data: { url: 'https://i/x.png', alt: 'Shot' } }])))
       .toBe('![Shot](https://i/x.png)');
@@ -615,6 +625,14 @@ describe('blocksToMarkdown (view)', () => {
 
       expect(warnings).toEqual([
         { construct: 'spacer', action: 'dropped', detail: expect.stringContaining('Markdown') },
+      ]);
+    });
+
+    it('reports a dropped table of contents', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([{ type: 'table_of_contents', data: {} }]));
+
+      expect(warnings).toEqual([
+        { construct: 'table_of_contents', action: 'dropped', detail: expect.stringContaining('headings') },
       ]);
     });
 

@@ -90,6 +90,7 @@ export const blokDocumentSchema = {
           { if: { required: ['type'], properties: { type: { const: 'database-row' } } }, then: { properties: { data: { $ref: '#/$defs/database-row' } } } },
           { if: { required: ['type'], properties: { type: { const: 'divider' } } }, then: { properties: { data: { $ref: '#/$defs/divider' } } } },
           { if: { required: ['type'], properties: { type: { const: 'spacer' } } }, then: { properties: { data: { $ref: '#/$defs/spacer' } } } },
+          { if: { required: ['type'], properties: { type: { const: 'table_of_contents' } } }, then: { properties: { data: { $ref: '#/$defs/table_of_contents' } } } },
           { if: { required: ['type'], properties: { type: { const: 'quote' } } }, then: { properties: { data: { $ref: '#/$defs/quote' } } } },
           { if: { required: ['type'], properties: { type: { const: 'code' } } }, then: { properties: { data: { $ref: '#/$defs/code' } } } },
           { if: { required: ['type'], properties: { type: { const: 'image' } } }, then: { properties: { data: { $ref: '#/$defs/image' } } } },
@@ -355,6 +356,16 @@ export const blokDocumentSchema = {
       additionalProperties: false,
       properties: {
         height: { type: 'number', minimum: 38, maximum: 600, description: 'Gap in pixels. Defaults to 38; out-of-range values are clamped on load.' },
+      },
+    },
+
+    table_of_contents: {
+      type: 'object',
+      description: 'An outline of the page headings. The list is read from the document each time and never saved.',
+      additionalProperties: false,
+      properties: {
+        textColor: { type: 'string', description: 'Text color preset name, e.g. "red".' },
+        backgroundColor: { type: 'string', description: 'Background color preset name.' },
       },
     },
 

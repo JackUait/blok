@@ -1138,7 +1138,31 @@ describe('parseNotionBlocksV3', () => {
       expect(out).toEqual([]);
     });
 
-    it.each(['table_of_contents', 'breadcrumb', 'copy_indicator', 'link_to_page'])(
+    it('maps a table of contents to the Blok tool, ignoring its stray title', () => {
+      const out = parseNotionBlocksV3(v3(value('x', 'table_of_contents', { properties: title(['ignored']) })));
+
+      expect(out).toEqual([{ id: 'x', tool: 'table_of_contents', data: {} }]);
+    });
+
+    it('keeps a table of contents colour that is in Blok\'s palette, and only that key', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('x', 'table_of_contents', { format: { block_color: 'gray_background' } })),
+        () => true
+      );
+
+      expect(out).toEqual([{ id: 'x', tool: 'table_of_contents', data: { backgroundColor: 'gray' } }]);
+    });
+
+    it('drops a table of contents when the host has not registered the tool', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('x', 'table_of_contents', { properties: title(['ignored']) })),
+        (tool) => tool !== 'table_of_contents'
+      );
+
+      expect(out).toEqual([]);
+    });
+
+    it.each(['breadcrumb', 'copy_indicator', 'link_to_page'])(
       'drops the structure-only block type "%s" instead of leaving a stray paragraph',
       (type) => {
         const out = parseNotionBlocksV3(v3(value('x', type, { properties: title(['ignored']) })));

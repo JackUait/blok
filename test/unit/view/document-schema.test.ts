@@ -33,6 +33,7 @@ import {
   Quote,
   Spacer,
   Table,
+  TableOfContents,
   Toggle,
   Video,
   defaultBlockTools,
@@ -182,6 +183,8 @@ const savedData: Record<string, Record<string, unknown>> = {
 
   spacer: new Spacer(options({ height: 40 })).save(),
 
+  table_of_contents: new TableOfContents(options({ textColor: 'red', backgroundColor: 'blue' })).save(),
+
   quote: new Quote(options({ text: 'Wise words', size: 'large' })).save(
     contentElement('Wise words') as unknown as HTMLQuoteElement
   ),
@@ -311,6 +314,17 @@ describe('blokDocumentSchema', () => {
       expect(branches.some(branch =>
         branch.if.properties.type.const === 'page' && branch.then.properties.data.$ref === '#/$defs/page'
       )).toBe(true);
+    });
+  });
+
+  describe('table_of_contents', () => {
+    it('saves only block color; the heading list is never stored', () => {
+      const toc = defs.table_of_contents;
+
+      expect(savedData.table_of_contents).toEqual({ textColor: 'red', backgroundColor: 'blue' });
+      expect(toc.required ?? []).toEqual([]);
+      expect(toc.additionalProperties).toBe(false);
+      expect(Object.keys(toc.properties ?? {})).toEqual(['textColor', 'backgroundColor']);
     });
   });
 

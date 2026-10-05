@@ -7,13 +7,14 @@
  * declaration is wrong.
  */
 
-import type { defaultBlockTools, Columns, Embed, Bookmark, Page, Image, File, Audio, Video, ClearFormat, mountChildBlocks } from '../../../types/tools-entry';
+import type { defaultBlockTools, Columns, Embed, Bookmark, Page, Image, File, Audio, Video, ClearFormat, mountChildBlocks, TableOfContents, BlokBlockDataMap } from '../../../types/tools-entry';
 import type {
   ImageData, ImageConfig, ImageUploader,
   FileData, FileConfig, FileUploader,
   AudioData, AudioConfig, AudioUploader,
   VideoData, VideoConfig, VideoUploader,
   PageData, PageConfig, PageInfo, PageIcon, PageSearchResult,
+  TableOfContentsData,
 } from '../../../types/tools-entry';
 
 // defaultBlockTools must include 'database' and 'database-row' entries
@@ -65,6 +66,11 @@ const _fileDefault: typeof defaultBlockTools.file = {} as const;
 const _audioDefault: typeof defaultBlockTools.audio = {} as const;
 const _videoDefault: typeof defaultBlockTools.video = {} as const;
 
+// TableOfContents is exported from the runtime tools entry and is a default block tool.
+const _toc: typeof TableOfContents = {} as typeof TableOfContents;
+const _tocDefault: typeof defaultBlockTools.table_of_contents = {} as const;
+const _tocData: BlokBlockDataMap['table_of_contents'] = { textColor: 'red' } satisfies TableOfContentsData;
+
 // Suppress unused variable warnings
 void _db;
 void _dbRow;
@@ -88,3 +94,6 @@ void _mountChildBlocks;
 void _fileDefault;
 void _audioDefault;
 void _videoDefault;
+void _toc;
+void _tocDefault;
+void _tocData;

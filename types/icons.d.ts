@@ -41,6 +41,7 @@ export declare const IconTextSizeSmall: string;
 export declare const IconTextSizeLarge: string;
 export declare const IconWarning: string;
 export declare const IconToggleList: string;
+export declare const IconTableOfContents: string;
 export declare const IconListBulleted: string;
 export declare const IconListNumbered: string;
 export declare const IconListChecklist: string;

@@ -10,11 +10,23 @@ describe('tools entry exports', () => {
     it('includes database-row entry', () => {
       expect(toolsEntry.defaultBlockTools).toHaveProperty('database-row');
     });
+
+    it('includes table_of_contents entry', () => {
+      expect(toolsEntry.defaultBlockTools).toHaveProperty('table_of_contents');
+    });
   });
 
   describe('Columns group export', () => {
     it('exports Columns', () => {
       expect(toolsEntry).toHaveProperty('Columns');
+    });
+  });
+
+  describe('TableOfContents export', () => {
+    it('exports the table of contents tool class', async () => {
+      const { TableOfContentsTool } = await import('../../../src/tools/table-of-contents');
+
+      expect(toolsEntry).toHaveProperty('TableOfContents', TableOfContentsTool);
     });
   });
 

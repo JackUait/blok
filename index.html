@@ -1741,7 +1741,7 @@
     // `data-blok-tool` on its blocks — an unscoped import would double-style the
     // editor. Scoping keeps the sheet affecting only the Blok View render.
     import viewCssText from './view.css?raw';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Page, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, TableOfContents, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Page, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
@@ -1799,6 +1799,7 @@
         database: true,
         divider: true,
         spacer: true,
+        table_of_contents: true,
         quote: true,
         code: true,
         image: true,
@@ -1885,6 +1886,7 @@
       }
       if (state.tools.divider) tools.divider = Divider;
       if (state.tools.spacer) tools.spacer = Spacer;
+      if (state.tools.table_of_contents) tools.table_of_contents = TableOfContents;
       if (state.tools.quote) tools.quote = { class: Quote, inlineToolbar: true };
       if (state.tools.code) tools.code = { class: Code, inlineToolbar: false };
       if (state.tools.image) tools.image = Image;
@@ -3089,6 +3091,7 @@
       { key: 'database', label: 'Database', icon: Icons.IconDatabase },
       { key: 'divider', label: 'Divider', icon: Icons.IconMinus },
       { key: 'spacer', label: 'Spacer', icon: Icons.IconSpacer },
+      { key: 'table_of_contents', label: 'Table of contents', icon: Icons.IconTableOfContents },
       { key: 'quote', label: 'Quote', icon: Icons.IconQuote },
       { key: 'page', label: 'Page', icon: Icons.IconPage },
     ];
@@ -3131,7 +3134,7 @@
       'UI & Navigation': ['IconCheck', 'IconWand', 'IconCross', 'IconMenu', 'IconPlus', 'IconMinus', 'IconChevronLeft', 'IconChevronRight', 'IconChevronDown', 'IconSearch', 'IconArrowUp', 'IconArrowDownLine'],
       'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconClearFormat', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconEquation', 'IconSuperscript', 'IconSubscript', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconReturn', 'IconCode'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
-      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconSpacer', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar', 'IconPage'],
+      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconSpacer', 'IconTableOfContents', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar', 'IconPage'],
       'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCrop', 'IconSliders', 'IconRotateLeft', 'IconFlipHorizontal', 'IconExpandFullscreen', 'IconCollapseFullscreen', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerBackward', 'IconPlayerForward', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconPlayerSettings', 'IconPlayerSpeed', 'IconPlayerLoop', 'IconPlayerPip', 'IconPlayerTheater', 'IconDownload', 'IconUpload'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3', 'IconToggleH4', 'IconToggleH5', 'IconToggleH6'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconArrowUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight', 'IconMergeCells', 'IconSplitCell', 'IconPlacement', 'IconTextSizeSmall', 'IconTextSizeLarge'],
@@ -3455,6 +3458,24 @@
             { id: 'sp-a', type: 'paragraph', data: { text: 'Above spacer.' } },
             { id: 'sp', type: 'spacer', data: { height: 64 } },
             { id: 'sp-b', type: 'paragraph', data: { text: 'Below spacer.' } },
+          ] },
+        ],
+      },
+      {
+        tool: 'table_of_contents',
+        label: 'Table of contents',
+        states: [
+          { label: 'Outlining headings', blocks: [
+            { id: 'toc', type: 'table_of_contents', data: {} },
+            { id: 'toc-h2', type: 'header', data: { text: 'Overview', level: 2 } },
+            { id: 'toc-h3', type: 'header', data: { text: 'Details', level: 3 } },
+          ] },
+          { label: 'No headings yet', blocks: [
+            { id: 'toc-empty', type: 'table_of_contents', data: {} },
+          ] },
+          { label: 'Colored', blocks: [
+            { id: 'toc-color', type: 'table_of_contents', data: { backgroundColor: 'gray' } },
+            { id: 'toc-color-h', type: 'header', data: { text: 'Overview', level: 2 } },
           ] },
         ],
       },
@@ -3840,6 +3861,7 @@
           'database-row': DatabaseRow,
           divider: Divider,
           spacer: Spacer,
+          table_of_contents: TableOfContents,
           quote: Quote,
           code: Code,
           image: Image,

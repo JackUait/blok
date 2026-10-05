@@ -60,11 +60,12 @@ interface Mapped {
  * Parse the `text/_notion-blocks-v3-production` clipboard payload into a flat
  * array of Blok-ready blocks.  Returns `null` when the payload is not valid
  * JSON or does not look like the Notion record-map (so callers can fall back
- * to the HTML path). Unregistered page tools fall back to Notion links.
+ * to the HTML path). Unregistered page tools fall back to Notion links; an
+ * unregistered table of contents is dropped.
  */
 export function parseNotionBlocksV3(
   json: string,
-  hasTool?: (tool: 'page' | 'page-link' | 'bookmark') => boolean
+  hasTool?: (tool: 'page' | 'page-link' | 'bookmark' | 'table_of_contents') => boolean
 ): NotionParsedBlock[] | null {
   const parsed = safeJsonParse(json);
 
@@ -270,7 +271,7 @@ function resolveColumnOrder(
 function mapValue(
   value: NotionValue,
   byId: Map<string, NotionValue>,
-  hasTool?: (tool: 'page' | 'page-link' | 'bookmark') => boolean
+  hasTool?: (tool: 'page' | 'page-link' | 'bookmark' | 'table_of_contents') => boolean
 ): Mapped | null {
   const props = value.properties ?? {};
   const text = richText(props.title, byId);
@@ -379,6 +380,7 @@ function mapValue(
       return null;
     }
     case 'table_of_contents':
+      return hasTool?.('table_of_contents') === false ? null : mapTableOfContents(value.format);
     case 'breadcrumb':
     case 'copy_indicator':
     case 'link_to_page':
@@ -389,11 +391,24 @@ function mapValue(
   }
 }
 
+/** The outline itself is rebuilt from the pasted headings; only a palette colour carries over. */
+function mapTableOfContents(format: Record<string, unknown> | undefined): Mapped {
+  const { textColor, backgroundColor } = parseBlockColor(format?.block_color);
+
+  return {
+    tool: 'table_of_contents',
+    data: {
+      ...(textColor !== null ? { textColor } : {}),
+      ...(backgroundColor !== null ? { backgroundColor } : {}),
+    },
+  };
+}
+
 /** Keep a page reference navigable when its opt-in block tool is absent. */
 function pageReferenceFallback(
   id: string,
   text: string,
-  hasTool?: (tool: 'page' | 'page-link' | 'bookmark') => boolean
+  hasTool?: (tool: 'page' | 'page-link' | 'bookmark' | 'table_of_contents') => boolean
 ): Mapped {
   const url = notionPageUrl(id);
 

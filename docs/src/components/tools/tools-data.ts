@@ -591,6 +591,39 @@ const editor = new Blok({
   },
 
   {
+    id: 'table_of_contents',
+    exportName: 'TableOfContents',
+    type: 'block',
+    title: 'Table of contents',
+    description:
+      'A list of the page\'s headings. Each entry links to its heading. Insert it from the toolbox, or type `/toc`.\n\nThe list is built from the page on the fly, so it is never saved. It updates as you add, rename, move, or delete headings. It shows headings at the top level and inside columns and callouts. It skips headings inside toggles, lists, and toggle headings. Entries are indented by heading level, and a skipped level does not add extra indent.\n\nClick an entry, or focus it and press Enter, to scroll to that heading. ArrowUp/ArrowDown, Home, and End move between entries. The entry for the section you are reading is marked with `aria-current="location"`.\n\nWith no headings, the block shows "Add headings to create a table of contents." It works in read-only mode. Pasting a table of contents from Notion creates this block. Markdown export drops it, since the headings export on their own.',
+    importExample: `import { TableOfContents } from '@bloklabs/core/tools';`,
+    configOptions: [],
+    saveDataShape: `interface TableOfContentsData {
+  textColor?: string;       // Colour preset name, absent for default
+  backgroundColor?: string; // Colour preset name, absent for none
+}`,
+    saveDataExample: `{
+  "id": "toc001",
+  "type": "table_of_contents",
+  "data": {
+    "backgroundColor": "gray"
+  }
+}`,
+    usageExample: `import { Blok } from '@bloklabs/core';
+import { TableOfContents } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    table_of_contents: {
+      class: TableOfContents,
+    },
+  },
+});`,
+  },
+
+  {
     id: 'quote',
     exportName: 'Quote',
     type: 'block',

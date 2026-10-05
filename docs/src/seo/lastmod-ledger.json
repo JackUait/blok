@@ -1,6 +1,6 @@
 {
   "/": {
-    "hash": "783319d205aa7de0",
+    "hash": "ef60858ebfb8d0b7",
     "date": "2026-10-05"
   },
   "/404": {
@@ -16,7 +16,7 @@
     "date": "2026-10-05"
   },
   "/docs": {
-    "hash": "6bc54c22ed78b7ce",
+    "hash": "8967c3b7d9a88662",
     "date": "2026-10-05"
   },
   "/docs/audio": {
@@ -235,6 +235,10 @@
     "hash": "7ae14fead3460363",
     "date": "2026-09-28"
   },
+  "/docs/table_of_contents": {
+    "hash": "30f9ad5929a43ef9",
+    "date": "2026-10-05"
+  },
   "/docs/theme-api": {
     "hash": "0849ad5ffe7a14ea",
     "date": "2026-09-08"
@@ -304,7 +308,7 @@
     "date": "2026-09-08"
   },
   "/ru": {
-    "hash": "46f21769c1be5f5a",
+    "hash": "52ed24fc31110baf",
     "date": "2026-10-05"
   },
   "/ru/changelog": {
@@ -316,7 +320,7 @@
     "date": "2026-10-05"
   },
   "/ru/docs": {
-    "hash": "0c3bccb15a328f4e",
+    "hash": "644bc04d9cd73b4f",
     "date": "2026-10-05"
   },
   "/ru/docs/audio": {
@@ -534,6 +538,10 @@
   "/ru/docs/table": {
     "hash": "c683e052518c5f05",
     "date": "2026-09-28"
+  },
+  "/ru/docs/table_of_contents": {
+    "hash": "4567c0e677ddc68f",
+    "date": "2026-10-05"
   },
   "/ru/docs/theme-api": {
     "hash": "d0216ca64c953da2",

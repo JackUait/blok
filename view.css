@@ -1362,6 +1362,11 @@
   inherits: false;
   initial-value: transparent;
 }
+@property --blok-embed-window-tone {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
 [data-blok-tool="header"] {
   font-weight: var(--blok-heading-font-weight, 600);
   margin-bottom: var(--blok-heading-margin-bottom, 1px);
@@ -1433,6 +1438,9 @@
 }
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
+    :root, :host {
+      --blok-embed-window-tone: transparent;
+    }
     *, ::before, ::after, ::backdrop {
       --tw-border-style: solid;
       --tw-leading: initial;

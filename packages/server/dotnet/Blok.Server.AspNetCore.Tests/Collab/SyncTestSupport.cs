@@ -495,6 +495,11 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
     return Task.CompletedTask;
   }
 
+  public Task RetireAsync(string docId, CancellationToken cancellationToken = default)
+  {
+    return DeleteAsync(docId, cancellationToken);
+  }
+
   public Task DeleteAsync(string docId, CancellationToken cancellationToken = default)
   {
     lock (documents)

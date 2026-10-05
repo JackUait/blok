@@ -230,6 +230,7 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
   private int writes;
   private int resets;
   private int deletes;
+  private int retires;
   private int maxConcurrentEntries;
   private long writtenBytes;
   private int largestWriteBytes;
@@ -378,6 +379,30 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
 
     AfterReset?.Invoke();
     cancellationToken.ThrowIfCancellationRequested();
+  }
+
+  /// <summary>When it answers non-null for a doc, that doc's RetireAsync throws it.</summary>
+  internal Func<string, Exception?>? FailRetires { get; set; }
+
+  internal int Retires => Volatile.Read(ref retires);
+
+  public Task RetireAsync(string docId, CancellationToken cancellationToken = default)
+  {
+    Interlocked.Increment(ref retires);
+    cancellationToken.ThrowIfCancellationRequested();
+
+    if (FailRetires?.Invoke(docId) is { } failure)
+    {
+      throw failure;
+    }
+
+    lock (guard)
+    {
+      documents.Remove(docId);
+      journal.Add("retire");
+    }
+
+    return Task.CompletedTask;
   }
 
   public async Task DeleteAsync(string docId, CancellationToken cancellationToken = default)

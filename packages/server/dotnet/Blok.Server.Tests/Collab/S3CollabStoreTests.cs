@@ -200,6 +200,24 @@ public sealed class S3CollabStoreTests
     Assert.All(bucket.Requests, request => Assert.Equal(ObjectPath, request.Path));
   }
 
+  /// <summary>A corrupt object reads as absent; retiring it would destroy the only bytes left to repair.</summary>
+  [Fact]
+  public async Task RetireDeletesAReadableObjectAndKeepsACorruptOne()
+  {
+    var bucket = new FakeS3Bucket();
+    var (store, _) = CreateStore(bucket);
+    var corruptPath = "/media/collab/" + CollabDocKey.For("doc-2");
+    bucket.Seed(ObjectPath, CollabWorkingSetCodec.EncodeDocument(Tag, []));
+    bucket.Seed(corruptPath, "not a working set"u8.ToArray());
+
+    await store.RetireAsync(DocId, CancellationToken.None);
+    await store.RetireAsync("doc-2", CancellationToken.None);
+    await store.RetireAsync(DocId, CancellationToken.None);
+
+    Assert.False(bucket.Holds(ObjectPath));
+    Assert.Equal("not a working set"u8.ToArray(), bucket.StoredAt(corruptPath));
+  }
+
   [Fact]
   public async Task DeleteTreatsAnS3NotFoundAnswerAsAlreadyDeleted()
   {

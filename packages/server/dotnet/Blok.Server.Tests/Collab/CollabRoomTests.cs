@@ -1522,9 +1522,11 @@ public sealed class CollabRoomTests
 
     var reset = await manager.ResetAsync(DocId, CancellationToken.None);
 
+    // One read, after the open: the reset looks for a working copy to adopt
+    // (there is none here), so the journal's tombstone always wins first.
     Assert.Equal(1, operations.Opens);
     Assert.Equal(1, endpoint.Loads);
-    Assert.Equal(0, store.Reads);
+    Assert.Equal(1, store.Reads);
     Assert.Equal(1, reset.Epoch);
     Assert.Equal(0, manager.LiveRoomCount);
   }
@@ -1548,7 +1550,7 @@ public sealed class CollabRoomTests
     var reset = Assert.IsType<CollabResetResult>(result);
     Assert.Equal(CollabResetStatus.Reset, reset.Status);
     Assert.Equal(0, store.Resets);
-    Assert.Equal(0, store.Reads);
+    Assert.Equal(0, store.Writes);
     Assert.Equal(reset.Tag?.Lineage, operations.Head(DocId)?.Lineage);
   }
 
@@ -2424,11 +2426,11 @@ public sealed class CollabRoomTests
   }
 
   [Fact]
-  public async Task AFailedWorkingSetDeleteStillOpensAndTheNextLoadRetriesIt()
+  public async Task AFailedWorkingSetRetireStillOpensAndTheNextLoadRetriesIt()
   {
     endpoint.Holds(DocId, "from-endpoint");
     store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("from-ws"))], Tags.At(3));
-    store.FailDeletes = _ => new IOException("the disk is busy");
+    store.FailRetires = _ => new IOException("the disk is busy");
     var manager = CreateJournalManager();
 
     var state = await manager.StateAsync(DocId, CancellationToken.None);
@@ -2438,7 +2440,7 @@ public sealed class CollabRoomTests
     Assert.True(store.Holds(DocId));
 
     await manager.DrainAsync(CancellationToken.None);
-    store.FailDeletes = null;
+    store.FailRetires = null;
     var reloaded = await CreateJournalManager().StateAsync(DocId, CancellationToken.None);
 
     Assert.Equal("""{"text":"from-ws"}""", Encoding.UTF8.GetString(reloaded.Json));
@@ -2477,6 +2479,89 @@ public sealed class CollabRoomTests
     Assert.Equal(
         """{"text":"from-endpoint"}""",
         Encoding.UTF8.GetString((await manager.StateAsync(DocId, CancellationToken.None)).Json));
+  }
+
+  /// <summary>
+  /// A damaged working copy is moved aside by the store and the room seeds from
+  /// the endpoint. Retiring a working copy later must not take the quarantined
+  /// bytes with it: only a purge may.
+  /// </summary>
+  [Fact]
+  public async Task AQuarantinedWorkingCopySurvivesTheJournalTakingOver()
+  {
+    var directory = Path.Combine(Path.GetTempPath(), $"blok-quarantine-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(directory);
+
+    try
+    {
+      var local = new LocalCollabStore(directory, log.Add);
+      var damaged = Path.Combine(directory, CollabDocKey.For(DocId));
+      File.WriteAllBytes(damaged, [9, 9, 9]);
+      endpoint.Holds(DocId, "from-endpoint");
+
+      var first = new CollabRoomManager(local, endpoint, converter, new CollabRoomOptions(), time, log.Add, operations);
+      var opened = await first.StateAsync(DocId, CancellationToken.None);
+      await first.DrainAsync(CancellationToken.None);
+      var second = new CollabRoomManager(local, endpoint, converter, new CollabRoomOptions(), time, log.Add, operations);
+      await second.StateAsync(DocId, CancellationToken.None);
+      await second.DrainAsync(CancellationToken.None);
+
+      Assert.Equal("""{"text":"from-endpoint"}""", Encoding.UTF8.GetString(opened.Json));
+      var aside = Assert.Single(Directory.GetFiles(directory, CollabDocKey.For(DocId) + ".unreadable-*"));
+      Assert.Equal([9, 9, 9], File.ReadAllBytes(aside));
+    }
+    finally
+    {
+      Directory.Delete(directory, recursive: true);
+    }
+  }
+
+  /// <summary>
+  /// A reset rebaselines from the endpoint, so whatever only the working copy
+  /// held must reach the endpoint first, the way the built-in journal imports
+  /// and flushes before it resets.
+  /// </summary>
+  [Fact]
+  public async Task AResetOfAHeadlessDocumentAdoptsAndFlushesTheWorkingSetFirst()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("from-ws"))], Tags.At(3));
+    var manager = CreateJournalManager();
+
+    var result = await manager.ResetForHttpAsync(DocId);
+
+    Assert.Equal(CollabResetStatus.Reset, result.Status);
+    Assert.Contains(endpoint.Saves, save => save.Data["text"]?.GetValue<string>() == "from-ws");
+    // The reset raised the ADOPTED epoch, so it ran on the adopted history.
+    Assert.Equal(4, Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Epoch);
+    Assert.False(store.Holds(DocId));
+  }
+
+  /// <summary>
+  /// A working copy left beside a reset journal holds content the reset threw
+  /// away, and a lost journal would adopt it again. So a reset that cannot
+  /// retire it is refused, and the operator's retry finishes it.
+  /// </summary>
+  [Fact]
+  public async Task AResetThatCannotRetireTheWorkingCopyIsRefused()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("from-ws"))], Tags.At(3));
+    store.FailRetires = _ => new IOException("the disk is busy");
+    var manager = CreateJournalManager();
+
+    var refused = await manager.ResetForHttpAsync(DocId);
+
+    Assert.Equal(CollabResetStatus.Unavailable, refused.Status);
+    Assert.Equal(3, Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Epoch);
+    Assert.True(store.Holds(DocId));
+
+    store.FailRetires = null;
+    var retried = await manager.ResetForHttpAsync(DocId);
+
+    Assert.Equal(CollabResetStatus.Reset, retried.Status);
+    Assert.Equal(4, Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Epoch);
+    Assert.False(store.Holds(DocId));
   }
 
   [Fact]

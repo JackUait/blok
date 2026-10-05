@@ -104,6 +104,30 @@ internal sealed class S3CollabStore : ICollabWorkingSetStore
         cancellationToken);
   }
 
+  /// <summary>
+  /// A corrupt object reads as absent and is never moved aside here, so it
+  /// stays where it is: it may be the only copy left to repair from.
+  /// </summary>
+  public Task RetireAsync(
+      string docId,
+      CancellationToken cancellationToken = default)
+  {
+    return CollabWorkingSetLaw.GuardAsync(
+        docId,
+        "retire",
+        async () =>
+        {
+          var document = await store.GetObjectAsync(KeyFor(docId), cancellationToken);
+
+          if (document is not null &&
+              CollabWorkingSetLaw.DecodeOrAbsent(docId, document, log) is not null)
+          {
+            await store.DeleteObjectAsync(KeyFor(docId), cancellationToken);
+          }
+        },
+        cancellationToken);
+  }
+
   public Task DeleteAsync(
       string docId,
       CancellationToken cancellationToken = default)

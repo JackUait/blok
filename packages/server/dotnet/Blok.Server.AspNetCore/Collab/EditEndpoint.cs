@@ -213,10 +213,22 @@ internal static class EditEndpoint
 
     // A browser hides non-safelisted headers from a cross-origin page unless
     // they are exposed; without this it cannot build If-Match or read a 412.
+    // Merged, not replaced: the host's own CORS layer may have exposed others.
     if (context.Response.Headers.ContainsKey(HeaderNames.AccessControlAllowOrigin))
     {
-      context.Response.Headers.AccessControlExposeHeaders =
-          $"{LineageHeader}, {SequenceHeader}, {HeaderNames.ETag}";
+      var exposed = context.Response.Headers.AccessControlExposeHeaders
+          .SelectMany(value => (value ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+          .ToList();
+
+      foreach (var name in new[] { LineageHeader, SequenceHeader, HeaderNames.ETag })
+      {
+        if (!exposed.Contains(name, StringComparer.OrdinalIgnoreCase))
+        {
+          exposed.Add(name);
+        }
+      }
+
+      context.Response.Headers.AccessControlExposeHeaders = string.Join(", ", exposed);
     }
   }
 

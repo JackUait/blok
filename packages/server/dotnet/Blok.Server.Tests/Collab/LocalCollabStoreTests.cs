@@ -350,6 +350,42 @@ public sealed class LocalCollabStoreTests : IDisposable
     Assert.True(Directory.Exists(Path.Combine(directory, DocKeyHex)));
   }
 
+  /// <summary>
+  /// Retiring is what a journal does once it holds a working set's content.
+  /// It is not purge: quarantined bytes are kept for repair, and an old
+  /// scratch file does not block it the way it blocks a purge.
+  /// </summary>
+  [Fact]
+  public async Task RetireRemovesOnlyAReadableWorkingSet()
+  {
+    var store = CreateStore();
+    await store.WriteAsync(DocId, Frames([0x01]), Tag, CancellationToken.None);
+    var unreadable = Path.Combine(directory, $"{DocKeyHex}.unreadable-old");
+    var oldScratch = Path.Combine(directory, ".blok-collab-00000000000000000000000000000001");
+    File.WriteAllBytes(unreadable, [3]);
+    File.WriteAllBytes(oldScratch, [4]);
+
+    await store.RetireAsync(DocId, CancellationToken.None);
+    await store.RetireAsync(DocId, CancellationToken.None);
+
+    Assert.False(File.Exists(Path.Combine(directory, DocKeyHex)));
+    Assert.Equal([3], File.ReadAllBytes(unreadable));
+    Assert.True(File.Exists(oldScratch));
+  }
+
+  [Fact]
+  public async Task RetireLeavesAnUnreadableWorkingSetInPlace()
+  {
+    var store = CreateStore();
+    Directory.CreateDirectory(directory);
+    var stored = Path.Combine(directory, DocKeyHex);
+    File.WriteAllBytes(stored, [9, 9, 9]);
+
+    await store.RetireAsync(DocId, CancellationToken.None);
+
+    Assert.Equal([9, 9, 9], File.ReadAllBytes(stored));
+  }
+
   private LocalCollabStore CreateStore()
   {
     return new LocalCollabStore(directory, logs.Add);

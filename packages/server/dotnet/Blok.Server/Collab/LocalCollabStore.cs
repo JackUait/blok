@@ -152,6 +152,49 @@ internal sealed class LocalCollabStore : ICollabWorkingSetStore
         cancellationToken);
   }
 
+  /// <summary>
+  /// Only the doc's own file, and only when it decodes. Quarantined
+  /// <c>.unreadable-*</c> copies and scratch files are purge's to remove, so
+  /// an old scratch file never blocks this the way it blocks a purge.
+  /// </summary>
+  public Task RetireAsync(
+      string docId,
+      CancellationToken cancellationToken = default)
+  {
+    return CollabWorkingSetLaw.GuardAsync(
+        docId,
+        "retire",
+        async () =>
+        {
+          var path = PathFor(docId);
+
+          if (Directory.Exists(path))
+          {
+            return;
+          }
+
+          byte[] document;
+
+          try
+          {
+            document = await File.ReadAllBytesAsync(path, cancellationToken);
+          }
+          catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
+          {
+            return;
+          }
+
+          if (CollabWorkingSetLaw.DecodeOrAbsent(docId, document, log) is null)
+          {
+            return;
+          }
+
+          File.Delete(path);
+          SyncDirectory(directory);
+        },
+        cancellationToken);
+  }
+
   public Task DeleteAsync(
       string docId,
       CancellationToken cancellationToken = default)

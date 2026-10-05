@@ -822,8 +822,9 @@ the same two headers:
 | `Blok-Doc-Lineage` | The lineage, `^[0-9a-f]{32}$`. |
 | `Blok-Doc-Sequence` | A sequence on that lineage, in decimal with no sign and no leading zero. What it names depends on the response: the sequence an edit committed at (12.1), or the document's head on a 412 and on `/state`. `0` means nothing is committed yet. |
 
-For an allowed origin, both routes list `Blok-Doc-Lineage`, `Blok-Doc-Sequence`
-and `ETag` in `Access-Control-Expose-Headers`, so a browser page can read them.
+For an allowed origin, both routes add `Blok-Doc-Lineage`, `Blok-Doc-Sequence`
+and `ETag` to `Access-Control-Expose-Headers`, keeping any names already there,
+so a browser page can read them.
 
 ### 12.1 Edit receipts
 

@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text;
 using Blok.Server.Collab;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -55,6 +57,27 @@ public sealed class StateEndpointTests
     Assert.Equal(["Blok-Doc-Lineage", "Blok-Doc-Sequence", "ETag"], ExposedHeaders(state));
     Assert.Equal(["Blok-Doc-Lineage", "Blok-Doc-Sequence", "ETag"], ExposedHeaders(applied));
     Assert.Equal(["Blok-Doc-Lineage", "Blok-Doc-Sequence", "ETag"], ExposedHeaders(stale));
+  }
+
+  /// <summary>A host's own CORS layer may expose headers first; ours are added, not swapped in.</summary>
+  [Fact]
+  public async Task TheHeadHeadersJoinHeadersTheAppAlreadyExposes()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await SyncApp.StartAsync(
+        services: collection => collection.AddSingleton<ICollabOperationStore>(operations),
+        configureApp: web => web.Use(async (context, next) =>
+        {
+          context.Response.Headers.AccessControlExposeHeaders = "X-Request-Id, etag";
+          await next(context);
+        }),
+        fakes: new SyncFakes(operationStore: operations));
+
+    using var state = await State(app);
+    using var edit = await Edit(app, "joined-edit");
+
+    Assert.Equal(["Blok-Doc-Lineage", "Blok-Doc-Sequence", "X-Request-Id", "etag"], ExposedHeaders(state));
+    Assert.Equal(["Blok-Doc-Lineage", "Blok-Doc-Sequence", "X-Request-Id", "etag"], ExposedHeaders(edit));
   }
 
   private static string[] ExposedHeaders(HttpResponseMessage response)

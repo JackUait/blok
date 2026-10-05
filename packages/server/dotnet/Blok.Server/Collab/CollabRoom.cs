@@ -945,6 +945,19 @@ internal sealed class CollabRoom : IDisposable
                         $"so the reset drops it: {error.Message}");
                   }
                 }
+                else
+                {
+                  // A store that does not import working sets itself never
+                  // seeded this document. Adopt the working copy first, as the
+                  // built-in journal's import does, so the flush below sends
+                  // its edits to the endpoint this reset rebaselines from.
+                  NewDocLocked();
+
+                  if (await TryAdoptWorkingSetLocked())
+                  {
+                    state = RoomState.Ready;
+                  }
+                }
               }
               catch (Exception error)
               {
@@ -982,6 +995,30 @@ internal sealed class CollabRoom : IDisposable
               }
             }
 
+            // Strict, unlike the load path: a copy left beside the new lineage
+            // holds what this reset threw away, and a lost journal would adopt
+            // it again. Refused before anything is reset, so a retry is clean.
+            try
+            {
+              await store.RetireAsync(DocId, lifetime.Token);
+            }
+            catch (Exception error) when (!lifetime.IsCancellationRequested)
+            {
+              log?.Invoke(
+                  $"collab: room \"{DocId}\" could not retire its working set, so the reset is refused: {error.Message}");
+
+              if (state == RoomState.Ready)
+              {
+                UpdateEvictionLocked();
+              }
+              else
+              {
+                await CloseRoomLocked(null);
+              }
+
+              return new CollabResetResult(CollabResetStatus.Unavailable, null, error);
+            }
+
             var head = session!.OpenResult.Head;
             var current = head is null
                 ? tag
@@ -990,10 +1027,6 @@ internal sealed class CollabRoom : IDisposable
             try
             {
               var next = await ResetJournalLocked(current);
-
-              // A reset takes the endpoint's copy; a working set left behind
-              // would be adopted again if the journal were ever lost.
-              await DropWorkingSetLocked();
               await CloseRoomLocked(CollabCloseReason.Reset);
 
               return new CollabResetResult(CollabResetStatus.Reset, next, null);
@@ -1790,8 +1823,11 @@ internal sealed class CollabRoom : IDisposable
   /// A working set left by a room that ran without the journal can hold edits
   /// the endpoint never got (a failed write-back, a hard kill). Its own frames
   /// and tag become the journal's baseline, so cached clients still merge.
-  /// False when there is nothing to adopt; an unreadable one throws, like the
-  /// working-copy load, and is left in place.
+  /// False when there is nothing to adopt. A copy in another format, or one
+  /// that decodes but will not apply, throws and stays in place. A copy the
+  /// store cannot decode reads as absent: the local store moves it aside as
+  /// <c>.unreadable-*</c>, S3 leaves it, and neither is ever retired, so the
+  /// room seeds from the endpoint and the bytes are kept for repair.
   /// </summary>
   private async Task<bool> TryAdoptWorkingSetLocked()
   {
@@ -1852,12 +1888,16 @@ internal sealed class CollabRoom : IDisposable
     return true;
   }
 
-  /// <summary>Best effort: a failed delete is retried by the next load, which drops it again.</summary>
+  /// <summary>
+  /// Best effort: the journal already holds the content, so a failed retire
+  /// costs no open, and the next load retries it. Retire, never delete: a
+  /// delete is purge and would take quarantined bytes with it.
+  /// </summary>
   private async Task DropWorkingSetLocked()
   {
     try
     {
-      await store.DeleteAsync(DocId, lifetime.Token);
+      await store.RetireAsync(DocId, lifetime.Token);
     }
     catch (Exception error) when (!lifetime.IsCancellationRequested)
     {

@@ -69,6 +69,16 @@ internal interface ICollabWorkingSetStore
       CollabWorkingSetTag newTag,
       CancellationToken cancellationToken = default);
 
+  /// <summary>
+  /// Removes a working set a journal has taken over. Unlike
+  /// <see cref="DeleteAsync"/>, which is purge, it removes only a copy that
+  /// reads back, and never quarantined or unreadable bytes: those are kept for
+  /// repair. Absence is success.
+  /// </summary>
+  Task RetireAsync(
+      string docId,
+      CancellationToken cancellationToken = default);
+
   /// <summary>Deletes a document's working set; absence is success.</summary>
   Task DeleteAsync(
       string docId,

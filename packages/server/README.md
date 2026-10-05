@@ -274,6 +274,8 @@ A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed wi
 | `POST /sync/{doc}/edit` | Inserts, updates or removes blocks from outside; all-or-nothing, reaches every open tab, and requires an idempotency key |
 | `GET /sync/{doc}/state` | Returns the live document as JSON, with the journal head it reflects when there is a journal |
 
+On a journal-backed service, `POST /sync/{doc}/reset` first adopts a working copy the journal does not hold yet and writes it back to your endpoint, so the reset rebaselines from a record that includes it. It then retires that working copy before it resets. If the retire fails, the reset answers 503 and changes nothing; retry it.
+
 `POST /sync/{doc}/edit` needs one `Blok-Idempotency-Key` header with 1 to 128 printable ASCII characters. With an operation journal, retrying the same key returns the first result without applying it again; reusing it for different work receives 409. A 204 then means the edit is durable, and the response carries `Blok-Doc-Lineage` and `Blok-Doc-Sequence`. A working-copy-only service answers 204 without those headers and without that promise. If that journal cannot commit, the endpoint returns 503 without relaying the edit. A working-copy-only service does not deduplicate the key or make reuse a 409: requests have ordinary retry behavior, and its 204 starts the existing write-back retry path.
 
 An edit may also send `If-Match: "<lineage>:<sequence>"`. It is one quoted tag, built from the `Blok-Doc-Lineage` and `Blok-Doc-Sequence` values exactly as the service prints them.
@@ -286,7 +288,7 @@ An edit may also send `If-Match: "<lineage>:<sequence>"`. It is one quoted tag, 
 
 `GET /sync/{doc}/state` returns the live document as `application/json`, in the same shape your document endpoint receives. It includes edits made a moment ago. With a journal, it also sends `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag: "<lineage>:<sequence>"`, naming the exact head the body reflects. Send that `ETag` back as `If-Match` to edit only if nothing changed in between. A working-copy-only service sends the body without those three headers. A purged document answers 403. A document that cannot be loaded, is held by another process, or is on a service that is shutting down answers 503. A document the service cannot write as JSON answers 500.
 
-Both routes list `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag` in `Access-Control-Expose-Headers` for an allowed origin, so a browser page can read them.
+Both routes add `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag` to `Access-Control-Expose-Headers` for an allowed origin, so a browser page can read them. Headers your app already exposes are kept.
 
 Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
 
@@ -362,7 +364,8 @@ Registering an operation store is close to one-way per document. A journal-backe
 A build without your store does not read the journal. Unregistering the store, or rolling back to a binary that never had it, lands each document on whatever else it has:
 
 - **Journal-backed from the start.** There is no blob, so the room seeds from your document endpoint and comes back as the last projection that endpoint accepted. Every operation acknowledged since then is still in your journal and nothing serves it.
-- **Working set from before the switch.** The first open under the journal adopts a document's blob as the journal's baseline, keeping its lineage, and then deletes it. Every later open deletes any blob it finds beside the journal. A journal-backed room never writes one. So a blob survives only for a document that has not been opened since you registered the store, or one journalled by an earlier Blok build and not reopened since. A blob with any frame in it is authoritative on open. The endpoint is never consulted, so that document comes back as it was on the day you switched. There is no error, and nothing in the log.
+- **Working set from before the switch.** The first open under the journal adopts a document's blob as the journal's baseline, keeping its lineage, and then retires it. Every later open retires any blob it finds beside the journal; a failed retire is logged and tried again on the next open. A journal-backed room never writes one. So a blob survives only for a document that has not been opened since you registered the store, or one journalled by an earlier Blok build and not reopened since.
+- **Unreadable working set.** Retiring removes only a blob that reads back. A damaged one is kept for repair: under `--collab-dir` it is moved aside as `<key>.unreadable-<time>`, and an S3 object is left where it is. The room then seeds from your endpoint. Only a purge deletes quarantined bytes. A blob with any frame in it is authoritative on open. The endpoint is never consulted, so that document comes back as it was on the day you switched. There is no error, and nothing in the log.
 
 Blok does not keep a second whole-document copy beside the journal to make the switch back instant. The journal is the record; the JSON is a projection of it. Buying instant rollback with a hidden dual write would mean two records that can disagree, and the second one carries no fence.
 

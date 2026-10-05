@@ -1,4 +1,4 @@
-import type { LooseOutputBlockData, LooseOutputData } from '../../types/data-formats/output-data';
+import type { LooseOutputBlockData, LooseOutputData, OutputData } from '../../types/data-formats/output-data';
 // Imported by file rather than through `src/components/utils`: the barrel
 // reaches the DOM, this module does not.
 import { getBlokVersion } from '../components/utils/version';
@@ -12,6 +12,7 @@ import { blocksToPlainText, blocksToPlainTextWithReport } from './blocks-to-plai
 import { blokDocumentSchema } from './document-schema';
 import type { DocumentTextsOptions } from './document-texts';
 import { extractTexts, injectTexts } from './document-texts';
+import { findRemapProblems, remapPageDocument } from './page-document-remap';
 import { pageIndex } from './page-index';
 import type { PageIcon, PageInfo } from '../../types/tools/page';
 
@@ -274,6 +275,39 @@ const readRawDocument = (input: Record<string, unknown>, operation: string): Loo
 };
 
 /**
+ * An `{ old: new }` id map. Only own string values count, so a bad value reads
+ * as a missing mapping instead of a crash.
+ * @param value - the raw map
+ * @param name - names the field in the error
+ */
+const readIdMap = (value: unknown, name: string): Map<string, string> => {
+  if (!isRecord(value)) {
+    throw new TypeError(`remapPageDocument input requires \`${name}\` to be an object.`);
+  }
+
+  return new Map(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
+};
+
+/**
+ * Bad id maps are the caller's mistake, so they cross the host boundary as
+ * data. remapPageDocument would throw a plain Error, which the host reports as
+ * an unknown failure.
+ * @param inputJson - the serialized `{ document, blockIds, pageIds }` request
+ */
+const remapPageDocumentResult = (inputJson: string): string => {
+  const input = parseRecord(inputJson);
+  const document = readRawDocument(input, 'remapPageDocument') as OutputData;
+  const ids = { blockIds: readIdMap(input.blockIds, 'blockIds'), pageIds: readIdMap(input.pageIds, 'pageIds') };
+  const unmapped = findRemapProblems(document, ids);
+
+  if (unmapped.missingBlockIds.length > 0 || unmapped.duplicateBlockIds.length > 0 || unmapped.idlessBlocks > 0) {
+    return JSON.stringify({ unmapped });
+  }
+
+  return JSON.stringify({ document: remapPageDocument(document, ids) });
+};
+
+/**
  * Wraps its result because the one failure a caller can cause — a translation
  * list that does not match the document — has to cross the host boundary as
  * data. An engine exception would arrive as whatever the host makes of a
@@ -398,6 +432,8 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
       return injectTextsResult(inputJson);
     case 'pageIndex':
       return JSON.stringify(pageIndex(readRawDocument(parseRecord(inputJson), 'pageIndex')));
+    case 'remapPageDocument':
+      return remapPageDocumentResult(inputJson);
     default:
       throw new TypeError(`Unsupported Blok runtime operation: ${operation}`);
   }

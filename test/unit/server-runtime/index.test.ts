@@ -602,4 +602,107 @@ describe('server runtime boundary', () => {
         .rejects.toThrow(new TypeError('pageIndex input requires a `document` with a `blocks` array.'));
     });
   });
+
+  describe('remapPageDocument', () => {
+    const remapInput = (document: unknown, blockIds: unknown, pageIds: unknown = {}): string =>
+      JSON.stringify({ document, blockIds, pageIds });
+
+    const source = {
+      time: 1759670000000,
+      version: '1.15.2',
+      blocks: [
+        { id: 'h1', type: 'header', data: { text: 'Go <a href="#p2">down</a>', level: 2 }, tunes: { anchor: { id: 'top' } } },
+        { id: 'own', type: 'page', data: { pageId: 'pg-a' }, custom: 'kept' },
+        { id: 'p2', type: 'paragraph', data: { text: 'See <a data-blok-page-id="pg-ref">x</a>' } },
+      ],
+    };
+    const blockIds = { h1: 'H1', own: 'OWN', p2: 'P2' };
+
+    it('remaps ids and keeps tunes, time and unknown keys', async () => {
+      const output = JSON.parse(await invoke('remapPageDocument', remapInput(source, blockIds, { 'pg-a': 'PG-A', 'pg-ref': 'PG-REF' }))) as unknown;
+
+      expect(output).toEqual({
+        document: {
+          time: 1759670000000,
+          version: '1.15.2',
+          blocks: [
+            { id: 'H1', type: 'header', data: { text: 'Go <a href="#P2">down</a>', level: 2 }, tunes: { anchor: { id: 'top' } } },
+            { id: 'OWN', type: 'page', data: { pageId: 'PG-A' }, custom: 'kept' },
+            { id: 'P2', type: 'paragraph', data: { text: 'See <a data-blok-page-id="PG-REF">x</a>' } },
+          ],
+        },
+      });
+    });
+
+    it('answers every id problem as data, legacy-nested ids included', async () => {
+      const document = {
+        blocks: [
+          { id: 'a', type: 'paragraph', parent: 'gone-parent', data: { text: '' } },
+          { id: 'b', type: 'paragraph', data: { text: '' } },
+          { type: 'paragraph', data: { text: 'idless' } },
+          { id: 'co', type: 'callout', data: { body: { blocks: [{ id: 'nested', type: 'page', data: { pageId: 'p' } }] } } },
+        ],
+      };
+      const output = JSON.parse(await invoke('remapPageDocument', remapInput(document, { a: 'X', b: 'X', co: 'CO' }))) as unknown;
+
+      expect(output).toEqual({
+        unmapped: { missingBlockIds: ['gone-parent', 'nested'], duplicateBlockIds: ['X'], idlessBlocks: 1 },
+      });
+    });
+
+    it('reads only string mappings', async () => {
+      const output = JSON.parse(await invoke('remapPageDocument', remapInput(
+        { blocks: [{ id: 'a', type: 'page', data: { pageId: 'p' } }] },
+        { a: 5 },
+        { p: 7 }
+      ))) as unknown;
+
+      expect(output).toEqual({ unmapped: { missingBlockIds: ['a'], duplicateBlockIds: [], idlessBlocks: 0 } });
+    });
+
+    /** JSON.stringify would set the prototype rather than write the key, so this is a literal. */
+    it('keeps an own __proto__ key and maps an own __proto__ id', async () => {
+      const output = await invoke(
+        'remapPageDocument',
+        '{"document":{"blocks":[{"id":"__proto__","type":"paragraph","data":{"text":"x","__proto__":{"keep":"me"}}}]},'
+        + '"blockIds":{"__proto__":"new"},"pageIds":{}}'
+      );
+
+      expect(output).toBe('{"document":{"blocks":[{"id":"new","type":"paragraph","data":{"text":"x","__proto__":{"keep":"me"}}}]}}');
+    });
+
+    it.each([
+      ['a bare document', { blocks: [] }],
+      ['a document with no blocks array', { document: { blocks: {} }, blockIds: {}, pageIds: {} }],
+      ['block ids that are not a record', { document: { blocks: [] }, blockIds: [], pageIds: {} }],
+      ['page ids that are not a record', { document: { blocks: [] }, blockIds: {}, pageIds: 'x' }],
+    ])('refuses %s with a TypeError', async (_name, input) => {
+      await expect(invoke('remapPageDocument', JSON.stringify(input))).rejects.toThrow(TypeError);
+      await expect(invoke('remapPageDocument', JSON.stringify(input))).rejects.not.toThrow('Unsupported');
+    });
+
+    /** The C# host reports a plain Error as Unknown, so a caller mistake in a real document must arrive as data. */
+    it.each([
+      ['a missing own id', { blocks: [{ id: 'a', type: 'paragraph', data: { text: '' } }] }, {}],
+      ['a dangling parent', { blocks: [{ id: 'a', type: 'paragraph', parent: 'x', data: { text: '' } }] }, { a: 'A' }],
+      ['a dangling content id', { blocks: [{ id: 'a', type: 'toggle', content: ['x'], data: { text: '' } }] }, { a: 'A' }],
+      ['a dangling cell id', { blocks: [{ id: 't', type: 'table', data: { content: [[{ blocks: ['x'] }]] } }] }, { t: 'T' }],
+      ['an empty mapping', { blocks: [{ id: 'a', type: 'paragraph', data: { text: '' } }] }, { a: '' }],
+      ['a non-string mapping', { blocks: [{ id: 'a', type: 'paragraph', data: { text: '' } }] }, { a: null }],
+      ['a duplicate target', { blocks: [{ id: 'a', type: 'paragraph' }, { id: 'b', type: 'paragraph' }] }, { a: 'X', b: 'X' }],
+      ['an idless block', { blocks: [{ type: 'paragraph', data: { text: '' } }] }, {}],
+      ['a legacy body child id', { blocks: [{ id: 'c', type: 'callout', data: { body: { blocks: [{ id: 'n', type: 'paragraph', data: { text: '' } }] } } }] }, { c: 'C' }],
+      ['a data-less page block', { blocks: [{ id: 'a', type: 'page' }] }, { a: 'A' }],
+      ['a data-less table block', { blocks: [{ id: 'a', type: 'table' }] }, { a: 'A' }],
+      ['a non-record block', { blocks: [5, null, 'x'] }, {}],
+    ])('answers as data for %s', async (_name, document, ids) => {
+      const outcome = await invoke('remapPageDocument', remapInput(document, ids)).then(
+        (output) => JSON.parse(output) as Record<string, unknown>,
+        (error: unknown) => error
+      );
+
+      expect(outcome).not.toBeInstanceOf(Error);
+      expect(Object.keys(outcome as Record<string, unknown>)).toEqual([expect.stringMatching(/^(document|unmapped)$/)]);
+    });
+  });
 });

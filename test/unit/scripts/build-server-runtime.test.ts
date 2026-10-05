@@ -68,6 +68,24 @@ describe('buildServerRuntime', () => {
     expect(output).toContain('"data":{"text":"y","__proto__":{"keep":"me"}}');
   });
 
+  /** The engine has no structuredClone; remap must still copy and keep an own `__proto__` key. */
+  it('remaps a page document in a realm with no host globals', async () => {
+    const outputPath = await buildServerRuntime(outDir);
+    const source = readFileSync(outputPath, 'utf8');
+    const sandbox: Record<string, unknown> = {};
+
+    runInContext(source, createContext(sandbox));
+
+    const invoke = sandbox.blokServerInvoke as (op: string, input: string) => Promise<string>;
+    const output = await invoke(
+      'remapPageDocument',
+      '{"document":{"blocks":[{"id":"a","type":"page","data":{"pageId":"p","__proto__":{"keep":"me"}},"tunes":{"__proto__":{"t":1}}}]},'
+      + '"blockIds":{"a":"A"},"pageIds":{"p":"P"}}'
+    );
+
+    expect(output).toBe('{"document":{"blocks":[{"id":"A","type":"page","data":{"pageId":"P","__proto__":{"keep":"me"}},"tunes":{"__proto__":{"t":1}}}]}}');
+  });
+
   /** Own-key lookups and the unsafe-scheme strip must hold in the bare realm too. */
   it('renders page metadata from an envelope in a realm with no host globals', async () => {
     const outputPath = await buildServerRuntime(outDir);

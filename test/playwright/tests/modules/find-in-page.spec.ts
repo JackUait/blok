@@ -142,6 +142,50 @@ test.describe('find in page', () => {
   });
 
   test.describe('opening', () => {
+    // Keys typed in an iframe never reach the page, so the browser's own find would open.
+    test('Mod+F still opens the find bar after a click inside an embedded frame', async ({ page }) => {
+      await page.evaluate(async () => {
+        document.getElementById('blok')?.remove();
+        const holder = document.createElement('div');
+
+        holder.id = 'blok';
+        document.body.appendChild(holder);
+
+        class FrameTool {
+          public render(): HTMLElement {
+            const frame = document.createElement('iframe');
+
+            frame.title = 'Embedded frame';
+            frame.srcdoc = '<button onclick="this.textContent = \'Playing\'">Play</button>';
+
+            return frame;
+          }
+
+          public save(): Record<string, never> {
+            return {};
+          }
+        }
+
+        const blok = new window.Blok({
+          holder: 'blok',
+          tools: { frame: FrameTool },
+          data: { blocks: [{ id: 'p', type: 'paragraph', data: { text: 'alpha' } }, { id: 'f', type: 'frame', data: {} }] },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      });
+
+      const frame = page.frameLocator('iframe[title="Embedded frame"]');
+
+      await frame.getByRole('button', { name: 'Play' }).click();
+      await page.keyboard.press(FIND_KEY);
+
+      await expect(page.getByTestId('find-input')).toBeFocused();
+      // Handing focus back must not cost the click that the frame got.
+      await expect(frame.getByRole('button', { name: 'Playing' })).toBeVisible();
+    });
+
     test('Mod+F inside the editor opens the find bar and prevents the browser find', async ({ page }) => {
       await createEditor(page, paragraphs('alpha', 'beta'));
       await focusParagraph(page, 'alpha');

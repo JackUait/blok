@@ -117,6 +117,7 @@ export class Find extends Module {
     // Scroll does not bubble; capture sees scrollers outside this editor too.
     this.listeners.on(document, 'scroll', this.onPageScroll, { capture: true, passive: true });
     this.listeners.on(window, 'scroll', this.onPageScroll, { passive: true });
+    this.listeners.on(window, 'blur', this.onWindowBlur);
   }
 
   /**
@@ -307,6 +308,25 @@ export class Find extends Module {
     Find.lastActive = this;
   };
 
+  /**
+   * Keys typed in an iframe never reach the page, so Cmd/Ctrl+F there opens
+   * the browser's find. Once a click inside an embed has landed, give focus back.
+   * The frame's own keyboard controls are the cost.
+   */
+  private readonly onWindowBlur = (): void => {
+    // The frame is document.activeElement only after the blur.
+    setTimeout(() => {
+      const active = document.activeElement;
+
+      if (this.isDestroyed || !(active instanceof HTMLIFrameElement) || !this.Blok.UI.nodes.wrapper.contains(active)) {
+        return;
+      }
+
+      Find.lastActive = this;
+      active.blur();
+    }, 0);
+  };
+
   private readonly onDocumentKeydown = (event: Event): void => {
     if (!(event instanceof KeyboardEvent) || this.isDestroyed || !this.ownsKeyTarget(event.target, false)) {
       return;
@@ -385,7 +405,27 @@ export class Find extends Module {
       return false;
     }
 
-    return Find.instances.size < 2 || Find.lastActive === this;
+    return Find.instances.size < 2 || Find.keyOwner() === this;
+  }
+
+  /**
+   * The editor that takes a shortcut pressed outside every editor: the one
+   * used last while it is on screen, else the first on screen. Every
+   * instance asks this, so exactly one claims the key.
+   */
+  private static keyOwner(): Find | null {
+    const onScreen = (find: Find): boolean => find.Blok.UI.nodes.wrapper.getClientRects().length > 0;
+    const last = Find.lastActive;
+
+    if (last !== null && onScreen(last)) {
+      return last;
+    }
+
+    const shown = [...Find.instances]
+      .filter(onScreen)
+      .sort((a, b) => a.Blok.UI.nodes.wrapper.compareDocumentPosition(b.Blok.UI.nodes.wrapper) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+
+    return shown[0] ?? last;
   }
 
   private ensureBar(): FindBar {

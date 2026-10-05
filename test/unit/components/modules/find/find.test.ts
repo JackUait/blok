@@ -316,6 +316,39 @@ describe('Find module', () => {
     expect(document.querySelector('[data-blok-find]')).toBeNull();
   });
 
+  describe('a key outside every editor, with several on the page', () => {
+    const showOnScreen = (wrapper: HTMLElement): void => {
+      vi.spyOn(wrapper, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 100, 100)] as unknown as DOMRectList);
+    };
+
+    it('goes to the visible editor when the one used last is hidden', () => {
+      const hidden = editor([{ id: 'a', text: 'hello' }]);
+      const shown = editor([{ id: 'b', text: 'world' }]);
+
+      showOnScreen(shown.wrapper);
+      hidden.wrapper.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+      expect(press(document.body, { key: 'f', code: 'KeyF', metaKey: true }).defaultPrevented).toBe(true);
+      expect(shown.find.isOpen).toBe(true);
+      expect(hidden.find.isOpen).toBe(false);
+    });
+
+    it('goes to exactly one editor when the one used last is gone', () => {
+      const used = editor([{ id: 'a', text: 'hello' }]);
+      const first = editor([{ id: 'b', text: 'world' }]);
+      const second = editor([{ id: 'c', text: 'again' }]);
+
+      showOnScreen(first.wrapper);
+      showOnScreen(second.wrapper);
+      used.wrapper.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      used.find.destroy();
+
+      expect(press(document.body, { key: 'f', code: 'KeyF', metaKey: true }).defaultPrevented).toBe(true);
+      expect(first.find.isOpen).toBe(true);
+      expect(second.find.isOpen).toBe(false);
+    });
+  });
+
   it('only the editor that holds the target opens its bar', () => {
     const first = editor([{ id: 'a', text: 'hello' }]);
     const second = editor([{ id: 'b', text: 'world' }]);

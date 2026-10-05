@@ -335,8 +335,6 @@ export const hop = (
   chip.setAttribute('aria-hidden', 'true');
   chip.textContent = source.text;
   Object.assign(chip.style, {
-    left: `${source.rect.left - dockRect.left}px`,
-    top: `${source.rect.top - dockRect.top}px`,
     fontFamily: source.font.family,
     fontSize: source.font.size,
     fontWeight: source.font.weight,
@@ -345,13 +343,22 @@ export const hop = (
   });
   dock.append(chip);
 
+  // The chip has its own line box and padding: centre it on the word's line and put its text, not its edge, on the word.
+  const start = {
+    left: source.rect.left - (parseFloat(getComputedStyle(chip).paddingLeft) || 0),
+    top: source.rect.top + (source.rect.height - chip.offsetHeight) / 2,
+  };
+
+  chip.style.left = `${start.left - dockRect.left}px`;
+  chip.style.top = `${start.top - dockRect.top}px`;
+
   const targetStyle = getComputedStyle(target);
   const rtl = targetStyle.direction === 'rtl';
   // The start edge stays put as the chip shrinks, so dx and dy still land on the text start.
   chip.style.transformOrigin = rtl ? 'right center' : 'left center';
   const land = parseFloat(targetStyle.fontSize) / parseFloat(source.font.size) || 1;
-  const dx = (rtl ? targetRect.right - chip.offsetWidth : targetRect.left) - source.rect.left;
-  const dy = targetRect.top + (targetRect.height - chip.offsetHeight) / 2 - source.rect.top;
+  const dx = (rtl ? targetRect.right - chip.offsetWidth : targetRect.left) - start.left;
+  const dy = targetRect.top + (targetRect.height - chip.offsetHeight) / 2 - start.top;
   const steps = Array.from({ length: ARC_STEPS + 1 }, (_, i) => {
     const progress = i / ARC_STEPS;
 
@@ -360,7 +367,7 @@ export const hop = (
   // One factor for the whole arc, so a field near the top flattens it instead of clipping it.
   const room = Math.min(1, ...steps
     .filter((step) => step.lift > 0.01)
-    .map((step) => (source.rect.top + dy * step.travel - ARC_MARGIN) / (step.lift * ARC_LIFT)));
+    .map((step) => (start.top + dy * step.travel - ARC_MARGIN) / (step.lift * ARC_LIFT)));
   const lift = ARC_LIFT * Math.max(0, room);
   const arc: Keyframe[] = steps.map((step) => ({
     offset: step.progress,

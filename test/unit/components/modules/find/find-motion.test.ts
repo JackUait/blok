@@ -505,10 +505,49 @@ describe('hop', () => {
   const liftOf = (frame: Keyframe): number => Number(/translate\(\S+px, (\S+)px\)/.exec(String(frame.transform))?.[1]);
   const scaleOf = (frame: Keyframe): number => Number(/scale\((\S+)\)/.exec(String(frame.transform))?.[1]);
 
+  const shiftOf = (frame: Keyframe): number => Number(/translate\((\S+)px,/.exec(String(frame.transform))?.[1]);
+
+  /** The chip as find.css draws it: a 24px line box, 1px padding at each side. */
+  const styleChip = (): void => {
+    const style = document.createElement('style');
+
+    style.textContent = '[data-blok-find-hop-chip] { padding-left: 1px; padding-right: 1px; }';
+    document.body.append(style);
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(24);
+  };
+
+  // The chip's line box is not the word's: top-aligned, its text sat lower than the word.
+  it('takes off with its text right over the word', () => {
+    stubAnimate();
+    stubReducedMotion(false);
+    styleChip();
+    const dock = document.createElement('div');
+
+    document.body.append(dock);
+    hop(dock, source, document.createElement('input'), 0, vi.fn());
+    const chip = dock.querySelector<HTMLElement>('[data-blok-find-hop-chip]');
+
+    // Word: left 50, top 100, 20 tall. Centred 24px box: 100 + (20 - 24) / 2.
+    expect(chip?.style.top).toBe('98px');
+    expect(chip?.style.left).toBe('49px');
+  });
+
+  it('lands its box on the field\'s text box wherever it took off', () => {
+    styleChip();
+    const arc = flyTo(200, { input: '16px' });
+    const chip = document.querySelector<HTMLElement>('[data-blok-find-hop-chip]');
+    const last = arc[arc.length - 1];
+
+    // Field: left 900, top 200, 22 tall; the 24px box centres on it.
+    expect(parseFloat(chip?.style.left ?? '') + shiftOf(last)).toBeCloseTo(900, 3);
+    expect(parseFloat(chip?.style.top ?? '') + liftOf(last)).toBeCloseTo(199, 3);
+  });
+
   it('keeps the word on screen when the field sits near the top of the window', () => {
     const arc = flyTo(21, { input: '16px' });
+    const top = parseFloat(document.querySelector<HTMLElement>('[data-blok-find-hop-chip]')?.style.top ?? '');
 
-    expect(Math.min(...arc.map((frame) => source.rect.top + liftOf(frame)))).toBeGreaterThanOrEqual(8);
+    expect(Math.min(...arc.map((frame) => top + liftOf(frame)))).toBeGreaterThanOrEqual(8);
   });
 
   it('keeps the full lift when there is room above', () => {

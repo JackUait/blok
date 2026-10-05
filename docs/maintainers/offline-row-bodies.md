@@ -48,7 +48,9 @@ The row's `pageId` is only a mirror. Older clients delete it (see below). So Blo
 
 - `lookup` is the source of truth. Return the row's page, or `null` if the row was never moved. It must read durable host state, not the row's `pageId`.
 - Blok calls `lookup` when a row opens, before every copy, and when a peer's change drops `pageId` or changes a moved row's legacy body.
-- While `lookup` runs, the body stays empty and inert. If it fails, Blok shows the non-editable error state. It never falls back to the legacy editor.
+- While `lookup` runs, the body stays empty and inert. If it fails, Blok shows the non-editable error state and an error toast. This also holds for the lookup before a copy. It never falls back to the legacy editor.
+- A row that already has `pageId` mounts its page at once. Its lookup runs in the background, only to catch an old client's edit. If that lookup fails, Blok stays quiet: the page is shown, and the legacy body waits for the next check.
+- An old-client edit that lands while a reconcile is in flight is merged by a second reconcile right after.
 - When `lookup` returns a page, Blok writes `pageId` back to the row. The write is derived, so undo does not remove it.
 - `copyFromLegacy` on a row that already has a page MUST reject. It must never overwrite the page. Blok then calls `lookup` and goes down the reconcile path with the body the user typed.
 

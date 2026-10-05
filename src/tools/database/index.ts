@@ -82,6 +82,7 @@ export class DatabaseTool implements BlockTool {
   private reprojectQueued = false;
   private readonly resolvingRows = new Set<string>();
   private readonly resolveAgainRows = new Set<string>();
+  private destroyed = false;
   /** Set while a full redraw waits for an inline edit or drag to end. */
   private redrawWhenIdleRetry: (() => void) | null = null;
 
@@ -280,6 +281,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.api.events.off('block changed', this.handleBlockChanged);
     this.stopWaitingForIdle();
     this.cardDrag?.destroy();
@@ -599,8 +601,9 @@ export class DatabaseTool implements BlockTool {
       if (propertyCreation !== null && created === undefined && this.config.adapter !== undefined) return;
       if (this.model.getRow(rowId) === undefined) return;
       // A row is copied at most once: a second copy would replace its page.
-      const existing = await rowPages.lookup({ rowId });
+      const existing = await this.lookupForCopy(rowId);
 
+      if (this.destroyed) return;
       if (existing !== null) {
         await this.adoptRowPage(rowId, existing);
 
@@ -625,7 +628,7 @@ export class DatabaseTool implements BlockTool {
       const outcome = await rowPages.copyFromLegacy(request).catch(() => rowPages.copyFromLegacy(request))
         .then((receipt) => ({ receipt }), async (error: unknown) => {
           // Refused because another client moved the row meanwhile.
-          const moved = await rowPages.lookup({ rowId });
+          const moved = await this.lookupForCopy(rowId);
 
           if (moved === null) throw error;
 
@@ -637,6 +640,7 @@ export class DatabaseTool implements BlockTool {
 
         return;
       }
+      if (this.destroyed) return;
       const { receipt } = outcome;
       const current = this.model.getRow(rowId)?.properties[propertyId];
 
@@ -1623,28 +1627,50 @@ export class DatabaseTool implements BlockTool {
   private async resolveRowPage(rowId: string): Promise<void> {
     const rowPages = this.config.rowPages;
 
-    if (rowPages === undefined || this.readOnly) return;
+    if (rowPages === undefined || this.readOnly || this.destroyed) return;
     if (this.resolvingRows.has(rowId)) {
       this.resolveAgainRows.add(rowId);
 
       return;
     }
     this.resolvingRows.add(rowId);
+    const stage = { lookedUp: false };
+
     try {
       const page = await rowPages.lookup({ rowId });
 
+      stage.lookedUp = true;
       if (page !== null) {
         await this.adoptRowPage(rowId, page);
       }
-      this.cardDrawer?.setRowPageLookup(rowId, 'done');
+      if (!this.destroyed) this.cardDrawer?.setRowPageLookup(rowId, 'done');
     } catch {
-      this.cardDrawer?.setRowPageLookup(rowId, 'failed');
-      this.api.notifier.show({ message: this.api.i18n.t('tools.stub.error'), style: 'error' });
+      // A row whose page is shown loses nothing when a background lookup
+      // fails: its legacy body stays for the next check.
+      const quiet = !stage.lookedUp && this.model.getRow(rowId)?.pageId !== undefined;
+
+      if (!this.destroyed && !quiet) {
+        this.cardDrawer?.setRowPageLookup(rowId, 'failed');
+        this.api.notifier.show({ message: this.api.i18n.t('tools.stub.error'), style: 'error' });
+      }
     } finally {
       this.resolvingRows.delete(rowId);
       if (this.resolveAgainRows.delete(rowId)) {
         void this.resolveRowPage(rowId);
       }
+    }
+  }
+
+  /** `lookup` for the copy path; a failure leaves the body non-editable. */
+  private async lookupForCopy(rowId: string): Promise<{ pageId: string; acceptedBody: OutputData } | null> {
+    const rowPages = this.config.rowPages;
+
+    if (rowPages === undefined) return null;
+    try {
+      return await rowPages.lookup({ rowId });
+    } catch (error) {
+      if (!this.destroyed) this.cardDrawer?.setRowPageLookup(rowId, 'failed');
+      throw error;
     }
   }
 
@@ -1656,7 +1682,7 @@ export class DatabaseTool implements BlockTool {
   private async adoptRowPage(rowId: string, page: { pageId: string; acceptedBody: OutputData }): Promise<void> {
     const rowPages = this.config.rowPages;
 
-    if (rowPages === undefined || this.readOnly) return;
+    if (rowPages === undefined || this.readOnly || this.destroyed) return;
     if (typeof page.pageId !== 'string' || page.pageId.length === 0) {
       throw new Error('Row page lookup returned no page id');
     }
@@ -1671,8 +1697,14 @@ export class DatabaseTool implements BlockTool {
         || !equalsOutputData(receipt.acceptedBody, legacy)) {
         throw new Error('Reconcile receipt did not match the legacy body');
       }
-      // Changed again meanwhile: the reprojection that saw it merges it next.
-      if (!equalsOutputData(this.legacyBodyOf(this.model.getRow(rowId)), legacy)) return;
+      if (this.readOnly || this.destroyed) return;
+      // Changed again meanwhile. The change may not have touched pageId, so no
+      // reprojection would rerun this: queue it here.
+      if (!equalsOutputData(this.legacyBodyOf(this.model.getRow(rowId)), legacy)) {
+        void this.resolveRowPage(rowId);
+
+        return;
+      }
     }
 
     const rowBlock = this.api.blocks.getChildren(this.block.id).find((child) => child.id === rowId);

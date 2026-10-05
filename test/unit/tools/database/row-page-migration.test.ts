@@ -1328,6 +1328,123 @@ describe('database row page migration with older clients', () => {
     }
   });
 
+  it('merges a second old-client edit that lands while the first is being reconciled', async () => {
+    const legacy = body('Old body');
+    const editB = { blocks: [{ id: 'b-p', type: 'paragraph', data: { text: 'B' } }] };
+    const editC = { blocks: [{ id: 'c-p', type: 'paragraph', data: { text: 'C' } }] };
+    const host = createMovedRowHost(legacy, pageEdit);
+    const realReconcile = vi.mocked(host.rowPages.reconcileLegacy).getMockImplementation();
+    const gate = deferred<void>();
+
+    if (realReconcile === undefined) throw new Error('reconcile fake is missing');
+    vi.mocked(host.rowPages.reconcileLegacy).mockImplementationOnce(async (input) => {
+      await gate.promise;
+
+      return realReconcile(input);
+    });
+    const harness = await openLegacyRowWithBody(host.rowPages, legacy, undefined, undefined, databaseData, false, {
+      row: { pageId: 'row-page' },
+      awaitLegacyEditor: false,
+    });
+
+    try {
+      await vi.waitFor(() => {
+        expect(host.rowPages.lookup).toHaveBeenCalledTimes(1);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const current = harness.rowData();
+
+      await harness.projectPeerRow({ properties: { ...current.properties, 'prop-body': editB }, position: current.position });
+      await vi.waitFor(() => {
+        expect(host.rowPages.reconcileLegacy).toHaveBeenCalledTimes(1);
+      });
+      await harness.projectPeerRow({ properties: { ...current.properties, 'prop-body': editC }, position: current.position });
+      gate.resolve();
+      await vi.waitFor(() => {
+        expect(host.pages.get('row-page')?.blocks).toEqual([...pageEdit.blocks, ...editB.blocks, ...editC.blocks]);
+      });
+      await vi.waitFor(() => {
+        expect(harness.rowData().pageId).toBe('row-page');
+      });
+    } finally {
+      gate.resolve();
+      harness.tool.destroy();
+    }
+  });
+
+  it('writes nothing when the database is destroyed while a lookup is in flight', async () => {
+    const legacy = body('Old body');
+    const host = createMovedRowHost(legacy, pageEdit);
+    const lookup = deferred<{ pageId: string; acceptedBody: OutputData } | null>();
+
+    vi.mocked(host.rowPages.lookup).mockImplementation(() => lookup.promise);
+    const harness = await openLegacyRowWithBody(host.rowPages, legacy, undefined, undefined, databaseData, false, {
+      awaitLegacyEditor: false,
+    });
+
+    await vi.waitFor(() => {
+      expect(host.rowPages.lookup).toHaveBeenCalled();
+    });
+    harness.tool.destroy();
+    lookup.resolve({ pageId: 'row-page', acceptedBody: legacy });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(harness.rowBlock.dispatchChange).not.toHaveBeenCalled();
+    expect(harness.rowData().pageId).toBeUndefined();
+    expect(harness.notifier.show).not.toHaveBeenCalled();
+  });
+
+  it('shows the non-editable failure when the lookup before a copy fails', async () => {
+    const legacy = body('Old body');
+    const rowPages: RowPages = {
+      lookup: vi.fn(async () => null),
+      copyFromLegacy: vi.fn(async () => { throw new Error('unexpected copy'); }),
+      reconcileLegacy: vi.fn(async () => { throw new Error('unexpected reconcile'); }),
+      mount: vi.fn(() => ({ destroy: vi.fn() })),
+    };
+    const harness = await openLegacyRowWithBody(rowPages, legacy);
+
+    vi.mocked(rowPages.lookup).mockRejectedValue(new Error('host offline'));
+    try {
+      await harness.editBody(body('Typed'));
+      await vi.waitFor(() => {
+        expect(within(harness.databaseElement).getByRole('alert').textContent).toBe('Error');
+      });
+
+      expect(rowPages.copyFromLegacy).not.toHaveBeenCalled();
+      const holder = queryAllByAttribute('data-blok-database-drawer-editor', harness.databaseElement, '')[0];
+
+      if (holder === undefined) throw new Error('drawer body is missing');
+      expect(within(holder).getByRole('alert').textContent).toBe('Error');
+    } finally {
+      harness.tool.destroy();
+    }
+  });
+
+  it('does not report a failed background lookup for a row whose page mounted', async () => {
+    const legacy = body('Old body');
+    const host = createMovedRowHost(legacy, pageEdit);
+
+    vi.mocked(host.rowPages.lookup).mockRejectedValue(new Error('flaky host'));
+    const harness = await openLegacyRowWithBody(host.rowPages, legacy, undefined, undefined, databaseData, false, {
+      row: { pageId: 'row-page' },
+      awaitLegacyEditor: false,
+    });
+
+    try {
+      await vi.waitFor(() => {
+        expect(host.rowPages.lookup).toHaveBeenCalled();
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(harness.notifier.show).not.toHaveBeenCalled();
+      expect(host.rowPages.mount).toHaveBeenCalledTimes(1);
+      expect(within(harness.editorHolder).queryByRole('alert')).toBeNull();
+    } finally {
+      harness.tool.destroy();
+    }
+  });
+
   it('opens a row that lost pageId while closed on its page, not the legacy editor', async () => {
     const legacy = body('Old body');
     const host = createMovedRowHost(legacy, pageEdit);

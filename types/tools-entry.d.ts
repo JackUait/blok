@@ -121,7 +121,7 @@ export { EmbedData, EmbedKind, EmbedAlignment, EmbedMatch, EmbedServiceType } fr
 // Embed-registry lookup for migrating stored links; the registry data stays private.
 export { matchEmbedService, buildEmbedUrl } from './tools/embed';
 export { BookmarkData, BookmarkConfig, BookmarkMeta } from './tools/bookmark';
-export { PageData, PageConfig, PageInfo, PageIcon, PageCache, PageSearchResult } from './tools/page';
+export { PageData, PageConfig, PageCreateResult, PageInfo, PageIcon, PageCache, PageSearchResult } from './tools/page';
 export { PageLinkData } from './tools/page-link';
 export { MediaSource } from './tools/media-source';
 export { MediaUploadError, MediaUploadErrorCode, UploadErrorHandler } from './tools/upload-error';

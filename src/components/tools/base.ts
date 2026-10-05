@@ -114,6 +114,10 @@ export enum InternalBlockToolSettings {
    */
   DuplicateData = 'duplicateData',
   /**
+   * Async data a toolbox insert waits for (a page id from the host's backend).
+   */
+  PrepareInsert = 'prepareInsert',
+  /**
    * The block menu layout: `{ titled, trash }`. Titled heads the menu with the
    * tool's name and puts Turn into first; trash reads Delete as "Move to Trash".
    */

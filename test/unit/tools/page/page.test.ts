@@ -6,6 +6,13 @@ import { previewLines } from '../../../../src/tools/page/hover-preview';
 import { sanitizeBlocks } from '../../../../src/components/utils/sanitizer';
 import { convertBlockDataToString } from '../../../../src/components/utils/blocks';
 import type { API, BlockOrigin, BlockToolConstructorOptions } from '../../../../types';
+import { log } from '../../../../src/components/utils/logger';
+import type * as Logger from '../../../../src/components/utils/logger';
+
+vi.mock('../../../../src/components/utils/logger', async (importOriginal) => ({
+  ...await importOriginal<typeof Logger>(),
+  log: vi.fn(),
+}));
 
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -902,6 +909,19 @@ describe('Page tool', () => {
       expect(open).not.toHaveBeenCalled();
     });
 
+    it('keeps its own id and warns when create answers an API insert with another id', async () => {
+      const create = vi.fn().mockResolvedValue({ pageId: 'server-1' });
+      const tool = new PageTool(createOptions({ data: { pageId: '' }, config: { create }, origin: 'api' }));
+      const minted = tool.save().pageId;
+
+      tool.render();
+      tool.rendered();
+      await flush();
+
+      expect(tool.save().pageId).toBe(minted);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('server-1'), 'warn');
+    });
+
     it('resolves the new page only after it was created', async () => {
       const calls: string[] = [];
       const tool = new PageTool(createOptions({
@@ -977,6 +997,72 @@ describe('Page tool', () => {
 
       expect(create).not.toHaveBeenCalled();
       expect(open).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('prepareInsert (the toolbox asks before it inserts)', () => {
+    it('uses the id create returns', async () => {
+      const create = vi.fn().mockResolvedValue({ pageId: 'server-1' });
+
+      await expect(PageTool.prepareInsert({ create })).resolves.toEqual({ pageId: 'server-1' });
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(create).toHaveBeenCalledWith({ pageId: expect.stringMatching(/^[A-Za-z0-9_-]{10}$/) });
+    });
+
+    it.each([
+      ['nothing', undefined],
+      ['an empty id', { pageId: '' }],
+      ['a non-string id', { pageId: 7 }],
+    ])('keeps the id it passed when create returns %s', async (_name, answer) => {
+      const create = vi.fn().mockResolvedValue(answer);
+
+      const data = await PageTool.prepareInsert({ create: create as PageConfig['create'] });
+
+      expect(data).toEqual({ pageId: create.mock.calls[0]?.[0].pageId });
+    });
+
+    it('mints an id without a create hook', async () => {
+      await expect(PageTool.prepareInsert({})).resolves.toEqual({ pageId: expect.stringMatching(/^[A-Za-z0-9_-]{10}$/) });
+    });
+
+    it('rejects when create fails, so nothing is inserted', async () => {
+      await expect(PageTool.prepareInsert({ create: () => Promise.reject(new Error('down')) })).rejects.toThrow('down');
+    });
+
+    it('opens the inserted page once, without creating it again', async () => {
+      const create = vi.fn().mockResolvedValue({ pageId: 'server-2' });
+      const open = vi.fn();
+      const resolve = vi.fn().mockResolvedValue({ title: 'New' });
+      const config = { create, open, resolve };
+      const data = await PageTool.prepareInsert(config);
+      const tool = new PageTool(createOptions({ data, config, origin: 'user' }));
+
+      tool.render();
+      tool.rendered();
+      tool.rendered();
+      await flush();
+
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(open).toHaveBeenCalledWith('server-2', {});
+      expect(resolve).toHaveBeenCalledWith('server-2');
+      expect(tool.save().pageId).toBe('server-2');
+    });
+
+    it('does not open a page a later block points at', async () => {
+      const open = vi.fn();
+      const config = { create: vi.fn().mockResolvedValue({ pageId: 'server-3' }), open };
+      const data = await PageTool.prepareInsert(config);
+      const first = new PageTool(createOptions({ data, config, origin: 'user' }));
+      const second = new PageTool(createOptions({ data, config, origin: 'user' }));
+
+      first.render();
+      first.rendered();
+      second.render();
+      second.rendered();
+      await flush();
+
+      expect(open).toHaveBeenCalledTimes(1);
     });
   });
 

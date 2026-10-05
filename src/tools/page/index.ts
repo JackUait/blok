@@ -28,6 +28,7 @@ import { twJoin } from '../../components/utils/tw';
 import type { MenuConfig, MenuConfigItem } from '../../../types/tools/menu-config';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { generateBlockId } from '../../components/utils/id-generator';
+import { log } from '../../components/utils/logger';
 import { PLAINTEXT } from '../../components/utils/sanitizer';
 import { safeHref } from '../../components/utils/sanitize-url';
 import {
@@ -44,12 +45,22 @@ import { PageHoverPreview, pageIconNode, previewLines, type PageHoverContent, ty
 import { renderPagePreview } from './preview';
 import type { PageConfig, PageData, PageIcon, PageInfo } from './types';
 
-export type { PageCache, PageConfig, PageData, PageIcon, PageInfo, PageSearchResult } from './types';
+export type { PageCache, PageConfig, PageCreateResult, PageData, PageIcon, PageInfo, PageSearchResult } from './types';
 
 type PageState = 'unresolved' | 'normal' | 'untitled' | 'missing' | 'no-access';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** The id `create` answered with; anything else keeps the id Blok passed. */
+const createdId = (answer: unknown): string | undefined =>
+  isRecord(answer) && typeof answer.pageId === 'string' && answer.pageId !== '' ? answer.pageId : undefined;
+
+/**
+ * Ids `prepareInsert` made pages for. The block the toolbox then inserts
+ * takes its id out and opens the page; a flag in data would be saved.
+ */
+const preparedPageIds = new Set<string>();
 
 const COLOR_NAMES = new Set(COLOR_PRESETS.map((preset) => preset.name));
 
@@ -92,6 +103,8 @@ export class PageTool implements BlockTool {
   private data: { pageId: string } & BlockColorData;
   /** Minted here: this instance is the user's or the API's new page. */
   private readonly isNew: boolean;
+  /** Made by `prepareInsert` before the toolbox inserted it: open it, never create it. */
+  private readonly isPrepared: boolean;
   private readonly opensWhenCreated: boolean;
   private readonly isProbe: boolean;
   private root: HTMLElement | null = null;
@@ -117,6 +130,7 @@ export class PageTool implements BlockTool {
     // Restore origins (load, replay, paste, probe, convert) never mint: the
     // document is the truth there, and a probe is never inserted.
     this.isNew = pageId === '' && !options.readOnly && (origin === 'user' || origin === 'api');
+    this.isPrepared = origin === 'user' && !options.readOnly && preparedPageIds.delete(pageId);
     this.opensWhenCreated = origin === 'user';
     this.isProbe = origin === 'probe';
     this.data = { pageId: this.isNew ? generateBlockId() : pageId, ...readColors(options.data) };
@@ -126,6 +140,19 @@ export class PageTool implements BlockTool {
   /** The block menu is a "Page" section with Turn into first, and Delete reads "Move to Trash". */
   public static get blockMenu(): { titled: boolean; trash: boolean } {
     return { titled: true, trash: true };
+  }
+
+  /**
+   * The toolbox waits for this before it inserts a page, so the block is
+   * born with the id the host's `create` answered. A rejection inserts nothing.
+   */
+  public static async prepareInsert(config: PageConfig): Promise<PageData> {
+    const minted = generateBlockId();
+    const pageId = createdId(await config.create?.({ pageId: minted })) ?? minted;
+
+    preparedPageIds.add(pageId);
+
+    return { pageId };
   }
 
   /**
@@ -223,6 +250,11 @@ export class PageTool implements BlockTool {
 
     if (this.isNew) {
       void this.createPage();
+
+      return;
+    }
+    if (this.isPrepared) {
+      void this.openPrepared();
 
       return;
     }
@@ -515,7 +547,11 @@ export class PageTool implements BlockTool {
     this.block.dispatchChange({ derived: true });
 
     try {
-      await this.config.create?.({ pageId });
+      const answered = createdId(await this.config.create?.({ pageId }));
+
+      if (answered !== undefined && answered !== pageId) {
+        log(`Page create() answered "${answered}" for a block already inserted as "${pageId}"; the block keeps "${pageId}". Pass pageId to blocks.insert() to use your own id.`, 'warn');
+      }
     } catch {
       if (this.detached || pageId !== this.data.pageId) {
         return;
@@ -535,6 +571,19 @@ export class PageTool implements BlockTool {
     if (this.opensWhenCreated) {
       this.config.open?.(pageId, {});
     }
+
+    await this.refresh();
+  }
+
+  private async openPrepared(): Promise<void> {
+    const { pageId } = this.data;
+
+    // The insert adds the block to the document after this call.
+    await Promise.resolve();
+    if (this.detached || pageId !== this.data.pageId) {
+      return;
+    }
+    this.config.open?.(pageId, {});
 
     await this.refresh();
   }

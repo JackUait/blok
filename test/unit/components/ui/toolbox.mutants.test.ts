@@ -189,6 +189,7 @@ const createTool = (
 ): BlockToolAdapter => ({
   name,
   toolbox,
+  prepareInsert: () => undefined,
   ...extra,
 } as unknown as BlockToolAdapter);
 

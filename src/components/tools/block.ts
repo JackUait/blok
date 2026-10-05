@@ -193,6 +193,27 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * The data a toolbox insert waits for. Undefined means no hook; a rejection
+   * means insert nothing.
+   */
+  public prepareInsert(): Promise<BlockToolData> | undefined {
+    const prepareInsert = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.PrepareInsert];
+
+    if (typeof prepareInsert !== 'function') {
+      return undefined;
+    }
+
+    return new Promise<unknown>((resolve) => resolve(prepareInsert.call(this.constructable, this.settings)))
+      .then((data) => {
+        if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+          throw new Error(`Tool «${this.name}» prepareInsert() did not return block data`);
+        }
+
+        return data as BlockToolData;
+      });
+  }
+
+  /**
    * True when a copy of the Tool's block rebuilds its children from its own
    * data, so Duplicate and Alt-drag leave them out.
    */

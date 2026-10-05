@@ -999,10 +999,10 @@ const editor = new Blok({
       },
       {
         option: 'create',
-        type: '(init: { pageId: string }) => void | Promise<void>',
+        type: '(init: { pageId: string }) => void | { pageId: string } | Promise<…>',
         default: 'undefined',
         description:
-          'Makes the page in your app. Blok calls it once with the id it minted, when a page block is inserted without a `pageId`. That happens when a user picks Page in the toolbox, or when your code inserts one through the API.\n\nIt is never called on load, paste, undo, redo or a collaborator\'s change, or in read-only mode. If it throws, the block stays with its id and shows "Page not found". Blok still asks `resolve`, so a page your app made after all shows up.',
+          'Makes the page in your app. Blok calls it once per new page, with an id it minted. It is never called on load, paste, undo, redo or a collaborator\'s change, or in read-only mode.\n\nWhen a user picks Page in the toolbox, Blok waits for it. The item shows a spinner, and the block appears once it resolves. Return `{ pageId }` to use your backend\'s id instead of Blok\'s. If it throws, no block is inserted; show the error yourself. Closing the menu while it runs does not cancel the insert.\n\nWhen your code inserts a page through the API without a `pageId`, the block appears at once with Blok\'s id. A different returned id is ignored with a warning, so pass your own `pageId` to `insert` instead. If it throws, the block shows "Page not found". Blok still asks `resolve`, so a page your app made after all shows up.',
       },
       {
         option: 'search',
@@ -1051,7 +1051,8 @@ const editor = new Blok({
       class: Page,
       config: {
         ...pageConfig,
-        create: ({ pageId }) => myApi.createPage(pageId),
+        // Return { pageId } to use your backend's id instead of Blok's.
+        create: async ({ pageId }) => ({ pageId: (await myApi.createPage(pageId)).id }),
       },
     },
     'page-link': { class: PageLink, config: pageConfig },

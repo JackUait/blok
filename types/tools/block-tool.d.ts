@@ -330,6 +330,16 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   duplicateData?(data: BlockToolData, config: ToolConfig): BlockToolData | null;
 
   /**
+   * The data a block picked from the toolbox starts with, for data only the
+   * host can give, like a page id from a backend. The toolbox waits for it
+   * and shows the item as busy, then inserts the block. A rejection inserts
+   * nothing. Other inserts never call it.
+   *
+   * @param config - the Tool's config
+   */
+  prepareInsert?(config: ToolConfig): Promise<BlockToolData>;
+
+  /**
    * How this Tool's block menu is laid out.
    * `titled` heads the menu with the Tool's toolbox title and puts Turn into
    * before the Tool's own items, like Notion's page menu.

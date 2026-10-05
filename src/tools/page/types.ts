@@ -1,5 +1,8 @@
 import type { BlockToolData, OutputBlockData } from '../../../types';
 
+/** What `create` may answer: the id the host gave the page, or nothing to keep Blok's. */
+export type PageCreateResult = void | { pageId: string };
+
 /** A page's icon: an emoji, or an image at a URL. */
 export type PageIcon = { type: 'emoji'; value: string } | { type: 'image'; url: string };
 
@@ -53,8 +56,8 @@ export interface PageConfig {
   open?(pageId: string, ctx: { event?: MouseEvent | KeyboardEvent }): void;
   /** Authorized metadata. `null` means missing; `undefined` means unresolved. */
   resolve?(pageId: string): PageInfo | null | undefined | Promise<PageInfo | null | undefined>;
-  /** Makes the page a new page block points at. */
-  create?(init: { pageId: string }): void | Promise<void>;
+  /** Makes the page a new page block points at. May answer with the host's own id. */
+  create?(init: { pageId: string }): PageCreateResult | Promise<PageCreateResult>;
   /** Calls `onChange` for local-tab and remote metadata or access changes. */
   subscribe?(pageId: string, onChange: () => void): (() => void) | void;
   /** Saves a new title from the block menu's Rename. */

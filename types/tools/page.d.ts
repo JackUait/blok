@@ -4,6 +4,9 @@ import { BlockToolData } from './block-tool-data';
 import { OutputBlockData } from '../data-formats/output-data';
 import { ToolboxConfig } from './tool-settings';
 
+/** What `create` may answer: the id the host gave the page, or nothing to keep Blok's. */
+export type PageCreateResult = void | { pageId: string };
+
 /**
  * A page's icon: an emoji, or an image at a URL.
  */
@@ -78,12 +81,19 @@ export interface PageConfig {
    */
   subscribe?(pageId: string, onChange: () => void): (() => void) | void;
   /**
-   * Makes the page for a new page block. Called once, when a page block is
-   * inserted without a `pageId`, with the id Blok minted. Never called on load,
-   * undo, redo or a collaborator's change. If it throws, the block shows
+   * Makes the page for a new page block. Called once per new page, with an id
+   * Blok minted. Never called on load, undo, redo or a collaborator's change.
+   *
+   * From the toolbox, Blok waits for it and shows the item as busy, then
+   * inserts the block. Return `{ pageId }` to use your backend's id instead of
+   * Blok's. If it throws, no block is inserted; show the error yourself.
+   *
+   * From `blocks.insert('page')` without a `pageId`, the block is inserted
+   * first, so it keeps Blok's id and a returned id is ignored with a warning.
+   * Pass your own `pageId` to `insert` instead. If it throws, the block shows
    * "Page not found" until `resolve` finds the page.
    */
-  create?(init: { pageId: string }): void | Promise<void>;
+  create?(init: { pageId: string }): PageCreateResult | Promise<PageCreateResult>;
   /**
    * Saves a new title. Called by the block menu's Rename and Cmd/Ctrl+Shift+R
    * on the selected block. Without it, Rename is not offered. Blok shows the
@@ -158,6 +168,9 @@ export declare class Page implements BlockTool {
 
   /** A titled "Page" menu with Turn into first; Delete reads "Move to Trash". */
   static blockMenu?: { titled: boolean; trash: boolean };
+
+  /** Asks `config.create` for a new page, for the toolbox to insert. */
+  static prepareInsert(config: PageConfig): Promise<PageData>;
 
   /** A new page id for Duplicate and Alt-drag. Null without `config.duplicate`. */
   static duplicateData(data: PageData, config: PageConfig): PageData | null;

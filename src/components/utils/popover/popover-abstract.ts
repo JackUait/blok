@@ -454,6 +454,17 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Shows or hides the busy spinner on all items matching the given name
+   * @param name - name of the items
+   * @param isBusy - true while their action waits
+   */
+  public setItemBusyByName(name: string, isBusy: boolean): void {
+    this.itemsDefault
+      .filter(item => item.name === name)
+      .forEach(item => item.setBusy(isBusy));
+  }
+
+  /**
    * Returns true if the given item name was explicitly hidden via toggleItemHiddenByName.
    * Used by subclasses to prevent filter logic from un-hiding restricted items.
    * @param name - item name to check

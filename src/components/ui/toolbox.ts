@@ -1200,6 +1200,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    */
   private registeredShortcuts: string[] = [];
 
+  /** A pick that waits on `prepareInsert`; a second one would ask the host twice. */
+  private insertPending = false;
+
   /**
    * Iterate all tools and enable theirs shortcuts if specified
    */
@@ -1270,6 +1273,46 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * @param blockDataOverrides - predefined Block data
    */
   private async insertNewBlock(toolName: string, blockDataOverrides?: BlockToolData): Promise<void> {
+    if (this.insertPending) {
+      return;
+    }
+
+    const prepared = this.tools.get(toolName)?.prepareInsert();
+
+    if (prepared === undefined) {
+      await this.insertBlock(toolName, blockDataOverrides);
+
+      return;
+    }
+
+    const blockId = this.api.blocks.getBlockByIndex(this.api.blocks.getCurrentBlockIndex())?.id;
+
+    this.insertPending = true;
+    this.popover?.setItemBusyByName(toolName, true);
+
+    const data = await prepared.then(
+      (answer) => answer,
+      // The host shows its own error; the "/query" stays as typed.
+      () => null
+    );
+
+    this.insertPending = false;
+    this.popover?.setItemBusyByName(toolName, false);
+
+    const block = blockId === undefined || data === null ? null : this.api.blocks.getById(blockId);
+
+    if (block === null) {
+      return;
+    }
+    // The menu may have closed and the caret moved while the host answered.
+    if (this.api.blocks.getBlockByIndex(this.api.blocks.getCurrentBlockIndex())?.id !== block.id) {
+      this.api.caret.setToBlock(block, 'end');
+    }
+
+    await this.insertBlock(toolName, { ...blockDataOverrides, ...data });
+  }
+
+  private async insertBlock(toolName: string, blockDataOverrides?: BlockToolData): Promise<void> {
     const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
     const currentBlock = this.api.blocks.getBlockByIndex(currentBlockIndex);
 

@@ -207,6 +207,11 @@
   animation: blok-find-shake 360ms var(--blok-ease-bounce);
 }
 
+/* The hop chip's tint, so the landed word keeps the same highlight. */
+[data-blok-find-field] > input::selection {
+  background: var(--blok-selection-inline);
+}
+
 [data-blok-find-field] input::-webkit-search-cancel-button,
 [data-blok-find-field] input::-webkit-search-decoration {
   appearance: none;
@@ -420,7 +425,8 @@
   background: transparent;
 }
 
-/* JS sets the place and the copied type; the tint fades out on the way. */
+/* JS sets the place and the copied type. The tint stays on: the field's
+   selection takes it over on landing. */
 [data-blok-find-hop-chip] {
   position: absolute;
   z-index: 1;
@@ -430,6 +436,20 @@
   line-height: var(--blok-line-height-body);
   white-space: pre;
   pointer-events: none;
+}
+
+/* The same text in the field's type; JS fades it in as the page's type fades out. */
+[data-blok-find-hop-chip]::after {
+  content: attr(data-blok-find-hop-text);
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  padding-inline: inherit;
+  font-family: var(--blok-find-hop-land-family);
+  font-weight: var(--blok-find-hop-land-weight);
+  font-style: var(--blok-find-hop-land-style);
+  color: var(--blok-find-hop-land-color);
+  opacity: 0;
 }
 
 /* ─── Active match lens ─── */

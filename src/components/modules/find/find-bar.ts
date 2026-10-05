@@ -39,6 +39,9 @@ export interface FindBarInit {
   offset?: FindConfig['offset'];
 }
 
+/** How long the field's old text and count take to fade as a word hops in. */
+const HOP_FADE_MS = 120;
+
 const ATTR = {
   dock: 'data-blok-find',
   bar: 'data-blok-find-bar',
@@ -314,6 +317,9 @@ export class FindBar {
   }
 
   public open(init: { query?: string; replace?: boolean; readOnly: boolean; hop?: HopSource | null }): void {
+    // The same word hopping in again: its old copy in the field fades instead of blinking out.
+    const again = init.query !== undefined && init.query !== '' && this.input.value === init.query;
+
     this.setReadOnly(init.readOnly);
 
     if (init.replace === true && !this.readOnly) {
@@ -327,7 +333,7 @@ export class FindBar {
       }
 
       this.focusQuery();
-      this.playHop(init.hop ?? null, 0);
+      this.playHop(init.hop ?? null, 0, again);
 
       return;
     }
@@ -344,7 +350,7 @@ export class FindBar {
     }
 
     this.stopMotion();
-    const hopping = this.playHop(init.hop ?? null, HOP_DELAY);
+    const hopping = this.playHop(init.hop ?? null, HOP_DELAY, again);
 
     this.track(...bloom({
       dock: this.element,
@@ -611,7 +617,7 @@ export class FindBar {
   }
 
   /** @returns true when a word is in flight */
-  private playHop(source: HopSource | null, delay: number): boolean {
+  private playHop(source: HopSource | null, delay: number, fadeText: boolean): boolean {
     this.flight?.end();
 
     if (source === null) {
@@ -632,10 +638,8 @@ export class FindBar {
       if (landed) {
         const pop = springEasing(SPRINGS.bouncy);
 
-        this.track(
-          this.field.animate([{ scale: '1' }, { scale: '1.04 0.9', offset: 0.25 }, { scale: '1' }], pop),
-          this.input.animate([{ translate: '0 -4px' }, { translate: '0 0' }], pop)
-        );
+        // The text must stay where the copy put it, so only the field gives.
+        this.track(this.field.animate([{ scale: '1' }, { scale: '1.02 0.94', offset: 0.25 }, { scale: '1' }], pop));
       }
     });
 
@@ -644,12 +648,22 @@ export class FindBar {
     }
 
     // Paint only: the counter's text, and what it announces, is already current.
-    roll.counter = this.counter.animate([{ opacity: 0, translate: '0 14px' }, { opacity: 1, translate: '0 0' }], {
-      ...springEasing(SPRINGS.bouncy),
-      delay: delay + HOP_MS + 80,
-      fill: 'backwards',
-    });
+    // One animation fades the old count out and rolls the new one in, so there is no frame where it blinks.
+    const spring = springEasing(SPRINGS.bouncy);
+    const rollAt = delay + HOP_MS + 80;
+    const total = rollAt + spring.duration;
+
+    roll.counter = this.counter.animate([
+      { opacity: 1, translate: '0 0', easing: 'ease-out' },
+      { opacity: 0, translate: '0 0', offset: HOP_FADE_MS / total },
+      { opacity: 0, translate: '0 14px', offset: rollAt / total, easing: spring.easing },
+      { opacity: 1, translate: '0 0' },
+    ], { duration: total });
     this.track(roll.counter);
+
+    if (fadeText) {
+      this.track(this.input.animate([{ color: getComputedStyle(this.input).color }, { color: 'transparent' }], { duration: HOP_FADE_MS, easing: 'ease-out' }));
+    }
     // Last: a throw above must not leave the field's text hidden.
     this.field.setAttribute(ATTR.hopping, '');
 

@@ -1152,6 +1152,64 @@ describe('FindBar', () => {
       expect(counterCancels.every((cancel) => cancel.mock.calls.length === 1)).toBe(true);
     });
 
+    const inputFades = (): Keyframe[][] => animate.mock.calls
+      .filter((_, index) => animate.mock.contexts[index] === findInput())
+      .map(([frames]) => (Array.isArray(frames) ? frames : []))
+      .filter((frames) => frames.some((frame) => frame.color === 'transparent'));
+
+    it('fades the field\'s text out when the same word hops in again', () => {
+      bar.open({ readOnly: false, query: 'this' });
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(inputFades()).toHaveLength(1);
+    });
+
+    it('does not flash a new word in the field before it hops in', () => {
+      bar.open({ readOnly: false, query: 'that' });
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(inputFades()).toHaveLength(0);
+    });
+
+    it('fades the counter out before it rolls back in', () => {
+      bar.open({ readOnly: false, query: 'this' });
+      const counter = byTestId(bar.element, 'find-counter');
+      const before = animate.mock.calls.length;
+
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      const roll = animate.mock.calls.slice(before).find((_, index) => animate.mock.contexts[before + index] === counter);
+      const frames = Array.isArray(roll?.[0]) ? roll[0] : [];
+
+      expect(frames[0]?.opacity).toBe(1);
+      expect(frames.at(-1)?.opacity).toBe(1);
+      expect(frames.some((frame) => frame.opacity === 0)).toBe(true);
+    });
+
+    it('lands without nudging the field\'s text off where the word put it', async () => {
+      const landed = animate.getMockImplementation();
+
+      animate.mockImplementation((keyframes, options) => {
+        const animation = landed?.(keyframes, options);
+
+        if (animation === undefined) {
+          throw new Error('no stub');
+        }
+
+        return { ...animation, finished: Promise.resolve() };
+      });
+      // Already open, so no bloom moves the input too.
+      bar.open({ readOnly: false });
+      const before = animate.mock.calls.length;
+
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(chip()).toBeNull();
+      expect(animate.mock.calls.slice(before).some(([frames], index) => animate.mock.contexts[before + index] === findInput()
+        && Array.isArray(frames) && frames.some((frame) => 'translate' in frame))).toBe(false);
+    });
+
     it('keeps the counter text live during the flight', () => {
       bar.open({ readOnly: false, query: 'this', hop: source });
       bar.setResults({ current: 0, total: 3 });

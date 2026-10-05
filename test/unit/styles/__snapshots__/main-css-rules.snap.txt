@@ -15015,6 +15015,10 @@ span[data-blok-slash-search] {
   animation: blok-find-shake 360ms var(--blok-ease-bounce);
 }
 
+[data-blok-find-field] > input::selection {
+  background: var(--blok-selection-inline);
+}
+
 [data-blok-find-field] input::-webkit-search-cancel-button, [data-blok-find-field] input::-webkit-search-decoration {
   appearance: none;
 }
@@ -15203,6 +15207,19 @@ span[data-blok-slash-search] {
   line-height: var(--blok-line-height-body);
   white-space: pre;
   pointer-events: none;
+}
+
+[data-blok-find-hop-chip]::after {
+  content: attr(data-blok-find-hop-text);
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  padding-inline: inherit;
+  font-family: var(--blok-find-hop-land-family);
+  font-weight: var(--blok-find-hop-land-weight);
+  font-style: var(--blok-find-hop-land-style);
+  color: var(--blok-find-hop-land-color);
+  opacity: 0;
 }
 
 [data-blok-find-lens] {

@@ -275,6 +275,8 @@ const ARC_LIFT = 70;
 const ARC_SPIN = -14;
 const ARC_GROW = 0.18;
 const ARC_STEPS = 20;
+/** Progress span over which the copy trades the page's type for the field's. */
+const TYPE_SWAP = { from: 0.2, to: 0.6 };
 /**
  * Gap between the window's top and the chip's box at its highest, in px.
  * Only the translate is counted; the spin and grow draw the chip closer.
@@ -333,6 +335,7 @@ export const hop = (
   chip.setAttribute('data-blok-find-hop-chip', '');
   chip.setAttribute('data-blok-testid', 'find-hop-chip');
   chip.setAttribute('aria-hidden', 'true');
+  chip.setAttribute('data-blok-find-hop-text', source.text);
   chip.textContent = source.text;
   Object.assign(chip.style, {
     fontFamily: source.font.family,
@@ -353,6 +356,12 @@ export const hop = (
   chip.style.top = `${start.top - dockRect.top}px`;
 
   const targetStyle = getComputedStyle(target);
+
+  // find.css draws the text again on ::after in these, so it lands already in the field's type.
+  chip.style.setProperty('--blok-find-hop-land-family', targetStyle.fontFamily);
+  chip.style.setProperty('--blok-find-hop-land-weight', targetStyle.fontWeight);
+  chip.style.setProperty('--blok-find-hop-land-style', targetStyle.fontStyle);
+  chip.style.setProperty('--blok-find-hop-land-color', targetStyle.color);
   const rtl = targetStyle.direction === 'rtl';
   // The start edge stays put as the chip shrinks, so dx and dy still land on the text start.
   chip.style.transformOrigin = rtl ? 'right center' : 'left center';
@@ -361,8 +370,10 @@ export const hop = (
   const dy = targetRect.top + (targetRect.height - chip.offsetHeight) / 2 - start.top;
   const steps = Array.from({ length: ARC_STEPS + 1 }, (_, i) => {
     const progress = i / ARC_STEPS;
+    const travel = 1 - Math.pow(1 - progress, 3.2);
 
-    return { progress, travel: 1 - Math.pow(1 - progress, 3.2), lift: Math.sin(progress * Math.PI) };
+    // Lift and spin follow travel, not time, so they are gone by the time the copy is over the field.
+    return { progress, travel, lift: Math.sin(travel * Math.PI) };
   });
   // One factor for the whole arc, so a field near the top flattens it instead of clipping it.
   const room = Math.min(1, ...steps
@@ -375,7 +386,14 @@ export const hop = (
   }));
   const flight = [
     chip.animate(arc, { duration: HOP_MS, delay, easing: 'linear', fill: 'backwards' }),
-    chip.animate([{}, { backgroundColor: 'transparent' }], { duration: HOP_MS, delay, easing: 'ease-in', fill: 'both' }),
+    chip.animate(
+      [{ color: source.font.color }, { color: source.font.color, offset: TYPE_SWAP.from }, { color: 'transparent', offset: TYPE_SWAP.to }, { color: 'transparent' }],
+      { duration: HOP_MS, delay, fill: 'both' }
+    ),
+    chip.animate(
+      [{ opacity: 0 }, { opacity: 0, offset: TYPE_SWAP.from }, { opacity: 1, offset: TYPE_SWAP.to }, { opacity: 1 }],
+      { duration: HOP_MS, delay, fill: 'both', pseudoElement: '::after' }
+    ),
   ];
   const state = { ended: false };
   const finish = (landed: boolean): void => {

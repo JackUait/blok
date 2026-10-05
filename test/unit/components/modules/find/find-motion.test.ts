@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -553,7 +556,7 @@ describe('hop', () => {
   it('keeps the full lift when there is room above', () => {
     const arc = flyTo(source.rect.top, { input: '16px' });
 
-    expect(liftOf(arc[Math.floor(arc.length / 2)])).toBeLessThan(-60);
+    expect(Math.min(...arc.map(liftOf))).toBeLessThan(-60);
   });
 
   it('lands at the field\'s text size, so the text does not jump when it shows', () => {
@@ -568,11 +571,83 @@ describe('hop', () => {
     expect(HOP_DELAY).toBeLessThanOrEqual(60);
   });
 
+  it('stops turning and rising once it reaches the field', () => {
+    const arc = flyTo(source.rect.top, { input: '16px' });
+    const dxOf = (frame: Keyframe): number => Number(/translate\((\S+)px,/.exec(String(frame.transform))?.[1]);
+    const turnOf = (frame: Keyframe): number => Number(/rotate\((\S+)deg\)/.exec(String(frame.transform))?.[1]);
+    const total = dxOf(arc[arc.length - 1]);
+    const arrived = arc.filter((frame) => dxOf(frame) / total > 0.97);
+
+    expect(arrived.length).toBeGreaterThan(3);
+    expect(Math.max(...arrived.map((frame) => Math.abs(turnOf(frame))))).toBeLessThan(1);
+  });
+
+  it('turns into the field\'s type on the way, so the hand-off does not swap fonts', () => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(false);
+    const dock = document.createElement('div');
+    const input = document.createElement('input');
+
+    Object.assign(input.style, { fontFamily: 'monospace', fontWeight: '500', color: 'rgb(1, 2, 3)' });
+    dock.append(input);
+    document.body.append(dock);
+    hop(dock, { ...source, font: { ...source.font, weight: '700' } }, input, 0, vi.fn());
+    const chip = dock.querySelector<HTMLElement>('[data-blok-find-hop-chip]');
+    const calls = animate.mock.calls;
+    const landing = calls.find(([, options]) => typeof options === 'object' && options.pseudoElement === '::after');
+    const leaving = calls.find(([frames]) => Array.isArray(frames) && frames.some((frame) => frame.color === 'transparent'));
+
+    expect(chip?.getAttribute('data-blok-find-hop-text')).toBe('this');
+    expect(chip?.style.getPropertyValue('--blok-find-hop-land-family')).toBe('monospace');
+    expect(chip?.style.getPropertyValue('--blok-find-hop-land-weight')).toBe('500');
+    expect(chip?.style.getPropertyValue('--blok-find-hop-land-color')).toBe('rgb(1, 2, 3)');
+    expect(Array.isArray(landing?.[0]) ? landing[0].at(-1)?.opacity : undefined).toBe(1);
+    expect(Array.isArray(leaving?.[0]) ? leaving[0].at(-1)?.color : undefined).toBe('transparent');
+  });
+
+  it('keeps its tint all the way, so it hands over to the field\'s selection', () => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(false);
+    const dock = document.createElement('div');
+    const input = document.createElement('input');
+
+    dock.append(input);
+    document.body.append(dock);
+    hop(dock, source, input, 0, vi.fn());
+
+    expect(animate.mock.calls.some(([frames]) => Array.isArray(frames) && frames.some((frame) => 'backgroundColor' in frame))).toBe(false);
+  });
+
   it('leaves fast and eases into the field', () => {
     const arc = flyTo(source.rect.top, { input: '16px' });
     const dxOf = (frame: Keyframe): number => Number(/translate\((\S+)px,/.exec(String(frame.transform))?.[1]);
     const total = dxOf(arc[arc.length - 1]);
 
     expect(dxOf(arc[Math.floor(arc.length / 4)]) / total).toBeGreaterThan(0.55);
+  });
+});
+
+// jsdom has no CSS, so these read the authored source.
+describe('hop hand-off styles', () => {
+  const css = readFileSync(resolve(__dirname, '../../../../../src/styles/find.css'), 'utf8');
+  const rule = (selector: string): string => {
+    const start = css.indexOf(`${selector} {`);
+
+    return start === -1 ? '' : css.slice(start, css.indexOf('}', start));
+  };
+
+  it('draws the landing layer in the field\'s type', () => {
+    const layer = rule('[data-blok-find-hop-chip]::after');
+
+    expect(layer).toContain('content: attr(data-blok-find-hop-text)');
+    expect(layer).toContain('var(--blok-find-hop-land-family)');
+    expect(layer).toContain('var(--blok-find-hop-land-weight)');
+    expect(layer).toContain('var(--blok-find-hop-land-color)');
+  });
+
+  it('selects the field\'s text in the chip\'s tint, so the tint carries on after landing', () => {
+    expect(rule('[data-blok-find-field] > input::selection')).toContain('background: var(--blok-selection-inline)');
   });
 });

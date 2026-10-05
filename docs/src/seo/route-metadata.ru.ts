@@ -1,6 +1,17 @@
 // docs/src/seo/route-metadata.ru.ts
+import { DOCUMENTED_TOOL_ROUTE_PATHS } from '../components/tools/tools-data';
 import { BLOK_VERSION } from '../utils/constants';
 import type { RouteCopy } from './route-metadata';
+
+const RU_PLURAL = new Intl.PluralRules('ru');
+
+/** "N встроенных … инструментов" with the noun agreed to N. */
+export const ruBuiltInTools = (count: number): string => {
+  const form = RU_PLURAL.select(count);
+  if (form === 'one') return `${count} встроенный блочный и строчный инструмент`;
+  if (form === 'few') return `${count} встроенных блочных и строчных инструмента`;
+  return `${count} встроенных блочных и строчных инструментов`;
+};
 
 /**
  * Russian title / description / H1 copy, keyed by the *unprefixed* route path —
@@ -34,7 +45,7 @@ export const RU_COPY: Record<string, RouteCopy> = {
   '/docs': {
     title: 'Документация Blok — редактор для React, Vue, Angular',
     description:
-      'Руководства, справочник API и 29 встроенных блочных и строчных инструментов Blok. Первый редактор — за пять минут.',
+      `Руководства, справочник API и ${ruBuiltInTools(DOCUMENTED_TOOL_ROUTE_PATHS.length)} Blok. Первый редактор — за пять минут.`,
     h1: 'Документация Blok',
   },
   '/tools': {
@@ -56,9 +67,9 @@ export const RU_COPY: Record<string, RouteCopy> = {
     h1: 'Загрузки и превью ссылок',
   },
   '/migration': {
-    title: 'Переход на Blok — Editor.js, TipTap, Quill',
+    title: 'Переход с Editor.js на Blok — руководство и кодмод',
     description:
-      'Руководства по миграции и кодмод, которые переносят существующую интеграцию редактора на Blok без переписывания контента.',
+      'Пошаговое руководство и кодмод, которые переносят интеграцию Editor.js на Blok без переписывания сохранённого контента.',
     h1: 'Editor.js стал тесен?',
   },
   '/migration/reference': {
@@ -88,7 +99,7 @@ export const RU_COPY: Record<string, RouteCopy> = {
   '/docs/concepts': {
     title: 'Модель данных Blok — всё является блоком',
     description:
-      'Как Blok хранит контент в виде вложенных JSON-блоков с parentId и contentIds и почему в документе нет HTML.',
+      'Как Blok хранит контент в виде дерева JSON-блоков, связанных id родителя и дочерних блоков. Структура — это JSON, а строчная разметка (жирный, подчёркивание) бывает только внутри текста.',
     h1: 'Всё является блоком: модель данных Blok',
   },
   '/docs/custom-block-tool': {
@@ -256,20 +267,20 @@ export const RU_COPY: Record<string, RouteCopy> = {
   '/docs/output-data': {
     title: 'OutputData — формат сохранённого JSON Blok',
     description:
-      'Точная форма ответа save(): time, version и массив blocks с id, type, data, tunes, parentId и contentIds.',
+      'Точная форма ответа save(): time, version и массив blocks с id, type, data, tunes, parent и content.',
     h1: 'OutputData: формат сохранённого JSON',
   },
   '/docs/block-data': {
     title: 'BlockData — данные одного блока Blok',
     description:
-      'Что лежит внутри поля data блока, как к нему цепляются tunes и как parentId и contentIds выражают вложенность.',
+      'Что лежит внутри поля data блока, как к нему цепляются tunes и как поля parent и content выражают вложенность.',
     h1: 'BlockData: полезная нагрузка блока',
   },
   '/docs/blok-editor': {
-    title: 'Компонент BlokEditor для React — справочник',
+    title: 'Компонент BlokEditor — React, Vue и Angular',
     description:
-      'Все пропсы BlokEditor: data, tools, onChange, onSave, readOnly, onReady и императивный API через ref.',
-    h1: 'React-компонент BlokEditor',
+      'Пропсы и входы компонента BlokEditor «всё в одном» в React, Vue и Angular: data, tools, readOnly, запасной вход [config] и доступ к живому экземпляру редактора.',
+    h1: 'Компонент BlokEditor для React, Vue и Angular',
   },
   '/docs/use-blocks': {
     title: 'Хук useBlocks — React API редактора Blok',

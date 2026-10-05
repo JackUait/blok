@@ -1,7 +1,7 @@
 // docs/src/seo/route-metadata.ts
 import { API_SECTIONS } from '../components/api/api-data';
 import { GROUP_TITLES_EN, MODULE_ORDER, SIDEBAR_GROUPS } from '../components/api/api-nav';
-import { TOOL_SECTIONS } from '../components/tools/tools-data';
+import { DOCUMENTED_TOOL_ROUTE_PATHS, TOOL_SECTIONS } from '../components/tools/tools-data';
 import { getTranslation, type Locale } from '../i18n';
 import { STATIC_PATHS } from '../prerender-paths';
 import { BLOK_VERSION } from '../utils/constants';
@@ -71,7 +71,7 @@ const STATIC_COPY: Record<string, Copy> = {
   '/docs': {
     title: 'Blok Docs — Block Editor for React, Vue & Angular',
     description:
-      'Guides, API reference, and 29 built-in block and inline tools for Blok. Start in five minutes.',
+      `Guides, API reference, and ${DOCUMENTED_TOOL_ROUTE_PATHS.length} built-in block and inline tools for Blok. Start in five minutes.`,
     h1: 'Blok documentation',
   },
   '/tools': {
@@ -93,9 +93,9 @@ const STATIC_COPY: Record<string, Copy> = {
     h1: 'Uploads and link previews',
   },
   '/migration': {
-    title: 'Migrate to Blok — Editor.js, TipTap, Quill',
+    title: 'Migrate from Editor.js to Blok — Guide & Codemod',
     description:
-      'Migration guides and a codemod for moving an existing editor integration to Blok without rewriting stored content.',
+      'A step-by-step guide and a codemod for moving an Editor.js integration to Blok without rewriting stored content.',
     h1: 'Outgrown Editor.js?',
   },
   '/migration/reference': {
@@ -137,7 +137,7 @@ const MODULE_COPY: Record<string, Copy> = {
   concepts: {
     title: 'Blok Data Model — Everything Is a Block',
     description:
-      'How Blok stores content as nested JSON blocks with parentId and contentIds, and why there is no HTML in the document.',
+      'How Blok stores content as a tree of JSON blocks linked by parent and child ids. The structure is JSON; only inline text carries markup.',
     h1: "Everything is a block: Blok's data model",
   },
   'custom-block-tool': {
@@ -305,20 +305,20 @@ const MODULE_COPY: Record<string, Copy> = {
   'output-data': {
     title: 'Blok OutputData — Saved JSON Format Reference',
     description:
-      'The exact shape save() returns: time, version, and the blocks array with id, type, data, tunes, parentId, and contentIds.',
+      'The exact shape save() returns: time, version, and the blocks array with id, type, data, tunes, parent, and content.',
     h1: "OutputData: Blok's saved JSON format",
   },
   'block-data': {
     title: 'Blok BlockData — Per-Block Payload Reference',
     description:
-      "What lives inside a block's data field, how tunes attach to it, and how parentId and contentIds express nesting.",
+      "What lives inside a block's data field, how tunes attach to it, and how the parent and content fields express nesting.",
     h1: 'BlockData: the per-block payload',
   },
   'blok-editor': {
-    title: 'BlokEditor React Component — Props Reference',
+    title: 'BlokEditor Component — React, Vue & Angular',
     description:
-      'Every prop on BlokEditor: data, tools, onChange, onSave, readOnly, onReady, and the imperative ref API.',
-    h1: 'The BlokEditor React component',
+      'Props and inputs of the all-in-one BlokEditor component in React, Vue and Angular: data, tools, readOnly, the [config] escape hatch, and reading the live editor instance.',
+    h1: 'The BlokEditor component for React, Vue and Angular',
   },
   'use-blocks': {
     title: 'useBlocks Hook — Blok React API',
@@ -649,7 +649,7 @@ const buildRouteMetadata = (locale: Locale): Record<string, RouteMetadata> => {
     };
   }
 
-  // tools-data.ts carries a duplicate id; first occurrence wins, matching the
+  // First occurrence wins if tools-data.ts ever repeats an id, matching the
   // sidebar's own dedupe.
   const firstToolOfType: Partial<Record<'block' | 'inline', string>> = {};
   for (const tool of TOOL_SECTIONS) {

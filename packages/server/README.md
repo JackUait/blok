@@ -394,6 +394,35 @@ Run this drill before you roll back.
 
 Rolling forward again is not symmetric either. With the store registered, the journal wins the open, so whatever was typed while the old build was serving is not in it.
 
+## Pages
+
+A `page` block saves only its `pageId`. The page body is its own collaborative document, and its document id is the page id. So each page body loads and saves through your document endpoint, like any other document.
+
+| Call | What the service sends | What you answer |
+| --- | --- | --- |
+| `GET {DocEndpoint}/{docId}` | `Authorization`: your `DocEndpointAuth` value | `200` with the JSON literal `null`, or `{"data": null, "version": "0"}`, for a document you never saved; it opens empty. Otherwise `200` with `{"data": <document>, "version": "<v>"}`, or the bare document. |
+| `PUT {DocEndpoint}/{docId}` | The bare document. `Blok-Doc-Version`: the last version you answered, absent until you answer one. `Blok-Doc-Lineage` and `Blok-Doc-Sequence`: with a journal only. | Any `2xx`. A JSON body with `version` sets the next `Blok-Doc-Version`; an empty body keeps it. |
+
+- A first open fails on 404, 204, an empty 200 or any other non-2xx. The socket closes with 4503. Never answer those for a new page.
+- PUT is an upsert, and the version header is optional. With a journal, a page that was reopened sends one empty-document PUT with no version, even if nobody typed.
+- Keep the version on the service's own PUT. Bump it only for your own write, answer a stale PUT with 409, and call `POST /sync/{doc}/reset`.
+- A refused PUT is retried, and its room stays loaded until it lands. Purge a page with `ICollabDocumentPurger` before you delete its rows.
+
+Who may open which page goes through `IBlokAuthorization`. It runs before a room loads, on `/sync`, `/state`, `/edit` and `/reset`. It is registered as a singleton:
+
+```csharp
+builder.Services
+  .AddBlokServer(options =>
+  {
+    options.CollabEnabled = true;
+    options.DocEndpoint = "http://127.0.0.1:5080/internal/blok-docs";
+    options.DocEndpointAuth = docEndpointSecret;
+  })
+  .UseAuthorization<PageRules>();
+```
+
+The full walkthrough, with the page store, the document endpoint, delete, duplicate, export and drain: [Page blocks on an ASP.NET Core backend](https://github.com/JackUait/blok/blob/main/docs/maintainers/page-csharp-host.md).
+
 ## Who was in a document, and when
 
 The service can tell your app when a person was in a document, including people

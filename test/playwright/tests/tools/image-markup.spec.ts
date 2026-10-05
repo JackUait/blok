@@ -206,6 +206,15 @@ test('Ctrl+Click picks several marks and Delete removes them all', async ({ page
   await page.mouse.click(...within(frame, 0.6, 0.35));
   await page.keyboard.up('Control');
   await expect(selectionBoxes(page)).toHaveCount(2);
+  // The next press still works after the Ctrl+Click.
+  await page.keyboard.down('Control');
+  await page.mouse.click(...within(frame, 0.6, 0.35));
+  await page.keyboard.up('Control');
+  await expect(selectionBoxes(page)).toHaveCount(1);
+  await page.keyboard.down('Control');
+  await page.mouse.click(...within(frame, 0.6, 0.35));
+  await page.keyboard.up('Control');
+  await expect(selectionBoxes(page)).toHaveCount(2);
   await page.keyboard.press('Delete');
   await expect(darkroomMarks(page)).toHaveCount(0);
 });

@@ -29,9 +29,9 @@
   --blok-audio-play-size: 36px;
   --blok-audio-bar: var(--blok-border-subtle);
   --blok-audio-bar-played: var(--blok-text-primary);
-  /* Comet-head tint — played colour nudged toward the editor accent. Subtle by
-     design; the waveform canvas blends bars toward it only at the playhead. */
-  --blok-audio-bar-head: color-mix(in srgb, var(--blok-audio-bar-played) 68%, var(--blok-color-accent) 32%);
+  /* Playhead bar colour, blended in only at the playhead. Ink, never accent
+     blue: the playhead is an active state, and those stay neutral. */
+  --blok-audio-bar-head: var(--blok-audio-bar-played);
   --blok-audio-seek-pct: 0%;
   --blok-audio-vol-pct: 100%;
   --blok-audio-speed-pct: 50%;

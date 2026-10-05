@@ -8702,7 +8702,7 @@ span[data-blok-slash-search] {
   --blok-audio-play-size: 36px;
   --blok-audio-bar: var(--blok-border-subtle);
   --blok-audio-bar-played: var(--blok-text-primary);
-  --blok-audio-bar-head: color-mix(in srgb, var(--blok-audio-bar-played) 68%, var(--blok-color-accent) 32%);
+  --blok-audio-bar-head: var(--blok-audio-bar-played);
   --blok-audio-seek-pct: 0%;
   --blok-audio-vol-pct: 100%;
   --blok-audio-speed-pct: 50%;

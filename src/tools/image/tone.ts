@@ -1,5 +1,6 @@
 export type Tone = 'paper' | 'graphite';
 export interface Rgb { r: number; g: number; b: number }
+export interface Rgba extends Rgb { a: number }
 export interface ToneGrid { width: number; height: number; luminance: Float32Array }
 /** Fractions of the visible picture: 0..1 from its left/top edge. */
 export interface Region { x: number; y: number; w: number; h: number }
@@ -19,6 +20,14 @@ const contrast = (a: number, b: number): number => (Math.max(a, b) + 0.05) / (Ma
 // Must match the --blok-overlay-surface values of the [data-tone] rules in image.css.
 const PAPER = relativeLuminance({ r: 255, g: 255, b: 255 });
 const GRAPHITE = relativeLuminance({ r: 0x25, g: 0x25, b: 0x25 });
+
+/** Paints background layers (innermost first, so on top) over `base`, as the browser stacks them. */
+export const flatten = (layers: Rgba[], base: Rgb): Rgb =>
+  layers.reduceRight<Rgb>((under, c) => ({
+    r: c.r * c.a + under.r * (1 - c.a),
+    g: c.g * c.a + under.g * (1 - c.a),
+    b: c.b * c.a + under.b * (1 - c.a),
+  }), base);
 
 /** `pixels` is unpremultiplied RGBA, as getImageData returns it. */
 export function luminanceGrid(pixels: Uint8ClampedArray, width: number, height: number, backdrop: Rgb): ToneGrid {

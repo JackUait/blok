@@ -320,3 +320,46 @@ test('a cross-origin picture without CORS still shows, and its chrome follows th
 
   expect(surface).toBe(themeSurface);
 });
+
+// A fully transparent PNG: every pixel shows the page behind the picture.
+const serveClearPicture = async (page: Page): Promise<void> => {
+  const base64 = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+
+    c.width = 800;
+    c.height = 600;
+
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  const body = Buffer.from(base64, 'base64');
+
+  await page.route(SAME, (route) => route.fulfill({ status: 200, contentType: 'image/png', body }));
+};
+
+const DARK_PAGES: Array<{ name: string; html: string; body: string }> = [
+  { name: 'an oklch background', html: '', body: 'background: oklch(0.205 0 0)' },
+  { name: 'a faint white card over near-black', html: 'background: #0c0c0c', body: 'background: rgba(255, 255, 255, 0.04)' },
+  { name: 'color-scheme: dark and no background at all', html: 'color-scheme: dark', body: 'background: transparent' },
+];
+
+for (const dark of DARK_PAGES) {
+  test(`a transparent picture on a dark page (${dark.name}) gets graphite chrome`, async ({ page }) => {
+    await serveClearPicture(page);
+    await page.evaluate((s) => {
+      document.documentElement.setAttribute('style', s.html);
+      document.body.setAttribute('style', s.body);
+    }, dark);
+    try {
+      await createBlok(page, { blocks: [...ROOM_ABOVE, picture(SAME, { alt: 'Logo' })] });
+
+      await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-tone', 'graphite');
+      await expect(imageBlock(page).locator('[data-action="alt-edit"]')).toHaveAttribute('data-tone', 'graphite');
+    } finally {
+      await page.evaluate(() => {
+        document.documentElement.removeAttribute('style');
+        document.body.removeAttribute('style');
+      });
+    }
+  });
+}
+

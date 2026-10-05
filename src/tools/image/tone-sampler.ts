@@ -1,12 +1,11 @@
 import type { ImageData } from '../../../types/tools/image';
 import { cssFilter, readAdjust, type FilterSet } from './adjust';
 import { orientedSize, readGeometry } from './geometry';
-import { luminanceGrid, pickTone, regionLuminance, type Rgb, type ToneGrid } from './tone';
+import { flatten, luminanceGrid, pickTone, regionLuminance, type Rgb, type Rgba, type ToneGrid } from './tone';
 
 /** Long side of the sampling canvas. A few hundred cells tell light from dark. */
 const GRID_LONG_SIDE = 24;
 const TONED = '[data-role="image-overlay"], [data-action="alt-edit"], [data-role="resize-handle"]';
-const RGBA = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+)%?)?\s*\)/;
 const WHITE: Rgb = { r: 255, g: 255, b: 255 };
 
 export function isReadableInPlace(src: string, base: string = location.href): boolean {
@@ -79,19 +78,53 @@ export function readToneGrid(
   }
 }
 
-const paintedBackground = (el: Element): Rgb | null => {
-  const m = RGBA.exec(getComputedStyle(el).backgroundColor);
+/**
+ * Any CSS colour as RGBA, by painting one pixel. Computed styles keep oklch(), color(srgb …)
+ * and friends as written, so a regex over rgb() would miss them.
+ */
+export function cssColor(css: string): Rgba | null {
+  const canvas = document.createElement('canvas');
 
-  if (!m || (m[4] !== undefined && parseFloat(m[4]) === 0)) return null;
+  canvas.width = 1;
+  canvas.height = 1;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-  return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) };
+  if (!ctx) return null;
+  // An invalid colour leaves fillStyle as it was, so start from transparent.
+  ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+  ctx.fillStyle = css;
+  ctx.fillRect(0, 0, 1, 1);
+  const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+
+  return { r, g, b, a: a / 255 };
+}
+
+/** Painted backgrounds from `el` up, innermost first, stopping at the first opaque one. */
+const backgroundLayers = (el: Element | null): Rgba[] => {
+  if (!el) return [];
+  const c = cssColor(getComputedStyle(el).backgroundColor);
+
+  if (c && c.a >= 1) return [c];
+
+  return c && c.a > 0 ? [c, ...backgroundLayers(el.parentElement)] : backgroundLayers(el.parentElement);
 };
 
-/** The colour a transparent pixel shows: the first painted background up the tree. */
-export function pageBackdrop(el: Element): Rgb {
-  const parent = el.parentElement;
+/** What shows where no element paints: the root's Canvas colour, which follows color-scheme. */
+const canvasColor = (): Rgb => {
+  const probe = document.createElement('span');
 
-  return paintedBackground(el) ?? (parent ? pageBackdrop(parent) : WHITE);
+  probe.style.cssText = 'position:absolute;width:0;height:0;background:Canvas';
+  document.documentElement.appendChild(probe);
+  const c = cssColor(getComputedStyle(probe).backgroundColor);
+
+  probe.remove();
+
+  return c && c.a > 0 ? c : WHITE;
+};
+
+/** The colour a transparent pixel shows: every painted layer up the tree, over the page canvas. */
+export function pageBackdrop(el: Element): Rgb {
+  return flatten(backgroundLayers(el), canvasColor());
 }
 
 export async function sampleToneGrid(

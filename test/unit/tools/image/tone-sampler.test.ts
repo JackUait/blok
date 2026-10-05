@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  applyTones, isReadableInPlace, loadSampleSource, pageBackdrop, readToneGrid,
+  applyTones, cssColor, isReadableInPlace, loadSampleSource, pageBackdrop, readToneGrid,
 } from '../../../../src/tools/image/tone-sampler';
 import { luminanceGrid } from '../../../../src/tools/image/tone';
 
@@ -152,17 +152,17 @@ describe('tone-sampler', () => {
     expect(ctx.scale).toHaveBeenLastCalledWith(-1, 1);
   });
 
-  it('the page colour is the first ancestor with a painted background, white if none', () => {
+  // Real colour parsing (oklch, translucent layers, color-scheme) is covered in image-chrome.spec.ts:
+  // it paints a canvas pixel, and jsdom has no canvas.
+  it('without a canvas to read colours, the page counts as white', () => {
     const page = document.createElement('div');
-    const inner = document.createElement('div');
 
     page.style.backgroundColor = 'rgb(25, 25, 25)';
-    page.appendChild(inner);
     document.body.appendChild(page);
 
-    expect(pageBackdrop(inner)).toEqual({ r: 25, g: 25, b: 25 });
-    page.style.backgroundColor = 'rgba(0, 0, 0, 0)';
-    expect(pageBackdrop(inner)).toEqual(WHITE);
+    expect(cssColor('rgb(25, 25, 25)')).toBeNull();
+    expect(pageBackdrop(page)).toEqual(WHITE);
+    expect(document.documentElement.querySelector(':scope > span')).toBeNull();
   });
 
   it('stamps each control with the tone under it, and clears tones without a grid', () => {

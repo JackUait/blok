@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { luminanceGrid, pickTone, regionLuminance, relativeLuminance, type Rgb } from '../../../../src/tools/image/tone';
+import { flatten, luminanceGrid, pickTone, regionLuminance, relativeLuminance, type Rgb } from '../../../../src/tools/image/tone';
 
 const WHITE: Rgb = { r: 255, g: 255, b: 255 };
 const BLACK: Rgb = { r: 0, g: 0, b: 0 };
@@ -59,5 +59,24 @@ describe('tone', () => {
     expect(regionLuminance(grid, { x: 0, y: 0, w: 0, h: 1 })).toBeNull();
     expect(regionLuminance(grid, { x: 1.2, y: 0, w: 0.1, h: 1 })).toBeNull();
     expect(regionLuminance(grid, { x: 0, y: -0.5, w: 1, h: 0.4 })).toBeNull();
+  });
+
+  it('a faint white card over a near-black page still reads as dark', () => {
+    const page = flatten([{ r: 255, g: 255, b: 255, a: 0.04 }], { r: 12, g: 12, b: 12 });
+
+    expect(pickTone(relativeLuminance(page))).toBe('graphite');
+  });
+
+  it('stacks layers innermost on top', () => {
+    const red = { r: 255, g: 0, b: 0, a: 1 };
+    const blueHalf = { r: 0, g: 0, b: 255, a: 0.5 };
+
+    expect(flatten([blueHalf, red], WHITE)).toEqual({ r: 127.5, g: 0, b: 127.5 });
+    // An opaque layer on top hides everything under it.
+    expect(flatten([red, blueHalf], WHITE)).toEqual({ r: 255, g: 0, b: 0 });
+  });
+
+  it('with no painted layer the base shows through', () => {
+    expect(flatten([], BLACK)).toEqual(BLACK);
   });
 });

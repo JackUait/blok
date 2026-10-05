@@ -609,7 +609,6 @@ export class FindBar {
     // Set once the flight starts; an interrupted hop cancels it so the counter shows at once.
     const roll: { counter?: Animation } = {};
 
-    this.field.setAttribute(ATTR.hopping, '');
     this.flight = hop(this.element, source, this.input, delay, (landed) => {
       this.flight = null;
       this.field.removeAttribute(ATTR.hopping);
@@ -629,8 +628,6 @@ export class FindBar {
     });
 
     if (this.flight === null) {
-      this.field.removeAttribute(ATTR.hopping);
-
       return false;
     }
 
@@ -641,6 +638,8 @@ export class FindBar {
       fill: 'backwards',
     });
     this.motion.push(roll.counter);
+    // Last: a throw above must not leave the field's text hidden.
+    this.field.setAttribute(ATTR.hopping, '');
 
     return true;
   }

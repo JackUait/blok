@@ -715,6 +715,7 @@ describe('Find module', () => {
 
     afterEach(() => {
       Reflect.deleteProperty(Element.prototype, 'animate');
+      Reflect.deleteProperty(CSS, 'supports');
       if (nativeClientRects === undefined) {
         Reflect.deleteProperty(Range.prototype, 'getClientRects');
       } else {
@@ -738,6 +739,9 @@ describe('Find module', () => {
         writable: true,
       });
       vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: false, media: query })));
+      // A motion-capable engine, so only the input guard can stop the hop.
+      Object.defineProperty(CSS, 'supports', { value: () => true, configurable: true, writable: true });
+      vi.stubGlobal('KeyframeEffect', class { public get pseudoElement(): string | null { return null; } });
       // A stale document range is still measurable; only the input guard stops a hop from it.
       window.getSelection()?.setBaseAndExtent(text, 5, text, 9);
       hostInput.value = 'search words';

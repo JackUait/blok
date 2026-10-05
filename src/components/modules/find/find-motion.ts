@@ -148,7 +148,17 @@ export interface BloomParts {
   controls: HTMLElement[];
 }
 
-export const canAnimate = (element: Element): boolean => typeof element.animate === 'function';
+/**
+ * The springs are linear() easings and the skin is a ::before animation.
+ * Engines Blok still supports lack one or both: linear() throws there, and a
+ * dropped `pseudoElement` would animate the dock's own box. They get no motion.
+ */
+export const canAnimate = (element: Element): boolean =>
+  typeof element.animate === 'function'
+  && typeof CSS !== 'undefined'
+  && CSS.supports?.('transition-timing-function', 'linear(0, 1)')
+  && typeof KeyframeEffect !== 'undefined'
+  && 'pseudoElement' in KeyframeEffect.prototype;
 
 const sizeOf = (element: HTMLElement): Size => ({ width: element.offsetWidth, height: element.offsetHeight });
 

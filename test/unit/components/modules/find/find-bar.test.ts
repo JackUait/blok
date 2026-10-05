@@ -56,6 +56,16 @@ const type = (input: HTMLInputElement, value: string): void => {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 };
 
+/** jsdom has neither `CSS.supports` nor `KeyframeEffect`; `linear` says whether this engine parses linear(). */
+const stubEngine = (linear: boolean): void => {
+  Object.defineProperty(CSS, 'supports', {
+    value: (_property: string, value: string): boolean => linear || !value.includes('linear('),
+    configurable: true,
+    writable: true,
+  });
+  vi.stubGlobal('KeyframeEffect', class { public get pseudoElement(): string | null { return null; } });
+};
+
 describe('FindBar', () => {
   let callbacks: ReturnType<typeof makeCallbacks>;
   let bar: FindBar;
@@ -879,10 +889,12 @@ describe('FindBar', () => {
       });
       Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true });
       vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: false, media: query })));
+      stubEngine(true);
     });
 
     afterEach(() => {
       Reflect.deleteProperty(Element.prototype, 'animate');
+      Reflect.deleteProperty(CSS, 'supports');
       vi.unstubAllGlobals();
     });
 
@@ -1010,6 +1022,52 @@ describe('FindBar', () => {
       bar.setResults({ current: 0, total: 3 });
 
       expect(byTestId(bar.element, 'find-counter').textContent).toBe('find.count{"current":1,"total":3}');
+    });
+  });
+
+  // Chrome 105-112, Firefox 110-111 and Safari 16 throw on a linear() easing.
+  describe('on an engine without linear()', () => {
+    const source = {
+      rect: { left: 50, top: 100, width: 30, height: 20 },
+      text: 'this',
+      font: { family: 'serif', size: '16px', weight: '400', style: 'normal', color: 'rgb(0, 0, 0)' },
+    };
+
+    beforeEach(() => {
+      const animate = (_keyframes: Keyframe[], options?: KeyframeAnimationOptions): { cancel: () => void; finished: Promise<void> } => {
+        if (options?.easing?.includes('linear(') === true) {
+          throw new TypeError(`Invalid easing: ${options.easing}`);
+        }
+
+        return { cancel: vi.fn(), finished: new Promise<void>(() => undefined) };
+      };
+
+      Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true });
+      vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: false, media: query })));
+      stubEngine(false);
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(Element.prototype, 'animate');
+      Reflect.deleteProperty(CSS, 'supports');
+      vi.unstubAllGlobals();
+    });
+
+    it('opens on a selected word focused and searching, with no word in flight', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(findInput()).toHaveFocus();
+      expect(callbacks.onQueryChange).toHaveBeenCalledWith('this');
+      expect(bar.element.querySelector('[data-blok-find-hop-chip]')).toBeNull();
+      expect(byTestId(bar.element, 'find-field').hasAttribute('data-blok-find-hopping')).toBe(false);
+    });
+
+    it('still opens the replace row', () => {
+      bar.open({ readOnly: false });
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(callbacks.onReplaceChange).toHaveBeenCalledTimes(1);
+      expect(byTestId(bar.element, 'find-replace-row').hidden).toBe(false);
     });
   });
 

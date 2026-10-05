@@ -147,6 +147,22 @@ const stubReducedMotion = (reduce: boolean): void => {
   vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: reduce && query.includes('reduce'), media: query })));
 };
 
+/**
+ * jsdom has neither `CSS.supports` nor `KeyframeEffect`. A modern engine has
+ * both; an old one cannot parse linear() or animate a pseudo-element.
+ * `CSS` itself stays: find.test.ts reads `CSS.highlights` from it.
+ */
+const stubEngine = ({ linear, pseudo }: { linear: boolean; pseudo: boolean }): void => {
+  Object.defineProperty(CSS, 'supports', {
+    value: (_property: string, value: string): boolean => linear || !value.includes('linear('),
+    configurable: true,
+    writable: true,
+  });
+  vi.stubGlobal('KeyframeEffect', pseudo ? class { public get pseudoElement(): string | null { return null; } } : class {});
+};
+
+const modernEngine = { linear: true, pseudo: true };
+
 describe('bloom and stretch', () => {
   const parts = (): Parameters<typeof bloom>[0] => {
     const dock = document.createElement('div');
@@ -169,10 +185,12 @@ describe('bloom and stretch', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    stubEngine(modernEngine);
   });
 
   afterEach(() => {
     Reflect.deleteProperty(Element.prototype, 'animate');
+    Reflect.deleteProperty(CSS, 'supports');
     vi.unstubAllGlobals();
     document.body.replaceChildren();
     vi.restoreAllMocks();
@@ -287,6 +305,32 @@ describe('bloom and stretch', () => {
 
     expect(bloom(parts(), { block: 'top', inline: 'right' })).toEqual([]);
   });
+
+  // An engine older than linear() throws on the spring easings.
+  it('does nothing where CSS cannot parse linear()', () => {
+    const animate = stubAnimate();
+    const p = parts();
+
+    stubReducedMotion(false);
+    stubEngine({ linear: false, pseudo: true });
+
+    expect(bloom(p, { block: 'top', inline: 'right' })).toEqual([]);
+    expect(stretch({ dock: p.dock, bar: p.bar, field: p.field, buttons: [] }, { width: 470, height: 40 }, { block: 'top', inline: 'right' })).toEqual([]);
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  // Such an engine would animate the dock's own box instead of its ::before skin.
+  it('does nothing where animations cannot target a pseudo-element', () => {
+    const animate = stubAnimate();
+    const p = parts();
+
+    stubReducedMotion(false);
+    stubEngine({ linear: true, pseudo: false });
+
+    expect(bloom(p, { block: 'top', inline: 'right' })).toEqual([]);
+    expect(stretch({ dock: p.dock, bar: p.bar, field: p.field, buttons: [] }, { width: 470, height: 40 }, { block: 'top', inline: 'right' })).toEqual([]);
+    expect(animate).not.toHaveBeenCalled();
+  });
 });
 
 describe('hopSourceFromRange', () => {
@@ -354,10 +398,12 @@ describe('hop', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    stubEngine(modernEngine);
   });
 
   afterEach(() => {
     Reflect.deleteProperty(Element.prototype, 'animate');
+    Reflect.deleteProperty(CSS, 'supports');
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
     document.body.replaceChildren();
@@ -419,6 +465,20 @@ describe('hop', () => {
 
     expect(hop(dock, source, document.createElement('input'), 0, vi.fn())).toBeNull();
     expect(dock.childElementCount).toBe(0);
+  });
+
+  it('does not fly where CSS cannot parse linear()', () => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(false);
+    stubEngine({ linear: false, pseudo: true });
+    const dock = document.createElement('div');
+
+    document.body.append(dock);
+
+    expect(hop(dock, source, document.createElement('input'), 0, vi.fn())).toBeNull();
+    expect(dock.childElementCount).toBe(0);
+    expect(animate).not.toHaveBeenCalled();
   });
 
   /** Fly from `source` to an input at `inputTop`, and return the arc keyframes. */

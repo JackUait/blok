@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  archiveEntriesConfined,
   buildVersionsManifest,
   injectNoindex,
   listPages,
@@ -121,6 +122,22 @@ describe('pruneToBudget', () => {
   });
 });
 
+describe('archiveEntriesConfined', () => {
+  it('accepts an archive whose entries all sit under its own /v/<minor>/', () => {
+    expect(archiveEntriesConfined(['./', './v/', './v/1.14/', './v/1.14/index.html', './v/1.14/assets/a.js'], '1.14')).toBe(true);
+  });
+
+  it('rejects an entry outside /v/<minor>/', () => {
+    expect(archiveEntriesConfined(['./', './v/1.14/index.html', './index.html'], '1.14')).toBe(false);
+    expect(archiveEntriesConfined(['./v/1.13/index.html'], '1.14')).toBe(false);
+    expect(archiveEntriesConfined(['./v/1.140/index.html'], '1.14')).toBe(false);
+  });
+
+  it('rejects an entry that climbs out through ..', () => {
+    expect(archiveEntriesConfined(['./v/1.14/../../index.html'], '1.14')).toBe(false);
+  });
+});
+
 describe('assemble-site', () => {
   // jsdom swaps the global URL class, which node's fileURLToPath rejects.
   const docsDir = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -187,6 +204,18 @@ describe('assemble-site', () => {
     expect(JSON.parse(readFileSync(join(out, 'versions.json'), 'utf8'))).toEqual(
       buildVersionsManifest(selectSnapshots(['v1.15.2', 'v1.14.0'])),
     );
+  });
+
+  it('refuses an archive that would write outside its /v/<minor>/ and keeps the root', () => {
+    const releases = fixtures();
+    page('bad', 'index.html', 'EVIL');
+    page('bad', 'v/1.14/index.html', 'OLD');
+    tgz(join(dir, 'src', 'bad'), join(releases, 'v1.14.0', 'docs-v1.14.tgz'));
+    const out = join(dir, 'site');
+    const result = assemble(releases, out);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('v1.14.0');
+    expect(readFileSync(join(out, 'index.html'), 'utf8')).toBe('ROOT');
   });
 
   it('fails naming the tag whose snapshot is missing', () => {

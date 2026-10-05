@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { buildVersionsManifest, dirBytes, pruneToBudget, selectSnapshots, snapshotAssetNames } from './docs-versions.mjs';
+import { archiveEntriesConfined, buildVersionsManifest, dirBytes, pruneToBudget, selectSnapshots, snapshotAssetNames } from './docs-versions.mjs';
 
 const { values } = parseArgs({
   options: {
@@ -73,7 +73,11 @@ unpack(nextTarball);
 // Measured before archives land: the budget counts root + next as fixed.
 const fixedBytes = dirBytes(out);
 
-for (const { tarball } of archiveTarballs) unpack(tarball);
+for (const { tag, minor, tarball } of archiveTarballs) {
+  const entries = execFileSync('tar', ['-tzf', tarball], { encoding: 'utf8' }).split('\n').filter(Boolean);
+  if (!archiveEntriesConfined(entries, minor)) fail(`Docs snapshot for ${tag} writes outside ./v/${minor}/; refusing to unpack it.`);
+  unpack(tarball);
+}
 const kept = pruneToBudget(
   archiveTarballs.map(({ minor }) => ({ minor, bytes: dirBytes(join(out, 'v', minor)) })),
   fixedBytes,

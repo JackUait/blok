@@ -34,6 +34,18 @@ export const buildVersionsManifest = ({ root, archives }) => ({
   ],
 });
 
+// An archive is unpacked over the site root, so any entry outside ./v/<minor>/
+// would overwrite root files.
+export const archiveEntriesConfined = (entries, minor) => {
+  const own = `./v/${minor}/`;
+  const allowedDirs = new Set(['./', './v/', own]);
+  return entries.every((entry) => {
+    if (entry.split('/').includes('..')) return false;
+    const path = entry.endsWith('/') ? entry : `${entry}/`;
+    return allowedDirs.has(path) || entry.startsWith(own);
+  });
+};
+
 export const snapshotAssetNames = (minor) => ({ root: 'docs-root.tgz', archive: `docs-v${minor}.tgz` });
 
 // React Router writes prerendered HTML under the base, but assets and public/

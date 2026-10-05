@@ -314,6 +314,13 @@
 .blok-embed-empty__input {
   appearance: none;
 }
+/* Address bar: the icon, then the colour mirror and the input stacked in one
+   cell, then the button. Needs the attribute to outrank field.css's flex. */
+[data-blok-field].blok-embed-empty__bar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+.blok-embed-empty__bar > :is(.blok-media-empty__embed-mirror, .blok-embed-empty__input) { grid-row: 1; grid-column: 2; }
+/* The mirror must use the input's own size, or the caret drifts off its glyph. */
+.blok-embed-empty__bar > .blok-media-empty__embed-mirror { font-size: inherit; line-height: inherit; }
+.blok-embed-empty__bar[data-valid="true"] .blok-media-empty__url-host { background-size: 100% 1.5px; }
 
 .blok-embed-empty__submit {
   appearance: none;

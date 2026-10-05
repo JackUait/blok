@@ -30,6 +30,7 @@ import {
 } from '../registry';
 import { brandMarkElement } from '../../../components/utils/brand-mark-services';
 import { embedTypeIcon } from '../paste-menu/items';
+import { createUrlMirror } from '../../../components/utils/url-mirror';
 import { createEmbedWindow } from './empty-window';
 import { isAllowedEmbedOrigin } from './allowed-origins';
 import { renderEmbedPreview } from './preview';
@@ -694,6 +695,8 @@ export class Embed implements BlockTool {
     input.autocomplete = 'off';
     input.spellcheck = false;
 
+    const mirror = createUrlMirror(input);
+
     const submit = document.createElement('button');
 
     submit.type = 'submit';
@@ -801,7 +804,7 @@ export class Embed implements BlockTool {
       el.querySelector('[data-role="embed-url-error"]')?.remove();
     });
 
-    bar.append(fieldIcon, input, submit);
+    bar.append(fieldIcon, mirror.element, input, submit);
     form.append(embedWindow.element, readback, bar);
     form.addEventListener('submit', (event) => {
       event.preventDefault();

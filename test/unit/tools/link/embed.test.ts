@@ -726,6 +726,17 @@ describe('Embed tool — empty state', () => {
     expect(brandOf(root)).toBeNull();
   });
 
+  it('colours the typed link like an address bar', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+    const bar = root.querySelector('[data-role="embed-url-bar"]');
+
+    expect(bar?.querySelector('.blok-media-empty__url-host')?.textContent).toBe('youtube.com');
+    expect(root.querySelector('[data-role="embed-url-input"]')?.classList.contains('blok-media-empty__embed-input--mirrored')).toBe(true);
+  });
+
   describe('scene morph', () => {
     const animate = vi.fn(() => ({ cancel: vi.fn(), finished: Promise.resolve() }));
 

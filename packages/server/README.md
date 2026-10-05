@@ -404,9 +404,9 @@ A `page` block saves only its `pageId`. The page body is its own collaborative d
 | `PUT {DocEndpoint}/{docId}` | The bare document. `Blok-Doc-Version`: the last version you answered, absent until you answer one. `Blok-Doc-Lineage` and `Blok-Doc-Sequence`: with a journal only. | Any `2xx`. A JSON body with `version` sets the next `Blok-Doc-Version`; an empty body keeps it. |
 
 - A first open fails on 404, 204, an empty 200 or any other non-2xx. The socket closes with 4503. Never answer those for a new page.
-- PUT is an upsert, and the version header is optional. With a journal, a page that was reopened sends one empty-document PUT with no version, even if nobody typed.
+- PUT is an upsert, and the version header is optional. With a journal, every reopen owes one PUT, even if nobody typed. It goes out at the room's next checkpoint, eviction or drain. For a page never saved, it carries `{"blocks":[]}` and no version, so it must create the row.
 - Keep the version on the service's own PUT. Bump it only for your own write, answer a stale PUT with 409, and call `POST /sync/{doc}/reset`.
-- A refused PUT is retried, and its room stays loaded until it lands. Purge a page with `ICollabDocumentPurger` before you delete its rows.
+- A refused PUT is retried, and its room stays loaded until it lands. So delete a page in this order: commit a tombstone that your `IBlokAuthorization` and both routes refuse, purge it with `ICollabDocumentPurger`, then delete its rows. The guide below handles the purge's `UnauthorizedAccessException` and `DocumentOpenElsewhere`.
 
 Who may open which page goes through `IBlokAuthorization`. It runs before a room loads, on `/sync`, `/state`, `/edit` and `/reset`. It is registered as a singleton:
 

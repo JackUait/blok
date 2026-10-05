@@ -224,7 +224,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   const doneBtn = makeBtn('done', 'tools.image.cropDone', 'primary');
   const lead = el('div', 'blok-darkroom__bar-lead');
 
-  const shortcutsBtn = el('button', 'blok-darkroom__btn blok-darkroom__btn--ghost blok-darkroom__btn--icon');
+  const shortcutsBtn = el('button', 'blok-darkroom__btn blok-darkroom__btn--ghost blok-darkroom__btn--icon blok-darkroom__help');
 
   shortcutsBtn.type = 'button';
   shortcutsBtn.setAttribute('data-action', 'shortcuts');
@@ -232,7 +232,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   shortcutsBtn.setAttribute('aria-keyshortcuts', 'Shift+?');
   shortcutsBtn.title = `${tr(opts.i18n, 'tools.image.shortcutsTitle')} (?)`;
   shortcutsBtn.textContent = '?';
-  lead.append(cancelBtn, resetBtn, rotateBtn, flipBtn, shortcutsBtn);
+  lead.append(cancelBtn, resetBtn, rotateBtn, flipBtn);
   bar.append(lead, doneBtn);
 
   const stage = el('div', 'blok-darkroom__stage', 'darkroom-stage');
@@ -585,7 +585,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   dock.setAttribute('data-darkroom-chrome', '');
   // The crop panel goes first so the ratio pill stays the first radiogroup in the dialog.
-  dock.append(cropPanel, adjustWrap, ...(showFilters ? [filterWrap] : []), markupPanel.el, tabs.el);
+  dock.append(cropPanel, adjustWrap, ...(showFilters ? [filterWrap] : []), markupPanel.el, tabs.el, shortcutsBtn);
 
   const live = el('div', 'blok-darkroom__live', 'darkroom-live');
 

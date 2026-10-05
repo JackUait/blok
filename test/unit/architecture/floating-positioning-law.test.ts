@@ -105,6 +105,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-tab-bar.ts': 'Shared anchored overflow menu plus a tracked drag ghost and popover consumer.',
   'tools/image/darkroom/motion.ts': 'Fixed fly-out clone springs once from the frame to the measured block box, then is removed.',
   'tools/image/download.ts': 'Transient styleless download anchor clicked and removed synchronously.',
+  'tools/image/tone-sampler.ts': 'Synchronous zero-size probe that reads the root Canvas colour, removed before control returns.',
   'tools/image/ui.ts': 'Viewport modal lightbox, not a surface positioned against a live anchor.',
   'tools/spacer/alignment-guide.ts': 'Pointer-driven fixed guide whose coordinates refresh throughout the drag.',
   'tools/table/table-row-col-drag.ts': 'Pointer-following table ghost and indicator refreshed on every pointer move.',
@@ -118,6 +119,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
 const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/image/darkroom/markup-editor.ts': 'Markup selection box and text editor convert the camera plane rect into offsets local to the stage overlay they live in; refresh() re-places them on every camera paint and stage resize.',
   'tools/image/index.ts': 'Snap guides are placed at container percentages inside the block root; the container width is read only for the readout px, not to position a floating root.',
+  'tools/image/tone-sampler.ts': 'Reads control and picture rects only to find which pixels sit under each control; it positions nothing.',
   'components/modules/collaboration/presence-carets.ts': 'Remote carets convert a measured Range rect into offsets local to the block holder they are appended to; nothing is written against the root.',
   'components/modules/drag/preview/DragPreview.ts': 'Fixed pointer-following preview; root coordinates refresh on every drag pointer update.',
   'components/modules/drag/utils/ColumnDropAnimation.ts': 'Ephemeral fixed drag preview animates to a viewport target rect and is then removed.',

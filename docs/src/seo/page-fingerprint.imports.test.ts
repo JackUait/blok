@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { API_PAGE_FILES, STATIC_PAGES } from './page-fingerprint';
+import { SECTION_TRANSLATION_KEYS } from '../hooks/useApiTranslations';
+import { translations } from '../i18n';
+import { API_EXTRA_CATALOG, API_PAGE_FILES, STATIC_PAGES } from './page-fingerprint';
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
 const SRC = 'docs/src/';
@@ -16,7 +18,7 @@ const SHARED: Record<string, string> = {
   'docs/src/components/ui/': 'site-wide UI primitives',
   'docs/src/components/layout/': 'nav and footer chrome',
   'docs/src/contexts/': 'app state, no copy',
-  'docs/src/hooks/': 'overlays over data modules that the pages fingerprint themselves',
+  'docs/src/hooks/': 'overlays over data modules; the catalogue keys they read are checked below',
   'docs/src/lib/': 'analytics and class helpers',
   'docs/src/seo/': 'route copy, fingerprinted per route',
   'docs/src/utils/': 'shared helpers and constants',
@@ -27,11 +29,16 @@ const SHARED: Record<string, string> = {
   'CHANGELOG.md': 'the changelog is dated by its newest release heading instead',
 };
 
+/** Modules a page fingerprints as resolved data rather than as files. */
+const AS_DATA: Record<string, string> = {
+  'docs/src/components/api/docs-hub-summaries.ts': 'the hub hashes only its own locale\'s summaries',
+};
+
 // Page content that happens to live in a shared folder.
 const NOT_SHARED = new Set(['docs/src/components/common/framework-snippets.ts']);
 
 const isShared = (file: string): boolean =>
-  !NOT_SHARED.has(file) && Object.keys(SHARED).some((prefix) => file.startsWith(prefix));
+  file in AS_DATA || (!NOT_SHARED.has(file) && Object.keys(SHARED).some((prefix) => file.startsWith(prefix)));
 
 const covers = (inputs: string[], file: string): boolean =>
   inputs.some((input) => file === input || file.startsWith(`${input}/`));
@@ -89,7 +96,76 @@ const unfingerprinted = (inputs: string[]): string[] => {
   return [...missing].sort();
 };
 
+const HOOKS = 'docs/src/hooks/';
+const TOP_LEVEL_KEYS = new Set(Object.keys(translations.en));
+const CATALOG_KEY = /^[A-Za-z]\w*(\.[\w-]+)+\.?$/;
+
+/** Translation hooks (hooks reading the i18n context) that a page's own modules call. */
+const translationHooks = (inputs: string[]): string[] => {
+  const seen = new Set<string>();
+  const hooks = new Set<string>();
+  const queue = inputs.flatMap(filesUnder);
+  while (queue.length > 0) {
+    const file = queue.pop() as string;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    for (const target of importsOf(file)) {
+      if (target.startsWith(HOOKS) && importsOf(target).includes('docs/src/contexts/I18nContext.tsx')) hooks.add(target);
+      if (!isShared(target)) queue.push(target);
+    }
+  }
+  return [...hooks].sort();
+};
+
+/**
+ * Catalogue keys a module names: whole literals ('tools.sections.blockTools')
+ * and the fixed head of a template (`api.sections.${key}` -> 'api.sections').
+ */
+const catalogKeysOf = (file: string): string[] => {
+  const source = ts.createSourceFile(file, fs.readFileSync(path.join(REPO_ROOT, file), 'utf8'), ts.ScriptTarget.Latest);
+  const keys = new Set<string>();
+  const visit = (node: ts.Node): void => {
+    let text: string | undefined;
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) text = node.text;
+    else if (ts.isTemplateExpression(node)) text = node.head.text;
+    if (text !== undefined && CATALOG_KEY.test(text) && TOP_LEVEL_KEYS.has(text.split('.')[0])) {
+      keys.add(text.replace(/\.$/, ''));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return [...keys].sort();
+};
+
+/** Keys a reached translation hook reads that no catalogue namespace of the page covers. */
+const undeclaredHookKeys = (inputs: string[], catalog: string[]): string[] =>
+  translationHooks(inputs).flatMap((hook) =>
+    catalogKeysOf(hook)
+      .filter((key) => !catalog.some((namespace) => key === namespace || key.startsWith(`${namespace}.`)))
+      .map((key) => `${hook}: ${key}`),
+  );
+
+const apiCatalog = (id: string): string[] => [
+  ...(SECTION_TRANSLATION_KEYS[id] ? [SECTION_TRANSLATION_KEYS[id]] : []),
+  ...(API_EXTRA_CATALOG[id] ?? []),
+];
+
 describe('page fingerprint inputs', () => {
+  // A hook renders catalogue strings the page's files never name, so its keys
+  // must be in the page's catalogue or a renamed label never re-dates the page.
+  it.each(Object.entries(STATIC_PAGES))('declare every catalogue key a translation hook renders on %s', (_route, page) => {
+    expect(undeclaredHookKeys(page.files, page.catalog)).toEqual([]);
+  });
+
+  it.each(Object.entries(API_PAGE_FILES))('declare every catalogue key a translation hook renders on the %s page', (id, files) => {
+    expect(undeclaredHookKeys(files, apiCatalog(id))).toEqual([]);
+  });
+
+  it('sees the keys of a hook a page calls', () => {
+    expect(translationHooks(['docs/src/pages/PresetsPage.tsx'])).toEqual(['docs/src/hooks/usePresetsTranslations.ts']);
+    expect(catalogKeysOf('docs/src/hooks/usePresetsTranslations.ts')).toEqual(['presets.items']);
+  });
+
   it.each(Object.entries(STATIC_PAGES))('cover every local module %s renders', (_route, page) => {
     expect(unfingerprinted(page.files)).toEqual([]);
   });

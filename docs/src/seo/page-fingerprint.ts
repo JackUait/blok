@@ -2,9 +2,12 @@
 // Node implementations in docs/scripts/source-digest.mjs.
 import { API_SECTIONS, type ApiSection } from '../components/api/api-data';
 import { MODULE_ORDER } from '../components/api/api-nav';
+import { DOCS_HUB_SUMMARIES } from '../components/api/docs-hub-summaries';
 import { TOOL_SECTIONS, type ToolSection } from '../components/tools/tools-data';
-import { SECTION_TRANSLATION_KEYS } from '../hooks/useApiTranslations';
-import { translations, type Locale } from '../i18n';
+import { SECTION_TRANSLATION_KEYS, translateApiSection } from '../hooks/useApiTranslations';
+import { buildDocsSidebarSections } from '../hooks/useDocsSidebarSections';
+import { translateToolSection } from '../hooks/useToolsTranslations';
+import { resolveTranslation, translations, type Locale } from '../i18n';
 import { BLOK_VERSION } from '../utils/constants';
 import { DEFAULT_LOCALE, splitLocalePath } from './locales';
 import { getRouteMetadata } from './route-metadata';
@@ -17,19 +20,13 @@ import { getRouteMetadata } from './route-metadata';
 export const STATIC_PAGES: Record<string, { files: string[]; catalog: string[] }> = {
   '/': { files: ['docs/src/pages/HomePage.tsx', 'docs/src/components/home'], catalog: ['home'] },
   '/demo': { files: ['docs/src/pages/DemoPage.tsx', 'docs/src/components/demo'], catalog: ['demo'] },
+  // The cards and summaries come in as resolved data (hubData below).
   '/docs': {
-    files: ['docs/src/components/api/DocsHub.tsx', 'docs/src/components/api/docs-hub-summaries.ts'],
-    catalog: ['api.hub'],
+    files: ['docs/src/components/api/DocsHub.tsx'],
+    catalog: ['api.hub', 'api.sections', 'api.links', 'tools.sections', 'tools.links'],
   },
-  '/tools': {
-    files: [
-      'docs/src/pages/ToolsPage.tsx',
-      'docs/src/routes/tools.tsx',
-      'docs/src/components/tools/ToolSection.tsx',
-      'docs/src/components/tools/tools-data.ts',
-    ],
-    catalog: [],
-  },
+  // Only a redirect into /docs renders here.
+  '/tools': { files: ['docs/src/routes/tools.tsx'], catalog: [] },
   '/presets': { files: ['docs/src/pages/PresetsPage.tsx', 'docs/src/components/presets'], catalog: ['presets'] },
   '/server': { files: ['docs/src/pages/ServerPage.tsx', 'docs/src/components/server'], catalog: ['server'] },
   '/migration': {
@@ -66,12 +63,13 @@ export const API_PAGE_FILES: Record<string, string[]> = {
   'dev-override-seam': ['docs/src/components/api/DevOverrideSeamContent.tsx'],
 };
 
-const EXTRA_API_CATALOG: Record<string, string[]> = { 'quick-start': ['api.quickStartSteps'] };
+export const API_EXTRA_CATALOG: Record<string, string[]> = { 'quick-start': ['api.quickStartSteps'] };
 
 export interface FingerprintSources {
   apiSections: ApiSection[];
   toolSections: ToolSection[];
   catalogs: Record<Locale, unknown>;
+  hubSummaries: Record<Locale, Record<string, string>>;
   /** Normalised out of every input: a release bump rewrites no page's content. */
   version: string;
   /** Content digest of a repo-relative file or directory. */
@@ -84,6 +82,7 @@ export const pageData = (): Omit<FingerprintSources, 'digestSource' | 'hash'> =>
   apiSections: API_SECTIONS,
   toolSections: TOOL_SECTIONS,
   catalogs: translations,
+  hubSummaries: DOCS_HUB_SUMMARIES,
   version: BLOK_VERSION,
 });
 
@@ -119,6 +118,20 @@ const catalogInput = (sources: FingerprintSources, locale: Locale, namespaces: s
     return locale === DEFAULT_LOCALE ? own : withFallback(own, subtree(sources.catalogs[DEFAULT_LOCALE], namespace));
   });
 
+// The `t` the site renders with (I18nContext), over the given catalogues.
+const translator = (sources: FingerprintSources, locale: Locale) => (key: string): string =>
+  resolveTranslation(sources.catalogs, locale, key);
+
+// What the hub shows: each card group's title and its links in order, and this
+// locale's own summaries. Icons are left out: they are not text.
+const hubData = (sources: FingerprintSources, locale: Locale): unknown => ({
+  groups: buildDocsSidebarSections(translator(sources, locale), sources.toolSections).map((group) => ({
+    title: group.title,
+    links: group.links.map(({ id, label }) => ({ id, label })),
+  })),
+  summaries: sources.hubSummaries[locale],
+});
+
 const pageInput = (route: string, sources: FingerprintSources): unknown => {
   const { locale, path: unprefixed } = splitLocalePath(route);
   const meta = getRouteMetadata(route);
@@ -131,24 +144,30 @@ const pageInput = (route: string, sources: FingerprintSources): unknown => {
       copy,
       catalog: catalogInput(sources, locale, page.catalog),
       files: page.files.map(sources.digestSource),
+      ...(unprefixed === '/docs' && { data: hubData(sources, locale) }),
     };
   }
 
   const id = unprefixed.replace(/^\/docs\//, '');
   // A module id shadows a tool id, as in route-metadata.ts.
   if (MODULE_ORDER.includes(id)) {
-    const sections = sources.apiSections.filter((section) => section.id === id);
+    // Resolved for the locale, so an English edit Russian translates leaves the Russian page alone.
+    const sections = sources.apiSections
+      .filter((section) => section.id === id)
+      .map((section) => translateApiSection(section, translator(sources, locale)));
     const namespace = SECTION_TRANSLATION_KEYS[id];
     const files = API_PAGE_FILES[id] ?? [];
     return {
       copy,
       data: sections,
-      catalog: catalogInput(sources, locale, [...(namespace ? [namespace] : []), ...(EXTRA_API_CATALOG[id] ?? [])]),
+      catalog: catalogInput(sources, locale, [...(namespace ? [namespace] : []), ...(API_EXTRA_CATALOG[id] ?? [])]),
       files: files.map(sources.digestSource),
     };
   }
 
-  const tools = sources.toolSections.filter((tool) => tool.id === id);
+  const tools = sources.toolSections
+    .filter((tool) => tool.id === id)
+    .map((tool) => translateToolSection(tool, translator(sources, locale)));
   if (tools.length > 0) {
     return {
       copy,

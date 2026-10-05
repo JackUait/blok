@@ -1,7 +1,7 @@
 import { Link } from '../common/Link';
 import { Typo } from '../common/Typo';
 import { useI18n } from '../../contexts/I18nContext';
-import { useApiTranslations } from '../../hooks/useApiTranslations';
+import { useDocsSidebarSections } from '../../hooks/useDocsSidebarSections';
 import { localizedPath } from '../../seo/locales';
 import { getRouteMetadata } from '../../seo/route-metadata';
 import { DOCS_HUB_SUMMARIES } from './docs-hub-summaries';
@@ -15,7 +15,7 @@ import { DOCS_HUB_SUMMARIES } from './docs-hub-summaries';
  */
 export const DocsHub: React.FC = () => {
   const { t, locale } = useI18n();
-  const { sidebarSections } = useApiTranslations();
+  const sidebarSections = useDocsSidebarSections();
 
   // Fall back to English when the hub's own strings have no translation yet, so
   // a missing key never surfaces as a raw `api.hub.*` token on the page.

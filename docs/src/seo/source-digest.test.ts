@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { nodeDigests } from '../../scripts/source-digest.mjs';
+import { nodeDigests, untrackedInputs } from '../../scripts/source-digest.mjs';
 
 const PAGE_DIR = 'docs/src/components/home';
 const REPO_ROOT = path.resolve(__dirname, '../../..');
@@ -39,5 +39,30 @@ describe('source digest', () => {
     addStray('NewSection.tsx');
 
     expect(nodeDigests.digestSource(PAGE_DIR)).not.toBe(before);
+  });
+});
+
+describe('untracked inputs', () => {
+  // The digest counts them, so a ledger written with them goes red in CI once
+  // they are left out of the commit.
+  it('names an untracked page file', () => {
+    addStray('NewSection.tsx');
+
+    expect(untrackedInputs([PAGE_DIR, 'docs/src/pages/HomePage.tsx'])).toEqual([`${PAGE_DIR}/NewSection.tsx`]);
+  });
+
+  it('skips files the digest ignores', () => {
+    addStray('.DS_Store');
+    addStray('Stray.test.deferred.tsx');
+
+    expect(untrackedInputs([PAGE_DIR])).toEqual([]);
+  });
+});
+
+describe('missing input', () => {
+  it('names the file and where page inputs are listed', () => {
+    expect(() => nodeDigests.digestSource('docs/src/pages/Renamed.tsx')).toThrow(
+      /docs\/src\/pages\/Renamed\.tsx.*docs\/src\/seo\/page-fingerprint\.ts/s,
+    );
   });
 });

@@ -38,6 +38,11 @@ const NOT_PAGE_CONTENT = /\.test(\.deferred)?\.[jt]sx?$|[/\\]__snapshots__[/\\]/
  * re-date by running the update script.
  */
 const digestSource = (repoPath) => {
+  if (!fs.existsSync(path.join(REPO_ROOT, repoPath))) {
+    throw new Error(
+      `Page fingerprint input ${repoPath} does not exist. If it was renamed or removed, update the inputs in docs/src/seo/page-fingerprint.ts.`,
+    );
+  }
   const committable = committableFiles(repoPath);
   return sha(
     listFiles(path.join(REPO_ROOT, repoPath))
@@ -46,5 +51,21 @@ const digestSource = (repoPath) => {
       .join('\n'),
   );
 };
+
+/**
+ * Untracked files the digest of these inputs counts. A ledger written with
+ * them goes red in CI once they are left out of the commit. No paths returns
+ * nothing: git would otherwise list every untracked file in the repo.
+ */
+export const untrackedInputs = (repoPaths) =>
+  repoPaths.length === 0
+    ? []
+    : execFileSync('git', ['ls-files', '--others', '--exclude-standard', '-z', '--', ...repoPaths], {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+      })
+        .split('\0')
+        .filter((file) => file && !NOT_PAGE_CONTENT.test(file))
+        .sort();
 
 export const nodeDigests = { digestSource, hash: (input) => sha(input).slice(0, 16) };

@@ -9,14 +9,14 @@
   },
   "/changelog": {
     "hash": "178ddc8a652182e0",
-    "date": "2026-09-17"
+    "date": "2026-09-04"
   },
   "/demo": {
     "hash": "07b32c994fd48303",
     "date": null
   },
   "/docs": {
-    "hash": "a695738eeafc3657",
+    "hash": "6bc54c22ed78b7ce",
     "date": "2026-10-05"
   },
   "/docs/audio": {
@@ -24,7 +24,7 @@
     "date": "2026-09-28"
   },
   "/docs/block-api": {
-    "hash": "d863e2d305ede992",
+    "hash": "c064b907700485e2",
     "date": "2026-09-24"
   },
   "/docs/block-data": {
@@ -32,7 +32,7 @@
     "date": "2026-10-05"
   },
   "/docs/blocks-api": {
-    "hash": "c736187e9a11c57b",
+    "hash": "ccff18ddc9e8429b",
     "date": "2026-09-24"
   },
   "/docs/blok-editor": {
@@ -52,7 +52,7 @@
     "date": "2026-09-25"
   },
   "/docs/caret-api": {
-    "hash": "070837774cc57add",
+    "hash": "b30d590c21bc2b6b",
     "date": "2026-09-08"
   },
   "/docs/clearFormat": {
@@ -76,11 +76,11 @@
     "date": "2026-10-05"
   },
   "/docs/config": {
-    "hash": "66671f093c14cdef",
+    "hash": "730af986407f69f4",
     "date": "2026-10-04"
   },
   "/docs/core": {
-    "hash": "51b50640be162499",
+    "hash": "0613f926627c9cc7",
     "date": "2026-09-08"
   },
   "/docs/custom-block-tool": {
@@ -112,7 +112,7 @@
     "date": "2026-09-08"
   },
   "/docs/events-api": {
-    "hash": "0a9485de75fc5df5",
+    "hash": "f90181402e9050a9",
     "date": "2026-09-08"
   },
   "/docs/file": {
@@ -124,11 +124,11 @@
     "date": "2026-09-08"
   },
   "/docs/history-api": {
-    "hash": "5965b6a7666f2333",
+    "hash": "98dccab31e1ad77a",
     "date": "2026-09-24"
   },
   "/docs/i18n-api": {
-    "hash": "7cf4ff56753947b5",
+    "hash": "f49d20326c37eb23",
     "date": "2026-09-08"
   },
   "/docs/image": {
@@ -136,7 +136,7 @@
     "date": "2026-10-02"
   },
   "/docs/inline-toolbar-api": {
-    "hash": "107cf7667ed7f01f",
+    "hash": "84f4b5d434a66c9a",
     "date": "2026-09-08"
   },
   "/docs/inlineCode": {
@@ -156,7 +156,7 @@
     "date": "2026-09-08"
   },
   "/docs/listeners-api": {
-    "hash": "45460c1c4c16cab5",
+    "hash": "f6cda1d7503bda39",
     "date": "2026-09-08"
   },
   "/docs/marker": {
@@ -164,15 +164,15 @@
     "date": "2026-09-28"
   },
   "/docs/marks-api": {
-    "hash": "758892f944e4c9f6",
+    "hash": "4f796707304a269f",
     "date": "2026-09-08"
   },
   "/docs/notifier-api": {
-    "hash": "57f707d91177212f",
+    "hash": "21c4783ed82f1462",
     "date": "2026-09-08"
   },
   "/docs/output-data": {
-    "hash": "fb46389e51468632",
+    "hash": "46abbacb7510f27a",
     "date": "2026-10-05"
   },
   "/docs/page": {
@@ -188,7 +188,7 @@
     "date": "2026-09-08"
   },
   "/docs/placeholder-api": {
-    "hash": "bc5d7ce1907e6fb3",
+    "hash": "b85675e8c13ef6e0",
     "date": "2026-09-08"
   },
   "/docs/quick-start": {
@@ -200,19 +200,19 @@
     "date": "2026-09-08"
   },
   "/docs/readonly-api": {
-    "hash": "b539debba46dc1f5",
+    "hash": "e30c734e1732cf9f",
     "date": "2026-09-08"
   },
   "/docs/sanitizer-api": {
-    "hash": "77ee8a6776d409db",
+    "hash": "e11c5257fc5373fa",
     "date": "2026-09-08"
   },
   "/docs/saver-api": {
-    "hash": "b2dd5bdde6ccc52d",
+    "hash": "9a806b082d8fc28f",
     "date": "2026-09-08"
   },
   "/docs/selection-api": {
-    "hash": "2a1820624fc7ab2e",
+    "hash": "e571695f40eaf315",
     "date": "2026-09-08"
   },
   "/docs/spacer": {
@@ -236,7 +236,7 @@
     "date": "2026-09-28"
   },
   "/docs/theme-api": {
-    "hash": "9eb22d4fb7ff41a7",
+    "hash": "0849ad5ffe7a14ea",
     "date": "2026-09-08"
   },
   "/docs/toggle": {
@@ -244,15 +244,15 @@
     "date": "2026-09-08"
   },
   "/docs/toolbar-api": {
-    "hash": "4c460f8a7072467c",
+    "hash": "1db67960c4d77b0c",
     "date": "2026-09-26"
   },
   "/docs/tools-api": {
-    "hash": "3969a10c6e6b8795",
+    "hash": "abea4e721ea9fbbe",
     "date": "2026-09-24"
   },
   "/docs/tooltip-api": {
-    "hash": "b745233cb5e0c4d8",
+    "hash": "3cc2d495b0bc90eb",
     "date": "2026-09-08"
   },
   "/docs/tutorial": {
@@ -288,7 +288,7 @@
     "date": "2026-09-08"
   },
   "/docs/width-api": {
-    "hash": "5a76c2279202de2a",
+    "hash": "0fc301eed821cffe",
     "date": "2026-09-08"
   },
   "/migration": {
@@ -309,286 +309,286 @@
   },
   "/ru/changelog": {
     "hash": "b0aea1391ee1ce9a",
-    "date": "2026-09-17"
+    "date": "2026-09-04"
   },
   "/ru/demo": {
     "hash": "b68423ddfdda9f22",
     "date": "2026-09-07"
   },
   "/ru/docs": {
-    "hash": "2b7b1d10e3c3e861",
+    "hash": "0c3bccb15a328f4e",
     "date": "2026-10-05"
   },
   "/ru/docs/audio": {
-    "hash": "c446459ecab08e85",
+    "hash": "6e78dc793dd15388",
     "date": "2026-09-28"
   },
   "/ru/docs/block-api": {
-    "hash": "26d5e08eec873b8e",
+    "hash": "64f326d017ca8bc5",
     "date": "2026-09-24"
   },
   "/ru/docs/block-data": {
-    "hash": "7c7baa10c56940e5",
+    "hash": "c11fa33e63176bcc",
     "date": "2026-10-05"
   },
   "/ru/docs/blocks-api": {
-    "hash": "0634903e7aecbc8b",
+    "hash": "ca418dc2983d69a7",
     "date": "2026-09-24"
   },
   "/ru/docs/blok-editor": {
-    "hash": "e96cb176ed29539c",
+    "hash": "4e817ba84d75af11",
     "date": "2026-10-05"
   },
   "/ru/docs/bold": {
-    "hash": "144934f54d89a5c5",
+    "hash": "07ceaab44b6df965",
     "date": "2026-09-08"
   },
   "/ru/docs/bookmark": {
-    "hash": "60178ec00e2e56ef",
+    "hash": "b88b6856e0fc018c",
     "date": "2026-09-08"
   },
   "/ru/docs/callout": {
-    "hash": "7fb3df827c6a33ac",
+    "hash": "38e55b0b5d246b57",
     "date": "2026-09-25"
   },
   "/ru/docs/caret-api": {
-    "hash": "d0a6692696a1c04f",
+    "hash": "f9e9fe5309d5367b",
     "date": "2026-09-08"
   },
   "/ru/docs/clearFormat": {
-    "hash": "8cc1ab5487922cc0",
+    "hash": "908258b48cf7a085",
     "date": "2026-09-08"
   },
   "/ru/docs/code": {
-    "hash": "d74bae020ed35122",
+    "hash": "3d19e3460b4c6ba6",
     "date": "2026-10-01"
   },
   "/ru/docs/column": {
-    "hash": "423427887487e927",
+    "hash": "51849dbdc164b446",
     "date": "2026-09-08"
   },
   "/ru/docs/column_list": {
-    "hash": "f4fea25c7e309394",
+    "hash": "ed4915691d2c61a8",
     "date": "2026-09-08"
   },
   "/ru/docs/concepts": {
-    "hash": "b106e0ff6afe2205",
+    "hash": "5b05167014f36056",
     "date": "2026-10-05"
   },
   "/ru/docs/config": {
-    "hash": "743688ca42413e8d",
+    "hash": "4bb39a5c324b936f",
     "date": "2026-10-04"
   },
   "/ru/docs/core": {
-    "hash": "5431aa7583c7739d",
+    "hash": "9ca869b62a7a4f9d",
     "date": "2026-09-08"
   },
   "/ru/docs/custom-block-tool": {
-    "hash": "3909dcc05db45d95",
+    "hash": "066ebbf44b63b57b",
     "date": "2026-09-08"
   },
   "/ru/docs/database": {
-    "hash": "32e124e0f46d86b3",
+    "hash": "97af6e5b612cc8fd",
     "date": "2026-09-08"
   },
   "/ru/docs/database-row": {
-    "hash": "f1e19bba29585153",
+    "hash": "a203f306b04de348",
     "date": "2026-09-08"
   },
   "/ru/docs/dev-override-seam": {
-    "hash": "84d2178f147dbb9c",
+    "hash": "c786545b13fa80a4",
     "date": "2026-09-08"
   },
   "/ru/docs/divider": {
-    "hash": "c2d808ae927a3e03",
+    "hash": "c46a7111dbee804a",
     "date": "2026-09-08"
   },
   "/ru/docs/embed": {
-    "hash": "e51310c28d98cf6e",
+    "hash": "724d7e76a9be4def",
     "date": "2026-09-08"
   },
   "/ru/docs/equation": {
-    "hash": "0c5499785acf3e71",
+    "hash": "b4286ff466a4bc3c",
     "date": "2026-09-08"
   },
   "/ru/docs/events-api": {
-    "hash": "2bfe4032e46e26d4",
+    "hash": "a4098ed392fce82f",
     "date": "2026-09-08"
   },
   "/ru/docs/file": {
-    "hash": "de693c903bf731b4",
+    "hash": "591252babf52e8bb",
     "date": "2026-09-28"
   },
   "/ru/docs/header": {
-    "hash": "ef78101654735cf5",
+    "hash": "576eba4c50187cb5",
     "date": "2026-09-08"
   },
   "/ru/docs/history-api": {
-    "hash": "3bc39344208a0c9a",
+    "hash": "68310da4af5c9191",
     "date": "2026-09-24"
   },
   "/ru/docs/i18n-api": {
-    "hash": "b438591ba08e8b9c",
+    "hash": "54ffa8c4ea5b422b",
     "date": "2026-09-08"
   },
   "/ru/docs/image": {
-    "hash": "b114060efcf5cfb3",
+    "hash": "8f9b535959974b16",
     "date": "2026-10-02"
   },
   "/ru/docs/inline-toolbar-api": {
-    "hash": "101b8a6bfa19e193",
+    "hash": "6b4597ab28d605c5",
     "date": "2026-09-08"
   },
   "/ru/docs/inlineCode": {
-    "hash": "cad893db76d5066e",
+    "hash": "9094559d150af928",
     "date": null
   },
   "/ru/docs/italic": {
-    "hash": "c507cb6552410ba4",
+    "hash": "37ea8256b7c95d24",
     "date": null
   },
   "/ru/docs/link": {
-    "hash": "4a8185c2054d538f",
+    "hash": "69035abf3b728d59",
     "date": "2026-09-08"
   },
   "/ru/docs/list": {
-    "hash": "0d50cec97d366360",
+    "hash": "a7f27c5a1f788c9b",
     "date": "2026-09-08"
   },
   "/ru/docs/listeners-api": {
-    "hash": "da037974dcdcf5be",
+    "hash": "8647d11c003ca907",
     "date": "2026-09-08"
   },
   "/ru/docs/marker": {
-    "hash": "ebdc888a45a806a2",
+    "hash": "e30b3f66375d1be5",
     "date": "2026-09-28"
   },
   "/ru/docs/marks-api": {
-    "hash": "13f5dea869be4e00",
+    "hash": "6c3e5100afaea987",
     "date": "2026-09-08"
   },
   "/ru/docs/notifier-api": {
-    "hash": "7f4c957c0c649455",
+    "hash": "80f406bb7e07e27d",
     "date": "2026-09-08"
   },
   "/ru/docs/output-data": {
-    "hash": "3e55ae564710bdb3",
+    "hash": "3a8f7dcd07e60d44",
     "date": "2026-10-05"
   },
   "/ru/docs/page": {
-    "hash": "aea67ef994508df7",
+    "hash": "fb334e891853570e",
     "date": "2026-10-05"
   },
   "/ru/docs/page-link": {
-    "hash": "992a2be19948940b",
+    "hash": "5326132ec3321d28",
     "date": "2026-10-05"
   },
   "/ru/docs/paragraph": {
-    "hash": "1b98c0b7031c3652",
+    "hash": "99547f1981936c61",
     "date": "2026-09-08"
   },
   "/ru/docs/placeholder-api": {
-    "hash": "2c5cdf144380b866",
+    "hash": "10b8b863c99d5715",
     "date": "2026-09-08"
   },
   "/ru/docs/quick-start": {
-    "hash": "455c5be2c5bc627a",
+    "hash": "200fa32c952ef061",
     "date": "2026-09-08"
   },
   "/ru/docs/quote": {
-    "hash": "5bc3ec0161d0c93b",
+    "hash": "495315a84da3adbb",
     "date": "2026-09-08"
   },
   "/ru/docs/readonly-api": {
-    "hash": "f28cd2a9f15f4c59",
+    "hash": "817b46fd30ee1ace",
     "date": "2026-09-08"
   },
   "/ru/docs/sanitizer-api": {
-    "hash": "1ea32c6e5eb018de",
+    "hash": "700aa19488690c88",
     "date": "2026-09-08"
   },
   "/ru/docs/saver-api": {
-    "hash": "3b3a19c7a63ecb5e",
+    "hash": "a6fa8a35556a97b6",
     "date": "2026-09-08"
   },
   "/ru/docs/selection-api": {
-    "hash": "4cc1c2b8ba44cd09",
+    "hash": "0cb7b913b452c062",
     "date": "2026-09-08"
   },
   "/ru/docs/spacer": {
-    "hash": "748879399cb22b73",
+    "hash": "f96cdd82d1ef86b6",
     "date": "2026-09-08"
   },
   "/ru/docs/strikethrough": {
-    "hash": "c8e56685e77977e3",
+    "hash": "098725953f601871",
     "date": null
   },
   "/ru/docs/styles-api": {
-    "hash": "a9a636fa90165a92",
+    "hash": "231fdd8cace08d8e",
     "date": "2026-10-05"
   },
   "/ru/docs/supSub": {
-    "hash": "4c80f0919d1c4f62",
+    "hash": "694e53ba3430b1df",
     "date": "2026-09-08"
   },
   "/ru/docs/table": {
-    "hash": "4ee74be8990d702b",
+    "hash": "c683e052518c5f05",
     "date": "2026-09-28"
   },
   "/ru/docs/theme-api": {
-    "hash": "21453217006efc2d",
+    "hash": "d0216ca64c953da2",
     "date": "2026-09-08"
   },
   "/ru/docs/toggle": {
-    "hash": "383ea7a9e29f215a",
+    "hash": "90825faef309348e",
     "date": "2026-09-08"
   },
   "/ru/docs/toolbar-api": {
-    "hash": "1e887d6454fb3176",
+    "hash": "529520a9bce1fbe5",
     "date": "2026-09-26"
   },
   "/ru/docs/tools-api": {
-    "hash": "3acc9f6a933c6579",
+    "hash": "0839fd75647e3fac",
     "date": "2026-09-24"
   },
   "/ru/docs/tooltip-api": {
-    "hash": "fabae2411de64f80",
+    "hash": "c793ad9992dac498",
     "date": "2026-09-08"
   },
   "/ru/docs/tutorial": {
-    "hash": "0b2e4dcca70b23bd",
+    "hash": "5a1870a947fe8a37",
     "date": "2026-09-08"
   },
   "/ru/docs/ui-api": {
-    "hash": "059dbf00181e5758",
+    "hash": "8335da2ee4ec9715",
     "date": null
   },
   "/ru/docs/underline": {
-    "hash": "98a5a8524b1ddeec",
+    "hash": "44efafbf12d8bad9",
     "date": null
   },
   "/ru/docs/uploader-api": {
-    "hash": "63173cfde7097805",
+    "hash": "7a3925bf82fe77d5",
     "date": "2026-09-08"
   },
   "/ru/docs/use-blocks": {
-    "hash": "cfa5a9a3424afe7f",
+    "hash": "54325ba935ab0728",
     "date": "2026-09-27"
   },
   "/ru/docs/use-blok-ready": {
-    "hash": "ef679caea59d9aa6",
+    "hash": "c73705579e3d719a",
     "date": "2026-09-08"
   },
   "/ru/docs/video": {
-    "hash": "5b1cb48b3d8f0c13",
+    "hash": "40d94a5fa49949bc",
     "date": "2026-09-28"
   },
   "/ru/docs/view-api": {
-    "hash": "8759be7542449ef3",
+    "hash": "671dd195f8073a99",
     "date": "2026-09-08"
   },
   "/ru/docs/width-api": {
-    "hash": "9865f1ea868f0136",
+    "hash": "99ade27c9352dd43",
     "date": "2026-09-08"
   },
   "/ru/migration": {
@@ -608,7 +608,7 @@
     "date": "2026-10-05"
   },
   "/ru/tools": {
-    "hash": "3bd4ef6b7fe4dc4f",
+    "hash": "2b0fddd440ba58c4",
     "date": null
   },
   "/server": {
@@ -616,7 +616,7 @@
     "date": "2026-10-05"
   },
   "/tools": {
-    "hash": "528ca84b37ee943c",
+    "hash": "8ae406d370e08ec0",
     "date": null
   }
 }

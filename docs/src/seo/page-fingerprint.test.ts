@@ -22,16 +22,30 @@ describe('page fingerprints', () => {
     expect(Object.keys(baseline).sort()).toEqual([...ROUTES].sort());
   });
 
-  it('changes only that page, in both locales, when one API section is edited', () => {
+  // A code example has no translation, so the Russian page shows the edit too.
+  it('changes only that page, in both locales, when an untranslated part of an API section is edited', () => {
     const sources: FingerprintSources = { ...base, apiSections: clone(base.apiSections) };
-    const caret = sources.apiSections.find((section) => section.id === 'caret-api');
-    if (!caret) throw new Error('caret-api section is gone');
-    caret.description = `${caret.description ?? ''} Edited.`;
+    const method = sources.apiSections.find((section) => section.id === 'caret-api')?.methods?.[0];
+    if (!method) throw new Error('caret-api has no method');
+    method.example = `${method.example ?? ''}\n// edited`;
 
     expect(changedRoutes(baseline, fingerprintRoutes(ROUTES, sources))).toEqual([
       '/docs/caret-api',
       '/ru/docs/caret-api',
     ]);
+  });
+
+  // English renders the authored data only where en.json has no string for it.
+  it('leaves the Russian page alone when English prose it translates is edited', () => {
+    const catalogs = clone(base.catalogs);
+    delete (catalogs.en as { api: { caretApi: { description?: string } } }).api.caretApi.description;
+    const before = fingerprintRoutes(ROUTES, { ...base, catalogs });
+    const sources: FingerprintSources = { ...base, catalogs, apiSections: clone(base.apiSections) };
+    const caret = sources.apiSections.find((section) => section.id === 'caret-api');
+    if (!caret) throw new Error('caret-api section is gone');
+    caret.description = `${caret.description ?? ''} Edited.`;
+
+    expect(changedRoutes(before, fingerprintRoutes(ROUTES, sources))).toEqual(['/docs/caret-api']);
   });
 
   it('changes only the Russian page when only its translation is edited', () => {
@@ -54,6 +68,50 @@ describe('page fingerprints', () => {
       '/docs/table',
       '/ru/docs/table',
     ]);
+  });
+
+  it('leaves the Russian tool page alone when English prose it translates is edited', () => {
+    const catalogs = clone(base.catalogs);
+    delete (catalogs.en as { tools: { docs: { table: { description?: string } } } }).tools.docs.table.description;
+    const before = fingerprintRoutes(ROUTES, { ...base, catalogs });
+    const sources: FingerprintSources = { ...base, catalogs, toolSections: clone(base.toolSections) };
+    const table = sources.toolSections.find((tool) => tool.id === 'table');
+    if (!table) throw new Error('table tool is gone');
+    table.description = `${table.description} Edited.`;
+
+    expect(changedRoutes(before, fingerprintRoutes(ROUTES, sources))).toEqual(['/docs/table']);
+  });
+
+  // The hub renders every sidebar group title and link label as its cards.
+  it.each([
+    ['api.links.caret', ['/ru/docs']],
+    ['api.sections.core', ['/ru/docs']],
+    ['tools.sections.blockTools', ['/ru/docs']],
+    ['tools.links.table', ['/ru/docs', '/ru/docs/table']],
+  ])('re-dates the Russian hub when its card label %s is renamed', (key, expected) => {
+    const catalogs = clone(base.catalogs);
+    const path = key.split('.');
+    const parent = path.slice(0, -1).reduce<Record<string, unknown>>(
+      (node, segment) => node[segment] as Record<string, unknown>,
+      catalogs.ru as Record<string, unknown>,
+    );
+    parent[path[path.length - 1]] = `${String(parent[path[path.length - 1]])} Правка`;
+
+    expect(changedRoutes(baseline, fingerprintRoutes(ROUTES, { ...base, catalogs }))).toEqual(expected);
+  });
+
+  it('re-dates only the English hub when an English card label Russian translates is renamed', () => {
+    const catalogs = clone(base.catalogs);
+    (catalogs.en as { api: { links: { caret: string } } }).api.links.caret += ' Edited';
+
+    expect(changedRoutes(baseline, fingerprintRoutes(ROUTES, { ...base, catalogs }))).toEqual(['/docs']);
+  });
+
+  it('re-dates only the English hub when an English card summary is edited', () => {
+    const hubSummaries = clone(base.hubSummaries);
+    hubSummaries.en['caret-api'] += ' Edited.';
+
+    expect(changedRoutes(baseline, fingerprintRoutes(ROUTES, { ...base, hubSummaries }))).toEqual(['/docs']);
   });
 
   it('changes only the docs hub, per locale, when a hub string is edited', () => {

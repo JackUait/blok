@@ -7,6 +7,8 @@
 // invisible to the unit suite: a sitemap whose 148 `lastmod` values were all
 // identical (shallow CI clone), and three days of deploys that published
 // nothing at all.
+import { firstArchivePath, versionedSitemapUrls } from './live-docs-versions.mjs';
+
 const SITE = (process.argv[2] ?? 'https://blokeditor.com').replace(/\/$/, '');
 
 const waitFor = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -99,6 +101,33 @@ const main = async () => {
     lastmods.size > 1,
     `all ${locs.length} URLs share lastmod ${[...lastmods][0]} — the deploy checkout is shallow`,
   );
+
+  const versioned = versionedSitemapUrls(sitemap);
+  check(
+    'sitemap lists no /next/ or /v/ URL',
+    versioned.length === 0,
+    `offenders: ${versioned.slice(0, 3).join(', ')}`,
+  );
+
+  const versionsResponse = await fetchNoRedirect(`${SITE}/versions.json`);
+  check('versions.json answers 200', versionsResponse.status === 200, `got ${versionsResponse.status}`);
+  let manifest = null;
+  try {
+    manifest = JSON.parse(await versionsResponse.text());
+  } catch {
+    // Reported by the check below.
+  }
+  const hasVersions = Array.isArray(manifest?.versions);
+  check('versions.json parses to a versions list', hasVersions, 'not JSON with a versions array');
+
+  const next = await fetchNoRedirect(`${SITE}/next/`);
+  check('/next/ answers 200', next.status === 200, `got ${next.status}`);
+
+  const archive = hasVersions ? firstArchivePath(manifest) : null;
+  if (archive) {
+    const response = await fetchNoRedirect(`${SITE}${archive}`);
+    check(`newest archive answers 200: ${archive}`, response.status === 200, `got ${response.status}`);
+  }
 
   // A canonical that redirects is a canonical Google ignores. Sampled, not
   // exhaustive: 148 sequential requests would dominate the job's runtime.

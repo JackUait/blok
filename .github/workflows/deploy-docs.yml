@@ -13,6 +13,11 @@ on:
         description: Release tag to verify and deploy
         required: false
         type: string
+      dry_run:
+        description: Build and verify the site without deploying it
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -81,10 +86,45 @@ jobs:
             node scripts/verify-docs-release.mjs "$tag" --packages-only
           fi
 
+  # Builds this release's root and archive snapshots and attaches them to the
+  # release, where `build` downloads them. Prereleases never become the root.
+  snapshot:
+    name: Snapshot Release Docs
+    runs-on: ubuntu-latest
+    needs: [docs-tests, verify-release]
+    if: github.event_name == 'release' && !github.event.release.prerelease
+    timeout-minutes: 7
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          # The root snapshot is the live site, and its sitemap dates each page
+          # from `git log`. A shallow clone collapses every lastmod to one date.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Build and attach snapshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          yarn build
+          minor="$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")"
+          node docs/scripts/build-snapshot.mjs --version "$minor" --base / --out docs-root.tgz
+          node docs/scripts/build-snapshot.mjs --version "$minor" --base "/v/$minor/" --out "docs-v$minor.tgz"
+          gh release upload "$TAG" docs-root.tgz "docs-v$minor.tgz" --clobber
+
   build:
     name: Build Docs
     runs-on: ubuntu-latest
-    needs: [docs-tests, verify-release]
+    needs: [docs-tests, verify-release, snapshot]
     timeout-minutes: 15
     outputs:
       marker: ${{ steps.marker.outputs.path }}
@@ -97,6 +137,7 @@ jobs:
       ${{ !cancelled()
       && needs.docs-tests.result == 'success'
       && (needs.verify-release.result == 'success' || needs.verify-release.result == 'skipped')
+      && (needs.snapshot.result == 'success' || needs.snapshot.result == 'skipped')
       && (github.event_name != 'workflow_run'
       || (github.event.workflow_run.conclusion == 'success'
       && github.event.workflow_run.event == 'push'
@@ -109,7 +150,9 @@ jobs:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}
           # generate-seo-artifacts.mjs dates every page from `git log -1` on its
           # sources. A shallow clone has no such history, so all 148 sitemap
-          # lastmod values collapse to the deploy date.
+          # lastmod values collapse to the deploy date. Note: the live sitemap
+          # now comes from the root snapshot built by `snapshot` at release
+          # time; this job's /next/ build writes no sitemap.
           fetch-depth: 0
 
       - name: Setup Node.js and Dependencies
@@ -118,15 +161,20 @@ jobs:
       - name: Build Blok library
         run: yarn build
 
-      - name: Build docs
-        run: cd docs && yarn build
-
+      # Root = latest stable release snapshot, /v/<minor>/ = archived release
+      # snapshots, both downloaded from release assets; /next/ = this commit.
       # The library is NOT copied into the artifact: the demo's `/dist/react.mjs`
       # and `/dist/tools.mjs` imports are resolved and bundled at build time by
       # docs/vite.config.ts's external-dist plugin, so the deployed site never
       # requests /dist from its own origin — the copy was 47 MB of dead weight.
-      - name: Copy CHANGELOG into docs output
-        run: cp CHANGELOG.md docs/dist/CHANGELOG.md
+      - name: Assemble versioned site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          node docs/scripts/build-snapshot.mjs --version next --base /next/ --out next.tgz
+          node docs/scripts/assemble-site.mjs --next next.tgz --out site
+          cp CHANGELOG.md site/CHANGELOG.md
 
       # A prerender regression is invisible from a green build: the files are
       # still emitted, they are just empty shells again, and every crawler that
@@ -136,37 +184,46 @@ jobs:
       - name: Verify deploy artifact
         run: |
           set -euo pipefail
-          page=docs/dist/client/docs/quick-start/index.html
+          page=site/docs/quick-start/index.html
           test -f "$page"
           grep -q '<h1' "$page"
           grep -q 'Blok' "$page"
-          test -s docs/dist/client/robots.txt
-          test -s docs/dist/client/sitemap.xml
+          test -s site/robots.txt
+          test -s site/sitemap.xml
+          test -f site/next/docs/quick-start/index.html
+          grep -q 'noindex' site/next/docs/quick-start/index.html
+          test -s site/versions.json
+          archive="$(node -p "require('./site/versions.json').versions.find(v => v.path.startsWith('/v/'))?.path ?? ''")"
+          if [ -n "$archive" ]; then test -f "site${archive}index.html"; grep -q 'noindex' "site${archive}index.html"; fi
+          # Not `! grep`: set -e ignores a negated command.
+          if grep -q 'noindex' site/docs/quick-start/index.html; then
+            echo "The root snapshot is noindex; the live site would drop out of search" >&2
+            exit 1
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
-      # React Router's framework build splits its output into dist/client (the
-      # prerendered HTML + assets) and dist/server; only the client half is the
-      # site, so the artifact root moved one level down.
       # Names one content-hashed file from this exact build. The smoke test polls
       # for it, because a 200 on `/` only proves the PREVIOUS deploy is alive.
+      # Taken from /next/: the root is a release snapshot, unchanged on a plain
+      # main push, so a root marker would match the previous deploy.
       - name: Record deploy marker
         id: marker
         run: |
-          asset="$(find docs/dist/client/assets -name 'client-*.js' -print -quit)"
+          asset="$(find site/next/assets -name 'client-*.js' -print -quit)"
           # Empty would silently turn the smoke test's readiness poll into a
           # no-op, and it would then pass against the previous deploy.
           if [ -z "$asset" ]; then
             echo "No content-hashed client asset found; the build output shape changed" >&2
             exit 1
           fi
-          echo "path=/${asset#docs/dist/client/}" >> "$GITHUB_OUTPUT"
+          echo "path=/${asset#site/}" >> "$GITHUB_OUTPUT"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: docs/dist/client/
+          path: site/
 
   deploy:
     name: Deploy to GitHub Pages
@@ -177,7 +234,8 @@ jobs:
     # itself and goes green — and `deploy` is skipped anyway. Every docs deploy
     # between ungating the build and this line built the site, verified the
     # artifact, and published nothing.
-    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    # `dry_run` builds and verifies the artifact without publishing it.
+    if: ${{ !cancelled() && needs.build.result == 'success' && !inputs.dry_run }}
     permissions:
       pages: write
       id-token: write
@@ -197,7 +255,7 @@ jobs:
     name: Verify Live Docs
     runs-on: ubuntu-latest
     needs: [build, deploy]
-    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
+    if: ${{ !cancelled() && needs.deploy.result == 'success' && !inputs.dry_run }}
     timeout-minutes: 10
     steps:
       - name: Checkout code

@@ -53,8 +53,8 @@ const workflow = parse(
   readFileSync(resolve(REPO_ROOT, '.github/workflows/deploy-docs.yml'), 'utf8'),
 ) as Workflow;
 
-/** Where the framework build puts the site, and what the Pages job uploads. */
-const ARTIFACT_ROOT = 'docs/dist/client';
+/** Where assemble-site.mjs puts the versioned site, and what the Pages job uploads. */
+const ARTIFACT_ROOT = 'site';
 
 /** The page the deploy probes for prose. Cross-checked against the real manifest below. */
 const PRERENDER_PROBE_ROUTE = '/docs/quick-start';
@@ -81,6 +81,11 @@ const RELEASE_GATED_JOBS: Record<string, string> = {
     'and the image after waiting for that same CI run, so the server half cannot be satisfied ' +
     'yet. The release and dispatch paths carry a tag and check everything. The build job accepts ' +
     '`skipped` so content still ships.',
+  snapshot:
+    'Builds the root and archive snapshots of a stable release and attaches them to that ' +
+    'release, which is where the build job downloads them from. A CI run has no release to ' +
+    'attach to; it rebuilds only /next/ and reuses the published snapshots. The build job ' +
+    'accepts `skipped` so content still ships.',
 };
 
 const getJob = (id: string): Job => {
@@ -202,13 +207,17 @@ describe('docs deploy law — reachable without a release', () => {
   // sources behind it. A depth-1 clone has no such history, so every route
   // falls back to HEAD's date and all 148 sitemap `lastmod` values come out
   // identical — which is exactly what production served.
+  // The live sitemap comes from the release's root snapshot, so the snapshot
+  // job needs the history as much as the build job does.
   it('checks out enough history for per-page sitemap dates', () => {
-    const checkout = build.steps?.find((step) => step.name === 'Checkout code');
+    for (const id of ['build', 'snapshot']) {
+      const checkout = getJob(id).steps?.find((step) => step.name === 'Checkout code');
 
-    expect(
-      checkout?.with?.['fetch-depth'],
-      'the build job needs fetch-depth: 0, or every page claims it changed on deploy day',
-    ).toBe(0);
+      expect(
+        checkout?.with?.['fetch-depth'],
+        `the ${id} job needs fetch-depth: 0, or every page claims it changed on deploy day`,
+      ).toBe(0);
+    }
   });
 
   // Everything else here checks bytes on the runner. Neither of the two worst
@@ -258,6 +267,7 @@ describe('docs deploy law — non-vacuity floor', () => {
       'deploy',
       'docs-tests',
       'seo-smoke',
+      'snapshot',
       'verify-release',
     ]);
   });

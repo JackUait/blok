@@ -206,7 +206,7 @@ describe('createSidecarTransferHost', () => {
     expect(messageOf(error)).toMatch(/different request/i);
   });
 
-  it('removes the target copy and retries when a peer edits the source first', async () => {
+  it('retries the removal when a peer edits elsewhere in the source', async () => {
     const { server, host } = setup();
     let edited = false;
 
@@ -588,6 +588,95 @@ describe('createSidecarTransferHost', () => {
     expect(receipt.rootIds).toEqual(['c1', 'c2']);
   });
 
+  describe('turn-into-blocks keeps the pointer while the page body differs from the plan', () => {
+    const tib: PageTransferRequest = {
+      kind: 'turn-into-blocks',
+      operationId: 'tib',
+      sourcePageId: 'child',
+      targetPageId: 'parent',
+      pointerId: 'ptr',
+    };
+    const text = (server: FakeSidecar, doc: string, id: string): unknown =>
+      server.document(doc).blocks.find((block) => block.id === id)?.data.text;
+
+    it('(a) a peer edit in the body during the copy', async () => {
+      const { server, host } = setup();
+      let once = false;
+
+      server.seed('parent', [{ id: 'ptr', type: 'page', data: { pageId: 'child' } }]);
+      server.seed('child', [{ id: 'c1', type: 'paragraph', data: { text: 'C1' } }]);
+      server.onEdit((edit) => {
+        if (edit.doc === 'parent' && !once) {
+          once = true;
+          server.peerEdit('child', 'c1', 'Peer typed in the body');
+        }
+      });
+      const error = await failure(host.run(tib));
+
+      expect(server.ids('parent')).toContain('ptr');
+      expect(text(server, 'child', 'c1')).toBe('Peer typed in the body');
+      expect(messageOf(error)).toMatch(/page body "child" changed/i);
+    });
+
+    it('(b) a peer block written into an empty body after planning', async () => {
+      const { server, log } = setup();
+      let parentReads = 0;
+      const host = createSidecarTransferHost({
+        baseUrl: 'https://sidecar.test/api/blok',
+        ticketFor: (doc, access) => `ticket:${doc}:${access.write ? 'write' : 'read'}`,
+        log,
+        fetch: async (url, init) => {
+          // The second parent read is the check before the removal; planning read it first.
+          if (url.endsWith('/parent/state') && ++parentReads === 2) {
+            server.peerInsertRoot('child', { id: 'peer', type: 'paragraph', data: { text: 'Peer' } });
+          }
+
+          return server.fetch(url, init);
+        },
+      });
+
+      server.seed('parent', [{ id: 'ptr', type: 'page', data: { pageId: 'child' } }]);
+      server.seed('child', []);
+      const error = await failure(host.run(tib));
+
+      expect(parentReads).toBe(2);
+
+      expect(server.ids('parent')).toEqual(['ptr']);
+      expect(server.ids('child')).toEqual(['peer']);
+      expect(messageOf(error)).toMatch(/page body "child" changed/i);
+    });
+
+    it('(c) a resumed run after the body changed between attempts', async () => {
+      const { server, log } = setup();
+      const host = (): ReturnType<typeof createSidecarTransferHost> => createSidecarTransferHost({
+        baseUrl: 'https://sidecar.test/api/blok',
+        ticketFor: (doc, access) => `ticket:${doc}:${access.write ? 'write' : 'read'}`,
+        log,
+        fetch: server.fetch,
+      });
+      let dropped = false;
+
+      server.seed('parent', [{ id: 'ptr', type: 'page', data: { pageId: 'child' } }]);
+      server.seed('child', [{ id: 'c1', type: 'paragraph', data: { text: 'C1' } }]);
+      server.onEdit((edit) => {
+        if (edit.doc === 'parent' && JSON.stringify(edit.ops) === '[{"op":"remove","id":"ptr"}]' && !dropped) {
+          dropped = true;
+
+          return 'drop';
+        }
+      });
+      await failure(host().run(tib));
+      server.peerInsertRoot('child', { id: 'late', type: 'paragraph', data: { text: 'Written after the crash' } });
+      server.peerEdit('child', 'c1', 'Edited after the crash');
+      const error = await failure(host().run(tib));
+
+      expect(server.ids('parent')).toContain('ptr');
+      expect(server.ids('child').sort()).toEqual(['c1', 'late']);
+      expect(text(server, 'child', 'c1')).toBe('Edited after the crash');
+      expect(messageOf(error)).toMatch(/page body "child" changed/i);
+    });
+  });
+
   it('refuses turn-into-blocks when the pointer names another page', async () => {
     const { server, host } = setup();
 
@@ -647,7 +736,7 @@ describe('createSidecarTransferHost', () => {
 });
 
 describe('overlapping runs with one operation ID', () => {
-  it('never loses the block when a retry overlaps a run that is mid-compensation', async () => {
+  it('a retry that overlaps a run mid-removal replays its removal instead of repeating it', async () => {
     const server = new FakeSidecar();
     const log = memoryLog();
     const ticketFor = (doc: string, access: { write: boolean }): string => `ticket:${doc}:${access.write ? 'write' : 'read'}`;
@@ -661,7 +750,6 @@ describe('overlapping runs with one operation ID', () => {
       return { promise, open: () => opened.forEach((resolve) => resolve()) };
     };
     const aParked = latch();
-    const releaseA = latch();
     const runs: Array<Promise<unknown>> = [];
     let aPosts = 0;
     let bPosts = 0;
@@ -701,27 +789,25 @@ describe('overlapping runs with one operation ID', () => {
           if (aPosts === 3) {
             server.peerEdit('target', 't', 'Peer T');
           }
-          if (aPosts === 6) {
-            aParked.open();
-            await releaseA.promise;
-          }
         }
 
         return server.fetch(url, init);
       },
     });
 
-    const runA = hostA.run(request).catch((error: unknown) => error).finally(() => aParked.open());
+    // A: copy, removal (412: a peer edited b), removal again. B waits for A,
+    // then replays the copy and finds the removal already committed.
+    const resultA = await hostA.run(request).catch((error: unknown) => error).finally(() => aParked.open());
+    const [resultB] = await Promise.all(runs);
+    const text = (doc: string, id: string): unknown => server.document(doc).blocks.find((block) => block.id === id)?.data.text;
 
-    await aParked.promise;
-    await Promise.all(runs);
-    releaseA.open();
-    await runA;
-
-    const holders = ['source', 'target'].filter((doc) => server.ids(doc).includes('a'));
-
-    expect(holders.length).toBeGreaterThan(0);
-    expect(server.ids('source')).toContain('b');
+    expect(text('target', 'a')).toBe('A');
+    expect(text('source', 'b')).toBe('Peer B');
+    expect(text('target', 't')).toBe('Peer T');
+    expect(server.ids('source')).toEqual(['b']);
+    expect([aPosts, bPosts]).toEqual([3, 2]);
+    expect(resultA).toMatchObject({ durability: { kind: 'saga' } });
+    expect(resultB).toMatchObject({ durability: { kind: 'saga' } });
   });
 });
 
@@ -768,136 +854,106 @@ describe('review repros: every block survives every interleaving', () => {
     ]);
     server.seed('target', [{ id: 't', type: 'paragraph', data: { text: 'T' } }]);
   };
-  const lost = (server: FakeSidecar, ids: string[]): string[] =>
-    ids.filter((id) => !server.ids('source').includes(id) && !server.ids('target').includes(id));
+  /** Each [id, text] pair that no page holds any more, by ID and exact text. */
+  const lost = (server: FakeSidecar, wanted: Array<[string, string]>): string[] => wanted
+    .filter(([id, text]) => !['source', 'target'].some((doc) =>
+      server.document(doc).blocks.some((block) => block.id === id && block.data.text === text)))
+    .map(([id, text]) => `${id}=${text}`);
   const removeIfPresent = (server: FakeSidecar, doc: string, id: string): void => {
     if (server.ids(doc).includes(id)) {
       server.peerRemove(doc, id);
     }
   };
 
-  it('F1: two runs that both plan before either logs', async () => {
+  it('F1: two runs that both plan before either logs, around a peer edit to the moved block', async () => {
     const server = new FakeSidecar();
     const log = memoryLog();
     const aParked = latch();
     const releaseA = latch();
-    const aAfterCompensate = latch();
-    const releaseA2 = latch();
-    const bAtFirstPost = latch();
+    const bAtRemoval = latch();
     const releaseB = latch();
     let aPosts = 0;
     let bPosts = 0;
     let aTargetReads = 0;
 
     seedSmall(server);
-    const hostA = gated(server, log, async (url, init) => {
-      if (init.method === 'GET' && url.endsWith('/target/state') && ++aTargetReads === 1) {
-        aParked.open();
-        await releaseA.promise;
-      }
-      if (init.method === 'POST' && ++aPosts === 4) {
-        aAfterCompensate.open();
-        await releaseA2.promise;
-      }
+    const hostA = createSidecarTransferHost({
+      baseUrl: 'https://sidecar.test/api/blok',
+      ticketFor,
+      log,
+      fetch: async (url, init) => {
+        const response = await server.fetch(url, init);
+
+        // Parks after the planning read returns, before A logs its plan.
+        if (init.method === 'GET' && url.endsWith('/target/state') && ++aTargetReads === 1) {
+          aParked.open();
+          await releaseA.promise;
+        }
+        if (init.method === 'POST') {
+          aPosts += 1;
+        }
+
+        return response;
+      },
     });
     const hostB = gated(server, log, async (_url, init) => {
-      if (init.method === 'POST' && ++bPosts === 1) {
-        bAtFirstPost.open();
+      if (init.method === 'POST' && ++bPosts === 2) {
+        bAtRemoval.open();
         await releaseB.promise;
       }
     });
-    const runA = failure(hostA.run(request)).finally(() => {
-      aParked.open();
-      aAfterCompensate.open();
-    });
+    // A has read the source with a = 'A' and parks while planning.
+    const runA = failure(hostA.run(request)).finally(() => aParked.open());
 
     await aParked.promise;
-    server.peerEdit('source', 'b', 'Peer');
-    const runB = failure(hostB.run(request)).finally(() => bAtFirstPost.open());
+    server.peerEdit('source', 'a', 'A|P1');
+    // B plans from a = 'A|P1', copies first, and parks before its removal.
+    const runB = hostB.run(request).finally(() => bAtRemoval.open());
 
-    await bAtFirstPost.promise;
+    await bAtRemoval.promise;
     releaseA.open();
-    await aAfterCompensate.promise;
-    releaseB.open();
-    await runB;
-    releaseA2.open();
-    await runA;
+    const errorA = await runA;
 
-    expect(lost(server, ['a', 'b'])).toEqual([]);
+    releaseB.open();
+    const receiptB = await runB;
+
+    expect(lost(server, [['a', 'A|P1'], ['b', 'B']])).toEqual([]);
+    expect(server.ids('source')).toEqual(['b']);
+    expect([aPosts, bPosts]).toEqual([1, 2]);
+    expect(messageOf(errorA)).toMatch(/different plan/);
+    expect(receiptB.durability.kind).toBe('saga');
   });
 
-  it('F2: two runs that share one logged record and race at different source heads', async () => {
+  it('F2: a retry that shares the logged plan while a peer edits the moved block mid-removal', async () => {
     const server = new FakeSidecar();
     const log = memoryLog();
-    const aAtCopy2 = latch();
-    const releaseA = latch();
-    const aAfterCompensate2 = latch();
-    const releaseA3 = latch();
-    const bAtCopy2 = latch();
-    const releaseB = latch();
-    const bAtRebuild = latch();
-    const releaseBRebuild = latch();
-    const bStarted = latch();
+    const aDone = latch();
     const runs: Array<Promise<unknown>> = [];
     let aPosts = 0;
     let bPosts = 0;
-    let bSourceReads = 0;
 
     seedSmall(server);
-    const hostB = gated(server, log, async (url, init) => {
-      if (init.method === 'GET' && url.endsWith('/source/state') && ++bSourceReads === 2) {
-        bAtRebuild.open();
-        await releaseBRebuild.promise;
-      }
-      if (init.method === 'POST' && ++bPosts === 3) {
-        bAtCopy2.open();
-        await releaseB.promise;
+    const hostB = gated(server, log, async (_url, init) => {
+      if (init.method === 'POST' && ++bPosts === 1) {
+        await aDone.promise;
       }
     });
-    const hostA = gated(server, log, async (_url, init) => {
-      if (init.method !== 'POST') {
-        return;
-      }
-      aPosts += 1;
-      if (aPosts === 2) {
-        server.peerEdit('source', 'b', 'Peer 1');
-        runs.push(failure(hostB.run(request)).finally(() => {
-          bAtRebuild.open();
-          bAtCopy2.open();
-        }));
-        bStarted.open();
-      }
-      if (aPosts === 4) {
-        aAtCopy2.open();
-        await releaseA.promise;
-      }
-      if (aPosts === 6) {
-        aAfterCompensate2.open();
-      }
-      if (aPosts === 7) {
-        await releaseA3.promise;
+    const hostA = gated(server, log, (_url, init) => {
+      if (init.method === 'POST' && ++aPosts === 2) {
+        server.peerEdit('source', 'a', 'A|P1');
+        runs.push(failure(hostB.run(request)));
       }
     });
-    const runA = failure(hostA.run(request)).finally(() => {
-      bStarted.open();
-      aAtCopy2.open();
-      aAfterCompensate2.open();
-    });
+    // A: copy, removal (412), then a replay of the removal with the planned head (refused).
+    const errorA = await failure(hostA.run(request)).finally(() => aDone.open());
+    // B: replays the copy, sees the moved block changed, replays the removal (refused).
+    const [errorB] = await Promise.all(runs);
 
-    await bStarted.promise;
-    await aAtCopy2.promise;
-    await bAtRebuild.promise;
-    server.peerEdit('source', 'b', 'Peer 2');
-    releaseBRebuild.open();
-    await bAtCopy2.promise;
-    releaseA.open();
-    await aAfterCompensate2.promise;
-    releaseB.open();
-    await Promise.all(runs);
-    releaseA3.open();
-    await runA;
-
-    expect(lost(server, ['a', 'b'])).toEqual([]);
+    expect(lost(server, [['a', 'A|P1'], ['b', 'B']])).toEqual([]);
+    expect(server.ids('source')).toEqual(['a', 'b']);
+    expect([aPosts, bPosts]).toEqual([3, 2]);
+    expect(messageOf(errorA)).toMatch(/changed the blocks being moved/);
+    expect(messageOf(errorB)).toMatch(/changed the blocks being moved/);
   });
 
   it('F3: the source removal is refused once (403), then the run is retried', async () => {
@@ -916,7 +972,7 @@ describe('review repros: every block survives every interleaving', () => {
     const host = gated(server, log);
     const first = await failure(host.run(request));
 
-    expect(lost(server, ['a', 'b'])).toEqual([]);
+    expect(lost(server, [['a', 'A'], ['b', 'B']])).toEqual([]);
     expect(server.ids('target')).toEqual(['t', 'a']);
     expect(messageOf(first)).toMatch(/403/);
 
@@ -951,7 +1007,7 @@ describe('review repros: every block survives every interleaving', () => {
     removeIfPresent(server, 'source', 'a');
     await failure(host.run(request));
 
-    expect(lost(server, ['a', 'b'])).toEqual([]);
+    expect(lost(server, [['a', 'A'], ['b', 'Peer']])).toEqual([]);
     expect(server.ids('target')).toContain('a');
   });
 
@@ -974,7 +1030,7 @@ describe('review repros: every block survives every interleaving', () => {
     removeIfPresent(server, 'target', 'a');
     const retry = await failure(host.run(request));
 
-    expect(lost(server, ['a', 'b'])).toEqual([]);
+    expect(lost(server, [['a', 'A'], ['b', 'B']])).toEqual([]);
     expect(server.ids('source')).toContain('a');
     expect(messageOf(retry)).toMatch(/incomplete or changed/i);
   });
@@ -995,7 +1051,7 @@ describe('review repros: every block survives every interleaving', () => {
     await failure(host.run(request));
     await failure(host.run(request));
 
-    expect(lost(server, ['a', 'a1', 'a2', 'b'])).toEqual([]);
+    expect(lost(server, [['a', 'A'.repeat(150)], ['a1', '1'.repeat(150)], ['a2', '2'.repeat(150)], ['b', 'B']])).toEqual([]);
     expect(server.ids('target')).toEqual(['t', 'a', 'a1', 'a2']);
     expect(server.ids('source')).toEqual(['b']);
   });
@@ -1014,7 +1070,7 @@ describe('review repros: every block survives every interleaving', () => {
     const host = gated(server, log, undefined, 400);
     const first = await failure(host.run(request));
 
-    expect(lost(server, ['a', 'a1', 'a2', 'b'])).toEqual([]);
+    expect(lost(server, [['a', 'A'.repeat(150)], ['a1', '1'.repeat(150)], ['a2', '2'.repeat(150)], ['b', 'B']])).toEqual([]);
     expect(server.ids('source')).toEqual(['a', 'a1', 'a2', 'b']);
     expect(messageOf(first)).toMatch(/partial copy/i);
 
@@ -1024,80 +1080,37 @@ describe('review repros: every block survives every interleaving', () => {
     expect(server.ids('source')).toEqual(['b']);
   });
 
-  it('F6: two overlapping Undo runs with one Undo operation ID', async () => {
+  it('F6: an overlapping Undo retry while a peer edits the moved block mid-removal', async () => {
     const server = new FakeSidecar();
     const log = memoryLog();
 
     seedSmall(server);
     const receipt = await gated(server, log).run(request);
     const undo = { operationId: 'undo-1', undoOf: receipt };
-    const aAtCopy2 = latch();
-    const releaseA = latch();
-    const aAfterCompensate2 = latch();
-    const releaseA3 = latch();
-    const bAtCopy2 = latch();
-    const releaseB = latch();
-    const bAtRebuild = latch();
-    const releaseBRebuild = latch();
-    const bStarted = latch();
+    const aDone = latch();
     const runs: Array<Promise<unknown>> = [];
     let aPosts = 0;
     let bPosts = 0;
-    let bTargetReads = 0;
-    const hostB = gated(server, log, async (url, init) => {
-      if (init.method === 'GET' && url.endsWith('/target/state') && ++bTargetReads === 2) {
-        bAtRebuild.open();
-        await releaseBRebuild.promise;
-      }
-      if (init.method === 'POST' && ++bPosts === 3) {
-        bAtCopy2.open();
-        await releaseB.promise;
+    const hostB = gated(server, log, async (_url, init) => {
+      if (init.method === 'POST' && ++bPosts === 1) {
+        await aDone.promise;
       }
     });
-    const hostA = gated(server, log, async (_url, init) => {
-      if (init.method !== 'POST') {
-        return;
-      }
-      aPosts += 1;
-      if (aPosts === 2) {
-        server.peerEdit('target', 't', 'Peer 1');
-        runs.push(failure(hostB.undo(undo)).finally(() => {
-          bAtRebuild.open();
-          bAtCopy2.open();
-        }));
-        bStarted.open();
-      }
-      if (aPosts === 4) {
-        aAtCopy2.open();
-        await releaseA.promise;
-      }
-      if (aPosts === 6) {
-        aAfterCompensate2.open();
-      }
-      if (aPosts === 7) {
-        await releaseA3.promise;
+    const hostA = gated(server, log, (_url, init) => {
+      if (init.method === 'POST' && ++aPosts === 2) {
+        server.peerEdit('target', 'a', 'A|P1');
+        runs.push(failure(hostB.undo(undo)));
       }
     });
-    const runA = failure(hostA.undo(undo)).finally(() => {
-      bStarted.open();
-      aAtCopy2.open();
-      aAfterCompensate2.open();
-    });
+    // Undo A: copy back into the source, removal from the target (412), refused replay.
+    const errorA = await failure(hostA.undo(undo)).finally(() => aDone.open());
+    const [errorB] = await Promise.all(runs);
 
-    await bStarted.promise;
-    await aAtCopy2.promise;
-    await bAtRebuild.promise;
-    server.peerEdit('target', 't', 'Peer 2');
-    releaseBRebuild.open();
-    await bAtCopy2.promise;
-    releaseA.open();
-    await aAfterCompensate2.promise;
-    releaseB.open();
-    await Promise.all(runs);
-    releaseA3.open();
-    await runA;
-
-    expect(lost(server, ['a', 'b', 't'])).toEqual([]);
+    expect(lost(server, [['a', 'A|P1'], ['b', 'B'], ['t', 'T']])).toEqual([]);
+    expect(server.ids('target')).toEqual(['t', 'a']);
+    expect([aPosts, bPosts]).toEqual([3, 2]);
+    expect(messageOf(errorA)).toMatch(/changed the blocks being moved/);
+    expect(messageOf(errorB)).toMatch(/changed the blocks being moved/);
   });
 });
 

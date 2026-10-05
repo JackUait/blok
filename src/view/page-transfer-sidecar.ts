@@ -43,7 +43,7 @@ export interface SidecarExpectedBlock {
   content: string[];
 }
 
-/** The exact edits of one operation. Written once and never rebuilt under the same operation ID. */
+/** The exact edits of one operation. A run never rebuilds a plan it found in the log. */
 export interface SidecarTransferPlan {
   copyDoc: string;
   copyHead: SidecarDocHead;
@@ -56,6 +56,11 @@ export interface SidecarTransferPlan {
   originExpected: SidecarExpectedBlock[];
   /** IDs the removal inserts, so they must not exist yet (the turn-into-page pointer). */
   originAbsent: string[];
+  /**
+   * A document that must still equal the plan exactly before the removal: the
+   * page body of turn-into-blocks, which the host retires after the pointer goes.
+   */
+  frozen?: { doc: string; head: SidecarDocHead; blocks: SidecarExpectedBlock[] };
   rootIds: string[];
   restore?: SidecarRootPlacement[];
   destination?: PageBlockPlacement;
@@ -402,6 +407,7 @@ class Saga {
     if (!looksAsPlanned(copy.data, copyExpectedOf(plan.copyChunks))) {
       throw keptBoth(plan.copyDoc, `The copy in "${plan.copyDoc}" is incomplete or changed`);
     }
+    await this.checkFrozen();
     const outcome = await this.io.edit(plan.originDoc, key, plan.originOps, origin.head);
 
     if (outcome instanceof Refused && outcome.status === 412 && tries + 1 < this.io.maxAttempts) {
@@ -409,6 +415,22 @@ class Saga {
     }
 
     return this.confirmed(outcome, `"${plan.originDoc}" refused the removal (HTTP ${outcome instanceof Refused ? outcome.status : 204})`);
+  }
+
+  /** Read last, right before the removal: any later change is the documented window. */
+  private async checkFrozen(): Promise<void> {
+    const { plan } = this.record;
+
+    if (!plan.frozen) {
+      return;
+    }
+    const { doc, head, blocks } = plan.frozen;
+    const body = await this.io.readState(doc);
+
+    sameLineage(body.head, head, doc);
+    if (body.data.blocks.length !== blocks.length || !looksAsPlanned(body.data, blocks)) {
+      throw keptBoth(plan.copyDoc, `The page body "${doc}" changed after planning`);
+    }
   }
 
   private confirmed(outcome: PageTransferSagaStep | Refused, why: string): PageTransferSagaStep {
@@ -638,6 +660,7 @@ export function createSidecarTransferHost(options: SidecarTransferHostOptions): 
           originOps: removeOps([request.pointerId]),
           originExpected: subtreeOf(target.data, [request.pointerId]),
           originAbsent: [],
+          frozen: { doc: request.sourcePageId, head: source.head, blocks: source.data.blocks.map(expectedOf) },
           rootIds: rootsOf(source.data),
         });
       }

@@ -830,7 +830,7 @@ export interface SidecarExpectedBlock {
   content: string[];
 }
 
-/** The exact edits of one operation. Written once and never rebuilt under the same operation ID. */
+/** The exact edits of one operation. A run never rebuilds a plan it found in the log. */
 export interface SidecarTransferPlan {
   copyDoc: string;
   copyHead: SidecarDocHead;
@@ -843,6 +843,11 @@ export interface SidecarTransferPlan {
   originExpected: SidecarExpectedBlock[];
   /** IDs the removal inserts, so they must not exist yet (the turn-into-page pointer). */
   originAbsent: string[];
+  /**
+   * A document that must still equal the plan exactly before the removal: the
+   * page body of turn-into-blocks, which the host retires after the pointer goes.
+   */
+  frozen?: { doc: string; head: SidecarDocHead; blocks: SidecarExpectedBlock[] };
   rootIds: string[];
   restore?: SidecarRootPlacement[];
   destination?: PageBlockPlacement;

@@ -28,19 +28,23 @@ The adapter hashes idempotency keys with `crypto.subtle`. Browsers expose it onl
 
 `test/unit/view/page-transfer-sidecar.server.test.ts` runs the adapter against the real host. Set `BLOK_CONFORMANCE_SERVER` to a built `Blok.Server.Host` to run it.
 
-**Guarantee.** No blocks are lost, outside the one window below. Blocks may end in both pages. The adapter never deletes a copy. The only destructive edit is the source removal, and it runs only after the copy is verified. The steps are:
+**Guarantee.** No blocks are lost, outside the window below. Blocks may end in both pages. The adapter never deletes a copy. The only destructive edit is the source removal, and it runs only after the copy is verified. The steps are:
 
-1. Read `GET /sync/{doc}/state` for both pages. Run the pure transform on that fresh state. Write the plan to the log. The plan is never rebuilt under the same operation ID.
+1. Read `GET /sync/{doc}/state` for both pages. Run the pure transform on that fresh state. Write the plan to the log. A run never rebuilds a plan it found in the log.
 2. Insert the copy into the receiving page. Large copies are split into requests under `maxEditBytes` (the server's `CollabMaxMessageBytes`, 1 MiB by default). Parents go first. Each request must return a durable receipt. The copy carries no `If-Match`: the server already refuses an insert whose parent, sibling or ID no longer fits.
 3. Read the giving page again. Every block being removed must look exactly as planned: same data, parent and children. If not, a peer changed them, so the source stays.
 4. Read the receiving page again. Every copied block must be there with the planned data, parent and children. If not, the copy is incomplete or changed, so the source stays.
-5. Remove the blocks from the giving page in one request, with `If-Match` set to the head read in step 3. For turn-into-page, the same request inserts the pointer. On 412, a peer edited elsewhere in the giving page. The adapter goes back to step 3, up to `maxAttempts` times.
+5. For turn-into-blocks only: read the page body again. It must equal the plan exactly, with no extra blocks and no changed data, on the same lineage. If not, the pointer stays. The host retires that body once the pointer is gone, so a body change the copy did not carry would otherwise be lost.
+6. Remove the blocks from the giving page in one request, with `If-Match` set to the head read in step 3. For turn-into-page, the same request inserts the pointer. On 412, a peer edited elsewhere in the giving page. The adapter goes back to step 3, up to `maxAttempts` times.
 
 Any failure leaves the source plus whatever copy exists, whole or partial. The error says which page holds what.
 
-**The remaining window.** Step 4 and step 5 touch two documents, and no request can guard both. If someone deletes the copy after step 4 reads it and before step 5 lands, the blocks are gone from both pages. That window is one read and one edit long. Only a deletion of the copy in it loses blocks. A peer edit does not.
+**The remaining window.** The last checks and the removal touch different documents, and no request can guard both. Between the final read and the removal landing (one read and one edit), two things can still lose data:
 
-**Keys and overlapping runs.** Each request's idempotency key is a hash of the operation ID, the step and the chunk index. Nothing else goes into it. Two runs with the same operation ID can overlap, for example when a host retries while the first call still runs. They then send the same keys. With the same body the journal applies it once. With a different body, from a plan built at another moment, the server answers 409 and that run stops before writing.
+- Someone deletes the copy. The source removal then leaves the blocks in neither page. A peer edit to the copy is not a loss.
+- For turn-into-blocks, someone changes the page body. The change is not in the copy, and the host retires the body.
+
+**Keys and overlapping runs.** Each request's idempotency key is a hash of the operation ID, the step and the chunk index. Nothing else goes into it. Two runs with the same operation ID can overlap, for example when a host retries while the first call still runs. The log is read, then written, with no compare-and-set, so two runs that start together can each build and log their own plan. Safety does not rest on the log. It rests on the server: the runs send the same keys, the journal applies a body once, and a different body under a used key gets 409, which stops that run before it writes.
 
 **Recovery.** The host supplies `log: { get(operationId), put(record) }` and stores each record as given. Blok stores nothing. A retry with the same operation ID replays the logged plan: the journal answers committed requests with their first receipt and applies the rest. A partial copy therefore resumes. A network error or 5xx is treated as unknown: the adapter throws, and a retry resolves it. If the source no longer looks as planned, the adapter replays the removal with the planned head. If that removal was already committed, this returns its receipt. Otherwise the stale head makes the server refuse. If a page's lineage changed since the plan, the journal forgot those keys, and the adapter refuses because the outcome is unknown.
 

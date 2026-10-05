@@ -359,6 +359,10 @@
   grid-column: 1;
   justify-self: end;
   align-self: center;
+  /* The 20px icon plus padding of the other icon buttons; equal sides make the pill radius a circle. */
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }
 
 .blok-darkroom__panel {

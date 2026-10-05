@@ -23,15 +23,72 @@ Forgetting a local scope removes bytes only on this device. Other offline device
 
 ## Database row bodies
 
-`DatabaseConfig.rowPages` is an opt-in host integration for moving a row's rich-text body into a page document. Blok has no built-in transaction or live-room fence for this handoff. Do not enable it with stock collaboration. A host must first verify the live-room gate against an older open client; a consumer-side version check is not enough. Version `v1.15.2` clients strip `pageId` and can still write the legacy row body.
+`DatabaseConfig.rowPages` is an opt-in host integration. It moves a row's rich-text body into a page document. Blok has no built-in transaction or live-room fence for this handoff. Do not enable it with stock collaboration.
 
-The host supplies `copyFromLegacy({ rowId, operationId, body })` and `mount(pageId, holder)`. Treat a copy as one transaction:
+### Host methods
 
-1. At the authoritative row document, refuse every other legacy-body writer and any old client that can still write it.
-2. Re-read the row body and compare it structurally with `body`. Reject a changed body; let the editor keep the legacy body for a later retry.
-3. Commit the page body, the row's `pageId`, and an operation record together. Use one stable page ID per row. A retry with the same `operationId` and body returns the same receipt; a changed body under that ID is rejected.
-4. Return `{ pageId, transactionId, acceptedBody }` only after the commit is durable. Blok mirrors `pageId` on the row only after that matching receipt; this local mirror is not proof of durability.
+```ts
+interface DatabaseRowPages {
+  lookup(input: { rowId: string }): Promise<{ pageId: string; acceptedBody: OutputData } | null>;
+  copyFromLegacy(input: { rowId: string; operationId: string; body: OutputData }): Promise<DatabaseRowPageReceipt>;
+  reconcileLegacy(input: {
+    rowId: string; pageId: string; operationId: string; body: OutputData; acceptedBody: OutputData;
+  }): Promise<DatabaseRowPageReceipt>;
+  mount(pageId: string, holder: HTMLElement): { destroy(): void };
+}
 
-`mount` owns the page editor's access checks, persistence, and collaboration settings. A row with `pageId` uses that editor, not the legacy nested editor. If mounting fails, show a non-editable error state. Keep the legacy rich-text property for recovery; do not delete it as part of the handoff. A failed copy leaves the row on the legacy path.
+interface DatabaseRowPageReceipt { pageId: string; transactionId: string; acceptedBody: OutputData }
+```
 
-Before enabling this integration for shared documents, test a real host with an old tab still open: its legacy write must be refused at the live-room boundary. Also check that failed target writes leave neither a page nor a pointer, and that a lost response retried with the same operation ID creates only one page. The unit contract fixture does not verify a real host fence.
+`acceptedBody` is the legacy body the page has already taken in. Blok compares bodies by blocks only. `time`, `version` and edit stamps do not count.
+
+### Never copy a row twice
+
+The row's `pageId` is only a mirror. Older clients delete it (see below). So Blok never treats a missing `pageId` as "not moved".
+
+- `lookup` is the source of truth. Return the row's page, or `null` if the row was never moved. It must read durable host state, not the row's `pageId`.
+- Blok calls `lookup` when a row opens, before every copy, and when a peer's change drops `pageId` or changes a moved row's legacy body.
+- While `lookup` runs, the body stays empty and inert. If it fails, Blok shows the non-editable error state. It never falls back to the legacy editor.
+- When `lookup` returns a page, Blok writes `pageId` back to the row. The write is derived, so undo does not remove it.
+- `copyFromLegacy` on a row that already has a page MUST reject. It must never overwrite the page. Blok then calls `lookup` and goes down the reconcile path with the body the user typed.
+
+Treat a copy as one transaction:
+
+1. At the authoritative row document, refuse every other legacy-body writer you can.
+2. Re-read the row body and compare it with `body`. Reject a changed body. The editor keeps the legacy body for a later retry.
+3. Commit the page body, the row's page record, and an operation record together. Use one stable page ID per row. A retry with the same `operationId` and body returns the same receipt. A changed body under that ID is rejected.
+4. Return the receipt only after the commit is durable. Blok mirrors `pageId` on the row only after a matching receipt. This mirror is not proof of durability.
+
+### Reconcile: keep both bodies
+
+An older client can still change the legacy body after the copy. Blok sees this when the row's legacy body differs from `acceptedBody`. It then calls `reconcileLegacy` with the current legacy `body` and the `acceptedBody` it compared against.
+
+The host must:
+
+- Merge `body` into the existing page. Never overwrite the page. Keep both: for example, append the legacy blocks after the page content.
+- Do nothing if `body` already equals the stored `acceptedBody`. Many clients may reconcile the same change at once; it must land once.
+- Store `body` as the new `acceptedBody` in the same durable commit.
+- Return `{ pageId, transactionId, acceptedBody }` with the same `pageId` and `acceptedBody` equal to `body`.
+
+Blok checks the receipt. Then it restores `pageId` if it was missing. A new client never writes the legacy property for a row it knows is moved. In the race above it has already saved the typed body before it learns of the move; reconcile carries that body into the page. A read-only editor does not look up, reconcile, or write anything.
+
+`mount` owns the page editor's access checks, persistence, and collaboration settings. A row with a page uses that editor, not the legacy nested editor. If mounting fails, Blok shows a non-editable error state. Keep the legacy rich-text property for recovery. Do not delete it as part of the handoff.
+
+### What v1.15.2 clients do
+
+Checked by running v1.15.2 code in jsdom (no real socket), unless marked "code reading".
+
+- Its row tool saves only `properties` and `position`. Its save flush then deletes every other top-level key. So any local row write removes `pageId` for everyone. Opening and closing the row drawer is enough, even with no typing: closing re-saves the body with a new `time`.
+- A remote update alone does not strip `pageId`. Booting does not either.
+- Its database tool also sends row bodies to the host adapter (`adapter.updateRow`, 500 ms debounce). No collaboration fence sees that path (code reading).
+- The current row tool keeps top-level keys it does not know, so future keys survive this version's saves. One limit: the save path HTML-sanitizes an unknown string key (`a & <b>x</b>` becomes `a &amp; x`). A row tool cannot declare a rule for keys it does not know; that needs a core change.
+
+### Fences against old clients
+
+Reconcile is the safety net. It is the only route that also covers the adapter path. Use a fence only to make it rarer.
+
+- **Read-only tickets for old clients.** v1.15.2 fetches its ticket with a plain GET and sends no version or capability. A host can mint `write: false` tickets for clients that do not present a capability header. A v1.15.2 tab then boots locked. Limits (code reading): it only works for hosts that use `ticket`; an open tab keeps its cached ticket until it nears expiry, so the host must close it with code 4401 to force a new ticket; and turning read-only re-saves an open drawer, which still calls `adapter.updateRow`. When such a tab re-mints and locks, its unsent room writes are dropped or quarantined. They never reach the legacy body, so reconcile cannot see them.
+- **Read-only via the server's own write check, or a capability token on connect.** Do not use these to make old clients read-only. The old UI stays editable. Version 1 writes are dropped and version 2 writes are quarantined (code reading). That loses edits silently. Refusing the connection (4403) is safe but ends the old tab's session.
+- **Reconcile alone.** Covers the room and the adapter, as long as `lookup` reads durable host state and `reconcileLegacy` keeps both bodies.
+
+Before enabling this for shared documents, test a real host with an old tab open. Check that its edit after the copy shows up in the page. Check that failed target writes leave neither a page nor a pointer. Check that a lost response retried with the same operation ID creates only one page. The unit contract fixture does not verify a real host.

@@ -83,7 +83,13 @@ export class DatabaseCardDrawer {
   private editorInitVersion = 0;
   private blokInstance: BlokInstance | null = null;
   private pageMount: { destroy(): void } | null = null;
+  /** The page the holder shows or failed to mount. Kept while a peer's save drops `pageId`. */
+  private mountedPageId: string | undefined = undefined;
   private readonly pendingBodyRows = new Set<string>();
+  /** Rows waiting for the host to say whether they have a page. */
+  private readonly lookupRows = new Set<string>();
+  /** Rows whose page the host could not resolve. */
+  private readonly failedLookupRows = new Set<string>();
   private isBodyChanged: ((data: OutputData) => boolean) | null = null;
   private escapeHandler: ((e: KeyboardEvent) => void) | null = null;
   private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
@@ -446,6 +452,28 @@ export class DatabaseCardDrawer {
   }
 
   /**
+   * Hold the body while the host looks the row's page up, show a failure when
+   * the lookup failed, or let the body load. A row the host may have moved
+   * must not open the legacy editor: its body there is stale.
+   */
+  setRowPageLookup(rowId: string, state: 'pending' | 'done' | 'failed'): void {
+    this.lookupRows.delete(rowId);
+    this.failedLookupRows.delete(rowId);
+    if (state === 'pending') this.lookupRows.add(rowId);
+    if (state === 'failed') this.failedLookupRows.add(rowId);
+    if (this.currentRowId !== rowId || this.currentRow === null || this.mountedPageId !== undefined) return;
+    const editorHolder = this.drawer?.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
+
+    if (editorHolder === null || editorHolder === undefined) return;
+    // Discard, not save: the legacy body may be stale.
+    this.blokInstance?.destroy();
+    this.blokInstance = null;
+    this.isBodyChanged = null;
+    editorHolder.replaceChildren();
+    this.initNestedEditor(editorHolder, this.currentRow);
+  }
+
+  /**
    * Show the open row's data after undo, redo or a peer changed it, or close
    * when the row is gone. A stale title or body would be written back over
    * the change on the next keystroke.
@@ -460,8 +488,6 @@ export class DatabaseCardDrawer {
 
       return;
     }
-
-    const previousPageId = this.currentRow?.pageId;
 
     this.currentRow = row;
 
@@ -481,12 +507,16 @@ export class DatabaseCardDrawer {
     const description = this.descriptionFor(row);
     const editorHolder = this.drawer.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
 
-    if (editorHolder !== null && row.pageId !== previousPageId) {
+    // An old client's save drops `pageId`; the page stays the body.
+    const shownPageId = row.pageId ?? (this.rowPages === undefined ? undefined : this.mountedPageId);
+
+    if (editorHolder !== null && shownPageId !== this.mountedPageId) {
       this.blokInstance?.destroy();
       this.blokInstance = null;
       this.isBodyChanged = null;
       this.pageMount?.destroy();
       this.pageMount = null;
+      this.mountedPageId = undefined;
       editorHolder.replaceChildren();
       this.initNestedEditor(editorHolder, row);
       return;
@@ -494,7 +524,7 @@ export class DatabaseCardDrawer {
 
     // Discard, not save: saving the old editor would write the stale body
     // back over the change.
-    if (editorHolder !== null && this.isBodyChanged?.(description ?? { blocks: [] }) === true) {
+    if (editorHolder !== null && this.mountedPageId === undefined && this.isBodyChanged?.(description ?? { blocks: [] }) === true) {
       this.blokInstance?.destroy();
       this.blokInstance = null;
       this.isBodyChanged = null;
@@ -675,6 +705,7 @@ export class DatabaseCardDrawer {
   private cleanupEditor(): void {
     this.pageMount?.destroy();
     this.pageMount = null;
+    this.mountedPageId = undefined;
     if (this.blokInstance) {
       const instance = this.blokInstance;
 
@@ -714,15 +745,21 @@ export class DatabaseCardDrawer {
 
     editorHolder.toggleAttribute('inert', this.pendingBodyRows.has(row.id));
     if (row.pageId !== undefined && this.rowPages !== undefined) {
+      // Set even when mounting fails, so a later sync does not retry it.
+      this.mountedPageId = row.pageId;
       try {
         this.pageMount = this.rowPages.mount(row.pageId, editorHolder);
       } catch {
-        const failure = document.createElement('p');
-
-        failure.setAttribute('role', 'alert');
-        failure.textContent = this.i18n?.t('tools.stub.error') ?? englishDictionary['tools.stub.error'];
-        editorHolder.replaceChildren(failure);
+        this.showPageFailure(editorHolder);
       }
+      return;
+    }
+    if (this.rowPages !== undefined && this.failedLookupRows.has(row.id)) {
+      this.showPageFailure(editorHolder);
+      return;
+    }
+    if (this.rowPages !== undefined && this.lookupRows.has(row.id)) {
+      editorHolder.toggleAttribute('inert', true);
       return;
     }
 
@@ -736,7 +773,8 @@ export class DatabaseCardDrawer {
       // The row may have changed while the editor loaded.
       const latest = this.currentRow ?? row;
 
-      if (latest.pageId !== undefined && this.rowPages !== undefined) {
+      if (this.rowPages !== undefined && (latest.pageId !== undefined
+        || this.lookupRows.has(rowId) || this.failedLookupRows.has(rowId))) {
         return;
       }
       const description = this.descriptionFor(latest);
@@ -787,5 +825,13 @@ export class DatabaseCardDrawer {
     }).catch(() => {
       // Blok import may fail in unit tests (jsdom), drawer still works for title
     });
+  }
+
+  private showPageFailure(editorHolder: HTMLElement): void {
+    const failure = document.createElement('p');
+
+    failure.setAttribute('role', 'alert');
+    failure.textContent = this.i18n?.t('tools.stub.error') ?? englishDictionary['tools.stub.error'];
+    editorHolder.replaceChildren(failure);
   }
 }

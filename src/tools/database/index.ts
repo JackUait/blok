@@ -80,6 +80,8 @@ export class DatabaseTool implements BlockTool {
   private keyboard: DatabaseKeyboard | null = null;
   private cardMenuPopover: PopoverDesktop | null = null;
   private reprojectQueued = false;
+  private readonly resolvingRows = new Set<string>();
+  private readonly resolveAgainRows = new Set<string>();
   /** Set while a full redraw waits for an inline edit or drag to end. */
   private redrawWhenIdleRetry: (() => void) | null = null;
 
@@ -421,6 +423,8 @@ export class DatabaseTool implements BlockTool {
     this.syncRowsFromBlocks();
 
     const after = this.model.getOrderedRows();
+
+    this.resolveMovedRows(before, after);
     const retitled = this.retitledRows(before, after);
     const openRowId = this.cardDrawer?.openRowId ?? null;
 
@@ -594,6 +598,14 @@ export class DatabaseTool implements BlockTool {
 
       if (propertyCreation !== null && created === undefined && this.config.adapter !== undefined) return;
       if (this.model.getRow(rowId) === undefined) return;
+      // A row is copied at most once: a second copy would replace its page.
+      const existing = await rowPages.lookup({ rowId });
+
+      if (existing !== null) {
+        await this.adoptRowPage(rowId, existing);
+
+        return;
+      }
       const written = this.config.adapter === undefined
         ? undefined
         : await this.sync.syncUpdateRowNow({ rowId, properties: { [propertyId]: body } }, (error) => {
@@ -610,7 +622,22 @@ export class DatabaseTool implements BlockTool {
         || !equalsOutputData(beforeCopy, body)) return;
 
       const request = { rowId, operationId: nanoid(), body };
-      const receipt = await rowPages.copyFromLegacy(request).catch(() => rowPages.copyFromLegacy(request));
+      const outcome = await rowPages.copyFromLegacy(request).catch(() => rowPages.copyFromLegacy(request))
+        .then((receipt) => ({ receipt }), async (error: unknown) => {
+          // Refused because another client moved the row meanwhile.
+          const moved = await rowPages.lookup({ rowId });
+
+          if (moved === null) throw error;
+
+          return { moved };
+        });
+
+      if ('moved' in outcome) {
+        await this.adoptRowPage(rowId, outcome.moved);
+
+        return;
+      }
+      const { receipt } = outcome;
       const current = this.model.getRow(rowId)?.properties[propertyId];
 
       if (typeof receipt.pageId !== 'string' || receipt.pageId.length === 0
@@ -625,7 +652,8 @@ export class DatabaseTool implements BlockTool {
 
       if (rowBlock === undefined) return;
       rowBlock.call('updatePageId', { pageId: receipt.pageId });
-      rowBlock.dispatchChange();
+      // The host committed it: undo must not strip it.
+      rowBlock.dispatchChange({ derived: true });
       this.syncRowsFromBlocks();
       if (this.cardDrawer?.openRowId === rowId) {
         this.cardDrawer.syncOpenRow(this.model.getRow(rowId));
@@ -1550,11 +1578,113 @@ export class DatabaseTool implements BlockTool {
   private handleRowClick(rowId: string): void {
     const row = this.model.getRow(rowId);
 
-    if (row === undefined) {
+    // Already shown: a fresh lookup would drop the open editor unsaved.
+    if (row === undefined || this.cardDrawer?.openRowId === rowId) {
       return;
     }
 
+    if (this.config.rowPages !== undefined && !this.readOnly && row.pageId === undefined) {
+      this.cardDrawer?.setRowPageLookup(rowId, 'pending');
+    }
     this.cardDrawer?.open(row);
+    void this.resolveRowPage(rowId);
+  }
+
+  /**
+   * Ask the host about rows an older client touched: one that lost `pageId`
+   * (its save prunes keys it does not know), or a moved row whose legacy body
+   * changed.
+   */
+  private resolveMovedRows(before: DatabaseRow[], after: DatabaseRow[]): void {
+    if (this.config.rowPages === undefined || this.readOnly) return;
+    for (const row of after) {
+      const previous = before.find(({ id }) => id === row.id);
+
+      if (previous === undefined || (previous.pageId === undefined && row.pageId === undefined)) continue;
+      if (row.pageId === undefined || !equalsOutputData(this.legacyBodyOf(previous), this.legacyBodyOf(row))) {
+        void this.resolveRowPage(row.id);
+      }
+    }
+  }
+
+  private legacyBodyOf(row: DatabaseRow | undefined): OutputData | undefined {
+    for (const property of this.model.getSchema()) {
+      const value = row?.properties[property.id];
+
+      if (property.type === 'richText' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        return value;
+      }
+    }
+
+    return undefined;
+  }
+
+  /** Look the row's page up and adopt it; the drawer waits for the answer. */
+  private async resolveRowPage(rowId: string): Promise<void> {
+    const rowPages = this.config.rowPages;
+
+    if (rowPages === undefined || this.readOnly) return;
+    if (this.resolvingRows.has(rowId)) {
+      this.resolveAgainRows.add(rowId);
+
+      return;
+    }
+    this.resolvingRows.add(rowId);
+    try {
+      const page = await rowPages.lookup({ rowId });
+
+      if (page !== null) {
+        await this.adoptRowPage(rowId, page);
+      }
+      this.cardDrawer?.setRowPageLookup(rowId, 'done');
+    } catch {
+      this.cardDrawer?.setRowPageLookup(rowId, 'failed');
+      this.api.notifier.show({ message: this.api.i18n.t('tools.stub.error'), style: 'error' });
+    } finally {
+      this.resolvingRows.delete(rowId);
+      if (this.resolveAgainRows.delete(rowId)) {
+        void this.resolveRowPage(rowId);
+      }
+    }
+  }
+
+  /**
+   * Point the row at the host's page. A legacy body an older client changed
+   * after the copy is merged into the page first, so neither body is lost.
+   * Never writes the legacy body.
+   */
+  private async adoptRowPage(rowId: string, page: { pageId: string; acceptedBody: OutputData }): Promise<void> {
+    const rowPages = this.config.rowPages;
+
+    if (rowPages === undefined || this.readOnly) return;
+    if (typeof page.pageId !== 'string' || page.pageId.length === 0) {
+      throw new Error('Row page lookup returned no page id');
+    }
+    const legacy = this.legacyBodyOf(this.model.getRow(rowId));
+
+    if (legacy !== undefined && !equalsOutputData(legacy, page.acceptedBody)) {
+      const request = { rowId, pageId: page.pageId, operationId: nanoid(), body: legacy, acceptedBody: page.acceptedBody };
+      const receipt = await rowPages.reconcileLegacy(request).catch(() => rowPages.reconcileLegacy(request));
+
+      if (receipt.pageId !== page.pageId
+        || typeof receipt.transactionId !== 'string' || receipt.transactionId.length === 0
+        || !equalsOutputData(receipt.acceptedBody, legacy)) {
+        throw new Error('Reconcile receipt did not match the legacy body');
+      }
+      // Changed again meanwhile: the reprojection that saw it merges it next.
+      if (!equalsOutputData(this.legacyBodyOf(this.model.getRow(rowId)), legacy)) return;
+    }
+
+    const rowBlock = this.api.blocks.getChildren(this.block.id).find((child) => child.id === rowId);
+
+    if (rowBlock === undefined || this.model.getRow(rowId)?.pageId === page.pageId) return;
+    rowBlock.call('updatePageId', { pageId: page.pageId });
+    // Host-derived, not a user step: undo must not strip it again.
+    rowBlock.dispatchChange({ derived: true });
+    this.syncRowsFromBlocks();
+    if (this.cardDrawer?.openRowId === rowId) {
+      this.cardDrawer.syncOpenRow(this.model.getRow(rowId));
+    }
   }
 
   /**

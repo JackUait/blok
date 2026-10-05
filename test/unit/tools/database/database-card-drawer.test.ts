@@ -1272,6 +1272,8 @@ describe('DatabaseCardDrawer', () => {
         transactionId: 'unused',
         acceptedBody: { blocks: [] },
       })),
+      lookup: vi.fn(async () => null),
+      reconcileLegacy: vi.fn(async () => { throw new Error('unexpected reconcile'); }),
       mount: vi.fn((_pageId: string, holder: HTMLElement) => {
         holder.replaceChildren(document.createTextNode('Page B'));
 
@@ -1370,6 +1372,8 @@ describe('DatabaseCardDrawer', () => {
         transactionId: 'unused',
         acceptedBody: { blocks: [] },
       })),
+      lookup: vi.fn(async () => null),
+      reconcileLegacy: vi.fn(async () => { throw new Error('unexpected reconcile'); }),
       mount: vi.fn((_pageId: string, holder: HTMLElement) => {
         const pageContent = document.createElement('div');
 

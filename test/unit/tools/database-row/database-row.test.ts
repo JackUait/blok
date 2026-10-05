@@ -279,6 +279,56 @@ describe('DatabaseRowTool', () => {
     });
   });
 
+  describe('keys this version does not know', () => {
+    // A newer Blok may add a top-level row key. Dropping it here would make
+    // this version's save prune it from the shared document for everyone.
+    const withFutureKey = (): DatabaseRowData => Object.assign(
+      { properties: { title: 'Row' }, position: 'a1', pageId: 'page-1' },
+      { futureKey: 'a & <b>x</b>', futureObject: { nested: [1, 2] } },
+    );
+
+    it('keeps an unknown top-level key through constructor and save', () => {
+      const tool = new DatabaseRowTool(createRowOptions(withFutureKey()));
+      const saved: Record<string, unknown> = { ...tool.save(document.createElement('div')) };
+
+      expect(saved.futureKey).toBe('a & <b>x</b>');
+      expect(saved.futureObject).toEqual({ nested: [1, 2] });
+      expect(saved).toMatchObject({ properties: { title: 'Row' }, position: 'a1', pageId: 'page-1' });
+    });
+
+    it('keeps an unknown top-level key through setData and readData', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+
+      tool.setData(withFutureKey());
+      tool.updateProperties({ title: 'Edited' });
+      const live: Array<Record<string, unknown>> = [];
+
+      tool.readData({ receive: (data) => live.push({ ...data }) });
+      const saved: Record<string, unknown> = { ...tool.save(document.createElement('div')) };
+
+      expect(saved.futureKey).toBe('a & <b>x</b>');
+      expect(live[0]?.futureKey).toBe('a & <b>x</b>');
+      expect(saved.properties).toEqual({ title: 'Edited' });
+    });
+
+    it('still drops a malformed known key', () => {
+      const malformed: Record<string, unknown> = { properties: {}, position: 'a0', pageId: '', title: 7 };
+      const tool = new DatabaseRowTool({ ...createRowOptions(), data: malformed as unknown as DatabaseRowData });
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved).not.toHaveProperty('pageId');
+      expect(saved).not.toHaveProperty('title');
+    });
+
+    it('does not let an unknown key shadow a known one', () => {
+      const tool = new DatabaseRowTool(createRowOptions(withFutureKey()));
+
+      tool.updatePosition({ position: 'b0' });
+
+      expect(tool.save(document.createElement('div')).position).toBe('b0');
+    });
+  });
+
   describe('readData()', () => {
     it('hands back the row as it is now, not as it was saved', () => {
       const tool = new DatabaseRowTool(createRowOptions({ properties: { a: '1' }, position: 'a0' }));

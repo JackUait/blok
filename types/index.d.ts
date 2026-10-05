@@ -152,6 +152,7 @@ export {
   DatabaseData,
   DatabaseAdapter,
   DatabaseRowPages,
+  DatabaseRowPageReceipt,
   DatabaseConfig,
 } from './tools/database';
 export { BlockId } from './data-formats/block-id';

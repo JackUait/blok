@@ -1332,22 +1332,26 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     };
     const onContextMenu = (event: MouseEvent): void => {
       event.preventDefault();
+      event.stopPropagation();
+      const rect = root.getBoundingClientRect();
       ctxLoop.setAttribute('aria-checked', String(media.loop));
-      ctxMenu.style.setProperty('--blok-ctx-x', `${event.offsetX}px`);
-      ctxMenu.style.setProperty('--blok-ctx-y', `${event.offsetY}px`);
+      ctxMenu.style.setProperty('--blok-ctx-x', `${event.clientX - rect.left}px`);
+      ctxMenu.style.setProperty('--blok-ctx-y', `${event.clientY - rect.top}px`);
       ctxMenu.hidden = false;
       document.addEventListener('mousedown', onCtxOutside);
       document.addEventListener('keydown', onCtxKeydown);
     };
     ctxLoop.addEventListener('click', () => { setLoop(!media.loop); onLoopChange?.(); ctxLoop.setAttribute('aria-checked', String(media.loop)); closeCtxMenu(); });
     ctxCopy.addEventListener('click', () => { clipboardWrite(video.currentSrc); closeCtxMenu(); });
-    ctxCopyAt.addEventListener('click', () => { clipboardWrite(`${video.currentSrc}#t=${Math.floor(video.currentTime)}`); closeCtxMenu(); });
+    ctxCopyAt.addEventListener('click', () => { clipboardWrite(`${video.currentSrc.split('#', 1)[0]}#t=${Math.floor(video.currentTime)}`); closeCtxMenu(); });
     ctxStats.addEventListener('click', () => { toggleStats(); closeCtxMenu(); });
     video.addEventListener('contextmenu', onContextMenu);
+    root.addEventListener('contextmenu', onContextMenu);
     return (): void => {
       document.removeEventListener('mousedown', onCtxOutside);
       document.removeEventListener('keydown', onCtxKeydown);
       video.removeEventListener('contextmenu', onContextMenu);
+      root.removeEventListener('contextmenu', onContextMenu);
     };
   })() : undefined;
 

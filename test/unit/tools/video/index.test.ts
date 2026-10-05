@@ -143,6 +143,29 @@ describe('VideoTool — read-only playback menu', () => {
     expect(video.loop).toBe(true);
   });
 
+  it('opens the playback menu from read-only controls without reaching the block menu', () => {
+    const tool = new VideoTool({ ...createOptions({ url: 'https://x/y.mp4' }), readOnly: true });
+    const host = document.createElement('div');
+    const root = tool.render();
+    const blockContextMenu = vi.fn();
+    host.appendChild(root);
+    host.addEventListener('contextmenu', blockContextMenu);
+    const playButton = root.querySelector<HTMLButtonElement>('[data-action="play-toggle"]');
+    const controls = root.querySelector<HTMLElement>('[data-role="video-controls"]');
+    if (!playButton || !controls) throw new Error('video controls missing');
+    vi.spyOn(controls, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 200, 400, 225));
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 135, clientY: 245 });
+
+    playButton.dispatchEvent(event);
+
+    const menu = root.querySelector<HTMLElement>('[data-role="video-menu"]');
+    expect(blockContextMenu).not.toHaveBeenCalled();
+    expect(menu?.hidden).toBe(false);
+    expect(menu?.style.getPropertyValue('--blok-ctx-x')).toBe('35px');
+    expect(menu?.style.getPropertyValue('--blok-ctx-y')).toBe('45px');
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('keeps a read-only playback-menu Loop choice after rerender', () => {
     localStorage.setItem('blok:video:loop', 'false');
     const block = createMockBlock();
@@ -178,6 +201,25 @@ describe('VideoTool — read-only playback menu', () => {
 
     expect(writeText).toHaveBeenNthCalledWith(1, 'https://x/variant.webm');
     expect(writeText).toHaveBeenNthCalledWith(2, 'https://x/variant.webm#t=95');
+  });
+
+  it('replaces a URL fragment when read-only viewers copy the current time', () => {
+    const writeText = vi.fn();
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const tool = new VideoTool({ ...createOptions({ url: 'https://x/y.mp4' }), readOnly: true });
+    const root = tool.render();
+    const video = root.querySelector('video');
+    if (!video) throw new Error('video missing');
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'https://x/variant.webm?token=abc#old',
+      configurable: true,
+    });
+    video.currentTime = 95.9;
+
+    video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    root.querySelector<HTMLButtonElement>('[data-action="copy-url-at-time"]')?.click();
+
+    expect(writeText).toHaveBeenCalledWith('https://x/variant.webm?token=abc#t=95');
   });
 
   it('keeps playback statistics for read-only viewers', () => {

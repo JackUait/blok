@@ -1076,8 +1076,8 @@ export class Header implements BlockTool {
     wrapper.appendChild(headerRow);
 
     const bodyPlaceholder = document.createElement('div');
-    // ps-8 (32px) matches the heading's start padding so body aligns with the title text start.
-    bodyPlaceholder.className = twMerge(BODY_PLACEHOLDER_STYLES, 'ps-8');
+    // ms-6.5 + px-1.5 = 32px matches the heading's start padding so body aligns with the title text start.
+    bodyPlaceholder.className = twMerge(BODY_PLACEHOLDER_STYLES, 'ms-6.5');
     bodyPlaceholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
     bodyPlaceholder.setAttribute(DATA_ATTR.chrome, '');
     // Class changes on the body placeholder (show/hide) must not trigger didMutated →

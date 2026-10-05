@@ -706,14 +706,18 @@ describe('Header Tool - Custom Configurations', () => {
         expect(childContainer.classList.contains('ps-8')).toBe(true);
       });
 
-      it('applies ps-8 to body placeholder so it aligns with heading text start', () => {
+      it('indents body placeholder by margin so its hover fill starts at the heading text (ms-6.5 + px-1.5 = 32px)', () => {
         const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
         const header = new Header(options);
         const wrapper = header.render();
         const bodyPlaceholder = wrapper.querySelector('[data-blok-toggle-body-placeholder]') as HTMLElement;
 
         expect(bodyPlaceholder).not.toBeNull();
-        expect(bodyPlaceholder.classList.contains('ps-8')).toBe(true);
+        expect(bodyPlaceholder.classList.contains('ms-6.5')).toBe(true);
+        expect(bodyPlaceholder.classList.contains('px-1.5')).toBe(true);
+        expect(bodyPlaceholder.classList.contains('ps-8')).toBe(false);
+        expect(bodyPlaceholder.classList.contains('ms-5.5')).toBe(false);
+        expect(bodyPlaceholder.classList.contains('can-hover:hover:bg-item-hover-bg')).toBe(true);
       });
     });
 

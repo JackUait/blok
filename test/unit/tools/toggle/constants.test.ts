@@ -26,8 +26,15 @@ describe('BODY_PLACEHOLDER_STYLES', () => {
     expect(BODY_PLACEHOLDER_STYLES).not.toContain('py-[7px]');
   });
 
-  it('uses ps-7 to align body placeholder with toggle list title text start', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('ps-7');
+  it('starts its text at 28px (ms-5.5 + px-1.5) to align with the toggle list title text start', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('ms-5.5');
+    expect(BODY_PLACEHOLDER_STYLES).toContain('px-1.5');
+    expect(BODY_PLACEHOLDER_STYLES).not.toContain('ps-7');
+  });
+
+  it('highlights its own box on hover, not the indent under the arrow', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('can-hover:hover:bg-item-hover-bg');
+    expect(BODY_PLACEHOLDER_STYLES).toContain('rounded-(--blok-radius-control)');
   });
 
   it('does not use pl-[1.1em] (body should align with title, not use Notion indent)', () => {

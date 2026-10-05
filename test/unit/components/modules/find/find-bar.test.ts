@@ -972,6 +972,8 @@ describe('FindBar', () => {
 
     it('ends the hop at once when the reader types', () => {
       bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(chip()).not.toBeNull();
       type(findInput(), 'thi');
 
       expect(chip()).toBeNull();
@@ -980,10 +982,25 @@ describe('FindBar', () => {
 
     it('ends the hop when the bar closes', () => {
       bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(chip()).not.toBeNull();
       bar.close();
 
       expect(chip()).toBeNull();
       expect(field().hasAttribute('data-blok-find-hopping')).toBe(false);
+    });
+
+    it('shows the counter at once when the reader types mid-flight', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      const counter = byTestId(bar.element, 'find-counter');
+      const counterCancels = animate.mock.contexts
+        .map((context, index) => (context === counter ? cancels[index] : undefined))
+        .filter((cancel) => cancel !== undefined);
+
+      expect(counterCancels.length).toBeGreaterThan(0);
+      type(findInput(), 'x');
+
+      expect(counterCancels.every((cancel) => cancel.mock.calls.length === 1)).toBe(true);
     });
 
     it('keeps the counter text live during the flight', () => {

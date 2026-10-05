@@ -723,12 +723,23 @@ describe('Find module', () => {
     });
 
     it('gives the bar no hop for a host input selection, which has no rect', () => {
-      const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
+      const { wrapper, blocks } = editor([{ id: 'a', text: 'pick this word' }]);
+      const text = blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
       const hostInput = document.createElement('input');
       const animate = vi.fn(() => ({ cancel: vi.fn(), finished: new Promise<void>(() => undefined) }));
 
+      if (!(text instanceof Text)) {
+        throw new Error('text missing');
+      }
       Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true });
+      Object.defineProperty(Range.prototype, 'getClientRects', {
+        value: () => [{ left: 10, top: 10, width: 30, height: 18, right: 40, bottom: 28 }],
+        configurable: true,
+        writable: true,
+      });
       vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: false, media: query })));
+      // A stale document range is still measurable; only the input guard stops a hop from it.
+      window.getSelection()?.setBaseAndExtent(text, 5, text, 9);
       hostInput.value = 'search words';
       document.body.appendChild(hostInput);
       hostInput.focus();

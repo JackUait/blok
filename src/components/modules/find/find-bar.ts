@@ -606,10 +606,17 @@ export class FindBar {
       return false;
     }
 
+    // Set once the flight starts; an interrupted hop cancels it so the counter shows at once.
+    const roll: { counter?: Animation } = {};
+
     this.field.setAttribute(ATTR.hopping, '');
     this.flight = hop(this.element, source, this.input, delay, (landed) => {
       this.flight = null;
       this.field.removeAttribute(ATTR.hopping);
+
+      if (!landed) {
+        roll.counter?.cancel();
+      }
 
       if (landed) {
         const pop = springEasing(SPRINGS.bouncy);
@@ -628,11 +635,12 @@ export class FindBar {
     }
 
     // Paint only: the counter's text, and what it announces, is already current.
-    this.motion.push(this.counter.animate([{ opacity: 0, translate: '0 14px' }, { opacity: 1, translate: '0 0' }], {
+    roll.counter = this.counter.animate([{ opacity: 0, translate: '0 14px' }, { opacity: 1, translate: '0 0' }], {
       ...springEasing(SPRINGS.bouncy),
       delay: delay + HOP_MS + 80,
       fill: 'backwards',
-    }));
+    });
+    this.motion.push(roll.counter);
 
     return true;
   }

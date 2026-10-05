@@ -65,6 +65,38 @@ describe('url mirror', () => {
     expect(mirror.element.firstElementChild?.getAttribute('style')).toContain('--scroll: 42');
   });
 
+  it('hazes only the sides a long link runs past', () => {
+    const { input, mirror } = setup();
+    const measure = (scrollLeft: number): void => {
+      Object.defineProperty(input, 'scrollLeft', { configurable: true, value: scrollLeft });
+      Object.defineProperty(input, 'scrollWidth', { configurable: true, value: 300 });
+      Object.defineProperty(input, 'clientWidth', { configurable: true, value: 200 });
+      input.dispatchEvent(new Event('scroll'));
+    };
+    const sides = (): [string | null, string | null] =>
+      [mirror.element.getAttribute('data-overflow-start'), mirror.element.getAttribute('data-overflow-end')];
+
+    measure(0);
+    expect(sides()).toEqual([null, '']);
+
+    measure(50);
+    expect(sides()).toEqual(['', '']);
+
+    measure(100);
+    expect(sides()).toEqual(['', null]);
+  });
+
+  it('does not haze a link that fits', () => {
+    const { input, mirror } = setup();
+
+    Object.defineProperty(input, 'scrollWidth', { configurable: true, value: 200 });
+    Object.defineProperty(input, 'clientWidth', { configurable: true, value: 200 });
+    input.dispatchEvent(new Event('input'));
+
+    expect(mirror.element.hasAttribute('data-overflow-start')).toBe(false);
+    expect(mirror.element.hasAttribute('data-overflow-end')).toBe(false);
+  });
+
   it('redraws on demand after the value is set in code', () => {
     const { input, mirror } = setup();
 

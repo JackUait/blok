@@ -5679,6 +5679,20 @@ span[data-blok-slash-search] {
   transform: translateX(calc(var(--scroll, 0) * -1px));
 }
 
+.blok-media-empty__embed-mirror {
+  --haze-start: #000;
+  --haze-end: #000;
+  mask-image: linear-gradient(to right, var(--haze-start), #000 20px, #000 calc(100% - 20px), var(--haze-end));
+}
+
+.blok-media-empty__embed-mirror[data-overflow-start] {
+  --haze-start: rgb(0 0 0 / 0.35);
+}
+
+.blok-media-empty__embed-mirror[data-overflow-end] {
+  --haze-end: rgb(0 0 0 / 0.35);
+}
+
 [data-blok-field] > .blok-media-empty__embed-input--mirrored {
   position: relative;
   z-index: 1;

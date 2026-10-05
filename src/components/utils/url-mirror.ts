@@ -31,7 +31,12 @@ export function createUrlMirror(input: HTMLInputElement): UrlMirror {
   input.classList.add('blok-media-empty__embed-input--mirrored');
 
   const place = (): void => {
-    text.style.setProperty('--scroll', String(input.scrollLeft));
+    const scroll = input.scrollLeft;
+
+    text.style.setProperty('--scroll', String(scroll));
+    // 1px slack: a zoomed page reports fractional scroll positions.
+    element.toggleAttribute('data-overflow-start', scroll > 1);
+    element.toggleAttribute('data-overflow-end', input.scrollWidth - input.clientWidth - scroll > 1);
   };
   const draw = (): void => {
     text.replaceChildren(...urlParts(input.value).map(([part, value]) => {

@@ -104,6 +104,13 @@ const setup = (config: Partial<BlokConfig> = {}, readOnly = false, onScreen = tr
 const input = (blockId: string, kind: 'upload' | 'load' = 'load', retry = vi.fn()): { blockId: string; tool: string; kind: 'upload' | 'load'; url: string; retry: () => void } =>
   ({ blockId, tool: 'image', kind, url: `https://x.test/${blockId}.png`, retry });
 
+/**
+ * jsdom lays nothing out; this gives an element a box at `top` in the viewport.
+ */
+const placeInViewport = (element: HTMLElement, top: number, height: number): void => {
+  vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, top, 600, height));
+};
+
 const actionsOf = (options: NotifierOptions | undefined): NonNullable<NotifierOptions['actions']> => options?.actions ?? [];
 
 const unloadPrevented = (): boolean => {
@@ -265,6 +272,65 @@ describe('MediaFailures', () => {
     vi.advanceTimersByTime(COALESCE_MS);
 
     expect(show).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not toast a failure whose image is in sight', () => {
+    const { module, show, blockOf } = setup();
+
+    placeInViewport(blockOf('a').pluginsContent, 100, 200);
+    module.report(input('a', 'upload'));
+    vi.advanceTimersByTime(COALESCE_MS);
+
+    expect(show).not.toHaveBeenCalled();
+  });
+
+  it('toasts a failure whose image is mostly below the fold', () => {
+    const { module, show, blockOf } = setup();
+
+    placeInViewport(blockOf('a').pluginsContent, window.innerHeight - 40, 200);
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+
+    expect(show).toHaveBeenCalledTimes(1);
+  });
+
+  it('toasts only the failures out of sight when several fail together', () => {
+    const { module, show, blockOf } = setup();
+
+    placeInViewport(blockOf('a').pluginsContent, 100, 200);
+    module.report(input('a'));
+    module.report(input('b'));
+    vi.advanceTimersByTime(COALESCE_MS);
+
+    expect(show).toHaveBeenCalledTimes(1);
+    actionsOf(show.mock.calls[0][0])[1].onClick();
+    expect(revealBlock).toHaveBeenCalledWith(blockOf('b').holder, blockOf('b').pluginsContent);
+  });
+
+  it('drops a held toast whose image is in sight when the user comes back', () => {
+    const { module, show, wrapper, blockOf } = setup({}, false, false);
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    placeInViewport(blockOf('a').pluginsContent, 100, 200);
+    FakeIntersectionObserver.setOnScreen(wrapper, true);
+    FakeIntersectionObserver.setOnScreen(wrapper, false);
+    placeInViewport(blockOf('a').pluginsContent, window.innerHeight + 100, 200);
+    FakeIntersectionObserver.setOnScreen(wrapper, true);
+
+    expect(show).not.toHaveBeenCalled();
+  });
+
+  it('still warns on save about a failure that was never toasted because it was in sight', () => {
+    const { module, show, blockOf } = setup();
+
+    placeInViewport(blockOf('a').pluginsContent, 100, 200);
+    module.report(input('a', 'upload'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    module.onSave();
+
+    expect(show).toHaveBeenCalledTimes(1);
+    expect(show.mock.calls[0][0].message).toBe('imageFailure.notSaved:1');
   });
 
   it('shows one card per failure, in the order they failed', () => {

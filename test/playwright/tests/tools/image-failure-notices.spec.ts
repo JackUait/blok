@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
-import type { Blok, OutputData } from '@/types';
+import type { Blok, ImageFailureReport, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
@@ -19,6 +19,7 @@ declare global {
     Blok: new (...args: unknown[]) => Blok;
     BlokImage: unknown;
     __imageFailureChanges?: number;
+    __imageFailureReasons?: string[];
   }
 }
 
@@ -41,6 +42,7 @@ const createBlok = async (page: Page, data: OutputData, failUploads = false, not
     document.body.appendChild(container);
 
     window.__imageFailureChanges = 0;
+    window.__imageFailureReasons = [];
     const blok = new window.Blok({
       holder,
       data: initialData,
@@ -48,6 +50,10 @@ const createBlok = async (page: Page, data: OutputData, failUploads = false, not
       i18n: { locale: language },
       onChange: () => {
         window.__imageFailureChanges = (window.__imageFailureChanges ?? 0) + 1;
+      },
+      // Returns nothing, so Blok still shows its own notices.
+      onImageFailure: ({ reason }: ImageFailureReport) => {
+        window.__imageFailureReasons?.push(reason);
       },
       tools: {
         image: {
@@ -66,6 +72,10 @@ const createBlok = async (page: Page, data: OutputData, failUploads = false, not
     await blok.isReady;
   }, { holder: HOLDER_ID, initialData: data, rejectUploads: failUploads, position: notifierPosition, language: locale });
 };
+
+/** Pushes what follows below the fold: a toast is only for images out of sight. */
+const filler = (count = 40): OutputData['blocks'] =>
+  Array.from({ length: count }, (_, i) => ({ type: 'paragraph', data: { text: `Paragraph ${i}` } }));
 
 test.describe('image failure notices', () => {
   test.beforeEach(async ({ page }) => {
@@ -121,11 +131,11 @@ test.describe('image failure notices', () => {
 
   test('each dead image gets its own card; closing one brings up the next', async ({ page }) => {
     await page.route('https://media.test/**', (route) => route.fulfill({ status: 404, body: '' }));
-    await createBlok(page, { blocks: [ 'one', 'two', 'three' ].map((name) => ({
+    await createBlok(page, { blocks: [ ...filler(), ...[ 'one', 'two', 'three' ].map((name) => ({
       id: name,
       type: 'image',
       data: { url: `https://media.test/stack-${name}.jpg` },
-    })) });
+    })) ] });
 
     const container = page.getByTestId('notifier-container');
     const front = page.locator('[data-blok-testid="notification-error"][data-state="open"]');
@@ -150,12 +160,12 @@ test.describe('image failure notices', () => {
 
   test('a closed card leaves from where it was, while the next one fills in', async ({ page }) => {
     await page.route('https://media.test/**', (route) => route.fulfill({ status: 404, body: '' }));
-    await createBlok(page, { blocks: [ 'one', 'two' ].map((name) => ({
+    await createBlok(page, { blocks: [ ...filler(), ...[ 'one', 'two' ].map((name) => ({
       id: name,
       type: 'image',
       data: { url: `https://media.test/drift-${name}.jpg` },
     // Russian titles are wider than an empty card, so the next card grows once its text lands.
-    })) }, false, 'bottom-center', 'ru');
+    })) ] }, false, 'bottom-center', 'ru');
     await expect(page.getByTestId('notifier-container')).toHaveAttribute('data-blok-toast-behind', '1');
 
     const drift = await page.evaluate(async () => {
@@ -178,8 +188,9 @@ test.describe('image failure notices', () => {
   test('Show on a stacked card scrolls to that card\'s own image', async ({ page }) => {
     await page.route('https://media.test/**', (route) => route.fulfill({ status: 404, body: '' }));
     await createBlok(page, { blocks: [
+      ...filler(),
       { id: 'first', type: 'image', data: { url: 'https://media.test/show-first.jpg' } },
-      ...Array.from({ length: 40 }, (_, i) => ({ type: 'paragraph', data: { text: `Paragraph ${i}` } })),
+      ...filler(),
       { id: 'second', type: 'image', data: { url: 'https://media.test/show-second.jpg' } },
     ] });
 
@@ -223,14 +234,14 @@ test.describe('image failure notices', () => {
     await expect(block.locator('[data-role="mend-state"]')).toHaveCount(0);
   });
 
-  test('saving with a failed upload shows the save toast', async ({ page }) => {
+  test('a failed upload in sight gets no toast, but saving still warns about it', async ({ page }) => {
     await createBlok(page, { blocks: [ { type: 'image', data: {} } ] }, true);
     await page.locator(IMAGE_BLOCK_SELECTOR).getByTestId('file-input').setInputFiles(PHOTO_FIXTURE_PATH);
     const card = page.locator('[data-blok-testid="notification-error"][data-state="open"]');
 
-    await expect(card).toContainText('Image failed to upload');
-    // While the card is up it already tells the user; the save toast is for failures out of sight.
-    await card.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(page.locator(IMAGE_BLOCK_SELECTOR).locator('[data-role="error-state"]')).toBeVisible();
+    // The host is asked right before the cards go up, so once it heard, any card would be up.
+    await expect.poll(() => page.evaluate(() => window.__imageFailureReasons)).toEqual([ 'fail' ]);
     await expect(card).toHaveCount(0);
 
     await page.evaluate(() => window.blokInstance?.save());
@@ -241,7 +252,7 @@ test.describe('image failure notices', () => {
   test('confirmLeave shows the banner and each button answers', async ({ page }) => {
     await page.route('https://media.test/**', (route) => route.fulfill({ status: 404, body: '' }));
     await createBlok(page, { blocks: [ { type: 'image', data: { url: 'https://media.test/confirm-leave.jpg' } } ] });
-    await expect(page.getByTestId('notification-error')).toBeVisible();
+    await expect(page.locator(IMAGE_BLOCK_SELECTOR).locator('[data-role="error-state"]')).toBeVisible();
 
     const banner = page.getByRole('alertdialog', { name: 'Some images have problems' });
 

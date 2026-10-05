@@ -353,7 +353,15 @@ export class MediaFailures extends Module {
     const present = this.presence === null || this.presence.onScreen || this.presence.focused;
 
     if (present) {
-      this.notices().filter((notice) => !this.onScreen.has(notice)).forEach((notice) => this.put(notice));
+      this.notices().filter((notice) => !this.onScreen.has(notice)).forEach((notice) => {
+        // Its image already shows the error. The card is dropped, not held, so it
+        // never pops up later; the save toast still counts the failure.
+        if (this.imageInSight(notice)) {
+          this.forget(notice);
+        } else {
+          this.put(notice);
+        }
+      });
 
       return;
     }
@@ -366,6 +374,24 @@ export class MediaFailures extends Module {
         this.Blok.NotifierAPI.dismiss(notice);
       }
     });
+  }
+
+  /**
+   * @param notice - a card about to go up
+   * @returns true when at least half of its failed image is in the viewport
+   */
+  private imageInSight(notice: NotifierOptions): boolean {
+    const entry = [ ...this.entries.values() ].find((candidate) => candidate.card === notice);
+    const block = entry === undefined ? undefined : this.Blok.BlockManager.getBlockById(entry.blockId);
+
+    if (block === undefined) {
+      return false;
+    }
+    const rect = block.pluginsContent.getBoundingClientRect();
+    const visible = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+
+    // A detached or hidden block measures 0×0.
+    return rect.width > 0 && rect.height > 0 && visible >= rect.height / 2;
   }
 
   private put(notice: NotifierOptions): void {

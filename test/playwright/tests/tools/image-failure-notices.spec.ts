@@ -142,6 +142,8 @@ test.describe('image failure notices', () => {
 
     await front.getByRole('button', { name: 'Dismiss' }).click();
     await expect(front).toHaveCount(0);
+    // A card that rose from the stack must still slide out and leave the page.
+    await expect(page.locator('[data-blok-toast="card"]')).toHaveCount(0);
   });
 
   test('Show on a stacked card scrolls to that card\'s own image', async ({ page }) => {

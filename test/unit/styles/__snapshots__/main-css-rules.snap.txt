@@ -15026,13 +15026,14 @@ textarea[data-blok-field] {
 
 [data-blok-interface='notifier'] [data-blok-toast='card'][data-state='closed'] {
   z-index: 1;
+  pointer-events: none;
 }
 
-[data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise] {
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
   animation: blok-toast-rise 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-[data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise] {
+[data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
   animation-name: blok-toast-rise-top;
 }
 
@@ -15336,7 +15337,7 @@ textarea[data-blok-field] {
   animation: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-toast='card'] [data-blok-toast-part='thumb'], [data-blok-toast='card'] [data-blok-toast-part='check'], [data-blok-toast='card'] [data-blok-toast-part='check']::before, [data-blok-toast='card'] [data-blok-toast-part='check'] svg path, [data-blok-toast='card'][data-resolved='true']::after, [data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'], [data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise], [data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-toast='card'] [data-blok-toast-part='thumb'], [data-blok-toast='card'] [data-blok-toast-part='check'], [data-blok-toast='card'] [data-blok-toast-part='check']::before, [data-blok-toast='card'] [data-blok-toast-part='check'] svg path, [data-blok-toast='card'][data-resolved='true']::after, [data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'], [data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'], [data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
   animation: none;
 }
 

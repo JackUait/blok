@@ -52,16 +52,18 @@
   translate: 0 calc(2 * var(--blok-toast-peek));
 }
 
-/* The leaving card stays above the one rising into its place. */
+/* The leaving card stays above the one rising into its place, but clicks go through to it. */
 [data-blok-interface='notifier'] [data-blok-toast='card'][data-state='closed'] {
   z-index: 1;
+  pointer-events: none;
 }
 
-[data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise] {
+/* Open only: on close the slide-out has to run, or animationend never comes and the card stays. */
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
   animation: blok-toast-rise 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-[data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise] {
+[data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
   animation-name: blok-toast-rise-top;
 }
 
@@ -462,8 +464,8 @@
   [data-blok-toast='card'] [data-blok-toast-part='check'] svg path,
   [data-blok-toast='card'][data-resolved='true']::after,
   [data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'],
-  [data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise],
-  [data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise] {
+  [data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'],
+  [data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
     animation: none;
   }
 

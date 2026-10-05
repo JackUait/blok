@@ -95,6 +95,20 @@ describe('Notifier card stack', () => {
     expect(first?.style.position).toBe('absolute');
   });
 
+  it('keeps the closing card the size and place it had, against the resized wrapper', () => {
+    show(card('first'));
+    const first = front();
+    const wrapper = first?.parentElement;
+
+    show(card('second'));
+    vi.spyOn(first as HTMLElement, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 500, 480, 64));
+    // Centred on screen, the wrapper narrows to the next card once the first one leaves the flow.
+    vi.spyOn(wrapper as HTMLElement, 'getBoundingClientRect').mockReturnValue(new DOMRect(130, 492, 420, 72));
+    closeFront();
+
+    expect([ first?.style.width, first?.style.left, first?.style.top ]).toEqual([ '480px', '-30px', '8px' ]);
+  });
+
   it('moves focus to the next card when the closed one held it', () => {
     show(card('first'));
     show(card('second'));

@@ -2,6 +2,7 @@ import { serialize } from 'parse5';
 import type { DefaultTreeAdapterMap } from 'parse5';
 import type { OutputBlockData, OutputData } from '../../types';
 import { parseInlineFragment } from './html-text';
+import { cloneJson } from './json-clone';
 
 type P5ChildNode = DefaultTreeAdapterMap['childNode'];
 type P5Element = DefaultTreeAdapterMap['element'];
@@ -128,7 +129,7 @@ export const remapPageDocument = (data: OutputData, ids: PageDocumentIds): Outpu
 
   const blocks: OutputBlockData[] = data.blocks.map((block) => {
     const copy: OutputBlockData = {
-      ...structuredClone(block),
+      ...(cloneJson(block) as OutputBlockData),
       id: mappedBlockId(block.id),
     };
 

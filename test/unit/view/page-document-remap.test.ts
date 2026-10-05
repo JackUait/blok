@@ -3,7 +3,10 @@ import type { OutputBlockData, OutputData } from '../../../types';
 import { blocksToHtml, remapPageDocument } from '../../../src/view';
 
 beforeEach(() => vi.clearAllMocks());
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 const doc = (blocks: OutputBlockData[]): OutputData => ({ blocks });
 const ids = {
@@ -308,6 +311,28 @@ describe('remapPageDocument', () => {
     Reflect.set(nested, 'label', 'Edited');
 
     expect(original.blocks[0]?.data.nested).toEqual({ label: 'Original' });
+  });
+
+  it('copies a document where structuredClone does not exist', () => {
+    vi.stubGlobal('structuredClone', undefined);
+    const original = doc([{ id: 'old-block', type: 'paragraph', data: { text: 'Hi', nested: { a: 1 } } }]);
+
+    const copied = remapPageDocument(original, { blockIds: new Map([['old-block', 'new-block']]), pageIds: new Map() });
+
+    expect(copied.blocks[0]).toEqual({ id: 'new-block', type: 'paragraph', data: { text: 'Hi', nested: { a: 1 } } });
+    expect(copied.blocks[0]?.data.nested).not.toBe(original.blocks[0]?.data.nested);
+  });
+
+  it('keeps a __proto__ key in data and tunes', () => {
+    const block: OutputBlockData = JSON.parse(
+      '{"id":"old-block","type":"paragraph","data":{"text":"x","__proto__":{"keep":"data"}},"tunes":{"__proto__":{"keep":"tune"}}}'
+    );
+
+    const copied = remapPageDocument(doc([block]), { blockIds: new Map([['old-block', 'new-block']]), pageIds: new Map() });
+
+    expect(JSON.stringify(copied.blocks[0])).toBe(
+      '{"id":"new-block","type":"paragraph","data":{"text":"x","__proto__":{"keep":"data"}},"tunes":{"__proto__":{"keep":"tune"}}}'
+    );
   });
 
   it('refuses a missing block ID mapping', () => {

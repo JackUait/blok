@@ -129,7 +129,6 @@ const RADII: Array<[string, string, string]> = [
   ['styles/embed.css', '[data-blok-tool="embed"] .blok-embed-toolbar button', nested('control')],
   ['styles/embed.css', '[data-blok-tool="embed"] .blok-embed-toolbar__align-popover', role('surface')],
   ['styles/embed.css', '.blok-embed-empty__submit', role('control-sm')],
-  ['styles/embed.css', '.blok-embed-empty__kbd', role('control-sm')],
   ['styles/embed.css', '.blok-embed-empty__readonly', role('block')],
   ['styles/embed.css', '.blok-embed-linkcard', role('block')],
   ['styles/embed.css', '.blok-embed-linkcard__action', nested('control')],

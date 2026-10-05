@@ -158,6 +158,11 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     reason: 'Text input: the shared field keys its focus look on the text input or textarea only (never a button inside the box), so it may look active however the field was focused.',
   },
   {
+    file: 'src/styles/embed.css',
+    match: 'input:focus)',
+    reason: 'Text input: the embed address bar restates the shared field\'s input-only focus border at its own specificity.',
+  },
+  {
     file: 'src/styles/media-empty.css',
     match: '.blok-media-empty__input',
     reason: 'Text input: the URL field may look active however it was focused.',

@@ -11,6 +11,7 @@ import { INLINE_TEXT_SANITIZE } from '../components/shared/inline-content-saniti
 import type { BlokViewSchema } from '../shared/sanitize-schema';
 import { BLOCK_CONTENT_CLASSES, BLOCK_WRAPPER_CLASSES } from '../shared/block-scaffolding';
 import { classesFor } from '../shared/tool-classes';
+import { ownEntry } from '../shared/own-entry';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 import { firstStrongDirection } from '../shared/text-direction';
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
@@ -314,7 +315,7 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
       return null;
     }
 
-    for (const field of DIRECTION_FIELDS[block.type] ?? []) {
+    for (const field of ownEntry(DIRECTION_FIELDS, block.type) ?? []) {
       const value = block.data[field];
       const direction = typeof value === 'string' ? firstStrongDirection(proseTextContent(value)) : null;
 
@@ -496,7 +497,7 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
   const commentSafeType = (type: string): string => escapeHtml(type.replace(/-+/g, '-'));
 
   const renderBlock = (block: ViewBlock): string => {
-    const custom = renderers[block.type];
+    const custom = ownEntry(renderers, block.type);
 
     if (custom !== undefined) {
       return custom(block.data, ctxFor(block));
@@ -504,7 +505,7 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 
     const emitter = block.type === 'page' && !isPagePointer(block.type, block.data)
       ? undefined
-      : builtinEmitters[block.type];
+      : ownEntry(builtinEmitters, block.type);
 
     if (emitter !== undefined) {
       const bare = BARE_CONTAINER_TOOLS.has(block.type);
@@ -573,7 +574,7 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
    */
   const renderWithDirection = (block: ViewBlock): string => {
     const html = renderBlock(block);
-    const ownsRoot = renderers[block.type] === undefined && builtinEmitters[block.type] !== undefined;
+    const ownsRoot = ownEntry(renderers, block.type) === undefined && ownEntry(builtinEmitters, block.type) !== undefined;
     const direction = ownsRoot ? directionOf(block) : null;
 
     if (classes) {

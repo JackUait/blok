@@ -16,6 +16,7 @@
 import type { OutputData } from '../../types';
 import { repairedTableRows, sourceCellsInDisplayOrder, tableRows } from './table-grid';
 import { cloneJson } from './json-clone';
+import { ownEntry } from '../shared/own-entry';
 
 /** Options shared by extraction and injection — they must match, or the counts will not. */
 export interface DocumentTextsOptions {
@@ -83,7 +84,7 @@ const fieldsFor = (type: string, options: DocumentTextsOptions): string[] => {
   }
 
   /** An unfamiliar tool storing prose in `data.text` is still translatable. */
-  return PROSE_FIELDS[type] ?? ['text'];
+  return ownEntry(PROSE_FIELDS, type) ?? ['text'];
 };
 
 /** One translatable string and the write-back that puts its translation in place. */

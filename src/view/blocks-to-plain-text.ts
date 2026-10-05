@@ -15,6 +15,7 @@ import { htmlTextContent } from './html-text';
 import { claimedCellTexts, isSyntheticCell, leadingCellText, repairedTableRows } from './table-grid';
 
 import type { LooseOutputData, OutputData } from '../../types';
+import { ownEntry } from '../shared/own-entry';
 import { isPagePointer } from '../shared/page-pointer';
 import { PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
 
@@ -187,7 +188,7 @@ const readPlainText = (
    * @param block - the block that was read as nothing
    */
   const noteUnreadable = (block: ViewBlock): void => {
-    if (KNOWN_BLOCK_TYPES.has(block.type) || renderers[block.type] !== undefined) {
+    if (KNOWN_BLOCK_TYPES.has(block.type) || ownEntry(renderers, block.type) !== undefined) {
       return;
     }
 
@@ -368,7 +369,7 @@ const readPlainText = (
    * @param block - block to read
    */
   const ownSegments = (block: ViewBlock, order: number): Segment[] => {
-    const custom = renderers[block.type];
+    const custom = ownEntry(renderers, block.type);
 
     if (custom !== undefined) {
       const text = htmlTextContent(custom(block.data, htmlRenderer.ctxFor(block)));
@@ -410,11 +411,11 @@ const readPlainText = (
        * not re-emitted. A child no cell names is emitted here instead of being
        * dropped — silently indexing as nothing makes content unfindable.
        */
-      const referenced = block.type === 'table' && renderers[block.type] === undefined
+      const referenced = block.type === 'table' && ownEntry(renderers, block.type) === undefined
         ? referencedCellIds(block)
         : undefined;
 
-      if ((isPagePointer(block.type, block.data) || block.type === 'page-link') && renderers[block.type] === undefined) {
+      if ((isPagePointer(block.type, block.data) || block.type === 'page-link') && ownEntry(renderers, block.type) === undefined) {
         return;
       }
 

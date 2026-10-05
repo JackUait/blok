@@ -68,6 +68,25 @@ public sealed class BlokPageFunctionsTests
         index.Text);
   }
 
+  [Theory]
+  [InlineData("constructor")]
+  [InlineData("toString")]
+  [InlineData("__proto__")]
+  public async Task IndexesABlockTypedLikeAPrototypeKeyAsAnUnknownBlock(string type)
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    static string DocumentOf(string blockType) => $$$"""
+        {"blocks":[{"id":"b","type":"{{{blockType}}}","data":{"text":"Own text"}}]}
+        """;
+
+    var index = await converter.GetPageIndexAsync(DocumentOf(type));
+    var unknown = await converter.GetPageIndexAsync(DocumentOf("x-unknown"));
+
+    Assert.Equal(unknown.Text, index.Text);
+    Assert.Equal(unknown.Owners, index.Owners);
+    Assert.Equal(unknown.References, index.References);
+  }
+
   [Fact]
   public async Task ReportsUnreadableJsonAsAnInvalidDocument()
   {

@@ -244,7 +244,7 @@ const useLatestBlokVersion = (): string => {
   return version;
 };
 
-// The showpiece for "Typed JSON, never HTML": a flip card. At rest it shows the
+// The showpiece for "Typed JSON, not an HTML blob": a flip card. At rest it shows the
 // clean, typed JSON the editor saves to — the whole object, in full; on hover
 // the card turns to reveal the very document that JSON renders as inside the
 // editor — "Hello, Blok" over Blok's mark, with a live caret and block handles.

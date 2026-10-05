@@ -1833,7 +1833,7 @@
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
 }
 
-/* "Typed JSON, never HTML": the hero diorama is a flip card. The front is the
+/* "Typed JSON, not an HTML blob": the hero diorama is a flip card. The front is the
    rendered page you author; on hover the whole tile turns it 180° to reveal the
    clean JSON that document saves to. backface-visibility hides whichever side
    faces away, so only one is ever readable. */

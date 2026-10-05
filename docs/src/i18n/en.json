@@ -1331,7 +1331,7 @@
         },
         "save": {
           "title": "Save it to JSON",
-          "body": "Call `save()` to get your content as a plain object. There's no HTML to parse and no hidden state, only blocks you can store anywhere.",
+          "body": "Call `save()` to get your content as a plain object. The structure is typed JSON with no hidden state, only blocks you can store anywhere. Inline formatting is stored as HTML in rich text fields.",
           "payoff": "That object is the whole point. It's portable JSON you can drop into a database, a file, or an API. It's exactly what you'll load back next."
         },
         "render": {
@@ -1441,12 +1441,12 @@
       "sectionLabel": "Features",
       "learnMoreLabel": "Learn more",
       "cleanJson": {
-        "title": "Typed JSON, never HTML",
+        "title": "Typed JSON, not an HTML blob",
         "description": "Just typed JSON blocks, never an HTML blob.",
         "learnMore": "Learn more about Clean JSON output",
         "details": {
           "summary": "Blok is a headless editor built around a structured document model. Your app owns that data and decides how to store and display it.",
-          "benefit1": "Typed JSON output, no HTML parsing",
+          "benefit1": "Typed JSON output, so you never parse structure out of HTML",
           "benefit2": "Stable block IDs for diffing and version control",
           "benefit3": "Render on the server or the client",
           "benefit4": "Framework-agnostic core with full TypeScript types"
@@ -1813,7 +1813,7 @@
     "tryReadOnlyTitle": "Read-only mode",
     "tryReadOnlyDesc": "Open Settings and switch the editor to read-only to see the page exactly as a reader gets it.",
     "tryJsonTitle": "JSON output",
-    "tryJsonDesc": "Nothing here is HTML. The content is saved as a plain array of blocks, ready to store or render anywhere.",
+    "tryJsonDesc": "The structure here is typed JSON. Only the text inside a block carries inline HTML markup. The content is saved as a plain array of blocks, ready to store or render anywhere.",
     "nextTitle": "Where to go next",
     "nextQuickStartDesc": "Install the package and mount your first editor in a few lines.",
     "nextConfigDesc": "Every option the Blok constructor accepts, and what each one defaults to.",

@@ -31,6 +31,18 @@ describe('saved-format field names in route metadata', () => {
   }
 });
 
+describe('tool route descriptions and saved field names', () => {
+  // A tool description reads as what the block is and stores. The saved JSON
+  // uses `parent`/`content`; `parentId`/`contentIds` are live names only.
+  for (const prefix of LOCALE_PREFIXES) {
+    for (const path of DOCUMENTED_TOOL_ROUTE_PATHS) {
+      it(`${prefix || '/en'}${path} does not name parentId/contentIds`, () => {
+        expect(getRouteMetadata(`${prefix}${path}`)?.description ?? '').not.toMatch(/parentId|contentIds/);
+      });
+    }
+  }
+});
+
 describe('concepts description and inline markup', () => {
   // Text fields save inline HTML (paragraph save() returns innerHTML; underline wraps in <u>).
   it('does not claim the document holds no HTML', () => {

@@ -366,7 +366,7 @@ const TOOL_COPY: Record<string, Copy> = {
   toggle: {
     title: 'Toggle Block — Collapsible Content in Blok',
     description:
-      'A collapsible block that owns child blocks through contentIds, including toggle headings that keep their level.',
+      'A collapsible block that owns nested child blocks, including toggle headings that keep their level.',
     h1: 'Toggle block: collapsible content',
   },
   callout: {

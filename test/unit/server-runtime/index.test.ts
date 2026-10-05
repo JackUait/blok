@@ -244,6 +244,18 @@ describe('server runtime boundary', () => {
     expect(result.warnings[0].detail).toBe('2 malformed blocks were skipped');
   });
 
+  it('never writes a script-capable URL into Markdown', async () => {
+    const output = await invoke('blocksToMarkdown', JSON.stringify({
+      blocks: [
+        { type: 'paragraph', data: { text: '<a href="javascript:alert(1)">js</a> <img src="javascript:alert(1)" alt="i">' } },
+        { type: 'image', data: { url: 'javascript:alert(1)', alt: 'Alt' } },
+      ],
+    }));
+    const result = JSON.parse(output) as { markdown: string };
+
+    expect(result.markdown).toBe('js \n\nAlt');
+  });
+
   it('still rejects input that is not a document at all', async () => {
     await expect(invoke('blocksToMarkdown', JSON.stringify({ notBlocks: [] })))
       .rejects.toThrow(TypeError);

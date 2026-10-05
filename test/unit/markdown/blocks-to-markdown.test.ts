@@ -71,6 +71,16 @@ describe('blocksToMarkdown', () => {
     expect(md).toBe('# Title\n\nIntro\n\n- one\n- two');
   });
 
+  it('keeps the label and drops the link when a URL is script-capable', () => {
+    const md = (html: string): string => blocksToMarkdown([{ tool: 'paragraph', data: { text: html } }]);
+
+    expect(md('<a href="javascript:alert(1)">js</a>')).toBe('js');
+    expect(md('<a href=" java\tscript:alert(1)">ws</a>')).toBe('ws');
+    expect(md('x <img src="javascript:alert(1)" alt="i"> y')).toBe('x  y');
+    expect(blocksToMarkdown([{ tool: 'image', data: { url: 'javascript:alert(1)', alt: 'Alt' } }])).toBe('Alt');
+    expect(blocksToMarkdown([{ tool: 'embed', data: { url: 'javascript:alert(1)', service: 'evil' } }])).toBe('evil');
+  });
+
   it('drops the link syntax when an anchor has no href', () => {
     expect(blocksToMarkdown([{ tool: 'paragraph', data: { text: '<a>bare</a>' } }])).toBe('bare');
   });

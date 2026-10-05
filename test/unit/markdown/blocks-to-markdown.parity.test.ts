@@ -181,6 +181,14 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
     ]),
   },
   {
+    name: 'script-capable URLs',
+    document: doc([
+      { type: 'paragraph', data: { text: '<a href="javascript:alert(1)">js</a> <a href=" java\tscript:x">ws</a> <img src="javascript:x" alt="i">' } },
+      { type: 'image', data: { url: 'javascript:alert(1)', alt: 'Alt' } },
+      { type: 'bookmark', data: { url: 'vbscript:x', title: 'X' } },
+    ]),
+  },
+  {
     name: 'a non-owning page reference',
     document: doc([{ id: 'r1', type: 'page-link', data: { pageId: 'p1' } }]),
   },

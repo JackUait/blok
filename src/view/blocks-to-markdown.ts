@@ -16,6 +16,7 @@ import {
   codeSpan,
   inlineEquation,
   inlineLosses,
+  markdownDestination,
   markdownTextEscaper,
   serializeBlocksToMarkdown
 } from '../markdown/blocks-to-markdown-core';
@@ -130,17 +131,17 @@ const serializeNode = (
     case 'strike':
       return inner.trim() === '' ? inner : `~~${inner}~~`;
     case 'a': {
-      const href = attr(node, 'href');
+      const href = markdownDestination(attr(node, 'href') ?? '', 'href');
 
       return href ? `[${inner}](${href})` : inner;
     }
     /**
      * An image has no child nodes, so the `default` branch serializes it to
      * nothing and the image is lost. `alt` is text, escaped like a link's
-     * label; `src` is written raw, like `href`.
+     * label; `src` goes through the same URL check as `href`.
      */
     case 'img': {
-      const src = attr(node, 'src');
+      const src = markdownDestination(attr(node, 'src') ?? '', 'src');
 
       return src ? `![${escape(attr(node, 'alt') ?? '')}](${src})` : '';
     }

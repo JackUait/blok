@@ -102,6 +102,44 @@ describe('blocksToMarkdown (view)', () => {
     });
   });
 
+  /**
+   * Markdown renderers turn a destination into a live href/src, so a
+   * script-capable URL must never reach one. The label stays, as in blocksToHtml.
+   */
+  describe('unsafe URLs', () => {
+    /**
+     * Serialize one paragraph's inline HTML.
+     * @param text - the paragraph's `data.text`
+     */
+    const inline = (text: string): string => blocksToMarkdown(doc([{ type: 'paragraph', data: { text } }]));
+
+    it('keeps the label of a javascript: link and drops the link', () => {
+      expect(inline('<a href="javascript:alert(1)">js</a>')).toBe('js');
+    });
+
+    it('drops a link whose scheme is smuggled through whitespace', () => {
+      expect(inline('<a href=" java\tscript:alert(1)">ws</a>')).toBe('ws');
+    });
+
+    it('drops a data: or blob: link', () => {
+      expect(inline('<a href="data:text/html,x">d</a> <a href="blob:https://x/1">b</a>')).toBe('d b');
+    });
+
+    it('emits nothing for an image with a javascript: src', () => {
+      expect(inline('x <img src="javascript:alert(1)" alt="i"> y')).toBe('x  y');
+    });
+
+    it('keeps a raster data: image src', () => {
+      expect(inline('<img src="data:image/png;base64,AA" alt="p">')).toBe('![p](data:image/png;base64,AA)');
+    });
+
+    it('drops the link from an image block and a link-like block with an unsafe url', () => {
+      expect(blocksToMarkdown(doc([{ type: 'image', data: { url: 'javascript:alert(1)', alt: 'Alt' } }]))).toBe('Alt');
+      expect(blocksToMarkdown(doc([{ type: 'bookmark', data: { url: 'javascript:alert(1)', title: 'X' } }]))).toBe('X');
+      expect(blocksToMarkdown(doc([{ type: 'embed', data: { source: 'data:text/html,x', service: 'evil' } }]))).toBe('evil');
+    });
+  });
+
   it('serializes headings, quotes, dividers and code fences', () => {
     expect(blocksToMarkdown(doc([{ type: 'header', data: { text: 'Title', level: 2 } }]))).toBe('## Title');
     expect(blocksToMarkdown(doc([{ type: 'quote', data: { text: 'wisdom' } }]))).toBe('> wisdom');

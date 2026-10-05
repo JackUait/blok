@@ -18,6 +18,7 @@ import type { PageInfo } from '../../types/tools/page';
 import { orderByContent } from '../shared/content-order';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from '../shared/table-grid';
 import { isPagePointer } from '../shared/page-pointer';
+import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 
 export interface SerializableBlock {
   /**
@@ -211,6 +212,17 @@ const EQUATION_MARKER = 'data-latex';
  * read as math.
  * @param latex - the equation's LaTeX source
  */
+/**
+ * The URL to write as a Markdown destination, or null when it must not be
+ * written. A renderer turns every destination into a live link or image, so a
+ * script-capable URL is refused. `kind` is the Markdown shape: `![..](..)` is
+ * 'src', `[..](..)` is 'href' (a clickable link refuses data: and blob:).
+ * @param url - the raw URL
+ * @param kind - 'src' for an image, 'href' for a link
+ */
+export const markdownDestination = (url: string, kind: 'href' | 'src'): string | null =>
+  hasUnsafeUrlProtocol(url, kind) ? null : url;
+
 export const inlineEquation = (latex: string): string => (latex.trim() === '' ? '' : `$${latex.trim()}$`);
 
 /**
@@ -1217,7 +1229,11 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
         warn(context, block.tool, 'degraded', 'image caption has no Markdown equivalent (the `![…]` slot is alt text); the caption is lost');
       }
 
-      return `${flatIndent}![${inlineMarkdown(context, alt)}](${asString(data.url)})`;
+      const src = markdownDestination(asString(data.url), 'src');
+
+      return src === null
+        ? `${flatIndent}${inlineMarkdown(context, alt)}`
+        : `${flatIndent}![${inlineMarkdown(context, alt)}](${src})`;
     }
     /**
      * Markdown has no media or embed syntax, so these degrade to a link — which
@@ -1235,7 +1251,9 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       const label = inlineMarkdown(context, asString(data.caption))
         || escapePlainText(asString(data.title) || asString(data.fileName) || asString(data.service) || url);
 
-      return `${flatIndent}[${label}](${url})`;
+      const href = markdownDestination(url, 'href');
+
+      return href === null ? `${flatIndent}${label}` : `${flatIndent}[${label}](${href})`;
     }
     case 'page':
     case 'page-link': {

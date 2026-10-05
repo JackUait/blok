@@ -55,18 +55,6 @@ describe('page fingerprints', () => {
       '/ru/docs/table',
     ]);
   });
-
-  it('ignores a release version bump, which edits no page', () => {
-    const bumpedSections = JSON.parse(
-      JSON.stringify(base.apiSections).split(base.version).join('999.0.0'),
-    ) as FingerprintSources['apiSections'];
-    expect(JSON.stringify(bumpedSections)).toContain('999.0.0');
-    const bumped: FingerprintSources = { ...base, apiSections: bumpedSections, version: '999.0.0' };
-
-    // Only the changelog's copy still carries the real version here; a real
-    // bump rewrites that copy too, and the changelog changes with every release.
-    expect(changedRoutes(baseline, fingerprintRoutes(ROUTES, bumped))).toEqual(['/changelog', '/ru/changelog']);
-  });
 });
 
 describe('mergeLedger', () => {

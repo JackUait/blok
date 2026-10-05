@@ -135,7 +135,11 @@ const pageInput = (route: string, sources: FingerprintSources): unknown => {
   throw new Error(`No content sources mapped for route ${route}`);
 };
 
-/** Route -> digest of that page's own content: its data, prose, files and locale strings. */
+/**
+ * Route -> digest of that page's own content: its data, prose, files and locale strings.
+ * Changing what goes in moves every hash: migrate the ledger's hashes and keep
+ * its dates, never re-date them with the update script.
+ */
 export const fingerprintRoutes = (
   routes: readonly string[],
   sources: FingerprintSources,

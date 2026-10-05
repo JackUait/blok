@@ -139,6 +139,9 @@ export const remapPageDocument = (data: OutputData, ids: PageDocumentIds): Outpu
     if (block.content !== undefined) {
       copy.content = block.content.map(mappedBlockId);
     }
+    if (!isRecord(block.data)) {
+      return copy;
+    }
 
     if (block.type === 'page' || block.type === 'page-link' || block.type === 'database-row') {
       const pageId = block.data.pageId;

@@ -335,6 +335,17 @@ describe('remapPageDocument', () => {
     );
   });
 
+  it.each(['page', 'page-link', 'database-row', 'table', 'paragraph', 'header', 'list', 'quote', 'toggle'])(
+    'copies a %s block that has no data',
+    (type) => {
+      const block: OutputBlockData = JSON.parse(JSON.stringify({ id: 'old-block', type }));
+
+      const copied = remapPageDocument(doc([block]), { blockIds: new Map([['old-block', 'new-block']]), pageIds: new Map() });
+
+      expect(copied.blocks).toEqual([{ id: 'new-block', type }]);
+    }
+  );
+
   it('refuses a missing block ID mapping', () => {
     const original = doc([{ id: 'old-block', type: 'paragraph', data: {} }]);
 

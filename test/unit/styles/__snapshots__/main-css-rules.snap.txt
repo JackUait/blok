@@ -9143,10 +9143,8 @@ span[data-blok-slash-search] {
 [data-blok-tool="audio"] .blok-audio-error-state__crack {
   position: absolute;
   inset: 0;
-  margin: auto;
-  width: var(--blok-audio-disc-size);
-  height: var(--blok-audio-disc-size);
-  z-index: 1;
+  width: 100%;
+  height: 100%;
   color: var(--blok-audio-disc-label-hi);
   opacity: 0.85;
   pointer-events: none;

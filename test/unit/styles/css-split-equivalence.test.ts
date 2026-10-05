@@ -701,7 +701,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // islands' split motion; class-keyed tone rules. Net, measured against 80722a4e.
     const IMAGE_CHROME_PAPER_GRAPHITE_BYTES = -5_778;
     // Audio error card: the cracked, skipping record and the flat waveform.
-    const AUDIO_ERROR_PLAYER_BYTES = 4_493;
+    const AUDIO_ERROR_PLAYER_BYTES = 4_353;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

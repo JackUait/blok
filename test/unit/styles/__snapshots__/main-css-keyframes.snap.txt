@@ -22,9 +22,9 @@
 
 @keyframes blok-audio-skip {
   0%, 82% { transform: rotate(-14deg) }
-  86% { transform: rotate(-9deg) }
+  86% { transform: rotate(-6deg) }
   90% { transform: rotate(-14deg) }
-  94% { transform: rotate(-10deg) }
+  94% { transform: rotate(-8deg) }
 }
 
 @keyframes blok-block-target-pulse {

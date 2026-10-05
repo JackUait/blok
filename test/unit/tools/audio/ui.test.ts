@@ -178,6 +178,11 @@ describe('renderErrorState', () => {
     expect(el.querySelector('[data-role="audio-error-art"] .blok-audio-cover__disc')).not.toBeNull();
   });
 
+  it('cracks the disc itself, so the crack jumps with every skip', () => {
+    const el = renderErrorState(base);
+    expect(el.querySelector('.blok-audio-cover__disc > .blok-audio-error-state__crack')).not.toBeNull();
+  });
+
   it('runs onReplace when Replace is clicked', () => {
     const onReplace = vi.fn();
     const el = renderErrorState({ ...base, onReplace });

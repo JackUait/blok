@@ -331,8 +331,11 @@
   color: var(--blok-icon-active-text);
 }
 
-/* The popover draws each row's check once; only a checked row shows it. */
-[data-blok-find-options-menu] [data-blok-popover-item]:not([data-blok-popover-item-active]) > [data-blok-testid='popover-item-trailing-icon'] {
+/*
+  The check sits in the icon column, so a row keeps its width when checked
+  and the shortcut ends the row. Only a checked row shows it.
+*/
+[data-blok-find-options-menu] [data-blok-popover-item]:not([data-blok-popover-item-active]) > [data-blok-testid='popover-item-icon'] {
   visibility: hidden;
 }
 

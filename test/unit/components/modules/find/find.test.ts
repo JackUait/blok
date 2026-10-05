@@ -961,8 +961,21 @@ describe('Find module', () => {
       expect(blocks[1].holder.hasAttribute('data-blok-find-preview')).toBe(false);
     });
 
+    it('strikes each match through with nothing after it when the replacement is empty', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat and cat' }]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('dog');
+      typeReplacement('');
+
+      const preview = previewOf(blocks[0].holder);
+
+      expect(texts(preview, '[data-blok-find-preview-old]')).toEqual(['cat', 'cat']);
+      expect(preview.textContent).toBe('cat and cat');
+    });
+
     it.each([
-      ['the replacement is cleared', () => typeReplacement('')],
       ['the replace row closes', () => openBar().querySelector<HTMLButtonElement>('[data-blok-testid="find-replace-toggle"]')?.click()],
       ['the bar closes', () => press(searchInput(), { key: 'Escape', code: 'Escape' })],
     ])('goes away when %s', (_, act) => {

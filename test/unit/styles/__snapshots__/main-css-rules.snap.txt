@@ -15157,7 +15157,7 @@ span[data-blok-slash-search] {
   color: var(--blok-icon-active-text);
 }
 
-[data-blok-find-options-menu] [data-blok-popover-item]:not([data-blok-popover-item-active]) > [data-blok-testid='popover-item-trailing-icon'] {
+[data-blok-find-options-menu] [data-blok-popover-item]:not([data-blok-popover-item-active]) > [data-blok-testid='popover-item-icon'] {
   visibility: hidden;
 }
 

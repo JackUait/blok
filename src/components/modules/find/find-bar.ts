@@ -325,9 +325,9 @@ export class FindBar {
     return this.input.value;
   }
 
-  /** The text to preview in place of each match: empty while the replace row is closed. */
-  public get replacement(): string {
-    return this.replaceOpen ? this.replaceInput.value : '';
+  /** The text to preview in place of each match: null while the replace row is closed, '' for a delete. */
+  public get replacement(): string | null {
+    return this.replaceOpen ? this.replaceInput.value : null;
   }
 
   public get options(): FindOptions {
@@ -588,7 +588,7 @@ export class FindBar {
       toggle: true,
       isActive: this[option],
       secondaryLabel: shortcut,
-      trailingIcon: IconCheck,
+      icon: IconCheck,
       onActivate: () => this.toggleOption(option, true),
     });
 

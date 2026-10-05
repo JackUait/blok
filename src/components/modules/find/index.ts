@@ -605,14 +605,15 @@ export class Find extends Module {
    */
   private showPreview(): void {
     const bar = this.bar;
+    const replacement = bar?.replacement ?? null;
 
-    if (bar === null || this.Blok.ReadOnly.isEnabled || bar.replacement === '') {
+    if (bar === null || this.Blok.ReadOnly.isEnabled || replacement === null) {
       this.preview?.clear();
 
       return;
     }
 
-    this.preview?.show(this.ranges.filter((range) => this.ownsRange(range)), bar.query, bar.options, bar.replacement);
+    this.preview?.show(this.ranges.filter((range) => this.ownsRange(range)), bar.query, bar.options, replacement);
   }
 
   /**

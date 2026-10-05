@@ -700,6 +700,12 @@ describe('FindBar', () => {
       expect(bar.replacement).toBe('dog');
     });
 
+    it('reports an empty replacement while the open row is empty, so the preview shows a delete', () => {
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(bar.replacement).toBe('');
+    });
+
     it('reports no replacement once the replace row closes, and the typed one when it opens again', () => {
       const toggle = button(bar.element, 'find.toggleReplace');
 
@@ -709,7 +715,7 @@ describe('FindBar', () => {
       toggle.click();
 
       expect(callbacks.onReplaceChange).toHaveBeenCalledTimes(1);
-      expect(bar.replacement).toBe('');
+      expect(bar.replacement).toBeNull();
 
       toggle.click();
 
@@ -1002,7 +1008,7 @@ describe('FindBar', () => {
       callbacks.onReplaceChange.mockClear();
       bar.setReadOnly(true);
 
-      expect(bar.replacement).toBe('');
+      expect(bar.replacement).toBeNull();
       expect(callbacks.onReplaceChange).toHaveBeenCalledTimes(1);
     });
 

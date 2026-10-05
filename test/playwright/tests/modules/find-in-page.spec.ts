@@ -1210,10 +1210,33 @@ test.describe('find in page', () => {
       await openFind(page, 'apple');
       await pickOption(page, 'Match case');
 
-      const check = (name: string) => page.getByRole('menuitemcheckbox', { name }).getByTestId('popover-item-trailing-icon');
+      const check = (name: string) => page.getByRole('menuitemcheckbox', { name }).getByTestId('popover-item-icon');
 
       await expect(check('Match case')).toBeVisible();
       await expect(check('Match whole word')).toBeHidden();
+    });
+
+    // The check has its own column, so the shortcut ends the row instead of floating before an empty slot.
+    test('puts the check before the label and the shortcut at the end of the row', async ({ page }) => {
+      await createEditor(page, paragraphs('Apple apple APPLE'));
+      await focusParagraph(page, 'Apple apple APPLE');
+      await openFind(page, 'apple');
+      await pickOption(page, 'Match case');
+
+      const row = page.getByRole('menuitemcheckbox', { name: 'Match case' });
+      const [rowBox, checkBox, titleBox, shortcutBox] = await Promise.all([
+        row.boundingBox(),
+        row.getByTestId('popover-item-icon').boundingBox(),
+        row.getByTestId('popover-item-title').boundingBox(),
+        row.getByTestId('popover-item-secondary-title').boundingBox(),
+      ]);
+
+      if (rowBox === null || checkBox === null || titleBox === null || shortcutBox === null) {
+        throw new Error('menu row parts missing');
+      }
+
+      expect(checkBox.x + checkBox.width).toBeLessThanOrEqual(titleBox.x);
+      expect(rowBox.x + rowBox.width - (shortcutBox.x + shortcutBox.width)).toBeLessThanOrEqual(16);
     });
 
     test('matching ignores accents', async ({ page }) => {

@@ -8,6 +8,8 @@ import { PopoverDesktop } from '../../utils/popover';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
 import { createTooltipContent } from '../toolbar/tooltip';
 
+import { bloom, cornerOf, stretch, type Corner } from './find-motion';
+
 import type { FindOptions } from './match-text';
 
 export interface FindBarCallbacks {
@@ -142,6 +144,8 @@ export class FindBar {
   private noResults = false;
 
   private optionsMenu: PopoverDesktop | null = null;
+  private readonly replaceField: HTMLElement;
+  private motion: Animation[] = [];
 
   private readonly listeners: Array<() => void> = [];
   private inputResize: ResizeObserver | undefined;
@@ -226,7 +230,7 @@ export class FindBar {
     this.replaceRow.hidden = true;
 
     const replaceInner = build('div', { [ATTR.row]: '' });
-    const replaceField = build('div', { [ATTR.field]: '', 'data-blok-field': 'text', 'data-blok-testid': 'find-replace-field' });
+    this.replaceField = build('div', { [ATTR.field]: '', 'data-blok-field': 'text', 'data-blok-testid': 'find-replace-field' });
 
     this.replaceInput = build('input', {
       type: 'text',
@@ -236,14 +240,14 @@ export class FindBar {
       spellcheck: 'false',
       'data-blok-testid': 'find-replace-input',
     });
-    replaceField.append(this.replaceInput);
+    this.replaceField.append(this.replaceInput);
 
     this.replaceButton = this.makeTextButton('find.replace', 'find-replace');
     this.replaceAllButton = this.makeTextButton('find.replaceAll', 'find-replace-all');
     const replaceControls = build('div', { [ATTR.controls]: '' });
 
     replaceControls.append(this.replaceButton, this.replaceAllButton);
-    replaceInner.append(replaceField, replaceControls);
+    replaceInner.append(this.replaceField, replaceControls);
     this.replaceRow.append(replaceInner);
 
     this.bar.append(row, this.replaceRow);
@@ -320,6 +324,15 @@ export class FindBar {
     this.element.toggleAttribute('inert', false);
     // The top layer sits above every stacking context a host page can build.
     promoteToTopLayer(this.element);
+    this.stopMotion();
+    this.motion = bloom({
+      dock: this.element,
+      bar: this.bar,
+      field: this.field,
+      query: this.input,
+      counter: this.counter,
+      controls: [this.replaceToggle, this.optionsButton, this.previousButton, this.nextButton, this.closeButton].filter((control) => !control.hidden),
+    }, this.corner());
 
     if (init.query !== undefined) {
       this.input.value = init.query;
@@ -338,6 +351,7 @@ export class FindBar {
       return;
     }
 
+    this.stopMotion();
     this.opened = false;
     hideTooltip();
     this.optionsMenu?.hide();
@@ -363,6 +377,7 @@ export class FindBar {
   }
 
   public destroy(): void {
+    this.stopMotion();
     this.opened = false;
     hideTooltip();
     this.optionsMenu?.destroy();
@@ -568,14 +583,36 @@ export class FindBar {
     menu.show();
   }
 
+  private corner(): Corner {
+    return cornerOf(this.element.getAttribute(ATTR.placement) ?? 'top-end', this.element.getAttribute('dir') === 'rtl');
+  }
+
+  private stopMotion(): void {
+    this.motion.forEach((animation) => animation.cancel());
+    this.motion = [];
+  }
+
   private setReplaceOpen(open: boolean): void {
     const next = open && !this.readOnly;
     const changed = next !== this.replaceOpen;
+    // Before the row shows: the stretch springs from this size.
+    const from = { width: this.bar.offsetWidth, height: this.bar.offsetHeight };
 
     this.replaceOpen = next;
     this.replaceRow.hidden = !next;
     this.replaceToggle.setAttribute('aria-expanded', String(next));
     this.bar.toggleAttribute(ATTR.open, next);
+
+    // On a closed bar, the bloom that follows covers both rows.
+    if (changed && next && this.opened) {
+      this.stopMotion();
+      this.motion = stretch({
+        dock: this.element,
+        bar: this.bar,
+        field: this.replaceField,
+        buttons: [this.replaceButton, this.replaceAllButton],
+      }, from, this.corner());
+    }
 
     if (changed) {
       this.callbacks.onReplaceChange();

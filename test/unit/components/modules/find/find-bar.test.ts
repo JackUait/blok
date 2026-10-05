@@ -864,6 +864,73 @@ describe('FindBar', () => {
     });
   });
 
+  describe('motion', () => {
+    let animate: ReturnType<typeof vi.fn>;
+    let cancels: Array<ReturnType<typeof vi.fn>>;
+
+    beforeEach(() => {
+      cancels = [];
+      animate = vi.fn(() => {
+        const cancel = vi.fn();
+
+        cancels.push(cancel);
+
+        return { cancel, finished: new Promise<void>(() => undefined) };
+      });
+      Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true });
+      vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: false, media: query })));
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(Element.prototype, 'animate');
+      vi.unstubAllGlobals();
+    });
+
+    const skinCalls = (): unknown[][] => animate.mock.calls.filter((call) => call[1]?.pseudoElement === '::before');
+
+    it('blooms when it opens', () => {
+      bar.open({ readOnly: false });
+
+      expect(skinCalls()).toHaveLength(1);
+    });
+
+    it('does not bloom again when a second Mod+F lands on an open bar', () => {
+      bar.open({ readOnly: false });
+      bar.open({ readOnly: false });
+
+      expect(skinCalls()).toHaveLength(1);
+    });
+
+    it('stops the bloom when it closes, so a quick reopen starts clean', () => {
+      bar.open({ readOnly: false });
+      const opened = cancels.length;
+
+      bar.close();
+
+      expect(cancels.slice(0, opened).every((cancel) => cancel.mock.calls.length === 1)).toBe(true);
+    });
+
+    it('stretches the skin when the replace row opens on an open bar', () => {
+      bar.open({ readOnly: false });
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(skinCalls()).toHaveLength(2);
+    });
+
+    it('covers both rows with one bloom when it opens with replace', () => {
+      bar.open({ readOnly: false, replace: true });
+
+      expect(skinCalls()).toHaveLength(1);
+    });
+
+    it('does not stretch when the replace row closes', () => {
+      bar.open({ readOnly: false, replace: true });
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(skinCalls()).toHaveLength(1);
+    });
+  });
+
   describe('destroy', () => {
     it('removes the element', () => {
       bar.destroy();

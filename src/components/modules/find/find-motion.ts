@@ -134,3 +134,114 @@ export const growFrames = (
     duration,
   };
 };
+
+export interface BloomParts {
+  dock: HTMLElement;
+  bar: HTMLElement;
+  field: HTMLElement;
+  query: HTMLElement;
+  /** null while a word hops in: the hop lands the counter. */
+  counter: HTMLElement | null;
+  /** In reading order. */
+  controls: HTMLElement[];
+}
+
+export const prefersReducedMotion = (): boolean =>
+  typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+export const canAnimate = (element: Element): boolean => typeof element.animate === 'function';
+
+const sizeOf = (element: HTMLElement): Size => ({ width: element.offsetWidth, height: element.offsetHeight });
+
+const radiusOf = (element: HTMLElement): number => parseFloat(getComputedStyle(element).borderTopLeftRadius) || 0;
+
+const startEdge = (element: HTMLElement): 'left' | 'right' => getComputedStyle(element).direction === 'rtl' ? 'right' : 'left';
+
+/**
+ * Grow the bar out of a dot in its corner, then land its parts in reading
+ * order. Part animations fill backwards only, so nothing stays inline after.
+ */
+export const bloom = (parts: BloomParts, corner: Corner): Animation[] => {
+  const { dock, bar } = parts;
+
+  if (prefersReducedMotion() || !canAnimate(bar)) {
+    return [];
+  }
+
+  const frames = growFrames(sizeOf(bar), { width: DOT, height: DOT }, corner, {
+    springs: { width: SPRINGS.wide, height: SPRINGS.tall },
+    radius: { from: DOT / 2, to: radiusOf(bar) },
+  });
+  const sampled = { duration: frames.duration, easing: 'linear' };
+  const soft = springEasing(SPRINGS.soft);
+  const pop = springEasing(SPRINGS.bouncy);
+  const edge = startEdge(dock);
+  const animations = [
+    dock.animate(frames.skin, { ...sampled, pseudoElement: '::before' }),
+    bar.animate(frames.clip, sampled),
+    bar.animate([{ opacity: 0 }, { opacity: 1 }], { duration: frames.duration * 0.25, easing: 'ease-out' }),
+    parts.field.animate(
+      [{ transform: 'scaleX(0.2)', transformOrigin: `${edge} center`, opacity: 0 }, { transform: 'none', transformOrigin: `${edge} center`, opacity: 1 }],
+      { ...soft, delay: 60, fill: 'backwards' }
+    ),
+    parts.query.animate(
+      [{ translate: `${edge === 'left' ? -8 : 8}px 0`, opacity: 0 }, { translate: '0 0', opacity: 1 }],
+      { ...soft, delay: 160, fill: 'backwards' }
+    ),
+    // No end opacity: a disabled control rests at 0.4 and must land there, not pop down from 1.
+    ...parts.controls.map((control, index) => control.animate(
+      [{ transform: 'scale(0.3) rotate(-30deg)', opacity: 0 }, { transform: 'none' }],
+      { ...pop, delay: 120 + 45 * index, fill: 'backwards' }
+    )),
+  ];
+
+  // `translate`, not `transform`: the counter's bump keyframes own transform.
+  if (parts.counter !== null) {
+    animations.push(parts.counter.animate(
+      [{ translate: '0 10px', opacity: 0 }, { translate: '0 0', opacity: 1 }],
+      { ...pop, delay: 240, fill: 'backwards' }
+    ));
+  }
+
+  return animations;
+};
+
+/**
+ * The bar just grew taller (the replace row snapped open): spring the skin
+ * and clip from the old size, pinching in a little as it stretches.
+ */
+export const stretch = (
+  parts: { dock: HTMLElement; bar: HTMLElement; field: HTMLElement; buttons: HTMLElement[] },
+  from: Size,
+  corner: Corner
+): Animation[] => {
+  const { dock, bar } = parts;
+
+  if (prefersReducedMotion() || !canAnimate(bar)) {
+    return [];
+  }
+
+  const round = radiusOf(bar);
+  const frames = growFrames(sizeOf(bar), from, corner, {
+    springs: { width: SPRINGS.soft, height: SPRINGS.tall },
+    radius: { from: round, to: round },
+    pinch: 14,
+  });
+  const sampled = { duration: frames.duration, easing: 'linear' };
+  const soft = springEasing(SPRINGS.soft);
+  const pop = springEasing(SPRINGS.bouncy);
+
+  return [
+    dock.animate(frames.skin, { ...sampled, pseudoElement: '::before' }),
+    bar.animate(frames.clip, sampled),
+    parts.field.animate(
+      [{ transform: 'translateY(-36px) scaleY(0.6)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+      { ...soft, delay: 40, fill: 'backwards' }
+    ),
+    // No end opacity, as in bloom: Replace is disabled until there is a match.
+    ...parts.buttons.map((button, index) => button.animate(
+      [{ transform: 'translateY(-24px) scale(0.6)', opacity: 0 }, { transform: 'none' }],
+      { ...pop, delay: 110 + 60 * index, fill: 'backwards' }
+    )),
+  ];
+};

@@ -98,7 +98,7 @@
   inset-inline-start: var(--blok-find-offset-x);
 }
 
-/* `translate`, not `transform`: the bar's own entrance animation owns transform. */
+/* `translate`, not `transform`: the dock's exit fade owns transform. */
 [data-blok-find][data-blok-find-placement$="-center"],
 [data-blok-find][data-blok-top-layer][popover][data-blok-find-placement$="-center"] {
   left: 50%;

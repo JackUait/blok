@@ -1,12 +1,15 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  bloom,
   cornerOf,
   growFrames,
+  prefersReducedMotion,
   settleMs,
   springAt,
   springEasing,
   SPRINGS,
+  stretch,
 } from '../../../../../src/components/modules/find/find-motion';
 
 const insetOf = (frame: Keyframe): number[] => {
@@ -117,5 +120,128 @@ describe('find-motion', () => {
       expect(narrowest).toBeLessThan(470 - 10);
       expect(skin[skin.length - 1]).toMatchObject({ width: '470px', height: '84px' });
     });
+  });
+});
+
+/** jsdom has no Web Animations; a stub records every call. */
+const stubAnimate = (): ReturnType<typeof vi.fn> => {
+  const animate = vi.fn(() => ({ cancel: vi.fn(), finished: new Promise<void>(() => undefined) }));
+
+  Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true });
+
+  return animate;
+};
+
+const stubReducedMotion = (reduce: boolean): void => {
+  vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: reduce && query.includes('reduce'), media: query })));
+};
+
+describe('bloom', () => {
+  const parts = (): Parameters<typeof bloom>[0] => {
+    const dock = document.createElement('div');
+    const bar = document.createElement('div');
+
+    dock.append(bar);
+    document.body.append(dock);
+    Object.defineProperty(bar, 'offsetWidth', { value: 470 });
+    Object.defineProperty(bar, 'offsetHeight', { value: 44 });
+
+    return {
+      dock,
+      bar,
+      field: document.createElement('div'),
+      query: document.createElement('input'),
+      counter: document.createElement('span'),
+      controls: [document.createElement('button'), document.createElement('button')],
+    };
+  };
+
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, 'animate');
+    vi.unstubAllGlobals();
+    document.body.replaceChildren();
+  });
+
+  it('grows the skin on the dock and clips the bar, from the dot to the full box', () => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(false);
+    const p = parts();
+
+    bloom(p, { block: 'top', inline: 'right' });
+
+    const skinCall = animate.mock.calls.find((call) => call[1]?.pseudoElement === '::before');
+    const clipCall = animate.mock.calls.find((call) => Array.isArray(call[0]) && 'clipPath' in call[0][0]);
+
+    expect(skinCall?.[0][0]).toMatchObject({ width: '40px', left: '430px' });
+    expect(skinCall?.[1]).toMatchObject({ easing: 'linear' });
+    expect(clipCall).toBeDefined();
+    expect(animate.mock.contexts).toContain(p.dock);
+  });
+
+  it('lands the parts in reading order: field, then controls one after another', () => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(false);
+    const p = parts();
+
+    bloom(p, { block: 'top', inline: 'right' });
+
+    const delayOf = (element: Element): number => {
+      const index = animate.mock.contexts.indexOf(element);
+
+      return Number(animate.mock.calls[index]?.[1]?.delay ?? -1);
+    };
+
+    expect(delayOf(p.field)).toBeLessThan(delayOf(p.controls[0]));
+    expect(delayOf(p.controls[0])).toBeLessThan(delayOf(p.controls[1]));
+  });
+
+  // A disabled control rests at opacity 0.4; a keyframe ending at 1 would pop it down when the motion ends.
+  it('lands each control on its own opacity, so a disabled one does not pop at the end', () => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(false);
+    const p = parts();
+
+    bloom(p, { block: 'top', inline: 'right' });
+
+    p.controls.forEach((control) => {
+      const keyframes = animate.mock.calls[animate.mock.contexts.indexOf(control)]?.[0];
+
+      expect(keyframes.at(-1)).not.toHaveProperty('opacity');
+    });
+  });
+
+  it('lands the replace buttons on their own opacity when the row stretches open', () => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(false);
+    const p = parts();
+    const buttons = [document.createElement('button'), document.createElement('button')];
+
+    stretch({ dock: p.dock, bar: p.bar, field: p.field, buttons }, { width: 470, height: 40 }, { block: 'top', inline: 'right' });
+
+    buttons.forEach((element) => {
+      const keyframes = animate.mock.calls[animate.mock.contexts.indexOf(element)]?.[0];
+
+      expect(keyframes.at(-1)).not.toHaveProperty('opacity');
+    });
+  });
+
+  it('does nothing under reduced motion', () => {
+    const animate = stubAnimate();
+
+    stubReducedMotion(true);
+
+    expect(prefersReducedMotion()).toBe(true);
+    expect(bloom(parts(), { block: 'top', inline: 'right' })).toEqual([]);
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it('does nothing where Web Animations are missing', () => {
+    stubReducedMotion(false);
+
+    expect(bloom(parts(), { block: 'top', inline: 'right' })).toEqual([]);
   });
 });

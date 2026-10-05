@@ -1,5 +1,6 @@
 // Helpers for verify-live-docs.mjs, kept apart so tests can drive them with a
 // fake fetch instead of the real host.
+import { contentAddressedPath } from './docs-build-info.mjs';
 
 const waitFor = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -14,8 +15,9 @@ export const compareBuildInfo = (live, expected) =>
     .map(([key, value]) => `${key}: live ${live?.[key]}, expected ${value}`);
 
 /**
- * Polls /build-info.json until it names the artifact just built. Pages sits
- * behind a CDN with a ~10 minute TTL, hence the per-attempt cache-buster.
+ * Polls this build's content-addressed build info until it is served and
+ * names the expected commit. Not /build-info.json: the CDN ignores query
+ * strings, so that path can serve the previous deploy for up to its TTL.
  */
 export const awaitBuildInfo = async ({
   site,
@@ -27,16 +29,19 @@ export const awaitBuildInfo = async ({
   sleep = waitFor,
   log = (line) => process.stdout.write(`${line}\n`),
 }) => {
+  if (!expected.manifestHash) throw new Error('awaitBuildInfo needs the expected manifest hash to name the file it polls');
+  const path = contentAddressedPath(expected.manifestHash);
+  const name = path.slice(1);
   let problem = '';
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     let response = null;
     try {
-      response = await fetchImpl(`${site}/build-info.json?cb=${Date.now()}-${attempt}`, {
+      response = await fetchImpl(`${site}${path}`, {
         redirect: 'manual',
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
-      problem = `build-info.json request failed: ${error?.message ?? error}`;
+      problem = `${name} request failed: ${error?.message ?? error}`;
     }
     if (response?.status === 200) {
       const body = await response.text();
@@ -44,7 +49,7 @@ export const awaitBuildInfo = async ({
       try {
         live = JSON.parse(body);
       } catch {
-        problem = 'build-info.json is not JSON';
+        problem = `${name} is not JSON`;
       }
       if (live) {
         const mismatches = compareBuildInfo(live, expected);
@@ -52,12 +57,24 @@ export const awaitBuildInfo = async ({
         problem = mismatches.join('; ');
       }
     } else if (response) {
-      problem = `build-info.json answered ${response.status}`;
+      problem = `${name} answered ${response.status}`;
     }
-    log(`waiting for build-info.json to match (attempt ${attempt}): ${problem}`);
+    log(`waiting for ${name} (attempt ${attempt}): ${problem}`);
     if (attempt < attempts) await sleep(delayMs);
   }
   throw new Error(`The live site is not the build just deployed: ${problem}`);
+};
+
+/** Runs the checks and always writes the report, recording the error if one is thrown. */
+export const runWithReport = async ({ report, write, body }) => {
+  try {
+    await body();
+  } catch (error) {
+    report.error = String(error?.message ?? error);
+    throw error;
+  } finally {
+    write(report);
+  }
 };
 
 /** How far the live commit is behind origin/main. `git` runs git and returns stdout. */

@@ -6,7 +6,7 @@
 // In CI it also writes `sha` and `manifest` to $GITHUB_OUTPUT.
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -51,8 +51,21 @@ export const createBuildInfo = ({ dir, sha, version, runId = null, builtAt }) =>
   };
 };
 
+/**
+ * The CDN drops query strings from its cache key and keeps a 404 well past
+ * max-age, so /build-info.json can show the previous deploy for minutes. A
+ * path named by this build's hash was never requested before, so it is never
+ * cached stale. Named by hash, not SHA: a release redeploys the same SHA with
+ * a new root snapshot.
+ */
+export const contentAddressedPath = (manifestHash) => `/build-info/${manifestHash}.json`;
+
 export const writeBuildInfo = (dir, info) => {
-  writeFileSync(join(dir, BUILD_INFO_FILE), `${JSON.stringify(info, null, 2)}\n`);
+  const json = `${JSON.stringify(info, null, 2)}\n`;
+  writeFileSync(join(dir, BUILD_INFO_FILE), json);
+  const copy = join(dir, contentAddressedPath(info.manifestHash).slice(1));
+  mkdirSync(join(copy, '..'), { recursive: true });
+  writeFileSync(copy, json);
 };
 
 const main = () => {

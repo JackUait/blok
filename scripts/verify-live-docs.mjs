@@ -8,12 +8,12 @@
 // identical (shallow CI clone), and three days of deploys that published
 // nothing at all.
 //
-// Usage: verify-live-docs.mjs [site] [--crawl] [--report <file.json>] [--concurrency <n>]
+// Usage: verify-live-docs.mjs [site] [--crawl] [--report <file.json>] [--concurrency <n>] [--require-build-info]
 //        verify-live-docs.mjs [site] --status   (which commit is live, how far behind main)
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import { awaitBuildInfo, crawlUrls, deployLag } from './live-docs-checks.mjs';
+import { awaitBuildInfo, crawlUrls, deployLag, runWithReport } from './live-docs-checks.mjs';
 import { firstArchivePath, versionedSitemapUrls } from './live-docs-versions.mjs';
 
 const { values: options, positionals } = parseArgs({
@@ -23,6 +23,7 @@ const { values: options, positionals } = parseArgs({
     report: { type: 'string' },
     concurrency: { type: 'string', default: '4' },
     status: { type: 'boolean', default: false },
+    'require-build-info': { type: 'boolean', default: false },
   },
 });
 
@@ -44,8 +45,9 @@ const check = (name, ok, detail) => {
  *
  * A 200 on `/` proves nothing: the stale deploy answered 200 throughout the
  * three-day outage. The marker is a content-hashed asset from the artifact just
- * built, which only exists once this deploy is live. Pages sits behind a CDN
- * with a ~10 minute TTL, hence the per-attempt cache-buster.
+ * built, which only exists once this deploy is live. Its path was never
+ * requested before, so the CDN has no stale copy; the query string does not
+ * bust the cache (the edge drops it from the key).
  */
 const awaitDeployment = async (marker, attempts = 20, delayMs = 15_000) => {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -85,6 +87,7 @@ const status = async () => {
   const { info, problem } = await readLiveBuildInfo();
   if (info) {
     printLag(info);
+    process.stdout.write('note: /build-info.json can lag a new deploy by up to the CDN TTL (max-age=600).\n');
     return;
   }
   const home = await fetchNoRedirect(`${SITE}/`);
@@ -94,30 +97,28 @@ const status = async () => {
   );
 };
 
-const main = async () => {
-  if (options.status) {
-    await status();
-    return;
-  }
-
-  const report = { site: SITE, startedAt: new Date().toISOString() };
+const checks = async (report) => {
   const marker = process.env.DEPLOY_MARKER;
   if (marker) await awaitDeployment(marker);
 
   // Set by the deploy workflow from the artifact it just uploaded. Without
-  // them (a local run) build info is reported, not enforced.
+  // them (a local run) build info is reported, not enforced. CI passes
+  // --require-build-info so empty outputs fail instead of skipping the check.
   const expected = {
     sha: process.env.EXPECTED_BUILD_SHA ?? '',
     manifestHash: process.env.EXPECTED_MANIFEST_HASH ?? '',
   };
+  if (options['require-build-info'] && (!expected.sha || !expected.manifestHash)) {
+    throw new Error('--require-build-info: EXPECTED_BUILD_SHA and EXPECTED_MANIFEST_HASH must both be set');
+  }
   if (expected.sha || expected.manifestHash) {
     try {
       // The marker poll above already waited for the deploy; this covers CDN
       // lag on one file. Sized with the crawl deadline to fit timeout-minutes: 10.
       report.buildInfo = await awaitBuildInfo({ site: SITE, expected, attempts: 6, timeoutMs: 10_000 });
-      check('live build-info.json matches the artifact just built', true, '');
+      check('live build info matches the artifact just built', true, '');
     } catch (error) {
-      check('live build-info.json matches the artifact just built', false, error.message);
+      check('live build info matches the artifact just built', false, error.message);
     }
   } else {
     const { info, problem } = await readLiveBuildInfo();
@@ -214,6 +215,7 @@ const main = async () => {
 
   // A canonical that redirects is a canonical Google ignores. --crawl checks
   // every sitemap URL under a concurrency cap; without it, a sequential sample.
+  // Pages may come from the edge cache, up to max-age=600 old.
   if (options.crawl) {
     const crawl = await crawlUrls(locs, {
       concurrency: Number(options.concurrency),
@@ -246,13 +248,25 @@ const main = async () => {
     'sitemap line missing',
   );
 
-  if (options.report) {
-    writeFileSync(options.report, `${JSON.stringify({ ...report, failures }, null, 2)}\n`);
-  }
   if (failures.length > 0) {
     throw new Error(`Live docs verification failed:\n  ${failures.join('\n  ')}`);
   }
   process.stdout.write(`\nLive docs verification passed against ${SITE}.\n`);
+};
+
+const main = async () => {
+  if (options.status) {
+    await status();
+    return;
+  }
+  const report = { site: SITE, startedAt: new Date().toISOString() };
+  await runWithReport({
+    report,
+    write: (data) => {
+      if (options.report) writeFileSync(options.report, `${JSON.stringify({ ...data, failures }, null, 2)}\n`);
+    },
+    body: () => checks(report),
+  });
 };
 
 await main();

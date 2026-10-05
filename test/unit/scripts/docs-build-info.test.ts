@@ -1,9 +1,17 @@
 // @vitest-environment node
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { contentManifest, createBuildInfo, writeBuildInfo } from '../../../scripts/docs-build-info.mjs';
+import {
+  contentAddressedPath,
+  contentManifest,
+  createBuildInfo,
+  writeBuildInfo,
+} from '../../../scripts/docs-build-info.mjs';
+
+const SCRIPT = join(__dirname, '../../../scripts/docs-build-info.mjs');
 
 const write = (root: string, path: string, content: string): void => {
   const file = join(root, path);
@@ -96,6 +104,38 @@ describe('docs build info', () => {
     writeBuildInfo(site, info);
 
     expect(JSON.parse(readFileSync(join(site, 'build-info.json'), 'utf8'))).toEqual(info);
+  });
+
+  it('also writes a copy named by the manifest hash, which no CDN has cached yet', () => {
+    const info = createBuildInfo({ dir: site, sha: 'e'.repeat(40), version: '1.0.0', builtAt: 'now' });
+
+    writeBuildInfo(site, info);
+
+    expect(contentAddressedPath(info.manifestHash)).toBe(`/build-info/${info.manifestHash}.json`);
+    expect(JSON.parse(readFileSync(join(site, 'build-info', `${info.manifestHash}.json`), 'utf8'))).toEqual(info);
+    // Writing the copy must not change the hash it is named after.
+    expect(contentManifest(site).hash).toBe(info.manifestHash);
+  });
+
+  it('hands the workflow exactly the sha and manifest outputs it reads', () => {
+    const output = join(site, 'github-output');
+
+    execFileSync(process.execPath, [SCRIPT, site], {
+      env: { ...process.env, GITHUB_OUTPUT: output, GITHUB_RUN_ID: '7' },
+      stdio: 'pipe',
+    });
+
+    const lines = readFileSync(output, 'utf8').trim().split('\n');
+    const outputs = Object.fromEntries(lines.map((line): [string, string] => {
+      const [key = '', value = ''] = line.split('=');
+      return [key, value];
+    }));
+    const written = JSON.parse(readFileSync(join(site, 'build-info.json'), 'utf8')) as { sha: string; manifestHash: string };
+
+    // deploy-docs.yml reads steps.build-info.outputs.sha / .manifest (pinned in docs-deploy-law).
+    expect(Object.keys(outputs)).toEqual(['sha', 'manifest']);
+    expect(outputs).toEqual({ sha: written.sha, manifest: written.manifestHash });
+    expect(existsSync(join(site, 'build-info', `${written.manifestHash}.json`))).toBe(true);
   });
 
   it('refuses a SHA that is not a full commit id', () => {

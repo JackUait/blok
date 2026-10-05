@@ -208,9 +208,10 @@ jobs:
           node docs/scripts/assemble-site.mjs --next next.tgz --out site
           cp CHANGELOG.md site/CHANGELOG.md
 
-      # Names the commit and a hash of every page in this artifact. The live
-      # check fails unless the host serves this exact file. Must run last: a
-      # file written into site/ after it would not be in the hash.
+      # Names the commit and a hash of every page in this artifact, at
+      # /build-info.json and at /build-info/<hash>.json. The live check polls
+      # the hash-named copy, which no CDN has cached. Must run last: a page
+      # written into site/ after it would not be in the hash.
       - name: Record build info
         id: build-info
         run: node scripts/docs-build-info.mjs site
@@ -230,6 +231,7 @@ jobs:
           test -s site/robots.txt
           test -s site/sitemap.xml
           test -s site/build-info.json
+          test -s "site/build-info/$(node -p "require('./site/build-info.json').manifestHash").json"
           test -f site/next/docs/quick-start/index.html
           grep -q 'noindex' site/next/docs/quick-start/index.html
           test -s site/versions.json
@@ -313,7 +315,7 @@ jobs:
           DEPLOY_MARKER: ${{ needs.build.outputs.marker }}
           EXPECTED_BUILD_SHA: ${{ needs.build.outputs.build_sha }}
           EXPECTED_MANIFEST_HASH: ${{ needs.build.outputs.manifest_hash }}
-        run: node scripts/verify-live-docs.mjs "https://blokeditor.com" --crawl --report live-docs-report.json
+        run: node scripts/verify-live-docs.mjs "https://blokeditor.com" --crawl --require-build-info --report live-docs-report.json
 
       - name: Upload live check report
         if: ${{ !cancelled() }}

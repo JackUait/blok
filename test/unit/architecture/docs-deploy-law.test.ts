@@ -324,6 +324,16 @@ describe('docs deploy law — the live site is proven to be the build just deplo
     expect(verifier).toContain('awaitBuildInfo(');
   });
 
+  it('makes the build-info check mandatory in CI, so empty outputs cannot skip it', () => {
+    expect(verifyStep?.run).toContain('--require-build-info');
+  });
+
+  it('records the content-addressed copy the live check polls', () => {
+    // The CDN ignores query strings, so the stable /build-info.json can be a
+    // cached copy of the previous deploy; the hash-named copy cannot.
+    expect(guardStep?.run).toContain('test -s "site/build-info/$(node -p "require(\'./site/build-info.json\').manifestHash").json"');
+  });
+
   it('crawls the whole sitemap and keeps the report even when the check fails', () => {
     expect(verifyStep?.run).toContain('--crawl');
     expect(verifyStep?.run).toContain(`--report ${LIVE_REPORT}`);

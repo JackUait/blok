@@ -5,6 +5,7 @@ import {
   compareBuildInfo,
   crawlUrls,
   deployLag,
+  runWithReport,
 } from '../../../scripts/live-docs-checks.mjs';
 
 const SHA_A = 'a'.repeat(40);
@@ -69,9 +70,9 @@ describe('live build info', () => {
 
   it('waits out Pages propagation, then returns the matching build', async () => {
     const { impl, calls } = fakeFetch({
-      [`${SITE}/build-info.json`]: [
+      [`${SITE}/build-info/new.json`]: [
         { status: 404 },
-        { status: 200, body: JSON.stringify({ sha: SHA_B, manifestHash: 'old' }) },
+        { status: 200, body: JSON.stringify({ sha: SHA_B, manifestHash: 'new' }) },
         { status: 200, body: JSON.stringify({ sha: SHA_A, manifestHash: 'new' }) },
       ],
     });
@@ -87,13 +88,14 @@ describe('live build info', () => {
 
     expect(info).toEqual({ sha: SHA_A, manifestHash: 'new' });
     expect(calls).toHaveLength(3);
-    // Each attempt must bypass the CDN cache, or a stale copy is read every time.
-    expect(new Set(calls).size).toBe(3);
+    // The edge drops query strings from its cache key, so only a path never
+    // requested before the deploy is guaranteed uncached.
+    expect(new Set(calls)).toEqual(new Set([`${SITE}/build-info/new.json`]));
   });
 
   it('fails with the last mismatch when the live build never matches', async () => {
     const { impl } = fakeFetch({
-      [`${SITE}/build-info.json`]: [{ status: 200, body: JSON.stringify({ sha: SHA_B, manifestHash: 'old' }) }],
+      [`${SITE}/build-info/new.json`]: [{ status: 200, body: JSON.stringify({ sha: SHA_B, manifestHash: 'new' }) }],
     });
 
     await expect(awaitBuildInfo({
@@ -111,32 +113,46 @@ describe('live build info', () => {
 
     await expect(awaitBuildInfo({
       site: SITE,
-      expected: { sha: SHA_A },
+      expected: { sha: SHA_A, manifestHash: 'new' },
       fetchImpl: impl,
       attempts: 2,
       sleep: noSleep,
       log: () => {},
-    })).rejects.toThrow(/build-info\.json.*404/);
+    })).rejects.toThrow(/build-info\/new\.json.*404/);
   });
 
   it('gives up on a stalled request instead of hanging the job', async () => {
     await expect(awaitBuildInfo({
       site: SITE,
-      expected: { sha: SHA_A },
+      expected: { sha: SHA_A, manifestHash: 'new' },
       fetchImpl: stalledFetch,
       attempts: 2,
       timeoutMs: 10,
       sleep: noSleep,
       log: () => {},
-    })).rejects.toThrow(/build-info\.json request failed/);
+    })).rejects.toThrow(/build-info\/new\.json request failed/);
   });
 
-  it('treats an unparseable build-info.json as a mismatch, not a crash', async () => {
-    const { impl } = fakeFetch({ [`${SITE}/build-info.json`]: [{ status: 200, body: '<html>' }] });
+  it('refuses to poll without a manifest hash to name the file by', async () => {
+    const { impl, calls } = fakeFetch({});
 
     await expect(awaitBuildInfo({
       site: SITE,
       expected: { sha: SHA_A },
+      fetchImpl: impl,
+      attempts: 1,
+      sleep: noSleep,
+      log: () => {},
+    })).rejects.toThrow(/manifest hash/);
+    expect(calls).toEqual([]);
+  });
+
+  it('treats an unparseable build-info.json as a mismatch, not a crash', async () => {
+    const { impl } = fakeFetch({ [`${SITE}/build-info/new.json`]: [{ status: 200, body: '<html>' }] });
+
+    await expect(awaitBuildInfo({
+      site: SITE,
+      expected: { sha: SHA_A, manifestHash: 'new' },
       fetchImpl: impl,
       attempts: 1,
       sleep: noSleep,
@@ -315,5 +331,40 @@ describe('full sitemap crawl', () => {
     await crawlUrls(urls, { fetchImpl: impl, sleep, concurrency: 1, spacingMs: 250 });
 
     expect(sleep.mock.calls.filter(([ms]) => ms === 250)).toHaveLength(2);
+  });
+});
+
+describe('report on failure', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('writes the report with the error when the checks throw, then rethrows', async () => {
+    const write = vi.fn();
+    const report: Record<string, unknown> = { site: SITE };
+
+    await expect(runWithReport({
+      report,
+      write,
+      body: async () => {
+        report.reached = 'marker';
+        throw new Error('marker never became available');
+      },
+    })).rejects.toThrow('marker never became available');
+
+    expect(write).toHaveBeenCalledWith({ site: SITE, reached: 'marker', error: 'marker never became available' });
+  });
+
+  it('writes the report once when the checks pass', async () => {
+    const write = vi.fn();
+
+    await runWithReport({ report: { site: SITE }, write, body: async () => {} });
+
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledWith({ site: SITE });
   });
 });

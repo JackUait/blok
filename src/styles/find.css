@@ -345,12 +345,14 @@
   outline-offset: -2px;
 }
 
+/*
+  Grows into the slack the wider Replace buttons leave in the shared column,
+  so the options button stays against the find field. The line stays centred.
+*/
 [data-blok-find-divider] {
-  flex: none;
-  width: 1px;
+  flex: 1 0 calc(1px + 2 * var(--blok-space-1));
   height: 16px;
-  margin-inline: var(--blok-space-1);
-  background: var(--blok-border-secondary);
+  background: linear-gradient(var(--blok-border-secondary), var(--blok-border-secondary)) center / 1px 100% no-repeat;
 }
 
 /* ─── Replace row ─── */

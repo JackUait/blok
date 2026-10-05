@@ -324,6 +324,38 @@ test.describe('find in page', () => {
       expect(replaceField.right).toBeCloseTo(findField.right, 0);
       expect(replaceAll.right).toBeCloseTo(close.right, 0);
     });
+
+    test('opening the replace row keeps the options button against the find field', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one', 'foo two'));
+      await focusParagraph(page, 'foo one');
+      await page.keyboard.press(FIND_KEY);
+      await page.getByTestId('find-input').fill('foo');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      const settle = (): Promise<unknown> => page.waitForFunction(() =>
+        document.getAnimations().every((animation) => animation.playState !== 'running'));
+      const edge = async (testId: string, side: 'left' | 'right'): Promise<number> => {
+        const rect = await page.getByTestId(testId).boundingBox();
+
+        if (rect === null) {
+          throw new Error(`${testId} has no box`);
+        }
+
+        return side === 'left' ? rect.x : rect.x + rect.width;
+      };
+      const fieldToOptions = async (): Promise<number> =>
+        await edge('find-options', 'left') - await edge('find-field', 'right');
+
+      await settle();
+      const closedGap = await fieldToOptions();
+
+      await page.getByTestId('find-replace-toggle').click();
+      await expect(page.getByTestId('find-replace-row')).toBeVisible();
+      await settle();
+
+      expect(await fieldToOptions()).toBeCloseTo(closedGap, 0);
+      expect(await edge('find-close', 'right')).toBeCloseTo(await edge('find-replace-all', 'right'), 0);
+    });
   });
 
   test.describe('results', () => {

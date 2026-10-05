@@ -16,7 +16,13 @@ interface Runtime {
   save: () => Promise<OutputData>;
   blocks: API['blocks'];
   caret: API['caret'];
-  module: { toolbar: { toolbox: { open: () => void; close: () => void; opened: boolean | undefined } } };
+  module: {
+    toolbar: {
+      toolbox: { open: () => void; close: () => void; opened: boolean | undefined };
+      moveAndOpen: (block?: unknown) => void;
+    };
+    blockManager: { getBlockByIndex: (index: number) => unknown };
+  };
 }
 
 let editor: Runtime | undefined;
@@ -39,11 +45,11 @@ const deferred = <T>(): { promise: Promise<T>; resolve: (value: T) => void; reje
   return { promise, ...handlers };
 };
 
-const boot = async (config: PageConfig): Promise<Runtime> => {
+const boot = async (config: PageConfig, text = ''): Promise<Runtime> => {
   const instance = new Blok({
     holder,
     tools: { paragraph: Paragraph, page: { class: PageTool, config } },
-    data: { blocks: [{ id: 'a', type: 'paragraph', data: { text: '' } }] },
+    data: { blocks: [{ id: 'a', type: 'paragraph', data: { text } }] },
   }) as unknown as Runtime;
 
   editor = instance;
@@ -193,5 +199,35 @@ describe('a page whose id comes from the host', () => {
     await settle();
 
     expect(await types(instance)).toEqual([{ type: 'paragraph', data: { text: 'kept' } }]);
+  }, 30_000);
+
+  it('still inserts the page when the plus-button menu was closed while waiting', async () => {
+    const answer = deferred<{ pageId: string }>();
+    const instance = await boot({ create: () => answer.promise }, 'above');
+
+    instance.caret.setToBlock(0, 'end');
+    instance.module.toolbar.moveAndOpen(instance.module.blockManager.getBlockByIndex(0));
+    const plus = [...document.querySelectorAll<HTMLElement>('[data-blok-testid="plus-button"]')].at(-1);
+
+    // jsdom has no elementFromPoint; the rectangle selection reads it on mousedown.
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => null });
+    try {
+      plus?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }));
+    } finally {
+      Reflect.deleteProperty(document, 'elementFromPoint');
+    }
+    await settle();
+    pageItem().click();
+    instance.module.toolbar.toolbox.close();
+    await settle();
+    answer.resolve({ pageId: 'server-9' });
+    await settle();
+    await settle();
+
+    expect(await types(instance)).toEqual([
+      { type: 'paragraph', data: { text: 'above' } },
+      { type: 'page', data: { pageId: 'server-9' } },
+    ]);
   }, 30_000);
 });

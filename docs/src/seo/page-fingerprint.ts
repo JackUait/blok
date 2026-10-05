@@ -19,7 +19,11 @@ import { getRouteMetadata } from './route-metadata';
  */
 export const STATIC_PAGES: Record<string, { files: string[]; catalog: string[] }> = {
   '/': { files: ['docs/src/pages/HomePage.tsx', 'docs/src/components/home'], catalog: ['home'] },
-  '/demo': { files: ['docs/src/pages/DemoPage.tsx', 'docs/src/components/demo'], catalog: ['demo'] },
+  '/demo': {
+    files: ['docs/src/pages/DemoPage.tsx', 'docs/src/components/demo'],
+    // The "next steps" cards borrow these docs link labels.
+    catalog: ['demo', 'api.links.quickStart', 'api.links.configuration', 'api.links.outputData', 'api.sections.adapters'],
+  },
   // The cards and summaries come in as resolved data (hubData below).
   '/docs': {
     files: ['docs/src/components/api/DocsHub.tsx'],
@@ -27,7 +31,19 @@ export const STATIC_PAGES: Record<string, { files: string[]; catalog: string[] }
   },
   // Only a redirect into /docs renders here.
   '/tools': { files: ['docs/src/routes/tools.tsx'], catalog: [] },
-  '/presets': { files: ['docs/src/pages/PresetsPage.tsx', 'docs/src/components/presets'], catalog: ['presets'] },
+  '/presets': {
+    files: ['docs/src/pages/PresetsPage.tsx', 'docs/src/components/presets'],
+    // Table headings shared with the tool pages.
+    catalog: [
+      'presets',
+      'tools.configuration',
+      'tools.option',
+      'tools.type',
+      'tools.default',
+      'tools.description',
+      'tools.usageExample',
+    ],
+  },
   '/server': { files: ['docs/src/pages/ServerPage.tsx', 'docs/src/components/server'], catalog: ['server'] },
   '/migration': {
     files: ['docs/src/pages/MigrationPage.tsx', 'docs/src/components/migration'],
@@ -63,7 +79,10 @@ export const API_PAGE_FILES: Record<string, string[]> = {
   'dev-override-seam': ['docs/src/components/api/DevOverrideSeamContent.tsx'],
 };
 
-export const API_EXTRA_CATALOG: Record<string, string[]> = { 'quick-start': ['api.quickStartSteps'] };
+export const API_EXTRA_CATALOG: Record<string, string[]> = {
+  'quick-start': ['api.quickStartSteps'],
+  tutorial: ['api.links.customBlockTool', 'api.links.everythingIsABlock'],
+};
 
 export interface FingerprintSources {
   apiSections: ApiSection[];

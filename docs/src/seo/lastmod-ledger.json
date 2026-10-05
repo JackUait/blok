@@ -12,7 +12,7 @@
     "date": "2026-09-04"
   },
   "/demo": {
-    "hash": "07b32c994fd48303",
+    "hash": "8ac712295971dfcd",
     "date": null
   },
   "/docs": {
@@ -256,7 +256,7 @@
     "date": "2026-09-08"
   },
   "/docs/tutorial": {
-    "hash": "ed3680d14efb29ac",
+    "hash": "cfe1897f73ba470b",
     "date": "2026-09-08"
   },
   "/docs/ui-api": {
@@ -300,7 +300,7 @@
     "date": "2026-09-08"
   },
   "/presets": {
-    "hash": "ed77051ef6a629d0",
+    "hash": "d296de679d9bba1e",
     "date": "2026-09-08"
   },
   "/ru": {
@@ -312,7 +312,7 @@
     "date": "2026-09-04"
   },
   "/ru/demo": {
-    "hash": "b68423ddfdda9f22",
+    "hash": "e8fb83aafdaa45c3",
     "date": "2026-09-07"
   },
   "/ru/docs": {
@@ -556,7 +556,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/tutorial": {
-    "hash": "5a1870a947fe8a37",
+    "hash": "9cb7be24400a9c89",
     "date": "2026-09-08"
   },
   "/ru/docs/ui-api": {
@@ -600,7 +600,7 @@
     "date": "2026-09-08"
   },
   "/ru/presets": {
-    "hash": "b60626d7ff3dc70d",
+    "hash": "cc793f77cde6a20f",
     "date": "2026-09-08"
   },
   "/ru/server": {

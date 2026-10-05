@@ -100,22 +100,27 @@ const HOOKS = 'docs/src/hooks/';
 const TOP_LEVEL_KEYS = new Set(Object.keys(translations.en));
 const CATALOG_KEY = /^[A-Za-z]\w*(\.[\w-]+)+\.?$/;
 
-/** Translation hooks (hooks reading the i18n context) that a page's own modules call. */
-const translationHooks = (inputs: string[]): string[] => {
+/** Every module reached from the inputs, following only imports `follow` accepts. */
+const reached = (inputs: string[], follow: (target: string) => boolean): string[] => {
   const seen = new Set<string>();
-  const hooks = new Set<string>();
   const queue = inputs.flatMap(filesUnder);
   while (queue.length > 0) {
     const file = queue.pop() as string;
     if (seen.has(file)) continue;
     seen.add(file);
-    for (const target of importsOf(file)) {
-      if (target.startsWith(HOOKS) && importsOf(target).includes('docs/src/contexts/I18nContext.tsx')) hooks.add(target);
-      if (!isShared(target)) queue.push(target);
-    }
+    for (const target of importsOf(file)) if (follow(target)) queue.push(target);
   }
-  return [...hooks].sort();
+  return [...seen].filter((file) => /\.[jt]sx?$/.test(file) && !/\.test\./.test(file)).sort();
 };
+
+/**
+ * Translation hooks (hooks reading the i18n context) a page's own modules call,
+ * also through another hook.
+ */
+const translationHooks = (inputs: string[]): string[] =>
+  reached(inputs, (target) => !isShared(target) || target.startsWith(HOOKS)).filter(
+    (file) => file.startsWith(HOOKS) && importsOf(file).includes('docs/src/contexts/I18nContext.tsx'),
+  );
 
 /**
  * Catalogue keys a module names: whole literals ('tools.sections.blockTools')
@@ -137,12 +142,18 @@ const catalogKeysOf = (file: string): string[] => {
   return [...keys].sort();
 };
 
-/** Keys a reached translation hook reads that no catalogue namespace of the page covers. */
-const undeclaredHookKeys = (inputs: string[], catalog: string[]): string[] =>
-  translationHooks(inputs).flatMap((hook) =>
-    catalogKeysOf(hook)
+/** Keys a page names but never prerenders, with the reason. */
+const UNRENDERED_KEYS: Record<string, string> = {
+  'common.unknownError': 'shown only when the demo editor fails to load in the browser',
+};
+
+/** Keys the modules name that no catalogue namespace of the page covers. */
+const undeclaredKeys = (modules: string[], catalog: string[]): string[] =>
+  modules.flatMap((file) =>
+    catalogKeysOf(file)
+      .filter((key) => !(key in UNRENDERED_KEYS))
       .filter((key) => !catalog.some((namespace) => key === namespace || key.startsWith(`${namespace}.`)))
-      .map((key) => `${hook}: ${key}`),
+      .map((key) => `${file}: ${key}`),
   );
 
 const apiCatalog = (id: string): string[] => [
@@ -154,16 +165,32 @@ describe('page fingerprint inputs', () => {
   // A hook renders catalogue strings the page's files never name, so its keys
   // must be in the page's catalogue or a renamed label never re-dates the page.
   it.each(Object.entries(STATIC_PAGES))('declare every catalogue key a translation hook renders on %s', (_route, page) => {
-    expect(undeclaredHookKeys(page.files, page.catalog)).toEqual([]);
+    expect(undeclaredKeys(translationHooks(page.files), page.catalog)).toEqual([]);
   });
 
   it.each(Object.entries(API_PAGE_FILES))('declare every catalogue key a translation hook renders on the %s page', (id, files) => {
-    expect(undeclaredHookKeys(files, apiCatalog(id))).toEqual([]);
+    expect(undeclaredKeys(translationHooks(files), apiCatalog(id))).toEqual([]);
+  });
+
+  it.each(Object.entries(STATIC_PAGES))('declare every catalogue key the modules of %s name', (_route, page) => {
+    expect(undeclaredKeys(reached(page.files, (target) => !isShared(target)), page.catalog)).toEqual([]);
+  });
+
+  it.each(Object.entries(API_PAGE_FILES))('declare every catalogue key the modules of the %s page name', (id, files) => {
+    expect(undeclaredKeys(reached(files, (target) => !isShared(target)), apiCatalog(id))).toEqual([]);
   });
 
   it('sees the keys of a hook a page calls', () => {
     expect(translationHooks(['docs/src/pages/PresetsPage.tsx'])).toEqual(['docs/src/hooks/usePresetsTranslations.ts']);
     expect(catalogKeysOf('docs/src/hooks/usePresetsTranslations.ts')).toEqual(['presets.items']);
+  });
+
+  it('sees a hook that another hook calls', () => {
+    expect(translationHooks(['docs/src/components/api/ApiModuleBody.tsx'])).toEqual([
+      'docs/src/hooks/useApiTranslations.ts',
+      'docs/src/hooks/useDocsSidebarSections.ts',
+      'docs/src/hooks/useToolsTranslations.ts',
+    ]);
   });
 
   it.each(Object.entries(STATIC_PAGES))('cover every local module %s renders', (_route, page) => {

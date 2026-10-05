@@ -34,7 +34,7 @@ export class MediaFailures extends Module {
   private holdingLeave = false;
   private saveNotice: NotifierOptions | null = null;
   /**
-   * Cards the user should see are on screen only while they are in this editor.
+   * Cards put up and not yet taken down. New cards go up only while the user is in this editor.
    */
   private readonly onScreen = new Set<NotifierOptions>();
   private presence: { wrapper: HTMLElement; observer: IntersectionObserver | null; onScreen: boolean; focused: boolean } | null = null;
@@ -343,35 +343,22 @@ export class MediaFailures extends Module {
   }
 
   /**
-   * Put the cards up while the user is in this editor, take them down when they leave.
-   * A card the user closed stays closed.
+   * Put new cards up only while the user is in this editor. A card already up
+   * stays up when they leave: its image is still broken.
    */
   private syncToasts(): void {
-    if (this.isDestroyed) {
-      return;
-    }
     const present = this.presence === null || this.presence.onScreen || this.presence.focused;
 
-    if (present) {
-      this.notices().filter((notice) => !this.onScreen.has(notice)).forEach((notice) => {
-        // Its image already shows the error. The card is dropped, not held, so it
-        // never pops up later; the save toast still counts the failure.
-        if (this.imageInSight(notice)) {
-          this.forget(notice);
-        } else {
-          this.put(notice);
-        }
-      });
-
+    if (this.isDestroyed || !present) {
       return;
     }
-    // Back cards first: taking the front one down first would bring each next one up just to drop it.
-    this.notices().filter((notice) => this.onScreen.has(notice)).reverse().forEach((notice) => {
-      this.onScreen.delete(notice);
-      if (this.Blok.NotifierAPI.isClosed(notice)) {
+    this.notices().filter((notice) => !this.onScreen.has(notice)).forEach((notice) => {
+      // Its image already shows the error. The card is dropped, not held, so it
+      // never pops up later; the save toast still counts the failure.
+      if (this.imageInSight(notice)) {
         this.forget(notice);
       } else {
-        this.Blok.NotifierAPI.dismiss(notice);
+        this.put(notice);
       }
     });
   }

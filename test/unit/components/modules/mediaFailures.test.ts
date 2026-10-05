@@ -168,18 +168,27 @@ describe('MediaFailures', () => {
     expect(show).toHaveBeenCalledTimes(1);
   });
 
-  it('hides the toast when the user leaves the editor and brings it back on return', () => {
+  it('keeps a shown toast up after the user leaves the editor while the image is still broken', () => {
     const { module, show, dismiss, wrapper } = setup();
 
     module.report(input('a'));
     vi.advanceTimersByTime(COALESCE_MS);
-    const [ [ shown ] ] = show.mock.calls;
-
     FakeIntersectionObserver.setOnScreen(wrapper, false);
-    expect(dismiss).toHaveBeenCalledWith(shown);
+
+    expect(dismiss).not.toHaveBeenCalled();
     FakeIntersectionObserver.setOnScreen(wrapper, true);
-    expect(show).toHaveBeenCalledTimes(2);
-    expect(show.mock.calls[1][0]).toBe(shown);
+    expect(show).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes a toast left up after the user left once its image recovers', () => {
+    const { module, show, resolve, wrapper } = setup();
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    FakeIntersectionObserver.setOnScreen(wrapper, false);
+    module.clear('a', { recovered: true });
+
+    expect(resolve).toHaveBeenCalledWith(show.mock.calls[0][0], 'imageFailure.restored');
   });
 
   it('keeps the toast while focus stays in the editor even if it scrolls off screen', () => {
@@ -211,7 +220,7 @@ describe('MediaFailures', () => {
   });
 
   it('lets go of the editor once focus moves from the toast to somewhere else', () => {
-    const { module, dismiss, wrapper } = setup();
+    const { module, show, wrapper } = setup();
     const toast = document.createElement('div');
     const button = document.createElement('button');
     const search = document.createElement('input');
@@ -225,8 +234,10 @@ describe('MediaFailures', () => {
     button.focus();
     search.focus();
     FakeIntersectionObserver.setOnScreen(wrapper, false);
+    module.report(input('b'));
+    vi.advanceTimersByTime(COALESCE_MS);
 
-    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(show).toHaveBeenCalledTimes(1);
   });
 
   it('does not bring back a toast the user closed', () => {
@@ -348,33 +359,20 @@ describe('MediaFailures', () => {
     ]);
   });
 
-  it('hides every card when the user leaves, the back ones first, and brings them back in order', () => {
+  it('keeps every shown card up when the user leaves and holds a new one until they return', () => {
     const { module, show, dismiss, wrapper } = setup();
 
     module.report(input('a'));
     module.report(input('b'));
     vi.advanceTimersByTime(COALESCE_MS);
-    const [ [ first ], [ second ] ] = show.mock.calls;
-
     FakeIntersectionObserver.setOnScreen(wrapper, false);
-    expect(dismiss.mock.calls.map(([ options ]) => options)).toEqual([ second, first ]);
-    FakeIntersectionObserver.setOnScreen(wrapper, true);
-    expect(show.mock.calls.slice(2).map(([ options ]) => options)).toEqual([ first, second ]);
-  });
-
-  it('brings back only the cards the user did not close', () => {
-    const { module, show, isClosed, wrapper } = setup();
-
-    module.report(input('a'));
-    module.report(input('b'));
+    module.report(input('c'));
     vi.advanceTimersByTime(COALESCE_MS);
-    const [ [ first ], [ second ] ] = show.mock.calls;
 
-    isClosed.mockImplementation((options) => options === first);
-    FakeIntersectionObserver.setOnScreen(wrapper, false);
+    expect(dismiss).not.toHaveBeenCalled();
+    expect(show).toHaveBeenCalledTimes(2);
     FakeIntersectionObserver.setOnScreen(wrapper, true);
-
-    expect(show.mock.calls.slice(2).map(([ options ]) => options)).toEqual([ second ]);
+    expect(show).toHaveBeenCalledTimes(3);
   });
 
   it('keeps the card of a failure that fails again and stops its spinner', () => {

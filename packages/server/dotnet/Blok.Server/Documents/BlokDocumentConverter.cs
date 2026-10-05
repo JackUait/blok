@@ -52,6 +52,21 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
         ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion.");
   }
 
+  public async ValueTask<BlokMarkdownConversion> ToMarkdownAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, BlokPageInfo?> pages,
+      Func<string, string>? pageHref = null,
+      CancellationToken cancellationToken = default)
+  {
+    var output = await runtime.InvokeAsync(
+        "blocksToMarkdownWithPages",
+        PagesRequest(documentJson, pages, pageHref),
+        cancellationToken);
+
+    return JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion.");
+  }
+
   private string? schema;
 
   // Constant for the life of the bundle, and large, so it is fetched once.
@@ -138,6 +153,71 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     }.ToJsonString();
   }
 
+  /// <summary>
+  /// The page-aware operations take <c>{document, pages}</c>, a different
+  /// operation from the bare-document ones, so the shipped overloads never
+  /// read page data. A <c>null</c> entry is written as JSON <c>null</c>: it
+  /// means "missing", while a left-out id means "unresolved".
+  /// </summary>
+  private static string PagesRequest(
+      string documentJson,
+      IReadOnlyDictionary<string, BlokPageInfo?> pages,
+      Func<string, string>? pageHref)
+  {
+    ArgumentNullException.ThrowIfNull(documentJson);
+    ArgumentNullException.ThrowIfNull(pages);
+
+    var entries = new JsonObject();
+
+    foreach (var (pageId, info) in pages)
+    {
+      entries[pageId] = PageEntry(pageId, info, pageHref);
+    }
+
+    return new JsonObject
+    {
+      ["document"] = ParseDocument(documentJson),
+      ["pages"] = entries,
+    }.ToJsonString();
+  }
+
+  private static JsonObject? PageEntry(string pageId, BlokPageInfo? info, Func<string, string>? pageHref)
+  {
+    if (info is null)
+    {
+      return null;
+    }
+
+    // A denied page sends nothing else, and its link is never built.
+    if (info.NoAccess)
+    {
+      return new JsonObject { ["access"] = "none" };
+    }
+
+    var entry = new JsonObject();
+
+    if (info.Title is not null)
+    {
+      entry["title"] = info.Title;
+    }
+
+    if (info.Icon is not null)
+    {
+      entry["icon"] = info.Icon.IsImage
+          ? new JsonObject { ["type"] = "image", ["url"] = info.Icon.Value }
+          : new JsonObject { ["type"] = "emoji", ["value"] = info.Icon.Value };
+    }
+
+    var href = pageHref?.Invoke(pageId);
+
+    if (!string.IsNullOrEmpty(href))
+    {
+      entry["href"] = href;
+    }
+
+    return entry;
+  }
+
   /*
    * The envelope operations parse the document here rather than in the engine,
    * which would otherwise make ONE bad document report two different failures
@@ -161,6 +241,18 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     ArgumentNullException.ThrowIfNull(documentJson);
 
     return runtime.InvokeAsync("blocksToHtml", documentJson, cancellationToken);
+  }
+
+  public ValueTask<string> ToHtmlAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, BlokPageInfo?> pages,
+      Func<string, string>? pageHref = null,
+      CancellationToken cancellationToken = default)
+  {
+    return runtime.InvokeAsync(
+        "blocksToHtmlWithPages",
+        PagesRequest(documentJson, pages, pageHref),
+        cancellationToken);
   }
 
   public ValueTask<string> ToPlainTextAsync(

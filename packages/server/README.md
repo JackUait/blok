@@ -72,6 +72,7 @@ public sealed class ArticleExport(IBlokDocumentConverter blok, ILogger<ArticleEx
 |--------|---------|
 | `ToMarkdownAsync` | the Markdown, plus every construct Markdown could not carry |
 | `ToHtmlAsync` | the document's HTML |
+| `ToHtmlAsync(doc, pages, pageHref)` / `ToMarkdownAsync(doc, pages, pageHref)` | the same, with page titles, icons and links from your `BlokPageInfo` map: a `null` value shows "Page not found", `NoAccess` shows "No access", an id left out shows "Page"; `pageHref` is called only for allowed pages |
 | `ToPlainTextAsync` | the document's readable text; `includeHiddenText: true` also emits an image's alt, a video/file url, an embed source, an audio title/artist/url and a bookmark description/url |
 | `FromMarkdownAsync` | the saved document, plus what Markdown could not carry into it |
 | `FromHtmlAsync` | the saved document parsed out of HTML, plus what the HTML could not carry into it |

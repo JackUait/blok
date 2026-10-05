@@ -127,6 +127,31 @@ public interface IBlokDocumentConverter
       CancellationToken cancellationToken = default);
 
   /// <summary>
+  /// Converts a saved document to Markdown, with page titles and links from
+  /// <paramref name="pages"/>.
+  /// </summary>
+  /// <remarks>
+  /// An allowed page with a link is written as <c>[title](href)</c>; any other
+  /// page is its label alone, and its lost link is reported in the warnings.
+  /// See <see cref="ToHtmlAsync(string, IReadOnlyDictionary{string, BlokPageInfo}, Func{string, string}, CancellationToken)"/>
+  /// for how <paramref name="pages"/> and <paramref name="pageHref"/> are read.
+  /// </remarks>
+  /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
+  /// <param name="pages">What the reader may see about each page, by page id.</param>
+  /// <param name="pageHref">Builds the link for an allowed page. <c>null</c>: no links.</param>
+  /// <param name="cancellationToken">Cancels the conversion.</param>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says whether the input was unusable, the timeout was reached, or the
+  /// allocation budget was.
+  /// </exception>
+  ValueTask<BlokMarkdownConversion> ToMarkdownAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, BlokPageInfo?> pages,
+      Func<string, string>? pageHref = null,
+      CancellationToken cancellationToken = default);
+
+  /// <summary>
   /// The version the editor stamps into a saved document's <c>version</c>
   /// field. A caller writing documents outside the browser reads it from here
   /// so both sides agree on what a stored document says it is.
@@ -205,6 +230,39 @@ public interface IBlokDocumentConverter
   /// allocation budget was.
   /// </exception>
   ValueTask<string> ToHtmlAsync(string documentJson, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Converts a saved document to HTML, with page titles, icons and links from
+  /// <paramref name="pages"/>.
+  /// </summary>
+  /// <remarks>
+  /// A saved document stores only page ids. For each <c>page</c> block,
+  /// <c>page-link</c> block and inline page reference:
+  /// <list type="bullet">
+  /// <item>an id mapped to a <see cref="BlokPageInfo"/> shows its title and icon, and links when <paramref name="pageHref"/> gives a URL;</item>
+  /// <item>an id mapped to one with <see cref="BlokPageInfo.NoAccess"/> shows "No access", unlinked;</item>
+  /// <item>an id mapped to <c>null</c> shows "Page not found";</item>
+  /// <item>an id not in the map shows "Page".</item>
+  /// </list>
+  /// <paramref name="pageHref"/> is called only for allowed pages, never for
+  /// denied or missing ones. Its result is used as given, so encode the id
+  /// yourself; a script-capable URL is dropped. Only <paramref name="pages"/>
+  /// counts: page data inside <paramref name="documentJson"/> is ignored.
+  /// </remarks>
+  /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
+  /// <param name="pages">What the reader may see about each page, by page id.</param>
+  /// <param name="pageHref">Builds the link for an allowed page. <c>null</c>: no links.</param>
+  /// <param name="cancellationToken">Cancels the conversion.</param>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says whether the input was unusable, the timeout was reached, or the
+  /// allocation budget was.
+  /// </exception>
+  ValueTask<string> ToHtmlAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, BlokPageInfo?> pages,
+      Func<string, string>? pageHref = null,
+      CancellationToken cancellationToken = default);
 
   /// <summary>Extracts a saved document's readable text.</summary>
   /// <remarks>
@@ -328,7 +386,7 @@ public interface IBlokDocumentConverter
 
   /// <summary>
   /// Parses HTML into a saved document, reporting what the HTML could not carry
-  /// into it. The inverse of <see cref="ToHtmlAsync"/>.
+  /// into it. The inverse of <see cref="ToHtmlAsync(string, CancellationToken)"/>.
   /// </summary>
   /// <remarks>
   /// Covers the structural subset a document body is made of: headings,

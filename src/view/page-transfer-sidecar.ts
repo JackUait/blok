@@ -33,15 +33,29 @@ export interface SidecarRootPlacement extends PageBlockPlacement {
   rootId: string;
 }
 
+/** A block as the transfer expects to find it before the source removal. */
+export interface SidecarExpectedBlock {
+  id: string;
+  type: string;
+  data: Record<string, unknown>;
+  tunes?: Record<string, unknown>;
+  parent: string | null;
+  content: string[];
+}
+
+/** The exact edits of one operation. Written once and never rebuilt under the same operation ID. */
 export interface SidecarTransferPlan {
   copyDoc: string;
   copyHead: SidecarDocHead;
   copyChunks: SidecarEditOp[][];
   originDoc: string;
   originHead: SidecarDocHead;
+  /** The one destructive edit. */
   originOps: SidecarEditOp[];
-  /** Ops that put back what the copy step removed (the pointer of turn-into-blocks). */
-  restoreOps: SidecarEditOp[];
+  /** The removed blocks as planned. The removal runs only while they still look like this. */
+  originExpected: SidecarExpectedBlock[];
+  /** IDs the removal inserts, so they must not exist yet (the turn-into-page pointer). */
+  originAbsent: string[];
   rootIds: string[];
   restore?: SidecarRootPlacement[];
   destination?: PageBlockPlacement;
@@ -51,9 +65,7 @@ export interface SidecarTransferRecord {
   version: 1;
   operationId: string;
   digest: string;
-  attempt: number;
   plan: SidecarTransferPlan;
-  copySteps: PageTransferSagaStep[];
   receipt?: PageTransferReceipt;
   undoReceipt?: PageTransferUndoReceipt;
 }
@@ -83,7 +95,7 @@ export interface SidecarTransferHostOptions {
   fetch?: SidecarFetch;
   /** The server's `CollabMaxMessageBytes`. */
   maxEditBytes?: number;
-  /** How many fresh attempts to make when a peer edits the source mid-transfer. */
+  /** How many times to send the source removal when peers keep editing elsewhere in the source. */
   maxAttempts?: number;
 }
 
@@ -134,8 +146,8 @@ const lineageChanged = (doc: string): Error =>
 const noJournal = (doc: string): Error =>
   new Error(`"${doc}" gave no durable head; the sidecar must run with an operation journal (--collab-journal)`);
 
-const copyLeft = (doc: string): Error =>
-  new Error(`The copy in "${doc}" was left in place: it changed or could not be removed. Both pages keep the blocks`);
+const keptBoth = (copyDoc: string, why: string): Error =>
+  new Error(`${why}. The source was kept, and the copy stays in "${copyDoc}"`);
 
 const editBlock = (block: OutputBlockData): SidecarEditBlock => {
   const id = block.id;
@@ -240,17 +252,79 @@ const chunk = (ops: SidecarEditOp[], maxBytes: number): SidecarEditOp[][] => {
 
 type InsertOp = Extract<SidecarEditOp, { op: 'insert' }>;
 
+const expectedOf = (block: OutputBlockData): SidecarExpectedBlock => {
+  const expected: SidecarExpectedBlock = {
+    id: block.id ?? '',
+    type: block.type,
+    data: block.data,
+    parent: block.parent ?? null,
+    content: block.content ?? [],
+  };
+
+  if (block.tunes) {
+    expected.tunes = block.tunes;
+  }
+
+  return expected;
+};
+
+/** Every block in the subtrees of `rootIds`, as it is now. */
+const subtreeOf = (document: OutputData, rootIds: readonly string[]): SidecarExpectedBlock[] => {
+  const byId = new Map(document.blocks.map((block) => [block.id ?? '', block]));
+  const visit = (id: string): SidecarExpectedBlock[] => {
+    const block = byId.get(id);
+
+    if (!block) {
+      throw new Error(`Block "${id}" missing`);
+    }
+
+    return [expectedOf(block), ...(block.content ?? []).flatMap(visit)];
+  };
+
+  return rootIds.flatMap(visit);
+};
+
+/** The copy as its inserts build it: data, parent and the exact child list. */
+const copyExpectedOf = (chunks: SidecarEditOp[][]): SidecarExpectedBlock[] => {
+  const inserts = chunks.flat().filter((op): op is InsertOp => op.op === 'insert');
+
+  return inserts.map((op) => {
+    const expected: SidecarExpectedBlock = {
+      id: op.id,
+      type: op.block.type,
+      data: op.block.data,
+      parent: op.parent,
+      content: inserts.filter((child) => child.parent === op.id).map((child) => child.id),
+    };
+
+    if (op.block.tunes) {
+      expected.tunes = op.block.tunes;
+    }
+
+    return expected;
+  });
+};
+
+const looksAsPlanned = (document: OutputData, expected: SidecarExpectedBlock[]): boolean => {
+  const byId = new Map(document.blocks.map((block) => [block.id ?? '', block]));
+
+  return expected.every((want) => {
+    const block = byId.get(want.id);
+
+    return block !== undefined && same(expectedOf(block), want);
+  });
+};
+
 interface DocState {
   data: OutputData;
   head: SidecarDocHead;
 }
 
 interface SagaIo {
-  log: SidecarTransferLog;
   maxAttempts: number;
   readState(doc: string): Promise<DocState>;
   edit(doc: string, key: string, ops: SidecarEditOp[], ifMatch: SidecarDocHead | null): Promise<PageTransferSagaStep | Refused>;
-  key(record: SidecarTransferRecord, role: string, index: number): Promise<string>;
+  key(operationId: string, role: string, index: number): Promise<string>;
 }
 
 const sameLineage = (found: { lineage: string }, head: SidecarDocHead, doc: string): void => {
@@ -260,150 +334,92 @@ const sameLineage = (found: { lineage: string }, head: SidecarDocHead, doc: stri
 };
 
 /**
- * Drives one logged record. A resumed record is replayed with its stored
- * bodies and keys until the server gives a definite answer; only a definite
- * 412 rebuilds the plan. Rebuilding on resume would compensate a copy whose
- * source removal may already have committed — deleting the only copy.
+ * Runs one logged plan. The source removal is the only destructive edit, and
+ * it runs only after a fresh read shows the whole copy as planned and the
+ * source blocks unchanged. Nothing ever deletes a copy. Keys depend only on
+ * the operation ID, so an overlapping run either replays the same bodies
+ * (deduplicated) or meets 409 for a different body and stops.
  */
 class Saga {
   public constructor(
     private readonly io: SagaIo,
-    private readonly record: SidecarTransferRecord,
-    private readonly build: () => Promise<SidecarTransferPlan>
+    private readonly record: SidecarTransferRecord
   ) {}
 
   public async drive(resumed: boolean): Promise<PageTransferSagaStep[]> {
+    const { plan } = this.record;
+
     if (resumed) {
-      const { plan } = this.record;
       const [copy, origin] = await Promise.all([this.io.readState(plan.copyDoc), this.io.readState(plan.originDoc)]);
 
       sameLineage(copy.head, plan.copyHead, plan.copyDoc);
       sameLineage(origin.head, plan.originHead, plan.originDoc);
     }
+    const steps: PageTransferSagaStep[] = [];
 
-    return this.attempt();
+    for (const [index, ops] of plan.copyChunks.entries()) {
+      steps.push(await this.copy(index, ops));
+    }
+
+    return [...steps, await this.removeOrigin(0)];
   }
 
-  private async attempt(): Promise<PageTransferSagaStep[]> {
-    const { record } = this;
-    const { plan } = record;
-
-    if (!await this.copy()) {
-      await this.nextAttempt(plan.copyDoc);
-
-      return this.attempt();
-    }
-    if (plan.originOps.length === 0) {
-      return [...record.copySteps];
-    }
-    const outcome = await this.io.edit(plan.originDoc, await this.io.key(record, 'origin', 0), plan.originOps, plan.originHead);
-
-    if (!(outcome instanceof Refused)) {
-      sameLineage(outcome, plan.originHead, plan.originDoc);
-
-      return [...record.copySteps, outcome];
-    }
-    if (outcome.head) {
-      sameLineage(outcome.head, plan.originHead, plan.originDoc);
-    }
-    await this.compensate();
-    if (outcome.status !== 412) {
-      throw new Error(`"${plan.originDoc}" refused the removal with HTTP ${outcome.status}; it was left intact`);
-    }
-    await this.nextAttempt(plan.originDoc);
-
-    return this.attempt();
-  }
-
-  /** False when the first chunk met a stale head, so nothing was applied. */
-  private async copy(): Promise<boolean> {
-    const { record } = this;
-    const { plan } = record;
-    const pending = plan.copyChunks
-      .map((ops, index) => ({ ops, index }))
-      .slice(record.copySteps.length);
-
-    for (const { ops, index } of pending) {
-      const outcome = await this.io.edit(
-        plan.copyDoc,
-        await this.io.key(record, 'copy', index),
-        ops,
-        index === 0 ? plan.copyHead : record.copySteps[index - 1] ?? null
-      );
-
-      if (outcome instanceof Refused) {
-        return this.copyRefused(outcome, index);
-      }
-      sameLineage(outcome, plan.copyHead, plan.copyDoc);
-      record.copySteps.push(outcome);
-      await this.io.log.put(record);
-    }
-
-    return true;
-  }
-
-  private async copyRefused(outcome: Refused, index: number): Promise<false> {
-    const { plan } = this.record;
-
-    if (outcome.head) {
-      sameLineage(outcome.head, plan.copyHead, plan.copyDoc);
-    }
-    if (index === 0 && outcome.status === 412) {
-      return false;
-    }
-    if (index > 0) {
-      await this.compensate();
-    }
-    throw new Error(`"${plan.copyDoc}" refused the copy with HTTP ${outcome.status}; the source was left intact`);
-  }
-
-  /**
-   * Removes this attempt's copy only while the receiving page is still at the
-   * head of this attempt's last copy receipt. Content alone cannot prove the
-   * copy is ours: an overlapping run with the same operation ID writes the same
-   * IDs and data, and removing that copy loses the blocks once its source
-   * removal lands. Any other head means peer or overlapping work, so the copy stays.
-   */
-  private async compensate(): Promise<void> {
-    const { record } = this;
-    const { plan, copySteps } = record;
-    const last = copySteps[copySteps.length - 1];
-
-    if (last === undefined) {
-      return;
-    }
-    const inserted = plan.copyChunks.slice(0, copySteps.length).flat()
-      .filter((op): op is InsertOp => op.op === 'insert');
-    const insertedIds = new Set(inserted.map((op) => op.id));
-    const roots = inserted
-      .filter((op) => op.parent === null || !insertedIds.has(op.parent))
-      .map((op) => op.id);
-    const outcome = await this.io.edit(
-      plan.copyDoc,
-      await this.io.key(record, 'compensate', 0),
-      [...removeOps(roots), ...plan.restoreOps],
-      last
-    );
+  private async copy(index: number, ops: SidecarEditOp[]): Promise<PageTransferSagaStep> {
+    const { plan, operationId } = this.record;
+    const outcome = await this.io.edit(plan.copyDoc, await this.io.key(operationId, 'copy', index), ops, null);
 
     if (outcome instanceof Refused) {
-      if (outcome.head) {
-        sameLineage(outcome.head, plan.copyHead, plan.copyDoc);
-      }
-      throw copyLeft(plan.copyDoc);
+      const why = outcome.status === 409
+        ? `Another run wrote a different plan under operation ID "${operationId}"; use a new operation ID`
+        : `Copy into "${plan.copyDoc}" stopped at part ${index + 1} of ${plan.copyChunks.length} (HTTP ${outcome.status}); ` +
+          'a partial copy may be there. Retry with the same operation ID to resume';
+
+      throw keptBoth(plan.copyDoc, why);
     }
     sameLineage(outcome, plan.copyHead, plan.copyDoc);
+
+    return outcome;
   }
 
-  private async nextAttempt(changedDoc: string): Promise<void> {
-    const { record } = this;
+  private async removeOrigin(tries: number): Promise<PageTransferSagaStep> {
+    const { plan, operationId } = this.record;
+    const key = await this.io.key(operationId, 'origin', 0);
+    const origin = await this.io.readState(plan.originDoc);
 
-    if (record.attempt >= this.io.maxAttempts) {
-      throw new Error(`The source was left intact: "${changedDoc}" changed during the transfer on every attempt`);
+    sameLineage(origin.head, plan.originHead, plan.originDoc);
+    const present = new Set(origin.data.blocks.map((block) => block.id));
+
+    if (!looksAsPlanned(origin.data, plan.originExpected) || plan.originAbsent.some((id) => present.has(id))) {
+      // A removal this operation already committed answers with its first
+      // receipt. Otherwise the stale head makes the server refuse: the doc
+      // moved, or it would still look as planned.
+      return this.confirmed(await this.io.edit(plan.originDoc, key, plan.originOps, plan.originHead),
+        `"${plan.originDoc}" changed the blocks being moved`);
     }
-    record.plan = await this.build();
-    record.attempt += 1;
-    record.copySteps = [];
-    await this.io.log.put(record);
+    const copy = plan.copyDoc === plan.originDoc ? origin : await this.io.readState(plan.copyDoc);
+
+    sameLineage(copy.head, plan.copyHead, plan.copyDoc);
+    if (!looksAsPlanned(copy.data, copyExpectedOf(plan.copyChunks))) {
+      throw keptBoth(plan.copyDoc, `The copy in "${plan.copyDoc}" is incomplete or changed`);
+    }
+    const outcome = await this.io.edit(plan.originDoc, key, plan.originOps, origin.head);
+
+    if (outcome instanceof Refused && outcome.status === 412 && tries + 1 < this.io.maxAttempts) {
+      return this.removeOrigin(tries + 1);
+    }
+
+    return this.confirmed(outcome, `"${plan.originDoc}" refused the removal (HTTP ${outcome instanceof Refused ? outcome.status : 204})`);
+  }
+
+  private confirmed(outcome: PageTransferSagaStep | Refused, why: string): PageTransferSagaStep {
+    const { plan } = this.record;
+
+    if (outcome instanceof Refused) {
+      throw keptBoth(plan.copyDoc, why);
+    }
+    sameLineage(outcome, plan.originHead, plan.originDoc);
+
+    return outcome;
   }
 }
 
@@ -467,10 +483,10 @@ export function createSidecarTransferHost(options: SidecarTransferHostOptions): 
     return { data: { blocks }, head };
   };
 
-  const key = async (record: SidecarTransferRecord, role: string, index: number): Promise<string> => {
+  const key = async (operationId: string, role: string, index: number): Promise<string> => {
     const digest = await globalThis.crypto.subtle.digest(
       'SHA-256',
-      new TextEncoder().encode(canonical([record.operationId, record.attempt, role, index]))
+      new TextEncoder().encode(canonical([operationId, role, index]))
     );
 
     return `blok-transfer-${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
@@ -513,8 +529,8 @@ export function createSidecarTransferHost(options: SidecarTransferHostOptions): 
     throw new Error(`Editing "${doc}" failed with HTTP ${response.status}; retry with the same operation ID`);
   };
 
-  const saga = (record: SidecarTransferRecord, build: () => Promise<SidecarTransferPlan>): Saga =>
-    new Saga({ log, maxAttempts, readState, edit, key }, record, build);
+  const saga = (record: SidecarTransferRecord): Saga =>
+    new Saga({ maxAttempts, readState, edit, key }, record);
 
   const open = async (
     operationId: string,
@@ -538,9 +554,7 @@ export function createSidecarTransferHost(options: SidecarTransferHostOptions): 
       version: 1,
       operationId,
       digest,
-      attempt: 1,
       plan: await build(),
-      copySteps: [],
     };
 
     await log.put(record);
@@ -553,8 +567,7 @@ export function createSidecarTransferHost(options: SidecarTransferHostOptions): 
   ): SidecarTransferPlan => {
     const { copyOps, ...rest } = plan;
 
-    if (byteLength(JSON.stringify({ ops: plan.originOps })) > maxEditBytes ||
-        byteLength(JSON.stringify({ ops: [...removeOps(plan.rootIds), ...plan.restoreOps] })) > maxEditBytes) {
+    if (byteLength(JSON.stringify({ ops: plan.originOps })) > maxEditBytes) {
       throw new Error(`The source edit is too large for one sidecar edit (${maxEditBytes} bytes)`);
     }
 
@@ -579,7 +592,8 @@ export function createSidecarTransferHost(options: SidecarTransferHostOptions): 
           originDoc: request.sourcePageId,
           originHead: source.head,
           originOps: removeOps(request.rootIds),
-          restoreOps: [],
+          originExpected: subtreeOf(source.data, request.rootIds),
+          originAbsent: [],
           rootIds: [...request.rootIds],
           restore: request.rootIds.map((rootId) => ({ rootId, ...placementOf(source.data, rootId) })),
           destination: { ...request.place },
@@ -601,27 +615,30 @@ export function createSidecarTransferHost(options: SidecarTransferHostOptions): 
           originDoc: request.sourcePageId,
           originHead: source.head,
           originOps: [...removeOps(request.rootIds), ...insertOps(turned.source, [request.pointerId])],
-          restoreOps: [],
+          originExpected: subtreeOf(source.data, request.rootIds),
+          originAbsent: [request.pointerId],
           rootIds: [...request.rootIds],
         });
       }
       case 'turn-into-blocks': {
-        // The source is the page being emptied; the target holds its pointer.
+        // The source is the page being turned back; the target holds its pointer.
+        // The blocks land next to the pointer, and removing the pointer is the
+        // one destructive edit. The page body is left for the host to retire.
         const turned = turnPageIntoBlocks(target.data, request.pointerId, {
           pageId: request.sourcePageId,
           body: source.data,
         });
-        const roots = rootsOf(source.data);
 
         return finishPlan({
           copyDoc: request.targetPageId,
           copyHead: target.head,
-          copyOps: [...removeOps([request.pointerId]), ...insertOps(turned.source, turned.movedIds)],
-          originDoc: request.sourcePageId,
-          originHead: source.head,
-          originOps: removeOps(roots),
-          restoreOps: insertOps(target.data, [request.pointerId]),
-          rootIds: roots,
+          copyOps: insertOps(turned.source, turned.movedIds),
+          originDoc: request.targetPageId,
+          originHead: target.head,
+          originOps: removeOps([request.pointerId]),
+          originExpected: subtreeOf(target.data, [request.pointerId]),
+          originAbsent: [],
+          rootIds: rootsOf(source.data),
         });
       }
       case 'duplicate-page':
@@ -673,7 +690,8 @@ export function createSidecarTransferHost(options: SidecarTransferHostOptions): 
       originDoc: undoOf.targetPageId,
       originHead: target.head,
       originOps: removeOps(undoOf.rootIds),
-      restoreOps: [],
+      originExpected: subtreeOf(target.data, undoOf.rootIds),
+      originAbsent: [],
       rootIds: [...undoOf.rootIds],
     });
   };
@@ -691,7 +709,7 @@ export function createSidecarTransferHost(options: SidecarTransferHostOptions): 
       if (record.receipt) {
         return record.receipt;
       }
-      const steps = await saga(record, build).drive(resumed);
+      const steps = await saga(record).drive(resumed);
       const receipt: PageTransferReceipt = {
         operationId: request.operationId,
         kind: request.kind,
@@ -724,7 +742,7 @@ export function createSidecarTransferHost(options: SidecarTransferHostOptions): 
       if (record.undoReceipt) {
         return record.undoReceipt;
       }
-      const steps = await saga(record, build).drive(resumed);
+      const steps = await saga(record).drive(resumed);
       const receipt: PageTransferUndoReceipt = {
         operationId: request.operationId,
         undoOfOperationId: undoOf.operationId,

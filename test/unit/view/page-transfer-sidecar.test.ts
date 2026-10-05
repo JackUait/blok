@@ -224,7 +224,7 @@ describe('createSidecarTransferHost', () => {
     expect(server.document('source').blocks[0]?.data.text).toBe('Peer');
   });
 
-  it('gives up with the source intact and no target copy when the source keeps changing', async () => {
+  it('gives up with the source intact and the copy kept when the source keeps changing', async () => {
     const { server, host } = setup({ maxAttempts: 2 });
     let peerText = 0;
 
@@ -239,11 +239,11 @@ describe('createSidecarTransferHost', () => {
 
     expect(server.ids('source')).toEqual(['a', 'a1', 'b']);
     expect(server.document('source').blocks[2]?.data.text).toBe('Peer 2');
-    expect(server.ids('target')).toEqual(['t']);
-    expect(messageOf(error)).toMatch(/changed during the transfer/i);
+    expect(server.ids('target')).toEqual(['t', 'a', 'a1']);
+    expect(messageOf(error)).toMatch(/refused the removal \(HTTP 412\).*source was kept/i);
   });
 
-  it('leaves the copy in place when a peer has added to it before compensation', async () => {
+  it('keeps the source when a peer has added to the copy before the removal', async () => {
     const { server, host } = setup();
     let edited = false;
 
@@ -263,7 +263,7 @@ describe('createSidecarTransferHost', () => {
     expect(messageOf(error)).toMatch(/copy/i);
   });
 
-  it('leaves the copy in place when a peer has edited it before compensation', async () => {
+  it('keeps the source when a peer has edited the copy before the removal', async () => {
     const { server, host } = setup();
     let edited = false;
 
@@ -280,10 +280,10 @@ describe('createSidecarTransferHost', () => {
     expect(server.ids('source')).toEqual(['a', 'a1', 'b']);
     expect(server.document('target').blocks.find((block) => block.id === 'a1')?.data.text).toBe('Peer typed in the copy');
     expect(ofTarget(server, 'a')).toBe(1);
-    expect(messageOf(error)).toMatch(/copy .* left in place/i);
+    expect(messageOf(error)).toMatch(/incomplete or changed.*copy stays/i);
   });
 
-  it('never compensates when the source step outcome is unknown (commit then 504)', async () => {
+  it('resolves an unknown source outcome (commit then 504) on retry without a second removal', async () => {
     const { server, host } = setup();
     let once = false;
 
@@ -307,18 +307,18 @@ describe('createSidecarTransferHost', () => {
     expect(server.ids('source')).toEqual(['b']);
   });
 
-  it('removes the copy and keeps the source when the source refuses for good', async () => {
+  it('keeps the source and the copy when the source refuses for good', async () => {
     const { server, host } = setup();
 
     server.onEdit((edit) => edit.doc === 'source' ? { refuse: 403 } : undefined);
     const error = await failure(host.run(move));
 
     expect(server.ids('source')).toEqual(['a', 'a1', 'b']);
-    expect(server.ids('target')).toEqual(['t']);
+    expect(server.ids('target')).toEqual(['t', 'a', 'a1']);
     expect(messageOf(error)).toMatch(/403/);
   });
 
-  it('removes the partial copy when a later copy chunk is refused', async () => {
+  it('keeps the partial copy and the source when a later copy chunk is refused', async () => {
     const { server, host } = setup({ maxEditBytes: 400 });
     let targetEdits = 0;
 
@@ -338,9 +338,9 @@ describe('createSidecarTransferHost', () => {
     const error = await failure(host.run(move));
 
     expect(server.ids('source')).toEqual(['a', 'a1', 'a2']);
-    expect(server.ids('target')).toEqual(['t']);
+    expect(server.ids('target')).toEqual(['t', 'a']);
     expect(server.edits.filter((edit) => edit.doc === 'source')).toHaveLength(0);
-    expect(messageOf(error)).toMatch(/refused the copy/i);
+    expect(messageOf(error)).toMatch(/part 2 of 3.*partial copy/i);
   });
 
   it('stops before any edit when the host log cannot store the plan', async () => {
@@ -383,6 +383,21 @@ describe('createSidecarTransferHost', () => {
     expect(server.ids('source')).toEqual(['p']);
     expect(server.edits).toHaveLength(0);
     expect(messageOf(error)).toMatch(/cycle/i);
+  });
+
+  it('keeps the source when a peer edits a moved block after the copy', async () => {
+    const { server, host } = setup();
+
+    server.onEdit((edit) => {
+      if (edit.doc === 'target') {
+        server.peerEdit('source', 'a1', 'Peer typed in the source');
+      }
+    });
+    const error = await failure(host.run(move));
+
+    expect(server.document('source').blocks.find((block) => block.id === 'a1')?.data.text).toBe('Peer typed in the source');
+    expect(server.ids('target')).toEqual(['t', 'a', 'a1']);
+    expect(messageOf(error)).toMatch(/changed the blocks being moved.*source was kept/i);
   });
 
   it('refuses a server without an operation journal before writing anything', async () => {
@@ -466,7 +481,7 @@ describe('createSidecarTransferHost', () => {
     expect(server.appliedEdits.filter((edit) => edit.doc === 'target').length).toBeGreaterThan(1);
   });
 
-  it('keeps a peer edit made to the copy between chunks when the source then changes', async () => {
+  it('keeps the source when a peer edits the copy between chunks', async () => {
     const { server, host } = setup({ maxEditBytes: 400 });
     let targetEdits = 0;
     let sourceEdited = false;
@@ -493,7 +508,7 @@ describe('createSidecarTransferHost', () => {
 
     expect(server.document('target').blocks.find((block) => block.id === 'a')?.data.text).toBe('Peer typed in the copy');
     expect(server.ids('source')).toContain('a');
-    expect(messageOf(error)).toMatch(/copy .* left in place/i);
+    expect(messageOf(error)).toMatch(/incomplete or changed.*copy stays/i);
   });
 
   it('refuses a block larger than one edit request before writing', async () => {
@@ -524,7 +539,7 @@ describe('createSidecarTransferHost', () => {
     expect(server.document('source').blocks[0]).toEqual({ id: 'ptr', type: 'page', data: { pageId: 'new-page' } });
   });
 
-  it('refuses turn-into-page when a peer writes into the new page first', async () => {
+  it('keeps a peer block written into the new page before the copy', async () => {
     const { server, host } = setup();
     let once = false;
 
@@ -534,21 +549,20 @@ describe('createSidecarTransferHost', () => {
         server.peerInsertRoot('new-page', { id: 'peer', type: 'paragraph', data: { text: 'Peer' } });
       }
     });
-    const error = await failure(host.run({
+    await host.run({
       kind: 'turn-into-page',
       operationId: 'tip-2',
       sourcePageId: 'source',
       targetPageId: 'new-page',
       rootIds: ['a'],
       pointerId: 'ptr',
-    }));
+    });
 
-    expect(server.ids('source')).toEqual(['a', 'a1', 'b']);
-    expect(server.ids('new-page')).toEqual(['peer']);
-    expect(messageOf(error)).toMatch(/empty new page/i);
+    expect(server.ids('new-page').sort()).toEqual(['a', 'a1', 'peer']);
+    expect(server.ids('source')).toEqual(['ptr', 'b']);
   });
 
-  it('turns a page back into blocks in the parent and empties the page', async () => {
+  it('turns a page back into blocks in the parent and leaves the body for the host', async () => {
     const { server, host } = setup();
 
     server.seed('parent', [
@@ -570,7 +584,7 @@ describe('createSidecarTransferHost', () => {
     });
 
     expect(server.ids('parent')).toEqual(['x', 'c1', 'c2', 'z']);
-    expect(server.ids('child')).toEqual([]);
+    expect(server.ids('child')).toEqual(['c1', 'c2']);
     expect(receipt.rootIds).toEqual(['c1', 'c2']);
   });
 
@@ -708,6 +722,382 @@ describe('overlapping runs with one operation ID', () => {
 
     expect(holders.length).toBeGreaterThan(0);
     expect(server.ids('source')).toContain('b');
+  });
+});
+
+describe('review repros: every block survives every interleaving', () => {
+  const latch = (): { promise: Promise<void>; open: () => void } => {
+    const opened: Array<() => void> = [];
+    const promise = new Promise<void>((resolve) => {
+      opened.push(resolve);
+    });
+
+    return { promise, open: () => opened.forEach((resolve) => resolve()) };
+  };
+  const ticketFor = (doc: string, access: { write: boolean }): string => `ticket:${doc}:${access.write ? 'write' : 'read'}`;
+  const gated = (
+    server: FakeSidecar,
+    log: SidecarTransferLog,
+    gate: (url: string, init: { method: string }) => Promise<void> | void = () => undefined,
+    maxEditBytes?: number
+  ) => createSidecarTransferHost({
+    baseUrl: 'https://sidecar.test/api/blok',
+    ticketFor,
+    log,
+    maxEditBytes,
+    fetch: async (url, init) => {
+      await gate(url, init);
+
+      return server.fetch(url, init);
+    },
+  });
+  const request: PageTransferRequest = { ...move, operationId: 'op-1' };
+  const seedSmall = (server: FakeSidecar): void => {
+    server.seed('source', [
+      { id: 'a', type: 'paragraph', data: { text: 'A' } },
+      { id: 'b', type: 'paragraph', data: { text: 'B' } },
+    ]);
+    server.seed('target', [{ id: 't', type: 'paragraph', data: { text: 'T' } }]);
+  };
+  const seedBig = (server: FakeSidecar): void => {
+    server.seed('source', [
+      { id: 'a', type: 'toggle', data: { text: 'A'.repeat(150) }, content: ['a1', 'a2'] },
+      { id: 'a1', type: 'paragraph', parent: 'a', data: { text: '1'.repeat(150) } },
+      { id: 'a2', type: 'paragraph', parent: 'a', data: { text: '2'.repeat(150) } },
+      { id: 'b', type: 'paragraph', data: { text: 'B' } },
+    ]);
+    server.seed('target', [{ id: 't', type: 'paragraph', data: { text: 'T' } }]);
+  };
+  const lost = (server: FakeSidecar, ids: string[]): string[] =>
+    ids.filter((id) => !server.ids('source').includes(id) && !server.ids('target').includes(id));
+  const removeIfPresent = (server: FakeSidecar, doc: string, id: string): void => {
+    if (server.ids(doc).includes(id)) {
+      server.peerRemove(doc, id);
+    }
+  };
+
+  it('F1: two runs that both plan before either logs', async () => {
+    const server = new FakeSidecar();
+    const log = memoryLog();
+    const aParked = latch();
+    const releaseA = latch();
+    const aAfterCompensate = latch();
+    const releaseA2 = latch();
+    const bAtFirstPost = latch();
+    const releaseB = latch();
+    let aPosts = 0;
+    let bPosts = 0;
+    let aTargetReads = 0;
+
+    seedSmall(server);
+    const hostA = gated(server, log, async (url, init) => {
+      if (init.method === 'GET' && url.endsWith('/target/state') && ++aTargetReads === 1) {
+        aParked.open();
+        await releaseA.promise;
+      }
+      if (init.method === 'POST' && ++aPosts === 4) {
+        aAfterCompensate.open();
+        await releaseA2.promise;
+      }
+    });
+    const hostB = gated(server, log, async (_url, init) => {
+      if (init.method === 'POST' && ++bPosts === 1) {
+        bAtFirstPost.open();
+        await releaseB.promise;
+      }
+    });
+    const runA = failure(hostA.run(request)).finally(() => {
+      aParked.open();
+      aAfterCompensate.open();
+    });
+
+    await aParked.promise;
+    server.peerEdit('source', 'b', 'Peer');
+    const runB = failure(hostB.run(request)).finally(() => bAtFirstPost.open());
+
+    await bAtFirstPost.promise;
+    releaseA.open();
+    await aAfterCompensate.promise;
+    releaseB.open();
+    await runB;
+    releaseA2.open();
+    await runA;
+
+    expect(lost(server, ['a', 'b'])).toEqual([]);
+  });
+
+  it('F2: two runs that share one logged record and race at different source heads', async () => {
+    const server = new FakeSidecar();
+    const log = memoryLog();
+    const aAtCopy2 = latch();
+    const releaseA = latch();
+    const aAfterCompensate2 = latch();
+    const releaseA3 = latch();
+    const bAtCopy2 = latch();
+    const releaseB = latch();
+    const bAtRebuild = latch();
+    const releaseBRebuild = latch();
+    const bStarted = latch();
+    const runs: Array<Promise<unknown>> = [];
+    let aPosts = 0;
+    let bPosts = 0;
+    let bSourceReads = 0;
+
+    seedSmall(server);
+    const hostB = gated(server, log, async (url, init) => {
+      if (init.method === 'GET' && url.endsWith('/source/state') && ++bSourceReads === 2) {
+        bAtRebuild.open();
+        await releaseBRebuild.promise;
+      }
+      if (init.method === 'POST' && ++bPosts === 3) {
+        bAtCopy2.open();
+        await releaseB.promise;
+      }
+    });
+    const hostA = gated(server, log, async (_url, init) => {
+      if (init.method !== 'POST') {
+        return;
+      }
+      aPosts += 1;
+      if (aPosts === 2) {
+        server.peerEdit('source', 'b', 'Peer 1');
+        runs.push(failure(hostB.run(request)).finally(() => {
+          bAtRebuild.open();
+          bAtCopy2.open();
+        }));
+        bStarted.open();
+      }
+      if (aPosts === 4) {
+        aAtCopy2.open();
+        await releaseA.promise;
+      }
+      if (aPosts === 6) {
+        aAfterCompensate2.open();
+      }
+      if (aPosts === 7) {
+        await releaseA3.promise;
+      }
+    });
+    const runA = failure(hostA.run(request)).finally(() => {
+      bStarted.open();
+      aAtCopy2.open();
+      aAfterCompensate2.open();
+    });
+
+    await bStarted.promise;
+    await aAtCopy2.promise;
+    await bAtRebuild.promise;
+    server.peerEdit('source', 'b', 'Peer 2');
+    releaseBRebuild.open();
+    await bAtCopy2.promise;
+    releaseA.open();
+    await aAfterCompensate2.promise;
+    releaseB.open();
+    await Promise.all(runs);
+    releaseA3.open();
+    await runA;
+
+    expect(lost(server, ['a', 'b'])).toEqual([]);
+  });
+
+  it('F3: the source removal is refused once (403), then the run is retried', async () => {
+    const server = new FakeSidecar();
+    const log = memoryLog();
+    let refuse = true;
+
+    seedSmall(server);
+    server.onEdit((edit) => {
+      if (edit.doc === 'source' && refuse) {
+        refuse = false;
+
+        return { refuse: 403 };
+      }
+    });
+    const host = gated(server, log);
+    const first = await failure(host.run(request));
+
+    expect(lost(server, ['a', 'b'])).toEqual([]);
+    expect(server.ids('target')).toEqual(['t', 'a']);
+    expect(messageOf(first)).toMatch(/403/);
+
+    await host.run(request);
+
+    expect(server.ids('target')).toEqual(['t', 'a']);
+    expect(server.ids('source')).toEqual(['b']);
+  });
+
+  it('F4a: a retry after the user removed the source duplicate keeps the target copy', async () => {
+    const server = new FakeSidecar();
+    const log = memoryLog();
+    let first = true;
+
+    seedSmall(server);
+    let refuseRemoval = true;
+
+    server.onEdit((edit) => {
+      if (edit.doc === 'source' && first) {
+        first = false;
+        server.peerEdit('source', 'b', 'Peer');
+      }
+      if (edit.doc === 'target' && refuseRemoval && JSON.stringify(edit.ops) === '[{"op":"remove","id":"a"}]') {
+        refuseRemoval = false;
+
+        return { refuse: 403 };
+      }
+    });
+    const host = gated(server, log);
+
+    await failure(host.run(request));
+    removeIfPresent(server, 'source', 'a');
+    await failure(host.run(request));
+
+    expect(lost(server, ['a', 'b'])).toEqual([]);
+    expect(server.ids('target')).toContain('a');
+  });
+
+  it('F4b: a retry after the user removed the target copy keeps the source', async () => {
+    const server = new FakeSidecar();
+    const log = memoryLog();
+    let refuse = true;
+
+    seedSmall(server);
+    server.onEdit((edit) => {
+      if (edit.doc === 'source' && refuse) {
+        refuse = false;
+
+        return { refuse: 403 };
+      }
+    });
+    const host = gated(server, log);
+
+    await failure(host.run(request));
+    removeIfPresent(server, 'target', 'a');
+    const retry = await failure(host.run(request));
+
+    expect(lost(server, ['a', 'b'])).toEqual([]);
+    expect(server.ids('source')).toContain('a');
+    expect(messageOf(retry)).toMatch(/incomplete or changed/i);
+  });
+
+  it('F5a: a peer edit in the target between copy chunks neither strands nor blocks the transfer', async () => {
+    const server = new FakeSidecar();
+    const log = memoryLog();
+    let targetEdits = 0;
+
+    seedBig(server);
+    server.onEdit((edit) => {
+      if (edit.doc === 'target' && ++targetEdits === 2) {
+        server.peerEdit('target', 't', 'Peer T');
+      }
+    });
+    const host = gated(server, log, undefined, 400);
+
+    await failure(host.run(request));
+    await failure(host.run(request));
+
+    expect(lost(server, ['a', 'a1', 'a2', 'b'])).toEqual([]);
+    expect(server.ids('target')).toEqual(['t', 'a', 'a1', 'a2']);
+    expect(server.ids('source')).toEqual(['b']);
+  });
+
+  it.each([412, 413])('F5: a copy chunk refused with %i resumes on retry with the same operation ID', async (status) => {
+    const server = new FakeSidecar();
+    const log = memoryLog();
+    let targetEdits = 0;
+
+    seedBig(server);
+    server.onEdit((edit) => {
+      if (edit.doc === 'target' && ++targetEdits === 2) {
+        return { refuse: status };
+      }
+    });
+    const host = gated(server, log, undefined, 400);
+    const first = await failure(host.run(request));
+
+    expect(lost(server, ['a', 'a1', 'a2', 'b'])).toEqual([]);
+    expect(server.ids('source')).toEqual(['a', 'a1', 'a2', 'b']);
+    expect(messageOf(first)).toMatch(/partial copy/i);
+
+    await host.run(request);
+
+    expect(server.ids('target')).toEqual(['t', 'a', 'a1', 'a2']);
+    expect(server.ids('source')).toEqual(['b']);
+  });
+
+  it('F6: two overlapping Undo runs with one Undo operation ID', async () => {
+    const server = new FakeSidecar();
+    const log = memoryLog();
+
+    seedSmall(server);
+    const receipt = await gated(server, log).run(request);
+    const undo = { operationId: 'undo-1', undoOf: receipt };
+    const aAtCopy2 = latch();
+    const releaseA = latch();
+    const aAfterCompensate2 = latch();
+    const releaseA3 = latch();
+    const bAtCopy2 = latch();
+    const releaseB = latch();
+    const bAtRebuild = latch();
+    const releaseBRebuild = latch();
+    const bStarted = latch();
+    const runs: Array<Promise<unknown>> = [];
+    let aPosts = 0;
+    let bPosts = 0;
+    let bTargetReads = 0;
+    const hostB = gated(server, log, async (url, init) => {
+      if (init.method === 'GET' && url.endsWith('/target/state') && ++bTargetReads === 2) {
+        bAtRebuild.open();
+        await releaseBRebuild.promise;
+      }
+      if (init.method === 'POST' && ++bPosts === 3) {
+        bAtCopy2.open();
+        await releaseB.promise;
+      }
+    });
+    const hostA = gated(server, log, async (_url, init) => {
+      if (init.method !== 'POST') {
+        return;
+      }
+      aPosts += 1;
+      if (aPosts === 2) {
+        server.peerEdit('target', 't', 'Peer 1');
+        runs.push(failure(hostB.undo(undo)).finally(() => {
+          bAtRebuild.open();
+          bAtCopy2.open();
+        }));
+        bStarted.open();
+      }
+      if (aPosts === 4) {
+        aAtCopy2.open();
+        await releaseA.promise;
+      }
+      if (aPosts === 6) {
+        aAfterCompensate2.open();
+      }
+      if (aPosts === 7) {
+        await releaseA3.promise;
+      }
+    });
+    const runA = failure(hostA.undo(undo)).finally(() => {
+      bStarted.open();
+      aAtCopy2.open();
+      aAfterCompensate2.open();
+    });
+
+    await bStarted.promise;
+    await aAtCopy2.promise;
+    await bAtRebuild.promise;
+    server.peerEdit('target', 't', 'Peer 2');
+    releaseBRebuild.open();
+    await bAtCopy2.promise;
+    releaseA.open();
+    await aAfterCompensate2.promise;
+    releaseB.open();
+    await Promise.all(runs);
+    releaseA3.open();
+    await runA;
+
+    expect(lost(server, ['a', 'b', 't'])).toEqual([]);
   });
 });
 

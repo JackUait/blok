@@ -75,6 +75,7 @@ export type {
   SidecarDocHead,
   SidecarEditBlock,
   SidecarEditOp,
+  SidecarExpectedBlock,
   SidecarFetch,
   SidecarFetchResponse,
   SidecarRootPlacement,

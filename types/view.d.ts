@@ -820,29 +820,40 @@ export interface SidecarRootPlacement extends PageBlockPlacement {
   rootId: string;
 }
 
-/** The exact edits of one attempt. Stored so a retry replays the same bodies and keys. */
+/** A block as the transfer expects to find it before the source removal. */
+export interface SidecarExpectedBlock {
+  id: string;
+  type: string;
+  data: Record<string, unknown>;
+  tunes?: Record<string, unknown>;
+  parent: string | null;
+  content: string[];
+}
+
+/** The exact edits of one operation. Written once and never rebuilt under the same operation ID. */
 export interface SidecarTransferPlan {
   copyDoc: string;
   copyHead: SidecarDocHead;
   copyChunks: SidecarEditOp[][];
   originDoc: string;
   originHead: SidecarDocHead;
+  /** The one destructive edit. */
   originOps: SidecarEditOp[];
-  /** Ops that put back what the copy step removed (the pointer of turn-into-blocks). */
-  restoreOps: SidecarEditOp[];
+  /** The removed blocks as planned. The removal runs only while they still look like this. */
+  originExpected: SidecarExpectedBlock[];
+  /** IDs the removal inserts, so they must not exist yet (the turn-into-page pointer). */
+  originAbsent: string[];
   rootIds: string[];
   restore?: SidecarRootPlacement[];
   destination?: PageBlockPlacement;
 }
 
-/** Progress of one transfer or Undo. JSON-safe; the host stores it as given. */
+/** One transfer or Undo. JSON-safe; the host stores it as given. */
 export interface SidecarTransferRecord {
   version: 1;
   operationId: string;
   digest: string;
-  attempt: number;
   plan: SidecarTransferPlan;
-  copySteps: PageTransferSagaStep[];
   receipt?: PageTransferReceipt;
   undoReceipt?: PageTransferUndoReceipt;
 }
@@ -874,14 +885,15 @@ export interface SidecarTransferHostOptions {
   fetch?: SidecarFetch;
   /** The server's `CollabMaxMessageBytes`. Defaults to 1048576. */
   maxEditBytes?: number;
-  /** Fresh attempts when a peer edits the source mid-transfer. Defaults to 3. */
+  /** How many times to send the source removal when peers keep editing elsewhere in the source. Defaults to 3. */
   maxAttempts?: number;
 }
 
 /**
  * A `live-saga` transfer host over the stock collab sidecar. Needs a server
- * running with an operation journal (`--collab-journal`). It never loses
- * blocks; a copy may show in both pages for a moment. Refuses `duplicate-page`.
+ * running with an operation journal (`--collab-journal`). It never deletes a
+ * copy: a failure leaves the source plus whatever copy exists, so blocks can
+ * end in both pages. Refuses `duplicate-page`.
  */
 export declare function createSidecarTransferHost(options: SidecarTransferHostOptions): PageTransferUndoHost;
 

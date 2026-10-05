@@ -360,7 +360,7 @@
   "tools.image.zoomIn": "Увеличить",
   "tools.image.zoomOut": "Уменьшить",
   "tools.image.resetZoom": "Сбросить масштаб",
-  "tools.image.errorUploadFailed": "Не удалось загрузить на сервер",
+  "tools.image.errorUploadFailed": "Не удалось загрузить изображение на сервер",
   "tools.image.errorFileTooLarge": "Размер изображения ({size}) превышает ограничение {max}.",
   "tools.image.errorUploadFailedTitle": "Ошибка загрузки",
   "tools.image.errorSourceOffline": "Исходный файл мог быть перемещён или недоступен.",

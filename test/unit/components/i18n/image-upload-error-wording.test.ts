@@ -10,6 +10,6 @@ const load = (locale: string): Record<string, string> =>
 describe('image upload error wording', () => {
   it('says the server upload failed, not just "upload failed"', () => {
     expect(load('en')['tools.image.errorUploadFailed']).toBe('Couldn’t upload to the server');
-    expect(load('ru')['tools.image.errorUploadFailed']).toBe('Не удалось загрузить на сервер');
+    expect(load('ru')['tools.image.errorUploadFailed']).toBe('Не удалось загрузить изображение на сервер');
   });
 });

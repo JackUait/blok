@@ -60,6 +60,9 @@ describe('applyOverlay', () => {
     expect(existsSync(join(dir, 'src/versioning/VersionPicker.test.tsx'))).toBe(false);
     expect(existsSync(join(dir, 'scripts/docs-versions.mjs'))).toBe(true);
     expect(existsSync(join(dir, 'scripts/build-snapshot.mjs'))).toBe(true);
+    // docs-backfill.yml audits the tag's root build with the tag's own manifest.
+    expect(existsSync(join(dir, 'scripts/audit-build-output.mjs'))).toBe(true);
+    expect(existsSync(join(dir, 'scripts/build-audit.mjs'))).toBe(true);
     expect(existsSync(join(dir, 'src/versioning/__fixtures__'))).toBe(false);
 
     const before = FILES.map((file) => read(dir, file));

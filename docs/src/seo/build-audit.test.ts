@@ -254,3 +254,92 @@ describe('build output audit', () => {
     expect(result.pages.map(({ route, ok }) => [route, ok])).toEqual(ROUTES.map((route) => [route, true]));
   });
 });
+
+// The /next/ snapshot (build-snapshot.mjs --base /next/), as measured from a real
+// build: every page is `noindex, follow`, its canonical, hreflang and markdown
+// links all name the ROOT page, it ships no .md mirrors and no sitemap.xml.
+describe('build output audit — a noindex snapshot under /next/', () => {
+  const BASE = '/next/';
+  const NOINDEX = '<meta name="robots" content="noindex, follow">';
+  let out: string;
+  let pages: PageSpec[];
+
+  const write = (path: string, content: string): void => {
+    const file = join(out, path);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, content);
+  };
+  const snapshotFile = (route: string): string => `next/${fileFor(route)}`;
+  const snapshotPage = (route: string, options: Parameters<typeof html>[1] = {}): string =>
+    html(route, { head: NOINDEX, links: ['/next/docs/table/', '/favicon.ico', '/'], ...options });
+
+  const audit = () => auditBuild({ outDir: out, siteUrl: SITE, pages, base: BASE });
+  const failing = (result: ReturnType<typeof auditBuild>) =>
+    result.failures.map(({ route, check }) => `${route} ${check}`);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    out = mkdtempSync(join(tmpdir(), 'build-audit-next-'));
+    pages = ROUTES.map((route) => ({ route, canonical: url(route) }));
+    for (const route of ROUTES) write(snapshotFile(route), snapshotPage(route));
+  });
+
+  afterEach(() => {
+    rmSync(out, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  it('passes the real /next/ contract: noindex pages that canonicalise to the root', () => {
+    const result = audit();
+
+    expect(result.failures).toEqual([]);
+    expect(result.pages.map(({ file }) => file)).toEqual(ROUTES.map(snapshotFile));
+  });
+
+  it('flags a snapshot page that could be indexed', () => {
+    write(snapshotFile('/docs/table'), html('/docs/table', { links: [] }));
+    write(snapshotFile('/ru'), snapshotPage('/ru', { head: '<meta name="description" content="noindex">' }));
+
+    expect(failing(audit())).toEqual(['/docs/table indexable', '/ru indexable']);
+  });
+
+  it('flags a canonical that names the snapshot page instead of the root one', () => {
+    write(snapshotFile('/docs/table'), snapshotPage('/docs/table', { canonicals: [`${SITE}/next/docs/table/`] }));
+
+    expect(failing(audit())).toEqual(['/docs/table canonical']);
+  });
+
+  it('flags a page the snapshot did not emit, a shell page and a second h1', () => {
+    rmSync(join(out, snapshotFile('/docs/table')));
+    write(snapshotFile('/ru'), snapshotPage('/ru', { prose: 'x' }));
+    write(snapshotFile('/'), snapshotPage('/', { h1s: 2 }));
+
+    expect(failing(audit())).toEqual(expect.arrayContaining(['/docs/table missing-file', '/ru prose', '/ h1']));
+  });
+
+  it('checks links inside the snapshot and leaves the root\'s links to the root audit', () => {
+    write(snapshotFile('/ru'), snapshotPage('/ru', { links: ['/next/docs/gone/', '/docs/not-in-this-build/'] }));
+
+    expect(audit().failures).toEqual([
+      { route: '/ru', check: 'internal-link', detail: `${SITE}/next/docs/gone/ is not in the build` },
+    ]);
+  });
+
+  it('requires each hreflang page to exist in the snapshot and list the same set back', () => {
+    rmSync(join(out, snapshotFile('/ru/docs/table')));
+    write(snapshotFile('/ru'), snapshotPage('/ru', { alternates: `${hreflang('/ru')}<link rel="alternate" hreflang="de" href="${url('/')}"/>` }));
+
+    const details = audit().failures.filter(({ check }) => check === 'hreflang').map(({ route, detail }) => `${route}: ${detail}`);
+
+    expect(details).toEqual(expect.arrayContaining([
+      `/docs/table: hreflang ru -> ${url('/ru/docs/table')} is not a built page`,
+      `/: hreflang is not reciprocal with ${url('/ru')}`,
+    ]));
+  });
+
+  it('flags a sitemap shipped inside the snapshot', () => {
+    write('next/sitemap.xml', '<urlset/>');
+
+    expect(failing(audit())).toEqual(['null sitemap-file']);
+  });
+});

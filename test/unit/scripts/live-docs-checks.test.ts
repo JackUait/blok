@@ -11,6 +11,8 @@ import {
 const SHA_A = 'a'.repeat(40);
 const SHA_B = 'b'.repeat(40);
 const SITE = 'https://blokeditor.com';
+// Unique per build run, so no CDN can hold a copy from an earlier deploy.
+const PROOF = '/build-info/new.json';
 
 type Reply = { status: number; body?: string; location?: string } | Error;
 
@@ -80,6 +82,7 @@ describe('live build info', () => {
     const info = await awaitBuildInfo({
       site: SITE,
       expected: { sha: SHA_A, manifestHash: 'new' },
+      path: PROOF,
       fetchImpl: impl,
       attempts: 5,
       sleep: noSleep,
@@ -101,6 +104,7 @@ describe('live build info', () => {
     await expect(awaitBuildInfo({
       site: SITE,
       expected: { sha: SHA_A, manifestHash: 'new' },
+      path: PROOF,
       fetchImpl: impl,
       attempts: 3,
       sleep: noSleep,
@@ -114,6 +118,7 @@ describe('live build info', () => {
     await expect(awaitBuildInfo({
       site: SITE,
       expected: { sha: SHA_A, manifestHash: 'new' },
+      path: PROOF,
       fetchImpl: impl,
       attempts: 2,
       sleep: noSleep,
@@ -125,6 +130,7 @@ describe('live build info', () => {
     await expect(awaitBuildInfo({
       site: SITE,
       expected: { sha: SHA_A, manifestHash: 'new' },
+      path: PROOF,
       fetchImpl: stalledFetch,
       attempts: 2,
       timeoutMs: 10,
@@ -133,18 +139,37 @@ describe('live build info', () => {
     })).rejects.toThrow(/build-info\/new\.json request failed/);
   });
 
-  it('refuses to poll without a manifest hash to name the file by', async () => {
+  it('refuses to poll without the proof path the build named', async () => {
     const { impl, calls } = fakeFetch({});
 
     await expect(awaitBuildInfo({
       site: SITE,
-      expected: { sha: SHA_A },
+      expected: { sha: SHA_A, manifestHash: 'new' },
       fetchImpl: impl,
       attempts: 1,
       sleep: noSleep,
       log: () => {},
-    })).rejects.toThrow(/manifest hash/);
+    })).rejects.toThrow(/proof path/);
     expect(calls).toEqual([]);
+  });
+
+  it('polls exactly the proof path it is given, not one derived from the manifest', async () => {
+    const proof = '/build-info/run-42-attempt-2.json';
+    const { impl, calls } = fakeFetch({
+      [`${SITE}${proof}`]: [{ status: 200, body: JSON.stringify({ sha: SHA_A, manifestHash: 'new' }) }],
+    });
+
+    await awaitBuildInfo({
+      site: SITE,
+      expected: { sha: SHA_A, manifestHash: 'new' },
+      path: proof,
+      fetchImpl: impl,
+      attempts: 1,
+      sleep: noSleep,
+      log: () => {},
+    });
+
+    expect(calls).toEqual([`${SITE}${proof}`]);
   });
 
   it('treats an unparseable build-info.json as a mismatch, not a crash', async () => {
@@ -153,6 +178,7 @@ describe('live build info', () => {
     await expect(awaitBuildInfo({
       site: SITE,
       expected: { sha: SHA_A, manifestHash: 'new' },
+      path: PROOF,
       fetchImpl: impl,
       attempts: 1,
       sleep: noSleep,
@@ -229,6 +255,31 @@ describe('full sitemap crawl', () => {
     expect(report.failures.map(({ url, kind }) => [url, kind])).toEqual([[a, 'deterministic'], [b, 'deterministic']]);
     expect(report.failures[0].detail).toContain('301');
     expect(calls).toHaveLength(2);
+  });
+
+  it('reads robots and canonical tags whatever their attribute order, quoting and case', async () => {
+    const urls = ['a', 'b', 'c', 'd', 'e', 'f'].map((name) => `${SITE}/docs/${name}/`);
+    const bodies = [
+      `<link href="${urls[0]}" rel="canonical"><meta content="noindex" name="robots">`,
+      `<LINK REL=Canonical HREF='${urls[1]}'><META NAME='ROBOTS' CONTENT='NOINDEX, follow'>`,
+      `<link rel="canonical" href="${urls[2]}"><meta content="noindex" name="googlebot">`,
+      `<link rel="alternate canonical" href="${urls[3]}">`,
+      `<link href="${urls[4]}" rel="canonical"><meta name="description" content="noindex is a robots word">`,
+      `<link rel="canonical" href="${urls[5]}"><link rel="canonical" href="${SITE}/docs/other/">`,
+    ];
+    const { impl } = fakeFetch(Object.fromEntries(urls.map((url, index) => [
+      url,
+      [{ status: 200, body: `<html><head>${bodies[index]}</head><body><h1>Hi</h1></body></html>` }],
+    ])));
+
+    const report = await crawlUrls(urls, { fetchImpl: impl, sleep: noSleep });
+
+    expect(report.failures.map(({ url, detail }) => [url, detail])).toEqual([
+      [urls[0], 'page is noindex'],
+      [urls[1], 'page is noindex'],
+      [urls[2], 'page is noindex'],
+      [urls[5], `expected one canonical ${urls[5]}, found [${urls[5]}, ${SITE}/docs/other/]`],
+    ]);
   });
 
   it('fails a page whose canonical points elsewhere or that is noindex', async () => {

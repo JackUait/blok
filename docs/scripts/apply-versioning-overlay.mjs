@@ -49,7 +49,7 @@ const PATCHES = [
   },
 ];
 
-const SCRIPTS = ['docs-versions.mjs', 'build-snapshot.mjs'];
+const SCRIPTS = ['docs-versions.mjs', 'build-snapshot.mjs', 'audit-build-output.mjs', 'build-audit.mjs'];
 
 const applyPatch = (tagDocsDir, { file, anchor, before = [], after = [] }) => {
   const path = join(tagDocsDir, file);

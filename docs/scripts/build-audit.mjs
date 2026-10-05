@@ -33,15 +33,22 @@ const markdownBody = (content) => content.replace(/^---\n[\s\S]*?\n---\n/, '').t
  * @param {string} options.siteUrl  production origin, no trailing slash
  * @param {{ route: string, canonical: string, noindex?: boolean, mirror?: boolean }[]} options.pages
  * @param {number} [options.minProseChars]
+ * @param {string} [options.base]   `/` for the indexed root. Any other base (`/next/`) is a
+ *   noindex snapshot: its pages must be noindex and canonicalise to the ROOT page, and its
+ *   canonical, hreflang and markdown links name root URLs. It ships no sitemap or mirrors.
  */
-export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200 }) => {
+export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200, base = '/' }) => {
   const origin = new URL(siteUrl).origin;
+  const indexed = base === '/';
+  const baseDir = path.join(outDir, ...base.split('/').filter(Boolean));
   const failures = [];
   const urlToRoute = new Map(pages.map((page) => [ownUrl(siteUrl, page.route), page]));
   const pageFile = (pathname) => path.join(outDir, decodeURIComponent(pathname), 'index.html');
+  // A snapshot's hreflang names root URLs; its own copy of that page is the one to compare.
+  const hreflangFile = (pathname) => path.join(baseDir, decodeURIComponent(pathname), 'index.html');
   const isBuiltPage = (url) => {
     const parsed = new URL(url);
-    return parsed.origin === origin && parsed.pathname.endsWith('/') && isFile(pageFile(parsed.pathname));
+    return parsed.origin === origin && parsed.pathname.endsWith('/') && isFile(hreflangFile(parsed.pathname));
   };
 
   const hreflangCache = new Map();
@@ -64,7 +71,8 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200 }) => {
       failures.push({ route: page.route, check, detail });
     };
     const url = ownUrl(siteUrl, page.route);
-    const file = path.join(outDir, page.route === '/' ? 'index.html' : `${page.route.slice(1)}/index.html`);
+    const servedUrl = ownUrl(`${origin}${base.replace(/\/$/, '')}`, page.route);
+    const file = path.join(baseDir, page.route === '/' ? 'index.html' : `${page.route.slice(1)}/index.html`);
     const result = { route: page.route, url, file: path.relative(outDir, file), indexable: !page.noindex };
 
     if (page.noindex) return { ...result, ok: true, problems };
@@ -85,7 +93,10 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200 }) => {
 
     const robots = [...document.querySelectorAll('meta[name="robots" i], meta[name="googlebot" i]')]
       .map((meta) => meta.getAttribute('content') ?? '');
-    if (robots.some((content) => /noindex/i.test(content))) fail('noindex', `robots meta: ${robots.join(' | ')}`);
+    const isNoindex = robots.some((content) => /noindex/i.test(content));
+    if (indexed && isNoindex) fail('noindex', `robots meta: ${robots.join(' | ')}`);
+    // A snapshot page left indexable competes with the root page it copies.
+    if (!indexed && !isNoindex) fail('indexable', `a ${base} page must be noindex; robots meta: [${robots.join(' | ')}]`);
 
     const h1Count = document.querySelectorAll('h1').length;
     if (h1Count !== 1) fail('h1', `expected one <h1>, found ${h1Count}`);
@@ -102,13 +113,15 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200 }) => {
       if (!raw || raw.startsWith('#')) continue;
       let target;
       try {
-        target = new URL(raw, url);
+        target = new URL(raw, servedUrl);
       } catch {
         fail('internal-link', `${raw} is not a valid URL`);
         continue;
       }
       if (target.origin !== origin) continue;
       const pathname = target.pathname;
+      // Links out of a snapshot land on the root, which is audited on its own build.
+      if (!indexed && !pathname.startsWith(base)) continue;
       const shown = `${origin}${pathname}`;
       if (seen.has(shown)) continue;
       seen.add(shown);
@@ -135,7 +148,7 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200 }) => {
         fail('hreflang', `hreflang ${lang} -> ${href} is not a built page`);
         continue;
       }
-      const other = hreflangSet(pageFile(new URL(href).pathname));
+      const other = hreflangSet(hreflangFile(new URL(href).pathname));
       if (other.join('\n') !== alternates.join('\n')) fail('hreflang', `hreflang is not reciprocal with ${href}`);
     }
 
@@ -146,6 +159,9 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200 }) => {
         fail('json-ld', `JSON-LD does not parse: ${error.message}`);
       }
     }
+
+    // A snapshot ships no mirrors; its mirror link names the root's file.
+    if (!indexed) return { ...result, ok: problems.length === 0, problems };
 
     const wantsMirror = page.mirror ?? true;
     const mirrorHref = document.querySelector('link[rel~="alternate"][type="text/markdown"]')?.getAttribute('href');
@@ -160,8 +176,12 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200 }) => {
     return { ...result, ok: problems.length === 0, problems };
   });
 
-  const sitemapFile = path.join(outDir, 'sitemap.xml');
-  if (!isFile(sitemapFile)) {
+  const sitemapFile = path.join(baseDir, 'sitemap.xml');
+  if (!indexed) {
+    if (isFile(sitemapFile)) {
+      failures.push({ route: null, check: 'sitemap-file', detail: `${base}sitemap.xml would advertise noindex pages` });
+    }
+  } else if (!isFile(sitemapFile)) {
     failures.push({ route: null, check: 'sitemap-file', detail: 'sitemap.xml was not emitted' });
   } else {
     const locs = [...fs.readFileSync(sitemapFile, 'utf8').matchAll(/<loc>(.*?)<\/loc>/g)].map(([, loc]) => loc);

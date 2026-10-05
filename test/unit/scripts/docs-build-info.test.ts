@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  contentAddressedPath,
   contentManifest,
   createBuildInfo,
+  proofPath,
   writeBuildInfo,
 } from '../../../scripts/docs-build-info.mjs';
 
@@ -36,14 +36,31 @@ describe('docs build info', () => {
     vi.restoreAllMocks();
   });
 
-  it('hashes only the HTML and markdown files', () => {
+  it('hashes every deployed file, assets and crawl files included', () => {
     const before = contentManifest(site);
 
-    write(site, 'assets/client-abc.js', 'console.log(2)');
-
-    expect(contentManifest(site)).toEqual(before);
-    expect(before.files).toBe(3);
+    expect(before.files).toBe(4);
     expect(before.hash).toMatch(/^[a-f0-9]{64}$/);
+
+    write(site, 'assets/client-abc.js', 'console.log(2)');
+    const afterAsset = contentManifest(site).hash;
+    expect(afterAsset).not.toBe(before.hash);
+
+    write(site, 'sitemap.xml', '<urlset/>');
+    write(site, 'robots.txt', 'User-agent: *');
+    expect(contentManifest(site)).toEqual({ hash: expect.not.stringMatching(afterAsset), files: 6 });
+  });
+
+  it('leaves out only its own output at the site root', () => {
+    const before = contentManifest(site);
+
+    write(site, 'build-info.json', '{}');
+    write(site, 'build-info/anything.json', '{}');
+    expect(contentManifest(site)).toEqual(before);
+
+    // Same names deeper down are ordinary site files.
+    write(site, 'next/build-info.json', '{}');
+    expect(contentManifest(site).hash).not.toBe(before.hash);
   });
 
   it('changes the hash when a page body changes', () => {
@@ -85,9 +102,17 @@ describe('docs build info', () => {
       version: '1.16.0',
       root: '1.15',
       manifestHash: contentManifest(site).hash,
-      files: 3,
+      files: 5,
       builtAt: '2026-10-05T00:00:00.000Z',
       runId: '123',
+      runAttempt: null,
+      proof: proofPath({
+        sha: 'b'.repeat(40),
+        manifestHash: contentManifest(site).hash,
+        runId: '123',
+        runAttempt: null,
+        builtAt: '2026-10-05T00:00:00.000Z',
+      }),
     });
   });
 
@@ -96,6 +121,7 @@ describe('docs build info', () => {
 
     expect(info.root).toBeNull();
     expect(info.runId).toBeNull();
+    expect(info.runAttempt).toBeNull();
   });
 
   it('writes build-info.json at the site root', () => {
@@ -106,22 +132,40 @@ describe('docs build info', () => {
     expect(JSON.parse(readFileSync(join(site, 'build-info.json'), 'utf8'))).toEqual(info);
   });
 
-  it('also writes a copy named by the manifest hash, which no CDN has cached yet', () => {
-    const info = createBuildInfo({ dir: site, sha: 'e'.repeat(40), version: '1.0.0', builtAt: 'now' });
+  it('writes the proof file under a name unique to this build, and no manifest-named copy', () => {
+    const info = createBuildInfo({ dir: site, sha: 'e'.repeat(40), version: '1.0.0', runId: '9', runAttempt: '1', builtAt: 'now' });
 
     writeBuildInfo(site, info);
 
-    expect(contentAddressedPath(info.manifestHash)).toBe(`/build-info/${info.manifestHash}.json`);
-    expect(JSON.parse(readFileSync(join(site, 'build-info', `${info.manifestHash}.json`), 'utf8'))).toEqual(info);
-    // Writing the copy must not change the hash it is named after.
+    expect(info.proof).toMatch(/^\/build-info\/[a-f0-9]{64}\.json$/);
+    expect(JSON.parse(readFileSync(join(site, info.proof.slice(1)), 'utf8'))).toEqual(info);
+    // A manifest-named file is shared by every deploy with the same bytes, so a CDN can serve an old one.
+    expect(existsSync(join(site, 'build-info', `${info.manifestHash}.json`))).toBe(false);
+    // Writing the proof must not change the hash it records.
     expect(contentManifest(site).hash).toBe(info.manifestHash);
+  });
+
+  it('names a different proof file for every build, even with identical pages', () => {
+    const base = { sha: 'a'.repeat(40), manifestHash: 'f'.repeat(64), runId: '100', runAttempt: '1', builtAt: 't1' };
+
+    expect(proofPath(base)).toBe(proofPath({ ...base }));
+    expect(proofPath({ ...base, sha: 'b'.repeat(40) })).not.toBe(proofPath(base));
+    expect(proofPath({ ...base, manifestHash: 'e'.repeat(64) })).not.toBe(proofPath(base));
+    expect(proofPath({ ...base, runId: '101' })).not.toBe(proofPath(base));
+    expect(proofPath({ ...base, runAttempt: '2' })).not.toBe(proofPath(base));
+  });
+
+  it('falls back to the build time for a local build that has no run', () => {
+    const local = { sha: 'a'.repeat(40), manifestHash: 'f'.repeat(64), runId: null, runAttempt: null };
+
+    expect(proofPath({ ...local, builtAt: 't1' })).not.toBe(proofPath({ ...local, builtAt: 't2' }));
   });
 
   it('hands the workflow exactly the sha and manifest outputs it reads', () => {
     const output = join(site, 'github-output');
 
     execFileSync(process.execPath, [SCRIPT, site], {
-      env: { ...process.env, GITHUB_OUTPUT: output, GITHUB_RUN_ID: '7' },
+      env: { ...process.env, GITHUB_OUTPUT: output, GITHUB_RUN_ID: '7', GITHUB_RUN_ATTEMPT: '3' },
       stdio: 'pipe',
     });
 
@@ -130,12 +174,15 @@ describe('docs build info', () => {
       const [key = '', value = ''] = line.split('=');
       return [key, value];
     }));
-    const written = JSON.parse(readFileSync(join(site, 'build-info.json'), 'utf8')) as { sha: string; manifestHash: string };
+    const written = JSON.parse(readFileSync(join(site, 'build-info.json'), 'utf8')) as {
+      sha: string; manifestHash: string; proof: string; runId: string; runAttempt: string;
+    };
 
-    // deploy-docs.yml reads steps.build-info.outputs.sha / .manifest (pinned in docs-deploy-law).
-    expect(Object.keys(outputs)).toEqual(['sha', 'manifest']);
-    expect(outputs).toEqual({ sha: written.sha, manifest: written.manifestHash });
-    expect(existsSync(join(site, 'build-info', `${written.manifestHash}.json`))).toBe(true);
+    // deploy-docs.yml reads steps.build-info.outputs.sha / .manifest / .proof (pinned in docs-deploy-law).
+    expect(Object.keys(outputs)).toEqual(['sha', 'manifest', 'proof']);
+    expect(outputs).toEqual({ sha: written.sha, manifest: written.manifestHash, proof: written.proof });
+    expect(written).toMatchObject({ runId: '7', runAttempt: '3' });
+    expect(existsSync(join(site, written.proof.slice(1)))).toBe(true);
   });
 
   it('refuses a SHA that is not a full commit id', () => {

@@ -92,8 +92,19 @@ jobs:
           node docs/scripts/build-snapshot.mjs --version "$minor" --base "/v/$minor/" --out "docs-v$minor.tgz"
           if [ "$TAG" = "$ROOT_TAG" ]; then
             node docs/scripts/build-snapshot.mjs --version "$minor" --base / --out docs-root.tgz
+            # Audits the root build left in docs/dist against the tag's own
+            # manifest; the overlay copies the audit scripts in. A failure
+            # stops the job before anything is attached.
+            node docs/scripts/audit-build-output.mjs --report docs-build-audit.json
           fi
           echo "minor=$minor" >> "$GITHUB_OUTPUT"
+      - name: Upload build audit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docs-build-audit-${{ matrix.tag }}
+          path: tag/docs-build-audit.json
+          if-no-files-found: ignore
       - name: Attach snapshots to the release
         working-directory: tag
         env:

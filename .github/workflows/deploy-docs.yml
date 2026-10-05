@@ -111,8 +111,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.release.tag_name || inputs.release_tag }}
-          # The root snapshot is the live site, and its sitemap dates each page
-          # from `git log`. A shallow clone collapses every lastmod to one date.
+          # The tag's own scripts build the root snapshot. Tags older than
+          # docs/src/seo/lastmod-ledger.json date each page from `git log -1`,
+          # and a release_tag dispatch can rebuild one; a shallow clone would
+          # collapse their lastmod to one date. Newer tags read the ledger.
           fetch-depth: 0
           persist-credentials: false
 
@@ -157,6 +159,7 @@ jobs:
       marker: ${{ steps.marker.outputs.path }}
       build_sha: ${{ steps.build-info.outputs.sha }}
       manifest_hash: ${{ steps.build-info.outputs.manifest }}
+      build_info_path: ${{ steps.build-info.outputs.proof }}
     permissions:
       contents: read
       pages: read
@@ -177,12 +180,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}
-          # generate-seo-artifacts.mjs dates every page from `git log -1` on its
-          # sources. A shallow clone has no such history, so all 148 sitemap
-          # lastmod values collapse to the deploy date. Note: the live sitemap
-          # now comes from the root snapshot built by `snapshot` at release
-          # time; this job's /next/ build writes no sitemap.
-          fetch-depth: 0
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
@@ -208,10 +205,24 @@ jobs:
           node docs/scripts/assemble-site.mjs --next next.tgz --out site
           cp CHANGELOG.md site/CHANGELOG.md
 
-      # Names the commit and a hash of every page in this artifact, at
-      # /build-info.json and at /build-info/<hash>.json. The live check polls
-      # the hash-named copy, which no CDN has cached. Must run last: a page
-      # written into site/ after it would not be in the hash.
+      # The release snapshot at the root was audited when it was built. This
+      # audits the /next/ build by the snapshot rules: noindex pages whose
+      # canonical names the root page, and no sitemap. A failure stops the deploy.
+      - name: Audit next snapshot
+        run: node docs/scripts/audit-build-output.mjs --dir site --base /next/ --report docs-build-audit-next.json
+
+      - name: Upload next audit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docs-build-audit-next
+          path: docs-build-audit-next.json
+          if-no-files-found: ignore
+
+      # Names the commit and a hash of every file in this artifact, at
+      # /build-info.json and at a proof path unique to this run and attempt.
+      # The live check polls the proof path, which no CDN has cached. Must run
+      # last: a file written into site/ after it would not be in the hash.
       - name: Record build info
         id: build-info
         run: node scripts/docs-build-info.mjs site
@@ -222,6 +233,8 @@ jobs:
       # rendered markup, and check the two files that make the site crawlable
       # at all — before anything is published, not after.
       - name: Verify deploy artifact
+        env:
+          PROOF: ${{ steps.build-info.outputs.proof }}
         run: |
           set -euo pipefail
           page=site/docs/quick-start/index.html
@@ -231,7 +244,8 @@ jobs:
           test -s site/robots.txt
           test -s site/sitemap.xml
           test -s site/build-info.json
-          test -s "site/build-info/$(node -p "require('./site/build-info.json').manifestHash").json"
+          test -n "$PROOF"
+          test -s "site$PROOF"
           test -f site/next/docs/quick-start/index.html
           grep -q 'noindex' site/next/docs/quick-start/index.html
           test -s site/versions.json
@@ -315,6 +329,7 @@ jobs:
           DEPLOY_MARKER: ${{ needs.build.outputs.marker }}
           EXPECTED_BUILD_SHA: ${{ needs.build.outputs.build_sha }}
           EXPECTED_MANIFEST_HASH: ${{ needs.build.outputs.manifest_hash }}
+          EXPECTED_BUILD_INFO_PATH: ${{ needs.build.outputs.build_info_path }}
         run: node scripts/verify-live-docs.mjs "https://blokeditor.com" --crawl --require-build-info --report live-docs-report.json
 
       - name: Upload live check report

@@ -182,8 +182,8 @@ describe('docs deployment workflow', () => {
     expect(job['timeout-minutes']).toBe(7);
     expect(checkout?.with).toMatchObject({
       ref: `\${{ ${RELEASE_TAG} }}`,
-      // The root snapshot's sitemap dates pages from `git log`; a shallow tag
-      // checkout collapses every lastmod to the release date.
+      // Tags older than the lastmod ledger date pages from `git log`; a shallow
+      // tag checkout collapses every lastmod to the release date.
       'fetch-depth': 0,
       'persist-credentials': false,
     });

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Audits a built docs site against the route manifest and writes a JSON report.
 //
-// Usage: node docs/scripts/audit-build-output.mjs [--dir <built site>] [--report <file.json>]
-// --dir defaults to docs/dist/client, a root (`--base /`) build. Exits 1 on any failure.
+// Usage: node docs/scripts/audit-build-output.mjs [--dir <built site>] [--base <base>] [--report <file.json>]
+// --dir defaults to docs/dist/client, a root (`--base /`) build. --base /next/ audits the
+// noindex snapshot under <dir>/next/ by the snapshot rules. Exits 1 on any failure.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +17,7 @@ const { values } = parseArgs({
   options: {
     dir: { type: 'string', default: path.join(DOCS_ROOT, 'dist', 'client') },
     report: { type: 'string' },
+    base: { type: 'string', default: '/' },
   },
 });
 
@@ -52,13 +54,15 @@ const loadPages = async () => {
 };
 
 const outDir = path.resolve(values.dir);
-if (!fs.existsSync(path.join(outDir, 'index.html'))) {
-  throw new Error(`No built site at ${outDir}; run the docs build first.`);
+const { base } = values;
+if (!/^\/([^/]+\/)*$/.test(base)) throw new Error(`--base must start and end with /, got ${base}`);
+if (!fs.existsSync(path.join(outDir, base, 'index.html'))) {
+  throw new Error(`No built site at ${path.join(outDir, base)}; run the docs build first.`);
 }
 
 const { pages, siteUrl } = await loadPages();
-const result = auditBuild({ outDir, siteUrl, pages });
-const report = { generatedAt: new Date().toISOString(), outDir, siteUrl, ...result };
+const result = auditBuild({ outDir, siteUrl, pages, base });
+const report = { generatedAt: new Date().toISOString(), outDir, base, siteUrl, ...result };
 
 if (values.report) {
   fs.mkdirSync(path.dirname(path.resolve(values.report)), { recursive: true });

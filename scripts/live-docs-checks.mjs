@@ -12,11 +12,17 @@ export const compareBuildInfo = (live, expected) =>
     .filter(([key, value]) => live?.[key] !== value)
     .map(([key, value]) => `${key}: live ${live?.[key]}, expected ${value}`);
 
+/** @typedef {(url: string, init?: RequestInit) => Promise<Response>} FetchLike */
+
 /**
  * Polls this build's proof file until it is served and names the expected
  * commit. `path` is the name docs-build-info.mjs gave it, unique to the run.
  * Not /build-info.json: the CDN ignores query strings and caches 200s and
  * 404s, so a reused name can serve an earlier deploy for up to its TTL.
+ *
+ * @param {{ site: string, expected: Record<string, string>, path?: string, fetchImpl?: FetchLike,
+ *   attempts?: number, delayMs?: number, timeoutMs?: number, sleep?: (ms: number) => Promise<void>,
+ *   log?: (line: string) => void }} options
  */
 export const awaitBuildInfo = async ({
   site,

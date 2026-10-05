@@ -56,6 +56,9 @@ export const proofPath = ({ sha, manifestHash, runId, runAttempt, builtAt }) => 
   return `/${PROOF_DIR}/${createHash('sha256').update(parts.join('\n')).digest('hex')}.json`;
 };
 
+/**
+ * @param {{ dir: string, sha: string, version: string, runId?: string | null, runAttempt?: string | null, builtAt: string }} options
+ */
 export const createBuildInfo = ({ dir, sha, version, runId = null, runAttempt = null, builtAt }) => {
   if (!/^[a-f0-9]{40}$/.test(sha ?? '')) throw new Error(`build info needs a full commit sha, got ${sha}`);
   const manifest = contentManifest(dir);

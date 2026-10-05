@@ -73,7 +73,7 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200, base =
     const url = ownUrl(siteUrl, page.route);
     const servedUrl = ownUrl(`${origin}${base.replace(/\/$/, '')}`, page.route);
     const file = path.join(baseDir, page.route === '/' ? 'index.html' : `${page.route.slice(1)}/index.html`);
-    const result = { route: page.route, url, file: path.relative(outDir, file), indexable: !page.noindex };
+    const result = { route: page.route, url, file: path.relative(outDir, file), indexable: indexed && !page.noindex };
 
     if (page.noindex) return { ...result, ok: true, problems };
 
@@ -211,7 +211,7 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200, base =
   return {
     summary: {
       pages: pages.length,
-      indexable: pages.filter((page) => !page.noindex).length,
+      indexable: indexed ? pages.filter((page) => !page.noindex).length : 0,
       failures: failures.length,
     },
     failures,

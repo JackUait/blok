@@ -294,6 +294,8 @@ describe('build output audit — a noindex snapshot under /next/', () => {
 
     expect(result.failures).toEqual([]);
     expect(result.pages.map(({ file }) => file)).toEqual(ROUTES.map(snapshotFile));
+    // Nothing in a noindex snapshot is indexable; the report must not say otherwise.
+    expect(result.summary).toEqual({ pages: 4, indexable: 0, failures: 0 });
   });
 
   it('flags a snapshot page that could be indexed', () => {

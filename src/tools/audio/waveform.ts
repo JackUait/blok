@@ -234,7 +234,8 @@ export function attachWaveform(opts: {
           ctx.save();
           ctx.globalAlpha = Math.min(1, blend);
           ctx.fillStyle = headColor;
-          ctx.shadowColor = headColor;
+          // Ink, not the head tint: the glow must not spread the tint's accent blue.
+          ctx.shadowColor = playedColor;
           ctx.shadowBlur = HEAD_GLOW_PX * blend;
           paintBar(x, y, h);
           ctx.restore();

@@ -145,4 +145,39 @@ describe('attachWaveform', () => {
       destroy();
     });
   });
+
+  it('glows the playhead in played ink, never the accent-mixed head tint', () => {
+    const glows: string[] = [];
+    const ctx = new Proxy({}, {
+      get: (_t, key) => (key === 'roundRect' ? undefined : () => undefined),
+      set: (_t, key, value) => {
+        if (key === 'shadowColor' && value) glows.push(String(value));
+        return true;
+      },
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { frames.push(cb); return frames.length; });
+    vi.stubGlobal('cancelAnimationFrame', () => { frames.length = 0; });
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    const mount = document.createElement('div');
+    const media = document.createElement('audio');
+    Object.defineProperty(media, 'duration', { value: 40, configurable: true });
+    const handle = attachWaveform({ mount, media, peaks: new Array<number>(40).fill(0.5) });
+    const canvas = mount.querySelector<HTMLCanvasElement>('[data-role="audio-waveform-canvas"]');
+    if (!canvas) throw new Error('canvas was not mounted');
+    canvas.style.setProperty('--blok-audio-bar-played', 'rgb(1, 2, 3)');
+    canvas.style.setProperty('--blok-audio-bar-head', 'rgb(0, 0, 255)');
+    canvas.getBoundingClientRect = (): DOMRect =>
+      ({ left: 0, width: 200, top: 0, height: 40, right: 200, bottom: 40, x: 0, y: 0, toJSON: () => ({}) });
+    media.currentTime = 20;
+    const t0 = performance.now();
+    media.dispatchEvent(new Event('play'));
+    [700, 716, 732].forEach((ms) => frames.splice(0).forEach((cb) => cb(t0 + ms)));
+
+    expect(glows.length).toBeGreaterThan(0);
+    expect(new Set(glows)).toEqual(new Set(['rgb(1, 2, 3)']));
+    handle.destroy();
+    vi.unstubAllGlobals();
+  });
 });

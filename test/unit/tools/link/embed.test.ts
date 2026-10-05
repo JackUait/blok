@@ -8,7 +8,7 @@ const createMockAPI = (
   allowedEmbedOrigins?: string[]
 ): API =>
   ({
-    i18n: { t: (key: string) => key, has: () => false },
+    i18n: { t: (key: string) => key, has: () => false, getLocale: () => 'en' },
     blocks: { delete: blocksDelete ?? ((): void => undefined) },
     config: { linkPaste: { allowGenericEmbed, allowedEmbedOrigins } },
   }) as unknown as API;
@@ -534,6 +534,150 @@ describe('Embed tool — empty state', () => {
     }
 
     expect(bar?.getAttribute('data-valid')).toBe('false');
+  });
+
+  const type = (root: HTMLElement, value: string, inputType = 'insertText'): void => {
+    const input = root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
+
+    if (!input) {
+      throw new Error('no URL input');
+    }
+    input.value = value;
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType }));
+  };
+
+  const windowOf = (root: HTMLElement): HTMLElement | null =>
+    root.querySelector<HTMLElement>('[data-role="embed-window"]');
+
+  const readbackOf = (root: HTMLElement): HTMLElement | null =>
+    root.querySelector<HTMLElement>('[data-role="embed-readback"]');
+
+  const nameOf = (root: HTMLElement): string | null | undefined =>
+    root.querySelector('[data-role="embed-readback-name"]')?.textContent;
+
+  it('shows an idle window and no read-back before anything is typed', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe('idle');
+    expect(windowOf(root)?.getAttribute('aria-hidden')).toBe('true');
+    expect(readbackOf(root)?.hidden).toBe(true);
+  });
+
+  it.each([
+    ['https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'video', 'YouTube'],
+    ['youtube.com/watch?v=dQw4w9WgXcQ', 'video', 'YouTube'],
+    ['https://docs.google.com/spreadsheets/d/abc123/edit', 'table', 'Google Sheets'],
+    ['https://www.figma.com/design/abc123/Board', 'design', 'Figma'],
+  ])('morphs the window to the provider type for %s', (url, kind, title) => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, url);
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe(kind);
+    expect(readbackOf(root)?.hidden).toBe(false);
+    expect(nameOf(root)).toBe(title);
+  });
+
+  it('swaps the bar icon away from the link glyph for a known provider', () => {
+    const root = mount(new Embed(createOptions({})));
+    const icon = root.querySelector<HTMLElement>('.blok-embed-empty__bar-icon');
+    const idle = icon?.innerHTML;
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+    expect(icon?.innerHTML).not.toBe(idle);
+
+    type(root, '');
+
+    expect(icon?.innerHTML).toBe(idle);
+  });
+
+  it('keeps the window idle for an unknown link when generic embeds are off', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://example.com/page');
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe('idle');
+    expect(readbackOf(root)?.hidden).toBe(true);
+  });
+
+  it('shows a generic window with the host for an unknown https link when generic embeds are on', () => {
+    const root = mount(new Embed(createOptions({}, { allowGenericEmbed: true })));
+
+    type(root, 'https://dashboards.example.com/page?x=1');
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe('generic');
+    expect(nameOf(root)).toBe('dashboards.example.com');
+  });
+
+  it('keeps the window idle for an http link that submit would reject', () => {
+    const root = mount(new Embed(createOptions({}, { allowGenericEmbed: true })));
+
+    type(root, 'http://example.com/page');
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe('idle');
+  });
+
+  it('returns to idle once the field is cleared', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    type(root, '');
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe('idle');
+    expect(readbackOf(root)?.hidden).toBe(true);
+  });
+
+  it('plays the catch animation when a known link is pasted', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'insertFromPaste');
+
+    expect(windowOf(root)?.getAttribute('data-anim')).toBe('caught');
+  });
+
+  it('does not play the catch animation when pasted text is not embeddable', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'hello world', 'insertFromPaste');
+
+    expect(windowOf(root)?.hasAttribute('data-anim')).toBe(false);
+  });
+
+  it('shakes the window when a submit is rejected', () => {
+    const root = mount(new Embed(createOptions({})));
+    const form = root.querySelector<HTMLFormElement>('[data-role="embed-url-form"]');
+
+    type(root, 'https://example.com/page');
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    expect(windowOf(root)?.getAttribute('data-anim')).toBe('rejected');
+  });
+
+  it('clears the animation only when the window itself finishes animating', () => {
+    const root = mount(new Embed(createOptions({})));
+    const win = windowOf(root);
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'insertFromPaste');
+    win?.firstElementChild?.dispatchEvent(new Event('animationend', { bubbles: true }));
+
+    expect(win?.getAttribute('data-anim')).toBe('caught');
+
+    win?.dispatchEvent(new Event('animationend', { bubbles: true }));
+
+    expect(win?.hasAttribute('data-anim')).toBe(false);
+  });
+
+  it('keeps the read-back out of live regions so typing is not announced', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    expect(readbackOf(root)?.closest('[aria-live]')).toBeNull();
+  });
+
+  it('draws no window in read-only mode', () => {
+    const root = mount(new Embed(createOptions({}, { readOnly: true })));
+
+    expect(windowOf(root)).toBeNull();
   });
 });
 

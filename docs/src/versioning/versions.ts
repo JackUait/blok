@@ -18,9 +18,11 @@ export const VERSIONS_URL = '/versions.json';
 
 export const currentVersionId = (): string => import.meta.env.VITE_DOCS_VERSION || 'next';
 
-// The path becomes an href: "//host/" would leave the site, and versionHref needs the trailing slash.
-const isSitePath = (path: unknown): path is string =>
-  typeof path === 'string' && path.startsWith('/') && !path.startsWith('//') && path.endsWith('/');
+// The path becomes an href and a fetch URL. An allow-list, because URL parsing
+// treats "\" as "/" and drops tabs and newlines, so "/\evil.com/" leaves the site.
+const SITE_PATH = /^\/(?:[A-Za-z0-9._-]+\/)*$/;
+
+const isSitePath = (path: unknown): path is string => typeof path === 'string' && SITE_PATH.test(path);
 
 const isVersion = (value: unknown): value is DocsVersion => {
   if (typeof value !== 'object' || value === null) return false;

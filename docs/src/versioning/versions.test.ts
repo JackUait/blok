@@ -45,7 +45,12 @@ describe('parseVersionsManifest', () => {
     expect(parseVersionsManifest({ latest: '1.15', versions: [{ id: 1 }] })).toBeNull();
   });
 
-  it.each(['//evil.com/', 'https://evil.com/', '/v/1.14'])('rejects an entry whose path is %s', (path) => {
+  it.each(['/', '/next/', '/v/1.14/'])('accepts the site path %s', (path) => {
+    const json = { latest: '1.15', versions: [{ id: 'x', label: 'x', path }] };
+    expect(parseVersionsManifest(json)).toEqual(json);
+  });
+
+  it.each(['//evil.com/', 'https://evil.com/', '/v/1.14', '/\\evil.com/', '/\t/evil.com/', '/\n/evil.com/'])('rejects an entry whose path is %s', (path) => {
     const json = { latest: '1.15', versions: [{ id: '1.15', label: '1.15', path }] };
     expect(parseVersionsManifest(json)).toBeNull();
   });

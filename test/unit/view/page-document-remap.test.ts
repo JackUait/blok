@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OutputBlockData, OutputData } from '../../../types';
 import { blocksToHtml, pageIndex, remapPageDocument } from '../../../src/view';
 import type { PageIndex } from '../../../src/view';
+import { findRemapProblems } from '../../../src/view/page-document-remap';
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => {
@@ -551,5 +552,54 @@ const invariantFixtures: Record<string, { doc: OutputData; ids: Ids }> = {
 describe('remapPageDocument keeps pageIndex in step', () => {
   it.each(Object.entries(invariantFixtures))('pageIndex(remap(%s)) is pageIndex of the original with ids mapped', (_, { doc: original, ids: map }) => {
     expect(pageIndex(remapPageDocument(original, map))).toEqual(mapIndex(pageIndex(original), map));
+  });
+});
+
+describe('findRemapProblems', () => {
+  it('reports missing, dangling, nested, idless and duplicate ids in one result', () => {
+    const idless: OutputBlockData = JSON.parse('{"type":"paragraph","data":{"text":"no id"}}');
+    const original = doc([
+      { id: 'unmapped', type: 'paragraph', data: { text: '' } },
+      { id: 'kid', type: 'paragraph', parent: 'ghost', content: ['gone-child'], data: { text: '' } },
+      { id: 'tbl', type: 'table', data: { content: [[{ blocks: ['gone-cell'] }]] } },
+      idless,
+      { id: 'c', type: 'paragraph', data: { text: '' } },
+      { id: 'd', type: 'paragraph', data: { text: '' } },
+      { id: 'co', type: 'callout', data: { body: { blocks: [{ id: 'nested', type: 'paragraph', data: { text: '' } }] } } },
+      { id: 'blank', type: 'paragraph', data: { text: '' } },
+    ]);
+
+    expect(findRemapProblems(original, {
+      blockIds: new Map([['kid', 'kid2'], ['tbl', 'tbl2'], ['c', 'same'], ['d', 'same'], ['co', 'co2'], ['blank', '']]),
+      pageIds: new Map(),
+    })).toEqual({
+      missingBlockIds: ['unmapped', 'ghost', 'gone-child', 'gone-cell', 'nested', 'blank'],
+      duplicateBlockIds: ['same'],
+      idlessBlocks: 1,
+    });
+  });
+
+  it('reports a document whose only unmapped id sits in a legacy callout body', () => {
+    const { blockIds, pageIds } = legacy.callout.ids;
+    const partial = { blockIds: new Map([...blockIds].filter(([id]) => id !== 'np')), pageIds };
+
+    expect(findRemapProblems(legacy.callout.doc, partial).missingBlockIds).toEqual(['np']);
+    expect(() => remapPageDocument(legacy.callout.doc, partial)).toThrow(/"np"/);
+  });
+
+  it('finds nothing in a fully mapped legacy document with an id-less nested child', () => {
+    expect(findRemapProblems(legacy.callout.doc, legacy.callout.ids))
+      .toEqual({ missingBlockIds: [], duplicateBlockIds: [], idlessBlocks: 0 });
+  });
+
+  it('names the ids in the error remap throws', () => {
+    const original = doc([
+      { id: 'a', type: 'paragraph', data: {} },
+      { id: 'b', type: 'paragraph', data: {} },
+      { id: 'c', type: 'paragraph', data: {} },
+    ]);
+
+    expect(() => remapPageDocument(original, { blockIds: new Map([['b', 'same'], ['c', 'same']]), pageIds: new Map() }))
+      .toThrow(/mapping.*"a".*duplicate.*"same"/i);
   });
 });

@@ -196,41 +196,76 @@ const blockSlots = (block: unknown, nested: boolean): Slot[] => {
   return slots;
 };
 
-/** Copy one page document, rewriting only known block and page references. */
-export const remapPageDocument = (data: OutputData, ids: PageDocumentIds): OutputData => {
-  const mappedBlockId = (id: unknown): string => {
-    const mapped = typeof id === 'string' ? ids.blockIds.get(id) : undefined;
+/** Caller errors in a remap's id maps. */
+export interface RemapProblems {
+  /** Own, `parent`, `content` and table-cell ids with no (or an empty) mapping. */
+  missingBlockIds: string[];
+  /** New ids that more than one block would get. */
+  duplicateBlockIds: string[];
+  /** Top-level blocks with no id. */
+  idlessBlocks: number;
+}
 
-    if (!mapped) {
-      throw new Error('Missing block ID mapping');
-    }
+const documentSlots = (blocks: readonly unknown[]): Slot[] => blocks.flatMap((block) => blockSlots(block, false));
 
-    return mapped;
-  };
+/**
+ * Every id problem `remapPageDocument` would refuse, found in one pass.
+ * Internal: the server runtime answers with it; not in the public API.
+ */
+export const findRemapProblems = (data: OutputData, ids: PageDocumentIds): RemapProblems => {
+  const missing = new Set<string>();
+  const duplicates = new Set<string>();
   const mappedIds = new Set<string>();
+  const problems = { idlessBlocks: 0 };
 
-  for (const slot of data.blocks.flatMap((block) => blockSlots(block, false))) {
-    if (slot.kind !== 'blockId') {
+  for (const { kind, value } of documentSlots(data.blocks)) {
+    if (kind === 'blockId' && (typeof value !== 'string' || value === '')) {
+      problems.idlessBlocks += 1;
+      continue;
+    }
+    if (kind !== 'blockId' && kind !== 'blockRef') {
       continue;
     }
 
-    const mapped = mappedBlockId(slot.value);
+    const mapped = typeof value === 'string' ? ids.blockIds.get(value) : undefined;
 
-    if (mappedIds.has(mapped)) {
-      throw new Error('Duplicate mapped block ID');
+    if (!mapped) {
+      missing.add(String(value));
+    } else if (kind === 'blockId' && mappedIds.has(mapped)) {
+      duplicates.add(mapped);
+    } else if (kind === 'blockId') {
+      mappedIds.add(mapped);
     }
-    mappedIds.add(mapped);
+  }
+
+  return { missingBlockIds: [...missing], duplicateBlockIds: [...duplicates], idlessBlocks: problems.idlessBlocks };
+};
+
+const describeProblems = ({ missingBlockIds, duplicateBlockIds, idlessBlocks }: RemapProblems): string => [
+  missingBlockIds.length > 0 ? `Missing block ID mapping for ${missingBlockIds.map((id) => JSON.stringify(id)).join(', ')}` : '',
+  duplicateBlockIds.length > 0 ? `Duplicate mapped block ID ${duplicateBlockIds.map((id) => JSON.stringify(id)).join(', ')}` : '',
+  idlessBlocks > 0 ? `${idlessBlocks} block(s) without an ID` : '',
+].filter((part) => part !== '').join('; ');
+
+/** Copy one page document, rewriting only known block and page references. */
+export const remapPageDocument = (data: OutputData, ids: PageDocumentIds): OutputData => {
+  const message = describeProblems(findRemapProblems(data, ids));
+
+  if (message !== '') {
+    throw new Error(message);
   }
 
   const blocks = data.blocks.map((block) => cloneJson(block) as OutputBlockData);
 
-  for (const slot of blocks.flatMap((block) => blockSlots(block, false))) {
-    const value = slot.value;
-
-    if (slot.kind === 'blockId' || slot.kind === 'blockRef') {
-      slot.write(mappedBlockId(value));
-    } else if (typeof value === 'string') {
-      slot.write(slot.kind === 'pageId' ? ids.pageIds.get(value) ?? value : rewriteInlineLinks(value, ids));
+  /** Every block id and ref has a mapping: findRemapProblems found none missing. */
+  for (const { kind, value, write } of documentSlots(blocks)) {
+    if (typeof value !== 'string') {
+      continue;
+    }
+    if (kind === 'blockId' || kind === 'blockRef') {
+      write(ids.blockIds.get(value) ?? value);
+    } else {
+      write(kind === 'pageId' ? ids.pageIds.get(value) ?? value : rewriteInlineLinks(value, ids));
     }
   }
 

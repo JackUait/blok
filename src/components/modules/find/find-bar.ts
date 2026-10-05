@@ -267,6 +267,12 @@ export class FindBar {
     this.listen(this.input, 'scroll', () => this.syncOverflow());
     this.listen(this.bar, 'keydown', (event) => this.handleKeydown(event));
     this.listen(this.replaceToggle, 'click', () => this.setReplaceOpen(!this.replaceOpen));
+    // close() froze the motion for the fade; once faded, let it go.
+    this.listen(this.element, 'transitionend', (event) => {
+      if (event.target === this.element && !this.opened) {
+        this.stopMotion();
+      }
+    });
     this.listen(this.optionsButton, 'click', () => this.toggleOptionsMenu());
     this.listen(this.previousButton, 'click', () => this.callbacks.onPrevious());
     this.listen(this.nextButton, 'click', () => this.callbacks.onNext());
@@ -336,7 +342,7 @@ export class FindBar {
     this.stopMotion();
     const hopping = this.playHop(init.hop ?? null, HOP_DELAY);
 
-    this.motion.push(...bloom({
+    this.track(...bloom({
       dock: this.element,
       bar: this.bar,
       field: this.field,
@@ -359,7 +365,9 @@ export class FindBar {
     }
 
     this.flight?.end();
-    this.stopMotion();
+    // Paused, not cancelled, so the fade starts from this frame.
+    // Running ones only: pause() brings a cancelled one back to its first frame.
+    this.motion.filter((animation) => animation.playState === 'running').forEach((animation) => animation.pause());
     this.opened = false;
     hideTooltip();
     this.optionsMenu?.hide();
@@ -620,7 +628,7 @@ export class FindBar {
       if (landed) {
         const pop = springEasing(SPRINGS.bouncy);
 
-        this.motion.push(
+        this.track(
           this.field.animate([{ scale: '1' }, { scale: '1.04 0.9', offset: 0.25 }, { scale: '1' }], pop),
           this.input.animate([{ translate: '0 -4px' }, { translate: '0 0' }], pop)
         );
@@ -637,11 +645,19 @@ export class FindBar {
       delay: delay + HOP_MS + 80,
       fill: 'backwards',
     });
-    this.motion.push(roll.counter);
+    this.track(roll.counter);
     // Last: a throw above must not leave the field's text hidden.
     this.field.setAttribute(ATTR.hopping, '');
 
     return true;
+  }
+
+  /** Drops ended animations as it adds, so an open bar's list stays bounded. */
+  private track(...animations: Animation[]): void {
+    this.motion = [
+      ...this.motion.filter((animation) => animation.playState !== 'idle' && animation.playState !== 'finished'),
+      ...animations,
+    ];
   }
 
   private stopMotion(): void {

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { FindBar } from '../../../../../src/components/modules/find/find-bar';
 import type { FindBarCallbacks } from '../../../../../src/components/modules/find/find-bar';
@@ -875,17 +876,38 @@ describe('FindBar', () => {
   });
 
   describe('motion', () => {
-    let animate: ReturnType<typeof vi.fn>;
-    let cancels: Array<ReturnType<typeof vi.fn>>;
+    interface StubAnimation {
+      cancel: Mock<() => void>;
+      pause: Mock<() => void>;
+      playState: AnimationPlayState;
+      finished: Promise<void>;
+    }
+
+    type Animate = (keyframes: Keyframe[], options?: KeyframeAnimationOptions) => StubAnimation;
+
+    let animate: Mock<Animate>;
+    let made: StubAnimation[];
+    let cancels: Array<Mock<() => void>>;
 
     beforeEach(() => {
+      made = [];
       cancels = [];
-      animate = vi.fn(() => {
-        const cancel = vi.fn();
+      animate = vi.fn<Animate>(() => {
+        const animation: StubAnimation = {
+          playState: 'running',
+          finished: new Promise<void>(() => undefined),
+          cancel: vi.fn(() => {
+            animation.playState = 'idle';
+          }),
+          pause: vi.fn(() => {
+            animation.playState = 'paused';
+          }),
+        };
 
-        cancels.push(cancel);
+        made.push(animation);
+        cancels.push(animation.cancel);
 
-        return { cancel, finished: new Promise<void>(() => undefined) };
+        return animation;
       });
       Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true });
       vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: false, media: query })));
@@ -899,8 +921,8 @@ describe('FindBar', () => {
     });
 
     // The geometry calls only: the bloom also fades the skin on its own ::before animation.
-    const skinCalls = (): unknown[][] => animate.mock.calls.filter((call) =>
-      call[1]?.pseudoElement === '::before' && Array.isArray(call[0]) && 'width' in call[0][0]);
+    const skinCalls = (): Array<Parameters<Animate>> => animate.mock.calls.filter((call) =>
+      call[1]?.pseudoElement === '::before' && 'width' in call[0][0]);
 
     it('blooms when it opens', () => {
       bar.open({ readOnly: false });
@@ -915,13 +937,80 @@ describe('FindBar', () => {
       expect(skinCalls()).toHaveLength(1);
     });
 
-    it('stops the bloom when it closes, so a quick reopen starts clean', () => {
+    // Cancelling would snap a half-grown bar to full size for the length of the fade.
+    it('freezes the bloom when it closes, so the fade starts from the current frame', () => {
       bar.open({ readOnly: false });
-      const opened = cancels.length;
+      const opened = made.slice();
 
       bar.close();
 
-      expect(cancels.slice(0, opened).every((cancel) => cancel.mock.calls.length === 1)).toBe(true);
+      expect(opened.length).toBeGreaterThan(0);
+      expect(opened.every((animation) => animation.pause.mock.calls.length === 1)).toBe(true);
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 0)).toBe(true);
+    });
+
+    it('drops the frozen bloom on a quick reopen, so it starts clean', () => {
+      bar.open({ readOnly: false });
+      const opened = made.slice();
+
+      bar.close();
+      bar.open({ readOnly: false });
+
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
+    });
+
+    it('drops the frozen bloom once the bar has faded out', () => {
+      bar.open({ readOnly: false });
+      const opened = made.slice();
+
+      bar.close();
+      byTestId(bar.element, 'find-input').dispatchEvent(new Event('transitionend', { bubbles: true }));
+
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 0)).toBe(true);
+
+      bar.element.dispatchEvent(new Event('transitionend', { bubbles: true }));
+
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
+    });
+
+    it('drops the frozen bloom when destroyed', () => {
+      bar.open({ readOnly: false });
+      const opened = made.slice();
+
+      bar.close();
+      bar.destroy();
+
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
+    });
+
+    // pause() on a cancelled animation would bring back its first frame.
+    it('does not freeze an animation that already ended', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      const counter = byTestId(bar.element, 'find-counter');
+      const roll = made.find((_, index) => animate.mock.contexts[index] === counter);
+
+      bar.close();
+
+      expect(roll?.cancel).toHaveBeenCalledTimes(1);
+      expect(roll?.pause).not.toHaveBeenCalled();
+    });
+
+    it('forgets ended animations, so hops on an open bar do not pile up', () => {
+      bar.open({ readOnly: false });
+
+      for (let i = 0; i < 5; i++) {
+        bar.open({ readOnly: false, query: 'this', hop: source });
+      }
+      const counter = byTestId(bar.element, 'find-counter');
+      const counterAnimations = made.filter((_, index) => animate.mock.contexts[index] === counter);
+
+      // The last roll is still live: destroy both ends its flight and stops it.
+      const ended = counterAnimations.slice(0, -1);
+
+      bar.destroy();
+
+      expect(ended.length).toBeGreaterThan(4);
+      expect(ended.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
     });
 
     it('stretches the skin when the replace row opens on an open bar', () => {

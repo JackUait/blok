@@ -14,6 +14,9 @@ public enum CollabDocumentOpenOutcome
   /// holder that has died.
   /// </summary>
   DocumentOpenElsewhere,
+
+  /// <summary>The document was permanently purged and cannot be seeded again.</summary>
+  Purged,
 }
 
 /// <summary>The answer to <see cref="ICollabOperationStore.OpenAsync"/>.</summary>
@@ -32,6 +35,10 @@ public sealed record CollabDocumentOpen
   /// </summary>
   public static CollabDocumentOpen DocumentOpenElsewhere { get; } =
       new(CollabDocumentOpenOutcome.DocumentOpenElsewhere, null);
+
+  /// <summary>The document was permanently purged; no session was taken.</summary>
+  public static CollabDocumentOpen Purged { get; } =
+      new(CollabDocumentOpenOutcome.Purged, null);
 
   /// <summary>The document was opened and <paramref name="session"/> holds its fence.</summary>
   public static CollabDocumentOpen Opened(ICollabOperationSession session)
@@ -120,9 +127,10 @@ public interface ICollabOperationStore
   /// </param>
   /// <param name="cancellationToken">The caller's token.</param>
   /// <returns>
-  /// An open session, or
-  /// <see cref="CollabDocumentOpen.DocumentOpenElsewhere"/> when a live process
-  /// holds the document. A held document is an ordinary answer, not an error.
+  /// An open session, <see cref="CollabDocumentOpen.DocumentOpenElsewhere"/>
+  /// when a live process holds the document, or
+  /// <see cref="CollabDocumentOpen.Purged"/> when it was permanently deleted.
+  /// Neither refusal takes a session.
   /// </returns>
   /// <remarks>
   /// <para>
@@ -165,6 +173,32 @@ public interface ICollabOperationStore
   /// </para>
   /// </remarks>
   ValueTask<CollabDocumentOpen> OpenAsync(
+      string documentId,
+      CancellationToken cancellationToken = default);
+}
+
+/// <summary>The result of a fenced journal purge.</summary>
+public enum CollabDocumentPurgeOutcome
+{
+  /// <summary>The tombstone is durable and all journal payloads are gone.</summary>
+  Purged,
+
+  /// <summary>A live session holds the document; nothing was purged.</summary>
+  DocumentOpenElsewhere,
+}
+
+/// <summary>
+/// Optional permanent deletion for an <see cref="ICollabOperationStore"/>.
+/// </summary>
+/// <remarks>
+/// Purge takes the document's exclusive fence and makes a deletion marker
+/// durable before removing payloads. A failed cleanup must keep the marker
+/// and allow a retry. An open must refuse a marked document.
+/// </remarks>
+public interface ICollabOperationPurgeStore
+{
+  /// <summary>Permanently removes one document's journal and blocks future opens.</summary>
+  ValueTask<CollabDocumentPurgeOutcome> PurgeAsync(
       string documentId,
       CancellationToken cancellationToken = default);
 }

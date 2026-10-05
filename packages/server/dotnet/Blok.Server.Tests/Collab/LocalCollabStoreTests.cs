@@ -279,6 +279,77 @@ public sealed class LocalCollabStoreTests : IDisposable
         File.GetUnixFileMode(directory));
   }
 
+  [Fact]
+  public async Task DeleteRemovesOnlyOneDocumentsWorkingSetAndKeyedOrphans()
+  {
+    var store = CreateStore();
+    await store.WriteAsync(DocId, Frames([0x01]), Tag, CancellationToken.None);
+    await store.WriteAsync("doc-2", Frames([0x02]), Tag, CancellationToken.None);
+    var otherKey = CollabDocKey.For("doc-2");
+    var unreadable = Path.Combine(directory, $"{DocKeyHex}.unreadable-old");
+    var otherUnreadable = Path.Combine(directory, $"{otherKey}.unreadable-old");
+    var temporary = Path.Combine(directory, $".blok-collab-{DocKeyHex}-abandoned");
+    var otherTemporary = Path.Combine(directory, $".blok-collab-{otherKey}-abandoned");
+    var oldUnkeyedTemporary = Path.Combine(directory, ".blok-collab-unidentified");
+    File.WriteAllBytes(unreadable, [3]);
+    File.WriteAllBytes(otherUnreadable, [4]);
+    File.WriteAllBytes(temporary, [5]);
+    File.WriteAllBytes(otherTemporary, [6]);
+    File.WriteAllBytes(oldUnkeyedTemporary, [7]);
+
+    await store.DeleteAsync(DocId, CancellationToken.None);
+    await store.DeleteAsync(DocId, CancellationToken.None);
+
+    Assert.False(File.Exists(Path.Combine(directory, DocKeyHex)));
+    Assert.False(File.Exists(unreadable));
+    Assert.False(File.Exists(temporary));
+    Assert.True(File.Exists(Path.Combine(directory, otherKey)));
+    Assert.True(File.Exists(otherUnreadable));
+    Assert.True(File.Exists(otherTemporary));
+    Assert.True(File.Exists(oldUnkeyedTemporary));
+  }
+
+  [Fact]
+  public async Task DeleteRefusesALegacyUnkeyedTemporaryFileUntilItIsRemoved()
+  {
+    var store = CreateStore();
+    await store.WriteAsync(DocId, Frames([0x01]), Tag, CancellationToken.None);
+    await store.WriteAsync("doc-2", Frames([0x02]), Tag, CancellationToken.None);
+    var otherPath = Path.Combine(directory, CollabDocKey.For("doc-2"));
+    var legacyPath = Path.Combine(
+        directory,
+        ".blok-collab-00000000000000000000000000000001");
+    var legacyBytes = CollabWorkingSetCodec.EncodeDocument(Tag, Frames([0x03]));
+    File.WriteAllBytes(legacyPath, legacyBytes);
+
+    await Assert.ThrowsAsync<IOException>(() =>
+        store.DeleteAsync(DocId, CancellationToken.None));
+
+    Assert.True(File.Exists(Path.Combine(directory, DocKeyHex)));
+    Assert.True(File.Exists(otherPath));
+    Assert.Equal(legacyBytes, File.ReadAllBytes(legacyPath));
+
+    File.Delete(legacyPath);
+    await store.DeleteAsync(DocId, CancellationToken.None);
+
+    Assert.False(File.Exists(Path.Combine(directory, DocKeyHex)));
+    Assert.True(File.Exists(otherPath));
+  }
+
+  [Fact]
+  public async Task DeletePropagatesAnOccupiedWorkingSetPath()
+  {
+    var store = CreateStore();
+    Directory.CreateDirectory(directory);
+    Directory.CreateDirectory(Path.Combine(directory, DocKeyHex));
+
+    var error = await Record.ExceptionAsync(() =>
+        store.DeleteAsync(DocId, CancellationToken.None));
+
+    Assert.True(error is IOException or UnauthorizedAccessException);
+    Assert.True(Directory.Exists(Path.Combine(directory, DocKeyHex)));
+  }
+
   private LocalCollabStore CreateStore()
   {
     return new LocalCollabStore(directory, logs.Add);

@@ -236,6 +236,18 @@ public sealed class EditEndpointTests
   }
 
   [Fact]
+  public async Task EditAnswersForbiddenWhenDocumentPurged()
+  {
+    var operations = new FakeCollabOperationStore { DocumentPurged = true };
+    await using var app = await StartWithOperationStore(operations);
+
+    using var response = await Edit(app);
+
+    await AssertError(response, HttpStatusCode.Forbidden, "forbidden\n");
+    Assert.Equal(0, app.Fakes.Endpoint.Gets);
+  }
+
+  [Fact]
   public async Task AnEditLandsOnEveryOpenSocketAndInTheDocument()
   {
     await using var app = await SyncApp.StartAsync();
@@ -313,6 +325,20 @@ public sealed class EditEndpointTests
   }
 
   [Fact]
+  public async Task EditRefusesReadDeniedCallerEvenWhenWriteIsAllowed()
+  {
+    var authorization = new RecordingAuthorization { AllowRead = false, AllowWrite = true };
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        services: services => services.AddSingleton<IBlokAuthorization>(authorization));
+
+    using var response = await Edit(app, ticket: fixture.Compatible);
+
+    await AssertError(response, HttpStatusCode.Forbidden, "forbidden\n");
+    Assert.Equal(0, app.Fakes.Endpoint.Gets);
+  }
+
+  [Fact]
   public async Task ADocumentIdWithAnEncodedSlashIsRefusedWithASingleSegmentReason()
   {
     await using var app = await SyncApp.StartAsync();
@@ -323,6 +349,43 @@ public sealed class EditEndpointTests
         response,
         HttpStatusCode.BadRequest,
         "document ids must be a single path segment\n");
+  }
+
+  [Theory]
+  [InlineData(@"a\b")]
+  [InlineData("a%5cb")]
+  public async Task AnEncodedBackslashDocumentIsRejectedOrCanBePurgedAfterEdit(string doc)
+  {
+    var authorization = new RecordingAuthorization();
+    await using var app = await SyncApp.StartAsync(
+        services: services => services.AddSingleton<IBlokAuthorization>(authorization));
+
+    using var response = await Edit(app, doc: doc, key: "encoded-backslash");
+
+    if (response.StatusCode == HttpStatusCode.BadRequest)
+    {
+      await AssertError(
+          response,
+          HttpStatusCode.BadRequest,
+          "document ids must be a single path segment\n");
+      Assert.Equal(0, app.Fakes.Endpoint.Gets);
+
+      return;
+    }
+
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    var routedDoc = Assert.Single(
+        authorization.Calls, call => call.Method == "write").Document;
+    Assert.True(routedDoc.Contains('\\') ||
+        routedDoc.Contains("%5c", StringComparison.OrdinalIgnoreCase));
+    Assert.Equal(1, app.Fakes.Converter.ApplyOpsCalls);
+    Assert.True(app.Fakes.Store.Holds(routedDoc));
+    var purger = app.App.Services.GetRequiredService<ICollabDocumentPurger>();
+
+    Assert.Equal(
+        CollabDocumentPurgeOutcome.Purged,
+        await purger.PurgeDocumentAsync(routedDoc, _ => ValueTask.FromResult(true)));
+    Assert.False(app.Fakes.Store.Holds(routedDoc));
   }
 
   [Theory]

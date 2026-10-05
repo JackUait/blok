@@ -1,3 +1,4 @@
+using System.Net.WebSockets;
 using Blok.Server.AspNetCore.Collab;
 using Blok.Server.Collab;
 using Xunit;
@@ -31,7 +32,7 @@ public sealed class SyncSocketMemberTests
   }
 
   [Fact]
-  public void TheFirstCloseWinsAndMapsTheRoomReasons()
+  public void TheFirstNonForbiddenCloseWinsAndMapsTheRoomReasons()
   {
     var reset = new SyncSocketMember(canWrite: false, acceptsControlFrames: false, maxQueuedBytes: 10);
     var draining = new SyncSocketMember(canWrite: false, acceptsControlFrames: false, maxQueuedBytes: 10);
@@ -100,5 +101,78 @@ public sealed class SyncSocketMemberTests
 
     Assert.Equal(4409, (int)frame.Status);
     Assert.Equal("document reset", frame.Reason);
+  }
+
+  [Fact]
+  public async Task RevocationOverridesAQueuedSlowConsumerClose()
+  {
+    var member = new SyncSocketMember(canWrite: false, acceptsControlFrames: true, maxQueuedBytes: 1);
+    member.Send([1]);
+    member.Send([2]);
+    member.Send([3]);
+    var queuedClose = member.RequestedClose;
+    member.Close(CollabCloseReason.Forbidden);
+    using var socket = new RecordingSocket();
+
+    await member.RunAsync(socket, null, 1024, null, CancellationToken.None);
+
+    Assert.Empty(socket.SentFrames);
+    Assert.Equal((WebSocketCloseStatus)4403, socket.CloseStatus);
+    Assert.Equal("forbidden", socket.CloseStatusDescription);
+    Assert.Equal(SyncClose.SlowConsumer, queuedClose);
+  }
+
+  private sealed class RecordingSocket : WebSocket
+  {
+    private WebSocketCloseStatus? closeStatus;
+    private string? closeStatusDescription;
+
+    internal List<byte[]> SentFrames { get; } = [];
+
+    public override WebSocketCloseStatus? CloseStatus => closeStatus;
+
+    public override string? CloseStatusDescription => closeStatusDescription;
+
+    public override WebSocketState State => WebSocketState.Open;
+
+    public override string? SubProtocol => null;
+
+    public override void Abort() => throw new NotSupportedException();
+
+    public override Task CloseAsync(
+        WebSocketCloseStatus closeStatus,
+        string? statusDescription,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
+
+    public override Task CloseOutputAsync(
+        WebSocketCloseStatus closeStatus,
+        string? statusDescription,
+        CancellationToken cancellationToken)
+    {
+      this.closeStatus = closeStatus;
+      closeStatusDescription = statusDescription;
+
+      return Task.CompletedTask;
+    }
+
+    public override void Dispose()
+    {
+    }
+
+    public override Task<WebSocketReceiveResult> ReceiveAsync(
+        ArraySegment<byte> buffer,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(new WebSocketReceiveResult(0, WebSocketMessageType.Close, true));
+
+    public override Task SendAsync(
+        ArraySegment<byte> buffer,
+        WebSocketMessageType messageType,
+        bool endOfMessage,
+        CancellationToken cancellationToken)
+    {
+      SentFrames.Add(buffer.ToArray());
+
+      return Task.CompletedTask;
+    }
   }
 }

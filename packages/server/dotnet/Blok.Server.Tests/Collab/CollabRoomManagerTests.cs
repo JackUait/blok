@@ -479,6 +479,235 @@ public sealed class CollabRoomManagerTests
   }
 
   [Fact]
+  public async Task LegacyManagerCannotSilentlyIgnoreAnAccessRecheck()
+  {
+    ICollabRoomManager legacy = new LegacyRoomManager();
+
+    await Assert.ThrowsAsync<NotSupportedException>(() => legacy.RecheckAccessAsync(DocId).AsTask());
+  }
+
+  [Fact]
+  public async Task RecheckExpelsAMemberWhenPolicyAndLoggerThrow()
+  {
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("seeded"))], Tags.At(4));
+    var throwOnLog = false;
+    var manager = new CollabRoomManager(
+        store,
+        endpoint,
+        converter,
+        new CollabRoomOptions(),
+        time,
+        _ =>
+        {
+          if (throwOnLog)
+          {
+            throw new InvalidOperationException("logger failed");
+          }
+        });
+    var revoked = new FakeMember();
+    var allowed = new FakeMember();
+    var membership = (await manager.JoinAsync(DocId, revoked)).Membership!;
+    await manager.JoinAsync(DocId, allowed);
+    revoked.RecheckFailure = new InvalidOperationException("policy failed");
+    Assert.Equal(1, manager.LiveRoomCount);
+    throwOnLog = true;
+
+    var expelled = await ((ICollabRoomManager)manager).RecheckAccessAsync(DocId);
+
+    Assert.Equal(1, expelled);
+    Assert.Equal([CollabCloseReason.Forbidden], revoked.Closes);
+    Assert.Empty(allowed.Closes);
+    var client = YDocs.NewClient();
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, " stolen"))));
+    Assert.Equal("seeded", YDocs.Text(await ReplicaAsync(manager)));
+  }
+
+  [Fact]
+  public async Task FirstJoinIsRefusedWhenPolicyAndLoggerThrow()
+  {
+    var manager = new CollabRoomManager(
+        store,
+        endpoint,
+        converter,
+        new CollabRoomOptions(),
+        time,
+        _ => throw new InvalidOperationException("logger failed"));
+    var member = new FakeMember
+    {
+      RecheckFailure = new InvalidOperationException("policy failed"),
+    };
+
+    var denied = await manager.JoinAsync(DocId, member);
+
+    Assert.Equal(CollabJoinStatus.Forbidden, denied.Status);
+    Assert.Equal(0, endpoint.Loads);
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  [Fact]
+  public async Task CancellingAnAccessRecheckDoesNotExpelAnAllowedMember()
+  {
+    endpoint.Holds(DocId, "seeded");
+    var manager = CreateManager();
+    var member = new FakeMember();
+    Assert.Equal(CollabJoinStatus.Joined, (await manager.JoinAsync(DocId, member)).Status);
+    member.RecheckEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    member.RecheckGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    using var cancellation = new CancellationTokenSource();
+    var recheck = ((ICollabRoomManager)manager).RecheckAccessAsync(DocId, cancellation.Token).AsTask();
+    await member.RecheckEntered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+
+    await cancellation.CancelAsync();
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => recheck);
+    Assert.Empty(member.Closes);
+    Assert.Equal(1, manager.LiveRoomCount);
+  }
+
+  [Fact]
+  public async Task AThrowingActivityDropLoggerDoesNotStrandOtherRevokedMembers()
+  {
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("seeded"))], Tags.At(4));
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var activity = new RecordingActivityObserver { Gate = gate };
+    var droppedLogs = 0;
+    var manager = new CollabRoomManager(
+        store,
+        endpoint,
+        converter,
+        new CollabRoomOptions(),
+        time,
+        message =>
+        {
+          if (message.Contains("dropped an activity record", StringComparison.Ordinal))
+          {
+            droppedLogs++;
+            throw new InvalidOperationException("logger failed");
+          }
+        },
+        activityObserver: activity);
+    await manager.JoinAsync(DocId, new FakeMember(actorId: "holder"));
+    await activity.WaitForAsync(1).WaitAsync(TimeSpan.FromSeconds(3));
+
+    for (var index = 0; index < 127; index++)
+    {
+      var flapping = (await manager.JoinAsync(DocId, new FakeMember(actorId: $"visitor-{index}"))).Membership!;
+      await flapping.LeaveAsync();
+    }
+
+    var first = new FakeMember(actorId: "revoked-1");
+    var second = new FakeMember(actorId: "revoked-2");
+    await manager.JoinAsync(DocId, first);
+    await manager.JoinAsync(DocId, second);
+    first.Allowed = false;
+    second.Allowed = false;
+
+    try
+    {
+      var expelled = await ((ICollabRoomManager)manager).RecheckAccessAsync(DocId);
+
+      Assert.Equal(2, expelled);
+      Assert.Equal([CollabCloseReason.Forbidden], first.Closes);
+      Assert.Equal([CollabCloseReason.Forbidden], second.Closes);
+      Assert.True(droppedLogs > 0);
+    }
+    finally
+    {
+      gate.SetResult();
+    }
+  }
+
+  [Fact]
+  public async Task RecheckExpelsOnlyRevokedMembersWithoutResettingTheRoom()
+  {
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("seeded"))], Tags.At(4));
+    var manager = CreateManager();
+    var revoked = new FakeMember();
+    var allowed = new FakeMember();
+    var revokedMembership = (await manager.JoinAsync(DocId, revoked)).Membership!;
+    await manager.JoinAsync(DocId, allowed);
+    revoked.Allowed = false;
+
+    var closed = await ((ICollabRoomManager)manager).RecheckAccessAsync(DocId);
+
+    Assert.Equal(1, closed);
+    Assert.Equal([CollabCloseReason.Forbidden], revoked.Closes);
+    Assert.Empty(allowed.Closes);
+    Assert.Equal(Tags.At(4), store.Stored(DocId).Tag);
+    Assert.Equal(0, store.Resets);
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.Equal(0, await ((ICollabRoomManager)manager).RecheckAccessAsync("doc-absent"));
+
+    var client = YDocs.NewClient();
+    await revokedMembership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, " stolen"))));
+    Assert.Equal("seeded", YDocs.Text(await ReplicaAsync(manager)));
+  }
+
+  [Fact]
+  public async Task RecheckKeepsQueuedWritesOutOfTheJournalAndRejectsAQueuedJoin()
+  {
+    endpoint.Holds(DocId, "seeded");
+    var operations = new FakeCollabOperationStore();
+    var manager = CreateManager(operationStore: operations);
+    var revoked = new FakeMember();
+    var allowed = new FakeMember();
+    var membership = (await manager.JoinAsync(DocId, revoked)).Membership!;
+    await manager.JoinAsync(DocId, allowed);
+    revoked.Allowed = false;
+    revoked.RecheckEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    revoked.RecheckGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    var recheck = ((ICollabRoomManager)manager).RecheckAccessAsync(DocId).AsTask();
+    await revoked.RecheckEntered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+    var client = YDocs.NewClient();
+    var receive = membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, " stolen")))).AsTask();
+    var deniedJoin = manager.JoinAsync(DocId, new FakeMember { Allowed = false }).AsTask();
+    revoked.RecheckGate.SetResult();
+
+    Assert.Equal(1, await recheck);
+    await receive;
+    Assert.Equal(CollabJoinStatus.Forbidden, (await deniedJoin).Status);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Empty(allowed.Received.OfType<SyncUpdateFrame>());
+    Assert.Equal("seeded", YDocs.Text(await ReplicaAsync(manager)));
+  }
+
+  [Fact]
+  public async Task RecheckClosesAJoinThatPassedAccessBeforeTheAclChanged()
+  {
+    endpoint.Holds(DocId, "seeded");
+    endpoint.LoadGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var manager = CreateManager();
+    var revoked = new FakeMember();
+    var join = manager.JoinAsync(DocId, revoked).AsTask();
+    await Waits.UntilAsync(() => endpoint.Loads == 1, "the seed load to start");
+    revoked.Allowed = false;
+    var recheck = ((ICollabRoomManager)manager).RecheckAccessAsync(DocId).AsTask();
+    endpoint.LoadGate.SetResult();
+
+    Assert.Equal(CollabJoinStatus.Joined, (await join).Status);
+    Assert.Equal(1, await recheck);
+    Assert.Equal([CollabCloseReason.Forbidden], revoked.Closes);
+  }
+
+  [Fact]
+  public async Task ForbiddenFirstJoinDoesNotLoadOrRetainARoom()
+  {
+    var manager = CreateManager();
+
+    var denied = await manager.JoinAsync(DocId, new FakeMember { Allowed = false });
+
+    Assert.Equal(CollabJoinStatus.Forbidden, denied.Status);
+    Assert.Null(denied.Membership);
+    Assert.Equal(0, endpoint.Loads);
+    Assert.Equal(0, store.Writes);
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  [Fact]
   public async Task ResetRaisesTheEpochClosesEveryMemberAndReseedsOnTheNextJoin()
   {
     endpoint.Holds(DocId, "old");
@@ -1000,10 +1229,346 @@ public sealed class CollabRoomManagerTests
             .Select(save => save.Data["text"]?.GetValue<string>()));
   }
 
+  [Theory]
+  [InlineData("")]
+  [InlineData(".")]
+  [InlineData("..")]
+  [InlineData("a/b")]
+  [InlineData("a\\b")]
+  public async Task PurgeRejectsInvalidDocumentIdsBeforeAuthorization(string documentId)
+  {
+    var manager = CreateManager();
+    var authorized = false;
+
+    await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+        ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+            documentId,
+            _ =>
+            {
+              authorized = true;
+              return ValueTask.FromResult(true);
+            }).AsTask());
+
+    Assert.False(authorized);
+    Assert.Equal(0, store.Deletes);
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  [Fact]
+  public async Task DeniedPurgeLeavesTheRoomAndWorkingSetUntouched()
+  {
+    endpoint.Holds(DocId, "visible");
+    var manager = CreateManager();
+    var member = new FakeMember();
+    Assert.Equal(CollabJoinStatus.Joined, (await manager.JoinAsync(DocId, member)).Status);
+
+    await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+        ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+            DocId, _ => ValueTask.FromResult(false)).AsTask());
+
+    Assert.Empty(member.Closes);
+    Assert.True(store.Holds(DocId));
+    Assert.Equal(0, store.Deletes);
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.Equal(
+        CollabJoinStatus.Joined,
+        (await manager.JoinAsync(DocId, new FakeMember())).Status);
+  }
+
+  [Fact]
+  public async Task AJournalWithoutPurgeSupportFailsBeforeTheRoomIsClosed()
+  {
+    endpoint.Holds(DocId, "visible");
+    var operations = new FakeCollabOperationStore();
+    var manager = CreateManager(operationStore: new OpenOnlyOperationStore(operations));
+    var member = new FakeMember();
+    Assert.Equal(CollabJoinStatus.Joined, (await manager.JoinAsync(DocId, member)).Status);
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("legacy"))], Tags.At(1));
+
+    await Assert.ThrowsAsync<NotSupportedException>(() =>
+        ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+            DocId, _ => ValueTask.FromResult(true)).AsTask());
+
+    Assert.Empty(member.Closes);
+    Assert.True(store.Holds(DocId));
+    Assert.Equal(0, store.Deletes);
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.Equal(
+        CollabJoinStatus.Joined,
+        (await manager.JoinAsync(DocId, new FakeMember())).Status);
+  }
+
+  [Fact]
+  public async Task PurgeClosesMembersWithoutFlushingAndBarsEveryEntryPoint()
+  {
+    endpoint.Holds(DocId, "old");
+    endpoint.Holds("doc-2", "other");
+    var manager = CreateManager();
+    var member = new FakeMember();
+    var membership = Assert.IsType<CollabMembership>(
+        (await manager.JoinAsync(DocId, member)).Membership);
+    var client = await SyncedAsync(membership, member);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, " edit"))));
+    await Waits.UntilAsync(() => store.FramesOf(DocId).Count == 2, "the edit blob to land");
+
+    var outcome = await ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+        DocId, _ => ValueTask.FromResult(true));
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, " late"))));
+    time.Advance(TimeSpan.FromMinutes(1));
+    await manager.SettleAsync();
+
+    Assert.Equal(CollabDocumentPurgeOutcome.Purged, outcome);
+    Assert.Equal([CollabCloseReason.Forbidden], member.Closes);
+    Assert.False(store.Holds(DocId));
+    Assert.Equal(1, store.Deletes);
+    Assert.Empty(endpoint.Saves);
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Equal(CollabJoinStatus.Purged,
+        (await manager.JoinAsync(DocId, new FakeMember())).Status);
+    Assert.Equal(CollabEditStatus.Purged,
+        (await manager.EditAsync(DocId, [Insert("late")])).Status);
+    Assert.Equal(CollabResetStatus.Purged,
+        (await manager.ResetForHttpAsync(DocId)).Status);
+    Assert.False(await manager.CheckpointAsync(DocId));
+    Assert.Equal(1, endpoint.Loads);
+    Assert.Equal(CollabJoinStatus.Joined,
+        (await manager.JoinAsync("doc-2", new FakeMember())).Status);
+  }
+
+  [Fact]
+  public async Task PurgeBarsAdmissionWhileAPreviousBlobWriteIsStillInFlight()
+  {
+    endpoint.Holds(DocId, "old");
+    var manager = CreateManager();
+    var member = new FakeMember();
+    var membership = Assert.IsType<CollabMembership>(
+        (await manager.JoinAsync(DocId, member)).Membership);
+    var client = await SyncedAsync(membership, member);
+    var blocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    store.BeforeWrite = () => blocked.Task;
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, " edit"))));
+    await Waits.UntilAsync(() => store.Writes == 2, "the old blob write to start");
+
+    var purge = ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+        DocId, _ => ValueTask.FromResult(true)).AsTask();
+    var queuedFrame = membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, " queued")))).AsTask();
+
+    try
+    {
+      Assert.False(purge.IsCompleted);
+      Assert.Equal(CollabJoinStatus.Purged,
+          (await manager.JoinAsync(DocId, new FakeMember()).AsTask()
+              .WaitAsync(TimeSpan.FromSeconds(3))).Status);
+      Assert.Equal(CollabEditStatus.Purged,
+          (await manager.EditAsync(DocId, [Insert("late")]).AsTask()
+              .WaitAsync(TimeSpan.FromSeconds(3))).Status);
+      Assert.Equal(CollabResetStatus.Purged,
+          (await manager.ResetForHttpAsync(DocId).AsTask()
+              .WaitAsync(TimeSpan.FromSeconds(3))).Status);
+      Assert.False(await manager.CheckpointAsync(DocId).AsTask()
+          .WaitAsync(TimeSpan.FromSeconds(3)));
+      Assert.True(store.Holds(DocId));
+    }
+    finally
+    {
+      blocked.SetResult();
+      store.BeforeWrite = null;
+    }
+
+    Assert.Equal(CollabDocumentPurgeOutcome.Purged, await purge);
+    await queuedFrame;
+    Assert.False(store.Holds(DocId));
+    Assert.Equal([CollabCloseReason.Forbidden], member.Closes);
+  }
+
+  [Fact]
+  public async Task PurgeWaitsForAnInFlightExportButStartsNoFinalExport()
+  {
+    endpoint.Holds(DocId, "old");
+    endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var manager = CreateManager();
+    var member = new FakeMember();
+    var membership = Assert.IsType<CollabMembership>(
+        (await manager.JoinAsync(DocId, member)).Membership);
+    var client = await SyncedAsync(membership, member);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, " edit"))));
+    await Waits.UntilAsync(() => store.FramesOf(DocId).Count == 2, "the blob to land");
+    time.Advance(TimeSpan.FromSeconds(2));
+    await Waits.UntilAsync(() => endpoint.Saves.Count == 1, "the export to start");
+
+    var purge = ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+        DocId, _ => ValueTask.FromResult(true)).AsTask();
+
+    Assert.False(purge.IsCompleted);
+    Assert.Equal(CollabJoinStatus.Purged,
+        (await manager.JoinAsync(DocId, new FakeMember()).AsTask()
+            .WaitAsync(TimeSpan.FromSeconds(3))).Status);
+    endpoint.SaveGate.SetResult();
+    endpoint.SaveGate = null;
+    Assert.Equal(CollabDocumentPurgeOutcome.Purged, await purge);
+    time.Advance(TimeSpan.FromMinutes(1));
+    await manager.SettleAsync();
+
+    Assert.Single(endpoint.Saves);
+    Assert.False(store.Holds(DocId));
+    Assert.Equal([CollabCloseReason.Forbidden], member.Closes);
+  }
+
+  [Fact]
+  public async Task ARemoteJournalHoldLeavesTheWorkingSetAndAdmissionGateInPlace()
+  {
+    var operations = new FakeCollabOperationStore();
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("old"))], Tags.At(1));
+    var opened = await operations.OpenAsync(DocId);
+    var held = Assert.IsAssignableFrom<ICollabOperationSession>(opened.Session);
+    var manager = CreateManager(operationStore: operations);
+
+    var busy = await ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+        DocId, _ => ValueTask.FromResult(true));
+
+    Assert.Equal(CollabDocumentPurgeOutcome.DocumentOpenElsewhere, busy);
+    Assert.True(store.Holds(DocId));
+    Assert.Equal(0, store.Deletes);
+    Assert.Equal(CollabJoinStatus.Purged,
+        (await manager.JoinAsync(DocId, new FakeMember())).Status);
+    await held.DisposeAsync();
+
+    Assert.Equal(CollabDocumentPurgeOutcome.Purged,
+        await ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+            DocId, _ => ValueTask.FromResult(true)));
+    Assert.False(store.Holds(DocId));
+  }
+
+  [Fact]
+  public async Task AJournalPurgeFailureKeepsTheGateAndRetriesBeforeWorkingSetDeletion()
+  {
+    endpoint.Holds(DocId, "old");
+    var events = new List<string>();
+    var operations = new FakeCollabOperationStore
+    {
+      OnPurge = _ => events.Add("journal"),
+      FailPurgeAfterTombstone = _ => new IOException("journal cleanup failed"),
+    };
+    store.BeforeDelete = () =>
+    {
+      events.Add("working-set");
+      return Task.CompletedTask;
+    };
+    var manager = CreateManager(operationStore: operations);
+    var member = new FakeMember();
+    Assert.Equal(CollabJoinStatus.Joined, (await manager.JoinAsync(DocId, member)).Status);
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("legacy"))], Tags.At(1));
+
+    await Assert.ThrowsAsync<IOException>(() =>
+        ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+            DocId, _ => ValueTask.FromResult(true)).AsTask());
+
+    Assert.Equal(["journal"], events);
+    Assert.Equal([CollabCloseReason.Forbidden], member.Closes);
+    Assert.True(store.Holds(DocId));
+    Assert.Equal(0, store.Deletes);
+    Assert.Equal(CollabJoinStatus.Purged,
+        (await manager.JoinAsync(DocId, new FakeMember())).Status);
+    Assert.Equal(1, endpoint.Loads);
+
+    operations.FailPurgeAfterTombstone = null;
+    Assert.Equal(CollabDocumentPurgeOutcome.Purged,
+        await ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+            DocId, _ => ValueTask.FromResult(true)));
+    Assert.Equal(["journal", "journal", "working-set"], events);
+    Assert.False(store.Holds(DocId));
+  }
+
+  [Fact]
+  public async Task AWorkingSetDeleteFailureKeepsTheJournalTombstoneAndRetries()
+  {
+    endpoint.Holds(DocId, "old");
+    var events = new List<string>();
+    var operations = new FakeCollabOperationStore
+    {
+      OnPurge = _ => events.Add("journal"),
+    };
+    store.BeforeDelete = () =>
+    {
+      events.Add("working-set");
+      return Task.CompletedTask;
+    };
+    store.FailDeletes = _ => new IOException("working set delete failed");
+    var manager = CreateManager(operationStore: operations);
+    Assert.Equal(
+        CollabJoinStatus.Joined,
+        (await manager.JoinAsync(DocId, new FakeMember())).Status);
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("legacy"))], Tags.At(1));
+
+    await Assert.ThrowsAsync<IOException>(() =>
+        ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+            DocId, _ => ValueTask.FromResult(true)).AsTask());
+
+    Assert.Equal(["journal", "working-set"], events);
+    Assert.True(store.Holds(DocId));
+    Assert.Equal(CollabJoinStatus.Purged,
+        (await manager.JoinAsync(DocId, new FakeMember())).Status);
+    Assert.Equal(1, endpoint.Loads);
+
+    store.FailDeletes = null;
+    Assert.Equal(CollabDocumentPurgeOutcome.Purged,
+        await ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+            DocId, _ => ValueTask.FromResult(true)));
+    Assert.Equal(["journal", "working-set", "journal", "working-set"], events);
+    Assert.False(store.Holds(DocId));
+    Assert.Equal(2, operations.Purges);
+    Assert.Equal(2, store.Deletes);
+  }
+
+  [Fact]
+  public async Task AJournalFreePurgeNeedsTheHostsTombstoneOnAnotherManager()
+  {
+    endpoint.Holds(DocId, "old");
+    var manager = CreateManager();
+    Assert.Equal(CollabJoinStatus.Joined,
+        (await manager.JoinAsync(DocId, new FakeMember())).Status);
+
+    Assert.Equal(CollabDocumentPurgeOutcome.Purged,
+        await ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+            DocId, _ => ValueTask.FromResult(true)));
+
+    endpoint.LoadFailure = new DocEndpointException("gone", 410);
+    var restarted = CreateManager();
+    var late = await restarted.JoinAsync(DocId, new FakeMember());
+
+    Assert.Equal(CollabJoinStatus.SeedFailed, late.Status);
+    Assert.False(store.Holds(DocId));
+    Assert.Equal(2, endpoint.Loads);
+  }
+
+  private sealed class OpenOnlyOperationStore(FakeCollabOperationStore inner) : ICollabOperationStore
+  {
+    public ValueTask<CollabDocumentOpen> OpenAsync(
+        string documentId,
+        CancellationToken cancellationToken = default)
+    {
+      return inner.OpenAsync(documentId, cancellationToken);
+    }
+  }
+
+  private sealed class LegacyRoomManager : ICollabRoomManager
+  {
+    public ValueTask DrainAsync(CancellationToken cancellationToken = default)
+    {
+      return ValueTask.CompletedTask;
+    }
+  }
+
   private CollabRoomManager CreateManager(
       CollabRoomOptions? options = null,
       ICollabWorkingSetStore? store = null,
-      List<string>? log = null)
+      List<string>? log = null,
+      ICollabOperationStore? operationStore = null)
   {
     return new CollabRoomManager(
         store ?? this.store,
@@ -1011,7 +1576,8 @@ public sealed class CollabRoomManagerTests
         converter,
         options ?? new CollabRoomOptions(),
         time,
-        log is null ? null : log.Add);
+        log is null ? null : log.Add,
+        operationStore);
   }
 
   /// <summary>An insert op the fake converter applies by appending <paramref name="text"/>.</summary>

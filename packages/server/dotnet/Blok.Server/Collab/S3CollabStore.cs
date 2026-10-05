@@ -104,6 +104,17 @@ internal sealed class S3CollabStore : ICollabWorkingSetStore
         cancellationToken);
   }
 
+  public Task DeleteAsync(
+      string docId,
+      CancellationToken cancellationToken = default)
+  {
+    return CollabWorkingSetLaw.GuardAsync(
+        docId,
+        "delete",
+        () => store.DeleteObjectAsync(KeyFor(docId), cancellationToken),
+        cancellationToken);
+  }
+
   private string KeyFor(string docId)
   {
     return $"{prefix}/{CollabDocKey.For(docId)}";

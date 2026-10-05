@@ -9,7 +9,7 @@ namespace Blok.Server.AspNetCore.Collab;
 /// POST /sync/{doc}/edit: block-level edits from a consumer backend that is
 /// not a WebSocket peer. Same door as the reset endpoint — the HTTP guard
 /// checks origin, write ticket and rate limit, and this handler adds the
-/// ticket's doc claim and the application's write gate.
+/// ticket's doc claim and the application's read and write gates.
 ///
 /// The body is read under the same ceiling one sync message gets. A caller
 /// able to POST an unbounded document could otherwise grow it past what any
@@ -53,7 +53,8 @@ internal static class EditEndpoint
     var user = claims is null ? context.User : TicketPrincipal.For(claims.Value);
 
     if (authorization is not null &&
-        !await authorization.CanWriteDocumentAsync(user, doc, context.RequestAborted))
+        (!await authorization.CanReadDocumentAsync(user, doc, context.RequestAborted) ||
+         !await authorization.CanWriteDocumentAsync(user, doc, context.RequestAborted)))
     {
       await SyncEndpoint.RefuseAsync(context, StatusCodes.Status403Forbidden, "forbidden\n");
 
@@ -140,6 +141,14 @@ internal static class EditEndpoint
             context,
             StatusCodes.Status422UnprocessableEntity,
             $"{result.Error?.Message ?? "collab: the edit was refused."}\n");
+
+        return;
+
+      case CollabEditStatus.Purged:
+        await SyncEndpoint.RefuseAsync(
+            context,
+            StatusCodes.Status403Forbidden,
+            "forbidden\n");
 
         return;
 

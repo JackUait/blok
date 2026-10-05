@@ -170,6 +170,8 @@ public static class BlokServerServiceCollectionExtensions
     // drain handle. Both resolve to the one instance.
     services.TryAddSingleton<ICollabRoomManager>(provider =>
         provider.GetRequiredService<CollabRoomManager>());
+    services.TryAddSingleton<ICollabDocumentPurger>(provider =>
+        provider.GetRequiredService<CollabRoomManager>());
 
     return new BlokServerBuilder(services);
   }

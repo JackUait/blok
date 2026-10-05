@@ -84,7 +84,7 @@ namespace Blok.Server.Collab;
 /// first's hold has evaporated. Nothing here makes several writers safe.
 /// </para>
 /// </remarks>
-internal sealed class LocalCollabOperationStore : ICollabOperationStore
+internal sealed class LocalCollabOperationStore : ICollabOperationStore, ICollabOperationPurgeStore
 {
   /// <summary>
   /// Matches the default <c>CollabMaxMessageBytes</c>. The codec's own 32 MiB
@@ -95,6 +95,11 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
 
   private const string LockName = "lock";
   private const string ManifestName = "manifest";
+  private const string PurgeName = "purged";
+  private const int LinuxWouldBlock = 11;
+  private const int MacWouldBlock = 35;
+  private const int WindowsSharingViolation = unchecked((int)0x80070020);
+  private const int WindowsLockViolation = unchecked((int)0x80070021);
 
   // Distinguishes the journal directory from LocalCollabStore's whole-document
   // file, which sits at the unsuffixed key in the same directory.
@@ -159,6 +164,77 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     return ValueTask.FromResult(Open(documentId));
   }
 
+  public ValueTask<CollabDocumentPurgeOutcome> PurgeAsync(
+      string documentId,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(documentId);
+    cancellationToken.ThrowIfCancellationRequested();
+
+    return ValueTask.FromResult(Purge(documentId));
+  }
+
+  private CollabDocumentPurgeOutcome Purge(string documentId)
+  {
+    var docDirectory = Path.Combine(
+        directory,
+        CollabDocKey.For(documentId) + JournalDirectorySuffix);
+    EnsureDirectory(docDirectory);
+
+    var lockPath = Path.Combine(docDirectory, LockName);
+    FileStream hold;
+
+    try
+    {
+      hold = new FileStream(
+          lockPath,
+          CreateOptions(FileAccess.ReadWrite, FileMode.OpenOrCreate, FileShare.None));
+    }
+    catch (IOException error) when (error.HResult is
+        LinuxWouldBlock or MacWouldBlock or
+        WindowsSharingViolation or WindowsLockViolation)
+    {
+      log?.Invoke($"collab: \"{documentId}\" is held elsewhere: {error.Message}");
+
+      return CollabDocumentPurgeOutcome.DocumentOpenElsewhere;
+    }
+
+    using var exclusiveHold = hold;
+    var purgePath = Path.Combine(docDirectory, PurgeName);
+
+    using (var marker = new FileStream(
+        purgePath,
+        CreateOptions(FileAccess.Write, FileMode.OpenOrCreate, FileShare.None)))
+    {
+      marker.Flush(flushToDisk: true);
+    }
+
+    // The marker must survive a crash before any payload is removed.
+    SyncDirectory(docDirectory);
+
+    var entries = Directory.GetFileSystemEntries(docDirectory);
+    var lockEntry = entries.FirstOrDefault(path => Path.GetFileName(path) == LockName)
+        ?? entries.First(path => string.Equals(
+            Path.GetFileName(path), LockName, StringComparison.OrdinalIgnoreCase));
+    var purgeEntry = entries.FirstOrDefault(path => Path.GetFileName(path) == PurgeName)
+        ?? entries.First(path => string.Equals(
+            Path.GetFileName(path), PurgeName, StringComparison.OrdinalIgnoreCase));
+
+    foreach (var path in entries)
+    {
+      if (path == lockEntry || path == purgeEntry)
+      {
+        continue;
+      }
+
+      File.Delete(path);
+    }
+
+    SyncDirectory(docDirectory);
+
+    return CollabDocumentPurgeOutcome.Purged;
+  }
+
   private CollabDocumentOpen Open(string documentId)
   {
     var docDirectory = Path.Combine(
@@ -183,6 +259,13 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
         log?.Invoke($"collab: \"{documentId}\" is held elsewhere: {refusal}");
 
         return CollabDocumentOpen.DocumentOpenElsewhere;
+      }
+
+      if (File.Exists(Path.Combine(docDirectory, PurgeName)))
+      {
+        hold.Dispose();
+
+        return CollabDocumentOpen.Purged;
       }
 
       var manifestPath = Path.Combine(docDirectory, ManifestName);
@@ -995,6 +1078,11 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       string documentId,
       Manifest held)
   {
+    if (File.Exists(Path.Combine(docDirectory, PurgeName)))
+    {
+      throw new CollabOperationFenceLostException();
+    }
+
     var onDisk = ReadManifest(Path.Combine(docDirectory, ManifestName), documentId);
 
     if (onDisk is null ||

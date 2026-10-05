@@ -120,6 +120,8 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
 
   internal bool DocumentOpenElsewhere { get; set; }
 
+  internal bool DocumentPurged { get; set; }
+
   /// <summary>When it answers non-null for a doc, that doc's AppendAsync throws it and records nothing.</summary>
   internal Func<string, Exception?>? FailAppends { get; set; }
 
@@ -176,6 +178,11 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
 
     lock (guard)
     {
+      if (DocumentPurged)
+      {
+        return ValueTask.FromResult(CollabDocumentOpen.Purged);
+      }
+
       if (DocumentOpenElsewhere)
       {
         return ValueTask.FromResult(CollabDocumentOpen.DocumentOpenElsewhere);
@@ -483,6 +490,16 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
     lock (documents)
     {
       documents[docId] = new StoredWorkingSet([], newTag);
+    }
+
+    return Task.CompletedTask;
+  }
+
+  public Task DeleteAsync(string docId, CancellationToken cancellationToken = default)
+  {
+    lock (documents)
+    {
+      documents.Remove(docId);
     }
 
     return Task.CompletedTask;
@@ -1035,7 +1052,7 @@ internal sealed class SyncFakes
 
   internal SyncFakes(
       CollabRoomOptions? roomOptions = null,
-      FakeCollabOperationStore? operationStore = null)
+      ICollabOperationStore? operationStore = null)
   {
     Endpoint.Holds(SyncApp.Doc, "seeded");
     Manager = new CollabRoomManager(
@@ -1126,6 +1143,14 @@ internal sealed class RecordingAuthorization : IBlokAuthorization
 
   internal bool AllowWrite { get; set; } = true;
 
+  internal HashSet<string> DeniedReadUsers { get; } = [];
+
+  internal HashSet<string> DeniedWriteUsers { get; } = [];
+
+  internal HashSet<string> FailedReadUsers { get; } = [];
+
+  internal string? RevokeReadAfterWriteForUser { get; set; }
+
   internal List<(string Method, string User, string Document)> Calls { get; } = [];
 
   /// <summary>Every principal the hook was handed, in call order.</summary>
@@ -1137,8 +1162,14 @@ internal sealed class RecordingAuthorization : IBlokAuthorization
       CancellationToken cancellationToken = default)
   {
     Record("read", user, documentId);
+    var userId = UserId(user);
 
-    return ValueTask.FromResult(AllowRead);
+    if (FailedReadUsers.Contains(userId))
+    {
+      throw new InvalidOperationException("authorization unavailable");
+    }
+
+    return ValueTask.FromResult(AllowRead && !DeniedReadUsers.Contains(userId));
   }
 
   public ValueTask<bool> CanWriteDocumentAsync(
@@ -1147,18 +1178,27 @@ internal sealed class RecordingAuthorization : IBlokAuthorization
       CancellationToken cancellationToken = default)
   {
     Record("write", user, documentId);
+    var userId = UserId(user);
+    var allowed = AllowWrite && !DeniedWriteUsers.Contains(userId);
 
-    return ValueTask.FromResult(AllowWrite);
+    if (userId == RevokeReadAfterWriteForUser)
+    {
+      DeniedReadUsers.Add(userId);
+    }
+
+    return ValueTask.FromResult(allowed);
+  }
+
+  private static string UserId(ClaimsPrincipal user)
+  {
+    return user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
   }
 
   private void Record(string method, ClaimsPrincipal user, string documentId)
   {
     lock (Calls)
     {
-      Calls.Add((
-          method,
-          user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
-          documentId));
+      Calls.Add((method, UserId(user), documentId));
       Principals.Add(user);
     }
   }

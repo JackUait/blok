@@ -1,30 +1,43 @@
 /*
- * Tabs block — a card with a strip of pill tabs and the open tab below.
+ * Tabs block — a folder: the open tab and its panel are one sheet of paper
+ * rising out of a recessed band of closed tabs.
  *
- * The active pill is never painted by the pill itself: one shared indicator
- * glides behind the strip (motion.ts moves it), so the pills only change ink.
- * Selected = gray fill + primary ink, never blue (selected-state-neutral).
+ * The open tab is never painted by the pill itself: one shared indicator
+ * glides behind the strip (motion.ts moves it), carrying the two concave
+ * corners that join it to the sheet, so the pills only change ink.
+ * Selected = sheet surface + primary ink, never blue (selected-state-neutral).
  */
 [data-blok-tabs] {
-  --blok-tabs-pill-height: 1.75rem;
+  --blok-tabs-pill-height: 2rem;
+  --blok-tabs-neck-radius: var(--blok-radius-control-lg);
+  --blok-tabs-sheet: var(--blok-bg-primary);
+  --blok-tabs-band: var(--blok-bg-secondary);
+  --blok-tabs-edge: var(--blok-border-subtle);
+  --_blok-tabs-inner-radius: calc(var(--blok-radius-block) - var(--blok-border-width-hairline));
   display: flex;
   flex-direction: column;
-  border: var(--blok-border-width-hairline) solid var(--blok-border-subtle);
+  border: var(--blok-border-width-hairline) solid var(--blok-tabs-edge);
   border-radius: var(--blok-radius-block);
-  transition: border-color var(--blok-duration-slow) var(--blok-ease-standard);
 }
 
 @media (hover: hover) {
   [data-blok-tabs]:hover {
-    border-color: var(--blok-border-primary);
+    --blok-tabs-edge: var(--blok-border-primary);
   }
 }
 
 [data-blok-tabs-strip] {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--blok-space-0-5);
-  padding: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1);
+  padding-block-start: var(--blok-space-1-5);
+  padding-block-end: 0;
+  padding-inline: var(--blok-space-1);
+  border-start-start-radius: var(--_blok-tabs-inner-radius);
+  border-start-end-radius: var(--_blok-tabs-inner-radius);
+  background-color: var(--blok-tabs-band);
+  /* The band's bottom edge. The open tab covers it, opening the sheet. */
+  box-shadow: inset 0 calc(-1 * var(--blok-border-width-hairline)) 0 var(--blok-tabs-edge);
   user-select: none;
 }
 
@@ -35,6 +48,7 @@
   gap: var(--blok-space-0-5);
   min-width: 0;
   overflow-x: auto;
+  padding-inline: var(--blok-tabs-neck-radius);
   /* Pills scrolled into view stop clear of the edge fades below. */
   scroll-padding-inline: var(--blok-space-6);
   scrollbar-width: none;
@@ -69,9 +83,13 @@
   inset-block: 0;
   inset-inline-start: 0;
   width: 0;
-  border-radius: var(--blok-radius-control);
-  background-color: var(--blok-icon-active-bg);
-  box-shadow: inset 0 0 0 var(--blok-border-width-hairline) var(--blok-border-secondary);
+  border-radius: var(--blok-tabs-neck-radius) var(--blok-tabs-neck-radius) 0 0;
+  background-color: var(--blok-tabs-sheet);
+  /* Top and side outline. Outer shadows only paint outside the box. */
+  box-shadow:
+    0 calc(-1 * var(--blok-border-width-hairline)) 0 var(--blok-tabs-edge),
+    var(--blok-border-width-hairline) 0 0 var(--blok-tabs-edge),
+    calc(-1 * var(--blok-border-width-hairline)) 0 0 var(--blok-tabs-edge);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--blok-duration-slow) var(--blok-ease-standard);
@@ -79,6 +97,40 @@
 
 [data-blok-tabs-indicator][data-placed] {
   opacity: 1;
+}
+
+/* The concave corners where the tab flares into the sheet. Each is a square
+ * of sheet with a circle cut from its outer top corner; the hairline ring on
+ * that circle continues the tab's side into the band's bottom edge. */
+[data-blok-tabs-indicator]::before,
+[data-blok-tabs-indicator]::after {
+  content: "";
+  position: absolute;
+  inset-block-end: 0;
+  width: var(--blok-tabs-neck-radius);
+  height: var(--blok-tabs-neck-radius);
+}
+
+[data-blok-tabs-indicator]::before {
+  inset-inline-start: calc(-1 * var(--blok-tabs-neck-radius));
+  background: radial-gradient(
+    circle at calc(50% - 50% * var(--_blok-inline-sign, 1)) 0,
+    transparent calc(var(--blok-tabs-neck-radius) - var(--blok-border-width-hairline)),
+    var(--blok-tabs-edge) calc(var(--blok-tabs-neck-radius) - var(--blok-border-width-hairline) + 0.5px),
+    var(--blok-tabs-edge) var(--blok-tabs-neck-radius),
+    var(--blok-tabs-sheet) calc(var(--blok-tabs-neck-radius) + 0.5px)
+  );
+}
+
+[data-blok-tabs-indicator]::after {
+  inset-inline-end: calc(-1 * var(--blok-tabs-neck-radius));
+  background: radial-gradient(
+    circle at calc(50% + 50% * var(--_blok-inline-sign, 1)) 0,
+    transparent calc(var(--blok-tabs-neck-radius) - var(--blok-border-width-hairline)),
+    var(--blok-tabs-edge) calc(var(--blok-tabs-neck-radius) - var(--blok-border-width-hairline) + 0.5px),
+    var(--blok-tabs-edge) var(--blok-tabs-neck-radius),
+    var(--blok-tabs-sheet) calc(var(--blok-tabs-neck-radius) + 0.5px)
+  );
 }
 
 [data-blok-tabs-pill] {
@@ -89,7 +141,7 @@
   align-items: center;
   gap: var(--blok-space-1-5);
   height: var(--blok-tabs-pill-height);
-  padding-inline: var(--blok-space-2-5);
+  padding-inline: var(--blok-space-3);
   border-radius: var(--blok-radius-control);
   font-size: var(--blok-font-size-body);
   /* Equal to the height: the block toolbar centers on this line box. */
@@ -106,10 +158,6 @@
 @media (hover: hover) {
   [data-blok-tabs-pill]:hover {
     color: var(--blok-text-primary);
-  }
-
-  [data-blok-tabs-pill][aria-selected="false"]:hover {
-    background-color: var(--blok-item-hover-bg);
   }
 }
 
@@ -147,8 +195,10 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: var(--blok-tabs-pill-height);
-  height: var(--blok-tabs-pill-height);
+  width: calc(var(--blok-tabs-pill-height) - var(--blok-space-1));
+  height: calc(var(--blok-tabs-pill-height) - var(--blok-space-1));
+  /* Lifted off the band edge, so its hover fill never touches the hairline. */
+  margin-block-end: var(--blok-space-0-5);
   border-radius: var(--blok-radius-control);
   color: var(--blok-text-secondary);
   cursor: pointer;
@@ -183,7 +233,10 @@
 }
 
 [data-blok-tabs-panels] {
-  padding: 0 var(--blok-space-2) var(--blok-space-2);
+  padding: var(--blok-space-2);
+  border-end-start-radius: var(--_blok-tabs-inner-radius);
+  border-end-end-radius: var(--_blok-tabs-inner-radius);
+  background-color: var(--blok-tabs-sheet);
 }
 
 [data-blok-tab-empty] {
@@ -203,7 +256,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-tabs],
   [data-blok-tabs-indicator],
   [data-blok-tabs-pill],
   [data-blok-tabs-add],

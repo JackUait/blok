@@ -1541,6 +1541,8 @@ test.describe('find in page', () => {
         document.body.appendChild(cover);
       });
       await page.keyboard.press(FIND_KEY);
+      // The bloom clips the bar to a dot at first, so its centre is not hit-testable until it lands.
+      await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
 
       const onTop = await page.evaluate(() => {
         const bar = document.querySelector('[data-blok-testid="find-bar"]');
@@ -1588,6 +1590,124 @@ test.describe('find in page', () => {
       await page.mouse.up();
 
       expect(await barBox(page)).toEqual(placed);
+    });
+  });
+
+  test.describe('motion', () => {
+    const settle = (page: Page): Promise<void> => page.waitForFunction(() =>
+      document.getAnimations().every((animation) => animation.playState !== 'running'));
+
+    const selectWord = async (page: Page, text: string, start: number, end: number): Promise<void> => {
+      await page.getByText(text, { exact: true }).evaluate((element, range) => {
+        const node = element.firstChild;
+
+        if (node !== null) {
+          window.getSelection()?.setBaseAndExtent(node, range.start, node, range.end);
+        }
+      }, { start, end });
+    };
+
+    for (const { placement, dir } of [
+      { placement: 'top-end', dir: 'ltr' },
+      { placement: 'bottom-start', dir: 'ltr' },
+      { placement: 'top-center', dir: 'ltr' },
+      { placement: 'top-end', dir: 'rtl' },
+    ] as const) {
+      test(`the bloom ends with the skin exactly on the bar (${placement}, ${dir})`, async ({ page }) => {
+        await page.evaluate((direction) => document.documentElement.setAttribute('dir', direction), dir);
+        await createEditor(page, paragraphs('hello there'), { config: { find: { placement } } });
+        await focusParagraph(page, 'hello there');
+        await page.keyboard.press(FIND_KEY);
+        await settle(page);
+
+        const fit = await page.evaluate(() => {
+          const dock = document.querySelector<HTMLElement>('[data-blok-find]');
+          const bar = document.querySelector<HTMLElement>('[data-blok-find-bar]');
+
+          if (dock === null || bar === null) {
+            return null;
+          }
+          const skin = getComputedStyle(dock, '::before');
+
+          return {
+            skin: [skin.width, skin.height],
+            bar: [`${bar.offsetWidth}px`, `${bar.offsetHeight}px`],
+            clip: getComputedStyle(bar).clipPath,
+            opacity: getComputedStyle(bar).opacity,
+          };
+        });
+
+        expect(fit?.skin).toEqual(fit?.bar);
+        expect(fit?.clip).toBe('none');
+        expect(fit?.opacity).toBe('1');
+      });
+    }
+
+    test('Mod+F on a selected word flies it into the field, and writes nothing', async ({ page }) => {
+      await createEditor(page, paragraphs('pick this word'));
+      await page.evaluate(async () => {
+        const counter = window as Window & { __findChanges?: number };
+
+        counter.__findChanges = 0;
+        window.blokInstance?.destroy();
+        const blok = new window.Blok({
+          holder: 'blok',
+          data: { blocks: [{ id: 'find-p0', type: 'paragraph', data: { text: 'pick this word' } }] },
+          onChange: () => {
+            counter.__findChanges = (counter.__findChanges ?? 0) + 1;
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      });
+      await focusParagraph(page, 'pick this word');
+      await waitPastOnChangeBatch(page);
+      await selectWord(page, 'pick this word', 5, 9);
+      await page.keyboard.press(FIND_KEY);
+
+      await expect(page.getByTestId('find-hop-chip')).toHaveText('this');
+      await expect(page.getByTestId('find-hop-chip')).toHaveCount(0);
+      await expect(page.getByTestId('find-input')).toHaveValue('this');
+      await expect(page.getByTestId('find-input')).toBeFocused();
+      await expect(page.getByTestId('find-field')).not.toHaveAttribute('data-blok-find-hopping', '');
+      await waitPastOnChangeBatch(page);
+
+      expect(await page.evaluate(() => (window as Window & { __findChanges?: number }).__findChanges)).toBe(0);
+      expect(await savedTexts(page)).toEqual(['pick this word']);
+    });
+
+    test('typing during the flight shows the typed text at once', async ({ page }) => {
+      await createEditor(page, paragraphs('pick this word'));
+      await focusParagraph(page, 'pick this word');
+      await selectWord(page, 'pick this word', 5, 9);
+      await page.keyboard.press(FIND_KEY);
+      await page.keyboard.type('w');
+
+      // Read once, without polling: the flight lands on its own soon after, so a poll would pass anyway.
+      const state = await page.evaluate(() => ({
+        chips: document.querySelectorAll('[data-blok-find-hop-chip]').length,
+        hopping: document.querySelector('[data-blok-find-field]')?.hasAttribute('data-blok-find-hopping'),
+      }));
+
+      expect(state).toEqual({ chips: 0, hopping: false });
+      await expect(page.getByTestId('find-input')).toHaveValue('w');
+    });
+
+    test('with reduced motion the bar is whole on the first frame and nothing flies', async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await createEditor(page, paragraphs('pick this word'));
+      await focusParagraph(page, 'pick this word');
+      await selectWord(page, 'pick this word', 5, 9);
+      await page.keyboard.press(FIND_KEY);
+
+      const state = await page.evaluate(() => ({
+        running: document.querySelector('[data-blok-find]')?.getAnimations({ subtree: true }).length ?? -1,
+        chips: document.querySelectorAll('[data-blok-find-hop-chip]').length,
+      }));
+
+      expect(state).toEqual({ running: 0, chips: 0 });
+      await expect(page.getByTestId('find-input')).toHaveValue('this');
     });
   });
 

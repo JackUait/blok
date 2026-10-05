@@ -78,6 +78,7 @@ public sealed class ArticleExport(IBlokDocumentConverter blok, ILogger<ArticleEx
 | `FromHtmlAsync` | the saved document parsed out of HTML, plus what the HTML could not carry into it |
 | `ExtractTextsAsync` / `InjectTextsAsync` | the document's translatable strings, and the document with them put back |
 | `GetPageIndexAsync` | the pages a document owns, the pages it links to, and each block's searchable text: the same rows as `pageIndex` in Node; raise the timeout for very large documents |
+| `RemapPageDocumentAsync` | a copy of a page document under new block and page ids, to import next to the original; throws `ArgumentException` naming every block id your map misses |
 | `GetVersionAsync` | the `version` the editor stamps into a saved document |
 | `GetSchemaAsync` | the saved format as JSON Schema (draft 2020-12) |
 

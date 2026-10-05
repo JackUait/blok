@@ -247,6 +247,44 @@ public interface IBlokDocumentConverter
       string documentJson,
       CancellationToken cancellationToken = default);
 
+  /// <summary>
+  /// Copies a page document under new ids: every block id, the references to
+  /// them, and the page ids you map. Use it to import a copy of a page next to
+  /// the original.
+  /// </summary>
+  /// <remarks>
+  /// Rewrites block ids, <c>parent</c> and <c>content</c>, table cell ids,
+  /// in-document <c>#id</c> links, the <c>pageId</c> of <c>page</c>,
+  /// <c>page-link</c> and <c>database-row</c> blocks, and inline page
+  /// references, including those inside legacy nested blocks. A page id you
+  /// do not map is kept. Everything else, unknown keys included, is copied as
+  /// is.
+  /// <para>
+  /// Take the page ids from your own catalog of the copied pages.
+  /// <see cref="GetPageIndexAsync"/> does not list <c>database-row</c> pages.
+  /// </para>
+  /// </remarks>
+  /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
+  /// <param name="blockIds">A new id for every block id the document names.</param>
+  /// <param name="pageIds">New ids for the pages being copied, by old id.</param>
+  /// <param name="cancellationToken">Cancels the copy.</param>
+  /// <returns>The copied document, to store.</returns>
+  /// <exception cref="ArgumentException">
+  /// <paramref name="blockIds"/> misses an id the document names, maps two
+  /// blocks to one id, or the document has a block with no id. The message
+  /// lists every such id.
+  /// </exception>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says whether the input was unusable, the timeout was reached, or the
+  /// allocation budget was.
+  /// </exception>
+  ValueTask<string> RemapPageDocumentAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, string> blockIds,
+      IReadOnlyDictionary<string, string> pageIds,
+      CancellationToken cancellationToken = default);
+
   /// <summary>Converts a saved document to HTML.</summary>
   /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
   /// <param name="cancellationToken">Cancels the conversion.</param>

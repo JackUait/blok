@@ -134,6 +134,62 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
         ?? throw new InvalidOperationException("The Blok runtime returned no page index.");
   }
 
+  public async ValueTask<string> RemapPageDocumentAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, string> blockIds,
+      IReadOnlyDictionary<string, string> pageIds,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentNullException.ThrowIfNull(documentJson);
+    ArgumentNullException.ThrowIfNull(blockIds);
+    ArgumentNullException.ThrowIfNull(pageIds);
+
+    var request = new JsonObject
+    {
+      ["document"] = ParseDocument(documentJson),
+      ["blockIds"] = IdMap(blockIds),
+      ["pageIds"] = IdMap(pageIds),
+    };
+    var output = await runtime.InvokeAsync("remapPageDocument", request.ToJsonString(), cancellationToken);
+    var result = JsonNode.Parse(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no document.");
+
+    if (result["unmapped"] is JsonNode unmapped)
+    {
+      throw new ArgumentException(DescribeUnmapped(unmapped), nameof(blockIds));
+    }
+
+    return result["document"]?.ToJsonString()
+        ?? throw new InvalidOperationException("The Blok runtime returned no document.");
+  }
+
+  private static JsonObject IdMap(IReadOnlyDictionary<string, string> ids)
+  {
+    var map = new JsonObject();
+
+    foreach (var (oldId, newId) in ids)
+    {
+      map[oldId] = newId;
+    }
+
+    return map;
+  }
+
+  private static string DescribeUnmapped(JsonNode unmapped)
+  {
+    var problems = unmapped.Deserialize<UnmappedIds>()
+        ?? throw new InvalidOperationException("The Blok runtime returned no id problems.");
+    static string Quoted(IEnumerable<string> ids) => string.Join(", ", ids.Select(id => $"\"{id}\""));
+    string[] parts =
+    [
+      problems.MissingBlockIds.Count > 0 ? $"No new id for {Quoted(problems.MissingBlockIds)}" : string.Empty,
+      problems.DuplicateBlockIds.Count > 0 ? $"More than one block maps to {Quoted(problems.DuplicateBlockIds)}" : string.Empty,
+      problems.IdlessBlocks > 0 ? $"{problems.IdlessBlocks} block(s) without an id" : string.Empty,
+    ];
+
+    return string.Join("; ", parts.Where(part => part.Length > 0)) + ".";
+  }
+
   /// <summary>
   /// The translation operations carry options and a translation list beside the
   /// document, so the document is a field rather than the whole request.
@@ -389,6 +445,11 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
 
   private sealed record MarkdownInput(
       [property: JsonPropertyName("markdown")] string Markdown);
+
+  private sealed record UnmappedIds(
+      [property: JsonPropertyName("missingBlockIds")] IReadOnlyList<string> MissingBlockIds,
+      [property: JsonPropertyName("duplicateBlockIds")] IReadOnlyList<string> DuplicateBlockIds,
+      [property: JsonPropertyName("idlessBlocks")] int IdlessBlocks);
 
   private sealed record HtmlInput(
       [property: JsonPropertyName("html")] string Html);

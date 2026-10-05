@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Blok.Server.Documents;
 using Xunit;
 
@@ -95,5 +96,95 @@ public sealed class BlokPageFunctionsTests
     var converter = BlokDocuments.Create(poolSize: 1);
 
     await Assert.ThrowsAsync<ArgumentNullException>(async () => await converter.GetPageIndexAsync(null!));
+  }
+
+  [Fact]
+  public async Task RemapsIdsAndKeepsUnknownKeys()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    const string document = """
+        {"time":1759670000000,"version":"1.15.2","blocks":[
+          {"id":"h1","type":"header","data":{"text":"Go <a href=\"#p2\">down</a>","level":2},"tunes":{"anchor":{"id":"top"}}},
+          {"id":"own","type":"page","data":{"pageId":"pg-a"},"custom":"kept"},
+          {"id":"p2","type":"paragraph","data":{"text":"See <a data-blok-page-id=\"pg-ref\">x</a>"}}
+        ]}
+        """;
+
+    var copy = await converter.RemapPageDocumentAsync(
+        document,
+        new Dictionary<string, string> { ["h1"] = "H1", ["own"] = "OWN", ["p2"] = "P2" },
+        new Dictionary<string, string> { ["pg-a"] = "PG-A" });
+
+    Assert.True(JsonNode.DeepEquals(
+        JsonNode.Parse("""
+            {"time":1759670000000,"version":"1.15.2","blocks":[
+              {"id":"H1","type":"header","data":{"text":"Go <a href=\"#P2\">down</a>","level":2},"tunes":{"anchor":{"id":"top"}}},
+              {"id":"OWN","type":"page","data":{"pageId":"PG-A"},"custom":"kept"},
+              {"id":"P2","type":"paragraph","data":{"text":"See <a data-blok-page-id=\"pg-ref\">x</a>"}}
+            ]}
+            """),
+        JsonNode.Parse(copy)));
+  }
+
+  [Fact]
+  public async Task RefusesIdMapsThatDoNotCoverTheDocument()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    const string document = """
+        {"blocks":[
+          {"id":"a","type":"paragraph","parent":"gone","data":{"text":""}},
+          {"id":"b","type":"paragraph","data":{"text":""}},
+          {"type":"paragraph","data":{"text":"idless"}},
+          {"id":"co","type":"callout","data":{"body":{"blocks":[{"id":"nested","type":"page","data":{"pageId":"p"}}]}}}
+        ]}
+        """;
+
+    var refusal = await Assert.ThrowsAsync<ArgumentException>(async () => await converter.RemapPageDocumentAsync(
+        document,
+        new Dictionary<string, string> { ["a"] = "X", ["b"] = "X", ["co"] = "CO" },
+        new Dictionary<string, string>()));
+
+    Assert.Equal("blockIds", refusal.ParamName);
+    Assert.Contains("\"gone\", \"nested\"", refusal.Message, StringComparison.Ordinal);
+    Assert.Contains("\"X\"", refusal.Message, StringComparison.Ordinal);
+    Assert.Contains("1 block(s) without an id", refusal.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("""{"blocks":[{"id":"m","type":"paragraph"}]}""", "No new id for \"m\".")]
+  [InlineData("""{"blocks":[{"id":"x","type":"paragraph"},{"id":"a","type":"paragraph"}]}""", "More than one block maps to \"A\".")]
+  [InlineData("""{"blocks":[{"type":"paragraph"},{"type":"paragraph"}]}""", "2 block(s) without an id.")]
+  public async Task NamesEachKindOfIdProblemOnItsOwn(string document, string message)
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var refusal = await Assert.ThrowsAsync<ArgumentException>(async () => await converter.RemapPageDocumentAsync(
+        document,
+        new Dictionary<string, string> { ["x"] = "A", ["a"] = "A" },
+        new Dictionary<string, string>()));
+
+    Assert.StartsWith(message, refusal.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task ReportsUnreadableJsonToRemapAsAnInvalidDocument()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var failure = await Assert.ThrowsAsync<BlokDocumentConversionException>(async () =>
+        await converter.RemapPageDocumentAsync("{not json", new Dictionary<string, string>(), new Dictionary<string, string>()));
+
+    Assert.Equal(BlokConversionFailure.InvalidDocument, failure.Reason);
+  }
+
+  [Fact]
+  public async Task RefusesNullRemapArguments()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    var none = new Dictionary<string, string>();
+
+    await Assert.ThrowsAsync<ArgumentNullException>(async () => await converter.RemapPageDocumentAsync(null!, none, none));
+    await Assert.ThrowsAsync<ArgumentNullException>(async () => await converter.RemapPageDocumentAsync("{}", null!, none));
+    await Assert.ThrowsAsync<ArgumentNullException>(async () => await converter.RemapPageDocumentAsync("{}", none, null!));
   }
 }

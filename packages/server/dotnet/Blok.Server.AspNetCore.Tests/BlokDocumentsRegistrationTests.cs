@@ -329,6 +329,13 @@ public sealed class BlokDocumentsRegistrationTests
         CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
+    public ValueTask<string> RemapPageDocumentAsync(
+        string documentJson,
+        IReadOnlyDictionary<string, string> blockIds,
+        IReadOnlyDictionary<string, string> pageIds,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
     public ValueTask<string> ToHtmlAsync(
         string documentJson,
         IReadOnlyDictionary<string, BlokPageInfo?> pages,

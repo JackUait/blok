@@ -704,6 +704,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const AUDIO_ERROR_PLAYER_BYTES = 5_014;
     // Audio beat motion: the turning label print, beat ring, halo and art punch.
     const AUDIO_BEAT_MOTION_BYTES = 2_576;
+    // Embed empty state: the window above the URL bar that draws the typed link's kind.
+    const EMBED_LIVING_WINDOW_BYTES = 10_195;
     // Video error screen: static, the colour-bar tear, the glass card and its tokens.
     const VIDEO_NO_SIGNAL_BYTES = 7_902;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
@@ -746,6 +748,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + IMAGE_CHROME_PAPER_GRAPHITE_BYTES
       + AUDIO_ERROR_PLAYER_BYTES
       + AUDIO_BEAT_MOTION_BYTES
+      + EMBED_LIVING_WINDOW_BYTES
       + VIDEO_NO_SIGNAL_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 

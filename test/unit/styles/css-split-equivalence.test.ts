@@ -707,7 +707,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Embed empty state: the window above the URL bar that draws the typed link's kind.
     const EMBED_LIVING_WINDOW_BYTES = 10_195;
     // Video error screen: static, the colour-bar tear, the glass card and its tokens.
-    const VIDEO_NO_SIGNAL_BYTES = 7_902;
+    const VIDEO_NO_SIGNAL_BYTES = 8_421;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

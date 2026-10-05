@@ -11505,7 +11505,7 @@ span[data-blok-slash-search] {
   display: flex;
   align-items: flex-end;
   gap: var(--blok-space-0-5);
-  padding-block-start: var(--blok-space-1-5);
+  padding-block-start: calc(var(--blok-space-1-5) - var(--blok-border-width-hairline));
   padding-block-end: 0;
   padding-inline: var(--blok-space-1);
   border-start-start-radius: var(--_blok-tabs-inner-radius);
@@ -11522,6 +11522,7 @@ span[data-blok-slash-search] {
   gap: var(--blok-space-0-5);
   min-width: 0;
   overflow-x: auto;
+  padding-block-start: var(--blok-border-width-hairline);
   padding-inline: var(--blok-tabs-neck-radius);
   scroll-padding-inline: var(--blok-space-6);
   scrollbar-width: none;
@@ -11546,7 +11547,8 @@ span[data-blok-slash-search] {
 
 [data-blok-tabs-indicator] {
   position: absolute;
-  inset-block: 0;
+  inset-block-start: var(--blok-border-width-hairline);
+  inset-block-end: 0;
   inset-inline-start: 0;
   width: 0;
   border-radius: var(--blok-tabs-neck-radius) var(--blok-tabs-neck-radius) 0 0;

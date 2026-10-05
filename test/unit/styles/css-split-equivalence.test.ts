@@ -721,7 +721,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Tabs block: tabs.css (strip, sliding pill, panels, empty tab, dwell motion) and its @import.
     const TABS_BLOCK_BYTES = 7_064;
     // Tabs folder look: the band, the sheet and the two concave corners on the open tab.
-    const TABS_FOLDER_LOOK_BYTES = 2_654;
+    const TABS_FOLDER_LOOK_BYTES = 2_897;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

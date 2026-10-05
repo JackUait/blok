@@ -70,7 +70,16 @@ describe('tabs folder look', () => {
 
     expect(declaration(strip, 'align-items')).toBe('flex-end');
     expect(declaration(strip, 'padding-block-end')).toBe('0');
-    expect(declaration(ruleBody('[data-blok-tabs-indicator]'), 'inset-block')).toBe('0');
+    expect(declaration(ruleBody('[data-blok-tabs-indicator]'), 'inset-block-end')).toBe('0');
+  });
+
+  // The open tab's top outline is a shadow drawn above its box. Flush with the
+  // scroller's top edge, the scroller's clip erases it.
+  it('leaves room inside the scroller for the open tab top outline', () => {
+    const hairline = 'var(--blok-border-width-hairline)';
+
+    expect(declaration(ruleBody('[data-blok-tabs-scroller]'), 'padding-block-start')).toBe(hairline);
+    expect(declaration(ruleBody('[data-blok-tabs-indicator]'), 'inset-block-start')).toBe(hairline);
   });
 
   it('keeps the open tab neutral, never blue', () => {

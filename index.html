@@ -3853,6 +3853,7 @@
           audioDriveErrRoot.replaceChildren(renderAudioErrorState({
             message: 'Audio from Google Drive can’t be played directly. Download the file and upload it here instead.',
             service: 'google-drive',
+            badge: 'Needle skipped',
             replaceLabel: 'Replace',
             onReplace: () => {},
             upload: { label: 'Choose audio', accept: 'audio/*', onFile: () => {} },

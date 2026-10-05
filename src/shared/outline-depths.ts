@@ -22,3 +22,11 @@ export const outlineDepths = (levels: readonly number[]): number[] => {
     return depth;
   });
 };
+
+/**
+ * Containers whose headings still count as the page's own, as in Notion.
+ * A heading inside anything else (toggle, list, quote, a toggle heading's
+ * section) is folded content and stays out of a table of contents.
+ * `columns` is the legacy name of `column_list`.
+ */
+export const OUTLINE_CONTAINERS: ReadonlySet<string> = new Set(['column_list', 'columns', 'column', 'callout']);

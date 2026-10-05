@@ -21,6 +21,8 @@ import type { DocumentModel, ViewBlock } from './document-model';
 import { builtinEmitters, renderListRun } from './emitters';
 import type { EmitterEnv } from './emitters';
 import { htmlTextContent, proseTextContent } from './html-text';
+import { tableOfContents } from './outline';
+import type { TocEntry } from './outline';
 import { applyInlineRenderers } from './inline-renderers';
 import type { ViewInlineRenderer } from './inline-renderers';
 import { escapeHtml, sanitizeHtmlFragment } from './sanitize';
@@ -411,6 +413,19 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 
   const pageHref = options.pageHref;
 
+  /** Built once, on first use: a heading before the table of contents already needs its id. */
+  const tocCache: { value?: { entries: TocEntry[]; targets: ReadonlySet<ViewBlock> } } = {};
+
+  const tocOf = (): { entries: TocEntry[]; targets: ReadonlySet<ViewBlock> } => {
+    if (tocCache.value === undefined) {
+      const entries = ownEntry(renderers, 'table_of_contents') === undefined ? tableOfContents(model) ?? [] : [];
+
+      tocCache.value = { entries, targets: new Set(entries.map((entry) => entry.block)) };
+    }
+
+    return tocCache.value;
+  };
+
   const env: EmitterEnv = {
     inline: (value) => {
       const sanitized = sanitizeHtmlFragment(typeof value === 'string' ? value : '', inlineConfig, inlineUrlTransform);
@@ -470,6 +485,8 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     classList: (list) => (classes && list.length > 0 ? ` class="${escapeHtml(list.join(' '))}"` : ''),
     classesEnabled: classes,
     ltrAttr: directionEnabled ? ' dir="ltr"' : '',
+    tocEntries: () => tocOf().entries,
+    tocTargetId: (block) => (tocOf().targets.has(block) ? block.id : undefined),
     dirAttr: (block) => {
       const direction = directionOf(block);
 

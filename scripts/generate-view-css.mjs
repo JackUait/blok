@@ -62,6 +62,8 @@ const FIXTURE_BLOCKS = [
   { id: 'c1', type: 'code', data: { code: 'const answer = 42;', language: 'javascript', filename: 'answer.js' } },
   { id: 'd1', type: 'divider', data: {} },
   { id: 's1', type: 'spacer', data: {} },
+  /** Lists the headings above, at several depths. */
+  { id: 'toc1', type: 'table_of_contents', data: {} },
   { id: 'u1', type: 'list', data: { text: 'Unordered item', style: 'unordered' } },
   { id: 'u2', type: 'list', data: { text: 'Nested item', style: 'unordered', depth: 1 } },
   { id: 'o1', type: 'list', data: { text: 'Ordered item', style: 'ordered' } },

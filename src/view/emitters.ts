@@ -38,6 +38,7 @@ import {
 import { TOGGLE_CHILDREN_CLASSES, TOGGLE_CONTENT_CLASSES, TOGGLE_HEADER_ROW_CLASSES } from '../shared/tool-classes/toggle';
 import type { PageInfo } from '../../types/tools/page';
 import type { ViewBlock } from './document-model';
+import type { TocEntry } from './outline';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from './table-grid';
 
 /**
@@ -110,6 +111,14 @@ export interface EmitterEnv {
   dirAttr(block: ViewBlock): string;
   /** ` dir="ltr"` when the `direction` option is set, else '': pins code LTR. */
   ltrAttr: string;
+  /** The document's table of contents; empty when Blok does not draw one. */
+  tocEntries(): TocEntry[];
+  /**
+   * The block id of a heading the table of contents links to, so the link has
+   * a target. Undefined for every other block, which keeps documents without a
+   * table of contents byte-identical.
+   */
+  tocTargetId(block: ViewBlock): string | undefined;
 }
 
 /**
@@ -531,7 +540,7 @@ export const builtinEmitters: Record<string, Emitter> = {
      * or every `<a href="#...">` in the rendered document dies. It comes from
      * block data — clipboard-controlled — so it is escaped like any other value.
      */
-    const anchor = normalizeHeadingAnchor(block.data.anchor);
+    const anchor = normalizeHeadingAnchor(block.data.anchor) ?? env.tocTargetId(block);
     const anchorAttr = anchor === undefined ? '' : ` id="${env.escape(anchor)}"`;
     const heading = `<h${level}${env.rootAttrs(block)}${anchorAttr}${levelAttr}>${env.inline(block.data.text)}</h${level}>`;
 
@@ -709,6 +718,34 @@ export const builtinEmitters: Record<string, Emitter> = {
   table: emitTable,
 
   spacer: (block, env) => trail('<div aria-hidden="true"></div>', block, env),
+
+  /**
+   * The editor reads the outline live; here it is built from the saved
+   * headings. No children: the tool refuses them. Nothing to list renders
+   * nothing, so no stamp lands on an empty element.
+   */
+  table_of_contents: (_block, env) => {
+    const entries = env.tocEntries();
+
+    if (entries.length === 0) {
+      return '';
+    }
+
+    const parity = env.classesEnabled;
+    const items = entries.map((entry) => {
+      // The editor's stylesheet indents by this variable.
+      const depthStyle = parity ? ` style="--blok-toc-depth: ${entry.depth}"` : '';
+      const href = env.url('href', `#${encodeURIComponent(entry.target)}`, 'table_of_contents');
+      const label = parity ? `<span>${env.escape(entry.text)}</span>` : env.escape(entry.text);
+
+      return `<li data-depth="${entry.depth}"${depthStyle}><a${href}${parity ? ' data-blok-toc-link' : ''}>${label}</a></li>`;
+    }).join('');
+
+    // `list-style: none` drops list semantics in WebKit, hence the role.
+    return parity
+      ? `<nav data-blok-toc><ol data-blok-toc-list role="list">${items}</ol></nav>`
+      : `<nav><ol>${items}</ol></nav>`;
+  },
 
   column_list: childrenDiv,
   columns: childrenDiv,

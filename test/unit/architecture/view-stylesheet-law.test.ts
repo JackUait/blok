@@ -42,8 +42,12 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..');
  * only — not to pick a bigger number.
  *
  * The page card is text, not media, so its rules stay in the base sheet.
+ *
+ * Raised to 60,000 (owner's decision) for the table of contents: the sheet
+ * was already at 56,396 and its rules add ~2.3 KB. The media split stays the
+ * next step.
  */
-const VIEW_CSS_BYTE_BUDGET = 56_000;
+const VIEW_CSS_BYTE_BUDGET = 60_000;
 
 const readManifest = (): Record<string, unknown> =>
   JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8')) as Record<string, unknown>;

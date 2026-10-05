@@ -1,4 +1,5 @@
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { OUTLINE_CONTAINERS } from '../../shared/outline-depths';
 
 /**
  * One heading a table of contents links to.
@@ -11,13 +12,6 @@ export interface TocHeading {
   /** Plain text, whitespace collapsed. */
   text: string;
 }
-
-/**
- * Containers whose headings still count as the page's own, as in Notion.
- * A heading inside anything else (toggle, list, quote, a toggle heading's
- * section) is folded content and stays out.
- */
-const OUTLINE_CONTAINERS = new Set(['column_list', 'column', 'callout']);
 
 const HEADER_ROOT = `[${DATA_ATTR.tool}="header"]`;
 const HOLDER = `[${DATA_ATTR.element}]`;

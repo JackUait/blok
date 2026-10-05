@@ -174,6 +174,51 @@ describe('playground block states spec (index.html)', () => {
     });
   });
 
+  describe('page entry', () => {
+    test('has a page tab', () => {
+      expect(rawSpec).toContain("tool: 'page'");
+    });
+
+    test.each([
+      'Page',
+      'Emoji icon',
+      'Image icon',
+      'Long title',
+      'Untitled',
+      'Loading',
+      'Missing',
+      'No access',
+    ])('covers the "%s" state', (label) => {
+      expect(sectionFor('page')).toContain(`label: '${label}'`);
+    });
+
+    test('all page states use the page block type', () => {
+      expect(sectionFor('page')).toContain("type: 'page'");
+    });
+
+    test('every page state has its own fixture in the resolve map', () => {
+      const section = sectionFor('page');
+      const ids = [...section.matchAll(/pageId: '([^']+)'/g)].map((match) => match[1]);
+      const mapStart = html.indexOf('const PAGE_STATE_INFO = {');
+
+      expect(ids.length).toBeGreaterThanOrEqual(8);
+      expect(mapStart).toBeGreaterThan(-1);
+
+      const map = html.slice(mapStart, html.indexOf('};', mapStart));
+
+      for (const id of ids.filter((pageId) => pageId !== 'pg-state-loading')) {
+        expect(map, `PAGE_STATE_INFO entry for '${id}'`).toContain(`'${id}':`);
+      }
+    });
+
+    test('the missing state resolves to null and the no-access state is denied', () => {
+      const map = html.slice(html.indexOf('const PAGE_STATE_INFO = {'));
+
+      expect(map).toMatch(/'pg-state-missing': null/);
+      expect(map).toMatch(/'pg-state-denied': \{ access: 'none' \}/);
+    });
+  });
+
   describe('gallery preview tools', () => {
     test('mountStatePreview registers the embed tool', () => {
       expect(mountTools).toContain('embed: Embed');
@@ -181,6 +226,12 @@ describe('playground block states spec (index.html)', () => {
 
     test('mountStatePreview registers the bookmark tool', () => {
       expect(mountTools).toContain('bookmark: { class: Bookmark');
+    });
+
+    test('mountStatePreview registers the page tool with a resolve fixture', () => {
+      expect(mountTools).toContain('page: {');
+      expect(mountTools).toContain('class: Page');
+      expect(mountTools).toContain('resolve: (id) => PAGE_STATE_INFO[id]');
     });
   });
 });

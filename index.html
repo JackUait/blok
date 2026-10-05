@@ -3714,6 +3714,37 @@
           } }] },
         ],
       },
+      {
+        tool: 'page',
+        label: 'Page',
+        // Each state is a host answer from PAGE_STATE_INFO, keyed by pageId.
+        states: [
+          { label: 'Page', blocks: [{ id: 'pg-titled', type: 'page', data: { pageId: 'pg-state-titled' } }] },
+          { label: 'Emoji icon', blocks: [{ id: 'pg-emoji', type: 'page', data: { pageId: 'pg-state-emoji' } }] },
+          { label: 'Image icon', blocks: [{ id: 'pg-image', type: 'page', data: { pageId: 'pg-state-image' } }] },
+          { label: 'Long title', blocks: [{ id: 'pg-long', type: 'page', data: { pageId: 'pg-state-long' } }] },
+          { label: 'Untitled', blocks: [{ id: 'pg-untitled', type: 'page', data: { pageId: 'pg-state-untitled' } }] },
+          { label: 'Loading', blocks: [{ id: 'pg-loading', type: 'page', data: { pageId: 'pg-state-loading' } }] },
+          { label: 'Missing', blocks: [{ id: 'pg-missing', type: 'page', data: { pageId: 'pg-state-missing' } }] },
+          { label: 'No access', blocks: [{ id: 'pg-denied', type: 'page', data: { pageId: 'pg-state-denied' } }] },
+        ],
+      },
+    ];
+
+    // `undefined` keeps a page unresolved, so 'pg-state-loading' is left out on purpose.
+    const PAGE_STATE_INFO = {
+      'pg-state-titled': { title: 'Product roadmap', path: ['Workspace', 'Planning'] },
+      'pg-state-emoji': { title: 'Meeting notes', icon: { type: 'emoji', value: '📝' }, path: ['Workspace'] },
+      'pg-state-image': { title: 'Album artwork', icon: { type: 'image', url: '/samples/soundhelix-song-1-cover.png' }, path: ['Workspace', 'Music'] },
+      'pg-state-long': { title: 'Q4 2025 consolidated financial statements and management discussion and analysis — final board-approved version', icon: { type: 'emoji', value: '📊' } },
+      'pg-state-untitled': { title: '' },
+      'pg-state-missing': null,
+      'pg-state-denied': { access: 'none' },
+    };
+
+    const PAGE_STATE_PREVIEW = [
+      { id: 'pg-pv-h', type: 'header', data: { text: 'Overview', level: 2 } },
+      { id: 'pg-pv-p', type: 'paragraph', data: { text: 'A page block points at a page the host owns. Hover a live page to see its opening blocks.' } },
     ];
 
     const BLOCK_STATES_SPEC = BLOCK_STATES_RAW.map(entry => flattenStates(entry.tool, entry.label, entry.states));
@@ -3780,6 +3811,15 @@
           column: Column,
           embed: Embed,
           bookmark: { class: Bookmark, config: { endpoint: '/unfurl' } },
+          page: {
+            class: Page,
+            config: {
+              href: (id) => `#${id}`,
+              open: () => {},
+              resolve: (id) => PAGE_STATE_INFO[id],
+              preview: () => PAGE_STATE_PREVIEW,
+            },
+          },
           marker: Marker,
           bold: Bold,
           italic: Italic,

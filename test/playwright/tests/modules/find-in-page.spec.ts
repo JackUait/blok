@@ -1683,15 +1683,17 @@ test.describe('find in page', () => {
       await focusParagraph(page, 'pick this word');
       await selectWord(page, 'pick this word', 5, 9);
       await page.keyboard.press(FIND_KEY);
-      await page.keyboard.type('w');
 
       // Read once, without polling: the flight lands on its own soon after, so a poll would pass anyway.
-      const state = await page.evaluate(() => ({
+      const readFlight = (): Promise<{ chips: number; hopping: boolean | undefined }> => page.evaluate(() => ({
         chips: document.querySelectorAll('[data-blok-find-hop-chip]').length,
         hopping: document.querySelector('[data-blok-find-field]')?.hasAttribute('data-blok-find-hopping'),
       }));
 
-      expect(state).toEqual({ chips: 0, hopping: false });
+      expect(await readFlight()).toEqual({ chips: 1, hopping: true });
+      await page.keyboard.type('w');
+
+      expect(await readFlight()).toEqual({ chips: 0, hopping: false });
       await expect(page.getByTestId('find-input')).toHaveValue('w');
     });
 

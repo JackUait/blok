@@ -1,7 +1,10 @@
 import type { ImageData } from '../../../types/tools/image';
 import { cssFilter, readAdjust, type FilterSet } from './adjust';
 import { orientedSize, readGeometry } from './geometry';
-import { flatten, luminanceGrid, pickTone, regionLuminance, type Rgb, type Rgba, type ToneGrid } from './tone';
+import { flatten, luminanceGrid, pickTone, regionLuminance, type Rgb, type Rgba, type Tone, type ToneGrid } from './tone';
+
+/** Each control's tone, keyed by its role or action and edge. */
+export type ToneMap = Record<string, Tone>;
 
 /** Long side of the sampling canvas. A few hundred cells tell light from dark. */
 const GRID_LONG_SIDE = 24;
@@ -150,15 +153,42 @@ const toneUnder = (el: HTMLElement, grid: ToneGrid | null, box: DOMRect | undefi
   });
 };
 
+const controlKey = (el: HTMLElement): string =>
+  [el.getAttribute('data-role') ?? el.getAttribute('data-action'), el.getAttribute('data-edge')].filter(Boolean).join(':');
+
+/** What decides the pixels on screen. Layout, size and caption change none of them. */
+export function pictureKey(data: Partial<ImageData>): string {
+  const { url, crop, rotation, flipX, straighten, filter, filterStrength, adjust } = data;
+
+  return JSON.stringify([url, crop, rotation, flipX, straighten, filter, filterStrength, adjust]);
+}
+
 /** No grid, or a control with no box: drop data-tone so CSS falls back to the theme. */
-export function applyTones(figure: HTMLElement, grid: ToneGrid | null): void {
+export function applyTones(figure: HTMLElement, grid: ToneGrid | null): ToneMap {
   const media = figure.querySelector<HTMLElement>('.blok-image-crop') ?? figure.querySelector<HTMLElement>('img');
   const box = media?.getBoundingClientRect();
 
-  figure.querySelectorAll<HTMLElement>(TONED).forEach((el) => {
+  return Array.from(figure.querySelectorAll<HTMLElement>(TONED)).reduce<ToneMap>((tones, el) => {
     const l = toneUnder(el, grid, box);
 
-    if (l === null) el.removeAttribute('data-tone');
-    else el.setAttribute('data-tone', pickTone(l));
+    if (l === null) {
+      el.removeAttribute('data-tone');
+
+      return tones;
+    }
+    const tone = pickTone(l);
+
+    el.setAttribute('data-tone', tone);
+
+    return { ...tones, [controlKey(el)]: tone };
+  }, {});
+}
+
+/** Puts known tones on freshly built chrome, before its picture has loaded and laid out. */
+export function stampTones(figure: HTMLElement, tones: ToneMap): void {
+  figure.querySelectorAll<HTMLElement>(TONED).forEach((el) => {
+    const tone = tones[controlKey(el)];
+
+    if (tone) el.setAttribute('data-tone', tone);
   });
 }

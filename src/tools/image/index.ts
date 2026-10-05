@@ -36,7 +36,7 @@ import {
 } from '../../components/icons';
 import { DEFAULT_RELOAD_ATTEMPTS, IMAGE_SNAP_POINTS, URL_PATTERN } from './constants';
 import { syncMediaHeight } from './media-height';
-import { applyTones, sampleToneGrid } from './tone-sampler';
+import { applyTones, pictureKey, sampleToneGrid, stampTones, type ToneMap } from './tone-sampler';
 import type { ToneGrid } from './tone';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
@@ -101,6 +101,9 @@ export class ImageTool implements BlockTool {
   private resizeDetach: (() => void)[] = [];
   private overlayResizeObserver: ResizeObserver | null = null;
   private toneGrid: ToneGrid | null = null;
+  /** The picture `toneGrid` and `tones` were read from; a re-render of the same one reuses them. */
+  private toneKey: string | null = null;
+  private tones: ToneMap = {};
   private cropDetach: (() => void) | null = null;
   private altPopoverDetach: (() => void) | null = null;
   private errorMessage: string | null = null;
@@ -1123,8 +1126,12 @@ export class ImageTool implements BlockTool {
     if (!this.root) return;
     // The card goes first so the hidden figure below it takes no room.
     if (this.mending) this.root.appendChild(this.buildErrorCard(true, true));
-    // A grid read from the previous picture must not tone this one.
-    this.toneGrid = null;
+    // A grid read from a different picture must not tone this one.
+    if (pictureKey(this.data) !== this.toneKey) {
+      this.toneGrid = null;
+      this.toneKey = null;
+      this.tones = {};
+    }
     const figure = renderImage(this.data, this.filters);
     const natural = naturalOf(this.data);
     if (natural) {
@@ -1224,6 +1231,8 @@ export class ImageTool implements BlockTool {
 
     if (!this.readOnly) {
       this.attachResizeHandles(figure);
+      // Same picture re-rendered (caption, alignment…): no flash of theme colours before it loads.
+      stampTones(figure, this.tones);
     }
   }
 
@@ -1262,7 +1271,7 @@ export class ImageTool implements BlockTool {
       updateOverlayTier(overlay, figure.clientWidth, figure.clientHeight);
       syncMediaHeight(figure);
       // Tier and size change where each control sits over the picture.
-      if (this.toneGrid) applyTones(figure, this.toneGrid);
+      if (this.toneGrid) this.tones = applyTones(figure, this.toneGrid);
     };
     sync();
     if (img && !img.complete) {
@@ -1274,11 +1283,19 @@ export class ImageTool implements BlockTool {
   }
 
   private refreshTone(img: HTMLImageElement, figure: HTMLElement): void {
+    const key = pictureKey(this.data);
+
+    if (this.toneGrid && this.toneKey === key) {
+      this.tones = applyTones(figure, this.toneGrid);
+
+      return;
+    }
     void sampleToneGrid(img, this.data, this.filters).then((grid) => {
       // A re-render replaced this figure while the copy loaded.
       if (!figure.isConnected) return;
       this.toneGrid = grid;
-      applyTones(figure, grid);
+      this.toneKey = key;
+      this.tones = applyTones(figure, grid);
     });
   }
 

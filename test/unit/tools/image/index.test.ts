@@ -17,11 +17,14 @@ vi.mock('../../../../src/components/media-variants/image-variants', () => ({
 import { produceImageVariants } from '../../../../src/components/media-variants/image-variants';
 const mockProduce = vi.mocked(produceImageVariants);
 
-vi.mock('../../../../src/tools/image/tone-sampler', () => ({
+vi.mock('../../../../src/tools/image/tone-sampler', async (importOriginal) => ({
+  ...(await importOriginal<typeof ToneSampler>()),
   sampleToneGrid: vi.fn(async () => ({ width: 1, height: 1, luminance: new Float32Array([1]) })),
-  applyTones: vi.fn(),
+  applyTones: vi.fn(() => ({ 'image-overlay': 'graphite' })),
+  stampTones: vi.fn(),
 }));
-import { applyTones, sampleToneGrid } from '../../../../src/tools/image/tone-sampler';
+import { applyTones, sampleToneGrid, stampTones } from '../../../../src/tools/image/tone-sampler';
+import type * as ToneSampler from '../../../../src/tools/image/tone-sampler';
 
 const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
@@ -2764,7 +2767,25 @@ describe('ImageTool — save() geometry and adjust', () => {
 });
 
 describe('ImageTool — paper and graphite', () => {
-  beforeEach(() => vi.clearAllMocks());
+  let resizeCallbacks: ResizeObserverCallback[] = [];
+  let OriginalResizeObserver: typeof ResizeObserver;
+
+  beforeAll(() => {
+    OriginalResizeObserver = window.ResizeObserver;
+    window.ResizeObserver = class MockRO {
+      constructor(cb: ResizeObserverCallback) { resizeCallbacks.push(cb); }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    };
+  });
+  afterAll(() => {
+    window.ResizeObserver = OriginalResizeObserver;
+  });
+  beforeEach(() => {
+    resizeCallbacks = [];
+    vi.clearAllMocks();
+  });
   afterEach(() => {
     vi.restoreAllMocks();
     document.body.innerHTML = '';
@@ -2811,4 +2832,82 @@ describe('ImageTool — paper and graphite', () => {
     expect(pending).toHaveLength(1);
     expect(detached).toHaveLength(0);
   });
+
+  it('a re-render of the same picture keeps its tones at once and reads no pixels again', async () => {
+    const { root } = renderRenderedImage();
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+    root.querySelector<HTMLButtonElement>('[data-action="caption-toggle"]')?.click();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+
+    // Before the new img loads: the last tones are already on the new chrome.
+    expect(stampTones).toHaveBeenLastCalledWith(figure, { 'image-overlay': 'graphite' });
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+
+    expect(sampleToneGrid).toHaveBeenCalledTimes(1);
+    expect(applyTones).toHaveBeenLastCalledWith(figure, expect.objectContaining({ width: 1 }));
+  });
+
+  it('a resize re-maps the controls over the same grid', async () => {
+    const { root } = renderRenderedImage();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+    vi.mocked(applyTones).mockClear();
+    resizeCallbacks.at(-1)?.([], {} as ResizeObserver);
+
+    expect(applyTones).toHaveBeenCalledWith(figure, expect.objectContaining({ width: 1 }));
+  });
+
+  it('before its first sample lands, a resize stamps nothing', () => {
+    renderRenderedImage();
+    resizeCallbacks.at(-1)?.([], {} as ResizeObserver);
+
+    expect(applyTones).not.toHaveBeenCalled();
+  });
+
+  it('a different picture drops the old tones and reads its own pixels', async () => {
+    const { root, tool } = renderRenderedImage();
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+    vi.mocked(stampTones).mockClear();
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/other.png' } }) as PatternPasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await flush();
+
+    expect(stampTones).not.toHaveBeenCalledWith(expect.anything(), { 'image-overlay': 'graphite' });
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+
+    expect(sampleToneGrid).toHaveBeenCalledTimes(2);
+  });
+
+  it('a sample of the old picture that lands after a new one is pasted never reaches the new chrome', async () => {
+    const pending: Array<(g: { width: number; height: number; luminance: Float32Array }) => void> = [];
+
+    vi.mocked(sampleToneGrid).mockImplementationOnce(() => new Promise((r) => { pending.push(r); }));
+    const { root, tool } = renderRenderedImage();
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/other.png' } }) as PatternPasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await flush();
+    const stale = { width: 9, height: 9, luminance: new Float32Array(81) };
+
+    pending.forEach((resolve) => resolve(stale));
+    await flush();
+    vi.mocked(applyTones).mockClear();
+    resizeCallbacks.at(-1)?.([], {} as ResizeObserver);
+
+    expect(applyTones).not.toHaveBeenCalledWith(expect.anything(), stale);
+  });
 });
+

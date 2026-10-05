@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  applyTones, cssColor, isReadableInPlace, loadSampleSource, pageBackdrop, readToneGrid,
+  applyTones, cssColor, isReadableInPlace, loadSampleSource, pageBackdrop, pictureKey, readToneGrid,
 } from '../../../../src/tools/image/tone-sampler';
 import { luminanceGrid } from '../../../../src/tools/image/tone';
 
@@ -189,5 +189,26 @@ describe('tone-sampler', () => {
     applyTones(figure, null);
     expect(overlay.hasAttribute('data-tone')).toBe(false);
     expect(alt.hasAttribute('data-tone')).toBe(false);
+  });
+});
+
+describe('pictureKey', () => {
+  const base = { url: 'https://x/a.png', alignment: 'center' as const, caption: 'One' };
+
+  it('ignores layout and caption: the pixels are the same', () => {
+    expect(pictureKey({ ...base, alignment: 'left', caption: 'Two', captionVisible: false, width: 40 })).toBe(pictureKey(base));
+  });
+
+  it.each([
+    ['url', { url: 'https://x/b.png' }],
+    ['crop', { crop: { x: 0, y: 0, w: 50, h: 50 } }],
+    ['rotation', { rotation: 90 as const }],
+    ['flip', { flipX: true }],
+    ['straighten', { straighten: 3 }],
+    ['filter', { filter: 'noir' }],
+    ['filter strength', { filterStrength: 40 }],
+    ['adjust', { adjust: { brightness: -20, contrast: 0, saturation: 0 } }],
+  ])('changes with the %s', (_, change) => {
+    expect(pictureKey({ ...base, ...change })).not.toBe(pictureKey(base));
   });
 });

@@ -16,11 +16,13 @@ export const VersionPicker = () => {
   const [versions, setVersions] = useState<DocsVersion[]>([self]);
   const [pages, setPages] = useState<Record<string, string[] | null>>({});
   const [isOpen, setIsOpen] = useState(false);
+  const [requested, setRequested] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Fetched after hydration: the prerendered HTML lists only the current
-  // version, so server and client markup match.
+  // Fetched on first open, never on mount: some pages must load with no network
+  // request (ChangelogPage.test.tsx). The prerendered menu lists only the current version.
   useEffect(() => {
+    if (!requested) return;
     let cancelled = false;
     fetch(VERSIONS_URL)
       .then((response) => (response.ok ? response.json() : null))
@@ -42,7 +44,7 @@ export const VersionPicker = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [requested]);
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -68,7 +70,10 @@ export const VersionPicker = () => {
           'flex h-9 cursor-pointer items-center gap-1 rounded-full px-3 text-sm font-semibold text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
           isOpen && 'bg-secondary text-foreground',
         )}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          setRequested(true);
+        }}
         aria-expanded={isOpen}
         aria-haspopup="menu"
         aria-label={`${strings.pickerLabel}: ${self.label}`}

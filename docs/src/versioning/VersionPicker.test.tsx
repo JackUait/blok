@@ -53,6 +53,15 @@ describe('VersionPicker', () => {
     await waitFor(() => expect(latest).toHaveAttribute('href', '/ru/docs/table/'));
   });
 
+  it('makes no network request until the menu is first opened', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() => respond(manifest));
+    renderAt('/', '/v/1.14');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /1\.14/ }));
+    await screen.findByRole('menuitem', { name: /1\.15/ });
+    expect(fetchSpy).toHaveBeenCalledWith('/versions.json');
+  });
+
   it('is hidden on phones, where the header has no room for it', () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.reject(new Error('offline')));
     renderAt('/', '/v/1.14');

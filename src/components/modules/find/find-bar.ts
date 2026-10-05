@@ -668,16 +668,16 @@ export class FindBar {
   private setReplaceOpen(open: boolean): void {
     const next = open && !this.readOnly;
     const changed = next !== this.replaceOpen;
-    // Before the row shows: the stretch springs from this size.
-    const from = { width: this.bar.offsetWidth, height: this.bar.offsetHeight };
+    // Read before the row shows: the stretch springs from this size. A closed
+    // bar needs none, as the bloom that follows covers both rows.
+    const from = changed && next && this.opened ? { width: this.bar.offsetWidth, height: this.bar.offsetHeight } : null;
 
     this.replaceOpen = next;
     this.replaceRow.hidden = !next;
     this.replaceToggle.setAttribute('aria-expanded', String(next));
     this.bar.toggleAttribute(ATTR.open, next);
 
-    // On a closed bar, the bloom that follows covers both rows.
-    if (changed && next && this.opened) {
+    if (from !== null) {
       this.stopMotion();
       this.motion = stretch({
         dock: this.element,

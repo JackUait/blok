@@ -1020,6 +1020,30 @@ describe('FindBar', () => {
       expect(skinCalls()).toHaveLength(2);
     });
 
+    it('reads no layout when the replace row does not change', () => {
+      const barBox = byTestId(bar.element, 'find-bar');
+      const width = vi.spyOn(barBox, 'offsetWidth', 'get');
+      const height = vi.spyOn(barBox, 'offsetHeight', 'get');
+
+      // Read-only closes the row, which is already closed.
+      bar.setReadOnly(true);
+
+      expect(width).not.toHaveBeenCalled();
+      expect(height).not.toHaveBeenCalled();
+    });
+
+    it('stretches from the one-row size when the row opens', () => {
+      bar.open({ readOnly: false });
+      const barBox = byTestId(bar.element, 'find-bar');
+      const row = byTestId(bar.element, 'find-replace-row');
+
+      vi.spyOn(barBox, 'offsetWidth', 'get').mockReturnValue(470);
+      vi.spyOn(barBox, 'offsetHeight', 'get').mockImplementation(() => (row.hidden ? 44 : 84));
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(skinCalls().at(-1)?.[0][0]).toMatchObject({ height: '44px' });
+    });
+
     it('covers both rows with one bloom when it opens with replace', () => {
       bar.open({ readOnly: false, replace: true });
 

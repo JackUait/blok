@@ -3024,6 +3024,77 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// The host guide promises this exact traffic for a null seed under a
+  /// journal: nothing on the first open, then one PUT of an empty document
+  /// with no Blok-Doc-Version on the reopen (the load-time catch-up PUT).
+  /// </summary>
+  [Fact]
+  public async Task UnderAJournalANullSeedPutsNothingAndItsReopenPutsOneEmptyDocument()
+  {
+    endpoint.HoldsNothing(DocId);
+    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time));
+    var first = await Join(manager, V2Member());
+    var lineage = Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Lineage;
+    await first.LeaveAsync();
+    await RunTimersAsync(manager);
+
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Empty(endpoint.Saves);
+
+    // A journal room holds the owed PUT until a checkpoint, eviction or drain.
+    var reopened = await Join(manager, V2Member());
+    await reopened.LeaveAsync();
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count > 0,
+        "the reopen PUT");
+    await RunTimersAsync(manager);
+
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Equal(2, endpoint.Loads);
+    var save = Assert.Single(endpoint.Saves);
+    Assert.Empty(Assert.IsType<JsonArray>(save.Data["blocks"]));
+    Assert.Null(save.Version);
+    Assert.Equal(new DocProjection(lineage, 0), save.Projection);
+  }
+
+  /// <summary>
+  /// A /state read of an id Blok has never seen seeds the journal like a
+  /// join does, so the reopen PUT above applies to a /state-only id too.
+  /// </summary>
+  [Fact]
+  public async Task UnderAJournalAStateReadSeedsANullDocumentAndItsReopenPutsOnce()
+  {
+    endpoint.HoldsNothing(DocId);
+    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time));
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Ready, state.Status);
+    var lineage = Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Lineage;
+    await RunTimersAsync(manager);
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Empty(endpoint.Saves);
+
+    // A journal room holds the owed PUT until a checkpoint, eviction or drain.
+    var reopened = await Join(manager, V2Member());
+    await reopened.LeaveAsync();
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count > 0,
+        "the reopen PUT");
+    await RunTimersAsync(manager);
+
+    Assert.Equal(2, endpoint.Loads);
+    var save = Assert.Single(endpoint.Saves);
+    Assert.Empty(Assert.IsType<JsonArray>(save.Data["blocks"]));
+    Assert.Null(save.Version);
+    Assert.Equal(new DocProjection(lineage, 0), save.Projection);
+  }
+
+  /// <summary>
   /// Journal corruption is not a hiccup. The design's crash table says fail
   /// closed and never silently re-seed, so a checkpoint refused because the
   /// journal cannot be read stops the room rather than logging "retrying
@@ -5939,6 +6010,20 @@ public sealed class CollabRoomTests
         activity);
   }
 
+  /// <summary>
+  /// Runs every debounce, retry and idle-eviction timer well past its window.
+  /// The waits let posted lane callbacks arm their timers between advances.
+  /// </summary>
+  private async Task RunTimersAsync(CollabRoomManager manager)
+  {
+    for (var tick = 0; tick < 5; tick++)
+    {
+      await Task.Delay(10);
+      time.Advance(TimeSpan.FromSeconds(30));
+      await manager.SettleAsync();
+    }
+  }
+
   /// <summary>A room backed by an operation store, which is what turns on the commit path.</summary>
   /// <summary>An HTTP edit whose idempotency digest is the canonical body, as the endpoint sends it.</summary>
   private static async Task<CollabEditResult> HttpEdit(
@@ -5959,12 +6044,14 @@ public sealed class CollabRoomTests
         CancellationToken.None);
   }
 
-  private CollabRoomManager CreateJournalManager(CollabRoomOptions? options = null)
+  private CollabRoomManager CreateJournalManager(
+      CollabRoomOptions? options = null,
+      ICollabDocConverter? docConverter = null)
   {
     return new CollabRoomManager(
         store,
         endpoint,
-        converter,
+        docConverter ?? converter,
         options ?? new CollabRoomOptions(),
         time,
         log.Add,

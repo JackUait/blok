@@ -178,6 +178,43 @@ public sealed class HostCollabTests
     }
   }
 
+  /// <summary>
+  /// The host guide tells consumers that a GET answering 404, 204 or an empty
+  /// 200 fails a first open closed. Only "null" (or a null data envelope)
+  /// opens an empty document.
+  /// </summary>
+  [Theory]
+  [InlineData(404)]
+  [InlineData(204)]
+  [InlineData(200)]
+  public async Task ASeedGetWithoutAJsonBodyCloses4503AndStateAnswers503(int status)
+  {
+    var collabDirectory = UniqueDirectory("blok-host-seed-refused");
+    await using var endpoint = await FixtureDocEndpoint.StartAsync();
+    endpoint.GetStatus = status;
+    await using var app = await StartCollabHostAsync(
+        endpoint,
+        collabDirectory,
+        HostRequestTimeouts.DefaultRequestTimeout,
+        HostRequestTimeouts.DefaultKeepAliveTimeout);
+
+    try
+    {
+      var listen = ListenAddress(app);
+
+      using var socket = await ConnectAsync(listen);
+      Assert.Equal(4503, (await ReceiveCloseAsync(socket)).Status);
+
+      using var client = new HttpClient { BaseAddress = new Uri($"http://{listen}") };
+      using var state = await client.GetAsync(new Uri($"/sync/{DocId}/state", UriKind.Relative));
+      Assert.Equal(HttpStatusCode.ServiceUnavailable, state.StatusCode);
+    }
+    finally
+    {
+      DeleteDirectory(collabDirectory);
+    }
+  }
+
   [Fact]
   public async Task ASyncSocketOutlivesTheRequestTimeout()
   {

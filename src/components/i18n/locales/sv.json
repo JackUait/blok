@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Ljudfilen är för stor. {size} överskrider gränsen på {max}.",
   "tools.audio.errorGoogleDrive": "Ljud från Google Drive kan inte spelas upp direkt. Ladda i stället ned filen och ladda upp den här.",
   "tools.audio.errorOneDrive": "Ljud från OneDrive kan inte spelas upp direkt. Ladda i stället ned filen och ladda upp den här.",
+  "tools.audio.errorBadge": "Nålen hoppade",
   "tools.audio.errorReplace": "Ersätt",
   "tools.audio.titlePlaceholder": "Spårtitel",
   "tools.audio.artistPlaceholder": "Artist",

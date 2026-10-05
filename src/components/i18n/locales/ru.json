@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Размер аудиофайла ({size}) превышает ограничение {max}.",
   "tools.audio.errorGoogleDrive": "Аудио из Google Диска нельзя воспроизвести напрямую. Скачайте файл и загрузите его сюда.",
   "tools.audio.errorOneDrive": "Аудио из OneDrive нельзя воспроизвести напрямую. Скачайте файл и загрузите его сюда.",
+  "tools.audio.errorBadge": "Игла соскочила",
   "tools.audio.errorReplace": "Заменить",
   "tools.audio.titlePlaceholder": "Название трека",
   "tools.audio.artistPlaceholder": "Исполнитель",

@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Âm thanh quá lớn. {size} vượt quá giới hạn {max}.",
   "tools.audio.errorGoogleDrive": "Không thể phát trực tiếp âm thanh từ Google Drive. Thay vào đó, hãy tải tệp xuống rồi tải lên tại đây.",
   "tools.audio.errorOneDrive": "Không thể phát trực tiếp âm thanh từ OneDrive. Thay vào đó, hãy tải tệp xuống rồi tải lên tại đây.",
+  "tools.audio.errorBadge": "Kim đĩa bị nhảy",
   "tools.audio.errorReplace": "Thay thế",
   "tools.audio.titlePlaceholder": "Tên bản nhạc",
   "tools.audio.artistPlaceholder": "Nghệ sĩ",

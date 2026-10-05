@@ -624,6 +624,7 @@
   "tools.audio.errorFileTooLarge": "A hangfájl túl nagy: {size}. A megengedett legnagyobb méret {max}.",
   "tools.audio.errorGoogleDrive": "A Google Drive-ból származó hanganyag nem játszható le közvetlenül. Ehelyett töltse le a fájlt, majd töltse fel ide.",
   "tools.audio.errorOneDrive": "A OneDrive-ból származó hanganyag nem játszható le közvetlenül. Ehelyett töltse le a fájlt, majd töltse fel ide.",
+  "tools.audio.errorBadge": "Ugrott a tű",
   "tools.audio.errorReplace": "Csere",
   "tools.audio.titlePlaceholder": "Zeneszám címe",
   "tools.audio.artistPlaceholder": "Előadó",

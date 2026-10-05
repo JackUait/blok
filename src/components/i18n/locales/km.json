@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "អូឌីយ៉ូធំពេក។ {size} លើសពីដែនកំណត់ {max}។",
   "tools.audio.errorGoogleDrive": "អូឌីយ៉ូពី Google Drive មិនអាចចាក់ដោយផ្ទាល់បានទេ។ សូមទាញយកឯកសារ រួចបង្ហោះវានៅទីនេះជំនួសវិញ។",
   "tools.audio.errorOneDrive": "អូឌីយ៉ូពី OneDrive មិនអាចចាក់ដោយផ្ទាល់បានទេ។ សូមទាញយកឯកសារ រួចបង្ហោះវានៅទីនេះជំនួសវិញ។",
+  "tools.audio.errorBadge": "ម្ជុល​រំលង",
   "tools.audio.errorReplace": "ជំនួស",
   "tools.audio.titlePlaceholder": "ចំណងជើងបទ",
   "tools.audio.artistPlaceholder": "សិល្បករ",

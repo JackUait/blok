@@ -637,6 +637,7 @@
   "tools.audio.errorFileTooLarge": "دەنگەکە زۆر گەورەیە. {size} لە سنووری {max} تێدەپەڕێت.",
   "tools.audio.errorGoogleDrive": "دەنگی Google Drive ناتوانرێت ڕاستەوخۆ لێ بدرێت. فایلەکە دابگرە و لەبری ئەوە لێرە باری بکە.",
   "tools.audio.errorOneDrive": "دەنگی OneDrive ناتوانرێت ڕاستەوخۆ لێ بدرێت. فایلەکە دابگرە و لەبری ئەوە لێرە باری بکە.",
+  "tools.audio.errorBadge": "Derzî qelişî",
   "tools.audio.errorReplace": "گۆڕین",
   "tools.audio.titlePlaceholder": "ناونیشانی گۆرانی",
   "tools.audio.artistPlaceholder": "هونەرمەند",

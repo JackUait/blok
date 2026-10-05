@@ -624,6 +624,7 @@
   "tools.audio.errorFileTooLarge": "فایل صوتی بسیار بزرگ است. {size} از حد مجاز {max} فراتر می‌رود.",
   "tools.audio.errorGoogleDrive": "فایل صوتی موجود در Google Drive را نمی‌توان مستقیماً پخش کرد. فایل را دانلود کنید و به‌جای آن اینجا بارگذاری کنید.",
   "tools.audio.errorOneDrive": "فایل صوتی موجود در OneDrive را نمی‌توان مستقیماً پخش کرد. فایل را دانلود کنید و به‌جای آن اینجا بارگذاری کنید.",
+  "tools.audio.errorBadge": "سوزن پرید",
   "tools.audio.errorReplace": "جایگزین",
   "tools.audio.titlePlaceholder": "عنوان قطعه",
   "tools.audio.artistPlaceholder": "هنرمند",

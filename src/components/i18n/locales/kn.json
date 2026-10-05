@@ -637,6 +637,7 @@
   "tools.audio.errorFileTooLarge": "ಆಡಿಯೊ ತುಂಬಾ ದೊಡ್ಡದಾಗಿದೆ. ಗಾತ್ರ: {size}. ಗರಿಷ್ಠ ಮಿತಿ: {max}.",
   "tools.audio.errorGoogleDrive": "Google Drive ನಿಂದ ಆಡಿಯೊವನ್ನು ನೇರವಾಗಿ ಪ್ಲೇ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ. ಫೈಲ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ, ಬದಲಿಗೆ ಇಲ್ಲಿ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.",
   "tools.audio.errorOneDrive": "OneDrive ನಿಂದ ಆಡಿಯೊವನ್ನು ನೇರವಾಗಿ ಪ್ಲೇ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ. ಫೈಲ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ, ಬದಲಿಗೆ ಇಲ್ಲಿ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.",
+  "tools.audio.errorBadge": "ಸೂಜಿ ಜಾರಿತು",
   "tools.audio.errorReplace": "ಬದಲಿಸಿ",
   "tools.audio.titlePlaceholder": "ಟ್ರ್ಯಾಕ್ ಶೀರ್ಷಿಕೆ",
   "tools.audio.artistPlaceholder": "ಕಲಾವಿದ",

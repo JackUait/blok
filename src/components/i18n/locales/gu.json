@@ -624,6 +624,7 @@
   "tools.audio.errorFileTooLarge": "ઓડિઓ ખૂબ મોટો છે. {size} એ {max} મર્યાદા કરતાં વધારે છે.",
   "tools.audio.errorGoogleDrive": "Google Driveમાંથી ઑડિયો સીધો ચલાવી શકાતો નથી. ફાઇલ ડાઉનલોડ કરીને તેના બદલે અહીં અપલોડ કરો.",
   "tools.audio.errorOneDrive": "OneDriveમાંથી ઑડિયો સીધો ચલાવી શકાતો નથી. ફાઇલ ડાઉનલોડ કરીને તેના બદલે અહીં અપલોડ કરો.",
+  "tools.audio.errorBadge": "સોય ઊછળી ગઈ",
   "tools.audio.errorReplace": "બદલો",
   "tools.audio.titlePlaceholder": "ટ્રૅકનું શીર્ષક",
   "tools.audio.artistPlaceholder": "કલાકાર",

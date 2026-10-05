@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "O arquivo de áudio é muito grande. {size} excede o limite de {max}.",
   "tools.audio.errorGoogleDrive": "O áudio do Google Drive não pode ser reproduzido diretamente. Em vez disso, baixe o arquivo e envie-o aqui.",
   "tools.audio.errorOneDrive": "O áudio do OneDrive não pode ser reproduzido diretamente. Em vez disso, baixe o arquivo e envie-o aqui.",
+  "tools.audio.errorBadge": "A agulha pulou",
   "tools.audio.errorReplace": "Substituir",
   "tools.audio.titlePlaceholder": "Título da faixa",
   "tools.audio.artistPlaceholder": "Artista",

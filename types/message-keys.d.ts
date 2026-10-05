@@ -266,6 +266,7 @@ export type BlokMessageKey =
   | 'tools.audio.emptyUpload'
   | 'tools.audio.emptyUrlAria'
   | 'tools.audio.emptyUrlPlaceholder'
+  | 'tools.audio.errorBadge'
   | 'tools.audio.errorFileTooLarge'
   | 'tools.audio.errorGoogleDrive'
   | 'tools.audio.errorOneDrive'

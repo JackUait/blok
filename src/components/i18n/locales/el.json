@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Το αρχείο ήχου είναι πολύ μεγάλο. Το μέγεθος {size} υπερβαίνει το όριο των {max}.",
   "tools.audio.errorGoogleDrive": "Ο ήχος από το Google Drive δεν μπορεί να αναπαραχθεί απευθείας. Αντ’ αυτού, κατεβάστε το αρχείο και ανεβάστε το εδώ.",
   "tools.audio.errorOneDrive": "Ο ήχος από το OneDrive δεν μπορεί να αναπαραχθεί απευθείας. Αντ’ αυτού, κατεβάστε το αρχείο και ανεβάστε το εδώ.",
+  "tools.audio.errorBadge": "Η βελόνα πήδηξε",
   "tools.audio.errorReplace": "Αντικατάσταση",
   "tools.audio.titlePlaceholder": "Τίτλος κομματιού",
   "tools.audio.artistPlaceholder": "Καλλιτέχνης",

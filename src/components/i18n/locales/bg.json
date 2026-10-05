@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Аудиофайлът е твърде голям. Размерът му ({size}) надвишава ограничението от {max}.",
   "tools.audio.errorGoogleDrive": "Аудиото от Google Drive не може да се възпроизведе директно. Вместо това изтеглете файла и го качете тук.",
   "tools.audio.errorOneDrive": "Аудиото от OneDrive не може да се възпроизведе директно. Вместо това изтеглете файла и го качете тук.",
+  "tools.audio.errorBadge": "Иглата прескочи",
   "tools.audio.errorReplace": "Замени",
   "tools.audio.titlePlaceholder": "Заглавие на записа",
   "tools.audio.artistPlaceholder": "Изпълнител",

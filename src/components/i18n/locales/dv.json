@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "އޯޑިއޯ މާ ބޮޑު. {max} ގެ ލިމިޓަށްވުރެ {size} ބޮޑު.",
   "tools.audio.errorGoogleDrive": "Google Drive އިން އޯޑިއޯ ސީދާ ޕްލޭއެއް ނުކުރެވޭނެ. ފައިލް ޑައުންލޯޑްކޮށް މިތަނަށް އަޕްލޯޑްކުރޭ.",
   "tools.audio.errorOneDrive": "OneDrive އިން އޯޑިއޯ ސީދާ ޕްލޭއެއް ނުކުރެވޭނެ. ފައިލް ޑައުންލޯޑްކޮށް މިތަނަށް އަޕްލޯޑްކުރޭ.",
+  "tools.audio.errorBadge": "ނީޑަލް ފުންމައިފި",
   "tools.audio.errorReplace": "ބަދަލުކުރޭ",
   "tools.audio.titlePlaceholder": "އޯޑިއޯގެ ނަން",
   "tools.audio.artistPlaceholder": "ފަންނާނު",

@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "የድምፅ ፋይሉ በጣም ትልቅ ነው። {size} ከ{max} ገደብ ይበልጣል።",
   "tools.audio.errorGoogleDrive": "ከGoogle Drive የመጣ ኦዲዮ በቀጥታ ሊጫወት አይችልም። ፋይሉን አውርደው በምትኩ እዚህ ይስቀሉት።",
   "tools.audio.errorOneDrive": "ከOneDrive የመጣ ኦዲዮ በቀጥታ ሊጫወት አይችልም። ፋይሉን አውርደው በምትኩ እዚህ ይስቀሉት።",
+  "tools.audio.errorBadge": "መርፌው ዘለለ",
   "tools.audio.errorReplace": "ተካ",
   "tools.audio.titlePlaceholder": "የድምፅ ቅጂው ርዕስ",
   "tools.audio.artistPlaceholder": "አርቲስት",

@@ -637,6 +637,7 @@
   "tools.audio.errorFileTooLarge": "अडियो धेरै ठूलो छ। {size} ले {max} सीमा नाघेको छ।",
   "tools.audio.errorGoogleDrive": "Google Drive को अडियो सिधै प्ले गर्न सकिँदैन। फाइल डाउनलोड गरेर यसको सट्टा यहाँ अपलोड गर्नुहोस्।",
   "tools.audio.errorOneDrive": "OneDrive को अडियो सिधै प्ले गर्न सकिँदैन। फाइल डाउनलोड गरेर यसको सट्टा यहाँ अपलोड गर्नुहोस्।",
+  "tools.audio.errorBadge": "सुई चिप्लियो",
   "tools.audio.errorReplace": "बदल्नुहोस्",
   "tools.audio.titlePlaceholder": "ट्र्याकको शीर्षक",
   "tools.audio.artistPlaceholder": "कलाकार",

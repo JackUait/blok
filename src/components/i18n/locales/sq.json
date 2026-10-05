@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Audioja është shumë e madhe. {size} tejkalon kufirin prej {max}.",
   "tools.audio.errorGoogleDrive": "Audioja nga Google Drive nuk mund të luhet drejtpërdrejt. Në vend të kësaj, shkarkoni skedarin dhe ngarkojeni këtu.",
   "tools.audio.errorOneDrive": "Audioja nga OneDrive nuk mund të luhet drejtpërdrejt. Në vend të kësaj, shkarkoni skedarin dhe ngarkojeni këtu.",
+  "tools.audio.errorBadge": "Gjilpëra kërceu",
   "tools.audio.errorReplace": "Zëvendëso",
   "tools.audio.titlePlaceholder": "Titulli i pjesës audio",
   "tools.audio.artistPlaceholder": "Artisti",

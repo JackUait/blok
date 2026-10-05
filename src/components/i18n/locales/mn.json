@@ -637,6 +637,7 @@
   "tools.audio.errorFileTooLarge": "Аудио хэтэрхий том байна. {size} нь {max} хязгаараас хэтэрсэн.",
   "tools.audio.errorGoogleDrive": "Google Drive-аас авсан аудиог шууд тоглуулах боломжгүй. Файлыг татаж аваад оронд нь энд байршуулна уу.",
   "tools.audio.errorOneDrive": "OneDrive-аас авсан аудиог шууд тоглуулах боломжгүй. Файлыг татаж аваад оронд нь энд байршуулна уу.",
+  "tools.audio.errorBadge": "Зүү үсэрчихлээ",
   "tools.audio.errorReplace": "Солих",
   "tools.audio.titlePlaceholder": "Дууны нэр",
   "tools.audio.artistPlaceholder": "Уран бүтээлч",

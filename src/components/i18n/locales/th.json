@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "ไฟล์เสียงมีขนาดใหญ่เกินไป {size} เกินขีดจำกัด {max}",
   "tools.audio.errorGoogleDrive": "ไม่สามารถเล่นเสียงจาก Google Drive ได้โดยตรง โปรดดาวน์โหลดไฟล์แล้วอัปโหลดที่นี่แทน",
   "tools.audio.errorOneDrive": "ไม่สามารถเล่นเสียงจาก OneDrive ได้โดยตรง โปรดดาวน์โหลดไฟล์แล้วอัปโหลดที่นี่แทน",
+  "tools.audio.errorBadge": "เข็มสะดุด",
   "tools.audio.errorReplace": "แทนที่",
   "tools.audio.titlePlaceholder": "ชื่อแทร็ก",
   "tools.audio.artistPlaceholder": "ศิลปิน",

@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "ئاۋاز ھۆججىتى بەك چوڭ. {size} بولسا {max} چېكىدىن ئېشىپ كەتتى.",
   "tools.audio.errorGoogleDrive": "Google Drive دىكى ئاۋازنى بىۋاسىتە قويغىلى بولمايدۇ. ئۇنىڭ ئورنىغا، ھۆججەتنى چۈشۈرۈپ بۇ يەرگە يۈكلەڭ.",
   "tools.audio.errorOneDrive": "OneDrive دىكى ئاۋازنى بىۋاسىتە قويغىلى بولمايدۇ. ئۇنىڭ ئورنىغا، ھۆججەتنى چۈشۈرۈپ بۇ يەرگە يۈكلەڭ.",
+  "tools.audio.errorBadge": "يىڭنە سەكرەپ كەتتى",
   "tools.audio.errorReplace": "ئالماشتۇرۇش",
   "tools.audio.titlePlaceholder": "ئاۋاز يولى نامى",
   "tools.audio.artistPlaceholder": "سەنئەتكار",

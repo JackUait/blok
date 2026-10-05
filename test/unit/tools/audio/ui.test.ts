@@ -149,7 +149,7 @@ describe('renderErrorState', () => {
   });
 
   it('leaves the message as the only text a screen reader hears besides the buttons', () => {
-    const el = renderErrorState({ ...base, service: 'google-drive' });
+    const el = renderErrorState({ ...base, service: 'google-drive', badge: 'Needle skipped' });
     const message = el.querySelector('[data-role="audio-error-message"]');
     expect(message?.textContent).toBe(base.message);
     const decorative = el.querySelectorAll('[aria-hidden="true"]');
@@ -159,12 +159,15 @@ describe('renderErrorState', () => {
     expect([...decorative]).toEqual(expect.arrayContaining([art, wave, source]));
   });
 
-  it('names the service on the card when the link came from one', () => {
-    const drive = renderErrorState({ ...base, service: 'google-drive' });
+  it('shows the given badge instead of the service name when the link came from one', () => {
+    const drive = renderErrorState({ ...base, service: 'google-drive', badge: 'Needle skipped' });
+    expect(drive.querySelector('[data-role="audio-error-source"]')?.textContent).toBe('Needle skipped');
     expect(drive.getAttribute('data-reason')).toBe('google-drive');
-    expect(drive.querySelector('[data-role="audio-error-source"]')?.textContent).toBe('Google Drive');
-    const onedrive = renderErrorState({ ...base, service: 'onedrive' });
-    expect(onedrive.querySelector('[data-role="audio-error-source"]')?.textContent).toBe('OneDrive');
+  });
+
+  it('shows no badge when none is given', () => {
+    const drive = renderErrorState({ ...base, service: 'google-drive' });
+    expect(drive.querySelector('[data-role="audio-error-source"]')).toBeNull();
   });
 
   it('shows no service name for an ordinary failure', () => {

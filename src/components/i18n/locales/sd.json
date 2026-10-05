@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "آڊيو تمام وڏو آهي. {size}، {max} جي حد کان وڌيڪ آهي.",
   "tools.audio.errorGoogleDrive": "Google Drive مان آڊيو سڌو هلائي نٿو سگهجي. ان جي بدران فائل ڊائونلوڊ ڪري هتي اپلوڊ ڪريو.",
   "tools.audio.errorOneDrive": "OneDrive مان آڊيو سڌو هلائي نٿو سگهجي. ان جي بدران فائل ڊائونلوڊ ڪري هتي اپلوڊ ڪريو.",
+  "tools.audio.errorBadge": "سُئي ٽپي وئي",
   "tools.audio.errorReplace": "بدلايو",
   "tools.audio.titlePlaceholder": "ٽريڪ جو عنوان",
   "tools.audio.artistPlaceholder": "فنڪار",

@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Zvukový soubor je příliš velký. Jeho velikost {size} překračuje limit {max}.",
   "tools.audio.errorGoogleDrive": "Zvukový soubor z Disku Google nelze přehrát přímo. Místo toho jej stáhněte a nahrajte sem.",
   "tools.audio.errorOneDrive": "Zvukový soubor z OneDrivu nelze přehrát přímo. Místo toho jej stáhněte a nahrajte sem.",
+  "tools.audio.errorBadge": "Jehla přeskočila",
   "tools.audio.errorReplace": "Nahradit",
   "tools.audio.titlePlaceholder": "Název skladby",
   "tools.audio.artistPlaceholder": "Interpret",

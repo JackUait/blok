@@ -624,6 +624,7 @@
   "tools.audio.errorFileTooLarge": "ऑडियो फ़ाइल बहुत बड़ी है। इसका आकार {size} है, जो {max} की सीमा से ज़्यादा है।",
   "tools.audio.errorGoogleDrive": "Google Drive का ऑडियो सीधे नहीं चलाया जा सकता। इसके बजाय फ़ाइल डाउनलोड करके यहाँ अपलोड करें।",
   "tools.audio.errorOneDrive": "OneDrive का ऑडियो सीधे नहीं चलाया जा सकता। इसके बजाय फ़ाइल डाउनलोड करके यहाँ अपलोड करें।",
+  "tools.audio.errorBadge": "सुई फिसल गई",
   "tools.audio.errorReplace": "बदलें",
   "tools.audio.titlePlaceholder": "ट्रैक का टाइटल",
   "tools.audio.artistPlaceholder": "कलाकार",

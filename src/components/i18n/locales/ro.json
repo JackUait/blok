@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Fișierul audio este prea mare. {size} depășește limita de {max}.",
   "tools.audio.errorGoogleDrive": "Conținutul audio din Google Drive nu poate fi redat direct. Descărcați fișierul și încărcați-l aici.",
   "tools.audio.errorOneDrive": "Conținutul audio din OneDrive nu poate fi redat direct. Descărcați fișierul și încărcați-l aici.",
+  "tools.audio.errorBadge": "Acul a sărit",
   "tools.audio.errorReplace": "Înlocuiește",
   "tools.audio.titlePlaceholder": "Titlul piesei",
   "tools.audio.artistPlaceholder": "Interpret",

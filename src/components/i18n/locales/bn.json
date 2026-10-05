@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "অডিওটি খুব বড়। আকার {size}; সর্বোচ্চ {max}।",
   "tools.audio.errorGoogleDrive": "Google Drive-এর অডিও সরাসরি চালানো যায় না। ফাইলটি ডাউনলোড করে এর বদলে এখানে আপলোড করুন।",
   "tools.audio.errorOneDrive": "OneDrive-এর অডিও সরাসরি চালানো যায় না। ফাইলটি ডাউনলোড করে এর বদলে এখানে আপলোড করুন।",
+  "tools.audio.errorBadge": "পিন ফসকে গেল",
   "tools.audio.errorReplace": "প্রতিস্থাপন",
   "tools.audio.titlePlaceholder": "ট্র্যাকের শিরোনাম",
   "tools.audio.artistPlaceholder": "শিল্পী",

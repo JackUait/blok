@@ -637,6 +637,7 @@
   "tools.audio.errorFileTooLarge": "Audio ir pārāk liels. {size} pārsniedz ierobežojumu {max}.",
   "tools.audio.errorGoogleDrive": "Audio no Google Drive nevar atskaņot tieši. Lejupielādējiet failu un tā vietā augšupielādējiet to šeit.",
   "tools.audio.errorOneDrive": "Audio no OneDrive nevar atskaņot tieši. Lejupielādējiet failu un tā vietā augšupielādējiet to šeit.",
+  "tools.audio.errorBadge": "Adata pārlēca",
   "tools.audio.errorReplace": "Aizstāt",
   "tools.audio.titlePlaceholder": "Ieraksta nosaukums",
   "tools.audio.artistPlaceholder": "Izpildītājs",

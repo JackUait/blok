@@ -594,6 +594,9 @@ export class AudioTool implements BlockTool {
     this.root.appendChild(renderErrorState({
       message: this.errorMessage ?? tr(this.api.i18n, 'tools.audio.errorUploadFailed', 'Upload failed'),
       service: this.errorService,
+      ...(this.errorService
+        ? { badge: tr(this.api.i18n, 'tools.audio.errorBadge', 'Needle skipped') }
+        : {}),
       replaceLabel: tr(this.api.i18n, 'tools.audio.errorReplace', 'Replace'),
       onReplace: () => this.transitionToEmpty(),
       ...(canUpload

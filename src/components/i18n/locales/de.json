@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Die Audiodatei ist zu groß. {size} überschreitet die Höchstgrenze von {max}.",
   "tools.audio.errorGoogleDrive": "Eine Audiodatei aus Google Drive kann nicht direkt wiedergegeben werden. Laden Sie die Datei stattdessen herunter und hier hoch.",
   "tools.audio.errorOneDrive": "Eine Audiodatei aus OneDrive kann nicht direkt wiedergegeben werden. Laden Sie die Datei stattdessen herunter und hier hoch.",
+  "tools.audio.errorBadge": "Nadel gesprungen",
   "tools.audio.errorReplace": "Ersetzen",
   "tools.audio.titlePlaceholder": "Titel",
   "tools.audio.artistPlaceholder": "Künstler",

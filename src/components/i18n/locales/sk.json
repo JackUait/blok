@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Audio je príliš veľké. {size} presahuje limit {max}.",
   "tools.audio.errorGoogleDrive": "Zvuk z Disku Google nie je možné prehrať priamo. Namiesto toho súbor stiahnite a nahrajte sem.",
   "tools.audio.errorOneDrive": "Zvuk zo služby OneDrive nie je možné prehrať priamo. Namiesto toho súbor stiahnite a nahrajte sem.",
+  "tools.audio.errorBadge": "Ihla preskočila",
   "tools.audio.errorReplace": "Nahradiť",
   "tools.audio.titlePlaceholder": "Názov skladby",
   "tools.audio.artistPlaceholder": "Interpret",

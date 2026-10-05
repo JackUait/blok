@@ -624,6 +624,7 @@
   "tools.audio.errorFileTooLarge": "Le fichier audio est trop volumineux. Sa taille de {size} dépasse la limite de {max}.",
   "tools.audio.errorGoogleDrive": "L’audio provenant de Google Drive ne peut pas être lu directement. Téléchargez plutôt le fichier, puis importez-le ici.",
   "tools.audio.errorOneDrive": "L’audio provenant de OneDrive ne peut pas être lu directement. Téléchargez plutôt le fichier, puis importez-le ici.",
+  "tools.audio.errorBadge": "Le diamant a sauté",
   "tools.audio.errorReplace": "Remplacer",
   "tools.audio.titlePlaceholder": "Titre du morceau",
   "tools.audio.artistPlaceholder": "Artiste",

@@ -637,6 +637,7 @@
   "tools.audio.errorFileTooLarge": "오디오가 너무 큽니다. 현재 크기: {size}. 최대 크기: {max}.",
   "tools.audio.errorGoogleDrive": "Google Drive의 오디오는 직접 재생할 수 없습니다. 대신 파일을 다운로드한 다음 여기에 업로드하세요.",
   "tools.audio.errorOneDrive": "OneDrive의 오디오는 직접 재생할 수 없습니다. 대신 파일을 다운로드한 다음 여기에 업로드하세요.",
+  "tools.audio.errorBadge": "바늘이 튀었어요",
   "tools.audio.errorReplace": "교체",
   "tools.audio.titlePlaceholder": "곡 제목",
   "tools.audio.artistPlaceholder": "아티스트",

@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Audio terlalu besar. {size} melebihi batas {max}.",
   "tools.audio.errorGoogleDrive": "Audio dari Google Drive tidak dapat diputar langsung. Unduh berkasnya, lalu unggah di sini.",
   "tools.audio.errorOneDrive": "Audio dari OneDrive tidak dapat diputar langsung. Unduh berkasnya, lalu unggah di sini.",
+  "tools.audio.errorBadge": "Jarumnya meloncat",
   "tools.audio.errorReplace": "Ganti",
   "tools.audio.titlePlaceholder": "Judul trek",
   "tools.audio.artistPlaceholder": "Artis",

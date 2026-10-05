@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Ձայնանյութը չափազանց մեծ է։ {size}-ը գերազանցում է {max} սահմանաչափը։",
   "tools.audio.errorGoogleDrive": "Google Drive-ից ձայնանյութը հնարավոր չէ ուղղակիորեն նվագարկել։ Փոխարենը ներբեռնեք ֆայլը և վերբեռնեք այն այստեղ։",
   "tools.audio.errorOneDrive": "OneDrive-ից ձայնանյութը հնարավոր չէ ուղղակիորեն նվագարկել։ Փոխարենը ներբեռնեք ֆայլը և վերբեռնեք այն այստեղ։",
+  "tools.audio.errorBadge": "Ասեղը ցատկեց",
   "tools.audio.errorReplace": "Փոխարինել",
   "tools.audio.titlePlaceholder": "Ձայնագրության վերնագիր",
   "tools.audio.artistPlaceholder": "Կատարող",

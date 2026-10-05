@@ -624,6 +624,7 @@
   "tools.audio.errorFileTooLarge": "Audiozapis je prevelik. {size} premašuje ograničenje od {max}.",
   "tools.audio.errorGoogleDrive": "Audiozapis iz usluge Google Drive ne može se izravno reproducirati. Umjesto toga preuzmi datoteku i prenesi je ovdje.",
   "tools.audio.errorOneDrive": "Audiozapis iz usluge OneDrive ne može se izravno reproducirati. Umjesto toga preuzmi datoteku i prenesi je ovdje.",
+  "tools.audio.errorBadge": "Igla je preskočila",
   "tools.audio.errorReplace": "Zamijeni",
   "tools.audio.titlePlaceholder": "Naslov audiozapisa",
   "tools.audio.artistPlaceholder": "Izvođač",

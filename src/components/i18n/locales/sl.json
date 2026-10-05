@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Zvočni posnetek je prevelik. {size} presega omejitev {max}.",
   "tools.audio.errorGoogleDrive": "Zvoka iz storitve Google Drive ni mogoče predvajati neposredno. Datoteko prenesite in jo namesto tega naložite sem.",
   "tools.audio.errorOneDrive": "Zvoka iz storitve OneDrive ni mogoče predvajati neposredno. Datoteko prenesite in jo namesto tega naložite sem.",
+  "tools.audio.errorBadge": "Igla je preskočila",
   "tools.audio.errorReplace": "Zamenjaj",
   "tools.audio.titlePlaceholder": "Naslov skladbe",
   "tools.audio.artistPlaceholder": "Izvajalec",

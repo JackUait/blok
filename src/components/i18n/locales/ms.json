@@ -637,6 +637,7 @@
   "tools.audio.errorFileTooLarge": "Audio terlalu besar. {size} melebihi had {max}.",
   "tools.audio.errorGoogleDrive": "Audio daripada Google Drive tidak boleh dimainkan terus. Muat turun fail, kemudian muat naik di sini sebagai gantinya.",
   "tools.audio.errorOneDrive": "Audio daripada OneDrive tidak boleh dimainkan terus. Muat turun fail, kemudian muat naik di sini sebagai gantinya.",
+  "tools.audio.errorBadge": "Jarum terlompat",
   "tools.audio.errorReplace": "Ganti",
   "tools.audio.titlePlaceholder": "Tajuk trek",
   "tools.audio.artistPlaceholder": "Artis",

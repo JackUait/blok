@@ -581,6 +581,7 @@
   "tools.audio.errorFileTooLarge": "音訊檔案太大。{size} 超過 {max} 上限。",
   "tools.audio.errorGoogleDrive": "無法直接播放 Google Drive 中的音訊。請改為下載檔案後在此上傳。",
   "tools.audio.errorOneDrive": "無法直接播放 OneDrive 中的音訊。請改為下載檔案後在此上傳。",
+  "tools.audio.errorBadge": "唱針跳針了",
   "tools.audio.errorReplace": "取代",
   "tools.audio.titlePlaceholder": "曲目名稱",
   "tools.audio.artistPlaceholder": "藝人",

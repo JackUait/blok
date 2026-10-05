@@ -581,6 +581,7 @@
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Audio from Google Drive can’t be played directly. Download the file and upload it here instead.",
   "tools.audio.errorOneDrive": "Audio from OneDrive can’t be played directly. Download the file and upload it here instead.",
+  "tools.audio.errorBadge": "Needle skipped",
   "tools.audio.errorReplace": "Replace",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

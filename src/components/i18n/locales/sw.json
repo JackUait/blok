@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Faili ya sauti ni kubwa mno. {size} imezidi kikomo cha {max}.",
   "tools.audio.errorGoogleDrive": "Sauti kutoka Google Drive haiwezi kuchezwa moja kwa moja. Badala yake, pakua faili na uipakie hapa.",
   "tools.audio.errorOneDrive": "Sauti kutoka OneDrive haiwezi kuchezwa moja kwa moja. Badala yake, pakua faili na uipakie hapa.",
+  "tools.audio.errorBadge": "Sindano imeruka",
   "tools.audio.errorReplace": "Badilisha",
   "tools.audio.titlePlaceholder": "Jina la wimbo",
   "tools.audio.artistPlaceholder": "Msanii",

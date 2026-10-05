@@ -637,6 +637,7 @@
   "tools.audio.errorFileTooLarge": "အသံ အလွန်ကြီးနေသည်။ {size} သည် ကန့်သတ်ချက် {max} ကို ကျော်လွန်နေသည်။",
   "tools.audio.errorGoogleDrive": "Google Drive မှ အသံကို တိုက်ရိုက်ဖွင့်၍မရပါ။ ဖိုင်ကို ဒေါင်းလုဒ်လုပ်ပြီး ယင်းအစား ဤနေရာတွင် အပ်လုဒ်လုပ်ပါ။",
   "tools.audio.errorOneDrive": "OneDrive မှ အသံကို တိုက်ရိုက်ဖွင့်၍မရပါ။ ဖိုင်ကို ဒေါင်းလုဒ်လုပ်ပြီး ယင်းအစား ဤနေရာတွင် အပ်လုဒ်လုပ်ပါ။",
+  "tools.audio.errorBadge": "အပ် ခုန်သွားတယ်",
   "tools.audio.errorReplace": "အစားထိုး",
   "tools.audio.titlePlaceholder": "အသံဖိုင်ခေါင်းစဉ်",
   "tools.audio.artistPlaceholder": "အနုပညာရှင်",

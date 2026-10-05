@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "غږیز فایل ډېر لوی دی. {size} د {max} له حده اوړي.",
   "tools.audio.errorGoogleDrive": "د Google Drive غږ مستقیم نه شي غږېدلی. فایل ډاونلوډ کړئ او پر ځای یې دلته پورته کړئ.",
   "tools.audio.errorOneDrive": "د OneDrive غږ مستقیم نه شي غږېدلی. فایل ډاونلوډ کړئ او پر ځای یې دلته پورته کړئ.",
+  "tools.audio.errorBadge": "ستن ټوپ کړ",
   "tools.audio.errorReplace": "بدل یې کړئ",
   "tools.audio.titlePlaceholder": "د ټرېک سرلیک",
   "tools.audio.artistPlaceholder": "هنرمند",

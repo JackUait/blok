@@ -637,6 +637,7 @@
   "tools.audio.errorFileTooLarge": "Garso įrašas per didelis. {size} viršija {max} ribą.",
   "tools.audio.errorGoogleDrive": "Garso įrašo iš „Google Drive“ negalima paleisti tiesiogiai. Atsisiųskite failą ir vietoj to įkelkite jį čia.",
   "tools.audio.errorOneDrive": "Garso įrašo iš „OneDrive“ negalima paleisti tiesiogiai. Atsisiųskite failą ir vietoj to įkelkite jį čia.",
+  "tools.audio.errorBadge": "Adata šoktelėjo",
   "tools.audio.errorReplace": "Pakeisti",
   "tools.audio.titlePlaceholder": "Takelio pavadinimas",
   "tools.audio.artistPlaceholder": "Atlikėjas",

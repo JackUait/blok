@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "آڈیو بہت بڑا ہے۔ {size}، {max} کی حد سے زیادہ ہے۔",
   "tools.audio.errorGoogleDrive": "Google Drive کی صوتی فائل براہِ راست نہیں چلائی جا سکتی۔ اس کے بجائے فائل ڈاؤن لوڈ کر کے یہاں اپ لوڈ کریں۔",
   "tools.audio.errorOneDrive": "OneDrive کی صوتی فائل براہِ راست نہیں چلائی جا سکتی۔ اس کے بجائے فائل ڈاؤن لوڈ کر کے یہاں اپ لوڈ کریں۔",
+  "tools.audio.errorBadge": "سوئی پھسل گئی",
   "tools.audio.errorReplace": "تبدیل کریں",
   "tools.audio.titlePlaceholder": "ٹریک کا عنوان",
   "tools.audio.artistPlaceholder": "فنکار",

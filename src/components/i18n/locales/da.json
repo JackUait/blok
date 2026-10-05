@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Lydfilen er for stor. {size} overskrider grænsen på {max}.",
   "tools.audio.errorGoogleDrive": "Lyd fra Google Drive kan ikke afspilles direkte. Hent filen, og upload den her i stedet.",
   "tools.audio.errorOneDrive": "Lyd fra OneDrive kan ikke afspilles direkte. Hent filen, og upload den her i stedet.",
+  "tools.audio.errorBadge": "Nålen hoppede",
   "tools.audio.errorReplace": "Erstat",
   "tools.audio.titlePlaceholder": "Titel",
   "tools.audio.artistPlaceholder": "Kunstner",

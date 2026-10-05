@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "ஆடியோ மிகப் பெரியது. {size} என்பது {max} வரம்பை மீறுகிறது.",
   "tools.audio.errorGoogleDrive": "Google Drive-இலுள்ள ஒலியை நேரடியாக இயக்க முடியாது. அதற்குப் பதிலாக, கோப்பைப் பதிவிறக்கி இங்கே பதிவேற்றவும்.",
   "tools.audio.errorOneDrive": "OneDrive-இலுள்ள ஒலியை நேரடியாக இயக்க முடியாது. அதற்குப் பதிலாக, கோப்பைப் பதிவிறக்கி இங்கே பதிவேற்றவும்.",
+  "tools.audio.errorBadge": "ஊசி தாவியது",
   "tools.audio.errorReplace": "மாற்று",
   "tools.audio.titlePlaceholder": "டிராக் தலைப்பு",
   "tools.audio.artistPlaceholder": "கலைஞர்",

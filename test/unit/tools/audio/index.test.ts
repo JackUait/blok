@@ -296,6 +296,12 @@ describe('AudioTool', () => {
       expect(error?.getAttribute('data-reason')).toBe('google-drive');
     });
 
+    it('tops a share-link failure with a playful badge, not the service name', async () => {
+      const el = await failDriveLink({});
+      const badge = el.querySelector('[data-role="audio-error"] [data-role="audio-error-source"]');
+      expect(badge?.textContent).toBe('Needle skipped');
+    });
+
     it('lets the user upload the downloaded file straight from the error', async () => {
       const el = await failDriveLink({});
       const input = el.querySelector<HTMLInputElement>('[data-role="audio-error"] input[type="file"]');

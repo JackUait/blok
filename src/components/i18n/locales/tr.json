@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Ses dosyası çok büyük. {size} boyutuyla {max} sınırını aşıyor.",
   "tools.audio.errorGoogleDrive": "Google Drive'daki ses doğrudan oynatılamaz. Bunun yerine dosyayı indirip buraya yükleyin.",
   "tools.audio.errorOneDrive": "OneDrive'daki ses doğrudan oynatılamaz. Bunun yerine dosyayı indirip buraya yükleyin.",
+  "tools.audio.errorBadge": "İğne atladı",
   "tools.audio.errorReplace": "Değiştir",
   "tools.audio.titlePlaceholder": "Parça adı",
   "tools.audio.artistPlaceholder": "Sanatçı",

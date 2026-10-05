@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Аудіо завелике. {size} перевищує ліміт {max}.",
   "tools.audio.errorGoogleDrive": "Аудіо з Google Диска не можна відтворити безпосередньо. Завантажте файл на пристрій, а потім передайте його сюди.",
   "tools.audio.errorOneDrive": "Аудіо з OneDrive не можна відтворити безпосередньо. Завантажте файл на пристрій, а потім передайте його сюди.",
+  "tools.audio.errorBadge": "Голка зіскочила",
   "tools.audio.errorReplace": "Замінити",
   "tools.audio.titlePlaceholder": "Назва треку",
   "tools.audio.artistPlaceholder": "Виконавець",

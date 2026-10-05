@@ -637,6 +637,7 @@
   "tools.audio.errorFileTooLarge": "ສຽງໃຫຍ່ເກີນໄປ. {size} ເກີນຂີດຈຳກັດ {max}.",
   "tools.audio.errorGoogleDrive": "ສຽງຈາກ Google Drive ບໍ່ສາມາດຫຼິ້ນໂດຍກົງໄດ້. ດາວໂຫຼດໄຟລ໌ ແລ້ວອັບໂຫຼດຢູ່ບ່ອນນີ້ແທນ.",
   "tools.audio.errorOneDrive": "ສຽງຈາກ OneDrive ບໍ່ສາມາດຫຼິ້ນໂດຍກົງໄດ້. ດາວໂຫຼດໄຟລ໌ ແລ້ວອັບໂຫຼດຢູ່ບ່ອນນີ້ແທນ.",
+  "tools.audio.errorBadge": "ເຂັມກະໂດດ",
   "tools.audio.errorReplace": "ແທນທີ່",
   "tools.audio.titlePlaceholder": "ຊື່ແທຣັກ",
   "tools.audio.artistPlaceholder": "ສິລະປິນ",

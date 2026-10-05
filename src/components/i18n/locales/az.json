@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Audio faylı həddindən böyükdür. Ölçüsü: {size}. İcazə verilən hədd: {max}.",
   "tools.audio.errorGoogleDrive": "Google Drive-dan audio birbaşa oxudula bilmir. Faylı endirin və əvəzinə buraya yükləyin.",
   "tools.audio.errorOneDrive": "OneDrive-dan audio birbaşa oxudula bilmir. Faylı endirin və əvəzinə buraya yükləyin.",
+  "tools.audio.errorBadge": "İynə sürüşdü",
   "tools.audio.errorReplace": "Dəyişdir",
   "tools.audio.titlePlaceholder": "Trekin adı",
   "tools.audio.artistPlaceholder": "İfaçı",

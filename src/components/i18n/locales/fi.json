@@ -624,6 +624,7 @@
   "tools.audio.errorFileTooLarge": "Äänitiedosto on liian suuri. Koko {size} ylittää rajan {max}.",
   "tools.audio.errorGoogleDrive": "Google Drivessa olevaa äänitiedostoa ei voi toistaa suoraan. Lataa tiedosto ja lähetä se sen sijaan tähän.",
   "tools.audio.errorOneDrive": "OneDrivessa olevaa äänitiedostoa ei voi toistaa suoraan. Lataa tiedosto ja lähetä se sen sijaan tähän.",
+  "tools.audio.errorBadge": "Neula hyppäsi",
   "tools.audio.errorReplace": "Korvaa",
   "tools.audio.titlePlaceholder": "Kappaleen nimi",
   "tools.audio.artistPlaceholder": "Artisti",

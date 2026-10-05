@@ -637,6 +637,7 @@
   "tools.audio.errorFileTooLarge": "ഓഡിയോ വളരെ വലുതാണ്. {size} എന്നത് {max} പരിധി കവിയുന്നു.",
   "tools.audio.errorGoogleDrive": "Google Drive-ൽ നിന്നുള്ള ഓഡിയോ നേരിട്ട് പ്ലേ ചെയ്യാനാകില്ല. ഫയൽ ഡൗൺലോഡ് ചെയ്‌ത് പകരം ഇവിടെ അപ്‌ലോഡ് ചെയ്യുക.",
   "tools.audio.errorOneDrive": "OneDrive-ൽ നിന്നുള്ള ഓഡിയോ നേരിട്ട് പ്ലേ ചെയ്യാനാകില്ല. ഫയൽ ഡൗൺലോഡ് ചെയ്‌ത് പകരം ഇവിടെ അപ്‌ലോഡ് ചെയ്യുക.",
+  "tools.audio.errorBadge": "സൂചി തെന്നി",
   "tools.audio.errorReplace": "മാറ്റുക",
   "tools.audio.titlePlaceholder": "ട്രാക്ക് ശീർഷകം",
   "tools.audio.artistPlaceholder": "ആർട്ടിസ്റ്റ്",

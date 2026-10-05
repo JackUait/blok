@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "音频文件过大。{size} 超过 {max} 上限。",
   "tools.audio.errorGoogleDrive": "无法直接播放 Google Drive 中的音频。请改为下载文件后在此上传。",
   "tools.audio.errorOneDrive": "无法直接播放 OneDrive 中的音频。请改为下载文件后在此上传。",
+  "tools.audio.errorBadge": "唱针跳针了",
   "tools.audio.errorReplace": "替换",
   "tools.audio.titlePlaceholder": "曲目标题",
   "tools.audio.artistPlaceholder": "艺人",

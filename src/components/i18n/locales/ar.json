@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "المقطع الصوتي كبير جدًا. حجمه {size}، وهو يتجاوز الحد الأقصى {max}.",
   "tools.audio.errorGoogleDrive": "لا يمكن تشغيل الصوت من Google Drive مباشرةً. نزّل الملف وارفعه هنا بدلاً من ذلك.",
   "tools.audio.errorOneDrive": "لا يمكن تشغيل الصوت من OneDrive مباشرةً. نزّل الملف وارفعه هنا بدلاً من ذلك.",
+  "tools.audio.errorBadge": "قفزت الإبرة",
   "tools.audio.errorReplace": "استبدال",
   "tools.audio.titlePlaceholder": "عنوان المقطع",
   "tools.audio.artistPlaceholder": "الفنان",

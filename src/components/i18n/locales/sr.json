@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Аудио је превелики. {size} прелази ограничење од {max}.",
   "tools.audio.errorGoogleDrive": "Звук са Google Drive-а није могуће репродуковати директно. Уместо тога, преузмите датотеку и отпремите је овде.",
   "tools.audio.errorOneDrive": "Звук са OneDrive-а није могуће репродуковати директно. Уместо тога, преузмите датотеку и отпремите је овде.",
+  "tools.audio.errorBadge": "Игла је прескочила",
   "tools.audio.errorReplace": "Замени",
   "tools.audio.titlePlaceholder": "Назив нумере",
   "tools.audio.artistPlaceholder": "Извођач",

@@ -262,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 576 + 114 + 61 + 4 closure for all 755 keys', () => {
+  it('rebuilds a disjoint 577 + 114 + 61 + 4 closure for all 756 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -276,7 +276,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(755);
+    expect(lifecycle.size).toBe(756);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -310,7 +310,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +9: that sheet also names markup tools by literal (see below).
       // +2: the table grips name their merge-lock tooltips by literal.
       // The video context menu calls ctxCopyUrlAtTime and ctxStats by literal.
-      'executable-literal': 576,
+      'executable-literal': 577,
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
       // when the video settings became one pane (1b400077); still shipped.

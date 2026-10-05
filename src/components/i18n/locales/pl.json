@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Plik audio jest za duży. Rozmiar {size} przekracza limit {max}.",
   "tools.audio.errorGoogleDrive": "Dźwięku z Dysku Google nie można odtworzyć bezpośrednio. Pobierz plik i zamiast tego prześlij go tutaj.",
   "tools.audio.errorOneDrive": "Dźwięku z usługi OneDrive nie można odtworzyć bezpośrednio. Pobierz plik i zamiast tego prześlij go tutaj.",
+  "tools.audio.errorBadge": "Igła przeskoczyła",
   "tools.audio.errorReplace": "Zamień",
   "tools.audio.titlePlaceholder": "Tytuł utworu",
   "tools.audio.artistPlaceholder": "Wykonawca",

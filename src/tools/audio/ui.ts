@@ -135,11 +135,6 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
 
 export type ErrorService = 'google-drive' | 'onedrive';
 
-const SERVICE_NAMES: Record<ErrorService, string> = {
-  'google-drive': 'Google Drive',
-  onedrive: 'OneDrive',
-};
-
 /** Bars in the dead waveform; the glitch sits a little before the middle. */
 const FLATLINE_BARS = 48;
 const GLITCH_BARS = [19, 20, 21];
@@ -148,6 +143,8 @@ export interface ErrorStateOptions {
   message: string;
   /** The share service the link came from, when that is why it failed. */
   service?: ErrorService;
+  /** Short decorative label above the message. */
+  badge?: string;
   replaceLabel: string;
   onReplace(): void;
   /** Offer a file picker right on the card. Omit when uploading is not allowed. */
@@ -182,12 +179,12 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   const body = document.createElement('div');
   body.className = 'blok-audio-error-state__body';
 
-  if (opts.service) {
+  if (opts.badge) {
     const source = document.createElement('span');
     source.className = 'blok-audio-error-state__source';
     source.setAttribute('data-role', 'audio-error-source');
     source.setAttribute('aria-hidden', 'true');
-    source.textContent = SERVICE_NAMES[opts.service];
+    source.textContent = opts.badge;
     body.append(source);
   }
 

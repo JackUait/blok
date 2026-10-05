@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "აუდიო ძალიან დიდია. ზომა: {size}; ლიმიტი: {max}.",
   "tools.audio.errorGoogleDrive": "Google Drive-ის აუდიოს პირდაპირ დაკვრა შეუძლებელია. ჩამოტვირთეთ ფაილი და ამის ნაცვლად აქ ატვირთეთ.",
   "tools.audio.errorOneDrive": "OneDrive-ის აუდიოს პირდაპირ დაკვრა შეუძლებელია. ჩამოტვირთეთ ფაილი და ამის ნაცვლად აქ ატვირთეთ.",
+  "tools.audio.errorBadge": "ნემსი გადახტა",
   "tools.audio.errorReplace": "ჩანაცვლება",
   "tools.audio.titlePlaceholder": "ჩანაწერის სათაური",
   "tools.audio.artistPlaceholder": "შემსრულებელი",

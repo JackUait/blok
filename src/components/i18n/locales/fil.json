@@ -624,6 +624,7 @@
   "tools.audio.errorFileTooLarge": "Masyadong malaki ang audio. Lumampas ang {size} sa limitasyon na {max}.",
   "tools.audio.errorGoogleDrive": "Hindi direktang mapapatugtog ang audio mula sa Google Drive. I-download ang file at i-upload na lang ito rito.",
   "tools.audio.errorOneDrive": "Hindi direktang mapapatugtog ang audio mula sa OneDrive. I-download ang file at i-upload na lang ito rito.",
+  "tools.audio.errorBadge": "Lumaktaw ang karayom",
   "tools.audio.errorReplace": "Palitan",
   "tools.audio.titlePlaceholder": "Pamagat ng track",
   "tools.audio.artistPlaceholder": "Artista",

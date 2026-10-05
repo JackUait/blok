@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "דער אַודיאָ איז צו גרויס. {size} גייט אריבער דעם {max} לימיט.",
   "tools.audio.errorGoogleDrive": "מע קען נישט שפּילן קלאַנג פֿון Google Drive דירעקט. אַנשטאָט דעם, לאָדט אַראָפּ די טעקע און לאָדט זי דאָ אַרויף.",
   "tools.audio.errorOneDrive": "מע קען נישט שפּילן קלאַנג פֿון OneDrive דירעקט. אַנשטאָט דעם, לאָדט אַראָפּ די טעקע און לאָדט זי דאָ אַרויף.",
+  "tools.audio.errorBadge": "די נאָדל איז געשפּרונגען",
   "tools.audio.errorReplace": "אויסבייטן",
   "tools.audio.titlePlaceholder": "טרעק־טיטל",
   "tools.audio.artistPlaceholder": "קינסטלער",

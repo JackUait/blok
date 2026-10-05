@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Het audiobestand is te groot. {size} overschrijdt de limiet van {max}.",
   "tools.audio.errorGoogleDrive": "Audio uit Google Drive kan niet rechtstreeks worden afgespeeld. Download het bestand en upload het in plaats daarvan hier.",
   "tools.audio.errorOneDrive": "Audio uit OneDrive kan niet rechtstreeks worden afgespeeld. Download het bestand en upload het in plaats daarvan hier.",
+  "tools.audio.errorBadge": "De naald versprong",
   "tools.audio.errorReplace": "Vervangen",
   "tools.audio.titlePlaceholder": "Titel",
   "tools.audio.artistPlaceholder": "Artiest",

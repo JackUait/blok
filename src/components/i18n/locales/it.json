@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "Il file audio è troppo grande. {size} supera il limite di {max}.",
   "tools.audio.errorGoogleDrive": "L’audio da Google Drive non può essere riprodotto direttamente. Scarica il file e caricalo qui.",
   "tools.audio.errorOneDrive": "L’audio da OneDrive non può essere riprodotto direttamente. Scarica il file e caricalo qui.",
+  "tools.audio.errorBadge": "La puntina è saltata",
   "tools.audio.errorReplace": "Sostituisci",
   "tools.audio.titlePlaceholder": "Titolo del brano",
   "tools.audio.artistPlaceholder": "Artista",

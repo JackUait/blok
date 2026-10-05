@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "ශ්‍රව්‍යය ඉතා විශාලයි. {size} ප්‍රමාණය {max} සීමාව ඉක්මවයි.",
   "tools.audio.errorGoogleDrive": "Google Drive වෙතින් ශ්‍රව්‍යය සෘජුව වාදනය කළ නොහැක. ඒ වෙනුවට ගොනුව බාගත කර මෙහි උඩුගත කරන්න.",
   "tools.audio.errorOneDrive": "OneDrive වෙතින් ශ්‍රව්‍යය සෘජුව වාදනය කළ නොහැක. ඒ වෙනුවට ගොනුව බාගත කර මෙහි උඩුගත කරන්න.",
+  "tools.audio.errorBadge": "ඉඳිකටුව පැන්නා",
   "tools.audio.errorReplace": "ප්‍රතිස්ථාපනය",
   "tools.audio.titlePlaceholder": "ශ්‍රව්‍ය පථයේ මාතෘකාව",
   "tools.audio.artistPlaceholder": "කලාකරු",

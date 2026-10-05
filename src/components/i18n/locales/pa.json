@@ -626,6 +626,7 @@
   "tools.audio.errorFileTooLarge": "ਆਡੀਓ ਬਹੁਤ ਵੱਡਾ ਹੈ। ਆਕਾਰ: {size}; ਸੀਮਾ: {max}।",
   "tools.audio.errorGoogleDrive": "Google Drive ਤੋਂ ਆਡੀਓ ਸਿੱਧਾ ਨਹੀਂ ਚਲਾਇਆ ਜਾ ਸਕਦਾ। ਫ਼ਾਈਲ ਡਾਊਨਲੋਡ ਕਰਕੇ ਇਸ ਦੀ ਬਜਾਏ ਇੱਥੇ ਅੱਪਲੋਡ ਕਰੋ।",
   "tools.audio.errorOneDrive": "OneDrive ਤੋਂ ਆਡੀਓ ਸਿੱਧਾ ਨਹੀਂ ਚਲਾਇਆ ਜਾ ਸਕਦਾ। ਫ਼ਾਈਲ ਡਾਊਨਲੋਡ ਕਰਕੇ ਇਸ ਦੀ ਬਜਾਏ ਇੱਥੇ ਅੱਪਲੋਡ ਕਰੋ।",
+  "tools.audio.errorBadge": "ਸੂਈ ਤਿਲਕ ਗਈ",
   "tools.audio.errorReplace": "ਬਦਲੋ",
   "tools.audio.titlePlaceholder": "ਟਰੈਕ ਦਾ ਸਿਰਲੇਖ",
   "tools.audio.artistPlaceholder": "ਕਲਾਕਾਰ",

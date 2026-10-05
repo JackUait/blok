@@ -268,31 +268,24 @@
 .blok-embed-window[data-kind='table'] { --_badge-y: 22px; }
 .blok-embed-window[data-kind='calendar'] { --_badge-x: 34px; --_badge-y: 24px; }
 
+/* The provider name stays for screen readers; on screen the logo on the
+   drawing names it, so the field sits right under the window. */
 .blok-embed-empty__readback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--blok-space-1-5);
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 16px;
-  color: var(--blok-text-secondary);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
-.blok-embed-empty__readback[hidden] { display: none; }
-.blok-embed-empty__readback-icon { display: inline-flex; }
-.blok-embed-empty__readback-icon svg { width: 14px; height: 14px; }
 
 
 @media (prefers-reduced-motion: no-preference) {
   .blok-embed-window__brand { animation: blok-embed-brand-in .9s cubic-bezier(0.34, 1.56, 0.64, 1) .32s both; }
   .blok-embed-window[data-anim='caught'] { animation: blok-embed-caught .5s var(--blok-ease-popover); }
   .blok-embed-window[data-anim='rejected'] { animation: blok-embed-rejected .36s ease-in-out; }
-  .blok-embed-empty__readback:not([hidden]) { animation: blok-embed-part-in .3s var(--blok-ease-popover); }
 }
 
-@keyframes blok-embed-part-in {
-  from { opacity: 0; transform: translateY(6px) scale(.85); }
-}
 @keyframes blok-embed-brand-in {
   from { opacity: 0; transform: translateY(-18px) scale(.4) rotate(-14deg); }
 }
@@ -330,7 +323,14 @@
 .blok-embed-empty__bar > :is(.blok-media-empty__embed-mirror, .blok-embed-empty__input) { grid-row: 1; grid-column: 2; }
 /* The mirror must use the input's own size, or the caret drifts off its glyph. */
 .blok-embed-empty__bar > .blok-media-empty__embed-mirror { font-size: inherit; line-height: inherit; }
-.blok-embed-empty__bar[data-valid="true"] .blok-media-empty__url-host { background-size: 100% 1.5px; }
+/* A faint hairline a little below the host; padding moves it down without
+   touching the text, so the caret stays on its glyph. */
+.blok-embed-empty__bar .blok-media-empty__url-host {
+  padding-bottom: 2px;
+  background-image: linear-gradient(color-mix(in srgb, currentColor 30%, transparent), color-mix(in srgb, currentColor 30%, transparent));
+  background-size: 0 1px;
+}
+.blok-embed-empty__bar[data-valid="true"] .blok-media-empty__url-host { background-size: 100% 1px; }
 
 .blok-embed-empty__submit {
   appearance: none;

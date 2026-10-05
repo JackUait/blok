@@ -113,10 +113,6 @@
   40% { transform: scale(1.025) }
 }
 
-@keyframes blok-embed-part-in {
-  from { opacity: 0; transform: translateY(6px) scale(.85) }
-}
-
 @keyframes blok-embed-rejected {
   25%, 75% { transform: translateX(-4px) }
   50% { transform: translateX(4px) }

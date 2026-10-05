@@ -9886,27 +9886,12 @@ span[data-blok-slash-search] {
 }
 
 .blok-embed-empty__readback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--blok-space-1-5);
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 16px;
-  color: var(--blok-text-secondary);
-}
-
-.blok-embed-empty__readback[hidden] {
-  display: none;
-}
-
-.blok-embed-empty__readback-icon {
-  display: inline-flex;
-}
-
-.blok-embed-empty__readback-icon svg {
-  width: 14px;
-  height: 14px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 [@media (prefers-reduced-motion: no-preference)] .blok-embed-window__brand {
@@ -9919,10 +9904,6 @@ span[data-blok-slash-search] {
 
 [@media (prefers-reduced-motion: no-preference)] .blok-embed-window[data-anim='rejected'] {
   animation: blok-embed-rejected .36s ease-in-out;
-}
-
-[@media (prefers-reduced-motion: no-preference)] .blok-embed-empty__readback:not([hidden]) {
-  animation: blok-embed-part-in .3s var(--blok-ease-popover);
 }
 
 .blok-embed-empty__bar {
@@ -9967,8 +9948,14 @@ span[data-blok-slash-search] {
   line-height: inherit;
 }
 
+.blok-embed-empty__bar .blok-media-empty__url-host {
+  padding-bottom: 2px;
+  background-image: linear-gradient(color-mix(in srgb, currentColor 30%, transparent), color-mix(in srgb, currentColor 30%, transparent));
+  background-size: 0 1px;
+}
+
 .blok-embed-empty__bar[data-valid="true"] .blok-media-empty__url-host {
-  background-size: 100% 1.5px;
+  background-size: 100% 1px;
 }
 
 .blok-embed-empty__submit {

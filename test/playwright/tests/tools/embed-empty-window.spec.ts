@@ -38,7 +38,13 @@ test.describe('Embed empty state window', () => {
     await input.fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
 
     await expect(window).toHaveAttribute('data-kind', 'video');
-    await expect(page.getByText('YouTube', { exact: true })).toBeVisible();
+    // The logo on the drawing names the provider; no label row pushes the field down.
+    await expect(window.locator('[data-role="embed-brand"]')).toBeVisible();
+
+    const windowBox = await window.boundingBox();
+    const barBox = await page.locator('[data-role="embed-url-bar"]').boundingBox();
+
+    expect((barBox?.y ?? 0) - ((windowBox?.y ?? 0) + (windowBox?.height ?? 0))).toBeLessThanOrEqual(8);
 
     await input.press('Enter');
 

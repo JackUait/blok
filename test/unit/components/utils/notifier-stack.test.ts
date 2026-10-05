@@ -170,4 +170,15 @@ describe('Notifier card stack', () => {
     retry?.click();
     expect(options.actions?.[0].onClick).toHaveBeenCalledTimes(2);
   });
+
+  it('turns a closed card to dust instead of sliding it out', () => {
+    Object.defineProperty(window, 'matchMedia', { configurable: true, value: (media: string) => ({ matches: false, media }) });
+    show(card('first'));
+    const first = front();
+
+    closeFront();
+    Reflect.deleteProperty(window, 'matchMedia');
+
+    expect([ first?.hasAttribute('data-blok-toast-dust'), first?.classList.contains('animate-notify-slide-out') ]).toEqual([ true, false ]);
+  });
 });

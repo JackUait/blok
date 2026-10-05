@@ -78,9 +78,26 @@
   pointer-events: none;
 }
 
+/*
+  A closed card dissolves from its close side. The 220% gradient's soft band is
+  centred at 110%; dust.ts sheds specks from that edge (edgeAt) — change both together.
+*/
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-dust] {
+  mask-image: linear-gradient(to right, var(--blok-toast-dust-solid) 47%, transparent 53%);
+  mask-size: 220% 100%;
+  mask-repeat: no-repeat;
+  mask-position: calc(var(--_blok-toast-dust) * 100%) 0;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-dust='rtl'] {
+  mask-image: linear-gradient(to left, var(--blok-toast-dust-solid) 47%, transparent 53%);
+  mask-position: calc((1 - var(--_blok-toast-dust)) * 100%) 0;
+}
+
 /* Open only: on close the slide-out has to run, or animationend never comes and the card stays. */
 [data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
-  animation: blok-toast-rise 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* Waits in its peek shape while the closed card turns to dust over it (DUST_MS in dust.ts). */
+  animation: blok-toast-rise 480ms cubic-bezier(0.22, 1, 0.36, 1) 320ms backwards;
 }
 
 [data-blok-interface='notifier'][data-blok-position^='top'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
@@ -88,6 +105,14 @@
 }
 
 [data-blok-interface='notifier'] [data-blok-toast='card'] {
+  /* Dust a closed card turns into (notifier/dust.ts reads these). */
+  --blok-toast-dust-body: #2c2c31;
+  --blok-toast-dust-shade: #1c1c1f;
+  --blok-toast-dust-glint: #f5f5f5;
+  /* Only the mask's alpha counts; any opaque colour works. */
+  --blok-toast-dust-solid: #000;
+  /* Sweep progress, 0 to 1, written each frame by dust.ts. */
+  --_blok-toast-dust: 0;
   --blok-toast-card-pad: 10px 8px 10px 12px;
   --blok-toast-card-gap: 12px;
   --blok-toast-card-row-gap: 8px;
@@ -463,14 +488,19 @@
   to { opacity: 1; translate: 0 0; filter: blur(0); }
 }
 
+/*
+  The next card unfolds from its peek: it starts clipped to the peek's 12px-narrower
+  box and opens to full width, so its text never scales. The end clip is far outside
+  the card: `none` would not interpolate. Fill is backwards only, so the clip lets go after.
+*/
 @keyframes blok-toast-rise {
-  from { opacity: 0.4; translate: 0 calc(-1 * var(--blok-toast-peek)); }
-  to { opacity: 1; translate: 0 0; }
+  from { opacity: 0.55; translate: 0 calc(-1 * var(--blok-toast-peek)); clip-path: inset(0 12px round var(--blok-radius-surface)); }
+  to { opacity: 1; translate: 0 0; clip-path: inset(-64px round var(--blok-radius-surface)); }
 }
 
 @keyframes blok-toast-rise-top {
-  from { opacity: 0.4; translate: 0 var(--blok-toast-peek); }
-  to { opacity: 1; translate: 0 0; }
+  from { opacity: 0.55; translate: 0 var(--blok-toast-peek); clip-path: inset(0 12px round var(--blok-radius-surface)); }
+  to { opacity: 1; translate: 0 0; clip-path: inset(-64px round var(--blok-radius-surface)); }
 }
 
 @keyframes blok-toast-ghost-out {

@@ -2,6 +2,7 @@ import { registerLayer } from '../dismissable-layer';
 import { syncPortalDirection } from '../portal-direction';
 import { promoteToTopLayer, removeFromTopLayer } from '../top-layer';
 
+import { dissolve } from './dust';
 import { alert, confirm, drawResolved, drawSettled, getWrapper, modalCleanups, prompt, setToastDismisser } from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions, NotifierPosition } from './types';
 import { DEFAULT_NOTIFIER_POSITION } from './types';
@@ -250,16 +251,19 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
         frontCard()?.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]')?.focus();
       }
     }
-    dismissWithAnimation(notify, position);
-
-    // Release the Top Layer once the toast has finished animating out and no
-    // other notification remains in the wrapper. Registered after
-    // dismissWithAnimation so it runs *after* that handler removes the node.
-    notify.addEventListener('animationend', () => {
+    // Release the Top Layer once the toast is gone and no other notification remains.
+    const release = (): void => {
       if (wrapper.querySelector(NOTIFICATION_SELECTOR) === null) {
         removeFromTopLayer(wrapper);
       }
-    }, { once: true });
+    };
+
+    if (notify.getAttribute('data-blok-toast') === 'card' && dissolve(notify, release)) {
+      return;
+    }
+    dismissWithAnimation(notify, position);
+    // Registered after dismissWithAnimation so it runs *after* that handler removes the node.
+    notify.addEventListener('animationend', release, { once: true });
   };
 
   // A toast with actions waits for the user. Never pass Infinity instead:

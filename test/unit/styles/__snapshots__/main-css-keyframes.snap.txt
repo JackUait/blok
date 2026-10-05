@@ -849,13 +849,13 @@
 }
 
 @keyframes blok-toast-rise {
-  from { opacity: 0.4; translate: 0 calc(-1 * var(--blok-toast-peek)) }
-  to { opacity: 1; translate: 0 0 }
+  from { opacity: 0.55; translate: 0 calc(-1 * var(--blok-toast-peek)); clip-path: inset(0 12px round var(--blok-radius-surface)) }
+  to { opacity: 1; translate: 0 0; clip-path: inset(-64px round var(--blok-radius-surface)) }
 }
 
 @keyframes blok-toast-rise-top {
-  from { opacity: 0.4; translate: 0 var(--blok-toast-peek) }
-  to { opacity: 1; translate: 0 0 }
+  from { opacity: 0.55; translate: 0 var(--blok-toast-peek); clip-path: inset(0 12px round var(--blok-radius-surface)) }
+  to { opacity: 1; translate: 0 0; clip-path: inset(-64px round var(--blok-radius-surface)) }
 }
 
 @keyframes blok-toast-roll-in {

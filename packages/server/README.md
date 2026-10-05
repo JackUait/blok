@@ -212,6 +212,8 @@ docker run \
 
 `--collab` turns the sync routes on. `--doc-endpoint` names the routes in your own app that the service loads a document from and writes it back to. `BLOK_DOC_ENDPOINT_AUTH` holds the header value those routes expect, sent verbatim on every call. It has to be a single line: a value carrying a carriage return or newline refuses to start rather than losing the header on every call. `--collab-dir` (or `--collab-s3-prefix`) is where the working copy lives. It holds document content, so it must not be publicly readable, and it may not sit inside `--storage-dir`, where everything is served. In-process, the same switches are `options.CollabEnabled` and `options.DocEndpoint`, and the app must call `app.UseWebSockets()`.
 
+Add `--collab-journal` (or set `BLOK_COLLAB_JOURNAL=true`) to keep an operation journal under `--collab-dir`. This turns on the acknowledged profile described below. It needs `--collab`. It is refused with `--collab-s3-prefix`: the journal is on this machine's disk, so a second instance sharing the bucket would not see it. In-process, the switch is `options.CollabJournal`. A store registered with `UseCollabOperationStore<T>()` replaces it. Turning it off again is not a restart: follow [Going back to the working-copy profile](#going-back-to-the-working-copy-profile) first, or documents edited under the journal reopen as they were on the day you switched.
+
 ## Point the editor at it
 
 ```ts
@@ -270,20 +272,31 @@ A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed wi
 | `GET /sync/{doc}` | WebSocket; the editor's live collaboration connection to one document (with `--collab`) |
 | `POST /sync/{doc}/reset` | Drops the working copy, reloads the document from your endpoint and tells every open tab to pick it up |
 | `POST /sync/{doc}/edit` | Inserts, updates or removes blocks from outside; all-or-nothing, reaches every open tab, and requires an idempotency key |
+| `GET /sync/{doc}/state` | Returns the live document as JSON, with the journal head it reflects when there is a journal |
 
 `POST /sync/{doc}/edit` needs one `Blok-Idempotency-Key` header with 1 to 128 printable ASCII characters. With an operation journal, retrying the same key returns the first result without applying it again; reusing it for different work receives 409. A 204 then means the edit is durable, and the response carries `Blok-Doc-Lineage` and `Blok-Doc-Sequence`. A working-copy-only service answers 204 without those headers and without that promise. If that journal cannot commit, the endpoint returns 503 without relaying the edit. A working-copy-only service does not deduplicate the key or make reuse a 409: requests have ordinary retry behavior, and its 204 starts the existing write-back retry path.
+
+An edit may also send `If-Match: "<lineage>:<sequence>"`. It is one quoted tag, built from the `Blok-Doc-Lineage` and `Blok-Doc-Sequence` values exactly as the service prints them.
+
+- With a journal, the edit applies only if the document is still at that head. Otherwise it answers 412 and applies nothing. The 412 carries the current `Blok-Doc-Lineage` and `Blok-Doc-Sequence`.
+- A key that is already committed still returns its first result, even if its `If-Match` is now stale.
+- A working-copy-only service has no head to check, so any `If-Match` answers 428 and applies nothing.
+- A list, `*`, a weak tag, or any other shape answers 400, with or without a journal.
+- A 412 commits nothing, so you may retry the same key with a fresh tag.
+
+`GET /sync/{doc}/state` returns the live document as `application/json`, in the same shape your document endpoint receives. It includes edits made a moment ago. With a journal, it also sends `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag: "<lineage>:<sequence>"`, naming the exact head the body reflects. Send that `ETag` back as `If-Match` to edit only if nothing changed in between. A working-copy-only service sends the body without those three headers. A purged document answers 403, and a service that is shutting down answers 503.
 
 Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
 
 A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`.
 
-A ticket with `write: false` may call `GET /unfurl` and open `GET /sync/{doc}` read-only; both upload routes, `reset` and `edit` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset` and its `edit` are refused when the pass names no document or a different one. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
+A ticket with `write: false` may call `GET /unfurl`, `GET /sync/{doc}/state` and open `GET /sync/{doc}` read-only; both upload routes, `reset` and `edit` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset`, its `edit` and its `state` are refused when the pass names no document or a different one. `state` asks your `IBlokAuthorization` for read access only. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
 
 ## Live collaboration profiles
 
 `--collab` (or `options.CollabEnabled`) gives you the working-copy profile: the service keeps a working copy of every open document and writes it back to your document endpoint. Nothing keeps a record of the individual changes that produced it, so `POST /sync/{doc}/edit` cannot tell a retry from new work, and a socket gets no per-change receipt.
 
-Registering an operation store turns on the acknowledged profile. The journal becomes the record. Every accepted change is appended to it before it is broadcast. The edit route deduplicates its `Blok-Idempotency-Key`, and answers 409 for a key reused for different work. A socket that negotiated `blok-sync.v2` receives one acknowledgement per operation, naming the sequence it committed at. The service ships no store you can switch on: there is no flag for one on the standalone host, and the working set under `--collab-dir` or `--collab-s3-prefix` is not a journal. An in-process app registers its own. The store's own bodies are elided below. Writing them is the work, and the laws further down are what they have to keep; the registration is complete as written:
+Registering an operation store, or `--collab-journal`, turns on the acknowledged profile. The journal becomes the record. Every accepted change is appended to it before it is broadcast. The edit route deduplicates its `Blok-Idempotency-Key`, and answers 409 for a key reused for different work. A socket that negotiated `blok-sync.v2` receives one acknowledgement per operation, naming the sequence it committed at. The standalone host's `--collab-journal` puts the built-in local journal under `--collab-dir`. It serves one instance only. The working set under `--collab-dir` or `--collab-s3-prefix` is not a journal. An app that runs more than one instance registers its own store. The store's own bodies are elided below. Writing them is the work, and the laws further down are what they have to keep; the registration is complete as written:
 
 ```csharp
 using Blok.Server.AspNetCore;
@@ -338,7 +351,7 @@ A backend that is not .NET implements the wire protocol instead of this interfac
 
 Stock `y-websocket` never offers `blok-sync.v2`, so it negotiates v1 and is compatible with the working-copy profile alone: ordinary y-protocol sync, no acknowledgement, no durability claim. On a journal-backed document a v1 write is still journaled before it is relayed; it earns no receipt. The same holds for any client that offers only v1.
 
-S3 stays v1-only. `--collab-s3-prefix` puts the working set in your bucket, and there is no S3 operation store, so an S3-configured service runs the working-copy profile unless it also registers one.
+S3 stays v1-only. `--collab-s3-prefix` puts the working set in your bucket, and there is no S3 operation store, so an S3-configured service runs the working-copy profile unless it also registers one. `--collab-journal` is refused next to `--collab-s3-prefix`.
 
 ### Going back to the working-copy profile
 

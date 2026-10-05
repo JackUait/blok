@@ -376,6 +376,92 @@ public sealed class HostCollabTests
     Assert.Equal(0, plainOptions.CollabMaxConnections);
   }
 
+  [Fact]
+  public async Task TheCollabJournalFlagTurnsOnReceiptsAndKeyDedupeOnEdit()
+  {
+    var root = UniqueDirectory("blok-host-journal");
+    await using var endpoint = await FixtureDocEndpoint.StartAsync();
+
+    try
+    {
+      await using var app = await StartCollabHostAsync(
+          endpoint,
+          Path.Combine(root, "collab"),
+          HostRequestTimeouts.DefaultRequestTimeout,
+          HostRequestTimeouts.DefaultKeepAliveTimeout,
+          configure: options => options.CollabJournal = true);
+      using var client = new HttpClient { BaseAddress = new Uri($"http://{ListenAddress(app)}") };
+
+      using var first = await PostEditAsync(client, "journal-key", "first");
+      using var replay = await PostEditAsync(client, "journal-key", "first");
+      using var next = await PostEditAsync(client, "journal-key-2", "second");
+
+      Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
+      Assert.Equal(HttpStatusCode.NoContent, replay.StatusCode);
+      var lineage = Assert.Single(first.Headers.GetValues("Blok-Doc-Lineage"));
+      Assert.Matches("^[0-9a-f]{32}$", lineage);
+      Assert.Equal("1", Assert.Single(first.Headers.GetValues("Blok-Doc-Sequence")));
+      Assert.Equal(lineage, Assert.Single(replay.Headers.GetValues("Blok-Doc-Lineage")));
+      Assert.Equal("1", Assert.Single(replay.Headers.GetValues("Blok-Doc-Sequence")));
+      Assert.Equal("2", Assert.Single(next.Headers.GetValues("Blok-Doc-Sequence")));
+
+      using var state = await client.GetAsync($"/sync/{DocId}/state");
+      Assert.Equal(HttpStatusCode.OK, state.StatusCode);
+      Assert.Equal($"\"{lineage}:2\"", Assert.Single(state.Headers.GetValues("ETag")));
+      // An insert with no "after" goes first, so the later edit leads.
+      Assert.Equal(
+          ["second", "first"],
+          BlockIds(JsonNode.Parse(await state.Content.ReadAsStringAsync())));
+      Assert.True(Directory.Exists(Path.Combine(root, "collab")));
+      Assert.NotEmpty(Directory.GetDirectories(Path.Combine(root, "collab"), "*.journal"));
+    }
+    finally
+    {
+      DeleteDirectory(root);
+    }
+  }
+
+  [Fact]
+  public async Task WithoutTheCollabJournalFlagAnEditCarriesNoReceipt()
+  {
+    var root = UniqueDirectory("blok-host-no-journal");
+    await using var endpoint = await FixtureDocEndpoint.StartAsync();
+
+    try
+    {
+      await using var app = await StartCollabHostAsync(
+          endpoint,
+          Path.Combine(root, "collab"),
+          HostRequestTimeouts.DefaultRequestTimeout,
+          HostRequestTimeouts.DefaultKeepAliveTimeout);
+      using var client = new HttpClient { BaseAddress = new Uri($"http://{ListenAddress(app)}") };
+
+      using var response = await PostEditAsync(client, "plain-key", "first");
+
+      Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+      Assert.False(response.Headers.Contains("Blok-Doc-Sequence"));
+      Assert.False(response.Headers.Contains("Blok-Doc-Lineage"));
+    }
+    finally
+    {
+      DeleteDirectory(root);
+    }
+  }
+
+  private static Task<HttpResponseMessage> PostEditAsync(HttpClient client, string key, string blockId)
+  {
+    var request = new HttpRequestMessage(HttpMethod.Post, $"/sync/{DocId}/edit")
+    {
+      Content = new StringContent(
+          $$"""{ "ops": [ { "op": "insert", "id": "{{blockId}}", "block": { "type": "paragraph", "data": { "text": "{{blockId}}" } } } ] }""",
+          Encoding.UTF8,
+          "application/json"),
+    };
+    request.Headers.TryAddWithoutValidation("Blok-Idempotency-Key", key);
+
+    return client.SendAsync(request);
+  }
+
   private static long? MaxUpgradedConnections(WebApplication app)
   {
     return app.Services

@@ -527,12 +527,17 @@ internal sealed class CollabRoom : IDisposable
   /// <summary>
   /// Block-level edits from POST /sync/{doc}/edit. Null when the room has
   /// already closed — the caller should retry on a fresh room.
+  ///
+  /// <c>expect</c> is the journal head the caller saw. It is checked after the
+  /// op-id lookup, so a committed retry still gets its own receipt, and in the
+  /// same lane hold as the apply, so nothing can land between check and write.
   /// </summary>
   internal Task<CollabEditResult?> EditAsync(
       IReadOnlyList<CollabEditOp> ops,
       string operationId,
       ReadOnlyMemory<byte> digest,
       string? actorId,
+      CollabEditPrecondition? expect,
       CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(ops);
@@ -591,16 +596,34 @@ internal sealed class CollabRoom : IDisposable
               return new CollabEditResult(CollabEditStatus.Unavailable, null);
             }
 
+            // A room this request loaded has no member to arm its eviction,
+            // and every early return below would otherwise keep the journal lock.
             switch (committed.Outcome)
             {
               case CollabOperationLookupOutcome.Duplicate:
+                UpdateEvictionLocked();
+
                 return new CollabEditResult(
                     CollabEditStatus.Applied,
                     null,
                     new CollabEditReceipt(tag, committed.ServerSequence));
 
               case CollabOperationLookupOutcome.Conflict:
+                UpdateEvictionLocked();
+
                 return new CollabEditResult(CollabEditStatus.Conflict, null);
+            }
+
+            if (expect is not null &&
+                (!string.Equals(expect.Lineage, tag.Lineage, StringComparison.Ordinal) ||
+                 expect.Sequence != committedThrough))
+            {
+              UpdateEvictionLocked();
+
+              return new CollabEditResult(
+                  CollabEditStatus.PreconditionFailed,
+                  null,
+                  new CollabEditReceipt(tag, committedThrough));
             }
           }
 
@@ -696,6 +719,69 @@ internal sealed class CollabRoom : IDisposable
               CollabEditStatus.Applied,
               null,
               new CollabEditReceipt(tag, sequence.Value));
+        },
+        cancellationToken);
+  }
+
+  /// <summary>
+  /// The export and the head it reflects, read in one lane hold so no edit
+  /// can land between them. Null when the room has already closed.
+  /// </summary>
+  internal Task<CollabStateResult?> StateAsync(CancellationToken cancellationToken)
+  {
+    return RunAsync<CollabStateResult?>(
+        async () =>
+        {
+          if (PurgeRequested)
+          {
+            return new CollabStateResult(CollabStateStatus.Purged, []);
+          }
+
+          if (state == RoomState.Closed)
+          {
+            return null;
+          }
+
+          if (state == RoomState.New && await TryLoadLocked() is { } failure)
+          {
+            await CloseRoomLocked(null);
+
+            return new CollabStateResult(
+                failure.OpenOutcome switch
+                {
+                  CollabDocumentOpenOutcome.Purged => CollabStateStatus.Purged,
+                  CollabDocumentOpenOutcome.DocumentOpenElsewhere => CollabStateStatus.Unavailable,
+                  _ => CollabStateStatus.SeedFailed,
+                },
+                [],
+                Error: failure.Error);
+          }
+
+          if (PurgeRequested)
+          {
+            return new CollabStateResult(CollabStateStatus.Purged, []);
+          }
+
+          // A room this read loaded has no member to arm its eviction.
+          UpdateEvictionLocked();
+
+          byte[] json;
+
+          try
+          {
+            json = DocEndpointClient.Serialize(converter.Export(doc!));
+          }
+          catch (Exception error)
+          {
+            log?.Invoke($"collab: room \"{DocId}\" could not export its state: {error.Message}");
+
+            return new CollabStateResult(CollabStateStatus.ExportFailed, [], Error: error);
+          }
+
+          return new CollabStateResult(
+              CollabStateStatus.Ready,
+              json,
+              session is null ? null : new CollabEditReceipt(tag, committedThrough));
         },
         cancellationToken);
   }

@@ -104,6 +104,7 @@ public sealed class SyncEndpointTests
     Assert.Contains("/blok/sync/{doc}", warning.Message, StringComparison.Ordinal);
     Assert.Contains("/blok/sync/{doc}/reset", warning.Message, StringComparison.Ordinal);
     Assert.Contains("/blok/sync/{doc}/edit", warning.Message, StringComparison.Ordinal);
+    Assert.Contains("GET /blok/sync/{doc}/state", warning.Message, StringComparison.Ordinal);
     // The standalone host forwards only this category to stderr, and its
     // none mode is loopback-only by validation: the warning is in-process only.
     Assert.NotEqual("Blok.Server.Collab", warning.Category);

@@ -21,6 +21,8 @@ documents both entry shapes field by field.
 Sections 1–10 fix the bytes. Section 11 fixes the eight behaviours a durable v2
 server owes on top of them, and names the executable case that proves each one
 against the reference server.
+Section 12 covers the HTTP edit and state routes that share the journal with
+the socket.
 
 ## 1. Notation
 
@@ -808,3 +810,68 @@ sends `oversized-update`.** In this implementation that verdict is reached on
 the client, before the frame is sent, against the limit the type-101 frame
 announced. A server MAY send it; a client MUST handle it either way, and every
 implementation MUST accept an unrecognised code as a final rejection.
+
+## 12. HTTP edit and state
+
+A backend that is not a socket peer edits through `POST /sync/{doc}/edit` and
+reads through `GET /sync/{doc}/state`. On a journal-backed document both name
+the journal head with the same two values:
+
+| Header | Value |
+| --- | --- |
+| `Blok-Doc-Lineage` | The lineage, `^[0-9a-f]{32}$`. |
+| `Blok-Doc-Sequence` | The highest committed sequence on that lineage, in decimal with no sign and no leading zero. `0` means nothing is committed yet. |
+
+### 12.1 Edit receipts
+
+A 204 from the edit route means the edit is committed. It carries the lineage
+and the sequence the edit committed at. `Blok-Idempotency-Key` identifies the
+edit; the server derives the journal's operation id from it. The same key with
+the same canonical body returns the first receipt without applying anything.
+The same key with a different body answers 409. A server without a journal
+sends neither header and does not deduplicate.
+
+### 12.2 `If-Match` on an edit
+
+An edit MAY send `If-Match` with exactly one strong tag:
+
+```text
+If-Match: "<lineage>:<sequence>"
+```
+
+`<lineage>` and `<sequence>` are written exactly as the two headers above print
+them. The server MUST answer 400 for anything else: a list, `*`, a weak `W/`
+tag, an unquoted value, a lineage that is not 32 lowercase hex, or a sequence
+with a sign or a leading zero. This check comes first, with or without a
+journal.
+
+On a journal-backed document the server checks the tag after the key lookup and
+before it applies anything, in one step with the apply:
+
+1. A key that is already committed returns its first receipt, even when the
+   tag no longer matches. A retry must not turn into a 412.
+2. If the document's current lineage or sequence differs from the tag, the
+   server answers 412. It applies, journals and relays nothing. The 412
+   carries the current `Blok-Doc-Lineage` and `Blok-Doc-Sequence`. Nothing is
+   committed under the key, so the caller may retry the same key with a fresh
+   tag.
+3. Otherwise the edit applies as usual and commits at the next sequence.
+
+A server without a journal has no head to compare, so it MUST answer 428 to any
+well-formed `If-Match` and apply nothing. A caller that sent a guard must never get an
+unguarded write.
+
+### 12.3 State
+
+`GET /sync/{doc}/state` returns the live document as `application/json`, in the
+shape the document endpoint receives on write-back. It reflects every edit
+committed before the request. It needs read access only, and the same document
+scope as the edit route.
+
+On a journal-backed document the response also carries `Blok-Doc-Lineage`,
+`Blok-Doc-Sequence` and `ETag: "<lineage>:<sequence>"`. All three describe the
+exact head the body reflects: the server reads the body and the head together.
+The `ETag` is a valid `If-Match` for the next edit. A server without a journal
+sends the body without those three headers.
+
+A purged document answers 403. A server that is shutting down answers 503.

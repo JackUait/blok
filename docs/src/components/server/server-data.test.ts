@@ -361,6 +361,7 @@ describe('server docs data', () => {
       '--auth',
       '--collab',
       '--collab-dir',
+      '--collab-journal',
       '--collab-s3-prefix',
       '--doc-endpoint',
       '--doc-endpoint-auth',
@@ -595,12 +596,13 @@ describe('server docs data', () => {
   });
 
   // The idempotency rules the entry below states hold only where an operation
-  // journal exists, and the service registers none: no flag turns one on and
-  // the working copy is not one, so the reader has to be told the seam is
-  // theirs to fill before the next entry promises them a retry-safe edit.
-  it('says a retry-safe outside edit needs an operation journal you write', () => {
+  // journal exists. The working copy is not one, so the reader has to be told
+  // the two ways to get one before the next entry promises a retry-safe edit:
+  // the standalone host's --collab-journal, or a store they write.
+  it('says a retry-safe outside edit needs an operation journal, and how to get one', () => {
     const limits = serverLimits.map((l) => l.id);
-    const body = serverLimits.find((l) => l.id === 'collab-operation-journal')?.body ?? '';
+    const entry = serverLimits.find((l) => l.id === 'collab-operation-journal');
+    const body = entry?.body ?? '';
 
     expect(limits.indexOf('collab-operation-journal')).toBe(
       limits.indexOf('collab-rollback-boundary') - 1,
@@ -608,7 +610,14 @@ describe('server docs data', () => {
     expect(body).toContain('Blok-Idempotency-Key');
     expect(body).toMatch(/409/);
     expect(body).toMatch(/503/);
-    expect(body).toMatch(/no flag/i);
+    // --collab-journal exists now, so the old "no flag" claim is a lie.
+    expect(body).not.toMatch(/no flag/i);
+    expect(entry?.title).not.toMatch(/you write/i);
+    expect(body).toContain('--collab-journal');
+    expect(body).toContain('BLOK_COLLAB_JOURNAL');
+    expect(body).toMatch(/local disk/i);
+    expect(body).toMatch(inOrder('--collab-journal', 'needs --collab', 'refused', '--collab-s3-prefix'));
+    expect(body).toContain('options.CollabJournal');
     expect(body).toContain('--collab-dir');
     expect(body).toContain('--collab-s3-prefix');
     expect(body).toContain('ICollabOperationStore');
@@ -631,6 +640,11 @@ describe('server docs data', () => {
     // `getTranslation` falls back to English on a miss, so only Cyrillic text
     // proves the Russian key is really there.
     expect(getTranslation('ru', key)).toMatch(/журнал/i);
+    expect(getTranslation('ru', key)).toContain('--collab-journal');
+    expect(getTranslation('ru', key)).toContain('BLOK_COLLAB_JOURNAL');
+    expect(getTranslation('ru', key)).toMatch(/локальном диске/);
+    expect(getTranslation('ru', key)).not.toMatch(/Никакой флаг/);
+    expect(getTranslation('ru', 'server.limits.collab-operation-journal.title')).not.toMatch(/пишете вы/);
   });
 
   // Purge refuses a custom journal that cannot purge. Hosts must learn that
@@ -791,6 +805,25 @@ describe('server docs data', () => {
     expect(body).toContain('has no children list, so nothing can be placed under it.');
     expect(body).toContain('is not in the document order, so nothing can be placed after it.');
     expect(body).toMatch(/422/);
+    // The guard and the read that feeds it. A caller that sends If-Match must
+    // learn each answer it can get, including 428 where there is no journal.
+    expect(body).toMatch(inOrder('If-Match', '<lineage>:<sequence>', '412', 'first result', '428', '400'));
+    expect(body).toContain('GET /sync/{doc}/state');
+    expect(body).toMatch(/read pass/i);
+    expect(body).toMatch(inOrder('GET /sync/{doc}/state', 'ETag', 'If-Match'));
+  });
+
+  it('renders the If-Match and state notes in both shipped locales', () => {
+    const key = 'server.limits.collab-reset.body';
+    const body = serverLimits.find((l) => l.id === 'collab-reset')?.body ?? '';
+
+    expect(getTranslation('en', key)).toBe(body);
+    expect(getTranslation('ru', key)).toMatch(inOrder('If-Match', '412', '428', '400'));
+    expect(getTranslation('ru', key)).toContain('GET /sync/{doc}/state');
+    // Latin tokens survive the English fallback; only Cyrillic proves the
+    // Russian body carries the new notes.
+    expect(getTranslation('ru', key)).toMatch(/пропуска на чтение/);
+    expect(getTranslation('ru', key)).toMatch(/свежим тегом/);
   });
 
   it('shows the host access lifecycle without suggesting reset or host UI', () => {

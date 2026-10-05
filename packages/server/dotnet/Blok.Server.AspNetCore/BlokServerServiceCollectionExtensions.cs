@@ -133,6 +133,14 @@ public static class BlokServerServiceCollectionExtensions
           "The collaboration working set needs CollabDirectory or CollabS3Prefix.");
     });
 
+    // TryAdd, so a store a host registered first, or a later
+    // UseCollabOperationStore<T>(), wins over the built-in one.
+    if (options.CollabEnabled && options.CollabJournal)
+    {
+      services.TryAddSingleton<ICollabOperationStore>(_ =>
+          new LocalCollabOperationStore(options.CollabDirectory));
+    }
+
     // The store is optional: GetService (not GetRequiredService) returns null on
     // a server with no ICollabOperationStore registered, which SyncHandshake
     // then treats the same as v2 being switched off.

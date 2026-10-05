@@ -115,6 +115,11 @@ public sealed class CollabOperationFenceLostException : Exception
 /// <c>AddBlokServer(…).UseCollabOperationStore&lt;T&gt;()</c>. It is resolved as
 /// a singleton and must be safe to use from several documents at once.
 /// </para>
+/// <para>
+/// To purge documents (<see cref="ICollabDocumentPurger"/>), the same class
+/// must also implement <see cref="ICollabOperationPurgeStore"/>. Without it a
+/// purge throws <see cref="NotSupportedException"/> and changes nothing.
+/// </para>
 /// </remarks>
 public interface ICollabOperationStore
 {

@@ -291,6 +291,58 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
+  public void TheCollabJournalOptionRegistersTheLocalJournalUnlessAStoreReplacesIt()
+  {
+    static void Journal(BlokServerOptions options)
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = "https://app.example.com/api/blok-docs";
+      options.CollabDirectory = "/srv/blok/collab";
+      options.CollabJournal = true;
+    }
+
+    var services = new ServiceCollection();
+    services.AddBlokServer(Journal);
+
+    using (var provider = services.BuildServiceProvider())
+    {
+      Assert.IsType<LocalCollabOperationStore>(
+          provider.GetRequiredService<ICollabOperationStore>());
+    }
+
+    var replaced = new ServiceCollection();
+    replaced.AddBlokServer(Journal).UseCollabOperationStore<StubCollabOperationStore>();
+
+    using var replacedProvider = replaced.BuildServiceProvider();
+    Assert.IsType<StubCollabOperationStore>(
+        replacedProvider.GetRequiredService<ICollabOperationStore>());
+  }
+
+  [Fact]
+  public void RejectsTheCollabJournalWithACollabS3Prefix()
+  {
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        new ServiceCollection().AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = "https://app.example.com/api/blok-docs";
+          options.CollabS3Prefix = "collab/";
+          options.S3Endpoint = "https://s3.example.com";
+          options.S3Region = "eu-central-1";
+          options.S3Bucket = "media";
+          options.S3BucketUrl = "https://cdn.example.com/media";
+          options.S3AccessKey = "access-key";
+          options.S3SecretKey = "secret-key";
+          options.CollabJournal = true;
+        }));
+
+    Assert.StartsWith(
+        "--collab-journal cannot be used with --collab-s3-prefix",
+        error.Message,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
   public void ReplacesOnlyTheCollabOperationStore()
   {
     var services = new ServiceCollection();

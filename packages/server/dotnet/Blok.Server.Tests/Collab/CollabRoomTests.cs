@@ -2367,6 +2367,228 @@ public sealed class CollabRoomTests
   }
 
   [Fact]
+  public async Task StateIsTheLiveExportAndTheHeadItReflects()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var edit = await HttpEdit(manager, OpOne, "!");
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Ready, state.Status);
+    Assert.Equal("""{"text":"hello!"}""", Encoding.UTF8.GetString(state.Json));
+    Assert.Equal(edit.Receipt, state.Head);
+  }
+
+  [Fact]
+  public async Task StateWithoutAJournalHasNoHead()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    await manager.EditAsync(DocId, [Appending("b-1", "!")], CancellationToken.None);
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Ready, state.Status);
+    Assert.Equal("""{"text":"hello!"}""", Encoding.UTF8.GetString(state.Json));
+    Assert.Null(state.Head);
+  }
+
+  [Fact]
+  public async Task AColdRoomLoadedByStateIsEvicted()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Ready, state.Status);
+    Assert.Equal(1, manager.LiveRoomCount);
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+  }
+
+  [Fact]
+  public async Task StateOfAPurgedDocumentIsRefused()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await HttpEdit(manager, OpOne, "!");
+    await ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+        DocId,
+        _ => ValueTask.FromResult(true));
+    var loads = endpoint.Loads;
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Purged, state.Status);
+    Assert.Equal(loads, endpoint.Loads);
+  }
+
+  [Fact]
+  public async Task StateIsRefusedWhileDraining()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await manager.DrainAsync(CancellationToken.None);
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Draining, state.Status);
+  }
+
+  [Fact]
+  public async Task AnExportFailureIsReportedWithoutClosingTheRoom()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await HttpEdit(manager, OpOne, "!");
+    converter.NextExportFailure = new InvalidOperationException("unreadable block");
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.ExportFailed, state.Status);
+    Assert.Equal(1, manager.LiveRoomCount);
+  }
+
+  [Fact]
+  public async Task AColdRoomLoadedByACommittedKeyReplayIsStillEvicted()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await HttpEdit(manager, OpOne, "!");
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the first room to be evicted");
+
+    var replay = await HttpEdit(manager, OpOne, "!");
+
+    Assert.Equal(CollabEditStatus.Applied, replay.Status);
+    Assert.Equal(1, manager.LiveRoomCount);
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the replay's room to be evicted");
+  }
+
+  [Fact]
+  public async Task AColdRoomLoadedByAReusedKeyConflictIsStillEvicted()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await HttpEdit(manager, OpOne, "!");
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the first room to be evicted");
+
+    var conflict = await HttpEdit(manager, OpOne, "different");
+
+    Assert.Equal(CollabEditStatus.Conflict, conflict.Status);
+    Assert.Equal(1, manager.LiveRoomCount);
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the conflict's room to be evicted");
+  }
+
+  [Fact]
+  public async Task AStaleEditPreconditionIsRefusedWithTheHeadAndNothingApplied()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var first = await HttpEdit(manager, OpOne, "!");
+    var head = Assert.IsType<CollabEditReceipt>(first.Receipt);
+    var observer = new FakeMember();
+    await Join(manager, observer);
+    observer.Received.Clear();
+
+    var staleSequence = await HttpEdit(
+        manager,
+        OpTwo,
+        "?",
+        new CollabEditPrecondition(head.Tag.Lineage, 0));
+    var otherLineage = await HttpEdit(
+        manager,
+        OpThree,
+        "?",
+        new CollabEditPrecondition(new string('0', 32), head.ServerSequence));
+
+    Assert.Equal(CollabEditStatus.PreconditionFailed, staleSequence.Status);
+    Assert.Equal(CollabEditStatus.PreconditionFailed, otherLineage.Status);
+    Assert.Equal(head, staleSequence.Receipt);
+    Assert.Equal(head, otherLineage.Receipt);
+    Assert.Single(operations.Committed(DocId));
+    Assert.Empty(observer.Received);
+    Assert.Equal("hello!", await ExportedTextAsync(manager));
+  }
+
+  [Fact]
+  public async Task AMatchingEditPreconditionAppliesAtTheNextSequence()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var head = Assert.IsType<CollabEditReceipt>((await HttpEdit(manager, OpOne, "!")).Receipt);
+
+    var result = await HttpEdit(
+        manager,
+        OpTwo,
+        "?",
+        new CollabEditPrecondition(head.Tag.Lineage, head.ServerSequence));
+
+    Assert.Equal(CollabEditStatus.Applied, result.Status);
+    Assert.Equal(new CollabEditReceipt(head.Tag, 2), result.Receipt);
+    Assert.Equal("hello!?", await ExportedTextAsync(manager));
+  }
+
+  [Fact]
+  public async Task ACommittedKeyReplaysItsReceiptEvenWhenItsPreconditionIsNowStale()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var original = await HttpEdit(manager, OpOne, "!");
+    await HttpEdit(manager, OpTwo, "?");
+
+    var replay = await HttpEdit(
+        manager,
+        OpOne,
+        "!",
+        new CollabEditPrecondition(Assert.IsType<CollabEditReceipt>(original.Receipt).Tag.Lineage, 0));
+
+    Assert.Equal(CollabEditStatus.Applied, replay.Status);
+    Assert.Equal(original.Receipt, replay.Receipt);
+    Assert.Equal(2, operations.Committed(DocId).Count);
+  }
+
+  [Fact]
+  public async Task AnEditPreconditionWithoutAJournalIsRefusedBeforeTheRoomLoads()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+
+    var result = await HttpEdit(
+        manager,
+        OpOne,
+        "!",
+        new CollabEditPrecondition(new string('0', 32), 0));
+
+    Assert.Equal(CollabEditStatus.PreconditionRequired, result.Status);
+    Assert.Equal(0, endpoint.Loads);
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  [Fact]
+  public async Task AColdRoomLoadedByAFailedPreconditionIsStillEvicted()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+
+    var result = await HttpEdit(
+        manager,
+        OpOne,
+        "!",
+        new CollabEditPrecondition(new string('0', 32), 0));
+
+    Assert.Equal(CollabEditStatus.PreconditionFailed, result.Status);
+    Assert.Equal(1, manager.LiveRoomCount);
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+  }
+
+  [Fact]
   public async Task AnEditIsRefusedWhileAnotherProcessHoldsTheDocument()
   {
     endpoint.Holds(DocId, "hello");
@@ -5508,6 +5730,25 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>A room backed by an operation store, which is what turns on the commit path.</summary>
+  /// <summary>An HTTP edit whose idempotency digest is the canonical body, as the endpoint sends it.</summary>
+  private static async Task<CollabEditResult> HttpEdit(
+      CollabRoomManager manager,
+      string operationId,
+      string text,
+      CollabEditPrecondition? expect = null)
+  {
+    CollabEditOp[] ops = [Appending($"b-{text}", text)];
+
+    return await manager.EditAsync(
+        DocId,
+        ops,
+        operationId,
+        CollabEditOps.CanonicalBodyDigest(ops),
+        actorId: null,
+        expect,
+        CancellationToken.None);
+  }
+
   private CollabRoomManager CreateJournalManager(CollabRoomOptions? options = null)
   {
     return new CollabRoomManager(

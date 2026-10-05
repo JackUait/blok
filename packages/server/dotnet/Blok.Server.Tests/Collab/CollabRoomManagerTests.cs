@@ -1285,7 +1285,7 @@ public sealed class CollabRoomManagerTests
     Assert.Equal(CollabJoinStatus.Joined, (await manager.JoinAsync(DocId, member)).Status);
     store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("legacy"))], Tags.At(1));
 
-    await Assert.ThrowsAsync<NotSupportedException>(() =>
+    var refusal = await Assert.ThrowsAsync<NotSupportedException>(() =>
         ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
             DocId, _ => ValueTask.FromResult(true)).AsTask());
 
@@ -1296,6 +1296,7 @@ public sealed class CollabRoomManagerTests
     Assert.Equal(
         CollabJoinStatus.Joined,
         (await manager.JoinAsync(DocId, new FakeMember())).Status);
+    Assert.Contains(nameof(ICollabOperationPurgeStore), refusal.Message, StringComparison.Ordinal);
   }
 
   [Fact]

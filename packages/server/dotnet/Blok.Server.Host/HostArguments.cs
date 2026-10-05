@@ -55,6 +55,9 @@ internal static class HostArguments
           directory for the collaboration working set (default "./blok-collab")
         --collab-s3-prefix value
           S3 key prefix for the collaboration working set (needs --s3-bucket)
+        --collab-journal
+          keep an operation journal under --collab-dir: edit receipts, key dedupe, blok-sync.v2
+          (needs --collab; refused with --collab-s3-prefix; or set BLOK_COLLAB_JOURNAL)
 
       """;
 
@@ -76,6 +79,7 @@ internal static class HostArguments
     long? rateLimit = null;
     var secretFromFlag = false;
     var docEndpointAuthFromFlag = false;
+    var collabJournalFromFlag = false;
 
     for (var index = 0; index < args.Length; index++)
     {
@@ -134,6 +138,26 @@ internal static class HostArguments
         }
 
         options.CollabEnabled = collabEnabled;
+        continue;
+      }
+
+      if (name == "collab-journal")
+      {
+        collabJournalFromFlag = true;
+
+        if (inlineValue is null)
+        {
+          options.CollabJournal = true;
+          continue;
+        }
+
+        if (!TryParseBoolean(inlineValue, out var journal))
+        {
+          return ParseError(
+              $"invalid value \"{inlineValue}\" for flag -collab-journal: parse error");
+        }
+
+        options.CollabJournal = journal;
         continue;
       }
 
@@ -242,6 +266,18 @@ internal static class HostArguments
     if (!docEndpointAuthFromFlag)
     {
       options.DocEndpointAuth = getEnvironmentVariable("BLOK_DOC_ENDPOINT_AUTH") ?? "";
+    }
+
+    if (!collabJournalFromFlag &&
+        getEnvironmentVariable("BLOK_COLLAB_JOURNAL") is { Length: > 0 } journalVariable)
+    {
+      if (!TryParseBoolean(journalVariable, out var journal))
+      {
+        return ParseError(
+            $"invalid value \"{journalVariable}\" for BLOK_COLLAB_JOURNAL: parse error");
+      }
+
+      options.CollabJournal = journal;
     }
 
     options.S3AccessKey = getEnvironmentVariable("BLOK_S3_ACCESS_KEY") ?? "";

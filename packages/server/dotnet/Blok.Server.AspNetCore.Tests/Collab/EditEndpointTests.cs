@@ -93,6 +93,143 @@ public sealed class EditEndpointTests
   }
 
   [Fact]
+  public async Task AStaleIfMatchAnswers412WithTheHeadAndAppliesNothing()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartWithOperationStore(operations);
+    using var first = await Edit(app, key: "first-edit");
+    var lineage = Assert.Single(first.Headers.GetValues("Blok-Doc-Lineage"));
+    await using var open = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
+    await open.ReceiveAsync<BlokControlFrame>();
+    var mirror = YDocs.NewClient();
+    await open.SendAsync(new SyncStep1Frame(YDocs.StateVector(mirror)));
+    YDocs.Apply(mirror, (await open.ReceiveAsync<SyncStep2Frame>()).Update);
+    await open.ReceiveAsync<SyncStep1Frame>();
+    var relay = open.ReceiveAsync<SyncUpdateFrame>();
+
+    using var stale = await Edit(
+        app,
+        key: "stale-edit",
+        body: """{ "ops": [ { "op": "insert", "id": "stale", "block": { "type": "p", "data": { "text": "?" } } } ] }""",
+        ifMatch: $"\"{lineage}:0\"");
+
+    Assert.Equal(HttpStatusCode.PreconditionFailed, stale.StatusCode);
+    Assert.Equal(lineage, Assert.Single(stale.Headers.GetValues("Blok-Doc-Lineage")));
+    Assert.Equal("1", Assert.Single(stale.Headers.GetValues("Blok-Doc-Sequence")));
+    Assert.Single(operations.Committed(SyncApp.Doc));
+    Assert.Equal(1, app.Fakes.Converter.ApplyOpsCalls);
+
+    // The next relay is the matching edit's, so the refused one sent nothing.
+    using var matching = await Edit(app, key: "matching-edit", ifMatch: $"\"{lineage}:1\"");
+    Assert.Equal(HttpStatusCode.NoContent, matching.StatusCode);
+    Assert.Equal("2", Assert.Single(matching.Headers.GetValues("Blok-Doc-Sequence")));
+    YDocs.Apply(mirror, (await relay).Update);
+    Assert.Equal("seeded!!", YDocs.Text(mirror));
+  }
+
+  [Fact]
+  public async Task IfMatchIsCheckedAgainstTheHeadAColdRoomLoadsFromTheJournal()
+  {
+    var operations = new FakeCollabOperationStore();
+    string lineage;
+
+    await using (var firstApp = await StartWithOperationStore(operations))
+    {
+      using var first = await Edit(firstApp, key: "before-reload");
+      lineage = Assert.Single(first.Headers.GetValues("Blok-Doc-Lineage"));
+      await firstApp.Fakes.Manager.DrainAsync(CancellationToken.None);
+      Assert.Equal(0, firstApp.Fakes.Manager.LiveRoomCount);
+    }
+
+    await using var app = await StartWithOperationStore(operations);
+    using var stale = await Edit(app, key: "stale-after-reload", ifMatch: $"\"{lineage}:0\"");
+    using var matching = await Edit(app, key: "after-reload", ifMatch: $"\"{lineage}:1\"");
+
+    Assert.Equal(HttpStatusCode.PreconditionFailed, stale.StatusCode);
+    Assert.Equal("1", Assert.Single(stale.Headers.GetValues("Blok-Doc-Sequence")));
+    Assert.Equal(HttpStatusCode.NoContent, matching.StatusCode);
+    Assert.Equal(lineage, Assert.Single(matching.Headers.GetValues("Blok-Doc-Lineage")));
+    Assert.Equal("2", Assert.Single(matching.Headers.GetValues("Blok-Doc-Sequence")));
+  }
+
+  [Fact]
+  public async Task ACommittedKeyReplaysItsReceiptEvenWithAStaleIfMatch()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartWithOperationStore(operations);
+    using var first = await Edit(app, key: "replayed-edit");
+    var lineage = Assert.Single(first.Headers.GetValues("Blok-Doc-Lineage"));
+    using var second = await Edit(app, key: "later-edit");
+
+    using var replay = await Edit(app, key: "replayed-edit", ifMatch: $"\"{lineage}:0\"");
+
+    Assert.Equal(HttpStatusCode.NoContent, replay.StatusCode);
+    Assert.Equal("1", Assert.Single(replay.Headers.GetValues("Blok-Doc-Sequence")));
+    Assert.Equal(2, operations.Committed(SyncApp.Doc).Count);
+  }
+
+  [Fact]
+  public async Task IfMatchWithoutAJournalAnswers428AndAppliesNothing()
+  {
+    await using var app = await SyncApp.StartAsync();
+
+    using var response = await Edit(
+        app,
+        ifMatch: $"\"{new string('0', 32)}:0\"");
+
+    await AssertError(
+        response,
+        (HttpStatusCode)428,
+        "If-Match needs the operation journal, and this server keeps none\n");
+    Assert.Equal(0, app.Fakes.Endpoint.Gets);
+    Assert.Equal(0, app.Fakes.Converter.ApplyOpsCalls);
+  }
+
+  [Theory]
+  [InlineData("*")]
+  [InlineData("0123456789abcdef0123456789abcdef:1")]
+  [InlineData("W/\"0123456789abcdef0123456789abcdef:1\"")]
+  [InlineData("\"0123456789abcdef0123456789abcdef:1\", \"0123456789abcdef0123456789abcdef:2\"")]
+  [InlineData("\"0123456789abcdef0123456789abcdef\"")]
+  [InlineData("\"0123456789abcdef0123456789abcdef:\"")]
+  [InlineData("\"0123456789abcdef0123456789abcdef:-1\"")]
+  [InlineData("\"0123456789abcdef0123456789abcdef:01\"")]
+  [InlineData("\"0123456789abcdef0123456789abcdef:1:2\"")]
+  [InlineData("\"0123456789ABCDEF0123456789ABCDEF:1\"")]
+  [InlineData("\"not-a-lineage:1\"")]
+  [InlineData("\"\"")]
+  public async Task AMalformedIfMatchAnswers400BeforeTheRoomIsTouched(string ifMatch)
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartWithOperationStore(operations);
+
+    using var response = await Edit(app, ifMatch: ifMatch);
+
+    await AssertError(
+        response,
+        HttpStatusCode.BadRequest,
+        "If-Match must be one quoted \"<lineage>:<sequence>\" tag\n");
+    Assert.Equal(0, app.Fakes.Endpoint.Gets);
+    Assert.Empty(operations.Committed(SyncApp.Doc));
+  }
+
+  [Fact]
+  public async Task TwoIfMatchHeadersAnswer400()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartWithOperationStore(operations);
+    var tag = $"\"{new string('0', 32)}:0\"";
+
+    using var response = await Edit(
+        app,
+        ifMatch: tag,
+        configure: request => request.Headers.TryAddWithoutValidation("If-Match", tag));
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    Assert.Empty(operations.Committed(SyncApp.Doc));
+  }
+
+  [Fact]
   public async Task ALateDuplicateAppendClosesWithoutRelayingOrWritingBack()
   {
     var operations = new FakeCollabOperationStore
@@ -481,7 +618,8 @@ public sealed class EditEndpointTests
       string? ticket = null,
       string body = AppendOne,
       string? key = IdempotencyKey,
-      Action<HttpRequestMessage>? configure = null)
+      Action<HttpRequestMessage>? configure = null,
+      string? ifMatch = null)
   {
     using var request = new HttpRequestMessage(
         HttpMethod.Post,
@@ -499,6 +637,11 @@ public sealed class EditEndpointTests
     if (key is not null)
     {
       request.Headers.TryAddWithoutValidation("Blok-Idempotency-Key", key);
+    }
+
+    if (ifMatch is not null)
+    {
+      request.Headers.TryAddWithoutValidation("If-Match", ifMatch);
     }
 
     configure?.Invoke(request);

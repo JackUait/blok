@@ -53,7 +53,22 @@ internal enum CollabEditStatus
   /// answers 503.
   /// </summary>
   Unavailable,
+
+  /// <summary>
+  /// The journal head is not the one the caller named; nothing was applied.
+  /// The receipt carries the current head. The endpoint answers 412.
+  /// </summary>
+  PreconditionFailed,
+
+  /// <summary>
+  /// A precondition was sent but no journal is registered, so there is no
+  /// head to check it against. The endpoint answers 428.
+  /// </summary>
+  PreconditionRequired,
 }
+
+/// <summary>The journal head an HTTP edit expects, from its If-Match header.</summary>
+internal sealed record CollabEditPrecondition(string Lineage, ulong Sequence);
 
 internal sealed record CollabEditReceipt(CollabWorkingSetTag Tag, ulong ServerSequence);
 
@@ -61,6 +76,34 @@ internal sealed record CollabEditResult(
     CollabEditStatus Status,
     Exception? Error,
     CollabEditReceipt? Receipt = null);
+
+internal enum CollabStateStatus
+{
+  Ready,
+  Purged,
+
+  /// <summary>The server is going down; the endpoint answers 503.</summary>
+  Draining,
+
+  /// <summary>The doc endpoint could not seed the room; the endpoint answers 503.</summary>
+  SeedFailed,
+
+  /// <summary>Held by another process or in its commit cooldown; the endpoint answers 503.</summary>
+  Unavailable,
+
+  /// <summary>The converter cannot write this document as JSON; the endpoint answers 500.</summary>
+  ExportFailed,
+}
+
+/// <summary>
+/// One consistent read of a room: the export bytes and, on a journal-backed
+/// room, the head they reflect. Both are taken in one lane hold.
+/// </summary>
+internal sealed record CollabStateResult(
+    CollabStateStatus Status,
+    byte[] Json,
+    CollabEditReceipt? Head = null,
+    Exception? Error = null);
 
 internal enum CollabResetStatus
 {
@@ -240,11 +283,18 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       string operationId,
       ReadOnlyMemory<byte> digest,
       string? actorId,
+      CollabEditPrecondition? expect = null,
       CancellationToken cancellationToken = default)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
     ArgumentNullException.ThrowIfNull(ops);
     ArgumentException.ThrowIfNullOrEmpty(operationId);
+
+    // Checked before a room is made, so no seed GET is spent on it.
+    if (expect is not null && operationStore is null)
+    {
+      return new CollabEditResult(CollabEditStatus.PreconditionRequired, null);
+    }
 
     for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
     {
@@ -278,6 +328,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
           operationId,
           digest,
           actorId,
+          expect,
           cancellationToken);
 
       if (result is not null)
@@ -290,6 +341,51 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
 
     throw new InvalidOperationException(
         $"collab: the room for \"{docId}\" kept closing during an edit.");
+  }
+
+  /// <summary>GET /sync/{doc}/state: the live document, loading the room the way an edit does.</summary>
+  internal async ValueTask<CollabStateResult> StateAsync(
+      string docId,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(docId);
+
+    for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
+    {
+      if (IsPurging(docId))
+      {
+        return new CollabStateResult(CollabStateStatus.Purged, []);
+      }
+
+      if (draining)
+      {
+        return new CollabStateResult(CollabStateStatus.Draining, []);
+      }
+
+      if (InCommitCooldown(docId))
+      {
+        return new CollabStateResult(CollabStateStatus.Unavailable, []);
+      }
+
+      var room = RoomFor(docId);
+
+      if (room is null)
+      {
+        return new CollabStateResult(CollabStateStatus.Purged, []);
+      }
+
+      var result = await room.StateAsync(cancellationToken);
+
+      if (result is not null)
+      {
+        return result;
+      }
+
+      Forget(room);
+    }
+
+    throw new InvalidOperationException(
+        $"collab: the room for \"{docId}\" kept closing during a state read.");
   }
 
   public async ValueTask<int> RecheckAccessAsync(
@@ -364,7 +460,9 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
     if (operationStore is not null &&
         operationStore is not ICollabOperationPurgeStore)
     {
-      throw new NotSupportedException("the operation journal cannot purge documents");
+      throw new NotSupportedException(
+          $"the operation journal cannot purge documents: the registered {nameof(ICollabOperationStore)} " +
+          $"({operationStore.GetType().FullName}) must also implement {nameof(ICollabOperationPurgeStore)}");
     }
 
     SemaphoreSlim purgeLane;

@@ -22,7 +22,11 @@ const SampleGroup: React.FC<{ heading: string; samples: ServerCodeSample[] }> = 
           <p className="mb-2 text-sm text-muted-foreground">
             <Typo>{sample.label}</Typo>
           </p>
-          <CodeBlock code={sample.code} language={sample.language} />
+          <CodeBlock
+            code={sample.code}
+            language={sample.language}
+            copyKind={sample.install ? 'install' : undefined}
+          />
         </div>
       ))}
     </div>

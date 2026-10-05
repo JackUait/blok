@@ -220,6 +220,7 @@ describe('CodeBlock', () => {
       await waitFor(() => {
         expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.copyCode, {
           language: 'typescript',
+          copy_kind: 'snippet',
         });
       });
     });
@@ -241,8 +242,37 @@ describe('CodeBlock', () => {
         expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.copyCode, {
           language: 'bash',
           package_manager: 'yarn',
+          copy_kind: 'install',
         });
       });
+    });
+
+    it('marks an install command without the toggle as an install copy', async () => {
+      stubClipboard('success');
+      renderWithI18n(
+        <CodeBlock code="dotnet add package Blok.Server.AspNetCore" language="bash" copyKind="install" />
+      );
+
+      fireEvent.click(screen.getByTestId('code-copy-button'));
+
+      await waitFor(() => {
+        expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.copyCode, {
+          language: 'bash',
+          copy_kind: 'install',
+        });
+      });
+    });
+
+    it('never sends the copied code itself', async () => {
+      stubClipboard('success');
+      renderWithI18n(<CodeBlock code="const secret = 1;" language="typescript" />);
+
+      fireEvent.click(screen.getByTestId('code-copy-button'));
+
+      await waitFor(() => {
+        expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.copyCode, expect.anything());
+      });
+      expect(JSON.stringify(gtagMock.mock.calls)).not.toContain('secret');
     });
 
     it('does not track a copy_code event when the copy fails', async () => {

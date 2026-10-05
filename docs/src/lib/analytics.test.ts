@@ -87,6 +87,21 @@ describe("analytics", () => {
       });
     });
 
+    it("lets the caller set page_location apart from page_path", () => {
+      trackPageView("/docs/paragraph/", "Paragraph — Blok", {
+        page_location: "https://blokeditor.com/docs/paragraph/?utm_source=x",
+      });
+
+      expect(getGtagMock()).toHaveBeenCalledWith(
+        "event",
+        "page_view",
+        expect.objectContaining({
+          page_path: "/docs/paragraph/",
+          page_location: "https://blokeditor.com/docs/paragraph/?utm_source=x",
+        }),
+      );
+    });
+
     it("falls back to the document title when none is given", () => {
       document.title = "Fallback Title";
 

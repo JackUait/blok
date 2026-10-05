@@ -7,6 +7,8 @@ export interface ServerCodeSample {
   label: string;
   language: 'bash' | 'csharp' | 'typescript';
   code: string;
+  /** A package install command; reported as `copy_kind: "install"` on copy. */
+  install?: true;
 }
 
 /** One thing that goes wrong, in the reader's words, with what to do about it. */
@@ -114,6 +116,7 @@ new Blok({
         label: 'Install the ASP.NET Core package',
         language: 'bash',
         code: 'dotnet add package Blok.Server.AspNetCore',
+        install: true,
       },
     ],
     appRoute: [

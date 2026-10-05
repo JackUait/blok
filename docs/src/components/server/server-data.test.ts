@@ -85,6 +85,17 @@ describe('server docs data', () => {
     expect(missingRu, `asked for, missing from ru.json:\n${missingRu.join('\n')}`).toEqual([]);
   });
 
+  it('flags package installs, and only those, as install copies', () => {
+    const samples = serverPaths.flatMap((p) => [...p.whatToRun, ...p.appRoute, p.editorConfig]);
+    const isPackageInstall = (code: string) =>
+      /^(dotnet add package|npm install|yarn add|bun add|pnpm add)\b/.test(code);
+
+    expect(samples.some((sample) => isPackageInstall(sample.code))).toBe(true);
+    for (const sample of samples) {
+      expect(sample.install === true).toBe(isPackageInstall(sample.code));
+    }
+  });
+
   it('documents the four deployment paths as separate entries', () => {
     expect(serverPaths.map((p) => p.id)).toEqual([
       'own-storage',

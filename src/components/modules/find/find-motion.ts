@@ -26,7 +26,6 @@ export interface GrowFrames {
   duration: number;
 }
 
-/** Tuned against the GIFs the user approved; see the design doc. */
 export const SPRINGS = {
   wide: { stiffness: 200, damping: 17 },
   tall: { stiffness: 320, damping: 19 },
@@ -276,7 +275,10 @@ const ARC_LIFT = 70;
 const ARC_SPIN = -14;
 const ARC_GROW = 0.18;
 const ARC_STEPS = 20;
-/** Room the arc keeps from the window's top edge, in px; covers the spin and grow. */
+/**
+ * Gap between the window's top and the chip's box at its highest, in px.
+ * Only the translate is counted; the spin and grow draw the chip closer.
+ */
 const ARC_MARGIN = 8;
 
 /** The selected word's first visible line box and text style, or null when it has none on screen. */

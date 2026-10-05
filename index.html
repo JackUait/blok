@@ -3741,6 +3741,8 @@
           { label: 'Link card (not embeddable)', blocks: [{ id: 'em-link-card', type: 'embed', data: { source: 'https://example.com/articles/blocks', embed: 'https://example.com/articles/blocks' } }] },
           // A registry service whose source no longer matches it renders inert.
           { label: 'Tampered data (inert)', blocks: [{ id: 'em-tampered', type: 'embed', data: { service: 'youtube', source: 'https://example.com/not-youtube', embed: 'https://example.com/not-youtube' } }] },
+          { label: 'Generic iframe (opted in)', editorConfig: { linkPaste: { allowGenericEmbed: true } }, blocks: [{ id: 'em-generic-iframe', type: 'embed', data: { source: 'https://example.com/', embed: 'https://example.com/' } }] },
+          { label: 'Allowed origin iframe', editorConfig: { linkPaste: { allowedEmbedOrigins: ['example.com'] } }, blocks: [{ id: 'em-allowed-origin', type: 'embed', data: { source: 'https://example.com/', embed: 'https://example.com/' } }] },
           { label: 'YouTube', blocks: [{ id: 'em-youtube', type: 'embed', data: {
             service: 'youtube',
             source: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',

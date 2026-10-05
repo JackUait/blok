@@ -133,6 +133,8 @@ describe('playground block states spec (index.html)', () => {
       ['Narrow (window hidden)', 'width: 320'],
       ['Link card (not embeddable)', "source: 'https://example.com/"],
       ['Tampered data (inert)', "service: 'youtube'"],
+      ['Generic iframe (opted in)', 'linkPaste: { allowGenericEmbed: true }'],
+      ['Allowed origin iframe', 'linkPaste: { allowedEmbedOrigins: ['],
     ])('covers the "%s" state', (label, marker) => {
       const section = sectionFor('embed');
       const start = section.indexOf(`label: '${label}'`);

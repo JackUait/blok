@@ -243,8 +243,8 @@
    stage's svg rules would stroke it and stretch it to 200px. */
 .blok-embed-window__brand {
   position: absolute;
-  inset-inline-start: calc(50% + 46px);
-  top: 18px;
+  inset-inline-start: calc(50% + var(--_badge-x));
+  top: var(--_badge-y);
   display: grid;
   place-items: center;
   width: 30px;
@@ -257,6 +257,16 @@
     0 1px 2px color-mix(in srgb, var(--blok-media-preview-shadow) 25%, transparent);
 }
 .blok-embed-window__brand svg { width: 18px; height: 18px; }
+/* The badge sits on each scene's top corner: x from the drawing centre, y
+   from the window top. They follow the frame edges in media-preview-art.ts. */
+.blok-embed-window { --_badge-x: 44px; --_badge-y: 20px; }
+.blok-embed-window:is([data-kind='video'], [data-kind='map']) { --_badge-x: 46px; --_badge-y: 18px; }
+.blok-embed-window[data-kind='audio'] { --_badge-x: 56px; --_badge-y: 30px; }
+.blok-embed-window[data-kind='image'] { --_badge-x: 40px; --_badge-y: 16px; }
+.blok-embed-window:is([data-kind='social'], [data-kind='form']) { --_badge-x: 29px; --_badge-y: 16px; }
+.blok-embed-window[data-kind='document'] { --_badge-x: 2px; --_badge-y: 20px; }
+.blok-embed-window[data-kind='table'] { --_badge-y: 22px; }
+.blok-embed-window[data-kind='calendar'] { --_badge-x: 34px; --_badge-y: 24px; }
 
 .blok-embed-empty__readback {
   display: flex;

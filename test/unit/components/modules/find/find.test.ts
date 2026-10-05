@@ -710,6 +710,60 @@ describe('Find module', () => {
     expect(searchInput(wrapper).value).toBe('words');
   });
 
+  describe('word hop', () => {
+    const nativeClientRects = Object.getOwnPropertyDescriptor(Range.prototype, 'getClientRects');
+
+    afterEach(() => {
+      Reflect.deleteProperty(Element.prototype, 'animate');
+      if (nativeClientRects === undefined) {
+        Reflect.deleteProperty(Range.prototype, 'getClientRects');
+      } else {
+        Object.defineProperty(Range.prototype, 'getClientRects', nativeClientRects);
+      }
+    });
+
+    it('gives the bar no hop for a host input selection, which has no rect', () => {
+      const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
+      const hostInput = document.createElement('input');
+      const animate = vi.fn(() => ({ cancel: vi.fn(), finished: new Promise<void>(() => undefined) }));
+
+      Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true });
+      vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: false, media: query })));
+      hostInput.value = 'search words';
+      document.body.appendChild(hostInput);
+      hostInput.focus();
+      hostInput.setSelectionRange(7, 12);
+      press(hostInput, { key: 'f', code: 'KeyF', ctrlKey: true });
+
+      expect(searchInput(wrapper).value).toBe('words');
+      expect(document.querySelector('[data-blok-find-hop-chip]')).toBeNull();
+    });
+
+    it('measures the selected word before the bar opens and takes focus', () => {
+      const { redactor, blocks } = editor([{ id: 'a', text: 'pick this word' }]);
+      const text = blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
+
+      if (!(text instanceof Text)) {
+        throw new Error('text missing');
+      }
+      const measured = vi.fn(() => [{ left: 10, top: 10, width: 30, height: 18, right: 40, bottom: 28 }]);
+
+      Object.defineProperty(Range.prototype, 'getClientRects', { value: measured, configurable: true, writable: true });
+      window.getSelection()?.setBaseAndExtent(text, 5, text, 9);
+      const focusAtMeasure: Array<Element | null> = [];
+
+      measured.mockImplementation(() => {
+        focusAtMeasure.push(document.activeElement);
+
+        return [{ left: 10, top: 10, width: 30, height: 18, right: 40, bottom: 28 }];
+      });
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+
+      expect(focusAtMeasure.length).toBeGreaterThan(0);
+      expect(focusAtMeasure[0]?.closest('[data-blok-find]')).toBeNull();
+    });
+  });
+
   it('does not prefill from a selection in another editor', () => {
     const first = editor([{ id: 'a', text: 'hello' }]);
     const second = editor([{ id: 'b', text: 'other words' }]);

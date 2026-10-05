@@ -942,6 +942,56 @@ describe('FindBar', () => {
       expect(stretched.length).toBeGreaterThan(0);
       expect(stretched.every((cancel) => cancel.mock.calls.length === 1)).toBe(true);
     });
+
+    const source = {
+      rect: { left: 50, top: 100, width: 30, height: 20 },
+      text: 'this',
+      font: { family: 'serif', size: '16px', weight: '400', style: 'normal', color: 'rgb(0, 0, 0)' },
+    };
+    const chip = (): Element | null => bar.element.querySelector('[data-blok-find-hop-chip]');
+    const field = (): HTMLElement => byTestId(bar.element, 'find-field');
+
+    it('flies the selected word in and hides the field text until it lands', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(chip()).not.toBeNull();
+      expect(field().hasAttribute('data-blok-find-hopping')).toBe(true);
+      expect(findInput().value).toBe('this');
+      expect(findInput()).toHaveFocus();
+    });
+
+    it('hops with no bloom when the bar is already open', () => {
+      bar.open({ readOnly: false });
+      const blooms = animate.mock.calls.filter((call) => call[1]?.pseudoElement === '::before').length;
+
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(chip()).not.toBeNull();
+      expect(animate.mock.calls.filter((call) => call[1]?.pseudoElement === '::before')).toHaveLength(blooms);
+    });
+
+    it('ends the hop at once when the reader types', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      type(findInput(), 'thi');
+
+      expect(chip()).toBeNull();
+      expect(field().hasAttribute('data-blok-find-hopping')).toBe(false);
+    });
+
+    it('ends the hop when the bar closes', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      bar.close();
+
+      expect(chip()).toBeNull();
+      expect(field().hasAttribute('data-blok-find-hopping')).toBe(false);
+    });
+
+    it('keeps the counter text live during the flight', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      bar.setResults({ current: 0, total: 3 });
+
+      expect(byTestId(bar.element, 'find-counter').textContent).toBe('find.count{"current":1,"total":3}');
+    });
   });
 
   describe('destroy', () => {

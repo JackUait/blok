@@ -408,6 +408,30 @@
   cursor: default;
 }
 
+/* ─── Word hop ─── */
+
+/* The word flies in on a copy; its text in the field shows when it lands. */
+[data-blok-find-field][data-blok-find-hopping] > input {
+  color: transparent;
+  caret-color: transparent;
+}
+
+[data-blok-find-field][data-blok-find-hopping] > input::selection {
+  background: transparent;
+}
+
+/* JS sets the place and the copied type; the tint fades out on the way. */
+[data-blok-find-hop-chip] {
+  position: absolute;
+  z-index: 1;
+  padding-inline: 1px;
+  border-radius: var(--blok-radius-notch);
+  background: var(--blok-selection-inline);
+  line-height: var(--blok-line-height-body);
+  white-space: pre;
+  pointer-events: none;
+}
+
 /* ─── Active match lens ─── */
 
 [data-blok-find-lens] {
@@ -488,5 +512,9 @@
 
   [data-blok-find-roll]::before {
     content: none;
+  }
+
+  [data-blok-find-hop-chip] {
+    display: none;
   }
 }

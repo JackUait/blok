@@ -4,6 +4,10 @@ import {
   bloom,
   cornerOf,
   growFrames,
+  HOP_DELAY,
+  HOP_MS,
+  hop,
+  hopSourceFromRange,
   prefersReducedMotion,
   settleMs,
   springAt,
@@ -248,5 +252,141 @@ describe('bloom and stretch', () => {
     stubReducedMotion(false);
 
     expect(bloom(parts(), { block: 'top', inline: 'right' })).toEqual([]);
+  });
+});
+
+describe('hopSourceFromRange', () => {
+  const rangeWithRects = (rects: Array<Partial<DOMRect>>): Range => {
+    const p = document.createElement('p');
+
+    p.textContent = 'pick this word';
+    p.style.fontSize = '16px';
+    document.body.append(p);
+    const range = document.createRange();
+    const text = p.firstChild;
+
+    if (!(text instanceof Text)) {
+      throw new Error('text missing');
+    }
+    range.setStart(text, 5);
+    range.setEnd(text, 9);
+    Object.defineProperty(range, 'getClientRects', {
+      value: () => rects.map((rect) => ({ left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, ...rect })),
+    });
+
+    return range;
+  };
+
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it('takes the first visible line box and the text style', () => {
+    const source = hopSourceFromRange(rangeWithRects([{ left: 50, top: 100, width: 30, height: 20, right: 80, bottom: 120 }]), 'this');
+
+    expect(source?.rect).toEqual({ left: 50, top: 100, width: 30, height: 20 });
+    expect(source?.text).toBe('this');
+    expect(source?.font.size).toBe('16px');
+  });
+
+  it('gives no hop for a selection scrolled out of view', () => {
+    expect(hopSourceFromRange(rangeWithRects([{ left: 50, top: -400, width: 30, height: 20, right: 80, bottom: -380 }]), 'this')).toBeNull();
+  });
+
+  it('gives no hop for a range with no boxes', () => {
+    expect(hopSourceFromRange(rangeWithRects([]), 'this')).toBeNull();
+  });
+
+  it('gives no hop where ranges cannot measure (jsdom)', () => {
+    const range = document.createRange();
+
+    Object.defineProperty(range, 'getClientRects', { value: undefined });
+
+    expect(hopSourceFromRange(range, 'this')).toBeNull();
+  });
+});
+
+describe('hop', () => {
+  const source = {
+    rect: { left: 50, top: 100, width: 30, height: 20 },
+    text: 'this',
+    font: { family: 'serif', size: '16px', weight: '400', style: 'normal', color: 'rgb(0, 0, 0)' },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, 'animate');
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.body.replaceChildren();
+  });
+
+  it('flies a hidden copy of the word, then removes it and reports a landing', async () => {
+    let land: () => void = () => undefined;
+    const finished = new Promise<void>((resolve) => {
+      land = resolve;
+    });
+
+    Object.defineProperty(Element.prototype, 'animate', {
+      value: vi.fn(() => ({ cancel: vi.fn(), finished })),
+      configurable: true,
+      writable: true,
+    });
+    stubReducedMotion(false);
+    const dock = document.createElement('div');
+    const input = document.createElement('input');
+
+    dock.append(input);
+    document.body.append(dock);
+    const onEnd = vi.fn();
+
+    hop(dock, source, input, HOP_DELAY, onEnd);
+
+    const chip = dock.querySelector('[data-blok-find-hop-chip]');
+
+    expect(chip?.textContent).toBe('this');
+    expect(chip?.getAttribute('aria-hidden')).toBe('true');
+
+    land();
+    await finished;
+    await Promise.resolve();
+
+    expect(dock.querySelector('[data-blok-find-hop-chip]')).toBeNull();
+    expect(onEnd).toHaveBeenCalledWith(true);
+  });
+
+  it('ends at once when stopped, without a landing', () => {
+    stubAnimate();
+    stubReducedMotion(false);
+    const dock = document.createElement('div');
+    const input = document.createElement('input');
+
+    dock.append(input);
+    document.body.append(dock);
+    const onEnd = vi.fn();
+
+    hop(dock, source, input, 0, onEnd)?.end();
+
+    expect(dock.querySelector('[data-blok-find-hop-chip]')).toBeNull();
+    expect(onEnd).toHaveBeenCalledTimes(1);
+    expect(onEnd).toHaveBeenCalledWith(false);
+  });
+
+  it('does not fly under reduced motion', () => {
+    stubAnimate();
+    stubReducedMotion(true);
+    const dock = document.createElement('div');
+
+    document.body.append(dock);
+
+    expect(hop(dock, source, document.createElement('input'), 0, vi.fn())).toBeNull();
+    expect(dock.childElementCount).toBe(0);
+  });
+
+  it('lasts long enough to read as a hop', () => {
+    expect(HOP_MS).toBeGreaterThanOrEqual(400);
   });
 });

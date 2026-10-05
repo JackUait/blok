@@ -13,6 +13,7 @@ import { findOwn } from '../../utils/own-element';
 import { syncPortalDirection } from '../../utils/portal-direction';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { FindBar } from './find-bar';
+import { hopSourceFromRange, type HopSource } from './find-motion';
 import { FindLens } from './find-lens';
 import { clearFindHighlights, paintFindHighlights } from './find-highlight';
 import type { FindOptions } from './match-text';
@@ -135,6 +136,8 @@ export class Find extends Module {
     const bar = this.ensureBar();
     const wasOpen = bar.isOpen;
     const prefill = this.selectedTextForPrefill();
+    // Before bar.open() takes focus and the search reveal scrolls.
+    const hop = prefill === null ? null : this.hopSource(prefill);
 
     if (!wasOpen || prefill !== null) {
       const caret = this.caretRange();
@@ -152,6 +155,7 @@ export class Find extends Module {
       query: prefill ?? undefined,
       replace: withReplace,
       readOnly: this.Blok.ReadOnly.isEnabled,
+      hop,
     });
 
     // Search now, not after the typing debounce: until then the bar would show "No results".
@@ -467,6 +471,18 @@ export class Find extends Module {
     }
 
     return text;
+  }
+
+  /** Where the prefilled word sits on screen. A host input's selection has no range to measure. */
+  private hopSource(text: string): HopSource | null {
+    const field = document.activeElement;
+    const selection = window.getSelection();
+
+    if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || selection === null || selection.rangeCount === 0) {
+      return null;
+    }
+
+    return hopSourceFromRange(selection.getRangeAt(0), text);
   }
 
   private caretRange(): Range | null {

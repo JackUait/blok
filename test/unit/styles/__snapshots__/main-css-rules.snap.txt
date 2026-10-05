@@ -14851,6 +14851,26 @@ span[data-blok-slash-search] {
   cursor: default;
 }
 
+[data-blok-find-field][data-blok-find-hopping] > input {
+  color: transparent;
+  caret-color: transparent;
+}
+
+[data-blok-find-field][data-blok-find-hopping] > input::selection {
+  background: transparent;
+}
+
+[data-blok-find-hop-chip] {
+  position: absolute;
+  z-index: 1;
+  padding-inline: 1px;
+  border-radius: var(--blok-radius-notch);
+  background: var(--blok-selection-inline);
+  line-height: var(--blok-line-height-body);
+  white-space: pre;
+  pointer-events: none;
+}
+
 [data-blok-find-lens] {
   position: fixed;
   inset: 0;
@@ -14880,6 +14900,10 @@ span[data-blok-slash-search] {
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-find-roll]::before {
   content: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-find-hop-chip] {
+  display: none;
 }
 
 [data-blok-field] {

@@ -124,6 +124,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/collaboration/presence-carets.ts': 'Remote carets convert a measured Range rect into offsets local to the block holder they are appended to; nothing is written against the root.',
   'components/modules/drag/preview/DragPreview.ts': 'Fixed pointer-following preview; root coordinates refresh on every drag pointer update.',
   'components/modules/drag/utils/ColumnDropAnimation.ts': 'Ephemeral fixed drag preview animates to a viewport target rect and is then removed.',
+  'components/modules/find/find-motion.ts': 'Hop chip: a transient aria-hidden copy of the selected word. It turns the selection rect into dock-local px once, at open, and is removed when it lands or is interrupted; the bar itself is still placed by find.css.',
   'components/ui/toolbox-preview.ts': 'Fixed hover card reads the menu and row rects on every row change and on menu-list scroll; any other scroll closes it.',
   'components/modules/rectangleSelection.ts': 'Selection rectangle converts pointer coordinates into its measured local overlay container.',
   'components/modules/toolbar/inline/toolbar-ghost.ts': 'Fading copy of the inline toolbar, placed once at the toolbar\'s measured spot beside its wrapper and removed within 400ms; it never tracks movement.',

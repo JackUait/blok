@@ -245,3 +245,121 @@ export const stretch = (
     )),
   ];
 };
+
+export interface HopSource {
+  rect: { left: number; top: number; width: number; height: number };
+  text: string;
+  font: { family: string; size: string; weight: string; style: string; color: string };
+}
+
+export interface Hop {
+  /** Stop now: the chip goes, and `onEnd(false)` runs once. */
+  end(): void;
+}
+
+export const HOP_MS = 560;
+/** The bar starts blooming first, so there is a field to land in. */
+export const HOP_DELAY = 120;
+
+const ARC_LIFT = 70;
+const ARC_SPIN = -14;
+const ARC_GROW = 0.18;
+const ARC_STEPS = 20;
+
+/** The selected word's first visible line box and text style, or null when it has none on screen. */
+export const hopSourceFromRange = (range: Range, text: string): HopSource | null => {
+  if (typeof range.getClientRects !== 'function') {
+    return null;
+  }
+
+  const rect = [...range.getClientRects()].find((box) => box.width > 0 && box.height > 0);
+  const node = range.startContainer;
+  const element = node instanceof Element ? node : node.parentElement;
+
+  if (rect === undefined || element === null) {
+    return null;
+  }
+
+  const onScreen = rect.bottom > 0 && rect.right > 0 && rect.top < window.innerHeight && rect.left < window.innerWidth;
+
+  if (!onScreen) {
+    return null;
+  }
+
+  const style = getComputedStyle(element);
+
+  return {
+    rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+    text,
+    font: { family: style.fontFamily, size: style.fontSize, weight: style.fontWeight, style: style.fontStyle, color: style.color },
+  };
+};
+
+/**
+ * Fly a copy of the selected word from the page into `target` on an arc.
+ * The copy is aria-hidden paint in the dock; the editor's DOM is never touched.
+ */
+export const hop = (
+  dock: HTMLElement,
+  source: HopSource,
+  target: HTMLElement,
+  delay: number,
+  onEnd: (landed: boolean) => void
+): Hop | null => {
+  if (prefersReducedMotion() || !canAnimate(dock)) {
+    return null;
+  }
+
+  // Measure before any bloom transform scales the field.
+  const dockRect = dock.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const chip = document.createElement('span');
+
+  chip.setAttribute('data-blok-find-hop-chip', '');
+  chip.setAttribute('data-blok-testid', 'find-hop-chip');
+  chip.setAttribute('aria-hidden', 'true');
+  chip.textContent = source.text;
+  Object.assign(chip.style, {
+    left: `${source.rect.left - dockRect.left}px`,
+    top: `${source.rect.top - dockRect.top}px`,
+    fontFamily: source.font.family,
+    fontSize: source.font.size,
+    fontWeight: source.font.weight,
+    fontStyle: source.font.style,
+    color: source.font.color,
+  });
+  dock.append(chip);
+
+  const rtl = getComputedStyle(target).direction === 'rtl';
+  const dx = (rtl ? targetRect.right - chip.offsetWidth : targetRect.left) - source.rect.left;
+  const dy = targetRect.top + (targetRect.height - chip.offsetHeight) / 2 - source.rect.top;
+  const arc: Keyframe[] = Array.from({ length: ARC_STEPS + 1 }, (_, i) => {
+    const progress = i / ARC_STEPS;
+    const travel = 1 - Math.pow(1 - progress, 2.2);
+    const lift = Math.sin(progress * Math.PI);
+
+    return {
+      offset: progress,
+      transform: `translate(${dx * travel}px, ${dy * travel - lift * ARC_LIFT}px) rotate(${lift * ARC_SPIN}deg) scale(${1 + lift * ARC_GROW})`,
+    };
+  });
+  const flight = [
+    chip.animate(arc, { duration: HOP_MS, delay, easing: 'linear', fill: 'backwards' }),
+    chip.animate([{}, { backgroundColor: 'transparent' }], { duration: HOP_MS, delay, easing: 'ease-in', fill: 'both' }),
+  ];
+  const state = { ended: false };
+  const finish = (landed: boolean): void => {
+    if (state.ended) {
+      return;
+    }
+    state.ended = true;
+    flight.forEach((animation) => animation.cancel());
+    chip.remove();
+    onEnd(landed);
+  };
+
+  // cancel() rejects `finished`; that path already ran finish(false).
+  flight[0].finished.then(() => finish(true), () => undefined);
+
+  return { end: () => finish(false) };
+};

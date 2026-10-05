@@ -8,7 +8,7 @@ import { PopoverDesktop } from '../../utils/popover';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
 import { createTooltipContent } from '../toolbar/tooltip';
 
-import { bloom, cornerOf, stretch, type Corner } from './find-motion';
+import { bloom, cornerOf, hop, HOP_DELAY, HOP_MS, springEasing, SPRINGS, stretch, type Corner, type Hop, type HopSource } from './find-motion';
 
 import type { FindOptions } from './match-text';
 
@@ -58,6 +58,7 @@ const ATTR = {
   empty: 'data-blok-find-empty',
   overflow: 'data-blok-find-overflow',
   shake: 'data-blok-find-shake',
+  hopping: 'data-blok-find-hopping',
   bump: 'data-blok-find-bump',
   roll: 'data-blok-find-roll',
   rollFrom: 'data-blok-find-roll-from',
@@ -146,6 +147,7 @@ export class FindBar {
   private optionsMenu: PopoverDesktop | null = null;
   private readonly replaceField: HTMLElement;
   private motion: Animation[] = [];
+  private flight: Hop | null = null;
 
   private readonly listeners: Array<() => void> = [];
   private inputResize: ResizeObserver | undefined;
@@ -301,7 +303,7 @@ export class FindBar {
     return { matchCase: this.matchCase, wholeWord: this.wholeWord };
   }
 
-  public open(init: { query?: string; replace?: boolean; readOnly: boolean }): void {
+  public open(init: { query?: string; replace?: boolean; readOnly: boolean; hop?: HopSource | null }): void {
     this.setReadOnly(init.readOnly);
 
     if (init.replace === true && !this.readOnly) {
@@ -315,6 +317,7 @@ export class FindBar {
       }
 
       this.focusQuery();
+      this.playHop(init.hop ?? null, 0);
 
       return;
     }
@@ -324,19 +327,23 @@ export class FindBar {
     this.element.toggleAttribute('inert', false);
     // The top layer sits above every stacking context a host page can build.
     promoteToTopLayer(this.element);
+
+    // The hop measures the field with the query already in it.
+    if (init.query !== undefined) {
+      this.input.value = init.query;
+    }
+
     this.stopMotion();
-    this.motion = bloom({
+    const hopping = this.playHop(init.hop ?? null, HOP_DELAY);
+
+    this.motion.push(...bloom({
       dock: this.element,
       bar: this.bar,
       field: this.field,
       query: this.input,
-      counter: this.counter,
+      counter: hopping ? null : this.counter,
       controls: [this.replaceToggle, this.optionsButton, this.previousButton, this.nextButton, this.closeButton].filter((control) => !control.hidden),
-    }, this.corner());
-
-    if (init.query !== undefined) {
-      this.input.value = init.query;
-    }
+    }, this.corner()));
 
     // A reopened bar keeps its last query, which must be searched again.
     if (init.query !== undefined || this.input.value !== '') {
@@ -351,6 +358,7 @@ export class FindBar {
       return;
     }
 
+    this.flight?.end();
     this.stopMotion();
     this.opened = false;
     hideTooltip();
@@ -377,6 +385,7 @@ export class FindBar {
   }
 
   public destroy(): void {
+    this.flight?.end();
     this.stopMotion();
     this.opened = false;
     hideTooltip();
@@ -412,6 +421,8 @@ export class FindBar {
   }
 
   private handleInput(): void {
+    this.flight?.end();
+
     if (!this.opened) {
       return;
     }
@@ -585,6 +596,45 @@ export class FindBar {
 
   private corner(): Corner {
     return cornerOf(this.element.getAttribute(ATTR.placement) ?? 'top-end', this.element.getAttribute('dir') === 'rtl');
+  }
+
+  /** @returns true when a word is in flight */
+  private playHop(source: HopSource | null, delay: number): boolean {
+    this.flight?.end();
+
+    if (source === null) {
+      return false;
+    }
+
+    this.field.setAttribute(ATTR.hopping, '');
+    this.flight = hop(this.element, source, this.input, delay, (landed) => {
+      this.flight = null;
+      this.field.removeAttribute(ATTR.hopping);
+
+      if (landed) {
+        const pop = springEasing(SPRINGS.bouncy);
+
+        this.motion.push(
+          this.field.animate([{ scale: '1' }, { scale: '1.04 0.9', offset: 0.25 }, { scale: '1' }], pop),
+          this.input.animate([{ translate: '0 -4px' }, { translate: '0 0' }], pop)
+        );
+      }
+    });
+
+    if (this.flight === null) {
+      this.field.removeAttribute(ATTR.hopping);
+
+      return false;
+    }
+
+    // Paint only: the counter's text, and what it announces, is already current.
+    this.motion.push(this.counter.animate([{ opacity: 0, translate: '0 14px' }, { opacity: 1, translate: '0 0' }], {
+      ...springEasing(SPRINGS.bouncy),
+      delay: delay + HOP_MS + 80,
+      fill: 'backwards',
+    }));
+
+    return true;
   }
 
   private stopMotion(): void {

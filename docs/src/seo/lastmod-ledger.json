@@ -16,7 +16,7 @@
     "date": "2026-10-05"
   },
   "/docs": {
-    "hash": "ca5d190d74fcce8e",
+    "hash": "4898188f67dda3b8",
     "date": "2026-10-06"
   },
   "/docs/audio": {
@@ -76,7 +76,7 @@
     "date": "2026-10-05"
   },
   "/docs/config": {
-    "hash": "072e56a0160218a7",
+    "hash": "bfdf22156230f741",
     "date": "2026-10-06"
   },
   "/docs/core": {
@@ -120,8 +120,8 @@
     "date": "2026-09-28"
   },
   "/docs/header": {
-    "hash": "6ad154e74b8b6793",
-    "date": "2026-09-08"
+    "hash": "097ed82897a3f4a4",
+    "date": "2026-10-06"
   },
   "/docs/history-api": {
     "hash": "98dccab31e1ad77a",
@@ -172,8 +172,8 @@
     "date": "2026-09-08"
   },
   "/docs/output-data": {
-    "hash": "46abbacb7510f27a",
-    "date": "2026-10-05"
+    "hash": "1d7ae6750b8d86b1",
+    "date": "2026-10-06"
   },
   "/docs/page": {
     "hash": "ceacb8667f8b90c6",
@@ -235,6 +235,10 @@
     "hash": "d560cfcf42a945d0",
     "date": "2026-10-06"
   },
+  "/docs/tab-sync": {
+    "hash": "c51965640c0f5aab",
+    "date": "2026-10-06"
+  },
   "/docs/table": {
     "hash": "7ae14fead3460363",
     "date": "2026-09-28"
@@ -252,8 +256,8 @@
     "date": "2026-09-08"
   },
   "/docs/toggle": {
-    "hash": "dedf0c86ca6c2e67",
-    "date": "2026-10-05"
+    "hash": "a10e8716a3c22ab6",
+    "date": "2026-10-06"
   },
   "/docs/toolbar-api": {
     "hash": "1db67960c4d77b0c",
@@ -299,6 +303,10 @@
     "hash": "fe92a83671c02aac",
     "date": "2026-09-08"
   },
+  "/docs/view-state-api": {
+    "hash": "1981c1ecf65077dc",
+    "date": "2026-10-06"
+  },
   "/docs/width-api": {
     "hash": "0fc301eed821cffe",
     "date": "2026-09-08"
@@ -328,7 +336,7 @@
     "date": "2026-10-05"
   },
   "/ru/docs": {
-    "hash": "4bbf9a55cdfb2445",
+    "hash": "d7b65ec6470669bd",
     "date": "2026-10-06"
   },
   "/ru/docs/audio": {
@@ -388,7 +396,7 @@
     "date": "2026-10-05"
   },
   "/ru/docs/config": {
-    "hash": "b6acf8e25d26e56f",
+    "hash": "1f7977d0cd6287e3",
     "date": "2026-10-06"
   },
   "/ru/docs/core": {
@@ -432,8 +440,8 @@
     "date": "2026-09-28"
   },
   "/ru/docs/header": {
-    "hash": "576eba4c50187cb5",
-    "date": "2026-09-08"
+    "hash": "f7c9436e1ce9d356",
+    "date": "2026-10-06"
   },
   "/ru/docs/history-api": {
     "hash": "68310da4af5c9191",
@@ -484,8 +492,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/output-data": {
-    "hash": "3a8f7dcd07e60d44",
-    "date": "2026-10-05"
+    "hash": "81fd18a0e52a9df6",
+    "date": "2026-10-06"
   },
   "/ru/docs/page": {
     "hash": "56ca3e0d6e92c693",
@@ -547,6 +555,10 @@
     "hash": "8dd7054d46a18cc7",
     "date": "2026-10-06"
   },
+  "/ru/docs/tab-sync": {
+    "hash": "c94bfc17c09dfeb8",
+    "date": "2026-10-06"
+  },
   "/ru/docs/table": {
     "hash": "c683e052518c5f05",
     "date": "2026-09-28"
@@ -564,8 +576,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/toggle": {
-    "hash": "8d63e8354cdc6be8",
-    "date": "2026-10-05"
+    "hash": "0514b00e60757180",
+    "date": "2026-10-06"
   },
   "/ru/docs/toolbar-api": {
     "hash": "529520a9bce1fbe5",
@@ -610,6 +622,10 @@
   "/ru/docs/view-api": {
     "hash": "671dd195f8073a99",
     "date": "2026-09-08"
+  },
+  "/ru/docs/view-state-api": {
+    "hash": "b0418f22b56273c5",
+    "date": "2026-10-06"
   },
   "/ru/docs/width-api": {
     "hash": "99ade27c9352dd43",

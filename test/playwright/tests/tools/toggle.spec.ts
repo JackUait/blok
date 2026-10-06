@@ -282,6 +282,7 @@ test.describe('Toggle Tool', () => {
     // shows no block handles. Reached from the toggle's own title line.
     test('shows no block handles over the body placeholder', async ({ page }) => {
       await createBlok(page, createToggleData('Empty open toggle'));
+      await expandToggle(page);
 
       const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);
       const plus = page.getByTestId('plus-button');
@@ -323,6 +324,7 @@ test.describe('Toggle Tool', () => {
 
     test('hover fill is 8px shorter than the space the placeholder takes, and clicking it does not shift layout', async ({ page }) => {
       await createBlok(page, createToggleData('Measured toggle'));
+      await expandToggle(page);
 
       const toggle = page.locator(TOGGLE_BLOCK_SELECTOR);
       const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);

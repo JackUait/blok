@@ -4,11 +4,9 @@ import { getCaretOffset } from '../../../components/utils/caret/index';
 import { resolveCaretRange } from '../collaboration/caret-position';
 import { hiddenAncestors } from '../blockManager/new-block-placement';
 import type { BlokModules } from '../../../types-internal/blok-modules';
-import type { Block } from '../../block';
 
 import { dropPeerPaddingOfRemovedColumn, isPaddingCell, namesOnlyPaddingCells } from './grid-padding';
 import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS } from './serializer';
-import { isCollapsedToggleBlock } from '../drag/utils/toggleState';
 import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, MoveReplayCallback, SingleMoveEntry, UndoScopeType } from './types';
 
 type StackItem = Y.UndoManager['undoStack'][number];
@@ -2945,10 +2943,8 @@ export class UndoHistory {
     // The caret cannot land in hidden content. Closed tabs and closed toggles
     // both open: neither open state is in history, so this undoes no replay.
     hiddenAncestors(block, id => BlockManager.getBlockById(id))
-      .filter(parent => parent.tool.isLayout)
       .reverse()
       .forEach(parent => parent.call('expand'));
-    this.expandCollapsedAncestors(block.parentId);
 
     // Get the specific input within the block
     const input = block.inputs[snapshot.inputIndex];
@@ -2994,25 +2990,6 @@ export class UndoHistory {
     return true;
   }
 
-  /**
-   * Open every collapsed toggle above the restored caret, outermost first, so
-   * the caret never lands in hidden text. Open state is personal, so this
-   * adds no undo step.
-   * @param parentId - parent of the block that receives the caret
-   */
-  private expandCollapsedAncestors(parentId: string | null): void {
-    const { BlockManager } = this.blok;
-    const ancestorsOf = (id: string | null): Block[] => {
-      const ancestor = typeof id === 'string' ? BlockManager.getBlockById(id) : undefined;
-
-      return ancestor === undefined ? [] : [ancestor, ...ancestorsOf(ancestor.parentId)];
-    };
-
-    ancestorsOf(parentId)
-      .filter(isCollapsedToggleBlock)
-      .reverse()
-      .forEach(ancestor => ancestor.call('expand'));
-  }
 
   /**
    * Re-select a range the snapshot recorded (collapsed carets have no `end`)

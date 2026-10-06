@@ -3,6 +3,7 @@ import type { API, BlockToolConstructorOptions } from '../../../../types';
 import { ToggleItem } from '../../../../src/tools/toggle';
 import type { ToggleItemData, ToggleItemConfig } from '../../../../src/tools/toggle/types';
 import { TOGGLE_ATTR } from '../../../../src/tools/toggle/constants';
+import { createMemoryViewState } from '../../../helpers/view-state';
 
 const createMockAPI = (): API => ({
   i18n: {
@@ -22,12 +23,15 @@ const createMockAPI = (): API => ({
   caret: {
     setToBlock: vi.fn(),
   },
+  viewState: createMemoryViewState(),
 } as unknown as API);
 
 const createToggle = (readOnly: boolean): { toggle: ToggleItem; api: API; element: HTMLElement } => {
   const api = createMockAPI();
+
+  api.viewState.set('toggle-id', 'open', true);
   const options: BlockToolConstructorOptions<ToggleItemData, ToggleItemConfig> = {
-    data: { text: 'Title', isOpen: true },
+    data: { text: 'Title' },
     config: {},
     api,
     readOnly,

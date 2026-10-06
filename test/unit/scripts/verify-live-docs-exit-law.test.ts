@@ -9,9 +9,10 @@
  * `timeout-minutes: 10`, so the deploy job was cancelled with every check
  * already printed `ok` and the site already live.
  *
- * The script cannot be driven end to end from a test: its canonical-host checks
- * compose `http://` and `www.` URLs out of the origin it is given, which no
- * local server can answer. Hence a source-level pin.
+ * verify-live-docs-cli.test.ts drives the script end to end, but it cannot
+ * catch this: with local servers the child exits quickly even without the
+ * explicit exit (checked by removing it; that suite stayed green), so the hang
+ * needs the real host. Hence a source-level pin, for the pass and fail paths.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -21,7 +22,7 @@ import { describe, expect, it } from 'vitest';
 const source = readFileSync(resolve(__dirname, '../../../scripts/verify-live-docs.mjs'), 'utf8');
 
 describe('verify-live-docs', () => {
-  it('exits when its checks pass instead of waiting out the socket', () => {
-    expect(source).toMatch(/await main\(\);[\s\S]*process\.exit\(0\)/);
+  it('exits when its checks end, pass or fail, instead of waiting out the socket', () => {
+    expect(source).toMatch(/await main\(\);[\s\S]*process\.exit\(failed \? 1 : 0\)/);
   });
 });

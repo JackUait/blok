@@ -1,3 +1,4 @@
+import { getElementDirection, type TextDirection } from '../direction';
 import { resolvePosition } from './popover-position';
 import { clampNestedPopoverTop, resolveNestedPopoverSide } from './popover-nested-position';
 
@@ -123,12 +124,14 @@ export function resolveBoundaryRect(
  * @param size - measured content size
  * @param boundaryRect - constraining rect
  * @param offset - gap in px
+ * @param direction - reading direction of the content
  */
 function positionVertical(
   anchorRect: DOMRect,
   size: { width: number; height: number },
   boundaryRect: DOMRect,
-  offset: number
+  offset: number,
+  direction: TextDirection
 ): ResolvedAnchoredPosition {
   const { top, left, openTop, openLeft } = resolvePosition({
     anchor: anchorRect,
@@ -137,11 +140,12 @@ function positionVertical(
     viewportSize: { width: window.innerWidth, height: window.innerHeight },
     scrollOffset: { x: window.scrollX, y: window.scrollY },
     offset,
+    direction,
   });
 
   return {
     side: openTop ? 'top' : 'bottom',
-    align: openLeft ? 'end' : 'start',
+    align: openLeft === (direction === 'ltr') ? 'end' : 'start',
     top,
     left,
   };
@@ -268,7 +272,8 @@ export function positionAnchored(
       align,
       overlap
     )
-    : positionVertical(anchorRect, size, boundaryRect, offset);
+    // Direction comes from the content: portal callers sync it from the anchor first.
+    : positionVertical(anchorRect, size, boundaryRect, offset, getElementDirection(content));
 
   content.setAttribute('data-side', resolved.side);
   content.setAttribute('data-align', resolved.align);
@@ -326,8 +331,14 @@ export interface PositionTracker {
  * @param reposition - callback that re-computes and applies the position;
  *   receives the originating event for scroll so consumers can fail closed
  *   when a virtual anchor has no live nested-scroll context
+ * @param anchor - optional element to observe too: an anchor inside a panel
+ *   that animates its size moves without any scroll or window resize
  */
-export function createPositionTracker(content: Element, reposition: (event?: Event) => void): PositionTracker {
+export function createPositionTracker(
+  content: Element,
+  reposition: (event?: Event) => void,
+  anchor?: Element
+): PositionTracker {
   const state: { attached: boolean; resizeObserver: ResizeObserver | null } = {
     attached: false,
     resizeObserver: null,
@@ -350,6 +361,9 @@ export function createPositionTracker(content: Element, reposition: (event?: Eve
       if (typeof ResizeObserver !== 'undefined') {
         state.resizeObserver = new ResizeObserver(() => reposition());
         state.resizeObserver.observe(content);
+        if (anchor !== undefined) {
+          state.resizeObserver.observe(anchor);
+        }
       }
     },
 

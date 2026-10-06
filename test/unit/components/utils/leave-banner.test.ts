@@ -22,6 +22,16 @@ describe('openLeaveBanner', () => {
     vi.restoreAllMocks();
   });
 
+  it('takes the direction of the editor it belongs to', () => {
+    const editor = document.createElement('div');
+
+    editor.style.direction = 'rtl';
+    document.body.appendChild(editor);
+    openLeaveBanner('s', labels, handlers(), editor);
+
+    expect(byId('leave-banner')?.getAttribute('dir')).toBe('rtl');
+  });
+
   it('is an alertdialog named by its title with focus on the first button', () => {
     openLeaveBanner("Won't be saved: 2", labels, handlers());
     const banner = byId('leave-banner');

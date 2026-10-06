@@ -247,6 +247,16 @@ describe('RectangleSelection', () => {
     expect(rectangle).not.toBeNull();
   });
 
+  it('keeps the selection rectangle hidden until a drag starts', () => {
+    const { rectangleSelection, blokWrapper } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    const rectangle = blokWrapper.querySelector<HTMLElement>('[data-blok-testid="overlay-rectangle"]');
+
+    expect(rectangle?.style.display).toBe('none');
+  });
+
   describe('screen-reader announcements (H9)', () => {
     it('marks the decorative lasso overlay aria-hidden', () => {
       const { rectangleSelection, blokWrapper } = createRectangleSelection();

@@ -1,5 +1,6 @@
 import { DATA_ATTR } from './constants';
 import { DomIterator } from './domIterator';
+import { getElementDirection, logicalArrow } from './utils/direction';
 import { isFunction, keyCodes } from './utils';
 
 /**
@@ -42,8 +43,8 @@ export interface FlipperOptions {
   allowedKeys?: number[];
 
   /**
-   * Callback fired when ArrowLeft is pressed.
-   * Used by nested popovers to close and return focus to parent.
+   * Callback fired by the arrow toward the inline start (ArrowLeft, or
+   * ArrowRight in RTL). Used by nested popovers to close and return focus to parent.
    */
   onArrowLeft?: () => void;
 
@@ -302,6 +303,28 @@ export class Flipper {
   }
 
   /**
+   * Toward the inline end opens the focused item's submenu; toward the start
+   * runs the back callback. Mirrors in RTL, where submenus open on the left.
+   * @param event - keydown event
+   * @param keyCode - LEFT or RIGHT key code
+   */
+  private handleHorizontalArrow(event: KeyboardEvent, keyCode: number): void {
+    const target = event.target instanceof Element ? event.target : null;
+    const direction = getElementDirection(this.iterator?.currentItem ?? target);
+    const step = logicalArrow(keyCode === keyCodes.LEFT ? 'ArrowLeft' : 'ArrowRight', direction);
+
+    if (step === 'backward') {
+      this.onArrowLeftCallback?.();
+
+      return;
+    }
+
+    if (this.iterator?.currentItem && this.currentItemHasChildren()) {
+      this.handleEnterPress(event);
+    }
+  }
+
+  /**
    * Checks if current focused item has children (nested menu)
    * Looks for data-blok-has-children attribute on the current item
    */
@@ -480,20 +503,11 @@ export class Flipper {
         this.handleTabPress(event);
         break;
       case keyCodes.LEFT:
-        // ArrowLeft triggers callback only if callback is set (for nested popovers)
-        if (this.onArrowLeftCallback) {
-          this.onArrowLeftCallback();
-        }
+      case keyCodes.RIGHT:
+        this.handleHorizontalArrow(event, keyCode);
         break;
       case keyCodes.UP:
         this.flipLeft();
-        break;
-      case keyCodes.RIGHT:
-        // ArrowRight clicks the focused item to open nested popover, but only if item has children
-        // Otherwise, do nothing (don't activate items without nested menu)
-        if (this.iterator?.currentItem && this.currentItemHasChildren()) {
-          this.handleEnterPress(event);
-        }
         break;
       case keyCodes.DOWN:
         this.flipRight();

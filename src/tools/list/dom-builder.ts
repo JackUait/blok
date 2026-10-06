@@ -231,7 +231,7 @@ export const buildStandardContent = (context: DOMBuilderContext): HTMLElement =>
   const depth = data.depth ?? 0;
   if (depth > 0) {
     const indent = data.style === 'ordered' ? ORDERED_INDENT_PER_LEVEL : INDENT_PER_LEVEL;
-    item.style.marginLeft = `${depth * indent}px`;
+    item.style.marginInlineStart = `${depth * indent}px`;
   }
 
   // Create marker element (use visual depth for marker display when provided)
@@ -280,7 +280,7 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
   // Apply indentation based on depth
   const depth = data.depth ?? 0;
   if (depth > 0) {
-    wrapper.style.marginLeft = `${depth * INDENT_PER_LEVEL}px`;
+    wrapper.style.marginInlineStart = `${depth * INDENT_PER_LEVEL}px`;
   }
 
   const checkbox = document.createElement('input');
@@ -447,10 +447,10 @@ export const createMarker = (style: ListItemStyle, depth: number): HTMLElement =
   if (style === 'ordered') {
     // Placeholder marker - will be updated by OrderedMarkerManager
     marker.textContent = '1.';
-    marker.className = twMerge(marker.className, 'text-right');
+    marker.className = twMerge(marker.className, 'text-end');
     // The number inherits the item's font size, so its gutter is expressed in
     // the same em: 0.6875em is the historical 11px at a 16px item.
-    marker.style.paddingRight = '0.6875em';
+    marker.style.paddingInlineEnd = '0.6875em';
     marker.style.minWidth = 'fit-content';
   } else {
     const bulletChar = getBulletCharacter(depth);
@@ -469,8 +469,8 @@ export const createMarker = (style: ListItemStyle, depth: number): HTMLElement =
      * font — the same box `leading-[1.5]` gives the content cell.
      */
     marker.className = twMerge(marker.className, 'w-[1em] text-center flex justify-center');
-    marker.style.paddingLeft = 'calc(1em / 24)';
-    marker.style.paddingRight = 'calc(13em / 24)';
+    marker.style.paddingInlineStart = 'calc(1em / 24)';
+    marker.style.paddingInlineEnd = 'calc(13em / 24)';
     marker.style.fontSize = '1.5em';
     marker.style.fontFamily = 'Arial';
     marker.style.lineHeight = '1';

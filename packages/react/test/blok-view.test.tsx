@@ -18,6 +18,27 @@ describe('BlokView', () => {
     vi.restoreAllMocks();
   });
 
+  it('sets the document direction on the wrapper and each block follows its own text', () => {
+    const { container } = render(
+      <BlokView
+        direction="rtl"
+        data={{
+          blocks: [
+            { type: 'paragraph', data: { text: 'Hello' } },
+            { type: 'paragraph', data: { text: '123' } },
+          ],
+        }}
+      />
+    );
+
+    expect(container.firstElementChild?.getAttribute('dir')).toBe('rtl');
+
+    const contents = container.querySelectorAll('[data-blok-element] > div');
+
+    expect(contents[0]?.getAttribute('dir')).toBe('ltr');
+    expect(contents[1]?.hasAttribute('dir')).toBe(false);
+  });
+
   it('renders semantic HTML synchronously inside a single wrapper div', () => {
     const { container } = render(
       <BlokView
@@ -131,6 +152,19 @@ describe('BlokView', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/pic.png');
   });
 
+  it('forwards pageInfo and pageHref so a page card links to its sub-page', () => {
+    const { container } = render(
+      <BlokView
+        data={{ blocks: [{ type: 'page', data: { pageId: 'p1' } }] }}
+        pageInfo={() => ({ title: 'Roadmap' })}
+        pageHref={(pageId) => `/pages/${pageId}`}
+      />
+    );
+
+    expect(container.querySelector('a')?.getAttribute('href')).toBe('/pages/p1');
+    expect(container.querySelector('a')).toHaveTextContent('Roadmap');
+  });
+
   it('forwards id and arbitrary div attributes onto the wrapper', () => {
     const { container } = render(
       <BlokView data={paragraphDoc('x')} id="doc" data-testid="reader" aria-label="Article body" />
@@ -207,6 +241,24 @@ describe('useBlokView', () => {
 
     expect(container.querySelector('p')).toHaveTextContent('two');
     expect(Object.is(results[0], results[1])).toBe(false);
+  });
+
+  it('forwards pageInfo and pageHref', () => {
+    const Probe = (): React.ReactNode => {
+      const content = useBlokView(
+        { blocks: [{ type: 'page', data: { pageId: 'p1' } }] },
+        { pageInfo: () => ({ title: 'Roadmap' }), pageHref: (pageId) => `/pages/${pageId}` }
+      );
+
+      return <div data-testid="probe">{content}</div>;
+    };
+
+    render(<Probe />);
+
+    const link = screen.getByTestId('probe').querySelector('a');
+
+    expect(link?.getAttribute('href')).toBe('/pages/p1');
+    expect(link).toHaveTextContent('Roadmap');
   });
 
   it('forwards toolAttributes / blockIds / transformUrl options', () => {

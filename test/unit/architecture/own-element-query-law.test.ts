@@ -62,6 +62,11 @@ interface ExemptSite {
 
 const EXEMPT_SITES: ExemptSite[] = [
   {
+    file: 'src/playground/page-host.ts',
+    snippet: "first.holder.querySelectorAll('[contenteditable=\"true\"]:not([data-blok-mutation-free])')",
+    reason: 'counts the first block\'s fields only after getChildren() came back empty, so no child holder is inside',
+  },
+  {
     file: 'src/tools/nested-blocks.ts',
     snippet: 'block.holder.querySelector(CHILD_SLOT_SELECTOR)',
     reason: 'presence of any slot: nested holders only live inside the block\'s own slot, so a slotless block has none',
@@ -108,12 +113,12 @@ const EXEMPT_SITES: ExemptSite[] = [
   },
   {
     file: 'src/tools/list/depth-validator.ts',
-    snippet: "block.holder?.querySelector('[role=\"listitem\"]')",
+    snippet: "block.holder?.querySelector('[data-list-depth]')",
     reason: 'every caller checks name === list first, and list items are slotless',
   },
   {
     file: 'src/tools/list/marker-calculator.ts',
-    snippet: "block.holder?.querySelector('[role=\"listitem\"]')",
+    snippet: "block.holder?.querySelector('[data-list-depth]')",
     reason: 'every caller checks name === list first, and list items are slotless',
   },
   {

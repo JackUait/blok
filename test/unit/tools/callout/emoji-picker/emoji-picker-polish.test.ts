@@ -93,6 +93,21 @@ describe('EmojiPicker polish', () => {
     expect(search).toHaveFocus();
   });
 
+  it('takes the anchor direction and mirrors grid arrows in RTL', async () => {
+    anchor.style.direction = 'rtl';
+    await picker.open(anchor);
+    const search = get<HTMLInputElement>('input');
+    const first = get<HTMLButtonElement>('[data-emoji-native="😀"]');
+    const second = get<HTMLButtonElement>('[data-emoji-native="👋"]');
+
+    expect(element.getAttribute('dir')).toBe('rtl');
+    key(search, 'ArrowDown');
+    key(first, 'ArrowLeft');
+    expect(second).toHaveFocus();
+    key(second, 'ArrowRight');
+    expect(first).toHaveFocus();
+  });
+
   it.each([{ isComposing: true }, { keyCode: 229 }])('leaves IME candidate navigation in search for %j', async (composition) => {
     await picker.open(anchor);
     const search = get<HTMLInputElement>('input');

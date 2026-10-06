@@ -914,6 +914,15 @@ export interface CreateReactBlockSpec<
    * `null`/`undefined` (or omit) to keep core's default.
    */
   getToolbarAnchorElement?: (host: HTMLElement, block: BlockAPI) => HTMLElement | null | undefined;
+  /**
+   * Enter (or Cmd/Ctrl+Enter) on this block while it is the keyboard
+   * navigation target — core's `onNavigationEnter` hook. Return true when the
+   * block handled it (e.g. opened a link); omit it, or return false, to let
+   * core put the caret in the block.
+   * @param event - the Enter keydown
+   * @param block - this block's per-block API
+   */
+  onNavigationEnter?: (event: KeyboardEvent, block: BlockAPI) => boolean;
   onRendered?: (block: BlockAPI) => void;
   /**
    * Fired ONCE per block instance, after the portal's FIRST commit — the first
@@ -1225,6 +1234,10 @@ export interface BlokViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>
   transformUrl?: BlocksToHtmlOptions['transformUrl'];
   /** Custom renderers for inline elements, keyed by lowercase tag name (equations, mentions). */
   inlineRenderers?: BlocksToHtmlOptions['inlineRenderers'];
+  /** Build the link for a `page` block from its `pageId`. A page card is a link only with this and an allowing {@link pageInfo}. */
+  pageHref?: BlocksToHtmlOptions['pageHref'];
+  /** Host metadata (title, icon, access) for a `page` block. Without it a page card shows a neutral "Page" label and no link. */
+  pageInfo?: BlocksToHtmlOptions['pageInfo'];
   /**
    * Render with the editor's presentational classes and per-block scaffolding
    * so the output matches a read-only editor render (default `true`). Needs
@@ -1232,6 +1245,8 @@ export interface BlokViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>
    * semantic markup.
    */
   classes?: BlocksToHtmlOptions['classes'];
+  /** Document direction: set as `dir` on the wrapper, and each block follows its own text. */
+  direction?: BlocksToHtmlOptions['direction'];
 }
 
 /**

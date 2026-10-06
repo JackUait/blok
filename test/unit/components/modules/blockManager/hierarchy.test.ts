@@ -24,6 +24,12 @@ const createMockBlock = (options: {
     parentId: options.parentId ?? null,
     contentIds: options.contentIds ?? [],
     call: vi.fn(),
+    tool: {
+      // Mirrors the real column / column_list declarations.
+      get isLayout(): boolean {
+        return block.name === 'column' || block.name === 'column_list';
+      },
+    },
   } as unknown as Block;
 
   return block;
@@ -649,6 +655,86 @@ describe('BlockHierarchy', () => {
       expect(x.holder.classList.contains('hidden')).toBe(false);
     });
 
+    it('keeps the active tab visible when it is re-placed among hidden layout siblings', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'tabs', parentId: null, contentIds: ['t1', 't2', 't3'] },
+        { id: 't1', parentId: 'tabs', contentIds: [] },
+        { id: 't2', parentId: 'tabs', contentIds: [] },
+        { id: 't3', parentId: 'tabs', contentIds: [] },
+      ]);
+      hierarchy = hierarchyOf(repository);
+
+      for (const id of ['t1', 't2', 't3']) {
+        Object.assign(requireBlock(id), { name: 'tab', tool: { isLayout: true } });
+      }
+      requireBlock('t2').holder.classList.add('hidden');
+      requireBlock('t3').holder.classList.add('hidden');
+
+      hierarchy.setBlockParent(requireBlock('t1'), 'tabs');
+      hierarchy.setBlockParent(requireBlock('t2'), 'tabs');
+
+      expect(requireBlock('t1').holder.classList.contains('hidden')).toBe(false);
+      expect(requireBlock('t2').holder.classList.contains('hidden')).toBe(true);
+    });
+
+    it('a block leaving a collapsed toggle for a hidden layout slot sheds its own hidden flag', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle', parentId: null, contentIds: ['p'] },
+        { id: 'p', parentId: 'toggle', contentIds: [] },
+        { id: 'tab', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = hierarchyOf(repository);
+
+      const marker = document.createElement('div');
+
+      marker.setAttribute('data-blok-toggle-open', 'false');
+      requireBlock('toggle').holder.appendChild(marker);
+
+      const tab = requireBlock('tab');
+      const slot = document.createElement('div');
+
+      slot.setAttribute('data-blok-nested-blocks', '');
+      tab.holder.appendChild(slot);
+      tab.holder.classList.add('hidden');
+      Object.assign(tab, { name: 'tab', tool: { isLayout: true } });
+
+      const p = requireBlock('p');
+
+      p.holder.classList.add('hidden');
+
+      hierarchy.setBlockParent(p, 'tab');
+
+      // The tab's own hidden holder conceals it; a flag of its own would
+      // outlive the tab being shown.
+      expect(tab.holder.contains(p.holder)).toBe(true);
+      expect(p.holder.classList.contains('hidden')).toBe(false);
+    });
+
+    it('a block leaving a collapsed toggle keeps its hidden flag under a hidden parent whose holder does not hold it', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle', parentId: null, contentIds: ['p', 'slotless'] },
+        { id: 'p', parentId: 'toggle', contentIds: [] },
+        { id: 'slotless', parentId: 'toggle', contentIds: [] },
+      ]);
+      hierarchy = hierarchyOf(repository);
+
+      const marker = document.createElement('div');
+
+      marker.setAttribute('data-blok-toggle-open', 'false');
+      requireBlock('toggle').holder.appendChild(marker);
+
+      const p = requireBlock('p');
+      const slotless = requireBlock('slotless');
+
+      p.holder.classList.add('hidden');
+      slotless.holder.classList.add('hidden');
+
+      hierarchy.setBlockParent(p, 'slotless');
+
+      expect(slotless.holder.contains(p.holder)).toBe(false);
+      expect(p.holder.classList.contains('hidden')).toBe(true);
+    });
+
     /**
      * Fix 4: cycle guard.
      *
@@ -989,6 +1075,27 @@ describe('BlockHierarchy', () => {
       expect(para.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
       expect(para.holder.style.marginLeft).toBe('');
       expect(para.holder).toHaveAttribute('data-blok-depth', '0');
+    });
+
+    it('skips visual indentation for an isLayout block and every block below it', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'tabs', parentId: null, contentIds: ['tab'] },
+        { id: 'tab', parentId: 'tabs', contentIds: ['para'] },
+        { id: 'para', parentId: 'tab', contentIds: ['nested'] },
+        { id: 'nested', parentId: 'para' },
+      ]);
+      hierarchy = hierarchyOf(repository);
+
+      Object.assign(requireBlock('tab'), { name: 'tab', tool: { isLayout: true } });
+
+      for (const id of ['tab', 'para', 'nested']) {
+        const block = requireBlock(id);
+
+        hierarchy.updateBlockIndentation(block);
+
+        expect(block.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
+        expect(block.holder).toHaveAttribute('data-blok-depth', '0');
+      }
     });
   });
 

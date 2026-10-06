@@ -6,12 +6,12 @@
 // Every list here is derived from the SAME manifest that drives prerendering
 // (`src/prerender-paths.ts` + `src/seo/route-metadata.ts`), so a route that is
 // added to the site cannot be missing from the sitemap or from llms.txt.
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
 import { createServer } from 'vite';
+import { nodeDigests } from './source-digest.mjs';
 import {
   htmlToMarkdown,
   renderLlmsFull,
@@ -21,52 +21,7 @@ import {
 } from './seo-artifacts.mjs';
 
 const DOCS_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const REPO_ROOT = path.resolve(DOCS_ROOT, '..');
 const OUT_DIR = path.join(DOCS_ROOT, 'dist', 'client');
-
-/**
- * Source files whose git history dates each static route. Docs routes are
- * handled generically below. A route with no mapping throws rather than
- * silently getting today's date.
- */
-const STATIC_SOURCES = {
-  '/': ['docs/src/pages/HomePage.tsx', 'docs/src/components/home'],
-  '/demo': ['docs/src/pages/DemoPage.tsx'],
-  '/docs': ['docs/src/components/api/DocsHub.tsx'],
-  '/tools': ['docs/src/pages/ToolsPage.tsx'],
-  '/presets': ['docs/src/pages/PresetsPage.tsx', 'docs/src/components/presets'],
-  '/server': ['docs/src/pages/ServerPage.tsx', 'docs/src/components/server'],
-  '/migration': ['docs/src/pages/MigrationPage.tsx', 'docs/src/components/migration'],
-  '/migration/reference': ['docs/src/pages/MigrationReferencePage.tsx'],
-  '/changelog': ['CHANGELOG.md'],
-  '/404': ['docs/src/routes/not-found.tsx'],
-};
-
-const API_DATA_SOURCE = 'docs/src/components/api/api-data.ts';
-const TOOLS_DATA_SOURCE = 'docs/src/components/tools/tools-data.ts';
-
-const gitDateCache = new Map();
-
-const gitDate = (repoPath) => {
-  if (!gitDateCache.has(repoPath)) {
-    const iso = execFileSync('git', ['log', '-1', '--format=%cI', '--', repoPath], {
-      cwd: REPO_ROOT,
-      encoding: 'utf8',
-    }).trim();
-    gitDateCache.set(repoPath, iso.slice(0, 10));
-  }
-  return gitDateCache.get(repoPath);
-};
-
-/** Latest commit date (YYYY-MM-DD) touching any of the given repo paths. */
-const lastCommitDate = (repoPaths) => {
-  const newest = repoPaths.map(gitDate).filter(Boolean).sort().at(-1);
-  // Empty when the file is added but not yet committed, and on a shallow CI
-  // clone whose single commit did not touch it. Fall back to HEAD's date rather
-  // than the filesystem, whose mtimes are the clone time in CI. (A `fetch-depth:
-  // 0` checkout is what gives every page its own real date.)
-  return newest ?? gitDate('.');
-};
 
 /** Loads the app's TypeScript manifest modules without a separate build step. */
 const loadManifest = async () => {
@@ -79,17 +34,24 @@ const loadManifest = async () => {
     resolve: { alias: { '@': path.join(DOCS_ROOT, 'src') } },
   });
   try {
-    const [paths, locales, metadata, nav, tools] = await Promise.all([
+    const [paths, locales, metadata, nav, tools, fingerprint, lastmod] = await Promise.all([
       server.ssrLoadModule('/src/prerender-paths.ts'),
       server.ssrLoadModule('/src/seo/locales.ts'),
       server.ssrLoadModule('/src/seo/route-metadata.ts'),
       server.ssrLoadModule('/src/components/api/api-nav.ts'),
       server.ssrLoadModule('/src/components/tools/tools-data.ts'),
+      server.ssrLoadModule('/src/seo/page-fingerprint.ts'),
+      server.ssrLoadModule('/src/seo/lastmod.ts'),
     ]);
+    const routes = locales.localizedPrerenderPaths(paths.PRERENDER_PATHS);
     return {
       // The very list react-router.config.ts prerenders from, locale trees
       // included, so a sitemap URL and an emitted HTML file cannot disagree.
-      ROUTES: locales.localizedPrerenderPaths(paths.PRERENDER_PATHS),
+      ROUTES: routes,
+      // Computed while the module server is up: it reads the page sources.
+      FINGERPRINTS: fingerprint.fingerprintRoutes(routes, { ...fingerprint.pageData(), ...nodeDigests }),
+      LASTMOD_LEDGER: lastmod.LASTMOD_LEDGER,
+      lastModified: lastmod.lastModified,
       STATIC_PATHS: paths.STATIC_PATHS,
       DEFAULT_LOCALE: locales.DEFAULT_LOCALE,
       absoluteUrl: locales.absoluteUrl,
@@ -98,7 +60,6 @@ const loadManifest = async () => {
       splitLocalePath: locales.splitLocalePath,
       getRouteMetadata: metadata.getRouteMetadata,
       SITE_URL: metadata.SITE_URL,
-      MODULE_ORDER: nav.MODULE_ORDER,
       SIDEBAR_GROUPS: nav.SIDEBAR_GROUPS,
       GROUP_TITLES_EN: nav.GROUP_TITLES_EN,
       TOOL_SECTIONS: tools.TOOL_SECTIONS,
@@ -112,6 +73,9 @@ const main = async () => {
   const manifest = await loadManifest();
   const {
     ROUTES,
+    FINGERPRINTS,
+    LASTMOD_LEDGER,
+    lastModified,
     DEFAULT_LOCALE,
     absoluteUrl,
     hasMarkdownMirror,
@@ -119,7 +83,6 @@ const main = async () => {
     splitLocalePath,
     getRouteMetadata,
     SITE_URL,
-    MODULE_ORDER,
     SIDEBAR_GROUPS,
     GROUP_TITLES_EN,
     TOOL_SECTIONS,
@@ -129,18 +92,15 @@ const main = async () => {
     throw new Error(`Build output missing at ${OUT_DIR}; run the docs build first.`);
   }
 
-  const toolIds = new Set(TOOL_SECTIONS.map((tool) => tool.id));
-
-  const sourcesForRoute = (route) => {
-    const { locale, path: unprefixed } = splitLocalePath(route);
-    // A translated page also changes when its message catalogue does.
-    const localeSource = locale === DEFAULT_LOCALE ? [] : [`docs/src/i18n/${locale}.json`];
-    if (STATIC_SOURCES[unprefixed]) return [...STATIC_SOURCES[unprefixed], ...localeSource];
-    const id = unprefixed.replace(/^\/docs\//, '');
-    if (MODULE_ORDER.includes(id)) return [API_DATA_SOURCE, ...localeSource];
-    if (toolIds.has(id)) return [TOOLS_DATA_SOURCE, ...localeSource];
-    throw new Error(`No lastmod source mapped for route ${route}`);
-  };
+  // The prerendered HTML already carries the ledger's dateModified, so a stale
+  // entry cannot be patched here; it has to be fixed at the source.
+  const stale = ROUTES.filter((route) => LASTMOD_LEDGER[route]?.hash !== FINGERPRINTS[route]);
+  if (stale.length > 0) {
+    throw new Error(
+      `Pages changed since the lastmod ledger was written: ${stale.join(', ')}. ` +
+        'Run `node docs/scripts/update-lastmod-ledger.mjs` and commit docs/src/seo/lastmod-ledger.json.',
+    );
+  }
 
   // Route -> { metadata, lastmod, markdown }, built once and reused by all
   // three artifacts so they cannot disagree about what the site contains.
@@ -178,7 +138,8 @@ const main = async () => {
     return {
       route,
       metadata,
-      lastmod: lastCommitDate(sourcesForRoute(route)),
+      // Undefined means no page-specific date is known: emit none.
+      lastmod: lastModified(route),
       body: htmlToMarkdown(dom.window.document.body, { siteUrl: SITE_URL }),
     };
   });

@@ -14,10 +14,13 @@ describe('ListDepthValidator', () => {
   } = {}) => {
     const { name = 'list', depth = 0 } = options;
 
+    const wrapper = document.createElement('div');
+    wrapper.setAttribute('data-list-depth', String(depth));
+
     const roleItem = document.createElement('div');
     roleItem.setAttribute('role', 'listitem');
     if (depth > 0) {
-      roleItem.style.marginLeft = `${depth * 27}px`;
+      roleItem.style.marginInlineStart = `${depth * 27}px`;
     }
 
     return {
@@ -26,6 +29,7 @@ describe('ListDepthValidator', () => {
       holder: {
         querySelector: (selector: string) => {
           if (selector === '[role="listitem"]') return roleItem;
+          if (selector === '[data-list-depth]') return wrapper;
           return null;
         },
       },
@@ -519,7 +523,7 @@ describe('ListDepthValidator', () => {
   });
 
   describe('getBlockDepth', () => {
-    it('returns 0 for blocks with no margin-left', () => {
+    it('returns 0 for a root-level item', () => {
       const block = createMockBlock({ depth: 0 });
       const blocksAPI = createMockBlocksAPI([]);
       const validator = new ListDepthValidator(blocksAPI);
@@ -527,7 +531,7 @@ describe('ListDepthValidator', () => {
       expect(validator.getBlockDepth(block)).toBe(0);
     });
 
-    it('calculates depth from margin-left', () => {
+    it('reads the depth the list tool stamped on its wrapper', () => {
       const block = createMockBlock({ depth: 2 });
       const blocksAPI = createMockBlocksAPI([]);
       const validator = new ListDepthValidator(blocksAPI);

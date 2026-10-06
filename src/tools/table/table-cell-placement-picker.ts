@@ -1,9 +1,12 @@
 import type { I18n } from '../../../types/api';
 import { twMerge } from '../../components/utils/tw';
+import type { TextDirection } from '../../components/utils/direction';
 import type { CellPlacement } from './types';
 
 interface PlacementPickerOptions {
   i18n: I18n;
+  /** The table's direction: in RTL, left/right placements show on the right/left. */
+  direction?: TextDirection;
   currentPlacement: CellPlacement | undefined;
   onPlacementSelect: (placement: CellPlacement) => void;
 }
@@ -28,6 +31,19 @@ const I18N_KEYS: Record<CellPlacement, string> = {
   'bottom-left': 'tools.table.placementBottomLeft',
   'bottom-center': 'tools.table.placementBottomCenter',
   'bottom-right': 'tools.table.placementBottomRight',
+};
+
+/** Names an RTL option by the side it shows on, since left/right mean the grid's start/end. */
+const MIRRORED: Record<CellPlacement, CellPlacement> = {
+  'top-left': 'top-right',
+  'top-center': 'top-center',
+  'top-right': 'top-left',
+  'middle-left': 'middle-right',
+  'middle-center': 'middle-center',
+  'middle-right': 'middle-left',
+  'bottom-left': 'bottom-right',
+  'bottom-center': 'bottom-center',
+  'bottom-right': 'bottom-left',
 };
 
 /** Row by row, so option n sits at grid column n % 3, row floor(n / 3). */
@@ -66,7 +82,7 @@ const PREVIEW_TOP: Record<Row, number> = {
   bottom: 48,
 };
 
-/** How far a line of this width sits from the left edge when aligned to this column. */
+/** How far a line of this width sits from the inline start when aligned to this column. */
 const offsetOf = (column: Column, width: number): number => {
   if (column === 'left') {
     return 0;
@@ -80,6 +96,9 @@ const offsetOf = (column: Column, width: number): number => {
  * without overshoot. Longer or springy motion reads as lag after the click.
  */
 const EASE_IN_OUT = '[transition-timing-function:cubic-bezier(0.7,0,0.2,1)]';
+
+/** -1 in an RTL popover. paint() runs before the picker is attached, so CSS resolves it. */
+const INLINE_SIGN = 'var(--_blok-inline-sign, 1)';
 
 const MOTION = [
   'transition-transform',
@@ -129,11 +148,12 @@ const GROUP_CLASSES = [
 /**
  * The selection is a neutral surface that slides between options — never blue.
  * It is one grid cell in size, so translate(col * 100%, row * 100%) lands on it.
+ * Left/right mean start/end, so x steps toward the inline end.
  */
 const THUMB_CLASSES = [
   'absolute',
   'top-[3px]',
-  'left-[3px]',
+  'start-[3px]',
   'w-[calc((100%-6px)/3)]',
   'h-[calc((100%-6px)/3)]',
   'rounded-(--blok-radius-inner)',
@@ -246,7 +266,7 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
 
     textBox.style.transform = `translateY(${PREVIEW_TOP[row]}px)`;
     for (const [lineIndex, line] of previewLines.entries()) {
-      line.style.transform = `translateX(${offsetOf(column, PREVIEW_LINES[lineIndex])}px)`;
+      line.style.transform = `translateX(calc(${offsetOf(column, PREVIEW_LINES[lineIndex])}px * ${INLINE_SIGN}))`;
     }
   };
 
@@ -254,7 +274,7 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
     buttons.forEach((button, index) => {
       button.setAttribute('aria-checked', String(index === state.index));
     });
-    thumb.style.transform = `translate(${(state.index % 3) * 100}%, ${Math.floor(state.index / 3) * 100}%)`;
+    thumb.style.transform = `translate(calc(${(state.index % 3) * 100}% * ${INLINE_SIGN}), ${Math.floor(state.index / 3) * 100}%)`;
     show(state.index);
   };
 
@@ -264,7 +284,9 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
     button.type = 'button';
     button.setAttribute('role', 'radio');
     button.setAttribute('data-placement', option.placement);
-    button.setAttribute('aria-label', options.i18n.t(I18N_KEYS[option.placement]));
+    const shown = options.direction === 'rtl' ? MIRRORED[option.placement] : option.placement;
+
+    button.setAttribute('aria-label', options.i18n.t(I18N_KEYS[shown]));
     button.className = twMerge(OPTION_CLASSES);
 
     const glyph = div(GLYPH_CLASSES);

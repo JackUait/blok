@@ -27,7 +27,7 @@
 .blok-media-empty__card > * {
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-block) - var(--blok-border-width-hairline) - var(--blok-space-2)));
 }
-.blok-media-empty__card:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__card:focus-visible {
   outline: none;
   outline-offset: 0;
   border-color: var(--blok-focus-ring);
@@ -53,7 +53,7 @@
 
 .blok-media-empty__tabs {
   display: inline-flex; gap: var(--blok-space-0-5);
-  margin-left: auto;
+  margin-inline-start: auto;
   flex-shrink: 0;
 }
 .blok-media-empty__tab {
@@ -69,7 +69,7 @@
   color: var(--blok-text-primary);
   background: var(--blok-bg-hover);
 }
-.blok-media-empty__tab:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__tab:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -223,6 +223,17 @@
 .blok-media-preview__sheet { transform-origin: 50% 100%; }
 .blok-media-preview__sheet--back { --dir: -1; --rest: translateX(-6px) rotate(-8deg); opacity: 0.55; transform: var(--rest); }
 .blok-media-preview__sheet--mid { --dir: 1; --rest: translateX(6px) rotate(6deg); opacity: 0.8; transform: var(--rest); }
+/* "Nothing found" in a popover (searchPreviewSvg): the loupe hovers over the empty slot. */
+.blok-media-preview__field,
+.blok-media-preview__lens { fill: var(--blok-media-preview-tone); }
+.blok-media-preview__field { stroke: none; }
+.blok-media-preview__slot { stroke-dasharray: 2.5 3; opacity: 0.7; }
+.blok-media-preview__glint { opacity: 0.6; }
+.blok-media-preview__loupe { animation: blok-media-preview-hover 3.2s ease-in-out infinite; }
+@keyframes blok-media-preview-hover {
+  0%, 100% { translate: 0 0; }
+  50% { translate: -1.5px -2.5px; }
+}
 
 /* ----- Shadows: light comes from the pointer, so every shadow falls away
    from it. --tilt-x/--tilt-y are the live tilt from media-preview-3d.ts. The
@@ -418,7 +429,7 @@
 }
 .blok-media-empty__choose:hover { opacity: 0.88; }
 .blok-media-empty__choose:active { opacity: 0.78; }
-.blok-media-empty__choose:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__choose:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -440,7 +451,7 @@
   text-overflow: ellipsis;
 }
 .blok-media-empty__content--row .blok-media-empty__meta {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .blok-media-empty__card[data-active-tab="embed"] .blok-media-empty__panel {
   border-color: transparent;
@@ -521,6 +532,15 @@
   line-height: 24px;
 }
 .blok-media-empty__embed-mirror-text { transform: translateX(calc(var(--scroll, 0) * -1px)); }
+/* A faint haze on whichever side a long link runs past. Only the mirror is
+   masked: the input's text is transparent, so its caret stays crisp. */
+.blok-media-empty__embed-mirror {
+  --haze-start: #000;
+  --haze-end: #000;
+  mask-image: linear-gradient(to right, var(--haze-start), #000 20px, #000 calc(100% - 20px), var(--haze-end));
+}
+.blok-media-empty__embed-mirror[data-overflow-start] { --haze-start: rgb(0 0 0 / 0.35); }
+.blok-media-empty__embed-mirror[data-overflow-end] { --haze-end: rgb(0 0 0 / 0.35); }
 /* Must outrank the shared field's "> input { color: inherit }" (field.css). */
 [data-blok-field] > .blok-media-empty__embed-input--mirrored {
   position: relative;
@@ -625,7 +645,7 @@
   transform: scale(0.96);
   transition-duration: 80ms;
 }
-.blok-media-empty__embed-submit:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__embed-submit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -648,7 +668,7 @@
   justify-content: center;
   height: 16px;
   max-width: 40px;
-  margin-left: var(--blok-space-1-5);
+  margin-inline-start: var(--blok-space-1-5);
   padding: var(--blok-space-0-25) var(--blok-space-1) var(--blok-space-0, 0);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   font-size: 11px;
@@ -815,7 +835,7 @@
 }
 .blok-media-empty__submit:hover { opacity: 0.88; }
 .blok-media-empty__submit:active { opacity: 0.78; }
-.blok-media-empty__submit:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-media-empty__submit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -886,6 +906,6 @@
   .blok-media-empty__meta { font-size: 10px; }
 }
 @container (max-width: 360px) {
-  .blok-media-empty__tabs { margin-left: 0; }
+  .blok-media-empty__tabs { margin-inline-start: 0; }
   .blok-media-empty__header { flex-wrap: wrap; }
 }

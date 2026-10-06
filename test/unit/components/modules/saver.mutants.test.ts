@@ -1451,7 +1451,7 @@ describe('Saver — mutation coverage', () => {
 
       const result = await saver.save();
 
-      expect(result).toStrictEqual({ time: +frozen, blocks: [], version: '9.9.9-test' });
+      expect(result).toStrictEqual({ id: expect.any(String), time: +frozen, blocks: [], version: '9.9.9-test' });
     });
 
     it('keeps a document whose first block is an empty default paragraph but is not alone', async () => {

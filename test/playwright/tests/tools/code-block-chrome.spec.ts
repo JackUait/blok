@@ -135,20 +135,52 @@ test.describe('code block chrome', () => {
 
     await expect(band).toBeVisible();
 
-    const text = await lineTops(page);
-    const box = await band.boundingBox();
+    await expect.poll(async () => {
+      const text = await lineTops(page);
+      const box = await band.boundingBox();
 
-    expect(box).not.toBeNull();
-    expect(Math.abs((box?.y ?? 0) - text[1])).toBeLessThanOrEqual(4);
-    expect(Math.abs((box?.y ?? 0) + (box?.height ?? 0) - text[2])).toBeLessThanOrEqual(4);
+      if (box === null) return Infinity;
+
+      return Math.max(
+        Math.abs(box.y - text[1]),
+        Math.abs(box.y + box.height - text[2])
+      );
+    }).toBeLessThanOrEqual(4);
     await expect(page.getByTestId('code-gutter').locator('[data-active="true"]')).toHaveText('2');
 
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
+    await page.getByTestId('code-gutter').locator('[data-line-index="2"]').click();
     await expect(page.getByTestId('code-gutter').locator('[data-active="true"]')).toHaveText('3');
 
     await page.getByTestId('code-content').evaluate((element) => element.blur());
     await expect(band).toBeHidden();
+  });
+
+  test('ArrowDown moves from a wrapped code line to the next logical line', async ({ page }) => {
+    await createBlok(page, [{ type: 'code', data: { code: `const a = 1;\n${LONG_LINE}\nconst b = 2;`, language: 'javascript' } }]);
+
+    const code = page.getByTestId('code-content');
+
+    await page.getByTestId('code-gutter').locator('[data-line-index="1"]').click();
+    await page.keyboard.press('ArrowDown');
+
+    await expect.poll(() => code.evaluate((element) => {
+      const selection = element.ownerDocument.getSelection();
+
+      if (element.ownerDocument.activeElement !== element || !selection?.isCollapsed || !selection.rangeCount || !selection.anchorNode || !element.contains(selection.anchorNode)) {
+        return null;
+      }
+
+      const before = element.ownerDocument.createRange();
+
+      before.selectNodeContents(element);
+      before.setEnd(selection.anchorNode, selection.anchorOffset);
+
+      return before.toString().split('\n').length;
+    })).toBe(3);
+
+    const text = await lineTops(page);
+
+    expect(text[2] - text[1]).toBeGreaterThan((text[1] - text[0]) * 1.5);
   });
 
   test('leaves no empty strip under the code of a block without a preview', async ({ page }) => {

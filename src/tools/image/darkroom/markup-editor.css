@@ -5,9 +5,9 @@
   --blok-markup-handle-hit: 28px;
   --blok-markup-box-ink: rgba(255, 255, 255, 0.92);
   --blok-markup-box-shade: rgba(0, 0, 0, 0.35);
+  --blok-markup-marquee-fill: rgba(255, 255, 255, 0.08);
   --blok-markup-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(0, 0, 0, 0.25);
   --blok-markup-handle-fill: #fff;
-  --blok-markup-eraser-cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='8' fill='rgba(255,255,255,0.25)' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='8.75' fill='none' stroke='rgba(0,0,0,0.5)' stroke-width='0.5'/%3E%3C/svg%3E") 12 12, cell;
   position: absolute;
   inset: 0;
   /* Above the photo and frame, below the bar and dock (z-index 2). */
@@ -21,7 +21,10 @@
 .blok-markup-layer[hidden] { display: none; }
 .blok-markup-layer[data-tool="select"] { cursor: default; }
 .blok-markup-layer[data-tool="text"] { cursor: text; }
-.blok-markup-layer[data-tool="eraser"] { cursor: var(--blok-markup-eraser-cursor); }
+/* Ring radius = ERASER_PX in markup-editor.ts for that size. */
+.blok-markup-layer[data-tool="eraser"][data-size="0"] { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='8' cy='8' r='4' fill='rgba(255,255,255,0.25)' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='8' cy='8' r='4.75' fill='none' stroke='rgba(0,0,0,0.5)' stroke-width='0.5'/%3E%3C/svg%3E") 8 8, cell; }
+.blok-markup-layer[data-tool="eraser"][data-size="1"] { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='8' fill='rgba(255,255,255,0.25)' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='8.75' fill='none' stroke='rgba(0,0,0,0.5)' stroke-width='0.5'/%3E%3C/svg%3E") 12 12, cell; }
+.blok-markup-layer[data-tool="eraser"][data-size="2"] { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='16' fill='rgba(255,255,255,0.25)' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='20' cy='20' r='16.75' fill='none' stroke='rgba(0,0,0,0.5)' stroke-width='0.5'/%3E%3C/svg%3E") 20 20, cell; }
 
 /* Hairline box in screen px: the same weight at any zoom. */
 .blok-markup-selection {
@@ -46,6 +49,16 @@
   margin: calc(var(--blok-markup-handle-hit) / -2) 0 0 calc(var(--blok-markup-handle-hit) / -2);
   pointer-events: auto;
   touch-action: none;
+}
+
+/* Drag-to-select box. Neutral, like the selection box: blue is for links and focus only. */
+.blok-markup-marquee {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px dashed var(--blok-markup-box-ink);
+  box-shadow: 0 0 0 1px var(--blok-markup-box-shade);
+  background: var(--blok-markup-marquee-fill);
+  pointer-events: none;
 }
 
 /* The visible dot is small; the press target around it is finger sized. */

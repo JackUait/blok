@@ -6,7 +6,7 @@ import {
   shortcutToReadable,
 } from '../../../src/components/utils/key-icon';
 
-const SPAN_OPEN = '<span style="display:inline-flex;align-items:center;line-height:1">';
+const SPAN_OPEN = '<span style="display:inline-flex;align-items:center;line-height:1;direction:ltr">';
 const SPAN_CLOSE = '</span>';
 
 /**
@@ -38,6 +38,17 @@ const keySvg = (label: string, width: number, fontSize: number, x: number): stri
   `>${label}</text>` +
   `</svg>`;
 
+describe('key-icon — glyph order in RTL', () => {
+  it('pins the glyph row to LTR so a shortcut reads the same inside an RTL menu', () => {
+    const host = document.createElement('div');
+
+    host.dir = 'rtl';
+    host.innerHTML = makeShortcutHtml('⌘ + D');
+
+    expect(host.querySelector('span')?.style.direction).toBe('ltr');
+  });
+});
+
 describe('key-icon — makeShortcutHtml markup', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -49,7 +60,7 @@ describe('key-icon — makeShortcutHtml markup', () => {
 
   it('renders a single-glyph shortcut as the complete literal markup', () => {
     expect(makeShortcutHtml('⌘')).toBe(
-      '<span style="display:inline-flex;align-items:center;line-height:1">' +
+      '<span style="display:inline-flex;align-items:center;line-height:1;direction:ltr">' +
         '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="16" viewBox="0 0 13 16"' +
         ' style="display:inline-block;vertical-align:middle;flex-shrink:0" aria-hidden="true">' +
         '<text x="6.5" y="9" text-anchor="middle" dominant-baseline="middle"' +

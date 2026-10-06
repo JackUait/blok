@@ -187,7 +187,7 @@ describe('database column drag mutants', () => {
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 120));
 
-      expect(board.columns[1].style.marginLeft).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.columns[1].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
 
       board.drag.cleanup();
     });
@@ -199,8 +199,8 @@ describe('database column drag mutants', () => {
       document.dispatchEvent(pointer('pointermove', 120));
       document.dispatchEvent(pointer('pointermove', 220));
 
-      expect(board.columns[1].style.marginLeft).toBe('');
-      expect(board.columns[2].style.marginLeft).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.columns[1].style.marginInlineStart).toBe('');
+      expect(board.columns[2].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
 
       board.drag.cleanup();
     });
@@ -211,8 +211,8 @@ describe('database column drag mutants', () => {
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(board.board.style.paddingRight).toBe(`${COLUMN_WIDTH}px`);
-      expect(board.columns[1].style.marginLeft).toBe('');
+      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.columns[1].style.marginInlineStart).toBe('');
 
       board.drag.cleanup();
     });
@@ -223,7 +223,7 @@ describe('database column drag mutants', () => {
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 10));
 
-      expect(board.columns[0].style.marginLeft).toBe('');
+      expect(board.columns[0].style.marginInlineStart).toBe('');
 
       board.drag.cleanup();
     });
@@ -281,8 +281,8 @@ describe('database column drag mutants', () => {
     const assertClean = (board: Board): void => {
       expect(ghost()).toBeNull();
       expect(board.columns[0].style.opacity).toBe('');
-      expect(board.columns[1].style.marginLeft).toBe('');
-      expect(board.board.style.paddingRight).toBe('');
+      expect(board.columns[1].style.marginInlineStart).toBe('');
+      expect(board.board.style.paddingInlineEnd).toBe('');
       expect(board.wrapper.hasAttribute('data-blok-database-column-reordering')).toBe(false);
     };
 
@@ -467,8 +467,8 @@ describe('database column drag — strict mutants', () => {
       board.drag.beginTracking('a', 50, 100);
       document.dispatchEvent(pointer('pointermove', 50 + DRAG_THRESHOLD - 5));
 
-      expect(board.columns[1].style.marginLeft).toBe('');
-      expect(board.board.style.paddingRight).toBe('');
+      expect(board.columns[1].style.marginInlineStart).toBe('');
+      expect(board.board.style.paddingInlineEnd).toBe('');
 
       board.drag.cleanup();
     });
@@ -483,7 +483,7 @@ describe('database column drag — strict mutants', () => {
       document.dispatchEvent(pointer('pointermove', 150));
 
       // Column b spans 100-200, so its midpoint is exactly 150.
-      expect(board.columns[2].style.marginLeft).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.columns[2].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
 
       document.dispatchEvent(pointer('pointerup', 150));
 
@@ -497,7 +497,7 @@ describe('database column drag — strict mutants', () => {
       document.dispatchEvent(pointer('pointermove', 61));
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(board.board.style.paddingRight).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
 
       document.dispatchEvent(pointer('pointerup', 400));
 
@@ -531,12 +531,12 @@ describe('database column drag — strict mutants', () => {
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(board.board.style.paddingRight).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
 
       document.dispatchEvent(pointer('pointermove', 120));
 
-      expect(board.board.style.paddingRight).toBe('');
-      expect(board.columns[1].style.marginLeft).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.board.style.paddingInlineEnd).toBe('');
+      expect(board.columns[1].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
 
       board.drag.cleanup();
     });
@@ -548,7 +548,7 @@ describe('database column drag — strict mutants', () => {
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(board.board.style.paddingRight).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
 
       board.board.remove();
       document.dispatchEvent(pointer('pointermove', 400));
@@ -565,14 +565,14 @@ describe('database column drag — strict mutants', () => {
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 120));
 
-      expect(board.columns[1].style.marginLeft).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.columns[1].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
 
       const writes = styleWritesDuring(board.columns[1], () => {
         document.dispatchEvent(pointer('pointermove', 120));
       });
 
       expect(writes).toStrictEqual([]);
-      expect(board.columns[1].style.marginLeft).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.columns[1].style.marginInlineStart).toBe(`${COLUMN_WIDTH}px`);
 
       board.drag.cleanup();
     });
@@ -583,14 +583,14 @@ describe('database column drag — strict mutants', () => {
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(board.board.style.paddingRight).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
 
       const writes = styleWritesDuring(board.board, () => {
         document.dispatchEvent(pointer('pointermove', 400));
       });
 
       expect(writes).toStrictEqual([]);
-      expect(board.board.style.paddingRight).toBe(`${COLUMN_WIDTH}px`);
+      expect(board.board.style.paddingInlineEnd).toBe(`${COLUMN_WIDTH}px`);
 
       board.drag.cleanup();
     });

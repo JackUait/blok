@@ -103,6 +103,19 @@ describe('anchored-position', () => {
       expect(content.dataset.align).toBe('end');
     });
 
+    it('aligns RTL content to the anchor right edge and reports align=start', () => {
+      const content = document.createElement('div');
+
+      stubSize(content, 200, 150);
+      content.style.direction = 'rtl';
+      document.body.appendChild(content);
+
+      const result = positionAnchored(content, rect({ top: 100, bottom: 140, left: 500, right: 600, width: 100, height: 40 }));
+
+      expect(result.left).toBe(400);
+      expect(content.getAttribute('data-align')).toBe('start');
+    });
+
     it('does not mutate content styles when apply is false but still returns coords', () => {
       const content = document.createElement('div');
 
@@ -254,6 +267,34 @@ describe('anchored-position', () => {
       tracker.detach();
       expect(disconnect).toHaveBeenCalled();
 
+      vi.unstubAllGlobals();
+    });
+
+    it('also observes an anchor that is passed, so the content follows it when it resizes', () => {
+      const observe = vi.fn();
+
+      class MockResizeObserver {
+        public observe = observe;
+
+        public disconnect = vi.fn();
+
+        public unobserve = vi.fn();
+      }
+
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+
+      const content = document.createElement('div');
+      const anchor = document.createElement('button');
+
+      document.body.append(content, anchor);
+
+      const tracker = createPositionTracker(content, vi.fn(), anchor);
+
+      tracker.attach();
+
+      expect(observe).toHaveBeenCalledWith(anchor);
+
+      tracker.detach();
       vi.unstubAllGlobals();
     });
 

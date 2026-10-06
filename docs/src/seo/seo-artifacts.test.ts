@@ -56,6 +56,20 @@ describe('renderSitemap', () => {
     expect(lastmods).toEqual(['2026-07-01', '2026-07-20', '2026-06-11']);
   });
 
+  it('omits lastmod for a page with no recorded date instead of inventing one', () => {
+    const doc = parseXml(
+      renderSitemap([
+        { loc: 'https://blokeditor.com/a/', lastmod: '2026-07-01' },
+        { loc: 'https://blokeditor.com/b/' },
+      ]),
+    );
+    const urls = [...doc.querySelectorAll('url')];
+
+    expect(urls[0].querySelector('lastmod')?.textContent).toBe('2026-07-01');
+    expect(urls[1].querySelector('lastmod')).toBeNull();
+    expect(doc.querySelector('parsererror')).toBeNull();
+  });
+
   it('omits priority and changefreq, which Google ignores', () => {
     const xml = renderSitemap(FIXTURE_ENTRIES);
 
@@ -211,6 +225,18 @@ describe('renderMarkdownMirror', () => {
 
   it('ends with the page body', () => {
     expect(mirror.trimEnd().endsWith('# Table block\n\nMerged cells.')).toBe(true);
+  });
+
+  it('drops the lastmod line when the page has no recorded date', () => {
+    const undated = renderMarkdownMirror({
+      title: 'T',
+      description: 'D',
+      source: 'https://blokeditor.com/docs/table/',
+      body: 'Body.',
+    });
+
+    expect(undated).not.toContain('lastmod');
+    expect(undated).toContain('source: https://blokeditor.com/docs/table/\n---');
   });
 });
 

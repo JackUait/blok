@@ -61,7 +61,7 @@ describe('convertGdocs', () => {
     expect(result.blocks[0].data.text).toBe('plain text');
   });
 
-  it('converts table cell paragraphs to br-separated content', () => {
+  it('converts each table cell paragraph to its own block', () => {
     // Multi-row single-column text-only: stays a table (a 1x1 table would
     // unwrap into plain paragraphs before reaching the table builder).
     const html = gdocs(
@@ -71,14 +71,11 @@ describe('convertGdocs', () => {
     const tableBlock = result.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
-    // Table child paragraphs should contain the br-separated content
-    const cellBlocks = result.blocks.filter(
-      (b: { type: string; parent: string }) => b.parent === tableBlock.id
-    );
+    const blocks = result.blocks as Array<{ id: string; data: { text?: string } }>;
+    const firstCellIds: string[] = tableBlock.data.content[0][0].blocks;
+    const firstCellTexts = firstCellIds.map(id => blocks.find(b => b.id === id)?.data.text);
 
-    expect(cellBlocks.length).toBeGreaterThan(0);
-    expect(cellBlocks[0].data.text).toContain('Line A');
-    expect(cellBlocks[0].data.text).toContain('Line B');
+    expect(firstCellTexts).toEqual(['Line A', 'Line B']);
   });
 
   it('unwraps a single-cell Google Docs table into plain paragraph blocks', () => {

@@ -681,6 +681,17 @@ describe('server release wiring', () => {
     expect(readme).toMatch(/TLS[^\n]*(reverse proxy|hosting platform)|(reverse proxy|hosting platform)[^\n]*TLS/i);
   });
 
+  it('documents the doc endpoint wire and links the page host guide', () => {
+    const readme = read('packages/server/README.md');
+
+    // A never-saved document must answer 200 with a JSON null, not 404.
+    expect(readme).toMatch(/`200`[^\n]*`null`/);
+    expect(readme).toContain('{"data": null, "version": "0"}');
+    expect(readme).toMatch(/PUT[^\n]*upsert/i);
+    // nuget.org renders the packed README, where a relative link breaks.
+    expect(readme).toContain('https://github.com/JackUait/blok/blob/main/docs/maintainers/page-csharp-host.md');
+  });
+
   it('keeps the root Docker context small without excluding release inputs', () => {
     const ignore = read('.dockerignore');
 

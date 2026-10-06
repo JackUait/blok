@@ -26,6 +26,18 @@ describe('blocksToPlainText', () => {
     expect(blocksToPlainText(doc([{ type: 'paragraph', data: { text: 'Hello <b>world</b>' } }]))).toBe('Hello world');
   });
 
+  it('reads inline page references from authorized metadata, not saved labels', () => {
+    const data = doc([{
+      type: 'paragraph',
+      data: { text: 'See <a data-blok-page-id="p1" href="/private" title="Private"><strong>Private</strong></a>' },
+    }]);
+
+    expect(blocksToPlainText(data, { pageInfo: () => ({ title: 'Roadmap & plans' }) })).toBe('See Roadmap & plans');
+    expect(blocksToPlainText(data, { pageInfo: () => ({ access: 'none', title: 'Private' }) })).toBe('See Page');
+    expect(blocksToPlainText(data, { pageInfo: () => null })).toBe('See Page');
+    expect(blocksToPlainText(data)).toBe('See Page');
+  });
+
   /**
    * An equation span's children are a rendering cache of its `data-latex`
    * source. Legacy documents carry the text KaTeX's MathML and HTML layers left
@@ -275,6 +287,18 @@ describe('blocksToPlainText', () => {
     expect(text).toContain('Right');
   });
 
+  it('reads every tab as its title line followed by its content', () => {
+    const text = blocksToPlainText(doc([
+      { id: 'tabs', type: 'tabs', data: {} },
+      { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'Overview & <more>', icon: '📋' } },
+      { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'First' } },
+      { id: 't2', type: 'tab', parent: 'tabs', data: { title: 'Details' } },
+      { id: 'p2', type: 'paragraph', parent: 't2', data: { text: 'Second' } },
+    ]));
+
+    expect(text).toBe('Overview & <more>\n\nFirst\n\nDetails\n\nSecond');
+  });
+
   it('tolerates loose input', () => {
     expect(blocksToPlainText(null)).toBe('');
     expect(blocksToPlainText({} as unknown as OutputData)).toBe('');
@@ -303,6 +327,57 @@ describe('blocksToPlainText', () => {
 
   it('emits nothing extra for a quote without a caption', () => {
     expect(blocksToPlainText(doc([{ type: 'quote', data: { text: 'Wise words' } }]))).toBe('Wise words');
+  });
+
+  describe('page', () => {
+    it('ignores a legacy cached title and reads authorized host metadata verbatim', () => {
+      const data = doc([
+        { type: 'paragraph', data: { text: 'Before' } },
+        { type: 'page', data: { pageId: 'p1', cache: { title: 'Private title' } } },
+      ]);
+
+      expect(blocksToPlainText(data)).toBe('Before\n\nPage');
+      expect(blocksToPlainText(data, {
+        pageInfo: () => ({ title: 'Q3 <plan> & notes' }),
+      })).toBe('Before\n\nQ3 <plan> & notes');
+    });
+
+    it('uses a neutral label for unresolved pages', () => {
+      expect(blocksToPlainText(doc([
+        { type: 'page', data: { pageId: 'p1' } },
+        { type: 'paragraph', data: { text: 'After' } },
+      ]))).toBe('Page\n\nAfter');
+    });
+
+    it('distinguishes missing and denied pages without revealing titles', () => {
+      const data = doc([{ type: 'page', data: { pageId: 'p1', cache: { title: 'Cached title' } } }]);
+
+      expect(blocksToPlainText(data, { pageInfo: () => null })).toBe('Page not found');
+      expect(blocksToPlainText(data, { pageInfo: () => ({ access: 'none', title: 'Secret' }) })).toBe('No access');
+      expect(blocksToPlainText(data, { pageInfo: () => ({ title: '' }) })).toBe('New page');
+    });
+
+    it('never reads children a malformed document hangs off a page', () => {
+      const blocks = [
+        { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'Cached title' } }, content: ['c1'] },
+        { id: 'c1', type: 'paragraph', parent: 'pg', data: { text: 'Leaked body' } },
+      ] as OutputBlockData[];
+      const data = doc(blocks);
+      const pageInfo = () => ({ title: 'T' });
+
+      expect(blocksToPlainText(data, { pageInfo })).toBe('T');
+      expect(blocksToPlainText(data, { pageInfo, includeHiddenText: true })).toBe('T');
+    });
+
+    it('never reads a page\'s children inside a table cell', () => {
+      const blocks = [
+        { id: 't', type: 'table', data: { content: [[{ blocks: ['pg'] }]] }, content: ['pg'] },
+        { id: 'pg', type: 'page', parent: 't', data: { pageId: 'p1', cache: { title: 'Cached title' } }, content: ['c1'] },
+        { id: 'c1', type: 'paragraph', parent: 'pg', data: { text: 'Leaked body' } },
+      ] as OutputBlockData[];
+
+      expect(blocksToPlainText(doc(blocks), { pageInfo: () => ({ title: 'T' }) })).toBe('T');
+    });
   });
 
   /**
@@ -387,5 +462,68 @@ describe('blocksToPlainText', () => {
 
       expect(blocksToPlainText(doc(blocks), { includeHiddenText: true })).toBe(blocksToPlainText(doc(blocks)));
     });
+  });
+});
+
+/** The editor evicts non-`tab` children of `tabs` to the tabs block's own parent, right after the tabs block. */
+describe('stray children of tabs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('places strays after the tabs subtree, in editor save order', () => {
+    const out = blocksToPlainText(doc([
+      { id: 'before', type: 'paragraph', data: { text: 'BEFORE' } },
+      { id: 'tabs', type: 'tabs', data: {}, content: ['s1', 't1', 's2'] },
+      { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs', content: ['s1c'] },
+      { id: 's1c', type: 'paragraph', data: { text: 'S1C' }, parent: 's1' },
+      { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 's2', type: 'paragraph', data: { text: 'S2' }, parent: 'tabs' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('BEFORE\n\nDo\n\none\n\nS1\n\nS1C\n\nS2\n\nAFTER');
+  });
+
+  it('keeps a tabs block holding only a stray, with the stray after it', () => {
+    const out = blocksToPlainText(doc([
+      { id: 'tabs', type: 'tabs', data: {}, content: ['s1'] },
+      { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('S1\n\nAFTER');
+  });
+
+  it('keeps a stray in the toggle holding the tabs, right after the tabs', () => {
+    const out = blocksToPlainText(doc([
+      { id: 'c', type: 'toggle', data: { text: 'C' }, content: ['tabs', 'i2'] },
+      { id: 'tabs', type: 'tabs', data: {}, parent: 'c', content: ['s1', 't1'] },
+      { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+      { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 'i2', type: 'paragraph', data: { text: 'I2' }, parent: 'c' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('C\n\nDo\n\none\n\nS1\n\nI2\n\nAFTER');
+  });
+
+  it('renders nested tabs without strays as before', () => {
+    const out = blocksToPlainText(doc([
+      { id: 'c', type: 'toggle', data: { text: 'C' }, content: ['tabs', 'i2'] },
+      { id: 'tabs', type: 'tabs', data: {}, parent: 'c', content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 'i2', type: 'paragraph', data: { text: 'I2' }, parent: 'c' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('C\n\nDo\n\none\n\nI2\n\nAFTER');
   });
 });

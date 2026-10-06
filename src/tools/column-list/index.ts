@@ -292,6 +292,20 @@ export class ColumnList implements BlockTool {
   public static get keepsChildrenOnEnter(): boolean {
     return true;
   }
+
+  /**
+   * Deleting it deletes everything inside it
+   */
+  public static get deletesChildren(): boolean {
+    return true;
+  }
+
+  /**
+   * Pure layout: no toolbar, no selection, no indent for what is inside
+   */
+  public static get isLayout(): boolean {
+    return true;
+  }
 }
 
 export type { ColumnListData };

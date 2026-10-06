@@ -1,3 +1,5 @@
+import { DATA_ATTR } from '../constants/data-attributes';
+
 export type TextDirection = 'ltr' | 'rtl';
 
 interface PortalDirectionOptions {
@@ -12,6 +14,12 @@ interface PortalDirectionOptions {
    * Live element that owns the detached UI root.
    */
   source?: Element | null;
+
+  /**
+   * Called after a runtime flip re-reads the portal's direction, so the
+   * portal can re-place itself on the new side.
+   */
+  onResync?: () => void;
 }
 
 const isTextDirection = (value: string | null | undefined): value is TextDirection =>
@@ -41,13 +49,37 @@ const resolveSourceDirection = (source: Element | null | undefined): TextDirecti
     return undefined;
   }
 
-  const computedDirection = window.getComputedStyle(source).direction;
+  // Menus speak the editor's UI language. A block may carry its own `dir`
+  // (an English paragraph in an RTL editor), so read the editor root instead.
+  const owner = source.closest(`[${DATA_ATTR.editor}]`) ?? source;
+  const computedDirection = window.getComputedStyle(owner).direction;
 
   if (isTextDirection(computedDirection)) {
     return computedDirection;
   }
 
-  return resolveSemanticDirection(source);
+  return resolveSemanticDirection(owner);
+};
+
+/**
+ * Portals synced from a live source, so a runtime direction flip can re-read
+ * them. Closed (disconnected) portals are dropped on every sync, which keeps
+ * this bounded by the portals open at once.
+ */
+const syncedPortals = new Map<HTMLElement, { source: Element; onResync?: () => void }>();
+
+const rememberPortal = (target: HTMLElement, options: PortalDirectionOptions): void => {
+  syncedPortals.forEach((_entry, portal) => {
+    if (portal !== target && !portal.isConnected) {
+      syncedPortals.delete(portal);
+    }
+  });
+
+  if (options.direction === undefined && options.source !== null && options.source !== undefined) {
+    syncedPortals.set(target, { source: options.source, onResync: options.onResync });
+  } else {
+    syncedPortals.delete(target);
+  }
 };
 
 /**
@@ -66,6 +98,8 @@ export const syncPortalDirection = (
   target: HTMLElement,
   options: PortalDirectionOptions = {}
 ): TextDirection | undefined => {
+  rememberPortal(target, options);
+
   const resolvedDirection = options.direction ?? resolveSourceDirection(options.source);
 
   if (resolvedDirection === undefined) {
@@ -76,4 +110,36 @@ export const syncPortalDirection = (
   target.style.setProperty('direction', resolvedDirection, 'important');
 
   return resolvedDirection;
+};
+
+/**
+ * True when `source` belongs to an editor nested inside `root` (a database
+ * page body). That editor resyncs its own portals when its direction changes.
+ */
+const isInNestedEditor = (source: Element, root: Element): boolean => {
+  const owner = source.closest(`[${DATA_ATTR.editor}]`);
+
+  return owner !== null && owner !== root && root.contains(owner);
+};
+
+/**
+ * Re-reads the direction of every open portal whose source lives in `root`.
+ * Called when an editor flips direction at runtime; portals of other editors
+ * are left alone. A portal that registered `onResync` re-places itself, but
+ * only when its direction changed: re-placing closes submenus, and the i18n
+ * API re-applies the same direction on every locale or message update.
+ */
+export const resyncPortalDirections = (root: Element): void => {
+  syncedPortals.forEach(({ source, onResync }, portal) => {
+    if (!portal.isConnected || !source.isConnected || !root.contains(source) || isInNestedEditor(source, root)) {
+      return;
+    }
+
+    const previous = portal.getAttribute('dir');
+    const next = syncPortalDirection(portal, { source, onResync });
+
+    if (next !== undefined && next !== previous) {
+      onResync?.();
+    }
+  });
 };

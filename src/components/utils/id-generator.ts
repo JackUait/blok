@@ -20,6 +20,9 @@ export const generateBlockId = (): string => {
   return nanoid(idLen);
 };
 
+/** A document id. nanoid, not crypto.randomUUID: that one is missing outside secure contexts. */
+export const generateDocumentId = (): string => nanoid(21);
+
 /**
  * Nanoid-compatible block ID pattern: exactly 10 URL-safe characters (A-Z, a-z, 0-9, _, -)
  */

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Header, type HeaderConfig, type HeaderData } from '../../../src/tools/header';
 import type { API, BlockToolConstructorOptions } from '../../../types';
+import { createMemoryViewState } from '../../helpers/view-state';
 
 const createMockAPI = (): API => ({
   styles: {
@@ -27,6 +28,7 @@ const createMockAPI = (): API => ({
     off: vi.fn(),
     emit: vi.fn(),
   },
+  viewState: createMemoryViewState(),
 } as unknown as API);
 
 const createHeaderOptions = (

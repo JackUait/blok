@@ -1,4 +1,9 @@
 // @vitest-environment node
+import { spawnSync } from 'node:child_process';
+import { chmodSync, copyFileSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { parse } from 'yaml';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -8,10 +13,12 @@ import {
   checkRatchet,
   collectSurvivors,
   deadlineSeconds,
+  hasValidIncrementalState,
   isPartialRun,
   nextTotal,
   orderQueue,
   resolveDiffBase,
+  runWithIncrementalBackup,
   scopeFingerprint,
   scopeMoved,
   splitByTime,
@@ -755,6 +762,112 @@ describe('mutation-scope', () => {
 
     it('drops a parked file that can no longer be measured', () => {
       expect(orderQueue({ queued: ['src/gone.ts'], mutate: ['src/a.ts'] })).toEqual(['src/a.ts']);
+    });
+  });
+
+  describe('incremental state recovery', () => {
+    it('rejects a report whose source entry has no mutant list', () => {
+      const directory = mkdtempSync(join(tmpdir(), 'blok-mutation-shape-'));
+
+      try {
+        writeFileSync(join(directory, 'stryker-incremental.json'), '{"files":{"src/a.ts":{}}}');
+        writeFileSync(join(directory, 'state.json'), '{"lastCheckedSha":"prior"}');
+
+        expect(hasValidIncrementalState(directory)).toBe(false);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    });
+
+    it('rejects an incremental report without a usable paired ledger', () => {
+      const directory = mkdtempSync(join(tmpdir(), 'blok-mutation-state-'));
+
+      try {
+        writeFileSync(join(directory, 'stryker-incremental.json'), '{"files":{"src/a.ts":{"mutants":[]}}}');
+
+        expect(hasValidIncrementalState(directory)).toBe(false);
+        writeFileSync(join(directory, 'state.json'), '{}');
+        expect(hasValidIncrementalState(directory)).toBe(false);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    });
+
+    it('restores an older valid artifact when the latest successful run uploaded truncated JSON', () => {
+      const directory = mkdtempSync(join(tmpdir(), 'blok-mutation-restore-'));
+
+      try {
+        mkdirSync(join(directory, 'bin'));
+        mkdirSync(join(directory, 'scripts'));
+        copyFileSync(
+          resolve(__dirname, '../../../scripts/mutation-scope.mjs'),
+          join(directory, 'scripts/mutation-scope.mjs'),
+        );
+        const gh = join(directory, 'bin/gh');
+
+        writeFileSync(gh, `#!/bin/sh
+if [ "$1" = run ] && [ "$2" = list ]; then
+  for arg in "$@"; do
+    if [ "$arg" = 1 ]; then printf 'bad\\n'; exit 0; fi
+  done
+  printf 'bad\\ngood\\n'
+  exit 0
+fi
+if [ "$1" = run ] && [ "$2" = download ]; then
+  mkdir -p .mutation-state
+  printf '{"lastCheckedSha":"prior"}' > .mutation-state/state.json
+  case "$3" in
+    bad) printf '{"files":' > .mutation-state/stryker-incremental.json ;;
+    good) printf '{"files":{}}' > .mutation-state/stryker-incremental.json ;;
+    *) exit 1 ;;
+  esac
+  exit 0
+fi
+exit 1
+`);
+        chmodSync(gh, 0o755);
+
+        const workflow = parse(readFileSync(
+          resolve(__dirname, '../../../.github/workflows/mutation.yml'),
+          'utf8',
+        )) as { jobs: { mutation: { steps: Array<{ name?: string; run?: string }> } } };
+        const restore = workflow.jobs.mutation.steps.find((step) => step.name === 'Restore mutation state');
+        const result = spawnSync('/bin/bash', ['-e'], {
+          input: restore?.run ?? '',
+          cwd: directory,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: `${join(directory, 'bin')}:${process.env.PATH ?? ''}`,
+            BASELINE_TAG: 'mutation-baseline',
+          },
+        });
+
+        expect(readFileSync(join(directory, '.mutation-state/stryker-incremental.json'), 'utf8'))
+          .toBe('{"files":{}}');
+        expect(result.status).toBe(0);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    });
+
+    it('restores the previous incremental file when Stryker reaches its deadline', async () => {
+      const directory = mkdtempSync(join(tmpdir(), 'blok-mutation-deadline-'));
+      const incremental = join(directory, 'stryker-incremental.json');
+      const original = '{"files":{"src/a.ts":{"mutants":[]}}}';
+
+      try {
+        writeFileSync(incremental, original);
+        await runWithIncrementalBackup(directory, async () => {
+          writeFileSync(incremental, '{"files":');
+
+          return 'deadline';
+        });
+
+        expect(readFileSync(incremental, 'utf8')).toBe(original);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
     });
   });
 

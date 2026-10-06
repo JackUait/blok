@@ -31,7 +31,7 @@
  *   token form (what a real save produces).
  *
  * Tools compared: paragraph, header (incl. toggleable), quote, code, divider,
- * list (unordered/nested/ordered/checklist), callout, toggle (open + closed),
+ * list (unordered/nested/ordered/checklist), callout, toggle,
  * table (headings + merged cell), image, columns (column_list/column).
  * Tools skipped (with reasons):
  * - quote `caption`: the editor migrates the legacy caption field into a
@@ -823,7 +823,7 @@ describe('golden harness: view renderer vs live editor', () => {
     expect(viewRoot.querySelector('aside')?.textContent).toContain('💡');
   }, 60_000);
 
-  it('toggle: open and closed toggles both keep their children content', async () => {
+  it('toggle: every toggle renders collapsed, whatever isOpen says, and keeps its children content', async () => {
     const { viewRoot } = await compareFixture('toggle', [
       { id: 't1', type: 'toggle', data: { text: 'Open toggle', isOpen: true } },
       { id: 'tp1', type: 'paragraph', parent: 't1', data: { text: 'Visible body' } },
@@ -833,7 +833,7 @@ describe('golden harness: view renderer vs live editor', () => {
 
     const details = Array.from(viewRoot.querySelectorAll('details'));
 
-    expect(details.map((el) => el.hasAttribute('open'))).toEqual([true, false]);
+    expect(details.map((el) => el.hasAttribute('open'))).toEqual([false, false]);
   }, 60_000);
 
   it('table: headings, cell blocks, and a merged cell agree', async () => {

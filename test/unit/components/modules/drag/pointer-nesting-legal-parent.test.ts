@@ -62,7 +62,7 @@ const previewedDepth = (
     getBlockIndex: (block: Block) => blocks.indexOf(block),
     getBlockById: (id: string) => blocks.find(b => b.id === id),
   };
-  const detector = new DropTargetDetector({ contentRect: { left: CONTENT_LEFT } }, blockManager);
+  const detector = new DropTargetDetector({ contentRect: { left: CONTENT_LEFT, right: CONTENT_LEFT + 650 } }, blockManager);
 
   detector.setSourceBlocks([source]);
 
@@ -108,5 +108,21 @@ describe('drop indicator depth is limited to depths the drop can actually apply'
     const source = listBlock('source', 0);
 
     expect(previewedDepth([paragraph, trailing], 0, source, 1)).toBe(1);
+  });
+
+  it('never previews a dragged list item nested under a block that takes no children', () => {
+    const page = { ...otherBlock('page', 'page'), tool: { acceptsChildren: false } } as unknown as Block;
+    const trailing = otherBlock('trailing');
+    const source = listBlock('source', 0);
+
+    expect(previewedDepth([page, trailing], 0, source, 1)).toBe(0);
+  });
+
+  it('never previews a dragged header nested under a list item that takes no children', () => {
+    const item = { ...listBlock('item', 0), tool: { acceptsChildren: false } } as unknown as Block;
+    const paragraph = otherBlock('paragraph');
+    const source = otherBlock('source', 'header');
+
+    expect(previewedDepth([item, paragraph], 0, source, 1)).toBe(0);
   });
 });

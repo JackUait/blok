@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router";
 import { Check, Globe } from "lucide-react";
-import { useI18n, useLocalePath } from "../../contexts/I18nContext";
+import { useI18n, useLocalePath, useSelectLocale } from "../../contexts/I18nContext";
 import type { Locale } from "../../i18n";
 import { cn } from "@/lib/utils";
-import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics";
 
 /* SVG Flag Icons - Clean, minimal style */
 const FlagIcon = ({ locale }: { locale: Locale }) => {
@@ -50,7 +49,8 @@ const FlagIcon = ({ locale }: { locale: Locale }) => {
 };
 
 export const LanguageSelector = () => {
-  const { locale, setLocale, localeNames, t } = useI18n();
+  const { locale, localeNames, t } = useI18n();
+  const selectLocale = useSelectLocale();
   const localePath = useLocalePath();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -80,13 +80,9 @@ export const LanguageSelector = () => {
   }, []);
 
   const handleLocaleChange = (newLocale: Locale) => {
-    // Re-picking the active locale is a dismissal, not a language change.
-    if (newLocale !== locale) {
-      trackEvent(ANALYTICS_EVENTS.selectLanguage, { locale: newLocale });
-    }
     // The locale itself comes from the URL the link navigates to; this only
     // records the preference the site root reads.
-    setLocale(newLocale);
+    selectLocale(newLocale);
     setIsOpen(false);
   };
 

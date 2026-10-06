@@ -7,7 +7,7 @@
     "node": ">=22.22.0"
   },
   "scripts": {
-    "dev": "react-router dev",
+    "serve": "react-router dev",
     "build": "tsc && react-router build && cp dist/client/404/index.html dist/client/404.html && node scripts/generate-seo-artifacts.mjs",
     "preview": "vite preview --outDir dist/client",
     "lint": "tsc --noEmit",

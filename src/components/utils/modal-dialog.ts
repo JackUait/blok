@@ -33,6 +33,7 @@
  */
 
 import { registerLayer } from './dismissable-layer';
+import { syncPortalDirection } from './portal-direction';
 import { promoteToTopLayer, removeFromTopLayer } from './top-layer';
 
 /**
@@ -159,6 +160,15 @@ export interface OpenModalDialogOptions {
 
   /** Anchor treated as "inside" for outside-pointer dismissal. */
   anchor?: HTMLElement;
+
+  /**
+   * Element whose direction the dialog takes (it mounts outside the editor).
+   * Defaults to {@link anchor}. With neither, the direction is left alone.
+   */
+  directionSource?: Element | null;
+
+  /** Re-places an anchored dialog after its editor flips direction. */
+  onDirectionResync?: () => void;
 
   /** Whether Escape dismisses the dialog. Defaults to `true`. */
   escape?: boolean;
@@ -305,6 +315,11 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
   const previouslyFocused = document.activeElement;
   // Resolved at open time: presses inside the dialog overwrite the tracker.
   const pointerOpener = focusableOpener(lastPointerPress.target);
+
+  syncPortalDirection(content, {
+    source: options.directionSource ?? options.anchor,
+    onResync: options.onDirectionResync,
+  });
 
   if (container !== null) {
     container.appendChild(content);

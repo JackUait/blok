@@ -1,6 +1,7 @@
 import type { CellContent, CellPlacement, LegacyCellContent, TableData, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
 import { alignRowsToColumns, ensureTableIds, generateTableId } from './table-ids';
+import { isSafeCssColor } from '../../shared/css-color';
 import { repairMergeGrid } from '../../shared/table-merge-repair';
 
 export interface SelectionRect {
@@ -14,39 +15,6 @@ export interface MergeResult {
   /** Block IDs that were moved from absorbed cells into the origin cell. */
   blocksToRelocate: string[];
 }
-
-/**
- * Validate that a string is a safe CSS color value.
- *
- * Accepts:
- * - 3/4/6/8-digit hex: #rgb, #rgba, #rrggbb, #rrggbbaa
- * - rgb/rgba: rgb(r, g, b) / rgba(r, g, b, a)
- * - hsl/hsla: hsl(h, s%, l%) / hsla(h, s%, l%, a)
- * - The keyword "transparent"
- */
-const isValidCssColor = (value: string): boolean => {
-  // Hex: #rgb, #rgba, #rrggbb, #rrggbbaa
-  if (/^#[0-9a-f]{3,4}$/i.test(value) || /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(value)) {
-    return true;
-  }
-
-  // rgb/rgba
-  if (/^rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(,\s*[\d.]+\s*)?\)$/i.test(value)) {
-    return true;
-  }
-
-  // hsl/hsla
-  if (/^hsla?\(\s*[\d.]+\s*,\s*[\d.]+%\s*,\s*[\d.]+%\s*(,\s*[\d.]+\s*)?\)$/i.test(value)) {
-    return true;
-  }
-
-  // Keywords
-  if (value === 'transparent') {
-    return true;
-  }
-
-  return false;
-};
 
 /**
  * Pure data model for table state.
@@ -308,7 +276,7 @@ export class TableModel {
 
     if (color === undefined) {
       delete this.contentGrid[row][col].color;
-    } else if (isValidCssColor(color)) {
+    } else if (isSafeCssColor(color)) {
       this.contentGrid[row][col].color = color;
     }
   }
@@ -338,7 +306,7 @@ export class TableModel {
 
     if (color === undefined) {
       delete this.contentGrid[row][col].textColor;
-    } else if (isValidCssColor(color)) {
+    } else if (isSafeCssColor(color)) {
       this.contentGrid[row][col].textColor = color;
     }
   }
@@ -1755,11 +1723,11 @@ export class TableModel {
         normalized.rowId = cell.rowId;
       }
 
-      if (cell.color !== undefined && isValidCssColor(cell.color)) {
+      if (isSafeCssColor(cell.color)) {
         normalized.color = cell.color;
       }
 
-      if (cell.textColor !== undefined && isValidCssColor(cell.textColor)) {
+      if (isSafeCssColor(cell.textColor)) {
         normalized.textColor = cell.textColor;
       }
 

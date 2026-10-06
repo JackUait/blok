@@ -13,6 +13,7 @@ import type { ToggleItemData } from '../../../src/tools/toggle/types';
 import { ListItem } from '../../../src/tools/list';
 import type { ListItemData } from '../../../src/tools/list/types';
 import type { API } from '../../../types';
+import { createMemoryViewState } from '../../helpers/view-state';
 
 vi.mock('../../../src/components/utils/tooltip', () => ({
   show: vi.fn(),
@@ -45,6 +46,7 @@ const createApi = (): API => ({
     getBlocksCount: () => 1,
     update: vi.fn().mockResolvedValue(undefined),
   },
+  viewState: createMemoryViewState(),
 } as unknown as API);
 
 interface Tool<T> {
@@ -126,9 +128,10 @@ describe('setData(B) equals render(B)', () => {
 
   const ToggleTool = ToggleItem as unknown as new (options: never) => Tool<ToggleItemData>;
   const toggleCases: Array<[string, ToggleItemData, ToggleItemData]> = [
-    ['text', { text: 'One', isOpen: true }, { text: 'Two', isOpen: true }],
-    ['closed', { text: 'T', isOpen: true }, { text: 'T', isOpen: false }],
-    ['isOpen removed', { text: 'T', isOpen: false }, { text: 'T' }],
+    ['text', { text: 'One' }, { text: 'Two' }],
+    ['colour added', { text: 'T' }, { text: 'T', textColor: 'red' }],
+    // isOpen is personal state: a stray one in the record changes nothing.
+    ['stray isOpen ignored', { text: 'T', isOpen: true }, { text: 'T', isOpen: false }],
   ];
 
   it.each(toggleCases)('toggle: %s', (_name, from, to) => {

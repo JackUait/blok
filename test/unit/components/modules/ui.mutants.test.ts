@@ -12,6 +12,7 @@ import { Flipper } from '../../../../src/components/flipper';
 import { SelectionUtils } from '../../../../src/components/selection/index';
 import { destroyAnnouncer } from '../../../../src/components/utils/announcer';
 import * as Logger from '../../../../src/components/utils/logger';
+import { syncPortalDirection } from '../../../../src/components/utils/portal-direction';
 import { KeyboardController } from '../../../../src/components/modules/uiControllers/controllers/keyboard';
 import { SelectionController } from '../../../../src/components/modules/uiControllers/controllers/selection';
 import { BlockHoverController } from '../../../../src/components/modules/uiControllers/controllers/blockHover';
@@ -99,6 +100,8 @@ const createBlokStub = () => {
     },
     Toolbar: {
       moveAndOpen: vi.fn(),
+      relayout: vi.fn(),
+      syncDirection: vi.fn(),
       close: vi.fn(),
       contains: vi.fn(() => false),
       nodes: {
@@ -2036,6 +2039,20 @@ describe('UI module — mutants', () => {
       expect(window.open).toHaveBeenCalled();
     });
 
+    it('leaves a click on a link a tool owns to that tool', () => {
+      const { redactor } = createLinkUI();
+      const owner = document.createElement('div');
+
+      owner.setAttribute('data-blok-link-owner', '');
+      redactor.appendChild(owner);
+
+      const anchor = addAnchor(owner, 'https://example.com/owned');
+      const event = clickAnchor(anchor);
+
+      expect(window.open).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
     it('scrolls to a same-page fragment target', () => {
       const { blok, redactor } = createLinkUI();
 
@@ -2314,6 +2331,26 @@ describe('UI module — mutants', () => {
       redactor.appendChild(plain);
 
       expect(() => mouseMove(plain, 5, 5)).not.toThrow();
+      vi.advanceTimersByTime(400);
+
+      expect(priv(ui).linkHoverCard).toBeNull();
+      expect(cardWrappers()).toHaveLength(0);
+    });
+
+    it('does not show a card for a link a tool owns', () => {
+      vi.useFakeTimers();
+
+      const { ui, redactor } = createHoverUI();
+      const owner = document.createElement('div');
+      const anchor = document.createElement('a');
+
+      owner.setAttribute('data-blok-link-owner', '');
+      anchor.setAttribute('href', 'https://example.com/owned');
+      anchor.textContent = 'owned-link';
+      owner.appendChild(anchor);
+      redactor.appendChild(owner);
+
+      mouseMove(anchor, 5, 5);
       vi.advanceTimersByTime(400);
 
       expect(priv(ui).linkHoverCard).toBeNull();
@@ -2625,6 +2662,23 @@ describe('UI module — mutants', () => {
       expect(ui.contentRect).toBe(measured);
       expect(blockContent.getBoundingClientRect).toHaveBeenCalledTimes(2);
     });
+
+    // The content column mirrors when the direction flips, so drag-to-nest must
+    // not keep measuring from the old side.
+    it('re-measures after the direction changes', () => {
+      const { ui, wrapper } = createMadeUI();
+      const blockContent = document.createElement('div');
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({ width: 777 } as DOMRect);
+      wrapper.appendChild(blockContent);
+
+      void ui.contentRect;
+      ui.setDirection('rtl');
+      void ui.contentRect;
+
+      expect(blockContent.getBoundingClientRect).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('checkEmptiness, width mode and direction', () => {
@@ -2676,6 +2730,58 @@ describe('UI module — mutants', () => {
 
       ui.setDirection('rtl');
       expect(wrapper.getAttribute('dir')).toBe('rtl');
+    });
+
+    // The toolbar sits inside block holders, under a block's own dir.
+    it('tells the block toolbar to re-read the editor direction', () => {
+      const { ui, blok } = createMadeUI();
+      const syncDirection = (blok.Toolbar as unknown as { syncDirection: ReturnType<typeof vi.fn> }).syncDirection;
+
+      ui.setDirection('rtl');
+
+      expect(syncDirection).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-syncs open portals of this editor when the direction flips', () => {
+      const { ui, wrapper } = createMadeUI();
+      const trigger = document.createElement('button');
+      const portal = document.createElement('div');
+
+      wrapper.appendChild(trigger);
+      document.body.append(wrapper, portal);
+      syncPortalDirection(portal, { source: trigger });
+      expect(portal.getAttribute('dir')).toBe('ltr');
+
+      // jsdom does not derive `direction` from `dir`, so set it where the browser would.
+      trigger.style.direction = 'rtl';
+      ui.setDirection('rtl');
+
+      expect(portal.getAttribute('dir')).toBe('rtl');
+      portal.remove();
+    });
+
+    // Placement of open menus was computed for the old side; the toolbar
+    // offset was clamped for it too.
+    it('closes open menus and re-places the toolbar when the direction flips', () => {
+      const { ui, blok } = createMadeUI();
+
+      ui.setDirection('rtl');
+
+      expect(blok.BlockSettings.close).toHaveBeenCalledTimes(1);
+      expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.relayout).toHaveBeenCalledTimes(1);
+    });
+
+    // A locale change re-applies its direction, often the same one.
+    it('leaves open menus and the toolbar alone when the direction does not change', () => {
+      const { ui, blok } = createMadeUI();
+
+      ui.setDirection('ltr');
+
+      expect(blok.BlockSettings.close).not.toHaveBeenCalled();
+      expect(blok.InlineToolbar.close).not.toHaveBeenCalled();
+      expect(blok.Toolbar.relayout).not.toHaveBeenCalled();
     });
 
     it('stamps dir="ltr" on an LTR editor', () => {

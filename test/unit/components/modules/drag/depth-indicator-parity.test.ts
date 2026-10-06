@@ -87,23 +87,20 @@ const indicatorDepth = (previous: Neighbour, next: Neighbour, sourceDepth: numbe
     getBlockIndex: () => 0,
     getBlockById: () => undefined,
   };
-  const detector = new DropTargetDetector({ contentRect: { left: 0 } }, blockManager);
+  const detector = new DropTargetDetector({ contentRect: { left: 0, right: 650 } }, blockManager);
 
   return detector.calculateTargetDepth(previousBlock, 'bottom', source);
 };
 
-/** Build a ListDepthValidator block (depth via [role=listitem] margin-left). */
+/** Build a ListDepthValidator block (depth via the wrapper's data-list-depth). */
 const validatorBlock = (kind: 'list' | 'other', depth: number): ReturnType<BlocksAPI['getBlockByIndex']> => {
-  const roleItem = document.createElement('div');
-  roleItem.setAttribute('role', 'listitem');
-  if (depth > 0) {
-    roleItem.style.marginLeft = `${depth * 27}px`;
-  }
+  const wrapper = document.createElement('div');
+  wrapper.setAttribute('data-list-depth', String(depth));
 
   return {
     id: `${kind}-${Math.random()}`,
     name: kind === 'list' ? 'list' : 'paragraph',
-    holder: { querySelector: (s: string) => (s === '[role="listitem"]' ? roleItem : null) },
+    holder: { querySelector: (s: string) => (s === '[data-list-depth]' ? wrapper : null) },
   };
 };
 

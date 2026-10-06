@@ -15,16 +15,17 @@ const escapeXml = (value) =>
     .replace(/"/g, '&quot;');
 
 /**
- * @param {{ loc: string, lastmod: string }[]} entries
+ * @param {{ loc: string, lastmod?: string }[]} entries
  * @returns {string} sitemaps.org XML. No `priority`/`changefreq`: Google
- * documents that it ignores both, so emitting them is pure noise.
+ * documents that it ignores both, so emitting them is pure noise. An entry
+ * without `lastmod` gets none: the field is optional and a guessed date is worse.
  */
 export const renderSitemap = (entries) => {
   const urls = entries
-    .map(
-      ({ loc, lastmod }) =>
-        `  <url>\n    <loc>${escapeXml(loc)}</loc>\n    <lastmod>${escapeXml(lastmod)}</lastmod>\n  </url>`,
-    )
+    .map(({ loc, lastmod }) => {
+      const date = lastmod ? `\n    <lastmod>${escapeXml(lastmod)}</lastmod>` : '';
+      return `  <url>\n    <loc>${escapeXml(loc)}</loc>${date}\n  </url>`;
+    })
     .join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="${SITEMAP_NS}">\n${urls}\n</urlset>\n`;
@@ -199,7 +200,7 @@ export const renderMarkdownMirror = ({ title, description, source, lastmod, body
     `title: ${yamlString(title)}`,
     `description: ${yamlString(description)}`,
     `source: ${source}`,
-    `lastmod: ${lastmod}`,
+    ...(lastmod ? [`lastmod: ${lastmod}`] : []),
     '---',
     '',
     body,

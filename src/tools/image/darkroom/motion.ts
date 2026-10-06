@@ -1,6 +1,7 @@
-import type { ImageAdjust, ImageCrop, ImageFilterPreset, ImageMarkup } from '../../../../types/tools/image';
+import type { ImageAdjust, ImageCrop, ImageMarkup } from '../../../../types/tools/image';
 import { createSpring, SPRING_SOFT, type SpringClock } from '../../../components/utils/spring';
 import { promoteToTopLayer } from '../../../components/utils/top-layer';
+import type { FilterSet } from '../adjust';
 import { IDENTITY, orientedSize, type Geometry } from '../geometry';
 import { applyImageFilter, buildPlane, sizePlane } from '../image-view';
 import { rectToCamera, type Box, type Size } from './camera';
@@ -63,7 +64,9 @@ export interface FlyOutOptions {
   /** Crop in the oriented box. */
   rect: ImageCrop;
   geometry?: Geometry;
-  filter?: ImageFilterPreset;
+  filter?: string;
+  strength?: number;
+  filters?: FilterSet;
   adjust?: ImageAdjust;
   markup?: ImageMarkup[];
   from: Box;
@@ -105,7 +108,7 @@ export function flyOut(opts: FlyOutOptions): void {
 
   img.src = opts.url;
   img.alt = '';
-  applyImageFilter(img, opts.filter ?? 'none', opts.adjust ?? {});
+  applyImageFilter(img, opts.filter ?? 'none', opts.adjust ?? {}, opts.strength, opts.filters);
   const plane = cameraPlane(img, opts.natural, geometry, opts.markup);
 
   shell.appendChild(plane);

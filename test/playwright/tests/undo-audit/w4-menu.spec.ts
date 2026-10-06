@@ -131,19 +131,16 @@ const tune = (page: Page, name: string): Locator =>
   page.locator(`${TUNES_POPOVER} [data-blok-testid="popover-item"][data-blok-item-name="${name}"]`);
 
 const nested = (page: Page, name: string): Locator =>
-  page.locator(`${NESTED_POPOVER} [data-blok-testid="popover-item"][data-blok-item-name="${name}"]`);
+  page.locator(NESTED_POPOVER).getByRole('menuitem', { name, exact: true });
 
 const duplicate = async (page: Page, id: string): Promise<void> => {
   await openTunes(page, id);
   await tune(page, 'duplicate').click();
 };
 
-const convert = async (page: Page, id: string, to: string, tab?: string): Promise<void> => {
+const convert = async (page: Page, id: string, to: string): Promise<void> => {
   await openTunes(page, id);
   await tune(page, 'convert-to').click();
-  if (tab !== undefined) {
-    await page.locator(`${NESTED_POPOVER} [data-blok-popover-tab="${tab}"][role="tab"]`).click();
-  }
   await nested(page, to).click();
 };
 
@@ -289,7 +286,7 @@ test.describe('W4M defects', () => {
   // convert are one undo step (tracked writes, not a move group). CAP-7 is the other direction.
   test('W4M-1: one undo of "heading -> toggle heading" restores the plain heading and its following block', async ({ page }) => {
     await createBlok(page, wrap({ id: 'x', type: 'header', data: { text: 'Title', level: 2 } }));
-    const r = await roundTrip(page, () => convert(page, 'x', 'toggle-header-2', 'toggle-heading'));
+    const r = await roundTrip(page, () => convert(page, 'x', 'Toggle heading 2'));
 
     expect(r.undone.data, 'save() after one undo').toEqual(r.before.data);
     expect(r.redone.data, 'save() after one redo').toEqual(r.after.data);
@@ -331,7 +328,7 @@ test.describe('W4M defects', () => {
     await page.keyboard.press('End');
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('ArrowLeft');
-    await convert(page, 'x', 'quote');
+    await convert(page, 'x', 'Quote');
     await gap(page);
     const afterGesture = await caret(page);
 
@@ -393,28 +390,28 @@ test.describe('W4M controls: duplicate from the block menu', () => {
   });
 });
 
-const CONVERT_CASES: Array<[string, string, SavedBlock[], string, string?]> = [
-  ['paragraph to heading', 'x', wrap(P('x', 'Plain text')), 'header-2', 'heading'],
-  ['paragraph to bulleted list', 'x', wrap(P('x', 'Plain text')), 'bulleted-list'],
-  ['paragraph to check list', 'x', wrap(P('x', 'Plain text')), 'check-list'],
-  ['paragraph to toggle', 'x', wrap(P('x', 'Plain text')), 'toggle'],
-  ['paragraph to quote', 'x', wrap(P('x', 'Plain text')), 'quote'],
-  ['paragraph to code', 'x', wrap(P('x', 'Plain text')), 'code'],
-  ['paragraph to callout', 'x', wrap(P('x', 'Plain text')), 'callout'],
-  ['list with a nested item to paragraph', 'x', wrap(...LIST_WITH_NESTED), 'paragraph'],
-  ['bulleted list to numbered list', 'x', wrap({ id: 'x', type: 'list', data: { text: 'Item', style: 'unordered' } }), 'numbered-list'],
-  ['numbered list to heading', 'x', wrap({ id: 'x', type: 'list', data: { text: 'Item', style: 'ordered' } }), 'header-2', 'heading'],
-  ['last heading to toggle heading (nothing to adopt)', 'x', [P('p-before', 'before'), { id: 'x', type: 'header', data: { text: 'Title', level: 2 } }], 'toggle-header-2', 'toggle-heading'],
-  ['toggle without children to list', 'x', wrap({ id: 'x', type: 'toggle', data: { text: 'Box title', isOpen: true } }), 'bulleted-list'],
-  ['quote to callout', 'x', wrap({ id: 'x', type: 'quote', data: { text: 'Quoted', size: 'default' } }), 'callout'],
-  ['multiline code to paragraph', 'x', wrap({ id: 'x', type: 'code', data: { code: 'one\ntwo\nthree', language: 'plain' } }), 'paragraph'],
+const CONVERT_CASES: Array<[string, string, SavedBlock[], string]> = [
+  ['paragraph to heading', 'x', wrap(P('x', 'Plain text')), 'Heading 2'],
+  ['paragraph to bulleted list', 'x', wrap(P('x', 'Plain text')), 'Bulleted list'],
+  ['paragraph to check list', 'x', wrap(P('x', 'Plain text')), 'To-do list'],
+  ['paragraph to toggle', 'x', wrap(P('x', 'Plain text')), 'Toggle list'],
+  ['paragraph to quote', 'x', wrap(P('x', 'Plain text')), 'Quote'],
+  ['paragraph to code', 'x', wrap(P('x', 'Plain text')), 'Code'],
+  ['paragraph to callout', 'x', wrap(P('x', 'Plain text')), 'Callout'],
+  ['list with a nested item to paragraph', 'x', wrap(...LIST_WITH_NESTED), 'Text'],
+  ['bulleted list to numbered list', 'x', wrap({ id: 'x', type: 'list', data: { text: 'Item', style: 'unordered' } }), 'Numbered list'],
+  ['numbered list to heading', 'x', wrap({ id: 'x', type: 'list', data: { text: 'Item', style: 'ordered' } }), 'Heading 2'],
+  ['last heading to toggle heading (nothing to adopt)', 'x', [P('p-before', 'before'), { id: 'x', type: 'header', data: { text: 'Title', level: 2 } }], 'Toggle heading 2'],
+  ['toggle without children to list', 'x', wrap({ id: 'x', type: 'toggle', data: { text: 'Box title', isOpen: true } }), 'Bulleted list'],
+  ['quote to callout', 'x', wrap({ id: 'x', type: 'quote', data: { text: 'Quoted', size: 'default' } }), 'Callout'],
+  ['multiline code to paragraph', 'x', wrap({ id: 'x', type: 'code', data: { code: 'one\ntwo\nthree', language: 'plain' } }), 'Text'],
 ];
 
 test.describe('W4M controls: turn into from the block menu', () => {
-  for (const [title, id, blocks, to, tab] of CONVERT_CASES) {
+  for (const [title, id, blocks, to] of CONVERT_CASES) {
     test(`W4M control: turn ${title}: one undo restores the block, redo converts it again`, async ({ page }) => {
       await createBlok(page, blocks);
-      const r = await roundTrip(page, () => convert(page, id, to, tab));
+      const r = await roundTrip(page, () => convert(page, id, to));
 
       expectRoundTrip(r);
       expect(r.after.data, 'the conversion happened').not.toEqual(r.before.data);

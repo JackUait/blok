@@ -12,6 +12,15 @@ import {
   LIST_INDENT_PER_LEVEL,
   LIST_ITEM_CLASSES,
 } from '../../../src/shared/tool-classes/list';
+import {
+  PAGE_FALLBACK_ICON,
+  PAGE_ICON_CLASSES,
+  PAGE_LINK_CLASSES,
+  PAGE_LINK_INK_CLASSES,
+  PAGE_TITLE_CLASSES,
+  PAGE_TITLE_MUTED_CLASSES,
+  PAGE_WRAPPER_CLASSES,
+} from '../../../src/shared/tool-classes/page';
 import { PARAGRAPH_CLASSES } from '../../../src/shared/tool-classes/paragraph';
 import { quoteClasses } from '../../../src/shared/tool-classes/quote';
 import { isInstrumented } from '../helpers/instrumented';
@@ -52,8 +61,8 @@ describe('shared tool classes', () => {
     });
 
     it('reserves arrow room only for toggleable headings', () => {
-      expect(headerClasses(2, true)).toContain('pl-8');
-      expect(headerClasses(2, false)).not.toContain('pl-8');
+      expect(headerClasses(2, true)).toContain('ps-8');
+      expect(headerClasses(2, false)).not.toContain('ps-8');
     });
 
     it.skipIf(isInstrumented())('is the single source for the tool level config', async () => {
@@ -184,6 +193,62 @@ describe('shared tool classes', () => {
 
       expect(listTool.INDENT_PER_LEVEL).toBe(LIST_INDENT_PER_LEVEL);
       expect(listTool.CHECKBOX_STYLES).toBe(LIST_CHECKBOX_CLASSES.join(' '));
+    });
+  });
+
+  /**
+   * The card is an `<a>` inside the block holder, whose `[&_a]:text-link` and
+   * `[&_a]:underline` (a class plus a type selector) outrank any plain utility
+   * on the anchor. Only `!important` lets the card keep neutral ink.
+   */
+  describe('page', () => {
+    it('stamps the wrapper spacing on the block root', () => {
+      expect(classesFor('page', {})).toEqual(PAGE_WRAPPER_CLASSES);
+    });
+
+    it('overrides the holder link colour and underline with important utilities', () => {
+      expect(PAGE_LINK_CLASSES).toContain('no-underline!');
+      expect(PAGE_LINK_INK_CLASSES).toEqual(['text-text-primary!']);
+    });
+
+    it('never paints the card as a blue link', () => {
+      const all = [...PAGE_WRAPPER_CLASSES, ...PAGE_LINK_CLASSES, ...PAGE_LINK_INK_CLASSES, ...PAGE_ICON_CLASSES, ...PAGE_TITLE_CLASSES, ...PAGE_TITLE_MUTED_CLASSES];
+
+      expect(all.filter((cls) => /link|blue/.test(cls))).toEqual([]);
+    });
+
+    it('keeps the soft underline on the title', () => {
+      expect(PAGE_TITLE_CLASSES).toEqual(expect.arrayContaining(['border-b', '[border-color:var(--blok-border-primary)]']));
+    });
+
+    it('reaches the generated stylesheet input', () => {
+      const all = [...PAGE_WRAPPER_CLASSES, ...PAGE_LINK_CLASSES, ...PAGE_LINK_INK_CLASSES, ...PAGE_ICON_CLASSES, ...PAGE_TITLE_CLASSES, ...PAGE_TITLE_MUTED_CLASSES];
+
+      expect(all.filter((cls) => !ALL_STATIC_CLASSES.includes(cls))).toEqual([]);
+    });
+
+    it('keeps the tool constants derived from the shared source, not copied', async () => {
+      const tool = await import('../../../src/tools/page/constants');
+      const words = (value: string): string[] => value.split(' ');
+
+      expect(tool.PAGE_WRAPPER_CLASSES).toBe(PAGE_WRAPPER_CLASSES.join(' '));
+      expect(words(tool.PAGE_LINK_CLASSES)).toEqual(expect.arrayContaining([...PAGE_LINK_CLASSES]));
+      expect(words(tool.PAGE_LINK_ENABLED_CLASSES)).toEqual(expect.arrayContaining([...PAGE_LINK_INK_CLASSES]));
+      expect(tool.PAGE_ICON_CLASSES).toBe(PAGE_ICON_CLASSES.join(' '));
+      expect(tool.PAGE_TITLE_CLASSES).toBe(PAGE_TITLE_CLASSES.join(' '));
+      expect(tool.PAGE_TITLE_MUTED_CLASSES).toBe(PAGE_TITLE_MUTED_CLASSES.join(' '));
+    });
+
+    it('falls back to the same drawing as the editor\'s IconPage', async () => {
+      const { IconPage } = await import('../../../src/components/icons');
+
+      expect(PAGE_FALLBACK_ICON).toBe(IconPage);
+    });
+
+    it('keeps a missing page muted in the editor, not link blue', async () => {
+      const tool = await import('../../../src/tools/page/constants');
+
+      expect(tool.PAGE_LINK_DISABLED_CLASSES.split(' ')).toContain('text-text-secondary!');
     });
   });
 

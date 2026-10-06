@@ -37,7 +37,8 @@ internal sealed record SyncAccepted(
     bool CanWrite,
     string? Principal,
     string? ActorId,
-    CollabOperationSource ProtocolSource) : SyncHandshakeResult;
+    CollabOperationSource ProtocolSource,
+    ClaimsPrincipal User) : SyncHandshakeResult;
 
 /// <summary>
 /// The sync door (plan decisions 7, 9, 18). Order: WebSocket plumbing →
@@ -212,7 +213,8 @@ internal sealed class SyncHandshake(
         canWrite,
         candidate.Principal,
         candidate.ActorId,
-        candidate.ProtocolSource);
+        candidate.ProtocolSource,
+        candidate.User);
   }
 
   /// <summary>The application's authenticated user (the RequireAuthorization path), if any.</summary>

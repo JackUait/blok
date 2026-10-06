@@ -28,6 +28,7 @@ import {
   IconSplitCell,
   IconSplitView,
   IconTable,
+  IconTabs,
   IconUpload,
 } from '../../../../src/components/icons';
 
@@ -37,7 +38,7 @@ const layoutIcons = {
   IconEmojiSprout, IconEmojiStar, IconEmojiUtensils, IconGallery,
   IconHeaderColumn, IconHeaderRow, IconImage, IconList, IconMergeCells,
   IconMultiSelect, IconPaintRoller, IconPlacement, IconPreview, IconSelect,
-  IconSpacer, IconSplitCell, IconSplitView, IconTable, IconUpload,
+  IconSpacer, IconSplitCell, IconSplitView, IconTable, IconTabs, IconUpload,
 };
 
 const svgOf = (icon: string): Document => new DOMParser().parseFromString(icon, 'image/svg+xml');
@@ -101,6 +102,38 @@ const linePoints = (path: Element): Point[][] => {
   });
 
   return contours;
+};
+
+/** Path vertices, including arc end points (absolute and relative M/L/H/V/A). */
+const arcAwarePoints = (path: Element): Point[] => {
+  const commands = path.getAttribute('d')?.match(/[MLHVAZmlhvaz][^MLHVAZmlhvaz]*/g) ?? [];
+  const points: Point[] = [];
+  let x = 0;
+  let y = 0;
+
+  commands.forEach(command => {
+    const letter = command.charAt(0);
+    const lower = letter.toLowerCase();
+    const values = command.slice(1).match(/-?(?:\d*\.)?\d+/g)?.map(Number) ?? [];
+    const relative = letter === lower;
+    const step = { a: 7, h: 1, v: 1 }[lower] ?? 2;
+
+    for (let i = 0; i + step <= values.length; i += step) {
+      const chunk = values.slice(i, i + step);
+
+      if (lower === 'h') {
+        x = (relative ? x : 0) + chunk[0];
+      } else if (lower === 'v') {
+        y = (relative ? y : 0) + chunk[0];
+      } else {
+        x = (relative ? x : 0) + chunk[step - 2];
+        y = (relative ? y : 0) + chunk[step - 1];
+      }
+      points.push([x, y]);
+    }
+  });
+
+  return points;
 };
 
 const distanceToSegment = ([x, y]: Point, [ax, ay]: Point, [bx, by]: Point): number => {
@@ -297,5 +330,27 @@ describe('Blok Line layout geometry', () => {
     });
     expect(new Set(dots.map(dot => numberOf(dot, 'cx'))).size).toBe(3);
     expect(new Set(dots.map(dot => numberOf(dot, 'cy'))).size).toBe(3);
+  });
+  it('draws the tab strip on the panel keyline, with a clear opening between the two tabs', () => {
+    const [outline, smallTab] = Array.from(svgOf(IconTabs).querySelectorAll('path[stroke="currentColor"]'));
+    const outlinePoints = arcAwarePoints(outline);
+    const xs = outlinePoints.map(([x]) => x);
+    const ys = outlinePoints.map(([, y]) => y);
+
+    // The body plus the raised tab fill the same box as every framed tool icon.
+    expect([Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]).toStrictEqual([3, 4, 17, 16]);
+
+    const tabPoints = arcAwarePoints(smallTab);
+    const bodyTop = Math.max(...tabPoints.map(([, y]) => y));
+    const activeTabRight = Math.max(...outlinePoints.filter(([, y]) => y < bodyTop).map(([x]) => x));
+    const smallTabLeft = Math.min(...tabPoints.map(([x]) => x));
+
+    // The small tab stands on the body's top edge and is lower than the raised tab.
+    expect(outlinePoints.some(([x, y]) => y === bodyTop && x > smallTabLeft)).toBe(true);
+    expect(Math.min(...tabPoints.map(([, y]) => y))).toBeGreaterThan(4);
+    // A full stroke of clear space keeps the opening visible at 16 px.
+    expect(smallTabLeft - activeTabRight - 1.25).toBeGreaterThanOrEqual(1.25);
+    // The shared top edge is drawn once: the small tab is an open path.
+    expect(smallTab.getAttribute('d')).not.toMatch(/z/i);
   });
 });

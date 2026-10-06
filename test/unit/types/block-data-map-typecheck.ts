@@ -49,7 +49,13 @@ type _AssertBuiltins =
   BlokBlockDataMap['paragraph'] &
   BlokBlockDataMap['header'] &
   BlokBlockDataMap['database-row'] &
-  BlokBlockDataMap['column_list'];
+  BlokBlockDataMap['column_list'] &
+  BlokBlockDataMap['tabs'] &
+  BlokBlockDataMap['tab'];
+
+// A tab's saved title is typed through the map.
+const _tabTitle: BlokBlockDataMap['tab']['title'] = 'Tab 1';
+void _tabTitle;
 declare const _builtins: _AssertBuiltins;
 void _builtins;
 

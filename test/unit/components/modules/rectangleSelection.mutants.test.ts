@@ -654,12 +654,14 @@ describe('RectangleSelection — surviving mutants', () => {
       expect(h.rect.isMouseDownWithinBounds).toBe(false);
     });
 
-    it('leaves the overlay hidden when a cancel arrives with no gesture in flight', () => {
+    it('leaves the overlay untouched when a cancel arrives with no gesture in flight', () => {
       const h = createHarness();
 
+      // The rectangle starts hidden, so a sentinel shows whether cancel wrote to it.
+      h.overlayRectangle.style.display = 'contents';
       h.rect.cancelActiveSelection();
 
-      expect(h.overlayRectangle.style.display).toBe('');
+      expect(h.overlayRectangle.style.display).toBe('contents');
     });
 
     it('resets a selection built before prepare() without touching a missing overlay', () => {
@@ -1852,7 +1854,7 @@ describe('RectangleSelection — surviving mutants', () => {
 
       expect(h.errors).toEqual([]);
       expect(h.rect.isRectActivated()).toBe(true);
-      expect(h.overlayRectangle.style.display).toBe('');
+      expect(h.overlayRectangle.style.display).toBe('none');
     });
   });
 

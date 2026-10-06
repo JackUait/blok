@@ -143,6 +143,15 @@ export interface CreateAngularBlockSpec<Data = BlockToolData> {
    * @param block - this block's per-block API
    */
   getToolbarAnchorElement?: (host: HTMLElement, block: BlockAPI) => HTMLElement | null | undefined;
+  /**
+   * Enter (or Cmd/Ctrl+Enter) on this block while it is the keyboard
+   * navigation target — core's `onNavigationEnter` hook. Return true when the
+   * block handled it (e.g. opened a link); omit it, or return false, to let
+   * core put the caret in the block.
+   * @param event - the Enter keydown
+   * @param block - this block's per-block API
+   */
+  onNavigationEnter?: (event: KeyboardEvent, block: BlockAPI) => boolean;
   /** Optional lifecycle callbacks mapped from Blok's block hooks. */
   onRendered?: (block: BlockAPI) => void;
   /**
@@ -223,6 +232,7 @@ export function createAngularBlock<Data = BlockToolData>(
   setData(newData: BlockToolData): Promise<boolean>;
   setReadOnly(state: boolean): void;
   getToolbarAnchorElement(): HTMLElement | undefined;
+  onNavigationEnter(event: KeyboardEvent): boolean;
   rendered(): void;
   moved(): void;
   removed(): void;
@@ -429,6 +439,14 @@ export function createAngularBlock<Data = BlockToolData>(
       }
 
       return spec.getToolbarAnchorElement(host, this.blockApi) ?? undefined;
+    }
+
+    /**
+     * Core's navigation-mode Enter hook. Only a real `true` from the spec
+     * counts as handled.
+     */
+    public onNavigationEnter(event: KeyboardEvent): boolean {
+      return spec.onNavigationEnter?.(event, this.blockApi) === true;
     }
 
     /**

@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 
@@ -62,6 +63,7 @@ const createBlok = async (
     },
     { holder: HOLDER_ID, initialData: data ?? null, extras: extraToolNames }
   );
+  await openFixtureToggles(page, data);
 };
 
 test.beforeEach(async ({ page }) => {

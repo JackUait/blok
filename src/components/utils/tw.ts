@@ -60,7 +60,7 @@ const CLASS_PATTERNS: Array<{ pattern: RegExp; getGroup: (match: RegExpMatchArra
   { pattern: /^inset-(.+)$/, getGroup: () => 'inset' },
 
   // Top/Right/Bottom/Left positioning
-  { pattern: /^(top|right|bottom|left)-(.+)$/, getGroup: (m) => m[1] },
+  { pattern: /^(top|right|bottom|left|start|end)-(.+)$/, getGroup: (m) => m[1] },
 
   // Margin: m-*, mx-*, my-*, mt-*, mr-*, mb-*, ml-*
   { pattern: /^!?m-(.+)$/, getGroup: () => 'm' },
@@ -70,6 +70,8 @@ const CLASS_PATTERNS: Array<{ pattern: RegExp; getGroup: (match: RegExpMatchArra
   { pattern: /^!?mr-(.+)$/, getGroup: () => 'mr' },
   { pattern: /^!?mb-(.+)$/, getGroup: () => 'mb' },
   { pattern: /^!?ml-(.+)$/, getGroup: () => 'ml' },
+  { pattern: /^!?ms-(.+)$/, getGroup: () => 'ms' },
+  { pattern: /^!?me-(.+)$/, getGroup: () => 'me' },
 
   // Padding: p-*, px-*, py-*, pt-*, pr-*, pb-*, pl-*
   { pattern: /^p-(.+)$/, getGroup: () => 'p' },
@@ -79,6 +81,8 @@ const CLASS_PATTERNS: Array<{ pattern: RegExp; getGroup: (match: RegExpMatchArra
   { pattern: /^pr-(.+)$/, getGroup: () => 'pr' },
   { pattern: /^pb-(.+)$/, getGroup: () => 'pb' },
   { pattern: /^pl-(.+)$/, getGroup: () => 'pl' },
+  { pattern: /^ps-(.+)$/, getGroup: () => 'ps' },
+  { pattern: /^pe-(.+)$/, getGroup: () => 'pe' },
 
   // Gap: axis-specific gaps are independent groups, like mx/my and px/py
   { pattern: /^gap-x-(.+)$/, getGroup: () => 'gap-x' },
@@ -127,8 +131,8 @@ const CLASS_PATTERNS: Array<{ pattern: RegExp; getGroup: (match: RegExpMatchArra
   // Border width/style: border, border-0, border-none
   { pattern: /^border(?:-(?:none|0))?$/, getGroup: () => 'border-w' },
 
-  // Border side width: border-{t,r,b,l}(-{suffix})?
-  { pattern: /^border-([trlb])(?:-|$)/, getGroup: (m) => `border-${m[1]}` },
+  // Border side width: border-{t,r,b,l,s,e}(-{suffix})?
+  { pattern: /^border-([trlbse])(?:-|$)/, getGroup: (m) => `border-${m[1]}` },
 
   // Border color: everything else with border- prefix
   { pattern: /^border-.+$/, getGroup: () => 'border-color' },

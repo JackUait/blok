@@ -149,7 +149,6 @@ const editor = new Blok({
   text: string;             // Heading HTML content
   level: number;            // 1–6
   isToggleable?: boolean;   // true when the heading has toggle (collapse/expand)
-  isOpen?: boolean;         // Persisted toggle state, present when toggleable
   textColor?: string;       // Block colour preset, present when set
   backgroundColor?: string; // Block background colour preset, present when set
   anchor?: string;          // Anchor id for in-document links, present when set
@@ -346,7 +345,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Toggle',
     description:
-      'A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when it is collapsed.\n\nYou toggle it by clicking the arrow icon, or programmatically through the public Block API: `api.blocks.getById(id)?.call("expand")` / `.call("collapse")`. Toggle headings (Header blocks with `isToggleable: true`) accept the same two commands. These are string-addressed commands routed through `BlockAPI.call()`. They are not declared as methods on the exported tool classes.\n\nThe open or collapsed state is saved in `isOpen` and restored on reload. Toggles default to open.',
+      'A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when it is collapsed.\n\nYou toggle it by clicking the arrow icon, or programmatically through the public Block API: `api.blocks.getById(id)?.call("expand")` / `.call("collapse")`. Toggle headings (Header blocks with `isToggleable: true`) accept the same two commands. These are string-addressed commands routed through `BlockAPI.call()`. They are not declared as methods on the exported tool classes.\n\nThe open or collapsed state is personal. Each browser remembers it for itself, and it is never saved. A toggle starts collapsed, except for the person who just created it.',
     importExample: `import { Toggle } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -357,8 +356,7 @@ const editor = new Blok({
       },
     ],
     saveDataShape: `interface ToggleData {
-  text: string;     // Toggle title HTML content
-  isOpen?: boolean; // Whether the toggle is expanded — persisted and restored on reload
+  text: string; // Toggle title HTML content
 }`,
     saveDataExample: `{
   "id": "mno345",
@@ -591,6 +589,39 @@ const editor = new Blok({
   },
 
   {
+    id: 'table_of_contents',
+    exportName: 'TableOfContents',
+    type: 'block',
+    title: 'Table of contents',
+    description:
+      'A list of the page\'s headings. Each entry links to its heading. Insert it from the toolbox, or type `/toc`.\n\nThe list is built from the page on the fly, so it is never saved. It updates as you add, rename, move, or delete headings. It shows headings at the top level and inside columns and callouts. It skips headings inside toggles, lists, and toggle headings. Entries are indented by heading level, and a skipped level does not add extra indent.\n\nClick an entry, or focus it and press Enter, to scroll to that heading. ArrowUp/ArrowDown, Home, and End move between entries. The entry for the section you are reading is marked with `aria-current="location"`.\n\nWith no headings, the block shows "Add headings to create a table of contents." It works in read-only mode. Pasting a table of contents from Notion creates this block. Markdown export drops it, since the headings export on their own.\n\n`blocksToHtml` (and the server\'s HTML export) renders it as a `<nav>` of links, built from the saved headings. It gives each listed heading an `id` so the links work: its `anchor` when it has one, else its block id. Each entry carries `data-depth`.',
+    importExample: `import { TableOfContents } from '@bloklabs/core/tools';`,
+    configOptions: [],
+    saveDataShape: `interface TableOfContentsData {
+  textColor?: string;       // Colour preset name, absent for default
+  backgroundColor?: string; // Colour preset name, absent for none
+}`,
+    saveDataExample: `{
+  "id": "toc001",
+  "type": "table_of_contents",
+  "data": {
+    "backgroundColor": "gray"
+  }
+}`,
+    usageExample: `import { Blok } from '@bloklabs/core';
+import { TableOfContents } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    table_of_contents: {
+      class: TableOfContents,
+    },
+  },
+});`,
+  },
+
+  {
     id: 'quote',
     exportName: 'Quote',
     type: 'block',
@@ -730,6 +761,13 @@ const editor = new Blok({
         description:
           'How many times a rendered image silently re-fetches its `src` after a load error before showing the broken-image state. Set 0 to disable auto-retry.',
       },
+      {
+        option: 'filters',
+        type: 'Array<ImageFilterPreset | ImageFilterDefinition>',
+        default: 'every built-in',
+        description:
+          'The looks the image editor\'s Filters tab offers, in order. Original always comes first.\n\n- A string picks a built-in, such as `\'vivid\'`, `\'noir\'` or `\'film\'`. There are 23.\n- An object `{ name, title, css }` adds your own look. `name` is saved in `filter`, `title` is the label, and `css` is a CSS filter value.\n  - Only `brightness`, `contrast`, `saturate`, `grayscale`, `sepia`, `invert` and `hue-rotate` are kept.\n  - Reusing a built-in name retunes that built-in.\n- `[]` hides the Filters tab.\n\nA built-in you leave out still renders on images that already use it. A saved name this editor does not know renders unfiltered and is kept on save.',
+      },
     ],
     saveDataShape: `interface ImageData {
   url: string;             // Image source URL — http(s) or blob:
@@ -744,7 +782,8 @@ const editor = new Blok({
   rotation?: 0 | 90 | 180 | 270; // Clockwise quarter turn (omitted for 0)
   flipX?: boolean;         // Mirrored left to right, before rotation
   straighten?: number;     // Fine turn in degrees, -45 to 45, after rotation
-  filter?: 'none' | 'vivid' | 'dramatic' | 'warm' | 'mono' | 'noir' | 'fade' | 'sepia';
+  filter?: ImageFilterPreset | string; // A built-in look or a host filter name (omitted for 'none')
+  filterStrength?: number; // How strongly filter applies, 0 to 100 (omitted for 100)
   adjust?: { brightness?: number; contrast?: number; saturation?: number }; // Each -100 to 100
   markup?: ImageMarkup[];  // Drawings, shapes and text over the image, back to front
   alt?: string;            // Alt text for screen readers
@@ -855,6 +894,78 @@ const editor = new Blok({
   },
 });`,
   },
+  {
+    id: 'tabs',
+    exportName: 'TabsTool',
+    type: 'block',
+    title: 'Tabs',
+    description:
+      'A block that splits content into tabs. A strip of tabs sits on top, and the open tab\'s content shows below it. Insert it from the toolbox, or type `/tabs`. A new tabs block starts with three tabs: Tab 1, Tab 2, and Tab 3.\n\nEach tab is a child `tab` block, and the blocks you write live inside the tabs (via `contentIds`). The tabs block itself saves nothing. Which tab is open is UI state, kept per editor, and never saved. A tabs block holds only `tab` blocks. Any other child is moved out to just after it.\n\nTo manage tabs:\n- click "+" to add a tab\n- click the open tab, right-click a tab, or press Shift+F10 or the ContextMenu key on it to open its menu: Rename, Edit icon, and Delete\n- press F2 on a tab to rename it\n- drag a tab sideways to reorder it\n\nThe last tab cannot be deleted. Delete the whole block instead. Deleting a tab deletes its content, and deleting the tabs block deletes every tab.\n\nThe arrow keys, Home, and End move between tabs. While you drag a block, rest it on a tab to open that tab, or drop it on the tab to add it at the end of that tab. Find in page opens the tab that holds a match.\n\nYou can register both tools at once with the `Tabs` group handle: `tools: { tabs: Tabs }` expands to the `tabs` and `tab` tools. The saved JSON still contains `tabs` and `tab` blocks.\n\nIt works in read-only mode. Pasting tabs from Notion creates this block. Markdown export writes every tab in order, each under its bold title. `blocksToHtml` writes a `<div data-blok-tabs>` with one `<section data-blok-tab>` per tab, and `htmlToBlocks` reads that HTML back as tabs.',
+    importExample: `import { TabsTool } from '@bloklabs/core/tools';
+// …or register both tab tools at once with the group handle:
+import { Tabs } from '@bloklabs/core/tools';`,
+    configOptions: [],
+    saveDataShape: `interface TabsData {
+  // No persisted fields. The tabs are the child \`tab\` blocks, referenced by
+  // the block's saved \`content\` array (exposed as \`contentIds\` on the
+  // in-memory Block). The open tab is UI state and is never saved.
+}`,
+    saveDataExample: `{
+  "id": "tabs001",
+  "type": "tabs",
+  "data": {},
+  "content": ["tab1", "tab2"]
+}`,
+    usageExample: `import { Blok } from '@bloklabs/core';
+import { TabsTool, TabTool } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    tabs: {
+      class: TabsTool,
+    },
+    tab: {
+      class: TabTool,
+    },
+  },
+});`,
+  },
+  {
+    id: 'tab',
+    exportName: 'TabTool',
+    type: 'block',
+    title: 'Tab',
+    description:
+      'A single tab inside a tabs block. It is not user-insertable on its own. The parent `tabs` block creates and manages its tabs.\n\nThe tab saves its `title` and an optional emoji `icon`, both as plain text. An empty icon is not saved. Child blocks are nested inside the tab via `contentIds`. A tab cannot hold another tabs block.\n\nAn empty tab shows "Empty tab. Click or drop blocks inside." Clicking it adds a paragraph to the tab.',
+    importExample: `import { TabTool } from '@bloklabs/core/tools';`,
+    configOptions: [],
+    saveDataShape: `interface TabData {
+  title: string; // Plain text label shown in the tab strip
+  icon?: string; // Optional emoji shown before the title
+}
+// Child blocks are referenced via the block's saved \`content\` array
+// (the in-memory \`contentIds\`), not stored here.`,
+    saveDataExample: `{
+  "id": "tab1",
+  "type": "tab",
+  "data": {
+    "title": "Overview",
+    "icon": "📘"
+  },
+  "content": ["block1", "block2"]
+}`,
+    usageExample: `// Tab is not inserted directly — it is created by the TabsTool.
+import { TabsTool, TabTool } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    tabs: { class: TabsTool },
+    tab: { class: TabTool },
+  },
+});`,
+  },
 
   {
     id: 'embed',
@@ -954,6 +1065,145 @@ const editor = new Blok({
       class: Bookmark,
       config: {
         endpoint: 'https://your-backend.example.com/unfurl',
+      },
+    },
+  },
+});`,
+  },
+  {
+    id: 'page',
+    exportName: 'Page',
+    type: 'block',
+    title: 'Page',
+    description:
+      'An owning `page` block saves only `data.pageId`; its body, title, icon, and access live in your host. A `page-link` block and an inline `<a data-blok-page-id="p1">Page</a>` are non-owning references. Neither stores a title, icon, URL, or access verdict.\n\nUse `resolve` for authorized metadata and `subscribe` to refresh it after a host change. The host publishes same-tab notifications after local edits and remote changes. `null` means missing, `undefined` stays neutral, and `{ access: \'none\' }` means denied. A denied page hides its title, shows a lock, and explains No access on click or Enter.\n\nUse `search` to offer only accessible pages for `@` and `[[` insertion. Your host owns global search and backlink screens. Ordinary URL mentions remain URL-backed. Register `Page` and `PageLink` with the same `PageConfig`; only `Page` can call `create` for a new owning page.\n\nFor static HTML, pass `blocksToHtml(data, { pageInfo, pageHref })`. `pageInfo` must supply authorized metadata synchronously. Missing, denied, or unresolved pages never receive a `pageHref` URL.\n\n`href` builds a title-free URL from the opaque ID. `open` handles ordinary clicks and Enter; modified clicks follow the browser link. Blok does not load or save the page body.',
+    importExample: `import { Page } from '@bloklabs/core/tools';`,
+    configOptions: [
+      {
+        option: 'href',
+        type: '(pageId: string) => string',
+        default: 'undefined',
+        description:
+          'Builds the page\'s URL from its id. Blok puts it on the link, so Cmd/Ctrl-click or middle click opens the page in a new tab. Without it the link has no URL. Unsafe schemes such as `javascript:` are dropped.',
+      },
+      {
+        option: 'pageIdFromHref',
+        type: '(href: string) => string | null | undefined',
+        default: 'undefined',
+        description:
+          'Turns a URL back into a page id, or returns `null` when the URL is not a page link. Blok passes an absolute URL. With it, pasting a page link offers Mention, which inserts an inline reference to the page instead of a plain link.',
+      },
+      {
+        option: 'open',
+        type: '(pageId: string, ctx: { event?: MouseEvent | KeyboardEvent }) => void',
+        default: 'undefined',
+        description:
+          'Opens the page. Blok calls it on a plain left click. Without it, a click follows `href`.\n\nEnter also opens the page when the block is selected from the keyboard (Escape, then the arrow keys). Then `ctx.event` is that key press.\n\nBlok also calls it once right after a user inserts a new page from the toolbox. Then `ctx.event` is empty. It is not called for a page inserted through the API, or when `create` throws.',
+      },
+      {
+        option: 'resolve',
+        type: '(pageId: string) => PageInfo | null | undefined | Promise<…>',
+        default: 'undefined',
+        description:
+          'Returns authorized current page metadata. `null` means the page does not exist; `{ access: \'none\' }` hides the title and icon and shows No access; `undefined` leaves a neutral label. A returned title or icon is displayed but never saved in the page block.\n\nThe host must check permissions before returning metadata. `subscribe` triggers another lookup when access or metadata changes.',
+      },
+      {
+        option: 'create',
+        type: '(init: { pageId: string }) => void | { pageId: string } | Promise<…>',
+        default: 'undefined',
+        description:
+          'Makes the page in your app. Blok calls it once per new page, with an id it minted. It is never called on load, paste, undo, redo or a collaborator\'s change, or in read-only mode.\n\nWhen a user picks Page in the toolbox, Blok waits for it. The item shows a spinner, and the block appears once it resolves. Return `{ pageId }` to use your backend\'s id instead of Blok\'s. If it throws, no block is inserted; show the error yourself. Closing the menu while it runs does not cancel the insert.\n\nWhen your code inserts a page through the API without a `pageId`, the block appears at once with Blok\'s id. A different returned id is ignored with a warning, so pass your own `pageId` to `insert` instead. If it throws, the block shows "Page not found". Blok still asks `resolve`, so a page your app made after all shows up.',
+      },
+      {
+        option: 'search',
+        type: '(query: string) => Promise<readonly PageSearchResult[]>',
+        default: 'undefined',
+        description: 'Offers accessible pages for inline `@` and `[[` references. Filter results by the current user before returning them; Blok does not own global search.',
+      },
+      {
+        option: 'subscribe',
+        type: '(pageId: string, onChange: () => void) => (() => void) | void',
+        default: 'undefined',
+        description: 'Calls `onChange` when page metadata or access changes. Blok re-runs `resolve` and uses the returned function to stop listening.',
+      },
+      {
+        option: 'preview',
+        type: '(pageId: string) => OutputBlockData[] | null | undefined | Promise<…>',
+        default: 'undefined',
+        description: 'Supplies authorized opening blocks for the hover preview. Blok requests them only for an accessible page.',
+      },
+    ],
+    saveDataShape: `interface PageData {
+  pageId: string;
+}`,
+    saveDataExample: `{
+  "id": "pg001",
+  "type": "page",
+  "data": { "pageId": "p1" }
+}`,
+    usageExample: `import { Blok } from '@bloklabs/core';
+import { Page, PageLink } from '@bloklabs/core/tools';
+import { blocksToHtml } from '@bloklabs/core/view';
+
+const pageUrl = (pageId) => \`/pages/\${pageId}\`;
+const pageConfig = {
+  href: pageUrl,
+  open: (pageId) => router.push(pageUrl(pageId)),
+  resolve: (pageId) => myApi.getAuthorizedPageInfo(pageId),
+  search: (query) => myApi.searchAccessiblePages(query),
+  subscribe: (pageId, onChange) => myApi.subscribePage(pageId, onChange),
+};
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    page: {
+      class: Page,
+      config: {
+        ...pageConfig,
+        // Return { pageId } to use your backend's id instead of Blok's.
+        create: async ({ pageId }) => ({ pageId: (await myApi.createPage(pageId)).id }),
+      },
+    },
+    'page-link': { class: PageLink, config: pageConfig },
+  },
+});
+
+const authorizedPageInfo = myApi.getAuthorizedPageInfoSnapshot();
+const html = blocksToHtml(savedData, {
+  pageInfo: (pageId) => authorizedPageInfo.get(pageId),
+  pageHref: pageUrl,
+});`,
+  },
+  {
+    id: 'page-link',
+    exportName: 'PageLink',
+    type: 'block',
+    title: 'Page link',
+    description:
+      'A non-owning reference to a host page. It saves only `data.pageId` and never creates or owns a page. Use it for links to an existing page; an owning `page` block is the page tree edge.\n\nRegister `PageLink` with the same authorized `PageConfig` as `Page`. Missing or denied metadata shows a neutral or locked label without the page title or URL.',
+    importExample: `import { PageLink } from '@bloklabs/core/tools';`,
+    configOptions: [],
+    saveDataShape: `interface PageLinkData {
+  pageId: string;
+}`,
+    saveDataExample: `{
+  "id": "ref001",
+  "type": "page-link",
+  "data": { "pageId": "p1" }
+}`,
+    usageExample: `import { Blok } from '@bloklabs/core';
+import { PageLink } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    'page-link': {
+      class: PageLink,
+      config: {
+        resolve: (pageId) => myApi.getAuthorizedPageInfo(pageId),
+        href: (pageId) => \`/pages/\${pageId}\`,
+        subscribe: (pageId, onChange) => myApi.subscribePage(pageId, onChange),
       },
     },
   },

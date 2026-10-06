@@ -1332,16 +1332,9 @@ public sealed class GuardedOutboundFetcherTests
                 new byte[1],
                 cancellationToken).AsTask();
 
-            while (!closeProbe.IsCompleted)
-            {
-              await stream.WriteAsync(
-                  "1\r\nx\r\n"u8.ToArray(),
-                  cancellationToken);
-              await stream.FlushAsync(cancellationToken);
-              await Task.Delay(
-                  TimeSpan.FromMilliseconds(5),
-                  cancellationToken);
-            }
+            await stream.WriteAsync(
+                "5\r\nxxxxx\r\n"u8.ToArray(),
+                cancellationToken);
 
             if (await closeProbe == 0)
             {
@@ -1358,7 +1351,7 @@ public sealed class GuardedOutboundFetcherTests
     var error = await Assert.ThrowsAsync<GuardedFetchException>(
         async () => await fetcher.GetAsync(
             $"http://dispose.example:{origin.Port}/oversized",
-            new GuardedFetchLimits(TimeSpan.FromSeconds(1), 4, 0),
+            new GuardedFetchLimits(TimeSpan.FromSeconds(5), 4, 0),
             CancellationToken.None).AsTask().WaitAsync(
                 TimeSpan.FromSeconds(2)));
 
@@ -1384,16 +1377,9 @@ public sealed class GuardedOutboundFetcherTests
                 new byte[1],
                 cancellationToken).AsTask();
 
-            while (!closeProbe.IsCompleted)
-            {
-              await stream.WriteAsync(
-                  "1\r\nx\r\n"u8.ToArray(),
-                  cancellationToken);
-              await stream.FlushAsync(cancellationToken);
-              await Task.Delay(
-                  TimeSpan.FromMilliseconds(5),
-                  cancellationToken);
-            }
+            await stream.WriteAsync(
+                "5\r\nxxxxx\r\n"u8.ToArray(),
+                cancellationToken);
 
             if (await closeProbe == 0)
             {
@@ -1417,8 +1403,9 @@ public sealed class GuardedOutboundFetcherTests
     var error = await Assert.ThrowsAsync<GuardedFetchException>(
         async () => await fetcher.GetAsync(
             $"https://dispose-tls.example:{origin.Port}/",
-            new GuardedFetchLimits(TimeSpan.FromSeconds(1), 4, 0),
-            CancellationToken.None));
+            new GuardedFetchLimits(TimeSpan.FromSeconds(5), 4, 0),
+            CancellationToken.None).AsTask().WaitAsync(
+                TimeSpan.FromSeconds(2)));
 
     Assert.Equal(GuardedFetchFailure.ResponseTooLarge, error.Failure);
     await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(2));

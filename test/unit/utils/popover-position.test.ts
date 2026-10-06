@@ -205,6 +205,83 @@ describe('resolvePosition', () => {
   });
 
 
+  describe('horizontal placement in RTL', () => {
+    const base = {
+      popoverSize: { width: 250, height: 100 },
+      scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 1000 }),
+      viewportSize: { width: 1000, height: 768 },
+      scrollOffset: { x: 0, y: 0 },
+      offset: 8,
+      direction: 'rtl' as const,
+    };
+
+    it('aligns the popover right edge to the anchor right edge', () => {
+      const result = resolvePosition({
+        ...base,
+        anchor: rect({ top: 100, bottom: 140, left: 500, right: 600 }),
+      });
+
+      expect(result.left + 250).toBe(600);
+      expect(result.openLeft).toBe(true);
+    });
+
+    it('aligns to the right edge of leftAlignRect when provided', () => {
+      const result = resolvePosition({
+        ...base,
+        anchor: rect({ top: 100, bottom: 140, left: 500, right: 540 }),
+        leftAlignRect: rect({ left: 200, right: 800 }),
+      });
+
+      expect(result.left + 250).toBe(800);
+    });
+
+    it('flips to open rightward from the anchor left edge when the left side is too narrow', () => {
+      const result = resolvePosition({
+        ...base,
+        anchor: rect({ top: 100, bottom: 140, left: 50, right: 150 }),
+      });
+
+      // spaceLeft = 150 < 250, spaceRight = 1000 - 50 = 950
+      expect(result.openLeft).toBe(false);
+      expect(result.left).toBe(50);
+    });
+
+    it('pins the right edge to the boundary when the popover is wider than the scope', () => {
+      const result = resolvePosition({
+        ...base,
+        anchor: rect({ top: 100, bottom: 140, left: 200, right: 300 }),
+        popoverSize: { width: 500, height: 100 },
+        scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 400 }),
+        viewportSize: { width: 400, height: 768 },
+      });
+
+      // spaceLeft = 300, spaceRight = 200 -> stays leftward, clamps to keep the start (right) edge in view
+      expect(result.openLeft).toBe(true);
+      expect(result.left).toBe(-100);
+    });
+
+    it('accounts for horizontal scroll', () => {
+      const result = resolvePosition({
+        ...base,
+        anchor: rect({ top: 100, bottom: 140, left: 500, right: 600 }),
+        scrollOffset: { x: 100, y: 0 },
+      });
+
+      expect(result.left).toBe(450);
+    });
+
+    it('keeps LTR placement when direction is ltr', () => {
+      const result = resolvePosition({
+        ...base,
+        direction: 'ltr',
+        anchor: rect({ top: 100, bottom: 140, left: 500, right: 600 }),
+      });
+
+      expect(result.left).toBe(500);
+      expect(result.openLeft).toBe(false);
+    });
+  });
+
   describe('fuzz: horizontal anchor fidelity with wide leftAlignRect', () => {
     // Matrix fuzz: for many realistic combinations of (caret position,
     // leftAlignRect width, popover width, viewport width, horizontal scroll),

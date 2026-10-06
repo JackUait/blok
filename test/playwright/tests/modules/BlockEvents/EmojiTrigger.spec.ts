@@ -32,17 +32,18 @@ const resetBlok = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createBlok = async (page: Page, data: OutputData): Promise<void> => {
+const createBlok = async (page: Page, data: OutputData, direction: 'ltr' | 'rtl' = 'ltr'): Promise<void> => {
   await resetBlok(page);
-  await page.evaluate(async ({ holder, blokData }) => {
+  await page.evaluate(async ({ holder, blokData, dir }) => {
     const blok = new window.Blok({
       holder,
       data: blokData,
+      i18n: { direction: dir },
     });
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, blokData: data });
+  }, { holder: HOLDER_ID, blokData: data, dir: direction });
 };
 
 const createParagraphBlok = async (page: Page, texts: string[]): Promise<void> => {
@@ -60,6 +61,29 @@ const saveBlok = async (page: Page): Promise<OutputData> => {
     return window.blokInstance.save();
   });
 };
+
+/** Index of the highlighted result in the picker grid, read through the combobox host. */
+const highlightedIndex = async (host: Locator): Promise<number> =>
+  host.evaluate((el) => {
+    const activeId = el.getAttribute('aria-activedescendant');
+    const active = activeId !== null ? document.getElementById(activeId) : null;
+    const buttons = Array.from(document.querySelectorAll('[data-emoji-native]'));
+
+    return active === null ? -1 : buttons.indexOf(active);
+  });
+
+/** Whether result `to` sits right or left of result `from`, both measured now. */
+const sideOf = async (page: Page, from: number, to: number): Promise<'ArrowRight' | 'ArrowLeft'> =>
+  page.evaluate(({ a, b }) => {
+    const buttons = Array.from(document.querySelectorAll('[data-emoji-native]'));
+    const x = (i: number): number => {
+      const rect = buttons[i].getBoundingClientRect();
+
+      return rect.left + rect.width / 2;
+    };
+
+    return x(b) > x(a) ? 'ArrowRight' : 'ArrowLeft';
+  }, { a: from, b: to });
 
 const getTextContent = async (locator: Locator): Promise<string> => {
   return locator.evaluate((element) => element.textContent ?? '');
@@ -324,4 +348,33 @@ test.describe('inline ":" emoji trigger', () => {
     await expect(menu).toBeHidden();
     await expect(page.locator(SCROLL_LOCKED_SELECTOR)).not.toBeAttached();
   });
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    test(`${direction}: Left/Right move the highlight the way the arrow points`, async ({ page }) => {
+      await createBlok(page, { blocks: [{ type: 'paragraph', data: { text: '' } }] }, direction);
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      const menu = page.getByTestId('emoji-menu');
+
+      await paragraph.click();
+      await page.keyboard.type(':fi');
+      await expect(menu).toBeVisible();
+      await expect(paragraph).toHaveAttribute('aria-activedescendant', /.+/);
+
+      const first = await highlightedIndex(paragraph);
+      // The first result sits at the inline start, so step toward the end first.
+      const keys = direction === 'rtl' ? ['ArrowLeft', 'ArrowRight'] as const : ['ArrowRight', 'ArrowLeft'] as const;
+
+      for (const key of keys) {
+        const before = await highlightedIndex(paragraph);
+
+        await page.keyboard.press(key);
+        await expect.poll(() => highlightedIndex(paragraph)).not.toBe(before);
+
+        expect(await sideOf(page, before, await highlightedIndex(paragraph))).toBe(key);
+      }
+
+      expect(await highlightedIndex(paragraph)).toBe(first);
+    });
+  }
 });

@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -61,6 +62,7 @@ const createBlokWithData = async (
     },
     { holder: HOLDER_ID, blokBlocks: blocks }
   );
+  await openFixtureToggles(page, { blocks });
 };
 
 // ===========================================================================
@@ -217,13 +219,13 @@ test.describe('Toggle nesting: cross-type (toggle list <-> toggle heading)', () 
       {
         id: 'toggle-list-1',
         type: 'toggle',
-        data: { text: 'Outer Toggle' },
+        data: { text: 'Outer Toggle', isOpen: true },
         content: ['heading-1'],
       },
       {
         id: 'heading-1',
         type: 'header',
-        data: { text: 'Nested Toggle Heading', level: 2, isToggleable: true },
+        data: { text: 'Nested Toggle Heading', level: 2, isToggleable: true, isOpen: true },
         parent: 'toggle-list-1',
         content: ['para-1'],
       },

@@ -1,3 +1,5 @@
+import { getElementDirection, logicalArrow } from './direction';
+
 /**
  * Roving tabindex controller.
  *
@@ -20,8 +22,9 @@ export type RovingOrientation = 'horizontal' | 'vertical';
 
 export interface RovingTabindexOptions {
   /**
-   * Which arrow keys move focus. `horizontal` uses ArrowLeft/ArrowRight,
-   * `vertical` uses ArrowUp/ArrowDown. Defaults to `horizontal`.
+   * Which arrow keys move focus. `horizontal` uses ArrowLeft/ArrowRight in
+   * the group's reading order (ArrowLeft is next in RTL), `vertical` uses
+   * ArrowUp/ArrowDown. Defaults to `horizontal`.
    */
   orientation?: RovingOrientation;
 
@@ -37,6 +40,14 @@ export interface RovingTabindexOptions {
    */
   tabbable?: boolean;
 }
+
+const verticalStep = (key: string): 'forward' | 'backward' | null => {
+  if (key === 'ArrowDown') {
+    return 'forward';
+  }
+
+  return key === 'ArrowUp' ? 'backward' : null;
+};
 
 /**
  * Returns whether the element is currently hidden and therefore should be
@@ -171,14 +182,14 @@ export class RovingTabindexController {
    * @param event - keyboard event from a group item
    */
   private onKeydown(event: KeyboardEvent): void {
-    const [nextKey, prevKey] = this.orientation === 'horizontal'
-      ? ['ArrowRight', 'ArrowLeft']
-      : ['ArrowDown', 'ArrowUp'];
+    const step = this.orientation === 'horizontal'
+      ? logicalArrow(event.key, getElementDirection(event.currentTarget instanceof Element ? event.currentTarget : null))
+      : verticalStep(event.key);
 
-    if (event.key === nextKey) {
+    if (step === 'forward') {
       event.preventDefault();
       this.move(1);
-    } else if (event.key === prevKey) {
+    } else if (step === 'backward') {
       event.preventDefault();
       this.move(-1);
     } else if (event.key === 'Home') {

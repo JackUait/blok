@@ -1,7 +1,7 @@
 {
   "name": "Blok — Block-Based Rich Text Editor",
   "short_name": "Blok",
-  "description": "A production-ready, extensible rich text editor that brings Notion-like block-based editing to your app. Clean JSON output, never HTML.",
+  "description": "A production-ready, extensible rich text editor that brings Notion-like block-based editing to your app. Clean JSON output, not an HTML blob.",
   "start_url": "/",
   "scope": "/",
   "icons": [

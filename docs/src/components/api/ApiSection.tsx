@@ -5,6 +5,7 @@ import { ConceptsContent } from "./ConceptsContent";
 import { TutorialContent } from "./TutorialContent";
 import { HowToCustomToolContent } from "./HowToCustomToolContent";
 import { DevOverrideSeamContent } from "./DevOverrideSeamContent";
+import { TabSyncContent } from "./TabSyncContent";
 import { EditorAccessNote } from "./EditorAccessNote";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
@@ -16,6 +17,7 @@ import {
 import { adaptExample } from "../common/framework-adapt";
 import { getRouteMetadata } from "../../seo/route-metadata";
 import { localizedPath } from "../../seo/locales";
+import { lastModified } from "../../seo/lastmod";
 import { generatePropertyId, generateOptionId } from "./api-anchors";
 import { renderInline } from "./inline-code";
 import { Prose } from "../common/Prose";
@@ -48,6 +50,7 @@ const EDIT_PATH_BY_CUSTOM_TYPE: Record<NonNullable<ApiSectionType["customType"]>
   tutorial: "docs/src/components/api/TutorialContent.tsx",
   concepts: "docs/src/components/api/ConceptsContent.tsx",
   "how-to-custom-tool": "docs/src/components/api/HowToCustomToolContent.tsx",
+  "tab-sync": "docs/src/components/api/TabSyncContent.tsx",
   "dev-override-seam": "docs/src/components/api/DevOverrideSeamContent.tsx",
 };
 
@@ -69,6 +72,8 @@ const formatLastUpdated = (dateString: string, locale: string): string => {
     month: "short",
     day: "numeric",
     year: "numeric",
+    // The date is a calendar day; a local zone west of UTC would show the day before.
+    timeZone: "UTC",
   });
 };
 
@@ -221,7 +226,10 @@ const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => {
   // cursor position" rather than the bare module name). getRouteMetadata reads
   // the locale off the path, so it must be asked in the reader's own tree —
   // an unprefixed path always answers in English.
-  const heading = getRouteMetadata(localizedPath(`/docs/${section.id}`, locale))?.h1 ?? section.title;
+  const route = localizedPath(`/docs/${section.id}`, locale);
+  const heading = getRouteMetadata(route)?.h1 ?? section.title;
+  // Same ledger record as the sitemap and dateModified; none means no line.
+  const lastUpdated = lastModified(route);
 
   return (
     <div className="flex flex-col gap-3">
@@ -232,9 +240,9 @@ const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => {
         <div className="max-w-2xl"><Prose text={section.description} className="text-base leading-relaxed text-muted-foreground" /></div>
       )}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-        {section.lastUpdated && (
+        {lastUpdated && (
           <span data-blok-testid="api-last-updated">
-            <Typo>{t('api.lastUpdated')}</Typo> {formatLastUpdated(section.lastUpdated, locale)}
+            <Typo>{t('api.lastUpdated')}</Typo> {formatLastUpdated(lastUpdated, locale)}
           </span>
         )}
         <a
@@ -313,6 +321,17 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
           <SectionHeader section={section} />
         </div>
         <HowToCustomToolContent />
+      </section>
+    );
+  }
+
+  if (section.customType === "tab-sync") {
+    return (
+      <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <div className="mb-10">
+          <SectionHeader section={section} />
+        </div>
+        <TabSyncContent />
       </section>
     );
   }

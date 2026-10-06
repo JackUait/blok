@@ -5,6 +5,8 @@ import { DatabaseModel } from './database-model';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
+import { firstStrongDirection } from '../../shared/text-direction';
+import { equalsOutputData } from '../../shared/output-data';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { DatabaseBackendSync } from './database-backend-sync';
 import { DatabaseCardDrag } from './database-card-drag';
@@ -72,9 +74,15 @@ export class DatabaseTool implements BlockTool {
   private columnControls: DatabaseColumnControls | null = null;
   private listRowDrag: DatabaseListRowDrag | null = null;
   private cardDrawer: DatabaseCardDrawer | null = null;
+  private descriptionPropertyCreation: ReturnType<DatabaseBackendSync['syncCreateProperty']> | null = null;
+  private descriptionPropertyNeedsCreate = false;
+  private readonly pendingDescriptions = new Map<string, OutputData>();
   private keyboard: DatabaseKeyboard | null = null;
   private cardMenuPopover: PopoverDesktop | null = null;
   private reprojectQueued = false;
+  private readonly resolvingRows = new Set<string>();
+  private readonly resolveAgainRows = new Set<string>();
+  private destroyed = false;
   /** Set while a full redraw waits for an inline edit or drag to end. */
   private redrawWhenIdleRetry: (() => void) | null = null;
 
@@ -183,18 +191,39 @@ export class DatabaseTool implements BlockTool {
     titleEl.style.cursor = 'text';
     titleEl.style.wordBreak = 'break-word';
 
+    // Own dir from its text, so core skips it and an RTL title does not flip
+    // the grid. No dir when there is no letter: `dir="auto"` would resolve an
+    // empty title to LTR and push the placeholder out of an RTL column.
+    const syncTitleDirection = (): void => {
+      const direction = firstStrongDirection(titleEl.textContent ?? '');
+
+      if (direction === null) {
+        titleEl.removeAttribute('dir');
+      } else {
+        titleEl.setAttribute('dir', direction);
+      }
+    };
+
+    syncTitleDirection();
+    titleEl.addEventListener('input', syncTitleDirection);
     titleEl.className = getPlaceholderClasses('always').join(' ');
     setupPlaceholder(titleEl, this.api.i18n.t('tools.database.titlePlaceholder'));
 
     if (!this.readOnly) {
       titleEl.setAttribute('contenteditable', 'true');
-      titleEl.addEventListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === 'Tab') {
-          e.preventDefault();
-          titleEl.blur();
-        }
-      });
     }
+
+    // Always attached: setReadOnly flips the title in place without re-rendering.
+    titleEl.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (this.readOnly) {
+        return;
+      }
+
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        titleEl.blur();
+      }
+    });
 
     return titleEl;
   }
@@ -252,6 +281,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.api.events.off('block changed', this.handleBlockChanged);
     this.stopWaitingForIdle();
     this.cardDrag?.destroy();
@@ -344,6 +374,7 @@ export class DatabaseTool implements BlockTool {
           id: child.id,
           position: rowData?.position ?? '',
           properties,
+          ...(typeof rowData?.pageId === 'string' && rowData.pageId.length > 0 ? { pageId: rowData.pageId } : {}),
         };
       });
     this.model.setRows(rows);
@@ -394,6 +425,8 @@ export class DatabaseTool implements BlockTool {
     this.syncRowsFromBlocks();
 
     const after = this.model.getOrderedRows();
+
+    this.resolveMovedRows(before, after);
     const retitled = this.retitledRows(before, after);
     const openRowId = this.cardDrawer?.openRowId ?? null;
 
@@ -531,6 +564,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private deleteRowBlock(rowId: string): void {
+    this.pendingDescriptions.delete(rowId);
     const blockIndex = this.api.blocks.getBlockIndex(rowId);
 
     if (blockIndex !== undefined) {
@@ -552,6 +586,94 @@ export class DatabaseTool implements BlockTool {
     this.syncRowsFromBlocks();
   }
 
+  private async copyLegacyRowBody(rowId: string, propertyId: string, body: OutputData): Promise<void> {
+    const rowPages = this.config.rowPages;
+
+    if (rowPages === undefined) return;
+
+    const propertyCreation = this.descriptionPropertyCreation;
+    const failure: { generic: boolean; backend?: { error: unknown } } = { generic: false };
+
+    this.cardDrawer?.setBodyMigrationPending(rowId, true);
+    try {
+      const created = propertyCreation === null ? undefined : await propertyCreation;
+
+      if (propertyCreation !== null && created === undefined && this.config.adapter !== undefined) return;
+      if (this.model.getRow(rowId) === undefined) return;
+      // A row is copied at most once: a second copy would replace its page.
+      const existing = await this.lookupForCopy(rowId);
+
+      if (this.destroyed) return;
+      if (existing !== null) {
+        await this.adoptRowPage(rowId, existing);
+
+        return;
+      }
+      const written = this.config.adapter === undefined
+        ? undefined
+        : await this.sync.syncUpdateRowNow({ rowId, properties: { [propertyId]: body } }, (error) => {
+          failure.backend = { error };
+        });
+
+      if (this.config.adapter !== undefined && written === undefined) {
+        failure.generic = true;
+        return;
+      }
+      const beforeCopy = this.model.getRow(rowId)?.properties[propertyId];
+
+      if (beforeCopy === null || typeof beforeCopy !== 'object' || Array.isArray(beforeCopy)
+        || !equalsOutputData(beforeCopy, body)) return;
+
+      const request = { rowId, operationId: nanoid(), body };
+      const outcome = await rowPages.copyFromLegacy(request).catch(() => rowPages.copyFromLegacy(request))
+        .then((receipt) => ({ receipt }), async (error: unknown) => {
+          // Refused because another client moved the row meanwhile.
+          const moved = await this.lookupForCopy(rowId);
+
+          if (moved === null) throw error;
+
+          return { moved };
+        });
+
+      if ('moved' in outcome) {
+        await this.adoptRowPage(rowId, outcome.moved);
+
+        return;
+      }
+      if (this.destroyed) return;
+      const { receipt } = outcome;
+      const current = this.model.getRow(rowId)?.properties[propertyId];
+
+      if (typeof receipt.pageId !== 'string' || receipt.pageId.length === 0
+        || typeof receipt.transactionId !== 'string' || receipt.transactionId.length === 0
+        || !equalsOutputData(receipt.acceptedBody, body)
+        || current === null || typeof current !== 'object' || Array.isArray(current)
+        || !equalsOutputData(current, body)) {
+        throw new Error('Copy receipt did not match the current row body');
+      }
+
+      const rowBlock = this.api.blocks.getChildren(this.block.id).find((child) => child.id === rowId);
+
+      if (rowBlock === undefined) return;
+      rowBlock.call('updatePageId', { pageId: receipt.pageId });
+      // The host committed it: undo must not strip it.
+      rowBlock.dispatchChange({ derived: true });
+      this.syncRowsFromBlocks();
+      if (this.cardDrawer?.openRowId === rowId) {
+        this.cardDrawer.syncOpenRow(this.model.getRow(rowId));
+      }
+    } catch {
+      failure.generic = true;
+    } finally {
+      this.cardDrawer?.setBodyMigrationPending(rowId, false);
+      if (failure.backend !== undefined) {
+        this.showBackendError(failure.backend.error);
+      } else if (failure.generic) {
+        this.api.notifier.show({ message: this.api.i18n.t('tools.stub.error'), style: 'error' });
+      }
+    }
+  }
+
   private moveRowBlock(rowId: string, position: string): void {
     const children = this.api.blocks.getChildren(this.block.id);
     const rowBlock = children.find((child) => child.id === rowId);
@@ -568,6 +690,18 @@ export class DatabaseTool implements BlockTool {
   // View management
   // ---------------------------------------------------------------------------
 
+  private showBackendError(error: unknown): void {
+    // Adapter errors are untrusted; the notifier renders HTML.
+    const message = String(error)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    this.api.notifier.show({ message, style: 'error' });
+  }
+
   private activateView(viewId: string): void {
     const viewConfig = this.model.getView(viewId);
 
@@ -576,25 +710,7 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.activeViewId = viewId;
-    this.sync = new DatabaseBackendSync(
-      this.config.adapter,
-      (error) => {
-        // The notifier renders `message` as raw HTML (innerHTML). The error
-        // comes from a consumer-supplied backend adapter (untrusted), so escape
-        // it to inert text before display to prevent HTML/script injection.
-        const message = String(error)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
-
-        this.api.notifier.show({
-          message,
-          style: 'error',
-        });
-      },
-    );
+    this.sync = new DatabaseBackendSync(this.config.adapter, (error) => this.showBackendError(error));
   }
 
   private switchView(viewId: string): void {
@@ -1136,7 +1252,9 @@ export class DatabaseTool implements BlockTool {
         wrapper: this.element,
         readOnly: this.readOnly,
         i18n: this.api.i18n,
+        events: this.api.events,
         toolsConfig: this.api.tools.getToolsConfig(),
+        rowPages: this.config.rowPages,
         titlePropertyId: titlePropId,
         descriptionPropertyId: descriptionPropId,
         schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
@@ -1152,9 +1270,56 @@ export class DatabaseTool implements BlockTool {
           this.sync.syncUpdateRow({ rowId, properties: { [titlePropId]: title } });
         },
         onDescriptionChange: (rowId, description: OutputData) => {
-          if (descriptionPropId !== undefined) {
-            this.updateRowBlock(rowId, { [descriptionPropId]: description });
-            this.sync.syncUpdateRow({ rowId, properties: { [descriptionPropId]: description } });
+          const row = this.model.getRow(rowId);
+
+          if (row === undefined || (this.config.rowPages !== undefined && row.pageId !== undefined)) return;
+          const schema = this.model.getSchema();
+          const designated = schema.find((property) => property.type === 'richText');
+          const existing = schema.find((property) => property.type === 'richText'
+            && property.name === designated?.name
+            && row?.properties[property.id] !== undefined && row?.properties[property.id] !== null)
+            ?? designated;
+          const property = existing ?? this.model.addProperty(this.api.i18n.t('tools.database.cardDetails'), 'richText');
+
+          if (existing === undefined) {
+            this.block.dispatchChange();
+            this.descriptionPropertyNeedsCreate = true;
+          }
+
+          if (this.descriptionPropertyNeedsCreate && this.descriptionPropertyCreation === null) {
+            const creation = this.sync.syncCreateProperty({
+              id: property.id,
+              name: property.name,
+              type: property.type,
+              position: property.position,
+            });
+
+            this.descriptionPropertyCreation = creation;
+            void creation.then((created) => {
+              this.descriptionPropertyCreation = null;
+              if (created === undefined && this.config.adapter !== undefined) {
+                return;
+              }
+              this.descriptionPropertyNeedsCreate = false;
+
+              if (this.config.rowPages === undefined) {
+                for (const [pendingRowId, pendingDescription] of this.pendingDescriptions) {
+                  this.sync.syncUpdateRow({ rowId: pendingRowId, properties: { [property.id]: pendingDescription } });
+                }
+                this.pendingDescriptions.clear();
+                this.sync.flushPendingUpdates();
+              }
+            });
+          }
+
+          this.cardDrawer?.setDescriptionPropertyId(property.id);
+          this.updateRowBlock(rowId, { [property.id]: description });
+          if (this.config.rowPages !== undefined) {
+            void this.copyLegacyRowBody(rowId, property.id, description);
+          } else if (this.descriptionPropertyCreation !== null) {
+            this.pendingDescriptions.set(rowId, description);
+          } else {
+            this.sync.syncUpdateRow({ rowId, properties: { [property.id]: description } });
           }
         },
         onClose: () => { /* no-op; drawer handles its own DOM cleanup */ },
@@ -1417,11 +1582,141 @@ export class DatabaseTool implements BlockTool {
   private handleRowClick(rowId: string): void {
     const row = this.model.getRow(rowId);
 
-    if (row === undefined) {
+    // Already shown: a fresh lookup would drop the open editor unsaved.
+    if (row === undefined || this.cardDrawer?.openRowId === rowId) {
       return;
     }
 
+    if (this.config.rowPages !== undefined && !this.readOnly && row.pageId === undefined) {
+      this.cardDrawer?.setRowPageLookup(rowId, 'pending');
+    }
     this.cardDrawer?.open(row);
+    void this.resolveRowPage(rowId);
+  }
+
+  /**
+   * Ask the host about rows an older client touched: one that lost `pageId`
+   * (its save prunes keys it does not know), or a moved row whose legacy body
+   * changed.
+   */
+  private resolveMovedRows(before: DatabaseRow[], after: DatabaseRow[]): void {
+    if (this.config.rowPages === undefined || this.readOnly) return;
+    for (const row of after) {
+      const previous = before.find(({ id }) => id === row.id);
+
+      if (previous === undefined || (previous.pageId === undefined && row.pageId === undefined)) continue;
+      if (row.pageId === undefined || !equalsOutputData(this.legacyBodyOf(previous), this.legacyBodyOf(row))) {
+        void this.resolveRowPage(row.id);
+      }
+    }
+  }
+
+  private legacyBodyOf(row: DatabaseRow | undefined): OutputData | undefined {
+    for (const property of this.model.getSchema()) {
+      const value = row?.properties[property.id];
+
+      if (property.type === 'richText' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        return value;
+      }
+    }
+
+    return undefined;
+  }
+
+  /** Look the row's page up and adopt it; the drawer waits for the answer. */
+  private async resolveRowPage(rowId: string): Promise<void> {
+    const rowPages = this.config.rowPages;
+
+    if (rowPages === undefined || this.readOnly || this.destroyed) return;
+    if (this.resolvingRows.has(rowId)) {
+      this.resolveAgainRows.add(rowId);
+
+      return;
+    }
+    this.resolvingRows.add(rowId);
+    const stage = { lookedUp: false };
+
+    try {
+      const page = await rowPages.lookup({ rowId });
+
+      stage.lookedUp = true;
+      if (page !== null) {
+        await this.adoptRowPage(rowId, page);
+      }
+      if (!this.destroyed) this.cardDrawer?.setRowPageLookup(rowId, 'done');
+    } catch {
+      // A row whose page is shown loses nothing when a background lookup
+      // fails: its legacy body stays for the next check.
+      const quiet = !stage.lookedUp && this.model.getRow(rowId)?.pageId !== undefined;
+
+      if (!this.destroyed && !quiet) {
+        this.cardDrawer?.setRowPageLookup(rowId, 'failed');
+        this.api.notifier.show({ message: this.api.i18n.t('tools.stub.error'), style: 'error' });
+      }
+    } finally {
+      this.resolvingRows.delete(rowId);
+      if (this.resolveAgainRows.delete(rowId)) {
+        void this.resolveRowPage(rowId);
+      }
+    }
+  }
+
+  /** `lookup` for the copy path; a failure leaves the body non-editable. */
+  private async lookupForCopy(rowId: string): Promise<{ pageId: string; acceptedBody: OutputData } | null> {
+    const rowPages = this.config.rowPages;
+
+    if (rowPages === undefined) return null;
+    try {
+      return await rowPages.lookup({ rowId });
+    } catch (error) {
+      if (!this.destroyed) this.cardDrawer?.setRowPageLookup(rowId, 'failed');
+      throw error;
+    }
+  }
+
+  /**
+   * Point the row at the host's page. A legacy body an older client changed
+   * after the copy is merged into the page first, so neither body is lost.
+   * Never writes the legacy body.
+   */
+  private async adoptRowPage(rowId: string, page: { pageId: string; acceptedBody: OutputData }): Promise<void> {
+    const rowPages = this.config.rowPages;
+
+    if (rowPages === undefined || this.readOnly || this.destroyed) return;
+    if (typeof page.pageId !== 'string' || page.pageId.length === 0) {
+      throw new Error('Row page lookup returned no page id');
+    }
+    const legacy = this.legacyBodyOf(this.model.getRow(rowId));
+
+    if (legacy !== undefined && !equalsOutputData(legacy, page.acceptedBody)) {
+      const request = { rowId, pageId: page.pageId, operationId: nanoid(), body: legacy, acceptedBody: page.acceptedBody };
+      const receipt = await rowPages.reconcileLegacy(request).catch(() => rowPages.reconcileLegacy(request));
+
+      if (receipt.pageId !== page.pageId
+        || typeof receipt.transactionId !== 'string' || receipt.transactionId.length === 0
+        || !equalsOutputData(receipt.acceptedBody, legacy)) {
+        throw new Error('Reconcile receipt did not match the legacy body');
+      }
+      if (this.readOnly || this.destroyed) return;
+      // Changed again meanwhile. The change may not have touched pageId, so no
+      // reprojection would rerun this: queue it here.
+      if (!equalsOutputData(this.legacyBodyOf(this.model.getRow(rowId)), legacy)) {
+        void this.resolveRowPage(rowId);
+
+        return;
+      }
+    }
+
+    const rowBlock = this.api.blocks.getChildren(this.block.id).find((child) => child.id === rowId);
+
+    if (rowBlock === undefined || this.model.getRow(rowId)?.pageId === page.pageId) return;
+    rowBlock.call('updatePageId', { pageId: page.pageId });
+    // Host-derived, not a user step: undo must not strip it again.
+    rowBlock.dispatchChange({ derived: true });
+    this.syncRowsFromBlocks();
+    if (this.cardDrawer?.openRowId === rowId) {
+      this.cardDrawer.syncOpenRow(this.model.getRow(rowId));
+    }
   }
 
   /**

@@ -77,6 +77,8 @@ vi.mock('../../../src/components/modules', () => {
     public state?: BlokModules;
     public prepare = calls.uiPrepare;
     public checkEmptiness = calls.uiCheckEmptiness;
+    public showLoading = (): void => {};
+    public hideLoading = async (): Promise<void> => {};
   }
 
   class MockBlockManager {

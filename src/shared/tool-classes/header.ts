@@ -40,10 +40,10 @@ export const HEADER_LEVEL_CLASSES: Readonly<Record<number, readonly string[]>> =
 };
 
 /**
- * Left indent reserving room for a toggleable header's disclosure arrow. This
+ * Inline-start indent reserving room for a toggleable header's disclosure arrow. This
  * is STATIC, not an edit affordance: read-only renders still show the arrow.
  */
-export const HEADER_TOGGLEABLE_INDENT_CLASS = 'pl-8';
+export const HEADER_TOGGLEABLE_INDENT_CLASS = 'ps-8';
 
 /**
  * Resolve a heading's classes.

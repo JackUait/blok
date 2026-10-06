@@ -30,11 +30,11 @@ export const TOGGLE_HEADER_ROW_CLASSES: readonly string[] = ['flex', 'items-star
 export const TOGGLE_CONTENT_CLASSES: readonly string[] = [
   /** Host font-size hook (`config.style.fontSize.toggle`) for the title line. */
   'text-[length:var(--blok-toggle-font-size,inherit)]',
-  'pl-0.5',
+  'ps-0.5',
   'leading-[1.5]',
   'flex-1',
   'min-w-0',
 ];
 
 /** Indent on the container holding a toggle's child blocks. */
-export const TOGGLE_CHILDREN_CLASSES: readonly string[] = ['pl-7'];
+export const TOGGLE_CHILDREN_CLASSES: readonly string[] = ['ps-7'];

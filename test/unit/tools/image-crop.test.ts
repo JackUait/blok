@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { renderImage } from '../../../src/tools/image/ui';
+import { IconSliders } from '../../../src/components/icons';
 
 describe('renderImage with crop', () => {
   it('flat structure when crop absent', () => {
@@ -100,8 +101,10 @@ describe('renderOverlay crop button', () => {
     const btn = overlay.querySelector<HTMLButtonElement>('[data-action="crop"]')!;
     expect(btn).not.toBeNull();
     // Observable render output: accessible label and an icon glyph.
-    expect(btn.getAttribute('aria-label')).toBe('Crop');
-    expect(btn.innerHTML).not.toBe('');
+    expect(btn.getAttribute('aria-label')).toBe('Edit');
+    expect(btn.querySelector('path')?.getAttribute('d')).toBe(
+      new DOMParser().parseFromString(IconSliders, 'image/svg+xml').querySelector('path')?.getAttribute('d')
+    );
 
     // The handler stops propagation so an ancestor click listener must not fire.
     const ancestorClick = vi.fn();

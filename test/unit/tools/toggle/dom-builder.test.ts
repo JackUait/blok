@@ -380,6 +380,14 @@ describe('Toggle DOM Builder', () => {
         expect(result.bodyPlaceholderElement.hasAttribute(TOGGLE_ATTR.toggleBodyPlaceholder)).toBe(true);
       });
 
+      // It stands in for the first child, so hovering it shows no block toolbar.
+      it('body placeholder is marked as a stand-in for the first child block', () => {
+        const context = createDefaultContext();
+        const result = buildToggleItem(context);
+
+        expect(result.bodyPlaceholderElement.hasAttribute('data-blok-child-stand-in')).toBe(true);
+      });
+
       it('body placeholder has correct text content', () => {
         const context = createDefaultContext();
         const result = buildToggleItem(context);

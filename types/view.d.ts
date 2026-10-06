@@ -1,6 +1,7 @@
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData } from './data-formats/output-data';
 import type { PlaintextRule, SanitizerConfig } from './configs/sanitizer-config';
 import type { BlokViewSchema } from './index';
+import type { PageIcon, PageInfo } from './tools/page';
 
 /**
  * Hand-authored declarations for the `@bloklabs/core/view` subpath — the
@@ -166,6 +167,38 @@ export interface BlocksToHtmlOptions {
    * wrapper elements.
    */
   classes?: boolean;
+  /**
+   * Build the link for a `page` block from its `pageId`.
+   *
+   * A page's body lives in a separate document, so the view renders a page
+   * block as a one-line card (icon + title) and never renders children under
+   * it. The card is a link only when this and {@link pageInfo} return
+   * authorized metadata. The returned URL still passes through
+   * {@link transformUrl} (with `blockType: 'page'`) and the unsafe-scheme
+   * strip, so a `javascript:` result renders a plain card.
+   *
+   * @example
+   * blocksToHtml(data, {
+   *   pageInfo: (pageId) => hostPageInfo(pageId),
+   *   pageHref: (pageId) => `/pages/${pageId}`,
+   * });
+   */
+  pageHref?: (pageId: string) => string;
+  /** Authorized page metadata; absent results render neutral, unlinked cards. */
+  pageInfo?: (pageId: string) => PageInfo | null | undefined;
+  /**
+   * Base direction of the document (default: none).
+   *
+   * Sets `dir` on the {@link root} wrapper and turns on per-block direction:
+   * each block whose own text has a strong letter carries `dir` from the first
+   * one, the same rule the editor applies. A block with no strong letter
+   * (empty, digits only) carries none and follows the document. Code is never
+   * stamped. Under {@link classes} the `dir` sits on the content element, as in
+   * the editor; otherwise on the block's root element (each `<li>` for lists).
+   *
+   * Opt-in: without it the output has no `dir` anywhere.
+   */
+  direction?: 'ltr' | 'rtl';
 }
 
 /**
@@ -220,6 +253,70 @@ export declare function blocksToPlainText(
   data: OutputData | LooseOutputData | null | undefined,
   options?: BlocksToPlainTextOptions
 ): string;
+
+/** An owning page pointer in one saved document. */
+export interface PageOwnerEdge {
+  pageId: string;
+  sourceBlockId: string;
+  order: number;
+}
+
+/** Searchable text attributed to a visible block. */
+export interface PageTextEntry {
+  blockId: string | null;
+  order: number;
+  text: string;
+}
+
+/** A non-owning reference to a page in one saved document. */
+export interface PageReference {
+  pageId: string;
+  sourceBlockId: string | null;
+  order: number;
+}
+
+/** Document facts for a host-owned page catalog. */
+export interface PageIndex {
+  owners: PageOwnerEdge[];
+  text: PageTextEntry[];
+  references: PageReference[];
+}
+
+/** Extract page ownership, text and references without a DOM or workspace state. */
+export declare function pageIndex(data: OutputData | LooseOutputData | null | undefined): PageIndex;
+
+export interface HostPageEdge extends PageOwnerEdge {
+  /** Null for a root document. */
+  ownerPageId: string | null;
+}
+
+export interface PageTreeNode {
+  pageId: string;
+  sourceBlockId: string;
+  order: number;
+  access: 'allowed' | 'none' | 'missing';
+  title?: string;
+  icon?: PageIcon;
+  children: PageTreeNode[];
+}
+
+export type PageTreeDiagnostic =
+  | { kind: 'duplicate-owner'; pageId: string; edges: HostPageEdge[] }
+  | { kind: 'cycle'; pageId: string; path: string[] }
+  | { kind: 'missing-page'; pageId: string; sourceBlockId: string }
+  | { kind: 'missing-owner'; pageId: string }
+  | { kind: 'unreachable'; pageId: string; sourceBlockId: string };
+
+export interface PageTreeProjection {
+  roots: PageTreeNode[];
+  diagnostics: PageTreeDiagnostic[];
+}
+
+/** Metadata must already be filtered for the current viewer. */
+export declare function projectPageTree(
+  edges: readonly HostPageEdge[],
+  metadata: Readonly<Record<string, PageInfo | null | undefined>>
+): PageTreeProjection;
 
 /** Options for {@link extractTexts} / {@link injectTexts}. */
 export interface DocumentTextsOptions {
@@ -292,11 +389,16 @@ export interface MarkdownSerializationResult {
  * tables GFM pipe grids; a callout becomes a blockquote and columns flatten
  * into reading order, since Markdown can express neither.
  *
+ * A page block or inline page reference is written as `[title](href)` when
+ * `pageInfo` allows the page and `pageHref` gives a safe link. Otherwise it is
+ * the label alone.
+ *
  * @param data - saved document (strict or loose wire shape; nullish tolerated)
  * @returns Markdown ('' for empty/malformed documents)
  */
 export declare function blocksToMarkdown(
-  data: OutputData | LooseOutputData | null | undefined
+  data: OutputData | LooseOutputData | null | undefined,
+  options?: Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref'>
 ): string;
 
 /**
@@ -309,7 +411,8 @@ export declare function blocksToMarkdown(
  * @returns the Markdown and its degradations
  */
 export declare function blocksToMarkdownWithReport(
-  data: OutputData | LooseOutputData | null | undefined
+  data: OutputData | LooseOutputData | null | undefined,
+  options?: Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref'>
 ): MarkdownSerializationResult;
 
 /**
@@ -551,9 +654,10 @@ export interface HtmlImportResult {
  *
  * Covers the structural subset a document body is made of: headings,
  * paragraphs, lists (nested, ordered, checklists), tables (merged cells
- * included), images, links and inline marks, code, blockquotes, toggles and
- * dividers. Layout containers are unwrapped and their children converted in
- * place; anything else is reported rather than dropped in silence.
+ * included), images, links and inline marks, code, blockquotes, toggles,
+ * dividers, and the tabs `blocksToHtml` writes. Other layout containers are
+ * unwrapped and their children converted in place; anything else is reported
+ * rather than dropped in silence.
  *
  * Reach for {@link htmlToBlocksWithReport} when the caller has to be told what
  * the HTML could not carry.
@@ -573,3 +677,238 @@ export declare function htmlToBlocks(html: string): OutputBlockData[];
  * @returns the blocks and their degradations
  */
 export declare function htmlToBlocksWithReport(html: string): HtmlImportResult;
+
+/** Where moved root blocks are inserted in the target document. */
+export interface PageBlockPlacement {
+  parentId: string | null;
+  afterId: string | null;
+}
+
+/** New document snapshots after moving blocks between pages. */
+export interface PageBlockMove {
+  source: OutputData;
+  target: OutputData;
+  movedIds: string[];
+}
+
+/** Move complete block subtrees without changing either input document. */
+export declare function movePageBlocks(
+  source: OutputData,
+  target: OutputData,
+  roots: readonly string[],
+  place: PageBlockPlacement
+): PageBlockMove;
+
+/** Build a new page body and replace adjacent blocks with its owning pointer. */
+export declare function turnBlocksIntoPage(
+  source: OutputData,
+  roots: readonly string[],
+  ids: { pageId: string; pointerId: string }
+): { source: OutputData; pageBody: OutputData; pointerId: string };
+
+/** Replace an owning pointer only after its matching page body has loaded. */
+export declare function turnPageIntoBlocks(
+  source: OutputData,
+  pointerId: string,
+  loaded: { pageId: string; body: OutputData } | null
+): { source: OutputData; retiredPageId: string; movedIds: string[] };
+
+interface PageTransferBase {
+  operationId: string;
+  sourcePageId: string;
+  targetPageId: string;
+}
+
+/** A host request for one cross-document page operation. */
+export type PageTransferRequest =
+  | (PageTransferBase & {
+    kind: 'move-blocks' | 'reparent-page';
+    rootIds: string[];
+    place: PageBlockPlacement;
+  })
+  | (PageTransferBase & {
+    kind: 'turn-into-page';
+    rootIds: string[];
+    pointerId: string;
+  })
+  | (PageTransferBase & {
+    kind: 'turn-into-blocks';
+    pointerId: string;
+  })
+  | (PageTransferBase & {
+    kind: 'duplicate-page';
+    pointerId: string;
+    place: PageBlockPlacement;
+  });
+
+/** One durable edit receipt from a sidecar journal. */
+export interface PageTransferSagaStep {
+  doc: string;
+  lineage: string;
+  sequence: string;
+}
+
+/** A host transaction, or a chain of durable per-document sidecar edits. */
+export type PageTransferDurability =
+  | { kind: 'transaction'; transactionId: string }
+  | { kind: 'saga'; steps: PageTransferSagaStep[] };
+
+/** Proof claimed by a host after durably committing the operation. */
+export interface PageTransferReceipt {
+  operationId: string;
+  kind: PageTransferRequest['kind'];
+  sourcePageId: string;
+  targetPageId: string;
+  rootIds: string[];
+  undoToken: string;
+  durability: PageTransferDurability;
+}
+
+/** Host persistence adapter. A live mode must write the authoritative rooms. */
+export interface PageTransferHost {
+  mode: 'saved-transaction' | 'live-transaction' | 'live-saga';
+  run(request: PageTransferRequest): Promise<PageTransferReceipt>;
+}
+
+/** Refuse collaboration without a live transaction and validate the host receipt. */
+export declare function executePageTransfer(
+  host: PageTransferHost,
+  request: PageTransferRequest,
+  context: { collaboration: boolean }
+): Promise<PageTransferReceipt>;
+
+export interface PageTransferUndoRequest {
+  operationId: string;
+  undoOf: PageTransferReceipt;
+}
+
+export interface PageTransferUndoReceipt {
+  operationId: string;
+  undoOfOperationId: string;
+  undoToken: string;
+  durability: PageTransferDurability;
+}
+
+export interface PageTransferUndoHost extends PageTransferHost {
+  undo(request: PageTransferUndoRequest): Promise<PageTransferUndoReceipt>;
+}
+
+/** Validate a receipt-scoped host Undo; the host owns the inverse transaction. */
+export declare function undoPageTransfer(
+  host: PageTransferUndoHost,
+  request: PageTransferUndoRequest,
+  context: { collaboration: boolean }
+): Promise<PageTransferUndoReceipt>;
+
+/** A document head from a journalled sidecar. */
+export interface SidecarDocHead {
+  lineage: string;
+  sequence: string;
+}
+
+/** A block as one `/sync/{doc}/edit` insert carries it; its place lives on the op. */
+export interface SidecarEditBlock {
+  id: string;
+  type: string;
+  data: Record<string, unknown>;
+  tunes?: Record<string, unknown>;
+  lastEditedAt?: number;
+  lastEditedBy?: string;
+}
+
+/** One op of a `/sync/{doc}/edit` body. */
+export type SidecarEditOp =
+  | { op: 'insert'; id: string; block: SidecarEditBlock; parent: string | null; after: string | null }
+  | { op: 'remove'; id: string };
+
+export interface SidecarRootPlacement extends PageBlockPlacement {
+  rootId: string;
+}
+
+/** A block as the transfer expects to find it before the source removal. */
+export interface SidecarExpectedBlock {
+  id: string;
+  type: string;
+  data: Record<string, unknown>;
+  tunes?: Record<string, unknown>;
+  parent: string | null;
+  content: string[];
+}
+
+/** The exact edits of one operation. A run never rebuilds a plan it found in the log. */
+export interface SidecarTransferPlan {
+  copyDoc: string;
+  copyHead: SidecarDocHead;
+  copyChunks: SidecarEditOp[][];
+  originDoc: string;
+  originHead: SidecarDocHead;
+  /** The one destructive edit. */
+  originOps: SidecarEditOp[];
+  /** The removed blocks as planned. The removal runs only while they still look like this. */
+  originExpected: SidecarExpectedBlock[];
+  /** IDs the removal inserts, so they must not exist yet (the turn-into-page pointer). */
+  originAbsent: string[];
+  /**
+   * A document that must still equal the plan exactly before the removal: the
+   * page body of turn-into-blocks, which the host retires after the pointer goes.
+   */
+  frozen?: { doc: string; head: SidecarDocHead; blocks: SidecarExpectedBlock[] };
+  rootIds: string[];
+  restore?: SidecarRootPlacement[];
+  destination?: PageBlockPlacement;
+}
+
+/** One transfer or Undo. JSON-safe; the host stores it as given. */
+export interface SidecarTransferRecord {
+  version: 1;
+  operationId: string;
+  digest: string;
+  plan: SidecarTransferPlan;
+  receipt?: PageTransferReceipt;
+  undoReceipt?: PageTransferUndoReceipt;
+}
+
+/** Host-owned storage for transfer progress. Keep a record for the retry and Undo window. */
+export interface SidecarTransferLog {
+  get(operationId: string): SidecarTransferRecord | undefined | Promise<SidecarTransferRecord | undefined>;
+  put(record: SidecarTransferRecord): void | Promise<void>;
+}
+
+export interface SidecarFetchResponse {
+  status: number;
+  headers: { get(name: string): string | null };
+  json(): Promise<unknown>;
+}
+
+/** The part of `fetch` the adapter uses. The global `fetch` fits. */
+export type SidecarFetch = (
+  url: string,
+  init: { method: 'GET' | 'POST'; headers: Record<string, string>; body?: string }
+) => Promise<SidecarFetchResponse>;
+
+export interface SidecarTransferHostOptions {
+  /** The prefix the sidecar routes are mapped under, e.g. `https://example.com/api/blok`. */
+  baseUrl: string;
+  /** A pass for one document. `write` is true for edits and false for state reads. */
+  ticketFor(doc: string, access: { write: boolean }): string | Promise<string>;
+  log: SidecarTransferLog;
+  fetch?: SidecarFetch;
+  /** The server's `CollabMaxMessageBytes`. Defaults to 1048576. */
+  maxEditBytes?: number;
+  /** How many times to send the source removal when peers keep editing elsewhere in the source. Defaults to 3. */
+  maxAttempts?: number;
+}
+
+/**
+ * A `live-saga` transfer host over the stock collab sidecar. Needs a server
+ * running with an operation journal (`--collab-journal`). It never deletes a
+ * copy: a failure leaves the source plus whatever copy exists, so blocks can
+ * end in both pages. Refuses `duplicate-page`.
+ */
+export declare function createSidecarTransferHost(options: SidecarTransferHostOptions): PageTransferUndoHost;
+
+/** Copy one page document, rewriting only known block and page references. */
+export declare function remapPageDocument(
+  data: OutputData,
+  ids: { blockIds: ReadonlyMap<string, string>; pageIds: ReadonlyMap<string, string> }
+): OutputData;

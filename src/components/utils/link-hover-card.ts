@@ -1,5 +1,7 @@
 import { IconCopy, IconGlobe } from '../icons';
 
+import { getElementDirection } from './direction';
+import { syncPortalDirection } from './portal-direction';
 import { createPositionTracker, type PositionTracker } from './popover/anchored-position';
 import { promoteToTopLayer, removeFromTopLayer } from './top-layer';
 import { twJoin } from './tw';
@@ -249,6 +251,7 @@ export class LinkHoverCard {
     }
 
     this.shown = true;
+    syncPortalDirection(this.nodes.wrapper, { source: anchor });
     promoteToTopLayer(this.nodes.wrapper);
     this.position(anchor, cursor);
     this.positionTracker?.detach();
@@ -408,7 +411,8 @@ export class LinkHoverCard {
       return;
     }
 
-    const left = Math.max(VIEWPORT_MARGIN, Math.min(rect.left, window.innerWidth - width - VIEWPORT_MARGIN));
+    const startLeft = getElementDirection(this.nodes.wrapper) === 'rtl' ? rect.right - width : rect.left;
+    const left = Math.max(VIEWPORT_MARGIN, Math.min(startLeft, window.innerWidth - width - VIEWPORT_MARGIN));
 
     this.nodes.wrapper.style.left = `${left}px`;
     this.nodes.wrapper.style.top = `${top}px`;
@@ -522,7 +526,7 @@ export class LinkHoverCard {
     // and the host's loads later, so button margins silently drop to 0.
     const actions = document.createElement('span');
 
-    actions.className = 'flex items-center shrink-0 gap-0.5 ml-2';
+    actions.className = 'flex items-center shrink-0 gap-0.5 ms-2';
     actions.append(copyButton, editButton);
 
     wrapper.append(globe, url, actions);

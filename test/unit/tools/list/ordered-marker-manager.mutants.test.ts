@@ -15,7 +15,7 @@ interface MockBlock {
 }
 
 interface WrapperOptions {
-  /** Depth is read back from the list item's margin-left, not from an attribute. */
+  /** Read back from `data-list-depth`, as the list tool stamps it. */
   depth?: number;
   start?: number;
   /** `null` builds a wrapper with no marker element at all. */
@@ -31,6 +31,7 @@ const makeWrapper = (style: string, options: WrapperOptions = {}): HTMLElement =
   const wrapper = document.createElement('div');
 
   wrapper.setAttribute('data-list-style', style);
+  wrapper.setAttribute('data-list-depth', String(depth));
   if (start !== undefined) {
     wrapper.setAttribute('data-list-start', String(start));
   }
@@ -39,7 +40,7 @@ const makeWrapper = (style: string, options: WrapperOptions = {}): HTMLElement =
 
   item.setAttribute('role', 'listitem');
   if (depth > 0) {
-    item.style.marginLeft = `${depth * INDENT_PER_LEVEL}px`;
+    item.style.marginInlineStart = `${depth * INDENT_PER_LEVEL}px`;
   }
 
   if (marker !== null) {

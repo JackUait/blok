@@ -272,6 +272,14 @@ describe('strokeOutline', () => {
     expect(halfWidthAt(tapered, 168)).toBeLessThan(halfWidthAt(tapered, 90) * 0.7);
     expect(halfWidthAt(blunt, 12)).toBeCloseTo(5, 1);
   });
+
+  it('tapers only the ends it is asked to', () => {
+    const pts = line(41, 4);
+    const d = strokeOutline(pts, 10, { taper: { start: false, end: true }, pressure: false });
+
+    expect(halfWidthAt(d, 12)).toBeCloseTo(5, 1);
+    expect(halfWidthAt(d, 168)).toBeLessThan(halfWidthAt(d, 90) * 0.7);
+  });
 });
 
 describe('bakeMousePressure', () => {

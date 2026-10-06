@@ -18,7 +18,7 @@ import { viewNodesToReact } from './view-nodes-to-react';
  * bindings map from remains `@experimental` — but consumers of this hook never
  * touch it directly.
  * @param data - saved document (strict or loose wire shape; nullish tolerated)
- * @param options - schema / renderers / inlineRenderers / unknown-block policy / toolAttributes / blockIds / transformUrl
+ * @param options - schema / renderers / inlineRenderers / unknown-block policy / toolAttributes / blockIds / transformUrl / pageHref / pageInfo
  */
 export const useBlokView = (
   data: OutputData | LooseOutputData | null | undefined,
@@ -31,7 +31,10 @@ export const useBlokView = (
   const blockIds = options?.blockIds;
   const transformUrl = options?.transformUrl;
   const inlineRenderers = options?.inlineRenderers;
+  const pageHref = options?.pageHref;
+  const pageInfo = options?.pageInfo;
   const classes = options?.classes;
+  const direction = options?.direction;
 
   return useMemo(() => {
     return createElement(
@@ -46,6 +49,8 @@ export const useBlokView = (
           blockIds,
           transformUrl,
           inlineRenderers,
+          pageHref,
+          pageInfo,
           /**
            * Opt-in, NOT defaulted on. Parity rendering wraps every block in the
            * core's holder → content scaffolding, which would contradict this
@@ -57,8 +62,9 @@ export const useBlokView = (
            * already owns a wrapper and its job IS to look like the editor.
            */
           classes,
+          direction,
         })
       )
     );
-  }, [data, schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl, inlineRenderers, classes]);
+  }, [data, schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl, inlineRenderers, pageHref, pageInfo, classes, direction]);
 };

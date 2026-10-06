@@ -20,6 +20,7 @@ import type { BlockMutationEvent } from '../../../../types/events/block';
 
 vi.mock('../../../../src/components/utils/id-generator', () => ({
   generateBlockId: vi.fn(() => 'mock-id'),
+  generateDocumentId: vi.fn(() => 'mock-doc-id'),
 }));
 
 type BlockSaveResult = SavedData & { tunes?: Record<string, unknown> };

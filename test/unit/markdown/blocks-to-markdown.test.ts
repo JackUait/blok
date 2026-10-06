@@ -71,6 +71,31 @@ describe('blocksToMarkdown', () => {
     expect(md).toBe('# Title\n\nIntro\n\n- one\n- two');
   });
 
+  it('keeps the label and drops the link when a URL is script-capable', () => {
+    const md = (html: string): string => blocksToMarkdown([{ tool: 'paragraph', data: { text: html } }]);
+
+    expect(md('<a href="javascript:alert(1)">js</a>')).toBe('js');
+    expect(md('<a href=" java\tscript:alert(1)">ws</a>')).toBe('ws');
+    expect(md('x <img src="javascript:alert(1)" alt="i"> y')).toBe('x  y');
+    expect(blocksToMarkdown([{ tool: 'image', data: { url: 'javascript:alert(1)', alt: 'Alt' } }])).toBe('Alt');
+    expect(blocksToMarkdown([{ tool: 'embed', data: { url: 'javascript:alert(1)', service: 'evil' } }])).toBe('evil');
+  });
+
+  it('escapes a link destination that would break out, and leaves balanced parens alone', () => {
+    const md = (html: string): string => blocksToMarkdown([{ tool: 'paragraph', data: { text: html } }]);
+
+    expect(md('<a href="https://ok.example/a b">space</a>')).toBe('[space](https://ok.example/a%20b)');
+    expect(md('<a href="https://ok.example/x) [evil](javascript:alert(1)">b</a>')).not.toContain('](javascript:');
+    expect(md('<a href="https://en.wikipedia.org/wiki/Foo_(bar)">w</a>')).toBe('[w](https://en.wikipedia.org/wiki/Foo_(bar))');
+  });
+
+  it('escapes an & that a renderer would decode as a character reference', () => {
+    const md = (html: string): string => blocksToMarkdown([{ tool: 'paragraph', data: { text: html } }]);
+
+    expect(md('<a href="&amp;#106;avascript:alert(1)">a</a>')).toBe('[a](\\&#106;avascript:alert(1))');
+    expect(md('<a href="https://x.example/?a=1&amp;b=2">q</a>')).toBe('[q](https://x.example/?a=1&b=2)');
+  });
+
   it('drops the link syntax when an anchor has no href', () => {
     expect(blocksToMarkdown([{ tool: 'paragraph', data: { text: '<a>bare</a>' } }])).toBe('bare');
   });
@@ -102,6 +127,26 @@ describe('blocksToMarkdown', () => {
       .toBe('[X](https://x.com)');
     expect(blocksToMarkdown([{ tool: 'embed', data: { source: 'https://youtu.be/1', service: 'youtube' } }]))
       .toBe('[youtube](https://youtu.be/1)');
+  });
+
+  describe('page', () => {
+    it('does not serialize a legacy cached title', () => {
+      expect(blocksToMarkdown([
+        { tool: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } } },
+      ])).toBe('Page');
+    });
+
+    it('serializes a page without host metadata as a neutral label', () => {
+      expect(blocksToMarkdown([{ tool: 'page', data: { pageId: 'p1' } }])).toBe('Page');
+      expect(blocksToMarkdown([{ tool: 'page', data: { pageId: 'p1', cache: { title: '' } } }])).toBe('Page');
+    });
+
+    it('keeps the list-continuation indent under a list item', () => {
+      expect(blocksToMarkdown([
+        { id: 'l1', tool: 'list', data: { text: 'Item', style: 'unordered' } },
+        { id: 'pg', parentId: 'l1', tool: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } }, indent: 1 },
+      ])).toBe('- Item\n\n    Page');
+    });
   });
 });
 

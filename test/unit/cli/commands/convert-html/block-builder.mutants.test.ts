@@ -242,13 +242,13 @@ describe('convert-html block builder mutants', () => {
       ]);
     });
 
-    it('marks headings when only part of the first row is a th', () => {
+    it('does not mark a heading row when only part of the first row is a th', () => {
       expect(run('<table><tr><th>h</th><td>d</td></tr></table>')).toStrictEqual([
         {
           id: 'table-1',
           type: 'table',
           data: {
-            withHeadings: true,
+            withHeadings: false,
             withHeadingColumn: false,
             content: [
               [

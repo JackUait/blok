@@ -251,6 +251,44 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
 
+    it('is a strict no-op when the preceding sibling takes no children (a page)', () => {
+      const page = createBlock({
+        id: 'pg',
+        name: 'page',
+        parentId: null,
+        tool: { name: 'page', acceptsChildren: false } as unknown as Block['tool'],
+      });
+      const current = createBlock({ id: 'cur', parentId: null });
+      const blok = tabModules([page, current], current);
+      const setBlockParent = blok.BlockManager.setBlockParent as ReturnType<typeof vi.fn>;
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+      keyboardNavigation.handleTab(event);
+
+      expect(setBlockParent).not.toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not hand the following siblings to an outdented block that takes no children', () => {
+      const parent = createBlock({ id: 'p', parentId: null, contentIds: ['pg', 'c'] });
+      const page = createBlock({
+        id: 'pg',
+        name: 'page',
+        parentId: 'p',
+        tool: { name: 'page', acceptsChildren: false } as unknown as Block['tool'],
+      });
+      const c = createBlock({ id: 'c', parentId: 'p' });
+      const blok = tabModules([parent, page, c], page);
+      const setBlockParent = blok.BlockManager.setBlockParent as ReturnType<typeof vi.fn>;
+      const keyboardNavigation = new KeyboardNavigation(blok);
+
+      keyboardNavigation.handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: true }));
+
+      expect(setBlockParent).not.toHaveBeenCalledWith(c, 'pg');
+      expect(setBlockParent).toHaveBeenCalledWith(page, null);
+    });
+
     it('still nests under a preceding sibling that merely HAS children (a toggle)', () => {
       const toggle = createBlock({ id: 'toggle', name: 'toggle', parentId: null, contentIds: ['kid'] });
       const kid = createBlock({ id: 'kid', parentId: 'toggle' });

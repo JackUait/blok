@@ -24,6 +24,8 @@ declare global {
  * importing `test` from '@playwright/test'.
  */
 const lastSpecFile = new WeakMap<Page, string>();
+/** What `browser.newContext()` gives a page when the project sets no viewport. */
+const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
 const needsFreshNavigation = new WeakSet<Page>();
 
 export const test = base.extend<NonNullable<unknown>, { __sharedPage: Page }>({
@@ -48,6 +50,23 @@ export const test = base.extend<NonNullable<unknown>, { __sharedPage: Page }>({
     if (lastSpecFile.get(__sharedPage) !== testInfo.file) {
       lastSpecFile.set(__sharedPage, testInfo.file);
       needsFreshNavigation.add(__sharedPage);
+
+      // Navigation does not reset the viewport: a spec that resized it would
+      // shrink every later file on this worker (whichever file follows is
+      // work-stealing roulette, so the leak only shows up on some shards).
+      const viewport = testInfo.project.use.viewport ?? DEFAULT_VIEWPORT;
+
+      await __sharedPage.setViewportSize(viewport);
+      // Media emulation survives navigation too: a spec that set reduced
+      // motion would strip every animation from the next file on this worker.
+      // null = the bare newContext() default the page was created with.
+      await __sharedPage.emulateMedia({
+        media: null,
+        colorScheme: null,
+        reducedMotion: null,
+        forcedColors: null,
+        contrast: null,
+      });
     }
     await use(__sharedPage);
   },

@@ -86,7 +86,7 @@ const mustVideo = (root: HTMLElement): HTMLVideoElement => {
 };
 
 const errorText = (root: HTMLElement): string | null =>
-  root.querySelector('[data-role="video-error"] span')?.textContent ?? null;
+  root.querySelector('[data-role="video-error-message"]')?.textContent ?? null;
 
 const videoFile = (name = 'clip.mp4', type = 'video/mp4', bytes = 8): File =>
   new File([new Uint8Array(bytes)], name, { type });
@@ -275,7 +275,17 @@ describe('VideoTool — toolbar anchoring and content offset', () => {
     stubRect(root, 1000, 100);
     stubRect(mustFigure(root), 800, 130);
 
-    expect(tool.getContentOffset(root)).toStrictEqual({ left: 30 });
+    expect(tool.getContentOffset(root)).toStrictEqual({ left: 30, right: 170 });
+  });
+
+  it('reports a left-flush figure as a right inset only', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+    const root = tool.render();
+
+    stubRect(root, 1000, 100);
+    stubRect(mustFigure(root), 600, 100);
+
+    expect(tool.getContentOffset(root)).toStrictEqual({ left: 0, right: 400 });
   });
 
   it('reports no offset when the figure is flush with the root', () => {
@@ -302,6 +312,8 @@ describe('VideoTool — block settings copy', () => {
     'tools.video.replace': 'L10n replace',
     'tools.video.download': 'L10n download',
     'tools.video.copyUrl': 'L10n copy url',
+    'tools.video.ctxCopyUrlAtTime': 'L10n copy url at time',
+    'tools.video.ctxStats': 'L10n statistics',
   };
 
   beforeEach(() => vi.clearAllMocks());
@@ -338,6 +350,8 @@ describe('VideoTool — block settings copy', () => {
       'video-replace': 'L10n replace',
       'video-download': 'L10n download',
       'video-copy-url': 'L10n copy url',
+      'video-copy-url-at-time': 'L10n copy url at time',
+      'video-statistics': 'L10n statistics',
     });
   });
 
@@ -358,6 +372,8 @@ describe('VideoTool — block settings copy', () => {
       'video-replace': 'Replace video',
       'video-download': 'Download',
       'video-copy-url': 'Copy URL',
+      'video-copy-url-at-time': 'Copy video URL at current time',
+      'video-statistics': 'Playback statistics',
     });
   });
 
@@ -374,6 +390,8 @@ describe('VideoTool — block settings copy', () => {
       'video-replace',
       'video-download',
       'video-copy-url',
+      'video-copy-url-at-time',
+      'video-statistics',
     ];
 
     for (const name of leaves) {
@@ -1127,14 +1145,14 @@ describe('VideoTool — tunes and lifecycle', () => {
     expect(block.dispatchChange).toHaveBeenCalledTimes(1);
   });
 
-  it('toggling Loop off clears the stored flag', () => {
+  it('toggling Loop off saves an explicit false choice', () => {
     const block = createMockBlock();
     const tool = new VideoTool(createOptions({ url: 'u', loop: true }, {}, block));
 
     tool.render();
     findItem(tool, 'video-loop')?.onActivate?.();
 
-    expect(tool.save().loop).toBeUndefined();
+    expect(tool.save().loop).toBe(false);
     expect(block.dispatchChange).toHaveBeenCalledTimes(1);
   });
 

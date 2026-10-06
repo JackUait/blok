@@ -34,9 +34,17 @@ export const CHILD_TOOLBAR_SELECTOR = '[data-blok-child-toolbar]';
  */
 const MAX_DESCENT_DEPTH = 12;
 
+/**
+ * A container's empty-state hint that stands in for its first child block.
+ * Exported for the same reason as {@link CELL_BLOCKS_SELECTOR}.
+ */
+export const CHILD_STAND_IN_SELECTOR = '[data-blok-child-stand-in]';
+
 export type HoveredBlockResolution =
   /** The toolbar belongs to this block wrapper */
   | { kind: 'block'; wrapper: Element }
+  /** Pointer is over a container's empty hint — no block owns the toolbar there */
+  | { kind: 'stand-in' }
   /** Pointer is in container chrome with no block on that line — keep the current anchor */
   | { kind: 'keep' }
   /** No block under the pointer — caller may fall back to nearest-block detection */
@@ -59,6 +67,8 @@ export type HoveredBlockResolution =
  *   children) descends by line: the child whose vertical band contains the
  *   pointer wins; with side-by-side children (columns) the horizontal band
  *   disambiguates; no band match keeps the current anchor.
+ * - Pointer over a container's empty hint ([data-blok-child-stand-in]) is
+ *   over no block: the hint stands in for a first child that does not exist.
  * @param target - element under the pointer
  * @param point - pointer client coordinates, used for band descent in container chrome
  */
@@ -68,6 +78,19 @@ export function resolveHoveredBlockWrapper(
 ): HoveredBlockResolution {
   if (target === null || typeof target.closest !== 'function') {
     return { kind: 'none' };
+  }
+
+  const standIn = target.closest(CHILD_STAND_IN_SELECTOR);
+
+  /**
+   * A hidden hint stands in for nothing: the throttled hover can deliver a
+   * move queued over the hint after a click replaced it with a real block.
+   * Engines without checkVisibility() count the hint as shown.
+   */
+  if (standIn !== null) {
+    const shown = typeof standIn.checkVisibility !== 'function' || standIn.checkVisibility();
+
+    return shown ? { kind: 'stand-in' } : { kind: 'keep' };
   }
 
   const directWrapper = target.closest(BLOCK_WRAPPER_SELECTOR);

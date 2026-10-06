@@ -552,6 +552,20 @@ describe('dist weight (consumer parse cost)', () => {
     expect(nativeChunks).toEqual([])
   })
 
+  it('parses markdown math without shipping a KaTeX renderer', () => {
+    // Markdown import needs only the math tokenizer. If the loader keeps the
+    // whole micromark-extension-math namespace, its `mathHtml` drags in a
+    // nested KaTeX copy (~260 KB) next to Blok's own one.
+    const tokenizerChunks = esFiles.filter((file) =>
+      readFileSync(file, 'utf-8').includes('mathFlowFenceSequence'),
+    )
+    expect(tokenizerChunks.length).toBeGreaterThan(0)
+    const withKatex = tokenizerChunks.filter((file) =>
+      readFileSync(file, 'utf-8').includes('KaTeX parse error'),
+    )
+    expect(withKatex).toEqual([])
+  })
+
   it('keeps the non-data ES code surface under the parse-cost budget', () => {
     // JSON.parse data chunks are one cheap string node each; the expensive part
     // for a consumer's bundler is real code. Unminified output put code at

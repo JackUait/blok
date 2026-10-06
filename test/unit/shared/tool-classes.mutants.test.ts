@@ -43,8 +43,8 @@ describe('shared tool classes mutants', () => {
       expect(CALLOUT_WRAPPER_CLASSES).toStrictEqual([
         'text-[length:var(--blok-callout-font-size,var(--blok-paragraph-font-size,inherit))]',
         'rounded-(--blok-radius-block)',
-        'pl-8',
-        'pr-4',
+        'ps-8',
+        'pe-4',
         'pt-[var(--blok-callout-padding-block,5px)]',
         'pb-[var(--blok-callout-padding-block,5px)]',
         'my-1',
@@ -181,7 +181,7 @@ describe('shared tool classes mutants', () => {
     it('lets the title fill the row so the arrow keeps its own column', () => {
       expect(TOGGLE_CONTENT_CLASSES).toStrictEqual([
         'text-[length:var(--blok-toggle-font-size,inherit)]',
-        'pl-0.5',
+        'ps-0.5',
         'leading-[1.5]',
         'flex-1',
         'min-w-0',
@@ -189,7 +189,7 @@ describe('shared tool classes mutants', () => {
     });
 
     it('indents the children container', () => {
-      expect(TOGGLE_CHILDREN_CLASSES).toStrictEqual(['pl-7']);
+      expect(TOGGLE_CHILDREN_CLASSES).toStrictEqual(['ps-7']);
     });
 
     it('leaves the contenteditable focus-ring suppression at the call site', () => {

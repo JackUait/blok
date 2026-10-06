@@ -236,7 +236,8 @@ export function normalizeOutputBlocks(blocks: Array<OutputBlockData | LooseOutpu
 /**
  * Normalizes a whole loose wire document into the strict saved
  * {@link OutputData} shape at an input boundary. A nullish document becomes
- * `{ blocks: [] }`; `null` envelope fields (`time`/`version`) are dropped; each
+ * `{ blocks: [] }`; `null` envelope fields (`time`/`version`) are dropped and a
+ * non-empty `id` is kept; each
  * block is passed through {@link normalizeOutputBlocks}, so `null`/missing
  * `data` becomes `{}`, `null`/empty ids are dropped for regeneration and
  * nullish/empty `parent`/`content` references are dropped as absent.
@@ -255,6 +256,7 @@ export function normalizeOutputData(data: AnyOutputData): OutputData {
   }
 
   return {
+    ...(typeof data.id === 'string' && data.id !== '' ? { id: data.id } : {}),
     ...(typeof data.version === 'string' ? { version: data.version } : {}),
     ...(typeof data.time === 'number' ? { time: data.time } : {}),
     blocks: normalizeOutputBlocks(data.blocks),

@@ -1,4 +1,5 @@
 import { DATA_ATTR } from '../../../constants';
+import { getElementDirection, logicalArrow } from '../../../utils/direction';
 import { KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP, PRINTABLE_SPECIAL_KEYS } from '../constants';
 
 /**
@@ -46,3 +47,38 @@ export const isPrintableKeyEvent = (event: KeyboardEvent): boolean => {
 
   return event.key.length === 1 || PRINTABLE_SPECIAL_KEYS.has(event.key);
 }
+
+// Includes `plaintext-only`: the code block editable can run LTR in an RTL editor.
+const DIRECTION_HOST_SELECTOR = '[contenteditable="true"], [contenteditable="plaintext-only"], textarea, input';
+
+const editableOf = (node: Node | null | undefined): Element | null => {
+  const element = node instanceof Element ? node : node?.parentElement;
+
+  return element?.closest(DIRECTION_HOST_SELECTOR) ?? null;
+};
+
+/**
+ * Reading-order meaning of a horizontal arrow, or null for any other key.
+ *
+ * Direction comes from the editable that holds the caret, so a block whose
+ * text runs the other way than the editor still moves by its own direction.
+ * The selection anchor goes first: while blocks are selected, focus can stay
+ * in a block that is not the one the selection started in.
+ * @param event - keydown event
+ * @param fallback - element to read when no editable is found (the editor wrapper)
+ */
+export const horizontalArrowIntent = (
+  event: KeyboardEvent,
+  fallback: Element | null | undefined
+): 'forward' | 'backward' | null => {
+  const key = [event.key, event.code].find((name) => name === 'ArrowLeft' || name === 'ArrowRight');
+
+  if (key === undefined) {
+    return null;
+  }
+
+  const target = event.target instanceof Node ? event.target : null;
+  const source = editableOf(window.getSelection()?.anchorNode) ?? editableOf(target) ?? fallback;
+
+  return logicalArrow(key, getElementDirection(source));
+};

@@ -13,11 +13,10 @@ import ru from "../../i18n/ru.json";
 describe("marks section", () => {
   const section = API_SECTIONS.find((s) => s.id === "marks-api");
 
-  it("exists with a title, description and lastUpdated", () => {
+  it("exists with a title and description", () => {
     expect(section).toBeDefined();
     expect(section!.title).toBe("Marks API");
     expect(section!.description).toBeDefined();
-    expect(section!.lastUpdated).toBeDefined();
   });
 
   it("leads with the range-aware contrast to selection.findParentTag", () => {

@@ -1,3 +1,4 @@
+import { syncPortalDirection } from '../utils/portal-direction';
 import { promoteToTopLayer, removeFromTopLayer } from '../utils/top-layer';
 
 import type { ToolboxPreviewConfig } from '@/types';
@@ -104,7 +105,8 @@ export class ToolboxPreview {
     paper.replaceChildren(drawing);
     caption.textContent = this.describe(params.config);
 
-    const left = this.resolveLeft(params.surface.getBoundingClientRect());
+    const direction = syncPortalDirection(root, { source: params.surface }) ?? 'ltr';
+    const left = this.resolveLeft(params.surface.getBoundingClientRect(), direction);
 
     if (left === null) {
       this.hide();
@@ -137,16 +139,23 @@ export class ToolboxPreview {
     return `${Math.max(VIEWPORT_MARGIN, Math.min(item.getBoundingClientRect().top, maxTop))}px`;
   }
 
-  private resolveLeft(surface: DOMRect): number | null {
+  /**
+   * Beside the menu on its inline-end side (left in RTL), flipping when that side has no room.
+   */
+  private resolveLeft(surface: DOMRect, direction: 'ltr' | 'rtl'): number | null {
     const right = surface.right + GAP;
+    const left = surface.left - GAP - PREVIEW_CARD_WIDTH;
+    const fitsRight = right + PREVIEW_CARD_WIDTH <= window.innerWidth - VIEWPORT_MARGIN;
+    const fitsLeft = left >= VIEWPORT_MARGIN;
+    const [preferred, fitsPreferred, alternate, fitsAlternate] = direction === 'rtl'
+      ? [left, fitsLeft, right, fitsRight]
+      : [right, fitsRight, left, fitsLeft];
 
-    if (right + PREVIEW_CARD_WIDTH <= window.innerWidth - VIEWPORT_MARGIN) {
-      return right;
+    if (fitsPreferred) {
+      return preferred;
     }
 
-    const left = surface.left - GAP - PREVIEW_CARD_WIDTH;
-
-    return left >= VIEWPORT_MARGIN ? left : null;
+    return fitsAlternate ? alternate : null;
   }
 
   private describe(config: ToolboxPreviewConfig): string {

@@ -34,6 +34,13 @@ describe('DatabasePropertyTypePopover', () => {
       expect(el).not.toBeNull();
     });
 
+    it('takes the anchor direction so it mirrors in an RTL editor', () => {
+      anchor.style.direction = 'rtl';
+      popover.open(anchor);
+      const el = document.querySelector('[data-blok-database-property-type-popover]');
+      expect(el?.getAttribute('dir')).toBe('rtl');
+    });
+
     it('uses fixed positioning for correct scroll behavior', () => {
       popover.open(anchor);
       const el = document.querySelector('[data-blok-database-property-type-popover]') as HTMLElement;

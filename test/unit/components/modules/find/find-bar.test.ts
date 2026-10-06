@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { FindBar } from '../../../../../src/components/modules/find/find-bar';
 import type { FindBarCallbacks } from '../../../../../src/components/modules/find/find-bar';
@@ -17,7 +18,6 @@ const makeCallbacks = (): { [K in keyof FindBarCallbacks]: ReturnType<typeof vi.
     onOptionsChange: vi.fn(),
     onReplace: vi.fn(),
     onReplaceAll: vi.fn(),
-    onSeek: vi.fn(),
     onReplaceChange: vi.fn(),
   };
 
@@ -57,6 +57,16 @@ const type = (input: HTMLInputElement, value: string): void => {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 };
 
+/** jsdom has neither `CSS.supports` nor `KeyframeEffect`; `linear` says whether this engine parses linear(). */
+const stubEngine = (linear: boolean): void => {
+  Object.defineProperty(CSS, 'supports', {
+    value: (_property: string, value: string): boolean => linear || !value.includes('linear('),
+    configurable: true,
+    writable: true,
+  });
+  vi.stubGlobal('KeyframeEffect', class { public get pseudoElement(): string | null { return null; } });
+};
+
 describe('FindBar', () => {
   let callbacks: ReturnType<typeof makeCallbacks>;
   let bar: FindBar;
@@ -71,6 +81,7 @@ describe('FindBar', () => {
 
   const findInput = (): HTMLInputElement => byTestId<HTMLInputElement>(bar.element, 'find-input');
   const replaceInput = (): HTMLInputElement => byTestId<HTMLInputElement>(bar.element, 'find-replace-input');
+  const replaceAllRow = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-item-name="replace-all"]');
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -104,7 +115,7 @@ describe('FindBar', () => {
     });
 
     it('labels every icon button', () => {
-      for (const key of ['find.previous', 'find.next', 'find.close', 'find.matchCase', 'find.wholeWord', 'find.toggleReplace']) {
+      for (const key of ['find.previous', 'find.next', 'find.close', 'find.options', 'find.toggleReplace']) {
         expect(button(bar.element, key).type).toBe('button');
       }
     });
@@ -251,7 +262,7 @@ describe('FindBar', () => {
 
     it('stops reacting to its buttons after closing', () => {
       bar.open({ readOnly: false });
-      bar.setResults({ current: 0, total: 3, positions: [0, 0.5, 1] });
+      bar.setResults({ current: 0, total: 3 });
       bar.close();
 
       button(bar.element, 'find.next').click();
@@ -298,6 +309,43 @@ describe('FindBar', () => {
       expect(callbacks.onNext).not.toHaveBeenCalled();
     });
 
+    it('goes to the next match on ArrowDown', () => {
+      const event = press(findInput(), { key: 'ArrowDown' });
+
+      expect(callbacks.onNext).toHaveBeenCalledTimes(1);
+      expect(callbacks.onPrevious).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('goes to the previous match on ArrowUp', () => {
+      const event = press(findInput(), { key: 'ArrowUp' });
+
+      expect(callbacks.onPrevious).toHaveBeenCalledTimes(1);
+      expect(callbacks.onNext).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it.each([
+      { shiftKey: true },
+      { altKey: true },
+      { metaKey: true },
+      { ctrlKey: true },
+    ])('leaves a modified arrow to the field (%o)', (modifier) => {
+      const up = press(findInput(), { key: 'ArrowUp', ...modifier });
+      const down = press(findInput(), { key: 'ArrowDown', ...modifier });
+
+      expect(callbacks.onPrevious).not.toHaveBeenCalled();
+      expect(callbacks.onNext).not.toHaveBeenCalled();
+      expect(up.defaultPrevented).toBe(false);
+      expect(down.defaultPrevented).toBe(false);
+    });
+
+    it('ignores arrows while an IME is composing', () => {
+      press(findInput(), { key: 'ArrowDown', isComposing: true });
+
+      expect(callbacks.onNext).not.toHaveBeenCalled();
+    });
+
     it('ignores Enter while an IME is composing', () => {
       press(findInput(), { key: 'Enter', isComposing: true });
 
@@ -312,33 +360,103 @@ describe('FindBar', () => {
     });
   });
 
-  describe('option toggles', () => {
+  describe('search options', () => {
+    const optionsButton = (): HTMLButtonElement => button(bar.element, 'find.options');
+    const row = (label: string): HTMLElement => {
+      const found = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]'))
+        .find((el) => (el.textContent ?? '').includes(label));
+
+      if (found === undefined) {
+        throw new Error(`No menu row ${label}`);
+      }
+
+      return found;
+    };
+    const menuRows = (): HTMLElement[] => Array.from(document.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]'));
+
     beforeEach(() => {
       bar.open({ readOnly: false });
     });
 
-    it('toggles match case from its button', () => {
-      const toggle = button(bar.element, 'find.matchCase');
-
-      toggle.click();
-
-      expect(toggle.getAttribute('aria-pressed')).toBe('true');
-      expect(bar.options).toEqual({ matchCase: true, wholeWord: false });
-      expect(callbacks.onOptionsChange).toHaveBeenLastCalledWith({ matchCase: true, wholeWord: false });
-
-      toggle.click();
-
-      expect(toggle.getAttribute('aria-pressed')).toBe('false');
-      expect(callbacks.onOptionsChange).toHaveBeenLastCalledWith({ matchCase: false, wholeWord: false });
+    it('folds match case and whole word into one menu button', () => {
+      expect(optionsButton().getAttribute('aria-haspopup')).toBe('menu');
+      expect(optionsButton().getAttribute('aria-expanded')).toBe('false');
+      expect(Array.from(bar.element.querySelectorAll('button')).some((el) =>
+        el.getAttribute('aria-label') === 'find.matchCase' || el.getAttribute('aria-label') === 'find.wholeWord')).toBe(false);
     });
 
-    it('toggles whole word from its button', () => {
-      const toggle = button(bar.element, 'find.wholeWord');
+    it('opens a menu with a checkbox row per option', () => {
+      optionsButton().click();
 
-      toggle.click();
+      expect(optionsButton().getAttribute('aria-expanded')).toBe('true');
+      expect(menuRows()).toHaveLength(2);
+      expect(row('find.matchCase').getAttribute('aria-checked')).toBe('false');
+      expect(row('find.wholeWord').getAttribute('aria-checked')).toBe('false');
+    });
 
-      expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    it('toggles an option from its row and keeps the menu open', () => {
+      optionsButton().click();
+      row('find.matchCase').click();
+
+      expect(row('find.matchCase').getAttribute('aria-checked')).toBe('true');
+      expect(bar.options).toEqual({ matchCase: true, wholeWord: false });
+      expect(callbacks.onOptionsChange).toHaveBeenLastCalledWith({ matchCase: true, wholeWord: false });
+      expect(optionsButton().getAttribute('aria-expanded')).toBe('true');
+
+      row('find.wholeWord').click();
+      row('find.matchCase').click();
+
       expect(callbacks.onOptionsChange).toHaveBeenLastCalledWith({ matchCase: false, wholeWord: true });
+      expect(row('find.matchCase').getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('marks the button while any option is on', () => {
+      expect(optionsButton().hasAttribute('data-blok-find-options-active')).toBe(false);
+
+      press(findInput(), { key: '∑', code: 'KeyW', altKey: true });
+
+      expect(optionsButton().hasAttribute('data-blok-find-options-active')).toBe(true);
+
+      press(findInput(), { key: '∑', code: 'KeyW', altKey: true });
+
+      expect(optionsButton().hasAttribute('data-blok-find-options-active')).toBe(false);
+    });
+
+    it('shows how many options are on, on the button', () => {
+      const count = (): HTMLElement | null => optionsButton().querySelector('[data-blok-testid="find-options-count"]');
+
+      expect(count()?.hidden).toBe(true);
+
+      press(findInput(), { key: '∑', code: 'KeyW', altKey: true });
+
+      expect(count()?.hidden).toBe(false);
+      expect(count()?.textContent).toBe('1');
+
+      press(findInput(), { key: 'ç', code: 'KeyC', altKey: true });
+
+      expect(count()?.textContent).toBe('2');
+
+      press(findInput(), { key: '∑', code: 'KeyW', altKey: true });
+      press(findInput(), { key: 'ç', code: 'KeyC', altKey: true });
+
+      expect(count()?.hidden).toBe(true);
+    });
+
+    it('closes only the menu on Escape', () => {
+      optionsButton().click();
+      press(row('find.matchCase'), { key: 'Escape' });
+
+      expect(callbacks.onClose).not.toHaveBeenCalled();
+      expect(optionsButton().getAttribute('aria-expanded')).toBe('false');
+      expect(menuRows()).toHaveLength(0);
+      expect(bar.isOpen).toBe(true);
+    });
+
+    it('closes the menu with the bar', () => {
+      optionsButton().click();
+      bar.close();
+
+      expect(menuRows()).toHaveLength(0);
     });
 
     it('reads Alt+C and Alt+W by key code, since macOS Option changes event.key', () => {
@@ -350,7 +468,11 @@ describe('FindBar', () => {
       press(findInput(), { key: '∑', code: 'KeyW', altKey: true });
 
       expect(callbacks.onOptionsChange).toHaveBeenLastCalledWith({ matchCase: true, wholeWord: true });
-      expect(button(bar.element, 'find.wholeWord').getAttribute('aria-pressed')).toBe('true');
+
+      optionsButton().click();
+
+      expect(row('find.matchCase').getAttribute('aria-checked')).toBe('true');
+      expect(row('find.wholeWord').getAttribute('aria-checked')).toBe('true');
     });
 
     it('also takes Alt+C from the replace field', () => {
@@ -373,14 +495,14 @@ describe('FindBar', () => {
     });
 
     it('are disabled with no matches', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(button(bar.element, 'find.next').disabled).toBe(true);
       expect(button(bar.element, 'find.previous').disabled).toBe(true);
     });
 
     it('call next and previous', () => {
-      bar.setResults({ current: 0, total: 2, positions: [0, 1] });
+      bar.setResults({ current: 0, total: 2 });
 
       button(bar.element, 'find.next').click();
       button(bar.element, 'find.previous').click();
@@ -404,21 +526,21 @@ describe('FindBar', () => {
     });
 
     it('is empty with no query', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(counter()).toBe('');
     });
 
     it('shows a one-based position out of the total', () => {
       type(findInput(), 'a');
-      bar.setResults({ current: 2, total: 7, positions: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6] });
+      bar.setResults({ current: 2, total: 7 });
 
       expect(counter()).toBe('find.count{"current":3,"total":7}');
     });
 
     it('says there are no results for a query that matches nothing', () => {
       type(findInput(), 'zzz');
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(counter()).toBe('find.noResults');
     });
@@ -427,7 +549,6 @@ describe('FindBar', () => {
   describe('counter roll', () => {
     const interpolate = (key: string, vars?: Record<string, string | number>): string =>
       key === 'find.count' && vars !== undefined ? `${vars.current} of ${vars.total}` : key;
-    const positions = Array.from({ length: 20 }, (_, index) => index / 20);
     const counter = (): HTMLElement => byTestId(bar.element, 'find-counter');
     const roll = (): HTMLElement | null => counter().querySelector('[data-blok-find-roll]');
 
@@ -437,11 +558,11 @@ describe('FindBar', () => {
       document.body.appendChild(bar.element);
       bar.open({ readOnly: false });
       type(findInput(), 'a');
-      bar.setResults({ current: 15, total: 20, positions });
+      bar.setResults({ current: 15, total: 20 });
     });
 
     it('rolls only the digits that changed, up when the number grows', () => {
-      bar.setResults({ current: 18, total: 20, positions });
+      bar.setResults({ current: 18, total: 20 });
 
       expect(roll()?.textContent).toBe('9');
       expect(roll()?.getAttribute('data-blok-find-roll')).toBe('up');
@@ -450,7 +571,7 @@ describe('FindBar', () => {
     });
 
     it('rolls down when the number shrinks', () => {
-      bar.setResults({ current: 13, total: 20, positions });
+      bar.setResults({ current: 13, total: 20 });
 
       expect(roll()?.textContent).toBe('4');
       expect(roll()?.getAttribute('data-blok-find-roll')).toBe('down');
@@ -459,7 +580,7 @@ describe('FindBar', () => {
     });
 
     it('rolls the whole number when its length changes', () => {
-      bar.setResults({ current: 8, total: 20, positions });
+      bar.setResults({ current: 8, total: 20 });
 
       expect(roll()?.textContent).toBe('9');
       expect(roll()?.getAttribute('data-blok-find-roll-from')).toBe('16');
@@ -467,7 +588,7 @@ describe('FindBar', () => {
     });
 
     it('does not roll when the total changes', () => {
-      bar.setResults({ current: 16, total: 21, positions: [...positions, 1] });
+      bar.setResults({ current: 16, total: 21 });
 
       expect(roll()).toBeNull();
       expect(counter().textContent).toBe('17 of 21');
@@ -482,42 +603,25 @@ describe('FindBar', () => {
       type(findInput(), 'zzz');
     });
 
-    it('tints the field and shakes it once', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
+    it('tints the field, without a shake', () => {
+      bar.setResults({ current: -1, total: 0 });
 
       expect(field().hasAttribute('data-blok-find-empty')).toBe(true);
-      expect(field().hasAttribute('data-blok-find-shake')).toBe(true);
+      expect(field().hasAttribute('data-blok-find-shake')).toBe(false);
       expect(findInput().getAttribute('aria-invalid')).toBe('true');
     });
 
-    it('does not shake again while it stays at zero', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
-      field().dispatchEvent(new Event('animationend'));
-
-      expect(field().hasAttribute('data-blok-find-shake')).toBe(false);
-
-      bar.setResults({ current: -1, total: 0, positions: [] });
-
-      expect(field().hasAttribute('data-blok-find-shake')).toBe(false);
-    });
-
-    it('shakes again after leaving zero and coming back', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
-      field().dispatchEvent(new Event('animationend'));
-
-      bar.setResults({ current: 0, total: 1, positions: [0.5] });
+    it('clears the tint once there are results again', () => {
+      bar.setResults({ current: -1, total: 0 });
+      bar.setResults({ current: 0, total: 1 });
 
       expect(field().hasAttribute('data-blok-find-empty')).toBe(false);
       expect(findInput().hasAttribute('aria-invalid')).toBe(false);
-
-      bar.setResults({ current: -1, total: 0, positions: [] });
-
-      expect(field().hasAttribute('data-blok-find-shake')).toBe(true);
     });
 
     it('is not a no-results state when the query is empty', () => {
       type(findInput(), '');
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(field().hasAttribute('data-blok-find-empty')).toBe(false);
       expect(field().hasAttribute('data-blok-find-shake')).toBe(false);
@@ -599,6 +703,12 @@ describe('FindBar', () => {
       expect(bar.replacement).toBe('dog');
     });
 
+    it('reports an empty replacement while the open row is empty, so the preview shows a delete', () => {
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(bar.replacement).toBe('');
+    });
+
     it('reports no replacement once the replace row closes, and the typed one when it opens again', () => {
       const toggle = button(bar.element, 'find.toggleReplace');
 
@@ -608,7 +718,7 @@ describe('FindBar', () => {
       toggle.click();
 
       expect(callbacks.onReplaceChange).toHaveBeenCalledTimes(1);
-      expect(bar.replacement).toBe('');
+      expect(bar.replacement).toBeNull();
 
       toggle.click();
 
@@ -627,44 +737,209 @@ describe('FindBar', () => {
     });
 
     it.each([
-      { name: 'Replace all', testId: 'find-replace-all', field: 'replace' },
+      { name: 'the replace menu', testId: 'find-replace-menu', field: 'replace' },
       { name: 'Replace', testId: 'find-replace', field: 'replace' },
       { name: 'Next', testId: 'find-next', field: 'find' },
     ])('keeps focus in the bar when $name disables itself', ({ testId, field }) => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 1, positions: [0] });
+      bar.setResults({ current: 0, total: 1 });
       byTestId<HTMLButtonElement>(bar.element, testId).focus();
 
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(field === 'replace' ? replaceInput() : findInput()).toHaveFocus();
     });
 
     it('disables both replace buttons with no matches', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace').disabled).toBe(true);
-      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-all').disabled).toBe(true);
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-menu').disabled).toBe(true);
+    });
+
+    it('disables both replace buttons when no match can be replaced', () => {
+      bar.open({ replace: true, readOnly: false });
+      bar.setResults({ current: 0, total: 3, replaceable: 0, currentReplaceable: false });
+      replaceInput().value = 'x';
+
+      press(replaceInput(), { key: 'Enter' });
+      press(replaceInput(), { key: 'Enter', metaKey: true });
+
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace').disabled).toBe(true);
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-menu').disabled).toBe(true);
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-next').disabled).toBe(false);
+      expect(callbacks.onReplace).not.toHaveBeenCalled();
+      expect(callbacks.onReplaceAll).not.toHaveBeenCalled();
+    });
+
+    it('disables only Replace when the current match cannot be replaced but others can', () => {
+      bar.open({ replace: true, readOnly: false });
+      bar.setResults({ current: 0, total: 3, replaceable: 2, currentReplaceable: false });
+      replaceInput().value = 'x';
+
+      press(replaceInput(), { key: 'Enter' });
+
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace').disabled).toBe(true);
+      expect(byTestId<HTMLButtonElement>(bar.element, 'find-replace-menu').disabled).toBe(false);
+      expect(callbacks.onReplace).not.toHaveBeenCalled();
+    });
+
+    describe('hint on a disabled replace button', () => {
+      const hoverText = (testId: string): string => {
+        vi.useFakeTimers();
+        try {
+          byTestId<HTMLButtonElement>(bar.element, testId).dispatchEvent(new MouseEvent('mouseenter'));
+          vi.runAllTimers();
+        } finally {
+          vi.useRealTimers();
+        }
+
+        return document.getElementById('blok-tooltip')?.textContent ?? '';
+      };
+
+      beforeEach(() => {
+        bar.destroy();
+        destroyTooltip();
+        bar = create();
+        bar.open({ replace: true, readOnly: false });
+      });
+
+      it('says the current match cannot be edited', () => {
+        bar.setResults({ current: 0, total: 3, replaceable: 2, currentReplaceable: false });
+
+        expect(hoverText('find-replace')).toContain('find.replaceUnavailable');
+      });
+
+      it('says no match can be edited', () => {
+        bar.setResults({ current: 0, total: 3, replaceable: 0, currentReplaceable: false });
+
+        expect(hoverText('find-replace-menu')).toContain('find.replaceAllUnavailable');
+      });
+
+      it('says the current match already reads like the replacement', () => {
+        bar.setResults({ current: 0, total: 3, replaceable: 2, currentReplaceable: false, currentUnchanged: true });
+
+        expect(hoverText('find-replace')).toContain('find.replaceUnchanged');
+        expect(hoverText('find-replace')).not.toContain('find.replaceUnavailable');
+      });
+
+      it('says every match already reads like the replacement', () => {
+        bar.setResults({ current: 0, total: 3, replaceable: 0, currentReplaceable: false, currentUnchanged: true, unchanged: true });
+
+        expect(hoverText('find-replace-menu')).toContain('find.replaceUnchanged');
+        expect(hoverText('find-replace-menu')).not.toContain('find.replaceAllUnavailable');
+      });
+
+      it('says there are no results', () => {
+        bar.setResults({ current: -1, total: 0 });
+
+        expect(hoverText('find-replace')).toContain('find.noResults');
+      });
+
+      it('goes back to the label and shortcut once the button works again', () => {
+        bar.setResults({ current: 0, total: 3, replaceable: 2, currentReplaceable: false });
+        bar.setResults({ current: 1, total: 3, replaceable: 2, currentReplaceable: true });
+
+        const text = hoverText('find-replace');
+
+        expect(text).not.toContain('find.replaceUnavailable');
+        expect(text).toContain('find.replace');
+        expect(text).toContain('⏎');
+      });
+    });
+
+    it('moves focus to the replace field when the focused Replace stops applying', () => {
+      bar.open({ replace: true, readOnly: false });
+      bar.setResults({ current: 0, total: 2 });
+      byTestId<HTMLButtonElement>(bar.element, 'find-replace').focus();
+
+      bar.setResults({ current: 1, total: 2, replaceable: 1, currentReplaceable: false });
+
+      expect(replaceInput()).toHaveFocus();
     });
 
     it('replaces from the buttons with the typed text', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 2, positions: [0, 1] });
+      bar.setResults({ current: 0, total: 2 });
       replaceInput().value = 'new';
 
       byTestId(bar.element, 'find-replace').click();
-      byTestId(bar.element, 'find-replace-all').click();
+      byTestId(bar.element, 'find-replace-menu').click();
+      replaceAllRow()?.click();
 
       expect(callbacks.onReplace).toHaveBeenCalledWith('new');
       expect(callbacks.onReplaceAll).toHaveBeenCalledWith('new');
       expect(byTestId(bar.element, 'find-replace').textContent).toBe('find.replace');
-      expect(byTestId(bar.element, 'find-replace-all').textContent).toBe('find.replaceAll');
+    });
+
+    describe('replace split button', () => {
+      const menuButton = (): HTMLButtonElement => byTestId<HTMLButtonElement>(bar.element, 'find-replace-menu');
+
+      beforeEach(() => {
+        bar.open({ replace: true, readOnly: false });
+        bar.setResults({ current: 0, total: 2 });
+      });
+
+      it('has Replace as the click and Replace all behind a menu button', () => {
+        expect(menuButton().getAttribute('aria-haspopup')).toBe('menu');
+        expect(menuButton().getAttribute('aria-expanded')).toBe('false');
+        expect(menuButton().getAttribute('aria-label')).toBe('find.replaceAll');
+        expect(bar.element.querySelector('[data-blok-testid="find-replace-all"]')).toBeNull();
+        expect(replaceAllRow()).toBeNull();
+      });
+
+      it('opens a menu whose row replaces all and closes it', () => {
+        replaceInput().value = 'new';
+        menuButton().click();
+
+        expect(menuButton().getAttribute('aria-expanded')).toBe('true');
+        expect(replaceAllRow()?.textContent).toContain('find.replaceAll');
+        expect(replaceAllRow()?.textContent).toContain('⌘⏎');
+
+        replaceAllRow()?.click();
+
+        expect(callbacks.onReplaceAll).toHaveBeenCalledWith('new');
+        expect(callbacks.onReplace).not.toHaveBeenCalled();
+        expect(replaceAllRow()).toBeNull();
+        expect(menuButton().getAttribute('aria-expanded')).toBe('false');
+      });
+
+      it('closes only the menu on Escape', () => {
+        menuButton().click();
+        press(menuButton(), { key: 'Escape' });
+
+        expect(replaceAllRow()).toBeNull();
+        expect(callbacks.onClose).not.toHaveBeenCalled();
+        expect(bar.isOpen).toBe(true);
+      });
+
+      it('closes the menu when no match can be replaced any more', () => {
+        menuButton().click();
+        bar.setResults({ current: 0, total: 2, replaceable: 0, currentReplaceable: false });
+
+        expect(replaceAllRow()).toBeNull();
+        expect(menuButton().disabled).toBe(true);
+      });
+
+      it('closes the menu with the replace row', () => {
+        menuButton().click();
+        button(bar.element, 'find.toggleReplace').click();
+
+        expect(replaceAllRow()).toBeNull();
+      });
+
+      it('closes the menu with the bar', () => {
+        menuButton().click();
+        bar.close();
+
+        expect(replaceAllRow()).toBeNull();
+      });
     });
 
     it('replaces one on Enter in the replace field', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 2, positions: [0, 1] });
+      bar.setResults({ current: 0, total: 2 });
       replaceInput().value = 'x';
 
       press(replaceInput(), { key: 'Enter' });
@@ -676,7 +951,7 @@ describe('FindBar', () => {
 
     it('replaces all on Cmd+Enter on a Mac', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 2, positions: [0, 1] });
+      bar.setResults({ current: 0, total: 2 });
       replaceInput().value = 'x';
 
       press(replaceInput(), { key: 'Enter', ctrlKey: true });
@@ -693,7 +968,7 @@ describe('FindBar', () => {
       bar.destroy();
       bar = create(false);
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 2, positions: [0, 1] });
+      bar.setResults({ current: 0, total: 2 });
       replaceInput().value = 'x';
 
       press(replaceInput(), { key: 'Enter', metaKey: true });
@@ -707,7 +982,7 @@ describe('FindBar', () => {
 
     it('does not replace from the keyboard with no matches', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: -1, total: 0, positions: [] });
+      bar.setResults({ current: -1, total: 0 });
 
       press(replaceInput(), { key: 'Enter' });
       press(replaceInput(), { key: 'Enter', metaKey: true });
@@ -750,13 +1025,13 @@ describe('FindBar', () => {
       callbacks.onReplaceChange.mockClear();
       bar.setReadOnly(true);
 
-      expect(bar.replacement).toBe('');
+      expect(bar.replacement).toBeNull();
       expect(callbacks.onReplaceChange).toHaveBeenCalledTimes(1);
     });
 
     it('ignores replace keys while read-only', () => {
       bar.open({ replace: true, readOnly: false });
-      bar.setResults({ current: 0, total: 1, positions: [0] });
+      bar.setResults({ current: 0, total: 1 });
       bar.setReadOnly(true);
 
       press(replaceInput(), { key: 'Enter' });
@@ -766,68 +1041,401 @@ describe('FindBar', () => {
   });
 
   describe('match map', () => {
-    const ticks = (): HTMLElement[] =>
-      Array.from(bar.element.querySelectorAll<HTMLElement>('[data-blok-testid="find-map-tick"]'));
-    const map = (): HTMLElement => byTestId(bar.element, 'find-map');
-
-    beforeEach(() => {
+    it('draws no match map under the find row', () => {
       bar.open({ readOnly: false });
       type(findInput(), 'a');
+      bar.setResults({ current: 1, total: 3 });
+
+      expect(bar.element.querySelector('[data-blok-find-map], [data-blok-find-tick]')).toBeNull();
+    });
+  });
+
+  describe('motion', () => {
+    interface StubAnimation {
+      cancel: Mock<() => void>;
+      pause: Mock<() => void>;
+      playState: AnimationPlayState;
+      finished: Promise<void>;
+    }
+
+    type Animate = (keyframes: Keyframe[], options?: KeyframeAnimationOptions) => StubAnimation;
+
+    let animate: Mock<Animate>;
+    let made: StubAnimation[];
+    let cancels: Array<Mock<() => void>>;
+
+    beforeEach(() => {
+      made = [];
+      cancels = [];
+      animate = vi.fn<Animate>(() => {
+        const animation: StubAnimation = {
+          playState: 'running',
+          finished: new Promise<void>(() => undefined),
+          cancel: vi.fn(() => {
+            animation.playState = 'idle';
+          }),
+          pause: vi.fn(() => {
+            animation.playState = 'paused';
+          }),
+        };
+
+        made.push(animation);
+        cancels.push(animation.cancel);
+
+        return animation;
+      });
+      Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true });
+      vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: false, media: query })));
+      stubEngine(true);
     });
 
-    it('draws one tick per match at its position', () => {
-      bar.setResults({ current: 1, total: 3, positions: [0, 0.25, 1] });
-
-      expect(ticks()).toHaveLength(3);
-      expect(ticks()[1].style.left).toBe('25%');
-      expect(map().hidden).toBe(false);
+    afterEach(() => {
+      Reflect.deleteProperty(Element.prototype, 'animate');
+      Reflect.deleteProperty(CSS, 'supports');
+      vi.unstubAllGlobals();
     });
 
-    it('marks the active tick', () => {
-      bar.setResults({ current: 1, total: 3, positions: [0, 0.25, 1] });
+    // The geometry calls only: the bloom also fades the skin on its own ::before animation.
+    const skinCalls = (): Array<Parameters<Animate>> => animate.mock.calls.filter((call) =>
+      call[1]?.pseudoElement === '::before' && 'width' in call[0][0]);
 
-      expect(ticks().map((tick) => tick.hasAttribute('data-blok-find-active'))).toEqual([false, true, false]);
+    it('blooms when it opens', () => {
+      bar.open({ readOnly: false });
+
+      expect(skinCalls()).toHaveLength(1);
     });
 
-    it('hides with no matches', () => {
-      bar.setResults({ current: -1, total: 0, positions: [] });
+    it('does not bloom again when a second Mod+F lands on an open bar', () => {
+      bar.open({ readOnly: false });
+      bar.open({ readOnly: false });
 
-      expect(map().hidden).toBe(true);
+      expect(skinCalls()).toHaveLength(1);
     });
 
-    it('buckets a large match set to at most 200 ticks', () => {
-      const positions = Array.from({ length: 1000 }, (_, i) => i / 999);
+    // Cancelling would snap a half-grown bar to full size for the length of the fade.
+    it('freezes the bloom when it closes, so the fade starts from the current frame', () => {
+      bar.open({ readOnly: false });
+      const opened = made.slice();
 
-      bar.setResults({ current: 999, total: 1000, positions });
+      bar.close();
 
-      expect(ticks().length).toBeLessThanOrEqual(200);
-      expect(ticks().length).toBeGreaterThan(100);
-      expect(ticks().filter((tick) => tick.hasAttribute('data-blok-find-active'))).toHaveLength(1);
+      expect(opened.length).toBeGreaterThan(0);
+      expect(opened.every((animation) => animation.pause.mock.calls.length === 1)).toBe(true);
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 0)).toBe(true);
     });
 
-    it('keeps the 200 cap when positions arrive out of order', () => {
-      const positions = Array.from({ length: 1000 }, (_, i) => (i * 7919 % 1000) / 999);
+    it('drops the frozen bloom on a quick reopen, so it starts clean', () => {
+      bar.open({ readOnly: false });
+      const opened = made.slice();
 
-      bar.setResults({ current: 0, total: 1000, positions });
+      bar.close();
+      bar.open({ readOnly: false });
 
-      expect(ticks().length).toBeLessThanOrEqual(200);
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
     });
 
-    it('seeks to the match under a clicked tick', () => {
-      bar.setResults({ current: 0, total: 3, positions: [0, 0.25, 1] });
+    it('drops the frozen bloom once the bar has faded out', () => {
+      bar.open({ readOnly: false });
+      const opened = made.slice();
 
-      ticks()[2].click();
+      bar.close();
+      byTestId(bar.element, 'find-input').dispatchEvent(new Event('transitionend', { bubbles: true }));
 
-      expect(callbacks.onSeek).toHaveBeenCalledWith(2);
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 0)).toBe(true);
+
+      bar.element.dispatchEvent(new Event('transitionend', { bubbles: true }));
+
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
     });
 
-    it('seeks to the nearest match when a click lands on the track', () => {
-      bar.setResults({ current: 0, total: 3, positions: [0, 0.25, 1] });
-      vi.spyOn(map(), 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 0, 200, 8));
+    // Chrome ends the fade with transitioncancel, not transitionend: display:none lands as it finishes.
+    it('drops the frozen bloom when the fade ends by display:none', () => {
+      bar.open({ readOnly: false });
+      const opened = made.slice();
 
-      map().dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 100 + 200 * 0.3 }));
+      bar.close();
+      bar.element.dispatchEvent(new Event('transitioncancel', { bubbles: true }));
 
-      expect(callbacks.onSeek).toHaveBeenCalledWith(1);
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
+    });
+
+    it('keeps its motion when a fade is cut short by a reopen', () => {
+      bar.open({ readOnly: false });
+      bar.close();
+      bar.open({ readOnly: false });
+      const reopened = made.slice(-3);
+
+      bar.element.dispatchEvent(new Event('transitioncancel', { bubbles: true }));
+
+      expect(reopened.every((animation) => animation.cancel.mock.calls.length === 0)).toBe(true);
+    });
+
+    it('drops the frozen bloom when destroyed', () => {
+      bar.open({ readOnly: false });
+      const opened = made.slice();
+
+      bar.close();
+      bar.destroy();
+
+      expect(opened.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
+    });
+
+    // pause() on a cancelled animation would bring back its first frame.
+    it('does not freeze an animation that already ended', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      const counter = byTestId(bar.element, 'find-counter');
+      const roll = made.find((_, index) => animate.mock.contexts[index] === counter);
+
+      bar.close();
+
+      expect(roll?.pause).not.toHaveBeenCalled();
+      expect(roll?.cancel).toHaveBeenCalledTimes(1);
+    });
+
+    it('forgets ended animations, so hops on an open bar do not pile up', () => {
+      bar.open({ readOnly: false });
+
+      for (let i = 0; i < 5; i++) {
+        bar.open({ readOnly: false, query: 'this', hop: source });
+      }
+      const counter = byTestId(bar.element, 'find-counter');
+      const counterAnimations = made.filter((_, index) => animate.mock.contexts[index] === counter);
+
+      // The last roll is still live: destroy both ends its flight and stops it.
+      const ended = counterAnimations.slice(0, -1);
+
+      bar.destroy();
+
+      expect(ended.length).toBeGreaterThan(4);
+      expect(ended.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
+    });
+
+    it('stretches the skin when the replace row opens on an open bar', () => {
+      bar.open({ readOnly: false });
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(skinCalls()).toHaveLength(2);
+    });
+
+    it('reads no layout when the replace row does not change', () => {
+      const barBox = byTestId(bar.element, 'find-bar');
+      const width = vi.spyOn(barBox, 'offsetWidth', 'get');
+      const height = vi.spyOn(barBox, 'offsetHeight', 'get');
+
+      // Read-only closes the row, which is already closed.
+      bar.setReadOnly(true);
+
+      expect(width).not.toHaveBeenCalled();
+      expect(height).not.toHaveBeenCalled();
+    });
+
+    it('stretches from the one-row size when the row opens', () => {
+      bar.open({ readOnly: false });
+      const barBox = byTestId(bar.element, 'find-bar');
+      const row = byTestId(bar.element, 'find-replace-row');
+
+      vi.spyOn(barBox, 'offsetWidth', 'get').mockReturnValue(470);
+      vi.spyOn(barBox, 'offsetHeight', 'get').mockImplementation(() => (row.hidden ? 44 : 84));
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(skinCalls().at(-1)?.[0][0]).toMatchObject({ height: '44px' });
+    });
+
+    it('covers both rows with one bloom when it opens with replace', () => {
+      bar.open({ readOnly: false, replace: true });
+
+      expect(skinCalls()).toHaveLength(1);
+    });
+
+    it('does not stretch when the replace row closes', () => {
+      bar.open({ readOnly: false, replace: true });
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(skinCalls()).toHaveLength(1);
+    });
+
+    it('stops the stretch when the replace row closes, so the skin follows the row up', () => {
+      bar.open({ readOnly: false });
+      const beforeStretch = cancels.length;
+
+      button(bar.element, 'find.toggleReplace').click();
+      const stretched = cancels.slice(beforeStretch);
+
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(stretched.length).toBeGreaterThan(0);
+      expect(stretched.every((cancel) => cancel.mock.calls.length === 1)).toBe(true);
+    });
+
+    const source = {
+      rect: { left: 50, top: 100, width: 30, height: 20 },
+      text: 'this',
+      font: { family: 'serif', size: '16px', weight: '400', style: 'normal', color: 'rgb(0, 0, 0)' },
+    };
+    const chip = (): Element | null => bar.element.querySelector('[data-blok-find-hop-chip]');
+    const field = (): HTMLElement => byTestId(bar.element, 'find-field');
+
+    it('flies the selected word in and hides the field text until it lands', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(chip()).not.toBeNull();
+      expect(field().hasAttribute('data-blok-find-hopping')).toBe(true);
+      expect(findInput().value).toBe('this');
+      expect(findInput()).toHaveFocus();
+    });
+
+    it('hops with no bloom when the bar is already open', () => {
+      bar.open({ readOnly: false });
+      const blooms = skinCalls().length;
+
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(chip()).not.toBeNull();
+      expect(skinCalls()).toHaveLength(blooms);
+    });
+
+    it('ends the hop at once when the reader types', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(chip()).not.toBeNull();
+      type(findInput(), 'thi');
+
+      expect(chip()).toBeNull();
+      expect(field().hasAttribute('data-blok-find-hopping')).toBe(false);
+    });
+
+    it('ends the hop when the bar closes', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(chip()).not.toBeNull();
+      bar.close();
+
+      expect(chip()).toBeNull();
+      expect(field().hasAttribute('data-blok-find-hopping')).toBe(false);
+    });
+
+    it('shows the counter at once when the reader types mid-flight', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      const counter = byTestId(bar.element, 'find-counter');
+      const counterCancels = animate.mock.contexts
+        .map((context, index) => (context === counter ? cancels[index] : undefined))
+        .filter((cancel) => cancel !== undefined);
+
+      expect(counterCancels.length).toBeGreaterThan(0);
+      type(findInput(), 'x');
+
+      expect(counterCancels.every((cancel) => cancel.mock.calls.length === 1)).toBe(true);
+    });
+
+    const inputFades = (): Keyframe[][] => animate.mock.calls
+      .filter((_, index) => animate.mock.contexts[index] === findInput())
+      .map(([frames]) => (Array.isArray(frames) ? frames : []))
+      .filter((frames) => frames.some((frame) => frame.color === 'transparent'));
+
+    it('fades the field\'s text out when the same word hops in again', () => {
+      bar.open({ readOnly: false, query: 'this' });
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(inputFades()).toHaveLength(1);
+    });
+
+    it('does not flash a new word in the field before it hops in', () => {
+      bar.open({ readOnly: false, query: 'that' });
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(inputFades()).toHaveLength(0);
+    });
+
+    it('fades the counter out before it rolls back in', () => {
+      bar.open({ readOnly: false, query: 'this' });
+      const counter = byTestId(bar.element, 'find-counter');
+      const before = animate.mock.calls.length;
+
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      const roll = animate.mock.calls.slice(before).find((_, index) => animate.mock.contexts[before + index] === counter);
+      const frames = Array.isArray(roll?.[0]) ? roll[0] : [];
+
+      expect(frames[0]?.opacity).toBe(1);
+      expect(frames.at(-1)?.opacity).toBe(1);
+      expect(frames.some((frame) => frame.opacity === 0)).toBe(true);
+    });
+
+    it('lands without nudging the field\'s text off where the word put it', async () => {
+      const landed = animate.getMockImplementation();
+
+      animate.mockImplementation((keyframes, options) => {
+        const animation = landed?.(keyframes, options);
+
+        if (animation === undefined) {
+          throw new Error('no stub');
+        }
+
+        return { ...animation, finished: Promise.resolve() };
+      });
+      // Already open, so no bloom moves the input too.
+      bar.open({ readOnly: false });
+      const before = animate.mock.calls.length;
+
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(chip()).toBeNull();
+      expect(animate.mock.calls.slice(before).some(([frames], index) => animate.mock.contexts[before + index] === findInput()
+        && Array.isArray(frames) && frames.some((frame) => 'translate' in frame))).toBe(false);
+    });
+
+    it('keeps the counter text live during the flight', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+      bar.setResults({ current: 0, total: 3 });
+
+      expect(byTestId(bar.element, 'find-counter').textContent).toBe('find.count{"current":1,"total":3}');
+    });
+  });
+
+  // Chrome 105-112, Firefox 110-111 and Safari 16 throw on a linear() easing.
+  describe('on an engine without linear()', () => {
+    const source = {
+      rect: { left: 50, top: 100, width: 30, height: 20 },
+      text: 'this',
+      font: { family: 'serif', size: '16px', weight: '400', style: 'normal', color: 'rgb(0, 0, 0)' },
+    };
+
+    beforeEach(() => {
+      const animate = (_keyframes: Keyframe[], options?: KeyframeAnimationOptions): { cancel: () => void; finished: Promise<void> } => {
+        if (options?.easing?.includes('linear(') === true) {
+          throw new TypeError(`Invalid easing: ${options.easing}`);
+        }
+
+        return { cancel: vi.fn(), finished: new Promise<void>(() => undefined) };
+      };
+
+      Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true });
+      vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: false, media: query })));
+      stubEngine(false);
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(Element.prototype, 'animate');
+      Reflect.deleteProperty(CSS, 'supports');
+      vi.unstubAllGlobals();
+    });
+
+    it('opens on a selected word focused and searching, with no word in flight', () => {
+      bar.open({ readOnly: false, query: 'this', hop: source });
+
+      expect(findInput()).toHaveFocus();
+      expect(callbacks.onQueryChange).toHaveBeenCalledWith('this');
+      expect(bar.element.querySelector('[data-blok-find-hop-chip]')).toBeNull();
+      expect(byTestId(bar.element, 'find-field').hasAttribute('data-blok-find-hopping')).toBe(false);
+    });
+
+    it('still opens the replace row', () => {
+      bar.open({ readOnly: false });
+      button(bar.element, 'find.toggleReplace').click();
+
+      expect(callbacks.onReplaceChange).toHaveBeenCalledTimes(1);
+      expect(byTestId(bar.element, 'find-replace-row').hidden).toBe(false);
     });
   });
 

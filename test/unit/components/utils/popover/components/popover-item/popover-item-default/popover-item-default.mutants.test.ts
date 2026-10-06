@@ -102,8 +102,8 @@ describe('PopoverItemDefault — construction', () => {
     expect(root.getAttribute('role')).toBe('menuitem');
     expect(root.classList.contains('flex')).toBe(true);
     expect(root.classList.contains('px-2')).toBe(true);
-    expect(root.classList.contains('pl-2')).toBe(true);
-    expect(root.classList.contains('pr-3')).toBe(true);
+    expect(root.classList.contains('ps-2')).toBe(true);
+    expect(root.classList.contains('pe-3')).toBe(true);
     expect(root.classList.contains('p-[3px]')).toBe(false);
     expect(root.getAttribute('data-blok-item-name')).toBeNull();
   });
@@ -179,7 +179,7 @@ describe('PopoverItemDefault — construction', () => {
     expect(chevron.getAttribute('aria-hidden')).toBe('true');
     expect(chevron.getAttribute(DATA_ATTR.popoverItemIcon)).toBe('');
     expect(chevron.getAttribute(DATA_ATTR.popoverItemIconChevronRight)).toBe('');
-    expect(chevron.classList.contains('ml-3')).toBe(true);
+    expect(chevron.classList.contains('ms-3')).toBe(true);
     expect(chevron.classList.contains('w-4')).toBe(true);
     expect(chevron.querySelector('svg')).not.toBeNull();
   });
@@ -209,15 +209,18 @@ describe('PopoverItemDefault — title, icon and label elements', () => {
 
     expect(titleEl.textContent).toBe('Heading 1');
     expect(titleEl.getAttribute(DATA_ATTR.popoverItemTitle)).toBe('');
-    expect(titleEl.classList.contains('mr-auto')).toBe(true);
+    expect(titleEl.classList.contains('me-auto')).toBe(true);
     expect(titleEl.classList.contains('grow')).toBe(false);
   });
 
-  it('switches the title class when a secondary label shares the row', () => {
+  // A stretched title would let plaintext bidi push Latin text to the far
+  // side of an RTL row, so the title stays as wide as its text.
+  it('keeps the title as wide as its text when a secondary label shares the row', () => {
     const item = makeItem({ title: 'Delete', secondaryLabel: '⌘ + D', onActivate: () => {} });
     const root = getElement(item);
 
-    expect(el(root, 'popover-item-title').classList.contains('grow')).toBe(true);
+    expect(el(root, 'popover-item-title').classList.contains('grow')).toBe(false);
+    expect(el(root, 'popover-item-title').classList.contains('me-auto')).toBe(true);
   });
 
   it('appends a live title host element with its node identity preserved', () => {
@@ -287,7 +290,7 @@ describe('PopoverItemDefault — title, icon and label elements', () => {
     const item = makeItem({ title: 'Done', trailingIcon: '<svg data-trailing="check"></svg>', onActivate: () => {} });
     const trailing = el(getElement(item), 'popover-item-trailing-icon');
 
-    expect(trailing.classList.contains('ml-auto')).toBe(true);
+    expect(trailing.classList.contains('ms-auto')).toBe(true);
     expect(trailing.classList.contains('shrink-0')).toBe(true);
     expect(trailing.getAttribute('aria-hidden')).toBe('true');
     expect(trailing.innerHTML).toContain('data-trailing="check"');
@@ -324,7 +327,7 @@ describe('PopoverItemDefault — contextual class matrix', () => {
     const root = getElement(item);
 
     expect(root.classList.contains('justify-center')).toBe(true);
-    expect(root.classList.contains('pl-2')).toBe(false);
+    expect(root.classList.contains('ps-2')).toBe(false);
     expect(root.classList.contains('px-0')).toBe(true);
     expect(root.classList.contains('py-0')).toBe(true);
     expect(root.classList.contains('px-2')).toBe(false);
@@ -347,9 +350,9 @@ describe('PopoverItemDefault — contextual class matrix', () => {
 
     expect(root.classList.contains('justify-center')).toBe(false);
     expect(iconEl.classList.contains('w-6')).toBe(true);
-    expect(iconEl.classList.contains('mr-2.5')).toBe(true);
-    expect(iconEl.classList.contains('mr-0!')).toBe(false);
-    expect(iconEl.classList.contains('mr-2!')).toBe(false);
+    expect(iconEl.classList.contains('me-2.5')).toBe(true);
+    expect(iconEl.classList.contains('me-0!')).toBe(false);
+    expect(iconEl.classList.contains('me-2!')).toBe(false);
     expect(iconEl.classList.contains('shadow-none')).toBe(false);
     expect(iconEl.classList.contains('w-auto')).toBe(false);
   });
@@ -366,7 +369,7 @@ describe('PopoverItemDefault — contextual class matrix', () => {
 
     expect(iconOnly.classList.contains('w-auto')).toBe(true);
     expect(iconOnly.classList.contains('shadow-none')).toBe(true);
-    expect(iconOnly.classList.contains('mr-0!')).toBe(true);
+    expect(iconOnly.classList.contains('me-0!')).toBe(true);
     expect(gapless.classList.contains('shadow-none')).toBe(false);
   });
 
@@ -376,10 +379,10 @@ describe('PopoverItemDefault — contextual class matrix', () => {
     const iconEl = el(root, 'popover-item-icon');
 
     expect(root.classList.contains('p-[3px]')).toBe(true);
-    expect(root.classList.contains('pl-2')).toBe(false);
+    expect(root.classList.contains('ps-2')).toBe(false);
     expect(iconEl.classList.contains('w-toolbox-btn')).toBe(true);
-    expect(iconEl.classList.contains('mr-2!')).toBe(true);
-    expect(iconEl.classList.contains('mr-2.5')).toBe(false);
+    expect(iconEl.classList.contains('me-2!')).toBe(true);
+    expect(iconEl.classList.contains('me-2.5')).toBe(false);
   });
 });
 

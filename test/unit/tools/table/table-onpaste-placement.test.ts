@@ -68,8 +68,12 @@ const createTableOptions = (
   block: {} as never,
 });
 
-const createPasteTable = (rowsHtml: string): HTMLTableElement => {
+const createPasteTable = (rowsHtml: string, dir?: string): HTMLTableElement => {
   const tableEl = document.createElement('table');
+
+  if (dir !== undefined) {
+    tableEl.setAttribute('dir', dir);
+  }
 
   tableEl.innerHTML = rowsHtml;
 
@@ -95,14 +99,14 @@ const sanitizeWithTablePasteConfig = (tableEl: HTMLTableElement): Element => {
   return sanitized;
 };
 
-const pasteAndSave = (rowsHtml: string, throughSanitizer: boolean): TableData => {
+const pasteAndSave = (rowsHtml: string, throughSanitizer: boolean, dir?: string): TableData => {
   const table = new Table(createTableOptions({ content: [['A']] }));
   const element = table.render();
 
   document.body.appendChild(element);
   table.rendered();
 
-  const pasted = createPasteTable(rowsHtml);
+  const pasted = createPasteTable(rowsHtml, dir);
   const data = throughSanitizer ? sanitizeWithTablePasteConfig(pasted) : pasted;
 
   table.onPaste({ detail: { data } } as unknown as CustomEvent);
@@ -171,5 +175,19 @@ describe('Table onPaste — external cell alignment becomes cell placement', () 
     const saved = pasteAndSave('<tr><td style="text-align: justify">A</td></tr>', false);
 
     expect(cellAt(saved, 0, 0).placement).toBeUndefined();
+  });
+
+  it('reads an RTL table\'s alignment as the grid start/end through the REAL paste sanitizer', () => {
+    const saved = pasteAndSave(
+      '<tr>'
+      + '<td style="text-align: left; vertical-align: bottom">A</td>'
+      + '<td style="text-align: right; vertical-align: middle">B</td>'
+      + '</tr>',
+      true,
+      'rtl',
+    );
+
+    expect(cellAt(saved, 0, 0).placement).toBe('bottom-right');
+    expect(cellAt(saved, 0, 1).placement).toBe('middle-left');
   });
 });

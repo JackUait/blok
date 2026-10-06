@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 /**
  * A container's holder holds its children's holders, and a toggle keeps its
@@ -38,6 +39,7 @@ const createBlok = async (page: Page, blocks: OutputBlockData[]): Promise<void> 
     window.blokInstance = blok;
     await blok.isReady;
   }, { holder: HOLDER_ID, initialBlocks: blocks });
+  await openFixtureToggles(page, { blocks });
 };
 
 /** `id:type:parent` for every saved block, in saved order. */

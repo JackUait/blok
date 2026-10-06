@@ -882,7 +882,7 @@ describe('BlockSettings', () => {
   });
 
 
-  it('passes minWidth of 220px to the popover', async () => {
+  it('gives the popover a 280px floor instead of a fixed width', async () => {
     blockSettings.make();
 
     const block = createBlock();
@@ -904,9 +904,10 @@ describe('BlockSettings', () => {
     await blockSettings.open(block);
 
     const popover = getLastPopover();
-    const params = popover?.params as { minWidth?: string } | undefined;
+    const params = popover?.params as { minWidth?: string; width?: string } | undefined;
 
-    expect(params?.minWidth).toBe('220px');
+    expect(params?.minWidth).toBe('280px');
+    expect(params?.width).toBeUndefined();
 
     getTunesItemsSpy.mockRestore();
   });

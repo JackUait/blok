@@ -452,6 +452,22 @@ describe('EmojiPicker', () => {
         expect(localStorage.getItem('blok-emoji-skin-tone')).toBe('3');
       });
 
+      it('a reopen shows the skin tone another tab picked while it was closed', async () => {
+        const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+        const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
+        container.appendChild(picker.getElement());
+        await picker.open(container);
+        picker.close();
+
+        localStorage.setItem('blok-emoji-skin-tone', '2');
+        window.dispatchEvent(new StorageEvent('storage', { key: 'blok-emoji-skin-tone', newValue: '2', storageArea: localStorage }));
+        await picker.open(container);
+
+        const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+
+        expect(toggle.textContent).toBe('✋🏼');
+      });
+
       it('restores skin tone from localStorage when picker opens', async () => {
         localStorage.setItem('blok-emoji-skin-tone', '2');
 

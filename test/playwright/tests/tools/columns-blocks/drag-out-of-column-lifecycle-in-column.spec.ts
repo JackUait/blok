@@ -151,7 +151,7 @@ const headerInColumnFixture = (): OutputData => ({
 /**
  * The container variant: a Toggle (toggle1) WITH a child paragraph (tc1) in the
  * first column, alongside a plain "c1keeper" paragraph (see headerInColumnFixture
- * for why the keeper is needed). The toggle data shape is `{ text, isOpen }` with
+ * for why the keeper is needed). The toggle data shape is `{ text }` with
  * `content: ['tc1']` and the child carries `parent: 'toggle1'` (matches
  * toggle-in-column.spec.ts).
  */

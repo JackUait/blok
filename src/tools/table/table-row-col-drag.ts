@@ -1,4 +1,8 @@
+import { getElementDirection } from '../../components/utils/direction';
+import { syncPortalDirection } from '../../components/utils/portal-direction';
+
 import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, ownRows } from './table-core';
+import { colEdgeX, gridX } from './table-direction';
 import type { RowColAction } from './table-row-col-controls';
 
 const DRAG_THRESHOLD = 10;
@@ -13,8 +17,9 @@ const ownCellInCol = (row: Element, col: number): HTMLElement | null =>
 
 /**
  * Build cumulative column edge positions from the first row's cells.
- * Returns an array of [0, w0, w0+w1, ...] representing left edges of each column
- * plus the right edge of the last column.
+ * Returns an array of [0, w0, w0+w1, ...]: each column's inline-start edge plus
+ * the inline end of the last column, in reading order. Map to physical x with
+ * colEdgeX (table-direction.ts).
  */
 export const getCumulativeColEdges = (grid: HTMLElement): number[] => {
   const colgroup = grid.querySelector(':scope > colgroup');
@@ -63,10 +68,12 @@ export interface TableDragOptions {
   onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null, dragIndex: number) => void;
   /**
    * Can this row/column be picked up at all? False when it is part of a merge
-   * that extends beyond it. The gesture is then rejected on sight with a
-   * not-allowed cursor instead of running a full drag that silently snaps back.
+   * that extends beyond it. The gesture is then rejected on sight instead of
+   * running a full drag that silently snaps back.
    */
   canDrag?: (type: 'row' | 'col', index: number) => boolean;
+  /** A gesture refused by canDrag passed the drag threshold. Fires once per gesture. */
+  onDragRejected?: (type: 'row' | 'col', index: number) => void;
   /**
    * Can the dragged row/column land at this index? False when the drop would
    * cut through a merged span. Drives live feedback during the drag (the drop
@@ -85,10 +92,12 @@ export class TableRowColDrag {
   private onAction: (action: RowColAction) => void;
   private onDragStateChange: ((isDragging: boolean, dragType: 'row' | 'col' | null, dragIndex: number) => void) | null;
   private canDrag: ((type: 'row' | 'col', index: number) => boolean) | null;
+  private onDragRejected: ((type: 'row' | 'col', index: number) => void) | null;
   private canDrop: ((type: 'row' | 'col', fromIndex: number, toIndex: number) => boolean) | null;
 
   /** The grabbed row/column is locked in place (merge would tear) — reject the gesture. */
   private isDragRejected = false;
+  private isRejectionReported = false;
 
   private isDragging = false;
   private dragType: 'row' | 'col' | null = null;
@@ -113,6 +122,7 @@ export class TableRowColDrag {
     this.onAction = options.onAction;
     this.onDragStateChange = options.onDragStateChange ?? null;
     this.canDrag = options.canDrag ?? null;
+    this.onDragRejected = options.onDragRejected ?? null;
     this.canDrop = options.canDrop ?? null;
 
     this.boundDocPointerMove = this.handleDocPointerMove.bind(this);
@@ -172,6 +182,7 @@ export class TableRowColDrag {
     this.onDragStateChange?.(false, null, -1);
     this.isDragging = false;
     this.isDragRejected = false;
+    this.isRejectionReported = false;
     this.dragType = null;
     this.dragFromIndex = -1;
     this.resolveTracking = null;
@@ -212,11 +223,11 @@ export class TableRowColDrag {
     const passedThreshold = dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD;
 
     // A row/column locked by a merge never enters drag state — no ghost, no
-    // drop indicator. The not-allowed cursor is the feedback, so the user sees
-    // the move was refused instead of watching the row snap back silently.
+    // drop indicator. The owner explains the refusal instead.
     if (this.isDragRejected) {
-      if (passedThreshold) {
-        document.body.style.cursor = 'not-allowed';
+      if (passedThreshold && !this.isRejectionReported && this.dragType !== null) {
+        this.isRejectionReported = true;
+        this.onDragRejected?.(this.dragType, this.dragFromIndex);
       }
 
       return;
@@ -407,11 +418,11 @@ export class TableRowColDrag {
       return;
     }
 
-    const relativeX = e.clientX - gridRect.left;
-    const dropIndex = this.getColDropIndex(relativeX);
+    const direction = getElementDirection(this.grid);
     const edges = getCumulativeColEdges(this.grid);
+    const dropIndex = this.getColDropIndex(e.clientX - gridRect.left, edges, direction);
 
-    this.dropIndicator.style.left = `${(edges[dropIndex] ?? 0) - 1.5}px`;
+    this.dropIndicator.style.left = `${colEdgeX(edges, dropIndex, direction) - 1.5}px`;
     this.reflectDropAllowed(this.isDropAllowed(dropIndex));
   }
 
@@ -440,8 +451,8 @@ export class TableRowColDrag {
   }
 
   private finishColDrag(e: PointerEvent, gridRect: DOMRect): void {
-    const relativeX = e.clientX - gridRect.left;
-    const rawDropIndex = this.getColDropIndex(relativeX);
+    const direction = getElementDirection(this.grid);
+    const rawDropIndex = this.getColDropIndex(e.clientX - gridRect.left, getCumulativeColEdges(this.grid), direction);
     const dropIndex = this.toDropIndex(rawDropIndex);
 
     if (dropIndex !== this.dragFromIndex && this.isDropAllowed(rawDropIndex)) {
@@ -485,6 +496,8 @@ export class TableRowColDrag {
       this.buildColumnGhost();
     }
 
+    // Cells lay out and align by the ghost's dir, like the grid's.
+    syncPortalDirection(ghost, { source: this.grid });
     document.body.appendChild(ghost);
 
     if (sourceRect) {
@@ -637,8 +650,8 @@ export class TableRowColDrag {
     return 0;
   }
 
-  private getColDropIndex(relativeX: number): number {
-    const edges = getCumulativeColEdges(this.grid);
+  private getColDropIndex(physicalX: number, edges: number[], direction: 'ltr' | 'rtl'): number {
+    const relativeX = gridX(physicalX, edges[edges.length - 1] ?? 0, direction);
     const distances = edges.map(edge => Math.abs(relativeX - edge));
     const minDist = Math.min(...distances);
 

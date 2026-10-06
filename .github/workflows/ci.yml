@@ -55,8 +55,12 @@ jobs:
           restore-keys: |
             lint-v2-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-
 
+      # A cold tsc, or a warm one after editing a widely imported file, peaks
+      # at ~5.6 GB; Node's ~4 GB default heap dies with exit 134.
       - name: Lint
         run: yarn lint
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
 
       # Save only after a green lint: a failed run's ESLint cache carries the
       # error entries, and restoring one replays those stale errors for every

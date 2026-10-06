@@ -75,9 +75,14 @@ export class Core {
           await this.start();
           await this.render();
 
-          const { BlockManager, Caret, UI, ModificationsObserver } = this.moduleInstances;
+          const { BlockManager, Caret, UI, ModificationsObserver, TabSync } = this.moduleInstances;
 
           UI.checkEmptiness();
+          // Optional: unit fixtures build Core without the module.
+          void TabSync?.start({
+            loadedFromPersistence: this.loadedFromPersistence,
+            isEmpty: BlockManager.blocks.every((block) => block.isEmpty),
+          });
           ModificationsObserver.enable();
 
           /**
@@ -116,6 +121,9 @@ export class Core {
    */
   private pendingPersistedLoad: (() => Promise<OutputData | PersistedDocument | null>) | null = null;
 
+  /** True when the rendered document came from `persistence.load`; tab sync trusts only that id. */
+  private loadedFromPersistence = false;
+
   public set configuration(config: BlokConfig|string|undefined) {
     /**
      * Place config into the class property
@@ -140,6 +148,7 @@ export class Core {
      * so a refused config never builds a persistence save queue it will not use.
      */
     this.validateCollaborationConfig();
+    this.validateTabSyncConfig();
 
     /**
      * `server` is sugar over options that already exist. Expanding it here —
@@ -302,7 +311,10 @@ export class Core {
       this.config.collaboration === undefined &&
       (isEmpty(this.config.data) || this.config.data.blocks.length === 0)
     ) {
-      this.config.data = { blocks: [ defaultBlockData ] };
+      const { id } = this.config.data;
+
+      // Keep the id: the Saver reads it from here to keep the document's identity.
+      this.config.data = { ...(typeof id === 'string' && id !== '' ? { id } : {}), blocks: [ defaultBlockData ] };
     }
 
     this.config.readOnly = this.config.readOnly ?? false;
@@ -314,6 +326,21 @@ export class Core {
    */
   public get configuration(): BlokConfig {
     return this.config;
+  }
+
+  /**
+   * Refuse a malformed `documentId` / `tabSync`. Throwing rejects the ready promise.
+   */
+  private validateTabSyncConfig(): void {
+    const { documentId, tabSync } = this.config;
+
+    if (documentId !== undefined && (typeof documentId !== 'string' || documentId === '')) {
+      throw new Error('documentId must be a non-empty string');
+    }
+
+    if (tabSync !== undefined && typeof tabSync !== 'boolean' && (typeof tabSync !== 'object' || tabSync === null)) {
+      throw new Error('tabSync must be a boolean or an object');
+    }
   }
 
   /**
@@ -414,6 +441,7 @@ export class Core {
       'ReadOnly',
       'ThemeManager',
       'Find',
+      'PageReferences',
     ];
 
     await modulesToPrepare.reduce(
@@ -482,6 +510,10 @@ export class Core {
       return renderer.render(normalizeOutputBlocks(data.blocks));
     }
 
+    const { UI } = this.moduleInstances;
+
+    UI.showLoading();
+
     return load().then((result) => {
       const loaded = unwrapPersistedDocument(result);
       const blocks = loaded?.blocks;
@@ -498,12 +530,19 @@ export class Core {
         const cloned = cloneOutputBlocks(normalizeOutputBlocks(blocks));
 
         this.config.data = { ...loaded, blocks: cloned };
+        this.loadedFromPersistence = true;
 
         return renderer.render(cloned);
       }
 
       return renderer.render(normalizeOutputBlocks(data.blocks));
-    });
+    }).then(
+      () => UI.hideLoading(),
+      async (error: unknown) => {
+        await UI.hideLoading();
+        throw error;
+      }
+    );
   }
 
   /**

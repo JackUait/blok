@@ -6,7 +6,7 @@ import { ownClone } from '../../components/utils/own-element';
  * Default block tools that are always restricted from being inserted into table cells.
  * These tools create semantic or structural issues when nested in table cells.
  */
-const DEFAULT_RESTRICTED_TOOLS = ['header', 'table', 'column_list'];
+const DEFAULT_RESTRICTED_TOOLS = ['header', 'table', 'column_list', 'tabs'];
 
 /**
  * Additional restricted tools registered via table tool config.

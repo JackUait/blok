@@ -81,12 +81,12 @@ const CANARY_PROBES: Record<string, string> = {
 };
 
 function visit(entry: { name: string; isDirectory: () => boolean }, dir: string, pattern: RegExp, acc: string[]): void {
-  if (SKIP_DIRS.has(entry.name)) return;
+  if (SKIP_DIRS.has(entry.name) || (entry.isDirectory() && entry.name.startsWith('.blok-server-runtime-'))) return;
 
   const full = join(dir, entry.name);
 
   if (entry.isDirectory()) collect(full, pattern, acc);
-  else if (pattern.test(entry.name)) acc.push(full);
+  else if (pattern.exec(entry.name) !== null) acc.push(full);
 }
 
 function collect(dir: string, pattern: RegExp, acc: string[] = []): string[] {
@@ -446,7 +446,7 @@ function deadTokensOf(site: ClassStringSite, emits: (token: string) => boolean, 
       const bare = token.replace(/^.*:/, '').replace(/^-/, '').replace(/\/.*$/, '');
 
       // A utility always starts with a letter, `-`, `[`, `*` or `!` — never a digit.
-      if (!/^[a-zA-Z[*!-]/.test(token)) return false;
+      if (/^[a-zA-Z[*!-]/.exec(token) === null) return false;
       if (VARIANT_MARKER.test(token)) return false;
       // Repo-owned BEM hooks. Safe ONLY because no Tailwind utility can start with
       // `blok-`; adding an `@utility blok-*` would hide breakage behind this rule.

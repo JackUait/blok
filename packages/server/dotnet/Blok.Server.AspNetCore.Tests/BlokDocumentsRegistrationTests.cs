@@ -324,6 +324,32 @@ public sealed class BlokDocumentsRegistrationTests
     public ValueTask<string> ToHtmlAsync(string documentJson, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
+    public ValueTask<BlokPageIndex> GetPageIndexAsync(
+        string documentJson,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public ValueTask<string> RemapPageDocumentAsync(
+        string documentJson,
+        IReadOnlyDictionary<string, string> blockIds,
+        IReadOnlyDictionary<string, string> pageIds,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public ValueTask<string> ToHtmlAsync(
+        string documentJson,
+        IReadOnlyDictionary<string, BlokPageInfo?> pages,
+        Func<string, string>? pageHref = null,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public ValueTask<BlokMarkdownConversion> ToMarkdownAsync(
+        string documentJson,
+        IReadOnlyDictionary<string, BlokPageInfo?> pages,
+        Func<string, string>? pageHref = null,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
     /** The one method the warm-up calls, so it answers rather than throwing. */
     public virtual ValueTask<string> ToPlainTextAsync(
         string documentJson,

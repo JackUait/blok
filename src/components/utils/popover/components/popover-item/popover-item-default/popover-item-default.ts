@@ -18,7 +18,6 @@ import type {
  * Represents single popover item node
  * @todo replace multiple make() usages with constructing separate instances
  * @todo split regular popover item and popover item with confirmation to separate classes
- * @todo display icon on the right side of the item for rtl languages
  */
 export class PopoverItemDefault extends PopoverItem {
   /**
@@ -189,6 +188,34 @@ export class PopoverItemDefault extends PopoverItem {
   }
 
   /**
+   * Shows a spinner while the item's action waits, e.g. on a host's backend.
+   * @param isBusy - true while waiting
+   */
+  public setBusy(isBusy: boolean): void {
+    const root = this.nodes.root;
+
+    if (root === null) {
+      return;
+    }
+
+    root.querySelector('[data-blok-testid="popover-item-spinner"]')?.remove();
+    root.removeAttribute('aria-busy');
+
+    if (!isBusy) {
+      return;
+    }
+
+    const spinner = document.createElement('div');
+
+    // Neutral ink: a busy item is not a selected one, so no blue.
+    spinner.className = 'ms-auto size-3.5 shrink-0 rounded-full border-2 border-solid [border-color:color-mix(in_srgb,var(--blok-text-primary)_14%,transparent)] [border-top-color:var(--blok-text-primary)] animate-[blok-image-retry-spin_0.9s_linear_infinite]';
+    spinner.setAttribute('data-blok-testid', 'popover-item-spinner');
+    spinner.setAttribute('aria-hidden', 'true');
+    root.setAttribute('aria-busy', 'true');
+    root.appendChild(spinner);
+  }
+
+  /**
    * Resets popover item to its original state
    */
   public reset(): void {
@@ -300,9 +327,9 @@ export class PopoverItemDefault extends PopoverItem {
     if (title !== undefined || titleHost !== undefined) {
       const titleEl = document.createElement('div');
 
-      titleEl.className = params.secondaryLabel
-        ? 'grow whitespace-nowrap text-[13px] font-medium leading-5'
-        : 'mr-auto whitespace-nowrap text-[13px] font-medium leading-5';
+      // plaintext: the title takes its direction from its text, so "C++" keeps
+      // its order in an RTL menu. Only safe while the box is as wide as the text.
+      titleEl.className = 'me-auto whitespace-nowrap text-[13px] font-medium leading-5 [unicode-bidi:plaintext]';
       titleEl.setAttribute(DATA_ATTR.popoverItemTitle, '');
       titleEl.setAttribute('data-blok-testid', 'popover-item-title');
       PopoverItemDefault.setTitleContent(titleEl, titleHost ?? title ?? '');
@@ -325,7 +352,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.secondaryLabel) {
       const secondaryEl = document.createElement('div');
 
-      secondaryEl.className = 'ml-auto shrink-0 inline-flex items-center whitespace-nowrap pl-8 leading-none text-text-secondary';
+      secondaryEl.className = 'ms-auto shrink-0 inline-flex items-center whitespace-nowrap ps-8 leading-none text-text-secondary';
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.innerHTML = makeShortcutHtml(params.secondaryLabel);
@@ -349,11 +376,11 @@ export class PopoverItemDefault extends PopoverItem {
       }
     }
 
-    // Trailing icon (right-side indicator, e.g. checkmark)
+    // Trailing icon (end-side indicator, e.g. checkmark)
     if (params.trailingIcon) {
       const trailingEl = document.createElement('div');
 
-      trailingEl.className = 'ml-auto shrink-0 flex items-center justify-center [&_svg]:w-icon [&_svg]:h-icon';
+      trailingEl.className = 'ms-auto shrink-0 flex items-center justify-center [&_svg]:w-icon [&_svg]:h-icon';
       trailingEl.setAttribute('data-blok-testid', 'popover-item-trailing-icon');
       trailingEl.setAttribute('aria-hidden', 'true');
       trailingEl.innerHTML = params.trailingIcon;
@@ -439,7 +466,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     return twMerge(
       css.item,
-      !isInline && !isNestedInline && 'pl-2 pr-3',
+      !isInline && !isNestedInline && 'ps-2 pe-3',
       isInline && cssInline.item,
       isInline && this.params.icon && cssInline.itemIconOnly,
       isInline && this.params.title && cssInline.itemWithTitle,
@@ -456,20 +483,20 @@ export class PopoverItemDefault extends PopoverItem {
       css.icon,
       isInline && 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
       isNestedInline && 'w-toolbox-btn h-toolbox-btn',
-      iconWithGap && 'mr-2.5',
-      iconWithGap && isInline && 'shadow-none mr-0!',
-      iconWithGap && isNestedInline && 'mr-2!'
+      iconWithGap && 'me-2.5',
+      iconWithGap && isInline && 'shadow-none me-0!',
+      iconWithGap && isNestedInline && 'me-2!'
     );
   }
 
   /**
-   * Gets the chevron class. The glyph always points right — submenus open
+   * Gets the chevron class. The glyph points to the inline end (mirrored in RTL by CSS) — submenus open
    * sideways in every context, including the inline toolbar.
    */
   private getChevronClass(): string {
     return twMerge(
       css.icon,
-      'ml-3 w-4 h-4 text-text-secondary'
+      'ms-3 w-4 h-4 text-text-secondary'
     );
   }
 

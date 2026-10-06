@@ -7,6 +7,9 @@ import type { PasteHandler } from '../components/modules/paste/handlers/base';
 import { BasePasteHandler } from '../components/modules/paste/handlers/base';
 import { Block } from '../components/block';
 import { normalizeTableChildParents } from '../components/utils/data-model-transform';
+import { getRestrictedTools } from '../tools/table/table-restrictions';
+import { enclosingCellTable } from '../components/utils/enclosing-cell-table';
+import { subtreeEndIndex } from '../components/utils/blocks-tree';
 import type { InternalMarkdownImportConfig } from './types';
 
 /**
@@ -48,7 +51,8 @@ export function hasMarkdownSignals(text: string): boolean {
  * Priority 30: between TextHandler (10) and HtmlHandler (40).
  * Lazy-loads the converter on first use.
  *
- * Uses BlockManager.insertMany() to insert converted blocks directly,
+ * Uses BlockManager.insertMany() to insert converted blocks directly
+ * (one insert per block inside a table cell, so the table can claim them),
  * preserving all block data (list depth, table cells, etc.) that
  * would be lost if mapped through the DOM-based paste pipeline.
  */
@@ -120,12 +124,6 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     // lacking explicit parent), which would render them at page bottom.
     const outputBlocks = normalizeTableChildParents(rawOutputBlocks);
 
-    // Replace empty default block if present
-    const shouldReplace = context.canReplaceCurrentBlock && currentBlock !== undefined && currentBlock.isEmpty;
-    const insertIndex = shouldReplace
-      ? BlockManager.currentBlockIndex
-      : BlockManager.currentBlockIndex + 1;
-
     // Container membership: when the caret sits inside a container child (e.g. a
     // callout/toggle body) the converted top-level blocks must stay inside that
     // container instead of ejecting to the root. Mirrors BasePasteHandler's
@@ -135,9 +133,28 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
     const isInContainerTitle = childContainer !== null &&
       !childContainer.contains(currentBlock?.currentInput ?? null);
-    const contextParentId = isInContainerTitle
+
+    const table = currentBlock !== undefined ? enclosingCellTable(currentBlock, id => BlockManager.getBlockById(id)) : undefined;
+    const restricted = new Set(getRestrictedTools());
+    // A tool barred from cells sends the whole batch out of the table, right
+    // after its subtree, as BasePasteHandler.redirectToTableParentIfNeeded does.
+    const redirectTable = table !== undefined && outputBlocks.some(block => restricted.has(block.type)) ? table : undefined;
+
+    if (currentBlock !== undefined && table !== undefined && redirectTable === undefined
+      && currentBlock.parentId === table.id && !isInContainerTitle) {
+      await this.insertIntoCell(outputBlocks, currentBlock);
+
+      return true;
+    }
+
+    // Replace empty default block if present
+    const shouldReplace = redirectTable === undefined && context.canReplaceCurrentBlock && currentBlock !== undefined && currentBlock.isEmpty;
+    const nextIndex = redirectTable !== undefined ? this.indexAfterSubtree(redirectTable) : BlockManager.currentBlockIndex + 1;
+    const insertIndex = shouldReplace ? BlockManager.currentBlockIndex : nextIndex;
+    const caretParentId = isInContainerTitle
       ? (currentBlock?.id ?? null)
       : (currentBlock?.parentId ?? null);
+    const contextParentId = redirectTable !== undefined ? redirectTable.parentId : caretParentId;
 
     // Compose Block instances from OutputBlockData
     const composed = outputBlocks.map(({ id, type, data: blockData, parent }) => ({
@@ -183,6 +200,51 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     }
 
     return true;
+  }
+
+  /**
+   * Flat index right after `block` and all its descendants.
+   * @param block - the subtree root
+   */
+  private indexAfterSubtree(block: Block): number {
+    const { blocks } = this.Blok.BlockManager;
+    const reader = { getBlocksCount: (): number => blocks.length, getBlockByIndex: (i: number): Block | undefined => blocks[i] };
+
+    return subtreeEndIndex(reader, this.Blok.BlockManager.getBlockIndex(block)) + 1;
+  }
+
+  /**
+   * Insert the batch into the caret's table cell, after the caret block.
+   * Top-level blocks go in by index so the table claims them into that cell
+   * from the block-added event — insertMany fires none, and a later
+   * setBlockParent to the table would mount them in the FIRST cell.
+   * @param outputBlocks - the converted batch, in flat document order
+   * @param caretBlock - the cell block the caret is in
+   */
+  private async insertIntoCell(outputBlocks: OutputBlockData[], caretBlock: Block): Promise<void> {
+    const { BlockManager, Caret } = this.Blok;
+    const inserted: Block[] = [];
+
+    await this.inOneUndoGroup(async () => {
+      const start = this.indexAfterSubtree(caretBlock);
+
+      for (const { id, type, data: blockData, parent } of outputBlocks) {
+        const parentId = typeof parent === 'string' ? parent : null;
+        const afterId = parentId === null
+          ? null
+          : ([...inserted].reverse().find(block => block.parentId === parentId)?.id ?? null);
+
+        inserted.push(parentId === null
+          ? BlockManager.insert({ id, tool: type, data: blockData, index: start + inserted.length, needToFocus: false, origin: 'paste' })
+          : BlockManager.insert({ id, tool: type, data: blockData, placement: { parentId, afterId }, needToFocus: false, origin: 'paste' }));
+      }
+    });
+
+    const lastBlock = inserted[inserted.length - 1];
+
+    if (lastBlock !== undefined) {
+      Caret.setToBlock(lastBlock, Caret.positions.END);
+    }
   }
 
   /**

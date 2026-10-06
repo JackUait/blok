@@ -1,12 +1,13 @@
 import type { I18n } from '../../../types/api';
 import { Dom } from '../../components/dom';
-import { IconCopy, IconCross, IconDotsHorizontal, IconMarker, IconMergeCells, IconPlacement, IconSplitCell } from '../../components/icons';
+import { IconCopy, IconCross, IconDotsHorizontal, IconPaintRoller, IconMergeCells, IconPlacement, IconSplitCell } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
 import { isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../components/utils/caret';
+import { getElementDirection, logicalArrow } from '../../components/utils/direction';
 import { hasCrossHostSelectionWithin } from '../../components/selection/cross-block-range';
 
 import { CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR, ROW_ATTR } from './table-core';
@@ -14,6 +15,8 @@ import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
 import { createCellColorPicker } from './table-cell-color-picker';
 import type { CellColorMode } from './table-cell-color-picker';
 import { createCellPlacementPicker } from './table-cell-placement-picker';
+import { inlineAxis } from './table-direction';
+import type { InlineAxis } from './table-direction';
 import type { CellPlacement } from './types';
 
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -84,9 +87,7 @@ export type FillDirection = 'right' | 'down';
 
 type ArrowDirection = 'left' | 'right' | 'up' | 'down';
 
-const ARROW_DIRECTIONS: Record<string, ArrowDirection> = {
-  ArrowLeft: 'left',
-  ArrowRight: 'right',
+const VERTICAL_ARROWS: Record<string, ArrowDirection> = {
   ArrowUp: 'up',
   ArrowDown: 'down',
 };
@@ -94,13 +95,21 @@ const ARROW_DIRECTIONS: Record<string, ArrowDirection> = {
 /**
  * Resolve the plain (unmodified except Shift) arrow direction of a keydown.
  * Cmd/Ctrl/Alt+Shift+Arrow are native or block-movement gestures and are left alone.
+ * 'left'/'right' are column order, so they follow the grid: in an RTL grid
+ * ArrowLeft steps to the next column.
  */
-const resolveArrowDirection = (e: KeyboardEvent): ArrowDirection | null => {
+const resolveArrowDirection = (e: KeyboardEvent, grid: Element): ArrowDirection | null => {
   if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) {
     return null;
   }
 
-  return ARROW_DIRECTIONS[e.key] ?? null;
+  const inline = logicalArrow(e.key, getElementDirection(grid));
+
+  if (inline !== null) {
+    return inline === 'forward' ? 'right' : 'left';
+  }
+
+  return VERTICAL_ARROWS[e.key] ?? null;
 };
 
 /**
@@ -222,6 +231,8 @@ export class TableCellSelection {
   private anchorCell: CellCoord | null = null;
   private extentCell: CellCoord | null = null;
   private isSelecting = false;
+  /** Read once per pointer drag: past which side the pointer reaches the last column. */
+  private dragAxis: InlineAxis = inlineAxis('ltr');
   private hasSelection = false;
   private selectedCells: HTMLElement[] = [];
   private overlay: HTMLElement | null = null;
@@ -395,6 +406,13 @@ export class TableCellSelection {
   }
 
   /**
+   * Re-fit the overlay after the layout moved under it (a direction flip).
+   */
+  public reposition(): void {
+    this.repositionOverlay();
+  }
+
+  /**
    * Return the currently painted selection range, or null if nothing is selected.
    */
   public getSelectedRange(): SelectionRange | null {
@@ -461,7 +479,22 @@ export class TableCellSelection {
     }
 
     this.anchorCell = cell;
+
+    if (!clickedSameCell) {
+      /**
+       * Draw the box on the pressed cell now, without making it a selection
+       * yet — pointerup still decides that. Leaving the table with no box while
+       * the button is held reads as a blink.
+       */
+      this.extentCell = cell;
+      this.paintSelection();
+      // The old box's document clear handler runs after this one and would
+      // wipe the box just drawn. That box is already cleared above.
+      document.removeEventListener('pointerdown', this.boundClearSelection);
+    }
+
     this.isSelecting = false;
+    this.dragAxis = inlineAxis(getElementDirection(this.grid));
 
     // Suppress DOM-mutation-triggered Yjs syncs for the duration of this pointer drag.
     // The browser can mutate contenteditable DOM across cell boundaries during a drag,
@@ -588,6 +621,10 @@ export class TableCellSelection {
           this.anchorCell.row,
           this.anchorCell.col,
         );
+      } else {
+        // Drop the box pointerdown drew; the inner selection wins.
+        this.restoreModifiedCells();
+        this.lastPaintedRange = null;
       }
     }
 
@@ -681,6 +718,11 @@ export class TableCellSelection {
       return;
     }
 
+    // Resizing a column acts on the table, not on the selection inside it.
+    if (target instanceof HTMLElement && this.grid.contains(target) && target.closest('[data-blok-table-resize]') !== null) {
+      return;
+    }
+
     // Don't clear when clicking inside an open popover — the user may be
     // clicking a popover item whose pointerdown bubbles to the document.
     // Popovers render on document.body and carry `data-blok-popover-opened`.
@@ -737,10 +779,10 @@ export class TableCellSelection {
       return;
     }
 
-    const arrow = resolveArrowDirection(e);
+    const arrow = resolveArrowDirection(e, this.grid);
 
     if (arrow !== null) {
-      if (this.tryExtendKeyboardSelection(arrow)) {
+      if (this.tryExtendKeyboardSelection(arrow, e.key)) {
         e.preventDefault();
         e.stopPropagation();
       }
@@ -780,7 +822,7 @@ export class TableCellSelection {
    * Create or extend the keyboard rectangle in the given direction.
    * Returns true when the gesture was claimed (caller prevents/stops the event).
    */
-  private tryExtendKeyboardSelection(direction: ArrowDirection): boolean {
+  private tryExtendKeyboardSelection(direction: ArrowDirection, key: string): boolean {
     /**
      * A block selection inside the grid (e.g. Cmd+A on a cell line) owns
      * Shift+Arrow — it extends that intra-cell line selection. A whole-cell
@@ -790,7 +832,7 @@ export class TableCellSelection {
       return false;
     }
 
-    const origin = this.resolveKeyboardOrigin(direction);
+    const origin = this.resolveKeyboardOrigin(direction, key);
 
     if (origin === null) {
       return false;
@@ -834,7 +876,7 @@ export class TableCellSelection {
    * - an existing pointer rectangle is adopted (corner-to-corner)
    * - otherwise the caret's cell, but only at the cell's text boundary
    */
-  private resolveKeyboardOrigin(direction: ArrowDirection): { anchor: CellCoord; extent: CellCoord } | null {
+  private resolveKeyboardOrigin(direction: ArrowDirection, key: string): { anchor: CellCoord; extent: CellCoord } | null {
     if (this.hasSelection && this.keyboardAnchor !== null && this.keyboardExtent !== null) {
       return { anchor: this.keyboardAnchor, extent: this.keyboardExtent };
     }
@@ -857,7 +899,7 @@ export class TableCellSelection {
 
     const caret = this.resolveCaretCell();
 
-    if (caret === null || !this.isCaretAtCellBoundary(caret.input, direction)) {
+    if (caret === null || !this.isCaretAtCellBoundary(caret.input, direction, key)) {
       return null;
     }
 
@@ -889,12 +931,14 @@ export class TableCellSelection {
 
   /**
    * True when the caret sits at the far edge of the whole CELL (not merely of
-   * its own block): the last block's end when moving right/down, the first
-   * block's start when moving left/up. Anywhere else, Shift+Arrow stays a normal
-   * text/line gesture inside the cell.
+   * its own block): the last block's end for Down or an arrow toward the text's
+   * end, the first block's start for Up or an arrow toward the text's start.
+   * Left/Right read that from the text's own direction, not the grid's.
+   * Anywhere else, Shift+Arrow stays a normal text/line gesture inside the cell.
    */
-  private isCaretAtCellBoundary(input: HTMLElement, direction: ArrowDirection): boolean {
-    const towardsEnd = direction === 'right' || direction === 'down';
+  private isCaretAtCellBoundary(input: HTMLElement, direction: ArrowDirection, key: string): boolean {
+    const inline = logicalArrow(key, getElementDirection(input));
+    const towardsEnd = inline === null ? direction === 'down' : inline === 'forward';
     const container = input.closest<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
     const blockHolder = input.closest<HTMLElement>('[data-blok-id]');
 
@@ -1206,26 +1250,6 @@ export class TableCellSelection {
       return;
     }
 
-    const gridRect = this.grid.getBoundingClientRect();
-    const firstRect = firstCell.getBoundingClientRect();
-    const lastRect = lastCell.getBoundingClientRect();
-
-    // getBoundingClientRect() measures from the border-box edge, but
-    // position:absolute offsets from the padding-box edge. Subtract
-    // grid border widths to align with cell edges.
-    const gridStyle = getComputedStyle(this.grid);
-    const borderTop = parseFloat(gridStyle.borderTopWidth) || 0;
-    const borderLeft = parseFloat(gridStyle.borderLeftWidth) || 0;
-
-    const width = lastRect.right - firstRect.left + 1;
-    const height = lastRect.bottom - firstRect.top + 1;
-
-    // Extend overlay 1px outward to cover adjacent borders:
-    // grid border-top/border-left at row 0/col 0, or the previous
-    // row's border-bottom / previous column's border-right otherwise.
-    const top = firstRect.top - gridRect.top - borderTop - 1;
-    const left = firstRect.left - gridRect.left - borderLeft - 1;
-
     // Create overlay once, reuse on subsequent paints
     if (!this.overlay) {
       this.overlay = document.createElement('div');
@@ -1238,20 +1262,13 @@ export class TableCellSelection {
       this.grid.appendChild(this.overlay);
     }
 
-    this.overlay.style.top = `${top}px`;
-    this.overlay.style.left = `${left}px`;
-    this.overlay.style.width = `${width}px`;
-    this.overlay.style.height = `${height}px`;
-
     // Create pill once, reuse on subsequent paints
     if (!this.pill) {
       this.pill = this.createPill();
       this.grid.appendChild(this.pill);
     }
 
-    // Position at center of the 2px right border; translate(-50%,-50%) handles centering
-    this.pill.style.left = `${left + width - 1}px`;
-    this.pill.style.top = `${top + height / 2}px`;
+    this.layoutOverlay(firstCell, lastCell);
 
     this.observeCellResizes();
   }
@@ -1275,26 +1292,49 @@ export class TableCellSelection {
       return;
     }
 
+    this.layoutOverlay(firstCell, lastCell);
+  }
+
+  /**
+   * Fit the overlay over the range's corner cells and pin the pill to its
+   * inline-end border.
+   */
+  private layoutOverlay(firstCell: HTMLElement, lastCell: HTMLElement): void {
     const gridRect = this.grid.getBoundingClientRect();
     const firstRect = firstCell.getBoundingClientRect();
     const lastRect = lastCell.getBoundingClientRect();
 
+    // getBoundingClientRect() measures from the border-box edge, but
+    // position:absolute offsets from the padding-box edge. Subtract
+    // grid border widths to align with cell edges.
     const gridStyle = getComputedStyle(this.grid);
     const borderTop = parseFloat(gridStyle.borderTopWidth) || 0;
     const borderLeft = parseFloat(gridStyle.borderLeftWidth) || 0;
 
-    const width = lastRect.right - firstRect.left + 1;
+    // In RTL the first cell is the right one, so take the union of both rects.
+    const rangeLeft = Math.min(firstRect.left, lastRect.left);
+    const rangeRight = Math.max(firstRect.right, lastRect.right);
+    const width = rangeRight - rangeLeft + 1;
     const height = lastRect.bottom - firstRect.top + 1;
-    const top = firstRect.top - gridRect.top - borderTop - 1;
-    const left = firstRect.left - gridRect.left - borderLeft - 1;
 
-    this.overlay.style.top = `${top}px`;
-    this.overlay.style.left = `${left}px`;
-    this.overlay.style.width = `${width}px`;
-    this.overlay.style.height = `${height}px`;
+    // Extend overlay 1px outward to cover adjacent borders:
+    // grid border-top/border-left at the top/left edge, or the neighbouring
+    // row's border-bottom / column's border-right otherwise.
+    const top = firstRect.top - gridRect.top - borderTop - 1;
+    const left = rangeLeft - gridRect.left - borderLeft - 1;
+
+    if (this.overlay) {
+      this.overlay.style.top = `${top}px`;
+      this.overlay.style.left = `${left}px`;
+      this.overlay.style.width = `${width}px`;
+      this.overlay.style.height = `${height}px`;
+    }
 
     if (this.pill) {
-      this.pill.style.left = `${left + width - 1}px`;
+      // Centre of the 2px inline-end border; translate(-50%,-50%) handles centering
+      const isRtl = gridStyle.direction === 'rtl';
+
+      this.pill.style.left = `${isRtl ? left + 1 : left + width - 1}px`;
       this.pill.style.top = `${top + height / 2}px`;
     }
   }
@@ -1402,7 +1442,7 @@ export class TableCellSelection {
       });
 
       colorPickerItems.push({
-        icon: IconMarker,
+        icon: IconPaintRoller,
         title: this.i18n.t('tools.table.cellColor'),
         name: 'cellColor',
         children: {
@@ -1427,6 +1467,7 @@ export class TableCellSelection {
 
       const { element: pickerElement } = createCellPlacementPicker({
         i18n: this.i18n,
+        direction: getElementDirection(this.grid),
         currentPlacement,
         onPlacementSelect: (placement: CellPlacement): void => {
           this.onPlacementChange?.([...this.selectedCells], placement);
@@ -1698,7 +1739,8 @@ export class TableCellSelection {
     }
 
     const row = this.clampAxis(e.clientY, gridRect.top, gridRect.bottom, rowCount, this.extentCell?.row ?? this.anchorCell.row);
-    const col = this.clampAxis(e.clientX, gridRect.left, gridRect.right, colCount, this.extentCell?.col ?? this.anchorCell.col);
+    const axis = this.dragAxis;
+    const col = this.clampAxis(axis.x(e.clientX), axis.start(gridRect), axis.end(gridRect), colCount, this.extentCell?.col ?? this.anchorCell.col);
 
     const clamped = { row, col };
 

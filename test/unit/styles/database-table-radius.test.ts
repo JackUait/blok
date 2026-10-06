@@ -40,7 +40,7 @@ const innerOf = (file: string, selector: string): string[] =>
     .filter(rule => rule.selector === selector)
     .flatMap(rule => declarations(rule.body, '--blok-radius-inner'));
 
-const ROLES = 'dialog|surface|block|field|control-lg|control|control-sm|mark|pill|notch';
+const ROLES = 'dialog|surface|block|field|control-lg|control|control-sm|mark|pill|notch|table';
 const ALLOWED = new RegExp(
   `^(?:0|50%|inherit|var\\(--blok-radius-(?:${ROLES})\\)|var\\(--blok-radius-inner, var\\(--blok-radius-(?:${ROLES})\\)\\))$`
 );

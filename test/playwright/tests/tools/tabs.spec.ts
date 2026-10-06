@@ -187,22 +187,29 @@ test.describe('Tabs tool', () => {
       .toEqual([{ title: 'Tab 1' }, { title: 'Tab 2' }, { title: 'Tab 3' }, { title: 'Notes' }]);
   });
 
-  test('double-clicking a tab renames it and Enter saves the title', async ({ page }) => {
-    await createBlok(page, threeTabs);
+  for (const name of ['Beta', 'Alpha']) {
+    test(`double-clicking tab ${name} opens its menu, and Rename edits the title`, async ({ page }) => {
+      await createBlok(page, threeTabs);
 
-    await tab(page, 'Beta').dblclick();
+      await tab(page, name).dblclick();
 
-    const input = page.getByRole('textbox', { name: 'Tab title' });
+      const input = page.getByRole('textbox', { name: 'Tab title' });
 
-    await expect(input).toBeFocused();
-    await input.fill('Renamed');
-    await input.press('Enter');
+      await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeVisible();
+      await expect(page.getByRole('menu')).toHaveCount(1);
+      await expect(input).toHaveCount(0);
 
-    await expect(tab(page, 'Renamed')).toBeVisible();
-    await expect(input).toHaveCount(0);
-    await expect.poll(async () => (await saveBlok(page)).blocks.find(block => block.id === 't2')?.data)
-      .toEqual({ title: 'Renamed' });
-  });
+      await page.getByRole('menuitem', { name: 'Rename' }).click();
+      await expect(input).toBeFocused();
+      await input.fill('Renamed');
+      await input.press('Enter');
+
+      await expect(tab(page, 'Renamed')).toBeVisible();
+      await expect(input).toHaveCount(0);
+      await expect.poll(async () => (await saveBlok(page)).blocks.find(block => block.data.title === 'Renamed')?.id)
+        .toBe(name === 'Alpha' ? 't1' : 't2');
+    });
+  }
 
   test('clicking the open tab opens its menu, and Delete removes the tab with its content', async ({ page }) => {
     await createBlok(page, threeTabs);

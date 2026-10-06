@@ -327,6 +327,21 @@ describe('tabs block', () => {
     expect(document.querySelectorAll('[role="menu"]')).toHaveLength(1);
   });
 
+  it.each([0, 1])('opens the tab menu, not a rename, on a double-click of tab %i', async (index) => {
+    await boot(doc());
+
+    const pill = pills()[index];
+
+    pill.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    pill.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 2 }));
+    pill.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, detail: 2 }));
+    await settle();
+
+    expect(document.querySelector('[data-blok-tabs-rename-input]')).toBeNull();
+    expect(document.querySelectorAll('[role="menu"][aria-label="Tab options"]')).toHaveLength(1);
+    expect(pills()[index].getAttribute('aria-expanded')).toBe('true');
+  });
+
   it('puts the strip back in order when a reorder is undone', async () => {
     const instance = await boot(doc());
 

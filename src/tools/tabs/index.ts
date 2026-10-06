@@ -624,8 +624,13 @@ export class TabsTool implements BlockTool, TabsHandle {
     pill.appendChild(label);
     pill.setAttribute('aria-label', label.textContent);
 
-    pill.addEventListener('click', () => {
+    pill.addEventListener('click', (event) => {
       const isActive = pill.getAttribute('aria-selected') === 'true';
+
+      // The second click of a double-click keeps the menu the first one opened.
+      if (event.detail > 1 && pill.getAttribute('aria-expanded') === 'true') {
+        return;
+      }
 
       if (isActive && !this.readOnly) {
         this.openMenu(id);
@@ -634,10 +639,6 @@ export class TabsTool implements BlockTool, TabsHandle {
       }
 
       this.select(id, { animate: true, focus: false });
-    });
-    pill.addEventListener('dblclick', (event) => {
-      event.preventDefault();
-      this.startRename(id);
     });
     pill.addEventListener('contextmenu', (event) => {
       if (this.readOnly) {

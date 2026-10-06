@@ -11625,6 +11625,7 @@ span[data-blok-slash-search] {
   background: transparent;
   color: inherit;
   font: inherit;
+  line-height: var(--blok-line-height-option);
   outline: none;
 }
 

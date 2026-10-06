@@ -200,6 +200,9 @@
   background: transparent;
   color: inherit;
   font: inherit;
+  /* After `font`, which resets it. The pill's line-height is its full height,
+   * and an input selection fills its line box. */
+  line-height: var(--blok-line-height-option);
   outline: none;
 }
 

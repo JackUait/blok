@@ -1,5 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { createServer, type ViteDevServer } from 'vite';
 
@@ -20,14 +21,21 @@ const SEED_TITLE = 'Keyboard shortcuts';
 
 let vite: ViteDevServer | undefined;
 let viteUrl: string;
+let cacheDir: string | undefined;
 let host: { url: string; close: () => Promise<void> };
 
 test.describe.configure({ mode: 'default' });
 
 test.beforeAll(async () => {
+  cacheDir = mkdtempSync(join(tmpdir(), 'blok-vite-'));
   vite = await createServer({
     root: ROOT,
     logLevel: 'error',
+    // vite.config.mjs forces re-optimization, so every Vite boot deletes its
+    // deps dir. In the shared node_modules/.vite, another Vite booting
+    // (page-host-sync.spec.ts's worker, a retry, `yarn serve`) deletes the deps
+    // this one is serving: 504 Outdated Optimize Dep and a blank page.
+    cacheDir,
     // No HMR: the checkout is shared, and an edit to any watched file would
     // full-reload every open page mid-test. `watch: null` cannot do this:
     // Vite's mergeConfig skips null, so vite.config.mjs's watcher stays.
@@ -45,6 +53,9 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await vite?.close();
+  if (cacheDir !== undefined) {
+    rmSync(cacheDir, { recursive: true, force: true });
+  }
 });
 
 test.beforeEach(async () => {

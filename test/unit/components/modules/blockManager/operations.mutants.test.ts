@@ -101,6 +101,7 @@ const createBlock = (id: string, options: BlockStubOptions = {}): Block => {
     holder,
     parentId: options.parentId ?? null,
     contentIds: options.contentIds ?? [],
+    tool: { isLayout: false },
   } as unknown as Block;
 };
 
@@ -410,6 +411,36 @@ describe('BlockOperations — coordinator state and delegation', () => {
       const { operations } = createHarness({ blocks, currentBlockIndex: 1 });
 
       expect(operations.previousVisibleBlock).toBeNull();
+    });
+  });
+
+  describe('visible-block navigation through hidden ancestors', () => {
+    /**
+     * An inactive tab hides only its own holder; its content blocks carry no
+     * `hidden` class but are just as invisible.
+     */
+    const tabsFixture = (): Block[] => [
+      createBlock('before'),
+      createBlock('tab-1', { parentId: null, contentIds: ['in-1'] }),
+      createBlock('in-1', { parentId: 'tab-1' }),
+      createBlock('tab-2', { hidden: true, contentIds: ['in-2'] }),
+      createBlock('in-2', { parentId: 'tab-2', contentIds: ['deep'] }),
+      createBlock('deep', { parentId: 'in-2' }),
+      createBlock('after'),
+    ];
+
+    it('skips a block whose ancestor holder is hidden going forward', () => {
+      const blocks = tabsFixture();
+      const { operations } = createHarness({ blocks, currentBlockIndex: 2 });
+
+      expect(operations.nextVisibleBlock?.id).toBe('after');
+    });
+
+    it('skips a block whose ancestor holder is hidden going backward', () => {
+      const blocks = tabsFixture();
+      const { operations } = createHarness({ blocks, currentBlockIndex: 6 });
+
+      expect(operations.previousVisibleBlock?.id).toBe('in-1');
     });
   });
 

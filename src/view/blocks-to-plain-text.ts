@@ -15,7 +15,9 @@ import { htmlTextContent } from './html-text';
 import { claimedCellTexts, isSyntheticCell, leadingCellText, repairedTableRows } from './table-grid';
 
 import type { LooseOutputData, OutputData } from '../../types';
+import { ownEntry } from '../shared/own-entry';
 import { isPagePointer } from '../shared/page-pointer';
+import { PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
 
 /**
  * Narrow an unknown value to a plain record.
@@ -23,12 +25,6 @@ import { isPagePointer } from '../shared/page-pointer';
  */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
-
-/**
- * Plain text of an inline-HTML block-data field.
- * @param value - raw field value
- */
-const inlineText = (value: unknown): string => htmlTextContent(typeof value === 'string' ? value : '');
 
 /**
  * First non-empty string among the given data fields.
@@ -101,6 +97,14 @@ interface Segment {
   isList: boolean;
 }
 
+interface IndexBlockVisit {
+  block: ViewBlock;
+  sourceBlockId: string | null;
+  ownText: string;
+  order: number;
+  inTable: boolean;
+}
+
 /** Everything `blocksToHtml` takes, plus what the default reader leaves out. */
 export interface BlocksToPlainTextOptions extends BlocksToHtmlOptions {
   /**
@@ -127,26 +131,49 @@ export interface BlocksToPlainTextOptions extends BlocksToHtmlOptions {
   includeHiddenText?: boolean;
 }
 
+/** Every block id named by a table cell, including covered cells. */
+export const referencedCellIds = (block: ViewBlock): Set<string> => {
+  const content = Array.isArray(block.data.content) ? block.data.content : [];
+  const rows = content.filter((row): row is unknown[] => Array.isArray(row));
+
+  const cellIds = (cell: unknown): string[] => {
+    if (!isRecord(cell) || !Array.isArray(cell.blocks)) {
+      return [];
+    }
+
+    return cell.blocks.filter((id): id is string => typeof id === 'string');
+  };
+
+  return new Set(rows.flat().flatMap(cellIds));
+};
+
 /**
- * Extract the readable text of a saved Blok document AND report every block the
- * reader could make nothing of, synchronously and DOM-free.
- *
- * The text is identical to what {@link blocksToPlainText} returns; only the
- * report is new. Reach for this whenever `''` has to mean something — an empty
- * result alone cannot say whether the document holds no text or holds nothing
- * this reader understands.
- * @param data - saved document (strict or loose wire shape; nullish tolerated)
- * @param options - `blocksToHtml`'s options (custom renderers are rendered to HTML, then stripped), plus `includeHiddenText`
- * @returns the text and its degradations
+ * Read one document for plain text and, optionally, block-level index facts.
+ * @param data - saved document
+ * @param options - plain-text options
+ * @param onBlock - receives blocks in reading order
  */
-export const blocksToPlainTextWithReport = (
+const readPlainText = (
   data: OutputData | LooseOutputData | null | undefined,
-  options: BlocksToPlainTextOptions = {}
+  options: BlocksToPlainTextOptions,
+  onBlock?: (visit: IndexBlockVisit) => void
 ): PlainTextResult => {
   const model: DocumentModel = buildDocumentModel(data);
+  const sourceBlockId = (block: ViewBlock): string | null =>
+    block.id !== undefined && !model.syntheticIds.has(block.id) ? block.id : null;
   const renderers = options.renderers ?? {};
   const htmlRenderer = createHtmlRenderer(model, options);
   const includeHidden = options.includeHiddenText === true;
+  const inlineText = (value: unknown): string => htmlTextContent(
+    typeof value === 'string' ? value : '',
+    (pageId) => {
+      const info = options.pageInfo?.(pageId);
+
+      return info !== null && info !== undefined && info.access !== 'none' && typeof info.title === 'string' && info.title.trim() !== ''
+        ? info.title
+        : PAGE_REFERENCE_FALLBACK;
+    }
+  );
 
   /** Ids currently on the walk stack — breaks parent-reference cycles. */
   const active = new Set<string>();
@@ -161,7 +188,7 @@ export const blocksToPlainTextWithReport = (
    * @param block - the block that was read as nothing
    */
   const noteUnreadable = (block: ViewBlock): void => {
-    if (KNOWN_BLOCK_TYPES.has(block.type) || renderers[block.type] !== undefined) {
+    if (KNOWN_BLOCK_TYPES.has(block.type) || ownEntry(renderers, block.type) !== undefined) {
       return;
     }
 
@@ -208,6 +235,9 @@ export const blocksToPlainTextWithReport = (
           .join('\n');
       case 'code':
         return typeof block.data.code === 'string' ? block.data.code : '';
+      /** A tab title is plain text, so it is read raw rather than as HTML. */
+      case 'tab':
+        return typeof block.data.title === 'string' ? block.data.title : '';
       case 'image':
         return mediaText(block.data, ['caption'], ['caption', 'alt']);
       case 'video':
@@ -220,9 +250,26 @@ export const blocksToPlainTextWithReport = (
         return mediaText(block.data, ['caption', 'fileName'], ['caption', 'fileName', 'url']);
       case 'bookmark':
         return mediaText(block.data, ['title', 'url'], ['title', 'description', 'url']);
-      /** The title is plain text; an untitled page reads as nothing, not as a placeholder. */
       case 'page':
-        return isPagePointer(block.type, block.data) && isRecord(block.data.cache) ? firstString(block.data.cache, ['title']) : '';
+      case 'page-link': {
+        if (block.type === 'page' && !isPagePointer(block.type, block.data)) {
+          return '';
+        }
+        const pageId = block.data.pageId;
+        const info = typeof pageId === 'string' && pageId !== '' ? options.pageInfo?.(pageId) : undefined;
+
+        if (info === null) {
+          return 'Page not found';
+        }
+        if (info === undefined) {
+          return 'Page';
+        }
+        if (info.access === 'none') {
+          return 'No access';
+        }
+
+        return typeof info.title === 'string' && info.title !== '' ? info.title : 'New page';
+      }
       default:
         /** divider, spacer, columns, database, unknown tools… carry no own text. */
         return '';
@@ -234,7 +281,8 @@ export const blocksToPlainTextWithReport = (
    * used for table cell content.
    * @param block - block to read
    */
-  const deepText = (block: ViewBlock): string => {
+  const indexedTablePointers = new Set<string>();
+  const deepText = (block: ViewBlock, tableOrder: number): string => {
     if (block.id !== undefined && active.has(block.id)) {
       return '';
     }
@@ -246,8 +294,19 @@ export const blocksToPlainTextWithReport = (
     try {
       noteUnreadable(block);
 
-      const children = isPagePointer(block.type, block.data) ? [] : model.childrenOf(block.id);
-      const parts = [ownText(block), ...children.map(deepText)];
+      const pointer = isPagePointer(block.type, block.data) || block.type === 'page-link';
+      const text = block.type === 'table' ? tableText(block, tableOrder) : ownText(block);
+      const displayedText = pointer && onBlock !== undefined ? '' : text;
+
+      if (pointer && onBlock !== undefined && block.id !== undefined && !indexedTablePointers.has(block.id)) {
+        indexedTablePointers.add(block.id);
+        onBlock({ block, sourceBlockId: sourceBlockId(block), ownText: displayedText, order: tableOrder, inTable: true });
+      }
+
+      const referenced = block.type === 'table' ? referencedCellIds(block) : undefined;
+      const children = pointer ? [] : model.childrenOf(block.id)
+        .filter((child) => referenced === undefined || child.id === undefined || !referenced.has(child.id));
+      const parts = [displayedText, ...children.map((child) => deepText(child, tableOrder))];
 
       return parts.filter((part) => part !== '').join('\n');
     } finally {
@@ -262,7 +321,7 @@ export const blocksToPlainTextWithReport = (
    * either legacy inline HTML or child blocks resolved by id.
    * @param block - table block
    */
-  const tableText = (block: ViewBlock): string => {
+  const tableText = (block: ViewBlock, order: number): string => {
     const rows = repairedTableRows(block.data.content);
 
     const cellText = (cell: unknown): string => {
@@ -287,7 +346,7 @@ export const blocksToPlainTextWithReport = (
 
       const leading = leadingCellText(cell);
       const own = kids.length > 0
-        ? [...(leading === undefined ? [] : [inlineText(leading)]), ...kids.map(deepText)]
+        ? [...(leading === undefined ? [] : [inlineText(leading)]), ...kids.map((kid) => deepText(kid, order))]
         : [inlineText(cell.text)];
 
       return [...own, ...claimedCellTexts(cell).map(inlineText)].filter((part) => part !== '').join('\n');
@@ -308,31 +367,12 @@ export const blocksToPlainTextWithReport = (
   };
 
   /**
-   * Every block id named by any cell of a table.
-   * @param block - table block
-   */
-  const referencedCellIds = (block: ViewBlock): Set<string> => {
-    const content = Array.isArray(block.data.content) ? block.data.content : [];
-    const rows = content.filter((row): row is unknown[] => Array.isArray(row));
-
-    const cellIds = (cell: unknown): string[] => {
-      if (!isRecord(cell) || !Array.isArray(cell.blocks)) {
-        return [];
-      }
-
-      return cell.blocks.filter((id): id is string => typeof id === 'string');
-    };
-
-    return new Set(rows.flat().flatMap(cellIds));
-  };
-
-  /**
    * The block's own segments (no children). Empty texts produce no segment,
    * so contentless blocks add no stray separators.
    * @param block - block to read
    */
-  const ownSegments = (block: ViewBlock): Segment[] => {
-    const custom = renderers[block.type];
+  const ownSegments = (block: ViewBlock, order: number): Segment[] => {
+    const custom = ownEntry(renderers, block.type);
 
     if (custom !== undefined) {
       const text = htmlTextContent(custom(block.data, htmlRenderer.ctxFor(block)));
@@ -342,7 +382,7 @@ export const blocksToPlainTextWithReport = (
 
     noteUnreadable(block);
 
-    const text = block.type === 'table' ? tableText(block) : ownText(block);
+    const text = block.type === 'table' ? tableText(block, order) : ownText(block);
 
     return text === '' ? [] : [{ text, isList: block.type === 'list' }];
   };
@@ -352,6 +392,7 @@ export const blocksToPlainTextWithReport = (
    * @param block - block to walk
    * @param segments - accumulator
    */
+  const order = { value: 0 };
   const visit = (block: ViewBlock, segments: Segment[]): void => {
     if (block.id !== undefined && active.has(block.id)) {
       return;
@@ -362,19 +403,22 @@ export const blocksToPlainTextWithReport = (
     }
 
     try {
-      segments.push(...ownSegments(block));
+      const blockOrder = order.value++;
+      const own = ownSegments(block, blockOrder);
+
+      segments.push(...own);
+      onBlock?.({ block, sourceBlockId: sourceBlockId(block), ownText: own[0]?.text ?? '', order: blockOrder, inTable: false });
 
       /**
        * A table's cells already emitted the children they name, so those are
        * not re-emitted. A child no cell names is emitted here instead of being
        * dropped — silently indexing as nothing makes content unfindable.
        */
-      const referenced = block.type === 'table' && renderers[block.type] === undefined
+      const referenced = block.type === 'table' && ownEntry(renderers, block.type) === undefined
         ? referencedCellIds(block)
         : undefined;
 
-      /** A page's body lives in another document; children here are malformed and stay unread. */
-      if (isPagePointer(block.type, block.data) && renderers[block.type] === undefined) {
+      if ((isPagePointer(block.type, block.data) || block.type === 'page-link') && ownEntry(renderers, block.type) === undefined) {
         return;
       }
 
@@ -411,6 +455,27 @@ export const blocksToPlainTextWithReport = (
   });
 
   return { text: parts.join(''), warnings };
+};
+
+/**
+ * Extract readable text and report blocks the reader could not read.
+ * @param data - saved document
+ * @param options - plain-text options
+ */
+export const blocksToPlainTextWithReport = (
+  data: OutputData | LooseOutputData | null | undefined,
+  options: BlocksToPlainTextOptions = {}
+): PlainTextResult => readPlainText(data, options);
+
+/** Block facts for the internal page index, using the same text walk. */
+export const collectPageIndexBlocks = (
+  data: OutputData | LooseOutputData | null | undefined
+): IndexBlockVisit[] => {
+  const visits: IndexBlockVisit[] = [];
+
+  readPlainText(data, {}, (visit) => visits.push(visit));
+
+  return visits;
 };
 
 /**

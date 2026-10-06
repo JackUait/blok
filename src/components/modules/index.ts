@@ -33,6 +33,7 @@ import { Find } from './find';
 import { I18n } from './i18n';
 import { ModificationsObserver } from './modificationsObserver';
 import { Paste } from './paste';
+import { PageReferences } from './pageReferences';
 import { ReadOnly } from './readonly';
 import { RectangleSelection } from './rectangleSelection';
 import { Renderer } from './renderer';
@@ -96,6 +97,7 @@ export const Modules = {
   Find,
   ModificationsObserver,
   Paste,
+  PageReferences,
   ReadOnly,
   RectangleSelection,
   Renderer,

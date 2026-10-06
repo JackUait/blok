@@ -50,7 +50,8 @@ describe('preprocessGoogleDocsHtml — surviving-mutant coverage', () => {
       { colour: 'hsl(245, 30%, 80%)', light: true },
       { colour: 'x#eee', light: false },
       { colour: '#00ff87', light: true },
-      { colour: 'rgb(0, 0, 15)', light: false },
+      // Not rgb(0, 0, 15): that is near-black body ink, dropped as default text.
+      { colour: 'rgb(0, 0, 115)', light: false },
       { colour: '#eeex', light: false },
       { colour: 'hsl(0,0%,80%)', light: true },
       { colour: 'xhsl(0,0%,80%)', light: false },

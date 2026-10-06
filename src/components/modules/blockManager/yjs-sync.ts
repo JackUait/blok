@@ -168,6 +168,15 @@ export class BlockYjsSync {
   private readonly reconcilingBlocks = new Map<string, number>();
 
   /**
+   * Blocks this client added to the document while a sync window was open (a
+   * tool minting children in `rendered()` or in its read-only lift). They are
+   * not replay, so their parent's data, which references them, must be written
+   * too — or the doc keeps orphans and every boot mints another set.
+   * Cleared when the window closes.
+   */
+  private readonly addedLocallyDuringSync = new Set<string>();
+
+  /**
    * Blocks that mutated while their reconcile window was open, so the
    * write-back was dropped as the reconciler's own echo.
    *
@@ -275,6 +284,26 @@ export class BlockYjsSync {
    */
   public get isApplyingRemote(): boolean {
     return this.remoteSyncCount > 0;
+  }
+
+  /**
+   * Records a block this client just added to the document inside a sync
+   * window. See `addedLocallyDuringSync`.
+   * @param blockId - the added block
+   */
+  public noteLocalAddDuringSync(blockId: string): void {
+    if (this.isSyncingFromYjs) {
+      this.addedLocallyDuringSync.add(blockId);
+    }
+  }
+
+  /**
+   * Whether any of `childIds` was added by this client inside the open sync
+   * window. Their parent's data then has to reach the document.
+   * @param childIds - the parent's children
+   */
+  public hasLocalAddDuringSync(childIds: readonly string[]): boolean {
+    return this.addedLocallyDuringSync.size > 0 && childIds.some((id) => this.addedLocallyDuringSync.has(id));
   }
 
   /**
@@ -777,6 +806,9 @@ export class BlockYjsSync {
         this.remoteSyncCount--;
       }
       this.trackScope(blockId, -1);
+      if (this.yjsSyncCount === 0) {
+        this.addedLocallyDuringSync.clear();
+      }
       if (operations && this.yjsSyncCount === 0) {
         operations.suppressStopCapturing = false;
       }
@@ -1779,12 +1811,10 @@ export class BlockYjsSync {
         lastEditedBy,
       });
 
-      // An undo/redo root block after a nested one would land in that block's
-      // slot (see activateBlock). Not a peer's: its parent write may still
-      // come, and the table holds such a block by where its holder lands.
-      const mountAtRoot = parentId === undefined && replaySourceOf(origin) === 'history';
-
-      this.blocksStore.insert(targetIndex, block, false, false, mountAtRoot);
+      // A root block after a nested one would land in that block's slot (see
+      // activateBlock). A peer's table child is placed by the table data, not
+      // by where its holder lands.
+      this.blocksStore.insert(targetIndex, block, false, false, parentId === undefined);
 
       // The tool's own normalisation of what the document handed us lands
       // after this window closes — see `settlingBlocks`.
@@ -2343,7 +2373,8 @@ export class BlockYjsSync {
         return positions;
       }
 
-      this.blocksStore.move(targetIndex, currentIndex);
+      // An unmounted holder stays unmounted: a peer's table child waits for its cell.
+      this.blocksStore.move(targetIndex, currentIndex, block.holder.parentElement === null);
 
       return this.indexBlockPositions();
     }, this.indexBlockPositions());

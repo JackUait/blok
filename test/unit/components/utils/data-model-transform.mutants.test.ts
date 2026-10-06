@@ -23,10 +23,10 @@ afterEach(() => {
 
 describe('data-model-transform - transform decision gates', () => {
   describe('shouldExpandToHierarchical', () => {
-    it('expands legacy input for every model except the legacy one', () => {
+    it('expands legacy input for every model, the legacy one included', () => {
       expect(shouldExpandToHierarchical('auto', 'legacy')).toBe(true);
       expect(shouldExpandToHierarchical('hierarchical', 'legacy')).toBe(true);
-      expect(shouldExpandToHierarchical('legacy', 'legacy')).toBe(false);
+      expect(shouldExpandToHierarchical('legacy', 'legacy')).toBe(true);
     });
 
     it('never expands input that is not legacy', () => {

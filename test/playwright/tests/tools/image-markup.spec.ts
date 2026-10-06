@@ -105,7 +105,8 @@ test('Shift draws a square rectangle', async ({ page }) => {
   await seedImage(page);
   const { dialog, frame } = await openMarkup(page);
 
-  await dialog.getByRole('radio', { name: 'Rectangle' }).click();
+  await dialog.getByRole('radio', { name: 'Shapes' }).click();
+  await page.getByRole('dialog', { name: 'Shapes' }).getByRole('radio', { name: 'Rectangle', exact: true }).click();
   await page.keyboard.down('Shift');
   await stroke(page, within(frame, 0.2, 0.2), within(frame, 0.6, 0.4));
   await page.keyboard.up('Shift');
@@ -188,6 +189,56 @@ test('a saved text shows again on reopen and a double-click edits it', async ({ 
   await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="image-markup"] [data-markup-type="text"]`)).toHaveText('Bye');
 });
 
+const TWO_RECTS = [
+  { id: 'r1', type: 'rect', color: '#0a84ff', x1: 0.1, y1: 0.2, x2: 0.3, y2: 0.5, size: 0.012 },
+  { id: 'r2', type: 'rect', color: '#0a84ff', x1: 0.6, y1: 0.2, x2: 0.8, y2: 0.5, size: 0.012 },
+];
+
+const selectionBoxes = (page: Page): Locator => page.locator('[data-role="markup-selection"]');
+
+test('Ctrl+Click picks several marks and Delete removes them all', async ({ page }) => {
+  await seedImage(page, TWO_RECTS);
+  const { dialog, frame } = await openMarkup(page);
+
+  await dialog.getByRole('radio', { name: 'Select' }).click();
+  await page.mouse.click(...within(frame, 0.1, 0.35));
+  await page.keyboard.down('Control');
+  await page.mouse.click(...within(frame, 0.6, 0.35));
+  await page.keyboard.up('Control');
+  await expect(selectionBoxes(page)).toHaveCount(2);
+  // The next press still works after the Ctrl+Click.
+  await page.keyboard.down('Control');
+  await page.mouse.click(...within(frame, 0.6, 0.35));
+  await page.keyboard.up('Control');
+  await expect(selectionBoxes(page)).toHaveCount(1);
+  await page.keyboard.down('Control');
+  await page.mouse.click(...within(frame, 0.6, 0.35));
+  await page.keyboard.up('Control');
+  await expect(selectionBoxes(page)).toHaveCount(2);
+  await page.keyboard.press('Delete');
+  await expect(darkroomMarks(page)).toHaveCount(0);
+});
+
+test('a drag on empty space selects what it crosses, and dragging one moves them all', async ({ page }) => {
+  await seedImage(page, TWO_RECTS);
+  const { dialog, frame } = await openMarkup(page);
+
+  await dialog.getByRole('radio', { name: 'Select' }).click();
+  await stroke(page, within(frame, 0.05, 0.1), within(frame, 0.9, 0.25));
+  await expect(selectionBoxes(page)).toHaveCount(2);
+  await expect(page.locator('[data-role="markup-marquee"]')).toHaveCount(0);
+  await stroke(page, within(frame, 0.1, 0.35), within(frame, 0.2, 0.45));
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(dialog).toHaveCount(0);
+
+  const [a, b] = await marksOf(page);
+
+  expect(a.x1).toBeCloseTo(0.2, 1);
+  expect(b.x1).toBeCloseTo(0.7, 1);
+  expect(a.y1).toBeCloseTo(0.3, 1);
+  expect(b.y1).toBeCloseTo(0.3, 1);
+});
+
 test('Z zooms the view only: a rectangle drawn zoomed lands where the pointer was, and 100% is one image px per CSS px', async ({ page }) => {
   await seedImage(page);
   const { dialog } = await openMarkup(page);
@@ -261,4 +312,37 @@ test('the ? button opens the sheet and a second click closes it; a click outside
   await expect(sheet).toHaveCount(0);
   await expect(dialog).toBeVisible();
   expect(await page.locator('[data-role="darkroom-frame"]').boundingBox()).toEqual(frameBefore);
+});
+
+test('the shape picker draws its glyphs in the current ink, shows the photo in its framing tiles, and picks by keyboard', async ({ page }) => {
+  await seedImage(page);
+  const { dialog, frame } = await openMarkup(page);
+
+  await dialog.getByRole('radio', { name: 'Shapes' }).click();
+  const shapes = page.getByRole('dialog', { name: 'Shapes' });
+  const rect = shapes.getByRole('radio', { name: 'Rectangle', exact: true });
+
+  // The default pen ink is red (#ff3b30).
+  expect(await rect.evaluate((b) => getComputedStyle(b.querySelector('svg') ?? b).color)).toBe('rgb(255, 59, 48)');
+  for (const name of ['Spotlight', 'Magnifier']) {
+    const src = await shapes.getByRole('radio', { name }).evaluate((b) => b.querySelector('img')?.getAttribute('src'));
+
+    expect(src, name).toBe(SAMPLE_IMAGE_URL);
+  }
+
+  await expect(rect).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  const rounded = shapes.getByRole('radio', { name: 'Rounded rectangle' });
+
+  await expect(rounded).toBeFocused();
+  await expect(rounded).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('Escape');
+  await expect(shapes).toHaveCount(0);
+
+  await stroke(page, within(frame, 0.2, 0.2), within(frame, 0.6, 0.5));
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(dialog).toHaveCount(0);
+  const [mark] = await marksOf(page);
+
+  expect(mark.type).toBe('rounded-rect');
 });

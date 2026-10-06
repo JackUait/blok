@@ -152,6 +152,100 @@ internal sealed class LocalCollabStore : ICollabWorkingSetStore
         cancellationToken);
   }
 
+  /// <summary>
+  /// Only the doc's own file, and only when it decodes. Quarantined
+  /// <c>.unreadable-*</c> copies and scratch files are purge's to remove, so
+  /// an old scratch file never blocks this the way it blocks a purge.
+  /// </summary>
+  public Task RetireAsync(
+      string docId,
+      CancellationToken cancellationToken = default)
+  {
+    return CollabWorkingSetLaw.GuardAsync(
+        docId,
+        "retire",
+        async () =>
+        {
+          var path = PathFor(docId);
+
+          if (Directory.Exists(path))
+          {
+            return;
+          }
+
+          byte[] document;
+
+          try
+          {
+            document = await File.ReadAllBytesAsync(path, cancellationToken);
+          }
+          catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
+          {
+            return;
+          }
+
+          if (CollabWorkingSetLaw.DecodeOrAbsent(docId, document, log) is null)
+          {
+            return;
+          }
+
+          File.Delete(path);
+          SyncDirectory(directory);
+        },
+        cancellationToken);
+  }
+
+  public Task DeleteAsync(
+      string docId,
+      CancellationToken cancellationToken = default)
+  {
+    return CollabWorkingSetLaw.GuardAsync(
+        docId,
+        "delete",
+        () =>
+        {
+          cancellationToken.ThrowIfCancellationRequested();
+
+          if (!Directory.Exists(directory))
+          {
+            return Task.CompletedTask;
+          }
+
+          // Old temp names have no doc key, so their owner is unknown.
+          foreach (var path in Directory.EnumerateFiles(directory, ".blok-collab-*"))
+          {
+            cancellationToken.ThrowIfCancellationRequested();
+            var name = Path.GetFileName(path);
+
+            if (Guid.TryParseExact(name[".blok-collab-".Length..], "N", out _))
+            {
+              throw new IOException(
+                  $"collab: cannot purge \"{docId}\" while {name} may hold its working set.");
+            }
+          }
+
+          var key = CollabDocKey.For(docId);
+          File.Delete(Path.Combine(directory, key));
+
+          foreach (var path in Directory.EnumerateFiles(directory, $"{key}.unreadable-*"))
+          {
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Delete(path);
+          }
+
+          foreach (var path in Directory.EnumerateFiles(directory, $".blok-collab-{key}-*"))
+          {
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Delete(path);
+          }
+
+          SyncDirectory(directory);
+
+          return Task.CompletedTask;
+        },
+        cancellationToken);
+  }
+
   // DllImport, not LibraryImport: the source generator emits unsafe code and
   // AllowUnsafeBlocks is off for the whole project.
 #pragma warning disable SYSLIB1054
@@ -307,7 +401,7 @@ internal sealed class LocalCollabStore : ICollabWorkingSetStore
     var finalPath = PathFor(docId);
     var temporaryPath = Path.Combine(
         directory,
-        $".blok-collab-{Guid.NewGuid():N}");
+        $".blok-collab-{CollabDocKey.For(docId)}-{Guid.NewGuid():N}");
     FileStream? temporaryFile = null;
 
     try

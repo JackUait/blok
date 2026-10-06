@@ -8,6 +8,8 @@ export default {
   // known URL into a real HTML file so deep links answer 200 with prose in the
   // body instead of the redirect stub's empty 404.
   ssr: false,
+  // `/v/1.14/` for an archived minor, `/next/` for main. Assets and links follow it.
+  basename: process.env.DOCS_BASE || '/',
   buildDirectory: 'dist',
   // Both locale trees: `/docs/table` and `/ru/docs/table` are separate URLs and
   // therefore separate files.

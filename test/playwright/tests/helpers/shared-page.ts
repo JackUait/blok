@@ -57,6 +57,16 @@ export const test = base.extend<NonNullable<unknown>, { __sharedPage: Page }>({
       const viewport = testInfo.project.use.viewport ?? DEFAULT_VIEWPORT;
 
       await __sharedPage.setViewportSize(viewport);
+      // Media emulation survives navigation too: a spec that set reduced
+      // motion would strip every animation from the next file on this worker.
+      // null = the bare newContext() default the page was created with.
+      await __sharedPage.emulateMedia({
+        media: null,
+        colorScheme: null,
+        reducedMotion: null,
+        forcedColors: null,
+        contrast: null,
+      });
     }
     await use(__sharedPage);
   },

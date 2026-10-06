@@ -73,10 +73,6 @@ describe('markup-panel.css', () => {
     expect(rule).toMatch(/height:\s*1px/);
   });
 
-  it('the shape button chevron is small and muted next to the shape', () => {
-    expect(body(css, '.blok-darkroom__markup-shapes-chevron')).toMatch(/width:\s*1[0-2]px/);
-  });
-
   it('eraser size dots are hollow rings, not the last ink colour', () => {
     const rule = body(css, '.blok-darkroom__markup[data-tool="eraser"] .blok-darkroom__markup-dot');
 
@@ -143,6 +139,65 @@ describe('markup-panel.css', () => {
   it('scrolls both rows sideways instead of wrapping', () => {
     expect(body(css, '.blok-darkroom__markup-rail')).toMatch(/overflow-x:\s*auto/);
     expect(body(css, '.blok-darkroom__markup-context')).toMatch(/overflow-x:\s*auto/);
+  });
+
+  it('draws the shape tiles in the current ink, at the current width, filled when Fill is on', () => {
+    expect(body(css, '.blok-darkroom__markup-shape[data-ink] svg')).toMatch(/color:\s*var\(--blok-markup-color\)/);
+    expect(body(css, '.blok-darkroom__markup-shape[data-ink] svg > *')).toMatch(/stroke-width:\s*var\(--blok-markup-shape-stroke\)/);
+    ['0', '1', '2'].forEach((n) => {
+      expect(body(css, `.blok-darkroom__markup-shapes[data-size="${n}"]`)).toMatch(/--blok-markup-shape-stroke:/);
+    });
+    expect(body(css, '.blok-darkroom__markup-shapes[data-fill] .blok-darkroom__markup-shape[data-fillable] svg > *'))
+      .toMatch(/fill:\s*currentColor/);
+  });
+
+  it('keeps the checked shape tile a neutral fill, the glyph in the user\'s ink, never blue', () => {
+    expect(body(css, '.blok-darkroom__markup-shape[aria-checked="true"]')).toMatch(/background:\s*var\(--blok-icon-active-bg\)/);
+    expect(body(css, '.blok-darkroom__markup-shape[data-ink] svg')).not.toMatch(BLUE);
+  });
+
+  it('gives dark ink a light halo, so a black glyph still reads on the dark glass', () => {
+    expect(body(css, '.blok-darkroom__markup-shapes[data-ink-dark] .blok-darkroom__markup-shape[data-ink] svg')).toMatch(/filter:\s*drop-shadow/);
+  });
+
+  it('springs the picker out of its button and traces each glyph on in turn', () => {
+    expect(body(css, '.blok-darkroom__markup-shapes')).toMatch(/animation:[^;]*blok-markup-shapes-in/);
+    expect(body(css, '.blok-darkroom__markup-shape svg > *')).toMatch(/animation:[^;]*blok-markup-trace/);
+    expect(body(css, '.blok-darkroom__markup-shape svg > *')).toMatch(/--blok-markup-shape-i/);
+    expect(css).toMatch(/@keyframes blok-markup-trace\s*\{[^}]*stroke-dashoffset:\s*1/);
+  });
+
+  it('finishes the whole open sequence within half a second', () => {
+    const tokens = body(css, '.blok-darkroom__markup-shapes');
+    const ms = (name: string): number => {
+      const m = tokens.match(new RegExp(`${name}:\\s*(\\d+)ms`));
+
+      if (m === null) throw new Error(`no ${name}`);
+
+      return Number(m[1]);
+    };
+    // Eight drawn glyphs: the last one starts seven steps after the first.
+    const lastGlyphDone = ms('--blok-markup-shape-lead') + 7 * ms('--blok-markup-shape-step') + ms('--blok-markup-shape-trace');
+
+    expect(lastGlyphDone).toBeLessThanOrEqual(500);
+    expect(body(css, '.blok-darkroom__markup-shape svg > *')).toMatch(/var\(--blok-markup-shape-trace\)/);
+    expect(body(css, '.blok-darkroom__markup-shape svg > *')).toMatch(/var\(--blok-markup-shape-lead\)/);
+  });
+
+  it('crops the photo tiles to the tile, with a spotlight window and a round lens', () => {
+    expect(body(css, '.blok-darkroom__markup-shape[data-photo] img')).toMatch(/object-fit:\s*cover/);
+    expect(body(css, '.blok-darkroom__markup-spot::before')).toMatch(/box-shadow:/);
+    expect(body(css, '.blok-darkroom__markup-lens')).toMatch(/border-radius:\s*50%/);
+  });
+
+  it('opens the picker still under reduced motion', () => {
+    [
+      '.blok-darkroom__markup-shapes',
+      '.blok-darkroom__markup-shape svg > *',
+      '.blok-darkroom__markup-shape[data-photo] img',
+      '.blok-darkroom__markup-spot::before',
+      '.blok-darkroom__markup-lens',
+    ].forEach((sel) => expect(body(reducedMotion, sel)).toMatch(/animation:\s*none/));
   });
 
   it('stills the puck and the context fades under reduced motion', () => {

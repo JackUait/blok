@@ -12,13 +12,16 @@
  * Unit tests cannot see `docs/dist` during a unit run, so the artifact assertion
  * lives in the workflow and this law asserts that the workflow still carries it.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { PRERENDER_PATHS } from '../../../docs/src/prerender-paths';
 
 type Step = {
+  id?: string;
+  'working-directory'?: string;
+  'continue-on-error'?: boolean;
   name?: string;
   run?: string;
   uses?: string;
@@ -53,8 +56,8 @@ const workflow = parse(
   readFileSync(resolve(REPO_ROOT, '.github/workflows/deploy-docs.yml'), 'utf8'),
 ) as Workflow;
 
-/** Where the framework build puts the site, and what the Pages job uploads. */
-const ARTIFACT_ROOT = 'docs/dist/client';
+/** Where assemble-site.mjs puts the versioned site, and what the Pages job uploads. */
+const ARTIFACT_ROOT = 'site';
 
 /** The page the deploy probes for prose. Cross-checked against the real manifest below. */
 const PRERENDER_PROBE_ROUTE = '/docs/quick-start';
@@ -81,6 +84,12 @@ const RELEASE_GATED_JOBS: Record<string, string> = {
     'and the image after waiting for that same CI run, so the server half cannot be satisfied ' +
     'yet. The release and dispatch paths carry a tag and check everything. The build job accepts ' +
     '`skipped` so content still ships.',
+  snapshot:
+    'Builds the root and archive snapshots of a stable release and attaches them to that ' +
+    'release, which is where the build job downloads them from. It runs for the release event ' +
+    'and for the release_tag dispatch that release-server.yml sends. A CI run has no release to ' +
+    'attach to; it rebuilds only /next/ and reuses the published snapshots. The build job ' +
+    'accepts `skipped` so content still ships.',
 };
 
 const getJob = (id: string): Job => {
@@ -168,7 +177,8 @@ describe('docs deploy law — reachable without a release', () => {
 
   it('gates only the exempted jobs on a release event', () => {
     const releaseGated = Object.entries(workflow.jobs)
-      .filter(([, job]) => job.if?.includes("github.event_name == 'release'"))
+      // release-server.yml dispatches releases, so a gate may key on the tag alone.
+      .filter(([, job]) => /github\.event_name == 'release'|github\.event\.release\.|inputs\.release_tag/.test(job.if ?? ''))
       .map(([id]) => id)
       .sort();
 
@@ -198,17 +208,37 @@ describe('docs deploy law — reachable without a release', () => {
     }
   });
 
-  // `generate-seo-artifacts.mjs` dates each page from `git log -1` on the
-  // sources behind it. A depth-1 clone has no such history, so every route
-  // falls back to HEAD's date and all 148 sitemap `lastmod` values come out
-  // identical — which is exactly what production served.
-  it('checks out enough history for per-page sitemap dates', () => {
+  // Page dates come from docs/src/seo/lastmod-ledger.json, a committed file. The
+  // build job builds main, which has the ledger, and reads git only through
+  // `rev-parse HEAD` and `ls-files`, which a depth-1 clone answers.
+  it('does not fetch history the build job never reads', () => {
     const checkout = build.steps?.find((step) => step.name === 'Checkout code');
 
-    expect(
-      checkout?.with?.['fetch-depth'],
-      'the build job needs fetch-depth: 0, or every page claims it changed on deploy day',
-    ).toBe(0);
+    expect(checkout?.with?.['fetch-depth'], 'the build job fetches full history it does not use').toBeUndefined();
+  });
+
+  // The snapshot job builds a release TAG with that tag's own scripts. Every tag
+  // older than the ledger dates pages by `git log -1`, and a release_tag
+  // dispatch can rebuild any of them; a shallow clone collapses their lastmod.
+  it('checks out full history for tags that still date pages from git', () => {
+    const checkout = getJob('snapshot').steps?.find((step) => step.name === 'Checkout code');
+
+    expect(checkout?.with?.['fetch-depth']).toBe(0);
+  });
+
+  // The backfill builds the root snapshot the live site serves until the next
+  // stable release, so its tag checkout needs the same history.
+  it('backfills root snapshots from a full-history tag checkout', () => {
+    const backfill = parse(
+      readFileSync(resolve(REPO_ROOT, '.github/workflows/docs-backfill.yml'), 'utf8'),
+    ) as Workflow;
+    const tagCheckout = backfill.jobs.snapshot?.steps?.find(
+      (step) => step.uses?.startsWith('actions/checkout') && step.with?.path === 'tag',
+    );
+
+    expect(tagCheckout, 'docs-backfill no longer checks out the tag into tag/').toBeDefined();
+    expect(tagCheckout?.with?.['fetch-depth']).toBe(0);
+    expect(tagCheckout?.with?.['persist-credentials']).toBe(false);
   });
 
   // Everything else here checks bytes on the runner. Neither of the two worst
@@ -249,6 +279,160 @@ describe('docs deploy law — reachable without a release', () => {
   });
 });
 
+/** Where the deploy writes what it built, and what verify-live-docs.mjs compares the host against. */
+const BUILD_INFO_FILE = `${ARTIFACT_ROOT}/build-info.json`;
+const LIVE_REPORT = 'live-docs-report.json';
+const AUDIT_REPORT = 'docs-build-audit.json';
+
+const stepIndex = (steps: Step[], match: (step: Step) => boolean): number => steps.findIndex(match);
+
+describe('docs deploy law — the live site is proven to be the build just deployed', () => {
+  const buildInfoStep = buildSteps.find((step) => step.run?.includes(`node scripts/docs-build-info.mjs ${ARTIFACT_ROOT}`));
+  const smoke = getJob('seo-smoke');
+  const verifyStep = smoke.steps?.find((step) => step.run?.includes('verify-live-docs.mjs'));
+
+  it('records build-info.json into the artifact before verifying and uploading it', () => {
+    expect(buildInfoStep, `the build job does not write ${BUILD_INFO_FILE}`).toBeDefined();
+    expect(buildInfoStep?.id, 'the build-info step needs an id so its outputs can be read').toBeTruthy();
+
+    const assemble = stepIndex(buildSteps, (step) => step.run?.includes('assemble-site.mjs') ?? false);
+    const info = stepIndex(buildSteps, (step) => step === buildInfoStep);
+    const guard = stepIndex(buildSteps, (step) => step === guardStep);
+    const upload = stepIndex(buildSteps, (step) => step.uses?.startsWith('actions/upload-pages-artifact') ?? false);
+
+    // The manifest hash covers every page, so nothing may write into the site after it.
+    expect(info, 'build info must be taken after the site is fully assembled').toBeGreaterThan(assemble);
+    expect(info, 'build info must exist before the artifact guard runs').toBeLessThan(guard);
+    expect(guard).toBeLessThan(upload);
+    expect(guardStep?.run, 'the artifact guard must check build-info.json shipped').toContain(`test -s ${BUILD_INFO_FILE}`);
+  });
+
+  it('hands the built SHA, manifest hash and proof path to the live check', () => {
+    const id = buildInfoStep?.id ?? 'missing';
+
+    expect(build.outputs?.build_sha).toBe(`\${{ steps.${id}.outputs.sha }}`);
+    expect(build.outputs?.manifest_hash).toBe(`\${{ steps.${id}.outputs.manifest }}`);
+    expect(build.outputs?.build_info_path).toBe(`\${{ steps.${id}.outputs.proof }}`);
+    expect(verifyStep?.env).toMatchObject({
+      EXPECTED_BUILD_SHA: '${{ needs.build.outputs.build_sha }}',
+      EXPECTED_MANIFEST_HASH: '${{ needs.build.outputs.manifest_hash }}',
+      EXPECTED_BUILD_INFO_PATH: '${{ needs.build.outputs.build_info_path }}',
+    });
+  });
+
+  it('enforces the expected build in the verifier the workflow runs', () => {
+    // The env names above are only a contract if the script reads them.
+    const verifier = readFileSync(resolve(REPO_ROOT, 'scripts/verify-live-docs.mjs'), 'utf8');
+
+    expect(verifier).toContain('process.env.EXPECTED_BUILD_SHA');
+    expect(verifier).toContain('process.env.EXPECTED_MANIFEST_HASH');
+    expect(verifier).toContain('process.env.EXPECTED_BUILD_INFO_PATH');
+    expect(verifier).toContain('awaitBuildInfo(');
+  });
+
+  it('makes the build-info check mandatory in CI, so empty outputs cannot skip it', () => {
+    expect(verifyStep?.run).toContain('--require-build-info');
+  });
+
+  it('ships the proof file the live check polls, named uniquely for this run', () => {
+    // The CDN ignores query strings and caches 200s and 404s, so only a name
+    // no earlier deploy used is guaranteed fresh. A manifest-named file is
+    // reused by any deploy with the same bytes.
+    expect(guardStep?.env?.PROOF).toBe(`\${{ steps.${buildInfoStep?.id ?? 'missing'}.outputs.proof }}`);
+    expect(guardStep?.run).toContain('test -s "site$PROOF"');
+    expect(guardStep?.run).not.toContain('.manifestHash');
+  });
+
+  it('crawls the whole sitemap and keeps the report even when the check fails', () => {
+    expect(verifyStep?.run).toContain('--crawl');
+    expect(verifyStep?.run).toContain(`--report ${LIVE_REPORT}`);
+
+    const upload = smoke.steps?.find((step) => step.uses?.startsWith('actions/upload-artifact@'));
+
+    expect(upload?.with?.path).toBe(LIVE_REPORT);
+    expect(upload?.if, 'a failed crawl is exactly when the report matters').toBe('${{ !cancelled() }}');
+  });
+});
+
+describe('docs deploy law — the indexed snapshot is audited before it is attached', () => {
+  const snapshotSteps = getJob('snapshot').steps ?? [];
+  const buildStep = snapshotSteps.find((step) => step.name === 'Build snapshots');
+  const run = buildStep?.run ?? '';
+
+  it('audits the root build, after it is built and before the archive build wipes it', () => {
+    const audit = run.indexOf(`node docs/scripts/audit-build-output.mjs --report ${AUDIT_REPORT}`);
+    const root = run.indexOf('--base / --out docs-root.tgz');
+    const archive = run.indexOf('--base "/v/$minor/"');
+
+    expect(audit, 'the snapshot job does not audit the root build').toBeGreaterThan(-1);
+    expect(audit).toBeGreaterThan(root);
+    expect(audit, 'build-snapshot.mjs deletes docs/dist before each build').toBeLessThan(archive);
+  });
+
+  it('uploads the audit report even when the audit fails', () => {
+    const upload = snapshotSteps.find((step) => step.uses?.startsWith('actions/upload-artifact@'));
+
+    expect(upload?.with?.path).toBe(AUDIT_REPORT);
+    expect(upload?.if).toBe('${{ !cancelled() }}');
+    expect(stepIndex(snapshotSteps, (step) => step === upload)).toBeGreaterThan(
+      stepIndex(snapshotSteps, (step) => step === buildStep),
+    );
+  });
+
+  it('runs scripts that exist', () => {
+    for (const file of ['docs/scripts/audit-build-output.mjs', 'scripts/docs-build-info.mjs', 'scripts/verify-live-docs.mjs']) {
+      expect(existsSync(resolve(REPO_ROOT, file)), `${file} is missing`).toBe(true);
+    }
+  });
+});
+
+describe('docs deploy law — every deploying build is audited', () => {
+  const NEXT_REPORT = 'docs-build-audit-next.json';
+
+  it('audits the /next/ snapshot by the snapshot rules before the artifact is uploaded', () => {
+    const audit = stepIndex(buildSteps, (step) => step.run?.includes('node docs/scripts/audit-build-output.mjs') ?? false);
+    const auditStep = buildSteps[audit];
+
+    expect(auditStep?.run).toContain(`node docs/scripts/audit-build-output.mjs --dir ${ARTIFACT_ROOT} --base /next/ --report ${NEXT_REPORT}`);
+    expect(auditStep, 'a failing audit must fail the build, which gates deploy').not.toHaveProperty('continue-on-error');
+    expect(audit).toBeGreaterThan(stepIndex(buildSteps, (step) => step.run?.includes('assemble-site.mjs') ?? false));
+    expect(audit).toBeLessThan(stepIndex(buildSteps, (step) => step.uses?.startsWith('actions/upload-pages-artifact') ?? false));
+
+    const upload = buildSteps.find((step) => step.uses?.startsWith('actions/upload-artifact@') && step.with?.path === NEXT_REPORT);
+
+    expect(upload?.if, 'a failed audit is exactly when the report matters').toBe('${{ !cancelled() }}');
+    expect(stepIndex(buildSteps, (step) => step === upload)).toBeGreaterThan(audit);
+  });
+
+  it('audits a backfilled root snapshot before attaching it', () => {
+    const backfill = parse(
+      readFileSync(resolve(REPO_ROOT, '.github/workflows/docs-backfill.yml'), 'utf8'),
+    ) as Workflow;
+    const steps = backfill.jobs.snapshot?.steps ?? [];
+    const buildStep = steps.find((step) => step.id === 'snapshots');
+    const run = buildStep?.run ?? '';
+    const root = run.indexOf('--base / --out docs-root.tgz');
+    const audit = run.indexOf(`node docs/scripts/audit-build-output.mjs --report ${AUDIT_REPORT}`);
+
+    expect(audit, 'the backfill does not audit the root build').toBeGreaterThan(-1);
+    // build-snapshot.mjs deletes docs/dist before each build, so the audit must follow the root one.
+    expect(audit).toBeGreaterThan(root);
+    expect(run.slice(root, audit)).not.toContain('build-snapshot.mjs');
+    expect(buildStep?.['working-directory']).toBe('tag');
+
+    const upload = steps.find((step) => step.uses?.startsWith('actions/upload-artifact@'));
+
+    expect(upload?.with?.path).toBe(`tag/${AUDIT_REPORT}`);
+    // One artifact per matrix job; a shared name collides.
+    expect(upload?.with?.name).toContain('${{ matrix.tag }}');
+    expect(upload?.if).toBe('${{ !cancelled() }}');
+    expect(stepIndex(steps, (step) => step === upload)).toBeGreaterThan(stepIndex(steps, (step) => step === buildStep));
+    expect(stepIndex(steps, (step) => step.name === 'Attach snapshots to the release')).toBeGreaterThan(
+      stepIndex(steps, (step) => step === buildStep),
+    );
+  });
+});
+
 describe('docs deploy law — non-vacuity floor', () => {
   // Guards against a workflow rename, a YAML parse that returns an empty
   // document, or a build job stripped down to nothing.
@@ -258,6 +442,7 @@ describe('docs deploy law — non-vacuity floor', () => {
       'deploy',
       'docs-tests',
       'seo-smoke',
+      'snapshot',
       'verify-release',
     ]);
   });

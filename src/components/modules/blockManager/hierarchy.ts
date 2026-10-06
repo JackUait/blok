@@ -13,7 +13,7 @@ import { childrenInTreeOrder, flatIndexForPlacement, placementImpliedByFlat } fr
 import type { TreePlacement } from '../../utils/tree-order';
 import type { Blocks } from '../../blocks';
 
-import { hideUnderCollapsedParent } from './new-block-placement';
+import { hideUnderCollapsedParent, isHiddenByCollapsedParent } from './new-block-placement';
 import type { BlockRepository } from './repository';
 
 /**
@@ -49,6 +49,7 @@ export class BlockHierarchy {
   private readonly onParentChanged?: (parentId: string) => void;
   private readonly getIsSyncingFromYjs?: () => boolean;
   private readonly blocksStore?: Pick<Blocks, 'mount'>;
+  private readonly isApplyingRemoteChange?: () => boolean;
 
   /**
    * @param repository - BlockRepository for looking up blocks by id
@@ -59,17 +60,20 @@ export class BlockHierarchy {
    *   peers can legitimately deliver a transiently-dangling parent id during
    *   conflict resolution, batched undo replay, or initial sync ordering.
    * @param blocksStore - the store behind `repository`; {@link placeBlock} mounts holders through it
+   * @param isApplyingRemoteChange - optional getter: true while a peer's change is materialised
    */
   constructor(
     repository: BlockRepository,
     onParentChanged?: (parentId: string) => void,
     getIsSyncingFromYjs?: () => boolean,
-    blocksStore?: Pick<Blocks, 'mount'>
+    blocksStore?: Pick<Blocks, 'mount'>,
+    isApplyingRemoteChange?: () => boolean
   ) {
     this.repository = repository;
     this.onParentChanged = onParentChanged;
     this.getIsSyncingFromYjs = getIsSyncingFromYjs;
     this.blocksStore = blocksStore;
+    this.isApplyingRemoteChange = isApplyingRemoteChange;
   }
 
   /**
@@ -207,6 +211,27 @@ export class BlockHierarchy {
     const owner = walk(block.parentId, new Set<string>());
 
     return owner !== undefined && slot.closest(`[${DATA_ATTR.element}]`) === owner.holder ? slot : undefined;
+  }
+
+  /**
+   * The table cell holding the nearest slotless ancestor of `block` below its
+   * table/database. A slotless block's children sit flat after it, so a list
+   * item's child goes in the item's cell. Undefined when `block`'s parent is
+   * the table/database itself or no such ancestor is in a cell.
+   * @param block - a block under a table/database
+   */
+  private cellOfSlotlessAncestor(block: Block): Element | undefined {
+    const walk = (cursor: string | null, visited: Set<string>): Element | undefined => {
+      const ancestor = cursor === null || visited.has(cursor) ? undefined : this.repository.getBlockById(cursor);
+
+      if (ancestor === undefined || SELF_PLACING_PARENTS.has(ancestor.name)) {
+        return undefined;
+      }
+
+      return this.ownSelfPlacingSlot(ancestor) ?? walk(ancestor.parentId, visited.add(ancestor.id));
+    };
+
+    return walk(block.parentId, new Set<string>());
   }
 
   /**
@@ -507,11 +532,18 @@ export class BlockHierarchy {
       const carried = subtree.filter(member =>
         !subtree.some(other => other !== member && other.holder.contains(member.holder)));
 
-      // Last first: each mount anchors on the holders after it.
-      [...carried].reverse().forEach(member => {
-        store.mount(member, this.repository.getBlockIndex(member), firstSlot);
-      });
-      carried.forEach(member => this.updateBlockIndentation(member));
+      // A peer's child: the cell it belongs to comes with the table's own
+      // data write, and the table mounts it then. Shown in the first cell
+      // meanwhile, it would take typing that no cell reference keeps.
+      if (this.isApplyingRemoteChange?.() === true) {
+        carried.forEach(member => member.holder.remove());
+      } else {
+        // Last first: each mount anchors on the holders after it.
+        [...carried].reverse().forEach(member => {
+          store.mount(member, this.repository.getBlockIndex(member), firstSlot);
+        });
+        carried.forEach(member => this.updateBlockIndentation(member));
+      }
     }
 
     this.syncVisibilityWithParent(block, oldParentId);
@@ -531,13 +563,19 @@ export class BlockHierarchy {
 
     hideUnderCollapsedParent(block, id => this.repository.getBlockById(id));
 
-    // A block leaving a collapsed toggle keeps its `hidden` flag unless the
-    // new parent hides it too.
+    // A block leaving a collapsed toggle keeps its `hidden` flag only if the
+    // new parent hides it too. A hidden parent whose holder holds the block
+    // (an inactive tab) already conceals it; a flag of its own would outlive
+    // the parent being shown. A slotless child sits outside its parent's
+    // holder, so it still needs the flag.
     const hiddenByNewParent = newParent !== undefined && (
-      newParent.holder.classList.contains('hidden')
+      (newParent.holder.classList.contains('hidden') && !newParent.holder.contains(block.holder))
       || findOwn(newParent.holder, '[data-blok-toggle-open="false"]') !== null
-      || newParent.contentIds.some(id =>
-        id !== block.id && this.repository.getBlockById(id)?.holder.classList.contains('hidden') === true)
+      || newParent.contentIds.some(id => {
+        const sibling = id === block.id ? undefined : this.repository.getBlockById(id);
+
+        return sibling !== undefined && isHiddenByCollapsedParent(sibling);
+      })
     );
 
     if (oldParentId !== newParentId && !hiddenByNewParent) {
@@ -570,7 +608,8 @@ export class BlockHierarchy {
    * - Under a table/database a holder already in one of its cells is only
    *   reordered inside that cell; any other holder stays where it is, and the
    *   tool picks the cell or view (setBlockParent mounts a holder from outside
-   *   the table into its first cell).
+   *   the table into its first cell, except a peer's, which waits unmounted
+   *   for the table).
    * - Hiding a block that joins a collapsed toggle.
    * - Yjs writes and the parent-change callback.
    *
@@ -670,7 +709,9 @@ export class BlockHierarchy {
         return;
       }
 
-      const cell = home.kind === 'self-placing' ? this.ownSelfPlacingSlot(member) : undefined;
+      const cell = home.kind === 'self-placing'
+        ? this.cellOfSlotlessAncestor(member) ?? this.ownSelfPlacingSlot(member)
+        : undefined;
 
       if (cell !== undefined) {
         store.mount(member, this.repository.getBlockIndex(member), cell);
@@ -723,14 +764,13 @@ export class BlockHierarchy {
   }
 
   /**
-   * Walks the block's parentId chain and returns true if any ancestor is a
-   * `column` or `column_list` block — i.e. the block lives inside a columns
-   * layout in the block tree, regardless of whether its holder has been
-   * mounted into the columns DOM yet. Cycle-safe via a visited set.
+   * Walks the block's parentId chain and returns true if any ancestor's Tool
+   * declares `isLayout` (column, column_list, tab) — read from the block tree,
+   * so it holds before the holder is mounted into the layout DOM. Cycle-safe.
    * @param block - the block to test
-   * @returns true if a column/column_list ancestor exists
+   * @returns true if a layout ancestor exists
    */
-  private hasColumnAncestor(block: Block): boolean {
+  private hasLayoutAncestor(block: Block): boolean {
     const walk = (parentId: string | null, visited: Set<string>): boolean => {
       if (parentId === null || visited.has(parentId)) {
         return false;
@@ -743,7 +783,7 @@ export class BlockHierarchy {
         return false;
       }
 
-      if (parent.name === 'column' || parent.name === 'column_list') {
+      if (parent.tool.isLayout) {
         return true;
       }
 
@@ -828,8 +868,8 @@ export class BlockHierarchy {
       return;
     }
 
-    // Columns are a flex layout: the column_list block, its column children, and
-    // every block inside a column are positioned by flex, not block-tree depth.
+    // Layout pieces (columns, tabs) position their content themselves: the
+    // layout block and every block below it are flush, not depth-indented.
     // Depth-based margin would push the column holders off their even split and
     // indent the column content. Keep them flush.
     //
@@ -839,9 +879,9 @@ export class BlockHierarchy {
     // appends it. The column ancestry is always in the block tree, so consult
     // that too rather than relying on DOM placement timing.
     if (
-      block.name === 'column_list' ||
+      block.tool.isLayout ||
       holder.closest('[data-blok-columns]') ||
-      this.hasColumnAncestor(block)
+      this.hasLayoutAncestor(block)
     ) {
       holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, '0');
       holder.setAttribute('data-blok-depth', '0');

@@ -239,7 +239,7 @@ export class Collaboration extends Module {
    */
   private resetGeneration = 0;
 
-  /** An explicit `write: false` claim on the connection ticket. */
+  /** A denied ticket, or a no-ticket headless copy without a write grant. */
   private writeDenied = false;
 
   /** What the host passed as `config.data`, shown read-only while offline. */
@@ -865,7 +865,7 @@ export class Collaboration extends Module {
    * Opens the offline cache and replays what it holds, returning the lineage
    * the restored document belongs to (or undefined when nothing was adopted).
    *
-   * Adoption is what makes an offline editor EDITABLE before it has spoken to
+   * Adoption can make an offline editor editable before it has spoken to
    * the server, so the gate is narrow: the cache hands back a document only
    * behind a validated control frame it recorded earlier, which is the same
    * "carries server lineage" test the first sync would apply.
@@ -972,12 +972,10 @@ export class Collaboration extends Module {
       return undefined;
     }
 
-    // The member's last known write verdict: without it an offline reload
-    // hands a read-only member an editable document whose edits the server
-    // will refuse the moment it reconnects. Only with a ticket source, which
-    // is the one thing that can ever re-derive it — restored without one it
-    // would hold, and be re-persisted, for the rest of this browser's life.
-    this.writeDenied = settings.ticketEndpoint !== undefined && contents.meta.writeDenied;
+    // A ticket can re-derive its cached write verdict. A no-ticket headless
+    // copy has no write grant to re-derive, so it stays read-only.
+    this.writeDenied = contents.meta.writeDenied
+      && (settings.ticketEndpoint !== undefined || contents.meta.headlessDownload);
     // The protocol the copy was written under. A v1-only deployment must not
     // come back from a reload accumulating outbox rows nothing can drain.
     this.protocol = contents.meta.protocol;
@@ -1349,7 +1347,10 @@ export class Collaboration extends Module {
 
     this.protocol = this.provider?.protocol ?? 'v1';
 
-    this.captured(store.recordSession(tag, this.writeDenied, this.protocol, snapshot));
+    // No-ticket sync carries no write grant, so keep a headless copy marked.
+    const headlessDownload = this.writeDenied && this.settings?.ticketEndpoint === undefined;
+
+    this.captured(store.recordSession(tag, this.writeDenied, this.protocol, snapshot, undefined, headlessDownload));
 
     this.cacheSeeded = true;
   }

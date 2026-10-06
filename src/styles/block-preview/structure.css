@@ -27,21 +27,22 @@
   font-weight: 600;
 }
 
-/* Same card corners as the real table; the drawing is always 4 columns wide. */
+/* Same card corners as the real table (see tables.css for the split-corner
+   radii); the drawing is always 4 columns wide. */
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:first-child {
-  border-start-start-radius: var(--blok-radius-table);
+  border-start-start-radius: var(--blok-radius-table) calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:nth-child(4) {
-  border-start-end-radius: var(--blok-radius-table);
+  border-start-end-radius: var(--blok-radius-table) calc(var(--blok-radius-table) - (1 + var(--_blok-inline-sign, 1)) * 0.5px);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:nth-last-child(4) {
-  border-end-start-radius: var(--blok-radius-table);
+  border-end-start-radius: calc(var(--blok-radius-table) - (1 + var(--_blok-inline-sign, 1)) * 0.5px) var(--blok-radius-table);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell]:last-child {
-  border-end-end-radius: var(--blok-radius-table);
+  border-end-end-radius: calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px) var(--blok-radius-table);
 }
 
 /* ─── Code ──────────────────────────────────────────── */
@@ -269,6 +270,69 @@
   font-size: 10px;
 }
 
+/* ─── Tabs ──────────────────────────────────────────── */
+
+[data-blok-interface='block-preview'] [data-blok-preview='tabs'] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='tabs'] [data-strip] {
+  display: flex;
+  gap: var(--blok-preview-space-2);
+  padding: var(--blok-preview-space-4);
+  border: 1px solid var(--blok-border-secondary);
+  border-bottom: 0;
+  border-radius: var(--blok-radius-block) var(--blok-radius-block) 0 0;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='tabs'] [data-tab] {
+  padding: var(--blok-preview-space-2) var(--blok-preview-space-8);
+  border-radius: var(--blok-radius-control-sm);
+  color: var(--blok-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+/* Selected is gray with primary ink, never blue (CLAUDE.md). */
+[data-blok-interface='block-preview'] [data-blok-preview='tabs'] [data-tab='active'] {
+  background: var(--blok-icon-active-bg);
+  color: var(--blok-icon-active-text);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='tabs'] [data-panel] {
+  padding: var(--blok-preview-space-10) var(--blok-preview-space-12) var(--blok-preview-space-4);
+  border: 1px solid var(--blok-border-secondary);
+  border-radius: 0 0 var(--blok-radius-block) var(--blok-radius-block);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='tabs'] [data-title] {
+  margin-bottom: var(--blok-preview-space-8);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='tabs'] [data-line] {
+  position: relative;
+  height: 5px;
+  margin-bottom: var(--blok-preview-space-7);
+  border-radius: var(--blok-radius-pill);
+  overflow: hidden;
+}
+
+/* Bar ink is text color at low strength, so it follows the theme. */
+[data-blok-interface='block-preview'] [data-blok-preview='tabs'] [data-line]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--blok-text-primary);
+  opacity: 0.13;
+}
+
 /* ─── Spacer ────────────────────────────────────────── */
 
 [data-blok-interface='block-preview'] [data-blok-preview='spacer'] {
@@ -324,6 +388,32 @@
   box-shadow: 0 0 0 2px var(--blok-bg-primary);
 }
 
+/* ─── Table of contents ─────────────────────────────── */
+
+[data-blok-interface='block-preview'] [data-blok-preview='table-of-contents'] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='table-of-contents'] [data-outline] {
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='table-of-contents'] [data-entry] {
+  padding: var(--blok-preview-space-3) 0;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 28%, transparent);
+  text-underline-offset: 0.25em;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='table-of-contents'] [data-entry][data-depth='1'] {
+  padding-left: var(--blok-preview-space-14);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   /* Table: body cells fill in one by one, row after row. */
   [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell] > span {
@@ -357,6 +447,12 @@
     --blok-preview-offset: calc((var(--n) - 1) / 2 - var(--i));
 
     animation: blok-preview-structure-split 900ms var(--blok-preview-ease-spring) 220ms both;
+  }
+
+  /* Tabs: the open tab's content rises in, line after line. */
+  [data-blok-interface='block-preview'] [data-blok-preview='tabs'] [data-line] {
+    animation: blok-preview-structure-cell-in 320ms var(--blok-preview-ease-out) both;
+    animation-delay: calc(160ms + var(--i) * 70ms);
   }
 
   /* Spacer: the gap breathes open from its middle, so the drawing stays centered. */

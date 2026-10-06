@@ -1028,7 +1028,7 @@ describe('openDarkroom geometry, adjust and filters', () => {
       const lead = button('reset').parentElement;
       const actions = [...(lead?.children ?? [])].map((c) => c.getAttribute('data-action'));
 
-      expect(actions).toEqual(['cancel', 'reset', 'rotate-left', 'flip', 'shortcuts']);
+      expect(actions).toEqual(['cancel', 'reset', 'rotate-left', 'flip']);
       expect(button('rotate-left').getAttribute('aria-label')).toBe('Rotate left');
       expect(button('flip').getAttribute('aria-label')).toBe('Flip');
       expect(button('rotate-left').querySelector('svg')).not.toBeNull();
@@ -2032,6 +2032,15 @@ describe('openDarkroom markup', () => {
     expect(document.querySelector('[data-role="markup-layer"]:not([hidden])')).toBeNull();
   });
 
+  it('the spotlight and magnifier tiles in the shape picker show the photo being edited', () => {
+    open();
+    tab('markup');
+    q<HTMLButtonElement>('[data-blok-testid="markup-tool-shapes"]').click();
+
+    expect(q('[data-blok-testid="markup-shape-spotlight"] img').getAttribute('src')).toBe('x.png');
+    expect(q('[data-blok-testid="markup-shape-magnifier"] img').getAttribute('src')).toBe('x.png');
+  });
+
   it('a tool key on the stage picks the tool in the panel', () => {
     open();
     tab('markup');
@@ -2773,9 +2782,14 @@ describe('openDarkroom photo editor keys', () => {
       expect(sheet()?.querySelector('[data-shortcut="tools.image.editModeFilters"]')).toBeNull();
     });
 
-    it('a button in the top bar opens it too and names its key', () => {
+    it('a button in the bottom right opens it too and names its key', () => {
       open();
       const btn = button('shortcuts');
+      const dock = q('[role="tablist"]').closest<HTMLElement>('[data-darkroom-chrome]');
+
+      expect(btn.closest('[data-darkroom-chrome]')).toBe(dock);
+      expect(dock?.lastElementChild).toBe(btn);
+      expect(btn.classList.contains('blok-darkroom__help')).toBe(true);
 
       expect(btn.getAttribute('aria-label')).toBe('Keyboard shortcuts');
       expect(btn.getAttribute('aria-keyshortcuts')).toBe('Shift+?');

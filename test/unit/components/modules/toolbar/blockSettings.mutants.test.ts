@@ -584,7 +584,7 @@ describe('BlockSettings — mutation coverage', () => {
 
       expect(params.searchable).toBe(true);
       expect(params.autoFocusFirstItem).toBe(false);
-      expect(params.minWidth).toBe('220px');
+      expect(params.minWidth).toBe('280px');
       expect(params.viewportMargin).toBe(8);
       expect(params.messages).toStrictEqual({
         back: 'a11y.back',

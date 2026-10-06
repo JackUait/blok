@@ -72,6 +72,16 @@ export class NotifierAPI extends Module {
   }
 
   /**
+   * Stop a card's busy spinner. A custom notifier cannot be reached from here.
+   * @param options - the object passed to `show`
+   */
+  public settle(options: NotifierOptions): void {
+    if (this.customNotifier === undefined) {
+      this.builtInNotifier.settle(this.sentCopies.get(options) ?? options);
+    }
+  }
+
+  /**
    * @param options - the object passed to `show`
    * @returns true once that toast has closed; always true with a custom notifier, which cannot be closed from here
    */

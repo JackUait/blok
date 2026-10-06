@@ -200,7 +200,6 @@ for (const surface of ['settings', 'inline'] as const) {
 
       await expect(current).toBeVisible();
       await expect(current).toHaveAttribute('data-blok-popover-item-active', 'true');
-      await page.mouse.move(5, 850);
       // Selected is gray, never blue: a neutral fill, same ink as any other row, plus the checkmark.
       const plainInk = await menu.getByRole('menuitem', { name: 'Quote', exact: true }).evaluate(element => getComputedStyle(element).color);
       const fill = await current.evaluate(element => getComputedStyle(element).backgroundColor);
@@ -216,7 +215,8 @@ for (const surface of ['settings', 'inline'] as const) {
 
       const search = page.getByRole('combobox', { name: 'Find an action…', exact: true }).last();
 
-      await search.fill('te');
+      // Keydown keeps this pointer-opened submenu alive when the pointer leaves.
+      await search.pressSequentially('te');
       await page.mouse.move(5, 850);
       const textOption = menu.getByRole('menuitem', { name: 'Text', exact: true });
 

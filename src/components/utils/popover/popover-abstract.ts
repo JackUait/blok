@@ -9,7 +9,8 @@ import { twMerge } from '../tw';
 import { PopoverItemDefault, PopoverItemSeparator, PopoverItemType } from './components/popover-item';
 import type { PopoverItem, PopoverItemRenderParamsMap , PopoverItemParams } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
-import { NOTHING_FOUND_ART } from './nothing-found-art';
+import { searchPreviewSvg } from '../media-preview-art';
+import { leanPreview } from '../media-preview-3d';
 import type { SearchInput } from './components/search-input';
 import { PopoverRegistry } from './popover-registry';
 import { css, REEL_DISTORTION } from './popover.const';
@@ -453,6 +454,17 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Shows or hides the busy spinner on all items matching the given name
+   * @param name - name of the items
+   * @param isBusy - true while their action waits
+   */
+  public setItemBusyByName(name: string, isBusy: boolean): void {
+    this.itemsDefault
+      .filter(item => item.name === name)
+      .forEach(item => item.setBusy(isBusy));
+  }
+
+  /**
    * Returns true if the given item name was explicitly hidden via toggleItemHiddenByName.
    * Used by subclasses to prevent filter logic from un-hiding restricted items.
    * @param name - item name to check
@@ -787,7 +799,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
-   * Rows fade in, the lens sweeps across them, then the label rises.
+   * The back menu fans out from behind the front one, the loupe drops in and
+   * lands on the empty slot, then the label rises.
    */
   private animateNothingFoundEntrance(): void {
     const message = this.nodes.nothingFoundMessage;
@@ -797,26 +810,37 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     const settle = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
+    // The media previews' spring fallback: lands with a small overshoot.
+    const spring = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 
-    message.querySelectorAll('[data-blok-nothing-found-row]').forEach((row, index) => {
-      row.animate(
-        [
-          { opacity: 0, transform: 'translateX(-4px)' },
-          { opacity: 1, transform: 'translateX(0)' },
-        ],
-        { duration: 220, delay: 40 + index * 50, easing: settle, fill: 'backwards' }
-      );
-    });
-    // The lens sweeps across the empty rows, then comes to rest with a small tilt.
-    message.querySelector('[data-blok-nothing-found-lens]')?.animate(
+    // `rotate`/`translate`, not `transform`: CSS already sets the sheet's resting
+    // transform, and the individual properties stack on top of it.
+    message.querySelector('.blok-media-preview__sheet--back')?.animate(
       [
-        { opacity: 0, transform: 'translate(-22px, -16px) rotate(-12deg)', offset: 0 },
-        { opacity: 1, transform: 'translate(-16px, -12px) rotate(-12deg)', offset: 0.2 },
-        { transform: 'translate(-4px, -6px) rotate(8deg)', offset: 0.55 },
-        { transform: 'translate(0, 0) rotate(-4deg)', offset: 0.8 },
-        { opacity: 1, transform: 'translate(0, 0) rotate(0deg)', offset: 1 },
+        { rotate: '8deg', translate: '6px 0', opacity: 0 },
+        { rotate: '0deg', translate: '0 0', opacity: 0.55 },
       ],
-      { duration: 760, delay: 60, easing: 'cubic-bezier(0.33, 1, 0.68, 1)', fill: 'backwards' }
+      { duration: 520, delay: 80, easing: spring, fill: 'backwards' }
+    );
+    // The drop shadow is a <use> copy of the loupe and does not inherit its
+    // animation, so it gets the same flight or it waits on the slot alone.
+    const flight = { duration: 640, delay: 160, easing: spring, fill: 'backwards' } as const;
+
+    message.querySelector('.blok-media-preview__loupe')?.animate(
+      [
+        { translate: '-46px -30px', rotate: '-14deg', opacity: 0 },
+        { opacity: 1, offset: 0.3 },
+        { translate: '0 0', rotate: '0deg', opacity: 1 },
+      ],
+      flight
+    );
+    message.querySelector('.blok-media-preview__drop')?.animate(
+      [
+        { translate: '-46px -30px', rotate: '-14deg', opacity: 0 },
+        { opacity: 0, offset: 0.3 },
+        { translate: '0 0', rotate: '0deg' },
+      ],
+      flight
     );
     message.querySelectorAll('[data-blok-nothing-found-text]').forEach((text, index) => {
       text.animate(
@@ -824,7 +848,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
           { opacity: 0, transform: 'translateY(4px)' },
           { opacity: 1, transform: 'translateY(0)' },
         ],
-        { duration: 260, delay: 140 + index * 60, easing: settle, fill: 'backwards' }
+        { duration: 260, delay: 200 + index * 60, easing: settle, fill: 'backwards' }
       );
     });
   }
@@ -1121,8 +1145,37 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     const nothingFoundArt = document.createElement('div');
 
-    nothingFoundArt.className = 'mx-auto mb-3 w-16';
-    nothingFoundArt.innerHTML = NOTHING_FOUND_ART;
+    nothingFoundArt.className = 'mx-auto mb-2 w-[168px]';
+
+    const nothingFoundStage = document.createElement('span');
+
+    nothingFoundStage.className = 'blok-media-preview';
+    nothingFoundStage.setAttribute('data-blok-media-preview', 'search');
+    nothingFoundStage.setAttribute('aria-hidden', 'true');
+    nothingFoundStage.innerHTML = searchPreviewSvg();
+    nothingFoundArt.append(nothingFoundStage);
+
+    // Same pointer tilt as the media previews: -1..1 from edge to edge.
+    nothingFoundMessage.addEventListener('pointermove', (event) => {
+      if (prefersReducedMotion()) {
+        return;
+      }
+
+      const box = nothingFoundMessage.getBoundingClientRect();
+
+      if (box.width === 0 || box.height === 0) {
+        return;
+      }
+
+      leanPreview(
+        nothingFoundStage,
+        ((event.clientX - box.left) / box.width) * 2 - 1,
+        ((event.clientY - box.top) / box.height) * 2 - 1
+      );
+    });
+    nothingFoundMessage.addEventListener('pointerleave', () => {
+      leanPreview(nothingFoundStage, 0, 0);
+    });
 
     const nothingFoundLabel = document.createElement('div');
 

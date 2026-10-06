@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import type { Locale } from '../../i18n';
@@ -173,6 +173,29 @@ describe('Footer', () => {
       fireEvent.click(screen.getByRole('link', { name: /Русский/i }));
 
       expect(localStorage.getItem('blok-docs-locale')).toBe('ru');
+    });
+
+    describe('analytics', () => {
+      const gtagWindow = window as Window & { gtag?: (...args: unknown[]) => void };
+      const gtagMock = vi.fn();
+
+      beforeEach(() => {
+        vi.clearAllMocks();
+        gtagWindow.gtag = gtagMock;
+      });
+
+      afterEach(() => {
+        delete gtagWindow.gtag;
+        vi.restoreAllMocks();
+      });
+
+      it('sends the same select_language event as the header picker', () => {
+        renderFooter('en', '/');
+
+        fireEvent.click(screen.getByRole('link', { name: /Русский/i }));
+
+        expect(gtagMock).toHaveBeenCalledWith('event', 'select_language', { locale: 'ru' });
+      });
     });
   });
 });

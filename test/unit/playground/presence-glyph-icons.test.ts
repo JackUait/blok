@@ -61,15 +61,21 @@ describe('presence glyph icons', () => {
 
 describe('playground icon gallery wiring', () => {
   const GLYPH_STUB = { astronaut: '<svg data-glyph="astronaut"></svg>' };
+  const BRAND_STUB = { youtube: '<svg data-brand="youtube"></svg>' };
 
   const renderGallery = (): { iconGroups: Record<string, string[]>; icons: Record<string, string> } => {
     const captured: { args: { iconGroups: Record<string, string[]>; icons: Record<string, string> } | null } = { args: null };
 
-    runInNewContext(section('const iconGroups = {', '/**'), {
+    const gallerySource = section('const iconGroups = {', 'radiusGalleryHandle = renderRadiusGallery') +
+      section('renderIconGallery({', '/**');
+
+    runInNewContext(gallerySource, {
       document: { getElementById: (): unknown => ({}) },
       Icons: { IconCheck: '<svg data-icon="check"></svg>' },
       PRESENCE_GLYPH_GROUP,
       PRESENCE_GLYPH_ICONS: GLYPH_STUB,
+      BRAND_MARK_GROUP: 'Brand marks',
+      BRAND_MARK_ICONS: BRAND_STUB,
       renderIconGallery: (args: { iconGroups: Record<string, string[]>; icons: Record<string, string> }): void => {
         captured.args = args;
       },
@@ -92,14 +98,18 @@ describe('playground icon gallery wiring', () => {
     vi.restoreAllMocks();
   });
 
-  it('groups the anonymous silhouettes on the icons tab', () => {
-    expect(renderGallery().iconGroups[PRESENCE_GLYPH_GROUP]).toStrictEqual(Object.keys(GLYPH_STUB));
+  it('groups anonymous silhouettes and brand marks on the icons tab', () => {
+    const { iconGroups } = renderGallery();
+
+    expect(iconGroups[PRESENCE_GLYPH_GROUP]).toStrictEqual(Object.keys(GLYPH_STUB));
+    expect(iconGroups['Brand marks']).toStrictEqual(Object.keys(BRAND_STUB));
   });
 
-  it('hands the gallery the silhouette markup alongside the exported icons', () => {
+  it('hands the gallery silhouette and brand markup alongside exported icons', () => {
     const { icons } = renderGallery();
 
     expect(icons.astronaut).toBe(GLYPH_STUB.astronaut);
+    expect(icons.youtube).toBe(BRAND_STUB.youtube);
     expect(icons.IconCheck).toContain('data-icon="check"');
   });
 });

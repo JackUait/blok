@@ -1128,11 +1128,10 @@ test.describe('popover', () => {
       // Check second item (bold) is NOT focused
       await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="bold"][data-blok-focused="true"]`)).toBeHidden();
 
-      // Press Tab
       await page.keyboard.press('Tab');
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"]`).getByRole('menuitemcheckbox', { name: 'Color' })).toHaveAttribute('data-blok-focused', 'true');
 
-      // Check second item (bold) became focused after tab
-      // Note: inline tool order is convert-to -> bold -> italic -> link
+      await page.keyboard.press('Tab');
       await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="bold"][data-blok-focused="true"]`)).toBeVisible();
     });
 
@@ -1172,22 +1171,14 @@ test.describe('popover', () => {
 
       await expect(nestedPopover).toBeVisible();
 
-      // The convert menu is searchable, so opening it puts the caret in its
-      // search field. ArrowDown then walks the focus ring: the heading family
-      // tab strip is a focus stop and comes before the first option.
       await expect(nestedPopover.getByRole('combobox')).toBeFocused();
-
-      const selectedTab = nestedPopover.locator('[data-blok-popover-tabs] [role="tab"][aria-selected="true"]');
-
-      await page.keyboard.press('ArrowDown');
-
-      await expect(selectedTab).toHaveAttribute('data-blok-focused', 'true');
-
-      await page.keyboard.press('ArrowDown');
 
       const nestedItems = nestedPopover.locator('[data-blok-testid="popover-item"]');
 
+      await page.keyboard.press('ArrowDown');
       await expect(nestedItems.first()).toHaveAttribute('data-blok-focused', 'true');
+      await page.keyboard.press('ArrowDown');
+      await expect(nestedItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
     });
 
     test('should convert block when clicking on item in nested popover', async ({ page }) => {

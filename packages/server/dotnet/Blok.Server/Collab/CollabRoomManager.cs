@@ -4,6 +4,11 @@ internal enum CollabJoinStatus
 {
   Joined,
 
+  /// <summary>Access changed after the handshake; the endpoint answers 403.</summary>
+  Forbidden,
+
+  Purged,
+
   /// <summary>The doc endpoint could not seed the room; the endpoint closes 4503 and the next join retries.</summary>
   SeedFailed,
 
@@ -37,6 +42,8 @@ internal enum CollabEditStatus
   /// <summary>An op failed validation; nothing was written. The endpoint answers 422.</summary>
   Invalid,
 
+  Purged,
+
   /// <summary>The doc endpoint could not seed the room; the endpoint answers 503.</summary>
   SeedFailed,
 
@@ -46,7 +53,22 @@ internal enum CollabEditStatus
   /// answers 503.
   /// </summary>
   Unavailable,
+
+  /// <summary>
+  /// The journal head is not the one the caller named; nothing was applied.
+  /// The receipt carries the current head. The endpoint answers 412.
+  /// </summary>
+  PreconditionFailed,
+
+  /// <summary>
+  /// A precondition was sent but no journal is registered, so there is no
+  /// head to check it against. The endpoint answers 428.
+  /// </summary>
+  PreconditionRequired,
 }
+
+/// <summary>The journal head an HTTP edit expects, from its If-Match header.</summary>
+internal sealed record CollabEditPrecondition(string Lineage, ulong Sequence);
 
 internal sealed record CollabEditReceipt(CollabWorkingSetTag Tag, ulong ServerSequence);
 
@@ -55,11 +77,40 @@ internal sealed record CollabEditResult(
     Exception? Error,
     CollabEditReceipt? Receipt = null);
 
+internal enum CollabStateStatus
+{
+  Ready,
+  Purged,
+
+  /// <summary>The server is going down; the endpoint answers 503.</summary>
+  Draining,
+
+  /// <summary>The doc endpoint could not seed the room; the endpoint answers 503.</summary>
+  SeedFailed,
+
+  /// <summary>Held by another process or in its commit cooldown; the endpoint answers 503.</summary>
+  Unavailable,
+
+  /// <summary>The converter cannot write this document as JSON; the endpoint answers 500.</summary>
+  ExportFailed,
+}
+
+/// <summary>
+/// One consistent read of a room: the export bytes and, on a journal-backed
+/// room, the head they reflect. Both are taken in one lane hold.
+/// </summary>
+internal sealed record CollabStateResult(
+    CollabStateStatus Status,
+    byte[] Json,
+    CollabEditReceipt? Head = null,
+    Exception? Error = null);
+
 internal enum CollabResetStatus
 {
   Reset,
   SeedFailed,
   Unavailable,
+  Purged,
 }
 
 internal sealed record CollabResetResult(
@@ -72,11 +123,12 @@ internal sealed record CollabResetResult(
 /// when they close (eviction, reset, seed failure, drain); a join that races
 /// a closing room simply retries on a fresh one.
 /// </summary>
-internal sealed class CollabRoomManager : ICollabRoomManager
+internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPurger
 {
   private const int MaxJoinAttempts = 16;
 
   private readonly Dictionary<string, CollabRoom> rooms = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, SemaphoreSlim> purgeLanes = new(StringComparer.Ordinal);
   private readonly Dictionary<string, CommitCooldown> cooldowns = new(StringComparer.Ordinal);
   private readonly ICollabWorkingSetStore store;
   private readonly ICollabOperationStore? operationStore;
@@ -135,6 +187,11 @@ internal sealed class CollabRoomManager : ICollabRoomManager
 
     for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
     {
+      if (IsPurging(docId))
+      {
+        return new CollabJoinResult(CollabJoinStatus.Purged, null, null);
+      }
+
       if (draining)
       {
         return new CollabJoinResult(CollabJoinStatus.Draining, null, null);
@@ -146,6 +203,12 @@ internal sealed class CollabRoomManager : ICollabRoomManager
       }
 
       var room = RoomFor(docId);
+
+      if (room is null)
+      {
+        return new CollabJoinResult(CollabJoinStatus.Purged, null, null);
+      }
+
       var result = await room.JoinAsync(member, cancellationToken);
 
       if (result is not null)
@@ -179,6 +242,12 @@ internal sealed class CollabRoomManager : ICollabRoomManager
     for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
     {
       var room = RoomFor(docId);
+
+      if (room is null)
+      {
+        return new CollabResetResult(CollabResetStatus.Purged, null, null);
+      }
+
       var result = await room.ResetAsync(cancellationToken);
 
       if (result is not null)
@@ -214,14 +283,26 @@ internal sealed class CollabRoomManager : ICollabRoomManager
       string operationId,
       ReadOnlyMemory<byte> digest,
       string? actorId,
+      CollabEditPrecondition? expect = null,
       CancellationToken cancellationToken = default)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
     ArgumentNullException.ThrowIfNull(ops);
     ArgumentException.ThrowIfNullOrEmpty(operationId);
 
+    // Checked before a room is made, so no seed GET is spent on it.
+    if (expect is not null && operationStore is null)
+    {
+      return new CollabEditResult(CollabEditStatus.PreconditionRequired, null);
+    }
+
     for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
     {
+      if (IsPurging(docId))
+      {
+        return new CollabEditResult(CollabEditStatus.Purged, null);
+      }
+
       // Refused during shutdown, like a join: a room created after the drain
       // pass has already swept would seed a document from the consumer's
       // endpoint and then be closed without ever flushing it back.
@@ -236,11 +317,18 @@ internal sealed class CollabRoomManager : ICollabRoomManager
       }
 
       var room = RoomFor(docId);
+
+      if (room is null)
+      {
+        return new CollabEditResult(CollabEditStatus.Purged, null);
+      }
+
       var result = await room.EditAsync(
           ops,
           operationId,
           digest,
           actorId,
+          expect,
           cancellationToken);
 
       if (result is not null)
@@ -253,6 +341,66 @@ internal sealed class CollabRoomManager : ICollabRoomManager
 
     throw new InvalidOperationException(
         $"collab: the room for \"{docId}\" kept closing during an edit.");
+  }
+
+  /// <summary>GET /sync/{doc}/state: the live document, loading the room the way an edit does.</summary>
+  internal async ValueTask<CollabStateResult> StateAsync(
+      string docId,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(docId);
+
+    for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
+    {
+      if (IsPurging(docId))
+      {
+        return new CollabStateResult(CollabStateStatus.Purged, []);
+      }
+
+      if (draining)
+      {
+        return new CollabStateResult(CollabStateStatus.Draining, []);
+      }
+
+      if (InCommitCooldown(docId))
+      {
+        return new CollabStateResult(CollabStateStatus.Unavailable, []);
+      }
+
+      var room = RoomFor(docId);
+
+      if (room is null)
+      {
+        return new CollabStateResult(CollabStateStatus.Purged, []);
+      }
+
+      var result = await room.StateAsync(cancellationToken);
+
+      if (result is not null)
+      {
+        return result;
+      }
+
+      Forget(room);
+    }
+
+    throw new InvalidOperationException(
+        $"collab: the room for \"{docId}\" kept closing during a state read.");
+  }
+
+  public async ValueTask<int> RecheckAccessAsync(
+      string documentId,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(documentId);
+    CollabRoom? room;
+
+    lock (rooms)
+    {
+      rooms.TryGetValue(documentId, out room);
+    }
+
+    return room is null ? 0 : await room.RecheckAccessAsync(cancellationToken);
   }
 
   /// <summary>
@@ -270,6 +418,11 @@ internal sealed class CollabRoomManager : ICollabRoomManager
 
     lock (rooms)
     {
+      if (purgeLanes.ContainsKey(docId))
+      {
+        return false;
+      }
+
       rooms.TryGetValue(docId, out room);
     }
 
@@ -278,6 +431,96 @@ internal sealed class CollabRoomManager : ICollabRoomManager
 
   /// <summary>Consecutive commit failures for one document, and when it may be loaded again.</summary>
   private sealed record CommitCooldown(int Failures, DateTimeOffset Until);
+
+  public async ValueTask<CollabDocumentPurgeOutcome> PurgeDocumentAsync(
+      string documentId,
+      Func<CancellationToken, ValueTask<bool>> authorize,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(documentId);
+    ArgumentNullException.ThrowIfNull(authorize);
+
+    if (documentId is "." or ".." ||
+        documentId.Contains('/') ||
+        documentId.Contains('\\') ||
+        documentId.Contains("%2f", StringComparison.OrdinalIgnoreCase) ||
+        documentId.Contains("%5c", StringComparison.OrdinalIgnoreCase))
+    {
+      throw new ArgumentException(
+          "collab: document ids must be a single path segment.",
+          nameof(documentId));
+    }
+
+    if (!await authorize(cancellationToken))
+    {
+      throw new UnauthorizedAccessException(
+          "collab: document purge was not authorized.");
+    }
+
+    if (operationStore is not null &&
+        operationStore is not ICollabOperationPurgeStore)
+    {
+      throw new NotSupportedException(
+          $"the operation journal cannot purge documents: the registered {nameof(ICollabOperationStore)} " +
+          $"({operationStore.GetType().FullName}) must also implement {nameof(ICollabOperationPurgeStore)}");
+    }
+
+    SemaphoreSlim purgeLane;
+
+    lock (rooms)
+    {
+      if (purgeLanes.TryGetValue(documentId, out var existing))
+      {
+        purgeLane = existing;
+      }
+      else
+      {
+        purgeLane = new SemaphoreSlim(1, 1);
+        purgeLanes[documentId] = purgeLane;
+      }
+
+      if (rooms.TryGetValue(documentId, out var current))
+      {
+        current.RequestPurge();
+      }
+    }
+
+    await purgeLane.WaitAsync(cancellationToken);
+
+    try
+    {
+      CollabRoom? room;
+
+      lock (rooms)
+      {
+        rooms.TryGetValue(documentId, out room);
+        room?.RequestPurge();
+      }
+
+      if (room is not null)
+      {
+        await room.PurgeAsync(cancellationToken);
+      }
+
+      if (operationStore is ICollabOperationPurgeStore journal)
+      {
+        var outcome = await journal.PurgeAsync(documentId, cancellationToken);
+
+        if (outcome == CollabDocumentPurgeOutcome.DocumentOpenElsewhere)
+        {
+          return outcome;
+        }
+      }
+
+      await store.DeleteAsync(documentId, cancellationToken);
+
+      return CollabDocumentPurgeOutcome.Purged;
+    }
+    finally
+    {
+      purgeLane.Release();
+    }
+  }
 
   /// <summary>Plan decision 19: refuse new joins, flush every room (blob + export), close members 1001.</summary>
   public async ValueTask DrainAsync(CancellationToken cancellationToken = default)
@@ -334,10 +577,23 @@ internal sealed class CollabRoomManager : ICollabRoomManager
     }
   }
 
-  private CollabRoom RoomFor(string docId)
+  private bool IsPurging(string docId)
   {
     lock (rooms)
     {
+      return purgeLanes.ContainsKey(docId);
+    }
+  }
+
+  private CollabRoom? RoomFor(string docId)
+  {
+    lock (rooms)
+    {
+      if (purgeLanes.ContainsKey(docId))
+      {
+        return null;
+      }
+
       if (!rooms.TryGetValue(docId, out var room))
       {
         room = new CollabRoom(

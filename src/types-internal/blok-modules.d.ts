@@ -36,6 +36,7 @@ import { DragController as DragManager } from '../components/modules/drag/DragCo
 import { Find } from '../components/modules/find';
 import { ModificationsObserver } from '../components/modules/modificationsObserver';
 import { Paste } from '../components/modules/paste';
+import { PageReferences } from '../components/modules/pageReferences';
 import { ReadOnly } from '../components/modules/readonly';
 import { RectangleSelection } from '../components/modules/rectangleSelection';
 import { Renderer } from '../components/modules/renderer';
@@ -97,6 +98,7 @@ export interface BlokModules {
   DragManager: DragManager,
   ModificationsObserver: ModificationsObserver,
   Paste: Paste,
+  PageReferences: PageReferences,
   ReadOnly: ReadOnly,
   RectangleSelection: RectangleSelection,
   Renderer: Renderer,

@@ -884,3 +884,90 @@ describe('merge audit: resize and grip selection on a merged grid', () => {
     expect(selection.getSelectedRange()).toEqual({ minRow: 0, maxRow: 2, minCol: 1, maxCol: 1 });
   });
 });
+
+describe('merge audit: the grip of a merged cell acts on every row/column it covers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  type SpanAction = { type: 'delete-row' | 'delete-col' | 'duplicate-row' | 'duplicate-col'; index: number; count: number };
+
+  interface SpanSubsystems {
+    handleRowColAction: (g: HTMLElement, a: SpanAction) => void;
+    colorRange: (type: 'row' | 'col', index: number, color: string | null, mode: 'backgroundColor', count: number) => void;
+  }
+
+  const subsystemsOf = (table: Table): SpanSubsystems =>
+    (table as unknown as { subsystems: SpanSubsystems }).subsystems;
+
+  /** 4x4 with a 3-row x 2-col merge at [0,0]..[2,1]. */
+  const mergedTable = (): { table: Table; gridEl: HTMLElement; model: TableModel } => {
+    const content = Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => ({ blocks: [] as string[] })));
+    const { table, gridEl } = createTable({ withHeadings: false, withHeadingColumn: false, content });
+    const model = getModel(table);
+
+    model.mergeCells({ minRow: 0, maxRow: 2, minCol: 0, maxCol: 1 });
+    rebuild(table);
+
+    return { table, gridEl, model };
+  };
+
+  it('delete removes all three merged rows in one go', () => {
+    const { table, gridEl, model } = mergedTable();
+
+    subsystemsOf(table).handleRowColAction(gridEl, { type: 'delete-row', index: 0, count: 3 });
+
+    expect(model.rows).toBe(1);
+    model.validateInvariants();
+    expectDomMatchesModel(gridEl, model);
+  });
+
+  it('delete removes both merged columns in one go', () => {
+    const { table, gridEl, model } = mergedTable();
+
+    subsystemsOf(table).handleRowColAction(gridEl, { type: 'delete-col', index: 0, count: 2 });
+
+    expect(model.cols).toBe(2);
+    expect(model.hasMerges()).toBe(false);
+    model.validateInvariants();
+    expectDomMatchesModel(gridEl, model);
+    expect(gridEl.querySelectorAll('colgroup col')).toHaveLength(model.cols);
+  });
+
+  it('duplicate copies all three merged rows below the span', () => {
+    const { table, gridEl, model } = mergedTable();
+
+    subsystemsOf(table).handleRowColAction(gridEl, { type: 'duplicate-row', index: 0, count: 3 });
+
+    expect(model.rows).toBe(7);
+    expect(model.getCellSpan(0, 0)).toEqual({ colspan: 2, rowspan: 3 });
+    model.validateInvariants();
+    expectDomMatchesModel(gridEl, model);
+  });
+
+  it('duplicate copies both merged columns right of the span', () => {
+    const { table, gridEl, model } = mergedTable();
+
+    subsystemsOf(table).handleRowColAction(gridEl, { type: 'duplicate-col', index: 0, count: 2 });
+
+    expect(model.cols).toBe(6);
+    model.validateInvariants();
+    expectDomMatchesModel(gridEl, model);
+    expect(gridEl.querySelectorAll('colgroup col')).toHaveLength(model.cols);
+  });
+
+  it('color paints every cell of the merged rows, not only the first row', () => {
+    const { table, model } = mergedTable();
+
+    subsystemsOf(table).colorRange('row', 0, '#ff0000', 'backgroundColor', 3);
+
+    expect(model.getCellColor(2, 3)).toBe('#ff0000');
+    expect(model.getCellColor(1, 2)).toBe('#ff0000');
+    expect(model.getCellColor(3, 3)).toBeUndefined();
+  });
+});

@@ -293,10 +293,23 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   acceptsChildren?: boolean;
 
   /**
-   * For a block that stands for something that must exist once, like a page.
-   * Copy, Duplicate and Alt-drag carry this link instead of the block, and a
-   * pasted copy becomes the link. A cut still moves the block, once.
-   * Return null when there is nothing to link to.
+   * Set to true when a copy of this Tool's block rebuilds its children from
+   * its own data — a table's `content` names its cell blocks, and the copy
+   * duplicates them when it renders.
+   *
+   * Duplicate and Alt-drag then copy only the block and leave its descendants
+   * to the Tool, so they are not copied twice. Leave unset when the children
+   * are not named in the data (toggle, column_list, database rows): declaring
+   * it there loses them from every copy.
+   */
+  copiesOwnChildren?: boolean;
+
+  /**
+   * For a block that stands for something living elsewhere, like a page.
+   * Copy carries this link for other apps, and a pasted copy becomes it. A
+   * cut still moves the block, once. A page block is the exception: in the
+   * document where its page is already live, paste, Duplicate and Alt-drag
+   * make another block for the same page. Return null when there is nothing to link to.
    *
    * Core inserts the link as a default block (a paragraph holding
    * `<a href="url">text</a>`), and the block menu's "Copy link" copies `url`.
@@ -306,6 +319,35 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * @param config - the Tool's config
    */
   copyAsLink?(data: BlockToolData, config: ToolConfig): { url: string; text: string } | null;
+
+  /**
+   * The data Duplicate and Alt-drag insert for this Tool's block, instead of
+   * a copy or the `copyAsLink` link. Return null to fall back. Copy and
+   * paste never call it.
+   *
+   * @param data - the block's saved data
+   * @param config - the Tool's config
+   */
+  duplicateData?(data: BlockToolData, config: ToolConfig): BlockToolData | null;
+
+  /**
+   * The data a block picked from the toolbox starts with, for data only the
+   * host can give, like a page id from a backend. The toolbox waits for it
+   * and shows the item as busy, then inserts the block. A rejection inserts
+   * nothing. Other inserts never call it.
+   *
+   * @param config - the Tool's config
+   */
+  prepareInsert?(config: ToolConfig): Promise<BlockToolData>;
+
+  /**
+   * How this Tool's block menu is laid out.
+   * `titled` heads the menu with the Tool's toolbox title and puts Turn into
+   * before the Tool's own items, like Notion's page menu.
+   * `trash` reads Delete as "Move to Trash", for a block that stands for
+   * something the host keeps, like a page.
+   */
+  blockMenu?: { titled?: boolean; trash?: boolean };
 
   /**
    * Set to true when Enter on this container's empty LAST child must create the
@@ -330,6 +372,25 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * children never stepwise-outdent out of it.
    */
   keepsChildrenOnEnter?: boolean;
+
+  /**
+   * Set to true when deleting this Tool's block must delete its whole subtree.
+   *
+   * By default Blok keeps a deleted container's body: its children move up one
+   * level into the container's slot (a toggle, a callout). A layout container
+   * whose children only make sense inside it — a column, a tab — declares this
+   * so its children are removed with it instead of leaking out.
+   */
+  deletesChildren?: boolean;
+
+  /**
+   * Set to true when the block is a pure layout piece, like a column or a tab.
+   *
+   * A layout block never gets the hover toolbar (no drag handle, no block
+   * menu) and is never a selection unit: only the blocks inside it are. Blocks
+   * inside it take no depth indent, since the layout positions them.
+   */
+  isLayout?: boolean;
 
   /**
    * Declares that this Tool stores a host-uploaded asset URL at `data.url`.

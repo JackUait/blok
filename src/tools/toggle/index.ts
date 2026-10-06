@@ -119,9 +119,9 @@ export class ToggleItem implements BlockTool {
       readOnly: this.readOnly,
       isOpen: this._isOpen,
       placeholder: this.placeholder,
-      keydownHandler: this.readOnly ? null : this.handleKeyDown.bind(this),
+      keydownHandler: null,
       onArrowClick: () => this.toggleOpen(),
-      onBodyPlaceholderClick: this.readOnly ? null : () => this.handleBodyPlaceholderClick(),
+      onBodyPlaceholderClick: null,
       bodyPlaceholderText: this.api.i18n.t(BODY_PLACEHOLDER_KEY),
       ariaLabels: {
         collapse: this.api.i18n.t(ARIA_LABEL_COLLAPSE_KEY),
@@ -147,7 +147,26 @@ export class ToggleItem implements BlockTool {
 
     this.followPersonalOpen();
 
+    if (!this.readOnly) {
+      this.wireEditableListeners();
+    }
+
     return this._element;
+  }
+
+  /**
+   * Kept out of render(): a collaboration session boots every block read-only
+   * and flips it editable in place via setReadOnly(false), without a re-render.
+   * Stable handler refs make a repeated add a DOM no-op, so nothing stacks.
+   */
+  private wireEditableListeners(): void {
+    this._contentElement?.addEventListener('keydown', this.handleKeyDown);
+    this._bodyPlaceholderElement?.addEventListener('click', this.handleBodyPlaceholderClick);
+  }
+
+  private unwireEditableListeners(): void {
+    this._contentElement?.removeEventListener('keydown', this.handleKeyDown);
+    this._bodyPlaceholderElement?.removeEventListener('click', this.handleBodyPlaceholderClick);
   }
 
   private handleChildContainerInput = (): void => {
@@ -289,6 +308,12 @@ export class ToggleItem implements BlockTool {
       this._contentElement.contentEditable = state ? 'false' : 'true';
     }
 
+    if (state) {
+      this.unwireEditableListeners();
+    } else {
+      this.wireEditableListeners();
+    }
+
     // Manage block changed event subscription
     if (state && !wasReadOnly) {
       this.api.events.off('block changed', this.handleBlockChanged);
@@ -416,7 +441,7 @@ export class ToggleItem implements BlockTool {
     updateToggleEmptyState(this._element, this._childContainerElement);
   }
 
-  private handleBodyPlaceholderClick(): void {
+  private handleBodyPlaceholderClick = (): void => {
     if (this.blockId === undefined) {
       return;
     }
@@ -433,9 +458,9 @@ export class ToggleItem implements BlockTool {
 
     // Hide the body placeholder now that a child exists
     this._bodyPlaceholderElement?.classList.add('hidden');
-  }
+  };
 
-  private handleKeyDown(event: KeyboardEvent): void {
+  private handleKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       void this.handleEnter();
@@ -448,7 +473,7 @@ export class ToggleItem implements BlockTool {
 
       return;
     }
-  }
+  };
 
   private createKeyboardContext(): Parameters<typeof handleToggleEnter>[0] {
     return {

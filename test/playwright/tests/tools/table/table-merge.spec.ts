@@ -624,4 +624,28 @@ test.describe('Table structural ops through a merged region', () => {
       page.locator('[data-blok-table-grip-row="2"]')
     ).not.toHaveAttribute('data-blok-table-grip-drag-disabled', '');
   });
+
+  test('dragging a row locked by a merge explains why it does not move', async ({ page }) => {
+    await create3x3Table(page);
+    await mergeTopLeft2x2(page);
+    await hoverCellAt(page, 0, 2);
+
+    const lockedGrip = page.locator('[data-blok-table-grip-row="0"]');
+
+    await expect(lockedGrip).toBeVisible();
+    await expect(lockedGrip).toHaveCSS('cursor', 'pointer');
+
+    const box = assertBoundingBox(await lockedGrip.boundingBox(), 'locked row grip');
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 60, { steps: 6 });
+
+    await expect(page.getByRole('tooltip')).toHaveText('Split merged cells to move this row');
+    expect(await page.evaluate(() => document.body.style.cursor)).not.toBe('not-allowed');
+
+    await page.mouse.up();
+
+    await expect(page.getByRole('tooltip')).toBeHidden();
+  });
 });

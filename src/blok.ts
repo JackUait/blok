@@ -47,6 +47,10 @@ export { TEST_ID } from './components/constants/test-ids';
  */
 export { BLOK_FONT_SIZE_TOKENS } from './components/utils/font-size-tokens';
 
+export { inspectOfflineScope, forgetOfflineScope } from './components/modules/collaboration/offline-scope';
+export { listOfflinePages, forgetOfflinePage } from './components/modules/collaboration/offline-pages';
+export { downloadOfflinePage } from './components/modules/collaboration/headless-offline-page';
+
 /**
  * Full teardown of an instance: modules and their listeners, the save queue's
  * `beforeunload` guard, the shared tooltip, and the readiness-registry entry
@@ -65,6 +69,10 @@ function teardown(instance: Blok, blok: Core): void {
   // Drop this instance from the readiness registry first, so aggregates
   // scoped to a subtree stop counting an editor that is going away.
   unregisterInstance(instance);
+
+  const persistence = blok.config?.persistence;
+  // Before markDestroyed: the last edit must be read while blocks are mounted.
+  const finalSave = blok.moduleInstances.ModificationsObserver?.flushOnDestroy?.() ?? null;
 
   // Mark all modules as destroyed first so any in-flight async work stops gracefully
   Object.values(blok.moduleInstances)
@@ -99,7 +107,12 @@ function teardown(instance: Blok, blok: Core): void {
   // module, so the walk above cannot reach it. Left attached it outlives the
   // editor and asks the user to confirm every later navigation in a
   // single-page app, over a document that is already gone.
-  releasePersistenceQueue(blok.config?.persistence);
+  // Released after the final save reaches the queue, or the queue drops it.
+  if (finalSave === null) {
+    releasePersistenceQueue(persistence);
+  } else {
+    void finalSave.finally(() => releasePersistenceQueue(persistence));
+  }
 
   destroyTooltip();
 

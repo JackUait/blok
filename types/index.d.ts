@@ -152,6 +152,8 @@ export {
   DatabaseRowData,
   DatabaseData,
   DatabaseAdapter,
+  DatabaseRowPages,
+  DatabaseRowPageReceipt,
   DatabaseConfig,
 } from './tools/database';
 export { BlockId } from './data-formats/block-id';
@@ -411,6 +413,66 @@ export function createEmittedEchoWindow(capacity?: number): {
  * @param configs - sanitize configs in composition order
  */
 export function composeBaseSanitizeConfig(configs: SanitizerConfig[]): SanitizerConfig;
+
+export interface OfflinePartitionReport {
+  url: string;
+  doc: string;
+  outbox: { count: number; bytes: number };
+  quarantine: { count: number; bytes: number };
+  updates: { count: number; bytes: number };
+  mayHaveUnsentV1Edits: boolean;
+}
+
+export interface OfflineScopeReport {
+  partitions: readonly OfflinePartitionReport[];
+}
+
+export interface OfflineScopeForgetResult {
+  deletedPartitions: number;
+  discarded: OfflineScopeReport;
+}
+
+export function inspectOfflineScope(offlineScope: string): Promise<OfflineScopeReport>;
+
+export function forgetOfflineScope(
+  offlineScope: string,
+  options: { discardPending: true }
+): Promise<OfflineScopeForgetResult>;
+
+export function listOfflinePages(scope: string): Promise<readonly OfflinePartitionReport[]>;
+
+export function forgetOfflinePage(
+  scope: string,
+  page: { url: string; doc: string },
+  options: { discardPending: true }
+): Promise<OfflineScopeForgetResult>;
+
+export interface DownloadOfflinePageInput {
+  url: string;
+  doc: string;
+  offlineScope: string;
+  ticket?: (options?: { forceRefresh?: boolean }) => Promise<string>;
+  signal?: AbortSignal;
+  socketFactory?: (url: string, protocols: string[]) => {
+    binaryType: string;
+    readonly readyState: number;
+    readonly protocol: string;
+    onopen: ((event: unknown) => void) | null;
+    onmessage: ((event: { data: unknown }) => void) | null;
+    onclose: ((event: { code: number; reason: string }) => void) | null;
+    onerror: ((event: unknown) => void) | null;
+    send(data: ArrayBufferLike | ArrayBufferView): void;
+    close(code?: number, reason?: string): void;
+  };
+}
+
+export interface DownloadOfflinePageResult {
+  url: string;
+  doc: string;
+  lineage: string;
+}
+
+export function downloadOfflinePage(input: DownloadOfflinePageInput): Promise<DownloadOfflinePageResult>;
 
 /**
  * Derive an inline tool's sanitizer rule from its MarkSpec: allowlists the

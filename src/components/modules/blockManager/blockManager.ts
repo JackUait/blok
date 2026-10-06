@@ -491,12 +491,18 @@ export class BlockManager extends Module {
     this.hierarchy = new BlockHierarchy(
       this.repository,
       (parentId) => {
-        if (!this.yjsSync.isSyncingFromYjs) {
+        // Inside a sync window the parent's data came from the doc — unless a
+        // child under it was just minted here, which the doc only half has.
+        const hasLocalChild = (): boolean =>
+          this.yjsSync.hasLocalAddDuringSync(this.repository.getBlockById(parentId)?.contentIds ?? []);
+
+        if (!this.yjsSync.isSyncingFromYjs || hasLocalChild()) {
           this.scheduleParentSync(parentId);
         }
       },
       () => Boolean(this.yjsSync?.isSyncingFromYjs),
-      this.blocksStore
+      this.blocksStore,
+      () => Boolean(this.yjsSync?.isMaterializingFromPeer)
     );
 
     // Initialize operations first (before yjsSync) to allow circular dependency resolution
@@ -963,6 +969,11 @@ export class BlockManager extends Module {
    * @param skipYjsSync - if true, skip syncing to Yjs (caller handles sync separately)
    */
   public removeBlock(block: Block, addLastBlock = true, skipYjsSync = false): Promise<void> {
+    // Teardown is not a deletion: a container's destroy() must not delete its children from the doc.
+    if (this.isDestroyed) {
+      return Promise.resolve();
+    }
+
     return this.operations.removeBlock(block, addLastBlock, skipYjsSync, this.blocksStore);
   }
 
@@ -2084,11 +2095,11 @@ export class BlockManager extends Module {
     // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
     // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
     if (mutationType === BlockChangedMutationType && !this._isPointerDragActive) {
-      if (isEcho) {
-        // Not necessarily an echo: the window is open across setData's await
-        // and one frame, so the user can type into it. Re-checked on close.
+      // A replay announcement is not a local edit; only a real mutation
+      // needs checking when the window closes.
+      if (isEcho && source === 'mutation') {
         this.yjsSync.noteSuppressedMutation(block);
-      } else {
+      } else if (!isEcho) {
         void this.syncBlockDataToYjs(block, block.isDerivedChange ? { untracked: true, normalize: 'all', derivedFrom: block.derivedFrom } : undefined);
       }
     }

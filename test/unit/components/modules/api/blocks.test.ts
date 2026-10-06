@@ -277,6 +277,7 @@ type BlokStub = {
   };
   BlockSelection: {
     selectBlock: ReturnType<typeof vi.fn>;
+    clearSelection: ReturnType<typeof vi.fn>;
   };
   Paste: {
     processText: ReturnType<typeof vi.fn>;
@@ -347,6 +348,7 @@ const createBlokStub = (
     },
     BlockSelection: {
       selectBlock: vi.fn(),
+      clearSelection: vi.fn(),
     },
     Tools: {
       blockTools: new Map(),
@@ -1180,6 +1182,43 @@ describe('BlocksAPI', () => {
 
       expect(mockScrollTo).toHaveBeenCalledWith({ top: 320, behavior: 'smooth' });
       expect(blok.BlockSelection.selectBlock).toHaveBeenCalledWith(targetBlock);
+      expect(el.classList.contains('blok-block--target')).toBe(true);
+      expect(mockAnnounce).toHaveBeenCalledWith('a11y.navigatedToBlock');
+    });
+
+    it('replaces an earlier block selection instead of adding to it', () => {
+      // Two jumps used to leave both targets selected; Backspace then deleted both.
+      const targetBlock = createBlockStub({ id: 'target-1' });
+      const { blocksApi, blok, blockManager } = createBlocksApi({ blocks: [ targetBlock ] });
+      const calls: string[] = [];
+
+      blockManager.getBlockById.mockImplementation((id: string) => (id === 'target-1' ? targetBlock : undefined));
+      blok.BlockSelection.clearSelection.mockImplementation(() => calls.push('clear'));
+      blok.BlockSelection.selectBlock.mockImplementation(() => calls.push('select'));
+      document.querySelector = vi.fn((selector: string): Element | null =>
+        selector === '[data-blok-id="target-1"]' ? stubElement(10) : originalQuerySelector(selector)
+      );
+
+      blocksApi.methods.scrollToBlock?.('target-1');
+
+      expect(calls).toEqual(['clear', 'select']);
+    });
+
+    it('scrolls, highlights and announces without selecting when asked not to select', () => {
+      const targetBlock = createBlockStub({ id: 'target-1' });
+      const { blocksApi, blok, blockManager } = createBlocksApi({ blocks: [ targetBlock ] });
+      const el = stubElement(200);
+
+      blockManager.getBlockById.mockImplementation((id: string) => (id === 'target-1' ? targetBlock : undefined));
+      document.querySelector = vi.fn((selector: string): Element | null =>
+        selector === '[data-blok-id="target-1"]' ? el : originalQuerySelector(selector)
+      );
+
+      blocksApi.methods.scrollToBlock?.('target-1', { select: false });
+
+      expect(blok.BlockSelection.selectBlock).not.toHaveBeenCalled();
+      expect(blok.BlockSelection.clearSelection).not.toHaveBeenCalled();
+      expect(mockScrollTo).toHaveBeenCalledWith({ top: 200, behavior: 'smooth' });
       expect(el.classList.contains('blok-block--target')).toBe(true);
       expect(mockAnnounce).toHaveBeenCalledWith('a11y.navigatedToBlock');
     });

@@ -28,10 +28,14 @@ import {
   Image as ImageTool,
   List,
   Page,
+  PageLink,
   Paragraph,
   Quote,
   Spacer,
   Table,
+  TableOfContents,
+  TabTool,
+  TabsTool,
   Toggle,
   Video,
   defaultBlockTools,
@@ -56,7 +60,7 @@ type JsonSchema = {
  * is registered by hand. Export names cannot stand in for this list — they are
  * class names (`Columns`), not the registry keys a saved block's `type` holds.
  */
-const BUILT_IN_BLOCK_TOOLS: readonly string[] = [...Object.keys(defaultBlockTools), 'page'];
+const BUILT_IN_BLOCK_TOOLS: readonly string[] = [...Object.keys(defaultBlockTools), 'page', 'page-link'];
 
 const schema = blokDocumentSchema as unknown as JsonSchema;
 const defs = schema.$defs ?? {};
@@ -173,14 +177,17 @@ const savedData: Record<string, Record<string, unknown>> = {
 
   // A row as the tool writes one today: a top-level `title` beside the
   // properties mirror. A row saved before that key existed still omits it.
-  'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it' }))
+  'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it', pageId: 'row-page' }))
     .save(contentElement('')),
 
-  page: new Page(options({ pageId: 'p1', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } })).save(),
+  page: new Page(options({ pageId: 'p1', textColor: 'red', backgroundColor: 'blue', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } })).save(),
+  'page-link': new PageLink(options({ pageId: 'p1' })).save(),
 
   divider: new Divider(options({})).save(),
 
   spacer: new Spacer(options({ height: 40 })).save(),
+
+  table_of_contents: new TableOfContents(options({ textColor: 'red', backgroundColor: 'blue' })).save(),
 
   quote: new Quote(options({ text: 'Wise words', size: 'large' })).save(
     contentElement('Wise words') as unknown as HTMLQuoteElement
@@ -225,6 +232,11 @@ const savedData: Record<string, Record<string, unknown>> = {
   column_list: new ColumnList(options({})).save(),
 
   column: new Column(options({ widthRatio: 2 })).save(),
+
+  tabs: new TabsTool(options({})).save(),
+
+  // TabData is an interface, so spread it into a plain record.
+  tab: { ...new TabTool(options({ title: 'Overview', icon: '📋' })).save() },
 
   embed: new Embed(options({
     service: 'youtube', source: 'https://youtu.be/x', embed: 'https://www.youtube.com/embed/x',
@@ -280,23 +292,26 @@ describe('blokDocumentSchema', () => {
     });
   });
 
-  /**
-   * A page block is a pointer: its body is a separate document, so the def
-   * describes only the id and the cached title/icon.
-   */
+  describe('database-row', () => {
+    it('declares a nonempty optional page pointer saved beside row data', () => {
+      const row = defs['database-row'];
+
+      expect(savedData['database-row']).toHaveProperty('pageId', 'row-page');
+      expect(row.properties?.pageId).toMatchObject({ type: 'string', minLength: 1 });
+      expect(row.required).not.toContain('pageId');
+      expect(row.additionalProperties).toBe(false);
+    });
+  });
+
   describe('page', () => {
-    it('describes the pointer and its cached title and icon', () => {
+    it('describes the saved pointer id and block color, not legacy cached metadata', () => {
       const page = defs.page;
 
+      expect(savedData.page).toEqual({ pageId: 'p1', textColor: 'red', backgroundColor: 'blue' });
       expect(page.required).toEqual(['pageId']);
       expect(page.additionalProperties).toBe(false);
-      expect(Object.keys(page.properties ?? {}).sort()).toEqual(['cache', 'pageId']);
+      expect(Object.keys(page.properties ?? {})).toEqual(['pageId', 'textColor', 'backgroundColor']);
       expect(page.description).toMatch(/separate document/);
-
-      const cache = page.properties?.cache as JsonSchema;
-
-      expect(cache.additionalProperties).toBe(false);
-      expect(Object.keys(cache.properties ?? {}).sort()).toEqual(['icon', 'title']);
     });
 
     it('routes the page type to its def', () => {
@@ -331,6 +346,55 @@ describe('blokDocumentSchema', () => {
       const isOpen = (defs[name].properties ?? {}).isOpen as { type?: string; deprecated?: boolean; description?: string } | undefined;
 
       expect(isOpen).toEqual({ type: 'boolean', deprecated: true, description: 'Ignored. Open state is personal and never saved.' });
+    });
+  });
+
+  describe('table_of_contents', () => {
+    it('saves only block color; the heading list is never stored', () => {
+      const toc = defs.table_of_contents;
+
+      expect(savedData.table_of_contents).toEqual({ textColor: 'red', backgroundColor: 'blue' });
+      expect(toc.required ?? []).toEqual([]);
+      expect(toc.additionalProperties).toBe(false);
+      expect(Object.keys(toc.properties ?? {})).toEqual(['textColor', 'backgroundColor']);
+    });
+  });
+
+  describe('tabs', () => {
+    it('describes an empty tabs container and a tab with a required plain title and optional icon', () => {
+      expect(defs.tabs).toMatchObject({ type: 'object', additionalProperties: false });
+      expect(Object.keys(defs.tabs.properties ?? {})).toEqual([]);
+
+      expect(defs.tab.required).toEqual(['title']);
+      expect(defs.tab.additionalProperties).toBe(false);
+      expect(Object.keys(defs.tab.properties ?? {})).toEqual(['title', 'icon']);
+      expect(defs.tab.properties?.title).toMatchObject({ type: 'string' });
+      expect(defs.tab.properties?.icon).toMatchObject({ type: 'string' });
+    });
+
+    it('routes tabs and tab to their defs', () => {
+      const branches = (blockSchema.items as unknown as { allOf?: Array<{
+        if: { properties: { type: { const: string } } };
+        then: { properties: { data: { $ref: string } } };
+      }> }).allOf ?? [];
+      const routed = Object.fromEntries(
+        branches.map(branch => [branch.if.properties.type.const, branch.then.properties.data.$ref])
+      );
+
+      expect(routed.tabs).toBe('#/$defs/tabs');
+      expect(routed.tab).toBe('#/$defs/tab');
+    });
+  });
+
+  describe('page-link', () => {
+    it('requires a nonempty target and rejects saved metadata', () => {
+      const link = defs['page-link'];
+
+      expect(savedData['page-link']).toEqual({ pageId: 'p1' });
+      expect(link.required).toEqual(['pageId']);
+      expect(link.additionalProperties).toBe(false);
+      expect(Object.keys(link.properties ?? {})).toEqual(['pageId']);
+      expect(link.properties?.pageId).toMatchObject({ type: 'string', minLength: 1 });
     });
   });
 

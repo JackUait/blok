@@ -36,6 +36,7 @@ const EXEMPT_FILES: Exemption[] = [
   { file: 'src/components/utils/logger.ts', reason: 'dev console badge styling, never rendered in the editor' },
   { file: 'src/tools/database/database-view.ts', reason: 'not rendered by the product; only unit tests import it' },
   { file: 'src/playground/radius-gallery.ts', reason: 'the rounding page draws any radius and every primitive to explain the rule' },
+  { file: 'src/playground/page-tree.css', reason: 'playground chrome outside every Blok root, where the radius roles are not defined and resolve to 0' },
 ];
 
 const exempt = new Set(EXEMPT_FILES.map((e) => e.file));
@@ -66,6 +67,8 @@ const isLawfulRadius = (value: string, channels: ReadonlySet<string> = new Set()
   const v = value
     .replace(/!important/, '')
     .trim()
+    // Table corners offset the radius by half the fixed 1px cell border.
+    .replace(/calc\(var\(--blok-radius-table\) - \(1 [+-] var\(--_blok-inline-sign, 1\)\) \* 0\.5px\)/g, 'var(--blok-radius-table)')
     .replace(/var\((--[\w-]+)/g, (m, name: string) => (channels.has(name) ? 'var(--blok-radius-channel' : m));
 
   // Arithmetic is only lawful around a radius var (e.g. frame + gap).
@@ -213,8 +216,14 @@ describe('isLawfulRadius', () => {
     'calc(var(--blok-space-2) + 1px)',
     '9999px',
     'var(--blok-image-island-merged-radius)',
+    'calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.75px)',
   ])('rejects %s', (value) => {
     expect(isLawfulRadius(value)).toBe(false);
+  });
+
+  it('accepts the directional half-border correction on table corners', () => {
+    expect(isLawfulRadius('var(--blok-radius-table) calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px)')).toBe(true);
+    expect(isLawfulRadius('calc(var(--blok-radius-table) - (1 + var(--_blok-inline-sign, 1)) * 0.5px) var(--blok-radius-table)')).toBe(true);
   });
 
   it('accepts a declared component channel', () => {

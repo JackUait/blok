@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { blocksToHtml, blocksToPlainText, htmlToBlocks, htmlToBlocksWithReport } from '../../../src/view';
 
 import type { OutputBlockData } from '../../../types';
+import { COLOR_PRESETS, COLOR_PRESETS_DARK } from '../../../src/components/shared/color-presets';
 
 /**
  * Blocks without their generated ids, so a test asserts shape rather than the
@@ -31,6 +32,12 @@ describe('htmlToBlocks — structure', () => {
   it('keeps inline markup and links inside a paragraph', () => {
     expect(shape(htmlToBlocks('<p>a <b>bold</b> <a href="https://x.dev" rel="nofollow">link</a></p>'))).toEqual([
       { type: 'paragraph', data: { text: 'a <b>bold</b> <a href="https://x.dev" rel="nofollow">link</a>' } },
+    ]);
+  });
+
+  it('imports a page reference without its stale URL or title', () => {
+    expect(shape(htmlToBlocks('<p>See <a data-blok-page-id="p1" href="/old-title" title="Old title">Old title</a></p>'))).toEqual([
+      { type: 'paragraph', data: { text: 'See <a data-blok-page-id="p1">Page</a>' } },
     ]);
   });
 
@@ -276,6 +283,165 @@ describe('htmlToBlocks — tables', () => {
     const [table] = htmlToBlocks('<table><tr><th>a</th><td>1</td></tr><tr><th>b</th><td>2</td></tr></table>');
 
     expect(table.data.withHeadingColumn).toBe(true);
+  });
+
+  it('reads a one-column table of th cells with no thead as a heading column, not a heading row', () => {
+    const [table] = htmlToBlocks('<table><tr><th>a</th></tr><tr><th>b</th></tr></table>');
+
+    expect(table.data).toMatchObject({ withHeadings: false, withHeadingColumn: true });
+  });
+
+  it('keeps both heading flags when the first row is all th and every row opens with th', () => {
+    const [table] = htmlToBlocks('<table><tr><th>a</th><th>b</th></tr><tr><th>x</th><td>1</td></tr></table>');
+
+    expect(table.data).toMatchObject({ withHeadings: true, withHeadingColumn: true });
+  });
+
+  it('keeps a first row of th with no thead as a heading row', () => {
+    const [table] = htmlToBlocks('<table><tr><th>H</th></tr><tr><td>c</td></tr></table>');
+
+    expect(table.data).toMatchObject({ withHeadings: true, withHeadingColumn: false });
+  });
+
+  it('round-trips a one-column table with both heading flags', () => {
+    const doc = {
+      blocks: [
+        { id: 't', type: 'table', data: { withHeadings: true, withHeadingColumn: true, content: [[{ blocks: ['a'] }], [{ blocks: ['b'] }]] }, content: ['a', 'b'] },
+        { id: 'a', type: 'paragraph', parent: 't', data: { text: 'A' } },
+        { id: 'b', type: 'paragraph', parent: 't', data: { text: 'B' } },
+      ] as OutputBlockData[],
+    };
+    const [table] = htmlToBlocks(blocksToHtml(doc));
+
+    expect(table.data).toMatchObject({ withHeadings: true, withHeadingColumn: true });
+  });
+
+  it('reads cell colours and alignment from the cell style', () => {
+    const [table] = htmlToBlocks(
+      '<table><tr>'
+      + '<td style="background-color: rgb(251, 236, 221); color: #d9730d; text-align: center; vertical-align: middle">a</td>'
+      + '<td style="text-align:var(--_blok-end-side, right);vertical-align:bottom">b</td>'
+      + '<td style="text-align: right">c</td>'
+      + '<td style="background: #EEE; color: var(--Brand-Ink)">d</td>'
+      + '</tr></table>'
+    );
+    const [row] = table.data.content as Array<Array<Record<string, unknown>>>;
+
+    expect(row[3]).toMatchObject({ color: '#EEE', textColor: 'var(--Brand-Ink)' });
+    expect(row[0]).toMatchObject({ color: 'rgb(251, 236, 221)', textColor: '#d9730d', placement: 'middle-center' });
+    expect(row[1]).toMatchObject({ placement: 'bottom-right' });
+    expect(row[2]).toMatchObject({ placement: 'top-right' });
+  });
+
+  it('adds no style keys for a plain, transparent, top-left or unsafe cell', () => {
+    const [table] = htmlToBlocks(
+      '<table><tr>'
+      + '<td>a</td>'
+      + '<td style="background-color: transparent; text-align: left; vertical-align: top">b</td>'
+      + '<td style="background-color: url(x); color: expression(1); border-color: red">c</td>'
+      + '</tr></table>'
+    );
+    const [row] = table.data.content as Array<Array<Record<string, unknown>>>;
+
+    expect(row).toEqual([
+      { blocks: [expect.any(String)] },
+      { blocks: [expect.any(String)] },
+      { blocks: [expect.any(String)] },
+    ]);
+  });
+
+  it.each([
+    ['#ffffff', '#000000'],
+    ['#fff', '#000'],
+    ['white', 'black'],
+    ['rgb(255, 255, 255)', 'rgb(0, 0, 0)'],
+    ['rgba(255,255,255,1)', 'rgba(0, 0, 0, 1)'],
+    ['#FFFFFF', 'BLACK'],
+  ])('drops the page-default bg %s and text %s that external tables put on every cell', (background, text) => {
+    const [table] = htmlToBlocks(
+      '<table><tr>'
+      + `<td style="border:solid #000000 1pt;background-color:${background};color:${text};padding:5pt">a</td>`
+      + `<td style="background-color:#fbecdd;color:${text}">b</td>`
+      + `<td style="background-color:${background};color:#d9730d">c</td>`
+      + '</tr></table>'
+    );
+    const [row] = table.data.content as Array<Array<Record<string, unknown>>>;
+
+    expect(row[0]).toEqual({ blocks: [expect.any(String)] });
+    expect(row[1]).toEqual({ blocks: [expect.any(String)], color: '#fbecdd' });
+    expect(row[2]).toEqual({ blocks: [expect.any(String)], textColor: '#d9730d' });
+  });
+
+  it.each([
+    ['rgb(31, 31, 31)'],
+    ['#202124'],
+    ['rgba(40, 40, 40, 1)'],
+  ])('drops the near-black body ink %s like the editor paste does', (text) => {
+    const [table] = htmlToBlocks(`<table><tr><td style="color:${text}">a</td><td style="color:rgb(41, 41, 41)">b</td></tr></table>`);
+    const [row] = table.data.content as Array<Array<Record<string, unknown>>>;
+
+    expect(row[0]).toEqual({ blocks: [expect.any(String)] });
+    expect(row[1]).toEqual({ blocks: [expect.any(String)], textColor: 'rgb(41, 41, 41)' });
+  });
+
+  it('round-trips every light and dark cell colour preset exactly', () => {
+    const presets = [...COLOR_PRESETS, ...COLOR_PRESETS_DARK];
+    const doc = {
+      blocks: [
+        {
+          id: 't',
+          type: 'table',
+          data: { withHeadings: false, content: [presets.map((preset, index) => ({ blocks: [`p${index}`], color: preset.bg, textColor: preset.text }))] },
+          content: presets.map((_, index) => `p${index}`),
+        },
+        ...presets.map((_, index) => ({ id: `p${index}`, type: 'paragraph', parent: 't', data: { text: String(index) } })),
+      ] as OutputBlockData[],
+    };
+    const [table] = htmlToBlocks(blocksToHtml(doc));
+    const [row] = table.data.content as Array<Array<Record<string, unknown>>>;
+
+    expect(row.map((cell) => [cell.color, cell.textColor])).toEqual(presets.map((preset) => [preset.bg, preset.text]));
+  });
+
+  it('mirrors physical left and right in a right-to-left table', () => {
+    const [table] = htmlToBlocks(
+      '<div dir="rtl"><table><tr>'
+      + '<td style="text-align: right; vertical-align: middle">a</td>'
+      + '<td style="text-align: left">b</td>'
+      + '<td style="text-align:var(--_blok-end-side, right)">c</td>'
+      + '</tr></table></div>'
+    );
+    const [row] = table.data.content as Array<Array<Record<string, unknown>>>;
+
+    expect(row[0]).toMatchObject({ placement: 'middle-left' });
+    expect(row[1]).toMatchObject({ placement: 'top-right' });
+    expect(row[2]).toMatchObject({ placement: 'top-right' });
+  });
+
+  it('flattens a table nested behind a wrapper into one block per inner cell, in order, with a warning', () => {
+    const report = htmlToBlocksWithReport(
+      '<table><tr><td><p>before</p><div><table><tr><td>deep</td><td>er</td></tr></table></div><p>after</p></td></tr></table>'
+    );
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: [expect.any(String), expect.any(String), expect.any(String), expect.any(String)] }]] } },
+      { type: 'paragraph', data: { text: 'before' }, parent: 0 },
+      { type: 'paragraph', data: { text: 'deep' }, parent: 0 },
+      { type: 'paragraph', data: { text: 'er' }, parent: 0 },
+      { type: 'paragraph', data: { text: 'after' }, parent: 0 },
+    ]);
+    expect(report.warnings.map(({ construct, action }) => ({ construct, action }))).toEqual([{ construct: 'table', action: 'degraded' }]);
+  });
+
+  it('reads column widths and stretched only when they fit the grid', () => {
+    const [fits] = htmlToBlocks('<table data-blok-col-widths="120,360.5" data-blok-stretched="true"><tr><td>a</td><td>b</td></tr></table>');
+    const [wrongCount] = htmlToBlocks('<table data-blok-col-widths="120"><tr><td>a</td><td>b</td></tr></table>');
+    const [bad] = htmlToBlocks('<table data-blok-col-widths="120,-1"><tr><td>a</td><td>b</td></tr></table>');
+
+    expect(fits.data).toMatchObject({ colWidths: [120, 360.5], stretched: true });
+    expect(wrongCount.data).not.toHaveProperty('colWidths');
+    expect(bad.data).not.toHaveProperty('colWidths');
+    expect(bad.data).not.toHaveProperty('stretched');
   });
 });
 
@@ -808,5 +974,118 @@ describe('htmlToBlocks — image alignment', () => {
   it('keeps width and alignment together on one image', () => {
     expect(shape(htmlToBlocks('<figure><img src="https://x.dev/a.png" style="width:25%;margin:0 auto" alt="A"></figure>')))
       .toEqual([{ type: 'image', data: { url: 'https://x.dev/a.png', caption: 'A', alt: 'A', width: 25, alignment: 'center' } }]);
+  });
+});
+
+describe('htmlToBlocks — tabs', () => {
+  it('rebuilds tabs with each tab\'s title, icon and content', () => {
+    expect(shape(htmlToBlocks(
+      '<div data-blok-tabs>'
+      + '<section data-blok-tab><h4 data-blok-tab-title><span data-blok-tab-icon>🍎</span> First &amp; &lt;One&gt;</h4><p>A</p></section>'
+      + '<section data-blok-tab><h4 data-blok-tab-title>Second</h4><p>B</p><p>C</p></section>'
+      + '</div>'
+    ))).toEqual([
+      { type: 'tabs', data: {} },
+      { type: 'tab', data: { title: 'First & <One>', icon: '🍎' }, parent: 0 },
+      { type: 'paragraph', data: { text: 'A' }, parent: 1 },
+      { type: 'tab', data: { title: 'Second' }, parent: 0 },
+      { type: 'paragraph', data: { text: 'B' }, parent: 3 },
+      { type: 'paragraph', data: { text: 'C' }, parent: 3 },
+    ]);
+  });
+
+  it('reads an icon-only title as an empty title', () => {
+    expect(shape(htmlToBlocks(
+      '<div data-blok-tabs><section data-blok-tab><h4 data-blok-tab-title><span data-blok-tab-icon>📋</span></h4></section></div>'
+    ))).toEqual([
+      { type: 'tabs', data: {} },
+      { type: 'tab', data: { title: '', icon: '📋' }, parent: 0 },
+    ]);
+  });
+
+  it('keeps an untitled, empty tab as a tab', () => {
+    expect(shape(htmlToBlocks('<div data-blok-tabs><section data-blok-tab></section></div>'))).toEqual([
+      { type: 'tabs', data: {} },
+      { type: 'tab', data: { title: '' }, parent: 0 },
+    ]);
+  });
+
+  it('keeps a real H4 that opens an untitled tab as a header', () => {
+    expect(shape(htmlToBlocks(
+      '<div data-blok-tabs><section data-blok-tab><h4>Real heading</h4><p>A</p></section></div>'
+    ))).toEqual([
+      { type: 'tabs', data: {} },
+      { type: 'tab', data: { title: '' }, parent: 0 },
+      { type: 'header', data: { text: 'Real heading', level: 4 }, parent: 1 },
+      { type: 'paragraph', data: { text: 'A' }, parent: 1 },
+    ]);
+  });
+
+  it('ignores whitespace between hand-formatted sections', () => {
+    expect(shape(htmlToBlocks(
+      '<div data-blok-tabs>\n  <section data-blok-tab>\n    <h4 data-blok-tab-title> One </h4>\n  </section>\n  <!-- c -->\n</div>'
+    ))).toEqual([
+      { type: 'tabs', data: {} },
+      { type: 'tab', data: { title: 'One' }, parent: 0 },
+    ]);
+  });
+
+  it('unwraps a tab section that is not directly inside tabs', () => {
+    expect(shape(htmlToBlocks(
+      '<section data-blok-tab><h4 data-blok-tab-title>Loose</h4><p>A</p></section>'
+    ))).toEqual([
+      { type: 'header', data: { text: 'Loose', level: 4 } },
+      { type: 'paragraph', data: { text: 'A' } },
+    ]);
+  });
+
+  it('unwraps tabs that hold no tab section', () => {
+    expect(shape(htmlToBlocks('<div data-blok-tabs><p>A</p></div><div data-blok-tabs></div>'))).toEqual([
+      { type: 'paragraph', data: { text: 'A' } },
+    ]);
+  });
+
+  it('moves content that is not a tab out after the tabs, and reports it', () => {
+    const { blocks, warnings } = htmlToBlocksWithReport(
+      '<details><summary>T</summary><div data-blok-tabs><p>stray</p><section data-blok-tab><h4 data-blok-tab-title>One</h4></section></div></details>'
+    );
+
+    expect(shape(blocks)).toEqual([
+      { type: 'toggle', data: { text: 'T', isOpen: false } },
+      { type: 'tabs', data: {}, parent: 0 },
+      { type: 'tab', data: { title: 'One' }, parent: 1 },
+      { type: 'paragraph', data: { text: 'stray' }, parent: 0 },
+    ]);
+    expect(warnings).toEqual([
+      { construct: 'tabs', action: 'degraded', detail: expect.stringContaining('tab') },
+    ]);
+  });
+
+  it('round-trips tabs through blocksToHtml, nested in a toggle', () => {
+    const blocks: OutputBlockData[] = [
+      { id: 'tg', type: 'toggle', data: { text: 'Wrap', isOpen: true } },
+      { id: 'tabs', type: 'tabs', parent: 'tg', data: {} },
+      { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'First & <One>', icon: '🍎' } },
+      { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'A' } },
+      { id: 'h1', type: 'header', parent: 't1', data: { text: 'Inner', level: 4 } },
+      { id: 't2', type: 'tab', parent: 'tabs', data: { title: '' } },
+      { id: 'h2', type: 'header', parent: 't2', data: { text: 'Lead', level: 4 } },
+      { id: 't3', type: 'tab', parent: 'tabs', data: { title: '', icon: '📋' } },
+      { id: 't4', type: 'tab', parent: 'tabs', data: { title: 'Last' } },
+      { id: 'after', type: 'paragraph', data: { text: 'after' } },
+    ];
+
+    expect(shape(htmlToBlocks(blocksToHtml({ blocks })))).toEqual([
+      { type: 'toggle', data: { text: 'Wrap', isOpen: true } },
+      { type: 'tabs', data: {}, parent: 0 },
+      { type: 'tab', data: { title: 'First & <One>', icon: '🍎' }, parent: 1 },
+      { type: 'paragraph', data: { text: 'A' }, parent: 2 },
+      { type: 'header', data: { text: 'Inner', level: 4 }, parent: 2 },
+      { type: 'tab', data: { title: '' }, parent: 1 },
+      { type: 'header', data: { text: 'Lead', level: 4 }, parent: 5 },
+      { type: 'tab', data: { title: '', icon: '📋' }, parent: 1 },
+      { type: 'tab', data: { title: 'Last' }, parent: 1 },
+      { type: 'paragraph', data: { text: 'after' } },
+    ]);
   });
 });

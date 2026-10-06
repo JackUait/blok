@@ -96,6 +96,7 @@ internal static class SyncClose
   private static SyncCloseFrame Map(CollabCloseReason reason) => reason switch
   {
     CollabCloseReason.Reset => Reset,
+    CollabCloseReason.Forbidden => Forbidden,
     CollabCloseReason.Draining => Draining,
     CollabCloseReason.BadAwareness => BadAwareness,
     CollabCloseReason.CommitUnavailable => CommitUnavailable,

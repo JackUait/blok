@@ -1,0 +1,646 @@
+{
+  "/": {
+    "hash": "862188178dbfa0a8",
+    "date": "2026-10-06"
+  },
+  "/404": {
+    "hash": "53bdd9729858a544",
+    "date": null
+  },
+  "/changelog": {
+    "hash": "178ddc8a652182e0",
+    "date": "2026-09-04"
+  },
+  "/demo": {
+    "hash": "ffdeb47053c7e797",
+    "date": "2026-10-05"
+  },
+  "/docs": {
+    "hash": "ca5d190d74fcce8e",
+    "date": "2026-10-06"
+  },
+  "/docs/audio": {
+    "hash": "b24af5f207524c40",
+    "date": "2026-09-28"
+  },
+  "/docs/block-api": {
+    "hash": "c064b907700485e2",
+    "date": "2026-09-24"
+  },
+  "/docs/block-data": {
+    "hash": "7b692bdc21e25883",
+    "date": "2026-10-05"
+  },
+  "/docs/blocks-api": {
+    "hash": "cde719e5b7b43e33",
+    "date": "2026-10-05"
+  },
+  "/docs/blok-editor": {
+    "hash": "fde4dd8f0388efce",
+    "date": "2026-10-05"
+  },
+  "/docs/bold": {
+    "hash": "5fc92ae29f4f45c1",
+    "date": null
+  },
+  "/docs/bookmark": {
+    "hash": "118db6ad390f9227",
+    "date": "2026-09-08"
+  },
+  "/docs/callout": {
+    "hash": "1af22bd9e34104f5",
+    "date": "2026-09-25"
+  },
+  "/docs/caret-api": {
+    "hash": "b30d590c21bc2b6b",
+    "date": "2026-09-08"
+  },
+  "/docs/clearFormat": {
+    "hash": "90f47b3374b22b4c",
+    "date": "2026-09-08"
+  },
+  "/docs/code": {
+    "hash": "cfe54ffc95e449bd",
+    "date": "2026-10-01"
+  },
+  "/docs/column": {
+    "hash": "bb3c5ea3a6ae4241",
+    "date": "2026-09-08"
+  },
+  "/docs/column_list": {
+    "hash": "085bfcdc082ee868",
+    "date": "2026-09-08"
+  },
+  "/docs/concepts": {
+    "hash": "33f68c80642ad777",
+    "date": "2026-10-05"
+  },
+  "/docs/config": {
+    "hash": "072e56a0160218a7",
+    "date": "2026-10-06"
+  },
+  "/docs/core": {
+    "hash": "0613f926627c9cc7",
+    "date": "2026-09-08"
+  },
+  "/docs/custom-block-tool": {
+    "hash": "eabe365e74d499c9",
+    "date": "2026-09-08"
+  },
+  "/docs/database": {
+    "hash": "10fc82e10fc728d1",
+    "date": "2026-09-08"
+  },
+  "/docs/database-row": {
+    "hash": "14918cf2bc9359ad",
+    "date": "2026-09-08"
+  },
+  "/docs/dev-override-seam": {
+    "hash": "bf95aeb17bd158ef",
+    "date": "2026-09-08"
+  },
+  "/docs/divider": {
+    "hash": "f0390aa3d5133dd9",
+    "date": "2026-09-08"
+  },
+  "/docs/embed": {
+    "hash": "a47ee48a70018a69",
+    "date": "2026-09-08"
+  },
+  "/docs/equation": {
+    "hash": "f11971c98eaccf8d",
+    "date": "2026-09-08"
+  },
+  "/docs/events-api": {
+    "hash": "f90181402e9050a9",
+    "date": "2026-09-08"
+  },
+  "/docs/file": {
+    "hash": "aff5f767a7bdba26",
+    "date": "2026-09-28"
+  },
+  "/docs/header": {
+    "hash": "6ad154e74b8b6793",
+    "date": "2026-09-08"
+  },
+  "/docs/history-api": {
+    "hash": "98dccab31e1ad77a",
+    "date": "2026-09-24"
+  },
+  "/docs/i18n-api": {
+    "hash": "f49d20326c37eb23",
+    "date": "2026-09-08"
+  },
+  "/docs/image": {
+    "hash": "a52f50af0ea1cd1a",
+    "date": "2026-10-02"
+  },
+  "/docs/inline-toolbar-api": {
+    "hash": "84f4b5d434a66c9a",
+    "date": "2026-09-08"
+  },
+  "/docs/inlineCode": {
+    "hash": "7f9bd3ace1e56586",
+    "date": null
+  },
+  "/docs/italic": {
+    "hash": "ca6accbec885debc",
+    "date": null
+  },
+  "/docs/link": {
+    "hash": "feff0cec96f7b0b2",
+    "date": "2026-09-08"
+  },
+  "/docs/list": {
+    "hash": "87a9151aa9fdbb2b",
+    "date": "2026-09-08"
+  },
+  "/docs/listeners-api": {
+    "hash": "f6cda1d7503bda39",
+    "date": "2026-09-08"
+  },
+  "/docs/marker": {
+    "hash": "6885a525a4ce70d8",
+    "date": "2026-09-28"
+  },
+  "/docs/marks-api": {
+    "hash": "4f796707304a269f",
+    "date": "2026-09-08"
+  },
+  "/docs/notifier-api": {
+    "hash": "21c4783ed82f1462",
+    "date": "2026-09-08"
+  },
+  "/docs/output-data": {
+    "hash": "46abbacb7510f27a",
+    "date": "2026-10-05"
+  },
+  "/docs/page": {
+    "hash": "ceacb8667f8b90c6",
+    "date": "2026-10-06"
+  },
+  "/docs/page-link": {
+    "hash": "f5c919bb6b2d7fe9",
+    "date": "2026-10-05"
+  },
+  "/docs/paragraph": {
+    "hash": "46e6ab08d8b46da5",
+    "date": "2026-09-08"
+  },
+  "/docs/placeholder-api": {
+    "hash": "b85675e8c13ef6e0",
+    "date": "2026-09-08"
+  },
+  "/docs/quick-start": {
+    "hash": "b9b8250bf0814ead",
+    "date": "2026-09-08"
+  },
+  "/docs/quote": {
+    "hash": "ad2c75ae8f29fa89",
+    "date": "2026-09-08"
+  },
+  "/docs/readonly-api": {
+    "hash": "e30c734e1732cf9f",
+    "date": "2026-09-08"
+  },
+  "/docs/sanitizer-api": {
+    "hash": "e11c5257fc5373fa",
+    "date": "2026-09-08"
+  },
+  "/docs/saver-api": {
+    "hash": "9a806b082d8fc28f",
+    "date": "2026-09-08"
+  },
+  "/docs/selection-api": {
+    "hash": "e571695f40eaf315",
+    "date": "2026-09-08"
+  },
+  "/docs/spacer": {
+    "hash": "de60790901c074d1",
+    "date": "2026-09-08"
+  },
+  "/docs/strikethrough": {
+    "hash": "fac81d574c5019d6",
+    "date": null
+  },
+  "/docs/styles-api": {
+    "hash": "fd70fd59cca7f10e",
+    "date": "2026-10-06"
+  },
+  "/docs/supSub": {
+    "hash": "806166aa35609506",
+    "date": "2026-09-08"
+  },
+  "/docs/tab": {
+    "hash": "d560cfcf42a945d0",
+    "date": "2026-10-06"
+  },
+  "/docs/table": {
+    "hash": "7ae14fead3460363",
+    "date": "2026-09-28"
+  },
+  "/docs/table_of_contents": {
+    "hash": "2b3ce7fe4ac358ec",
+    "date": "2026-10-05"
+  },
+  "/docs/tabs": {
+    "hash": "7c02ec55314fe793",
+    "date": "2026-10-06"
+  },
+  "/docs/theme-api": {
+    "hash": "0849ad5ffe7a14ea",
+    "date": "2026-09-08"
+  },
+  "/docs/toggle": {
+    "hash": "dedf0c86ca6c2e67",
+    "date": "2026-10-05"
+  },
+  "/docs/toolbar-api": {
+    "hash": "1db67960c4d77b0c",
+    "date": "2026-09-26"
+  },
+  "/docs/tools-api": {
+    "hash": "abea4e721ea9fbbe",
+    "date": "2026-09-24"
+  },
+  "/docs/tooltip-api": {
+    "hash": "3cc2d495b0bc90eb",
+    "date": "2026-09-08"
+  },
+  "/docs/tutorial": {
+    "hash": "7814d57f3f2dc1bd",
+    "date": "2026-10-05"
+  },
+  "/docs/ui-api": {
+    "hash": "ca032a6baf9e75fe",
+    "date": null
+  },
+  "/docs/underline": {
+    "hash": "dfd33b86bbe9f570",
+    "date": null
+  },
+  "/docs/uploader-api": {
+    "hash": "b0438b8842dd8e56",
+    "date": "2026-09-08"
+  },
+  "/docs/use-blocks": {
+    "hash": "5102cd5b20605077",
+    "date": "2026-09-27"
+  },
+  "/docs/use-blok-ready": {
+    "hash": "76036f6e147870be",
+    "date": "2026-09-08"
+  },
+  "/docs/video": {
+    "hash": "f9296582d5be195c",
+    "date": "2026-09-28"
+  },
+  "/docs/view-api": {
+    "hash": "fe92a83671c02aac",
+    "date": "2026-09-08"
+  },
+  "/docs/width-api": {
+    "hash": "0fc301eed821cffe",
+    "date": "2026-09-08"
+  },
+  "/migration": {
+    "hash": "07efb40769b4d200",
+    "date": "2026-10-05"
+  },
+  "/migration/reference": {
+    "hash": "e304c1a5fb583213",
+    "date": "2026-09-08"
+  },
+  "/presets": {
+    "hash": "d296de679d9bba1e",
+    "date": "2026-09-08"
+  },
+  "/ru": {
+    "hash": "ccdb627e33732847",
+    "date": "2026-10-06"
+  },
+  "/ru/changelog": {
+    "hash": "b0aea1391ee1ce9a",
+    "date": "2026-09-04"
+  },
+  "/ru/demo": {
+    "hash": "007040728fa1da94",
+    "date": "2026-10-05"
+  },
+  "/ru/docs": {
+    "hash": "4bbf9a55cdfb2445",
+    "date": "2026-10-06"
+  },
+  "/ru/docs/audio": {
+    "hash": "6e78dc793dd15388",
+    "date": "2026-09-28"
+  },
+  "/ru/docs/block-api": {
+    "hash": "64f326d017ca8bc5",
+    "date": "2026-09-24"
+  },
+  "/ru/docs/block-data": {
+    "hash": "c11fa33e63176bcc",
+    "date": "2026-10-05"
+  },
+  "/ru/docs/blocks-api": {
+    "hash": "37b5843bb5bb4afa",
+    "date": "2026-10-05"
+  },
+  "/ru/docs/blok-editor": {
+    "hash": "4e817ba84d75af11",
+    "date": "2026-10-05"
+  },
+  "/ru/docs/bold": {
+    "hash": "07ceaab44b6df965",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/bookmark": {
+    "hash": "b88b6856e0fc018c",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/callout": {
+    "hash": "38e55b0b5d246b57",
+    "date": "2026-09-25"
+  },
+  "/ru/docs/caret-api": {
+    "hash": "f9e9fe5309d5367b",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/clearFormat": {
+    "hash": "908258b48cf7a085",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/code": {
+    "hash": "3d19e3460b4c6ba6",
+    "date": "2026-10-01"
+  },
+  "/ru/docs/column": {
+    "hash": "51849dbdc164b446",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/column_list": {
+    "hash": "ed4915691d2c61a8",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/concepts": {
+    "hash": "5b05167014f36056",
+    "date": "2026-10-05"
+  },
+  "/ru/docs/config": {
+    "hash": "b6acf8e25d26e56f",
+    "date": "2026-10-06"
+  },
+  "/ru/docs/core": {
+    "hash": "9ca869b62a7a4f9d",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/custom-block-tool": {
+    "hash": "066ebbf44b63b57b",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/database": {
+    "hash": "97af6e5b612cc8fd",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/database-row": {
+    "hash": "a203f306b04de348",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/dev-override-seam": {
+    "hash": "c786545b13fa80a4",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/divider": {
+    "hash": "c46a7111dbee804a",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/embed": {
+    "hash": "724d7e76a9be4def",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/equation": {
+    "hash": "b4286ff466a4bc3c",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/events-api": {
+    "hash": "a4098ed392fce82f",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/file": {
+    "hash": "591252babf52e8bb",
+    "date": "2026-09-28"
+  },
+  "/ru/docs/header": {
+    "hash": "576eba4c50187cb5",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/history-api": {
+    "hash": "68310da4af5c9191",
+    "date": "2026-09-24"
+  },
+  "/ru/docs/i18n-api": {
+    "hash": "54ffa8c4ea5b422b",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/image": {
+    "hash": "8f9b535959974b16",
+    "date": "2026-10-02"
+  },
+  "/ru/docs/inline-toolbar-api": {
+    "hash": "6b4597ab28d605c5",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/inlineCode": {
+    "hash": "9094559d150af928",
+    "date": null
+  },
+  "/ru/docs/italic": {
+    "hash": "37ea8256b7c95d24",
+    "date": null
+  },
+  "/ru/docs/link": {
+    "hash": "69035abf3b728d59",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/list": {
+    "hash": "a7f27c5a1f788c9b",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/listeners-api": {
+    "hash": "8647d11c003ca907",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/marker": {
+    "hash": "e30b3f66375d1be5",
+    "date": "2026-09-28"
+  },
+  "/ru/docs/marks-api": {
+    "hash": "6c3e5100afaea987",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/notifier-api": {
+    "hash": "80f406bb7e07e27d",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/output-data": {
+    "hash": "3a8f7dcd07e60d44",
+    "date": "2026-10-05"
+  },
+  "/ru/docs/page": {
+    "hash": "56ca3e0d6e92c693",
+    "date": "2026-10-06"
+  },
+  "/ru/docs/page-link": {
+    "hash": "5326132ec3321d28",
+    "date": "2026-10-05"
+  },
+  "/ru/docs/paragraph": {
+    "hash": "99547f1981936c61",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/placeholder-api": {
+    "hash": "10b8b863c99d5715",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/quick-start": {
+    "hash": "200fa32c952ef061",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/quote": {
+    "hash": "495315a84da3adbb",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/readonly-api": {
+    "hash": "817b46fd30ee1ace",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/sanitizer-api": {
+    "hash": "700aa19488690c88",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/saver-api": {
+    "hash": "a6fa8a35556a97b6",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/selection-api": {
+    "hash": "0cb7b913b452c062",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/spacer": {
+    "hash": "f96cdd82d1ef86b6",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/strikethrough": {
+    "hash": "098725953f601871",
+    "date": null
+  },
+  "/ru/docs/styles-api": {
+    "hash": "caaf7de63662e3d0",
+    "date": "2026-10-06"
+  },
+  "/ru/docs/supSub": {
+    "hash": "694e53ba3430b1df",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/tab": {
+    "hash": "8dd7054d46a18cc7",
+    "date": "2026-10-06"
+  },
+  "/ru/docs/table": {
+    "hash": "c683e052518c5f05",
+    "date": "2026-09-28"
+  },
+  "/ru/docs/table_of_contents": {
+    "hash": "4276e6a60be46e03",
+    "date": "2026-10-05"
+  },
+  "/ru/docs/tabs": {
+    "hash": "17003f4b63d385be",
+    "date": "2026-10-06"
+  },
+  "/ru/docs/theme-api": {
+    "hash": "d0216ca64c953da2",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/toggle": {
+    "hash": "8d63e8354cdc6be8",
+    "date": "2026-10-05"
+  },
+  "/ru/docs/toolbar-api": {
+    "hash": "529520a9bce1fbe5",
+    "date": "2026-09-26"
+  },
+  "/ru/docs/tools-api": {
+    "hash": "0839fd75647e3fac",
+    "date": "2026-09-24"
+  },
+  "/ru/docs/tooltip-api": {
+    "hash": "c793ad9992dac498",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/tutorial": {
+    "hash": "230acd0ed42fa142",
+    "date": "2026-10-05"
+  },
+  "/ru/docs/ui-api": {
+    "hash": "8335da2ee4ec9715",
+    "date": null
+  },
+  "/ru/docs/underline": {
+    "hash": "44efafbf12d8bad9",
+    "date": null
+  },
+  "/ru/docs/uploader-api": {
+    "hash": "7a3925bf82fe77d5",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/use-blocks": {
+    "hash": "54325ba935ab0728",
+    "date": "2026-09-27"
+  },
+  "/ru/docs/use-blok-ready": {
+    "hash": "c73705579e3d719a",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/video": {
+    "hash": "40d94a5fa49949bc",
+    "date": "2026-09-28"
+  },
+  "/ru/docs/view-api": {
+    "hash": "671dd195f8073a99",
+    "date": "2026-09-08"
+  },
+  "/ru/docs/width-api": {
+    "hash": "99ade27c9352dd43",
+    "date": "2026-09-08"
+  },
+  "/ru/migration": {
+    "hash": "97d8b01766dbb3db",
+    "date": "2026-10-05"
+  },
+  "/ru/migration/reference": {
+    "hash": "547df1f30f3bcfda",
+    "date": "2026-09-08"
+  },
+  "/ru/presets": {
+    "hash": "cc793f77cde6a20f",
+    "date": "2026-09-08"
+  },
+  "/ru/server": {
+    "hash": "4d4c323f43004465",
+    "date": "2026-10-05"
+  },
+  "/ru/tools": {
+    "hash": "2b0fddd440ba58c4",
+    "date": null
+  },
+  "/server": {
+    "hash": "18da7678df7fe761",
+    "date": "2026-10-05"
+  },
+  "/tools": {
+    "hash": "8ae406d370e08ec0",
+    "date": null
+  }
+}

@@ -14,9 +14,11 @@
  */
 
 import type { BlockToolData } from '../../types';
+import type { PageInfo } from '../../types/tools/page';
 import { orderByContent } from '../shared/content-order';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from '../shared/table-grid';
 import { isPagePointer } from '../shared/page-pointer';
+import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 
 export interface SerializableBlock {
   /**
@@ -112,6 +114,185 @@ export const inlineLosses = (tagName: string, style: string | null): string[] =>
   return losses.length === 0 && tagName === 'mark' ? ['highlight'] : losses;
 };
 
+/** Escapes one text node's value; code spans pass {@link RAW_TEXT} instead. */
+export type TextEscaper = (text: string) => string;
+
+/** Text inside a code span is literal: escaping it would print the backslashes. */
+export const RAW_TEXT: TextEscaper = (text) => text;
+
+/** A bare URL. GFM links it as written, so a backslash inside would join the URL. */
+const BARE_URL = /((?:https?:\/\/|www\.)[^\s<]*)/;
+
+/** An `&` that would read as a character reference. */
+const ENTITY_LIKE = /&(?=#[0-9]{1,7};|#[xX][0-9a-fA-F]{1,6};|[A-Za-z][A-Za-z0-9]{1,31};)/g;
+
+/** ASCII punctuation: the characters a CommonMark backslash escapes. */
+const ASCII_PUNCTUATION = /[!-/:-@[-`{-~]/;
+
+/** Characters {@link escapeProse} may escape; text without any is returned as is. */
+const PROSE_SIGNIFICANT = /[\\`[\]*~_<$&]/;
+
+const isSpace = (character: string | undefined): boolean => character !== undefined && /\s/.test(character);
+
+const isWordCharacter = (character: string | undefined): boolean =>
+  character !== undefined && /[\p{L}\p{N}]/u.test(character);
+
+/**
+ * Escape one run of prose (no URL inside) so it reads back as the same text.
+ *
+ * Minimal on purpose: the editor's `text/plain` clipboard flavour IS this
+ * Markdown, so a character is escaped only where it could open or close a
+ * construct. The neighbours of a text node are unknown, so its edges count as
+ * "could touch markup".
+ * @param text - plain text
+ * @param dollars - whether `$` could pair into inline math in this field
+ */
+const escapeProse = (text: string, dollars: boolean): string => {
+  if (!PROSE_SIGNIFICANT.test(text)) {
+    return text;
+  }
+
+  return text.replace(/[\\`[\]*~_<$]/g, (character: string, index: number): string => {
+    const before = text[index - 1];
+    const after = text[index + 1];
+
+    switch (character) {
+      case '\\':
+        return after === undefined || ASCII_PUNCTUATION.test(after) ? '\\\\' : character;
+      /** Flanked by spaces on both sides, these can neither open nor close. */
+      case '*':
+      case '~':
+        return isSpace(before) && isSpace(after) ? character : `\\${character}`;
+      /** `_` never opens or closes inside a word (`snake_case`). */
+      case '_':
+        return (isWordCharacter(before) && isWordCharacter(after)) || (isSpace(before) && isSpace(after))
+          ? character
+          : '\\_';
+      case '<':
+        return after !== undefined && /[A-Za-z/!?]/.test(after) ? '\\<' : character;
+      case '$':
+        return dollars ? '\\$' : character;
+      default:
+        return `\\${character}`;
+    }
+  }).replace(ENTITY_LIKE, '\\&');
+};
+
+/**
+ * Escape a plain-text field (a page title, a file name) written where inline
+ * Markdown is read.
+ * @param text - plain text, never HTML
+ */
+const escapePlainText = (text: string): string => escapeLineStarts(markdownTextEscaper(text)(text));
+
+/**
+ * The escaper for one inline field's text nodes.
+ *
+ * `$` is escaped only when the field could pair two of them: it holds an
+ * equation (written as `$…$`, which makes the importer load the math syntax)
+ * or two `$` of its own. A lone price stays readable.
+ * @param html - the field's inline HTML
+ */
+export const markdownTextEscaper = (html: string): TextEscaper => {
+  const dollars = html.includes(EQUATION_MARKER) || (html.match(/\$/g) ?? []).length >= 2;
+
+  /** The capture group keeps each URL in the split, at every odd index. */
+  return (text) => text
+    .split(BARE_URL)
+    .map((part, index) => (index % 2 === 1 ? part : escapeProse(part, dollars)))
+    .join('');
+};
+
+/** The inline-equation attribute, spelled out: the core stays import-free. Matches `EQUATION_SOURCE_ATTR`. */
+const EQUATION_MARKER = 'data-latex';
+
+/** Characters a bare destination cannot hold: they end it or start raw HTML. */
+const DESTINATION_BREAKER = /[\u0000-\u0020\u007f<>]/;
+
+/** What follows `&` in a CommonMark character reference. The longest entity name is 31 letters. */
+const CHARACTER_REFERENCE_TAIL = /^(?:#\d{1,7}|#[xX][\da-fA-F]{1,6}|[A-Za-z][A-Za-z\d]{0,31});/;
+
+/**
+ * True when the parens in `url` pair up, as CommonMark requires of a bare
+ * destination. Every backslash before them is escaped, so all of them count.
+ * @param url - the raw URL
+ */
+const parensBalanced = (url: string): boolean => Array.from(url).reduce((depth, char) => {
+  /** Once below zero a `)` has closed the destination; later parens cannot fix it. */
+  if (depth < 0) {
+    return depth;
+  }
+
+  if (char === '(') {
+    return depth + 1;
+  }
+
+  return char === ')' ? depth - 1 : depth;
+}, 0) === 0;
+
+/**
+ * The URL to write as a Markdown destination, or null when it must not be
+ * written. A renderer turns every destination into a live link or image, so a
+ * script-capable URL is refused. `kind` is the Markdown shape: `![..](..)` is
+ * 'src', `[..](..)` is 'href' (a clickable link refuses data: and blob:).
+ *
+ * Only what would end the destination early is escaped, so a well-formed URL
+ * is written byte for byte. `\` is backslash-escaped, not percent-encoded:
+ * browsers read `\` as `/` in http URLs, so `%5C` would change the URL.
+ * @param url - the raw URL
+ * @param kind - 'src' for an image, 'href' for a link
+ */
+export const markdownDestination = (url: string, kind: 'href' | 'src'): string | null => {
+  if (hasUnsafeUrlProtocol(url, kind)) {
+    return null;
+  }
+
+  const escapeParens = !parensBalanced(url);
+  const chars = Array.from(url);
+  const pieces = chars.map((char, index) => {
+    if (DESTINATION_BREAKER.test(char)) {
+      return encodeURIComponent(char);
+    }
+    /** A renderer decodes `&#106;` to `j`, so `&#106;avascript:` would pass the check above. */
+    if (char === '&' && CHARACTER_REFERENCE_TAIL.test(chars.slice(index + 1, index + 40).join(''))) {
+      return '\\&';
+    }
+
+    return escapeParens && (char === '(' || char === ')') ? `\\${char}` : char;
+  });
+
+  /** Decided on the written next piece: `\%20` would escape the `%`. */
+  return pieces
+    .map((piece, index) => {
+      const next = pieces[index + 1];
+
+      return piece === '\\' && (next === undefined || ASCII_PUNCTUATION.test(next[0])) ? '\\\\' : piece;
+    })
+    .join('');
+};
+
+/**
+ * Write an inline equation's source as `$…$` math. An empty source writes
+ * nothing: `$$` would open display math. Trimmed, because `$ x $` is not
+ * read as math.
+ * @param latex - the equation's LaTeX source
+ */
+export const inlineEquation = (latex: string): string => (latex.trim() === '' ? '' : `$${latex.trim()}$`);
+
+/**
+ * Escape what text can only mean at the start of a line: an ATX heading, a
+ * blockquote, a list marker, a setext underline or a thematic break. A line
+ * starts after every newline, and these can interrupt a paragraph.
+ * @param markdown - one inline field's Markdown
+ */
+const escapeLineStarts = (markdown: string): string =>
+  markdown.split('\n').map((line) => line
+    .replace(/^( {0,3})(#{1,6})(?=[ \t]|$)/, '$1\\$2')
+    .replace(/^( {0,3})>/, '$1\\>')
+    .replace(/^( {0,3})([+-])(?=[ \t]|$)/, '$1\\$2')
+    .replace(/^( {0,3})(-+|=+)([ \t]*)$/, '$1\\$2$3')
+    .replace(/^( {0,3}\d{1,9})([.)])(?=[ \t]|$)/, '$1\\$2')).join('\n');
+
 /** A construct that could not be carried into Markdown as-is. */
 export interface MarkdownDegradation {
   /**
@@ -149,6 +330,8 @@ const CONTAINER_TOOLS = new Set([
   'column_list',
   'columns',
   'column',
+  'tabs',
+  'tab',
 ]);
 
 /**
@@ -173,6 +356,10 @@ interface SerializationContext {
   childrenOf: Map<string, SerializableBlock[]>;
   /** Reads inline HTML. */
   inline: InlineBackend;
+  /** Authorized page metadata for the static view. */
+  pageInfo?: (pageId: string) => PageInfo | null | undefined;
+  /** Link for an allowed page. Never asked for an unresolved, missing or denied one. */
+  pageHref?: (pageId: string) => string;
   /** Collects degradations; discarded when the caller asked for no report. */
   warnings: MarkdownDegradation[];
   /** Ids already on the render stack — breaks parent-reference cycles. */
@@ -207,11 +394,35 @@ const warn = (
  */
 export const HARD_BREAK = '  \n';
 
+const BLANK_LINE = /^[ \t]*$/;
+
 /**
  * CommonMark has no hard break at the end of a block: it is dropped (or, as
  * `\`, read as a literal backslash). Editables often end in a filler `<br>`.
+ *
+ * Strips what `/(?: {2}\n[ \t]*)+$/` would, line by line: that regex retries
+ * from every break and goes quadratic on many breaks followed by text.
+ * @param markdown - an inline field's Markdown
  */
-const TRAILING_HARD_BREAKS = /(?: {2}\n[ \t]*)+$/;
+const stripTrailingHardBreaks = (markdown: string): string => {
+  const lines = markdown.split('\n');
+  const body = lines.slice(0, -1);
+
+  if (body.length === 0 || !BLANK_LINE.test(lines[lines.length - 1])) {
+    return markdown;
+  }
+
+  const blankBreaks = body.reduceRight((count, line, index) =>
+    count === body.length - 1 - index && BLANK_LINE.test(line) && line.endsWith('  ') ? count + 1 : count, 0);
+  const before = body.length - 1 - blankBreaks;
+  const start = before >= 0 && body[before].endsWith('  ') ? before : before + 1;
+
+  if (start === body.length) {
+    return markdown;
+  }
+
+  return [...body.slice(0, start), body[start].slice(0, -2)].join('\n');
+};
 
 /**
  * A break with nothing before it on its line would leave a whitespace-only
@@ -232,14 +443,14 @@ const HARD_BREAKS = /(?: {2}|\\)\n/g;
  * @param html - the field's inline HTML
  */
 const inlineMarkdown = (context: SerializationContext, html: string): string =>
-  context.inline.inlineToMarkdown(html, (construct: string): void => {
+  escapeLineStarts(stripTrailingHardBreaks(context.inline.inlineToMarkdown(html, (construct: string): void => {
     if (context.inlineSeen.has(construct)) {
       return;
     }
 
     context.inlineSeen.add(construct);
     warn(context, construct, 'degraded', INLINE_LOSS_DETAILS[construct] ?? `${construct} has no Markdown equivalent`);
-  }).replace(TRAILING_HARD_BREAKS, '').replace(BREAK_ONLY_LINES, '\\\n');
+  })).replace(BREAK_ONLY_LINES, '\\\n'));
 
 /**
  * Join loss names into a readable list: `a`, `a and b`, `a, b and c`.
@@ -331,6 +542,60 @@ const isMerged = (cell: Record<string, unknown>): boolean =>
   (typeof cell.colspan === 'number' && cell.colspan > 1) || (typeof cell.rowspan === 'number' && cell.rowspan > 1);
 
 /**
+ * A cell's placement, `top-left` when unset or unknown.
+ * @param cell - one cell of the grid
+ */
+const placementOf = (cell: Record<string, unknown>): string =>
+  typeof cell.placement === 'string' && /^(top|middle|bottom)-(left|center|right)$/.test(cell.placement)
+    ? cell.placement
+    : 'top-left';
+
+/**
+ * Each column's shared horizontal placement, or `null` when its cells disagree.
+ * Covered (merged-into) cells are skipped: they render nothing. A missing cell
+ * in a short row is an empty default cell.
+ * @param grid - the cell grid, already normalized
+ */
+const columnAlignments = (grid: Array<Array<Record<string, unknown>>>): Array<string | null> => {
+  const columns = grid.reduce((max, row) => Math.max(max, row.length), 0);
+
+  return Array.from({ length: columns }, (_unused, index) => {
+    const found = new Set(grid
+      .map((row) => row[index] ?? {})
+      .filter((cell) => cell.mergedInto === undefined)
+      .map((cell) => placementOf(cell).split('-')[1]));
+
+    return found.size > 1 ? null : [...found][0] ?? 'left';
+  });
+};
+
+/** GFM delimiter cell per horizontal placement. Left is the default, so it stays bare. */
+const ALIGNMENT_DELIMITERS: Record<string, string> = {
+  center: ':---:',
+  right: '---:',
+};
+
+/**
+ * Write one line of code as a GFM code span. The fence is longer than any
+ * backtick run inside, and a space pads content that touches a backtick, so the
+ * span cannot close early. Leading/trailing spaces on both sides would be
+ * stripped by the parser, hence padded too.
+ * @param text - one line of literal code
+ */
+export const codeSpan = (text: string): string => {
+  if (text === '') {
+    return '';
+  }
+
+  const longest = (text.match(/`+/g) ?? []).reduce((max, run) => Math.max(max, run.length), 0);
+  const fence = '`'.repeat(longest + 1);
+  const spaced = text.startsWith(' ') && text.endsWith(' ') && text.trim() !== '';
+  const pad = text.startsWith('`') || text.endsWith('`') || spaced ? ' ' : '';
+
+  return `${fence}${pad}${text}${pad}${fence}`;
+};
+
+/**
  * The table fields a GFM pipe table cannot carry, in report order.
  *
  * Column widths and text size are left out on purpose: the tool writes
@@ -345,13 +610,15 @@ const tablePresentationLosses = (
 ): string[] => {
   const cells = grid.flat();
   const coloured = cells.some((cell) => asString(cell.color) !== '' || asString(cell.textColor) !== '');
-  const placed = cells.some((cell) => typeof cell.placement === 'string' && cell.placement !== 'top-left');
+  /** A column whose cells share one horizontal placement rides out in the delimiter row. */
+  const vertical = cells.some((cell) => !placementOf(cell).startsWith('top-'));
+  const mixed = columnAlignments(grid).some((alignment) => alignment === null);
 
   return [
     cells.some(isMerged) ? 'merged cells' : '',
     data.withHeadingColumn === true ? 'heading column' : '',
     coloured ? 'cell colours' : '',
-    placed ? 'cell placement' : '',
+    vertical || mixed ? 'cell placement' : '',
     data.stretched === true ? 'full-width layout' : '',
   ].filter((loss) => loss !== '');
 };
@@ -359,31 +626,33 @@ const tablePresentationLosses = (
 /**
  * Escape a cell's Markdown so it cannot break the pipe-table grid: `|` is
  * escaped and hard line breaks become `<br>` (GFM cells are single-line).
+ *
+ * The table splits on a `|` behind an EVEN backslash run, so every pipe must
+ * end up behind an odd one. Escaped text always leaves an even run (+1). An
+ * odd run is raw — a code span or an equation — and takes +2:
+ * the grid holds, but the content gains a backslash, so it is reported.
  * @param markdown - the cell's Markdown
+ * @param onLossy - called when a raw backslash run sits before a pipe
  */
-const escapeTableCell = (markdown: string): string => {
-  const segments = markdown.replace(HARD_BREAKS, '\n').split('|');
+const escapeTableCell = (markdown: string, onLossy: () => void): string => {
+  // Split on pipes by hand: `/(\\*)\|/g` rescans a backslash run from every offset.
+  const parts = markdown.replace(HARD_BREAKS, '\n').split('|');
 
-  /**
-   * A `\` run before a `|` must be doubled before the escaping `\` is added,
-   * otherwise `a\|b` exports as `a\\|b` — a literal backslash plus a LIVE
-   * delimiter — and re-importing splits the cell in two.
-   */
-  return segments
-    .map((segment, index) => (index === segments.length - 1 ? segment : doubleTrailingBackslashes(segment)))
-    .join('\\|')
-    .replace(/\n/g, '<br>');
-};
+  return parts.map((part, index) => {
+    if (index === parts.length - 1) {
+      return part;
+    }
 
-/**
- * Double the trailing `\` run of a cell segment.
- * @param segment - cell Markdown between two `|` characters
- * @returns the segment with its trailing backslash run doubled
- */
-const doubleTrailingBackslashes = (segment: string): string => {
-  const run = Array.from(segment).reduce((count, character) => (character === '\\' ? count + 1 : 0), 0);
+    const run = Array.from(part).reduce((count, character) => (character === '\\' ? count + 1 : 0), 0);
 
-  return segment + '\\'.repeat(run);
+    if (run % 2 === 1) {
+      onLossy();
+
+      return `${part}\\\\|`;
+    }
+
+    return `${part}\\|`;
+  }).join('').replace(/\n/g, '<br>');
 };
 
 /**
@@ -392,12 +661,40 @@ const doubleTrailingBackslashes = (segment: string): string => {
  * @param context - the serialization context
  * @param depth - nesting depth relative to the cell
  */
-const cellBlockLines = (block: SerializableBlock, context: SerializationContext, depth: number): string[] => {
+const cellBlockLines = (
+  block: SerializableBlock,
+  context: SerializationContext,
+  depth: number,
+  degraded: Set<string>
+): string[] => {
+  if (block.tool !== 'paragraph') {
+    degraded.add(block.tool);
+  }
+
+  /**
+   * A fence cannot live in a one-line pipe cell: its lines would be joined
+   * with `<br>` and read back as literal text inside one code span, with the
+   * language glued to the first line. Each line becomes its own code span.
+   */
+  if (block.tool === 'code') {
+    const literal = asString(block.data.code);
+    const code = literal !== '' ? literal : decodeCharacterReferences(asString(block.data.text));
+
+    warn(context, 'code', 'degraded', 'code block in a table cell is rendered as one inline code span per line; its language and block form are lost');
+
+    return [code.split(/\r\n|\r|\n/).map(codeSpan).join('\n')];
+  }
+
   const lines = [blockToMarkdown({ ...block,
     indent: depth }, context)];
 
+  // A container already rendered its own subtree above.
+  if (CONTAINER_TOOLS.has(block.tool)) {
+    return lines;
+  }
+
   for (const child of context.childrenOf.get(block.id ?? '') ?? []) {
-    lines.push(...cellBlockLines(child, context, depth + 1));
+    lines.push(...cellBlockLines(child, context, depth + 1, degraded));
   }
 
   return lines;
@@ -427,6 +724,8 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
 
   const columns = grid.reduce((max, row) => Math.max(max, row.length), 0);
   const unresolved: string[] = [];
+  const degraded = new Set<string>();
+  const rawPipes = { found: false };
 
   const rows = grid.map((row) =>
     Array.from({ length: columns }, (_unused, index) => {
@@ -450,7 +749,7 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
           return [];
         }
 
-        return cellBlockLines(cellBlock, context, 0);
+        return cellBlockLines(cellBlock, context, 0, degraded);
       });
       const own = leadingCellText(cell) ?? (blockLines.length === 0 ? asString(cell.text) : '');
       const lines = [
@@ -459,17 +758,39 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
         ...claimedCellTexts(cell).map((text) => inlineMarkdown(context, text)),
       ];
 
-      return escapeTableCell(lines.join('\n')).trim();
+      return escapeTableCell(lines.join('\n'), () => {
+        rawPipes.found = true;
+      }).trim();
     })
   );
 
   warnUnresolvedChildren(context, block, unresolved.length);
   warnPresentationLosses(context, block, 'a GFM pipe table', tablePresentationLosses(block.data, readTableGrid(block.data)));
 
+  if (rawPipes.found) {
+    warn(context, block.tool, 'degraded', 'a backslash before a pipe inside code or an equation cannot be written exactly in a pipe table; it gains a backslash');
+  }
+
+  /** Code reports itself; a paragraph is what a cell reads back as, so it loses nothing. */
+  const flattened = [...degraded].filter((tool) => tool !== 'code');
+
+  if (flattened.length > 0) {
+    warn(context, block.tool, 'degraded', `a pipe-table cell holds only inline text, so its ${joinLosses(flattened)} blocks are flattened into the cell's text`);
+  }
+
   const withHeadings = block.data.withHeadings === true;
-  const header = withHeadings ? rows[0] : Array.from({ length: columns }, () => '');
+  /**
+   * An all-empty header row is how a HEADLESS table is written (GFM requires a
+   * header), so a real heading row that happens to be blank carries a bare
+   * `<br>` in its first cell. No content exports as that alone — trailing
+   * breaks are stripped and cells trimmed — and the importer reads it as empty.
+   */
+  const blankHeading = withHeadings && rows[0].every((cell) => cell === '');
+  const header = withHeadings
+    ? rows[0].map((cell, index) => (blankHeading && index === 0 ? '<br>' : cell))
+    : Array.from({ length: columns }, () => '');
   const body = withHeadings ? rows.slice(1) : rows;
-  const delimiter = Array.from({ length: columns }, () => '---');
+  const delimiter = columnAlignments(grid).map((alignment) => ALIGNMENT_DELIMITERS[alignment ?? ''] ?? '---');
 
   return [header, delimiter, ...body].map((row) => `| ${row.join(' | ')} |`).join('\n');
 };
@@ -846,9 +1167,29 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       return childrenToMarkdown(block, context);
     case 'column':
       return childrenToMarkdown(block, context);
+    /** Static Markdown cannot switch tabs, so every tab is written in order. */
+    case 'tabs':
+      if ((context.childrenOf.get(block.id ?? '') ?? []).some((child) => child.tool === 'tab')) {
+        warn(context, block.tool, 'degraded', 'tabs are written one after another, each under its bold title; switching between them is lost');
+      }
+
+      return childrenToMarkdown(block, context);
+    case 'tab': {
+      const label = escapePlainText([asString(data.icon), asString(data.title)].filter((part) => part !== '').join(' '));
+      const body = childrenToMarkdown(block, context);
+      // `****` alone would be a thematic break, so an empty label prints no line.
+      const title = label === '' ? '' : `**${label}**`;
+
+      return [title, body].filter((part) => part !== '').join('\n\n');
+    }
     /** Pure vertical whitespace — Markdown has no representation for a gap. */
     case 'spacer':
       warn(context, block.tool, 'dropped', 'spacer is purely visual and has no Markdown equivalent');
+
+      return '';
+    /** Its outline is derived from the headings, which serialize themselves. */
+    case 'table_of_contents':
+      warn(context, block.tool, 'dropped', 'a table of contents is built from the headings, which are exported on their own');
 
       return '';
     default:
@@ -878,7 +1219,9 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
        * rest into a paragraph. Raw `<br>` is the one inline break a heading can
        * hold; the importer reads it back. A soft newline is just a space.
        */
-      const line = text.replace(HARD_BREAKS, '<br>').replace(/\n/g, ' ');
+      const line = text.replace(HARD_BREAKS, '<br>').replace(/\n/g, ' ')
+        /** A ` #` run at the end would be read as the heading's closing sequence. */
+        .replace(/([ \t])(#+)([ \t]*)$/, '$1\\$2$3');
 
       return `${flatIndent}${'#'.repeat(level)} ${line}`;
     }
@@ -964,7 +1307,11 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
         warn(context, block.tool, 'degraded', 'image caption has no Markdown equivalent (the `![…]` slot is alt text); the caption is lost');
       }
 
-      return `${flatIndent}![${inlineMarkdown(context, alt)}](${asString(data.url)})`;
+      const src = markdownDestination(asString(data.url), 'src');
+
+      return src === null
+        ? `${flatIndent}${inlineMarkdown(context, alt)}`
+        : `${flatIndent}![${inlineMarkdown(context, alt)}](${src})`;
     }
     /**
      * Markdown has no media or embed syntax, so these degrade to a link — which
@@ -980,24 +1327,36 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
 
       const url = asString(data.url) || asString(data.source);
       const label = inlineMarkdown(context, asString(data.caption))
-        || asString(data.title)
-        || asString(data.fileName)
-        || asString(data.service)
-        || url;
+        || escapePlainText(asString(data.title) || asString(data.fileName) || asString(data.service) || url);
 
-      return `${flatIndent}[${label}](${url})`;
+      const href = markdownDestination(url, 'href');
+
+      return href === null ? `${flatIndent}${label}` : `${flatIndent}[${label}](${href})`;
     }
-    /**
-     * A page points at a separate document, so only its title line is here.
-     * The title is plain text: written raw, never read as inline HTML.
-     * "Untitled" matches the view's card.
-     */
-    case 'page': {
-      warn(context, block.tool, 'degraded', 'page is rendered as its title; the link to the sub-page is lost');
+    case 'page':
+    case 'page-link': {
+      const pageId = data.pageId;
+      const info = typeof pageId === 'string' && pageId !== '' ? context.pageInfo?.(pageId) : undefined;
+      const allowed = info !== null && info !== undefined && info.access !== 'none';
+      const rawHref = allowed && typeof pageId === 'string' ? context.pageHref?.(pageId) : undefined;
+      const href = typeof rawHref === 'string' && rawHref !== '' ? markdownDestination(rawHref, 'href') : null;
 
-      const title = isRecord(data.cache) ? asString(data.cache.title) : '';
+      if (href === null) {
+        warn(context, block.tool, 'degraded', 'page link is lost');
+      }
+      if (info === null) {
+        return `${flatIndent}Page not found`;
+      }
+      if (info === undefined) {
+        return `${flatIndent}Page`;
+      }
+      if (info.access === 'none') {
+        return `${flatIndent}No access`;
+      }
 
-      return `${flatIndent}${title === '' ? 'Untitled' : title}`;
+      const title = escapePlainText(typeof info.title === 'string' && info.title !== '' ? info.title : 'New page');
+
+      return href === null ? `${flatIndent}${title}` : `${flatIndent}[${title}](${href})`;
     }
     default: {
       const fallback = `${flatIndent}${text}`;
@@ -1027,7 +1386,9 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
 const buildContext = (
   blocks: SerializableBlock[],
   inline: InlineBackend,
-  warnings: MarkdownDegradation[]
+  warnings: MarkdownDegradation[],
+  pageInfo?: (pageId: string) => PageInfo | null | undefined,
+  pageHref?: (pageId: string) => string
 ): SerializationContext => {
   const byId = new Map<string, SerializableBlock>();
   const childrenOf = new Map<string, SerializableBlock[]>();
@@ -1058,6 +1419,8 @@ const buildContext = (
   return { byId,
     childrenOf,
     inline,
+    pageInfo,
+    pageHref,
     warnings,
     active: new Set<string>(),
     inlineSeen: new Set<string>() };
@@ -1132,10 +1495,12 @@ const collectOwnedIds = (blocks: SerializableBlock[], context: SerializationCont
  */
 export const serializeBlocksToMarkdown = (
   blocks: SerializableBlock[],
-  inline: InlineBackend
+  inline: InlineBackend,
+  pageInfo?: (pageId: string) => PageInfo | null | undefined,
+  pageHref?: (pageId: string) => string
 ): { markdown: string; warnings: MarkdownDegradation[] } => {
   const warnings: MarkdownDegradation[] = [];
-  const context = buildContext(blocks, inline, warnings);
+  const context = buildContext(blocks, inline, warnings, pageInfo, pageHref);
   const ownedIds = collectOwnedIds(blocks, context);
   const topLevel = blocks.filter((block) => block.id === undefined || !ownedIds.has(block.id));
 

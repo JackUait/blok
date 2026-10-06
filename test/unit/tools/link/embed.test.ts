@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Embed, type EmbedData } from '../../../../src/tools/link/embed';
+import { embedPreviewSvg } from '../../../../src/components/utils/media-preview-art';
 import type { API, BlockToolConstructorOptions, PatternPasteEvent } from '../../../../types';
 
 const createMockAPI = (
@@ -8,7 +9,7 @@ const createMockAPI = (
   allowedEmbedOrigins?: string[]
 ): API =>
   ({
-    i18n: { t: (key: string) => key, has: () => false },
+    i18n: { t: (key: string) => key, has: () => false, getLocale: () => 'en' },
     blocks: { delete: blocksDelete ?? ((): void => undefined) },
     config: { linkPaste: { allowGenericEmbed, allowedEmbedOrigins } },
   }) as unknown as API;
@@ -307,6 +308,50 @@ describe('Embed tool — generic embed', () => {
   });
 });
 
+describe('Embed tool — link-card context menu', () => {
+  it('marks only the generic link card as a block-menu surface', () => {
+    const linkCard = new Embed(createOptions({
+      service: '',
+      source: 'https://example.com/page',
+      embed: 'https://example.com/page',
+    })).render();
+    const provider = new Embed(createOptions(iframeData())).render();
+
+    expect(linkCard.querySelector('[data-role="embed-link-card-anchor"]')?.hasAttribute('data-blok-block-context-menu')).toBe(true);
+    expect(provider.querySelector('[data-blok-block-context-menu]')).toBeNull();
+  });
+
+  it('opens the original generic link in a new tab alongside copy URL', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const tool = new Embed(createOptions({
+      service: '',
+      source: 'https://example.com/page',
+      embed: 'https://example.com/page',
+    }));
+    const settings = tool.renderSettings() as Array<{ name?: string; title?: string; onActivate?: () => void }>;
+    const action = settings.find((item) => item.name === 'embed-open-original');
+
+    expect(action?.title).toBe('tools.embed.openOriginal');
+    expect(settings.map((item) => item.name)).toContain('embed-copy-url');
+    action?.onActivate?.();
+    expect(open).toHaveBeenCalledWith('https://example.com/page', '_blank', 'noopener,noreferrer');
+  });
+
+  it('does not add open original to a provider iframe or unsafe stored URL', () => {
+    const provider = new Embed(createOptions(iframeData()));
+    const unsafe = new Embed(createOptions({
+      service: '',
+      source: 'javascript:alert(1)',
+      embed: '',
+    }));
+    const names = (tool: Embed): Array<string | undefined> =>
+      (tool.renderSettings() as Array<{ name?: string }>).map((item) => item.name);
+
+    expect(names(provider)).not.toContain('embed-open-original');
+    expect(names(unsafe)).not.toContain('embed-open-original');
+  });
+});
+
 describe('Embed tool — replace source', () => {
   const mount = (tool: Embed): HTMLElement => {
     const el = tool.render();
@@ -490,6 +535,315 @@ describe('Embed tool — empty state', () => {
     }
 
     expect(bar?.getAttribute('data-valid')).toBe('false');
+  });
+
+  const type = (root: HTMLElement, value: string, inputType = 'insertText'): void => {
+    const input = root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
+
+    if (!input) {
+      throw new Error('no URL input');
+    }
+    input.value = value;
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType }));
+  };
+
+  const windowOf = (root: HTMLElement): HTMLElement | null =>
+    root.querySelector<HTMLElement>('[data-role="embed-window"]');
+
+  const readbackOf = (root: HTMLElement): HTMLElement | null =>
+    root.querySelector<HTMLElement>('[data-role="embed-readback"]');
+
+  const nameOf = (root: HTMLElement): string | null | undefined =>
+    root.querySelector('[data-role="embed-readback-name"]')?.textContent;
+
+  it('shows an idle window and no read-back before anything is typed', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe('idle');
+    expect(windowOf(root)?.getAttribute('aria-hidden')).toBe('true');
+    expect(readbackOf(root)?.hidden).toBe(true);
+  });
+
+  it.each([
+    ['https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'video', 'YouTube'],
+    ['youtube.com/watch?v=dQw4w9WgXcQ', 'video', 'YouTube'],
+    ['https://docs.google.com/spreadsheets/d/abc123/edit', 'table', 'Google Sheets'],
+    ['https://www.figma.com/design/abc123/Board', 'design', 'Figma'],
+  ])('morphs the window to the provider type for %s', (url, kind, title) => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, url);
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe(kind);
+    expect(readbackOf(root)?.hidden).toBe(false);
+    expect(nameOf(root)).toBe(title);
+  });
+
+  it('swaps the bar icon away from the link glyph for a known provider', () => {
+    const root = mount(new Embed(createOptions({})));
+    const icon = root.querySelector<HTMLElement>('.blok-embed-empty__bar-icon');
+    const idle = icon?.innerHTML;
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+    expect(icon?.innerHTML).not.toBe(idle);
+
+    type(root, '');
+
+    expect(icon?.innerHTML).toBe(idle);
+  });
+
+  it('keeps the window idle for an unknown link when generic embeds are off', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://example.com/page');
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe('idle');
+    expect(readbackOf(root)?.hidden).toBe(true);
+  });
+
+  it('shows a generic window with the host for an unknown https link when generic embeds are on', () => {
+    const root = mount(new Embed(createOptions({}, { allowGenericEmbed: true })));
+
+    type(root, 'https://dashboards.example.com/page?x=1');
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe('generic');
+    expect(nameOf(root)).toBe('dashboards.example.com');
+  });
+
+  it('keeps the window idle for an http link that submit would reject', () => {
+    const root = mount(new Embed(createOptions({}, { allowGenericEmbed: true })));
+
+    type(root, 'http://example.com/page');
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe('idle');
+  });
+
+  it('returns to idle once the field is cleared', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    type(root, '');
+
+    expect(windowOf(root)?.getAttribute('data-kind')).toBe('idle');
+    expect(readbackOf(root)?.hidden).toBe(true);
+  });
+
+  it('plays the catch animation when a known link is pasted', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'insertFromPaste');
+
+    expect(windowOf(root)?.getAttribute('data-anim')).toBe('caught');
+  });
+
+  it('does not play the catch animation when pasted text is not embeddable', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'hello world', 'insertFromPaste');
+
+    expect(windowOf(root)?.hasAttribute('data-anim')).toBe(false);
+  });
+
+  it('shakes the window when a submit is rejected', () => {
+    const root = mount(new Embed(createOptions({})));
+    const form = root.querySelector<HTMLFormElement>('[data-role="embed-url-form"]');
+
+    type(root, 'https://example.com/page');
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    expect(windowOf(root)?.getAttribute('data-anim')).toBe('rejected');
+  });
+
+  it('clears the animation only when the window itself finishes animating', () => {
+    const root = mount(new Embed(createOptions({})));
+    const win = windowOf(root);
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'insertFromPaste');
+    win?.firstElementChild?.dispatchEvent(new Event('animationend', { bubbles: true }));
+
+    expect(win?.getAttribute('data-anim')).toBe('caught');
+
+    win?.dispatchEvent(new Event('animationend', { bubbles: true }));
+
+    expect(win?.hasAttribute('data-anim')).toBe(false);
+  });
+
+  it('keeps the read-back out of live regions so typing is not announced', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    expect(readbackOf(root)?.closest('[aria-live]')).toBeNull();
+  });
+
+  it('draws no window in read-only mode', () => {
+    const root = mount(new Embed(createOptions({}, { readOnly: true })));
+
+    expect(windowOf(root)).toBeNull();
+  });
+
+  const stagesOf = (root: HTMLElement): HTMLElement[] =>
+    Array.from(windowOf(root)?.querySelectorAll<HTMLElement>('.blok-media-preview') ?? []);
+
+  const brandOf = (root: HTMLElement): HTMLElement | null =>
+    windowOf(root)?.querySelector<HTMLElement>('[data-role="embed-brand"]') ?? null;
+
+  it('draws the idle scene as a media preview drawing', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    expect(stagesOf(root)).toHaveLength(1);
+    expect(stagesOf(root)[0]?.querySelector('svg')).not.toBeNull();
+  });
+
+  it('replaces the drawing with the scene of the typed provider', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+    expect(stagesOf(root)).toHaveLength(1);
+    expect(stagesOf(root)[0]?.querySelector('.blok-media-preview__knob')).not.toBeNull();
+  });
+
+  it('lands the provider logo on the window, outside the drawing', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+    expect(brandOf(root)).not.toBeNull();
+    expect(brandOf(root)?.getAttribute('aria-hidden')).toBe('true');
+    expect(brandOf(root)?.closest('.blok-media-preview')).toBeNull();
+  });
+
+  it('keeps the badge on the drawing when the provider changes, and swaps only its logo', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    const badge = brandOf(root);
+    const youtubeLogo = badge?.innerHTML;
+
+    type(root, 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC');
+
+    expect(brandOf(root)).toBe(badge);
+    expect(brandOf(root)?.querySelectorAll('[data-role="embed-brand-mark"]')).toHaveLength(1);
+    expect(brandOf(root)?.querySelector('[data-role="embed-brand-mark"]')?.innerHTML).not.toBe(youtubeLogo);
+  });
+
+  it('takes the logo away when the link stops naming a branded service', () => {
+    const root = mount(new Embed(createOptions({}, { allowGenericEmbed: true })));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    type(root, 'https://dashboards.example.com/page');
+
+    expect(brandOf(root)).toBeNull();
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    type(root, '');
+
+    expect(brandOf(root)).toBeNull();
+  });
+
+  it('colours the typed link like an address bar', () => {
+    const root = mount(new Embed(createOptions({})));
+
+    type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+    const bar = root.querySelector('[data-role="embed-url-bar"]');
+
+    expect(bar?.querySelector('.blok-media-empty__url-host')?.textContent).toBe('youtube.com');
+    expect(root.querySelector('[data-role="embed-url-input"]')?.classList.contains('blok-media-empty__embed-input--mirrored')).toBe(true);
+  });
+
+  describe('scene morph', () => {
+    const animate = vi.fn(() => ({ cancel: vi.fn(), finished: Promise.resolve() }));
+    const identity = {
+      a: 1, b: 0, c: 0, d: 1, e: 0, f: 0,
+      inverse: () => identity,
+      multiply: () => identity,
+    };
+    // Tag names of every element in the window's drawing(s), in order.
+    const shapesIn = (root: Element | null | undefined): string[] =>
+      Array.from(root?.querySelectorAll('svg *') ?? []).map((el) => el.tagName);
+    const freshScene = (kind: 'video'): string[] => {
+      const holder = document.createElement('div');
+
+      holder.innerHTML = embedPreviewSvg(kind);
+
+      return shapesIn(holder);
+    };
+    const settle = async (): Promise<void> => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    };
+
+    beforeEach(() => {
+      Object.defineProperty(SVGElement.prototype, 'getBBox', {
+        configurable: true,
+        value: () => ({ x: 0, y: 0, width: 10, height: 10 }),
+      });
+      Object.defineProperty(Element.prototype, 'animate', { configurable: true, value: animate });
+      Object.defineProperty(SVGElement.prototype, 'getScreenCTM', { configurable: true, value: () => identity });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(SVGElement.prototype, 'getBBox');
+      Reflect.deleteProperty(SVGElement.prototype, 'getScreenCTM');
+      Reflect.deleteProperty(Element.prototype, 'animate');
+      Reflect.deleteProperty(window, 'matchMedia');
+    });
+
+    const prefersReducedMotion = (reduce: boolean): void => {
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        value: (query: string) => ({ matches: reduce && query.includes('reduce'), media: query }),
+      });
+    };
+
+    it('flies the new scene in from the old one', () => {
+      prefersReducedMotion(false);
+      const root = mount(new Embed(createOptions({})));
+
+      type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+      expect(animate).toHaveBeenCalled();
+    });
+
+    it('leaves only the new scene once the morph lands', async () => {
+      prefersReducedMotion(false);
+      const root = mount(new Embed(createOptions({})));
+
+      type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+      await settle();
+
+      expect(stagesOf(root)).toHaveLength(1);
+      expect(shapesIn(stagesOf(root)[0])).toEqual(freshScene('video'));
+    });
+
+    it('cleans up a morph cut short by the next link', () => {
+      prefersReducedMotion(false);
+      animate.mockImplementation(() => ({ cancel: vi.fn(), finished: new Promise(() => undefined) }));
+      const root = mount(new Embed(createOptions({})));
+
+      type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+      type(root, 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC');
+
+      const [, current] = stagesOf(root);
+
+      expect(windowOf(root)?.getAttribute('data-kind')).toBe('audio');
+      // Only the scene being left (video) and the scene arriving (audio): no trace of idle.
+      expect(stagesOf(root)).toHaveLength(2);
+      expect(current?.querySelectorAll('[class*="chip-float"]')).toHaveLength(0);
+      animate.mockImplementation(() => ({ cancel: vi.fn(), finished: Promise.resolve() }));
+    });
+
+    it('swaps the scene without motion when the user prefers reduced motion', () => {
+      prefersReducedMotion(true);
+      const root = mount(new Embed(createOptions({})));
+
+      type(root, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+      expect(animate).not.toHaveBeenCalled();
+      expect(stagesOf(root)).toHaveLength(1);
+    });
   });
 });
 

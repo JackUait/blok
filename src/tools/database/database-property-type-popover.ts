@@ -94,7 +94,8 @@ export class DatabasePropertyTypePopover {
     this.popoverEl = popover;
 
     reposition();
-    this.positionTracker = createPositionTracker(popover, reposition);
+    // The drawer grows its width as it slides in, carrying the anchor along.
+    this.positionTracker = createPositionTracker(popover, reposition, anchor);
     this.positionTracker.attach();
 
     this.boundOutsideClick = (e: MouseEvent): void => {

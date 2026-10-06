@@ -46,6 +46,8 @@ const createBlockStub = (options: {
     parentId: options.parentId ?? null,
     contentIds: [] as string[],
     indent: 0,
+    // Mirrors the real column / column_list declarations.
+    tool: { isLayout: ['column', 'column_list'].includes(options.name ?? ''), deletesChildren: ['column', 'column_list'].includes(options.name ?? '') },
     holder: (() => {
       const el = document.createElement('div');
 

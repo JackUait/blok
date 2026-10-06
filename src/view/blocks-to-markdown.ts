@@ -10,14 +10,25 @@
 import type { DefaultTreeAdapterMap } from 'parse5';
 
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
-import { HARD_BREAK, inlineLosses, serializeBlocksToMarkdown } from '../markdown/blocks-to-markdown-core';
-import type { InlineBackend, MarkdownDegradation, SerializableBlock } from '../markdown/blocks-to-markdown-core';
+import {
+  HARD_BREAK,
+  RAW_TEXT,
+  codeSpan,
+  inlineEquation,
+  inlineLosses,
+  markdownDestination,
+  markdownTextEscaper,
+  serializeBlocksToMarkdown
+} from '../markdown/blocks-to-markdown-core';
+import type { InlineBackend, MarkdownDegradation, SerializableBlock, TextEscaper } from '../markdown/blocks-to-markdown-core';
 import { buildDocumentModel } from './document-model';
 import type { ViewBlock } from './document-model';
 import { needsTokenizing, parseInlineFragment } from './html-text';
 
 import type { LooseOutputData, OutputData } from '../../types';
+import type { BlocksToHtmlOptions } from './blocks-to-html';
 import { isPagePointer } from '../shared/page-pointer';
+import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
 
 export type { MarkdownDegradation } from '../markdown/blocks-to-markdown-core';
 
@@ -33,6 +44,9 @@ type P5ChildNode = DefaultTreeAdapterMap['childNode'];
 
 /** Receives the name of every inline construct the walk had to unwrap. */
 type LossReporter = (construct: string) => void;
+
+/** Host page metadata and links, as `blocksToHtml` takes them. */
+type PageOptions = Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref'>;
 
 /**
  * Read an attribute off a parse5 element.
@@ -51,19 +65,30 @@ const attr = (node: P5ChildNode, name: string): string | null => {
  * Serialize parse5 child nodes to inline Markdown.
  * @param nodes - nodes to walk
  * @param onLoss - receives every unwrapped inline construct
+ * @param escape - escapes text node values
  */
-const serializeNodes = (nodes: P5ChildNode[], onLoss: LossReporter): string =>
-  nodes.map((node) => serializeNode(node, onLoss)).join('');
+const serializeNodes = (
+  nodes: P5ChildNode[],
+  onLoss: LossReporter,
+  escape: TextEscaper,
+  pages: PageOptions
+): string => nodes.map((node) => serializeNode(node, onLoss, escape, pages)).join('');
 
 /**
  * Serialize one parse5 node to inline Markdown. Mirrors the tag handling of the
  * DOM backend exactly — the parity test fails on any divergence.
  * @param node - the node to serialize
  * @param onLoss - receives every unwrapped inline construct
+ * @param escape - escapes text node values
  */
-const serializeNode = (node: P5ChildNode, onLoss: LossReporter): string => {
+const serializeNode = (
+  node: P5ChildNode,
+  onLoss: LossReporter,
+  escape: TextEscaper,
+  pages: PageOptions
+): string => {
   if (node.nodeName === '#text') {
-    return (node as DefaultTreeAdapterMap['textNode']).value;
+    return escape((node as DefaultTreeAdapterMap['textNode']).value);
   }
 
   if (!('childNodes' in node)) {
@@ -77,10 +102,25 @@ const serializeNode = (node: P5ChildNode, onLoss: LossReporter): string => {
   const latex = attr(node, EQUATION_SOURCE_ATTR);
 
   if (latex !== null) {
-    return latex;
+    return inlineEquation(latex);
   }
 
-  const inner = serializeNodes(node.childNodes, onLoss);
+  const pageId = node.nodeName === 'a' ? attr(node, PAGE_REFERENCE_ATTR) : null;
+
+  if (pageId) {
+    const info = pages.pageInfo?.(pageId);
+    const allowed = info !== null && info !== undefined && info.access !== 'none';
+    const title = allowed && typeof info.title === 'string' && info.title.trim() !== ''
+      ? info.title
+      : PAGE_REFERENCE_FALLBACK;
+    const label = markdownTextEscaper(title)(title);
+    const rawHref = allowed ? pages.pageHref?.(pageId) : undefined;
+    const href = typeof rawHref === 'string' && rawHref !== '' ? markdownDestination(rawHref, 'href') : null;
+
+    return href === null ? label : `[${label}](${href})`;
+  }
+
+  const inner = serializeNodes(node.childNodes, onLoss, node.nodeName === 'code' ? RAW_TEXT : escape, pages);
 
   switch (node.nodeName) {
     case 'br':
@@ -92,25 +132,25 @@ const serializeNode = (node: P5ChildNode, onLoss: LossReporter): string => {
     case 'em':
       return inner.trim() === '' ? inner : `*${inner}*`;
     case 'code':
-      return inner.trim() === '' ? inner : `\`${inner}\``;
+      return inner.trim() === '' ? inner : codeSpan(inner);
     case 's':
     case 'del':
     case 'strike':
       return inner.trim() === '' ? inner : `~~${inner}~~`;
     case 'a': {
-      const href = attr(node, 'href');
+      const href = markdownDestination(attr(node, 'href') ?? '', 'href');
 
       return href ? `[${inner}](${href})` : inner;
     }
     /**
      * An image has no child nodes, so the `default` branch serializes it to
-     * nothing and the image is lost. `alt` and `src` are written raw, exactly
-     * as `a` writes its label and `href`.
+     * nothing and the image is lost. `alt` is text, escaped like a link's
+     * label; `src` goes through the same URL check as `href`.
      */
     case 'img': {
-      const src = attr(node, 'src');
+      const src = markdownDestination(attr(node, 'src') ?? '', 'src');
 
-      return src ? `![${attr(node, 'alt') ?? ''}](${src})` : '';
+      return src ? `![${escape(attr(node, 'alt') ?? '')}](${src})` : '';
     }
     default:
       inlineLosses(node.nodeName, attr(node, 'style')).forEach(onLoss);
@@ -120,7 +160,7 @@ const serializeNode = (node: P5ChildNode, onLoss: LossReporter): string => {
 };
 
 /** Reads inline HTML through parse5. Runs anywhere, including bare Node and Jint. */
-const parse5InlineBackend: InlineBackend = {
+const parse5InlineBackend = (pages: PageOptions): InlineBackend => ({
   /**
    * Convert a fragment of inline HTML (a block's `text`) into inline Markdown.
    * @param html - inline HTML string
@@ -128,20 +168,20 @@ const parse5InlineBackend: InlineBackend = {
    */
   inlineToMarkdown(html: string, onLoss: LossReporter = (): void => {}): string {
     const source = html ?? '';
+    const escape = markdownTextEscaper(source);
 
     /**
-     * A lone text node serializes to its raw value with no Markdown escaping,
-     * so a field the tokenizer would not have changed is already its own
-     * Markdown. Reads inline HTML through its own `parseFragment` rather than
-     * through `htmlTextContent`, so it needs the guard of its own.
+     * A field the tokenizer would not change is one text node, so it is
+     * escaped directly. Reads inline HTML through its own `parseFragment`
+     * rather than through `htmlTextContent`, so it needs the guard of its own.
      */
     if (!needsTokenizing(source)) {
-      return source;
+      return escape(source);
     }
 
-    return serializeNodes(parseInlineFragment(source).childNodes, onLoss);
+    return serializeNodes(parseInlineFragment(source).childNodes, onLoss, escape, pages);
   },
-};
+});
 
 /**
  * Flatten a saved document into the core's block list, in reading order —
@@ -168,8 +208,8 @@ const flattenDocument = (data: OutputData | LooseOutputData | null | undefined):
       seen.add(block.id);
     }
 
-    const isPage = isPagePointer(block.type, block.data);
-    const unresolvedChildIds = isPage ? [] : model.unresolvedContentOf(block.id);
+    const leafPage = isPagePointer(block.type, block.data) || block.type === 'page-link';
+    const unresolvedChildIds = leafPage ? [] : model.unresolvedContentOf(block.id);
 
     out.push({ ...(block.id === undefined ? {} : { id: block.id }),
       parentId,
@@ -178,8 +218,7 @@ const flattenDocument = (data: OutputData | LooseOutputData | null | undefined):
       indent,
       ...(unresolvedChildIds.length > 0 ? { unresolvedChildIds } : {}) });
 
-    /** A page's body lives in another document; children here are malformed. */
-    if (isPage) {
+    if (leafPage) {
       return;
     }
 
@@ -200,8 +239,10 @@ const flattenDocument = (data: OutputData | LooseOutputData | null | undefined):
  * @param data - saved document (strict or loose wire shape; nullish tolerated)
  * @returns Markdown ('' for empty/malformed documents)
  */
-export const blocksToMarkdown = (data: OutputData | LooseOutputData | null | undefined): string =>
-  serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend).markdown;
+export const blocksToMarkdown = (
+  data: OutputData | LooseOutputData | null | undefined,
+  options: PageOptions = {}
+): string => blocksToMarkdownWithReport(data, options).markdown;
 
 /**
  * Serialize a saved Blok document to Markdown and report what degraded.
@@ -215,5 +256,7 @@ export const blocksToMarkdown = (data: OutputData | LooseOutputData | null | und
  * @returns the Markdown and its degradations
  */
 export const blocksToMarkdownWithReport = (
-  data: OutputData | LooseOutputData | null | undefined
-): MarkdownSerializationResult => serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend);
+  data: OutputData | LooseOutputData | null | undefined,
+  options: PageOptions = {}
+): MarkdownSerializationResult =>
+  serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend(options), options.pageInfo, options.pageHref);

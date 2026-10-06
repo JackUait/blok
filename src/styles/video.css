@@ -194,39 +194,202 @@
   transition-duration: 0s;
 }
 
-/* ----- error state — flat soft-danger callout (mirrors image error) ----- */
+/* ----- error state — the screen, no signal -----------------
+   Same frame as a working player, so the failure reads as "this video", not a
+   generic alert: a dead screen of static that a colour-bar tear rips across now
+   and then, with a glass card on top that holds the way out. The screen stays
+   dark in both themes, like a real one, and the card is the player's own
+   dark glass, like the gear menu. */
 [data-blok-tool="video"] .blok-video-error-state {
-  padding: var(--blok-space-3);
-  background: color-mix(in srgb, var(--blok-color-danger) 6%, var(--blok-bg-secondary));
-  border: 1px solid color-mix(in srgb, var(--blok-color-danger) 18%, var(--blok-border-subtle));
+  --blok-video-error-ink: var(--blok-color-danger);
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  max-width: 100%;
+  vertical-align: top;
   border-radius: var(--blok-radius-block);
-  display: flex; gap: var(--blok-space-3); align-items: center;
-  color: var(--blok-text-primary);
+  background: var(--blok-video-stage);
+  box-shadow: var(--blok-image-shadow-resting);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   text-align: start;
 }
+/* the 16:9 frame is a floor, not a cap: the row grows when a long message
+   wraps in a narrow block, so the card never runs off the screen */
+[data-blok-tool="video"] .blok-video-error-state::before {
+  content: "";
+  grid-area: 1 / 1;
+  aspect-ratio: 16 / 9;
+  /* min-width: 0 stops the height floor from widening the frame through the ratio */
+  min-width: 0;
+  min-height: 13rem;
+}
+[data-blok-tool="video"] .blok-video-error-state__screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+/* the static — a noise tile, oversized so the hard jumps never show an edge */
+[data-blok-tool="video"] .blok-video-error-state__screen::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='2.4' intercept='-0.7'/%3E%3CfeFuncG type='linear' slope='2.4' intercept='-0.7'/%3E%3CfeFuncB type='linear' slope='2.4' intercept='-0.7'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 160px 160px repeat;
+  opacity: 0.78;
+  animation: blok-video-static 0.5s steps(1) infinite;
+}
+/* scanlines, a slow rolling band, and a vignette that darkens the corners */
+[data-blok-tool="video"] .blok-video-error-state__screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, var(--blok-video-error-scanline) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, transparent 0%, var(--blok-video-error-roll) 48%, transparent 56%) 0 0 / 100% 300% no-repeat,
+    radial-gradient(ellipse at center, transparent 35%, var(--blok-video-error-vignette) 100%);
+  animation: blok-video-roll 6s linear infinite;
+}
+/* the tear: SMPTE colour bars that flash across the static for a beat */
+[data-blok-tool="video"] .blok-video-error-state__tear {
+  position: absolute;
+  inset-inline: 0;
+  top: 30%;
+  height: 18%;
+  display: flex;
+  opacity: 0;
+  filter: drop-shadow(3px 0 var(--blok-video-error-split-red)) drop-shadow(-3px 0 var(--blok-video-error-split-cyan));
+  animation: blok-video-tear 3.4s steps(1) infinite;
+}
+[data-blok-tool="video"] .blok-video-error-state__tear span { flex: 1; }
+[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(1) { background: var(--blok-video-error-bar-1); }
+[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(2) { background: var(--blok-video-error-bar-2); }
+[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(3) { background: var(--blok-video-error-bar-3); }
+[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(4) { background: var(--blok-video-error-bar-4); }
+[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(5) { background: var(--blok-video-error-bar-5); }
+[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(6) { background: var(--blok-video-error-bar-6); }
+[data-blok-tool="video"] .blok-video-error-state__tear span:nth-child(7) { background: var(--blok-video-error-bar-7); }
+[data-blok-tool="video"] .blok-video-error-state__card {
+  grid-area: 1 / 1;
+  place-self: center;
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: var(--blok-space-2-5);
+  row-gap: var(--blok-space-3);
+  max-width: min(22rem, calc(100% - 2 * var(--blok-space-4)));
+  margin: var(--blok-space-4);
+  padding: var(--blok-space-4);
+  border: var(--blok-border-width-hairline) solid var(--blok-video-menu-border);
+  border-radius: var(--blok-radius-surface);
+  background: color-mix(in srgb, var(--blok-video-menu-bg) 62%, transparent);
+  color: var(--blok-video-control-fg);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: var(--blok-video-error-card-shadow);
+  animation: blok-video-rise var(--blok-duration-slow) var(--blok-ease-popover) both;
+}
+/* a red "on air" dot that keeps pinging for a signal that never comes */
+[data-blok-tool="video"] .blok-video-error-state__signal {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-error-ink);
+  /* centred on the message's first line: half its 1.45 line box, minus half the dot */
+  margin-block-start: calc(14px * 1.45 / 2 - 4px);
+  animation: blok-video-ping 1.6s ease-out infinite;
+}
+[data-blok-tool="video"] .blok-video-error-state__message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+[data-blok-tool="video"] .blok-video-error-state__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blok-space-2);
+}
+[data-blok-tool="video"] .blok-video-error-state__upload,
 [data-blok-tool="video"] .blok-video-retry {
-  margin-inline-start: auto;
-  flex-shrink: 0;
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
   padding: var(--blok-space-1-5) var(--blok-space-3);
   border-radius: var(--blok-radius-control);
-  border: 1px solid var(--blok-border-subtle);
-  background: var(--blok-bg-primary);
-  color: var(--blok-text-primary);
+  border: 1px solid var(--blok-video-track);
+  background: transparent;
+  color: var(--blok-video-control-fg);
   font-size: 12.5px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background var(--blok-duration-base) ease, border-color var(--blok-duration-base) ease;
+  transition: background var(--blok-duration-base) ease, border-color var(--blok-duration-base) ease, transform var(--blok-duration-base) ease;
 }
+/* the way out wears the player's white ink */
+[data-blok-tool="video"] .blok-video-error-state__upload {
+  border-color: transparent;
+  background: var(--blok-video-control-fg);
+  color: var(--blok-video-stage);
+}
+[data-blok-tool="video"] .blok-video-error-state__upload svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+[data-blok-tool="video"] .blok-video-error-state__upload:hover { transform: translateY(-1px); }
+[data-blok-tool="video"] .blok-video-error-state__upload:active { transform: scale(0.97); }
 [data-blok-tool="video"] .blok-video-retry:hover {
-  background: var(--blok-bg-hover);
-  border-color: var(--blok-border-primary);
+  background: var(--blok-video-control-bg-hover);
+  border-color: var(--blok-video-buffered);
 }
-[data-blok-tool="video"] .blok-video-retry:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-error-state__upload:focus-visible,
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-retry:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
+}
+@keyframes blok-video-static {
+  0%   { transform: translate(0, 0); }
+  20%  { transform: translate(-7%, 4%); }
+  40%  { transform: translate(5%, -6%); }
+  60%  { transform: translate(-3%, -9%); }
+  80%  { transform: translate(8%, 3%); }
+}
+@keyframes blok-video-roll {
+  from { background-position: 0 0, 0 100%, 0 0; }
+  to   { background-position: 0 0, 0 0, 0 0; }
+}
+@keyframes blok-video-tear {
+  0%   { opacity: 0; }
+  84%  { opacity: 1; transform: translateX(-9%); clip-path: inset(0 0 58% 0); }
+  86%  { opacity: 1; transform: translateX(6%) scaleY(0.6); clip-path: inset(36% 0 0 0); }
+  88%  { opacity: 0.85; transform: translateX(-2%); clip-path: inset(0); }
+  90%  { opacity: 1; transform: translate(12%, 140%) scaleY(0.3); clip-path: inset(0 0 40% 0); }
+  92%  { opacity: 0; transform: none; clip-path: inset(0); }
+}
+@keyframes blok-video-rise {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes blok-video-ping {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--blok-video-error-ink) 55%, transparent); }
+  100% { box-shadow: 0 0 0 7px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tool="video"] .blok-video-error-state__screen::before,
+  [data-blok-tool="video"] .blok-video-error-state__screen::after,
+  [data-blok-tool="video"] .blok-video-error-state__tear,
+  [data-blok-tool="video"] .blok-video-error-state__card,
+  [data-blok-tool="video"] .blok-video-error-state__signal {
+    animation: none;
+  }
+  [data-blok-tool="video"] .blok-video-error-state__upload { transition: none; }
 }
 
 /* =================================================
@@ -588,7 +751,7 @@
   background: var(--blok-video-thumb);
   box-shadow: var(--blok-video-thumb-shadow);
 }
-[data-blok-tool="video"] .blok-video-controls__seek:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__seek:focus-visible {
   box-shadow: 0 0 0 3px var(--blok-video-focus-ring);
 }
 
@@ -746,7 +909,7 @@
   color: var(--blok-video-control-fg);
 }
 [data-blok-tool="video"] .blok-video-controls__menu-row:active { transform: scale(0.985); }
-[data-blok-tool="video"] .blok-video-controls__menu-row:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__menu-row:focus-visible {
   outline: none;
   background: var(--blok-video-control-bg-hover);
   box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
@@ -840,7 +1003,7 @@
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 2px;
+  gap: var(--blok-space-0-5);
   margin: var(--blok-space-2-5) 0 var(--blok-space-1);
   font-size: 38px;
   font-weight: 600;
@@ -894,7 +1057,7 @@
 [data-blok-tool="video"] .blok-video-controls__speed-tick-label {
   position: absolute;
   top: 100%;
-  margin-top: 2px;
+  margin-top: var(--blok-space-0-5);
   left: 50%;
   transform: translateX(-50%);
   font-size: 9.5px;
@@ -955,8 +1118,8 @@
   height: 0;
   border: 0;
 }
-[data-blok-tool="video"] .blok-video-controls__speed-slider:focus { outline: none; }
-[data-blok-tool="video"] .blok-video-controls__speed-ruler:not([data-pointer-focus]) .blok-video-controls__speed-slider:focus-visible ~ .blok-video-controls__speed-needle {
+[data-blok-tool="video"] .blok-video-controls__speed-slider:focus-visible { outline: none; }
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__speed-ruler:not([data-pointer-focus]) .blok-video-controls__speed-slider:focus-visible ~ .blok-video-controls__speed-needle {
   box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
 }
 
@@ -1027,7 +1190,7 @@
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="video"] .blok-video-controls__speed-puck { transition: none; }
 }
-[data-blok-tool="video"] .blok-video-controls__speed-chip:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__speed-chip:focus-visible {
   outline: none;
   box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
 }
@@ -1210,10 +1373,10 @@
 [data-blok-tool="video"] .blok-video-controls__time { cursor: pointer; }
 
 /* keyboard focus rings */
-[data-blok-tool="video"] .blok-video-controls__btn:focus-visible,
-[data-blok-tool="video"] .blok-video-controls__center:focus-visible,
-[data-blok-tool="video"] .blok-video-controls__time:focus-visible,
-[data-blok-tool="video"] .blok-video-controls__ctx-item:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__btn:focus-visible,
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__center:focus-visible,
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__time:focus-visible,
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="video"] .blok-video-controls__ctx-item:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
 }
@@ -1309,7 +1472,7 @@
   position: absolute;
   top: var(--blok-space-2);
   left: var(--blok-space-2);
-  padding: 2px var(--blok-space-2);
+  padding: var(--blok-space-0-5) var(--blok-space-2);
   border-radius: var(--blok-radius-control-sm);
   background: var(--blok-video-burst-bg);
   box-shadow: var(--blok-video-burst-shadow);

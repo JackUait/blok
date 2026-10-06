@@ -1,13 +1,41 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, queryAllByAttribute } from '@testing-library/dom';
-import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../types';
-import type { DatabaseData, DatabaseConfig, DatabaseRowData, DatabaseViewConfig } from '../../../../src/tools/database/types';
+import type { API, BlockAPI, BlockToolConstructorOptions, OutputData } from '../../../../types';
+import type { DatabaseAdapter, DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, DatabaseViewConfig, PropertyDefinition, PropertyValue } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
-import type { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
+import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
 import type { GroupDragResult, DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
+
+interface NestedEditorConfig {
+  holder: HTMLElement;
+  data?: OutputData;
+  onChange: () => Promise<void>;
+}
+
+const nestedEditor = vi.hoisted((): { configs: NestedEditorConfig[]; savePayload: OutputData } => ({
+  configs: [],
+  savePayload: { blocks: [] },
+}));
+
+// The drawer imports Blok when it opens, so the test captures that editor's callbacks.
+vi.mock('../../../../src/blok', () => ({
+  Blok: class MockBlok {
+    readonly isReady = Promise.resolve();
+
+    constructor(config: NestedEditorConfig) {
+      nestedEditor.configs.push(config);
+    }
+
+    save(): Promise<OutputData> {
+      return Promise.resolve(nestedEditor.savePayload);
+    }
+
+    destroy(): void {}
+  },
+}));
 
 // ---------------------------------------------------------------------------
 // Testing Library helpers — replace querySelector / querySelectorAll with
@@ -89,11 +117,16 @@ const createMockRowBlock = (options: {
   id: string;
   properties: Record<string, unknown>;
   position: string;
+  pageId?: string;
 }): BlockAPI => ({
   id: options.id,
   name: 'database-row',
   holder: document.createElement('div'),
-  preservedData: { properties: options.properties, position: options.position } as DatabaseRowData,
+  preservedData: {
+    properties: options.properties,
+    position: options.position,
+    ...(options.pageId !== undefined ? { pageId: options.pageId } : {}),
+  } as DatabaseRowData,
   call: vi.fn(),
   dispatchChange: vi.fn(),
 } as unknown as BlockAPI);
@@ -155,12 +188,14 @@ const createDatabaseOptions = (
   config,
   api: createMockAPI(overrides.childBlocks ?? []),
   readOnly: overrides.readOnly ?? false,
-  block: { id: 'test-block-id' } as never,
+  block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
 });
 
 describe('DatabaseTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    nestedEditor.configs.length = 0;
+    nestedEditor.savePayload = { blocks: [] };
   });
 
   afterEach(() => {
@@ -931,6 +966,350 @@ describe('DatabaseTool', () => {
     });
   });
 
+  it('saves a changed drawer body with the default schema', async () => {
+    const body: OutputData = {
+      blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'Kept' } }],
+    };
+    const rowBlock = createMockRowBlock({
+      id: 'row-1',
+      position: 'a0',
+      properties: { 'prop-title': 'Row', 'prop-status': 'opt-todo' },
+    });
+    const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [rowBlock] }));
+
+    try {
+      const element = tool.render();
+      tool.rendered();
+      const card = queryByData(element, 'data-row-id', 'row-1');
+
+      if (card === null) throw new Error('row card was not rendered');
+      card.click();
+
+      const editorHolder = queryByData(element, 'data-blok-database-drawer-editor');
+
+      if (editorHolder === null) throw new Error('drawer body was not rendered');
+      await vi.waitFor(() => {
+        expect(nestedEditor.configs.some(({ holder }) => holder === editorHolder)).toBe(true);
+      });
+      const editor = nestedEditor.configs.find(({ holder }) => holder === editorHolder);
+
+      if (editor === undefined) throw new Error('nested editor was not constructed');
+      nestedEditor.savePayload = body;
+      await editor.onChange();
+
+      const bodyProperty = tool.save(element).schema.find((property) => property.type === 'richText');
+
+      expect(bodyProperty).toBeDefined();
+      if (bodyProperty === undefined) throw new Error('body property was not saved');
+      expect(rowBlock.call).toHaveBeenCalledWith('updateProperties', { [bodyProperty.id]: body });
+    } finally {
+      tool.destroy();
+    }
+  });
+
+  it('passes a migrated row page pointer to the drawer', () => {
+    const rowBlock = createMockRowBlock({
+      id: 'row-1',
+      position: 'a0',
+      properties: { 'prop-title': 'Row', 'prop-status': 'opt-todo' },
+      pageId: 'row-page',
+    });
+    const opened = vi.spyOn(DatabaseCardDrawer.prototype, 'open');
+    const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [rowBlock] }));
+
+    try {
+      const element = tool.render();
+      tool.rendered();
+      const card = queryByData(element, 'data-row-id', 'row-1');
+
+      if (card === null) throw new Error('row card was not rendered');
+      card.click();
+
+      expect(opened).toHaveBeenCalledWith(expect.objectContaining({ pageId: 'row-page' }));
+    } finally {
+      tool.destroy();
+    }
+  });
+
+  const openDrawerEditor = async (element: HTMLElement): Promise<NestedEditorConfig> => {
+    const card = queryByData(element, 'data-row-id', 'row-1');
+
+    if (card === null) throw new Error('row card was not rendered');
+    card.click();
+    const holder = queryByData(element, 'data-blok-database-drawer-editor');
+
+    if (holder === null) throw new Error('drawer body was not rendered');
+    await vi.waitFor(() => {
+      expect(nestedEditor.configs.some(({ holder: configuredHolder }) => configuredHolder === holder)).toBe(true);
+    });
+    const editor = nestedEditor.configs.find(({ holder: configuredHolder }) => configuredHolder === holder);
+
+    if (editor === undefined) throw new Error('nested editor was not constructed');
+
+    return editor;
+  };
+
+  it('does not restore a deleted row when a closing drawer saves later', async () => {
+    const body: OutputData = { blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'Late body' } }] };
+    const properties = { 'prop-title': 'Row', 'prop-status': 'opt-todo', 'prop-body': { blocks: [] } };
+    const storedRows = new Map<string, DatabaseRow>([['row-1', { id: 'row-1', position: 'a0', properties }]]);
+    const adapter: DatabaseAdapter = {
+      loadDatabase: vi.fn(),
+      createRow: vi.fn(),
+      updateRow: vi.fn(async ({ rowId, properties: updated }: Parameters<DatabaseAdapter['updateRow']>[0]) => {
+        const row = { id: rowId, position: 'a0', properties: updated };
+
+        storedRows.set(rowId, row);
+        return row;
+      }),
+      moveRow: vi.fn(),
+      deleteRow: vi.fn(async ({ rowId }: Parameters<DatabaseAdapter['deleteRow']>[0]) => {
+        storedRows.delete(rowId);
+      }),
+      createProperty: vi.fn(),
+      updateProperty: vi.fn(),
+      deleteProperty: vi.fn(),
+      createView: vi.fn(),
+      updateView: vi.fn(),
+      deleteView: vi.fn(),
+    };
+    const rowBlock = createMockRowBlock({ id: 'row-1', position: 'a0', properties });
+    const options = createDatabaseOptions({
+      schema: [...makeDefaultData().schema, { id: 'prop-body', name: 'Details', type: 'richText', position: 'a2' }],
+    }, { adapter }, { childBlocks: [rowBlock] });
+
+    (options.api.blocks.delete as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([]);
+    });
+    const tool = new DatabaseTool(options);
+
+    try {
+      const element = tool.render();
+      tool.rendered();
+      await openDrawerEditor(element);
+      nestedEditor.savePayload = body;
+      vi.useFakeTimers();
+
+      const closeButton = queryByData(element, 'data-blok-database-drawer-close');
+      const cardMenu = queryByData(element, 'data-blok-database-card-menu');
+
+      if (closeButton === null || cardMenu === null) throw new Error('drawer or card menu was not rendered');
+      closeButton.click();
+      cardMenu.click();
+      const deleteAction = queryByData(document.body, 'data-mock-popover-action', /delete/);
+
+      if (deleteAction === null) throw new Error('delete action was not rendered');
+      deleteAction.click();
+      await vi.runOnlyPendingTimersAsync();
+
+      expect(storedRows.has('row-1')).toBe(false);
+    } finally {
+      tool.destroy();
+      queryByData(document.body, 'data-mock-popover')?.remove();
+      vi.useRealTimers();
+    }
+  });
+
+  it('publishes a newly created drawer body property in the database block', async () => {
+    const rowBlock = createMockRowBlock({
+      id: 'row-1',
+      position: 'a0',
+      properties: { 'prop-title': 'Row', 'prop-status': 'opt-todo' },
+    });
+    const options = createDatabaseOptions({}, {}, { childBlocks: [rowBlock] });
+    const tool = new DatabaseTool(options);
+    const element = tool.render();
+    const published: DatabaseData[] = [];
+
+    options.block.dispatchChange = () => {
+      published.push(tool.save(element));
+    };
+
+    try {
+      tool.rendered();
+      const editor = await openDrawerEditor(element);
+
+      nestedEditor.savePayload = { blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'Kept' } }] };
+      await editor.onChange();
+
+      expect(published[0]?.schema.some((property) => property.type === 'richText')).toBe(true);
+      expect(published).toHaveLength(1);
+    } finally {
+      tool.destroy();
+    }
+  });
+
+  it('waits for body property creation before syncing the latest row value to the adapter', async () => {
+    const firstBody: OutputData = { blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'First' } }] };
+    const body: OutputData = { blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'Kept' } }] };
+    let finishCreate: (() => void) | undefined;
+    let persistedProperties: Record<string, PropertyValue> | undefined;
+    let propertyCreated = false;
+    const adapter: DatabaseAdapter = {
+      loadDatabase: vi.fn(),
+      createRow: vi.fn(),
+      updateRow: vi.fn(async (params: Parameters<DatabaseAdapter['updateRow']>[0]) => {
+        if (!propertyCreated) throw new Error('property does not exist');
+        persistedProperties = params.properties;
+
+        return { id: params.rowId, position: 'a0', properties: params.properties };
+      }),
+      moveRow: vi.fn(),
+      deleteRow: vi.fn(),
+      createProperty: vi.fn((property: Parameters<DatabaseAdapter['createProperty']>[0]) => new Promise<PropertyDefinition>((resolve) => {
+        finishCreate = () => {
+          propertyCreated = true;
+          resolve(property);
+        };
+      })),
+      updateProperty: vi.fn(),
+      deleteProperty: vi.fn(),
+      createView: vi.fn(),
+      updateView: vi.fn(),
+      deleteView: vi.fn(),
+    };
+    const rowBlock = createMockRowBlock({
+      id: 'row-1',
+      position: 'a0',
+      properties: { 'prop-title': 'Row', 'prop-status': 'opt-todo' },
+    });
+    const tool = new DatabaseTool(createDatabaseOptions({}, { adapter }, { childBlocks: [rowBlock] }));
+
+    try {
+      const element = tool.render();
+      const editor = await openDrawerEditor(element);
+
+      vi.useFakeTimers();
+      nestedEditor.savePayload = firstBody;
+      await editor.onChange();
+      nestedEditor.savePayload = body;
+      await editor.onChange();
+      await vi.advanceTimersByTimeAsync(500);
+      if (finishCreate === undefined) throw new Error('property creation was not started');
+      finishCreate();
+      await vi.runOnlyPendingTimersAsync();
+
+      const bodyProperty = tool.save(element).schema.find((property) => property.type === 'richText');
+
+      if (bodyProperty === undefined) throw new Error('body property was not saved');
+      expect(persistedProperties?.[bodyProperty.id]).toEqual(body);
+    } finally {
+      tool.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it('retries body property creation after an adapter failure before syncing the latest body', async () => {
+    const firstBody: OutputData = { blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'First' } }] };
+    const latestBody: OutputData = { blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'Latest' } }] };
+    let createCalls = 0;
+    let created = false;
+    let persistedProperties: Record<string, PropertyValue> | undefined;
+    const adapter: DatabaseAdapter = {
+      loadDatabase: vi.fn(),
+      createRow: vi.fn(),
+      updateRow: vi.fn(async (params: Parameters<DatabaseAdapter['updateRow']>[0]) => {
+        if (!created) throw new Error('property does not exist');
+        persistedProperties = params.properties;
+
+        return { id: params.rowId, position: 'a0', properties: params.properties };
+      }),
+      moveRow: vi.fn(),
+      deleteRow: vi.fn(),
+      createProperty: vi.fn(async (property: Parameters<DatabaseAdapter['createProperty']>[0]) => {
+        createCalls += 1;
+        if (createCalls === 1) throw new Error('create failed');
+        created = true;
+
+        return property;
+      }),
+      updateProperty: vi.fn(),
+      deleteProperty: vi.fn(),
+      createView: vi.fn(),
+      updateView: vi.fn(),
+      deleteView: vi.fn(),
+    };
+    const rowBlock = createMockRowBlock({
+      id: 'row-1', position: 'a0', properties: { 'prop-title': 'Row', 'prop-status': 'opt-todo' },
+    });
+    const tool = new DatabaseTool(createDatabaseOptions({}, { adapter }, { childBlocks: [rowBlock] }));
+
+    try {
+      const element = tool.render();
+      const editor = await openDrawerEditor(element);
+
+      vi.useFakeTimers();
+      nestedEditor.savePayload = firstBody;
+      await editor.onChange();
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(adapter.updateRow).not.toHaveBeenCalled();
+
+      nestedEditor.savePayload = latestBody;
+      await editor.onChange();
+      await vi.runOnlyPendingTimersAsync();
+      const bodyProperty = tool.save(element).schema.find((property) => property.type === 'richText');
+
+      if (bodyProperty === undefined) throw new Error('body property was not saved');
+      expect(createCalls).toBe(2);
+      expect(persistedProperties?.[bodyProperty.id]).toEqual(latestBody);
+    } finally {
+      tool.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not sync a deleted row after its body property creation completes', async () => {
+    let finishCreate: (() => void) | undefined;
+    const adapter: DatabaseAdapter = {
+      loadDatabase: vi.fn(),
+      createRow: vi.fn(),
+      updateRow: vi.fn(async (params: Parameters<DatabaseAdapter['updateRow']>[0]) => ({
+        id: params.rowId, position: 'a0', properties: params.properties,
+      })),
+      moveRow: vi.fn(),
+      deleteRow: vi.fn(),
+      createProperty: vi.fn((property: Parameters<DatabaseAdapter['createProperty']>[0]) => new Promise<PropertyDefinition>((resolve) => {
+        finishCreate = () => resolve(property);
+      })),
+      updateProperty: vi.fn(),
+      deleteProperty: vi.fn(),
+      createView: vi.fn(),
+      updateView: vi.fn(),
+      deleteView: vi.fn(),
+    };
+    const rowBlock = createMockRowBlock({
+      id: 'row-1', position: 'a0', properties: { 'prop-title': 'Row', 'prop-status': 'opt-todo' },
+    });
+    const tool = new DatabaseTool(createDatabaseOptions({}, { adapter }, { childBlocks: [rowBlock] }));
+
+    try {
+      const element = tool.render();
+      const editor = await openDrawerEditor(element);
+
+      vi.useFakeTimers();
+      nestedEditor.savePayload = { blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'Kept' } }] };
+      await editor.onChange();
+      const cardMenu = queryByData(element, 'data-blok-database-card-menu');
+
+      if (cardMenu === null) throw new Error('card menu was not rendered');
+      cardMenu.click();
+      const deleteAction = queryByData(document.body, 'data-mock-popover-action', /delete/);
+
+      if (deleteAction === null) throw new Error('delete action was not rendered');
+      deleteAction.click();
+      if (finishCreate === undefined) throw new Error('property creation was not started');
+      finishCreate();
+      await vi.runOnlyPendingTimersAsync();
+
+      expect(adapter.updateRow).not.toHaveBeenCalled();
+    } finally {
+      tool.destroy();
+      queryByData(document.body, 'data-mock-popover')?.remove();
+      vi.useRealTimers();
+    }
+  });
+
   describe('drawer title edits update row block via call()', () => {
     it('editing the title in the drawer calls block.call("updateTitle") on the row block', () => {
       const childBlocks = [
@@ -1128,6 +1507,300 @@ describe('DatabaseTool', () => {
       expect(row.getTitle()).toBe('Second');
 
       tool.destroy();
+    });
+
+    it('keeps an unset Details body separate from populated Notes', async () => {
+      const notes: OutputData = { blocks: [{ id: 'notes-1', type: 'paragraph', data: { text: 'Notes' } }] };
+      const details: OutputData = { blocks: [{ id: 'details-1', type: 'paragraph', data: { text: 'Details' } }] };
+      const schema: PropertyDefinition[] = [
+        ...makeDefaultData().schema,
+        { id: 'prop-details', name: 'Details', type: 'richText', position: 'a2' },
+        { id: 'prop-notes', name: 'Notes', type: 'richText', position: 'a3' },
+      ];
+      const { block, row } = liveRowBlock('row-1', {
+        position: 'a0',
+        properties: { 'prop-title': 'Row', 'prop-status': 'opt-todo', 'prop-notes': notes },
+      });
+      const tool = new DatabaseTool(createDatabaseOptions({ schema }, {}, { childBlocks: [block] }));
+
+      try {
+        const element = tool.render();
+
+        tool.rendered();
+        const editor = await openDrawerEditor(element);
+
+        expect(editor.data).toBeUndefined();
+
+        nestedEditor.savePayload = details;
+        await editor.onChange();
+
+        expect(row.getProperties()['prop-details']).toEqual(details);
+        expect(row.getProperties()['prop-notes']).toEqual(notes);
+      } finally {
+        tool.destroy();
+      }
+    });
+
+    it('reopens a saved default-schema body and reuses its property on a second edit', async () => {
+      const firstBody: OutputData = { blocks: [{ id: 'body-1', type: 'paragraph', data: { text: 'First' } }] };
+      const secondBody: OutputData = { blocks: [{ id: 'body-1', type: 'paragraph', data: { text: 'Second' } }] };
+      const { block, row } = liveRowBlock('row-1', {
+        position: 'a0',
+        properties: { 'prop-title': 'Row', 'prop-status': 'opt-todo' },
+      });
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [block] }));
+
+      try {
+        const element = tool.render();
+        tool.rendered();
+        const card = queryByData(element, 'data-row-id', 'row-1');
+
+        if (card === null) throw new Error('row card was not rendered');
+        card.click();
+        const firstHolder = queryByData(element, 'data-blok-database-drawer-editor');
+
+        if (firstHolder === null) throw new Error('drawer body was not rendered');
+        await vi.waitFor(() => {
+          expect(nestedEditor.configs.some(({ holder }) => holder === firstHolder)).toBe(true);
+        });
+        const firstEditor = nestedEditor.configs.find(({ holder }) => holder === firstHolder);
+
+        if (firstEditor === undefined) throw new Error('nested editor was not constructed');
+        nestedEditor.savePayload = firstBody;
+        await firstEditor.onChange();
+
+        const firstSchema = tool.save(element).schema;
+        const bodyProperty = firstSchema.find((property) => property.type === 'richText');
+
+        expect(bodyProperty).toBeDefined();
+        if (bodyProperty === undefined) throw new Error('body property was not saved');
+        expect(row.save(document.createElement('div')).properties[bodyProperty.id]).toEqual(firstBody);
+
+        const closeButton = queryByData(element, 'data-blok-database-drawer-close');
+
+        if (closeButton === null) throw new Error('drawer close button was not rendered');
+        closeButton.click();
+        card.click();
+        const reopenedHolder = queryByData(element, 'data-blok-database-drawer-editor');
+
+        if (reopenedHolder === null) throw new Error('drawer body was not reopened');
+        await vi.waitFor(() => {
+          expect(nestedEditor.configs.some(({ holder }) => holder === reopenedHolder)).toBe(true);
+        });
+        const reopenedEditor = nestedEditor.configs.find(({ holder }) => holder === reopenedHolder);
+
+        if (reopenedEditor === undefined) throw new Error('nested editor was not reconstructed');
+        expect(reopenedEditor.data).toEqual(firstBody);
+
+        nestedEditor.savePayload = secondBody;
+        await reopenedEditor.onChange();
+
+        expect(tool.save(element).schema.filter((property) => property.type === 'richText')).toEqual([bodyProperty]);
+        expect(row.save(document.createElement('div')).properties[bodyProperty.id]).toEqual(secondBody);
+      } finally {
+        tool.destroy();
+      }
+    });
+
+    it('recovers a saved drawer body without republishing a backend-omitted property', async () => {
+      const body: OutputData = {
+        blocks: [{ id: 'body-1', type: 'paragraph', data: { text: 'Saved details' } }],
+      };
+      const backendData = makeDefaultData();
+      let backendSchema = backendData.schema;
+      let createAttempts = 0;
+      const adapter: DatabaseAdapter = {
+        loadDatabase: vi.fn(async () => ({ schema: structuredClone(backendSchema), views: backendData.views })),
+        createRow: vi.fn(),
+        updateRow: vi.fn(),
+        moveRow: vi.fn(),
+        deleteRow: vi.fn(),
+        createProperty: vi.fn(async (property: Parameters<DatabaseAdapter['createProperty']>[0]) => {
+          createAttempts += 1;
+          if (createAttempts === 1) throw new Error('schema write failed');
+          backendSchema = [...backendSchema, property];
+
+          return property;
+        }),
+        updateProperty: vi.fn(),
+        deleteProperty: vi.fn(),
+        createView: vi.fn(),
+        updateView: vi.fn(),
+        deleteView: vi.fn(),
+      };
+      const { block, row } = liveRowBlock('row-1', {
+        position: 'a0',
+        properties: { 'prop-title': 'Row', 'prop-status': 'opt-todo' },
+      });
+      const saved = await (async (): Promise<{ database: DatabaseData; row: DatabaseRowData }> => {
+        const tool = new DatabaseTool(createDatabaseOptions({}, { adapter }, { childBlocks: [block] }));
+
+        try {
+          const element = tool.render();
+          const editor = await openDrawerEditor(element);
+
+          nestedEditor.savePayload = body;
+          await editor.onChange();
+
+          return { database: tool.save(element), row: row.save(document.createElement('div')) };
+        } finally {
+          tool.destroy();
+        }
+      })();
+      const { block: reloadedBlock } = liveRowBlock('row-1', saved.row);
+      const reloadedTool = new DatabaseTool(createDatabaseOptions(saved.database, { adapter }, { childBlocks: [reloadedBlock] }));
+
+      try {
+        const element = reloadedTool.render();
+        const firstCard = queryByData(element, 'data-row-id', 'row-1');
+
+        if (firstCard === null) throw new Error('row card was not rendered');
+        reloadedTool.rendered();
+        await vi.waitFor(() => {
+          expect(queryByData(element, 'data-row-id', 'row-1')).not.toBe(firstCard);
+        });
+        expect(reloadedTool.save(element).schema.some((property) => property.type === 'richText')).toBe(false);
+        const editor = await openDrawerEditor(element);
+
+        expect(editor.data).toEqual(body);
+      } finally {
+        reloadedTool.destroy();
+      }
+    });
+
+    it('keeps an explicitly empty Notes body instead of reviving an orphan', async () => {
+      const original = makeDefaultData();
+      const details = { id: 'prop-details', name: 'Details', type: 'richText', position: 'a2' } as const;
+      const notes = { id: 'prop-notes', name: 'Notes', type: 'richText', position: 'a3' } as const;
+      const savedSchema = [...original.schema, details, notes];
+      const backendSchema = [...original.schema, notes];
+      const body: OutputData = {
+        blocks: [{ id: 'body-1', type: 'paragraph', data: { text: 'Saved details' } }],
+      };
+      const emptyBody: OutputData = { blocks: [] };
+      const adapter: DatabaseAdapter = {
+        loadDatabase: vi.fn(async () => ({ schema: backendSchema, views: original.views })),
+        createRow: vi.fn(),
+        updateRow: vi.fn(),
+        moveRow: vi.fn(),
+        deleteRow: vi.fn(),
+        createProperty: vi.fn(),
+        updateProperty: vi.fn(),
+        deleteProperty: vi.fn(),
+        createView: vi.fn(),
+        updateView: vi.fn(),
+        deleteView: vi.fn(),
+      };
+      const { block } = liveRowBlock('row-1', {
+        position: 'a0',
+        properties: {
+          'prop-title': 'Row',
+          'prop-status': 'opt-todo',
+          'prop-details': body,
+          'prop-notes': emptyBody,
+        },
+      });
+      const tool = new DatabaseTool(createDatabaseOptions({ schema: savedSchema }, { adapter }, { childBlocks: [block] }));
+
+      try {
+        const element = tool.render();
+        const firstCard = queryByData(element, 'data-row-id', 'row-1');
+
+        tool.rendered();
+        await vi.waitFor(() => {
+          expect(queryByData(element, 'data-row-id', 'row-1')).not.toBe(firstCard);
+        });
+        const editor = await openDrawerEditor(element);
+
+        expect(editor.data).toEqual(emptyBody);
+        expect(tool.save(element).schema).toEqual(backendSchema);
+      } finally {
+        tool.destroy();
+      }
+    });
+
+    it('reopens the latest orphan body after backend property creation fails', async () => {
+      const original = makeDefaultData();
+      const details = { id: 'prop-details', name: 'Details', type: 'richText', position: 'a2' } as const;
+      const oldBody: OutputData = {
+        blocks: [{ id: 'body-1', type: 'paragraph', data: { text: 'Old details' } }],
+      };
+      const editedBody: OutputData = {
+        blocks: [{ id: 'body-1', type: 'paragraph', data: { text: 'Edited details' } }],
+      };
+      let createAttempts = 0;
+      const adapter: DatabaseAdapter = {
+        loadDatabase: vi.fn(async () => ({ schema: original.schema, views: original.views })),
+        createRow: vi.fn(),
+        updateRow: vi.fn(),
+        moveRow: vi.fn(),
+        deleteRow: vi.fn(),
+        createProperty: vi.fn(async () => {
+          createAttempts += 1;
+          throw new Error('schema write failed');
+        }),
+        updateProperty: vi.fn(),
+        deleteProperty: vi.fn(),
+        createView: vi.fn(),
+        updateView: vi.fn(),
+        deleteView: vi.fn(),
+      };
+      const { block, row } = liveRowBlock('row-1', {
+        position: 'a0',
+        properties: { 'prop-title': 'Row', 'prop-status': 'opt-todo', 'prop-details': oldBody },
+      });
+      const saved = await (async (): Promise<{ database: DatabaseData; row: DatabaseRowData }> => {
+        const tool = new DatabaseTool(createDatabaseOptions({
+          schema: [...original.schema, details],
+        }, { adapter }, { childBlocks: [block] }));
+
+        try {
+          const element = tool.render();
+          const firstCard = queryByData(element, 'data-row-id', 'row-1');
+
+          tool.rendered();
+          await vi.waitFor(() => {
+            expect(queryByData(element, 'data-row-id', 'row-1')).not.toBe(firstCard);
+          });
+          const editor = await openDrawerEditor(element);
+
+          nestedEditor.savePayload = editedBody;
+          await editor.onChange();
+
+          return { database: tool.save(element), row: row.save(document.createElement('div')) };
+        } finally {
+          tool.destroy();
+        }
+      })();
+      const { block: reloadedBlock } = liveRowBlock('row-1', saved.row);
+      const reloadedTool = new DatabaseTool(createDatabaseOptions(saved.database, { adapter }, { childBlocks: [reloadedBlock] }));
+
+      try {
+        const element = reloadedTool.render();
+        const firstCard = queryByData(element, 'data-row-id', 'row-1');
+
+        reloadedTool.rendered();
+        await vi.waitFor(() => {
+          expect(queryByData(element, 'data-row-id', 'row-1')).not.toBe(firstCard);
+        });
+        const editor = await openDrawerEditor(element);
+
+        expect(editor.data).toEqual(editedBody);
+
+        const bodyKeys = Object.keys(saved.row.properties).filter((id) =>
+          id !== 'prop-title' && id !== 'prop-status' && id !== 'prop-details');
+
+        expect(createAttempts).toBe(1);
+        expect(saved.row.properties['prop-details']).toEqual(oldBody);
+        expect(bodyKeys).toHaveLength(1);
+        expect(Object.keys(saved.row.properties)).toEqual([
+          'prop-title', 'prop-status', 'prop-details', bodyKeys[0],
+        ]);
+        expect(saved.row.properties[bodyKeys[0]]).toEqual(editedBody);
+        expect(reloadedTool.save(element).schema).toEqual(original.schema);
+      } finally {
+        reloadedTool.destroy();
+      }
     });
 
     /** The 'block changed' listener the tool registered. */
@@ -2207,6 +2880,82 @@ describe('DatabaseTool', () => {
       expect(() => tool.setReadOnly(false)).not.toThrow();
 
       expect(queryByData(element, 'data-blok-database-add-column')).not.toBeNull();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    // Collab boots every block read-only, then flips it in place.
+    it.each(['Enter', 'Tab'])('exiting read-only makes %s in the title commit like an editable boot', (key) => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.setReadOnly(false);
+
+      const titleEl = queryByData(element, 'data-blok-database-title');
+
+      if (titleEl === null) {
+        throw new Error('title element missing');
+      }
+
+      const blurSpy = vi.spyOn(titleEl, 'blur');
+      const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true });
+
+      titleEl.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(blurSpy).toHaveBeenCalledTimes(1);
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('title Enter does nothing again after re-entering read-only', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.setReadOnly(true);
+
+      const titleEl = queryByData(element, 'data-blok-database-title');
+
+      if (titleEl === null) {
+        throw new Error('title element missing');
+      }
+
+      const blurSpy = vi.spyOn(titleEl, 'blur');
+      const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true, bubbles: true });
+
+      titleEl.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(blurSpy).not.toHaveBeenCalled();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('toggling read-only repeatedly does not stack title Enter handlers', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.setReadOnly(false);
+      tool.setReadOnly(true);
+      tool.setReadOnly(false);
+
+      const titleEl = queryByData(element, 'data-blok-database-title');
+
+      if (titleEl === null) {
+        throw new Error('title element missing');
+      }
+
+      const blurSpy = vi.spyOn(titleEl, 'blur');
+
+      titleEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true, bubbles: true }));
+
+      expect(blurSpy).toHaveBeenCalledTimes(1);
 
       element.remove();
       tool.destroy();

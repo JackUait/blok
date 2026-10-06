@@ -6,6 +6,7 @@ import { TableModel } from '../../../src/tools/table/table-model';
 import { CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES, CODE_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/code';
 import {
   PAGE_ICON_CLASSES,
+  PAGE_LOCK_ICON,
   PAGE_LINK_CLASSES,
   PAGE_LINK_INK_CLASSES,
   PAGE_TITLE_CLASSES,
@@ -16,6 +17,7 @@ import { IconPage } from '../../../src/components/icons';
 
 import type { LooseOutputData, OutputBlockData, OutputData } from '../../../types';
 import type { LegacyCellContent } from '../../../src/tools/table/types';
+import type { PageInfo } from '../../../types/tools/page';
 
 /**
  * Convenience: wrap blocks into an OutputData envelope.
@@ -153,6 +155,36 @@ describe('blocksToHtml', () => {
       const nodes = blocksToViewNodes(withText(equationText), { inlineRenderers: { span: renderEquation } });
 
       expect(JSON.stringify(nodes)).toContain('"class":"katex"');
+    });
+  });
+
+  describe('inline page references', () => {
+    const withReference = doc([{
+      type: 'paragraph',
+      data: { text: 'See <a data-blok-page-id="p1" href="/old-title" title="Old title">Old title</a>' },
+    }]);
+
+    it('shows only authorized host titles and keeps denied or missing pages neutral and unlinked', () => {
+      const allowed = blocksToHtml(withReference, {
+        pageInfo: () => ({ title: 'Roadmap & plans' }),
+        pageHref: () => '/pages/p1',
+      });
+      const allowedWithoutHref = blocksToHtml(withReference, {
+        pageInfo: () => ({ title: 'Roadmap & plans' }),
+      });
+      const denied = blocksToHtml(withReference, {
+        pageInfo: () => ({ access: 'none', title: 'Private roadmap' }),
+        pageHref: () => '/pages/p1',
+      });
+      const missing = blocksToHtml(withReference, {
+        pageInfo: () => null,
+        pageHref: () => '/pages/p1',
+      });
+
+      expect(allowed).toBe('<p>See <a data-blok-page-id="p1" href="/pages/p1">Roadmap &amp; plans</a></p>');
+      expect(allowedWithoutHref).toBe('<p>See <a data-blok-page-id="p1">Roadmap &amp; plans</a></p>');
+      expect(denied).toBe('<p>See <a data-blok-page-id="p1">Page</a></p>');
+      expect(missing).toBe('<p>See <a data-blok-page-id="p1">Page</a></p>');
     });
   });
 
@@ -478,6 +510,18 @@ describe('blocksToHtml', () => {
       expect(html).toBe('<table><tbody><tr><td>x</td><td><b>y</b></td></tr></tbody></table>');
     });
 
+    it('stamps valid column widths and stretched on the table element', () => {
+      const html = blocksToHtml(doc([
+        { type: 'table', data: { withHeadings: false, stretched: true, colWidths: [120, 360.5], content: [['x', 'y']] } },
+        { type: 'table', data: { withHeadings: false, stretched: false, colWidths: [120, 'wide'], content: [['x', 'y']] } },
+      ]));
+
+      expect(html).toBe(
+        '<table data-blok-col-widths="120,360.5" data-blok-stretched="true"><tbody><tr><td>x</td><td>y</td></tr></tbody></table>'
+        + '<table><tbody><tr><td>x</td><td>y</td></tr></tbody></table>'
+      );
+    });
+
     it('emits colspan/rowspan from merged-cell data and skips covered cells', () => {
       const html = blocksToHtml(doc([
         {
@@ -592,6 +636,56 @@ describe('blocksToHtml', () => {
       expect(new TableModel({ content }).findCellForBlock('c')).toEqual({ row: 0, col: 2 });
     });
 
+    it('paints a cell\'s background, text colour and placement as inline style', () => {
+      const html = blocksToHtml(doc([
+        { type: 'table', data: { content: [[
+          { blocks: [], text: 'A', color: '#fbecdd', textColor: 'rgb(217, 115, 13)', placement: 'bottom-right' },
+          { blocks: [], text: 'B', placement: 'middle-center' },
+          { blocks: [], text: 'C', placement: 'top-left' },
+        ]] } },
+      ]));
+
+      expect(html).toBe(
+        '<table><tbody><tr>'
+        + '<td style="background-color:#fbecdd;color:rgb(217, 115, 13);vertical-align:bottom;text-align:var(--_blok-end-side, right)">A</td>'
+        + '<td style="vertical-align:middle;text-align:center">B</td>'
+        + '<td style="vertical-align:top">C</td>'
+        + '</tr></tbody></table>'
+      );
+    });
+
+    it('never emits a cell colour or placement the table model would reject', () => {
+      const html = blocksToHtml(doc([
+        { type: 'table', data: { content: [[
+          { blocks: [], text: 'A', color: 'red;position:fixed', textColor: '"><script>x()</script>', placement: 'top-left;color:red' },
+          { blocks: [], text: 'B', color: 'url(https://evil.test/x)', textColor: 'expression(alert(1))' },
+          { blocks: [], text: 'C', color: 'var(--x);color:red', textColor: 'red/**/' },
+          { blocks: [], text: 'D', color: 'rgb(1 2 3', textColor: 'red\nposition:fixed' },
+          { blocks: [], text: 'E', color: 'var(--x, url(y))', textColor: 'r\\65 d' },
+        ]] } },
+      ]));
+
+      expect(html).toBe('<table><tbody><tr><td>A</td><td>B</td><td>C</td><td>D</td><td>E</td></tr></tbody></table>');
+    });
+
+    it('paints modern, named and token cell colours the table model keeps', () => {
+      const content = [[
+        { blocks: [], text: 'A', color: 'var(--blok-color-red-bg)', textColor: 'red' },
+        { blocks: [], text: 'B', color: 'rgb(1 2 3 / 50%)', textColor: 'hsl(10 20% 30%)' },
+      ]];
+      const html = blocksToHtml(doc([{ type: 'table', data: { content } }]));
+      const model = new TableModel({ content });
+
+      expect(html).toBe(
+        '<table><tbody><tr>'
+        + '<td style="background-color:var(--blok-color-red-bg);color:red">A</td>'
+        + '<td style="background-color:rgb(1 2 3 / 50%);color:hsl(10 20% 30%)">B</td>'
+        + '</tr></tbody></table>'
+      );
+      expect([model.getCellColor(0, 0), model.getCellTextColor(0, 0), model.getCellColor(0, 1), model.getCellTextColor(0, 1)])
+        .toEqual(['var(--blok-color-red-bg)', 'red', 'rgb(1 2 3 / 50%)', 'hsl(10 20% 30%)']);
+    });
+
     it('marks the first column as th when withHeadingColumn is set', () => {
       const html = blocksToHtml(doc([
         { type: 'table', data: { withHeadings: false, withHeadingColumn: true, content: [[{ blocks: [], text: 'K' }, { blocks: [], text: 'V' }]] } },
@@ -638,6 +732,112 @@ describe('blocksToHtml', () => {
     });
   });
 
+  describe('tabs', () => {
+    it('renders every tab as a titled section, in order, with its content', () => {
+      const html = blocksToHtml(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'Overview', icon: '📋' } },
+        { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'A' } },
+        { id: 't2', type: 'tab', parent: 'tabs', data: { title: 'Details' } },
+        { id: 'p2', type: 'paragraph', parent: 't2', data: { text: 'B' } },
+      ]));
+
+      expect(html).toBe(
+        '<div data-blok-tabs>'
+        + '<section data-blok-tab><h4 data-blok-tab-title><span data-blok-tab-icon>📋</span> Overview</h4><p>A</p></section>'
+        + '<section data-blok-tab><h4 data-blok-tab-title>Details</h4><p>B</p></section>'
+        + '</div>'
+      );
+    });
+
+    it('escapes the title and icon as plain text', () => {
+      const html = blocksToHtml(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', parent: 'tabs', data: { title: '<img src=x onerror=alert(1)>', icon: '<b>' } },
+      ]));
+
+      expect(html).toBe('<div data-blok-tabs><section data-blok-tab><h4 data-blok-tab-title><span data-blok-tab-icon>&lt;b&gt;</span> &lt;img src=x onerror=alert(1)&gt;</h4></section></div>');
+    });
+
+    it('writes no empty heading for an untitled tab without an icon', () => {
+      const html = blocksToHtml(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', parent: 'tabs', data: { title: '' } },
+        { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'A' } },
+      ]));
+
+      expect(html).toBe('<div data-blok-tabs><section data-blok-tab><p>A</p></section></div>');
+    });
+
+    it('stamps the tool hook and id on each own root', () => {
+      const html = blocksToHtml(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'One' } },
+      ]), { toolAttributes: true, blockIds: true });
+
+      expect(html).toBe(
+        '<div data-blok-tool="tabs" data-blok-id="tabs" data-blok-tabs>'
+        + '<section data-blok-tool="tab" data-blok-id="t1" data-blok-tab><h4 data-blok-tab-title>One</h4></section>'
+        + '</div>'
+      );
+    });
+  });
+
+  /** The editor evicts non-`tab` children of `tabs` to the tabs block's own parent, right after the tabs block. */
+  describe('stray children of tabs', () => {
+    it('places strays after the tabs subtree, in editor save order', () => {
+      const out = blocksToHtml(doc([
+        { id: 'before', type: 'paragraph', data: { text: 'BEFORE' } },
+        { id: 'tabs', type: 'tabs', data: {}, content: ['s1', 't1', 's2'] },
+        { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs', content: ['s1c'] },
+        { id: 's1c', type: 'paragraph', data: { text: 'S1C' }, parent: 's1' },
+        { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+        { id: 's2', type: 'paragraph', data: { text: 'S2' }, parent: 'tabs' },
+        { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+      ]));
+
+      expect(out).toBe('<p>BEFORE</p><div data-blok-tabs><section data-blok-tab><h4 data-blok-tab-title>Do</h4><p>one</p></section></div><p>S1</p><p>S1C</p><p>S2</p><p>AFTER</p>');
+    });
+
+    it('keeps a tabs block holding only a stray, with the stray after it', () => {
+      const out = blocksToHtml(doc([
+        { id: 'tabs', type: 'tabs', data: {}, content: ['s1'] },
+        { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+        { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+      ]));
+
+      expect(out).toBe('<div data-blok-tabs></div><p>S1</p><p>AFTER</p>');
+    });
+
+    it('keeps a stray in the toggle holding the tabs, right after the tabs', () => {
+      const out = blocksToHtml(doc([
+        { id: 'c', type: 'toggle', data: { text: 'C' }, content: ['tabs', 'i2'] },
+        { id: 'tabs', type: 'tabs', data: {}, parent: 'c', content: ['s1', 't1'] },
+        { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+        { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+        { id: 'i2', type: 'paragraph', data: { text: 'I2' }, parent: 'c' },
+        { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+      ]));
+
+      expect(out).toBe('<details><summary>C</summary><div data-blok-tabs><section data-blok-tab><h4 data-blok-tab-title>Do</h4><p>one</p></section></div><p>S1</p><p>I2</p></details><p>AFTER</p>');
+    });
+
+    it('renders nested tabs without strays as before', () => {
+      const out = blocksToHtml(doc([
+        { id: 'c', type: 'toggle', data: { text: 'C' }, content: ['tabs', 'i2'] },
+        { id: 'tabs', type: 'tabs', data: {}, parent: 'c', content: ['t1'] },
+        { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+        { id: 'i2', type: 'paragraph', data: { text: 'I2' }, parent: 'c' },
+        { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+      ]));
+
+      expect(out).toBe('<details><summary>C</summary><div data-blok-tabs><section data-blok-tab><h4 data-blok-tab-title>Do</h4><p>one</p></section></div><p>I2</p></details><p>AFTER</p>');
+    });
+  });
+
   describe('database', () => {
     it('renders row children as blocks (minimal fallback)', () => {
       const html = blocksToHtml(doc([
@@ -655,56 +855,90 @@ describe('blocksToHtml', () => {
   describe('page', () => {
     const page = (data: Record<string, unknown>, extra: Partial<OutputBlockData> = {}): OutputBlockData =>
       ({ id: 'pg', type: 'page', data, ...extra });
-    /** The editor's IconPage, shown when the cache has no usable icon. */
     const ICON = `<span aria-hidden="true">${IconPage.trim()}</span>`;
+    const LOCK_ICON = `<span aria-hidden="true">${PAGE_LOCK_ICON.trim()}</span>`;
 
-    it('renders a non-link card with emoji icon and title when no pageHref is given', () => {
+    it('renders a neutral, unlinked card instead of legacy cached metadata', () => {
+      const pageHref = vi.fn((pageId: string) => `/pages/${pageId}`);
       const html = blocksToHtml(doc([
-        page({ pageId: 'p1', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } }),
-      ]));
+        page({ pageId: 'p1', cache: { title: 'Private roadmap', icon: { type: 'emoji', value: '🗺' } } }),
+      ]), { pageHref });
 
-      expect(html).toBe('<div><span><span aria-hidden="true">🗺</span><span>Roadmap</span></span></div>');
+      expect(html).toBe(`<div><span>${ICON}<span>Page</span></span></div>`);
+      expect(html).not.toContain('Private roadmap');
+      expect(html).not.toContain('🗺');
+      expect(pageHref).not.toHaveBeenCalled();
     });
 
-    it('links the card through pageHref', () => {
+    it('renders authorized host metadata without a link when no pageHref is given', () => {
+      const html = blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'Stale title' } })]), {
+        pageInfo: () => ({ title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } }),
+      });
+
+      expect(html).toBe('<div><span><span aria-hidden="true">🗺</span><span>Roadmap</span></span></div>');
+      expect(html).not.toContain('Stale title');
+    });
+
+    it('links the card through pageHref only with authorized host metadata', () => {
       const pageHref = vi.fn((pageId: string) => `/pages/${pageId}`);
-      const html = blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'Roadmap' } })]), { pageHref });
+      const pageInfo = vi.fn(() => ({ title: 'Roadmap' }));
+      const html = blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'Stale title' } })]), { pageHref, pageInfo });
 
       expect(html).toBe(`<div><a href="/pages/p1">${ICON}<span>Roadmap</span></a></div>`);
+      expect(pageInfo).toHaveBeenCalledWith('p1');
       expect(pageHref).toHaveBeenCalledWith('p1');
     });
 
-    it('falls back to "Untitled" when the cache has no title', () => {
-      expect(blocksToHtml(doc([page({ pageId: 'p1' })]))).toBe(`<div><span>${ICON}<span>Untitled</span></span></div>`);
-      expect(blocksToHtml(doc([page({ pageId: 'p1', cache: { title: '' } })]))).toContain('<span>Untitled</span>');
+    it('uses the neutral label while unresolved and the placeholder for an authorized untitled page', () => {
+      expect(blocksToHtml(doc([page({ pageId: 'p1' })]))).toBe(`<div><span>${ICON}<span>Page</span></span></div>`);
+      expect(blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'Stale title' } })]), {
+        pageInfo: () => ({ title: '' }),
+      })).toBe(`<div><span>${ICON}<span>New page</span></span></div>`);
     });
 
-    it('escapes the title and the emoji', () => {
-      const html = blocksToHtml(doc([
-        page({ pageId: 'p1', cache: { title: '<img src=x onerror=alert(1)>', icon: { type: 'emoji', value: '<b>' } } }),
-      ]));
+    it('distinguishes missing and denied pages without leaking host metadata or links', () => {
+      const pageHref = vi.fn(() => '/private');
+      const cached = page({ pageId: 'p1', cache: { title: 'Cached title', icon: { type: 'emoji', value: '🗺' } } });
+      const missing = blocksToHtml(doc([cached]), { pageInfo: () => null, pageHref });
+      const denied = blocksToHtml(doc([cached]), {
+        pageInfo: () => ({ access: 'none', title: 'Secret', icon: { type: 'emoji', value: '🔒' } }),
+        pageHref,
+      });
 
+      expect(missing).toBe(`<div><span>${ICON}<span>Page not found</span></span></div>`);
+      expect(denied).toBe(`<div><span>${LOCK_ICON}<span>No access</span></span></div>`);
+      expect(missing + denied).not.toMatch(/Cached title|Secret|🗺|🔒|href=/);
+      expect(pageHref).not.toHaveBeenCalled();
+    });
+
+    it('escapes the host title and emoji', () => {
+      const html = blocksToHtml(doc([page({ pageId: 'p1' })]), {
+        pageInfo: () => ({ title: '<img src=x onerror=alert(1)>', icon: { type: 'emoji', value: '<b>' } }),
+      });
+
+      expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+      expect(html).toContain('&lt;b&gt;');
       expect(html).not.toContain('<img');
       expect(html).not.toContain('<b>');
-      expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
     });
 
-    it('renders an image icon through the URL gate', () => {
-      const safe = blocksToHtml(doc([
-        page({ pageId: 'p1', cache: { title: 'T', icon: { type: 'image', url: 'https://cdn.x/i.png' } } }),
-      ]));
-      const unsafe = blocksToHtml(doc([
-        page({ pageId: 'p1', cache: { title: 'T', icon: { type: 'image', url: 'javascript:alert(1)' } } }),
-      ]));
+    it('renders only a safe host image icon through the URL gate', () => {
+      const block = page({ pageId: 'p1', cache: { icon: { type: 'image', url: 'https://private.test/icon' } } });
+      const safe = blocksToHtml(doc([block]), {
+        pageInfo: () => ({ title: 'T', icon: { type: 'image', url: 'https://cdn.x/i.png' } }),
+      });
+      const unsafe = blocksToHtml(doc([block]), {
+        pageInfo: () => ({ title: 'T', icon: { type: 'image', url: 'javascript:alert(1)' } }),
+      });
 
       expect(safe).toBe('<div><span><span aria-hidden="true"><img src="https://cdn.x/i.png" alt=""></span><span>T</span></span></div>');
-      expect(unsafe).not.toContain('javascript:');
-      expect(unsafe).not.toContain('<img');
-      expect(unsafe).toContain(ICON);
+      expect(unsafe).toBe(`<div><span>${ICON}<span>T</span></span></div>`);
+      expect(safe + unsafe).not.toContain('private.test');
     });
 
     it('drops the link when pageHref returns an unsafe URL', () => {
-      const html = blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'T' } })]), {
+      const html = blocksToHtml(doc([page({ pageId: 'p1' })]), {
+        pageInfo: () => ({ title: 'T' }),
         pageHref: () => 'javascript:alert(1)',
       });
 
@@ -719,9 +953,10 @@ describe('blocksToHtml', () => {
       expect(html).toBe('');
     });
 
-    it('routes the href through transformUrl with blockType "page"', () => {
+    it('routes an authorized href through transformUrl with blockType "page"', () => {
       const transformUrl = vi.fn((url: string) => `https://site.test${url}`);
-      const html = blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'T' } })]), {
+      const html = blocksToHtml(doc([page({ pageId: 'p1' })]), {
+        pageInfo: () => ({ title: 'T' }),
         pageHref: (id) => `/p/${id}`,
         transformUrl,
       });
@@ -742,15 +977,18 @@ describe('blocksToHtml', () => {
 
     it('never renders a child claimed only through the page\'s content list', () => {
       const html = blocksToHtml(doc([
-        page({ pageId: 'p1', cache: { title: 'T' } }, { content: ['c1'] }),
+        page({ pageId: 'p1', cache: { title: 'Stale title' } }, { content: ['c1'] }),
         { id: 'c1', type: 'paragraph', data: { text: 'Leaked body' } },
-      ]));
+      ]), { pageInfo: () => ({ title: 'T' }) });
 
       expect(html).toBe(`<div><span>${ICON}<span>T</span></span></div>`);
+      expect(html).not.toContain('Leaked body');
+      expect(html).not.toContain('Stale title');
     });
 
     it('carries the tool and id hooks on the card root', () => {
-      const html = blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'T' } })]), {
+      const html = blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'Stale title' } })]), {
+        pageInfo: () => ({ title: 'T' }),
         toolAttributes: true,
         blockIds: true,
       });
@@ -758,8 +996,8 @@ describe('blocksToHtml', () => {
       expect(html).toBe(`<div data-blok-tool="page" data-blok-id="pg"><span>${ICON}<span>T</span></span></div>`);
     });
 
-    it('shows the page glyph when the cache has no icon, like the editor', () => {
-      expect(blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'T' } })]))).toContain(ICON);
+    it('shows the page glyph when authorized metadata has no icon', () => {
+      expect(blocksToHtml(doc([page({ pageId: 'p1' })]), { pageInfo: () => ({ title: 'T' }) })).toContain(ICON);
     });
 
     /**
@@ -784,10 +1022,11 @@ describe('blocksToHtml', () => {
         return undefined;
       };
 
-      const render = (data: Record<string, unknown>, withHref = true): { root: El; card: El; icon: El; title: El } => {
+      const render = (data: Record<string, unknown>, info?: PageInfo, withHref = true): { root: El; card: El; icon: El; title: El } => {
         const nodes = blocksToViewNodes(doc([page(data)]), {
           classes: true,
           toolAttributes: true,
+          pageInfo: () => info,
           ...(withHref ? { pageHref: (id: string) => `/p/${id}` } : {}),
         }) as Array<El | { text: string }>;
         const root = findCard(nodes);
@@ -804,8 +1043,8 @@ describe('blocksToHtml', () => {
 
       const classesOf = (el: El): string[] => (el.attrs.class ?? '').split(' ');
 
-      it('paints the link in neutral ink with no text underline', () => {
-        const { card } = render({ pageId: 'p1', cache: { title: 'T' } });
+      it('paints an authorized link in neutral ink with no text underline', () => {
+        const { card } = render({ pageId: 'p1' }, { title: 'T' });
 
         expect(card.tag).toBe('a');
         expect(card.attrs.class).not.toMatch(/text-link|blue/);
@@ -813,24 +1052,31 @@ describe('blocksToHtml', () => {
       });
 
       it('gives the same ink to a card with no pageHref', () => {
-        const { card } = render({ pageId: 'p1', cache: { title: 'T' } }, false);
+        const { card } = render({ pageId: 'p1' }, { title: 'T' }, false);
 
         expect(card.tag).toBe('span');
         expect(classesOf(card)).toEqual([...PAGE_LINK_CLASSES, ...PAGE_LINK_INK_CLASSES]);
       });
 
-      it('stamps the wrapper, icon slot and soft-underlined title', () => {
-        const { root, icon, title } = render({ pageId: 'p1', cache: { title: 'T' } });
+      it('stamps the wrapper, icon slot and soft-underlined authorized title', () => {
+        const { root, icon, title } = render({ pageId: 'p1' }, { title: 'T' });
 
         expect(classesOf(root)).toEqual([...PAGE_WRAPPER_CLASSES]);
         expect(classesOf(icon)).toEqual([...PAGE_ICON_CLASSES]);
         expect(classesOf(title)).toEqual([...PAGE_TITLE_CLASSES]);
       });
 
-      it('mutes an untitled page, like the editor', () => {
-        const { title } = render({ pageId: 'p1' });
+      it('mutes an unresolved page', () => {
+        const { title } = render({ pageId: 'p1', cache: { title: 'Stale title' } });
 
-        expect(title.children).toEqual([{ text: 'Untitled' }]);
+        expect(title.children).toEqual([{ text: 'Page' }]);
+        expect(classesOf(title)).toEqual([...PAGE_TITLE_CLASSES, ...PAGE_TITLE_MUTED_CLASSES]);
+      });
+
+      it('mutes an authorized untitled page', () => {
+        const { title } = render({ pageId: 'p1' }, { title: '' });
+
+        expect(title.children).toEqual([{ text: 'New page' }]);
         expect(classesOf(title)).toEqual([...PAGE_TITLE_CLASSES, ...PAGE_TITLE_MUTED_CLASSES]);
       });
     });

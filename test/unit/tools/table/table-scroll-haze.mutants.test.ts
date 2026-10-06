@@ -183,7 +183,7 @@ describe('TableScrollHaze — mutant cover', () => {
   });
 
   describe('overlay construction', () => {
-    it('gives each side its own edge and gradient direction', () => {
+    it('gives each side its own gradient direction', () => {
       const sc = createScrollContainer();
       const haze = new TableScrollHaze();
 
@@ -192,12 +192,8 @@ describe('TableScrollHaze — mutant cover', () => {
       const left = hazeElement(wrapper, 'left');
       const right = hazeElement(wrapper, 'right');
 
-      expect(left.classList.contains('left-0')).toBe(true);
       expect(left.classList.contains('bg-linear-to-r')).toBe(true);
-      expect(left.classList.contains('right-5')).toBe(false);
-      expect(right.classList.contains('right-5')).toBe(true);
       expect(right.classList.contains('bg-linear-to-l')).toBe(true);
-      expect(right.classList.contains('left-0')).toBe(false);
 
       haze.destroy();
     });

@@ -381,6 +381,18 @@ export const drawResolved = (notify: HTMLElement, message: string): void => {
 };
 
 /**
+ * Takes the busy state off a card's actions.
+ * @param notify - a card drawn by `alert`
+ */
+export const drawSettled = (notify: HTMLElement): void => {
+  notify.querySelectorAll<HTMLElement>('[data-blok-toast-part="action"][aria-busy="true"]').forEach((button) => {
+    button.removeAttribute('aria-busy');
+    button.removeAttribute('aria-label');
+    button.querySelector('[data-blok-toast-part="spinner"]')?.remove();
+  });
+};
+
+/**
  * A copy of a leaving part, pinned where it was, that fades out on its own.
  * @param part - the element about to be removed or rewritten
  * @param box - the card's box before the change

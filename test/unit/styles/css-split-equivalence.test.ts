@@ -11,7 +11,7 @@
  *   2. Source-order preservation (declarations remain in emission order;
  *      rules are listed in resolved-@import order).
  *   3. @keyframes name uniqueness (silent shadow = silent breakage).
- *   4. Total byte budget (split ≤ pre-split × 1.01).
+ *   4. Total authored CSS byte budget.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync, statSync } from 'node:fs';
@@ -212,7 +212,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     );
   });
 
-  it('total local CSS byte size stays within +2% of the pre-split baseline', () => {
+  it('total local CSS byte size stays within the measured budget', () => {
     // Pre-split baseline captured 2026-04-22 immediately before the split refactor
     // started. Overhead budget covers per-file headers/comments added during
     // extraction plus later feature additions (crop-modal close animation,
@@ -610,6 +610,11 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // plus the centered uploading layout in image.css and file.css, and the
     // --blok-media-preview-shadow token in the colors.css palettes.
     const MEDIA_EMPTY_PREVIEW_BYTES = 22_434;
+    // Popover "Nothing found" search drawing: its part fills, dashed slot and
+    // the loupe's idle hover keyframes in media-empty.css.
+    const NOTHING_FOUND_SEARCH_PREVIEW_BYTES = 549;
+    // The slash pill's `width: auto !important`, so the + button's search shows it.
+    const PLUS_BUTTON_SEARCH_PILL_BYTES = 62;
     // Image chrome (frame and islands): island cards and their split motion,
     // selection ring, dot handles, width readout, snap guides, hover bridge,
     // table-cell insets and the on-image alt pill in
@@ -668,10 +673,59 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Loading skeleton: loading.css, its three keyframes, the bar and sheen tokens in
     // the three theme blocks, and its import in main.css.
     const LOADING_SKELETON_BYTES = 4_837;
-    // Table frame: heading ink + divider, row hover, the 2px frame radius on the
+    // Table frame: heading ink + divider, the 2px frame radius on the
     // grid and its corner cells, the radius role and the matching toolbox
     // preview. Measured net growth against 7d2de4e2.
-    const TABLE_FRAME_BYTES = 2_676;
+    const TABLE_FRAME_BYTES = 2_390;
+    // Table cells: no placeholder ::before paints inside a cell, whatever path
+    // left the placeholder attributes on a block.
+    const CELL_PLACEHOLDER_BYTES = 497;
+    // Speed ruler spacing and its preset puck.
+    const VIDEO_SPEED_PRESET_BYTES = 33 + 1_972;
+    // Darkroom keys, view-only zoom, and the shortcuts sheet.
+    const DARKROOM_NAVIGATION_BYTES = 264 + 320 + 1_957;
+    // Table corner arcs and pill room, net of the simpler heading row.
+    const TABLE_CORNER_AND_PILL_BYTES = 1_025 - 427 + 470;
+    // Keyboard-only focus modality rules.
+    const FOCUS_MODALITY_BYTES = 1_286 + 4;
+    // The find options CSS shrank by 238 authored bytes.
+    const FIND_OPTIONS_SAVINGS_BYTES = -238;
+    // Three themeable 2px spacing literals became token references.
+    const SPACING_TOKEN_REFERENCES_BYTES = 54;
+    // Live ink shape tiles in markup-panel.css: ink/width/fill glyphs, the photo
+    // spotlight and lens tiles, the trace-on keyframes and their reduced motion.
+    const SHAPE_PICKER_LIVE_INK_BYTES = 5_732;
+    // Shape picker timing tokens (lead, step, trace) shared by every open animation.
+    const SHAPE_PICKER_TIMING_TOKENS_BYTES = 268;
+    // Image chrome paper and graphite: one bar, bar handles and an ALT tag replace the
+    // islands' split motion; class-keyed tone rules. Net, measured against 80722a4e.
+    const IMAGE_CHROME_PAPER_GRAPHITE_BYTES = -5_778;
+    // Audio error card: the cracked, skipping record and the flat waveform.
+    const AUDIO_ERROR_PLAYER_BYTES = 5_014;
+    // Audio beat motion: the turning label print, beat ring, halo and art punch.
+    const AUDIO_BEAT_MOTION_BYTES = 2_576;
+    // Embed empty state: the window above the URL bar that draws the typed link's kind.
+    const EMBED_LIVING_WINDOW_BYTES = 10_195;
+    // Video error screen: static, the colour-bar tear, the glass card and its tokens.
+    const VIDEO_NO_SIGNAL_BYTES = 8_421;
+    // Image upload resend: the card's lift, progress hairline, attempt pill and the failed send's fall back.
+    const IMAGE_RESEND_BYTES = 5_150;
+    // Notifier card stack: the peeking edges of waiting cards, their tokens, the unfold and the dust mask.
+    const NOTIFIER_CARD_STACK_BYTES = 5_687;
+    // Notifier card launch: the spring curve, the launch and its light, the staggered insides, the peek entrance and their reduced motion.
+    const NOTIFIER_CARD_LAUNCH_BYTES = 5_099;
+    // Table of contents block: its stylesheet and import, then the toolbox preview drawing.
+    const TABLE_OF_CONTENTS_BYTES = 6_071 + 35 + 2_544;
+    // Tabs toolbox preview: the tab strip, the open tab's panel and its line motion.
+    const TABS_TOOLBOX_PREVIEW_BYTES = 2_439;
+    // Tabs block: tabs.css (strip, sliding pill, panels, empty tab, dwell motion) and its @import.
+    const TABS_BLOCK_BYTES = 7_064;
+    // Tabs folder look: the band, the sheet and the two concave corners on the open tab.
+    const TABS_FOLDER_LOOK_BYTES = 2_897;
+    // Tabs focus ring drawn inside the pill, clear of the scroller's clip.
+    const TABS_FOCUS_RING_BYTES = 208;
+    // Tabs empty hint takes the empty paragraph's box, so the first block never resizes the tab.
+    const TABS_EMPTY_HINT_BYTES = 519;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -685,11 +739,16 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + INLINE_TOOLBAR_CARD_BYTES
       + INLINE_TOOLBAR_ENTRANCE_BYTES
       + MEDIA_EMPTY_PREVIEW_BYTES
+      + NOTHING_FOUND_SEARCH_PREVIEW_BYTES
+      + PLUS_BUTTON_SEARCH_PILL_BYTES
       + IMAGE_CHROME_ISLANDS_BYTES
       + IMAGE_MEND_BYTES
       + IMAGE_ERROR_SHAPES_BYTES
       + NOTIFIER_MEDIA_CARD_BYTES
       + SPOTLIGHT_BYTES
+      + NOTIFIER_CARD_STACK_BYTES
+      + NOTIFIER_CARD_LAUNCH_BYTES
+      + TABLE_OF_CONTENTS_BYTES
       + MEDIA_RADIUS_ROLES_BYTES
       + RADIUS_SYSTEM_BYTES
       + DARKROOM_EDIT_PANELS_BYTES
@@ -697,7 +756,27 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DARKROOM_FILTER_STRIP_BYTES
       + LOADING_SKELETON_BYTES
       + TOOLBOX_HOVER_PREVIEWS_BYTES
-      + TABLE_FRAME_BYTES;
+      + TABLE_FRAME_BYTES
+      + CELL_PLACEHOLDER_BYTES
+      + VIDEO_SPEED_PRESET_BYTES
+      + DARKROOM_NAVIGATION_BYTES
+      + TABLE_CORNER_AND_PILL_BYTES
+      + FOCUS_MODALITY_BYTES
+      + FIND_OPTIONS_SAVINGS_BYTES
+      + SPACING_TOKEN_REFERENCES_BYTES
+      + SHAPE_PICKER_LIVE_INK_BYTES
+      + SHAPE_PICKER_TIMING_TOKENS_BYTES
+      + IMAGE_CHROME_PAPER_GRAPHITE_BYTES
+      + AUDIO_ERROR_PLAYER_BYTES
+      + AUDIO_BEAT_MOTION_BYTES
+      + EMBED_LIVING_WINDOW_BYTES
+      + VIDEO_NO_SIGNAL_BYTES
+      + IMAGE_RESEND_BYTES
+      + TABS_TOOLBOX_PREVIEW_BYTES
+      + TABS_BLOCK_BYTES
+      + TABS_FOLDER_LOOK_BYTES
+      + TABS_FOCUS_RING_BYTES
+      + TABS_EMPTY_HINT_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

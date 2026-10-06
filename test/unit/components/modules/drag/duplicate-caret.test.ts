@@ -12,6 +12,8 @@ import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { Block } from '../../../../../src/components/block';
+import { BlockToolAdapter } from '../../../../../src/components/tools/block';
+import type { API } from '../../../../../types';
 import * as tooltip from '../../../../../src/components/utils/tooltip';
 import * as announcer from '../../../../../src/components/utils/announcer';
 
@@ -72,13 +74,15 @@ type DupSetup = {
   insert: Mock;
 };
 
-const createSetup = (dups: Block | Block[]): DupSetup => {
+const createSetup = (
+  dups: Block | Block[],
+  blocks: Block[] = [createBlockStub('block-1'), createBlockStub('block-2')]
+): DupSetup => {
   const dupQueue = Array.isArray(dups) ? [...dups] : [dups];
   const wrapper = document.createElement('div');
 
   wrapper.setAttribute('data-blok-editor', '');
 
-  const blocks = [createBlockStub('block-1'), createBlockStub('block-2')];
   const allBlocks = [...blocks, ...dupQueue];
 
   // Hand out one fresh copy per insert() call so a multi-block selection yields
@@ -156,13 +160,13 @@ const createSetup = (dups: Block | Block[]): DupSetup => {
 
 describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
     vi.spyOn(tooltip, 'hide').mockImplementation(() => undefined);
     vi.spyOn(announcer, 'announce').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('places the caret into the duplicated copy instead of block-selecting it', async () => {
@@ -177,24 +181,85 @@ describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
     expect(caret.setToBlock).toHaveBeenCalledWith(dup, caret.positions.END);
   });
 
-  it('duplicates a page block as a link paragraph, never a second page block', async () => {
+  it.each([
+    ['with a link url', (): { url: string; text: string } => ({ url: 'https://x.test/p1', text: 'Plans' })],
+    ['without a link url', (): null => null],
+  ])('duplicates a page block %s as another entry point to the same page', async (_, copyAsLink) => {
     const dup = createBlockStub('dup-1');
     const { dragManager, blocks, tools, insert } = createSetup(dup);
 
     Object.assign(blocks[0], {
       name: 'page',
-      save: vi.fn().mockResolvedValue({ data: { pageId: 'p1' }, tunes: {} }),
+      save: vi.fn().mockResolvedValue({ data: { pageId: 'p1', textColor: 'red' }, tunes: {} }),
     });
-    tools.blockTools.set('page', { copyAsLink: (data: { pageId: string }) => ({ url: `https://x.test/${data.pageId}`, text: 'Plans' }) });
+    tools.blockTools.set('page', { copyAsLink, duplicateData: () => ({ pageId: 'p1-copy' }) });
     tools.defaultTool = { name: 'paragraph', conversionConfig: { import: 'text' }, settings: {} };
+
+    const copied = await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert.mock.calls[0][0]).toMatchObject({ tool: 'page', data: { pageId: 'p1', textColor: 'red' } });
+    expect(copied).toEqual([dup]);
+  });
+
+  it('duplicates a block with the data its tool gives', async () => {
+    const dup = createBlockStub('dup-1');
+    const { dragManager, blocks, tools, insert } = createSetup(dup);
+
+    Object.assign(blocks[0], {
+      name: 'custom',
+      save: vi.fn().mockResolvedValue({ data: { ref: 'r1' }, tunes: {} }),
+    });
+    tools.blockTools.set('custom', {
+      duplicateData: (data: { ref: string }) => ({ ref: `${data.ref}-copy` }),
+      copyAsLink: () => ({ url: 'https://x.test/r1', text: 'Ref' }),
+    });
 
     await dragManager.duplicateBlocksInPlace(blocks[0]);
 
     expect(insert).toHaveBeenCalledTimes(1);
-    expect(insert.mock.calls[0][0]).toMatchObject({
-      tool: 'paragraph',
-      data: { text: '<a href="https://x.test/p1">Plans</a>' },
+    expect(insert.mock.calls[0][0]).toMatchObject({ tool: 'custom', data: { ref: 'r1-copy' } });
+  });
+
+  it('duplicates a custom block with its ordinary data when copyAsLink throws', async () => {
+    class CustomTool {
+      public static copyAsLink(): never {
+        throw new Error('link lookup failed');
+      }
+
+      public render(): HTMLElement {
+        return document.createElement('div');
+      }
+
+      public save(): { text: string } {
+        return { text: 'ordinary copy' };
+      }
+    }
+
+    const dup = createBlockStub('dup-1');
+    const { dragManager, blocks, tools, insert } = createSetup(dup);
+
+    Object.assign(blocks[0], {
+      name: 'custom',
+      save: vi.fn().mockResolvedValue({ data: { text: 'ordinary copy' }, tunes: { alignment: { alignment: 'center' } } }),
     });
+    tools.blockTools.set('custom', new BlockToolAdapter({
+      name: 'custom',
+      constructable: CustomTool,
+      config: {},
+      api: {} as API,
+      isDefault: false,
+      isInternal: false,
+    }));
+
+    const copied = await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'custom',
+      data: { text: 'ordinary copy' },
+      tunes: { alignment: { alignment: 'center' } },
+    }));
+    expect(copied).toEqual([dup]);
   });
 
   it('briefly highlights the duplicated copy as just-added (blue arrival pulse)', async () => {

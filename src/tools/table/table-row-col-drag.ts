@@ -68,10 +68,12 @@ export interface TableDragOptions {
   onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null, dragIndex: number) => void;
   /**
    * Can this row/column be picked up at all? False when it is part of a merge
-   * that extends beyond it. The gesture is then rejected on sight with a
-   * not-allowed cursor instead of running a full drag that silently snaps back.
+   * that extends beyond it. The gesture is then rejected on sight instead of
+   * running a full drag that silently snaps back.
    */
   canDrag?: (type: 'row' | 'col', index: number) => boolean;
+  /** A gesture refused by canDrag passed the drag threshold. Fires once per gesture. */
+  onDragRejected?: (type: 'row' | 'col', index: number) => void;
   /**
    * Can the dragged row/column land at this index? False when the drop would
    * cut through a merged span. Drives live feedback during the drag (the drop
@@ -90,10 +92,12 @@ export class TableRowColDrag {
   private onAction: (action: RowColAction) => void;
   private onDragStateChange: ((isDragging: boolean, dragType: 'row' | 'col' | null, dragIndex: number) => void) | null;
   private canDrag: ((type: 'row' | 'col', index: number) => boolean) | null;
+  private onDragRejected: ((type: 'row' | 'col', index: number) => void) | null;
   private canDrop: ((type: 'row' | 'col', fromIndex: number, toIndex: number) => boolean) | null;
 
   /** The grabbed row/column is locked in place (merge would tear) — reject the gesture. */
   private isDragRejected = false;
+  private isRejectionReported = false;
 
   private isDragging = false;
   private dragType: 'row' | 'col' | null = null;
@@ -118,6 +122,7 @@ export class TableRowColDrag {
     this.onAction = options.onAction;
     this.onDragStateChange = options.onDragStateChange ?? null;
     this.canDrag = options.canDrag ?? null;
+    this.onDragRejected = options.onDragRejected ?? null;
     this.canDrop = options.canDrop ?? null;
 
     this.boundDocPointerMove = this.handleDocPointerMove.bind(this);
@@ -177,6 +182,7 @@ export class TableRowColDrag {
     this.onDragStateChange?.(false, null, -1);
     this.isDragging = false;
     this.isDragRejected = false;
+    this.isRejectionReported = false;
     this.dragType = null;
     this.dragFromIndex = -1;
     this.resolveTracking = null;
@@ -217,11 +223,11 @@ export class TableRowColDrag {
     const passedThreshold = dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD;
 
     // A row/column locked by a merge never enters drag state — no ghost, no
-    // drop indicator. The not-allowed cursor is the feedback, so the user sees
-    // the move was refused instead of watching the row snap back silently.
+    // drop indicator. The owner explains the refusal instead.
     if (this.isDragRejected) {
-      if (passedThreshold) {
-        document.body.style.cursor = 'not-allowed';
+      if (passedThreshold && !this.isRejectionReported && this.dragType !== null) {
+        this.isRejectionReported = true;
+        this.onDragRejected?.(this.dragType, this.dragFromIndex);
       }
 
       return;

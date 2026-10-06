@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import * as tooltip from '../../../../src/components/utils/tooltip';
 import { GRIP_DRAG_DISABLED_ATTR, TableRowColControls } from '../../../../src/tools/table/table-row-col-controls';
 import type { TableRowColControlsOptions } from '../../../../src/tools/table/table-row-col-controls';
 
@@ -14,8 +15,8 @@ const GRIP_VISIBLE_ATTR = 'data-blok-table-grip-visible';
 const HIDE_DELAY_MS = 150;
 /** GRIP_HOVER_SIZE from table-grip-visuals. */
 const HOVER_SIZE_PX = '16px';
-/** COL_PILL_HEIGHT / ROW_PILL_WIDTH (4) plus the 12px hit-area padding. */
-const IDLE_PILL_PX = '16px';
+/** COL_PILL_HEIGHT / ROW_PILL_WIDTH: idle matches the visible pill, so a reveal only fades. */
+const IDLE_PILL_PX = '4px';
 const CELL_WIDTH = 100;
 
 const mockI18n = {
@@ -411,7 +412,8 @@ describe('TableRowColControls — geometry and grip state', () => {
 
       expect(locked.hasAttribute(GRIP_DRAG_DISABLED_ATTR)).toBe(true);
       expect(locked.getAttribute(GRIP_DRAG_DISABLED_ATTR)).toBe('');
-      expect(locked.style.cursor).toBe('not-allowed');
+      // It still opens a menu, so it reads as a button, not as broken.
+      expect(locked.style.cursor).toBe('pointer');
       expect(locked.getAttribute('aria-label')).toBe('blockSettings.clickToOpenMenu');
 
       expect(free.hasAttribute(GRIP_DRAG_DISABLED_ATTR)).toBe(false);
@@ -419,6 +421,65 @@ describe('TableRowColControls — geometry and grip state', () => {
       expect(free.getAttribute('aria-label'))
         .toBe('blockSettings.dragToMove. blockSettings.clickToOpenMenu');
       expect(free.getAttribute(GRIP_ATTR)).toBe('');
+    });
+
+    it('explains why when the user tries to drag a locked row', async () => {
+      const show = vi.spyOn(tooltip, 'show').mockImplementation(() => undefined);
+      const hide = vi.spyOn(tooltip, 'hide').mockImplementation(() => undefined);
+
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        ...baseOptions(grid, 2, 2),
+        canDrag: (type, index) => !(type === 'row' && index === 1),
+      });
+
+      const locked = gripsIn(grid, GRIP_ROW_ATTR)[1];
+
+      locked.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 0, clientY: 60 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 0, clientY: 120 }));
+
+      expect(show).toHaveBeenCalledTimes(1);
+      expect(show).toHaveBeenCalledWith(locked, 'tools.table.rowLockedByMerge', expect.anything());
+      expect(document.body.style.cursor).toBe('');
+
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 0, clientY: 120 }));
+      await Promise.resolve();
+
+      expect(hide).toHaveBeenCalled();
+    });
+
+    it('names the column when the locked grip is a column', () => {
+      const show = vi.spyOn(tooltip, 'show').mockImplementation(() => undefined);
+
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        ...baseOptions(grid, 2, 2),
+        canDrag: (type, index) => !(type === 'col' && index === 0),
+      });
+
+      const locked = gripsIn(grid, GRIP_COL_ATTR)[0];
+
+      locked.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 50, clientY: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 150, clientY: 0 }));
+
+      expect(show).toHaveBeenCalledWith(locked, 'tools.table.columnLockedByMerge', expect.anything());
+    });
+
+    it('shows no explanation for a click on a locked grip', () => {
+      const show = vi.spyOn(tooltip, 'show').mockImplementation(() => undefined);
+
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        ...baseOptions(grid, 2, 2),
+        canDrag: () => false,
+      });
+
+      const locked = gripsIn(grid, GRIP_ROW_ATTR)[0];
+
+      locked.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 0, clientY: 20 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 0, clientY: 20 }));
+
+      expect(show).not.toHaveBeenCalled();
     });
 
     it('leaves every grip draggable when no canDrag predicate is supplied', () => {
@@ -468,7 +529,7 @@ describe('TableRowColControls — geometry and grip state', () => {
       expect(gripsIn(grid, GRIP_COL_ATTR).some(g => g.hasAttribute(GRIP_VISIBLE_ATTR))).toBe(false);
     });
 
-    it('hides the grips revealed by hover, and returns them to their idle pill size', () => {
+    it('hides the grips revealed by hover, at the same pill size', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls(baseOptions(grid, 2, 2));
 
@@ -484,7 +545,6 @@ describe('TableRowColControls — geometry and grip state', () => {
       expect(hoveredCol.hasAttribute(GRIP_VISIBLE_ATTR)).toBe(false);
       expect(hoveredRow.hasAttribute(GRIP_VISIBLE_ATTR)).toBe(false);
       expect(gripsIn(grid, GRIP_COL_ATTR)[0].hasAttribute(GRIP_VISIBLE_ATTR)).toBe(true);
-      // Idle pill keeps the 12px hit-area padding, otherwise the grip is unhoverable.
       expect(hoveredCol.style.height).toBe(IDLE_PILL_PX);
       expect(hoveredRow.style.width).toBe(IDLE_PILL_PX);
     });
@@ -1543,10 +1603,12 @@ describe('TableRowColControls — geometry and grip state', () => {
       const colGrips = gripsIn(grid, GRIP_COL_ATTR);
 
       expect(colGrips[2].classList.contains('bg-blue-500')).toBe(true);
-      // Rebuilt grips start at the bare 4px pill; every other grip must be
-      // padded out to its hoverable hit area, not left as a sliver.
-      expect(colGrips[0].style.height).toBe(IDLE_PILL_PX);
-      expect(colGrips[1].style.height).toBe(IDLE_PILL_PX);
+
+      for (const other of [colGrips[0], colGrips[1]]) {
+        expect(other.classList.contains('opacity-0')).toBe(true);
+        expect(other.classList.contains('pointer-events-none')).toBe(true);
+        expect(other.style.height).toBe(IDLE_PILL_PX);
+      }
     });
   });
 

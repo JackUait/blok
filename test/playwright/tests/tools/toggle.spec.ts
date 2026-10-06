@@ -278,6 +278,27 @@ test.describe('Toggle Tool', () => {
       await expect(placeholder).toHaveText('Empty toggle. Click to add a block, or drag blocks here.');
     });
 
+    // The placeholder stands in for the first child; it is not a block, so it
+    // shows no block handles. Reached from the toggle's own title line.
+    test('shows no block handles over the body placeholder', async ({ page }) => {
+      await createBlok(page, createToggleData('Empty open toggle'));
+
+      const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);
+      const plus = page.getByTestId('plus-button');
+
+      await page.getByText('Empty open toggle').hover();
+      await expect(plus).toBeVisible();
+
+      const box = await placeholder.boundingBox();
+
+      if (box === null) {
+        throw new Error('no placeholder box');
+      }
+
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 6 });
+      await expect(plus).toBeHidden();
+    });
+
     test('body placeholder is hidden when toggle is collapsed', async ({ page }) => {
       await createBlok(page, createToggleData('Collapsible for placeholder'));
       await expandToggle(page);
@@ -298,6 +319,39 @@ test.describe('Toggle Tool', () => {
       const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);
 
       await expect(placeholder).not.toBeVisible();
+    });
+
+    test('hover fill is 8px shorter than the space the placeholder takes, and clicking it does not shift layout', async ({ page }) => {
+      await createBlok(page, createToggleData('Measured toggle'));
+
+      const toggle = page.locator(TOGGLE_BLOCK_SELECTOR);
+      const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);
+
+      await expect(placeholder).toBeVisible();
+
+      const fill = await placeholder.evaluate((el) => {
+        const style = getComputedStyle(el);
+
+        return {
+          height: el.getBoundingClientRect().height,
+          lineHeight: parseFloat(style.lineHeight),
+          marginTop: parseFloat(style.marginTop),
+          marginBottom: parseFloat(style.marginBottom),
+        };
+      });
+
+      expect(fill.height).toBeCloseTo(fill.lineHeight + 8, 0);
+      expect(fill.marginTop + fill.marginBottom).toBe(8);
+
+      const heightBefore = (await toggle.boundingBox())?.height ?? 0;
+
+      await placeholder.click();
+      await expect(page.locator(`${TOGGLE_CHILDREN_SELECTOR} [data-blok-component="paragraph"]`)).toHaveCount(1);
+      await expect(placeholder).not.toBeVisible();
+
+      const heightAfter = (await toggle.boundingBox())?.height ?? 0;
+
+      expect(heightAfter).toBeCloseTo(heightBefore, 0);
     });
   });
 

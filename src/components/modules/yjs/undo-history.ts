@@ -2,6 +2,7 @@ import * as Y from 'yjs';
 
 import { getCaretOffset } from '../../../components/utils/caret/index';
 import { resolveCaretRange } from '../collaboration/caret-position';
+import { hiddenAncestors } from '../blockManager/new-block-placement';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { Block } from '../../block';
 
@@ -2941,6 +2942,12 @@ export class UndoHistory {
       return false;
     }
 
+    // The caret cannot land in hidden content. Closed tabs and closed toggles
+    // both open: neither open state is in history, so this undoes no replay.
+    hiddenAncestors(block, id => BlockManager.getBlockById(id))
+      .filter(parent => parent.tool.isLayout)
+      .reverse()
+      .forEach(parent => parent.call('expand'));
     this.expandCollapsedAncestors(block.parentId);
 
     // Get the specific input within the block

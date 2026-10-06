@@ -55,6 +55,184 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
   }
 
   [Fact]
+  public async Task PurgeRemovesAllJournalPayloadsAndSurvivesRestart()
+  {
+    var store = new LocalCollabOperationStore(root, log: logs.Add);
+
+    await using (var session = await OpenAsync())
+    {
+      await session.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage(), 0xb1));
+      await session.AppendAsync(Candidate(OperationId(1), [0x01]));
+      await session.WriteCheckpointAsync(new CollabOperationCheckpoint(1, new byte[] { 0xc1 }));
+      await session.ResetAsync(Reset(2, CollabWorkingSetTag.NewLineage(), 0xb2));
+      await session.AppendAsync(Candidate(OperationId(2), [0x02]));
+    }
+
+    File.WriteAllBytes(Path.Combine(DocDirectory, "journal.99.99"), [0x99]);
+    File.WriteAllBytes(LockPath, [0x5a]);
+
+    Assert.Equal(CollabDocumentPurgeOutcome.Purged, await store.PurgeAsync(DocId));
+    Assert.Equal([0x5a], File.ReadAllBytes(LockPath));
+    Assert.True(File.Exists(PurgePath));
+    Assert.Equal(2, Directory.GetFiles(DocDirectory).Length);
+    Assert.Empty(Directory.GetDirectories(DocDirectory));
+
+    var restarted = new LocalCollabOperationStore(root, log: logs.Add);
+    var opened = await restarted.OpenAsync(DocId, CancellationToken.None);
+    Assert.Equal(CollabDocumentOpenOutcome.Purged, opened.Outcome);
+    Assert.Null(opened.Session);
+    Assert.Equal(
+        CollabDocumentPurgeOutcome.Purged,
+        await ((ICollabOperationPurgeStore)restarted).PurgeAsync(DocId));
+    Assert.Equal(2, Directory.GetFiles(DocDirectory).Length);
+  }
+
+  [Fact]
+  public async Task PurgeKeepsTheMarkerOnACaseInsensitiveVolume()
+  {
+    var store = new LocalCollabOperationStore(root, log: logs.Add);
+    await using (var session = await OpenAsync())
+    {
+      await session.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage(), 0xb1));
+    }
+
+    File.WriteAllBytes(Path.Combine(DocDirectory, "PURGED"), []);
+
+    Assert.Equal(CollabDocumentPurgeOutcome.Purged, await store.PurgeAsync(DocId));
+    var reopened = await new LocalCollabOperationStore(root, log: logs.Add)
+        .OpenAsync(DocId, CancellationToken.None);
+    Assert.Equal(CollabDocumentOpenOutcome.Purged, reopened.Outcome);
+    Assert.Null(reopened.Session);
+    Assert.Equal(2, Directory.GetFiles(DocDirectory).Length);
+  }
+
+  [Fact]
+  public async Task PurgeRefusesALiveSessionWithoutChangingBytes()
+  {
+    var store = new LocalCollabOperationStore(root, log: logs.Add);
+    await using var session = await OpenAsync();
+    await session.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage(), 0xb1));
+    await session.AppendAsync(Candidate(OperationId(1), [0x01]));
+    await session.WriteCheckpointAsync(new CollabOperationCheckpoint(1, new byte[] { 0xc1 }));
+
+    var manifestBefore = File.ReadAllBytes(ManifestPath);
+    var baselinePath = Assert.Single(Directory.GetFiles(DocDirectory, "baseline.*"));
+    var checkpointPath = Assert.Single(Directory.GetFiles(DocDirectory, "checkpoint.*"));
+    var baselineBefore = File.ReadAllBytes(baselinePath);
+    var journalBefore = File.ReadAllBytes(JournalPath(1));
+    var checkpointBefore = File.ReadAllBytes(checkpointPath);
+
+    Assert.Equal(
+        CollabDocumentPurgeOutcome.DocumentOpenElsewhere,
+        await ((ICollabOperationPurgeStore)store).PurgeAsync(DocId));
+
+    Assert.False(File.Exists(PurgePath));
+    Assert.Equal(manifestBefore, File.ReadAllBytes(ManifestPath));
+    Assert.Equal(baselineBefore, File.ReadAllBytes(baselinePath));
+    Assert.Equal(journalBefore, File.ReadAllBytes(JournalPath(1)));
+    Assert.Equal(checkpointBefore, File.ReadAllBytes(checkpointPath));
+    Assert.Equal(5, Directory.GetFiles(DocDirectory).Length);
+  }
+
+  [Fact]
+  public async Task PurgeDoesNotReportALockIoFaultAsALiveHolder()
+  {
+    if (OperatingSystem.IsWindows())
+    {
+      output.WriteLine("The symlink loop used for a lock I/O fault is POSIX-only.");
+
+      return;
+    }
+
+    var store = new LocalCollabOperationStore(root, log: logs.Add);
+    await using (var session = await OpenAsync())
+    {
+      await session.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage(), 0xb1));
+    }
+
+    var manifestBefore = File.ReadAllBytes(ManifestPath);
+    File.Delete(LockPath);
+    File.CreateSymbolicLink(LockPath, LockPath);
+
+    try
+    {
+      await Assert.ThrowsAsync<IOException>(async () => await store.PurgeAsync(DocId));
+      Assert.False(File.Exists(PurgePath));
+      Assert.Equal(manifestBefore, File.ReadAllBytes(ManifestPath));
+    }
+    finally
+    {
+      File.Delete(LockPath);
+    }
+  }
+
+  [Fact]
+  public async Task PurgeFailureKeepsTombstoneAndRetryFinishesCleanup()
+  {
+    var store = new LocalCollabOperationStore(root, log: logs.Add);
+    await using (var session = await OpenAsync())
+    {
+      await session.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage(), 0xb1));
+      await session.AppendAsync(Candidate(OperationId(1), [0x01]));
+    }
+
+    var blocked = Path.Combine(DocDirectory, "orphan-directory");
+    Directory.CreateDirectory(blocked);
+    File.WriteAllBytes(Path.Combine(blocked, "old-payload"), [0x7b]);
+
+    var failure = await Record.ExceptionAsync(
+        async () => await ((ICollabOperationPurgeStore)store).PurgeAsync(DocId));
+
+    Assert.True(failure is IOException or UnauthorizedAccessException);
+    Assert.True(File.Exists(PurgePath));
+    Assert.Equal(
+        CollabDocumentOpenOutcome.Purged,
+        (await new LocalCollabOperationStore(root, log: logs.Add)
+            .OpenAsync(DocId, CancellationToken.None)).Outcome);
+    Assert.Equal([0x7b], File.ReadAllBytes(Path.Combine(blocked, "old-payload")));
+
+    Directory.Delete(blocked, recursive: true);
+    Assert.Equal(
+        CollabDocumentPurgeOutcome.Purged,
+        await ((ICollabOperationPurgeStore)store).PurgeAsync(DocId));
+    Assert.Equal(2, Directory.GetFiles(DocDirectory).Length);
+  }
+
+  [Fact]
+  public async Task StaleSessionCannotWriteAfterPurge()
+  {
+    if (OperatingSystem.IsWindows())
+    {
+      output.WriteLine("The stale-lock case needs POSIX unlink of an open lock file.");
+
+      return;
+    }
+
+    await using var stale = await OpenAsync();
+    await stale.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage(), 0xb1));
+    await stale.AppendAsync(Candidate(OperationId(1), [0x01]));
+
+    File.Delete(LockPath);
+    var store = new LocalCollabOperationStore(root, log: logs.Add);
+    Assert.Equal(
+        CollabDocumentPurgeOutcome.Purged,
+        await ((ICollabOperationPurgeStore)store).PurgeAsync(DocId));
+
+    await Assert.ThrowsAsync<CollabOperationFenceLostException>(
+        async () => await stale.AppendAsync(Candidate(OperationId(2), [0x02])));
+    await Assert.ThrowsAsync<CollabOperationFenceLostException>(
+        async () => await stale.WriteCheckpointAsync(
+            new CollabOperationCheckpoint(1, new byte[] { 0xc1 })));
+    await Assert.ThrowsAsync<CollabOperationFenceLostException>(
+        async () => await stale.ResetAsync(Reset(2, CollabWorkingSetTag.NewLineage(), 0xb2)));
+
+    Assert.Equal(2, Directory.GetFiles(DocDirectory).Length);
+    Assert.Equal(
+        CollabDocumentOpenOutcome.Purged,
+        (await store.OpenAsync(DocId, CancellationToken.None)).Outcome);
+  }
+
+  [Fact]
   public async Task AppendReopensAtTheAcknowledgedSequence()
   {
     var lineage = CollabWorkingSetTag.NewLineage();
@@ -1269,6 +1447,8 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
   private string ManifestPath => Path.Combine(DocDirectory, "manifest");
 
   private string LockPath => Path.Combine(DocDirectory, "lock");
+
+  private string PurgePath => Path.Combine(DocDirectory, "purged");
 
   /// <summary>
   /// Resolved by generation, because the rest of the name is the fence that

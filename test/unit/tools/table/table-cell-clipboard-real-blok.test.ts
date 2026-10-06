@@ -7,6 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Blok from '../../../../src/blok';
 import { Table } from '../../../../src/tools/table/index';
 import { Paragraph } from '../../../../src/tools/paragraph';
+import { CodeTool } from '../../../../src/tools/code';
+import { PageTool } from '../../../../src/tools/page';
+import { PageLink } from '../../../../src/tools/page-link';
+import type { PageConfig } from '../../../../src/tools/page/types';
 import {
   Bold,
   Equation,
@@ -19,8 +23,8 @@ import {
 } from '../../../../src/tools';
 import { buildClipboardHtml, serializeCellsToClipboard } from '../../../../src/tools/table/table-cell-clipboard';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
-import type { CellContent, CellPlacement, TableConfig, TableData } from '../../../../src/tools/table/types';
-import type { BlockToolConstructorOptions, OutputBlockData, OutputData } from '../../../../types';
+import type { CellContent, CellPlacement, TableCellsClipboard, TableConfig, TableData } from '../../../../src/tools/table/types';
+import type { API, BlockToolConstructorOptions, ConversionConfig, OutputBlockData, OutputData, PasteConfig } from '../../../../types';
 
 interface CellSelectionHandle {
   selectRow: (row: number) => void;
@@ -37,6 +41,16 @@ class TrackedTable extends Table {
   constructor(options: BlockToolConstructorOptions<TableData, TableConfig>) {
     super(options);
     tables.set(options.block?.id ?? '', this);
+  }
+}
+
+class NoImportDefault extends Paragraph {
+  public static get conversionConfig(): ConversionConfig {
+    return { export: 'text' };
+  }
+
+  public static get pasteConfig(): PasteConfig {
+    return { tags: [] };
   }
 }
 
@@ -62,6 +76,7 @@ const selectionOf = (tableId: string): CellSelectionHandle => {
 
 interface TestEditor {
   isReady: Promise<unknown>;
+  blocks: API['blocks'];
   save: () => Promise<OutputData>;
   destroy: () => void;
 }
@@ -73,12 +88,25 @@ const settle = (ms = 0): Promise<void> => new Promise(resolve => {
   setTimeout(resolve, ms);
 });
 
-const boot = async (data: OutputData, onChange?: () => void, direction?: 'ltr' | 'rtl'): Promise<TestEditor> => {
+const boot = async (
+  data: OutputData,
+  onChange?: () => void,
+  direction?: 'ltr' | 'rtl',
+  pageConfig?: PageConfig & Record<string, unknown>,
+  withPageLink = true,
+  defaultBlock: 'paragraph' | 'custom' | 'code' = 'paragraph',
+  paragraphCanImport = true,
+): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
+    ...(defaultBlock !== 'paragraph' && { defaultBlock }),
     tools: {
-      paragraph: Paragraph,
+      paragraph: paragraphCanImport ? Paragraph : NoImportDefault,
+      ...(defaultBlock === 'custom' && { custom: NoImportDefault }),
+      ...(defaultBlock === 'code' && { code: CodeTool }),
       table: TrackedTable,
+      page: pageConfig === undefined ? PageTool : { class: PageTool, config: pageConfig },
+      ...(pageConfig === undefined || !withPageLink ? {} : { 'page-link': { class: PageLink, config: pageConfig } }),
       bold: Bold,
       italic: Italic,
       underline: Underline,
@@ -101,7 +129,7 @@ const boot = async (data: OutputData, onChange?: () => void, direction?: 'ltr' |
 };
 
 /** Select row `row` of the table and run the real document copy handler. */
-const copyRow = (tableId: string, row: number): string => {
+const copyRowFlavors = (tableId: string, row: number): Record<string, string> => {
   selectionOf(tableId).selectRow(row);
 
   const store: Record<string, string> = {};
@@ -116,8 +144,10 @@ const copyRow = (tableId: string, row: number): string => {
   Object.defineProperty(event, 'clipboardData', { value: clipboardData });
   document.dispatchEvent(event);
 
-  return store['text/html'] ?? '';
+  return store;
 };
+
+const copyRow = (tableId: string, row: number): string => copyRowFlavors(tableId, row)['text/html'] ?? '';
 
 const pasteHtml = (target: HTMLElement, html: string): void => {
   const data: Record<string, string> = { 'text/html': html };
@@ -210,6 +240,168 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
     blok = null;
     holder.remove();
     vi.restoreAllMocks();
+  });
+
+  it('pastes a copied page cell without creating another page owner', async () => {
+    const editor = await boot({
+      blocks: [
+        ...cellsTable('src', [[{ id: 'pg' }, { id: 's2' }]]),
+        { id: 'pg', type: 'page', parent: 'src', data: { pageId: 'p1' } },
+        cellParagraph('s2', 'src', 'other'),
+        ...cellsTable('dst', [[{ id: 'd1' }, { id: 'd2' }]]),
+        cellParagraph('d1', 'dst', ''),
+        cellParagraph('d2', 'dst', ''),
+      ],
+    });
+
+    pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+    await settle();
+    const saved = await editor.save();
+
+    expect(saved.blocks.filter(block => block.type === 'page' && block.data.pageId === 'p1')).toHaveLength(1);
+    expect(savedCell(saved, 'src', 0, 0).blocks).toContain('pg');
+    expect(savedCell(saved, 'dst', 0, 0).blocks).not.toContain('pg');
+  });
+
+  it('pastes an open-only page cell as a non-owning page reference', async () => {
+    const editor = await boot({
+      blocks: [
+        ...cellsTable('src', [[{ id: 'pg' }, { id: 's2' }]]),
+        { id: 'pg', type: 'page', parent: 'src', data: { pageId: 'p1' } },
+        cellParagraph('s2', 'src', 'other'),
+        ...cellsTable('dst', [[{ id: 'd1' }, { id: 'd2' }]]),
+        cellParagraph('d1', 'dst', ''),
+        cellParagraph('d2', 'dst', ''),
+      ],
+    }, undefined, undefined, { open: () => undefined });
+
+    pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+    await settle();
+    const saved = await editor.save();
+    const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
+
+    expect(saved.blocks.find(block => block.id === copiedId)).toMatchObject({
+      type: 'page-link', data: { pageId: 'p1' },
+    });
+    expect(saved.blocks.filter(block => block.type === 'page' && block.data.pageId === 'p1')).toHaveLength(1);
+  });
+
+  it('pastes an open-only page cell as an inline reference when page-link is unavailable', async () => {
+    const editor = await boot({
+      blocks: [
+        ...cellsTable('src', [[{ id: 'pg' }, { id: 's2' }]]),
+        { id: 'pg', type: 'page', parent: 'src', data: { pageId: 'p1' } },
+        cellParagraph('s2', 'src', 'other'),
+        ...cellsTable('dst', [[{ id: 'd1' }, { id: 'd2' }]]),
+        cellParagraph('d1', 'dst', ''),
+        cellParagraph('d2', 'dst', ''),
+      ],
+    }, undefined, undefined, { open: () => undefined }, false);
+
+    pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+    await settle();
+    const saved = await editor.save();
+    const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
+
+    expect(saved.blocks.find(block => block.id === copiedId)).toMatchObject({
+      type: 'paragraph', data: { text: '<a data-blok-page-id="p1">Page</a>' },
+    });
+    expect(saved.blocks.filter(block => block.type === 'page' && block.data.pageId === 'p1')).toHaveLength(1);
+  });
+
+  it('keeps a copied page cell ID in Paragraph when Code is the default tool', async () => {
+    const editor = await boot({
+      blocks: [
+        ...cellsTable('src', [[{ id: 'pg' }, { id: 's2' }]]),
+        { id: 'pg', type: 'page', parent: 'src', data: { pageId: 'p1' } },
+        cellParagraph('s2', 'src', 'other'),
+        ...cellsTable('dst', [[{ id: 'd1' }, { id: 'd2' }]]),
+        cellParagraph('d1', 'dst', ''),
+        cellParagraph('d2', 'dst', ''),
+      ],
+    }, undefined, undefined, { open: () => undefined }, false, 'code');
+
+    pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+    await settle();
+    const saved = await editor.save();
+    const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
+
+    expect(saved.blocks.find(block => block.id === copiedId)).toMatchObject({
+      type: 'paragraph', data: { text: '<a data-blok-page-id="p1">Page</a>' },
+    });
+    expect(saved.blocks.filter(block => block.type === 'page' && block.data.pageId === 'p1')).toHaveLength(1);
+  });
+
+  it.each([
+    ['<a data-blok-page-id="p1">Page</a>', true],
+    ['Page', false],
+  ] as const)('copies an open-only page cell as %s with a non-importing default', async (expectedText, paragraphCanImport) => {
+    const editor = await boot({
+      blocks: [
+        ...cellsTable('src', [[{ id: 'pg' }, { id: 's2' }]]),
+        { id: 'pg', type: 'page', parent: 'src', data: { pageId: 'p1' } },
+        cellParagraph('s2', 'src', 'other'),
+        ...cellsTable('dst', [[{ id: 'd1' }, { id: 'd2' }]]),
+        cellParagraph('d1', 'dst', ''),
+        cellParagraph('d2', 'dst', ''),
+      ],
+    }, undefined, undefined, { open: () => undefined }, false, 'custom', paragraphCanImport);
+
+    pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+    await settle();
+    const saved = await editor.save();
+    const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
+
+    expect(saved.blocks.find(block => block.id === copiedId)).toMatchObject({
+      type: 'paragraph', data: { text: expectedText },
+    });
+    expect(saved.blocks.filter(block => block.type === 'page' && block.data.pageId === 'p1')).toHaveLength(1);
+  });
+
+  it('does not seed a copied page as a second owner in a new table', async () => {
+    const editor = await boot({
+      blocks: [{ id: 'pg', type: 'page', data: { pageId: 'p1' } }],
+    });
+
+    const table = editor.blocks.insert('table', {
+      withHeadings: false,
+      content: [[{ blocks: [], blockData: [{ tool: 'page', data: { pageId: 'p1' } }] }]],
+    }, {}, 1, false);
+
+    await settle();
+    const saved = await editor.save();
+
+    expect(saved.blocks.filter(block => block.type === 'page' && block.data.pageId === 'p1')).toHaveLength(1);
+    expect(savedCell(saved, table.id, 0, 0).blocks).not.toContain('pg');
+  });
+
+  it('copies an API-inserted page reference without stale metadata before save', async () => {
+    const editor = await boot({ blocks: [] });
+    const stale = '<a data-blok-page-id="p1" href="https://example.test/old-title" title="Old title">Old title</a>';
+    const table = editor.blocks.insert('table', {
+      withHeadings: false,
+      content: [[stale]],
+    }, {}, 0, false);
+
+    await settle();
+
+    const flavors = copyRowFlavors(table.id, 0);
+    const html = flavors['text/html'] ?? '';
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const rawJson = doc.querySelector('table')?.getAttribute('data-blok-table-cells');
+
+    if (rawJson === null || rawJson === undefined) {
+      throw new Error('missing table clipboard payload');
+    }
+
+    const payload = JSON.parse(rawJson) as TableCellsClipboard;
+    const anchor = doc.querySelector('td a');
+
+    expect(payload.cells[0]?.[0]?.blocks[0]?.data.text).toBe('<a data-blok-page-id="p1">Page</a>');
+    expect(anchor?.outerHTML).toBe('<a data-blok-page-id="p1">Page</a>');
+    expect(flavors['text/plain']).toBe('Page');
+    expect(html).not.toContain('Old title');
+    expect(html).not.toContain('old-title');
   });
 
   describe('copied cells keep the inline marks Blok writes', () => {

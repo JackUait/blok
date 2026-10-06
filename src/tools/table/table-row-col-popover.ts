@@ -6,7 +6,7 @@ import {
   IconInsertBelow,
   IconInsertLeft,
   IconInsertRight,
-  IconMarker,
+  IconPaintRoller,
   IconTrash,
   IconHeaderRow,
   IconHeaderColumn,
@@ -39,10 +39,10 @@ export interface PopoverMenuOptions {
   isHeadingRow: () => boolean;
   isHeadingColumn: () => boolean;
   onAction: (action: RowColAction) => void;
-  /** Wipe the content of every cell in the grip's row/column (colors survive). */
-  onClearContents: (type: 'row' | 'col', index: number) => void;
-  /** Paint every cell in the grip's row/column. */
-  onColorChange: (type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode) => void;
+  /** Wipe the content of every cell in the grip's `count` rows/columns from `index` (colors survive). */
+  onClearContents: (type: 'row' | 'col', index: number, count: number) => void;
+  /** Paint every cell in the grip's `count` rows/columns from `index`. */
+  onColorChange: (type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode, count: number) => void;
   i18n: I18n;
 }
 
@@ -59,17 +59,18 @@ export interface PopoverMenuOptions {
 const buildColorItem = (
   type: 'row' | 'col',
   index: number,
+  count: number,
   options: PopoverMenuOptions
 ): PopoverItemParams => {
   const { element, focusActiveSwatch } = createCellColorPicker({
     i18n: options.i18n,
     onColorSelect: (color, mode) => {
-      options.onColorChange(type, index, color, mode);
+      options.onColorChange(type, index, color, mode, count);
     },
   });
 
   return {
-    icon: IconMarker,
+    icon: IconPaintRoller,
     title: options.i18n.t('tools.table.cellColor'),
     name: 'cellColor',
     children: {
@@ -92,6 +93,7 @@ const buildColorItem = (
 const buildEditItems = (
   type: 'row' | 'col',
   index: number,
+  count: number,
   options: PopoverMenuOptions
 ): PopoverItemParams[] => [
   {
@@ -99,7 +101,7 @@ const buildEditItems = (
     title: options.i18n.t(type === 'row' ? 'tools.table.duplicateRow' : 'tools.table.duplicateColumn'),
     closeOnActivate: true,
     onActivate: (): void => {
-      options.onAction({ type: type === 'row' ? 'duplicate-row' : 'duplicate-col', index });
+      options.onAction({ type: type === 'row' ? 'duplicate-row' : 'duplicate-col', index, ...spanCount(count) });
     },
   },
   {
@@ -108,10 +110,13 @@ const buildEditItems = (
     isDestructive: true,
     closeOnActivate: true,
     onActivate: (): void => {
-      options.onClearContents(type, index);
+      options.onClearContents(type, index, count);
     },
   },
 ];
+
+/** No count means one row/column. */
+const spanCount = (count: number): { count?: number } => (count > 1 ? { count } : {});
 
 /**
  * Callbacks the popover needs from the controls class.
@@ -127,9 +132,10 @@ export interface OpenPopoverCallbacks {
 }
 
 /**
- * Build the popover menu items for a column grip.
+ * Build the popover menu items for a column grip. A merged cell's grip stands
+ * for all `count` columns it covers.
  */
-export const buildColumnMenuItems = (colIndex: number, options: PopoverMenuOptions): PopoverItemParams[] => {
+export const buildColumnMenuItems = (colIndex: number, options: PopoverMenuOptions, count = 1): PopoverItemParams[] => {
   const headingItems: PopoverItemParams[] = colIndex === 0
     ? [
       {
@@ -148,7 +154,7 @@ export const buildColumnMenuItems = (colIndex: number, options: PopoverMenuOptio
     : [];
 
   const baseItems: PopoverItemParams[] = [
-    buildColorItem('col', colIndex, options),
+    buildColorItem('col', colIndex, count, options),
     {
       icon: IconInsertLeft,
       title: options.i18n.t('tools.table.insertColumnLeft'),
@@ -162,13 +168,13 @@ export const buildColumnMenuItems = (colIndex: number, options: PopoverMenuOptio
       title: options.i18n.t('tools.table.insertColumnRight'),
       closeOnActivate: true,
       onActivate: (): void => {
-        options.onAction({ type: 'insert-col-right', index: colIndex });
+        options.onAction({ type: 'insert-col-right', index: colIndex + count - 1 });
       },
     },
-    ...buildEditItems('col', colIndex, options),
+    ...buildEditItems('col', colIndex, count, options),
   ];
 
-  const canDelete = options.getColumnCount() > 1;
+  const canDelete = options.getColumnCount() > count;
   const deleteItems: PopoverItemParams[] = [
     { type: PopoverItemType.Separator },
     {
@@ -178,7 +184,7 @@ export const buildColumnMenuItems = (colIndex: number, options: PopoverMenuOptio
       isDisabled: !canDelete,
       closeOnActivate: true,
       onActivate: (): void => {
-        options.onAction({ type: 'delete-col', index: colIndex });
+        options.onAction({ type: 'delete-col', index: colIndex, ...spanCount(count) });
       },
     },
   ];
@@ -187,9 +193,10 @@ export const buildColumnMenuItems = (colIndex: number, options: PopoverMenuOptio
 };
 
 /**
- * Build the popover menu items for a row grip.
+ * Build the popover menu items for a row grip. A merged cell's grip stands
+ * for all `count` rows it covers.
  */
-export const buildRowMenuItems = (rowIndex: number, options: PopoverMenuOptions): PopoverItemParams[] => {
+export const buildRowMenuItems = (rowIndex: number, options: PopoverMenuOptions, count = 1): PopoverItemParams[] => {
   const headingItems: PopoverItemParams[] = rowIndex === 0
     ? [
       {
@@ -208,7 +215,7 @@ export const buildRowMenuItems = (rowIndex: number, options: PopoverMenuOptions)
     : [];
 
   const baseItems: PopoverItemParams[] = [
-    buildColorItem('row', rowIndex, options),
+    buildColorItem('row', rowIndex, count, options),
     {
       icon: IconInsertAbove,
       title: options.i18n.t('tools.table.insertRowAbove'),
@@ -222,13 +229,13 @@ export const buildRowMenuItems = (rowIndex: number, options: PopoverMenuOptions)
       title: options.i18n.t('tools.table.insertRowBelow'),
       closeOnActivate: true,
       onActivate: (): void => {
-        options.onAction({ type: 'insert-row-below', index: rowIndex });
+        options.onAction({ type: 'insert-row-below', index: rowIndex + count - 1 });
       },
     },
-    ...buildEditItems('row', rowIndex, options),
+    ...buildEditItems('row', rowIndex, count, options),
   ];
 
-  const canDelete = options.getRowCount() > 1;
+  const canDelete = options.getRowCount() > count;
   const deleteItems: PopoverItemParams[] = [
     { type: PopoverItemType.Separator },
     {
@@ -238,7 +245,7 @@ export const buildRowMenuItems = (rowIndex: number, options: PopoverMenuOptions)
       isDisabled: !canDelete,
       closeOnActivate: true,
       onActivate: (): void => {
-        options.onAction({ type: 'delete-row', index: rowIndex });
+        options.onAction({ type: 'delete-row', index: rowIndex, ...spanCount(count) });
       },
     },
   ];
@@ -255,6 +262,7 @@ export const buildRowMenuItems = (rowIndex: number, options: PopoverMenuOptions)
 export const createGripPopover = (
   type: 'row' | 'col',
   index: number,
+  count: number,
   grips: { col: HTMLElement[]; row: HTMLElement[] },
   menuOptions: PopoverMenuOptions,
   callbacks: OpenPopoverCallbacks
@@ -271,8 +279,8 @@ export const createGripPopover = (
   }
 
   const items = type === 'col'
-    ? buildColumnMenuItems(index, menuOptions)
-    : buildRowMenuItems(index, menuOptions);
+    ? buildColumnMenuItems(index, menuOptions, count)
+    : buildRowMenuItems(index, menuOptions, count);
 
   const popover = new PopoverDesktop({
     items,

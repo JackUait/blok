@@ -153,7 +153,7 @@
 
   /* Table */
   --blok-table-border: #d1d5db;
-  --blok-table-heading-bg: #f9fafb;
+  --blok-table-heading-bg: #f7f6f3;
   --blok-table-grip-outline: transparent;
   --blok-table-drag-source-bg: #f3f4f6;
 
@@ -518,6 +518,22 @@
   --blok-video-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   --blok-video-burst-bg: rgba(0, 0, 0, 0.5);
   --blok-video-burst-fg: #ffffff;
+
+  /* Video error screen — a dead TV: scanlines, a rolling band, a dark
+     vignette, SMPTE colour bars for the tear and a red/cyan split on them. */
+  --blok-video-error-scanline: rgba(0, 0, 0, 0.22);
+  --blok-video-error-roll: rgba(255, 255, 255, 0.07);
+  --blok-video-error-vignette: rgba(0, 0, 0, 0.7);
+  --blok-video-error-split-red: rgba(255, 0, 64, 0.55);
+  --blok-video-error-split-cyan: rgba(0, 224, 255, 0.55);
+  --blok-video-error-card-shadow: 0 18px 48px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --blok-video-error-bar-1: #c0c0c0;
+  --blok-video-error-bar-2: #c0c000;
+  --blok-video-error-bar-3: #00c0c0;
+  --blok-video-error-bar-4: #00c000;
+  --blok-video-error-bar-5: #c000c0;
+  --blok-video-error-bar-6: #c00000;
+  --blok-video-error-bar-7: #0000c0;
   --blok-video-burst-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
   --blok-video-burst-ring: rgba(255, 255, 255, 0.4);
   /* Settings popover — near-opaque dark so video never bleeds through the text. */
@@ -539,12 +555,9 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.32);
   --blok-find-match-active-bg: rgba(255, 138, 0, 0.5);
   --blok-find-lens-ring: rgba(255, 128, 0, 0.72);
-  --blok-find-track: #e9e9e7;
-  --blok-find-tick: #c9c8c5;
-  --blok-find-tick-active: #191919;
   --blok-find-empty-bg: rgba(235, 87, 87, 0.07);
   --blok-find-empty-border: rgba(235, 87, 87, 0.55);
-  --blok-find-bar-width: 385px;
+  --blok-find-bar-width: 362px;
   /* Distance from the window edges named by the find.placement config; find.offset overrides per editor. */
   --blok-find-offset-x: 16px;
   --blok-find-offset-y: 12px;
@@ -745,9 +758,6 @@
     --blok-find-match-bg: rgba(255, 212, 0, 0.2);
     --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
     --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
-    --blok-find-track: #3a3a3a;
-    --blok-find-tick: #5e5e5e;
-    --blok-find-tick-active: #f0efed;
     --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
     --blok-find-empty-border: rgba(251, 93, 93, 0.6);
   }
@@ -945,9 +955,6 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.2);
   --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
   --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
-  --blok-find-track: #3a3a3a;
-  --blok-find-tick: #5e5e5e;
-  --blok-find-tick-active: #f0efed;
   --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
   --blok-find-empty-border: rgba(251, 93, 93, 0.6);
 }

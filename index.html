@@ -168,7 +168,9 @@
       -webkit-tap-highlight-color: transparent;
     }
     .playground-wordmark:hover { background: var(--pg-hover); }
-    .playground-wordmark:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+    html[data-pg-modality="keyboard"] .playground-wordmark:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+    /* Blink can keep :focus-visible after a click, and its default ring would show. */
+    html[data-pg-modality="pointer"] :focus-visible { outline: none; }
     .playground-wordmark__mark {
       width: 34px;
       height: 34px;
@@ -215,7 +217,7 @@
     .dark-mode .playground-wordmark { color: #ffffff; }
     .dark-mode .playground-wordmark:hover { background: rgba(255,255,255,0.06); }
     .dark-mode .playground-wordmark__meta { color: #a8a8a8; }
-    .dark-mode .playground-wordmark:focus-visible { outline-color: #ffffff; }
+    html[data-pg-modality="keyboard"] .dark-mode .playground-wordmark:focus-visible { outline-color: #ffffff; }
 
     /* Playground nav: centered floating pill. Two pills slide under the tabs
        (src/playground/nav-indicator.ts): black for the page, gray for hover. */
@@ -311,7 +313,7 @@
     /* Before the script mounts the pills, the tab paints its own fill. */
     .playground-nav:not([data-pg-nav-ready]) .playground-tab:hover { background: var(--pg-hover); }
     .playground-nav:not([data-pg-nav-ready]) .playground-tab[aria-selected="true"] { background: var(--pg-ink); }
-    .playground-tab:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+    html[data-pg-modality="keyboard"] .playground-tab:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
     @media (prefers-reduced-motion: reduce) {
       .playground-nav__pill,
       .playground-nav__pill[data-animate="true"],
@@ -356,37 +358,52 @@
     .dark-mode .playground-nav:not([data-pg-nav-ready]) .playground-tab[aria-selected="true"] { background: #ffffff; }
     .dark-mode .playground-tab[aria-selected="true"],
     .dark-mode .playground-tab[aria-selected="true"]:hover { color: #191919; }
-    .dark-mode .playground-tab:focus-visible { outline-color: #ffffff; }
+    html[data-pg-modality="keyboard"] .dark-mode .playground-tab:focus-visible { outline-color: #ffffff; }
 
     /* Dark mode page styles */
     .dark-mode { background: #191919; color: #ffffff; }
 
-    /* Block states gallery */
-    .block-states-gallery { padding: 24px 0 120px; }
-    /* Full-bleed so the side menu hugs the left edge (ID beats Tailwind utilities) */
-    #block-states-gallery { max-width: none; margin: 0; padding: 24px 56px 120px; }
-    /* Side menu layout: fixed-width centre column flanked by equal 1fr gutters
-       keeps the content viewport-centered, while the menu sits at the start of
-       the left gutter and is sticky so it stays in place while scrolling.
-       (Below 1280px gutters get too tight → stacked layout.) */
+    /* Block states gallery (src/playground/block-states-gallery.ts) */
+    #block-states-gallery {
+      --bs-card: #ffffff;
+      --bs-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 14px -6px rgba(0,0,0,0.08);
+      --bs-shadow-hover: 0 2px 4px rgba(0,0,0,0.05), 0 14px 32px -10px rgba(0,0,0,0.16);
+      max-width: none; margin: 0; padding: 24px 56px 120px;
+    }
+    .dark-mode #block-states-gallery {
+      --pg-ink: #ffffff; --pg-muted: #a8a8a8; --pg-line: #2f2f2f; --pg-line-strong: #3d3d3d; --pg-hover: #232323;
+      --bs-card: #1f1f1f;
+      --bs-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 4px 14px -6px rgba(0,0,0,0.5);
+      --bs-shadow-hover: 0 2px 4px rgba(0,0,0,0.4), 0 14px 32px -10px rgba(0,0,0,0.7);
+    }
     .block-states-layout {
       display: grid;
-      grid-template-columns: 1fr 720px 1fr;
+      grid-template-columns: 208px minmax(0, 1fr);
+      gap: 56px;
       align-items: start;
     }
     .block-states-tabs {
-      grid-column: 1;
-      justify-self: start;
-      align-self: start;
       position: sticky;
       top: 96px;
       display: flex;
       flex-direction: column;
       gap: 2px;
-      width: 196px;
-      padding-top: 0;
+    }
+    .block-states-tabs__pill {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      border-radius: 9px;
+      background: var(--pg-ink);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .block-states-tabs[data-ready] .block-states-tabs__pill {
+      opacity: 1;
+      /* Overshoot matches the top nav's pill bounce. */
+      transition: transform 0.32s cubic-bezier(0.3, 1.35, 0.5, 1), height 0.32s ease;
     }
     .block-states-tab {
+      position: relative;
       font-family: var(--pg-font);
       font-size: 14px;
       font-weight: 500;
@@ -395,68 +412,104 @@
       border: 0;
       border-radius: 9px;
       background: transparent;
-      color: var(--pg-ink-soft, #6b6b6b);
+      color: var(--pg-muted);
       cursor: pointer;
-      transition: color 0.15s, background 0.15s;
+      transition: color 0.2s, background 0.15s;
     }
-    .block-states-tab:hover {
-      background: var(--pg-hover);
-      color: var(--pg-ink);
-    }
+    .block-states-tab:hover { background: var(--pg-hover); color: var(--pg-ink); }
     .block-states-tab[aria-selected="true"],
-    .block-states-tab[aria-selected="true"]:hover {
-      background: var(--pg-ink);
-      color: #ffffff;
+    .block-states-tab[aria-selected="true"]:hover { background: transparent; color: #ffffff; }
+    .dark-mode .block-states-tab[aria-selected="true"] { color: #191919; }
+    /* Until the pill is placed, the selected tab paints its own fill. */
+    .block-states-tabs:not([data-ready]) .block-states-tab[aria-selected="true"] { background: var(--pg-ink); }
+
+    .block-states-panels { max-width: 1040px; width: 100%; margin: 0 auto; }
+    :root[data-bs-vt] .block-states-panels { view-transition-name: bs-panels; }
+    .block-states-panel.hidden { display: none; }
+    .block-states-head { margin: 8px 0 28px; font-family: var(--pg-font); }
+    .block-states-title { margin: 0; font-size: 30px; font-weight: 700; line-height: 1.2; color: var(--pg-ink); }
+    .block-states-count { margin: 6px 0 0; font-size: 15px; color: var(--pg-muted); }
+    .block-states-jumps { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .block-states-jump {
+      font-family: var(--pg-font);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 13px;
+      border: 1px solid var(--pg-line-strong);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--pg-ink);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
     }
-    .dark-mode .block-states-tab { color: #9a9a9a; background: transparent; }
-    .dark-mode .block-states-tab:hover { background: rgba(255,255,255,0.07); color: #ffffff; }
-    .dark-mode .block-states-tab[aria-selected="true"],
-    .dark-mode .block-states-tab[aria-selected="true"]:hover {
-      background: #ffffff;
-      color: #191919;
+    .block-states-jump:hover { border-color: var(--pg-ink); }
+    .block-states-jump:active { background: var(--pg-hover); }
+
+    .block-states-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      align-items: start;
     }
-    .block-states-panels {
-      grid-column: 2;
-      max-width: 720px;
-      margin: 0 0 64px;
-      padding-top: 16px;
+    .block-states-panel[data-wide] .block-states-grid { grid-template-columns: minmax(0, 1fr); }
+    .block-states-card {
+      position: relative;
+      min-width: 0;
+      /* Blok's redactor keeps a 56px gutter for the + and drag handles, so the
+         card's own left padding is small and the label indents to the text. */
+      padding: 20px 56px 24px 0;
+      border: 1px solid var(--pg-line);
+      border-radius: 16px;
+      background: var(--bs-card);
+      box-shadow: var(--bs-shadow);
+      scroll-margin: 120px;
+      transition: box-shadow 0.3s ease, outline-color 0.3s ease;
+      outline: 2px solid transparent;
+      outline-offset: 3px;
+      animation: bs-rise 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      animation-delay: calc(min(var(--i, 0), 10) * 30ms);
     }
-    /* Below 1280px the far-left menu would overlap the centered content,
-       so fall back to a horizontal pill row above the content. */
-    @media (max-width: 1280px) {
+    .block-states-card:hover { box-shadow: var(--bs-shadow-hover); }
+    .block-states-card[data-flash] { outline-color: var(--pg-ink); }
+    .block-states-card__label {
+      margin: 0 0 10px 56px;
+      font-family: var(--pg-font);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--pg-muted);
+    }
+    @keyframes bs-rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+    @keyframes bs-sink {
+      to { opacity: 0; transform: translateY(6px); }
+    }
+    /* Only the old panel needs the VT; the new cards rise on their own and the
+       sidebar pill keeps animating in the live root. */
+    :root[data-bs-vt]::view-transition-old(root), :root[data-bs-vt]::view-transition-new(root) { animation: none; }
+    :root[data-bs-vt]::view-transition-group(bs-panels) { animation: none; }
+    :root[data-bs-vt]::view-transition-old(bs-panels) { animation: bs-sink 0.16s ease-in both; }
+    :root[data-bs-vt]::view-transition-new(bs-panels) { animation: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .block-states-card { animation: none; }
+      .block-states-tabs[data-ready] .block-states-tabs__pill { transition: none; }
+    }
+
+    @media (max-width: 1100px) {
       .block-states-layout { display: block; }
-      .block-states-tabs {
-        position: static;
-        width: 100%;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 32px;
-        padding-bottom: 4px;
-      }
-      .block-states-panels { max-width: 720px; margin: 0 auto 64px; }
-      .block-states-tab {
-        border: 1px solid var(--pg-line-strong);
-        border-radius: 999px;
-        padding: 7px 14px;
-        font-size: 13px;
-        color: var(--pg-ink);
-      }
+      .block-states-tabs { position: static; flex-direction: row; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+      .block-states-tabs__pill { display: none; }
+      .block-states-tab { border: 1px solid var(--pg-line-strong); border-radius: 999px; padding: 7px 14px; font-size: 13px; color: var(--pg-ink); }
       .block-states-tab[aria-selected="true"],
-      .block-states-tab[aria-selected="true"]:hover {
-        border-color: var(--pg-ink);
-      }
-      .dark-mode .block-states-tab { border-color: #3d3d3d; }
-      .block-states-panels { padding-top: 0; }
+      .block-states-tab[aria-selected="true"]:hover,
+      .block-states-tabs:not([data-ready]) .block-states-tab[aria-selected="true"] { background: var(--pg-ink); border-color: var(--pg-ink); }
+      .block-states-grid { grid-template-columns: minmax(0, 1fr); }
     }
     @media (max-width: 768px) {
       #block-states-gallery { padding-left: 20px; padding-right: 20px; }
-      .block-states-panels { max-width: 100%; }
-    }
-    .block-states-panel { display: block; }
-    .block-states-panel.hidden { display: none; }
-    .block-states-preview {
-      padding: 0;
+      .block-states-card { padding: 16px 20px 18px 0; }
     }
 
     /* Icon gallery */
@@ -484,7 +537,7 @@
       background: var(--pg-ink);
       border-color: var(--pg-ink);
     }
-    .icon-gallery-controls .icon-lightbox__btn:focus-visible {
+    html[data-pg-modality="keyboard"] .icon-gallery-controls .icon-lightbox__btn:focus-visible {
       outline: 2px solid var(--pg-ink);
       outline-offset: 3px;
     }
@@ -639,7 +692,7 @@
       background: #ffffff;
       border-color: #ffffff;
     }
-    .dark-mode .icon-gallery-controls .icon-lightbox__btn:focus-visible { outline-color: #ffffff; }
+    html[data-pg-modality="keyboard"] .dark-mode .icon-gallery-controls .icon-lightbox__btn:focus-visible { outline-color: #ffffff; }
     .dark-mode .icon-cell:hover { background: #232323; }
     .dark-mode .icon-cell:active { background: #2a2a2a; }
     .dark-mode .icon-cell .icon-preview svg { border-color: #3d3d3d; }
@@ -1176,7 +1229,7 @@
     }
     .settings-range:hover::-webkit-slider-thumb { transform: scale(1.12); }
     .settings-range:active::-webkit-slider-thumb { transform: scale(0.95); }
-    .settings-range:focus { outline: none; }
+    .settings-range:focus-visible { outline: none; }
     html[data-pg-modality="keyboard"] .settings-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--pg-ink); }
     .dark-mode .settings-range::-webkit-slider-runnable-track { background: linear-gradient(to right, #ffffff var(--fill), #3d3d3d var(--fill)); }
     .dark-mode .settings-range::-moz-range-track { background: linear-gradient(to right, #ffffff var(--fill), #3d3d3d var(--fill)); }
@@ -1244,7 +1297,7 @@
       transform: scale(1.08);
     }
     html[data-pg-modality="keyboard"] .position-picker__spot:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 0; }
-    .position-picker__spot:focus { outline: none; }
+    .position-picker__spot:focus-visible { outline: none; }
     .dark-mode .position-picker { background: #1f1f1f; box-shadow: inset 0 0 0 1px #2f2f2f; }
     .dark-mode .position-picker::before {
       background:
@@ -1287,7 +1340,7 @@
     #settings-close:hover { background: rgba(0,0,0,0.05); color: #1a1a1a; }
     #settings-close:hover svg { transform: rotate(90deg); }
     #settings-close:active { transform: scale(0.92); background: rgba(0,0,0,0.08); }
-    #settings-close:focus-visible { box-shadow: 0 0 0 2px rgba(34,34,34,0.4); }
+    html[data-pg-modality="keyboard"] #settings-close:focus-visible { box-shadow: 0 0 0 2px rgba(34,34,34,0.4); }
     .dark-mode #settings-close { color: #a8a8a8; }
     .dark-mode #settings-close:hover { background: rgba(255,255,255,0.07); color: #ffffff; }
     .dark-mode #settings-close:active { background: rgba(255,255,255,0.11); }
@@ -1382,9 +1435,9 @@
       transition: border-color 0.12s, box-shadow 0.12s;
     }
     #locale-search::placeholder { color: var(--pg-muted); }
-    #locale-search:focus { border-color: #222222; box-shadow: 0 0 0 3px rgba(34,34,34,0.08); }
+    #locale-search:focus { border-color: #222222; }
     .dark-mode #locale-search { border-color: #3d3d3d; color: #e0e0e0; }
-    .dark-mode #locale-search:focus { border-color: #ffffff; box-shadow: 0 0 0 3px rgba(255,255,255,0.1); }
+    .dark-mode #locale-search:focus { border-color: #ffffff; }
 
     #locale-list {
       max-height: 280px;
@@ -1509,6 +1562,15 @@
     .dark-mode #settings-panel { background: #191919; border-color: #2f2f2f; }
    </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <script data-pg-no-leave-prompt>
+    /*
+     * No "Leave site?" prompt in the playground. A capture listener on window
+     * runs before Blok's bubble-phase beforeunload guards and stops them.
+     */
+    window.addEventListener('beforeunload', function (event) {
+      event.stopImmediatePropagation();
+    }, true);
+  </script>
   <script>
     /*
      * Which gesture the user last drove the page with. Mirrors
@@ -1544,11 +1606,11 @@
         </span>
       </a>
       <nav role="tablist" class="playground-nav">
-        <a class="playground-tab" role="tab" aria-selected="true" href="/editor" data-tab="editor"><span class="playground-tab__icon" data-icon="IconPencil" aria-hidden="true"></span>Editor</a>
-        <a class="playground-tab" role="tab" aria-selected="false" href="/block-states" data-tab="block-states"><span class="playground-tab__icon" data-icon="IconBoard" aria-hidden="true"></span>Block States</a>
-        <a class="playground-tab" role="tab" aria-selected="false" href="/icons" data-tab="icons"><span class="playground-tab__icon" data-icon="IconHexagon" aria-hidden="true"></span>Icons</a>
-        <a class="playground-tab" role="tab" aria-selected="false" href="/rounding" data-tab="rounding"><span class="playground-tab__icon" data-icon="IconRoundedRectangle" aria-hidden="true"></span>Rounding</a>
-        <a class="playground-tab" role="tab" aria-selected="false" href="/previews" data-tab="previews"><span class="playground-tab__icon" data-icon="IconPreview" aria-hidden="true"></span>Previews</a>
+        <a class="playground-tab" role="tab" aria-selected="true" href="/editor" data-tab="editor" aria-controls="tab-editor"><span class="playground-tab__icon" data-icon="IconPencil" aria-hidden="true"></span>Editor</a>
+        <a class="playground-tab" role="tab" aria-selected="false" href="/block-states" data-tab="block-states" aria-controls="tab-block-states"><span class="playground-tab__icon" data-icon="IconBoard" aria-hidden="true"></span>Block States</a>
+        <a class="playground-tab" role="tab" aria-selected="false" href="/icons" data-tab="icons" aria-controls="tab-icons"><span class="playground-tab__icon" data-icon="IconHexagon" aria-hidden="true"></span>Icons</a>
+        <a class="playground-tab" role="tab" aria-selected="false" href="/rounding" data-tab="rounding" aria-controls="tab-rounding"><span class="playground-tab__icon" data-icon="IconRoundedRectangle" aria-hidden="true"></span>Rounding</a>
+        <a class="playground-tab" role="tab" aria-selected="false" href="/previews" data-tab="previews" aria-controls="tab-previews"><span class="playground-tab__icon" data-icon="IconPreview" aria-hidden="true"></span>Previews</a>
       </nav>
       <div class="ml-auto">
         <a href="https://github.com/JackUait/blok" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-full text-[#717171] hover:text-[#222222] hover:bg-[#f7f7f7] dark-mode:text-[#a8a8a8] dark-mode:hover:text-[#ffffff] dark-mode:hover:bg-white/5 transition-colors" aria-label="View on GitHub">
@@ -1739,7 +1801,7 @@
     // `data-blok-tool` on its blocks — an unscoped import would double-style the
     // editor. Scoping keeps the sheet affecting only the Blok View render.
     import viewCssText from './view.css?raw';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Page, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, TableOfContents, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, TabsTool, TabTool, Embed, Bookmark, Page, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
@@ -1754,11 +1816,15 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
-    import { PAGE_TITLE_SELECTOR, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
+    import { PAGE_TITLE_SELECTOR, PAGES_STORAGE_KEY, ROOT_STORAGE_KEY, PageRegistry, caretToFirstBlock, firstBlockKeydown, replaceTitleText, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
+    import { mountPageTree } from './src/playground/page-tree.ts';
+    import { remotePagePlayground } from './src/playground/remote-page-host.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
+    import { renderErrorState as renderAudioErrorState } from './src/tools/audio/ui.ts';
+    import { renderErrorState as renderVideoErrorState } from './src/tools/video/ui.ts';
     // Default import only — the json-as-string vite plugin rewrites JSON
     // modules to a lone default export, so named JSON imports throw on load.
     import pkg from './package.json';
@@ -1793,6 +1859,7 @@
         database: true,
         divider: true,
         spacer: true,
+        table_of_contents: true,
         quote: true,
         code: true,
         image: true,
@@ -1800,6 +1867,7 @@
         video: true,
         audio: true,
         columns: true,
+        tabs: true,
         page: true,
       },
     };
@@ -1879,6 +1947,7 @@
       }
       if (state.tools.divider) tools.divider = Divider;
       if (state.tools.spacer) tools.spacer = Spacer;
+      if (state.tools.table_of_contents) tools.table_of_contents = TableOfContents;
       if (state.tools.quote) tools.quote = { class: Quote, inlineToolbar: true };
       if (state.tools.code) tools.code = { class: Code, inlineToolbar: false };
       if (state.tools.image) tools.image = Image;
@@ -1921,6 +1990,10 @@
         tools.column_list = ColumnList;
         tools.column = Column;
       }
+      if (state.tools.tabs) {
+        tools.tabs = TabsTool;
+        tools.tab = TabTool;
+      }
       // Link-paste tools. Embed works standalone; Bookmark is contract-only and
       // needs a metadata backend at `endpoint` (none here → it shows ERROR state).
       tools.embed = Embed;
@@ -1936,11 +2009,19 @@
         class: Page,
         config: {
           href: (id) => pagePath(id, window.location.search),
+          pageIdFromHref: (href) => {
+            const url = new URL(href);
+
+            return url.origin === window.location.origin ? pageIdFromPath(url.pathname) : null;
+          },
           // Deferred: the tool keeps working on its block right after `open`.
           open: (id) => setTimeout(() => goToPage(id), 0),
-          resolve: (id) => pages.info(id),
-          create: ({ pageId: id }) => pages.create(id, pageId),
-          preview: (id) => pages.get(id)?.blocks,
+          ...(remotePages !== null ? remotePages.pageTool(pageId) : {
+            resolve: (id) => pages.info(id),
+            subscribe: (id, onChange) => pages.subscribe(id, onChange),
+            create: ({ pageId: id }) => pages.create(id, pageId),
+            preview: (id) => pages.get(id)?.blocks,
+          }),
         },
       };
 
@@ -2007,7 +2088,34 @@
      * Pages. `/editor` is the root playground document; `/editor/page/<id>`
      * is one page from the registry, each its own document and its own editor.
      */
-    const pages = new PageRegistry(SEED_PAGES);
+    const localPages = new PageRegistry(SEED_PAGES);
+    /**
+     * `?host=remote`: page titles, icons and access come from the reference
+     * page host (scripts/dev-page-host.mjs) at `?hostUrl=`, or the one
+     * `yarn serve` started. The local registry keeps the tree and page bodies.
+     */
+    const remotePages = (() => {
+      const params = new URLSearchParams(window.location.search);
+      const baseUrl = params.get('hostUrl') ?? import.meta.env.VITE_BLOK_PAGE_HOST_URL;
+
+      if (params.get('host') !== 'remote') return null;
+      if (!baseUrl) {
+        console.warn('?host=remote needs a page host: run `yarn serve` or pass ?hostUrl=.');
+        return null;
+      }
+      return remotePagePlayground({
+        baseUrl,
+        user: userConfig().id,
+        local: localPages,
+        rerender: () => {
+          if (document.activeElement?.matches(PAGE_TITLE_SELECTOR) === true) updateDocumentTitle();
+          else renderHeader();
+        },
+      });
+    })();
+    const pages = remotePages?.pages ?? localPages;
+    // Set once the editor is up; renderHeader and storeBlocks run before that.
+    let pageTree = null;
     const pageHeader = document.getElementById('page-header');
     const baseDocumentTitle = document.title;
     let currentPageId = pageIdFromPath(window.location.pathname);
@@ -2031,6 +2139,7 @@
     function storeBlocks(pageId, blocks) {
       if (pageId === null) rootBlocks = blocks;
       else pages.setBlocks(pageId, blocks);
+      pageTree?.refresh();
     }
 
     /**
@@ -2057,7 +2166,7 @@
       if (!restore || api.readOnly?.isEnabled) return;
       for (const id of pages.pendingRestores(pageId)) {
         if (!hasPointer(blocks, id)) {
-          const { type, data } = pointerBlock(id, pages);
+          const { type, data } = pointerBlock(id);
           api.blocks.insert(type, data, undefined, api.blocks.getBlocksCount(), false);
         }
         pages.restored(id);
@@ -2072,6 +2181,8 @@
       persistTimer = setTimeout(async () => {
         persistPending = false;
         syncPointers(api, pageId, pointers);
+        // Before the save: the tree reads the live page blocks, and a failed save must not freeze it.
+        pageTree?.refresh();
         try {
           storeBlocks(pageId, (await api.saver.save()).blocks);
         } catch (error) {
@@ -2108,7 +2219,7 @@
         pages,
         search: window.location.search,
         readOnly: state.readOnly,
-        navigate: (id) => goToPage(id),
+        navigate: (id, link) => goToPage(id, { from: link }),
         splitTitle: (html) => {
           blok.blocks.insert('paragraph', { text: html }, {}, 0, false);
           blok.caret.setToFirstBlock('start');
@@ -2126,6 +2237,20 @@
       alignPageHeader(pageHeader, document.getElementById('blok'));
     }
     keepPageHeaderAligned(pageHeader, document.getElementById('blok'));
+
+    // The registry is read once at boot; another tab's rename lands here.
+    window.addEventListener('storage', (event) => {
+      if (event.key !== null && event.key !== PAGES_STORAGE_KEY && event.key !== ROOT_STORAGE_KEY) return;
+      const crumbs = () => JSON.stringify([pages.root(), ...(currentPageId === null ? [] : pages.trail(currentPageId).map(({ title, icon }) => [title, icon]))]);
+      const before = crumbs();
+      pages.reload();
+      // Block saves land here too; a rebuilt header would close its icon picker.
+      if (crumbs() !== before && document.activeElement?.matches(PAGE_TITLE_SELECTOR) !== true) {
+        renderHeader();
+      } else {
+        updateDocumentTitle();
+      }
+    });
     // Capture: runs before the editor's own Backspace and ArrowUp handling.
     document.getElementById('blok').addEventListener('keydown', (event) => firstBlockKeydown(event, blok), true);
 
@@ -2136,7 +2261,7 @@
       // A collaborative parent gets its block when it next opens (syncPointers).
       if (collaborationConfig(parentId) === null) {
         const blocks = blocksFor(parentId);
-        if (!hasPointer(blocks, id)) storeBlocks(parentId, [...blocks, pointerBlock(id, pages)]);
+        if (!hasPointer(blocks, id)) storeBlocks(parentId, [...blocks, pointerBlock(id)]);
         pages.restored(id);
       }
       renderHeader();
@@ -2151,22 +2276,31 @@
       const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
       document.title = page === undefined
         ? baseDocumentTitle
-        : `${page.icon ? `${page.icon} ` : ''}${page.title.trim() || 'Untitled'} · ${baseDocumentTitle}`;
+        : `${page.icon ? `${page.icon} ` : ''}${page.title.trim() || 'New page'} · ${baseDocumentTitle}`;
+      // Every title and icon change lands here, typed or from a peer.
+      pageTree?.refresh();
     }
 
     /** The open page's title in the editor's undo history. */
     let titleHistory = null;
 
     function wireTitleHistory(editor) {
+      const shared = collaborationConfig(editorPageId) !== null;
+      let hostTitle = '';
       const tracked = editor.history.track('title', (value, { source }) => {
-        pages.setTitle(currentPageId, value ?? '');
-        const title = document.querySelector(PAGE_TITLE_SELECTOR);
-        // A peer's change must not pull the caret out of what this user is typing.
         if (source === 'remote') {
-          if (title !== null) replaceTitleText(title, value ?? '');
+          pages.reload();
+          const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
+          const canonical = page?.title ?? '';
+          hostTitle = canonical;
+          const title = document.querySelector(PAGE_TITLE_SELECTOR);
+          // Keep the caret while restoring the host title after a peer update.
+          if (title !== null) replaceTitleText(title, canonical);
           updateDocumentTitle();
           return;
         }
+        hostTitle = value ?? '';
+        pages.setTitle(currentPageId, hostTitle);
         renderHeader();
         const fresh = document.querySelector(PAGE_TITLE_SELECTOR);
         if (fresh === null) return;
@@ -2176,47 +2310,66 @@
       });
       const seed = () => {
         if (titleHistory !== null) return;
-        titleHistory = tracked;
         const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
-        // A shared document may already carry the title a peer gave it.
-        const shared = tracked.get();
-        if (shared === undefined) {
-          tracked.set(page?.title ?? '', { record: false });
-        } else if (shared !== page?.title) {
-          pages.setTitle(currentPageId, shared);
-          renderHeader();
-        }
+        hostTitle = page?.title ?? '';
+        // The host record is not shared by the playground's page registry.
+        if (!shared && tracked.get() !== hostTitle) tracked.set(hostTitle, { record: false });
+        titleHistory = {
+          set(value, options) {
+            // Rebase only for a local edit, so its undo returns to this host title.
+            if (shared && tracked.get() !== hostTitle) tracked.set(hostTitle, { record: false });
+            tracked.set(value, options);
+            hostTitle = value;
+          },
+        };
       };
-      // A shared document is whole only after its first sync; seeding earlier
-      // would write this tab's saved title over the one peers already have.
-      if (collaborationConfig(editorPageId) === null) {
+      // A shared history value cannot be seeded from this profile's local title.
+      if (!shared) {
         seed();
       } else {
         editor.on('collaboration:status', ({ status }) => {
-          if (status === 'connected') seed();
+          if (status !== 'connected') return;
+          const before = JSON.stringify(currentPageId === null ? pages.root() : pages.info(currentPageId));
+          pages.reload();
+          seed();
+          const after = JSON.stringify(currentPageId === null ? pages.root() : pages.info(currentPageId));
+          if (before !== after) {
+            if (document.activeElement?.matches(PAGE_TITLE_SELECTOR) === true) updateDocumentTitle();
+            else renderHeader();
+          }
         });
       }
     }
 
     /** Destroys the live editor and builds one for currentPageId. */
-    async function swapEditor() {
+    async function swapEditor(overrides = {}) {
       clearTimeout(persistTimer);
       persistPending = false;
       blok.destroy();
       titleHistory = null;
-      const editor = new Blok(buildConfig());
+      const editor = new Blok({ ...buildConfig(), ...overrides });
       blok = editor;
       window.blok = editor;
       editorPageId = currentPageId;
       try {
         await editor.isReady;
-        wireTitleHistory(editor);
+        wirePageTitle(editor);
         refreshBlokView();
         wireCollaborationPresence(editor);
         syncLoadedPointers(editor);
       } catch (error) {
         console.error('Editor failed to start', error);
       }
+    }
+
+    /** Under `?host=remote` a page's title is the host's; the root document's stays local. */
+    function wirePageTitle(editor) {
+      if (remotePages === null) return wireTitleHistory(editor);
+      // The host is canonical: a peer's mirror change reloads it, never local storage.
+      void remotePages.wire(editorPageId, editor.history).then((wired) => {
+        if (wired !== null && blok === editor) titleHistory = wired;
+      });
+      if (editorPageId === null) wireTitleHistory(editor);
     }
 
     // Navigation, tool toggles and reset all rebuild the editor; one queue keeps
@@ -2229,11 +2382,15 @@
 
     /**
      * Shows a page (null = root). `push: false` is for popstate, where the
-     * browser already moved the URL.
+     * browser already moved the URL. `from` is a clicked link outside the
+     * editor (page tree, crumb, tab): the page grows out of it, since its
+     * row in the editor may be anywhere or off screen.
      */
-    function goToPage(pageId, { push = true } = {}) {
+    function goToPage(pageId, { push = true, from: opener } = {}) {
       return queueEditorWork(async () => {
-        const target = pageId !== null && pages.has(pageId) ? pageId : null;
+        if (pageId !== null && !pages.has(pageId)) pages.reload();
+        if (pageId !== null && !pages.has(pageId)) return;
+        const target = pageId;
 
         if (push) history.pushState(null, '', pagePath(target, window.location.search));
         if (target === editorPageId) {
@@ -2247,35 +2404,65 @@
         // A page deleted for good goes up to its parent, so it slides back too.
         const back = from !== null && (target === null || !pages.has(from) || pages.trail(from).some((page) => page.id === target));
 
-        scrollByPage.set(from, window.scrollY);
+        scrollByPage.set(from, { y: window.scrollY, height: document.body.getBoundingClientRect().height });
         await snapshotEditor();
         currentPageId = target;
+        const box = opener?.getBoundingClientRect();
+        const origin = box === undefined ? undefined : { x: box.left + box.width / 2, y: box.top + box.height / 2 };
 
         await runPageTransition(async () => {
-          await swapEditor();
+          // The transition paints its loading state, so a page that arrives in time never shows a skeleton.
+          await swapEditor({ loader: { delay: PAGE_CONTENT_WAIT_MS } });
+          // The new snapshot must be the real page, not an empty editor.
+          await waitForPageContent(document.getElementById('blok'), PAGE_CONTENT_WAIT_MS);
           renderHeader();
-          window.scrollTo(0, back ? (scrollByPage.get(target) ?? 0) : 0);
+          const saved = back ? scrollByPage.get(target) : undefined;
+          // The page's blocks may still be loading; without the hold the offset clamps to the empty page.
+          if (saved !== undefined) holdPageHeight(saved.height);
+          window.scrollTo(0, saved?.y ?? 0);
           // A brand-new page starts at its title, like Notion.
           if (target !== null && pages.get(target)?.title === '' && !state.readOnly) {
             document.querySelector(PAGE_TITLE_SELECTOR)?.focus();
           }
         }, {
           direction: back ? 'back' : 'forward',
-          from: back ? PAGE_TITLE_SELECTOR : pageLinkSelector(target),
-          to: back ? pageLinkSelector(from) : PAGE_TITLE_SELECTOR,
+          ...(origin === undefined
+            ? pageNavMorphs({ back, from, target, parentOf: (id) => pages.get(id)?.parentId })
+            : { from: null, to: null, origin }),
         });
+        if (back && from !== null) flashArrivalRow(from);
       });
     }
 
     let blok = new Blok(buildConfig());
     window.blok = blok;
     blok.isReady.then(() => {
-      wireTitleHistory(blok);
+      wirePageTitle(blok);
       wireCollaborationPresence(blok);
       syncLoadedPointers(blok);
       alignPageHeader(pageHeader, document.getElementById('blok'));
     });
     renderHeader();
+
+    // The open page reads the live editor: its saved blocks lag behind it.
+    function pageBlocksOf(id) {
+      if (id === editorPageId) {
+        try {
+          return livePagePointers(blok);
+        } catch {
+          // An editor mid-swap: its saved blocks below.
+        }
+      }
+      return id === null ? (rootBlocks ?? DEFAULT_BLOCKS) : pages.get(id)?.blocks;
+    }
+
+    pageTree = mountPageTree({
+      pages,
+      blocksOf: pageBlocksOf,
+      currentPageId: () => currentPageId,
+      href: (id) => pagePath(id, window.location.search),
+      navigate: (id, link) => goToPage(id, { from: link }),
+    });
 
     /**
      * Reinitialize editor with current state.
@@ -2344,6 +2531,7 @@
       }
       if (activeTab && activeTab.parentElement === playgroundNav) navIndicator.select(activeTab);
       document.getElementById('tab-editor').classList.toggle('hidden', page !== 'editor');
+      pageTree.setAvailable(page === 'editor');
       document.getElementById('tab-block-states').classList.toggle('hidden', page !== 'block-states');
       document.getElementById('tab-icons').classList.toggle('hidden', page !== 'icons');
       document.getElementById('tab-rounding').classList.toggle('hidden', page !== 'rounding');
@@ -2370,7 +2558,7 @@
         if (page === 'editor') {
           // The Editor tab leads home, to the root document.
           navigateTo(page, '');
-          goToPage(null);
+          goToPage(null, { from: tab });
           return;
         }
         history.pushState(null, '', `/${page}${window.location.search}`);
@@ -2378,6 +2566,9 @@
       });
     });
 
+    // goToPage restores each page's scroll; the browser's own restore would
+    // scroll the page being left before the transition snapshots it.
+    history.scrollRestoration = 'manual';
     window.addEventListener('popstate', () => {
       const { page, subpath } = parseRoute(window.location.pathname);
       navigateTo(page, subpath);
@@ -2497,6 +2688,7 @@
           sel.dispatchEvent(new Event('change'));
         },
         KeyX: () => document.getElementById('reset-content').click(),
+        KeyP: () => pageTree.toggle(),
       };
 
       const toolMatch = e.code.match(/^Digit([1-9])$/);
@@ -2969,8 +3161,10 @@
       { key: 'database', label: 'Database', icon: Icons.IconDatabase },
       { key: 'divider', label: 'Divider', icon: Icons.IconMinus },
       { key: 'spacer', label: 'Spacer', icon: Icons.IconSpacer },
+      { key: 'table_of_contents', label: 'Table of contents', icon: Icons.IconTableOfContents },
       { key: 'quote', label: 'Quote', icon: Icons.IconQuote },
       { key: 'page', label: 'Page', icon: Icons.IconPage },
+      { key: 'tabs', label: 'Tabs', icon: Icons.IconTabs },
     ];
 
     const toolTogglesContainer = document.getElementById('tool-toggles');
@@ -3009,13 +3203,13 @@
      */
     const iconGroups = {
       'UI & Navigation': ['IconCheck', 'IconWand', 'IconCross', 'IconMenu', 'IconPlus', 'IconMinus', 'IconChevronLeft', 'IconChevronRight', 'IconChevronDown', 'IconSearch', 'IconArrowUp', 'IconArrowDownLine'],
-      'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconClearFormat', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconMarker', 'IconEquation', 'IconSuperscript', 'IconSubscript', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconReturn', 'IconCode'],
+      'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconClearFormat', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconEquation', 'IconSuperscript', 'IconSubscript', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconReturn', 'IconCode'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
-      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconSpacer', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar', 'IconPage'],
+      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconSpacer', 'IconTableOfContents', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconTabs', 'IconCalendar', 'IconPage'],
       'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCrop', 'IconSliders', 'IconRotateLeft', 'IconFlipHorizontal', 'IconExpandFullscreen', 'IconCollapseFullscreen', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerBackward', 'IconPlayerForward', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconPlayerSettings', 'IconPlayerSpeed', 'IconPlayerLoop', 'IconPlayerPip', 'IconPlayerTheater', 'IconDownload', 'IconUpload'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3', 'IconToggleH4', 'IconToggleH5', 'IconToggleH6'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconArrowUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight', 'IconMergeCells', 'IconSplitCell', 'IconPlacement', 'IconTextSizeSmall', 'IconTextSizeLarge'],
-      'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconPaintRoller', 'IconPreview', 'IconSplitView', 'IconDotsHorizontal'],
+      'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconLock', 'IconPaintRoller', 'IconPreview', 'IconSplitView', 'IconDotsHorizontal'],
       'Emoji Picker': ['IconEmojiSparkles', 'IconEmojiWink', 'IconEmojiBowl', 'IconEmojiGamepad', 'IconEmojiMap', 'IconEmojiHearts', 'IconEmojiStar', 'IconEmojiSmile', 'IconEmojiSprout', 'IconEmojiUtensils', 'IconEmojiBall', 'IconEmojiGlobe', 'IconEmojiLightbulb', 'IconEmojiHeart', 'IconEmojiFlag', 'IconEmojiDice'],
       'Link Types': ['IconVideo', 'IconMusic', 'IconMap', 'IconChart', 'IconMessage', 'IconFile'],
       'File Types': ['IconFile', 'IconFileDoc', 'IconFileSheet', 'IconFileSlides', 'IconFileArchive'],
@@ -3053,27 +3247,21 @@
     // segment; a state with `toolConfig` gets its own segment (and thus its
     // own editor instance) so tool-level options like `sources` can vary
     // per state.
+    // Tools whose states need the full row: they lay out wide content.
+    const WIDE_STATE_TOOLS = ['table', 'column_list', 'tabs', 'database', 'code', 'image', 'video', 'embed'];
+
     function flattenStates(tool, label, states) {
-      const segments = [];
-      let current = null;
-      states.forEach((state, i) => {
-        const header = {
-          id: `${tool}-label-${i}`,
-          type: 'header',
-          data: { text: state.label, level: 3 },
-        };
-        if (state.toolConfig) {
-          segments.push({ blocks: [header, ...state.blocks], toolConfig: state.toolConfig });
-          current = null;
-        } else {
-          if (!current) {
-            current = { blocks: [] };
-            segments.push(current);
-          }
-          current.blocks.push(header, ...state.blocks);
-        }
-      });
-      return { tool, label, segments };
+      const segments = states.map((state) => ({
+        label: state.label,
+        blocks: state.blocks,
+        toolConfig: state.toolConfig,
+        readOnly: state.readOnly,
+        editorConfig: state.editorConfig,
+        width: state.width,
+        // A typed draft is filled into the first block's URL field after mount.
+        drafts: state.draft ? [{ id: state.blocks[0].id, ...state.draft }] : [],
+      }));
+      return { tool, label, wide: WIDE_STATE_TOOLS.includes(tool), segments };
     }
 
     const BLOCK_STATES_RAW = [
@@ -3215,11 +3403,26 @@
         tool: 'callout',
         label: 'Callout',
         states: [
-          { label: 'No emoji', blocks: [{ id: 'c-plain', type: 'callout', data: { text: 'Plain callout without emoji.', emoji: '' } }] },
-          { label: 'With emoji', blocks: [{ id: 'c-emoji', type: 'callout', data: { text: 'Tip: prefer composition over inheritance.', emoji: '💡' } }] },
-          { label: 'Colored bg', blocks: [{ id: 'c-bg', type: 'callout', data: { text: 'Heads up — background color set.', emoji: '⚠️', backgroundColor: 'yellow' } }] },
-          { label: 'Colored text', blocks: [{ id: 'c-text', type: 'callout', data: { text: 'Red text on plain background.', emoji: '🔥', textColor: 'red' } }] },
-          { label: 'Both colors', blocks: [{ id: 'c-both', type: 'callout', data: { text: 'Both colors set.', emoji: '✨', backgroundColor: 'blue', textColor: 'white' } }] },
+          { label: 'No emoji', blocks: [
+            { id: 'c-plain', type: 'callout', data: { emoji: '' }, content: ['c-plain-p'] },
+            { id: 'c-plain-p', type: 'paragraph', data: { text: 'Plain callout without emoji.' }, parent: 'c-plain' },
+          ] },
+          { label: 'With emoji', blocks: [
+            { id: 'c-emoji', type: 'callout', data: { emoji: '💡' }, content: ['c-emoji-p'] },
+            { id: 'c-emoji-p', type: 'paragraph', data: { text: 'Tip: prefer composition over inheritance.' }, parent: 'c-emoji' },
+          ] },
+          { label: 'Colored bg', blocks: [
+            { id: 'c-bg', type: 'callout', data: { emoji: '⚠️', backgroundColor: 'yellow' }, content: ['c-bg-p'] },
+            { id: 'c-bg-p', type: 'paragraph', data: { text: 'Heads up — background color set.' }, parent: 'c-bg' },
+          ] },
+          { label: 'Colored text', blocks: [
+            { id: 'c-text', type: 'callout', data: { emoji: '🔥', textColor: 'red' }, content: ['c-text-p'] },
+            { id: 'c-text-p', type: 'paragraph', data: { text: 'Red text on plain background.' }, parent: 'c-text' },
+          ] },
+          { label: 'Both colors', blocks: [
+            { id: 'c-both', type: 'callout', data: { emoji: '✨', backgroundColor: 'blue', textColor: 'white' }, content: ['c-both-p'] },
+            { id: 'c-both-p', type: 'paragraph', data: { text: 'Both colors set.' }, parent: 'c-both' },
+          ] },
         ],
       },
       {
@@ -3257,6 +3460,135 @@
             { id: 'colr-b', type: 'column', data: {}, content: ['colr-b-l1', 'colr-b-l2'], parent: 'colr' },
             { id: 'colr-b-l1', type: 'list', data: { style: 'checklist', text: 'Headers', checked: true }, parent: 'colr-b' },
             { id: 'colr-b-l2', type: 'list', data: { style: 'checklist', text: 'Lists', checked: true }, parent: 'colr-b' },
+          ] },
+        ],
+      },
+      {
+        tool: 'tabs',
+        label: 'Tabs',
+        states: [
+          { label: 'Three tabs', blocks: [
+            { id: 'tabs3', type: 'tabs', data: {}, content: ['tabs3-a', 'tabs3-b', 'tabs3-c'] },
+            { id: 'tabs3-a', type: 'tab', data: { title: 'Overview' }, content: ['tabs3-a-p'], parent: 'tabs3' },
+            { id: 'tabs3-a-p', type: 'paragraph', data: { text: 'The first tab is open by default.' }, parent: 'tabs3-a' },
+            { id: 'tabs3-b', type: 'tab', data: { title: 'Setup' }, content: ['tabs3-b-p'], parent: 'tabs3' },
+            { id: 'tabs3-b-p', type: 'paragraph', data: { text: 'Install, then configure.' }, parent: 'tabs3-b' },
+            { id: 'tabs3-c', type: 'tab', data: { title: 'FAQ' }, content: ['tabs3-c-p'], parent: 'tabs3' },
+            { id: 'tabs3-c-p', type: 'paragraph', data: { text: 'Answers to common questions.' }, parent: 'tabs3-c' },
+          ] },
+          { label: 'With icons', blocks: [
+            { id: 'tabsi', type: 'tabs', data: {}, content: ['tabsi-a', 'tabsi-b'] },
+            { id: 'tabsi-a', type: 'tab', data: { title: 'Docs', icon: '📘' }, content: ['tabsi-a-p'], parent: 'tabsi' },
+            { id: 'tabsi-a-p', type: 'paragraph', data: { text: 'Each tab can carry an emoji.' }, parent: 'tabsi-a' },
+            { id: 'tabsi-b', type: 'tab', data: { title: 'Ideas', icon: '💡' }, content: ['tabsi-b-p'], parent: 'tabsi' },
+            { id: 'tabsi-b-p', type: 'paragraph', data: { text: 'Second tab content.' }, parent: 'tabsi-b' },
+          ] },
+          { label: 'Empty tab', blocks: [
+            { id: 'tabse', type: 'tabs', data: {}, content: ['tabse-a', 'tabse-b'] },
+            { id: 'tabse-a', type: 'tab', data: { title: 'Empty' }, parent: 'tabse' },
+            { id: 'tabse-b', type: 'tab', data: { title: 'Filled' }, content: ['tabse-b-p'], parent: 'tabse' },
+            { id: 'tabse-b-p', type: 'paragraph', data: { text: 'Only this tab has content.' }, parent: 'tabse-b' },
+          ] },
+          { label: 'Single tab', blocks: [
+            { id: 'tabs1', type: 'tabs', data: {}, content: ['tabs1-a'] },
+            { id: 'tabs1-a', type: 'tab', data: { title: 'Only tab' }, content: ['tabs1-a-p'], parent: 'tabs1' },
+            { id: 'tabs1-a-p', type: 'paragraph', data: { text: 'A tabs block always keeps at least one tab.' }, parent: 'tabs1-a' },
+          ] },
+          { label: 'Untitled tab', blocks: [
+            { id: 'tabsu', type: 'tabs', data: {}, content: ['tabsu-a', 'tabsu-b'] },
+            { id: 'tabsu-a', type: 'tab', data: { title: '' }, content: ['tabsu-a-p'], parent: 'tabsu' },
+            { id: 'tabsu-a-p', type: 'paragraph', data: { text: 'A tab with an empty title shows the fallback name.' }, parent: 'tabsu-a' },
+            { id: 'tabsu-b', type: 'tab', data: { title: 'Named' }, content: ['tabsu-b-p'], parent: 'tabsu' },
+            { id: 'tabsu-b-p', type: 'paragraph', data: { text: 'Second tab.' }, parent: 'tabsu-b' },
+          ] },
+          { label: 'Long titles', blocks: [
+            { id: 'tabsl', type: 'tabs', data: {}, content: ['tabsl-a', 'tabsl-b'] },
+            { id: 'tabsl-a', type: 'tab', data: { title: 'Quarterly planning notes for the platform and infrastructure teams', icon: '🗂️' }, content: ['tabsl-a-p'], parent: 'tabsl' },
+            { id: 'tabsl-a-p', type: 'paragraph', data: { text: 'Long titles stop at a maximum width and end in an ellipsis.' }, parent: 'tabsl-a' },
+            { id: 'tabsl-b', type: 'tab', data: { title: 'Retrospective and follow-up action items from the launch' }, content: ['tabsl-b-p'], parent: 'tabsl' },
+            { id: 'tabsl-b-p', type: 'paragraph', data: { text: 'Second long tab.' }, parent: 'tabsl-b' },
+          ] },
+          { label: 'Overflowing strip', width: 480, blocks: [
+            { id: 'tabso', type: 'tabs', data: {}, content: ['tabso-0', 'tabso-1', 'tabso-2', 'tabso-3', 'tabso-4', 'tabso-5', 'tabso-6', 'tabso-7', 'tabso-8', 'tabso-9', 'tabso-10', 'tabso-11'] },
+            { id: 'tabso-0', type: 'tab', data: { title: 'Overview' }, content: ['tabso-0-p'], parent: 'tabso' },
+            { id: 'tabso-0-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-0' },
+            { id: 'tabso-1', type: 'tab', data: { title: 'Install' }, content: ['tabso-1-p'], parent: 'tabso' },
+            { id: 'tabso-1-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-1' },
+            { id: 'tabso-2', type: 'tab', data: { title: 'Config' }, content: ['tabso-2-p'], parent: 'tabso' },
+            { id: 'tabso-2-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-2' },
+            { id: 'tabso-3', type: 'tab', data: { title: 'Theming' }, content: ['tabso-3-p'], parent: 'tabso' },
+            { id: 'tabso-3-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-3' },
+            { id: 'tabso-4', type: 'tab', data: { title: 'Plugins' }, content: ['tabso-4-p'], parent: 'tabso' },
+            { id: 'tabso-4-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-4' },
+            { id: 'tabso-5', type: 'tab', data: { title: 'Events' }, content: ['tabso-5-p'], parent: 'tabso' },
+            { id: 'tabso-5-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-5' },
+            { id: 'tabso-6', type: 'tab', data: { title: 'API' }, content: ['tabso-6-p'], parent: 'tabso' },
+            { id: 'tabso-6-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-6' },
+            { id: 'tabso-7', type: 'tab', data: { title: 'Recipes' }, content: ['tabso-7-p'], parent: 'tabso' },
+            { id: 'tabso-7-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-7' },
+            { id: 'tabso-8', type: 'tab', data: { title: 'Testing' }, content: ['tabso-8-p'], parent: 'tabso' },
+            { id: 'tabso-8-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-8' },
+            { id: 'tabso-9', type: 'tab', data: { title: 'Deploy' }, content: ['tabso-9-p'], parent: 'tabso' },
+            { id: 'tabso-9-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-9' },
+            { id: 'tabso-10', type: 'tab', data: { title: 'FAQ' }, content: ['tabso-10-p'], parent: 'tabso' },
+            { id: 'tabso-10-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-10' },
+            { id: 'tabso-11', type: 'tab', data: { title: 'Changelog' }, content: ['tabso-11-p'], parent: 'tabso' },
+            { id: 'tabso-11-p', type: 'paragraph', data: { text: 'Scroll the strip: the edges fade where more tabs hide.' }, parent: 'tabso-11' },
+          ] },
+          { label: 'Rich content', blocks: [
+            { id: 'tabsr', type: 'tabs', data: {}, content: ['tabsr-a', 'tabsr-b'] },
+            { id: 'tabsr-a', type: 'tab', data: { title: 'Release', icon: '🚀' }, content: ['tabsr-h', 'tabsr-p', 'tabsr-l1', 'tabsr-l2', 'tabsr-l3', 'tabsr-tg', 'tabsr-code'], parent: 'tabsr' },
+            { id: 'tabsr-h', type: 'header', data: { text: 'Launch checklist', level: 3 }, parent: 'tabsr-a' },
+            { id: 'tabsr-p', type: 'paragraph', data: { text: 'Switch tabs to watch each block drop in after the one above it.' }, parent: 'tabsr-a' },
+            { id: 'tabsr-l1', type: 'list', data: { style: 'checklist', text: 'Freeze the API', checked: true }, parent: 'tabsr-a' },
+            { id: 'tabsr-l2', type: 'list', data: { style: 'checklist', text: 'Write the release notes' }, parent: 'tabsr-a' },
+            { id: 'tabsr-l3', type: 'list', data: { style: 'checklist', text: 'Tag and publish' }, parent: 'tabsr-a' },
+            { id: 'tabsr-tg', type: 'toggle', data: { text: 'Rollback plan', isOpen: false }, content: ['tabsr-tg-c'], parent: 'tabsr-a' },
+            { id: 'tabsr-tg-c', type: 'paragraph', data: { text: 'Revert the tag and republish the previous version.' }, parent: 'tabsr-tg' },
+            { id: 'tabsr-code', type: 'code', data: { code: 'yarn release 1.16.0', language: 'bash' }, parent: 'tabsr-a' },
+            { id: 'tabsr-b', type: 'tab', data: { title: 'Notes', icon: '📝' }, content: ['tabsr-b-q', 'tabsr-b-c'], parent: 'tabsr' },
+            { id: 'tabsr-b-q', type: 'quote', data: { text: 'Ship small, ship often.', size: 'default' }, parent: 'tabsr-b' },
+            { id: 'tabsr-b-c', type: 'callout', data: { text: 'Every tab holds ordinary blocks.', emoji: '💡' }, parent: 'tabsr-b' },
+          ] },
+          { label: 'Tabs inside a tab', blocks: [
+            { id: 'tabsn', type: 'tabs', data: {}, content: ['tabsn-a', 'tabsn-b'] },
+            { id: 'tabsn-a', type: 'tab', data: { title: 'Outer' }, content: ['tabsn-in'], parent: 'tabsn' },
+            { id: 'tabsn-in', type: 'tabs', data: {}, content: ['tabsn-in-a', 'tabsn-in-b'], parent: 'tabsn-a' },
+            { id: 'tabsn-in-a', type: 'tab', data: { title: 'Inner one' }, content: ['tabsn-in-a-p'], parent: 'tabsn-in' },
+            { id: 'tabsn-in-a-p', type: 'paragraph', data: { text: 'A tabs block nested in a tab.' }, parent: 'tabsn-in-a' },
+            { id: 'tabsn-in-b', type: 'tab', data: { title: 'Inner two' }, content: ['tabsn-in-b-p'], parent: 'tabsn-in' },
+            { id: 'tabsn-in-b-p', type: 'paragraph', data: { text: 'Second inner tab.' }, parent: 'tabsn-in-b' },
+            { id: 'tabsn-b', type: 'tab', data: { title: 'Sibling' }, content: ['tabsn-b-p'], parent: 'tabsn' },
+            { id: 'tabsn-b-p', type: 'paragraph', data: { text: 'Outer second tab.' }, parent: 'tabsn-b' },
+          ] },
+          { label: 'Inside columns', blocks: [
+            { id: 'tabsc', type: 'column_list', data: {}, content: ['tabsc-a', 'tabsc-b'] },
+            { id: 'tabsc-a', type: 'column', data: {}, content: ['tabsc-t'], parent: 'tabsc' },
+            { id: 'tabsc-t', type: 'tabs', data: {}, content: ['tabsc-t-a', 'tabsc-t-b', 'tabsc-t-c'], parent: 'tabsc-a' },
+            { id: 'tabsc-t-a', type: 'tab', data: { title: 'Design' }, content: ['tabsc-t-a-p'], parent: 'tabsc-t' },
+            { id: 'tabsc-t-a-p', type: 'paragraph', data: { text: 'Tabs in a narrow column.' }, parent: 'tabsc-t-a' },
+            { id: 'tabsc-t-b', type: 'tab', data: { title: 'Build' }, content: ['tabsc-t-b-p'], parent: 'tabsc-t' },
+            { id: 'tabsc-t-b-p', type: 'paragraph', data: { text: 'Second tab.' }, parent: 'tabsc-t-b' },
+            { id: 'tabsc-t-c', type: 'tab', data: { title: 'Ship' }, content: ['tabsc-t-c-p'], parent: 'tabsc-t' },
+            { id: 'tabsc-t-c-p', type: 'paragraph', data: { text: 'Third tab.' }, parent: 'tabsc-t-c' },
+            { id: 'tabsc-b', type: 'column', data: {}, content: ['tabsc-b-p'], parent: 'tabsc' },
+            { id: 'tabsc-b-p', type: 'paragraph', data: { text: 'The column next to the tabs.' }, parent: 'tabsc-b' },
+          ] },
+          { label: 'Read-only', readOnly: true, blocks: [
+            { id: 'tabsro', type: 'tabs', data: {}, content: ['tabsro-a', 'tabsro-b'] },
+            { id: 'tabsro-a', type: 'tab', data: { title: 'Readers', icon: '👀' }, content: ['tabsro-a-p'], parent: 'tabsro' },
+            { id: 'tabsro-a-p', type: 'paragraph', data: { text: 'Tabs still switch, but there is no Add tab button and no renaming.' }, parent: 'tabsro-a' },
+            { id: 'tabsro-b', type: 'tab', data: { title: 'Second' }, content: ['tabsro-b-p'], parent: 'tabsro' },
+            { id: 'tabsro-b-p', type: 'paragraph', data: { text: 'Second tab.' }, parent: 'tabsro-b' },
+          ] },
+          { label: 'Right-to-left', editorConfig: { i18n: { direction: 'rtl' } }, blocks: [
+            { id: 'tabsrtl', type: 'tabs', data: {}, content: ['tabsrtl-a', 'tabsrtl-b', 'tabsrtl-c'] },
+            { id: 'tabsrtl-a', type: 'tab', data: { title: 'סקירה' }, content: ['tabsrtl-a-p'], parent: 'tabsrtl' },
+            { id: 'tabsrtl-a-p', type: 'paragraph', data: { text: 'הלשונית הראשונה פתוחה.' }, parent: 'tabsrtl-a' },
+            { id: 'tabsrtl-b', type: 'tab', data: { title: 'הגדרות', icon: '⚙️' }, content: ['tabsrtl-b-p'], parent: 'tabsrtl' },
+            { id: 'tabsrtl-b-p', type: 'paragraph', data: { text: 'לשונית שנייה.' }, parent: 'tabsrtl-b' },
+            { id: 'tabsrtl-c', type: 'tab', data: { title: 'שאלות' }, content: ['tabsrtl-c-p'], parent: 'tabsrtl' },
+            { id: 'tabsrtl-c-p', type: 'paragraph', data: { text: 'לשונית שלישית.' }, parent: 'tabsrtl-c' },
           ] },
         ],
       },
@@ -3325,6 +3657,24 @@
             { id: 'sp-a', type: 'paragraph', data: { text: 'Above spacer.' } },
             { id: 'sp', type: 'spacer', data: { height: 64 } },
             { id: 'sp-b', type: 'paragraph', data: { text: 'Below spacer.' } },
+          ] },
+        ],
+      },
+      {
+        tool: 'table_of_contents',
+        label: 'Table of contents',
+        states: [
+          { label: 'Outlining headings', blocks: [
+            { id: 'toc', type: 'table_of_contents', data: {} },
+            { id: 'toc-h2', type: 'header', data: { text: 'Overview', level: 2 } },
+            { id: 'toc-h3', type: 'header', data: { text: 'Details', level: 3 } },
+          ] },
+          { label: 'No headings yet', blocks: [
+            { id: 'toc-empty', type: 'table_of_contents', data: {} },
+          ] },
+          { label: 'Colored', blocks: [
+            { id: 'toc-color', type: 'table_of_contents', data: { backgroundColor: 'gray' } },
+            { id: 'toc-color-h', type: 'header', data: { text: 'Overview', level: 2 } },
           ] },
         ],
       },
@@ -3450,7 +3800,7 @@
             artist: 'SoundHelix',
             coverUrl: '/samples/soundhelix-song-1-cover.png',
             duration: 90,
-            peaks: [0.17,0.24,0.29,0.34,0.35,0.3,0.27,0.25,0.22,0.2,0.84,0.84,0.83,0.82,0.85,0.83,0.85,0.84,0.87,0.86,0.97,0.96,0.95,0.9,0.96,0.97,0.97,0.97,0.99,0.93,0.96,0.98,0.94,0.96,0.97,0.98,0.9,0.91,0.97,0.96,0.99,0.95,0.95,0.98,0.96,0.96,0.99,0.96,0.95,0.97,0.98,0.96,0.93,0.98,0.97,1,0.96,0.94,0.99,1,0.97,0.96,0.98,0.83],
+            peaks: [0.03,0.06,0.11,0.14,0.17,0.19,0.22,0.21,0.2,0.25,0.28,0.29,0.24,0.23,0.25,0.25,0.34,0.33,0.29,0.24,0.26,0.35,0.32,0.34,0.3,0.27,0.29,0.3,0.26,0.25,0.27,0.27,0.27,0.25,0.25,0.21,0.2,0.19,0.22,0.19,0.17,0.18,0.2,0.17,0.2,0.2,0.18,0.81,0.84,0.75,0.82,0.82,0.84,0.8,0.78,0.83,0.83,0.83,0.78,0.77,0.81,0.78,0.82,0.8,0.79,0.82,0.8,0.85,0.84,0.78,0.83,0.79,0.77,0.83,0.76,0.85,0.81,0.75,0.78,0.77,0.84,0.78,0.81,0.78,0.84,0.84,0.87,0.8,0.82,0.83,0.79,0.82,0.82,0.86,0.94,0.97,0.86,0.97,0.93,0.8,0.96,0.91,0.83,0.9,0.74,0.95,0.93,0.68,0.9,0.89,0.88,0.82,0.96,0.84,0.96,0.93,0.82,0.96,0.97,0.8,0.97,0.88,0.84,0.93,0.97,0.84,0.97,0.83,0.85,0.97,0.92,0.9,0.99,0.88,0.93,0.85,0.93,0.84,0.92,0.83,0.93,0.92,0.94,0.92,0.96,0.92,0.94,0.89,0.94,0.98,0.94,0.85,0.93,0.93,0.93,0.88,0.93,0.93,0.96,0.95,0.93,0.9,0.97,0.86,0.89,0.98,0.89,0.85,0.91,0.83,0.83,0.9,0.9,0.86,0.88,0.78,0.85,0.91,0.87,0.86,0.96,0.97,0.87,0.96,0.85,0.85,0.94,0.83,0.88,0.99,0.92,0.99,0.95,0.95,0.77,0.91,0.95,0.92,0.92,0.85,0.93,0.98,0.81,0.92,0.9,0.96,0.91,0.95,0.91,0.96,0.93,0.91,0.96,0.91,0.76,0.99,0.84,0.88,0.92,0.92,0.85,0.9,0.96,0.84,0.94,0.95,0.91,0.93,0.94,0.95,0.9,0.96,0.88,0.97,0.93,0.89,0.95,0.98,0.84,0.9,0.89,0.95,0.87,0.96,0.88,0.93,0.79,0.86,0.91,0.97,0.88,0.98,0.94,0.93,0.91,0.97,0.92,0.94,0.91,0.92,1,0.97,0.94,0.95,0.92,0.91,0.96,0.88,0.85,0.92,0.92,0.94,0.96,0.88,0.95,0.97,0.99,1,0.92,0.95,0.88,0.97,0.93,0.94,0.96,0.81,0.95,0.86,0.96,0.95,0.93,0.92,0.98,0.84,0.92,0.97,0.64,0.38,0.27,0.14],
           } }] },
           { label: 'No cover art', blocks: [{ id: 'au-no-cover', type: 'audio', data: {
             url: '/samples/soundhelix-song-1.mp3',
@@ -3459,7 +3809,7 @@
             title: 'SoundHelix Song 2',
             artist: 'SoundHelix',
             duration: 90,
-            peaks: [0.2,0.28,0.33,0.3,0.26,0.22,0.19,0.24,0.31,0.36,0.8,0.82,0.85,0.83,0.86,0.84,0.82,0.85,0.88,0.86,0.93,0.95,0.97,0.92,0.94,0.96,0.98,0.95,0.97,0.91,0.94,0.97,0.93,0.95,0.98,0.96,0.89,0.92,0.96,0.94,0.98,0.93,0.96,0.99,0.95,0.94,0.97,0.95,0.93,0.96,0.98,0.94,0.92,0.97,0.96,0.99,0.95,0.93,0.98,1,0.96,0.95,0.97,0.82],
+            peaks: [0.03,0.06,0.11,0.14,0.17,0.19,0.22,0.21,0.2,0.25,0.28,0.29,0.24,0.23,0.25,0.25,0.34,0.33,0.29,0.24,0.26,0.35,0.32,0.34,0.3,0.27,0.29,0.3,0.26,0.25,0.27,0.27,0.27,0.25,0.25,0.21,0.2,0.19,0.22,0.19,0.17,0.18,0.2,0.17,0.2,0.2,0.18,0.81,0.84,0.75,0.82,0.82,0.84,0.8,0.78,0.83,0.83,0.83,0.78,0.77,0.81,0.78,0.82,0.8,0.79,0.82,0.8,0.85,0.84,0.78,0.83,0.79,0.77,0.83,0.76,0.85,0.81,0.75,0.78,0.77,0.84,0.78,0.81,0.78,0.84,0.84,0.87,0.8,0.82,0.83,0.79,0.82,0.82,0.86,0.94,0.97,0.86,0.97,0.93,0.8,0.96,0.91,0.83,0.9,0.74,0.95,0.93,0.68,0.9,0.89,0.88,0.82,0.96,0.84,0.96,0.93,0.82,0.96,0.97,0.8,0.97,0.88,0.84,0.93,0.97,0.84,0.97,0.83,0.85,0.97,0.92,0.9,0.99,0.88,0.93,0.85,0.93,0.84,0.92,0.83,0.93,0.92,0.94,0.92,0.96,0.92,0.94,0.89,0.94,0.98,0.94,0.85,0.93,0.93,0.93,0.88,0.93,0.93,0.96,0.95,0.93,0.9,0.97,0.86,0.89,0.98,0.89,0.85,0.91,0.83,0.83,0.9,0.9,0.86,0.88,0.78,0.85,0.91,0.87,0.86,0.96,0.97,0.87,0.96,0.85,0.85,0.94,0.83,0.88,0.99,0.92,0.99,0.95,0.95,0.77,0.91,0.95,0.92,0.92,0.85,0.93,0.98,0.81,0.92,0.9,0.96,0.91,0.95,0.91,0.96,0.93,0.91,0.96,0.91,0.76,0.99,0.84,0.88,0.92,0.92,0.85,0.9,0.96,0.84,0.94,0.95,0.91,0.93,0.94,0.95,0.9,0.96,0.88,0.97,0.93,0.89,0.95,0.98,0.84,0.9,0.89,0.95,0.87,0.96,0.88,0.93,0.79,0.86,0.91,0.97,0.88,0.98,0.94,0.93,0.91,0.97,0.92,0.94,0.91,0.92,1,0.97,0.94,0.95,0.92,0.91,0.96,0.88,0.85,0.92,0.92,0.94,0.96,0.88,0.95,0.97,0.99,1,0.92,0.95,0.88,0.97,0.93,0.94,0.96,0.81,0.95,0.86,0.96,0.95,0.93,0.92,0.98,0.84,0.92,0.97,0.64,0.38,0.27,0.14],
           } }] },
           { label: 'Google Drive error', blocks: [{ id: 'au-drive-error', type: 'audio', data: { url: '' } }] },
         ],
@@ -3591,6 +3941,28 @@
         label: 'Embed',
         states: [
           { label: 'Empty', blocks: [{ id: 'em-empty', type: 'embed', data: {} }] },
+          { label: 'Typing · YouTube (video)', draft: { url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ' }, blocks: [{ id: 'em-typing-youtube', type: 'embed', data: {} }] },
+          { label: 'Typing · Spotify (audio)', draft: { url: 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC' }, blocks: [{ id: 'em-typing-spotify', type: 'embed', data: {} }] },
+          { label: 'Typing · GIPHY (image)', draft: { url: 'https://giphy.com/gifs/cat-JIX9t2j0ZTN9S' }, blocks: [{ id: 'em-typing-giphy', type: 'embed', data: {} }] },
+          { label: 'Typing · Instagram (social)', draft: { url: 'https://www.instagram.com/p/C1a2B3c4D5e/' }, blocks: [{ id: 'em-typing-instagram', type: 'embed', data: {} }] },
+          { label: 'Typing · Google Docs (document)', draft: { url: 'https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/edit' }, blocks: [{ id: 'em-typing-googledocs', type: 'embed', data: {} }] },
+          { label: 'Typing · Airtable (table)', draft: { url: 'https://airtable.com/shrAbCdEfGh123456' }, blocks: [{ id: 'em-typing-airtable', type: 'embed', data: {} }] },
+          { label: 'Typing · Typeform (form)', draft: { url: 'https://form.typeform.com/to/abc123' }, blocks: [{ id: 'em-typing-typeform', type: 'embed', data: {} }] },
+          { label: 'Typing · CodePen (code)', draft: { url: 'https://codepen.io/team/codepen/pen/PNaGbb' }, blocks: [{ id: 'em-typing-codepen', type: 'embed', data: {} }] },
+          { label: 'Typing · Figma (design)', draft: { url: 'https://www.figma.com/file/abc123XYZ/Design-system' }, blocks: [{ id: 'em-typing-figma', type: 'embed', data: {} }] },
+          { label: 'Typing · Flourish (chart)', draft: { url: 'https://public.flourish.studio/visualisation/1234567/' }, blocks: [{ id: 'em-typing-flourish', type: 'embed', data: {} }] },
+          { label: 'Typing · OpenStreetMap (map)', draft: { url: 'https://www.openstreetmap.org/#map=13/51.5072/-0.1276' }, blocks: [{ id: 'em-typing-osm', type: 'embed', data: {} }] },
+          { label: 'Typing · Calendly (calendar)', draft: { url: 'https://calendly.com/acme/intro-call' }, blocks: [{ id: 'em-typing-calendly', type: 'embed', data: {} }] },
+          { label: 'Typing · Unknown site (generic)', draft: { url: 'https://dashboards.example.com/q3' }, editorConfig: { linkPaste: { allowGenericEmbed: true } }, blocks: [{ id: 'em-typing-generic', type: 'embed', data: {} }] },
+          { label: 'Typing · Not embeddable', draft: { url: 'https://example.com/page' }, blocks: [{ id: 'em-typing-plain', type: 'embed', data: {} }] },
+          { label: 'Rejected link', draft: { url: 'https://example.com/rejected', submit: true }, blocks: [{ id: 'em-rejected', type: 'embed', data: {} }] },
+          { label: 'Narrow (window hidden)', width: 320, blocks: [{ id: 'em-narrow', type: 'embed', data: {} }] },
+          { label: 'Read-only empty', readOnly: true, blocks: [{ id: 'em-readonly', type: 'embed', data: {} }] },
+          { label: 'Link card (not embeddable)', blocks: [{ id: 'em-link-card', type: 'embed', data: { source: 'https://example.com/articles/blocks', embed: 'https://example.com/articles/blocks' } }] },
+          // A registry service whose source no longer matches it renders inert.
+          { label: 'Tampered data (inert)', blocks: [{ id: 'em-tampered', type: 'embed', data: { service: 'youtube', source: 'https://example.com/not-youtube', embed: 'https://example.com/not-youtube' } }] },
+          { label: 'Generic iframe (opted in)', editorConfig: { linkPaste: { allowGenericEmbed: true } }, blocks: [{ id: 'em-generic-iframe', type: 'embed', data: { source: 'https://example.com/', embed: 'https://example.com/' } }] },
+          { label: 'Allowed origin iframe', editorConfig: { linkPaste: { allowedEmbedOrigins: ['example.com'] } }, blocks: [{ id: 'em-allowed-origin', type: 'embed', data: { source: 'https://example.com/', embed: 'https://example.com/' } }] },
           { label: 'YouTube', blocks: [{ id: 'em-youtube', type: 'embed', data: {
             service: 'youtube',
             source: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
@@ -3632,6 +4004,37 @@
           } }] },
         ],
       },
+      {
+        tool: 'page',
+        label: 'Page',
+        // Each state is a host answer from PAGE_STATE_INFO, keyed by pageId.
+        states: [
+          { label: 'Page', blocks: [{ id: 'pg-titled', type: 'page', data: { pageId: 'pg-state-titled' } }] },
+          { label: 'Emoji icon', blocks: [{ id: 'pg-emoji', type: 'page', data: { pageId: 'pg-state-emoji' } }] },
+          { label: 'Image icon', blocks: [{ id: 'pg-image', type: 'page', data: { pageId: 'pg-state-image' } }] },
+          { label: 'Long title', blocks: [{ id: 'pg-long', type: 'page', data: { pageId: 'pg-state-long' } }] },
+          { label: 'Untitled', blocks: [{ id: 'pg-untitled', type: 'page', data: { pageId: 'pg-state-untitled' } }] },
+          { label: 'Loading', blocks: [{ id: 'pg-loading', type: 'page', data: { pageId: 'pg-state-loading' } }] },
+          { label: 'Missing', blocks: [{ id: 'pg-missing', type: 'page', data: { pageId: 'pg-state-missing' } }] },
+          { label: 'No access', blocks: [{ id: 'pg-denied', type: 'page', data: { pageId: 'pg-state-denied' } }] },
+        ],
+      },
+    ];
+
+    // `undefined` keeps a page unresolved, so 'pg-state-loading' is left out on purpose.
+    const PAGE_STATE_INFO = {
+      'pg-state-titled': { title: 'Product roadmap', path: ['Workspace', 'Planning'] },
+      'pg-state-emoji': { title: 'Meeting notes', icon: { type: 'emoji', value: '📝' }, path: ['Workspace'] },
+      'pg-state-image': { title: 'Album artwork', icon: { type: 'image', url: '/samples/soundhelix-song-1-cover.png' }, path: ['Workspace', 'Music'] },
+      'pg-state-long': { title: 'Q4 2025 consolidated financial statements and management discussion and analysis — final board-approved version', icon: { type: 'emoji', value: '📊' } },
+      'pg-state-untitled': { title: '' },
+      'pg-state-missing': null,
+      'pg-state-denied': { access: 'none' },
+    };
+
+    const PAGE_STATE_PREVIEW = [
+      { id: 'pg-pv-h', type: 'header', data: { text: 'Overview', level: 2 } },
+      { id: 'pg-pv-p', type: 'paragraph', data: { text: 'A page block points at a page the host owns. Hover a live page to see its opening blocks.' } },
     ];
 
     const BLOCK_STATES_SPEC = BLOCK_STATES_RAW.map(entry => flattenStates(entry.tool, entry.label, entry.states));
@@ -3642,8 +4045,9 @@
       segments.forEach((segment) => mountStateSegment(container, segment));
     }
 
-    function mountStateSegment(container, { blocks, toolConfig = {} }) {
+    function mountStateSegment(container, { blocks, toolConfig = {}, readOnly = false, editorConfig = {}, width, drafts = [] }) {
       const holder = document.createElement('div');
+      if (width) holder.style.maxWidth = `${width}px`;
       container.appendChild(holder);
       const tools = {
           paragraph: { class: Paragraph, preserveBlank: true },
@@ -3656,6 +4060,7 @@
           'database-row': DatabaseRow,
           divider: Divider,
           spacer: Spacer,
+          table_of_contents: TableOfContents,
           quote: Quote,
           code: Code,
           image: Image,
@@ -3696,8 +4101,19 @@
           },
           column_list: ColumnList,
           column: Column,
+          tabs: TabsTool,
+          tab: TabTool,
           embed: Embed,
           bookmark: { class: Bookmark, config: { endpoint: '/unfurl' } },
+          page: {
+            class: Page,
+            config: {
+              href: (id) => `#${id}`,
+              open: () => {},
+              resolve: (id) => PAGE_STATE_INFO[id],
+              preview: () => PAGE_STATE_PREVIEW,
+            },
+          },
           marker: Marker,
           bold: Bold,
           italic: Italic,
@@ -3719,12 +4135,25 @@
       });
 
       const instance = new Blok({
+        ...editorConfig,
         holder,
         data: { blocks },
         tools,
+        readOnly,
         minHeight: 0,
       });
       blockStatesInstances.push(instance);
+
+      // Embed drafts: type the link the way a user would, so the window shows its scene.
+      if (drafts.length > 0) instance.isReady.then(() => {
+        drafts.forEach(({ id, url, submit }) => {
+          const input = holder.querySelector(`[data-blok-id="${id}"] [data-role="embed-url-input"]`);
+          if (!input) return;
+          input.value = url;
+          input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+          if (submit) input.form?.requestSubmit();
+        });
+      });
 
       // The broken demo image 404s at once; keep Retry's loading state visible
       // and let half the retries succeed.
@@ -3755,19 +4184,12 @@
         const videoErrRoot = holder.querySelector('[data-blok-id="vd-upload-error"] [data-blok-tool="video"]');
         if (videoErrRoot) {
           videoErrRoot.setAttribute('data-state', 'error');
-          videoErrRoot.replaceChildren();
-          const wrap = document.createElement('div');
-          wrap.className = 'blok-video-error-state';
-          wrap.setAttribute('data-role', 'video-error');
-          const msg = document.createElement('span');
-          msg.textContent = 'Upload failed';
-          const retry = document.createElement('button');
-          retry.type = 'button';
-          retry.className = 'blok-video-retry';
-          retry.setAttribute('data-action', 'replace');
-          retry.textContent = 'Replace';
-          wrap.append(msg, retry);
-          videoErrRoot.appendChild(wrap);
+          videoErrRoot.replaceChildren(renderVideoErrorState({
+            message: 'Upload failed',
+            width: 45,
+            replace: { label: 'Replace', onReplace: () => {} },
+            upload: { label: 'Choose a video', accept: 'video/*', onFile: () => {} },
+          }));
         }
 
         // Force the audio "Google Drive error" state demo — the message shown
@@ -3775,19 +4197,14 @@
         const audioDriveErrRoot = holder.querySelector('[data-blok-id="au-drive-error"] [data-blok-tool="audio"]');
         if (audioDriveErrRoot) {
           audioDriveErrRoot.setAttribute('data-state', 'error');
-          audioDriveErrRoot.replaceChildren();
-          const wrap = document.createElement('div');
-          wrap.className = 'blok-audio-error-state';
-          wrap.setAttribute('data-role', 'audio-error');
-          const msg = document.createElement('span');
-          msg.textContent = 'Google Drive links can’t be played directly — download the file and upload it here instead.';
-          const retry = document.createElement('button');
-          retry.type = 'button';
-          retry.className = 'blok-audio-retry';
-          retry.setAttribute('data-action', 'replace');
-          retry.textContent = 'Replace';
-          wrap.append(msg, retry);
-          audioDriveErrRoot.appendChild(wrap);
+          audioDriveErrRoot.replaceChildren(renderAudioErrorState({
+            message: 'Audio from Google Drive can’t be played directly. Download the file and upload it here instead.',
+            service: 'google-drive',
+            badge: 'Needle skipped',
+            replaceLabel: 'Replace',
+            onReplace: () => {},
+            upload: { label: 'Choose audio', accept: 'audio/*', onFile: () => {} },
+          }));
         }
 
         // Force the transient file-upload loading state. The uploader resolves

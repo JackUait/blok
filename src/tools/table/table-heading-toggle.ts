@@ -43,7 +43,8 @@ const ICON_WRAPPER_CLASSES = [
  */
 const LABEL_CLASSES = [
   'me-auto',
-  'truncate',
+  // Never ellipsize: the menu widens to the longest translation instead.
+  'whitespace-nowrap',
   'text-sm',
   'font-medium',
   'leading-5',

@@ -1,5 +1,7 @@
 import { preprocessLegacyCmsHtmlIn } from '../../../preprocess/legacy-cms-html';
 import { sanitize } from './sanitizer';
+import { stampPastedTableDirection } from '../../../components/modules/paste/table-direction-preprocessor';
+import { carryParagraphAlignmentToCell } from '../../../components/modules/paste/google-docs-preprocessor';
 import { buildBlocks } from './block-builder';
 import { normalizeInlineMarkupIn } from '../../../components/utils/inline-normalization';
 import type { OutputData } from './types';
@@ -11,9 +13,12 @@ declare const __CLI_VERSION__: string;
  * Runs: preprocess → sanitize → build blocks → serialize.
  */
 export function convertHtml(html: string): string {
-  const dom = new DOMParser().parseFromString(html, 'text/html');
+  // The sanitizer drops wrapper dir and table style, so stamp the grid direction first.
+  const dom = new DOMParser().parseFromString(stampPastedTableDirection(html), 'text/html');
   const wrapper = dom.body;
 
+  // Before the legacy pass unwraps cell <p>s and the sanitizer drops their style.
+  wrapper.querySelectorAll('td, th').forEach(carryParagraphAlignmentToCell);
   preprocessLegacyCmsHtmlIn(wrapper);
   sanitize(wrapper);
   /**

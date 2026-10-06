@@ -42,6 +42,14 @@ describe('darkroom.css', () => {
     expect(chipScope).not.toMatch(BLUE);
   });
 
+  it('the ? button is a circle, as big as the icon buttons beside Reset', () => {
+    const help = rule('.blok-darkroom__dock > .blok-darkroom__help');
+
+    expect(help).toMatch(/width:\s*32px;/);
+    expect(help).toMatch(/height:\s*32px;/);
+    expect(rule('.blok-darkroom__btn')).toMatch(/border-radius:\s*var\(--blok-radius-pill\)/);
+  });
+
   it('Done is white on black, not blue', () => {
     const done = rule('.blok-darkroom__btn--primary');
 

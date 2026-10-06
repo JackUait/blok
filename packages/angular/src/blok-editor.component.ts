@@ -13,6 +13,7 @@ import {
   signal,
   type AfterViewInit,
   type DoCheck,
+  type OnDestroy,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 import { BlokContentDirective, getConstructedCollaboration } from './blok-content.directive';
@@ -53,6 +54,38 @@ const collaborationDataIgnoredMessage = (doc?: string): string =>
   'To change part of it, use the blocks API (insert/update/delete).';
 
 /**
+ * An EventEmitter that remembers its subscribed handlers. Core's final save on
+ * destroy settles after Angular has unsubscribed the template listeners when a
+ * tool saves asynchronously, so the component reads the handlers it saw at
+ * destroy and calls them directly.
+ */
+class SaveEmitter<T> extends EventEmitter<T> {
+  private readonly handlers = new Set<(value: T) => void>();
+
+  override subscribe(observerOrNext?: unknown, error?: unknown, complete?: unknown): ReturnType<EventEmitter<T>['subscribe']> {
+    const subscription = super.subscribe(observerOrNext, error, complete);
+    const next = typeof observerOrNext === 'function'
+      ? observerOrNext
+      : (observerOrNext as { next?: unknown } | null | undefined)?.next;
+
+    if (typeof next === 'function') {
+      const handler = (value: T): void => {
+        next.call(observerOrNext, value);
+      };
+
+      this.handlers.add(handler);
+      subscription.add(() => this.handlers.delete(handler));
+    }
+
+    return subscription;
+  }
+
+  liveHandlers(): Array<(value: T) => void> {
+    return [...this.handlers];
+  }
+}
+
+/**
  * The blessed all-in-one Angular component for embedding Blok (mirrors React's
  * `BlokEditor`). Delegates instance lifecycle to an internal `BlokContentDirective`
  * and layers the typed reactive input/output API on top.
@@ -89,7 +122,7 @@ const collaborationDataIgnoredMessage = (doc?: string): string =>
     },
   ],
 })
-export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValueAccessor {
+export class BlokEditorComponent implements AfterViewInit, DoCheck, OnDestroy, ControlValueAccessor {
   private readonly ngZone = inject(NgZone);
   /** App-wide defaults from `provideBlok()`; merged UNDER per-instance inputs. */
   private readonly defaults = inject(BLOK_DEFAULT_CONFIG, { optional: true }) ?? {};
@@ -106,10 +139,10 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
   /** Emits the live Blok instance once ready, after `instance()` is populated. */
   @Output() readonly ready = new EventEmitter<Blok>();
 
-  @Output() readonly dataChange = new EventEmitter<OutputData>();
+  @Output() readonly dataChange: EventEmitter<OutputData> = new SaveEmitter<OutputData>();
 
   /** Fires with the full serialized content on every change (notification half). */
-  @Output() readonly save = new EventEmitter<OutputData>();
+  @Output() readonly save: EventEmitter<OutputData> = new SaveEmitter<OutputData>();
 
   /** Raw block mutation channel (core `onChange`). */
   @Output() readonly change = new EventEmitter<{
@@ -310,6 +343,14 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
   private readonly coreOnSave = (data: OutputData, api: API): void => {
     this.lastRenderedData = data;
     this.emittedEcho.record(data);
+
+    const handlersAtDestroy = this.saveHandlersAtDestroy;
+
+    if (handlersAtDestroy.length > 0) {
+      this.ngZone.run(() => handlersAtDestroy.forEach((handler) => handler(data)));
+
+      return;
+    }
 
     if (this.hasSaveConsumer()) {
       this.ngZone.run(() => {
@@ -548,6 +589,28 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
 
   ngAfterViewInit(): void {
     this.content.set(this.contentQuery ?? null);
+  }
+
+  /** Save consumers captured at destroy, for core's final save. */
+  private saveHandlersAtDestroy: Array<(data: OutputData) => void> = [];
+
+  // Runs before Angular unsubscribes the host's output listeners and before
+  // the forms directive swaps the registered CVA callbacks for noops.
+  ngOnDestroy(): void {
+    const { cvaOnChange, cvaOnTouched } = this;
+    const forms = cvaOnChange === undefined
+      ? []
+      : [(data: OutputData): void => {
+        cvaOnChange(data);
+        cvaOnTouched?.();
+      }];
+
+    this.saveHandlersAtDestroy = [
+      ...[this.dataChange, this.save].flatMap((emitter) =>
+        emitter instanceof SaveEmitter ? emitter.liveHandlers() : []
+      ),
+      ...forms,
+    ];
   }
 
   /**

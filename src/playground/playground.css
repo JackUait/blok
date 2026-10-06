@@ -80,7 +80,7 @@
   transition: border-color 120ms ease;
 }
 .pg-trash-action:hover { border-color: var(--pg-page-ink); }
-.pg-trash-action:focus-visible { outline: 2px solid var(--pg-page-ink); outline-offset: 2px; }
+html[data-pg-modality="keyboard"] .pg-trash-action:focus-visible { outline: 2px solid var(--pg-page-ink); outline-offset: 2px; }
 
 .pg-crumbs ol {
   display: flex;
@@ -112,9 +112,9 @@
 .pg-crumb-icon { font-size: 15px; line-height: 1; }
 a.pg-crumb:hover { background: var(--pg-page-hover); color: var(--pg-page-ink); }
 .pg-crumb[aria-current="page"] { color: var(--pg-page-ink); font-weight: 500; }
-.pg-crumb:focus-visible,
-.pg-page-icon:focus-visible,
-.pg-page-add-icon:focus-visible { outline: 2px solid var(--blok-focus-ring); outline-offset: 1px; }
+html[data-pg-modality="keyboard"] .pg-crumb:focus-visible,
+html[data-pg-modality="keyboard"] .pg-page-icon:focus-visible,
+html[data-pg-modality="keyboard"] .pg-page-add-icon:focus-visible { outline: 2px solid var(--blok-focus-ring); outline-offset: 1px; }
 
 .pg-page-icon-row { display: flex; align-items: flex-end; min-height: 28px; margin-bottom: 4px; }
 .pg-page-icon-row.has-icon { min-height: 0; margin-bottom: 8px; }
@@ -156,7 +156,7 @@ a.pg-crumb:hover { background: var(--pg-page-hover); color: var(--pg-page-ink); 
 }
 .pg-page-add-icon svg { width: 16px; height: 16px; }
 .pg-page-header:hover .pg-page-add-icon,
-.pg-page-add-icon:focus-visible { opacity: 1; }
+html[data-pg-modality="keyboard"] .pg-page-add-icon:focus-visible { opacity: 1; }
 .pg-page-add-icon:hover { background: var(--pg-page-hover); color: var(--pg-page-ink); }
 .pg-page-add-icon:disabled { display: none; }
 @media (hover: none) { .pg-page-add-icon { opacity: 1; } }
@@ -180,25 +180,120 @@ a.pg-crumb:hover { background: var(--pg-page-hover); color: var(--pg-page-ink); 
   pointer-events: none;
 }
 
-/* Page navigation: the content slides, the title morphs (page-host.ts runPageTransition). */
-html.pg-page-nav { --pg-page-shift: 18px; }
-html.pg-page-nav[data-pg-page-dir="back"] { --pg-page-shift: -18px; }
-html.pg-page-nav #tab-editor { view-transition-name: pg-page-body; }
+/* Page navigation: the body slides, the title and icon morph (page-host.ts runPageTransition). */
+html.pg-page-nav {
+  --pg-page-shift: 24px;
+  --pg-page-glide: cubic-bezier(0.22, 1, 0.36, 1);
+}
+html.pg-page-nav[data-pg-page-dir="back"] { --pg-page-shift: -24px; }
+/* The chrome around the page crossfades: the top bar may scroll in or out. */
+html.pg-page-nav::view-transition-group(root) { animation-duration: 300ms; }
 html.pg-page-nav::view-transition-old(root),
-html.pg-page-nav::view-transition-new(root) { animation: none; }
-html.pg-page-nav::view-transition-old(pg-page-body) {
-  animation: pg-page-leave 140ms cubic-bezier(0.4, 0, 1, 1) both;
+html.pg-page-nav::view-transition-new(root) { animation-duration: 300ms; }
+/* The old page is gone before the new one shows, so the two never stack. */
+html.pg-page-nav::view-transition-old(pg-page-out) {
+  animation: pg-page-leave 120ms cubic-bezier(0.4, 0, 1, 1) both;
 }
-html.pg-page-nav::view-transition-new(pg-page-body) {
-  animation: pg-page-enter 280ms cubic-bezier(0.2, 0.8, 0.2, 1) 40ms both;
+html.pg-page-nav::view-transition-new(pg-page-in) {
+  animation: pg-page-enter 420ms var(--pg-page-glide) 90ms both;
 }
-html.pg-page-nav::view-transition-group(pg-page-title) {
-  animation-duration: 320ms;
-  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+html.pg-page-nav::view-transition-group(pg-page-title),
+html.pg-page-nav::view-transition-group(pg-page-icon) {
+  /* pg-page-in is named only after the swap, so its group stacks above these and its opaque fill hides them. */
+  z-index: 1;
+  animation-duration: 460ms;
+  animation-timing-function: var(--pg-page-glide);
+}
+/*
+ * The ends differ in width (a 116px row title vs a full-width h1), and a
+ * snapshot stretched to the wider box blows the text up into a blurry ghost.
+ * Scaling by height keeps the glyphs' shape while they grow.
+ */
+html.pg-page-nav::view-transition-old(pg-page-title),
+html.pg-page-nav::view-transition-new(pg-page-title),
+html.pg-page-nav::view-transition-old(pg-page-icon),
+html.pg-page-nav::view-transition-new(pg-page-icon) {
+  height: 100%;
+  width: auto;
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+  animation-duration: 460ms;
+  animation-timing-function: var(--pg-page-glide);
+}
+/* The two titles differ in line box, so a crossfade over the whole flight smears them into a doubled word. */
+html.pg-page-nav::view-transition-old(pg-page-title) { animation-name: pg-page-title-out; }
+html.pg-page-nav::view-transition-new(pg-page-title) { animation-name: pg-page-title-in; }
+/*
+ * Back zooms out: the page being left recedes while its title folds into its
+ * row, and the parent settles down from slightly larger.
+ */
+html.pg-page-nav[data-pg-page-dir="back"]::view-transition-old(pg-page-out) {
+  transform-origin: var(--pg-page-out-origin, 50% 50%);
+  animation: pg-page-recede 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+html.pg-page-nav[data-pg-page-dir="back"]::view-transition-new(pg-page-in) {
+  transform-origin: var(--pg-page-in-origin, 50% 50%);
+  animation: pg-page-settle 560ms var(--pg-page-glide) 170ms both;
+}
+/*
+ * From the page tree, a crumb or a tab, the page grows out of the clicked link:
+ * a soft-edged opening spreads from that point while the old page sinks toward
+ * it. Nothing flies, since the page's row in the editor may be anywhere.
+ */
+@property --pg-portal-r {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+/* Snapshots are see-through by default; inside the opening both pages would show. */
+html.pg-page-nav #tab-editor { background-color: #ffffff; }
+html.pg-page-nav body.dark-mode #tab-editor { background-color: #191919; }
+html.pg-page-nav[data-pg-page-via="portal"]::view-transition-old(pg-page-out) {
+  transform-origin: var(--pg-portal-out);
+  animation: pg-portal-sink 560ms cubic-bezier(0.33, 0, 0.15, 1) both;
+}
+html.pg-page-nav[data-pg-page-via="portal"]::view-transition-new(pg-page-in) {
+  --pg-portal-feather: 160px;
+  transform-origin: var(--pg-portal-in);
+  mask-image: radial-gradient(circle at var(--pg-portal-in), #000 calc(var(--pg-portal-r) - var(--pg-portal-feather)), transparent var(--pg-portal-r));
+  animation: pg-portal-open 720ms cubic-bezier(0.33, 0, 0.15, 1) both;
+}
+/* A part with no end on the new page (a page with no icon yet) leaves with the old page. */
+html.pg-page-nav::view-transition-old(pg-page-title):only-child,
+html.pg-page-nav::view-transition-old(pg-page-icon):only-child {
+  animation: pg-page-vanish 100ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+@keyframes pg-portal-sink {
+  to { transform: scale(0.94); filter: blur(5px) brightness(0.96); opacity: 0.4; }
+}
+@keyframes pg-portal-open {
+  from { --pg-portal-r: 0px; transform: scale(1.05); filter: blur(10px); }
+  60% { filter: blur(0); }
+  to { --pg-portal-r: calc(var(--pg-portal-reach) + var(--pg-portal-feather)); transform: none; filter: none; }
 }
 @keyframes pg-page-leave {
-  to { opacity: 0; transform: translateX(calc(var(--pg-page-shift) * -1)); }
+  to { opacity: 0; transform: translateX(calc(var(--pg-page-shift) * -0.5)) scale(0.985); filter: blur(2px); }
+}
+@keyframes pg-page-vanish {
+  to { opacity: 0; }
+}
+@keyframes pg-page-recede {
+  to { opacity: 0; transform: scale(0.955); filter: blur(3px); }
+}
+@keyframes pg-page-settle {
+  from { opacity: 0; transform: scale(1.03); filter: blur(8px); }
+}
+@keyframes pg-page-title-out {
+  0% { opacity: 1; }
+  40% { opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes pg-page-title-in {
+  0% { opacity: 0; }
+  15% { opacity: 0; }
+  55% { opacity: 1; }
+  100% { opacity: 1; }
 }
 @keyframes pg-page-enter {
-  from { opacity: 0; transform: translateX(var(--pg-page-shift)); }
+  from { opacity: 0; transform: translateX(var(--pg-page-shift)) scale(0.985); filter: blur(6px); }
 }

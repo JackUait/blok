@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { analyzeDataFormat, expandToHierarchical, collapseToLegacy, normalizeTableChildParents, reclaimDetachedTableCells } from '../../../../src/components/utils/data-model-transform';
+import { analyzeDataFormat, expandToHierarchical, collapseToLegacy, normalizeTableChildParents, reclaimDetachedTableCells, shouldExpandToHierarchical, shouldCollapseToLegacy } from '../../../../src/components/utils/data-model-transform';
 import { validateHierarchy } from '../../../../src/components/utils/hierarchy-invariant';
 import type { OutputBlockData, BlockId } from '../../../../types';
 
@@ -3398,6 +3398,35 @@ describe('data-model-transform', () => {
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('image');
       expect(result[0].id).toBe('broken');
+    });
+  });
+  describe('dataModel legacy - legacy list round trip', () => {
+    it('hands the List tool one block per item and saves them all back, nested ones included', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'l',
+          type: 'list',
+          data: {
+            style: 'unordered',
+            items: [
+              { content: 'one', items: [{ content: 'one-a', items: [] }] },
+              { content: 'two', items: [] },
+            ],
+          },
+        },
+      ];
+      const { format } = analyzeDataFormat(blocks);
+      // Same gates the Renderer and Saver use.
+      const loaded = shouldExpandToHierarchical('legacy', format) ? expandToHierarchical(blocks) : blocks;
+      const saved = shouldCollapseToLegacy('legacy', format) ? collapseToLegacy(loaded) : loaded;
+
+      // The List tool is flat and renders one item per block.
+      expect(loaded.map(b => (b.data as { text?: string }).text)).toEqual(['one', 'one-a', 'two']);
+      // Collapse writes one legacy list per root item, as under 'auto'.
+      expect(saved.flatMap(b => (b.data as { items: unknown[] }).items)).toEqual([
+        { content: 'one', items: [{ content: 'one-a' }] },
+        { content: 'two' },
+      ]);
     });
   });
   describe('analyzeDataFormat - legacy checklist', () => {

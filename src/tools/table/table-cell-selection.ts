@@ -1,6 +1,6 @@
 import type { I18n } from '../../../types/api';
 import { Dom } from '../../components/dom';
-import { IconCopy, IconCross, IconDotsHorizontal, IconMarker, IconMergeCells, IconPlacement, IconSplitCell } from '../../components/icons';
+import { IconCopy, IconCross, IconDotsHorizontal, IconPaintRoller, IconMergeCells, IconPlacement, IconSplitCell } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
@@ -479,6 +479,20 @@ export class TableCellSelection {
     }
 
     this.anchorCell = cell;
+
+    if (!clickedSameCell) {
+      /**
+       * Draw the box on the pressed cell now, without making it a selection
+       * yet — pointerup still decides that. Leaving the table with no box while
+       * the button is held reads as a blink.
+       */
+      this.extentCell = cell;
+      this.paintSelection();
+      // The old box's document clear handler runs after this one and would
+      // wipe the box just drawn. That box is already cleared above.
+      document.removeEventListener('pointerdown', this.boundClearSelection);
+    }
+
     this.isSelecting = false;
     this.dragAxis = inlineAxis(getElementDirection(this.grid));
 
@@ -607,6 +621,10 @@ export class TableCellSelection {
           this.anchorCell.row,
           this.anchorCell.col,
         );
+      } else {
+        // Drop the box pointerdown drew; the inner selection wins.
+        this.restoreModifiedCells();
+        this.lastPaintedRange = null;
       }
     }
 
@@ -697,6 +715,11 @@ export class TableCellSelection {
     const target = e.target;
 
     if (target instanceof HTMLElement && target.closest(`[${PILL_ATTR}]`)) {
+      return;
+    }
+
+    // Resizing a column acts on the table, not on the selection inside it.
+    if (target instanceof HTMLElement && this.grid.contains(target) && target.closest('[data-blok-table-resize]') !== null) {
       return;
     }
 
@@ -1419,7 +1442,7 @@ export class TableCellSelection {
       });
 
       colorPickerItems.push({
-        icon: IconMarker,
+        icon: IconPaintRoller,
         title: this.i18n.t('tools.table.cellColor'),
         name: 'cellColor',
         children: {

@@ -23,6 +23,7 @@ interface Harness {
   video: HTMLVideoElement;
   controls: HTMLElement;
   setTheater(on: boolean): void;
+  toggleStats(): void;
   destroy(): void;
 }
 
@@ -45,11 +46,11 @@ const mount = (opts: Partial<ControlsOptions> = {}): Harness => {
   slot.appendChild(figure);
   document.body.appendChild(slot);
 
-  const { element, setTheater, destroy } = attachControls({ video, figure, ...opts });
+  const { element, setTheater, toggleStats, destroy } = attachControls({ video, figure, ...opts });
 
   figure.appendChild(element);
 
-  return { figure, slot, video, controls: element, setTheater, destroy };
+  return { figure, slot, video, controls: element, setTheater, toggleStats, destroy };
 };
 
 const q = <T extends HTMLElement>(root: HTMLElement, sel: string): T => {
@@ -100,8 +101,7 @@ const iconHtml = (svg: string): string => {
 const I18N_KEYS = [
   'play', 'pause', 'seek', 'toggleTimeDisplay', 'mute', 'unmute', 'volume',
   'fullscreen', 'fullscreenExit', 'settings', 'playbackSpeed', 'loop',
-  'speedPresets', 'theater', 'theaterExit', 'pip', 'ctxCopyUrl',
-  'ctxCopyUrlAtTime', 'ctxStats',
+  'speedPresets', 'theater', 'theaterExit', 'pip',
 ];
 
 const sentinel = (key: string): string => `i18n:${key}`;
@@ -155,7 +155,6 @@ describe('video controls — built DOM contract', () => {
     expect(cls('[data-role="mini-progress"]')).toBe('blok-video-controls__mini');
     expect(cls('[data-role="video-title"]')).toBe('blok-video-controls__title');
     expect(cls('[data-role="video-ambient"]')).toBe('blok-video-controls__ambient');
-    expect(cls('[data-role="video-menu"]')).toBe('blok-video-controls__ctx');
     expect(cls('[data-role="video-stats"]')).toBe('blok-video-controls__stats');
     expect(q(h.controls, '[data-role="play-burst"]').parentElement).toBe(h.controls);
   });
@@ -182,7 +181,6 @@ describe('video controls — built DOM contract', () => {
   it('starts the spinner idle and the title bar empty and hidden', () => {
     expect(q(h.controls, '[data-role="buffer-spinner"]').getAttribute('data-active')).toBe('false');
     expect(q(h.controls, '[data-role="video-title"]').hidden).toBe(true);
-    expect(q(h.controls, '[data-role="video-menu"]').hidden).toBe(true);
   });
 
   it('configures the seek slider as a full-range continuous scrubber', () => {
@@ -301,12 +299,6 @@ describe('video controls — label i18n keys', () => {
     expect(q(h.figure, '[data-action="speed-0.5"]').parentElement?.getAttribute('aria-label')).toBe(sentinel('speedPresets'));
   });
 
-  it('resolves every context-menu label through its own key', () => {
-    expect(q(h.controls, '[data-action="ctx-loop"]').textContent).toBe(sentinel('loop'));
-    expect(q(h.controls, '[data-action="copy-url"]').textContent).toBe(sentinel('ctxCopyUrl'));
-    expect(q(h.controls, '[data-action="copy-url-at-time"]').textContent).toBe(sentinel('ctxCopyUrlAtTime'));
-    expect(q(h.controls, '[data-action="stats"]').textContent).toBe(sentinel('ctxStats'));
-  });
 });
 
 describe('video controls — English fallback labels', () => {
@@ -321,13 +313,6 @@ describe('video controls — English fallback labels', () => {
     expect(q(h.figure, '[data-role="speed-slider"]').getAttribute('aria-label')).toBe('Playback speed');
     expect(flatText(q(h.figure, '[data-action="loop"]'))).toBe('Loop');
     expect(q(h.figure, '[data-action="speed-0.5"]').parentElement?.getAttribute('aria-label')).toBe('Speed presets');
-  });
-
-  it('falls back to the canonical English copy for the context menu', () => {
-    expect(q(h.controls, '[data-action="ctx-loop"]').textContent).toBe('Loop');
-    expect(q(h.controls, '[data-action="copy-url"]').textContent).toBe('Copy video URL');
-    expect(q(h.controls, '[data-action="copy-url-at-time"]').textContent).toBe('Copy video URL at current time');
-    expect(q(h.controls, '[data-action="stats"]').textContent).toBe('Playback statistics');
   });
 
   it('falls back to "Pause" once playing and "Unmute" once muted', () => {
@@ -425,15 +410,6 @@ describe('video controls — menu structure', () => {
     expect(ticks[35].style.getPropertyValue('--blok-speed-tick')).toBe('35');
   });
 
-  it('builds the context menu items as menu items', () => {
-    const copy = q<HTMLButtonElement>(h.controls, '[data-action="copy-url"]');
-
-    expect(copy.type).toBe('button');
-    expect(copy.getAttribute('class')).toBe('blok-video-controls__ctx-item');
-    expect(copy.getAttribute('role')).toBe('menuitem');
-    expect(q(h.controls, '[data-action="ctx-loop"]').getAttribute('role')).toBe('menuitemcheckbox');
-    expect(q(h.controls, '[data-role="video-menu"]').getAttribute('role')).toBe('menu');
-  });
 });
 
 describe('video controls — centre play, spinner and time readout', () => {
@@ -1884,70 +1860,19 @@ describe('video controls — idle auto-hide', () => {
   });
 });
 
-describe('video controls — context menu', () => {
+describe('video controls — context menu handoff', () => {
   let h: Harness;
 
   beforeEach(() => { vi.clearAllMocks(); h = mount(); });
   afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
 
-  const ctx = (): HTMLElement => q(h.controls, '[data-role="video-menu"]');
-  const openCtx = (clientX = 30, clientY = 40): MouseEvent => {
-    const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX, clientY });
+  it('leaves the context event untouched for the editor menu', () => {
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
 
-    h.video.dispatchEvent(ev);
+    h.video.dispatchEvent(event);
 
-    return ev;
-  };
-
-  it('opens at the pointer position it was summoned from', () => {
-    openCtx(30, 40);
-    expect(ctx().hidden).toBe(false);
-    expect(ctx().style.getPropertyValue('--blok-ctx-x')).toBe('30px');
-    expect(ctx().style.getPropertyValue('--blok-ctx-y')).toBe('40px');
-  });
-
-  it('closes on a press outside it', () => {
-    openCtx();
-    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    expect(ctx().hidden).toBe(true);
-  });
-
-  it('stays open for a press on one of its own items', () => {
-    openCtx();
-    q(h.controls, '[data-action="copy-url"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    expect(ctx().hidden).toBe(false);
-  });
-
-  it('ignores keys other than Escape while open', () => {
-    openCtx();
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
-    expect(ctx().hidden).toBe(false);
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    expect(ctx().hidden).toBe(true);
-  });
-
-  it('closes after every item it offers', () => {
-    for (const action of ['ctx-loop', 'copy-url', 'copy-url-at-time', 'stats']) {
-      openCtx();
-      q(h.controls, `[data-action="${action}"]`).click();
-      expect(ctx().hidden).toBe(true);
-    }
-  });
-
-  it('does not throw on a browser with no clipboard write', () => {
-    const onError = vi.fn();
-
-    window.addEventListener('error', onError);
-    vi.stubGlobal('navigator', { clipboard: {} });
-    openCtx();
-    q(h.controls, '[data-action="copy-url"]').click();
-    vi.stubGlobal('navigator', {});
-    openCtx();
-    q(h.controls, '[data-action="copy-url-at-time"]').click();
-    window.removeEventListener('error', onError);
-    vi.unstubAllGlobals();
-    expect(onError).not.toHaveBeenCalled();
-    expect(ctx().hidden).toBe(true);
+    expect(event.defaultPrevented).toBe(false);
+    expect(h.controls.querySelector('[data-role="video-menu"]')).toBeNull();
   });
 });
 
@@ -1958,10 +1883,7 @@ describe('video controls — playback statistics', () => {
   afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
 
   const stats = (): HTMLElement => q(h.controls, '[data-role="video-stats"]');
-  const openStats = (): void => {
-    h.video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    q(h.controls, '[data-action="stats"]').click();
-  };
+  const openStats = (): void => h.toggleStats();
 
   it('refreshes the open overlay as playback advances', () => {
     setProp(h.video, 'buffered', fakeRanges([[0, 30]]));
@@ -1983,8 +1905,7 @@ describe('video controls — playback statistics', () => {
     expect(stats().textContent).toContain('Resolution: Not available');
     setProp(h.video, 'videoWidth', 640);
     setProp(h.video, 'videoHeight', 360);
-    h.video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    q(h.controls, '[data-action="stats"]').click();
+    h.toggleStats();
     expect(stats().hidden).toBe(true);
     expect(stats().textContent).toContain('Resolution: Not available');
   });
@@ -2278,8 +2199,7 @@ describe('video controls — teardown detaches every listener', () => {
   it('stops refreshing the statistics overlay', () => {
     setProp(h.video, 'buffered', fakeRanges([[0, 30]]));
     setProp(h.video, 'currentTime', 10);
-    h.video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    at('[data-action="stats"]').click();
+    h.toggleStats();
     h.destroy();
     setProp(h.video, 'currentTime', 25);
     h.video.dispatchEvent(new Event('timeupdate'));
@@ -2341,23 +2261,6 @@ describe('video controls — teardown detaches every listener', () => {
     document.dispatchEvent(new Event('fullscreenchange'));
     setProp(document, 'fullscreenElement', null);
     expect(h.figure.hasAttribute('data-fullscreen')).toBe(false);
-  });
-
-  it('stops claiming the right-click menu', () => {
-    h.destroy();
-    const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
-
-    h.video.dispatchEvent(ev);
-    expect(ev.defaultPrevented).toBe(false);
-    expect(at('[data-role="video-menu"]').hidden).toBe(true);
-  });
-
-  it('leaves an open right-click menu untouched by later document events', () => {
-    h.video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    h.destroy();
-    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    expect(at('[data-role="video-menu"]').hidden).toBe(false);
   });
 
   it('stops answering pointer and keyboard input on the video', () => {

@@ -232,7 +232,7 @@ describe('no-glass CSS regression', () => {
 
   it('darkroom glass stays on the small pill controls; the full-viewport backdrop never blurs', () => {
     const glassSelectors = [...darkroomCss.matchAll(/([^{}]+)\{([^}]*)\}/g)]
-      .filter(([, , body]) => /backdrop-filter/.test(body))
+      .filter(([, , body]) => /(?:-webkit-)?backdrop-filter\s*:\s*(?!none\b)\S/.test(body))
       .flatMap(([, selector]) => selector.replace(/\/\*[\s\S]*?\*\//g, '').split(','))
       .map((selector) => selector.trim())
       .sort();

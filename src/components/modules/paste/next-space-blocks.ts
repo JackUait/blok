@@ -223,9 +223,7 @@ function expandTable(
   const rowIds = (Array.isArray(table.subNodes) ? table.subNodes : []).filter(
     (rowId): rowId is string => typeof rowId === 'string'
   );
-  const columnOrder = Array.isArray(format.tableBlockColumnOrder)
-    ? format.tableBlockColumnOrder.filter((columnId): columnId is string => typeof columnId === 'string')
-    : [];
+  const columnOrder = resolveColumnOrder(format.tableBlockColumnOrder, rowIds, byId);
   const cells: NextSpaceParsedBlock[] = [];
   const content: { blocks: string[] }[][] = rowIds.map((rowId) => {
     visited.add(rowId);
@@ -258,6 +256,27 @@ function expandTable(
 
   result.push(tableBlock);
   cells.forEach((cell) => result.push(cell));
+}
+
+/**
+ * The column id order for a table: the explicit `tableBlockColumnOrder`, or
+ * (when absent) the `collectionProperties` keys of the first populated row.
+ */
+function resolveColumnOrder(order: unknown, rowIds: string[], byId: Map<string, NextSpaceNode>): string[] {
+  if (Array.isArray(order) && order.length > 0) {
+    return order.filter((columnId): columnId is string => typeof columnId === 'string');
+  }
+
+  for (const rowId of rowIds) {
+    const properties = byId.get(rowId)?.data?.collectionProperties;
+    const keys = isPlainObject(properties) ? Object.keys(properties) : [];
+
+    if (keys.length > 0) {
+      return keys;
+    }
+  }
+
+  return [];
 }
 
 /** Map one buildin node to a Blok tool + data, or `null` to skip (table rows). */

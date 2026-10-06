@@ -1,4 +1,4 @@
-import { fireEvent, getAllByRole, getByRole } from '@testing-library/dom';
+import { fireEvent, getAllByRole, getByRole, queryByRole } from '@testing-library/dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildBlockColorTunes } from '../../../src/components/shared/block-color';
 import { PopoverMobile } from '../../../src/components/utils/popover/popover-mobile';
@@ -8,6 +8,8 @@ const translations: Record<string, string> = {
   'toolNames.marker': 'Color',
   'tools.marker.textColor': 'Text color',
   'tools.marker.background': 'Background',
+  'tools.marker.default': 'Default',
+  'tools.colorPicker.defaultSwatchLabel': '{default} {mode}',
 };
 const i18n: I18n = {
   t: (key) => translations[key] ?? key,
@@ -52,27 +54,26 @@ describe('PopoverMobile native color keyboard', () => {
     vi.restoreAllMocks();
   });
 
-  it('leaves Left and Right arrows to the native color tabs', async () => {
+  it('shows both color groups and leaves swatch keys to the native picker', async () => {
     const menu = await openColors();
-    const textTab = getByRole(menu.getElement(), 'tab', { name: 'Text color' });
+    const textGroup = getByRole(menu.getElement(), 'group', { name: 'Text color' });
+    const backgroundGroup = getByRole(menu.getElement(), 'group', { name: 'Background' });
+    const textSwatch = getByRole(textGroup, 'button', { name: 'Default text color' });
 
-    textTab.focus();
-    fireEvent.keyDown(textTab, { key: 'ArrowRight' });
-    const backgroundTab = getByRole(menu.getElement(), 'tab', { name: 'Background' });
-
-    expect(backgroundTab).toHaveFocus();
-    expect(backgroundTab).toHaveAttribute('aria-selected', 'true');
-    fireEvent.keyDown(backgroundTab, { key: 'ArrowLeft' });
-    expect(textTab).toHaveFocus();
-    expect(textTab).toHaveAttribute('aria-selected', 'true');
+    expect(getByRole(backgroundGroup, 'button', { name: 'Default background' })).toBeInTheDocument();
+    expect(queryByRole(menu.getElement(), 'tablist')).toBeNull();
+    textSwatch.focus();
+    expect(fireEvent.keyDown(textSwatch, { key: 'ArrowRight' })).toBe(true);
+    expect(fireEvent.keyDown(textSwatch, { key: 'ArrowLeft' })).toBe(true);
+    expect(textSwatch).toHaveFocus();
     expect(getByRole(menu.getElement(), 'button', { name: 'Back' })).toBeInTheDocument();
-    expect(fireEvent.keyDown(textTab, { key: 'Tab' })).toBe(true);
+    expect(fireEvent.keyDown(textSwatch, { key: 'Tab' })).toBe(true);
   });
 
-  it('runs the native child open hook to focus its selected tab', async () => {
+  it('runs the native child open hook to focus the active text swatch', async () => {
     const menu = await openColors();
 
-    expect(getByRole(menu.getElement(), 'tab', { name: 'Text color', selected: true })).toHaveFocus();
+    expect(getByRole(menu.getElement(), 'button', { name: 'Default text color', pressed: true })).toHaveFocus();
   });
 
   it('restores menu arrows after Back and keeps Left navigation for ordinary children', async () => {
@@ -98,10 +99,10 @@ describe('PopoverMobile native color keyboard', () => {
 
   it('lets Escape dismiss the mobile color sheet and restore its trigger', async () => {
     const menu = await openColors();
-    const tab = getByRole(menu.getElement(), 'tab', { name: 'Text color' });
+    const swatch = getByRole(menu.getElement(), 'button', { name: 'Default text color' });
 
-    tab.focus();
-    fireEvent.keyDown(tab, { key: 'Escape' });
+    swatch.focus();
+    fireEvent.keyDown(swatch, { key: 'Escape' });
     expect(menu.isShown).toBe(false);
     expect(getByRole(document.body, 'button', { name: 'Settings' })).toHaveFocus();
   });

@@ -170,7 +170,7 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
         0,
         EmptyPayloadHash,
         readBody: false,
-        allowNotFound: false,
+        allowNotFound: true,
         cancellationToken);
   }
 

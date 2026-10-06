@@ -13,6 +13,7 @@ interface TestEditor {
   blocks: API['blocks'];
   history: { undo: () => void; redo: () => void };
   readOnly: { toggle: (state?: boolean) => Promise<boolean> };
+  caret: { setToBlock: (id: string) => boolean };
   module: {
     yjsManager: { stopCapturing: () => void };
     blockManager: { getBlockById: (id: string) => { getToolbarAnchorElement: () => HTMLElement | undefined } | undefined };
@@ -384,6 +385,80 @@ describe('tabs block', () => {
 
     return document.querySelector<HTMLInputElement>('[data-blok-tabs-rename-input]');
   };
+
+  const pressOnPill = async (index: number, key: string): Promise<void> => {
+    pills()[index].focus();
+    pills()[index].dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    await settle();
+  };
+
+  // Mac keyboards label Backspace "delete".
+  it.each(['Delete', 'Backspace'])('deletes the open tab and its content on %s, then focuses the tab that opens', async (key) => {
+    const instance = await boot(doc());
+
+    await pressOnPill(0, key);
+
+    const saved = await instance.save();
+
+    expect(byType(saved, 'tab').map(tab => tab.id)).toEqual(['t2']);
+    expect(saved.blocks.map(block => block.id)).not.toContain('p1');
+    expect(pills().map(pill => pill.getAttribute('data-tab-id'))).toEqual(['t2']);
+    expect(pills()[0].getAttribute('aria-selected')).toBe('true');
+    expect(pills()[0]).toHaveFocus();
+  });
+
+  // In a browser the block is deleted only after the pill folds away, and that delete moves the caret.
+  it('keeps focus on the opened tab after the deleted tab finishes folding away', async () => {
+    Object.assign(HTMLElement.prototype, {
+      animate(): Animation {
+        const animation = { cancel: vi.fn(), finish: vi.fn(), onfinish: null, oncancel: null } as unknown as Animation;
+
+        setTimeout(() => animation.onfinish?.call(animation, new Event('finish') as AnimationPlaybackEvent), 20);
+
+        return animation;
+      },
+      getAnimations: (): Animation[] => [],
+    });
+
+    try {
+      const instance = await boot([{ id: 'p0', type: 'paragraph', data: { text: 'before' } }, ...doc()]);
+
+      // The caret was last in a paragraph, so a block delete would put it back there.
+      instance.caret.setToBlock('p0');
+      await settle();
+      await pressOnPill(0, 'Delete');
+      await new Promise(resolve => {
+        setTimeout(resolve, 100);
+      });
+      await settle();
+
+      expect(pills().map(pill => pill.getAttribute('data-tab-id'))).toEqual(['t2']);
+      expect(pills()[0]).toHaveFocus();
+    } finally {
+      delete (HTMLElement.prototype as Partial<{ animate: unknown }>).animate;
+      delete (HTMLElement.prototype as Partial<{ getAnimations: unknown }>).getAnimations;
+    }
+  });
+
+  it('keeps the last tab when Delete is pressed on it', async () => {
+    const instance = await boot([
+      { id: 'tabs', type: 'tabs', data: {}, content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: 'Only' }, parent: 'tabs', content: [] },
+    ]);
+
+    await pressOnPill(0, 'Delete');
+
+    expect(byType(await instance.save(), 'tab').map(tab => tab.id)).toEqual(['t1']);
+  });
+
+  it('does not delete a tab on Delete in read-only mode', async () => {
+    await boot(doc(), true);
+
+    await pressOnPill(0, 'Delete');
+
+    expect(pills().map(pill => pill.getAttribute('data-tab-id'))).toEqual(['t1', 't2']);
+    expect(document.querySelector('[data-blok-id="t1"]')).not.toBeNull();
+  });
 
   it('shows a New tab placeholder while a tab title is cleared', async () => {
     await boot(doc());

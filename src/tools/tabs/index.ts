@@ -104,7 +104,7 @@ export class TabsTool implements BlockTool, TabsHandle {
 
     scroller.setAttribute(TABS_ATTR.scroller, '');
     scroller.setAttribute('role', 'tablist');
-    // Arrows, Home/End, Enter and the menu key belong to the strip.
+    // Arrows, Home/End, Enter, Delete and the menu key belong to the strip.
     scroller.setAttribute(DATA_ATTR.keyboardOwner, '');
     scroller.addEventListener('scroll', this.updateOverflow, { passive: true });
 
@@ -326,7 +326,8 @@ export class TabsTool implements BlockTool, TabsHandle {
       const flatIndex = this.api.blocks.getBlockIndex(id);
 
       if (flatIndex !== undefined) {
-        void this.api.blocks.delete(flatIndex);
+        // false: the caret stays put, so a keyboard delete keeps focus on the tabs.
+        void this.api.blocks.delete(flatIndex, false);
       }
     };
     const pill = this.pills.get(id);
@@ -690,6 +691,10 @@ export class TabsTool implements BlockTool, TabsHandle {
       } else if (event.key === 'F2' && !this.readOnly) {
         event.preventDefault();
         this.startRename(id);
+      } else if ((event.key === 'Delete' || event.key === 'Backspace') && !this.readOnly && pill.getAttribute('aria-selected') === 'true') {
+        event.preventDefault();
+        this.deleteTab({ id });
+        this.pills.get(this.activeId() ?? '')?.focus();
       }
     });
 

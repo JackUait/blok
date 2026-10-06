@@ -351,6 +351,16 @@ describe('PopoverItemDefault', () => {
     expect(icon?.className).toContain('h-6');
   });
 
+  it('draws the glyph at the icons\' native 20px grid, not shrunk to 16px', () => {
+    const { element } = createItem();
+    const icon = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
+
+    expect(icon?.className).toContain('[&_svg]:w-icon');
+    expect(icon?.className).toContain('[&_svg]:h-icon');
+    expect(icon?.className).not.toContain('[&_svg]:w-4');
+    expect(icon?.className).not.toContain('[&_svg]:h-4');
+  });
+
   it('prevents icon container from shrinking in flex layout', () => {
     const { element } = createItem();
     const icon = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');

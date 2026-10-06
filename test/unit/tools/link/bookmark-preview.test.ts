@@ -28,5 +28,6 @@ describe('bookmark toolbox preview', () => {
 
     expect(link?.querySelector('[data-part="host"]')?.textContent).toBe('craft.blog');
     expect(link?.querySelector('[data-part="path"]')?.textContent).toBe('/slow');
+    expect(link?.querySelector('[data-part="address"] [data-part="favicon"]')).not.toBeNull();
   });
 });

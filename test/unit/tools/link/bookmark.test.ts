@@ -320,6 +320,15 @@ describe('Bookmark tool', () => {
       expect(urlSpan?.textContent).toBe('example.com/article');
     });
 
+    it('wraps the favicon and url in one address pill', () => {
+      const card = renderCard(fullMeta);
+
+      const pill = card.querySelector('[data-role="bookmark-link-row"] > [data-role="bookmark-address"]');
+
+      expect(pill?.classList.contains('blok-bookmark__address')).toBe(true);
+      expect(Array.from(pill?.children ?? [], (child) => child.getAttribute('data-role'))).toEqual([ 'bookmark-favicon', 'bookmark-url' ]);
+    });
+
     it('keeps the query and hash in the path', () => {
       const card = renderCard({ url: 'https://example.com/a?b=1#c' });
 

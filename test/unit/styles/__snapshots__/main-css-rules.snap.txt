@@ -10449,6 +10449,16 @@ span[data-blok-slash-search] {
   text-overflow: ellipsis;
 }
 
+[data-blok-tool="bookmark"] .blok-bookmark__address {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  padding-block: 0.33333em;
+  padding-inline: 0.41667em 0.83333em;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-item-hover-bg);
+}
+
 [data-blok-tool="bookmark"] .blok-bookmark__host {
   font-weight: 500;
 }
@@ -13793,11 +13803,20 @@ span[data-blok-slash-search] {
 
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='link'] {
   display: flex;
-  align-items: center;
-  gap: var(--blok-space-1-5);
   margin-top: auto;
   font-size: var(--blok-font-size-ui-small);
   line-height: 14px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='address'] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  min-width: 0;
+  padding-block: var(--blok-space-0-5);
+  padding-inline: var(--blok-space-0-5) var(--blok-space-1-5);
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-item-hover-bg);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='favicon'] {
@@ -13824,14 +13843,14 @@ span[data-blok-slash-search] {
 
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='cover'] {
   position: relative;
-  flex: 0 0 96px;
+  flex: 0 0 70px;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='window'] {
   position: absolute;
   inset-block-start: 10px;
   inset-inline-start: 10px;
-  width: 116px;
+  width: 96px;
   overflow: hidden;
   border-radius: var(--blok-radius-control);
   background: var(--blok-bg-primary);
@@ -13861,7 +13880,7 @@ span[data-blok-slash-search] {
   box-shadow: calc(var(--_bm-dot) * 5 / 3 * var(--_blok-inline-sign, 1)) 0 0 var(--_bm-dot-color), calc(var(--_bm-dot) * 10 / 3 * var(--_blok-inline-sign, 1)) 0 0 var(--_bm-dot-color);
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='address'] {
+[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='location'] {
   flex: 1;
   min-width: 0;
   padding-inline: var(--_bm-dot);
@@ -13893,7 +13912,7 @@ span[data-blok-slash-search] {
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='cover-orb'] {
   position: absolute;
   top: 14px;
-  left: 30px;
+  inset-inline-start: 22px;
   width: 18px;
   height: 18px;
   border-radius: var(--blok-radius-pill);

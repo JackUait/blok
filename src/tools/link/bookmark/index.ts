@@ -305,6 +305,11 @@ export class Bookmark implements BlockTool {
     linkRow.classList.add('blok-bookmark__link-row');
     linkRow.setAttribute('data-role', 'bookmark-link-row');
 
+    const addressPill = document.createElement('span');
+
+    addressPill.classList.add('blok-bookmark__address');
+    addressPill.setAttribute('data-role', 'bookmark-address');
+
     if (this.data.favicon) {
       const favicon = document.createElement('img');
 
@@ -312,7 +317,7 @@ export class Bookmark implements BlockTool {
       favicon.setAttribute('data-role', 'bookmark-favicon');
       favicon.src = this.data.favicon;
       favicon.alt = '';
-      linkRow.appendChild(favicon);
+      addressPill.appendChild(favicon);
     }
 
     const urlText = document.createElement('span');
@@ -320,7 +325,8 @@ export class Bookmark implements BlockTool {
     urlText.classList.add('blok-bookmark__url');
     urlText.setAttribute('data-role', 'bookmark-url');
     urlText.append(...this.addressParts());
-    linkRow.appendChild(urlText);
+    addressPill.appendChild(urlText);
+    linkRow.appendChild(addressPill);
     content.appendChild(linkRow);
 
     card.appendChild(content);

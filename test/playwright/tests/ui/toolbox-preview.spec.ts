@@ -441,7 +441,9 @@ test.describe('Toolbox hover preview', () => {
           let [ left, top, right, bottom ] = [ rect.left, rect.top, rect.right, rect.bottom ];
 
           for (let parent = from; parent !== null && parent !== paper; parent = parent.parentElement) {
-            if (getComputedStyle(parent).overflow !== 'visible') {
+            const style = getComputedStyle(parent);
+
+            if (style.overflowX !== 'visible' || style.overflowY !== 'visible') {
               const clip = parent.getBoundingClientRect();
 
               [ left, top, right, bottom ] = [ Math.max(left, clip.left), Math.max(top, clip.top), Math.min(right, clip.right), Math.min(bottom, clip.bottom) ];

@@ -15,12 +15,16 @@ export const renderBookmarkPreview = (): HTMLElement => createPreview(
       h(
         'div',
         { 'data-part': 'link' },
-        h('span', { 'data-part': 'favicon' }),
         h(
           'span',
-          { 'data-part': 'url' },
-          h('span', { 'data-part': 'host' }, 'craft.blog'),
-          h('span', { 'data-part': 'path' }, '/slow')
+          { 'data-part': 'address' },
+          h('span', { 'data-part': 'favicon' }),
+          h(
+            'span',
+            { 'data-part': 'url' },
+            h('span', { 'data-part': 'host' }, 'craft.blog'),
+            h('span', { 'data-part': 'path' }, '/slow')
+          )
         )
       )
     ),
@@ -30,7 +34,7 @@ export const renderBookmarkPreview = (): HTMLElement => createPreview(
       h(
         'div',
         { 'data-part': 'window' },
-        h('div', { 'data-part': 'bar' }, h('span', { 'data-part': 'address' }, 'craft.blog/slow')),
+        h('div', { 'data-part': 'bar' }, h('span', { 'data-part': 'location' }, 'craft.blog/slow')),
         h('div', { 'data-part': 'shot' }, h('span', { 'data-part': 'cover-orb' }))
       )
     )

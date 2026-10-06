@@ -87,6 +87,17 @@
   text-overflow: ellipsis;
 }
 
+/* favicon + url in a pill, like a browser's address bar */
+[data-blok-tool="bookmark"] .blok-bookmark__address {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  padding-block: 0.33333em;
+  padding-inline: 0.41667em 0.83333em;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-item-hover-bg);
+}
+
 /* host in ink, path in gray */
 [data-blok-tool="bookmark"] .blok-bookmark__host {
   font-weight: 500;

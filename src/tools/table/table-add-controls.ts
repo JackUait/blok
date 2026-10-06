@@ -2,7 +2,7 @@ import type { I18n } from '../../../types/api';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconPlus } from '../../components/icons';
 import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
-import { hide as hideTooltip, onHover, show as showTooltip } from '../../components/utils/tooltip';
+import { hide as hideTooltip, onHover, showReadout } from '../../components/utils/tooltip';
 import { twMerge } from '../../components/utils/tw';
 import { getElementDirection } from '../../components/utils/direction';
 import type { TextDirection } from '../../components/utils/direction';
@@ -356,7 +356,7 @@ export class TableAddControls {
       ? { placement: 'bottom' as const, marginTop: -16 }
       : { placement: 'bottom' as const };
 
-    showTooltip(target, `${size.cols}\u00D7${size.rows}`, opts);
+    showReadout(target, `${size.cols}\u00D7${size.rows}`, opts);
   }
 
   private handlePointerDown(axis: 'row' | 'col', e: PointerEvent): void {

@@ -90,7 +90,7 @@ const meta: Meta<TooltipArgs> = {
   args: {
     placement: 'bottom',
     content: 'This is a tooltip',
-    delay: 0,
+    delay: 500,
   },
   argTypes: {
     placement: {
@@ -103,7 +103,7 @@ const meta: Meta<TooltipArgs> = {
       description: 'Tooltip content text',
     },
     delay: {
-      control: { type: 'number', min: 0, max: 1000, step: 50 },
+      control: { type: 'number', min: 300, max: 1000, step: 50 },
       description: 'Delay before showing tooltip (ms)',
     },
   },
@@ -119,7 +119,7 @@ export const TooltipStates: Story = {
   args: {
     placement: 'bottom',
     content: 'This is a tooltip',
-    delay: 0,
+    delay: 500,
   },
   render: createAllStatesDemo,
   parameters: {
@@ -136,7 +136,7 @@ export const TooltipStates: Story = {
 
       expect(trigger).toBeInTheDocument();
 
-      show(trigger, `Tooltip at ${placement}`, { placement, delay: 0 });
+      show(trigger, `Tooltip at ${placement}`, { placement });
 
       await waitFor(
         () => {
@@ -173,7 +173,7 @@ export const WithHTMLContent: Story = {
   args: {
     placement: 'bottom',
     content: '<strong>Bold</strong> tooltip',
-    delay: 0,
+    delay: 500,
   },
   parameters: {
     chromatic: { delay: 500 },
@@ -188,7 +188,7 @@ export const WithHTMLContent: Story = {
         const content = document.createElement('span');
 
         content.innerHTML = '<strong>Bold</strong> and <em>italic</em>';
-        show(trigger, content, { placement: 'bottom', delay: 0 });
+        show(trigger, content, { placement: 'bottom' });
       }
 
       await waitFor(

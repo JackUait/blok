@@ -4,10 +4,12 @@ import { simulateMouseenter, simulateMouseleave } from '../../../helpers/simulat
 import type { I18n } from '../../../../types/api';
 
 const mockShowTooltip = vi.fn();
+const mockShowReadout = vi.fn();
 const mockHideTooltip = vi.fn();
 
 vi.mock('../../../../src/components/utils/tooltip', () => ({
   show: (...args: unknown[]): void => { mockShowTooltip(...args); },
+  showReadout: (...args: unknown[]): void => { mockShowReadout(...args); },
   hide: (): void => { mockHideTooltip(); },
 }));
 
@@ -728,7 +730,7 @@ describe('TableCornerDrag', () => {
       hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 60, pointerId: 1 }));
       hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 300, clientY: 75, pointerId: 1 }));
 
-      expect(mockShowTooltip).toHaveBeenCalledWith(
+      expect(mockShowReadout).toHaveBeenCalledWith(
         hitZone,
         '3\u00D73',
         expect.objectContaining({ placement: 'bottom' }),

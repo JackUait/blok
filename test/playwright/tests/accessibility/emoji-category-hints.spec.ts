@@ -115,19 +115,19 @@ for (const elapsed of [250, 299]) {
   });
 }
 
-test('shows a category hint on keyboard focus and closes it with Escape', async ({ page }) => {
+test('shows no category hint on keyboard focus, since hints are hover-only', async ({ page }) => {
   const picker = page.getByRole('dialog', { name: 'Edit icon' });
   const category = picker.locator('[data-emoji-nav]').last();
 
+  await installPausedClock(page);
   await page.mouse.move(0, 0);
   await picker.getByRole('searchbox').focus();
   await page.keyboard.press('Shift+Tab');
   await expect(category).toBeFocused();
-  await expect(page.getByRole('tooltip')).toBeVisible();
-  await expect(page.getByRole('tooltip')).toHaveText(await category.getAttribute('aria-label') ?? '');
-  await expect(category).toHaveAttribute('aria-describedby');
-  await page.keyboard.press('Escape');
+  // Longer than any hint delay, so a focus-driven hint would have opened by now.
+  await page.clock.runFor(1000);
   await expect(page.getByRole('tooltip')).not.toBeVisible();
+  await expect(category).not.toHaveAttribute('aria-describedby');
 });
 
 test('keeps category hints attached and inside the viewport at each corner', async ({ page }) => {

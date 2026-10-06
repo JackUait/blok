@@ -26,7 +26,7 @@ import {
   type AvatarLayer,
   type AvatarPeer,
 } from '../../../../../src/components/modules/collaboration/presence-avatars';
-import { destroy as destroyTooltip } from '../../../../../src/components/utils/tooltip';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../../src/components/utils/tooltip';
 
 const GUTTER_ATTR = 'data-blok-presence-gutter';
 const FACE_ATTR = 'data-blok-presence-face';
@@ -145,6 +145,7 @@ afterEach(() => {
   layers.splice(0).forEach((layer) => layer.clear());
   mounted.splice(0).forEach((holder) => holder.remove());
   destroyTooltip();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -207,7 +208,9 @@ describe('buildAvatar — every write is an attribute with an exact value', () =
     vi.spyOn(avatar, 'getBoundingClientRect').mockReturnValue(rect(400, 20));
     document.body.appendChild(avatar);
     mounted.push(avatar);
+    vi.useFakeTimers();
     avatar.dispatchEvent(new Event('mouseenter'));
+    vi.advanceTimersByTime(HINT_DELAY);
 
     const bubble = document.querySelector(`[${DATA_ATTR.interface}="${TOOLTIP_INTERFACE_VALUE}"]`);
 

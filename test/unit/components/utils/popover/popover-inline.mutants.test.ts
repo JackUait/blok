@@ -71,6 +71,7 @@ afterEach(() => {
   activated.clear();
   mountedPopovers.splice(0);
   tooltip.destroy();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -295,7 +296,9 @@ describe('PopoverInline — mutation residue', () => {
         height: 40,
       } as DOMRect);
 
+      vi.useFakeTimers();
       item.dispatchEvent(new MouseEvent('mouseenter'));
+      vi.advanceTimersByTime(tooltip.HINT_DELAY);
     };
 
     it('points the hint bubble above the toolbar row, never sideways', () => {
@@ -440,7 +443,9 @@ describe('PopoverInline — mutation residue', () => {
         height: 40,
       } as DOMRect);
 
+      vi.useFakeTimers();
       root.dispatchEvent(new MouseEvent('mouseenter'));
+      vi.advanceTimersByTime(tooltip.HINT_DELAY);
 
       expect(document.querySelector('[data-blok-testid="tooltip"]')?.getAttribute('data-blok-placement')).toBe('top');
       expect(root.getAttribute('aria-describedby')).toBe('blok-tooltip');

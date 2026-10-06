@@ -1,7 +1,7 @@
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { I18n } from '../../../types/api';
 import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
-import { show as showTooltip, hide as hideTooltip } from '../../components/utils/tooltip';
+import { show as showTooltip, showReadout, hide as hideTooltip } from '../../components/utils/tooltip';
 import { getElementDirection } from '../../components/utils/direction';
 
 import { inlineAxis, scrollToInlineEnd } from './table-direction';
@@ -259,7 +259,7 @@ export class TableCornerDrag {
   private updateTooltip(): void {
     const size = this.getTableSize();
 
-    showTooltip(this.hitZone, `${size.cols}\u00D7${size.rows}`, { placement: 'bottom' });
+    showReadout(this.hitZone, `${size.cols}\u00D7${size.rows}`, { placement: 'bottom' });
   }
 
   /**

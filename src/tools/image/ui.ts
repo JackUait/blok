@@ -238,7 +238,6 @@ export function renderAltPill(opts: AltPillOptions): HTMLButtonElement {
     tooltipShow(btn, hint, { delay: ALT_HINT_DELAY_MS });
   };
   btn.addEventListener('mouseenter', showHint);
-  btn.addEventListener('focus', showHint);
   btn.addEventListener('mouseleave', () => tooltipHide());
   btn.addEventListener('blur', () => tooltipHide());
 

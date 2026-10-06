@@ -424,7 +424,7 @@ describe('TableRowColControls — geometry and grip state', () => {
     });
 
     it('explains why when the user tries to drag a locked row', async () => {
-      const show = vi.spyOn(tooltip, 'show').mockImplementation(() => undefined);
+      const show = vi.spyOn(tooltip, 'showReadout').mockImplementation(() => undefined);
       const hide = vi.spyOn(tooltip, 'hide').mockImplementation(() => undefined);
 
       grid = createGrid(2, 2);
@@ -449,7 +449,7 @@ describe('TableRowColControls — geometry and grip state', () => {
     });
 
     it('names the column when the locked grip is a column', () => {
-      const show = vi.spyOn(tooltip, 'show').mockImplementation(() => undefined);
+      const show = vi.spyOn(tooltip, 'showReadout').mockImplementation(() => undefined);
 
       grid = createGrid(2, 2);
       controls = new TableRowColControls({
@@ -466,7 +466,7 @@ describe('TableRowColControls — geometry and grip state', () => {
     });
 
     it('shows no explanation for a click on a locked grip', () => {
-      const show = vi.spyOn(tooltip, 'show').mockImplementation(() => undefined);
+      const show = vi.spyOn(tooltip, 'showReadout').mockImplementation(() => undefined);
 
       grid = createGrid(2, 2);
       controls = new TableRowColControls({

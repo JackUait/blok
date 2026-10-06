@@ -18,10 +18,12 @@ import type { TableCornerDragOptions } from '../../../../src/tools/table/table-c
 import type { I18n } from '../../../../types/api';
 
 const mockShowTooltip = vi.fn();
+const mockShowReadout = vi.fn();
 const mockHideTooltip = vi.fn();
 
 vi.mock('../../../../src/components/utils/tooltip', () => ({
   show: (...args: unknown[]): void => { mockShowTooltip(...args); },
+  showReadout: (...args: unknown[]): void => { mockShowReadout(...args); },
   hide: (): void => { mockHideTooltip(); },
 }));
 
@@ -815,10 +817,10 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       const geo = geometry();
       const { hitZone } = build(geo);
 
-      mockShowTooltip.mockClear();
+      mockShowReadout.mockClear();
       down(hitZone, gridRight(geo), gridBottom(geo));
 
-      expect(mockShowTooltip).toHaveBeenCalledWith(hitZone, '3×3', { placement: 'bottom' });
+      expect(mockShowReadout).toHaveBeenCalledWith(hitZone, '3×3', { placement: 'bottom' });
     });
   });
 
@@ -1706,12 +1708,12 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
 
       const left = hitZone.style.left;
 
-      mockShowTooltip.mockClear();
+      mockShowReadout.mockClear();
       frames.step(1125);
 
       expect(options.onAddColumn).toHaveBeenCalled();
       expect(hitZone.style.left).not.toBe(left);
-      expect(mockShowTooltip).toHaveBeenCalledWith(hitZone, `${geo.colWidths.length}×${geo.rowHeights.length}`, { placement: 'bottom' });
+      expect(mockShowReadout).toHaveBeenCalledWith(hitZone, `${geo.colWidths.length}×${geo.rowHeights.length}`, { placement: 'bottom' });
     });
   });
 
@@ -2330,6 +2332,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       corner?.destroy();
       corner = null;
       mockShowTooltip.mockClear();
+      mockShowReadout.mockClear();
       mockHideTooltip.mockClear();
 
       hitZone.dispatchEvent(new MouseEvent('mouseenter'));
@@ -2338,6 +2341,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       up(hitZone, gridRight(geo), gridBottom(geo));
 
       expect(mockShowTooltip).not.toHaveBeenCalled();
+      expect(mockShowReadout).not.toHaveBeenCalled();
       expect(mockHideTooltip).not.toHaveBeenCalled();
       expect(options.onAddRow).not.toHaveBeenCalled();
       expect(options.onAddColumn).not.toHaveBeenCalled();

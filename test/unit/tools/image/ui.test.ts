@@ -231,12 +231,15 @@ describe('renderAltPill', () => {
     expect(parentClick).not.toHaveBeenCalled();
   });
 
-  it('shows the explaining hint on hover and on focus', () => {
+  it('shows the explaining hint on hover only, never on focus', () => {
     const pill = renderAltPill({ onOpen: noopFn, isEditorOpen: () => false });
-    pill.dispatchEvent(new MouseEvent('mouseenter'));
     pill.dispatchEvent(new FocusEvent('focus'));
 
-    expect(tooltip.show).toHaveBeenCalledTimes(2);
+    expect(tooltip.show).not.toHaveBeenCalled();
+
+    pill.dispatchEvent(new MouseEvent('mouseenter'));
+
+    expect(tooltip.show).toHaveBeenCalledTimes(1);
     const content = vi.mocked(tooltip.show).mock.calls[0][1];
 
     expect(content instanceof HTMLElement ? content.textContent : content).toContain('What is alt text?');

@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types/api';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { getElementDirection } from '../../components/utils/direction';
-import { hide as hideTooltip, show as showTooltip } from '../../components/utils/tooltip';
+import { hide as hideTooltip, showReadout } from '../../components/utils/tooltip';
 import { twMerge } from '../../components/utils/tw';
 
 import type { CellColorMode } from './table-cell-color-picker';
@@ -1017,7 +1017,7 @@ export class TableRowColControls {
     const rowPlacement = getElementDirection(this.grid) === 'rtl' ? 'right' : 'left';
 
     this.isRejectionTooltipShown = true;
-    showTooltip(
+    showReadout(
       grip,
       this.i18n.t(type === 'col' ? 'tools.table.columnLockedByMerge' : 'tools.table.rowLockedByMerge'),
       { placement: type === 'col' ? 'top' : rowPlacement }

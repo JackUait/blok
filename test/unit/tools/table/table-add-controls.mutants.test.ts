@@ -11,7 +11,7 @@ const mockShow = vi.fn();
 vi.mock('../../../../src/components/utils/tooltip', () => ({
   onHover: (...args: unknown[]): void => { mockOnHover(...args); },
   hide: (): void => { mockHide(); },
-  show: (...args: unknown[]): void => { mockShow(...args); },
+  showReadout: (...args: unknown[]): void => { mockShow(...args); },
 }));
 
 vi.mock('../../../../src/components/modules/toolbar/tooltip', () => ({

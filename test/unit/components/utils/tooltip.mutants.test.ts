@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../../../../src/components/constants';
 import { TOP_LAYER_MARKER_ATTR } from '../../../../src/components/utils/top-layer';
-import { destroy, hide, onHover, show } from '../../../../src/components/utils/tooltip';
+import { destroy, hide, HINT_DELAY, MIN_HINT_DELAY, onHover, show, showReadout } from '../../../../src/components/utils/tooltip';
 
 /**
  * Placement math reads `window.innerWidth/innerHeight` directly, so every
@@ -20,11 +20,8 @@ const TOOLTIP_SELECTOR = `[${DATA_ATTR.interface}="${TOOLTIP_INTERFACE_VALUE}"]`
 
 const HOVER_EVENT_NAMES = [
   'pointerenter',
-  'pointerdown',
   'mouseenter',
   'mouseleave',
-  'focusin',
-  'focusout',
 ] as const;
 
 type AnchorRect = {
@@ -92,7 +89,7 @@ const seedSizedWrapper = (width: number, height: number): HTMLElement => {
     width: 10,
     height: 10 });
 
-  show(seed, 'seed');
+  showReadout(seed, 'seed');
 
   const wrapper = requireWrapper();
 
@@ -193,7 +190,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'visibility');
+      showReadout(anchor, 'visibility');
 
       const wrapper = requireWrapper();
 
@@ -211,7 +208,7 @@ describe('Tooltip utility — mutation coverage', () => {
       expect(wrapper.getAttribute('aria-hidden')).toBe('true');
       expect(wrapper.getAttribute('data-blok-shown')).toBe('false');
 
-      show(anchor, 'visibility again');
+      showReadout(anchor, 'visibility again');
 
       // Re-asserted after a real hidden+important value was written: an
       // invalid priority makes setProperty a no-op, which would leave the
@@ -248,7 +245,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'observer leak');
+      showReadout(anchor, 'observer leak');
       hide();
 
       const orphaned = requireWrapper();
@@ -273,11 +270,11 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(first, 'first');
+      showReadout(first, 'first');
 
       expect(first.getAttribute('aria-describedby')).toBe('blok-tooltip');
 
-      show(second, 'second');
+      showReadout(second, 'second');
 
       // The singleton describes one target at a time: the previous one must be
       // released or screen readers announce a bubble that no longer exists.
@@ -295,7 +292,10 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'described');
+      showReadout(anchor, 'described');
+
+      expect(anchor.getAttribute('aria-describedby')).toBe('blok-tooltip');
+
       destroy();
 
       expect(anchor.getAttribute('aria-describedby')).toBeNull();
@@ -309,14 +309,16 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'delayed', { delay: 100 });
+      show(anchor, 'delayed');
 
-      expect(anchor.getAttribute('aria-describedby')).toBe('blok-tooltip');
+      // The link is made at reveal, not while the hint waits.
+      expect(anchor.getAttribute('aria-describedby')).toBeNull();
 
       anchor.checkVisibility = vi.fn(() => false);
-      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(HINT_DELAY);
 
       expect(anchor.getAttribute('aria-describedby')).toBeNull();
+      expect(requireWrapper().getAttribute('data-blok-shown')).toBe('false');
     });
   });
 
@@ -327,7 +329,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'promoted');
+      showReadout(anchor, 'promoted');
 
       const wrapper = requireWrapper();
 
@@ -442,7 +444,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'escape listener');
+      showReadout(anchor, 'escape listener');
 
       const keydownAdd = addSpy.mock.calls.find(([ type ]) => type === 'keydown');
 
@@ -481,9 +483,11 @@ describe('Tooltip utility — mutation coverage', () => {
       document.body.appendChild(field);
       field.addEventListener('keydown', (event) => event.stopPropagation());
 
-      show(anchor, 'escape');
+      showReadout(anchor, 'escape');
 
       const wrapper = requireWrapper();
+
+      expect(wrapper.getAttribute('data-blok-shown')).toBe('true');
 
       field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape',
         bubbles: true }));
@@ -497,7 +501,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'other keys');
+      showReadout(anchor, 'other keys');
 
       const wrapper = requireWrapper();
 
@@ -515,15 +519,13 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'pending', { delay: 100 });
-
-      window.dispatchEvent(new Event('scroll'));
+      show(anchor, 'pending');
 
       // The scroll handler must only act on a bubble that is actually open;
       // hiding here would also drop the pending reveal.
-      expect(anchor.getAttribute('aria-describedby')).toBe('blok-tooltip');
+      window.dispatchEvent(new Event('scroll'));
 
-      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(HINT_DELAY);
 
       expect(requireWrapper().getAttribute('aria-hidden')).toBe('false');
     });
@@ -538,10 +540,10 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'first', { delay: 100 });
-      show(anchor, 'second', { delay: 500 });
+      show(anchor, 'first', { delay: MIN_HINT_DELAY });
+      show(anchor, 'second', { delay: HINT_DELAY });
 
-      vi.advanceTimersByTime(150);
+      vi.advanceTimersByTime(MIN_HINT_DELAY);
 
       // Asserted before the second timer can fire: the stale 100ms timer must
       // not reveal a bubble the user already moved away from.
@@ -549,7 +551,7 @@ describe('Tooltip utility — mutation coverage', () => {
 
       expect(wrapper.getAttribute('aria-hidden')).toBe('true');
 
-      vi.advanceTimersByTime(350);
+      vi.advanceTimersByTime(HINT_DELAY - MIN_HINT_DELAY);
 
       expect(wrapper.getAttribute('aria-hidden')).toBe('false');
       expect(wrapper.textContent).toBe('second');
@@ -563,8 +565,9 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      onHover(anchor, 'grace', { delay: 0 });
+      onHover(anchor, 'grace');
       dispatchHover(anchor, 'mouse');
+      vi.advanceTimersByTime(HINT_DELAY);
 
       const wrapper = requireWrapper();
 
@@ -592,11 +595,12 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      onHover(anchor, 'delayed reentry', { delay: 100 });
+      onHover(anchor, 'delayed reentry', { delay: MIN_HINT_DELAY });
       dispatchHover(anchor, 'mouse');
 
-      vi.advanceTimersByTime(50);
+      vi.advanceTimersByTime(MIN_HINT_DELAY - 50);
       anchor.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+      // The reveal was due now; the grace hide is still 50ms away.
       vi.advanceTimersByTime(50);
 
       const wrapper = requireWrapper();
@@ -604,7 +608,7 @@ describe('Tooltip utility — mutation coverage', () => {
       expect(wrapper.getAttribute('aria-hidden')).toBe('true');
 
       dispatchHover(anchor, 'mouse');
-      vi.advanceTimersByTime(99);
+      vi.advanceTimersByTime(MIN_HINT_DELAY - 1);
 
       expect(wrapper.getAttribute('aria-hidden')).toBe('true');
 
@@ -617,53 +621,6 @@ describe('Tooltip utility — mutation coverage', () => {
       expect(wrapper.getAttribute('aria-hidden')).toBe('false');
     });
 
-    it('does not re-arm the skip-delay window when hide runs on an already closed bubble', () => {
-      vi.useFakeTimers();
-      vi.setSystemTime(0);
-
-      const anchor = createAnchor({ left: 10,
-        top: 20,
-        width: 100,
-        height: 40 });
-
-      show(anchor, 'first', { delay: 0 });
-      hide();
-
-      vi.setSystemTime(400);
-      hide();
-
-      vi.setSystemTime(500);
-      show(anchor, 'cold', { delay: 200 });
-
-      // Only the 0ms hide was real. A second hide that believes the bubble was
-      // still open would stamp 400ms and make this show instant.
-      expect(requireWrapper().getAttribute('aria-hidden')).toBe('true');
-    });
-
-    it('treats the skip-delay window as exclusive at its boundary', () => {
-      vi.useFakeTimers();
-      vi.setSystemTime(0);
-
-      const anchor = createAnchor({ left: 10,
-        top: 20,
-        width: 100,
-        height: 40 });
-
-      show(anchor, 'first', { delay: 0 });
-      hide();
-
-      vi.setSystemTime(300);
-      show(anchor, 'boundary', { delay: 200 });
-
-      const wrapper = requireWrapper();
-
-      expect(wrapper.getAttribute('aria-hidden')).toBe('true');
-
-      vi.advanceTimersByTime(200);
-
-      expect(wrapper.getAttribute('aria-hidden')).toBe('false');
-    });
-
     it('cancels a pending show on destroy so the detached bubble never opens', () => {
       vi.useFakeTimers();
 
@@ -672,12 +629,12 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'destroy during delay', { delay: 100 });
+      show(anchor, 'destroy during delay');
 
       const orphaned = requireWrapper();
 
       destroy();
-      vi.advanceTimersByTime(150);
+      vi.advanceTimersByTime(HINT_DELAY);
 
       expect(orphaned.getAttribute('data-state')).toBe('closed');
       expect(orphaned.getAttribute('data-blok-shown')).toBe('false');
@@ -691,8 +648,9 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      onHover(anchor, 'events after destroy', { delay: 0 });
+      onHover(anchor, 'events after destroy');
       dispatchHover(anchor, 'mouse');
+      vi.advanceTimersByTime(HINT_DELAY);
 
       const orphaned = requireWrapper();
 
@@ -701,8 +659,9 @@ describe('Tooltip utility — mutation coverage', () => {
       destroy();
 
       // destroy() leaves the per-trigger handlers bound to the element, and
-      // focusout closes over the instance that is already gone.
-      anchor.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+      // they close over the instance that is already gone.
+      dispatchHover(anchor, 'mouse');
+      vi.advanceTimersByTime(HINT_DELAY);
 
       expect(orphaned.getAttribute('data-state')).toBe('open');
 
@@ -716,7 +675,7 @@ describe('Tooltip utility — mutation coverage', () => {
   });
 
   describe('hover binding', () => {
-    it('replaces a previous onHover binding instead of stacking a second one', () => {
+    it('lets the newest onHover binding drive the hint', () => {
       vi.useFakeTimers();
 
       const anchor = createAnchor({ left: 10,
@@ -724,18 +683,18 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      onHover(anchor, 'stale', { delay: 0 });
-      onHover(anchor, 'fresh', { delay: 100 });
+      onHover(anchor, 'stale', { delay: MIN_HINT_DELAY });
+      onHover(anchor, 'fresh', { delay: HINT_DELAY });
 
       dispatchHover(anchor, 'mouse');
+      vi.advanceTimersByTime(MIN_HINT_DELAY);
 
       const wrapper = requireWrapper();
 
-      // A surviving first binding would open instantly with its own delay of 0
-      // and the second show could not close it again.
+      // The stale binding's shorter delay must not open the hint.
       expect(wrapper.getAttribute('aria-hidden')).toBe('true');
 
-      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(HINT_DELAY - MIN_HINT_DELAY);
 
       expect(wrapper.getAttribute('aria-hidden')).toBe('false');
       expect(wrapper.textContent).toBe('fresh');
@@ -762,6 +721,8 @@ describe('Tooltip utility — mutation coverage', () => {
     });
 
     it('suppresses a hover reveal under an open popover unless the trigger lives inside it', () => {
+      vi.useFakeTimers();
+
       const outside = createAnchor({ left: 10,
         top: 20,
         width: 100,
@@ -771,8 +732,9 @@ describe('Tooltip utility — mutation coverage', () => {
       popover.setAttribute('data-blok-popover-opened', 'true');
       document.body.appendChild(popover);
 
-      onHover(outside, 'covered', { delay: 0 });
+      onHover(outside, 'covered');
       dispatchHover(outside, 'mouse');
+      vi.advanceTimersByTime(HINT_DELAY);
 
       const wrapper = requireWrapper();
 
@@ -784,65 +746,15 @@ describe('Tooltip utility — mutation coverage', () => {
         height: 40 });
 
       popover.appendChild(inside);
-      onHover(inside, 'inside the menu', { delay: 0 });
+      onHover(inside, 'inside the menu');
       dispatchHover(inside, 'mouse');
+      vi.advanceTimersByTime(HINT_DELAY);
 
       // Items of the open menu still get their tooltips — the guard is about
       // covering a menu, not about muting everything while one is open.
       expect(wrapper.getAttribute('aria-hidden')).toBe('false');
     });
 
-    it('keeps the caller options on the focus path', () => {
-      const anchor = createAnchor({ left: 100,
-        top: 300,
-        width: 100,
-        height: 40 });
-
-      onHover(anchor, 'focus placement', { placement: 'right' });
-      anchor.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-
-      expect(requireWrapper().getAttribute('data-side')).toBe('right');
-    });
-
-    it('treats the touch-focus suppression window as exclusive at its boundary', () => {
-      vi.useFakeTimers();
-      vi.setSystemTime(0);
-
-      const anchor = createAnchor({ left: 10,
-        top: 20,
-        width: 100,
-        height: 40 });
-
-      onHover(anchor, 'boundary focus', { delay: 0 });
-      anchor.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch',
-        bubbles: true }));
-
-      vi.setSystemTime(500);
-      anchor.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-
-      expect(requireWrapper().getAttribute('aria-hidden')).toBe('false');
-    });
-
-    it('does not arm the touch guard from a mouse pointerdown', () => {
-      vi.useFakeTimers();
-      vi.setSystemTime(0);
-
-      const anchor = createAnchor({ left: 10,
-        top: 20,
-        width: 100,
-        height: 40 });
-
-      onHover(anchor, 'mouse pointerdown', { delay: 0 });
-      anchor.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'mouse',
-        bubbles: true }));
-
-      vi.setSystemTime(100);
-      anchor.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-
-      // Only touch may suppress the focus reveal; a mouse press that also
-      // focused the control must still surface the tooltip (WCAG 1.4.13).
-      expect(requireWrapper().getAttribute('aria-hidden')).toBe('false');
-    });
   });
 
   describe('placement', () => {
@@ -853,7 +765,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 80,
         height: 40 });
 
-      show(anchor, 'flip down to up', { placement: 'bottom' });
+      showReadout(anchor, 'flip down to up', { placement: 'bottom' });
 
       // 58px below the anchor, 650px above it, and a 70px bubble: the offset
       // is subtracted from the free space, never added to it.
@@ -868,7 +780,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 80,
         height: 560 });
 
-      show(anchor, 'no room either side', { placement: 'bottom' });
+      showReadout(anchor, 'no room either side', { placement: 'bottom' });
 
       // 98px below and 90px above for a 100px bubble: nothing fits, so the
       // requested side wins.
@@ -882,7 +794,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 80,
         height: 40 });
 
-      show(anchor, 'flip up to down', { placement: 'top' });
+      showReadout(anchor, 'flip up to down', { placement: 'top' });
 
       expect(wrapper.getAttribute('data-side')).toBe('bottom');
       expect(wrapper.style.top).toBe(`${45 + ANCHOR_OFFSET}px`);
@@ -895,7 +807,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'right at the top edge', { placement: 'right' });
+      showReadout(anchor, 'right at the top edge', { placement: 'right' });
 
       // There is no room above and plenty below, but a right-placed bubble is
       // never resolved against the vertical axis.
@@ -909,7 +821,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'flip right to left', { placement: 'right' });
+      showReadout(anchor, 'flip right to left', { placement: 'right' });
 
       // 14px to the right of the anchor, 890px to its left, 20px bubble.
       expect(wrapper.getAttribute('data-side')).toBe('left');
@@ -925,7 +837,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'flip left to right', { placement: 'left' });
+      showReadout(anchor, 'flip left to right', { placement: 'left' });
 
       // 10px to the left of the anchor, 894px to its right, 20px bubble.
       expect(wrapper.getAttribute('data-side')).toBe('right');
@@ -940,7 +852,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'bottom clamp', { placement: 'right' });
+      showReadout(anchor, 'bottom clamp', { placement: 'right' });
 
       // Unclamped this lands at 745px and the bubble hangs off-screen.
       expect(wrapper.style.top).toBe(`${VIEWPORT_HEIGHT - 30}px`);
@@ -953,13 +865,13 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      show(anchor, 'implicit default', {});
+      showReadout(anchor, 'implicit default', {});
 
       // The anchor sits 10px from the left edge: any fallback that is not
       // literally 'bottom' resolves on the horizontal axis and flips to right.
       expect(wrapper.getAttribute('data-side')).toBe('bottom');
 
-      show(anchor, 'explicit undefined', { placement: undefined });
+      showReadout(anchor, 'explicit undefined', { placement: undefined });
 
       expect(wrapper.getAttribute('data-side')).toBe('bottom');
     });

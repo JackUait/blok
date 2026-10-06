@@ -278,23 +278,6 @@ test.describe('tool surfaces after a runtime flip to RTL', () => {
     await expect(tooltip).toHaveAttribute('data-blok-shown', 'false');
   });
 
-  test('a tooltip opened by keyboard focus closes, since its anchor moved', async ({ page }) => {
-    await createBlok(page, 'ltr', [{ type: 'image', data: { url: IMAGE_URL, naturalWidth: 800, naturalHeight: 600 } }]);
-    const more = page.locator('[data-blok-tool="image"] [data-action="more"]');
-    const tooltip = page.getByTestId('tooltip');
-
-    // No pointer is involved, so no mouseleave can close it.
-    await more.focus();
-    await expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
-    const before = await box(more);
-
-    await flip(page);
-
-    expect(await box(more)).not.toEqual(before);
-    await expect(more).toBeFocused();
-    await expect(tooltip).toHaveAttribute('data-blok-shown', 'false');
-  });
-
   test('an open link hover card closes, since its link moved', async ({ page }) => {
     await createBlok(page, 'ltr', [{ type: 'paragraph', data: { text: '\u200Fنص <a href="https://example.com">رابط</a>' } }]);
     const link = page.locator('[data-blok-tool="paragraph"] a');

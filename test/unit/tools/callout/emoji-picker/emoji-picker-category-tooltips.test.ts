@@ -139,7 +139,7 @@ describe('EmojiPicker category tooltips', () => {
     expect(tooltip).toHaveAttribute('aria-hidden', 'false');
   });
 
-  it('keeps visible hints for the grace period and skips the next category delay only while warm', () => {
+  it('keeps visible hints for the grace period and makes the next category wait its full delay', () => {
     const button = nav('people');
     const nextButton = nav('nature');
 
@@ -153,29 +153,56 @@ describe('EmojiPicker category tooltips', () => {
     expect(tooltip).toHaveAttribute('aria-hidden', 'true');
 
     nextButton.dispatchEvent(new MouseEvent('mouseenter'));
-    expect(tooltip).toHaveAttribute('aria-hidden', 'false');
-    expect(tooltip.textContent).toBe('[translated:tools.callout.emojiCategoryNature]');
-
-    nextButton.dispatchEvent(new MouseEvent('mouseleave'));
-    vi.advanceTimersByTime(400);
-    button.dispatchEvent(new MouseEvent('mouseenter'));
     expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+    expect(nextButton).not.toHaveAttribute('aria-describedby');
     vi.advanceTimersByTime(299);
     expect(tooltip).toHaveAttribute('aria-hidden', 'true');
     vi.advanceTimersByTime(1);
     expect(tooltip).toHaveAttribute('aria-hidden', 'false');
+    expect(tooltip.textContent).toBe('[translated:tools.callout.emojiCategoryNature]');
   });
 
-  it('shows the category label immediately on keyboard focus and dismisses it on blur', () => {
+  it('hides an open hint when the next category is hovered inside the grace period, then waits the full delay', () => {
+    const button = nav('people');
+    const nextButton = nav('nature');
+
+    button.dispatchEvent(new MouseEvent('mouseenter'));
+    vi.advanceTimersByTime(300);
+    button.dispatchEvent(new MouseEvent('mouseleave'));
+    vi.advanceTimersByTime(50);
+    expect(tooltip).toHaveAttribute('aria-hidden', 'false');
+
+    nextButton.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+    expect(button).not.toHaveAttribute('aria-describedby');
+    vi.advanceTimersByTime(299);
+    expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+    vi.advanceTimersByTime(1);
+    expect(tooltip).toHaveAttribute('aria-hidden', 'false');
+    expect(tooltip.textContent).toBe('[translated:tools.callout.emojiCategoryNature]');
+    expect(nextButton).toHaveAttribute('aria-describedby', 'blok-tooltip');
+  });
+
+  it('keeps an open hint open when its own category is re-entered inside the grace period', () => {
+    const button = nav('people');
+
+    button.dispatchEvent(new MouseEvent('mouseenter'));
+    vi.advanceTimersByTime(300);
+    button.dispatchEvent(new MouseEvent('mouseleave'));
+    vi.advanceTimersByTime(50);
+    button.dispatchEvent(new MouseEvent('mouseenter'));
+
+    expect(tooltip).toHaveAttribute('aria-hidden', 'false');
+    vi.advanceTimersByTime(1000);
+    expect(tooltip).toHaveAttribute('aria-hidden', 'false');
+    expect(tooltip.textContent).toBe('[translated:tools.callout.emojiCategoryPeople]');
+  });
+
+  it('shows no category hint on keyboard focus, even after the hover delay', () => {
     const button = nav('people');
 
     button.focus();
-
-    expect(tooltip).toHaveAttribute('aria-hidden', 'false');
-    expect(tooltip.textContent).toBe('[translated:tools.callout.emojiCategoryPeople]');
-    expect(button).toHaveAttribute('aria-describedby', 'blok-tooltip');
-
-    anchor.focus();
+    vi.advanceTimersByTime(1000);
 
     expect(tooltip).toHaveAttribute('aria-hidden', 'true');
     expect(button).not.toHaveAttribute('aria-describedby');
@@ -184,15 +211,21 @@ describe('EmojiPicker category tooltips', () => {
   describe.each([
     { state: 'pending', elapsed: 100 },
     { state: 'visible', elapsed: 300 },
-  ])('$state hints', ({ elapsed }) => {
+  ])('$state hints', ({ state, elapsed }) => {
     let button: HTMLButtonElement;
 
     beforeEach(() => {
       button = nav('people');
       button.dispatchEvent(new MouseEvent('mouseenter'));
       vi.advanceTimersByTime(elapsed);
-      expect(button).toHaveAttribute('aria-describedby', 'blok-tooltip');
-      expect(tooltip).toHaveAttribute('aria-hidden', elapsed === 300 ? 'false' : 'true');
+      // A pending hint writes nothing to the trigger until its delay ends.
+      if (state === 'visible') {
+        expect(button).toHaveAttribute('aria-describedby', 'blok-tooltip');
+        expect(tooltip).toHaveAttribute('aria-hidden', 'false');
+      } else {
+        expect(button).not.toHaveAttribute('aria-describedby');
+        expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+      }
     });
 
     it('dismisses on category click without closing the picker', () => {
@@ -204,6 +237,7 @@ describe('EmojiPicker category tooltips', () => {
       expect(picker.isOpen()).toBe(true);
       vi.advanceTimersByTime(500);
       expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+      expect(button).not.toHaveAttribute('aria-describedby');
     });
 
     it('dismisses on pointer leave after the shared tooltip grace period', () => {
@@ -214,6 +248,7 @@ describe('EmojiPicker category tooltips', () => {
       expect(button).not.toHaveAttribute('aria-describedby');
       vi.advanceTimersByTime(500);
       expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+      expect(button).not.toHaveAttribute('aria-describedby');
     });
 
     it('dismisses on close and does not reappear on reopen', async () => {
@@ -224,6 +259,7 @@ describe('EmojiPicker category tooltips', () => {
       await picker.open(anchor);
       vi.advanceTimersByTime(500);
       expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+      expect(button).not.toHaveAttribute('aria-describedby');
     });
 
     it.each(['grinning', 'no-such-emoji-zzzz', ''])('dismisses when query "%s" hides or rebuilds category buttons', (query) => {
@@ -233,6 +269,7 @@ describe('EmojiPicker category tooltips', () => {
       expect(button).not.toHaveAttribute('aria-describedby');
       vi.advanceTimersByTime(500);
       expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+      expect(button).not.toHaveAttribute('aria-describedby');
     });
   });
 });

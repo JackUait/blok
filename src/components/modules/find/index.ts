@@ -628,9 +628,7 @@ export class Find extends Module {
     const anchor = this.anchor;
     const findOptions: FindOptions = this.bar.options;
 
-    // The preview hides the real text it copies; showPreview() puts it back.
-    this.preview?.clear();
-    this.ranges = findRanges(document.body, this.bar.query, findOptions).filter((range) => this.isFindable(range));
+    this.ranges = findRanges(document.body, this.bar.query, findOptions);
 
     const after = anchor === null ? this.ranges : this.ranges.filter((range) => startsAtOrAfter(range, anchor, document.body));
     // While typing, prefer a match the reader can see; hidden ones are one Enter away.
@@ -674,7 +672,7 @@ export class Find extends Module {
     }
 
     if (current !== null && options.expand === true) {
-      this.collapsedAncestors(current).reverse().forEach((parent) => parent.call('expand'));
+      this.reveal(current);
     }
 
     paintFindHighlights(this, this.ranges.map((range) => this.onScreen(range)), current === null ? null : this.onScreen(current));
@@ -714,22 +712,58 @@ export class Find extends Module {
     return hiddenAncestors(block, (id) => BlockManager.getBlockById(id));
   }
 
+  private blockOf(range: Range): Block | undefined {
+    const editor = editorOf(range.startContainer);
+    const owner = Array.from(Find.allInstances).find((instance) => instance.Blok.UI.nodes.wrapper === editor);
+
+    return owner?.Blok.BlockManager.getBlockByChildNode(range.startContainer);
+  }
+
   private isHidden(range: Range): boolean {
-    return this.collapsedAncestors(range).length > 0;
+    return this.collapsedAncestors(range).length > 0 || !this.isShown(range);
   }
 
   /**
-   * Like the browser's find: text that is not rendered does not count, unless
-   * Find can show it by opening what hides it (a collapsed toggle, a tab).
+   * Whether the match's text is rendered. Read on the preview copy while one is
+   * shown: the preview hides the real text it stands in for.
    * @param range - a match
    */
-  private isFindable(range: Range): boolean {
-    const element = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
+  private isShown(range: Range): boolean {
+    const node = this.onScreen(range).startContainer;
+    const element = node instanceof Element ? node : node.parentElement;
 
-    return element === null
-      || typeof element.checkVisibility !== 'function'
-      || element.checkVisibility({ visibilityProperty: true })
-      || this.isHidden(range);
+    return element === null || typeof element.checkVisibility !== 'function' || element.checkVisibility({ visibilityProperty: true });
+  }
+
+  /**
+   * Show a match the reader stepped to: switch the host tabs around it, open
+   * the blocks hiding it, then ask its own block (a code block behind its
+   * preview) to show it. Outermost first, so each step sees a laid-out parent.
+   * @param range - the current match
+   */
+  private reveal(range: Range): void {
+    const node = range.startContainer;
+    const panelsAround = (element: Element | null | undefined): Element[] => {
+      const panel = element?.closest('[role="tabpanel"]');
+
+      return panel == null ? [] : [...panelsAround(panel.parentElement), panel];
+    };
+
+    panelsAround(node instanceof Element ? node : node.parentElement)
+      .filter((panel) => panel.id !== '' && typeof panel.checkVisibility === 'function' && !panel.checkVisibility())
+      .forEach((panel) => {
+        const tab = [...document.querySelectorAll('[role="tab"][aria-controls]')].find((candidate) => candidate.getAttribute('aria-controls') === panel.id);
+
+        if (tab instanceof HTMLElement) {
+          tab.click();
+        }
+      });
+
+    this.collapsedAncestors(range).reverse().forEach((parent) => parent.call('expand'));
+
+    if (!this.isShown(range)) {
+      this.blockOf(range)?.call('expand');
+    }
   }
 
   private scrollIntoView(range: Range): void {

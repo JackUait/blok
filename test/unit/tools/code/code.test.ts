@@ -625,6 +625,30 @@ describe('CodeTool', () => {
       expect((previewEl as HTMLElement).hidden).toBe(false);
     });
 
+    // Find calls expand() to show a match in the source behind the preview.
+    it('expand() switches from the preview to the code', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      tool.expand();
+
+      expect(el.querySelector('pre')?.hidden).toBe(false);
+      expect(el.querySelector<HTMLElement>('[data-blok-testid="code-preview"]')?.hidden).toBe(true);
+    });
+
+    it('expand() keeps split view, where the code already shows', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      el.querySelector<HTMLButtonElement>('[data-blok-testid="code-mode-split"]')?.click();
+      tool.expand();
+
+      expect(el.querySelector('pre')?.hidden).toBe(false);
+      expect(el.querySelector<HTMLElement>('[data-blok-testid="code-preview"]')?.hidden).toBe(false);
+    });
+
     it('clicking code mode button shows code and hides preview', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));

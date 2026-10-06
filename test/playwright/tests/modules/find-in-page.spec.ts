@@ -1438,6 +1438,23 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-bar')).toBeHidden();
     });
 
+    test('stepping to a match in a code block source behind its preview shows the code', async ({ page }) => {
+      await createEditor(page, [
+        { id: 'find-p', type: 'paragraph', data: { text: 'alpha here' } },
+        { id: 'find-code', type: 'code', data: { code: 'alpha^2', language: 'latex' } },
+      ]);
+      await focusParagraph(page, 'alpha here');
+      await openFind(page, 'alpha');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+      await expect(page.getByTestId('code-content')).toBeHidden();
+
+      await page.keyboard.press('Enter');
+
+      await expect(page.getByTestId('code-content')).toBeVisible();
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+    });
+
     test('replacing in a code block keeps focus in the find bar', async ({ page }) => {
       await createEditor(page, [
         { id: 'find-code', type: 'code', data: { code: 'const hello = "hello";', language: 'javascript' } },

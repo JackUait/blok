@@ -407,8 +407,34 @@ describe('Find module', () => {
     expect(activeText()).toBe('apple two');
   });
 
-  describe('text that is not rendered', () => {
+  describe('a match whose text is not shown', () => {
     const matchCount = (): number => painted('blok-find-match').length + painted('blok-find-match-active').length;
+
+    const hostTab = (): { tab: HTMLButtonElement; panel: HTMLDivElement } => {
+      const tab = document.createElement('button');
+      const panel = document.createElement('div');
+
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-controls', 'other-tab');
+      tab.addEventListener('click', () => {
+        panel.hidden = false;
+      });
+      panel.id = 'other-tab';
+      panel.setAttribute('role', 'tabpanel');
+      panel.hidden = true;
+      panel.textContent = 'cat in another tab';
+      document.body.append(tab, panel);
+
+      return { tab, panel };
+    };
+
+    const hiddenSource = (block: FakeBlock): void => {
+      const source = document.createElement('pre');
+
+      source.className = 'hidden';
+      source.textContent = 'cat source';
+      block.holder.querySelector('[contenteditable]')?.parentElement?.appendChild(source);
+    };
 
     beforeEach(() => {
       Object.defineProperty(Element.prototype, 'checkVisibility', {
@@ -423,33 +449,48 @@ describe('Find module', () => {
       Reflect.deleteProperty(Element.prototype, 'checkVisibility');
     });
 
-    it('does not count host page text that is not rendered', () => {
+    it('switches to the host tab that holds it when the reader steps to it', () => {
       const { wrapper, redactor } = editor([{ id: 'a', text: 'cat here' }]);
-      const panel = document.createElement('div');
+      const { panel } = hostTab();
 
-      panel.hidden = true;
-      panel.textContent = 'cat in another tab';
-      document.body.appendChild(panel);
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
+
+      expect(panel.hidden).toBe(false);
+      expect(activeText()).toBe('cat in another tab');
+      expect(matchCount()).toBe(2);
+    });
+
+    it('asks its own block to show it when the reader steps to it, like a code block source behind its preview', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat here' }, { id: 'code', text: 'diagram' }]);
+
+      hiddenSource(blocks[1]);
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
+
+      expect(blocks[1].call).toHaveBeenCalledWith('expand');
+      expect(blocks[0].call).not.toHaveBeenCalled();
+      expect(matchCount()).toBe(2);
+    });
+
+    it('switches nothing while the query is being typed, and starts on a shown match', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'code', text: 'diagram' }, { id: 'a', text: 'cat here' }]);
+      const { panel } = hostTab();
+
+      hiddenSource(blocks[0]);
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
       typeQuery(wrapper, 'cat');
 
-      expect(matchCount()).toBe(1);
+      expect(blocks[0].call).not.toHaveBeenCalled();
+      expect(panel.hidden).toBe(true);
+      const [active] = [...highlights.get('blok-find-match-active') ?? []];
+
+      expect(active instanceof Range ? active.startContainer.parentElement?.closest('[data-blok-element]') : null).toBe(blocks[1].holder);
     });
 
-    it('does not count editor text that is not rendered, like a code block source behind its preview', () => {
-      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat here' }]);
-      const source = document.createElement('pre');
-
-      source.className = 'hidden';
-      source.textContent = 'cat source';
-      blocks[0].holder.querySelector('[data-blok-element-content] > *')?.appendChild(source);
-      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
-      typeQuery(wrapper, 'cat');
-
-      expect(matchCount()).toBe(1);
-    });
-
-    it('still counts a match Find can reveal, like one in a hidden tab', () => {
+    it('still counts a match in a hidden tab block', () => {
       const { wrapper, redactor } = editor([
         { id: 'tabs', text: 'tabs' },
         { id: 'tab-1', text: 'cat first', parent: 'tabs' },

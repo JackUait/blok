@@ -77,6 +77,30 @@ describe('PopoverDesktop current item', () => {
     expect(['alpha', 'beta']).toContain(last?.name);
   });
 
+  it('reports the pointer on the row the keyboard already made current', () => {
+    popover.show();
+    popover.getElement().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true }));
+
+    const focused = seen.at(-1)?.name ?? '';
+
+    document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 5, clientY: 5 }));
+    hover(itemEl(popover, focused), 7, 9);
+
+    expect(seen.at(-1)).toEqual({ name: focused, element: itemEl(popover, focused), source: 'pointer' });
+  });
+
+  it('reports the pointer again on its row after the keyboard moved away and back', () => {
+    popover.show();
+    document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 5, clientY: 5 }));
+    hover(itemEl(popover, 'alpha'), 5, 5);
+    // The first press focuses alpha, the second moves to beta.
+    popover.getElement().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true }));
+    popover.getElement().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true }));
+    hover(itemEl(popover, 'alpha'), 6, 6);
+
+    expect(seen.at(-1)).toEqual({ name: 'alpha', element: itemEl(popover, 'alpha'), source: 'pointer' });
+  });
+
   it('clears when the pointer leaves the menu', () => {
     popover.show();
     document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 5, clientY: 5 }));

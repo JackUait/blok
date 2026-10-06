@@ -56,26 +56,43 @@ export class ToolboxPreview {
   private warmUntil = 0;
   private visible = false;
   private current: ToolboxPreviewShowParams | null = null;
+  private pending: ToolboxPreviewShowParams | null = null;
+  private scrolledAway: ToolboxPreviewShowParams | null = null;
 
   constructor(private readonly options: ToolboxPreviewOptions) {}
 
   public show(params: ToolboxPreviewShowParams): void {
-    this.cancelOpen();
+    this.stopWaitingForPointer();
 
     if (this.visible || params.source === 'keyboard' || Date.now() < this.warmUntil) {
+      this.cancelOpen();
       this.open(params);
 
       return;
     }
 
+    // The delay runs once per hover: moving to the next row swaps the card it will open.
+    this.pending = params;
+
+    if (this.openTimer !== null) {
+      return;
+    }
+
     this.openTimer = setTimeout(() => {
+      const pending = this.pending;
+
       this.openTimer = null;
-      this.open(params);
+      this.pending = null;
+
+      if (pending !== null) {
+        this.open(pending);
+      }
     }, PREVIEW_OPEN_DELAY);
   }
 
   public hide(): void {
     this.cancelOpen();
+    this.stopWaitingForPointer();
 
     if (!this.visible || this.root === null) {
       return;
@@ -192,11 +209,32 @@ export class ToolboxPreview {
   }
 
   private cancelOpen(): void {
+    this.pending = null;
+
     if (this.openTimer !== null) {
       clearTimeout(this.openTimer);
       this.openTimer = null;
     }
   }
+
+  private stopWaitingForPointer(): void {
+    this.scrolledAway = null;
+    document.removeEventListener('mousemove', this.onPointerMove, { capture: true });
+  }
+
+  /**
+   * The menu reports a row only when the pointer enters it, so a card a scroll
+   * closed would stay closed while the pointer rests on the same row.
+   */
+  private onPointerMove = (event: MouseEvent): void => {
+    const params = this.scrolledAway;
+
+    this.stopWaitingForPointer();
+
+    if (params !== null && event.target instanceof Node && params.item.contains(event.target)) {
+      this.open(params);
+    }
+  };
 
   private onScroll = (event: Event): void => {
     // Arrow keys scroll the menu's own list to reveal the focused row: follow the row.
@@ -206,6 +244,13 @@ export class ToolboxPreview {
       return;
     }
 
+    const current = this.current;
+
     this.hide();
+
+    if (current !== null) {
+      this.scrolledAway = current;
+      document.addEventListener('mousemove', this.onPointerMove, { capture: true });
+    }
   };
 }

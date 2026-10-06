@@ -175,6 +175,7 @@ export class PopoverDesktop extends PopoverAbstract {
   private currentItemListeners = new Set<(current: PopoverCurrentItem | null) => void>();
 
   private currentItemElement: HTMLElement | null = null;
+  private currentItemSource: PopoverCurrentItem['source'] = 'pointer';
 
   /**
    * Suppresses the synthesized mouseover that Chromium fires immediately
@@ -925,11 +926,17 @@ export class PopoverDesktop extends PopoverAbstract {
   private reportCurrentItem(item: PopoverItem | null, source: PopoverCurrentItem['source']): void {
     const element = item?.getElement() ?? null;
 
-    if (element === this.currentItemElement) {
+    if (element === this.currentItemElement && source === this.currentItemSource) {
       return;
     }
 
     this.currentItemElement = element;
+    this.currentItemSource = source;
+
+    // The pointer may still rest on the row it hovered: let it claim that row again.
+    if (source === 'keyboard') {
+      this.previouslyHoveredItem = null;
+    }
 
     const current = item !== null && element !== null ? { name: item.name, element, source } : null;
 

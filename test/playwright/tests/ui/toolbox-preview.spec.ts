@@ -48,6 +48,16 @@ const openToolbox = async (page: Page): Promise<void> => {
 
 const option = (page: Page, name: string) => page.getByTestId('toolbox-popover').locator(`[data-blok-item-name="${name}"]`);
 
+const rowCenter = async (page: Page, name: string): Promise<{ x: number; y: number }> => {
+  const box = await option(page, name).boundingBox();
+
+  if (box === null) {
+    throw new Error(`row ${name} has no box`);
+  }
+
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+};
+
 test.describe('Toolbox hover preview', () => {
   test.beforeAll(ensureBlokBundleBuilt);
 
@@ -153,6 +163,51 @@ test.describe('Toolbox hover preview', () => {
 
     expect(seen.size).toBeGreaterThan(20);
     expect([ ...seen ].filter(([, size]) => size !== '232x156')).toEqual([]);
+  });
+
+  test('shows the card for the first search match when the pointer moves onto it', async ({ page }) => {
+    await page.mouse.move(1, 1);
+    await openToolbox(page);
+    await page.locator(PARAGRAPH_SELECTOR).type('head');
+    await expect(option(page, 'header-1')).toBeVisible();
+
+    const center = await rowCenter(page, 'header-1');
+
+    await page.mouse.move(center.x, center.y, { steps: 6 });
+
+    await expect(page.getByTestId('toolbox-preview')).toContainText('Big section heading');
+  });
+
+  test('opens while the pointer keeps moving down the rows', async ({ page }) => {
+    await page.mouse.move(1, 1);
+    await openToolbox(page);
+
+    for (const name of [ 'paragraph', 'header-1', 'header-2', 'header-3' ]) {
+      const center = await rowCenter(page, name);
+
+      await page.mouse.move(center.x, center.y, { steps: 3 });
+      // Each rest is shorter than the open delay (PREVIEW_OPEN_DELAY = 320ms).
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 200)));
+    }
+
+    await expect(page.getByTestId('toolbox-preview')).toBeVisible();
+  });
+
+  test('comes back on the next pointer move after a page scroll closed it', async ({ page }) => {
+    await page.evaluate(() => {
+      document.body.style.minHeight = '4000px';
+    });
+    await openToolbox(page);
+
+    const center = await rowCenter(page, 'header-1');
+
+    await page.mouse.move(center.x, center.y, { steps: 3 });
+    await expect(page.getByTestId('toolbox-preview')).toBeVisible();
+    await page.evaluate(() => window.scrollBy(0, 1));
+    await expect(page.getByTestId('toolbox-preview')).toBeHidden();
+    await page.mouse.move(center.x + 4, center.y + 1, { steps: 2 });
+
+    await expect(page.getByTestId('toolbox-preview')).toContainText('Big section heading');
   });
 
   test('closes with the menu', async ({ page }) => {

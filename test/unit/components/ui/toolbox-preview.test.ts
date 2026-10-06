@@ -205,6 +205,42 @@ describe('ToolboxPreview', () => {
     expect(cardRoot()?.hidden).toBe(true);
   });
 
+  it('keeps one open delay while the pointer moves across rows', () => {
+    const { surface, item } = makeAnchors();
+    const next = document.createElement('div');
+
+    surface.appendChild(next);
+    preview.show({ item, surface, config: config('first'), source: 'pointer' });
+    vi.advanceTimersByTime(PREVIEW_OPEN_DELAY - 100);
+    preview.show({ item: next, surface, config: config('second'), source: 'pointer' });
+    vi.advanceTimersByTime(100);
+
+    expect(cardRoot()?.hidden).toBe(false);
+    expect(cardRoot()?.querySelector('[data-testid="drawing"]')?.textContent).toBe('second');
+  });
+
+  it('reopens on the next pointer move over the row a page scroll closed it on', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+    document.dispatchEvent(new Event('scroll'));
+    item.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+
+    expect(cardRoot()?.hidden).toBe(false);
+  });
+
+  it('stays closed after a page scroll when the pointer moves off the row', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+    document.dispatchEvent(new Event('scroll'));
+    document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+    item.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+    vi.advanceTimersByTime(PREVIEW_OPEN_DELAY);
+
+    expect(cardRoot()?.hidden).toBe(true);
+  });
+
   it('stays open and follows the row when the menu list itself scrolls', () => {
     const { surface, item } = makeAnchors();
 

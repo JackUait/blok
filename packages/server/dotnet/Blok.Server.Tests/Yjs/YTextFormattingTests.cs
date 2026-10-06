@@ -181,6 +181,38 @@ public sealed class YTextFormattingTests
         YjsEngineFixtures.Canonicalize(DeltaJson(runner.Doc.GetText("content").ToDelta())));
   }
 
+  /// <summary>
+  /// The decoder only checks that an embed is JSON, so a peer can send
+  /// <c>null</c>; yjs reads it as <c>{ insert: null }</c>.
+  /// </summary>
+  [Fact]
+  public void ToDeltaReadsANullEmbed()
+  {
+    var writer = new YDoc(4242);
+    var embed = new AnyObject();
+
+    embed.Add("a", 1d);
+
+    var written = writer.Transact(
+        transaction => writer.GetText("content").InsertEmbed(transaction, 0, embed)) ?? [];
+    var json = "{\"a\":1}"u8.ToArray();
+    var at = written.AsSpan().IndexOf([(byte)json.Length, .. json]);
+
+    Assert.True(at >= 0, "the embed's JSON is not in the update");
+
+    byte[] patched = [.. written[..at], 4, .. "null"u8.ToArray(), .. written[(at + 1 + json.Length)..]];
+    var doc = new YDoc(4343);
+
+    Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(patched).Outcome);
+
+    var operation = Assert.Single(doc.GetText("content").ToDelta());
+    var replay = NodeReplay.Run(
+        new Dictionary<string, string>(StringComparer.Ordinal) { ["content"] = "text" }, [patched], null);
+
+    Assert.Null(operation.Insert);
+    Assert.Equal("[{\"insert\":null}]", replay.Json["content"]?["$text"]?.ToJsonString());
+  }
+
   [Fact]
   public void AttachedTextNeedsATransaction()
   {

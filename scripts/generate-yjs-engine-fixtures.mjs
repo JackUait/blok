@@ -75,6 +75,9 @@ const ROOT_CTORS = { array: Y.Array, map: Y.Map, text: Y.Text };
 // Tags an update produced by a fixture op, so the recorder ignores the update
 // events that remote applies also fire.
 const LOCAL_ORIGIN = Symbol('blok-fixture-local');
+// Deliveries need an origin of their own: yjs's format cleanup is the only
+// write left with origin null.
+const REMOTE_ORIGIN = Symbol('blok-fixture-remote');
 
 const SEED_COUNT = 50;
 // 40, not the plan's ~80: at 80 ops a seed weighs ~24 KiB (the per-step sha256
@@ -339,7 +342,30 @@ class World {
    * @returns {void}
    */
   deliver(name, update) {
-    Y.applyUpdate(this.doc(name), update);
+    this.deliverCapturingCleanup(name, update);
+  }
+
+  /**
+   * Applies a remote update and answers what yjs wrote back on its own: the
+   * format cleanup it runs after a remote transaction, with origin null.
+   * @param {string} name
+   * @param {Uint8Array} update
+   * @returns {Uint8Array[]}
+   */
+  deliverCapturingCleanup(name, update) {
+    const doc = this.doc(name);
+    const cleanup = [];
+    const listener = (written, origin) => {
+      if (origin === null) {
+        cleanup.push(written);
+      }
+    };
+
+    doc.on('update', listener);
+    Y.applyUpdate(doc, update, REMOTE_ORIGIN);
+    doc.off('update', listener);
+
+    return cleanup;
   }
 
   /**
@@ -1316,19 +1342,25 @@ const SCENARIOS = [
     ],
   },
   {
-    name: 'formatted-text-remote-overlap',
-    description: 'Two peers bold overlapping ranges concurrently. The receiving yjs doc runs its format cleanup, the engine does not (contract section 7), so only canonical segments are comparable: see `compare`.',
+    name: 'formatted-text-remote-cleanup',
+    description: 'Two peers format overlapping ranges. On receipt, yjs runs a format cleanup that the engine does not port (contract section 7), and here that cleanup CHANGES what "ab" reads as: yjs drops italic, the engine keeps it. The divergence is pinned, then closed by delivering the cleanup a yjs peer (A) wrote and sent. See `compare` and `cleanupAs`.',
     compare: 'segments',
     roots: MAP_ROOTS,
     steps: [
       { doc: 'A', op: mapSet('b1', { $yxmltext: '' }), deliver: ['B', 'C'] },
       { doc: 'A', op: richInsert(0, 'abcdef', {}), deliver: ['B', 'C'] },
-      { doc: 'A', op: richFormat(0, 4, { bold: true }) },
-      { doc: 'B', op: richFormat(2, 4, { bold: true }) },
-      { deliverOf: 's3', to: ['B', 'C'] },
-      { deliverOf: 's4', to: ['A', 'C'] },
-      { engine: true, op: richInsert(3, 'X', { bold: true }) },
-      { engine: true, op: richFormat(1, 2, { italic: true }) },
+      { doc: 'A', op: richFormat(0, 2, { italic: true, bold: null }) },
+      { doc: 'A', op: richFormat(2, 1, { bold: true, italic: true }) },
+      { doc: 'B', op: richFormat(0, 4, { italic: true, bold: null }) },
+      { doc: 'B', op: richFormat(0, 4, { bold: null, italic: null }) },
+      { deliverOf: 's3', to: ['C'] },
+      { deliverOf: 's4', to: ['C'] },
+      { deliverOf: 's5', to: ['C'] },
+      { deliverOf: 's6', to: ['C'], engineDiverges: true },
+      { deliverOf: 's5', to: ['A'], cleanupAs: 'c1' },
+      { deliverOf: 's6', to: ['A'] },
+      { engine: true, op: richInsert(6, '!', { bold: true }), engineDiverges: true },
+      { deliverOf: 'c1', to: ['C'] },
     ],
   },
   {
@@ -1372,8 +1404,13 @@ function runScenario(spec) {
   const steps = [];
   let counter = 0;
 
-  const expectEngine = () => {
-    steps.push({ kind: 'expect', doc: engine, expect: world.observe(engine, spec.roots) });
+  const expectEngine = (diverges) => {
+    steps.push({
+      kind: 'expect',
+      doc: engine,
+      ...(diverges === true ? { diverges: true } : {}),
+      expect: world.observe(engine, spec.roots),
+    });
   };
 
   for (const authored of spec.steps) {
@@ -1384,14 +1421,34 @@ function runScenario(spec) {
         throw new Error(`scenario "${spec.name}" delivers unknown step "${authored.deliverOf}"`);
       }
 
+      const cleanup = [];
+
       for (const target of authored.to) {
-        world.deliver(target, update);
+        cleanup.push(...world.deliverCapturingCleanup(target, update));
       }
 
       steps.push({ kind: 'deliver', updateOf: authored.deliverOf, to: authored.to });
 
       if (authored.to.includes(engine)) {
-        expectEngine();
+        expectEngine(authored.engineDiverges);
+      }
+
+      if (authored.cleanupAs !== undefined) {
+        if (cleanup.length === 0) {
+          throw new Error(`scenario "${spec.name}": step ${authored.cleanupAs} expected a yjs format cleanup, none ran`);
+        }
+
+        const merged = Y.mergeUpdates(cleanup);
+
+        updates.set(authored.cleanupAs, merged);
+        steps.push({
+          kind: 'op',
+          id: authored.cleanupAs,
+          doc: authored.to[0],
+          op: { op: 'yjs.cleanup' },
+          update: b64(merged),
+          deliver: [],
+        });
       }
 
       continue;
@@ -1420,7 +1477,7 @@ function runScenario(spec) {
     });
 
     if (actor === engine || deliver.includes(engine)) {
-      expectEngine();
+      expectEngine(authored.engineDiverges);
     }
   }
 
@@ -1460,7 +1517,10 @@ function buildScenarios() {
       '`json` on the engine doc). Update bytes need not match yjs byte-for-byte, but `sv` and ' +
       '`json` must. A case with `compare: "segments"` has remote formatting, which yjs cleans up ' +
       'after the transaction and the engine does not: compare only `json`, with every Y.Text ' +
-      'delta merged into runs of equal attributes, and skip engine bytes and `sv`. Nested $ymap/$yarray/$ytext values integrate the container item first and then ' +
+      'delta merged into runs of equal attributes, and skip engine bytes and `sv`. An expect with ' +
+      '`diverges: true` pins a KNOWN gap from that missing cleanup: the merged json must DIFFER. ' +
+      'An "op" whose op is `yjs.cleanup` is the cleanup a yjs doc wrote with origin null while ' +
+      'receiving an update; peers send it, so the engine converges once it arrives. Nested $ymap/$yarray/$ytext values integrate the container item first and then ' +
       'their entries in listed order — get that order wrong and the state vector diverges. The fuzz ' +
       'seed files use this same op grammar with two step shortcuts of their own, which each of them ' +
       'states in its own $description.',

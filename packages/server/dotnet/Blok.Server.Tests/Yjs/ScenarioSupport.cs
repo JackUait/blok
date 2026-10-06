@@ -9,8 +9,12 @@ using Xunit;
 namespace Blok.Server.Tests.Yjs;
 
 /// <summary>What a step says the engine document must look like once it has run.</summary>
+/// <param name="Diverges">
+/// A known gap: yjs ran a format cleanup the engine does not port, so the
+/// merged json must DIFFER until a peer's cleanup arrives.
+/// </param>
 internal sealed record ScenarioExpect(
-    byte[]? StateVector, bool? HasPending, JsonNode? Json, string? JsonSha256);
+    byte[]? StateVector, bool? HasPending, JsonNode? Json, string? JsonSha256, bool Diverges = false);
 
 /// <summary>
 /// One step of a scenario or a fuzz seed, in the one shape both files reduce
@@ -554,7 +558,9 @@ internal static class ScenarioSupport
         Bytes(step["update"]),
         step["updateOf"]?.GetValue<string>(),
         Names(kind == "deliver" ? step["to"] : step["deliver"]),
-        ReadExpect(step["expect"]));
+        ReadExpect(step["expect"]) is { } expect
+            ? expect with { Diverges = step["diverges"]?.GetValue<bool>() ?? false }
+            : null);
   }
 
   private static ScenarioCase ReadSeed(string fileName)
@@ -790,11 +796,20 @@ internal sealed class ScenarioRunner
     if (expect.Json is { } json)
     {
       var rendered = JsonRenderer.Render(Doc, testCase.Roots);
+      var wanted = YjsEngineFixtures.Canonicalize(
+          testCase.Segments ? ScenarioSupport.MergeTextRuns(json) : json);
+      var actual = YjsEngineFixtures.Canonicalize(
+          testCase.Segments ? ScenarioSupport.MergeTextRuns(rendered) : rendered);
 
-      Assert.Equal(
-          YjsEngineFixtures.Canonicalize(testCase.Segments ? ScenarioSupport.MergeTextRuns(json) : json),
-          YjsEngineFixtures.Canonicalize(
-              testCase.Segments ? ScenarioSupport.MergeTextRuns(rendered) : rendered));
+      if (expect.Diverges)
+      {
+        Assert.NotEqual(wanted, actual);
+      }
+      else
+      {
+        Assert.Equal(wanted, actual);
+      }
+
       Checks++;
     }
 

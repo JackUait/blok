@@ -313,7 +313,7 @@ public sealed class YDocWriteTests
   [InlineData("formatted-text-prelim-queue")]
   [InlineData("formatted-text-link-key-order")]
   [InlineData("formatted-text-equal-links-cleanup")]
-  [InlineData("formatted-text-remote-overlap")]
+  [InlineData("formatted-text-remote-cleanup")]
   public void TextWritesMatchYjs(string name)
   {
     var testCase = ScenarioSupport.Scenarios().Single(candidate => candidate.Name == name);

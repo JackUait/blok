@@ -3,9 +3,12 @@ using System.Globalization;
 namespace Blok.Server.Yjs;
 
 /// <summary>One op of <see cref="YTextBase.ToDelta"/>: a run of characters, an embed or a nested type, and the marks on it.</summary>
-/// <param name="Insert">A string, an embed value, or a <see cref="YAbstractType"/>.</param>
+/// <param name="Insert">
+/// A string, an embed value, or a <see cref="YAbstractType"/>. Null for an
+/// embed whose JSON is null, which no yjs API writes but the wire allows.
+/// </param>
 /// <param name="Attributes">Null when no mark is in force.</param>
-internal sealed record YTextDelta(object Insert, AnyObject? Attributes);
+internal sealed record YTextDelta(object? Insert, AnyObject? Attributes);
 
 /// <summary>
 /// The item-chain text logic Y.Text and Y.XmlText share: yjs's YText.js
@@ -176,7 +179,7 @@ internal abstract class YTextBase : YAbstractType
 
         case ContentEmbed embed:
           PackRun();
-          delta.Add(new YTextDelta(JsJson.Parse(embed.Json)!, Snapshot(attributes)));
+          delta.Add(new YTextDelta(JsJson.Parse(embed.Json), Snapshot(attributes)));
           break;
 
         case ContentType nested:

@@ -10,11 +10,34 @@ describe('tools entry exports', () => {
     it('includes database-row entry', () => {
       expect(toolsEntry.defaultBlockTools).toHaveProperty('database-row');
     });
+
+    it('includes table_of_contents entry', () => {
+      expect(toolsEntry.defaultBlockTools).toHaveProperty('table_of_contents');
+    });
   });
 
   describe('Columns group export', () => {
     it('exports Columns', () => {
       expect(toolsEntry).toHaveProperty('Columns');
+    });
+  });
+
+  describe('TableOfContents export', () => {
+    it('exports the table of contents tool class', async () => {
+      const { TableOfContentsTool } = await import('../../../src/tools/table-of-contents');
+
+      expect(toolsEntry).toHaveProperty('TableOfContents', TableOfContentsTool);
+    });
+  });
+
+  describe('Tabs group export', () => {
+    it('exports the Tabs manifest that provides the tabs and tab block tools', () => {
+      expect(toolsEntry.Tabs.provides).toStrictEqual({ tabs: toolsEntry.TabsTool, tab: toolsEntry.TabTool });
+    });
+
+    it('lists tabs and tab in defaultBlockTools', () => {
+      expect(toolsEntry.defaultBlockTools).toHaveProperty('tabs');
+      expect(toolsEntry.defaultBlockTools).toHaveProperty('tab');
     });
   });
 

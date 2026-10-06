@@ -265,7 +265,7 @@ describe('buildLanguagePickerItems', () => {
     const onPick = vi.fn();
     const go = build({ onPick }).filter(isDefault).find((item) => item.name === 'go');
 
-    go?.onActivate(go);
+    go?.onActivate?.(go);
 
     expect(onPick).toHaveBeenCalledWith('go');
   });

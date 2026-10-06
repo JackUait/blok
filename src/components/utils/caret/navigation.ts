@@ -7,6 +7,7 @@
 
 import { Dom as $ } from '../../dom';
 
+import { getElementDirection, inlineStartOffset, scrollFromInlineStart } from '../direction';
 import { setSelectionToElement } from './focus';
 
 /**
@@ -166,7 +167,26 @@ export const setCaretAtXPositionInContentEditable = (
 };
 
 /**
- * Binary search to find the character position closest to target X in a native input.
+ * Measures text in the input's font, or returns null when the browser cannot
+ * (no 2D canvas, as in jsdom).
+ */
+const createInputTextMeasurer = (style: CSSStyleDeclaration): ((text: string) => number) | null => {
+  const context = document.createElement('canvas').getContext('2d');
+
+  if (context === null) {
+    return null;
+  }
+
+  // Longhands: the `font` shorthand reads back empty when a part is not
+  // expressible in it (e.g. a non-normal font-stretch).
+  context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  context.letterSpacing = style.letterSpacing === 'normal' ? '0px' : style.letterSpacing;
+
+  return (text: string): number => context.measureText(text).width;
+};
+
+/**
+ * Finds the character position in a native input closest to a target X.
  *
  * @param input - The native input element
  * @param start - Start position for search
@@ -180,34 +200,45 @@ export const findBestPositionInRange = (
   end: number,
   targetX: number
 ): number => {
-  /**
-   * For native inputs, we approximate position based on character width
-   * This is not perfect but provides reasonable behavior
-   */
   const inputRect = input.getBoundingClientRect();
   const style = window.getComputedStyle(input);
-  const paddingLeft = parseFloat(style.paddingLeft) || 0;
-
-  /**
-   * For native inputs, we approximate position based on character width
-   */
-  const relativeX = targetX - inputRect.left - paddingLeft;
+  const direction = getElementDirection(input);
+  const paddingStart = parseFloat(direction === 'rtl' ? style.paddingRight : style.paddingLeft) || 0;
+  const borderStart = parseFloat(direction === 'rtl' ? style.borderRightWidth : style.borderLeftWidth) || 0;
+  const relativeX = inlineStartOffset(targetX, inputRect, direction) - borderStart - paddingStart
+    + scrollFromInlineStart(input, direction);
 
   if (relativeX <= 0) {
     return start;
   }
 
-  /**
-   * Estimate character width and find approximate position
-   */
   const text = input.value.substring(start, end);
-  const fontSize = parseFloat(style.fontSize) || 16;
-  const avgCharWidth = fontSize * 0.6; // Approximate average character width
+  const measure = createInputTextMeasurer(style);
 
-  const estimatedPosition = Math.round(relativeX / avgCharWidth);
-  const clampedPosition = Math.min(Math.max(estimatedPosition, 0), text.length);
+  if (measure === null) {
+    // Without a canvas, assume an average glyph of 0.6em.
+    const avgCharWidth = (parseFloat(style.fontSize) || 16) * 0.6;
 
-  return start + clampedPosition;
+    return start + Math.min(Math.round(relativeX / avgCharWidth), text.length);
+  }
+
+  // Prefix widths only grow: binary-search the first caret at or past the
+  // target, then take the nearer of it and the one before.
+  const caretOffset = (index: number): number => measure(text.slice(0, index));
+  const firstAtOrPast = (low: number, high: number): number => {
+    if (low >= high) {
+      return low;
+    }
+
+    const middle = Math.floor((low + high) / 2);
+
+    return caretOffset(middle) >= relativeX ? firstAtOrPast(low, middle) : firstAtOrPast(middle + 1, high);
+  };
+  const after = firstAtOrPast(1, text.length);
+  const before = after - 1;
+  const isAfterNearer = Math.abs(caretOffset(after) - relativeX) < relativeX - caretOffset(before);
+
+  return start + (isAfterNearer ? after : before);
 };
 
 /**
@@ -311,11 +342,19 @@ export const getCaretXPosition = (): number | null => {
     return null;
   }
 
-  // Check if getBoundingClientRect is available (may not be in jsdom)
-  if (typeof range.getBoundingClientRect !== 'function') {
+  /**
+   * A caret with no box of its own sits at the element's inline start: the
+   * right edge in RTL.
+   */
+  const elementInlineStart = (): number => {
     const elementRect = element.getBoundingClientRect();
 
-    return elementRect.left;
+    return getElementDirection(element) === 'rtl' ? elementRect.right : elementRect.left;
+  };
+
+  // Check if getBoundingClientRect is available (may not be in jsdom)
+  if (typeof range.getBoundingClientRect !== 'function') {
+    return elementInlineStart();
   }
 
   const rect = range.getBoundingClientRect();
@@ -329,7 +368,5 @@ export const getCaretXPosition = (): number | null => {
     return rect.left;
   }
 
-  const elementRect = element.getBoundingClientRect();
-
-  return elementRect.left;
+  return elementInlineStart();
 };

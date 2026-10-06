@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 // ---------------------------------------------------------------------------
 // Selectors
@@ -61,6 +62,7 @@ const createBlokWithData = async (
     },
     { holder: HOLDER_ID, blokBlocks: blocks }
   );
+  await openFixtureToggles(page, { blocks });
 };
 
 const saveData = async (page: Page): Promise<OutputData> => {

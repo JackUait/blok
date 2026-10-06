@@ -23,6 +23,7 @@ import type { BlokModules } from '../../types-internal/blok-modules';
 export async function repaintBlocks(Blok: BlokModules): Promise<void> {
   const { ModificationsObserver, Saver, BlockManager, Renderer, Caret } = Blok;
 
+  ModificationsObserver.flushPendingBeforeRender();
   ModificationsObserver.disable();
 
   try {

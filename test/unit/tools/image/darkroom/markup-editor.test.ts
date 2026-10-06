@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ImageMarkup, ImageMarkupShape, ImageMarkupStroke, ImageMarkupText } from '../../../../../types/tools/image';
 import {
   createMarkupEditor,
+  stateForMark,
   type MarkupEditor,
   type MarkupEditorOptions,
 } from '../../../../../src/tools/image/darkroom/markup-editor';
@@ -207,6 +208,19 @@ describe('createMarkupEditor', () => {
       expect(livePaths()).toBeGreaterThan(0);
     });
 
+    it('a live highlighter paints the same two blend passes as the committed one', () => {
+      const { layer, plane, advance } = setup({ state: { ...BASE, tool: 'highlighter', color: '#ffcc00' } });
+
+      fire(layer, 'pointerdown', 350, 175);
+      fire(layer, 'pointermove', 380, 190);
+      advance(16);
+      const live = Array.from(plane.querySelectorAll<SVGPathElement>('[data-role="markup-live"] path'));
+
+      expect(live.map((p) => p.style.mixBlendMode)).toEqual(['multiply', 'screen']);
+      expect(live.map((p) => p.getAttribute('opacity'))).toEqual(['0.55', '0.4']);
+      expect(live[0]?.getAttribute('d')).toBe(live[1]?.getAttribute('d'));
+    });
+
     it('a long live stroke only re-outlines its tail each frame', () => {
       const { layer, advance } = setup();
 
@@ -232,11 +246,11 @@ describe('createMarkupEditor', () => {
       expect(plane.querySelector<SVGElement>('[data-markup-type="pen"]')?.style.opacity).toBe('');
     });
 
-    it('a mouse stroke stores the nominal pressure; a pen stroke stores its own', () => {
+    it('a mouse stroke stores its speed as pressure; a pen stroke stores its own', () => {
       const { layer, onCommit } = setup();
 
       drag(layer, [350, 175], [400, 200]);
-      expect((lastCommit(onCommit)[0] as ImageMarkupStroke).points[2]).toBe(0.5);
+      expect((lastCommit(onCommit)[0] as ImageMarkupStroke).points[2]).not.toBe(0.5);
 
       drag(layer, [350, 175], [400, 200], { pointerType: 'pen', pressure: 0.9, pointerId: 2 });
       expect((lastCommit(onCommit)[1] as ImageMarkupStroke).points[2]).toBe(0.9);
@@ -331,6 +345,64 @@ describe('createMarkupEditor', () => {
       const r = lastCommit(onCommit)[0] as ImageMarkupShape;
 
       expect((r.x2 - r.x1) * O.w).toBeCloseTo((r.y2 - r.y1) * O.h, 3);
+    });
+
+    it.each(['rounded-rect', 'star', 'polygon', 'bubble'] as const)('a %s runs corner to corner, squares with Shift and takes the fill', (type) => {
+      const { layer, onCommit, editor } = setup();
+
+      editor.setState({ ...BASE, tool: type, fill: true });
+      drag(layer, [150, 100], [250, 130], { shiftKey: true });
+
+      const r = lastCommit(onCommit)[0] as ImageMarkupShape;
+
+      expect(r).toMatchObject({ type, x1: 0.1, y1: 0.2, fill: true });
+      expect((r.x2 - r.x1) * O.w).toBeCloseTo((r.y2 - r.y1) * O.h, 3);
+    });
+
+    it('a spotlight dims the photo while it is dragged out and lands without a fill', () => {
+      const { layer, plane, editor, onCommit, advance } = setup();
+
+      editor.setState({ ...BASE, tool: 'spotlight', fill: true });
+      fire(layer, 'pointerdown', 150, 100);
+      fire(layer, 'pointermove', 250, 150);
+      advance(16);
+      expect(plane.querySelector('[data-role="markup-spotlight"]')).not.toBeNull();
+      fire(layer, 'pointerup', 250, 150);
+
+      expect(lastCommit(onCommit)[0]).toMatchObject({ type: 'spotlight', x1: 0.1, y1: 0.2, x2: 0.3, y2: 0.4 });
+      expect(lastCommit(onCommit)[0]).not.toHaveProperty('fill');
+    });
+
+    it('a magnifier is always round, even without Shift', () => {
+      const { layer, editor, onCommit } = setup();
+
+      editor.setState({ ...BASE, tool: 'magnifier' });
+      drag(layer, [150, 100], [250, 130]);
+
+      const r = lastCommit(onCommit)[0] as ImageMarkupShape;
+
+      expect(r.type).toBe('magnifier');
+      expect((r.x2 - r.x1) * O.w).toBeCloseTo((r.y2 - r.y1) * O.h, 3);
+    });
+
+    it('a bubble is drawn with its tail while it is dragged out, before it lands', () => {
+      const { layer, plane, editor, advance } = setup();
+
+      editor.setState({ ...BASE, tool: 'bubble' });
+      fire(layer, 'pointerdown', 150, 100);
+      fire(layer, 'pointermove', 250, 150);
+      advance(16);
+      const d = plane.querySelector('[data-markup-type="bubble"] path')?.getAttribute('d') ?? '';
+      const ys = Array.from(d.matchAll(/[ML][\d.]+ ([\d.]+)/g), (m) => Number(m[1]));
+
+      // Box bottom is O y 200; the tail reaches below it.
+      expect(Math.max(...ys)).toBeGreaterThan(220);
+    });
+
+    it.each(['rounded-rect', 'star', 'polygon', 'bubble'] as const)('a selected %s shows its fill in the panel', (type) => {
+      const item: ImageMarkupShape = { id: 's', type, color: '#0a84ff', x1: 0.2, y1: 0.2, x2: 0.4, y2: 0.6, size: 0.012, fill: true };
+
+      expect(stateForMark({ ...BASE, fill: false }, item).fill).toBe(true);
     });
 
     it('Alt draws the ellipse out from its centre', () => {
@@ -440,7 +512,7 @@ describe('createMarkupEditor', () => {
       type('Hi');
       key(document.body, 'Escape');
 
-      expect(onSelectionChange).toHaveBeenLastCalledWith('text', expect.objectContaining({ text: 'Hi' }));
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['text'], expect.objectContaining({ text: 'Hi' }));
       expect(stage).toHaveFocus();
     });
 
@@ -623,7 +695,7 @@ describe('createMarkupEditor', () => {
       fire(layer, 'pointerdown', 200, 150);
       fire(layer, 'pointerup', 200, 150);
 
-      expect(onSelectionChange).toHaveBeenLastCalledWith('rect', expect.objectContaining({ id: 'r1' }));
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['rect'], expect.objectContaining({ id: 'r1' }));
       expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(8);
     });
 
@@ -636,7 +708,7 @@ describe('createMarkupEditor', () => {
       fire(layer, 'pointerdown', 550, 280);
       fire(layer, 'pointerup', 550, 280);
 
-      expect(onSelectionChange).toHaveBeenLastCalledWith(null, null);
+      expect(onSelectionChange).toHaveBeenLastCalledWith([], null);
       expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(0);
     });
 
@@ -689,7 +761,7 @@ describe('createMarkupEditor', () => {
       fire(layer, 'pointerdown', 200, 150);
       fire(layer, 'pointerup', 200, 150);
       key(document.body, 'Escape');
-      expect(onSelectionChange).toHaveBeenLastCalledWith(null, null);
+      expect(onSelectionChange).toHaveBeenLastCalledWith([], null);
       expect(below).not.toHaveBeenCalled();
       key(document.body, 'Escape');
 
@@ -747,7 +819,245 @@ describe('createMarkupEditor', () => {
       fire(layer, 'pointerup', 200, 150);
       editor.set([]);
 
-      expect(onSelectionChange).toHaveBeenLastCalledWith(null, null);
+      expect(onSelectionChange).toHaveBeenLastCalledWith([], null);
+    });
+  });
+
+  describe('multi-select', () => {
+    // Screen boxes: r1 (200, 100)-(300, 200), r2 (400, 100)-(500, 200); t1 is centred on (350, 175).
+    const r2 = (): ImageMarkupShape => rect({ id: 'r2', x1: 0.6, x2: 0.8 });
+    const boxes = (stage: HTMLElement): HTMLElement[] => [...stage.querySelectorAll<HTMLElement>('[data-role="markup-selection"]')];
+    const click = (layer: Element, x: number, y: number, init: PointerInit = {}): void => {
+      fire(layer, 'pointerdown', x, y, init);
+      fire(layer, 'pointerup', x, y, init);
+    };
+    const selectTool = (over: Partial<MarkupEditorOptions> = {}) => {
+      const s = setup({ markup: [rect(), r2(), text()], ...over });
+
+      s.editor.setState({ ...BASE, tool: 'select' });
+
+      return s;
+    };
+
+    it('Ctrl+Click adds a mark: one handle-free box per mark', () => {
+      const { layer, stage, onSelectionChange } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['rect'], expect.objectContaining({ id: 'r2' }));
+      expect(boxes(stage)).toHaveLength(2);
+      expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(0);
+    });
+
+    it('Cmd+Click and Shift+Click add too, and the kinds are listed once each', () => {
+      const { layer, onSelectionChange } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { metaKey: true });
+      click(layer, 350, 175, { shiftKey: true });
+
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['rect', 'text'], expect.objectContaining({ id: 't1' }));
+    });
+
+    it('Ctrl+Click on a selected mark takes it out, and a lone mark gets its handles back', () => {
+      const { layer, stage } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      click(layer, 400, 150, { ctrlKey: true });
+
+      expect(boxes(stage)).toHaveLength(1);
+      expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(8);
+    });
+
+    it('a drag on empty space draws a marquee and selects what it touches, live', () => {
+      const { layer, stage, onCommit } = selectTool();
+
+      fire(layer, 'pointerdown', 150, 80);
+      fire(layer, 'pointermove', 300, 100);
+      fire(layer, 'pointermove', 450, 120);
+      expect(stage.querySelector('[data-role="markup-marquee"]')).not.toBeNull();
+      expect(boxes(stage)).toHaveLength(2);
+      fire(layer, 'pointerup', 450, 120);
+
+      expect(stage.querySelector('[data-role="markup-marquee"]')).toBeNull();
+      expect(boxes(stage)).toHaveLength(2);
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    it('a box already shown stays put as the marquee takes in more marks', () => {
+      const { layer, stage } = selectTool();
+
+      fire(layer, 'pointerdown', 150, 80);
+      fire(layer, 'pointermove', 250, 120);
+      const first = boxes(stage)[0];
+
+      fire(layer, 'pointermove', 450, 120);
+
+      expect(boxes(stage)).toHaveLength(2);
+      expect(boxes(stage)).toContain(first);
+    });
+
+    it('a marquee that catches one mark gives it handles once the pointer lifts', () => {
+      const { layer, stage } = selectTool();
+
+      fire(layer, 'pointerdown', 150, 80);
+      fire(layer, 'pointermove', 250, 120);
+      expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(0);
+      fire(layer, 'pointerup', 250, 120);
+
+      expect(stage.querySelectorAll('[data-markup-handle]')).toHaveLength(8);
+    });
+
+    it('the marquee box sits where the pointer went', () => {
+      const { layer, stage } = selectTool();
+
+      fire(layer, 'pointerdown', 450, 120);
+      fire(layer, 'pointermove', 150, 80);
+      const m = stage.querySelector<HTMLElement>('[data-role="markup-marquee"]');
+
+      // The layer sits at (0, 0).
+      expect([m?.style.left, m?.style.top, m?.style.width, m?.style.height]).toStrictEqual(['150px', '80px', '300px', '40px']);
+    });
+
+    it('a marquee started with Ctrl adds to the selection', () => {
+      const { layer, onSelectionChange } = selectTool();
+
+      click(layer, 350, 175);
+      drag(layer, [150, 80], [450, 120], { ctrlKey: true });
+
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['text', 'rect'], expect.anything());
+    });
+
+    it('a marquee without a modifier replaces the selection', () => {
+      const { layer, onSelectionChange } = selectTool();
+
+      click(layer, 350, 175);
+      drag(layer, [150, 80], [450, 120]);
+
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['rect'], expect.anything());
+    });
+
+    it('a cancelled marquee puts the old selection back', () => {
+      const { layer, stage } = selectTool();
+
+      click(layer, 350, 175);
+      fire(layer, 'pointerdown', 150, 80);
+      fire(layer, 'pointermove', 450, 120);
+      fire(layer, 'pointercancel', 450, 120);
+
+      expect(stage.querySelector('[data-role="markup-marquee"]')).toBeNull();
+      expect(boxes(stage)).toHaveLength(1);
+      expect(stage.querySelector('[data-markup-handle="rotate"]')).not.toBeNull();
+    });
+
+    it('a drag on one selected mark moves them all in one step', () => {
+      const { layer, onCommit } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      drag(layer, [200, 150], [250, 175]);
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      const [a, b, t] = lastCommit(onCommit);
+
+      expect(a).toMatchObject({ id: 'r1', x1: 0.3, y1: 0.3 });
+      expect(b).toMatchObject({ id: 'r2', x1: 0.7, y1: 0.3 });
+      expect(t).toStrictEqual(text());
+    });
+
+    it('a plain click on one selected mark narrows the selection to it', () => {
+      const { layer, stage, onSelectionChange } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      click(layer, 200, 150);
+
+      expect(onSelectionChange).toHaveBeenLastCalledWith(['rect'], expect.objectContaining({ id: 'r1' }));
+      expect(boxes(stage)).toHaveLength(1);
+    });
+
+    it('Delete removes every selected mark in one step', () => {
+      const { layer, stage, onCommit, onSelectionChange } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      key(stage, 'Delete');
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(lastCommit(onCommit)).toStrictEqual([text()]);
+      expect(onSelectionChange).toHaveBeenLastCalledWith([], null);
+    });
+
+    it('arrow keys nudge every selected mark, committed once', () => {
+      vi.useFakeTimers();
+      const { layer, stage, onCommit } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      key(stage, 'ArrowDown');
+      key(stage, 'ArrowDown');
+      vi.advanceTimersByTime(400);
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      // 2 screen px at scale 0.5 = 4 O px = 0.008 of 500.
+      const [a, b] = lastCommit(onCommit) as ImageMarkupShape[];
+
+      expect(a?.y1).toBeCloseTo(0.208, 4);
+      expect(b?.y1).toBeCloseTo(0.208, 4);
+      vi.useRealTimers();
+    });
+
+    it('a panel colour change restyles every selected mark in one step', () => {
+      const { layer, editor, onCommit } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 350, 175, { ctrlKey: true });
+      editor.setState({ ...BASE, tool: 'select', color: '#34c759' });
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(lastCommit(onCommit).map((m) => m.color)).toStrictEqual(['#34c759', '#0a84ff', '#34c759']);
+    });
+
+    it('Cmd+D duplicates every selected mark and selects the copies', () => {
+      const { layer, stage, onCommit } = selectTool();
+
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      key(stage, 'd', { metaKey: true });
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      const list = lastCommit(onCommit);
+
+      expect(list).toHaveLength(5);
+      expect(list.slice(3).map((m) => m.type)).toStrictEqual(['rect', 'rect']);
+      expect(boxes(stage)).toHaveLength(2);
+    });
+
+    it('one Escape clears the whole selection, the next goes on', () => {
+      const { layer, onSelectionChange } = selectTool();
+      const below = vi.fn();
+
+      document.addEventListener('keydown', below);
+      click(layer, 200, 150);
+      click(layer, 400, 150, { ctrlKey: true });
+      key(document.body, 'Escape');
+      expect(onSelectionChange).toHaveBeenLastCalledWith([], null);
+      expect(below).not.toHaveBeenCalled();
+      key(document.body, 'Escape');
+
+      expect(below).toHaveBeenCalledTimes(1);
+      document.removeEventListener('keydown', below);
+    });
+
+    it('Ctrl+Click opens no context menu over the stage', () => {
+      const { layer } = selectTool();
+      const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, ctrlKey: true });
+
+      layer.dispatchEvent(e);
+
+      expect(e.defaultPrevented).toBe(true);
     });
   });
 
@@ -764,6 +1074,71 @@ describe('createMarkupEditor', () => {
 
       expect(onCommit).toHaveBeenCalledTimes(1);
       expect(lastCommit(onCommit).map((m) => m.id)).toStrictEqual(['t1']);
+    });
+
+    it('a drag across the middle of a stroke erases only what it passed over', () => {
+      // O (100, 100) to (900, 100); size 0.012 of 500 is 6 px wide.
+      const line: ImageMarkupStroke = { id: 'p1', type: 'pen', color: '#ff3b30', points: [0.1, 0.2, 0.5, 0.9, 0.2, 0.5], size: 0.012 };
+      const { layer, editor, onCommit, plane, advance } = setup({ markup: [line] });
+
+      editor.setState({ ...BASE, tool: 'eraser' });
+      // Screen (350, 90)..(350, 110) is O (500, 80)..(500, 120): straight down through the stroke.
+      fire(layer, 'pointerdown', 350, 90);
+      fire(layer, 'pointermove', 350, 100);
+      advance(16);
+      expect(plane.querySelectorAll('[data-markup-id]')).toHaveLength(2);
+      fire(layer, 'pointermove', 350, 110);
+      fire(layer, 'pointerup', 350, 110);
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      const out = lastCommit(onCommit).filter((m): m is ImageMarkupStroke => m.type === 'pen');
+      const xs = out.map((m) => m.points.filter((_, i) => i % 3 === 0).map((v) => v * O.w));
+
+      expect(out).toHaveLength(2);
+      expect(out[0]?.id).toBe('p1');
+      // The eraser is 8 screen px = 16 O px; the ink reaches 3 px past the centreline.
+      expect(Math.max(...(xs[0] ?? []))).toBeCloseTo(481, 0);
+      expect(Math.min(...(xs[1] ?? []))).toBeCloseTo(519, 0);
+    });
+
+    it('a bigger eraser size cuts a wider gap', () => {
+      const line: ImageMarkupStroke = { id: 'p1', type: 'pen', color: '#ff3b30', points: [0.1, 0.2, 0.5, 0.9, 0.2, 0.5], size: 0.012 };
+      const { layer, editor, onCommit } = setup({ markup: [line] });
+
+      editor.setState({ ...BASE, tool: 'eraser', size: 2 });
+      drag(layer, [350, 90], [350, 110]);
+
+      const out = lastCommit(onCommit).filter((m): m is ImageMarkupStroke => m.type === 'pen');
+      const xs = out.map((m) => m.points.filter((_, i) => i % 3 === 0).map((v) => v * O.w));
+
+      // Thick is 16 screen px = 32 O px, plus 3 px of ink.
+      expect(Math.max(...(xs[0] ?? []))).toBeCloseTo(465, 0);
+      expect(Math.min(...(xs[1] ?? []))).toBeCloseTo(535, 0);
+    });
+
+    it('the cursor ring follows the eraser size', () => {
+      const { layer, editor } = setup();
+
+      editor.setState({ ...BASE, tool: 'eraser', size: 0 });
+      expect(layer.getAttribute('data-size')).toBe('0');
+      editor.setState({ ...BASE, tool: 'eraser', size: 2 });
+      expect(layer.getAttribute('data-size')).toBe('2');
+    });
+
+    it('undoing the cut is one step: the gesture commits once', () => {
+      const line: ImageMarkupStroke = { id: 'p1', type: 'pen', color: '#ff3b30', points: [0.1, 0.2, 0.5, 0.9, 0.2, 0.5], size: 0.012 };
+      const { layer, editor, onCommit } = setup({ markup: [line] });
+
+      editor.setState({ ...BASE, tool: 'eraser' });
+      fire(layer, 'pointerdown', 200, 90);
+      fire(layer, 'pointermove', 200, 110);
+      // Along O y = 120, clear of the ink: 16 px of eraser + 3 px of ink is under 20.
+      fire(layer, 'pointermove', 400, 110);
+      fire(layer, 'pointermove', 400, 90);
+      fire(layer, 'pointerup', 400, 90);
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(lastCommit(onCommit)).toHaveLength(3);
     });
 
     it('a drag over nothing commits nothing', () => {
@@ -786,6 +1161,22 @@ describe('createMarkupEditor', () => {
       key(stage, k);
 
       expect(onStateChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool }));
+    });
+
+    it('a non-Latin layout picks by physical key', () => {
+      const { stage, onStateChange } = setup({ state: { ...BASE, tool: 'select' } });
+
+      key(stage, 'з', { code: 'KeyP' });
+
+      expect(onStateChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool: 'pen' }));
+    });
+
+    it('a Shift letter is not a tool key', () => {
+      const { stage, onStateChange } = setup({ state: { ...BASE, tool: 'select' } });
+
+      key(stage, 'H', { shiftKey: true });
+
+      expect(onStateChange).not.toHaveBeenCalled();
     });
 
     it('letters with a modifier are not tool keys', () => {

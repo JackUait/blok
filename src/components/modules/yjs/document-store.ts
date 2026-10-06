@@ -154,6 +154,11 @@ export class DocumentStore {
   private yRootOrder: Y.Array<string> = this.ydoc.getArray('root');
 
   /**
+   * Host-owned values in the undo history (`history.track`), by key.
+   */
+  private yValues: Y.Map<unknown> = this.ydoc.getMap('values');
+
+  /**
    * Serializer for converting between Yjs and OutputBlockData formats
    */
   private serializer: YBlockSerializer;
@@ -189,11 +194,18 @@ export class DocumentStore {
   }
 
   /**
+   * Host-owned values in the undo history (`history.track`), by key.
+   */
+  public get values(): Y.Map<unknown> {
+    return this.yValues;
+  }
+
+  /**
    * Shared types the Y.UndoManager must track. contentIds arrays nest
-   * inside `blocksMap` values, so the two roots cover every block write.
+   * inside `blocksMap` values, so the two block roots cover every block write.
    */
   public get undoScope(): UndoScopeType[] {
-    return [this.yBlocksMap, this.yRootOrder];
+    return [this.yBlocksMap, this.yRootOrder, this.yValues];
   }
 
   /**
@@ -2589,6 +2601,7 @@ export class DocumentStore {
     this.ydoc = new Y.Doc();
     this.yBlocksMap = this.ydoc.getMap('blocks');
     this.yRootOrder = this.ydoc.getArray('root');
+    this.yValues = this.ydoc.getMap('values');
 
     previous.destroy();
 

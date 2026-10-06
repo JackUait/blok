@@ -56,49 +56,49 @@ describe('parseHTML mutants', () => {
 
 describe('saveToggleItem mutants', () => {
   it('returns the stored data untouched when the block has no element', () => {
-    const data: ToggleItemData = { text: 'stored', isOpen: false };
+    const data: ToggleItemData = { text: 'stored', textColor: 'red' };
     const contentEl = contentElementWith('live text');
 
-    const saved = saveToggleItem(data, null, () => contentEl, true);
+    const saved = saveToggleItem(data, null, () => contentEl);
 
     expect(saved).toBe(data);
-    expect(saved).toEqual({ text: 'stored', isOpen: false });
+    expect(saved).toEqual({ text: 'stored', textColor: 'red' });
   });
 
-  it('reads the live content when the block has an element', () => {
-    const data: ToggleItemData = { text: 'stored', isOpen: false };
+  it('reads the live content when the block has an element, and never saves isOpen', () => {
+    const data: ToggleItemData = { text: 'stored' };
 
-    const saved = saveToggleItem(data, document.createElement('div'), () => contentElementWith('live text'), true);
+    const saved = saveToggleItem(data, document.createElement('div'), () => contentElementWith('live text'));
 
-    expect(saved).toEqual({ text: 'live text', isOpen: true });
+    expect(saved).toEqual({ text: 'live text' });
   });
 
   it('keeps the stored text when there is no content element', () => {
-    const data: ToggleItemData = { text: 'stored', isOpen: true };
+    const data: ToggleItemData = { text: 'stored' };
 
-    const saved = saveToggleItem(data, document.createElement('div'), () => null, false);
+    const saved = saveToggleItem(data, document.createElement('div'), () => null);
 
-    expect(saved).toEqual({ text: 'stored', isOpen: false });
+    expect(saved).toEqual({ text: 'stored' });
   });
 });
 
 describe('setToggleItemData mutants', () => {
   it('leaves the content element alone for a payload that carries no text', () => {
     const contentEl = contentElementWith('existing');
-    const current: ToggleItemData = { text: 'existing', isOpen: false };
-    const replayed: Partial<ToggleItemData> = { isOpen: true };
+    const current: ToggleItemData = { text: 'existing' };
+    const replayed: Partial<ToggleItemData> = { textColor: 'red' };
 
     const result = setToggleItemData(current, replayed as ToggleItemData, () => contentEl);
 
     expect(contentEl.innerHTML).toBe('existing');
-    expect(result).toEqual({ newData: { isOpen: true }, inPlace: true });
+    expect(result).toEqual({ newData: { textColor: 'red' }, inPlace: true });
   });
 
   it('writes the new text into the content element', () => {
     const contentEl = contentElementWith('existing');
-    const current: ToggleItemData = { text: 'existing', isOpen: false };
+    const current: ToggleItemData = { text: 'existing' };
 
-    const result = setToggleItemData(current, { text: '<b>next</b>', isOpen: true }, () => contentEl);
+    const result = setToggleItemData(current, { text: '<b>next</b>' }, () => contentEl);
 
     expect(contentEl.innerHTML).toBe('<b>next</b>');
     expect(result.inPlace).toBe(true);
@@ -107,13 +107,13 @@ describe('setToggleItemData mutants', () => {
   it('writes an empty text, which is still a string', () => {
     const contentEl = contentElementWith('existing');
 
-    setToggleItemData({ text: 'existing', isOpen: true }, { text: '', isOpen: true }, () => contentEl);
+    setToggleItemData({ text: 'existing' }, { text: '' }, () => contentEl);
 
     expect(contentEl.innerHTML).toBe('');
   });
 
   it('reports no in-place update when the content element is gone', () => {
-    const current: ToggleItemData = { text: 'existing', isOpen: false };
+    const current: ToggleItemData = { text: 'existing' };
 
     expect(setToggleItemData(current, { text: 'next' }, () => null)).toEqual({ newData: current, inPlace: false });
   });

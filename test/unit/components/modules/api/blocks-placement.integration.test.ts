@@ -90,6 +90,21 @@ class Owner {
   }
 }
 
+/** A block that never has children, like a page that points at another document. */
+class Leaf {
+  public static get acceptsChildren(): boolean {
+    return false;
+  }
+
+  public render(): HTMLElement {
+    return document.createElement('div');
+  }
+
+  public save(): Record<string, never> {
+    return {};
+  }
+}
+
 const settle = (): Promise<void> => new Promise(resolve => {
   setTimeout(resolve, 0);
 });
@@ -147,7 +162,7 @@ const roots = (instance: TestEditor): string[] =>
 const boot = async (blocks: OutputBlockData[] = doc()): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
-    tools: { paragraph: Paragraph, toggle: ToggleItem, header: Header, list: ListItem, table: Table, column_list: ColumnList, column: Column, only: ParagraphsOnly, owner: Owner },
+    tools: { paragraph: Paragraph, toggle: ToggleItem, header: Header, list: ListItem, table: Table, column_list: ColumnList, column: Column, only: ParagraphsOnly, owner: Owner, leaf: Leaf },
     data: { blocks },
   }) as unknown as TestEditor;
 
@@ -862,6 +877,64 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       instance.blocks.move(3, 0);
 
       expect(pickMoved({ ...seen.filter(event => event.type === 'block-moved').at(-1)?.detail })).toEqual({ parentId: 't', oldParentId: null, previousSiblingId: 'c1' });
+    }, 30_000);
+  });
+
+  describe('a block that takes no children', () => {
+    const LEAF_DOC = (): OutputBlockData[] => [P('a'), { id: 'lf', type: 'leaf', data: {} }, P('b')];
+    const LEAF_INITIAL = ['a^-', 'lf^-', 'b^-'];
+
+    it('insertInsideParent throws and adds nothing', async () => {
+      const instance = await boot(LEAF_DOC());
+
+      expect(thrownName(() => instance.blocks.insertInsideParent('lf', 2, { text: 'n' }, 'paragraph', { id: 'n' }))).toBe('BlockPlacementError');
+      expect(flat(instance)).toEqual(LEAF_INITIAL);
+      expect(shared(instance)).toEqual(LEAF_INITIAL);
+    }, 30_000);
+
+    it('insertAt with it as the parent throws and adds nothing', async () => {
+      const instance = await boot(LEAF_DOC());
+
+      expect(() => instance.blocks.insertAt('paragraph', { text: 'n' }, { id: 'n', parentId: 'lf' })).toThrow(/takes no children/);
+      expect(flat(instance)).toEqual(LEAF_INITIAL);
+      expect(shared(instance)).toEqual(LEAF_INITIAL);
+    }, 30_000);
+
+    it('an insert with it as the placement parent throws and adds nothing', async () => {
+      const instance = await boot(LEAF_DOC());
+
+      expect(thrownName(() => instance.module.blockManager.insert({ id: 'n', tool: 'paragraph', placement: { parentId: 'lf', afterId: null } }))).toBe('BlockPlacementError');
+      expect(flat(instance)).toEqual(LEAF_INITIAL);
+      expect(shared(instance)).toEqual(LEAF_INITIAL);
+    }, 30_000);
+
+    it('moveTo into it throws and moves nothing', async () => {
+      const instance = await boot(LEAF_DOC());
+
+      expect(() => instance.blocks.moveTo('b', { parentId: 'lf', position: 'end' })).toThrow(/takes no children/);
+      expect(flat(instance)).toEqual(LEAF_INITIAL);
+    }, 30_000);
+
+    it('insertMany puts a block naming it as parent at the root', async () => {
+      const instance = await boot(LEAF_DOC());
+
+      instance.blocks.insertMany([{ id: 'k', type: 'paragraph', data: { text: 'k' }, parent: 'lf' }], 2);
+
+      const expected = ['a^-', 'lf^-', 'k^-', 'b^-'];
+
+      expect(flat(instance)).toEqual(expected);
+      expect(await saved(instance)).toEqual(expected);
+      expect(shared(instance)).toEqual(expected);
+    }, 30_000);
+
+    it('setBlockParent onto it changes nothing', async () => {
+      const instance = await boot(LEAF_DOC());
+
+      instance.blocks.setBlockParent('b', 'lf');
+
+      expect(flat(instance)).toEqual(LEAF_INITIAL);
+      expect(await saved(instance)).toEqual(LEAF_INITIAL);
+      expect(shared(instance)).toEqual(LEAF_INITIAL);
     }, 30_000);
   });
 

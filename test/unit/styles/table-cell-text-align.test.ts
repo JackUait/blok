@@ -2,7 +2,9 @@
  * Cell placement moves whole block boxes with flex, but a block that wraps is
  * already full width, so only `text-align` can line its text up. Each cell
  * resets it, so a nested table never inherits the outer cell's alignment.
- * Rendering is checked in test/playwright/tests/tools/table/table-cell-placement.spec.ts.
+ * Left/right mean the grid's start/end.
+ * Rendering is checked in test/playwright/tests/tools/table/table-cell-placement.spec.ts
+ * and test/playwright/tests/tools/table-rtl.spec.ts.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -19,21 +21,24 @@ const findRule = (selector: string): { index: number; body: string } | null => {
 };
 
 describe('table cell text alignment', () => {
-  it('starts every cell at the start edge, so nested tables do not inherit the outer cell', () => {
-    expect(findRule('[data-blok-table-cell-blocks]')?.body).toMatch(/text-align:\s*start/);
+  // The sides come from the nearest dir above the cell (the table's), not
+  // start/end: each cell paragraph carries the dir of its own text.
+  it('starts every cell at the grid start, so nested tables do not inherit the outer cell', () => {
+    expect(findRule('[data-blok-table-cell-blocks]')?.body).toMatch(/text-align:\s*var\(--_blok-start-side,\s*left\)/);
   });
 
   it.each([
-    ['-center', 'center'],
-    ['-right', 'right'],
-  ])('aligns the text of *%s placements to the %s', (suffix, value) => {
-    // Two attributes: the build lowers `text-align: start` to `:not(:lang(…rtl…))`,
-    // which lifts the reset to two-attribute specificity, so one attribute loses.
-    const rule = findRule(`[data-blok-table-cell-blocks][data-blok-cell-placement$="${suffix}"]`);
-    const reset = findRule('[data-blok-table-cell-blocks]');
+    ['[data-blok-table-cell-blocks][data-blok-cell-placement$="-center"]', 'center'],
+    ['[data-blok-table-cell-blocks][data-blok-cell-placement$="-right"]', 'var\\(--_blok-end-side,\\s*right\\)'],
+  ])('%s aligns to %s and comes after the grid-start rule', (selector, value) => {
+    const rule = findRule(selector);
 
     expect(rule?.body).toMatch(new RegExp(`text-align:\\s*${value}`));
-    // Equal specificity after lowering, so it must come later to win.
-    expect(rule?.index).toBeGreaterThan(reset?.index ?? Infinity);
+    expect(rule?.index).toBeGreaterThan(findRule('[data-blok-table-cell-blocks]')?.index ?? Infinity);
+  });
+
+  it('defines the sides on every dir root, the table drag ghost included', () => {
+    expect(css).toMatch(/\[data-blok-table-drag-ghost\]\[dir="rtl"\][^{]*\{[^}]*--_blok-start-side:\s*right/);
+    expect(css).toMatch(/\[data-blok-table-drag-ghost\]\[dir="ltr"\][^{]*\{[^}]*--_blok-start-side:\s*left/);
   });
 });

@@ -214,6 +214,7 @@ const buildBodyPlaceholder = (onClick: (() => void) | null, text: string): HTMLE
   placeholder.className = BODY_PLACEHOLDER_STYLES;
   placeholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
   placeholder.setAttribute(DATA_ATTR.chrome, '');
+  placeholder.setAttribute(DATA_ATTR.childStandIn, '');
   // Class changes on the body placeholder (show/hide) must not trigger didMutated →
   // syncBlockDataToYjs, which would create a spurious Yjs undo entry when a child
   // block is inserted via Enter. The placeholder holds no user-editable content.

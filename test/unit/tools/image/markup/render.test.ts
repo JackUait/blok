@@ -91,18 +91,33 @@ describe('marks', () => {
     expect(path.hasAttribute('stroke')).toBe(false);
   });
 
-  it('draws a highlighter as a flat, translucent, multiplied stroke', () => {
-    const svg = createMarkupLayer([pen({ id: 'h', type: 'highlighter', color: '#ffcc00', size: 0.03 })], O);
-    const path = child(mark(svg, 'h'), 'path');
+  it('draws an eraser-cut pen end blunt, so the cut is as wide as the ink', () => {
+    const straight = { points: [0.1, 0.2, 0.5, 0.5, 0.2, 0.5], size: 0.02 };
+    const cut = child(mark(createMarkupLayer([pen({ ...straight, cut: 'start' })], O), 'p1'), 'path').getAttribute('d') ?? '';
+    const whole = child(mark(createMarkupLayer([pen(straight)], O), 'p1'), 'path').getAttribute('d') ?? '';
+    const reachAt = (d: string, x: number): number =>
+      Math.max(0, ...Array.from(d.matchAll(/(-?\d*\.?\d+) (-?\d*\.?\d+)/g), (m) => [Number(m[1]), Number(m[2])])
+        .filter(([px]) => Math.abs((px ?? 0) - x) <= 3).map(([, py]) => Math.abs((py ?? 0) - 100)));
 
-    expect(path.getAttribute('fill')).toBe('none');
-    expect(path.getAttribute('stroke')).toBe('#ffcc00');
-    expect(num(path, 'stroke-width')).toBe(15);
-    expect(path.getAttribute('stroke-linecap')).toBe('round');
-    expect(path.getAttribute('stroke-linejoin')).toBe('round');
-    expect(path.getAttribute('opacity')).toBe('0.45');
-    expect(path.getAttribute('style')).toContain('mix-blend-mode:multiply');
-    expect(path.getAttribute('d')).toMatch(/^M100 50/);
+    expect(reachAt(cut, 103)).toBeGreaterThan(4.5);
+    expect(reachAt(whole, 103)).toBeLessThan(4);
+    expect(reachAt(cut, 497)).toBeLessThan(4);
+  });
+
+  it('draws a highlighter as a flat stroke in two passes: multiply keeps ink dark, screen keeps it bright on dark photos', () => {
+    const svg = createMarkupLayer([pen({ id: 'h', type: 'highlighter', color: '#ffcc00', size: 0.03 })], O);
+    const paths = Array.from(mark(svg, 'h').querySelectorAll('path'));
+
+    expect(paths.map((p) => p.getAttribute('style'))).toEqual(['mix-blend-mode:multiply', 'mix-blend-mode:screen']);
+    expect(paths.map((p) => p.getAttribute('opacity'))).toEqual(['0.55', '0.4']);
+    for (const path of paths) {
+      expect(path.getAttribute('fill')).toBe('none');
+      expect(path.getAttribute('stroke')).toBe('#ffcc00');
+      expect(num(path, 'stroke-width')).toBe(15);
+      expect(path.getAttribute('stroke-linecap')).toBe('round');
+      expect(path.getAttribute('stroke-linejoin')).toBe('round');
+      expect(path.getAttribute('d')).toMatch(/^M100 50/);
+    }
   });
 
   it('draws a one-point highlighter as a dot', () => {
@@ -119,6 +134,161 @@ describe('marks', () => {
     expect(num(rect, 'stroke-width')).toBe(5);
     expect(rect.getAttribute('stroke-linejoin')).toBe('round');
     expect(rect.getAttribute('fill')).toBe('none');
+  });
+
+  it.each(['rounded-rect', 'star', 'polygon', 'bubble'] as const)('draws a %s as a closed outline path', (type) => {
+    const item = shape({ id: 'x', type, ...(type === 'bubble' ? { tx: 0.1, ty: 0.9 } : {}) });
+    const path = child(mark(createMarkupLayer([item], O), 'x'), 'path');
+
+    expect(path.getAttribute('d')).toMatch(/^M[\d. ]+(L[\d. -]+)+Z$/);
+    expect(path.getAttribute('stroke')).toBe('#0a84ff');
+    expect(num(path, 'stroke-width')).toBe(5);
+    expect(path.getAttribute('fill')).toBe('none');
+    const filled = child(mark(createMarkupLayer([{ ...item, fill: true }], O), 'x'), 'path');
+
+    expect(filled.getAttribute('fill')).toBe('#0a84ff');
+    expect(filled.getAttribute('fill-opacity')).toBe('0.2');
+  });
+
+  describe('spotlight', () => {
+    const spot = (id: string, x1: number, y1: number): ImageMarkupShape =>
+      shape({ id, type: 'spotlight', x1, y1, x2: x1 + 0.2, y2: y1 + 0.2 });
+    const sheet = (svg: SVGSVGElement): Element | null => svg.querySelector('[data-role="markup-spotlight"]');
+
+    it('dims the whole box once, with a hole for every spotlight', () => {
+      const svg = createMarkupLayer([spot('a', 0.1, 0.1), pen(), spot('b', 0.6, 0.5)], O);
+      const d = sheet(svg)?.getAttribute('d') ?? '';
+
+      expect(d.startsWith('M0 0H1000V500H0Z')).toBe(true);
+      expect(d.match(/M/g)).toHaveLength(3);
+      expect(sheet(svg)?.getAttribute('fill-rule')).toBe('evenodd');
+      expect(sheet(svg)?.getAttribute('pointer-events')).toBe('none');
+    });
+
+    it('sits under every mark, so the marks stay bright', () => {
+      const svg = createMarkupLayer([pen(), spot('a', 0.1, 0.1)], O);
+      const kids = Array.from(svg.children).filter((c) => c.localName !== 'defs');
+
+      expect(kids[0]).toBe(sheet(svg));
+    });
+
+    it('draws nothing of its own in the mark node, and leaves when the last spotlight goes', () => {
+      const svg = createMarkupLayer([spot('a', 0.1, 0.1)], O);
+
+      expect(mark(svg, 'a').querySelector('[stroke]:not([stroke="none"])')).toBeNull();
+      updateMarkupLayer(svg, [pen()], O);
+      expect(sheet(svg)).toBeNull();
+    });
+  });
+
+  describe('magnifier', () => {
+    // Box (100, 100)..(300, 300) on O 1000 × 500: lens centre (200, 200), radius 100.
+    const lens = (): ImageMarkupShape => shape({ id: 'mg', type: 'magnifier', x1: 0.1, y1: 0.2, x2: 0.3, y2: 0.6 });
+    const PHOTO_STYLE = 'position:absolute;width:50%;height:200%;left:25%;top:-50%;transform:rotate(90deg) scaleX(-1);filter:contrast(1.2)';
+    const planeWith = (markup: ImageMarkup[]): { svg: SVGSVGElement; photo: HTMLImageElement } => {
+      const plane = document.createElement('div');
+      const photo = document.createElement('img');
+
+      photo.src = 'https://example.com/photo.jpg';
+      photo.setAttribute('style', PHOTO_STYLE);
+      const svg = createMarkupLayer([], null);
+
+      plane.append(photo, svg);
+      document.body.appendChild(plane);
+      updateMarkupLayer(svg, markup, O);
+
+      return { svg, photo };
+    };
+    // An SVG image, not HTML in a foreignObject: WebKit paints foreignObject HTML over the clip and the other marks.
+    const copy = (svg: SVGSVGElement): SVGImageElement | null => mark(svg, 'mg').querySelector('image');
+
+    afterEach(() => {
+      document.body.replaceChildren();
+    });
+
+    it('shows the photo under it as an SVG image, clipped to the lens', () => {
+      const { svg, photo } = planeWith([lens()]);
+      const clipped = copy(svg)?.closest('[clip-path]');
+      const clipId = /url\(#(.+)\)/.exec(clipped?.getAttribute('clip-path') ?? '')?.[1] ?? '';
+      const circle = svg.querySelector(`clipPath[id="${clipId}"] circle`);
+
+      expect(mark(svg, 'mg').querySelector('foreignObject')).toBeNull();
+      expect(copy(svg)?.getAttribute('href')).toBe(photo.src);
+      expect([num(circle as Element, 'cx'), num(circle as Element, 'cy'), num(circle as Element, 'r')]).toEqual([200, 200, 100]);
+    });
+
+    it('places the copy on the photo\'s box and turns and paints it the same way', () => {
+      const { svg } = planeWith([lens()]);
+      const img = copy(svg) as Element;
+
+      // 50% × 200% of 1000 × 500, at 25% / -50%.
+      expect(['x', 'y', 'width', 'height'].map((a) => num(img, a))).toEqual([250, -250, 500, 1000]);
+      expect(img.getAttribute('preserveAspectRatio')).toBe('none');
+      expect((img as SVGElement).style.transform).toBe('rotate(90deg) scaleX(-1)');
+      expect((img as SVGElement).style.transformOrigin).toBe('center');
+    });
+
+    it('paints the photo\'s filter with an SVG filter, which WebKit draws on SVG content and CSS filters are not', () => {
+      const { svg } = planeWith([lens()]);
+      const img = copy(svg) as SVGElement;
+      const id = /url\(#(.+)\)/.exec(img.getAttribute('filter') ?? '')?.[1] ?? '';
+      const filter = svg.querySelector(`filter[id="${id}"]`);
+
+      expect(img.style.filter).toBe('');
+      expect(filter?.getAttribute('color-interpolation-filters')).toBe('sRGB');
+      expect(filter?.querySelector('feFuncR')?.getAttribute('slope')).toBe('1.2');
+    });
+
+    it('turns a hue-rotate look into an SVG hueRotate matrix', async () => {
+      const { svg, photo } = planeWith([lens()]);
+
+      photo.style.setProperty('filter', 'hue-rotate(-15deg)');
+      await vi.waitFor(() => {
+        const m = svg.querySelector('[data-markup-id="mg"] filter feColorMatrix');
+
+        expect(m?.getAttribute('type')).toBe('hueRotate');
+        expect(m?.getAttribute('values')).toBe('-15');
+      });
+    });
+
+    it('enlarges twice about the lens centre', () => {
+      const { svg } = planeWith([lens()]);
+
+      expect(copy(svg)?.parentElement?.getAttribute('transform')).toBe('translate(200 200) scale(2) translate(-200 -200)');
+    });
+
+    it('follows the photo when it turns or takes a filter', async () => {
+      const { svg, photo } = planeWith([lens()]);
+
+      photo.style.setProperty('filter', 'grayscale(1)');
+      await vi.waitFor(() => expect(svg.querySelector('[data-markup-id="mg"] filter feColorMatrix')).not.toBeNull());
+      photo.style.removeProperty('filter');
+      await vi.waitFor(() => expect(copy(svg)?.hasAttribute('filter')).toBe(false));
+    });
+
+    it.each(['lens 1', 'a)b', 'x"y'])('keeps its clip and filter for a saved id like %j, which a url(#…) cannot hold', (id) => {
+      const { svg, photo } = planeWith([]);
+
+      photo.style.setProperty('filter', 'grayscale(1)');
+      updateMarkupLayer(svg, [{ ...lens(), id }], O);
+      const node = svg.querySelector(`[data-markup-id="${CSS.escape(id)}"]`);
+      // A browser drops the whole reference when the id has a space, quote or bracket: the lens would lose its clip.
+      const target = (attr: string, el: Element | null | undefined): Element | null => {
+        const ref = /^url\(#([\w-]+)\)$/.exec(el?.getAttribute(attr) ?? '')?.[1];
+
+        return ref === undefined ? null : svg.querySelector(`[id="${ref}"]`);
+      };
+
+      expect(target('clip-path', node?.querySelector('[clip-path]'))?.localName).toBe('clipPath');
+      expect(target('filter', node?.querySelector('image'))?.localName).toBe('filter');
+    });
+
+    it('rings the lens', () => {
+      const { svg } = planeWith([lens()]);
+      const ring = mark(svg, 'mg').querySelector('circle[stroke]');
+
+      expect([num(ring as Element, 'cx'), num(ring as Element, 'r')]).toEqual([200, 100]);
+    });
   });
 
   it('fills a rect and an ellipse with a translucent wash of their colour', () => {

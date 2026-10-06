@@ -102,6 +102,13 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Replaces the built-in focus-visible so a click never paints a ring.
+   data-modality comes from src/lib/input-modality.ts. */
+@custom-variant focus-visible (&:focus-visible:where(:root:not([data-modality="pointer"]) *));
+
+/* Unlayered, so it beats the browser's own ring and every layered utility. */
+:root[data-modality="pointer"] :focus-visible { outline: none; }
+
 /* ============================================================
    Blok-brand design tokens
    Pulled from the Blok noodle logo: a rose-pink wordmark (#E14B6E)
@@ -591,6 +598,16 @@
   animation: hero-wander-alt 6.9s ease-in-out -1.2s infinite;
 }
 
+/* How much of the card wander plays (1 = all, 0 = still). Registered so it can transition:
+   a snap view (Hero.tsx) eases it to 0 so flush blocks never drift into each other. */
+@property --hero-drift {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+.hero-stack[data-hero-snap] {
+  --hero-drift: 0;
+}
 .hero-stack {
   transform-origin: center;
   /* preserve-3d keeps every card's translateZ as real depth inside the parent's
@@ -600,7 +617,70 @@
      rest when the pointer leaves. */
   transform-style: preserve-3d;
   transform: rotateX(var(--hero-tilt-x, 0deg)) rotateY(var(--hero-tilt-y, 0deg));
-  transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition:
+    transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1),
+    --hero-drift 0.7s ease;
+}
+
+/* Assemble: once the blocks land, a page sheet rises behind them and each card's own
+   chrome (border, shadow, fill, drag handle) dissolves, so four cards read as one page.
+   The sheet's size comes from ASSEMBLE_PAGE (inline style). */
+.hero-page {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 1.25rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--shadow-card-hover);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) translateZ(-30px) scale(0.9);
+  transition:
+    opacity 0.45s ease,
+    transform 0.7s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.hero-stack[data-hero-page] .hero-page {
+  opacity: 1;
+  transform: translate(-50%, -50%) translateZ(-30px) scale(1);
+}
+/* One light sweep across the page as it settles. */
+.hero-page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--chart-4) 22%, transparent) 48%, color-mix(in srgb, white 60%, transparent) 50%, transparent 62%);
+  transform: translateX(-110%);
+}
+.hero-stack[data-hero-page] .hero-page::after {
+  animation: hero-page-sweep 1.3s cubic-bezier(0.3, 0.6, 0.3, 1) 0.2s both;
+}
+@keyframes hero-page-sweep {
+  to {
+    transform: translateX(110%);
+  }
+}
+.hero-slab-face {
+  transition:
+    border-color 0.45s ease,
+    background-color 0.45s ease,
+    box-shadow 0.45s ease;
+}
+.hero-stack[data-hero-page] .hero-slab-face {
+  border-color: transparent;
+  background-color: transparent;
+  box-shadow: none;
+}
+.hero-stack[data-hero-page] .hero-slab-face > svg:first-child {
+  opacity: 0;
+}
+/* The side walls hide behind an opaque face; once the face goes clear they show as slivers. */
+.hero-slab-edge {
+  transition: opacity 0.3s ease;
+}
+.hero-stack[data-hero-page] .hero-slab-edge {
+  opacity: 0;
 }
 
 /* Each card is a 3D SLAB, not a flat plane. The front face is the styled card; two side
@@ -653,20 +733,20 @@
     rotate: 0deg;
   }
   20% {
-    translate: 7px -9px;
-    rotate: 1.2deg;
+    translate: calc(7px * var(--hero-drift)) calc(-9px * var(--hero-drift));
+    rotate: calc(1.2deg * var(--hero-drift));
   }
   40% {
-    translate: -6px -4px;
-    rotate: -1deg;
+    translate: calc(-6px * var(--hero-drift)) calc(-4px * var(--hero-drift));
+    rotate: calc(-1deg * var(--hero-drift));
   }
   58% {
-    translate: 9px 6px;
-    rotate: 1.6deg;
+    translate: calc(9px * var(--hero-drift)) calc(6px * var(--hero-drift));
+    rotate: calc(1.6deg * var(--hero-drift));
   }
   78% {
-    translate: -8px 8px;
-    rotate: -1.3deg;
+    translate: calc(-8px * var(--hero-drift)) calc(8px * var(--hero-drift));
+    rotate: calc(-1.3deg * var(--hero-drift));
   }
 }
 
@@ -677,20 +757,20 @@
     rotate: 0deg;
   }
   22% {
-    translate: -8px 7px;
-    rotate: -1.4deg;
+    translate: calc(-8px * var(--hero-drift)) calc(7px * var(--hero-drift));
+    rotate: calc(-1.4deg * var(--hero-drift));
   }
   44% {
-    translate: 6px 9px;
-    rotate: 1.1deg;
+    translate: calc(6px * var(--hero-drift)) calc(9px * var(--hero-drift));
+    rotate: calc(1.1deg * var(--hero-drift));
   }
   62% {
-    translate: -9px -6px;
-    rotate: -1.6deg;
+    translate: calc(-9px * var(--hero-drift)) calc(-6px * var(--hero-drift));
+    rotate: calc(-1.6deg * var(--hero-drift));
   }
   82% {
-    translate: 7px -8px;
-    rotate: 1.3deg;
+    translate: calc(7px * var(--hero-drift)) calc(-8px * var(--hero-drift));
+    rotate: calc(1.3deg * var(--hero-drift));
   }
 }
 
@@ -855,6 +935,210 @@
 .hero-pop {
   transform-origin: center;
   animation: hero-pop 2.2s ease-in-out infinite;
+}
+
+/* Cinematic hero (Hero.tsx): a warm dawn sky over a planet whose rim catches the
+   sunrise. Every loop here animates transform/opacity on layers behind the text, so
+   the h1 (the LCP element) never repaints per frame. */
+.hero-backdrop {
+  background: linear-gradient(
+    to bottom,
+    var(--background) 0%,
+    color-mix(in srgb, var(--chart-4) 10%, var(--background)) 55%,
+    color-mix(in srgb, var(--chart-1) 16%, var(--background)) 100%
+  );
+}
+.hero-aurora {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.6;
+  will-change: transform;
+}
+.hero-aurora-a {
+  top: -18rem;
+  left: -10rem;
+  width: 46rem;
+  height: 34rem;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--chart-1) 55%, transparent), transparent);
+  animation: hero-aurora-drift 22s ease-in-out infinite;
+}
+.hero-aurora-b {
+  top: 6rem;
+  left: 22%;
+  width: 40rem;
+  height: 26rem;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--chart-4) 50%, transparent), transparent);
+  animation: hero-aurora-drift 27s ease-in-out -9s infinite reverse;
+}
+.hero-aurora-c {
+  top: -6rem;
+  right: -12rem;
+  width: 38rem;
+  height: 38rem;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--chart-3) 45%, transparent), transparent);
+  animation: hero-aurora-drift 31s ease-in-out -4s infinite;
+}
+@keyframes hero-aurora-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate3d(6rem, 3rem, 0) scale(1.12) rotate(8deg);
+  }
+  66% {
+    transform: translate3d(-4rem, 5rem, 0) scale(0.92) rotate(-6deg);
+  }
+}
+/* The planet. --hero-r is its diameter; its top edge sits 3.5rem above the section's
+   bottom. Glow and glint are children so they rise with it. */
+.hero-horizon {
+  --hero-r: 240vw;
+  position: absolute;
+  left: 50%;
+  bottom: calc(3.5rem - var(--hero-r));
+  width: var(--hero-r);
+  height: var(--hero-r);
+  margin-left: calc(var(--hero-r) / -2);
+  border-radius: 50%;
+  background: var(--background);
+  box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--chart-4) 90%, white);
+  animation: hero-horizon-rise 2.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes hero-horizon-rise {
+  from {
+    transform: translateY(7rem);
+  }
+}
+.hero-horizon-glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow:
+    0 -6px 24px 2px color-mix(in srgb, var(--chart-2) 70%, transparent),
+    0 -40px 110px 20px color-mix(in srgb, var(--chart-1) 45%, transparent),
+    0 -140px 260px 80px color-mix(in srgb, var(--chart-3) 22%, transparent);
+  animation:
+    hero-glow-in 2.4s ease-out both,
+    hero-glow-breathe 9s ease-in-out 2.4s infinite;
+}
+@keyframes hero-glow-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes hero-glow-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+/* Sun glint: pinned to the rim's top, rotated about the planet's centre so it glides
+   along the curve instead of drifting off it. */
+.hero-horizon-glint {
+  position: absolute;
+  top: -1.1rem;
+  left: 50%;
+  width: 18rem;
+  height: 2.2rem;
+  margin-left: -9rem;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, white 90%, var(--chart-4)), color-mix(in srgb, var(--chart-4) 55%, transparent) 45%, transparent);
+  filter: blur(6px);
+  transform-origin: 50% calc(var(--hero-r) / 2 + 1.1rem);
+  animation: hero-glint 16s ease-in-out infinite;
+}
+@keyframes hero-glint {
+  0%,
+  100% {
+    transform: rotate(-11deg);
+    opacity: 0.35;
+  }
+  50% {
+    transform: rotate(11deg);
+    opacity: 0.35;
+  }
+  25%,
+  75% {
+    opacity: 1;
+  }
+}
+/* A soft key light from above, pooled on the title. */
+.hero-keylight {
+  position: absolute;
+  top: -30%;
+  left: -10%;
+  width: 75%;
+  height: 120%;
+  background: radial-gradient(ellipse 50% 45% at 40% 40%, color-mix(in srgb, var(--background) 85%, white), transparent 70%);
+  opacity: 0.7;
+}
+.dark .hero-keylight {
+  opacity: 0;
+}
+/* Film grain. Data URI so it costs no request; sits on the backdrop, never over text. */
+.hero-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.dark .hero-grain {
+  mix-blend-mode: screen;
+  opacity: 0.05;
+}
+.hero-title {
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+/* Bloom under the gradient words. Static: an animated filter would repaint the h1.
+   background-clip:text paints only inside the box, and the tight tracking lets the last
+   glyph overhang it, so pad the box (margin cancels it) or the "s" is sliced flat. Clone
+   gives every wrapped line its own padding. */
+.hero-title-glow {
+  padding-inline: 0.08em;
+  margin-inline: -0.08em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  filter: drop-shadow(0 8px 26px color-mix(in srgb, var(--chart-1) 30%, transparent))
+    drop-shadow(0 2px 8px color-mix(in srgb, var(--chart-2) 22%, transparent));
+}
+/* Blur-to-sharp reveal. Opacity starts near 1: the h1 is the LCP element. */
+.hero-reveal {
+  animation: hero-reveal 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.hero-reveal-2 {
+  animation-delay: 0.18s;
+}
+.hero-reveal-3 {
+  animation-delay: 0.32s;
+}
+@keyframes hero-reveal {
+  from {
+    opacity: 0.2;
+    filter: blur(14px);
+    transform: translateY(18px) scale(0.985);
+  }
+}
+.hero-cta-glow::before {
+  content: "";
+  position: absolute;
+  inset: 6px 10px -10px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(to right, var(--brand-from), var(--brand-via), var(--brand-to));
+  filter: blur(18px);
+  opacity: 0.55;
+  transition: opacity 0.3s ease;
+}
+.hero-cta-glow:hover::before {
+  opacity: 0.85;
 }
 
 /* Nav brand hover — the noodle mascot springs into a quick bob + wiggle and the
@@ -1245,63 +1529,13 @@
   }
 }
 
-/* Search empty-state glyph — the doc page's corner folds and unfolds from time
-   to time. The flap pivots around the diagonal crease (axis 1,1,0). Resting
-   state is the folded dog-ear (rotate 180° reflects the corner onto the page);
-   periodically it opens flat and folds back. The base transform keeps the
-   dog-ear correct even when the animation is off / 3D is unsupported. */
-.paper-fold {
-  transform-box: fill-box;
-  transform-origin: left top;
-  transform-style: preserve-3d;
-  transform: rotate3d(1, 1, 0, 180deg);
-  animation: paper-fold 5.5s ease-in-out infinite;
+/* Search palette: the preview pane crossfades as the selection moves. */
+.search-fade {
+  animation: search-fade 120ms ease-out both;
 }
 
-@keyframes paper-fold {
-  0%,
-  55%,
-  100% {
-    transform: rotate3d(1, 1, 0, 180deg);
-  }
-  75%,
-  84% {
-    transform: rotate3d(1, 1, 0, 0deg);
-  }
-}
-
-/* The flap face is the page underside (secondary) when folded, and blends to
-   the page colour (card) as it lays flat so the corner reads as unfolded. */
-.paper-fold-face {
-  animation: paper-fold-face 5.5s ease-in-out infinite;
-}
-
-@keyframes paper-fold-face {
-  0%,
-  62%,
-  100% {
-    fill: var(--secondary);
-  }
-  72%,
-  87% {
-    fill: var(--card);
-  }
-}
-
-/* The crease line is the cut edge: shown while folded, faded out as the corner
-   lays flat so the unfolded page reads as a seamless rectangle. */
-.paper-crease {
-  animation: paper-crease 5.5s ease-in-out infinite;
-}
-
-@keyframes paper-crease {
-  0%,
-  58%,
-  100% {
-    opacity: 1;
-  }
-  74%,
-  85% {
+@keyframes search-fade {
+  from {
     opacity: 0;
   }
 }
@@ -1325,9 +1559,15 @@
   .hero-pin,
   .hero-type,
   .hero-pop,
-  .paper-fold,
-  .paper-fold-face,
-  .paper-crease {
+  .hero-aurora-a,
+  .hero-aurora-b,
+  .hero-aurora-c,
+  .hero-reveal,
+  .hero-horizon,
+  .hero-horizon-glow,
+  .hero-horizon-glint,
+  .hero-page::after,
+  .search-fade {
     animation: none;
   }
 }
@@ -1593,7 +1833,7 @@
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
 }
 
-/* "Typed JSON, never HTML": the hero diorama is a flip card. The front is the
+/* "Typed JSON, not an HTML blob": the hero diorama is a flip card. The front is the
    rendered page you author; on hover the whole tile turns it 180° to reveal the
    clean JSON that document saves to. backface-visibility hides whichever side
    faces away, so only one is ever readable. */

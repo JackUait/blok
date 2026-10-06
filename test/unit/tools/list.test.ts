@@ -900,12 +900,16 @@ describe('List Tool - moved() marker refresh', () => {
     const holder = document.createElement('div');
     const listItem = document.createElement('div');
 
+    const wrapper = document.createElement('div');
+
+    wrapper.setAttribute('data-list-depth', String(depth));
     listItem.setAttribute('role', 'listitem');
 
     if (depth > 0) {
-      listItem.style.marginLeft = `${depth * 27}px`;
+      listItem.style.marginInlineStart = `${depth * 27}px`;
     }
-    holder.appendChild(listItem);
+    wrapper.appendChild(listItem);
+    holder.appendChild(wrapper);
 
     return { name: 'list', holder };
   };

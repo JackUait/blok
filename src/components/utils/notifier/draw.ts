@@ -42,7 +42,7 @@ export const CSS = {
     'placeholder:text-white/30 focus:border-white/20'
   ),
   dismissBtn: twJoin(
-    'shrink-0 ml-3 -mr-2 grid place-items-center w-6 h-6 rounded-full',
+    'shrink-0 ms-3 -me-2 grid place-items-center w-6 h-6 rounded-full',
     'border-none bg-transparent text-[#a1a1aa] text-[16px] leading-none cursor-pointer',
     'outline-hidden hover:bg-white/10 hover:text-[#f5f5f5]',
     'focus-visible:ring-2 focus-visible:ring-focus-ring'
@@ -378,6 +378,18 @@ export const drawResolved = (notify: HTMLElement, message: string): void => {
   if (hadFocus) {
     notify.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]')?.focus();
   }
+};
+
+/**
+ * Takes the busy state off a card's actions.
+ * @param notify - a card drawn by `alert`
+ */
+export const drawSettled = (notify: HTMLElement): void => {
+  notify.querySelectorAll<HTMLElement>('[data-blok-toast-part="action"][aria-busy="true"]').forEach((button) => {
+    button.removeAttribute('aria-busy');
+    button.removeAttribute('aria-label');
+    button.querySelector('[data-blok-toast-part="spinner"]')?.remove();
+  });
 };
 
 /**

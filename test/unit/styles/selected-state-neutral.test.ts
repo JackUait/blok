@@ -4,7 +4,7 @@ import { readMainCss } from './helpers/read-main-css';
 /**
  * Selected states are gray, never blue (CLAUDE.md "No blue selected states").
  * These tokens paint every selected popover item, active inline tool button
- * and pressed find toggle, so their defaults decide the whole editor.
+ * and the find bar's options button, so their defaults decide the whole editor.
  */
 
 const css = readMainCss();
@@ -44,5 +44,12 @@ describe('selected-state tokens are neutral', () => {
     expect(rule?.[1]).toContain('text-icon-active-text');
     expect(rule?.[1]).toContain('bg-icon-active-bg');
     expect(rule?.[1]).not.toContain('active-icon;');
+  });
+
+  it('the find options button marks an active option with the gray tokens', () => {
+    const rule = css.match(/\[data-blok-find-options\]\[data-blok-find-options-active\][^{]*\{([^}]*)\}/);
+
+    expect(rule?.[1]).toContain('background: var(--blok-popover-icon-active-bg)');
+    expect(rule?.[1]).toContain('color: var(--blok-icon-active-text)');
   });
 });

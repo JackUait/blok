@@ -112,6 +112,8 @@ export interface ClipboardBlockData {
   tool: string;
   data: Record<string, unknown>;
   tunes?: Record<string, unknown>;
+  /** Nested child blocks, in order. Ids are minted on paste, so the tree is nested, not id-linked. */
+  children?: ClipboardBlockData[];
 }
 
 /**
@@ -138,4 +140,8 @@ export interface TableCellsClipboard {
   rows: number;
   cols: number;
   cells: TableClipboardCell[][];
+  /** Set only when the copied range includes the heading row of a headed table. */
+  withHeadings?: boolean;
+  /** Set only when the copied range includes the heading column of a headed table. */
+  withHeadingColumn?: boolean;
 }

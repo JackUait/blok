@@ -6,9 +6,10 @@
  */
 import { Map as YMap } from 'yjs';
 
-import type { BlockToolData, OutputBlockData, PasteEvent } from '../../../../types';
+import type { BlockOrigin, BlockToolData, OutputBlockData, PasteEvent } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { BlockMutationEventMap, BlockMutationType } from '../../../../types/events/block';
+import type { BlockMutationOrigin } from '../../../../types/events/block/Base';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 import { BlockMovedMutationType } from '../../../../types/events/block/BlockMoved';
@@ -22,7 +23,7 @@ import { DATA_ATTR } from '../../constants';
 import { BlockChanged, BlockRendered } from '../../events';
 import { generateBlockId, logLabeled } from '../../utils';
 import { sanitizeBlocks } from '../../utils/sanitizer';
-import { isChildToolAllowed } from '../../utils/child-tools';
+import { acceptsChildren, isChildToolAllowed } from '../../utils/child-tools';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
 import { findOwn } from '../../utils/own-element';
 import { releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
@@ -250,6 +251,20 @@ export class BlockManager extends Module {
   }
 
   /**
+   * What a change applied from another client is called in mutation events.
+   */
+  private remoteOriginLabel: 'tab' | 'remote' = 'remote';
+
+  /**
+   * Name the source of changes applied from another client: 'tab' when they
+   * come from another tab of this browser, 'remote' from a collaboration peer.
+   * @param label - the origin mutation events carry for those changes
+   */
+  public setRemoteOriginLabel(label: 'tab' | 'remote'): void {
+    this.remoteOriginLabel = label;
+  }
+
+  /**
    * When true, suppresses DOM-mutation-triggered Yjs syncs.
    * Set by the table tool's cell-selection handler during a pointer drag
    * to prevent cross-cell browser DOM mutations from corrupting Yjs state.
@@ -364,6 +379,8 @@ export class BlockManager extends Module {
   /** True while `insertMany` renders a document; see `normalizeRenderedBlocks`. */
   private isRenderingDocument = false;
 
+  private readonly createdHere = new Set<string>();
+
   /**
    * Operations handler for state changes
    */
@@ -460,6 +477,7 @@ export class BlockManager extends Module {
         tools: this.Blok.Tools.blockTools,
         moduleInstances: this.Blok,
         migrations: this.config.migrations,
+        onComposed: (block, origin) => this.trackCreatedHere(block.id, origin),
       },
       this.bindBlockEvents.bind(this),
       (block) => this.eventBinder.bindBlockChanges(block)
@@ -473,12 +491,18 @@ export class BlockManager extends Module {
     this.hierarchy = new BlockHierarchy(
       this.repository,
       (parentId) => {
-        if (!this.yjsSync.isSyncingFromYjs) {
+        // Inside a sync window the parent's data came from the doc — unless a
+        // child under it was just minted here, which the doc only half has.
+        const hasLocalChild = (): boolean =>
+          this.yjsSync.hasLocalAddDuringSync(this.repository.getBlockById(parentId)?.contentIds ?? []);
+
+        if (!this.yjsSync.isSyncingFromYjs || hasLocalChild()) {
           this.scheduleParentSync(parentId);
         }
       },
       () => Boolean(this.yjsSync?.isSyncingFromYjs),
-      this.blocksStore
+      this.blocksStore,
+      () => Boolean(this.yjsSync?.isMaterializingFromPeer)
     );
 
     // Initialize operations first (before yjsSync) to allow circular dependency resolution
@@ -620,6 +644,41 @@ export class BlockManager extends Module {
    */
   public composeBlock(options: ComposeBlockOptions): Block {
     return this.factory.composeBlock(options);
+  }
+
+  /**
+   * True for a block this tab created after the document rendered.
+   * @param blockId - the block to check
+   */
+  public isCreatedHere(blockId: string): boolean {
+    return this.createdHere.has(blockId);
+  }
+
+  /**
+   * Classified by origin, not by render/sync flags: inserts reach the factory
+   * directly, and `isSyncingFromYjs` is still true just after render.
+   * @param id - id of the block just composed
+   * @param origin - why it was composed
+   */
+  private trackCreatedHere(id: string, origin: BlockOrigin): void {
+    // Undo, redo and remote are never created here, even when they rebuild in place.
+    if (origin === 'load' || origin === 'replay') {
+      this.createdHere.delete(id);
+
+      return;
+    }
+
+    // Convert reuses the old block's id, so it must win before the rebuild check.
+    if (origin === 'convert') {
+      this.createdHere.add(id);
+
+      return;
+    }
+
+    // An existing id is a rebuild in place (setData fallback): keep its status.
+    if (origin !== 'probe' && this.repository.getBlockById(id) === undefined) {
+      this.createdHere.add(id);
+    }
   }
 
   /**
@@ -910,6 +969,11 @@ export class BlockManager extends Module {
    * @param skipYjsSync - if true, skip syncing to Yjs (caller handles sync separately)
    */
   public removeBlock(block: Block, addLastBlock = true, skipYjsSync = false): Promise<void> {
+    // Teardown is not a deletion: a container's destroy() must not delete its children from the doc.
+    if (this.isDestroyed) {
+      return Promise.resolve();
+    }
+
     return this.operations.removeBlock(block, addLastBlock, skipYjsSync, this.blocksStore);
   }
 
@@ -1312,6 +1376,14 @@ export class BlockManager extends Module {
    * @param newParentId - the new parent block id, or null for root level
    */
   public setBlockParent(block: Block, newParentId: string | null): void {
+    // Re-asserting the current parent stays allowed: drag and replay re-place
+    // children a stored document already put there.
+    if (newParentId !== null && newParentId !== block.parentId && !acceptsChildren(this.getBlockById(newParentId))) {
+      logLabeled(`Block «${block.id}» was not nested under «${newParentId}»: that block takes no children.`, 'warn');
+
+      return;
+    }
+
     // Capture the old parent id BEFORE hierarchy.setBlockParent mutates it —
     // the BlockMoved emission guard below compares against it.
     const oldParentId = block.parentId;
@@ -2010,9 +2082,12 @@ export class BlockManager extends Module {
     source: 'mutation' | 'replay' = 'mutation'
   ): Block {
     const isEcho = this.yjsSync.isSyncingFromYjs && this.yjsSync.isReconciling(block);
+    // A keystroke inside a remote window is the user's own.
+    const fromRemote = isEcho && this.yjsSync.isApplyingRemote && !this.yjsSync.hasUserTypedWhileReconciling(block);
+    const origin = fromRemote ? this.remoteOriginLabel : 'local';
 
     if (mutationType !== BlockChangedMutationType || !isEcho || this.yjsSync.claimChangeAnnouncement(block, source)) {
-      this.emitBlockMutation(mutationType, block, detailData);
+      this.emitBlockMutation(mutationType, block, detailData, origin);
     }
 
     // Sync content changes to Yjs for undo/redo support
@@ -2020,11 +2095,11 @@ export class BlockManager extends Module {
     // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
     // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
     if (mutationType === BlockChangedMutationType && !this._isPointerDragActive) {
-      if (isEcho) {
-        // Not necessarily an echo: the window is open across setData's await
-        // and one frame, so the user can type into it. Re-checked on close.
+      // A replay announcement is not a local edit; only a real mutation
+      // needs checking when the window closes.
+      if (isEcho && source === 'mutation') {
         this.yjsSync.noteSuppressedMutation(block);
-      } else {
+      } else if (!isEcho) {
         void this.syncBlockDataToYjs(block, block.isDerivedChange ? { untracked: true, normalize: 'all', derivedFrom: block.derivedFrom } : undefined);
       }
     }
@@ -2037,16 +2112,19 @@ export class BlockManager extends Module {
    * @param mutationType - what happened to the block
    * @param block - the block
    * @param detailData - event details
+   * @param origin - who made the change
    */
   private emitBlockMutation<Type extends BlockMutationType>(
     mutationType: Type,
     block: Block,
-    detailData: BlockMutationEventDetailWithoutTarget<Type>
+    detailData: BlockMutationEventDetailWithoutTarget<Type>,
+    origin: BlockMutationOrigin = 'local'
   ): void {
     const eventDetail = {
       target: new BlockAPI(block, this.Blok.API),
       ...this.placementDetail(mutationType, block, detailData),
       ...detailData,
+      origin,
     };
 
     const event = new CustomEvent(mutationType, {

@@ -452,33 +452,39 @@ describe('TableRowColDrag mutation coverage', () => {
   });
 
   describe('a row or column locked by a merge', () => {
-    it('refuses the gesture with a not-allowed cursor and no drag chrome', () => {
+    it('refuses the gesture once, with no drag chrome and no not-allowed cursor', () => {
       const grid = createGrid();
       const onDragStateChange = vi.fn();
+      const onDragRejected = vi.fn();
 
       drag = new TableRowColDrag({
         grid,
         onAction: vi.fn(),
         onDragStateChange,
+        onDragRejected,
         canDrag: () => false,
       });
       void drag.beginTracking('row', 1, 250, 170);
       move(250, 250);
+      move(250, 260);
 
-      expect(document.body.style.cursor).toBe('not-allowed');
+      expect(onDragRejected).toHaveBeenCalledTimes(1);
+      expect(onDragRejected).toHaveBeenCalledWith('row', 1);
+      expect(document.body.style.cursor).toBe('');
       expect(document.querySelector(GHOST_SELECTOR)).toBeNull();
       expect(hasIndicator(grid)).toBe(false);
       expect(onDragStateChange).not.toHaveBeenCalled();
     });
 
-    it('leaves the cursor alone until the refused gesture passes the threshold', () => {
+    it('does not report a refusal until the gesture passes the threshold', () => {
       const grid = createGrid();
+      const onDragRejected = vi.fn();
 
-      drag = new TableRowColDrag({ grid, onAction: vi.fn(), canDrag: () => false });
+      drag = new TableRowColDrag({ grid, onAction: vi.fn(), onDragRejected, canDrag: () => false });
       void drag.beginTracking('row', 1, 250, 170);
       move(250 + DRAG_THRESHOLD, 170 + DRAG_THRESHOLD);
 
-      expect(document.body.style.cursor).toBe('');
+      expect(onDragRejected).not.toHaveBeenCalled();
     });
 
     it('drags normally when canDrag accepts the row', () => {

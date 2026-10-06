@@ -21,13 +21,13 @@ const DOCUMENTS_PATH = '/docs/';
  *
  * @param {object} options
  * @param {Map<string, unknown>} options.documents Written documents, by id.
- * @param {unknown} options.seed Answer for a document nobody has written yet.
+ * @param {(id: string) => unknown} options.seedFor Answer for a document nobody has written yet.
  * @param {string} options.method HTTP method.
  * @param {string} options.path Request path.
  * @param {string} [options.body] Request body, for PUT.
  * @returns {{ status: number, body?: string }}
  */
-export function handleDocumentRequest({ documents, seed, method, path, body }) {
+export function handleDocumentRequest({ documents, seedFor, method, path, body }) {
   if (!path.startsWith(DOCUMENTS_PATH)) {
     return { status: 404, body: '{"error":"not a document path"}' };
   }
@@ -43,7 +43,7 @@ export function handleDocumentRequest({ documents, seed, method, path, body }) {
   }
 
   if (method === 'GET') {
-    return { status: 200, body: JSON.stringify(documents.has(id) ? documents.get(id) : seed) };
+    return { status: 200, body: JSON.stringify(documents.has(id) ? documents.get(id) : seedFor(id)) };
   }
 
   if (method === 'PUT') {
@@ -69,10 +69,10 @@ export function handleDocumentRequest({ documents, seed, method, path, body }) {
  *
  * @param {object} options
  * @param {number} options.port Port to listen on.
- * @param {unknown} options.seed Document handed out until someone writes one.
+ * @param {(id: string) => unknown} options.seedFor Document handed out until someone writes one.
  * @returns {Promise<import('node:http').Server>}
  */
-export function startDocumentStore({ port, seed }) {
+export function startDocumentStore({ port, seedFor }) {
   const documents = new Map();
   const server = createServer((request, response) => {
     const chunks = [];
@@ -81,7 +81,7 @@ export function startDocumentStore({ port, seed }) {
     request.once('end', () => {
       const { status, body } = handleDocumentRequest({
         documents,
-        seed,
+        seedFor,
         method: request.method ?? 'GET',
         path: new URL(request.url ?? '/', 'http://127.0.0.1').pathname,
         body: Buffer.concat(chunks).toString('utf8'),

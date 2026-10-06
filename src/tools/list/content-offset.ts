@@ -4,38 +4,32 @@
  * Used by the toolbar to position itself closer to nested list items.
  */
 
+import { getElementDirection } from '../../components/utils/direction';
 import { INDENT_PER_LEVEL } from './constants';
 
 /**
- * Extracts the margin-left value from an element's inline style
+ * Reads the margin-inline-start the list tool writes on a nested item.
  *
- * @param element - The element to extract margin-left from
- * @returns Object with left offset if valid margin-left found, undefined otherwise
+ * @param element - The list item element
+ * @returns Indent in px, or undefined when not indented
  */
-export const getMarginLeftFromElement = (element: Element | null): { left: number } | undefined => {
-  if (!element) {
+export const getInlineStartMarginFromElement = (element: Element | null): number | undefined => {
+  if (!(element instanceof HTMLElement)) {
     return undefined;
   }
 
-  const style = element.getAttribute('style') || '';
-  const marginMatch = style.match(/margin-left:\s*(\d+)px/);
+  const margin = parseFloat(element.style.marginInlineStart);
 
-  if (!marginMatch) {
-    return undefined;
-  }
-
-  const marginLeft = parseInt(marginMatch[1], 10);
-
-  return marginLeft > 0 ? { left: marginLeft } : undefined;
+  return margin > 0 ? margin : undefined;
 }
 
 /**
- * Gets the offset from the data-list-depth attribute
+ * Gets the indent from the data-list-depth attribute
  *
  * @param hoveredElement - The element to start searching from
- * @returns Object with left offset based on depth, undefined if depth is 0 or not found
+ * @returns Indent in px based on depth, undefined if depth is 0 or not found
  */
-export const getOffsetFromDepthAttribute = (hoveredElement: Element): { left: number } | undefined => {
+export const getOffsetFromDepthAttribute = (hoveredElement: Element): number | undefined => {
   const wrapper = hoveredElement.closest('[data-list-depth]');
 
   if (!wrapper) {
@@ -50,28 +44,32 @@ export const getOffsetFromDepthAttribute = (hoveredElement: Element): { left: nu
 
   const depth = parseInt(depthAttr, 10);
 
-  return depth > 0 ? { left: depth * INDENT_PER_LEVEL } : undefined;
+  return depth > 0 ? depth * INDENT_PER_LEVEL : undefined;
 }
 
 /**
- * Returns the horizontal offset of the content at the hovered element.
+ * Returns the physical inset of the list item at the hovered element.
  * Used by the toolbar to position itself closer to nested list items.
  *
  * @param hoveredElement - The element that is currently being hovered
- * @returns Object with left offset in pixels based on the list item's depth
+ * @returns The indent on the side it lies: `right` for an RTL item, `left` otherwise
  */
-export const getContentOffset = (hoveredElement: Element): { left: number } | undefined => {
+export const getContentOffset = (hoveredElement: Element): { left: number; right?: number } | undefined => {
   // First try: find listitem in ancestors (when hovering content)
   // Second try: find listitem in descendants (when hovering wrapper)
   const listItemEl = hoveredElement.closest('[role="listitem"]') ||
     hoveredElement.querySelector('[role="listitem"]');
 
-  const marginLeftOffset = getMarginLeftFromElement(listItemEl);
+  // Fallback: use data-list-depth from wrapper
+  const indent = getInlineStartMarginFromElement(listItemEl) ?? getOffsetFromDepthAttribute(hoveredElement);
 
-  if (marginLeftOffset !== undefined) {
-    return marginLeftOffset;
+  if (indent === undefined) {
+    return undefined;
   }
 
-  // Fallback: use data-list-depth from wrapper
-  return getOffsetFromDepthAttribute(hoveredElement);
+  // The item's own direction, not the editor's: an Arabic item in an LTR editor
+  // indents from the right.
+  return getElementDirection(listItemEl ?? hoveredElement) === 'rtl'
+    ? { left: 0, right: indent }
+    : { left: indent };
 }

@@ -96,6 +96,7 @@ const createBlokStub = (): BlokModules => {
       // handleEscape reads this before the PopoverRegistry branch (see the
       // emoji-menu Escape fix); every Escape now touches it.
       emojiTrigger: { opened: false, close: vi.fn() },
+      pageReferenceTrigger: { opened: false, close: vi.fn() },
     },
     Caret: {
       setToBlock: vi.fn(),
@@ -114,6 +115,7 @@ const createBlokStub = (): BlokModules => {
     DragManager: {
       isDragging: false,
     },
+    PageReferences: { ownsTarget: vi.fn(() => false) },
     // The turn-into paths report a refused conversion through the public API.
     API: {
       methods: {

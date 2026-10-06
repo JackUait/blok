@@ -683,6 +683,56 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
         .toBe(query(options.wrapper, '[data-blok-database-drawer-editor]'));
     });
 
+    it('opens an explicitly empty designated body instead of a populated orphan', async () => {
+      const empty: OutputData = { blocks: [] };
+      const stale: OutputData = { blocks: [{ type: 'paragraph', data: { text: 'stale' } }] };
+      const options = createOptions({
+        descriptionPropertyId: 'prop-desc',
+        schema: [makeDef({ id: 'prop-desc', name: 'Description', type: 'richText' })],
+      });
+      const drawer = makeDrawer(options);
+
+      drawer.open(makeRow({ properties: { 'prop-title': 'Card', 'prop-desc': empty, 'orphan-desc': stale } }));
+
+      await vi.waitFor(() => { expect(nested.created).toHaveLength(1); }, WAIT);
+
+      expect(nested.created[0].config.data).toBe(empty);
+    });
+
+    it('opens the designated body instead of an earlier duplicate-name column', async () => {
+      const stale: OutputData = { blocks: [{ type: 'paragraph', data: { text: 'stale' } }] };
+      const designated: OutputData = { blocks: [{ type: 'paragraph', data: { text: 'designated' } }] };
+      const options = createOptions({
+        descriptionPropertyId: 'prop-desc',
+        schema: [
+          makeDef({ id: 'prop-old', name: 'Description', type: 'richText', position: 'a1' }),
+          makeDef({ id: 'prop-desc', name: 'Description', type: 'richText', position: 'a2' }),
+        ],
+      });
+      const drawer = makeDrawer(options);
+
+      drawer.open(makeRow({ properties: { 'prop-title': 'Card', 'prop-old': stale, 'prop-desc': designated } }));
+
+      await vi.waitFor(() => { expect(nested.created).toHaveLength(1); }, WAIT);
+
+      expect(nested.created[0].config.data).toBe(designated);
+    });
+
+    it('uses a populated orphan when the designated body is absent', async () => {
+      const orphan: OutputData = { blocks: [{ type: 'paragraph', data: { text: 'legacy' } }] };
+      const options = createOptions({
+        descriptionPropertyId: 'prop-desc',
+        schema: [makeDef({ id: 'prop-desc', name: 'Description', type: 'richText' })],
+      });
+      const drawer = makeDrawer(options);
+
+      drawer.open(makeRow({ properties: { 'prop-title': 'Card', 'orphan-desc': orphan } }));
+
+      await vi.waitFor(() => { expect(nested.created).toHaveLength(1); }, WAIT);
+
+      expect(nested.created[0].config.data).toBe(orphan);
+    });
+
     it('passes no description when no description property id is configured', async () => {
       const options = createOptions();
       const drawer = makeDrawer(options);
@@ -773,6 +823,37 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       }, WAIT);
     });
 
+    it('does not emit a legacy body on close while migration is pending', async () => {
+      nested.savePayload = { blocks: [{ type: 'paragraph', data: { text: 'typed' } }] };
+      const options = createOptions({ descriptionPropertyId: 'prop-desc' });
+      const drawer = makeDrawer(options);
+
+      drawer.open(makeRow());
+      await vi.waitFor(() => { expect(nested.created).toHaveLength(1); }, WAIT);
+
+      drawer.setBodyMigrationPending('row-1', true);
+      drawer.close();
+
+      await vi.waitFor(() => { expect(nested.created[0].destroyCalls).toBe(1); }, WAIT);
+      expect(options.onDescriptionChange).not.toHaveBeenCalled();
+    });
+
+    it('does not emit the previous legacy body on switch after migration clears', async () => {
+      nested.savePayload = { blocks: [{ type: 'paragraph', data: { text: 'typed' } }] };
+      const options = createOptions({ descriptionPropertyId: 'prop-desc' });
+      const drawer = makeDrawer(options);
+
+      drawer.open(makeRow());
+      await vi.waitFor(() => { expect(nested.created).toHaveLength(1); }, WAIT);
+
+      drawer.setBodyMigrationPending('row-1', true);
+      drawer.open(makeRow({ id: 'row-2' }));
+      drawer.setBodyMigrationPending('row-1', false);
+
+      await vi.waitFor(() => { expect(nested.created[0].destroyCalls).toBe(1); }, WAIT);
+      expect(options.onDescriptionChange).not.toHaveBeenCalled();
+    });
+
     it('saves the previous card description before switching cards', async () => {
       nested.savePayload = { blocks: [{ type: 'paragraph', data: { text: 'typed' } }] };
 
@@ -792,26 +873,17 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       expect(nested.created[0].destroyCalls).toBe(1);
     });
 
-    it('reports no description for an editor that finished loading after the close', async () => {
+    it('does not mount an editor after the drawer closes before import finishes', async () => {
       const options = createOptions({ descriptionPropertyId: 'prop-desc' });
       const drawer = makeDrawer(options);
 
-      // close() runs before the dynamic import settles, so the editor is adopted
-      // with no current row behind it.
       drawer.open(makeRow());
       drawer.close();
+      await vi.dynamicImportSettled();
 
-      await vi.waitFor(() => {
-        expect(nested.created).toHaveLength(1);
-      }, WAIT);
-
-      drawer.destroy();
-
-      await vi.waitFor(() => {
-        expect(nested.created[0].destroyCalls).toBe(1);
-      }, WAIT);
+      expect(nested.created).toHaveLength(0);
       expect(options.onDescriptionChange).not.toHaveBeenCalled();
-    });
+    }, 20000);
 
     it('reports the saved description when the nested editor changes', async () => {
       nested.savePayload = { blocks: [{ type: 'paragraph', data: { text: 'edited' } }] };

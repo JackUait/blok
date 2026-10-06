@@ -374,7 +374,7 @@ export class SpacerTool implements BlockTool {
     readout.setAttribute('aria-hidden', 'true');
     readout.textContent = `${this.height}px`;
     readout.className = twMerge(
-      'absolute', 'right-2', 'top-1/2', '-translate-y-1/2',
+      'absolute', 'end-2', 'top-1/2', '-translate-y-1/2',
       'text-xs', 'text-text-secondary', 'select-none', 'pointer-events-none',
       'opacity-0', 'transition-opacity', 'group-hover/spacer:opacity-100'
     );

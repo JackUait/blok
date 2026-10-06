@@ -10,6 +10,7 @@ import type { BlokModules } from '../../../../../src/types-internal/blok-modules
 import type { API, BlockAPI } from '../../../../../types';
 import en from '../../../../../src/components/i18n/locales/en.json';
 import ru from '../../../../../src/components/i18n/locales/ru.json';
+import { createMemoryViewState } from '../../../../helpers/view-state';
 
 const translations: Record<string, string> = en;
 const settingsInstances: BlockSettings[] = [];
@@ -28,6 +29,7 @@ const createSettings = (data: Partial<HeaderData> = {}, locale: 'en' | 'ru' = 'e
     i18n,
     events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
     blocks: { getChildren: () => [] },
+    viewState: createMemoryViewState(),
   } as unknown as API;
   const header = new Header({
     api,
@@ -63,7 +65,7 @@ const createSettings = (data: Partial<HeaderData> = {}, locale: 'en' | 'ru' = 'e
     CrossBlockSelection: { isCrossBlockSelectionStarted: false },
     Tools: { blockTools: new Map([['header', tool]]) },
     API: { methods: api },
-    Toolbar: { close: closeToolbar, isPositionedRight: false },
+    Toolbar: { close: closeToolbar, isDockedPhysicallyRight: false },
     Caret: { setToBlock: setCaret, positions: { DEFAULT: 'default', END: 'end' } },
     I18n: i18n,
   } as unknown as BlokModules;
@@ -117,7 +119,7 @@ describe('Heading search in real block settings', () => {
     { locale: 'ru', isToggleable: true, title: 'Заголовок 3' },
   ] as const)('prefers the native level action for English search and preserves heading data ($locale, toggle: $isToggleable)', async ({ locale, isToggleable, title }) => {
     const { settings, block, header, holder, convert } = createSettings({
-      ...(isToggleable ? { isToggleable: true, isOpen: false } : {}),
+      ...(isToggleable ? { isToggleable: true } : {}),
       textColor: 'red', backgroundColor: 'blue',
     }, locale);
     const child = document.createElement('p');
@@ -148,7 +150,7 @@ describe('Heading search in real block settings', () => {
     expect(header.save(holder)).toEqual({
       text: '<b>Edited after opening</b>', level: 3, anchor: 'original-anchor',
       textColor: 'red', backgroundColor: 'blue',
-      ...(isToggleable ? { isToggleable: true, isOpen: false } : {}),
+      ...(isToggleable ? { isToggleable: true } : {}),
     });
     expect(holder.querySelector('h3')?.id).toBe('original-anchor');
     expect(convert).not.toHaveBeenCalled();
@@ -160,7 +162,7 @@ describe('Heading search in real block settings', () => {
   it.each([false, true])('keeps the current heading unchanged and closes the toolbar with toggle state %s', async (isToggleable) => {
     const { settings, block, header, holder, convert, closeToolbar, setCaret } = createSettings({
       textColor: 'red', backgroundColor: 'blue',
-      ...(isToggleable ? { isToggleable: true, isOpen: false } : {}),
+      ...(isToggleable ? { isToggleable: true } : {}),
     });
     const child = document.createElement('p');
 
@@ -198,7 +200,7 @@ describe('Heading search in real block settings', () => {
   });
 
   it('keeps explicit conversion available when a native level action retains toggle state', async () => {
-    const { settings, block } = createSettings({ isToggleable: true, isOpen: false });
+    const { settings, block } = createSettings({ isToggleable: true });
 
     await settings.open(block);
     const menu = getMenu();

@@ -1,5 +1,5 @@
 // docs/src/components/tools/tools-data.test.ts
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { defaultBlockTools, defaultInlineTools } from '../../../../src/tools/index';
@@ -13,6 +13,9 @@ import {
 /** Repo root — docs/src/components/tools → up four levels. */
 const BLOK_ROOT = resolve(__dirname, '..', '..', '..', '..');
 const readSource = (rel: string): string => readFileSync(join(BLOK_ROOT, rel), 'utf8');
+
+beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('tools documentation coverage', () => {
   it('documents every key in defaultBlockTools', () => {
@@ -127,6 +130,73 @@ describe('tools documentation coverage', () => {
   }
 });
 
+describe('page reference documentation', () => {
+  const pageDescriptionIn = (locale: string): string => {
+    const catalogue = JSON.parse(readSource(`docs/src/i18n/${locale}.json`)) as {
+      tools?: { docs?: { page?: { description?: string } } };
+    };
+
+    return catalogue.tools?.docs?.page?.description ?? '';
+  };
+
+  it('shows ID-only owning and non-owning saved shapes', () => {
+    const page = TOOL_SECTIONS.find((section) => section.id === 'page');
+    const pageLink = TOOL_SECTIONS.find((section) => section.id === 'page-link');
+
+    expect(page?.saveDataExample).toContain('"pageId": "p1"');
+    expect(page?.saveDataExample).not.toContain('"cache"');
+    expect(pageLink?.saveDataExample).toContain('"type": "page-link"');
+    expect(pageLink?.saveDataExample).toContain('"pageId"');
+    expect(pageLink?.description).toMatch(/non-owning/i);
+    expect(pageLink?.saveDataExample).not.toContain('"title"');
+    expect(pageLink?.saveDataExample).not.toContain('"href"');
+  });
+
+  it('shows the host hooks and safe inline reference format', () => {
+    const page = TOOL_SECTIONS.find((section) => section.id === 'page');
+    const example = page?.usageExample ?? '';
+
+    expect(example).toContain('PageLink');
+    expect(example).toContain('search:');
+    expect(example).toContain('subscribe:');
+    expect(example).toContain('pageInfo:');
+    expect(example).toContain('pageHref:');
+    expect(page?.configOptions.map((option) => option.option)).toEqual(expect.arrayContaining([
+      'href', 'open', 'resolve', 'create', 'search', 'subscribe',
+    ]));
+    expect(page?.description).toContain('data-blok-page-id');
+    expect(page?.description).toContain('same-tab');
+    expect(page?.description).toContain('global search');
+    expect(page?.description).not.toContain('saved cache');
+  });
+
+  it.each(['en', 'ru'])('explains authorized metadata in %s', (locale) => {
+    const description = pageDescriptionIn(locale);
+
+    expect(description).toContain('pageId');
+    expect(description).toContain('resolve');
+    expect(description).toContain('subscribe');
+    expect(description).toContain('search');
+    expect(description).toContain('pageInfo');
+    expect(description).toContain('pageHref');
+    expect(description).not.toContain('cached copy');
+    // The page tool never shipped a saved `cache`, so there is no legacy one.
+    expect(description).not.toContain('`cache`');
+  });
+
+  it.each(['en', 'ru'])('documents the non-owning page link in %s', (locale) => {
+    const catalogue = JSON.parse(readSource(`docs/src/i18n/${locale}.json`)) as {
+      tools?: {
+        docs?: { 'page-link'?: { description?: string } };
+        links?: { 'page-link'?: string };
+      };
+    };
+
+    expect(catalogue.tools?.docs?.['page-link']?.description ?? '').toContain('pageId');
+    expect(catalogue.tools?.links?.['page-link']).toBe(locale === 'ru' ? 'Ссылка на страницу' : 'Page link');
+  });
+});
+
 describe('callout keyboard exit', () => {
   /**
    * A callout holds its text in child blocks, so "how do I get back out" is a
@@ -174,5 +244,29 @@ describe('pasted code language', () => {
     expect(description).toContain('language');
     expect(description).toMatch(/```sql|fence/);
     expect(description).toContain('Gemini');
+  });
+});
+
+describe('toggle open state', () => {
+  /** The open state lives in each browser, not in saved data. */
+  const toggleDescriptionIn = (locale: string): string => {
+    const catalogue = JSON.parse(readSource(`docs/src/i18n/${locale}.json`)) as {
+      tools?: { docs?: { toggle?: { description?: string } } };
+    };
+
+    return catalogue.tools?.docs?.toggle?.description ?? '';
+  };
+
+  it.each([
+    ['tools-data.ts', TOOL_SECTIONS.find((s) => s.id === 'toggle')?.description ?? ''],
+    ['en.json', toggleDescriptionIn('en')],
+    ['ru.json', toggleDescriptionIn('ru')],
+  ])('does not document a saved isOpen in %s', (_file, text) => {
+    expect(text.length).toBeGreaterThan(0);
+    expect(text).not.toContain('isOpen');
+  });
+
+  it.each(['toggle', 'header'])('leaves isOpen out of the %s saved data shape', (id) => {
+    expect(TOOL_SECTIONS.find((s) => s.id === id)?.saveDataShape ?? '').not.toContain('isOpen');
   });
 });

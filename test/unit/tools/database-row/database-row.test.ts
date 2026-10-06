@@ -3,6 +3,7 @@ import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { DatabaseRowData as PublicDatabaseRowData } from '../../../../types';
 import type { DatabaseRowData } from '../../../../src/tools/database/types';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
+import { sanitizeBlocks } from '../../../../src/components/utils/sanitizer';
 
 const createMockAPI = (): API => ({
   styles: {
@@ -57,6 +58,15 @@ describe('DatabaseRowTool', () => {
     it('isReadOnlySupported is true', () => {
       expect(DatabaseRowTool.isReadOnlySupported).toBe(true);
     });
+
+    it('keeps a page pointer literal through saved-data sanitization', () => {
+      const [sanitized] = sanitizeBlocks(
+        [{ tool: 'database-row', data: { properties: {}, position: 'a0', pageId: 'row<page>' } }],
+        () => DatabaseRowTool.sanitize,
+      );
+
+      expect(sanitized.data).toHaveProperty('pageId', 'row<page>');
+    });
   });
 
   describe('render()', () => {
@@ -104,6 +114,26 @@ describe('DatabaseRowTool', () => {
       const tool = new DatabaseRowTool(createRowOptions({ properties: { 'p-title': 'Ship it' }, title: 'Ship it' }));
 
       expect(tool.save(tool.render()).title).toBe('Ship it');
+    });
+
+    it('preserves a migrated page pointer alongside its legacy body', () => {
+      const legacy = { blocks: [{ id: 'p', type: 'paragraph', data: { text: 'Legacy' } }] };
+      const migrated = {
+        properties: { description: legacy },
+        position: 'a0',
+        pageId: 'row-page',
+      };
+      const tool = new DatabaseRowTool(createRowOptions(migrated));
+      const saved = tool.save(tool.render());
+
+      expect(saved).toHaveProperty('pageId', 'row-page');
+      expect(saved.properties.description).toEqual(legacy);
+    });
+
+    it('does not invent a page pointer on an unmigrated row', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ properties: { description: { blocks: [] } } }));
+
+      expect(tool.save(tool.render())).not.toHaveProperty('pageId');
     });
   });
 
@@ -158,6 +188,27 @@ describe('DatabaseRowTool', () => {
       const tool = new DatabaseRowTool(createRowOptions());
 
       expect(tool.validate({ properties: null, position: 'a0' } as unknown as DatabaseRowData)).toBe(false);
+    });
+
+    it('rejects an empty page pointer', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+      const row = { properties: {}, position: 'a0', pageId: '' };
+
+      expect(tool.validate(row)).toBe(false);
+    });
+
+    it('rejects a non-string page pointer', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+      const row = { properties: {}, position: 'a0', pageId: 42 };
+
+      expect(tool.validate(row as unknown as DatabaseRowData)).toBe(false);
+    });
+
+    it('accepts a nonempty page pointer', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+      const row = { properties: {}, position: 'a0', pageId: 'row-page' };
+
+      expect(tool.validate(row)).toBe(true);
     });
   });
 
@@ -217,6 +268,65 @@ describe('DatabaseRowTool', () => {
 
       expect(tool.getTitle()).toBeUndefined();
     });
+
+    it('retains a replayed page pointer through save', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+      const replayed = { properties: { description: { blocks: [] } }, position: 'a0', pageId: 'row-page' };
+
+      tool.setData(replayed);
+
+      expect(tool.save(tool.render())).toHaveProperty('pageId', 'row-page');
+    });
+  });
+
+  describe('keys this version does not know', () => {
+    // A newer Blok may add a top-level row key. Dropping it here would make
+    // this version's save prune it from the shared document for everyone.
+    const withFutureKey = (): DatabaseRowData => Object.assign(
+      { properties: { title: 'Row' }, position: 'a1', pageId: 'page-1' },
+      { futureKey: 'a & <b>x</b>', futureObject: { nested: [1, 2] } },
+    );
+
+    it('keeps an unknown top-level key through constructor and save', () => {
+      const tool = new DatabaseRowTool(createRowOptions(withFutureKey()));
+      const saved: Record<string, unknown> = { ...tool.save(document.createElement('div')) };
+
+      expect(saved.futureKey).toBe('a & <b>x</b>');
+      expect(saved.futureObject).toEqual({ nested: [1, 2] });
+      expect(saved).toMatchObject({ properties: { title: 'Row' }, position: 'a1', pageId: 'page-1' });
+    });
+
+    it('keeps an unknown top-level key through setData and readData', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+
+      tool.setData(withFutureKey());
+      tool.updateProperties({ title: 'Edited' });
+      const live: Array<Record<string, unknown>> = [];
+
+      tool.readData({ receive: (data) => live.push({ ...data }) });
+      const saved: Record<string, unknown> = { ...tool.save(document.createElement('div')) };
+
+      expect(saved.futureKey).toBe('a & <b>x</b>');
+      expect(live[0]?.futureKey).toBe('a & <b>x</b>');
+      expect(saved.properties).toEqual({ title: 'Edited' });
+    });
+
+    it('still drops a malformed known key', () => {
+      const malformed: Record<string, unknown> = { properties: {}, position: 'a0', pageId: '', title: 7 };
+      const tool = new DatabaseRowTool({ ...createRowOptions(), data: malformed as unknown as DatabaseRowData });
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved).not.toHaveProperty('pageId');
+      expect(saved).not.toHaveProperty('title');
+    });
+
+    it('does not let an unknown key shadow a known one', () => {
+      const tool = new DatabaseRowTool(createRowOptions(withFutureKey()));
+
+      tool.updatePosition({ position: 'b0' });
+
+      expect(tool.save(document.createElement('div')).position).toBe('b0');
+    });
   });
 
   describe('readData()', () => {
@@ -231,6 +341,16 @@ describe('DatabaseRowTool', () => {
       tool.readData({ receive });
 
       expect(receive).toHaveBeenCalledWith({ properties: { a: '2' }, position: 'a5' });
+    });
+
+    it('includes a migrated page pointer in the live row projection', () => {
+      const migrated = { properties: {}, position: 'a0', pageId: 'row-page' };
+      const tool = new DatabaseRowTool(createRowOptions(migrated));
+      const receive = vi.fn();
+
+      tool.readData({ receive });
+
+      expect(receive).toHaveBeenCalledWith(migrated);
     });
 
     it('gives a copy, so a saved snapshot does not follow later edits', () => {

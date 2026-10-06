@@ -12,6 +12,7 @@ import { test as isolatedTest } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -57,6 +58,7 @@ const createBlok = async (page: Page, blocks: SavedBlock[]): Promise<void> => {
     window.blokInstance = blok;
     await blok.isReady;
   }, { holder: HOLDER_ID, initial: blocks });
+  await openFixtureToggles(page, { blocks });
 };
 
 const save = async (page: Page): Promise<SavedBlock[]> => page.evaluate(async () => {
@@ -127,6 +129,10 @@ const toggleWithKids = (isOpen: boolean): SavedBlock[] => [
   P('k2', 'Kid two', 't'),
   P('after', 'After'),
 ];
+
+/** A fixture as save() returns it: the open state is personal, so `isOpen` is never saved. */
+const asSaved = (blocks: SavedBlock[]): SavedBlock[] =>
+  blocks.map(({ data: { isOpen: _open, ...data }, ...block }) => ({ ...block, data }));
 
 const outerWithInner = (innerOpen: boolean): SavedBlock[] => [
   P('top', 'Top'),
@@ -213,7 +219,7 @@ test.describe('hidden and nested targets', () => {
     const merged = await save(page);
 
     await undo(page);
-    expect(await save(page)).toEqual(toggleWithKids(true));
+    expect(await save(page)).toEqual(asSaved(toggleWithKids(true)));
     await redo(page);
 
     expect(await save(page)).toEqual(merged);
@@ -267,13 +273,15 @@ test.describe('hidden and nested targets', () => {
     await selectAndDelete(page, 't');
     await undo(page);
 
-    expect(await save(page)).toEqual(toggleWithKids(false));
+    expect(await save(page)).toEqual(asSaved(toggleWithKids(false)));
     await expect(holder(page, 't')).toBeVisible();
     await expect(holder(page, 'k1')).toBeHidden();
     await expect(holder(page, 'k2')).toBeHidden();
   });
 
-  test('works: edit deep in nested toggles, collapse both, undo expands each before reverting the edit', async ({ page }) => {
+  // Open/close is not an undo step: one undo reverts the edit. The caret goes back into
+  // the edited block, so undo and redo open both collapsed toggles around it.
+  test('works: edit deep in nested toggles, collapse both, one undo reverts the edit and opens both toggles', async ({ page }) => {
     await createBlok(page, [
       P('top', 'Top'),
       { id: 't', type: 'toggle', data: { text: 'Outer', isOpen: true }, content: ['t2'] },
@@ -292,16 +300,14 @@ test.describe('hidden and nested targets', () => {
 
     await editable(page, 'top').click();
     await undo(page);
-    await expect(holder(page, 't2')).toBeVisible();
-    await undo(page);
-    await expect(holder(page, 'c')).toBeVisible();
-    await undo(page);
     expect(await save(page)).toEqual(s0);
-    await redo(page);
-    await redo(page);
+    await expect(holder(page, 'c')).toBeVisible();
+    await page.locator('[data-blok-id="t"] [data-blok-toggle-arrow]').first().click();
+    await expect(holder(page, 't2')).toBeHidden();
+    await editable(page, 'top').click();
     await redo(page);
     expect(await save(page)).toEqual(collapsed);
-    await expect(holder(page, 't2')).toBeHidden();
+    await expect(holder(page, 'c')).toBeVisible();
   });
 
   test('works: toggle > callout > list > nested list, edit and Enter undo/redo exactly', async ({ page }) => {
@@ -623,7 +629,8 @@ isolatedTest.describe('framework adapters', () => {
     await expect(page.getByTestId('rc-value')).toHaveText('0');
   });
 
-  isolatedTest('control: undo of a vanilla toggle collapse reaches onSave', async ({ page }) => {
+  // Open/close is personal state: it never reaches onSave data, and undo does not reopen it.
+  isolatedTest('control: a vanilla toggle collapse never saves isOpen, and undo does not reopen it', async ({ page }) => {
     await page.goto('http://localhost:4444/test/playwright/fixtures/test.html');
     await page.waitForFunction(() => typeof window.Blok === 'function');
     await page.evaluate(async () => {
@@ -646,17 +653,24 @@ isolatedTest.describe('framework adapters', () => {
 
       window.blokInstance = blok;
       await blok.isReady;
+      // A loaded toggle starts collapsed; open it as this browser would have.
+      blok.blocks.getById('t')?.call('expand');
     });
-    await page.locator('[data-blok-id="t"] [data-blok-toggle-arrow]').first().click();
+    const arrow = page.locator('[data-blok-id="t"] [data-blok-toggle-arrow]').first();
+
+    await expect(arrow).toHaveAttribute('aria-expanded', 'true');
+    await arrow.click();
     await gap(page, SAVE_SETTLE);
     const read = (): Promise<unknown> => page.evaluate(() => (window as unknown as { __saved?: unknown }).__saved);
 
-    expect(await read()).toEqual({ text: 'Tog', isOpen: false });
+    await expect(arrow).toHaveAttribute('aria-expanded', 'false');
+    expect(await read()).toEqual({ text: 'Tog' });
     await editable(page, 'top').click();
     await undo(page);
     await gap(page, SAVE_SETTLE);
 
-    expect(await read()).toEqual({ text: 'Tog', isOpen: true });
+    await expect(arrow).toHaveAttribute('aria-expanded', 'false');
+    expect(await read()).toEqual({ text: 'Tog' });
   });
 
   // Vue v-model is covered by W4N-5.

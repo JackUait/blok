@@ -46,7 +46,7 @@ describe('header tool classes', () => {
       5: ['text-base', 'font-semibold', 'mt-3', 'mb-px'],
       6: ['text-sm', 'font-semibold', 'mt-3', 'mb-px'],
     });
-    expect(HEADER_TOGGLEABLE_INDENT_CLASS).toBe('pl-8');
+    expect(HEADER_TOGGLEABLE_INDENT_CLASS).toBe('ps-8');
   });
 
   it('composes base classes with the requested level and no indent by default', () => {
@@ -97,7 +97,7 @@ describe('header tool classes', () => {
       'font-semibold',
       'mt-[26px]',
       'mb-px',
-      'pl-8',
+      'ps-8',
     ]);
     expect(headerClasses(2, false)).toStrictEqual(headerClasses(2));
   });

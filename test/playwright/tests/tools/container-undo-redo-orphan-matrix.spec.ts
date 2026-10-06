@@ -22,6 +22,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -110,6 +111,7 @@ const createBlok = async (
     window.blokInstance = blok;
     await blok.isReady;
   }, { holder: HOLDER_ID, initialData: data, neededTools: [...toolsNeeded] });
+  await openFixtureToggles(page, data);
 };
 
 const saveBlok = async (page: Page): Promise<OutputData> => {

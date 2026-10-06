@@ -131,7 +131,7 @@ export class BlockHoverController extends Controller {
        * two sets of block controls at once.
        */
       if (closestBlockWrapper && this.belongsToAnotherEditor(closestBlockWrapper)) {
-        this.yieldHoverToOtherEditor();
+        this.releaseHover();
 
         return;
       }
@@ -158,6 +158,17 @@ export class BlockHoverController extends Controller {
         return;
       }
 
+      /**
+       * Over a container's empty hint no block owns the toolbar. Releasing also
+       * clears the last hovered id, so leaving the hint for its own block's
+       * line counts as a new hover.
+       */
+      if (resolution.kind === 'stand-in') {
+        this.releaseHover();
+
+        return;
+      }
+
       const hoveredBlockElement = resolution.kind === 'block' ? resolution.wrapper : null;
 
       /**
@@ -170,12 +181,27 @@ export class BlockHoverController extends Controller {
          * the pointer is closest to — only that one runs nearest-block detection.
          */
         if (!this.isNearestEditorToPointer(event.clientX, event.clientY)) {
-          this.yieldHoverToOtherEditor();
+          this.releaseHover();
 
           return;
         }
 
-        this.emitNearestBlockHoveredInZone(event.clientX, event.clientY);
+        /**
+         * The pointer left the editor: drop the controls instead of parking
+         * them on the nearest block. A held button means a drag gesture
+         * crossed the edge — closing would cut it.
+         */
+        const isAway = !this.isWithinHoverZone(event.clientX, event.clientY);
+
+        if (isAway && event.buttons === 0) {
+          this.releaseHover();
+        }
+
+        if (isAway) {
+          return;
+        }
+
+        this.emitNearestBlockHovered(event.clientX, event.clientY);
 
         return;
       }
@@ -187,11 +213,10 @@ export class BlockHoverController extends Controller {
       }
 
       /**
-       * Columns are structural containers, not selectable blocks. Skip the
-       * event so neither the column nor its column_list ever gets a toolbar —
-       * only the blocks inside a column are selectable (Notion-style).
+       * Layout pieces are not selectable blocks. Skip the event so none ever
+       * gets a toolbar — only the blocks inside them are (Notion-style).
        */
-      if (BlockHoverController.isColumnContainer(block)) {
+      if (BlockHoverController.isLayoutBlock(block)) {
         return;
       }
 
@@ -249,23 +274,33 @@ export class BlockHoverController extends Controller {
   }
 
   /**
-   * Columns are structural containers, not independent blocks: neither a
-   * `column` nor its `column_list` may own a drag handle, settings menu, or
-   * "convert to" option. Only the blocks inside a column are selectable.
+   * Layout pieces (a column, its column_list, a tab) are not independent
+   * blocks: none may own a drag handle, settings menu, or "convert to" option.
+   * Only the blocks inside them are selectable.
    * @param block - a hovered or candidate block
-   * @returns true when the block is a column layout container
+   * @returns true when the block's Tool declares `isLayout`
    */
-  private static isColumnContainer(block: Block): boolean {
-    return block.name === 'column' || block.name === 'column_list';
+  private static isLayoutBlock(block: Block): boolean {
+    return block.tool.isLayout;
   }
 
   /**
-   * Emits a BlockHovered event for the nearest block, but only if the cursor
-   * is within the extended hover zone (HOVER_ZONE_SIZE px from content edges).
+   * Whether the cursor is in the extended hover zone: within the editor's
+   * height, and within HOVER_ZONE_SIZE px of the content column's sides.
+   * The sides use the content column, not the wrapper, so a wrapper tight
+   * around the content cannot hide the controls on the way to the plus button.
    * @param clientX - Cursor X position
    * @param clientY - Cursor Y position
    */
-  private emitNearestBlockHoveredInZone(clientX: number, clientY: number): void {
+  private isWithinHoverZone(clientX: number, clientY: number): boolean {
+    if (this.wrapperElement !== null) {
+      const wrapperRect = this.wrapperElement.getBoundingClientRect();
+
+      if (clientY < wrapperRect.top || clientY > wrapperRect.bottom) {
+        return false;
+      }
+    }
+
     const blocks = this.Blok.BlockManager.blocks;
     /**
      * Only the ZONE ANCHOR must be a top-level block — its content element
@@ -273,20 +308,18 @@ export class BlockHoverController extends Controller {
      * would shrink the zone. findNearestBlock itself considers nested blocks.
      */
     const topLevelBlocks = blocks.filter(block =>
-      !BlockHoverController.isColumnContainer(block)
+      !BlockHoverController.isLayoutBlock(block)
       && block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
     );
 
     if (topLevelBlocks.length === 0) {
-      return;
+      return false;
     }
 
     const contentEl = topLevelBlocks[0].holder.querySelector<HTMLElement>('[data-blok-element-content]');
 
     if (!contentEl) {
-      this.emitNearestBlockHovered(clientX, clientY);
-
-      return;
+      return true;
     }
 
     const contentRect = contentEl.getBoundingClientRect();
@@ -297,12 +330,8 @@ export class BlockHoverController extends Controller {
      * cursors inside a column wider than 2×HOVER_ZONE_SIZE (e.g. hovering
      * below all blocks at the column's horizontal center).
      */
-    const withinZone = clientX >= contentRect.left - BlockHoverController.HOVER_ZONE_SIZE
+    return clientX >= contentRect.left - BlockHoverController.HOVER_ZONE_SIZE
       && clientX <= contentRect.right + BlockHoverController.HOVER_ZONE_SIZE;
-
-    if (withinZone) {
-      this.emitNearestBlockHovered(clientX, clientY);
-    }
   }
 
   /**
@@ -325,7 +354,7 @@ export class BlockHoverController extends Controller {
     const candidates = blocks
       .map(block => ({ block, rect: block.holder.getBoundingClientRect() }))
       .filter(({ block, rect }) =>
-        !BlockHoverController.isColumnContainer(block)
+        !BlockHoverController.isLayoutBlock(block)
         && block.holder.closest('[data-blok-table-cell-blocks]') === null
         && rect.width > 0
         && rect.height > 0
@@ -447,11 +476,11 @@ export class BlockHoverController extends Controller {
   }
 
   /**
-   * Hand the pointer over to another editor: drop this editor's block controls
-   * so only one set is visible on the page. Menus the user opened here stay put
-   * — moving the pointer away must not dismiss them.
+   * The pointer no longer belongs to this editor (it left it, or another
+   * editor owns it): drop the block controls. Menus the user opened here stay
+   * put — moving the pointer away must not dismiss them.
    */
-  private yieldHoverToOtherEditor(): void {
+  private releaseHover(): void {
     this.blockHoveredState.lastHoveredBlockId = null;
 
     const { Toolbar, BlockSettings, InlineToolbar, DragManager } = this.Blok;
@@ -462,7 +491,7 @@ export class BlockHoverController extends Controller {
 
     /**
      * A menu the user opened here, or a drag in flight, outranks the pointer:
-     * walking over a sibling editor must not dismiss them.
+     * walking away must not dismiss them.
      */
     const isBusy = BlockSettings.opened
       || BlockSettings.isOpening

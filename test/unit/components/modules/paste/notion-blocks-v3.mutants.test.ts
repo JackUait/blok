@@ -307,7 +307,7 @@ describe('parseNotionBlocksV3 — tables', () => {
     ]);
 
     expect(parseNotionBlocksV3(json)).toStrictEqual([
-      { id: 'tg', tool: 'toggle', data: { text: 'Group', isOpen: true } },
+      { id: 'tg', tool: 'toggle', data: { text: 'Group' } },
       {
         id: 'tb',
         tool: 'table',
@@ -400,21 +400,21 @@ describe('parseNotionBlocksV3 — block type mapping', () => {
     ]);
   });
 
-  it('omits the title of an untitled sub-page reference', () => {
+  it('keeps only the ID of an untitled sub-page', () => {
     const json = siblings(value('pg', 'page'));
 
     expect(parseNotionBlocksV3(json)).toStrictEqual([
-      { id: 'pg', tool: 'bookmark', data: { url: 'https://www.notion.so/pg' } },
+      { id: 'pg', tool: 'page', data: { pageId: 'pg' } },
     ]);
   });
 
-  it('drops a tab wrapper and promotes its child to the top level', () => {
+  it('drops a tab wrapper and promotes its child to the top level when tabs is not registered', () => {
     const json = payload([
-      value('tb', 'tab', { ...titleProps('Tab one'), content: ['ch'] }),
+      value('tb', 'tab', { content: ['ch'] }),
       value('ch', 'text', titleProps('Inside')),
     ]);
 
-    expect(parseNotionBlocksV3(json)).toStrictEqual([{ id: 'ch', tool: 'paragraph', data: { text: 'Inside' } }]);
+    expect(parseNotionBlocksV3(json, (tool) => tool !== 'tabs')).toStrictEqual([{ id: 'ch', tool: 'paragraph', data: { text: 'Inside' } }]);
   });
 
   it('keeps a checklist item unchecked for a No property', () => {
@@ -799,7 +799,7 @@ describe('parseNotionBlocksV3 — inline rich text', () => {
     expect(paragraphText([['x', [['h', '']]]])).toBe('x');
   });
 
-  it('labels a page mention whose target has no properties', () => {
+  it('keeps a page mention ID when its target has no properties', () => {
     const json = payload([
       richTextParagraph('p', [['‣', [['p', 'pageref']]]]),
       value('pageref', 'page'),
@@ -809,7 +809,7 @@ describe('parseNotionBlocksV3 — inline rich text', () => {
       {
         id: 'p',
         tool: 'paragraph',
-        data: { text: '<a href="https://www.notion.so/pageref">Untitled</a>' },
+        data: { text: '<a data-blok-page-id="pageref">Page</a>' },
       },
     ]);
   });

@@ -1,6 +1,7 @@
 import type { Root, Nodes, List, ListItem, PhrasingContent, Table, Blockquote, RootContent, Definition } from 'mdast';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { MarkdownImportConfig } from './types';
+import type { CellPlacement } from '../tools/table/types';
 import { safeImageSrc } from '../components/utils/sanitize-url';
 import { isBareBreak, phrasingToHtml } from './phrasing-to-html';
 import type { DefinitionMap } from './phrasing-to-html';
@@ -531,7 +532,7 @@ function handleAlert(kind: AlertKind, children: RootContent[], ctx: ConvertConte
 function handleTable(table: Table, ctx: ConvertContext): OutputBlockData[] {
   const blocks: OutputBlockData[] = [];
   const tableId = ctx.generateId();
-  const content: Array<Array<{ blocks: string[] }>> = [];
+  const content: TableCell[][] = [];
 
   /**
    * GFM requires a header row, so the exporter writes an EMPTY one for a table
@@ -542,7 +543,7 @@ function handleTable(table: Table, ctx: ConvertContext): OutputBlockData[] {
   const rows = headless ? table.children.slice(1) : table.children;
 
   for (const row of rows) {
-    const rowContent = processTableRow(row.children, tableId, blocks, ctx);
+    const rowContent = processTableRow(row.children, table.align, tableId, blocks, ctx);
 
     content.push(rowContent);
   }
@@ -561,16 +562,30 @@ function handleTable(table: Table, ctx: ConvertContext): OutputBlockData[] {
   return [tableBlock, ...blocks];
 }
 
+interface TableCell {
+  blocks: string[];
+  placement?: CellPlacement;
+}
+
+/** Left (or unset) is the default placement, so it is left out. */
+const ALIGN_PLACEMENT: Partial<Record<string, CellPlacement>> = {
+  center: 'top-center',
+  right: 'top-right',
+};
+
 function processTableRow(
   cells: Table['children'][number]['children'],
+  align: Table['align'],
   tableId: string,
   blocks: OutputBlockData[],
   ctx: ConvertContext,
-): Array<{ blocks: string[] }> {
-  const rowContent: Array<{ blocks: string[] }> = [];
+): TableCell[] {
+  const rowContent: TableCell[] = [];
 
-  for (const cell of cells) {
-    const cellText = phrasingToHtml(cell.children, ctx.definitions);
+  for (const [index, cell] of cells.entries()) {
+    const html = phrasingToHtml(cell.children, ctx.definitions);
+    /** The exporter marks a blank heading row with a lone `<br>` (see `tableToMarkdown`). */
+    const cellText = html === '<br>' ? '' : html;
     const cellBlockId = ctx.generateId();
 
     blocks.push({
@@ -580,7 +595,9 @@ function processTableRow(
       parent: tableId,
     });
 
-    rowContent.push({ blocks: [cellBlockId] });
+    const placement = ALIGN_PLACEMENT[align?.[index] ?? ''];
+
+    rowContent.push(placement === undefined ? { blocks: [cellBlockId] } : { blocks: [cellBlockId], placement });
   }
 
   return rowContent;

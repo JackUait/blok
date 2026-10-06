@@ -8,6 +8,7 @@ import { InlineToolEventManager } from '../../../inline-tools/services/inline-to
 import { SelectionUtils } from '../../../selection/index';
 import type { InlineToolAdapter } from '../../../tools/inline';
 import { isMobileScreen } from '../../../utils';
+import { getElementDirection } from '../../../utils/direction';
 import type { Popover, PopoverItemParams } from '../../../utils/popover';
 import { PopoverInline } from '../../../utils/popover/popover-inline';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -658,6 +659,8 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       : new DOMRect(0, 0, 0, 0);
     const contentRect = this.Blok.UI.contentRect;
     const selectionRect = SelectionUtils.rect;
+    // The toolbar follows the editor's direction, not the selected block's own `dir`.
+    const direction = getElementDirection(uiWrapper);
 
     const side = this.positioner.apply({
       wrapper: this.nodes.wrapper,
@@ -666,10 +669,13 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       contentRect,
       popoverWidth,
       popoverHeight,
+      direction,
     });
 
-    // The entrance grows out of the edge nearest the selection.
-    this.nodes.wrapper.style.setProperty('--_blok-inline-toolbar-origin', side === 'above' ? 'left bottom' : 'left top');
+    // The entrance grows out of the corner nearest the selection start.
+    const originX = direction === 'rtl' ? 'right' : 'left';
+
+    this.nodes.wrapper.style.setProperty('--_blok-inline-toolbar-origin', `${originX} ${side === 'above' ? 'bottom' : 'top'}`);
   }
 
 

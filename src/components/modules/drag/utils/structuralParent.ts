@@ -17,6 +17,8 @@ export interface StructuralParentCandidate {
   id: string;
   /** Whether the candidate is a list item — the only universally legal parent. */
   isList: boolean;
+  /** False for a block that never has children (a page); omitted reads as true. */
+  acceptsChildren?: boolean;
   /** Structural depth (length of the parentId chain); root blocks are 0. */
   depth: number;
 }
@@ -44,7 +46,7 @@ export const resolveStructuralParent = (
   }
 
   for (const candidate of preceding) {
-    const isValidParent = movedIsList || candidate.isList;
+    const isValidParent = candidate.acceptsChildren !== false && (movedIsList || candidate.isList);
 
     if (candidate.depth === dropDepth - 1) {
       // Candidate sits exactly at the target parent depth: nest under it only
@@ -59,7 +61,7 @@ export const resolveStructuralParent = (
     // "nest from the bottom" preview. A list block (or a non-list block whose
     // nearest predecessor is not a list) bails to root rather than over-nesting.
     if (candidate.depth < dropDepth - 1) {
-      return !movedIsList && candidate.isList ? candidate.id : null;
+      return !movedIsList && candidate.isList && candidate.acceptsChildren !== false ? candidate.id : null;
     }
   }
 

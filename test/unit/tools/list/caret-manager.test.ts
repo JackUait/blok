@@ -41,6 +41,7 @@ const createMockAPI = (): API => ({
   readOnly: {} as API["readOnly"],
   ui: {} as API["ui"],
   theme: {} as API["theme"],
+  viewState: {} as API["viewState"],
   rectangleSelection: {} as API["rectangleSelection"],
   config: {},
 });

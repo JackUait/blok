@@ -105,6 +105,11 @@ const TOOLS: Array<{
     load: async () => (await import('../../../src/tools/spacer')).SpacerTool,
     data: {},
   },
+  {
+    name: 'table_of_contents',
+    load: async () => (await import('../../../src/tools/table-of-contents')).TableOfContentsTool,
+    data: {},
+  },
 ];
 
 describe('tool root stamp law', () => {

@@ -1,3 +1,5 @@
+import { matchesHostPattern } from '../host-pattern';
+
 /**
  * Host-declared trust list for generic embeds (`linkPaste.allowedEmbedOrigins`).
  *
@@ -16,7 +18,7 @@ export function isAllowedEmbedOrigin(url: string, patterns: readonly string[] | 
     try {
       const parsed = new URL(url);
 
-      return parsed.protocol === 'https:' ? parsed.hostname.toLowerCase() : null;
+      return parsed.protocol === 'https:' ? parsed.hostname : null;
     } catch {
       return null;
     }
@@ -26,13 +28,5 @@ export function isAllowedEmbedOrigin(url: string, patterns: readonly string[] | 
     return false;
   }
 
-  return patterns.some((pattern) => {
-    const normalized = pattern.toLowerCase();
-
-    if (normalized.startsWith('*.')) {
-      return hostname.endsWith(normalized.slice(1));
-    }
-
-    return hostname === normalized;
-  });
+  return matchesHostPattern(hostname, patterns);
 }

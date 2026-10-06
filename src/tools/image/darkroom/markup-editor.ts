@@ -4,11 +4,11 @@ import { prefersReducedMotion, type SpringClock } from '../../../components/util
 import type { I18nInstance } from '../../../components/utils/tools';
 import { tr } from '../i18n';
 import {
-  commitMarkupItem, contrastInk, HIGHLIGHTER_SCALE, hitTest, MARKUP_SIZES, markupBounds, moveMarkup, newMarkupId,
-  resizeMarkup, TEXT_LINE_HEIGHT, textBoxSize,
+  commitMarkupItem, contrastInk, eraseMarkup, HIGHLIGHTER_SCALE, hitTest, isClosedShape, takesFill, MARKUP_SIZES, markupBounds, moveMarkup, newMarkupId,
+  markupIntersectsRect, resizeMarkup, TEXT_LINE_HEIGHT, textBoxSize,
 } from '../markup/model';
 import { smoothStroke, strokeOutline } from '../markup/freehand';
-import { createMarkupLayer, updateMarkupLayer } from '../markup/render';
+import { createMarkupLayer, HIGHLIGHTER_PASSES, updateMarkupLayer } from '../markup/render';
 import type { Box, Point, Size } from './camera';
 import type { MarkupPanelState, MarkupSelectionKind, MarkupSizeIndex, MarkupTool } from './markup-panel';
 
@@ -24,9 +24,12 @@ export interface MarkupEditorOptions {
   state: MarkupPanelState;
   /** Every finished edit, as the whole new list. One history step each. */
   onCommit(next: ImageMarkup[]): void;
-  onSelectionChange(kind: MarkupSelectionKind, item: ImageMarkup | null): void;
+  /** `item` is the mark picked last; the panel shows its look. */
+  onSelectionChange(kinds: MarkupSelectionKind, item: ImageMarkup | null): void;
   /** The stage asked for another panel state (a tool key). */
   onStateChange?(next: MarkupPanelState): void;
+  /** True while a press must not draw (Space held to pan); the press then reaches the stage. */
+  suspended?(): boolean;
   clock?: SpringClock;
 }
 
@@ -50,8 +53,9 @@ type HandleName = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'rotate';
 
 const HANDLES: HandleName[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 const TEXT_HANDLES: HandleName[] = ['nw', 'ne', 'se', 'sw', 'rotate'];
-const TOOL_KEYS: Record<string, MarkupTool> = {
-  v: 'select', p: 'pen', h: 'highlighter', t: 'text', r: 'rect', o: 'ellipse', a: 'arrow', l: 'line', e: 'eraser',
+// B is Photoshop's brush.
+export const TOOL_KEYS: Readonly<Record<string, MarkupTool>> = {
+  v: 'select', p: 'pen', b: 'pen', h: 'highlighter', t: 'text', r: 'rect', o: 'ellipse', a: 'arrow', l: 'line', e: 'eraser',
 };
 const NUDGES: Record<string, [number, number]> = {
   ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
@@ -61,6 +65,8 @@ const NUDGES: Record<string, [number, number]> = {
 const SLOP_PX = 4;
 /** Hit reach around a mark, in screen px. */
 const HIT_PX = 8;
+/** Eraser radius per size, in screen px. markup-editor.css draws a cursor ring of each. */
+export const ERASER_PX: Readonly<Record<MarkupSizeIndex, number>> = { 0: 4, 1: 8, 2: 16 };
 const NUDGE_BIG = 10;
 const KEY_IDLE_MS = 250;
 /** A click-placed shape spans this share of the short side. */
@@ -73,7 +79,6 @@ const LIVE_CHUNK = 48;
 const LIVE_OVERLAP = 3;
 /** The live ink crossfades into the committed, tapered stroke. */
 const HANDOVER_MS = 90;
-const HIGHLIGHTER_OPACITY = '0.45';
 const ERASE_MS = 160;
 /** A shape placed by a click pops from small; a mark the user watched being drawn only settles. */
 const POP_FROM_CLICK = 0.4;
@@ -86,7 +91,7 @@ const OUTLINE_WIDTH = 0.16;
 const BG_PAD_X = 0.08;
 const BG_PAD_Y = 0.2;
 const FONT_FAMILY = "system-ui, -apple-system, 'Segoe UI', sans-serif";
-const SHAPES = new Set<MarkupTool>(['rect', 'ellipse', 'arrow', 'line']);
+const SHAPES = new Set<MarkupTool>(['rect', 'rounded-rect', 'ellipse', 'arrow', 'line', 'bubble', 'star', 'polygon', 'spotlight', 'magnifier']);
 
 const rafClock: SpringClock = {
   now: () => performance.now(),
@@ -95,7 +100,7 @@ const rafClock: SpringClock = {
 };
 
 const isText = (m: ImageMarkup): m is ImageMarkupText => m.type === 'text';
-const isBoxShape = (m: ImageMarkup): boolean => m.type === 'rect' || m.type === 'ellipse';
+const isBoxShape = (m: ImageMarkup): boolean => takesFill(m.type);
 
 const easeOutBack = (t: number): number => {
   const c1 = 1.70158;
@@ -153,11 +158,12 @@ interface Mapping { left: number; top: number; scale: number }
 type Gesture =
   | { kind: 'stroke'; id: number; pen: boolean; touch: boolean; item: ImageMarkupStroke }
   | { kind: 'shape'; id: number; touch: boolean; type: ImageMarkupShape['type']; markId: string; from: Point; to: Point; screen: Point; moved: boolean }
-  | { kind: 'move'; id: number; touch: boolean; item: ImageMarkup; from: Point; screen: Point; moved: boolean }
+  | { kind: 'move'; id: number; touch: boolean; items: ImageMarkup[]; narrow: string | null; from: Point; screen: Point; moved: boolean }
+  | { kind: 'marquee'; id: number; touch: boolean; from: Point; screen: Point; moved: boolean; before: string[]; keep: string[] }
   | { kind: 'resize'; id: number; touch: boolean; item: ImageMarkup; handle: HandleName; box: Box; from: Point }
   | { kind: 'text-scale'; id: number; touch: boolean; item: ImageMarkupText; dist: number }
   | { kind: 'rotate'; id: number; touch: boolean; item: ImageMarkupText; angle: number }
-  | { kind: 'erase'; id: number; touch: boolean; last: Point; erased: Set<string> }
+  | { kind: 'erase'; id: number; touch: boolean; last: Point; list: ImageMarkup[]; faded: Set<string> }
   | { kind: 'text'; id: number; touch: boolean; at: Point; target: ImageMarkupText | null }
   | { kind: 'idle'; id: number; touch: boolean };
 
@@ -172,7 +178,8 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     state: { ...opts.state },
     active: false,
     destroyed: false,
-    selected: null as string | null,
+    /** In pick order; the last is the one the panel shows. */
+    selected: [] as string[],
     /** Shown instead of `markup` while a gesture previews a change. */
     preview: null as ImageMarkup[] | null,
     gesture: null as Gesture | null,
@@ -184,11 +191,11 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     frame: 0,
     size: '',
     keyIdle: 0,
-    nudged: null as ImageMarkup | null,
+    nudged: null as ImageMarkup[] | null,
   };
   const anims = new Map<string, () => void>();
   const edit: { current: TextEdit | null } = { current: null };
-  const selection: { el: HTMLElement | null; unregister: (() => void) | null } = { el: null, unregister: null };
+  const selection: { els: Map<string, HTMLElement>; unregister: (() => void) | null; marquee: HTMLElement | null } = { els: new Map(), unregister: null, marquee: null };
 
   const svg = createMarkupLayer([], null);
   // Erased marks fade here: the main layer drops any node that is not a current mark.
@@ -204,7 +211,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
   live.setAttribute('aria-hidden', 'true');
   live.setAttribute('style', 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none');
   opts.plane.append(svg, live, ghosts);
-  const ink: { group: SVGGElement | null; tail: SVGPathElement | null; frozen: number } = { group: null, tail: null, frozen: 0 };
+  const ink: { group: SVGGElement | null; tail: SVGPathElement | null; twins: SVGPathElement[]; frozen: number } = { group: null, tail: null, twins: [], frozen: 0 };
 
   const layer = document.createElement('div');
 
@@ -285,13 +292,23 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       live.appendChild(ink.group);
       if (item.type === 'pen') ink.group.setAttribute('fill', item.color);
       else {
-        ink.tail.setAttribute('fill', 'none');
-        ink.tail.setAttribute('stroke', item.color);
-        ink.tail.setAttribute('stroke-width', String(width));
-        ink.tail.setAttribute('stroke-linecap', 'round');
-        ink.tail.setAttribute('stroke-linejoin', 'round');
-        ink.tail.setAttribute('opacity', HIGHLIGHTER_OPACITY);
-        ink.tail.style.mixBlendMode = 'multiply';
+        // One path per blend pass; the first is the tail, the rest follow its d.
+        const passes = HIGHLIGHTER_PASSES.map((pass, i) => {
+          const path = i === 0 ? ink.tail ?? inkPath() : inkPath();
+
+          path.setAttribute('fill', 'none');
+          path.setAttribute('stroke', item.color);
+          path.setAttribute('stroke-width', String(width));
+          path.setAttribute('stroke-linecap', 'round');
+          path.setAttribute('stroke-linejoin', 'round');
+          path.setAttribute('opacity', pass.opacity);
+          path.style.mixBlendMode = pass.blend;
+
+          return path;
+        });
+
+        ink.twins = passes.slice(1);
+        ink.group.append(...ink.twins);
       }
     }
     const { group, tail } = ink;
@@ -299,7 +316,10 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     if (!tail) return;
     if (item.type === 'highlighter') {
       // A flat stroke: one cheap path. Chunks would darken where they overlap.
-      tail.setAttribute('d', centreline(strokePx(item, 0, n)));
+      const d = centreline(strokePx(item, 0, n));
+
+      tail.setAttribute('d', d);
+      ink.twins.forEach((twin) => twin.setAttribute('d', d));
 
       return;
     }
@@ -320,6 +340,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
     ink.group = null;
     ink.tail = null;
+    ink.twins = [];
     ink.frozen = 0;
 
     return group;
@@ -420,98 +441,154 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
   /* ---------- selection ---------- */
 
-  const announceSelection = (): void => {
-    const item = find(st.selected, st.markup);
+  const sameIds = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((id, i) => id === b[i]);
+  const selectedMarks = (list = st.markup): ImageMarkup[] =>
+    st.selected.map((id) => find(id, list)).filter((m): m is ImageMarkup => m !== null);
+  /** The one selected mark; null when none or several are. */
+  const single = (list = st.markup): ImageMarkup | null => (st.selected.length === 1 ? find(st.selected[0] ?? null, list) : null);
 
-    if (item) st.state = stateForMark(st.state, item);
-    opts.onSelectionChange(item ? item.type : null, item);
+  const announceSelection = (): void => {
+    const marks = selectedMarks();
+    const primary = marks[marks.length - 1] ?? null;
+
+    if (primary) st.state = stateForMark(st.state, primary);
+    opts.onSelectionChange([...new Set(marks.map((m) => m.type))], primary);
   };
 
-  const placeSelection = (): void => {
-    const el = selection.el;
-    const item = find(st.selected);
-
-    if (!el || !item) return;
+  const boxStyle = (item: ImageMarkup): Partial<CSSStyleDeclaration> => {
     const scale = measure().scale;
 
     if (isText(item)) {
       const box = textBoxSize(item, o());
       const c = toLayer({ x: item.x * o().w, y: item.y * o().h });
 
-      el.style.left = `${c.x}px`;
-      el.style.top = `${c.y}px`;
-      el.style.width = `${box.w * scale}px`;
-      el.style.height = `${box.h * scale}px`;
-      el.style.transform = `translate(-50%, -50%) rotate(${item.rotation ?? 0}deg)`;
-
-      return;
+      return {
+        left: `${c.x}px`, top: `${c.y}px`, width: `${box.w * scale}px`, height: `${box.h * scale}px`,
+        transform: `translate(-50%, -50%) rotate(${item.rotation ?? 0}deg)`,
+      };
     }
     const b = markupBounds(item, o());
     const a = toLayer({ x: b.x, y: b.y });
 
-    el.style.left = `${a.x}px`;
-    el.style.top = `${a.y}px`;
-    el.style.width = `${b.w * scale}px`;
-    el.style.height = `${b.h * scale}px`;
-    el.style.transform = '';
+    return { left: `${a.x}px`, top: `${a.y}px`, width: `${b.w * scale}px`, height: `${b.h * scale}px`, transform: '' };
   };
 
-  const buildSelection = (item: ImageMarkup): void => {
-    selection.el?.remove();
-    const el = document.createElement('div');
+  const placeSelection = (): void => {
+    selection.els.forEach((el, id) => {
+      const item = find(id);
 
-    el.className = 'blok-markup-selection';
-    el.setAttribute('data-role', 'markup-selection');
-    el.setAttribute('data-kind', item.type);
-    for (const h of isText(item) ? TEXT_HANDLES : HANDLES) {
-      const handle = document.createElement('span');
+      if (item) Object.assign(el.style, boxStyle(item));
+    });
+  };
 
-      handle.className = 'blok-markup-selection__handle';
-      handle.setAttribute('data-markup-handle', h);
-      el.appendChild(handle);
+  /**
+   * One box per selected mark. Only a lone mark gets handles, and not while a marquee runs.
+   * A box that still fits stays, so it does not fade in again.
+   */
+  const buildSelection = (): void => {
+    const marks = selectedMarks();
+    const handles = marks.length === 1 && st.gesture?.kind !== 'marquee';
+    const old = new Map(selection.els);
+
+    selection.els.clear();
+    const handlesOf = (item: ImageMarkup): HandleName[] => {
+      if (!handles) return [];
+
+      return isText(item) ? TEXT_HANDLES : HANDLES;
+    };
+
+    for (const item of marks) {
+      const kept = old.get(item.id);
+
+      if (kept && kept.getAttribute('data-kind') === item.type && (kept.firstElementChild !== null) === handles) {
+        old.delete(item.id);
+        selection.els.set(item.id, kept);
+        continue;
+      }
+      const el = document.createElement('div');
+
+      el.className = 'blok-markup-selection';
+      el.setAttribute('data-role', 'markup-selection');
+      el.setAttribute('data-kind', item.type);
+      for (const h of handlesOf(item)) {
+        const handle = document.createElement('span');
+
+        handle.className = 'blok-markup-selection__handle';
+        handle.setAttribute('data-markup-handle', h);
+        el.appendChild(handle);
+      }
+      layer.appendChild(el);
+      selection.els.set(item.id, el);
     }
-    layer.appendChild(el);
-    selection.el = el;
+    old.forEach((el) => el.remove());
     placeSelection();
   };
 
   const clearSelection = (): void => {
-    selection.el?.remove();
-    selection.el = null;
+    selection.els.forEach((el) => el.remove());
+    selection.els.clear();
     selection.unregister?.();
     selection.unregister = null;
-    st.selected = null;
+    st.selected = [];
   };
 
-  const select = (id: string | null): void => {
-    if (id === st.selected) return;
-    flushNudge();
-    clearSelection();
-    const item = find(id, st.markup);
+  const select = (ids: readonly string[]): void => {
+    const next = ids.filter((id, i) => ids.indexOf(id) === i && find(id, st.markup) !== null);
 
-    if (item) {
-      st.selected = item.id;
-      buildSelection(item);
-      // Its own Escape layer: one Escape clears the selection, the next reaches the dialog.
-      selection.unregister = registerLayer({ element: layer, outside: false, onDismiss: () => select(null) });
+    if (sameIds(next, st.selected)) return;
+    flushNudge();
+    const had = st.selected.length > 0;
+
+    st.selected = next;
+    buildSelection();
+    // Its own Escape layer: one Escape clears the selection, the next reaches the dialog.
+    if (!had && next.length > 0) selection.unregister = registerLayer({ element: layer, outside: false, onDismiss: () => select([]) });
+    if (next.length === 0) {
+      selection.unregister?.();
+      selection.unregister = null;
     }
     announceSelection();
   };
 
+  const showBoxes = (on: boolean): void => selection.els.forEach((el) => el.toggleAttribute('hidden', !on));
+
+  /** The marquee in layer px, from two screen points. */
+  const drawMarquee = (a: Point, b: Point): void => {
+    if (!selection.marquee) {
+      selection.marquee = document.createElement('div');
+      selection.marquee.className = 'blok-markup-marquee';
+      selection.marquee.setAttribute('data-role', 'markup-marquee');
+      layer.appendChild(selection.marquee);
+    }
+    const r = layer.getBoundingClientRect();
+    const el = selection.marquee;
+
+    el.style.left = `${Math.min(a.x, b.x) - r.left}px`;
+    el.style.top = `${Math.min(a.y, b.y) - r.top}px`;
+    el.style.width = `${Math.abs(b.x - a.x)}px`;
+    el.style.height = `${Math.abs(b.y - a.y)}px`;
+  };
+
+  const removeMarquee = (): void => {
+    selection.marquee?.remove();
+    selection.marquee = null;
+  };
+
   /* ---------- commits ---------- */
 
-  /** Follows the selected mark through new data; drops the selection when the mark is gone. */
+  /** Follows the selected marks through new data; drops the ones that are gone. */
   const syncSelection = (): void => {
-    if (st.selected === null) return;
-    const item = find(st.selected);
+    if (st.selected.length === 0) return;
+    const alive = st.selected.filter((id) => find(id) !== null);
 
-    if (!item) {
-      clearSelection();
-      announceSelection();
+    if (alive.length !== st.selected.length) {
+      select(alive);
 
       return;
     }
-    if (selection.el?.getAttribute('data-kind') !== item.type) buildSelection(item);
+    const lone = single(shown());
+
+    if (lone && selection.els.get(lone.id)?.getAttribute('data-kind') !== lone.type) buildSelection();
     placeSelection();
   };
 
@@ -524,16 +601,20 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     opts.onCommit(next);
   };
 
-  const replace = (item: ImageMarkup): ImageMarkup[] => st.markup.map((m) => (m.id === item.id ? item : m));
+  const replace = (...items: ImageMarkup[]): ImageMarkup[] => {
+    const byId = new Map(items.map((m) => [m.id, m]));
+
+    return st.markup.map((m) => byId.get(m.id) ?? m);
+  };
 
   const flushNudge = (): void => {
     if (st.keyIdle === 0) return;
     window.clearTimeout(st.keyIdle);
     st.keyIdle = 0;
-    const item = st.nudged;
+    const items = st.nudged;
 
     st.nudged = null;
-    if (item) commit(replace(commitMarkupItem(item)));
+    if (items) commit(replace(...items.map((m) => commitMarkupItem(m))));
   };
 
   /* ---------- text editor ---------- */
@@ -575,7 +656,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     t.closing = true;
     edit.current = null;
     t.unregister();
-    if (selection.el) selection.el.hidden = false;
+    showBoxes(true);
     const value = t.el.value;
     const hadFocus = document.activeElement === t.el;
 
@@ -591,14 +672,12 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       const item = commitMarkupItem({ ...t.item, text: value });
 
       commit([...st.markup, item]);
-      select(item.id);
+      select([item.id]);
 
       return;
     }
     if (empty) {
-      if (st.selected === t.item.id) clearSelection();
       commit(st.markup.filter((m) => m.id !== t.item.id));
-      announceSelection();
 
       return;
     }
@@ -609,7 +688,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
   const openEditor = (item: ImageMarkupText, isNew: boolean): void => {
     flushNudge();
     // Before the editor's own layer: the stack peels the last one registered first.
-    if (!isNew && st.selected !== item.id) select(item.id);
+    if (!isNew && !sameIds(st.selected, [item.id])) select([item.id]);
     const el = document.createElement('textarea');
 
     el.className = 'blok-markup-text-editor';
@@ -638,7 +717,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     });
     layer.appendChild(el);
     // Its handles would sit on the text and take the clicks meant for the caret.
-    if (selection.el) selection.el.hidden = true;
+    showBoxes(false);
     nodeOf(item.id)?.style.setProperty('visibility', 'hidden');
     styleEditor(t);
     el.focus({ preventScroll: true });
@@ -659,12 +738,14 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
   /* ---------- gestures ---------- */
 
   const tolerance = (): number => HIT_PX / st.map.scale;
+  const eraserRadius = (): number => ERASER_PX[st.state.size] / st.map.scale;
 
   const shapeEnds = (type: ImageMarkupShape['type'], a: Point, b: Point, e: MouseEvent): [Point, Point] => {
     const raw = { x: b.x - a.x, y: b.y - a.y };
-    const box = type === 'rect' || type === 'ellipse';
+    const box = isClosedShape(type);
     const d = ((): Point => {
-      if (!e.shiftKey) return raw;
+      // A lens is always round.
+      if (!e.shiftKey && type !== 'magnifier') return raw;
       if (box) {
         const m = Math.max(Math.abs(raw.x), Math.abs(raw.y));
 
@@ -688,7 +769,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       size: sizeFor(g.type, st.state.size),
     };
 
-    if ((g.type === 'rect' || g.type === 'ellipse') && st.state.fill) item.fill = true;
+    if (takesFill(g.type) && st.state.fill) item.fill = true;
 
     return item;
   };
@@ -702,24 +783,33 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
   const pressureOf = (e: PointerEvent, pen: boolean): number => (pen && e.pressure > 0 ? e.pressure : 0.5);
 
-  /** Erases every mark on the segment from the last point to `p`, not just under the samples. */
+  /** Erases along the segment from the last point to `p`, not just under the samples. */
   const eraseAlong = (p: Point): void => {
     const g = st.gesture;
 
     if (g?.kind !== 'erase') return;
     const from = g.last;
-    const n = Math.max(1, Math.ceil(Math.hypot(p.x - from.x, p.y - from.y) / Math.max(1, tolerance() / 2)));
+    const before = g.list;
+    const n = Math.max(1, Math.ceil(Math.hypot(p.x - from.x, p.y - from.y) / Math.max(1, eraserRadius() / 2)));
 
     Array.from({ length: n }, (_, k) => (k + 1) / n).forEach((t) => {
       const at = { x: from.x + (p.x - from.x) * t, y: from.y + (p.y - from.y) * t };
-      const hit = hitTest(st.markup.filter((m) => !g.erased.has(m.id)), at, o(), tolerance());
+      const next = eraseMarkup(g.list, at, eraserRadius(), o());
 
-      if (!hit) return;
-      g.erased.add(hit.id);
-      st.preview = st.markup.filter((m) => !g.erased.has(m.id));
-      fadeOut(hit);
+      if (next === g.list) return;
+      const kept = new Set(next.map((m) => m.id));
+
+      // Only a mark gone whole fades; a cut stroke keeps its node under the same id.
+      for (const gone of g.list.filter((m) => !kept.has(m.id))) {
+        g.faded.add(gone.id);
+        fadeOut(gone);
+      }
+      g.list = next;
     });
     g.last = p;
+    if (g.list === before) return;
+    st.preview = g.list;
+    scheduleDraw();
   };
 
   const appendSamples = (g: Extract<Gesture, { kind: 'stroke' }>, e: PointerEvent): void => {
@@ -743,29 +833,51 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
   const textCentre = (item: ImageMarkupText): Point => ({ x: item.x * o().w, y: item.y * o().h });
 
   const startSelectGesture = (e: PointerEvent, p: Point, base: { id: number; touch: boolean }): Gesture => {
-    const selected = find(st.selected, st.markup);
+    const lone = single();
     const handle = handleOf(e.target);
 
-    if (selected && handle && isText(selected)) {
-      const c = textCentre(selected);
+    if (lone && handle && isText(lone)) {
+      const c = textCentre(lone);
 
-      if (handle === 'rotate') return { ...base, kind: 'rotate', item: selected, angle: Math.atan2(p.y - c.y, p.x - c.x) };
+      if (handle === 'rotate') return { ...base, kind: 'rotate', item: lone, angle: Math.atan2(p.y - c.y, p.x - c.x) };
 
-      return { ...base, kind: 'text-scale', item: selected, dist: Math.max(1, Math.hypot(p.x - c.x, p.y - c.y)) };
+      return { ...base, kind: 'text-scale', item: lone, dist: Math.max(1, Math.hypot(p.x - c.x, p.y - c.y)) };
     }
-    if (selected && handle) return { ...base, kind: 'resize', item: selected, handle, box: markupBounds(selected, o()), from: p };
-    const b = selected ? markupBounds(selected, o()) : null;
-    const inBox = b !== null && p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
-    const hit = inBox && selected ? selected : hitTest(st.markup, p, o(), tolerance());
+    if (lone && handle) return { ...base, kind: 'resize', item: lone, handle, box: markupBounds(lone, o()), from: p };
+    const screen = { x: e.clientX, y: e.clientY };
+    const additive = e.ctrlKey || e.metaKey || e.shiftKey;
+    // A press inside a selected mark's box grabs it, even off its ink.
+    const boxed = selectedMarks().reverse().find((m) => {
+      const b = markupBounds(m, o());
 
-    select(hit ? hit.id : null);
+      return p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+    }) ?? null;
+    const inked = hitTest(st.markup, p, o(), tolerance());
+    // A modifier click picks the ink under it, so a mark inside a selected box can join.
+    const hit = additive ? inked ?? boxed : boxed ?? inked;
 
-    return hit
-      ? { ...base, kind: 'move', item: hit, from: p, screen: { x: e.clientX, y: e.clientY }, moved: false }
-      : { ...base, kind: 'idle' };
+    if (!hit) {
+      const before = [...st.selected];
+
+      if (!additive) select([]);
+
+      return { ...base, kind: 'marquee', from: p, screen, moved: false, before, keep: additive ? before : [] };
+    }
+    if (additive) {
+      select(st.selected.includes(hit.id) ? st.selected.filter((id) => id !== hit.id) : [...st.selected, hit.id]);
+
+      return { ...base, kind: 'idle' };
+    }
+    const group = st.selected.length > 1 && st.selected.includes(hit.id);
+
+    if (!group) select([hit.id]);
+
+    // A click without a drag on a grouped mark narrows the group to it.
+    return { ...base, kind: 'move', items: selectedMarks(), narrow: group ? hit.id : null, from: p, screen, moved: false };
   };
 
   const onDown = (e: PointerEvent): void => {
+    if (opts.suspended?.()) return;
     e.stopPropagation();
     if (!st.active || edit.current?.el.contains(e.target as Node)) return;
     const touch = e.pointerType === 'touch';
@@ -799,12 +911,12 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
       return;
     }
-    if (handleOf(e.target) && st.selected !== null) {
+    if (handleOf(e.target) && st.selected.length === 1) {
       st.gesture = startSelectGesture(e, p, base);
 
       return;
     }
-    select(null);
+    select([]);
     if (tool === 'pen' || tool === 'highlighter') {
       const pen = e.pointerType === 'pen';
       const size = o();
@@ -825,7 +937,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       return;
     }
     if (tool === 'eraser') {
-      st.gesture = { ...base, kind: 'erase', last: p, erased: new Set() };
+      st.gesture = { ...base, kind: 'erase', last: p, list: st.markup, faded: new Set() };
       eraseAlong(p);
 
       return;
@@ -860,10 +972,20 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
       return;
     }
+    if (g.kind === 'marquee') {
+      g.moved = g.moved || Math.hypot(e.clientX - g.screen.x, e.clientY - g.screen.y) >= SLOP_PX;
+      if (!g.moved) return;
+      drawMarquee(g.screen, { x: e.clientX, y: e.clientY });
+      const r = { x: Math.min(g.from.x, p.x), y: Math.min(g.from.y, p.y), w: Math.abs(p.x - g.from.x), h: Math.abs(p.y - g.from.y) };
+
+      select([...g.keep, ...st.markup.filter((m) => markupIntersectsRect(m, r, size)).map((m) => m.id)]);
+
+      return;
+    }
     if (g.kind === 'move') {
       g.moved = g.moved || Math.hypot(e.clientX - g.screen.x, e.clientY - g.screen.y) >= SLOP_PX;
       if (!g.moved) return;
-      st.preview = replace(moveMarkup(g.item, (p.x - g.from.x) / size.w, (p.y - g.from.y) / size.h));
+      st.preview = replace(...g.items.map((m) => moveMarkup(m, (p.x - g.from.x) / size.w, (p.y - g.from.y) / size.h)));
     } else if (g.kind === 'resize') {
       st.preview = replace(resizeMarkup(g.item, g.box, resizedBox(g, p, e.shiftKey), size));
     } else if (g.kind === 'text-scale') {
@@ -919,8 +1041,12 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     st.dead = true;
     cancelFrame();
     if (g?.kind === 'erase') {
-      for (const id of g.erased) anims.get(`erase:${id}`)?.();
+      for (const id of g.faded) anims.get(`erase:${id}`)?.();
       ghosts.replaceChildren();
+    }
+    if (g?.kind === 'marquee') {
+      removeMarquee();
+      select(g.before);
     }
     draw();
     placeSelection();
@@ -930,7 +1056,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     const size = o();
 
     if (g.kind === 'stroke') {
-      const item = commitMarkupItem(g.item);
+      const item = commitMarkupItem(g.item, size);
 
       cancelFrame();
       commit([...st.markup, item]);
@@ -942,7 +1068,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       const ends = ((): [Point, Point] => {
         if (g.moved) return shapeEnds(g.type, g.from, toO(e.clientX, e.clientY), e);
         const half = (DEFAULT_SHAPE * Math.min(size.w, size.h)) / 2;
-        const box = g.type === 'rect' || g.type === 'ellipse';
+        const box = isClosedShape(g.type);
 
         return [{ x: g.from.x - half, y: g.from.y - (box ? half : 0) }, { x: g.from.x + half, y: g.from.y + (box ? half : 0) }];
       })();
@@ -954,7 +1080,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       return;
     }
     if (g.kind === 'erase') {
-      if (g.erased.size > 0) commit(st.markup.filter((m) => !g.erased.has(m.id)));
+      if (g.list !== st.markup) commit(g.list);
 
       return;
     }
@@ -963,7 +1089,25 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
       return;
     }
-    if (g.kind === 'idle' || (g.kind === 'move' && !g.moved)) return;
+    if (g.kind === 'marquee') {
+      removeMarquee();
+      buildSelection();
+
+      return;
+    }
+    if (g.kind === 'move' && !g.moved) {
+      if (g.narrow !== null) select([g.narrow]);
+
+      return;
+    }
+    if (g.kind === 'move') {
+      const moved = g.items.map((m) => find(m.id)).filter((m): m is ImageMarkup => m !== null);
+
+      commit(replace(...moved.map((m) => commitMarkupItem(m))));
+
+      return;
+    }
+    if (g.kind === 'idle') return;
     const changed = find(g.item.id);
 
     if (changed) commit(replace(commitMarkupItem(changed)));
@@ -977,6 +1121,10 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     if (!g || g.id !== e.pointerId) return;
     st.gesture = null;
     if (e.type === 'pointercancel') {
+      if (g.kind === 'marquee') {
+        removeMarquee();
+        select(g.before);
+      }
       st.preview = null;
       draw();
       placeSelection();
@@ -996,15 +1144,14 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
   const nudge = (e: KeyboardEvent): boolean => {
     const dir = NUDGES[e.key];
-    const item = find(st.selected, st.markup);
+    const marks = selectedMarks();
 
-    if (!dir || !item) return false;
+    if (!dir || marks.length === 0) return false;
     const step = (e.shiftKey ? NUDGE_BIG : 1) / measure().scale;
-    const from = st.nudged ?? item;
-    const next = moveMarkup(from, (dir[0] * step) / o().w, (dir[1] * step) / o().h);
+    const next = (st.nudged ?? marks).map((m) => moveMarkup(m, (dir[0] * step) / o().w, (dir[1] * step) / o().h));
 
     st.nudged = next;
-    st.preview = replace(next);
+    st.preview = replace(...next);
     draw();
     placeSelection();
     window.clearTimeout(st.keyIdle);
@@ -1014,12 +1161,12 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
   };
 
   const deleteSelection = (): void => {
-    const id = st.selected;
+    const ids = new Set(st.selected);
 
-    if (id === null) return;
+    if (ids.size === 0) return;
     flushNudge();
     clearSelection();
-    commit(st.markup.filter((m) => m.id !== id));
+    commit(st.markup.filter((m) => !ids.has(m.id)));
     announceSelection();
   };
 
@@ -1027,32 +1174,34 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     const prev = st.state;
 
     st.state = { ...next };
-    if (next.tool !== prev.tool && next.tool !== 'select' && !edit.current) select(null);
+    if (next.tool !== prev.tool && next.tool !== 'select' && !edit.current) select([]);
     layer.setAttribute('data-tool', next.tool);
+    layer.setAttribute('data-size', String(next.size));
     const keys = (['color', 'size', 'textStyle', 'fill'] as const).filter((k) => next[k] !== prev[k]);
-    const target = edit.current ? edit.current.item : find(st.selected, st.markup);
+    const targets = edit.current ? [edit.current.item] : selectedMarks();
 
-    if (keys.length === 0 || !target) return;
-    const styled = keys.reduce((m, k) => restyle(m, k, next), target);
+    if (keys.length === 0 || targets.length === 0) return;
+    const styled = targets.map((t) => keys.reduce((m, k) => restyle(m, k, next), t));
 
     if (edit.current) {
       // The mark under the editor takes the new look as the user types; it lands on commit.
-      edit.current.item = styled as ImageMarkupText;
+      edit.current.item = styled[0] as ImageMarkupText;
       styleEditor(edit.current);
 
       return;
     }
-    const clean = commitMarkupItem(styled);
+    const changed = styled.map((m) => commitMarkupItem(m)).filter((m, i) => JSON.stringify(m) !== JSON.stringify(targets[i]));
 
-    if (JSON.stringify(clean) !== JSON.stringify(target)) commit(replace(clean));
+    if (changed.length > 0) commit(replace(...changed));
   };
 
   const onKey = (e: KeyboardEvent): void => {
     if (!st.active || edit.current || e.target !== opts.stage) return;
     const mod = e.metaKey || e.ctrlKey;
-    const item = find(st.selected, st.markup);
+    const marks = selectedMarks();
+    const item = single();
 
-    if ((e.key === 'Delete' || e.key === 'Backspace') && item) {
+    if ((e.key === 'Delete' || e.key === 'Backspace') && marks.length > 0) {
       e.preventDefault();
       deleteSelection();
 
@@ -1066,14 +1215,14 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
       return;
     }
-    if (mod && !e.altKey && e.key.toLowerCase() === 'd' && item) {
+    if (mod && !e.altKey && e.key.toLowerCase() === 'd' && marks.length > 0) {
       e.preventDefault();
       const shift = 12 / measure().scale;
-      const copy = commitMarkupItem({ ...moveMarkup(item, shift / o().w, shift / o().h), id: newMarkupId() });
+      const copies = marks.map((m) => commitMarkupItem({ ...moveMarkup(m, shift / o().w, shift / o().h), id: newMarkupId() }));
 
-      commit([...st.markup, copy]);
-      select(copy.id);
-      pop(copy, POP_FROM_DRAWN);
+      commit([...st.markup, ...copies]);
+      select(copies.map((c) => c.id));
+      copies.forEach((c) => pop(c, POP_FROM_DRAWN));
 
       return;
     }
@@ -1082,7 +1231,10 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
       return;
     }
-    const tool = mod || e.altKey || e.key.length !== 1 ? undefined : TOOL_KEYS[e.key.toLowerCase()];
+    // A non-Latin layout picks by physical key, as the darkroom's own letter keys do.
+    const letter = /^[\x20-\x7e]$/.test(e.key) ? e.key.toLowerCase() : /^Key([A-Z])$/.exec(e.code)?.[1].toLowerCase();
+    // Shift+letter belongs to the darkroom (Shift+H flips).
+    const tool = mod || e.altKey || e.shiftKey || e.key.length !== 1 || letter === undefined ? undefined : TOOL_KEYS[letter];
 
     if (tool && tool !== st.state.tool) {
       e.preventDefault();
@@ -1097,9 +1249,16 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
   layer.addEventListener('pointermove', onMove);
   layer.addEventListener('pointerup', onUp);
   layer.addEventListener('pointercancel', onUp);
+  // macOS turns Ctrl+Click into a right click; here it picks marks.
+  const onContextMenu = (e: MouseEvent): void => {
+    if (st.active && e.ctrlKey) e.preventDefault();
+  };
+
   layer.addEventListener('dblclick', onDblClick);
+  layer.addEventListener('contextmenu', onContextMenu);
   opts.stage.addEventListener('keydown', onKey);
   layer.setAttribute('data-tool', st.state.tool);
+  layer.setAttribute('data-size', String(st.state.size));
   draw();
 
   const flush = (): void => {
@@ -1115,7 +1274,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
         if (st.gesture) cancelGesture();
         st.dead = false;
         st.pointers.clear();
-        if (st.selected !== null) select(null);
+        select([]);
       }
       st.active = on;
       layer.hidden = !on;
@@ -1130,12 +1289,12 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       st.preview = null;
       cancelFrame();
       draw();
-      if (st.selected !== null) {
-        const item = find(st.selected);
+      if (st.selected.length > 0) {
+        const alive = st.selected.filter((id) => find(id) !== null);
 
-        if (!item) select(null);
+        if (alive.length !== st.selected.length) select(alive);
         else {
-          buildSelection(item);
+          buildSelection();
           announceSelection();
         }
       }
@@ -1143,8 +1302,8 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     setState,
     deleteSelection,
     deselect() {
-      if (st.selected === null) return false;
-      select(null);
+      if (st.selected.length === 0) return false;
+      select([]);
 
       return true;
     },
@@ -1154,7 +1313,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       const size = o();
 
       if (`${size.w}x${size.h}` !== st.size) draw();
-      if (selection.el) placeSelection();
+      placeSelection();
       if (edit.current) styleEditor(edit.current);
     },
     destroy() {
@@ -1170,6 +1329,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       layer.removeEventListener('pointerup', onUp);
       layer.removeEventListener('pointercancel', onUp);
       layer.removeEventListener('dblclick', onDblClick);
+      layer.removeEventListener('contextmenu', onContextMenu);
       opts.stage.removeEventListener('keydown', onKey);
       layer.remove();
       svg.remove();

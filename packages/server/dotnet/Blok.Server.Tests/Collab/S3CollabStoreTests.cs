@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Cryptography;
 using Blok.Server.Collab;
 using Xunit;
@@ -177,6 +178,67 @@ public sealed class S3CollabStoreTests
 
     Assert.Throws<ArgumentException>(() =>
         new S3CollabStore(blobStore, prefix));
+  }
+
+  [Fact]
+  public async Task DeleteTargetsOnlyTheExactCurrentObjectAndMayBeRepeated()
+  {
+    var bucket = new FakeS3Bucket();
+    var (store, _) = CreateStore(bucket);
+    var otherPath = "/media/collab/" + CollabDocKey.For("doc-2");
+    bucket.Seed(ObjectPath, [1]);
+    bucket.Seed(otherPath, [2]);
+
+    await store.DeleteAsync(DocId, CancellationToken.None);
+    await store.DeleteAsync(DocId, CancellationToken.None);
+
+    Assert.False(bucket.Holds(ObjectPath));
+    Assert.True(bucket.Holds(otherPath));
+    Assert.Equal(
+        new[] { HttpMethod.Delete, HttpMethod.Delete },
+        bucket.Requests.Select(request => request.Method).ToArray());
+    Assert.All(bucket.Requests, request => Assert.Equal(ObjectPath, request.Path));
+  }
+
+  /// <summary>A corrupt object reads as absent; retiring it would destroy the only bytes left to repair.</summary>
+  [Fact]
+  public async Task RetireDeletesAReadableObjectAndKeepsACorruptOne()
+  {
+    var bucket = new FakeS3Bucket();
+    var (store, _) = CreateStore(bucket);
+    var corruptPath = "/media/collab/" + CollabDocKey.For("doc-2");
+    bucket.Seed(ObjectPath, CollabWorkingSetCodec.EncodeDocument(Tag, []));
+    bucket.Seed(corruptPath, "not a working set"u8.ToArray());
+
+    await store.RetireAsync(DocId, CancellationToken.None);
+    await store.RetireAsync("doc-2", CancellationToken.None);
+    await store.RetireAsync(DocId, CancellationToken.None);
+
+    Assert.False(bucket.Holds(ObjectPath));
+    Assert.Equal("not a working set"u8.ToArray(), bucket.StoredAt(corruptPath));
+  }
+
+  [Fact]
+  public async Task DeleteTreatsAnS3NotFoundAnswerAsAlreadyDeleted()
+  {
+    using var blobStore = S3CollabTestSupport.CreateS3BlobStore(
+        (_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)));
+    var store = new S3CollabStore(blobStore, "collab");
+
+    await store.DeleteAsync(DocId, CancellationToken.None);
+  }
+
+  [Fact]
+  public async Task DeletePropagatesAnS3Failure()
+  {
+    using var blobStore = S3CollabTestSupport.CreateS3BlobStore(
+        (_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)));
+    var store = new S3CollabStore(blobStore, "collab");
+
+    var error = await Assert.ThrowsAsync<HttpRequestException>(() =>
+        store.DeleteAsync(DocId, CancellationToken.None));
+
+    Assert.Equal(HttpStatusCode.InternalServerError, error.StatusCode);
   }
 
   private static (S3CollabStore Store, List<string> Logs) CreateStore(

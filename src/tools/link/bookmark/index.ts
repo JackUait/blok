@@ -11,7 +11,9 @@ import type {
   SanitizerConfig,
 } from '../../../../types';
 import { PLAINTEXT } from '../../../components/utils/sanitizer';
-import { IconLink } from '../../../components/icons';
+import { IconCopy, IconLink, IconLinkExternal } from '../../../components/icons';
+import { DATA_ATTR } from '../../../components/constants/data-attributes';
+import type { MenuConfig } from '../../../../types/tools/menu-config';
 import { deliverToRebuiltBlock } from '../../image/detached-upload';
 import { isHttpUrl, setSafeLinkHref } from '../registry';
 import {
@@ -134,6 +136,35 @@ export class Bookmark implements BlockTool {
     return root;
   }
 
+  public renderSettings(): MenuConfig {
+    const { url } = this.data;
+
+    if (!isHttpUrl(url)) {
+      return [];
+    }
+
+    return [
+      {
+        icon: IconLinkExternal,
+        title: this.api.i18n.t('tools.embed.openOriginal'),
+        name: 'bookmark-open-original',
+        closeOnActivate: true,
+        onActivate: (): void => {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        },
+      },
+      {
+        icon: IconCopy,
+        title: this.api.i18n.t('tools.link.copyUrl'),
+        name: 'bookmark-copy-url',
+        closeOnActivate: true,
+        onActivate: (): void => {
+          void navigator.clipboard?.writeText(url);
+        },
+      },
+    ];
+  }
+
   public save(): BookmarkData {
     const out: BookmarkData = { url: this.data.url };
 
@@ -235,6 +266,7 @@ export class Bookmark implements BlockTool {
 
     card.classList.add('blok-bookmark');
     card.setAttribute('data-blok-testid', 'bookmark-card');
+    card.setAttribute(DATA_ATTR.blockContextMenu, '');
 
     // Only navigate http(s) URLs. Saved JSON or a compromised unfurl endpoint
     // could carry a javascript:/data: URL; leaving href unset prevents XSS.
@@ -251,6 +283,9 @@ export class Bookmark implements BlockTool {
 
     title.classList.add('blok-bookmark__title');
     title.setAttribute('data-role', 'bookmark-title');
+    // Each line follows its own script: core reads only editable text, so it
+    // never sets a direction for this block.
+    title.setAttribute('dir', 'auto');
     title.textContent = this.data.title ?? this.fallbackTitle();
     content.appendChild(title);
 
@@ -259,6 +294,7 @@ export class Bookmark implements BlockTool {
 
       description.classList.add('blok-bookmark__description');
       description.setAttribute('data-role', 'bookmark-description');
+      description.setAttribute('dir', 'auto');
       description.textContent = this.data.description;
       content.appendChild(description);
     }

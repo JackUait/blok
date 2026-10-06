@@ -8,11 +8,12 @@ import { areBlocksMergeable } from '../../../utils/blocks';
 import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../../utils/caret/index';
 import { EDITABLE_INPUT_SELECTOR, HEADER_TOOL_NAME, LIST_TOOL_NAME, QUOTE_TOOL_NAME } from '../constants';
 import { deliverOnSubmit } from '../../../utils/on-submit';
-import { keyCodeFromEvent } from '../utils/keyboard';
+import { horizontalArrowIntent, keyCodeFromEvent } from '../utils/keyboard';
 import { findOwn } from '../../../utils/own-element';
 
 import { BlockEventComposer } from './__base';
-import { getIndentTarget, getFollowingSiblings } from './structural-siblings';
+import { canOutdent, getIndentTarget, getFollowingSiblings } from './structural-siblings';
+import { acceptsChildren } from '../../../utils/child-tools';
 
 /**
  * Checks if the keyboard event is a block movement shortcut (Cmd/Ctrl+Shift+Arrow)
@@ -55,12 +56,11 @@ export class KeyboardNavigation extends BlockEventComposer {
   }
 
   /**
-   * Determine if we're using RTL layout.
-   * In RTL, right/left navigation is inverted.
+   * Reading-order meaning of a horizontal arrow for this event. The dispatcher
+   * routes with the same helper, so both sides always agree.
    */
-  private get isRtl(): boolean {
-    const ui = this.Blok.UI as unknown as { isRtl?: boolean };
-    return ui.isRtl ?? false;
+  private horizontalIntent(event: KeyboardEvent): 'forward' | 'backward' | null {
+    return horizontalArrowIntent(event, this.Blok.UI.nodes?.wrapper);
   }
 
   /**
@@ -269,7 +269,7 @@ export class KeyboardNavigation extends BlockEventComposer {
       return false;
     }
 
-    if (currentBlock.parentId === null) {
+    if (currentBlock.parentId === null || !canOutdent(BlockManager, currentBlock)) {
       return false;
     }
 
@@ -286,7 +286,8 @@ export class KeyboardNavigation extends BlockEventComposer {
      * the parent's contentIds), then adopt them under the outdented block so the
      * content that used to sit below it stays nested beneath it.
      */
-    const followingSiblings = getFollowingSiblings(BlockManager, currentBlock);
+    // A block that takes no children leaves its following siblings where they are.
+    const followingSiblings = acceptsChildren(currentBlock) ? getFollowingSiblings(BlockManager, currentBlock) : [];
 
     for (const sibling of followingSiblings) {
       BlockManager.setBlockParent(sibling, currentBlock.id);
@@ -1130,7 +1131,8 @@ export class KeyboardNavigation extends BlockEventComposer {
   }
 
   /**
-   * Handle right and down keyboard keys
+   * Handle down and forward keys. Forward is ArrowRight in LTR text and
+   * ArrowLeft in RTL text.
    * @param event - keyboard event
    */
   public handleArrowRightAndDown(event: KeyboardEvent): void {
@@ -1206,7 +1208,8 @@ export class KeyboardNavigation extends BlockEventComposer {
      * (caret at end, or a block selection already in progress); elsewhere the
      * native within-block shift-extend is left intact.
      */
-    const isShiftRightKey = event.shiftKey && keyCode === keyCodes.RIGHT && !this.isRtl;
+    const isForwardKey = this.horizontalIntent(event) === 'forward';
+    const isShiftRightKey = event.shiftKey && isForwardKey;
 
     if (isShiftRightKey && shouldEnableCBS) {
       this.Blok.CrossBlockSelection.toggleBlockSelectedState();
@@ -1218,7 +1221,7 @@ export class KeyboardNavigation extends BlockEventComposer {
       void this.Blok.InlineToolbar.tryToShow();
     }
 
-    const isPlainRightKey = keyCode === keyCodes.RIGHT && !event.shiftKey && !this.isRtl;
+    const isPlainRightKey = isForwardKey && !event.shiftKey;
 
     const nbpsTarget = isPlainRightKey && caretInput instanceof HTMLElement
       ? findNbspAfterEmptyInline(caretInput)
@@ -1260,8 +1263,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      * no-op, not a cross-block arrow).
      */
     const isRightKey =
-      keyCode === keyCodes.RIGHT &&
-      !this.isRtl &&
+      isForwardKey &&
       !event.shiftKey &&
       !event.metaKey &&
       !event.ctrlKey &&
@@ -1326,7 +1328,8 @@ export class KeyboardNavigation extends BlockEventComposer {
   }
 
   /**
-   * Handle left and up keyboard keys
+   * Handle up and backward keys. Backward is ArrowLeft in LTR text and
+   * ArrowRight in RTL text.
    * @param event - keyboard event
    */
   public handleArrowLeftAndUp(event: KeyboardEvent): void {
@@ -1404,7 +1407,8 @@ export class KeyboardNavigation extends BlockEventComposer {
      * boundary (caret at start, or a block selection already in progress);
      * elsewhere the native within-block shift-extend is left intact.
      */
-    const isShiftLeftKey = event.shiftKey && keyCode === keyCodes.LEFT && !this.isRtl;
+    const isBackwardKey = this.horizontalIntent(event) === 'backward';
+    const isShiftLeftKey = event.shiftKey && isBackwardKey;
 
     if (isShiftLeftKey && shouldEnableCBS) {
       this.Blok.CrossBlockSelection.toggleBlockSelectedState(false);
@@ -1445,8 +1449,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      * boundary no-op, not a cross-block arrow).
      */
     const isLeftKey =
-      keyCode === keyCodes.LEFT &&
-      !this.isRtl &&
+      isBackwardKey &&
       !event.shiftKey &&
       !event.metaKey &&
       !event.ctrlKey &&

@@ -93,7 +93,7 @@ describe('DropTargetDetector — the seam between two blocks', () => {
     };
 
     detector = new DropTargetDetector(
-      { contentRect: { left: CONTENT_LEFT } },
+      { contentRect: { left: CONTENT_LEFT, right: CONTENT_LEFT + 650 } },
       blockManager,
       { isColumnsEnabled: () => false }
     );
@@ -111,14 +111,14 @@ describe('DropTargetDetector — the seam between two blocks', () => {
 
   it('resolves a drop target for a cursor in the gap in the left gutter', () => {
     // Cursor sits on the seam, in the left drop zone beside the content.
-    const gutterBlock = detector.findBlockInLeftDropZone(CONTENT_LEFT - 10, 249);
+    const gutterBlock = detector.findBlockInGutterDropZone(CONTENT_LEFT - 10, 249);
 
     expect(gutterBlock).toBe(blockA);
   });
 
   it('still ignores a cursor far below the last block', () => {
     // The gap tolerance must not turn the whole page into a drop target.
-    expect(detector.findBlockInLeftDropZone(CONTENT_LEFT - 10, 5000)).toBeNull();
+    expect(detector.findBlockInGutterDropZone(CONTENT_LEFT - 10, 5000)).toBeNull();
     expect(detector.determineDropTarget(editorBody, 300, 5000, source)).toBeNull();
   });
 });

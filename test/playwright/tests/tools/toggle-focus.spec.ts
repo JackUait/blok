@@ -5,6 +5,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const TOGGLE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="toggle"]`;
@@ -58,13 +59,15 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
     },
     { holder: HOLDER_ID, initialData: data ?? null }
   );
+  await openFixtureToggles(page, data);
 };
 
+/** Every test here needs an open toggle, so the fixture asks for one. */
 const createToggleData = (text: string, extra: Record<string, unknown> = {}): OutputData => ({
   blocks: [
     {
       type: 'toggle',
-      data: { text, ...extra },
+      data: { text, isOpen: true, ...extra },
     },
   ],
 });

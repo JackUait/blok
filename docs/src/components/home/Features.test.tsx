@@ -162,7 +162,7 @@ describe('Features', () => {
   it('should render the clean JSON pillar as a title-only tile', () => {
     renderFeatures();
 
-    expect(screen.getByText('Typed JSON, never HTML')).toBeInTheDocument();
+    expect(screen.getByText('Typed JSON, not an HTML blob')).toBeInTheDocument();
     // Pillars are now title-only — the descriptive prose moved into the modal.
     expect(screen.queryByText((content) => content.includes('typed JSON blocks'))).not.toBeInTheDocument();
   });
@@ -507,7 +507,7 @@ describe('Features', () => {
   it('should render Russian strings when locale is ru', () => {
     renderFeatures('ru');
     expect(screen.queryByText('Почему Blok')).not.toBeInTheDocument();
-    expect(screen.getByText('Типизированный JSON, не HTML')).toBeInTheDocument();
+    expect(screen.getByText('Типизированный JSON, а не сплошной HTML')).toBeInTheDocument();
   });
 
   // Opening a feature drawer never changes the route, so the global page-view

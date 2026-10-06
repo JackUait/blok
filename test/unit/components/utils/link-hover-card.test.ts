@@ -297,5 +297,17 @@ describe('LinkHoverCard', () => {
       // anchor.top - fallback gap - card height = 770 - 6 - 40
       expect(getCard()?.style.top).toBe('724px');
     });
+
+    it('in RTL, takes the anchor direction and ends at the anchor right edge', () => {
+      const anchor = createAnchor('https://youtube.com/');
+
+      anchor.style.direction = 'rtl';
+      vi.mocked(anchor.getBoundingClientRect).mockReturnValue(makeRect(20, 40, 500, 700));
+      showCard(card, anchor);
+
+      expect(getCard()?.getAttribute('dir')).toBe('rtl');
+      // anchor.right - width = 700 - 200
+      expect(getCard()?.style.left).toBe('500px');
+    });
   });
 });

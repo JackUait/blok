@@ -1,3 +1,4 @@
+import { syncPortalDirection } from '../../components/utils/portal-direction';
 import {
   IconText,
   IconHash,
@@ -84,14 +85,17 @@ export class DatabasePropertyTypePopover {
     }
 
     document.body.appendChild(popover);
-    this.popoverEl = popover;
-
     const reposition = (): void => {
       positionFixedAnchored(popover, anchor, { side: 'bottom', offset: 4 });
     };
 
+    // The anchor mirrors with the editor, so a flip re-places the menu.
+    syncPortalDirection(popover, { source: anchor, onResync: reposition });
+    this.popoverEl = popover;
+
     reposition();
-    this.positionTracker = createPositionTracker(popover, reposition);
+    // The drawer grows its width as it slides in, carrying the anchor along.
+    this.positionTracker = createPositionTracker(popover, reposition, anchor);
     this.positionTracker.attach();
 
     this.boundOutsideClick = (e: MouseEvent): void => {

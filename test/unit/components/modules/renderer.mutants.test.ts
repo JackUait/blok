@@ -4,9 +4,9 @@
  *
  * 1. Line 183, `this.config.dataModel || 'auto'` falling back to the empty
  *    string. `dataModelConfig` has exactly one consumer,
- *    `shouldExpandToHierarchical`, which only asks whether the value differs
- *    from `legacy`. Both `auto` and the empty string answer yes, so the
- *    expansion decision is the same for every input.
+ *    `shouldExpandToHierarchical`, which ignores it and decides on the
+ *    detected format alone, so the expansion decision is the same for every
+ *    input.
  *
  * 2. Line 219, `incomingId !== undefined` replaced by `true`. The mutant can
  *    only diverge when the id is undefined, and then the result hangs on
@@ -306,6 +306,31 @@ describe('Renderer mutation coverage', () => {
       expect(outcome).toBe('resolved');
     });
 
+    it('keeps one pending promise across overlapping renders and resolves it when the last ends', async () => {
+      const { renderer } = createRenderer();
+
+      renderer.markRenderStart();
+      const pending = renderer.pendingRender;
+
+      renderer.markRenderStart();
+      expect(renderer.pendingRender).toBe(pending);
+
+      renderer.markRenderEnd();
+      expect(renderer.pendingRender).toBe(pending);
+
+      renderer.markRenderEnd();
+      expect(renderer.pendingRender).toBeNull();
+
+      const outcome = await Promise.race([
+        pending === null ? Promise.resolve('missing') : pending.then(() => 'resolved'),
+        new Promise<string>((resolve) => {
+          setTimeout(() => resolve('stuck'), 25);
+        }),
+      ]);
+
+      expect(outcome).toBe('resolved');
+    });
+
     it('ignores a render end that no render start preceded', () => {
       const { renderer } = createRenderer();
 
@@ -448,7 +473,7 @@ describe('Renderer mutation coverage', () => {
       expect(renderer.getDetectedInputFormat()).toBe('legacy');
     });
 
-    it('keeps legacy data unexpanded when the host pinned the legacy model', async () => {
+    it('expands legacy data when the host pinned the legacy model too', async () => {
       const { renderer, composeBlock, tools } = createRenderer({
         config: { dataModel: 'legacy' },
       });
@@ -457,7 +482,7 @@ describe('Renderer mutation coverage', () => {
 
       await renderer.render(legacyBlocks());
 
-      expect(composeBlock).toHaveBeenCalledTimes(1);
+      expect(composeBlock).toHaveBeenCalledTimes(2);
     });
   });
 

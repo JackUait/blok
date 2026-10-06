@@ -62,6 +62,8 @@ const FIXTURE_BLOCKS = [
   { id: 'c1', type: 'code', data: { code: 'const answer = 42;', language: 'javascript', filename: 'answer.js' } },
   { id: 'd1', type: 'divider', data: {} },
   { id: 's1', type: 'spacer', data: {} },
+  /** Lists the headings above, at several depths. */
+  { id: 'toc1', type: 'table_of_contents', data: {} },
   { id: 'u1', type: 'list', data: { text: 'Unordered item', style: 'unordered' } },
   { id: 'u2', type: 'list', data: { text: 'Nested item', style: 'unordered', depth: 1 } },
   { id: 'o1', type: 'list', data: { text: 'Ordered item', style: 'ordered' } },
@@ -75,6 +77,10 @@ const FIXTURE_BLOCKS = [
   { id: 'tg1c', type: 'paragraph', parent: 'tg1', data: { text: 'Toggle body' } },
   { id: 'tg2', type: 'toggle', data: { text: 'Closed toggle', isOpen: false } },
   { id: 'tg2c', type: 'paragraph', parent: 'tg2', data: { text: 'Hidden body' } },
+  /** Every page icon shape: the fallback svg, an emoji, an image; and an untitled page. */
+  { id: 'pg1', type: 'page', data: { pageId: 'p1', cache: { title: 'Sub-page' } } },
+  { id: 'pg2', type: 'page', data: { pageId: 'p2', cache: { title: 'Emoji page', icon: { type: 'emoji', value: '🗺' } } } },
+  { id: 'pg3', type: 'page', data: { pageId: 'p3', cache: { icon: { type: 'image', url: 'https://example.com/icon.png' } } } },
 ];
 
 /**
@@ -202,11 +208,12 @@ const matchesView = (selector, root) => {
  *
  * The radius nesting channels are the same kind of component state: a
  * container publishes `--blok-radius-inner` for its own children and core
- * writes `--blok-radius-frame` per block. Neither is theme surface, so a rule
- * carrying only those prunes by its selector too.
+ * writes `--blok-radius-frame` per block. `--_blok-inline-sign` follows each
+ * [dir] element. None is theme surface, so a rule carrying only those prunes
+ * by its selector too.
  * @param rule - a postcss rule
  */
-const COMPONENT_CHANNELS = new Set(['--blok-radius-inner', '--blok-radius-frame']);
+const COMPONENT_CHANNELS = new Set(['--blok-radius-inner', '--blok-radius-frame', '--_blok-inline-sign']);
 
 const isTokenCarrier = (rule) => {
   if (rule.selector.includes('.')) {
@@ -446,6 +453,18 @@ const main = async () => {
     root: true,
     classes: true,
     toolAttributes: true,
+    /** Without it a page card is a `<span>`, and `<a>`-only rules would be pruned. */
+    pageHref: (pageId) => `/pages/${pageId}`,
+    pageInfo: (pageId) => {
+      if (pageId === 'p2') {
+        return { title: 'Emoji page', icon: { type: 'emoji', value: '🗺' } };
+      }
+      if (pageId === 'p3') {
+        return { icon: { type: 'image', url: 'https://example.com/icon.png' } };
+      }
+
+      return { title: 'Sub-page' };
+    },
   });
 
   const { window } = new JSDOM(`<!doctype html><html><body>${html}</body></html>`);
@@ -469,11 +488,15 @@ const main = async () => {
    *
    * `block-preview.css` likewise: its drawings declare custom properties per
    * block, and the toolbox hover card they live in never exists in a view.
+   *
+   * `loading.css` too: its token block reads as a carrier, and a view never
+   * shows the loading skeleton.
    */
   const entrySource = readFileSync(STYLES_ENTRY, 'utf-8')
     .replace(/^@import '\.\/fonts\.css';$/m, '')
     .replace(/^@import '\.\/presence\.css';$/m, '')
-    .replace(/^@import '\.\/block-preview\.css';$/m, '');
+    .replace(/^@import '\.\/block-preview\.css';$/m, '')
+    .replace(/^@import '\.\/loading\.css';$/m, '');
 
   const compiler = await compile(entrySource, {
     base: dirname(STYLES_ENTRY),

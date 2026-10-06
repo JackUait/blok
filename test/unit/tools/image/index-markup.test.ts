@@ -43,6 +43,7 @@ const result = (over: Partial<DarkroomResult> = {}): DarkroomResult => ({
   crop: null,
   geometry: { rotation: 0, flipX: false, straighten: 0 },
   filter: 'none',
+  strength: 100,
   adjust: { brightness: 0, contrast: 0, saturation: 0 },
   markup: [],
   ...over,

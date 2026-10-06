@@ -439,18 +439,22 @@ export function useBlok(
   watch(
     [editor, () => mergedConfig().i18n],
     ([ed, i18n]) => {
-      if (!ed || i18n === undefined || deepEqual(i18n, appliedI18n.value)) {
+      const previous = appliedI18n.value;
+
+      if (!ed || (i18n === undefined && previous?.direction === undefined) || deepEqual(i18n, previous)) {
         return;
       }
 
-      appliedI18n.value = { ...i18n };
+      appliedI18n.value = i18n === undefined ? undefined : { ...i18n };
 
-      const { locale, messages, direction } = i18n;
+      const { locale, messages, direction } = i18n ?? {};
+      // A dropped direction must be cleared, or the editor keeps the old one.
+      const nextDirection = direction ?? (previous?.direction === undefined ? undefined : null);
 
       void ed.i18n.update({
         ...(locale === undefined ? {} : { locale }),
         ...(messages === undefined ? {} : { messages }),
-        ...(direction === undefined ? {} : { direction }),
+        ...(nextDirection === undefined ? {} : { direction: nextDirection }),
       });
     },
     { immediate: true, deep: true }

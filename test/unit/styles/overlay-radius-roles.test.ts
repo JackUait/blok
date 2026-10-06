@@ -107,11 +107,18 @@ describe('find', () => {
     expect(radius(css, '[data-blok-find-text-button]')).toBe(inner('control'));
   });
 
-  it('micro shapes use the notch; the tick is a pill', () => {
-    expect(radius(css, "[data-blok-find-toggle='find-whole-word'] > span::after"))
-      .toBe('0 0 var(--blok-radius-notch) var(--blok-radius-notch)');
+  it('micro shapes use the notch', () => {
     expect(radius(css, '[data-blok-find-lens-box]')).toBe('var(--blok-radius-notch)');
-    expect(radius(css, '[data-blok-find-tick]')).toBe('var(--blok-radius-pill)');
+  });
+
+  it('paints the bar from a skin on the dock, so the bloom can grow it without moving layout', () => {
+    const skin = '[data-blok-find]::before';
+
+    expect(radius(css, skin)).toBe('var(--blok-radius-surface)');
+    expect(prop(css, skin, 'background')).toBe('var(--blok-popover-bg)');
+    expect(prop(css, skin, 'box-shadow')).toBe('var(--blok-popover-box-shadow)');
+    expect(prop(css, bar, 'background')).toBeNull();
+    expect(prop(css, bar, 'box-shadow')).toBeNull();
   });
 });
 

@@ -1209,6 +1209,24 @@ describe('Caret module', () => {
       expect(selection?.focusOffset).toBe(1);
     });
 
+    it('puts the caret at the end of the text inside nested inline marks', () => {
+      const { caret } = createCaret();
+      const container = createContentEditable('H');
+      const textNode = container.firstChild as Text;
+
+      document.body.appendChild(container);
+      setCollapsedSelection(textNode, textNode.length);
+
+      caret.insertContentAtCaretPosition('<sub>2</sub>O <s><u>both</u></s>');
+
+      const inner = container.querySelector('u')?.firstChild;
+      const selection = window.getSelection();
+
+      expect(inner).toBeInstanceOf(Text);
+      expect(selection?.focusNode).toBe(inner);
+      expect(selection?.focusOffset).toBe(4);
+    });
+
     it('replaces the placeholder <br> of an emptied editable, like native typing', () => {
       const { caret } = createCaret();
       const container = createContentEditable('<br>');

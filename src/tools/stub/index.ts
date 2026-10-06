@@ -102,7 +102,7 @@ export class Stub implements BlockTool {
   private make(): HTMLElement {
     const wrapper = $.make('div', 'flex items-center py-3 px-[18px] my-2.5 rounded-(--blok-radius-block) bg-bg-light border border-line-gray text-gray-text text-sm [&_svg]:size-icon');
     const icon = IconWarning;
-    const infoContainer = $.make('div', 'ml-3.5');
+    const infoContainer = $.make('div', 'ms-3.5');
     const title = $.make('div', 'font-medium capitalize', {
       textContent: this.title,
     });

@@ -28,25 +28,27 @@ import {
   IconAlignRight,
   IconCaption,
   IconCopy,
-  IconCrop,
+  IconSliders,
   IconDownload,
   IconExpandFullscreen,
   IconImage,
   IconReplace,
 } from '../../components/icons';
-import { DEFAULT_RELOAD_ATTEMPTS, IMAGE_SNAP_POINTS, URL_PATTERN } from './constants';
+import { DEFAULT_RELOAD_ATTEMPTS, IMAGE_SNAP_POINTS, RESEND_STAGE_MS, URL_PATTERN } from './constants';
 import { syncMediaHeight } from './media-height';
+import { applyTones, pictureKey, sampleToneGrid, stampTones, type ToneMap } from './tone-sampler';
+import type { ToneGrid } from './tone';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
-import { renderErrorState } from './error-state';
+import { renderErrorState, startSending } from './error-state';
 import { ImageError } from './errors';
 import { alignmentFraction, attachResizeHandle, edgePositionPercent, type ResizeEdge } from './resizer';
 import { resizeFloorPx } from './resize-floor';
 import { widthForAspectChange } from './crop-math';
 import { readGeometry, geometryFields, orientedSize } from './geometry';
-import { readAdjust, adjustFields } from './adjust';
+import { readAdjust, adjustFields, resolveFilters, type FilterSet } from './adjust';
 import {
   applyAutoFull,
   openLightbox,
@@ -70,6 +72,7 @@ import { resolveConvertedUploader } from './converted-uploader';
 import { tr } from './i18n';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl, writeDerived } from './detached-upload';
 import { renderImagePreview } from './preview';
+import { figureInsets } from './figure-insets';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -86,6 +89,7 @@ export class ImageTool implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: ImageConfig;
+  private readonly filters: FilterSet;
   private readonly uploader: Uploader;
   private data: ImageData;
   private readOnly: boolean;
@@ -96,6 +100,10 @@ export class ImageTool implements BlockTool {
   private uploadingEl: UploadingStateElement | null = null;
   private resizeDetach: (() => void)[] = [];
   private overlayResizeObserver: ResizeObserver | null = null;
+  private toneGrid: ToneGrid | null = null;
+  /** The picture `toneGrid` and `tones` were read from; a re-render of the same one reuses them. */
+  private toneKey: string | null = null;
+  private tones: ToneMap = {};
   private cropDetach: (() => void) | null = null;
   private altPopoverDetach: (() => void) | null = null;
   private errorMessage: string | null = null;
@@ -103,6 +111,18 @@ export class ImageTool implements BlockTool {
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private brokenImage = false;
   private retrying = false;
+  /** Tries of the current upload, the first one included. */
+  private uploadTries = 1;
+  /** When the running resend started; a failure that comes sooner waits for the stage. */
+  private sendStartedAt: number | null = null;
+  private sendProgress: ((percent: number) => void) | null = null;
+  private heldFailure: ReturnType<typeof setTimeout> | null = null;
+  /** The next error card ends a resend. */
+  private resentFailure = false;
+  /** How far (%) the ended resend's fill had reached. */
+  private drainFrom = 0;
+  /** Where the resend's thumbnail sat; the picture it brought back opens from there. */
+  private landFrom: DOMRect | null = null;
   /** A broken image's Retry is reloading; the card stays up until it loads or fails. */
   private mending = false;
   private reloadAttempts = 0;
@@ -111,6 +131,7 @@ export class ImageTool implements BlockTool {
   private detached = false;
   /** Object URL of the picked file shown in the failure notice; freed when the failure ends. */
   private failurePreview: string | null = null;
+  private failurePreviewFile: File | null = null;
   /** Put back with the old `url` when an entered link fails. */
   private variantsBeforeLink: ImageData['variants'];
 
@@ -118,6 +139,7 @@ export class ImageTool implements BlockTool {
     this.api = options.api;
     this.block = options.block;
     this.config = options.config ?? {};
+    this.filters = resolveFilters(this.config.filters);
     this.readOnly = options.readOnly;
     const { markup, ...rest } = options.data ?? { url: '' };
 
@@ -172,8 +194,8 @@ export class ImageTool implements BlockTool {
         out.crop = isShaped ? { x, y, w, h, shape } : { x, y, w, h };
       }
     }
-    const { filter, adjust } = readAdjust(this.data);
-    Object.assign(out, geometryFields(readGeometry(this.data)), adjustFields(filter, adjust), markupFields(readMarkup(this.data.markup)));
+    const { filter, strength, adjust } = readAdjust(this.data);
+    Object.assign(out, geometryFields(readGeometry(this.data)), adjustFields(filter, adjust, strength), markupFields(readMarkup(this.data.markup)));
     return out;
   }
 
@@ -254,9 +276,11 @@ export class ImageTool implements BlockTool {
 
   private reportProgress = (percent: number): void => {
     this.uploadingEl?.setProgress(percent);
+    this.sendProgress?.(percent);
   };
 
   private startUpload(file: File): void {
+    this.uploadTries = 1;
     const before = this.writePickedFile(file);
 
     if (this.shouldConvertGif(file.type)) {
@@ -392,6 +416,7 @@ export class ImageTool implements BlockTool {
   }
 
   private startUrl(url: string): void {
+    this.uploadTries = 1;
     const before = this.writeEnteredUrl(url);
 
     if (this.shouldConvertGifUrl(url)) {
@@ -501,12 +526,16 @@ export class ImageTool implements BlockTool {
       this.transitionToEmpty();
       return;
     }
+    // The toast's Retry can fire while the card is already sending.
+    if (this.retrying) return;
     this.retrying = true;
     this.syncRetryingAttribute();
-    const retryBtn = this.root?.querySelector<HTMLButtonElement>(
-      '[data-role="error-state"] [data-action="retry"]'
-    );
-    if (retryBtn) retryBtn.disabled = true;
+    this.uploadTries++;
+    const card = this.root?.querySelector<HTMLElement>('[data-role="error-state"]');
+    if (card) {
+      this.sendProgress = startSending(card, this.api.i18n);
+      this.sendStartedAt = performance.now();
+    }
     // A failed pick or link was put back, so the retry makes that edit again.
     if (source.kind === 'file') {
       this.uploadFile(source, this.writePickedFile(source.file));
@@ -570,6 +599,8 @@ export class ImageTool implements BlockTool {
   }
 
   private showResult(result: UploadResult): void {
+    this.landFrom = this.root?.querySelector('[data-sending="true"] .blok-image-error__icon')?.getBoundingClientRect() ?? null;
+    this.endSend();
     this.data = { ...this.data, url: result.url, fileName: result.fileName ?? this.data.fileName, variants: result.variants };
     this.state = 'RENDERED';
     this.errorMessage = null;
@@ -579,6 +610,9 @@ export class ImageTool implements BlockTool {
   }
 
   private applyError(err: unknown, source: { file?: File; url?: string }): void {
+    if (this.holdForStage(() => this.applyError(err, source))) return;
+    // Read before the render below replaces the sending card.
+    if (this.resentFailure) this.drainFrom = this.fillReach();
     const own = err instanceof ImageError ? err : null;
     const outcome = resolveUploadError({
       tool: 'image',
@@ -598,8 +632,12 @@ export class ImageTool implements BlockTool {
     this.retrying = false;
     if (outcome.kind === 'message') {
       // Before rendering: the card shows this preview as the failed file's thumbnail.
-      this.releaseFailurePreview();
-      this.failurePreview = source.file === undefined ? null : URL.createObjectURL(source.file);
+      // The same file keeps its URL: a new one is decoded again and the tile blinks.
+      if (source.file === undefined || source.file !== this.failurePreviewFile) {
+        this.releaseFailurePreview();
+        this.failurePreview = source.file === undefined ? null : URL.createObjectURL(source.file);
+        this.failurePreviewFile = source.file ?? null;
+      }
     }
     this.renderState();
     if (outcome.kind === 'message') {
@@ -617,6 +655,67 @@ export class ImageTool implements BlockTool {
     if (!(err instanceof ImageError)) {
       console.error('[image] upload failed', err);
     }
+  }
+
+  /**
+   * Holds a resend's failure until the send has been on stage for RESEND_STAGE_MS.
+   * @param apply - shows the failure
+   * @returns true when the failure was held
+   */
+  private holdForStage(apply: () => void): boolean {
+    if (this.sendStartedAt === null) return false;
+    const wait = RESEND_STAGE_MS - (performance.now() - this.sendStartedAt);
+    this.endSend();
+    this.resentFailure = true;
+    if (wait <= 0) return false;
+    this.heldFailure = setTimeout(() => {
+      this.heldFailure = null;
+      if (!this.detached && this.retrying) apply();
+    }, wait);
+    return true;
+  }
+
+  /** @returns how far (%) the sending card's fill reaches, 0 without one */
+  private fillReach(): number {
+    const card = this.root?.querySelector<HTMLElement>('[data-sending="true"]');
+    const fill = card?.querySelector<HTMLElement>('.blok-image-error__fill');
+    const width = card?.getBoundingClientRect().width ?? 0;
+
+    return fill === undefined || fill === null || width === 0
+      ? 0
+      : Math.round((fill.getBoundingClientRect().width / width) * 100);
+  }
+
+  private endSend(): void {
+    this.sendStartedAt = null;
+    this.sendProgress = null;
+  }
+
+  /**
+   * The picture a resend brought back opens out of the thumbnail's spot, then develops.
+   * @param figure - the loaded picture
+   */
+  private landPicture(figure: HTMLElement): void {
+    const from = this.landFrom;
+    if (from === null) return;
+    this.landFrom = null;
+    figure.setAttribute('data-developing', 'true');
+    figure.addEventListener('animationend', (event) => {
+      if (event.animationName === 'blok-image-develop') figure.removeAttribute('data-developing');
+    });
+    const to = figure.getBoundingClientRect();
+    if (prefersReducedMotion() || !canAnimate(figure) || from.width === 0 || to.width === 0) return;
+    const top = Math.max(0, from.top - to.top);
+    const left = Math.max(0, from.left - to.left);
+    const right = Math.max(0, to.right - from.right);
+    const bottom = Math.max(0, to.bottom - from.bottom);
+    figure.animate(
+      [
+        { clipPath: `inset(${top}px ${right}px ${bottom}px ${left}px round 8px)` },
+        { clipPath: 'inset(0px 0px 0px 0px round 0px)' },
+      ],
+      { duration: 620, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }
+    );
   }
 
   private applyBrokenImage(): void {
@@ -696,6 +795,7 @@ export class ImageTool implements BlockTool {
     if (this.failurePreview !== null) {
       URL.revokeObjectURL(this.failurePreview);
       this.failurePreview = null;
+      this.failurePreviewFile = null;
     }
   }
 
@@ -720,12 +820,11 @@ export class ImageTool implements BlockTool {
     return this.root?.querySelector<HTMLElement>('.blok-image-inner') ?? undefined;
   }
 
-  public getContentOffset(_hoveredElement: Element): { left: number } | undefined {
+  public getContentOffset(_hoveredElement: Element): { left: number; right: number } | undefined {
     const root = this.root;
     const figure = root?.querySelector<HTMLElement>('.blok-image-inner');
     if (!root || !figure || this.mending) return undefined;
-    const delta = figure.getBoundingClientRect().left - root.getBoundingClientRect().left;
-    return delta > 0 ? { left: delta } : undefined;
+    return figureInsets(root, figure);
   }
 
   public renderSettings(): MenuConfig {
@@ -740,7 +839,7 @@ export class ImageTool implements BlockTool {
     const iconAlignment = alignments.find((a) => a.value === currentAlignment)?.icon ?? alignments[1].icon;
     const iconCaption = IconCaption;
     const iconReplace = IconReplace;
-    const iconCrop = IconCrop;
+    const iconEdit = IconSliders;
     const iconFullscreen = IconExpandFullscreen;
     const iconDownload = IconDownload;
     return [
@@ -775,7 +874,7 @@ export class ImageTool implements BlockTool {
         onActivate: (): void => this.transitionToEmpty(),
       },
       {
-        icon: iconCrop,
+        icon: iconEdit,
         title: i18n.t('tools.image.crop'),
         name: 'image-crop',
         closeOnActivate: true,
@@ -818,6 +917,7 @@ export class ImageTool implements BlockTool {
       ...pickEdits(this.data),
       origin,
       i18n: this.api.i18n,
+      filters: this.filters,
       navigation: this.collectNavigation(),
     });
   }
@@ -863,7 +963,9 @@ export class ImageTool implements BlockTool {
       initial: this.data.crop,
       initialGeometry: readGeometry(this.data),
       initialFilter: readAdjust(this.data).filter,
+      initialStrength: readAdjust(this.data).strength,
       initialAdjust: readAdjust(this.data).adjust,
+      filters: this.filters,
       initialMarkup: readMarkup(this.data.markup),
       onApply: (result) => this.applyCrop(result),
       onCancel: () => this.cancelCrop(),
@@ -880,7 +982,7 @@ export class ImageTool implements BlockTool {
       ?? null;
   }
 
-  private applyCrop({ crop: rect, geometry, filter, adjust, markup }: DarkroomResult): void {
+  private applyCrop({ crop: rect, geometry, filter, strength, adjust, markup }: DarkroomResult): void {
     this.cropDetach = null;
     const prevCrop = this.data.crop;
     const prevGeometry = readGeometry(this.data);
@@ -906,9 +1008,10 @@ export class ImageTool implements BlockTool {
     delete this.data.flipX;
     delete this.data.straighten;
     delete this.data.filter;
+    delete this.data.filterStrength;
     delete this.data.adjust;
     delete this.data.markup;
-    Object.assign(this.data, geometryFields(geometry), adjustFields(filter, adjust), markupFields(readMarkup(markup)));
+    Object.assign(this.data, geometryFields(geometry), adjustFields(filter, adjust, strength), markupFields(readMarkup(markup)));
     this.block.dispatchChange();
     this.renderState();
   }
@@ -947,6 +1050,7 @@ export class ImageTool implements BlockTool {
 
   public removed(): void {
     this.detached = true;
+    if (this.heldFailure !== null) clearTimeout(this.heldFailure);
     this.clearFailure();
     this.detachResize();
     this.detachCrop();
@@ -1083,8 +1187,14 @@ export class ImageTool implements BlockTool {
         : () => this.retryLastSource(),
       onSwap: this.readOnly ? undefined : () => this.transitionToEmpty(),
       i18n: this.api.i18n,
-      ...(isBroken ? { frame: this.data } : this.failedFile()),
+      ...(isBroken ? { frame: this.data } : { ...this.failedFile(), attempt: this.uploadTries, drainFrom: this.drainFrom, resent: this.takeResent() }),
     });
+  }
+
+  private takeResent(): boolean {
+    const resent = this.resentFailure;
+    this.resentFailure = false;
+    return resent;
   }
 
   /** What the upload card names: the picked file, or the link that failed. */
@@ -1114,7 +1224,13 @@ export class ImageTool implements BlockTool {
     if (!this.root) return;
     // The card goes first so the hidden figure below it takes no room.
     if (this.mending) this.root.appendChild(this.buildErrorCard(true, true));
-    const figure = renderImage(this.data);
+    // A grid read from a different picture must not tone this one.
+    if (pictureKey(this.data) !== this.toneKey) {
+      this.toneGrid = null;
+      this.toneKey = null;
+      this.tones = {};
+    }
+    const figure = renderImage(this.data, this.filters);
     const natural = naturalOf(this.data);
     if (natural) {
       const oriented = orientedSize(natural, readGeometry(this.data));
@@ -1127,11 +1243,12 @@ export class ImageTool implements BlockTool {
     const originEl = figure.querySelector<HTMLElement>('.blok-image-crop') ?? imgEl ?? undefined;
     if (imgEl) {
       imgEl.style.cursor = 'zoom-in';
-      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, ...pickEdits(this.data), origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }));
+      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, ...pickEdits(this.data), origin: originEl, i18n: this.api.i18n, filters: this.filters, navigation: this.collectNavigation() }));
       this.reloadAttempts = 0;
       imgEl.addEventListener('error', () => this.handleImgLoadFailure(imgEl, figure));
       imgEl.addEventListener('load', () => {
         this.endMending(figure);
+        this.landPicture(figure);
         this.clearFailure({ recovered: true });
         figure.removeAttribute('data-loading');
         syncMediaHeight(figure);
@@ -1139,6 +1256,7 @@ export class ImageTool implements BlockTool {
         figure.style.removeProperty('min-height');
         imgEl.style.removeProperty('min-height');
         this.cacheNaturalDimensions(imgEl);
+        if (!this.readOnly) this.refreshTone(imgEl, figure);
       });
       if (imgEl.complete && imgEl.naturalWidth === 0) {
         this.applyBrokenImage();
@@ -1163,7 +1281,7 @@ export class ImageTool implements BlockTool {
         onReplace: () => this.transitionToEmpty(),
         onDelete: () => this.deleteBlock(),
         onDownload: () => this.download(),
-        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, ...pickEdits(this.data), origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }),
+        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, ...pickEdits(this.data), origin: originEl, i18n: this.api.i18n, filters: this.filters, navigation: this.collectNavigation() }),
         onCopyUrl: () => this.copyUrl(),
         onToggleCaption: () => this.toggleCaption(),
         onCrop: () => this.enterCrop(),
@@ -1212,6 +1330,8 @@ export class ImageTool implements BlockTool {
 
     if (!this.readOnly) {
       this.attachResizeHandles(figure);
+      // Same picture re-rendered (caption, alignment…): no flash of theme colours before it loads.
+      stampTones(figure, this.tones);
     }
   }
 
@@ -1249,6 +1369,8 @@ export class ImageTool implements BlockTool {
       }
       updateOverlayTier(overlay, figure.clientWidth, figure.clientHeight);
       syncMediaHeight(figure);
+      // Tier and size change where each control sits over the picture.
+      if (this.toneGrid) this.tones = applyTones(figure, this.toneGrid);
     };
     sync();
     if (img && !img.complete) {
@@ -1257,6 +1379,23 @@ export class ImageTool implements BlockTool {
     if (typeof ResizeObserver === 'undefined') return;
     this.overlayResizeObserver = new ResizeObserver(sync);
     this.overlayResizeObserver.observe(figure);
+  }
+
+  private refreshTone(img: HTMLImageElement, figure: HTMLElement): void {
+    const key = pictureKey(this.data);
+
+    if (this.toneGrid && this.toneKey === key) {
+      this.tones = applyTones(figure, this.toneGrid);
+
+      return;
+    }
+    void sampleToneGrid(img, this.data, this.filters).then((grid) => {
+      // A re-render replaced this figure while the copy loaded.
+      if (!figure.isConnected) return;
+      this.toneGrid = grid;
+      this.toneKey = key;
+      this.tones = applyTones(figure, grid);
+    });
   }
 
   private attachResizeHandles(figure: HTMLElement): void {

@@ -45,6 +45,7 @@ internal sealed class SyncSocketMember : ICollabMember
   private readonly long maxQueuedBytes;
   private readonly TimeSpan closeGrace;
   private readonly SyncInboundBudget? inbound;
+  private readonly Func<CancellationToken, ValueTask<bool>>? recheckAccess;
   private long queuedBytes;
   private StrongBox<SyncCloseFrame>? requestedClose;
 
@@ -55,7 +56,8 @@ internal sealed class SyncSocketMember : ICollabMember
       SyncInboundBudget? inbound = null,
       TimeSpan? closeGrace = null,
       string? actorId = null,
-      CollabOperationSource protocolSource = CollabOperationSource.ClientV1)
+      CollabOperationSource protocolSource = CollabOperationSource.ClientV1,
+      Func<CancellationToken, ValueTask<bool>>? recheckAccess = null)
   {
     CanWrite = canWrite;
     AcceptsControlFrames = acceptsControlFrames;
@@ -64,6 +66,7 @@ internal sealed class SyncSocketMember : ICollabMember
     this.closeGrace = closeGrace ?? DefaultCloseGrace;
     ActorId = actorId;
     ProtocolSource = protocolSource;
+    this.recheckAccess = recheckAccess;
   }
 
   public bool CanWrite { get; }
@@ -73,6 +76,11 @@ internal sealed class SyncSocketMember : ICollabMember
   public string? ActorId { get; }
 
   public CollabOperationSource ProtocolSource { get; }
+
+  public ValueTask<bool> RecheckAccessAsync(CancellationToken cancellationToken)
+  {
+    return recheckAccess?.Invoke(cancellationToken) ?? ValueTask.FromResult(true);
+  }
 
   /// <summary>The close that won, once one was requested.</summary>
   internal SyncCloseFrame? RequestedClose => Volatile.Read(ref requestedClose)?.Value;
@@ -102,12 +110,16 @@ internal sealed class SyncSocketMember : ICollabMember
     RequestClose(SyncClose.For(reason));
   }
 
-  /// <summary>Queues the close behind whatever is already queued; later frames are dropped.</summary>
+  /// <summary>Queues a close; Forbidden overtakes it so revoked members cannot drain queued frames.</summary>
   internal void RequestClose(SyncCloseFrame close)
   {
     var box = new StrongBox<SyncCloseFrame>(close);
 
-    if (Interlocked.CompareExchange(ref requestedClose, box, null) is not null)
+    var previous = close == SyncClose.Forbidden
+        ? Interlocked.Exchange(ref requestedClose, box)
+        : Interlocked.CompareExchange(ref requestedClose, box, null);
+
+    if (previous is not null)
     {
       return;
     }
@@ -174,19 +186,23 @@ internal sealed class SyncSocketMember : ICollabMember
     {
       await foreach (var item in outbound.Reader.ReadAllAsync(cancellationToken))
       {
-        if (item.Frame is not null)
+        if (item.Frame is { } frame)
         {
-          await socket.SendAsync(
-              item.Frame,
-              WebSocketMessageType.Binary,
-              endOfMessage: true,
-              cancellationToken);
-          Interlocked.Add(ref queuedBytes, -item.Frame.Length);
+          if (RequestedClose != SyncClose.Forbidden)
+          {
+            await socket.SendAsync(
+                frame,
+                WebSocketMessageType.Binary,
+                endOfMessage: true,
+                cancellationToken);
+          }
+
+          Interlocked.Add(ref queuedBytes, -frame.Length);
 
           continue;
         }
 
-        var close = item.Close!.Value;
+        var close = RequestedClose ?? item.Close!.Value;
         await socket.CloseOutputAsync(close.Status, close.Reason, cancellationToken);
         // The peer now owes us its close; do not wait for it forever.
         TryCancel(receiving, closeGrace);

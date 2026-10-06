@@ -3,6 +3,7 @@ import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../typ
 import type { ToggleItemData, ToggleItemConfig } from '../../../../src/tools/toggle/types';
 import { TOGGLE_ATTR, TOOL_NAME } from '../../../../src/tools/toggle/constants';
 import { Shortcuts } from '../../../../src/components/utils/shortcuts';
+import { createMemoryViewState } from '../../../helpers/view-state';
 
 /**
  * Create a mock API for testing
@@ -35,6 +36,7 @@ const createMockAPI = (): API => ({
     getBlocksCount: vi.fn().mockReturnValue(1),
     getChildren: vi.fn().mockReturnValue([]),
   },
+  viewState: createMemoryViewState(),
 } as unknown as API);
 
 /**
@@ -97,8 +99,7 @@ describe('ToggleItem shortcuts', () => {
       const element = toggle.render();
       toggle.rendered();
 
-      // Starts expanded in editing mode — collapse first to test expand
-      toggle.collapse();
+      // Starts collapsed: nothing is stored for it
       expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
       for (const holder of childHolders) {
         expect(holder.classList.contains('hidden')).toBe(true);
@@ -188,8 +189,7 @@ describe('ToggleItem shortcuts', () => {
       const element = toggle.render();
       toggle.rendered();
 
-      // Starts expanded in editing mode — collapse first
-      toggle.collapse();
+      // Starts collapsed: nothing is stored for it
       expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
 
       // Collapse again — no-op

@@ -455,8 +455,7 @@ function expandToggleListEntry(block, ctx) {
     ...(childIds.length > 0 ? { content: childIds } : {}),
   };
 
-  const isOpenField = typeof block.data.isExpanded === 'boolean' ? { isOpen: block.data.isExpanded } : {};
-
+  // isExpanded is dropped: the open state is personal per browser, never saved.
   if (typeof block.data.titleVariant === 'number') {
     blocks.push({
       ...sharedFields,
@@ -465,7 +464,6 @@ function expandToggleListEntry(block, ctx) {
         text: block.data.title,
         level: block.data.titleVariant,
         isToggleable: true,
-        ...isOpenField,
       },
     });
   } else {
@@ -474,7 +472,6 @@ function expandToggleListEntry(block, ctx) {
       type: 'toggle',
       data: {
         text: block.data.title,
-        ...isOpenField,
       },
     });
   }

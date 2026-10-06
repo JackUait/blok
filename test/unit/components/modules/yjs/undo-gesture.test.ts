@@ -35,6 +35,7 @@ describe('UndoHistory gestures', () => {
   let ydoc: Y.Doc;
   let yblocks: Y.Array<Y.Map<unknown>>;
   let blocks: FakeBlock[];
+  let caret: { setToInput: ReturnType<typeof vi.fn>; setToBlock: ReturnType<typeof vi.fn>; positions: { START: string; DEFAULT: string } };
 
   const write = (id: string): void => {
     ydoc.transact(() => {
@@ -62,10 +63,11 @@ describe('UndoHistory gestures', () => {
       setCurrentBlockByChildNode: vi.fn(),
     };
 
+    caret = { setToInput: vi.fn(), setToBlock: vi.fn(), positions: { START: 'start', DEFAULT: 'default' } };
     history = new UndoHistory([yblocks as unknown as UndoScopeType], {
       BlockManager: blockManager,
       BlockSelection: { clearSelection: vi.fn() },
-      Caret: { setToInput: vi.fn(), setToBlock: vi.fn(), positions: { START: 'start', DEFAULT: 'default' } },
+      Caret: caret,
     } as unknown as BlokModules);
   });
 
@@ -341,5 +343,79 @@ describe('UndoHistory gestures', () => {
     write('y');
 
     expect(caretStack().at(-1)?.before).toBeNull();
+  });
+
+  describe('tracked value edits', () => {
+    it('one typing run in a value is one step, even when its first write joins a gesture still open', () => {
+      vi.useFakeTimers();
+      putCaret(blocks[0], 2);
+      history.beginGesture('discrete');
+      history.beginValueEdit('title', true);
+      write('t1');
+      vi.advanceTimersByTime(1);
+      history.beginValueEdit('title', true);
+      write('t2');
+
+      expect(undoSteps()).toBe(1);
+    });
+
+    it('typing in a value after typing in a block is a new step', () => {
+      vi.useFakeTimers();
+      putCaret(blocks[0], 2);
+      history.beginGesture('typing');
+      write('x');
+      vi.advanceTimersByTime(1);
+      window.getSelection()?.removeAllRanges();
+      history.beginValueEdit('title', true);
+      write('t1');
+
+      expect(undoSteps()).toBe(2);
+    });
+
+    it('typing in another value is a new step', () => {
+      vi.useFakeTimers();
+      history.beginValueEdit('title', true);
+      write('t1');
+      vi.advanceTimersByTime(1);
+      history.beginValueEdit('subtitle', true);
+      write('s1');
+
+      expect(undoSteps()).toBe(2);
+    });
+
+    it('undo of a value step made outside the editor leaves the caret to the host', () => {
+      vi.useFakeTimers();
+      // The click into the host title starts a gesture while the caret is still in the block.
+      putCaret(blocks[0], 2);
+      history.beginGesture('discrete');
+      window.getSelection()?.removeAllRanges();
+      history.beginValueEdit('title', true);
+      write('t1');
+      history.undo();
+
+      expect(caret.setToInput).not.toHaveBeenCalled();
+    });
+
+    it('undo of a value write made with the caret in a block puts the caret back in the block', () => {
+      vi.useFakeTimers();
+      putCaret(blocks[0], 0);
+      history.beginGesture('discrete');
+      history.beginValueEdit('title', false);
+      write('merged');
+      history.undo();
+
+      expect(caret.setToInput).toHaveBeenCalledWith(blocks[0].inputs[0], 'default', 0);
+    });
+
+    it('a discrete value write closes the typing run in that value', () => {
+      vi.useFakeTimers();
+      history.beginValueEdit('title', true);
+      write('t1');
+      vi.advanceTimersByTime(1);
+      history.beginValueEdit('title', false);
+      write('t2');
+
+      expect(undoSteps()).toBe(2);
+    });
   });
 });

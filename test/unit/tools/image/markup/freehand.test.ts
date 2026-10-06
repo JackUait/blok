@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Point } from '../../../../../src/tools/image/darkroom/camera';
-import { smoothStroke, strokeOutline } from '../../../../../src/tools/image/markup/freehand';
+import { bakeMousePressure, smoothStroke, strokeOutline } from '../../../../../src/tools/image/markup/freehand';
 
 interface Command { cmd: string; nums: number[] }
 
@@ -257,6 +257,12 @@ describe('strokeOutline', () => {
     expect(Math.max(...jumps)).toBeLessThan(1.5);
   });
 
+  it('keeps full width along a long stroke with only two points', () => {
+    const d = strokeOutline([10, 50, 0.5, 400, 50, 0.5], 10, { pressure: false });
+
+    expect(halfWidthAt(d, 200)).toBeCloseTo(5, 0);
+  });
+
   it('tapers the ends when asked', () => {
     const pts = line(41, 4);
     const tapered = strokeOutline(pts, 10, { taper: true, pressure: false });
@@ -265,5 +271,29 @@ describe('strokeOutline', () => {
     expect(halfWidthAt(tapered, 12)).toBeLessThan(halfWidthAt(tapered, 90) * 0.7);
     expect(halfWidthAt(tapered, 168)).toBeLessThan(halfWidthAt(tapered, 90) * 0.7);
     expect(halfWidthAt(blunt, 12)).toBeCloseTo(5, 1);
+  });
+
+  it('tapers only the ends it is asked to', () => {
+    const pts = line(41, 4);
+    const d = strokeOutline(pts, 10, { taper: { start: false, end: true }, pressure: false });
+
+    expect(halfWidthAt(d, 12)).toBeCloseTo(5, 1);
+    expect(halfWidthAt(d, 168)).toBeLessThan(halfWidthAt(d, 90) * 0.7);
+  });
+});
+
+describe('bakeMousePressure', () => {
+  it('writes the speed-simulated pressure into a mouse stroke', () => {
+    const slow = Array.from({ length: 30 }, (_, i) => [10 + i, 50, 0.5]).flat();
+    const baked = bakeMousePressure(slow, 10);
+
+    expect(baked.filter((_, i) => i % 3 === 2).every((p) => p > 0.5)).toBe(true);
+    expect(baked.filter((_, i) => i % 3 !== 2)).toEqual(slow.filter((_, i) => i % 3 !== 2));
+  });
+
+  it('leaves real stylus pressure alone', () => {
+    const pts = [10, 50, 0.2, 20, 50, 0.9];
+
+    expect(bakeMousePressure(pts, 10)).toEqual(pts);
   });
 });

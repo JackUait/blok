@@ -5,6 +5,7 @@ vi.mock('../../../../../src/components/utils/notifier/index', () => ({
   show: vi.fn(),
   dismiss: vi.fn(),
   resolve: vi.fn(),
+  settle: vi.fn(),
   isClosed: vi.fn(() => false),
 }));
 
@@ -133,6 +134,21 @@ describe('NotifierAPI', () => {
 
     expect(vi.mocked(notifierModule.resolve).mock.calls[0][0]).toBe(shown);
     expect(vi.mocked(notifierModule.dismiss).mock.calls[0][0]).toBe(shown);
+  });
+
+  it('settles the very object the built-in notifier was shown', async () => {
+    const notifierModule = await import('../../../../../src/components/utils/notifier/index');
+    const api = new NotifierAPI(makeConfig());
+    const { state } = makeTranslatorState({});
+    api.state = state;
+    const options: NotifierOptions = { message: 'm', actions: [ { label: 'Retry', onClick: vi.fn() } ] };
+
+    api.show(options);
+    api.settle(options);
+    await new Promise(r => setTimeout(r, 0));
+    const [ [ shown ] ] = vi.mocked(notifierModule.show).mock.calls;
+
+    expect(vi.mocked(notifierModule.settle).mock.calls[0][0]).toBe(shown);
   });
 
   it('asks the built-in notifier about the very object it was shown', async () => {

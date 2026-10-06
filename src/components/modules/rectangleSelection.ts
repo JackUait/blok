@@ -523,6 +523,8 @@ export class RectangleSelection extends Module {
     overlay.setAttribute('aria-hidden', 'true');
     overlayContainer.setAttribute(DATA_ATTR.overlayContainer, '');
     overlayRectangle.setAttribute(DATA_ATTR.overlayRectangle, '');
+    // Its border and fill paint a 2px dot at the origin until a drag shows it.
+    overlayRectangle.style.display = 'none';
     overlay.setAttribute('data-blok-testid', 'overlay');
     overlayRectangle.setAttribute('data-blok-testid', 'overlay-rectangle');
 

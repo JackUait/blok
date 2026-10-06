@@ -209,6 +209,55 @@ describe('Bookmark tool', () => {
     expect(card?.href ?? '').not.toContain('javascript:');
   });
 
+  describe('context menu actions', () => {
+    it('marks the card and cover image as one block-menu surface', () => {
+      const tool = new Bookmark(createOptions({
+        url: 'https://example.com/article',
+        title: 'Article',
+        image: 'https://example.com/cover.png',
+      }));
+      const root = tool.render();
+      const card = root.querySelector('[data-blok-testid="bookmark-card"]');
+      const cover = root.querySelector('[data-role="bookmark-image"] img');
+
+      expect(card?.hasAttribute('data-blok-block-context-menu')).toBe(true);
+      expect(cover?.closest('[data-blok-block-context-menu]')).toBe(card);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('opens the original link in a new tab', () => {
+      const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const tool = new Bookmark(createOptions({ url: 'https://example.com/article' }));
+      const settings = tool.renderSettings() as Array<{ name?: string; title?: string; onActivate?: () => void }>;
+      const action = settings.find((item) => item.name === 'bookmark-open-original');
+
+      expect(action?.title).toBe('tools.embed.openOriginal');
+      action?.onActivate?.();
+      expect(open).toHaveBeenCalledWith('https://example.com/article', '_blank', 'noopener,noreferrer');
+    });
+
+    it('copies the original URL', () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+      const tool = new Bookmark(createOptions({ url: 'https://example.com/article' }));
+      const settings = tool.renderSettings() as Array<{ name?: string; onActivate?: () => void }>;
+
+      settings.find((item) => item.name === 'bookmark-copy-url')?.onActivate?.();
+      expect(writeText).toHaveBeenCalledWith('https://example.com/article');
+    });
+
+    it('does not offer URL actions for unsafe saved data', () => {
+      const tool = new Bookmark(createOptions({ url: 'javascript:alert(1)' }));
+      const settings = tool.renderSettings() as Array<{ name?: string }>;
+
+      expect(settings.some((item) => item.name === 'bookmark-open-original')).toBe(false);
+      expect(settings.some((item) => item.name === 'bookmark-copy-url')).toBe(false);
+    });
+  });
+
   describe('card DOM structure (Notion parity)', () => {
     const fullMeta: Partial<BookmarkData> = {
       url: 'https://example.com/article',
@@ -283,6 +332,13 @@ describe('Bookmark tool', () => {
       expect(img).not.toBeNull();
       expect(img?.getAttribute('src')).toBe('https://example.com/og.png');
       expect(img?.getAttribute('alt')).toBe('');
+    });
+
+    it('lets the title and description follow their own script', () => {
+      const card = renderCard({ url: 'https://example.com/article', title: 'عنوان', description: 'وصف' });
+
+      expect(card.querySelector('[data-role="bookmark-title"]')?.getAttribute('dir')).toBe('auto');
+      expect(card.querySelector('[data-role="bookmark-description"]')?.getAttribute('dir')).toBe('auto');
     });
 
     it('falls back to the hostname when metadata has no title', () => {

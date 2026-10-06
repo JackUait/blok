@@ -1,3 +1,5 @@
+import { PAGE_REFERENCE_ATTR } from './page-reference';
+
 /**
  * Shared policy for inline markup normalization.
  *
@@ -129,12 +131,16 @@ export const wrapperSignature = (view: InlineElementView): string => {
 };
 
 /**
- * An `id` must stay unique, so merging two elements that both carry one would
- * have to discard an identifier something else may reference.
+ * A page-reference anchor and an element ID each identify one occurrence.
+ * Merging either would discard an occurrence.
  * @param view - element view to check
  */
 export const carriesIdentity = (view: InlineElementView): boolean =>
-  view.attributes.some((attribute) => attribute.name.toLowerCase() === 'id');
+  view.attributes.some((attribute) => {
+    const name = attribute.name.toLowerCase();
+
+    return name === 'id' || (view.tagName === 'A' && name === PAGE_REFERENCE_ATTR);
+  });
 
 /**
  * Whether the element's decoration would be visible over pure whitespace.

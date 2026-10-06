@@ -105,6 +105,8 @@ function buildViewModeElements(
   previewElement.setAttribute('data-blok-testid', 'code-preview');
   // Rendered from the code, not typed: an empty block's error text must not make it non-empty.
   previewElement.setAttribute(DATA_ATTR.chrome, '');
+  // Math and diagrams read LTR in any editor direction.
+  previewElement.setAttribute('dir', 'ltr');
 
   // Split container — wraps code body + preview
   const splitContainer = document.createElement('div');
@@ -209,7 +211,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   languageButton.appendChild(langText);
 
   const chevronSpan = document.createElement('span');
-  chevronSpan.className = 'inline-flex items-center ml-0.5 -mr-0.5';
+  chevronSpan.className = 'inline-flex items-center ms-0.5 -me-0.5';
   chevronSpan.innerHTML = IconChevronDown;
   chevronSpan.setAttribute('data-blok-testid', 'code-language-chevron');
   chevronSpan.hidden = readOnly;
@@ -334,6 +336,8 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   // Code body container (flex: gutter + pre)
   const codeBody = document.createElement('div');
   codeBody.className = CODE_BODY_STYLES;
+  // Source code reads LTR in any editor direction; the gutter stays on its left.
+  codeBody.setAttribute('dir', 'ltr');
 
   const activeLine = readOnly ? null : buildActiveLine();
 

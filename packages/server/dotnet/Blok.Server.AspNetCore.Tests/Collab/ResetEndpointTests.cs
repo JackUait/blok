@@ -88,6 +88,18 @@ public sealed class ResetEndpointTests
   }
 
   [Fact]
+  public async Task ResetAnswersForbiddenWhenDocumentPurged()
+  {
+    var operations = new FakeCollabOperationStore { DocumentPurged = true };
+    await using var app = await StartWithOperationStore(operations);
+
+    using var response = await Reset(app);
+
+    await AssertError(response, HttpStatusCode.Forbidden, "forbidden\n");
+    Assert.Equal(0, app.Fakes.Endpoint.Gets);
+  }
+
+  [Fact]
   public async Task ResetBumpsTheEpochClosesOpenSocketsAndTheNextJoinReseeds()
   {
     await using var app = await SyncApp.StartAsync();
@@ -159,6 +171,20 @@ public sealed class ResetEndpointTests
     authorization.AllowWrite = true;
     using var allowed = await Reset(app, ticket: fixture.Compatible);
     Assert.Equal(HttpStatusCode.NoContent, allowed.StatusCode);
+  }
+
+  [Fact]
+  public async Task ResetRefusesReadDeniedCallerEvenWhenWriteIsAllowed()
+  {
+    var authorization = new RecordingAuthorization { AllowRead = false, AllowWrite = true };
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        services: services => services.AddSingleton<IBlokAuthorization>(authorization));
+
+    using var response = await Reset(app, ticket: fixture.Compatible);
+
+    await AssertError(response, HttpStatusCode.Forbidden, "forbidden\n");
+    Assert.Equal(0, app.Fakes.Endpoint.Gets);
   }
 
   [Fact]

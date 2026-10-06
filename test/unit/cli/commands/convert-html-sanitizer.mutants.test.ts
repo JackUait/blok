@@ -65,7 +65,7 @@ describe('sanitize mutants - attributes', () => {
   });
 
   it('keeps only the whitelisted attribute', () => {
-    expect(run('<table><tr><td style="width:10px" colspan="2">cell</td></tr></table>'))
-      .toBe('<table><tbody><tr><td style="width:10px">cell</td></tr></tbody></table>');
+    expect(run('<table><tr><td style="width:10px" colspan="2" class="x">cell</td></tr></table>'))
+      .toBe('<table><tbody><tr><td style="width:10px" colspan="2">cell</td></tr></tbody></table>');
   });
 });

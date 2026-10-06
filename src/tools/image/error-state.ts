@@ -16,6 +16,12 @@ export interface ErrorStateOptions {
   frame?: { width?: number; naturalWidth?: number; naturalHeight?: number };
   /** Upload: the file (or link) that did not upload. */
   file?: { name: string; size?: number; preview?: string | null };
+  /** Upload: how many times it was tried; shown from the second try. */
+  attempt?: number;
+  /** Upload: this failure ended a send, so the card drains back to red. */
+  resent?: boolean;
+  /** Upload, resent: how far (%) the send's fill had reached, where the drain starts. */
+  drainFrom?: number;
   onTryAgain?(): void;
   onSwap?(): void;
   i18n?: I18nInstance;
@@ -32,6 +38,10 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   }
   const variant: ErrorVariant = opts.variant ?? 'broken';
   root.setAttribute('data-variant', variant);
+  if (opts.resent === true) {
+    root.setAttribute('data-resent', 'true');
+    root.style.setProperty('--blok-image-drain-from', `${opts.drainFrom ?? 0}%`);
+  }
   if (variant === 'broken') {
     applyFrame(root, opts.frame);
   }
@@ -62,7 +72,17 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   msg.className = 'blok-image-error__msg';
   msg.textContent = opts.message ?? tr(opts.i18n, 'tools.image.errorDefaultMessage');
 
-  body.append(title, msg);
+  body.append(title);
+  // Before the reason line, which takes a row of its own; the size lands after the title.
+  if (opts.attempt !== undefined && opts.attempt > 1) {
+    const attempt = document.createElement('span');
+
+    attempt.className = 'blok-image-error__attempt';
+    attempt.setAttribute('aria-hidden', 'true');
+    attempt.textContent = `×${opts.attempt}`;
+    body.append(attempt);
+  }
+  body.append(msg);
   root.append(icon, body);
   if (variant === 'upload' && opts.file !== undefined) {
     showFile(icon, title, opts.file);
@@ -105,6 +125,52 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   }
 
   return root;
+}
+
+/**
+ * Puts a failed upload card into its sending look, in place, so the change
+ * animates on the card the user clicked.
+ * @param card - a card from {@link renderErrorState}
+ * @param i18n - for the status line and the progress label
+ * @returns a setter for the upload's progress, 0 to 100
+ */
+export function startSending(card: HTMLElement, i18n?: I18nInstance): (percent: number) => void {
+  card.setAttribute('data-sending', 'true');
+  card.setAttribute('aria-busy', 'true');
+  card.removeAttribute('data-resent');
+  card.querySelectorAll('button').forEach((button) => {
+    button.toggleAttribute('disabled', true);
+  });
+
+  const msg = card.querySelector('.blok-image-error__msg');
+
+  if (msg !== null) {
+    msg.textContent = tr(i18n, 'tools.image.uploading');
+  }
+
+  const bar = document.createElement('div');
+
+  bar.className = 'blok-image-error__progress';
+  bar.setAttribute('role', 'progressbar');
+  bar.setAttribute('aria-label', tr(i18n, 'tools.image.uploadProgress'));
+  bar.setAttribute('aria-valuemin', '0');
+  bar.setAttribute('aria-valuemax', '100');
+  // Trickles until the uploader reports, since many never do.
+  bar.setAttribute('data-indeterminate', '');
+
+  const fill = document.createElement('div');
+
+  fill.className = 'blok-image-error__fill';
+  bar.append(fill);
+  card.append(bar);
+
+  return (percent) => {
+    const value = Math.round(Math.min(100, Math.max(0, percent)));
+
+    bar.removeAttribute('data-indeterminate');
+    bar.setAttribute('aria-valuenow', String(value));
+    fill.style.setProperty('--blok-image-send-progress', `${value}%`);
+  };
 }
 
 /**

@@ -28,12 +28,15 @@ interface BlockStub {
 
 const makeBlockStub = (id: string, name: string, depth = 0): BlockStub => {
   const holder = document.createElement('div');
+  const wrapper = document.createElement('div');
   const roleItem = document.createElement('div');
+  wrapper.setAttribute('data-list-depth', String(depth));
   roleItem.setAttribute('role', 'listitem');
   if (depth > 0) {
-    roleItem.style.marginLeft = `${depth * 27}px`;
+    roleItem.style.marginInlineStart = `${depth * 27}px`;
   }
-  holder.appendChild(roleItem);
+  wrapper.appendChild(roleItem);
+  holder.appendChild(wrapper);
 
   return { id, name, parentId: null, holder };
 };

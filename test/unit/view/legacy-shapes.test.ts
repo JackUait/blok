@@ -220,7 +220,7 @@ describe('legacy blocks read like their migration result', () => {
       'a toggleList becomes a toggle',
       { type: 'toggleList', data: { title: 'More <b>detail</b>', isExpanded: true, body: { blocks: [{ type: 'paragraph', data: { text: 'inner' } }] } } },
       [
-        { id: 't', type: 'toggle', data: { text: 'More <b>detail</b>', isOpen: true }, content: ['c'] },
+        { id: 't', type: 'toggle', data: { text: 'More <b>detail</b>' }, content: ['c'] },
         { id: 'c', parent: 't', type: 'paragraph', data: { text: 'inner' } },
       ],
     ],

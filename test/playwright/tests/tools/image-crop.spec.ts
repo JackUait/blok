@@ -241,6 +241,7 @@ test('Cmd+Z inside the darkroom undoes the crop edit, not the document', async (
 });
 
 test('the photo flies back into the block after Done', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   const { dialog } = await openDarkroom(page, { x: 10, y: 10, w: 60, h: 60 });
 
   await recordFlights(page);
@@ -315,6 +316,7 @@ test('a filter preset saves and the block image carries the filter', async ({ pa
   const { dialog } = await openDarkroom(page);
 
   await dialog.getByRole('tab', { name: 'Filters' }).click();
+  await dialog.getByRole('tab', { name: 'B&W' }).click();
   await dialog.getByRole('radio', { name: 'Mono', exact: true }).click();
   await expect(dialog.getByRole('radio', { name: 'Mono', exact: true })).toHaveAttribute('aria-checked', 'true');
   await dialog.locator('[data-action="done"]').click();
@@ -349,6 +351,7 @@ test('Reset crop clears the crop and turn but keeps the filter', async ({ page }
   await dialog.getByRole('button', { name: 'Rotate left' }).click();
   await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
   await dialog.getByRole('tab', { name: 'Filters' }).click();
+  await dialog.getByRole('tab', { name: 'B&W' }).click();
   await dialog.getByRole('radio', { name: 'Mono', exact: true }).click();
   await dialog.getByRole('tab', { name: 'Crop' }).click();
   await expect(resetCrop).toBeVisible();

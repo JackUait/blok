@@ -151,12 +151,12 @@ describe('video ui — mutation hardening', () => {
       expect(caption.className).toBe('blok-video-caption');
     });
 
-    it('styles the caption with no outline and left alignment', () => {
+    it('styles the caption with no outline and inline-start alignment', () => {
       const row = renderCaptionRow(options());
       const caption = requireElement(row.querySelector('[data-role="video-caption"]'), 'caption');
 
       expect(caption.style.outline).toBe('none');
-      expect(caption.style.textAlign).toBe('left');
+      expect(caption.style.textAlign).toBe('start');
     });
 
     it('declares the textbox contract only while editable', () => {

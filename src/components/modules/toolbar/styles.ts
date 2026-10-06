@@ -17,13 +17,11 @@ export const getToolbarStyles = (): { [name: string]: string } => {
       'relative mx-auto max-w-blok-content'
     ),
     actions: twJoin(
-      'absolute flex opacity-0 pr-[5px]',
-      'right-full',
+      // Logical sides: docks in the inline-start gutter, so RTL mirrors for free.
+      'absolute flex opacity-0 pe-[5px]',
+      'end-full',
       // Mobile styles
-      'mobile:right-auto',
-      // RTL styles
-      'group-data-[blok-rtl=true]:right-auto group-data-[blok-rtl=true]:left-[calc(-1*(var(--spacing-toolbox-btn)))]',
-      'mobile:group-data-[blok-rtl=true]:ml-0 mobile:group-data-[blok-rtl=true]:mr-auto mobile:group-data-[blok-rtl=true]:pr-0 mobile:group-data-[blok-rtl=true]:pl-[10px]'
+      'mobile:end-auto'
     ),
     actionsOpened: 'opacity-100',
     settingsTogglerHidden: 'hidden',

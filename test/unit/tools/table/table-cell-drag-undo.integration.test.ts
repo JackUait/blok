@@ -6,6 +6,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { Table } from '../../../../src/tools/table';
 import { ToggleItem } from '../../../../src/tools/toggle';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
+import { storeToggleOpenState } from '../../../helpers/view-state';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -94,7 +95,9 @@ describe('table cell drag undo', () => {
   let editor: TestEditor | null;
 
   const boot = async (blocks: OutputBlockData[], paragraphTool: typeof Paragraph = Paragraph): Promise<TestEditor> => {
-    const instance = new Blok({ holder, tools: { paragraph: paragraphTool, table: Table, toggle: ToggleItem }, data: { blocks } }) as unknown as TestEditor;
+    storeToggleOpenState('doc', blocks);
+
+    const instance = new Blok({ holder, tools: { paragraph: paragraphTool, table: Table, toggle: ToggleItem }, data: { id: 'doc', blocks } }) as unknown as TestEditor;
 
     editor = instance;
     await instance.isReady;

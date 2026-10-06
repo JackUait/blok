@@ -75,4 +75,16 @@ describe('outlineFromOutputData', () => {
     expect(outlineFromOutputData(undefined)).toEqual([]);
     expect(outlineFromOutputData({ blocks: [{ id: 'p', type: 'paragraph', data: { text: 'x' } }] })).toEqual([]);
   });
+
+  it('adds no entry for a page block and never reads headings under it', () => {
+    const data = {
+      blocks: [
+        { id: 'h1', type: 'header', data: { text: 'Intro', level: 1 } },
+        { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'Sub' } }, content: ['h2'] },
+        { id: 'h2', type: 'header', parent: 'pg', data: { text: 'Leaked heading', level: 2 } },
+      ],
+    } as OutputData;
+
+    expect(outlineFromOutputData(data)).toEqual([{ id: 'h1', level: 1, text: 'Intro' }]);
+  });
 });

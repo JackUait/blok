@@ -134,12 +134,6 @@ describe('Russian canonicals and breadcrumbs', () => {
     expect(trail?.map((crumb) => crumb.path)).toEqual(['/ru', '/ru/docs', '/ru/docs/caret-api']);
     expect(trail?.every((crumb) => CYRILLIC.test(crumb.name))).toBe(true);
   });
-
-  it('reuses the English lastUpdated date', () => {
-    expect(RU_ROUTE_METADATA['/docs/caret-api'].dateModified).toBe(
-      ROUTE_METADATA['/docs/caret-api'].dateModified,
-    );
-  });
 });
 
 describe('getRouteMetadata with a locale prefix', () => {

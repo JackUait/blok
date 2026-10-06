@@ -92,15 +92,15 @@ describe('list dom-builder mutants', () => {
     it('leaves the indent unset at the root depth', () => {
       const item = buildStandardContent(context({ depth: 0 }));
 
-      expect(item.style.marginLeft).toBe('');
+      expect(item.style.marginInlineStart).toBe('');
       expect(item.style.color).toBe('');
       expect(item.style.fontSize).toBe('');
     });
 
     it('indents by the ordered step for ordered items and the plain step otherwise', () => {
-      expect(buildStandardContent(context({ style: 'ordered', depth: 2 })).style.marginLeft).not.toBe('');
-      expect(buildStandardContent(context({ style: 'unordered', depth: 2 })).style.marginLeft)
-        .not.toBe(buildStandardContent(context({ style: 'ordered', depth: 2 })).style.marginLeft);
+      expect(buildStandardContent(context({ style: 'ordered', depth: 2 })).style.marginInlineStart).not.toBe('');
+      expect(buildStandardContent(context({ style: 'unordered', depth: 2 })).style.marginInlineStart)
+        .not.toBe(buildStandardContent(context({ style: 'ordered', depth: 2 })).style.marginInlineStart);
     });
 
     it('applies the configured colour and size', () => {
@@ -127,7 +127,7 @@ describe('list dom-builder mutants', () => {
     it('leaves the indent unset at the root depth', () => {
       const wrapper = buildChecklistContent(context({ style: 'checklist', depth: 0 }));
 
-      expect(wrapper.style.marginLeft).toBe('');
+      expect(wrapper.style.marginInlineStart).toBe('');
       expect(wrapper.getAttribute('role')).toBe('listitem');
     });
 
@@ -219,8 +219,8 @@ describe('list dom-builder mutants', () => {
       const marker = createMarker('ordered', 0);
 
       expect(marker.textContent).toBe('1.');
-      expect(marker.className).toBe('shrink-0 select-none text-right');
-      expect(marker.style.paddingRight).toBe('0.6875em');
+      expect(marker.className).toBe('shrink-0 select-none text-end');
+      expect(marker.style.paddingInlineEnd).toBe('0.6875em');
     });
 
     it('gives the bullet marker a centred em-relative box', () => {

@@ -24,8 +24,8 @@ export const CALLOUT_WRAPPER_CLASSES: readonly string[] = [
    */
   'text-[length:var(--blok-callout-font-size,var(--blok-paragraph-font-size,inherit))]',
   'rounded-(--blok-radius-block)',
-  'pl-8',
-  'pr-4',
+  'ps-8',
+  'pe-4',
   /**
    * The panel's own box inset — deliberately NOT the `--blok-block-padding-*`
    * rhythm tokens. The documented rhythm override (compact read-only

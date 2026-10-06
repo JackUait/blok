@@ -1088,6 +1088,22 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[0][0].textColor).toBeUndefined();
     });
 
+    it('should not set textColor when td has near-black body text (Gemini rgb(31, 31, 31))', () => {
+      const html = '<table><tr><td style="color: rgb(31, 31, 31)">a</td><td style="color: #202124">b</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].textColor).toBeUndefined();
+      expect(result?.cells[0][1].textColor).toBeUndefined();
+    });
+
+    it('should keep every text color preset while dropping near-black', () => {
+      const presets = ['#787774', '#9f6b53', '#d9730d', '#cb9b00', '#448361', '#337ea9', '#9065b0', '#c14c8a', '#d44c47'];
+      const html = `<table><tr>${presets.map(color => `<td style="color: ${color}">x</td>`).join('')}</tr></table>`;
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0].map(cell => cell.textColor)).toEqual(presets);
+    });
+
     it('should still extract non-black text color from td alongside default-black filtering', () => {
       const html = `<table><tr>
         <td style="color: rgb(0, 0, 0)">black text</td>
@@ -1364,6 +1380,40 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[0][1].placement).toBeUndefined();
     });
 
+    it('reads legacy align/valign/bgcolor attributes off a pasted cell', () => {
+      const result = parseGenericHtmlTable(
+        '<table><tr>'
+        + '<td align="right" valign="bottom">A</td>'
+        + '<td bgcolor="#ffff00">B</td>'
+        + '<td bgcolor="javascript:alert(1)">C</td>'
+        + '</tr></table>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('bottom-right');
+      expect(result?.cells[0][1].color).toBeDefined();
+      expect(result?.cells[0][2].color).toBeUndefined();
+    });
+
+    it('reads only a keyword from a legacy align attribute', () => {
+      const result = parseGenericHtmlTable(
+        '<table><tr><td align="center;background-color:#ff0000">A</td></tr></table>'
+      );
+
+      expect(result?.cells[0][0].color).toBeUndefined();
+    });
+
+    it('lets the inline style win over a legacy attribute', () => {
+      const result = parseGenericHtmlTable(
+        '<table><tr>'
+        + '<td style="text-align: right" align="center" valign="middle">A</td>'
+        + '<td style="background: transparent" bgcolor="#ffff00">B</td>'
+        + '</tr></table>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('middle-right');
+      expect(result?.cells[0][1].color).toBeUndefined();
+    });
+
     it('round-trips placement through the external HTML flavor', () => {
       const payload: TableCellsClipboard = {
         rows: 1,
@@ -1388,6 +1438,119 @@ describe('table-cell-clipboard', () => {
 
       expect(html).not.toContain('text-align');
       expect(html).not.toContain('vertical-align');
+    });
+  });
+
+  // Placement left/right means the grid's start/end, so an RTL grid exports
+  // the side the user sees and marks the table dir="rtl".
+  describe('buildClipboardHtml — placement in an RTL grid', () => {
+    const placed = (placement: TableCellsClipboard['cells'][number][number]['placement']): TableCellsClipboard => ({
+      rows: 1,
+      cols: 1,
+      cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'x' } }], placement }]],
+    });
+    const stripJson = (html: string): string => html.replace(/ data-blok-table-cells='[^']*'/, '');
+
+    it('exports *-right as text-align: left and *-left as text-align: right on a dir="rtl" table', () => {
+      const end = buildClipboardHtml(placed('bottom-right'), 'rtl');
+      const start = buildClipboardHtml(placed('middle-left'), 'rtl');
+
+      expect(end).toContain('text-align: left; vertical-align: bottom');
+      expect(start).toContain('text-align: right; vertical-align: middle');
+      expect(end).toMatch(/^<table dir="rtl" /);
+      expect(buildClipboardHtml(placed('top-center'), 'rtl')).toContain('text-align: center');
+    });
+
+    it('keeps the LTR export unchanged', () => {
+      const payload = placed('bottom-right');
+
+      expect(buildClipboardHtml(payload, 'ltr')).toBe(buildClipboardHtml(payload));
+      expect(buildClipboardHtml(payload)).not.toContain('dir=');
+      expect(buildClipboardHtml(payload)).toContain('text-align: right');
+    });
+
+    for (const direction of ['ltr', 'rtl'] as const) {
+      for (const placement of ['top-left', 'middle-right', 'bottom-center', 'bottom-left'] as const) {
+        it(`${direction}: ${placement} survives the external flavor round trip`, () => {
+          const external = stripJson(buildClipboardHtml(placed(placement), direction));
+          const expected = placement === 'top-left' ? undefined : placement;
+
+          expect(parseGenericHtmlTable(external)?.cells[0][0].placement).toBe(expected);
+        });
+
+        it(`${direction}: ${placement} survives the Blok JSON round trip`, () => {
+          const html = buildClipboardHtml(placed(placement), direction);
+
+          expect(parseClipboardHtml(html)?.cells[0][0].placement).toBe(placement);
+        });
+      }
+    }
+
+    it('reads a right-aligned cell of an external RTL table as the grid start', () => {
+      const result = parseGenericHtmlTable(
+        '<table dir="rtl"><tr>'
+        + '<td style="text-align: right">A</td>'
+        + '<td style="text-align: left">B</td>'
+        + '</tr></table>'
+      );
+
+      expect(result?.cells[0][0].placement).toBeUndefined();
+      expect(result?.cells[0][1].placement).toBe('top-right');
+    });
+
+    it('takes the grid direction from an ancestor of the pasted table', () => {
+      const result = parseGenericHtmlTable(
+        '<div dir="rtl"><table><tr><td style="text-align: left">A</td></tr></table></div>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('top-right');
+    });
+
+    it('takes the grid direction from the clipboard document body', () => {
+      const result = parseGenericHtmlTable(
+        '<html><body dir="rtl"><table><tr><td style="text-align: left">A</td></tr></table></body></html>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('top-right');
+    });
+
+    it('takes the grid direction from an inline direction style on the table or a wrapper', () => {
+      const onTable = parseGenericHtmlTable(
+        '<table style="direction: rtl"><tr><td style="text-align: left">A</td></tr></table>'
+      );
+      const onWrapper = parseGenericHtmlTable(
+        '<div style="direction:rtl"><table><tr><td style="text-align: left">A</td></tr></table></div>'
+      );
+
+      expect(onTable?.cells[0][0].placement).toBe('top-right');
+      expect(onWrapper?.cells[0][0].placement).toBe('top-right');
+    });
+
+    it('lets a table own dir="ltr" win over an RTL wrapper', () => {
+      const result = parseGenericHtmlTable(
+        '<div dir="rtl"><table dir="ltr"><tr><td style="text-align: right">A</td></tr></table></div>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('top-right');
+    });
+
+    it('does not read flex-direction as the grid direction', () => {
+      const result = parseGenericHtmlTable(
+        '<div dir="rtl" style="flex-direction: row"><table><tr><td style="text-align: left">A</td></tr></table></div>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('top-right');
+    });
+
+    it('reads text-align start/end as the grid start/end in both directions', () => {
+      const row = '<tr><td style="text-align: start">A</td><td style="text-align: end">B</td></tr>';
+
+      for (const dir of ['ltr', 'rtl']) {
+        const result = parseGenericHtmlTable(`<table dir="${dir}">${row}</table>`);
+
+        expect(result?.cells[0][0].placement).toBeUndefined();
+        expect(result?.cells[0][1].placement).toBe('top-right');
+      }
     });
   });
 
@@ -1472,6 +1635,35 @@ describe('table-cell-clipboard', () => {
       const parsed = parseClipboardHtml(buildClipboardHtml(payload));
 
       expect(parsed).toEqual(payload);
+    });
+  });
+
+  describe('nested children in a clipboard cell', () => {
+    const toggleWithChild = (childText: string): TableCellsClipboard => ({
+      rows: 1,
+      cols: 1,
+      cells: [[{
+        blocks: [{
+          tool: 'toggle',
+          data: { text: 'Toggle' },
+          children: [{ tool: 'paragraph', data: { text: childText } }],
+        }],
+      }]],
+    });
+
+    it('sanitizes the text of a nested child on parse', () => {
+      const html = buildClipboardHtml(toggleWithChild('<img src="x" onerror="alert(1)">child'));
+      const parsed = parseClipboardHtml(html);
+      const child = parsed?.cells[0][0].blocks[0].children?.[0];
+
+      expect(child?.data.text).toBe('child');
+    });
+
+    it('keeps a nested child\'s text in the external HTML and plain-text flavors', () => {
+      const payload = toggleWithChild('child');
+
+      expect(buildClipboardHtml(payload)).toContain('Toggle<br>child');
+      expect(buildClipboardPlainText(payload)).toBe('Toggle child');
     });
   });
 });

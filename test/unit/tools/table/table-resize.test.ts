@@ -123,6 +123,7 @@ describe('TableResize', () => {
   let grid: HTMLTableElement;
 
   afterEach(() => {
+    vi.restoreAllMocks();
     grid?.parentElement?.remove();
   });
 
@@ -884,6 +885,135 @@ describe('TableResize', () => {
       edges.forEach((right) => {
         expect(right).toBeLessThanOrEqual(total);
       });
+    });
+  });
+  describe('selected cell edge', () => {
+    const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+      ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON: () => ({}) });
+
+    /**
+     * The cell selection draws its box as an overlay in the grid. Its rect
+     * stands for the selected cell spanning x 0..301, y 100..200.
+     */
+    const addSelectionOverlay = (gridEl: HTMLElement): HTMLElement => {
+      const overlay = document.createElement('div');
+
+      overlay.setAttribute('data-blok-table-selection-overlay', '');
+      Object.defineProperty(overlay, 'getBoundingClientRect', { value: () => rect(0, 100, 301, 100) });
+      gridEl.appendChild(overlay);
+
+      return overlay;
+    };
+
+    const setup = (): HTMLElement[] => {
+      grid = createMultiRowGrid(3, [300, 300]);
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handles = Array.from(grid.querySelectorAll<HTMLElement>('[data-blok-table-resize]'));
+
+      Object.defineProperty(handles[0], 'getBoundingClientRect', { value: () => rect(292, 0, 16, 300) });
+      Object.defineProperty(handles[1], 'getBoundingClientRect', { value: () => rect(584, 0, 16, 300) });
+
+      return handles;
+    };
+
+    it('hides the resize line while hovering the selected cell\'s inline-end border', () => {
+      const [handle] = setup();
+
+      addSelectionOverlay(grid);
+      handle.dispatchEvent(new MouseEvent('mouseenter', { clientX: 300, clientY: 150 }));
+
+      expect(handle.style.opacity).toBe('0');
+    });
+
+    it('shows the line on the same border outside the selected cell', () => {
+      const [handle] = setup();
+
+      addSelectionOverlay(grid);
+      handle.dispatchEvent(new MouseEvent('mouseenter', { clientX: 300, clientY: 250 }));
+
+      expect(handle.style.opacity).toBe('1');
+    });
+
+    it('shows the line on a border the selection does not end on', () => {
+      const handles = setup();
+
+      addSelectionOverlay(grid);
+      handles[1].dispatchEvent(new MouseEvent('mouseenter', { clientX: 600, clientY: 150 }));
+
+      expect(handles[1].style.opacity).toBe('1');
+    });
+
+    it('hides the line when the pointer moves along the border into the selected cell', () => {
+      const [handle] = setup();
+
+      addSelectionOverlay(grid);
+      handle.dispatchEvent(new MouseEvent('mouseenter', { clientX: 300, clientY: 50 }));
+      expect(handle.style.opacity).toBe('1');
+
+      handle.dispatchEvent(new MouseEvent('mousemove', { clientX: 300, clientY: 150 }));
+
+      expect(handle.style.opacity).toBe('0');
+    });
+
+    it('keeps the line hidden after a resize released on the selected cell\'s border', () => {
+      const [handle] = setup();
+
+      addSelectionOverlay(grid);
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 150, bubbles: true }));
+      vi.spyOn(handle, 'matches').mockReturnValue(true);
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 300, clientY: 150 }));
+
+      expect(handle.style.opacity).toBe('0');
+    });
+
+    it('shows the line on hover when nothing is selected', () => {
+      const [handle] = setup();
+
+      handle.dispatchEvent(new MouseEvent('mouseenter', { clientX: 300, clientY: 150 }));
+
+      expect(handle.style.opacity).toBe('1');
+    });
+  });
+
+  describe('outer edge rounding', () => {
+    it('rounds the inline-end corners of the last handle to the table radius', () => {
+      grid = createGrid([200, 300, 200]);
+      new TableResize(grid, [200, 300, 200], vi.fn());
+
+      const handles = grid.querySelectorAll<HTMLElement>('[data-blok-table-resize]');
+      const last = handles[2];
+
+      expect(last.style.borderTopRightRadius).toBe('var(--blok-radius-table)');
+      expect(last.style.borderBottomRightRadius).toBe('var(--blok-radius-table)');
+      expect(last.style.borderTopLeftRadius).toBe('');
+      expect(last.style.borderBottomLeftRadius).toBe('');
+    });
+
+    it('leaves interior handles square', () => {
+      grid = createGrid([200, 300, 200]);
+      new TableResize(grid, [200, 300, 200], vi.fn());
+
+      const handles = grid.querySelectorAll<HTMLElement>('[data-blok-table-resize]');
+
+      [handles[0], handles[1]].forEach(handle => {
+        expect(handle.style.borderTopRightRadius).toBe('');
+        expect(handle.style.borderBottomRightRadius).toBe('');
+      });
+    });
+
+    it('rounds the left corners in RTL, where the last column ends at the left edge', () => {
+      grid = createGrid([200, 300, 200]);
+      const resize = new TableResize(grid, [200, 300, 200], vi.fn());
+      const last = grid.querySelectorAll<HTMLElement>('[data-blok-table-resize]')[2];
+
+      grid.style.direction = 'rtl';
+      resize.reposition();
+
+      expect(last.style.borderTopLeftRadius).toBe('var(--blok-radius-table)');
+      expect(last.style.borderBottomLeftRadius).toBe('var(--blok-radius-table)');
+      expect(last.style.borderTopRightRadius).toBe('');
+      expect(last.style.borderBottomRightRadius).toBe('');
     });
   });
 });

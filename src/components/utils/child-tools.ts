@@ -70,14 +70,22 @@ export const satisfiesChildToolRestrictions = (
 };
 
 /**
- * Whether `toolName` may be a direct child of `parent`.
+ * Whether `parent` may have children at all. Root always may.
+ * @param parent - the prospective parent block (undefined/null = root)
+ */
+export const acceptsChildren = (parent: Block | undefined | null): boolean =>
+  parent?.tool?.acceptsChildren !== false;
+
+/**
+ * Whether `toolName` may be a direct child of `parent`. Always false under a
+ * parent that takes no children.
  * @param parent - the prospective parent block (undefined/null = root, always allowed)
  * @param toolName - name of the block tool being placed
  */
 export const isChildToolAllowed = (
   parent: Block | undefined | null,
   toolName: string
-): boolean => satisfiesChildToolRestrictions(getChildToolRestrictions(parent), toolName);
+): boolean => acceptsChildren(parent) && satisfiesChildToolRestrictions(getChildToolRestrictions(parent), toolName);
 
 /**
  * The tool a child insert should actually create: the requested one when the

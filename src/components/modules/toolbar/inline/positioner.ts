@@ -7,7 +7,7 @@ import type { InlinePositioningOptions } from './types';
  * Responsibilities:
  * - Calculate toolbar position based on selection
  * - Apply position to wrapper element
- * - Prevent overflow on right side
+ * - Keep it inside the viewport horizontally
  */
 export class InlinePositioner {
   /**
@@ -24,10 +24,11 @@ export class InlinePositioner {
    * @returns which side of the selection the toolbar landed on
    */
   public apply(options: InlinePositioningOptions): 'below' | 'above' {
-    const { wrapper, selectionRect, wrapperOffset, popoverWidth, popoverHeight = 0 } = options;
+    const { wrapper, selectionRect, wrapperOffset, popoverWidth, popoverHeight = 0, direction = 'ltr' } = options;
+    const startX = direction === 'rtl' ? selectionRect.right - popoverWidth : selectionRect.x;
 
     const newCoords = {
-      x: selectionRect.x - wrapperOffset.x,
+      x: startX - wrapperOffset.x,
       y: selectionRect.y +
         selectionRect.height -
         wrapperOffset.top +

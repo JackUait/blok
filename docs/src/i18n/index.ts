@@ -20,17 +20,23 @@ export const localeNames: Record<Locale, string> = {
 export const defaultLocale: Locale = 'en';
 
 /**
- * Get a nested translation value from a dot-notation key
+ * Get a nested translation value from a dot-notation key. Pure over `catalogs`
+ * so the page fingerprint resolves strings exactly as the site renders them.
  */
-const getTranslation = (locale: Locale, key: string): string => {
+export const resolveTranslation = (
+  catalogs: Record<Locale, unknown>,
+  locale: Locale,
+  key: string,
+): string => {
   const keys = key.split('.');
   // A missing segment — or a segment that walks past a leaf string — is a hard
   // miss. Keeping the parent node and continuing let a later segment resolve
   // against a shallower ancestor, so e.g. `api.<section>.properties.<p>.description`
   // silently returned the section's own `description`.
-  const result = keys.reduce<Translations | string | undefined>(
-    (acc, k) => (acc === undefined || typeof acc === 'string' ? undefined : acc[k]),
-    translations[locale] as Translations | string | undefined,
+  const result = keys.reduce<unknown>(
+    (acc, k) =>
+      typeof acc === 'object' && acc !== null ? (acc as Record<string, unknown>)[k] : undefined,
+    catalogs[locale],
   );
 
   if (typeof result === 'string') {
@@ -39,10 +45,12 @@ const getTranslation = (locale: Locale, key: string): string => {
 
   // Fallback to English if key not found
   if (locale !== 'en') {
-    return getTranslation('en', key);
+    return resolveTranslation(catalogs, 'en', key);
   }
 
   return key;
 };
+
+const getTranslation = (locale: Locale, key: string): string => resolveTranslation(translations, locale, key);
 
 export { getTranslation };

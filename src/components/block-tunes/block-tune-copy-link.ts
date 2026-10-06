@@ -75,11 +75,13 @@ export class CopyLinkTune implements BlockTune {
   }
 
   /**
-   * Copy block link to clipboard and notify user
+   * Copy block link to clipboard and notify user. A block that stands for
+   * something else, like a page, copies that thing's url instead.
    */
   public async handleClick(): Promise<void> {
+    const copyLink = this.block.copyLink;
     const baseUrl = window.location.href.split('#')[0];
-    const url = `${baseUrl}#${encodeURIComponent(this.block.id)}`;
+    const url = typeof copyLink === 'string' ? copyLink : `${baseUrl}#${encodeURIComponent(this.block.id)}`;
 
     try {
       await navigator.clipboard.writeText(url);

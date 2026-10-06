@@ -129,7 +129,7 @@ const buildSettings = (sources: Source[]) => {
     Tools: { blockTools: tools },
     API: { methods: api },
     Toolbar: { close: vi.fn(),
-      isPositionedRight: false },
+      isDockedPhysicallyRight: false },
     Caret: { setToBlock: vi.fn(),
       positions: { DEFAULT: 'default',
         END: 'end' } },

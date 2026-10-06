@@ -4,12 +4,15 @@ import {
   isDefaultDarkBackground as isDefaultDarkBackgroundShared,
   isDefaultWhiteBackground as isDefaultWhiteBackgroundShared,
   isInvisibleBackground,
+  isNearBlackText,
 } from '../../utils/default-page-colors';
 
 import { COLUMNS_CANDIDATE_ATTR } from './constants';
 import { parseUntrustedHtml } from '../../utils/inert-html';
 import { trimTrailingBreaks } from '../../utils/trailing-breaks';
 import { isSpacerParagraph } from '../../utils/spacer-paragraph';
+import { ownPastedCells, ownPastedRows } from '../../../tools/table/table-cell-paste';
+import { isSafeCssColor } from '../../../shared/css-color';
 
 /**
  * Pre-process Google Docs clipboard HTML before sanitization.
@@ -21,16 +24,18 @@ import { isSpacerParagraph } from '../../utils/spacer-paragraph';
  * spans to `<b>`/`<i>`/`<mark>` BEFORE the sanitizer runs.
  *
  * @param html - raw clipboard HTML string
+ * @param options.keepTables - skip the layout-table passes (unwrap, columns
+ *   stamp): a paste into a table cell keeps every table a table
  * @returns preprocessed HTML string
  */
-export function preprocessGoogleDocsHtml(html: string): string {
+export function preprocessGoogleDocsHtml(html: string, { keepTables = false }: { keepTables?: boolean } = {}): string {
   const wrapper = parseUntrustedHtml(html);
 
   const isGoogleDocs = unwrapGoogleDocsContent(wrapper);
 
   convertGoogleDocsStyles(wrapper, isGoogleDocs);
 
-  if (isGoogleDocs) {
+  if (isGoogleDocs && !keepTables) {
     unwrapLayoutSingleColumnTables(wrapper);
   }
 
@@ -44,8 +49,11 @@ export function preprocessGoogleDocsHtml(html: string): string {
    */
   convertTableCellParagraphs(wrapper);
 
-  if (isGoogleDocs) {
+  if (isGoogleDocs && !keepTables) {
     stampColumnsCandidateTables(wrapper);
+  }
+
+  if (isGoogleDocs) {
     promoteImages(wrapper);
   }
 
@@ -231,17 +239,6 @@ function resolveBackgroundStyle(hasBgColor: boolean, hasColor: boolean, mappedBg
 }
 
 /**
- * Check whether a CSS color value is the default black text color.
- * Google Docs uses different formats: `rgb(0, 0, 0)`, `rgb(0,0,0)`, or `#000000`.
- * Spans with only this color should not be converted to `<mark>`.
- */
-function isDefaultBlack(color: string): boolean {
-  const normalized = color.replace(/\s/g, '');
-
-  return normalized === 'rgb(0,0,0)' || normalized === '#000000';
-}
-
-/**
  * Whether an element's text is entirely a link's text.
  *
  * Editors color link text with their own link color (Google Docs `#1155cc`,
@@ -420,7 +417,36 @@ function hasHeadingAncestor(node: Element): boolean {
   return hasHeadingAncestor(parent);
 }
 
-function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string | null {
+const SCRIPT_TAGS: Record<string, string | undefined> = { super: 'sup', sub: 'sub' };
+
+/**
+ * A style's background colour: the `background-color` longhand, else the
+ * colour in a `background` shorthand (Word and Writer highlights). The
+ * shorthand is read by a style parser in an inert document, so a `url()`
+ * in it is never fetched.
+ */
+function readBackgroundColor(style: string): string | undefined {
+  const longhand = /background-color\s*:\s*([^;]+)/i.exec(style)?.[1];
+
+  if (longhand !== undefined) {
+    return longhand.trim();
+  }
+
+  if (!/(?<![a-z-])background\s*:/i.test(style)) {
+    return undefined;
+  }
+
+  const probe = document.implementation.createHTMLDocument('').createElement('div');
+
+  probe.style.cssText = style;
+
+  const color = probe.style.backgroundColor;
+
+  // currentcolor is valid but paints the text's own colour behind it.
+  return isSafeCssColor(color) && color.toLowerCase() !== 'currentcolor' ? color : undefined;
+}
+
+export function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string | null {
   const style = span.getAttribute('style') ?? '';
   /**
    * Headings are already rendered bold. A span with font-weight:700 inside a
@@ -432,10 +458,9 @@ function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string
   const isItalic = /font-style\s*:\s*italic/i.test(style);
 
   const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
-  const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
 
   const color = colorMatch?.[1]?.trim();
-  const bgColor = bgMatch?.[1]?.trim();
+  const bgColor = readBackgroundColor(style);
 
   /**
    * A link's own color is dropped so the link falls back to the default link
@@ -445,8 +470,8 @@ function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string
   const isLinkColor = color !== undefined && isLinkContent(span);
 
   const hasColor = !isLinkColor && (isGoogleDocs
-    ? color !== undefined && !isDefaultBlack(color)
-    : color !== undefined && !isDefaultBlack(color) && !isDefaultLightText(color));
+    ? color !== undefined && !isNearBlackText(color)
+    : color !== undefined && !isNearBlackText(color) && !isDefaultLightText(color));
   /**
    * Invisible backgrounds (transparent, near-white light-page bg, near-black
    * dark-page bg) are filtered for both branches. Google Docs writes the page
@@ -456,14 +481,27 @@ function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string
    */
   const hasBgColor = bgColor !== undefined && !isInvisibleBackground(bgColor);
 
-  if (!isBold && !isItalic && !hasColor && !hasBgColor) {
+  const decoration = isGoogleDocs ? /text-decoration(?:-line)?\s*:\s*([^;]+)/i.exec(style)?.[1] ?? '' : '';
+  const verticalAlign = isGoogleDocs ? /vertical-align\s*:\s*([^;]+)/i.exec(style)?.[1]?.trim() ?? '' : '';
+  // Docs underlines every link; that underline is the link style, not a mark.
+  const isUnderline = /underline/i.test(decoration) && !isLinkContent(span);
+  const isStrike = /line-through/i.test(decoration);
+  const scriptTag = SCRIPT_TAGS[verticalAlign.toLowerCase()];
+
+  if (!isBold && !isItalic && !hasColor && !hasBgColor && !isUnderline && !isStrike && scriptTag === undefined) {
     return null;
   }
 
   const inner = buildMarkWrapper(span.innerHTML, hasColor, hasBgColor, color, bgColor);
-  const italic = isItalic ? `<i>${inner}</i>` : inner;
+  const tags = [
+    isBold ? 'b' : '',
+    isItalic ? 'i' : '',
+    isUnderline ? 'u' : '',
+    isStrike ? 's' : '',
+    scriptTag ?? '',
+  ].filter(Boolean);
 
-  return isBold ? `<b>${italic}</b>` : italic;
+  return tags.reduceRight((html, tag) => `<${tag}>${html}</${tag}>`, inner);
 }
 
 /**
@@ -473,6 +511,8 @@ function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string
  * - `<span style="font-style:italic">` → `<i>`
  * - `<span style="color:...">` → `<mark style="color: ...">`
  * - `<span style="background-color:...">` → `<mark style="background-color: ...">`
+ * - Google Docs only: `text-decoration` underline / line-through → `<u>` / `<s>`,
+ *   `vertical-align` super / sub → `<sup>` / `<sub>`
  *
  * Color and bold/italic can combine: a bold red span becomes `<b><mark style="color: red;">text</mark></b>`.
  */
@@ -528,17 +568,6 @@ function convertAnchorColorStyles(wrapper: HTMLElement): void {
 }
 
 /**
- * The table's own rows (nested tables' rows excluded) as arrays of TD/TH
- * cells, in document order.
- */
-function ownRowCells(table: HTMLTableElement): HTMLElement[][] {
-  return Array.from(table.querySelectorAll('tr'))
-    .filter((row) => row.closest('table') === table)
-    .map((row) => Array.from(row.children)
-      .filter((child): child is HTMLElement => child.tagName === 'TD' || child.tagName === 'TH'));
-}
-
-/**
  * Unwrap single-column LAYOUT tables into plain top-level content.
  *
  * A one-column table can never become a `column_list` (the editor dissolves
@@ -563,7 +592,7 @@ function unwrapLayoutSingleColumnTables(wrapper: HTMLElement): void {
       continue;
     }
 
-    const rows = ownRowCells(table);
+    const rows = ownPastedRows(table).map(ownPastedCells);
 
     if (rows.length === 0 || rows.some((cells) => cells.length !== 1)) {
       continue;
@@ -608,7 +637,7 @@ function stampColumnsCandidateTables(wrapper: HTMLElement): void {
       continue;
     }
 
-    const rows = ownRowCells(table);
+    const rows = ownPastedRows(table).map(ownPastedCells);
 
     if (rows.length === 0) {
       continue;
@@ -656,8 +685,49 @@ function unwrapCellParagraph(p: Element): void {
   p.replaceWith(fragment);
 }
 
+const TEXT_ALIGN = /(?<![a-z-])text-align\s*:\s*([^;]+)/i;
+
+/** A paragraph's text-align: its style, else Writer's `align` attribute (keywords only). */
+function paragraphAlignment(p: Element): string | undefined {
+  const styled = TEXT_ALIGN.exec(p.getAttribute('style') ?? '')?.[1];
+  const attribute = p.getAttribute('align')?.trim();
+  const alignment = styled ?? (attribute !== undefined && /^[a-z]+$/i.test(attribute) ? attribute : undefined);
+
+  return alignment?.trim().toLowerCase();
+}
+
+/**
+ * Docs, Word and Writer put a cell's alignment on its `<p>`s, which the unwrap below
+ * drops. Copy it onto the cell's own style (the table reads it there) when
+ * every content paragraph agrees and the cell has no text-align of its own.
+ */
+export function carryParagraphAlignmentToCell(cell: Element): void {
+  const ownStyle = cell.getAttribute('style') ?? '';
+
+  if (TEXT_ALIGN.test(ownStyle)) {
+    return;
+  }
+
+  // A nested table's paragraphs belong to its own cells.
+  const paragraphs = Array.from(cell.querySelectorAll('p'))
+    .filter(p => p.closest('td, th') === cell && !isSpacerParagraph(p));
+  const alignments = new Set(paragraphs.map(paragraphAlignment));
+  const [alignment] = alignments;
+
+  if (alignments.size !== 1 || alignment === undefined) {
+    return;
+  }
+
+  cell.setAttribute('style', ownStyle === '' ? `text-align:${alignment}` : `${ownStyle};text-align:${alignment}`);
+}
+
 function convertTableCellParagraphs(wrapper: HTMLElement): void {
-  for (const cell of Array.from(wrapper.querySelectorAll('td, th'))) {
+  const cells = Array.from(wrapper.querySelectorAll('td, th'));
+
+  // Before any unwrap: an outer cell unwraps its nested cells' <p>s too.
+  cells.forEach(carryParagraphAlignmentToCell);
+
+  for (const cell of cells) {
     const paragraphs = cell.querySelectorAll('p');
 
     if (paragraphs.length === 0) {

@@ -42,6 +42,9 @@ vi.mock('../../src/components/core', () => {
         saver: {
           save: vi.fn(),
         },
+        media: {
+          confirmLeave: vi.fn(),
+        },
       } as unknown as BlokModules['API']['methods'],
     } as unknown as BlokModules['API'],
     EventsAPI: {

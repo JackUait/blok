@@ -177,7 +177,7 @@ A hint (tooltip) NEVER shows instantly. It shows only when the pointer hovers it
 - Use `onHover` or `show` from `src/components/utils/tooltip.ts`. They wait `HINT_DELAY` (500ms) by default. They raise any shorter `delay` to `MIN_HINT_DELAY` (300ms). There is no warm window, so moving to the next trigger waits again.
 - `showReadout` skips the wait. Use it only for live feedback during a gesture, like the table's `3×4` size readout while dragging. Never use it for a hover hint.
 - Do not add a `focus`/`focusin` listener that shows a hint, and do not pass a `delay` below the minimum.
-- Hover cards with their own timer follow the same rule: the toolbox preview card (`src/components/ui/toolbox-preview.ts`) and the link hover card. No warm window, and an open card never swaps to a new trigger without waiting again.
+- Hover cards with their own timer follow the same rule: the toolbox preview card (`src/components/ui/toolbox-preview.ts`) and the link hover card. No warm window. One exception (USER, 2026-10-07): an open toolbox preview card moves to the next row and swaps its drawing at once, and stays open over a section label; only its first open waits.
 - `test/unit/architecture/hint-delay-law.test.ts` enforces this. A new `showReadout` user goes in its `READOUT_USERS` with a reason.
 
 

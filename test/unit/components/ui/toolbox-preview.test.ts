@@ -175,22 +175,18 @@ describe('ToolboxPreview', () => {
     expect(drawingText()).toBe('second');
   });
 
-  it('closes the open card on a new row and waits the full delay before showing it', () => {
+  it('moves the open card to a new row and swaps its content at once', () => {
     const { surface, item } = makeAnchors();
     const next = document.createElement('div');
 
     surface.appendChild(next);
+    vi.spyOn(next, 'getBoundingClientRect').mockReturnValue(rect(104, 200, 292, 32));
     openNow({ item, surface, config: config('first') });
     preview.show({ item: next, surface, config: config('second') });
 
-    expect(cardRoot()?.hidden).toBe(true);
-
-    vi.advanceTimersByTime(PREVIEW_OPEN_DELAY - 1);
-    expect(cardRoot()?.hidden).toBe(true);
-
-    vi.advanceTimersByTime(1);
     expect(cardRoot()?.hidden).toBe(false);
     expect(drawingText()).toBe('second');
+    expect(parseFloat(cardRoot()?.style.top ?? '')).toBe(200);
   });
 
   it('cancels a pending open when hidden first', () => {

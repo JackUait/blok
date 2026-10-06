@@ -6,7 +6,7 @@ import type { ToolboxPreviewConfig } from '@/types';
 /** Must match the card width in block-preview.css; placement math uses it before layout. */
 export const PREVIEW_CARD_WIDTH = 248;
 
-/** How long the pointer rests on a row before a card opens. A hint never opens instantly (see CLAUDE.md). */
+/** How long the pointer rests on a row before the first card opens (see CLAUDE.md). */
 export const PREVIEW_OPEN_DELAY = 320;
 
 const GAP = 8;
@@ -59,16 +59,12 @@ export class ToolboxPreview {
   public show(params: ToolboxPreviewShowParams): void {
     this.stopWaitingForPointer();
 
-    if (this.visible && this.current?.item === params.item) {
+    // Only the first card waits: an open card moves to the new row and swaps its drawing.
+    if (this.visible) {
       this.cancelOpen();
       this.open(params);
 
       return;
-    }
-
-    // Swapping an open card to a new row would show that row's hint with no wait.
-    if (this.visible) {
-      this.hide();
     }
 
     // The delay runs once per hover: moving to the next row swaps the card it will open.

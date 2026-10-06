@@ -743,8 +743,8 @@ describe('blocksToHtml', () => {
 
       expect(html).toBe(
         '<div data-blok-tabs>'
-        + '<section data-blok-tab><h4>📋 Overview</h4><p>A</p></section>'
-        + '<section data-blok-tab><h4>Details</h4><p>B</p></section>'
+        + '<section data-blok-tab><h4 data-blok-tab-title><span data-blok-tab-icon>📋</span> Overview</h4><p>A</p></section>'
+        + '<section data-blok-tab><h4 data-blok-tab-title>Details</h4><p>B</p></section>'
         + '</div>'
       );
     });
@@ -755,7 +755,7 @@ describe('blocksToHtml', () => {
         { id: 't1', type: 'tab', parent: 'tabs', data: { title: '<img src=x onerror=alert(1)>', icon: '<b>' } },
       ]));
 
-      expect(html).toBe('<div data-blok-tabs><section data-blok-tab><h4>&lt;b&gt; &lt;img src=x onerror=alert(1)&gt;</h4></section></div>');
+      expect(html).toBe('<div data-blok-tabs><section data-blok-tab><h4 data-blok-tab-title><span data-blok-tab-icon>&lt;b&gt;</span> &lt;img src=x onerror=alert(1)&gt;</h4></section></div>');
     });
 
     it('writes no empty heading for an untitled tab without an icon', () => {
@@ -776,9 +776,64 @@ describe('blocksToHtml', () => {
 
       expect(html).toBe(
         '<div data-blok-tool="tabs" data-blok-id="tabs" data-blok-tabs>'
-        + '<section data-blok-tool="tab" data-blok-id="t1" data-blok-tab><h4>One</h4></section>'
+        + '<section data-blok-tool="tab" data-blok-id="t1" data-blok-tab><h4 data-blok-tab-title>One</h4></section>'
         + '</div>'
       );
+    });
+  });
+
+  /** The editor evicts non-`tab` children of `tabs` to the tabs block's own parent, right after the tabs block. */
+  describe('stray children of tabs', () => {
+    it('places strays after the tabs subtree, in editor save order', () => {
+      const out = blocksToHtml(doc([
+        { id: 'before', type: 'paragraph', data: { text: 'BEFORE' } },
+        { id: 'tabs', type: 'tabs', data: {}, content: ['s1', 't1', 's2'] },
+        { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs', content: ['s1c'] },
+        { id: 's1c', type: 'paragraph', data: { text: 'S1C' }, parent: 's1' },
+        { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+        { id: 's2', type: 'paragraph', data: { text: 'S2' }, parent: 'tabs' },
+        { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+      ]));
+
+      expect(out).toBe('<p>BEFORE</p><div data-blok-tabs><section data-blok-tab><h4 data-blok-tab-title>Do</h4><p>one</p></section></div><p>S1</p><p>S1C</p><p>S2</p><p>AFTER</p>');
+    });
+
+    it('keeps a tabs block holding only a stray, with the stray after it', () => {
+      const out = blocksToHtml(doc([
+        { id: 'tabs', type: 'tabs', data: {}, content: ['s1'] },
+        { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+        { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+      ]));
+
+      expect(out).toBe('<div data-blok-tabs></div><p>S1</p><p>AFTER</p>');
+    });
+
+    it('keeps a stray in the toggle holding the tabs, right after the tabs', () => {
+      const out = blocksToHtml(doc([
+        { id: 'c', type: 'toggle', data: { text: 'C' }, content: ['tabs', 'i2'] },
+        { id: 'tabs', type: 'tabs', data: {}, parent: 'c', content: ['s1', 't1'] },
+        { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+        { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+        { id: 'i2', type: 'paragraph', data: { text: 'I2' }, parent: 'c' },
+        { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+      ]));
+
+      expect(out).toBe('<details><summary>C</summary><div data-blok-tabs><section data-blok-tab><h4 data-blok-tab-title>Do</h4><p>one</p></section></div><p>S1</p><p>I2</p></details><p>AFTER</p>');
+    });
+
+    it('renders nested tabs without strays as before', () => {
+      const out = blocksToHtml(doc([
+        { id: 'c', type: 'toggle', data: { text: 'C' }, content: ['tabs', 'i2'] },
+        { id: 'tabs', type: 'tabs', data: {}, parent: 'c', content: ['t1'] },
+        { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+        { id: 'i2', type: 'paragraph', data: { text: 'I2' }, parent: 'c' },
+        { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+      ]));
+
+      expect(out).toBe('<details><summary>C</summary><div data-blok-tabs><section data-blok-tab><h4 data-blok-tab-title>Do</h4><p>one</p></section></div><p>I2</p></details><p>AFTER</p>');
     });
   });
 

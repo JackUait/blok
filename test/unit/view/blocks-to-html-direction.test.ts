@@ -46,7 +46,7 @@ describe('blocksToHtml direction', () => {
       { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'نظرة' } },
     ]), { direction: 'ltr' });
 
-    expect(html).toContain('<section dir="rtl" data-blok-tab><h4>نظرة</h4></section>');
+    expect(html).toContain('<section dir="rtl" data-blok-tab><h4 data-blok-tab-title>نظرة</h4></section>');
   });
 
   describe('code and math read left-to-right in any direction', () => {

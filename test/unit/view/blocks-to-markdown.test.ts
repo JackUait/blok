@@ -716,6 +716,18 @@ describe('blocksToMarkdown (view)', () => {
       ]);
     });
 
+    it('does not report tabs as degraded when the block holds no tab', () => {
+      const empty = blocksToMarkdownWithReport(doc([{ id: 'tabs', type: 'tabs', data: {} }]));
+      const strayOnly = blocksToMarkdownWithReport(doc([
+        { id: 'tabs', type: 'tabs', data: {}, content: ['s1'] },
+        { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+      ]));
+
+      expect(empty.warnings).toEqual([]);
+      expect(strayOnly.warnings).toEqual([]);
+      expect(strayOnly.markdown).toBe('S1');
+    });
+
     it('reports a collapsible heading', () => {
       const { warnings } = blocksToMarkdownWithReport(doc([
         { id: 'h1', type: 'header', data: { text: 'Section', level: 2, isToggleable: true } },
@@ -1189,5 +1201,68 @@ describe('blocksToMarkdown (view)', () => {
   it('returns an empty string for an empty or malformed document', () => {
     expect(blocksToMarkdown(undefined)).toBe('');
     expect(blocksToMarkdown(doc([]))).toBe('');
+  });
+});
+
+/** The editor evicts non-`tab` children of `tabs` to the tabs block's own parent, right after the tabs block. */
+describe('stray children of tabs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('places strays after the tabs subtree, in editor save order', () => {
+    const out = blocksToMarkdown(doc([
+      { id: 'before', type: 'paragraph', data: { text: 'BEFORE' } },
+      { id: 'tabs', type: 'tabs', data: {}, content: ['s1', 't1', 's2'] },
+      { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs', content: ['s1c'] },
+      { id: 's1c', type: 'paragraph', data: { text: 'S1C' }, parent: 's1' },
+      { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 's2', type: 'paragraph', data: { text: 'S2' }, parent: 'tabs' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('BEFORE\n\n**Do**\n\none\n\nS1\n\nS1C\n\nS2\n\nAFTER');
+  });
+
+  it('keeps a tabs block holding only a stray, with the stray after it', () => {
+    const out = blocksToMarkdown(doc([
+      { id: 'tabs', type: 'tabs', data: {}, content: ['s1'] },
+      { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('S1\n\nAFTER');
+  });
+
+  it('keeps a stray in the toggle holding the tabs, right after the tabs', () => {
+    const out = blocksToMarkdown(doc([
+      { id: 'c', type: 'toggle', data: { text: 'C' }, content: ['tabs', 'i2'] },
+      { id: 'tabs', type: 'tabs', data: {}, parent: 'c', content: ['s1', 't1'] },
+      { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+      { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 'i2', type: 'paragraph', data: { text: 'I2' }, parent: 'c' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('**C**\n\n**Do**\n\none\n\nS1\n\nI2\n\nAFTER');
+  });
+
+  it('renders nested tabs without strays as before', () => {
+    const out = blocksToMarkdown(doc([
+      { id: 'c', type: 'toggle', data: { text: 'C' }, content: ['tabs', 'i2'] },
+      { id: 'tabs', type: 'tabs', data: {}, parent: 'c', content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 'i2', type: 'paragraph', data: { text: 'I2' }, parent: 'c' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('**C**\n\n**Do**\n\none\n\nI2\n\nAFTER');
   });
 });

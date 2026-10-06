@@ -302,6 +302,55 @@ const legacyChildren = (block: ViewBlock): unknown[] => {
 };
 
 /**
+ * Move every non-`tab` child of a `tabs` block out, the way the tabs tool
+ * evicts them on load (`scheduleRogueEviction`): each lands in the tabs
+ * block's own parent, right after the tabs block, order and subtree kept.
+ * Tabs are handled in document order, so a stray `tabs` moved out by an outer
+ * one hands its own strays to its new parent, as in the editor.
+ * @param topLevel - root blocks, mutated in place
+ * @param children - children by parent id, mutated in place
+ */
+const hoistTabsStrays = (topLevel: ViewBlock[], children: Map<string, ViewBlock[]>): void => {
+  const parentOf = new Map<ViewBlock, ViewBlock | null>();
+  const tabsBlocks: ViewBlock[] = [];
+  const seen = new Set<ViewBlock>();
+
+  const walk = (block: ViewBlock, parent: ViewBlock | null): void => {
+    if (seen.has(block)) {
+      return;
+    }
+
+    seen.add(block);
+    parentOf.set(block, parent);
+
+    if (block.type === 'tabs') {
+      tabsBlocks.push(block);
+    }
+
+    (block.id === undefined ? [] : children.get(block.id) ?? []).forEach((child) => walk(child, block));
+  };
+
+  topLevel.forEach((block) => walk(block, null));
+
+  for (const tabs of tabsBlocks) {
+    const own = tabs.id === undefined ? [] : children.get(tabs.id) ?? [];
+    const strays = own.filter((child) => child.type !== 'tab');
+    const parent = parentOf.get(tabs) ?? null;
+    const siblings = parent === null ? topLevel : children.get(parent.id ?? '');
+    const at = siblings?.indexOf(tabs) ?? -1;
+
+    if (tabs.id === undefined || strays.length === 0 || siblings === undefined || at === -1) {
+      continue;
+    }
+
+    children.set(tabs.id, own.filter((child) => child.type === 'tab'));
+
+    strays.forEach((stray) => parentOf.set(stray, parent));
+    siblings.splice(at + 1, 0, ...strays);
+  }
+};
+
+/**
  * Build the document model for one render run.
  * @param input - saved document, tolerant of the loose wire shape and nullish input
  */
@@ -506,6 +555,8 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
       children.set(parentId, orderByContent(siblings, content));
     }
   }
+
+  hoistTabsStrays(topLevel, children);
 
   return {
     topLevel,

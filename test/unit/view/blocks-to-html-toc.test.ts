@@ -183,6 +183,23 @@ describe('blocksToHtml — table of contents', () => {
     expect(html).not.toContain('id="inToggle"');
   });
 
+  it('leaves out headings inside tabs, the open tab and a hidden one alike, as the editor does', () => {
+    // The editor and the static renderer share OUTLINE_CONTAINERS.
+    const html = blocksToHtml(doc([
+      toc,
+      { id: 'top', type: 'header', data: { text: 'Top', level: 2 } },
+      { id: 'tabs', type: 'tabs', data: {}, content: ['t1', 't2'] },
+      { id: 't1', type: 'tab', data: { title: 'Open' }, parent: 'tabs', content: ['inOpen'] },
+      { id: 'inOpen', type: 'header', data: { text: 'In open tab', level: 2 }, parent: 't1' },
+      { id: 't2', type: 'tab', data: { title: 'Hidden' }, parent: 'tabs', content: ['inHidden'] },
+      { id: 'inHidden', type: 'header', data: { text: 'In hidden tab', level: 2 }, parent: 't2' },
+    ]));
+
+    expect(html.match(/<a href="#[^"]+">[^<]+<\/a>/g)).toEqual([ '<a href="#top">Top</a>' ]);
+    expect(html).toContain('In open tab');
+    expect(html).toContain('In hidden tab');
+  });
+
   it('renders nothing when the document has no headings to list', () => {
     expect(blocksToHtml(doc([toc, { id: 'p', type: 'paragraph', data: { text: 'Body' } }]))).toBe('<p>Body</p>');
     expect(blocksToHtml(doc([toc]), { toolAttributes: true, blockIds: true, classes: true })).toBe('');

@@ -87,8 +87,10 @@ public sealed class ArticleExport(IBlokDocumentConverter blok, ILogger<ArticleEx
 `FromHtmlAsync` is the inverse of `ToHtmlAsync`. It takes a fragment or a whole
 document and parses the structural subset a document body is made of: headings,
 paragraphs, lists (nested, ordered, checklists), tables (merged cells included),
-images, links and inline marks, code, blockquotes, toggles and dividers. Layout
-containers are unwrapped and their children converted in place.
+images, links and inline marks, code, blockquotes, toggles and dividers. Tabs
+written by `ToHtmlAsync` come back as tabs, with each tab's title, icon and
+content. Other layout containers are unwrapped and their children converted in
+place.
 
 ```csharp
 var import = await blok.FromHtmlAsync(html, ct);

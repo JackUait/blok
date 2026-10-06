@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
 
-import { blocksToHtml, blocksToMarkdown, blocksToPlainText, outlineFromOutputData } from '../../../src/view';
+import { blocksToHtml, blocksToMarkdown, blocksToPlainText, extractTexts, injectTexts, outlineFromOutputData, pageIndex } from '../../../src/view';
 import { buildDocumentModel } from '../../../src/view/document-model';
 
 /**
@@ -175,5 +175,136 @@ describe('child order follows the parent `content`', () => {
 
   it('lists outline headings in that order', () => {
     expect(outlineFromOutputData(doc).map((entry) => entry.id)).toEqual(['c2', 'c1', 'c3']);
+  });
+});
+
+/**
+ * The editor never keeps a non-`tab` child under `tabs`: the tabs tool evicts
+ * each one to the tabs block's own parent, right after the tabs block, subtree
+ * and order kept. The static renderers must read the same document. Expected
+ * orders match the editor's save order, pinned in
+ * test/unit/tools/tabs/tabs-stray-eviction.integration.test.ts.
+ */
+describe('stray children of `tabs` move out the way the editor evicts them', () => {
+  /** Pre-order ids, the order the editor's save() lists them. */
+  const readingOrder = (input: Parameters<typeof buildDocumentModel>[0]): string[] => {
+    const model = buildDocumentModel(input);
+    const ids: string[] = [];
+    const visit = (block: { id?: string }): void => {
+      ids.push(block.id ?? '?');
+      model.childrenOf(block.id).forEach(visit);
+    };
+
+    model.topLevel.forEach(visit);
+
+    return ids;
+  };
+
+  const probe = {
+    blocks: [
+      { id: 'before', type: 'paragraph', data: { text: 'BEFORE' } },
+      { id: 'tabs', type: 'tabs', data: {}, content: ['s1', 't1', 's2'] },
+      { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs', content: ['s1c'] },
+      { id: 's1c', type: 'paragraph', data: { text: 'S1C' }, parent: 's1' },
+      { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 's2', type: 'paragraph', data: { text: 'S2' }, parent: 'tabs' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ],
+  };
+
+  it('places root-level strays right after the tabs subtree, subtree kept', () => {
+    const model = buildDocumentModel(probe);
+
+    expect(readingOrder(probe)).toEqual(['before', 'tabs', 't1', 'p1', 's1', 's1c', 's2', 'after']);
+    expect(model.childrenOf('tabs').map((block) => block.id)).toEqual(['t1']);
+    expect(model.topLevel.map((block) => block.id)).toEqual(['before', 'tabs', 's1', 's2', 'after']);
+  });
+
+  it('keeps a tabs block that holds only a stray, empty, with the stray after it', () => {
+    const doc = {
+      blocks: [
+        { id: 'tabs', type: 'tabs', data: {}, content: ['s1'] },
+        { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+        { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+      ],
+    };
+
+    expect(readingOrder(doc)).toEqual(['tabs', 's1', 'after']);
+    expect(buildDocumentModel(doc).childrenOf('tabs')).toEqual([]);
+  });
+
+  it('keeps a stray in the container that holds the tabs, right after the tabs', () => {
+    const doc = {
+      blocks: [
+        { id: 'before', type: 'paragraph', data: { text: 'B' } },
+        { id: 'o', type: 'toggle', data: { text: 'O' }, content: ['c', 'o2'] },
+        { id: 'c', type: 'toggle', data: { text: 'C' }, parent: 'o', content: ['tabs', 'i2'] },
+        { id: 'tabs', type: 'tabs', data: {}, parent: 'c', content: ['s1', 't1'] },
+        { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs', content: ['s1c'] },
+        { id: 's1c', type: 'paragraph', data: { text: 'S1C' }, parent: 's1' },
+        { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs' },
+        { id: 'i2', type: 'paragraph', data: { text: 'I2' }, parent: 'c' },
+        { id: 'o2', type: 'paragraph', data: { text: 'O2' }, parent: 'o' },
+        { id: 'after', type: 'paragraph', data: { text: 'A' } },
+      ],
+    };
+
+    expect(readingOrder(doc)).toEqual(['before', 'o', 'c', 'tabs', 't1', 's1', 's1c', 'i2', 'o2', 'after']);
+    expect(buildDocumentModel(doc).childrenOf('c').map((block) => block.id)).toEqual(['tabs', 's1', 'i2']);
+  });
+
+  it('puts each tabs block\'s strays right after it when two share a container', () => {
+    const doc = {
+      blocks: [
+        { id: 'c', type: 'toggle', data: { text: 'C' }, content: ['ta', 'tb'] },
+        { id: 'ta', type: 'tabs', data: {}, parent: 'c', content: ['a1', 'ta1', 'a2'] },
+        { id: 'a1', type: 'paragraph', data: { text: 'A1' }, parent: 'ta' },
+        { id: 'ta1', type: 'tab', data: { title: 'x' }, parent: 'ta' },
+        { id: 'a2', type: 'paragraph', data: { text: 'A2' }, parent: 'ta' },
+        { id: 'tb', type: 'tabs', data: {}, parent: 'c', content: ['b1', 'tb1'] },
+        { id: 'b1', type: 'paragraph', data: { text: 'B1' }, parent: 'tb' },
+        { id: 'tb1', type: 'tab', data: { title: 'y' }, parent: 'tb' },
+        { id: 'after', type: 'paragraph', data: { text: 'A' } },
+      ],
+    };
+
+    expect(readingOrder(doc)).toEqual(['c', 'ta', 'ta1', 'a1', 'a2', 'tb', 'tb1', 'b1', 'after']);
+  });
+
+  it('leaves a lone root-level tab where it is', () => {
+    const doc = {
+      blocks: [
+        { id: 't1', type: 'tab', data: { title: 'Do' }, content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      ],
+    };
+
+    expect(readingOrder(doc)).toEqual(['t1', 'p1']);
+  });
+
+  it('keeps extractTexts and injectTexts aligned on a document with strays', () => {
+    const texts = extractTexts(probe);
+    const translated = injectTexts(probe, texts.map((text) => `~${text}`));
+
+    expect(extractTexts(translated)).toEqual(texts.map((text) => `~${text}`));
+  });
+
+  it('lists outline headings in editor order', () => {
+    const doc = {
+      blocks: [
+        { id: 'tabs', type: 'tabs', data: {}, content: ['h1', 't1'] },
+        { id: 'h1', type: 'header', data: { text: 'Stray', level: 2 }, parent: 'tabs' },
+        { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['h2'] },
+        { id: 'h2', type: 'header', data: { text: 'Inside', level: 2 }, parent: 't1' },
+      ],
+    };
+
+    expect(outlineFromOutputData(doc).map((entry) => entry.id)).toEqual(['h2', 'h1']);
+  });
+
+  it('lists page-index text in editor order', () => {
+    expect(pageIndex(probe).text.map((entry) => entry.blockId))
+      .toEqual(['before', 'tabs', 't1', 'p1', 's1', 's1c', 's2', 'after']);
   });
 });

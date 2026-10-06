@@ -1169,7 +1169,9 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       return childrenToMarkdown(block, context);
     /** Static Markdown cannot switch tabs, so every tab is written in order. */
     case 'tabs':
-      warn(context, block.tool, 'degraded', 'tabs are written one after another, each under its bold title; switching between them is lost');
+      if ((context.childrenOf.get(block.id ?? '') ?? []).some((child) => child.tool === 'tab')) {
+        warn(context, block.tool, 'degraded', 'tabs are written one after another, each under its bold title; switching between them is lost');
+      }
 
       return childrenToMarkdown(block, context);
     case 'tab': {

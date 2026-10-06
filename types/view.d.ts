@@ -654,9 +654,10 @@ export interface HtmlImportResult {
  *
  * Covers the structural subset a document body is made of: headings,
  * paragraphs, lists (nested, ordered, checklists), tables (merged cells
- * included), images, links and inline marks, code, blockquotes, toggles and
- * dividers. Layout containers are unwrapped and their children converted in
- * place; anything else is reported rather than dropped in silence.
+ * included), images, links and inline marks, code, blockquotes, toggles,
+ * dividers, and the tabs `blocksToHtml` writes. Other layout containers are
+ * unwrapped and their children converted in place; anything else is reported
+ * rather than dropped in silence.
  *
  * Reach for {@link htmlToBlocksWithReport} when the caller has to be told what
  * the HTML could not carry.

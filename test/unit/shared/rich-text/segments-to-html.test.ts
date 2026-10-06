@@ -46,6 +46,28 @@ describe('segmentsToHtml', () => {
       .toBe('<abbr title="X &amp; Y">x</abbr>');
   });
 
+  it('renders a custom mark with an invalid tag name unwrapped', () => {
+    expect(segmentsToHtml([{ text: 'x', marks: { 'tag:img src=x onerror=alert(1)': {} } }])).toBe('x');
+    expect(segmentsToHtml([{ text: 'x', marks: { 'tag:': {} } }])).toBe('x');
+  });
+
+  it('skips attributes with invalid names', () => {
+    expect(segmentsToHtml([{ text: 'x', marks: { 'tag:abbr': { 'onclick="a"': 'b', title: 'T' } } }]))
+      .toBe('<abbr title="T">x</abbr>');
+  });
+
+  it('writes one link for runs whose link objects differ only in key order', () => {
+    expect(segmentsToHtml([
+      { text: 'a', marks: { link: { href: 'https://x.com', target: '_blank' } } },
+      { text: 'b', marks: { link: { target: '_blank', href: 'https://x.com' } } },
+    ])).toBe('<a href="https://x.com" target="_blank">ab</a>');
+  });
+
+  it('writes custom attributes in sorted name order', () => {
+    expect(segmentsToHtml([{ text: 'x', marks: { 'tag:abbr': { title: 'T', lang: 'en' } } }]))
+      .toBe('<abbr lang="en" title="T">x</abbr>');
+  });
+
   it('returns an empty string for no segments', () => {
     expect(segmentsToHtml([])).toBe('');
   });

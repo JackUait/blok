@@ -546,6 +546,8 @@ export interface BlokMountOptions {
    *
    * Blok reads both shapes on input whatever this says. With legacy output
    * (`dataModel: 'legacy'`, or `'auto'` with legacy input) the output stays HTML.
+   * With `collaboration` configured the output also stays HTML, and Blok logs
+   * a console warning.
    * @default 'html'
    */
   richText?: RichTextFormat;

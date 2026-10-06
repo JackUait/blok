@@ -1,7 +1,7 @@
 import { COLOR_PRESETS, colorVarName } from '../../components/shared/color-presets';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../page-reference';
 import { EQUATION_SOURCE_ATTR } from '../equation-mark';
-import type { RichText, RichTextMarks, RichTextSegment } from './types';
+import type { RichText, RichTextMarks, RichTextSegment } from '../../../types/rich-text';
 
 const PRESET_NAMES = new Set(COLOR_PRESETS.map(preset => preset.name));
 
@@ -13,9 +13,13 @@ const escapeAttr = (value: string): string => escapeText(value).replace(/"/g, '&
 const cssColor = (value: string, mode: 'text' | 'bg'): string =>
   PRESET_NAMES.has(value) ? colorVarName(value, mode) : value;
 
+/** Tag and attribute names are written raw, so anything else could break out of the tag. */
+const isSafeName = (name: string): boolean => /^[a-z][a-z0-9-]*$/i.test(name);
+
 const attrs = (pairs: Record<string, string | undefined>): string =>
   Object.keys(pairs)
-    .filter(name => pairs[name] !== undefined)
+    .sort()
+    .filter(name => pairs[name] !== undefined && isSafeName(name))
     .map(name => ` ${name}="${escapeAttr(pairs[name] as string)}"`)
     .join('');
 
@@ -78,7 +82,18 @@ const customWrapper = (key: `tag:${string}`): Wrapper => {
   };
 };
 
-const stableKey = (value: unknown): string => JSON.stringify(value) ?? 'undefined';
+const sortKeys = (value: unknown): unknown => {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return value;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return Object.fromEntries(Object.keys(record).sort().map(key => [key, sortKeys(record[key])]));
+};
+
+/** Key order must not matter, or equal marks split into two wrappers. */
+const stableKey = (value: unknown): string => JSON.stringify(sortKeys(value)) ?? 'undefined';
 
 const leaf = (segment: RichTextSegment): string => {
   if ('text' in segment) {
@@ -137,7 +152,8 @@ const render = (segments: RichTextSegment[], wrappers: Wrapper[], depth: number)
     .join('');
 };
 
-const isCustomKey = (key: string): key is `tag:${string}` => key.startsWith('tag:');
+const isCustomKey = (key: string): key is `tag:${string}` =>
+  key.startsWith('tag:') && isSafeName(key.slice('tag:'.length));
 
 /**
  * Rich text → the inline HTML Blok tools store internally.

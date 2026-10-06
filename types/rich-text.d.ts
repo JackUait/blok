@@ -6,9 +6,9 @@ export interface RichTextLink {
 }
 
 /**
- * Formatting on one run of text. Open map: keys Blok does not know are kept
- * as they are. Custom inline tools that Blok cannot name are stored as
- * `"tag:<tagname>": { <attribute>: <value> }`.
+ * Formatting on one run of text. Custom inline tools that Blok cannot name
+ * are stored as `"tag:<tagname>": { <attribute>: <value> }`. Any other key
+ * is dropped on input with one console warning per key.
  */
 export interface RichTextMarks {
   bold?: true;
@@ -34,10 +34,13 @@ export interface RichTextTextSegment {
   marks?: RichTextMarks;
 }
 
+/**
+ * An inline object inside rich text. `html` holds markup the segment model
+ * has no slot for (an `<img>` or a list inside a paragraph), kept verbatim.
+ */
 export type RichTextEmbed =
   | { equation: { expression: string } }
   | { page: { id: string } }
-  /** Markup the segment model has no slot for (an `<img>` or a list inside a paragraph). Kept verbatim. */
   | { html: string };
 
 export interface RichTextEmbedSegment {

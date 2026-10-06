@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { init, parse } from 'es-module-lexer';
+import { init, parse } from 'es-module-lexer/minimal';
 import { rollup } from 'rollup';
 import { describe, expect, it } from 'vitest';
 
@@ -16,7 +16,7 @@ const exportNames = (path: string): string[] => {
 
 describe('dist override wrappers', () => {
   it('wraps every published entry and ships the runtime', async () => {
-    await init;
+    await init();
     for (const entry of ENTRIES) {
       for (const ext of entry.formats) {
         const wrapper = join(dist, `${entry.file}.${ext}`);
@@ -30,7 +30,7 @@ describe('dist override wrappers', () => {
   });
 
   it('guards exactly the impl export set (no drift)', async () => {
-    await init;
+    await init();
     for (const entry of ENTRIES) {
       expect(
         exportNames(join(dist, `${entry.file}.mjs`)),

@@ -79,6 +79,12 @@ export default defineConfig(({ mode }) => {
                     return true;
                   }
 
+                  // elkjs (EPL-2.0) ships because mermaid 12 imports it for its
+                  // default ELK layout. Keep in sync with test/unit/build/vendor-license.test.ts.
+                  if (dependency.name === 'elkjs' && dependency.license === 'EPL-2.0') {
+                    return true;
+                  }
+
                   // Return false for unlicensed dependencies.
                   if (!dependency.license) {
                     return false;

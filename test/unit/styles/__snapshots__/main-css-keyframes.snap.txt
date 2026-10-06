@@ -736,10 +736,6 @@
   to { opacity: 0.2; transform: scale(0.6) }
 }
 
-@keyframes blok-preview-media-wave {
-  50% { transform: scaleY(0.5) }
-}
-
 @keyframes blok-preview-media-wave-flag {
   to { transform: scaleX(0.7) skewY(6deg) }
 }

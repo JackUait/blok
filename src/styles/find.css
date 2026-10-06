@@ -522,15 +522,17 @@
 
 /* ─── Active match lens ─── */
 
+/* At the page origin, so the boxes scroll with the page (find-lens.ts adds the scroll offset). */
 [data-blok-find-lens] {
-  position: fixed;
-  inset: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
   z-index: var(--blok-z-find, 25);
   overflow: visible;
 }
 
 /*
-  Drawn from the viewport's top-left; JS supplies translate, width and height.
+  Drawn from the page's top-left; JS supplies translate, width and height.
   No padding: the box must match the ::highlight fill exactly, or a band of
   page shows between fill and ring. The ring is an outer shadow, so it paints
   over the fill's square corners that the radius leaves bare.

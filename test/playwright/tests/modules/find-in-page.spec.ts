@@ -591,6 +591,28 @@ test.describe('find in page', () => {
   });
 
   test.describe('closing', () => {
+    // The browser scrolls the page off the main thread; a lens moved by a scroll listener trails the text.
+    test('the lens scrolls with the page itself, before any scroll handler runs', async ({ page }) => {
+      await createEditor(page, paragraphs(...Array.from({ length: 40 }, (_, i) => (i === 20 ? 'the needle line' : `filler line ${i}`))));
+      await focusParagraph(page, 'filler line 0');
+      await openFind(page, 'needle');
+      await expect(page.getByTestId('find-lens-box')).toBeInViewport();
+
+      const offset = await page.getByTestId('find-lens-box').evaluate((box) => {
+        const [range] = [...CSS.highlights.get('blok-find-match-active') ?? []];
+
+        if (!(range instanceof Range)) {
+          return null;
+        }
+        window.scrollBy({ top: 60, behavior: 'instant' });
+
+        return Math.abs(box.getBoundingClientRect().top - range.getBoundingClientRect().top);
+      });
+
+      expect(offset).not.toBeNull();
+      expect(offset).toBeLessThanOrEqual(1.5);
+    });
+
     test('stepping into a closed tab puts the lens on the match once the tab has animated in', async ({ page }) => {
       await createEditor(page, [
         { id: 'tabs1', type: 'tabs', data: {}, content: ['t1', 't2'] },

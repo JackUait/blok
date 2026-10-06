@@ -15283,8 +15283,9 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-find-lens] {
-  position: fixed;
-  inset: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
   z-index: var(--blok-z-find, 25);
   overflow: visible;
 }

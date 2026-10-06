@@ -694,7 +694,7 @@ The types are `RichText`, `RichTextSegment` and `RichTextMarks`, exported from `
 - A custom inline tool's tag is stored as `"tag:<name>": { <attribute>: <value> }`.
 - An inline object is `{ embed: { equation: { expression } } }`, `{ embed: { page: { id } } }` or `{ embed: { html } }`. The `html` embed keeps markup that has no mark, such as an `<img>`, verbatim.
 
-These fields become segments: `text` on `paragraph`, `header`, `list`, `toggle` and `quote`. A custom block tool's field is converted when the tool gives it a tag-map rule in `static sanitize`. Table cells and plain-text fields such as captions stay strings.
+These fields become segments: `text` on `paragraph`, `header`, `list`, `toggle` and `quote`. A custom block tool takes part only when it lists its fields in `static richTextFields`, such as `['text']`. Without it, the tool's fields stay as the tool stores them, on input and on output. A sanitize rule does not count. Table cells and plain-text fields such as captions stay strings.
 
 ### Input Takes Both Shapes
 
@@ -711,7 +711,7 @@ In segments mode these return segments:
 - `getBlockData` from `useBlocks` in the React, Vue and Angular adapters. Its `.data` is a new object on every call, so do not use it as a memo dependency.
 - The value `importMarkdown()` returns.
 
-`exportMarkdown()` is unchanged. `@bloklabs/core/view` (`blocksToHtml`, plain text, markdown, outline) and the C# server runtime read both shapes.
+`exportMarkdown()` is unchanged. `@bloklabs/core/view` (`blocksToHtml`, plain text, markdown, outline) reads both shapes in built-in block types. A custom block type's fields reach your renderer as stored. The C# server runtime reads both shapes.
 
 The output stays HTML, with one console warning, in two cases:
 
@@ -724,7 +724,7 @@ The output stays HTML, with one console warning, in two cases:
 - `BlockAPI.preservedData` and `target.preservedData` in `onChange`. They are an internal snapshot.
 - The database `rowPages` `body` and `acceptedBody` sent to your host. Store and echo them unchanged.
 - `extractTexts()` returns HTML strings. `injectTexts()` writes each field back in the shape it found.
-- Fields of custom block tools without a tag-map sanitize rule.
+- Fields of custom block tools that do not declare `static richTextFields`.
 
 ### Things to Check Before You Turn It On
 

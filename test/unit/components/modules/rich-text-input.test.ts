@@ -247,3 +247,27 @@ describe('richTextInputToHtml on the table tool', () => {
     expect(richTextInputToHtml(adapter, { content: [['a', 'b']] }, resolve)).toEqual({ content: [['a', 'b']] });
   });
 });
+
+describe('nested row documents on input', () => {
+  const adapter = (name: string, constructable: unknown): BlockToolAdapter => new BlockToolAdapter({
+    name,
+    constructable: constructable as BlockToolConstructable,
+    config: {},
+    api: {} as API,
+    isDefault: false,
+    isInternal: false,
+  });
+  const paragraph = adapter('paragraph', Paragraph);
+  const resolve = (name: string): BlockToolAdapter | undefined => (name === 'paragraph' ? paragraph : undefined);
+  const nested = { properties: { notes: { blocks: [{ type: 'paragraph', data: { text: [{ text: 'a < b' }] } }] } } };
+
+  it('reads a database-row property document', () => {
+    expect(richTextInputToHtml(adapter('database-row', Table), nested, resolve)).toEqual({
+      properties: { notes: { blocks: [{ type: 'paragraph', data: { text: 'a &lt; b' } }] } },
+    });
+  });
+
+  it('leaves a custom tool\'s nested documents alone', () => {
+    expect(richTextInputToHtml(adapter('my-tool', Table), nested, resolve)).toEqual(nested);
+  });
+});

@@ -1,6 +1,6 @@
 import type { BlockToolData } from '../../../types';
 import type { BlockToolAdapter } from '../tools/block';
-import { blockDataToHtml } from '../../shared/rich-text/block-data';
+import { blockDataToHtml, nestedDocumentsFor } from '../../shared/rich-text/block-data';
 import { isRichText } from '../../shared/rich-text/guards';
 import { logLabeled } from '../utils';
 
@@ -48,5 +48,5 @@ export const richTextInputToHtml = (
 
   warnUnknownMarksOnce(data, tool.richTextFields);
 
-  return blockDataToHtml(data, tool.richTextFields, type => resolveTool(type)?.richTextFields ?? []);
+  return blockDataToHtml(data, tool.richTextFields, type => resolveTool(type)?.richTextFields ?? [], nestedDocumentsFor(tool.name));
 };

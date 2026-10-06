@@ -35,7 +35,7 @@ import type { LegacyGrammarEntry } from '../components/migration/legacy-grammar.
 import { migrateBlocks } from '../components/migration/block-migrations';
 import type { BlockMigrations } from '../components/migration/block-migrations';
 import type { RichText, RichTextEmbed } from '../../types/rich-text';
-import { outputBlocksToSegments } from '../shared/rich-text/block-data';
+import { isNestedDocument, nestedDocumentsFor, outputBlocksToSegments } from '../shared/rich-text/block-data';
 import { RICH_TEXT_FIELDS } from '../shared/rich-text/fields';
 import { isRichText } from '../shared/rich-text/guards';
 import { segmentsToHtml } from '../shared/rich-text/segments-to-html';
@@ -300,9 +300,6 @@ const lossyReasons = (rich: RichText): Set<RichTextLossyReport['reason']> => {
   return reasons;
 };
 
-const isNestedDocument = (value: unknown): value is { blocks: OutputBlockData[] } =>
-  typeof value === 'object' && value !== null && Array.isArray((value as { blocks?: unknown }).blocks);
-
 /** Walks input and output side by side, so only fields converted in this pass are reported. */
 const reportLossy = (
   before: OutputBlockData[],
@@ -321,7 +318,9 @@ const reportLossy = (
       }
     }
 
-    reportNestedLossy(oldData.properties, newData.properties, onLossy);
+    if (nestedDocumentsFor(block.type).nestedDocuments === true) {
+      reportNestedLossy(oldData.properties, newData.properties, onLossy);
+    }
   });
 };
 

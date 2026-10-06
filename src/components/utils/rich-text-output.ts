@@ -1,6 +1,6 @@
 import type { BlockToolData } from '../../../types';
 import type { BlockToolAdapter } from '../tools/block';
-import { blockDataToSegments } from '../../shared/rich-text/block-data';
+import { blockDataToSegments, nestedDocumentsFor } from '../../shared/rich-text/block-data';
 import { htmlToSegmentsDom } from './rich-text-dom';
 
 /**
@@ -18,5 +18,11 @@ export const richTextOutputForHost = (
   resolveTool: (name: string) => BlockToolAdapter | undefined,
   options: { collaborating: boolean; legacyOutput: boolean }
 ): BlockToolData => (tool.richTextFormat === 'segments' && !options.collaborating && !options.legacyOutput
-  ? blockDataToSegments(data, tool.richTextFields, type => resolveTool(type)?.richTextFields ?? [], htmlToSegmentsDom)
+  ? blockDataToSegments(
+    data,
+    tool.richTextFields,
+    type => resolveTool(type)?.richTextFields ?? [],
+    htmlToSegmentsDom,
+    nestedDocumentsFor(tool.name)
+  )
   : data);

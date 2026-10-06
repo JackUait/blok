@@ -3,6 +3,7 @@ import { blockDataToHtml, blockDataToSegments, outputBlocksToHtml, outputBlocksT
 import { htmlToSegmentsNode } from '../../../../src/view/rich-text-parse5';
 
 const resolve = richTextFieldsFor;
+const paragraphOnly = (type: string): string[] => (type === 'paragraph' ? ['text'] : []);
 
 describe('block data converters', () => {
   it('converts only the named fields and leaves the rest untouched', () => {
@@ -17,12 +18,35 @@ describe('block data converters', () => {
     expect(blockDataToHtml({ text: '<b>a</b>' }, ['text'], resolve)).toEqual({ text: '<b>a</b>' });
   });
 
-  it('converts nested row documents inside properties', () => {
+  it('converts nested row documents inside properties when asked', () => {
     const row = { properties: { notes: { blocks: [{ id: 'n1', type: 'paragraph', data: { text: '<i>x</i>' } }] }, status: 'done' } };
 
-    expect(blockDataToSegments(row, [], resolve, htmlToSegmentsNode)).toEqual({
+    expect(blockDataToSegments(row, [], resolve, htmlToSegmentsNode, { nestedDocuments: true })).toEqual({
       properties: { notes: { blocks: [{ id: 'n1', type: 'paragraph', data: { text: [{ text: 'x', marks: { italic: true } }] } }] }, status: 'done' },
     });
+  });
+
+  it('leaves nested documents alone by default', () => {
+    const row = { properties: { notes: { blocks: [{ id: 'n1', type: 'paragraph', data: { text: '<i>x</i>' } }] } } };
+    const segments = { properties: { notes: { blocks: [{ id: 'n1', type: 'paragraph', data: { text: [{ text: 'x' }] } }] } } };
+
+    expect(blockDataToSegments(row, [], resolve, htmlToSegmentsNode)).toEqual(row);
+    expect(blockDataToHtml(segments, [], resolve)).toEqual(segments);
+  });
+
+  it('walks nested documents of database-row blocks only', () => {
+    const data = { properties: { notes: { blocks: [{ id: 'n1', type: 'paragraph', data: { text: '<i>x</i>' } }] } } };
+    const converted = { properties: { notes: { blocks: [{ id: 'n1', type: 'paragraph', data: { text: [{ text: 'x', marks: { italic: true } }] } }] } } };
+    const blocks = [{ id: 'r', type: 'database-row', data }, { id: 'c', type: 'my-tool', data }];
+
+    expect(outputBlocksToSegments(blocks, paragraphOnly, htmlToSegmentsNode)).toEqual([
+      { id: 'r', type: 'database-row', data: converted },
+      { id: 'c', type: 'my-tool', data },
+    ]);
+    expect(outputBlocksToHtml([{ id: 'c', type: 'my-tool', data: converted }], paragraphOnly)).toEqual([{ id: 'c', type: 'my-tool', data: converted }]);
+    expect(outputBlocksToHtml([{ id: 'r', type: 'database-row', data: converted }], paragraphOnly)).toEqual([
+      { id: 'r', type: 'database-row', data: { properties: { notes: { blocks: [{ id: 'n1', type: 'paragraph', data: { text: '<i>x</i>' } }] } } } },
+    ]);
   });
 
   it('does not mutate its input', () => {

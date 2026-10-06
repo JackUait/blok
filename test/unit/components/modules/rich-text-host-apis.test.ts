@@ -53,8 +53,15 @@ const fallbackWarnings = (spy: MockInstance): unknown[][] =>
   spy.mock.calls.filter(call => call.some(arg => typeof arg === 'string' && arg.includes('richText: "segments" is ignored')));
 
 /** A BlockAPI over a stub block whose core runs with or without collaboration. */
-const blockApiUnder = (collaborating: boolean, data: Record<string, unknown> = { text: '<b>a</b>' }): BlockAPIInterface => {
-  const tool = { name: 'paragraph', richTextFormat: 'segments', richTextFields: [ 'text' ] } as unknown as BlockToolAdapter;
+const blockApiUnder = (
+  collaborating: boolean,
+  data: Record<string, unknown> = { text: '<b>a</b>' },
+  name = 'paragraph'
+): BlockAPIInterface => {
+  const paragraph = { name: 'paragraph', richTextFormat: 'segments', richTextFields: [ 'text' ] } as unknown as BlockToolAdapter;
+  const tool = name === 'paragraph'
+    ? paragraph
+    : { name, richTextFormat: 'segments', richTextFields: [] } as unknown as BlockToolAdapter;
   const moduleConfig = {
     config: { richText: 'segments' as const },
     eventsDispatcher: { on: vi.fn(), off: vi.fn(), emit: vi.fn() } as unknown as Saver['eventsDispatcher'],
@@ -63,7 +70,7 @@ const blockApiUnder = (collaborating: boolean, data: Record<string, unknown> = {
   const api = new API(moduleConfig);
   const state = {
     Saver: saver,
-    Tools: { blockTools: new Map([['paragraph', tool]]) },
+    Tools: { blockTools: new Map([['paragraph', paragraph], [name, tool]]) },
     Renderer: { getDetectedInputFormat: () => 'flat' },
     ...(collaborating ? { Collaboration: { isEnabled: true } } : {}),
   } as unknown as BlokModules;
@@ -73,9 +80,9 @@ const blockApiUnder = (collaborating: boolean, data: Record<string, unknown> = {
 
   const block = {
     id: 'p1',
-    name: 'paragraph',
+    name,
     tool,
-    save: () => Promise.resolve({ id: 'p1', tool: 'paragraph', data, time: 0 }),
+    save: () => Promise.resolve({ id: 'p1', tool: name, data, time: 0 }),
   } as unknown as Block;
 
   return new BlockAPI(block, api);
@@ -126,9 +133,17 @@ describe('host APIs that bypass the Saver — richText segments', { timeout: 60_
   it('BlockAPI.save converts a nested row document too', async () => {
     const nested = { properties: { notes: { blocks: [{ type: 'paragraph', data: { text: '<b>a</b>' } }] } } };
 
-    const saved = await blockApiUnder(false, nested).save();
+    const saved = await blockApiUnder(false, nested, 'database-row').save();
 
     expect(saved?.data).toEqual({ properties: { notes: { blocks: [{ type: 'paragraph', data: { text: bold } }] } } });
+  });
+
+  it('BlockAPI.save leaves a custom tool\'s nested documents alone', async () => {
+    const nested = { properties: { notes: { blocks: [{ type: 'paragraph', data: { text: '<b>a</b>' } }] } } };
+
+    const saved = await blockApiUnder(false, nested, 'my-tool').save();
+
+    expect(saved?.data).toEqual(nested);
   });
 
   it('BlockAPI.save keeps HTML with legacy output, like the document save', async () => {

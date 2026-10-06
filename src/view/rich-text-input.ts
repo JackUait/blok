@@ -5,7 +5,7 @@
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*).
  */
 import type { OutputBlockData } from '../../types';
-import { blockDataToHtml, richTextFieldsFor } from '../shared/rich-text/block-data';
+import { blockDataToHtml, nestedDocumentsFor, richTextFieldsFor } from '../shared/rich-text/block-data';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -24,5 +24,5 @@ export const viewBlocksToHtml = (blocks: OutputBlockData[]): OutputBlockData[] =
 
     const type = typeof block.type === 'string' ? block.type : '';
 
-    return { ...block, data: blockDataToHtml(block.data, richTextFieldsFor(type), richTextFieldsFor) } as OutputBlockData;
+    return { ...block, data: blockDataToHtml(block.data, richTextFieldsFor(type), richTextFieldsFor, nestedDocumentsFor(type)) } as OutputBlockData;
   });

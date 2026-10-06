@@ -56,6 +56,18 @@ describe('migrate rich text', () => {
     ] } } });
   });
 
+  it('leaves nested documents of an unknown type alone', () => {
+    const onLossy = vi.fn();
+    const input = { blocks: [{
+      id: 'x',
+      type: 'my-tool',
+      data: { properties: { notes: { blocks: [{ id: 'n', type: 'paragraph', data: { text: '<b>a</b><img src="a.png">' } }] } } },
+    }] };
+
+    expect(migrateToRichText(input, { onLossy })).toEqual(input);
+    expect(onLossy).not.toHaveBeenCalled();
+  });
+
   it('does not report fields that were already segments', () => {
     const onLossy = vi.fn();
     const once = migrateToRichText({ blocks: [{ id: 'a', type: 'paragraph', data: { text: '<img src="a.png">' } }] });

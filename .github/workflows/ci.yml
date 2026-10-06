@@ -6,9 +6,12 @@ on:
   pull_request:
     branches: ["**"]
 
+# Only PR runs are cancelled. A main run cancelled mid-CodeQL uploads a
+# failed SARIF, and code scanning then reports CodeQL errors for main. A
+# newer main push still replaces a queued run before it starts.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

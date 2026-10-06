@@ -59,7 +59,7 @@ type Workflow = {
   name?: string;
   concurrency?: {
     group?: string;
-    'cancel-in-progress'?: boolean;
+    'cancel-in-progress'?: boolean | string;
   };
   on?: {
     workflow_call?: {
@@ -192,9 +192,11 @@ describe('CI critical-path law', () => {
       expect(ci.jobs[id], `missing preserved CI job "${id}"`).toBeDefined();
     }
 
+    // Only PR runs are cancelled. A main run cancelled mid-CodeQL uploads a
+    // failed SARIF, and code scanning then reports CodeQL errors for main.
     expect(ci.concurrency).toEqual({
       group: '${{ github.workflow }}-${{ github.ref }}',
-      'cancel-in-progress': true,
+      'cancel-in-progress': "${{ github.event_name == 'pull_request' }}",
     });
   });
 

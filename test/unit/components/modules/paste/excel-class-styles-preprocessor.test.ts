@@ -165,19 +165,21 @@ describe('preprocessExcelClassStyles rule reading', () => {
   });
 
   // A hostile clipboard must not freeze the tab. Each shape never completes a match.
+  // The CDO cases do real work per rule: ~40-65ms locally, 211ms once on a CI
+  // runner. A quadratic scan takes ~20s, so 1s still catches it.
   it.each([
-    ['no brace at all', 'a'.repeat(200_000)],
-    ['a rule that never closes', `.a {${'b'.repeat(200_000)}`],
-    ['many comments that never close', '/*a'.repeat(66_000)],
-    ['one prelude of CDO tokens', `${'<!-- '.repeat(40_000)}.a {font-weight:700}`],
-    ['many rules behind CDO tokens', '<!-- .a{} '.repeat(20_000)],
-  ])('reads a 200k <style> with %s in linear time', (_label, styleText) => {
+    ['no brace at all', 'a'.repeat(200_000), 200],
+    ['a rule that never closes', `.a {${'b'.repeat(200_000)}`, 200],
+    ['many comments that never close', '/*a'.repeat(66_000), 200],
+    ['one prelude of CDO tokens', `${'<!-- '.repeat(40_000)}.a {font-weight:700}`, 1000],
+    ['many rules behind CDO tokens', '<!-- .a{} '.repeat(20_000), 1000],
+  ])('reads a 200k <style> with %s in linear time', (_label, styleText, budgetMs) => {
     const html = `<html><head><style>${styleText}</style></head><body><table><tr><td class=a>A</td></tr></table></body></html>`;
     const start = performance.now();
 
     preprocessExcelClassStyles(html);
 
-    expect(performance.now() - start).toBeLessThan(200);
+    expect(performance.now() - start).toBeLessThan(budgetMs);
   });
 });
 

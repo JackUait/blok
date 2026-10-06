@@ -557,7 +557,7 @@
   --blok-find-lens-ring: rgba(255, 128, 0, 0.72);
   --blok-find-empty-bg: rgba(235, 87, 87, 0.07);
   --blok-find-empty-border: rgba(235, 87, 87, 0.55);
-  --blok-find-bar-width: 385px;
+  --blok-find-bar-width: 362px;
   /* Distance from the window edges named by the find.placement config; find.offset overrides per editor. */
   --blok-find-offset-x: 16px;
   --blok-find-offset-y: 12px;

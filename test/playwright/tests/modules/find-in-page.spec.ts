@@ -200,6 +200,8 @@ test.describe('find in page', () => {
       const frame = page.frameLocator('iframe[title="Embedded frame"]');
 
       await frame.getByRole('button', { name: 'Play' }).click();
+      // The page takes focus back one task after the click. A key sent before that lands in the frame.
+      await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).not.toBe('IFRAME');
       await page.keyboard.press(FIND_KEY);
 
       await expect(page.getByTestId('find-input')).toBeFocused();

@@ -431,7 +431,7 @@ export class Find extends Module {
    * The frame's own keyboard controls are the cost.
    */
   private readonly onWindowBlur = (): void => {
-    // The frame is document.activeElement only after the blur.
+    // Chromium ignores blur() on the frame inside this event and its microtasks; a new task works.
     setTimeout(() => {
       const active = document.activeElement;
 

@@ -62,7 +62,7 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
       ]);
 
       // Phones cap the bar at the viewport, so the field fills what is left.
-      const expected = width < 651 ? 166 : 193;
+      const expected = width < 651 ? 189 : 193;
 
       expect(Math.round(find?.width ?? 0)).toBe(expected);
       expect(replace?.width).toBe(find?.width);

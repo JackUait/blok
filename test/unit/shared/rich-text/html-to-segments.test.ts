@@ -164,4 +164,21 @@ describe('canonicalizeSegments', () => {
     expect(JSON.stringify(canonicalizeSegments([{ text: 'a', marks: {} }, { text: 'b' }])))
       .toBe(JSON.stringify([{ text: 'ab' }]));
   });
+
+  it('writes a link as { href, target, rel }, dropping undefined members', () => {
+    const out = canonicalizeSegments([
+      { text: 'a', marks: { link: { rel: 'r', href: 'h', target: '_blank' } } },
+      { text: 'b', marks: { link: { href: 'h', target: undefined } } },
+    ]);
+
+    expect(JSON.stringify(out)).toBe(JSON.stringify([
+      { text: 'a', marks: { link: { href: 'h', target: '_blank', rel: 'r' } } },
+      { text: 'b', marks: { link: { href: 'h' } } },
+    ]));
+  });
+
+  it('sorts the attributes of a custom tag mark', () => {
+    expect(JSON.stringify(canonicalizeSegments([{ text: 'a', marks: { 'tag:span': { 'data-a': '1', class: 'c' } } }])))
+      .toBe(JSON.stringify([{ text: 'a', marks: { 'tag:span': { class: 'c', 'data-a': '1' } } }]));
+  });
 });

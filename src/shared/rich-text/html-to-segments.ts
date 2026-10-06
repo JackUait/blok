@@ -2,7 +2,7 @@ import { COLOR_PRESETS } from '../../components/shared/color-presets';
 import { PAGE_REFERENCE_ATTR } from '../page-reference';
 import { EQUATION_SOURCE_ATTR } from '../equation-mark';
 import type { InlineNode } from './inline-tree';
-import type { RichText, RichTextMarks, RichTextSegment, RichTextTextSegment } from '../../../types/rich-text';
+import type { RichText, RichTextLink, RichTextMarks, RichTextSegment, RichTextTextSegment } from '../../../types/rich-text';
 
 const SIMPLE_MARKS: Record<string, keyof RichTextMarks> = {
   strong: 'bold', b: 'bold', em: 'italic', i: 'italic', u: 'underline',
@@ -50,17 +50,28 @@ const sortedRecord = (record: Record<string, string>): Record<string, string> =>
 
 const BOOLEAN_MARKS = new Set<keyof RichTextMarks>(['highlight', 'bold', 'italic', 'underline', 'strikethrough', 'code', 'sup', 'sub']);
 
+/** Yjs stores link keys sorted; this order is the one the echo check and the C# export compare. */
+const canonicalLink = (link: RichTextLink): RichTextLink => ({
+  href: link.href,
+  ...(link.target === undefined ? {} : { target: link.target }),
+  ...(link.rel === undefined ? {} : { rel: link.rel }),
+});
+
 const orderMarks = (marks: RichTextMarks): RichTextMarks | undefined => {
   const ordered: Record<string, unknown> = {};
 
   for (const key of MARK_ORDER) {
     // A host may write `bold: false`; only `true` is a mark.
     if (BOOLEAN_MARKS.has(key) ? marks[key] === true : marks[key] !== undefined) {
-      ordered[key] = marks[key];
+      ordered[key] = key === 'link' && marks.link !== undefined ? canonicalLink(marks.link) : marks[key];
     }
   }
   for (const key of Object.keys(marks).filter(name => !MARK_ORDER.includes(name as keyof RichTextMarks)).sort()) {
-    ordered[key] = (marks as Record<string, unknown>)[key];
+    const value = (marks as Record<string, unknown>)[key];
+
+    ordered[key] = key.startsWith('tag:') && typeof value === 'object' && value !== null && !Array.isArray(value)
+      ? sortedRecord(value as Record<string, string>)
+      : value;
   }
 
   return Object.keys(ordered).length === 0 ? undefined : ordered as RichTextMarks;

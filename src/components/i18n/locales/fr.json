@@ -773,6 +773,7 @@
   "find.replaceAll": "Tout remplacer",
   "find.replaceUnavailable": "Cette occurrence n’est pas modifiable",
   "find.replaceAllUnavailable": "Aucune occurrence n’est modifiable",
+  "find.replaceUnchanged": "Rien ne changerait",
   "find.matchCase": "Respecter la casse",
   "find.wholeWord": "Mot entier uniquement",
   "find.options": "Options de recherche"

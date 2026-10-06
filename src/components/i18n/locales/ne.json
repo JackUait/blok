@@ -773,6 +773,7 @@
   "find.replaceAll": "सबै बदल्नुहोस्",
   "find.replaceUnavailable": "यो मेल सम्पादन गर्न मिल्दैन",
   "find.replaceAllUnavailable": "कुनै पनि मेल सम्पादन गर्न मिल्दैन",
+  "find.replaceUnchanged": "केही पनि परिवर्तन हुँदैन",
   "find.matchCase": "अक्षरको केस मिलाउनुहोस्",
   "find.wholeWord": "पूरा शब्द मिलाउनुहोस्",
   "find.options": "खोज विकल्पहरू"

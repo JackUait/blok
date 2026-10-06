@@ -773,6 +773,7 @@
   "find.replaceAll": "Thay thế tất cả",
   "find.replaceUnavailable": "Không thể chỉnh sửa kết quả này",
   "find.replaceAllUnavailable": "Không thể chỉnh sửa kết quả nào",
+  "find.replaceUnchanged": "Không có gì thay đổi",
   "find.matchCase": "Khớp chữ hoa/thường",
   "find.wholeWord": "Khớp toàn bộ từ",
   "find.options": "Tùy chọn tìm kiếm"

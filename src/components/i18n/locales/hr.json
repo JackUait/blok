@@ -773,6 +773,7 @@
   "find.replaceAll": "Zamijeni sve",
   "find.replaceUnavailable": "Ovo podudaranje ne može se uređivati",
   "find.replaceAllUnavailable": "Nijedno podudaranje ne može se uređivati",
+  "find.replaceUnchanged": "Ništa se ne bi promijenilo",
   "find.matchCase": "Razlikuj velika i mala slova",
   "find.wholeWord": "Samo cijele riječi",
   "find.options": "Opcije pretraživanja"

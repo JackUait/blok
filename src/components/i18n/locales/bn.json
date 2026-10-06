@@ -773,6 +773,7 @@
   "find.replaceAll": "সব প্রতিস্থাপন",
   "find.replaceUnavailable": "এই মিলটি সম্পাদনা করা যাবে না",
   "find.replaceAllUnavailable": "কোনো মিলই সম্পাদনা করা যাবে না",
+  "find.replaceUnchanged": "কিছুই বদলাবে না",
   "find.matchCase": "বড়/ছোট হাতের অক্ষর মেলান",
   "find.wholeWord": "সম্পূর্ণ শব্দ মেলান",
   "find.options": "অনুসন্ধানের বিকল্প"

@@ -773,6 +773,7 @@
   "find.replaceAll": "Substituir tudo",
   "find.replaceUnavailable": "Esta correspondência não pode ser editada",
   "find.replaceAllUnavailable": "Nenhuma correspondência pode ser editada",
+  "find.replaceUnchanged": "Nada mudaria",
   "find.matchCase": "Diferenciar maiúsculas de minúsculas",
   "find.wholeWord": "Somente palavras inteiras",
   "find.options": "Opções de pesquisa"

@@ -773,6 +773,7 @@
   "find.replaceAll": "جایگزینی همه",
   "find.replaceUnavailable": "این مورد قابل ویرایش نیست",
   "find.replaceAllUnavailable": "هیچ‌کدام از موارد قابل ویرایش نیستند",
+  "find.replaceUnchanged": "چیزی تغییر نمی‌کند",
   "find.matchCase": "تطبیق بزرگی و کوچکی حروف",
   "find.wholeWord": "تطبیق کل کلمه",
   "find.options": "گزینه‌های جستجو"

@@ -773,6 +773,7 @@
   "find.replaceAll": "Zamenjaj vse",
   "find.replaceUnavailable": "Tega zadetka ni mogoče urejati",
   "find.replaceAllUnavailable": "Nobenega zadetka ni mogoče urejati",
+  "find.replaceUnchanged": "Nič se ne bi spremenilo",
   "find.matchCase": "Razlikuj velike in male črke",
   "find.wholeWord": "Samo cele besede",
   "find.options": "Možnosti iskanja"

@@ -773,6 +773,7 @@
   "find.replaceAll": "Palitan lahat",
   "find.replaceUnavailable": "Hindi ma-edit ang tugmang ito",
   "find.replaceAllUnavailable": "Wala sa mga tugma ang ma-edit",
+  "find.replaceUnchanged": "Walang magbabago",
   "find.matchCase": "Itugma ang laki ng titik",
   "find.wholeWord": "Itugma ang buong salita",
   "find.options": "Mga opsyon sa paghahanap"

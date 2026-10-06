@@ -773,6 +773,7 @@
   "find.replaceAll": "Ganti semua",
   "find.replaceUnavailable": "Kecocokan ini tidak dapat diedit",
   "find.replaceAllUnavailable": "Tidak ada kecocokan yang dapat diedit",
+  "find.replaceUnchanged": "Tidak ada yang berubah",
   "find.matchCase": "Cocokkan huruf besar/kecil",
   "find.wholeWord": "Cocokkan seluruh kata",
   "find.options": "Opsi pencarian"

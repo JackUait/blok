@@ -773,6 +773,7 @@
   "find.replaceAll": "گۆڕینی هەموو",
   "find.replaceUnavailable": "ئەم ئەنجامە دەستکاری ناکرێت",
   "find.replaceAllUnavailable": "هیچ کام لە ئەنجامەکان دەستکاری ناکرێن",
+  "find.replaceUnchanged": "Tiştek naguhere",
   "find.matchCase": "جیاکردنەوەی پیتی گەورە و بچووک",
   "find.wholeWord": "تەنها وشەی تەواو",
   "find.options": "بژاردەکانی گەڕان"

@@ -773,6 +773,7 @@
   "find.replaceAll": "အားလုံး အစားထိုးရန်",
   "find.replaceUnavailable": "ဤကိုက်ညီမှုကို တည်းဖြတ်၍မရပါ",
   "find.replaceAllUnavailable": "မည်သည့်ကိုက်ညီမှုကိုမျှ တည်းဖြတ်၍မရပါ",
+  "find.replaceUnchanged": "ဘာမှ ပြောင်းလဲမည် မဟုတ်ပါ",
   "find.matchCase": "စာလုံးအကြီးအသေး ကိုက်ညီရန်",
   "find.wholeWord": "စကားလုံးအပြည့် ကိုက်ညီရန်",
   "find.options": "ရှာဖွေမှု ရွေးချယ်စရာများ"

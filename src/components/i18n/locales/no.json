@@ -773,6 +773,7 @@
   "find.replaceAll": "Erstatt alle",
   "find.replaceUnavailable": "Dette treffet kan ikke redigeres",
   "find.replaceAllUnavailable": "Ingen av treffene kan redigeres",
+  "find.replaceUnchanged": "Ingenting ville endret seg",
   "find.matchCase": "Skill mellom store og små bokstaver",
   "find.wholeWord": "Bare hele ord",
   "find.options": "Søkealternativer"

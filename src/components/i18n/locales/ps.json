@@ -773,6 +773,7 @@
   "find.replaceAll": "ټول بدل کړئ",
   "find.replaceUnavailable": "دا پایله نشي سمولای",
   "find.replaceAllUnavailable": "هېڅ پایله نشي سمولای",
+  "find.replaceUnchanged": "هیڅ به بدل نه شي",
   "find.matchCase": "د لویو او کوچنیو تورو توپیر",
   "find.wholeWord": "یوازې بشپړ ټکي",
   "find.options": "د لټون اختیارونه"

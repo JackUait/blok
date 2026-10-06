@@ -331,6 +331,34 @@
   color: var(--blok-icon-active-text);
 }
 
+/* How many options are on. Ink on the page color: it flips in dark mode and is never blue. */
+[data-blok-find-options] {
+  position: relative;
+}
+
+[data-blok-find-options-count] {
+  position: absolute;
+  top: 1px;
+  inset-inline-end: 1px;
+  display: grid;
+  place-items: center;
+  min-width: 14px;
+  height: 14px;
+  border-radius: var(--blok-radius-full);
+  background: var(--blok-text-primary);
+  box-shadow: 0 0 0 1.5px var(--blok-bg-primary);
+  color: var(--blok-bg-primary);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+[data-blok-find-options-count][hidden] {
+  display: none;
+}
+
 /*
   The check sits in the icon column, so a row keeps its width when checked
   and the shortcut ends the row. Only a checked row shows it.

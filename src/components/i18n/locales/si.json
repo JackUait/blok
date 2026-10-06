@@ -773,6 +773,7 @@
   "find.replaceAll": "සියල්ල ප්‍රතිස්ථාපනය",
   "find.replaceUnavailable": "මෙම ගැළපීම සංස්කරණය කළ නොහැක",
   "find.replaceAllUnavailable": "කිසිදු ගැළපීමක් සංස්කරණය කළ නොහැක",
+  "find.replaceUnchanged": "කිසිවක් වෙනස් නොවේ",
   "find.matchCase": "අකුරු ප්‍රමාණය ගළපන්න",
   "find.wholeWord": "සම්පූර්ණ වචනය ගළපන්න",
   "find.options": "සෙවුම් විකල්ප"

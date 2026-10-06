@@ -773,6 +773,7 @@
   "find.replaceAll": "全部取代",
   "find.replaceUnavailable": "無法編輯此相符項目",
   "find.replaceAllUnavailable": "沒有可編輯的相符項目",
+  "find.replaceUnchanged": "不會有任何變更",
   "find.matchCase": "大小寫須相符",
   "find.wholeWord": "全字拼寫須相符",
   "find.options": "搜尋選項"

@@ -773,6 +773,7 @@
   "find.replaceAll": "سڀ مٽايو",
   "find.replaceUnavailable": "هي ميل ايڊٽ نٿو ٿي سگهي",
   "find.replaceAllUnavailable": "ڪو به ميل ايڊٽ نٿو ٿي سگهي",
+  "find.replaceUnchanged": "ڪجهه به تبديل نه ٿيندو",
   "find.matchCase": "وڏن ننڍن اکرن جو فرق",
   "find.wholeWord": "رڳو پورا لفظ",
   "find.options": "ڳولا جا اختيار"

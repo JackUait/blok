@@ -773,6 +773,7 @@
   "find.replaceAll": "모두 바꾸기",
   "find.replaceUnavailable": "이 항목은 편집할 수 없습니다",
   "find.replaceAllUnavailable": "편집할 수 있는 항목이 없습니다",
+  "find.replaceUnchanged": "바뀌는 내용이 없습니다",
   "find.matchCase": "대/소문자 구분",
   "find.wholeWord": "단어 단위로",
   "find.options": "검색 옵션"

@@ -422,6 +422,26 @@ describe('FindBar', () => {
       expect(optionsButton().hasAttribute('data-blok-find-options-active')).toBe(false);
     });
 
+    it('shows how many options are on, on the button', () => {
+      const count = (): HTMLElement | null => optionsButton().querySelector('[data-blok-testid="find-options-count"]');
+
+      expect(count()?.hidden).toBe(true);
+
+      press(findInput(), { key: '∑', code: 'KeyW', altKey: true });
+
+      expect(count()?.hidden).toBe(false);
+      expect(count()?.textContent).toBe('1');
+
+      press(findInput(), { key: 'ç', code: 'KeyC', altKey: true });
+
+      expect(count()?.textContent).toBe('2');
+
+      press(findInput(), { key: '∑', code: 'KeyW', altKey: true });
+      press(findInput(), { key: 'ç', code: 'KeyC', altKey: true });
+
+      expect(count()?.hidden).toBe(true);
+    });
+
     it('closes only the menu on Escape', () => {
       optionsButton().click();
       press(row('find.matchCase'), { key: 'Escape' });
@@ -812,6 +832,20 @@ describe('FindBar', () => {
         bar.setResults({ current: 0, total: 3, replaceable: 0, currentReplaceable: false });
 
         expect(hoverText('find-replace-menu')).toContain('find.replaceAllUnavailable');
+      });
+
+      it('says the current match already reads like the replacement', () => {
+        bar.setResults({ current: 0, total: 3, replaceable: 2, currentReplaceable: false, currentUnchanged: true });
+
+        expect(hoverText('find-replace')).toContain('find.replaceUnchanged');
+        expect(hoverText('find-replace')).not.toContain('find.replaceUnavailable');
+      });
+
+      it('says every match already reads like the replacement', () => {
+        bar.setResults({ current: 0, total: 3, replaceable: 0, currentReplaceable: false, currentUnchanged: true, unchanged: true });
+
+        expect(hoverText('find-replace-menu')).toContain('find.replaceUnchanged');
+        expect(hoverText('find-replace-menu')).not.toContain('find.replaceAllUnavailable');
       });
 
       it('says there are no results', () => {

@@ -231,7 +231,7 @@ export class Find extends Module {
       return;
     }
 
-    const host = this.canReplace(current) ? editableHostOf(current) : null;
+    const host = this.canReplace(current) && this.changes(current, replacement) ? editableHostOf(current) : null;
 
     if (host === null) {
       this.move(1);
@@ -249,7 +249,7 @@ export class Find extends Module {
    * @param replacement - the new text
    */
   public replaceAll(replacement: string): void {
-    const editable = this.ranges.filter((range) => this.canReplace(range));
+    const editable = this.ranges.filter((range) => this.canReplace(range) && this.changes(range, replacement));
 
     if (this.Blok.ReadOnly.isEnabled || editable.length === 0) {
       return;
@@ -483,6 +483,16 @@ export class Find extends Module {
     return this.ownsRange(range) && editableHostOf(range) !== null;
   }
 
+  /**
+   * Whether replacing `range` would change its text. Case counts: "cat" to
+   * "Cat" is an edit.
+   * @param range - a match
+   * @param replacement - the new text; defaults to what the replace field holds
+   */
+  private changes(range: Range, replacement = this.bar?.replacement ?? null): boolean {
+    return replacement === null || range.toString() !== replacement;
+  }
+
   /** Host page text: outside every editor and outside the bar. */
   private isHostNode(node: Node): boolean {
     return editorOf(node) === null && this.bar?.element.contains(node) !== true;
@@ -676,11 +686,15 @@ export class Find extends Module {
     }
 
     paintFindHighlights(this, this.ranges.map((range) => this.onScreen(range)), current === null ? null : this.onScreen(current));
+    const editable = this.ranges.filter((range) => this.canReplace(range));
+
     this.bar?.setResults({
       current: this.active,
       total: this.ranges.length,
-      replaceable: this.ranges.filter((range) => this.canReplace(range)).length,
-      currentReplaceable: current !== null && this.canReplace(current),
+      replaceable: editable.filter((range) => this.changes(range)).length,
+      currentReplaceable: current !== null && this.canReplace(current) && this.changes(current),
+      unchanged: editable.length > 0 && editable.every((range) => !this.changes(range)),
+      currentUnchanged: current !== null && this.canReplace(current) && !this.changes(current),
     });
 
     if (current === null) {

@@ -15126,6 +15126,33 @@ span[data-blok-slash-search] {
   color: var(--blok-icon-active-text);
 }
 
+[data-blok-find-options] {
+  position: relative;
+}
+
+[data-blok-find-options-count] {
+  position: absolute;
+  top: 1px;
+  inset-inline-end: 1px;
+  display: grid;
+  place-items: center;
+  min-width: 14px;
+  height: 14px;
+  border-radius: var(--blok-radius-full);
+  background: var(--blok-text-primary);
+  box-shadow: 0 0 0 1.5px var(--blok-bg-primary);
+  color: var(--blok-bg-primary);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+[data-blok-find-options-count][hidden] {
+  display: none;
+}
+
 [data-blok-find-options-menu] [data-blok-popover-item]:not([data-blok-popover-item-active]) > [data-blok-testid='popover-item-icon'] {
   visibility: hidden;
 }

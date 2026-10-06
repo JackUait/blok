@@ -773,6 +773,7 @@
   "find.replaceAll": "全部替换",
   "find.replaceUnavailable": "无法编辑此匹配项",
   "find.replaceAllUnavailable": "没有可编辑的匹配项",
+  "find.replaceUnchanged": "不会有任何变化",
   "find.matchCase": "区分大小写",
   "find.wholeWord": "全字匹配",
   "find.options": "查找选项"

@@ -773,6 +773,7 @@
   "find.replaceAll": "Бүгдийг солих",
   "find.replaceUnavailable": "Энэ илэрцийг засах боломжгүй",
   "find.replaceAllUnavailable": "Аль ч илэрцийг засах боломжгүй",
+  "find.replaceUnchanged": "Юу ч өөрчлөгдөхгүй",
   "find.matchCase": "Том жижиг үсгийг ялгах",
   "find.wholeWord": "Зөвхөн бүтэн үг",
   "find.options": "Хайлтын сонголтууд"

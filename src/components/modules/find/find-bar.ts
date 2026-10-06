@@ -32,6 +32,10 @@ export interface FindBarResults {
   replaceable?: number;
   /** Whether Replace can edit the active match. Defaults to true when there is one. */
   currentReplaceable?: boolean;
+  /** Every editable match already reads like the replacement. */
+  unchanged?: boolean;
+  /** The active match already reads like the replacement. */
+  currentUnchanged?: boolean;
 }
 
 export interface FindBarInit {
@@ -55,6 +59,7 @@ const ATTR = {
   iconButton: 'data-blok-find-icon-button',
   options: 'data-blok-find-options',
   optionsActive: 'data-blok-find-options-active',
+  optionsCount: 'data-blok-find-options-count',
   optionsMenu: 'data-blok-find-options-menu',
   split: 'data-blok-find-split',
   replaceMenu: 'data-blok-find-replace-menu',
@@ -135,6 +140,8 @@ export class FindBar {
   private readonly counter: HTMLElement;
   private readonly replaceToggle: HTMLButtonElement;
   private readonly optionsButton: HTMLButtonElement;
+  /** Screen readers hear each option's state in the menu, so the count is paint only. */
+  private readonly optionsCount: HTMLElement;
   private readonly previousButton: HTMLButtonElement;
   private readonly nextButton: HTMLButtonElement;
   private readonly closeButton: HTMLButtonElement;
@@ -155,6 +162,8 @@ export class FindBar {
   private total = 0;
   private replaceable = 0;
   private currentReplaceable = false;
+  private unchanged = false;
+  private currentUnchanged = false;
   /** The count the counter shows now, -1 when it shows none. */
   private shown = { current: -1, total: 0 };
   private noResults = false;
@@ -226,6 +235,9 @@ export class FindBar {
     this.optionsButton.setAttribute(ATTR.options, '');
     this.optionsButton.setAttribute('aria-haspopup', 'menu');
     this.optionsButton.setAttribute('aria-expanded', 'false');
+    this.optionsCount = build('span', { [ATTR.optionsCount]: '', 'data-blok-testid': 'find-options-count', 'aria-hidden': 'true' });
+    this.optionsCount.hidden = true;
+    this.optionsButton.append(this.optionsCount);
     this.previousButton = this.makeIconButton('find.previous', IconChevronDown, 'find-previous');
     this.previousButton.setAttribute('data-blok-find-previous', '');
     this.nextButton = this.makeIconButton('find.next', IconChevronDown, 'find-next');
@@ -420,6 +432,8 @@ export class FindBar {
     this.total = results.total;
     this.replaceable = results.replaceable ?? results.total;
     this.currentReplaceable = results.currentReplaceable ?? results.current >= 0;
+    this.unchanged = results.unchanged === true;
+    this.currentUnchanged = results.currentUnchanged === true;
     this.renderResults(results.current);
   }
 
@@ -570,7 +584,11 @@ export class FindBar {
       this.optionsMenu?.hide();
     }
 
-    this.optionsButton.toggleAttribute(ATTR.optionsActive, this.matchCase || this.wholeWord);
+    const on = Number(this.matchCase) + Number(this.wholeWord);
+
+    this.optionsButton.toggleAttribute(ATTR.optionsActive, on > 0);
+    this.optionsCount.textContent = String(on);
+    this.optionsCount.hidden = on === 0;
     this.callbacks.onOptionsChange(this.options);
   }
 
@@ -847,8 +865,10 @@ export class FindBar {
       this.replaceMenu?.hide();
     }
 
-    const replaceHint = this.currentReplaceable ? null : 'find.replaceUnavailable';
-    const replaceAllHint = this.replaceable > 0 ? null : 'find.replaceAllUnavailable';
+    const replaceBlocker = this.currentUnchanged ? 'find.replaceUnchanged' : 'find.replaceUnavailable';
+    const replaceAllBlocker = this.unchanged ? 'find.replaceUnchanged' : 'find.replaceAllUnavailable';
+    const replaceHint = this.currentReplaceable ? null : replaceBlocker;
+    const replaceAllHint = this.replaceable > 0 ? null : replaceAllBlocker;
 
     this.syncReplaceHint(this.replaceButton, 'find.replace', this.shortcuts.replace, none ? 'find.noResults' : replaceHint);
     this.syncReplaceHint(this.replaceMenuButton, 'find.replaceAll', this.shortcuts.replaceAll, none ? 'find.noResults' : replaceAllHint);

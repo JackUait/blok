@@ -773,6 +773,7 @@
   "find.replaceAll": "Zamień wszystko",
   "find.replaceUnavailable": "Tego wyniku nie można edytować",
   "find.replaceAllUnavailable": "Żadnego z wyników nie można edytować",
+  "find.replaceUnchanged": "Nic by się nie zmieniło",
   "find.matchCase": "Uwzględniaj wielkość liter",
   "find.wholeWord": "Tylko całe wyrazy",
   "find.options": "Opcje wyszukiwania"

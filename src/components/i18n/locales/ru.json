@@ -773,6 +773,7 @@
   "find.replaceAll": "Заменить все",
   "find.replaceUnavailable": "Это совпадение нельзя изменить",
   "find.replaceAllUnavailable": "Ни одно совпадение нельзя изменить",
+  "find.replaceUnchanged": "Ничего не изменится",
   "find.matchCase": "Учитывать регистр",
   "find.wholeWord": "Слово целиком",
   "find.options": "Параметры поиска"

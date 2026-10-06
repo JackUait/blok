@@ -773,6 +773,7 @@
   "find.replaceAll": "Nahradiť všetko",
   "find.replaceUnavailable": "Túto zhodu nemožno upraviť",
   "find.replaceAllUnavailable": "Žiadnu zo zhôd nemožno upraviť",
+  "find.replaceUnchanged": "Nič by sa nezmenilo",
   "find.matchCase": "Rozlišovať veľké a malé písmená",
   "find.wholeWord": "Iba celé slová",
   "find.options": "Možnosti vyhľadávania"

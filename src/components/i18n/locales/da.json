@@ -773,6 +773,7 @@
   "find.replaceAll": "Erstat alle",
   "find.replaceUnavailable": "Dette match kan ikke redigeres",
   "find.replaceAllUnavailable": "Ingen af matchene kan redigeres",
+  "find.replaceUnchanged": "Intet ville ændre sig",
   "find.matchCase": "Forskel på store og små bogstaver",
   "find.wholeWord": "Kun hele ord",
   "find.options": "Søgeindstillinger"

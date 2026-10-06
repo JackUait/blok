@@ -773,6 +773,7 @@
   "find.replaceAll": "Összes cseréje",
   "find.replaceUnavailable": "Ez a találat nem szerkeszthető",
   "find.replaceAllUnavailable": "Egyik találat sem szerkeszthető",
+  "find.replaceUnchanged": "Semmi sem változna",
   "find.matchCase": "Kis- és nagybetűk megkülönböztetése",
   "find.wholeWord": "Csak teljes szavak",
   "find.options": "Keresési beállítások"

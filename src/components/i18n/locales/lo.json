@@ -773,6 +773,7 @@
   "find.replaceAll": "ປ່ຽນແທນທັງໝົດ",
   "find.replaceUnavailable": "ບໍ່ສາມາດແກ້ໄຂຜົນນີ້ໄດ້",
   "find.replaceAllUnavailable": "ບໍ່ສາມາດແກ້ໄຂຜົນໃດໆໄດ້",
+  "find.replaceUnchanged": "ບໍ່ມີຫຍັງປ່ຽນແປງ",
   "find.matchCase": "ກົງກັບຕົວພິມໃຫຍ່-ນ້ອຍ",
   "find.wholeWord": "ກົງກັບຄຳທັງໝົດ",
   "find.options": "ຕົວເລືອກການຊອກຫາ"

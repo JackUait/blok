@@ -773,6 +773,7 @@
   "find.replaceAll": "Pakeisti visus",
   "find.replaceUnavailable": "Šio atitikmens redaguoti negalima",
   "find.replaceAllUnavailable": "Nė vieno atitikmens redaguoti negalima",
+  "find.replaceUnchanged": "Niekas nepasikeistų",
   "find.matchCase": "Skirti didžiąsias ir mažąsias raides",
   "find.wholeWord": "Tik visi žodžiai",
   "find.options": "Paieškos parinktys"

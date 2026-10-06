@@ -773,6 +773,7 @@
   "find.replaceAll": "Замени всички",
   "find.replaceUnavailable": "Това съвпадение не може да се редактира",
   "find.replaceAllUnavailable": "Никое от съвпаденията не може да се редактира",
+  "find.replaceUnchanged": "Нищо няма да се промени",
   "find.matchCase": "Съвпадение на регистъра",
   "find.wholeWord": "Само цели думи",
   "find.options": "Опции за търсене"

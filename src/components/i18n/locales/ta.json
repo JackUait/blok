@@ -773,6 +773,7 @@
   "find.replaceAll": "அனைத்தையும் மாற்று",
   "find.replaceUnavailable": "இந்தப் பொருத்தத்தைத் திருத்த முடியாது",
   "find.replaceAllUnavailable": "எந்தப் பொருத்தத்தையும் திருத்த முடியாது",
+  "find.replaceUnchanged": "எதுவும் மாறாது",
   "find.matchCase": "எழுத்து வடிவத்தைப் பொருத்து",
   "find.wholeWord": "முழுச் சொல்லைப் பொருத்து",
   "find.options": "தேடல் விருப்பங்கள்"

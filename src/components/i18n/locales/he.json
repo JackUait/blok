@@ -773,6 +773,7 @@
   "find.replaceAll": "החלף הכול",
   "find.replaceUnavailable": "לא ניתן לערוך את ההתאמה הזו",
   "find.replaceAllUnavailable": "לא ניתן לערוך אף אחת מההתאמות",
+  "find.replaceUnchanged": "שום דבר לא ישתנה",
   "find.matchCase": "התאמת רישיות",
   "find.wholeWord": "מילה שלמה בלבד",
   "find.options": "אפשרויות חיפוש"

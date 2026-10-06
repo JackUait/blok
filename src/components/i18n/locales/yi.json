@@ -773,6 +773,7 @@
   "find.replaceAll": "טויש אַלץ",
   "find.replaceUnavailable": "מען קען נישט רעדאַקטירן דעם טרעף",
   "find.replaceAllUnavailable": "מען קען נישט רעדאַקטירן קיין איינעם פֿון די טרעפֿן",
+  "find.replaceUnchanged": "גאָרנישט וואָלט זיך נישט געביטן",
   "find.matchCase": "אונטערשיידן גרויסע און קליינע אותיות",
   "find.wholeWord": "נאָר גאַנצע ווערטער",
   "find.options": "זוך־אפציעס"

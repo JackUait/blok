@@ -773,6 +773,7 @@
   "find.replaceAll": "استبدال الكل",
   "find.replaceUnavailable": "لا يمكن تعديل هذه النتيجة",
   "find.replaceAllUnavailable": "لا يمكن تعديل أي من النتائج",
+  "find.replaceUnchanged": "لن يتغيّر شيء",
   "find.matchCase": "مطابقة حالة الأحرف",
   "find.wholeWord": "مطابقة الكلمة بأكملها",
   "find.options": "خيارات البحث"

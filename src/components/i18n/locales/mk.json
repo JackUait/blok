@@ -773,6 +773,7 @@
   "find.replaceAll": "Замени ги сите",
   "find.replaceUnavailable": "Ова совпаѓање не може да се уредува",
   "find.replaceAllUnavailable": "Ниедно совпаѓање не може да се уредува",
+  "find.replaceUnchanged": "Ништо нема да се промени",
   "find.matchCase": "Разликувај големи и мали букви",
   "find.wholeWord": "Само цели зборови",
   "find.options": "Опции за пребарување"

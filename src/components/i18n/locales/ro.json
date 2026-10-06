@@ -773,6 +773,7 @@
   "find.replaceAll": "Înlocuiește tot",
   "find.replaceUnavailable": "Această potrivire nu poate fi editată",
   "find.replaceAllUnavailable": "Nicio potrivire nu poate fi editată",
+  "find.replaceUnchanged": "Nu s-ar schimba nimic",
   "find.matchCase": "Potrivire majuscule/minuscule",
   "find.wholeWord": "Doar cuvinte întregi",
   "find.options": "Opțiuni de căutare"

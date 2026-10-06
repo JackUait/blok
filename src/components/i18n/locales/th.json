@@ -773,6 +773,7 @@
   "find.replaceAll": "แทนที่ทั้งหมด",
   "find.replaceUnavailable": "แก้ไขรายการที่ตรงกันนี้ไม่ได้",
   "find.replaceAllUnavailable": "แก้ไขรายการที่ตรงกันไม่ได้เลย",
+  "find.replaceUnchanged": "ไม่มีอะไรเปลี่ยนแปลง",
   "find.matchCase": "ตรงตามตัวพิมพ์เล็ก-ใหญ่",
   "find.wholeWord": "ตรงทั้งคำ",
   "find.options": "ตัวเลือกการค้นหา"

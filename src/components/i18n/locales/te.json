@@ -773,6 +773,7 @@
   "find.replaceAll": "అన్నీ భర్తీ చేయి",
   "find.replaceUnavailable": "ఈ సరిపోలికను సవరించలేరు",
   "find.replaceAllUnavailable": "ఏ సరిపోలికనూ సవరించలేరు",
+  "find.replaceUnchanged": "ఏమీ మారదు",
   "find.matchCase": "అక్షర కేస్‌ను సరిపోల్చు",
   "find.wholeWord": "పూర్తి పదాన్ని సరిపోల్చు",
   "find.options": "శోధన ఎంపికలు"

@@ -773,6 +773,7 @@
   "find.replaceAll": "Reemplazar todo",
   "find.replaceUnavailable": "Esta coincidencia no se puede editar",
   "find.replaceAllUnavailable": "Ninguna coincidencia se puede editar",
+  "find.replaceUnchanged": "No cambiaría nada",
   "find.matchCase": "Coincidir mayúsculas y minúsculas",
   "find.wholeWord": "Solo palabras completas",
   "find.options": "Opciones de búsqueda"

@@ -773,6 +773,7 @@
   "find.replaceAll": "Korvaa kaikki",
   "find.replaceUnavailable": "Tätä osumaa ei voi muokata",
   "find.replaceAllUnavailable": "Mitään osumista ei voi muokata",
+  "find.replaceUnchanged": "Mikään ei muuttuisi",
   "find.matchCase": "Sama kirjainkoko",
   "find.wholeWord": "Vain kokonaiset sanat",
   "find.options": "Hakuvaihtoehdot"

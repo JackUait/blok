@@ -773,6 +773,7 @@
   "find.replaceAll": "ਸਭ ਬਦਲੋ",
   "find.replaceUnavailable": "ਇਸ ਮੇਲ ਨੂੰ ਸੰਪਾਦਿਤ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਦਾ",
   "find.replaceAllUnavailable": "ਕਿਸੇ ਵੀ ਮੇਲ ਨੂੰ ਸੰਪਾਦਿਤ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਦਾ",
+  "find.replaceUnchanged": "ਕੁਝ ਵੀ ਨਹੀਂ ਬਦਲੇਗਾ",
   "find.matchCase": "ਅੱਖਰਾਂ ਦਾ ਕੇਸ ਮਿਲਾਓ",
   "find.wholeWord": "ਪੂਰਾ ਸ਼ਬਦ ਮਿਲਾਓ",
   "find.options": "ਖੋਜ ਵਿਕਲਪ"

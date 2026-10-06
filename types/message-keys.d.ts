@@ -86,6 +86,7 @@ export type BlokMessageKey =
   | 'find.replaceAllUnavailable'
   | 'find.replacePlaceholder'
   | 'find.replaceUnavailable'
+  | 'find.replaceUnchanged'
   | 'find.toggleReplace'
   | 'find.wholeWord'
   | 'imageFailure.bannerTitle'

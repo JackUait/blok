@@ -739,6 +739,35 @@ describe('Find module', () => {
       expect(replaceButton().disabled).toBe(false);
       expect(replaceAllButton().disabled).toBe(false);
     });
+
+    it('disable Replace on a match that already reads exactly like the replacement, case included', () => {
+      const { wrapper, redactor, find } = editor([{ id: 'a', text: 'cat and Cat' }]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('cat');
+
+      expect(replaceButton().disabled).toBe(true);
+      expect(replaceAllButton().disabled).toBe(false);
+
+      find.move(1);
+
+      expect(replaceButton().disabled).toBe(false);
+    });
+
+    it('leave Replace all nothing to do when every match already reads like the replacement', () => {
+      const { wrapper, redactor, find, blockManager } = editor([{ id: 'a', text: 'cat and cat' }]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('cat');
+
+      expect(replaceAllButton().disabled).toBe(true);
+
+      find.replaceAll('cat');
+
+      expect(blockManager.beginToolTransaction).not.toHaveBeenCalled();
+    });
   });
 
   it('never replaces in read-only mode', () => {

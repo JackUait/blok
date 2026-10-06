@@ -773,6 +773,7 @@
   "find.replaceAll": "ყველას ჩანაცვლება",
   "find.replaceUnavailable": "ამ დამთხვევის რედაქტირება შეუძლებელია",
   "find.replaceAllUnavailable": "არცერთი დამთხვევის რედაქტირება შეუძლებელია",
+  "find.replaceUnchanged": "არაფერი შეიცვლება",
   "find.matchCase": "რეგისტრის გათვალისწინება",
   "find.wholeWord": "მხოლოდ მთლიანი სიტყვა",
   "find.options": "ძიების პარამეტრები"

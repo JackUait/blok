@@ -3,6 +3,7 @@ import { htmlToSegmentsNode } from '../../../../src/view/rich-text-parse5';
 import { htmlToSegmentsDom } from '../../../../src/components/utils/rich-text-dom';
 import { isRichText } from '../../../../src/shared/rich-text/guards';
 import { canonicalizeSegments } from '../../../../src/shared/rich-text/html-to-segments';
+import type { RichText } from '../../../../types/rich-text';
 
 const readers = [['parse5', htmlToSegmentsNode], ['dom', htmlToSegmentsDom]] as const;
 
@@ -88,6 +89,20 @@ describe.each(readers)('htmlToSegments (%s)', (_name, read) => {
   it('returns no segments for empty input', () => {
     expect(read('')).toEqual([]);
   });
+
+  it('reads a raw newline in stored HTML as a space, like a browser does', () => {
+    expect(read('line one\nline two')).toEqual([{ text: 'line one line two' }]);
+    expect(read('<b>a</b> \n\t <i>b</i>')).toEqual([
+      { text: 'a', marks: { bold: true } },
+      { text: ' ' },
+      { text: 'b', marks: { italic: true } },
+    ]);
+  });
+
+  it('keeps <br> as the only line break and leaves non-breaking spaces alone', () => {
+    expect(read('a<br>b')).toEqual([{ text: 'a\nb' }]);
+    expect(read('a&nbsp;\nb')).toEqual([{ text: 'a\u00a0 b' }]);
+  });
 });
 
 describe('isRichText', () => {
@@ -106,6 +121,11 @@ describe('isRichText', () => {
     expect(isRichText([{ text: 'Buy milk', checked: true }])).toBe(false);
     expect(isRichText([{ embed: { page: { id: 'p' } }, extra: 1 }])).toBe(false);
     expect(isRichText([{ text: 'a', embed: { html: 'x' } }])).toBe(false);
+  });
+
+  it('treats a key whose value is undefined as absent', () => {
+    expect(isRichText([{ text: 'a', marks: undefined }, { text: 'b', marks: { bold: true } }])).toBe(true);
+    expect(isRichText([{ embed: { html: 'x' }, marks: undefined }])).toBe(true);
   });
 
   it('rejects marks that are not a plain record', () => {
@@ -128,6 +148,11 @@ describe('canonicalizeSegments', () => {
     ]);
 
     expect(JSON.stringify(out)).toBe(JSON.stringify([{ text: 'ab', marks: { bold: true, italic: true } }]));
+  });
+
+  it('drops a boolean mark that is not true', () => {
+    expect(JSON.stringify(canonicalizeSegments([{ text: 'a', marks: { bold: false, code: 'yes', italic: true } }] as unknown as RichText)))
+      .toBe(JSON.stringify([{ text: 'a', marks: { italic: true } }]));
   });
 
   it('drops empty marks so the run merges with a plain neighbour', () => {

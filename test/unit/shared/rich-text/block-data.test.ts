@@ -57,6 +57,22 @@ describe('block data converters', () => {
     expect(data).toEqual({ text: '<b>a</b>' });
   });
 
+  it('reads a declared field\'s non-segment array leniently, never passing the array on', () => {
+    const data = { text: [{ text: 'a', extra: 1 }, { nope: true }, 'x', { text: 'b', marks: { bold: true } }, { embed: { html: '<hr>' }, marks: 'bad' }] };
+
+    expect(blockDataToHtml(data, ['text'], resolve)).toEqual({ text: 'a<strong>b</strong><hr>' });
+  });
+
+  it('returns the very same data object when no field converts', () => {
+    const html = { text: '<b>a</b>', level: 2 };
+    const row = { properties: { notes: { blocks: [{ id: 'n1', type: 'paragraph', data: { text: '<i>x</i>' } }] }, status: 'done' } };
+    const blocks = [{ id: 'p', type: 'paragraph', data: html }];
+
+    expect(blockDataToHtml(html, ['text'], resolve)).toBe(html);
+    expect(blockDataToHtml(row, [], resolve, { nestedDocuments: true })).toBe(row);
+    expect(outputBlocksToHtml(blocks, resolve)).toBe(blocks);
+  });
+
   it('lists legacy rich fields', () => {
     expect(richTextFieldsFor('warning')).toEqual(['title', 'message']);
     expect(richTextFieldsFor('some-custom-tool')).toEqual([]);

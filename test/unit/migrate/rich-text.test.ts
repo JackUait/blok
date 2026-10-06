@@ -17,6 +17,13 @@ describe('migrate rich text', () => {
     expect(typeof document).toBe('undefined');
   });
 
+  it('reads a raw newline in stored HTML as a space, so it renders no line break', () => {
+    const out = migrateToRichText({ blocks: [{ id: 'a', type: 'paragraph', data: { text: 'line one\nline two' } }] });
+
+    expect(out.blocks[0].data.text).toEqual([{ text: 'line one line two' }]);
+    expect(richTextToHtml(out.blocks[0].data.text as RichText)).toBe('line one line two');
+  });
+
   it('converts known rich fields of a stored document', () => {
     const out = migrateToRichText({ blocks: [
       { id: 'a', type: 'paragraph', data: { text: '<b>a</b> &lt;' } },

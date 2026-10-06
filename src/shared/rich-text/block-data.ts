@@ -1,5 +1,5 @@
 import type { OutputBlockData } from '../../../types';
-import { isRichText } from './guards';
+import { isRichText, readRichTextLeniently } from './guards';
 import { segmentsToHtml } from './segments-to-html';
 import type { RichText } from '../../../types/rich-text';
 
@@ -23,6 +23,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 export const isNestedDocument = (value: unknown): value is { blocks: OutputBlockData[] } =>
   isRecord(value) && Array.isArray(value.blocks);
 
+/**
+ * Returns `data` itself when nothing converted, so callers can skip the copy
+ * (the renderer's `data === block.data` shortcut relies on it).
+ */
 const convertData = (
   data: Record<string, unknown>,
   fields: string[],
@@ -30,39 +34,67 @@ const convertData = (
   convertBlocks: (blocks: OutputBlockData[]) => OutputBlockData[],
   options: ConvertOptions
 ): Record<string, unknown> => {
-  const next: Record<string, unknown> = { ...data };
+  const changes: Record<string, unknown> = {};
 
-  for (const field of fields) {
-    if (field in next) {
-      next[field] = convertField(next[field]);
+  for (const field of fields.filter(name => name in data)) {
+    const value = convertField(data[field]);
+
+    if (value !== data[field]) {
+      changes[field] = value;
     }
   }
 
   // database-row: a richText property is a whole nested document.
-  if (options.nestedDocuments === true && isRecord(next.properties)) {
-    next.properties = Object.fromEntries(Object.entries(next.properties).map(([key, value]) => [
-      key,
-      isNestedDocument(value) ? { ...value, blocks: convertBlocks(value.blocks) } : value,
-    ]));
+  const properties = data.properties;
+
+  if (options.nestedDocuments === true && isRecord(properties)) {
+    const entries = Object.entries(properties).map(([key, value]): [string, unknown] => {
+      if (!isNestedDocument(value)) {
+        return [key, value];
+      }
+
+      const blocks = convertBlocks(value.blocks);
+
+      return [key, blocks === value.blocks ? value : { ...value, blocks }];
+    });
+
+    if (entries.some(([key, value]) => value !== properties[key])) {
+      changes.properties = Object.fromEntries(entries);
+    }
   }
 
-  return next;
+  return Object.keys(changes).length === 0 ? data : { ...data, ...changes };
+};
+
+/** The same array when no block's data changed. */
+const mapBlockData = (
+  blocks: OutputBlockData[],
+  convert: (block: OutputBlockData, data: Record<string, unknown>) => Record<string, unknown>
+): OutputBlockData[] => {
+  const next = blocks.map((block) => {
+    const data = block.data ?? {};
+    const converted = convert(block, data);
+
+    return converted === data ? block : { ...block, data: converted };
+  });
+
+  return next.every((block, index) => block === blocks[index]) ? blocks : next;
 };
 
 export const outputBlocksToHtml = (blocks: OutputBlockData[], resolve: FieldsResolver): OutputBlockData[] =>
-  blocks.map(block => ({ ...block, data: blockDataToHtml(block.data ?? {}, resolve(block.type), resolve, nestedDocumentsFor(block.type)) }));
+  mapBlockData(blocks, (block, data) => blockDataToHtml(data, resolve(block.type), resolve, nestedDocumentsFor(block.type)));
 
 export const outputBlocksToSegments = (
   blocks: OutputBlockData[],
   resolve: FieldsResolver,
   read: (html: string) => RichText
 ): OutputBlockData[] =>
-  blocks.map(block => ({
-    ...block,
-    data: blockDataToSegments(block.data ?? {}, resolve(block.type), resolve, read, nestedDocumentsFor(block.type)),
-  }));
+  mapBlockData(blocks, (block, data) => blockDataToSegments(data, resolve(block.type), resolve, read, nestedDocumentsFor(block.type)));
 
-/** Segment fields → HTML strings. HTML strings and non-rich values pass through. */
+/**
+ * Segment fields → HTML strings. HTML strings and non-array values pass through.
+ * An array that is not segments is read leniently: a tool never gets a raw array.
+ */
 export function blockDataToHtml(
   data: Record<string, unknown>,
   fields: string[],
@@ -72,7 +104,7 @@ export function blockDataToHtml(
   return convertData(
     data,
     fields,
-    value => (isRichText(value) ? segmentsToHtml(value) : value),
+    value => (Array.isArray(value) ? segmentsToHtml(isRichText(value) ? value : readRichTextLeniently(value)) : value),
     blocks => outputBlocksToHtml(blocks, resolve),
     options
   );

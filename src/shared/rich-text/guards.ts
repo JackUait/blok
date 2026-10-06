@@ -1,10 +1,11 @@
-import type { RichText } from '../../../types/rich-text';
+import type { RichText, RichTextEmbed, RichTextMarks, RichTextSegment } from '../../../types/rich-text';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+/** A key holding `undefined` counts as absent, as it does after a JSON round trip. */
 const hasOnlyKeys = (record: Record<string, unknown>, allowed: string[]): boolean =>
-  Object.keys(record).every(key => allowed.includes(key));
+  Object.keys(record).every(key => allowed.includes(key) || record[key] === undefined);
 
 /**
  * A segment has exactly the keys of one shape. An extra key means the array is
@@ -12,7 +13,7 @@ const hasOnlyKeys = (record: Record<string, unknown>, allowed: string[]): boolea
  * @param item - one array entry
  */
 const isSegment = (item: unknown): boolean => {
-  if (!isRecord(item) || ('marks' in item && !isRecord(item.marks))) {
+  if (!isRecord(item) || (item.marks !== undefined && !isRecord(item.marks))) {
     return false;
   }
 
@@ -27,3 +28,23 @@ const isSegment = (item: unknown): boolean => {
  */
 export const isRichText = (value: unknown): value is RichText =>
   Array.isArray(value) && value.every(isSegment);
+
+/**
+ * Segments out of an array that fails {@link isRichText}: keeps a string `text`
+ * or a record `embed`, plus a record `marks`; drops other keys and items.
+ * @param value - an array stored in a rich-text field
+ */
+export const readRichTextLeniently = (value: unknown[]): RichText => value.flatMap((item): RichTextSegment[] => {
+  if (!isRecord(item)) {
+    return [];
+  }
+
+  // Unknown mark keys are the input layer's to warn about and drop.
+  const marks = isRecord(item.marks) ? { marks: item.marks as RichTextMarks } : {};
+
+  if (typeof item.text === 'string') {
+    return [{ text: item.text, ...marks }];
+  }
+
+  return isRecord(item.embed) ? [{ embed: item.embed as RichTextEmbed, ...marks }] : [];
+});

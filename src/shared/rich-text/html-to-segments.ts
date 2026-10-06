@@ -48,11 +48,14 @@ const parseStyle = (style: string): Record<string, string> => Object.fromEntries
 const sortedRecord = (record: Record<string, string>): Record<string, string> =>
   Object.fromEntries(Object.keys(record).sort().map(key => [key, record[key]]));
 
+const BOOLEAN_MARKS = new Set<keyof RichTextMarks>(['highlight', 'bold', 'italic', 'underline', 'strikethrough', 'code', 'sup', 'sub']);
+
 const orderMarks = (marks: RichTextMarks): RichTextMarks | undefined => {
   const ordered: Record<string, unknown> = {};
 
   for (const key of MARK_ORDER) {
-    if (marks[key] !== undefined) {
+    // A host may write `bold: false`; only `true` is a mark.
+    if (BOOLEAN_MARKS.has(key) ? marks[key] === true : marks[key] !== undefined) {
       ordered[key] = marks[key];
     }
   }
@@ -91,7 +94,8 @@ const readMarkStyle = (attrs: Record<string, string>, marks: RichTextMarks): Ric
 const walk = (nodes: InlineNode[], marks: RichTextMarks, out: RichTextSegment[]): void => {
   for (const node of nodes) {
     if (node.kind === 'text') {
-      out.push(withMarks({ text: node.value }, marks));
+      // HTML renders a raw newline as a space; only <br> is a line break.
+      out.push(withMarks({ text: node.value.replace(/[ \t\n\r\f]*\n[ \t\n\r\f]*/g, ' ') }, marks));
       continue;
     }
 

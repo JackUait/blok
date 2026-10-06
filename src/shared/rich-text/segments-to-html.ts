@@ -1,6 +1,7 @@
 import { COLOR_PRESETS, colorVarName } from '../../components/shared/color-presets';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../page-reference';
 import { EQUATION_SOURCE_ATTR } from '../equation-mark';
+import { canonicalizeSegments } from './html-to-segments';
 import type { RichText, RichTextMarks, RichTextSegment } from '../../../types/rich-text';
 
 const PRESET_NAMES = new Set(COLOR_PRESETS.map(preset => preset.name));
@@ -157,12 +158,14 @@ const isCustomKey = (key: string): key is `tag:${string}` =>
 
 /**
  * Rich text → the inline HTML Blok tools store internally.
- * @param rich - segments
+ * @param input - segments
  */
-export const segmentsToHtml = (rich: RichText): string => {
+export const segmentsToHtml = (input: RichText): string => {
+  const rich = canonicalizeSegments(input);
   const customKeys = new Set(rich.flatMap(segment => Object.keys(segment.marks ?? {})).filter(isCustomKey));
   const wrappers = [...FIXED_WRAPPERS, ...[...customKeys].sort().map(customWrapper)];
   const html = render(rich, wrappers, 0);
+  // Read after canonicalizing: an empty run after "a\n" must not hide the typed break.
   const last = rich[rich.length - 1];
 
   // A lone trailing <br> in a contenteditable shows no line; a typed trailing break needs a second one.

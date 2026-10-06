@@ -188,6 +188,28 @@ describe('rich text segments on input', () => {
     expect(warningsAbout(warnSpy, 'tag:x y')).toBe(1);
   }, 60_000);
 
+  it('saves runs whose marks key is undefined as their text', async () => {
+    const instance = await boot([{ type: 'paragraph', data: { text: 'first' } }]);
+
+    instance.blocks.insert('paragraph', { text: [{ text: 'a', marks: undefined }, { text: 'b', marks: { bold: true } }] }, {}, 1);
+
+    expect((await lastBlock(instance)).data.text).toBe('a<strong>b</strong>');
+  }, 60_000);
+
+  it('reads a malformed segment array leniently and warns once per field', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const instance = await boot([{ type: 'paragraph', data: { text: 'first' } }]);
+
+    instance.blocks.insert('paragraph', { text: [{ text: 'a', id: 1 }, { text: 'b', marks: { 'acme:lenient': true } }, 7] }, {}, 1);
+    instance.blocks.insert('paragraph', { text: [{ text: 'c', id: 2 }] }, {}, 2);
+
+    const saved = await instance.save();
+
+    expect(saved.blocks.slice(1).map(block => block.data.text)).toEqual(['ab', 'c']);
+    expect(warningsAbout(warnSpy, 'paragraph.text')).toBe(1);
+    expect(warningsAbout(warnSpy, 'acme:lenient')).toBe(1);
+  }, 60_000);
+
   it('keeps a tag mark only when an inline tool allows the tag', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const instance = await boot([{ type: 'paragraph', data: { text: 'first' } }]);
@@ -330,6 +352,12 @@ describe('nested row documents on input', () => {
     expect(richTextInputToHtml(adapter('database-row', Table), nested, resolve)).toEqual({
       properties: { notes: { blocks: [{ type: 'paragraph', data: { text: 'a &lt; b' } }] } },
     });
+  });
+
+  it('hands back the caller\'s own data object when it is already HTML', () => {
+    const data = { text: '<b>a</b>' };
+
+    expect(richTextInputToHtml(paragraph, data, resolve)).toBe(data);
   });
 
   it('leaves a custom tool\'s nested documents alone', () => {

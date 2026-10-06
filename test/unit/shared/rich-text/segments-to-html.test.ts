@@ -1,7 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { segmentsToHtml } from '../../../../src/shared/rich-text/segments-to-html';
+import type { RichText } from '../../../../types/rich-text';
 
 describe('segmentsToHtml', () => {
+  it('writes no wrapper for a boolean mark set to false', () => {
+    expect(segmentsToHtml([{ text: 'x', marks: { bold: false, italic: true } }] as unknown as RichText)).toBe('<i>x</i>');
+  });
+
+  it('keeps a typed trailing line break when an empty run follows it', () => {
+    expect(segmentsToHtml([{ text: 'a\n' }, { text: '' }])).toBe('a<br><br>');
+  });
+
   it('escapes markup characters typed as text', () => {
     expect(segmentsToHtml([{ text: 'a < b && "c" > d' }])).toBe('a &lt; b &amp;&amp; "c" &gt; d');
   });

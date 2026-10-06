@@ -2,7 +2,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { init, parse } from 'es-module-lexer';
+import { init, parse } from 'es-module-lexer/minimal';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -78,7 +78,7 @@ const copyRuntime = (distDir) => {
 };
 
 export async function wrapDist(distDir) {
-  await init;
+  await init();
   copyRuntime(distDir);
   for (const entry of ENTRIES) {
     for (const ext of entry.formats) {

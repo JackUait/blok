@@ -1,0 +1,97 @@
+[
+  {
+    "id": "holder",
+    "type": "paragraph",
+    "data": {
+      "text": "root that lists no children"
+    }
+  },
+  {
+    "id": "root-x",
+    "type": "paragraph",
+    "data": {
+      "text": "second root"
+    }
+  },
+  {
+    "id": "z-top",
+    "type": "paragraph",
+    "data": {
+      "text": "dangling parent, sorts first"
+    },
+    "parent": "ghost-1",
+    "content": [
+      "z-kid"
+    ]
+  },
+  {
+    "id": "z-kid",
+    "type": "paragraph",
+    "data": {
+      "text": "child of a dangling top"
+    },
+    "parent": "z-top"
+  },
+  {
+    "id": "é-top",
+    "type": "paragraph",
+    "data": {
+      "text": "latin-1 id"
+    },
+    "parent": "ghost-2"
+  },
+  {
+    "id": "😀-top",
+    "type": "paragraph",
+    "data": {
+      "text": "surrogate-pair id sorts before fullwidth"
+    },
+    "parent": "ghost-3"
+  },
+  {
+    "id": "Ａ-top",
+    "type": "paragraph",
+    "data": {
+      "text": "fullwidth id sorts last by code unit"
+    },
+    "parent": "ghost-4"
+  },
+  {
+    "id": "held",
+    "type": "paragraph",
+    "data": {
+      "text": "parent exists but never listed it"
+    },
+    "parent": "holder",
+    "content": [
+      "held-kid"
+    ]
+  },
+  {
+    "id": "held-kid",
+    "type": "paragraph",
+    "data": {
+      "text": "reached through its orphan parent"
+    },
+    "parent": "held"
+  },
+  {
+    "id": "zz-orphan",
+    "type": "paragraph",
+    "data": {
+      "text": "orphan whose child sorts before it"
+    },
+    "parent": "holder",
+    "content": [
+      "aa-kid"
+    ]
+  },
+  {
+    "id": "aa-kid",
+    "type": "paragraph",
+    "data": {
+      "text": "emitted before its own parent in pass two"
+    },
+    "parent": "zz-orphan"
+  }
+]

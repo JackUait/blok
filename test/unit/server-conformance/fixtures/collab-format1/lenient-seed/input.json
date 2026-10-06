@@ -1,0 +1,85 @@
+[
+  {
+    "id": "l-data-array",
+    "type": "widget",
+    "data": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "id": "l-data-string",
+    "type": "widget",
+    "data": "abc"
+  },
+  {
+    "id": "l-data-number",
+    "type": "widget",
+    "data": 5
+  },
+  {
+    "id": "l-data-boolean",
+    "type": "widget",
+    "data": true
+  },
+  {
+    "id": "l-data-empty-array",
+    "type": "widget",
+    "data": []
+  },
+  {
+    "id": "l-para-number",
+    "type": "paragraph",
+    "data": 5
+  },
+  {
+    "id": "l-para-empty-array",
+    "type": "paragraph",
+    "data": []
+  },
+  {
+    "id": "l-tunes-array",
+    "type": "widget",
+    "data": {
+      "a": 1
+    },
+    "tunes": [
+      "x"
+    ]
+  },
+  {
+    "id": "l-tunes-string",
+    "type": "widget",
+    "data": {
+      "a": 1
+    },
+    "tunes": "ab"
+  },
+  {
+    "id": "l-tunes-number",
+    "type": "widget",
+    "data": {
+      "a": 1
+    },
+    "tunes": 5
+  },
+  {
+    "id": "l-content-string",
+    "type": "widget",
+    "data": {
+      "a": 1
+    },
+    "content": "abc"
+  },
+  {
+    "id": "l-content-null",
+    "type": "widget",
+    "data": {
+      "a": 1
+    },
+    "content": null
+  },
+  "a bare string entry is skipped",
+  42,
+  []
+]

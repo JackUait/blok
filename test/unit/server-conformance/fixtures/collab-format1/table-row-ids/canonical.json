@@ -1,0 +1,36 @@
+[
+  {
+    "id": "tr1",
+    "type": "table",
+    "data": {
+      "withHeadings": false,
+      "content": [
+        [
+          {
+            "blocks": [],
+            "id": "c0",
+            "rowId": "r0"
+          },
+          {
+            "blocks": [],
+            "id": "c1",
+            "rowId": "r0"
+          }
+        ],
+        [
+          {
+            "blocks": [],
+            "id": "c0",
+            "rowId": "r1"
+          },
+          {
+            "blocks": [],
+            "id": "c1",
+            "rowId": "rX"
+          }
+        ],
+        []
+      ]
+    }
+  }
+]

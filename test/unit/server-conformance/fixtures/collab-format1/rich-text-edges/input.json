@@ -1,0 +1,58 @@
+[
+  {
+    "id": "t-br",
+    "type": "paragraph",
+    "data": {
+      "text": "line one<br>line two<br>line three"
+    }
+  },
+  {
+    "id": "t-placeholder",
+    "type": "paragraph",
+    "data": {
+      "text": "typed<br>"
+    }
+  },
+  {
+    "id": "t-only-br",
+    "type": "paragraph",
+    "data": {
+      "text": "<br>"
+    }
+  },
+  {
+    "id": "t-nbsp",
+    "type": "paragraph",
+    "data": {
+      "text": "a&nbsp;b&nbsp;&nbsp;c"
+    }
+  },
+  {
+    "id": "t-escaped",
+    "type": "paragraph",
+    "data": {
+      "text": "a &lt; b &amp;&amp; \"c\" &gt; d"
+    }
+  },
+  {
+    "id": "t-empty",
+    "type": "paragraph",
+    "data": {
+      "text": ""
+    }
+  },
+  {
+    "id": "t-emoji",
+    "type": "paragraph",
+    "data": {
+      "text": "<b>👨‍👩‍👧 family</b> é 😀<i>x</i>"
+    }
+  },
+  {
+    "id": "t-plain",
+    "type": "paragraph",
+    "data": {
+      "text": "just plain text"
+    }
+  }
+]

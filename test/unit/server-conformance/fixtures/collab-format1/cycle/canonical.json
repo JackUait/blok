@@ -1,0 +1,67 @@
+[
+  {
+    "id": "anchor",
+    "type": "paragraph",
+    "data": {
+      "text": "root anchor"
+    }
+  },
+  {
+    "id": "c3-b",
+    "type": "paragraph",
+    "data": {
+      "text": "B"
+    },
+    "content": [
+      "c3-a"
+    ]
+  },
+  {
+    "id": "c3-a",
+    "type": "paragraph",
+    "data": {
+      "text": "A"
+    },
+    "parent": "c3-b"
+  },
+  {
+    "id": "c3-c",
+    "type": "paragraph",
+    "data": {
+      "text": "C"
+    }
+  },
+  {
+    "id": "q",
+    "type": "paragraph",
+    "data": {
+      "text": "Q"
+    },
+    "content": [
+      "p"
+    ]
+  },
+  {
+    "id": "p",
+    "type": "paragraph",
+    "data": {
+      "text": "P"
+    },
+    "parent": "q"
+  },
+  {
+    "id": "selfie",
+    "type": "paragraph",
+    "data": {
+      "text": "self parent"
+    }
+  },
+  {
+    "id": "tail",
+    "type": "paragraph",
+    "data": {
+      "text": "hangs off the cycle"
+    },
+    "parent": "p"
+  }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "p-empty",
+    "type": "paragraph",
+    "data": {
+      "text": ""
+    }
+  },
+  {
+    "id": "h-empty",
+    "type": "header",
+    "data": {}
+  },
+  {
+    "id": "p-text",
+    "type": "paragraph",
+    "data": {
+      "text": "kept"
+    }
+  },
+  {
+    "id": "p-other",
+    "type": "paragraph",
+    "data": {
+      "alignment": "left"
+    }
+  }
+]

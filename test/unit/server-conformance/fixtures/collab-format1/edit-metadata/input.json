@@ -1,0 +1,36 @@
+[
+  {
+    "id": "m1",
+    "type": "paragraph",
+    "data": {
+      "text": "edited"
+    },
+    "lastEditedAt": 1735689600000,
+    "lastEditedBy": "user-42"
+  },
+  {
+    "id": "m2",
+    "type": "paragraph",
+    "data": {
+      "text": "only at"
+    },
+    "lastEditedAt": 1735689600001
+  },
+  {
+    "id": "m3",
+    "type": "paragraph",
+    "data": {
+      "text": "only by"
+    },
+    "lastEditedBy": "user-7"
+  },
+  {
+    "id": "m4",
+    "type": "paragraph",
+    "data": {
+      "text": "null by is dropped"
+    },
+    "lastEditedAt": 1735689600002,
+    "lastEditedBy": null
+  }
+]

@@ -126,7 +126,10 @@ const createMockBlock = (): {
  * Tests that only exercise the block-facing surface pass this inert stub; the
  * hierarchy suite below builds a real one via `makeApi`.
  */
-const apiStub = { methods: { blocks: {} } } as unknown as ApiModules;
+const apiStub = {
+  methods: { blocks: {} },
+  blockDataForHost: (_tool: unknown, data: BlockToolData): BlockToolData => data,
+} as unknown as ApiModules;
 
 describe('BlockAPI', () => {
   beforeEach(() => {

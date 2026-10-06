@@ -5,6 +5,7 @@ import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { OutputBlockData, OutputData } from '../../../types/data-formats/output-data';
 import type { MarkdownImportConfig } from '../../markdown/types';
 import { ToolNotFoundError } from '../errors/tool-not-found';
+import { HOST_PRESERVED_DATA } from './host-preserved-data';
 
 import { flattenTree } from '../../shared/flatten-tree';
 import {
@@ -903,7 +904,12 @@ export const createBlocksApiForEditor = (
     // the same snapshot clipboard ops read. Returning it (rather than the async
     // save()) keeps this reader synchronous so a block can be read and re-inserted
     // (duplicated) inside one render/handler without the ref escape hatch.
-    return { data: block.preservedData, tunes: block.preservedTunes };
+    const hostData: unknown = Reflect.get(block, HOST_PRESERVED_DATA);
+
+    // An older core has no hidden reader: its data is HTML anyway.
+    const data = typeof hostData === 'function' ? (hostData as () => BlockToolData)() : block.preservedData;
+
+    return { data, tunes: block.preservedTunes };
   };
 
   const getBlockIndex = (id: string): number | null => {

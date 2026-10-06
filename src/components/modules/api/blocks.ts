@@ -18,6 +18,7 @@ import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { equalsOutputData, normalizeOutputBlocks } from '../../../shared/output-data';
+import { outputBlocksToHtml } from '../../../shared/rich-text/block-data';
 import { resolveHashTarget } from '../../utils/hash-target';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 import { assertCanMoveUnder, BlockPlacementError, findBlock, isUnder, resolvePlacement, type BlockTree } from './block-placement';
@@ -408,7 +409,19 @@ export class BlocksAPI extends Module {
 
     await this.replaceDocument(data, { keepId: true });
 
-    return data;
+    if (this.config.richText !== 'segments') {
+      return data;
+    }
+
+    // After the render: the legacy gate reads the detected input format.
+    return {
+      ...data,
+      blocks: blocks.map((block) => {
+        const tool = this.Blok.Tools.blockTools.get(block.type);
+
+        return tool === undefined ? block : { ...block, data: this.Blok.Saver.blockDataForHost(tool, block.data) };
+      }),
+    };
   }
 
   /**
@@ -421,11 +434,17 @@ export class BlocksAPI extends Module {
    * @returns the document as Markdown ('' when there is nothing to save)
    */
   public async exportMarkdown(): Promise<string> {
-    const output = await this.Blok.Saver.save();
+    const saved = await this.Blok.Saver.save();
 
-    if (output === undefined) {
+    if (saved === undefined) {
       return '';
     }
+
+    // blocksToMarkdown reads HTML; the host save may hold segments. The
+    // internal dialect would avoid this, but it also skips the legacy collapse.
+    const output = this.config.richText === 'segments'
+      ? { ...saved, blocks: outputBlocksToHtml(saved.blocks, type => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? []) }
+      : saved;
 
     const parentOf = new Map<string, string | null>();
 

@@ -6,6 +6,7 @@
  */
 import type { OutputData, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
+import type { BlockToolData } from '../../../types/tools';
 import type { SavedData, ValidatedData } from '../../../types/data-formats';
 import type { ModuleConfig } from '../../types-internal/module-config';
 import { Module } from '../__module';
@@ -27,6 +28,8 @@ import { dfsOrder } from '../utils/tree-order';
 import { normalizeInlineImages } from './normalizeInlineImages';
 import { htmlToSegmentsDom } from '../utils/rich-text-dom';
 import { outputBlocksToSegments } from '../../shared/rich-text/block-data';
+import { richTextOutputForHost } from '../utils/rich-text-output';
+import type { BlockToolAdapter } from '../tools/block';
 
 type SaverValidatedData = ValidatedData & {
   tunes?: Record<string, BlockTuneData>;
@@ -1263,6 +1266,32 @@ export class Saver extends Module {
       blocks: hostBlocks,
       version: getBlokVersion(),
     };
+  }
+
+  /**
+   * One block's data the way a host save would write it, for host APIs that
+   * skip the Saver (BlockAPI.save, getBlockData, importMarkdown). The gates
+   * must match makeOutput's, or a block's own save disagrees with the document.
+   * @param tool - the block's tool
+   * @param data - block data as the tool saved it
+   * @returns `data` itself when nothing converts
+   */
+  public blockDataForHost(tool: BlockToolAdapter, data: BlockToolData): BlockToolData {
+    if (tool.richTextFormat !== 'segments') {
+      return data;
+    }
+
+    const legacyOutput = shouldCollapseToLegacy(
+      this.config.dataModel || 'auto',
+      this.Blok.Renderer?.getDetectedInputFormat?.() ?? 'flat'
+    );
+    const collaborating = this.Blok.Collaboration?.isEnabled ?? false;
+
+    if (legacyOutput || collaborating) {
+      this.warnRichTextFallbackOnce(legacyOutput ? 'the legacy data model' : 'collaboration');
+    }
+
+    return richTextOutputForHost(tool, data, name => this.Blok.Tools.blockTools.get(name), { collaborating, legacyOutput });
   }
 
   private warnRichTextFallbackOnce(reason: string): void {

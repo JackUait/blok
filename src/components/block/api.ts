@@ -12,6 +12,7 @@ import {
 
 import type { Block } from './index';
 import { placeCaretInInsertedChild } from './insert-caret';
+import { HOST_PRESERVED_DATA } from '../utils/host-preserved-data';
 
 /**
  * Adapt the editor-level blocks API to the IndexReader the shared tree helpers
@@ -180,7 +181,15 @@ const BlockAPIConstructor = function BlockAPI(
      * @returns {Promise<void|SavedData>}
      */
     save(): Promise<void|SavedData> {
-      return block.save();
+      return block.save().then((saved) => {
+        if (saved === undefined) {
+          return saved;
+        }
+
+        const data = api.blockDataForHost(block.tool, saved.data);
+
+        return data === saved.data ? saved : { ...saved, data };
+      });
     },
 
     /**
@@ -398,6 +407,11 @@ const BlockAPIConstructor = function BlockAPI(
       api.methods.blocks.move(toIndex, fromIndex);
     },
   };
+
+  // Hidden: the adapters' getBlockData reads it (see HOST_PRESERVED_DATA).
+  Object.defineProperty(blockAPI, HOST_PRESERVED_DATA, {
+    value: (): BlockToolData => api.blockDataForHost(block.tool, block.preservedData),
+  });
 
   Object.setPrototypeOf(this, blockAPI);
 

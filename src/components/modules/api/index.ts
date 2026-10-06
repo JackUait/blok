@@ -6,12 +6,24 @@
  * if you cant to read more about how API works, please see docs
  */
 import type { API as APIInterfaces } from '../../../../types';
+import type { BlockToolData } from '../../../../types/tools';
+import type { BlockToolAdapter } from '../../tools/block';
 import { Module } from '../../__module';
 
 /**
  * @class API
  */
 export class API extends Module {
+  /**
+   * Block data the way hosts receive it. BlockAPI reaches core through this
+   * module only, so its save() converts here.
+   * @param tool - the block's tool
+   * @param data - block data as the tool saved it
+   */
+  public blockDataForHost(tool: BlockToolAdapter, data: BlockToolData): BlockToolData {
+    return this.Blok.Saver.blockDataForHost(tool, data);
+  }
+
   /**
    * Blok Core API modules
    */

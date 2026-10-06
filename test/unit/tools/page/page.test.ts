@@ -1305,6 +1305,24 @@ describe('Page tool', () => {
       expect(document.querySelector('[data-blok-testid="page-hover-preview-content"] script, [data-blok-testid="page-hover-preview-content"] b')).toBeNull();
     });
 
+    it('shows the lines of a page stored as segments', async () => {
+      const preview = vi.fn(() => Promise.resolve([
+        { type: 'header', data: { text: [{ text: 'Goals' }], level: 2 } },
+        { type: 'paragraph', data: { text: [{ text: 'Ship ' }, { text: 'fast', marks: { bold: true } }, { text: ' & safe' }] } },
+        { type: 'list', data: { text: [{ text: 'First' }], style: 'unordered' } },
+      ]));
+      const { root } = await mount({ config: { resolve: () => ({ title: 'Roadmap' }), preview } });
+
+      vi.useFakeTimers();
+      hoverOver(anchorOf(root));
+      await vi.advanceTimersByTimeAsync(500);
+
+      const lines = [...document.querySelectorAll('[data-blok-testid="page-hover-preview-line"]')];
+
+      expect(lines.map((line) => line.textContent)).toEqual(['Goals', 'Ship fast & safe', '• First']);
+      expect(lines[0].getAttribute('data-blok-preview-heading')).toBe('true');
+    });
+
     it('numbers ordered items, restarting after other blocks, and marks to-dos', () => {
       expect(previewLines([
         { type: 'list', data: { text: 'a', style: 'ordered' } },

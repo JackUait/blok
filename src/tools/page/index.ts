@@ -4,6 +4,7 @@ import type {
   BlockTool,
   BlockToolConstructorOptions,
   ConversionConfig,
+  OutputBlockData,
   SanitizerConfig,
   ToolboxConfig,
 } from '../../../types';
@@ -43,7 +44,13 @@ import {
 } from './constants';
 import { PageHoverPreview, pageIconNode, previewLines, type PageHoverContent, type PagePreviewLine } from './hover-preview';
 import { renderPagePreview } from './preview';
+import { outputBlocksToHtml } from '../../shared/rich-text/block-data';
+import { richTextFieldsFor } from '../../shared/rich-text/fields';
 import type { PageConfig, PageData, PageIcon, PageInfo } from './types';
+
+const isOutputBlock = (value: unknown): value is OutputBlockData =>
+  typeof value === 'object' && value !== null && typeof Reflect.get(value, 'type') === 'string'
+  && typeof Reflect.get(value, 'data') === 'object' && Reflect.get(value, 'data') !== null;
 
 export type { PageCache, PageConfig, PageCreateResult, PageData, PageIcon, PageInfo, PageSearchResult } from './types';
 
@@ -651,7 +658,22 @@ export class PageTool implements BlockTool {
 
     const { pageId } = this.data;
 
-    return Promise.resolve().then(() => preview(pageId)).then(previewLines);
+    return Promise.resolve().then(() => preview(pageId)).then((blocks) => previewLines(this.previewBlocksAsHtml(blocks)));
+  }
+
+  /** The host may store the page as segments; the preview reads HTML text. */
+  private previewBlocksAsHtml(blocks: unknown): unknown {
+    if (!Array.isArray(blocks)) {
+      return blocks;
+    }
+    const installed = typeof this.api.tools?.getBlockTools === 'function' ? this.api.tools.getBlockTools() : [];
+    const fieldsOf = (type: string): string[] => {
+      const declared: unknown = Reflect.get(installed.find((tool) => tool.name === type) ?? {}, 'richTextFields');
+
+      return Array.isArray(declared) ? declared.filter((field): field is string => typeof field === 'string') : richTextFieldsFor(type);
+    };
+
+    return blocks.map((block: unknown) => (isOutputBlock(block) ? outputBlocksToHtml([block], fieldsOf)[0] : block));
   }
 
   private previewContent(): PageHoverContent | null {

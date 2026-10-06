@@ -407,6 +407,51 @@ describe('tabs block', () => {
     expect(pills()[0]).toHaveFocus();
   });
 
+  describe('while the deleted tab folds away', () => {
+    const animations: Array<{ target: Element; frames: Keyframe[] }> = [];
+
+    beforeEach(() => {
+      animations.length = 0;
+      // A browser runs the fold, so the block is removed later, not at once.
+      Object.assign(HTMLElement.prototype, {
+        animate(this: HTMLElement, frames: Keyframe[]): Animation {
+          animations.push({ target: this, frames });
+
+          return { cancel: vi.fn(), finish: vi.fn(), onfinish: null, oncancel: null } as unknown as Animation;
+        },
+        getAnimations: (): Animation[] => [],
+      });
+    });
+
+    afterEach(() => {
+      delete (HTMLElement.prototype as Partial<{ animate: unknown }>).animate;
+      delete (HTMLElement.prototype as Partial<{ getAnimations: unknown }>).getAnimations;
+    });
+
+    it('hides the deleted tab\'s panel at once, so two panels never stack', async () => {
+      await boot(doc());
+      await pressOnPill(0, 'Delete');
+
+      expect(holderOf('t1').classList.contains('hidden')).toBe(true);
+      expect(holderOf('t2').classList.contains('hidden')).toBe(false);
+    });
+
+    it('does not blur the opened tab\'s blocks in', async () => {
+      await boot(doc());
+      await pressOnPill(0, 'Delete');
+
+      expect(animations.filter(call => call.frames.some(frame => String(frame.filter ?? '').includes('blur')))).toEqual([]);
+    });
+
+    it('shows no keyboard focus ring on the tab that takes focus', async () => {
+      await boot(doc());
+      await pressOnPill(0, 'Delete');
+
+      expect(pills().find(pill => pill.getAttribute('data-tab-id') === 't2')).toHaveFocus();
+      expect(document.documentElement.getAttribute('data-blok-modality')).toBe('pointer');
+    });
+  });
+
   // The block is deleted after the pill folds away; a delete that moved the caret would pull focus out of the strip.
   it('keeps focus on the opened tab after the deleted tab finishes folding away', async () => {
     Object.assign(HTMLElement.prototype, {

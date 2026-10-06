@@ -72,6 +72,15 @@ export function recordPointerGesture(): void {
 }
 
 /**
+ * Records a key that acts rather than navigates, e.g. Delete on a tab. The
+ * focus it moves lands where the user did not navigate to, so no focus ring
+ * shows until the next key.
+ */
+export function recordActionKey(): void {
+  rememberPointer();
+}
+
+/**
  * Whether the last user gesture came from the keyboard.
  * @returns true when a focus cursor or focus ring should be shown.
  */

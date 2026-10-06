@@ -10,6 +10,7 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconEmojiSmile, IconPencil, IconPlus, IconTabs, IconTrash } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
+import { recordActionKey } from '../../components/utils/input-modality';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { rovingRadioGroup, type RovingRadioGroup } from '../../components/utils/roving-radio-group';
@@ -318,6 +319,8 @@ export class TabsTool implements BlockTool, TabsHandle {
       this.setActiveId(neighbour.id);
     }
 
+    const closing = tabs[index].holder;
+
     this.pendingDeletes.add(id);
 
     const remove = (): void => {
@@ -339,7 +342,7 @@ export class TabsTool implements BlockTool, TabsHandle {
     }
 
     pill.setAttribute('aria-hidden', 'true');
-    this.select(this.activeId() ?? id, { animate: true, focus: false });
+    this.select(this.activeId() ?? id, { animate: true, focus: false, closing });
     foldPill(pill, remove);
   }
 
@@ -695,13 +698,14 @@ export class TabsTool implements BlockTool, TabsHandle {
         event.preventDefault();
         this.deleteTab({ id });
         this.pills.get(this.activeId() ?? '')?.focus();
+        recordActionKey();
       }
     });
 
     return pill;
   }
 
-  private select(tabId: string, options: { animate: boolean; focus: boolean }): void {
+  private select(tabId: string, options: { animate: boolean; focus: boolean; closing?: HTMLElement }): void {
     this.setActiveId(tabId);
     this.applyActive(tabId, options);
 
@@ -710,7 +714,12 @@ export class TabsTool implements BlockTool, TabsHandle {
     }
   }
 
-  private applyActive(activeId: string, options: { animate: boolean }): void {
+  /**
+   * @param activeId - the tab to show
+   * @param options - animate the switch; `closing` is a tab being deleted,
+   *   which tabBlocks() already leaves out, so it is hidden here
+   */
+  private applyActive(activeId: string, options: { animate: boolean; closing?: HTMLElement }): void {
     const panels = this.panels;
 
     if (panels === null) {
@@ -724,6 +733,9 @@ export class TabsTool implements BlockTool, TabsHandle {
     const nextIndex = tabs.findIndex(tab => tab.id === activeId);
     const switching = previousIndex !== nextIndex;
     const fromHeight = panels.offsetHeight;
+
+    options.closing?.classList.add('hidden');
+    options.closing?.setAttribute('aria-hidden', 'true');
 
     tabs.forEach((tab) => {
       const isActive = tab.id === activeId;
@@ -752,7 +764,8 @@ export class TabsTool implements BlockTool, TabsHandle {
       const panel = tabs[nextIndex]?.holder;
       const closing = tabs[previousIndex]?.holder;
 
-      if (panel !== undefined && (closing === undefined || !looksTheSame(panelRows(closing), panelRows(panel)))) {
+      // A delete only reveals the neighbour, so its blocks do not cascade in.
+      if (panel !== undefined && options.closing === undefined && (closing === undefined || !looksTheSame(panelRows(closing), panelRows(panel)))) {
         cascadeIn(panelRows(panel));
       }
       pill?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });

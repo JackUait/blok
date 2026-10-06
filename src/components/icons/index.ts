@@ -250,10 +250,11 @@ export const IconToggleList = `
 </svg>
 `;
 
-// Table of contents icon — rules stepped in by outline depth
+// Table of contents icon — Notion's stairs: each row is a dash and a rule,
+// stepped right by depth
 export const IconTableOfContents = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3 5.5H14M6.5 10H17M10 14.5H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 5.25H4.25M6.75 5.25H13.25M5 10H6.25M8.75 10H15.25M7 14.75H8.25M10.75 14.75H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -1063,12 +1064,14 @@ export const IconColumns = `
 </svg>
 `;
 
-// Tabs tool: a panel with a raised tab and a lower tab beside it. The lower
-// tab is an open path so the body's top edge is drawn once.
+// Tabs tool: the open tab is lit and has no floor. The floor under the other
+// tabs curves up into its edge, which keeps it apart from IconCalendar's
+// full-width header line.
 export const IconTabs = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M5 4h1.5a2 2 0 0 1 2 2v2H15a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M11 8V6.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1V8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17 8H9.5A1.5 1.5 0 0 1 8 6.5V4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5 4h3v2.5A1.5 1.5 0 0 0 9.5 8H3V6a2 2 0 0 1 2-2Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

@@ -28,6 +28,7 @@ import {
   IconSplitCell,
   IconSplitView,
   IconTable,
+  IconTableOfContents,
   IconTabs,
   IconUpload,
 } from '../../../../src/components/icons';
@@ -331,26 +332,58 @@ describe('Blok Line layout geometry', () => {
     expect(new Set(dots.map(dot => numberOf(dot, 'cx'))).size).toBe(3);
     expect(new Set(dots.map(dot => numberOf(dot, 'cy'))).size).toBe(3);
   });
-  it('draws the tab strip on the panel keyline, with a clear opening between the two tabs', () => {
-    const [outline, smallTab] = Array.from(svgOf(IconTabs).querySelectorAll('path[stroke="currentColor"]'));
-    const outlinePoints = arcAwarePoints(outline);
-    const xs = outlinePoints.map(([x]) => x);
-    const ys = outlinePoints.map(([, y]) => y);
+  it('lights the open tab and curves the floor up into its edge, unlike the calendar header', () => {
+    const svg = svgOf(IconTabs);
+    const floor = required(svg, 'path:not([fill])');
+    const tab = required(svg, 'path[fill="currentColor"]');
+    const floorPoints = arcAwarePoints(floor);
+    const tabPoints = arcAwarePoints(tab);
+    const [floorStart] = floorPoints;
+    const floorEnd = floorPoints[floorPoints.length - 1];
+    const floorY = floorStart[1];
 
-    // The body plus the raised tab fill the same box as every framed tool icon.
-    expect([Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]).toStrictEqual([3, 4, 17, 16]);
+    expect(frameOf(IconTabs)).toStrictEqual(frameOf(IconTable));
+    // The floor starts on the panel's right edge and ends on its top edge.
+    expect(floorStart[0]).toBe(17);
+    expect(floorEnd[1]).toBe(4);
+    // It stops at the open tab, so it is not the calendar's full-width line.
+    expect(Math.min(...floorPoints.map(([x]) => x))).toBeGreaterThan(3);
+    expect(floor.getAttribute('d')).toMatch(/A/i);
+    // The lit tab fills the corner up to the floor and follows its curve.
+    expect(Math.min(...tabPoints.map(([x]) => x))).toBe(3);
+    expect(Math.min(...tabPoints.map(([, y]) => y))).toBe(4);
+    expect(Math.max(...tabPoints.map(([, y]) => y))).toBe(floorY);
+    expect(floorPoints.filter(([x, y]) => y < floorY || x === floorEnd[0])
+      .every(point => tabPoints.some(([x, y]) => x === point[0] && y === point[1]))).toBe(true);
+    // Nothing sticks out above the panel the way calendar rings do.
+    expect(Math.min(...[...floorPoints, ...tabPoints].map(([, y]) => y))).toBe(4);
+  });
 
-    const tabPoints = arcAwarePoints(smallTab);
-    const bodyTop = Math.max(...tabPoints.map(([, y]) => y));
-    const activeTabRight = Math.max(...outlinePoints.filter(([, y]) => y < bodyTop).map(([x]) => x));
-    const smallTabLeft = Math.min(...tabPoints.map(([x]) => x));
+  it('steps each table of contents row right by the same amount, as a dash then a rule', () => {
+    const paths = Array.from(svgOf(IconTableOfContents).querySelectorAll('path'));
 
-    // The small tab stands on the body's top edge and is lower than the raised tab.
-    expect(outlinePoints.some(([x, y]) => y === bodyTop && x > smallTabLeft)).toBe(true);
-    expect(Math.min(...tabPoints.map(([, y]) => y))).toBeGreaterThan(4);
-    // A full stroke of clear space keeps the opening visible at 16 px.
-    expect(smallTabLeft - activeTabRight - 1.25).toBeGreaterThanOrEqual(1.25);
-    // The shared top edge is drawn once: the small tab is an open path.
-    expect(smallTab.getAttribute('d')).not.toMatch(/z/i);
+    expect(paths).toHaveLength(1);
+
+    const segments = linePoints(paths[0]);
+    const rows = [...new Set(segments.map(([[, y]]) => y))];
+
+    expect(segments).toHaveLength(6);
+    expect(rows).toHaveLength(3);
+
+    const pairs = rows.map(row => segments
+      .filter(([[, y]]) => y === row)
+      .map(([[a], [b]]) => [Math.min(a, b), Math.max(a, b)])
+      .sort(([a], [b]) => a - b));
+    const steps = pairs.slice(1).map(([[dash]], i) => dash - pairs[i][0][0]);
+
+    pairs.forEach(([dash, rule]) => {
+      expect(dash[1] - dash[0]).toBeLessThan(rule[1] - rule[0]);
+      // A full stroke of clear space keeps the dash apart from its rule at 16 px.
+      expect(rule[0] - dash[1] - 1.25).toBeGreaterThanOrEqual(1.25);
+    });
+    expect(steps[0]).toBeGreaterThan(0);
+    expect(steps[1]).toBe(steps[0]);
+    expect(Math.min(...pairs.flat(2))).toBe(3);
+    expect(Math.max(...pairs.flat(2))).toBe(17);
   });
 });

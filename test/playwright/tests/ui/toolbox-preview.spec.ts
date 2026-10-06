@@ -436,6 +436,20 @@ test.describe('Toolbox hover preview', () => {
 
         const bounds = paper.getBoundingClientRect();
         const rects: DOMRect[] = [];
+        // Only the part an overflow-clipping ancestor lets through is painted.
+        const visibleRect = (rect: DOMRect, from: Element | null): DOMRect => {
+          let [ left, top, right, bottom ] = [ rect.left, rect.top, rect.right, rect.bottom ];
+
+          for (let parent = from; parent !== null && parent !== paper; parent = parent.parentElement) {
+            if (getComputedStyle(parent).overflow !== 'visible') {
+              const clip = parent.getBoundingClientRect();
+
+              [ left, top, right, bottom ] = [ Math.max(left, clip.left), Math.max(top, clip.top), Math.min(right, clip.right), Math.min(bottom, clip.bottom) ];
+            }
+          }
+
+          return new DOMRect(left, top, Math.max(0, right - left), Math.max(0, bottom - top));
+        };
         const walker = document.createTreeWalker(paper, NodeFilter.SHOW_TEXT);
 
         for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
@@ -443,7 +457,7 @@ test.describe('Toolbox hover preview', () => {
             const range = document.createRange();
 
             range.selectNodeContents(node);
-            rects.push(...Array.from(range.getClientRects()));
+            rects.push(...Array.from(range.getClientRects(), (rect) => visibleRect(rect, node.parentElement)));
           }
         }
 
@@ -452,7 +466,7 @@ test.describe('Toolbox hover preview', () => {
           const style = getComputedStyle(el);
 
           if (style.backgroundColor !== 'rgba(0, 0, 0, 0)' || style.boxShadow !== 'none' || style.borderTopWidth !== '0px') {
-            rects.push(el.getBoundingClientRect());
+            rects.push(visibleRect(el.getBoundingClientRect(), el.parentElement));
           }
         });
 

@@ -319,7 +319,7 @@ export class Bookmark implements BlockTool {
 
     urlText.classList.add('blok-bookmark__url');
     urlText.setAttribute('data-role', 'bookmark-url');
-    urlText.textContent = this.data.url;
+    urlText.append(...this.addressParts());
     linkRow.appendChild(urlText);
     content.appendChild(linkRow);
 
@@ -331,15 +331,72 @@ export class Bookmark implements BlockTool {
       imageContainer.classList.add('blok-bookmark__image');
       imageContainer.setAttribute('data-role', 'bookmark-image');
 
+      const frame = document.createElement('div');
+
+      frame.classList.add('blok-bookmark__window');
+      frame.setAttribute('data-role', 'bookmark-window');
+
+      const bar = document.createElement('div');
+
+      bar.classList.add('blok-bookmark__window-bar');
+      bar.setAttribute('data-role', 'bookmark-window-bar');
+      bar.setAttribute('aria-hidden', 'true');
+
+      const address = this.splitAddress();
+      const barAddress = document.createElement('span');
+
+      barAddress.textContent = address === null ? this.data.url : address.host + address.path;
+      bar.appendChild(barAddress);
+
       const image = document.createElement('img');
 
       image.src = this.data.image;
       image.alt = '';
-      imageContainer.appendChild(image);
+      frame.append(bar, image);
+      imageContainer.appendChild(frame);
       card.appendChild(imageContainer);
     }
 
     return card;
+  }
+
+  /** Host in ink, path in gray; an unparseable url is shown as saved. */
+  private addressParts(): Array<string | HTMLElement> {
+    const address = this.splitAddress();
+
+    if (address === null) {
+      return [ this.data.url ];
+    }
+
+    const host = document.createElement('span');
+
+    host.classList.add('blok-bookmark__host');
+    host.setAttribute('data-role', 'bookmark-host');
+    host.textContent = address.host;
+
+    if (address.path === '') {
+      return [ host ];
+    }
+
+    const path = document.createElement('span');
+
+    path.classList.add('blok-bookmark__path');
+    path.setAttribute('data-role', 'bookmark-path');
+    path.textContent = address.path;
+
+    return [ host, path ];
+  }
+
+  /** The scheme is dropped; a bare site root has no path. */
+  private splitAddress(): { host: string; path: string } | null {
+    try {
+      const { host, pathname, search, hash } = new URL(this.data.url);
+      const path = pathname + search + hash;
+
+      return host === '' ? null : { host, path: path === '/' ? '' : path };
+    } catch {
+      return null;
+    }
   }
 
   /** Notion reduces a URL-ish title to the hostname; raw url if unparseable. */

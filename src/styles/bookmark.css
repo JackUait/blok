@@ -87,15 +87,94 @@
   text-overflow: ellipsis;
 }
 
-/* right cover image — fills its flex cell */
-[data-blok-tool="bookmark"] .blok-bookmark__image {
-  flex: 0 0 160px;
-  max-width: 29%;
+/* host in ink, path in gray */
+[data-blok-tool="bookmark"] .blok-bookmark__host {
+  font-weight: 500;
 }
-[data-blok-tool="bookmark"] .blok-bookmark__image img {
+[data-blok-tool="bookmark"] .blok-bookmark__path {
+  color: var(--blok-text-secondary);
+}
+
+/*
+  Cover = a small browser window peeking out of the card's end edge. It leans
+  away from the text and springs upright on hover. The card's overflow clips
+  the window's end and bottom; its min-height gives the window room to show.
+  The lean is mirrored through --_blok-inline-sign, so it follows the block's
+  own direction (the bar is aria-hidden, so the direction scan skips it).
+*/
+[data-blok-tool="bookmark"] .blok-bookmark__image {
+  --bookmark-scale: var(--blok-bookmark-title-font-size, 14px);
+  --bookmark-window-sign: var(--_blok-inline-sign, 1);
+  position: relative;
+  flex: 0 0 calc(var(--bookmark-scale) * 15);
+  max-width: 38%;
+  min-height: calc(var(--bookmark-scale) * 62 / 7);
+}
+
+[data-blok-tool="bookmark"] .blok-bookmark__window {
+  position: absolute;
+  inset-block-start: calc(var(--bookmark-scale) * 9 / 7);
+  inset-inline-start: calc(var(--bookmark-scale) * 9 / 7);
+  width: calc(var(--bookmark-scale) * 115 / 7);
+  overflow: hidden;
+  border-radius: var(--blok-radius-control-lg);
+  background: var(--blok-bg-primary);
+  box-shadow: 0 0 0 var(--blok-border-width-hairline) var(--blok-popover-border), var(--blok-image-shadow-resting);
+  transform: rotate(calc(-4deg * var(--bookmark-window-sign))) translateY(calc(var(--bookmark-scale) * 5 / 7));
+  transform-origin: calc(50% - 30% * var(--bookmark-window-sign)) 100%;
+}
+[data-blok-tool="bookmark"] .blok-bookmark:hover .blok-bookmark__window {
+  box-shadow: 0 0 0 var(--blok-border-width-hairline) var(--blok-popover-border), var(--blok-image-shadow-popover);
+  transform: rotate(0deg) translateY(calc(var(--bookmark-scale) * -3 / 7));
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-blok-tool="bookmark"] .blok-bookmark__window {
+    transition: transform 520ms cubic-bezier(.34, 1.56, .64, 1), box-shadow 520ms ease;
+  }
+}
+
+[data-blok-tool="bookmark"] .blok-bookmark__window-bar {
+  display: flex;
+  align-items: center;
+  height: calc(var(--bookmark-scale) * 10 / 7);
+  padding-inline: calc(var(--bookmark-scale) / 2);
+  background: color-mix(in srgb, var(--blok-text-primary) 4%, var(--blok-bg-primary));
+  --bookmark-dot: calc(var(--bookmark-scale) * 3 / 7);
+  --bookmark-dot-color: color-mix(in srgb, var(--blok-text-secondary) 35%, transparent);
+}
+/* three dots: one circle and two box-shadow copies along the inline axis */
+[data-blok-tool="bookmark"] .blok-bookmark__window-bar::before {
+  content: '';
+  flex: none;
+  width: var(--bookmark-dot);
+  height: var(--bookmark-dot);
+  margin-inline-end: calc(var(--bookmark-dot) * 14 / 3);
+  border-radius: var(--blok-radius-pill);
+  background: var(--bookmark-dot-color);
+  box-shadow:
+    calc(var(--bookmark-dot) * 5 / 3 * var(--bookmark-window-sign)) 0 0 var(--bookmark-dot-color),
+    calc(var(--bookmark-dot) * 10 / 3 * var(--bookmark-window-sign)) 0 0 var(--bookmark-dot-color);
+}
+[data-blok-tool="bookmark"] .blok-bookmark__window-bar > span {
+  flex: 1;
+  min-width: 0;
+  height: calc(var(--bookmark-scale) * 11 / 14);
+  padding-inline: calc(var(--bookmark-scale) * 5 / 14);
+  border-radius: var(--blok-radius-control-sm);
+  background: var(--blok-item-hover-bg);
+  color: var(--blok-text-secondary);
+  font-size: calc(var(--bookmark-scale) * 15 / 28);
+  font-weight: 500;
+  line-height: calc(var(--bookmark-scale) * 11 / 14);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-blok-tool="bookmark"] .blok-bookmark__window img {
   display: block;
   width: 100%;
-  height: 100%;
+  height: calc(var(--bookmark-scale) * 65 / 7);
   object-fit: cover;
 }
 

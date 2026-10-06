@@ -1,6 +1,6 @@
 import { createPreview, h } from '../../../components/utils/block-preview';
 
-/** Blok's bookmark card unfurling: text column, favicon + URL, drawn cover. */
+/** Blok's bookmark card: text column, favicon + host/path, drawn cover in a leaning window. */
 export const renderBookmarkPreview = (): HTMLElement => createPreview(
   'bookmark',
   h('p', { 'data-part': 'lead' }, 'Worth a read this week:'),
@@ -16,13 +16,23 @@ export const renderBookmarkPreview = (): HTMLElement => createPreview(
         'div',
         { 'data-part': 'link' },
         h('span', { 'data-part': 'favicon' }),
-        h('span', { 'data-part': 'url' }, 'craft.blog/slow')
+        h(
+          'span',
+          { 'data-part': 'url' },
+          h('span', { 'data-part': 'host' }, 'craft.blog'),
+          h('span', { 'data-part': 'path' }, '/slow')
+        )
       )
     ),
     h(
       'div',
       { 'data-part': 'cover' },
-      h('span', { 'data-part': 'cover-orb' })
+      h(
+        'div',
+        { 'data-part': 'window' },
+        h('div', { 'data-part': 'bar' }, h('span', { 'data-part': 'address' }, 'craft.blog/slow')),
+        h('div', { 'data-part': 'shot' }, h('span', { 'data-part': 'cover-orb' }))
+      )
     )
   )
 );

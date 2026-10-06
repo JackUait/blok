@@ -1076,10 +1076,74 @@
   text-overflow: ellipsis;
 }
 
-/* The link's cover image: a sun over a green hill. */
+[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='host'] {
+  font-weight: 500;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='path'] {
+  color: var(--blok-text-secondary);
+}
+
+/* The cover sits in a small browser window that leans away from the text, as on the real card. */
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='cover'] {
   position: relative;
-  flex: 0 0 62px;
+  flex: 0 0 96px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='window'] {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-start: 10px;
+  width: 116px;
+  overflow: hidden;
+  border-radius: var(--blok-radius-control);
+  background: var(--blok-bg-primary);
+  box-shadow: 0 0 0 var(--blok-border-width-hairline) var(--blok-popover-border), var(--blok-image-shadow-resting);
+  transform: rotate(calc(-4deg * var(--_blok-inline-sign, 1))) translateY(4px);
+  transform-origin: calc(50% - 30% * var(--_blok-inline-sign, 1)) 100%;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='bar'] {
+  display: flex;
+  align-items: center;
+  height: 12px;
+  padding-inline: calc(var(--_bm-dot) * 5 / 3);
+  background: color-mix(in srgb, var(--blok-text-primary) 4%, var(--blok-bg-primary));
+  --_bm-dot: 3px;
+  --_bm-dot-color: color-mix(in srgb, var(--blok-text-secondary) 35%, transparent);
+}
+
+/* three dots: one circle and two box-shadow copies along the inline axis */
+[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='bar']::before {
+  content: '';
+  flex: none;
+  width: var(--_bm-dot);
+  height: var(--_bm-dot);
+  margin-inline-end: calc(var(--_bm-dot) * 14 / 3);
+  border-radius: var(--blok-radius-pill);
+  background: var(--_bm-dot-color);
+  box-shadow:
+    calc(var(--_bm-dot) * 5 / 3 * var(--_blok-inline-sign, 1)) 0 0 var(--_bm-dot-color),
+    calc(var(--_bm-dot) * 10 / 3 * var(--_blok-inline-sign, 1)) 0 0 var(--_bm-dot-color);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='address'] {
+  flex: 1;
+  min-width: 0;
+  padding-inline: var(--_bm-dot);
+  border-radius: var(--blok-radius-mark);
+  background: var(--blok-item-hover-bg);
+  color: var(--blok-text-secondary);
+  font-size: calc(var(--_bm-dot) * 5 / 3);
+  line-height: calc(var(--_bm-dot) * 7 / 3);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* The link's cover image: a sun over a green hill. */
+[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='shot'] {
+  position: relative;
+  height: 72px;
   overflow: hidden;
   background: linear-gradient(
     170deg,
@@ -1088,7 +1152,7 @@
   );
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='cover']::after {
+[data-blok-interface='block-preview'] [data-blok-preview='bookmark'] [data-part='shot']::after {
   content: '';
   position: absolute;
   inset: auto -30px -44px -20px;

@@ -450,6 +450,13 @@ describe('Bookmark tool', () => {
       expect(afterFailedPaste.innerHTML).toBe(afterReload.innerHTML);
     });
 
+    it('owns its link, so Blok shows no link hover card over the card', () => {
+      const card = new Bookmark(createOptions({ url: URL })).render()
+        .querySelector('[data-blok-testid="bookmark-card"]');
+
+      expect(card?.closest('[data-blok-link-owner]')).not.toBeNull();
+    });
+
     it('keeps the link clickable in read-only mode', () => {
       const readOnlyRoot = new Bookmark(
         createOptions({ url: URL }, { endpoint: 'https://api.test/unfurl' }, true)

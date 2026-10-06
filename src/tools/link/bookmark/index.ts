@@ -267,6 +267,7 @@ export class Bookmark implements BlockTool {
     card.classList.add('blok-bookmark');
     card.setAttribute('data-blok-testid', 'bookmark-card');
     card.setAttribute(DATA_ATTR.blockContextMenu, '');
+    card.setAttribute(DATA_ATTR.linkOwner, '');
 
     // Only navigate http(s) URLs. Saved JSON or a compromised unfurl endpoint
     // could carry a javascript:/data: URL; leaving href unset prevents XSS.

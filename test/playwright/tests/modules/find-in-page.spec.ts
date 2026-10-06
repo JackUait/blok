@@ -142,6 +142,27 @@ test.describe('find in page', () => {
   });
 
   test.describe('opening', () => {
+    test('starts from where the reader has scrolled to, not from a caret left off screen', async ({ page }) => {
+      const lines = Array.from({ length: 60 }, (_, i) => ([0, 30, 50].includes(i) ? `needle at ${i}` : `filler ${i}`));
+
+      await createEditor(page, paragraphs(...lines));
+      await focusParagraph(page, 'needle at 0');
+      await page.getByText('filler 29', { exact: true }).evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+      await openFind(page, 'needle');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 3');
+    });
+
+    test('starts from the caret while it is on screen', async ({ page }) => {
+      const lines = Array.from({ length: 60 }, (_, i) => ([0, 30, 50].includes(i) ? `needle at ${i}` : `filler ${i}`));
+
+      await createEditor(page, paragraphs(...lines));
+      await focusParagraph(page, 'filler 28');
+      await openFind(page, 'needle');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 3');
+    });
+
     // Keys typed in an iframe never reach the page, so the browser's own find would open.
     test('Mod+F still opens the find bar after a click inside an embedded frame', async ({ page }) => {
       await page.evaluate(async () => {

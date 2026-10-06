@@ -101,6 +101,19 @@ const revealSideways = (element: Element | null, rect: DOMRect, behavior: Scroll
   }, 0);
 };
 
+/**
+ * Whether a range's box is inside the window.
+ * @param range - a caret or a match
+ */
+const isOnScreen = (range: Range): boolean => {
+  const element = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
+  const [rect] = rectsOf(range);
+  // A caret in an empty field has no box of its own.
+  const box = rect ?? element?.getBoundingClientRect();
+
+  return box !== undefined && box.bottom > 0 && box.top < window.innerHeight;
+};
+
 const QUERY_DEBOUNCE_MS = 40;
 const DOM_DEBOUNCE_MS = 120;
 /** Space kept between a revealed match and the viewport edge (or the find bar). */
@@ -158,6 +171,8 @@ export class Find extends Module {
   private active = -1;
   /** Where the next search starts from: the caret at open, the current match, or the text just replaced. */
   private anchor: TextPoint | null = null;
+  /** No anchor yet: start at the first match the reader has not scrolled past. */
+  private fromView = false;
   private observer: MutationObserver | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -217,8 +232,11 @@ export class Find extends Module {
 
     if (!wasOpen || prefill !== null) {
       const caret = this.caretRange();
+      // A caret the reader scrolled away from is not where they are reading.
+      const shown = caret !== null && isOnScreen(caret);
 
-      this.anchor = caret === null ? null : pointOf(caret, document.body);
+      this.anchor = shown ? pointOf(caret, document.body) : null;
+      this.fromView = !shown;
     }
 
     if (!wasOpen) {
@@ -739,7 +757,10 @@ export class Find extends Module {
 
     this.ranges = findRanges(document.body, this.bar.query, findOptions);
 
-    const after = anchor === null ? this.ranges : this.ranges.filter((range) => startsAtOrAfter(range, anchor, document.body));
+    const unread = this.fromView ? this.ranges.filter((range) => rectsOf(range).some((rect) => rect.bottom > 0)) : [];
+    // Nothing left below the reader: wrap to the top, as Enter on the last match does.
+    const fromView = unread.length > 0 ? unread : this.ranges;
+    const after = anchor === null ? fromView : this.ranges.filter((range) => startsAtOrAfter(range, anchor, document.body));
     // While typing, prefer a match the reader can see; hidden ones are one Enter away.
     const next = (options.expand === true ? undefined : after.find((range) => !this.isHidden(range))) ?? after[0] ?? this.ranges[0];
 
@@ -778,6 +799,7 @@ export class Find extends Module {
 
     if (current !== null) {
       this.anchor = pointOf(current, document.body);
+      this.fromView = false;
     }
 
     if (current !== null && options.expand === true) {

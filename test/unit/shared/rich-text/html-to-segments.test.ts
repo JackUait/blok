@@ -101,6 +101,19 @@ describe('isRichText', () => {
     expect(isRichText([{ content: 'a' }])).toBe(false);
     expect(isRichText(['a'])).toBe(false);
   });
+
+  it('rejects items carrying keys a segment never has', () => {
+    expect(isRichText([{ text: 'Buy milk', checked: true }])).toBe(false);
+    expect(isRichText([{ embed: { page: { id: 'p' } }, extra: 1 }])).toBe(false);
+    expect(isRichText([{ text: 'a', embed: { html: 'x' } }])).toBe(false);
+  });
+
+  it('rejects marks that are not a plain record', () => {
+    expect(isRichText([{ text: 'a', marks: 'bold' }])).toBe(false);
+    expect(isRichText([{ text: 'a', marks: ['bold'] }])).toBe(false);
+    expect(isRichText([{ embed: { html: 'x' }, marks: null }])).toBe(false);
+    expect(isRichText([{ text: 'a', marks: { bold: true } }])).toBe(true);
+  });
 });
 
 describe('canonicalizeSegments', () => {

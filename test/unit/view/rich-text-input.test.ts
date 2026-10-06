@@ -81,6 +81,37 @@ describe('src/view reads rich-text segments like HTML', () => {
     expect(blocksToPlainText(loose as unknown as OutputData)).toBe('ok');
   });
 
+  describe('a custom block whose text is an array of other records', () => {
+    const checklist: OutputData = {
+      blocks: [
+        { id: 'x', type: 'acme-checklist', data: { text: [{ text: 'Buy milk', checked: true }, { text: 'Eggs', checked: false }] } },
+      ],
+    };
+
+    it('reaches a custom renderer unchanged', () => {
+      const seen: unknown[] = [];
+
+      blocksToHtml(checklist, { renderers: { 'acme-checklist': (data) => { seen.push(data.text); return ''; } } });
+
+      expect(seen).toEqual([checklist.blocks[0].data.text]);
+    });
+
+    it('is not extracted and survives an inject round trip byte-equal', () => {
+      const before = JSON.stringify(checklist);
+
+      expect(extractTexts(checklist)).toEqual([]);
+      expect(JSON.stringify(injectTexts(checklist, extractTexts(checklist)))).toBe(before);
+    });
+  });
+
+  describe('prose fields that are not rich text', () => {
+    it('leave an array-valued tab title alone', () => {
+      const doc: OutputData = { blocks: [{ id: 't', type: 'tab', data: { title: [{ text: 'Tab' }] } }] };
+
+      expect(extractTexts(doc)).toEqual([]);
+    });
+  });
+
   describe('injectTexts', () => {
     it('writes a segments field back as segments and a string field as a string', () => {
       const mixed: OutputData = {

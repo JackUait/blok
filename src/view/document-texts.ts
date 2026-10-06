@@ -18,6 +18,7 @@ import { repairedTableRows, sourceCellsInDisplayOrder, tableRows } from './table
 import { cloneJson } from './json-clone';
 import { ownEntry } from '../shared/own-entry';
 import { isRichText } from '../shared/rich-text/guards';
+import { richTextFieldsFor } from '../shared/rich-text/fields';
 import { segmentsToHtml } from '../shared/rich-text/segments-to-html';
 import { htmlToSegmentsNode } from './rich-text-parse5';
 
@@ -139,10 +140,11 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
    * holds prose.
    * @param holder - record or array owning the value
    * @param key - field name or array index
+   * @param richFields - fields that may hold segments; any other array is not prose
    */
-  const pushSlot = (holder: Record<string, unknown> | unknown[], key: string | number): void => {
+  const pushSlot = (holder: Record<string, unknown> | unknown[], key: string | number, richFields: string[] = []): void => {
     const raw: unknown = Reflect.get(holder, key);
-    const segments = isRichText(raw);
+    const segments = typeof key === 'string' && richFields.includes(key) && isRichText(raw);
     const value = segments ? segmentsToHtml(raw) : raw;
 
     /** Blank values are not worth a model round-trip — and inject skips them identically. */
@@ -258,8 +260,10 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
       return;
     }
 
+    const richFields = richTextFieldsFor(entry.type);
+
     for (const field of fieldsFor(entry.type, options)) {
-      pushSlot(data, field);
+      pushSlot(data, field, richFields);
     }
 
     if (entry.type === 'table') {

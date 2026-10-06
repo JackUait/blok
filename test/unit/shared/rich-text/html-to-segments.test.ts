@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { htmlToSegmentsNode } from '../../../../src/view/rich-text-parse5';
 import { htmlToSegmentsDom } from '../../../../src/components/utils/rich-text-dom';
 import { isRichText } from '../../../../src/shared/rich-text/guards';
+import { canonicalizeSegments } from '../../../../src/shared/rich-text/html-to-segments';
 
 const readers = [['parse5', htmlToSegmentsNode], ['dom', htmlToSegmentsDom]] as const;
 
@@ -62,6 +63,28 @@ describe.each(readers)('htmlToSegments (%s)', (_name, read) => {
     expect(read('<abbr title="X &amp; Y">x</abbr>')).toEqual([{ text: 'x', marks: { 'tag:abbr': { title: 'X & Y' } } }]);
   });
 
+  it.each([
+    ['input', '<input type="checkbox" checked="">'],
+    ['video', '<video src="v.mp4"></video>'],
+    ['audio', '<audio src="a.mp3"></audio>'],
+    ['iframe', '<iframe src="https://x.com"></iframe>'],
+    ['svg', '<svg viewBox="0 0 1 1"><path d="M0 0"></path></svg>'],
+    ['math', '<math><mi>x</mi></math>'],
+    ['canvas', '<canvas width="2"></canvas>'],
+    ['object', '<object data="x.pdf"></object>'],
+    ['embed', '<embed src="x.swf">'],
+    ['picture', '<picture><img src="x.png"></picture>'],
+    ['wbr', '<wbr>'],
+    ['source', '<source src="x.mp4">'],
+    ['track', '<track src="x.vtt">'],
+  ])('keeps a text-less <%s> as an html embed', (_tag, html) => {
+    expect(read(`a${html}b`)).toEqual([{ text: 'a' }, { embed: { html } }, { text: 'b' }]);
+  });
+
+  it('drops an empty known mark', () => {
+    expect(read('a<b></b>b')).toEqual([{ text: 'ab' }]);
+  });
+
   it('returns no segments for empty input', () => {
     expect(read('')).toEqual([]);
   });
@@ -77,5 +100,25 @@ describe('isRichText', () => {
     expect(isRichText('a')).toBe(false);
     expect(isRichText([{ content: 'a' }])).toBe(false);
     expect(isRichText(['a'])).toBe(false);
+  });
+});
+
+describe('canonicalizeSegments', () => {
+  it('keeps a typed trailing line break', () => {
+    expect(canonicalizeSegments([{ text: 'a\n' }])).toEqual([{ text: 'a\n' }]);
+  });
+
+  it('merges runs whose marks differ only in key order, writing marks in canonical order', () => {
+    const out = canonicalizeSegments([
+      { text: 'a', marks: { italic: true, bold: true } },
+      { text: 'b', marks: { bold: true, italic: true } },
+    ]);
+
+    expect(JSON.stringify(out)).toBe(JSON.stringify([{ text: 'ab', marks: { bold: true, italic: true } }]));
+  });
+
+  it('drops empty marks so the run merges with a plain neighbour', () => {
+    expect(JSON.stringify(canonicalizeSegments([{ text: 'a', marks: {} }, { text: 'b' }])))
+      .toBe(JSON.stringify([{ text: 'ab' }]));
   });
 });

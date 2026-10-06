@@ -10,8 +10,15 @@ const SIMPLE_MARKS: Record<string, keyof RichTextMarks> = {
   code: 'code', sup: 'sup', sub: 'sub',
 };
 
-/** Block-level or void tags the run model cannot hold; kept verbatim as an html embed. */
-const OPAQUE_TAGS = new Set(['img', 'p', 'ul', 'ol', 'li', 'div', 'table', 'hr']);
+/**
+ * Block-level, void or replaced tags the run model cannot hold; kept verbatim as
+ * an html embed. Explicit on purpose: a tag missing here is walked as a mark, so
+ * a text-less one vanishes (that is right for an empty `<b></b>`).
+ */
+const OPAQUE_TAGS = new Set([
+  'img', 'p', 'ul', 'ol', 'li', 'div', 'table', 'hr',
+  'input', 'video', 'audio', 'iframe', 'svg', 'math', 'canvas', 'object', 'embed', 'picture', 'wbr', 'source', 'track',
+]);
 
 const PRESET_VAR = /^var\(--blok-color-([a-z]+)-(text|bg)\)$/;
 const PRESET_NAMES = new Set(COLOR_PRESETS.map(preset => preset.name));
@@ -62,8 +69,7 @@ const withMarks = (segment: RichTextSegment, marks: RichTextMarks): RichTextSegm
   return ordered === undefined ? segment : { ...segment, marks: ordered };
 };
 
-/** A `<mark>` with a colour style sets color/background; a bare one is a highlight. */
-const markMarks = (attrs: Record<string, string>, marks: RichTextMarks): RichTextMarks => {
+const readMarkStyle = (attrs: Record<string, string>, marks: RichTextMarks): RichTextMarks => {
   const style = parseStyle(attrs.style ?? '');
   const color = readColor(style.color, 'text');
   const background = readColor(style['background-color'], 'bg');
@@ -104,7 +110,7 @@ const walk = (nodes: InlineNode[], marks: RichTextMarks, out: RichTextSegment[])
     } else if (tag === 'span' && attrs[EQUATION_SOURCE_ATTR] !== undefined) {
       out.push(withMarks({ embed: { equation: { expression: attrs[EQUATION_SOURCE_ATTR] } } }, marks));
     } else if (tag === 'mark') {
-      walk(node.children, markMarks(attrs, marks), out);
+      walk(node.children, readMarkStyle(attrs, marks), out);
     } else if (OPAQUE_TAGS.has(tag)) {
       out.push(withMarks({ embed: { html: node.outerHtml } }, marks));
     } else {
@@ -113,19 +119,37 @@ const walk = (nodes: InlineNode[], marks: RichTextMarks, out: RichTextSegment[])
   }
 };
 
+const sortKeys = (value: unknown): unknown => {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return value;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return Object.fromEntries(Object.keys(record).sort().map(key => [key, sortKeys(record[key])]));
+};
+
+/** Key order inside nested values (`tag:*` attrs, link) must not split equal marks. */
 const sameMarks = (a: RichTextSegment, b: RichTextSegment): boolean =>
-  JSON.stringify(a.marks ?? {}) === JSON.stringify(b.marks ?? {});
+  JSON.stringify(sortKeys(a.marks ?? {})) === JSON.stringify(sortKeys(b.marks ?? {}));
+
+const withoutMarks = (segment: RichTextSegment): RichTextSegment => {
+  const { marks: _marks, ...rest } = segment;
+
+  return rest;
+};
 
 /**
- * One spelling per document: adjacent runs with equal marks merged, empty runs
- * dropped, the contenteditable placeholder `<br>` removed. The echo check in
+ * One spelling per document: marks in fixed order, empty marks and empty runs
+ * dropped, adjacent runs with equal marks merged. The echo check in
  * `blocks.render` compares this output, so it must be stable.
  * @param rich - segments in any spelling
  */
 export const canonicalizeSegments = (rich: RichText): RichText => {
   const out: RichTextSegment[] = [];
 
-  for (const segment of rich) {
+  for (const raw of rich) {
+    const segment = withMarks(withoutMarks(raw), raw.marks ?? {});
     const previous = out[out.length - 1];
 
     if ('text' in segment && segment.text === '') {
@@ -138,19 +162,20 @@ export const canonicalizeSegments = (rich: RichText): RichText => {
     out.push(segment);
   }
 
-  const last = out[out.length - 1];
+  return out;
+};
 
-  if (last !== undefined && 'text' in last && last.text.endsWith('\n')) {
-    const text = last.text.slice(0, -1);
+/** A lone trailing `<br>` is the contenteditable placeholder, not a typed line. */
+const dropPlaceholderBreak = (rich: RichText): RichText => {
+  const last = rich[rich.length - 1];
 
-    if (text === '') {
-      out.pop();
-    } else {
-      out[out.length - 1] = { ...last, text };
-    }
+  if (last === undefined || !('text' in last) || !last.text.endsWith('\n')) {
+    return rich;
   }
 
-  return out;
+  const text = last.text.slice(0, -1);
+
+  return text === '' ? rich.slice(0, -1) : [...rich.slice(0, -1), { ...last, text }];
 };
 
 /**
@@ -162,5 +187,5 @@ export const inlineTreeToSegments = (nodes: InlineNode[]): RichText => {
 
   walk(nodes, {}, out);
 
-  return canonicalizeSegments(out);
+  return dropPlaceholderBreak(canonicalizeSegments(out));
 };

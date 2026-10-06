@@ -25,6 +25,8 @@ import { sanitizeBlocks } from '../utils/sanitizer';
 import { generateDocumentId } from '../utils/id-generator';
 import { dfsOrder } from '../utils/tree-order';
 import { normalizeInlineImages } from './normalizeInlineImages';
+import { htmlToSegmentsDom } from '../utils/rich-text-dom';
+import { outputBlocksToSegments } from '../../shared/rich-text/block-data';
 
 type SaverValidatedData = ValidatedData & {
   tunes?: Record<string, BlockTuneData>;
@@ -85,6 +87,8 @@ export class Saver extends Module {
 
   private documentRecordId: string | null = null;
   private mintedDocumentId = false;
+
+  private richTextFallbackWarned = false;
 
   /**
    * @param options - module options
@@ -1217,13 +1221,27 @@ export class Saver extends Module {
       ? collapseToLegacy(extractedBlocks)
       : extractedBlocks;
 
+    // collapseToLegacy always returns a new array, so identity tells a collapse.
+    const collapsed = finalBlocks !== extractedBlocks;
+    const collaborating = this.Blok.Collaboration?.isEnabled ?? false;
+    const wantsSegments = this.config.richText === 'segments';
+
+    if (wantsSegments && (collapsed || collaborating)) {
+      this.warnRichTextFallbackOnce(collapsed ? 'the legacy data model' : 'collaboration');
+    }
+
+    const resolve = (type: string): string[] => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? [];
+    const hostBlocks = dialect === 'host' && wantsSegments && !collapsed && !collaborating
+      ? outputBlocksToSegments(finalBlocks, resolve, htmlToSegmentsDom)
+      : finalBlocks;
+
     // Defense-in-depth: assert the parent/content invariant on the final output
     // in test/dev builds. Any drift here means a mutation path elsewhere is
     // leaking inconsistent state through every reconciliation layer — that is
     // the exact failure mode behind the callout paste ejection bug family.
     // Throwing in test flushes the regression out of any future refactor; in
     // production we only log, so an edge-case drift never breaks user saves.
-    const violations = validateHierarchy(finalBlocks);
+    const violations = validateHierarchy(hostBlocks);
 
     if (violations.length > 0) {
       const summary = violations.map(v => v.message).join('; ');
@@ -1242,9 +1260,17 @@ export class Saver extends Module {
     return {
       id: this.getDocumentRecordId(),
       time: +new Date(),
-      blocks: finalBlocks,
+      blocks: hostBlocks,
       version: getBlokVersion(),
     };
+  }
+
+  private warnRichTextFallbackOnce(reason: string): void {
+    if (this.richTextFallbackWarned) {
+      return;
+    }
+    this.richTextFallbackWarned = true;
+    logLabeled(`richText: "segments" is ignored with ${reason}; rich text stays HTML.`, 'warn');
   }
 
   /**

@@ -1353,6 +1353,21 @@ describe('ImageTool — sending a failed upload again', () => {
     expect(root.getAttribute('data-state')).toBe('rendered');
   });
 
+  it('drains the failure from where the fill reached', async () => {
+    const { root } = await failedUpload(vi.fn().mockRejectedValue(new Error('still broken')));
+
+    retry(root);
+    const sending = card(root);
+    const fill = sending?.querySelector<HTMLElement>('.blok-image-error__fill');
+
+    if (!sending || !fill) throw new Error('sending card or fill missing');
+    vi.spyOn(sending, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 60));
+    vi.spyOn(fill, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 184, 60));
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+
+    expect(card(root)?.style.getPropertyValue('--blok-image-drain-from')).toBe('46%');
+  });
+
   it('counts the tries on the card after each failed send', async () => {
     const { root } = await failedUpload(vi.fn().mockRejectedValue(new Error('still broken')));
     const count = (): string | null | undefined => card(root)?.querySelector('.blok-image-error__attempt')?.textContent;

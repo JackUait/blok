@@ -18,8 +18,10 @@ export interface ErrorStateOptions {
   file?: { name: string; size?: number; preview?: string | null };
   /** Upload: how many times it was tried; shown from the second try. */
   attempt?: number;
-  /** Upload: this failure ended a send, so the card plays its fall back. */
+  /** Upload: this failure ended a send, so the card drains back to red. */
   resent?: boolean;
+  /** Upload, resent: how far (%) the send's fill had reached, where the drain starts. */
+  drainFrom?: number;
   onTryAgain?(): void;
   onSwap?(): void;
   i18n?: I18nInstance;
@@ -38,6 +40,7 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   root.setAttribute('data-variant', variant);
   if (opts.resent === true) {
     root.setAttribute('data-resent', 'true');
+    root.style.setProperty('--blok-image-drain-from', `${opts.drainFrom ?? 0}%`);
   }
   if (variant === 'broken') {
     applyFrame(root, opts.frame);
@@ -152,8 +155,13 @@ export function startSending(card: HTMLElement, i18n?: I18nInstance): (percent: 
   bar.setAttribute('aria-label', tr(i18n, 'tools.image.uploadProgress'));
   bar.setAttribute('aria-valuemin', '0');
   bar.setAttribute('aria-valuemax', '100');
-  // Sweeps until the uploader reports, since many never do.
+  // Trickles until the uploader reports, since many never do.
   bar.setAttribute('data-indeterminate', '');
+
+  const fill = document.createElement('div');
+
+  fill.className = 'blok-image-error__fill';
+  bar.append(fill);
   card.append(bar);
 
   return (percent) => {
@@ -161,7 +169,7 @@ export function startSending(card: HTMLElement, i18n?: I18nInstance): (percent: 
 
     bar.removeAttribute('data-indeterminate');
     bar.setAttribute('aria-valuenow', String(value));
-    bar.style.setProperty('--blok-image-send-progress', `${value}%`);
+    fill.style.setProperty('--blok-image-send-progress', `${value}%`);
   };
 }
 

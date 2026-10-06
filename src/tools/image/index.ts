@@ -119,6 +119,8 @@ export class ImageTool implements BlockTool {
   private heldFailure: ReturnType<typeof setTimeout> | null = null;
   /** The next error card ends a resend. */
   private resentFailure = false;
+  /** How far (%) the ended resend's fill had reached. */
+  private drainFrom = 0;
   /** Where the resend's thumbnail sat; the picture it brought back opens from there. */
   private landFrom: DOMRect | null = null;
   /** A broken image's Retry is reloading; the card stays up until it loads or fails. */
@@ -609,6 +611,8 @@ export class ImageTool implements BlockTool {
 
   private applyError(err: unknown, source: { file?: File; url?: string }): void {
     if (this.holdForStage(() => this.applyError(err, source))) return;
+    // Read before the render below replaces the sending card.
+    if (this.resentFailure) this.drainFrom = this.fillReach();
     const own = err instanceof ImageError ? err : null;
     const outcome = resolveUploadError({
       tool: 'image',
@@ -669,6 +673,17 @@ export class ImageTool implements BlockTool {
       if (!this.detached && this.retrying) apply();
     }, wait);
     return true;
+  }
+
+  /** @returns how far (%) the sending card's fill reaches, 0 without one */
+  private fillReach(): number {
+    const card = this.root?.querySelector<HTMLElement>('[data-sending="true"]');
+    const fill = card?.querySelector<HTMLElement>('.blok-image-error__fill');
+    const width = card?.getBoundingClientRect().width ?? 0;
+
+    return fill === undefined || fill === null || width === 0
+      ? 0
+      : Math.round((fill.getBoundingClientRect().width / width) * 100);
   }
 
   private endSend(): void {
@@ -1172,7 +1187,7 @@ export class ImageTool implements BlockTool {
         : () => this.retryLastSource(),
       onSwap: this.readOnly ? undefined : () => this.transitionToEmpty(),
       i18n: this.api.i18n,
-      ...(isBroken ? { frame: this.data } : { ...this.failedFile(), attempt: this.uploadTries, resent: this.takeResent() }),
+      ...(isBroken ? { frame: this.data } : { ...this.failedFile(), attempt: this.uploadTries, drainFrom: this.drainFrom, resent: this.takeResent() }),
     });
   }
 

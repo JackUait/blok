@@ -709,7 +709,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Video error screen: static, the colour-bar tear, the glass card and its tokens.
     const VIDEO_NO_SIGNAL_BYTES = 8_421;
     // Image upload resend: the card's lift, progress hairline, attempt pill and the failed send's fall back.
-    const IMAGE_RESEND_BYTES = 6_611;
+    const IMAGE_RESEND_BYTES = 5_150;
     // Notifier card stack: the peeking edges of waiting cards, their tokens, the unfold and the dust mask.
     const NOTIFIER_CARD_STACK_BYTES = 5_687;
     // Notifier card launch: the spring curve, the launch and its light, the staggered insides, the peek entrance and their reduced motion.

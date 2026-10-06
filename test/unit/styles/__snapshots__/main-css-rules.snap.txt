@@ -11618,6 +11618,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-tabs-rename-input] {
+  field-sizing: content;
   min-width: 0;
   padding: 0;
   border: 0;

@@ -892,9 +892,14 @@ export class TabsTool implements BlockTool, TabsHandle {
         input.setAttribute(TABS_ATTR.renameInput, '');
         input.setAttribute('dir', 'auto');
         input.setAttribute('placeholder', untitled);
-        input.setAttribute('size', String(Math.max(current.length, untitled.length)));
+
+        const fitSize = (): void => {
+          input.setAttribute('size', String((input.value === '' ? untitled : input.value).length));
+        };
+
+        fitSize();
         input.addEventListener('input', () => {
-          input.setAttribute('size', String(Math.max(input.value.length, untitled.length)));
+          fitSize();
           this.followIndicator(id);
         });
         input.addEventListener('keydown', event => event.stopPropagation());

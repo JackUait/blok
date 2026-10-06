@@ -192,6 +192,8 @@
 }
 
 [data-blok-tabs-rename-input] {
+  /* Fits the text, or the placeholder when empty. Firefox falls back to `size`. */
+  field-sizing: content;
   min-width: 0;
   padding: 0;
   border: 0;

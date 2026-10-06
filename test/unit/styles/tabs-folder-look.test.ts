@@ -107,6 +107,11 @@ describe('tabs folder look', () => {
     expect(declaration(hint, 'padding-inline')).toBe('calc(var(--blok-block-padding-inline, 2px) + var(--blok-space-1))');
   });
 
+  // A `size` in characters sizes by average glyph width, so a short title got a wide box.
+  it('sizes the tab title field to its text', () => {
+    expect(declaration(ruleBody('[data-blok-tabs-rename-input]'), 'field-sizing')).toBe('content');
+  });
+
   it('keeps the open tab neutral, never blue', () => {
     const selected = ruleBody('[data-blok-tabs-pill][aria-selected="true"]');
 

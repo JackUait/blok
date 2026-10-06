@@ -585,6 +585,22 @@ describe('tabs block', () => {
     expect(input?.placeholder).toBe('New tab');
   });
 
+  // Firefox has no field-sizing: content, so it sizes by `size`, which must not pad a short title.
+  it('fits the title field fallback size to the title, or to the placeholder when empty', async () => {
+    await boot(doc());
+
+    const input = await renameInput(0);
+
+    expect(input?.getAttribute('size')).toBe(String('Do'.length));
+
+    if (input !== null) {
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    expect(input?.getAttribute('size')).toBe(String('New tab'.length));
+  });
+
   it('names a tab New tab when its title is left empty', async () => {
     const instance = await boot(doc());
     const input = await renameInput(0);

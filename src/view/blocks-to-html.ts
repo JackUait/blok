@@ -255,8 +255,14 @@ const DIRECTION_FIELDS: Record<string, readonly string[]> = {
  * value is written into markup, so a stray string must never reach it.
  * @param options - render options
  */
-const documentDirection = (options: BlocksToHtmlOptions): 'ltr' | 'rtl' | undefined =>
-  options.direction === 'ltr' || options.direction === 'rtl' ? options.direction : undefined;
+const documentDirection = (options: BlocksToHtmlOptions): 'ltr' | 'rtl' | undefined => {
+  // Return literals, not the option, so no caller text can reach the markup.
+  if (options.direction === 'rtl') {
+    return 'rtl';
+  }
+
+  return options.direction === 'ltr' ? 'ltr' : undefined;
+};
 
 /** One rendering unit of a sibling run: a block, or a grouped run of `list` blocks. */
 type Segment = { kind: 'block'; block: ViewBlock } | { kind: 'list'; run: ViewBlock[] };

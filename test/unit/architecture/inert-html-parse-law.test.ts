@@ -77,16 +77,16 @@ const INNER_HTML_WRITE = /(\w+)\.innerHTML\s*=[^=]/g;
  */
 const LIVE_RECEIVER = /(?:const|let|var)\s+(\w+)\s*=\s*(?:document\.|dom\$\.make|Dom\.make)/g;
 /**
+ * The one file allowed to call the parse primitives directly.
+ */
+const PRIMITIVE_FILE = 'src/components/utils/inert-html.ts';
+
+/**
  * Sinks with no inert form. `document.createRange()` anchors the range in the
  * live document, so the fragment it parses loads too; `outerHTML`, `srcdoc`,
  * `insertAdjacentHTML` and `document.write` parse into a live tree by
  * definition. Take the range from the parsed node's own `ownerDocument`.
  */
-/**
- * The one file allowed to call the parse primitives directly.
- */
-const PRIMITIVE_FILE = 'src/components/utils/inert-html.ts';
-
 const BANNED_SINKS: Array<[string, RegExp]> = [
   // No /g: `test()` on a global regex carries lastIndex between files and
   // would skip every other match.

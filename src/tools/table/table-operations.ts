@@ -1,5 +1,6 @@
 import type { API } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { parseUntrustedHtml } from '../../components/utils/inert-html';
 
 import type { TableCellBlocks } from './table-cell-blocks';
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
@@ -383,10 +384,9 @@ export const mountCellBlocksReadOnly = (
       // Inert markup, no blocks: read-only must not mutate block state. The
       // wrapper matches edit mode's paragraph line-height; the cell is leading-none.
       const paintText = (html: string): void => {
-        const wrapper = document.createElement('div');
+        const wrapper = parseUntrustedHtml(html);
 
         wrapper.className = 'leading-[1.5]';
-        wrapper.innerHTML = html;
         container.replaceChildren(wrapper);
       };
 

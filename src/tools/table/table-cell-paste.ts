@@ -202,10 +202,7 @@ export const cellBlockFallbackText = (data: Record<string, unknown>): string => 
  * @param html - the sanitized cell innerHTML captured by parsePastedTable
  */
 export const parseCellContentToBlocks = (html: string): CellBlockInsert[] => {
-  const wrapper = document.createElement('div');
-
-  wrapper.innerHTML = html;
-
+  const wrapper = parseUntrustedHtml(html);
   const inserts = nodesToInserts(Array.from(wrapper.childNodes));
 
   return inserts.length > 0 ? inserts : [{ tool: 'paragraph', data: { text: '' } }];

@@ -27,8 +27,28 @@ const SCOPE = [
   'src/components/dom.ts',
   'src/components/utils/inline-normalization.ts',
   'src/components/utils/inert-html.ts',
-  'src/tools/table/table-cell-clipboard.ts',
+  // A directory: parseCellContentToBlocks (table-cell-paste.ts) live-parsed
+  // every cell's HTML while only table-cell-clipboard.ts was listed here.
+  'src/tools/table',
 ];
+
+/**
+ * Known offenders that parse no data, keyed by file. Every entry needs a reason.
+ */
+const EXEMPT: Record<string, Record<string, string>> = {
+  'src/tools/table/table-add-controls.ts': {
+    insertAdjacentHTML: 'inserts the IconPlus constant, never data',
+  },
+  'src/tools/table/table-heading-toggle.ts': {
+    iconWrapper: 'holds an icon constant, never data',
+  },
+  'src/tools/table/table-subsystems.ts': {
+    'document.createRange()': 'places the caret after a paste; it parses nothing',
+  },
+};
+
+const notExempt = (relativePath: string) => (offender: string): boolean =>
+  EXEMPT[relativePath]?.[offender] === undefined;
 
 const collect = (target: string): string[] => {
   const absolute = resolve(ROOT, target);
@@ -88,7 +108,8 @@ describe('inert HTML parse law', () => {
     const liveReceivers = new Set(Array.from(source.matchAll(LIVE_RECEIVER)).map((match) => match[1]));
     const offenders = Array.from(source.matchAll(INNER_HTML_WRITE))
       .map((match) => match[1])
-      .filter((receiver) => liveReceivers.has(receiver));
+      .filter((receiver) => liveReceivers.has(receiver))
+      .filter(notExempt(relativePath));
 
     expect(offenders).toEqual([]);
   });
@@ -103,7 +124,8 @@ describe('inert HTML parse law', () => {
     const source = readFileSync(resolve(ROOT, relativePath), 'utf-8');
     const offenders = BANNED_SINKS
       .filter(([, pattern]) => pattern.test(source))
-      .map(([name]) => name);
+      .map(([name]) => name)
+      .filter(notExempt(relativePath));
 
     expect(offenders).toEqual([]);
   });

@@ -4,6 +4,7 @@ import { getElementDirection } from '../../components/utils/direction';
 import type { TextDirection } from '../../components/utils/direction';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { clean } from '../../components/utils/sanitizer';
+import { parseUntrustedHtml } from '../../components/utils/inert-html';
 import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
 
 import { TableAddControls } from './table-add-controls';
@@ -1840,9 +1841,7 @@ export class TableSubsystems {
     }
 
     const fragment = document.createDocumentFragment();
-    const wrapper = document.createElement('div');
-
-    wrapper.innerHTML = html;
+    const wrapper = parseUntrustedHtml(html);
 
     Array.from(wrapper.childNodes).forEach((child) => fragment.appendChild(child));
 

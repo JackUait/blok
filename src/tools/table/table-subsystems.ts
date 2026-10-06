@@ -4,7 +4,7 @@ import { getElementDirection } from '../../components/utils/direction';
 import type { TextDirection } from '../../components/utils/direction';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { clean } from '../../components/utils/sanitizer';
-import { parseUntrustedHtml } from '../../components/utils/inert-html';
+import { parseUntrustedDocument, parseUntrustedHtml } from '../../components/utils/inert-html';
 import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
 
 import { TableAddControls } from './table-add-controls';
@@ -1657,7 +1657,7 @@ export class TableSubsystems {
      */
     if (
       externalPayload !== null &&
-      Array.from(new DOMParser().parseFromString(preprocessed, 'text/html').querySelectorAll('table'))
+      Array.from(parseUntrustedDocument(preprocessed).querySelectorAll('table'))
         .filter(table => (table.parentElement?.closest('table') ?? null) === null).length > 1
     ) {
       return;

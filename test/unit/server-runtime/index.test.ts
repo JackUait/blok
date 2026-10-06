@@ -724,6 +724,12 @@ describe('server runtime boundary', () => {
       ]);
     });
 
+    it('reads a null id as no id', async () => {
+      const output = await convert([{ id: null, type: 'paragraph', field: 'text', html: 'x' }]);
+
+      expect(output).toEqual([{ type: 'paragraph', field: 'text', segments: [{ text: 'x' }] }]);
+    });
+
     it('keeps markup characters that were text as text', async () => {
       const output = await convert([{ type: 'paragraph', field: 'text', html: 'a &lt; b &amp;&amp; "c"' }]);
 

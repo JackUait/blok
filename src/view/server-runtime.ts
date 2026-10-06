@@ -358,13 +358,13 @@ const parseHtmlFields = (inputJson: string): HtmlField[] => {
       || typeof entry.type !== 'string'
       || typeof entry.field !== 'string'
       || typeof entry.html !== 'string'
-      || (entry.id !== undefined && typeof entry.id !== 'string')
+      || (entry.id !== undefined && entry.id !== null && typeof entry.id !== 'string')
     ) {
       throw new TypeError(`htmlFieldsToSegments entry ${index} needs string \`type\`, \`field\` and \`html\` (and a string \`id\` if any).`);
     }
 
     return {
-      ...(entry.id === undefined ? {} : { id: entry.id }),
+      ...(typeof entry.id === 'string' ? { id: entry.id } : {}),
       type: entry.type,
       field: entry.field,
       html: entry.html,

@@ -90,7 +90,7 @@ describe('rich text segments — controlled-component echo', { timeout: 60_000 }
     expect(rebuild.rendered()).toBe(true);
   });
 
-  it('a raw hex colour re-renders once, then its saved output echoes without a rebuild', async () => {
+  it('a raw hex colour\'s saved output echoes without a rebuild', async () => {
     const editor = await createEditor({ richText: 'segments' });
     const input: OutputData = { blocks: [ { type: 'paragraph', data: { text: '<mark style="color: #d44c47;">b</mark>' } } ] };
 

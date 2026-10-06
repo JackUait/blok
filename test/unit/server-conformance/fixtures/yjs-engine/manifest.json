@@ -3,8 +3,8 @@
   "$description": "Every file this generator writes. yrs-compat.json is CAPTURED from YDotNet rather than generated, so it lives in this directory but is deliberately absent here.",
   "generator": "scripts/generate-yjs-engine-fixtures.mjs",
   "versions": {
-    "lib0": "0.2.117",
-    "yjs": "13.6.32"
+    "lib0": "0.2.119",
+    "yjs": "13.6.33"
   },
   "clientIds": {
     "A": 1000,

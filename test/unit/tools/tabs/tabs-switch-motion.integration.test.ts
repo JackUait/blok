@@ -100,18 +100,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('tabs block: switching cascades the blocks', () => {
-  it('drops the opened tab\'s blocks in one after another', async () => {
+describe('tabs block: switching', () => {
+  it('swaps the content at once: nothing in the panels animates', async () => {
     await boot(vi.fn());
     calls = [];
 
     await openTab('Two');
+    await openTab('One');
 
-    const delayOf = (id: string): number | undefined =>
-      calls.find(call => call.target === holderOf(id))?.options.delay;
+    const panels = document.querySelector<HTMLElement>('[data-blok-tabs-panels]');
 
-    expect(delayOf('p2')).toBeTypeOf('number');
-    expect(delayOf('p3')).toBeGreaterThan(delayOf('p2') as number);
+    expect(holderOf('t1').classList.contains('hidden')).toBe(false);
+    expect(calls.filter(call => panels?.contains(call.target))).toEqual([]);
   });
 
   it('records no edit while switching', async () => {
@@ -127,34 +127,5 @@ describe('tabs block: switching cascades the blocks', () => {
     });
 
     expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it('plays no content animation between two tabs that look the same', async () => {
-    const instance = new Blok({
-      holder,
-      tools: { paragraph: Paragraph, tabs: TabsTool, tab: TabTool },
-      data: { blocks: [
-        { id: 'tabs', type: 'tabs', data: {}, content: ['e1', 'e2', 'full'] },
-        { id: 'e1', type: 'tab', data: { title: 'One' }, parent: 'tabs', content: [] },
-        { id: 'e2', type: 'tab', data: { title: 'Two' }, parent: 'tabs', content: [] },
-        { id: 'full', type: 'tab', data: { title: 'Full' }, parent: 'tabs', content: ['fp'] },
-        { id: 'fp', type: 'paragraph', data: { text: 'filled' }, parent: 'full' },
-      ] },
-    }) as unknown as TestEditor;
-
-    editor = instance;
-    await instance.isReady;
-    await settle();
-
-    const hints = (): HTMLElement[] => Array.from(document.querySelectorAll<HTMLElement>('[data-blok-tab-empty]'));
-
-    calls = [];
-    await openTab('Two');
-
-    expect(calls.filter(call => hints().includes(call.target))).toHaveLength(0);
-
-    await openTab('Full');
-
-    expect(calls.some(call => call.target === holderOf('fp'))).toBe(true);
   });
 });

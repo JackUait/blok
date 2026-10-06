@@ -1526,8 +1526,15 @@ export class BlockMutation {
     }
 
     /**
-     * Complete the merge operation with the prepared data
-     * Syncs to Yjs atomically, then updates DOM without re-syncing
+     * Complete the merge operation with the prepared data.
+     *
+     * The tool merges its DOM FIRST and the target's save() is what goes to
+     * Yjs: only the tool knows what merged data looks like. Writing
+     * `{ ...target, ...source }` instead put the SOURCE's text on the target
+     * and left the real text to the target's DOM write-back. When that
+     * write-back landed in another window's echo tail (a list item's
+     * Backspace convert keeps one open for a frame) it went in untracked, and
+     * undo then reverted only the tracked half: "first" became "firstfirst".
      */
     const completeMerge = async (mergeData: BlockToolData): Promise<void> => {
       // Layer 17 re-check: post-await staleness window. Both ids must still be
@@ -1544,66 +1551,73 @@ export class BlockMutation {
       // here verbatim.
       const beforeTarget = this.readDocumentData(targetBlock.id);
 
-      // Read the target through the live instance: a reconciled swap makes the
-      // original object's data predate the peer's edit, and it is written back
-      // key by key below.
-      const targetData = await started.block.data;
+      // Scoped to the target, so its DOM write-back is dropped as an echo: the
+      // transaction below already carries the same data, inside the merge's
+      // undo step.
+      await this.yjsSync.withAtomicOperationAsync(async () => {
+        await started.block.mergeWith(mergeData);
 
-      // Layer 17 re-check after the second await.
-      const target = this.resolveLive(targetBlock);
-      const merged = this.resolveLive(blockToMerge);
+        const targetData = await started.block.data;
 
-      if (target === null || merged === null) {
-        return;
-      }
+        // Layer 17 re-check after the awaits. A swapped target lost the DOM
+        // merge with the old instance, so nothing is written.
+        const target = this.resolveLive(targetBlock);
+        const merged = this.resolveLive(blockToMerge);
 
-      // Composed synchronously, immediately before the write — see `composeWrite`.
-      const mergedData = this.composeWrite(targetBlock.id, target.block.name, targetData, beforeTarget, mergeData);
+        if (target === null || target.block !== started.block) {
+          return;
+        }
 
-      const liveTarget = target.block;
-      const liveMerged = merged.block;
+        // Composed synchronously, immediately before the write — see `composeWrite`.
+        const mergedData = this.composeWrite(targetBlock.id, target.block.name, targetData, beforeTarget);
 
-      // withAtomicOperation suppresses stopCapturing when currentBlockIndexValue
-      // is set at the end.
-      this.yjsSync.withAtomicOperation(() => {
-        /**
-         * Re-parent the merged block's nested children onto the survivor BEFORE
-         * removing it. `removeBlock(blockToMerge)` runs `promoteChildrenToParent`,
-         * which would otherwise re-home Tab-indented children onto the merged
-         * block's parent — since the user perceives them as
-         * belonging to the now-merged content. Notion re-parents them onto the
-         * surviving block. Reparenting first empties `blockToMerge.contentIds`, so
-         * the subsequent promote step is a no-op.
-         */
-        const childIdsToReparent = [...liveMerged.contentIds];
+        const liveTarget = target.block;
+        const liveMerged = merged?.block;
 
-        // One Yjs transaction = one undo entry: target data, the children's new
-        // parent, and the source's removal. The reparent must write Yjs itself:
-        // removing the source drops only its own entry, so the doc would keep
-        // the children under it and redo would promote them to root.
-        this.dependencies.YjsManager.transact(() => {
-          for (const [key, value] of Object.entries(mergedData)) {
-            this.dependencies.YjsManager.updateBlockData(liveTarget.id, key, value);
-          }
+        // withAtomicOperation suppresses stopCapturing when currentBlockIndexValue
+        // is set at the end.
+        this.yjsSync.withAtomicOperation(() => {
+          /**
+           * Re-parent the merged block's nested children onto the survivor BEFORE
+           * removing it. `removeBlock(blockToMerge)` runs `promoteChildrenToParent`,
+           * which would otherwise re-home Tab-indented children onto the merged
+           * block's parent — since the user perceives them as
+           * belonging to the now-merged content. Notion re-parents them onto the
+           * surviving block. Reparenting first empties `blockToMerge.contentIds`, so
+           * the subsequent promote step is a no-op.
+           */
+          const childIdsToReparent = [...(liveMerged?.contentIds ?? [])];
 
-          for (const childId of childIdsToReparent) {
-            const childBlock = this.repository.getBlockById(childId);
-
-            if (childBlock !== undefined) {
-              this.ctx.parentWriter(childBlock, liveTarget.id);
+          // One Yjs transaction = one undo entry: target data, the children's new
+          // parent, and the source's removal. The reparent must write Yjs itself:
+          // removing the source drops only its own entry, so the doc would keep
+          // the children under it and redo would promote them to root.
+          this.dependencies.YjsManager.transact(() => {
+            for (const [key, value] of Object.entries(mergedData)) {
+              this.dependencies.YjsManager.updateBlockData(liveTarget.id, key, value);
             }
-          }
 
-          this.dependencies.YjsManager.removeBlock(liveMerged.id);
+            for (const childId of childIdsToReparent) {
+              const childBlock = this.repository.getBlockById(childId);
+
+              if (childBlock !== undefined) {
+                this.ctx.parentWriter(childBlock, liveTarget.id);
+              }
+            }
+
+            if (liveMerged !== undefined) {
+              this.dependencies.YjsManager.removeBlock(liveMerged.id);
+            }
+          });
+
+          this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(liveTarget);
         });
 
         // DOM removal only: Yjs is done above.
-        void liveTarget.mergeWith(mergeData).then(() => {
-          return this.ctx.removeBlock(liveMerged, true, true, blocksStore);
-        });
-
-        this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(liveTarget);
-      });
+        if (liveMerged !== undefined) {
+          void this.ctx.removeBlock(liveMerged, true, true, blocksStore);
+        }
+      }, { blockId: targetBlock.id });
     };
 
     /**

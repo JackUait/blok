@@ -10,6 +10,7 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconEmojiSmile, IconPencil, IconPlus, IconTabs, IconTrash } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
+import { recordActionKey } from '../../components/utils/input-modality';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { rovingRadioGroup, type RovingRadioGroup } from '../../components/utils/roving-radio-group';
@@ -17,7 +18,7 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { mountChildBlocks } from '../nested-blocks';
 import { TABS_ATTR, TAB_TOOL } from './constants';
 import { attachPillGestures } from './pill-gestures';
-import { cascadeIn, foldPill, looksTheSame, measurePill, morphPanelsHeight, moveIndicator, panelRows, popInPill, type PillBox } from './motion';
+import { foldPill, measurePill, moveIndicator, popInPill, type PillBox } from './motion';
 import { renderTabsPreview } from './preview';
 import { tabRegistry, type TabsHandle } from './registry';
 import type { TabData, TabsData } from './types';
@@ -104,7 +105,7 @@ export class TabsTool implements BlockTool, TabsHandle {
 
     scroller.setAttribute(TABS_ATTR.scroller, '');
     scroller.setAttribute('role', 'tablist');
-    // Arrows, Home/End, Enter and the menu key belong to the strip.
+    // Arrows, Home/End, Enter, Delete and the menu key belong to the strip.
     scroller.setAttribute(DATA_ATTR.keyboardOwner, '');
     scroller.addEventListener('scroll', this.updateOverflow, { passive: true });
 
@@ -283,7 +284,7 @@ export class TabsTool implements BlockTool, TabsHandle {
   }
 
   /**
-   * @param params - the tab and its new title; blank keeps the old title
+   * @param params - the tab and its new title; blank leaves it untitled
    * @param params.id - tab id
    * @param params.title - the new title
    */
@@ -291,7 +292,7 @@ export class TabsTool implements BlockTool, TabsHandle {
     const trimmed = title.trim();
     const tab = this.tabBlocks().find(block => block.id === id);
 
-    if (this.readOnly || tab === undefined || trimmed === '' || trimmed === this.tabData(tab).title) {
+    if (this.readOnly || tab === undefined || trimmed === this.tabData(tab).title) {
       return;
     }
 
@@ -299,8 +300,7 @@ export class TabsTool implements BlockTool, TabsHandle {
   }
 
   /**
-   * Delete a tab and its content. The last tab stays: deleting it would leave
-   * a block with nothing to show. Delete the whole block from its menu instead.
+   * Delete a tab and its content. Deleting the last tab deletes the whole block.
    * @param params - the tab to delete
    * @param params.id - tab id
    */
@@ -308,7 +308,19 @@ export class TabsTool implements BlockTool, TabsHandle {
     const tabs = this.tabBlocks();
     const index = tabs.findIndex(tab => tab.id === id);
 
-    if (this.readOnly || index < 0 || tabs.length < 2) {
+    if (this.readOnly || index < 0) {
+      return;
+    }
+
+    if (tabs.length === 1) {
+      const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
+
+      this.closeMenu();
+
+      if (blockIndex !== undefined) {
+        void this.api.blocks.delete(blockIndex);
+      }
+
       return;
     }
 
@@ -318,6 +330,8 @@ export class TabsTool implements BlockTool, TabsHandle {
       this.setActiveId(neighbour.id);
     }
 
+    const closing = tabs[index].holder;
+
     this.pendingDeletes.add(id);
 
     const remove = (): void => {
@@ -326,7 +340,8 @@ export class TabsTool implements BlockTool, TabsHandle {
       const flatIndex = this.api.blocks.getBlockIndex(id);
 
       if (flatIndex !== undefined) {
-        void this.api.blocks.delete(flatIndex);
+        // false: the caret stays put, so a keyboard delete keeps focus on the tabs.
+        void this.api.blocks.delete(flatIndex, false);
       }
     };
     const pill = this.pills.get(id);
@@ -338,7 +353,7 @@ export class TabsTool implements BlockTool, TabsHandle {
     }
 
     pill.setAttribute('aria-hidden', 'true');
-    this.select(this.activeId() ?? id, { animate: true, focus: false });
+    this.select(this.activeId() ?? id, { animate: true, focus: false, closing });
     foldPill(pill, remove);
   }
 
@@ -690,13 +705,18 @@ export class TabsTool implements BlockTool, TabsHandle {
       } else if (event.key === 'F2' && !this.readOnly) {
         event.preventDefault();
         this.startRename(id);
+      } else if ((event.key === 'Delete' || event.key === 'Backspace') && !this.readOnly && pill.getAttribute('aria-selected') === 'true') {
+        event.preventDefault();
+        this.deleteTab({ id });
+        this.pills.get(this.activeId() ?? '')?.focus();
+        recordActionKey();
       }
     });
 
     return pill;
   }
 
-  private select(tabId: string, options: { animate: boolean; focus: boolean }): void {
+  private select(tabId: string, options: { animate: boolean; focus: boolean; closing?: HTMLElement }): void {
     this.setActiveId(tabId);
     this.applyActive(tabId, options);
 
@@ -705,7 +725,12 @@ export class TabsTool implements BlockTool, TabsHandle {
     }
   }
 
-  private applyActive(activeId: string, options: { animate: boolean }): void {
+  /**
+   * @param activeId - the tab to show
+   * @param options - animate the switch; `closing` is a tab being deleted,
+   *   which tabBlocks() already leaves out, so it is hidden here
+   */
+  private applyActive(activeId: string, options: { animate: boolean; closing?: HTMLElement }): void {
     const panels = this.panels;
 
     if (panels === null) {
@@ -718,7 +743,9 @@ export class TabsTool implements BlockTool, TabsHandle {
     const previousIndex = tabs.findIndex(tab => !tab.holder.classList.contains('hidden'));
     const nextIndex = tabs.findIndex(tab => tab.id === activeId);
     const switching = previousIndex !== nextIndex;
-    const fromHeight = panels.offsetHeight;
+
+    options.closing?.classList.add('hidden');
+    options.closing?.setAttribute('aria-hidden', 'true');
 
     tabs.forEach((tab) => {
       const isActive = tab.id === activeId;
@@ -736,20 +763,13 @@ export class TabsTool implements BlockTool, TabsHandle {
     if (pill !== undefined && this.indicator !== null) {
       const box = measurePill(pill);
 
-      moveIndicator(this.indicator, options.animate ? this.indicatorBox : null, box);
+      moveIndicator(this.indicator, options.animate ? this.indicatorBox : null, box, this.updateOverflow);
       this.indicatorBox = box;
       this.indicator.toggleAttribute('data-placed', box.width > 0);
     }
 
+    // The content swaps at once; only the tab moves.
     if (options.animate && switching) {
-      morphPanelsHeight(panels, fromHeight);
-
-      const panel = tabs[nextIndex]?.holder;
-      const closing = tabs[previousIndex]?.holder;
-
-      if (panel !== undefined && (closing === undefined || !looksTheSame(panelRows(closing), panelRows(panel)))) {
-        cascadeIn(panelRows(panel));
-      }
       pill?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
     }
   }
@@ -783,7 +803,6 @@ export class TabsTool implements BlockTool, TabsHandle {
     this.closeMenu();
 
     const t = (key: string): string => this.api.i18n.t(key);
-    const canDelete = this.tabBlocks().length > 1;
     const items = [
       {
         icon: IconPencil,
@@ -797,18 +816,14 @@ export class TabsTool implements BlockTool, TabsHandle {
         closeOnActivate: true,
         onActivate: () => this.openIconPicker(id),
       },
-      ...(canDelete
-        ? [
-          { type: PopoverItemType.Separator as const },
-          {
-            icon: IconTrash,
-            title: t('tools.tabs.delete'),
-            isDestructive: true,
-            closeOnActivate: true,
-            onActivate: () => this.deleteTab({ id }),
-          },
-        ]
-        : []),
+      { type: PopoverItemType.Separator as const },
+      {
+        icon: IconTrash,
+        title: t('tools.tabs.delete'),
+        isDestructive: true,
+        closeOnActivate: true,
+        onActivate: () => this.deleteTab({ id }),
+      },
     ];
 
     const menu = new PopoverDesktop({
@@ -819,6 +834,8 @@ export class TabsTool implements BlockTool, TabsHandle {
       messages: { actions: t('tools.tabs.tabOptions') },
       items,
     });
+
+    menu.getElement().setAttribute('data-blok-popover-dense', '');
 
     pill.setAttribute('aria-expanded', 'true');
     menu.on(PopoverEvent.Closed, () => {
@@ -855,16 +872,25 @@ export class TabsTool implements BlockTool, TabsHandle {
     this.closeMenu();
     this.renaming = true;
     pill.setAttribute('data-renaming', '');
+    const untitled = this.api.i18n.t('tools.tabs.untitled');
+
     startInlineRename({
       target: label,
       currentValue: current,
       label: this.api.i18n.t('tools.tabs.titleLabel'),
+      allowEmpty: true,
       configureInput: (input) => {
         input.setAttribute(TABS_ATTR.renameInput, '');
         input.setAttribute('dir', 'auto');
-        input.setAttribute('size', String(Math.max(current.length, 4)));
+        input.setAttribute('placeholder', untitled);
+
+        const fitSize = (): void => {
+          input.setAttribute('size', String((input.value === '' ? untitled : input.value).length));
+        };
+
+        fitSize();
         input.addEventListener('input', () => {
-          input.setAttribute('size', String(Math.max(input.value.length, 4)));
+          fitSize();
           this.followIndicator(id);
         });
         input.addEventListener('keydown', event => event.stopPropagation());
@@ -878,7 +904,7 @@ export class TabsTool implements BlockTool, TabsHandle {
 
         restored.setAttribute(TABS_ATTR.pillLabel, '');
         restored.setAttribute('dir', 'auto');
-        restored.textContent = value;
+        restored.textContent = value === '' ? untitled : value;
 
         return restored;
       },

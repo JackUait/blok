@@ -192,12 +192,17 @@
 }
 
 [data-blok-tabs-rename-input] {
+  /* Fits the text, or the placeholder when empty. Firefox falls back to `size`. */
+  field-sizing: content;
   min-width: 0;
   padding: 0;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
+  /* After `font`, which resets it. The pill's line-height is its full height,
+   * and an input selection fills its line box. */
+  line-height: var(--blok-line-height-option);
   outline: none;
 }
 

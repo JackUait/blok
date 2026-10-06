@@ -311,6 +311,9 @@ const createMockYjsSync = (): BlockYjsSync => {
   const mockYjsSync = {
     isSyncingFromYjs: false,
     withAtomicOperation: vi.fn(<T>(fn: () => T): T => fn()),
+    withAtomicOperationAsync: vi.fn(async (fn: () => Promise<void>): Promise<void> => {
+      await fn();
+    }),
     subscribe: vi.fn(() => vi.fn()),
     updateBlocksStore: vi.fn(),
     syncBlockDataToYjs: vi.fn(),
@@ -2640,7 +2643,12 @@ describe('BlockOperations', () => {
         parentId: 'cell-1',
         data: { text: 'first' },
       });
-      (targetInCell.mergeWith as Mock).mockResolvedValue(undefined);
+      // The tool's merge decides the merged data; the block's next read sees it.
+      (targetInCell.mergeWith as Mock).mockImplementation((data: { text: string }) => {
+        Object.assign(targetInCell, { data: Promise.resolve({ text: `first${data.text}` }) });
+
+        return Promise.resolve();
+      });
       const sourceInCell = createMockBlock({
         id: 'source-same-cell',
         name: 'paragraph',
@@ -2664,11 +2672,11 @@ describe('BlockOperations', () => {
       await testOps.mergeBlocks(targetInCell, sourceInCell, testStore);
 
       expect(dependencies.YjsManager.transact).toHaveBeenCalled();
-      // Source block's data is propagated into the target via Yjs
+      // The target's merged data, not the source's, goes to Yjs
       expect(dependencies.YjsManager.updateBlockData).toHaveBeenCalledWith(
         'target-same-cell',
         'text',
-        'second'
+        'firstsecond'
       );
       // Source block is removed from Yjs as part of the same transaction
       expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith('source-same-cell');

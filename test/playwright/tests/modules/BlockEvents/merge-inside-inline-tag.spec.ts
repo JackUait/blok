@@ -208,6 +208,57 @@ test.describe('merging with the caret inside a leading or trailing inline tag', 
     });
   }
 
+  test('list: a merge inside the turn-into\'s frame undoes in one step', async ({ page }) => {
+    await create(page, [
+      { id: 'a', type: 'list', data: { text: 'first', style: 'unordered' } },
+      { id: 'b', type: 'list', data: { text: '<strong>ld</strong> tail', style: 'unordered' } },
+    ]);
+    await editable(page, 'b').click();
+    await caretAtText(page, 'b', 'first');
+
+    // Held frames keep the turn-into's echo window open when the merge lands.
+    await page.evaluate(() => {
+      const held: FrameRequestCallback[] = [];
+      const real = window.requestAnimationFrame.bind(window);
+
+      window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
+        held.push(callback);
+
+        return 0;
+      };
+      Object.assign(window, {
+        releaseFrames: (): void => {
+          window.requestAnimationFrame = real;
+          held.splice(0).forEach((callback) => callback(performance.now()));
+        },
+      });
+    });
+
+    const release = (): Promise<void> => page.evaluate(() => {
+      (window as unknown as { releaseFrames?: () => void }).releaseFrames?.();
+    });
+
+    try {
+      await page.keyboard.press('Backspace');
+      const before = await saved(page);
+
+      await page.keyboard.press('Backspace');
+      await release();
+
+      const merged = await saved(page);
+
+      expect(merged).toEqual(['a:first<strong>ld</strong> tail']);
+
+      await page.keyboard.press(UNDO);
+      await expect.poll(() => saved(page)).toEqual(before);
+
+      await page.keyboard.press(REDO);
+      await expect.poll(() => saved(page)).toEqual(merged);
+    } finally {
+      await release();
+    }
+  });
+
   test('Enter inside bold then Backspace rejoins the halves', async ({ page }) => {
     await create(page, [{ id: 'a', type: 'paragraph', data: { text: 'x <b>bold</b> y' } }]);
     const before = await saved(page);

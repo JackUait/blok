@@ -200,7 +200,7 @@
   "tools.tabs.editIcon": "아이콘 편집",
   "tools.tabs.delete": "삭제",
   "tools.tabs.emptyTab": "빈 탭입니다. 클릭하거나 블록을 여기로 드래그하세요.",
-  "tools.tabs.untitled": "제목 없음",
+  "tools.tabs.untitled": "새 탭",
   "tools.tabs.tabOptions": "탭 옵션",
   "tools.tabs.titleLabel": "탭 제목",
   "searchTerms.columns": "다단",

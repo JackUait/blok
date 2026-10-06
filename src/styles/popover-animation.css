@@ -111,8 +111,8 @@
   }
 }
 
-/* Scope the denser chrome to block settings and conversion, not tool pickers. */
-:is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item]))) {
+/* Scope the denser chrome to block settings, conversion and opted-in menus, not tool pickers. */
+:is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-dense] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item]))) {
   /* Every corner gap is 4px, like the default card, so rows stay at 6. */
   padding-inline: var(--blok-space-1);
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));

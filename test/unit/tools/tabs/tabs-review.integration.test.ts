@@ -114,7 +114,7 @@ describe('tabs block: deleting tabs', () => {
     expect(strip(holder)).toEqual(['B', 'C*']);
   });
 
-  it('never deletes the last tab, even while a delete is still animating', async () => {
+  it('deletes the whole block when its last tab goes, even while another delete is still animating', async () => {
     const animations: Animation[] = [];
 
     Object.assign(HTMLElement.prototype, {
@@ -140,7 +140,7 @@ describe('tabs block: deleting tabs', () => {
 
     const saved = await editor.save();
 
-    expect(saved.blocks.filter(block => block.type === 'tab').map(block => block.id)).toEqual(['b']);
+    expect(saved.blocks.filter(block => block.type === 'tabs' || block.type === 'tab')).toEqual([]);
 
     delete (HTMLElement.prototype as Partial<{ animate: unknown }>).animate;
     delete (HTMLElement.prototype as Partial<{ getAnimations: unknown }>).getAnimations;

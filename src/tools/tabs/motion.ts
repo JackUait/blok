@@ -10,16 +10,17 @@ export interface PillBox {
   width: number;
 }
 
-const INDICATOR_MS = 420;
 const PANEL_MS = 360;
 const ENTER_MS = 300;
 // --blok-ease-popover: fast out, long settle. WAAPI cannot read a CSS var.
 const EASE_SETTLE = 'cubic-bezier(0.16, 1, 0.3, 1)';
-// Leading edge: quick and committed. Trailing edge: catches up later.
-const EASE_LEAD = 'cubic-bezier(0.3, 0, 0, 1)';
-// How far the trailing edge travels by the time the leading edge lands.
-const TRAIL_LAG = 0.3;
-const LEAD_OFFSET = 0.45;
+const FOLD_MS = 220;
+const RISE_MS = 560;
+// Under FOLD_MS: the new tab starts up while the old one is still going down.
+const RISE_DELAY_MS = 150;
+// Short of 90deg: an edge-on tab would vanish and pop back.
+const FLAT = 'perspective(240px) rotateX(88deg)';
+const UPRIGHT = 'perspective(240px) rotateX(0deg)';
 const CASCADE_MS = 520;
 const CASCADE_STEP_MS = 70;
 // Rows past this land together, so a long tab never makes the reader wait.
@@ -84,19 +85,17 @@ export const measurePill = (pill: HTMLElement): PillBox => {
   return { start, width: pill.offsetWidth };
 };
 
-const boxStyle = (box: PillBox): Keyframe => ({
-  insetInlineStart: `${box.start}px`,
-  width: `${box.width}px`,
-});
-
 /**
- * Glide the indicator to `to`. The edge that leads lands first and the
- * trailing edge catches up, so the pill stretches like a drop of ink.
+ * Swap the open tab like folder dividers: a copy of the old tab folds down
+ * flat into the sheet while the indicator unfolds up under the new pill.
  * @param indicator - the shared active-pill backdrop
  * @param from - its current box, or null when it has never been placed
  * @param to - the active pill's box
  */
 export const moveIndicator = (indicator: HTMLElement, from: PillBox | null, to: PillBox): void => {
+  // Read before the cancel below: a tab still rising folds from where it is.
+  const tilt = getComputedStyle(indicator).transform;
+
   indicator.style.setProperty('inset-inline-start', `${to.start}px`);
   indicator.style.setProperty('width', `${to.width}px`);
 
@@ -106,20 +105,30 @@ export const moveIndicator = (indicator: HTMLElement, from: PillBox | null, to: 
     return;
   }
 
-  const forward = to.start > from.start;
-  const fromEnd = from.start + from.width;
-  const toEnd = to.start + to.width;
-  const midStart = forward ? from.start + (to.start - from.start) * TRAIL_LAG : to.start;
-  const midEnd = forward ? toEnd : fromEnd + (toEnd - fromEnd) * TRAIL_LAG;
-
   indicator.getAnimations().forEach(animation => animation.cancel());
-  indicator.animate(
+
+  // A shallow clone keeps the indicator's look, corners included. The strip is mutation-free.
+  const old = indicator.cloneNode(false) as HTMLElement;
+
+  old.style.setProperty('inset-inline-start', `${from.start}px`);
+  old.style.setProperty('width', `${from.width}px`);
+  old.style.removeProperty('transform');
+  indicator.after(old);
+
+  const fold = old.animate(
     [
-      { ...boxStyle(from), easing: EASE_LEAD },
-      { insetInlineStart: `${midStart}px`, width: `${midEnd - midStart}px`, offset: LEAD_OFFSET, easing: EASE_SETTLE },
-      boxStyle(to),
+      { transform: tilt === '' || tilt === 'none' ? UPRIGHT : tilt, filter: 'brightness(1)' },
+      { transform: FLAT, filter: 'brightness(0.92)' },
     ],
-    { duration: INDICATOR_MS }
+    { duration: FOLD_MS, easing: 'cubic-bezier(0.5, 0, 0.9, 0.6)', fill: 'forwards' }
+  );
+
+  fold.onfinish = (): void => old.remove();
+  fold.oncancel = (): void => old.remove();
+
+  indicator.animate(
+    [{ transform: FLAT }, { transform: UPRIGHT }],
+    { duration: RISE_MS, delay: RISE_DELAY_MS, easing: spring(), fill: 'backwards' }
   );
 };
 

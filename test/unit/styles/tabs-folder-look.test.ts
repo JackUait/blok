@@ -73,6 +73,11 @@ describe('tabs folder look', () => {
     expect(declaration(ruleBody('[data-blok-tabs-indicator]'), 'inset-block-end')).toBe('0');
   });
 
+  // motion.ts folds tabs down and up: hinged anywhere else, a tab would lift off the band.
+  it('hinges the open tab on its bottom edge', () => {
+    expect(declaration(ruleBody('[data-blok-tabs-indicator]'), 'transform-origin')).toBe('50% 100%');
+  });
+
   // The open tab's top outline is a shadow drawn above its box. Flush with the
   // scroller's top edge, the scroller's clip erases it.
   it('leaves room inside the scroller for the open tab top outline', () => {

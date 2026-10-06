@@ -3,7 +3,7 @@
  * rising out of a recessed band of closed tabs.
  *
  * The open tab is never painted by the pill itself: one shared indicator
- * glides behind the strip (motion.ts moves it), carrying the two concave
+ * sits behind the strip (motion.ts folds it between pills), carrying the two concave
  * corners that join it to the sheet, so the pills only change ink.
  * Selected = sheet surface + primary ink, never blue (selected-state-neutral).
  */
@@ -95,6 +95,8 @@
     calc(-1 * var(--blok-border-width-hairline)) 0 0 var(--blok-tabs-edge);
   opacity: 0;
   pointer-events: none;
+  /* Tabs fold on the band edge (motion.ts). */
+  transform-origin: 50% 100%;
   transition: opacity var(--blok-duration-slow) var(--blok-ease-standard);
 }
 

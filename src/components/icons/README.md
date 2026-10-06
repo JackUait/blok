@@ -1,7 +1,7 @@
 # Blok Line
 
 Blok's editor icons form one light, precise line family. Design each icon for a
-menu at 16 px, not for a large illustration. Keep silhouettes familiar and
+menu at 20 px, not for a large illustration. Keep silhouettes familiar and
 interiors open.
 
 ## Construction

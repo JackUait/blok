@@ -2072,6 +2072,43 @@ describe('BlockSelection', () => {
       expect(positionCalls).toHaveLength(1);
       expect(positionCalls[0][1]).toEqual({ tool: 'Текст', position: 3, total: 3 });
     });
+
+    // A late announce() after the last editor is gone re-creates the shared
+    // live regions with no owner, so nothing ever removes them.
+    it('does not announce the position after the editor is destroyed inside the throttle window', async () => {
+      const { blockSelection } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      blockSelection.markDestroyed();
+      blockSelection.destroy();
+
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(announce).not.toHaveBeenCalled();
+    });
+
+    it('does not announce the position when the editor is destroyed while the tool name resolves', async () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const resolveEntry: { current: (entry: { titleKey: string }) => void } = { current: () => undefined };
+      const entry = new Promise<{ titleKey: string }>((resolve) => {
+        resolveEntry.current = resolve;
+      });
+
+      vi.mocked(blocks[0].getActiveToolboxEntry).mockReturnValueOnce(entry);
+
+      blockSelection.enableNavigationMode();
+      await vi.advanceTimersByTimeAsync(300);
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      blockSelection.markDestroyed();
+      blockSelection.destroy();
+      resolveEntry.current({ titleKey: 'text' });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(announce).not.toHaveBeenCalled();
+    });
   });
 
   describe('Cmd+A escalation announcements', () => {

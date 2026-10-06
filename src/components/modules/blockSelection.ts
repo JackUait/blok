@@ -1383,7 +1383,8 @@ export class BlockSelection extends Module {
          * announcement is stale and must not reach assistive technology.
          */
         if (
-          !this._navigationModeEnabled
+          this.isDestroyed
+          || !this._navigationModeEnabled
           || this.navigationFocusIndexNow() !== pendingIndex
           || this.lastAnnouncedNavigationIndex === pendingIndex
           || this.Blok.BlockManager.getBlockByIndex(pendingIndex) !== block
@@ -1450,6 +1451,10 @@ export class BlockSelection extends Module {
   public destroy(): void {
     /** Selection shortcut */
     Shortcuts.remove(this.Blok.UI.nodes.redactor, 'CMD+A');
+
+    // announce() after UI.destroy released the last reference re-creates the
+    // shared live regions with no owner, so they stay on the page forever.
+    this.resetNavigationAnnounce();
   }
 
   /**

@@ -214,8 +214,8 @@ describe('tabs block', () => {
     expect(holderOf('t2').classList.contains('hidden')).toBe(false);
   });
 
-  it('never deletes the last tab', async () => {
-    const instance = await boot(doc());
+  it('deletes the whole block, content included, when its last tab is deleted', async () => {
+    const instance = await boot([{ id: 'p0', type: 'paragraph', data: { text: 'before' } }, ...doc()]);
     const tabs = instance.blocks.getById('tabs');
 
     tabs?.call('deleteTab', { id: 't1' });
@@ -225,7 +225,40 @@ describe('tabs block', () => {
 
     const saved = await instance.save();
 
-    expect(byType(saved, 'tab').map(tab => tab.id)).toEqual(['t2']);
+    expect(saved.blocks.map(block => block.id)).toEqual(['p0']);
+    expect(pills()).toHaveLength(0);
+  });
+
+  it('brings the block back with its last tab when that delete is undone', async () => {
+    const instance = await boot([
+      { id: 'p0', type: 'paragraph', data: { text: 'before' } },
+      { id: 'tabs', type: 'tabs', data: {}, content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: 'Only' }, parent: 'tabs', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+    ]);
+
+    instance.blocks.getById('tabs')?.call('deleteTab', { id: 't1' });
+    await settle();
+    instance.module.yjsManager.stopCapturing();
+    instance.history.undo();
+    await settle();
+
+    const saved = await instance.save();
+
+    expect(saved.blocks.map(block => block.id)).toEqual(['p0', 'tabs', 't1', 'p1']);
+    expect(pills().map(pill => pill.textContent)).toEqual(['Only']);
+  });
+
+  it('offers Delete in the menu of the only tab', async () => {
+    await boot([
+      { id: 'tabs', type: 'tabs', data: {}, content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: 'Only' }, parent: 'tabs', content: [] },
+    ]);
+
+    pills()[0].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    await settle();
+
+    expect(document.querySelector('[role="menu"][aria-label="Tab options"]')?.textContent).toContain('Delete');
   });
 
   it('shows a placeholder in an empty tab and adds a block when it is clicked', async () => {
@@ -487,15 +520,16 @@ describe('tabs block', () => {
     }
   });
 
-  it('keeps the last tab when Delete is pressed on it', async () => {
+  it('deletes the whole block when Delete is pressed on its only tab', async () => {
     const instance = await boot([
+      { id: 'p0', type: 'paragraph', data: { text: 'before' } },
       { id: 'tabs', type: 'tabs', data: {}, content: ['t1'] },
       { id: 't1', type: 'tab', data: { title: 'Only' }, parent: 'tabs', content: [] },
     ]);
 
     await pressOnPill(0, 'Delete');
 
-    expect(byType(await instance.save(), 'tab').map(tab => tab.id)).toEqual(['t1']);
+    expect((await instance.save()).blocks.map(block => block.id)).toEqual(['p0']);
   });
 
   it('does not delete a tab on Delete in read-only mode', async () => {

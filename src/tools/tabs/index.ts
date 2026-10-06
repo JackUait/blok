@@ -300,8 +300,7 @@ export class TabsTool implements BlockTool, TabsHandle {
   }
 
   /**
-   * Delete a tab and its content. The last tab stays: deleting it would leave
-   * a block with nothing to show. Delete the whole block from its menu instead.
+   * Delete a tab and its content. Deleting the last tab deletes the whole block.
    * @param params - the tab to delete
    * @param params.id - tab id
    */
@@ -309,7 +308,19 @@ export class TabsTool implements BlockTool, TabsHandle {
     const tabs = this.tabBlocks();
     const index = tabs.findIndex(tab => tab.id === id);
 
-    if (this.readOnly || index < 0 || tabs.length < 2) {
+    if (this.readOnly || index < 0) {
+      return;
+    }
+
+    if (tabs.length === 1) {
+      const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
+
+      this.closeMenu();
+
+      if (blockIndex !== undefined) {
+        void this.api.blocks.delete(blockIndex);
+      }
+
       return;
     }
 
@@ -801,7 +812,6 @@ export class TabsTool implements BlockTool, TabsHandle {
     this.closeMenu();
 
     const t = (key: string): string => this.api.i18n.t(key);
-    const canDelete = this.tabBlocks().length > 1;
     const items = [
       {
         icon: IconPencil,
@@ -815,18 +825,14 @@ export class TabsTool implements BlockTool, TabsHandle {
         closeOnActivate: true,
         onActivate: () => this.openIconPicker(id),
       },
-      ...(canDelete
-        ? [
-          { type: PopoverItemType.Separator as const },
-          {
-            icon: IconTrash,
-            title: t('tools.tabs.delete'),
-            isDestructive: true,
-            closeOnActivate: true,
-            onActivate: () => this.deleteTab({ id }),
-          },
-        ]
-        : []),
+      { type: PopoverItemType.Separator as const },
+      {
+        icon: IconTrash,
+        title: t('tools.tabs.delete'),
+        isDestructive: true,
+        closeOnActivate: true,
+        onActivate: () => this.deleteTab({ id }),
+      },
     ];
 
     const menu = new PopoverDesktop({

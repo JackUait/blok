@@ -570,10 +570,11 @@ describe('dist weight (consumer parse cost)', () => {
     // JSON.parse data chunks are one cheap string node each; the expensive part
     // for a consumer's bundler is real code. Unminified output put code at
     // ~12 MB; minified it lands around 7 MB. Raising the budget needs a reason.
+    // 11.5 MiB: mermaid 12 adds ~1.7 MB of lazy diagram chunks (elkjs is 1.46 MB).
     const codeBytes = esFiles
       .filter((file) => !readFileSync(file, 'utf-8').slice(0, 200).includes('JSON.parse('))
       .reduce((sum, file) => sum + readFileSync(file).byteLength, 0)
-    expect(codeBytes).toBeLessThan(9 * 1024 * 1024)
+    expect(codeBytes).toBeLessThan(11.5 * 1024 * 1024)
   })
 
   it('emits minified chunks (no indented multi-line output)', () => {

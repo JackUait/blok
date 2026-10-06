@@ -312,10 +312,11 @@ for (const entry of readdirSync(path.resolve(stagingDir, 'angular'), { withFileT
   // block-portal-registry.ts each broke the build by being added and not listed.
   rewriteTypeImports(staged);
 }
-// Also rewrite staged shared/ files that import from '../../types'.
-for (const entry of readdirSync(path.resolve(stagingDir, 'shared'), { withFileTypes: true })) {
-  if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
-  rewriteTypeImports(path.resolve(stagingDir, 'shared', entry.name));
+// Also rewrite staged shared/ files that import from the repo-root types.
+// Recursive: shared/rich-text/*.ts sit one level deeper ('../../../types').
+for (const relPath of readdirSync(path.resolve(stagingDir, 'shared'), { recursive: true })) {
+  if (!relPath.endsWith('.ts')) continue;
+  rewriteTypeImports(path.resolve(stagingDir, 'shared', relPath));
 }
 
 // Fail-loud guard: after all rewrites, no staged .ts source file should still contain

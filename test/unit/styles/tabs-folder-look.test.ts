@@ -93,6 +93,15 @@ describe('tabs folder look', () => {
     expect(declaration(ruleBody('[data-blok-tabs-pill]:focus-visible'), 'outline-offset')).toBe(`-${width}px`);
   });
 
+  // The hint's text must stay where the first block's text will be, so the
+  // fill can only grow outward: what the margin takes, the padding gives back.
+  it('keeps the empty-tab hint fill close to its text, clear of the card edges', () => {
+    const hint = ruleBody('[data-blok-tab-empty]');
+
+    expect(declaration(hint, 'margin-inline')).toBe('calc(-1 * var(--blok-space-1))');
+    expect(declaration(hint, 'padding-inline')).toBe('calc(var(--blok-block-padding-inline, 2px) + var(--blok-space-1))');
+  });
+
   it('keeps the open tab neutral, never blue', () => {
     const selected = ruleBody('[data-blok-tabs-pill][aria-selected="true"]');
 

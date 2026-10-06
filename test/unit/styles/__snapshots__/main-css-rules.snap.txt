@@ -11678,9 +11678,9 @@ span[data-blok-slash-search] {
 
 [data-blok-tab-empty] {
   margin-block: 1px;
-  margin-inline: calc(-1 * var(--blok-space-1-5));
+  margin-inline: calc(-1 * var(--blok-space-1));
   padding-block: var(--blok-block-padding-top, 7px) var(--blok-block-padding-bottom, 7px);
-  padding-inline: calc(var(--blok-block-padding-inline, 2px) + var(--blok-space-1-5));
+  padding-inline: calc(var(--blok-block-padding-inline, 2px) + var(--blok-space-1));
   border-radius: var(--blok-radius-control);
   font-size: var(--blok-paragraph-font-size, inherit);
   line-height: 1.5;

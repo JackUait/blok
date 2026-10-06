@@ -56,14 +56,12 @@ export class TableOfContentsTool implements BlockTool {
   private data: BlockColorData;
   private root: HTMLElement | null = null;
   private list: HTMLOListElement | null = null;
-  private thumb: HTMLElement | null = null;
   private empty: HTMLElement | null = null;
   private outline = '';
   private started = false;
   private frame: number | null = null;
   private viewportFrame: number | null = null;
   private activeId: string | null = null;
-  private forceThumb = false;
   /** Each entry's heading holder, looked up once per outline instead of on every scroll. */
   private targets: Array<{ link: HTMLAnchorElement; holder: Element | null }> = [];
 
@@ -100,7 +98,6 @@ export class TableOfContentsTool implements BlockTool {
   public render(): HTMLElement {
     const root = document.createElement('nav');
     const list = document.createElement('ol');
-    const thumb = document.createElement('span');
     const empty = document.createElement('p');
 
     root.setAttribute(DATA_ATTR.tool, 'table_of_contents');
@@ -113,19 +110,16 @@ export class TableOfContentsTool implements BlockTool {
     list.setAttribute('data-blok-toc-list', '');
     // `list-style: none` drops list semantics in WebKit.
     list.setAttribute('role', 'list');
-    thumb.setAttribute('data-blok-toc-thumb', '');
-    thumb.setAttribute('aria-hidden', 'true');
     empty.setAttribute('data-blok-toc-empty', '');
     empty.textContent = this.api.i18n.t('tools.tableOfContents.empty');
 
-    root.append(thumb, list, empty);
+    root.append(list, empty);
     root.addEventListener('click', this.onClick);
     root.addEventListener('keydown', this.onKeydown);
     root.addEventListener('animationend', this.onAnimationEnd);
 
     this.root = root;
     this.list = list;
-    this.thumb = thumb;
     this.empty = empty;
     this.paint();
     this.showEmpty(true);
@@ -228,23 +222,20 @@ export class TableOfContentsTool implements BlockTool {
     if (event.target instanceof Element && redactor !== null && !event.target.contains(redactor)) {
       return;
     }
-    this.scheduleViewport(false);
+    this.scheduleViewport();
   };
 
-  /** A reflow moves the rows under an unchanged section, so the thumb is measured again. */
   private readonly onResize = (): void => {
-    this.scheduleViewport(true);
+    this.scheduleViewport();
   };
 
-  private scheduleViewport(force: boolean): void {
-    this.forceThumb ||= force;
+  private scheduleViewport(): void {
     if (this.viewportFrame !== null) {
       return;
     }
     this.viewportFrame = window.requestAnimationFrame(() => {
       this.viewportFrame = null;
-      this.markActive(this.forceThumb);
-      this.forceThumb = false;
+      this.markActive();
     });
   }
 
@@ -333,7 +324,7 @@ export class TableOfContentsTool implements BlockTool {
   }
 
   /** The section being read: the last heading above a line a quarter of the way down the viewport. */
-  private markActive(forceThumb = false): void {
+  private markActive(): void {
     const line = window.innerHeight * READING_LINE;
     const links = this.targets.map((target) => target.link);
     const passed = this.targets.filter(({ holder }) => holder !== null && holder.getBoundingClientRect().top <= line);
@@ -341,44 +332,16 @@ export class TableOfContentsTool implements BlockTool {
     const activeId = active === null ? null : targetOf(active);
 
     if (activeId === this.activeId) {
-      if (forceThumb) {
-        this.moveThumb(active);
-      }
-
       return;
     }
     this.activeId = activeId;
-    const activeIndex = active === null ? -1 : links.indexOf(active);
-
-    links.forEach((link, index) => {
+    links.forEach((link) => {
       if (link === active) {
         link.setAttribute('aria-current', 'location');
       } else {
         link.removeAttribute('aria-current');
       }
-      link.parentElement?.toggleAttribute('data-read', index < activeIndex);
     });
-    this.moveThumb(active);
-  }
-
-  private moveThumb(active: HTMLAnchorElement | null): void {
-    if (this.thumb === null) {
-      return;
-    }
-    if (active === null) {
-      this.thumb.removeAttribute('data-visible');
-
-      return;
-    }
-    const row = active.parentElement;
-
-    if (row === null) {
-      return;
-    }
-    // The row is the positioned box, so its offsetTop is relative to the nav. CSS adds the first line's centre.
-    this.thumb.style.setProperty('--blok-toc-thumb-y', `${row.offsetTop}px`);
-    this.thumb.style.setProperty('--blok-toc-thumb-depth', row.getAttribute('data-depth') ?? '0');
-    this.thumb.setAttribute('data-visible', '');
   }
 
   private readonly onClick = (event: MouseEvent): void => {

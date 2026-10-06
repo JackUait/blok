@@ -8,13 +8,12 @@ const ENTRIES: Array<[depth: number, text: string]> = [
   [1, 'Invite your team'],
 ];
 
-/** A short outline with the reading marker gliding down its rail. */
+/** A short outline of indented heading links. */
 export const renderTableOfContentsPreview = (): HTMLElement => createPreview(
   'table-of-contents',
   h(
     'div',
     { 'data-outline': '' },
-    h('span', { 'data-thumb': '' }),
     ...ENTRIES.map(([depth, text]) => h('div', { 'data-entry': '', 'data-depth': String(depth) }, text))
   )
 );

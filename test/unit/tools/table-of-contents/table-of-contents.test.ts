@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TableOfContentsTool } from '../../../../src/tools/table-of-contents';
+import { renderTableOfContentsPreview } from '../../../../src/tools/table-of-contents/preview';
 import type { TableOfContentsData } from '../../../../src/tools/table-of-contents/types';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
@@ -221,23 +222,25 @@ describe('TableOfContentsTool', () => {
     expect(root.querySelector('ol')?.getAttribute('role')).toBe('list');
   });
 
-  it('moves the reading marker when the entries reflow, even if the section stays the same', () => {
-    const { root, redactor } = setup([ heading('a', 1, 'A') ]);
-    const row = root.querySelector('li') as HTMLLIElement;
-    const offset = { top: 10 };
+  it('draws no rail beside the entries: no reading marker and no read-progress state', () => {
+    const { root, redactor } = setup([ heading('a', 1, 'A'), heading('b', 1, 'B'), heading('c', 1, 'C') ]);
+    const tops: Record<string, number> = { a: -400, b: 100, c: 900 };
 
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800);
-    vi.spyOn(redactor.querySelector('[data-blok-id="a"]') as HTMLElement, 'getBoundingClientRect').mockReturnValue({ top: -10 } as DOMRect);
-    vi.spyOn(row, 'offsetTop', 'get').mockImplementation(() => offset.top);
+    redactor.querySelectorAll<HTMLElement>('[data-blok-component="header"]').forEach((el) => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({ top: tops[el.getAttribute('data-blok-id') ?? ''] } as DOMRect);
+    });
     document.dispatchEvent(new Event('scroll'));
     flushFrames();
-    offset.top = 50;
-    window.dispatchEvent(new Event('resize'));
-    flushFrames();
 
-    const thumb = root.querySelector<HTMLElement>('[data-blok-toc-thumb]');
+    expect(root.querySelector('[data-blok-toc-thumb]')).toBeNull();
+    expect(root.querySelectorAll('li[data-read]')).toHaveLength(0);
+  });
 
-    expect(thumb?.style.getPropertyValue('--blok-toc-thumb-y')).toBe('50px');
+  it('shows no rail in the toolbox preview either', () => {
+    const preview = renderTableOfContentsPreview();
+
+    expect(preview.querySelector('[data-thumb]')).toBeNull();
   });
 
   it('keeps focus on the clicked entry, so a following key cannot reach the selected heading', () => {
@@ -295,20 +298,6 @@ describe('TableOfContentsTool', () => {
     const current = links(root).filter((a) => a.getAttribute('aria-current') === 'location');
 
     expect(current.map((a) => a.textContent)).toEqual(['B']);
-  });
-
-  it('marks sections already scrolled past as read, so the gutter shows reading progress', () => {
-    const { root, redactor } = setup([ heading('a', 1, 'A'), heading('b', 1, 'B'), heading('c', 1, 'C') ]);
-    const tops: Record<string, number> = { a: -400, b: 100, c: 900 };
-
-    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800);
-    redactor.querySelectorAll<HTMLElement>('[data-blok-component="header"]').forEach((el) => {
-      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({ top: tops[el.getAttribute('data-blok-id') ?? ''] } as DOMRect);
-    });
-    document.dispatchEvent(new Event('scroll'));
-    flushFrames();
-
-    expect(Array.from(root.querySelectorAll('li')).map((li) => li.hasAttribute('data-read'))).toEqual([true, false, false]);
   });
 
   it('marks no section while the reader is above the first heading', () => {

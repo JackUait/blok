@@ -397,13 +397,11 @@
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='table-of-contents'] [data-outline] {
-  position: relative;
   color: var(--blok-text-secondary);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='table-of-contents'] [data-entry] {
-  position: relative;
-  padding: var(--blok-preview-space-3) 0 var(--blok-preview-space-3) var(--blok-preview-space-18);
+  padding: var(--blok-preview-space-3) 0;
   font-size: 11px;
   line-height: 1.3;
   white-space: nowrap;
@@ -413,41 +411,10 @@
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='table-of-contents'] [data-entry][data-depth='1'] {
-  padding-left: calc(var(--blok-preview-space-18) + var(--blok-preview-space-14));
-}
-
-[data-blok-interface='block-preview'] [data-blok-preview='table-of-contents'] [data-entry]::before {
-  content: '';
-  position: absolute;
-  top: calc(50% - 1px);
-  left: var(--blok-preview-space-2);
-  width: 10px;
-  height: 2px;
-  border-radius: var(--blok-radius-pill);
-  background: color-mix(in srgb, currentColor 30%, transparent);
-}
-
-[data-blok-interface='block-preview'] [data-blok-preview='table-of-contents'] [data-entry][data-depth='1']::before {
-  width: 6px;
-}
-
-/* The reading marker rests on the first entry; motion below slides it down. */
-[data-blok-interface='block-preview'] [data-blok-preview='table-of-contents'] [data-thumb] {
-  position: absolute;
-  top: calc(10% - 1.5px);
-  left: var(--blok-preview-space-2);
-  width: 12px;
-  height: 3px;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-text-primary);
+  padding-left: var(--blok-preview-space-14);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* Table of contents: the reading marker glides down the outline, the way it follows a scroll. */
-  [data-blok-interface='block-preview'] [data-blok-preview='table-of-contents'] [data-thumb] {
-    animation: blok-preview-structure-toc-read 3.6s var(--blok-preview-ease-spring) infinite;
-  }
-
   /* Table: body cells fill in one by one, row after row. */
   [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell] > span {
     display: inline-block;
@@ -502,15 +469,6 @@
   [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-below] {
     animation: blok-preview-structure-push 1.4s ease-in-out infinite alternate;
   }
-}
-
-@keyframes blok-preview-structure-toc-read {
-  0%, 12% { top: calc(10% - 1.5px); width: 12px; }
-  20%, 30% { top: calc(30% - 1.5px); width: 8px; }
-  38%, 48% { top: calc(50% - 1.5px); width: 8px; }
-  56%, 66% { top: calc(70% - 1.5px); width: 12px; }
-  74%, 84% { top: calc(90% - 1.5px); width: 8px; }
-  100% { top: calc(10% - 1.5px); width: 12px; }
 }
 
 @keyframes blok-preview-structure-cell-in {

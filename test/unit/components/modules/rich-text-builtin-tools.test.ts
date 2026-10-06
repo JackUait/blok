@@ -1,0 +1,112 @@
+/**
+ * Built-in tools keep working when a host sets `richText: 'segments'`.
+ * Host-facing reads (`BlockAPI.save`, `getBlockData`) hand out segment arrays
+ * in that mode; tools read other blocks through internal data, which stays HTML.
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { Blok } from '../../../../src/blok';
+import { Header } from '../../../../src/tools/header';
+import { Paragraph } from '../../../../src/tools/paragraph';
+import { Table } from '../../../../src/tools/table';
+import { toClipboardBlock } from '../../../../src/tools/table/table-cell-blocks';
+import type { API, BlokConfig, OutputBlockData, OutputData } from '../../../../types';
+import type { BlockToolConstructable } from '../../../../types/tools';
+
+interface TestEditor {
+  isReady: Promise<unknown>;
+  save: () => Promise<OutputData>;
+  destroy: () => void;
+  blocks: API['blocks'];
+}
+
+const editors: TestEditor[] = [];
+const holders: HTMLElement[] = [];
+
+const createEditor = async (config: Partial<BlokConfig>): Promise<TestEditor> => {
+  const holder = document.createElement('div');
+
+  document.body.appendChild(holder);
+  holders.push(holder);
+
+  const editor = new Blok({
+    holder,
+    tools: {
+      paragraph: Paragraph,
+      header: Header as unknown as BlockToolConstructable,
+      table: Table as unknown as BlockToolConstructable,
+    },
+    ...config,
+  }) as unknown as TestEditor;
+
+  editors.push(editor);
+  await editor.isReady;
+
+  return editor;
+};
+
+const bold = [{ text: 'a', marks: { bold: true } }];
+
+const tableWithBoldCells = (): OutputBlockData[] => [
+  { id: 't', type: 'table', data: { withHeadings: false, content: [[{ id: 'k1', rowId: 'r1', blocks: ['c1'] }, { id: 'k2', rowId: 'r1', blocks: ['c2'] }]] } },
+  { id: 'c1', type: 'paragraph', data: { text: '<b>a</b>' }, parent: 't' },
+  { id: 'c2', type: 'paragraph', data: { text: 'plain' }, parent: 't' },
+];
+
+const blockData = (saved: OutputData, id: string): Record<string, unknown> | undefined =>
+  saved.blocks.find(block => block.id === id)?.data;
+
+describe('built-in tools — richText segments', { timeout: 60_000 }, () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    editors.splice(0).forEach(editor => editor.destroy());
+    holders.splice(0).forEach(holder => holder.remove());
+    vi.restoreAllMocks();
+  });
+
+  it('a table saves its formatted cell paragraphs as segments and keeps its grid as in html mode', async () => {
+    const segments = await (await createEditor({ richText: 'segments', data: { blocks: tableWithBoldCells() } })).save();
+    const html = await (await createEditor({ data: { blocks: tableWithBoldCells() } })).save();
+
+    expect(blockData(segments, 'c1')?.text).toEqual(bold);
+    expect(blockData(segments, 'c2')?.text).toEqual([{ text: 'plain' }]);
+    expect(blockData(segments, 't')).toEqual(blockData(html, 't'));
+  });
+
+  it('copying a table cell block carries HTML, as in html mode', async () => {
+    const segmentsEditor = await createEditor({ richText: 'segments', data: { blocks: tableWithBoldCells() } });
+    const htmlEditor = await createEditor({ data: { blocks: tableWithBoldCells() } });
+
+    const copy = (editor: TestEditor): unknown => {
+      const cell = editor.blocks.getById('c1');
+
+      if (cell === null) {
+        throw new Error('cell paragraph c1 is missing');
+      }
+
+      return toClipboardBlock(editor as unknown as API, cell).data;
+    };
+
+    expect(copy(segmentsEditor)).toEqual({ text: '<strong>a</strong>' });
+    expect(copy(segmentsEditor)).toEqual(copy(htmlEditor));
+  });
+
+  it('turning a bold paragraph into a heading keeps the bold text', async () => {
+    const blocks = [{ id: 'p1', type: 'paragraph', data: { text: '<b>a</b>' } }];
+    const segmentsEditor = await createEditor({ richText: 'segments', data: { blocks } });
+    const htmlEditor = await createEditor({ data: { blocks } });
+
+    await segmentsEditor.blocks.convert('p1', 'header', { level: 2 });
+    await htmlEditor.blocks.convert('p1', 'header', { level: 2 });
+
+    const segments = await segmentsEditor.save();
+    const html = await htmlEditor.save();
+
+    expect(segments.blocks[0]).toMatchObject({ type: 'header', data: { text: bold, level: 2 } });
+    expect(html.blocks[0]).toMatchObject({ type: 'header', data: { text: '<strong>a</strong>', level: 2 } });
+  });
+});

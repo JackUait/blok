@@ -1,7 +1,10 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { isBuiltin } from 'node:module'
 import { resolve, join, dirname } from 'node:path'
+import { init as initLexer, parse as parseModule } from 'es-module-lexer/minimal'
 import { describe, it, expect } from 'vitest'
+
+import { ENTRIES as OVERRIDE_ENTRIES } from '../../../scripts/override/generate-override-entries.mjs'
 
 const repoRoot = resolve(__dirname, '../../../')
 const dist = resolve(repoRoot, 'dist')
@@ -330,6 +333,65 @@ describe('view bundle isolation (parse5 stays out of editor bundles)', () => {
       expect(readFileSync(contentBearingPath(bundle), 'utf-8').includes(PARSE5_FINGERPRINT)).toBe(false)
     })
   }
+})
+
+describe('eager ESM path ships no ES2023+ runtime APIs', () => {
+  // The es2017 build target lowers syntax only. APIs pass through untouched and
+  // are not polyfilled, so an API on the eager path breaks every older browser.
+  // Mermaid 12 calls Object.groupBy; that is fine only while it stays behind the
+  // lazy `import()` of mermaid.core. Object.hasOwn, .at() and structuredClone
+  // are already eager, so they are not listed.
+  const NEWER_APIS: Record<string, RegExp> = {
+    'Object.groupBy / Map.groupBy': /\b(?:Object|Map)\.groupBy\b/,
+    'Promise.withResolvers': /\bPromise\.withResolvers\b/,
+    'Array findLast / findLastIndex': /\.findLast(?:Index)?\(/,
+    'Array toSorted / toReversed / toSpliced': /\.to(?:Sorted|Reversed|Spliced)\(/,
+    'Array.fromAsync': /\bArray\.fromAsync\b/,
+    'String isWellFormed / toWellFormed': /\.(?:is|to)WellFormed\(/,
+    'Set union / intersection / ...': /\.(?:union|intersection|symmetricDifference|isSubsetOf|isSupersetOf|isDisjointFrom)\(/,
+  }
+
+  /** Every file an entry loads at import time: static imports only, `import()` excluded. */
+  const staticClosure = (): Set<string> => {
+    const seen = new Set<string>()
+    const visit = (file: string): void => {
+      if (seen.has(file)) {
+        return
+      }
+      seen.add(file)
+      const [imports] = parseModule(readFileSync(file, 'utf-8'))
+      for (const { n: spec, d } of imports) {
+        // d === -1 marks a static import; dynamic import() has d >= 0.
+        if (d === -1 && spec?.startsWith('.')) {
+          visit(join(dirname(file), spec))
+        }
+      }
+    }
+    for (const entry of OVERRIDE_ENTRIES) {
+      visit(join(dist, `${entry.file}.mjs`))
+    }
+    return seen
+  }
+
+  it('keeps mermaid behind a dynamic import (non-vacuity)', async () => {
+    await initLexer()
+    const closure = [...staticClosure()]
+    expect(closure.some((file) => /mermaid\.core-[^/]*\.mjs$/.test(file))).toBe(false)
+    expect(
+      closure.some((file) => /import\(\s*[`'"]\.\/mermaid\.core-[^`'"]+\.mjs[`'"]\s*\)/.test(readFileSync(file, 'utf-8')))
+    ).toBe(true)
+  })
+
+  it('no eager file calls an API newer than the eager path already uses', async () => {
+    await initLexer()
+    const hits = [...staticClosure()].flatMap((file) => {
+      const code = readFileSync(file, 'utf-8')
+      return Object.entries(NEWER_APIS)
+        .filter(([, re]) => re.test(code))
+        .map(([api]) => `${file.slice(dist.length + 1)}: ${api}`)
+    })
+    expect(hits).toEqual([])
+  })
 })
 
 describe('ESM outputs still present', () => {

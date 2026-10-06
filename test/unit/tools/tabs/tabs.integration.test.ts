@@ -377,6 +377,59 @@ describe('tabs block', () => {
     expect(document.activeElement?.getAttribute('data-tab-id')).toBe('t1');
   });
 
+  const renameInput = async (index: number): Promise<HTMLInputElement | null> => {
+    pills()[index].focus();
+    pills()[index].dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true, cancelable: true }));
+    await settle();
+
+    return document.querySelector<HTMLInputElement>('[data-blok-tabs-rename-input]');
+  };
+
+  it('shows a New tab placeholder while a tab title is cleared', async () => {
+    await boot(doc());
+
+    const input = await renameInput(0);
+
+    expect(input?.placeholder).toBe('New tab');
+  });
+
+  it('names a tab New tab when its title is left empty', async () => {
+    const instance = await boot(doc());
+    const input = await renameInput(0);
+
+    if (input !== null) {
+      input.value = '   ';
+    }
+    input?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await settle();
+
+    const saved = await instance.save();
+
+    expect(byType(saved, 'tab')[0].data.title).toBe('');
+    expect(pills()[0].textContent).toBe('New tab');
+  });
+
+  it('opens the rename of a New tab empty, showing only the placeholder', async () => {
+    await boot([
+      { id: 'tabs', type: 'tabs', data: {}, content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: '' }, parent: 'tabs', content: [] },
+    ]);
+
+    const input = await renameInput(0);
+
+    expect(input?.value).toBe('');
+    expect(input?.placeholder).toBe('New tab');
+  });
+
+  it('packs the tab menu rows as tightly as the block settings menu', async () => {
+    await boot(doc());
+
+    pills()[0].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    await settle();
+
+    expect(document.querySelector('[role="menu"][aria-label="Tab options"]')?.closest('[data-blok-popover-dense]')).not.toBeNull();
+  });
+
   it('reopens the tab that was open when deleting the whole block is undone', async () => {
     const instance = await boot(doc());
 

@@ -141,6 +141,30 @@ describe('startInlineRename', () => {
     expect(onCommit).toHaveBeenCalledWith('Todo');
   });
 
+  it('commits an empty value when the caller allows it', () => {
+    const { container, title } = makeTitle('Todo');
+    const onCommit = vi.fn();
+
+    startInlineRename({
+      target: title,
+      currentValue: 'Todo',
+      label: 'Rename tab',
+      allowEmpty: true,
+      onCommit,
+      buildRestored,
+    });
+
+    const input = container.querySelector('input');
+
+    if (input === null) {
+      throw new Error('no input');
+    }
+    input.value = '   ';
+    simulateKeydown(input, 'Enter');
+
+    expect(onCommit).toHaveBeenCalledWith('');
+  });
+
   it('cancels on Escape, restoring the original value without committing', () => {
     const { container, title } = makeTitle('Todo');
     const onCommit = vi.fn();

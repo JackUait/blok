@@ -189,7 +189,7 @@
   "tools.tabs.editIcon": "アイコンを編集",
   "tools.tabs.delete": "削除",
   "tools.tabs.emptyTab": "空のタブです。クリックするか、ここにブロックをドラッグしてください。",
-  "tools.tabs.untitled": "無題",
+  "tools.tabs.untitled": "新しいタブ",
   "tools.tabs.tabOptions": "タブのオプション",
   "tools.tabs.titleLabel": "タブのタイトル",
   "searchTerms.columns": "段組み",

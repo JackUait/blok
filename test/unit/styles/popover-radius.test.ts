@@ -106,8 +106,8 @@ describe('popover card', () => {
     expect(body).toContain(`${inner('surface', '--blok-space-2')};`);
   });
 
-  it('block settings and convert menus publish the inner radius for their smallest corner gap', () => {
-    const selector = ':is([data-blok-testid=\'block-tunes-popover\'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])))';
+  it('block settings, convert and dense menus publish the inner radius for their smallest corner gap', () => {
+    const selector = ':is([data-blok-testid=\'block-tunes-popover\'] > [data-blok-popover-container], [data-blok-popover-dense] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])))';
     const body = squash(ruleBody(popoverAnimation, selector));
 
     // Same 4px inset as the default card, so rows stay at 6 (10 − 4).

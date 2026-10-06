@@ -23,6 +23,8 @@ export interface StartInlineRenameParams {
    * Callers decide whether the value actually changed.
    */
   onCommit: (value: string) => void;
+  /** Commit an emptied input as '' instead of falling back to `currentValue`. */
+  allowEmpty?: boolean;
   /** Called once when the rename is cancelled via Escape. */
   onCancel?: () => void;
   /** Called on every keystroke with the raw input value. */
@@ -47,7 +49,7 @@ const isNativelyFocusable = (element: HTMLElement): boolean => {
 };
 
 export function startInlineRename(params: StartInlineRenameParams): void {
-  const { target, currentValue, label, onCommit, onCancel, onInput, buildRestored, configureInput } = params;
+  const { target, currentValue, label, allowEmpty = false, onCommit, onCancel, onInput, buildRestored, configureInput } = params;
 
   const input = document.createElement('input');
 
@@ -88,7 +90,8 @@ export function startInlineRename(params: StartInlineRenameParams): void {
     }
     guard.done = true;
 
-    const resolved = input.value.trim() || currentValue;
+    const trimmed = input.value.trim();
+    const resolved = allowEmpty ? trimmed : trimmed || currentValue;
 
     swapBack(resolved);
     onCommit(resolved);

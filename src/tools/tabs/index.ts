@@ -283,7 +283,7 @@ export class TabsTool implements BlockTool, TabsHandle {
   }
 
   /**
-   * @param params - the tab and its new title; blank keeps the old title
+   * @param params - the tab and its new title; blank leaves it untitled
    * @param params.id - tab id
    * @param params.title - the new title
    */
@@ -291,7 +291,7 @@ export class TabsTool implements BlockTool, TabsHandle {
     const trimmed = title.trim();
     const tab = this.tabBlocks().find(block => block.id === id);
 
-    if (this.readOnly || tab === undefined || trimmed === '' || trimmed === this.tabData(tab).title) {
+    if (this.readOnly || tab === undefined || trimmed === this.tabData(tab).title) {
       return;
     }
 
@@ -820,6 +820,8 @@ export class TabsTool implements BlockTool, TabsHandle {
       items,
     });
 
+    menu.getElement().setAttribute('data-blok-popover-dense', '');
+
     pill.setAttribute('aria-expanded', 'true');
     menu.on(PopoverEvent.Closed, () => {
       pill.removeAttribute('aria-expanded');
@@ -855,16 +857,20 @@ export class TabsTool implements BlockTool, TabsHandle {
     this.closeMenu();
     this.renaming = true;
     pill.setAttribute('data-renaming', '');
+    const untitled = this.api.i18n.t('tools.tabs.untitled');
+
     startInlineRename({
       target: label,
       currentValue: current,
       label: this.api.i18n.t('tools.tabs.titleLabel'),
+      allowEmpty: true,
       configureInput: (input) => {
         input.setAttribute(TABS_ATTR.renameInput, '');
         input.setAttribute('dir', 'auto');
-        input.setAttribute('size', String(Math.max(current.length, 4)));
+        input.setAttribute('placeholder', untitled);
+        input.setAttribute('size', String(Math.max(current.length, untitled.length)));
         input.addEventListener('input', () => {
-          input.setAttribute('size', String(Math.max(input.value.length, 4)));
+          input.setAttribute('size', String(Math.max(input.value.length, untitled.length)));
           this.followIndicator(id);
         });
         input.addEventListener('keydown', event => event.stopPropagation());
@@ -878,7 +884,7 @@ export class TabsTool implements BlockTool, TabsHandle {
 
         restored.setAttribute(TABS_ATTR.pillLabel, '');
         restored.setAttribute('dir', 'auto');
-        restored.textContent = value;
+        restored.textContent = value === '' ? untitled : value;
 
         return restored;
       },

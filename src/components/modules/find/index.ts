@@ -65,6 +65,42 @@ const animationsAround = (range: Range): Animation[] => {
   });
 };
 
+/**
+ * Scroll every sideways scroller around a match (a wide table, a board) so the
+ * match shows, innermost first. Each step moves the match for the next one.
+ * @param element - the match's element
+ * @param rect - the match's first line box
+ * @param behavior - smooth, or instant under reduced motion
+ */
+const revealSideways = (element: Element | null, rect: DOMRect, behavior: ScrollBehavior): void => {
+  const scrollers = (node: Element | null): HTMLElement[] => {
+    if (node === null || node === document.body) {
+      return [];
+    }
+
+    const overflow = getComputedStyle(node).overflowX;
+    const scrolls = node instanceof HTMLElement && /auto|scroll|overlay/.test(overflow) && node.scrollWidth > node.clientWidth + 1;
+
+    return scrolls ? [node, ...scrollers(node.parentElement)] : scrollers(node.parentElement);
+  };
+
+  scrollers(element?.parentElement ?? null).reduce((moved, scroller) => {
+    const box = scroller.getBoundingClientRect();
+    const left = box.left + scroller.clientLeft + REVEAL_MARGIN;
+    const right = box.left + scroller.clientLeft + scroller.clientWidth - REVEAL_MARGIN;
+    const matchLeft = rect.left - moved;
+    const matchRight = rect.right - moved;
+    const tooFar = matchRight > right ? Math.min(matchRight - right, matchLeft - left) : 0;
+    const delta = matchLeft < left ? matchLeft - left : tooFar;
+
+    if (delta !== 0) {
+      scroller.scrollBy({ left: delta, behavior });
+    }
+
+    return moved + delta;
+  }, 0);
+};
+
 const QUERY_DEBOUNCE_MS = 40;
 const DOM_DEBOUNCE_MS = 120;
 /** Space kept between a revealed match and the viewport edge (or the find bar). */
@@ -869,6 +905,8 @@ export class Find extends Module {
     const parent = scrollParentOf(scrollStart);
     const view = parent?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight };
     const behavior: ScrollBehavior = prefersReducedMotion() ? 'instant' : 'smooth';
+
+    revealSideways(element, rect, behavior);
 
     const bar = this.barOver(rect);
     const isCovered = bar !== null && rect.bottom > bar.top && rect.top < bar.bottom;

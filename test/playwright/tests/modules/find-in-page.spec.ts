@@ -591,6 +591,58 @@ test.describe('find in page', () => {
   });
 
   test.describe('closing', () => {
+    test('stepping to a match scrolled out of a wide table scrolls the table to it', async ({ page }) => {
+      await page.evaluate(async () => {
+        document.getElementById('blok')?.remove();
+        const holder = document.createElement('div');
+
+        holder.id = 'blok';
+        holder.style.width = '600px';
+        document.body.appendChild(holder);
+
+        const tableClass = (window.Blok as unknown as Record<string, unknown>).Table;
+        const cols = 6;
+        const blok = new window.Blok({
+          holder: 'blok',
+          tools: { table: { class: tableClass as never } },
+          data: {
+            blocks: [
+              { id: 'p', type: 'paragraph', data: { text: 'marker up front' } },
+              {
+                id: 't',
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  colWidths: Array.from({ length: cols }, () => 240),
+                  content: [Array.from({ length: cols }, (_, c) => (c === cols - 1 ? 'far marker' : `cell ${c}`))],
+                },
+              },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      });
+      await focusParagraph(page, 'marker up front');
+      await openFind(page, 'marker');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      await page.keyboard.press('Enter');
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+
+      await expect.poll(() => page.getByTestId('find-lens-box').evaluate((box) => {
+        const [range] = [...CSS.highlights.get('blok-find-match-active') ?? []];
+        const area = range instanceof Range ? range.startContainer.parentElement?.closest('[data-blok-table-scroll]')?.getBoundingClientRect() : undefined;
+        const fill = range instanceof Range ? range.getBoundingClientRect() : null;
+        const ring = box.getBoundingClientRect();
+
+        return fill !== null && area !== undefined
+          && fill.left >= area.left && fill.right <= area.right
+          && Math.abs(ring.left - fill.left) <= 1.5;
+      })).toBe(true);
+    });
+
     // The browser scrolls the page off the main thread; a lens moved by a scroll listener trails the text.
     test('the lens scrolls with the page itself, before any scroll handler runs', async ({ page }) => {
       await createEditor(page, paragraphs(...Array.from({ length: 40 }, (_, i) => (i === 20 ? 'the needle line' : `filler line ${i}`))));

@@ -147,11 +147,19 @@ test.describe('Tabs tool', () => {
     await expect(page.getByText('Gamma body')).toBeHidden();
   });
 
-  test('the Add tab button appends a new tab and opens it', async ({ page }) => {
+  test('the Add tab button appends a new tab, opens it, and edits its title', async ({ page }) => {
     await insertTabsViaSlash(page);
 
     await page.getByTestId('tabs').hover();
     await page.getByRole('button', { name: 'Add tab' }).click();
+
+    const input = page.getByRole('textbox', { name: 'Tab title' });
+
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue('Tab 4');
+    await expect.poll(() => input.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd]))
+      .toEqual([0, 'Tab 4'.length]);
+    await input.press('Enter');
 
     await expect(page.getByRole('tab')).toHaveCount(4);
     await expect(tab(page, 'Tab 4')).toHaveAttribute('aria-selected', 'true');
@@ -163,6 +171,20 @@ test.describe('Tabs tool', () => {
     expect(saved.blocks.filter(block => block.type === 'tab').map(block => block.data)).toEqual([
       { title: 'Tab 1' }, { title: 'Tab 2' }, { title: 'Tab 3' }, { title: 'Tab 4' },
     ]);
+  });
+
+  test('typing right after Add tab names the new tab', async ({ page }) => {
+    await insertTabsViaSlash(page);
+
+    await page.getByTestId('tabs').hover();
+    await page.getByRole('button', { name: 'Add tab' }).click();
+    await expect(page.getByRole('textbox', { name: 'Tab title' })).toBeFocused();
+    await page.keyboard.type('Notes');
+    await page.keyboard.press('Enter');
+
+    await expect(tab(page, 'Notes')).toHaveAttribute('aria-selected', 'true');
+    await expect.poll(async () => (await saveBlok(page)).blocks.filter(block => block.type === 'tab').map(block => block.data))
+      .toEqual([{ title: 'Tab 1' }, { title: 'Tab 2' }, { title: 'Tab 3' }, { title: 'Notes' }]);
   });
 
   test('double-clicking a tab renames it and Enter saves the title', async ({ page }) => {

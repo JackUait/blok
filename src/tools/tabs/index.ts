@@ -360,7 +360,7 @@ export class TabsTool implements BlockTool, TabsHandle {
     this.sync();
   }
 
-  /** Append a tab named after its position and open it. */
+  /** Append a tab named after its position, open it, and start renaming it. */
   public addTab(): void {
     if (this.readOnly || this.panels === null) {
       return;
@@ -381,6 +381,8 @@ export class TabsTool implements BlockTool, TabsHandle {
       popInPill(pill);
       pill.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
     }
+
+    this.startRename(tab.id);
   }
 
   public static get toolbox(): ToolboxConfig {

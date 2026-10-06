@@ -164,6 +164,30 @@ describe('tabs block', () => {
     expect(pills()[2].getAttribute('aria-selected')).toBe('true');
   });
 
+  it('opens a new tab with its title in edit mode, all selected', async () => {
+    const instance = await boot(doc());
+
+    document.querySelector<HTMLElement>('[data-blok-tabs-add]')?.click();
+    await settle();
+
+    const input = pills()[2].querySelector<HTMLInputElement>('[data-blok-tabs-rename-input]');
+
+    expect(input).not.toBeNull();
+    expect(input).toHaveFocus();
+    expect(input?.value).toBe('Tab 3');
+    expect([input?.selectionStart, input?.selectionEnd]).toEqual([0, 'Tab 3'.length]);
+
+    if (input !== null && input !== undefined) {
+      input.value = 'Notes';
+    }
+    input?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await settle();
+
+    const saved = await instance.save();
+
+    expect(byType(saved, 'tab').map(tab => tab.data.title)).toEqual(['Do', 'Don’t', 'Notes']);
+  });
+
   it('renames a tab and saves the new title', async () => {
     const instance = await boot(doc());
 

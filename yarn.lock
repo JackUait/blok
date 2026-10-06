@@ -10701,7 +10701,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lib0@npm:0.2.119":
+"lib0@npm:0.2.119, lib0@npm:^0.2.102, lib0@npm:^0.2.85, lib0@npm:^0.2.99":
   version: 0.2.119
   resolution: "lib0@npm:0.2.119"
   dependencies:
@@ -10711,19 +10711,6 @@ __metadata:
     0gentesthtml: bin/gentesthtml.js
     0serve: bin/0serve.js
   checksum: 10c0/722277c01158cc560c4cdc6093803435d5c1c1ed278a7ccfca4693968cc8a8ff361a0bbfcf7d76d6085c8b65716d381af81cf8d415bd9b5e48428df8896393bf
-  languageName: node
-  linkType: hard
-
-"lib0@npm:^0.2.102, lib0@npm:^0.2.85, lib0@npm:^0.2.99":
-  version: 0.2.117
-  resolution: "lib0@npm:0.2.117"
-  dependencies:
-    isomorphic.js: "npm:^0.2.4"
-  bin:
-    0ecdsa-generate-keypair: bin/0ecdsa-generate-keypair.js
-    0gentesthtml: bin/gentesthtml.js
-    0serve: bin/0serve.js
-  checksum: 10c0/d1b9205890d5d0cbd95ffdb0d6df6f9fd2c315b89e195fc9b015f3778046fb34bc12e94205ccf410a3073b836444045dcef6671fa2f6d5a7f70ebf8b6b0c0616
   languageName: node
   linkType: hard
 

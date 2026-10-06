@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { parseUntrustedHtml } from '../../../../src/components/utils/inert-html';
+import { parseUntrustedDocument, parseUntrustedHtml } from '../../../../src/components/utils/inert-html';
 
 describe('parseUntrustedHtml', () => {
   beforeEach(() => {
@@ -44,5 +44,34 @@ describe('parseUntrustedHtml', () => {
     wrapper.appendChild(strong);
 
     expect(wrapper.innerHTML).toBe('<p>one</p><strong></strong>');
+  });
+});
+
+describe('parseUntrustedDocument', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('parses into a document with no browsing context', () => {
+    const doc = parseUntrustedDocument('<p>hi</p>');
+
+    expect(doc).not.toBe(document);
+    expect(doc.defaultView).toBeNull();
+  });
+
+  it('keeps <head> styles and <body> attributes that a fragment parse drops', () => {
+    const doc = parseUntrustedDocument('<html><head><style>.a{color:red}</style></head><body dir="rtl"><p>x</p></body></html>');
+
+    expect(doc.head.querySelector('style')?.textContent).toBe('.a{color:red}');
+    expect(doc.body.getAttribute('dir')).toBe('rtl');
+  });
+
+  it('parses Office markup with no doctype in quirks mode, like a browser does', () => {
+    // Quirks mode changes the tree: a <table> inside a <p> stays nested.
+    expect(parseUntrustedDocument('<p>a<table><tr><td>b</td></tr></table></p>').compatMode).toBe('BackCompat');
   });
 });

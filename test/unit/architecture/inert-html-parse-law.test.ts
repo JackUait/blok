@@ -12,7 +12,9 @@ import { resolve, join, relative } from 'path';
  * is a pre-sanitization sink. `parseUntrustedHtml` parses into a document with
  * no browsing context instead.
  *
- * `<template>` and `DOMParser` are inert and stay allowed.
+ * `<template>` is inert and stays allowed. `DOMParser` is inert too, but it
+ * is called only inside `inert-html.ts` (`parseUntrustedDocument`), so every
+ * untrusted parse in scope goes through one audited file.
  *
  * Scope is DIRECTORY-based on purpose: the first version of this law listed
  * exactly the files the fix had touched, so a brand-new paste preprocessor
@@ -60,6 +62,11 @@ const LIVE_RECEIVER = /(?:const|let|var)\s+(\w+)\s*=\s*(?:document\.|dom\$\.make
  * `insertAdjacentHTML` and `document.write` parse into a live tree by
  * definition. Take the range from the parsed node's own `ownerDocument`.
  */
+/**
+ * The one file allowed to call the parse primitives directly.
+ */
+const PRIMITIVE_FILE = 'src/components/utils/inert-html.ts';
+
 const BANNED_SINKS: Array<[string, RegExp]> = [
   // No /g: `test()` on a global regex carries lastIndex between files and
   // would skip every other match.
@@ -84,6 +91,12 @@ describe('inert HTML parse law', () => {
       .filter((receiver) => liveReceivers.has(receiver));
 
     expect(offenders).toEqual([]);
+  });
+
+  it.each(SCOPED_FILES.filter((file) => file !== PRIMITIVE_FILE))('%s parses full documents only through parseUntrustedDocument', (relativePath) => {
+    const source = readFileSync(resolve(ROOT, relativePath), 'utf-8');
+
+    expect(/\bDOMParser\b/.test(source)).toBe(false);
   });
 
   it.each(SCOPED_FILES)('%s uses no sink that parses into the live document', (relativePath) => {

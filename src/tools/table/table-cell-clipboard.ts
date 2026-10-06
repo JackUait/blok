@@ -19,7 +19,7 @@ import { clean, sanitizeBlocks } from '../../components/utils/sanitizer';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../shared/page-reference';
 import { resolvePresetColorVars, resolvePresetColors } from '../../components/shared/resolve-preset-colors';
-import { parseUntrustedHtml } from '../../components/utils/inert-html';
+import { parseUntrustedDocument, parseUntrustedHtml } from '../../components/utils/inert-html';
 import { trimTrailingBreaks } from '../../components/utils/trailing-breaks';
 import type { TextDirection } from '../../components/utils/direction';
 
@@ -581,7 +581,7 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
     return null;
   }
 
-  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const doc = parseUntrustedDocument(html);
   const table = doc.querySelector('table');
 
   if (!table) {
@@ -660,7 +660,7 @@ const PASTED_TEXTLESS_CONTENT = 'img, picture, video, audio, iframe, embed, obje
  * `<b id=docs-internal-guid>`, `<meta>`, empty divs) sit outside that table.
  */
 export function pastedContentOutsideTable(html: string): { html: string; text: string } | null {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const doc = parseUntrustedDocument(html);
   const table = doc.querySelector('table');
 
   if (table === null) {

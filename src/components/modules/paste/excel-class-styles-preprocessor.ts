@@ -1,3 +1,5 @@
+import { parseUntrustedDocument } from '../../utils/inert-html';
+
 /**
  * Excel puts cell formatting in `<style>` class rules (`.xl65 {font-weight:700;}`)
  * and only a `class` on the cell or `<font>` run. The sanitizer drops both the
@@ -207,8 +209,7 @@ export function preprocessExcelClassStyles(html: string): string {
     return html;
   }
 
-  // DOMParser keeps <head> and loads or runs nothing.
-  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const doc = parseUntrustedDocument(html);
   const styles = Array.from(doc.querySelectorAll('style'));
   const rules = readClassRules(styles.map(style => style.textContent ?? '').join('\n'));
 

@@ -9,6 +9,7 @@
  */
 import { isSafeCssColor } from '../../../shared/css-color';
 import { wrapCellTextMarks } from './excel-class-styles-preprocessor';
+import { parseUntrustedDocument } from '../../utils/inert-html';
 
 const MARK_DECLARATION = /(?<![a-z-])(font-weight|font-style|text-decoration(?:-line)?)\s*:/i;
 const MARK_PROPS = ['font-weight', 'font-style', 'text-decoration', 'text-decoration-line'];
@@ -60,8 +61,7 @@ export function preprocessTableCellFormatting(html: string): string {
     return html;
   }
 
-  // DOMParser keeps <head> (later passes read its <style>) and loads nothing.
-  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const doc = parseUntrustedDocument(html);
   const cells = Array.from(doc.body.querySelectorAll<HTMLElement>('td, th'));
   const fonts = Array.from(doc.body.querySelectorAll<HTMLElement>('td font[color], th font[color]'));
   const changed = [...cells.map(applyCellMarks), ...fonts.map(convertFontColor)];

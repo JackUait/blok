@@ -32,3 +32,18 @@ export function parseUntrustedHtml(html: string): HTMLElement {
 
   return wrapper;
 }
+
+/**
+ * Parse an untrusted full HTML document, keeping `<head>` (Excel's `<style>`)
+ * and `<html>`/`<body>` attributes that `parseUntrustedHtml` drops.
+ *
+ * DOMParser's document has no browsing context, so nothing in it loads or
+ * runs. Kept on DOMParser rather than `createHTMLDocument`: a string with no
+ * doctype parses in quirks mode here, as the browser parses it, and quirks
+ * mode changes the tree (a `<table>` inside a `<p>` stays nested).
+ * @param html - untrusted markup, typically clipboard HTML
+ * @returns the parsed document
+ */
+export function parseUntrustedDocument(html: string): Document {
+  return new DOMParser().parseFromString(html, 'text/html');
+}

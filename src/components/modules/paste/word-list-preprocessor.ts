@@ -1,3 +1,5 @@
+import { parseUntrustedDocument } from '../../utils/inert-html';
+
 /**
  * Word writes a list as `<p style="mso-list:l0 level1 lfo1">` paragraphs. The
  * bullet or number is plain text in a leading `<span style="mso-list:Ignore">`,
@@ -102,8 +104,7 @@ export function preprocessWordLists(html: string): string {
     return html;
   }
 
-  // DOMParser loads and runs nothing.
-  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const doc = parseUntrustedDocument(html);
   const items = new Map<Element, WordListItem>();
   const marked = Array.from(doc.body.querySelectorAll('[style]')).filter(element => LIST_STYLE.test(element.getAttribute('style') ?? ''));
 

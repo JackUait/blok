@@ -1,4 +1,5 @@
 import { pastedGridDirection } from '../../../tools/table/table-cell-clipboard';
+import { parseUntrustedDocument } from '../../utils/inert-html';
 
 /**
  * Carry a pasted table's column direction onto the `<table>` itself.
@@ -19,8 +20,7 @@ export function stampPastedTableDirection(html: string): string {
     return html;
   }
 
-  // DOMParser keeps <body> attributes and loads nothing (no browsing context).
-  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const doc = parseUntrustedDocument(html);
   const unstamped = Array.from(doc.querySelectorAll('table')).filter(table => {
     const own = table.getAttribute('dir')?.trim().toLowerCase() === 'rtl' ? 'rtl' : 'ltr';
 

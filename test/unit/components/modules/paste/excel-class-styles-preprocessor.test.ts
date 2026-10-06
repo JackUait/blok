@@ -169,8 +169,8 @@ describe('preprocessExcelClassStyles rule reading', () => {
     ['no brace at all', 'a'.repeat(200_000)],
     ['a rule that never closes', `.a {${'b'.repeat(200_000)}`],
     ['many comments that never close', '/*a'.repeat(66_000)],
-    ['CDO and CDC tokens', '<!--  -->'.repeat(22_000)],
-    ['CDC runs inside a selector', `.a${'-->'.repeat(66_000)}`],
+    ['one prelude of CDO tokens', `${'<!-- '.repeat(40_000)}.a {font-weight:700}`],
+    ['many rules behind CDO tokens', '<!-- .a{} '.repeat(20_000)],
   ])('reads a 200k <style> with %s in linear time', (_label, styleText) => {
     const html = `<html><head><style>${styleText}</style></head><body><table><tr><td class=a>A</td></tr></table></body></html>`;
     const start = performance.now();

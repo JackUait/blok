@@ -1511,6 +1511,15 @@
     .dark-mode #settings-panel { background: #191919; border-color: #2f2f2f; }
    </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <script data-pg-no-leave-prompt>
+    /*
+     * No "Leave site?" prompt in the playground. A capture listener on window
+     * runs before Blok's bubble-phase beforeunload guards and stops them.
+     */
+    window.addEventListener('beforeunload', function (event) {
+      event.stopImmediatePropagation();
+    }, true);
+  </script>
   <script>
     /*
      * Which gesture the user last drove the page with. Mirrors

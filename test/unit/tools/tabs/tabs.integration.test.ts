@@ -407,13 +407,15 @@ describe('tabs block', () => {
     expect(pills()[0]).toHaveFocus();
   });
 
-  // In a browser the block is deleted only after the pill folds away, and that delete moves the caret.
+  // The block is deleted after the pill folds away; a delete that moved the caret would pull focus out of the strip.
   it('keeps focus on the opened tab after the deleted tab finishes folding away', async () => {
     Object.assign(HTMLElement.prototype, {
       animate(): Animation {
         const animation = { cancel: vi.fn(), finish: vi.fn(), onfinish: null, oncancel: null } as unknown as Animation;
 
-        setTimeout(() => animation.onfinish?.call(animation, new Event('finish') as AnimationPlaybackEvent), 20);
+        setTimeout(() => {
+          animation.onfinish?.call(animation, new Event('finish') as AnimationPlaybackEvent);
+        }, 20);
 
         return animation;
       },

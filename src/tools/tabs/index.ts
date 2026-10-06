@@ -511,10 +511,15 @@ export class TabsTool implements BlockTool, TabsHandle {
       }
 
       this.evictionScheduled = false;
+
+      // Strays stay in the tabs block's container. Last first: each one lands
+      // right after the tabs block, so the reverse keeps their order.
+      const parentId = this.api.blocks.getById(this.blockId)?.parentId ?? null;
+
       this.api.blocks.getChildren(this.blockId)
         .filter(child => child.name !== TAB_TOOL)
         .reverse()
-        .forEach(child => this.api.blocks.setBlockParent(child.id, null));
+        .forEach(child => this.api.blocks.setBlockParent(child.id, parentId));
     };
 
     requestAnimationFrame(run);

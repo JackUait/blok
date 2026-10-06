@@ -441,16 +441,18 @@ describe('tabs block', () => {
   });
 
   describe('while the deleted tab folds away', () => {
-    const animations: Array<{ target: Element; frames: Keyframe[] }> = [];
+    const animations: Array<{ target: Element; frames: Keyframe[]; animation: Animation }> = [];
 
     beforeEach(() => {
       animations.length = 0;
       // A browser runs the fold, so the block is removed later, not at once.
       Object.assign(HTMLElement.prototype, {
         animate(this: HTMLElement, frames: Keyframe[]): Animation {
-          animations.push({ target: this, frames });
+          const animation = { cancel: vi.fn(), finish: vi.fn(), onfinish: null, oncancel: null } as unknown as Animation;
 
-          return { cancel: vi.fn(), finish: vi.fn(), onfinish: null, oncancel: null } as unknown as Animation;
+          animations.push({ target: this, frames, animation });
+
+          return animation;
         },
         getAnimations: (): Animation[] => [],
       });
@@ -459,6 +461,40 @@ describe('tabs block', () => {
     afterEach(() => {
       delete (HTMLElement.prototype as Partial<{ animate: unknown }>).animate;
       delete (HTMLElement.prototype as Partial<{ getAnimations: unknown }>).getAnimations;
+    });
+
+    // The folded tab copy keeps the old scroll width; once it goes, the edge fade must go too.
+    it('drops the strip\'s edge fade once the folded tab copy is gone', async () => {
+      await boot(doc());
+
+      const scroller = document.querySelector<HTMLElement>('[data-blok-tabs-scroller]');
+
+      if (scroller === null) {
+        throw new Error('no scroller');
+      }
+
+      const size = { scroll: 300, client: 200 };
+
+      Object.defineProperty(scroller, 'scrollWidth', { configurable: true, get: () => size.scroll });
+      Object.defineProperty(scroller, 'clientWidth', { configurable: true, get: () => size.client });
+      // jsdom lays nothing out; distinct boxes make the open tab move, which folds a copy.
+      pills().forEach((pill, index) => {
+        Object.defineProperty(pill, 'offsetLeft', { configurable: true, get: () => index * 100 });
+        Object.defineProperty(pill, 'offsetWidth', { configurable: true, get: () => 80 });
+      });
+
+      await pressOnPill(0, 'Delete');
+      scroller.dispatchEvent(new Event('scroll'));
+      expect(scroller.hasAttribute('data-overflow-end')).toBe(true);
+
+      size.scroll = 200;
+
+      const fold = animations.find(call => call.target !== scroller.querySelector('[data-blok-tabs-indicator]')
+        && call.target.hasAttribute('data-blok-tabs-indicator'));
+
+      fold?.animation.onfinish?.call(fold.animation, new Event('finish') as AnimationPlaybackEvent);
+
+      expect(scroller.hasAttribute('data-overflow-end')).toBe(false);
     });
 
     it('hides the deleted tab\'s panel at once, so two panels never stack', async () => {

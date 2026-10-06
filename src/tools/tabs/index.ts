@@ -764,7 +764,7 @@ export class TabsTool implements BlockTool, TabsHandle {
     if (pill !== undefined && this.indicator !== null) {
       const box = measurePill(pill);
 
-      moveIndicator(this.indicator, options.animate ? this.indicatorBox : null, box);
+      moveIndicator(this.indicator, options.animate ? this.indicatorBox : null, box, this.updateOverflow);
       this.indicatorBox = box;
       this.indicator.toggleAttribute('data-placed', box.width > 0);
     }

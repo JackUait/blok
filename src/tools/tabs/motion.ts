@@ -94,8 +94,9 @@ export const measurePill = (pill: HTMLElement): PillBox => {
  * @param indicator - the shared active-pill backdrop
  * @param from - its current box, or null when it has never been placed
  * @param to - the active pill's box
+ * @param onSettled - runs once the folded copy is gone; it held the scroll width until then
  */
-export const moveIndicator = (indicator: HTMLElement, from: PillBox | null, to: PillBox): void => {
+export const moveIndicator = (indicator: HTMLElement, from: PillBox | null, to: PillBox, onSettled?: () => void): void => {
   // Read before the cancel below: a tab still rising folds from where it is.
   const { transform: tilt, opacity } = getComputedStyle(indicator);
   const shown = opacity === '' || Number.isNaN(Number(opacity)) ? 1 : Number(opacity);
@@ -128,8 +129,13 @@ export const moveIndicator = (indicator: HTMLElement, from: PillBox | null, to: 
     { duration: FOLD_MS, easing: 'cubic-bezier(0.5, 0, 0.9, 0.6)', fill: 'forwards' }
   );
 
-  fold.onfinish = (): void => old.remove();
-  fold.oncancel = (): void => old.remove();
+  const settle = (): void => {
+    old.remove();
+    onSettled?.();
+  };
+
+  fold.onfinish = settle;
+  fold.oncancel = settle;
 
   indicator.animate(
     [

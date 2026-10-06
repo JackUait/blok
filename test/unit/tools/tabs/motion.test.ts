@@ -160,6 +160,22 @@ describe('tabs switch motion', () => {
       expect(ghosts(scroller)).toHaveLength(0);
     });
 
+    // The folded copy holds the strip's scroll width until it goes, and its removal resizes nothing.
+    it('reports when the folded tab is gone, so the strip can re-measure its overflow', () => {
+      const { scroller, indicator } = strip();
+      const settled = vi.fn();
+
+      moveIndicator(indicator, { start: 0, width: 80 }, { start: 120, width: 60 }, settled);
+
+      const fold = calls.find(call => call.target === ghosts(scroller)[0]);
+
+      expect(settled).not.toHaveBeenCalled();
+      fold?.animation.onfinish?.call(fold.animation, new Event('finish') as AnimationPlaybackEvent);
+
+      expect(ghosts(scroller)).toHaveLength(0);
+      expect(settled).toHaveBeenCalledTimes(1);
+    });
+
     it('removes the folded tab when its fold is cut short', () => {
       const { scroller, indicator } = strip();
 

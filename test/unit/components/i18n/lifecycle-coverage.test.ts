@@ -199,6 +199,9 @@ const deriveLifecycle = (): {
   for (const level of [1, 2, 3, 4, 5, 6]) addDynamic(`toolbox.preview.heading${level}`);
   addDynamic('tools.image.errorRetry');
   addDynamic('tools.image.errorReplace');
+  // The tab block has no toolbox entry. Its name is read as toolNames.<block.name>
+  // by translateToolName (blockSelection.ts, inline-tool-convert.ts).
+  addDynamic('toolNames.tab');
 
   for (const key of literal) dynamic.delete(key);
 
@@ -262,7 +265,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 546 + 117 + 70 + 4 closure for all 737 keys', () => {
+  it('rebuilds a disjoint 596 + 117 + 61 + 4 closure for all 778 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -276,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(737);
+    expect(lifecycle.size).toBe(778);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -306,10 +309,22 @@ describe('current English catalog lifecycle coverage', () => {
       // +8: the filter family tabs and their row name are listed by literal.
       // find.options labels the find bar's options button by literal.
       // +1: a11y.loadingContent names the loading skeleton's status by literal.
-      'executable-literal': 546,
-      // +1: toolNames.page comes from the page tool's titleKey.
+      // +12: the darkroom's keyboard shortcut sheet lists its rows by literal.
+      // +9: that sheet also names markup tools by literal (see below).
+      // +2: the table grips name their merge-lock tooltips by literal.
+      // The video context menu calls ctxCopyUrlAtTime and ctxStats by literal.
+      // -2: imageFailure.failedMany/restoredMany left the catalog.
+      // +5: the page menu keys (blockSettings.copyPageLink/moveToTrash,
+      // tools.page.editIcon/rename/openInSidePeek) are called by literal.
+      // +3: the table-of-contents block calls its toolNames, tools and
+      // toolbox.preview keys by literal.
+      // +2: the find bar names why a replace button is disabled by literal.
+      'executable-literal': 596,
+      // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
+      // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
       // when the video settings became one pane (1b400077); still shipped.
+      // +3: toolNames.tabs (titleKey), searchTerms.tabs, toolNames.tab (block name).
       'finite-dynamic': 117,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
@@ -317,7 +332,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +6: the new shape names, built the same way.
       // +16: the new filter names, built from the preset name like the first 8.
       // +5: the video keys above.
-      'registered-namespace-compatible': 70,
+      // -9: the shortcut sheet now names those 9 markup tools by literal.
+      'registered-namespace-compatible': 61,
       'catalog-only': 4,
     });
     expect(

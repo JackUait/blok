@@ -63,10 +63,22 @@ describe('blocksToPlainTextWithReport', () => {
       { type: 'spacer', data: { height: 24 } },
       { type: 'callout', data: { emoji: '💡' } },
       { type: 'column_list', data: {} },
+      { type: 'tabs', data: {} },
       { type: 'database', data: { schema: [], views: [], activeViewId: 'v' } },
     ]));
 
     expect(report.text).toBe('');
+    expect(report.warnings).toEqual([]);
+  });
+
+  /** Its outline is built from the headings, which are read on their own. */
+  it('reads a table of contents as nothing, without reporting it', () => {
+    const report = blocksToPlainTextWithReport(doc([
+      { type: 'header', data: { text: 'Intro', level: 2 } },
+      { type: 'table_of_contents', data: { text: 'stray', textColor: 'red' } },
+    ]));
+
+    expect(report.text).toBe('Intro');
     expect(report.warnings).toEqual([]);
   });
 

@@ -98,6 +98,11 @@ const EXEMPT_SINKS: FontSizeSink[] = [
     match: 'titleEl.style.fontSize',
     reason: 'database page title, not inline cell body text; database is a page container and its title size is intentional',
   },
+  {
+    file: 'src/tools/image/darkroom/markup-editor.ts',
+    match: 'el.style.fontSize',
+    reason: 'text-edit textarea in a body-mounted image dialog, not cell body text; its size follows image zoom',
+  },
 ];
 
 const KNOWN_SINKS = [...GUARDED_SINKS, ...EXEMPT_SINKS];

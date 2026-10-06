@@ -223,6 +223,36 @@ describe('createDial', () => {
     expect(capture).toHaveBeenCalledWith(1);
   });
 
+  it('with shiftSnap, a Shift drag lands on whole multiples of it; without Shift it moves freely', () => {
+    make({ shiftSnap: 15 });
+
+    pointer(dial.el, 'pointerdown', { clientX: 0 });
+    pointer(dial.el, 'pointermove', { clientX: -6 * 22, shiftKey: true });
+    expect(onInput).toHaveBeenLastCalledWith(15);
+    pointer(dial.el, 'pointermove', { clientX: -6 * 23, shiftKey: true });
+    expect(onInput).toHaveBeenLastCalledWith(30);
+    pointer(dial.el, 'pointermove', { clientX: 6 * 50, shiftKey: true });
+    expect(onInput).toHaveBeenLastCalledWith(-45);
+    pointer(dial.el, 'pointermove', { clientX: -6 * 22 });
+    expect(onInput).toHaveBeenLastCalledWith(22);
+  });
+
+  it('a Shift drag snaps to the grid, not to steps from where it started', () => {
+    make({ value: 7, shiftSnap: 15 });
+
+    pointer(dial.el, 'pointerdown', { clientX: 0 });
+    pointer(dial.el, 'pointermove', { clientX: -6 * 2, shiftKey: true });
+    expect(onInput).toHaveBeenLastCalledWith(15);
+  });
+
+  it('without shiftSnap, Shift does not change a drag', () => {
+    make();
+
+    pointer(dial.el, 'pointerdown', { clientX: 0 });
+    pointer(dial.el, 'pointermove', { clientX: -6 * 22, shiftKey: true });
+    expect(onInput).toHaveBeenLastCalledWith(22);
+  });
+
   it('a drag stays in range', () => {
     make();
 

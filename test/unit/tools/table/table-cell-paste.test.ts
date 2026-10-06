@@ -87,6 +87,18 @@ describe('parseCellContentToBlocks', () => {
     ]);
   });
 
+  it('turns a nested table into one block per nested cell, row by row', () => {
+    expect(parseCellContentToBlocks(
+      'before<table><tbody><tr><td>n1</td><td><ul><li>n2</li></ul></td></tr><tr><td></td><td>n4</td></tr></tbody></table>after'
+    )).toEqual([
+      { tool: 'paragraph', data: { text: 'before' } },
+      { tool: 'paragraph', data: { text: 'n1' } },
+      { tool: 'list', data: { text: 'n2', style: 'unordered', checked: false, depth: 0 } },
+      { tool: 'paragraph', data: { text: 'n4' } },
+      { tool: 'paragraph', data: { text: 'after' } },
+    ]);
+  });
+
   it('trims trailing <br> inside list item text (Google Docs p→br conversion)', () => {
     expect(parseCellContentToBlocks('<ul><li>alpha<br></li></ul>')).toEqual([
       { tool: 'list', data: { text: 'alpha', style: 'unordered', checked: false, depth: 0 } },

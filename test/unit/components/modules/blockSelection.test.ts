@@ -469,9 +469,11 @@ describe('BlockSelection', () => {
         tool: { copyAsLink: (data: { pageId: string }) => ({ url: `https://x.test/editor/page/${data.pageId}`, text: 'Plans' }) },
       });
 
+      const paragraph = { name: 'paragraph', conversionConfig: { import: 'text', export: 'text' }, settings: {} };
       const setup = createBlockSelection({
         Tools: {
-          defaultTool: { name: 'paragraph', conversionConfig: { import: 'text', export: 'text' }, settings: {} },
+          defaultTool: paragraph,
+          blockTools: new Map([['paragraph', paragraph]]),
         } as unknown as BlokModules['Tools'],
       });
 
@@ -493,18 +495,21 @@ describe('BlockSelection', () => {
     const flavorOf = (setData: ReturnType<typeof vi.fn>, type: string): unknown =>
       setData.mock.calls.find(([candidate]) => candidate === type)?.[1];
 
-    it('copy puts a link paragraph on the clipboard, never the page block', async () => {
+    it('copy keeps the page block for Blok and its link for other apps, with no cut token', async () => {
       const { setup } = setupPage();
       const setData = vi.fn();
 
       await setup.blockSelection.copySelectedBlocks(clipboardEventWith(setData));
 
-      const payload = payloadOf(setData);
+      const [entry] = payloadOf(setData);
 
-      expect(payload.some((entry) => entry.tool === 'page')).toBe(false);
-      expect(payload).toEqual([
-        { id: 'page-block', tool: 'paragraph', data: { text: LINK_HTML }, tunes: {}, parentId: null, indent: 0 },
-      ]);
+      expect(entry).toMatchObject({
+        id: 'page-block',
+        tool: 'page',
+        data: { pageId: 'p1' },
+        link: { url: PAGE_URL, text: 'Plans' },
+      });
+      expect(entry).not.toHaveProperty('cut');
       expect(flavorOf(setData, 'text/html')).toBe(`<p>${LINK_HTML}</p>`);
       expect(flavorOf(setData, 'text/plain')).toBe(`[Plans](${PAGE_URL})`);
     });
@@ -544,7 +549,7 @@ describe('BlockSelection', () => {
       expect(writeText).toHaveBeenCalledWith(`[Plans](${PAGE_URL})`);
     });
 
-    it('copies the block itself when the tool has nothing to link to', async () => {
+    it('copies a page without an href as itself, and as a non-owning reference for other apps', async () => {
       const { setup, page } = setupPage();
       const setData = vi.fn();
 
@@ -552,7 +557,12 @@ describe('BlockSelection', () => {
 
       await setup.blockSelection.copySelectedBlocks(clipboardEventWith(setData));
 
-      expect(payloadOf(setData)[0]).toMatchObject({ tool: 'page', data: { pageId: 'p1' } });
+      const [entry] = payloadOf(setData);
+
+      expect(entry).toMatchObject({ tool: 'page', data: { pageId: 'p1' } });
+      expect(entry).not.toHaveProperty('link');
+      expect(flavorOf(setData, 'text/html')).toBe('<p><a data-blok-page-id="p1">Page</a></p>');
+      expect(flavorOf(setData, 'text/plain')).toBe('Page');
     });
   });
 
@@ -2061,6 +2071,43 @@ describe('BlockSelection', () => {
 
       expect(positionCalls).toHaveLength(1);
       expect(positionCalls[0][1]).toEqual({ tool: 'Текст', position: 3, total: 3 });
+    });
+
+    // A late announce() after the last editor is gone re-creates the shared
+    // live regions with no owner, so nothing ever removes them.
+    it('does not announce the position after the editor is destroyed inside the throttle window', async () => {
+      const { blockSelection } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      blockSelection.markDestroyed();
+      blockSelection.destroy();
+
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(announce).not.toHaveBeenCalled();
+    });
+
+    it('does not announce the position when the editor is destroyed while the tool name resolves', async () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const resolveEntry: { current: (entry: { titleKey: string }) => void } = { current: () => undefined };
+      const entry = new Promise<{ titleKey: string }>((resolve) => {
+        resolveEntry.current = resolve;
+      });
+
+      vi.mocked(blocks[0].getActiveToolboxEntry).mockReturnValueOnce(entry);
+
+      blockSelection.enableNavigationMode();
+      await vi.advanceTimersByTimeAsync(300);
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      blockSelection.markDestroyed();
+      blockSelection.destroy();
+      resolveEntry.current({ titleKey: 'text' });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(announce).not.toHaveBeenCalled();
     });
   });
 

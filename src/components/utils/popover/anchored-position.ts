@@ -331,8 +331,14 @@ export interface PositionTracker {
  * @param reposition - callback that re-computes and applies the position;
  *   receives the originating event for scroll so consumers can fail closed
  *   when a virtual anchor has no live nested-scroll context
+ * @param anchor - optional element to observe too: an anchor inside a panel
+ *   that animates its size moves without any scroll or window resize
  */
-export function createPositionTracker(content: Element, reposition: (event?: Event) => void): PositionTracker {
+export function createPositionTracker(
+  content: Element,
+  reposition: (event?: Event) => void,
+  anchor?: Element
+): PositionTracker {
   const state: { attached: boolean; resizeObserver: ResizeObserver | null } = {
     attached: false,
     resizeObserver: null,
@@ -355,6 +361,9 @@ export function createPositionTracker(content: Element, reposition: (event?: Eve
       if (typeof ResizeObserver !== 'undefined') {
         state.resizeObserver = new ResizeObserver(() => reposition());
         state.resizeObserver.observe(content);
+        if (anchor !== undefined) {
+          state.resizeObserver.observe(anchor);
+        }
       }
     },
 

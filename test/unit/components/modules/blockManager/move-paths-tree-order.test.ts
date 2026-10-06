@@ -12,6 +12,7 @@ import { isCollapsedToggleBlock } from '../../../../../src/components/modules/dr
 import { Callout, Column, ColumnList, Header, List, Toggle } from '../../../../../src/tools';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { OutputBlockData } from '../../../../../types';
+import { storeToggleOpenState } from '../../../../helpers/view-state';
 
 interface Runtime {
   isReady: Promise<unknown>;
@@ -57,10 +58,12 @@ const boot = async (blocks: OutputBlockData[]): Promise<Runtime> => {
   document.body.appendChild(holder);
   holders.push(holder);
 
+  storeToggleOpenState('doc', blocks);
+
   const editor = new Blok({
     holder,
     tools: { paragraph: Paragraph, toggle: Toggle, callout: Callout, header: Header, list: List, column_list: ColumnList, column: Column },
-    data: { blocks },
+    data: { id: 'doc', blocks },
   }) as unknown as Runtime;
 
   await editor.isReady;
@@ -167,11 +170,13 @@ const keyboardMove = (id: string, direction: 'up' | 'down') => (editor: Runtime)
  * @param blocks - initial document
  * @param act - the move
  * @param expected - flat order after the move
+ * @param afterUndo - flat order after one undo; the starting order when omitted
  */
 const expectMove = async (
   blocks: OutputBlockData[],
   act: (editor: Runtime) => void,
-  expected: string[]
+  expected: string[],
+  afterUndo?: string[]
 ): Promise<void> => {
   const editor = await boot(blocks);
   const before = flat(editor);
@@ -186,7 +191,7 @@ const expectMove = async (
   editor.history.undo();
   await settle();
 
-  expect({ flat: flat(editor), problems: treeViolations(editor) }, 'one undo').toStrictEqual({ flat: before, problems: [] });
+  expect({ flat: flat(editor), problems: treeViolations(editor) }, 'one undo').toStrictEqual({ flat: afterUndo ?? before, problems: [] });
 
   editor.history.redo();
   await settle();
@@ -329,7 +334,42 @@ describe('public blocks.move keeps tree order', () => {
   }, 60_000);
 
   it('a move out of a collapsed toggle shows the block again', async () => {
-    await expectMove([P('a'), T('t', ['tc'], false), P('tc', 't'), P('b')], apiMove('tc', 3), ['a^-', 't^-', 'b^-', 'tc^-']);
+    // No caret before the move, so undo puts it in tc (the caret after the move), which opens t.
+    await expectMove(
+      [P('a'), T('t', ['tc'], false), P('tc', 't'), P('b')],
+      apiMove('tc', 3),
+      ['a^-', 't^-', 'b^-', 'tc^-'],
+      ['a^-', 't^-', 'tc^t', 'b^-']
+    );
+    expect(JSON.parse(localStorage.getItem('blok:view:doc:t:open') ?? 'null')).toMatchObject({ v: true });
+  }, 60_000);
+
+  it('undo of a move out of a collapsed toggle hides the block again when the caret was elsewhere', async () => {
+    const caretInA = (editor: Runtime): void => {
+      const holder = editor.module.blockManager.blocks[indexOf(editor, 'a')].holder;
+      // jsdom does not reflect the contentEditable property to the attribute.
+      const input = Array.from(holder.querySelectorAll<HTMLElement>('*')).find(element => element.contentEditable === 'true');
+      const range = document.createRange();
+
+      if (input === undefined) {
+        throw new Error('a has no input');
+      }
+      input.setAttribute('contenteditable', 'true');
+      range.setStart(input, 0);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+      const manager = editor.module.blockManager;
+
+      manager.currentBlockIndex = indexOf(editor, 'a');
+      apiMove('tc', 3)(editor);
+    };
+
+    await expectMove(
+      [P('a'), T('t', ['tc'], false), P('tc', 't'), P('b')],
+      caretInA,
+      ['a^-', 't^-', 'b^-', 'tc^-'],
+      ['a^-', 't^-', 'tc^t hidden', 'b^-']
+    );
   }, 60_000);
 
   it('a move of a toggle child to the top of the document shows it first', async () => {

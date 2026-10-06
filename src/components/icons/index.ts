@@ -40,15 +40,6 @@ export const IconLink = `
 </svg>
 `;
 
-// Marker/Color icon (letter A in rounded square)
-export const IconMarker = `
-<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M7 13.5 10 6.5 13 13.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M8 11h4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-`;
-
 // Equation/inline math icon (radical/square-root glyph)
 export const IconEquation = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -256,6 +247,13 @@ export const IconToggleList = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M8.5 6.5H16.5M8.5 13.5H16.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M3.5 4.75 5.75 6.5 3.5 8.25ZM3.5 11.75 5.75 13.5 3.5 15.25Z" stroke="currentColor" stroke-width="1.25" fill="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Table of contents icon — rules stepped in by outline depth
+export const IconTableOfContents = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 5.5H14M6.5 10H17M10 14.5H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -869,6 +867,18 @@ export const IconCaption = `
 </svg>
 `;
 
+// Image editor entry. Knobs are staggered so neighboring rings never touch.
+export const IconSliders = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.5 5.5H8.5M15.5 5.5H16.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3.5 10H4.5M11.5 10H16.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3.5 14.5H7.5M14.5 14.5H16.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="12" cy="5.5" r="1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="8" cy="10" r="1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="11" cy="14.5" r="1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Crop rails leave a gap at each crossing.
 export const IconCrop = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -1053,6 +1063,15 @@ export const IconColumns = `
 </svg>
 `;
 
+// Tabs tool: a panel with a raised tab and a lower tab beside it. The lower
+// tab is an open path so the body's top edge is drawn once.
+export const IconTabs = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5 4h1.5a2 2 0 0 1 2 2v2H15a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11 8V6.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1V8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Video / player icon — framed player with a play triangle (link-type: video)
 export const IconVideo = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -1110,6 +1129,14 @@ export const IconPage = `
   <path d="M5 5a2 2 0 0 1 2-2h4l4 4v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M11 3v4h4Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M7.5 10.5h5M7.5 13.5h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+export const IconLock = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M7 8V6.5a3 3 0 0 1 6 0V8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="5" y="8" width="10" height="9" rx="2" stroke="currentColor" stroke-width="1.25"/>
+  <circle cx="10" cy="12.5" r="0.75" fill="currentColor"/>
 </svg>
 `;
 

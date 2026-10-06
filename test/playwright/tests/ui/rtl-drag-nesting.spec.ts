@@ -147,7 +147,7 @@ const childParagraphIndicator = async (
   // A fresh editor per case: re-rendering after a drop that nested a block can
   // leave the editor without its block toolbar.
   await page.evaluate(async ({ holder, dir, data }) => {
-    await window.blokInstance?.destroy();
+    await window.blokInstance?.destroy?.();
     document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');

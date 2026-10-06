@@ -641,6 +641,26 @@ describe('Tooltip utility', () => {
     hide();
   });
 
+  // A quick hover-then-click opens the trigger's menu before the hover delay runs out.
+  it('does not reveal a delayed tooltip once a Popover has opened during the delay', () => {
+    vi.useFakeTimers();
+    vi.advanceTimersByTime(5000);
+
+    const target = createTargetElement();
+    const openPopover = document.createElement('div');
+
+    onHover(target, 'hover text', { delay: 400 });
+    target.dispatchEvent(new Event('mouseenter'));
+    openPopover.setAttribute('data-blok-popover-opened', 'true');
+    document.body.appendChild(openPopover);
+    vi.advanceTimersByTime(500);
+
+    expect(getTooltipWrapper()?.getAttribute('data-blok-shown')).not.toBe('true');
+
+    openPopover.remove();
+    hide();
+  });
+
   it('keeps aria-hidden synchronized with CSS class changes', async () => {
     const target = createTargetElement();
 

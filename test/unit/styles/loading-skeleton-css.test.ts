@@ -31,6 +31,22 @@ describe('loading skeleton styles', () => {
     expect(reduced).not.toBeNull();
   });
 
+  // The overlay mounts at once; only its paint waits, so a fast load never flashes it.
+  it('fades the overlay in after --blok-skeleton-delay, transparent until then', () => {
+    const overlay = css.match(/\n\[data-blok-loading-skeleton\]\s*\{([^}]*)\}/)?.[1] ?? '';
+    const appear = css.match(/@keyframes blok-skeleton-appear\s*\{([^}]*\}[^}]*\})/)?.[1] ?? '';
+
+    expect(overlay).toMatch(/animation:[^;]*blok-skeleton-appear[^;]*var\(--blok-skeleton-delay, 0ms\)[^;]*backwards/);
+    expect(appear).toMatch(/from\s*\{\s*opacity:\s*0/);
+  });
+
+  // Reduced motion may stop the sweep, but the delay must hold, or fast loads flash the overlay.
+  it('keeps the overlay delay under reduced motion', () => {
+    const reduced = css.match(/@media \(prefers-reduced-motion: reduce\)\s*\{([^@]*)\}/)?.[1] ?? '';
+
+    expect(reduced).not.toMatch(/\[data-blok-loading-skeleton\][^{]*\{[^}]*animation/);
+  });
+
   it('keeps the overlay out of pointer input', () => {
     expect(css).toMatch(/\[data-blok-loading-skeleton\]\s*\{[^}]*pointer-events:\s*none/);
   });

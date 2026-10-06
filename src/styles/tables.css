@@ -62,6 +62,17 @@
   font-size: var(--blok-table-comfortable-font-size, 1rem);
 }
 
+/*
+ * No placeholder ever paints inside a cell. Cells strip the attributes on the
+ * paths they know about; this covers every other one. Specificity (0,4,0) must
+ * beat the placeholder utilities (empty + focused, up to 0,3,0). The
+ * slash-search pill also lives on ::before, but its `content: ''` is
+ * !important, so it survives.
+ */
+[data-blok-table-cell] [data-blok-table-cell-blocks] [contenteditable]:is([data-placeholder], [data-blok-placeholder-active])::before {
+  content: none;
+}
+
 /* ─── Cell content placement ──────────────────────────────────── */
 
 /*
@@ -157,6 +168,52 @@
 [data-blok-table-heading-col] {
   @apply font-semibold;
   background-color: var(--blok-table-heading-bg);
+  color: var(--blok-text-secondary);
+}
+
+/*
+ * Rounded frame. The table draws only its top and left lines; cells draw the
+ * right and bottom ones, so each corner cell rounds itself too. Core stamps
+ * data-blok-table-corner on the cell that really holds a corner, merged cells
+ * included. No clipping: the selection overlay, its pill and the resize
+ * handles live inside the <table>.
+ * The physical top-right and bottom-left corners are split: one line is the
+ * table's, the other the cell's, and the cell sits one line inside the table.
+ * There the cell's radius is 1px (BORDER_WIDTH) shorter across the table's
+ * line, so its arc meets the table's arc as one ring. The lines are physical
+ * in both directions, so the split logical corners mirror in RTL.
+ */
+[data-blok-table-scroll] > table {
+  border-radius: var(--blok-radius-table);
+}
+
+/*
+ * The cell pill is centred on the cell's inline-end border, so in the last
+ * column half of it hangs past the table. This room keeps the scroll box
+ * from clipping that half without narrowing the table. 8px = half the
+ * hovered pill's width (PILL_WIDTH in table-cell-selection.ts).
+ */
+[data-blok-table-scroll] {
+  --_blok-table-pill-room: 8px;
+
+  margin-inline-end: calc(-1 * var(--_blok-table-pill-room));
+  padding-inline-end: var(--_blok-table-pill-room);
+}
+
+[data-blok-table-cell][data-blok-table-corner~="top-start"] {
+  border-start-start-radius: var(--blok-radius-table) calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px);
+}
+
+[data-blok-table-cell][data-blok-table-corner~="top-end"] {
+  border-start-end-radius: var(--blok-radius-table) calc(var(--blok-radius-table) - (1 + var(--_blok-inline-sign, 1)) * 0.5px);
+}
+
+[data-blok-table-cell][data-blok-table-corner~="bottom-start"] {
+  border-end-start-radius: calc(var(--blok-radius-table) - (1 + var(--_blok-inline-sign, 1)) * 0.5px) var(--blok-radius-table);
+}
+
+[data-blok-table-cell][data-blok-table-corner~="bottom-end"] {
+  border-end-end-radius: calc(var(--blok-radius-table) - (1 - var(--_blok-inline-sign, 1)) * 0.5px) var(--blok-radius-table);
 }
 
 /**

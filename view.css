@@ -652,7 +652,7 @@
   --blok-popover-icon-bg: rgba(55, 53, 47, 0.04);
   --blok-popover-icon-active-bg: rgba(55, 53, 47, 0.08);
   --blok-table-border: #d1d5db;
-  --blok-table-heading-bg: #f9fafb;
+  --blok-table-heading-bg: #f7f6f3;
   --blok-table-grip-outline: transparent;
   --blok-table-drag-source-bg: #f3f4f6;
   --blok-database-card-bg: #ffffff;
@@ -794,6 +794,7 @@
   --blok-radius-mark: var(--blok-radius-2);
   --blok-radius-floor: var(--blok-radius-4);
   --blok-radius-notch: 0.09375rem;
+  --blok-radius-table: var(--blok-radius-2);
   --blok-handle-bg-default: rgba(15, 15, 15, 0.6);
   --blok-handle-bg-hover: rgba(15, 15, 15, 0.85);
   --blok-handle-bg-active: rgba(15, 15, 15, 1);
@@ -892,6 +893,19 @@
   --blok-video-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   --blok-video-burst-bg: rgba(0, 0, 0, 0.5);
   --blok-video-burst-fg: #ffffff;
+  --blok-video-error-scanline: rgba(0, 0, 0, 0.22);
+  --blok-video-error-roll: rgba(255, 255, 255, 0.07);
+  --blok-video-error-vignette: rgba(0, 0, 0, 0.7);
+  --blok-video-error-split-red: rgba(255, 0, 64, 0.55);
+  --blok-video-error-split-cyan: rgba(0, 224, 255, 0.55);
+  --blok-video-error-card-shadow: 0 18px 48px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --blok-video-error-bar-1: #c0c0c0;
+  --blok-video-error-bar-2: #c0c000;
+  --blok-video-error-bar-3: #00c0c0;
+  --blok-video-error-bar-4: #00c000;
+  --blok-video-error-bar-5: #c000c0;
+  --blok-video-error-bar-6: #c00000;
+  --blok-video-error-bar-7: #0000c0;
   --blok-video-burst-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
   --blok-video-burst-ring: rgba(255, 255, 255, 0.4);
   --blok-video-menu-bg: rgba(22, 22, 22, 0.94);
@@ -911,12 +925,9 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.32);
   --blok-find-match-active-bg: rgba(255, 138, 0, 0.5);
   --blok-find-lens-ring: rgba(255, 128, 0, 0.72);
-  --blok-find-track: #e9e9e7;
-  --blok-find-tick: #c9c8c5;
-  --blok-find-tick-active: #191919;
   --blok-find-empty-bg: rgba(235, 87, 87, 0.07);
   --blok-find-empty-border: rgba(235, 87, 87, 0.55);
-  --blok-find-bar-width: 385px;
+  --blok-find-bar-width: 362px;
   --blok-find-offset-x: 16px;
   --blok-find-offset-y: 12px;
   --blok-find-control-size: 28px;
@@ -1081,9 +1092,6 @@
     --blok-find-match-bg: rgba(255, 212, 0, 0.2);
     --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
     --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
-    --blok-find-track: #3a3a3a;
-    --blok-find-tick: #5e5e5e;
-    --blok-find-tick-active: #f0efed;
     --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
     --blok-find-empty-border: rgba(251, 93, 93, 0.6);
   }
@@ -1246,9 +1254,6 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.2);
   --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
   --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
-  --blok-find-track: #3a3a3a;
-  --blok-find-tick: #5e5e5e;
-  --blok-find-tick-active: #f0efed;
   --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
   --blok-find-empty-border: rgba(251, 93, 93, 0.6);
 }
@@ -1357,6 +1362,11 @@
   inherits: false;
   initial-value: transparent;
 }
+@property --blok-embed-window-tone {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
 [data-blok-tool="header"] {
   font-weight: var(--blok-heading-font-weight, 600);
   margin-bottom: var(--blok-heading-margin-bottom, 1px);
@@ -1389,6 +1399,11 @@
 [data-blok-columns] {
   --blok-column-gutter: min(2rem, 4vw);
 }
+@media (hover: hover) {
+  [data-blok-tabs]:hover {
+    --blok-tabs-edge: var(--blok-border-primary);
+  }
+}
 [data-blok-find-roll='down'] {
   --blok-find-roll-shift: -1;
 }
@@ -1396,6 +1411,47 @@
   syntax: '<color>';
   inherits: false;
   initial-value: transparent;
+}
+[data-blok-toc] {
+  --blok-toc-indent: 1.5rem;
+  --blok-toc-pad: 0.375rem;
+  --blok-toc-font: 0.875rem;
+  --blok-toc-leading: 1.3;
+  --blok-toc-hairline: 1px;
+  padding-block: 0.25rem;
+  color: var(--blok-text-secondary);
+  border-radius: var(--blok-radius-control);
+}
+[data-blok-toc-list] {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-blok-toc-list] > li {
+  --blok-toc-depth: 0;
+  --blok-toc-index: 0;
+  padding-inline-start: calc(var(--blok-toc-depth) * var(--blok-toc-indent));
+}
+[data-blok-toc] [data-blok-toc-link] {
+  display: block;
+  padding: var(--blok-toc-pad);
+  border-radius: var(--blok-radius-control);
+  color: inherit;
+  font-size: var(--blok-toc-font);
+  line-height: var(--blok-toc-leading);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+[data-blok-toc] [data-blok-toc-link] > span {
+  text-decoration-line: underline;
+  text-decoration-thickness: var(--blok-toc-hairline);
+  text-decoration-color: currentColor;
+  @supports (color: color-mix(in lab, red, red)) {
+    text-decoration-color: color-mix(in srgb, currentColor 28%, transparent);
+  }
+  text-underline-offset: 0.25em;
+  transition: text-decoration-color 160ms ease;
 }
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {
   font-size: inherit;
@@ -1428,6 +1484,9 @@
 }
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
+    :root, :host {
+      --blok-embed-window-tone: transparent;
+    }
     *, ::before, ::after, ::backdrop {
       --tw-border-style: solid;
       --tw-leading: initial;

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ImageCrop, ImageMarkup } from '../../../../../types/tools/image';
 import { openDarkroom, type DarkroomResult, type OpenDarkroomOptions } from '../../../../../src/tools/image/darkroom';
+import { SHORTCUTS } from '../../../../../src/tools/image/darkroom/shortcuts';
 import { cameraToRect, fitFrame } from '../../../../../src/tools/image/darkroom/camera';
 import { resolveFilters } from '../../../../../src/tools/image/adjust';
 import { coverCrop } from '../../../../../src/tools/image/geometry';
@@ -1125,15 +1126,17 @@ describe('openDarkroom geometry, adjust and filters', () => {
       expect(stageEl()?.hasAttribute('data-settled')).toBe(true);
     });
 
-    it('a quarter turn under a fixed wide ratio switches to Free so the turned crop keeps its pixels', () => {
+    it('a quarter turn under a fixed wide ratio keeps the ratio, turned to portrait', () => {
       const { onApply, advance } = open();
+      const wide = q<HTMLButtonElement>(`[data-ratio="${String(16 / 9)}"]`);
 
-      q<HTMLButtonElement>(`[data-ratio="${String(16 / 9)}"]`).click();
+      wide.click();
       advance(3000);
       button('rotate-left').click();
       advance(3000);
 
-      expect(q('[data-ratio="free"]').getAttribute('aria-checked')).toBe('true');
+      expect(wide.getAttribute('aria-checked')).toBe('true');
+      expect(wide.textContent).toBe('9:16');
       button('done').click();
       const crop = result(onApply).crop;
 
@@ -1175,6 +1178,21 @@ describe('openDarkroom geometry, adjust and filters', () => {
       expect(geometry.straighten).toBe(10);
       if (!crop) throw new Error('a straightened photo always saves a crop');
       expect(isCovered(crop, NATURAL, 10)).toBe(true);
+    });
+
+    it('a Shift drag on the dial snaps the straighten to 15° steps', () => {
+      const { onApply, advance } = open();
+      const drag = (type: string, x: number, shiftKey: boolean): void => {
+        slider().dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, clientX: x, shiftKey }));
+      };
+
+      drag('pointerdown', 0, true);
+      drag('pointermove', -6 * 20, true);
+      drag('pointerup', -6 * 20, true);
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).geometry.straighten).toBe(15);
     });
 
     it('a straightened view still shows a covered crop after a pan', () => {
@@ -2014,6 +2032,15 @@ describe('openDarkroom markup', () => {
     expect(document.querySelector('[data-role="markup-layer"]:not([hidden])')).toBeNull();
   });
 
+  it('the spotlight and magnifier tiles in the shape picker show the photo being edited', () => {
+    open();
+    tab('markup');
+    q<HTMLButtonElement>('[data-blok-testid="markup-tool-shapes"]').click();
+
+    expect(q('[data-blok-testid="markup-shape-spotlight"] img').getAttribute('src')).toBe('x.png');
+    expect(q('[data-blok-testid="markup-shape-magnifier"] img').getAttribute('src')).toBe('x.png');
+  });
+
   it('a tool key on the stage picks the tool in the panel', () => {
     open();
     tab('markup');
@@ -2379,6 +2406,464 @@ describe('openDarkroom photo editor keys', () => {
       open();
 
       expect(button('rotate-left').getAttribute('aria-keyshortcuts')).toBe('Meta+[ Control+[');
+    });
+  });
+
+  describe('Lightroom and Photoshop letters', () => {
+    const picked = (): string | null => q('[data-blok-testid^="markup-tool-"][aria-checked="true"]').getAttribute('data-blok-testid');
+
+    it('R opens Crop, as in Lightroom', () => {
+      open();
+      tabOf('adjust').click();
+      key(stageEl(), { key: 'r' });
+
+      expect(dialog().getAttribute('data-mode')).toBe('crop');
+    });
+
+    it('in Markup, R is still the rectangle and no tool letter switches tabs', () => {
+      open();
+      tabOf('markup').click();
+      ['r', 'v', 'p', 'h', 't', 'o', 'a', 'l', 'e', 'b'].forEach((k) => key(stageEl(), { key: k }));
+      key(q('[data-blok-testid="markup-size-1"]'), { key: 'r' });
+
+      expect(dialog().getAttribute('data-mode')).toBe('markup');
+    });
+
+    it('B picks the pen, as Photoshop\'s brush', () => {
+      open();
+      tabOf('markup').click();
+      key(stageEl(), { key: 'v' });
+      key(stageEl(), { key: 'b' });
+
+      expect(picked()).toBe('markup-tool-pen');
+    });
+
+    it('U picks the last shape used', () => {
+      open();
+      tabOf('markup').click();
+      key(stageEl(), { key: 'o' });
+      key(stageEl(), { key: 'v' });
+      key(stageEl(), { key: 'u' });
+
+      expect(picked()).toBe('markup-tool-shapes');
+      expect(q('[data-blok-testid="markup-tool-shapes"]').getAttribute('data-shape')).toBe('ellipse');
+    });
+
+    it('B and U do nothing outside Markup', () => {
+      open();
+      key(stageEl(), { key: 'b' });
+      key(stageEl(), { key: 'u' });
+      tabOf('markup').click();
+
+      expect(picked()).not.toBe('markup-tool-shapes');
+    });
+  });
+
+  describe('X swaps the crop between landscape and portrait, as in Lightroom', () => {
+    const chip = (ratio: string): HTMLElement => q(`[data-ratio="${ratio}"]`);
+    const aspect = (crop: ImageCrop | null): number => {
+      if (!crop) throw new Error('no crop');
+
+      return (crop.w * NATURAL.w) / (crop.h * NATURAL.h);
+    };
+
+    it('under 16:9 the chip becomes 9:16 and the crop follows', () => {
+      const { onApply, advance } = open();
+
+      chip(String(16 / 9)).click();
+      advance(3000);
+      key(stageEl(), { key: 'x', code: 'KeyX' });
+      advance(3000);
+
+      expect(chip(String(16 / 9)).textContent).toBe('9:16');
+      expect(chip(String(4 / 3)).textContent).toBe('3:4');
+      expect(chip(String(16 / 9)).getAttribute('aria-checked')).toBe('true');
+      button('done').click();
+      expect(aspect(result(onApply).crop)).toBeCloseTo(9 / 16, 2);
+    });
+
+    it('a portrait chip picked later stays portrait', () => {
+      const { onApply, advance } = open();
+
+      key(stageEl(), { key: 'x' });
+      chip(String(4 / 3)).click();
+      advance(3000);
+      button('done').click();
+
+      expect(aspect(result(onApply).crop)).toBeCloseTo(3 / 4, 2);
+    });
+
+    it('a free crop swaps its own shape', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });
+      const before = (30 * NATURAL.w) / (40 * NATURAL.h);
+
+      key(stageEl(), { key: 'x' });
+      advance(3000);
+      button('done').click();
+
+      expect(aspect(result(onApply).crop)).toBeCloseTo(1 / before, 2);
+    });
+
+    it('is one undo step, labels included', () => {
+      const { onApply, advance } = open();
+
+      chip(String(16 / 9)).click();
+      advance(3000);
+      key(stageEl(), { key: 'x' });
+      advance(3000);
+      key(dialog(), { key: 'z', metaKey: true });
+      advance(3000);
+
+      expect(chip(String(16 / 9)).textContent).toBe('16:9');
+      button('done').click();
+      expect(aspect(result(onApply).crop)).toBeCloseTo(16 / 9, 2);
+    });
+
+    it('Reset crop brings the landscape labels back', () => {
+      const { advance } = open();
+
+      key(stageEl(), { key: 'x' });
+      advance(3000);
+      button('reset-crop').click();
+
+      expect(chip(String(4 / 3)).textContent).toBe('4:3');
+    });
+
+    it('does nothing outside Crop', () => {
+      open();
+      tabOf('adjust').click();
+      key(stageEl(), { key: 'x' });
+
+      expect(chip(String(4 / 3)).textContent).toBe('4:3');
+    });
+  });
+
+  describe('a view-only zoom: Z, Cmd/Ctrl + = - 0', () => {
+    const viewport = (): HTMLElement => q('[data-role="darkroom-viewport"]');
+    const scale = (): number => Number(/scale\(([\d.]+)\)/.exec(viewport().style.transform)?.[1] ?? 1);
+    const shift = (): [number, number] => {
+      const m = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(viewport().style.transform);
+
+      return m ? [Number(m[1]), Number(m[2])] : [0, 0];
+    };
+    const LAYER_S = 1.5;
+    const layerAt = (type: string, x: number, y: number): void => {
+      q('[data-role="markup-layer"]').dispatchEvent(new PointerEvent(type, {
+        bubbles: true, pointerId: 3, pointerType: 'mouse', button: 0, pressure: 0.5, clientX: x * LAYER_S, clientY: y * LAYER_S,
+      }));
+    };
+
+    it('the photo and the frame sit in one viewport inside the stage', () => {
+      open();
+
+      expect(viewport().parentElement).toBe(stageEl());
+      expect(viewport().querySelector('[data-role="image-plane"]')).not.toBeNull();
+      expect(viewport().querySelector('[data-role="darkroom-frame"]')).not.toBeNull();
+    });
+
+    it('Z zooms in, Z again goes back to fit', () => {
+      const { advance } = open();
+
+      key(stageEl(), { key: 'z', code: 'KeyZ' });
+      advance(3000);
+      expect(scale()).toBeGreaterThan(1);
+      expect(dialog().hasAttribute('data-zoomed')).toBe(true);
+      key(stageEl(), { key: 'z', code: 'KeyZ' });
+      advance(3000);
+
+      expect(scale()).toBe(1);
+      expect(dialog().hasAttribute('data-zoomed')).toBe(false);
+    });
+
+    it('Cmd+= zooms in a step, Cmd+- back out, and never past fit; Cmd+0 fits', () => {
+      const { advance } = open();
+
+      key(stageEl(), { key: '=', code: 'Equal', metaKey: true });
+      key(stageEl(), { key: '=', code: 'Equal', metaKey: true });
+      advance(3000);
+      expect(scale()).toBeCloseTo(1.5625);
+      key(stageEl(), { key: '-', code: 'Minus', ctrlKey: true });
+      advance(3000);
+      expect(scale()).toBeCloseTo(1.25);
+      key(stageEl(), { key: '0', code: 'Digit0', metaKey: true });
+      advance(3000);
+      expect(scale()).toBe(1);
+      key(stageEl(), { key: '-', code: 'Minus', metaKey: true });
+      advance(3000);
+
+      expect(scale()).toBe(1);
+    });
+
+    it('the keys match by key or by code, numpad included, and stop the browser zoom', () => {
+      const { advance } = open();
+      const plus = new KeyboardEvent('keydown', { key: '+', code: 'BracketRight', metaKey: true, bubbles: true, cancelable: true });
+
+      stageEl()?.dispatchEvent(plus);
+      key(stageEl(), { key: '+', code: 'NumpadAdd', ctrlKey: true });
+      advance(3000);
+
+      expect(plus.defaultPrevented).toBe(true);
+      expect(scale()).toBeCloseTo(1.5625);
+    });
+
+    it('zoomed, a drag pans the view and leaves the crop alone; handles and nudges are off', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const initial = { x: 25, y: 25, w: 50, h: 50 };
+      const { onApply, advance } = open({ initial });
+
+      key(stageEl(), { key: 'z' });
+      advance(3000);
+      const before = shift();
+
+      pointer('pointerdown', 600, 400);
+      pointer('pointermove', 650, 430);
+      pointer('pointerup', 650, 430);
+      key(stageEl(), { key: 'ArrowLeft' });
+      vi.advanceTimersByTime(1000);
+      advance(3000);
+
+      expect(shift()).toEqual([before[0] + 50, before[1] + 30]);
+      button('done').click();
+      expect(result(onApply).crop).toEqual(initial);
+    });
+
+    it('back at fit the crop is editable again', () => {
+      const initial = { x: 25, y: 25, w: 50, h: 50 };
+      const { onApply, advance } = open({ initial });
+
+      key(stageEl(), { key: 'z' });
+      advance(3000);
+      key(stageEl(), { key: '0', code: 'Digit0', metaKey: true });
+      advance(3000);
+      pointer('pointerdown', 600, 400);
+      pointer('pointermove', 700, 480);
+      pointer('pointerup', 700, 480);
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).crop).not.toEqual(initial);
+    });
+
+    it('in Markup a zoomed drag draws; with Space held on the stage it pans and draws nothing', () => {
+      const { onApply, advance } = open();
+
+      tabOf('markup').click();
+      q<HTMLButtonElement>('[data-blok-testid="markup-tool-pen"]').click();
+      key(stageEl(), { key: 'z' });
+      advance(3000);
+      const before = shift();
+
+      layerAt('pointerdown', 100, 100);
+      layerAt('pointermove', 150, 120);
+      layerAt('pointerup', 150, 120);
+      expect(shift()).toEqual(before);
+      key(stageEl(), { key: ' ', code: 'Space' });
+      layerAt('pointerdown', 100, 100);
+      layerAt('pointermove', 120, 110);
+      layerAt('pointerup', 120, 110);
+      stageEl()?.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', bubbles: true }));
+      advance(3000);
+
+      expect(shift()).not.toEqual(before);
+      button('done').click();
+      expect(result(onApply).markup).toHaveLength(1);
+    });
+
+    it('Space on a focused button is still that button\'s key', () => {
+      open();
+      const done = button('done');
+      const space = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+
+      done.dispatchEvent(space);
+
+      expect(space.defaultPrevented).toBe(false);
+    });
+
+    it('leaving the window lets go of Space', () => {
+      const { onApply, advance } = open();
+
+      tabOf('markup').click();
+      q<HTMLButtonElement>('[data-blok-testid="markup-tool-pen"]').click();
+      key(stageEl(), { key: ' ', code: 'Space' });
+      window.dispatchEvent(new Event('blur'));
+      layerAt('pointerdown', 100, 100);
+      layerAt('pointermove', 150, 120);
+      layerAt('pointerup', 150, 120);
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).markup).toHaveLength(1);
+    });
+
+    it('a zoom is not an edit: undo has nothing to take back and Done keeps the crop', () => {
+      const initial = { x: 25, y: 25, w: 50, h: 50 };
+      const { onApply, advance } = open({ initial });
+
+      key(stageEl(), { key: '=', code: 'Equal', metaKey: true });
+      advance(3000);
+      key(dialog(), { key: 'z', metaKey: true });
+      advance(3000);
+
+      expect(scale()).toBeCloseTo(1.25);
+      button('done').click();
+      expect(result(onApply).crop).toEqual(initial);
+    });
+
+    it('a photo that fails to load drops the zoom', () => {
+      const { advance } = open();
+
+      key(stageEl(), { key: 'z' });
+      advance(3000);
+      photoImg().dispatchEvent(new Event('error'));
+
+      expect(dialog().hasAttribute('data-zoomed')).toBe(false);
+    });
+  });
+
+  describe('? shows every key', () => {
+    const sheet = (): HTMLElement | null => document.querySelector('[data-role="darkroom-shortcuts"]');
+    const question = (target: Element | null = stageEl()): void => key(target, { key: '?', code: 'Slash', shiftKey: true });
+
+    it('? opens a sheet named Keyboard shortcuts that lists every row, grouped', () => {
+      open();
+      question();
+
+      expect(sheet()?.closest('[role="dialog"]')?.getAttribute('aria-label')).toBe('Keyboard shortcuts');
+      expect(sheet()?.querySelectorAll('[data-shortcut]')).toHaveLength(SHORTCUTS.length);
+      expect([...(sheet()?.querySelectorAll('h3') ?? [])].map((h) => h.textContent)).toEqual(['General', 'Crop', 'Markup']);
+      expect(sheet()?.querySelector('[data-shortcut="tools.image.shortcutZoomActual"] kbd')?.textContent).toBe('Z');
+    });
+
+    it('every row reads as words, never as a raw key name', () => {
+      open();
+      question();
+
+      [...(sheet()?.querySelectorAll('[data-shortcut] dt') ?? [])].forEach((dt) => {
+        expect(dt.textContent).not.toMatch(/^(tools|blockSettings)\./);
+      });
+    });
+
+    it('? again closes it; Escape closes only the sheet', () => {
+      const { onCancel } = open();
+
+      question();
+      question(sheet());
+      expect(sheet()).toBeNull();
+      question();
+      key(document.activeElement, { key: 'Escape' });
+
+      expect(sheet()).toBeNull();
+      expect(onCancel).not.toHaveBeenCalled();
+      expect(dialog().isConnected).toBe(true);
+    });
+
+    it('a ? typed into a field is just a character', () => {
+      open();
+      const input = document.createElement('input');
+
+      dialog().appendChild(input);
+      question(input);
+
+      expect(sheet()).toBeNull();
+    });
+
+    it('while it is open, the darkroom keys rest', () => {
+      open();
+      question();
+      key(sheet(), { key: 'a' });
+
+      expect(dialog().getAttribute('data-mode')).toBe('crop');
+    });
+
+    it('hides the Filters row when there are no filters', () => {
+      open({ filters: resolveFilters([]) });
+      question();
+
+      expect(sheet()?.querySelector('[data-shortcut="tools.image.editModeFilters"]')).toBeNull();
+    });
+
+    it('a button in the bottom right opens it too and names its key', () => {
+      open();
+      const btn = button('shortcuts');
+      const dock = q('[role="tablist"]').closest<HTMLElement>('[data-darkroom-chrome]');
+
+      expect(btn.closest('[data-darkroom-chrome]')).toBe(dock);
+      expect(dock?.lastElementChild).toBe(btn);
+      expect(btn.classList.contains('blok-darkroom__help')).toBe(true);
+
+      expect(btn.getAttribute('aria-label')).toBe('Keyboard shortcuts');
+      expect(btn.getAttribute('aria-keyshortcuts')).toBe('Shift+?');
+      btn.click();
+
+      expect(sheet()).not.toBeNull();
+    });
+
+    it('a second press on the ? button closes the sheet instead of reopening it', () => {
+      open();
+      const btn = button('shortcuts');
+
+      btn.click();
+      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, button: 0 }));
+      btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, button: 0 }));
+      btn.click();
+
+      expect(sheet()).toBeNull();
+    });
+
+    it('closing hands focus back to the stage', () => {
+      open();
+      const stage = q('[data-role="darkroom-stage"]');
+
+      stage.focus();
+      question();
+      question(sheet());
+
+      expect(stage).toHaveFocus();
+    });
+  });
+
+  describe('Shift+H flips the photo', () => {
+    it('flips like the button, in any tab, and leaves the markup tool alone', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 20, w: 30, h: 40 } });
+
+      tabOf('markup').click();
+      const toolBefore = q('[data-blok-testid^="markup-tool-"][aria-checked="true"]').getAttribute('data-blok-testid');
+
+      key(stageEl(), { key: 'H', code: 'KeyH', shiftKey: true });
+      advance(3000);
+
+      expect(q('[data-blok-testid^="markup-tool-"][aria-checked="true"]').getAttribute('data-blok-testid')).toBe(toolBefore);
+      button('done').click();
+      expect(result(onApply).geometry.flipX).toBe(true);
+      expect(result(onApply).crop).toEqual({ x: 60, y: 20, w: 30, h: 40 });
+    });
+
+    it('plain H is not a flip', () => {
+      const { onApply, advance } = open();
+
+      key(stageEl(), { key: 'h', code: 'KeyH' });
+      advance(3000);
+      button('done').click();
+
+      expect(result(onApply).geometry.flipX).toBe(false);
+    });
+
+    it('works on a non-Latin layout, and the flip button names its key', () => {
+      const { onApply, advance } = open();
+
+      key(stageEl(), { key: 'Р', code: 'KeyH', shiftKey: true });
+      advance(3000);
+      expect(button('flip').getAttribute('aria-keyshortcuts')).toBe('Shift+H');
+      button('done').click();
+
+      expect(result(onApply).geometry.flipX).toBe(true);
+    });
+
+    it('Shift with a tab letter is not a tab key', () => {
+      open();
+      key(stageEl(), { key: 'A', code: 'KeyA', shiftKey: true });
+
+      expect(dialog().getAttribute('data-mode')).toBe('crop');
     });
   });
 

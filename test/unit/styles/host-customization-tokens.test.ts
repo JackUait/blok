@@ -404,6 +404,14 @@ describe('Host customization tokens (public --blok-* contract)', () => {
     });
   });
 
+  it('keeps callout emoji centering tied to the fixed child heading margin', () => {
+    const emoji = findRuleBody(css, '[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child :is(h1, h2, h3))');
+    const heading = findRuleBody(css, '[data-blok-toggle-children] :is(h1, h2, h3, h4, h5, h6)');
+
+    expect(emoji).toMatch(/margin-top:\s*calc\([^;]*\+\s*1px\)\s*;/);
+    expect(heading).toContain('@apply mt-px;');
+  });
+
   describe('embed spacing token', () => {
     it('drives the embed top margin from --blok-embed-margin-top', () => {
       expect(css).toMatch(/\[data-blok-tool="embed"\]\s*\{[^}]*margin-top:\s*var\(--blok-embed-margin-top,\s*0\.5rem\)/);

@@ -23,10 +23,10 @@ afterEach(() => {
 
 describe('data-model-transform - transform decision gates', () => {
   describe('shouldExpandToHierarchical', () => {
-    it('expands legacy input for every model except the legacy one', () => {
+    it('expands legacy input for every model, the legacy one included', () => {
       expect(shouldExpandToHierarchical('auto', 'legacy')).toBe(true);
       expect(shouldExpandToHierarchical('hierarchical', 'legacy')).toBe(true);
-      expect(shouldExpandToHierarchical('legacy', 'legacy')).toBe(false);
+      expect(shouldExpandToHierarchical('legacy', 'legacy')).toBe(true);
     });
 
     it('never expands input that is not legacy', () => {
@@ -219,7 +219,7 @@ describe('data-model-transform - collapseToLegacy list blocks', () => {
 });
 
 describe('data-model-transform - collapseToLegacy toggle blocks', () => {
-  it('writes the toggle title, open state, body and tunes into the legacy shape', () => {
+  it('writes the toggle title, body and tunes into the legacy shape, dropping an old isOpen', () => {
     const blocks: OutputBlockData[] = [
       {
         id: 'tog',
@@ -239,7 +239,6 @@ describe('data-model-transform - collapseToLegacy toggle blocks', () => {
         type: 'toggleList',
         data: {
           title: 'Toggle title',
-          isExpanded: false,
           body: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'body text' } }] },
         },
         tunes: { alignment: { alignment: 'left' } },
@@ -263,7 +262,7 @@ describe('data-model-transform - collapseToLegacy toggle blocks', () => {
 });
 
 describe('data-model-transform - collapseToLegacy toggleable headers', () => {
-  it('writes the header level as titleVariant alongside the open state and body', () => {
+  it('writes the header level as titleVariant alongside the body, dropping an old isOpen', () => {
     const blocks: OutputBlockData[] = [
       {
         id: 'h1',
@@ -284,7 +283,6 @@ describe('data-model-transform - collapseToLegacy toggleable headers', () => {
         data: {
           title: 'Heading',
           titleVariant: 2,
-          isExpanded: true,
           body: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'section text' } }] },
         },
         tunes: { alignment: { alignment: 'right' } },

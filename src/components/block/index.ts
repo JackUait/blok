@@ -24,7 +24,7 @@ import { EventsDispatcher } from '../utils/events';
 import { hasContentMatching, isContentEmpty } from '../utils/own-element';
 
 import { BlockAPI } from './api';
-import { DataPersistenceManager } from './data-persistence-manager';
+import { DataPersistenceManager, NOT_SYNC } from './data-persistence-manager';
 import { InputManager } from './input-manager';
 import { syncContentDirection } from './content-direction';
 import { MutationHandler } from './mutation-handler';
@@ -585,16 +585,25 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns {object}
    */
   public async save(): Promise<undefined | BlockSaveResult> {
-    const result = await this.dataPersistenceManager.save();
+    return this.withBlockId(await this.dataPersistenceManager.save());
+  }
 
-    if (result === undefined) {
-      return undefined;
-    }
+  /**
+   * {@link save} without awaiting, for a save that must finish inside the caller.
+   * @returns the saved data, or NOT_SYNC when the tool's save() returned a promise
+   */
+  public saveSync(): undefined | BlockSaveResult | typeof NOT_SYNC {
+    const result = this.dataPersistenceManager.saveSync();
 
+    return result === NOT_SYNC ? NOT_SYNC : this.withBlockId(result);
+  }
+
+  /**
+   * @param result - what the persistence manager extracted
+   */
+  private withBlockId(result: undefined | BlockSaveResult): undefined | BlockSaveResult {
     // Override id with the actual block id
-    result.id = this.id;
-
-    return result;
+    return result === undefined ? undefined : { ...result, id: this.id };
   }
 
   /**
@@ -606,6 +615,15 @@ export class Block extends EventsDispatcher<BlockEvents> {
    */
   public async validate(data: BlockToolData): Promise<boolean> {
     return this.dataPersistenceManager.validate(data);
+  }
+
+  /**
+   * {@link validate} without awaiting.
+   * @param data - data to validate
+   * @returns the verdict, or NOT_SYNC when the tool's validate() returned a promise
+   */
+  public validateSync(data: BlockToolData): boolean | typeof NOT_SYNC {
+    return this.dataPersistenceManager.validateSync(data);
   }
 
   /**

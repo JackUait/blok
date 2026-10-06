@@ -62,6 +62,8 @@ const FIXTURE_BLOCKS = [
   { id: 'c1', type: 'code', data: { code: 'const answer = 42;', language: 'javascript', filename: 'answer.js' } },
   { id: 'd1', type: 'divider', data: {} },
   { id: 's1', type: 'spacer', data: {} },
+  /** Lists the headings above, at several depths. */
+  { id: 'toc1', type: 'table_of_contents', data: {} },
   { id: 'u1', type: 'list', data: { text: 'Unordered item', style: 'unordered' } },
   { id: 'u2', type: 'list', data: { text: 'Nested item', style: 'unordered', depth: 1 } },
   { id: 'o1', type: 'list', data: { text: 'Ordered item', style: 'ordered' } },
@@ -453,6 +455,16 @@ const main = async () => {
     toolAttributes: true,
     /** Without it a page card is a `<span>`, and `<a>`-only rules would be pruned. */
     pageHref: (pageId) => `/pages/${pageId}`,
+    pageInfo: (pageId) => {
+      if (pageId === 'p2') {
+        return { title: 'Emoji page', icon: { type: 'emoji', value: '🗺' } };
+      }
+      if (pageId === 'p3') {
+        return { icon: { type: 'image', url: 'https://example.com/icon.png' } };
+      }
+
+      return { title: 'Sub-page' };
+    },
   });
 
   const { window } = new JSDOM(`<!doctype html><html><body>${html}</body></html>`);

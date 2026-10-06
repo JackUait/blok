@@ -109,11 +109,40 @@ export enum InternalBlockToolSettings {
    */
   CopyAsLink = 'copyAsLink',
   /**
+   * The data a duplicate gets instead of a copy or a link (a page copied by
+   * its host). Duplicate and Alt-drag only; copy and paste still use the link.
+   */
+  DuplicateData = 'duplicateData',
+  /**
+   * Async data a toolbox insert waits for (a page id from the host's backend).
+   */
+  PrepareInsert = 'prepareInsert',
+  /**
+   * The block menu layout: `{ titled, trash }`. Titled heads the menu with the
+   * tool's name and puts Turn into first; trash reads Delete as "Move to Trash".
+   */
+  BlockMenu = 'blockMenu',
+  /**
+   * A copy of this Tool's block rebuilds its children from its own data (a
+   * table's cells), so Duplicate and Alt-drag must not copy them again
+   */
+  CopiesOwnChildren = 'copiesOwnChildren',
+  /**
    * Enter on this Tool's empty LAST child stays INSIDE the container instead of
    * escaping it (a column, a card) — per-tool policy the DOM cannot express,
    * since a callout renders the same nested-blocks slot yet wants the escape
    */
   KeepsChildrenOnEnter = 'keepsChildrenOnEnter',
+  /**
+   * Deleting this Tool's block deletes its whole subtree instead of promoting
+   * its children (a column, a tab: the children make no sense outside it)
+   */
+  DeletesChildren = 'deletesChildren',
+  /**
+   * The block is a pure layout piece (a column, a tab): no hover toolbar, never
+   * a selection unit, and its descendants take no depth indent
+   */
+  IsLayout = 'isLayout',
   /**
    * Tool stores a host-uploaded asset URL at `data.url` (image, video, audio,
    * file). Lets consumers discover the media-bearing tool set for orphaned-CDN

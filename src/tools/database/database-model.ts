@@ -21,7 +21,7 @@ export class DatabaseModel {
   private rows: DatabaseRow[] = [];
   private views: DatabaseViewConfig[];
   private activeViewId: string;
-  /** Ids this session minted after the model was built. A hydrate may not drop them. */
+  /** Ids minted here but not yet seen in a backend snapshot. */
   private readonly locallyAdded = new Set<string>();
 
   constructor(data?: Partial<DatabaseData>) {
@@ -204,6 +204,7 @@ export class DatabaseModel {
     const merged = new Map(local.filter((item) => this.locallyAdded.has(item.id)).map((item) => [item.id, item]));
 
     for (const item of incoming) {
+      this.locallyAdded.delete(item.id);
       merged.set(item.id, item);
     }
 

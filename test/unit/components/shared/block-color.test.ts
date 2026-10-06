@@ -76,13 +76,6 @@ describe('block-color foundation', () => {
       return tune.children.items[0].element;
     };
 
-    it('rounds the 18px swatch icon as a small control', () => {
-      const [tune] = buildBlockColorTunes({ data: {}, i18n, onPick: vi.fn() }) as Array<{ icon: string }>;
-
-      expect(tune.icon).toContain('border-radius:var(--blok-radius-control-sm);');
-      expect(tune.icon).not.toMatch(/border-radius:\d/);
-    });
-
     it('returns a single Color entry hosting the shared two-section picker', () => {
       const tunes = buildBlockColorTunes({ data: {}, i18n, onPick: vi.fn() }) as Array<{
         name: string;
@@ -128,6 +121,13 @@ describe('block-color foundation', () => {
   });
 
   describe('getBlockColorToolboxEntries', () => {
+    it('rounds the 18px swatch icon as a small control', () => {
+      const [entry] = getBlockColorToolboxEntries(toolboxI18n);
+
+      expect(entry.icon).toContain('border-radius:var(--blok-radius-control-sm);');
+      expect(entry.icon).not.toMatch(/border-radius:\d/);
+    });
+
     it('returns a flat text + background command per preset, plus two Default resets', () => {
       const entries = getBlockColorToolboxEntries(toolboxI18n);
 

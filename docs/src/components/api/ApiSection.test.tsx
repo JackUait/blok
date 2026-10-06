@@ -8,6 +8,9 @@ import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import { ROUTE_METADATA, getRouteMetadata } from '../../seo/route-metadata';
 import { applyTypography } from '../../utils/typography';
+import { lastModified } from '../../seo/lastmod';
+import { localizedPath } from '../../seo/locales';
+import { API_SECTIONS } from './api-data';
 
 /**
  * ApiSection reads the active framework, which now lives in the URL, so a router
@@ -521,17 +524,44 @@ describe('ApiSection', () => {
   });
 
   describe('last updated', () => {
-    it('renders the last-updated date when present', () => {
-      const sectionWithDate: ApiSectionType = { ...mockSection, lastUpdated: '2026-06-30' };
-      render(<Providers><ApiSection section={sectionWithDate} /></Providers>);
+    // The visible date and TechArticle dateModified both claim "last content
+    // update", so both must be the page's ledger record.
+    const realSection = (id: string): ApiSectionType => {
+      const section = API_SECTIONS.find((candidate) => candidate.id === id);
+      if (!section) throw new Error(`${id} section is gone`);
+      return section;
+    };
 
-      const lastUpdated = screen.getByTestId('api-last-updated');
-      expect(lastUpdated).toBeInTheDocument();
-      expect(lastUpdated.textContent).toContain('2026');
+    const renderIn = (locale: 'en' | 'ru', section: ApiSectionType) =>
+      render(
+        <MemoryRouter initialEntries={[localizedPath(`/docs/${section.id}`, locale)]}>
+          <I18nProvider locale={locale}>
+            <FrameworkProvider>
+              <ApiSection section={section} />
+            </FrameworkProvider>
+          </I18nProvider>
+        </MemoryRouter>,
+      );
+
+    const DATE_TAG = { en: 'en-US', ru: 'ru-RU' } as const;
+
+    it.each(['en', 'ru'] as const)('shows the ledger date on a dated page (%s)', (locale) => {
+      const date = lastModified(localizedPath('/docs/caret-api', locale));
+      if (!date) throw new Error('caret-api has no ledger date — this test would prove nothing');
+      renderIn(locale, realSection('caret-api'));
+
+      const expected = new Date(date).toLocaleDateString(DATE_TAG[locale], {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC',
+      });
+      expect(screen.getByTestId('api-last-updated').textContent).toContain(expected);
     });
 
-    it('does not render a last-updated line when absent', () => {
-      render(<Providers><ApiSection section={mockSection} /></Providers>);
+    it.each(['en', 'ru'] as const)('shows no date where the ledger has none (%s)', (locale) => {
+      expect(lastModified(localizedPath('/docs/ui-api', locale))).toBeUndefined();
+      renderIn(locale, realSection('ui-api'));
 
       expect(screen.queryByTestId('api-last-updated')).not.toBeInTheDocument();
     });

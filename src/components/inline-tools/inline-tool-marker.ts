@@ -5,7 +5,7 @@ import type {
 } from '../../../types';
 import type { I18n, InlineToolbar, MarkSpec } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
-import { IconMarker } from '../icons';
+import { IconPaintRoller } from '../icons';
 import { applyMark, findMark, hasMark, removeMark } from '../marks/mark-engine';
 import { SelectionUtils } from '../selection/index';
 import { PopoverItemType } from '../utils/popover';
@@ -217,7 +217,7 @@ export class MarkerInlineTool implements InlineTool {
    */
   public render(): MenuConfig {
     return {
-      icon: IconMarker,
+      icon: IconPaintRoller,
       name: 'marker',
       isActive: () => {
         const selection = window.getSelection();

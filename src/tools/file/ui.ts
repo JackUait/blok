@@ -1,4 +1,5 @@
 import { IconDownload } from '../../components/icons';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { FileData } from '../../../types/tools/file';
 import { resolveFileIcon } from './file-icon';
 import { humanFileSize } from './format';
@@ -82,6 +83,9 @@ export function renderFileCard(
   // a download anchor. Named by the file it opens — it holds no text of its own.
   const activator = onPreview ? createPreviewBody(onPreview) : createDownloadBody(href, downloadName);
   activator.setAttribute('data-role', 'file-card');
+  if (activator instanceof HTMLAnchorElement) {
+    activator.setAttribute(DATA_ATTR.blockContextMenu, '');
+  }
   activator.setAttribute('aria-label', displayName);
   Object.assign(activator.style, ACTIVATOR_STYLE);
 

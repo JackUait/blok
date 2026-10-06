@@ -87,6 +87,8 @@ const createMockBlock = (config: FixtureBlockConfig): Block => {
     parentId: config.parentId ?? null,
     contentIds: config.contentIds ?? [],
     call: vi.fn(),
+    // Mirrors the real column / column_list declarations.
+    tool: { isLayout: config.name === 'column' || config.name === 'column_list' },
   } as unknown as Block;
 };
 

@@ -38,7 +38,7 @@ interface Harness {
  * `parent` nests the block's holder inside another block's holder.
  */
 const createEditor = (
-  contents: Array<{ id: string; text: string; parent?: string; collapsed?: boolean }>,
+  contents: Array<{ id: string; text: string; parent?: string; collapsed?: boolean; hidden?: boolean }>,
   config: Partial<BlokConfig> = {}
 ): Harness => {
   const wrapper = document.createElement('div');
@@ -48,7 +48,7 @@ const createEditor = (
   wrapper.appendChild(redactor);
   document.body.appendChild(wrapper);
 
-  const blocks: FakeBlock[] = contents.map(({ id, text, parent, collapsed }) => {
+  const blocks: FakeBlock[] = contents.map(({ id, text, parent, collapsed, hidden }) => {
     const holder = document.createElement('div');
     const content = document.createElement('div');
     const toolRoot = document.createElement('div');
@@ -63,6 +63,9 @@ const createEditor = (
     holder.appendChild(content);
     if (collapsed !== undefined) {
       input.setAttribute('data-blok-toggle-open', String(!collapsed));
+    }
+    if (hidden === true) {
+      holder.classList.add('hidden');
     }
 
     return { id, parentId: parent ?? null, holder, call: vi.fn() };
@@ -121,6 +124,12 @@ const openBar = (): HTMLElement => {
   }
 
   return dock;
+};
+
+/** Replace all lives in the menu behind the Replace split button. */
+const clickReplaceAll = (): void => {
+  openBar().querySelector<HTMLButtonElement>('[data-blok-testid="find-replace-menu"]')?.click();
+  document.querySelector<HTMLElement>('[data-blok-item-name="replace-all"]')?.click();
 };
 
 const searchInput = (_wrapper?: HTMLElement): HTMLInputElement => {
@@ -307,6 +316,39 @@ describe('Find module', () => {
     expect(document.querySelector('[data-blok-find]')).toBeNull();
   });
 
+  describe('a key outside every editor, with several on the page', () => {
+    const showOnScreen = (wrapper: HTMLElement): void => {
+      vi.spyOn(wrapper, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 100, 100)] as unknown as DOMRectList);
+    };
+
+    it('goes to the visible editor when the one used last is hidden', () => {
+      const hidden = editor([{ id: 'a', text: 'hello' }]);
+      const shown = editor([{ id: 'b', text: 'world' }]);
+
+      showOnScreen(shown.wrapper);
+      hidden.wrapper.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+      expect(press(document.body, { key: 'f', code: 'KeyF', metaKey: true }).defaultPrevented).toBe(true);
+      expect(shown.find.isOpen).toBe(true);
+      expect(hidden.find.isOpen).toBe(false);
+    });
+
+    it('goes to exactly one editor when the one used last is gone', () => {
+      const used = editor([{ id: 'a', text: 'hello' }]);
+      const first = editor([{ id: 'b', text: 'world' }]);
+      const second = editor([{ id: 'c', text: 'again' }]);
+
+      showOnScreen(first.wrapper);
+      showOnScreen(second.wrapper);
+      used.wrapper.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      used.find.destroy();
+
+      expect(press(document.body, { key: 'f', code: 'KeyF', metaKey: true }).defaultPrevented).toBe(true);
+      expect(first.find.isOpen).toBe(true);
+      expect(second.find.isOpen).toBe(false);
+    });
+  });
+
   it('only the editor that holds the target opens its bar', () => {
     const first = editor([{ id: 'a', text: 'hello' }]);
     const second = editor([{ id: 'b', text: 'world' }]);
@@ -365,6 +407,104 @@ describe('Find module', () => {
     expect(activeText()).toBe('apple two');
   });
 
+  describe('a match whose text is not shown', () => {
+    const matchCount = (): number => painted('blok-find-match').length + painted('blok-find-match-active').length;
+
+    const hostTab = (): { tab: HTMLButtonElement; panel: HTMLDivElement } => {
+      const tab = document.createElement('button');
+      const panel = document.createElement('div');
+
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-controls', 'other-tab');
+      tab.addEventListener('click', () => {
+        panel.hidden = false;
+      });
+      panel.id = 'other-tab';
+      panel.setAttribute('role', 'tabpanel');
+      panel.hidden = true;
+      panel.textContent = 'cat in another tab';
+      document.body.append(tab, panel);
+
+      return { tab, panel };
+    };
+
+    const hiddenSource = (block: FakeBlock): void => {
+      const source = document.createElement('pre');
+
+      source.className = 'hidden';
+      source.textContent = 'cat source';
+      block.holder.querySelector('[contenteditable]')?.parentElement?.appendChild(source);
+    };
+
+    beforeEach(() => {
+      Object.defineProperty(Element.prototype, 'checkVisibility', {
+        configurable: true,
+        value(this: Element): boolean {
+          return this.closest('[hidden], .hidden') === null;
+        },
+      });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(Element.prototype, 'checkVisibility');
+    });
+
+    it('switches to the host tab that holds it when the reader steps to it', () => {
+      const { wrapper, redactor } = editor([{ id: 'a', text: 'cat here' }]);
+      const { panel } = hostTab();
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
+
+      expect(panel.hidden).toBe(false);
+      expect(activeText()).toBe('cat in another tab');
+      expect(matchCount()).toBe(2);
+    });
+
+    it('asks its own block to show it when the reader steps to it, like a code block source behind its preview', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat here' }, { id: 'code', text: 'diagram' }]);
+
+      hiddenSource(blocks[1]);
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
+
+      expect(blocks[1].call).toHaveBeenCalledWith('expand');
+      expect(blocks[0].call).not.toHaveBeenCalled();
+      expect(matchCount()).toBe(2);
+    });
+
+    it('switches nothing while the query is being typed, and starts on a shown match', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'code', text: 'diagram' }, { id: 'a', text: 'cat here' }]);
+      const { panel } = hostTab();
+
+      hiddenSource(blocks[0]);
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+
+      expect(blocks[0].call).not.toHaveBeenCalled();
+      expect(panel.hidden).toBe(true);
+      const [active] = [...highlights.get('blok-find-match-active') ?? []];
+
+      expect(active instanceof Range ? active.startContainer.parentElement?.closest('[data-blok-element]') : null).toBe(blocks[1].holder);
+    });
+
+    it('still counts a match in a hidden tab block', () => {
+      const { wrapper, redactor } = editor([
+        { id: 'tabs', text: 'tabs' },
+        { id: 'tab-1', text: 'cat first', parent: 'tabs' },
+        { id: 'tab-2', text: 'second', parent: 'tabs', hidden: true },
+        { id: 'leaf', text: 'cat inside', parent: 'tab-2', hidden: true },
+      ]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+
+      expect(matchCount()).toBe(2);
+    });
+  });
+
   it('never opens a collapsed toggle while the query is being typed', () => {
     const { wrapper, redactor, blocks } = editor([
       { id: 'outer', text: 'outer', collapsed: true },
@@ -394,6 +534,43 @@ describe('Find module', () => {
     expect(outer.call).toHaveBeenCalledWith('expand');
     expect(inner.call).toHaveBeenCalledWith('expand');
     expect(leaf.call).not.toHaveBeenCalled();
+  });
+
+  it('reveals a match inside a hidden ancestor by expanding it, outermost first', () => {
+    const { wrapper, redactor, blocks } = editor([
+      { id: 'tabs', text: 'tabs' },
+      { id: 'tab-1', text: 'first', parent: 'tabs' },
+      { id: 'tab-2', text: 'second', parent: 'tabs', hidden: true },
+      { id: 'toggle', text: 'toggle', parent: 'tab-2', collapsed: true },
+      { id: 'leaf', text: 'hidden treasure', parent: 'toggle' },
+    ]);
+
+    press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    typeQuery(wrapper, 'treasure');
+    press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
+
+    const [tabs, tab1, tab2, toggle, leaf] = blocks;
+
+    expect(tab2.call).toHaveBeenCalledWith('expand');
+    expect(toggle.call).toHaveBeenCalledWith('expand');
+    expect(tab2.call.mock.invocationCallOrder[0]).toBeLessThan(toggle.call.mock.invocationCallOrder[0]);
+    expect(tabs.call).not.toHaveBeenCalled();
+    expect(tab1.call).not.toHaveBeenCalled();
+    expect(leaf.call).not.toHaveBeenCalled();
+  });
+
+  it('prefers a visible match over one under a hidden ancestor while typing', () => {
+    const { wrapper, redactor, blocks } = editor([
+      { id: 'tab-1', text: 'tab one', hidden: true },
+      { id: 'inside', text: 'treasure inside', parent: 'tab-1' },
+      { id: 'outside', text: 'treasure outside' },
+    ]);
+
+    press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    typeQuery(wrapper, 'treasure');
+
+    expect(activeText()).toBe('treasure outside');
+    expect(blocks[0].call).not.toHaveBeenCalled();
   });
 
   it('reveals a collapsed match inside a nested editor', () => {
@@ -463,9 +640,7 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
     typeQuery(wrapper, 'cat');
     setReplacement(wrapper, 'dog');
-    const replaceAll = [...openBar().querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'find.replaceAll' || button.textContent === 'find.replaceAll');
-
-    replaceAll?.click();
+    clickReplaceAll();
 
     expect(blocks.map((block) => block.holder.textContent)).toEqual(['dog one', 'two dog, dog']);
     expect(blockManager.beginToolTransaction).toHaveBeenCalledTimes(1);
@@ -497,10 +672,102 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
     typeQuery(wrapper, 'bold');
     setReplacement(wrapper, 'brave');
-    [...openBar().querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'find.replaceAll' || button.textContent === 'find.replaceAll')?.click();
+    clickReplaceAll();
 
     expect(input.textContent).toBe('a brave move');
     expect(input.querySelector('b')?.textContent).toBe('brave');
+  });
+
+  describe('replace buttons', () => {
+    const replaceButton = (): HTMLButtonElement => byTestIdIn(openBar(), 'find-replace');
+    const replaceAllButton = (): HTMLButtonElement => byTestIdIn(openBar(), 'find-replace-menu');
+    const byTestIdIn = (root: Element, testId: string): HTMLButtonElement => {
+      const button = root.querySelector(`[data-blok-testid="${testId}"]`);
+
+      if (!(button instanceof HTMLButtonElement)) {
+        throw new Error(`${testId} missing`);
+      }
+
+      return button;
+    };
+    const hostText = (text: string): HTMLElement => {
+      const paragraph = document.createElement('p');
+
+      paragraph.textContent = text;
+      document.body.prepend(paragraph);
+
+      return paragraph;
+    };
+
+    it('are disabled when every match is outside the editor', () => {
+      const { wrapper, redactor } = editor([{ id: 'a', text: 'nothing here' }]);
+
+      hostText('a cat on the host page');
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+
+      expect(replaceButton().disabled).toBe(true);
+      expect(replaceAllButton().disabled).toBe(true);
+    });
+
+    it('are disabled when every match is in text that is not editable', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat' }]);
+
+      blocks[0].holder.querySelector('[contenteditable]')?.setAttribute('contenteditable', 'false');
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+
+      expect(replaceButton().disabled).toBe(true);
+      expect(replaceAllButton().disabled).toBe(true);
+    });
+
+    it('enable Replace only on a match it can replace, and Replace all while any is left', () => {
+      const { wrapper, redactor, blocks, find } = editor([{ id: 'a', text: 'cat in the editor' }]);
+      const host = hostText('a cat on the host page');
+      const activeIn = (): Node | undefined => [...highlights.get('blok-find-match-active') ?? []][0]?.startContainer;
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+
+      expect(host.contains(activeIn() ?? null)).toBe(true);
+      expect(replaceButton().disabled).toBe(true);
+      expect(replaceAllButton().disabled).toBe(false);
+
+      find.move(1);
+
+      expect(blocks[0].holder.contains(activeIn() ?? null)).toBe(true);
+      expect(replaceButton().disabled).toBe(false);
+      expect(replaceAllButton().disabled).toBe(false);
+    });
+
+    it('disable Replace on a match that already reads exactly like the replacement, case included', () => {
+      const { wrapper, redactor, find } = editor([{ id: 'a', text: 'cat and Cat' }]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('cat');
+
+      expect(replaceButton().disabled).toBe(true);
+      expect(replaceAllButton().disabled).toBe(false);
+
+      find.move(1);
+
+      expect(replaceButton().disabled).toBe(false);
+    });
+
+    it('leave Replace all nothing to do when every match already reads like the replacement', () => {
+      const { wrapper, redactor, find, blockManager } = editor([{ id: 'a', text: 'cat and cat' }]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('cat');
+
+      expect(replaceAllButton().disabled).toBe(true);
+
+      find.replaceAll('cat');
+
+      expect(blockManager.beginToolTransaction).not.toHaveBeenCalled();
+    });
   });
 
   it('never replaces in read-only mode', () => {
@@ -630,7 +897,7 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
     typeQuery(wrapper, 'cat');
     setReplacement(wrapper, 'dog');
-    [...openBar().querySelectorAll('button')].find((button) => button.textContent === 'find.replaceAll')?.click();
+    clickReplaceAll();
 
     expect(onEditor).not.toHaveBeenCalled();
     expect(onHost).toHaveBeenCalled();
@@ -647,6 +914,150 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
 
     expect(searchInput(wrapper).value).toBe('this');
+  });
+
+  it('never flashes "No results" while a prefilled query waits for its search', async () => {
+    // A real ResizeObserver reports once after layout, before the query's search timer.
+    vi.stubGlobal('ResizeObserver', class {
+      private readonly callback: () => void;
+
+      constructor(callback: () => void) {
+        this.callback = callback;
+      }
+
+      public observe(): void {
+        queueMicrotask(this.callback);
+      }
+
+      public disconnect(): void {}
+    });
+    const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'pick this word' }]);
+    const text = blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
+
+    if (!(text instanceof Text)) {
+      throw new Error('text missing');
+    }
+    window.getSelection()?.setBaseAndExtent(text, 5, text, 9);
+    press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await Promise.resolve();
+
+    expect(searchInput(wrapper).getAttribute('aria-invalid')).toBeNull();
+    expect(painted('blok-find-match-active')).toHaveLength(1);
+  });
+
+  it('prefills the query from a selection in a host contenteditable outside the editor', () => {
+    const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
+    const hostTitle = document.createElement('h1');
+
+    hostTitle.setAttribute('contenteditable', 'true');
+    hostTitle.textContent = 'Blok title';
+    document.body.appendChild(hostTitle);
+
+    const text = hostTitle.firstChild;
+
+    if (!(text instanceof Text)) {
+      throw new Error('text missing');
+    }
+    window.getSelection()?.setBaseAndExtent(text, 0, text, 4);
+    press(hostTitle, { key: 'f', code: 'KeyF', ctrlKey: true });
+
+    expect(searchInput(wrapper).value).toBe('Blok');
+  });
+
+  it('prefills the query from the selected part of a host input', () => {
+    const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
+    const hostInput = document.createElement('input');
+
+    hostInput.value = 'search words';
+    document.body.appendChild(hostInput);
+    hostInput.focus();
+    hostInput.setSelectionRange(7, 12);
+    press(hostInput, { key: 'f', code: 'KeyF', ctrlKey: true });
+
+    expect(searchInput(wrapper).value).toBe('words');
+  });
+
+  describe('word hop', () => {
+    const nativeClientRects = Object.getOwnPropertyDescriptor(Range.prototype, 'getClientRects');
+
+    afterEach(() => {
+      Reflect.deleteProperty(Element.prototype, 'animate');
+      Reflect.deleteProperty(CSS, 'supports');
+      if (nativeClientRects === undefined) {
+        Reflect.deleteProperty(Range.prototype, 'getClientRects');
+      } else {
+        Object.defineProperty(Range.prototype, 'getClientRects', nativeClientRects);
+      }
+    });
+
+    it('gives the bar no hop for a host input selection, which has no rect', () => {
+      const { wrapper, blocks } = editor([{ id: 'a', text: 'pick this word' }]);
+      const text = blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
+      const hostInput = document.createElement('input');
+      const animate = vi.fn(() => ({ cancel: vi.fn(), finished: new Promise<void>(() => undefined) }));
+
+      if (!(text instanceof Text)) {
+        throw new Error('text missing');
+      }
+      Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true });
+      Object.defineProperty(Range.prototype, 'getClientRects', {
+        value: () => [{ left: 10, top: 10, width: 30, height: 18, right: 40, bottom: 28 }],
+        configurable: true,
+        writable: true,
+      });
+      vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: false, media: query })));
+      // A motion-capable engine, so only the input guard can stop the hop.
+      Object.defineProperty(CSS, 'supports', { value: () => true, configurable: true, writable: true });
+      vi.stubGlobal('KeyframeEffect', class { public get pseudoElement(): string | null { return null; } });
+      // A stale document range is still measurable; only the input guard stops a hop from it.
+      window.getSelection()?.setBaseAndExtent(text, 5, text, 9);
+      hostInput.value = 'search words';
+      document.body.appendChild(hostInput);
+      hostInput.focus();
+      hostInput.setSelectionRange(7, 12);
+      press(hostInput, { key: 'f', code: 'KeyF', ctrlKey: true });
+
+      expect(searchInput(wrapper).value).toBe('words');
+      expect(document.querySelector('[data-blok-find-hop-chip]')).toBeNull();
+    });
+
+    it('measures the selected word before the bar opens and takes focus', () => {
+      const { redactor, blocks } = editor([{ id: 'a', text: 'pick this word' }]);
+      const text = blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
+
+      if (!(text instanceof Text)) {
+        throw new Error('text missing');
+      }
+      const measured = vi.fn(() => [{ left: 10, top: 10, width: 30, height: 18, right: 40, bottom: 28 }]);
+
+      Object.defineProperty(Range.prototype, 'getClientRects', { value: measured, configurable: true, writable: true });
+      window.getSelection()?.setBaseAndExtent(text, 5, text, 9);
+      const focusAtMeasure: Array<Element | null> = [];
+
+      measured.mockImplementation(() => {
+        focusAtMeasure.push(document.activeElement);
+
+        return [{ left: 10, top: 10, width: 30, height: 18, right: 40, bottom: 28 }];
+      });
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+
+      expect(focusAtMeasure.length).toBeGreaterThan(0);
+      expect(focusAtMeasure[0]?.closest('[data-blok-find]')).toBeNull();
+    });
+  });
+
+  it('does not prefill from a selection in another editor', () => {
+    const first = editor([{ id: 'a', text: 'hello' }]);
+    const second = editor([{ id: 'b', text: 'other words' }]);
+    const text = second.blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
+
+    if (!(text instanceof Text)) {
+      throw new Error('text missing');
+    }
+    window.getSelection()?.setBaseAndExtent(text, 0, text, 5);
+    first.find.open();
+
+    expect(searchInput(first.wrapper).value).toBe('');
   });
 
   describe('replace preview', () => {
@@ -710,8 +1121,21 @@ describe('Find module', () => {
       expect(blocks[1].holder.hasAttribute('data-blok-find-preview')).toBe(false);
     });
 
+    it('strikes each match through with nothing after it when the replacement is empty', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat and cat' }]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('dog');
+      typeReplacement('');
+
+      const preview = previewOf(blocks[0].holder);
+
+      expect(texts(preview, '[data-blok-find-preview-old]')).toEqual(['cat', 'cat']);
+      expect(preview.textContent).toBe('cat and cat');
+    });
+
     it.each([
-      ['the replacement is cleared', () => typeReplacement('')],
       ['the replace row closes', () => openBar().querySelector<HTMLButtonElement>('[data-blok-testid="find-replace-toggle"]')?.click()],
       ['the bar closes', () => press(searchInput(), { key: 'Escape', code: 'Escape' })],
     ])('goes away when %s', (_, act) => {
@@ -764,7 +1188,7 @@ describe('Find module', () => {
       const preview = previewOf(blocks[0].holder).cloneNode(true) as HTMLElement;
 
       preview.querySelectorAll('[data-blok-find-preview-old]').forEach((old) => old.remove());
-      [...openBar().querySelectorAll('button')].find((button) => button.textContent === 'find.replaceAll')?.click();
+      clickReplaceAll();
 
       expect(blocks[0].holder.querySelector('[contenteditable]')?.textContent).toBe(preview.textContent);
       expect(redactor.querySelector(PREVIEW)).toBeNull();

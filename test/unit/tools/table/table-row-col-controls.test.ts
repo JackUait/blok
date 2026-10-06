@@ -252,6 +252,115 @@ describe('TableRowColControls', () => {
     });
   });
 
+  describe('caret cell grips stay visible while hovering elsewhere', () => {
+    const createControls = (): void => {
+      grid = createGrid(3, 3);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 3,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
+        i18n: mockI18n,
+      });
+    };
+
+    const colGrip = (i: number): HTMLElement => grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`)[i];
+    const rowGrip = (i: number): HTMLElement => grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`)[i];
+
+    it('shows the pinned cell grips with no hover at all', () => {
+      createControls();
+
+      controls.pinCell({ row: 1, col: 2 });
+
+      expect(isGripVisible(rowGrip(1))).toBe(true);
+      expect(isGripVisible(colGrip(2))).toBe(true);
+      expect(isGripVisible(rowGrip(0))).toBe(false);
+      expect(isGripVisible(colGrip(0))).toBe(false);
+    });
+
+    it('keeps the pinned grips and adds the hovered cell grips', () => {
+      createControls();
+      controls.pinCell({ row: 0, col: 0 });
+
+      simulateMouseOver(getCell(grid, 2, 1));
+
+      expect(isGripVisible(rowGrip(0))).toBe(true);
+      expect(isGripVisible(colGrip(0))).toBe(true);
+      expect(isGripVisible(rowGrip(2))).toBe(true);
+      expect(isGripVisible(colGrip(1))).toBe(true);
+
+      simulateMouseOver(getCell(grid, 1, 2));
+
+      expect(isGripVisible(rowGrip(2))).toBe(false);
+      expect(isGripVisible(colGrip(1))).toBe(false);
+      expect(isGripVisible(rowGrip(0))).toBe(true);
+      expect(isGripVisible(colGrip(0))).toBe(true);
+    });
+
+    it('keeps the pinned grips after hovering the pinned row and moving away', () => {
+      createControls();
+      controls.pinCell({ row: 0, col: 0 });
+
+      simulateMouseOver(getCell(grid, 0, 0));
+      simulateMouseOver(getCell(grid, 2, 2));
+
+      expect(isGripVisible(rowGrip(0))).toBe(true);
+      expect(isGripVisible(colGrip(0))).toBe(true);
+    });
+
+    it('keeps the pinned grips after the pointer leaves the table', () => {
+      createControls();
+      controls.pinCell({ row: 0, col: 0 });
+
+      simulateMouseOver(getCell(grid, 2, 2));
+      simulateMouseLeave(grid);
+      vi.advanceTimersByTime(HIDE_DELAY_MS + 10);
+
+      expect(isGripVisible(rowGrip(0))).toBe(true);
+      expect(isGripVisible(colGrip(0))).toBe(true);
+      expect(isGripVisible(rowGrip(2))).toBe(false);
+      expect(isGripVisible(colGrip(2))).toBe(false);
+    });
+
+    it('moves the pinned grips to the new caret cell', () => {
+      createControls();
+      controls.pinCell({ row: 0, col: 0 });
+
+      controls.pinCell({ row: 2, col: 1 });
+
+      expect(isGripVisible(rowGrip(0))).toBe(false);
+      expect(isGripVisible(colGrip(0))).toBe(false);
+      expect(isGripVisible(rowGrip(2))).toBe(true);
+      expect(isGripVisible(colGrip(1))).toBe(true);
+    });
+
+    it('unpinning hides the grips unless the pointer is over them', () => {
+      createControls();
+      controls.pinCell({ row: 0, col: 0 });
+      simulateMouseOver(getCell(grid, 0, 2));
+
+      controls.pinCell(null);
+
+      expect(isGripVisible(rowGrip(0))).toBe(true);
+      expect(isGripVisible(colGrip(0))).toBe(false);
+      expect(isGripVisible(colGrip(2))).toBe(true);
+    });
+
+    it('keeps the pinned grips after refresh() rebuilds them', () => {
+      createControls();
+      controls.pinCell({ row: 1, col: 1 });
+
+      controls.refresh();
+
+      expect(isGripVisible(rowGrip(1))).toBe(true);
+      expect(isGripVisible(colGrip(1))).toBe(true);
+    });
+  });
+
   describe('public positionGrips', () => {
     it('positionGrips can be called externally to reposition grips', () => {
       grid = createGrid(2, 2);
@@ -289,9 +398,9 @@ describe('TableRowColControls', () => {
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
 
-      // The 1px border center is at y=-0.5px.
+      // The 1px top line spans y=0..1, so its centre is y=0.5px.
       // translate(-50%, -50%) handles offset from the center point.
-      expect(colGrips[0].style.top).toBe('-0.5px');
+      expect(colGrips[0].style.top).toBe('0.5px');
     });
 
     it('centers row grips on the left border line', () => {
@@ -310,9 +419,9 @@ describe('TableRowColControls', () => {
 
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
 
-      // The 1px border center is at x=-0.5px.
+      // The 1px start line spans x=0..1, so its centre is x=0.5px.
       // translate(-50%, -50%) handles offset from the center point.
-      expect(rowGrips[0].style.left).toBe('-0.5px');
+      expect(rowGrips[0].style.left).toBe('0.5px');
     });
   });
 
@@ -917,6 +1026,41 @@ describe('TableRowColControls', () => {
       expect(grip.style.width).toBe('24px');
     });
 
+    it('clicking the open grip again keeps the same menu open instead of rebuilding it', async () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      const grip = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`)[0];
+      const click = (): void => {
+        grip.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 50, clientY: 0 }));
+        document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      };
+
+      click();
+
+      await vi.waitFor(() => {
+        expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      });
+
+      const firstMenu = document.querySelector('[data-blok-popover-opened]');
+
+      click();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(document.querySelector('[data-blok-popover-opened]')).toBe(firstMenu);
+      expect(firstMenu?.isConnected).toBe(true);
+    });
+
     it('row grip remains at expanded size (16px width) while popover is open', async () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({
@@ -1088,6 +1232,36 @@ describe('TableRowColControls', () => {
   });
 
   describe('grip entry animation', () => {
+    // Size is in the transition list, so a reveal that also changed the size
+    // would play as a pale blob shrinking into the pill. Only opacity may fade.
+    it('reveals grips at their idle size, after the pointer left and came back', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      simulateMouseOver(getCell(grid, 0, 0));
+      simulateMouseLeave(grid);
+      vi.advanceTimersByTime(HIDE_DELAY_MS + 10);
+
+      const colGrip = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`)[0];
+      const rowGrip = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`)[0];
+      const idle = { height: colGrip.style.height, width: rowGrip.style.width };
+
+      simulateMouseOver(getCell(grid, 0, 0));
+
+      expect(isGripVisible(colGrip)).toBe(true);
+      expect({ height: colGrip.style.height, width: rowGrip.style.width }).toEqual(idle);
+    });
+
     it('skips opacity transition when switching grips while already inside table', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({
@@ -1468,42 +1642,163 @@ describe('TableRowColControls', () => {
       expect(rowGrips[2].style.top).toBe('100px');
     });
 
-    it('shows the grip of the row under the pointer when entering the merged cell at row 1', () => {
+    const rowGripTop = (table: HTMLElement, i: number): string =>
+      table.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`)[i].style.top;
+
+    const colGripLeft = (table: HTMLElement, i: number): string =>
+      table.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`)[i].style.left;
+
+    it('shows one row grip and one column grip wherever the pointer is inside the merged cell', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+
+      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 150, clientY: 100 }));
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0']);
+
+      origin.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 20, clientY: 10 }));
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0']);
+    });
+
+    it('centres the hovered merged cell grips on the merged cell', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+
+      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 150, clientY: 100 }));
+
+      expect(rowGripTop(table, 0)).toBe('60px');
+      expect(colGripLeft(table, 0)).toBe('100px');
+    });
+
+    it('puts the grip back on its own row once a plain cell of that row is hovered', () => {
       const { table, origin } = createSpanGrid();
 
       grid = table;
       controls = mountControls(table);
 
       origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 50, clientY: 60 }));
+      table.querySelectorAll<HTMLElement>(`[${CELL_ROW_ATTR}="0"][${CELL_COL_ATTR}="2"]`)[0]
+        .dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 250, clientY: 10 }));
+
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(rowGripTop(table, 0)).toBe('20px');
+    });
+
+    it('centres the pinned grips of a merged caret cell and shows no others', () => {
+      const { table } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+      controls.pinCell({ row: 0, col: 0, rowSpan: 3, colSpan: 2 });
+
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0']);
+      expect(rowGripTop(table, 0)).toBe('60px');
+      expect(colGripLeft(table, 0)).toBe('100px');
+    });
+
+    it('keeps the pinned column grip on one column when rows sit above the merged cell', () => {
+      const { table } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+      controls.pinCell({ row: 1, col: 0, rowSpan: 2, colSpan: 2 });
+
+      expect(colGripLeft(table, 0)).toBe('50px');
+    });
+
+    it('keeps the hovered column grip on one column when rows sit above the merged cell', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+      origin.setAttribute(CELL_ROW_ATTR, '1');
+
+      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 150, clientY: 100 }));
+
+      expect(colGripLeft(table, 0)).toBe('50px');
+    });
+
+    it('keeps a single pair when the pointer moves inside the pinned merged cell', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+      controls.pinCell({ row: 0, col: 0, rowSpan: 3, colSpan: 2 });
+
+      origin.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 150, clientY: 100 }));
+
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0']);
+      expect(rowGripTop(table, 0)).toBe('60px');
+    });
+
+    it('hides the pinned merged grip while a row it covers is hovered elsewhere, so two grips never stack', () => {
+      const { table } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+      controls.pinCell({ row: 0, col: 0, rowSpan: 3, colSpan: 2 });
+
+      table.querySelectorAll<HTMLElement>(`[${CELL_ROW_ATTR}="1"][${CELL_COL_ATTR}="2"]`)[0]
+        .dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 250, clientY: 60 }));
 
       expect(visibleRowGrips(table)).toEqual(['1']);
+      expect(visibleColGrips(table)).toEqual(['0', '2']);
     });
 
-    it('follows the pointer to another row while it moves inside the merged cell', () => {
+    it('hides the pinned plain-cell grip while a merged cell covering its row is hovered', () => {
       const { table, origin } = createSpanGrid();
 
       grid = table;
       controls = mountControls(table);
+      controls.pinCell({ row: 1, col: 2 });
 
       origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 50, clientY: 10 }));
-      expect(visibleRowGrips(table)).toEqual(['0']);
 
-      origin.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 50, clientY: 100 }));
-      expect(visibleRowGrips(table)).toEqual(['2']);
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0', '2']);
     });
 
-    it('shows the grip of the column under the pointer inside a colspan', () => {
+    it('opens the merged grip menu for the whole span', async () => {
       const { table, origin } = createSpanGrid();
+      const onAction = vi.fn();
 
       grid = table;
-      controls = mountControls(table);
+      controls = new TableRowColControls({
+        grid: table,
+        getColumnCount: () => 3,
+        getRowCount: () => 4,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction,
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
+        i18n: mockI18n,
+      });
 
-      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 150, clientY: 10 }));
+      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 150, clientY: 100 }));
 
-      expect(visibleColGrips(table)).toEqual(['1']);
+      const rowGrip = table.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`)[0];
+
+      rowGrip.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, clientY: 60 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 0, clientY: 60 }));
+      await vi.runAllTimersAsync();
+
+      const deleteItem = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-popover-item]'))
+        .find(item => item.textContent?.includes('tools.table.deleteRow'));
+
+      deleteItem?.click();
+
+      expect(onAction).toHaveBeenCalledWith({ type: 'delete-row', index: 0, count: 3 });
     });
 
-    it('resolves the row under the pointer when a locked grip is released over the merged cell', () => {
+    it('resolves the merged cell as a unit when a locked grip is released over it', () => {
       const { table, origin } = createSpanGrid();
 
       grid = table;
@@ -1512,8 +1807,9 @@ describe('TableRowColControls', () => {
 
       origin.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 150, clientY: 60 }));
 
-      expect(visibleRowGrips(table)).toEqual(['1']);
-      expect(visibleColGrips(table)).toEqual(['1']);
+      expect(visibleRowGrips(table)).toEqual(['0']);
+      expect(visibleColGrips(table)).toEqual(['0']);
+      expect(rowGripTop(table, 0)).toBe('60px');
     });
   });
 

@@ -14,6 +14,7 @@ import { validateTreeOrder } from '../../../../../src/components/utils/hierarchy
 import { Callout, Toggle } from '../../../../../src/tools';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { OutputBlockData } from '../../../../../types';
+import { storeToggleOpenState } from '../../../../helpers/view-state';
 
 interface Runtime {
   isReady: Promise<unknown>;
@@ -27,6 +28,7 @@ interface Runtime {
     blockManager: {
       blocks: Block[];
       currentBlockIndex: number;
+      currentBlock: Block | undefined;
       moveCurrentBlockUp: () => void;
       moveCurrentBlockDown: () => void;
     };
@@ -101,10 +103,12 @@ const boot = async (blocks: OutputBlockData[]): Promise<Runtime> => {
   document.body.appendChild(holder);
   holders.push(holder);
 
+  storeToggleOpenState('doc', blocks);
+
   const editor = new Blok({
     holder,
     tools: { paragraph: Paragraph, toggle: Toggle, callout: Callout },
-    data: { blocks },
+    data: { id: 'doc', blocks },
   }) as unknown as Runtime;
 
   await editor.isReady;
@@ -116,6 +120,16 @@ const boot = async (blocks: OutputBlockData[]): Promise<Runtime> => {
 
 const snapshot = (editor: Runtime): string[] => editor.module.blockManager.blocks.map(block =>
   `${block.id}^${block.parentId ?? '-'}${block.holder.classList.contains('hidden') ? ' hidden' : ''}`);
+
+const openToggles = (editor: Runtime): string[] => editor.module.blockManager.blocks
+  .filter(block => block.name === 'toggle' && !isCollapsedToggleBlock(block))
+  .map(block => block.id);
+
+const ancestorsOf = (editor: Runtime, block: Block): string[] => {
+  const parent = block.parentId === null ? undefined : editor.module.blockManager.blocks.find(candidate => candidate.id === block.parentId);
+
+  return parent === undefined ? [] : [parent.id, ...ancestorsOf(editor, parent)];
+};
 
 const treeViolations = (editor: Runtime): string[] => {
   const blocks = editor.module.blockManager.blocks;
@@ -237,6 +251,7 @@ const runSeed = async (seed: number, withApi: boolean, reparent: boolean, treeOr
   const random = rng(seed);
   const editor = await boot(randomDoc(random));
   const initial = snapshot(editor);
+  const initiallyOpen = openToggles(editor);
   const steps: string[] = [];
   const logTreeOrder = (when: string): void => {
     const [drift] = validateTreeOrder(editor.module.blockManager.blocks);
@@ -279,16 +294,36 @@ const runSeed = async (seed: number, withApi: boolean, reparent: boolean, treeOr
       return failure;
     }
 
+    // A toggle an undo opens must sit above the block that undo put the caret in.
+    // jsdom blocks have no inputs, so the caret falls back to the restored
+    // block's parent; that parent may be the toggle just opened.
+    const strayOpened: string[] = [];
+    let openBefore = initiallyOpen;
+
     for (const _step of steps) {
       editor.history.undo();
       await settle();
+
+      const openAfter = openToggles(editor);
+      const caretBlock = editor.module.blockManager.currentBlock;
+      const ancestorIds = caretBlock === undefined ? [] : [caretBlock.id, ...ancestorsOf(editor, caretBlock)];
+
+      strayOpened.push(...openAfter
+        .filter(id => !openBefore.includes(id) && !ancestorIds.includes(id))
+        .map(id => `${id} opened outside the caret ${caretBlock?.id ?? 'none'}`));
+      openBefore = openAfter;
     }
 
     logTreeOrder('undo of');
     const undone = snapshot(editor);
-    const problems = treeViolations(editor);
+    const nowOpen = openToggles(editor);
+    // Undo opens collapsed toggles above the caret it restores, so hidden flags
+    // may differ; treeViolations still checks them against the toggles.
+    const tree = (entries: string[]): string => entries.map(entry => entry.replace(' hidden', '')).join(' ');
+    const closed = initiallyOpen.filter(id => !nowOpen.includes(id)).map(id => `${id} was closed`);
+    const problems = [...treeViolations(editor), ...closed, ...strayOpened];
 
-    return undone.join(' ') === initial.join(' ') && problems.length === 0
+    return tree(undone) === tree(initial) && problems.length === 0
       ? null
       : `seed ${seed} undo of [${steps.join(', ')}]: got ${undone.join(' ')} want ${initial.join(' ')} ${problems.join('; ')}`;
   } finally {

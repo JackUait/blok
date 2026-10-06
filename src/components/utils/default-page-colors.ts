@@ -210,3 +210,20 @@ export function isInvisibleBackground(bgColor: string): boolean {
 
   return isDefaultDarkBackground(bgColor);
 }
+
+/**
+ * Highest RGB channel a text colour may have and still read as the default
+ * body ink. Apps paint body text near-black (Gemini `rgb(31,31,31)`, Google
+ * `#202124`); every text preset has a channel above 100, so none is swallowed.
+ */
+const NEAR_BLACK_MAX_CHANNEL = 40;
+
+/** True when a pasted text `color` is (near-)black: default ink, not formatting. */
+export function isNearBlackText(color: string): boolean {
+  const rgba = parseRgba(color);
+
+  return rgba !== null
+    && rgba.r <= NEAR_BLACK_MAX_CHANNEL
+    && rgba.g <= NEAR_BLACK_MAX_CHANNEL
+    && rgba.b <= NEAR_BLACK_MAX_CHANNEL;
+}

@@ -9,14 +9,16 @@
 import { Module } from '../../__module';
 import type { Block } from '../../block';
 import { getUserOS } from '../../utils/browser';
-import { findOwn } from '../../utils/own-element';
+import { hiddenAncestors } from '../blockManager/new-block-placement';
 import { syncPortalDirection } from '../../utils/portal-direction';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { FindBar } from './find-bar';
+import { hopSourceFromRange, type HopSource } from './find-motion';
 import { FindLens } from './find-lens';
 import { clearFindHighlights, paintFindHighlights } from './find-highlight';
 import type { FindOptions } from './match-text';
-import { isPreviewMutation, ReplacePreview } from './replace-preview';
+import { getCaretPositionFromPoint } from '../../utils/caret/navigation';
+import { isInPreviewedBlock, isPreviewMutation, ReplacePreview } from './replace-preview';
 import { editableHostOf, replaceRangeText } from './replace-text';
 import { findRanges } from './text-index';
 import type { TextPoint } from './text-point';
@@ -25,7 +27,93 @@ import { pointOf, startsAtOrAfter } from './text-point';
 const EDITOR_SELECTOR = '[data-blok-testid="blok-editor"]';
 const editorOf = (node: Node): Element | null =>
   (node instanceof Element ? node : node.parentElement)?.closest(EDITOR_SELECTOR) ?? null;
-const TOGGLE_STATE_SELECTOR = '[data-blok-toggle-open]';
+/**
+ * Put the caret at a point on screen, in the editable text there.
+ * @param x - client x
+ * @param y - client y
+ */
+const placeCaretAt = (x: number, y: number): void => {
+  const point = getCaretPositionFromPoint(x, y);
+  const host = point === null ? null : (point.node instanceof Element ? point.node : point.node.parentElement)?.closest<HTMLElement>('[contenteditable]:not([contenteditable="false"])');
+
+  if (point === null || host == null) {
+    return;
+  }
+
+  host.focus({ preventScroll: true });
+  window.getSelection()?.collapse(point.node, point.offset);
+};
+
+/**
+ * Running animations that move the text of `range`: those on its ancestors.
+ * @param range - a match
+ */
+const animationsAround = (range: Range): Animation[] => {
+  const node = range.startContainer;
+
+  if (typeof document.getAnimations !== 'function') {
+    return [];
+  }
+
+  return document.getAnimations().filter((animation) => {
+    const target = animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
+
+    // A looping animation never finishes; waiting on it would keep the lens hidden.
+    const ends = animation.effect?.getComputedTiming().endTime !== Infinity;
+
+    return animation.playState === 'running' && ends && target !== null && target.contains(node);
+  });
+};
+
+/**
+ * Scroll every sideways scroller around a match (a wide table, a board) so the
+ * match shows, innermost first. Each step moves the match for the next one.
+ * @param element - the match's element
+ * @param rect - the match's first line box
+ * @param behavior - smooth, or instant under reduced motion
+ */
+const revealSideways = (element: Element | null, rect: DOMRect, behavior: ScrollBehavior): void => {
+  const scrollers = (node: Element | null): HTMLElement[] => {
+    if (node === null || node === document.body) {
+      return [];
+    }
+
+    const overflow = getComputedStyle(node).overflowX;
+    const scrolls = node instanceof HTMLElement && /auto|scroll|overlay/.test(overflow) && node.scrollWidth > node.clientWidth + 1;
+
+    return scrolls ? [node, ...scrollers(node.parentElement)] : scrollers(node.parentElement);
+  };
+
+  scrollers(element?.parentElement ?? null).reduce((moved, scroller) => {
+    const box = scroller.getBoundingClientRect();
+    const left = box.left + scroller.clientLeft + REVEAL_MARGIN;
+    const right = box.left + scroller.clientLeft + scroller.clientWidth - REVEAL_MARGIN;
+    const matchLeft = rect.left - moved;
+    const matchRight = rect.right - moved;
+    const tooFar = matchRight > right ? Math.min(matchRight - right, matchLeft - left) : 0;
+    const delta = matchLeft < left ? matchLeft - left : tooFar;
+
+    if (delta !== 0) {
+      scroller.scrollBy({ left: delta, behavior });
+    }
+
+    return moved + delta;
+  }, 0);
+};
+
+/**
+ * Whether a range's box is inside the window.
+ * @param range - a caret or a match
+ */
+const isOnScreen = (range: Range): boolean => {
+  const element = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
+  const [rect] = rectsOf(range);
+  // A caret in an empty field has no box of its own.
+  const box = rect ?? element?.getBoundingClientRect();
+
+  return box !== undefined && box.bottom > 0 && box.top < window.innerHeight;
+};
+
 const QUERY_DEBOUNCE_MS = 40;
 const DOM_DEBOUNCE_MS = 120;
 /** Space kept between a revealed match and the viewport edge (or the find bar). */
@@ -83,6 +171,8 @@ export class Find extends Module {
   private active = -1;
   /** Where the next search starts from: the caret at open, the current match, or the text just replaced. */
   private anchor: TextPoint | null = null;
+  /** No anchor yet: start at the first match the reader has not scrolled past. */
+  private fromView = false;
   private observer: MutationObserver | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -113,10 +203,12 @@ export class Find extends Module {
     this.listeners.on(document, 'keydown', this.onDocumentKeydown, true);
     this.listeners.on(document, 'keydown', this.onHostFieldKeydown);
     this.listeners.on(wrapper, 'pointerdown', this.markActive, true);
+    this.listeners.on(this.Blok.UI.nodes.redactor, 'pointerdown', this.onContentPointerDown, true);
     this.listeners.on(wrapper, 'focusin', this.markActive, true);
     // Scroll does not bubble; capture sees scrollers outside this editor too.
     this.listeners.on(document, 'scroll', this.onPageScroll, { capture: true, passive: true });
     this.listeners.on(window, 'scroll', this.onPageScroll, { passive: true });
+    this.listeners.on(window, 'blur', this.onWindowBlur);
   }
 
   /**
@@ -135,11 +227,16 @@ export class Find extends Module {
     const bar = this.ensureBar();
     const wasOpen = bar.isOpen;
     const prefill = this.selectedTextForPrefill();
+    // Before bar.open() takes focus and the search reveal scrolls.
+    const hop = prefill === null ? null : this.hopSource(prefill);
 
     if (!wasOpen || prefill !== null) {
       const caret = this.caretRange();
+      // A caret the reader scrolled away from is not where they are reading.
+      const shown = caret !== null && isOnScreen(caret);
 
-      this.anchor = caret === null ? null : pointOf(caret, document.body);
+      this.anchor = shown ? pointOf(caret, document.body) : null;
+      this.fromView = !shown;
     }
 
     if (!wasOpen) {
@@ -152,9 +249,12 @@ export class Find extends Module {
       query: prefill ?? undefined,
       replace: withReplace,
       readOnly: this.Blok.ReadOnly.isEnabled,
+      hop,
     });
 
-    if (!wasOpen && prefill === null && bar.query !== '') {
+    // Search now, not after the typing debounce: until then the bar would show "No results".
+    if (bar.query !== '' && (!wasOpen || prefill !== null)) {
+      this.cancelSearch();
       this.search({ reveal: true });
     }
   }
@@ -163,13 +263,13 @@ export class Find extends Module {
    * Close the find bar and select a match in this editor, so typing replaces it.
    * When the reader already went back to the text, their caret stays put.
    */
-  public close(): void {
+  public close(options: { restoreFocus?: boolean } = {}): void {
     if (this.bar === null || !this.bar.isOpen) {
       return;
     }
 
     const current = this.ranges[this.active];
-    const isInText = this.Blok.UI.nodes.redactor.contains(document.activeElement);
+    const isInText = options.restoreFocus === false || this.Blok.UI.nodes.redactor.contains(document.activeElement);
 
     this.bar.close();
     this.stopObserving();
@@ -225,7 +325,7 @@ export class Find extends Module {
       return;
     }
 
-    const host = this.ownsRange(current) ? editableHostOf(current) : null;
+    const host = this.canReplace(current) && this.changes(current, replacement) ? editableHostOf(current) : null;
 
     if (host === null) {
       this.move(1);
@@ -243,7 +343,7 @@ export class Find extends Module {
    * @param replacement - the new text
    */
   public replaceAll(replacement: string): void {
-    const editable = this.ranges.filter((range) => this.ownsRange(range) && editableHostOf(range) !== null);
+    const editable = this.ranges.filter((range) => this.canReplace(range) && this.changes(range, replacement));
 
     if (this.Blok.ReadOnly.isEnabled || editable.length === 0) {
       return;
@@ -300,6 +400,48 @@ export class Find extends Module {
 
   private readonly markActive = (): void => {
     Find.lastActive = this;
+  };
+
+  /**
+   * A click back in the text ends the search. On the replace preview (an inert
+   * copy over a matched block) the browser has already hit the copy, which
+   * closing removes, so the caret is put at the click point in the real text.
+   */
+  private readonly onContentPointerDown = (event: Event): void => {
+    if (!this.isOpen || !(event instanceof PointerEvent)) {
+      return;
+    }
+
+    const onPreview = event.target instanceof Element && isInPreviewedBlock(event.target);
+
+    this.close({ restoreFocus: false });
+
+    if (!onPreview) {
+      return;
+    }
+
+    // Also stops the mousedown, whose caret would go to the removed copy.
+    event.preventDefault();
+    placeCaretAt(event.clientX, event.clientY);
+  };
+
+  /**
+   * Keys typed in an iframe never reach the page, so Cmd/Ctrl+F there opens
+   * the browser's find. Once a click inside an embed has landed, give focus back.
+   * The frame's own keyboard controls are the cost.
+   */
+  private readonly onWindowBlur = (): void => {
+    // Chromium ignores blur() on the frame inside this event and its microtasks; a new task works.
+    setTimeout(() => {
+      const active = document.activeElement;
+
+      if (this.isDestroyed || !(active instanceof HTMLIFrameElement) || !this.Blok.UI.nodes.wrapper.contains(active)) {
+        return;
+      }
+
+      Find.lastActive = this;
+      active.blur();
+    }, 0);
   };
 
   private readonly onDocumentKeydown = (event: Event): void => {
@@ -380,7 +522,27 @@ export class Find extends Module {
       return false;
     }
 
-    return Find.instances.size < 2 || Find.lastActive === this;
+    return Find.instances.size < 2 || Find.keyOwner() === this;
+  }
+
+  /**
+   * The editor that takes a shortcut pressed outside every editor: the one
+   * used last while it is on screen, else the first on screen. Every
+   * instance asks this, so exactly one claims the key.
+   */
+  private static keyOwner(): Find | null {
+    const onScreen = (find: Find): boolean => find.Blok.UI.nodes.wrapper.getClientRects().length > 0;
+    const last = Find.lastActive;
+
+    if (last !== null && onScreen(last)) {
+      return last;
+    }
+
+    const shown = [...Find.instances]
+      .filter(onScreen)
+      .sort((a, b) => a.Blok.UI.nodes.wrapper.compareDocumentPosition(b.Blok.UI.nodes.wrapper) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+
+    return shown[0] ?? last;
   }
 
   private ensureBar(): FindBar {
@@ -412,10 +574,6 @@ export class Find extends Module {
             this.render({ reveal: false });
           }
         },
-        onSeek: (index) => {
-          this.active = Math.max(0, Math.min(index, this.ranges.length - 1));
-          this.render({ reveal: true, pulse: true, expand: true });
-        },
       },
     });
     this.bar.setReadOnly(this.Blok.ReadOnly.isEnabled);
@@ -437,25 +595,65 @@ export class Find extends Module {
       editorOf(range.endContainer) === wrapper;
   }
 
+  /** In this editor's editable text. Host text, read-only content and other editors are not. */
+  private canReplace(range: Range): boolean {
+    return this.ownsRange(range) && editableHostOf(range) !== null;
+  }
+
   /**
-   * The selected text, when it is a short single-line selection in this editor.
+   * Whether replacing `range` would change its text. Case counts: "cat" to
+   * "Cat" is an edit.
+   * @param range - a match
+   * @param replacement - the new text; defaults to what the replace field holds
+   */
+  private changes(range: Range, replacement = this.bar?.replacement ?? null): boolean {
+    return replacement === null || range.toString() !== replacement;
+  }
+
+  /** Host page text: outside every editor and outside the bar. */
+  private isHostNode(node: Node): boolean {
+    return editorOf(node) === null && this.bar?.element.contains(node) !== true;
+  }
+
+  /** A selection Find may start from: in this editor or in the host page, never in another editor. */
+  private takesRange(range: Range): boolean {
+    return this.ownsRange(range) || (this.isHostNode(range.startContainer) && this.isHostNode(range.endContainer));
+  }
+
+  /**
+   * The selected text, when it is a short single-line selection in this editor or the host page.
    */
   private selectedTextForPrefill(): string | null {
+    const field = document.activeElement;
     const selection = window.getSelection();
+    // An input's selected text is not part of the document selection.
+    const isHostTextField = (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) && this.isHostNode(field);
 
-    if (selection === null || selection.rangeCount === 0 || selection.isCollapsed) {
+    if (!isHostTextField && (selection === null || selection.rangeCount === 0 || selection.isCollapsed || !this.takesRange(selection.getRangeAt(0)))) {
       return null;
     }
 
-    const range = selection.getRangeAt(0);
-    const text = selection.toString().trim();
-    const isInEditor = this.ownsRange(range);
+    const text = (isHostTextField
+      ? field.value.slice(field.selectionStart ?? 0, field.selectionEnd ?? 0)
+      : selection?.toString() ?? '').trim();
 
-    if (!isInEditor || text === '' || text.length > PREFILL_MAX_LENGTH || /[\n\r]/.test(text)) {
+    if (text === '' || text.length > PREFILL_MAX_LENGTH || /[\n\r]/.test(text)) {
       return null;
     }
 
     return text;
+  }
+
+  /** Where the prefilled word sits on screen. A host input's selection has no range to measure. */
+  private hopSource(text: string): HopSource | null {
+    const field = document.activeElement;
+    const selection = window.getSelection();
+
+    if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || selection === null || selection.rangeCount === 0) {
+      return null;
+    }
+
+    return hopSourceFromRange(selection.getRangeAt(0), text);
   }
 
   private caretRange(): Range | null {
@@ -469,7 +667,7 @@ export class Find extends Module {
 
     range.collapse(true);
 
-    return this.ownsRange(range) ? range : null;
+    return this.takesRange(range) ? range : null;
   }
 
   private focusToReturn(): Find['returnFocus'] {
@@ -511,7 +709,10 @@ export class Find extends Module {
     this.resizeObserver?.disconnect();
     this.observer = null;
     this.resizeObserver = null;
+    this.cancelSearch();
+  }
 
+  private cancelSearch(): void {
     if (this.searchTimer !== null) {
       clearTimeout(this.searchTimer);
       this.searchTimer = null;
@@ -556,7 +757,10 @@ export class Find extends Module {
 
     this.ranges = findRanges(document.body, this.bar.query, findOptions);
 
-    const after = anchor === null ? this.ranges : this.ranges.filter((range) => startsAtOrAfter(range, anchor, document.body));
+    const unread = this.fromView ? this.ranges.filter((range) => rectsOf(range).some((rect) => rect.bottom > 0)) : [];
+    // Nothing left below the reader: wrap to the top, as Enter on the last match does.
+    const fromView = unread.length > 0 ? unread : this.ranges;
+    const after = anchor === null ? fromView : this.ranges.filter((range) => startsAtOrAfter(range, anchor, document.body));
     // While typing, prefer a match the reader can see; hidden ones are one Enter away.
     const next = (options.expand === true ? undefined : after.find((range) => !this.isHidden(range))) ?? after[0] ?? this.ranges[0];
 
@@ -571,14 +775,15 @@ export class Find extends Module {
    */
   private showPreview(): void {
     const bar = this.bar;
+    const replacement = bar?.replacement ?? null;
 
-    if (bar === null || this.Blok.ReadOnly.isEnabled || bar.replacement === '') {
+    if (bar === null || this.Blok.ReadOnly.isEnabled || replacement === null) {
       this.preview?.clear();
 
       return;
     }
 
-    this.preview?.show(this.ranges.filter((range) => this.ownsRange(range)), bar.query, bar.options, bar.replacement);
+    this.preview?.show(this.ranges.filter((range) => this.ownsRange(range)), bar.query, bar.options, replacement);
   }
 
   /**
@@ -594,17 +799,23 @@ export class Find extends Module {
 
     if (current !== null) {
       this.anchor = pointOf(current, document.body);
+      this.fromView = false;
     }
 
     if (current !== null && options.expand === true) {
-      this.collapsedAncestors(current).reverse().forEach((parent) => parent.call('expand'));
+      this.reveal(current);
     }
 
     paintFindHighlights(this, this.ranges.map((range) => this.onScreen(range)), current === null ? null : this.onScreen(current));
+    const editable = this.ranges.filter((range) => this.canReplace(range));
+
     this.bar?.setResults({
       current: this.active,
       total: this.ranges.length,
-      positions: this.positions(),
+      replaceable: editable.filter((range) => this.changes(range)).length,
+      currentReplaceable: current !== null && this.canReplace(current) && this.changes(current),
+      unchanged: editable.length > 0 && editable.every((range) => !this.changes(range)),
+      currentUnchanged: current !== null && this.canReplace(current) && !this.changes(current),
     });
 
     if (current === null) {
@@ -616,37 +827,92 @@ export class Find extends Module {
     if (options.reveal) {
       this.scrollIntoView(this.onScreen(current));
     }
-    this.placeLens(this.onScreen(current), options.pulse === true);
+    const moving = animationsAround(this.onScreen(current));
+
+    if (moving.length === 0) {
+      this.placeLens(this.onScreen(current), options.pulse === true);
+
+      return;
+    }
+
+    // A tab just opened animates its rows in: measured now, the lens would stay where the row started.
+    this.lens?.hide();
+    void Promise.all(moving.map((animation) => animation.finished.catch(() => undefined))).then(() => {
+      if (this.isOpen && this.ranges[this.active] === current) {
+        this.placeLens(this.onScreen(current), options.pulse === true);
+      }
+    });
   }
 
   /**
-   * The collapsed toggles hiding the block that holds `range`, innermost first.
-   * The block itself does not count: its own text shows even when collapsed.
+   * The ancestors hiding the block that holds `range`. See {@link hiddenAncestors}.
    * @param range - a match
    */
   private collapsedAncestors(range: Range): Block[] {
     const editor = editorOf(range.startContainer);
     const owner = Array.from(Find.allInstances).find((instance) => instance.Blok.UI.nodes.wrapper === editor);
     const BlockManager = owner?.Blok.BlockManager;
+    const block = BlockManager?.getBlockByChildNode(range.startContainer);
 
-    if (BlockManager === undefined) {
+    if (BlockManager === undefined || block === undefined) {
       return [];
     }
 
-    const block = BlockManager.getBlockByChildNode(range.startContainer);
-    const ancestorsOf = (parentId: string | null): Block[] => {
-      const parent = parentId === null ? undefined : BlockManager.getBlockById(parentId);
+    return hiddenAncestors(block, (id) => BlockManager.getBlockById(id));
+  }
 
-      return parent === undefined ? [] : [parent, ...ancestorsOf(parent.parentId)];
-    };
+  private blockOf(range: Range): Block | undefined {
+    const editor = editorOf(range.startContainer);
+    const owner = Array.from(Find.allInstances).find((instance) => instance.Blok.UI.nodes.wrapper === editor);
 
-    return ancestorsOf(block?.parentId ?? null).filter((parent) =>
-      findOwn(parent.holder, TOGGLE_STATE_SELECTOR)?.getAttribute('data-blok-toggle-open') === 'false'
-    );
+    return owner?.Blok.BlockManager.getBlockByChildNode(range.startContainer);
   }
 
   private isHidden(range: Range): boolean {
-    return this.collapsedAncestors(range).length > 0;
+    return this.collapsedAncestors(range).length > 0 || !this.isShown(range);
+  }
+
+  /**
+   * Whether the match's text is rendered. Read on the preview copy while one is
+   * shown: the preview hides the real text it stands in for.
+   * @param range - a match
+   */
+  private isShown(range: Range): boolean {
+    const node = this.onScreen(range).startContainer;
+    const element = node instanceof Element ? node : node.parentElement;
+
+    return element === null || typeof element.checkVisibility !== 'function' || element.checkVisibility({ visibilityProperty: true });
+  }
+
+  /**
+   * Show a match the reader stepped to: switch the host tabs around it, open
+   * the blocks hiding it, then ask its own block (a code block behind its
+   * preview) to show it. Outermost first, so each step sees a laid-out parent.
+   * @param range - the current match
+   */
+  private reveal(range: Range): void {
+    const node = range.startContainer;
+    const panelsAround = (element: Element | null | undefined): Element[] => {
+      const panel = element?.closest('[role="tabpanel"]');
+
+      return panel == null ? [] : [...panelsAround(panel.parentElement), panel];
+    };
+
+    panelsAround(node instanceof Element ? node : node.parentElement)
+      .filter((panel) => panel.id !== '' && typeof panel.checkVisibility === 'function' && !panel.checkVisibility())
+      .forEach((panel) => {
+        const tab = [...document.querySelectorAll('[role="tab"][aria-controls]')].find((candidate) => candidate.getAttribute('aria-controls') === panel.id);
+
+        if (tab instanceof HTMLElement) {
+          tab.click();
+        }
+      });
+
+    this.collapsedAncestors(range).reverse().forEach((parent) => parent.call('expand'));
+
+    if (!this.isShown(range)) {
+      this.blockOf(range)?.call('expand');
+    }
   }
 
   private scrollIntoView(range: Range): void {
@@ -661,6 +927,8 @@ export class Find extends Module {
     const parent = scrollParentOf(scrollStart);
     const view = parent?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight };
     const behavior: ScrollBehavior = prefersReducedMotion() ? 'instant' : 'smooth';
+
+    revealSideways(element, rect, behavior);
 
     const bar = this.barOver(rect);
     const isCovered = bar !== null && rect.bottom > bar.top && rect.top < bar.bottom;
@@ -719,37 +987,6 @@ export class Find extends Module {
     }
 
     this.lens?.moveTo(rects, { pulse });
-  }
-
-  /**
-   * Each match's place on the page, 0 (top) to 1 (bottom), for the match
-   * map. A match inside a collapsed toggle takes its nearest visible ancestor's.
-   */
-  private positions(): number[] {
-    const height = document.documentElement.scrollHeight;
-
-    if (height === 0) {
-      return this.ranges.map((_, index) => (index + 0.5) / this.ranges.length);
-    }
-
-    return this.ranges.map((range) => {
-      const [rect] = rectsOf(this.onScreen(range));
-      const top = rect?.top ?? this.visibleAncestorTop(range.startContainer);
-
-      return Math.min(1, Math.max(0, (top + window.scrollY) / height));
-    });
-  }
-
-  private visibleAncestorTop(node: Node): number {
-    const element = node.parentElement;
-
-    if (element === null) {
-      return 0;
-    }
-
-    const [rect] = element.getClientRects();
-
-    return rect?.top ?? this.visibleAncestorTop(element);
   }
 
   /**

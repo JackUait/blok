@@ -146,6 +146,21 @@
 
 .blok-darkroom__stage:active { cursor: grabbing; }
 
+.blok-darkroom__viewport {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
+/* Zoomed, the crop is not editable: Z or Cmd/Ctrl+0 goes back to fit. */
+.blok-darkroom__surface[data-zoomed] [data-handle] {
+  display: none;
+}
+
+.blok-darkroom__surface[data-space] [data-role="markup-layer"] {
+  cursor: grab;
+}
+
 .blok-darkroom__photo {
   position: absolute;
   left: 0;
@@ -336,7 +351,19 @@
   visibility: hidden;
 }
 
-.blok-darkroom__dock > .blok-darkroom__tabs { grid-row: 2; }
+.blok-darkroom__dock > .blok-darkroom__tabs { grid-row: 2; grid-column: 1; }
+
+/* Shares the tabs' cell, pinned to the right edge. Without grid-column on both, auto-placement pushes the tabs into a new column. */
+.blok-darkroom__dock > .blok-darkroom__help {
+  grid-row: 2;
+  grid-column: 1;
+  justify-self: end;
+  align-self: center;
+  /* The 20px icon plus padding of the other icon buttons; equal sides make the pill radius a circle. */
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
 
 .blok-darkroom__panel {
   display: flex;
@@ -754,4 +781,78 @@
 @media (prefers-reduced-motion: reduce) {
   .blok-darkroom__tab,
   .blok-darkroom__filter { transition: none; }
+}
+
+/* The ? sheet: one dark-glass card in the middle of the darkroom. It is a top-layer
+   popover, so every box property is restated at the specificity of main.css's
+   [data-blok-top-layer][popover] reset (see the audio cover picker). */
+.blok-darkroom__shortcuts,
+.blok-darkroom__shortcuts[data-blok-top-layer][popover] {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: min(720px, calc(100vw - 32px));
+  height: fit-content;
+  max-height: calc(100vh - 64px);
+  overflow: auto;
+  margin: auto;
+  padding: var(--blok-space-4) var(--blok-space-5);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--blok-space-2) var(--blok-space-6);
+  border: var(--blok-border-width-hairline) solid var(--blok-darkroom-pill-edge);
+  border-radius: var(--blok-radius-surface);
+  background: var(--blok-darkroom-bg-center);
+  box-shadow: 0 12px 40px var(--blok-darkroom-pill-shadow);
+  color: var(--blok-darkroom-ink);
+  font-size: 13px;
+  outline: none;
+}
+
+.blok-darkroom__shortcuts-title {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.blok-darkroom__shortcuts-group h3 {
+  margin: var(--blok-space-2) 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blok-darkroom-ink-faint);
+}
+
+.blok-darkroom__shortcuts-group dl {
+  margin: 0;
+}
+
+.blok-darkroom__shortcuts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blok-space-3);
+  padding: var(--blok-space-1) 0;
+}
+
+.blok-darkroom__shortcuts-row dt {
+  color: var(--blok-darkroom-ink-muted);
+}
+
+.blok-darkroom__shortcuts-row dd {
+  display: flex;
+  gap: var(--blok-space-1);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.blok-darkroom__shortcuts-row kbd {
+  min-width: 20px;
+  padding: 0 var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
+  background: var(--blok-darkroom-btn-hover-bg);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
 }

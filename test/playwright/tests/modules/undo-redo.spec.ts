@@ -719,28 +719,23 @@ test.describe('yjs undo/redo', () => {
     ];
 
     /**
-     * Coverage completeness guardrail. Discovers every tool registered in the
-     * fixture whose class exposes a static `conversionConfig` (i.e. is a valid
-     * conversion target) and fails if any such tool is missing from
-     * CONVERT_TARGETS. This way, the day someone adds quote/code/etc. to the
-     * fixture, CI forces them to wire the new tool into the regression matrix
-     * before the PR lands. The bug class cannot silently re-emerge behind a
-     * gap in the parametrized tests.
+     * This matrix covers tools with an import rule. Export-only tools can
+     * supply text to conversion but cannot receive it.
      */
-    test('CONVERT_TARGETS covers every convertible tool in the fixture', async ({ page }) => {
+    test('CONVERT_TARGETS covers every importable tool in the fixture', async ({ page }) => {
       await createBlokWithBlocks(page, [
         { type: 'paragraph', data: { text: 'probe' } },
       ]);
 
       const convertibleToolNames = await page.evaluate(() => {
-        const tools = (window as unknown as { defaultBlockTools?: Record<string, { class: { conversionConfig?: unknown } }> }).defaultBlockTools;
+        const tools = (window as unknown as { defaultBlockTools?: Record<string, { class: { conversionConfig?: { import?: unknown } } }> }).defaultBlockTools;
 
         if (!tools) {
           return [];
         }
 
         return Object.entries(tools)
-          .filter(([, entry]) => entry.class?.conversionConfig !== undefined)
+          .filter(([, entry]) => entry.class?.conversionConfig?.import !== undefined)
           // paragraph is the source of every test, not a target
           .map(([name]) => name)
           .filter((name) => name !== 'paragraph')

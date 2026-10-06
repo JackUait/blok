@@ -1719,10 +1719,22 @@ export class PopoverDesktop extends PopoverAbstract {
 
     container.className = twMerge(container.className, popoverCss.popoverContainerOpened);
 
+    // The clone's host is 0px wide, so an auto container would shrink to its
+    // min-content width. A tiled item grid collapses there, and the measured
+    // width ends up narrower than the longest row.
+    // Placement reads this size, so it must include the minWidth floor that
+    // show() applies to --width.
+    if (this.params.width === undefined || this.params.width === 'auto') {
+      popoverClone.style.setProperty('--width', 'max-content');
+      container.style.minWidth = this.params.minWidth ?? '';
+    }
+
     document.body.appendChild(popoverClone);
 
     size.height = container.offsetHeight;
-    size.width = container.offsetWidth;
+    // offsetWidth rounds to the nearest pixel. Rounding down locks --width a
+    // fraction short of the widest row, and its label gets cut off.
+    size.width = Math.ceil(container.getBoundingClientRect().width);
     popoverClone.remove();
 
     this._size = size;
@@ -2099,8 +2111,13 @@ export class PopoverDesktop extends PopoverAbstract {
   }): void => {
     const isEmptyQuery = data.query === '';
 
+    // Filtering slides rows under a resting pointer; that hover is not the user's.
+    this.armSuppressSyncHover();
     this.isSearching = !isEmptyQuery;
-    const allTopLevel = data.topLevelItems as unknown as PopoverItemDefault[];
+    // An item hidden by name (a tool the container's childTools deny) stays
+    // hidden, so it must not count as a match or "Nothing found" never shows.
+    const allTopLevel = (data.topLevelItems as unknown as PopoverItemDefault[])
+      .filter(item => item.name === undefined || !this.isNamePermanentlyHidden(item.name));
 
     if (this.nodes.contextLabel !== undefined) {
       if (isEmptyQuery) {

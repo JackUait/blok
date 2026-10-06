@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { ImageTool } from '../../../../src/tools/image';
+import { renderImagePreview } from '../../../../src/tools/image/preview';
 import { URL_PATTERN } from '../../../../src/tools/image/constants';
 import { ImageError } from '../../../../src/tools/image/errors';
 import {
@@ -8,6 +9,7 @@ import {
   IconAlignLeft,
   IconAlignRight,
   IconImage,
+  IconSliders,
 } from '../../../../src/components/icons';
 import type {
   ImageAlignment,
@@ -284,6 +286,7 @@ describe('ImageTool — static tool registration', () => {
       titleKey: 'image',
       searchTerms: ['image', 'img', 'picture', 'photo', 'media'],
       section: 'media',
+      preview: { render: renderImagePreview, descriptionKey: 'toolbox.preview.image' },
     });
   });
 
@@ -328,6 +331,14 @@ describe('ImageTool — renderSettings menu contents', () => {
       ['image-download', 'tools.image.downloadOriginal'],
       ['image-copy-url', 'tools.image.copyUrl'],
     ]);
+  });
+
+  it('shows the image editor icon on the entry that opens the editor', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+
+    tool.render();
+
+    expect(settingsItems(tool).find((i) => i.name === 'image-crop')?.icon).toBe(IconSliders);
   });
 
   it('closes the popover after every entry is activated', () => {

@@ -67,6 +67,7 @@ const STATIC_BY_TOOL: Record<string, readonly string[]> = {
   divider: DIVIDER_WRAPPER_CLASSES,
   spacer: SPACER_WRAPPER_CLASSES,
   page: PAGE_WRAPPER_CLASSES,
+  'page-link': PAGE_WRAPPER_CLASSES,
   /**
    * Each list ITEM is its own block, so these land on the `<li>` — never on the
    * grouping `<ul>`/`<ol>`, which has no editor counterpart (the editor renders

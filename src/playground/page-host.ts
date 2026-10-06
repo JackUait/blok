@@ -29,6 +29,8 @@ export interface PageRecord {
 
 export type PageMap = Record<string, PageRecord>;
 
+type PageOperation = (page: PageRecord | undefined) => PageRecord | undefined;
+
 export const PAGES_STORAGE_KEY = 'blok-playground-pages';
 
 /** The root playground document's name, in breadcrumbs and page paths. */
@@ -40,7 +42,7 @@ export const ROOT_STORAGE_KEY = 'blok-playground-root';
 
 export type RootRecord = Pick<PageRecord, 'title' | 'icon'>;
 
-const untitled = (title: string): string => (title.trim() === '' ? 'Untitled' : title);
+const untitled = (title: string): string => (title.trim() === '' ? 'New page' : title);
 
 /** Pages deleted for good. Without it a deleted seed page returns on reload. */
 const PURGED_STORAGE_KEY = 'blok-playground-pages-purged';
@@ -80,9 +82,9 @@ const readStored = (): PageMap => {
   }
 };
 
-const readRoot = (): RootRecord => {
+const parseRoot = (stored: string | null): RootRecord => {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(ROOT_STORAGE_KEY) ?? '{}');
+    const parsed: unknown = JSON.parse(stored ?? '{}');
 
     if (isRecord(parsed)) {
       // A missing title is the default. 'Playground' was the old default, saved
@@ -95,10 +97,18 @@ const readRoot = (): RootRecord => {
       };
     }
   } catch {
-    // Unreadable storage: the default below.
+    return { title: ROOT_LABEL };
   }
 
   return { title: ROOT_LABEL };
+};
+
+const readRoot = (fallback: RootRecord = { title: ROOT_LABEL }): RootRecord => {
+  try {
+    return parseRoot(localStorage.getItem(ROOT_STORAGE_KEY));
+  } catch {
+    return fallback;
+  }
 };
 
 const readPurged = (): string[] => {
@@ -114,15 +124,45 @@ const readPurged = (): string[] => {
 export class PageRegistry {
   private pages: PageMap;
 
+  private readonly pendingPageOperations = new Map<string, PageOperation[]>();
+
+  private readonly pendingPurges = new Set<string>();
+
   private rootPage: RootRecord = readRoot();
 
-  constructor(private readonly seed: PageMap) {
-    // Stored edits win, but a page added to the seed later still shows up.
-    const purged = readPurged();
+  private readonly pendingRootOperations: Array<(root: RootRecord) => RootRecord> = [];
 
-    this.pages = Object.fromEntries(
-      Object.entries({ ...structuredClone(seed), ...readStored() }).filter(([id]) => !purged.includes(id))
-    );
+  private readonly listeners = new Map<string, Set<() => void>>();
+
+  constructor(private readonly seed: PageMap) {
+    this.pages = this.read();
+  }
+
+  /**
+   * Reads storage again after another tab wrote it, and tells each page
+   * whose title, icon or path changed.
+   */
+  public reload(): void {
+    const before = this.captureInfo();
+
+    this.pages = this.read();
+    this.rootPage = this.pendingRootOperations.reduce((root, change) => change(root), readRoot(this.rootPage));
+    this.notifyChanged(before);
+  }
+
+  /** What the page block's `subscribe` gets. */
+  public subscribe(pageId: string, listener: () => void): () => void {
+    const set = this.listeners.get(pageId) ?? new Set();
+
+    set.add(listener);
+    this.listeners.set(pageId, set);
+
+    return () => {
+      set.delete(listener);
+      if (set.size === 0) {
+        this.listeners.delete(pageId);
+      }
+    };
   }
 
   public get(pageId: string): PageRecord | undefined {
@@ -156,17 +196,49 @@ export class PageRegistry {
   }
 
   public create(pageId: string, parentId: string | null): void {
-    if (this.has(pageId)) {
+    const before = this.captureInfo();
+
+    this.mergeStored();
+    if (this.has(pageId) || this.pendingPurges.has(pageId) || readPurged().includes(pageId)) {
+      this.notifyChanged(before);
+
       return;
     }
-    this.pages[pageId] = { title: '', parentId, blocks: [] };
-    this.persist();
+    const created: PageRecord = { title: '', parentId, blocks: [] };
+
+    this.pages[pageId] = created;
+    this.persist({ id: pageId, operation: (page) => page ?? created });
+    this.notifyChanged(before);
+  }
+
+  /**
+   * Gives a page a record when a link to it is followed. Another tab of this
+   * browser may have stored it after this registry was read; else the page
+   * came from a peer, and the link is all this browser knows about it.
+   */
+  public adopt(pageId: string, link: { parentId: string | null; title: string; icon?: string }): void {
+    const before = this.captureInfo();
+
+    this.mergeStored();
+    if (this.has(pageId) || this.pendingPurges.has(pageId) || readPurged().includes(pageId)) {
+      this.notifyChanged(before);
+
+      return;
+    }
+    const stored = readStored();
+    const adopted: PageRecord = Object.hasOwn(stored, pageId)
+      ? stored[pageId]
+      : { title: link.title, parentId: link.parentId, blocks: [], ...(link.icon !== undefined && { icon: link.icon }) };
+
+    this.pages[pageId] = adopted;
+    this.persist({ id: pageId, operation: (page) => page ?? adopted });
+    this.notifyChanged(before);
   }
 
   /** `null` is the root document. */
   public setTitle(pageId: string | null, title: string): void {
     if (pageId === null) {
-      this.editRoot({ ...this.rootPage, title });
+      this.editRoot((root) => ({ ...root, title }));
 
       return;
     }
@@ -179,7 +251,7 @@ export class PageRegistry {
       icon === undefined ? page : { ...page, icon };
 
     if (pageId === null) {
-      this.editRoot(withIcon(this.rootPage));
+      this.editRoot(withIcon);
 
       return;
     }
@@ -240,6 +312,9 @@ export class PageRegistry {
 
   /** Deletes the page and its sub-pages for good. Returns its parent, the page to show next. */
   public purge(pageId: string): string | null {
+    const before = this.captureInfo();
+
+    this.mergeStored();
     const parentId = this.get(pageId)?.parentId ?? null;
     const doomed = new Set([pageId]);
 
@@ -257,17 +332,19 @@ export class PageRegistry {
 
     collect();
     this.pages = Object.fromEntries(Object.entries(this.pages).filter(([id]) => !doomed.has(id)));
+    doomed.forEach((id) => {
+      this.pendingPageOperations.delete(id);
+      this.pendingPurges.add(id);
+    });
     this.persist();
-    try {
-      localStorage.setItem(PURGED_STORAGE_KEY, JSON.stringify([...new Set([...readPurged(), ...doomed])]));
-    } catch {
-      // Blocked storage: the page is gone for this tab only.
-    }
+    this.notifyChanged(before);
 
     return parentId;
   }
 
   public reset(): void {
+    const before = this.captureInfo();
+
     try {
       localStorage.removeItem(PAGES_STORAGE_KEY);
       localStorage.removeItem(PURGED_STORAGE_KEY);
@@ -276,35 +353,112 @@ export class PageRegistry {
       // Storage blocked: the in-memory reset below still applies.
     }
     this.pages = structuredClone(this.seed);
+    this.pendingPageOperations.clear();
+    this.pendingPurges.clear();
     this.rootPage = { title: ROOT_LABEL };
+    this.pendingRootOperations.length = 0;
+    this.notifyChanged(before);
   }
 
-  private editRoot(root: RootRecord): void {
-    this.rootPage = root;
-    try {
-      const { title, ...rest } = root;
+  private read(): PageMap {
+    // Stored edits win, but a page added to the seed later still shows up.
+    return this.applyPending({ ...structuredClone(this.seed), ...readStored() });
+  }
 
-      localStorage.setItem(ROOT_STORAGE_KEY, JSON.stringify(title === ROOT_LABEL ? rest : root));
+  private editRoot(change: (root: RootRecord) => RootRecord): void {
+    const before = this.captureInfo();
+
+    this.rootPage = this.pendingRootOperations.reduce((root, operation) => operation(root), readRoot(this.rootPage));
+    this.rootPage = change(this.rootPage);
+    try {
+      const { title, ...rest } = this.rootPage;
+
+      localStorage.setItem(ROOT_STORAGE_KEY, JSON.stringify(title === ROOT_LABEL ? rest : this.rootPage));
+      this.pendingRootOperations.length = 0;
     } catch {
-      // Quota or blocked storage: the title still works for this tab.
+      this.pendingRootOperations.push(change);
     }
+    this.notifyChanged(before);
   }
 
   private edit(pageId: string, change: (page: PageRecord) => PageRecord): void {
+    const before = this.captureInfo();
+
+    this.mergeStored();
     const page = this.get(pageId);
 
     if (page === undefined) {
+      this.notifyChanged(before);
+
       return;
     }
     this.pages[pageId] = change(page);
-    this.persist();
+    this.persist({ id: pageId, operation: (stored) => stored === undefined ? undefined : change(stored) });
+    this.notifyChanged(before);
   }
 
-  private persist(): void {
+  private mergeStored(): void {
+    this.pages = this.applyPending({ ...this.pages, ...readStored() });
+  }
+
+  private applyPending(pages: PageMap): PageMap {
+    const storedPurges = readPurged();
+
+    // A durable purge cancels edits made before it.
+    storedPurges.forEach((id) => this.pendingPageOperations.delete(id));
+    const purged = new Set([...storedPurges, ...this.pendingPurges]);
+    const merged: PageMap = Object.fromEntries(Object.entries(pages).filter(([id]) => !purged.has(id)));
+
+    this.pendingPageOperations.forEach((operations, id) => {
+      if (purged.has(id)) {
+        return;
+      }
+      const page = operations.reduce<PageRecord | undefined>(
+        (current, operation) => operation(current),
+        Object.hasOwn(merged, id) ? merged[id] : undefined
+      );
+
+      if (page !== undefined) {
+        merged[id] = page;
+      }
+    });
+
+    return merged;
+  }
+
+  private captureInfo(): Map<string, string> {
+    return new Map([...this.listeners.keys()].map((id) => [id, JSON.stringify(this.info(id))]));
+  }
+
+  private notifyChanged(before: Map<string, string>): void {
+    before.forEach((info, id) => {
+      if (JSON.stringify(this.info(id)) !== info) {
+        this.listeners.get(id)?.forEach((listener) => listener());
+      }
+    });
+  }
+
+  private persist(pending?: { id: string; operation: PageOperation }): void {
     try {
       localStorage.setItem(PAGES_STORAGE_KEY, JSON.stringify(this.pages));
+      this.pendingPageOperations.clear();
     } catch {
-      // Quota or blocked storage: the page still works for this tab.
+      if (pending !== undefined) {
+        const operations = this.pendingPageOperations.get(pending.id) ?? [];
+
+        operations.push(pending.operation);
+        this.pendingPageOperations.set(pending.id, operations);
+      }
+    }
+
+    if (this.pendingPurges.size === 0) {
+      return;
+    }
+    try {
+      localStorage.setItem(PURGED_STORAGE_KEY, JSON.stringify([...new Set([...readPurged(), ...this.pendingPurges])]));
+      this.pendingPurges.clear();
+    } catch {
+      // Keep the tombstones in this tab until they are stored.
     }
   }
 }
@@ -344,21 +498,11 @@ export class PointerWatch {
 export const hasPointer = (blocks: OutputBlockData[], pageId: string): boolean => pointedPages(blocks).includes(pageId);
 
 /** A page block for `pageId`, to put back into its parent on restore. */
-export const pointerBlock = (pageId: string, pages: PageRegistry): OutputBlockData => {
-  const page = pages.get(pageId);
-
-  return {
-    id: `page-${pageId}-${Date.now().toString(36)}`,
-    type: 'page',
-    data: {
-      pageId,
-      cache: {
-        title: page?.title ?? '',
-        ...(page?.icon !== undefined && { icon: { type: 'emoji', value: page.icon } }),
-      },
-    },
-  };
-};
+export const pointerBlock = (pageId: string): OutputBlockData => ({
+  id: `page-${pageId}-${Date.now().toString(36)}`,
+  type: 'page',
+  data: { pageId },
+});
 
 /** What `firstBlockKeydown` needs from the editor. */
 export interface FirstBlockEditor {
@@ -500,8 +644,8 @@ export interface PageHeaderOptions {
   pages: PageRegistry;
   search: string;
   readOnly: boolean;
-  /** Plain click on a breadcrumb. */
-  navigate(pageId: string | null): void;
+  /** Plain click on a breadcrumb. `link` is the crumb: the page opens from it. */
+  navigate(pageId: string | null, link: HTMLElement): void;
   /** Enter in the title: open a new first block holding `html`, the title's text after the caret. */
   splitTitle(html: string): void;
   /** ArrowDown on the title's last line; `x` is the caret's, when known. */
@@ -524,15 +668,15 @@ export interface PageHeaderOptions {
 
 export const PAGE_TITLE_SELECTOR = '#pg-page-title';
 
-/** The page block's title for `pageId`, as the parent page renders it. */
-export const pageLinkSelector = (pageId: string): string => {
+const pageLinks = (pageId: string): string[] => {
   const path = CSS.escape(`/editor/page/${encodeURIComponent(pageId)}`);
 
-  return [`[href="${path}"]`, `[href^="${path}?"]`]
-    .map((link) => `[data-blok-testid="page-link"]${link} [data-blok-testid="page-title"]`)
-    .join(', ');
+  return [`[href="${path}"]`, `[href^="${path}?"]`].map((link) => `[data-blok-testid="page-link"]${link}`);
 };
 
+/** A part (`page-title` or `page-icon`) of the page block for `pageId`, as the parent page renders it. */
+export const pageLinkSelector = (pageId: string, part = 'page-title'): string =>
+  pageLinks(pageId).map((link) => `${link} [data-blok-testid="${part}"]`).join(', ');
 
 /**
  * Blok's radius roles are declared only on [data-blok-interface] elements, so
@@ -622,7 +766,7 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
           return;
         }
         event.preventDefault();
-        options.navigate(id);
+        options.navigate(id, el);
       });
     }
     li.append(el);
@@ -702,7 +846,7 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
   title.id = PAGE_TITLE_SELECTOR.slice(1);
   title.className = 'pg-page-title';
   title.textContent = page.title;
-  title.setAttribute('data-placeholder', 'Untitled');
+  title.setAttribute('data-placeholder', 'New page');
   title.setAttribute('role', 'textbox');
   title.setAttribute('aria-label', 'Page title');
   title.spellcheck = false;
@@ -884,17 +1028,191 @@ const disposeIconPicker = (): void => {
 
 /* ------------------------------------------------------------ transition */
 
-export interface PageTransitionOptions {
-  direction: 'forward' | 'back';
-  /** The element in the page being left that morphs into `to`. */
-  from: string | null;
-  to: string | null;
+/** The elements of one page end that morph into the other end's. */
+export interface PageMorph {
+  title: string;
+  icon: string;
 }
 
+export const PAGE_HEADER_MORPH: PageMorph = { title: PAGE_TITLE_SELECTOR, icon: '.pg-page-icon' };
+
+/** The page block for `pageId`, as the parent page renders it. */
+export const pageLinkMorph = (pageId: string): PageMorph => ({
+  title: pageLinkSelector(pageId),
+  icon: pageLinkSelector(pageId, 'page-icon'),
+});
+
+export interface PageTransitionOptions {
+  direction: 'forward' | 'back';
+  /** The page being left. */
+  from: PageMorph | null;
+  to: PageMorph | null;
+  /**
+   * Viewport point of a link outside the editor (the page tree, a crumb).
+   * The new page then grows out of it instead of morphing parts.
+   */
+  origin?: { x: number; y: number };
+}
+
+/*
+ * Two elements with one name make the browser skip the whole transition, and
+ * a page can be linked twice, so a part that matches more than once stays unnamed.
+ */
+const morphRules = (morph: PageMorph | null): string => {
+  if (morph === null) {
+    return '';
+  }
+
+  return (['title', 'icon'] as const)
+    .filter((part) => document.querySelectorAll(morph[part]).length === 1)
+    .map((part) => `${morph[part]} { view-transition-name: pg-page-${part}; }`)
+    .join('\n');
+};
+
+/*
+ * The leaving and arriving bodies get different names. One shared name would
+ * animate the body's box from the old scroll offset to the new one, sliding
+ * the page by the whole scroll distance.
+ */
+const bodyRule = (side: 'out' | 'in'): string => `#tab-editor { view-transition-name: pg-page-${side}; }`;
+
+/*
+ * A body snapshot is as tall as the whole page, so scaling it around its own
+ * middle would slide what is on screen. Scale around the viewport's middle.
+ */
+const setBodyOrigin = (side: 'out' | 'in'): void => {
+  const top = document.getElementById('tab-editor')?.getBoundingClientRect().top ?? 0;
+
+  document.documentElement.style.setProperty(`--pg-page-${side}-origin`, `50% ${Math.round(window.innerHeight / 2 - top)}px`);
+};
+
+/*
+ * Body snapshots span the whole page, so the click point is set against each
+ * body's own box: before the swap for the old one, after the scroll restore
+ * for the new one.
+ */
+const setPortalPoint = (side: 'out' | 'in', origin: { x: number; y: number }): void => {
+  const box = document.getElementById('tab-editor')?.getBoundingClientRect();
+
+  document.documentElement.style.setProperty(
+    `--pg-portal-${side}`,
+    `${Math.round(origin.x - (box?.left ?? 0))}px ${Math.round(origin.y - (box?.top ?? 0))}px`
+  );
+};
+
+/* The reveal must reach the farthest corner of the screen from the click. */
+const portalReach = (origin: { x: number; y: number }): string => {
+  const dx = Math.max(origin.x, window.innerWidth - origin.x);
+  const dy = Math.max(origin.y, window.innerHeight - origin.y);
+
+  return `${Math.ceil(Math.hypot(dx, dy))}px`;
+};
+
+/* A page that came back shorter (a peer deleted blocks) must not keep a blank tail forever. */
+const HOLD_LIMIT_MS = 4000;
+
 /**
- * Runs `update` inside a view transition: the body slides, and `from` morphs
- * into `to` (a page row's title into the big title, or back). Instant when the
- * API is missing or the user asked for reduced motion.
+ * Keeps the document `height` tall until the content fills it again, so
+ * restoring a scroll offset on a page that is still loading is not clamped.
+ */
+export const holdPageHeight = (height: number): void => {
+  const root = document.documentElement;
+  const release = (): void => {
+    watch.disconnect();
+    clearTimeout(timer);
+    root.style.removeProperty('min-height');
+  };
+  const watch = new ResizeObserver(() => {
+    if (document.body.getBoundingClientRect().height >= height) {
+      release();
+    }
+  });
+  const timer = setTimeout(release, HOLD_LIMIT_MS);
+
+  root.style.setProperty('min-height', `${height}px`);
+  watch.observe(document.body);
+};
+
+/*
+ * Must stay under Chrome's 4s update-callback abort. Navigation swaps also pass
+ * it as the loader delay, so a page that loads in time never paints a skeleton.
+ */
+export const PAGE_CONTENT_WAIT_MS = 1200;
+
+/**
+ * Resolves once the editor in `holder` shows its blocks and the loading
+ * skeleton has let go, or at `limitMs`. Inside a transition's update this
+ * makes the new snapshot the real page, and keeps the heavy first render
+ * off the animation's main thread.
+ */
+export const waitForPageContent = (holder: HTMLElement, limitMs: number): Promise<void> => new Promise((resolve) => {
+  const ready = (): boolean => holder.querySelector('[data-blok-element]') !== null && holder.querySelector('[data-blok-loading]') === null;
+
+  // No frame yield here: rAF never fires while a transition's update is pending.
+  if (ready()) {
+    resolve();
+
+    return;
+  }
+
+  const finish = (): void => {
+    watch.disconnect();
+    clearTimeout(timer);
+    resolve();
+  };
+  const watch = new MutationObserver(() => {
+    if (ready()) {
+      finish();
+    }
+  });
+  const timer = setTimeout(finish, limitMs);
+
+  watch.observe(holder, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-blok-loading'] });
+});
+
+/**
+ * Which parts morph on a page change. Going down, the row grows into the
+ * header; going up to the direct parent, the header shrinks back into its row.
+ * Any other jump has no row for the page, so nothing morphs.
+ */
+export const pageNavMorphs = (nav: {
+  back: boolean;
+  from: string | null;
+  target: string | null;
+  parentOf: (pageId: string) => string | null | undefined;
+}): { from: PageMorph | null; to: PageMorph | null } => {
+  if (!nav.back) {
+    return nav.target === null ? { from: null, to: null } : { from: pageLinkMorph(nav.target), to: PAGE_HEADER_MORPH };
+  }
+
+  if (nav.from !== null && nav.parentOf(nav.from) === nav.target) {
+    return { from: PAGE_HEADER_MORPH, to: pageLinkMorph(nav.from) };
+  }
+
+  return { from: null, to: null };
+};
+
+/**
+ * A soft gray wash that fades off the row of the page just left, so the eye
+ * lands where it came from. An animation, not a class: Blok's DOM stays untouched.
+ */
+export const flashArrivalRow = (pageId: string): void => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
+
+  const link = document.querySelector<HTMLElement>(pageLinks(pageId).join(', '));
+
+  link?.animate(
+    [{ backgroundColor: 'var(--blok-item-hover-bg)' }, { backgroundColor: 'var(--blok-item-hover-bg)', offset: 0.35 }, { backgroundColor: 'transparent' }],
+    { duration: 1100, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' }
+  );
+};
+
+/**
+ * Runs `update` inside a view transition: the body slides, and the `from`
+ * title and icon morph into the `to` ones (a page row into the page header).
+ * Instant when the API is missing or the user asked for reduced motion.
  */
 export const runPageTransition = async (update: () => Promise<void>, options: PageTransitionOptions): Promise<void> => {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -909,28 +1227,38 @@ export const runPageTransition = async (update: () => Promise<void>, options: Pa
   // A name set on Blok's DOM through a sheet, not inline: the old editor is
   // still live when the old snapshot is taken.
   const morph = document.createElement('style');
-  const name = (selector: string | null): string =>
-    selector === null ? '' : `${selector} { view-transition-name: pg-page-title; }`;
 
-  morph.textContent = name(options.from);
+  morph.textContent = [bodyRule('out'), morphRules(options.from)].join('\n');
   document.head.append(morph);
   root.classList.add('pg-page-nav');
   root.setAttribute('data-pg-page-dir', options.direction);
+  setBodyOrigin('out');
+  if (options.origin !== undefined) {
+    root.setAttribute('data-pg-page-via', 'portal');
+    root.style.setProperty('--pg-portal-reach', portalReach(options.origin));
+    setPortalPoint('out', options.origin);
+  }
 
   const transition = document.startViewTransition(async () => {
     await update();
-    morph.textContent = name(options.to);
+    morph.textContent = [bodyRule('in'), morphRules(options.to)].join('\n');
+    setBodyOrigin('in');
+    if (options.origin !== undefined) {
+      setPortalPoint('in', options.origin);
+    }
   });
 
   try {
     await transition.updateCallbackDone;
     await transition.finished;
   } catch {
-    // A skipped transition (two elements with one name, a hidden tab) still ran update.
+    // A skipped transition (a hidden tab, a named element replaced mid-way) still ran update.
   } finally {
     morph.remove();
     root.classList.remove('pg-page-nav');
     root.removeAttribute('data-pg-page-dir');
+    root.removeAttribute('data-pg-page-via');
+    ['--pg-page-out-origin', '--pg-page-in-origin', '--pg-portal-out', '--pg-portal-in', '--pg-portal-reach'].forEach((name) => root.style.removeProperty(name));
   }
 };
 

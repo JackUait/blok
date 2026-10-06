@@ -1,11 +1,11 @@
 // docs/src/components/api/api-nav.ts
 
 export const SIDEBAR_GROUPS: ReadonlyArray<{ key: string; moduleIds: string[] }> = [
-  { key: 'gettingStarted', moduleIds: ['quick-start', 'tutorial', 'concepts', 'custom-block-tool'] },
+  { key: 'gettingStarted', moduleIds: ['quick-start', 'tutorial', 'concepts', 'custom-block-tool', 'tab-sync'] },
   { key: 'core', moduleIds: ['core', 'config', 'blocks-api', 'block-api', 'saver-api', 'view-api'] },
   { key: 'editing', moduleIds: ['caret-api', 'selection-api', 'marks-api', 'styles-api', 'history-api'] },
   { key: 'interface', moduleIds: ['toolbar-api', 'inline-toolbar-api', 'ui-api', 'notifier-api', 'tooltip-api', 'theme-api', 'width-api', 'placeholder-api'] },
-  { key: 'extending', moduleIds: ['tools-api', 'uploader-api', 'events-api', 'listeners-api', 'sanitizer-api', 'readonly-api', 'i18n-api', 'dev-override-seam'] },
+  { key: 'extending', moduleIds: ['tools-api', 'uploader-api', 'events-api', 'listeners-api', 'view-state-api', 'sanitizer-api', 'readonly-api', 'i18n-api', 'dev-override-seam'] },
   { key: 'dataTypes', moduleIds: ['output-data', 'block-data'] },
   { key: 'adapters', moduleIds: ['blok-editor', 'use-blocks', 'use-blok-ready'] },
 ];
@@ -27,6 +27,7 @@ export const MODULE_LABELS_EN: Record<string, string> = {
   tutorial: 'Build your first editor',
   concepts: 'Everything is a block',
   'custom-block-tool': 'Create a custom block tool',
+  'tab-sync': 'Tab sync',
   core: 'Blok Class',
   config: 'Configuration',
   'blocks-api': 'Blocks',
@@ -48,6 +49,7 @@ export const MODULE_LABELS_EN: Record<string, string> = {
   'uploader-api': 'Uploader',
   'events-api': 'Events',
   'listeners-api': 'Listeners',
+  'view-state-api': 'ViewState',
   'sanitizer-api': 'Sanitizer',
   'readonly-api': 'ReadOnly',
   'i18n-api': 'I18n',

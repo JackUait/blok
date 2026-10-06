@@ -1,7 +1,6 @@
 // docs/src/seo/route-metadata.ts
-import { API_SECTIONS } from '../components/api/api-data';
 import { GROUP_TITLES_EN, MODULE_ORDER, SIDEBAR_GROUPS } from '../components/api/api-nav';
-import { TOOL_SECTIONS } from '../components/tools/tools-data';
+import { DOCUMENTED_TOOL_ROUTE_PATHS, TOOL_SECTIONS } from '../components/tools/tools-data';
 import { getTranslation, type Locale } from '../i18n';
 import { STATIC_PATHS } from '../prerender-paths';
 import { BLOK_VERSION } from '../utils/constants';
@@ -39,8 +38,6 @@ export interface RouteMetadata {
   ogImage: string;
   /** Set on routes that must not be indexed (client-side redirects, the 404). */
   noindex?: boolean;
-  /** ISO date fed to TechArticle's dateModified; only where the source data carries one. */
-  dateModified?: string;
   /**
    * The linked crumbs of the visible trail, in order. Breadcrumbs.tsx renders
    * these and nothing else; absent on top-level routes, which have no trail.
@@ -71,7 +68,7 @@ const STATIC_COPY: Record<string, Copy> = {
   '/docs': {
     title: 'Blok Docs — Block Editor for React, Vue & Angular',
     description:
-      'Guides, API reference, and 29 built-in block and inline tools for Blok. Start in five minutes.',
+      `Guides, API reference, and ${DOCUMENTED_TOOL_ROUTE_PATHS.length} built-in block and inline tools for Blok. Start in five minutes.`,
     h1: 'Blok documentation',
   },
   '/tools': {
@@ -93,9 +90,9 @@ const STATIC_COPY: Record<string, Copy> = {
     h1: 'Uploads and link previews',
   },
   '/migration': {
-    title: 'Migrate to Blok — Editor.js, TipTap, Quill',
+    title: 'Migrate from Editor.js to Blok — Guide & Codemod',
     description:
-      'Migration guides and a codemod for moving an existing editor integration to Blok without rewriting stored content.',
+      'A step-by-step guide and a codemod for moving an Editor.js integration to Blok without rewriting stored content.',
     h1: 'Outgrown Editor.js?',
   },
   '/migration/reference': {
@@ -137,7 +134,7 @@ const MODULE_COPY: Record<string, Copy> = {
   concepts: {
     title: 'Blok Data Model — Everything Is a Block',
     description:
-      'How Blok stores content as nested JSON blocks with parentId and contentIds, and why there is no HTML in the document.',
+      'How Blok stores content as a tree of JSON blocks linked by parent and child ids. The structure is JSON; only inline text carries markup.',
     h1: "Everything is a block: Blok's data model",
   },
   'custom-block-tool': {
@@ -296,6 +293,18 @@ const MODULE_COPY: Record<string, Copy> = {
       'Supply translations for tool names, toolbar labels, and the accessibility strings Blok renders.',
     h1: "i18n API: translate Blok's interface",
   },
+  'tab-sync': {
+    title: 'Blok Tab Sync — One Document Across Browser Tabs',
+    description:
+      'Keep a Blok document live across the tabs of one browser with documentId: what syncs, what never does, and the limits.',
+    h1: 'Tab sync: one document in every tab',
+  },
+  'view-state-api': {
+    title: 'Blok ViewState API — Personal Per-Browser Block State',
+    description:
+      'Store per-browser block state, such as whether a toggle is open, outside the saved document.',
+    h1: 'ViewState API: personal block state',
+  },
   'dev-override-seam': {
     title: 'Blok Dev Override Seam — Threat Model & Opt-Out',
     description:
@@ -305,20 +314,20 @@ const MODULE_COPY: Record<string, Copy> = {
   'output-data': {
     title: 'Blok OutputData — Saved JSON Format Reference',
     description:
-      'The exact shape save() returns: time, version, and the blocks array with id, type, data, tunes, parentId, and contentIds.',
+      'The exact shape save() returns: time, version, and the blocks array with id, type, data, tunes, parent, and content.',
     h1: "OutputData: Blok's saved JSON format",
   },
   'block-data': {
     title: 'Blok BlockData — Per-Block Payload Reference',
     description:
-      "What lives inside a block's data field, how tunes attach to it, and how parentId and contentIds express nesting.",
+      "What lives inside a block's data field, how tunes attach to it, and how the parent and content fields express nesting.",
     h1: 'BlockData: the per-block payload',
   },
   'blok-editor': {
-    title: 'BlokEditor React Component — Props Reference',
+    title: 'BlokEditor Component — React, Vue & Angular',
     description:
-      'Every prop on BlokEditor: data, tools, onChange, onSave, readOnly, onReady, and the imperative ref API.',
-    h1: 'The BlokEditor React component',
+      'Props and inputs of the all-in-one BlokEditor component in React, Vue and Angular: data, tools, readOnly, the [config] escape hatch, and reading the live editor instance.',
+    h1: 'The BlokEditor component for React, Vue and Angular',
   },
   'use-blocks': {
     title: 'useBlocks Hook — Blok React API',
@@ -369,7 +378,7 @@ const TOOL_COPY: Record<string, Copy> = {
   toggle: {
     title: 'Toggle Block — Collapsible Content in Blok',
     description:
-      'A collapsible block that owns child blocks through contentIds, including toggle headings that keep their level.',
+      'A collapsible block that owns nested child blocks, including toggle headings that keep their level.',
     h1: 'Toggle block: collapsible content',
   },
   callout: {
@@ -402,6 +411,12 @@ const TOOL_COPY: Record<string, Copy> = {
       'A resizable vertical space block for controlling page rhythm, and the height it stores in its data.',
     h1: 'Spacer block: adjustable vertical space',
   },
+  table_of_contents: {
+    title: 'Table of Contents Block — Live Heading Outline',
+    description:
+      'A block that lists the page headings and jumps to each one. The list is built live and never saved.',
+    h1: 'Table of contents block: a live heading outline',
+  },
   quote: {
     title: 'Quote Block — Blockquotes with Captions',
     description:
@@ -432,6 +447,18 @@ const TOOL_COPY: Record<string, Copy> = {
       'A single column inside a column list, carrying a width fraction and its own list of child blocks.',
     h1: 'Column block: one column of a layout',
   },
+  tabs: {
+    title: 'Tabs Block — Content Split into Switchable Tabs',
+    description:
+      'A block with a strip of tabs over the open tab\'s content. Each tab is a child block, and the open tab is never saved.',
+    h1: 'Tabs block: content in switchable tabs',
+  },
+  tab: {
+    title: 'Tab Block — One Tab of a Tabs Block',
+    description:
+      'A single tab inside a tabs block, carrying a plain-text title, an optional emoji icon, and its own child blocks.',
+    h1: 'Tab block: one tab of a tabs block',
+  },
   embed: {
     title: 'Embed Block — 115 Supported Services',
     description:
@@ -449,6 +476,12 @@ const TOOL_COPY: Record<string, Copy> = {
     description:
       'A one-line link to a sub-page that your app stores as its own document. Host hooks open, create and refresh each page.',
     h1: 'Page block: links to sub-pages',
+  },
+  'page-link': {
+    title: 'Page Link Block — Reference an Existing Page',
+    description:
+      'Add a non-owning page reference by ID. The host supplies an authorized title and URL, while the saved block keeps only the opaque page ID.',
+    h1: 'Page link block: reference an existing page',
   },
   file: {
     title: 'File Block — Attachments and Downloads',
@@ -590,18 +623,6 @@ const docsBreadcrumbs = (
   { name: crumbGroupTitle, path: localizedPath(groupFirstPath, locale) },
 ];
 
-/**
- * `dateModified` for the reference pages comes from the `lastUpdated` field
- * ApiSection already renders, so the structured data cannot drift away from the
- * date a reader sees on the page.
- */
-const lastUpdatedById = new Map(
-  API_SECTIONS.filter((section) => section.lastUpdated).map((section) => [
-    section.id,
-    section.lastUpdated as string,
-  ]),
-);
-
 const buildRouteMetadata = (locale: Locale): Record<string, RouteMetadata> => {
   const copyTable = COPY_BY_LOCALE[locale];
   const map: Record<string, RouteMetadata> = {};
@@ -636,14 +657,13 @@ const buildRouteMetadata = (locale: Locale): Record<string, RouteMetadata> => {
       ...copy,
       canonical: canonicalFor(path, locale),
       ogImage: OG_IMAGE,
-      ...(lastUpdatedById.has(id) && { dateModified: lastUpdatedById.get(id) }),
       ...(group && {
         breadcrumbs: docsBreadcrumbs(locale, groupTitle(locale, group.key), `/docs/${group.firstId}`),
       }),
     };
   }
 
-  // tools-data.ts carries a duplicate id; first occurrence wins, matching the
+  // First occurrence wins if tools-data.ts ever repeats an id, matching the
   // sidebar's own dedupe.
   const firstToolOfType: Partial<Record<'block' | 'inline', string>> = {};
   for (const tool of TOOL_SECTIONS) {

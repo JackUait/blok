@@ -4,6 +4,7 @@ import { buildColumnMenuItems, buildRowMenuItems } from '../../../../src/tools/t
 import type { PopoverMenuOptions } from '../../../../src/tools/table/table-row-col-popover';
 import type { RowColAction } from '../../../../src/tools/table/table-row-col-controls';
 import { PopoverItemType } from '../../../../src/components/utils/popover';
+import { IconPaintRoller } from '../../../../src/components/icons';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
 import type { I18n } from '../../../../types/api';
 
@@ -78,6 +79,14 @@ describe('table grip menu (row/column popover items)', () => {
     vi.restoreAllMocks();
   });
 
+  it('shows the paint roller icon on the color item of both menus', () => {
+    const rowColor = findByTitle(buildRowMenuItems(0, createOptions()), 'tools.table.cellColor');
+    const colColor = findByTitle(buildColumnMenuItems(0, createOptions()), 'tools.table.cellColor');
+
+    expect(rowColor && 'icon' in rowColor ? rowColor.icon : undefined).toBe(IconPaintRoller);
+    expect(colColor && 'icon' in colColor ? colColor.icon : undefined).toBe(IconPaintRoller);
+  });
+
   describe('row menu', () => {
     it('offers Color, Insert above/below, Duplicate, Clear contents and Delete', () => {
       const items = buildRowMenuItems(1, createOptions());
@@ -120,7 +129,7 @@ describe('table grip menu (row/column popover items)', () => {
 
       activate(buildRowMenuItems(2, createOptions({ onClearContents })), 'tools.table.clearSelection');
 
-      expect(onClearContents).toHaveBeenCalledWith('row', 2);
+      expect(onClearContents).toHaveBeenCalledWith('row', 2, 1);
     });
 
     it('routes the color picker selection to the whole row', () => {
@@ -137,7 +146,73 @@ describe('table grip menu (row/column popover items)', () => {
       expect(preset).not.toBeUndefined();
       preset?.click();
 
-      expect(onColorChange).toHaveBeenCalledWith('row', 1, expect.any(String), 'backgroundColor');
+      expect(onColorChange).toHaveBeenCalledWith('row', 1, expect.any(String), 'backgroundColor', 1);
+    });
+  });
+
+  describe('grip of a merged cell acts on the whole span', () => {
+    it('deletes every merged row, not just the first', () => {
+      const onAction = vi.fn<(action: RowColAction) => void>();
+
+      activate(buildRowMenuItems(1, createOptions({ onAction, getRowCount: () => 5 }), 3), 'tools.table.deleteRow');
+
+      expect(onAction).toHaveBeenCalledWith({ type: 'delete-row', index: 1, count: 3 });
+    });
+
+    it('inserts above the first merged row and below the last', () => {
+      const onAction = vi.fn<(action: RowColAction) => void>();
+      const items = buildRowMenuItems(1, createOptions({ onAction }), 3);
+
+      activate(items, 'tools.table.insertRowAbove');
+      activate(items, 'tools.table.insertRowBelow');
+
+      expect(onAction).toHaveBeenNthCalledWith(1, { type: 'insert-row-above', index: 1 });
+      expect(onAction).toHaveBeenNthCalledWith(2, { type: 'insert-row-below', index: 3 });
+    });
+
+    it('inserts left of the first merged column and right of the last', () => {
+      const onAction = vi.fn<(action: RowColAction) => void>();
+      const items = buildColumnMenuItems(0, createOptions({ onAction }), 2);
+
+      activate(items, 'tools.table.insertColumnLeft');
+      activate(items, 'tools.table.insertColumnRight');
+
+      expect(onAction).toHaveBeenNthCalledWith(1, { type: 'insert-col-left', index: 0 });
+      expect(onAction).toHaveBeenNthCalledWith(2, { type: 'insert-col-right', index: 1 });
+    });
+
+    it('duplicates and deletes every merged column', () => {
+      const onAction = vi.fn<(action: RowColAction) => void>();
+      const items = buildColumnMenuItems(0, createOptions({ onAction, getColumnCount: () => 4 }), 2);
+
+      activate(items, 'tools.table.duplicateColumn');
+      activate(items, 'tools.table.deleteColumn');
+
+      expect(onAction).toHaveBeenNthCalledWith(1, { type: 'duplicate-col', index: 0, count: 2 });
+      expect(onAction).toHaveBeenNthCalledWith(2, { type: 'delete-col', index: 0, count: 2 });
+    });
+
+    it('disables Delete when the span covers every row', () => {
+      const del = findByTitle(buildRowMenuItems(0, createOptions({ getRowCount: () => 3 }), 3), 'tools.table.deleteRow');
+
+      expect(del !== undefined && 'isDisabled' in del && del.isDisabled).toBe(true);
+    });
+
+    it('clears and colors every merged row', () => {
+      const onClearContents = vi.fn();
+      const onColorChange = vi.fn();
+      const items = buildRowMenuItems(1, createOptions({ onClearContents, onColorChange }), 3);
+
+      activate(items, 'tools.table.clearSelection');
+      expect(onClearContents).toHaveBeenCalledWith('row', 1, 3);
+
+      const picker = colorPickerElement(items);
+
+      document.body.appendChild(picker);
+      picker.querySelector<HTMLElement>('[data-blok-testid^="cell-color-swatch-backgroundColor-"]:not([data-blok-testid$="-default"])')?.click();
+      picker.remove();
+
+      expect(onColorChange).toHaveBeenCalledWith('row', 1, expect.any(String), 'backgroundColor', 3);
     });
   });
 
@@ -168,7 +243,7 @@ describe('table grip menu (row/column popover items)', () => {
 
       activate(buildColumnMenuItems(0, createOptions({ onClearContents })), 'tools.table.clearSelection');
 
-      expect(onClearContents).toHaveBeenCalledWith('col', 0);
+      expect(onClearContents).toHaveBeenCalledWith('col', 0, 1);
     });
 
     it('keeps the header-column toggle on the first column only', () => {

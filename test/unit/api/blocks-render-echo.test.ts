@@ -34,7 +34,11 @@ type BlokStub = {
     discardPendingChanges: ReturnType<typeof vi.fn>;
   };
   Renderer: RendererMock;
-  Saver: { save: ReturnType<typeof vi.fn> };
+  Saver: {
+    save: ReturnType<typeof vi.fn>;
+    adoptDocumentRecordId: ReturnType<typeof vi.fn>;
+    resetDocumentRecordId: ReturnType<typeof vi.fn>;
+  };
   BlockSelection: { selectBlock: ReturnType<typeof vi.fn> };
 };
 
@@ -63,6 +67,8 @@ const createBlocksApi = (currentContent: OutputData | undefined): { blocksApi: B
     },
     Saver: {
       save: vi.fn().mockResolvedValue(currentContent),
+      adoptDocumentRecordId: vi.fn(),
+      resetDocumentRecordId: vi.fn(),
     },
     BlockSelection: {
       selectBlock: vi.fn(),

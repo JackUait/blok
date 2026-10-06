@@ -13,6 +13,7 @@ import { BLOK_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../.
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expectSingleByRole } from '../helpers/a11y';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 
@@ -101,6 +102,7 @@ const createBlok = async (
       config,
     }
   );
+  await openFixtureToggles(page, options.data);
 };
 
 interface FocusSnapshot {

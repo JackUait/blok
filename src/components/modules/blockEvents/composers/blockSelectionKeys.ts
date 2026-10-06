@@ -8,7 +8,7 @@ import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../
 import { LIST_TOOL_NAME } from '../constants';
 
 import { BlockEventComposer } from './__base';
-import { getIndentTarget, getFollowingSiblings } from './structural-siblings';
+import { canOutdent, getIndentTarget, getFollowingSiblings } from './structural-siblings';
 import { acceptsChildren } from '../../../utils/child-tools';
 
 /**
@@ -255,6 +255,11 @@ export class BlockSelectionKeys extends BlockEventComposer {
 
     const grandparentId = parent.parentId;
     const originalParentId = first.parentId;
+    const movable = blocks.filter(block => block.parentId === originalParentId);
+
+    if (!movable.every(block => canOutdent(BlockManager, block))) {
+      return;
+    }
 
     /**
      * Capture and adopt the following siblings BEFORE reparenting (reparenting
@@ -268,10 +273,8 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     // Last block first: each one leaving goes to the end of the parent's run.
-    for (const block of [...blocks].reverse()) {
-      if (block.parentId === originalParentId) {
-        BlockManager.setBlockParent(block, grandparentId);
-      }
+    for (const block of [...movable].reverse()) {
+      BlockManager.setBlockParent(block, grandparentId);
     }
   }
 
@@ -310,8 +313,8 @@ export class BlockSelectionKeys extends BlockEventComposer {
     const moves: Array<{ block: Block; grandparentId: string | null }> = [];
 
     for (const block of listItems) {
-      // Already leftmost — nothing to outdent.
-      if (block.parentId === null) {
+      // Already leftmost, or held by its parent (a tab, a column).
+      if (!canOutdent(BlockManager, block)) {
         continue;
       }
 
@@ -320,7 +323,7 @@ export class BlockSelectionKeys extends BlockEventComposer {
         continue;
       }
 
-      const parent = BlockManager.getBlockById(block.parentId);
+      const parent = block.parentId === null ? undefined : BlockManager.getBlockById(block.parentId);
 
       if (parent === undefined) {
         continue;

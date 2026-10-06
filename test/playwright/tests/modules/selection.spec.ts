@@ -5,6 +5,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -131,6 +132,7 @@ const createBlokWithBlocks = async (
     blocks,
     serializedTools,
   });
+  await openFixtureToggles(page, { blocks });
 };
 
 const selectText = async (locator: Locator, text: string): Promise<void> => {

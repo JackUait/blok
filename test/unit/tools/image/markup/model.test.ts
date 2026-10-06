@@ -17,6 +17,7 @@ import {
   moveMarkup,
   resizeMarkup,
   hitTest,
+  markupIntersectsRect,
   contrastInk,
   arrowHeadLength,
   eraseMarkup,
@@ -505,6 +506,49 @@ describe('hitTest', () => {
     expect(hitTest([label], { x: 545, y: 250 }, O, 0)).toBeNull();
     expect(hitTest([{ ...label, rotation: 90 }], { x: 500, y: 285 }, O, 0)?.id).toBe('t1');
     expect(hitTest([{ ...label, rotation: 90 }], { x: 535, y: 250 }, O, 0)).toBeNull();
+  });
+});
+
+describe('markupIntersectsRect', () => {
+  it('a diagonal line is caught only where its ink runs, not across its empty bounding box', () => {
+    // O (100, 100) to (500, 300).
+    const line = shape({ type: 'line', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6 });
+
+    expect(markupIntersectsRect(line, { x: 380, y: 100, w: 100, h: 60 }, O)).toBe(false);
+    expect(markupIntersectsRect(line, { x: 280, y: 150, w: 40, h: 100 }, O)).toBe(true);
+  });
+
+  it('a stroke is caught by a box its ink crosses with no point inside', () => {
+    // O (100, 50) to (500, 50): no sample between the ends.
+    const stroke = pen({ points: [0.1, 0.1, 0.5, 0.5, 0.1, 0.5] });
+
+    expect(markupIntersectsRect(stroke, { x: 280, y: 30, w: 40, h: 40 }, O)).toBe(true);
+    expect(markupIntersectsRect(stroke, { x: 280, y: 70, w: 40, h: 40 }, O)).toBe(false);
+  });
+
+  it('an outlined rect is caught by its edge, a filled one also from inside', () => {
+    // O (100, 100) to (500, 300).
+    const inside = { x: 250, y: 150, w: 50, h: 50 };
+
+    expect(markupIntersectsRect(shape(), { x: 80, y: 150, w: 40, h: 40 }, O)).toBe(true);
+    expect(markupIntersectsRect(shape(), inside, O)).toBe(false);
+    expect(markupIntersectsRect(shape({ fill: true }), inside, O)).toBe(true);
+  });
+
+  it('an ellipse is caught on its curve, not in its bounding corner', () => {
+    const ellipse = shape({ type: 'ellipse' });
+
+    expect(markupIntersectsRect(ellipse, { x: 100, y: 100, w: 20, h: 20 }, O)).toBe(false);
+    expect(markupIntersectsRect(ellipse, { x: 290, y: 90, w: 20, h: 20 }, O)).toBe(true);
+  });
+
+  it('a text is caught anywhere in its box, and a box around a whole mark catches it', () => {
+    const t = text();
+    const b = markupBounds(t, O);
+
+    expect(markupIntersectsRect(t, { x: 495, y: 245, w: 10, h: 10 }, O)).toBe(true);
+    expect(markupIntersectsRect(shape({ type: 'star' }), { x: 0, y: 0, w: 1000, h: 500 }, O)).toBe(true);
+    expect(markupIntersectsRect(t, { x: b.x + b.w + 5, y: b.y, w: 20, h: 20 }, O)).toBe(false);
   });
 });
 

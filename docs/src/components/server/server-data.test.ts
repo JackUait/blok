@@ -85,6 +85,17 @@ describe('server docs data', () => {
     expect(missingRu, `asked for, missing from ru.json:\n${missingRu.join('\n')}`).toEqual([]);
   });
 
+  it('flags package installs, and only those, as install copies', () => {
+    const samples = serverPaths.flatMap((p) => [...p.whatToRun, ...p.appRoute, p.editorConfig]);
+    const isPackageInstall = (code: string) =>
+      /^(dotnet add package|npm install|yarn add|bun add|pnpm add)\b/.test(code);
+
+    expect(samples.some((sample) => isPackageInstall(sample.code))).toBe(true);
+    for (const sample of samples) {
+      expect(sample.install === true).toBe(isPackageInstall(sample.code));
+    }
+  });
+
   it('documents the four deployment paths as separate entries', () => {
     expect(serverPaths.map((p) => p.id)).toEqual([
       'own-storage',
@@ -361,6 +372,7 @@ describe('server docs data', () => {
       '--auth',
       '--collab',
       '--collab-dir',
+      '--collab-journal',
       '--collab-s3-prefix',
       '--doc-endpoint',
       '--doc-endpoint-auth',
@@ -438,7 +450,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(inOrder('--rate-limit', 'ticket', '60', 'otherwise', '0'));
   });
 
-  it('states the thirty service limits the design refuses to bury', () => {
+  it('states the thirty-one service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -446,6 +458,7 @@ describe('server docs data', () => {
       'collab-operation-journal',
       'collab-rollback-boundary',
       'collab-reset',
+      'collab-access-lifecycle',
       'doc-endpoint-auth',
       'collab-new-documents',
       'file-origin',
@@ -594,12 +607,13 @@ describe('server docs data', () => {
   });
 
   // The idempotency rules the entry below states hold only where an operation
-  // journal exists, and the service registers none: no flag turns one on and
-  // the working copy is not one, so the reader has to be told the seam is
-  // theirs to fill before the next entry promises them a retry-safe edit.
-  it('says a retry-safe outside edit needs an operation journal you write', () => {
+  // journal exists. The working copy is not one, so the reader has to be told
+  // the two ways to get one before the next entry promises a retry-safe edit:
+  // the standalone host's --collab-journal, or a store they write.
+  it('says a retry-safe outside edit needs an operation journal, and how to get one', () => {
     const limits = serverLimits.map((l) => l.id);
-    const body = serverLimits.find((l) => l.id === 'collab-operation-journal')?.body ?? '';
+    const entry = serverLimits.find((l) => l.id === 'collab-operation-journal');
+    const body = entry?.body ?? '';
 
     expect(limits.indexOf('collab-operation-journal')).toBe(
       limits.indexOf('collab-rollback-boundary') - 1,
@@ -607,7 +621,16 @@ describe('server docs data', () => {
     expect(body).toContain('Blok-Idempotency-Key');
     expect(body).toMatch(/409/);
     expect(body).toMatch(/503/);
-    expect(body).toMatch(/no flag/i);
+    // --collab-journal exists now, so the old "no flag" claim is a lie.
+    expect(body).not.toMatch(/no flag/i);
+    expect(entry?.title).not.toMatch(/you write/i);
+    expect(body).toContain('--collab-journal');
+    expect(body).toContain('BLOK_COLLAB_JOURNAL');
+    expect(body).toMatch(/local disk/i);
+    expect(body).toMatch(inOrder('--collab-journal', 'needs --collab', 'refused', '--collab-s3-prefix'));
+    expect(body).toContain('options.CollabJournal');
+    // Switching on must not drop what the working copy held.
+    expect(body).toMatch(inOrder('first open', 'adopts', 'working copy', 'deletes'));
     expect(body).toContain('--collab-dir');
     expect(body).toContain('--collab-s3-prefix');
     expect(body).toContain('ICollabOperationStore');
@@ -630,6 +653,25 @@ describe('server docs data', () => {
     // `getTranslation` falls back to English on a miss, so only Cyrillic text
     // proves the Russian key is really there.
     expect(getTranslation('ru', key)).toMatch(/журнал/i);
+    expect(getTranslation('ru', key)).toContain('--collab-journal');
+    expect(getTranslation('ru', key)).toContain('BLOK_COLLAB_JOURNAL');
+    expect(getTranslation('ru', key)).toMatch(/локальном диске/);
+    expect(getTranslation('ru', key)).toMatch(/первое открытие/i);
+    expect(getTranslation('ru', key)).not.toMatch(/Никакой флаг/);
+    expect(getTranslation('ru', 'server.limits.collab-operation-journal.title')).not.toMatch(/пишете вы/);
+  });
+
+  // Purge refuses a custom journal that cannot purge. Hosts must learn that
+  // here, not from a NotSupportedException in production.
+  it('says a custom journal needs ICollabOperationPurgeStore for purge, in both locales', () => {
+    const key = 'server.limits.collab-operation-journal.body';
+    const body = serverLimits.find((l) => l.id === 'collab-operation-journal')?.body ?? '';
+
+    expect(body).toContain('ICollabOperationPurgeStore');
+    expect(body).toContain('NotSupportedException');
+    expect(getTranslation('en', key)).toBe(body);
+    expect(getTranslation('ru', key)).toContain('ICollabOperationPurgeStore');
+    expect(getTranslation('ru', key)).toContain('NotSupportedException');
   });
 
   // The claim this entry exists to refuse: that a build without the store can
@@ -676,6 +718,12 @@ describe('server docs data', () => {
     // rollback that has a shipped referent is unregistering the store.
     expect(body).toMatch(/ceiling/i);
     expect(body).toMatch(/never had it/i);
+    // The first journal open adopts a document's working copy and deletes it,
+    // so the day-of-switch landing is left only for documents nobody opened.
+    expect(body).toMatch(inOrder('first open', 'adopts', 'deletes'));
+    expect(body).toMatch(/not been opened since/i);
+    expect(getTranslation('en', 'server.limits.collab-rollback-boundary.body')).toBe(body);
+    expect(getTranslation('ru', 'server.limits.collab-rollback-boundary.body')).toMatch(/первое открытие/i);
   });
 
   // What the page renders. The entry is worthless in `server-data.ts` alone.
@@ -777,6 +825,90 @@ describe('server docs data', () => {
     expect(body).toContain('has no children list, so nothing can be placed under it.');
     expect(body).toContain('is not in the document order, so nothing can be placed after it.');
     expect(body).toMatch(/422/);
+    // The guard and the read that feeds it. A caller that sends If-Match must
+    // learn each answer it can get, including 428 where there is no journal.
+    expect(body).toMatch(inOrder('If-Match', '<lineage>:<sequence>', '412', 'first result', '428', '400'));
+    expect(body).toContain('GET /sync/{doc}/state');
+    expect(body).toMatch(/read pass/i);
+    expect(body).toMatch(inOrder('GET /sync/{doc}/state', 'ETag', 'If-Match'));
+  });
+
+  it('renders the If-Match and state notes in both shipped locales', () => {
+    const key = 'server.limits.collab-reset.body';
+    const body = serverLimits.find((l) => l.id === 'collab-reset')?.body ?? '';
+
+    expect(getTranslation('en', key)).toBe(body);
+    expect(getTranslation('ru', key)).toMatch(inOrder('If-Match', '412', '428', '400'));
+    expect(getTranslation('ru', key)).toContain('GET /sync/{doc}/state');
+    // Latin tokens survive the English fallback; only Cyrillic proves the
+    // Russian body carries the new notes.
+    expect(getTranslation('ru', key)).toMatch(/пропуска на чтение/);
+    expect(getTranslation('ru', key)).toMatch(/свежим тегом/);
+  });
+
+  it('shows the host access lifecycle without suggesting reset or host UI', () => {
+    const body = serverLimits.find((limit) => limit.id === 'collab-access-lifecycle')?.body ?? '';
+
+    expect(body).toMatch(inOrder('CommitRevocationAsync', 'RecheckAccessAsync'));
+    expect(body).toContain('ICollabRoomManager');
+    expect(body).toContain('ICollabDocumentPurger');
+    expect(body).toMatch(/each server instance serving the document/i);
+    expect(body).toMatch(/4403/);
+    expect(body).toMatch(/do not.*reset/i);
+    expect(body).toMatch(inOrder('trash', 'keep', 'restore'));
+    expect(body).toMatch(inOrder('CommitPermanentTombstoneAsync', 'PurgeDocumentAsync'));
+    expect(body).toMatch(/DocumentOpenElsewhere/);
+    expect(body).toMatch(/retry/i);
+    expect(body).toMatch(/partial.*barred|barred.*retry/i);
+    expect(body).toMatch(/without a journal.*every.*instance|without a journal.*all.*instance/i);
+    expect(body).toMatch(/canonical page record/i);
+    expect(body).toMatch(/parent pointer/i);
+    expect(body).toMatch(/opaque.*id/i);
+    expect(body).toMatch(/not.*physical.*eras|not.*backups/i);
+    expect(body).toMatch(/access-settings.*UI|access UI/i);
+  });
+
+  it('requires host denial of deleted documents even with a journal', () => {
+    const body = serverLimits.find((limit) => limit.id === 'collab-access-lifecycle')?.body ?? '';
+    const beforeJournalCaveat = body.split('Without a journal')[0];
+
+    expect(beforeJournalCaveat).toMatch(/host authorization and consumer GET\/PUT.*deny/i);
+    const russian = getTranslation('ru', 'server.limits.collab-access-lifecycle.body');
+
+    expect(russian).toMatch(/авторизация приложения.*GET\/PUT.*отклонять/i);
+    expect(russian).toMatch(/даже при наличии журнала/i);
+  });
+
+  it('shows complete offline logout in both locales', () => {
+    const key = 'server.limits.collab-access-lifecycle.body';
+    const body = serverLimits.find((limit) => limit.id === 'collab-access-lifecycle')?.body ?? '';
+    const english = getTranslation('en', key);
+    const russian = getTranslation('ru', key);
+
+    expect(body).toMatch(inOrder(
+      'inspectOfflineScope',
+      'showDiscardWarning',
+      'closeEditorsAndSwitchScope',
+      'forgetOfflineScope',
+    ));
+    expect(body).toContain('forgetOfflineScope(oldScope, { discardPending: true })');
+    expect(body).toMatch(/whole.*scope/i);
+    expect(body).toContain('@bloklabs/core');
+    expect(body).toMatch(/offline device.*cannot.*remotely|cannot.*remotely.*offline device/i);
+    expect(english).toBe(body);
+    expect(russian).toContain('PurgeDocumentAsync');
+    expect(russian).toMatch(/доступ|удален|удалён/i);
+  });
+
+  // The page tool never shipped a saved `cache`, so no host holds one to strip.
+  it('does not ask hosts to strip a page cache that never shipped', () => {
+    const key = 'server.limits.collab-access-lifecycle.body';
+    const body = serverLimits.find((limit) => limit.id === 'collab-access-lifecycle')?.body ?? '';
+
+    for (const text of [body, getTranslation('en', key), getTranslation('ru', key)]) {
+      expect(text).not.toMatch(/data\.cache/);
+      expect(text).not.toMatch(/old clients|старым клиентам/i);
+    }
   });
 
   // Shape is checked at the door, meaning is not. Each of these is a known

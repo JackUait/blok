@@ -459,6 +459,96 @@ describe('FileTool — caption & read-only', () => {
   });
 });
 
+describe('FileTool — context menu actions', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('marks the non-previewable card but leaves its separate download link native', () => {
+    const root = new FileTool(createOptions({ url: 'https://cdn.test/archive.zip', fileName: 'archive.zip' })).render();
+    const card = root.querySelector('[data-role="file-card"]');
+    const download = root.querySelector('[data-role="file-card-wrapper"] > [data-action="download"]');
+
+    expect(card?.hasAttribute('data-blok-block-context-menu')).toBe(true);
+    expect(download?.hasAttribute('data-blok-block-context-menu')).toBe(false);
+  });
+
+  it('downloads a default-uploaded non-previewable file from the block menu', async () => {
+    const blobUrl = 'blob:https://example.com/archive';
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue(blobUrl);
+    const clicked: HTMLAnchorElement[] = [];
+    vi.spyOn(HTMLElement.prototype, 'click').mockImplementation(function (this: HTMLElement) {
+      if (this instanceof HTMLAnchorElement) clicked.push(this);
+    });
+    const tool = new FileTool(createOptions());
+    tool.render();
+
+    tool.onPaste(filePasteEvent(new File(['archive'], 'archive.zip', { type: 'application/zip' })));
+    await flush();
+    const settings = tool.renderSettings() as Array<{ name?: string; onActivate?: () => void }>;
+    settings.find((item) => item.name === 'file-download')?.onActivate?.();
+
+    expect(clicked[0]?.getAttribute('href')).toBe(blobUrl);
+    expect(clicked[0]?.getAttribute('download')).toBe('archive.zip');
+    expect(settings.map((item) => item.name)).not.toContain('file-open-new-tab');
+  });
+
+  it.each(['', ' \t '])('does not download the editor page for a blank file URL: %s', (url) => {
+    const clicked: HTMLAnchorElement[] = [];
+    vi.spyOn(HTMLElement.prototype, 'click').mockImplementation(function (this: HTMLElement) {
+      if (this instanceof HTMLAnchorElement) clicked.push(this);
+    });
+    const tool = new FileTool(createOptions({ url, fileName: 'archive.zip' }));
+    tool.render();
+    const settings = tool.renderSettings() as Array<{ name?: string; onActivate?: () => void }>;
+
+    settings.find((item) => item.name === 'file-download')?.onActivate?.();
+
+    expect(clicked).toHaveLength(0);
+  });
+
+  it.each(['javascript:alert(1)', 'data:text/html,<script>alert(1)</script>'])(
+    'does not activate an unsafe file URL from the block menu: %s',
+    (url) => {
+      const clicked: HTMLAnchorElement[] = [];
+      vi.spyOn(HTMLElement.prototype, 'click').mockImplementation(function (this: HTMLElement) {
+        if (this instanceof HTMLAnchorElement) clicked.push(this);
+      });
+      const tool = new FileTool(createOptions({ url, fileName: 'archive.zip' }));
+      tool.render();
+      const settings = tool.renderSettings() as Array<{ name?: string; onActivate?: () => void }>;
+
+      settings.find((item) => item.name === 'file-download')?.onActivate?.();
+
+      expect(clicked).toHaveLength(0);
+    }
+  );
+
+  it('opens a non-previewable file in a new tab alongside download and copy URL', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const tool = new FileTool(createOptions({ url: 'https://cdn.test/archive.zip', fileName: 'archive.zip' }));
+    const settings = tool.renderSettings() as Array<{ name?: string; title?: string; onActivate?: () => void }>;
+    const action = settings.find((item) => item.name === 'file-open-new-tab');
+
+    expect(action?.title).toBe('tools.file.previewOpenInNewTab');
+    expect(settings.map((item) => item.name)).toContain('file-download');
+    expect(settings.map((item) => item.name)).toContain('file-copy-url');
+    action?.onActivate?.();
+    expect(open).toHaveBeenCalledWith('https://cdn.test/archive.zip', '_blank', 'noopener,noreferrer');
+  });
+
+  it('does not offer the new-tab action for previewable or unsafe files', () => {
+    const previewable = new FileTool(createOptions({ url: 'https://cdn.test/doc.pdf', fileName: 'doc.pdf' }));
+    const unsafe = new FileTool(createOptions({ url: 'javascript:alert(1)', fileName: 'archive.zip' }));
+    const empty = new FileTool(createOptions());
+    const names = (tool: FileTool): Array<string | undefined> =>
+      (tool.renderSettings() as Array<{ name?: string }>).map((item) => item.name);
+
+    expect(names(previewable)).not.toContain('file-open-new-tab');
+    expect(names(unsafe)).not.toContain('file-open-new-tab');
+    expect(names(empty)).not.toContain('file-open-new-tab');
+  });
+});
+
 describe('FileTool — preview', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => {

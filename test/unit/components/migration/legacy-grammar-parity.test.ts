@@ -232,3 +232,26 @@ describe('legacy-grammar parity: shared interpreter reproduces runtime output', 
     }
   });
 });
+
+describe('legacy-grammar: toggleList open state', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // The open state is personal per browser, so migration never writes isOpen.
+  it.each([
+    ['a toggle', { title: 'T', isExpanded: true }, { text: 'T' }],
+    ['a toggle heading', { title: 'H', titleVariant: 2, isExpanded: false }, { text: 'H', level: 2, isToggleable: true }],
+  ])('drops isExpanded when it expands into %s', (_name, data, expected) => {
+    const [block] = expandLegacyBlocks(
+      [{ id: 'tl', type: 'toggleList', data }],
+      { generateId: makeCounterGenerator(), warn: () => undefined }
+    );
+
+    expect(block.data).toStrictEqual(expected);
+  });
+});

@@ -133,14 +133,16 @@ public static class BlokServerServiceCollectionExtensions
           "The collaboration working set needs CollabDirectory or CollabS3Prefix.");
     });
 
-    // The store is optional: GetService (not GetRequiredService) returns null on
-    // a server with no ICollabOperationStore registered, which SyncHandshake
-    // then treats the same as v2 being switched off.
+    services.TryAddSingleton<CollabOperationStoreSource>();
+
+    // The store is optional: the source answers null on a server with no
+    // ICollabOperationStore and no CollabJournal, which SyncHandshake then
+    // treats the same as v2 being switched off.
     services.TryAddSingleton<SyncHandshake>(provider => new SyncHandshake(
         provider.GetRequiredService<BlokServerOptions>(),
         provider.GetRequiredService<FixedWindowRateLimiter>(),
         provider.GetRequiredService<TimeProvider>(),
-        provider.GetService<ICollabOperationStore>()));
+        provider.GetRequiredService<CollabOperationStoreSource>().Store));
     services.TryAddSingleton<SyncConnectionTable>();
 
     services.TryAddSingleton<CollabRoomManager>(provider =>
@@ -162,13 +164,15 @@ public static class BlokServerServiceCollectionExtensions
           },
           timeProvider,
           CollabLog(provider),
-          provider.GetService<ICollabOperationStore>(),
+          provider.GetRequiredService<CollabOperationStoreSource>().Store,
           provider.GetService<ICollabActivityObserver>());
     });
 
     // The endpoints need the concrete manager; the interface is the host's
     // drain handle. Both resolve to the one instance.
     services.TryAddSingleton<ICollabRoomManager>(provider =>
+        provider.GetRequiredService<CollabRoomManager>());
+    services.TryAddSingleton<ICollabDocumentPurger>(provider =>
         provider.GetRequiredService<CollabRoomManager>());
 
     return new BlokServerBuilder(services);

@@ -37,6 +37,8 @@
   container-type: inline-size;
   pointer-events: none;
   padding-block: var(--blok-skeleton-inset);
+  /* Opacity only, so the compositor runs it while a long first render blocks the main thread. */
+  animation: blok-skeleton-appear 0.2s ease-out var(--blok-skeleton-delay, 0ms) backwards;
 }
 
 /* An RTL bar starts at its right edge. */

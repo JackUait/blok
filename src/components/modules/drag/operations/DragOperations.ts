@@ -3,8 +3,12 @@
  */
 
 import type { BlockOrigin } from '../../../../../types';
+import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../../shared/page-reference';
 import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
+import { parseUntrustedHtml } from '../../../utils/inert-html';
+import type { TreePlacement } from '../../../utils/tree-order';
+import { isSelfPlacedParent } from '../../blockManager/new-block-placement';
 import { resolveMoveDestination } from '../utils/moveDestination';
 import type { MoveDestination } from '../utils/moveDestination';
 
@@ -31,6 +35,7 @@ export interface DuplicatePreparation {
   validResults: Array<{
     saved: { data: Record<string, unknown>; tunes: Record<string, unknown> };
     toolName: string;
+    link?: { tool: string; data: Record<string, unknown> };
   }>;
   baseInsertIndex: number;
   /** null when pre-save stale guards aborted or post-save liveTargetIndex was -1. */
@@ -46,10 +51,9 @@ export interface BlockManagerAdapter {
     tool: string;
     data: Record<string, unknown>;
     tunes: Record<string, unknown>;
-    index: number;
     needToFocus: boolean;
     origin?: BlockOrigin;
-  }): Block;
+  } & ({ index: number } | { placement: TreePlacement })): Block;
   setBlockParent?(block: Block, parentId: string | null): void;
   getBlockById?(id: string): Block | undefined;
 }
@@ -64,10 +68,32 @@ export interface BlockSelectionAdapter {
 }
 
 /**
- * The block to insert instead of a copy of a `copyAsLink` block (a page must
- * exist once), or null to copy the block itself.
+ * The sources minus those under a copied block whose tool declares
+ * `copiesOwnChildren` (a table). That copy rebuilds them itself, so a second
+ * copy from here would land in it as extra content. A database does not
+ * declare it: its rows are copied here.
+ * @param sourceBlocks - the blocks being duplicated
  */
-export type CopyAsLinkResolver = (toolName: string, data: Record<string, unknown>) => { tool: string; data: Record<string, unknown> } | null;
+const withoutSelfCopiedChildren = (sourceBlocks: Block[]): Block[] => {
+  const sourceById = new Map(sourceBlocks.map(block => [block.id, block]));
+  const underSelfCopyingParent = (block: Block, seen: Set<string>): boolean => {
+    const parent = block.parentId === null ? undefined : sourceById.get(block.parentId);
+
+    if (parent === undefined || seen.has(parent.id)) {
+      return false;
+    }
+
+    return parent.tool?.copiesOwnChildren || underSelfCopyingParent(parent, seen.add(parent.id));
+  };
+
+  return sourceBlocks.filter(block => !underSelfCopyingParent(block, new Set()));
+};
+
+/**
+ * The block to insert for a `copyAsLink` block, null when there is no hook,
+ * or false when its hook has no valid link and the owner must not be copied.
+ */
+export type CopyAsLinkResolver = (toolName: string, data: Record<string, unknown>) => { tool: string; data: Record<string, unknown> } | null | false;
 
 export class DragOperations {
   private blockManager: BlockManagerAdapter;
@@ -169,7 +195,7 @@ export class DragOperations {
     }
 
     // Sort blocks by current index to preserve order
-    const sortedBlocks = [...sourceBlocks].sort((a, b) =>
+    const sortedBlocks = withoutSelfCopiedChildren(sourceBlocks).sort((a, b) =>
       this.blockManager.getBlockIndex(a) - this.blockManager.getBlockIndex(b)
     );
 
@@ -182,10 +208,13 @@ export class DragOperations {
           return null;
         }
 
-        return {
-          saved,
-          toolName: block.name,
-        };
+        const link = this.asLink?.(block.name, saved.data);
+
+        if (link === false) {
+          return null;
+        }
+
+        return link ? { saved, toolName: block.name, link } : { saved, toolName: block.name };
       })
     );
 
@@ -220,10 +249,11 @@ export class DragOperations {
     const validResults = saveResults.filter(
       (result): result is NonNullable<typeof result> => result !== null
     );
+    const copyableBlocks = sortedBlocks.filter((_, index) => saveResults[index] !== null);
 
     return {
-      sortedBlocks,
-      sourceIds: new Set(sortedBlocks.map((b) => b.id)),
+      sortedBlocks: copyableBlocks,
+      sourceIds: new Set(copyableBlocks.map((block) => block.id)),
       validResults,
       baseInsertIndex,
       aborted: false,
@@ -236,7 +266,10 @@ export class DragOperations {
    * write this method emits must stay synchronous so the caller can bracket
    * the whole thing in `BlockManager.transactForTool` for a single undo entry.
    */
-  applyDuplicates(prep: DuplicatePreparation): DuplicateResult {
+  applyDuplicates(
+    prep: DuplicatePreparation,
+    rootParentOf: (original: Block) => string | null = (original) => original.parentId
+  ): DuplicateResult {
     if (prep.aborted) {
       return { duplicatedBlocks: [], targetIndex: prep.baseInsertIndex };
     }
@@ -257,16 +290,41 @@ export class DragOperations {
     // A copy whose children are copied with it is inserted as 'paste' (it brings
     // its own children), so a container like callout does not seed a body.
     const copiedParentIds = new Set(prep.sortedBlocks.map(block => block.parentId));
-    // A `copyAsLink` block (a page) is copied as its link. One insert per
+    // A block the resolver maps is inserted as what it returned. One insert per
     // result either way: callers pair duplicatedBlocks with sortedBlocks by index.
-    const duplicatedBlocks = prep.validResults.map(({ saved, toolName }, index) => {
-      const link = this.asLink?.(toolName, saved.data) ?? null;
+    const duplicatedBlocks = prep.validResults.map(({ saved, toolName, link }, index) => {
+      const data = link?.data ?? structuredClone(saved.data);
+      const text = data.text;
+
+      if (link === undefined && typeof text === 'string' && text.includes(PAGE_REFERENCE_ATTR)) {
+        const wrapper = parseUntrustedHtml(text);
+        const changed = Array.from(wrapper.querySelectorAll(`a[${PAGE_REFERENCE_ATTR}]`)).reduce((found, anchor) => {
+          const allowed = preservePageReferenceAnchor(anchor);
+
+          if (typeof allowed !== 'object' || allowed[PAGE_REFERENCE_ATTR] !== true) {
+            return found;
+          }
+
+          for (const name of anchor.getAttributeNames()) {
+            if (allowed[name] !== true) {
+              anchor.removeAttribute(name);
+            }
+          }
+
+          return true;
+        }, false);
+
+        if (changed) {
+          // Painted labels and URLs must not enter the copied document.
+          data.text = wrapper.innerHTML;
+        }
+      }
 
       return this.blockManager.insert({
         tool: link?.tool ?? toolName,
-        data: link?.data ?? structuredClone(saved.data),
-        tunes: link === null ? structuredClone(saved.tunes) : {},
-        index: prep.baseInsertIndex + index,
+        data,
+        tunes: link === undefined ? structuredClone(saved.tunes) : {},
+        ...this.duplicatePosition(prep, index, rootParentOf),
         needToFocus: false,
         origin: copiedParentIds.has(prep.sortedBlocks[index].id) ? 'paste' : undefined,
       });
@@ -307,6 +365,40 @@ export class DragOperations {
     }
 
     return { duplicatedBlocks, targetIndex: prep.baseInsertIndex };
+  }
+
+  /**
+   * Where the copy of `prep.sortedBlocks[index]` goes. Copied roots go by
+   * placement (an index after a table would land in a cell); descendants and
+   * table/database children keep the flat index.
+   * @param prep - the duplicate plan
+   * @param index - position of the copy in the plan
+   * @param rootParentOf - the parent a copied root takes
+   */
+  private duplicatePosition(
+    prep: DuplicatePreparation,
+    index: number,
+    rootParentOf: (original: Block) => string | null
+  ): { index: number } | { placement: TreePlacement } {
+    const slot = prep.baseInsertIndex + index;
+    const original = prep.sortedBlocks[index];
+
+    if (original === undefined || (original.parentId !== null && prep.sourceIds.has(original.parentId))) {
+      return { index: slot };
+    }
+
+    const parentId = rootParentOf(original);
+    const getBlock = (id: string): Block | undefined => this.blockManager.getBlockById?.(id);
+    const parent = parentId === null ? undefined : getBlock(parentId);
+
+    if (parentId !== null && (parent === undefined || isSelfPlacedParent(parent, getBlock))) {
+      return { index: slot };
+    }
+
+    // The last sibling before the slot: the copy lands after its subtree, which is the slot.
+    const afterId = this.blockManager.blocks.slice(0, slot).filter(block => block.parentId === parentId).pop()?.id ?? null;
+
+    return { placement: { parentId, afterId } };
   }
 
   /**

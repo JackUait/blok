@@ -16,6 +16,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { startDocumentStore } from './dev-doc-store.mjs';
+import { playgroundPageSeed, startPageHostNear } from './dev-page-host.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DEV_DIRECTORY = join(ROOT, '.dev');
@@ -32,6 +33,7 @@ const VITE = join(ROOT, 'node_modules/.bin', process.platform === 'win32' ? 'vit
 const SYNC_PORT = 4000;
 const DOCUMENT_PORT = 4500;
 const DEFAULT_VITE_PORT = 3303;
+const PAGE_HOST_PORT = 4600;
 
 /**
  * Split our own flags from Vite's.
@@ -255,6 +257,22 @@ async function main() {
     }
   }
 
+  // The reference page host behind `?host=remote`. Optional: the playground
+  // keeps its localStorage registry without it.
+  const pageHost = await startPageHostNear({
+    from: PAGE_HOST_PORT,
+    attempts: 10,
+    seed: playgroundPageSeed(JSON.parse(readFileSync(PLAYGROUND_PAGES, 'utf8'))),
+  }).catch((error) => {
+    console.error(`[blok] the page host did not start (${error.message}) — ?host=remote is unavailable.`);
+
+    return null;
+  });
+
+  if (pageHost !== null) {
+    console.log(`[blok] page host at ${pageHost.url} — open the playground with ?host=remote to use it.`);
+  }
+
   supervise('vite', spawn(VITE, [
     // Collaboration is pinned to the origin above; letting Vite drift to the
     // next free port would break the socket with no visible cause.
@@ -263,7 +281,11 @@ async function main() {
   ], {
     cwd: ROOT,
     stdio: 'inherit',
-    env: { ...process.env, BLOK_DEV_BACKEND: backendRunning ? '1' : '0' },
+    env: {
+      ...process.env,
+      BLOK_DEV_BACKEND: backendRunning ? '1' : '0',
+      ...(pageHost !== null && { VITE_BLOK_PAGE_HOST_URL: pageHost.url }),
+    },
   }));
 }
 

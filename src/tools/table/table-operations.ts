@@ -8,6 +8,7 @@ import type { TableGrid } from './table-core';
 import type { CellContent, LegacyCellContent, TableData, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
 import { alignRowsToColumns } from './table-ids';
+import { ownPastedCells } from './table-cell-paste';
 
 // ─── Pure DOM helpers ───────────────────────────────────────────────
 
@@ -577,7 +578,7 @@ export const mapPastedTableCells = <T>(
   };
 
   rows.forEach((rowEl, r) => {
-    Array.from(rowEl.querySelectorAll('td, th')).reduce((cursor, cellEl) => {
+    ownPastedCells(rowEl).reduce((cursor, cellEl) => {
       // Skip slots already covered by spans from earlier rows/cells
       const c = nextFreeSlot(grid[r], cursor);
 

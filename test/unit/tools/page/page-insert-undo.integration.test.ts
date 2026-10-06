@@ -117,7 +117,7 @@ describe('a saved page block', () => {
     vi.restoreAllMocks();
   });
 
-  it('keeps its cached text byte-identical through load and save with inline tools on', async () => {
+  it('drops legacy cached metadata on load and save with inline tools on', async () => {
     const text = 'if (a<b) { } 5 < 6 && x </div> y <b>bold</b>';
     const data = { pageId: 'p1', cache: { title: text, icon: { type: 'image', url: 'https://ex.com/a.png?b=1&c=2' } } };
     const instance = new Blok({
@@ -132,7 +132,10 @@ describe('a saved page block', () => {
 
     const output = await instance.save();
 
-    expect(output.blocks.find(block => block.id === 'x')?.data).toEqual(data);
+    expect(output.blocks.find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1' });
+    expect(instance.module.yjsManager.toJSON().find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1' });
+    expect(holder?.textContent).not.toContain('bold');
+    expect(holder?.querySelector('[data-blok-testid="page-icon"] img')).toBeNull();
   }, 30_000);
 });
 
@@ -192,9 +195,7 @@ describe('a page block in a real editor', () => {
     expect(holder?.querySelector('[data-blok-navigation-focused]')).not.toBeNull();
   }, 30_000);
 
-  // Read-only never writes; once editing turns on, the title it showed is
-  // saved, so the block does not show one title and save another.
-  it('booted read-only shows a fresh title from resolve, and saves it once editing turns on', async () => {
+  it('booted read-only shows the resolved title without saving it when editing turns on', async () => {
     const resolve = vi.fn().mockResolvedValue({ title: 'New' });
     const data = { pageId: 'p1', cache: { title: 'Old' } };
     const instance = new Blok({
@@ -214,13 +215,13 @@ describe('a page block in a real editor', () => {
     await instance.readOnly.toggle(false);
     await settleFrame();
 
-    expect((await instance.save()).blocks.find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1', cache: { title: 'New' } });
-    expect(instance.module.yjsManager.toJSON().find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1', cache: { title: 'New' } });
+    expect((await instance.save()).blocks.find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1' });
+    expect(instance.module.yjsManager.toJSON().find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1' });
     expect(holder?.querySelector('[data-blok-testid="page-title"]')?.textContent).toBe('New');
     expect(resolve).toHaveBeenCalledTimes(1);
   }, 30_000);
 
-  it('turns into a paragraph that shows the title as literal text', async () => {
+  it('turns into a paragraph with a neutral label instead of the legacy title', async () => {
     const title = '<i>x</i> & y';
     const instance = new Blok({
       holder,
@@ -236,8 +237,8 @@ describe('a page block in a real editor', () => {
 
     await settleFrame();
 
-    expect(converted.holder.textContent).toBe(title);
+    expect(converted.holder.textContent).toBe('Page');
     expect(converted.holder.querySelector('i')).toBeNull();
-    expect((await instance.save()).blocks).toMatchObject([{ type: 'paragraph', data: { text: '&lt;i&gt;x&lt;/i&gt; &amp; y' } }]);
+    expect((await instance.save()).blocks).toMatchObject([{ type: 'paragraph', data: { text: 'Page' } }]);
   }, 30_000);
 });

@@ -6,6 +6,7 @@ import { clean } from '../../../src/components/utils/sanitizer';
 import { show as tooltipShow } from '../../../src/components/utils/tooltip';
 import type { API, BlockToolConstructorOptions, SanitizerConfig } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
+import { createMemoryViewState } from '../../helpers/view-state';
 
 vi.mock('../../../src/components/utils/tooltip', () => ({
   show: vi.fn(),
@@ -39,6 +40,7 @@ const createMockAPI = (): API => ({
     off: vi.fn(),
     emit: vi.fn(),
   },
+  viewState: createMemoryViewState(),
 } as unknown as API);
 
 const createHeaderOptions = (
@@ -51,6 +53,13 @@ const createHeaderOptions = (
   readOnly: false,
   block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
 });
+
+/**
+ * Seed this browser's personal state so the toggle heading renders open.
+ */
+const storeOpen = (api: API): void => {
+  api.viewState.set('test-block-id', 'open', true);
+};
 
 /**
  * Helper to convert MenuConfig to array for easier testing
@@ -531,17 +540,17 @@ describe('Header Tool - Custom Configurations', () => {
         expect(arrow).toBeNull();
       });
 
-      it('starts open when isToggleable is true in editing mode', () => {
+      it('starts collapsed when nothing is stored, in editing mode', () => {
         const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
         const header = new Header(options);
         const wrapper = header.render();
         // data-blok-toggle-open is on the heading element inside the wrapper
         const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
 
-        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
       });
 
-      it('starts open when isToggleable is true in readOnly mode', () => {
+      it('starts collapsed when nothing is stored, in readOnly mode', () => {
         const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
           data: { text: 'Toggle Heading', level: 2, isToggleable: true },
           config: {},
@@ -553,14 +562,10 @@ describe('Header Tool - Custom Configurations', () => {
         const wrapper = header.render();
         const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
 
-        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
       });
 
-      it('calls block.dispatchChange on collapse/expand so isOpen syncs to Yjs', () => {
-        // Regression: toggle-heading open state only mutates mutation-free
-        // containers and the ignored data-blok-toggle-open attribute, so the
-        // MutationObserver never fires. Without an explicit dispatchChange the
-        // new isOpen never reaches Yjs (no undo, no remote propagation).
+      it('stores expand/collapse personally, without block.dispatchChange or saved isOpen', () => {
         const dispatchChange = vi.fn();
         const options = createHeaderOptions({ text: 'Toggle', level: 2, isToggleable: true });
 
@@ -570,15 +575,15 @@ describe('Header Tool - Custom Configurations', () => {
 
         const element = header.render();
 
-        dispatchChange.mockClear();
+        header.expand();
+        expect(options.api.viewState.get('test-block-id', 'open')).toBe(true);
+        expect(header.save(element)).not.toHaveProperty('isOpen');
 
         header.collapse();
-        expect(header.save(element).isOpen).toBe(false);
-        expect(dispatchChange).toHaveBeenCalledTimes(1);
+        expect(options.api.viewState.get('test-block-id', 'open')).toBe(false);
+        expect(header.save(element)).not.toHaveProperty('isOpen');
 
-        header.expand();
-        expect(header.save(element).isOpen).toBe(true);
-        expect(dispatchChange).toHaveBeenCalledTimes(2);
+        expect(dispatchChange).not.toHaveBeenCalled();
       });
 
       it('arrow element is outside the contenteditable heading (wrapper sibling)', () => {
@@ -706,14 +711,18 @@ describe('Header Tool - Custom Configurations', () => {
         expect(childContainer.classList.contains('ps-8')).toBe(true);
       });
 
-      it('applies ps-8 to body placeholder so it aligns with heading text start', () => {
+      it('indents body placeholder by margin so its hover fill starts at the heading text (ms-6.5 + px-1.5 = 32px)', () => {
         const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
         const header = new Header(options);
         const wrapper = header.render();
         const bodyPlaceholder = wrapper.querySelector('[data-blok-toggle-body-placeholder]') as HTMLElement;
 
         expect(bodyPlaceholder).not.toBeNull();
-        expect(bodyPlaceholder.classList.contains('ps-8')).toBe(true);
+        expect(bodyPlaceholder.classList.contains('ms-6.5')).toBe(true);
+        expect(bodyPlaceholder.classList.contains('px-1.5')).toBe(true);
+        expect(bodyPlaceholder.classList.contains('ps-8')).toBe(false);
+        expect(bodyPlaceholder.classList.contains('ms-5.5')).toBe(false);
+        expect(bodyPlaceholder.classList.contains('can-hover:hover:bg-item-hover-bg')).toBe(true);
       });
     });
 
@@ -737,6 +746,7 @@ describe('Header Tool - Custom Configurations', () => {
 
         const mockAPI = createMockAPI();
         (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+        storeOpen(mockAPI);
 
         const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
           data: { text: 'Toggle Heading', level: 2, isToggleable: true },
@@ -751,14 +761,14 @@ describe('Header Tool - Custom Configurations', () => {
         return { header, mockAPI, childHolders };
       };
 
-      it('collapses children when arrow is clicked (starts open), then re-expands on second click', () => {
+      it('collapses children when arrow is clicked (stored open), then re-expands on second click', () => {
         const { header, childHolders } = setupToggleHeaderWithChildren();
         const element = header.render();
 
         // Call rendered() to apply initial state
         header.rendered();
 
-        // Verify children are visible initially (open by default)
+        // Verify children are visible initially (stored open)
         for (const holder of childHolders) {
           expect(holder.classList.contains('hidden')).toBe(false);
         }
@@ -781,14 +791,14 @@ describe('Header Tool - Custom Configurations', () => {
         }
       });
 
-      it('collapses children on first click (starts open)', () => {
+      it('collapses children on first click (stored open)', () => {
         const { header, childHolders } = setupToggleHeaderWithChildren();
         const element = header.render();
         header.rendered();
 
         const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
 
-        // First click: collapse (starts open)
+        // First click: collapse (stored open)
         arrow.click();
         for (const holder of childHolders) {
           expect(holder.classList.contains('hidden')).toBe(true);
@@ -803,7 +813,7 @@ describe('Header Tool - Custom Configurations', () => {
         const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
         const svg = arrow.querySelector('svg') as SVGElement;
 
-        // Initially open - SVG rotated 90deg
+        // Stored open - SVG rotated 90deg
         expect(svg.style.transform).toBe('rotate(90deg)');
 
         // Click to collapse
@@ -815,7 +825,7 @@ describe('Header Tool - Custom Configurations', () => {
         expect(svg.style.transform).toBe('rotate(90deg)');
       });
 
-      it('shows children on rendered() when toggle starts open by default', () => {
+      it('shows children on rendered() when stored open', () => {
         const { header, childHolders } = setupToggleHeaderWithChildren();
         header.render();
         header.rendered();
@@ -929,7 +939,7 @@ describe('Header Tool - Custom Configurations', () => {
       /**
        * Creates a toggle heading with child blocks for testing expand/collapse.
        */
-      const setupToggleHeaderForExpandCollapse = (childCount = 2) => {
+      const setupToggleHeaderForExpandCollapse = (childCount = 2, storedOpen = false) => {
         const childHolders = Array.from({ length: childCount }, (_, i) => {
           const holder = document.createElement('div');
           holder.textContent = `Child ${i + 1}`;
@@ -945,6 +955,10 @@ describe('Header Tool - Custom Configurations', () => {
         const mockAPI = createMockAPI();
         (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
 
+        if (storedOpen) {
+          storeOpen(mockAPI);
+        }
+
         const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
           data: { text: 'Toggle Heading', level: 2, isToggleable: true },
           config: {},
@@ -958,13 +972,13 @@ describe('Header Tool - Custom Configurations', () => {
         return { header, childHolders };
       };
 
-      it('expand() is a no-op if already expanded (default state)', () => {
-        const { header, childHolders } = setupToggleHeaderForExpandCollapse();
+      it('expand() is a no-op if already expanded (stored open)', () => {
+        const { header, childHolders } = setupToggleHeaderForExpandCollapse(2, true);
         const wrapper = header.render();
         const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
         header.rendered();
 
-        // Starts open by default
+        // Stored open
         expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
         for (const holder of childHolders) {
           expect(holder.classList.contains('hidden')).toBe(false);
@@ -1015,13 +1029,13 @@ describe('Header Tool - Custom Configurations', () => {
         }
       });
 
-      it('collapse() collapses toggle heading from default open state', () => {
-        const { header, childHolders } = setupToggleHeaderForExpandCollapse();
+      it('collapse() collapses toggle heading from a stored open state', () => {
+        const { header, childHolders } = setupToggleHeaderForExpandCollapse(2, true);
         const wrapper = header.render();
         const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
         header.rendered();
 
-        // Starts open by default
+        // Stored open
         expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
 
         // Collapse via public method
@@ -1193,6 +1207,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
           insertInsideParent: mockInsertInsideParent,
         },
         events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+        viewState: createMemoryViewState(),
       } as unknown as API;
       (api as unknown as Record<string, unknown>).caret = { setToBlock: mockSetToBlock };
       return api;
@@ -1242,6 +1257,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
           insertInsideParent: vi.fn().mockReturnValue(mockNewBlock),
         },
         events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+        viewState: createMemoryViewState(),
       } as unknown as API;
       (api as unknown as Record<string, unknown>).caret = { setToBlock: mockSetToBlock };
       return api;
@@ -1285,6 +1301,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
         insertInsideParent: mockInsertInsideParent,
       },
       events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+      viewState: createMemoryViewState(),
     } as unknown as API;
 
     const header = new Header({
@@ -1325,6 +1342,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
         insertInsideParent: mockInsertInsideParent,
       },
       events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+      viewState: createMemoryViewState(),
     } as unknown as API;
 
     // No block id passed — use undefined cast to simulate missing block
@@ -1362,7 +1380,7 @@ describe('Header Tool - setData() for undo/redo', () => {
 
   const createToggleHeader = (
     data: Partial<HeaderData> = {},
-    overrides: { children?: Array<{ id: string; holder: HTMLElement }> } = {}
+    overrides: { children?: Array<{ id: string; holder: HTMLElement }>; storedOpen?: boolean } = {}
   ): { header: Header; api: API; wrapper: HTMLElement } => {
     const children = overrides.children ?? [];
     const api: API = {
@@ -1382,10 +1400,15 @@ describe('Header Tool - setData() for undo/redo', () => {
         getChildren: vi.fn().mockReturnValue(children),
       },
       events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+      viewState: createMemoryViewState(),
     } as unknown as API;
 
+    if (overrides.storedOpen === true) {
+      storeOpen(api);
+    }
+
     const header = new Header({
-      data: { text: 'Hello', level: 2, isToggleable: true, isOpen: true, ...data },
+      data: { text: 'Hello', level: 2, isToggleable: true, ...data },
       config: {},
       api,
       readOnly: false,
@@ -1401,57 +1424,57 @@ describe('Header Tool - setData() for undo/redo', () => {
   it('setData updates heading text content', () => {
     const { header, wrapper } = createToggleHeader({ text: 'Original' });
 
-    const result = header.setData({ text: 'Updated', level: 2, isToggleable: true, isOpen: true });
+    const result = header.setData({ text: 'Updated', level: 2, isToggleable: true });
 
     const heading = wrapper.querySelector('h2') as HTMLElement;
     expect(heading.innerHTML).toBe('Updated');
     expect(result).toBe(true);
   });
 
-  it('setData syncs _isOpen when isOpen changes from true to false', () => {
-    const { header } = createToggleHeader({ isOpen: true });
+  // Undo/redo replays data; it must not touch the personal open state.
+  it('setData ignores isOpen=false on an open toggle heading', () => {
+    const { header } = createToggleHeader({}, { storedOpen: true });
 
     header.setData({ text: 'Hello', level: 2, isToggleable: true, isOpen: false });
 
-    const saved = header.save(document.createElement('div'));
-    expect(saved.isOpen).toBe(false);
+    expect(header.save(document.createElement('div'))).not.toHaveProperty('isOpen');
   });
 
-  it('setData syncs _isOpen when isOpen changes from false to true', () => {
-    const { header } = createToggleHeader({ isOpen: false });
+  it('setData ignores isOpen=true on a collapsed toggle heading', () => {
+    const { header, wrapper } = createToggleHeader();
 
     header.setData({ text: 'Hello', level: 2, isToggleable: true, isOpen: true });
 
-    const saved = header.save(document.createElement('div'));
-    expect(saved.isOpen).toBe(true);
+    expect(wrapper.querySelector('h2')?.getAttribute('data-blok-toggle-open')).toBe('false');
+    expect(header.save(document.createElement('div'))).not.toHaveProperty('isOpen');
   });
 
-  it('setData updates wrapper data-blok-toggle-open attribute', () => {
-    const { header, wrapper } = createToggleHeader({ isOpen: true });
+  it('setData keeps the data-blok-toggle-open attribute on the personal state', () => {
+    const { header, wrapper } = createToggleHeader({}, { storedOpen: true });
 
     const heading = wrapper.querySelector('h2') as HTMLElement;
     expect(heading.getAttribute('data-blok-toggle-open')).toBe('true');
 
     header.setData({ text: 'Hello', level: 2, isToggleable: true, isOpen: false });
 
-    expect(heading.getAttribute('data-blok-toggle-open')).toBe('false');
+    expect(heading.getAttribute('data-blok-toggle-open')).toBe('true');
   });
 
-  it('setData updates arrow aria-expanded attribute', () => {
-    const { header, wrapper } = createToggleHeader({ isOpen: true });
+  it('setData keeps arrow aria-expanded on the personal state', () => {
+    const { header, wrapper } = createToggleHeader({}, { storedOpen: true });
 
     const arrow = wrapper.querySelector('[data-blok-toggle-arrow]') as HTMLElement;
     expect(arrow.getAttribute('aria-expanded')).toBe('true');
 
     header.setData({ text: 'Hello', level: 2, isToggleable: true, isOpen: false });
 
-    expect(arrow.getAttribute('aria-expanded')).toBe('false');
+    expect(arrow.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('setData returns true for successful in-place update', () => {
     const { header } = createToggleHeader();
 
-    const result = header.setData({ text: 'New text', level: 2, isToggleable: true, isOpen: true });
+    const result = header.setData({ text: 'New text', level: 2, isToggleable: true });
 
     expect(result).toBe(true);
   });

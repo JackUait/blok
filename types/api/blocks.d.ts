@@ -446,6 +446,7 @@ export interface Blocks {
    * by calling this once the holder connects.
    *
    * @param id - target block id
+   * @param options - pass `select: false` to jump without selecting the block
    */
-  scrollToBlock?(id: string): void;
+  scrollToBlock?(id: string, options?: { select?: boolean }): void;
 }

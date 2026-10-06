@@ -2,16 +2,22 @@ import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { getElementDirection } from '../../components/utils/direction';
 import type { TextDirection } from '../../components/utils/direction';
+import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
+import { clean } from '../../components/utils/sanitizer';
+import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
 
 import { TableAddControls } from './table-add-controls';
 import type { TableCellBlocks } from './table-cell-blocks';
-import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
+import { CELL_BLOCKS_ATTR, toClipboardBlock } from './table-cell-blocks';
 import {
   serializeCellsToClipboard,
   buildClipboardHtml,
   buildClipboardPlainText,
+  isTextSerializable,
   parseClipboardHtml,
   parseGenericHtmlTable,
+  parsePlainTextGrid,
+  pastedContentOutsideTable,
 } from './table-cell-clipboard';
 import type { CellColorMode } from './table-cell-color-picker';
 import { TableCellSelection } from './table-cell-selection';
@@ -42,6 +48,10 @@ import { TableScrollHaze } from './table-scroll-haze';
 import { scrollToInlineEnd } from './table-direction';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard } from './types';
 import { movePlacementWithMotion } from './table-cell-placement-motion';
+import { preprocessPastedHtml } from '../../components/modules/paste/preprocess-pasted-html';
+import { findOwn } from '../../components/utils/own-element';
+import { markPasteContinuation, pasteContinuationSettled } from '../../components/utils/paste-continuation';
+import { logLabeled } from '../../components/utils/logger';
 
 /**
  * Tags each bulk-formattable mark produces. The first entry is what we WRITE;
@@ -55,6 +65,9 @@ const MARK_TAGS: Record<CellMark, string[]> = {
   strikethrough: ['s'],
   code: ['code'],
 };
+
+/** How long the paste after a pasted table may hold its undo step open. */
+const PASTE_CONTINUATION_TIMEOUT_MS = 5000;
 
 /**
  * Child nodes that carry meaning (whitespace-only text nodes don't).
@@ -682,8 +695,8 @@ export class TableSubsystems {
           : this.host.model.canMoveColumn(fromIndex, toIndex)
       ),
       onAction: (action: RowColAction) => this.handleRowColAction(gridEl, action),
-      onClearContents: (type, index) => this.clearRangeContents(type, index),
-      onColorChange: (type, index, color, mode) => this.colorRange(type, index, color, mode),
+      onClearContents: (type, index, count) => this.clearRangeContents(type, index, count),
+      onColorChange: (type, index, color, mode, count) => this.colorRange(type, index, color, mode, count),
       onDragStateChange: (isDragging: boolean, dragType: 'row' | 'col' | null, dragIndex: number) => {
         if (this.resize) {
           this.resize.enabled = !isDragging;
@@ -756,17 +769,20 @@ export class TableSubsystems {
   }
 
   /**
-   * Every real <td> of a row/column, in order. Merge-covered coordinates have no
-   * <td> at all, so they simply do not appear (and a merge origin appears once).
+   * Every real <td> of `count` rows/columns from `index`, in order. Merge-covered
+   * coordinates have no <td> at all, so they simply do not appear (and a merge
+   * origin appears once).
    */
-  private rangeCells(gridEl: HTMLElement, type: 'row' | 'col', index: number): HTMLElement[] {
-    const count = type === 'row'
+  private rangeCells(gridEl: HTMLElement, type: 'row' | 'col', index: number, count = 1): HTMLElement[] {
+    const length = type === 'row'
       ? this.host.grid.getColumnCount(gridEl)
       : this.host.grid.getRowCount(gridEl);
 
-    return Array.from({ length: count }, (_, i) => (
-      type === 'row' ? this.cellAt(gridEl, index, i) : this.cellAt(gridEl, i, index)
-    )).filter((cell): cell is HTMLElement => cell !== null);
+    return Array.from({ length: count }, (_, offset) => index + offset).flatMap(line => (
+      Array.from({ length }, (_, i) => (
+        type === 'row' ? this.cellAt(gridEl, line, i) : this.cellAt(gridEl, i, line)
+      )).filter((cell): cell is HTMLElement => cell !== null)
+    ));
   }
 
   /**
@@ -827,12 +843,7 @@ export class TableSubsystems {
         return;
       }
 
-      const blocks = this.readCellBlocks(sourceCell).map(block => ({
-        ...block,
-        data: structuredClone(block.data),
-      }));
-
-      this.pasteCellPayload(targetCell, { blocks });
+      this.pasteCellPayload(targetCell, { blocks: this.readCellBlocks(sourceCell) });
       this.host.model.setCellBlocks(
         target.row,
         target.col,
@@ -865,27 +876,27 @@ export class TableSubsystems {
   /**
    * Clear the contents of a whole row/column from the grip menu.
    */
-  private clearRangeContents(type: 'row' | 'col', index: number): void {
+  private clearRangeContents(type: 'row' | 'col', index: number, count: number): void {
     const gridEl = this.host.gridElement;
 
     if (!gridEl || this.host.readOnly) {
       return;
     }
 
-    this.clearCellsContent(this.rangeCells(gridEl, type, index));
+    this.clearCellsContent(this.rangeCells(gridEl, type, index, count));
   }
 
   /**
    * Paint a whole row/column from the grip menu's color submenu.
    */
-  private colorRange(type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode): void {
+  private colorRange(type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode, count: number): void {
     const gridEl = this.host.gridElement;
 
     if (!gridEl || this.host.readOnly) {
       return;
     }
 
-    this.handleCellColorChange(this.rangeCells(gridEl, type, index), color, mode);
+    this.handleCellColorChange(this.rangeCells(gridEl, type, index, count), color, mode);
   }
 
   /**
@@ -986,10 +997,12 @@ export class TableSubsystems {
         this.rowColControls?.refresh();
       }
 
-      if (action.type === 'duplicate-row') {
-        this.duplicateRangeContent(gridEl, 'row', action.index, action.index + 1);
-      } else if (action.type === 'duplicate-col') {
-        this.duplicateRangeContent(gridEl, 'col', action.index, action.index + 1);
+      if (action.type === 'duplicate-row' || action.type === 'duplicate-col') {
+        const count = action.count ?? 1;
+
+        Array.from({ length: count }).forEach((_, i) => {
+          this.duplicateRangeContent(gridEl, action.type === 'duplicate-row' ? 'row' : 'col', action.index + i, action.index + count + i);
+        });
       }
 
       if (!result.moveSelection) {
@@ -1041,12 +1054,16 @@ export class TableSubsystems {
         this.host.model.addColumn(action.index + 1);
         break;
       case 'duplicate-row':
-        // The copy starts life as an empty row; its content is deep-copied in
+        // The copies start life as empty rows; their content is deep-copied in
         // duplicateRangeContent() once the DOM half has rendered the new cells.
-        this.host.model.addRow(action.index + 1);
+        Array.from({ length: action.count ?? 1 }).forEach(() => {
+          this.host.model.addRow(action.index + (action.count ?? 1));
+        });
         break;
       case 'duplicate-col':
-        this.host.model.addColumn(action.index + 1);
+        Array.from({ length: action.count ?? 1 }).forEach(() => {
+          this.host.model.addColumn(action.index + (action.count ?? 1));
+        });
         break;
       case 'move-row':
         // The model refuses only the moves that would tear a merge, and the
@@ -1058,9 +1075,14 @@ export class TableSubsystems {
         this.host.model.moveColumn(action.fromIndex, action.toIndex);
         break;
       case 'delete-row':
-        return this.host.model.deleteRow(action.index);
       case 'delete-col':
-        return this.host.model.deleteColumn(action.index);
+        return {
+          blocksToDelete: Array.from({ length: action.count ?? 1 }).flatMap(() => (
+            action.type === 'delete-row'
+              ? this.host.model.deleteRow(action.index).blocksToDelete
+              : this.host.model.deleteColumn(action.index).blocksToDelete
+          )),
+        };
       case 'toggle-heading':
       case 'toggle-heading-column':
         // Metadata only — handled after executeRowColAction
@@ -1121,27 +1143,66 @@ export class TableSubsystems {
     this.scrollHaze?.update();
   }
 
-  private handleCellCopy(cells: HTMLElement[], clipboardData: DataTransfer): void {
-    const entries = this.collectCellBlockData(cells);
+  /**
+   * Clipboard payload for the selected cells, or null when nothing is copied.
+   * Heading flags travel only when the range holds the heading row/column.
+   */
+  private buildCellClipboardPayload(cells: HTMLElement[]): TableCellsClipboard | null {
+    const sanitizeReference = (block: ClipboardBlockData): ClipboardBlockData => {
+      const text = block.data.text;
+
+      return {
+        ...block,
+        data: typeof text === 'string' && text.includes(PAGE_REFERENCE_ATTR)
+          ? { ...block.data, text: clean(text, INLINE_TEXT_SANITIZE) }
+          : block.data,
+        ...(block.children === undefined ? {} : { children: block.children.map(sanitizeReference) }),
+      };
+    };
+
+    // Copy reads preservedData before save; leave that live object untouched.
+    const entries = this.collectCellBlockData(cells).map(entry => ({
+      ...entry,
+      blocks: entry.blocks.map(sanitizeReference),
+    }));
 
     if (entries.length === 0) {
-      return;
+      return null;
     }
 
     const payload = serializeCellsToClipboard(entries);
+    const hasRowZero = entries.some(entry => entry.row === 0);
+    const hasColZero = entries.some(entry => entry.col === 0);
+
+    if (this.host.model.withHeadings && hasRowZero) {
+      payload.withHeadings = true;
+    }
+
+    if (this.host.model.withHeadingColumn && hasColZero) {
+      payload.withHeadingColumn = true;
+    }
+
+    return payload;
+  }
+
+  private handleCellCopy(cells: HTMLElement[], clipboardData: DataTransfer): void {
+    const payload = this.buildCellClipboardPayload(cells);
+
+    if (payload === null) {
+      return;
+    }
 
     clipboardData.setData('text/html', buildClipboardHtml(payload, getElementDirection(this.host.gridElement)));
     clipboardData.setData('text/plain', buildClipboardPlainText(payload));
   }
 
   private handleCellCopyViaButton(cells: HTMLElement[]): void {
-    const entries = this.collectCellBlockData(cells);
+    const payload = this.buildCellClipboardPayload(cells);
 
-    if (entries.length === 0) {
+    if (payload === null) {
       return;
     }
 
-    const payload = serializeCellsToClipboard(entries);
     const html = buildClipboardHtml(payload, getElementDirection(this.host.gridElement));
     const plainText = buildClipboardPlainText(payload);
 
@@ -1251,19 +1312,18 @@ export class TableSubsystems {
   }
 
   /**
-   * Snapshot a cell's blocks as insertable payload data.
+   * Snapshot a cell's blocks as insertable payload data, children nested
+   * under their parent. Deep-cloned: preservedData is the live saved object.
    */
   private readCellBlocks(cell: HTMLElement): ClipboardBlockData[] {
-    const ids = this.host.cellBlocks?.getBlockIdsFromCells([cell]) ?? [];
+    const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
 
-    return ids
-      .map(id => this.host.api.blocks.getById(id))
+    return Array.from(container?.children ?? [])
+      .map(blockEl => this.host.api.blocks.getById(blockEl.getAttribute('data-blok-id') ?? ''))
       .filter((block): block is BlockAPI => block !== null && block !== undefined)
-      .map(block => ({
-        tool: block.name,
-        data: block.preservedData,
-        ...(Object.keys(block.preservedTunes).length > 0 ? { tunes: block.preservedTunes } : {}),
-      }));
+      // A list item's children sit beside it in the container and travel inside it.
+      .filter(block => !this.isNestedUnderCellBlock(block))
+      .map(block => structuredClone(toClipboardBlock(this.host.api, block)));
   }
 
   private handleCellColorChange(cells: HTMLElement[], color: string | null, mode: CellColorMode): void {
@@ -1356,6 +1416,14 @@ export class TableSubsystems {
     }
   }
 
+  /** A child of another cell block: it travels inside that block. */
+  private isNestedUnderCellBlock(block: BlockAPI): boolean {
+    const tableId = this.host.blockId;
+
+    // Without the table's id every parented block would look nested and be dropped.
+    return tableId !== undefined && typeof block.parentId === 'string' && block.parentId !== tableId;
+  }
+
   private collectCellBlockData(
     cells: HTMLElement[],
   ): Array<{
@@ -1385,32 +1453,14 @@ export class TableSubsystems {
         return { row: rowIndex, col: colIndex, blocks };
       }
 
-      container.querySelectorAll('[data-blok-id]').forEach(blockEl => {
+      // Nested children travel inside their parent. A list item's sit beside it, so skip by parent.
+      Array.from(container.children).forEach(blockEl => {
         const blockId = blockEl.getAttribute('data-blok-id');
+        const block = blockId === null ? undefined : this.host.api.blocks.getById(blockId);
 
-        if (!blockId) {
-          return;
+        if (block && !this.isNestedUnderCellBlock(block)) {
+          blocks.push(toClipboardBlock(this.host.api, block));
         }
-
-        const blockIndex = this.host.api.blocks.getBlockIndex(blockId);
-
-        if (blockIndex === undefined) {
-          return;
-        }
-
-        const block = this.host.api.blocks.getBlockByIndex(blockIndex);
-
-        if (!block) {
-          return;
-        }
-
-        blocks.push({
-          tool: block.name,
-          data: block.preservedData,
-          ...(Object.keys(block.preservedTunes).length > 0
-            ? { tunes: block.preservedTunes }
-            : {}),
-        });
       });
 
       // Read-only legacy cells can render plain text without mounted block holders.
@@ -1460,17 +1510,28 @@ export class TableSubsystems {
         this.host.api.blocks.setPointerDragActive?.(active);
       },
       onSelectionActiveChange: (hasSelection, isMultiCell) => {
-        if (this.resize) {
-          this.resize.enabled = !hasSelection;
-        }
-
         // A single-cell caret box is not a range: it exists whenever the caret
-        // is anywhere in the table, so gating these two on it left the corner
-        // drag and the "+" buttons permanently dead after one click. Only a
+        // is anywhere in the table, so gating these on it left column resize,
+        // the corner drag and the "+" buttons dead after one click. Only a
         // real multi-cell range can conflict with those pointer gestures.
+        if (this.resize) {
+          this.resize.enabled = !isMultiCell;
+        }
         this.addControls?.setInteractive(!isMultiCell);
         this.cornerDrag?.setInteractive(!isMultiCell);
         this.rowColControls?.setGripsDisplay(!hasSelection);
+
+        // A merged cell pins one grip pair standing for all the rows/cols it covers.
+        const caretRange = hasSelection && !isMultiCell ? this.cellSelection?.getSelectedRange() : null;
+
+        this.rowColControls?.pinCell(caretRange
+          ? {
+            row: caretRange.minRow,
+            col: caretRange.minCol,
+            rowSpan: caretRange.maxRow - caretRange.minRow + 1,
+            colSpan: caretRange.maxCol - caretRange.minCol + 1,
+          }
+          : null);
       },
       onSelectionRangeChange: () => {
         // Selection finalized — restore grips so hover works normally
@@ -1577,8 +1638,11 @@ export class TableSubsystems {
 
     const html = e.clipboardData.getData('text/html');
     const blokPayload = parseClipboardHtml(html, tool => this.toolSanitizeConfig(tool));
-    const externalPayload = blokPayload === null ? parseGenericHtmlTable(html) : null;
-    const payload = blokPayload ?? externalPayload;
+    // Raw clipboard HTML skips the paste module's pre-passes.
+    const preprocessed = blokPayload === null && html !== '' ? preprocessPastedHtml(html, { keepTables: true }) : '';
+    const externalPayload = blokPayload === null ? parseGenericHtmlTable(preprocessed) : null;
+    const plainTextPayload = html === '' ? parsePlainTextGrid(e.clipboardData.getData('text/plain')) : null;
+    const payload = blokPayload ?? externalPayload ?? plainTextPayload;
 
     if (!payload) {
       return;
@@ -1588,10 +1652,12 @@ export class TableSubsystems {
      * If the pasted HTML contains multiple tables (e.g. from Google Docs),
      * don't intercept — let the Paste module handle it as a document-level paste
      * so each table becomes a separate block without overwriting existing cells.
+     * A table nested in a cell is that cell's content, not a separate table.
      */
     if (
       externalPayload !== null &&
-      new DOMParser().parseFromString(html, 'text/html').querySelectorAll('table').length > 1
+      Array.from(new DOMParser().parseFromString(preprocessed, 'text/html').querySelectorAll('table'))
+        .filter(table => (table.parentElement?.closest('table') ?? null) === null).length > 1
     ) {
       return;
     }
@@ -1625,28 +1691,120 @@ export class TableSubsystems {
     const targetRowIndex = parseInt(targetCell.getAttribute(CELL_ROW_ATTR) ?? '0', 10);
     const targetColIndex = parseInt(targetCell.getAttribute(CELL_COL_ATTR) ?? '0', 10);
 
-    if (payload.rows === 1 && payload.cols === 1) {
-      const singleCell = payload.cells[0][0];
-      // Inline caret-insert only works for plain text blocks. Anything else
-      // (image/embed/code, and list items — which DO carry data.text but would
-      // lose their list structure in a text join) must be recreated as real
-      // blocks in the target cell instead.
-      const isTextOnly = singleCell.blocks.every(
-        block => block.tool === 'paragraph' && typeof block.data.text === 'string'
-      );
+    // Decided on the pre-passed HTML, where app chrome (copy buttons) is gone;
+    // taken from the raw HTML so the paste module runs its pre-passes once.
+    const contentOutsideTable = externalPayload !== null && pastedContentOutsideTable(preprocessed) !== null
+      ? pastedContentOutsideTable(html)
+      : null;
 
-      if (isTextOnly) {
-        this.insertSingleCellPayloadInline(singleCell);
+    // Inline caret-insert keeps only text. A list item, a block colour or any
+    // other block data would be lost, so those blocks are recreated instead.
+    const isTextOnlySingleCell = payload.rows === 1 && payload.cols === 1 && payload.cells[0][0].blocks.every(
+      block => block.tool === 'paragraph' && isTextSerializable(block)
+    );
 
-        return;
+    const pasteCells = (): void => {
+      if (isTextOnlySingleCell) {
+        this.insertSingleCellPayloadInline(payload.cells[0][0]);
+      } else {
+        this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
       }
+    };
 
-      this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
+    if (contentOutsideTable === null) {
+      pasteCells();
 
       return;
     }
 
-    this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
+    // The cells, the block after the table and the paste into it are one
+    // undo step. The paste lands async, so the step stays open until it does.
+    this.host.api.blocks.beginTransaction?.();
+
+    // Called from several exits (timeout, settle, failure); the pair must stay balanced.
+    const transaction = { open: true };
+    const endTransaction = (): void => {
+      if (transaction.open) {
+        transaction.open = false;
+        this.host.api.blocks.endTransaction?.();
+      }
+    };
+
+    try {
+      pasteCells();
+    } catch (error) {
+      endTransaction();
+      throw error;
+    }
+
+    void this.pasteAfterTable(contentOutsideTable, endTransaction);
+  }
+
+  /**
+   * Paste the content that came around a pasted table as blocks after this
+   * table, at its level, in their original order. It goes through the editor's
+   * paste handling, the only way a tool can turn HTML into blocks; the empty
+   * default block it lands on is replaced by the pasted blocks.
+   * Never rejects: the caller does not await it.
+   */
+  private async pasteAfterTable(content: { html: string; text: string }, endTransaction: () => void): Promise<void> {
+    const tableId = this.host.blockId;
+    const placeholder: { block: BlockAPI | null } = { block: null };
+
+    try {
+      if (tableId === undefined) {
+        return;
+      }
+
+      const block = this.host.api.blocks.insertAt(undefined, {}, { position: { after: tableId } });
+      const target = findOwn(block.holder, '[contenteditable="true"]') ?? block.holder;
+
+      placeholder.block = block;
+      // Moves the selection out of the cell: a paste merges into the caret's block.
+      this.host.api.caret.setToBlock(block, 'start');
+
+      const event = new Event('paste', { bubbles: true, cancelable: true });
+      const flavors: Record<string, string> = { 'text/html': content.html, 'text/plain': content.text };
+
+      Object.defineProperty(event, 'clipboardData', {
+        value: { types: Object.keys(flavors), getData: (type: string): string => flavors[type] ?? '' },
+      });
+      // Unmarked, it would start a gesture and close the undo step mid-paste.
+      markPasteContinuation(event);
+      target.dispatchEvent(event);
+
+      // A stalled paste (a lazy chunk that never loads) must not hold the undo
+      // step open, or the user's next edits join the paste's step.
+      const timer = setTimeout(endTransaction, PASTE_CONTINUATION_TIMEOUT_MS);
+
+      await pasteContinuationSettled(event).finally(() => clearTimeout(timer));
+    } catch (error) {
+      logLabeled('Table: could not paste the content around the pasted table', 'warn', error);
+    }
+
+    try {
+      if (placeholder.block !== null) {
+        await this.removeEmptyPlaceholder(placeholder.block);
+      }
+    } catch (error) {
+      logLabeled('Table: could not remove the empty block after the table', 'warn', error);
+    } finally {
+      endTransaction();
+    }
+  }
+
+  /** Nothing was pasted into it: the empty block must not stay behind. */
+  private async removeEmptyPlaceholder(block: BlockAPI): Promise<void> {
+    // Editor teardown detaches every holder; its blocks API is gone with it.
+    if (!block.holder.isConnected) {
+      return;
+    }
+
+    const index = this.host.api.blocks.getBlockIndex(block.id);
+
+    if (index !== undefined && this.host.api.blocks.getById(block.id)?.isEmpty === true) {
+      await this.host.api.blocks.delete(index);
+    }
   }
 
   /**
@@ -1961,41 +2119,27 @@ export class TableSubsystems {
     cell: HTMLElement,
     payloadCell: { blocks: ClipboardBlockData[] },
   ): void {
-    // Clear existing blocks in this cell
-    if (this.host.cellBlocks) {
-      const existingIds = this.host.cellBlocks.getBlockIdsFromCells([cell]);
-
-      this.host.cellBlocks.deleteBlocks(existingIds);
-    }
-
+    const cellBlocks = this.host.cellBlocks;
     const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
 
-    if (!container) {
+    if (!cellBlocks || !container) {
       return;
     }
 
+    cellBlocks.deleteBlocks(cellBlocks.getBlockIdsFromCells([cell]));
+
     if (payloadCell.blocks.length === 0) {
-      this.host.cellBlocks?.ensureCellHasBlock(cell);
+      cellBlocks.ensureCellHasBlock(cell);
 
       return;
     }
 
     for (const blockData of payloadCell.blocks) {
-      // The 8th argument is the block's tunes: the payload collected them and
-      // this call used to omit them, so every copied cell lost its tunes.
-      const block = this.host.api.blocks.insert(
-        blockData.tool,
-        blockData.data,
-        {},
-        this.host.cellBlocks?.indexAfterTableSubtree() ?? this.host.api.blocks.getBlocksCount(),
-        false,
-        false,
-        undefined,
-        blockData.tunes,
-      );
+      const block = cellBlocks.insertClipboardBlock(blockData);
 
       container.appendChild(block.holder);
       this.host.api.blocks.setBlockParent(block.id, this.host.blockId ?? '');
+      cellBlocks.insertClipboardChildren(block.id, blockData.children);
     }
   }
 }

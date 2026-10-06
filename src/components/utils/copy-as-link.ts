@@ -2,6 +2,7 @@ import type { BlockToolData } from '../../../types';
 import type { BlockToolAdapter } from '../tools/block';
 import { convertStringToBlockData } from './blocks';
 import { generateBlockId } from './id-generator';
+import { safeHref } from './sanitize-url';
 
 /** What a block with `copyAsLink` copies as. */
 export interface CopyLink {
@@ -10,13 +11,16 @@ export interface CopyLink {
 }
 
 /**
- * `<a href="url">text</a>`, both escaped. An empty text shows the url.
+ * An unsafe URL never becomes an href. An empty text shows the url.
  * @param link - the link to write
  */
 export const linkToHtml = (link: CopyLink): string => {
   const anchor = document.createElement('a');
+  const href = safeHref(link.url);
 
-  anchor.setAttribute('href', link.url);
+  if (href !== null) {
+    anchor.setAttribute('href', href);
+  }
   anchor.textContent = link.text === '' ? link.url : link.text;
 
   return anchor.outerHTML;

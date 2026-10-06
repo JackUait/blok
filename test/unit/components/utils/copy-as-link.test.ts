@@ -36,6 +36,15 @@ describe('copy-as-link', () => {
     it('shows the url when the text is empty', () => {
       expect(linkToHtml({ url: 'https://x.test/p1', text: '' })).toBe('<a href="https://x.test/p1">https://x.test/p1</a>');
     });
+
+    it('does not put an unsafe url in copied HTML', () => {
+      const holder = document.createElement('div');
+
+      holder.innerHTML = linkToHtml({ url: 'java\nscript:alert(1)', text: 'Plans' });
+
+      expect(holder.querySelector('a[href]')).toBeNull();
+      expect(holder.textContent).toBe('Plans');
+    });
   });
 
   describe('linkToBlock', () => {

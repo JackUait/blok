@@ -15,6 +15,23 @@ import type {
 import type { UseBlokConfig } from './types';
 
 /**
+ * Calls emit-mapped listeners read from a vnode's props. Vue stores one as a
+ * function, or as an array when several are bound to the same event.
+ * @param vnodeProps - the component vnode's props
+ * @param keys - listener keys, e.g. `onSave`
+ * @param data - the payload
+ */
+const callVnodeListeners = (vnodeProps: Record<string, unknown> | null, keys: string[], data: OutputData): void => {
+  const listeners: unknown[] = keys.flatMap((key) => vnodeProps?.[key] ?? []);
+
+  for (const listener of listeners) {
+    if (typeof listener === 'function') {
+      (listener as (payload: OutputData) => void)(data);
+    }
+  }
+};
+
+/**
  * The blessed all-in-one component for embedding Blok in Vue. Wires `useBlok`
  * and `BlokContent`, maps Vue emits onto the core config callbacks (gated on
  * listener presence, since their mere presence makes core do extra work), and
@@ -91,6 +108,10 @@ export const BlokEditor = defineComponent({
     persistence: { type: Object as PropType<BlokConfig['persistence']>, default: undefined },
     /** Real-time multiplayer against the server's sync service. Mutually exclusive with persistence. */
     collaboration: { type: Object as PropType<BlokConfig['collaboration']>, default: undefined },
+    /** Your app's id for this document; tabs showing the same id stay in sync. Mount-fixed. */
+    documentId: { type: String as PropType<BlokConfig['documentId']>, default: undefined },
+    /** Live sync between tabs of this browser. On by default. */
+    tabSync: { type: [Boolean, Object] as PropType<BlokConfig['tabSync']>, default: undefined },
     /** Opt-in: clicks on the host page below the editor append a block. */
     captureClicksBelowEditor: { type: Boolean as PropType<boolean | undefined>, default: undefined },
     /** Changing this prop's identity destroys and recreates the editor. */
@@ -186,6 +207,14 @@ export const BlokEditor = defineComponent({
       // v-model:data binding or an explicit @save listener consumes it.
       if (hasListener('onSave') || hasListener('onUpdate:data')) {
         config.onSave = (data: OutputData): void => {
+          // Vue drops emits once unmounted, but destroy()'s final save lands
+          // after that, so call the listeners straight from the vnode.
+          if (instance?.isUnmounted === true) {
+            callVnodeListeners(instance.vnode.props, ['onUpdate:data', 'onSave'], data);
+
+            return;
+          }
+
           emit('update:data', data);
           emit('save', data);
         };

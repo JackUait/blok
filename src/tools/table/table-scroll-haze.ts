@@ -28,14 +28,12 @@ const HAZE_CLASSES = [
 ];
 
 const LEFT_HAZE_CLASSES = [
-  'left-0',
   'bg-linear-to-r',
   'from-white/80',
   'to-transparent',
 ];
 
 const RIGHT_HAZE_CLASSES = [
-  'right-5',
   'bg-linear-to-l',
   'from-white/80',
   'to-transparent',
@@ -145,25 +143,26 @@ export class TableScrollHaze {
     const startHidden = fromStart > SCROLL_THRESHOLD;
     const endHidden = maxScroll > SCROLL_THRESHOLD && fromStart < maxScroll - SCROLL_THRESHOLD;
 
-    this.placeHazes(direction);
+    this.placeHazes();
     this.setVisible(this.leftHaze, direction === 'rtl' ? endHidden : startHidden);
     this.setVisible(this.rightHaze, direction === 'rtl' ? startHidden : endHidden);
   }
 
   /**
-   * The wrapper's inline-end padding is on the left in RTL, so both hazes
-   * shift to keep hugging the scroller. LTR keeps the class offsets.
+   * Hazes hug the scroller's clip box. It is not the wrapper's content box:
+   * the scroller hangs into the inline-end padding (pill room in tables.css).
    */
-  private placeHazes(direction: 'ltr' | 'rtl'): void {
-    if (!this.leftHaze || !this.rightHaze) {
+  private placeHazes(): void {
+    const sc = this.scrollContainer;
+
+    if (!this.leftHaze || !this.rightHaze || !sc || !this.wrapper) {
       return;
     }
 
-    const isRtl = direction === 'rtl';
-    const padding = isRtl && this.wrapper ? getComputedStyle(this.wrapper).paddingLeft : '';
+    const right = this.wrapper.clientWidth - sc.offsetLeft - sc.offsetWidth;
 
-    this.leftHaze.style.left = padding;
-    this.rightHaze.style.right = isRtl ? '0px' : '';
+    this.leftHaze.style.left = `${sc.offsetLeft}px`;
+    this.rightHaze.style.right = `${right}px`;
   }
 
   private setVisible(el: HTMLElement | null, visible: boolean): void {

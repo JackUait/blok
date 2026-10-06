@@ -6,6 +6,7 @@ import { sameMarkup } from '../markup/model';
 export interface Snapshot {
   rect: ImageCrop;
   ratioKey: string;
+  portrait: boolean;
   geometry: Geometry;
   filter: string;
   strength: number;
@@ -23,7 +24,7 @@ export interface CropHistory {
 // Camera round trips leave float noise; smaller changes are not a new step.
 const SAME = 1e-6;
 
-const same = (a: Snapshot, b: Snapshot): boolean => a.ratioKey === b.ratioKey
+const same = (a: Snapshot, b: Snapshot): boolean => a.ratioKey === b.ratioKey && a.portrait === b.portrait
   && a.filter === b.filter && a.strength === b.strength && ADJUST_KEYS.every((k) => a.adjust[k] === b.adjust[k])
   && a.geometry.rotation === b.geometry.rotation && a.geometry.flipX === b.geometry.flipX
   && Math.abs(a.geometry.straighten - b.geometry.straighten) < SAME

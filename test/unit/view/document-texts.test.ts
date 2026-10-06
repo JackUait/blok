@@ -54,6 +54,23 @@ describe('extractTexts / injectTexts', () => {
     expect(injectTexts(original, extractTexts(original))).toEqual(original);
   });
 
+  it('offers each tab title for translation and writes it back in place', () => {
+    const original = {
+      blocks: [
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'Overview', icon: '📋' } },
+        { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'Body' } },
+      ],
+    };
+
+    expect(extractTexts(original)).toEqual(['Overview', 'Body']);
+    expect(injectTexts(original, ['Обзор', 'Текст']).blocks).toEqual([
+      { id: 'tabs', type: 'tabs', data: {} },
+      { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'Обзор', icon: '📋' } },
+      { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'Текст' } },
+    ]);
+  });
+
   it('round-trips with code included too', () => {
     const original = richDocument();
     const options = { includeCode: true };
@@ -522,6 +539,21 @@ describe('extractTexts / injectTexts', () => {
     });
   });
 
+  /**
+   * The returned document is stored. A `__proto__` key in saved JSON is an own
+   * key; plain assignment would hit the prototype setter and drop it.
+   * Built with JSON.parse: an object literal would set the prototype instead.
+   */
+  it('keeps every __proto__ key of the document it returns', () => {
+    const data: unknown = JSON.parse(
+      '{"__proto__":{"top":1},"blocks":[{"type":"paragraph","data":{"text":"x","other":1,"__proto__":{"keep":"me"},"meta":{"__proto__":{"deep":true}}}}]}'
+    );
+
+    expect(JSON.stringify(injectTexts(data, ['y']))).toBe(
+      '{"__proto__":{"top":1},"blocks":[{"type":"paragraph","data":{"text":"y","other":1,"__proto__":{"keep":"me"},"meta":{"__proto__":{"deep":true}}}}]}'
+    );
+  });
+
   it('does not mutate the input document', () => {
     const data = richDocument();
     const snapshot = richDocument();
@@ -565,18 +597,21 @@ describe('extractTexts / injectTexts', () => {
     });
   });
 
-  it('extracts a page block\'s cached title and injects its translation back', () => {
+  it('never extracts or translates a page block\'s legacy cached metadata', () => {
+    const cachedPage = { type: 'page', data: { pageId: 'p1', cache: { title: 'Private title', icon: { type: 'emoji', value: '🗺' } } } };
     const data = {
       blocks: [
-        { type: 'page', data: { pageId: 'p1', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } } },
+        cachedPage,
+        { type: 'paragraph', data: { text: 'Hello' } },
         { type: 'page', data: { pageId: 'p2' } },
       ],
     };
 
-    expect(extractTexts(data)).toEqual(['Roadmap']);
-    expect(injectTexts(data, ['Дорожная карта'])).toEqual({
+    expect(extractTexts(data)).toEqual(['Hello']);
+    expect(injectTexts(data, ['Привет'])).toEqual({
       blocks: [
-        { type: 'page', data: { pageId: 'p1', cache: { title: 'Дорожная карта', icon: { type: 'emoji', value: '🗺' } } } },
+        cachedPage,
+        { type: 'paragraph', data: { text: 'Привет' } },
         { type: 'page', data: { pageId: 'p2' } },
       ],
     });

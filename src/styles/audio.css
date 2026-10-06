@@ -20,6 +20,8 @@
   --blok-audio-pad: var(--blok-space-3-5);
   --blok-audio-wave-height: 56px;
   --blok-audio-bar-height: 4px;
+  /* bar height of the dead waveform on the error card */
+  --blok-audio-flatline: 2px;
   /* lift the slim slider thumbs (volume + speed) off the track so they read as
      tactile pucks rather than flat dots */
   --blok-audio-thumb-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
@@ -27,9 +29,9 @@
   --blok-audio-play-size: 36px;
   --blok-audio-bar: var(--blok-border-subtle);
   --blok-audio-bar-played: var(--blok-text-primary);
-  /* Comet-head tint — played colour nudged toward the editor accent. Subtle by
-     design; the waveform canvas blends bars toward it only at the playhead. */
-  --blok-audio-bar-head: color-mix(in srgb, var(--blok-audio-bar-played) 68%, var(--blok-color-accent) 32%);
+  /* Playhead bar colour, blended in only at the playhead. Ink, never accent
+     blue: the playhead is an active state, and those stay neutral. */
+  --blok-audio-bar-head: var(--blok-audio-bar-played);
   --blok-audio-seek-pct: 0%;
   --blok-audio-vol-pct: 100%;
   --blok-audio-speed-pct: 50%;
@@ -70,6 +72,13 @@
   --blok-audio-disc-inner-shadow: rgba(0, 0, 0, 0.5);
   --blok-audio-label-shadow: rgba(0, 0, 0, 0.35);
   --blok-audio-spindle-catch: rgba(255, 255, 255, 0.4);
+  /* now-playing glow + beat ring, in ink so they stay neutral in both themes.
+     Driven by --blok-audio-level / --blok-audio-kick, which waveform.ts writes
+     on the figure each frame; they stay 0 under reduced motion. */
+  --blok-audio-level: 0;
+  --blok-audio-kick: 0;
+  --blok-audio-halo: color-mix(in srgb, var(--blok-text-primary) 30%, transparent);
+  --blok-audio-beat-ring: color-mix(in srgb, var(--blok-text-primary) 45%, transparent);
   /* cover overlay button — a semi-transparent dark scrim (same near-black as
      the disc, blended down to ~45% opacity so the art shows through) */
   --blok-audio-cover-scrim: color-mix(in srgb, var(--blok-overlay-dark) 50%, transparent);
@@ -313,6 +322,13 @@
       var(--blok-audio-disc-shine) 78%,
       transparent 92% 100%
     ),
+    /* a narrower bright streak opposite it, so the turn reads at a glance */
+    conic-gradient(
+      from 30deg,
+      transparent 0 72%,
+      var(--blok-audio-disc-sheen-soft) 79%,
+      transparent 86% 100%
+    ),
     /* a bright hairline run just inside the edge — the glossy outer bevel */
     radial-gradient(
       circle at center,
@@ -347,6 +363,12 @@
   inset: 36%;
   border-radius: var(--blok-radius-pill);
   background:
+    /* an off-centre printed dot — the label is otherwise round, so this is
+       what shows it turning */
+    radial-gradient(circle at 50% 22%, var(--blok-audio-disc-hole) 0 7%, transparent 9%),
+    /* a short printed line opposite it, like a line of label text */
+    linear-gradient(var(--blok-audio-disc-label-ring), var(--blok-audio-disc-label-ring))
+      50% 72% / 36% 7% no-repeat,
     /* a thin printed ring near the label rim */
     radial-gradient(
       circle at center,
@@ -364,6 +386,41 @@
   box-shadow:
     inset 0 0 0 1px var(--blok-audio-disc-rim),
     0 1px 1px var(--blok-audio-label-shadow);
+}
+
+/* beat motion: the record punches out on each beat and a soft ink halo
+   breathes with the loudness. `scale` is separate from the inline
+   `transform: rotate()` disc.ts writes, so the two never fight. */
+[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover__disc {
+  scale: calc(1 + var(--blok-audio-kick) * 0.04);
+  filter: drop-shadow(0 0 calc(var(--blok-audio-level) * 14px) var(--blok-audio-halo));
+}
+
+/* beat ring — starts at the disc edge on a hit, then grows and fades as the
+   kick decays (kick 1 → scale 1, full ink; kick 0 → scale 1.3, gone) */
+[data-blok-tool="audio"] .blok-audio-cover__placeholder::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--blok-audio-disc-size);
+  height: var(--blok-audio-disc-size);
+  translate: -50% -50%;
+  border-radius: var(--blok-radius-pill);
+  box-shadow: 0 0 0 1.5px var(--blok-audio-beat-ring);
+  scale: calc(1.3 - var(--blok-audio-kick) * 0.3);
+  opacity: var(--blok-audio-kick);
+  pointer-events: none;
+}
+
+/* with cover art there is no disc: the art itself takes the punch and glow */
+[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover img {
+  scale: calc(1 + var(--blok-audio-kick) * 0.025);
+}
+[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover:has(img) {
+  box-shadow:
+    inset 0 0 0 1px var(--blok-border-subtle),
+    0 calc(var(--blok-audio-level) * 6px) calc(var(--blok-audio-level) * 24px) var(--blok-audio-halo);
 }
 
 /* spindle hole — a crisp dark dot with a tiny rim catch */
@@ -746,31 +803,116 @@
   pointer-events: none;
 }
 
-/* ----- empty / loading / error states --------------------- */
+/* ----- empty / loading states ---------------------------- */
 [data-blok-tool="audio"][data-state="empty"] .blok-audio-inner,
 [data-blok-tool="audio"][data-state="loading"] .blok-audio-inner {
   opacity: 0.7;
 }
-[data-blok-tool="audio"][data-state="error"] .blok-audio-inner {
-  border-color: color-mix(in srgb, var(--blok-color-danger) 30%, var(--blok-border-subtle));
-  background: color-mix(in srgb, var(--blok-color-danger) 4%, var(--blok-bg-primary));
-}
 
-/* ----- error state — flat soft-danger callout (mirrors video error) ----- */
+/* ----- error state — the player, broken -------------------
+   Same card as a working track, so the failure reads as "this player", not a
+   generic alert: a cracked record that skips, and a dead waveform with a red
+   glitch where the sound should be. */
 [data-blok-tool="audio"] .blok-audio-error-state {
-  padding: var(--blok-space-3);
-  background: color-mix(in srgb, var(--blok-color-danger) 6%, var(--blok-bg-secondary));
-  border: 1px solid color-mix(in srgb, var(--blok-color-danger) 18%, var(--blok-border-subtle));
+  --blok-audio-error-ink: var(--blok-color-danger);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--blok-audio-gap);
+  padding: var(--blok-audio-pad);
+  background: var(--blok-bg-primary);
+  border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-block);
-  display: flex; gap: var(--blok-space-3); align-items: center;
+  box-shadow: var(--blok-image-shadow-resting);
   color: var(--blok-text-primary);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   text-align: start;
+  animation: blok-audio-rise var(--blok-duration-slow) var(--blok-ease-popover) both;
 }
+/* the disc is set at an angle and twitches back, like a needle stuck in a groove */
+[data-blok-tool="audio"] .blok-audio-error-state .blok-audio-cover__disc {
+  transform: rotate(-14deg);
+  animation: blok-audio-skip 2.4s steps(1) infinite;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__crack {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--blok-audio-disc-label-hi);
+  opacity: 0.85;
+  /* the crack line, drawn in the disc's 92px box (--blok-audio-disc-size) */
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 92 92' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 30 24 36 30 31 41 42 39 47M24 36l-2 8'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 92 92' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 30 24 36 30 31 41 42 39 47M24 36l-2 8'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding-block: var(--blok-space-1);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  margin-block-end: var(--blok-space-2);
+  padding: var(--blok-space-0-5) var(--blok-space-2) var(--blok-space-0-5) var(--blok-space-1-5);
+  border-radius: var(--blok-radius-pill);
+  background: color-mix(in srgb, var(--blok-audio-error-ink) 9%, transparent);
+  color: color-mix(in srgb, var(--blok-audio-error-ink) 82%, var(--blok-text-primary));
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 16px;
+}
+/* a red "signal lost" dot that keeps pinging */
+[data-blok-tool="audio"] .blok-audio-error-state__source::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-audio-error-ink);
+  animation: blok-audio-ping 1.6s ease-out infinite;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__wave {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  align-self: stretch;
+  height: 24px;
+  margin-block: var(--blok-space-2-5);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__wave span {
+  flex: 1;
+  height: var(--blok-audio-flatline);
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-audio-bar);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__wave span[data-glitch] {
+  background: var(--blok-audio-error-ink);
+  animation: blok-audio-glitch 2.4s steps(1) infinite;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__wave span[data-glitch] + span[data-glitch] {
+  animation-delay: 80ms;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blok-space-2);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__upload,
 [data-blok-tool="audio"] .blok-audio-retry {
-  margin-inline-start: auto;
-  flex-shrink: 0;
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
   padding: var(--blok-space-1-5) var(--blok-space-3);
   border-radius: var(--blok-radius-control);
   border: 1px solid var(--blok-border-subtle);
@@ -780,15 +922,59 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background var(--blok-duration-base) ease, border-color var(--blok-duration-base) ease;
+  transition: background var(--blok-duration-base) ease, border-color var(--blok-duration-base) ease, transform var(--blok-duration-base) ease;
+}
+/* the way out wears the play button's ink */
+[data-blok-tool="audio"] .blok-audio-error-state__upload {
+  border-color: transparent;
+  background: var(--blok-text-primary);
+  color: var(--blok-bg-primary);
+  box-shadow: var(--blok-image-shadow-resting);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__upload svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+[data-blok-tool="audio"] .blok-audio-error-state__upload:hover {
+  transform: translateY(-1px);
+}
+[data-blok-tool="audio"] .blok-audio-error-state__upload:active {
+  transform: scale(0.97);
 }
 [data-blok-tool="audio"] .blok-audio-retry:hover {
   background: var(--blok-bg-hover);
   border-color: var(--blok-border-primary);
 }
-[data-blok-tool="audio"] .blok-audio-retry:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"] .blok-audio-error-state__upload:focus-visible,
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-tool="audio"] .blok-audio-retry:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
+}
+@keyframes blok-audio-skip {
+  0%, 82% { transform: rotate(-14deg); }
+  86% { transform: rotate(-6deg); }
+  90% { transform: rotate(-14deg); }
+  94% { transform: rotate(-8deg); }
+}
+@keyframes blok-audio-glitch {
+  0%, 80%, 96% { height: var(--blok-audio-flatline); }
+  84% { height: 16px; }
+  88% { height: 6px; }
+  92% { height: 20px; }
+}
+@keyframes blok-audio-ping {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--blok-audio-error-ink) 45%, transparent); }
+  100% { box-shadow: 0 0 0 6px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tool="audio"] .blok-audio-error-state,
+  [data-blok-tool="audio"] .blok-audio-error-state .blok-audio-cover__disc,
+  [data-blok-tool="audio"] .blok-audio-error-state__source::before,
+  [data-blok-tool="audio"] .blok-audio-error-state__wave span[data-glitch] {
+    animation: none;
+  }
+  [data-blok-tool="audio"] .blok-audio-error-state__upload { transition: none; }
 }
 
 /* ----- hide caption in non-rendered states --------------- */

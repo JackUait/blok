@@ -53,6 +53,19 @@ describe('blok-cli binary', () => {
     expect(result.blocks[0].data.text).toBe('Hello <b>world</b>');
   });
 
+  it.each(['--convert-html', '--convert-gdocs'])('%s splits table cell content into blocks under plain Node', (flag) => {
+    const output = execFileSync(process.execPath, [BIN_PATH, flag], {
+      encoding: 'utf-8',
+      input: '<table><tr><td><p>a</p><p>b</p></td><td><ul><li>one</li></ul></td></tr><tr><td>c</td><td>d</td></tr></table>',
+    });
+    const result = JSON.parse(output) as { blocks: Array<{ id: string; type: string; data: { content?: Array<Array<{ blocks: string[] }>> } }> };
+    const content = result.blocks.find(b => b.type === 'table')?.data.content ?? [];
+    const typeOf = (id: string): string | undefined => result.blocks.find(b => b.id === id)?.type;
+
+    expect(content[0]?.[0]?.blocks.map(typeOf)).toEqual(['paragraph', 'paragraph']);
+    expect(content[0]?.[1]?.blocks.map(typeOf)).toEqual(['list']);
+  });
+
   it('--convert-gdocs converts piped Google Docs HTML to JSON', () => {
     const gdocsHtml = '<b id="docs-internal-guid-test"><p><span style="font-weight:700">Hello</span></p></b>';
     const output = execFileSync(process.execPath, [BIN_PATH, '--convert-gdocs'], {

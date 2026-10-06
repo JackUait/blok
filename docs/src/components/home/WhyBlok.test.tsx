@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { WhyBlok } from './WhyBlok';
 import { I18nProvider } from '../../contexts/I18nContext';
+import { defaultBlockTools } from '../../../../src/tools/index';
 
 const renderTable = () =>
   render(
@@ -87,9 +88,21 @@ describe('WhyBlok', () => {
     renderTable();
     const blocksRow = screen.getByText(/built-in blocks/i).closest('tr');
     expect(blocksRow).not.toBeNull();
-    // Matches `defaultBlockTools` in src/tools/index.ts (20 entries) and the
-    // 20 block sections in the docs' own tools reference.
-    expect(within(blocksRow as HTMLElement).getByText(/20 built-in/i)).toBeInTheDocument();
+    // Counts the out-of-the-box block set, not the docs reference: Page and
+    // PageLink need a host and are not in `defaultBlockTools`.
+    const count = Object.keys(defaultBlockTools).length;
+    expect(within(blocksRow as HTMLElement).getByText(`${count} built-in`)).toBeInTheDocument();
+  });
+
+  it('shows the same built-in block count in Russian', () => {
+    render(
+      <I18nProvider locale="ru">
+        <WhyBlok />
+      </I18nProvider>
+    );
+    const count = Object.keys(defaultBlockTools).length;
+    const adjective = new Intl.PluralRules('ru').select(count) === 'one' ? 'встроенный' : 'встроенных';
+    expect(screen.getByText(`${count} ${adjective}`)).toBeInTheDocument();
   });
 
   it('renders Russian copy when locale is ru', () => {

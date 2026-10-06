@@ -82,6 +82,11 @@ export declare class Table implements BlockTool {
    */
   static ownsChildren?: boolean;
 
+  /**
+   * A table copy duplicates the cell blocks its `content` names
+   */
+  static copiesOwnChildren?: boolean;
+
   constructor(options: TableConstructorOptions);
 
   /**

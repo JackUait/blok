@@ -676,6 +676,80 @@ describe('ModificationsObserver', () => {
       expect(onChange).not.toHaveBeenCalled();
     });
   });
+
+  describe('flushPendingBeforeRender', () => {
+    const setup = (): {
+      observer: ModificationsObserver;
+      eventsDispatcher: EventsDispatcher<BlokEventMap>;
+      onSave: ReturnType<typeof vi.fn>;
+      saverSave: ReturnType<typeof vi.fn>;
+      settle: (data: OutputData) => void;
+      readOnly: { isEnabled: boolean };
+    } => {
+      const onSave = vi.fn();
+      const { observer, eventsDispatcher, saverSave, readOnly, redactor, apiMethods } = createObserver({ onSave });
+      const pending: { resolve: (data: OutputData) => void } = { resolve: () => undefined };
+      const saveBeforeTeardown = vi.fn(() => new Promise<OutputData>((resolve) => {
+        pending.resolve = resolve;
+      }));
+
+      observer.state = {
+        UI: { nodes: { redactor } },
+        API: { methods: apiMethods },
+        Saver: { save: saverSave, saveBeforeTeardown },
+        ReadOnly: readOnly,
+      } as unknown as BlokModules;
+
+      return { observer, eventsDispatcher, onSave, saverSave, settle: (data) => pending.resolve(data), readOnly };
+    };
+
+    const doc: OutputData = { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'typed' } }] };
+
+    it('delivers the pending edit even when the render disables the observer and destroy() lands mid-save', async () => {
+      const { observer, eventsDispatcher, onSave, settle } = setup();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('p1') });
+
+      observer.flushPendingBeforeRender();
+      observer.disable();
+      observer.destroy();
+      settle(doc);
+      await vi.runAllTimersAsync();
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledWith(doc, expect.anything());
+    });
+
+    it('does not deliver again from the window enable() would reopen', async () => {
+      const { observer, eventsDispatcher, onSave, saverSave, settle } = setup();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('p1') });
+
+      observer.flushPendingBeforeRender();
+      observer.disable();
+      settle(doc);
+      observer.enable();
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout * 2);
+
+      expect(saverSave).not.toHaveBeenCalled();
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not deliver when read-only turns on while the save is in flight, and keeps the edit unsaved', async () => {
+      const { observer, eventsDispatcher, onSave, settle, readOnly } = setup();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('p1') });
+
+      observer.flushPendingBeforeRender();
+      readOnly.isEnabled = true;
+      settle(doc);
+      await vi.runAllTimersAsync();
+
+      expect(onSave).not.toHaveBeenCalled();
+      expect(observer.hasUnsavedChanges).toBe(true);
+    });
+  });
 });
-
-

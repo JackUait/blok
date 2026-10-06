@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 
@@ -59,6 +60,7 @@ const createBlok = async (
     window.blokInstance = blok;
     await blok.isReady;
   }, { holder: HOLDER_ID, blokBlocks: inScript(blocks, direction), dir: direction, blokStyle: style ?? null });
+  await openFixtureToggles(page, { blocks });
 };
 
 /**
@@ -254,11 +256,12 @@ test.describe('RTL block content mirrors LTR', () => {
       return { closed: xOf('tc'), open: xOf('to') };
     });
 
+    // Polled: the open toggle is opened after load, and its chevron rotates with a transition.
     await createBlok(page, blocks, 'ltr');
-    expect(await read()).toEqual({ closed: 1, open: 0 });
+    await expect.poll(read).toEqual({ closed: 1, open: 0 });
 
     await createBlok(page, blocks, 'rtl');
-    expect(await read()).toEqual({ closed: -1, open: 0 });
+    await expect.poll(read).toEqual({ closed: -1, open: 0 });
 
     // A block carries its own dir on its content wrapper (per-block direction).
     // An English toggle in an RTL editor points right; an Arabic toggle in an

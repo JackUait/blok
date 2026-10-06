@@ -189,6 +189,7 @@ const createMockAPIMethods = (): APIInterface => ({
     },
   },
   theme: {} as APIInterface['theme'],
+  viewState: {} as APIInterface['viewState'],
   rectangleSelection: {} as APIInterface['rectangleSelection'],
   config: {},
 });

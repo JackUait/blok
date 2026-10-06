@@ -349,17 +349,18 @@ export const buildColumnResizers = (
  * of truth (Column.save reads it back), so setting it to 1 resizes live and a
  * full editor.save() correctly omits the now-default widthRatio.
  *
- * NOTE: this does not actively clear a widthRatio already written to the live
- * Yjs doc by a prior resize — Column.save() returns {} for the even-split
- * default, and the per-key data sync never deletes keys absent from save()
- * output. So a reset that follows a persisted resize leaves the old ratio in
- * the live doc (visible only to undo/redo and remote peers, never to
- * save()/reload). Fully clearing it requires the per-key sync to delete omitted
- * keys; tracked as a known limitation rather than recreating blocks mid-drop.
+ * flex-grow sits outside the column's observed subtree, so a changed column
+ * dispatches its own change: the flush then drops widthRatio from the shared
+ * document, and other tabs and peers see the even split.
  */
 export const resetColumnsToEvenWidth = (api: API, columnListId: string): void => {
   for (const column of api.blocks.getChildren(columnListId)) {
+    const wasEven = ['', '1'].includes(column.holder.style.flexGrow);
+
     column.holder.style.flexGrow = '1';
+    if (!wasEven) {
+      column.dispatchChange();
+    }
   }
 };
 

@@ -688,7 +688,7 @@ describe('BlokDataHandler', () => {
     });
   });
 
-  describe('a block that copies as a link (page) never pastes as a second block', () => {
+  describe('a block that copies as a link (page) pastes as a link outside its document', () => {
     const urlOf = (pageId: unknown): string => `https://x.test/editor/page/${String(pageId)}`;
     const linkText = (pageId: string, title: string): string => `<a href="${urlOf(pageId)}">${title}</a>`;
 
@@ -750,7 +750,15 @@ describe('BlokDataHandler', () => {
       expect(insertedBlocks[0]).toEqual(expect.objectContaining({ tool: 'page', data: { pageId: 'p1', cache: { title: 'Plans' } } }));
     });
 
-    it('links when a block for the same page is still live (cut, then undo), and the cut stays spent', async () => {
+    it('pastes a copied page as another entry point while a block for the same page is live', async () => {
+      const { handler, insertedBlocks } = setup({ liveBlocks: [{ name: 'page', preservedData: { pageId: 'p1' } }] });
+
+      await handler.handle(JSON.stringify([pageEntry({ data: { pageId: 'p1', textColor: 'red' } })]), { canReplaceCurrentBlock: false });
+
+      expect(insertedBlocks).toEqual([expect.objectContaining({ tool: 'page', data: { pageId: 'p1', textColor: 'red' } })]);
+    });
+
+    it('keeps a cut page while the same page is live (cut, then undo), and the cut stays spent', async () => {
       const { handler, insertedBlocks, live } = setup({ liveBlocks: [{ name: 'page', preservedData: { pageId: 'p1' } }] });
       const payload = JSON.stringify([pageEntry({ cut: rememberCut(), link: { url: urlOf('p1'), text: 'Plans' } })]);
 
@@ -758,7 +766,7 @@ describe('BlokDataHandler', () => {
       live.splice(0, live.length);
       await handler.handle(payload, { canReplaceCurrentBlock: false });
 
-      expect(insertedBlocks.map((block) => block.tool)).toEqual(['paragraph', 'paragraph']);
+      expect(insertedBlocks.map((block) => block.tool)).toEqual(['page', 'paragraph']);
     });
 
     it('does not count a different live page as the same page', async () => {
@@ -769,7 +777,7 @@ describe('BlokDataHandler', () => {
       expect(insertedBlocks[0].tool).toBe('page');
     });
 
-    it('recreates each page of a cut once, even when two entries point at the same page', async () => {
+    it('keeps every page of a cut, two entries for one page included', async () => {
       const { handler, insertedBlocks } = setup();
       const token = rememberCut();
       const payload = JSON.stringify([
@@ -780,8 +788,7 @@ describe('BlokDataHandler', () => {
 
       await handler.handle(payload, { canReplaceCurrentBlock: false });
 
-      expect(insertedBlocks.map((block) => block.tool)).toEqual(['page', 'paragraph', 'page']);
-      expect(insertedBlocks[1].data).toEqual({ text: linkText('p1', 'Plans') });
+      expect(insertedBlocks.map((block) => block.data.pageId)).toEqual(['p1', 'p1', 'p2']);
     });
 
     it('drops the subtree of an entry that became a link', async () => {
@@ -823,11 +830,19 @@ describe('BlokDataHandler', () => {
       expect(insertedBlocks[0].data).toEqual({ text: '<a href="https://carried.test/p1">Carried</a>' });
     });
 
+    it('pastes a page with nothing to link to as a non-owning page reference', async () => {
+      const { handler, insertedBlocks } = setup({ copyAsLink: () => null });
+
+      await handler.handle(JSON.stringify([pageEntry()]), { canReplaceCurrentBlock: false });
+
+      expect(insertedBlocks).toEqual([expect.objectContaining({ tool: 'paragraph', data: { text: '<a data-blok-page-id="p1">Page</a>' } })]);
+    });
+
     it('falls back to the exported text when there is nothing to link to, and skips an empty one', async () => {
       const { handler, insertedBlocks } = setup({ copyAsLink: () => null });
 
       await handler.handle(
-        JSON.stringify([pageEntry(), pageEntry({ id: 'untitled', data: { pageId: 'p3' } })]),
+        JSON.stringify([pageEntry({ data: { cache: { title: 'Plans' } } }), pageEntry({ id: 'untitled', data: { cache: {} } })]),
         { canReplaceCurrentBlock: false }
       );
 

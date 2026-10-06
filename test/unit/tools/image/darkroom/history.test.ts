@@ -4,6 +4,7 @@ import { createHistory, type Snapshot } from '../../../../../src/tools/image/dar
 const snap = (x: number, ratioKey = 'free', over: Partial<Snapshot> = {}): Snapshot => ({
   rect: { x, y: 0, w: 50, h: 50 },
   ratioKey,
+  portrait: false,
   geometry: { rotation: 0, flipX: false, straighten: 0 },
   filter: 'none',
   strength: 100,

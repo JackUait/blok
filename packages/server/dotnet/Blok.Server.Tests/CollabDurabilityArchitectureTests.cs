@@ -76,6 +76,7 @@ public sealed class CollabDurabilityArchitectureTests
     (
       "ImportWorkingSet",
       ["WriteSealed", "SyncDirectory", "RequireFence", "Publish"]),
+    ("Purge", ["Flush", "SyncDirectory", "Delete"]),
   ];
 
   /// <summary>
@@ -107,6 +108,12 @@ public sealed class CollabDurabilityArchitectureTests
       "Only ever GROWS, and only a manifest that is short of its two slots: " +
       "the call sits behind a length comparison, and a manifest has no " +
       "committed history in it to lose."),
+    (
+      "Purge",
+      false,
+      "The exclusive lock refuses live sessions. A flushed, synced tombstone " +
+      "blocks new opens and fences stale sessions before payload deletion; " +
+      "the purge tests cover the lock and PublicationOrders pins the order."),
     (
       "TryDelete",
       false,

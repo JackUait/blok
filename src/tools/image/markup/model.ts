@@ -789,6 +789,66 @@ export function eraseMarkup(list: ImageMarkup[], at: Point, radius: number, o: S
   return state.changed ? out : list;
 }
 
+const ELLIPSE_STEPS = 48;
+
+const inBox = (p: Point, r: Box): boolean => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+
+/** Liang-Barsky: does the segment a→b pass through `r`? */
+const segmentCrossesBox = (a: Point, b: Point, r: Box): boolean => {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const sides: [number, number][] = [[-dx, a.x - r.x], [dx, r.x + r.w - a.x], [-dy, a.y - r.y], [dy, r.y + r.h - a.y]];
+  const span = sides.reduce<[number, number] | null>((t, [p, q]) => {
+    if (t === null) return null;
+    if (p === 0) return q < 0 ? null : t;
+    const k = q / p;
+
+    return p < 0 ? [Math.max(t[0], k), t[1]] : [t[0], Math.min(t[1], k)];
+  }, [0, 1]);
+
+  return span !== null && span[0] <= span[1];
+};
+
+/** The mark as a line through O px points; closed when its last point joins the first. */
+const markupPath = (item: ImageMarkup, o: Size): { pts: Point[]; closed: boolean; solid: boolean } => {
+  if (isStroke(item)) return { pts: triples(item.points).map((v) => ({ x: v.x * o.w, y: v.y * o.h })), closed: false, solid: false };
+  if (isText(item)) {
+    const box = textBoxSize(item, o);
+    const t = ((item.rotation ?? 0) * Math.PI) / 180;
+    const corners: Point[] = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx = 0, sy = 0]) => {
+      const lx = (sx * box.w) / 2;
+      const ly = (sy * box.h) / 2;
+
+      return { x: item.x * o.w + lx * Math.cos(t) - ly * Math.sin(t), y: item.y * o.h + lx * Math.sin(t) + ly * Math.cos(t) };
+    });
+
+    return { pts: corners, closed: true, solid: true };
+  }
+  const solid = item.fill === true || item.type === 'magnifier';
+  const outline = shapeOutline(item, o);
+
+  if (outline !== null) return { pts: outline, closed: true, solid };
+  const a = { x: item.x1 * o.w, y: item.y1 * o.h };
+  const b = { x: item.x2 * o.w, y: item.y2 * o.h };
+
+  if (item.type === 'line' || item.type === 'arrow') return { pts: [a, b], closed: false, solid: false };
+  if (item.type === 'ellipse' || item.type === 'magnifier') {
+    return { pts: ring(pxBox(item, o), Array.from({ length: ELLIPSE_STEPS }, () => 1), 0), closed: true, solid };
+  }
+
+  return { pts: [a, { x: b.x, y: a.y }, b, { x: a.x, y: b.y }], closed: true, solid };
+};
+
+/** Does the mark's ink (or a filled mark's body) reach into `r` (O px)? A marquee picks with this. */
+export function markupIntersectsRect(item: ImageMarkup, r: Box, o: Size): boolean {
+  const { pts, closed, solid } = markupPath(item, o);
+  const edges = pts.map((a, i): [Point, Point] => [a, pts[closed ? (i + 1) % pts.length : i + 1] ?? a]);
+
+  if (pts.some((p) => inBox(p, r)) || edges.some(([a, b]) => segmentCrossesBox(a, b, r))) return true;
+
+  return solid && encloses({ x: r.x, y: r.y }, pts);
+}
+
 /** Top-most mark under `p` (O px), or null. */
 export function hitTest(m: ImageMarkup[], p: Point, o: Size, tolerance: number): ImageMarkup | null {
   return [...m].reverse().find((item) => hits(item, p, o, tolerance)) ?? null;

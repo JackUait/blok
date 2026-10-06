@@ -21,4 +21,13 @@ describe('markup-editor.css', () => {
 
     expect(Number(r)).toBe(ERASER_PX[size]);
   });
+
+  it('the marquee is a neutral hairline box that never takes the press', () => {
+    const rule = /\.blok-markup-marquee\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+    expect(rule).toMatch(/position:\s*absolute/);
+    expect(rule).toMatch(/pointer-events:\s*none/);
+    expect(rule).toMatch(/border:\s*1px\s+(solid|dashed)\s+var\(--blok-markup-box-ink\)/);
+    expect(rule).not.toMatch(/blue|#0a84ff|rgb\(\s*0,\s*1[0-9]{2},\s*255/i);
+  });
 });

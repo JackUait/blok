@@ -270,6 +270,34 @@ describe('anchored-position', () => {
       vi.unstubAllGlobals();
     });
 
+    it('also observes an anchor that is passed, so the content follows it when it resizes', () => {
+      const observe = vi.fn();
+
+      class MockResizeObserver {
+        public observe = observe;
+
+        public disconnect = vi.fn();
+
+        public unobserve = vi.fn();
+      }
+
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+
+      const content = document.createElement('div');
+      const anchor = document.createElement('button');
+
+      document.body.append(content, anchor);
+
+      const tracker = createPositionTracker(content, vi.fn(), anchor);
+
+      tracker.attach();
+
+      expect(observe).toHaveBeenCalledWith(anchor);
+
+      tracker.detach();
+      vi.unstubAllGlobals();
+    });
+
     it('does not throw when ResizeObserver is unavailable', () => {
       const originalResizeObserver = globalThis.ResizeObserver;
 

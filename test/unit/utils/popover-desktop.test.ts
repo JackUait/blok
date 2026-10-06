@@ -2135,6 +2135,44 @@ describe('PopoverDesktop', () => {
       expect(headerItem?.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(true);
     });
 
+    it('shows "Nothing found" when the slash query matches only a hidden item', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Tabs', name: 'tabs', onActivate: vi.fn() },
+          { title: 'Paragraph', name: 'paragraph', onActivate: vi.fn() },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+      // The toolbox hides a tool its container's childTools deny this way.
+      popover.toggleItemHiddenByName('tabs', true);
+      popover.filterItems('tab');
+
+      expect(instance.nodes.nothingFoundMessage).toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
+      expect(instance.itemsDefault.filter(item => !item.getElement()?.hasAttribute(DATA_ATTR.hidden))).toHaveLength(0);
+    });
+
+    it('shows "Nothing found" when the search input matches only a hidden item', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Tabs', name: 'tabs', onActivate: vi.fn() },
+          { title: 'Paragraph', name: 'paragraph', onActivate: vi.fn() },
+        ],
+        searchable: true,
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+      popover.toggleItemHiddenByName('tabs', true);
+      getMockSearchInput().emitSearch({
+        query: 'tab',
+        items: [ instance.itemsDefault.find(item => item.name === 'tabs') ],
+      });
+
+      expect(instance.nodes.nothingFoundMessage).toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
+    });
+
     it('item becomes visible again after toggleItemHiddenByName(name, false) is called', () => {
       const popover = createPopover({
         items: [

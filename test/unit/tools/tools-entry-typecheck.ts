@@ -7,13 +7,15 @@
  * declaration is wrong.
  */
 
-import type { defaultBlockTools, Columns, Embed, Bookmark, Page, Image, File, Audio, Video, ClearFormat, mountChildBlocks } from '../../../types/tools-entry';
+import type { defaultBlockTools, Columns, Tabs, TabsTool, TabTool, Embed, Bookmark, Page, Image, File, Audio, Video, ClearFormat, mountChildBlocks, TableOfContents, BlokBlockDataMap } from '../../../types/tools-entry';
 import type {
   ImageData, ImageConfig, ImageUploader,
   FileData, FileConfig, FileUploader,
   AudioData, AudioConfig, AudioUploader,
   VideoData, VideoConfig, VideoUploader,
-  PageData, PageConfig, PageInfo, PageIcon,
+  PageData, PageConfig, PageInfo, PageIcon, PageSearchResult,
+  TableOfContentsData,
+  TabsData, TabData,
 } from '../../../types/tools-entry';
 
 // defaultBlockTools must include 'database' and 'database-row' entries
@@ -23,6 +25,15 @@ const _dbRow: typeof defaultBlockTools['database-row'] = {} as const;
 // Columns must be exported from the public tools entry and usable as a tool value
 const _columns: typeof Columns = {} as typeof Columns;
 
+// Tabs, TabsTool and TabTool are exported from the runtime tools entry.
+const _tabs: typeof Tabs = {} as typeof Tabs;
+const _tabsTool: typeof TabsTool = {} as typeof TabsTool;
+const _tabTool: typeof TabTool = {} as typeof TabTool;
+const _tabData: TabData = { title: 'Tab 1', icon: '🚀' };
+const _tabsData: TabsData = {};
+const _tabsDefault: typeof defaultBlockTools.tabs = {} as const;
+const _tabDefault: typeof defaultBlockTools.tab = {} as const;
+
 // Embed and Bookmark are exported from the runtime tools entry, so their
 // declarations must exist in the published types or `import { Embed, Bookmark }`
 // won't typecheck for consumers.
@@ -31,7 +42,7 @@ const _bookmark: typeof Bookmark = {} as typeof Bookmark;
 
 // Page is exported from the runtime tools entry.
 const _page: typeof Page = {} as typeof Page;
-const _pageTypes: [PageData, PageConfig, PageInfo, PageIcon] = [] as never;
+const _pageTypes: [PageData, PageConfig, PageInfo, PageIcon, PageSearchResult] = [] as never;
 
 // defaultBlockTools must include the 'embed' and 'bookmark' entries the runtime emits
 const _embedDefault: typeof defaultBlockTools.embed = {} as const;
@@ -65,10 +76,22 @@ const _fileDefault: typeof defaultBlockTools.file = {} as const;
 const _audioDefault: typeof defaultBlockTools.audio = {} as const;
 const _videoDefault: typeof defaultBlockTools.video = {} as const;
 
+// TableOfContents is exported from the runtime tools entry and is a default block tool.
+const _toc: typeof TableOfContents = {} as typeof TableOfContents;
+const _tocDefault: typeof defaultBlockTools.table_of_contents = {} as const;
+const _tocData: BlokBlockDataMap['table_of_contents'] = { textColor: 'red' } satisfies TableOfContentsData;
+
 // Suppress unused variable warnings
 void _db;
 void _dbRow;
 void _columns;
+void _tabs;
+void _tabsTool;
+void _tabTool;
+void _tabData;
+void _tabsData;
+void _tabsDefault;
+void _tabDefault;
 void _embed;
 void _bookmark;
 void _page;
@@ -88,3 +111,6 @@ void _mountChildBlocks;
 void _fileDefault;
 void _audioDefault;
 void _videoDefault;
+void _toc;
+void _tocDefault;
+void _tocData;

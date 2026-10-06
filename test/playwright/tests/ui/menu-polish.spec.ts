@@ -60,6 +60,12 @@ for (const theme of ['light', 'dark'] as const) {
 for (const width of [1280, 390]) {
   test(`inline formatting controls have comfortable targets without clipping icons at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
+    await page.evaluate(() => {
+      const unrelated = document.createElement('div');
+
+      document.body.appendChild(unrelated);
+      unrelated.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1000, iterations: Infinity });
+    });
     const paragraph = page.getByTestId('block-wrapper')
       .filter({ hasText: 'Select these words to make them your own.' })
       .locator('[contenteditable="true"]');
@@ -68,6 +74,9 @@ for (const width of [1280, 390]) {
     const bold = page.getByRole('menuitemcheckbox', { name: 'Bold', exact: true });
 
     await expect(bold).toBeVisible();
+    await page.getByTestId('inline-toolbar').getByTestId('popover-container').first().evaluate(async menu => {
+      await Promise.all(menu.getAnimations().map(animation => animation.finished));
+    });
     const bounds = await bold.boundingBox();
     const iconBounds = await bold.getByRole('img', { includeHidden: true }).boundingBox();
 
@@ -75,8 +84,8 @@ for (const width of [1280, 390]) {
       throw new Error('Missing formatting control or icon');
     }
 
-    expect(bounds.height).toBeGreaterThanOrEqual(32);
-    expect(bounds.width).toBeGreaterThanOrEqual(32);
+    expect(bounds.height).toBeGreaterThanOrEqual(width < 651 ? 40 : 28);
+    expect(bounds.width).toBeGreaterThanOrEqual(width < 651 ? 40 : 32);
     expect(iconBounds.x).toBeGreaterThanOrEqual(bounds.x);
     expect(iconBounds.y).toBeGreaterThanOrEqual(bounds.y);
     expect(iconBounds.x + iconBounds.width).toBeLessThanOrEqual(bounds.x + bounds.width);
@@ -135,3 +144,45 @@ test('heading controls and color submenu stay usable near the viewport edge', as
   expect(pickerBounds?.x).toBeGreaterThanOrEqual(0);
   expect((pickerBounds?.x ?? 0) + (pickerBounds?.width ?? 0)).toBeLessThanOrEqual(760);
 });
+
+// Locales whose block-menu shortcuts used to be pushed past the menu edge.
+for (const locale of ['hu', 'ta']) {
+  test(`block menu rows keep their label and shortcut inside the menu (${locale})`, async ({ page }) => {
+    await page.evaluate(async lang => {
+      await window.blokInstance?.i18n.update({ locale: lang });
+    }, locale);
+    await page.locator('[data-blok-tool="header"]').click();
+    await page.getByTestId('settings-toggler').click();
+
+    const container = page.getByTestId('block-tunes-popover').getByTestId('popover-container').first();
+
+    await expect(container).toBeVisible();
+
+    const overflow = await container.evaluate(menu => {
+      const edge = menu.getBoundingClientRect();
+
+      return [...menu.querySelectorAll<HTMLElement>('[data-blok-popover-item]')]
+        .filter(row => row.getClientRects().length > 0)
+        .flatMap(row => {
+          const box = row.getBoundingClientRect();
+          const labels = [...row.querySelectorAll<HTMLElement>('*')]
+            .filter(el => [...el.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()))
+            // Screen-reader-only labels (the heading tiles) are 1px boxes by design.
+            .filter(el => el.getBoundingClientRect().width > 1);
+
+          return labels.flatMap(label => {
+            const range = document.createRange();
+
+            range.selectNodeContents(label);
+            const text = range.getBoundingClientRect();
+
+            return text.right > Math.min(box.right, edge.right) + 0.01 || text.left < Math.max(box.left, edge.left) - 0.01
+              ? [label.textContent ?? '']
+              : [];
+          });
+        });
+    });
+
+    expect(overflow).toStrictEqual([]);
+  });
+}

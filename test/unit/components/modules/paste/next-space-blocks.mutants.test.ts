@@ -354,7 +354,7 @@ describe('parseNextSpaceBlocks — table expansion edges', () => {
     );
 
     expect(out).toStrictEqual([
-      { id: 'tg', tool: 'toggle', data: { text: 'holder', isOpen: true } },
+      { id: 'tg', tool: 'toggle', data: { text: 'holder' } },
       {
         id: 'tb',
         tool: 'table',

@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON = '[data-blok-interface=blok] [data-blok-testid="settings-toggler"]';
@@ -141,6 +142,7 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
     },
     { holder: HOLDER_ID, initialData: data ?? null }
   );
+  await openFixtureToggles(page, data);
 };
 
 const saveBlok = async (page: Page): Promise<OutputData> => {
@@ -1142,6 +1144,17 @@ test.describe('Columns tool', () => {
     );
 
     expect(withRatio).toHaveLength(0);
+
+    // The shared document drops it too, after the drop glide, or other tabs keep the old widths.
+    const docRatios = await page.evaluate(() =>
+      (window.blokInstance as unknown as {
+        module: { yjsManager: { toJSON: () => Array<{ type: string; data?: { widthRatio?: number } }> } };
+      }).module.yjsManager.toJSON()
+        .filter(b => b.type === 'column')
+        .map(b => b.data?.widthRatio)
+    );
+
+    expect(docRatios).toEqual([undefined, undefined, undefined]);
   });
 
   test('side-drop indicator spans the full column-row height, not one block', async ({ page }) => {

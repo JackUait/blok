@@ -11,6 +11,7 @@
 import type { I18n } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
+import { IconPaintRoller } from '../icons';
 import { createColorPicker, formatSwatchLabel, getActivePresets } from './color-picker';
 import { COLOR_PRESETS, COLOR_PRESETS_DARK, colorVarName } from './color-presets';
 
@@ -206,7 +207,7 @@ export const buildBlockColorTunes = (options: BlockColorTuneOptions): MenuConfig
     {
       title: i18n.t('toolNames.marker'),
       name: 'block-color',
-      icon: swatch(data.textColor ? colorVarName(data.textColor, 'text') : 'currentColor', false),
+      icon: IconPaintRoller,
       children: {
         searchable: false,
         isFlippable: false,

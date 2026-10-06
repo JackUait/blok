@@ -13,7 +13,7 @@ export const RADIUS_PRIMITIVES: RadiusToken[] = [
   '0', '2', '4', '6', '8', '10', '12', '16', 'full',
 ].map((step) => ({ token: `--blok-radius-${step}` }));
 
-type Specimen = 'dialog' | 'popover' | 'callout' | 'field' | 'button' | 'mark' | 'pill' | 'caret' | 'floor';
+type Specimen = 'dialog' | 'popover' | 'callout' | 'field' | 'button' | 'mark' | 'pill' | 'caret' | 'floor' | 'table';
 
 export interface RadiusRole extends RadiusToken {
   specimen: Specimen;
@@ -32,6 +32,7 @@ export const RADIUS_ROLES: RadiusRole[] = [
   { token: '--blok-radius-mark', specimen: 'mark' },
   { token: '--blok-radius-pill', specimen: 'pill' },
   { token: '--blok-radius-notch', specimen: 'caret' },
+  { token: '--blok-radius-table', specimen: 'table' },
   { token: '--blok-radius-floor', specimen: 'floor' },
 ];
 
@@ -171,6 +172,15 @@ const specimen = (role: RadiusRole): HTMLElement => {
       text.append(painted(el('span', 'rg-caret'), value));
 
       return text;
+    }
+    case 'table': {
+      const grid = painted(el('div', 'rg-table'), value);
+
+      for (const index of [0, 1, 2, 3, 4, 5]) {
+        grid.append(el('span', index < 3 ? 'rg-table__cell rg-table__cell--head' : 'rg-table__cell'));
+      }
+
+      return grid;
     }
     case 'floor': {
       // 10 − 8 would be 2; the floor holds the child at its own token.

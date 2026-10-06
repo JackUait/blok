@@ -18,6 +18,7 @@ import { twMerge } from '../utils/tw';
 import { isHttpUrl } from '../../tools/link/registry';
 import { MetadataFetcher } from '../../tools/link/metadata-fetcher';
 import { getRecentLinks, recordRecentLink, updateRecentLinkMeta, type RecentLink } from './link-history';
+import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../shared/page-reference';
 
 const SUGGESTION_ROW_BASE = 'flex items-center gap-2.5 w-full mt-0.5 px-1.5 py-1.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
 const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer can-hover:hover:bg-item-hover-bg focus-visible:bg-item-hover-bg transition-colors`;
@@ -115,11 +116,7 @@ export class LinkInlineTool implements InlineTool {
    */
   public static get sanitize(): SanitizerConfig {
     return {
-      a: {
-        href: true,
-        target: true,
-        rel: true,
-      },
+      a: preservePageReferenceAnchor,
     };
   }
 
@@ -1617,6 +1614,18 @@ export class LinkInlineTool implements InlineTool {
     const anchorTag = this.selection.findParentTag('A');
 
     if (anchorTag instanceof HTMLAnchorElement) {
+      if (anchorTag.hasAttribute(PAGE_REFERENCE_ATTR)) {
+        // The page sanitizer drops edited URLs while this ID remains.
+        anchorTag.removeAttribute(PAGE_REFERENCE_ATTR);
+        anchorTag.removeAttribute(DATA_ATTR.mutationFree);
+        anchorTag.removeAttribute(DATA_ATTR.linkOwner);
+        anchorTag.removeAttribute('contenteditable');
+        anchorTag.removeAttribute('tabindex');
+        anchorTag.removeAttribute('draggable');
+        anchorTag.removeAttribute('role');
+        anchorTag.removeAttribute('aria-disabled');
+      }
+
       /**
        * Apply an edited link text before re-selecting: only when it actually
        * changed, so an untouched anchor keeps its inner formatting instead of

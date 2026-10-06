@@ -3,6 +3,16 @@ import type { SanitizerConfig } from '../../../types';
 import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { DatabaseRowData, PropertyValue } from '../database/types';
 
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId']);
+
+/**
+ * Top-level keys this version does not know, kept as they came. A full save
+ * prunes every key it leaves out from the shared document, so dropping a
+ * newer version's key here would delete it for every client.
+ */
+const unknownKeys = (data: DatabaseRowData): Record<string, unknown> =>
+  Object.fromEntries(Object.entries(data).filter(([key]) => !KNOWN_KEYS.has(key)));
+
 const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   const row: DatabaseRowData = {
     properties: { ...data.properties },
@@ -14,6 +24,9 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   // whole-key write of a value nobody typed, and it would race a peer.
   if (typeof data.title === 'string') {
     row.title = data.title;
+  }
+  if (typeof data.pageId === 'string' && data.pageId.length > 0) {
+    row.pageId = data.pageId;
   }
 
   return row;
@@ -32,9 +45,11 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
  */
 export class DatabaseRowTool implements BlockTool {
   private _data: DatabaseRowData;
+  private unknown: Record<string, unknown>;
 
   constructor({ data }: BlockToolConstructorOptions<DatabaseRowData>) {
     this._data = toRowData(data);
+    this.unknown = unknownKeys(data);
   }
 
   public render(): HTMLDivElement {
@@ -51,12 +66,16 @@ export class DatabaseRowTool implements BlockTool {
 
   private snapshot(): DatabaseRowData {
     const saved: DatabaseRowData = {
+      ...structuredClone(this.unknown),
       properties: { ...this._data.properties },
       position: this._data.position,
     };
 
     if (this._data.title !== undefined) {
       saved.title = this._data.title;
+    }
+    if (this._data.pageId !== undefined) {
+      saved.pageId = this._data.pageId;
     }
 
     return saved;
@@ -68,12 +87,14 @@ export class DatabaseRowTool implements BlockTool {
    */
   public setData(data: DatabaseRowData): boolean {
     this._data = toRowData(data);
+    this.unknown = unknownKeys(data);
 
     return true;
   }
 
   public validate(data: DatabaseRowData): boolean {
-    return data.properties !== null && data.properties !== undefined && typeof data.properties === 'object';
+    return data.properties !== null && data.properties !== undefined && typeof data.properties === 'object'
+      && (data.pageId === undefined || (typeof data.pageId === 'string' && data.pageId.length > 0));
   }
 
   public updateProperties(changes: Record<string, PropertyValue>): void {
@@ -101,6 +122,12 @@ export class DatabaseRowTool implements BlockTool {
 
   public getTitle(): string | undefined {
     return this._data.title;
+  }
+
+  public updatePageId(param: { pageId: string }): void {
+    if (param.pageId.length > 0) {
+      this._data.pageId = param.pageId;
+    }
   }
 
   public updatePosition(param: { position: string }): void {
@@ -134,6 +161,7 @@ export class DatabaseRowTool implements BlockTool {
       title: PLAINTEXT,
       properties: PLAINTEXT,
       position: PLAINTEXT,
+      pageId: PLAINTEXT,
     };
   }
 

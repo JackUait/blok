@@ -1029,20 +1029,10 @@ test.describe('ui.block-tunes', () => {
 
       expect(nestedItemsCount).toBeGreaterThan(0);
 
-      // Nested popover opens without auto-focus. The convert menu's heading
-      // family tab strip is a focus stop, so it takes the first ArrowDown.
-      const selectedTab = nestedPopover.locator('[data-blok-popover-tabs] [role="tab"][aria-selected="true"]');
-
       await page.keyboard.press('ArrowDown');
 
-      await expect(selectedTab).toHaveAttribute('data-blok-focused', 'true');
-
-      await page.keyboard.press('ArrowDown');
-       
       await expect(nestedItems.first()).toHaveAttribute('data-blok-focused', 'true');
 
-      // Navigate down in nested popover - verify we can navigate if there are multiple items
-       
       if (nestedItemsCount > 1) {
         await page.keyboard.press('ArrowDown');
         // eslint-disable-next-line playwright/no-conditional-expect -- need to check second item, conditionally

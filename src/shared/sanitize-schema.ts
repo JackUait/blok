@@ -7,6 +7,7 @@
  * synchronous, module-scope-safe, and free of imports that drag in DOM-bound
  * editor modules (no `document`/`window` access, no UI/module imports).
  */
+import { INLINE_TOOL_ORDER } from '../components/constants/inline-tool-order';
 import { deepMerge } from '../components/utils/object';
 import { isFunction, isObject } from '../components/utils/type-guards';
 
@@ -203,8 +204,8 @@ const normalizeToolEntry = (entry: ToolConstructable | ToolSettings): Normalized
  *   statics; inline tools missing a prototype `render` are dropped, like the
  *   editor's availability check;
  * - enabled inline tools follow the global `inlineToolbar` setting
- *   (`false` → none, array → that order, otherwise convertTo + all inline
- *   tools in registration order);
+ *   (`false` → none, array → selected tools, otherwise convertTo + all inline
+ *   tools; the editor then sorts them into canonical order);
  * - tunes are the global `tunes` array (if any) followed by internal tunes;
  * - sanitize configs are read from each class's `sanitize` static — every
  *   built-in inline tool exposes one, and legacy tools wrapped via
@@ -287,6 +288,17 @@ export function defineBlokSchema<Config extends BlokSchemaConfig>(config: Config
     return Array.from(new Set(['convertTo', ...inlineToolConfigs.keys()]))
       .filter((name) => inlineToolConfigs.has(name));
   })();
+
+  // Match the editor's canonical inline-tool order before composing rules.
+  enabledInlineNames.sort((a, b) => {
+    const rank = (name: string): number => {
+      const index = INLINE_TOOL_ORDER.indexOf(name);
+
+      return index === -1 ? INLINE_TOOL_ORDER.length : index;
+    };
+
+    return rank(a) - rank(b);
+  });
 
   /**
    * Enabled tunes, mirroring `assignBlockTunesToBlockTool` for a block tool

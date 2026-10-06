@@ -969,6 +969,59 @@ public sealed class HostProcessTests
   }
 
   [Fact]
+  public void DefaultsTheCollabJournalOff()
+  {
+    var parsed = HostArguments.Parse(["--collab"], _ => null);
+
+    Assert.NotNull(parsed.Options);
+    Assert.False(parsed.Options.CollabJournal);
+  }
+
+  [Fact]
+  public void ParsesTheBooleanCollabJournalFlagForms()
+  {
+    var enabled = HostArguments.Parse(["--collab-journal"], _ => null);
+    Assert.NotNull(enabled.Options);
+    Assert.True(enabled.Options.CollabJournal);
+
+    var disabled = HostArguments.Parse(["--collab-journal=false"], _ => null);
+    Assert.NotNull(disabled.Options);
+    Assert.False(disabled.Options.CollabJournal);
+
+    var invalid = HostArguments.Parse(["--collab-journal=maybe"], _ => null);
+    Assert.Equal("invalid value \"maybe\" for flag -collab-journal: parse error", invalid.Error);
+  }
+
+  [Fact]
+  public void ReadsTheCollabJournalFromTheEnvironmentUnlessTheFlagIsGiven()
+  {
+    static string? Journal(string name) => name == "BLOK_COLLAB_JOURNAL" ? "true" : null;
+
+    var fromEnvironment = HostArguments.Parse(["--collab"], Journal);
+    Assert.NotNull(fromEnvironment.Options);
+    Assert.True(fromEnvironment.Options.CollabJournal);
+
+    var flagWins = HostArguments.Parse(["--collab-journal=false"], Journal);
+    Assert.NotNull(flagWins.Options);
+    Assert.False(flagWins.Options.CollabJournal);
+
+    // HostProcess.Start writes an unset variable as "", so empty means unset.
+    var empty = HostArguments.Parse([], name => name == "BLOK_COLLAB_JOURNAL" ? "" : null);
+    Assert.NotNull(empty.Options);
+    Assert.False(empty.Options.CollabJournal);
+
+    var invalid = HostArguments.Parse([], name => name == "BLOK_COLLAB_JOURNAL" ? "maybe" : null);
+    Assert.Equal("invalid value \"maybe\" for BLOK_COLLAB_JOURNAL: parse error", invalid.Error);
+  }
+
+  [Fact]
+  public void DescribesTheCollabJournalFlag()
+  {
+    Assert.Contains("--collab-journal", HostArguments.Usage, StringComparison.Ordinal);
+    Assert.Contains("BLOK_COLLAB_JOURNAL", HostArguments.Usage, StringComparison.Ordinal);
+  }
+
+  [Fact]
   public async Task AnExplicitSecretWinsEvenWhenItIsInvalid()
   {
     var result = await RunHostCommandAsync(
@@ -1130,6 +1183,24 @@ public sealed class HostProcessTests
         null
       },
       { ["--collab-s3-prefix", "collab/"], 1, "--collab-s3-prefix needs --collab", null },
+      { ["--collab-journal"], 1, "--collab-journal needs --collab", null },
+      {
+        [],
+        1,
+        "--collab-journal needs --collab",
+        new Dictionary<string, string?> { ["BLOK_COLLAB_JOURNAL"] = "1" }
+      },
+      {
+        [
+          "--collab",
+          "--doc-endpoint", ValidDocEndpoint,
+          "--collab-s3-prefix", "collab/",
+          "--collab-journal",
+        ],
+        1,
+        "--collab-journal cannot be used with --collab-s3-prefix",
+        null
+      },
       {
         ["--collab", "--doc-endpoint", ValidDocEndpoint, "--collab-s3-prefix", "collab/"],
         1,

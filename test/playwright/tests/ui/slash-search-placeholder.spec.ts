@@ -110,6 +110,32 @@ test.describe('slash search placeholder', () => {
     expect(['flex', 'inline-flex', 'grid', 'inline-grid']).not.toContain(display);
   });
 
+  test('should paint the pill across the whole empty (+ button) search input', async ({ page }) => {
+    const paragraph = page.locator(CONTENT_EDITABLE_SELECTOR);
+
+    await paragraph.click();
+    await paragraph.hover();
+
+    const plusButton = page.locator('[data-blok-testid="plus-button"]');
+
+    await expect(plusButton).toBeVisible();
+    await plusButton.click();
+
+    const pill = page.locator('[data-blok-slash-search]');
+
+    await expect(pill).toHaveAttribute('data-blok-slash-search', /.+/);
+    await expect(pill).toHaveText('');
+
+    // An empty block also matches the placeholder's `empty:before:w-0`, which
+    // would shrink the pill to nothing.
+    const widths = await pill.evaluate((el) => ({
+      pill: parseFloat(window.getComputedStyle(el, '::before').width),
+      box: el.getBoundingClientRect().width,
+    }));
+
+    expect(widths.pill).toBeCloseTo(widths.box, 0);
+  });
+
   test('should not make the empty (+ button) search input a flex container', async ({ page }) => {
     const paragraph = page.locator(CONTENT_EDITABLE_SELECTOR);
 

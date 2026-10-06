@@ -167,14 +167,151 @@
   z-index: 4;
 }
 
-/* ----- Empty state: hero card with a URL pill ----- */
+/* ----- Empty state: a window that becomes the typed link, over a URL pill ----- */
 .blok-embed-empty {
   font-family: var(--blok-font-family, var(--blok-font-sans));
 }
 
 .blok-embed-empty__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-2);
   width: 100%;
+  box-sizing: border-box;
+  padding: var(--blok-space-2);
   container-type: inline-size;
+  background: var(--blok-bg-primary);
+  border: var(--blok-border-width-hairline) solid var(--blok-border-subtle);
+  border-radius: var(--blok-radius-block);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-block) - var(--blok-border-width-hairline) - var(--blok-space-2)));
+}
+
+/* --blok-embed-window-tone tints the window and its drawing; each kind picks its hue. */
+/* Registered so the window's tint blends from one scene's colour to the next. */
+@property --blok-embed-window-tone {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+
+.blok-embed-window {
+  --blok-embed-window-tone: var(--blok-text-tertiary);
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 148px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--blok-embed-window-tone) 12%, transparent), transparent 64%),
+    radial-gradient(color-mix(in srgb, var(--blok-embed-window-tone) 16%, transparent) 1px, transparent 1.5px) 0 0 / 14px 14px,
+    color-mix(in srgb, var(--blok-embed-window-tone) 4%, var(--blok-bg-primary));
+  border-radius: var(--blok-radius-inner, var(--blok-radius-block));
+  box-shadow: inset 0 0 0 var(--blok-border-width-hairline) color-mix(in srgb, var(--blok-embed-window-tone) 12%, var(--blok-border-subtle));
+  transition: box-shadow .3s ease;
+}
+.blok-embed-window[data-kind='generic'] { --blok-embed-window-tone: var(--blok-color-gray-text); }
+.blok-embed-window:is([data-kind='video'], [data-kind='calendar']) { --blok-embed-window-tone: var(--blok-color-red-text); }
+.blok-embed-window[data-kind='audio'] { --blok-embed-window-tone: var(--blok-color-pink-text); }
+.blok-embed-window[data-kind='image'] { --blok-embed-window-tone: var(--blok-color-orange-text); }
+.blok-embed-window:is([data-kind='social'], [data-kind='document']) { --blok-embed-window-tone: var(--blok-color-blue-text); }
+.blok-embed-window:is([data-kind='table'], [data-kind='map']) { --blok-embed-window-tone: var(--blok-color-green-text); }
+.blok-embed-window:is([data-kind='form'], [data-kind='design']) { --blok-embed-window-tone: var(--blok-color-purple-text); }
+.blok-embed-window[data-kind='code'] { --blok-embed-window-tone: var(--blok-color-brown-text); }
+.blok-embed-window[data-kind='chart'] { --blok-embed-window-tone: var(--blok-color-teal-text); }
+
+/* Old and new scenes share one cell while they morph. */
+.blok-embed-window > .blok-media-preview {
+  grid-area: 1 / 1;
+  --blok-media-preview-ink: var(--blok-embed-window-tone);
+}
+/* Strokes keep their width while a part is scaled into place. */
+.blok-media-preview--morphing * { vector-effect: non-scaling-stroke; }
+
+/* Parts only the embed scenes draw (media-empty.css paints the shared ones). */
+.blok-media-preview__dashed { fill: none; stroke-dasharray: 3 3.5; }
+.blok-media-preview__frame.blok-media-preview__dashed { fill: var(--blok-bg-primary); }
+.blok-media-preview__link { fill: none; stroke-width: 1.6; }
+.blok-media-preview__select { stroke-width: 1.8; }
+.blok-media-preview__button,
+.blok-media-preview__tag { fill: currentColor; stroke: none; opacity: .55; }
+.blok-media-preview__band { fill: currentColor; stroke: none; opacity: .22; }
+.blok-media-preview__tick,
+.blok-media-preview__trend { fill: none; stroke-width: 1.8; }
+.blok-media-preview__trend { opacity: .8; }
+.blok-media-preview__heart { fill: currentColor; stroke: none; opacity: .8; }
+.blok-media-preview__pointer { fill: var(--blok-text-primary); stroke: var(--blok-bg-primary); stroke-width: 1.2; }
+.blok-media-preview__blob { fill: color-mix(in srgb, var(--blok-color-pink-text) 30%, var(--blok-bg-primary)); }
+.blok-media-preview__park { fill: color-mix(in srgb, currentColor 22%, var(--blok-bg-primary)); stroke: none; }
+.blok-media-preview__road { fill: none; stroke: var(--blok-bg-primary); stroke-width: 7; }
+.blok-media-preview__road--minor { stroke-width: 4; }
+.blok-media-preview__pin { fill: currentColor; stroke: none; opacity: .85; }
+
+/* The provider logo, on the drawing's top corner. Outside the stage: the
+   stage's svg rules would stroke it and stretch it to 200px. */
+.blok-embed-window__brand {
+  position: absolute;
+  inset-inline-start: calc(50% + var(--_badge-x));
+  top: var(--_badge-y);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  background: var(--blok-bg-primary);
+  border-radius: var(--blok-radius-control);
+  box-shadow:
+    0 0 0 var(--blok-border-width-hairline) var(--blok-overlay-ring),
+    0 6px 14px -4px color-mix(in srgb, var(--blok-media-preview-shadow) 45%, transparent),
+    0 1px 2px color-mix(in srgb, var(--blok-media-preview-shadow) 25%, transparent);
+}
+.blok-embed-window__brand svg { width: 18px; height: 18px; }
+/* An old logo spins out over the new one (empty-window.ts), so they share a cell. */
+.blok-embed-window__brand-mark { grid-area: 1 / 1; display: grid; place-items: center; }
+/* The badge sits on each scene's top corner: x from the drawing centre, y
+   from the window top. They follow the frame edges in media-preview-art.ts. */
+.blok-embed-window { --_badge-x: 44px; --_badge-y: 20px; }
+.blok-embed-window:is([data-kind='video'], [data-kind='map']) { --_badge-x: 46px; --_badge-y: 18px; }
+.blok-embed-window[data-kind='audio'] { --_badge-x: 56px; --_badge-y: 30px; }
+.blok-embed-window[data-kind='image'] { --_badge-x: 40px; --_badge-y: 16px; }
+.blok-embed-window:is([data-kind='social'], [data-kind='form']) { --_badge-x: 29px; --_badge-y: 16px; }
+.blok-embed-window[data-kind='document'] { --_badge-x: 2px; --_badge-y: 20px; }
+.blok-embed-window[data-kind='table'] { --_badge-y: 22px; }
+.blok-embed-window[data-kind='calendar'] { --_badge-x: 34px; --_badge-y: 24px; }
+
+/* The provider name stays for screen readers; on screen the logo on the
+   drawing names it, so the field sits right under the window. */
+.blok-embed-empty__readback {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+
+@media (prefers-reduced-motion: no-preference) {
+  .blok-embed-window { transition: --blok-embed-window-tone .7s cubic-bezier(0.22, 1, 0.36, 1), box-shadow .3s ease; }
+  .blok-embed-window__brand {
+    animation: blok-embed-brand-in .9s cubic-bezier(0.34, 1.56, 0.64, 1) .32s both;
+    transition: inset-inline-start .62s cubic-bezier(0.34, 1.3, 0.64, 1), top .62s cubic-bezier(0.34, 1.3, 0.64, 1);
+  }
+  .blok-embed-window__brand-mark[data-swap] { animation: blok-embed-brand-swap .52s cubic-bezier(0.34, 1.56, 0.64, 1) .12s both; }
+  .blok-embed-window[data-anim='caught'] { animation: blok-embed-caught .5s var(--blok-ease-popover); }
+  .blok-embed-window[data-anim='rejected'] { animation: blok-embed-rejected .36s ease-in-out; }
+}
+
+@keyframes blok-embed-brand-in {
+  from { opacity: 0; transform: translateY(-18px) scale(.4) rotate(-14deg); }
+}
+@keyframes blok-embed-brand-swap {
+  from { opacity: 0; scale: .4; rotate: -30deg; }
+}
+@keyframes blok-embed-caught {
+  40% { transform: scale(1.025); }
+}
+@keyframes blok-embed-rejected {
+  25%, 75% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
 }
 
 .blok-embed-empty__bar {
@@ -197,6 +334,35 @@
 .blok-embed-empty__input {
   appearance: none;
 }
+/* Address bar: the icon, then the colour mirror and the input stacked in one
+   cell, then the button. Needs the attribute to outrank field.css's flex. */
+[data-blok-field].blok-embed-empty__bar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+/* The embed field is its design's address bar, not the filled shared look:
+   white, a hairline, the button inset. Focus and errors still change only
+   the border, so they are restated at this specificity. */
+[data-blok-field].blok-embed-empty__bar {
+  gap: var(--blok-space-2);
+  min-height: 34px;
+  padding-inline: var(--blok-space-2-5) var(--blok-space-1);
+  background-color: var(--blok-bg-primary);
+  border-color: var(--blok-border-subtle);
+}
+[data-blok-field].blok-embed-empty__bar:has(> input:focus) { border-color: var(--blok-popover-border); }
+[data-blok-field].blok-embed-empty__bar:has(> input[aria-invalid='true']) { border-color: var(--blok-color-danger); }
+@media (max-width: 650px) {
+  [data-blok-field].blok-embed-empty__bar { min-height: 36px; }
+}
+.blok-embed-empty__bar > :is(.blok-media-empty__embed-mirror, .blok-embed-empty__input) { grid-row: 1; grid-column: 2; }
+/* The mirror must use the input's own size, or the caret drifts off its glyph. */
+.blok-embed-empty__bar > .blok-media-empty__embed-mirror { font-size: inherit; line-height: inherit; }
+/* A faint hairline a little below the host; padding moves it down without
+   touching the text, so the caret stays on its glyph. */
+.blok-embed-empty__bar .blok-media-empty__url-host {
+  padding-bottom: var(--blok-space-0-5);
+  background-image: linear-gradient(color-mix(in srgb, currentColor 30%, transparent), color-mix(in srgb, currentColor 30%, transparent));
+  background-size: 0 1px;
+}
+.blok-embed-empty__bar[data-valid="true"] .blok-media-empty__url-host { background-size: 100% 1px; }
 
 .blok-embed-empty__submit {
   appearance: none;
@@ -206,30 +372,28 @@
   display: inline-flex;
   align-items: center;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1;
-  height: 20px;
-  padding: 0 var(--blok-space-2);
+  height: 26px;
+  padding: 0 var(--blok-space-2-5);
   color: var(--blok-text-secondary);
-  background: transparent;
-  border: 1px solid var(--blok-border-subtle);
+  background: var(--blok-bg-secondary);
+  border: 0;
   border-radius: var(--blok-radius-control-sm);
   transition: color .15s ease, background .15s ease, border-color .15s ease, filter .15s ease, transform .08s ease;
 }
 .blok-embed-empty__submit:hover {
-  color: var(--blok-text-secondary);
-  background: var(--blok-bg-secondary);
-  border-color: var(--blok-border-primary);
+  color: var(--blok-text-primary);
+  background: var(--blok-item-hover-bg);
 }
 .blok-embed-empty__bar[data-valid="true"] .blok-embed-empty__submit {
   color: var(--blok-image-embed-submit-fg);
   background: var(--blok-color-accent);
-  border-color: transparent;
 }
 .blok-embed-empty__bar[data-valid="true"] .blok-embed-empty__submit:hover { filter: brightness(1.05); }
 .blok-embed-empty__submit:active { transform: translateY(1px); }
-.blok-embed-empty__submit:focus-visible {
+:where(:root:not([data-blok-modality="pointer"])) .blok-embed-empty__submit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
@@ -252,8 +416,6 @@
   font-weight: 600;
   line-height: 1;
   color: currentColor;
-  background: color-mix(in srgb, currentColor 14%, transparent);
-  border-radius: var(--blok-radius-control-sm);
   overflow: hidden;
   opacity: 0;
   /* Slides in from the inline start. */
@@ -262,8 +424,8 @@
 }
 .blok-embed-empty__bar[data-valid="true"] .blok-embed-empty__kbd {
   max-width: 40px;
-  margin-inline-start: var(--blok-space-1-5);
-  padding: var(--blok-space-0-25) var(--blok-space-1) var(--blok-space-0, 0);
+  margin-inline-start: var(--blok-space-1);
+  padding: var(--blok-space-0-25) 0 var(--blok-space-0, 0);
   opacity: 1;
   transform: translateX(0);
 }
@@ -297,6 +459,7 @@
 .blok-embed-empty__readonly-glyph svg { width: 16px; height: 16px; }
 
 @container (max-width: 360px) {
+  .blok-embed-window { display: none; }
   .blok-embed-empty__submit-label { display: none; }
   .blok-embed-empty__submit { padding: 0 var(--blok-space-1-5); }
 }

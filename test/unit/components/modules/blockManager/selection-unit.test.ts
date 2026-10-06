@@ -15,6 +15,7 @@ const createBlock = (options: {
   name?: string;
   parentId?: string | null;
   ownsChildren?: boolean;
+  isLayout?: boolean;
 }): Block => {
   const holder = document.createElement('div');
 
@@ -26,7 +27,11 @@ const createBlock = (options: {
     holder,
     parentId: options.parentId ?? null,
     contentIds: [],
-    tool: { ownsChildren: options.ownsChildren ?? false },
+    tool: {
+      ownsChildren: options.ownsChildren ?? false,
+      // Mirrors the real column / column_list declarations.
+      isLayout: options.isLayout ?? (options.name === 'column' || options.name === 'column_list'),
+    },
     call: vi.fn(),
   } as unknown as Block;
 };
@@ -188,6 +193,19 @@ describe('BlockRepository — selection units', () => {
       expect(repository.isSelectionUnit(row)).toBe(false);
       expect(repository.isSelectionUnit(column)).toBe(false);
       expect(repository.isSelectionUnit(child)).toBe(true);
+    });
+
+    it('rejects any isLayout block and keeps the blocks inside it as units', () => {
+      const tabs = createBlock({ id: 'tabs', name: 'tabs', ownsChildren: true });
+      const tab = createBlock({ id: 'tab', name: 'tab', parentId: 'tabs', ownsChildren: true, isLayout: true });
+      const child = createBlock({ id: 'child', parentId: 'tab' });
+
+      const repository = createRepository([tabs, tab, child]);
+
+      expect(repository.isSelectionUnit(child)).toBe(true);
+      expect(repository.resolveToSelectableBlock(child)).toBe(child);
+      expect(repository.isSelectionUnit(tab)).toBe(false);
+      expect(repository.isSelectionUnit(tabs)).toBe(true);
     });
   });
 });

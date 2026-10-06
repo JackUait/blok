@@ -190,6 +190,8 @@ const externalDistPlugin = (): Plugin => {
 };
 
 export default defineConfig({
+  // Must match react-router.config.ts `basename`, or assets 404 under a subpath.
+  base: process.env.DOCS_BASE || '/',
   // reactRouter() owns the build: it emits one HTML file per prerendered route
   // (react-router.config.ts) instead of a single SPA shell, and brings its own
   // React fast-refresh transform, so @vitejs/plugin-react must not be added too.

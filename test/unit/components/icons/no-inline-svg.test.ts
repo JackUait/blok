@@ -14,11 +14,8 @@ import { join, relative, sep } from 'node:path';
  * - src/components/icons/index.ts            → the registry itself
  * - src/components/utils/key-icon.ts         → SVGs composed dynamically
  *                                              per keyboard glyph at runtime
- * - src/components/utils/popover/nothing-found-art.ts → an illustration, not
- *                                              an icon: 64x48, opacity tints and
- *                                              animation hooks break the Blok
- *                                              Line contract the registry enforces
- * - src/components/utils/media-preview-art.ts → the media empty-state
+ * - src/components/utils/media-preview-art.ts → the media empty-state and
+ *                                              popover "Nothing found"
  *                                              illustrations: 200x120, tone
  *                                              fills, per-instance clip ids and
  *                                              animation hooks break the Blok
@@ -42,7 +39,6 @@ const SRC = join(__dirname, '..', '..', '..', '..', 'src');
 const ALLOWED_FILES = new Set([
   'components/icons/index.ts',
   'components/utils/key-icon.ts',
-  'components/utils/popover/nothing-found-art.ts',
   'components/utils/media-preview-art.ts',
   'components/utils/brand-marks.ts',
   'shared/tool-classes/page.ts',

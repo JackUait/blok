@@ -33,7 +33,23 @@ import { CalloutTool as Callout } from './tools/callout';
 import { CodeTool as Code } from './tools/code';
 import { ToggleItem as Toggle } from './tools/toggle';
 
-export { Blok, version, DATA_ATTR, EMPTY_OUTPUT_DATA, createEmittedEchoWindow, equalsOutputData, isEmptyOutputData, normalizeOutputData, normalizeOutputBlocks, toRenderableData } from './blok';
+export {
+  Blok,
+  version,
+  DATA_ATTR,
+  EMPTY_OUTPUT_DATA,
+  createEmittedEchoWindow,
+  equalsOutputData,
+  isEmptyOutputData,
+  normalizeOutputData,
+  normalizeOutputBlocks,
+  toRenderableData,
+  inspectOfflineScope,
+  forgetOfflineScope,
+  listOfflinePages,
+  forgetOfflinePage,
+  downloadOfflinePage,
+} from './blok';
 
 // types/full.d.ts does `export * from './index'`, so the mutation-type
 // constants are typed here too and need the matching runtime binding.

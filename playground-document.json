@@ -18,6 +18,11 @@
     }
   },
   {
+    "id": "toc-example",
+    "type": "table_of_contents",
+    "data": {}
+  },
+  {
     "id": "pages-section-header",
     "type": "header",
     "data": {

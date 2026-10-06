@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildPasteMenuOptions } from '../../../../src/tools/link/paste-menu/options';
+import { buildLivePasteMenuOptions } from '../../../../src/tools/link/paste-menu/controller';
 
 const types = (url: string, hasSelection = false): string[] =>
   buildPasteMenuOptions(url, { hasSelection }).map((option) => option.type);
@@ -54,5 +55,58 @@ describe('buildPasteMenuOptions — generic embed flag', () => {
 
   it('does not offer embed for a non-http string even when the flag is true', () => {
     expect(typesWith('not a url', true)).toEqual(['plain']);
+  });
+});
+
+const typesOwnHosts = (url: string, ownHosts: string[], allowGenericEmbed = false): string[] =>
+  buildPasteMenuOptions(url, { hasSelection: false, ownHosts, allowGenericEmbed }).map((o) => o.type);
+
+describe('buildPasteMenuOptions — own host', () => {
+  it('does not offer bookmark for a link to the editor host', () => {
+    expect(typesOwnHosts('https://app.example.com/doc/1', ['app.example.com'])).not.toContain('bookmark');
+  });
+
+  it('ignores the port and letter case when matching the host', () => {
+    expect(typesOwnHosts('http://APP.example.com:8080/doc', ['app.example.com'])).not.toContain('bookmark');
+  });
+
+  it('does not offer bookmark for a link to a host alias', () => {
+    expect(typesOwnHosts('https://example.com/doc', ['app.example.com', 'example.com'])).not.toContain('bookmark');
+  });
+
+  it('matches a wildcard alias on any subdomain but not the bare domain', () => {
+    expect(typesOwnHosts('https://a.b.example.com/doc', ['*.example.com'])).not.toContain('bookmark');
+    expect(typesOwnHosts('https://example.com/doc', ['*.example.com'])).toContain('bookmark');
+  });
+
+  it('still offers bookmark for a link to another host', () => {
+    expect(typesOwnHosts('https://other.com/doc', ['app.example.com'])).toContain('bookmark');
+  });
+
+  it('does not match a host that only ends with the own host name', () => {
+    expect(typesOwnHosts('https://evilexample.com/doc', ['example.com'])).toContain('bookmark');
+  });
+
+  it('keeps embed for an own-host link when embeds apply', () => {
+    expect(typesOwnHosts('https://app.example.com/doc', ['app.example.com'], true)).toEqual(['embed', 'mention', 'plain']);
+  });
+});
+
+describe('page links', () => {
+  const live = (url: string, pageId?: string): string[] =>
+    buildLivePasteMenuOptions(url, { hasSelection: false, ownHosts: ['example.com'], ...(pageId ? { pageId } : {}) })
+      .map((option) => option.type);
+
+  it('offers a mention first, then the plain link, for a link to a page', () => {
+    expect(live('https://example.com/editor/page/p1', 'p1')).toEqual(['mention', 'plain']);
+  });
+
+  it('offers no mention for a link that is not a page', () => {
+    expect(live('https://elsewhere.org/article')).not.toContain('mention');
+  });
+
+  it('offers only the plain link when the page link is pasted over a selection', () => {
+    expect(buildLivePasteMenuOptions('https://example.com/editor/page/p1', { hasSelection: true, pageId: 'p1' })
+      .map((option) => option.type)).toEqual(['plain']);
   });
 });

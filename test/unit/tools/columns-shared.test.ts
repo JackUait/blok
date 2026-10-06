@@ -241,7 +241,7 @@ describe('resetColumnsToEvenWidth', () => {
 
     holder.style.flexGrow = grow;
 
-    return { id, holder };
+    return { id, holder, dispatchChange: vi.fn() };
   };
 
   it('resets every column holder flex-grow to 1 so the row splits evenly', () => {
@@ -257,6 +257,19 @@ describe('resetColumnsToEvenWidth', () => {
 
     expect(getChildren).toHaveBeenCalledWith('cl');
     expect(columns.map(c => c.holder.style.flexGrow)).toEqual(['1', '1', '1']);
+  });
+
+  it('reports a change only for the columns whose width it changed', () => {
+    const columns = [
+      makeColumn('c1', '2'),
+      makeColumn('c2', '1'),
+      makeColumn('c3', ''),
+    ];
+    const api = { blocks: { getChildren: vi.fn().mockReturnValue(columns) } } as unknown as API;
+
+    resetColumnsToEvenWidth(api, 'cl');
+
+    expect(columns.map(c => c.dispatchChange.mock.calls.length)).toEqual([1, 0, 0]);
   });
 
   it('no-ops for a list with no columns', () => {

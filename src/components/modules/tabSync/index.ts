@@ -1583,7 +1583,9 @@ export class TabSync extends Module {
       return;
     }
     const wait = Promise.race([
-      Promise.all([ModificationsObserver.whenSavesSettled(), request]),
+      // The save started just before read-only lands here and writes with
+      // this tab's version, so its store request must settle too.
+      Promise.all([ModificationsObserver.whenSavesSettled(), request]).then(() => this.storeSettled(session)),
       new Promise((resolve) => {
         this.releaseTimer = setTimeout(resolve, TAKEOVER_SETTLE_WAIT_MS);
       }),
@@ -1594,6 +1596,20 @@ export class TabSync extends Module {
     });
 
     this.releaseWait = wait;
+  }
+
+  /**
+   * Resolves once this tab's store holds no request, or the session ended.
+   * @param session - the live session
+   */
+  private async storeSettled(session: Session): Promise<void> {
+    const access = persistenceVersionAccess(this.config.persistence);
+
+    while (this.session === session && access?.saveState() === 'saving') {
+      await new Promise((resolve) => {
+        setTimeout(resolve, SAVE_POLL_MS);
+      });
+    }
   }
 
   private stopReleaseWait(): void {

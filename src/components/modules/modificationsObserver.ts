@@ -639,11 +639,12 @@ export class ModificationsObserver extends Module {
   private emitOnSave(outlivesTeardown = false, outlivesReadOnly = false): Promise<void> {
     this.savesInFlight += 1;
 
+    const startedHere = this.savesHere;
     const serialization = outlivesTeardown ? this.Blok.Saver.saveBeforeTeardown() : this.Blok.Saver.save();
 
     return serialization
       .then((data) => {
-        this.deliverSave(data, outlivesTeardown, outlivesReadOnly);
+        this.deliverSave(data, outlivesTeardown, outlivesReadOnly, startedHere);
       })
       .catch(() => {
         /**
@@ -661,8 +662,9 @@ export class ModificationsObserver extends Module {
    * @param data - the serialization, undefined when the Saver failed
    * @param outlivesTeardown - see {@link emitOnSave}
    * @param outlivesReadOnly - see {@link flushBeforeTeardown}
+   * @param startedHere - whether this tab saved when the serialization started
    */
-  private deliverSave(data: OutputData | undefined, outlivesTeardown: boolean, outlivesReadOnly: boolean): void {
+  private deliverSave(data: OutputData | undefined, outlivesTeardown: boolean, outlivesReadOnly: boolean, startedHere: boolean): void {
     this.endSave();
 
     /**
@@ -675,13 +677,15 @@ export class ModificationsObserver extends Module {
      */
     // This save must outlive `destroyed` and the render's `disable()`, but
     // read-only still blocks it — unless the document was read before
-    // read-only engaged. A leader that stepped down on read-only keeps the
-    // edit instead (savesHere): the next leader would race this write.
+    // read-only engaged. That save also lands in a leader that stepped down
+    // on read-only: TabSync holds the lock until the write settles.
     const suppressed = outlivesTeardown
       ? !outlivesReadOnly && this.Blok.ReadOnly.isEnabled
       : this.isDeliverySuppressed;
 
-    if (suppressed || data === undefined || !this.savesHere) {
+    const mayDeliver = this.savesHere || (outlivesReadOnly && startedHere);
+
+    if (suppressed || data === undefined || !mayDeliver) {
       this.rearmSave();
 
       return;
@@ -762,7 +766,7 @@ export class ModificationsObserver extends Module {
 
     // A throwing onSave must not abort the teardown that called this.
     try {
-      this.deliverSave(data, true, false);
+      this.deliverSave(data, true, false, true);
     } catch {
       this.markUndelivered();
     }

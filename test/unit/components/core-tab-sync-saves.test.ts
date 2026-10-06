@@ -275,7 +275,7 @@ describe('Core — the leader saves structural changes made in a follower', () =
     expect(textOf(leader, 'a')).toBe('a one two');
   });
 
-  it('a lone leader that turns read-only saves its typing once it is editable again', async () => {
+  it('a lone leader that turns read-only saves its typing before read-only, and leads again once editable', async () => {
     const onSave = vi.fn();
     const leader = createCore({ documentId: 'ro-lone', data: document3(), onSave });
 
@@ -286,15 +286,14 @@ describe('Core — the leader saves structural changes made in a follower', () =
 
     await leader.moduleInstances.ReadOnly.set(true);
     await oneWindow();
-    expect(onSave).not.toHaveBeenCalled();
+    const saved = (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === 'a');
+
+    expect(saved?.data.text).toBe('a one two');
 
     await leader.moduleInstances.ReadOnly.set(false);
     await oneWindow();
 
     expect(leader.moduleInstances.TabSync.role).toBe('leader');
-    const saved = (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === 'a');
-
-    expect(saved?.data.text).toBe('a one two');
   });
 
   /** Whether a guard holds the tab back from closing. */
@@ -306,7 +305,7 @@ describe('Core — the leader saves structural changes made in a follower', () =
     return event.defaultPrevented;
   };
 
-  it('a lone leader that turns read-only inside the batch window keeps its edit unsaved and saves it once editable', async () => {
+  it('a lone leader that turns read-only inside the batch window saves its edit right away', async () => {
     const save = vi.fn(async () => undefined);
     const leader = createCore({
       documentId: 'ro-window',
@@ -329,21 +328,69 @@ describe('Core — the leader saves structural changes made in a follower', () =
     editable.dispatchEvent(new InputEvent('input', { bubbles: true }));
     await wait(20);
     await leader.moduleInstances.ReadOnly.set(true);
-
-    expect(leader.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(true);
-    await oneWindow();
-    expect(leader.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(true);
-    expect(closePromptArmed()).toBe(true);
-    expect(save).not.toHaveBeenCalled();
-
-    await leader.moduleInstances.ReadOnly.set(false);
     await oneWindow();
 
-    expect(leader.moduleInstances.TabSync.role).toBe('leader');
     expect(save).toHaveBeenCalledTimes(1);
     const saved = (save.mock.lastCall as unknown as [ { blocks: OutputBlockData[] } ] | undefined)?.[0];
 
     expect(saved?.blocks.find((block) => block.id === 'a')?.data.text).toBe('a typed');
+    expect(leader.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(false);
+    expect(closePromptArmed()).toBe(false);
+  });
+
+  it('a lone leader destroyed while read-only has already saved the edit made just before', async () => {
+    const onSave = vi.fn();
+    const leader = createCore({ documentId: 'ro-destroy', data: document3(), onSave });
+
+    await leader.isReady;
+    await wait(50);
+    expect(leader.moduleInstances.TabSync.role).toBe('leader');
+    onSave.mockClear();
+
+    await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a before read-only' });
+    await leader.moduleInstances.ReadOnly.set(true);
+    await wait(20);
+    destroyCore(leader);
+    await wait(20);
+
+    const saved = (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === 'a');
+
+    expect(saved?.data.text).toBe('a before read-only');
+  });
+
+  it('a leader that turns read-only keeps the lock until its last write lands, so the next leader never writes beside it', async () => {
+    const events: string[] = [];
+    const slowSave = (tab: string) => vi.fn(async (data: OutputData) => {
+      const text = data.blocks.find((block) => block.id === 'a')?.data.text as string | undefined;
+
+      events.push(`${tab} start ${text}`);
+      await wait(400);
+      events.push(`${tab} end ${text}`);
+    });
+    const leaderSave = slowSave('leader');
+    const followerSave = slowSave('follower');
+    const leader = createCore({ documentId: 'ro-slow', persistence: { load: async () => document3(), save: leaderSave } });
+
+    await leader.isReady;
+    await wait(50);
+    const follower = createCore({ documentId: 'ro-slow', persistence: { load: async () => document3(), save: followerSave } });
+
+    await follower.isReady;
+    await wait(600);
+    expect(leader.moduleInstances.TabSync.role).toBe('leader');
+    events.length = 0;
+
+    await leader.moduleInstances.API.methods.blocks.update('a', { text: 'a slow' });
+    await leader.moduleInstances.ReadOnly.set(true);
+    await wait(1500);
+
+    const leaderEnd = events.indexOf('leader end a slow');
+    const followerStart = events.findIndex((event) => event.startsWith('follower start'));
+
+    expect(leaderEnd, events.join(' | ')).toBeGreaterThanOrEqual(0);
+    if (followerStart >= 0) {
+      expect(followerStart, events.join(' | ')).toBeGreaterThan(leaderEnd);
+    }
   });
 
   it('a leader that turns read-only inside the batch window has its edit saved by the tab that takes over', async () => {

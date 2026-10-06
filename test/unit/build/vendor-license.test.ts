@@ -52,6 +52,17 @@ describe('dist/vendor.LICENSE.txt', () => {
     expect(readVendorEntries().map((entry) => entry.name)).toContain('mermaid')
   })
 
+  it('bundles one mermaid, at the version package.json pins', () => {
+    const manifest = JSON.parse(readFileSync(resolve(__dirname, '../../../package.json'), 'utf8')) as {
+      devDependencies?: Record<string, string>
+    }
+    const versions = readVendorEntries()
+      .filter((entry) => entry.name === 'mermaid')
+      .map((entry) => /^Version: (.+)$/m.exec(entry.block)?.[1])
+
+    expect(versions).toEqual([manifest.devDependencies?.mermaid])
+  })
+
   it('bundles only permissive licenses, apart from named exceptions', () => {
     const offenders = readVendorEntries()
       .filter((entry) => !isPermissive(entry.license))

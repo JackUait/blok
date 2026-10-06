@@ -99,13 +99,18 @@ export interface BlockTool extends BaseTool {
   moved?(event: MoveEvent): void;
 
   /**
-   * Returns the horizontal offset of the content at the hovered element.
-   * Used by the toolbar to position itself closer to nested content (e.g., nested list items).
+   * Returns how far the content at the hovered element is inset from the block's
+   * edges. Used by the toolbar to sit closer to nested content (e.g., nested list items).
+   *
+   * Both insets are PHYSICAL, whatever the text direction. The toolbar reads the
+   * one on the side its controls sit: `right` when they are on the right of the
+   * content (the default in an RTL editor), `left` otherwise.
    *
    * @param hoveredElement - The element that is currently being hovered
-   * @returns Object with left offset in pixels, or undefined if no offset should be applied
+   * @returns `left`: inset from the physical left edge in px; `right` (optional):
+   *   inset from the physical right edge in px. Undefined if no offset applies.
    */
-  getContentOffset?(hoveredElement: Element): { left: number } | undefined;
+  getContentOffset?(hoveredElement: Element): { left: number; right?: number } | undefined;
 
   /**
    * Returns the element that the toolbar should vertically center on.
@@ -116,6 +121,18 @@ export interface BlockTool extends BaseTool {
    * Return undefined to use the default positioning logic.
    */
   getToolbarAnchorElement?(): HTMLElement | undefined;
+
+  /**
+   * Called when the user presses Enter (or Cmd/Ctrl+Enter) on this block while
+   * it is the keyboard navigation target (Escape, then arrows).
+   *
+   * Return true if the tool handled it (e.g. opened a link). Blok then leaves
+   * navigation mode without putting the caret in the block. Return false, or
+   * omit the method, to keep the default: the caret moves into the block.
+   *
+   * @param event - the Enter keydown
+   */
+  onNavigationEnter?(event: KeyboardEvent): boolean;
 
   /**
    * Called when read-only mode is toggled without re-rendering the block.
@@ -261,6 +278,78 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   childTools?: ChildToolRestrictions;
 
   /**
+   * Set to false when this Tool's block never has children — for example a
+   * page block, whose body lives in another document, so a child stored under
+   * it would be dropped by every export.
+   *
+   * Core then refuses every way to nest a block in it: Tab is a no-op, an
+   * insert or `moveTo` with it as the parent throws `BlockPlacementError`,
+   * `setBlockParent` onto it does nothing, a reorder that would carry a block
+   * in is refused, and a drop never nests under it.
+   *
+   * `childTools` cannot express this: an empty `allow` list means "no
+   * restriction". Leave unset (or true) for any block that may hold children.
+   */
+  acceptsChildren?: boolean;
+
+  /**
+   * Set to true when a copy of this Tool's block rebuilds its children from
+   * its own data — a table's `content` names its cell blocks, and the copy
+   * duplicates them when it renders.
+   *
+   * Duplicate and Alt-drag then copy only the block and leave its descendants
+   * to the Tool, so they are not copied twice. Leave unset when the children
+   * are not named in the data (toggle, column_list, database rows): declaring
+   * it there loses them from every copy.
+   */
+  copiesOwnChildren?: boolean;
+
+  /**
+   * For a block that stands for something living elsewhere, like a page.
+   * Copy carries this link for other apps, and a pasted copy becomes it. A
+   * cut still moves the block, once. A page block is the exception: in the
+   * document where its page is already live, paste, Duplicate and Alt-drag
+   * make another block for the same page. Return null when there is nothing to link to.
+   *
+   * Core inserts the link as a default block (a paragraph holding
+   * `<a href="url">text</a>`), and the block menu's "Copy link" copies `url`.
+   * Return an absolute `url`: a copy may be pasted into another app.
+   *
+   * @param data - the block's saved data
+   * @param config - the Tool's config
+   */
+  copyAsLink?(data: BlockToolData, config: ToolConfig): { url: string; text: string } | null;
+
+  /**
+   * The data Duplicate and Alt-drag insert for this Tool's block, instead of
+   * a copy or the `copyAsLink` link. Return null to fall back. Copy and
+   * paste never call it.
+   *
+   * @param data - the block's saved data
+   * @param config - the Tool's config
+   */
+  duplicateData?(data: BlockToolData, config: ToolConfig): BlockToolData | null;
+
+  /**
+   * The data a block picked from the toolbox starts with, for data only the
+   * host can give, like a page id from a backend. The toolbox waits for it
+   * and shows the item as busy, then inserts the block. A rejection inserts
+   * nothing. Other inserts never call it.
+   *
+   * @param config - the Tool's config
+   */
+  prepareInsert?(config: ToolConfig): Promise<BlockToolData>;
+
+  /**
+   * How this Tool's block menu is laid out.
+   * `titled` heads the menu with the Tool's toolbox title and puts Turn into
+   * before the Tool's own items, like Notion's page menu.
+   * `trash` reads Delete as "Move to Trash", for a block that stands for
+   * something the host keeps, like a page.
+   */
+  blockMenu?: { titled?: boolean; trash?: boolean };
+
+  /**
    * Set to true when Enter on this container's empty LAST child must create the
    * new line INSIDE the container instead of leaving it.
    *
@@ -283,6 +372,25 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * children never stepwise-outdent out of it.
    */
   keepsChildrenOnEnter?: boolean;
+
+  /**
+   * Set to true when deleting this Tool's block must delete its whole subtree.
+   *
+   * By default Blok keeps a deleted container's body: its children move up one
+   * level into the container's slot (a toggle, a callout). A layout container
+   * whose children only make sense inside it — a column, a tab — declares this
+   * so its children are removed with it instead of leaking out.
+   */
+  deletesChildren?: boolean;
+
+  /**
+   * Set to true when the block is a pure layout piece, like a column or a tab.
+   *
+   * A layout block never gets the hover toolbar (no drag handle, no block
+   * menu) and is never a selection unit: only the blocks inside it are. Blocks
+   * inside it take no depth indent, since the layout positions them.
+   */
+  isLayout?: boolean;
 
   /**
    * Declares that this Tool stores a host-uploaded asset URL at `data.url`.

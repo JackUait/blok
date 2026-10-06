@@ -58,6 +58,7 @@ const apiMethodsStub: ToolApiMethods = {
   readOnly: {} as ToolApiMethods['readOnly'],
   ui: {} as ToolApiMethods['ui'],
   theme: {} as ToolApiMethods['theme'],
+  viewState: {} as ToolApiMethods['viewState'],
   rectangleSelection: {} as ToolApiMethods['rectangleSelection'],
   config: {},
 };

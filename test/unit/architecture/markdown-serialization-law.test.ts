@@ -59,7 +59,11 @@ const readSerializedTools = (): Set<string> => {
 };
 
 describe('Markdown serialization law', () => {
-  const registeredTools = Object.keys(defaultBlockTools);
+  /**
+   * `page` ships but is not a default: without the host's `href`/`resolve` it is
+   * a dead link. A page still reaches the clipboard once a host registers it.
+   */
+  const registeredTools = [...Object.keys(defaultBlockTools), 'page'];
 
   it.skipIf(isInstrumented())('every registered block tool is either serialized or explicitly exempt', () => {
     const serialized = readSerializedTools();

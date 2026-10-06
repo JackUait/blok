@@ -7,7 +7,7 @@ namespace Blok.Server.AspNetCore.Collab;
 /// <summary>
 /// POST /sync/{doc}/reset (plan decision 5). Runs behind the normal HTTP
 /// guard (origin, write ticket, rate limit); this handler adds what the guard
-/// never checks: the ticket's doc claim and the application's write gate.
+/// never checks: the ticket's doc claim and the application's read and write gates.
 /// </summary>
 internal static class ResetEndpoint
 {
@@ -43,7 +43,8 @@ internal static class ResetEndpoint
     var user = claims is null ? context.User : TicketPrincipal.For(claims.Value);
 
     if (authorization is not null &&
-        !await authorization.CanWriteDocumentAsync(user, doc, context.RequestAborted))
+        (!await authorization.CanReadDocumentAsync(user, doc, context.RequestAborted) ||
+         !await authorization.CanWriteDocumentAsync(user, doc, context.RequestAborted)))
     {
       await SyncEndpoint.RefuseAsync(context, StatusCodes.Status403Forbidden, "forbidden\n");
 
@@ -57,6 +58,14 @@ internal static class ResetEndpoint
     {
       case CollabResetStatus.Reset:
         context.Response.StatusCode = StatusCodes.Status204NoContent;
+
+        return;
+
+      case CollabResetStatus.Purged:
+        await SyncEndpoint.RefuseAsync(
+            context,
+            StatusCodes.Status403Forbidden,
+            "forbidden\n");
 
         return;
 

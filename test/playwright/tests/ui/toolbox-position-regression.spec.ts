@@ -4,6 +4,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
@@ -61,6 +62,7 @@ const createBlok = async (
     },
     { holder: HOLDER_ID, initialData: data ?? null, withTable: Boolean(options.withTable) }
   );
+  await openFixtureToggles(page, data);
 };
 
 interface PositionMeasurement {

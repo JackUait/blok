@@ -226,7 +226,7 @@ export class I18n extends Module {
   public update(options: {
     locale?: string;
     messages?: I18nDictionary;
-    direction?: 'ltr' | 'rtl';
+    direction?: 'ltr' | 'rtl' | null;
   }): Promise<void> {
     const run = (): Promise<void> => this.applyUpdate(options);
 
@@ -247,10 +247,11 @@ export class I18n extends Module {
   }
 
   /**
-   * Get the text direction for the current locale
+   * Get the text direction in effect: the explicit one if the host set it,
+   * otherwise the one the locale implies.
    */
   public getDirection(): 'ltr' | 'rtl' {
-    return getDirection(this.locale);
+    return this.config.i18n?.direction ?? getDirection(this.locale);
   }
 
   /**
@@ -296,7 +297,7 @@ export class I18n extends Module {
     }
 
     // Update config.i18n.direction so other modules can access it via isRtl getter
-    this.updateConfigDirection(i18nConfig?.direction ?? this.getDirection());
+    this.updateConfigDirection(i18nConfig?.direction ?? getDirection(this.locale));
   }
 
   /**
@@ -306,7 +307,7 @@ export class I18n extends Module {
   private async applyUpdate(options: {
     locale?: string;
     messages?: I18nDictionary;
-    direction?: 'ltr' | 'rtl';
+    direction?: 'ltr' | 'rtl' | null;
   }): Promise<void> {
     const { locale, messages, direction } = options;
     const localeChanged = locale === undefined
@@ -321,8 +322,9 @@ export class I18n extends Module {
       return;
     }
 
+    // `null` drops an explicit direction; a locale change also resets to the locale's.
     if (localeChanged || direction !== undefined) {
-      this.applyDirection(direction ?? this.getDirection());
+      this.applyDirection(direction ?? getDirection(this.locale));
     }
 
     this.Blok.Toolbar?.refreshI18n();
@@ -340,7 +342,7 @@ export class I18n extends Module {
 
     this.eventsDispatcher.emit(I18nChanged, {
       locale: this.locale,
-      direction: this.config.i18n?.direction ?? this.getDirection(),
+      direction: this.getDirection(),
     });
   }
 

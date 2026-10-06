@@ -136,6 +136,49 @@ describe('CopyLinkTune', () => {
     );
   });
 
+  it('copies the url the block links to when it has one, like a page block', async () => {
+    const { api, block, notifier } = createMocks();
+    const pageBlock = { ...block, copyLink: 'https://x.test/editor/page/p1' } as unknown as BlockAPI;
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+    });
+    Object.defineProperty(window, 'location', {
+      value: { href: 'https://example.com/page#oldHash' },
+      writable: true,
+    });
+
+    const config = new CopyLinkTune({ api, block: pageBlock }).render() as MenuConfigItem;
+
+    await config.onActivate?.(config);
+
+    expect(writeTextMock).toHaveBeenCalledWith('https://x.test/editor/page/p1');
+    expect(notifier.show).toHaveBeenCalledWith(expect.objectContaining({ style: 'success' }));
+  });
+
+  it('copies the block anchor when copyLink is null', async () => {
+    const { api, block } = createMocks();
+    const plainBlock = { ...block, copyLink: null } as unknown as BlockAPI;
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+    });
+    Object.defineProperty(window, 'location', {
+      value: { href: 'https://example.com/page' },
+      writable: true,
+    });
+
+    const config = new CopyLinkTune({ api, block: plainBlock }).render() as MenuConfigItem;
+
+    await config.onActivate?.(config);
+
+    expect(writeTextMock).toHaveBeenCalledWith('https://example.com/page#abc123XYZ0');
+  });
+
   it('shows error notification when clipboard write fails', async () => {
     const { api, block, notifier } = createMocks();
     const writeTextMock = vi.fn().mockRejectedValue(new Error('Permission denied'));

@@ -5,6 +5,8 @@ import { searchEmojisRanked } from '../../../components/utils/emoji/emoji-search
 import { loadEmojiLocale, type EmojiLocaleData } from '../../../components/utils/emoji/emoji-locale';
 import { hide as hideTooltip, onHover } from '../../../components/utils/tooltip';
 import { DATA_ATTR } from '../../../components/constants';
+import { getElementDirection, logicalArrow } from '../../../components/utils/direction';
+import { syncPortalDirection } from '../../../components/utils/portal-direction';
 import { getTabbables } from '../../../components/utils/modal-dialog';
 import { createPositionTracker, type PositionTracker } from '../../../components/utils/popover/anchored-position';
 import {
@@ -57,6 +59,13 @@ interface EmojiPickerOptions {
    * Defaults to false, the Callout icon-editing popover's existing behaviour.
    */
   inline?: boolean;
+  /**
+   * Shows the curated Callout section first. Defaults to on, except in inline
+   * mode. Pickers that do not edit a callout (a page icon) turn it off.
+   */
+  curated?: boolean;
+  /** How far the picker starts before the anchor's start edge, in px. Defaults to 8. */
+  startInset?: number;
 }
 
 interface ReelRow {
@@ -157,6 +166,8 @@ export class EmojiPicker {
   private readonly i18n: I18n;
   private readonly _locale: string;
   private readonly _inline: boolean;
+  private readonly _curated: boolean;
+  private readonly _startInset: number;
   private _localeData: EmojiLocaleData | null = null;
   private _localeLoad: Promise<void> | null = null;
   private _hasKeywords = false;
@@ -217,6 +228,8 @@ export class EmojiPicker {
     this.i18n = options.i18n;
     this._locale = options.locale;
     this._inline = options.inline ?? false;
+    this._curated = options.curated ?? !this._inline;
+    this._startInset = options.startInset ?? 8;
     this._element = this.buildElement();
 
     const body = this._element.querySelector<HTMLElement>('[data-emoji-picker-body]');
@@ -306,6 +319,8 @@ export class EmojiPicker {
     this._filterInput.value = '';
     this._clearSearchButton.hidden = true;
     this._element.setAttribute('data-theme', this.resolveTheme());
+    // One picker serves every callout and editor, so re-read the direction on each open.
+    syncPortalDirection(this._element, { source: anchor, onResync: () => this.onDirectionResync() });
 
     const storedTone = loadSkinTone();
     const toneChanged = storedTone !== this._skinTone;
@@ -414,6 +429,17 @@ export class EmojiPicker {
       .finally(() => {
         this._keywordsLoad = null;
       });
+  }
+
+  /**
+   * Re-places the open picker for the new direction. Inline mode reuses the
+   * caret rect captured on open. Closing here instead would desync the ":"
+   * trigger, which owns the inline picker's open state.
+   */
+  private onDirectionResync(): void {
+    if (this._open && this._anchorEl !== null) {
+      this.position(this._anchorEl);
+    }
   }
 
   public close(): void {
@@ -728,10 +754,10 @@ export class EmojiPicker {
     const tracks = getComputedStyle(grid).gridTemplateColumns;
     const columns = tracks && tracks !== 'none' ? tracks.split(' ').length : 10;
     const steps: Record<string, number> = {
-      ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns,
+      forward: 1, backward: -1, ArrowUp: -columns, ArrowDown: columns,
       Home: -index, End: this._emojiButtons.length - 1 - index,
     };
-    const step = steps[event.key];
+    const step = steps[logicalArrow(event.key, getElementDirection(this._element)) ?? event.key];
 
     if (step === undefined) {
       return;
@@ -772,7 +798,7 @@ export class EmojiPicker {
 
     popover.setAttribute('data-emoji-picker-skin-tone', '');
     popover.className = [
-      'absolute right-0 top-full mt-1.5 z-20',
+      'absolute end-0 top-full mt-1.5 z-20',
       'flex items-center gap-0.5 p-1',
       'bg-white border border-neutral-200/70 shadow-lg',
       'theme-dark:bg-neutral-800 theme-dark:border-neutral-700/50',
@@ -788,8 +814,8 @@ export class EmojiPicker {
       }
 
       const index = this._skinToneButtons.indexOf(target);
-      const directions: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1 };
-      const direction = directions[event.key] ?? 0;
+      const steps: Record<string, number> = { forward: 1, backward: -1 };
+      const direction = steps[logicalArrow(event.key, getElementDirection(popover)) ?? ''] ?? 0;
 
       if (index < 0 || direction === 0) {
         return;
@@ -1367,9 +1393,7 @@ export class EmojiPicker {
 
     const visibleCategories = new Set<string>();
 
-    if (!this._inline) {
-      // Curated callout section first — inline mode has no callout-specific
-      // affordance to curate for, so it skips straight to standard categories.
+    if (this._curated) {
       const calloutEmojis = CURATED_CALLOUT_EMOJIS
         .map(native => emojis.find(e => e.native === native))
         .filter((e): e is ProcessedEmoji => e !== undefined);
@@ -1383,11 +1407,9 @@ export class EmojiPicker {
       }
     }
 
-    // Standard categories. In Callout mode, exclude curated emojis here —
-    // they already have their own section above, so this avoids duplicates.
-    // Inline mode built no curated section, so nothing to exclude: those
-    // twenty emojis are ordinary emojis that stay in their own category.
-    const curatedSet = this._inline ? new Set<string>() : new Set(CURATED_CALLOUT_EMOJIS);
+    // Curated emojis already have their own section above. Without it, they
+    // stay in their own categories.
+    const curatedSet = this._curated ? new Set(CURATED_CALLOUT_EMOJIS) : new Set<string>();
     const byCategory = groupEmojisByCategory(emojis.filter(e => !curatedSet.has(e.native)));
 
     for (const [category, categoryEmojis] of byCategory) {
@@ -1692,7 +1714,11 @@ export class EmojiPicker {
     const above = rect.bottom + height + 4 > viewportHeight - 8 && rect.top > viewportHeight - rect.bottom;
     const preferredTop = above ? rect.top - height - 4 : rect.bottom + 4;
     const top = Math.max(8, Math.min(preferredTop, viewportHeight - height - 8));
-    const left = Math.max(8, Math.min(rect.left - 8, viewportWidth - width - 8));
+    // Starts before the anchor's start edge: its right edge in RTL.
+    const preferredLeft = getElementDirection(this._element) === 'rtl'
+      ? rect.right + this._startInset - width
+      : rect.left - this._startInset;
+    const left = Math.max(8, Math.min(preferredLeft, viewportWidth - width - 8));
 
     this._element.style.top = `${top}px`;
     this._element.style.left = `${left}px`;

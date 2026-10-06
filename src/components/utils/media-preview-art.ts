@@ -155,5 +155,279 @@ function uid(): string {
   return Math.random().toString(36).slice(2, 9);
 }
 
+// Popover "Nothing found": a menu whose result is a dashed empty slot, a
+// second menu fanned behind it, and a loupe floating over the slot.
+const searchRow = (y: number, width: number, soft: boolean): string =>
+  `<rect class="blok-media-preview__cell" x="58" y="${y}" width="12" height="12" rx="3.5"/>`
+  + `<rect class="blok-media-preview__line${soft ? ' blok-media-preview__line--soft' : ''}" x="78" y="${y + 4}" width="${width}" height="4" rx="2"/>`;
+
+const search = (id: string): string => `
+    <defs>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(1, `<rect class="blok-media-preview__frame blok-media-preview__sheet blok-media-preview__sheet--back" x="48" y="14" width="104" height="88" rx="12"/>`)}
+    ${layer(3, `
+      <rect id="${id}-s" class="blok-media-preview__frame" x="48" y="14" width="104" height="88" rx="12"/>
+      <rect class="blok-media-preview__field" x="56" y="22" width="88" height="14" rx="5"/>
+      <rect class="blok-media-preview__line blok-media-preview__line--soft" x="62" y="27.5" width="26" height="3" rx="1.5"/>
+      ${searchRow(45, 50, false)}
+      <rect class="blok-media-preview__slot" x="56" y="62.5" width="88" height="15" rx="5"/>
+      ${searchRow(84, 34, true)}
+      ${drop(id)}`)}
+    ${layer(8, `
+      <g id="${id}-f" class="blok-media-preview__loupe">
+        <path class="blok-media-preview__frame" d="M139.2 82.6l11.3 11.3a4 4 0 0 1-5.6 5.6l-11.3-11.3z"/>
+        <circle class="blok-media-preview__frame" cx="126" cy="70" r="17"/>
+        <circle class="blok-media-preview__lens" cx="126" cy="70" r="12"/>
+        <path class="blok-media-preview__glint" d="M118 66a9 9 0 0 1 5.5-5.5"/>
+      </g>`)}`;
+
+// Whitespace between tags is stripped: it would become text and leak into the
+// popover message's textContent, next to the "Nothing found" label.
+export const searchPreviewSvg = (): string =>
+  `<svg viewBox="0 0 200 120" width="200" height="120" fill="none" aria-hidden="true" focusable="false">${search(`blok-media-preview-${uid()}`)}</svg>`
+    .replace(/>\s+</g, '><')
+    .trim();
+
 export const previewSvg = (kind: MediaPreviewKind): string =>
   `<svg viewBox="0 0 200 120" width="200" height="120" fill="none" focusable="false">${drawings[kind](`blok-media-preview-${uid()}`)}</svg>`;
+
+// ---- Embed window scenes: what a typed link will become ----
+
+export const EMBED_SCENE_KINDS = [
+  'idle', 'generic', 'video', 'audio', 'image', 'social', 'document',
+  'table', 'form', 'code', 'design', 'chart', 'map', 'calendar',
+] as const;
+
+export type EmbedSceneKind = (typeof EMBED_SCENE_KINDS)[number];
+
+const cls = (names: string): string => names.split(' ').map((name) => `blok-media-preview__${name}`).join(' ');
+const rect = (names: string, x: number, y: number, w: number, h: number, rx: number, extra = ''): string =>
+  `<rect class="${cls(names)}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"${extra}/>`;
+const circle = (names: string, cx: number, cy: number, r: number): string =>
+  `<circle class="${cls(names)}" cx="${cx}" cy="${cy}" r="${r}"/>`;
+const path = (names: string, d: string, extra = ''): string => `<path class="${cls(names)}" d="${d}"${extra}/>`;
+const body = (id: string): string => ` id="${id}-s"`;
+const winDots = (x: number, y: number): string => [0, 1, 2].map((i) => circle('cell', x + i * 7, y, 2.2)).join('');
+
+type EmbedScene = Exclude<EmbedSceneKind, 'video' | 'audio' | 'image'>;
+
+const embedScenes: Record<EmbedScene, (id: string) => string> = {
+  idle: (id) => `
+    <defs>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(3, `
+      ${rect('frame dashed', 30, 12, 140, 88, 12, body(id))}
+      ${winDots(43, 24)}
+      ${rect('field', 70, 19, 86, 10, 5)}
+      ${rect('line line--title', 44, 42, 62, 5, 2.5)}
+      ${rect('line', 44, 54, 96, 3.5, 1.75)}
+      ${rect('line', 44, 62, 80, 3.5, 1.75)}
+      ${rect('line line--soft', 44, 70, 52, 3.5, 1.75)}
+      ${drop(id)}`)}
+    ${layer(7, `
+      <g id="${id}-f" class="blok-media-preview__chip-float">
+        ${rect('frame', 96, 72, 68, 24, 12)}
+        ${rect('link', 105, 80, 11, 8, 4)}
+        ${rect('link', 112, 80, 11, 8, 4)}
+        ${rect('line', 130, 82, 24, 4, 2)}
+      </g>`)}`,
+  generic: (id) => `
+    <defs>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(3, `
+      ${rect('frame', 26, 10, 148, 92, 12, body(id))}
+      ${winDots(39, 22)}
+      ${rect('field', 66, 17, 94, 10, 5)}
+      ${rect('screen', 38, 36, 56, 52, 6)}
+      ${rect('line line--title', 104, 40, 52, 5, 2.5)}
+      ${rect('line', 104, 52, 58, 3.5, 1.75)}
+      ${rect('line', 104, 60, 48, 3.5, 1.75)}
+      ${rect('line line--soft', 104, 68, 34, 3.5, 1.75)}
+      ${drop(id)}`)}
+    ${layer(7, `
+      <g id="${id}-f">
+        ${circle('frame', 156, 86, 15)}
+        <ellipse class="blok-media-preview__groove" cx="156" cy="86" rx="6.5" ry="15"/>
+        ${path('groove', 'M141 86h30')}
+      </g>`)}`,
+  social: (id) => `
+    <defs><clipPath id="${id}"><rect x="52" y="58" width="96" height="36" rx="6"/></clipPath>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(3, `
+      ${rect('frame', 40, 6, 120, 98, 12, body(id))}
+      ${circle('screen', 61, 24, 8)}
+      ${rect('line line--title', 75, 19, 40, 4.5, 2.25)}
+      ${rect('line line--soft', 75, 27, 26, 3, 1.5)}
+      ${rect('line', 52, 40, 92, 3.5, 1.75)}
+      ${rect('line', 52, 48, 70, 3.5, 1.75)}
+      ${rect('screen', 52, 58, 96, 36, 6)}
+      <g clip-path="url(#${id})"><g class="blok-media-preview__scene">
+        ${circle('sun', 128, 68, 5)}
+        ${path('hill hill--far', 'M52 94l24-20 20 12 18-10 34 18z')}
+      </g></g>
+      ${drop(id)}`)}
+    ${layer(7, `
+      <g id="${id}-f">
+        ${circle('frame', 158, 92, 13)}
+        ${path('heart', 'M158 98.5c-6-4-9-7-9-11a4.5 4.5 0 0 1 9-2a4.5 4.5 0 0 1 9 2c0 4-3 7-9 11z')}
+      </g>`)}`,
+  document: (id) => `
+    <defs>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(1, `
+      <g class="blok-media-preview__sheet blok-media-preview__sheet--back">
+        ${rect('frame', 70, 10, 62, 92, 8)}
+        ${rect('line', 78, 22, 30, 4, 2)}
+        ${rect('line line--soft', 78, 32, 44, 3, 1.5)}
+        ${rect('line line--soft', 78, 40, 40, 3, 1.5)}
+      </g>
+      ${drop(id)}`)}
+    ${layer(5, `
+      <g id="${id}-f" class="blok-media-preview__sheet">
+        ${path('frame', PAGE, body(id))}
+        ${path('crease', FLAP, ` filter="url(#${id}-d)"`)}
+        ${path('flap', FLAP)}
+        ${rect('line line--title', 78, 44, 30, 5, 2.5)}
+        ${rect('line', 78, 55, 44, 3.5, 1.75)}
+        ${rect('line', 78, 63, 44, 3.5, 1.75)}
+        ${rect('line', 78, 71, 36, 3.5, 1.75)}
+        ${rect('line line--soft', 78, 79, 26, 3.5, 1.75)}
+      </g>`)}`,
+  table: (id) => {
+    const head = [0, 1, 2, 3].map((col) => rect('cell cell--head', 36 + col * 33, 21, 29, 9, 2.5)).join('');
+    const rows = [35, 47, 59, 71, 83].flatMap((y) => [0, 1, 2, 3].map((col) => rect('cell', 36 + col * 33, y, 29, 8, 2))).join('');
+
+    return `
+    <defs>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(3, `${rect('frame', 26, 12, 148, 90, 10, body(id))}${head}${rows}${drop(id)}`)}
+    ${layer(7, `
+      <g id="${id}-f">
+        ${rect('frame select', 98, 44, 37, 17, 4)}
+        ${rect('line', 104, 51, 18, 3.5, 1.75)}
+        ${circle('glyph', 135, 61, 2.6)}
+      </g>`)}`;
+  },
+  form: (id) => `
+    <defs>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(3, `
+      ${rect('frame', 42, 6, 116, 98, 12, body(id))}
+      ${rect('line line--title', 54, 18, 48, 5, 2.5)}
+      ${rect('line line--soft', 54, 31, 26, 3, 1.5)}
+      ${rect('screen', 54, 37, 92, 13, 4.5)}
+      ${rect('line line--soft', 54, 57, 34, 3, 1.5)}
+      ${rect('screen', 54, 63, 92, 13, 4.5)}
+      ${rect('button', 54, 84, 42, 12, 4.5)}
+      ${drop(id)}`)}
+    ${layer(7, `
+      <g id="${id}-f">
+        ${rect('frame', 128, 76, 30, 30, 9)}
+        ${path('tick', 'M135.5 91.5l5 5 10-11')}
+      </g>`)}`,
+  code: (id) => {
+    const rows: Array<[number, number, boolean]> = [[0, 46, false], [12, 52, true], [12, 38, false], [24, 30, true], [12, 44, false], [0, 22, false]];
+    const lines = rows
+      .map(([indent, width, strong], i) => rect('cell', 38, 37 + i * 10, 5, 3, 1.5)
+        + rect(strong ? 'line line--title' : 'line', 50 + indent, 37 + i * 10, width, 3.5, 1.75))
+      .join('');
+
+    return `
+    <defs>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(3, `
+      ${rect('frame', 26, 10, 148, 92, 10, body(id))}
+      ${winDots(39, 22)}
+      ${rect('field', 64, 17, 36, 10, 4)}
+      ${lines}
+      ${drop(id)}`)}
+    ${layer(7, `
+      <g id="${id}-f">
+        ${rect('frame', 124, 74, 46, 26, 9)}
+        ${path('tick', 'M139 81l-6 6 6 6')}
+        ${path('tick', 'M155 81l6 6-6 6')}
+        ${path('tick', 'M149.5 80l-5 14')}
+      </g>`)}`;
+  },
+  design: (id) => `
+    <defs>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(3, `
+      ${rect('frame', 26, 10, 148, 92, 10, body(id))}
+      ${rect('cell', 34, 18, 10, 76, 4)}
+      ${rect('screen', 62, 30, 42, 42, 8)}
+      ${circle('blob', 116, 62, 21)}
+      ${rect('dashed', 57, 25, 52, 52, 3)}
+      ${rect('frame', 55, 23, 4, 4, 1)}${rect('frame', 107, 23, 4, 4, 1)}${rect('frame', 55, 75, 4, 4, 1)}${rect('frame', 107, 75, 4, 4, 1)}
+      ${drop(id)}`)}
+    ${layer(8, `
+      <g id="${id}-f">
+        ${path('pointer', 'M138 70v22l6-5.5 4.5 9.5 4-1.8-4.5-9.5h8z')}
+        ${rect('tag', 152, 92, 26, 11, 5.5)}
+      </g>`)}`,
+  chart: (id) => {
+    const bars = [22, 36, 28, 48, 40, 58].map((h, i) => rect('chart-bar', 40 + i * 19, 92 - h, 11, h, 2.5)).join('');
+
+    return `
+    <defs>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(3, `
+      ${rect('frame', 26, 10, 148, 92, 10, body(id))}
+      ${rect('line line--title', 38, 20, 40, 5, 2.5)}
+      ${bars}
+      ${path('trend', 'M45.5 64L64.5 50L83.5 58L102.5 38L121.5 46L140.5 28')}
+      ${drop(id)}`)}
+    ${layer(7, `
+      <g id="${id}-f">
+        ${rect('frame', 120, 54, 46, 24, 7)}
+        ${rect('line line--title', 127, 61, 24, 4, 2)}
+        ${rect('line line--soft', 127, 69, 32, 3, 1.5)}
+      </g>`)}`;
+  },
+  map: (id) => `
+    <defs><clipPath id="${id}"><rect x="32" y="16" width="136" height="80" rx="6"/></clipPath>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(3, `
+      ${rect('frame', 24, 8, 152, 96, 12, body(id))}
+      ${rect('screen', 32, 16, 136, 80, 6)}
+      <g clip-path="url(#${id})">
+        ${path('park', 'M120 16h48v34c-14 6-30 2-40-8s-12-18-8-26z')}
+        ${path('road', 'M28 76C64 66 104 86 172 54')}
+        ${path('road road--minor', 'M88 12L112 100')}
+        ${path('road road--minor', 'M28 34C60 40 80 30 100 36')}
+      </g>
+      ${drop(id)}`)}
+    ${layer(9, `
+      <g id="${id}-f">
+        ${path('pin', 'M117 34a13 13 0 0 1 13 13c0 10-13 22-13 22s-13-12-13-22a13 13 0 0 1 13-13z')}
+        ${circle('frame', 117, 47, 4.5)}
+      </g>`)}`,
+  calendar: (id) => {
+    const days = Array.from({ length: 21 }, (_, i) =>
+      rect(i === 9 ? 'glyph' : 'cell', 52 + (i % 7) * 14, 44 + Math.floor(i / 7) * 13, 10, 8, 2)).join('');
+
+    return `
+    <defs><clipPath id="${id}"><rect x="40" y="14" width="120" height="88" rx="12"/></clipPath>${shadowFilters(id)}</defs>
+    ${ground(id)}
+    ${layer(3, `
+      ${rect('frame', 40, 14, 120, 88, 12, body(id))}
+      <g clip-path="url(#${id})">${rect('band', 40, 14, 120, 20, 0)}</g>
+      ${rect('frame', 68, 8, 6, 13, 3)}${rect('frame', 126, 8, 6, 13, 3)}
+      ${days}
+      ${drop(id)}`)}
+    ${layer(7, `
+      <g id="${id}-f">
+        ${rect('frame', 110, 80, 62, 22, 7)}
+        ${rect('glyph', 115, 85, 3, 12, 1.5)}
+        ${rect('line line--title', 123, 86, 34, 4, 2)}
+        ${rect('line line--soft', 123, 93, 24, 3, 1.5)}
+      </g>`)}`;
+  },
+};
+
+/** The embed window scene for a kind; video, audio and image reuse the media drawings. */
+export const embedPreviewSvg = (kind: EmbedSceneKind): string => {
+  if (kind === 'video' || kind === 'audio' || kind === 'image') return previewSvg(kind);
+
+  return `<svg viewBox="0 0 200 120" width="200" height="120" fill="none" focusable="false">${embedScenes[kind](`blok-media-preview-${uid()}`)}</svg>`;
+};

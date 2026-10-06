@@ -127,6 +127,31 @@ public interface IBlokDocumentConverter
       CancellationToken cancellationToken = default);
 
   /// <summary>
+  /// Converts a saved document to Markdown, with page titles and links from
+  /// <paramref name="pages"/>.
+  /// </summary>
+  /// <remarks>
+  /// An allowed page with a link is written as <c>[title](href)</c>; any other
+  /// page is its label alone, and its lost link is reported in the warnings.
+  /// See <see cref="ToHtmlAsync(string, IReadOnlyDictionary{string, BlokPageInfo}, Func{string, string}, CancellationToken)"/>
+  /// for how <paramref name="pages"/> and <paramref name="pageHref"/> are read.
+  /// </remarks>
+  /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
+  /// <param name="pages">What the reader may see about each page, by page id.</param>
+  /// <param name="pageHref">Builds the link for an allowed page. <c>null</c>: no links.</param>
+  /// <param name="cancellationToken">Cancels the conversion.</param>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says whether the input was unusable, the timeout was reached, or the
+  /// allocation budget was.
+  /// </exception>
+  ValueTask<BlokMarkdownConversion> ToMarkdownAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, BlokPageInfo?> pages,
+      Func<string, string>? pageHref = null,
+      CancellationToken cancellationToken = default);
+
+  /// <summary>
   /// The version the editor stamps into a saved document's <c>version</c>
   /// field. A caller writing documents outside the browser reads it from here
   /// so both sides agree on what a stored document says it is.
@@ -196,6 +221,70 @@ public interface IBlokDocumentConverter
       bool includeCode = false,
       CancellationToken cancellationToken = default);
 
+  /// <summary>
+  /// The page facts in a saved document: the pages it owns, the pages it links
+  /// to, and each block's searchable text.
+  /// </summary>
+  /// <remarks>
+  /// Gives the same rows as Blok's <c>pageIndex</c> in Node, so a .NET host and
+  /// a Node host can write one catalog. Use the owners and references to build
+  /// the <c>pages</c> map an export needs.
+  /// <para>
+  /// It costs about twice <see cref="ToPlainTextAsync"/>. On a very large
+  /// document it can run past the timeout: a 730 KB article was measured
+  /// timing out at the 10 s default on a busy machine. If you index on every
+  /// save, raise the timeout, or index outside the save transaction and retry.
+  /// </para>
+  /// </remarks>
+  /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
+  /// <param name="cancellationToken">Cancels the indexing.</param>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says whether the input was unusable, the timeout was reached, or the
+  /// allocation budget was.
+  /// </exception>
+  ValueTask<BlokPageIndex> GetPageIndexAsync(
+      string documentJson,
+      CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Copies a page document under new ids: every block id, the references to
+  /// them, and the page ids you map. Use it to import a copy of a page next to
+  /// the original.
+  /// </summary>
+  /// <remarks>
+  /// Rewrites block ids, <c>parent</c> and <c>content</c>, table cell ids,
+  /// in-document <c>#id</c> links, the <c>pageId</c> of <c>page</c>,
+  /// <c>page-link</c> and <c>database-row</c> blocks, and inline page
+  /// references, including those inside legacy nested blocks. A page id you
+  /// do not map is kept. Everything else, unknown keys included, is copied as
+  /// is.
+  /// <para>
+  /// Take the page ids from your own catalog of the copied pages.
+  /// <see cref="GetPageIndexAsync"/> does not list <c>database-row</c> pages.
+  /// </para>
+  /// </remarks>
+  /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
+  /// <param name="blockIds">A new id for every block id the document names.</param>
+  /// <param name="pageIds">New ids for the pages being copied, by old id.</param>
+  /// <param name="cancellationToken">Cancels the copy.</param>
+  /// <returns>The copied document, to store.</returns>
+  /// <exception cref="ArgumentException">
+  /// <paramref name="blockIds"/> misses an id the document names, maps two
+  /// blocks to one id, or the document has a block with no id. The message
+  /// lists every such id.
+  /// </exception>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says whether the input was unusable, the timeout was reached, or the
+  /// allocation budget was.
+  /// </exception>
+  ValueTask<string> RemapPageDocumentAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, string> blockIds,
+      IReadOnlyDictionary<string, string> pageIds,
+      CancellationToken cancellationToken = default);
+
   /// <summary>Converts a saved document to HTML.</summary>
   /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
   /// <param name="cancellationToken">Cancels the conversion.</param>
@@ -205,6 +294,39 @@ public interface IBlokDocumentConverter
   /// allocation budget was.
   /// </exception>
   ValueTask<string> ToHtmlAsync(string documentJson, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Converts a saved document to HTML, with page titles, icons and links from
+  /// <paramref name="pages"/>.
+  /// </summary>
+  /// <remarks>
+  /// A saved document stores only page ids. For each <c>page</c> block,
+  /// <c>page-link</c> block and inline page reference:
+  /// <list type="bullet">
+  /// <item>an id mapped to a <see cref="BlokPageInfo"/> shows its title and icon, and links when <paramref name="pageHref"/> gives a URL;</item>
+  /// <item>an id mapped to one with <see cref="BlokPageInfo.NoAccess"/> shows "No access", unlinked;</item>
+  /// <item>an id mapped to <c>null</c> shows "Page not found";</item>
+  /// <item>an id not in the map shows "Page".</item>
+  /// </list>
+  /// <paramref name="pageHref"/> is called only for allowed pages, never for
+  /// denied or missing ones. Its result is used as given, so encode the id
+  /// yourself; a script-capable URL is dropped. Only <paramref name="pages"/>
+  /// counts: page data inside <paramref name="documentJson"/> is ignored.
+  /// </remarks>
+  /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
+  /// <param name="pages">What the reader may see about each page, by page id.</param>
+  /// <param name="pageHref">Builds the link for an allowed page. <c>null</c>: no links.</param>
+  /// <param name="cancellationToken">Cancels the conversion.</param>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says whether the input was unusable, the timeout was reached, or the
+  /// allocation budget was.
+  /// </exception>
+  ValueTask<string> ToHtmlAsync(
+      string documentJson,
+      IReadOnlyDictionary<string, BlokPageInfo?> pages,
+      Func<string, string>? pageHref = null,
+      CancellationToken cancellationToken = default);
 
   /// <summary>Extracts a saved document's readable text.</summary>
   /// <remarks>
@@ -328,7 +450,7 @@ public interface IBlokDocumentConverter
 
   /// <summary>
   /// Parses HTML into a saved document, reporting what the HTML could not carry
-  /// into it. The inverse of <see cref="ToHtmlAsync"/>.
+  /// into it. The inverse of <see cref="ToHtmlAsync(string, CancellationToken)"/>.
   /// </summary>
   /// <remarks>
   /// Covers the structural subset a document body is made of: headings,

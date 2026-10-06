@@ -17,6 +17,8 @@ type ReadOnlyMocks = {
   modificationsObserver: {
     disable: MockInstance<() => void>;
     enable: MockInstance<() => void>;
+    flushPendingBeforeRender: MockInstance<() => void>;
+    flushBeforeReadOnly: MockInstance<() => void>;
   };
   saver: {
     save: MockInstance<() => Promise<{ blocks: unknown[] }>>;
@@ -48,6 +50,7 @@ type ReadOnlyMocks = {
   };
   yjsManager: {
     captureCaretSnapshot: MockInstance<() => CaretSnapshot | null>;
+    transactWithoutCapture: MockInstance<(fn: () => void) => void>;
   };
   caret: {
     setToInput: MockInstance<(input: HTMLElement, position?: string, offset?: number) => void>;
@@ -75,6 +78,8 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
   const modificationsObserver: ReadOnlyMocks['modificationsObserver'] = {
     disable: vi.fn<() => void>(() => undefined),
     enable: vi.fn<() => void>(() => undefined),
+    flushPendingBeforeRender: vi.fn<() => void>(() => undefined),
+    flushBeforeReadOnly: vi.fn<() => void>(() => undefined),
   };
 
   const saver: ReadOnlyMocks['saver'] = {
@@ -119,6 +124,7 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
 
   const yjsManager: ReadOnlyMocks['yjsManager'] = {
     captureCaretSnapshot: vi.fn<() => CaretSnapshot | null>(() => null),
+    transactWithoutCapture: vi.fn((fn: () => void) => fn()),
   };
 
   const caret: ReadOnlyMocks['caret'] = {

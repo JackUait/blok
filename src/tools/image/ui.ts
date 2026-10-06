@@ -1,6 +1,7 @@
 import type { ImageCrop, ImageData, ImageSize } from '../../../types/tools/image';
 import type { MediaVariant } from '../../../types/configs/media';
 import { readVariants } from '../../shared/read-variants';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 /**
  * Mirror of the upstream ImageAlign* union from types/tools/image.d.ts,
  * kept local so the i18n regression scan finds no stray hardcoded copy.
@@ -10,11 +11,10 @@ import { onHover as tooltipOnHover, hide as tooltipHide, show as tooltipShow } f
 import type { I18nInstance } from '../../components/utils/tools';
 import {
   IconCaption,
-  IconCheck,
   IconChevronLeft,
   IconChevronRight,
   IconCollapseFullscreen,
-  IconCrop,
+  IconSliders,
   IconDownload,
   IconExpandFullscreen,
   IconAlignCenter,
@@ -27,13 +27,14 @@ import {
   IconMinus,
 } from '../../components/icons';
 import { applyRubberBand } from './spring';
-import { readAdjust } from './adjust';
+import { readAdjust, type FilterSet } from './adjust';
 import { isIdentity, orientedSize, readGeometry } from './geometry';
 import { applyImageFilter, buildFrame, naturalOf, pickEdits, type ImageEdits } from './image-view';
 import { readMarkup } from './markup/model';
 import { downloadImage } from './download';
 import { tr } from './i18n';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import { inlineDelta, logicalArrow, type TextDirection } from '../../components/utils/direction';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
 
 const ALIGN_TO_TEXT_ALIGN: Record<ImageAlign, string> = {
@@ -87,7 +88,8 @@ function wrapInPicture(img: HTMLImageElement, variants: MediaVariant[]): HTMLEle
 }
 
 export function renderImage(
-  data: Partial<ImageData> & { url: string }
+  data: Partial<ImageData> & { url: string },
+  filters?: FilterSet
 ): HTMLElement {
   const alignment = data.alignment ?? 'center';
   const figure = document.createElement('figure');
@@ -101,6 +103,7 @@ export function renderImage(
   }
 
   const img = document.createElement('img');
+  img.setAttribute(DATA_ATTR.blockContextMenu, '');
   img.setAttribute('src', data.url);
   img.setAttribute('alt', data.alt ?? '');
   img.draggable = false;
@@ -109,11 +112,11 @@ export function renderImage(
   const better = (readVariants(data.variants, data.url) ?? []).filter((variant) => variant.url !== data.url);
   const content: HTMLElement = better.length === 0 ? img : wrapInPicture(img, better);
   const geometry = readGeometry(data);
-  const { filter, adjust } = readAdjust(data);
+  const { filter, strength, adjust } = readAdjust(data);
 
   const markup = readMarkup(data.markup);
 
-  applyImageFilter(img, filter, adjust);
+  applyImageFilter(img, filter, adjust, strength, filters);
 
   if (!isIdentity(geometry) || markup.length > 0) {
     const frame = buildFrame(img, { natural: naturalOf(data), geometry, crop: data.crop, content, markup });
@@ -176,7 +179,7 @@ export function renderCaption(opts: CaptionOptions): HTMLElement {
   }
   el.textContent = opts.value;
   el.style.outline = 'none';
-  el.style.textAlign = 'left';
+  el.style.textAlign = 'start';
   return el;
 }
 
@@ -211,30 +214,17 @@ export function renderAltPill(opts: AltPillOptions): HTMLButtonElement {
   btn.setAttribute('data-state', hasAlt ? 'set' : 'missing');
   btn.setAttribute('aria-pressed', hasAlt ? 'true' : 'false');
 
-  const mark = document.createElement('span');
-  mark.className = 'blok-image-alt-pill__mark';
-  mark.setAttribute('aria-hidden', 'true');
-  if (hasAlt) mark.innerHTML = IconCheck;
-  btn.appendChild(mark);
-
+  if (hasAlt) {
+    const label = document.createElement('span');
+    label.className = 'blok-image-alt-pill__label';
+    label.textContent = tr(opts.i18n, 'tools.image.altButton');
+    // The accessible name is built from text, so it needs a real space; CSS draws the visual gap.
+    btn.append(label, ' ');
+  }
   const text = document.createElement('span');
   text.className = 'blok-image-alt-pill__text';
-  if (hasAlt) {
-    const label = document.createElement('b');
-    label.textContent = tr(opts.i18n, 'tools.image.altButton');
-    text.append(label, opts.alt ?? '');
-  } else {
-    text.textContent = tr(opts.i18n, 'tools.image.altAdd');
-  }
+  text.textContent = hasAlt ? opts.alt ?? '' : tr(opts.i18n, 'tools.image.altAdd');
   btn.appendChild(text);
-
-  if (!hasAlt) {
-    const help = document.createElement('span');
-    help.className = 'blok-image-alt-pill__help';
-    help.setAttribute('aria-hidden', 'true');
-    help.textContent = '?';
-    btn.appendChild(help);
-  }
 
   const hint = document.createElement('div');
   hint.className = 'blok-image-alt-hint';
@@ -295,6 +285,8 @@ export interface LightboxOptions extends ImageEdits {
    */
   direction?: 'ltr' | 'rtl';
   i18n?: I18nInstance;
+  /** How host filters render. Default: built-ins only. */
+  filters?: FilterSet;
   /**
    * Other images on the page, enabling prev/next navigation within the lightbox.
    * The entry at `startIndex` is the image the lightbox opens on; it should
@@ -351,10 +343,10 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.setAttribute('aria-modal', 'true');
   dialog.setAttribute('aria-label', tr(opts.i18n, 'tools.image.preview'));
   dialog.className = 'blok-image-lightbox';
-  syncPortalDirection(dialog, {
+  const direction: TextDirection = syncPortalDirection(dialog, {
     direction: opts.direction,
     source: opts.origin,
-  });
+  }) ?? 'ltr';
 
   const backdrop = document.createElement('div');
   backdrop.className = 'blok-image-lightbox__backdrop';
@@ -385,8 +377,8 @@ export function openLightbox(opts: LightboxOptions): () => void {
     const crop = item.crop;
     const edits = pickEdits(item);
     const geometry = readGeometry(edits);
-    const { filter, adjust } = readAdjust(edits);
-    applyImageFilter(el, filter, adjust);
+    const { filter, strength, adjust } = readAdjust(edits);
+    applyImageFilter(el, filter, adjust, strength, opts.filters);
     const markup = readMarkup(edits.markup);
     if (!isIdentity(geometry) || markup.length > 0) {
       const { w, h } = crop ?? { w: 100, h: 100 };
@@ -535,7 +527,8 @@ export function openLightbox(opts: LightboxOptions): () => void {
     syncResetLabel();
     syncZoomDisabled();
     syncNavDisabled();
-    const offset = delta > 0 ? 160 : -160;
+    // The next image slides in from the inline end.
+    const offset = inlineDelta(delta > 0 ? 160 : -160, direction);
     if (canAnimate(fresh)) {
       fresh.animate(
         [
@@ -550,7 +543,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     );
     if (btn && canAnimate(btn)) {
       if (source === 'keyboard') {
-        const nudge = delta > 0 ? 6 : -6;
+        const nudge = inlineDelta(delta > 0 ? 6 : -6, direction);
         btn.animate(
           [
             { transform: 'translateX(0) scale(1)' },
@@ -575,6 +568,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
   const nav = hasNav
     ? renderLightboxNav({
       i18n: opts.i18n,
+      direction,
       onPrev: () => navigate(-1),
       onNext: () => navigate(1),
     })
@@ -786,14 +780,10 @@ export function openLightbox(opts: LightboxOptions): () => void {
       setZoom(zoomState.value - ZOOM_STEP);
       return;
     }
-    if (hasNav && event.key === 'ArrowRight') {
+    const step = hasNav ? logicalArrow(event.key, direction) : null;
+    if (step !== null) {
       event.preventDefault();
-      navigate(1, 'keyboard');
-      return;
-    }
-    if (hasNav && event.key === 'ArrowLeft') {
-      event.preventDefault();
-      navigate(-1, 'keyboard');
+      navigate(step === 'forward' ? 1 : -1, 'keyboard');
       return;
     }
   };
@@ -983,11 +973,14 @@ function appendLightboxDivider(parent: HTMLElement): void {
 
 interface LightboxNavOptions {
   i18n?: I18nInstance;
+  direction: TextDirection;
   onPrev(): void;
   onNext(): void;
 }
 
 function renderLightboxNav(opts: LightboxNavOptions): HTMLElement {
+  // In RTL the sequence runs leftward: next is ArrowLeft and points left.
+  const isRtl = opts.direction === 'rtl';
   const nav = document.createElement('div');
   nav.setAttribute('data-role', 'lightbox-nav');
   nav.setAttribute('role', 'group');
@@ -998,18 +991,18 @@ function renderLightboxNav(opts: LightboxNavOptions): HTMLElement {
   appendLightboxButton(nav, {
     action: 'lightbox-prev',
     label: tr(opts.i18n, 'tools.image.previousImage'),
-    shortcut: '←',
-    html: IconChevronLeft,
+    shortcut: isRtl ? '→' : '←',
+    html: isRtl ? IconChevronRight : IconChevronLeft,
     onClick: opts.onPrev,
-    tooltipPlacement: 'right',
+    tooltipPlacement: isRtl ? 'left' : 'right',
   });
   appendLightboxButton(nav, {
     action: 'lightbox-next',
     label: tr(opts.i18n, 'tools.image.nextImage'),
-    shortcut: '→',
-    html: IconChevronRight,
+    shortcut: isRtl ? '←' : '→',
+    html: isRtl ? IconChevronLeft : IconChevronRight,
     onClick: opts.onNext,
-    tooltipPlacement: 'right',
+    tooltipPlacement: isRtl ? 'left' : 'right',
   });
 
   return nav;
@@ -1177,7 +1170,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   appendSimpleButton(edit, {
     action: 'crop',
     label: tr(opts.i18n, 'tools.image.crop'),
-    icon: IconCrop,
+    icon: IconSliders,
     onClick: opts.onCrop,
   });
   appendSimpleButton(edit, {
@@ -1211,8 +1204,6 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   more.innerHTML = IconDotsHorizontal;
   tooltipOnHover(more, moreLabel);
   view.appendChild(more);
-
-  reanchorTooltipAfterSplit(root);
 
   // Delete is reachable from the popover; expose an invisible legacy button for consumers/tests.
   const deleteAlias = document.createElement('button');
@@ -1318,22 +1309,6 @@ function appendAlignCtrl(parent: HTMLElement, opts: OverlayOptions): void {
     event.stopPropagation();
     if (popover.hidden) openPopover();
     else closePopover();
-  });
-}
-
-/**
- * The row rises into place, and a tooltip stays where it was first placed.
- * Once the row's own animation ends, show the hovered button's tooltip again at its final spot.
- */
-function reanchorTooltipAfterSplit(root: HTMLElement): void {
-  const pointer: { over: HTMLElement | null } = { over: null };
-  root.querySelectorAll<HTMLElement>('[data-island] button[data-action]').forEach((btn) => {
-    btn.addEventListener('mouseenter', () => { pointer.over = btn; });
-    btn.addEventListener('mouseleave', () => { if (pointer.over === btn) pointer.over = null; });
-  });
-  root.addEventListener('animationend', (event) => {
-    if (event.target !== root || pointer.over === null) return;
-    tooltipShow(pointer.over, pointer.over.getAttribute('aria-label') ?? '');
   });
 }
 

@@ -47,6 +47,16 @@ afterEach(() => {
 });
 
 describe('openFilePreview', () => {
+  it('takes the direction of the block that opened it', () => {
+    const block = document.createElement('div');
+
+    block.style.direction = 'rtl';
+    document.body.appendChild(block);
+    openFilePreview({ url: 'https://example.com/a.pdf', fileName: 'a.pdf', labels, directionSource: block });
+
+    expect(document.body.querySelector('[data-role="file-preview-backdrop"]')?.getAttribute('dir')).toBe('rtl');
+  });
+
   it('appends a dialog and an iframe with the given http(s) src', () => {
     openFilePreview({ url: 'https://example.com/a.pdf', fileName: 'a.pdf', labels });
 

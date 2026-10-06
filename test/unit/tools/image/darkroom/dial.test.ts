@@ -184,6 +184,14 @@ describe('createDial', () => {
     expect(dial.el.querySelector('[data-role="dial-needle"]')).not.toBeNull();
   });
 
+  it('shows a plain number when the range has no negatives, so a strength reads 60, not +60', () => {
+    make({ min: 0, max: 100, value: 60 });
+
+    expect(shown()).toBe('60');
+    dial.configure({ min: -45, max: 45, value: 5, label: 'Straighten', valueText: String });
+    expect(shown()).toBe('+5');
+  });
+
   it('draws a tick every 5 units, a long one every 15', () => {
     make();
     const ticks = [...dial.el.querySelectorAll<HTMLElement>('[data-role="dial-tick"]')];
@@ -213,6 +221,36 @@ describe('createDial', () => {
     expect(onCommit).toHaveBeenCalledTimes(1);
     expect(onCommit).toHaveBeenCalledWith(-10);
     expect(capture).toHaveBeenCalledWith(1);
+  });
+
+  it('with shiftSnap, a Shift drag lands on whole multiples of it; without Shift it moves freely', () => {
+    make({ shiftSnap: 15 });
+
+    pointer(dial.el, 'pointerdown', { clientX: 0 });
+    pointer(dial.el, 'pointermove', { clientX: -6 * 22, shiftKey: true });
+    expect(onInput).toHaveBeenLastCalledWith(15);
+    pointer(dial.el, 'pointermove', { clientX: -6 * 23, shiftKey: true });
+    expect(onInput).toHaveBeenLastCalledWith(30);
+    pointer(dial.el, 'pointermove', { clientX: 6 * 50, shiftKey: true });
+    expect(onInput).toHaveBeenLastCalledWith(-45);
+    pointer(dial.el, 'pointermove', { clientX: -6 * 22 });
+    expect(onInput).toHaveBeenLastCalledWith(22);
+  });
+
+  it('a Shift drag snaps to the grid, not to steps from where it started', () => {
+    make({ value: 7, shiftSnap: 15 });
+
+    pointer(dial.el, 'pointerdown', { clientX: 0 });
+    pointer(dial.el, 'pointermove', { clientX: -6 * 2, shiftKey: true });
+    expect(onInput).toHaveBeenLastCalledWith(15);
+  });
+
+  it('without shiftSnap, Shift does not change a drag', () => {
+    make();
+
+    pointer(dial.el, 'pointerdown', { clientX: 0 });
+    pointer(dial.el, 'pointermove', { clientX: -6 * 22, shiftKey: true });
+    expect(onInput).toHaveBeenLastCalledWith(22);
   });
 
   it('a drag stays in range', () => {
@@ -376,6 +414,15 @@ describe('createDial', () => {
       vi.advanceTimersByTime(1000);
 
       expect(onCommit.mock.calls).toEqual([[1], [0]]);
+    });
+
+    it('a double-click returns to resetTo when set, so a strength dial goes back to full, not off', () => {
+      make({ min: 0, max: 100, value: 40, resetTo: 100 });
+
+      dial.el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      expect(dial.el.getAttribute('aria-valuenow')).toBe('100');
+      expect(onCommit).toHaveBeenCalledWith(100);
     });
 
     it('a double-click on the dial resets to 0', () => {

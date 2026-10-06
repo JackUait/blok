@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.WebSockets;
+using System.Text;
 using Blok.Server.Collab;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Timeouts;
@@ -103,6 +104,7 @@ public sealed class SyncEndpointTests
     Assert.Contains("/blok/sync/{doc}", warning.Message, StringComparison.Ordinal);
     Assert.Contains("/blok/sync/{doc}/reset", warning.Message, StringComparison.Ordinal);
     Assert.Contains("/blok/sync/{doc}/edit", warning.Message, StringComparison.Ordinal);
+    Assert.Contains("GET /blok/sync/{doc}/state", warning.Message, StringComparison.Ordinal);
     // The standalone host forwards only this category to stderr, and its
     // none mode is loopback-only by validation: the warning is in-process only.
     Assert.NotEqual("Blok.Server.Collab", warning.Category);
@@ -237,6 +239,7 @@ public sealed class SyncEndpointTests
     var manager = provider.GetRequiredService<CollabRoomManager>();
 
     Assert.Same(manager, provider.GetRequiredService<ICollabRoomManager>());
+    Assert.Same(manager, provider.GetRequiredService<ICollabDocumentPurger>());
     Assert.Same(manager, provider.GetRequiredService<CollabRoomManager>());
   }
 
@@ -249,6 +252,92 @@ public sealed class SyncEndpointTests
 
     Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
     Assert.Equal("GET", string.Join(", ", response.Content.Headers.Allow));
+  }
+
+  [Fact]
+  public async Task RecheckRevokesOneReaderWith4403AndKeepsTheOtherConnected()
+  {
+    var authorization = new RecordingAuthorization();
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        services: services => services.AddSingleton<IBlokAuthorization>(authorization));
+    await using var revoked = await app.ConnectWithTicketAsync(fixture.Compatible);
+    await revoked.ReceiveAsync<BlokControlFrame>();
+    await using var allowed = await app.ConnectWithTicketAsync(fixture.UserTwo);
+    await allowed.ReceiveAsync<BlokControlFrame>();
+    authorization.DeniedReadUsers.Add("u1");
+
+    var closed = await ((ICollabRoomManager)app.Fakes.Manager).RecheckAccessAsync(SyncApp.Doc);
+
+    Assert.Equal(1, closed);
+    var close = await revoked.ReceiveCloseAsync();
+    Assert.Equal((4403, "forbidden"), close);
+    Assert.NotEqual(4409, close.Status);
+    Assert.Equal("seeded", await SyncedTextAsync(allowed));
+    await using var refused = await app.ConnectWithTicketAsync(fixture.Compatible);
+    Assert.Equal((4403, "forbidden"), await refused.ReceiveCloseAsync());
+  }
+
+  [Fact]
+  public async Task RecheckExpelsAWriterWhoLostWriteButKeepsAReadOnlyTicket()
+  {
+    var authorization = new RecordingAuthorization();
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        services: services => services.AddSingleton<IBlokAuthorization>(authorization));
+    await using var writer = await app.ConnectWithTicketAsync(fixture.Compatible);
+    await writer.ReceiveAsync<BlokControlFrame>();
+    await using var reader = await app.ConnectWithTicketAsync(fixture.ReadOnly);
+    await reader.ReceiveAsync<BlokControlFrame>();
+    await using var peer = await app.ConnectWithTicketAsync(fixture.UserTwo);
+    await peer.ReceiveAsync<BlokControlFrame>();
+    authorization.DeniedWriteUsers.Add("u1");
+
+    var closed = await ((ICollabRoomManager)app.Fakes.Manager).RecheckAccessAsync(SyncApp.Doc);
+
+    Assert.Equal(1, closed);
+    Assert.Equal((4403, "forbidden"), await writer.ReceiveCloseAsync());
+    Assert.Equal("seeded", await SyncedTextAsync(reader));
+    Assert.Equal("seeded", await SyncedTextAsync(peer));
+  }
+
+  [Fact]
+  public async Task RecheckFailsClosedWhenAuthorizationThrows()
+  {
+    var authorization = new RecordingAuthorization();
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        services: services => services.AddSingleton<IBlokAuthorization>(authorization));
+    await using var revoked = await app.ConnectWithTicketAsync(fixture.Compatible);
+    await revoked.ReceiveAsync<BlokControlFrame>();
+    await using var allowed = await app.ConnectWithTicketAsync(fixture.UserTwo);
+    await allowed.ReceiveAsync<BlokControlFrame>();
+    authorization.FailedReadUsers.Add("u1");
+
+    var closed = await ((ICollabRoomManager)app.Fakes.Manager).RecheckAccessAsync(SyncApp.Doc);
+
+    Assert.Equal(1, closed);
+    Assert.Equal((4403, "forbidden"), await revoked.ReceiveCloseAsync());
+    Assert.Equal("seeded", await SyncedTextAsync(allowed));
+  }
+
+  [Fact]
+  public async Task RoomAdmissionRefusesARevocationAfterTheHandshakeWithoutLoading()
+  {
+    var authorization = new RecordingAuthorization
+    {
+      RevokeReadAfterWriteForUser = "u1",
+    };
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        services: services => services.AddSingleton<IBlokAuthorization>(authorization));
+
+    await app.AssertRefusedAsync(
+        HttpStatusCode.Forbidden,
+        protocols: [SyncApp.Protocol, fixture.Compatible]);
+
+    Assert.Equal(0, app.Fakes.Endpoint.Gets);
+    Assert.Equal(0, app.Fakes.Manager.LiveRoomCount);
   }
 
   [Fact]
@@ -694,6 +783,56 @@ public sealed class SyncEndpointTests
     Assert.Equal((1008, "outbound queue overflow"), await stalled.ReceiveCloseAsync());
   }
 
+  [Fact]
+  public async Task ARevokedReaderDropsQueuedFramesBeforeTheForbiddenClose()
+  {
+    const int frames = 64;
+    var authorization = new RecordingAuthorization();
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        configure: options =>
+        {
+          options.CollabMaxMessageBytes = 4 * 1024 * 1024;
+          options.CollabInboundFramesPerSecond = 0;
+          options.CollabInboundAwarenessBytesPerSecond = 0;
+        },
+        services: services => services.AddSingleton<IBlokAuthorization>(authorization),
+        kestrel: true);
+    await using var writer = await app.ConnectWithTicketAsync(fixture.UserTwo);
+    await using var healthy = await app.ConnectWithTicketAsync(fixture.UserTwo);
+    await using var revoked = await app.ConnectWithTicketAsync(fixture.ReadOnly);
+    await writer.ReceiveAsync<BlokControlFrame>();
+    await healthy.ReceiveAsync<BlokControlFrame>();
+    await revoked.ReceiveAsync<BlokControlFrame>();
+    Assert.Equal("seeded", await SyncedTextAsync(writer));
+    Assert.Equal("seeded", await SyncedTextAsync(healthy));
+    Assert.Equal("seeded", await SyncedTextAsync(revoked));
+    var text = new string('x', 400 * 1024);
+
+    for (var index = 0; index < frames; index++)
+    {
+      var update = YDocs.UpdateAppending(YDocs.NewClient(), text);
+      await writer.SendAsync(new SyncUpdateFrame(update));
+      Assert.Equal(update, (await healthy.ReceiveAsync<SyncUpdateFrame>()).Update);
+    }
+
+    authorization.DeniedReadUsers.Add("u1");
+    var closed = await ((ICollabRoomManager)app.Fakes.Manager).RecheckAccessAsync(SyncApp.Doc);
+    var received = 0;
+
+    while (await revoked.ReceiveOrCloseAsync() is { } frame)
+    {
+      Assert.IsType<SyncUpdateFrame>(frame);
+      received++;
+    }
+
+    Assert.True(received < frames, $"received all {received} queued frames after revocation");
+    Assert.Equal(1, closed);
+    Assert.Equal(4403, (int?)revoked.Socket.CloseStatus);
+    Assert.Equal("forbidden", revoked.Socket.CloseStatusDescription);
+    await revoked.CloseAsync();
+  }
+
   /// <summary>
   /// v2 keeps the v1 handshake and changes only what the client may send
   /// back. Both clients start from an empty doc against the same room, so
@@ -900,6 +1039,172 @@ public sealed class SyncEndpointTests
     await using var client = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
 
     Assert.Equal((4503, "document unavailable"), await client.ReceiveCloseAsync());
+  }
+
+  [Fact]
+  public async Task TwoUsersKeepRestoredContentButCannotReopenAfterPermanentPurge()
+  {
+    var directory = Path.Combine(
+        Path.GetTempPath(), $"blok-access-lifecycle-{Guid.NewGuid():N}");
+    var authorization = new RecordingAuthorization();
+    var hostTrashed = false;
+    var hostTombstoneCommitted = false;
+
+    try
+    {
+      var journal = new LocalCollabOperationStore(directory);
+      await using (var app = await SyncApp.StartAsync(
+          "ticket",
+          services: services =>
+          {
+            services.AddSingleton<IBlokAuthorization>(authorization);
+            services.AddSingleton<ICollabOperationStore>(journal);
+          },
+          fakes: new SyncFakes(operationStore: journal)))
+      {
+        await using var alice = await app.ConnectWithTicketAsync(fixture.Compatible);
+        await alice.ReceiveAsync<BlokControlFrame>();
+        Assert.Equal("seeded", await SyncedTextAsync(alice));
+        await using var bob = await app.ConnectAsync(
+            protocols: [SyncApp.ProtocolV2, fixture.UserTwo]);
+        var bobDoc = YDocs.NewClient();
+        var lineage = await HandshakeV2Async(bob, bobDoc);
+        Assert.Equal("seeded", YDocs.Text(bobDoc));
+        await alice.ReceiveAsync<QueryAwarenessFrame>();
+
+        authorization.DeniedReadUsers.Add("u1");
+        Assert.Equal(1, await app.Fakes.Manager.RecheckAccessAsync(SyncApp.Doc));
+        var update = YDocs.UpdateAppending(bobDoc, " kept");
+        await bob.SendAsync(new OperationFrame(lineage, OpOne, update));
+        Assert.Equal(update, (await bob.ReceiveAsync<SyncUpdateFrame>()).Update);
+        Assert.Equal(OpOne, (await bob.ReceiveAsync<AcknowledgementFrame>()).OperationId);
+        Assert.Null(await alice.ReceiveOrCloseAsync());
+        Assert.Equal(4403, (int?)alice.Socket.CloseStatus);
+        Assert.Equal("forbidden", alice.Socket.CloseStatusDescription);
+
+        hostTrashed = true;
+        authorization.AllowRead = !hostTrashed;
+        Assert.Equal(1, await app.Fakes.Manager.RecheckAccessAsync(SyncApp.Doc));
+        Assert.Equal((4403, "forbidden"), await bob.ReceiveCloseAsync());
+        Assert.False(hostTombstoneCommitted);
+
+        hostTrashed = false;
+        authorization.AllowRead = !hostTrashed;
+        await using var restored = await app.ConnectWithTicketAsync(fixture.UserTwo);
+        await restored.ReceiveAsync<BlokControlFrame>();
+        Assert.Equal("seeded kept", await SyncedTextAsync(restored));
+
+        hostTombstoneCommitted = true;
+        authorization.AllowRead = false;
+        var purger = app.App.Services.GetRequiredService<ICollabDocumentPurger>();
+        Assert.Equal(CollabDocumentPurgeOutcome.Purged,
+            await purger.PurgeDocumentAsync(
+                SyncApp.Doc, _ => ValueTask.FromResult(hostTombstoneCommitted)));
+        Assert.Equal((4403, "forbidden"), await restored.ReceiveCloseAsync());
+      }
+
+      var restartedJournal = new LocalCollabOperationStore(directory);
+      await using var restarted = await SyncApp.StartAsync(
+          services: services => services.AddSingleton<ICollabOperationStore>(restartedJournal),
+          fakes: new SyncFakes(operationStore: restartedJournal));
+      await restarted.AssertRefusedAsync(HttpStatusCode.Forbidden);
+      Assert.Equal(0, restarted.Fakes.Endpoint.Gets);
+    }
+    finally
+    {
+      if (Directory.Exists(directory))
+      {
+        Directory.Delete(directory, recursive: true);
+      }
+    }
+  }
+
+  [Fact]
+  public async Task PurgeClosesTheSocketAndForbidsNewSyncEditAndReset()
+  {
+    await using var app = await SyncApp.StartAsync();
+    await using var member = await app.ConnectAsync();
+    Assert.Equal("seeded", await SyncedTextAsync(member));
+    var purger = app.App.Services.GetRequiredService<ICollabDocumentPurger>();
+    Assert.Same(app.Fakes.Manager, purger);
+
+    Assert.Equal(CollabDocumentPurgeOutcome.Purged,
+        await purger.PurgeDocumentAsync(
+            SyncApp.Doc, _ => ValueTask.FromResult(true)));
+
+    Assert.Equal((4403, "forbidden"), await member.ReceiveCloseAsync());
+    Assert.False(app.Fakes.Store.Holds(SyncApp.Doc));
+    Assert.Equal(0, app.Fakes.Manager.LiveRoomCount);
+    await app.AssertRefusedAsync(HttpStatusCode.Forbidden);
+    using var client = app.CreateClient();
+    using var edit = new HttpRequestMessage(
+        HttpMethod.Post, $"/sync/{SyncApp.Doc}/edit")
+    {
+      Content = new StringContent(
+          """{"ops":[{"op":"insert","id":"late","block":{"type":"p","data":{"text":"!"}}}]}""",
+          Encoding.UTF8,
+          "application/json"),
+    };
+    edit.Headers.TryAddWithoutValidation("Origin", SyncApp.AllowedOrigin);
+    edit.Headers.TryAddWithoutValidation("Blok-Idempotency-Key", "late");
+    using var editResponse = await client.SendAsync(edit);
+    using var reset = new HttpRequestMessage(
+        HttpMethod.Post, $"/sync/{SyncApp.Doc}/reset");
+    reset.Headers.TryAddWithoutValidation("Origin", SyncApp.AllowedOrigin);
+    using var resetResponse = await client.SendAsync(reset);
+
+    Assert.Equal(HttpStatusCode.Forbidden, editResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.Forbidden, resetResponse.StatusCode);
+    Assert.Equal(0, app.Fakes.Manager.LiveRoomCount);
+    Assert.Equal(1, app.Fakes.Endpoint.Gets);
+  }
+
+  [Fact]
+  public async Task RestartedJournalTombstoneRefusesAnOldConsumerDocument()
+  {
+    var directory = Path.Combine(
+        Path.GetTempPath(), $"blok-sync-purge-{Guid.NewGuid():N}");
+
+    try
+    {
+      var originalJournal = new LocalCollabOperationStore(directory);
+      await using (var original = await SyncApp.StartAsync(
+          services: services => services.AddSingleton<ICollabOperationStore>(originalJournal),
+          fakes: new SyncFakes(operationStore: originalJournal)))
+      {
+        Assert.Equal(CollabDocumentPurgeOutcome.Purged,
+            await original.App.Services.GetRequiredService<ICollabDocumentPurger>()
+                .PurgeDocumentAsync(SyncApp.Doc, _ => ValueTask.FromResult(true)));
+      }
+
+      var restartedJournal = new LocalCollabOperationStore(directory);
+      await using var restarted = await SyncApp.StartAsync(
+          services: services => services.AddSingleton<ICollabOperationStore>(restartedJournal),
+          fakes: new SyncFakes(operationStore: restartedJournal));
+      await restarted.AssertRefusedAsync(HttpStatusCode.Forbidden);
+
+      Assert.Equal(0, restarted.Fakes.Endpoint.Gets);
+      Assert.Equal(0, restarted.Fakes.Manager.LiveRoomCount);
+    }
+    finally
+    {
+      if (Directory.Exists(directory))
+      {
+        Directory.Delete(directory, recursive: true);
+      }
+    }
+  }
+
+  [Fact]
+  public async Task APurgedDocumentRefusesSyncBeforeUpgrade()
+  {
+    var operations = new FakeCollabOperationStore { DocumentPurged = true };
+    await using var app = await SyncApp.StartAsync(
+        services: services => services.AddSingleton<ICollabOperationStore>(operations),
+        fakes: new SyncFakes(operationStore: operations));
+
+    await app.AssertRefusedAsync(HttpStatusCode.Forbidden);
+    Assert.Equal(0, app.Fakes.Endpoint.Gets);
   }
 
   [Fact]

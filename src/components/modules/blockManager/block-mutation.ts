@@ -1781,7 +1781,7 @@ export class BlockMutation {
      *    forces a new undo boundary via `stopCapturing()`.
      *
      * 2. ANY tool can accept `{text}` on conversion but then populate extra
-     *    fields (e.g. toggle's `isOpen: true`) during its first `save()` pass.
+     *    fields during its first `save()` pass.
      *    That first save is triggered by the MutationObserver watching the
      *    brand-new block's DOM, and its `syncBlockDataToYjs` would write the
      *    extra fields as a *separate* Yjs transaction — creating a phantom

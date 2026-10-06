@@ -7,7 +7,7 @@
  * the cursor with a navigation key, never on open.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readMainCss } from './helpers/read-main-css';
 
@@ -66,19 +66,22 @@ describe('focus rings read --blok-focus-ring', () => {
     const aliases = [ ...readMainCss().matchAll(/(--blok-[\w-]+):\s*var\(--blok-focus-ring\);/g) ].map(match => match[1]);
     const usesRing = (value: string): boolean =>
       value.includes('var(--blok-focus-ring)') || aliases.some(alias => value.includes(`var(${alias})`));
-    const offenders = walk(SRC_ROOT, [ '.css' ]).flatMap((file) => {
-      const source = stripComments(readFileSync(file, 'utf-8'));
+    // Playground chrome has its own palette outside Blok roots.
+    const offenders = walk(SRC_ROOT, [ '.css' ])
+      .filter((file) => !file.includes(`${sep}playground${sep}`))
+      .flatMap((file) => {
+        const source = stripComments(readFileSync(file, 'utf-8'));
 
-      return [ ...source.matchAll(/([^{}]+)\{([^{}]*)\}/g) ].flatMap(([ , selector, body ]) => {
-        if (!FOCUS_SELECTOR.test(selector) || EXEMPT_SELECTORS.some(({ pattern }) => pattern.test(selector))) {
-          return [];
-        }
+        return [ ...source.matchAll(/([^{}]+)\{([^{}]*)\}/g) ].flatMap(([ , selector, body ]) => {
+          if (!FOCUS_SELECTOR.test(selector) || EXEMPT_SELECTORS.some(({ pattern }) => pattern.test(selector))) {
+            return [];
+          }
 
-        return [ ...body.matchAll(RING_DECLARATION) ]
-          .filter(([ , , value ]) => !NO_RING.test(value.trim()) && !usesRing(value))
-          .map(([ , property, value ]) => `${relative(REPO_ROOT, file)}: ${selector.trim()} { ${property}: ${value.trim()} }`);
+          return [ ...body.matchAll(RING_DECLARATION) ]
+            .filter(([ , , value ]) => !NO_RING.test(value.trim()) && !usesRing(value))
+            .map(([ , property, value ]) => `${relative(REPO_ROOT, file)}: ${selector.trim()} { ${property}: ${value.trim()} }`);
+        });
       });
-    });
 
     expect(offenders).toEqual([]);
   });

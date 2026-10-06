@@ -1,7 +1,7 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
-import { parseClipboardHtml } from '../../../../tools/table/table-cell-clipboard';
+import { isTextSerializable, parseClipboardHtml } from '../../../../tools/table/table-cell-clipboard';
 import { serializeCellBlocksToHtml } from '../../../../tools/table/table-cell-paste';
-import type { CellContent, ClipboardBlockData, LegacyCellContent, TableCellsClipboard, TableClipboardCell } from '../../../../tools/table/types';
+import type { CellContent, LegacyCellContent, TableCellsClipboard, TableClipboardCell } from '../../../../tools/table/types';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext } from '../types';
@@ -22,16 +22,6 @@ const clampSpans = (
   colspan: Math.min(cell.colspan ?? 1, payload.cols - col),
   rowspan: Math.min(cell.rowspan ?? 1, payload.rows - row),
 });
-
-/**
- * Whether a payload block survives the HTML `text` channel losslessly:
- * paragraphs and list items (which serializeCellBlocksToHtml round-trips) that
- * carry no tunes. Everything else needs the structured `blockData` seed.
- */
-const isTextSerializable = (block: ClipboardBlockData): boolean =>
-  (block.tool === 'paragraph' || block.tool === 'list')
-  && typeof block.data.text === 'string'
-  && block.tunes === undefined;
 
 /**
  * Map every position covered by a payload merge footprint (excluding origins)
@@ -132,8 +122,8 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
     );
 
     const tableData = {
-      withHeadings: false,
-      withHeadingColumn: false,
+      withHeadings: payload.withHeadings === true,
+      withHeadingColumn: payload.withHeadingColumn === true,
       content,
     };
 
@@ -177,9 +167,8 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
     const hasColor = cell.color !== undefined;
     const hasTextColor = cell.textColor !== undefined;
     const hasPlacement = cell.placement !== undefined;
-    // Blocks the text channel cannot carry (image/code/embed) or that carry
-    // tunes must be seeded structurally — rebuilding them from `text` dropped
-    // them, so a copied range pasted outside a table lost its images.
+    // Blocks the text channel cannot carry (image/code/embed, tunes, extra
+    // data keys, nested children) must be seeded structurally.
     const needsStructuredBlocks = cell.blocks.some(block => !isTextSerializable(block));
 
     if (!hasColor && !hasTextColor && !hasPlacement && !needsStructuredBlocks && colspan <= 1 && rowspan <= 1) {

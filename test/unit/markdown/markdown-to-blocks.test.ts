@@ -277,6 +277,13 @@ describe('markdownToBlocks — currency is not math', () => {
     ['from $1,000-$2,000 per unit'],
     ['Cost: $5 to $10'],
     ['I have $50 and $30'],
+    ['costs $5'],
+    ['$5,$6 each'],
+    ['Plans: $5/$month'],
+    ['$5-$10'],
+    ['$5 and $10'],
+    ['$5,$6'],
+    ['from $5k-$10k a year'],
   ])('keeps %s as one plain paragraph', async (md) => {
     const { blocks, warnings } = await markdownToBlocksWithReport(md);
 
@@ -286,11 +293,39 @@ describe('markdownToBlocks — currency is not math', () => {
     expect(warnings).toEqual([]);
   });
 
+  it('keeps prices as text in a document that also holds real math', async () => {
+    const blocks = await markdownToBlocks('Plans: $5/$month or $5 and $10.\n\nArea $x^2$ here.');
+
+    expect(blocks[0]).toMatchObject({ type: 'paragraph', data: { text: 'Plans: $5/$month or $5 and $10.' } });
+    expect(blocks.filter(b => b.type === 'code').map(b => b.data.code)).toEqual(['x^2']);
+  });
+
+  it('finds the real math after a price in the same paragraph', async () => {
+    const blocks = await markdownToBlocks('costs $5 and later $x^2$');
+
+    expect(blocks.map(b => [b.type, b.data.text ?? b.data.code])).toEqual([
+      ['paragraph', 'costs $5 and later'],
+      ['code', 'x^2'],
+    ]);
+  });
+
+  it('reads a padded $ x $ as text, not math', async () => {
+    const blocks = await markdownToBlocks('Area $x^2$ and $ y $ here.');
+
+    expect(blocks.filter(b => b.type === 'code').map(b => b.data.code)).toEqual(['x^2']);
+  });
+
   it('still parses genuine inline math', async () => {
     const blocks = await markdownToBlocks('The equation $E = mc^2$ is famous.');
 
     expect(blocks.map(b => b.type)).toEqual(['paragraph', 'code', 'paragraph']);
     expect(blocks[1].data).toMatchObject({ code: 'E = mc^2', language: 'latex' });
+  });
+
+  it('parses inline math that opens on a digit', async () => {
+    const blocks = await markdownToBlocks('Area $2x$ here.');
+
+    expect(blocks[1]).toMatchObject({ type: 'code', data: { code: '2x', language: 'latex' } });
   });
 
   it('still parses a short inline math span', async () => {
@@ -311,6 +346,33 @@ describe('markdownToBlocks — currency is not math', () => {
 
     expect(warnings).toEqual([
       { construct: 'inlineMath', action: 'degraded', detail: expect.stringContaining('paragraph') },
+    ]);
+  });
+});
+
+describe('markdownToBlocks — inline math in a table cell', () => {
+  it('becomes an equation mark holding the escaped source', async () => {
+    const blocks = await markdownToBlocks('| a |\n| --- |\n| $a<b & "c"$ |');
+    const cell = blocks.find(b => b.type === 'paragraph' && b.data.text !== 'a');
+
+    expect(cell?.data.text).toBe('<span data-latex="a&lt;b &amp; &quot;c&quot;">a&lt;b &amp; &quot;c&quot;</span>');
+  });
+
+  it('is not reported as degraded', async () => {
+    const { warnings } = await markdownToBlocksWithReport('| a |\n| --- |\n| $x^2$ |');
+
+    expect(warnings).toEqual([]);
+  });
+});
+
+describe('markdownToBlocks — table column alignment', () => {
+  it('sets each cell\'s placement from its column, header row included', async () => {
+    const blocks = await markdownToBlocks('| a | b | c | d |\n| :--- | :---: | ---: | --- |\n| 1 | 2 | 3 | 4 | 5 |');
+    const content = blocks.find(b => b.type === 'table')?.data.content as Array<Array<{ placement?: string }>>;
+
+    expect(content.map(row => row.map(cell => cell.placement))).toEqual([
+      [undefined, 'top-center', 'top-right', undefined],
+      [undefined, 'top-center', 'top-right', undefined, undefined],
     ]);
   });
 });

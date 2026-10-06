@@ -210,6 +210,7 @@ const createHarness = (options?: {
       // handleEscape reads this before the PopoverRegistry branch (see the
       // emoji-menu Escape fix); every Escape now touches it.
       emojiTrigger: { opened: false, close: vi.fn() },
+      pageReferenceTrigger: { opened: false, close: vi.fn() },
     },
     Caret: {
       setToBlock: vi.fn(),
@@ -223,6 +224,9 @@ const createHarness = (options?: {
       markCaretBeforeChange: vi.fn(() => {
         order.push('controller');
       }),
+      checkAndHandleBoundary: vi.fn(() => {
+        order.push('boundary');
+      }),
       undo: vi.fn(),
       redo: vi.fn(),
       stopCapturing: vi.fn(),
@@ -232,6 +236,7 @@ const createHarness = (options?: {
         return state.isDragging;
       },
     },
+    PageReferences: { ownsTarget: vi.fn(() => false) },
     Find: { isOpen: false, close: vi.fn() },
     Saver: {
       save: vi.fn(() => Promise.resolve({ blocks: [] } as unknown as OutputData)),
@@ -385,6 +390,22 @@ describe('KeyboardController — mutation coverage', () => {
       harness.redactor.dispatchEvent(new InputEvent('beforeinput', { bubbles: true }));
 
       expect(harness.blok.YjsManager.markCaretBeforeChange).toHaveBeenCalledWith(true);
+    });
+
+    it('closes a timed-out word-boundary step before the typed character is written', () => {
+      const harness = enabledHarness();
+
+      harness.redactor.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: 'd' }));
+
+      expect(harness.order).toStrictEqual(['boundary', 'controller']);
+    });
+
+    it('leaves the word-boundary step alone for input that is not typed text', () => {
+      const harness = enabledHarness();
+
+      harness.redactor.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'deleteContentBackward' }));
+
+      expect(harness.blok.YjsManager.checkAndHandleBoundary).not.toHaveBeenCalled();
     });
   });
 

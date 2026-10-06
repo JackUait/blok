@@ -1,5 +1,5 @@
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
-import { getPointFromPointerEvent, resolveHoveredBlockWrapper } from '../hovered-block-resolution';
+import { CHILD_STAND_IN_SELECTOR, getPointFromPointerEvent, resolveHoveredBlockWrapper } from '../hovered-block-resolution';
 
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 
@@ -98,6 +98,14 @@ export const createRedactorTouchHandler = (
        * from the hover that preceded it.
        */
       const resolution = resolveHoveredBlockWrapper(clickedNode, getPointFromPointerEvent(event));
+
+      // A container's empty hint is not a block; the block its click creates opens its own toolbar.
+      if (resolution.kind === 'stand-in') {
+        openToolbarOnCreatedChild(clickedNode, deps);
+
+        return;
+      }
+
       const resolvedBlock = resolution.kind === 'block'
         ? deps.Blok.BlockManager.getBlockByChildNode(resolution.wrapper) ?? undefined
         : undefined;
@@ -106,6 +114,29 @@ export const createRedactorTouchHandler = (
     }
   };
 }
+
+/**
+ * After a press on a container's empty hint, wait for the hint's click (it
+ * inserts the first child synchronously, Tab/Toggle tools), then open the
+ * toolbar on that child. Registered after the tool's own listener, so it runs
+ * second. The child is read from the DOM: the current block may still lag.
+ * @param pressed - the element the press landed on, inside the hint
+ * @param deps - the handler's module access
+ */
+const openToolbarOnCreatedChild = (pressed: HTMLElement, deps: RedactorTouchHandlerDependencies): void => {
+  const standIn = pressed.closest(CHILD_STAND_IN_SELECTOR);
+
+  standIn?.addEventListener('click', () => {
+    const child = standIn.parentElement?.querySelector(
+      ':scope > [data-blok-nested-blocks] > [data-blok-testid="block-wrapper"]'
+    );
+    const block = child ? deps.Blok.BlockManager.getBlockByChildNode(child) : undefined;
+
+    if (child && block) {
+      deps.Blok.Toolbar.moveAndOpen(block, child);
+    }
+  }, { once: true });
+};
 
 /**
  * Gets the actual clicked node, handling the case where the target is the redactor itself

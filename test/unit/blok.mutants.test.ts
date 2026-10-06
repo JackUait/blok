@@ -192,6 +192,7 @@ const makeApiMethods = (uiMethods: { isMobile: boolean }): Record<string, unknow
     emit: vi.fn(),
   },
   saver: { save: vi.fn() },
+  media: { confirmLeave: vi.fn() },
   ui: uiMethods,
 });
 

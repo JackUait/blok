@@ -99,6 +99,17 @@ describe('Notifier mutants - module shape guard', () => {
     }, { timeout: 5000 });
   });
 
+  it('passes the owning editor element so the toast can take its direction', async () => {
+    const { Notifier } = await import('../../../../src/components/utils/notifier');
+    const editor = document.createElement('div');
+
+    new Notifier('top-right', () => editor).show(message);
+
+    await vi.waitFor(() => {
+      expect(showSpy()).toHaveBeenCalledWith(message, 'top-right', editor);
+    }, { timeout: 5000 });
+  });
+
   it('rejects a module whose show export is not callable', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 

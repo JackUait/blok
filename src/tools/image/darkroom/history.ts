@@ -1,4 +1,4 @@
-import type { ImageAdjust, ImageCrop, ImageFilterPreset, ImageMarkup } from '../../../../types/tools/image';
+import type { ImageAdjust, ImageCrop, ImageMarkup } from '../../../../types/tools/image';
 import { ADJUST_KEYS } from '../adjust';
 import type { Geometry } from '../geometry';
 import { sameMarkup } from '../markup/model';
@@ -6,8 +6,10 @@ import { sameMarkup } from '../markup/model';
 export interface Snapshot {
   rect: ImageCrop;
   ratioKey: string;
+  portrait: boolean;
   geometry: Geometry;
-  filter: ImageFilterPreset;
+  filter: string;
+  strength: number;
   adjust: Required<ImageAdjust>;
   markup: ImageMarkup[];
 }
@@ -22,8 +24,8 @@ export interface CropHistory {
 // Camera round trips leave float noise; smaller changes are not a new step.
 const SAME = 1e-6;
 
-const same = (a: Snapshot, b: Snapshot): boolean => a.ratioKey === b.ratioKey
-  && a.filter === b.filter && ADJUST_KEYS.every((k) => a.adjust[k] === b.adjust[k])
+const same = (a: Snapshot, b: Snapshot): boolean => a.ratioKey === b.ratioKey && a.portrait === b.portrait
+  && a.filter === b.filter && a.strength === b.strength && ADJUST_KEYS.every((k) => a.adjust[k] === b.adjust[k])
   && a.geometry.rotation === b.geometry.rotation && a.geometry.flipX === b.geometry.flipX
   && Math.abs(a.geometry.straighten - b.geometry.straighten) < SAME
   && Math.abs(a.rect.x - b.rect.x) < SAME && Math.abs(a.rect.y - b.rect.y) < SAME

@@ -26,6 +26,28 @@ type BlockSaveResult = Omit<SavedData, 'data'> & {
 type SafeBlockToolData = Record<string, unknown>;
 
 /**
+ * Returned by the sync save path when a tool answered with a promise.
+ */
+export const NOT_SYNC: unique symbol = Symbol('not-sync');
+
+/**
+ * True for a promise-like value. A discarded one gets a no-op catch, so a
+ * tool that rejects later is not an unhandled rejection.
+ * @param value - what the tool returned
+ */
+const isPendingResult = (value: unknown): boolean => {
+  const then: unknown = (value as { then?: unknown } | null | undefined)?.then;
+
+  if (typeof then !== 'function') {
+    return false;
+  }
+
+  void Promise.resolve(value).catch(() => undefined);
+
+  return true;
+};
+
+/**
  * Shallow-copies whatever a tool returned from `save()`.
  *
  * That value belongs to the TOOL — framework adapters hand back a FROZEN
@@ -97,8 +119,25 @@ export class DataPersistenceManager {
    * @returns Saved data object or undefined if extraction fails
    */
   public async save(): Promise<undefined | BlockSaveResult> {
-    const extractedBlock = await this.extractToolData();
+    return this.toSaveResult(await this.extractToolData());
+  }
 
+  /**
+   * {@link save} without awaiting. Calls the tool's `save()` even when it then
+   * returns {@link NOT_SYNC}, so the caller's async retry calls it again.
+   * @returns the saved data, or NOT_SYNC when the tool returned a promise
+   */
+  public saveSync(): undefined | BlockSaveResult | typeof NOT_SYNC {
+    const extractedBlock = this.extractToolDataSync();
+
+    return extractedBlock === NOT_SYNC ? NOT_SYNC : this.toSaveResult(extractedBlock);
+  }
+
+  /**
+   * Records the extracted data as the last saved data and wraps it with tunes.
+   * @param extractedBlock - normalized tool output, undefined when extraction failed
+   */
+  private toSaveResult(extractedBlock: SafeBlockToolData | undefined): undefined | BlockSaveResult {
     if (extractedBlock === undefined) {
       return undefined;
     }
@@ -216,6 +255,21 @@ export class DataPersistenceManager {
   }
 
   /**
+   * {@link validate} without awaiting.
+   * @param data - data to validate
+   * @returns the verdict, or NOT_SYNC when the tool returned a promise
+   */
+  public validateSync(data: SafeBlockToolData): boolean | typeof NOT_SYNC {
+    if (!(this.toolInstance.validate instanceof Function)) {
+      return true;
+    }
+
+    const verdict: unknown = this.toolInstance.validate(data);
+
+    return isPendingResult(verdict) ? NOT_SYNC : verdict as boolean;
+  }
+
+  /**
    * Exports Block data as string using conversion config
    * Always uses fresh data by calling save() first.
    * @returns The block data as a string
@@ -283,42 +337,78 @@ export class DataPersistenceManager {
       // then narrow it properly for type safety
       const extracted = await this.toolInstance.save(pluginsContent) as unknown;
 
-      // If the block is not empty, return a copy of the extracted data
-      // (it could be string, number, etc. for non-object types)
-      if (!this.getIsEmpty()) {
-        return copyToolOwnedData(extracted) as SafeBlockToolData;
-      }
-
-      // For empty blocks, skip further processing for null/undefined
-      if (extracted === null) {
-        return undefined;
-      }
-
-      if (extracted === undefined) {
-        return undefined;
-      }
-
-      // For non-object types, return as-is
-      if (typeof extracted !== 'object') {
-        return extracted as SafeBlockToolData;
-      }
-
-      // Normalize empty fields for object types
-      const normalized: Record<string, unknown> = { ...(extracted as Record<string, unknown>) };
-      this.sanitizeEmptyFields(normalized);
-
-      return normalized;
+      return this.normalizeExtracted(extracted);
     } catch (error) {
-      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      return this.logExtractFailure(error);
+    }
+  }
 
-      log(
-        `Saving process for ${this.name} tool failed due to the ${normalizedError}`,
-        'log',
-        normalizedError
-      );
+  /**
+   * {@link extractToolData} without awaiting.
+   * @returns the data, or NOT_SYNC when the tool returned a promise
+   */
+  private extractToolDataSync(): SafeBlockToolData | undefined | typeof NOT_SYNC {
+    try {
+      const pluginsContent = this.getToolRenderedElement();
 
+      if (pluginsContent === null) {
+        return undefined;
+      }
+
+      const extracted = this.toolInstance.save(pluginsContent) as unknown;
+
+      return isPendingResult(extracted) ? NOT_SYNC : this.normalizeExtracted(extracted);
+    } catch (error) {
+      return this.logExtractFailure(error);
+    }
+  }
+
+  /**
+   * Turns a tool's resolved `save()` result into the block's saved data.
+   * @param extracted - resolved value returned by the tool's save()
+   */
+  private normalizeExtracted(extracted: unknown): SafeBlockToolData | undefined {
+    // If the block is not empty, return a copy of the extracted data
+    // (it could be string, number, etc. for non-object types)
+    if (!this.getIsEmpty()) {
+      return copyToolOwnedData(extracted) as SafeBlockToolData;
+    }
+
+    // For empty blocks, skip further processing for null/undefined
+    if (extracted === null) {
       return undefined;
     }
+
+    if (extracted === undefined) {
+      return undefined;
+    }
+
+    // For non-object types, return as-is
+    if (typeof extracted !== 'object') {
+      return extracted as SafeBlockToolData;
+    }
+
+    // Normalize empty fields for object types
+    const normalized: Record<string, unknown> = { ...(extracted as Record<string, unknown>) };
+    this.sanitizeEmptyFields(normalized);
+
+    return normalized;
+  }
+
+  /**
+   * Logs a failed tool save; the block then falls back to its preserved data.
+   * @param error - what the tool threw or rejected with
+   */
+  private logExtractFailure(error: unknown): undefined {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+
+    log(
+      `Saving process for ${this.name} tool failed due to the ${normalizedError}`,
+      'log',
+      normalizedError
+    );
+
+    return undefined;
   }
 
   /**

@@ -801,9 +801,8 @@ test.describe('Table Corner Drag Handle', () => {
     expect(saved.filter(block => block.parent === undefined).map(block => block.type)).toEqual(['table']);
   });
 
-  test('Corner drag inward does not leave the scroll area wider than the table', async ({ page }) => {
-    // Five 350px columns overflow the container; the stale column-resize handles
-    // must not hold its scroll width once a column is gone.
+  test('Corner drag inward leaves no overflow beyond the scroll padding', async ({ page }) => {
+    // Stale resize handles must not add width beyond the cell pill's scroll padding.
     await createTableWithWidths(page, [['', '', '', '', ''], ['', '', '', '', '']], [350, 350, 350, 350, 350]);
 
     const cornerBox = assertBoundingBox(await page.locator(CORNER_DRAG_SELECTOR).boundingBox(), 'Corner handle');
@@ -820,10 +819,12 @@ test.describe('Table Corner Drag Handle', () => {
       const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement;
       const grid = sc.querySelector('table') as HTMLElement;
 
-      return { scrollWidth: sc.scrollWidth, grid: grid.offsetWidth };
+      const paddingInlineEnd = parseFloat(getComputedStyle(sc).paddingInlineEnd);
+
+      return { scrollWidth: sc.scrollWidth, grid: grid.offsetWidth, paddingInlineEnd };
     });
 
-    expect(extent.scrollWidth).toBeLessThanOrEqual(extent.grid + 1);
+    expect(extent.scrollWidth).toBeLessThanOrEqual(extent.grid + extent.paddingInlineEnd + 1);
 
     await page.mouse.up();
   });

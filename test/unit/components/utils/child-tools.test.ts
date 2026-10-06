@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  acceptsChildren,
   getChildToolRestrictions,
   isChildToolAllowed,
   resolveChildTool,
@@ -8,6 +9,7 @@ import {
 } from '../../../../src/components/utils/child-tools';
 import type { ChildToolRestrictions } from '../../../../types/tools';
 import type { Block } from '../../../../src/components/block';
+import { PageTool } from '../../../../src/tools/page';
 
 /**
  * A container block whose tool declares (or does not declare) child restrictions.
@@ -47,6 +49,30 @@ describe('child-tool restrictions', () => {
       // container down by handing back an empty array.
       expect(getChildToolRestrictions(containerBlock({ allow: [],
         deny: [] }))).toBeUndefined();
+    });
+  });
+
+  describe('acceptsChildren', () => {
+    const blockWhoseTool = (accepts: boolean | undefined): Block =>
+      ({ id: 'leaf-1', name: 'leaf', tool: { name: 'leaf', acceptsChildren: accepts } } as unknown as Block);
+
+    it('is false only when the tool says it takes no children', () => {
+      expect(acceptsChildren(blockWhoseTool(false))).toBe(false);
+      expect(acceptsChildren(blockWhoseTool(true))).toBe(true);
+      expect(acceptsChildren(blockWhoseTool(undefined))).toBe(true);
+    });
+
+    it('treats the root as accepting children', () => {
+      expect(acceptsChildren(null)).toBe(true);
+      expect(acceptsChildren(undefined)).toBe(true);
+    });
+
+    it('refuses every tool under a parent that takes no children', () => {
+      expect(isChildToolAllowed(blockWhoseTool(false), 'paragraph')).toBe(false);
+    });
+
+    it('is declared by the page tool, whose body lives in another document', () => {
+      expect((PageTool as unknown as { acceptsChildren?: boolean }).acceptsChildren).toBe(false);
     });
   });
 

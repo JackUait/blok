@@ -595,7 +595,7 @@ describe('renderOverlay', () => {
     expect(labels).toEqual([
       'Toggle caption',
       'Replace image',
-      'Crop',
+      'Edit',
       'View full screen',
       'Download original',
     ]);

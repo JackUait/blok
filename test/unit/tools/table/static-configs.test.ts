@@ -81,11 +81,12 @@ describe('Table static configs', () => {
     });
   });
 
-  it('sanitize allows a tag with href, target _blank, and rel nofollow in content', () => {
-    const config = Table.sanitize;
-    const aRule = (config.content as Record<string, unknown>)['a'];
+  it('sanitize keeps ordinary table-cell links with target _blank and rel nofollow', () => {
+    const html = '<a href="https://example.test" target="_self" rel="friend">Site</a>';
+    const [block] = sanitizeBlocks([{ tool: 'table', data: { content: [[html]] } }], Table.sanitize);
+    const content = block?.data.content as string[][] | undefined;
 
-    expect(aRule).toEqual({ href: true, target: '_blank', rel: 'nofollow' });
+    expect(content?.[0]?.[0]).toBe('<a href="https://example.test" target="_blank" rel="nofollow">Site</a>');
   });
 
   it('paste config handles TABLE, TR, TH, TD tags', () => {
@@ -119,8 +120,8 @@ describe('Table static configs', () => {
       expect(thConfig).toBeDefined();
       // colspan/rowspan must stay whitelisted — without them the paste
       // sanitizer strips merges before onPaste runs.
-      expect((tdConfig as Record<string, unknown>).TD).toEqual({ style: true, colspan: true, rowspan: true });
-      expect((thConfig as Record<string, unknown>).TH).toEqual({ style: true, colspan: true, rowspan: true });
+      expect((tdConfig as Record<string, unknown>).TD).toEqual({ style: true, colspan: true, rowspan: true, align: true, valign: true, bgcolor: true });
+      expect((thConfig as Record<string, unknown>).TH).toEqual({ style: true, colspan: true, rowspan: true, align: true, valign: true, bgcolor: true });
     }
   });
 });

@@ -51,6 +51,50 @@ describe('rovingRadioGroup', () => {
     expect(radios.map((r) => r.tabIndex)).toEqual([0, -1, -1]);
   });
 
+  describe('in a right-to-left group', () => {
+    const rtlGroup = (count: number, selected: number): HTMLElement[] => {
+      const { group, radios } = makeGroup(count, selected);
+
+      group.setAttribute('dir', 'rtl');
+
+      return radios;
+    };
+
+    it('ArrowLeft moves to the next radio', () => {
+      const radios = rtlGroup(3, 0);
+      const onSelect = vi.fn();
+      const handle = rovingRadioGroup({ radios, getSelectedIndex: () => 0, onSelect });
+      cleanup = handle.destroy;
+
+      press(radios[0], 'ArrowLeft');
+
+      expect(onSelect).toHaveBeenCalledWith(1);
+    });
+
+    it('ArrowRight moves to the previous radio', () => {
+      const radios = rtlGroup(3, 1);
+      const onSelect = vi.fn();
+      const handle = rovingRadioGroup({ radios, getSelectedIndex: () => 1, onSelect });
+      cleanup = handle.destroy;
+
+      press(radios[1], 'ArrowRight');
+
+      expect(onSelect).toHaveBeenCalledWith(0);
+    });
+
+    it('both orientation keeps ArrowDown as next and maps ArrowLeft to next', () => {
+      const radios = rtlGroup(3, 0);
+      const onSelect = vi.fn();
+      const handle = rovingRadioGroup({ radios, getSelectedIndex: () => 0, onSelect, orientation: 'both' });
+      cleanup = handle.destroy;
+
+      press(radios[0], 'ArrowDown');
+      press(radios[0], 'ArrowLeft');
+
+      expect(onSelect.mock.calls).toEqual([[1], [1]]);
+    });
+  });
+
   it('ArrowRight moves selection to the next radio and follows focus', () => {
     const { radios } = makeGroup(3, 0);
     let selected = 0;

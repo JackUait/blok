@@ -119,6 +119,9 @@
      selection, so the chip reads as the selection that turned into it. */
   :where([data-blok-interface]) span[data-latex] {
     transition: background-color 160ms ease-out;
+    /* Math reads LTR in any direction, also as raw source before KaTeX renders. */
+    direction: ltr;
+    unicode-bidi: isolate;
   }
 
   @media (prefers-reduced-motion: reduce) {

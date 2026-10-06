@@ -78,12 +78,12 @@ describe('Quote Tool', () => {
       expect(el.innerHTML).toBe('<b>Bold</b> and <i>italic</i>');
     });
 
-    it('has a 3px left border via Tailwind class', async () => {
+    it('has a 3px inline-start border via Tailwind class', async () => {
       const { Quote } = await import('../../../../src/tools/quote');
       const tool = new Quote(createQuoteOptions());
       const el = tool.render();
 
-      expect(el.className).toContain('border-l-[3px]');
+      expect(el.className).toContain('border-s-[3px]');
     });
 
     it('uses currentcolor for the left border', async () => {

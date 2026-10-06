@@ -305,6 +305,62 @@ describe('Touch Handler', () => {
       expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(undefined, target);
     });
 
+    // A container's empty hint is not a block: pressing it opens no toolbar,
+    // the block it creates gets its own.
+    it('opens no toolbar when the press lands on a container\'s empty hint', () => {
+      const handler = createRedactorTouchHandler({
+        Blok: blok,
+        redactorElement,
+      });
+
+      const wrapper = document.createElement('div');
+      const hint = document.createElement('div');
+
+      wrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      hint.setAttribute('data-blok-child-stand-in', '');
+      wrapper.appendChild(hint);
+      redactorElement.appendChild(wrapper);
+
+      const event = new MouseEvent('mousedown', { bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: hint });
+
+      handler(event);
+
+      expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalled();
+    });
+
+    // The hint's own click inserts the first child; that block's toolbar opens
+    // once it exists, so the controls appear on its row.
+    it('opens the toolbar on the first child the hint\'s click creates', () => {
+      const handler = createRedactorTouchHandler({
+        Blok: blok,
+        redactorElement,
+      });
+
+      const container = document.createElement('div');
+      const hint = document.createElement('div');
+      const slot = document.createElement('div');
+      const child = document.createElement('div');
+      const childBlock = { id: 'child' };
+
+      hint.setAttribute('data-blok-child-stand-in', '');
+      slot.setAttribute('data-blok-nested-blocks', '');
+      child.setAttribute('data-blok-testid', 'block-wrapper');
+      container.append(hint, slot);
+      redactorElement.appendChild(container);
+      hint.addEventListener('click', () => slot.appendChild(child));
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockImplementation(node => (node === child ? childBlock : undefined) as never);
+
+      const event = new MouseEvent('mousedown', { bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: hint });
+      handler(event);
+      hint.click();
+
+      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(childBlock, child);
+    });
+
     it('does not set caret when rectangle selection is activated', () => {
       const handler = createRedactorTouchHandler({
         Blok: blok,

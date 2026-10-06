@@ -47,10 +47,10 @@ describe("analytics", () => {
 
   describe("trackEvent", () => {
     it("forwards the event name and params to gtag", () => {
-      trackEvent("copy_code", { language: "tsx", surface: "docs" });
+      trackEvent("copy_code", { code_language: "tsx", surface: "docs" });
 
       expect(getGtagMock()).toHaveBeenCalledWith("event", "copy_code", {
-        language: "tsx",
+        code_language: "tsx",
         surface: "docs",
       });
     });
@@ -62,7 +62,7 @@ describe("analytics", () => {
     });
 
     it("drops undefined params so GA does not record empty dimensions", () => {
-      trackEvent("copy_code", { language: undefined, surface: "docs" });
+      trackEvent("copy_code", { code_language: undefined, surface: "docs" });
 
       expect(getGtagMock()).toHaveBeenCalledWith("event", "copy_code", {
         surface: "docs",
@@ -85,6 +85,21 @@ describe("analytics", () => {
         page_location: `${window.location.origin}/docs/paragraph`,
         page_title: "Paragraph — Blok",
       });
+    });
+
+    it("lets the caller set page_location apart from page_path", () => {
+      trackPageView("/docs/paragraph/", "Paragraph — Blok", {
+        page_location: "https://blokeditor.com/docs/paragraph/?utm_source=x",
+      });
+
+      expect(getGtagMock()).toHaveBeenCalledWith(
+        "event",
+        "page_view",
+        expect.objectContaining({
+          page_path: "/docs/paragraph/",
+          page_location: "https://blokeditor.com/docs/paragraph/?utm_source=x",
+        }),
+      );
     });
 
     it("falls back to the document title when none is given", () => {

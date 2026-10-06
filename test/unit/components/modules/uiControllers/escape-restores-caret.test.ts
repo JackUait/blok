@@ -45,6 +45,7 @@ const createController = (mocks: Mocks): KeyboardController => {
     // emoji-menu Escape fix) — every path through handleEscape now touches it.
     BlockEvents: {
       emojiTrigger: { opened: false, close: vi.fn() },
+      pageReferenceTrigger: { opened: false, close: vi.fn() },
     },
     Toolbar: {
       toolbox: { opened: false, close: vi.fn() },

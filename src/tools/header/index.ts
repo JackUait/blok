@@ -58,8 +58,6 @@ export interface HeaderData extends BlockToolData, BlockColorData {
   level: number;
   /** Whether this header has toggle (collapse/expand) behavior */
   isToggleable?: boolean;
-  /** Whether the toggle heading is open (expanded). Persisted on save so state is restored on reload. */
-  isOpen?: boolean;
   /**
    * Anchor id for in-document links (`<a href="#...">`), rendered as the heading
    * element's `id`. Captured from the `id` of a pasted heading — that is how
@@ -243,15 +241,15 @@ export class Header implements BlockTool {
    */
   private _isOpen: boolean;
 
+  private unsubscribeOpen: (() => void) | null = null;
+
   /**
    * Block ID from the editor
    */
   private blockId?: string;
 
   /**
-   * Block instance — used to force a Yjs sync of `isOpen` on collapse/expand,
-   * since the open-state visuals all land in mutation-free/ignored DOM that
-   * the MutationObserver never reports.
+   * Block instance — used to dispatch a change after a color edit.
    */
   private block?: BlockAPI;
 
@@ -270,18 +268,16 @@ export class Header implements BlockTool {
     this.readOnly = readOnly;
     this._settings = config || {};
     this._data = this.normalizeData(data);
-    this._isOpen = this._data.isOpen ?? true;
-    this._element = this.getTag();
 
     if (block) {
       this.blockId = block.id;
       this.block = block;
     }
 
-    /**
-     * Applied here (not inside getTag) so that the custom anchorIds generator
-     * receives the block id, which is only known after `block` is assigned.
-     */
+    // Before getTag(): it stamps the open state on the heading.
+    this._isOpen = this.readPersonalOpen();
+    this._element = this.getTag();
+
     this.applyAnchorId();
 
     if (!readOnly && this._data.isToggleable) {
@@ -345,10 +341,6 @@ export class Header implements BlockTool {
       normalized.isToggleable = true;
     }
 
-    if (typeof data.isOpen === 'boolean') {
-      normalized.isOpen = data.isOpen;
-    }
-
     if (typeof data.textColor === 'string') {
       normalized.textColor = data.textColor;
     }
@@ -393,6 +385,8 @@ export class Header implements BlockTool {
   public render(): HTMLElement {
     if (this._data.isToggleable) {
       this._wrapper = this.buildWrapper();
+      this.followPersonalOpen();
+
       return this._wrapper;
     }
     return this._element;
@@ -404,6 +398,15 @@ export class Header implements BlockTool {
    */
   public rendered(): void {
     if (this._data.isToggleable) {
+      // Runs after insert, so isCreatedHere is known; still before paint.
+      if (
+        this.blockId !== undefined
+        && this.api.viewState.get(this.blockId, 'open') === undefined
+        && this.api.viewState.isCreatedHere(this.blockId)
+      ) {
+        this.setOpenState(true);
+      }
+
       this.updateChildrenVisibility();
       this.updateBodyPlaceholderVisibility();
     }
@@ -467,6 +470,11 @@ export class Header implements BlockTool {
   public removed(): void {
     this.api.events.off('block changed', this.handleBlockChanged);
     this._element.removeEventListener('keydown', this.handleKeyDown);
+    this.stopFollowingPersonalOpen();
+  }
+
+  public destroy(): void {
+    this.stopFollowingPersonalOpen();
   }
 
   /**
@@ -481,6 +489,8 @@ export class Header implements BlockTool {
       return;
     }
 
+    const wasReadOnly = this.readOnly;
+
     this.readOnly = state;
 
     if (state) {
@@ -488,6 +498,12 @@ export class Header implements BlockTool {
 
       if (this._data.isToggleable) {
         this._element.removeEventListener('keydown', this.handleKeyDown);
+      }
+
+      this._bodyPlaceholderElement?.removeEventListener('click', this.handleBodyPlaceholderClick);
+
+      if (!wasReadOnly) {
+        this.api.events.off('block changed', this.handleBlockChanged);
       }
 
       if (this.placeholderCleanup) {
@@ -501,10 +517,22 @@ export class Header implements BlockTool {
         this._element.addEventListener('keydown', this.handleKeyDown);
       }
 
+      // A stable handler ref makes a repeated add a DOM no-op.
+      this._bodyPlaceholderElement?.addEventListener('click', this.handleBodyPlaceholderClick);
+
+      if (wasReadOnly && this._data.isToggleable) {
+        this.api.events.on('block changed', this.handleBlockChanged);
+      }
+
       const translatedName = this.api.i18n.t(this.currentLevel.nameKey);
       const placeholderText = this.resolvePlaceholderText(translatedName);
 
+      this.placeholderCleanup?.();
       this.placeholderCleanup = setupPlaceholder(this._element, placeholderText);
+    }
+
+    if (this._data.isToggleable) {
+      this.updateBodyPlaceholderVisibility();
     }
   }
 
@@ -517,18 +545,7 @@ export class Header implements BlockTool {
       return;
     }
 
-    this._isOpen = true;
-
-    if (this._arrowElement && this._element) {
-      updateArrowState(this._arrowElement, this._element, this._isOpen, {
-        collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
-        expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
-      });
-    }
-
-    this.updateChildrenVisibility();
-    this.updateBodyPlaceholderVisibility();
-    this.syncOpenState();
+    this.setOpenState(true);
   }
 
   /**
@@ -540,18 +557,7 @@ export class Header implements BlockTool {
       return;
     }
 
-    this._isOpen = false;
-
-    if (this._arrowElement && this._element) {
-      updateArrowState(this._arrowElement, this._element, this._isOpen, {
-        collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
-        expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
-      });
-    }
-
-    this.updateChildrenVisibility();
-    this.updateBodyPlaceholderVisibility();
-    this.syncOpenState();
+    this.setOpenState(false);
   }
 
   /**
@@ -691,20 +697,6 @@ export class Header implements BlockTool {
       this._element.innerHTML = newData.text;
     }
 
-    if (this._data.isToggleable && typeof this._data.isOpen === 'boolean') {
-      this._isOpen = this._data.isOpen;
-
-      if (this._arrowElement && this._element) {
-        updateArrowState(this._arrowElement, this._element, this._isOpen, {
-          collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
-          expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
-        });
-      }
-
-      this.updateChildrenVisibility();
-      this.updateBodyPlaceholderVisibility();
-    }
-
     this.applyAnchorId();
 
     return true;
@@ -725,7 +717,6 @@ export class Header implements BlockTool {
 
     if (this._data.isToggleable === true) {
       data.isToggleable = true;
-      data.isOpen = this._isOpen;
     }
 
     if (this._data.textColor) {
@@ -766,7 +757,6 @@ export class Header implements BlockTool {
         ...INLINE_TEXT_SANITIZE,
       },
       isToggleable: false,
-      isOpen: false,
       // Plain fragment string, already validated by normalizeHeadingAnchor — pass through.
       anchor: false,
       // Block-level color fields hold plain preset names (not HTML) — pass through.
@@ -851,8 +841,12 @@ export class Header implements BlockTool {
      * of the heading element (keeping arrow outside the contenteditable h2).
      */
     if (this._data.isToggleable) {
+      if (!this._wrapper) {
+        this._isOpen = this.readPersonalOpen();
+      }
+
       this._element.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
-      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), 'pl-8');
+      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), 'ps-8');
 
       if (!this._wrapper) {
         /**
@@ -860,6 +854,7 @@ export class Header implements BlockTool {
          * prepend the arrow to the wrapper (not to the heading).
          */
         this.createToggleWrapper();
+        this.followPersonalOpen();
       } else if (!findOwn(this._wrapper, `[${TOGGLE_ATTR.toggleArrow}]`)) {
         /**
          * Wrapper exists but arrow was removed (e.g. after innerHTML reset) — re-add it.
@@ -886,7 +881,7 @@ export class Header implements BlockTool {
 
     /**
      * Re-derive the anchor id: the element may have just been rebuilt (level
-     * change) or its text replaced, and getTag() runs before blockId exists.
+     * change) or its text replaced.
      */
     this.applyAnchorId();
   }
@@ -930,10 +925,10 @@ export class Header implements BlockTool {
 
     /**
      * Add styles class using twMerge to combine base and level-specific styles.
-     * When isToggleable, add left padding to leave room for the arrow (which lives
+     * When isToggleable, add start padding to leave room for the arrow (which lives
      * in the wrapper div as a sibling, not inside this element).
      */
-    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), this._data.isToggleable ? 'pl-8' : '');
+    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), this._data.isToggleable ? 'ps-8' : '');
 
     /**
      * Apply inline styles for custom overrides (dynamic values from config)
@@ -1001,7 +996,7 @@ export class Header implements BlockTool {
    * Build the arrow element for toggle heading.
    *
    * The arrow is absolutely positioned within the header row, sitting in the area
-   * to the left of the heading text (which has pl-8 padding). This keeps the arrow
+   * on the inline-start side of the heading text (which has ps-8 padding). This keeps the arrow
    * completely outside the heading's contenteditable scope, allowing Chrome to
    * place a cursor and insert text without interference.
    *
@@ -1028,7 +1023,7 @@ export class Header implements BlockTool {
     });
     const textSizeClass = this.currentLevel.styles.match(/\btext-(?:xs|sm|base|lg|xl|\dxl)\b/)?.[0] ?? '';
 
-    arrow.className = twMerge(arrow.className, 'absolute left-0 top-[calc(var(--blok-block-padding-top,7px)_+_0.65em)] -translate-y-1/2 mt-0', textSizeClass);
+    arrow.className = twMerge(arrow.className, 'absolute start-0 top-[calc(var(--blok-block-padding-top,7px)_+_0.65em)] -translate-y-1/2 mt-0', textSizeClass);
 
     return arrow;
   }
@@ -1036,7 +1031,7 @@ export class Header implements BlockTool {
   /**
    * Build the wrapper div that contains the arrow and heading as siblings.
    * The wrapper has relative positioning so the absolutely-positioned arrow
-   * is anchored to it. The heading occupies the full width with pl-7 padding.
+   * is anchored to it. The heading occupies the full width with ps-8 padding.
    *
    * @returns The wrapper element (with arrow and heading already appended)
    */
@@ -1056,8 +1051,8 @@ export class Header implements BlockTool {
     wrapper.appendChild(headerRow);
 
     const bodyPlaceholder = document.createElement('div');
-    // pl-8 (32px) matches the heading's left padding so body aligns with the title text start.
-    bodyPlaceholder.className = twMerge(BODY_PLACEHOLDER_STYLES, 'pl-8');
+    // ms-6.5 + px-1.5 = 32px matches the heading's start padding so body aligns with the title text start.
+    bodyPlaceholder.className = twMerge(BODY_PLACEHOLDER_STYLES, 'ms-6.5');
     bodyPlaceholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
     bodyPlaceholder.setAttribute(DATA_ATTR.chrome, '');
     // Class changes on the body placeholder (show/hide) must not trigger didMutated →
@@ -1066,14 +1061,14 @@ export class Header implements BlockTool {
     bodyPlaceholder.setAttribute('data-blok-mutation-free', 'true');
     bodyPlaceholder.textContent = this.api.i18n.t('tools.toggle.bodyPlaceholder');
     if (!this.readOnly) {
-      bodyPlaceholder.addEventListener('click', () => this.handleBodyPlaceholderClick());
+      bodyPlaceholder.addEventListener('click', this.handleBodyPlaceholderClick);
     }
     this._bodyPlaceholderElement = bodyPlaceholder;
     wrapper.appendChild(bodyPlaceholder);
 
     const childContainer = document.createElement('div');
-    // pl-8 (32px) matches the heading's left padding so children align with the title text start.
-    childContainer.className = 'pl-8';
+    // ps-8 (32px) matches the heading's start padding so children align with the title text start.
+    childContainer.className = 'ps-8';
     childContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
     childContainer.setAttribute(DATA_ATTR.nestedBlocks, '');
     // Block DOM mutations inside the children container from triggering the header tool's
@@ -1167,7 +1162,28 @@ export class Header implements BlockTool {
    * Toggle the open/closed state of the toggle heading.
    */
   private toggleOpen(): void {
-    this._isOpen = !this._isOpen;
+    this.setOpenState(!this._isOpen);
+  }
+
+  private setOpenState(open: boolean): void {
+    const changed = this._isOpen !== open;
+
+    // Apply before storing: the store echoes the change to followPersonalOpen,
+    // and applyOpen must then see nothing to do.
+    this.applyOpen(open);
+
+    // Personal, not document data: no dispatchChange, and allowed in read-only.
+    if (changed && this.blockId !== undefined) {
+      this.api.viewState.set(this.blockId, 'open', open);
+    }
+  }
+
+  private applyOpen(open: boolean): void {
+    if (this._isOpen === open) {
+      return;
+    }
+
+    this._isOpen = open;
 
     if (this._arrowElement && this._element) {
       updateArrowState(this._arrowElement, this._element, this._isOpen, {
@@ -1178,21 +1194,30 @@ export class Header implements BlockTool {
 
     this.updateChildrenVisibility();
     this.updateBodyPlaceholderVisibility();
-    this.syncOpenState();
+  }
+
+  private readPersonalOpen(): boolean {
+    return this._data.isToggleable === true
+      && this.blockId !== undefined
+      && this.api.viewState.get(this.blockId, 'open') === true;
   }
 
   /**
-   * Force a Yjs sync of the toggle-heading open state.
-   *
-   * Collapse/expand only mutates mutation-free child containers and the
-   * ignored `data-blok-toggle-open` attribute, so the MutationObserver never
-   * reports it. Without this dispatch the new `isOpen` would not reach Yjs —
-   * leaving it non-undoable and invisible to remote collaborators.
+   * Track the personal open state, set here or by another tab.
    */
-  private syncOpenState(): void {
-    if (!this.readOnly) {
-      this.block?.dispatchChange();
+  private followPersonalOpen(): void {
+    this.stopFollowingPersonalOpen();
+
+    if (this.blockId === undefined) {
+      return;
     }
+
+    this.unsubscribeOpen = this.api.viewState.onChange(this.blockId, 'open', (value) => this.applyOpen(value === true));
+  }
+
+  private stopFollowingPersonalOpen(): void {
+    this.unsubscribeOpen?.();
+    this.unsubscribeOpen = null;
   }
 
   /**
@@ -1229,7 +1254,7 @@ export class Header implements BlockTool {
    * Handle a click on the body placeholder: insert a new child paragraph and focus it.
    * Mirrors the toggle list's handleBodyPlaceholderClick.
    */
-  private handleBodyPlaceholderClick(): void {
+  private handleBodyPlaceholderClick = (): void => {
     if (this.blockId === undefined) {
       return;
     }
@@ -1245,7 +1270,7 @@ export class Header implements BlockTool {
     this.api.caret.setToBlock(newBlock.id, 'start');
 
     this._bodyPlaceholderElement?.classList.add('hidden');
-  }
+  };
 
   /**
    * Handle 'block changed' events to refresh body placeholder visibility.

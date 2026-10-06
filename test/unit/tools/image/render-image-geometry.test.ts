@@ -27,15 +27,15 @@ afterEach(() => {
 });
 
 describe('renderImage geometry', () => {
-  it('keeps the identity DOM exactly as before, cropped or not', () => {
+  it('keeps the identity geometry unchanged, cropped or not', () => {
     expect(renderImage({ url: 'x.png', alt: 'a' }).outerHTML).toBe(
       '<figure class="blok-image-inner" data-role="image-figure" style="margin: 0px; text-align: center; position: relative;">'
-      + '<img src="x.png" alt="a" draggable="false"></figure>'
+      + '<img data-blok-block-context-menu="" src="x.png" alt="a" draggable="false"></figure>'
     );
     expect(renderImage({ url: 'x.png', crop: { x: 10, y: 20, w: 50, h: 40 } }).outerHTML).toBe(
       '<figure class="blok-image-inner" data-role="image-figure" style="margin: 0px; text-align: center; position: relative;">'
       + '<div class="blok-image-crop" data-role="image-crop" style="overflow: hidden; position: relative; aspect-ratio: 50 / 40; width: 100%;">'
-      + '<img src="x.png" alt="" draggable="false" style="display: block; max-width: none; width: 200%; transform: translate(-10%, -20%);"></div></figure>'
+      + '<img data-blok-block-context-menu="" src="x.png" alt="" draggable="false" style="display: block; max-width: none; width: 200%; transform: translate(-10%, -20%);"></div></figure>'
     );
   });
 

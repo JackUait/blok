@@ -13,7 +13,7 @@ internal readonly record struct TicketClaims(
 
 internal static class TicketVerifier
 {
-  private const string HeaderSegment = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+  internal const string HeaderSegment = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
 
   internal static bool TryVerify(
       string secret,

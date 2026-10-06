@@ -45,13 +45,31 @@ describe('Image control size tiers (src/styles/image.css)', () => {
     expect(body).toContain('height: 14px');
   });
 
-  it('handles are 9px dots, not 6px bars', () => {
+  it('handles are 3x32 bars 8px inside the picture, in the overlay ink', () => {
     const body = findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"]');
 
     expect(body).not.toBeNull();
-    expect(body).toContain('width: 9px');
-    expect(body).toContain('height: 9px');
-    expect(body).toContain('border-radius: 50%');
+    expect(body).toContain('width: 3px');
+    expect(body).toContain('height: 32px');
+    // Inverted against the cards: a paper area gets dark ink, a graphite one light ink.
+    expect(body).toContain('background: var(--blok-overlay-fg)');
+    expect(findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]')).toContain('left: var(--blok-space-2)');
+    expect(findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"]')).toContain('right: var(--blok-space-2)');
+  });
+
+  it('a hidden handle keeps its box, so tone-sampler can read what is under it', () => {
+    const body = findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"]');
+
+    expect(body).toContain('transform: translateY(-50%)');
+    expect(css).not.toMatch(/\[data-role="resize-handle"\][^{]*\{[^}]*scale\(/);
+  });
+
+  it('the hit area is 16px wide', () => {
+    expect(findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"]::before')).toContain('inset: -4px -6.5px');
+  });
+
+  it('a table cell needs no handle override: the handles are already inside', () => {
+    expect(css).not.toMatch(/\[data-blok-table-cell\][^{]*\[data-role="resize-handle"\]/);
   });
 
   it('caption steps between exactly two fixed sizes at the medium breakpoint', () => {
@@ -70,43 +88,35 @@ describe('Image control size tiers (src/styles/image.css)', () => {
 
 const mainCss = readFileSync(resolve(__dirname, '../../../src/styles/main.css'), 'utf-8');
 
-describe('image islands (frame and islands design)', () => {
-  it('the toolbar is a transparent row; each island paints its card behind its buttons', () => {
-    const island = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__island');
-    const card = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__island::before');
-
-    expect(island).not.toContain('background:');
-    expect(island).toContain('position: relative');
-    expect(card).toContain('background: var(--blok-overlay-surface)');
-    expect(card).toContain('z-index: -1');
-    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*background: transparent/);
+describe('image toolbar (one bar)', () => {
+  it('the toolbar itself is the card; groups have none', () => {
+    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*background: var\(--blok-overlay-surface\)/);
+    expect(findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__island')).not.toContain('background');
+    expect(css).not.toContain('.blok-image-toolbar::after');
+    expect(css).not.toContain('.blok-image-toolbar__island::after');
+    expect(css).not.toContain('blok-image-islands');
   });
 
-  it('the merged bar lies over the cards, so the join is hidden until it pinches', () => {
-    const bar = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar::after');
-
-    expect(bar).toContain('background-color: var(--blok-overlay-surface)');
-    expect(bar).toContain('z-index: -1');
-    expect(css).not.toContain('.blok-image-toolbar::before');
-  });
-
-  it('a neck joins each island to the next and pinches off; the last island has none', () => {
-    const neck = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__island::after');
-    const show = css.match(/[^}]*\.blok-image-toolbar__island::after \{[^}]*animation:[^}]*\}/g) ?? [];
-
-    expect(neck).toContain('background: var(--blok-overlay-surface)');
-    expect(findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__island[data-island="view"]::after')).toContain('content: none');
-    expect(show).toHaveLength(1);
-    expect(show[0]).toContain('blok-image-islands-pinch');
-  });
-
-  it('always sits 10px inside the top of the picture', () => {
-    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*top: 10px/);
+  it('sits 8px inside the top of the picture', () => {
+    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*top: 8px/);
     expect(mainCss).not.toMatch(/\.blok-image-toolbar \{[^}]*bottom:/);
-    expect(css).not.toContain('data-islands-placement');
   });
 
-  it('medium tier shows only the edit island and more', () => {
+  it('fades in by opacity only, so a placed tooltip never ends up off its button', () => {
+    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*transition: opacity 120ms ease/);
+    const animated = (css.match(/\.blok-image-toolbar[^{]*\{[^}]*animation:[^;]*/g) ?? [])
+      .filter((rule) => !rule.includes('animation: none'));
+
+    expect(animated).toHaveLength(0);
+  });
+
+  it('a divider opens a group only after the first visible one', () => {
+    expect(css).toContain('.blok-image-toolbar:not([data-tier="medium"]):not([data-compact="true"]) [data-island="edit"]::before');
+    expect(css).toContain('.blok-image-toolbar:not([data-compact="true"]) [data-island="view"]::before');
+    expect(css).not.toMatch(/\[data-island\] \+ \[data-island\]/);
+  });
+
+  it('medium tier shows only the edit group and more', () => {
     expect(css).toMatch(/\.blok-image-toolbar\[data-tier="medium"\] \[data-island="layout"\] \{\s*display: none/);
     expect(css).toMatch(/\.blok-image-toolbar\[data-tier="medium"\] \[data-island="view"\] > :not\(\[data-action="more"\]\)/);
   });
@@ -118,38 +128,6 @@ describe('image islands (frame and islands design)', () => {
   it('selection is read from the block holder, not the dead data-selected', () => {
     expect(css).toContain('[data-blok-selected="true"] [data-blok-tool="image"] [data-role="image-selection-ring"]');
     expect(css).toContain('[data-blok-selected="true"] [data-blok-tool="image"] [data-role="resize-handle"]');
-  });
-
-  it('one show rule per element, so hover then select does not replay the split', () => {
-    const island = css.match(/[^}]*\.blok-image-toolbar__island::before \{[^}]*animation:[^}]*\}/g) ?? [];
-    const row = (css.match(/[^}]*\.blok-image-toolbar \{[^}]*animation:[^}]*\}/g) ?? [])
-      .filter((rule) => !rule.includes('animation: none'));
-
-    expect(island).toHaveLength(1);
-    expect(island[0]).toContain('blok-image-islands-split');
-    expect(row).toHaveLength(1);
-    expect(row[0]).toContain('blok-image-islands-rise');
-  });
-
-  it('never animates layout, so buttons do not slide under a placed tooltip', () => {
-    const frames = css.match(/@keyframes blok-image-islands[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g) ?? [];
-
-    expect(frames.length).toBeGreaterThanOrEqual(4);
-    frames.forEach((frame) => {
-      expect(frame).not.toMatch(/(^|[\s;{])(gap|padding|margin|width|height|inset|left|right|top|bottom):/);
-    });
-  });
-
-  it('reduced motion switches the rise, merge, split and pinch off', () => {
-    const reduced = css.slice(css.indexOf('prefers-reduced-motion: reduce'));
-    const block = reduced.slice(0, reduced.indexOf('animation: none'));
-
-    [
-      '.blok-image-toolbar,',
-      '.blok-image-toolbar::after,',
-      '.blok-image-toolbar__island::before,',
-      '.blok-image-toolbar__island::after,',
-    ].forEach((selector) => expect(block).toContain(selector));
   });
 });
 
@@ -172,16 +150,25 @@ describe('alt hint and pill width', () => {
     expect(body).toContain('white-space: normal');
   });
 
-  it('caps the alt pill so a long description does not cover the picture', () => {
-    expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill')).toContain('max-width: min(calc(100% - 20px), 240px)');
+  it('caps the alt tag so a long description does not cover the picture', () => {
+    expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill')).toContain('max-width: min(calc(100% - 16px), 240px)');
+  });
+
+  it('the alt tag is painted from the overlay tokens, so data-tone repaints it', () => {
+    const body = findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill');
+
+    expect(body).toContain('background: var(--blok-overlay-surface)');
+    expect(body).toContain('color: var(--blok-overlay-fg-strong)');
+    expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill__text')).toContain('color: var(--blok-overlay-fg)');
+    expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill__label')).toContain('text-transform: uppercase');
+    expect(css).not.toContain('blok-image-alt-pill__mark');
+    expect(css).not.toContain('blok-image-alt-pill__help');
   });
 });
 
 describe('image chrome inside a table cell (the cell clips overflow)', () => {
-  it('keeps the ring and the dots inside the figure', () => {
+  it('keeps the ring inside the figure', () => {
     expect(css).toMatch(/\[data-blok-table-cell\] \[data-blok-tool="image"\] \[data-role="image-selection-ring"\][^{]*\{[^}]*left: 0/);
-    expect(css).toMatch(/\[data-blok-table-cell\] \[data-blok-tool="image"\] \[data-role="resize-handle"\]\[data-edge="left"\]\s*\{\s*left: var\(--blok-space-1\)/);
-    expect(css).toMatch(/\[data-blok-table-cell\] \[data-blok-tool="image"\] \[data-role="resize-handle"\]\[data-edge="right"\]\s*\{\s*right: var\(--blok-space-1\)/);
   });
 });
 

@@ -8,7 +8,8 @@
   --blok-icon-active-bg: rgba(255, 255, 255, 0.14);
   --blok-text-primary: var(--blok-darkroom-ink);
   --blok-icon-active-text: var(--blok-text-primary);
-  --blok-markup-hit: 36px;
+  --blok-markup-size: 36px;
+  --blok-markup-hit: var(--blok-markup-size);
   --blok-markup-pad: 4px;
   --blok-markup-gap: 2px;
   --blok-markup-row: calc(var(--blok-markup-hit) + 2 * var(--blok-markup-pad));
@@ -26,9 +27,21 @@
   --blok-markup-ink: var(--blok-darkroom-done-ink);
   --blok-markup-puck-i: 0;
   --blok-markup-puck-s: 0;
+  --blok-markup-shape-i: 0;
   --blok-markup-swatch: transparent;
   --blok-markup-swatch-ink: var(--blok-darkroom-done-ink);
   --blok-markup-dot: 8px;
+  --blok-markup-grow: 0px;
+  --blok-markup-drop: 0px;
+}
+
+/*
+  With the context row empty, the rail grows and drops to the middle of both rows.
+  Declared here, not on the rail, so the drop reads the base row.
+*/
+.blok-darkroom__markup[data-context-empty] {
+  --blok-markup-grow: 14px;
+  --blok-markup-drop: calc((var(--blok-markup-row) + var(--blok-space-3)) / 2);
 }
 
 /* The darkroom has the same rule; this copy also covers the panel outside it. */
@@ -52,16 +65,24 @@
   backdrop-filter: blur(20px) saturate(1.6);
 }
 
-/* A narrow dock scrolls the rail; it never wraps, so the panel height stays put. */
+/*
+  A narrow dock scrolls the rail; it never wraps, so the panel height stays put.
+  The row is recomputed here from the grown hit; the negative margin keeps the grown rail's flow size.
+*/
 .blok-darkroom__markup-rail {
+  --blok-markup-hit: calc(var(--blok-markup-size) + var(--blok-markup-grow));
+  --blok-markup-row: calc(var(--blok-markup-hit) + 2 * var(--blok-markup-pad));
   position: relative;
   flex: none;
   height: var(--blok-markup-row);
+  margin-block: calc(-1 * var(--blok-markup-grow) / 2);
+  translate: 0 var(--blok-markup-drop);
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
+  transition: height 420ms var(--blok-markup-spring), margin 420ms var(--blok-markup-spring), translate 420ms var(--blok-markup-spring);
 }
 
 /*
@@ -139,9 +160,206 @@
   }
 }
 
+/* Shapes: the rail button shows the last shape picked and opens a grid. */
+.blok-darkroom__markup-shapes-icon {
+  display: contents;
+}
+
+/*
+  Top-layer promoted, so it re-asserts the box the [data-blok-top-layer][popover]
+  reset strips, and the dark ink the :where([data-blok-top-layer]) tokens reset.
+*/
+.blok-darkroom__markup-shapes,
+.blok-darkroom__markup-shapes[data-blok-top-layer][popover] {
+  --blok-icon-active-bg: rgba(255, 255, 255, 0.14);
+  --blok-text-primary: var(--blok-darkroom-ink);
+  --blok-icon-active-text: var(--blok-text-primary);
+  --blok-markup-hit: 40px;
+  margin: 0;
+  padding: var(--blok-space-2);
+  border: 0;
+  border-radius: var(--blok-radius-surface);
+  background: var(--blok-darkroom-pill-bg);
+  box-shadow: inset 0 0 0 0.5px var(--blok-darkroom-pill-edge), 0 8px 24px var(--blok-darkroom-pill-shadow);
+  backdrop-filter: blur(20px) saturate(1.6);
+  color: var(--blok-darkroom-ink);
+}
+
+.blok-darkroom__markup-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(2, var(--blok-markup-hit));
+  gap: var(--blok-space-1);
+}
+
+.blok-darkroom__markup-shape-grid .blok-darkroom__markup-sep {
+  grid-column: 1 / -1;
+  width: auto;
+  height: 1px;
+  margin: var(--blok-space-1) 0;
+}
+
+/*
+  Live ink tiles: each glyph is drawn the way the shape will be, in the panel's
+  ink, width and fill. Glyph stroke widths are in the icons' 20-unit viewBox.
+  Also names the top-layer selector, whose background shorthand would drop the glow.
+*/
+.blok-darkroom__markup-shapes,
+.blok-darkroom__markup-shapes[data-blok-top-layer][popover] {
+  --blok-markup-shape-stroke: 1.5;
+  --blok-markup-shape-lead: 30ms;
+  --blok-markup-shape-step: 16ms;
+  --blok-markup-shape-trace: 320ms;
+  --blok-markup-halo: rgba(255, 255, 255, 0.95);
+  --blok-markup-halo-glow: rgba(255, 255, 255, 0.4);
+  --blok-markup-spot-edge: rgba(255, 255, 255, 0.9);
+  --blok-markup-spot-dim: rgba(0, 0, 0, 0.66);
+  --blok-markup-lens-ring: #fff;
+  --blok-markup-lens-rim: rgba(0, 0, 0, 0.35);
+  --blok-markup-lens-shadow: rgba(0, 0, 0, 0.55);
+  transform-origin: 50% 100%;
+  background-image: radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--blok-markup-color) 16%, transparent), transparent 70%);
+  animation: blok-markup-shapes-in 300ms var(--blok-markup-spring) backwards;
+}
+
+.blok-darkroom__markup-shapes[data-size="0"] { --blok-markup-shape-stroke: 1; }
+.blok-darkroom__markup-shapes[data-size="1"] { --blok-markup-shape-stroke: 1.5; }
+.blok-darkroom__markup-shapes[data-size="2"] { --blok-markup-shape-stroke: 2.25; }
+
+.blok-darkroom__markup-shape[data-ink] svg {
+  color: var(--blok-markup-color);
+}
+
+.blok-darkroom__markup-shape svg {
+  transition: scale 240ms var(--blok-markup-spring), width 420ms var(--blok-markup-spring), height 420ms var(--blok-markup-spring);
+}
+
+.blok-darkroom__markup-shape:hover svg {
+  scale: 1.12;
+}
+
+.blok-darkroom__markup-shape[data-ink] svg > * {
+  stroke-width: var(--blok-markup-shape-stroke);
+  transition: stroke-width 240ms var(--blok-markup-spring), fill-opacity 240ms ease;
+}
+
+.blok-darkroom__markup-shape[data-fillable] svg > * {
+  fill: currentColor;
+  fill-opacity: 0;
+}
+
+/* Matches FILL_OPACITY in markup/render.ts. */
+.blok-darkroom__markup-shapes[data-fill] .blok-darkroom__markup-shape[data-fillable] svg > * {
+  fill: currentColor;
+  fill-opacity: 0.2;
+}
+
+/* Filter on the outer svg box: WebKit ignores CSS filters on SVG children. */
+.blok-darkroom__markup-shapes[data-ink-dark] .blok-darkroom__markup-shape[data-ink] svg {
+  filter: drop-shadow(0 0 0.75px var(--blok-markup-halo)) drop-shadow(0 0 3px var(--blok-markup-halo-glow));
+}
+
+/*
+  Each glyph traces itself on, one tile after the next. pathLength="1" is set
+  on every mark in markup-panel.ts, so one dash length fits every glyph.
+  The dash lives only in the keyframes, so no seam is left once it ends.
+*/
+.blok-darkroom__markup-shape svg > * {
+  animation: blok-markup-trace var(--blok-markup-shape-trace) cubic-bezier(0.65, 0, 0.35, 1) calc(var(--blok-markup-shape-lead) + var(--blok-markup-shape-i) * var(--blok-markup-shape-step)) backwards;
+}
+
+/* The framing tiles: the photo itself, cropped to the tile. */
+.blok-darkroom__markup-shape[data-photo] {
+  overflow: hidden;
+}
+
+.blok-darkroom__markup-shape[data-photo] img {
+  position: absolute;
+  inset: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  border-radius: inherit;
+  object-fit: cover;
+  pointer-events: none;
+  animation: blok-markup-develop var(--blok-markup-shape-trace) ease-out calc(var(--blok-markup-shape-lead) + var(--blok-markup-shape-i) * var(--blok-markup-shape-step)) backwards;
+}
+
+.blok-darkroom__markup-spot {
+  position: absolute;
+  inset: 4px;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* A window cut from a dim sheet, as the spotlight mark draws it. */
+.blok-darkroom__markup-spot::before {
+  content: "";
+  position: absolute;
+  inset: 27% 21%;
+  border-radius: var(--blok-radius-mark);
+  box-shadow: 0 0 0 1px var(--blok-markup-spot-edge), 0 0 0 40px var(--blok-markup-spot-dim);
+  animation: blok-markup-spot-open var(--blok-markup-shape-trace) var(--blok-markup-spring) calc(var(--blok-markup-shape-lead) + var(--blok-markup-shape-i) * var(--blok-markup-shape-step)) backwards;
+}
+
+/* A round lens over the photo's middle at 2x, as the magnifier mark draws it. */
+.blok-darkroom__markup-lens {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 58%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 50%;
+  translate: -50% -50%;
+  box-shadow: 0 0 0 1.5px var(--blok-markup-lens-ring), 0 0 0 2.5px var(--blok-markup-lens-rim), 0 3px 8px var(--blok-markup-lens-shadow);
+  pointer-events: none;
+  animation: blok-markup-lens-in var(--blok-markup-shape-trace) var(--blok-markup-spring) calc(var(--blok-markup-shape-lead) + var(--blok-markup-shape-i) * var(--blok-markup-shape-step)) backwards;
+}
+
+/* The photo under the lens dims, so the zoomed middle stands out. */
+.blok-darkroom__markup-shape[data-tool="magnifier"] > img {
+  filter: brightness(0.55);
+}
+
+/* Twice the photo box, centred: the same middle, zoomed 2x. */
+.blok-darkroom__markup-shape[data-photo] .blok-darkroom__markup-lens img {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: calc((var(--blok-markup-hit) - 8px) * 2);
+  height: calc((var(--blok-markup-hit) - 8px) * 2);
+  border-radius: 0;
+  translate: -50% -50%;
+  animation: none;
+}
+
+@keyframes blok-markup-shapes-in {
+  from { opacity: 0; scale: 0.82; translate: 0 10px; }
+  40% { opacity: 1; }
+}
+
+@keyframes blok-markup-trace {
+  from { opacity: 0; stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+  12% { opacity: 1; }
+  to { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+}
+
+@keyframes blok-markup-develop {
+  from { opacity: 0; filter: blur(4px) saturate(0); scale: 1.25; }
+}
+
+@keyframes blok-markup-spot-open {
+  from { inset: 50% 50%; }
+}
+
+@keyframes blok-markup-lens-in {
+  from { opacity: 0; scale: 0.3; }
+}
+
 /* Controls */
 
 .blok-darkroom__markup-tool,
+.blok-darkroom__markup-shape,
 .blok-darkroom__markup-swatch,
 .blok-darkroom__markup-size,
 .blok-darkroom__markup-style,
@@ -164,22 +382,32 @@
   font-family: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: color 140ms ease, background-color 140ms ease, transform 220ms var(--blok-markup-spring);
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    transform 220ms var(--blok-markup-spring),
+    width 420ms var(--blok-markup-spring),
+    height 420ms var(--blok-markup-spring);
 }
 
+/* 20px at the base hit; grows with the rail. */
 .blok-darkroom__markup-tool svg,
+.blok-darkroom__markup-shape svg,
 .blok-darkroom__markup-btn svg {
-  width: 20px;
-  height: 20px;
+  width: calc(var(--blok-markup-hit) * 5 / 9);
+  height: calc(var(--blok-markup-hit) * 5 / 9);
   pointer-events: none;
+  transition: width 420ms var(--blok-markup-spring), height 420ms var(--blok-markup-spring);
 }
 
 .blok-darkroom__markup-tool:hover,
+.blok-darkroom__markup-shape:hover,
 .blok-darkroom__markup-size:hover,
 .blok-darkroom__markup-style:hover,
 .blok-darkroom__markup-btn:hover { color: var(--blok-darkroom-ink); }
 
 .blok-darkroom__markup-tool:not([aria-checked="true"]):hover,
+.blok-darkroom__markup-shape:not([aria-checked="true"]):hover,
 .blok-darkroom__markup-size:not([aria-checked="true"]):hover,
 .blok-darkroom__markup-style:not([aria-checked="true"]):hover,
 .blok-darkroom__markup-btn:not([aria-pressed="true"]):hover { background: var(--blok-darkroom-btn-hover-bg); }
@@ -211,7 +439,10 @@
   background: var(--blok-icon-active-bg);
   box-shadow: inset 0 0.5px 0 var(--blok-markup-puck-sheen), 0 2px 6px var(--blok-markup-puck-shadow);
   pointer-events: none;
-  transition: inset-inline-start 420ms var(--blok-markup-spring);
+  transition:
+    inset-inline-start 420ms var(--blok-markup-spring),
+    width 420ms var(--blok-markup-spring),
+    height 420ms var(--blok-markup-spring);
 }
 
 /* Swatches: the disc is a pseudo so the ring and scale never move the hit target. */
@@ -278,7 +509,13 @@
 
 .blok-darkroom__markup-size:hover .blok-darkroom__markup-dot { transform: scale(1.15); }
 
+.blok-darkroom__markup[data-tool="eraser"] .blok-darkroom__markup-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
 .blok-darkroom__markup-size[aria-checked="true"],
+.blok-darkroom__markup-shape[aria-checked="true"],
 .blok-darkroom__markup-style[aria-checked="true"],
 .blok-darkroom__markup-fill[aria-pressed="true"] {
   background: var(--blok-icon-active-bg);
@@ -321,7 +558,24 @@
   outline-offset: 1px;
 }
 
+/* The picker focuses a shape as it opens; the ring waits for a navigation key. */
+.blok-darkroom__markup-shapes:not([data-blok-keyboard-navigated]) button:focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .blok-darkroom__markup-shapes,
+  .blok-darkroom__markup-shape svg > *,
+  .blok-darkroom__markup-shape[data-photo] img,
+  .blok-darkroom__markup-spot::before,
+  .blok-darkroom__markup-lens { animation: none; }
+
+  .blok-darkroom__markup-shape svg,
+  .blok-darkroom__markup-shape[data-ink] svg > * { transition: none; }
+
+  .blok-darkroom__markup-rail,
+  .blok-darkroom__markup-tool svg,
+  .blok-darkroom__markup-btn svg,
   .blok-darkroom__markup-puck,
   .blok-darkroom__markup-ctl,
   .blok-darkroom__markup-tool,

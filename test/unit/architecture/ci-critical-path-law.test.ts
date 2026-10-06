@@ -236,7 +236,7 @@ describe('CI critical-path law', () => {
             "lint-v2-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-\n",
         },
       },
-      { name: 'Lint', run: 'yarn lint' },
+      { name: 'Lint', run: 'yarn lint', env: { NODE_OPTIONS: '--max-old-space-size=8192' } },
       {
         name: 'Save lint cache',
         // success() only: a red run's ESLint cache carries the error entries.

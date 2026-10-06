@@ -77,6 +77,13 @@ describe('TableModel colors', () => {
     'hsl( 11 , 22% , 33% )',
     'hsla( 11 , 22% , 33% , 0.5 )',
     'transparent',
+    'currentcolor',
+    'red',
+    'rgb(1 2 3)',
+    'rgb(1 2 3 / 50%)',
+    'hsl(10 20% 30%)',
+    'hsl(10deg 20% 30% / 0.5)',
+    'var(--blok-color-red-bg)',
   ];
 
   it.each(valid)('keeps the valid color %s', color => {
@@ -92,8 +99,16 @@ describe('TableModel colors', () => {
   // Each entry would let arbitrary CSS through if the anchors or the
   // character classes of the validator regexes were loosened.
   const invalid = [
-    'red',
+    'redd',
     'expression(1)',
+    'url(x)',
+    'red;position:fixed',
+    'var(--x);color:red',
+    'var(--x, red)',
+    'rgb(1 2 3',
+    'rgb(1,\n2,3)',
+    'red/**/',
+    '"red"',
     'evil#abc',
     'evil#aabbcc',
     '#abc;background:url(x)',

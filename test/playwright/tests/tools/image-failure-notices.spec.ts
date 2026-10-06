@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
-import type { Blok, OutputData } from '@/types';
+import type { Blok, ImageFailureReport, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
@@ -19,6 +19,7 @@ declare global {
     Blok: new (...args: unknown[]) => Blok;
     BlokImage: unknown;
     __imageFailureChanges?: number;
+    __imageFailureReasons?: string[];
   }
 }
 
@@ -30,8 +31,8 @@ test.beforeAll(() => {
  * Boot an editor whose image tool gives up on the first load error, so a dead
  * link fails at once instead of after five reloads.
  */
-const createBlok = async (page: Page, data: OutputData, failUploads = false): Promise<void> => {
-  await page.evaluate(async ({ holder, initialData, rejectUploads }) => {
+const createBlok = async (page: Page, data: OutputData, failUploads = false, notifierPosition = 'bottom-left', locale = 'en'): Promise<void> => {
+  await page.evaluate(async ({ holder, initialData, rejectUploads, position, language }) => {
     await window.blokInstance?.destroy?.();
     window.blokInstance = undefined;
     document.getElementById(holder)?.remove();
@@ -41,11 +42,18 @@ const createBlok = async (page: Page, data: OutputData, failUploads = false): Pr
     document.body.appendChild(container);
 
     window.__imageFailureChanges = 0;
+    window.__imageFailureReasons = [];
     const blok = new window.Blok({
       holder,
       data: initialData,
+      notifierPosition: position,
+      i18n: { locale: language },
       onChange: () => {
         window.__imageFailureChanges = (window.__imageFailureChanges ?? 0) + 1;
+      },
+      // Returns nothing, so Blok still shows its own notices.
+      onImageFailure: ({ reason }: ImageFailureReport) => {
+        window.__imageFailureReasons?.push(reason);
       },
       tools: {
         image: {
@@ -62,8 +70,12 @@ const createBlok = async (page: Page, data: OutputData, failUploads = false): Pr
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, initialData: data, rejectUploads: failUploads });
+  }, { holder: HOLDER_ID, initialData: data, rejectUploads: failUploads, position: notifierPosition, language: locale });
 };
+
+/** Pushes what follows below the fold: a toast is only for images out of sight. */
+const filler = (count = 40): OutputData['blocks'] =>
+  Array.from({ length: count }, (_, i) => ({ type: 'paragraph', data: { text: `Paragraph ${i}` } }));
 
 test.describe('image failure notices', () => {
   test.beforeEach(async ({ page }) => {
@@ -117,6 +129,92 @@ test.describe('image failure notices', () => {
     await expect(toast).toBeHidden();
   });
 
+  test('each dead image gets its own card; closing one brings up the next', async ({ page }) => {
+    await page.route('https://media.test/**', (route) => route.fulfill({ status: 404, body: '' }));
+    await createBlok(page, { blocks: [ ...filler(), ...[ 'one', 'two', 'three' ].map((name) => ({
+      id: name,
+      type: 'image',
+      data: { url: `https://media.test/stack-${name}.jpg` },
+    })) ] });
+
+    const container = page.getByTestId('notifier-container');
+    const front = page.locator('[data-blok-testid="notification-error"][data-state="open"]');
+
+    await expect(container).toHaveAttribute('data-blok-toast-behind', '2');
+    await expect(front).toHaveCount(1);
+    await expect(front).toContainText('Image failed to load');
+
+    await front.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(container).toHaveAttribute('data-blok-toast-behind', '1');
+    await expect(front).toHaveCount(1);
+
+    await front.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(container).not.toHaveAttribute('data-blok-toast-behind');
+    await expect(front).toHaveCount(1);
+
+    await front.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(front).toHaveCount(0);
+    // A card that rose from the stack must still slide out and leave the page.
+    await expect(page.locator('[data-blok-toast="card"]')).toHaveCount(0);
+  });
+
+  test('a closed card leaves from where it was, while the next one fills in', async ({ page }) => {
+    await page.route('https://media.test/**', (route) => route.fulfill({ status: 404, body: '' }));
+    await createBlok(page, { blocks: [ ...filler(), ...[ 'one', 'two' ].map((name) => ({
+      id: name,
+      type: 'image',
+      data: { url: `https://media.test/drift-${name}.jpg` },
+    // Russian titles are wider than an empty card, so the next card grows once its text lands.
+    })) ] }, false, 'bottom-center', 'ru');
+    await expect(page.getByTestId('notifier-container')).toHaveAttribute('data-blok-toast-behind', '1');
+
+    const drift = await page.evaluate(async () => {
+      const card = document.querySelector<HTMLElement>('[data-blok-toast="card"][data-state="open"]');
+
+      // The launch spring scales the card, so its box only sits at rest once that ends.
+      await Promise.all((card?.getAnimations() ?? [])
+        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)));
+      const left = card?.getBoundingClientRect().left ?? 0;
+      const lefts: number[] = [];
+
+      card?.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]')?.click();
+      for (const _frame of [ 1, 2, 3, 4 ]) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        lefts.push(card?.getBoundingClientRect().left ?? 0);
+      }
+
+      return Math.max(...lefts.map((value) => Math.abs(value - left)));
+    });
+
+    expect(drift).toBeLessThan(1);
+  });
+
+  test('Show on a stacked card scrolls to that card\'s own image', async ({ page }) => {
+    await page.route('https://media.test/**', (route) => route.fulfill({ status: 404, body: '' }));
+    await createBlok(page, { blocks: [
+      ...filler(),
+      { id: 'first', type: 'image', data: { url: 'https://media.test/show-first.jpg' } },
+      ...filler(),
+      { id: 'second', type: 'image', data: { url: 'https://media.test/show-second.jpg' } },
+    ] });
+
+    const front = page.locator('[data-blok-testid="notification-error"][data-state="open"]');
+    const lit = page.locator('[data-blok-spotlight="true"]').locator('xpath=ancestor::*[@data-blok-id][1]');
+    const shown: (string | null)[] = [];
+
+    await expect(page.getByTestId('notifier-container')).toHaveAttribute('data-blok-toast-behind', '1');
+    for (const _card of [ 1, 2 ]) {
+      await front.getByRole('button', { name: 'Show' }).click();
+      await expect(lit).toHaveCount(1);
+      shown.push(await lit.getAttribute('data-blok-id'));
+      await expect(lit).toHaveCount(0);
+      await front.getByRole('button', { name: 'Dismiss' }).click();
+    }
+
+    expect(shown.sort()).toEqual([ 'first', 'second' ]);
+  });
+
   test('a slow retry keeps the failed card in place, then breaks it apart again', async ({ page }) => {
     const retried = { now: false };
 
@@ -124,7 +222,7 @@ test.describe('image failure notices', () => {
       if (retried.now) await new Promise((resolve) => setTimeout(resolve, 1500));
       await route.fulfill({ status: 404, body: '' });
     });
-    await createBlok(page, { blocks: [ { id: 'img1', type: 'image', data: { url: 'https://media.test/a.jpg' } } ] });
+    await createBlok(page, { blocks: [ { id: 'img1', type: 'image', data: { url: 'https://media.test/slow-retry.jpg' } } ] });
 
     const block = page.locator('[data-blok-id="img1"]');
 
@@ -141,20 +239,25 @@ test.describe('image failure notices', () => {
     await expect(block.locator('[data-role="mend-state"]')).toHaveCount(0);
   });
 
-  test('saving with a failed upload shows the save toast', async ({ page }) => {
+  test('a failed upload in sight gets no toast, but saving still warns about it', async ({ page }) => {
     await createBlok(page, { blocks: [ { type: 'image', data: {} } ] }, true);
     await page.locator(IMAGE_BLOCK_SELECTOR).getByTestId('file-input').setInputFiles(PHOTO_FIXTURE_PATH);
-    await expect(page.getByTestId('notification-error')).toContainText('Image failed to upload');
+    const card = page.locator('[data-blok-testid="notification-error"][data-state="open"]');
+
+    await expect(page.locator(IMAGE_BLOCK_SELECTOR).locator('[data-role="error-state"]')).toBeVisible();
+    // The host is asked right before the cards go up, so once it heard, any card would be up.
+    await expect.poll(() => page.evaluate(() => window.__imageFailureReasons)).toEqual([ 'fail' ]);
+    await expect(card).toHaveCount(0);
 
     await page.evaluate(() => window.blokInstance?.save());
 
-    await expect(page.getByTestId('notification-error')).toContainText("Won't be saved: 1");
+    await expect(card).toContainText("Won't be saved: 1");
   });
 
   test('confirmLeave shows the banner and each button answers', async ({ page }) => {
     await page.route('https://media.test/**', (route) => route.fulfill({ status: 404, body: '' }));
-    await createBlok(page, { blocks: [ { type: 'image', data: { url: 'https://media.test/a.jpg' } } ] });
-    await expect(page.getByTestId('notification-error')).toBeVisible();
+    await createBlok(page, { blocks: [ { type: 'image', data: { url: 'https://media.test/confirm-leave.jpg' } } ] });
+    await expect(page.locator(IMAGE_BLOCK_SELECTOR).locator('[data-role="error-state"]')).toBeVisible();
 
     const banner = page.getByRole('alertdialog', { name: 'Some images have problems' });
 

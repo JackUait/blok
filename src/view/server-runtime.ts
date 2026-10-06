@@ -1,4 +1,4 @@
-import type { LooseOutputBlockData, LooseOutputData } from '../../types/data-formats/output-data';
+import type { LooseOutputBlockData, LooseOutputData, OutputData } from '../../types/data-formats/output-data';
 // Imported by file rather than through `src/components/utils`: the barrel
 // reaches the DOM, this module does not.
 import { getBlokVersion } from '../components/utils/version';
@@ -12,6 +12,9 @@ import { blocksToPlainText, blocksToPlainTextWithReport } from './blocks-to-plai
 import { blokDocumentSchema } from './document-schema';
 import type { DocumentTextsOptions } from './document-texts';
 import { extractTexts, injectTexts } from './document-texts';
+import { findRemapProblems, remapPageDocument } from './page-document-remap';
+import { pageIndex } from './page-index';
+import type { PageIcon, PageInfo } from '../../types/tools/page';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -185,6 +188,125 @@ const parsePlainTextRequest = (inputJson: string): {
   };
 };
 
+const hasOwn = (record: Record<string, unknown>, key: string): boolean =>
+  Object.prototype.hasOwnProperty.call(record, key);
+
+const readPageIcon = (value: unknown): PageIcon | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  if (value.type === 'emoji' && typeof value.value === 'string') {
+    return { type: 'emoji', value: value.value };
+  }
+
+  return value.type === 'image' && typeof value.url === 'string' ? { type: 'image', url: value.url } : undefined;
+};
+
+/**
+ * One `pages` entry: JSON `null` is a missing page, a record is metadata, and
+ * anything else is as good as unlisted.
+ * @param entry - the raw entry
+ */
+const readPageInfo = (entry: unknown): PageInfo | null | undefined => {
+  if (entry === null) {
+    return null;
+  }
+
+  if (!isRecord(entry)) {
+    return undefined;
+  }
+
+  const icon = readPageIcon(entry.icon);
+
+  return {
+    ...(typeof entry.title === 'string' ? { title: entry.title } : {}),
+    ...(icon === undefined ? {} : { icon }),
+    ...(entry.access === 'none' ? { access: 'none' as const } : {}),
+  };
+};
+
+/**
+ * The page-aware export operations take ONLY an envelope, and read `pages`
+ * only from its root. The shipped `blocksToHtml`/`blocksToMarkdown` stay
+ * bare-only, so a document string cannot carry page metadata of its own.
+ * @param inputJson - the serialized `{ document, pages }` envelope
+ */
+const parsePagesRequest = (inputJson: string): ParsedDocument & {
+  pageInfo: (pageId: string) => PageInfo | null | undefined;
+  pageHref: (pageId: string) => string;
+} => {
+  const input = parseRecord(inputJson);
+
+  if (!isRecord(input.document)) {
+    throw new TypeError('Page export input requires a `document` record.');
+  }
+
+  const pages = isRecord(input.pages) ? input.pages : {};
+  /** Own keys only: `pages.toString` would otherwise answer for an unlisted id. */
+  const entry = (pageId: string): unknown => (hasOwn(pages, pageId) ? pages[pageId] : undefined);
+
+  return {
+    ...readDocument(input.document),
+    pageInfo: (pageId) => readPageInfo(entry(pageId)),
+    pageHref: (pageId) => {
+      const raw = entry(pageId);
+
+      return isRecord(raw) && typeof raw.href === 'string' ? raw.href : '';
+    },
+  };
+};
+
+/**
+ * The `document` of a page-function envelope, passed on RAW. `readDocument`
+ * drops malformed blocks, which would shift every `order` pageIndex reports and
+ * lose unknown keys from the document remap returns to be stored.
+ * @param input - the parsed envelope
+ * @param operation - names the operation in the error
+ */
+const readRawDocument = (input: Record<string, unknown>, operation: string): LooseOutputData => {
+  const document = input.document;
+
+  if (!isRecord(document) || !Array.isArray(document.blocks)) {
+    throw new TypeError(`${operation} input requires a \`document\` with a \`blocks\` array.`);
+  }
+
+  return document as unknown as LooseOutputData;
+};
+
+/**
+ * An `{ old: new }` id map. Only own string values count, so a bad value reads
+ * as a missing mapping instead of a crash.
+ * @param value - the raw map
+ * @param name - names the field in the error
+ */
+const readIdMap = (value: unknown, name: string): Map<string, string> => {
+  if (!isRecord(value)) {
+    throw new TypeError(`remapPageDocument input requires \`${name}\` to be an object.`);
+  }
+
+  return new Map(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
+};
+
+/**
+ * Bad id maps are the caller's mistake, so they cross the host boundary as
+ * data. remapPageDocument would throw a plain Error, which the host reports as
+ * an unknown failure.
+ * @param inputJson - the serialized `{ document, blockIds, pageIds }` request
+ */
+const remapPageDocumentResult = (inputJson: string): string => {
+  const input = parseRecord(inputJson);
+  const document = readRawDocument(input, 'remapPageDocument') as OutputData;
+  const ids = { blockIds: readIdMap(input.blockIds, 'blockIds'), pageIds: readIdMap(input.pageIds, 'pageIds') };
+  const unmapped = findRemapProblems(document, ids);
+
+  if (unmapped.missingBlockIds.length > 0 || unmapped.duplicateBlockIds.length > 0 || unmapped.idlessBlocks > 0) {
+    return JSON.stringify({ unmapped });
+  }
+
+  return JSON.stringify({ document: remapPageDocument(document, ids) });
+};
+
 /**
  * Wraps its result because the one failure a caller can cause — a translation
  * list that does not match the document — has to cross the host boundary as
@@ -229,6 +351,21 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
     case 'blocksToMarkdown': {
       const { document, skipped } = parseDocument(inputJson);
       const report = blocksToMarkdownWithReport(document);
+
+      if (skipped > 0) {
+        report.warnings.push(skippedBlockWarning(skipped));
+      }
+
+      return JSON.stringify(report);
+    }
+    case 'blocksToHtmlWithPages': {
+      const { document, pageInfo, pageHref } = parsePagesRequest(inputJson);
+
+      return blocksToHtml(document, { pageInfo, pageHref });
+    }
+    case 'blocksToMarkdownWithPages': {
+      const { document, skipped, pageInfo, pageHref } = parsePagesRequest(inputJson);
+      const report = blocksToMarkdownWithReport(document, { pageInfo, pageHref });
 
       if (skipped > 0) {
         report.warnings.push(skippedBlockWarning(skipped));
@@ -293,6 +430,10 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
     }
     case 'injectTexts':
       return injectTextsResult(inputJson);
+    case 'pageIndex':
+      return JSON.stringify(pageIndex(readRawDocument(parseRecord(inputJson), 'pageIndex')));
+    case 'remapPageDocument':
+      return remapPageDocumentResult(inputJson);
     default:
       throw new TypeError(`Unsupported Blok runtime operation: ${operation}`);
   }

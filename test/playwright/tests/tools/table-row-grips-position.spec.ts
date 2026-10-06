@@ -213,7 +213,7 @@ test.describe('table row grip positioning with merged cells (rowspan)', () => {
     await expectEachRowGripInsideItsRow(page, 3);
   });
 
-  test('row grips stay inside their rows when the merged cell content grows', async ({ page }) => {
+  test('the caret merged cell keeps one row grip centred on it while its content grows', async ({ page }) => {
     const mergedCell = page.locator('[data-blok-table-cell-row="0"][data-blok-table-cell-col="0"]');
 
     await mergedCell.click();
@@ -229,7 +229,16 @@ test.describe('table row grip positioning with merged cells (rowspan)', () => {
       return box?.height ?? 0;
     }).toBeGreaterThan(120);
 
-    await expectEachRowGripInsideItsRow(page, 3);
+    const visibleGrips = page.locator('[data-blok-table-grip-row][data-blok-table-grip-visible]');
+
+    await expect(visibleGrips).toHaveCount(1);
+    await expect(visibleGrips).toHaveAttribute('data-blok-table-grip-row', '0');
+
+    await expect.poll(async () => {
+      const box = await mergedCell.boundingBox();
+
+      return Math.abs(await getRowGripCenterY(page, 0) - ((box?.y ?? 0) + (box?.height ?? 0) / 2));
+    }).toBeLessThan(2);
   });
 });
 

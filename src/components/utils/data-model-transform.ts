@@ -11,7 +11,7 @@ import { generateBlockId } from '../utils';
 // cannot drift. The runtime drives it with nanoid ids + a deduping console.warn.
 import { expandLegacyBlocks, analyzeLegacyFormat } from '../migration/legacy-grammar.mjs';
 import type { LegacyGrammarEntry } from '../migration/legacy-grammar.d.mts';
-import { parseCellContentToBlocks } from '../../tools/table/table-cell-paste';
+import { CELL_BLOCK_TAGS_SANITIZE, parseCellContentToBlocks } from '../../tools/table/table-cell-paste';
 import { INLINE_TEXT_SANITIZE } from '../shared/inline-content-sanitize';
 import { clean } from './sanitizer';
 
@@ -167,13 +167,10 @@ export interface ExpandOptions {
   rules?: LegacyGrammarEntry[];
 }
 
-/** Inline marks plus the list tags parseCellContentToBlocks reads. */
-const LEGACY_CELL_SANITIZE = {
+/** Inline marks plus the block tags parseCellContentToBlocks reads. */
+export const LEGACY_CELL_SANITIZE = {
   ...INLINE_TEXT_SANITIZE,
-  ul: true,
-  ol: true,
-  li: { style: true, 'aria-level': true, 'data-list-style': true },
-  input: { type: true, checked: true },
+  ...CELL_BLOCK_TAGS_SANITIZE,
 };
 
 /**
@@ -504,9 +501,6 @@ const processRootToggleItem = (
 
   const data: unknown = block.data;
   const text = isObjectWithText(data) ? data.text : '';
-  const isOpen = typeof (data as Record<string, unknown>)?.isOpen === 'boolean'
-    ? (data as Record<string, unknown>).isOpen as boolean
-    : undefined;
 
   const contentIds = block.content ?? [];
   const childBlocks = collapseBodyBlocks(contentIds, blockMap, processedIds);
@@ -516,7 +510,6 @@ const processRootToggleItem = (
     type: 'toggleList',
     data: {
       title: text,
-      ...(isOpen !== undefined ? { isExpanded: isOpen } : {}),
       ...(childBlocks.length > 0 ? {
         body: {
           blocks: childBlocks,
@@ -564,9 +557,6 @@ const processRootToggleableHeader = (
   const level = typeof (data as Record<string, unknown>)?.level === 'number'
     ? (data as Record<string, unknown>).level as number
     : undefined;
-  const isOpen = typeof (data as Record<string, unknown>)?.isOpen === 'boolean'
-    ? (data as Record<string, unknown>).isOpen as boolean
-    : undefined;
 
   const contentIds = block.content ?? [];
   const childBlocks = collapseBodyBlocks(contentIds, blockMap, processedIds);
@@ -577,7 +567,6 @@ const processRootToggleableHeader = (
     data: {
       title: text,
       ...(level !== undefined ? { titleVariant: level } : {}),
-      ...(isOpen !== undefined ? { isExpanded: isOpen } : {}),
       ...(childBlocks.length > 0 ? { body: { blocks: childBlocks } } : {}),
     },
     ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
@@ -1307,16 +1296,13 @@ export const reclaimDetachedTableCells = (blocks: OutputBlockData[]): OutputBloc
  * Check if transformation is needed based on config and detected format
  */
 export const shouldExpandToHierarchical = (
-  dataModelConfig: 'legacy' | 'hierarchical' | 'auto',
+  _dataModelConfig: 'legacy' | 'hierarchical' | 'auto',
   detectedFormat: DataFormatAnalysis['format']
 ): boolean => {
-  // Always expand legacy format - each list item becomes a separate block
-  // This is required for the flat List tool model to render all items
-  if (detectedFormat === 'legacy') {
-    return dataModelConfig !== 'legacy';
-  }
-
-  return false;
+  // Expand under every model, 'legacy' too: the List tool is flat and reads
+  // only items[0], so an unexpanded list loses the rest. 'legacy' output is
+  // rebuilt on save by shouldCollapseToLegacy.
+  return detectedFormat === 'legacy';
 };
 
 /**

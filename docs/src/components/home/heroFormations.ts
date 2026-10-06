@@ -47,6 +47,34 @@ export const TRANSIT_Z: Record<CardKey, number> = CARD_KEYS.reduce(
 const v = (...entries: VariantEntry[]): Variant => entries;
 const e = (slot: CardKey, pose: FormTuple): VariantEntry => ({ slot, pose });
 
+/** Assemble: the four blocks snap flush into one page. Scale, gap and padding of that page. */
+const ASSEMBLE_SCALE = 0.92;
+export const ASSEMBLE_GAP = 6;
+const PAGE_PAD = 14;
+/** Room above the first block for the page header (icon + title) and the top padding. */
+const PAGE_HEADER = 54;
+
+const assembleHeights = CARD_KEYS.map((slot) => (SLOT_CONTENT_PX[slot] + FACE_PAD) * ASSEMBLE_SCALE);
+const assembleColumn = assembleHeights.reduce((sum, h) => sum + h, 0) + ASSEMBLE_GAP * (CARD_KEYS.length - 1);
+
+/** The page sheet behind the assembled blocks, centred on the stack (x/y are its centre). */
+export const ASSEMBLE_PAGE = {
+  x: 0,
+  y: 0,
+  w: CARD_WIDTH * ASSEMBLE_SCALE + PAGE_PAD * 2,
+  h: PAGE_HEADER + assembleColumn + PAGE_PAD,
+  header: PAGE_HEADER,
+};
+
+const assembleVariant = (): Variant => {
+  let top = ASSEMBLE_PAGE.y - ASSEMBLE_PAGE.h / 2 + PAGE_HEADER;
+  return CARD_KEYS.map((slot, i) => {
+    const y = top + assembleHeights[i] / 2;
+    top += assembleHeights[i] + ASSEMBLE_GAP;
+    return e(slot, [0, y, 0, ASSEMBLE_SCALE, 0, 0, 0, 0]);
+  });
+};
+
 /** The matrix. Every count reuses the SAME, NESTED slot set across all views — count 2 =
  *  {a,d}, count 3 = {a,c,d}, count 4 = {a,b,c,d}. Because the sets nest, going to an equal or
  *  higher count keeps every active card (they flip-morph into the new arrangement) and only a
@@ -135,6 +163,11 @@ export const LAYOUTS: Record<string, Record<number, readonly Variant[]>> = {
         e('d', [-150, 0, 0, 0.8, 0, 0, 0, -80])
       ),
     ],
+  },
+  // The blocks fling out into depth and snap together into one page, then the page bursts
+  // apart again. Needs all four: a page of two blocks doesn't read as a page.
+  assemble: {
+    4: [assembleVariant()],
   },
 };
 
@@ -227,6 +260,9 @@ export const posesForVariant = (variant: Variant): Pose[] => {
 export const VIEW_KEYS: readonly string[] = Object.keys(LAYOUTS);
 /** Views the whole stack spins a full turn through — the orbit "wow" moment. */
 export const SPIN_VIEWS: ReadonlySet<string> = new Set(['orbit']);
+/** Views that hold blocks flush against each other. The card wander is eased to zero while
+ *  one holds (`data-hero-snap` on the stack), or the drift would knock the blocks together. */
+export const SNAP_VIEWS: ReadonlySet<string> = new Set(['assemble']);
 
 export interface AnimationChoice {
   view: string;
@@ -245,7 +281,9 @@ export const pickNextAnimation = (
   rng: () => number
 ): AnimationChoice => {
   const choose = <T>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
-  const viewChoices = VIEW_KEYS.filter((vw) => vw !== prev?.view && vw !== prev?.viewBefore);
+  // A view must also offer a count other than the last one (assemble only has 4).
+  const hasFreshCount = (vw: string): boolean => Object.keys(LAYOUTS[vw]).some((c) => Number(c) !== prev?.count);
+  const viewChoices = VIEW_KEYS.filter((vw) => vw !== prev?.view && vw !== prev?.viewBefore && hasFreshCount(vw));
   const view = choose(viewChoices.length ? viewChoices : VIEW_KEYS.filter((vw) => vw !== prev?.view));
   const allCounts = Object.keys(LAYOUTS[view]).map(Number);
   const countChoices = allCounts.filter((c) => c !== prev?.count);

@@ -27,25 +27,40 @@ import {
   Header,
   Image as ImageTool,
   List,
+  Page,
+  PageLink,
   Paragraph,
   Quote,
   Spacer,
   Table,
+  TableOfContents,
+  TabTool,
+  TabsTool,
   Toggle,
   Video,
   defaultBlockTools,
 } from '../../../src/tools';
 import { blokDocumentSchema } from '../../../src/view/document-schema';
+import { createMemoryViewState } from '../../helpers/view-state';
 
 import type { API, BlockToolConstructorOptions, OutputData } from '../../../types';
 
 type JsonSchema = {
+  description?: string;
   properties?: Record<string, unknown>;
   required?: string[];
   additionalProperties?: boolean;
   items?: JsonSchema;
   $defs?: Record<string, JsonSchema>;
 };
+
+/**
+ * Every block tool Blok ships a saved shape for. `page` is built in but not a
+ * default: without the host's `href`/`resolve` config it is a dead link, so it
+ * is registered by hand. Export names cannot stand in for this list — they are
+ * class names (`Columns`), not the registry keys a saved block's `type` holds.
+ */
+const BUILT_IN_BLOCK_TOOLS: readonly string[] = [...Object.keys(defaultBlockTools), 'page', 'page-link'];
 
 const schema = blokDocumentSchema as unknown as JsonSchema;
 const defs = schema.$defs ?? {};
@@ -58,6 +73,7 @@ const blockSchema = (schema.properties?.blocks ?? {}) as JsonSchema;
 const api = {
   styles: {},
   i18n: { t: (key: string) => key },
+  viewState: createMemoryViewState(),
   events: { on: () => {}, off: () => {}, emit: () => {} },
   blocks: {
     getById: () => null,
@@ -112,7 +128,7 @@ const savedData: Record<string, Record<string, unknown>> = {
 
   header: ((): Record<string, unknown> => {
     const tool = new Header(options({
-      text: 'Title', level: 2, isToggleable: true, isOpen: true,
+      text: 'Title', level: 2, isToggleable: true,
       textColor: 'red', backgroundColor: 'blue', anchor: 'title',
     }));
 
@@ -140,7 +156,7 @@ const savedData: Record<string, Record<string, unknown>> = {
   })).save(contentElement('')),
 
   toggle: ((): Record<string, unknown> => {
-    const tool = new Toggle(options({ text: 'Summary', isOpen: true }));
+    const tool = new Toggle(options({ text: 'Summary' }));
 
     tool.render();
 
@@ -161,12 +177,17 @@ const savedData: Record<string, Record<string, unknown>> = {
 
   // A row as the tool writes one today: a top-level `title` beside the
   // properties mirror. A row saved before that key existed still omits it.
-  'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it' }))
+  'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it', pageId: 'row-page' }))
     .save(contentElement('')),
+
+  page: new Page(options({ pageId: 'p1', textColor: 'red', backgroundColor: 'blue', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } })).save(),
+  'page-link': new PageLink(options({ pageId: 'p1' })).save(),
 
   divider: new Divider(options({})).save(),
 
   spacer: new Spacer(options({ height: 40 })).save(),
+
+  table_of_contents: new TableOfContents(options({ textColor: 'red', backgroundColor: 'blue' })).save(),
 
   quote: new Quote(options({ text: 'Wise words', size: 'large' })).save(
     contentElement('Wise words') as unknown as HTMLQuoteElement
@@ -179,7 +200,7 @@ const savedData: Record<string, Record<string, unknown>> = {
     alt: 'Alt', fileName: 'a.png', size: 'md', frame: 'border', rounded: true,
     captionVisible: true, naturalWidth: 800, naturalHeight: 600,
     crop: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' },
-    rotation: 90, flipX: true, straighten: 5, filter: 'warm',
+    rotation: 90, flipX: true, straighten: 5, filter: 'warm', filterStrength: 60,
     adjust: { brightness: 10, contrast: 20, saturation: 30 },
     variants: [{ url: 'https://example.com/a.avif', mimeType: 'image/avif' }, { url: 'https://example.com/a.png', mimeType: 'image/png' }],
     markup: [
@@ -212,6 +233,11 @@ const savedData: Record<string, Record<string, unknown>> = {
 
   column: new Column(options({ widthRatio: 2 })).save(),
 
+  tabs: new TabsTool(options({})).save(),
+
+  // TabData is an interface, so spread it into a plain record.
+  tab: { ...new TabTool(options({ title: 'Overview', icon: '📋' })).save() },
+
   embed: new Embed(options({
     service: 'youtube', source: 'https://youtu.be/x', embed: 'https://www.youtube.com/embed/x',
     kind: 'iframe', width: 580, height: 320, widthPercent: 50, alignment: 'left',
@@ -239,16 +265,16 @@ describe('blokDocumentSchema', () => {
 
   it('is a draft 2020-12 schema for the saved document envelope', () => {
     expect(blokDocumentSchema.$schema).toBe('https://json-schema.org/draft/2020-12/schema');
-    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(['blocks', 'time', 'version']);
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(['blocks', 'id', 'time', 'version']);
   });
 
   describe('coverage', () => {
     /**
-     * `defaultBlockTools` is the registry, so the comparison is bidirectional:
-     * a new tool without a def AND a def left behind by a removed tool both fail.
+     * The comparison is bidirectional: a new tool without a def AND a def left
+     * behind by a removed tool both fail.
      */
     it('has exactly one $defs entry per built-in block tool', () => {
-      expect(Object.keys(defs).sort()).toEqual(Object.keys(defaultBlockTools).sort());
+      expect(Object.keys(defs).sort()).toEqual([...BUILT_IN_BLOCK_TOOLS].sort());
     });
 
     it('routes every built-in type to its own def', () => {
@@ -260,21 +286,136 @@ describe('blokDocumentSchema', () => {
         branches.map(branch => [branch.if.properties.type.const, branch.then.properties.data.$ref])
       );
 
-      Object.keys(defaultBlockTools).forEach((name) => {
+      BUILT_IN_BLOCK_TOOLS.forEach((name) => {
         expect(routed[name]).toBe(`#/$defs/${name}`);
       });
     });
   });
 
+  describe('database-row', () => {
+    it('declares a nonempty optional page pointer saved beside row data', () => {
+      const row = defs['database-row'];
+
+      expect(savedData['database-row']).toHaveProperty('pageId', 'row-page');
+      expect(row.properties?.pageId).toMatchObject({ type: 'string', minLength: 1 });
+      expect(row.required).not.toContain('pageId');
+      expect(row.additionalProperties).toBe(false);
+    });
+  });
+
+  describe('page', () => {
+    it('describes the saved pointer id and block color, not legacy cached metadata', () => {
+      const page = defs.page;
+
+      expect(savedData.page).toEqual({ pageId: 'p1', textColor: 'red', backgroundColor: 'blue' });
+      expect(page.required).toEqual(['pageId']);
+      expect(page.additionalProperties).toBe(false);
+      expect(Object.keys(page.properties ?? {})).toEqual(['pageId', 'textColor', 'backgroundColor']);
+      expect(page.description).toMatch(/separate document/);
+    });
+
+    it('routes the page type to its def', () => {
+      const branches = (blockSchema.items as unknown as { allOf?: Array<{
+        if: { properties: { type: { const: string } } };
+        then: { properties: { data: { $ref: string } } };
+      }> }).allOf ?? [];
+
+      expect(branches.some(branch =>
+        branch.if.properties.type.const === 'page' && branch.then.properties.data.$ref === '#/$defs/page'
+      )).toBe(true);
+    });
+  });
+
+  describe('documents saved by older versions', () => {
+    /**
+     * v1.15.2 saved `isOpen` on toggles and toggle headings. The editor ignores it
+     * now, but the closed defs must still accept those documents.
+     */
+    it.each([
+      ['toggle', { text: 'Summary', isOpen: true }],
+      ['header', { text: 'Title', level: 2, isToggleable: true, isOpen: false }],
+    ])('%s: accepts a v1.15.2 payload with isOpen', (name, data) => {
+      const def = defs[name];
+      const declared = Object.keys(def.properties ?? {});
+
+      expect(def.additionalProperties).toBe(false);
+      Object.keys(data).forEach(key => expect(declared, `"${key}" rejected by the ${name} def`).toContain(key));
+    });
+
+    it.each(['toggle', 'header'])('%s: marks isOpen as deprecated and ignored', (name) => {
+      const isOpen = (defs[name].properties ?? {}).isOpen as { type?: string; deprecated?: boolean; description?: string } | undefined;
+
+      expect(isOpen).toEqual({ type: 'boolean', deprecated: true, description: 'Ignored. Open state is personal and never saved.' });
+    });
+  });
+
+  describe('table_of_contents', () => {
+    it('saves only block color; the heading list is never stored', () => {
+      const toc = defs.table_of_contents;
+
+      expect(savedData.table_of_contents).toEqual({ textColor: 'red', backgroundColor: 'blue' });
+      expect(toc.required ?? []).toEqual([]);
+      expect(toc.additionalProperties).toBe(false);
+      expect(Object.keys(toc.properties ?? {})).toEqual(['textColor', 'backgroundColor']);
+    });
+  });
+
+  describe('tabs', () => {
+    it('describes an empty tabs container and a tab with a required plain title and optional icon', () => {
+      expect(defs.tabs).toMatchObject({ type: 'object', additionalProperties: false });
+      expect(Object.keys(defs.tabs.properties ?? {})).toEqual([]);
+
+      expect(defs.tab.required).toEqual(['title']);
+      expect(defs.tab.additionalProperties).toBe(false);
+      expect(Object.keys(defs.tab.properties ?? {})).toEqual(['title', 'icon']);
+      expect(defs.tab.properties?.title).toMatchObject({ type: 'string' });
+      expect(defs.tab.properties?.icon).toMatchObject({ type: 'string' });
+    });
+
+    it('routes tabs and tab to their defs', () => {
+      const branches = (blockSchema.items as unknown as { allOf?: Array<{
+        if: { properties: { type: { const: string } } };
+        then: { properties: { data: { $ref: string } } };
+      }> }).allOf ?? [];
+      const routed = Object.fromEntries(
+        branches.map(branch => [branch.if.properties.type.const, branch.then.properties.data.$ref])
+      );
+
+      expect(routed.tabs).toBe('#/$defs/tabs');
+      expect(routed.tab).toBe('#/$defs/tab');
+    });
+  });
+
+  describe('page-link', () => {
+    it('requires a nonempty target and rejects saved metadata', () => {
+      const link = defs['page-link'];
+
+      expect(savedData['page-link']).toEqual({ pageId: 'p1' });
+      expect(link.required).toEqual(['pageId']);
+      expect(link.additionalProperties).toBe(false);
+      expect(Object.keys(link.properties ?? {})).toEqual(['pageId']);
+      expect(link.properties?.pageId).toMatchObject({ type: 'string', minLength: 1 });
+    });
+  });
+
   describe('field drift', () => {
-    it.each(Object.keys(defaultBlockTools))('%s: schema properties match what save() emits', (name) => {
+    /** Keys a def still accepts from older documents although save() no longer writes them. */
+    const LEGACY_KEYS: Record<string, string[]> = {
+      // v1.15.2 saved the open state; it is personal now and ignored on load.
+      toggle: ['isOpen'],
+      header: ['isOpen'],
+    };
+
+    it.each(BUILT_IN_BLOCK_TOOLS)('%s: schema properties match what save() emits', (name) => {
       const def = defs[name];
       const sample = savedData[name];
 
       expect(sample, `no save() sample for "${name}"`).toBeDefined();
 
       const savedKeys = Object.keys(sample).sort();
-      const schemaKeys = Object.keys(def.properties ?? {}).sort();
+      const schemaKeys = Object.keys(def.properties ?? {})
+        .filter(key => !(LEGACY_KEYS[name] ?? []).includes(key))
+        .sort();
 
       // Forward: nothing the tool saves may be missing from the schema.
       savedKeys.forEach(key => expect(schemaKeys).toContain(key));
@@ -300,7 +441,10 @@ describe('blokDocumentSchema', () => {
 
       expect(props.rotation?.enum).toEqual([0, 90, 180, 270]);
       expect(props.straighten).toMatchObject({ minimum: -45, maximum: 45 });
-      expect(props.filter?.enum).toEqual(['none', 'vivid', 'dramatic', 'warm', 'mono', 'noir', 'fade', 'sepia']);
+      // A host may define its own filters, so any non-empty name is valid.
+      expect(props.filter).toMatchObject({ type: 'string', minLength: 1 });
+      expect(props.filter?.enum).toBeUndefined();
+      expect(props.filterStrength).toMatchObject({ minimum: 0, maximum: 100 });
       expect(props.adjust?.additionalProperties).toBe(false);
       expect(Object.keys(props.adjust?.properties ?? {}).sort()).toEqual(['brightness', 'contrast', 'saturation']);
       Object.values(props.adjust?.properties ?? {}).forEach(p => expect(p).toMatchObject({ minimum: -100, maximum: 100 }));
@@ -325,7 +469,7 @@ describe('blokDocumentSchema', () => {
         .toEqual(['arrow', 'ellipse', 'highlighter', 'line', 'pen', 'rect', 'text']);
     });
 
-    it.each(Object.keys(defaultBlockTools))('%s: every required field is actually saved', (name) => {
+    it.each(BUILT_IN_BLOCK_TOOLS)('%s: every required field is actually saved', (name) => {
       (defs[name].required ?? []).forEach(key => expect(savedData[name]).toHaveProperty(key));
     });
   });
@@ -340,6 +484,7 @@ describe('blokDocumentSchema', () => {
         holder,
         tools: { paragraph: Paragraph, callout: Callout },
         data: {
+          id: 'doc-1',
           blocks: [
             {
               id: 'c1', type: 'callout', data: { emoji: '💡' },
@@ -357,6 +502,7 @@ describe('blokDocumentSchema', () => {
         const blockProperties = Object.keys((blockSchema.items ?? {}).properties ?? {});
 
         expect(Object.keys(saved).sort()).toEqual(Object.keys(schema.properties ?? {}).sort());
+        expect(saved.id).toBe('doc-1');
         expect(typeof saved.time).toBe('number');
         expect(typeof saved.version).toBe('string');
 

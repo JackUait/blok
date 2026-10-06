@@ -4,7 +4,7 @@
 // react-router's Link directly — mapping it again would produce `/ru/ru/…`.
 import { Link as CrossLocaleLink } from "react-router";
 import { Globe } from "lucide-react";
-import { useI18n, useLocalePath } from "../../contexts/I18nContext";
+import { useI18n, useLocalePath, useSelectLocale } from "../../contexts/I18nContext";
 import { Link } from "../common/Link";
 import { Typo } from "../common/Typo";
 
@@ -21,7 +21,8 @@ const TelegramIcon = () => (
 );
 
 export const Footer: React.FC = () => {
-  const { t, locale, setLocale, localeNames } = useI18n();
+  const { t, locale, localeNames } = useI18n();
+  const selectLocale = useSelectLocale();
   const localePath = useLocalePath();
 
   // Airbnb-style column link: dark text, simple underline grown from the left
@@ -175,7 +176,7 @@ export const Footer: React.FC = () => {
             <CrossLocaleLink
               to={localePath(otherLocale)}
               hrefLang={otherLocale}
-              onClick={() => setLocale(otherLocale)}
+              onClick={() => selectLocale(otherLocale)}
               className={`flex items-center gap-2 font-medium text-foreground ${inlineLinkClass}`}
               aria-label={`${t("languageSelector.label")}: ${localeNames[otherLocale]}`}
             >

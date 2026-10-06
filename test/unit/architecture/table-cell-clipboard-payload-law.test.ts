@@ -50,6 +50,7 @@ const CELL_CONSUMERS: Site[] = [
 /** Sites that BUILD the per-block payload entries. */
 const BLOCK_WRITERS: Site[] = [
   { file: SUBSYSTEMS_FILE, fn: 'collectCellBlockData' },
+  { file: CELL_BLOCKS_FILE, fn: 'toClipboardBlock' },
   { file: SUBSYSTEMS_FILE, fn: 'readCellBlocks' },
 ];
 
@@ -219,7 +220,7 @@ describe('Cell-Clipboard Payload Completeness Law', () => {
     expect(declaredFields('TableClipboardCell').sort()).toEqual(
       ['blocks', 'color', 'colspan', 'covered', 'placement', 'rowspan', 'textColor'].sort(),
     );
-    expect(declaredFields('ClipboardBlockData').sort()).toEqual(['data', 'tool', 'tunes'].sort());
+    expect(declaredFields('ClipboardBlockData').sort()).toEqual(['children', 'data', 'tool', 'tunes'].sort());
   });
 
   it('every exemption still refers to a declared field (stale exemptions must be removed)', () => {

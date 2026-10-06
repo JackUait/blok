@@ -1,6 +1,13 @@
 import type { SanitizerConfig } from '../../../../types/configs/sanitizer-config';
 
 /**
+ * Stands in for a `<pre>` inside a table cell during paste. html-janitor
+ * unwraps a `<pre>` nested in a `<td>` (both are block tags to it), so the
+ * code would land as plain text. It does not know this tag, so it survives.
+ */
+export const CELL_CODE_TAG = 'blok-cell-code';
+
+/**
  * Safe structural tags that should be preserved during pasting.
  * These tags define document structure (tables, lists) and should not be stripped.
  */
@@ -23,6 +30,7 @@ export const SAFE_STRUCTURAL_TAGS = new Set<string>([
   'dd',
   'details',
   'summary',
+  CELL_CODE_TAG,
 ]);
 
 /**

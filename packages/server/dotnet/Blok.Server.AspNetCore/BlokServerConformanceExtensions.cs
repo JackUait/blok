@@ -15,11 +15,10 @@ namespace Blok.Server.AspNetCore;
 public static class BlokServerConformanceExtensions
 {
   /// <summary>
-  /// Puts the built-in journal behind this server, which production DI never
-  /// does: <see cref="LocalCollabOperationStore"/> is Blok.Server-internal and
-  /// no host flag reaches it, so a stock host negotiates blok-sync.v1 and
-  /// journals nothing. The conformance suite needs a real process that
-  /// journals to prove hard-kill recovery from outside it.
+  /// Puts the built-in journal behind this server without
+  /// <see cref="BlokServerOptions.CollabJournal"/>, so the conformance runner
+  /// keeps its own switch. The suite needs a real process that journals to
+  /// prove hard-kill recovery from outside it.
   /// </summary>
   /// <param name="builder">The server being built.</param>
   /// <param name="directory">

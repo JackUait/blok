@@ -1,4 +1,4 @@
-import type { DatabaseAdapter, PropertyDefinition, DatabaseViewConfig } from './types';
+import type { DatabaseAdapter, DatabaseRow, PropertyDefinition, DatabaseViewConfig } from './types';
 
 const UPDATE_DEBOUNCE_MS = 500;
 
@@ -7,6 +7,9 @@ export class DatabaseBackendSync {
   private readonly onError: ((error: unknown) => void) | undefined;
   private readonly pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly pendingUpdates = new Map<string, Parameters<DatabaseAdapter['updateRow']>[0]>();
+  private readonly inFlightRowWrites = new Map<string, Promise<DatabaseRow | undefined>>();
+  private readonly deletingRows = new Set<string>();
+  private generation = 0;
   private readonly pendingPropertyTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly pendingPropertyUpdates = new Map<string, Parameters<DatabaseAdapter['updateProperty']>[0]>();
 
@@ -15,10 +18,13 @@ export class DatabaseBackendSync {
     this.onError = onError;
   }
 
-  private async safeCall<T>(fn: (adapter: DatabaseAdapter) => Promise<T>): Promise<T | undefined> {
+  private async safeCall<T>(
+    fn: (adapter: DatabaseAdapter) => Promise<T>,
+    onError?: (error: unknown) => void,
+  ): Promise<T | undefined> {
     if (this.adapter === undefined) return undefined;
     try { return await fn(this.adapter); }
-    catch (error) { this.onError?.(error); return undefined; }
+    catch (error) { (onError ?? this.onError)?.(error); return undefined; }
   }
 
   // ─── Load ───
@@ -30,23 +36,62 @@ export class DatabaseBackendSync {
   // ─── Row operations ───
 
   async syncCreateRow(params: Parameters<DatabaseAdapter['createRow']>[0]): Promise<ReturnType<DatabaseAdapter['createRow']> extends Promise<infer R> ? R | undefined : never> {
-    return this.safeCall((a) => a.createRow(params));
+    return this.sendRowWrite(params.id, () => this.safeCall((a) => a.createRow(params)));
   }
 
   syncUpdateRow(params: Parameters<DatabaseAdapter['updateRow']>[0]): void {
-    if (this.adapter === undefined) return;
+    if (this.adapter === undefined || this.deletingRows.has(params.rowId)) return;
     const { rowId } = params;
     const existing = this.pendingTimers.get(rowId);
     if (existing !== undefined) clearTimeout(existing);
     const pending = this.pendingUpdates.get(rowId);
     this.pendingUpdates.set(rowId, pending === undefined ? params : { ...pending, ...params, properties: { ...pending.properties, ...params.properties } });
-    this.pendingTimers.set(rowId, setTimeout(() => { this.flushRow(rowId); }, UPDATE_DEBOUNCE_MS));
+    this.pendingTimers.set(rowId, setTimeout(() => {
+      this.pendingTimers.delete(rowId);
+      this.flushRow(rowId);
+    }, UPDATE_DEBOUNCE_MS));
+  }
+
+  async syncUpdateRowNow(
+    params: Parameters<DatabaseAdapter['updateRow']>[0],
+    onError?: (error: unknown) => void,
+  ): Promise<DatabaseRow | undefined> {
+    const generation = this.generation;
+    const pending = this.cancelRow(params.rowId);
+    const merged = pending === undefined
+      ? params
+      : { ...pending, ...params, properties: { ...pending.properties, ...params.properties } };
+
+    return this.sendRowWrite(params.rowId, async () => {
+      const written = await this.safeCall((adapter) => adapter.updateRow(merged), onError);
+
+      if (written === undefined && pending !== undefined && generation === this.generation) {
+        const queuedProperties = Object.fromEntries(
+          Object.entries(pending.properties).filter(
+            ([propertyId]) => !Object.prototype.hasOwnProperty.call(params.properties, propertyId),
+          ),
+        );
+        if (Object.keys(queuedProperties).length > 0) {
+          const newer = this.cancelRow(params.rowId);
+
+          this.syncUpdateRow({
+            rowId: params.rowId,
+            properties: { ...queuedProperties, ...newer?.properties },
+          });
+        }
+      }
+
+      return written;
+    });
   }
 
   async syncMoveRow(params: Parameters<DatabaseAdapter['moveRow']>[0]): Promise<ReturnType<DatabaseAdapter['moveRow']> extends Promise<infer R> ? R | undefined : never> {
-    this.flushRow(params.rowId);
+    return this.sendRowWrite(params.rowId, async () => {
+      const pending = this.cancelRow(params.rowId);
 
-    return this.safeCall((a) => a.moveRow(params));
+      if (pending !== undefined) await this.safeCall((a) => a.updateRow(pending));
+      return this.safeCall((a) => a.moveRow(params));
+    });
   }
 
   async syncDeleteRow(params: Parameters<DatabaseAdapter['deleteRow']>[0]): Promise<void> {
@@ -54,8 +99,19 @@ export class DatabaseBackendSync {
     // timer armed lets the pending update land after the delete, which an
     // upserting backend turns back into a row the user deleted.
     this.cancelRow(params.rowId);
+    while (true) {
+      const inFlight = this.inFlightRowWrites.get(params.rowId);
 
-    await this.safeCall((a) => a.deleteRow(params));
+      if (inFlight === undefined) break;
+      await inFlight;
+    }
+    this.cancelRow(params.rowId);
+    this.deletingRows.add(params.rowId);
+    try {
+      await this.safeCall((a) => a.deleteRow(params));
+    } finally {
+      this.deletingRows.delete(params.rowId);
+    }
   }
 
   // ─── Property operations ───
@@ -112,7 +168,7 @@ export class DatabaseBackendSync {
   // ─── Flush & destroy ───
 
   flushPendingUpdates(): void {
-    for (const rowId of this.pendingTimers.keys()) { this.flushRow(rowId); }
+    for (const rowId of this.pendingUpdates.keys()) { this.flushRow(rowId, true); }
   }
 
   flushPendingPropertyUpdates(): void {
@@ -120,6 +176,7 @@ export class DatabaseBackendSync {
   }
 
   destroy(): void {
+    this.generation += 1;
     for (const timer of this.pendingTimers.values()) clearTimeout(timer);
     this.pendingTimers.clear();
     this.pendingUpdates.clear();
@@ -128,10 +185,33 @@ export class DatabaseBackendSync {
     this.pendingPropertyUpdates.clear();
   }
 
-  private flushRow(rowId: string): void {
+  private sendRowWrite(rowId: string, run: () => Promise<DatabaseRow | undefined>): Promise<DatabaseRow | undefined> {
+    if (this.deletingRows.has(rowId)) return Promise.resolve(undefined);
+    const previous = this.inFlightRowWrites.get(rowId);
+    const write = (async () => {
+      if (previous !== undefined) await previous;
+      return run();
+    })();
+    const tracked = write.finally(() => {
+      if (this.inFlightRowWrites.get(rowId) !== tracked) return;
+      this.inFlightRowWrites.delete(rowId);
+      if (this.pendingUpdates.has(rowId) && !this.pendingTimers.has(rowId)) {
+        this.pendingTimers.set(rowId, setTimeout(() => {
+          this.pendingTimers.delete(rowId);
+          this.flushRow(rowId);
+        }, UPDATE_DEBOUNCE_MS));
+      }
+    });
+
+    this.inFlightRowWrites.set(rowId, tracked);
+    return tracked;
+  }
+
+  private flushRow(rowId: string, includeInFlight = false): void {
+    if (!includeInFlight && this.inFlightRowWrites.has(rowId)) return;
     const params = this.cancelRow(rowId);
 
-    if (params !== undefined) void this.safeCall((a) => a.updateRow(params));
+    if (params !== undefined) void this.sendRowWrite(rowId, () => this.safeCall((a) => a.updateRow(params)));
   }
 
   private flushProperty(propertyId: string): void {

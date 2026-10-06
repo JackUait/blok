@@ -243,4 +243,52 @@ describe('PatternHandler — link paste menu gating', () => {
       expect(endGroupMock).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('link to the editor\'s own host', () => {
+    // jsdom serves the page from localhost.
+    const ownUrl = `${window.location.origin}/doc/1`;
+
+    it('keeps the link and opens no menu when only Plain is left', async () => {
+      const handler = makeHandler({});
+
+      const handled = await handler.handle(ownUrl, context);
+
+      expect(fakeMenu.open).not.toHaveBeenCalled();
+      expect(handled).toBe(true);
+      expect(insertMock).toHaveBeenCalledTimes(1);
+      expect(pasteMock).not.toHaveBeenCalled();
+    });
+
+    it('treats a configured host alias as the own host', async () => {
+      const handler = makeHandler({ linkPaste: { hostAliases: ['example.com'] } });
+
+      await handler.handle('https://example.com/article', context);
+
+      expect(fakeMenu.open).not.toHaveBeenCalled();
+    });
+
+    it('still opens the menu when an embed applies', async () => {
+      const handler = makeHandler({ linkPaste: { allowGenericEmbed: true } });
+
+      await handler.handle(ownUrl, context);
+
+      expect(fakeMenu.open).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not fall back to a bookmark when the selection cannot be linked', async () => {
+      const outside = document.createElement('div');
+
+      outside.textContent = 'not editable';
+      document.body.appendChild(outside);
+      window.getSelection()?.selectAllChildren(outside);
+
+      const handler = makeHandler({});
+      const handled = await handler.handle(ownUrl, context);
+
+      expect(pasteMock).not.toHaveBeenCalled();
+      expect(handled).toBe(false);
+      window.getSelection()?.removeAllRanges();
+      outside.remove();
+    });
+  });
 });

@@ -164,8 +164,8 @@ describe('Table Tool', () => {
 
       if (config !== false) {
         // TABLE is declared as a config object so the columns-candidate stamp
-        // (data-blok-columns-candidate) survives paste sanitization.
-        expect(config.tags).toContainEqual({ TABLE: { 'data-blok-columns-candidate': true } });
+        // (data-blok-columns-candidate) and the grid's dir survive paste sanitization.
+        expect(config.tags).toContainEqual({ TABLE: { 'data-blok-columns-candidate': true, dir: true } });
       }
     });
   });

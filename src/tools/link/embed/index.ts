@@ -12,11 +12,26 @@ import type {
 } from '../../../../types';
 import { PLAINTEXT } from '../../../components/utils/sanitizer';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
-import { IconCopy, IconGlobe, IconLink, IconReplace, IconTrash } from '../../../components/icons';
+import { IconCopy, IconGlobe, IconLink, IconLinkExternal, IconReplace, IconTrash } from '../../../components/icons';
+import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import { setFieldValidity } from '../../../components/utils/field-validity';
 import { attachResizeHandle, attachHeightResizeHandle, type ResizeEdge } from '../../image/resizer';
+import { figureInsets } from '../../image/figure-insets';
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
-import { EMBED_SERVICES, matchEmbedService, isHttpUrl, isHttpsUrl, setSafeLinkHref, type EmbedKind } from '../registry';
+import {
+  EMBED_SERVICES,
+  matchEmbedService,
+  isHttpUrl,
+  isHttpsUrl,
+  resolveEmbedServiceTitle,
+  setSafeLinkHref,
+  type EmbedKind,
+  type EmbedMatch,
+} from '../registry';
+import { brandMarkElement } from '../../../components/utils/brand-mark-services';
+import { embedTypeIcon } from '../paste-menu/items';
+import { createUrlMirror } from '../../../components/utils/url-mirror';
+import { createEmbedWindow } from './empty-window';
 import { isAllowedEmbedOrigin } from './allowed-origins';
 import { renderEmbedPreview } from './preview';
 
@@ -220,9 +235,10 @@ export class Embed implements BlockTool {
    * resolved to an embeddable source.
    */
   private resolveAndSet(url: string): boolean {
-    const match = matchEmbedService(url);
+    const target = this.resolveTarget(url);
 
-    if (match) {
+    if (target?.match) {
+      const match = target.match;
       const config = EMBED_SERVICES[match.service];
 
       this.data = {
@@ -238,10 +254,7 @@ export class Embed implements BlockTool {
       return true;
     }
 
-    // Generic embeds must be https: the render path refuses anything else,
-    // so rejecting here surfaces the error at input time instead of silently
-    // rendering an empty block.
-    if (this.isGenericAllowed() && isHttpsUrl(url)) {
+    if (target) {
       this.data = {
         service: '',
         source: url,
@@ -256,6 +269,28 @@ export class Embed implements BlockTool {
     }
 
     return false;
+  }
+
+  /**
+   * What a URL would become on submit, without touching data. The empty
+   * state's window previews exactly this, so it never promises an embed
+   * that submit then rejects.
+   */
+  private resolveTarget(url: string): { match: EmbedMatch | null } | null {
+    const match = matchEmbedService(url);
+
+    if (match) {
+      return { match };
+    }
+
+    // Generic embeds must be https: the render path refuses anything else,
+    // so rejecting here surfaces the error at input time instead of silently
+    // rendering an empty block.
+    if (this.isGenericAllowed() && isHttpsUrl(url)) {
+      return { match: null };
+    }
+
+    return null;
   }
 
   private isGenericAllowed(): boolean {
@@ -369,10 +404,10 @@ export class Embed implements BlockTool {
   }
 
   /**
-   * Shifts the block toolbar to the figure's left edge when the embed is
+   * Shifts the block toolbar to the figure's edge when the embed is
    * narrower than the content column (centered / right-aligned / fixed-width).
    */
-  public getContentOffset(_hoveredElement: Element): { left: number } | undefined {
+  public getContentOffset(_hoveredElement: Element): { left: number; right: number } | undefined {
     const root = this.root;
     const figure = root?.querySelector<HTMLElement>('[data-role="embed-figure"]');
 
@@ -380,9 +415,7 @@ export class Embed implements BlockTool {
       return undefined;
     }
 
-    const delta = figure.getBoundingClientRect().left - root.getBoundingClientRect().left;
-
-    return delta > 0 ? { left: delta } : undefined;
+    return figureInsets(root, figure);
   }
 
   private renderState(): void {
@@ -520,6 +553,7 @@ export class Embed implements BlockTool {
     const anchor = document.createElement('a');
 
     anchor.setAttribute('data-role', 'embed-link-card-anchor');
+    anchor.setAttribute(DATA_ATTR.blockContextMenu, '');
     anchor.className = 'blok-embed-linkcard__anchor';
     anchor.target = '_blank';
     anchor.rel = 'noopener noreferrer';
@@ -661,6 +695,8 @@ export class Embed implements BlockTool {
     input.autocomplete = 'off';
     input.spellcheck = false;
 
+    const mirror = createUrlMirror(input);
+
     const submit = document.createElement('button');
 
     submit.type = 'submit';
@@ -679,19 +715,103 @@ export class Embed implements BlockTool {
     kbd.textContent = '↵';
     submit.append(submitLabel, kbd);
 
-    input.addEventListener('input', () => {
+    const embedWindow = createEmbedWindow();
+    const readback = document.createElement('div');
+    const readbackIcon = document.createElement('span');
+    const readbackName = document.createElement('span');
+
+    readback.setAttribute('data-role', 'embed-readback');
+    readback.className = 'blok-embed-empty__readback';
+    readback.hidden = true;
+    readbackIcon.className = 'blok-embed-empty__readback-icon';
+    readbackIcon.setAttribute('aria-hidden', 'true');
+    readbackName.className = 'blok-embed-empty__readback-name';
+    readbackName.setAttribute('data-role', 'embed-readback-name');
+    readback.append(readbackIcon, readbackName);
+
+    const shown: { key: string | null } = { key: null };
+
+    /**
+     * Shows what the typed URL will become: the window's drawing, the bar icon
+     * and the read-back. Skips the DOM work while the target is unchanged.
+     */
+    const preview = (url: string): void => {
+      const target = url === '' ? null : this.resolveTarget(url);
+      const match = target?.match ?? null;
+      const host = target !== null && match === null ? hostnameOf(url) : '';
+      const key = target === null ? null : match?.service ?? `host:${host}`;
+
+      if (shown.key === key) {
+        return;
+      }
+
+      shown.key = key;
+
+      if (key === null) {
+        readback.hidden = true;
+        embedWindow.show('idle');
+        embedWindow.brand(null);
+        fieldIcon.innerHTML = IconLink;
+
+        return;
+      }
+
+      readback.hidden = false;
+
+      if (match === null) {
+        embedWindow.show('generic');
+        embedWindow.brand(null);
+        fieldIcon.innerHTML = IconGlobe;
+        readbackIcon.innerHTML = IconGlobe;
+        readbackName.textContent = host;
+
+        return;
+      }
+
+      const typeIcon = embedTypeIcon(match.type);
+      const mark = brandMarkElement(match.service, typeIcon);
+
+      embedWindow.show(match.type);
+      embedWindow.brand(brandMarkElement(match.service, typeIcon));
+      readbackIcon.innerHTML = typeIcon;
+      readbackName.textContent = resolveEmbedServiceTitle(
+        EMBED_SERVICES[match.service],
+        this.api.i18n.getLocale()
+      );
+
+      if (mark) {
+        fieldIcon.replaceChildren(mark);
+      } else {
+        fieldIcon.innerHTML = typeIcon;
+      }
+    };
+
+    input.addEventListener('input', (event) => {
       bar.setAttribute('data-valid', this.looksLikeUrl(input.value) ? 'true' : 'false');
+      preview(input.value.trim());
+
+      if (
+        event instanceof InputEvent
+        && event.inputType === 'insertFromPaste'
+        && shown.key !== null
+      ) {
+        embedWindow.play('caught');
+      }
+
       // Editing after a rejected submit clears the shared invalid state —
       // both the a11y attributes and the visible alert, so they never diverge.
       setFieldValidity(input, true, this.urlErrorId);
       el.querySelector('[data-role="embed-url-error"]')?.remove();
     });
 
-    bar.append(fieldIcon, input, submit);
-    form.appendChild(bar);
+    bar.append(fieldIcon, mirror.element, input, submit);
+    form.append(embedWindow.element, readback, bar);
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      this.submitUrl(input.value.trim(), el);
+
+      if (!this.submitUrl(input.value.trim(), el)) {
+        embedWindow.play('rejected');
+      }
     });
 
     el.appendChild(form);
@@ -715,11 +835,12 @@ export class Embed implements BlockTool {
     return isHttpUrl(value) || /^[\w-]+(\.[\w-]+)+([/?#].*)?$/i.test(value);
   }
 
-  private submitUrl(url: string, container: HTMLElement): void {
+  /** Returns whether the URL was accepted. */
+  private submitUrl(url: string, container: HTMLElement): boolean {
     container.querySelector('[data-role="embed-url-error"]')?.remove();
 
     if (url !== '' && this.resolveAndSet(url)) {
-      return;
+      return true;
     }
 
     const error = document.createElement('div');
@@ -736,6 +857,8 @@ export class Embed implements BlockTool {
     if (input) {
       setFieldValidity(input, false, this.urlErrorId);
     }
+
+    return false;
   }
 
   /**
@@ -955,8 +1078,18 @@ export class Embed implements BlockTool {
 
   public renderSettings(): MenuConfig {
     const i18n = this.api.i18n;
+    const source = this.data.source ?? '';
 
     return [
+      ...(this.embedRender().mode === 'link' ? [{
+        icon: IconLinkExternal,
+        title: i18n.t('tools.embed.openOriginal'),
+        name: 'embed-open-original',
+        closeOnActivate: true,
+        onActivate: (): void => {
+          window.open(source, '_blank', 'noopener,noreferrer');
+        },
+      }] : []),
       {
         icon: IconReplace,
         title: i18n.t('tools.embed.replace'),

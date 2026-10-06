@@ -54,7 +54,9 @@ internal static class SyncEndpoint
   {
     return doc.Length > 0 &&
         !doc.Contains('/') &&
-        !doc.Contains("%2f", StringComparison.OrdinalIgnoreCase);
+        !doc.Contains('\\') &&
+        !doc.Contains("%2f", StringComparison.OrdinalIgnoreCase) &&
+        !doc.Contains("%5c", StringComparison.OrdinalIgnoreCase);
   }
 
   internal static async Task RefuseAsync(HttpContext context, int statusCode, string body)
@@ -97,6 +99,22 @@ internal static class SyncEndpoint
 
     using (lease)
     {
+      Func<CancellationToken, ValueTask<bool>>? recheckAccess = null;
+
+      if (context.RequestServices.GetService<IBlokAuthorization>() is { } authorization)
+      {
+        recheckAccess = async cancellationToken =>
+        {
+          if (!await authorization.CanReadDocumentAsync(accepted.User, doc, cancellationToken))
+          {
+            return false;
+          }
+
+          return !accepted.CanWrite ||
+              await authorization.CanWriteDocumentAsync(accepted.User, doc, cancellationToken);
+        };
+      }
+
       var member = new SyncSocketMember(
           accepted.CanWrite,
           acceptsControlFrames: accepted.SubProtocol is not null,
@@ -105,7 +123,8 @@ internal static class SyncEndpoint
               options,
               context.RequestServices.GetRequiredService<TimeProvider>()),
           actorId: accepted.ActorId,
-          protocolSource: accepted.ProtocolSource);
+          protocolSource: accepted.ProtocolSource,
+          recheckAccess: recheckAccess);
       CollabJoinResult join;
 
       // Join before the upgrade: a draining server can still answer 503,
@@ -122,6 +141,13 @@ internal static class SyncEndpoint
       if (join.Status == CollabJoinStatus.Draining)
       {
         await RefuseAsync(context, StatusCodes.Status503ServiceUnavailable, "shutting down\n");
+
+        return;
+      }
+
+      if (join.Status is CollabJoinStatus.Forbidden or CollabJoinStatus.Purged)
+      {
+        await RefuseAsync(context, StatusCodes.Status403Forbidden, "forbidden\n");
 
         return;
       }

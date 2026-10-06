@@ -305,7 +305,7 @@ describe('BlockSelectionKeys', () => {
       // Wait for promise to resolve
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      expect(copySelectedBlocks).toHaveBeenCalledWith(event);
+      expect(copySelectedBlocks).toHaveBeenCalledWith(event, { cut: true });
       expect(deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
       expect(setToBlock).toHaveBeenCalledWith(insertedBlock, 'start');
       expect(clearSelection).toHaveBeenCalledWith(event);

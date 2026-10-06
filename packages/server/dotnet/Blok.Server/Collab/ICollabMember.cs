@@ -6,6 +6,9 @@ internal enum CollabCloseReason
   /// <summary>The doc was reset (epoch bumped); close 4409 and let the client resync.</summary>
   Reset,
 
+  /// <summary>Access was revoked; close 4403.</summary>
+  Forbidden,
+
   /// <summary>The server is shutting down; close 1001.</summary>
   Draining,
 
@@ -36,7 +39,7 @@ internal enum CollabCloseReason
 
 /// <summary>
 /// One connection in a room, as the sync endpoint presents it. The room calls
-/// every member INSIDE its lane, so both methods must enqueue and return —
+/// every member INSIDE its lane. Send and Close must enqueue and return —
 /// never block on the socket, never throw.
 /// </summary>
 internal interface ICollabMember
@@ -67,6 +70,9 @@ internal interface ICollabMember
   /// operations the room commits for it.
   /// </summary>
   CollabOperationSource ProtocolSource { get; }
+
+  /// <summary>Checks the member's admitted read and write rights.</summary>
+  ValueTask<bool> RecheckAccessAsync(CancellationToken cancellationToken);
 
   /// <summary>One fully encoded wire frame (see <see cref="SyncWire"/>).</summary>
   void Send(byte[] frame);

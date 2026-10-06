@@ -1513,6 +1513,28 @@ describe('Plus button interactions', () => {
       expect(wrapper.getAttribute('aria-label')).toBe('a11y.blockToolbar');
     });
 
+    it('carries the editor direction from the start', async () => {
+      const blok = getBlok() as unknown as {
+        API: { methods: unknown };
+        Tools: { blockTools: Map<string, unknown> };
+        I18n: { t: (key: string) => string };
+        UI: { nodes: { wrapper: HTMLElement } };
+      };
+
+      blok.API = { methods: {} };
+      blok.Tools = { blockTools: new Map() };
+      blok.I18n = { t: (key: string): string => key };
+      blok.UI.nodes.wrapper.setAttribute('dir', 'rtl');
+      document.body.appendChild(blok.UI.nodes.wrapper);
+
+      await (toolbar as unknown as { make: () => Promise<void> }).make();
+
+      const wrapper = (toolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+
+      expect(wrapper.getAttribute('dir')).toBe('rtl');
+      blok.UI.nodes.wrapper.remove();
+    });
+
     it('declares a horizontal aria-orientation for the roving group', async () => {
       const blok = getBlok() as unknown as {
         API: { methods: unknown };

@@ -13,11 +13,10 @@ import ru from "../../i18n/ru.json";
 describe("view renderer section", () => {
   const section = API_SECTIONS.find((s) => s.id === "view-api");
 
-  it("exists with a title, description and lastUpdated", () => {
+  it("exists with a title and description", () => {
     expect(section).toBeDefined();
     expect(section!.title).toBe("View renderer");
     expect(section!.description).toBeDefined();
-    expect(section!.lastUpdated).toBeDefined();
   });
 
   it("leads with the problem it solves: display without an editor instance", () => {

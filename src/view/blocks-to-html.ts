@@ -11,17 +11,25 @@ import { INLINE_TEXT_SANITIZE } from '../components/shared/inline-content-saniti
 import type { BlokViewSchema } from '../shared/sanitize-schema';
 import { BLOCK_CONTENT_CLASSES, BLOCK_WRAPPER_CLASSES } from '../shared/block-scaffolding';
 import { classesFor } from '../shared/tool-classes';
+import { ownEntry } from '../shared/own-entry';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
+import { firstStrongDirection } from '../shared/text-direction';
+import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
+import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
 import { buildDocumentModel, normalizeViewBlock } from './document-model';
 import type { DocumentModel, ViewBlock } from './document-model';
 import { builtinEmitters, renderListRun } from './emitters';
 import type { EmitterEnv } from './emitters';
-import { htmlTextContent } from './html-text';
+import { htmlTextContent, proseTextContent } from './html-text';
+import { tableOfContents } from './outline';
+import type { TocEntry } from './outline';
 import { applyInlineRenderers } from './inline-renderers';
 import type { ViewInlineRenderer } from './inline-renderers';
 import { escapeHtml, sanitizeHtmlFragment } from './sanitize';
 
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, SanitizerConfig } from '../../types';
+import type { PageInfo } from '../../types/tools/page';
+import { isPagePointer } from '../shared/page-pointer';
 
 /**
  * Services handed to a custom block renderer so it composes safely with the
@@ -160,6 +168,29 @@ export interface BlocksToHtmlOptions {
    * `<BlokView>` enables it internally, so React consumers get parity for free.
    */
   classes?: boolean;
+  /**
+   * Build the link for a `page` block from its `pageId`. The page body lives in
+   * a separate document, so the view renders a page as a one-line card; it is a
+   * link only when this and authorized {@link pageInfo} are given. The result still passes through
+   * {@link BlocksToHtmlOptions.transformUrl} and the unsafe-scheme strip.
+   */
+  pageHref?: (pageId: string) => string;
+  /** Authorized metadata for page cards. Missing metadata stays neutral and unlinked. */
+  pageInfo?: (pageId: string) => PageInfo | null | undefined;
+  /**
+   * Base direction of the document (default: none).
+   *
+   * Sets `dir` on the {@link root} wrapper, and turns on per-block direction:
+   * each block whose own text has a strong letter carries `dir` from the
+   * first one, the same rule the editor applies. A block with no strong letter
+   * (empty, digits only) carries none and follows the document. Code is never
+   * stamped. Under {@link classes} the `dir` sits on the content element, as
+   * in the editor; otherwise on the block's root element (each `<li>` for
+   * lists).
+   *
+   * Opt-in: without it the output has no `dir` anywhere.
+   */
+  direction?: 'ltr' | 'rtl';
 }
 
 /**
@@ -200,6 +231,32 @@ const BARE_CONTAINER_TOOLS = new Set(['database', 'database-row']);
  * weight then override it. A new wrapping emitter must be added here.
  */
 const SELF_STAMPING_TOOLS = new Set(['header', 'divider', 'code']);
+
+/**
+ * Text fields that set a block's direction, in order. Mirrors the editable
+ * fields the editor reads; code is absent because its text is pinned LTR.
+ */
+const DIRECTION_FIELDS: Record<string, readonly string[]> = {
+  paragraph: ['text'],
+  header: ['text'],
+  toggle: ['text'],
+  tab: ['title'],
+  list: ['text'],
+  quote: ['text', 'caption'],
+  image: ['caption'],
+  video: ['caption'],
+  embed: ['caption'],
+  audio: ['caption'],
+  file: ['caption'],
+};
+
+/**
+ * The `direction` option, or undefined for anything but 'ltr'/'rtl' — the
+ * value is written into markup, so a stray string must never reach it.
+ * @param options - render options
+ */
+const documentDirection = (options: BlocksToHtmlOptions): 'ltr' | 'rtl' | undefined =>
+  options.direction === 'ltr' || options.direction === 'rtl' ? options.direction : undefined;
 
 /** One rendering unit of a sibling run: a block, or a grouped run of `list` blocks. */
 type Segment = { kind: 'block'; block: ViewBlock } | { kind: 'list'; run: ViewBlock[] };
@@ -250,6 +307,28 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
   const blockIds = options.blockIds === true;
   const classes = options.classes === true;
   const transformUrl = options.transformUrl;
+  const directionEnabled = documentDirection(options) !== undefined;
+
+  /**
+   * Direction of the block's own text, or null for none or when the option is off.
+   * @param block - block to read
+   */
+  const directionOf = (block: ViewBlock): 'ltr' | 'rtl' | null => {
+    if (!directionEnabled) {
+      return null;
+    }
+
+    for (const field of ownEntry(DIRECTION_FIELDS, block.type) ?? []) {
+      const value = block.data[field];
+      const direction = typeof value === 'string' ? firstStrongDirection(proseTextContent(value)) : null;
+
+      if (direction !== null) {
+        return direction;
+      }
+    }
+
+    return null;
+  };
 
   /**
    * The composed inline allowlist: the schema's baseSanitize wins over the
@@ -269,19 +348,95 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     ? undefined
     : (url: string, attr: 'href' | 'src'): string => transformUrl(url, { attr, blockType: undefined });
 
-  /**
-   * Inline renderers run on the SANITIZED fragment, so a renderer can only see
-   * what the allowlist kept. Skipped entirely when none are configured — the
-   * pass costs a parse/serialize round trip per inline field.
-   */
+  /** Inline renderers see only attributes that survived sanitization. */
   const inlineRenderers = options.inlineRenderers ?? {};
   const hasInlineRenderers = Object.keys(inlineRenderers).length > 0;
+  const ownAnchorRenderer = inlineRenderers.a;
+  const pageReferenceRenderers: Record<string, ViewInlineRenderer> = {
+    ...inlineRenderers,
+    a: (element) => {
+      const rendered = ownAnchorRenderer?.(element);
+      const pageId = element.attrs[PAGE_REFERENCE_ATTR];
+
+      if (typeof rendered === 'string' || !pageId) {
+        return rendered;
+      }
+
+      const info = options.pageInfo?.(pageId);
+
+      if (info === null || info === undefined || info.access === 'none') {
+        return rendered;
+      }
+
+      const title = typeof info.title === 'string' && info.title.trim() !== ''
+        ? info.title
+        : PAGE_REFERENCE_FALLBACK;
+      const rawHref = options.pageHref?.(pageId);
+      const href = typeof rawHref === 'string' && inlineUrlTransform !== undefined
+        ? inlineUrlTransform(rawHref, 'href')
+        : rawHref;
+      const hrefAttr = typeof href === 'string' && href !== '' && !hasUnsafeUrlProtocol(href, 'href')
+        ? ` href="${escapeHtml(href)}"`
+        : '';
+
+      return `<a ${PAGE_REFERENCE_ATTR}="${escapeHtml(pageId)}"${hrefAttr}>${escapeHtml(title)}</a>`;
+    },
+  };
+
+  /**
+   * With a direction set, an inline equation is pinned LTR so math never
+   * mirrors. A renderer's replacement is the host's markup, so it is wrapped
+   * rather than edited. Without the option the output stays byte-identical.
+   */
+  const ownSpanRenderer = inlineRenderers.span;
+  const mathPinningRenderers: Record<string, ViewInlineRenderer> = {
+    ...pageReferenceRenderers,
+    span: (element) => {
+      const rendered = ownSpanRenderer?.(element);
+
+      if (element.attrs[EQUATION_SOURCE_ATTR] === undefined) {
+        return rendered;
+      }
+
+      if (typeof rendered === 'string') {
+        return rendered === '' ? '' : `<span dir="ltr">${rendered}</span>`;
+      }
+
+      const attrs = Object.entries(element.attrs)
+        .filter(([name]) => name !== 'dir')
+        .map(([name, value]) => ` ${name}="${escapeHtml(value)}"`)
+        .join('');
+
+      return `<span${attrs} dir="ltr">${element.html}</span>`;
+    },
+  };
+
+  const pageHref = options.pageHref;
+
+  /** Built once, on first use: a heading before the table of contents already needs its id. */
+  const tocCache: { value?: { entries: TocEntry[]; targets: ReadonlySet<ViewBlock> } } = {};
+
+  const tocOf = (): { entries: TocEntry[]; targets: ReadonlySet<ViewBlock> } => {
+    if (tocCache.value === undefined) {
+      const entries = ownEntry(renderers, 'table_of_contents') === undefined ? tableOfContents(model) ?? [] : [];
+
+      tocCache.value = { entries, targets: new Set(entries.map((entry) => entry.block)) };
+    }
+
+    return tocCache.value;
+  };
 
   const env: EmitterEnv = {
     inline: (value) => {
       const sanitized = sanitizeHtmlFragment(typeof value === 'string' ? value : '', inlineConfig, inlineUrlTransform);
 
-      return hasInlineRenderers ? applyInlineRenderers(sanitized, inlineRenderers) : sanitized;
+      if (directionEnabled && sanitized.includes(EQUATION_SOURCE_ATTR)) {
+        return applyInlineRenderers(sanitized, mathPinningRenderers);
+      }
+
+      return hasInlineRenderers || ((pageHref !== undefined || options.pageInfo !== undefined) && sanitized.includes(PAGE_REFERENCE_ATTR))
+        ? applyInlineRenderers(sanitized, pageReferenceRenderers)
+        : sanitized;
     },
     escape: (value) => escapeHtml(typeof value === 'string' ? value : ''),
     childrenOf: (id) => model.childrenOf(id),
@@ -310,6 +465,14 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 
       return ` ${name}="${escapeHtml(resolved)}"`;
     },
+    pageHrefAttr: (pageId, blockType) => (
+      pageHref === undefined || typeof pageId !== 'string' || pageId === ''
+        ? ''
+        : env.url('href', pageHref(pageId), blockType)
+    ),
+    pageInfo: (pageId) => (
+      typeof pageId === 'string' && pageId !== '' ? options.pageInfo?.(pageId) : undefined
+    ),
     idAttr: (block) => (blockIds && block.id !== undefined ? ` data-blok-id="${escapeHtml(block.id)}"` : ''),
     rootAttrs: (block) => {
       const list = classes ? classesFor(block.type, block.data) : [];
@@ -321,6 +484,14 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     },
     classList: (list) => (classes && list.length > 0 ? ` class="${escapeHtml(list.join(' '))}"` : ''),
     classesEnabled: classes,
+    ltrAttr: directionEnabled ? ' dir="ltr"' : '',
+    tocEntries: () => tocOf().entries,
+    tocTargetId: (block) => (tocOf().targets.has(block) ? block.id : undefined),
+    dirAttr: (block) => {
+      const direction = directionOf(block);
+
+      return direction === null ? '' : ` dir="${direction}"`;
+    },
   };
 
   const ctxFor = (block: ViewBlock): ViewRenderContext => ({
@@ -344,13 +515,15 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
   const commentSafeType = (type: string): string => escapeHtml(type.replace(/-+/g, '-'));
 
   const renderBlock = (block: ViewBlock): string => {
-    const custom = renderers[block.type];
+    const custom = ownEntry(renderers, block.type);
 
     if (custom !== undefined) {
       return custom(block.data, ctxFor(block));
     }
 
-    const emitter = builtinEmitters[block.type];
+    const emitter = block.type === 'page' && !isPagePointer(block.type, block.data)
+      ? undefined
+      : ownEntry(builtinEmitters, block.type);
 
     if (emitter !== undefined) {
       const bare = BARE_CONTAINER_TOOLS.has(block.type);
@@ -399,15 +572,34 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
    * `data-blok-element` marks the holder, matching the editor's own marker.
    * @param html - the block's own rendered markup
    */
-  const scaffold = (html: string): string => {
+  const scaffold = (html: string, direction: 'ltr' | 'rtl' | null): string => {
     if (!classes || html === '') {
       return html;
     }
 
     const wrapper = escapeHtml(BLOCK_WRAPPER_CLASSES.join(' '));
     const content = escapeHtml(BLOCK_CONTENT_CLASSES.join(' '));
+    const dir = direction === null ? '' : ` dir="${direction}"`;
 
-    return `<div data-blok-element class="${wrapper}"><div class="${content}">${html}</div></div>`;
+    return `<div data-blok-element class="${wrapper}"><div class="${content}"${dir}>${html}</div></div>`;
+  };
+
+  /**
+   * A built-in block's markup with its `dir`: on the content element under
+   * parity, else on its root tag. Custom renderers own their output, and an
+   * unknown tool has no root of its own, so neither is stamped.
+   * @param block - block being rendered
+   */
+  const renderWithDirection = (block: ViewBlock): string => {
+    const html = renderBlock(block);
+    const ownsRoot = ownEntry(renderers, block.type) === undefined && ownEntry(builtinEmitters, block.type) !== undefined;
+    const direction = ownsRoot ? directionOf(block) : null;
+
+    if (classes) {
+      return scaffold(html, direction);
+    }
+
+    return direction === null ? html : stampAttr(html, 'dir', direction);
   };
 
   const renderGuarded = (block: ViewBlock): string => {
@@ -420,7 +612,7 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 
     try {
       /** Bare containers contribute no block of their own, so they get no holder. */
-      return BARE_CONTAINER_TOOLS.has(block.type) ? renderBlock(block) : scaffold(renderBlock(block));
+      return BARE_CONTAINER_TOOLS.has(block.type) ? renderBlock(block) : renderWithDirection(block);
     } finally {
       if (block.id !== undefined) {
         active.delete(block.id);
@@ -501,5 +693,8 @@ export const blocksToHtml = (
    * the container, and a container that vanishes for empty content forces them
    * to handle two output shapes.
    */
-  return options.root === true ? `<div data-blok-interface="view">${body}</div>` : body;
+  const direction = documentDirection(options);
+  const dir = direction === undefined ? '' : ` dir="${direction}"`;
+
+  return options.root === true ? `<div data-blok-interface="view"${dir}>${body}</div>` : body;
 };

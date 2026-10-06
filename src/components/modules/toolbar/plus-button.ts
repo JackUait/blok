@@ -132,9 +132,7 @@ export class PlusButtonHandler {
         'group-data-[blok-block-settings-opened=true]:hidden',
         // Mobile styles (static positioning with overlay-pane appearance)
         'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:z-2',
-        'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
-        // RTL styles
-        'group-data-[blok-rtl=true]:right-[calc(-1*(var(--spacing-toolbox-btn)))] group-data-[blok-rtl=true]:left-auto'
+        'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile'
       ),
     ], {
       innerHTML: IconPlus,

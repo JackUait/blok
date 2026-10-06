@@ -52,6 +52,16 @@ describe('FindLens', () => {
     expect(boxes[1].style.width).toBe('40px');
   });
 
+  it('places boxes in page coordinates, so the page scroll carries them', () => {
+    vi.spyOn(window, 'scrollX', 'get').mockReturnValue(5);
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(100);
+    const lens = new FindLens(container);
+
+    lens.moveTo([rect(10, 20, 100, 18)]);
+
+    expect(boxesIn(container)[0].style.transform).toBe('translate(25px, 110px)');
+  });
+
   it('copies the notch radius from the theme source, since the lens root is outside it', () => {
     const lens = new FindLens(container);
 

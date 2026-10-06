@@ -159,7 +159,7 @@ describe("list-helpers", () => {
       expect(data.depth).toBe(3);
     });
 
-    it("sets marginLeft on listitem element", () => {
+    it("sets the inline-start margin on listitem element", () => {
       const element = document.createElement("div");
       const listItem = document.createElement("div");
       listItem.setAttribute("role", "listitem");
@@ -168,33 +168,33 @@ describe("list-helpers", () => {
 
       adjustDepthTo(element, data, 2);
 
-      expect(listItem.style.marginLeft).toBe("54px");
+      expect(listItem.style.marginInlineStart).toBe("54px");
     });
 
-    it("clears marginLeft when depth is 0", () => {
+    it("clears the inline-start margin when depth is 0", () => {
       const element = document.createElement("div");
       const listItem = document.createElement("div");
       listItem.setAttribute("role", "listitem");
-      listItem.style.marginLeft = "48px";
+      listItem.style.marginInlineStart = "48px";
       element.appendChild(listItem);
       const data = { depth: 2 };
 
       adjustDepthTo(element, data, 0);
 
-      expect(listItem.style.marginLeft).toBe("");
+      expect(listItem.style.marginInlineStart).toBe("");
     });
 
-    it("clears marginLeft when newDepth is 0", () => {
+    it("clears the inline-start margin when newDepth is 0", () => {
       const element = document.createElement("div");
       const listItem = document.createElement("div");
       listItem.setAttribute("role", "listitem");
-      listItem.style.marginLeft = "27px";
+      listItem.style.marginInlineStart = "27px";
       element.appendChild(listItem);
       const data = { depth: 1 };
 
       adjustDepthTo(element, data, 0);
 
-      expect(listItem.style.marginLeft).toBe("");
+      expect(listItem.style.marginInlineStart).toBe("");
     });
 
     it("handles when listitem element is not found", () => {
@@ -205,7 +205,7 @@ describe("list-helpers", () => {
       expect(() => adjustDepthTo(element, data, 1)).not.toThrow();
     });
 
-    it("calculates correct marginLeft for various depths", () => {
+    it("calculates correct inline-start margin for various depths", () => {
       const element = document.createElement("div");
       const listItem = document.createElement("div");
       listItem.setAttribute("role", "listitem");
@@ -215,11 +215,11 @@ describe("list-helpers", () => {
         const data = { depth: 0 };
         adjustDepthTo(element, data, depth);
         const expectedMargin = `${depth * 27}px`;
-        expect(listItem.style.marginLeft).toBe(expectedMargin);
+        expect(listItem.style.marginInlineStart).toBe(expectedMargin);
       }
     });
 
-    it("handles negative depth values (clears marginLeft since depth is not > 0)", () => {
+    it("handles negative depth values (clears the inline-start margin since depth is not > 0)", () => {
       const element = document.createElement("div");
       const listItem = document.createElement("div");
       listItem.setAttribute("role", "listitem");
@@ -229,8 +229,8 @@ describe("list-helpers", () => {
       adjustDepthTo(element, data, -1);
 
       expect(element).toHaveAttribute("data-list-depth", "-1");
-      // marginLeft is cleared (set to empty string) when newDepth <= 0
-      expect(listItem.style.marginLeft).toBe("");
+      // The margin is cleared (set to empty string) when newDepth <= 0
+      expect(listItem.style.marginInlineStart).toBe("");
     });
   });
 

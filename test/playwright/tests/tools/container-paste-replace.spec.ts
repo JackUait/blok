@@ -3,6 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 /**
  * Regression suite for the "paste ejection" bug family across EVERY container
@@ -96,6 +97,7 @@ const createBlok = async (page: Page, data?: OutputData, extraTools: string[] = 
     },
     { holder: HOLDER_ID, initialData: data ?? null, tools: extraTools }
   );
+  await openFixtureToggles(page, data);
 };
 
 const saveBlok = async (page: Page): Promise<{ blocks: SavedBlock[] }> => {

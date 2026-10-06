@@ -4,10 +4,12 @@
 
 import type { Block } from '../../../block';
 import { DATA_ATTR, createSelector } from '../../../constants';
+import { getElementDirection, inlineStartOffset, logicalSide } from '../../../utils/direction';
 import { DRAG_CONFIG } from '../utils/drag.constants';
 import { getBlockNestingDepth, getListItemDepth } from '../utils/depthUtils';
 import { deepestLegalStructuralDepth } from '../utils/structuralParent';
-import { areSourceRootsChildrenOf, isOpenToggleBlock } from '../utils/toggleState';
+import { acceptsChildren, isChildToolAllowed } from '../../../utils/child-tools';
+import { areSourceRootsChildrenOf, findNamedDropIntoZone, hasOwnDropIntoZone, isOpenToggleBlock } from '../utils/toggleState';
 import { resolveTargetDepth, selectPointerDepth } from '../../../../tools/list/depth-validator';
 import { INDENT_PER_LEVEL } from '../../../../tools/list/constants';
 
@@ -16,10 +18,14 @@ export interface DropTarget {
   edge: 'top' | 'bottom' | 'left' | 'right';
   depth: number;
   parentId: string | null;
+  /** Set when a named drop-into zone (a tab pill) took the drop: the dragged
+   *  blocks go to the END of `block`'s children, and the zone shows the indicator. */
+  zone?: HTMLElement;
 }
 
 export interface ContentRect {
   left: number;
+  right: number;
 }
 
 export interface UIAdapter {
@@ -43,6 +49,11 @@ export interface DropTargetDetectorOptions {
    * `tools.update` takes effect on the next drag.
    */
   isColumnsEnabled?: () => boolean;
+  /**
+   * Whether the block controls sit on the content's physical right (RTL, or
+   * `toolbarPosition: 'right'` in LTR). The gutter drop zone follows them.
+   */
+  controlsOnRight?: () => boolean;
 }
 
 /** A block paired with its measured holder rect. */
@@ -100,11 +111,13 @@ export class DropTargetDetector {
   private sourceBlocks: Block[] = [];
   private dragOriginX: number | null = null;
   private isColumnsEnabled: () => boolean;
+  private controlsOnRight: () => boolean;
 
   constructor(ui: UIAdapter, blockManager: BlockManagerAdapter, options: DropTargetDetectorOptions = {}) {
     this.ui = ui;
     this.blockManager = blockManager;
     this.isColumnsEnabled = options.isColumnsEnabled ?? ((): boolean => true);
+    this.controlsOnRight = options.controlsOnRight ?? ((): boolean => false);
   }
 
   /**
@@ -123,7 +136,7 @@ export class DropTargetDetector {
   }
 
   /**
-   * Finds the drop target block from an element or by checking the left drop zone
+   * Finds the drop target block from an element or by checking the gutter drop zone
    * @param elementUnderCursor - Element directly under the cursor
    * @param clientX - Cursor X position
    * @param clientY - Cursor Y position
@@ -160,11 +173,11 @@ export class DropTargetDetector {
       return { block, holder: directHolder };
     }
 
-    // Fallback: check if cursor is in the left drop zone
-    const leftZoneBlock = this.findBlockInLeftDropZone(clientX, clientY);
+    // Fallback: check if cursor is in the gutter drop zone
+    const gutterZoneBlock = this.findBlockInGutterDropZone(clientX, clientY);
 
-    if (leftZoneBlock) {
-      return { block: leftZoneBlock, holder: leftZoneBlock.holder };
+    if (gutterZoneBlock) {
+      return { block: gutterZoneBlock, holder: gutterZoneBlock.holder };
     }
 
     // Fallback: the cursor is in the vertical margin BETWEEN two holders, which
@@ -199,18 +212,16 @@ export class DropTargetDetector {
   }
 
   /**
-   * Finds a block by vertical position when cursor is in the left drop zone
+   * Finds a block by vertical position when the cursor is in the gutter drop
+   * zone — the gutter the block controls sit in.
    * Used as a fallback when elementFromPoint doesn't find a block directly
    * @param clientX - Cursor X position
    * @param clientY - Cursor Y position
-   * @returns Block at the vertical position, or null if not in left zone or no block found
+   * @returns Block at the vertical position, or null if not in the zone or no block found
    */
-  findBlockInLeftDropZone(clientX: number, clientY: number): Block | null {
-    const contentRect = this.ui.contentRect;
-    const leftEdge = contentRect.left;
-
-    // Check if cursor is within left drop zone (between leftEdge - leftDropZone and leftEdge)
-    const distanceFromEdge = leftEdge - clientX;
+  findBlockInGutterDropZone(clientX: number, clientY: number): Block | null {
+    const { left, right } = this.ui.contentRect;
+    const distanceFromEdge = this.controlsOnRight() ? clientX - right : left - clientX;
 
     if (distanceFromEdge < 0 || distanceFromEdge > DRAG_CONFIG.leftDropZone) {
       return null;
@@ -261,10 +272,28 @@ export class DropTargetDetector {
       return gapTarget;
     }
 
+    // A named zone (a closed tab's pill) takes the drop for the block it names.
+    // A refusal must not fall through, or the drop lands beside the host block.
+    const named = findNamedDropIntoZone(elementUnderCursor);
+    const namedOwner = named === null ? undefined : this.blockManager.getBlockById(named.blockId);
+
+    if (named !== null && namedOwner !== undefined) {
+      const target = this.dropIntoTarget(namedOwner, sourceBlock);
+
+      return target === null ? null : { ...target, zone: named.zone };
+    }
+
     const resolved = this.findDropTargetBlock(elementUnderCursor, clientX, clientY);
 
     if (!resolved.holder || !resolved.block || resolved.block === sourceBlock) {
       return null;
+    }
+
+    // An empty container showing a drop-into zone (an empty tab) takes the
+    // drop as its first child from anywhere on it. Without this, a top-half
+    // hover normalizes to the previous sibling — a hidden tab.
+    if (hasOwnDropIntoZone(resolved.block)) {
+      return this.dropIntoTarget(resolved.block, sourceBlock);
     }
 
     // A vertical drop in the EMPTY space below a column's content — the dead
@@ -448,14 +477,19 @@ export class DropTargetDetector {
       const nearLeft = clientX <= rect.left + sideZone;
       const nearRight = clientX >= rect.right - sideZone;
 
-      // Left edge fires only on the FIRST column, right edge only on the LAST —
-      // the row's outer edges. Every inner position (including inner edges)
-      // falls through to into-column.
-      if (nearLeft && this.isFirstColumnChild(targetBlock)) {
+      // The inline-start edge fires only on the FIRST column, the inline-end
+      // edge only on the LAST — the row's outer edges. Every inner position
+      // (including inner edges) falls through to into-column.
+      const direction = getElementDirection(columnsContainer);
+      const isOuterEdge = (edge: 'left' | 'right'): boolean => logicalSide(edge, direction) === 'start'
+        ? this.isFirstColumnChild(targetBlock)
+        : this.isLastColumnChild(targetBlock);
+
+      if (nearLeft && isOuterEdge('left')) {
         return { block: targetBlock, edge: 'left', depth: 0, parentId: this.findEnclosingColumnId(targetBlock) };
       }
 
-      if (nearRight && this.isLastColumnChild(targetBlock)) {
+      if (nearRight && isOuterEdge('right')) {
         return { block: targetBlock, edge: 'right', depth: 0, parentId: this.findEnclosingColumnId(targetBlock) };
       }
 
@@ -502,10 +536,10 @@ export class DropTargetDetector {
    * band, outer sideZone with no inner bound so the whole margin is live) so the
    * dropzone is identical whether or not columns already exist.
    *
-   * A left margin drop prepends a new column at the start of the row, a right
-   * margin drop appends one at the end. It does so by targeting the first/last
-   * column's first child block with a 'left'/'right' edge and that column's id as
-   * parentId — exactly the shape the row's inner outer-edge side-drop produces,
+   * An inline-start margin drop prepends a new column at the start of the row,
+   * an inline-end margin drop appends one at the end. It does so by targeting
+   * the first/last column's first child block with a 'left'/'right' edge and
+   * that column's id as parentId — exactly the shape the row's inner outer-edge side-drop produces,
    * so handleColumnDrop routes both through addColumnToList. Returns null when
    * the row has no resolvable column child, or the cursor falls in the central
    * reorder band / outside the vertical band (→ top/bottom reorders the list).
@@ -538,7 +572,8 @@ export class DropTargetDetector {
 
     const edge: 'left' | 'right' = nearLeft ? 'left' : 'right';
     const columns = this.blockManager.blocks.filter(block => block.parentId === columnListBlock.id);
-    const column = edge === 'left' ? columns[0] : columns[columns.length - 1];
+    const row = blockHolder.querySelector('[data-blok-columns]') ?? blockHolder;
+    const column = logicalSide(edge, getElementDirection(row)) === 'start' ? columns[0] : columns[columns.length - 1];
 
     if (column === undefined) {
       return null;
@@ -736,9 +771,9 @@ export class DropTargetDetector {
    * Detects a drop on the inter-column gutter — a resize separator that divides
    * two columns — and routes it to a "between columns" side-drop.
    *
-   * The separator's next sibling is the right-adjacent column's holder. We target
-   * that column's FIRST inner block with a 'left' edge so the integrator inserts a
-   * new column BEFORE it (addColumnToList side 'left'), i.e. between the two
+   * The separator's next sibling is the following column's holder. We target
+   * that column's FIRST inner block with its inline-start edge so the integrator
+   * inserts a new column BEFORE it (addColumnToList), i.e. between the two
    * columns the separator divides. Reusing a real child block keeps the indicator
    * and drop path identical to an inner-edge side-drop.
    *
@@ -778,20 +813,21 @@ export class DropTargetDetector {
       return gapRoot;
     }
 
-    // The separator sits between two column holders; the next one is the
-    // right-adjacent column. Its first child block is the side-drop target.
-    const rightColumnHolder = this.nextColumnHolder(resizer);
-    const childBlock = rightColumnHolder !== null
-      ? this.firstBlockInColumnHolder(rightColumnHolder)
+    // The separator sits between two column holders; the next one in reading
+    // order is the side-drop target, via its first child block.
+    const followingHolder = this.nextColumnHolder(resizer);
+    const childBlock = followingHolder !== null
+      ? this.firstBlockInColumnHolder(followingHolder)
       : undefined;
 
     if (childBlock === undefined) {
       return null;
     }
 
+    // Insert before that column: its inline-start side faces the separator.
     return {
       block: childBlock,
-      edge: 'left',
+      edge: getElementDirection(resizer) === 'rtl' ? 'right' : 'left',
       depth: 0,
       parentId: this.findEnclosingColumnId(childBlock),
     };
@@ -897,7 +933,7 @@ export class DropTargetDetector {
    *
    * When `clientX` is supplied, the cursor's horizontal position picks the
    * nesting depth (Notion's drag-to-indent): it snaps to a discrete indent step
-   * relative to the editor content's left edge and is clamped to the legal range
+   * relative to the editor content's inline-start edge and is clamped to the legal range
    * by {@link resolveTargetDepth}. Omitting `clientX` (unit tests, the parity
    * guard) falls back to the neighbour-based auto-resolution unchanged.
    *
@@ -957,9 +993,18 @@ export class DropTargetDetector {
 
     // The cursor's horizontal position, snapped to a discrete indent step,
     // overrides the auto-promotion when a nesting predecessor exists. The depth-0
-    // anchor is the editor content's left edge (this.ui.contentRect.left).
+    // anchor is the content's inline-start edge. A list item indents from its
+    // own text's start, which may oppose the editor's; any other block nests
+    // on its holder, in the editor's direction. The drop line follows the same split.
+    const axisElement = getListItemDepth(targetBlock) !== null
+      ? targetBlock.holder.querySelector(createSelector(DATA_ATTR.elementContent)) ?? targetBlock.holder
+      : targetBlock.holder;
     const pointerDepth = clientX !== undefined
-      ? selectPointerDepth(clientX, this.ui.contentRect.left, INDENT_PER_LEVEL)
+      ? selectPointerDepth(
+        inlineStartOffset(clientX, this.ui.contentRect, getElementDirection(axisElement)),
+        0,
+        INDENT_PER_LEVEL
+      )
       : undefined;
 
     const resolvedDepth = resolveTargetDepth({
@@ -986,7 +1031,8 @@ export class DropTargetDetector {
    * cap the indicator tucked itself one indent step in whenever the cursor moved
    * right — promising a nesting the drop then declined, so the block silently
    * landed at root. List items are exempt: they carry their own indent via the
-   * list tool's moved() hook, so their previewed depth is honest either way.
+   * list tool's moved() hook, so their previewed depth is honest either way —
+   * except under a block that takes no children, where no drop nests at all.
    *
    * @param depth - the depth resolved from the cursor / neighbours
    * @param dropIndex - index of the slot the block is dropping into
@@ -995,7 +1041,7 @@ export class DropTargetDetector {
    */
   private clampToApplicableDepth(depth: number, dropIndex: number, sourceBlock?: Block): number {
     // No source (unit tests, the parity guard) leaves auto-resolution untouched.
-    if (depth <= 0 || sourceBlock === undefined || sourceBlock.name === 'list') {
+    if (depth <= 0 || sourceBlock === undefined) {
       return depth;
     }
 
@@ -1012,8 +1058,17 @@ export class DropTargetDetector {
     const candidates = preceding.map(block => ({
       id: block.id,
       isList: block.name === 'list',
+      acceptsChildren: acceptsChildren(block),
       depth: this.structuralDepthOf(block, byId),
     }));
+
+    if (sourceBlock.name === 'list') {
+      // A list item keeps its previewed depth, except right under a block that
+      // takes no children: the drop lands it beside that block instead.
+      const parentSlot = candidates.find(candidate => candidate.depth <= depth - 1);
+
+      return parentSlot?.depth === depth - 1 && !parentSlot.acceptsChildren ? parentSlot.depth : depth;
+    }
 
     return deepestLegalStructuralDepth(false, depth, candidates);
   }
@@ -1041,6 +1096,29 @@ export class DropTargetDetector {
     };
 
     return walk(block.parentId);
+  }
+
+  /**
+   * The first-child drop into a container showing a drop-into zone, or null
+   * when the container is (inside) a dragged block or refuses a dragged tool.
+   * @param owner - the block whose holder shows the zone
+   * @param sourceBlock - the primary dragged block
+   */
+  private dropIntoTarget(owner: Block, sourceBlock: Block): DropTarget | null {
+    const sources = this.sourceBlocks.length > 0 ? this.sourceBlocks : [sourceBlock];
+    const sourceIds = new Set(sources.map(block => block.id));
+    const roots = sources.filter(block => block.parentId === null || !sourceIds.has(block.parentId));
+    const isInsideSource = (block: Block | undefined, seen: Set<string>): boolean =>
+      block !== undefined && !seen.has(block.id) && (
+        sourceIds.has(block.id)
+        || (block.parentId !== null && isInsideSource(this.blockManager.getBlockById(block.parentId), seen.add(block.id)))
+      );
+
+    if (isInsideSource(owner, new Set<string>()) || roots.some(root => !isChildToolAllowed(owner, root.name))) {
+      return null;
+    }
+
+    return { block: owner, edge: 'bottom', depth: 0, parentId: owner.id };
   }
 
   /**

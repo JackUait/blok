@@ -59,6 +59,8 @@ const createToggleWithChild = async (page: Page): Promise<void> => {
 
     window.blokInstance = blok;
     await blok.isReady;
+    // A loaded toggle starts collapsed; open it as this browser would have.
+    blok.blocks.getById('toggle-1')?.call('expand');
   }, { holder: HOLDER_ID });
 };
 
@@ -219,6 +221,8 @@ const createEmptyToggle = async (page: Page): Promise<void> => {
 
     window.blokInstance = blok;
     await blok.isReady;
+    // A loaded toggle starts collapsed; open it as this browser would have.
+    blok.blocks.getById('toggle-1')?.call('expand');
   }, { holder: HOLDER_ID });
 };
 

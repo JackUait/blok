@@ -116,3 +116,6 @@ override-extension/payload/
 # written here again on every seed. Six megabytes nobody should commit.
 mutation-state.tar.gz
 stryker.log
+
+# Playwright blob reports from sharded runs
+blob-report/

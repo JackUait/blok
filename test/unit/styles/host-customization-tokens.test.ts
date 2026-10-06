@@ -203,7 +203,7 @@ describe('Host customization tokens (public --blok-* contract)', () => {
 
       expect(body).not.toBeNull();
       expect(body).toMatch(
-        /margin-left:\s*calc\(var\(--_blok-block-depth,\s*0\)\s*\*\s*var\(--blok-block-indent-step,\s*24px\)/
+        /margin-inline-start:\s*calc\(var\(--_blok-block-depth,\s*0\)\s*\*\s*var\(--blok-block-indent-step,\s*24px\)/
       );
     });
 
@@ -402,6 +402,14 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       expect(body).toContain('margin-bottom: var(--blok-heading-margin-bottom, 1px)');
       expect(body).toContain('line-height: var(--blok-heading-line-height, 1.3)');
     });
+  });
+
+  it('keeps callout emoji centering tied to the fixed child heading margin', () => {
+    const emoji = findRuleBody(css, '[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child :is(h1, h2, h3))');
+    const heading = findRuleBody(css, '[data-blok-toggle-children] :is(h1, h2, h3, h4, h5, h6)');
+
+    expect(emoji).toMatch(/margin-top:\s*calc\([^;]*\+\s*1px\)\s*;/);
+    expect(heading).toContain('@apply mt-px;');
   });
 
   describe('embed spacing token', () => {

@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 /**
  * Generic container-block paste-ejection regression suite.
@@ -59,6 +60,7 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
     },
     { holder: HOLDER_ID, initialData: data ?? null }
   );
+  await openFixtureToggles(page, data);
 };
 
 const simulatePaste = async (page: Page, opts: { html?: string; text?: string }): Promise<void> => {

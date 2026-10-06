@@ -86,10 +86,17 @@ const RENDER_DEFENSE: Record<string, { pattern: RegExp; mechanism: string }> = {
     mechanism: 'rendered() renders only children whose name === COLUMN_TOOL',
   },
   table: {
-    // The grid renders from the model by coordinate; removeGhostChildren() then
-    // deletes any child the model does not place in a cell (findCellForBlock null).
+    // The grid renders from the model by coordinate; removeEmptyGhostChildren()
+    // then finds every child the model does not place in a cell (findCellForBlock
+    // null): an empty one is deleted, one with content moves to the root.
     pattern: /findCellForBlock\(\s*\w+\.id\s*\)\s*===\s*null/,
-    mechanism: 'removeGhostChildren() evicts children not referenced by any cell',
+    mechanism: 'removeEmptyGhostChildren() + promoteGhostChildren() evict children not referenced by any cell',
+  },
+  tabs: {
+    // rendered() mounts ONLY children whose tool name is `tab`; any other child
+    // is evicted to the root by scheduleRogueEviction() once Yjs replay settles.
+    pattern: /\.filter\(\s*\w+\s*=>\s*\w+\.name\s*===\s*TAB_TOOL\b/,
+    mechanism: 'rendered() renders only children whose name === TAB_TOOL; scheduleRogueEviction() reparents the rest to the root',
   },
 };
 
@@ -154,7 +161,7 @@ describe('ARCHITECTURE LAW: tool-owned children are never an indent target', () 
     }
 
     it('finds the known container tools (the scan is not vacuous)', () => {
-      expect([...claimingTools.keys()].sort()).toEqual(['column-list', 'table']);
+      expect([...claimingTools.keys()].sort()).toEqual(['column-list', 'table', 'tabs']);
     });
 
     it.each([...claimingTools.entries()])(
@@ -222,7 +229,7 @@ describe('ARCHITECTURE LAW: tool-owned children are never an indent target', () 
     const ownsChildrenDirs = declaringDirs();
 
     it('finds the known ownsChildren tools (the scan is not vacuous)', () => {
-      expect(ownsChildrenDirs).toEqual(['column-list', 'table']);
+      expect(ownsChildrenDirs).toEqual(['column-list', 'table', 'tabs']);
     });
 
     it.each(ownsChildrenDirs)(

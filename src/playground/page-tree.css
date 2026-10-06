@@ -1,0 +1,212 @@
+/*
+  Page tree drawer (page-tree.ts). Plain rules, not utilities, like the page
+  header in playground.css: utilities here would be emitted unscoped. Mirrors
+  the settings drawer on the other side. Radii are literal: Blok's radius
+  roles exist only inside its own roots, and resolve to 0 out here.
+*/
+.pg-pages-panel,
+.pg-pages-tab {
+  --pg-tree-ink: #222222;
+  --pg-tree-muted: #717171;
+  --pg-tree-faint: #a8a8a8;
+  --pg-tree-surface: #ffffff;
+  --pg-tree-line: #ebebeb;
+  --pg-tree-hover: rgba(55, 53, 47, 0.06);
+  /* Selected is no darker than hover (CLAUDE.md: no blue, hover fill at most). */
+  --pg-tree-current: var(--pg-tree-hover);
+  --pg-tree-toggle-hover: rgba(55, 53, 47, 0.1);
+  --pg-tree-glide: cubic-bezier(0.22, 1, 0.36, 1);
+
+  font-family: var(--pg-font);
+}
+.dark-mode .pg-pages-panel,
+.dark-mode .pg-pages-tab {
+  --pg-tree-ink: #ffffff;
+  --pg-tree-muted: #a8a8a8;
+  --pg-tree-faint: #6e6e6e;
+  --pg-tree-surface: #191919;
+  --pg-tree-line: #2f2f2f;
+  --pg-tree-hover: rgba(255, 255, 255, 0.06);
+  --pg-tree-toggle-hover: rgba(255, 255, 255, 0.12);
+}
+
+/* Vertical handle on the left edge. */
+.pg-pages-tab {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  z-index: 10;
+  padding: 16px 7px;
+  border: 1px solid var(--pg-tree-line);
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  background: var(--pg-tree-surface);
+  color: var(--pg-tree-muted);
+  box-shadow: 2px 0 12px -4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  user-select: none;
+  transform: translateY(-50%);
+  transition:
+    transform 320ms var(--pg-tree-glide),
+    opacity 220ms var(--pg-tree-glide),
+    color 0.15s ease;
+}
+.pg-pages-tab:hover { color: var(--pg-tree-ink); }
+.pg-pages-tab[hidden] { display: none; }
+.pg-pages-tab__label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+}
+.pg-pages-tab__key { margin-left: 4px; opacity: 0.7; }
+.pg-pages-tab__key::before { content: '·'; margin-right: 4px; opacity: 0.7; }
+/* Out of the way while the drawer is open, or while the header hides on scroll. */
+.pg-pages-tab.is-covered,
+body.header-hidden .pg-pages-tab {
+  transform: translate(calc(-100% - 8px), -50%);
+  opacity: 0;
+  pointer-events: none;
+}
+html[data-pg-modality="keyboard"] .pg-pages-tab:focus-visible { outline: 2px solid var(--pg-tree-ink); outline-offset: 2px; }
+
+/* The drawer: closed, it sits just past the left edge. */
+.pg-pages-panel {
+  position: fixed;
+  left: 12px;
+  top: 92px;
+  bottom: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  width: 272px;
+  border: 1px solid var(--pg-tree-line);
+  border-radius: 16px;
+  background: var(--pg-tree-surface);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.04);
+  transform: translateX(calc(-100% - 12px));
+  transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dark-mode .pg-pages-panel { box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.5), 0 2px 8px -2px rgba(0, 0, 0, 0.3); }
+.pg-pages-panel.is-open { transform: none; }
+
+.pg-pages-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 16px 10px 20px;
+}
+.pg-pages-title {
+  flex: 1;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--pg-tree-ink);
+}
+.pg-pages-close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pg-tree-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.pg-pages-close svg { display: block; width: 15px; height: 15px; }
+.pg-pages-close:hover { background: var(--pg-tree-hover); color: var(--pg-tree-ink); }
+html[data-pg-modality="keyboard"] .pg-pages-close:focus-visible { outline: 2px solid var(--pg-tree-ink); outline-offset: 1px; }
+
+.pg-pages-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 8px 12px;
+}
+.pg-tree,
+.pg-tree-group {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pg-tree-group[hidden] { display: none; }
+
+/* The toggle sits over the link's start padding, so the whole row is one hover target. */
+.pg-tree-row {
+  --pg-tree-indent: calc(var(--pg-tree-depth, 0) * 14px);
+
+  position: relative;
+}
+.pg-tree-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 8px 4px calc(var(--pg-tree-indent) + 8px);
+  border-radius: 6px;
+  color: var(--pg-tree-ink);
+  font-size: 14px;
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+/* Rows below the root keep the toggle's slot even without one, so icons line up. */
+.pg-tree-group .pg-tree-link { padding-left: calc(var(--pg-tree-indent) + 30px); }
+.pg-tree-link:hover { background: var(--pg-tree-hover); }
+.pg-tree-link[aria-current="page"] {
+  background: var(--pg-tree-current);
+  font-weight: 600;
+}
+html[data-pg-modality="keyboard"] .pg-tree-link:focus-visible { outline: 2px solid var(--pg-tree-ink); outline-offset: -2px; }
+
+.pg-tree-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--pg-tree-muted);
+  font-size: 15px;
+  line-height: 1;
+}
+.pg-tree-icon svg { display: block; width: 18px; height: 18px; }
+.pg-tree-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pg-tree-toggle {
+  position: absolute;
+  left: calc(var(--pg-tree-indent) + 6px);
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--pg-tree-faint);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.pg-tree-toggle svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  transition: transform 160ms var(--pg-tree-glide);
+}
+.pg-tree-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+.pg-tree-toggle:hover { background: var(--pg-tree-toggle-hover); color: var(--pg-tree-ink); }
+html[data-pg-modality="keyboard"] .pg-tree-toggle:focus-visible { outline: 2px solid var(--pg-tree-ink); outline-offset: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pg-pages-panel,
+  .pg-pages-tab,
+  .pg-tree-toggle svg { transition: none; }
+}

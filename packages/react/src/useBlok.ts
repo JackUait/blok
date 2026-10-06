@@ -719,22 +719,26 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   const appliedI18nRef = useRef<UseBlokConfig['i18n']>(config.i18n);
 
   useEffect(() => {
-    if (editor === null || i18n === undefined) {
+    const previous = appliedI18nRef.current;
+
+    if (editor === null || (i18n === undefined && previous?.direction === undefined)) {
       return;
     }
 
-    if (deepEqual(i18n, appliedI18nRef.current)) {
+    if (deepEqual(i18n, previous)) {
       return;
     }
 
     appliedI18nRef.current = i18n;
 
-    const { locale, messages, direction } = i18n;
+    const { locale, messages, direction } = i18n ?? {};
+    // A dropped direction must be cleared, or the editor keeps the old one.
+    const nextDirection = direction ?? (previous?.direction === undefined ? undefined : null);
 
     void editor.i18n.update({
       ...(locale === undefined ? {} : { locale }),
       ...(messages === undefined ? {} : { messages }),
-      ...(direction === undefined ? {} : { direction }),
+      ...(nextDirection === undefined ? {} : { direction: nextDirection }),
     });
   }, [editor, i18n]);
 

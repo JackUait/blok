@@ -75,6 +75,20 @@ describe('Notifier show (index.ts)', () => {
     document.querySelectorAll('[data-blok-testid="notifier-container"]').forEach((el) => el.remove());
   });
 
+  it('gives each toast the direction of the editor that showed it', () => {
+    const editor = document.createElement('div');
+
+    editor.style.direction = 'rtl';
+    document.body.appendChild(editor);
+    show({ message: 'rtl toast' }, 'bottom-left', editor);
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]');
+
+    expect(notification?.getAttribute('dir')).toBe('rtl');
+    expect(document.querySelector('[data-blok-testid="notifier-container"]')?.hasAttribute('dir')).toBe(false);
+    editor.remove();
+  });
+
   it('does not render a progress bar (dark pill design has no progress bar)', () => {
     show({ message: 'test alert', time: 5000 });
 

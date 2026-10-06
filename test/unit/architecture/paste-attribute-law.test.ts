@@ -205,6 +205,14 @@ interface ExpectedDynamicReads {
 
 const EXPECTED_DYNAMIC_READS: ExpectedDynamicReads[] = [
   {
+    file: 'src/tools/table/index.ts',
+    count: 1,
+    pastedAttrs: [],
+    reason:
+      'Table.sanitize reads the internal page ID from stored cell HTML during save, ' +
+      'not from the pasted DOM before onPaste. The core paste sanitizer keeps the mark.',
+  },
+  {
     file: 'src/tools/code/index.ts',
     count: 1,
     pastedAttrs: [CODE_LANGUAGE_ATTR],

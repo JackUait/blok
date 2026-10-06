@@ -26,7 +26,9 @@ import type {
   ReactInlineToolRenderProps as PublishedReactInlineToolRenderProps,
   CreateReactInlineToolSpec as PublishedCreateReactInlineToolSpec,
   BlokEditorHandle as PublishedBlokEditorHandle,
+  BlokViewProps as PublishedBlokViewProps,
 } from '../../../packages/react/types/index';
+import type { BlokViewProps as SourceBlokViewProps } from '../../../packages/react/src/BlokView';
 import type { BlokEditorHandle as SourceBlokEditorHandle } from '../../../packages/react/src/useBlokHandle';
 import type {
   ReactBlockRenderProps as SourceReactBlockRenderProps,
@@ -80,6 +82,7 @@ const _useBlokConfig: AssertEqual<PublishedUseBlokConfig, SourceUseBlokConfig> =
 const _editorHandle: AssertEqual<keyof PublishedBlokEditorHandle, keyof SourceBlokEditorHandle> = true;
 const _contentProps: AssertEqual<PublishedBlokContentProps, SourceBlokContentProps> = true;
 const _editorProps: AssertEqual<PublishedBlokEditorProps, SourceBlokEditorProps> = true;
+const _viewProps: AssertEqual<keyof PublishedBlokViewProps, keyof SourceBlokViewProps> = true;
 
 // useBlocks block-creation surface — the published declarations must not drift
 // from the source of truth in packages/react/src/blocks-snapshot.ts.
@@ -135,3 +138,4 @@ void _treeInsertSpec;
 void _moveTarget;
 void _useBlocksApi;
 void _editorHandle;
+void _viewProps;

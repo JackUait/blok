@@ -65,6 +65,8 @@ export declare class DatabaseRow implements BlockTool {
    */
   getTitle(): string | undefined;
 
+  updatePageId(param: { pageId: string }): void;
+
   /**
    * Update the row's fractional-index position
    */

@@ -1,3 +1,5 @@
+import type { TextDirection } from '../portal-direction';
+
 /**
  * Input for popover position resolution.
  * All rects/sizes are in viewport coordinates unless noted.
@@ -15,8 +17,13 @@ export interface PositionInput {
   scrollOffset: { x: number; y: number };
   /** Gap between anchor and popover edge (default 8) */
   offset?: number;
-  /** Element rect whose left edge overrides anchor's left for horizontal alignment */
+  /** Element rect whose start edge overrides the anchor's for horizontal alignment */
   leftAlignRect?: DOMRect;
+  /**
+   * Reading direction of the popover. In RTL the below/above placement aligns
+   * to the anchor's right edge and flips rightward. Defaults to `ltr`.
+   */
+  direction?: TextDirection;
   /**
    * When true, the popover is placed to the left of the anchor (when it fully
    * fits there) and is vertically centered on the anchor, shifted up or down
@@ -87,6 +94,7 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     placeLeftOfAnchor = false,
     asideSide = 'left',
     viewportMargin = 0,
+    direction = 'ltr',
   } = input;
 
   const boundaryBottom = Math.min(viewportSize.height, scopeBounds.bottom);
@@ -166,21 +174,39 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     : rawTop;
 
   // --- Horizontal ---
+  const minLeft = boundaryLeft + scrollOffset.x;
+  const maxRight = boundaryRight + scrollOffset.x;
+
+  if (direction === 'rtl') {
+    const alignRight = (leftAlignRect?.right ?? anchor.right) + scrollOffset.x;
+    const alignLeft = anchor.left + scrollOffset.x;
+    const openRight = shouldFlip(popoverSize.width, alignRight - minLeft, maxRight - alignLeft);
+    const rawLeft = openRight
+      ? Math.min(maxRight - popoverSize.width, alignLeft)
+      : alignRight - popoverSize.width;
+    // Mirror of the LTR clamp: keep the start (right) edge inside the boundary.
+    const left = rawLeft < minLeft
+      ? Math.min(minLeft, maxRight - popoverSize.width)
+      : rawLeft;
+
+    return { top, left, openTop, openLeft: !openRight };
+  }
+
   const alignLeft = (leftAlignRect?.left ?? anchor.left) + scrollOffset.x;
   const alignRight = anchor.right + scrollOffset.x;
 
-  const spaceRight = boundaryRight + scrollOffset.x - alignLeft;
-  const spaceLeft = alignRight - boundaryLeft - scrollOffset.x;
+  const spaceRight = maxRight - alignLeft;
+  const spaceLeft = alignRight - minLeft;
 
   const openLeft = shouldFlip(popoverSize.width, spaceRight, spaceLeft);
 
   const rawLeft = openLeft
-    ? Math.max(boundaryLeft + scrollOffset.x, anchor.right - popoverSize.width + scrollOffset.x)
+    ? Math.max(minLeft, anchor.right - popoverSize.width + scrollOffset.x)
     : alignLeft;
 
   // Clamp: ensure popover doesn't overflow right boundary
-  const left = rawLeft + popoverSize.width > boundaryRight + scrollOffset.x
-    ? Math.max(boundaryLeft + scrollOffset.x, boundaryRight + scrollOffset.x - popoverSize.width)
+  const left = rawLeft + popoverSize.width > maxRight
+    ? Math.max(minLeft, maxRight - popoverSize.width)
     : rawLeft;
 
   return { top, left, openTop, openLeft };

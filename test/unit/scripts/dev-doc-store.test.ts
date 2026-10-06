@@ -13,13 +13,24 @@ describe('handleDocumentRequest', () => {
   });
 
   const request = (method: string, path: string, body?: string): { status: number; body?: string } =>
-    handleDocumentRequest({ documents, seed: SEED, method, path, body });
+    handleDocumentRequest({ documents, seedFor: () => SEED, method, path, body });
 
   it('serves the seed document for a document nobody has written yet', () => {
     const response = request('GET', '/docs/playground');
 
     expect(response.status).toBe(200);
     expect(JSON.parse(response.body ?? '')).toEqual(SEED);
+  });
+
+  it('seeds each document by its own id', () => {
+    const response = handleDocumentRequest({
+      documents,
+      seedFor: (id: string) => ({ blocks: [], id }),
+      method: 'GET',
+      path: '/docs/room--page--p1',
+    });
+
+    expect(JSON.parse(response.body ?? '')).toEqual({ blocks: [], id: 'room--page--p1' });
   });
 
   it('serves what was written back', () => {

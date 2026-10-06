@@ -75,27 +75,19 @@ export class BlockRemoval {
       }
 
       /**
-       * Removing a columns wrapper (`column` or `column_list`) drops its ENTIRE
-       * descendant subtree rather than promoting children to root.
+       * A Tool that declares `deletesChildren` (column, column_list, tabs,
+       * tab) takes its whole subtree with it: its children make no sense
+       * outside it, and promoting them would strand structurally invalid
+       * blocks (a `column` at root). The flat array is the Saver's source of
+       * truth, so the descendants are spliced out below, not just detached.
        *
-       * A column / column_list is pure layout: its children only make sense
-       * inside it. Promoting them (the generic toggle/callout behaviour below)
-       * leaks the deleted column's content out to the document root and — for a
-       * nested column_list — strands structurally-invalid `column` blocks at
-       * root (a column may only live inside a column_list). The flat blocks
-       * array is the Saver's source of truth, so descendants left in it
-       * resurface in the output even though their holders were detached when the
-       * wrapper's holder was removed. Splice the whole subtree out so nothing
-       * survives orphaned.
-       *
-       * Other container tools (toggle, callout, toggleable header) keep the
-       * promote-to-root behaviour: deleting the container preserves its body.
+       * Other containers (toggle, callout) promote their children one level.
        */
-      const isColumnsWrapper = block.name === 'column' || block.name === 'column_list';
-      const descendants = isColumnsWrapper ? this.collectDescendants(block) : [];
+      const deletesSubtree = block.tool.deletesChildren;
+      const descendants = deletesSubtree ? this.collectDescendants(block) : [];
       const promotedIds: string[] = [];
 
-      if (isColumnsWrapper) {
+      if (deletesSubtree) {
         // Detach every block in the subtree first so a nested column /
         // column_list descendant's removed() hook finds no children and its
         // auto-unwrap is a no-op while we tear the subtree down.
@@ -112,7 +104,7 @@ export class BlockRemoval {
 
       blocksStore.remove(index);
 
-      // Splice the columns subtree's descendants out of the flat array + Yjs.
+      // Splice the deleted subtree's descendants out of the flat array + Yjs.
       // The wrapper's holder.remove() above already detached their DOM; this
       // removes their model entries so the Saver never re-emits them.
       // `skipYjsSync` covers only the block the caller named: a caller that
@@ -315,6 +307,9 @@ export class BlockRemoval {
     // column. Reparenting would keep the column non-empty, so its
     // collapse-when-childless check never fires and the column_list never
     // unwraps. Real containers (toggle-in-toggle etc.) still promote one level.
+    // Name-based on purpose: it pairs with the column-only collapse in
+    // removeBlock. `isLayout` / `deletesChildren` would also catch a `tab`,
+    // which never collapses and must keep the promoted body.
     const grandIsColumn = parentBlock?.name === 'column' || parentBlock?.name === 'column_list';
     const grandParentId = (parentBlock !== undefined && !grandIsColumn) ? parentBlock.id : null;
     const promotedChildIds: string[] = [];

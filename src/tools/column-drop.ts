@@ -4,6 +4,7 @@ import {
   captureSiblingTops,
   playSiblingShift,
 } from '../components/modules/drag/utils/ColumnDropAnimation';
+import { getElementDirection, logicalSide } from '../components/utils/direction';
 import {
   COLUMN_LIST_TOOL,
   COLUMN_TOOL,
@@ -13,6 +14,13 @@ import {
 import { isInsideTableCell, isRestrictedInTableCell } from './table/table-restrictions';
 
 export type ColumnDropSide = 'left' | 'right';
+
+/**
+ * Whether a drop on physical `side` lands before its neighbour. The row lays
+ * out in `row`'s direction, so in RTL the left side is the inline end.
+ */
+const dropsBefore = (side: ColumnDropSide, row: Element | null | undefined): boolean =>
+  logicalSide(side, getElementDirection(row)) === 'start';
 
 /**
  * Whether a new column_list may sit under `parentId`, beside `anchorId`.
@@ -50,8 +58,9 @@ const runTransacted = (api: API, fn: () => void): void => {
  * sources stacked in document order. The list takes the target's place under
  * the target's own parent, so a drop inside a toggle or callout stays there.
  *
- * - side 'left'  -> column order = [sources column, target column]
- * - side 'right' -> column order = [target column, sources column]
+ * - inline-start side -> column order = [sources column, target column]
+ * - inline-end side   -> column order = [target column, sources column]
+ * (`side` is physical: left is the inline start in LTR, the end in RTL.)
  *
  * The target's subtree follows automatically because children track their
  * parent. All work runs in a single undo entry via `transact`.
@@ -91,6 +100,8 @@ export const wrapInNewColumnList = (
 
   const targetHolder = target?.holder;
   const targetStartWidth = targetHolder?.getBoundingClientRect().width ?? 0;
+  // The new row takes the target's place, so it lays out in the container's direction.
+  const sourcesFirst = dropsBefore(side, targetHolder?.parentElement);
   const siblingTops = targetHolder !== undefined ? captureSiblingTops(targetHolder) : null;
 
   const created: {
@@ -113,8 +124,8 @@ export const wrapInNewColumnList = (
     const firstColumn = api.blocks.insertAt(COLUMN_TOOL, { noSeed: true }, { parentId: list.id, position: 'end' });
     const secondColumn = api.blocks.insertAt(COLUMN_TOOL, { noSeed: true }, { parentId: list.id, position: 'end' });
 
-    const targetColumn = side === 'left' ? secondColumn : firstColumn;
-    const sourcesColumn = side === 'left' ? firstColumn : secondColumn;
+    const targetColumn = sourcesFirst ? secondColumn : firstColumn;
+    const sourcesColumn = sourcesFirst ? firstColumn : secondColumn;
 
     created.columnHolders = [firstColumn.holder, secondColumn.holder];
     created.sourcesColumnHolder = sourcesColumn.holder;
@@ -132,7 +143,7 @@ export const wrapInNewColumnList = (
   if (targetHolder !== undefined && created.columnHolders.length === 2) {
     animateColumnWidths({
       holders: created.columnHolders,
-      startWidths: side === 'left' ? [0, targetStartWidth] : [targetStartWidth, 0],
+      startWidths: sourcesFirst ? [0, targetStartWidth] : [targetStartWidth, 0],
       newColumnHolder: created.sourcesColumnHolder,
     });
 
@@ -241,8 +252,9 @@ export const wrapBlocksInColumns = (
  * Add ONE new `column` beside an existing `neighborColumnId` inside its
  * `column_list`, then move the dragged `sourceIds` into it (in order).
  *
- * - side 'left'  -> new column inserted before the neighbor
- * - side 'right' -> new column inserted after the neighbor
+ * - inline-start side -> new column inserted before the neighbor
+ * - inline-end side   -> new column inserted after the neighbor
+ * (`side` is physical: left is the inline start in LTR, the end in RTL.)
  *
  * All work runs in a single undo entry via `transact`. Aborts (returns null,
  * no mutation) when sources is empty or the neighbor is stale.
@@ -286,11 +298,12 @@ export const addColumnToList = (
   const siblingTops = listHolder !== undefined ? captureSiblingTops(listHolder) : null;
 
   const created: { columnId: string | null } = { columnId: null };
+  const before = dropsBefore(side, neighbor?.holder?.parentElement);
 
   runTransacted(api, () => {
     const column = api.blocks.insertAt(COLUMN_TOOL, { noSeed: true }, {
       parentId: columnListId,
-      position: side === 'left' ? { before: neighborColumnId } : { after: neighborColumnId },
+      position: before ? { before: neighborColumnId } : { after: neighborColumnId },
     });
 
     created.columnId = column.id;

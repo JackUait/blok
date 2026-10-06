@@ -120,6 +120,8 @@ describe('mutation-type constants declared on the core entry', () => {
     'BlockRemovedMutationType',
     'BlockMovedMutationType',
     'BlockChangedMutationType',
+    'BlockMutationOrigin',
+    'ViewState',
   ])('types/index.d.ts exports %s', (name) => {
     expect(exported.has(name)).toBe(true);
   });

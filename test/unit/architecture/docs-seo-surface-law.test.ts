@@ -5,7 +5,7 @@
  *
  * The incident: until 2026-07-21 the docs site shipped ONE static `<head>` for
  * the whole property. Every one of the 65 addressable URLs — the homepage, the
- * playground, the migration guide, all 28 API modules and all 29 tool pages —
+ * playground, the migration guide, every API module and every tool page —
  * answered with the identical `<title>` and `<meta name="description">`, and
  * there was no sitemap at all. To a search engine that is not 65 pages, it is
  * one page with 64 duplicates: 57 documentation URLs were mutually

@@ -41,6 +41,7 @@ export class API extends Module {
       readOnly: this.Blok.ReadOnlyAPI.methods,
       ui: this.Blok.UiAPI.methods,
       theme: this.Blok.ThemeAPI.methods,
+      viewState: this.Blok.ViewStateAPI.methods,
       config: {
         get linkPaste() {
           return apiConfig.linkPaste;

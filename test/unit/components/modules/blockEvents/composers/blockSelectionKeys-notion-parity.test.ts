@@ -22,6 +22,7 @@ interface ListBlockOptions {
   checked?: boolean;
   name?: string;
   ownsChildren?: boolean;
+  acceptsChildren?: boolean;
 }
 
 const createListBlock = (options: ListBlockOptions): Block => {
@@ -51,6 +52,7 @@ const createListBlock = (options: ListBlockOptions): Block => {
     tool: {
       name: options.name ?? 'list',
       ownsChildren: options.ownsChildren ?? false,
+      acceptsChildren: options.acceptsChildren ?? true,
     },
     save: vi.fn(() => Promise.resolve({
       id: options.id,
@@ -167,6 +169,45 @@ describe('BlockSelectionKeys — Notion parity (M-8, M-9, m-12)', () => {
       expect(setBlockParent).not.toHaveBeenCalledWith(b, 'table');
       expect(setBlockParent).not.toHaveBeenCalledWith(c, 'table');
       expect(setBlockParent).toHaveBeenCalledWith(c, 'b');
+    });
+  });
+
+  describe('blocks that take no children', () => {
+    it('never nests the selection under a preceding page', () => {
+      const page = createListBlock({ id: 'pg', name: 'page', parentId: null, acceptsChildren: false });
+      const b = createListBlock({ id: 'b', name: 'paragraph', parentId: null });
+      const c = createListBlock({ id: 'c', name: 'paragraph', parentId: null });
+      const { blok, setBlockParent } = createBlok([page, b, c], [b, c]);
+
+      new BlockSelectionKeys(blok).handleIndent(tabEvent(false));
+
+      expect(setBlockParent).not.toHaveBeenCalledWith(b, 'pg');
+      expect(setBlockParent).not.toHaveBeenCalledWith(c, 'pg');
+    });
+
+    it('never nests the rest of the selection under a selected page with nothing above it', () => {
+      const page = createListBlock({ id: 'pg', name: 'page', parentId: null, acceptsChildren: false });
+      const b = createListBlock({ id: 'b', name: 'paragraph', parentId: null });
+      const { blok, setBlockParent } = createBlok([page, b], [page, b]);
+
+      new BlockSelectionKeys(blok).handleIndent(tabEvent(false));
+
+      expect(setBlockParent).not.toHaveBeenCalled();
+    });
+
+    it('does not hand the following siblings to an outdented page', () => {
+      const parent = createListBlock({ id: 'p', name: 'paragraph', parentId: null });
+      const a = createListBlock({ id: 'a', name: 'paragraph', parentId: 'p' });
+      const page = createListBlock({ id: 'pg', name: 'page', parentId: 'p', acceptsChildren: false });
+      const c = createListBlock({ id: 'c', name: 'paragraph', parentId: 'p' });
+
+      parent.contentIds.push('a', 'pg', 'c');
+      const { blok, setBlockParent } = createBlok([parent, a, page, c], [a, page]);
+
+      new BlockSelectionKeys(blok).handleIndent(tabEvent(true));
+
+      expect(setBlockParent).not.toHaveBeenCalledWith(c, 'pg');
+      expect(setBlockParent).toHaveBeenCalledWith(page, null);
     });
   });
 

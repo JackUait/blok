@@ -1404,6 +1404,45 @@ describe('Block', () => {
     });
   });
 
+  describe('onNavigationEnter', () => {
+    const keydown = (): KeyboardEvent => new KeyboardEvent('keydown', { key: 'Enter' });
+
+    it('passes the event to the tool and reports that it handled it', () => {
+      const { block } = createBlock();
+      const onNavigationEnter = vi.fn(() => true);
+      const event = keydown();
+
+      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.onNavigationEnter = onNavigationEnter;
+
+      expect(block.onNavigationEnter(event)).toBe(true);
+      expect(onNavigationEnter).toHaveBeenCalledWith(event);
+    });
+
+    it('reports false when the tool has no onNavigationEnter', () => {
+      const { block } = createBlock();
+
+      expect(block.onNavigationEnter(keydown())).toBe(false);
+    });
+
+    it('reports false when the tool returns anything but true', () => {
+      const { block } = createBlock();
+
+      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.onNavigationEnter = vi.fn(() => 'yes');
+
+      expect(block.onNavigationEnter(keydown())).toBe(false);
+    });
+
+    it('reports false when the tool throws', () => {
+      const { block } = createBlock();
+
+      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.onNavigationEnter = vi.fn(() => {
+        throw new Error('boom');
+      });
+
+      expect(block.onNavigationEnter(keydown())).toBe(false);
+    });
+  });
+
   describe('edit metadata', () => {
     it('should initialize lastEditedAt and lastEditedBy from constructor options', () => {
       const { block } = createBlock({

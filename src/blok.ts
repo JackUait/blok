@@ -4,6 +4,8 @@ import type { BlokConfig, API, EditorWidth, Tokens, EditorI18n, I18nUpdateOption
 
 import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
+import { SettingChanged } from './components/events/SettingChanged';
+import type { SettingChangedPayload } from './components/events/SettingChanged';
 import { getBlokVersion, isObject, isFunction } from './components/utils';
 import { announce } from './components/utils/announcer';
 import { prefersReducedMotion } from './components/utils/reduced-motion';
@@ -45,6 +47,10 @@ export { TEST_ID } from './components/constants/test-ids';
  */
 export { BLOK_FONT_SIZE_TOKENS } from './components/utils/font-size-tokens';
 
+export { inspectOfflineScope, forgetOfflineScope } from './components/modules/collaboration/offline-scope';
+export { listOfflinePages, forgetOfflinePage } from './components/modules/collaboration/offline-pages';
+export { downloadOfflinePage } from './components/modules/collaboration/headless-offline-page';
+
 /**
  * Full teardown of an instance: modules and their listeners, the save queue's
  * `beforeunload` guard, the shared tooltip, and the readiness-registry entry
@@ -63,6 +69,10 @@ function teardown(instance: Blok, blok: Core): void {
   // Drop this instance from the readiness registry first, so aggregates
   // scoped to a subtree stop counting an editor that is going away.
   unregisterInstance(instance);
+
+  const persistence = blok.config?.persistence;
+  // Before markDestroyed: the last edit must be read while blocks are mounted.
+  const finalSave = blok.moduleInstances.ModificationsObserver?.flushOnDestroy?.() ?? null;
 
   // Mark all modules as destroyed first so any in-flight async work stops gracefully
   Object.values(blok.moduleInstances)
@@ -97,7 +107,12 @@ function teardown(instance: Blok, blok: Core): void {
   // module, so the walk above cannot reach it. Left attached it outlives the
   // editor and asks the user to confirm every later navigation in a
   // single-page app, over a document that is already gone.
-  releasePersistenceQueue(blok.config?.persistence);
+  // Released after the final save reaches the queue, or the queue drops it.
+  if (finalSave === null) {
+    releasePersistenceQueue(persistence);
+  } else {
+    void finalSave.finally(() => releasePersistenceQueue(persistence));
+  }
 
   destroyTooltip();
 
@@ -273,6 +288,16 @@ class Blok {
      */
     this.destroy = (): void => {
       lifecycle.pendingDestroy = true;
+
+      // Teardown waits for isReady, which may wait on a slow load(), so stop the skeleton now.
+      // Deferred one microtask: Core queued init() first, so the UI module exists by then even on a same-tick destroy().
+      queueMicrotask(() => {
+        // Optional calls, as in teardown(): a partial module set must not throw from a microtask.
+        const ui = getUIModule() as Partial<Pick<BlokModules['UI'], 'markDestroyed' | 'hideLoading'>> | undefined;
+
+        ui?.markDestroyed?.();
+        void ui?.hideLoading?.();
+      });
     };
 
     /**
@@ -289,6 +314,11 @@ class Blok {
      * dark theme to fail when the host's state arrives after construction.
      */
     type ThemeMode = Parameters<BlokModules['ThemeManager']['setMode']>[0];
+
+    // Only these setters emit: the boot config and the pre-ready replay stay silent, so tab sync never pushes them.
+    const announceSetting = (payload: SettingChangedPayload): void => {
+      (blok.moduleInstances as Partial<BlokModules>).EventsAPI?.methods.emit(SettingChanged, payload);
+    };
 
     const themeBuffer = { pendingMode: null as ThemeMode | null };
 
@@ -308,7 +338,13 @@ class Blok {
         const tm = getThemeManager();
 
         if (tm !== undefined) {
+          const changed = tm.getMode() !== mode;
+
+          // Always applied: it re-asserts the page attribute another editor may have changed.
           tm.setMode(mode);
+          if (changed) {
+            announceSetting({ setting: 'theme', value: mode });
+          }
         }
       },
       getResolved: () => {
@@ -340,7 +376,12 @@ class Blok {
       const ui = getUIModule();
 
       if (ui !== undefined) {
+        const changed = ui.getWidthMode() !== mode;
+
         ui.setWidthMode(mode);
+        if (changed) {
+          announceSetting({ setting: 'width', value: mode });
+        }
       }
     };
 

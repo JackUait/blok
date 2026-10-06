@@ -1,4 +1,5 @@
 import { getCaretOffset } from '../../../utils/caret';
+import { getElementDirection, logicalArrow } from '../../../utils/direction';
 import type { ProcessedEmoji } from '../../../utils/emoji/emoji-data';
 import { loadEmojiData } from '../../../utils/emoji/emoji-data';
 import { isExactShortcodeMatch, searchEmojisRanked } from '../../../utils/emoji/emoji-search-ranked';
@@ -371,11 +372,13 @@ export class EmojiTrigger extends BlockEventComposer {
 
     switch (event.key) {
       case 'ArrowLeft':
-        this.setHighlightedIndex(this.highlightedIndex - 1);
+      case 'ArrowRight': {
+        // The picker grid lays out in its own direction: in RTL, Left is forward.
+        const step = logicalArrow(event.key, getElementDirection(this.picker?.getElement())) === 'forward' ? 1 : -1;
+
+        this.setHighlightedIndex(this.highlightedIndex + step);
         break;
-      case 'ArrowRight':
-        this.setHighlightedIndex(this.highlightedIndex + 1);
-        break;
+      }
       case 'ArrowUp':
         this.setHighlightedIndex(this.highlightedIndex - EMOJI_GRID_COLUMNS);
         break;

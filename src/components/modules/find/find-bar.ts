@@ -1,9 +1,14 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
 import type { FindConfig, FindPlacement } from '../../../../types';
-import { IconChevronDown, IconChevronRight, IconCross } from '../../icons';
+import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
+import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
+import { IconCheck, IconChevronDown, IconChevronRight, IconCross, IconPlayerSettings } from '../../icons';
 import { hide as hideTooltip, onHover } from '../../utils/tooltip';
+import { PopoverDesktop } from '../../utils/popover';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
 import { createTooltipContent } from '../toolbar/tooltip';
+
+import { bloom, cornerOf, hop, HOP_DELAY, HOP_MS, springEasing, SPRINGS, stretch, type Corner, type Hop, type HopSource } from './find-motion';
 
 import type { FindOptions } from './match-text';
 
@@ -15,7 +20,6 @@ export interface FindBarCallbacks {
   onOptionsChange(options: FindOptions): void;
   onReplace(replacement: string): void;
   onReplaceAll(replacement: string): void;
-  onSeek(index: number): void;
   /** The replacement to preview changed; read it from `FindBar.replacement`. */
   onReplaceChange(): void;
 }
@@ -24,8 +28,14 @@ export interface FindBarResults {
   /** 0-based index of the active match, -1 when none. */
   current: number;
   total: number;
-  /** One per match, 0..1 down the document. */
-  positions: number[];
+  /** Matches Replace all can edit. Defaults to `total`. */
+  replaceable?: number;
+  /** Whether Replace can edit the active match. Defaults to true when there is one. */
+  currentReplaceable?: boolean;
+  /** Every editable match already reads like the replacement. */
+  unchanged?: boolean;
+  /** The active match already reads like the replacement. */
+  currentUnchanged?: boolean;
 }
 
 export interface FindBarInit {
@@ -37,8 +47,8 @@ export interface FindBarInit {
   offset?: FindConfig['offset'];
 }
 
-/** Above this the map draws buckets, not one tick per match. */
-const MAX_TICKS = 200;
+/** How long the field's old text and count take to fade as a word hops in. */
+const HOP_FADE_MS = 120;
 
 const ATTR = {
   dock: 'data-blok-find',
@@ -47,18 +57,21 @@ const ATTR = {
   field: 'data-blok-find-field',
   counter: 'data-blok-find-counter',
   iconButton: 'data-blok-find-icon-button',
-  toggle: 'data-blok-find-toggle',
+  options: 'data-blok-find-options',
+  optionsActive: 'data-blok-find-options-active',
+  optionsCount: 'data-blok-find-options-count',
+  optionsMenu: 'data-blok-find-options-menu',
+  split: 'data-blok-find-split',
+  replaceMenu: 'data-blok-find-replace-menu',
   divider: 'data-blok-find-divider',
   controls: 'data-blok-find-controls',
   replaceToggle: 'data-blok-find-replace-toggle',
   replaceRow: 'data-blok-find-replace-row',
   textButton: 'data-blok-find-text-button',
-  map: 'data-blok-find-map',
-  tick: 'data-blok-find-tick',
   active: 'data-blok-find-active',
   empty: 'data-blok-find-empty',
   overflow: 'data-blok-find-overflow',
-  shake: 'data-blok-find-shake',
+  hopping: 'data-blok-find-hopping',
   bump: 'data-blok-find-bump',
   roll: 'data-blok-find-roll',
   rollFrom: 'data-blok-find-roll-from',
@@ -66,8 +79,6 @@ const ATTR = {
   readOnly: 'data-blok-find-read-only',
   placement: 'data-blok-find-placement',
 } as const;
-
-const TICK_INDEX = 'data-blok-find-index';
 
 /** Stands in for the current number, to find where a locale puts it. */
 const CURRENT_MARK = '\uE000';
@@ -127,29 +138,39 @@ export class FindBar {
   private readonly input: HTMLInputElement;
   private readonly counter: HTMLElement;
   private readonly replaceToggle: HTMLButtonElement;
-  private readonly matchCaseButton: HTMLButtonElement;
-  private readonly wholeWordButton: HTMLButtonElement;
+  private readonly optionsButton: HTMLButtonElement;
+  /** Screen readers hear each option's state in the menu, so the count is paint only. */
+  private readonly optionsCount: HTMLElement;
   private readonly previousButton: HTMLButtonElement;
   private readonly nextButton: HTMLButtonElement;
   private readonly closeButton: HTMLButtonElement;
-  private readonly map: HTMLElement;
   private readonly replaceRow: HTMLElement;
   private readonly replaceInput: HTMLInputElement;
   private readonly replaceButton: HTMLButtonElement;
-  private readonly replaceAllButton: HTMLButtonElement;
-
-  private ticks: HTMLElement[] = [];
-  private positions: number[] = [];
+  /** Opens the menu that holds Replace all. */
+  private readonly replaceMenuButton: HTMLButtonElement;
 
   private opened = false;
   private readOnly = false;
   private replaceOpen = false;
   private matchCase = false;
   private wholeWord = false;
+  private readonly shortcuts: Shortcuts;
+  /** Hint each replace button's tooltip shows now; null for the label and shortcut. */
+  private readonly replaceHints = new Map<HTMLButtonElement, string | null | undefined>();
   private total = 0;
+  private replaceable = 0;
+  private currentReplaceable = false;
+  private unchanged = false;
+  private currentUnchanged = false;
   /** The count the counter shows now, -1 when it shows none. */
   private shown = { current: -1, total: 0 };
-  private noResults = false;
+
+  private optionsMenu: PopoverDesktop | null = null;
+  private replaceMenu: PopoverDesktop | null = null;
+  private readonly replaceField: HTMLElement;
+  private motion: Animation[] = [];
+  private flight: Hop | null = null;
 
   private readonly listeners: Array<() => void> = [];
   private inputResize: ResizeObserver | undefined;
@@ -158,8 +179,9 @@ export class FindBar {
     this.t = init.t;
     this.callbacks = init.callbacks;
     this.isMac = init.isMac;
+    this.shortcuts = shortcutsFor(this.isMac);
 
-    const shortcuts = shortcutsFor(this.isMac);
+    const shortcuts = this.shortcuts;
     const replaceRowId = `blok-find-replace-${++idSequence.next}`;
 
     this.element = build('div', {
@@ -207,8 +229,13 @@ export class FindBar {
 
     this.field.append(this.input, this.counter);
 
-    this.matchCaseButton = this.makeToggle('find.matchCase', 'Aa', 'find-match-case');
-    this.wholeWordButton = this.makeToggle('find.wholeWord', 'ab', 'find-whole-word');
+    this.optionsButton = this.makeIconButton('find.options', IconPlayerSettings, 'find-options');
+    this.optionsButton.setAttribute(ATTR.options, '');
+    this.optionsButton.setAttribute('aria-haspopup', 'menu');
+    this.optionsButton.setAttribute('aria-expanded', 'false');
+    this.optionsCount = build('span', { [ATTR.optionsCount]: '', 'data-blok-testid': 'find-options-count', 'aria-hidden': 'true' });
+    this.optionsCount.hidden = true;
+    this.optionsButton.append(this.optionsCount);
     this.previousButton = this.makeIconButton('find.previous', IconChevronDown, 'find-previous');
     this.previousButton.setAttribute('data-blok-find-previous', '');
     this.nextButton = this.makeIconButton('find.next', IconChevronDown, 'find-next');
@@ -220,8 +247,7 @@ export class FindBar {
     const controls = build('div', { [ATTR.controls]: '' });
 
     controls.append(
-      this.matchCaseButton,
-      this.wholeWordButton,
+      this.optionsButton,
       divider,
       this.previousButton,
       this.nextButton,
@@ -229,15 +255,11 @@ export class FindBar {
     );
     row.append(this.replaceToggle, this.field, controls);
 
-    // Pointer shortcut only; keyboard users step with Enter / Shift+Enter.
-    this.map = build('div', { [ATTR.map]: '', 'aria-hidden': 'true', 'data-blok-testid': 'find-map' });
-    this.map.hidden = true;
-
     this.replaceRow = build('div', { [ATTR.replaceRow]: '', id: replaceRowId, 'data-blok-testid': 'find-replace-row' });
     this.replaceRow.hidden = true;
 
     const replaceInner = build('div', { [ATTR.row]: '' });
-    const replaceField = build('div', { [ATTR.field]: '', 'data-blok-field': 'text', 'data-blok-testid': 'find-replace-field' });
+    this.replaceField = build('div', { [ATTR.field]: '', 'data-blok-field': 'text', 'data-blok-testid': 'find-replace-field' });
 
     this.replaceInput = build('input', {
       type: 'text',
@@ -247,46 +269,52 @@ export class FindBar {
       spellcheck: 'false',
       'data-blok-testid': 'find-replace-input',
     });
-    replaceField.append(this.replaceInput);
+    this.replaceField.append(this.replaceInput);
 
     this.replaceButton = this.makeTextButton('find.replace', 'find-replace');
-    this.replaceAllButton = this.makeTextButton('find.replaceAll', 'find-replace-all');
+    // Its label names the one thing the menu does, so it reads as "Replace all, menu".
+    this.replaceMenuButton = this.makeIconButton('find.replaceAll', IconChevronDown, 'find-replace-menu');
+    this.replaceMenuButton.setAttribute(ATTR.replaceMenu, '');
+    this.replaceMenuButton.setAttribute('aria-haspopup', 'menu');
+    this.replaceMenuButton.setAttribute('aria-expanded', 'false');
+    const split = build('div', { [ATTR.split]: '' });
     const replaceControls = build('div', { [ATTR.controls]: '' });
 
-    replaceControls.append(this.replaceButton, this.replaceAllButton);
-    replaceInner.append(replaceField, replaceControls);
+    split.append(this.replaceButton, this.replaceMenuButton);
+    replaceControls.append(split);
+    replaceInner.append(this.replaceField, replaceControls);
     this.replaceRow.append(replaceInner);
 
-    this.bar.append(row, this.replaceRow, this.map);
+    this.bar.append(row, this.replaceRow);
     this.element.append(this.bar);
 
-    this.bindTooltip(this.matchCaseButton, 'find.matchCase', shortcuts.matchCase);
-    this.bindTooltip(this.wholeWordButton, 'find.wholeWord', shortcuts.wholeWord);
+    this.bindTooltip(this.optionsButton, 'find.options');
     this.bindTooltip(this.previousButton, 'find.previous', shortcuts.previous);
     this.bindTooltip(this.nextButton, 'find.next', shortcuts.next);
     this.bindTooltip(this.closeButton, 'find.close', shortcuts.close);
-    this.bindTooltip(this.replaceButton, 'find.replace', shortcuts.replace);
-    this.bindTooltip(this.replaceAllButton, 'find.replaceAll', shortcuts.replaceAll);
 
     this.listen(this.input, 'input', () => this.handleInput());
     this.listen(this.input, 'input', () => this.syncOverflow());
     this.listen(this.input, 'scroll', () => this.syncOverflow());
     this.listen(this.bar, 'keydown', (event) => this.handleKeydown(event));
     this.listen(this.replaceToggle, 'click', () => this.setReplaceOpen(!this.replaceOpen));
-    this.listen(this.matchCaseButton, 'click', () => this.toggleOption('matchCase'));
-    this.listen(this.wholeWordButton, 'click', () => this.toggleOption('wholeWord'));
+    // close() froze the motion for the fade; once faded, let it go. Chrome ends
+    // the fade with transitioncancel, as display:none lands when it finishes.
+    const faded = (event: TransitionEvent): void => {
+      if (event.target === this.element && !this.opened) {
+        this.stopMotion();
+      }
+    };
+
+    this.listen(this.element, 'transitionend', faded);
+    this.listen(this.element, 'transitioncancel', faded);
+    this.listen(this.optionsButton, 'click', () => this.toggleOptionsMenu());
     this.listen(this.previousButton, 'click', () => this.callbacks.onPrevious());
     this.listen(this.nextButton, 'click', () => this.callbacks.onNext());
     this.listen(this.closeButton, 'click', () => this.callbacks.onClose());
     this.listen(this.replaceButton, 'click', () => this.callbacks.onReplace(this.replaceInput.value));
-    this.listen(this.replaceAllButton, 'click', () => this.callbacks.onReplaceAll(this.replaceInput.value));
+    this.listen(this.replaceMenuButton, 'click', () => this.toggleReplaceMenu());
     this.listen(this.replaceInput, 'input', () => this.callbacks.onReplaceChange());
-    this.listen(this.map, 'click', (event) => this.handleMapClick(event));
-    this.listen(this.field, 'animationend', (event) => {
-      if (event.target === this.field) {
-        this.field.removeAttribute(ATTR.shake);
-      }
-    });
     this.listen(this.counter, 'animationend', () => this.counter.removeAttribute(ATTR.bump));
     this.watchInputWidth();
     this.place(init.placement, init.offset);
@@ -302,16 +330,19 @@ export class FindBar {
     return this.input.value;
   }
 
-  /** The text to preview in place of each match: empty while the replace row is closed. */
-  public get replacement(): string {
-    return this.replaceOpen ? this.replaceInput.value : '';
+  /** The text to preview in place of each match: null while the replace row is closed, '' for a delete. */
+  public get replacement(): string | null {
+    return this.replaceOpen ? this.replaceInput.value : null;
   }
 
   public get options(): FindOptions {
     return { matchCase: this.matchCase, wholeWord: this.wholeWord };
   }
 
-  public open(init: { query?: string; replace?: boolean; readOnly: boolean }): void {
+  public open(init: { query?: string; replace?: boolean; readOnly: boolean; hop?: HopSource | null }): void {
+    // The same word hopping in again: its old copy in the field fades instead of blinking out.
+    const again = init.query !== undefined && init.query !== '' && this.input.value === init.query;
+
     this.setReadOnly(init.readOnly);
 
     if (init.replace === true && !this.readOnly) {
@@ -325,6 +356,7 @@ export class FindBar {
       }
 
       this.focusQuery();
+      this.playHop(init.hop ?? null, 0, again);
 
       return;
     }
@@ -335,9 +367,22 @@ export class FindBar {
     // The top layer sits above every stacking context a host page can build.
     promoteToTopLayer(this.element);
 
+    // The hop measures the field with the query already in it.
     if (init.query !== undefined) {
       this.input.value = init.query;
     }
+
+    this.stopMotion();
+    const hopping = this.playHop(init.hop ?? null, HOP_DELAY, again);
+
+    this.track(...bloom({
+      dock: this.element,
+      bar: this.bar,
+      field: this.field,
+      query: this.input,
+      counter: hopping ? null : this.counter,
+      controls: [this.replaceToggle, this.optionsButton, this.previousButton, this.nextButton, this.closeButton].filter((control) => !control.hidden),
+    }, this.corner()));
 
     // A reopened bar keeps its last query, which must be searched again.
     if (init.query !== undefined || this.input.value !== '') {
@@ -352,8 +397,14 @@ export class FindBar {
       return;
     }
 
+    this.flight?.end();
+    // Paused, not cancelled, so the fade starts from this frame.
+    // Running ones only: pause() brings a cancelled one back to its first frame.
+    this.motion.filter((animation) => animation.playState === 'running').forEach((animation) => animation.pause());
     this.opened = false;
     hideTooltip();
+    this.optionsMenu?.hide();
+    this.replaceMenu?.hide();
     // `hidden` and `inert` land now; the exit animation rides a discrete `display` transition in find.css.
     this.element.toggleAttribute('inert', true);
     this.element.hidden = true;
@@ -372,13 +423,20 @@ export class FindBar {
 
   public setResults(results: FindBarResults): void {
     this.total = results.total;
-    this.positions = results.positions;
+    this.replaceable = results.replaceable ?? results.total;
+    this.currentReplaceable = results.currentReplaceable ?? results.current >= 0;
+    this.unchanged = results.unchanged === true;
+    this.currentUnchanged = results.currentUnchanged === true;
     this.renderResults(results.current);
   }
 
   public destroy(): void {
+    this.flight?.end();
+    this.stopMotion();
     this.opened = false;
     hideTooltip();
+    this.optionsMenu?.destroy();
+    this.replaceMenu?.destroy();
     this.listeners.forEach((remove) => remove());
     this.listeners.length = 0;
     this.inputResize?.disconnect();
@@ -410,13 +468,14 @@ export class FindBar {
   }
 
   private handleInput(): void {
+    this.flight?.end();
+
     if (!this.opened) {
       return;
     }
 
     if (this.input.value === '') {
       this.total = 0;
-      this.positions = [];
       this.renderResults();
     }
 
@@ -453,6 +512,21 @@ export class FindBar {
       return;
     }
 
+    const isArrow = event.key === 'ArrowUp' || event.key === 'ArrowDown';
+
+    // Modified arrows stay the field's: Shift selects, Alt/Cmd jump the caret.
+    if (inFind && isArrow && !event.shiftKey && !event.altKey && !event.metaKey && !event.ctrlKey) {
+      event.preventDefault();
+
+      if (event.key === 'ArrowUp') {
+        this.callbacks.onPrevious();
+      } else {
+        this.callbacks.onNext();
+      }
+
+      return;
+    }
+
     if (event.key !== 'Enter') {
       return;
     }
@@ -471,7 +545,7 @@ export class FindBar {
 
     event.preventDefault();
 
-    if (this.readOnly || this.total === 0) {
+    if (this.readOnly) {
       return;
     }
 
@@ -482,33 +556,245 @@ export class FindBar {
       return;
     }
 
-    if (mod) {
-      this.callbacks.onReplaceAll(this.replaceInput.value);
-    } else {
-      this.callbacks.onReplace(this.replaceInput.value);
+    if (mod && !this.replaceMenuButton.disabled) {
+      this.replaceAll();
+    }
+
+    if (!mod && !this.replaceButton.disabled) {
+      this.replaceButton.click();
     }
   }
 
-  private toggleOption(option: 'matchCase' | 'wholeWord'): void {
+  private toggleOption(option: 'matchCase' | 'wholeWord', fromMenu = false): void {
     if (option === 'matchCase') {
       this.matchCase = !this.matchCase;
-      this.matchCaseButton.setAttribute('aria-pressed', String(this.matchCase));
     } else {
       this.wholeWord = !this.wholeWord;
-      this.wholeWordButton.setAttribute('aria-pressed', String(this.wholeWord));
     }
 
+    // The menu's rows cannot be re-checked from outside, so a shortcut closes it.
+    if (!fromMenu) {
+      this.optionsMenu?.hide();
+    }
+
+    const on = Number(this.matchCase) + Number(this.wholeWord);
+
+    this.optionsButton.toggleAttribute(ATTR.optionsActive, on > 0);
+    this.optionsCount.textContent = String(on);
+    this.optionsCount.hidden = on === 0;
     this.callbacks.onOptionsChange(this.options);
+  }
+
+  private toggleOptionsMenu(): void {
+    if (this.optionsMenu !== null) {
+      this.optionsMenu.hide();
+
+      return;
+    }
+
+    const shortcuts = this.shortcuts;
+    const row = (option: 'matchCase' | 'wholeWord', labelKey: string, shortcut: string): PopoverItemParams => ({
+      title: this.t(labelKey),
+      name: option,
+      toggle: true,
+      isActive: this[option],
+      secondaryLabel: shortcut,
+      icon: IconCheck,
+      onActivate: () => this.toggleOption(option, true),
+    });
+
+    this.optionsMenu = this.openMenu(this.optionsButton, ATTR.optionsMenu, [
+      row('matchCase', 'find.matchCase', shortcuts.matchCase),
+      row('wholeWord', 'find.wholeWord', shortcuts.wholeWord),
+    ], (menu) => {
+      if (this.optionsMenu !== menu) {
+        return false;
+      }
+      this.optionsMenu = null;
+
+      return true;
+    });
+    this.optionsMenu.show();
+  }
+
+  private toggleReplaceMenu(): void {
+    if (this.replaceMenu !== null) {
+      this.replaceMenu.hide();
+
+      return;
+    }
+
+    this.replaceMenu = this.openMenu(this.replaceMenuButton, ATTR.replaceMenu, [{
+      title: this.t('find.replaceAll'),
+      name: 'replace-all',
+      secondaryLabel: this.shortcuts.replaceAll,
+      closeOnActivate: true,
+      onActivate: () => this.replaceAll(),
+    }], (menu) => {
+      if (this.replaceMenu !== menu) {
+        return false;
+      }
+      this.replaceMenu = null;
+
+      return true;
+    });
+    this.replaceMenu.show();
+  }
+
+  private replaceAll(): void {
+    this.callbacks.onReplaceAll(this.replaceInput.value);
+  }
+
+  /**
+   * Build a menu for one of the bar's buttons. The caller stores it, then shows it.
+   * @param release - clears the caller's slot; false when the menu is no longer the current one
+   */
+  private openMenu(
+    trigger: HTMLButtonElement,
+    attribute: string,
+    items: PopoverItemParams[],
+    release: (menu: PopoverDesktop) => boolean
+  ): PopoverDesktop {
+    const menu = new PopoverDesktop({ items, trigger, flippable: true });
+
+    // One Escape closes one layer: the menu, not the bar. Window capture runs
+    // before the bar's own handler and the popover registry's.
+    const onKeydown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        menu.hide();
+      }
+    };
+
+    menu.getElement().setAttribute(attribute, '');
+    menu.on(PopoverEvent.Closed, () => {
+      window.removeEventListener('keydown', onKeydown, true);
+
+      if (!release(menu)) {
+        return;
+      }
+
+      trigger.setAttribute('aria-expanded', 'false');
+
+      // A row click or Escape would leave focus on <body>, where the bar's keys stop working.
+      // A row's action can disable the trigger (Replace all left nothing), so fall back to its field.
+      if (this.opened && (document.activeElement === document.body || (document.activeElement !== null && menu.hasNode(document.activeElement)))) {
+        const fallback = trigger === this.replaceMenuButton ? this.replaceInput : this.input;
+
+        (trigger.disabled ? fallback : trigger).focus({ preventScroll: true });
+      }
+
+      menu.destroy();
+    });
+
+    window.addEventListener('keydown', onKeydown, true);
+    trigger.setAttribute('aria-expanded', 'true');
+
+    return menu;
+  }
+
+  private corner(): Corner {
+    return cornerOf(this.element.getAttribute(ATTR.placement) ?? 'top-end', this.element.getAttribute('dir') === 'rtl');
+  }
+
+  /** @returns true when a word is in flight */
+  private playHop(source: HopSource | null, delay: number, fadeText: boolean): boolean {
+    this.flight?.end();
+
+    if (source === null) {
+      return false;
+    }
+
+    // Set once the flight starts; an interrupted hop cancels it so the counter shows at once.
+    const roll: { counter?: Animation } = {};
+
+    this.flight = hop(this.element, source, this.input, delay, (landed) => {
+      this.flight = null;
+      this.field.removeAttribute(ATTR.hopping);
+
+      if (!landed) {
+        roll.counter?.cancel();
+      }
+
+      if (landed) {
+        const pop = springEasing(SPRINGS.bouncy);
+
+        // The text must stay where the copy put it, so only the field gives.
+        this.track(this.field.animate([{ scale: '1' }, { scale: '1.02 0.94', offset: 0.25 }, { scale: '1' }], pop));
+      }
+    });
+
+    if (this.flight === null) {
+      return false;
+    }
+
+    // Paint only: the counter's text, and what it announces, is already current.
+    // One animation fades the old count out and rolls the new one in, so there is no frame where it blinks.
+    const spring = springEasing(SPRINGS.bouncy);
+    const rollAt = delay + HOP_MS + 80;
+    const total = rollAt + spring.duration;
+
+    roll.counter = this.counter.animate([
+      { opacity: 1, translate: '0 0', easing: 'ease-out' },
+      { opacity: 0, translate: '0 0', offset: HOP_FADE_MS / total },
+      { opacity: 0, translate: '0 14px', offset: rollAt / total, easing: spring.easing },
+      { opacity: 1, translate: '0 0' },
+    ], { duration: total });
+    this.track(roll.counter);
+
+    if (fadeText) {
+      this.track(this.input.animate([{ color: getComputedStyle(this.input).color }, { color: 'transparent' }], { duration: HOP_FADE_MS, easing: 'ease-out' }));
+    }
+    // Last: a throw above must not leave the field's text hidden.
+    this.field.setAttribute(ATTR.hopping, '');
+
+    return true;
+  }
+
+  /** Drops ended animations as it adds, so an open bar's list stays bounded. */
+  private track(...animations: Animation[]): void {
+    this.motion = [
+      ...this.motion.filter((animation) => animation.playState !== 'idle' && animation.playState !== 'finished'),
+      ...animations,
+    ];
+  }
+
+  private stopMotion(): void {
+    this.motion.forEach((animation) => animation.cancel());
+    this.motion = [];
   }
 
   private setReplaceOpen(open: boolean): void {
     const next = open && !this.readOnly;
     const changed = next !== this.replaceOpen;
+    // Read before the row shows: the stretch springs from this size. A closed
+    // bar needs none, as the bloom that follows covers both rows.
+    const from = changed && next && this.opened ? { width: this.bar.offsetWidth, height: this.bar.offsetHeight } : null;
 
     this.replaceOpen = next;
     this.replaceRow.hidden = !next;
+
+    if (!next) {
+      this.replaceMenu?.hide();
+    }
     this.replaceToggle.setAttribute('aria-expanded', String(next));
     this.bar.toggleAttribute(ATTR.open, next);
+
+    if (from !== null) {
+      this.stopMotion();
+      this.motion = stretch({
+        dock: this.element,
+        bar: this.bar,
+        field: this.replaceField,
+        buttons: [this.replaceButton, this.replaceMenuButton],
+      }, from, this.corner());
+    }
+
+    // A stretch left running would paint the tall skin over a collapsing row.
+    if (changed && !next) {
+      this.stopMotion();
+    }
 
     if (changed) {
       this.callbacks.onReplaceChange();
@@ -538,35 +824,48 @@ export class FindBar {
       this.input.removeAttribute('aria-invalid');
     }
 
-    if (noResults && !this.noResults) {
-      replay(this.field, ATTR.shake);
-    }
-
-    if (!noResults) {
-      this.field.removeAttribute(ATTR.shake);
-    }
-
-    this.noResults = noResults;
 
     const none = this.total === 0;
+    const disabled = new Map([
+      [this.previousButton, none],
+      [this.nextButton, none],
+      [this.replaceButton, none || !this.currentReplaceable],
+      [this.replaceMenuButton, none || this.replaceable === 0],
+    ]);
+    const focused = document.activeElement;
 
     // A disabled button drops focus to <body>, where Escape no longer reaches the bar.
-    if (none && document.activeElement instanceof HTMLButtonElement) {
-      const focused = document.activeElement;
+    if (focused instanceof HTMLButtonElement && disabled.get(focused) === true) {
+      const isReplace = focused === this.replaceButton || focused === this.replaceMenuButton;
 
-      if (focused === this.replaceButton || focused === this.replaceAllButton) {
-        this.replaceInput.focus({ preventScroll: true });
-      } else if (focused === this.previousButton || focused === this.nextButton) {
-        this.input.focus({ preventScroll: true });
-      }
+      (isReplace ? this.replaceInput : this.input).focus({ preventScroll: true });
     }
 
-    this.previousButton.disabled = none;
-    this.nextButton.disabled = none;
-    this.replaceButton.disabled = none;
-    this.replaceAllButton.disabled = none;
+    for (const [button, isDisabled] of disabled) {
+      button.disabled = isDisabled;
+    }
 
-    this.renderMap(current);
+    if (this.replaceMenuButton.disabled) {
+      this.replaceMenu?.hide();
+    }
+
+    const replaceBlocker = this.currentUnchanged ? 'find.replaceUnchanged' : 'find.replaceUnavailable';
+    const replaceAllBlocker = this.unchanged ? 'find.replaceUnchanged' : 'find.replaceAllUnavailable';
+    const replaceHint = this.currentReplaceable ? null : replaceBlocker;
+    const replaceAllHint = this.replaceable > 0 ? null : replaceAllBlocker;
+
+    this.syncReplaceHint(this.replaceButton, 'find.replace', this.shortcuts.replace, none ? 'find.noResults' : replaceHint);
+    this.syncReplaceHint(this.replaceMenuButton, 'find.replaceAll', this.shortcuts.replaceAll, none ? 'find.noResults' : replaceAllHint);
+  }
+
+  /** Rebind only on change: renderResults runs on every search and resize. */
+  private syncReplaceHint(button: HTMLButtonElement, labelKey: string, shortcut: string, hintKey: string | null): void {
+    if (this.replaceHints.get(button) === hintKey) {
+      return;
+    }
+
+    this.replaceHints.set(button, hintKey);
+    this.bindTooltip(button, labelKey, shortcut, hintKey ?? undefined);
   }
 
   private counterText(current: number, noResults: boolean): string {
@@ -614,78 +913,6 @@ export class FindBar {
     return true;
   }
 
-  private renderMap(current: number): void {
-    const total = this.total;
-    const buckets = Math.min(total, MAX_TICKS);
-    const positionOf = (index: number): number => Math.min(1, Math.max(0, this.positions[index] ?? 0));
-    const bucketFor = (index: number): number =>
-      total <= MAX_TICKS ? index : Math.min(buckets - 1, Math.floor(positionOf(index) * buckets));
-
-    this.map.hidden = total === 0;
-
-    // One tick per bucket; each keeps the first match that fell into it.
-    const seen = new Set<number>();
-    const firstIndex = Array.from({ length: total }, (_, index) => index).filter((index) => {
-      const bucket = bucketFor(index);
-      const isFirst = !seen.has(bucket);
-
-      seen.add(bucket);
-
-      return isFirst;
-    });
-    const tickOfBucket = new Map(firstIndex.map((matchIndex, tickIndex) => [bucketFor(matchIndex), tickIndex]));
-    const activeTick = current >= 0 && current < total ? tickOfBucket.get(bucketFor(current)) ?? -1 : -1;
-
-    while (this.ticks.length > firstIndex.length) {
-      this.ticks.pop()?.remove();
-    }
-
-    firstIndex.forEach((matchIndex, tickIndex) => {
-      const tick = this.ticks[tickIndex] ?? this.makeTick();
-
-      tick.style.left = `${positionOf(matchIndex) * 100}%`;
-      tick.setAttribute(TICK_INDEX, String(matchIndex));
-      tick.toggleAttribute(ATTR.active, tickIndex === activeTick);
-    });
-
-  }
-
-  private makeTick(): HTMLElement {
-    const tick = build('span', { [ATTR.tick]: '', 'data-blok-testid': 'find-map-tick' });
-
-    this.map.append(tick);
-    this.ticks.push(tick);
-
-    return tick;
-  }
-
-  private handleMapClick(event: MouseEvent): void {
-    if (!this.opened || this.total === 0) {
-      return;
-    }
-
-    const tick = event.target instanceof Element ? event.target.closest(`[${ATTR.tick}]`) : null;
-    const index = tick?.getAttribute(TICK_INDEX);
-
-    if (index !== undefined && index !== null) {
-      this.callbacks.onSeek(Number(index));
-
-      return;
-    }
-
-    const box = this.map.getBoundingClientRect();
-
-    if (box.width === 0) {
-      return;
-    }
-
-    const ratio = (event.clientX - box.left) / box.width;
-    const nearest = this.positions.reduce((best, position, i) =>
-      Math.abs(position - ratio) < Math.abs(this.positions[best] - ratio) ? i : best, 0);
-
-    this.callbacks.onSeek(nearest);
-  }
-
   private makeIconButton(labelKey: string, icon: string, testId: string): HTMLButtonElement {
     const button = build('button', {
       type: 'button',
@@ -699,23 +926,6 @@ export class FindBar {
     return button;
   }
 
-  private makeToggle(labelKey: string, glyph: string, testId: string): HTMLButtonElement {
-    const button = build('button', {
-      type: 'button',
-      [ATTR.iconButton]: '',
-      [ATTR.toggle]: testId,
-      'aria-label': this.t(labelKey),
-      'aria-pressed': 'false',
-      'data-blok-testid': testId,
-    });
-    const glyphElement = build('span', { 'aria-hidden': 'true' });
-
-    glyphElement.textContent = glyph;
-    button.append(glyphElement);
-
-    return button;
-  }
-
   private makeTextButton(labelKey: string, testId: string): HTMLButtonElement {
     const button = build('button', { type: 'button', [ATTR.textButton]: '', 'data-blok-testid': testId });
 
@@ -724,13 +934,18 @@ export class FindBar {
     return button;
   }
 
-  private bindTooltip(element: HTMLElement, labelKey: string, shortcut?: string): void {
+  /**
+   * @param hintKey - why the button is disabled, shown under the label in place of the shortcut
+   */
+  private bindTooltip(element: HTMLElement, labelKey: string, shortcut?: string, hintKey?: string): void {
     const label = { text: this.t(labelKey), highlight: true };
-    const line = shortcut === undefined
-      ? [label]
-      : [label, { text: '  ', highlight: false }, { text: shortcut, highlight: false, direction: 'ltr' as const }];
+    const lines = hintKey !== undefined
+      ? [[label], this.t(hintKey)]
+      : [shortcut === undefined
+        ? [label]
+        : [label, { text: '  ', highlight: false }, { text: shortcut, highlight: false, direction: 'ltr' as const }]];
 
-    onHover(element, createTooltipContent([line]), { placement: 'bottom', delay: 400 });
+    onHover(element, createTooltipContent(lines), { placement: 'bottom', delay: 400 });
   }
 
   /**

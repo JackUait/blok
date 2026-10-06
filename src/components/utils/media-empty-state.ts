@@ -11,6 +11,7 @@ import { matchesMime } from './mime-match';
 import { rovingRadioGroup } from './roving-radio-group';
 import { clearPreviewProgress, EXIT_CLEAR_MS, makePreview, setPreviewProgress, springHome, type MediaPreviewKind } from './media-empty-preview';
 import { leanPreview } from './media-preview-3d';
+import { createUrlMirror } from './url-mirror';
 import { matchEmbedService } from '../../tools/link/registry';
 import { brandMarkSlug, brandMarkSlugForUrl } from './brand-mark-services';
 
@@ -144,13 +145,6 @@ function readLink(raw: string, types: readonly string[]): { domain: string; type
     domain: parts.slice(-keep).join('.'),
     type: accepted ? label : null,
   };
-}
-
-/** Splits typed link text the way an address bar colours it. */
-function urlParts(raw: string): Array<[string, string]> {
-  const match = /^([a-z][\w+.-]*:\/\/)?(www\.)?([^/?#]*)(.*)$/i.exec(raw) ?? [];
-  const parts: Array<[string, string]> = [['proto', match[1] ?? ''], ['www', match[2] ?? ''], ['host', match[3] ?? ''], ['path', match[4] ?? '']];
-  return parts.filter(([, text]) => text !== '');
 }
 
 function formatsLabel(types: readonly string[]): string {
@@ -454,32 +448,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     urlInput.autocomplete = 'off';
     urlInput.spellcheck = false;
 
-    // Address-bar colouring: the input's own text is transparent and a mirror
-    // behind it draws the same characters in colour. Same font and size, and
-    // colour only (no weight change), so the caret stays on its glyph.
-    const mirror = stage ? document.createElement('span') : null;
-    const mirrorText = document.createElement('span');
-    if (mirror) {
-      mirror.className = 'blok-media-empty__embed-mirror';
-      mirror.setAttribute('aria-hidden', 'true');
-      mirrorText.className = 'blok-media-empty__embed-mirror-text';
-      mirror.append(mirrorText);
-      urlInput.classList.add('blok-media-empty__embed-input--mirrored');
-    }
-    const drawMirror = (): void => {
-      if (!mirror) return;
-      mirrorText.replaceChildren(...urlParts(urlInput.value).map(([part, text]) => {
-        const span = document.createElement('span');
-        span.className = `blok-media-empty__url-${part}`;
-        span.textContent = text;
-        return span;
-      }));
-    };
-    // The mirror shares the input's grid cell (media-empty.css), so only the
-    // horizontal scroll of a long link has to be copied over.
-    const placeMirror = (): void => {
-      if (mirror) mirrorText.style.setProperty('--scroll', String(urlInput.scrollLeft));
-    };
+    const mirror = stage ? createUrlMirror(urlInput) : null;
 
     const submit = document.createElement('button');
     submit.type = 'button';
@@ -548,8 +517,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       if (letter) fieldIcon.setAttribute('data-site', letter);
       else fieldIcon.removeAttribute('data-site');
       site.textContent = letter;
-      drawMirror();
-      placeMirror();
+      mirror?.draw();
       // Editing after a rejected submit resets the shared invalid state so the
       // stale error doesn't linger while the user fixes the URL.
       if (!error.hidden) {
@@ -586,9 +554,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       }
     });
 
-    for (const type of ['scroll', 'keyup', 'select', 'focus', 'blur']) urlInput.addEventListener(type, placeMirror);
-
-    bar.append(fieldIcon, ...(mirror ? [mirror] : []), urlInput, readBack, submit);
+    bar.append(fieldIcon, ...(mirror ? [mirror.element] : []), urlInput, readBack, submit);
     panel.appendChild(bar);
     sync();
     queueMicrotask(() => urlInput.focus());

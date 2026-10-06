@@ -74,6 +74,7 @@ export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
     describedBy: description.id,
     initialFocus: () => textarea,
     anchor: opts.anchor,
+    onDirectionResync: () => reposition(),
     onDismiss: (reason) => {
       if (reason === 'escape') {
         cancel();

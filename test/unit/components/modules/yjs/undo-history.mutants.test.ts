@@ -14,6 +14,8 @@ interface FakeBlock {
   inputs: HTMLElement[];
   currentInput: HTMLElement | undefined;
   currentInputIndex: number;
+  holder: HTMLElement;
+  call: ReturnType<typeof vi.fn>;
 }
 
 type PlacementCall = [string, BlockPlacement, 'move-undo' | 'move-redo'];
@@ -161,6 +163,8 @@ const addBlock = (
     inputs,
     currentInput: inputs[currentInputIndex],
     currentInputIndex,
+    holder: document.createElement('div'),
+    call: vi.fn(),
   };
 
   harness.blocks.push(block);
@@ -535,6 +539,8 @@ describe('UndoHistory — mutation coverage', () => {
         inputs: [makeInput('later')],
         currentInput: undefined,
         currentInputIndex: 0,
+        holder: document.createElement('div'),
+        call: vi.fn(),
       };
 
       later.currentInput = later.inputs[0];
@@ -685,6 +691,46 @@ describe('UndoHistory — mutation coverage', () => {
 
       expect(lastCaretBlock(h)).toBe(target);
       expect(h.setToBlock.mock.calls.at(-1)?.[1]).toBe('start');
+    });
+
+    /** Gives a fake block the marker a toggle or toggle heading stamps on its own DOM. */
+    const markToggle = (block: FakeBlock, open: boolean): void => {
+      const marker = document.createElement('div');
+
+      marker.setAttribute('data-blok-toggle-open', String(open));
+      block.holder.append(marker);
+    };
+
+    it('opens every collapsed toggle above the caret, outermost first, and leaves open ones alone', () => {
+      const outer = addBlock(h, 'outer');
+      const middle = addBlock(h, 'middle', { parentId: 'outer' });
+      const inner = addBlock(h, 'inner', { parentId: 'middle' });
+      const target = addBlock(h, 'target-block', { parentId: 'inner' });
+      const order: string[] = [];
+
+      markToggle(outer, false);
+      markToggle(middle, true);
+      markToggle(inner, false);
+      [outer, middle, inner].forEach((block) => {
+        block.call.mockImplementation(() => order.push(block.id));
+      });
+
+      undoOntoSnapshotOf(target);
+
+      expect(order).toEqual(['outer', 'inner']);
+      expect(outer.call).toHaveBeenCalledWith('expand');
+      expect(middle.call).not.toHaveBeenCalled();
+      expect(target.call).not.toHaveBeenCalled();
+    });
+
+    it('does not open the caret block itself, even when it is a collapsed toggle', () => {
+      const target = addBlock(h, 'target-block');
+
+      markToggle(target, false);
+
+      undoOntoSnapshotOf(target);
+
+      expect(target.call).not.toHaveBeenCalled();
     });
   });
 

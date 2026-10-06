@@ -21,6 +21,7 @@ export * from './uploader';
 export * from './handlers';
 
 export * from './theme';
+export * from './view-state';
 export * from './width';
 export * from './placeholder';
 export * from './tokens';

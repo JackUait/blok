@@ -1,6 +1,6 @@
 // docs/src/components/server/ServerPathSection.test.tsx
-import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { ServerPathSection } from './ServerPathSection';
@@ -91,5 +91,39 @@ describe('ServerPathSection', () => {
     expect(within(section).getByText('Что запустить')).toBeInTheDocument();
     expect(within(section).getByText('Один маршрут в вашем приложении')).toBeInTheDocument();
     expect(within(section).getByText('Когда что-то ломается')).toBeInTheDocument();
+  });
+});
+
+describe('ServerPathSection analytics', () => {
+  const gtag = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (window as unknown as { gtag?: unknown }).gtag = gtag;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn(() => Promise.resolve()) },
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete (window as unknown as { gtag?: unknown }).gtag;
+  });
+
+  it('reports a copied install sample as an install copy', async () => {
+    renderSection({
+      ...withService,
+      whatToRun: [{ label: 'Install it', language: 'bash', code: 'dotnet add package X', install: true }],
+      appRoute: [],
+    });
+    const sample = screen.getByText('Install it').parentElement;
+    if (!sample) throw new Error('sample wrapper missing');
+
+    fireEvent.click(within(sample).getByTestId('code-copy-button'));
+
+    await waitFor(() => {
+      expect(gtag).toHaveBeenCalledWith('event', 'copy_code', expect.objectContaining({ copy_kind: 'install' }));
+    });
   });
 });

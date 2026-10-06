@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Blok.Server.AspNetCore;
+using Blok.Server.AspNetCore.Collab;
 using Blok.Server.Collab;
 using Blok.Server.Outbound;
 using Blok.Server.Storage;
@@ -288,6 +289,113 @@ public sealed class BlokServerRegistrationTests
 
     Assert.IsType<StubCollabOperationStore>(
         provider.GetRequiredService<ICollabOperationStore>());
+  }
+
+  [Fact]
+  public void TheCollabJournalOptionRegistersTheLocalJournalUnlessAStoreReplacesIt()
+  {
+    var services = new ServiceCollection();
+    services.AddBlokServer(Journal);
+
+    using (var provider = services.BuildServiceProvider())
+    {
+      Assert.IsType<LocalCollabOperationStore>(OperationStore(provider));
+      Assert.Same(OperationStore(provider), OperationStore(provider));
+    }
+
+    var replaced = new ServiceCollection();
+    replaced.AddBlokServer(Journal).UseCollabOperationStore<StubCollabOperationStore>();
+
+    using var replacedProvider = replaced.BuildServiceProvider();
+    Assert.IsType<StubCollabOperationStore>(OperationStore(replacedProvider));
+  }
+
+  [Fact]
+  public void WithoutTheCollabJournalOptionNoStoreIsResolved()
+  {
+    var services = new ServiceCollection();
+    services.AddBlokServer(options =>
+    {
+      Journal(options);
+      options.CollabJournal = false;
+    });
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.Null(OperationStore(provider));
+    Assert.DoesNotContain(services, candidate => candidate.ServiceType == typeof(ICollabOperationStore));
+  }
+
+  /// <summary>
+  /// Every other collab service reads the options the provider holds, so the
+  /// journal must too: a host may register its own instance first, or set the
+  /// switch after AddBlokServer.
+  /// </summary>
+  [Fact]
+  public void TheCollabJournalFollowsTheOptionsTheProviderHolds()
+  {
+    var hostOptions = new BlokServerOptions();
+    Journal(hostOptions);
+    var hostRegistered = new ServiceCollection();
+    hostRegistered.AddSingleton(hostOptions);
+    hostRegistered.AddBlokServer(options =>
+    {
+      Journal(options);
+      options.CollabJournal = false;
+    });
+
+    using (var provider = hostRegistered.BuildServiceProvider())
+    {
+      Assert.IsType<LocalCollabOperationStore>(OperationStore(provider));
+    }
+
+    var later = new BlokServerOptions();
+    Journal(later);
+    later.CollabJournal = false;
+    var changedLater = new ServiceCollection();
+    changedLater.AddBlokServer(later);
+    later.CollabJournal = true;
+
+    using var laterProvider = changedLater.BuildServiceProvider();
+    Assert.IsType<LocalCollabOperationStore>(OperationStore(laterProvider));
+  }
+
+  private static void Journal(BlokServerOptions options)
+  {
+    options.CollabEnabled = true;
+    options.DocEndpoint = "https://app.example.com/api/blok-docs";
+    options.CollabDirectory = "/srv/blok/collab";
+    options.CollabJournal = true;
+  }
+
+  /// <summary>The store the room manager and the handshake are built with.</summary>
+  private static ICollabOperationStore? OperationStore(IServiceProvider provider)
+  {
+    return provider.GetRequiredService<CollabOperationStoreSource>().Store;
+  }
+
+  [Fact]
+  public void RejectsTheCollabJournalWithACollabS3Prefix()
+  {
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        new ServiceCollection().AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = "https://app.example.com/api/blok-docs";
+          options.CollabS3Prefix = "collab/";
+          options.S3Endpoint = "https://s3.example.com";
+          options.S3Region = "eu-central-1";
+          options.S3Bucket = "media";
+          options.S3BucketUrl = "https://cdn.example.com/media";
+          options.S3AccessKey = "access-key";
+          options.S3SecretKey = "secret-key";
+          options.CollabJournal = true;
+        }));
+
+    Assert.StartsWith(
+        "--collab-journal cannot be used with --collab-s3-prefix",
+        error.Message,
+        StringComparison.Ordinal);
   }
 
   [Fact]

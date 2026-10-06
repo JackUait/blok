@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { validateHierarchy } from '../../../../src/components/utils/hierarchy-invariant';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 /**
  * Operation gauntlet: exercise a long sequence of mutations inside a container
@@ -60,6 +61,7 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
     },
     { holder: HOLDER_ID, initialData: data ?? null }
   );
+  await openFixtureToggles(page, data);
 };
 
 const saveAndAssertInvariant = async (page: Page, label: string): Promise<OutputData> => {

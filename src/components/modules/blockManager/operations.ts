@@ -20,7 +20,7 @@ import { BlockMutation } from './block-mutation';
 import { BlockRemoval } from './block-removal';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
-import { hideUnderCollapsedParent, isSelfPlacedParent } from './new-block-placement';
+import { hideUnderCollapsedParent, isHiddenInTree, isSelfPlacedParent } from './new-block-placement';
 import type {
   BlockDidMutated,
   BlockOperationsDependencies,
@@ -280,7 +280,7 @@ export class BlockOperations implements OperationsContext {
   }
 
   /**
-   * Get next visible block (skips blocks whose holder has 'hidden' class)
+   * Get next visible block (skips blocks hidden themselves or by an ancestor)
    * Returns null when no visible block is found after the current one
    */
   public get nextVisibleBlock(): Block | null {
@@ -292,11 +292,11 @@ export class BlockOperations implements OperationsContext {
 
     return this.repository.blocks
       .slice(currentIndex + 1)
-      .find(block => !block.holder.classList.contains('hidden')) ?? null;
+      .find(block => !isHiddenInTree(block, id => this.repository.getBlockById(id))) ?? null;
   }
 
   /**
-   * Get previous visible block (skips blocks whose holder has 'hidden' class)
+   * Get previous visible block (skips blocks hidden themselves or by an ancestor)
    * Returns null when no visible block is found before the current one
    */
   public get previousVisibleBlock(): Block | null {
@@ -309,7 +309,7 @@ export class BlockOperations implements OperationsContext {
     return this.repository.blocks
       .slice(0, currentIndex)
       .reverse()
-      .find(block => !block.holder.classList.contains('hidden')) ?? null;
+      .find(block => !isHiddenInTree(block, id => this.repository.getBlockById(id))) ?? null;
   }
 
   /**

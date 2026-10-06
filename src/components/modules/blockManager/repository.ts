@@ -270,9 +270,9 @@ export class BlockRepository {
    * ancestor is what made a lasso beside a table select the whole toggle
    * section, while the ⠿ handle on the same row pointed at the table.
    *
-   * Column layout is the exception: `column_list` owns its columns, but a
-   * column's children are the selectable units, so the walk stops there (and
-   * {@link isSelectionUnit} rejects the two containers outright).
+   * Layout is the exception: `column_list` owns its columns, but a column's
+   * children are the selectable units, so the walk stops at any `isLayout`
+   * parent (and {@link isSelectionUnit} rejects layout blocks outright).
    * @param block - the block a gesture landed on
    * @returns {Block} the block that owns the gesture
    */
@@ -283,7 +283,7 @@ export class BlockRepository {
 
     const parent = this.getBlockById(block.parentId);
 
-    if (parent === undefined || !parent.tool.ownsChildren || BlockRepository.isColumnLayout(parent)) {
+    if (parent === undefined || !parent.tool.ownsChildren || BlockRepository.isLayoutBlock(parent)) {
       return block;
     }
 
@@ -296,7 +296,7 @@ export class BlockRepository {
    * @returns {boolean}
    */
   public isSelectionUnit(block: Block): boolean {
-    return this.resolveToSelectableBlock(block) === block && !BlockRepository.isColumnLayout(block);
+    return this.resolveToSelectableBlock(block) === block && !BlockRepository.isLayoutBlock(block);
   }
 
   /**
@@ -401,13 +401,13 @@ export class BlockRepository {
   }
 
   /**
-   * Column layout containers, which never own a toolbar, a drag handle or a
-   * selection — only the blocks inside a column do. Mirrors
-   * `BlockHoverController.isColumnContainer`.
+   * Layout pieces (`isLayout`: column, column_list, tab), which never own a
+   * toolbar, a drag handle or a selection — only the blocks inside them do.
+   * Mirrors `BlockHoverController.isLayoutBlock`.
    * @param block - the block to test
    */
-  private static isColumnLayout(block: Block): boolean {
-    return block.name === 'column' || block.name === 'column_list';
+  private static isLayoutBlock(block: Block): boolean {
+    return block.tool.isLayout;
   }
 
   /**

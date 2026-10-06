@@ -185,7 +185,7 @@ describe('parseNextSpaceBlocks', () => {
       );
 
       expect(out).toEqual([
-        { id: 'h', tool: 'header', data: { text: 'Toggle H2', level: 2, isToggleable: true, isOpen: true } },
+        { id: 'h', tool: 'header', data: { text: 'Toggle H2', level: 2, isToggleable: true } },
         { id: 'c1', tool: 'paragraph', data: { text: 'body' }, parentId: 'h' },
       ]);
     });
@@ -225,7 +225,7 @@ describe('parseNextSpaceBlocks', () => {
       );
 
       expect(out).toEqual([
-        { id: 'tg', tool: 'toggle', data: { text: 'Open me', isOpen: true } },
+        { id: 'tg', tool: 'toggle', data: { text: 'Open me' } },
         { id: 'c1', tool: 'paragraph', data: { text: 'if you dare...' }, parentId: 'tg' },
       ]);
     });
@@ -521,7 +521,7 @@ describe('parseNextSpaceBlocks', () => {
       const out = parseNextSpaceBlocks(payload);
 
       expect(out).toEqual([
-        { id: 'tg', tool: 'toggle', data: { text: 'Open me', isOpen: true } },
+        { id: 'tg', tool: 'toggle', data: { text: 'Open me' } },
         { id: 'c1', tool: 'paragraph', data: { text: 'inside' }, parentId: 'tg' },
       ]);
     });

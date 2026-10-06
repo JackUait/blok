@@ -1,0 +1,119 @@
+name: Docs Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: Space-separated release tags (latest patch of each minor)
+        required: true
+        default: v1.7.0 v1.8.0 v1.9.0 v1.10.1 v1.11.0 v1.12.0 v1.13.0 v1.14.0 v1.15.2
+      root_tag:
+        description: Tag that also gets the root snapshot (latest stable)
+        required: true
+        default: v1.15.2
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    outputs:
+      tags: ${{ steps.split.outputs.tags }}
+    steps:
+      - id: split
+        env:
+          TAGS: ${{ inputs.tags }}
+          ROOT_TAG: ${{ inputs.root_tag }}
+        run: |
+          tag_list="$(jq -cn --arg t "$TAGS" '$t | split(" ") | map(select(length > 0))')"
+          # Otherwise no job builds the root snapshot and the run still looks green.
+          if ! jq -e --arg r "$ROOT_TAG" 'any(.[]; . == $r)' <<<"$tag_list" >/dev/null; then
+            echo "::error::root_tag '$ROOT_TAG' is not in tags: $TAGS"
+            exit 1
+          fi
+          echo "tags=$tag_list" >> "$GITHUB_OUTPUT"
+
+  snapshot:
+    name: Snapshot ${{ matrix.tag }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    # One-off manual workflow; the root-tag job builds twice.
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.prepare.outputs.tags) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: source
+          # The tag's install and build run old dependency scripts; keep the token off disk.
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.tag }}
+          path: tag
+          persist-credentials: false
+          # The root snapshot's sitemap dates each page by `git log -1`; a shallow clone collapses them.
+          fetch-depth: 0
+      # setup-node-deps has no working-directory input, so install by hand in tag/.
+      # Corepack must be enabled before setup-node switches Node, or `yarn` is missing.
+      - name: Enable Corepack
+        run: |
+          corepack --version >/dev/null 2>&1 || npm install -g corepack@0.35.0
+          corepack enable
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          # Every backfilled tag builds on 24; 26 is untested against them.
+          node-version: 24
+      - name: Install dependencies
+        working-directory: tag
+        run: yarn install --immutable
+      - name: Graft versioning onto the tag
+        run: node source/docs/scripts/apply-versioning-overlay.mjs --tag-docs tag/docs --source-docs source/docs
+      - name: Build library and docs deps
+        working-directory: tag
+        run: yarn build && (cd docs && yarn install --frozen-lockfile)
+      # No token here: the tag's build scripts would see the write token.
+      - name: Build snapshots
+        id: snapshots
+        working-directory: tag
+        env:
+          TAG: ${{ matrix.tag }}
+          ROOT_TAG: ${{ inputs.root_tag }}
+        run: |
+          minor="$(echo "${TAG#v}" | cut -d. -f1,2)"
+          node docs/scripts/build-snapshot.mjs --version "$minor" --base "/v/$minor/" --out "docs-v$minor.tgz"
+          if [ "$TAG" = "$ROOT_TAG" ]; then
+            node docs/scripts/build-snapshot.mjs --version "$minor" --base / --out docs-root.tgz
+            # Audits the root build left in docs/dist against the tag's own
+            # manifest; the overlay copies the audit scripts in. A failure
+            # stops the job before anything is attached.
+            node docs/scripts/audit-build-output.mjs --report docs-build-audit.json
+          fi
+          echo "minor=$minor" >> "$GITHUB_OUTPUT"
+      - name: Upload build audit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docs-build-audit-${{ matrix.tag }}
+          path: tag/docs-build-audit.json
+          if-no-files-found: ignore
+      - name: Attach snapshots to the release
+        working-directory: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ matrix.tag }}
+          ROOT_TAG: ${{ inputs.root_tag }}
+          MINOR: ${{ steps.snapshots.outputs.minor }}
+        run: |
+          gh release upload "$TAG" "docs-v$MINOR.tgz" --clobber --repo "$GITHUB_REPOSITORY"
+          if [ "$TAG" = "$ROOT_TAG" ]; then
+            gh release upload "$TAG" docs-root.tgz --clobber --repo "$GITHUB_REPOSITORY"
+          fi

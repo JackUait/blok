@@ -63,6 +63,25 @@ describe('openModalDialog', () => {
     handle.close();
   });
 
+  it('takes its direction from directionSource, else from its anchor', () => {
+    const rtl = document.createElement('button');
+
+    rtl.style.direction = 'rtl';
+    document.body.appendChild(rtl);
+
+    const fromSource = buildDialog();
+    const sourced = openModalDialog({ ...fromSource, directionSource: rtl, onDismiss: vi.fn() });
+
+    expect(fromSource.content.getAttribute('dir')).toBe('rtl');
+    sourced.close();
+
+    const fromAnchor = buildDialog();
+    const anchored = openModalDialog({ ...fromAnchor, anchor: rtl, onDismiss: vi.fn() });
+
+    expect(fromAnchor.content.getAttribute('dir')).toBe('rtl');
+    anchored.close();
+  });
+
   it('appends content to document.body and promotes it to the Top Layer', () => {
     const { content, surface } = buildDialog();
     const handle = openModalDialog({ content, surface, onDismiss: vi.fn() });

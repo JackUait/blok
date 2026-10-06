@@ -46,6 +46,7 @@ export class ToggleItem implements BlockTool {
   private _bodyPlaceholderElement: HTMLElement | null = null;
   private _childContainerElement: HTMLElement | null = null;
   private _isOpen: boolean;
+  private unsubscribeOpen: (() => void) | null = null;
 
   private blockId?: string;
 
@@ -56,12 +57,13 @@ export class ToggleItem implements BlockTool {
     this.readOnly = readOnly;
     this._settings = config || {};
     this._data = this.normalizeData(data);
-    this._isOpen = this._data.isOpen ?? true;
 
     if (block) {
       this.blockId = block.id;
       this.block = block;
     }
+
+    this._isOpen = this.readPersonalOpen();
 
     if (!readOnly) {
       this.api.events.on('block changed', this.handleBlockChanged);
@@ -73,10 +75,6 @@ export class ToggleItem implements BlockTool {
       const normalized: ToggleItemData = {
         text: typeof data.text === 'string' ? data.text : '',
       };
-
-      if (typeof (data as ToggleItemData).isOpen === 'boolean') {
-        normalized.isOpen = (data as ToggleItemData).isOpen;
-      }
 
       const { textColor, backgroundColor } = data as ToggleItemData;
 
@@ -91,18 +89,11 @@ export class ToggleItem implements BlockTool {
       return normalized;
     }
 
-    // Handle legacy toggleList format: { title, isExpanded }
+    // Legacy toggleList format: { title, isExpanded }. isExpanded is ignored: open state is personal.
     if (typeof data === 'object' && data !== null && 'title' in data) {
       const legacyData = data as Record<string, unknown>;
-      const normalized: ToggleItemData = {
-        text: typeof legacyData.title === 'string' ? legacyData.title : '',
-      };
 
-      if (typeof legacyData.isExpanded === 'boolean') {
-        normalized.isOpen = legacyData.isExpanded;
-      }
-
-      return normalized;
+      return { text: typeof legacyData.title === 'string' ? legacyData.title : '' };
     }
 
     return { text: '' };
@@ -128,9 +119,9 @@ export class ToggleItem implements BlockTool {
       readOnly: this.readOnly,
       isOpen: this._isOpen,
       placeholder: this.placeholder,
-      keydownHandler: this.readOnly ? null : this.handleKeyDown.bind(this),
+      keydownHandler: null,
       onArrowClick: () => this.toggleOpen(),
-      onBodyPlaceholderClick: this.readOnly ? null : () => this.handleBodyPlaceholderClick(),
+      onBodyPlaceholderClick: null,
       bodyPlaceholderText: this.api.i18n.t(BODY_PLACEHOLDER_KEY),
       ariaLabels: {
         collapse: this.api.i18n.t(ARIA_LABEL_COLLAPSE_KEY),
@@ -154,7 +145,28 @@ export class ToggleItem implements BlockTool {
      */
     this._childContainerElement.addEventListener('input', this.handleChildContainerInput);
 
+    this.followPersonalOpen();
+
+    if (!this.readOnly) {
+      this.wireEditableListeners();
+    }
+
     return this._element;
+  }
+
+  /**
+   * Kept out of render(): a collaboration session boots every block read-only
+   * and flips it editable in place via setReadOnly(false), without a re-render.
+   * Stable handler refs make a repeated add a DOM no-op, so nothing stacks.
+   */
+  private wireEditableListeners(): void {
+    this._contentElement?.addEventListener('keydown', this.handleKeyDown);
+    this._bodyPlaceholderElement?.addEventListener('click', this.handleBodyPlaceholderClick);
+  }
+
+  private unwireEditableListeners(): void {
+    this._contentElement?.removeEventListener('keydown', this.handleKeyDown);
+    this._bodyPlaceholderElement?.removeEventListener('click', this.handleBodyPlaceholderClick);
   }
 
   private handleChildContainerInput = (): void => {
@@ -162,12 +174,21 @@ export class ToggleItem implements BlockTool {
   };
 
   public rendered(): void {
+    // Runs after insert, so isCreatedHere is known; still before paint.
+    if (
+      this.blockId !== undefined
+      && this.api.viewState.get(this.blockId, 'open') === undefined
+      && this.api.viewState.isCreatedHere(this.blockId)
+    ) {
+      this.setOpenState(true);
+    }
+
     this.updateChildrenVisibility();
     this.updateBodyPlaceholderVisibility();
   }
 
   public save(): ToggleItemData {
-    return saveToggleItem(this._data, this._element, this.getContentElement.bind(this), this._isOpen);
+    return saveToggleItem(this._data, this._element, this.getContentElement.bind(this));
   }
 
   public validate(_blockData: ToggleItemData): boolean {
@@ -214,7 +235,7 @@ export class ToggleItem implements BlockTool {
     );
 
     this._data = result.newData;
-    this._isOpen = this._data.isOpen ?? true;
+    this._isOpen = this.readPersonalOpen();
 
     if (this._contentElement) {
       applyBlockColor(this._contentElement, this._data);
@@ -287,6 +308,12 @@ export class ToggleItem implements BlockTool {
       this._contentElement.contentEditable = state ? 'false' : 'true';
     }
 
+    if (state) {
+      this.unwireEditableListeners();
+    } else {
+      this.wireEditableListeners();
+    }
+
     // Manage block changed event subscription
     if (state && !wasReadOnly) {
       this.api.events.off('block changed', this.handleBlockChanged);
@@ -300,6 +327,33 @@ export class ToggleItem implements BlockTool {
 
   public removed(): void {
     this.api.events.off('block changed', this.handleBlockChanged);
+    this.stopFollowingPersonalOpen();
+  }
+
+  public destroy(): void {
+    this.stopFollowingPersonalOpen();
+  }
+
+  private readPersonalOpen(): boolean {
+    return this.blockId !== undefined && this.api.viewState.get(this.blockId, 'open') === true;
+  }
+
+  /**
+   * Track the personal open state, set here or by another tab.
+   */
+  private followPersonalOpen(): void {
+    this.stopFollowingPersonalOpen();
+
+    if (this.blockId === undefined) {
+      return;
+    }
+
+    this.unsubscribeOpen = this.api.viewState.onChange(this.blockId, 'open', (value) => this.applyOpen(value === true));
+  }
+
+  private stopFollowingPersonalOpen(): void {
+    this.unsubscribeOpen?.();
+    this.unsubscribeOpen = null;
   }
 
   private handleBlockChanged = (data: unknown): void => {
@@ -331,6 +385,21 @@ export class ToggleItem implements BlockTool {
   private setOpenState(open: boolean): void {
     const changed = this._isOpen !== open;
 
+    // Apply before storing: the store echoes the change to followPersonalOpen,
+    // and applyOpen must then see nothing to do.
+    this.applyOpen(open);
+
+    // Personal, not document data: no dispatchChange, and allowed in read-only.
+    if (changed && this.blockId !== undefined) {
+      this.api.viewState.set(this.blockId, 'open', open);
+    }
+  }
+
+  private applyOpen(open: boolean): void {
+    if (this._isOpen === open) {
+      return;
+    }
+
     this._isOpen = open;
 
     if (this._arrowElement && this._element) {
@@ -342,14 +411,6 @@ export class ToggleItem implements BlockTool {
 
     this.updateChildrenVisibility();
     this.updateBodyPlaceholderVisibility();
-
-    // The visual updates above all land in mutation-free subtrees and on the
-    // ignored `data-blok-toggle-open` attribute, so the MutationObserver never
-    // fires for an open/close. Dispatch explicitly so the new `isOpen` reaches
-    // Yjs — making it undoable and visible to remote collaborators.
-    if (changed && !this.readOnly) {
-      this.block?.dispatchChange();
-    }
   }
 
   private toggleOpen(): void {
@@ -380,7 +441,7 @@ export class ToggleItem implements BlockTool {
     updateToggleEmptyState(this._element, this._childContainerElement);
   }
 
-  private handleBodyPlaceholderClick(): void {
+  private handleBodyPlaceholderClick = (): void => {
     if (this.blockId === undefined) {
       return;
     }
@@ -397,9 +458,9 @@ export class ToggleItem implements BlockTool {
 
     // Hide the body placeholder now that a child exists
     this._bodyPlaceholderElement?.classList.add('hidden');
-  }
+  };
 
-  private handleKeyDown(event: KeyboardEvent): void {
+  private handleKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       void this.handleEnter();
@@ -412,7 +473,7 @@ export class ToggleItem implements BlockTool {
 
       return;
     }
-  }
+  };
 
   private createKeyboardContext(): Parameters<typeof handleToggleEnter>[0] {
     return {
@@ -424,7 +485,7 @@ export class ToggleItem implements BlockTool {
       syncContentFromDOM: this.syncContentFromDOM.bind(this),
       isOpen: this._isOpen,
       setOpen: (open: boolean) => {
-        this._isOpen = open;
+        this.setOpenState(open);
       },
     };
   }

@@ -71,6 +71,7 @@ interface BlockOptions {
 
 const DEFAULT_HOLDER_RECT: RectSpec = { top: 0, bottom: 20, left: 0, right: 100 };
 const DEFAULT_CONTENT_RECT: RectSpec = { top: 0, bottom: 20, left: 0, right: 100 };
+const PAGE_SIZED_RECT: RectSpec = { top: -100_000, bottom: 100_000, left: -100_000, right: 100_000 };
 
 /**
  * jsdom runs no layout, so every rect is all-zeros until it is stubbed. The
@@ -213,9 +214,11 @@ describe('BlockHoverController mutants', () => {
     wrapper.setAttribute('data-blok-editor', '');
     (parent ?? document.body).appendChild(wrapper);
 
-    if (wrapperRect !== undefined) {
-      setRect(wrapper, wrapperRect);
-    }
+    /**
+     * The controller drops hover once the pointer leaves the editor's height,
+     * so an unstubbed (all-zero) wrapper would put every pointer outside it.
+     */
+    setRect(wrapper, wrapperRect ?? PAGE_SIZED_RECT);
 
     const emit: EmitMock = vi.fn();
     const blocks: Block[] = [];
@@ -277,7 +280,8 @@ describe('BlockHoverController mutants', () => {
         holder.appendChild(content);
       }
 
-      const block = { id, name, holder } as unknown as Block;
+      // Mirrors the real column / column_list declarations.
+      const block = { id, name, holder, tool: { isLayout: name === 'column' || name === 'column_list' } } as unknown as Block;
 
       blocks.push(block);
 
@@ -638,7 +642,7 @@ describe('BlockHoverController mutants', () => {
       setRect(shallowContent, { top: 100, bottom: 200, left: 0, right: 100 });
       shallowHolder.appendChild(shallowContent);
 
-      const shallow = { id: 'shallow', name: 'paragraph', holder: shallowHolder } as unknown as Block;
+      const shallow = { id: 'shallow', name: 'paragraph', holder: shallowHolder, tool: { isLayout: false } } as unknown as Block;
 
       editor.blocks.push(shallow);
 
@@ -864,9 +868,13 @@ describe('BlockHoverController mutants', () => {
     });
 
     it('measures the vertical gap to an editor from its near edge', () => {
+      /**
+       * The pointer sits inside the near editor and 10px above the other one.
+       * A pointer above every editor would not do: it is released either way.
+       */
       const near = createEditor({ wrapperRect: { top: 100, bottom: 1000, left: 0, right: 10 } });
 
-      createEditor({ wrapperRect: { top: 200, bottom: 300, left: 0, right: 10 } });
+      createEditor({ wrapperRect: { top: 160, bottom: 170, left: 0, right: 10 } });
 
       near.addBlock({
         id: 'b1',
@@ -874,7 +882,7 @@ describe('BlockHoverController mutants', () => {
         contentRect: { top: 0, bottom: 100, left: 0, right: 100 },
       });
 
-      fire(near, mousemoveAt({ x: 0, y: 0 }));
+      fire(near, mousemoveAt({ x: 0, y: 150 }));
 
       expect(emittedBlockIds(near.emit)).toStrictEqual(['b1']);
     });

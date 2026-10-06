@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '../../../../types';
 import type { OutputData } from '../../../../types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
@@ -10,6 +10,19 @@ const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrap
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
 const PLUS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
 const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"] [data-blok-testid="popover-container"]';
+
+// "head" also matches the table of contents through its "headings" search term. It ranks last.
+const HEAD_FILTER_ITEMS = [
+  'header-1', 'header-2', 'header-3', 'header-4', 'header-5', 'header-6',
+  'toggle-header-1', 'toggle-header-2', 'toggle-header-3', 'toggle-header-4', 'toggle-header-5', 'toggle-header-6',
+  'table_of_contents',
+];
+
+const expectHeadFilterItems = async (visibleItems: Locator): Promise<void> => {
+  await expect.poll(() => visibleItems.evaluateAll((elements) =>
+    elements.map((element) => element.getAttribute('data-blok-item-name'))
+  )).toStrictEqual(HEAD_FILTER_ITEMS);
+};
 
 declare global {
   interface Window {
@@ -332,10 +345,10 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Type "head" to filter to heading items
     await page.keyboard.type('head');
 
-    // Now should only show heading items (6 headings + 6 toggle headings)
+    // Now should only show heading items
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(12);
+    await expectHeadFilterItems(visibleItems);
 
     // First filtered item should be focused
     const focusedItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name][data-blok-focused]');
@@ -363,16 +376,16 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Type "head" to filter
     await page.keyboard.type('head');
 
-    // Verify filter applied - should show 12 heading items (6 headings + 6 toggle headings)
+    // Verify filter applied
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(12);
+    await expectHeadFilterItems(visibleItems);
 
     // Backspace to "hea"
     await page.keyboard.press('Backspace');
 
     // Should still show heading items
-    await expect(visibleItems).toHaveCount(12);
+    await expectHeadFilterItems(visibleItems);
 
     // Backspace 3 more times to clear the filter
     await page.keyboard.press('Backspace');
@@ -462,7 +475,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Wait for filter to apply
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(12);
+    await expectHeadFilterItems(visibleItems);
 
     // Press ArrowDown to focus first heading item
     await page.keyboard.press('ArrowDown');
@@ -497,10 +510,10 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Type "head" to filter to heading items only
     await page.keyboard.type('head');
 
-    // Verify only heading items are visible (6 headings + 6 toggle headings)
+    // Verify only heading items are visible
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(12);
+    await expectHeadFilterItems(visibleItems);
 
     // Click on a Heading item by finding one with "Heading" in the text
     const headingItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
@@ -535,7 +548,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Wait for filter to apply
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(12);
+    await expectHeadFilterItems(visibleItems);
 
     // Click on Heading 1
     const headingItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
@@ -751,10 +764,10 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Type "head" to filter to heading items
     await page.keyboard.type('head');
 
-    // Wait for filter to show heading items (6 headings + 6 toggle headings)
+    // Wait for filter to show heading items
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(12);
+    await expectHeadFilterItems(visibleItems);
 
     // Click on Heading 1
     const headingItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
@@ -946,7 +959,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Toolbox must filter by "head" - heading items visible, not "Nothing found".
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(12);
+    await expectHeadFilterItems(visibleItems);
   });
 
   test('plus+slash regression: Escape still restores focus to pre-plus block', async ({ page }) => {

@@ -117,7 +117,6 @@ export const API_SECTIONS: ApiSection[] = [
     title: "Tab sync",
     description:
       "Keep one document live across the tabs of one browser, with no server.",
-    lastUpdated: "2026-10-03",
     customType: "tab-sync",
   },
   {

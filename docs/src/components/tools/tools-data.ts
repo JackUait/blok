@@ -939,7 +939,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Tab',
     description:
-      'A single tab inside a tabs block. It is not user-insertable on its own. The parent `tabs` block creates and manages its tabs.\n\nThe tab saves its `title` and an optional emoji `icon`, both as plain text (no HTML). An empty icon is not saved. Child blocks are nested inside the tab via `contentIds`. A tab cannot hold another tabs block.\n\nAn empty tab shows "Empty tab. Click or drop blocks inside." Clicking it adds a paragraph to the tab.',
+      'A single tab inside a tabs block. It is not user-insertable on its own. The parent `tabs` block creates and manages its tabs.\n\nThe tab saves its `title` and an optional emoji `icon`, both as plain text. An empty icon is not saved. Child blocks are nested inside the tab via `contentIds`. A tab cannot hold another tabs block.\n\nAn empty tab shows "Empty tab. Click or drop blocks inside." Clicking it adds a paragraph to the tab.',
     importExample: `import { TabTool } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface TabData {

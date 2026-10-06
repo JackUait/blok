@@ -66,8 +66,6 @@ export interface PageConfig {
   setIcon?(pageId: string, icon: PageIcon | null): void | Promise<void>;
   /** Opens the page in a side panel, from the menu or Alt+click. */
   peek?(pageId: string, ctx: { event?: MouseEvent }): void;
-  /** Copies `sourcePageId` into a new page with the id Blok minted, for Duplicate and Alt-drag. */
-  duplicate?(init: { sourcePageId: string; pageId: string }): void | Promise<void>;
   /** The page's opening blocks, for the hover preview. */
   preview?(pageId: string): OutputBlockData[] | null | undefined | Promise<OutputBlockData[] | null | undefined>;
 }

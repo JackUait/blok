@@ -12,8 +12,9 @@ import { PageLink } from '../../../../src/tools/page-link';
 import type { API, ConversionConfig, OutputData, PasteConfig } from '../../../../types';
 
 /**
- * A page must have one block. Runs the real copy handler, paste module,
- * sanitizer and default tool on a real editor.
+ * A pasted page block is another entry point to the same page in the page's
+ * own document, and a link anywhere else. Runs the real copy handler, paste
+ * module, sanitizer and default tool on a real editor.
  */
 
 interface TestEditor {
@@ -46,7 +47,7 @@ let holder: HTMLDivElement | undefined;
 
 const PAGE_URL = new URL('/editor/page/p1', document.baseURI).href;
 
-const createEditor = async (withHref = true, withPageLink = false): Promise<TestEditor> => {
+const createEditor = async (withHref = true, withPageLink = false, hasPage = true): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
     tools: {
@@ -57,7 +58,7 @@ const createEditor = async (withHref = true, withPageLink = false): Promise<Test
     data: {
       blocks: [
         { id: 'before', type: 'paragraph', data: { text: 'Before' } },
-        { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'Plans' } } },
+        ...(hasPage ? [{ id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'Plans' } } }] : []),
       ],
     },
   }) as unknown as TestEditor;
@@ -96,6 +97,27 @@ const paste = async (instance: TestEditor, written: Map<string, string>): Promis
   } as unknown as DataTransfer);
 };
 
+/** The document the page does not live in. */
+const openOtherDocument = async (withHref = true, withPageLink = false): Promise<TestEditor> => {
+  editor?.destroy();
+  holder?.remove();
+  holder = document.createElement('div');
+  document.body.appendChild(holder);
+
+  return createEditor(withHref, withPageLink, false);
+};
+
+const pageIds = (output: OutputData): unknown[] =>
+  output.blocks.filter((block) => block.type === 'page').map((block) => block.data.pageId);
+
+const instanceDelete = async (instance: TestEditor, pageId: string): Promise<void> => {
+  const block = instance.module.blockManager.blocks.find((candidate) => candidate.name === 'page' && candidate.preservedData.pageId === pageId);
+
+  if (block !== undefined) {
+    await instance.blocks.delete(instance.blocks.getBlockIndex(block.id));
+  }
+};
+
 const pageCount = (output: OutputData): number => output.blocks.filter((block) => block.type === 'page').length;
 
 const linkParagraphs = (output: OutputData): string[] =>
@@ -116,8 +138,8 @@ afterEach(() => {
   holder?.remove();
 });
 
-describe('page block clipboard (one block per page)', () => {
-  it('a copied page pastes as a link to the absolute page url', async () => {
+describe('page block clipboard (entry points and links)', () => {
+  it('a copied page pastes as another entry point to the same page in its document', async () => {
     const instance = await createEditor();
     const written = await copyPage(instance, false);
 
@@ -125,103 +147,123 @@ describe('page block clipboard (one block per page)', () => {
 
     const output = await instance.save();
 
-    expect(pageCount(output)).toBe(1);
-    expect(linkParagraphs(output)).toEqual([`<a href="${PAGE_URL}">Page</a>`]);
+    expect(pageIds(output)).toEqual(['p1', 'p1']);
+    expect(linkParagraphs(output)).toEqual([]);
     expect(written.get('text/plain')).toBe(`[Page](${PAGE_URL})`);
+    expect(written.get('text/html')).toBe(`<p><a href="${PAGE_URL}">Page</a></p>`);
     expect([...written.values()].join(' ')).not.toContain('Plans');
   });
 
-  it('copies an open-only page as a non-owning reference', async () => {
+  it('a copied page pastes as a link to the absolute page url in another document', async () => {
+    const written = await copyPage(await createEditor(), false);
+    const other = await openOtherDocument();
+
+    await paste(other, written);
+
+    const output = await other.save();
+
+    expect(pageCount(output)).toBe(0);
+    expect(linkParagraphs(output)).toEqual([`<a href="${PAGE_URL}">Page</a>`]);
+  });
+
+  it('copies an open-only page as an entry point here and a non-owning reference elsewhere', async () => {
     const instance = await createEditor(false);
     const written = await copyPage(instance, false);
-    const clipboardBlocks = JSON.parse(written.get('application/x-blok') ?? '') as Array<{ tool: string; data: { text?: string } }>;
-
-    expect(clipboardBlocks).toEqual([expect.objectContaining({
-      tool: 'paragraph',
-      data: { text: '<a data-blok-page-id="p1">Page</a>' },
-    })]);
 
     await paste(instance, written);
     await paste(instance, written);
 
-    const output = await instance.save();
+    expect(pageIds(await instance.save())).toEqual(['p1', 'p1', 'p1']);
+    expect([...written.values()].join(' ')).not.toContain('Plans');
+    expect([...written.values()].join(' ')).not.toContain('cache');
 
-    expect(pageCount(output)).toBe(1);
+    const other = await openOtherDocument(false);
+
+    await paste(other, written);
+    await paste(other, written);
+
+    const output = await other.save();
+
+    expect(pageCount(output)).toBe(0);
     expect(linkParagraphs(output)).toEqual([
       '<a data-blok-page-id="p1">Page</a>',
       '<a data-blok-page-id="p1">Page</a>',
     ]);
-    expect([...written.values()].join(' ')).not.toContain('Plans');
-    expect([...written.values()].join(' ')).not.toContain('cache');
   });
 
   it.each([
     ['page-link', true, { pageId: 'p1' }],
     ['paragraph', false, { text: '<a data-blok-page-id="p1">Page</a>' }],
-  ] as const)('keeps a copied open-only page ID via %s when the custom default cannot import HTML', async (tool, withPageLink, data) => {
-    const instance = new Blok({
-      holder,
-      defaultBlock: 'custom',
-      tools: {
-        custom: NoImportDefault,
-        paragraph: Paragraph,
-        page: { class: PageTool, config: { open: () => undefined } },
-        ...(withPageLink ? { 'page-link': { class: PageLink, config: { open: () => undefined } } } : {}),
-      },
-      data: {
-        blocks: [
-          { id: 'before', type: 'custom', data: { text: 'Before' } },
-          { id: 'pg', type: 'page', data: { pageId: 'p1' } },
-        ],
-      },
-    }) as unknown as TestEditor;
+  ] as const)('keeps a copied open-only page ID via %s in another document when the custom default cannot import HTML', async (tool, withPageLink, data) => {
+    const make = async (hasPage: boolean): Promise<TestEditor> => {
+      const instance = new Blok({
+        holder,
+        defaultBlock: 'custom',
+        tools: {
+          custom: NoImportDefault,
+          paragraph: Paragraph,
+          page: { class: PageTool, config: { open: () => undefined } },
+          ...(withPageLink ? { 'page-link': { class: PageLink, config: { open: () => undefined } } } : {}),
+        },
+        data: {
+          blocks: [
+            { id: 'before', type: 'custom', data: { text: 'Before' } },
+            ...(hasPage ? [{ id: 'pg', type: 'page', data: { pageId: 'p1' } }] : []),
+          ],
+        },
+      }) as unknown as TestEditor;
 
-    editor = instance;
-    await instance.isReady;
-    const written = await copyPage(instance, false);
-    const clipboardBlocks = JSON.parse(written.get('application/x-blok') ?? '') as Array<{ tool: string; data: Record<string, unknown> }>;
+      editor = instance;
+      await instance.isReady;
 
-    expect(clipboardBlocks).toEqual([expect.objectContaining({ tool, data })]);
+      return instance;
+    };
+    const written = await copyPage(await make(true), false);
 
-    await paste(instance, written);
-    await paste(instance, written);
-    const output = await instance.save();
+    editor?.destroy();
+    const other = await make(false);
 
-    expect(pageCount(output)).toBe(1);
+    await paste(other, written);
+    await paste(other, written);
+    const output = await other.save();
+
+    expect(pageCount(output)).toBe(0);
     expect(output.blocks.filter((block) => block.type === tool).map((block) => block.data)).toEqual([data, data]);
   });
 
-  it('keeps a no-href page ID when Code is the default and Paragraph is registered', async () => {
-    const instance = new Blok({
-      holder,
-      defaultBlock: 'code',
-      tools: {
-        code: CodeTool,
-        paragraph: Paragraph,
-        page: { class: PageTool, config: { open: () => undefined } },
-      },
-      data: {
-        blocks: [
-          { id: 'before', type: 'paragraph', data: { text: 'Before' } },
-          { id: 'pg', type: 'page', data: { pageId: 'p1' } },
-        ],
-      },
-    }) as unknown as TestEditor;
+  it('keeps a no-href page ID in another document when Code is the default and Paragraph is registered', async () => {
+    const make = async (hasPage: boolean): Promise<TestEditor> => {
+      const instance = new Blok({
+        holder,
+        defaultBlock: 'code',
+        tools: {
+          code: CodeTool,
+          paragraph: Paragraph,
+          page: { class: PageTool, config: { open: () => undefined } },
+        },
+        data: {
+          blocks: [
+            { id: 'before', type: 'paragraph', data: { text: 'Before' } },
+            ...(hasPage ? [{ id: 'pg', type: 'page', data: { pageId: 'p1' } }] : []),
+          ],
+        },
+      }) as unknown as TestEditor;
 
-    editor = instance;
-    await instance.isReady;
-    const written = await copyPage(instance, false);
-    const clipboardBlocks = JSON.parse(written.get('application/x-blok') ?? '') as Array<{ tool: string; data: Record<string, unknown> }>;
+      editor = instance;
+      await instance.isReady;
 
-    expect(clipboardBlocks).toEqual([expect.objectContaining({
-      tool: 'paragraph', data: { text: '<a data-blok-page-id="p1">Page</a>' },
-    })]);
+      return instance;
+    };
+    const written = await copyPage(await make(true), false);
 
-    await paste(instance, written);
-    const output = await instance.save();
+    editor?.destroy();
+    const other = await make(false);
+
+    await paste(other, written);
+    const output = await other.save();
 
     expect(linkParagraphs(output)).toEqual(['<a data-blok-page-id="p1">Page</a>']);
-    expect(pageCount(output)).toBe(1);
+    expect(pageCount(output)).toBe(0);
   });
 
   it('copies a consumer page tool and its child without treating it as a pointer', async () => {
@@ -251,7 +293,7 @@ describe('page block clipboard (one block per page)', () => {
     expect(written.get('text/html')).toContain('Custom page content');
   });
 
-  it('a cut page comes back once; the next paste of the same cut is a link', async () => {
+  it('a cut page comes back once; the next paste of the same cut is another entry point', async () => {
     const instance = await createEditor();
     const written = await copyPage(instance, true);
 
@@ -260,71 +302,54 @@ describe('page block clipboard (one block per page)', () => {
 
     const afterFirst = await instance.save();
 
-    expect(pageCount(afterFirst)).toBe(1);
+    expect(pageIds(afterFirst)).toEqual(['p1']);
     expect(linkParagraphs(afterFirst)).toEqual([]);
 
     await paste(instance, written);
 
     const afterSecond = await instance.save();
 
-    expect(pageCount(afterSecond)).toBe(1);
-    expect(linkParagraphs(afterSecond)).toEqual([`<a href="${PAGE_URL}">Page</a>`]);
+    expect(pageIds(afterSecond)).toEqual(['p1', 'p1']);
+    expect(linkParagraphs(afterSecond)).toEqual([]);
   });
 
-  it('a cut open-only page returns as the owner once, then pastes as a reference', async () => {
-    const instance = await createEditor(false);
-    const written = await copyPage(instance, true);
+  it('a cut page moves into another document once, then pastes there as another entry point', async () => {
+    const written = await copyPage(await createEditor(), true);
+    const other = await openOtherDocument(true, true);
 
-    await instance.blocks.delete(instance.blocks.getBlockIndex('pg'));
-    await paste(instance, written);
+    await paste(other, written);
+    expect(pageIds(await other.save())).toEqual(['p1']);
 
-    const afterFirst = await instance.save();
+    await paste(other, written);
 
-    expect(pageCount(afterFirst)).toBe(1);
-    expect(linkParagraphs(afterFirst)).toEqual([]);
+    const output = await other.save();
 
-    await paste(instance, written);
-
-    const afterSecond = await instance.save();
-
-    expect(pageCount(afterSecond)).toBe(1);
+    expect(pageIds(output)).toEqual(['p1', 'p1']);
   });
 
-  it('a cut open-only page does not create another owner while the original is live', async () => {
-    const instance = await createEditor(false);
-    const written = await copyPage(instance, true);
+  it('a spent cut pastes a page-link in a document without the page', async () => {
+    const written = await copyPage(await createEditor(false, true), true);
+    const other = await openOtherDocument(false, true);
 
-    await paste(instance, written);
+    await paste(other, written);
+    await instanceDelete(other, 'p1');
+    await paste(other, written);
 
-    const output = await instance.save();
-
-    expect(pageCount(output)).toBe(1);
-  });
-
-  it('a spent open-only cut pastes a page-link without creating a second owner', async () => {
-    const instance = await createEditor(false, true);
-    const written = await copyPage(instance, true);
-
-    await instance.blocks.delete(instance.blocks.getBlockIndex('pg'));
-    await paste(instance, written);
-    expect(pageCount(await instance.save())).toBe(1);
-
-    await paste(instance, written);
-    const output = await instance.save();
+    const output = await other.save();
 
     expect(output.blocks.filter((block) => block.type === 'page-link').map((block) => block.data)).toEqual([{ pageId: 'p1' }]);
-    expect(pageCount(output)).toBe(1);
+    expect(pageCount(output)).toBe(0);
   });
 
-  it('a live owner makes an open-only cut paste as a page-link', async () => {
+  it('a cut page pastes as another entry point while the original is live', async () => {
     const instance = await createEditor(false, true);
     const written = await copyPage(instance, true);
 
     await paste(instance, written);
     const output = await instance.save();
 
-    expect(output.blocks.filter((block) => block.type === 'page-link').map((block) => block.data)).toEqual([{ pageId: 'p1' }]);
-    expect(pageCount(output)).toBe(1);
+    expect(pageIds(output)).toEqual(['p1', 'p1']);
+    expect(output.blocks.filter((block) => block.type === 'page-link')).toEqual([]);
   });
 
   it.each(['paragraph', 'list'] as const)('does not copy revoked inline page metadata from a saved %s', async (type) => {

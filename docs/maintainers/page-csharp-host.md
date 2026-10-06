@@ -13,7 +13,7 @@ The docs site already states four rules this guide relies on. Read them on https
 - `collab-rollback-boundary`: "Turning the operation journal off is not a rollback".
 - `collab-access-lifecycle`: "Access, trash and permanent deletion belong to your app".
 
-The C# below compiles as one project against `Blok.Server.AspNetCore`. Its routes were run once in both collaboration profiles: signed out, create, resolve, rename, stale writes, events, trash, delete, duplicate and export. It keeps state in memory so it runs; a real host keeps the same rows in its database. The TypeScript was type-checked only, not run in a browser.
+The C# below compiles as one project against `Blok.Server.AspNetCore`. Its routes were run once in both collaboration profiles: signed out, create, resolve, rename, stale writes, events, trash, delete and export. It keeps state in memory so it runs; a real host keeps the same rows in its database. The TypeScript was type-checked only, not run in a browser.
 
 ## What a page is on the server
 
@@ -933,94 +933,22 @@ public static partial class PageRoutes
 
 The parent document still holds the `page` pointer. Remove it with `POST /sync/{parent}/edit` or in your own save, after your policy checks. Until then the pointer resolves to `null` and shows "Page not found".
 
-## Duplicate and page-aware export: `PageCopies.cs`
+## Page-aware export: `PageCopies.cs`
 
-Without `config.duplicate`, Duplicate (Cmd/Ctrl+D) and Alt-drag make a **second link to the same page**, not a copy. Copy and paste always carry a link.
-
-With `duplicate` set, Blok mints the new page id, inserts a pointer to it, and then calls `duplicate({ sourcePageId, pageId })`. Peers see the pointer before your route commits, and it shows "Page not found" until `subscribe` reports the page. Your route creates the record, the ACL row and a copied body under that id. The body copy needs fresh block ids: `RemapPageDocumentAsync` rewrites them.
-
-This sample copies one page. It refuses a page that owns child pages, because the copy would be a second owner of each child. Copy a subtree with `page-transfer-host.md`'s procedure instead. It copies the last body your endpoint accepted, which can trail the live document: by up to ten seconds on a working copy, and until the next checkpoint, eviction or drain under a journal.
+Blok never asks the host to copy a page. In the page's own document, Duplicate (Cmd/Ctrl+D), Alt-drag and paste make another block with the same `pageId`: another entry point to one page. A paste into any other document makes a link. The page stays out of Trash while one of its blocks is left. In the page tree, the first block owns it.
 
 The export route shows the page-aware `ToHtmlAsync`. A saved document holds page ids only. The export gets each title and icon from your records, filtered for the reader, through a `BlokPageInfo` map: a `null` value shows "Page not found", `NoAccess` shows "No access", and an id left out shows "Page". `ToMarkdownAsync` takes the same map.
 
 ```csharp
 // File: PageCopies.cs
-using System.Text.Json.Nodes;
 using Blok.Server.Documents;
 
 namespace PageHost;
-
-public sealed record DuplicateRequest(string PageId);
 
 public static partial class PageRoutes
 {
   internal static void MapPageCopies(this RouteGroupBuilder group)
   {
-    // config.duplicate -> POST.
-    group.MapPost("/{sourcePageId}/duplicate", async (string sourcePageId, DuplicateRequest request,
-        HttpContext context, PageStore store, PageEvents events, IBlokDocumentConverter blok,
-        CancellationToken ct) =>
-    {
-      if (UserId(context.User) is not { } userId)
-      {
-        return Results.Forbid();
-      }
-
-      if (store.Find(sourcePageId) is not { } source || store.AccessOf(sourcePageId, userId) == PageAccess.None)
-      {
-        return Results.NotFound();
-      }
-
-      if (!IsPageId(request.PageId))
-      {
-        return Results.BadRequest();
-      }
-
-      var body = store.Body(sourcePageId)?.Body.ToJsonString() ?? """{"blocks":[]}""";
-
-      if ((await blok.GetPageIndexAsync(body, ct)).Owners.Count > 0)
-      {
-        return Results.UnprocessableEntity("copy a page with child pages as a subtree");
-      }
-
-      // Blok saves nested blocks flat, each with its own top-level id.
-      var blockIds = new Dictionary<string, string>(StringComparer.Ordinal);
-
-      if (JsonNode.Parse(body)?["blocks"] is JsonArray blocks)
-      {
-        foreach (var block in blocks)
-        {
-          if (block?["id"]?.GetValue<string>() is { } id)
-          {
-            blockIds[id] = Guid.NewGuid().ToString("N")[..10];
-          }
-        }
-      }
-
-      string copy;
-
-      try
-      {
-        copy = await blok.RemapPageDocumentAsync(body, blockIds, new Dictionary<string, string>(), ct);
-      }
-      catch (ArgumentException error)
-      {
-        // Legacy nested blocks carry ids this walk does not see; the message names them.
-        return Results.UnprocessableEntity(error.Message);
-      }
-
-      if (store.Create(request.PageId, userId) is not (_, true))
-      {
-        return Results.Conflict();
-      }
-
-      store.Update(request.PageId, 1, record => record with { Title = source.Title, Icon = source.Icon });
-      store.ReplaceBodyByHost(request.PageId, JsonNode.Parse(copy) ?? new JsonObject());
-      events.Publish(request.PageId, [userId]);
-
-      return Results.Ok(store.Find(request.PageId));
-    });
-
     group.MapGet("/{pageId}/export.html", async (string pageId, HttpContext context, PageStore store,
         IBlokDocumentConverter blok, CancellationToken ct) =>
     {

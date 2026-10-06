@@ -155,27 +155,6 @@ export class PageTool implements BlockTool {
     return { pageId };
   }
 
-  /**
-   * Duplicate and Alt-drag copy the page itself when the host can: the copy
-   * points at a new id, and the host fills that page from the source.
-   * Null without the hook, so the copy stays a link.
-   */
-  public static duplicateData(data: PageData, config: PageConfig): PageData | null {
-    const duplicate = config.duplicate;
-    const sourcePageId = typeof data.pageId === 'string' ? data.pageId : '';
-
-    if (duplicate === undefined || sourcePageId === '') {
-      return null;
-    }
-
-    const pageId = generateBlockId();
-
-    // The copy shows "Page not found" until the host notifies that it exists.
-    new Promise<void>((resolve) => resolve(duplicate({ sourcePageId, pageId }))).catch(() => undefined);
-
-    return { pageId, ...readColors(data) };
-  }
-
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconPage,
@@ -204,8 +183,8 @@ export class PageTool implements BlockTool {
   }
 
   /**
-   * A page exists once, so a copy carries a link to it. The url is absolute:
-   * a relative href means nothing once pasted into another app.
+   * The link a copy becomes outside the page's own document, and in other
+   * apps. The url is absolute: a relative href means nothing once pasted elsewhere.
    */
   public static copyAsLink(data: PageData, config: PageConfig): { url: string; text: string } | null {
     const pageId = typeof data.pageId === 'string' ? data.pageId : '';

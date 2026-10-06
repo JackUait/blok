@@ -305,10 +305,11 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   copiesOwnChildren?: boolean;
 
   /**
-   * For a block that stands for something that must exist once, like a page.
-   * Copy, Duplicate and Alt-drag carry this link instead of the block, and a
-   * pasted copy becomes the link. A cut still moves the block, once.
-   * Return null when there is nothing to link to.
+   * For a block that stands for something living elsewhere, like a page.
+   * Copy carries this link for other apps, and a pasted copy becomes it. A
+   * cut still moves the block, once. A page block is the exception: in the
+   * document where its page is already live, paste, Duplicate and Alt-drag
+   * make another block for the same page. Return null when there is nothing to link to.
    *
    * Core inserts the link as a default block (a paragraph holding
    * `<a href="url">text</a>`), and the block menu's "Copy link" copies `url`.
@@ -321,8 +322,8 @@ export interface BlockToolConstructable extends BaseToolConstructable {
 
   /**
    * The data Duplicate and Alt-drag insert for this Tool's block, instead of
-   * a copy or the `copyAsLink` link — for example a page the host copies to
-   * a new id. Return null to fall back. Copy and paste never call it.
+   * a copy or the `copyAsLink` link. Return null to fall back. Copy and
+   * paste never call it.
    *
    * @param data - the block's saved data
    * @param config - the Tool's config

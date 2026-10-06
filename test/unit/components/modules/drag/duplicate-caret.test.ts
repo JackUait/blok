@@ -181,43 +181,44 @@ describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
     expect(caret.setToBlock).toHaveBeenCalledWith(dup, caret.positions.END);
   });
 
-  it('duplicates a page block as a link paragraph, never a second page block', async () => {
+  it.each([
+    ['with a link url', (): { url: string; text: string } => ({ url: 'https://x.test/p1', text: 'Plans' })],
+    ['without a link url', (): null => null],
+  ])('duplicates a page block %s as another entry point to the same page', async (_, copyAsLink) => {
     const dup = createBlockStub('dup-1');
     const { dragManager, blocks, tools, insert } = createSetup(dup);
 
     Object.assign(blocks[0], {
       name: 'page',
-      save: vi.fn().mockResolvedValue({ data: { pageId: 'p1' }, tunes: {} }),
+      save: vi.fn().mockResolvedValue({ data: { pageId: 'p1', textColor: 'red' }, tunes: {} }),
     });
-    tools.blockTools.set('page', { copyAsLink: (data: { pageId: string }) => ({ url: `https://x.test/${data.pageId}`, text: 'Plans' }) });
+    tools.blockTools.set('page', { copyAsLink, duplicateData: () => ({ pageId: 'p1-copy' }) });
     tools.defaultTool = { name: 'paragraph', conversionConfig: { import: 'text' }, settings: {} };
 
-    await dragManager.duplicateBlocksInPlace(blocks[0]);
+    const copied = await dragManager.duplicateBlocksInPlace(blocks[0]);
 
     expect(insert).toHaveBeenCalledTimes(1);
-    expect(insert.mock.calls[0][0]).toMatchObject({
-      tool: 'paragraph',
-      data: { text: '<a href="https://x.test/p1">Plans</a>' },
-    });
+    expect(insert.mock.calls[0][0]).toMatchObject({ tool: 'page', data: { pageId: 'p1', textColor: 'red' } });
+    expect(copied).toEqual([dup]);
   });
 
-  it('duplicates a page as a new page when its tool gives duplicate data', async () => {
+  it('duplicates a block with the data its tool gives', async () => {
     const dup = createBlockStub('dup-1');
     const { dragManager, blocks, tools, insert } = createSetup(dup);
 
     Object.assign(blocks[0], {
-      name: 'page',
-      save: vi.fn().mockResolvedValue({ data: { pageId: 'p1' }, tunes: {} }),
+      name: 'custom',
+      save: vi.fn().mockResolvedValue({ data: { ref: 'r1' }, tunes: {} }),
     });
-    tools.blockTools.set('page', {
-      duplicateData: (data: { pageId: string }) => ({ pageId: `${data.pageId}-copy` }),
-      copyAsLink: () => ({ url: 'https://x.test/p1', text: 'Page' }),
+    tools.blockTools.set('custom', {
+      duplicateData: (data: { ref: string }) => ({ ref: `${data.ref}-copy` }),
+      copyAsLink: () => ({ url: 'https://x.test/r1', text: 'Ref' }),
     });
 
     await dragManager.duplicateBlocksInPlace(blocks[0]);
 
     expect(insert).toHaveBeenCalledTimes(1);
-    expect(insert.mock.calls[0][0]).toMatchObject({ tool: 'page', data: { pageId: 'p1-copy' } });
+    expect(insert.mock.calls[0][0]).toMatchObject({ tool: 'custom', data: { ref: 'r1-copy' } });
   });
 
   it('duplicates a custom block with its ordinary data when copyAsLink throws', async () => {
@@ -257,51 +258,6 @@ describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
       tool: 'custom',
       data: { text: 'ordinary copy' },
       tunes: { alignment: { alignment: 'center' } },
-    }));
-    expect(copied).toEqual([dup]);
-  });
-
-  it('does not duplicate an owning page when no link URL is available', async () => {
-    const dup = createBlockStub('dup-1');
-    const { dragManager, blocks, tools, insert } = createSetup(dup);
-
-    Object.assign(blocks[0], {
-      name: 'page',
-      save: vi.fn().mockResolvedValue({ data: { pageId: 'p1' }, tunes: {} }),
-    });
-    tools.blockTools.set('page', { copyAsLink: () => null });
-
-    const copied = await dragManager.duplicateBlocksInPlace(blocks[0]);
-
-    expect(insert).not.toHaveBeenCalled();
-    expect(copied).toEqual([]);
-  });
-
-  it('keeps a selected paragraph in place when a preceding page has no link URL', async () => {
-    const container = createBlockStub('container');
-    const page = createBlockStub('page-1');
-    const paragraph = createBlockStub('para-1');
-    const dup = createBlockStub('dup-1');
-    const { dragManager, tools, insert, blockSelection } = createSetup(dup, [container, page, paragraph]);
-
-    container.contentIds = [page.id];
-    Object.assign(page, {
-      name: 'page',
-      parentId: container.id,
-      save: vi.fn().mockResolvedValue({ data: { pageId: 'p1' }, tunes: {} }),
-    });
-    page.selected = true;
-    paragraph.selected = true;
-    blockSelection.selectedBlocks = [page, paragraph];
-    tools.blockTools.set('page', { copyAsLink: () => null });
-
-    const copied = await dragManager.duplicateBlocksInPlace(page);
-
-    expect(insert).toHaveBeenCalledTimes(1);
-    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
-      tool: 'paragraph',
-      data: { text: 'para-1' },
-      placement: { parentId: null, afterId: paragraph.id },
     }));
     expect(copied).toEqual([dup]);
   });

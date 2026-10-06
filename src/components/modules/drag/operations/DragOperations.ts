@@ -290,7 +290,7 @@ export class DragOperations {
     // A copy whose children are copied with it is inserted as 'paste' (it brings
     // its own children), so a container like callout does not seed a body.
     const copiedParentIds = new Set(prep.sortedBlocks.map(block => block.parentId));
-    // A `copyAsLink` block (a page) is copied as its link. One insert per
+    // A block the resolver maps is inserted as what it returned. One insert per
     // result either way: callers pair duplicatedBlocks with sortedBlocks by index.
     const duplicatedBlocks = prep.validResults.map(({ saved, toolName, link }, index) => {
       const data = link?.data ?? structuredClone(saved.data);

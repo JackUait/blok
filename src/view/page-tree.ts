@@ -54,14 +54,17 @@ export const projectPageTree = (
   const unique = new Map<string, PositionedEdge>();
 
   for (const [pageId, group] of owners) {
-    if (group.length > 1) {
+    // Pointers in one document are entry points to one page; the first owns it.
+    const sameDocument = group.every(({ edge }) => edge.ownerPageId === group[0].edge.ownerPageId);
+
+    if (group.length > 1 && !sameDocument) {
       diagnostics.push({
         kind: 'duplicate-owner',
         pageId,
         edges: group.map(({ edge }) => edge),
       });
     } else {
-      unique.set(pageId, group[0]);
+      unique.set(pageId, group.reduce((first, entry) => (entry.edge.order < first.edge.order ? entry : first)));
     }
   }
 

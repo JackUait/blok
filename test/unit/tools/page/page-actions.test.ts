@@ -334,26 +334,4 @@ describe('Page tool actions', () => {
       expect(event.defaultPrevented).toBe(false);
     });
   });
-
-  describe('duplicateData (Duplicate and Alt-drag copy the page)', () => {
-    it('mints a new page, asks the host to copy into it, and keeps the color', () => {
-      const duplicate = vi.fn();
-      const copy = PageTool.duplicateData({ pageId: 'p1', textColor: 'red' }, { duplicate });
-
-      expect(copy).toEqual({ pageId: expect.any(String), textColor: 'red' });
-      expect(copy?.pageId).not.toBe('p1');
-      expect(duplicate).toHaveBeenCalledWith({ sourcePageId: 'p1', pageId: copy?.pageId });
-    });
-
-    it('returns null without a duplicate hook, so the copy stays a link', () => {
-      expect(PageTool.duplicateData({ pageId: 'p1' }, {})).toBeNull();
-    });
-
-    it('swallows a rejected host copy', async () => {
-      const duplicate = vi.fn(() => Promise.reject(new Error('quota')));
-
-      expect(PageTool.duplicateData({ pageId: 'p1' }, { duplicate })).not.toBeNull();
-      await flush();
-    });
-  });
 });

@@ -457,7 +457,7 @@ export class BlockSelection extends Module {
    * Reduce each Block and copy its content
    * @param {ClipboardEvent} e - copy/cut event
    * @param options - `cut` when the blocks are about to be deleted
-   * @param options.cut - a `copyAsLink` block then travels as itself, once
+   * @param options.cut - a `copyAsLink` block may then come back once anywhere
    * @returns {Promise<void>}
    */
   public async copySelectedBlocks(e: ClipboardEvent, options: { cut?: boolean } = {}): Promise<void> {
@@ -494,9 +494,9 @@ export class BlockSelection extends Module {
     const cutToken = options.cut === true && (links.size > 0 || allBlocks.some((block) => isPagePointer(block.name, block.preservedData)))
       ? rememberCut()
       : null;
-    const savedData = options.cut === true
-      ? this.serializeBlocksForClipboard(allBlocks, links, cutToken)
-      : linkedData;
+    // Blok's own flavor carries linked blocks as themselves; paste decides
+    // whether each one may stay a block or must become its link.
+    const savedData = this.serializeBlocksForClipboard(allBlocks, links, cutToken);
 
     /**
      * List blocks render as non-semantic `<div role="listitem">` with a marker
@@ -852,10 +852,11 @@ export class BlockSelection extends Module {
 
   /**
    * Serialize Blocks into the plain shape used for clipboard payloads.
-   * A linked block copies as a link. A cut keeps its owning form once.
+   * Without `cut` a linked block becomes its link (the Markdown flavor).
+   * With it, linked blocks stay blocks and carry their link for the paste.
    * @param blocks - the blocks from {@link collectBlocksForClipboard}
    * @param links - the links from {@link copyLinksOf}
-   * @param cut - a cut token, or null when a cut has no singleton blocks
+   * @param cut - a cut token, or null for a copy or a cut with no linked blocks
    * @returns serialized block data in document order
    */
   private serializeBlocksForClipboard(blocks: Block[], links: Map<Block, CopyLink>, cut?: string | null): ClipboardEntry[] {

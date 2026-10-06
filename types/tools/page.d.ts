@@ -113,14 +113,6 @@ export interface PageConfig {
    */
   peek?(pageId: string, ctx: { event?: MouseEvent }): void;
   /**
-   * Copies a page for Duplicate (Cmd/Ctrl+D) and Alt-drag. Blok mints the new
-   * `pageId`, inserts a page block pointing at it, and calls this to fill it
-   * from `sourcePageId`. The copy shows "Page not found" until `subscribe`
-   * reports the page. Without it, a duplicate is a link to the same page.
-   * Copy and paste always carry a link.
-   */
-  duplicate?(init: { sourcePageId: string; pageId: string }): void | Promise<void>;
-  /**
    * The page's opening blocks, asked for when a hover on the block starts.
    * The hover preview shows the first few as small lines of text under the
    * title, like Notion. Without it the preview shows only icon, path and title.
@@ -160,9 +152,9 @@ export declare class Page implements BlockTool {
   static acceptsChildren?: boolean;
 
   /**
-   * A link to the page with neutral text.
-   * Copy, Duplicate and Alt-drag carry it instead of a second block.
-   * Null without `href`.
+   * A link to the page with neutral text. A paste outside the page's own
+   * document, and other apps, get it. In that document, paste, Duplicate and
+   * Alt-drag make another block for the same page. Null without `href`.
    */
   static copyAsLink(data: PageData, config: PageConfig): { url: string; text: string } | null;
 
@@ -171,9 +163,6 @@ export declare class Page implements BlockTool {
 
   /** Asks `config.create` for a new page, for the toolbox to insert. */
   static prepareInsert(config: PageConfig): Promise<PageData>;
-
-  /** A new page id for Duplicate and Alt-drag. Null without `config.duplicate`. */
-  static duplicateData(data: PageData, config: PageConfig): PageData | null;
 
   constructor(options: PageConstructorOptions);
 

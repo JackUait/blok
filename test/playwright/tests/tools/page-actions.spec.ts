@@ -15,7 +15,6 @@ interface HostCalls {
   open: string[];
   newTab: string[];
   peek: string[];
-  duplicate: Array<{ sourcePageId: string; pageId: string }>;
 }
 
 declare global {
@@ -40,7 +39,7 @@ const DATA: OutputData = {
 const createEditor = async (page: Page, data: OutputData = DATA): Promise<void> => {
   await resetBlok(page);
   await page.evaluate(async ({ holder, data }) => {
-    const calls: HostCalls = { rename: [], icon: [], open: [], newTab: [], peek: [], duplicate: [] };
+    const calls: HostCalls = { rename: [], icon: [], open: [], newTab: [], peek: [] };
     const titles = new Map<string, string>([['roadmap', 'Roadmap']]);
     const icons = new Map<string, unknown>();
 
@@ -79,11 +78,6 @@ const createEditor = async (page: Page, data: OutputData = DATA): Promise<void> 
             peek: (pageId: string) => {
               calls.peek.push(pageId);
             },
-            duplicate: (init: { sourcePageId: string; pageId: string }) => {
-              calls.duplicate.push(init);
-              titles.set(init.pageId, `${titles.get(init.sourcePageId) ?? ''} (1)`);
-              listeners.get(init.pageId)?.();
-            },
           },
         },
       },
@@ -95,7 +89,7 @@ const createEditor = async (page: Page, data: OutputData = DATA): Promise<void> 
 };
 
 const hostCalls = async (page: Page): Promise<HostCalls> =>
-  await page.evaluate(() => window.__hostCalls ?? { rename: [], icon: [], open: [], newTab: [], peek: [], duplicate: [] });
+  await page.evaluate(() => window.__hostCalls ?? { rename: [], icon: [], open: [], newTab: [], peek: [] });
 
 const openMenu = async (page: Page): Promise<void> => {
   await page.getByTestId('page-link').click({ button: 'right' });
@@ -223,18 +217,15 @@ test.describe('Page block menu', () => {
     expect(calls.open).toEqual([]);
   });
 
-  test('duplicates the page through the host', async ({ page }) => {
+  test('duplicates the block as another entry point to the same page', async ({ page }) => {
     await openMenu(page);
     await menuItem(page, 'Duplicate').click();
 
-    await expect(page.getByTestId('page-title')).toHaveText(['Roadmap', 'Roadmap (1)']);
+    await expect(page.getByTestId('page-title')).toHaveText(['Roadmap', 'Roadmap']);
 
-    const { duplicate } = await hostCalls(page);
     const saved = await saveBlok(page);
 
-    expect(duplicate).toHaveLength(1);
-    expect(duplicate[0]?.sourcePageId).toBe('roadmap');
-    expect(saved.blocks.map((block) => block.data.pageId)).toEqual([undefined, 'roadmap', duplicate[0]?.pageId]);
+    expect(saved.blocks.map((block) => block.data.pageId)).toEqual([undefined, 'roadmap', 'roadmap']);
   });
 
   test('moves the page block to the trash', async ({ page }) => {

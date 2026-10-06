@@ -73,7 +73,23 @@ describe('projectPageTree', () => {
     });
   });
 
-  it('reports both duplicate owners instead of choosing one', () => {
+  it('places a page under its first entry point when one document points at it twice', () => {
+    const edges: HostPageEdge[] = [
+      { ownerPageId: 'doc', pageId: 'parent', sourceBlockId: 'p0', order: 0 },
+      { ownerPageId: null, pageId: 'doc', sourceBlockId: 'd0', order: 0 },
+      { ownerPageId: 'doc', pageId: 'shared', sourceBlockId: 'later', order: 5 },
+      { ownerPageId: 'doc', pageId: 'shared', sourceBlockId: 'first', order: 2 },
+    ];
+    const projection = projectPageTree(edges, { doc: {}, parent: {}, shared: { title: 'Shared' } });
+
+    expect(projection.diagnostics).toEqual([]);
+    expect(projection.roots[0]?.children.map((node) => [node.pageId, node.sourceBlockId])).toEqual([
+      ['parent', 'p0'],
+      ['shared', 'first'],
+    ]);
+  });
+
+  it('reports owners in different documents instead of choosing one', () => {
     const edges: HostPageEdge[] = [
       { ownerPageId: null, pageId: 'shared', sourceBlockId: 'b1', order: 0 },
       { ownerPageId: 'other', pageId: 'shared', sourceBlockId: 'b2', order: 3 },

@@ -24,7 +24,7 @@ Attach the source document's page ID to each stored owner edge as `ownerPageId`.
 
 `roots` and `children` follow saved numeric order, with input order breaking ties. A node uses only host metadata: `access: 'none'` contains no title or icon even if the record includes them, while absent metadata yields `access: 'missing'` and a `missing-page` diagnostic. The projection never reads a title or icon from the pointer.
 
-Check `diagnostics` before presenting a definitive parent or breadcrumb. `duplicate-owner` carries every competing source block and document edge; neither owner is selected. `cycle` and `unreachable` identify paths that cannot be placed under a root. `missing-owner` identifies metadata pages with no pointer. Repair the saved owners or catalog data and reproject; do not guess a parent.
+Check `diagnostics` before presenting a definitive parent or breadcrumb. Several pointers to one page in the same document are entry points to that page: the first in saved order owns it, with no diagnostic. Pointers in different documents raise `duplicate-owner`, which carries every competing source block and document edge; neither owner is selected. `cycle` and `unreachable` identify paths that cannot be placed under a root. `missing-owner` identifies metadata pages with no pointer. Repair the saved owners or catalog data and reproject; do not guess a parent.
 
 ## Search and access
 

@@ -813,6 +813,18 @@ describe('page trash', () => {
     expect(new PageRegistry(seed()).trashedIn('keys')?.id).toBe('keys');
   });
 
+  it('keeps a page out of trash while one of its entry points is left', () => {
+    const pages = new PageRegistry(seed());
+    const watch = new PointerWatch(pages);
+
+    watch.observe([pointer('keys'), para, pointer('keys')]);
+    watch.observe([para, pointer('keys')]);
+    expect(pages.trashedIn('keys')).toBeNull();
+
+    watch.observe([para]);
+    expect(pages.trashedIn('keys')?.id).toBe('keys');
+  });
+
   it('never trashes a page whose block was missing from the start', () => {
     const pages = new PageRegistry(seed());
     const watch = new PointerWatch(pages);

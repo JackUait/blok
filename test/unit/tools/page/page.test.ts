@@ -946,6 +946,20 @@ describe('Page tool', () => {
       expect(calls).toEqual(['create', 'resolve']);
     });
 
+    it('a pasted entry point to an existing page never creates or copies a page', async () => {
+      const create = vi.fn();
+      const resolve = vi.fn(() => ({ title: 'Plans' }));
+      const tool = new PageTool(createOptions({ data: { pageId: 'p1' }, config: { create, resolve }, origin: 'paste' }));
+
+      tool.render();
+      tool.rendered();
+      await flush();
+
+      expect(tool.save().pageId).toBe('p1');
+      expect(create).not.toHaveBeenCalled();
+      expect(resolve).toHaveBeenCalledWith('p1');
+    });
+
     it.each<[string, Pick<Setup, 'origin' | 'replaySource'>]>([
       ['load', { origin: 'load' }],
       ['own undo/redo', { origin: 'replay', replaySource: 'history' }],

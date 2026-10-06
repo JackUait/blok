@@ -29,6 +29,7 @@ import { resolveStructuralParent } from './utils/structuralParent';
 import { acceptsChildren } from '../../utils/child-tools';
 import { findOwn } from '../../utils/own-element';
 import { linkToBlock } from '../../utils/copy-as-link';
+import { isPagePointer } from '../../../shared/page-pointer';
 import {
   areSourceRootsChildrenOf,
   isCollapsedToggleBlock,
@@ -114,6 +115,11 @@ export class DragController extends Module {
       this.Blok.YjsManager,
       this.Blok.BlockSelection,
       (toolName, data) => {
+        // The copy lands in this document: another entry point to the same page.
+        if (isPagePointer(toolName, data)) {
+          return null;
+        }
+
         const tool = this.Blok.Tools.blockTools.get(toolName);
         const copy = tool?.duplicateData?.(data);
 

@@ -55,10 +55,23 @@ jobs:
           restore-keys: |
             lint-v2-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-
 
-      # A cold tsc, or a warm one after editing a widely imported file, peaks
-      # at ~5.6 GB; Node's ~4 GB default heap dies with exit 134.
-      - name: Lint
-        run: yarn lint
+      # Not `yarn lint`: on a cold cache it runs ESLint with --concurrency=4.
+      # Each worker builds its own typed program, and four of them fill the
+      # 16 GB runner until the VM is shut down with no ESLint output. Two
+      # workers peak at ~12.6 GB, too close. One thread peaks at ~7.6 GB and
+      # takes ~220s. Keep the cache flags equal to the lint script's.
+      - name: ESLint
+        id: eslint
+        run: node_modules/.bin/eslint . --concurrency=off --cache --cache-location node_modules/.cache/blok-eslint --cache-strategy content
+        env:
+          NODE_OPTIONS: --max-old-space-size=12288
+
+      # Runs even when ESLint fails, so one run shows both results. A cold tsc,
+      # or a warm one after editing a widely imported file, peaks at ~5.6 GB;
+      # Node's ~4 GB default heap dies with exit 134.
+      - name: TypeScript
+        if: success() || steps.eslint.conclusion == 'failure'
+        run: node_modules/.bin/tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/blok-lint.tsbuildinfo
         env:
           NODE_OPTIONS: --max-old-space-size=8192
 

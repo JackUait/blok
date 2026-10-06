@@ -236,7 +236,20 @@ describe('CI critical-path law', () => {
             "lint-v2-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-\n",
         },
       },
-      { name: 'Lint', run: 'yarn lint', env: { NODE_OPTIONS: '--max-old-space-size=8192' } },
+      // Not `yarn lint`: its cold path runs four ESLint workers, and they
+      // exhaust the 16 GB runner's memory until the VM shuts down.
+      {
+        name: 'ESLint',
+        id: 'eslint',
+        run: 'node_modules/.bin/eslint . --concurrency=off --cache --cache-location node_modules/.cache/blok-eslint --cache-strategy content',
+        env: { NODE_OPTIONS: '--max-old-space-size=12288' },
+      },
+      {
+        name: 'TypeScript',
+        if: "success() || steps.eslint.conclusion == 'failure'",
+        run: 'node_modules/.bin/tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/blok-lint.tsbuildinfo',
+        env: { NODE_OPTIONS: '--max-old-space-size=8192' },
+      },
       {
         name: 'Save lint cache',
         // success() only: a red run's ESLint cache carries the error entries.

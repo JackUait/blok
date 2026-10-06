@@ -17,6 +17,7 @@ export const BLOK_EDITOR_CONFIG_KEYS = [
   'autofocus',
   'defaultBlock',
   'dataModel',
+  'richText',
   'placeholder',
   'sanitizer',
   'hideToolbar',

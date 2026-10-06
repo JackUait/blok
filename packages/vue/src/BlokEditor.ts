@@ -52,6 +52,7 @@ export const BlokEditor = defineComponent({
     autofocus: { type: Boolean as PropType<boolean | undefined>, default: undefined },
     defaultBlock: { type: String, default: undefined },
     dataModel: { type: String as PropType<BlokConfig['dataModel']>, default: undefined },
+    richText: { type: String as PropType<BlokConfig['richText']>, default: undefined },
     placeholder: { type: [String, Boolean] as PropType<string | false>, default: undefined },
     sanitizer: { type: Object as PropType<BlokConfig['sanitizer']>, default: undefined },
     hideToolbar: { type: Boolean as PropType<boolean | undefined>, default: undefined },

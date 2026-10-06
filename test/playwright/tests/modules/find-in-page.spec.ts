@@ -591,6 +591,44 @@ test.describe('find in page', () => {
   });
 
   test.describe('closing', () => {
+    test('a click back in the content closes the bar and edits where it landed', async ({ page }) => {
+      await createEditor(page, paragraphs('alpha foo', 'beta foo'));
+      await focusParagraph(page, 'alpha foo');
+      await page.keyboard.press(REPLACE_KEY);
+      await page.getByTestId('find-input').fill('foo');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      // The replace preview paints a copy over each block with a match; the click lands on it.
+      const shown = page.locator('[data-blok-find-preview-clone]').filter({ hasText: 'beta foo' });
+      const paragraph = page.locator('[data-blok-element] [contenteditable="true"]:not([data-blok-find-preview-clone] *)').filter({ hasText: 'beta foo' });
+      const box = await shown.boundingBox();
+
+      if (box === null) {
+        throw new Error('paragraph not on screen');
+      }
+      await page.mouse.click(box.x + box.width - 2, box.y + box.height / 2);
+
+      await expect(page.getByTestId('find-bar')).toBeHidden();
+      await expect(paragraph).toBeFocused();
+
+      await page.keyboard.type('!');
+
+      await expect(paragraph).toHaveText('beta foo!');
+    });
+
+    test('a click in the content closes the bar when only find is open', async ({ page }) => {
+      await createEditor(page, paragraphs('alpha foo', 'beta foo'));
+      await focusParagraph(page, 'alpha foo');
+      await openFind(page, 'foo');
+
+      const paragraph = page.getByText('beta foo', { exact: true });
+
+      await paragraph.click();
+
+      await expect(page.getByTestId('find-bar')).toBeHidden();
+      await expect(paragraph).toBeFocused();
+    });
+
     test('Escape closes the bar, clears the paint and selects the active match', async ({ page }) => {
       await createEditor(page, paragraphs('alpha foo', 'beta foo'));
       await focusParagraph(page, 'alpha foo');
@@ -649,20 +687,6 @@ test.describe('find in page', () => {
 
       await expect(page.getByText('beta', { exact: true })).toBeFocused();
       await expect(page.getByTestId('find-bar')).toBeHidden();
-    });
-
-    test('Escape closes the bar after clicking back into the text, and keeps the caret there', async ({ page }) => {
-      await createEditor(page, paragraphs('foo one', 'foo two'));
-      await focusParagraph(page, 'foo one');
-      await openFind(page, 'foo');
-      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
-
-      await page.getByText('foo two', { exact: true }).click();
-      await page.keyboard.press('Escape');
-
-      await expect(page.getByTestId('find-bar')).toBeHidden();
-      // One Escape closes one layer: it must not also enter navigation mode.
-      await expect(page.getByText('foo two', { exact: true })).toBeFocused();
     });
 
     test('Escape closes the bar when nothing has focus', async ({ page }) => {

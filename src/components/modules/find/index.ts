@@ -17,7 +17,8 @@ import { hopSourceFromRange, type HopSource } from './find-motion';
 import { FindLens } from './find-lens';
 import { clearFindHighlights, paintFindHighlights } from './find-highlight';
 import type { FindOptions } from './match-text';
-import { isPreviewMutation, ReplacePreview } from './replace-preview';
+import { getCaretPositionFromPoint } from '../../utils/caret/navigation';
+import { isInPreviewedBlock, isPreviewMutation, ReplacePreview } from './replace-preview';
 import { editableHostOf, replaceRangeText } from './replace-text';
 import { findRanges } from './text-index';
 import type { TextPoint } from './text-point';
@@ -26,6 +27,23 @@ import { pointOf, startsAtOrAfter } from './text-point';
 const EDITOR_SELECTOR = '[data-blok-testid="blok-editor"]';
 const editorOf = (node: Node): Element | null =>
   (node instanceof Element ? node : node.parentElement)?.closest(EDITOR_SELECTOR) ?? null;
+/**
+ * Put the caret at a point on screen, in the editable text there.
+ * @param x - client x
+ * @param y - client y
+ */
+const placeCaretAt = (x: number, y: number): void => {
+  const point = getCaretPositionFromPoint(x, y);
+  const host = point === null ? null : (point.node instanceof Element ? point.node : point.node.parentElement)?.closest<HTMLElement>('[contenteditable]:not([contenteditable="false"])');
+
+  if (point === null || host == null) {
+    return;
+  }
+
+  host.focus({ preventScroll: true });
+  window.getSelection()?.collapse(point.node, point.offset);
+};
+
 const QUERY_DEBOUNCE_MS = 40;
 const DOM_DEBOUNCE_MS = 120;
 /** Space kept between a revealed match and the viewport edge (or the find bar). */
@@ -113,6 +131,7 @@ export class Find extends Module {
     this.listeners.on(document, 'keydown', this.onDocumentKeydown, true);
     this.listeners.on(document, 'keydown', this.onHostFieldKeydown);
     this.listeners.on(wrapper, 'pointerdown', this.markActive, true);
+    this.listeners.on(this.Blok.UI.nodes.redactor, 'pointerdown', this.onContentPointerDown, true);
     this.listeners.on(wrapper, 'focusin', this.markActive, true);
     // Scroll does not bubble; capture sees scrollers outside this editor too.
     this.listeners.on(document, 'scroll', this.onPageScroll, { capture: true, passive: true });
@@ -169,13 +188,13 @@ export class Find extends Module {
    * Close the find bar and select a match in this editor, so typing replaces it.
    * When the reader already went back to the text, their caret stays put.
    */
-  public close(): void {
+  public close(options: { restoreFocus?: boolean } = {}): void {
     if (this.bar === null || !this.bar.isOpen) {
       return;
     }
 
     const current = this.ranges[this.active];
-    const isInText = this.Blok.UI.nodes.redactor.contains(document.activeElement);
+    const isInText = options.restoreFocus === false || this.Blok.UI.nodes.redactor.contains(document.activeElement);
 
     this.bar.close();
     this.stopObserving();
@@ -306,6 +325,29 @@ export class Find extends Module {
 
   private readonly markActive = (): void => {
     Find.lastActive = this;
+  };
+
+  /**
+   * A click back in the text ends the search. On the replace preview (an inert
+   * copy over a matched block) the browser has already hit the copy, which
+   * closing removes, so the caret is put at the click point in the real text.
+   */
+  private readonly onContentPointerDown = (event: Event): void => {
+    if (!this.isOpen || !(event instanceof PointerEvent)) {
+      return;
+    }
+
+    const onPreview = event.target instanceof Element && isInPreviewedBlock(event.target);
+
+    this.close({ restoreFocus: false });
+
+    if (!onPreview) {
+      return;
+    }
+
+    // Also stops the mousedown, whose caret would go to the removed copy.
+    event.preventDefault();
+    placeCaretAt(event.clientX, event.clientY);
   };
 
   /**

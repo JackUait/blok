@@ -134,6 +134,7 @@ export {
 } from './configs';
 
 export * from './utils/popover';
+export * from './rich-text';
 
 export { OutputData, OutputBlockData, LooseOutputData, LooseOutputBlockData, BlokData} from './data-formats/output-data';
 export { flattenTree, BlockTreeSpec, BlockRunSpec, BlockTreeNode, FlattenTreeOptions } from './data-formats/block-tree';

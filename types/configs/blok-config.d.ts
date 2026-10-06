@@ -5,6 +5,7 @@ import {SanitizerConfig} from './sanitizer-config';
 import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
 import type { BlockMigrations } from '../migrate';
+import type { RichTextFormat } from '../rich-text';
 import type { UserInfo } from './user-info';
 import type { BlokUploader } from './uploader';
 import type { MediaConfig } from './media';
@@ -536,6 +537,18 @@ export interface BlokMountOptions {
    * @default 'auto'
    */
   dataModel?: DataModelFormat;
+
+  /**
+   * Shape of rich-text fields (`paragraph.text`, `header.text`, …) in saved data.
+   * - 'html': an inline-HTML string, e.g. `"<strong>Bold</strong> plain"` (default)
+   * - 'segments': an array of `{ text, marks }` runs, e.g.
+   *   `[{ text: 'Bold', marks: { bold: true } }, { text: ' plain' }]`
+   *
+   * Blok reads both shapes on input whatever this says. With legacy output
+   * (`dataModel: 'legacy'`, or `'auto'` with legacy input) the output stays HTML.
+   * @default 'html'
+   */
+  richText?: RichTextFormat;
 
   /**
    * Host-supplied per-type block migrations: `{ [blockType]: (data) => data }`.

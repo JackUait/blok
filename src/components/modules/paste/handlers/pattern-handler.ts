@@ -354,7 +354,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
   private mentionPage(block: TargetBlock, url: string, pageId: string): void {
     const link = this.findInsertedAnchor(block, url);
 
-    if (block === null || link === null) {
+    if (!block || link === null) {
       return;
     }
 
@@ -366,7 +366,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     link.replaceWith(reference);
 
     const selection = window.getSelection();
-    const after = document.createRange();
+    const after = reference.ownerDocument.createRange();
 
     after.setStartAfter(reference);
     after.collapse(true);

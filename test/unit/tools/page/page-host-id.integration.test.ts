@@ -45,7 +45,7 @@ const deferred = <T>(): { promise: Promise<T>; resolve: (value: T) => void; reje
   return { promise, ...handlers };
 };
 
-const boot = async (config: PageConfig, text = ''): Promise<Runtime> => {
+const boot = async (config: PageConfig & Record<string, unknown>, text = ''): Promise<Runtime> => {
   const instance = new Blok({
     holder,
     tools: { paragraph: Paragraph, page: { class: PageTool, config } },

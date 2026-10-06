@@ -376,7 +376,7 @@ describe('full sitemap crawl', () => {
 
   it('spaces out the requests each worker sends', async () => {
     const urls = [`${SITE}/a/`, `${SITE}/b/`, `${SITE}/c/`];
-    const sleep = vi.fn(noSleep);
+    const sleep = vi.fn<(ms: number) => Promise<void>>(noSleep);
     const impl = async (url: string): Promise<Response> => new Response(page(url), { status: 200 });
 
     await crawlUrls(urls, { fetchImpl: impl, sleep, concurrency: 1, spacingMs: 250 });

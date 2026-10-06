@@ -152,6 +152,11 @@ const pageProblem = (url, response, body) => {
  * Fetches every URL with a concurrency cap and per-worker spacing. Network
  * errors, 429 and 5xx are retried with backoff and, if they never clear, are
  * reported as `transient`. Any other wrong answer is `deterministic` at once.
+ *
+ * @param {string[]} urls
+ * @param {{ fetchImpl?: FetchLike, concurrency?: number, spacingMs?: number, retries?: number,
+ *   retryDelayMs?: number, timeoutMs?: number, deadlineMs?: number, now?: () => number,
+ *   sleep?: (ms: number) => Promise<void> }} [options]
  */
 export const crawlUrls = async (urls, {
   fetchImpl = fetch,

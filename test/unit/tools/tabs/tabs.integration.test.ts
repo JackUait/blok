@@ -404,4 +404,47 @@ describe('tabs block: strip overflow', () => {
 
     expect(scroller.hasAttribute('data-overflow-end')).toBe(true);
   });
+
+  // A web font that lands after mount widens the pills, not the strip.
+  it('refits the open tab backdrop when its pill changes size', async () => {
+    const observers: Array<{ callback: ResizeObserverCallback; targets: Set<Element> }> = [];
+
+    vi.stubGlobal('ResizeObserver', class {
+      private readonly entry: { callback: ResizeObserverCallback; targets: Set<Element> };
+
+      constructor(callback: ResizeObserverCallback) {
+        this.entry = { callback, targets: new Set() };
+        observers.push(this.entry);
+      }
+
+      public observe(target: Element): void {
+        this.entry.targets.add(target);
+      }
+
+      public disconnect(): void {
+        this.entry.targets.clear();
+      }
+
+      public unobserve(target: Element): void {
+        this.entry.targets.delete(target);
+      }
+    });
+
+    await boot(doc());
+
+    const pill = pills()[0];
+    const indicator = document.querySelector<HTMLElement>('[data-blok-tabs-indicator]');
+
+    if (indicator === null) {
+      throw new Error('no indicator');
+    }
+
+    Object.defineProperty(pill, 'offsetWidth', { configurable: true, value: 84 });
+    observers
+      .filter(observer => observer.targets.has(pill))
+      .forEach(observer => observer.callback([], {} as ResizeObserver));
+
+    expect(indicator.style.width).toBe('84px');
+    expect(indicator.hasAttribute('data-placed')).toBe(true);
+  });
 });

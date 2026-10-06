@@ -133,9 +133,10 @@ export class TabsTool implements BlockTool, TabsHandle {
       this.panelsObserver.observe(panels, { childList: true });
     }
 
-    // A block that mounts hidden measures a zero-width strip; re-measure when it shows or resizes.
+    // A block that mounts hidden measures a zero-width strip, and a late web
+    // font resizes the pills, not the strip: re-measure when either changes.
     if (!this.isProbe && typeof ResizeObserver !== 'undefined') {
-      this.stripResizeObserver = new ResizeObserver(this.updateOverflow);
+      this.stripResizeObserver = new ResizeObserver(this.onStripResize);
       this.stripResizeObserver.observe(scroller);
     }
 
@@ -548,7 +549,10 @@ export class TabsTool implements BlockTool, TabsHandle {
       .find(([, pill]) => pill.contains(document.activeElement))?.[0];
 
     this.roving?.destroy();
-    this.pills.forEach(pill => pill.remove());
+    this.pills.forEach((pill) => {
+      this.stripResizeObserver?.unobserve(pill);
+      pill.remove();
+    });
     this.pills.clear();
 
     const elements = tabs.map((tab) => {
@@ -556,6 +560,7 @@ export class TabsTool implements BlockTool, TabsHandle {
 
       scroller.appendChild(pill);
       this.pills.set(tab.id, pill);
+      this.stripResizeObserver?.observe(pill);
 
       return pill;
     });
@@ -721,6 +726,11 @@ export class TabsTool implements BlockTool, TabsHandle {
     }
   }
 
+  private readonly onStripResize = (): void => {
+    this.updateOverflow();
+    this.followIndicator(this.appliedActive);
+  };
+
   private readonly updateOverflow = (): void => {
     const scroller = this.scroller;
 
@@ -859,7 +869,7 @@ export class TabsTool implements BlockTool, TabsHandle {
     queueMicrotask(() => this.sync());
   }
 
-  /** Keep the indicator hugging a pill whose width changes while typing. */
+  /** Keep the indicator hugging the open pill when its width changes. */
   private followIndicator(id: string): void {
     const pill = this.pills.get(id);
 
@@ -871,6 +881,7 @@ export class TabsTool implements BlockTool, TabsHandle {
 
     moveIndicator(this.indicator, null, box);
     this.indicatorBox = box;
+    this.indicator.toggleAttribute('data-placed', box.width > 0);
   }
 
   private openIconPicker(id: string): void {

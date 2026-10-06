@@ -114,18 +114,22 @@ export const PAGE_REFERENCE_ICON_CLASSES: readonly string[] = [
   '[&>img]:size-full',
   '[&>img]:object-cover',
   '[&>img]:rounded-(--blok-radius-mark)',
+  // The badge corner is cut out of the glyph, not painted over it, so it
+  // works on any background (callout, block color, selection, hover).
+  '[&>svg:first-child]:[mask:var(--blok-page-reference-cut)]',
+  '[&>img]:[mask:var(--blok-page-reference-cut)]',
+  'before:[mask:var(--blok-page-reference-cut)]',
+  '[--blok-page-reference-cut:linear-gradient(#000_0_0)_exclude,linear-gradient(#000_0_0)_100%_100%/46%_46%_no-repeat]',
 ];
 
 /** The arrow badge on the icon's corner: it says "link to a page". */
 export const PAGE_REFERENCE_ARROW_CLASSES: readonly string[] = [
   'absolute',
-  'end-0',
+  // Physical, like the mask cut and the arrow glyph, which do not mirror in RTL.
+  'right-0',
   'bottom-0',
   'inline-flex',
-  'size-[0.55em]',
-  'p-[0.04em]',
-  'rounded-ss-[0.15em]',
-  'bg-(--blok-bg-primary)',
+  'size-[0.48em]',
   'text-text-primary',
   '[&>svg]:size-full',
   '[&>svg_path]:[stroke-width:3]',

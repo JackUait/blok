@@ -110,6 +110,8 @@ test.describe('Page mention', () => {
     // Centers within 3px: a baseline-aligned icon dropped about 10px.
     expect(Math.abs((icon.y + icon.height / 2) - (label.y + label.height / 2))).toBeLessThan(3);
 
+    // A painted cutout would show as a square on a callout or block color.
+    await expect(mention.getByTestId('page-reference-arrow')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expect(mention).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await mention.hover();
     await expect(mention).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
@@ -145,6 +147,24 @@ test.describe('Page mention', () => {
     });
 
     await expect(mention).toHaveCSS('color', ink);
+  });
+
+  test('typing after the mention keeps its icon and title', async ({ page }) => {
+    await pasteIntoParagraph(page);
+    await page.locator('[data-blok-item-name="paste-menu-mention"]').click();
+
+    const mention = page.locator('[data-blok-page-id="roadmap"]');
+
+    await expect(mention.getByTestId('page-reference-title')).toHaveText('Roadmap');
+    await page.keyboard.type(' next');
+
+    await expect(mention.getByTestId('page-reference-icon')).toBeVisible();
+    await expect(mention.getByTestId('page-reference-title')).toHaveText('Roadmap');
+
+    const saved = String((await saveBlok(page)).blocks[0]?.data.text);
+
+    expect(saved).toContain('<a data-blok-page-id="roadmap">Page</a>');
+    expect(saved).toContain('next');
   });
 
   test('a link that is not a page offers no mention', async ({ page }) => {

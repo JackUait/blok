@@ -9,7 +9,7 @@ import {
   PAGE_REFERENCE_MUTED_CLASSES,
   PAGE_REFERENCE_TITLE_CLASSES,
 } from '../../shared/tool-classes/page';
-import { PAGE_REFERENCE_ARROW_HOVER_CLASSES, PAGE_REFERENCE_HOVER_CLASSES } from '../../tools/page/constants';
+import { PAGE_REFERENCE_HOVER_CLASSES } from '../../tools/page/constants';
 import { IconArrowDiagonal } from '../icons';
 import { Module } from '../__module';
 import { DATA_ATTR } from '../constants/data-attributes';
@@ -47,7 +47,7 @@ const dropBlankText = (root: HTMLElement): void => {
 const buildArrow = (): HTMLElement => {
   const arrow = document.createElement('span');
 
-  arrow.className = [...PAGE_REFERENCE_ARROW_CLASSES, PAGE_REFERENCE_ARROW_HOVER_CLASSES].join(' ');
+  arrow.className = PAGE_REFERENCE_ARROW_CLASSES.join(' ');
   arrow.setAttribute(DATA_ATTR.testid, 'page-reference-arrow');
   // A trusted constant from the icon module, not user input.
   arrow.innerHTML = IconArrowDiagonal;

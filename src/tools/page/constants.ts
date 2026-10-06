@@ -56,9 +56,4 @@ export const PAGE_REFERENCE_HOVER_CLASSES = [
   'box-decoration-clone',
   'transition-colors duration-120 ease-out motion-reduce:transition-none',
   'can-hover:hover:bg-item-hover-bg',
-  'group/page-reference',
 ].join(' ');
-
-/** The arrow badge's paper cutout takes the same tint, or it shows as a white square. */
-export const PAGE_REFERENCE_ARROW_HOVER_CLASSES =
-  'can-hover:group-hover/page-reference:bg-[image:linear-gradient(var(--blok-item-hover-bg),var(--blok-item-hover-bg))]';

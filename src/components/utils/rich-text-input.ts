@@ -76,9 +76,11 @@ export const richTextInputToHtml = (
     return data;
   }
 
-  const read = readMalformedFields(tool.name, data, tool.richTextFields);
+  // Test doubles and hand-built adapters may lack the getter.
+  const fields = tool.richTextFields ?? [];
+  const read = readMalformedFields(tool.name, data, fields);
 
-  warnUnknownMarksOnce(read, tool.richTextFields);
+  warnUnknownMarksOnce(read, fields);
 
-  return blockDataToHtml(read, tool.richTextFields, type => resolveTool(type)?.richTextFields ?? [], nestedDocumentsFor(tool.name));
+  return blockDataToHtml(read, fields, type => resolveTool(type)?.richTextFields ?? [], nestedDocumentsFor(tool.name));
 };

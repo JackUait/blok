@@ -20,7 +20,8 @@ export const richTextOutputForHost = (
 ): BlockToolData => (tool.richTextFormat === 'segments' && !options.collaborating && !options.legacyOutput
   ? blockDataToSegments(
     data,
-    tool.richTextFields,
+    // Test doubles and hand-built adapters may lack the getter.
+    tool.richTextFields ?? [],
     type => resolveTool(type)?.richTextFields ?? [],
     htmlToSegmentsDom,
     nestedDocumentsFor(tool.name)

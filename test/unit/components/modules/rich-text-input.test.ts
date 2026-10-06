@@ -10,6 +10,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { Table } from '../../../../src/tools/table';
 import { BlockToolAdapter } from '../../../../src/components/tools/block';
 import { richTextInputToHtml } from '../../../../src/components/utils/rich-text-input';
+import { richTextOutputForHost } from '../../../../src/components/utils/rich-text-output';
 import type { API, BlockToolConstructable, OutputBlockData, OutputData } from '../../../../types';
 import type { BlockMigrations } from '../../../../src/components/migration/block-migrations';
 
@@ -390,6 +391,20 @@ describe('a third-party tool that declares no richTextFields', () => {
   it('saves a {}-rule string field unchanged in segments mode', async () => {
     expect((await bootItems({ items: [], style: 'ordered' }, 'segments')).data).toEqual({ items: [], style: 'ordered' });
   }, 60_000);
+});
+
+describe('a tool adapter that has no richTextFields', () => {
+  // Test doubles and older adapters may lack the getter; conversion must not throw.
+  const bare = { name: 'paragraph', richTextFormat: 'segments' } as unknown as BlockToolAdapter;
+  const data = { text: [{ text: 'a' }] };
+
+  it('passes input data through unchanged', () => {
+    expect(richTextInputToHtml(bare, data, () => undefined)).toEqual(data);
+  });
+
+  it('passes output data through unchanged', () => {
+    expect(richTextOutputForHost(bare, data, () => undefined, { collaborating: false, legacyOutput: false })).toEqual(data);
+  });
 });
 
 describe('richTextInputToHtml on the table tool', () => {

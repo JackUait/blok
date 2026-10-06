@@ -66,9 +66,11 @@ export async function loadMathExtensions(): Promise<{
   mathSyntax: MicromarkExtension;
   mathFromMarkdown: MdastExtension;
 }> {
-  const [{ math }, { mathFromMarkdown }] = await Promise.all([
-    import('micromark-extension-math'),
-    import('mdast-util-math'),
+  // Destructure each import in a `.then`: Rollup can then drop the unused
+  // `mathHtml` export, which would otherwise bundle a second KaTeX.
+  const [math, mathFromMarkdown] = await Promise.all([
+    import('micromark-extension-math').then(({ math: syntax }) => syntax),
+    import('mdast-util-math').then(({ mathFromMarkdown: fromMarkdown }) => fromMarkdown),
   ]);
   const syntax = math();
   const text = syntax.text?.[DOLLAR];

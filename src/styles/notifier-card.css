@@ -8,10 +8,170 @@
   viewport and squeeze the title onto two lines. The card's max-width bounds it.
 */
 [data-blok-interface='notifier']:has(> [data-blok-toast='card']) {
+  /* Kept beside `width` so the view.css generator, which keeps token-only rules, drops these. */
+  --blok-toast-peek: 8px;
+  --blok-toast-peek-near: #18181b;
+  --blok-toast-peek-far: #121214;
+  --blok-toast-peek-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 4px 12px rgb(0 0 0 / 0.25);
+  /* A damped spring sampled at 20 steps: about 9% past the spot, then settled. */
+  /* Where a launching card starts: past the screen edge, in card heights. */
+  --_blok-toast-launch-from: 120%;
+  --_blok-toast-spring: linear(0, 0.114, 0.356, 0.616, 0.832, 0.98, 1.063, 1.093, 1.09, 1.07, 1.045, 1.022, 1.006, 0.996, 0.992, 0.991, 0.993, 0.995, 0.997, 0.999, 1);
+
   width: max-content;
+  /* One shared cell: a leaving card stays where it was while the next card fills in under it. */
+  display: grid;
+  justify-items: center;
+  align-items: end;
+}
+
+[data-blok-interface='notifier'][data-blok-position$='left']:has(> [data-blok-toast='card']) {
+  justify-items: start;
+}
+
+[data-blok-interface='notifier'][data-blok-position$='right']:has(> [data-blok-toast='card']) {
+  justify-items: end;
+}
+
+[data-blok-interface='notifier'][data-blok-position^='top']:has(> [data-blok-toast='card']) {
+  --_blok-toast-launch-from: -120%;
+
+  align-items: start;
+}
+
+[data-blok-interface='notifier']:has(> [data-blok-toast='card']) > * {
+  grid-area: 1 / 1;
+}
+
+/*
+  Waiting cards peek out behind the front card (set by syncBehind in notifier/index.ts).
+  The wrapper is the stacking root, so z-index -1 paints them under the card.
+  ::after is the nearer card: it comes later in tree order, so it paints on top.
+*/
+[data-blok-interface='notifier'][data-blok-toast-behind]::after,
+[data-blok-interface='notifier'][data-blok-toast-behind='2']::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  /* The front card's box inside the wrapper, written by syncBehind; mid-swap the wrapper is wider. */
+  inset: var(--_blok-toast-peek-top, 8px) calc(var(--_blok-toast-peek-right, 0px) + 12px) var(--_blok-toast-peek-bottom, 0px) calc(var(--_blok-toast-peek-left, 0px) + 12px);
+  border-radius: var(--blok-radius-surface);
+  background: var(--blok-toast-peek-near);
+  box-shadow: var(--blok-toast-peek-shadow);
+  translate: 0 calc(-1 * var(--blok-toast-peek));
+  pointer-events: none;
+  transition-property: translate, inset;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Runs each time an edge appears; nudgeFront in notifier/index.ts dips the front card with it. */
+  animation: blok-toast-peek-in 620ms var(--_blok-toast-spring) var(--_blok-toast-peek-delay, 0ms) backwards;
+}
+
+[data-blok-interface='notifier'][data-blok-toast-behind='2']::before {
+  left: calc(var(--_blok-toast-peek-left, 0px) + 24px);
+  right: calc(var(--_blok-toast-peek-right, 0px) + 24px);
+  background: var(--blok-toast-peek-far);
+  translate: 0 calc(-2 * var(--blok-toast-peek));
+  /* Cards queued in one tick draw both edges in one frame; this staggers them. */
+  animation-delay: calc(var(--_blok-toast-peek-delay, 0ms) + 90ms);
+}
+
+/* A top toast stacks downward, away from the screen edge. */
+[data-blok-interface='notifier'][data-blok-position^='top'][data-blok-toast-behind]::after {
+  translate: 0 var(--blok-toast-peek);
+}
+
+[data-blok-interface='notifier'][data-blok-position^='top'][data-blok-toast-behind='2']::before {
+  translate: 0 calc(2 * var(--blok-toast-peek));
+}
+
+/* The leaving card stays above the one rising into its place, but clicks go through to it. */
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='closed'] {
+  z-index: 1;
+  pointer-events: none;
+}
+
+/*
+  A closed card dissolves from its close side. The 220% gradient's soft band is
+  centred at 110%; dust.ts sheds specks from that edge (edgeAt) — change both together.
+*/
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-dust] {
+  mask-image: linear-gradient(to right, var(--blok-toast-dust-solid) 47%, transparent 53%);
+  mask-size: 220% 100%;
+  mask-repeat: no-repeat;
+  mask-position: calc(var(--_blok-toast-dust) * 100%) 0;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-dust='rtl'] {
+  mask-image: linear-gradient(to left, var(--blok-toast-dust-solid) 47%, transparent 53%);
+  mask-position: calc((1 - var(--_blok-toast-dust)) * 100%) 0;
+}
+
+/* Open only: on close the slide-out has to run, or animationend never comes and the card stays. */
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
+  /* Waits in its peek shape while the closed card turns to dust over it (DUST_MS in dust.ts). */
+  animation: blok-toast-rise 480ms cubic-bezier(0.22, 1, 0.36, 1) 320ms backwards;
+}
+
+/*
+  The first card launches from past the screen edge, tilted back and blurred, and
+  springs into place. Not on a resolved card: its title runs blok-toast-roll-in.
+*/
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) {
+  animation:
+    blok-toast-launch 760ms var(--_blok-toast-spring) backwards,
+    blok-toast-launch-fade 420ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+/* One light crossing the card as it lands. */
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved])::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    100deg,
+    transparent 35%,
+    var(--blok-toast-launch-sheen) 50%,
+    transparent 65%
+  ) 130% 0 / 260% 100% no-repeat;
+  animation: blok-toast-sweep 900ms cubic-bezier(0.4, 0, 0.2, 1) 260ms both;
+  pointer-events: none;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-testid='notification-message-text'],
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-toast-part='detail'],
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-toast-part='actions'],
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-testid='notification-dismiss'] {
+  animation: blok-toast-part-in 520ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-testid='notification-message-text'] {
+  animation-delay: 140ms;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-toast-part='detail'] {
+  animation-delay: 190ms;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-toast-part='actions'] {
+  animation-delay: 240ms;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-testid='notification-dismiss'] {
+  animation-delay: 290ms;
 }
 
 [data-blok-interface='notifier'] [data-blok-toast='card'] {
+  /* Dust a closed card turns into (notifier/dust.ts reads these). */
+  --blok-toast-dust-body: #2c2c31;
+  --blok-toast-dust-shade: #1c1c1f;
+  --blok-toast-dust-glint: #f5f5f5;
+  /* Only the mask's alpha counts; any opaque colour works. */
+  --blok-toast-dust-solid: #000;
+  --blok-toast-launch-sheen: rgb(255 255 255 / 0.1);
+  /* Sweep progress, 0 to 1, written each frame by dust.ts. */
+  --_blok-toast-dust: 0;
   --blok-toast-card-pad: 10px 8px 10px 12px;
   --blok-toast-card-gap: 12px;
   --blok-toast-card-row-gap: 8px;
@@ -387,6 +547,63 @@
   to { opacity: 1; translate: 0 0; filter: blur(0); }
 }
 
+/*
+  The next card starts in the leaving card's peek shape — clip box and offset written
+  by shapeRise in notifier/index.ts, so a wider or narrower card still reads as the
+  same deck — then unfolds. Clipped, never scaled, so its text does not wobble. It
+  waits dimmed, not see-through: the page must not show through the deck. The end
+  clip is far outside the card: `none` would not interpolate. Fill is backwards only,
+  so the clip lets go after.
+*/
+@keyframes blok-toast-rise {
+  from {
+    translate: 0 var(--_blok-toast-rise-y, calc(-1 * var(--blok-toast-peek)));
+    clip-path: inset(0 var(--_blok-toast-rise-right, 12px) var(--_blok-toast-rise-bottom, 0px) var(--_blok-toast-rise-left, 12px) round var(--blok-radius-surface));
+    filter: brightness(0.5);
+    box-shadow: none;
+  }
+
+  /* The shadow waits for the clip to open: a clip edge crossing it draws a hard grey box. */
+  72% {
+    translate: 0 0;
+    clip-path: inset(-64px round var(--blok-radius-surface));
+    filter: brightness(1);
+    box-shadow: none;
+  }
+
+  to {
+    translate: 0 0;
+    clip-path: inset(-64px round var(--blok-radius-surface));
+    filter: brightness(1);
+  }
+}
+
+/*
+  No `to`: each property springs home to its own value. The spring overshoots, so
+  the card lifts a little past its spot and the tilt swings slightly forward.
+*/
+@keyframes blok-toast-launch {
+  from {
+    translate: 0 var(--_blok-toast-launch-from);
+    scale: 0.86;
+    transform: perspective(700px) rotateX(28deg);
+  }
+}
+
+/* Its own curve: opacity and blur cannot overshoot. */
+@keyframes blok-toast-launch-fade {
+  from { opacity: 0; filter: blur(12px) brightness(1.8); }
+}
+
+@keyframes blok-toast-part-in {
+  from { opacity: 0; translate: 0 8px; filter: blur(6px); }
+}
+
+/* Starts behind the card in front of it, and unseen while it waits for a launching card. */
+@keyframes blok-toast-peek-in {
+  from { translate: 0 0; opacity: 0; }
+}
+
 @keyframes blok-toast-ghost-out {
   to { opacity: 0; translate: 0 -8px; filter: blur(4px); }
 }
@@ -397,7 +614,24 @@
   [data-blok-toast='card'] [data-blok-toast-part='check']::before,
   [data-blok-toast='card'] [data-blok-toast-part='check'] svg path,
   [data-blok-toast='card'][data-resolved='true']::after,
-  [data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'] {
+  [data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'],
+  [data-blok-interface='notifier'] [data-blok-toast='card'][data-blok-toast-rise][data-state='open'] {
+    animation: none;
+  }
+
+  [data-blok-interface='notifier'][data-blok-toast-behind]::after,
+  [data-blok-interface='notifier'][data-blok-toast-behind]::before {
+    transition: none;
+  }
+
+  [data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]),
+  [data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved])::before,
+  [data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-testid='notification-message-text'],
+  [data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-toast-part='detail'],
+  [data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-toast-part='actions'],
+  [data-blok-interface='notifier'] [data-blok-toast='card'][data-state='open']:not([data-blok-toast-rise], [data-resolved]) [data-blok-testid='notification-dismiss'],
+  [data-blok-interface='notifier'][data-blok-toast-behind]::after,
+  [data-blok-interface='notifier'][data-blok-toast-behind='2']::before {
     animation: none;
   }
 

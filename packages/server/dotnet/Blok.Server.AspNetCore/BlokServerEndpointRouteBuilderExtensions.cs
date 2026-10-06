@@ -11,18 +11,18 @@ namespace Blok.Server.AspNetCore;
 /// <summary>Maps the Blok server's HTTP and WebSocket routes into an application.</summary>
 public static class BlokServerEndpointRouteBuilderExtensions
 {
-  private static readonly Action<ILogger, string, string, string, Exception?> LogOpenSyncRoutes =
-      LoggerMessage.Define<string, string, string>(
+  private static readonly Action<ILogger, string, string, string, string, Exception?> LogOpenSyncRoutes =
+      LoggerMessage.Define<string, string, string, string>(
           LogLevel.Warning,
           new EventId(2, "CollabOpen"),
-          "collab: no IBlokAuthorization is registered and Auth is \"none\", so {Sync}, {Reset} and {Edit} " +
+          "collab: no IBlokAuthorization is registered and Auth is \"none\", so {Sync}, {Reset}, {Edit} and {State} " +
           "are open to anyone who can reach this app unless the mapped group has RequireAuthorization(); " +
           "register a hook with AddBlokServer(...).UseAuthorization<T>() or set Auth to \"ticket\"");
 
   /// <summary>
   /// Maps <c>/health</c> plus whatever the options switch on: the upload
   /// routes when storage is configured, the unfurl routes unless they are
-  /// closed, and <c>/sync/{doc}</c> with its reset and edit routes when
+  /// closed, and <c>/sync/{doc}</c> with its reset, edit and state routes when
   /// collaboration is on.
   /// </summary>
   /// <remarks>
@@ -94,6 +94,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
       routes.Map("/sync/{doc}", context => HandleMethodNotAllowed(context, "GET")).WithOrder(1);
       MapShell(routes, "/sync/{doc}/reset", "POST");
       MapShell(routes, "/sync/{doc}/edit", "POST");
+      MapShell(routes, "/sync/{doc}/state", "GET");
 
       if (options.Auth == "none" &&
           endpoints.ServiceProvider.GetService<IBlokAuthorization>() is null)
@@ -127,21 +128,22 @@ public static class BlokServerEndpointRouteBuilderExtensions
         $"GET {pattern}/sync/{{doc}}",
         $"POST {pattern}/sync/{{doc}}/reset",
         $"POST {pattern}/sync/{{doc}}/edit",
+        $"GET {pattern}/sync/{{doc}}/state",
         null);
   }
 
   private static void MapShell(RouteGroupBuilder routes, string pattern, string method)
   {
-    var handler = method == "GET"
-      ? (RequestDelegate)UnfurlEndpoint.HandleAsync
-      : pattern switch
-      {
-        "/upload" => UploadEndpoint.HandleAsync,
-        "/delete" => DeleteEndpoint.HandleAsync,
-        "/sync/{doc}/reset" => ResetEndpoint.HandleAsync,
-        "/sync/{doc}/edit" => EditEndpoint.HandleAsync,
-        _ => UploadByUrlEndpoint.HandleAsync,
-      };
+    RequestDelegate handler = pattern switch
+    {
+      "/unfurl" => UnfurlEndpoint.HandleAsync,
+      "/sync/{doc}/state" => StateEndpoint.HandleAsync,
+      "/upload" => UploadEndpoint.HandleAsync,
+      "/delete" => DeleteEndpoint.HandleAsync,
+      "/sync/{doc}/reset" => ResetEndpoint.HandleAsync,
+      "/sync/{doc}/edit" => EditEndpoint.HandleAsync,
+      _ => UploadByUrlEndpoint.HandleAsync,
+    };
 
     routes.MapMethods(pattern, [method], Guard(handler, method == "POST"));
     routes.MapMethods(
@@ -150,9 +152,10 @@ public static class BlokServerEndpointRouteBuilderExtensions
         context => HandlePreflight(context, method))
         .AllowAnonymous();
 
-    var allowedMethods = method == "GET"
-      ? "GET, HEAD, OPTIONS"
-      : "OPTIONS, POST";
+    // /state maps GET only, so it must not advertise HEAD.
+    var allowedMethods = method != "GET"
+      ? "OPTIONS, POST"
+      : pattern == "/sync/{doc}/state" ? "GET, OPTIONS" : "GET, HEAD, OPTIONS";
     routes.Map(pattern, context => HandleMethodNotAllowed(context, allowedMethods)).WithOrder(1);
   }
 

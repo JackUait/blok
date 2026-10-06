@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import type { Blok, OutputData, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
+import { openFixtureToggles } from '../../helpers/toggle-open';
 
 export { ensureBlokBundleBuilt, TEST_PAGE_URL };
 
@@ -37,6 +38,7 @@ export const createBlok = async (page: Page, data?: OutputData): Promise<void> =
     },
     { holder: HOLDER_ID, initialData: data ?? null }
   );
+  await openFixtureToggles(page, data);
 };
 
 export const saveBlok = async (page: Page): Promise<OutputData> => {

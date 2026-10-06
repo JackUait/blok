@@ -17,7 +17,7 @@ interface TestEditor {
   destroy: () => void;
   blocks: API['blocks'];
   module: {
-    yjsManager: { stopCapturing: () => void };
+    yjsManager: { stopCapturing: () => void; toJSON: () => OutputBlockData[] };
     blockManager: { blocks: Array<{ id: string }> };
   };
 }
@@ -95,7 +95,7 @@ const nestedDoc = (): OutputBlockData[] => [
     },
     content: ['tg', 'b', 'l1', 'd'],
   },
-  { id: 'tg', type: 'toggle', parent: 'tbl', data: { text: 'Toggle', isOpen: true }, content: ['k'] },
+  { id: 'tg', type: 'toggle', parent: 'tbl', data: { text: 'Toggle' }, content: ['k'] },
   { id: 'k', type: 'paragraph', parent: 'tg', data: { text: RED }, tunes: { marker: { mark: 'kid' } } },
   { id: 'b', type: 'paragraph', parent: 'tbl', data: { text: 'B' } },
   { id: 'l1', type: 'list', parent: 'tbl', data: { text: 'L1', style: 'checklist', checked: true }, content: ['l2'] },
@@ -166,7 +166,7 @@ const expectConsistentTree = (out: OutputData): void => {
 
 const TOGGLE_TREE: Node[] = [{
   type: 'toggle',
-  data: { text: 'Toggle', isOpen: true },
+  data: { text: 'Toggle' },
   children: [{ type: 'paragraph', data: { text: RED }, tunes: { marker: { mark: 'kid' } }, children: [] }],
 }];
 
@@ -179,7 +179,7 @@ const CHECKLIST_TREE: Node[] = [{
 /** Saved trees keep only the fields the fixtures pin. */
 const pick = (nodes: Node[]): Node[] => nodes.map(node => ({
   type: node.type,
-  data: Object.fromEntries(Object.entries(node.data).filter(([key]) => ['text', 'isOpen', 'style', 'checked', 'depth'].includes(key))),
+  data: Object.fromEntries(Object.entries(node.data).filter(([key]) => ['text', 'style', 'checked', 'depth'].includes(key))),
   // The tune saves `{}` on blocks that never had a mark.
   ...(Object.keys(node.tunes?.marker ?? {}).length > 0 ? { tunes: { marker: node.tunes?.marker } } : {}),
   children: pick(node.children),
@@ -320,6 +320,34 @@ describe('fill and duplicate keep nested blocks in cells', () => {
     expect(pick(cellTree(out, 1, 0))).toEqual(CHECKLIST_TREE);
     expect(cellSubtreeIds(out, 0, 1).concat(cellSubtreeIds(out, 1, 1)).filter(id => SOURCE_IDS.includes(id))).toEqual([]);
     expectConsistentTree(out);
+  }, 30_000);
+
+  it('duplicates a root page reference without copying its stale title or URL to Yjs', async () => {
+    const instance = await boot([
+      {
+        id: 'tbl',
+        type: 'table',
+        data: { withHeadings: false, content: [[{ blocks: ['b'] }]] },
+        content: ['b'],
+      },
+      { id: 'b', type: 'paragraph', parent: 'tbl', data: { text: 'Before' } },
+    ]);
+    const stale = '<a data-blok-page-id="p1" href="https://example.test/old-title" title="Old title">Old title</a>';
+
+    await instance.blocks.update('b', { text: stale });
+    await menuAction('row', 0, 'Duplicate');
+
+    const copiedId = holder?.querySelector<HTMLElement>(
+      '[data-blok-table-cell-row="1"][data-blok-table-cell-col="0"] > [data-blok-table-cell-blocks] > [data-blok-id]'
+    )?.getAttribute('data-blok-id');
+
+    if (copiedId === undefined || copiedId === null) {
+      throw new Error('no copied root block');
+    }
+
+    const copied = instance.module.yjsManager.toJSON().find(block => block.id === copiedId);
+
+    expect(copied?.data.text).toBe('<a data-blok-page-id="p1">Page</a>');
   }, 30_000);
 
   it('a duplicated child does not share its data object with the source child', async () => {

@@ -4,6 +4,7 @@ import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const TOGGLE_CONTENT_SELECTOR = '[data-blok-toggle-content]';
@@ -54,6 +55,7 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
     },
     { holder: HOLDER_ID, initialData: data ?? null }
   );
+  await openFixtureToggles(page, data);
 };
 
 test.describe('Toggle - Delete key behavior', () => {
@@ -71,7 +73,7 @@ test.describe('Toggle - Delete key behavior', () => {
       // Toggle with one child paragraph, plus an empty paragraph after the toggle
       await createBlok(page, {
         blocks: [
-          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1'] },
+          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true }, content: ['child-1'] },
           { id: 'child-1', type: 'paragraph', data: { text: 'Child content' }, parent: 'toggle-1' },
           { id: 'root-1', type: 'paragraph', data: { text: '' } },
         ],
@@ -111,7 +113,7 @@ test.describe('Toggle - Delete key behavior', () => {
       // Toggle with one child paragraph, plus a non-empty paragraph after the toggle
       await createBlok(page, {
         blocks: [
-          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1'] },
+          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true }, content: ['child-1'] },
           { id: 'child-1', type: 'paragraph', data: { text: 'Child content' }, parent: 'toggle-1' },
           { id: 'root-1', type: 'paragraph', data: { text: 'After toggle' } },
         ],
@@ -153,7 +155,7 @@ test.describe('Toggle - Delete key behavior', () => {
       // Toggle with empty header and one child block
       await createBlok(page, {
         blocks: [
-          { id: 'toggle-1', type: 'toggle', data: { text: '' }, content: ['child-1'] },
+          { id: 'toggle-1', type: 'toggle', data: { text: '', isOpen: true }, content: ['child-1'] },
           { id: 'child-1', type: 'paragraph', data: { text: 'Child content' }, parent: 'toggle-1' },
         ],
       });
@@ -184,7 +186,7 @@ test.describe('Toggle - Delete key behavior', () => {
       // toggle parent, causing focus to exit the toggle children area.
       await createBlok(page, {
         blocks: [
-          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1', 'child-2'] },
+          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true }, content: ['child-1', 'child-2'] },
           { id: 'child-1', type: 'paragraph', data: { text: '' }, parent: 'toggle-1' },
           { id: 'child-2', type: 'paragraph', data: { text: 'Content' }, parent: 'toggle-1' },
           { id: 'root-1', type: 'paragraph', data: { text: 'Root content' } },
@@ -219,7 +221,7 @@ test.describe('Toggle - Delete key behavior', () => {
       // Deleting child-2 should remove it and move focus to child-1 (previous sibling inside toggle).
       await createBlok(page, {
         blocks: [
-          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1', 'child-2', 'child-3'] },
+          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true }, content: ['child-1', 'child-2', 'child-3'] },
           { id: 'child-1', type: 'paragraph', data: { text: 'First' }, parent: 'toggle-1' },
           { id: 'child-2', type: 'paragraph', data: { text: '' }, parent: 'toggle-1' },
           { id: 'child-3', type: 'paragraph', data: { text: 'Third' }, parent: 'toggle-1' },
@@ -256,7 +258,7 @@ test.describe('Toggle - Delete key behavior', () => {
       // Toggle heading with one child paragraph, plus an empty paragraph after
       await createBlok(page, {
         blocks: [
-          { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true }, content: ['child-1'] },
+          { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true, isOpen: true }, content: ['child-1'] },
           { id: 'child-1', type: 'paragraph', data: { text: 'Child content' }, parent: 'header-1' },
           { id: 'root-1', type: 'paragraph', data: { text: '' } },
         ],
@@ -288,7 +290,7 @@ test.describe('Toggle - Delete key behavior', () => {
       // Toggle heading with empty first child and a content child after it.
       await createBlok(page, {
         blocks: [
-          { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true }, content: ['child-1', 'child-2'] },
+          { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true, isOpen: true }, content: ['child-1', 'child-2'] },
           { id: 'child-1', type: 'paragraph', data: { text: '' }, parent: 'header-1' },
           { id: 'child-2', type: 'paragraph', data: { text: 'Content' }, parent: 'header-1' },
           { id: 'root-1', type: 'paragraph', data: { text: 'Root content' } },

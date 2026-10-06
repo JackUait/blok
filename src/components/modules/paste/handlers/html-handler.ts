@@ -15,6 +15,7 @@ import type { HandlerContext, PasteData } from '../types';
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 import { parseUntrustedHtml } from '../../../utils/inert-html';
+import { PAGE_REFERENCE_ATTR, preservePageReferenceAnchor } from '../../../../shared/page-reference';
 
 
 /**
@@ -85,6 +86,9 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     const { Tools } = this.Blok;
 
     const wrapper = parseUntrustedHtml(innerHTML);
+
+    // Empty references need their neutral text before the splitter drops empty nodes.
+    wrapper.querySelectorAll(`a[${PAGE_REFERENCE_ATTR}]`).forEach(preservePageReferenceAnchor);
 
     // Normalize legacy <b> → <strong> on the DETACHED wrapper, before the block
     // is rendered and the caret lands inside the pasted content. The live bold
@@ -230,7 +234,7 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
       const toolTags = this.buildToolTags(tool);
 
       const structuralSanitizeConfig = this.sanitizerBuilder.getStructuralTagsConfig(content);
-      const customConfig: SanitizerConfig = { ...structuralSanitizeConfig, ...toolTags, ...tool.baseSanitizeConfig, br: {} };
+      const customConfig: SanitizerConfig = { a: preservePageReferenceAnchor, ...structuralSanitizeConfig, ...toolTags, ...tool.baseSanitizeConfig, br: {} };
       const sanitizedContent = this.sanitizeContent(content, customConfig);
 
       if (!sanitizedContent) {

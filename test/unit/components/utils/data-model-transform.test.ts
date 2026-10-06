@@ -361,7 +361,7 @@ describe('data-model-transform', () => {
       expect(result[0].data.text).toBe('My Toggle Title');
     });
 
-    it('maps isExpanded to isOpen', () => {
+    it('drops isExpanded: the open state is personal, so no isOpen is emitted', () => {
       const blocks: OutputBlockData[] = [
         {
           id: 't1',
@@ -376,7 +376,7 @@ describe('data-model-transform', () => {
 
       const result = expandToHierarchical(blocks);
 
-      expect(result[0].data.isOpen).toBe(true);
+      expect(result[0].data).toEqual({ text: 'Toggle' });
     });
 
     it('sets parent reference on child blocks', () => {
@@ -533,7 +533,7 @@ describe('data-model-transform', () => {
       expect(inner?.type).toBe('toggle');
       expect(inner?.parent).toBe('outer');
       expect(inner?.data.text).toBe('Inner');
-      expect(inner?.data.isOpen).toBe(true);
+      expect(inner?.data).not.toHaveProperty('isOpen');
       expect(inner?.content).toEqual(['leaf']);
 
       // Leaf paragraph survives and is parented to inner.
@@ -829,7 +829,7 @@ describe('data-model-transform', () => {
       expect(result[0].data.text).toBe('My Heading Toggle');
     });
 
-    it('maps isExpanded to isOpen on toggle heading header block', () => {
+    it('drops isExpanded on a toggle heading header block', () => {
       const blocks: OutputBlockData[] = [
         {
           id: 't1',
@@ -844,7 +844,7 @@ describe('data-model-transform', () => {
 
       const result = expandToHierarchical(blocks);
 
-      expect(result[0].data.isOpen).toBe(false);
+      expect(result[0].data).toEqual({ text: 'Section heading', level: 2, isToggleable: true });
     });
 
     it('sets body blocks as children of toggle heading header block', () => {
@@ -1486,14 +1486,14 @@ describe('data-model-transform', () => {
       expect(result[0].data.title).toBe('My Title');
     });
 
-    it('maps isOpen back to isExpanded', () => {
+    it('drops an old document\'s isOpen instead of writing isExpanded', () => {
       const blocks: OutputBlockData[] = [
         { id: 't1', type: 'toggle', data: { text: 'Toggle', isOpen: true }, content: [] },
       ];
 
       const result = collapseToLegacy(blocks);
 
-      expect(result[0].data.isExpanded).toBe(true);
+      expect(result[0].data).not.toHaveProperty('isExpanded');
     });
 
     it('collects child blocks into body.blocks', () => {
@@ -1562,14 +1562,14 @@ describe('data-model-transform', () => {
       expect(result[0].data.title).toBe('My Section');
     });
 
-    it('maps toggleable header isOpen to isExpanded in collapsed toggleList', () => {
+    it('drops a toggleable header\'s isOpen instead of writing isExpanded', () => {
       const blocks: OutputBlockData[] = [
         { id: 'h1', type: 'header', data: { text: 'Section', level: 2, isToggleable: true, isOpen: false } },
       ];
 
       const result = collapseToLegacy(blocks);
 
-      expect(result[0].data.isExpanded).toBe(false);
+      expect(result[0].data).not.toHaveProperty('isExpanded');
     });
 
     it('collects toggleable header children into body.blocks', () => {

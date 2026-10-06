@@ -135,12 +135,17 @@ test.describe('code block chrome', () => {
 
     await expect(band).toBeVisible();
 
-    const text = await lineTops(page);
-    const box = await band.boundingBox();
+    await expect.poll(async () => {
+      const text = await lineTops(page);
+      const box = await band.boundingBox();
 
-    expect(box).not.toBeNull();
-    expect(Math.abs((box?.y ?? 0) - text[1])).toBeLessThanOrEqual(4);
-    expect(Math.abs((box?.y ?? 0) + (box?.height ?? 0) - text[2])).toBeLessThanOrEqual(4);
+      if (box === null) return Infinity;
+
+      return Math.max(
+        Math.abs(box.y - text[1]),
+        Math.abs(box.y + box.height - text[2])
+      );
+    }).toBeLessThanOrEqual(4);
     await expect(page.getByTestId('code-gutter').locator('[data-active="true"]')).toHaveText('2');
 
     await page.getByTestId('code-gutter').locator('[data-line-index="2"]').click();

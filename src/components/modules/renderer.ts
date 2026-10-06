@@ -134,11 +134,19 @@ export class Renderer extends Module {
    */
   private resolvePendingRender: (() => void) | null = null;
 
+  /** Renders in flight. Renders can overlap: renderFromHTML has no save prologue. */
+  private renderDepth = 0;
+
   /**
    * Signals that a render operation is starting.
-   * Sets pendingRender so that Saver can await it.
+   * Overlapping renders share ONE pendingRender: a waiter that took it during
+   * the first must not be left on a promise nobody resolves.
    */
   public markRenderStart(): void {
+    this.renderDepth += 1;
+    if (this.pendingRender !== null) {
+      return;
+    }
     this.pendingRender = new Promise<void>((resolve) => {
       this.resolvePendingRender = resolve;
     });
@@ -146,13 +154,18 @@ export class Renderer extends Module {
 
   /**
    * Signals that a render operation has completed.
-   * Resolves pendingRender so that any waiting Saver call can proceed.
+   * Resolves pendingRender once the last overlapping render ends.
    */
   public markRenderEnd(): void {
-    if (this.resolvePendingRender !== null) {
-      this.resolvePendingRender();
-      this.resolvePendingRender = null;
+    if (this.renderDepth === 0) {
+      return;
     }
+    this.renderDepth -= 1;
+    if (this.renderDepth > 0) {
+      return;
+    }
+    this.resolvePendingRender?.();
+    this.resolvePendingRender = null;
     this.pendingRender = null;
   }
 

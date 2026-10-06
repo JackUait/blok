@@ -1,6 +1,6 @@
 import type { I18n } from '../../../types/api';
 import { Dom } from '../../components/dom';
-import { IconCopy, IconCross, IconDotsHorizontal, IconMarker, IconMergeCells, IconPlacement, IconSplitCell } from '../../components/icons';
+import { IconCopy, IconCross, IconDotsHorizontal, IconPaintRoller, IconMergeCells, IconPlacement, IconSplitCell } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
@@ -1442,7 +1442,7 @@ export class TableCellSelection {
       });
 
       colorPickerItems.push({
-        icon: IconMarker,
+        icon: IconPaintRoller,
         title: this.i18n.t('tools.table.cellColor'),
         name: 'cellColor',
         children: {

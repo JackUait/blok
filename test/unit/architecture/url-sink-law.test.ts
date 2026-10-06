@@ -49,6 +49,8 @@ const SAFE_HELPERS = [
 const EXEMPT_SINKS: Record<string, string> = {
   'tools/image/index.ts » src':
     'HTMLImageElement src — <img> is not a script-execution sink (javascript: URLs do not run in img)',
+  'tools/image/tone-sampler.ts » src':
+    'HTMLImageElement src for a hidden CORS copy of the picture already on screen, only read for its tone — image loads cannot run script',
   'tools/image/error-state.ts » file.preview':
     'HTMLImageElement src for a failed-upload thumbnail — image-resource loads cannot run script',
   'tools/image/markup/render.ts » src':
@@ -63,6 +65,8 @@ const EXEMPT_SINKS: Record<string, string> = {
     'HTMLImageElement src (fly-out clone) — <img> is not a script-execution sink',
   'tools/image/darkroom/filter-strip.ts » o.url':
     'HTMLImageElement src (filter preset thumbnails, same url as the darkroom photo) — <img> is not a script-execution sink',
+  'tools/image/darkroom/markup-panel.ts » url':
+    'HTMLImageElement src (spotlight and magnifier shape tiles, same url as the darkroom photo) — <img> is not a script-execution sink',
   'components/utils/notifier/draw.ts » source':
     'HTMLImageElement src (failed-image toast tile), set only after SAFE_THUMBNAIL allows blob: or a raster data: image — <img> is not a script-execution sink',
   'tools/image/probe-dimensions.ts » url':
@@ -85,6 +89,8 @@ const EXEMPT_SINKS: Record<string, string> = {
     'anchor href, but the markdown-link composer returns early on hasUnsafeScheme(url)',
   'components/utils/resolve-link-attributes.ts » resolved.href':
     'host-supplied transformHref result applied to an already-gated anchor href (config is trusted, not stored data)',
+  'components/modules/pageReferences.ts » href':
+    'PageReferences.href() passes the host URL through safeHref() and returns null for unsafe schemes before paint assigns this anchor href',
 };
 
 interface Sink {

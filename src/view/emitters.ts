@@ -28,6 +28,7 @@ import {
 } from '../shared/tool-classes/list';
 import {
   PAGE_FALLBACK_ICON,
+  PAGE_LOCK_ICON,
   PAGE_ICON_CLASSES,
   PAGE_LINK_CLASSES,
   PAGE_LINK_INK_CLASSES,
@@ -35,7 +36,9 @@ import {
   PAGE_TITLE_MUTED_CLASSES,
 } from '../shared/tool-classes/page';
 import { TOGGLE_CHILDREN_CLASSES, TOGGLE_CONTENT_CLASSES, TOGGLE_HEADER_ROW_CLASSES } from '../shared/tool-classes/toggle';
+import type { PageInfo } from '../../types/tools/page';
 import type { ViewBlock } from './document-model';
+import type { TocEntry } from './outline';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from './table-grid';
 
 /**
@@ -60,11 +63,12 @@ export interface EmitterEnv {
    */
   url(name: 'href' | 'src', value: unknown, blockType: string): string;
   /**
-   * Build the ` href="…"` attribute for a page block from the `pageHref`
-   * option, gated like {@link EmitterEnv.url}. Empty when the option is absent,
-   * the id is not a non-empty string, or the URL is unsafe.
+   * Build a page or page-link href from `pageHref`, gated like
+   * {@link EmitterEnv.url}. Empty for an absent callback, invalid id or unsafe URL.
    */
-  pageHrefAttr(pageId: unknown): string;
+  pageHrefAttr(pageId: unknown, blockType: string): string;
+  /** Authorized page metadata, when the host has resolved it. */
+  pageInfo(pageId: unknown): PageInfo | null | undefined;
   /**
    * Build the ` data-blok-id="<id>"` attribute for a block when the `blockIds`
    * option is on and the block carries an id; empty string otherwise.
@@ -107,6 +111,14 @@ export interface EmitterEnv {
   dirAttr(block: ViewBlock): string;
   /** ` dir="ltr"` when the `direction` option is set, else '': pins code LTR. */
   ltrAttr: string;
+  /** The document's table of contents; empty when Blok does not draw one. */
+  tocEntries(): TocEntry[];
+  /**
+   * The block id of a heading the table of contents links to, so the link has
+   * a target. Undefined for every other block, which keeps documents without a
+   * table of contents byte-identical.
+   */
+  tocTargetId(block: ViewBlock): string | undefined;
 }
 
 /**
@@ -459,7 +471,7 @@ const emitTable = (block: ViewBlock, env: EmitterEnv): string => {
 
 /**
  * Page emitter: a one-line card (icon + title) pointing at a SEPARATE
- * document. It is a link only when the consumer supplies `pageHref`.
+ * document. It is a link only with authorized metadata and `pageHref`.
  *
  * Deliberately never renders children: the page body is not in this
  * document, so any child a malformed document hangs off a page would
@@ -468,19 +480,33 @@ const emitTable = (block: ViewBlock, env: EmitterEnv): string => {
  * @param env - emitter environment
  */
 const emitPage = (block: ViewBlock, env: EmitterEnv): string => {
-  const cache = isRecord(block.data.cache) ? block.data.cache : {};
-  const icon = isRecord(cache.icon) ? cache.icon : {};
-  const title = str(cache, 'title');
-  const emoji = icon.type === 'emoji' ? str(icon, 'value') : '';
-  const src = icon.type === 'image' ? env.url('src', icon.url, block.type) : '';
-  const fallback = emoji === '' ? PAGE_FALLBACK_ICON.trim() : env.escape(emoji);
+  const info = env.pageInfo(block.data.pageId);
+  const allowed = info !== null && info !== undefined && info.access !== 'none';
+  const icon = allowed && isRecord(info.icon) ? info.icon : null;
+  const emoji = icon?.type === 'emoji' ? str(icon, 'value') : '';
+  const src = icon?.type === 'image' ? env.url('src', icon.url, block.type) : '';
+  const pageFallback = emoji === '' ? PAGE_FALLBACK_ICON.trim() : env.escape(emoji);
+  const fallback = info?.access === 'none' ? PAGE_LOCK_ICON.trim() : pageFallback;
   const glyph = src === '' ? fallback : `<img${src} alt="">`;
   const iconSlot = `<span${env.classList(PAGE_ICON_CLASSES)} aria-hidden="true">${glyph}</span>`;
-  /** Matches the editor's placeholder; the view has no i18n layer. */
-  const titleClasses = title === '' ? [...PAGE_TITLE_CLASSES, ...PAGE_TITLE_MUTED_CLASSES] : PAGE_TITLE_CLASSES;
-  const label = `<span${env.classList(titleClasses)}>${env.escape(title === '' ? 'New page' : title)}</span>`;
+  const title = (() => {
+    if (info === null) {
+      return 'Page not found';
+    }
+    if (info === undefined) {
+      return 'Page';
+    }
+    if (info.access === 'none') {
+      return 'No access';
+    }
+
+    return typeof info.title === 'string' && info.title !== '' ? info.title : 'New page';
+  })();
+  const muted = !allowed || title === 'New page';
+  const titleClasses = muted ? [...PAGE_TITLE_CLASSES, ...PAGE_TITLE_MUTED_CLASSES] : PAGE_TITLE_CLASSES;
+  const label = `<span${env.classList(titleClasses)}>${env.escape(title)}</span>`;
   const cardClasses = env.classList([...PAGE_LINK_CLASSES, ...PAGE_LINK_INK_CLASSES]);
-  const href = env.pageHrefAttr(block.data.pageId);
+  const href = allowed ? env.pageHrefAttr(block.data.pageId, block.type) : '';
 
   return href === ''
     ? `<div><span${cardClasses}>${iconSlot}${label}</span></div>`
@@ -514,14 +540,13 @@ export const builtinEmitters: Record<string, Emitter> = {
      * or every `<a href="#...">` in the rendered document dies. It comes from
      * block data — clipboard-controlled — so it is escaped like any other value.
      */
-    const anchor = normalizeHeadingAnchor(block.data.anchor);
+    const anchor = normalizeHeadingAnchor(block.data.anchor) ?? env.tocTargetId(block);
     const anchorAttr = anchor === undefined ? '' : ` id="${env.escape(anchor)}"`;
     const heading = `<h${level}${env.rootAttrs(block)}${anchorAttr}${levelAttr}>${env.inline(block.data.text)}</h${level}>`;
 
+    /** Open state is personal to each browser, so the view always starts collapsed. */
     if (block.data.isToggleable === true) {
-      const open = block.data.isOpen === true ? ' open' : '';
-
-      return `<details${open}><summary>${heading}</summary>${childrenOnly(block, env)}</details>`;
+      return `<details><summary>${heading}</summary>${childrenOnly(block, env)}</details>`;
     }
 
     return trail(heading, block, env);
@@ -614,14 +639,13 @@ export const builtinEmitters: Record<string, Emitter> = {
   },
 
   toggle: (block, env) => {
-    const open = block.data.isOpen === true ? ' open' : '';
     const summary = `<summary${env.classList([...TOGGLE_HEADER_ROW_CLASSES, ...TOGGLE_CONTENT_CLASSES])}>${env.inline(block.data.text)}</summary>`;
     const children = childrenOnly(block, env);
     const body = env.classesEnabled
       ? `<div${env.classList(TOGGLE_CHILDREN_CLASSES)}${CHILDREN_CONTAINER_ATTR}>${children}</div>`
       : children;
 
-    return `<details${open}>${summary}${body}</details>`;
+    return `<details>${summary}${body}</details>`;
   },
 
   image: (block, env) => {
@@ -693,12 +717,56 @@ export const builtinEmitters: Record<string, Emitter> = {
 
   spacer: (block, env) => trail('<div aria-hidden="true"></div>', block, env),
 
+  /**
+   * The editor reads the outline live; here it is built from the saved
+   * headings. No children: the tool refuses them. Nothing to list renders
+   * nothing, so no stamp lands on an empty element.
+   */
+  table_of_contents: (_block, env) => {
+    const entries = env.tocEntries();
+
+    if (entries.length === 0) {
+      return '';
+    }
+
+    const parity = env.classesEnabled;
+    const items = entries.map((entry) => {
+      // The editor's stylesheet indents by this variable.
+      const depthStyle = parity ? ` style="--blok-toc-depth: ${entry.depth}"` : '';
+      const href = env.url('href', `#${encodeURIComponent(entry.target)}`, 'table_of_contents');
+      const label = parity ? `<span>${env.escape(entry.text)}</span>` : env.escape(entry.text);
+
+      return `<li data-depth="${entry.depth}"${depthStyle}><a${href}${parity ? ' data-blok-toc-link' : ''}>${label}</a></li>`;
+    }).join('');
+
+    // `list-style: none` drops list semantics in WebKit, hence the role.
+    return parity
+      ? `<nav data-blok-toc><ol data-blok-toc-list role="list">${items}</ol></nav>`
+      : `<nav><ol>${items}</ol></nav>`;
+  },
+
   column_list: childrenDiv,
   columns: childrenDiv,
   column: childrenDiv,
+
+  /** A static page cannot switch tabs, so every tab renders, one after another. */
+  tabs: (block, env) => `<div data-blok-tabs>${env.renderList(env.childrenOf(block.id))}</div>`,
+
+  /** `html-to-blocks.ts` reads the marked title and icon back into the tab's data. */
+  tab: (block, env) => {
+    const icon = str(block.data, 'icon');
+    const label = [
+      icon === '' ? '' : `<span data-blok-tab-icon>${env.escape(icon)}</span>`,
+      env.escape(str(block.data, 'title')),
+    ].filter((part) => part !== '').join(' ');
+    const heading = label === '' ? '' : `<h4 data-blok-tab-title>${label}</h4>`;
+
+    return `<section data-blok-tab>${heading}${env.renderList(env.childrenOf(block.id))}</section>`;
+  },
 
   database: childrenOnly,
   'database-row': childrenOnly,
 
   page: emitPage,
+  'page-link': emitPage,
 };

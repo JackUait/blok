@@ -1,0 +1,38 @@
+{
+  "blocks": [
+    {
+      "blockId": "link-block-id",
+      "blockSubtree": {
+        "__version__": 3,
+        "block": {
+          "link-block-id": {
+            "value": {
+              "id": "link-block-id",
+              "type": "alias",
+              "format": {
+                "alias_pointer": {
+                  "table": "block",
+                  "id": "target-page-id",
+                  "spaceId": "redacted-space-id"
+                }
+              },
+              "space_id": "redacted-space-id",
+              "created_time": 1791139302976,
+              "created_by_table": "notion_user",
+              "created_by_id": "redacted-user-id",
+              "last_edited_time": 1791139302977,
+              "version": 3,
+              "parent_id": "redacted-parent-page-id",
+              "parent_table": "block",
+              "alive": true,
+              "last_edited_by_id": "redacted-user-id",
+              "last_edited_by_table": "notion_user"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "action": "copy",
+  "wasContiguousSelection": true
+}

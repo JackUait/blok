@@ -98,6 +98,8 @@ const createHarness = (): {
     },
     Saver: {
       save: saverSave,
+      adoptDocumentRecordId: vi.fn(),
+      resetDocumentRecordId: vi.fn(),
     },
     BlockSelection: {
       selectBlock: vi.fn(),

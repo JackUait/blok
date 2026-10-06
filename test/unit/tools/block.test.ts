@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type {
   BlockAPI,
   BlockToolData,
@@ -217,6 +217,10 @@ const createInlineTool = (sanitize: Record<string, unknown>): InlineToolAdapter 
 };
 
 describe('BlockToolAdapter', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -408,6 +412,47 @@ describe('BlockToolAdapter', () => {
       expect(tool.keepsChildrenOnEnter).toBe(false);
     });
 
+    it('reports a tool whose deletion deletes its children', () => {
+      const constructable = createConstructable({ deletesChildren: true });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.deletesChildren).toBe(true);
+    });
+
+    it('keeps children on delete when the tool declares nothing', () => {
+      const { tool } = createBlockTool();
+
+      expect(tool.deletesChildren).toBe(false);
+    });
+
+    it('reports a pure layout tool', () => {
+      const constructable = createConstructable({ isLayout: true });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.isLayout).toBe(true);
+    });
+
+    it('is not layout when the tool declares nothing', () => {
+      const { tool } = createBlockTool();
+
+      expect(tool.isLayout).toBe(false);
+    });
+
+    it.each(['column', 'column_list'])('keeps the old name-based layout rules for a host tool registered as %s', (name) => {
+      const { tool } = createBlockTool({ name });
+
+      expect(tool.isLayout).toBe(true);
+      expect(tool.deletesChildren).toBe(true);
+    });
+
+    it('lets a host tool registered as column opt out explicitly', () => {
+      const constructable = createConstructable({ isLayout: false, deletesChildren: false });
+      const { tool } = createBlockTool({ name: 'column', constructable });
+
+      expect(tool.isLayout).toBe(false);
+      expect(tool.deletesChildren).toBe(false);
+    });
+
     it('reports a tool that takes no children', () => {
       const constructable = createConstructable({ acceptsChildren: false });
       const { tool } = createBlockTool({ constructable });
@@ -462,7 +507,7 @@ describe('BlockToolAdapter', () => {
       expect(tool.copyAsLink({})).toBeNull();
     });
 
-    it('returns null when copyAsLink throws, so a copy still writes the clipboard', () => {
+    it('returns undefined when copyAsLink throws, so copies use ordinary block data', () => {
       const constructable = createConstructable({
         copyAsLink: () => {
           throw new Error('bad host href');
@@ -470,7 +515,7 @@ describe('BlockToolAdapter', () => {
       });
       const { tool } = createBlockTool({ constructable });
 
-      expect(tool.copyAsLink({})).toBeNull();
+      expect(tool.copyAsLink({})).toBeUndefined();
     });
   });
 

@@ -126,11 +126,10 @@ describe('image alt popover theming', () => {
   });
 });
 
-/** Declarations of the base `[data-blok-tool="image"] .blok-image-toolbar` rule. */
-/** The painted surface: each island is a card, the toolbar row itself is transparent. */
+/** Declarations of the base `[data-blok-tool="image"] .blok-image-toolbar` rule: the bar is the card. */
 function imageToolbarRule(): string {
-  const idx = css.indexOf('[data-blok-tool="image"] .blok-image-toolbar__island::before {');
-  if (idx === -1) throw new Error('image toolbar island rule missing');
+  const idx = css.indexOf('[data-blok-tool="image"] .blok-image-toolbar {');
+  if (idx === -1) throw new Error('image toolbar rule missing');
   const open = css.indexOf('{', idx);
   return css.slice(open + 1, findMatchingBrace(css, open));
 }

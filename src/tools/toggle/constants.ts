@@ -102,14 +102,14 @@ export const ARROW_ICON = IconChevronRight;
 /**
  * Styles for the body placeholder element
  *
- * Vertical padding matches a child paragraph's layout contribution:
- *   - Paragraph element: py-[7px] (7px top, 7px bottom) + mt-px mb-px (1px margins)
- *   - Combined per side: 7px padding + 1px margin = 8px
- * Using fixed px values (not em) because py-[7px] and mt-px are also fixed.
+ * Each side takes 8px, the same as a child paragraph (py-[7px] + 1px margin), so
+ * clicking it to add a block causes no layout shift. The 8px is split into 4px
+ * margin + 4px padding so the hover fill hugs the text.
  *
- * ps-7 (28px) aligns the placeholder with the title text start (arrow button width: the pill is a fixed 28px regardless of the chevron inside it).
+ * ms-5.5 + px-1.5 (28px) aligns the placeholder text with the title text start (arrow button width: the pill is a fixed 28px regardless of the chevron inside it).
+ * The indent is margin, not padding, so the hover fill starts at the title, not under the arrow.
  */
-export const BODY_PLACEHOLDER_STYLES = 'hidden ps-7 pt-[8px] pb-[8px] text-gray-text leading-[1.5] cursor-pointer select-none';
+export const BODY_PLACEHOLDER_STYLES = 'hidden ms-5.5 px-1.5 my-[4px] py-[4px] text-gray-text leading-[1.5] cursor-pointer select-none rounded-(--blok-radius-control) can-hover:hover:bg-item-hover-bg transition-colors';
 
 /**
  * Styles for the children container element.

@@ -280,7 +280,8 @@ describe('BlockHoverController mutants', () => {
         holder.appendChild(content);
       }
 
-      const block = { id, name, holder } as unknown as Block;
+      // Mirrors the real column / column_list declarations.
+      const block = { id, name, holder, tool: { isLayout: name === 'column' || name === 'column_list' } } as unknown as Block;
 
       blocks.push(block);
 
@@ -641,7 +642,7 @@ describe('BlockHoverController mutants', () => {
       setRect(shallowContent, { top: 100, bottom: 200, left: 0, right: 100 });
       shallowHolder.appendChild(shallowContent);
 
-      const shallow = { id: 'shallow', name: 'paragraph', holder: shallowHolder } as unknown as Block;
+      const shallow = { id: 'shallow', name: 'paragraph', holder: shallowHolder, tool: { isLayout: false } } as unknown as Block;
 
       editor.blocks.push(shallow);
 

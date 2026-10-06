@@ -132,7 +132,7 @@
   background: var(--blok-image-frame-ring-strong);
 }
 
-/* A table cell clips its overflow, so the ring and dots that sit outside the figure move inside it. */
+/* A table cell clips its overflow, so the ring that sits outside the figure moves inside it. */
 [data-blok-table-cell] [data-blok-tool="image"] [data-role="image-selection-ring"],
 [data-blok-selected="true"] [data-blok-table-cell] [data-blok-tool="image"] [data-role="image-selection-ring"],
 [data-blok-table-cell] [data-blok-tool="image"][data-resizing="true"] [data-role="image-selection-ring"] {
@@ -142,40 +142,33 @@
   left: 0;
   height: var(--blok-image-media-height, 100%);
 }
-[data-blok-table-cell] [data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: var(--blok-space-1); }
-[data-blok-table-cell] [data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: var(--blok-space-1); }
 
-/* alt pill — sits on the figure, bottom inline-start */
+/* alt tag — sits on the picture, bottom inline-start */
 [data-blok-tool="image"] .blok-image-alt-pill {
   position: absolute;
-  top: calc(var(--blok-image-media-height, 100%) - var(--blok-space-2-5));
-  inset-inline-start: var(--blok-space-2-5);
+  top: calc(var(--blok-image-media-height, 100%) - var(--blok-space-2));
+  inset-inline-start: var(--blok-space-2);
   translate: 0 -100%;
   display: inline-flex;
   align-items: center;
-  gap: var(--blok-space-1-5);
-  max-width: min(calc(100% - 20px), 240px);
-  padding-block: var(--blok-space-1-25);
-  padding-inline: var(--blok-space-1-75) var(--blok-space-2-25);
+  max-width: min(calc(100% - 16px), 240px);
+  padding: var(--blok-space-1-25) var(--blok-space-2);
   border: 0;
-  border-radius: var(--blok-radius-pill);
+  border-radius: var(--blok-radius-control);
   background: var(--blok-overlay-surface);
   box-shadow:
     inset 0 0 0 1px var(--blok-overlay-ring),
-    var(--blok-image-handle-shadow);
-  color: var(--blok-text-primary);
+    var(--blok-image-shadow-toolbar);
+  color: var(--blok-overlay-fg-strong);
   font: inherit;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 500;
   line-height: 1;
   cursor: pointer;
   opacity: 0;
-  transition:
-    opacity 150ms ease,
-    transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: opacity 120ms ease;
   z-index: 2;
 }
-[data-blok-tool="image"] .blok-image-alt-pill:active { transform: scale(0.94); }
 [data-blok-tool="image"] .blok-image-alt-pill:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;
@@ -190,201 +183,50 @@
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"] .blok-image-alt-pill {
   display: none;
 }
-[data-blok-tool="image"] .blok-image-alt-pill__mark {
+[data-blok-tool="image"] .blok-image-alt-pill__label {
   flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--blok-text-tertiary);
-}
-[data-blok-tool="image"] .blok-image-alt-pill[data-state="set"] .blok-image-alt-pill__mark {
-  display: grid;
-  place-items: center;
-  width: 12px;
-  height: 12px;
-  background: none;
-}
-[data-blok-tool="image"] .blok-image-alt-pill__mark svg {
-  width: 12px;
-  height: 12px;
+  /* The space after the label is for the accessible name only: a flex row never draws a whitespace-only run. */
+  margin-inline-end: var(--blok-space-1-5);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 [data-blok-tool="image"] .blok-image-alt-pill__text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-[data-blok-tool="image"] .blok-image-alt-pill[data-state="set"] .blok-image-alt-pill__text {
-  color: var(--blok-text-secondary);
-}
-[data-blok-tool="image"] .blok-image-alt-pill[data-state="set"] b {
-  margin-inline-end: var(--blok-space-1);
-  color: var(--blok-text-primary);
-  font-weight: 600;
-}
-[data-blok-tool="image"] .blok-image-alt-pill__help {
-  display: grid;
-  place-items: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px var(--blok-border-primary);
-  color: var(--blok-text-tertiary);
-  font-size: 9px;
-  font-weight: 600;
+  color: var(--blok-overlay-fg);
 }
 
 /* toolbar base rule lives in main.css to satisfy direct readFileSync audits.
    Additional toolbar states/children remain here. */
 [data-blok-tool="image"] .blok-image-toolbar__island {
-  position: relative;
   display: inline-flex;
+  align-items: center;
   gap: var(--blok-space-0-25);
-  padding: var(--blok-space-0-75);
-  border-radius: var(--blok-radius-surface);
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-0-75)));
-  --blok-image-island-merged-radius: var(--blok-radius-floor);
 }
-/* The islands grow out of one bar. Only these pseudo-elements move: a button that moved would leave its tooltip behind.
-   Resting styles are the split state, so with motion off the islands simply sit apart. */
-[data-blok-tool="image"] .blok-image-toolbar__island::before {
+/* Tiers hide whole groups, so a plain `+` rule would draw a divider at the bar's edge. */
+[data-blok-tool="image"] .blok-image-toolbar:not([data-tier="medium"]):not([data-compact="true"]) [data-island="edit"]::before,
+[data-blok-tool="image"] .blok-image-toolbar:not([data-compact="true"]) [data-island="view"]::before {
   content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: var(--blok-radius-surface);
-  background: var(--blok-overlay-surface);
-  box-shadow:
-    inset 0 0 0 1px var(--blok-overlay-ring),
-    var(--blok-image-shadow-toolbar);
-  pointer-events: none;
+  width: 1px;
+  height: 14px;
+  margin-inline: var(--blok-space-0-75);
+  background: var(--blok-overlay-divider);
 }
-/* Inner corners start square so the cards join into one bar; outer ones stay round. The recoil pulls away from the neck. */
-[data-blok-tool="image"] .blok-image-toolbar__island[data-island="layout"],
-[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-island="edit"] {
-  --blok-image-island-merged-radius: var(--blok-radius-surface) var(--blok-radius-floor) var(--blok-radius-floor) var(--blok-radius-surface);
-}
-[data-blok-tool="image"] .blok-image-toolbar__island[data-island="view"] {
-  --blok-image-island-merged-radius: var(--blok-radius-floor) var(--blok-radius-surface) var(--blok-radius-surface) var(--blok-radius-floor);
-}
-[data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] [data-island="view"] {
-  --blok-image-island-merged-radius: var(--blok-radius-surface);
-}
-[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-island="edit"]::before,
-[data-blok-tool="image"] .blok-image-toolbar__island[data-island="layout"]::before {
-  transform-origin: left center;
-}
-[data-blok-tool="image"] .blok-image-toolbar__island[data-island="view"]::before {
-  transform-origin: right center;
-}
-/* The liquid neck to the next island. It overlaps both cards by a corner radius, so a full neck hides the gap. */
-[data-blok-tool="image"] .blok-image-toolbar__island::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(100% - var(--blok-radius-surface));
-  z-index: -1;
-  width: calc(var(--blok-space-1-5) + 2 * var(--blok-radius-surface));
-  background: var(--blok-overlay-surface);
-  /* Full height at both ends (hidden inside the cards), a waist over the gap: the concave sides of a liquid bridge. */
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 34' preserveAspectRatio='none'%3E%3Cpath d='M0 0C8 0 9 11 12 11S16 0 24 0V34C16 34 15 23 12 23S8 34 0 34Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 34' preserveAspectRatio='none'%3E%3Cpath d='M0 0C8 0 9 11 12 11S16 0 24 0V34C16 34 15 23 12 23S8 34 0 34Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
-  transform: scaleY(0);
-  pointer-events: none;
-}
-[data-blok-tool="image"] .blok-image-toolbar__island[data-island="view"]::after {
-  content: none;
-}
-/* The one bar. It paints after the cards, so it hides their inner edges until the necks start to pinch. */
-[data-blok-tool="image"] .blok-image-toolbar::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: var(--blok-radius-surface);
-  background-color: var(--blok-overlay-surface);
-  box-shadow:
-    inset 0 0 0 1px var(--blok-overlay-ring),
-    var(--blok-image-shadow-toolbar);
-  opacity: 0;
-  pointer-events: none;
-}
-/* Buttons never move sideways (a tooltip is placed once, where its button is at that moment);
-   only the whole row rises, and tools/image/ui.ts re-anchors the tooltip when that ends.
-   One animation per element for every show state, so hover -> select does not replay it. */
-[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar ,
-[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar ,
-[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar ,
-[data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar ,
+[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar,
+[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar,
+[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar,
+[data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar,
 [data-blok-tool="image"][data-alt-open="true"] .blok-image-toolbar {
   opacity: 1;
   pointer-events: auto;
-  animation: blok-image-islands-rise 300ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
-}
-[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar::after ,
-[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar::after ,
-[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar::after ,
-[data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar::after ,
-[data-blok-tool="image"][data-alt-open="true"] .blok-image-toolbar::after {
-  animation: blok-image-islands-merged 330ms linear both;
-}
-[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar__island::after ,
-[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar__island::after ,
-[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar__island::after ,
-[data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar__island::after ,
-[data-blok-tool="image"][data-alt-open="true"] .blok-image-toolbar__island::after {
-  animation: blok-image-islands-pinch 220ms cubic-bezier(0.6, 0, 0.9, 0.4) 240ms both;
-}
-[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar__island::before ,
-[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar__island::before ,
-[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar__island::before ,
-[data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar__island::before ,
-[data-blok-tool="image"][data-alt-open="true"] .blok-image-toolbar__island::before {
-  animation: blok-image-islands-split 480ms linear 240ms both;
-}
-@keyframes blok-image-islands-rise {
-  from { opacity: 0; translate: 0 10px; filter: blur(6px); }
-  to { opacity: 1; translate: 0 0; filter: none; }
-}
-@keyframes blok-image-islands-merged {
-  0%, 78% { opacity: 1; }
-  100% { opacity: 0; }
-}
-/* Thins to a thread, then snaps at 220ms: the moment the cards recoil. */
-@keyframes blok-image-islands-pinch {
-  from { transform: scaleY(1); }
-}
-/* 0-46%: the neck pulls the cards toward it. 46%: it snaps, they recoil like jelly, then settle.
-   No drop shadow while joined: the bar casts it, and a card's shadow would smear across the neck. */
-@keyframes blok-image-islands-split {
-  0% {
-    border-radius: var(--blok-image-island-merged-radius);
-    box-shadow: inset 0 0 0 1px transparent;
-    transform: scale(1, 1);
-    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
-  }
-  46% {
-    box-shadow: inset 0 0 0 1px transparent;
-    transform: scale(1.035, 0.97);
-    animation-timing-function: cubic-bezier(0.1, 0.8, 0.3, 1);
-  }
-  64% {
-    transform: scale(0.95, 1.05);
-    animation-timing-function: cubic-bezier(0.4, 0, 0.4, 1);
-  }
-  82% {
-    transform: scale(1.012, 0.992);
-    animation-timing-function: cubic-bezier(0.4, 0, 0.4, 1);
-  }
 }
 [data-blok-tool="image"][data-resizing="true"] .blok-image-inner .blok-image-toolbar {
-  /* The rise animation's fill would otherwise hold opacity at 1; it replays when the drag ends. */
-  animation: none;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 150ms ease;
 }
-/* While the image bytes are still loading, keep the islands off the loading placeholder. */
+/* While the image bytes are still loading, keep the toolbar off the loading placeholder. */
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"] .blok-image-toolbar {
   opacity: 0;
   pointer-events: none;
@@ -424,6 +266,36 @@
 [data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] [data-island="edit"],
 [data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] [data-island="view"] > :not([data-action="more"]) {
   display: none;
+}
+
+/* Paper or graphite, picked per control from the pixels under it (tone-sampler.ts).
+   No data-tone: the theme's overlay tokens apply.
+   Values live here, not as root tokens, and the rules hang off a class: view.css keeps every
+   root token and every attribute-only token rule, and a static view has no chrome.
+   The surfaces must match PAPER and GRAPHITE in src/tools/image/tone.ts. */
+.blok-image-inner [data-tone="paper"] {
+  --blok-overlay-surface: #ffffff;
+  --blok-overlay-ring: rgba(15, 15, 14, 0.06);
+  --blok-overlay-fg: rgba(15, 15, 14, 0.62);
+  --blok-overlay-fg-strong: #1d1d1d;
+  --blok-overlay-fg-hover: rgba(15, 15, 14, 0.06);
+  --blok-overlay-divider: rgba(15, 15, 14, 0.1);
+  /* A pressed button stays gray with primary ink (selected-state law); primary ink follows the card. */
+  --blok-text-primary: #1d1d1d;
+  --blok-icon-active-bg: rgba(15, 15, 14, 0.06);
+  --blok-icon-active-text: var(--blok-text-primary);
+}
+.blok-image-inner [data-tone="graphite"] {
+  --blok-overlay-surface: #252525;
+  --blok-overlay-ring: rgba(255, 255, 255, 0.08);
+  --blok-overlay-fg: rgba(255, 255, 255, 0.86);
+  --blok-overlay-fg-strong: #ffffff;
+  --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
+  --blok-overlay-divider: rgba(255, 255, 255, 0.14);
+  /* A pressed button stays gray with primary ink (selected-state law); primary ink follows the card. */
+  --blok-text-primary: #ffffff;
+  --blok-icon-active-bg: rgba(255, 255, 255, 0.14);
+  --blok-icon-active-text: var(--blok-text-primary);
 }
 
 /* The ring sits --blok-image-ring-gap outside the picture; its radius grows by
@@ -471,32 +343,29 @@
 [data-blok-tool="image"] .blok-image-toolbar__align { position: relative; }
 [data-blok-tool="image"] .blok-image-toolbar__align-popover[hidden] { display: none; }
 
-/* resize handles — dots on the selection ring's midline (ring sits 6px outside the figure) */
+/* resize handles — bars inside the picture, so a table cell's overflow never clips them.
+   Hidden is opacity only: tone-sampler.ts reads each handle's box while it is hidden. */
 [data-blok-tool="image"] [data-role="resize-handle"] {
   position: absolute;
   top: calc(var(--blok-image-media-height, 100%) / 2);
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--blok-overlay-surface);
-  box-shadow:
-    0 0 0 1px var(--blok-image-frame-ring-strong),
-    var(--blok-image-handle-shadow);
+  width: 3px;
+  height: 32px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-overlay-fg);
+  box-shadow: var(--blok-image-handle-shadow);
   cursor: ew-resize;
   opacity: 0;
-  transform: translateY(-50%) scale(0);
-  transition:
-    opacity 120ms ease,
-    transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translateY(-50%);
+  transition: opacity 120ms ease, height 120ms ease, box-shadow 120ms ease;
   z-index: 2;
 }
 [data-blok-tool="image"] [data-role="resize-handle"]::before {
   content: '';
   position: absolute;
-  inset: -24px -10px;
+  inset: -4px -6.5px;
 }
-[data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: -10.5px; }
-[data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: -10.5px; }
+[data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: var(--blok-space-2); }
+[data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: var(--blok-space-2); }
 [data-blok-tool="image"] .blok-image-inner:hover [data-role="resize-handle"],
 [data-blok-selected="true"] [data-blok-tool="image"] [data-role="resize-handle"],
 [data-blok-tool="image"][data-alt-open="true"] [data-role="resize-handle"],
@@ -504,14 +373,14 @@
 [data-blok-tool="image"][data-align-open="true"] [data-role="resize-handle"],
 [data-blok-tool="image"][data-resizing="true"] [data-role="resize-handle"] {
   opacity: 1;
-  transform: translateY(-50%) scale(1);
 }
+/* Stronger ink while grabbed: a ring of the same ink makes the bar read thicker. */
 [data-blok-tool="image"] [data-role="resize-handle"]:hover,
 [data-blok-tool="image"] [data-role="resize-handle"]:active {
-  transform: translateY(-50%) scale(1.45);
-}
-[data-blok-tool="image"] [data-role="resize-handle"]:active {
-  transition-duration: 0s;
+  height: 40px;
+  box-shadow:
+    0 0 0 1px var(--blok-overlay-fg),
+    var(--blok-image-handle-shadow);
 }
 
 [data-blok-tool="image"] [data-role="image-resize-readout"] {
@@ -915,23 +784,6 @@
   cursor: default;
   opacity: 0.55;
 }
-[data-blok-tool="image"][data-retrying="true"] .blok-image-error__btn[data-action="retry"] {
-  position: relative;
-  color: transparent;
-  opacity: 1;
-}
-[data-blok-tool="image"][data-retrying="true"] .blok-image-error__btn[data-action="retry"]::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--blok-text-primary) 35%, transparent);
-  border-top-color: var(--blok-text-primary);
-  animation: blok-image-retry-spin 0.65s linear infinite;
-}
 
 /* Auto-retry loading overlay — img failed once; re-fetching.
    Ambient blur backdrop + shimmer sweep + soft-glow spinner. */
@@ -1006,9 +858,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="image"] .blok-image-toolbar,
-  [data-blok-tool="image"] .blok-image-toolbar::after,
-  [data-blok-tool="image"] .blok-image-toolbar__island::before,
-  [data-blok-tool="image"] .blok-image-toolbar__island::after,
   [data-blok-tool="image"] [data-role="resize-handle"],
   [data-blok-tool="image"] [data-role="image-selection-ring"],
   [data-blok-tool="image"] .blok-image-alt-pill,
@@ -1283,6 +1132,153 @@
   .blok-image-error[data-unmended="true"] .blok-image-error__icon::after,
   .blok-image-error[data-unmended="true"] svg[data-icon],
   .blok-image-error[data-unmended="true"] svg[data-icon] :is(path, circle) {
+    animation: none;
+  }
+}
+
+/* ----- Sending a failed upload again -----
+   One idea: the card is the progress bar. Retry eases the whole card to
+   neutral on one beat and a fill grows behind its content from the
+   reading-start edge; that fill is the only moving signal. A failure is held
+   RESEND_STAGE_MS (constants.ts), then the fill drains from where it reached
+   while the red comes back on the same beat. index.ts measures that reach and
+   hands it over as --blok-image-drain-from. */
+.blok-image-error[data-variant="upload"] {
+  --blok-image-send-ease: cubic-bezier(0.2, 0, 0, 1);
+  --blok-image-send-beat: 320ms;
+
+  position: relative;
+  isolation: isolate;
+  transition:
+    background-color var(--blok-image-send-beat) var(--blok-image-send-ease),
+    border-color var(--blok-image-send-beat) var(--blok-image-send-ease);
+}
+.blok-image-error[data-variant="upload"] :is(.blok-image-error__icon, .blok-image-error__msg, .blok-image-error__btn, .blok-image-error__dismiss) {
+  transition:
+    color var(--blok-image-send-beat) var(--blok-image-send-ease),
+    box-shadow var(--blok-image-send-beat) var(--blok-image-send-ease),
+    opacity var(--blok-image-send-beat) var(--blok-image-send-ease);
+}
+.blok-image-error[data-sending="true"] {
+  background-color: color-mix(in srgb, var(--blok-text-primary) 3%, var(--blok-bg-secondary));
+  border-color: var(--blok-border-subtle);
+}
+.blok-image-error[data-sending="true"] .blok-image-error__icon {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-text-primary) 10%, transparent);
+}
+.blok-image-error[data-sending="true"] .blok-image-error__msg {
+  color: var(--blok-text-secondary);
+  animation: blok-image-send-text var(--blok-image-send-beat) var(--blok-image-send-ease) both;
+}
+.blok-image-error[data-sending="true"] :is(.blok-image-error__btn, .blok-image-error__dismiss):disabled { opacity: 0.4; }
+
+.blok-image-error__progress {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.blok-image-error__fill {
+  --blok-image-send-progress: 0%;
+  --blok-image-fill-ink: color-mix(in srgb, var(--blok-text-primary) 5%, transparent);
+
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: var(--blok-image-send-progress);
+  background: var(--blok-image-fill-ink);
+  transition: width 300ms var(--blok-image-send-ease);
+}
+/* The leading edge feathers out past the fill: a hard edge reads as a slab. */
+.blok-image-error__fill::after,
+.blok-image-error[data-resent="true"]::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 100%;
+  width: 48px;
+  /* -90deg in RTL: the sign var follows the nearest [dir]. */
+  background: linear-gradient(calc(90deg * var(--_blok-inline-sign, 1)), var(--blok-image-fill-ink), transparent);
+}
+/* No progress from the uploader: a trickle, quick then ever slower, that
+   never claims the end. */
+.blok-image-error__progress[data-indeterminate] .blok-image-error__fill {
+  animation: blok-image-send-trickle 14s cubic-bezier(0.1, 0.55, 0.15, 1) forwards;
+}
+
+.blok-image-error__attempt {
+  flex: none;
+  padding: 0 var(--blok-space-1-5);
+  border-radius: var(--blok-radius-pill);
+  background: color-mix(in srgb, var(--blok-text-primary) 7%, transparent);
+  color: var(--blok-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.blok-image-error[data-resent="true"] {
+  animation: blok-image-unmend calc(var(--blok-image-send-beat) * 1.6) var(--blok-image-send-ease) both;
+}
+.blok-image-error[data-resent="true"] .blok-image-error__icon {
+  animation: blok-image-unmend-tile calc(var(--blok-image-send-beat) * 1.6) var(--blok-image-send-ease) both;
+}
+.blok-image-error[data-resent="true"] :is(.blok-image-error__msg, .blok-image-error__attempt) {
+  animation: blok-image-send-text var(--blok-image-send-beat) var(--blok-image-send-ease) both;
+}
+/* The drain: the fill's own shape, in red, running back to the start. The
+   feathered edge is ::after, placed past it like the fill's. */
+.blok-image-error[data-resent="true"]::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: -1;
+  width: var(--blok-image-drain-from, 0%);
+  border-start-start-radius: inherit;
+  border-end-start-radius: inherit;
+  background: var(--blok-image-fill-ink);
+  animation: blok-image-send-drain 640ms var(--blok-image-send-ease) forwards;
+  pointer-events: none;
+}
+.blok-image-error[data-resent="true"] {
+  --blok-image-fill-ink: color-mix(in srgb, var(--blok-color-danger) 9%, transparent);
+}
+.blok-image-error[data-resent="true"]::after {
+  z-index: -1;
+  inset-inline-start: var(--blok-image-drain-from, 0%);
+  animation: blok-image-send-drain-edge 640ms var(--blok-image-send-ease) forwards;
+  pointer-events: none;
+}
+
+@keyframes blok-image-send-text {
+  from { opacity: 0; transform: translateY(2px); }
+}
+@keyframes blok-image-send-trickle {
+  0%    { width: 0%; }
+  2%    { width: 24%; }
+  6.5%  { width: 46%; }
+  100%  { width: 92%; }
+}
+@keyframes blok-image-send-drain {
+  to { width: 0%; }
+}
+@keyframes blok-image-send-drain-edge {
+  to { inset-inline-start: 0%; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blok-image-error__progress[data-indeterminate] .blok-image-error__fill {
+    width: 100%;
+    animation: none;
+  }
+  .blok-image-error[data-resent="true"]::before,
+  .blok-image-error[data-resent="true"]::after { display: none; }
+  .blok-image-error[data-sending="true"] .blok-image-error__msg,
+  .blok-image-error[data-resent="true"] :is(.blok-image-error__msg, .blok-image-error__attempt) {
     animation: none;
   }
 }

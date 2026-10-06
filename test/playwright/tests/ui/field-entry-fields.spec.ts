@@ -86,12 +86,55 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
       await expectBlokField(title, title, 'text');
     });
 
-    test('embed URL bar is the shared text field', async ({ page }) => {
+    // The embed field is the address bar from its design, not the filled shared look.
+    test('embed URL bar is a white address bar with a hairline and an inset button', async ({ page }) => {
       await mount(page, [{ type: 'embed', data: {} }], theme);
       const bar = page.locator('[data-role="embed-url-bar"]');
 
       await expect(bar).toBeVisible();
-      await expectBlokField(bar, bar.locator('[data-role="embed-url-input"]'), 'text');
+      await expect(bar).toHaveAttribute('data-blok-field', 'text');
+
+      const look = await bar.evaluate(element => {
+        const probe = document.createElement('span');
+
+        probe.style.cssText = 'background-color: var(--blok-bg-primary); border-color: var(--blok-border-subtle); color: var(--blok-bg-secondary)';
+        element.parentElement?.append(probe);
+        const tokens = getComputedStyle(probe);
+        const expected = { fill: tokens.backgroundColor, hairline: tokens.borderTopColor, button: tokens.color };
+
+        probe.remove();
+        const style = getComputedStyle(element);
+        const submit = element.querySelector<HTMLElement>('[data-role="embed-url-submit"]');
+
+        return {
+          expected,
+          fill: style.backgroundColor,
+          hairline: style.borderTopColor,
+          border: style.borderTopWidth,
+          radius: style.borderTopLeftRadius,
+          height: element instanceof HTMLElement ? element.offsetHeight : 0,
+          buttonHeight: submit?.offsetHeight ?? 0,
+          phone: window.innerWidth < 651,
+        };
+      });
+
+      expect(look.fill).toBe(look.expected.fill);
+      expect(look.hairline).toBe(look.expected.hairline);
+      expect(look.border).toBe('1px');
+      expect(look.radius).toBe('8px');
+      expect(look.height).toBe(look.phone ? 36 : 34);
+      expect(look.buttonHeight).toBe(26);
+      // The button fades its fill, and the theme is switched after mount.
+      await expect(bar.locator('[data-role="embed-url-submit"]')).toHaveCSS('background-color', look.expected.button);
+    });
+
+    test('focusing the embed URL input darkens the hairline', async ({ page }) => {
+      await mount(page, [{ type: 'embed', data: {} }], theme);
+      const bar = page.locator('[data-role="embed-url-bar"]');
+      const rest = await bar.evaluate(element => getComputedStyle(element).borderTopColor);
+
+      await bar.locator('[data-role="embed-url-input"]').focus();
+      await expect(bar).not.toHaveCSS('border-top-color', rest);
     });
 
     test('focus on the embed submit button leaves the field at rest', async ({ page }) => {

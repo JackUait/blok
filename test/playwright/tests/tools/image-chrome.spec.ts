@@ -38,7 +38,7 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
   }, { holder: HOLDER_ID, initialData: data });
 };
 
-// Room above the image: the islands must stay inside the picture even when they would fit above it.
+// Room above the image: the toolbar must stay inside the picture even when they would fit above it.
 const ROOM_ABOVE = [
   { type: 'paragraph', data: { text: 'One' } },
   { type: 'paragraph', data: { text: 'Two' } },
@@ -48,7 +48,7 @@ const ROOM_ABOVE = [
 const imageBlock = (page: Page): Locator => page.locator('[data-blok-id="img"]');
 const figure = (page: Page): Locator => imageBlock(page).locator('[data-role="image-figure"]');
 
-// The pill and islands stay hidden while the image bytes load; hover only once it has painted.
+// The alt tag and toolbar stay hidden while the image bytes load; hover only once it has painted.
 const hoverLoadedFigure = async (page: Page): Promise<void> => {
   await expect(figure(page)).not.toHaveAttribute('data-loading');
   await figure(page).hover();
@@ -62,15 +62,64 @@ const box = async (locator: Locator, label: string): Promise<{ x: number; y: num
   return b as { x: number; y: number; width: number; height: number };
 };
 
-test('hover shows the islands inside the image even with room above; selecting adds the ring', async ({ page }) => {
+type Fill = { top: string; bottom: string };
+
+// Draws an 800x600 PNG in the page: top half one colour, bottom half another.
+const pngBytes = async (page: Page, fill: Fill): Promise<Buffer> => {
+  const base64 = await page.evaluate(({ top, bottom }) => {
+    const c = document.createElement('canvas');
+
+    c.width = 800;
+    c.height = 600;
+    const ctx = c.getContext('2d');
+
+    if (!ctx) throw new Error('no 2d context');
+    ctx.fillStyle = top;
+    ctx.fillRect(0, 0, 800, 300);
+    ctx.fillStyle = bottom;
+    ctx.fillRect(0, 300, 800, 300);
+
+    return c.toDataURL('image/png').split(',')[1];
+  }, fill);
+
+  return Buffer.from(base64, 'base64');
+};
+
+const servePicture = async (page: Page, url: string, fill: Fill, cors: boolean): Promise<void> => {
+  const body = await pngBytes(page, fill);
+
+  await page.route(url, (route) => route.fulfill({
+    status: 200,
+    contentType: 'image/png',
+    body,
+    headers: cors ? { 'Access-Control-Allow-Origin': '*' } : {},
+  }));
+};
+
+// The test page is on localhost:4444, so 127.0.0.1:4444 is another origin.
+const SAME = 'http://localhost:4444/tone-fixture/picture.png';
+const CROSS = 'http://127.0.0.1:4444/tone-fixture/picture.png';
+const NO_CORS = 'http://127.0.0.1:4444/test/playwright/fixtures/image/shot.png';
+const DARK: Fill = { top: '#111111', bottom: '#111111' };
+const LIGHT: Fill = { top: '#fafafa', bottom: '#fafafa' };
+const SKY: Fill = { top: '#fafafa', bottom: '#111111' };
+
+const picture = (url: string, extra: Record<string, unknown> = {}): OutputData['blocks'][number] =>
+  ({ id: 'img', type: 'image', data: { url, naturalWidth: 800, naturalHeight: 600, ...extra } });
+
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+});
+
+test('hover shows the toolbar inside the image even with room above; selecting adds the ring', async ({ page }) => {
   await createBlok(page, { blocks: [...ROOM_ABOVE, { id: 'img', type: 'image', data: IMAGE }] });
   await hoverLoadedFigure(page);
 
-  await expect(imageBlock(page).locator('[data-island="edit"]')).toBeVisible();
-  const islands = await box(imageBlock(page).locator('[data-island="edit"]'), 'edit island');
+  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toBeVisible();
+  const bar = await box(imageBlock(page).locator('[data-role="image-overlay"]'), 'toolbar');
   const fig = await box(figure(page), 'figure');
 
-  expect(islands.y).toBeGreaterThanOrEqual(fig.y);
+  expect(bar.y).toBeGreaterThanOrEqual(fig.y);
   await expect(imageBlock(page).locator('[data-role="image-selection-ring"]')).toHaveCSS('opacity', '0');
 
   await imageBlock(page).getByRole('textbox').click();
@@ -80,42 +129,31 @@ test('hover shows the islands inside the image even with room above; selecting a
   await expect(imageBlock(page).locator('[data-role="image-selection-ring"]')).toHaveCSS('opacity', '1');
 });
 
-test('the islands split without sliding a button sideways, and every neck ends pinched off', async ({ page }) => {
+test('buttons hold still while the toolbar fades in', async ({ page }) => {
   await createBlok(page, { blocks: [...ROOM_ABOVE, { id: 'img', type: 'image', data: IMAGE }] });
   await expect(figure(page)).not.toHaveAttribute('data-loading');
+  // Measured against the figure: hovering may scroll the page.
+  const offset = async (label: string): Promise<{ x: number; y: number }> => {
+    const b = await box(imageBlock(page).locator('[data-action="crop"]'), label);
+    const f = await box(figure(page), 'figure');
+
+    return { x: b.x - f.x, y: b.y - f.y };
+  };
+  const before = await offset('crop at rest');
+
   await figure(page).hover();
+  const early = await offset('crop early');
 
-  const sample = async (time: number): Promise<{ crop: number; more: number; neck: string; bar: string }> =>
-    page.evaluate((t) => {
-      for (const animation of document.getAnimations()) {
-        animation.pause();
-        animation.currentTime = t;
-      }
-      const at = (action: string): number => document.querySelector(`[data-blok-id="img"] [data-action="${action}"]`)?.getBoundingClientRect().x ?? Number.NaN;
-      const edit = document.querySelector('[data-blok-id="img"] [data-island="edit"]');
-      const bar = document.querySelector('[data-blok-id="img"] [data-role="image-overlay"]');
+  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveCSS('opacity', '1');
+  const after = await offset('crop shown');
 
-      return {
-        crop: at('crop'),
-        more: at('more'),
-        neck: edit ? getComputedStyle(edit, '::after').transform : '',
-        bar: bar ? getComputedStyle(bar, '::after').opacity : '',
-      };
-    }, time);
-
-  const first = await sample(0);
-  const frames = [first, await sample(200), await sample(420), await sample(560), await sample(5000)];
-  const last = frames[frames.length - 1];
-
-  frames.forEach((frame) => {
-    expect(frame.crop).toBeCloseTo(first.crop, 1);
-    expect(frame.more).toBeCloseTo(first.more, 1);
-  });
-  expect(last.bar).toBe('0');
-  expect(last.neck).toMatch(/^matrix\(1, 0, 0, 0,/);
+  expect(early.x).toBeCloseTo(before.x, 1);
+  expect(early.y).toBeCloseTo(before.y, 1);
+  expect(after.x).toBeCloseTo(before.x, 1);
+  expect(after.y).toBeCloseTo(before.y, 1);
 });
 
-test('an image in a table cell keeps its islands inside the cell, where they can be clicked', async ({ page }) => {
+test('an image in a table cell keeps its toolbar and handles inside the cell, where they can be clicked', async ({ page }) => {
   await createBlok(page, { blocks: [
     ...ROOM_ABOVE,
     { id: 'tbl', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['img'] }], [{ blocks: ['p1'] }]] }, content: ['img', 'p1'] },
@@ -128,16 +166,21 @@ test('an image in a table cell keeps its islands inside the cell, where they can
   const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-action]')?.getAttribute('data-action'), { x: more.x + more.width / 2, y: more.y + more.height / 2 });
 
   expect(hit).toBe('more');
+
+  const handle = await box(imageBlock(page).locator('[data-role="resize-handle"][data-edge="right"]'), 'right handle');
+  const handleHit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.getAttribute('data-role'), { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 });
+
+  expect(handleHit).toBe('resize-handle');
 });
 
-test('an image as the first block puts its islands inside', async ({ page }) => {
+test('an image as the first block puts its toolbar inside', async ({ page }) => {
   await createBlok(page, { blocks: [{ id: 'img', type: 'image', data: IMAGE }] });
   await hoverLoadedFigure(page);
 
-  const islands = await box(imageBlock(page).locator('[data-island="edit"]'), 'edit island');
+  const bar = await box(imageBlock(page).locator('[data-role="image-overlay"]'), 'toolbar');
   const fig = await box(figure(page), 'figure');
 
-  expect(islands.y).toBeGreaterThanOrEqual(fig.y);
+  expect(bar.y).toBeGreaterThanOrEqual(fig.y);
 });
 
 test('dragging a handle shows the readout, snaps to 50% and saves it', async ({ page }) => {
@@ -192,18 +235,131 @@ test('alt: hint on hover, no hint while editing, Enter saves', async ({ page }) 
   await expect(updated).toContainText('Pink yarn mascot');
 });
 
-test('the alt pill stays when the caption is hidden', async ({ page }) => {
+test('the ALT label and the alt text are drawn apart, not run together', async ({ page }) => {
+  await createBlok(page, { blocks: [...ROOM_ABOVE, { id: 'img', type: 'image', data: { ...IMAGE, alt: 'Blok logotype' } }] });
+  await hoverLoadedFigure(page);
+  const tag = imageBlock(page).locator('[data-action="alt-edit"]');
+  // A flex row drops a whitespace-only text run, so the space in the text alone draws no gap.
+  const gap = await tag.evaluate((el) => {
+    const label = el.firstElementChild?.getBoundingClientRect();
+    const text = el.lastElementChild?.getBoundingClientRect();
+
+    return label && text ? text.left - label.right : Number.NaN;
+  });
+
+  expect(gap).toBeGreaterThanOrEqual(4);
+  await expect(tag).toHaveAccessibleName('Alt Blok logotype');
+});
+
+test('the alt tag stays when the caption is hidden', async ({ page }) => {
   await createBlok(page, { blocks: [...ROOM_ABOVE, { id: 'img', type: 'image', data: { ...IMAGE, captionVisible: false } }] });
   await hoverLoadedFigure(page);
 
   await expect(imageBlock(page).locator('[data-action="alt-edit"]')).toBeVisible();
 });
 
-test('reduced motion shows the islands without animating', async ({ page }) => {
+test('reduced motion shows the toolbar with no fade', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await createBlok(page, { blocks: [...ROOM_ABOVE, { id: 'img', type: 'image', data: IMAGE }] });
   await hoverLoadedFigure(page);
 
-  await expect(imageBlock(page).locator('[data-island="edit"]')).toHaveCSS('animation-name', 'none');
-  await expect(imageBlock(page).locator('[data-island="edit"]')).toHaveCSS('opacity', '1');
+  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveCSS('transition-duration', '0s');
+  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveCSS('opacity', '1');
 });
+
+test('a dark picture gets graphite chrome and light handles, before any hover', async ({ page }) => {
+  await servePicture(page, SAME, DARK, false);
+  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(SAME, { alt: 'Night' })] });
+
+  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-tone', 'graphite');
+  await expect(imageBlock(page).locator('[data-action="alt-edit"]')).toHaveAttribute('data-tone', 'graphite');
+  await expect(imageBlock(page).locator('[data-role="resize-handle"][data-edge="left"]')).toHaveAttribute('data-tone', 'graphite');
+  await hoverLoadedFigure(page);
+  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveCSS('background-color', 'rgb(37, 37, 37)');
+  await expect(imageBlock(page).locator('[data-role="resize-handle"][data-edge="right"]')).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.86)');
+});
+
+test('a bright picture gets paper chrome', async ({ page }) => {
+  await servePicture(page, SAME, LIGHT, false);
+  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(SAME)] });
+
+  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-tone', 'paper');
+  await hoverLoadedFigure(page);
+  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+});
+
+test('sky over ground: the toolbar is paper and the alt tag graphite', async ({ page }) => {
+  await servePicture(page, SAME, SKY, false);
+  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(SAME, { alt: 'Dusk' })] });
+
+  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-tone', 'paper');
+  await expect(imageBlock(page).locator('[data-action="alt-edit"]')).toHaveAttribute('data-tone', 'graphite');
+});
+
+test('a cross-origin picture whose host sends CORS is still read', async ({ page }) => {
+  await servePicture(page, CROSS, DARK, true);
+  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(CROSS)] });
+
+  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-tone', 'graphite');
+  await expect(imageBlock(page).locator('[data-blok-block-context-menu]')).not.toHaveAttribute('crossorigin');
+});
+
+test('a cross-origin picture without CORS still shows, and its chrome follows the editor theme', async ({ page }) => {
+  // Served by the real test server, which sends no CORS header. A routed response can't stand in:
+  // Playwright's route.fulfill adds access-control-allow-origin to cross-origin requests itself.
+  await createBlok(page, { blocks: [...ROOM_ABOVE, picture(NO_CORS)] });
+  await hoverLoadedFigure(page);
+
+  // The visible img still loads: only the hidden CORS copy is refused.
+  await expect.poll(() => imageBlock(page).locator('[data-blok-block-context-menu]').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(800);
+  // Give the failed CORS copy time to settle, then check nothing was stamped.
+  await page.evaluate(() => new Promise((resolve) => { setTimeout(resolve, 300); }));
+  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).not.toHaveAttribute('data-tone');
+  const themeSurface = await page.evaluate(() => getComputedStyle(document.querySelector('[data-blok-interface]') ?? document.body).getPropertyValue('--blok-overlay-surface').trim());
+  const surface = await imageBlock(page).locator('[data-role="image-overlay"]').evaluate((el) => getComputedStyle(el).getPropertyValue('--blok-overlay-surface').trim());
+
+  expect(surface).toBe(themeSurface);
+});
+
+// A fully transparent PNG: every pixel shows the page behind the picture.
+const serveClearPicture = async (page: Page): Promise<void> => {
+  const base64 = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+
+    c.width = 800;
+    c.height = 600;
+
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  const body = Buffer.from(base64, 'base64');
+
+  await page.route(SAME, (route) => route.fulfill({ status: 200, contentType: 'image/png', body }));
+};
+
+const DARK_PAGES: Array<{ name: string; html: string; body: string }> = [
+  { name: 'an oklch background', html: '', body: 'background: oklch(0.205 0 0)' },
+  { name: 'a faint white card over near-black', html: 'background: #0c0c0c', body: 'background: rgba(255, 255, 255, 0.04)' },
+  { name: 'color-scheme: dark and no background at all', html: 'color-scheme: dark', body: 'background: transparent' },
+];
+
+for (const dark of DARK_PAGES) {
+  test(`a transparent picture on a dark page (${dark.name}) gets graphite chrome`, async ({ page }) => {
+    await serveClearPicture(page);
+    await page.evaluate((s) => {
+      document.documentElement.setAttribute('style', s.html);
+      document.body.setAttribute('style', s.body);
+    }, dark);
+    try {
+      await createBlok(page, { blocks: [...ROOM_ABOVE, picture(SAME, { alt: 'Logo' })] });
+
+      await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-tone', 'graphite');
+      await expect(imageBlock(page).locator('[data-action="alt-edit"]')).toHaveAttribute('data-tone', 'graphite');
+    } finally {
+      await page.evaluate(() => {
+        document.documentElement.removeAttribute('style');
+        document.body.removeAttribute('style');
+      });
+    }
+  });
+}
+

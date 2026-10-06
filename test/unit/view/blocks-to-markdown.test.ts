@@ -1,9 +1,12 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import { fromMarkdown } from 'mdast-util-from-markdown';
+
 import { blocksToMarkdown, blocksToMarkdownWithReport } from '../../../src/view';
 
 import type { OutputBlockData, OutputData } from '../../../types';
+import type { PageInfo } from '../../../types/tools/page';
 
 /**
  * Convenience: wrap blocks into an OutputData envelope.
@@ -32,6 +35,18 @@ describe('blocksToMarkdown (view)', () => {
     expect(blocksToMarkdown(doc([{ type: 'paragraph', data: { text } }]))).toBe(
       'a **bold** *italic* `c` ~~gone~~ [link](https://x.com)'
     );
+  });
+
+  it('exports inline page references from authorized metadata, not saved labels or URLs', () => {
+    const data = doc([{
+      type: 'paragraph',
+      data: { text: 'See <a data-blok-page-id="p1" href="/private" title="Private"><strong>Private</strong></a>' },
+    }]);
+
+    expect(blocksToMarkdown(data, { pageInfo: () => ({ title: 'Roadmap [Q4]' }) })).toBe('See Roadmap \\[Q4\\]');
+    expect(blocksToMarkdown(data, { pageInfo: () => ({ access: 'none', title: 'Private' }) })).toBe('See Page');
+    expect(blocksToMarkdown(data, { pageInfo: () => null })).toBe('See Page');
+    expect(blocksToMarkdown(data)).toBe('See Page');
   });
 
   it('decodes HTML entities in inline text', () => {
@@ -70,7 +85,7 @@ describe('blocksToMarkdown (view)', () => {
      * same. Escaping only one of the two would make the backends disagree with
      * how every other inline construct is written.
      */
-    it('escapes Markdown-meaningful characters in alt and link text, leaving src and href raw', () => {
+    it('escapes Markdown-meaningful characters in alt and link text, leaving a well-formed src and href as is', () => {
       expect(inline('<img src="https://i/x(1).png" alt="a]b">')).toBe('![a\\]b](https://i/x(1).png)');
       expect(inline('<a href="https://x.com/(1)">a]b</a>')).toBe('[a\\]b](https://x.com/(1))');
     });
@@ -87,6 +102,159 @@ describe('blocksToMarkdown (view)', () => {
 
     it('collapses a mark holding only a src-less image', () => {
       expect(inline('<b><img alt="orphan"></b>')).toBe('');
+    });
+  });
+
+  /**
+   * Markdown renderers turn a destination into a live href/src, so a
+   * script-capable URL must never reach one. The label stays, as in blocksToHtml.
+   */
+  describe('unsafe URLs', () => {
+    /**
+     * Serialize one paragraph's inline HTML.
+     * @param text - the paragraph's `data.text`
+     */
+    const inline = (text: string): string => blocksToMarkdown(doc([{ type: 'paragraph', data: { text } }]));
+
+    it('keeps the label of a javascript: link and drops the link', () => {
+      expect(inline('<a href="javascript:alert(1)">js</a>')).toBe('js');
+    });
+
+    it('drops a link whose scheme is smuggled through whitespace', () => {
+      expect(inline('<a href=" java\tscript:alert(1)">ws</a>')).toBe('ws');
+    });
+
+    it('drops a data: or blob: link', () => {
+      expect(inline('<a href="data:text/html,x">d</a> <a href="blob:https://x/1">b</a>')).toBe('d b');
+    });
+
+    it('emits nothing for an image with a javascript: src', () => {
+      expect(inline('x <img src="javascript:alert(1)" alt="i"> y')).toBe('x  y');
+    });
+
+    it('keeps a raster data: image src', () => {
+      expect(inline('<img src="data:image/png;base64,AA" alt="p">')).toBe('![p](data:image/png;base64,AA)');
+    });
+
+    it('drops the link from an image block and a link-like block with an unsafe url', () => {
+      expect(blocksToMarkdown(doc([{ type: 'image', data: { url: 'javascript:alert(1)', alt: 'Alt' } }]))).toBe('Alt');
+      expect(blocksToMarkdown(doc([{ type: 'bookmark', data: { url: 'javascript:alert(1)', title: 'X' } }]))).toBe('X');
+      expect(blocksToMarkdown(doc([{ type: 'embed', data: { source: 'data:text/html,x', service: 'evil' } }]))).toBe('evil');
+    });
+  });
+
+  /**
+   * A destination must stay ONE destination when a CommonMark parser reads it
+   * back. Checked with a real parse, not string matching, so any escape form
+   * that keeps a second link or raw HTML out passes.
+   */
+  describe('URL destinations', () => {
+    /**
+     * Serialize one paragraph's inline HTML.
+     * @param text - the paragraph's `data.text`
+     */
+    const inline = (text: string): string => blocksToMarkdown(doc([{ type: 'paragraph', data: { text } }]));
+
+    /**
+     * Count node types in the CommonMark parse of `markdown`.
+     * @param markdown - the Markdown to parse
+     */
+    const nodeTypes = (markdown: string): Record<string, number> => {
+      const counts: Record<string, number> = {};
+
+      /**
+       * Walk one node and its children.
+       * @param node - mdast node
+       * @param node.type - node type
+       * @param node.children - child nodes
+       */
+      const walk = (node: { type: string; children?: unknown[] }): void => {
+        counts[node.type] = (counts[node.type] ?? 0) + 1;
+        node.children?.forEach((child) => walk(child as { type: string; children?: unknown[] }));
+      };
+
+      walk(fromMarkdown(markdown));
+
+      return counts;
+    };
+
+    it('cannot open a second link through a ) in the href', () => {
+      const markdown = inline('<a href="https://ok.example/x) [evil](javascript:alert(1)">break</a>');
+
+      expect(nodeTypes(markdown)).toMatchObject({ link: 1 });
+      expect(markdown).not.toContain('](javascript:');
+    });
+
+    it('cannot smuggle raw HTML through a space in the href', () => {
+      const markdown = inline('<a href="https://x.example/a <img src=x onerror=alert(1)>">l</a>');
+      const types = nodeTypes(markdown);
+
+      expect(types.html).toBeUndefined();
+      expect(types).toMatchObject({ link: 1 });
+    });
+
+    it('cannot smuggle a script URL through a character reference', () => {
+      const urls: string[] = [];
+
+      /**
+       * Collect every link and image URL, decoded as a renderer reads it.
+       * @param node - mdast node
+       * @param node.url - link or image destination
+       * @param node.children - child nodes
+       */
+      const collect = (node: { url?: string; children?: unknown[] }): void => {
+        if (node.url !== undefined) {
+          urls.push(node.url);
+        }
+        node.children?.forEach((child) => collect(child as { url?: string; children?: unknown[] }));
+      };
+      const markdown = blocksToMarkdown(doc([
+        { type: 'paragraph', data: { text: '<a href="&amp;#106;avascript:alert(1)">a</a> <img src="&amp;#x6A;avascript:x" alt="i">' } },
+        { type: 'image', data: { url: '&#100;ata:text/html,x', alt: 'A' } },
+        { type: 'bookmark', data: { url: '&Tab;javascript:alert(2)', title: 'B' } },
+        { type: 'page', data: { pageId: 'p1' } },
+      ]), { pageInfo: () => ({ title: 'T' }), pageHref: () => '&#106;avascript:alert(3)' });
+
+      collect(fromMarkdown(markdown));
+
+      expect(urls).toEqual([
+        '&#106;avascript:alert(1)',
+        '&#x6A;avascript:x',
+        '&#100;ata:text/html,x',
+        '&Tab;javascript:alert(2)',
+        '&#106;avascript:alert(3)',
+      ]);
+    });
+
+    it('writes an & that starts no character reference as is', () => {
+      expect(inline('<a href="https://x.example/?a=1&amp;b=2">q</a>')).toBe('[q](https://x.example/?a=1&b=2)');
+    });
+
+    it('keeps a link whose href holds a space', () => {
+      expect(inline('<a href="https://ok.example/a b">space</a>')).toBe('[space](https://ok.example/a%20b)');
+    });
+
+    it('closes a link whose href ends in a backslash', () => {
+      expect(nodeTypes(inline('<a href="https://x.example/a\\">l</a> tail'))).toMatchObject({ link: 1 });
+    });
+
+    it('keeps one image when the src breaks out', () => {
+      const markdown = inline('<img src="https://i.example/x.png) ![e](https://e.example/y.png" alt="i">');
+
+      expect(nodeTypes(markdown)).toMatchObject({ image: 1 });
+    });
+
+    it('keeps one image for an image block whose url breaks out', () => {
+      const markdown = blocksToMarkdown(doc([{ type: 'image', data: { url: 'https://i.example/x.png) [e](https://e.example', alt: 'A' } }]));
+      const types = nodeTypes(markdown);
+
+      expect(types).toMatchObject({ image: 1 });
+      expect(types.link).toBeUndefined();
+    });
+
+    it('writes a URL with balanced parens byte-identically', () => {
+      expect(inline('<a href="https://en.wikipedia.org/wiki/Foo_(bar)">w</a>'))
+        .toBe('[w](https://en.wikipedia.org/wiki/Foo_(bar))');
     });
   });
 
@@ -149,31 +317,41 @@ describe('blocksToMarkdown (view)', () => {
     expect(md).toBe('- Step one\n\n    More about step one');
   });
 
-  /**
-   * `blocksToMarkdown` takes no options, so it has no way to build the page's
-   * link: a page exports as its title line.
-   */
   describe('page', () => {
-    it('exports the cached title as plain text, escaping only what Markdown would read', () => {
+    it('ignores legacy cached titles without host metadata', () => {
       const md = blocksToMarkdown(doc([
         { type: 'paragraph', data: { text: 'Before' } },
-        { type: 'page', data: { pageId: 'p1', cache: { title: 'Q3 <plan> & notes' } } },
+        { type: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } } },
       ]));
 
-      expect(md).toBe('Before\n\nQ3 \\<plan> & notes');
+      expect(md).toBe('Before\n\nPage');
     });
 
-    it('exports an untitled page as "New page", like the rendered card', () => {
-      expect(blocksToMarkdown(doc([{ type: 'page', data: { pageId: 'p1' } }]))).toBe('New page');
+    it('exports only the host-authorized title as escaped plain text', () => {
+      const md = blocksToMarkdown(doc([
+        { type: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } } },
+      ]), { pageInfo: (pageId) => pageId === 'p1' ? { title: 'Q3 <plan> & notes' } : undefined });
+
+      expect(md).toBe('Q3 \\<plan> & notes');
+    });
+
+    it('uses neutral labels for unresolved, missing, denied, and untitled pages', () => {
+      const page = doc([{ type: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } } }]);
+
+      expect(blocksToMarkdown(page)).toBe('Page');
+      expect(blocksToMarkdown(page, { pageInfo: () => undefined })).toBe('Page');
+      expect(blocksToMarkdown(page, { pageInfo: () => null })).toBe('Page not found');
+      expect(blocksToMarkdown(page, { pageInfo: () => ({ access: 'none', title: 'Host secret' }) })).toBe('No access');
+      expect(blocksToMarkdown(page, { pageInfo: () => ({ title: '' }) })).toBe('New page');
     });
 
     it('never exports children a malformed document hangs off a page', () => {
       const md = blocksToMarkdown(doc([
-        { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'T' } }, content: ['c1'] },
+        { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'Restricted title' } }, content: ['c1'] },
         { id: 'c1', type: 'paragraph', parent: 'pg', data: { text: 'Leaked body' } },
       ]));
 
-      expect(md).toBe('T');
+      expect(md).toBe('Page');
     });
 
     it('does not report the page as dropped', () => {
@@ -186,6 +364,84 @@ describe('blocksToMarkdown (view)', () => {
       const { warnings } = blocksToMarkdownWithReport(doc([{ type: 'page', data: { pageId: 'p1' } }]));
 
       expect(warnings).toEqual([expect.objectContaining({ construct: 'page', action: 'degraded' })]);
+    });
+  });
+
+  describe('page links', () => {
+    const pages = doc([
+      { type: 'page', data: { pageId: 'p1' } },
+      { type: 'page-link', data: { pageId: 'p2' } },
+    ]);
+
+    it('links an allowed page that has an href, and reports nothing lost', () => {
+      const result = blocksToMarkdownWithReport(pages, {
+        pageInfo: (pageId) => ({ title: pageId === 'p1' ? 'Road [map]' : '' }),
+        pageHref: (pageId) => `/pages/${pageId}`,
+      });
+
+      expect(result.markdown).toBe('[Road \\[map\\]](/pages/p1)\n\n[New page](/pages/p2)');
+      expect(result.warnings).toEqual([]);
+    });
+
+    it('keeps the title only, and reports the lost link, when there is no href', () => {
+      const result = blocksToMarkdownWithReport(pages, {
+        pageInfo: () => ({ title: 'Roadmap' }),
+        pageHref: () => '',
+      });
+
+      expect(result.markdown).toBe('Roadmap\n\nRoadmap');
+      expect(result.warnings).toEqual([
+        { construct: 'page', action: 'degraded', detail: 'page link is lost' },
+        { construct: 'page-link', action: 'degraded', detail: 'page link is lost' },
+      ]);
+    });
+
+    it.each([
+      ['a script URL', 'javascript:alert(1)'],
+      ['a whitespace-smuggled script URL', ' java\tscript:alert(1)'],
+    ])('never links %s', (_name, href) => {
+      const result = blocksToMarkdownWithReport(pages, { pageInfo: () => ({ title: 'T' }), pageHref: () => href });
+
+      expect(result.markdown).toBe('T\n\nT');
+      expect(result.warnings).toHaveLength(2);
+    });
+
+    it('cannot open a second link through a ) in the href', () => {
+      const markdown = blocksToMarkdown(doc([{ type: 'page', data: { pageId: 'p1' } }]), {
+        pageInfo: () => ({ title: 'T' }),
+        pageHref: () => 'https://ok.example/x) [evil](javascript:alert(1)',
+      });
+
+      const paragraph = fromMarkdown(markdown).children[0] as { children: Array<{ type: string; url?: string }> };
+
+      expect(paragraph.children).toEqual([expect.objectContaining({ type: 'link', url: 'https://ok.example/x)%20[evil](javascript:alert(1)' })]);
+    });
+
+    it('never asks for the href of an unresolved, missing or denied page', () => {
+      const pageHref = vi.fn(() => '/leak');
+      const info: Record<string, PageInfo | null> = { p2: null, p3: { access: 'none', title: 'Secret' } };
+      const markdown = blocksToMarkdown(doc([
+        { type: 'page', data: { pageId: 'p1' } },
+        { type: 'page-link', data: { pageId: 'p2' } },
+        { type: 'page-link', data: { pageId: 'p3' } },
+        { type: 'paragraph', data: { text: '<a data-blok-page-id="p1">x</a> <a data-blok-page-id="p2">x</a> <a data-blok-page-id="p3">x</a>' } },
+      ]), { pageInfo: (pageId) => info[pageId], pageHref });
+
+      expect(markdown).toBe('Page\n\nPage not found\n\nNo access\n\nPage Page Page');
+      expect(pageHref).not.toHaveBeenCalled();
+    });
+
+    it('links an inline reference to an allowed page', () => {
+      const data = doc([{ type: 'paragraph', data: { text: 'See <a data-blok-page-id="p1">x</a> and <a data-blok-page-id="p2">x</a>' } }]);
+
+      expect(blocksToMarkdown(data, {
+        pageInfo: (pageId) => ({ title: pageId === 'p1' ? 'Roadmap' : ' ' }),
+        pageHref: (pageId) => `/pages/${pageId}`,
+      })).toBe('See [Roadmap](/pages/p1) and [Page](/pages/p2)');
+      expect(blocksToMarkdown(data, {
+        pageInfo: () => ({ title: 'Roadmap' }),
+        pageHref: () => 'javascript:alert(1)',
+      })).toBe('See Roadmap and Roadmap');
     });
   });
 
@@ -255,6 +511,63 @@ describe('blocksToMarkdown (view)', () => {
       expect(md).toBe('Left\n\nRight');
     });
 
+    it('writes every tab as a bold title line followed by its content', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: 'Overview', icon: '📋' }, parent: 'tabs' },
+        { id: 'p1', type: 'paragraph', data: { text: 'First <b>body</b>' }, parent: 't1' },
+        { id: 'l1', type: 'list', data: { text: 'nested', style: 'unordered' }, parent: 't1' },
+        { id: 't2', type: 'tab', data: { title: 'Details' }, parent: 'tabs' },
+        { id: 'p2', type: 'paragraph', data: { text: 'Second' }, parent: 't2' },
+        { type: 'paragraph', data: { text: 'After' } },
+      ]));
+
+      expect(md).toBe('**📋 Overview**\n\nFirst **body**\n\n- nested\n\n**Details**\n\nSecond\n\nAfter');
+    });
+
+    it('escapes a tab title as plain text, never reading it as HTML or Markdown', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: '<b>a</b> & *b*' }, parent: 'tabs' },
+      ]));
+
+      expect(fromMarkdown(md).children).toMatchObject([
+        { type: 'paragraph', children: [{ type: 'strong', children: [{ type: 'text', value: '<b>a</b> & *b*' }] }] },
+      ]);
+    });
+
+    /** `****` alone on a line is a thematic break, so an empty title must not print it. */
+    it('writes no title line for an untitled tab without an icon', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: '' }, parent: 'tabs' },
+        { id: 'p1', type: 'paragraph', data: { text: 'Body' }, parent: 't1' },
+        { id: 't2', type: 'tab', data: { title: '' }, parent: 'tabs' },
+      ]));
+
+      expect(md).toBe('Body');
+    });
+
+    it('escapes a Markdown-significant icon so the title stays bold', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: 'A', icon: '**' }, parent: 'tabs' },
+      ]));
+
+      expect(fromMarkdown(md).children).toMatchObject([
+        { type: 'paragraph', children: [{ type: 'strong', children: [{ type: 'text', value: '** A' }] }] },
+      ]);
+    });
+
+    it('writes an untitled tab with an icon as the icon alone', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: '', icon: '🔍' }, parent: 'tabs' },
+      ]));
+
+      expect(md).toBe('**🔍**');
+    });
+
     /**
      * The defect these cases exist for: a contentless container carries no
      * `data.text`, so the default branch emitted an empty string — and the
@@ -277,6 +590,16 @@ describe('blocksToMarkdown (view)', () => {
     const md = blocksToMarkdown(doc([
       { type: 'paragraph', data: { text: 'A' } },
       { type: 'spacer', data: {} },
+      { type: 'paragraph', data: { text: 'B' } },
+    ]));
+
+    expect(md).toBe('A\n\nB');
+  });
+
+  it('drops a table of contents, even one carrying stray text', () => {
+    const md = blocksToMarkdown(doc([
+      { type: 'paragraph', data: { text: 'A' } },
+      { type: 'table_of_contents', data: { text: 'stray', textColor: 'red' } },
       { type: 'paragraph', data: { text: 'B' } },
     ]));
 
@@ -362,6 +685,14 @@ describe('blocksToMarkdown (view)', () => {
       ]);
     });
 
+    it('reports a dropped table of contents', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([{ type: 'table_of_contents', data: {} }]));
+
+      expect(warnings).toEqual([
+        { construct: 'table_of_contents', action: 'dropped', detail: expect.stringContaining('headings') },
+      ]);
+    });
+
     it('reports a callout as degraded', () => {
       const { warnings } = blocksToMarkdownWithReport(doc([
         { id: 'cal1', type: 'callout', data: { emoji: '💡' } },
@@ -371,6 +702,30 @@ describe('blocksToMarkdown (view)', () => {
       expect(warnings).toEqual([
         { construct: 'callout', action: 'degraded', detail: expect.stringContaining('blockquote') },
       ]);
+    });
+
+    it('reports tabs as degraded once, not once per tab', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { id: 'tabs', type: 'tabs', data: {} },
+        { id: 't1', type: 'tab', data: { title: 'A' }, parent: 'tabs' },
+        { id: 't2', type: 'tab', data: { title: 'B' }, parent: 'tabs' },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'tabs', action: 'degraded', detail: 'tabs are written one after another, each under its bold title; switching between them is lost' },
+      ]);
+    });
+
+    it('does not report tabs as degraded when the block holds no tab', () => {
+      const empty = blocksToMarkdownWithReport(doc([{ id: 'tabs', type: 'tabs', data: {} }]));
+      const strayOnly = blocksToMarkdownWithReport(doc([
+        { id: 'tabs', type: 'tabs', data: {}, content: ['s1'] },
+        { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+      ]));
+
+      expect(empty.warnings).toEqual([]);
+      expect(strayOnly.warnings).toEqual([]);
+      expect(strayOnly.markdown).toBe('S1');
     });
 
     it('reports a collapsible heading', () => {
@@ -846,5 +1201,68 @@ describe('blocksToMarkdown (view)', () => {
   it('returns an empty string for an empty or malformed document', () => {
     expect(blocksToMarkdown(undefined)).toBe('');
     expect(blocksToMarkdown(doc([]))).toBe('');
+  });
+});
+
+/** The editor evicts non-`tab` children of `tabs` to the tabs block's own parent, right after the tabs block. */
+describe('stray children of tabs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('places strays after the tabs subtree, in editor save order', () => {
+    const out = blocksToMarkdown(doc([
+      { id: 'before', type: 'paragraph', data: { text: 'BEFORE' } },
+      { id: 'tabs', type: 'tabs', data: {}, content: ['s1', 't1', 's2'] },
+      { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs', content: ['s1c'] },
+      { id: 's1c', type: 'paragraph', data: { text: 'S1C' }, parent: 's1' },
+      { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 's2', type: 'paragraph', data: { text: 'S2' }, parent: 'tabs' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('BEFORE\n\n**Do**\n\none\n\nS1\n\nS1C\n\nS2\n\nAFTER');
+  });
+
+  it('keeps a tabs block holding only a stray, with the stray after it', () => {
+    const out = blocksToMarkdown(doc([
+      { id: 'tabs', type: 'tabs', data: {}, content: ['s1'] },
+      { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('S1\n\nAFTER');
+  });
+
+  it('keeps a stray in the toggle holding the tabs, right after the tabs', () => {
+    const out = blocksToMarkdown(doc([
+      { id: 'c', type: 'toggle', data: { text: 'C' }, content: ['tabs', 'i2'] },
+      { id: 'tabs', type: 'tabs', data: {}, parent: 'c', content: ['s1', 't1'] },
+      { id: 's1', type: 'paragraph', data: { text: 'S1' }, parent: 'tabs' },
+      { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 'i2', type: 'paragraph', data: { text: 'I2' }, parent: 'c' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('**C**\n\n**Do**\n\none\n\nS1\n\nI2\n\nAFTER');
+  });
+
+  it('renders nested tabs without strays as before', () => {
+    const out = blocksToMarkdown(doc([
+      { id: 'c', type: 'toggle', data: { text: 'C' }, content: ['tabs', 'i2'] },
+      { id: 'tabs', type: 'tabs', data: {}, parent: 'c', content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: 'Do' }, parent: 'tabs', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 'i2', type: 'paragraph', data: { text: 'I2' }, parent: 'c' },
+      { id: 'after', type: 'paragraph', data: { text: 'AFTER' } },
+    ]));
+
+    expect(out).toBe('**C**\n\n**Do**\n\none\n\nI2\n\nAFTER');
   });
 });

@@ -35,6 +35,12 @@ describe('htmlToBlocks — structure', () => {
     ]);
   });
 
+  it('imports a page reference without its stale URL or title', () => {
+    expect(shape(htmlToBlocks('<p>See <a data-blok-page-id="p1" href="/old-title" title="Old title">Old title</a></p>'))).toEqual([
+      { type: 'paragraph', data: { text: 'See <a data-blok-page-id="p1">Page</a>' } },
+    ]);
+  });
+
   it('strips an unsafe href while keeping the link text', () => {
     const [block] = htmlToBlocks('<p><a href="javascript:alert(1)">x</a></p>');
 
@@ -110,9 +116,9 @@ describe('htmlToBlocks — structure', () => {
     ]);
   });
 
-  it('converts details into a toggle whose body blocks reference it', () => {
+  it('converts details into a toggle whose body blocks reference it, dropping the open state', () => {
     expect(shape(htmlToBlocks('<details open><summary>More</summary><p>body</p></details>'))).toEqual([
-      { type: 'toggle', data: { text: 'More', isOpen: true } },
+      { type: 'toggle', data: { text: 'More' } },
       { type: 'paragraph', data: { text: 'body' }, parent: 0 },
     ]);
   });
@@ -718,7 +724,7 @@ describe('htmlToBlocks — single-field containers', () => {
     );
 
     expect(shape(report.blocks)).toEqual([
-      { type: 'toggle', data: { text: 'S', isOpen: false } },
+      { type: 'toggle', data: { text: 'S' } },
       { type: 'image', data: { url: 'https://x.dev/s.png' }, parent: 0 },
       { type: 'paragraph', data: { text: 'body' }, parent: 0 },
     ]);
@@ -968,5 +974,118 @@ describe('htmlToBlocks — image alignment', () => {
   it('keeps width and alignment together on one image', () => {
     expect(shape(htmlToBlocks('<figure><img src="https://x.dev/a.png" style="width:25%;margin:0 auto" alt="A"></figure>')))
       .toEqual([{ type: 'image', data: { url: 'https://x.dev/a.png', caption: 'A', alt: 'A', width: 25, alignment: 'center' } }]);
+  });
+});
+
+describe('htmlToBlocks — tabs', () => {
+  it('rebuilds tabs with each tab\'s title, icon and content', () => {
+    expect(shape(htmlToBlocks(
+      '<div data-blok-tabs>'
+      + '<section data-blok-tab><h4 data-blok-tab-title><span data-blok-tab-icon>🍎</span> First &amp; &lt;One&gt;</h4><p>A</p></section>'
+      + '<section data-blok-tab><h4 data-blok-tab-title>Second</h4><p>B</p><p>C</p></section>'
+      + '</div>'
+    ))).toEqual([
+      { type: 'tabs', data: {} },
+      { type: 'tab', data: { title: 'First & <One>', icon: '🍎' }, parent: 0 },
+      { type: 'paragraph', data: { text: 'A' }, parent: 1 },
+      { type: 'tab', data: { title: 'Second' }, parent: 0 },
+      { type: 'paragraph', data: { text: 'B' }, parent: 3 },
+      { type: 'paragraph', data: { text: 'C' }, parent: 3 },
+    ]);
+  });
+
+  it('reads an icon-only title as an empty title', () => {
+    expect(shape(htmlToBlocks(
+      '<div data-blok-tabs><section data-blok-tab><h4 data-blok-tab-title><span data-blok-tab-icon>📋</span></h4></section></div>'
+    ))).toEqual([
+      { type: 'tabs', data: {} },
+      { type: 'tab', data: { title: '', icon: '📋' }, parent: 0 },
+    ]);
+  });
+
+  it('keeps an untitled, empty tab as a tab', () => {
+    expect(shape(htmlToBlocks('<div data-blok-tabs><section data-blok-tab></section></div>'))).toEqual([
+      { type: 'tabs', data: {} },
+      { type: 'tab', data: { title: '' }, parent: 0 },
+    ]);
+  });
+
+  it('keeps a real H4 that opens an untitled tab as a header', () => {
+    expect(shape(htmlToBlocks(
+      '<div data-blok-tabs><section data-blok-tab><h4>Real heading</h4><p>A</p></section></div>'
+    ))).toEqual([
+      { type: 'tabs', data: {} },
+      { type: 'tab', data: { title: '' }, parent: 0 },
+      { type: 'header', data: { text: 'Real heading', level: 4 }, parent: 1 },
+      { type: 'paragraph', data: { text: 'A' }, parent: 1 },
+    ]);
+  });
+
+  it('ignores whitespace between hand-formatted sections', () => {
+    expect(shape(htmlToBlocks(
+      '<div data-blok-tabs>\n  <section data-blok-tab>\n    <h4 data-blok-tab-title> One </h4>\n  </section>\n  <!-- c -->\n</div>'
+    ))).toEqual([
+      { type: 'tabs', data: {} },
+      { type: 'tab', data: { title: 'One' }, parent: 0 },
+    ]);
+  });
+
+  it('unwraps a tab section that is not directly inside tabs', () => {
+    expect(shape(htmlToBlocks(
+      '<section data-blok-tab><h4 data-blok-tab-title>Loose</h4><p>A</p></section>'
+    ))).toEqual([
+      { type: 'header', data: { text: 'Loose', level: 4 } },
+      { type: 'paragraph', data: { text: 'A' } },
+    ]);
+  });
+
+  it('unwraps tabs that hold no tab section', () => {
+    expect(shape(htmlToBlocks('<div data-blok-tabs><p>A</p></div><div data-blok-tabs></div>'))).toEqual([
+      { type: 'paragraph', data: { text: 'A' } },
+    ]);
+  });
+
+  it('moves content that is not a tab out after the tabs, and reports it', () => {
+    const { blocks, warnings } = htmlToBlocksWithReport(
+      '<details><summary>T</summary><div data-blok-tabs><p>stray</p><section data-blok-tab><h4 data-blok-tab-title>One</h4></section></div></details>'
+    );
+
+    expect(shape(blocks)).toEqual([
+      { type: 'toggle', data: { text: 'T' } },
+      { type: 'tabs', data: {}, parent: 0 },
+      { type: 'tab', data: { title: 'One' }, parent: 1 },
+      { type: 'paragraph', data: { text: 'stray' }, parent: 0 },
+    ]);
+    expect(warnings).toEqual([
+      { construct: 'tabs', action: 'degraded', detail: expect.stringContaining('tab') },
+    ]);
+  });
+
+  it('round-trips tabs through blocksToHtml, nested in a toggle', () => {
+    const blocks: OutputBlockData[] = [
+      { id: 'tg', type: 'toggle', data: { text: 'Wrap' } },
+      { id: 'tabs', type: 'tabs', parent: 'tg', data: {} },
+      { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'First & <One>', icon: '🍎' } },
+      { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'A' } },
+      { id: 'h1', type: 'header', parent: 't1', data: { text: 'Inner', level: 4 } },
+      { id: 't2', type: 'tab', parent: 'tabs', data: { title: '' } },
+      { id: 'h2', type: 'header', parent: 't2', data: { text: 'Lead', level: 4 } },
+      { id: 't3', type: 'tab', parent: 'tabs', data: { title: '', icon: '📋' } },
+      { id: 't4', type: 'tab', parent: 'tabs', data: { title: 'Last' } },
+      { id: 'after', type: 'paragraph', data: { text: 'after' } },
+    ];
+
+    expect(shape(htmlToBlocks(blocksToHtml({ blocks })))).toEqual([
+      { type: 'toggle', data: { text: 'Wrap' } },
+      { type: 'tabs', data: {}, parent: 0 },
+      { type: 'tab', data: { title: 'First & <One>', icon: '🍎' }, parent: 1 },
+      { type: 'paragraph', data: { text: 'A' }, parent: 2 },
+      { type: 'header', data: { text: 'Inner', level: 4 }, parent: 2 },
+      { type: 'tab', data: { title: '' }, parent: 1 },
+      { type: 'header', data: { text: 'Lead', level: 4 }, parent: 5 },
+      { type: 'tab', data: { title: '', icon: '📋' }, parent: 1 },
+      { type: 'tab', data: { title: 'Last' }, parent: 1 },
+      { type: 'paragraph', data: { text: 'after' } },
+    ]);
   });
 });

@@ -258,6 +258,15 @@ describe('normalizeOutputData', () => {
     expect(normalizeOutputData(undefined)).toEqual({ blocks: [] });
   });
 
+  it('keeps the document id', () => {
+    expect(normalizeOutputData({ id: 'doc-1', blocks: [] })).toEqual({ id: 'doc-1', blocks: [] });
+  });
+
+  it('drops a null or empty document id', () => {
+    expect('id' in normalizeOutputData({ id: null, blocks: [] })).toBe(false);
+    expect('id' in normalizeOutputData({ id: '', blocks: [] })).toBe(false);
+  });
+
   it('strips null envelope fields (time/version) instead of carrying them through', () => {
     const normalized = normalizeOutputData({ time: null, version: null, blocks: [] });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ROUTE_METADATA, SITE_URL } from './route-metadata';
+import { lastModified } from './lastmod';
 import { buildMetaDescriptors } from './meta-descriptors';
 
 type Descriptor = Record<string, unknown>;
@@ -147,12 +148,11 @@ describe('JSON-LD', () => {
     expect(types).toEqual(expect.arrayContaining(['TechArticle', 'Article', 'BreadcrumbList']));
   });
 
-  it('carries dateModified where the source data has a lastUpdated date', () => {
+  it('takes dateModified from the lastmod ledger, the record the sitemap reads', () => {
     const article = jsonLd(buildMetaDescriptors('/docs/quick-start'))
       .flatMap((block) => block['@graph'] as Record<string, unknown>[])
       .find((node) => Array.isArray(node['@type']) && node['@type'].includes('TechArticle'));
-    expect(article?.dateModified).toBe(ROUTE_METADATA['/docs/quick-start'].dateModified);
-    expect(article?.dateModified).toBeTruthy();
+    expect(article?.dateModified).toBe(lastModified('/docs/quick-start'));
   });
 
   it('numbers breadcrumb positions from one with absolute item URLs', () => {

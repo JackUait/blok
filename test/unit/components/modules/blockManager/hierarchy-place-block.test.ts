@@ -78,6 +78,8 @@ const makeBlock = (spec: Spec): Block => {
     parentId: spec.parentId ?? null,
     contentIds: [],
     call: vi.fn(),
+    // None of these kinds is a layout piece.
+    tool: { isLayout: false },
   } as unknown as Block;
 };
 

@@ -77,10 +77,13 @@ export { Table, TableConstructorOptions, TableConstructable } from './tools/tabl
 export { Toggle, ToggleConstructorOptions, ToggleConstructable } from './tools/toggle';
 export { Divider, DividerConstructorOptions, DividerConstructable } from './tools/divider';
 export { Spacer, SpacerConstructorOptions, SpacerConstructable } from './tools/spacer';
+export { TableOfContents, TableOfContentsConstructorOptions } from './tools/table-of-contents';
 export { Callout, CalloutConstructorOptions, CalloutConstructable } from './tools/callout';
 export { Quote, QuoteConstructorOptions, QuoteConstructable } from './tools/quote';
 export { ColumnList, ColumnListConstructorOptions, ColumnListConstructable } from './tools/column-list';
 export { Column, ColumnConstructorOptions, ColumnConstructable } from './tools/column';
+export { TabsTool, TabsConstructorOptions } from './tools/tabs';
+export { TabTool, TabConstructorOptions } from './tools/tab';
 export { Database, DatabaseConstructorOptions } from './tools/database';
 // DatabaseRow is the block tool class, distinct from the DatabaseRow row-shape interface in types/tools/database.d.ts
 export { DatabaseRow, DatabaseRowConstructorOptions } from './tools/database-row';
@@ -92,11 +95,19 @@ export { Code, CodeConstructorOptions } from './tools/code';
 export { Embed, EmbedConstructorOptions } from './tools/embed';
 export { Bookmark, BookmarkConstructorOptions } from './tools/bookmark';
 export { Page, PageConstructorOptions } from './tools/page';
+export { PageLink, PageLinkConstructorOptions } from './tools/page-link';
 /**
  * Columns group manifest: a single registration handle that expands to the
  * `column_list` and `column` block tools. Register as `tools: { columns: Columns }`.
  */
 export const Columns: BlockToolConstructable & {
+  readonly provides: { readonly [blockType: string]: BlockToolConstructable };
+};
+/**
+ * Tabs group manifest: a single registration handle that expands to the
+ * `tabs` and `tab` block tools. Register as `tools: { tabs: Tabs }`.
+ */
+export const Tabs: BlockToolConstructable & {
   readonly provides: { readonly [blockType: string]: BlockToolConstructable };
 };
 
@@ -108,6 +119,7 @@ export { TableData, TableConfig, CellContent } from './tools/table';
 export { ToggleData, ToggleConfig } from './tools/toggle';
 export { DividerData } from './tools/divider';
 export { SpacerData } from './tools/spacer';
+export { TableOfContentsData } from './tools/table-of-contents';
 export { CalloutData, CalloutConfig } from './tools/callout';
 export { QuoteData } from './tools/quote';
 export { DatabaseData, DatabaseConfig, DatabaseAdapter, DatabaseViewConfig, DatabaseRowData } from './tools/database';
@@ -120,11 +132,14 @@ export { EmbedData, EmbedKind, EmbedAlignment, EmbedMatch, EmbedServiceType } fr
 // Embed-registry lookup for migrating stored links; the registry data stays private.
 export { matchEmbedService, buildEmbedUrl } from './tools/embed';
 export { BookmarkData, BookmarkConfig, BookmarkMeta } from './tools/bookmark';
-export { PageData, PageConfig, PageInfo, PageIcon, PageCache } from './tools/page';
+export { PageData, PageConfig, PageCreateResult, PageInfo, PageIcon, PageCache, PageSearchResult } from './tools/page';
+export { PageLinkData } from './tools/page-link';
 export { MediaSource } from './tools/media-source';
 export { MediaUploadError, MediaUploadErrorCode, UploadErrorHandler } from './tools/upload-error';
 export { ColumnListData } from './tools/column-list';
 export { ColumnData } from './tools/column';
+export { TabsData } from './tools/tabs';
+export { TabData } from './tools/tab';
 
 // ---------------------------------------------------------------------------
 // Block type → data registry (#10)
@@ -140,6 +155,7 @@ import { CalloutData as _CalloutData } from './tools/callout';
 import { QuoteData as _QuoteData } from './tools/quote';
 import { DividerData as _DividerData } from './tools/divider';
 import { SpacerData as _SpacerData } from './tools/spacer';
+import { TableOfContentsData as _TableOfContentsData } from './tools/table-of-contents';
 import { CodeData as _CodeData } from './tools/code';
 import { DatabaseData as _DatabaseData, DatabaseRowData as _DatabaseRowData } from './tools/database';
 import { ImageData as _ImageData } from './tools/image';
@@ -148,9 +164,12 @@ import { AudioData as _AudioData } from './tools/audio';
 import { VideoData as _VideoData } from './tools/video';
 import { ColumnListData as _ColumnListData } from './tools/column-list';
 import { ColumnData as _ColumnData } from './tools/column';
+import { TabsData as _TabsData } from './tools/tabs';
+import { TabData as _TabData } from './tools/tab';
 import { EmbedData as _EmbedData } from './tools/embed';
 import { BookmarkData as _BookmarkData } from './tools/bookmark';
 import { PageData as _PageData } from './tools/page';
+import { PageLinkData as _PageLinkData } from './tools/page-link';
 
 /**
  * Registry mapping a block's saved `type` string to the shape of its `data`.
@@ -180,6 +199,7 @@ export interface BlokBlockDataMap {
   quote: _QuoteData;
   divider: _DividerData;
   spacer: _SpacerData;
+  table_of_contents: _TableOfContentsData;
   code: _CodeData;
   database: _DatabaseData;
   'database-row': _DatabaseRowData;
@@ -189,9 +209,12 @@ export interface BlokBlockDataMap {
   video: _VideoData;
   column_list: _ColumnListData;
   column: _ColumnData;
+  tabs: _TabsData;
+  tab: _TabData;
   embed: _EmbedData;
   bookmark: _BookmarkData;
   page: _PageData;
+  'page-link': _PageLinkData;
 }
 
 /**
@@ -262,6 +285,7 @@ export const defaultBlockTools: {
   readonly 'database-row': {};
   readonly divider: {};
   readonly spacer: {};
+  readonly table_of_contents: {};
   readonly quote: {};
   readonly code: { readonly inlineToolbar: false };
   readonly image: {};
@@ -270,6 +294,8 @@ export const defaultBlockTools: {
   readonly video: {};
   readonly column_list: {};
   readonly column: {};
+  readonly tabs: {};
+  readonly tab: {};
   readonly embed: {};
   readonly bookmark: {};
 };

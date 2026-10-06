@@ -4,6 +4,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 import { DATA_ATTR, createSelector } from '../../../src/components/constants';
 import { expect, gotoTestPage, test } from './helpers/shared-page';
+import { openFixtureToggles } from './helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="settings-toggler"]`;
@@ -256,6 +257,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
     data,
     config,
   });
+  await openFixtureToggles(page, data);
 };
 
 test.describe('drag and drop', () => {
@@ -2963,13 +2965,12 @@ test.describe('drag and drop', () => {
       await createBlok(page, {
         data: {
           blocks: [
-            { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true } },
+            { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true, isOpen: true } },
             { id: 'para-1', type: 'paragraph', data: { text: 'Drop me in' } },
           ],
         },
       });
 
-      // Toggle heading starts expanded
       await expect(page.locator('[data-blok-toggle-open="true"]')).toBeVisible();
 
       // Hover over paragraph

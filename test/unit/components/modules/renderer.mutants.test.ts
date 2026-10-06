@@ -306,6 +306,31 @@ describe('Renderer mutation coverage', () => {
       expect(outcome).toBe('resolved');
     });
 
+    it('keeps one pending promise across overlapping renders and resolves it when the last ends', async () => {
+      const { renderer } = createRenderer();
+
+      renderer.markRenderStart();
+      const pending = renderer.pendingRender;
+
+      renderer.markRenderStart();
+      expect(renderer.pendingRender).toBe(pending);
+
+      renderer.markRenderEnd();
+      expect(renderer.pendingRender).toBe(pending);
+
+      renderer.markRenderEnd();
+      expect(renderer.pendingRender).toBeNull();
+
+      const outcome = await Promise.race([
+        pending === null ? Promise.resolve('missing') : pending.then(() => 'resolved'),
+        new Promise<string>((resolve) => {
+          setTimeout(() => resolve('stuck'), 25);
+        }),
+      ]);
+
+      expect(outcome).toBe('resolved');
+    });
+
     it('ignores a render end that no render start preceded', () => {
       const { renderer } = createRenderer();
 

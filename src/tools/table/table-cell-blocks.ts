@@ -1,7 +1,10 @@
 import type { API, BlockAPI } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { hasCrossHostSelectionWithin } from '../../components/selection/cross-block-range';
+import { convertStringToBlockData } from '../../components/utils/blocks';
+import { linkToHtml } from '../../components/utils/copy-as-link';
 import { getElementDirection, logicalArrow } from '../../components/utils/direction';
+import { parseUntrustedHtml } from '../../components/utils/inert-html';
 import {
   isCaretAtStartOfInput,
   isCaretAtEndOfInput,
@@ -9,6 +12,7 @@ import {
   isCaretAtLastLine,
   focus,
 } from '../../components/utils/caret';
+import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../shared/page-reference';
 
 import { CELL_ATTR, ROW_ATTR, CELL_COL_ATTR, ownCells, ownRows } from './table-core';
 import { cellBlockFallbackText, parseCellContentToBlocks } from './table-cell-paste';
@@ -26,6 +30,34 @@ import { cellKey, pickTableIds } from './table-ids';
 export type InitCellContent = LegacyCellContent | (CellContent & { leadingText?: string });
 
 export const CELL_BLOCKS_ATTR = 'data-blok-table-cell-blocks';
+
+const neutralizeCopiedPageReferences = (data: Record<string, unknown>): Record<string, unknown> => {
+  const text = data?.text;
+
+  if (typeof text !== 'string' || !text.includes(PAGE_REFERENCE_ATTR)) {
+    return data;
+  }
+
+  const wrapper = parseUntrustedHtml(text);
+  const anchors = [...wrapper.querySelectorAll(`a[${PAGE_REFERENCE_ATTR}]`)]
+    .filter(anchor => anchor.getAttribute(PAGE_REFERENCE_ATTR));
+
+  for (const anchor of anchors) {
+    const pageId = anchor.getAttribute(PAGE_REFERENCE_ATTR);
+
+    if (!pageId) {
+      continue;
+    }
+
+    const neutral = wrapper.ownerDocument.createElement('a');
+
+    neutral.setAttribute(PAGE_REFERENCE_ATTR, pageId);
+    neutral.textContent = PAGE_REFERENCE_FALLBACK;
+    anchor.replaceWith(neutral);
+  }
+
+  return anchors.length > 0 ? { ...data, text: wrapper.innerHTML } : data;
+};
 
 /**
  * A block and its nested children as clipboard data, read from the live tree.
@@ -808,22 +840,81 @@ export class TableCellBlocks {
     block: ClipboardBlockData,
     index: number = this.indexAfterTableSubtree()
   ): ReturnType<API['blocks']['insert']> {
+    const link = this.copyAsLink(block.tool, block.data);
+    const pageId = block.data.pageId;
+    const fallbackText = block.tool === 'page' && typeof pageId === 'string' && pageId !== ''
+      ? PAGE_REFERENCE_FALLBACK
+      : '';
+    const copied: ClipboardBlockData = link === null
+      ? { tool: 'paragraph', data: { text: fallbackText } }
+      : link ?? { ...block, data: neutralizeCopiedPageReferences(block.data) };
+
     try {
       // 8th arg = tunes; omit it and copied cells lose them.
       return this.api.blocks.insert(
-        block.tool,
-        block.data,
+        copied.tool,
+        copied.data,
         {},
         index,
         false,
         false,
         undefined,
-        block.tunes,
+        copied.tunes,
       );
     } catch {
       // Tool unavailable — degrade to a paragraph carrying whatever text it had.
-      return this.api.blocks.insert('paragraph', { text: cellBlockFallbackText(block.data) }, {}, index, false);
+      return this.api.blocks.insert('paragraph', { text: cellBlockFallbackText(copied.data) }, {}, index, false);
     }
+  }
+
+  /** An owning block may copy as a reference, but never as another owner. */
+  private copyAsLink(toolName: string, data: Record<string, unknown>): ClipboardBlockData | null | undefined {
+    const tools = this.api.tools?.getBlockTools();
+    const tool = tools?.find(candidate => candidate.name === toolName);
+    const link = tool?.copyAsLink(data);
+
+    if (link === undefined) {
+      return undefined;
+    }
+
+    const defaultTool = tools?.find(candidate => candidate.isDefault);
+
+    if (link !== null) {
+      const html = linkToHtml(link);
+
+      return defaultTool === undefined
+        ? { tool: 'paragraph', data: { text: html } }
+        : {
+          tool: defaultTool.name,
+          data: convertStringToBlockData(html, defaultTool.conversionConfig, { ...defaultTool.settings }),
+        };
+    }
+
+    const pageId = data.pageId;
+
+    if (toolName !== 'page' || typeof pageId !== 'string' || pageId === '') {
+      return null;
+    }
+    if (tools?.some(candidate => candidate.name === 'page-link')) {
+      return { tool: 'page-link', data: { pageId } };
+    }
+
+    const paragraph = tools?.find(candidate => candidate.name === 'paragraph');
+    const importRule = paragraph?.conversionConfig?.import;
+
+    if (paragraph === undefined || (typeof importRule !== 'string' && typeof importRule !== 'function')) {
+      return null;
+    }
+
+    const anchor = document.createElement('a');
+
+    anchor.setAttribute(PAGE_REFERENCE_ATTR, pageId);
+    anchor.textContent = PAGE_REFERENCE_FALLBACK;
+
+    return {
+      tool: paragraph.name,
+      data: convertStringToBlockData(anchor.outerHTML, paragraph.conversionConfig, { ...paragraph.settings }),
+    };
   }
 
   /**
@@ -833,10 +924,19 @@ export class TableCellBlocks {
    */
   public insertClipboardChildren(parentId: string, children: ClipboardBlockData[] | undefined): void {
     children?.forEach(child => {
-      const block = this.insertClipboardBlock(child, this.indexAfterSubtreeOf(parentId));
+      const link = this.copyAsLink(child.tool, child.data);
+
+      if (link === null) {
+        return;
+      }
+
+      const copied = link ?? { ...child, data: neutralizeCopiedPageReferences(child.data) };
+      const block = this.insertClipboardBlock(copied, this.indexAfterSubtreeOf(parentId));
 
       this.api.blocks.setBlockParent(block.id, parentId);
-      this.insertClipboardChildren(block.id, child.children);
+      if (link === undefined) {
+        this.insertClipboardChildren(block.id, child.children);
+      }
     });
   }
 
@@ -1481,21 +1581,36 @@ export class TableCellBlocks {
         && block.parentId === this.tableBlockId
         && !this.mountedThisPass.has(blockId);
 
-      if ((nestedContainer !== null && !strandedInPreviousRender && !parkedBySync) || hasDifferentOwner) {
+      const needsDuplicate = (nestedContainer !== null && !strandedInPreviousRender && !parkedBySync) || hasDifferentOwner;
+      const link = needsDuplicate ? this.copyAsLink(block.name, block.preservedData) : undefined;
+
+      if (link === null) {
+        continue;
+      }
+
+      if (needsDuplicate) {
+        const copiedData = link === undefined
+          ? neutralizeCopiedPageReferences(block.preservedData)
+          : link.data;
         const duplicate = this.api.blocks.insert(
-          block.name,
-          block.preservedData,
+          link?.tool ?? block.name,
+          copiedData,
           {},
           this.indexAfterTableSubtree(),
           false,
           false,
           undefined,
-          block.preservedTunes,
+          link === undefined ? block.preservedTunes : {},
         );
 
         container.appendChild(duplicate.holder);
         this.api.blocks.setBlockParent(duplicate.id, this.tableBlockId);
-        this.insertClipboardChildren(duplicate.id, this.api.blocks.getChildren(blockId).map(child => toClipboardBlock(this.api, child)));
+        this.insertClipboardChildren(
+          duplicate.id,
+          link === undefined
+            ? this.api.blocks.getChildren(blockId).map(child => toClipboardBlock(this.api, child))
+            : undefined,
+        );
         mountedIds.push(duplicate.id);
         replacements.set(blockId, duplicate.id);
         continue;

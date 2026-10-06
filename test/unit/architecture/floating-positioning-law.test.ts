@@ -95,6 +95,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/popover/popover-desktop.ts': 'Shared root implementation registered in ROOT_SURFACE_CONTRACTS.',
   'components/utils/tooltip.ts': 'Dismiss-on-scroll fixed surface registered in ROOT_SURFACE_CONTRACTS.',
   'tools/page/hover-preview.ts': 'Shared-placement page preview card registered in ROOT_SURFACE_CONTRACTS.',
+  'tools/page/index.ts': 'Mount owner for the tracked emoji-picker root surface (Edit icon).',
   'tools/audio/cover-picker.ts': 'Shared anchored root surface registered in ROOT_SURFACE_CONTRACTS.',
   'tools/audio/index.ts': 'Transient styleless download anchor clicked and removed synchronously.',
   'tools/callout/index.ts': 'Mount owner for the tracked emoji-picker root surface.',
@@ -105,9 +106,11 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-tab-bar.ts': 'Shared anchored overflow menu plus a tracked drag ghost and popover consumer.',
   'tools/image/darkroom/motion.ts': 'Fixed fly-out clone springs once from the frame to the measured block box, then is removed.',
   'tools/image/download.ts': 'Transient styleless download anchor clicked and removed synchronously.',
+  'tools/image/tone-sampler.ts': 'Synchronous zero-size probe that reads the root Canvas colour, removed before control returns.',
   'tools/image/ui.ts': 'Viewport modal lightbox, not a surface positioned against a live anchor.',
   'tools/spacer/alignment-guide.ts': 'Pointer-driven fixed guide whose coordinates refresh throughout the drag.',
   'tools/table/table-row-col-drag.ts': 'Pointer-following table ghost and indicator refreshed on every pointer move.',
+  'tools/tabs/index.ts': 'Mount owner for the tracked emoji-picker root surface (tab Edit icon).',
   'tools/video/index.ts': 'Transient styleless download anchor clicked and removed synchronously.',
 };
 
@@ -118,9 +121,11 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
 const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/image/darkroom/markup-editor.ts': 'Markup selection box and text editor convert the camera plane rect into offsets local to the stage overlay they live in; refresh() re-places them on every camera paint and stage resize.',
   'tools/image/index.ts': 'Snap guides are placed at container percentages inside the block root; the container width is read only for the readout px, not to position a floating root.',
+  'tools/image/tone-sampler.ts': 'Reads control and picture rects only to find which pixels sit under each control; it positions nothing.',
   'components/modules/collaboration/presence-carets.ts': 'Remote carets convert a measured Range rect into offsets local to the block holder they are appended to; nothing is written against the root.',
   'components/modules/drag/preview/DragPreview.ts': 'Fixed pointer-following preview; root coordinates refresh on every drag pointer update.',
   'components/modules/drag/utils/ColumnDropAnimation.ts': 'Ephemeral fixed drag preview animates to a viewport target rect and is then removed.',
+  'components/modules/find/find-motion.ts': 'Hop chip: a transient aria-hidden copy of the selected word. It turns the selection rect into dock-local px once, at open, and is removed when it lands or is interrupted; the bar itself is still placed by find.css.',
   'components/ui/toolbox-preview.ts': 'Fixed hover card reads the menu and row rects on every row change and on menu-list scroll; any other scroll closes it.',
   'components/modules/rectangleSelection.ts': 'Selection rectangle converts pointer coordinates into its measured local overlay container.',
   'components/modules/toolbar/inline/toolbar-ghost.ts': 'Fading copy of the inline toolbar, placed once at the toolbar\'s measured spot beside its wrapper and removed within 400ms; it never tracks movement.',
@@ -128,6 +133,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/toolbar/positioning.ts': 'Toolbar geometry is converted into offsets local to the editor-owned wrapper.',
   'components/utils/link-hover-card.ts': 'Fixed top-layer hover card continuously tracks its live anchor and viewport bounds.',
   'components/utils/notifier/draw.ts': 'Toast exit ghosts subtract the card rect from each part rect and write offsets inside the card; they fade out and are removed.',
+  'components/utils/notifier/dust.ts': 'Each frame the dust canvas subtracts the moving notifier wrapper rect from the closing card rect taken at close, so it stays where the card was; it is removed when the dust settles.',
   'components/utils/popover/anchored-position.ts': 'Shared coordinate-space engine and the only approved root anchored style writer.',
   'components/utils/popover/popover-desktop.ts': 'Shared root popover delegates boundary resolution and continuously tracks movement.',
   'components/utils/tooltip.ts': 'Fixed tooltip uses viewport coordinates and intentionally dismisses on capture-phase scroll.',
@@ -178,6 +184,7 @@ const CAPTURE_SCROLL_CLASSIFICATIONS: Record<string, string> = {
   'components/ui/toolbox-preview.ts': 'Capture-phase scroll listener re-places the toolbox hover card when the menu list scrolls and closes it on any other scroll.',
   'components/utils/tooltip.ts': 'Capture-phase scroll listener intentionally dismisses the snapshot tooltip.',
   'tools/file/preview-scroll-haze.ts': 'Capture-phase listener refreshes local file-preview scroll haze state.',
+  'tools/table-of-contents/index.ts': 'Capture-phase listener marks which heading is being read as any scroller moves; the thumb sits at the row offset inside the nav, never at viewport coordinates.',
 };
 
 type SurfaceContract = 'shared' | 'popover-core' | 'tracked-manual' | 'dismiss-on-scroll';
@@ -203,8 +210,10 @@ const POPOVER_DESKTOP_CONSUMERS = [
   'tools/database/database-view-popover.ts',
   'tools/database/index.ts',
   'tools/link/paste-menu/controller.ts',
+  'tools/page/page-picker.ts',
   'tools/table/table-cell-selection.ts',
   'tools/table/table-row-col-popover.ts',
+  'tools/tabs/index.ts',
 ].sort();
 
 const TRACKED_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {

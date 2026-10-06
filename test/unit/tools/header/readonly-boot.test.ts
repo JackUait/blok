@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import { Header, type HeaderConfig, type HeaderData } from '../../../../src/tools/header';
 import { TOGGLE_ATTR } from '../../../../src/tools/toggle/constants';
+import { createMemoryViewState } from '../../../helpers/view-state';
 
 const createMockAPI = (): API => ({
   styles: {
@@ -24,12 +25,15 @@ const createMockAPI = (): API => ({
   caret: {
     setToBlock: vi.fn(),
   },
+  viewState: createMemoryViewState(),
 } as unknown as API);
 
 const createToggleHeading = (readOnly: boolean): { header: Header; api: API; element: HTMLElement } => {
   const api = createMockAPI();
+
+  api.viewState.set('heading-id', 'open', true);
   const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
-    data: { text: 'Title', level: 2, isToggleable: true, isOpen: true },
+    data: { text: 'Title', level: 2, isToggleable: true },
     config: {},
     api,
     readOnly,

@@ -142,6 +142,73 @@ test.describe('find in page', () => {
   });
 
   test.describe('opening', () => {
+    test('starts from where the reader has scrolled to, not from a caret left off screen', async ({ page }) => {
+      const lines = Array.from({ length: 60 }, (_, i) => ([0, 30, 50].includes(i) ? `needle at ${i}` : `filler ${i}`));
+
+      await createEditor(page, paragraphs(...lines));
+      await focusParagraph(page, 'needle at 0');
+      await page.getByText('filler 29', { exact: true }).evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+      await openFind(page, 'needle');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 3');
+    });
+
+    test('starts from the caret while it is on screen', async ({ page }) => {
+      const lines = Array.from({ length: 60 }, (_, i) => ([0, 30, 50].includes(i) ? `needle at ${i}` : `filler ${i}`));
+
+      await createEditor(page, paragraphs(...lines));
+      await focusParagraph(page, 'filler 28');
+      await openFind(page, 'needle');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 3');
+    });
+
+    // Keys typed in an iframe never reach the page, so the browser's own find would open.
+    test('Mod+F still opens the find bar after a click inside an embedded frame', async ({ page }) => {
+      await page.evaluate(async () => {
+        document.getElementById('blok')?.remove();
+        const holder = document.createElement('div');
+
+        holder.id = 'blok';
+        document.body.appendChild(holder);
+
+        class FrameTool {
+          public render(): HTMLElement {
+            const frame = document.createElement('iframe');
+
+            frame.title = 'Embedded frame';
+            frame.srcdoc = '<button onclick="this.textContent = \'Playing\'">Play</button>';
+
+            return frame;
+          }
+
+          public save(): Record<string, never> {
+            return {};
+          }
+        }
+
+        const blok = new window.Blok({
+          holder: 'blok',
+          tools: { frame: FrameTool },
+          data: { blocks: [{ id: 'p', type: 'paragraph', data: { text: 'alpha' } }, { id: 'f', type: 'frame', data: {} }] },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      });
+
+      const frame = page.frameLocator('iframe[title="Embedded frame"]');
+
+      await frame.getByRole('button', { name: 'Play' }).click();
+      // The page takes focus back one task after the click. A key sent before that lands in the frame.
+      await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).not.toBe('IFRAME');
+      await page.keyboard.press(FIND_KEY);
+
+      await expect(page.getByTestId('find-input')).toBeFocused();
+      // Handing focus back must not cost the click that the frame got.
+      await expect(frame.getByRole('button', { name: 'Playing' })).toBeVisible();
+    });
+
     test('Mod+F inside the editor opens the find bar and prevents the browser find', async ({ page }) => {
       await createEditor(page, paragraphs('alpha', 'beta'));
       await focusParagraph(page, 'alpha');
@@ -296,12 +363,12 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-replace-toggle')).toHaveAttribute('aria-expanded', 'true');
     });
 
-    test('the replace row lines up under the find row, above the match map', async ({ page }) => {
+    test('the replace row lines up under the find row', async ({ page }) => {
       await createEditor(page, paragraphs('foo one', 'foo two'));
       await focusParagraph(page, 'foo one');
       await page.keyboard.press(REPLACE_KEY);
       await page.getByTestId('find-input').fill('foo');
-      await expect(page.getByTestId('find-map')).toBeVisible();
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
       // The row grows open; measure once it has settled.
       await page.waitForFunction(() =>
         document.getAnimations().every((animation) => animation.playState !== 'running'));
@@ -318,37 +385,50 @@ test.describe('find in page', () => {
       const findField = await box('find-field');
       const replaceField = await box('find-replace-field');
       const close = await box('find-close');
-      const replaceAll = await box('find-replace-all');
-      const map = await box('find-map');
+      const replaceMenu = await box('find-replace-menu');
+      const replace = await box('find-replace');
+      const options = await box('find-options');
 
       expect(replaceField.left).toBeCloseTo(findField.left, 0);
       expect(replaceField.right).toBeCloseTo(findField.right, 0);
-      expect(replaceAll.right).toBeCloseTo(close.right, 0);
-      expect(map.top).toBeGreaterThanOrEqual(replaceField.bottom);
+      expect(replaceMenu.right).toBeCloseTo(close.right, 0);
+      expect(replace.left).toBeCloseTo(options.left, 0);
     });
 
-    test('the match map line spans from the find field to the close button', async ({ page }) => {
+    test('opening the replace row moves nothing in the find row', async ({ page }) => {
       await createEditor(page, paragraphs('foo one', 'foo two'));
       await focusParagraph(page, 'foo one');
-      await openFind(page, 'foo');
-      await expect(page.getByTestId('find-map')).toBeVisible();
+      await page.keyboard.press(FIND_KEY);
+      await page.getByTestId('find-input').fill('foo');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
 
-      const geometry = await page.getByTestId('find-map').evaluate((map) => {
-        const box = map.getBoundingClientRect();
-        const line = getComputedStyle(map, '::before');
-        const field = document.querySelector('[data-blok-testid="find-field"]')?.getBoundingClientRect();
-        const close = document.querySelector('[data-blok-testid="find-close"]')?.getBoundingClientRect();
+      const settle = (): Promise<unknown> => page.waitForFunction(() =>
+        document.getAnimations().every((animation) => animation.playState !== 'running'));
+      const edge = async (testId: string, side: 'left' | 'right'): Promise<number> => {
+        const rect = await page.getByTestId(testId).boundingBox();
 
-        return {
-          lineLeft: box.left + parseFloat(line.left),
-          lineRight: box.right - parseFloat(line.right),
-          fieldLeft: field?.left ?? Number.NaN,
-          closeRight: close?.right ?? Number.NaN,
-        };
-      });
+        if (rect === null) {
+          throw new Error(`${testId} has no box`);
+        }
 
-      expect(geometry.lineLeft).toBeCloseTo(geometry.fieldLeft, 0);
-      expect(geometry.lineRight).toBeCloseTo(geometry.closeRight, 0);
+        return side === 'left' ? rect.x : rect.x + rect.width;
+      };
+      const fieldToOptions = async (): Promise<number> =>
+        await edge('find-options', 'left') - await edge('find-field', 'right');
+
+      await settle();
+      const closedGap = await fieldToOptions();
+      const closedOptions = await edge('find-options', 'left');
+      const closedField = await edge('find-field', 'right');
+
+      await page.getByTestId('find-replace-toggle').click();
+      await expect(page.getByTestId('find-replace-row')).toBeVisible();
+      await settle();
+
+      expect(await edge('find-options', 'left')).toBeCloseTo(closedOptions, 0);
+      expect(await edge('find-field', 'right')).toBeCloseTo(closedField, 0);
+      expect(await fieldToOptions()).toBeCloseTo(closedGap, 0);
+      expect(await edge('find-close', 'right')).toBeCloseTo(await edge('find-replace-menu', 'right'), 0);
     });
   });
 
@@ -406,16 +486,6 @@ test.describe('find in page', () => {
       expect(paint.active).toEqual(['foo']);
       expect(paint.matches).toEqual(['foo', 'foo']);
       expect(paint.activeBlockId).toBe('find-p0');
-    });
-
-    test('the match map draws one tick per match', async ({ page }) => {
-      await createEditor(page, paragraphs('foo one', 'foo two', 'foo three'));
-      await focusParagraph(page, 'foo one');
-
-      await openFind(page, 'foo');
-
-      await expect(page.getByTestId('find-map-tick')).toHaveCount(3);
-      await expect(page.getByTestId('find-map')).toBeVisible();
     });
   });
 
@@ -544,6 +614,155 @@ test.describe('find in page', () => {
   });
 
   test.describe('closing', () => {
+    test('stepping to a match scrolled out of a wide table scrolls the table to it', async ({ page }) => {
+      await page.evaluate(async () => {
+        document.getElementById('blok')?.remove();
+        const holder = document.createElement('div');
+
+        holder.id = 'blok';
+        holder.style.width = '600px';
+        document.body.appendChild(holder);
+
+        const tableClass = (window.Blok as unknown as Record<string, unknown>).Table;
+        const cols = 6;
+        const blok = new window.Blok({
+          holder: 'blok',
+          tools: { table: { class: tableClass as never } },
+          data: {
+            blocks: [
+              { id: 'p', type: 'paragraph', data: { text: 'marker up front' } },
+              {
+                id: 't',
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  colWidths: Array.from({ length: cols }, () => 240),
+                  content: [Array.from({ length: cols }, (_, c) => (c === cols - 1 ? 'far marker' : `cell ${c}`))],
+                },
+              },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      });
+      await focusParagraph(page, 'marker up front');
+      await openFind(page, 'marker');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      await page.keyboard.press('Enter');
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+
+      await expect.poll(() => page.getByTestId('find-lens-box').evaluate((box) => {
+        const [range] = [...CSS.highlights.get('blok-find-match-active') ?? []];
+        const area = range instanceof Range ? range.startContainer.parentElement?.closest('[data-blok-table-scroll]')?.getBoundingClientRect() : undefined;
+        const fill = range instanceof Range ? range.getBoundingClientRect() : null;
+        const ring = box.getBoundingClientRect();
+
+        return fill !== null && area !== undefined
+          && fill.left >= area.left && fill.right <= area.right
+          && Math.abs(ring.left - fill.left) <= 1.5;
+      })).toBe(true);
+    });
+
+    // The browser scrolls the page off the main thread; a lens moved by a scroll listener trails the text.
+    test('the lens scrolls with the page itself, before any scroll handler runs', async ({ page }) => {
+      await createEditor(page, paragraphs(...Array.from({ length: 40 }, (_, i) => (i === 20 ? 'the needle line' : `filler line ${i}`))));
+      await focusParagraph(page, 'filler line 0');
+      await openFind(page, 'needle');
+      await expect(page.getByTestId('find-lens-box')).toBeInViewport();
+
+      const offset = await page.getByTestId('find-lens-box').evaluate((box) => {
+        const [range] = [...CSS.highlights.get('blok-find-match-active') ?? []];
+
+        if (!(range instanceof Range)) {
+          return null;
+        }
+        window.scrollBy({ top: 60, behavior: 'instant' });
+
+        return Math.abs(box.getBoundingClientRect().top - range.getBoundingClientRect().top);
+      });
+
+      expect(offset).not.toBeNull();
+      expect(offset).toBeLessThanOrEqual(1.5);
+    });
+
+    test('stepping into a closed tab puts the lens on the match once the tab has animated in', async ({ page }) => {
+      await createEditor(page, [
+        { id: 'tabs1', type: 'tabs', data: {}, content: ['t1', 't2'] },
+        { id: 't1', type: 'tab', data: { title: 'Alpha' }, parent: 'tabs1', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'needle here' }, parent: 't1' },
+        { id: 't2', type: 'tab', data: { title: 'Beta' }, parent: 'tabs1', content: ['p2'] },
+        { id: 'p2', type: 'paragraph', data: { text: 'the hidden needle' }, parent: 't2' },
+      ]);
+      await focusParagraph(page, 'needle here');
+      await openFind(page, 'needle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      await page.keyboard.press('Enter');
+      await expect(page.getByText('the hidden needle')).toBeVisible();
+      await expect.poll(() => page.evaluate(() => document.getAnimations().filter((animation) => {
+        const target = (animation.effect as KeyframeEffect | null)?.target;
+
+        return target instanceof Element && target.closest('[data-blok-testid="find-lens"]') === null && animation.playState === 'running';
+      }).length)).toBe(0);
+
+      const offset = await page.getByTestId('find-lens-box').evaluate((box) => {
+        const [range] = [...CSS.highlights.get('blok-find-match-active') ?? []];
+
+        if (!(range instanceof Range)) {
+          return null;
+        }
+
+        const ring = box.getBoundingClientRect();
+        const fill = range.getBoundingClientRect();
+
+        return Math.max(Math.abs(ring.top - fill.top), Math.abs(ring.bottom - fill.bottom), Math.abs(ring.left - fill.left));
+      });
+
+      expect(offset).not.toBeNull();
+      expect(offset).toBeLessThanOrEqual(1.5);
+    });
+
+    test('a click back in the content closes the bar and edits where it landed', async ({ page }) => {
+      await createEditor(page, paragraphs('alpha foo', 'beta foo'));
+      await focusParagraph(page, 'alpha foo');
+      await page.keyboard.press(REPLACE_KEY);
+      await page.getByTestId('find-input').fill('foo');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      // The replace preview paints a copy over each block with a match; the click lands on it.
+      const shown = page.locator('[data-blok-find-preview-clone]').filter({ hasText: 'beta foo' });
+      const paragraph = page.locator('[data-blok-element] [contenteditable="true"]:not([data-blok-find-preview-clone] *)').filter({ hasText: 'beta foo' });
+      const box = await shown.boundingBox();
+
+      if (box === null) {
+        throw new Error('paragraph not on screen');
+      }
+      await page.mouse.click(box.x + box.width - 2, box.y + box.height / 2);
+
+      await expect(page.getByTestId('find-bar')).toBeHidden();
+      await expect(paragraph).toBeFocused();
+
+      await page.keyboard.type('!');
+
+      await expect(paragraph).toHaveText('beta foo!');
+    });
+
+    test('a click in the content closes the bar when only find is open', async ({ page }) => {
+      await createEditor(page, paragraphs('alpha foo', 'beta foo'));
+      await focusParagraph(page, 'alpha foo');
+      await openFind(page, 'foo');
+
+      const paragraph = page.getByText('beta foo', { exact: true });
+
+      await paragraph.click();
+
+      await expect(page.getByTestId('find-bar')).toBeHidden();
+      await expect(paragraph).toBeFocused();
+    });
+
     test('Escape closes the bar, clears the paint and selects the active match', async ({ page }) => {
       await createEditor(page, paragraphs('alpha foo', 'beta foo'));
       await focusParagraph(page, 'alpha foo');
@@ -602,20 +821,6 @@ test.describe('find in page', () => {
 
       await expect(page.getByText('beta', { exact: true })).toBeFocused();
       await expect(page.getByTestId('find-bar')).toBeHidden();
-    });
-
-    test('Escape closes the bar after clicking back into the text, and keeps the caret there', async ({ page }) => {
-      await createEditor(page, paragraphs('foo one', 'foo two'));
-      await focusParagraph(page, 'foo one');
-      await openFind(page, 'foo');
-      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
-
-      await page.getByText('foo two', { exact: true }).click();
-      await page.keyboard.press('Escape');
-
-      await expect(page.getByTestId('find-bar')).toBeHidden();
-      // One Escape closes one layer: it must not also enter navigation mode.
-      await expect(page.getByText('foo two', { exact: true })).toBeFocused();
     });
 
     test('Escape closes the bar when nothing has focus', async ({ page }) => {
@@ -886,7 +1091,8 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
       await page.getByTestId('find-replace-input').fill('changed');
 
-      await page.getByTestId('find-replace-all').click();
+      await page.getByTestId('find-replace-menu').click();
+      await page.getByRole('menuitem', { name: /Replace all/ }).click();
 
       await expect.poll(() => savedTexts(page)).toEqual(['changed in editor']);
       await expect(page.getByTestId('host-editable')).toHaveText('amberneedle outside');
@@ -1043,30 +1249,6 @@ test.describe('find in page', () => {
           document.body.style.transform = '';
         });
       }
-    });
-
-    test('places host matches at different points on the match map', async ({ page }) => {
-      await page.evaluate(() => {
-        const first = document.createElement('p');
-        const spacer = document.createElement('div');
-        const second = document.createElement('p');
-
-        first.textContent = 'mapneedle first';
-        spacer.style.height = '500px';
-        second.textContent = 'mapneedle second';
-        document.body.append(first, spacer, second);
-      });
-      await createEditor(page, paragraphs('other words'));
-      await focusParagraph(page, 'other words');
-
-      await openFind(page, 'mapneedle');
-
-      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
-      const positions = await page.getByTestId('find-map-tick').evaluateAll((ticks) =>
-        ticks.map((tick) => tick.getBoundingClientRect().left)
-      );
-
-      expect(positions[1] - positions[0]).toBeGreaterThan(10);
     });
 
     test('paints host-page matches', async ({ page }) => {
@@ -1230,10 +1412,33 @@ test.describe('find in page', () => {
       await openFind(page, 'apple');
       await pickOption(page, 'Match case');
 
-      const check = (name: string) => page.getByRole('menuitemcheckbox', { name }).getByTestId('popover-item-trailing-icon');
+      const check = (name: string) => page.getByRole('menuitemcheckbox', { name }).getByTestId('popover-item-icon');
 
       await expect(check('Match case')).toBeVisible();
       await expect(check('Match whole word')).toBeHidden();
+    });
+
+    // The check has its own column, so the shortcut ends the row instead of floating before an empty slot.
+    test('puts the check before the label and the shortcut at the end of the row', async ({ page }) => {
+      await createEditor(page, paragraphs('Apple apple APPLE'));
+      await focusParagraph(page, 'Apple apple APPLE');
+      await openFind(page, 'apple');
+      await pickOption(page, 'Match case');
+
+      const row = page.getByRole('menuitemcheckbox', { name: 'Match case' });
+      const [rowBox, checkBox, titleBox, shortcutBox] = await Promise.all([
+        row.boundingBox(),
+        row.getByTestId('popover-item-icon').boundingBox(),
+        row.getByTestId('popover-item-title').boundingBox(),
+        row.getByTestId('popover-item-secondary-title').boundingBox(),
+      ]);
+
+      if (rowBox === null || checkBox === null || titleBox === null || shortcutBox === null) {
+        throw new Error('menu row parts missing');
+      }
+
+      expect(checkBox.x + checkBox.width).toBeLessThanOrEqual(titleBox.x);
+      expect(rowBox.x + rowBox.width - (shortcutBox.x + shortcutBox.width)).toBeLessThanOrEqual(16);
     });
 
     test('matching ignores accents', async ({ page }) => {
@@ -1308,6 +1513,25 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
     });
 
+    test('a disabled replace button says on hover why nothing can be replaced', async ({ page }) => {
+      await createEditor(page, paragraphs('alpha'));
+      await page.evaluate(() => {
+        const note = document.createElement('p');
+
+        note.textContent = 'hostneedle on the page';
+        document.body.prepend(note);
+      });
+      await focusParagraph(page, 'alpha');
+      await page.keyboard.press(REPLACE_KEY);
+      await page.getByTestId('find-input').fill('hostneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+      await expect(page.getByTestId('find-replace-menu')).toBeDisabled();
+
+      await page.getByTestId('find-replace-menu').hover();
+
+      await expect(page.getByRole('tooltip')).toContainText('None of the matches can be edited');
+    });
+
     test('the Replace button replaces the current match only', async ({ page }) => {
       await createEditor(page, paragraphs('foo one', 'foo two'));
       await focusParagraph(page, 'foo one');
@@ -1363,12 +1587,30 @@ test.describe('find in page', () => {
       await page.getByTestId('find-input').fill('foo');
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
       await page.getByTestId('find-replace-input').fill('bar');
-      await page.getByTestId('find-replace-all').click();
+      await page.getByTestId('find-replace-menu').click();
+      await page.getByRole('menuitem', { name: /Replace all/ }).click();
       await expect.poll(() => savedTexts(page)).toEqual(['bar one', 'two bar']);
 
       await page.keyboard.press('Escape');
 
       await expect(page.getByTestId('find-bar')).toBeHidden();
+    });
+
+    test('stepping to a match in a code block source behind its preview shows the code', async ({ page }) => {
+      await createEditor(page, [
+        { id: 'find-p', type: 'paragraph', data: { text: 'alpha here' } },
+        { id: 'find-code', type: 'code', data: { code: 'alpha^2', language: 'latex' } },
+      ]);
+      await focusParagraph(page, 'alpha here');
+      await openFind(page, 'alpha');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+      await expect(page.getByTestId('code-content')).toBeHidden();
+
+      await page.keyboard.press('Enter');
+
+      await expect(page.getByTestId('code-content')).toBeVisible();
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
     });
 
     test('replacing in a code block keeps focus in the find bar', async ({ page }) => {
@@ -1601,6 +1843,8 @@ test.describe('find in page', () => {
         document.body.appendChild(cover);
       });
       await page.keyboard.press(FIND_KEY);
+      // The bloom clips the bar to a dot at first, so its centre is not hit-testable until it lands.
+      await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
 
       const onTop = await page.evaluate(() => {
         const bar = document.querySelector('[data-blok-testid="find-bar"]');
@@ -1648,6 +1892,182 @@ test.describe('find in page', () => {
       await page.mouse.up();
 
       expect(await barBox(page)).toEqual(placed);
+    });
+  });
+
+  test.describe('motion', () => {
+    const settle = async (page: Page): Promise<void> => {
+      await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
+    };
+
+    const selectWord = async (page: Page, text: string, start: number, end: number): Promise<void> => {
+      await page.getByText(text, { exact: true }).evaluate((element, range) => {
+        const node = element.firstChild;
+
+        if (node !== null) {
+          window.getSelection()?.setBaseAndExtent(node, range.start, node, range.end);
+        }
+      }, { start, end });
+    };
+
+    for (const { placement, dir } of [
+      { placement: 'top-end', dir: 'ltr' },
+      { placement: 'bottom-start', dir: 'ltr' },
+      { placement: 'top-center', dir: 'ltr' },
+      { placement: 'top-end', dir: 'rtl' },
+    ] as const) {
+      test(`the bloom ends with the skin exactly on the bar (${placement}, ${dir})`, async ({ page }) => {
+        // The editor takes its direction from i18n, not from <html dir>.
+        await createEditor(page, paragraphs('hello there'), { config: { find: { placement }, i18n: { direction: dir } } });
+        await focusParagraph(page, 'hello there');
+        await page.keyboard.press(FIND_KEY);
+        await settle(page);
+
+        const fit = await page.evaluate(() => {
+          const dock = document.querySelector<HTMLElement>('[data-blok-find]');
+          const bar = document.querySelector<HTMLElement>('[data-blok-find-bar]');
+
+          if (dock === null || bar === null) {
+            return null;
+          }
+          const skin = getComputedStyle(dock, '::before');
+
+          return {
+            skin: [skin.width, skin.height],
+            bar: [`${bar.offsetWidth}px`, `${bar.offsetHeight}px`],
+            clip: getComputedStyle(bar).clipPath,
+            opacity: getComputedStyle(bar).opacity,
+          };
+        });
+
+        expect(fit?.skin).toEqual(fit?.bar);
+        expect(fit?.clip).toBe('none');
+        expect(fit?.opacity).toBe('1');
+      });
+    }
+
+    for (const dir of ['ltr', 'rtl'] as const) {
+      test(`a top-end bar blooms from its inline-end corner (${dir})`, async ({ page }) => {
+        await createEditor(page, paragraphs('hello there'), { config: { find: { placement: 'top-end' }, i18n: { direction: dir } } });
+        await focusParagraph(page, 'hello there');
+        await page.keyboard.press(FIND_KEY);
+
+        // One synchronous read, at the bloom's first frame.
+        const start = await page.evaluate(() => {
+          const dock = document.querySelector<HTMLElement>('[data-blok-find]');
+          const bar = document.querySelector<HTMLElement>('[data-blok-find-bar]');
+          const skin = dock?.getAnimations({ subtree: true }).find((animation) => {
+            const effect = animation.effect;
+
+            return effect instanceof KeyframeEffect && effect.pseudoElement === '::before' && 'width' in (effect.getKeyframes()[0] ?? {});
+          });
+
+          if (dock === null || bar === null || skin === undefined) {
+            return null;
+          }
+          skin.pause();
+          skin.currentTime = 0;
+          const style = getComputedStyle(dock, '::before');
+          const read = { dir: dock.getAttribute('dir'), left: style.left, width: style.width, barWidth: bar.offsetWidth };
+
+          skin.play();
+
+          return read;
+        });
+
+        expect(start?.dir).toBe(dir);
+        expect(start?.width).toBe('40px');
+        expect(start?.left).toBe(dir === 'rtl' ? '0px' : `${(start?.barWidth ?? 0) - 40}px`);
+      });
+    }
+
+    test('Mod+F on a selected word flies it into the field, and writes nothing', async ({ page }) => {
+      await createEditor(page, paragraphs('pick this word'));
+      await page.evaluate(async () => {
+        const counter = window as Window & { __findChanges?: number };
+
+        counter.__findChanges = 0;
+        window.blokInstance?.destroy();
+        const blok = new window.Blok({
+          holder: 'blok',
+          data: { blocks: [{ id: 'find-p0', type: 'paragraph', data: { text: 'pick this word' } }] },
+          onChange: () => {
+            counter.__findChanges = (counter.__findChanges ?? 0) + 1;
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      });
+      await focusParagraph(page, 'pick this word');
+      await waitPastOnChangeBatch(page);
+      await selectWord(page, 'pick this word', 5, 9);
+      // The chip lives ~680ms, so record it as it is added instead of racing a poll.
+      await page.evaluate(() => {
+        const record = window as Window & { __findChips?: Array<{ text: string | null; animated: boolean }> };
+
+        record.__findChips = [];
+        new MutationObserver((mutations) => {
+          for (const node of mutations.flatMap((mutation) => [...mutation.addedNodes])) {
+            if (node instanceof HTMLElement && node.hasAttribute('data-blok-find-hop-chip')) {
+              record.__findChips?.push({ text: node.textContent, animated: node.getAnimations().length > 0 });
+            }
+          }
+        }).observe(document.body, { childList: true, subtree: true });
+      });
+      await page.keyboard.press(FIND_KEY);
+
+      await expect.poll(() => page.evaluate(() =>
+        (window as Window & { __findChips?: Array<{ text: string | null; animated: boolean }> }).__findChips)).toEqual([{ text: 'this', animated: true }]);
+      await expect(page.getByTestId('find-hop-chip')).toHaveCount(0);
+      await expect(page.getByTestId('find-input')).toHaveValue('this');
+      await expect(page.getByTestId('find-input')).toBeFocused();
+      await expect(page.getByTestId('find-field')).not.toHaveAttribute('data-blok-find-hopping', '');
+      await waitPastOnChangeBatch(page);
+
+      expect(await page.evaluate(() => (window as Window & { __findChanges?: number }).__findChanges)).toBe(0);
+      expect(await savedTexts(page)).toEqual(['pick this word']);
+    });
+
+    test('typing during the flight shows the typed text at once', async ({ page }) => {
+      await createEditor(page, paragraphs('pick this word'));
+      await focusParagraph(page, 'pick this word');
+      await selectWord(page, 'pick this word', 5, 9);
+      await page.keyboard.press(FIND_KEY);
+
+      // Read once, without polling: the flight lands on its own soon after, so a poll would pass anyway.
+      const readFlight = (): Promise<{ chips: number; hopping: boolean | undefined }> => page.evaluate(() => ({
+        chips: document.querySelectorAll('[data-blok-find-hop-chip]').length,
+        hopping: document.querySelector('[data-blok-find-field]')?.hasAttribute('data-blok-find-hopping'),
+      }));
+
+      expect(await readFlight()).toEqual({ chips: 1, hopping: true });
+      await page.keyboard.type('w');
+
+      expect(await readFlight()).toEqual({ chips: 0, hopping: false });
+      await expect(page.getByTestId('find-input')).toHaveValue('w');
+    });
+
+    test('with reduced motion the bar is whole on the first frame and nothing flies', async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await createEditor(page, paragraphs('pick this word'));
+      await focusParagraph(page, 'pick this word');
+      await selectWord(page, 'pick this word', 5, 9);
+      await page.keyboard.press(FIND_KEY);
+
+      const state = await page.evaluate(() => {
+        const bar = document.querySelector('[data-blok-find-bar]');
+
+        return {
+          running: document.querySelector('[data-blok-find]')?.getAnimations({ subtree: true }).length ?? -1,
+          chips: document.querySelectorAll('[data-blok-find-hop-chip]').length,
+          opacity: bar === null ? null : getComputedStyle(bar).opacity,
+          clip: bar === null ? null : getComputedStyle(bar).clipPath,
+        };
+      });
+
+      expect(state).toEqual({ running: 0, chips: 0, opacity: '1', clip: 'none' });
+      await expect(page.getByTestId('find-input')).toHaveValue('this');
     });
   });
 

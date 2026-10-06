@@ -17,6 +17,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const TOGGLE_CHILDREN_SELECTOR = '[data-blok-toggle-children]';
@@ -68,6 +69,7 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
     },
     { holder: HOLDER_ID, initialData: data }
   );
+  await openFixtureToggles(page, data);
 };
 
 const saveBlok = async (page: Page): Promise<OutputData> => {
@@ -169,7 +171,7 @@ test.describe('Toggle redo regression', () => {
     // Exact user scenario: create toggle, Enter to add child, type text, undo text, redo text.
     // The child block must stay inside the toggle throughout.
     await createBlok(page, {
-      blocks: [{ type: 'toggle', data: { text: 'My toggle' } }],
+      blocks: [{ type: 'toggle', data: { text: 'My toggle', isOpen: true } }],
     });
 
     // Press Enter at end of toggle header to create child block inside
@@ -231,7 +233,7 @@ test.describe('Toggle redo regression', () => {
     // Variant: type in the toggle HEADER while children exist.
     // Children must stay inside the toggle through undo/redo of header text.
     await createBlok(page, {
-      blocks: [{ type: 'toggle', data: { text: 'My toggle' } }],
+      blocks: [{ type: 'toggle', data: { text: 'My toggle', isOpen: true } }],
     });
 
     // Add a child block
@@ -303,7 +305,7 @@ test.describe('Toggle redo regression', () => {
     // both operations land in the same Yjs undo entry. CMD+Z removes
     // the entire block (not just text). CMD+Shift+Z must restore it inside toggle.
     await createBlok(page, {
-      blocks: [{ type: 'toggle', data: { text: 'My toggle' } }],
+      blocks: [{ type: 'toggle', data: { text: 'My toggle', isOpen: true } }],
     });
 
     const toggleContent = page.locator('[data-blok-toggle-content]');
@@ -349,7 +351,7 @@ test.describe('Toggle redo regression', () => {
 
   test('multiple undo/redo cycles keep child inside toggle', async ({ page }) => {
     await createBlok(page, {
-      blocks: [{ type: 'toggle', data: { text: 'My toggle' } }],
+      blocks: [{ type: 'toggle', data: { text: 'My toggle', isOpen: true } }],
     });
 
     const toggleContent = page.locator('[data-blok-toggle-content]');
@@ -403,7 +405,7 @@ test.describe('Toggle redo regression', () => {
   test('undo/redo of text in toggle heading body keeps child inside', async ({ page }) => {
     // Test toggle HEADING (not toggle list)
     await createBlok(page, {
-      blocks: [{ type: 'header', data: { text: 'Toggle heading', level: 2, isToggleable: true } }],
+      blocks: [{ type: 'header', data: { text: 'Toggle heading', level: 2, isToggleable: true, isOpen: true } }],
     });
 
     const header = page.getByRole('heading', { level: 2, name: 'Toggle heading' });

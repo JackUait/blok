@@ -19,6 +19,7 @@ import {
   IconAlignLeft,
   IconAlignRight,
   IconCaption,
+  IconChart,
   IconCopy,
   IconDownload,
   IconPlayerLoop,
@@ -30,7 +31,7 @@ import {
 import { attachResizeHandle, type ResizeEdge } from '../image/resizer';
 import { figureInsets } from '../image/figure-insets';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
-import { DEFAULT_CAPTION_PLACEHOLDER, MIN_WIDTH_PX, URL_PATTERN } from './constants';
+import { DEFAULT_CAPTION_PLACEHOLDER, DEFAULT_MIME_TYPES, MIN_WIDTH_PX, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
 import { deliverToRebuiltBlock, isStillInDocument, putBackOnRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
@@ -39,7 +40,7 @@ import type { ConvertedMedia, MediaConfig, VideoFormat } from '../../../types/co
 import { enqueueMediaJob } from '../../components/media-variants/media-queue';
 import { convertVideoInBackground, videoFormatOf } from '../../components/media-variants/video-background';
 import { produceVideoVariant } from '../../components/media-variants/video-variants';
-import { renderCaptionRow, renderVideo } from './ui';
+import { renderCaptionRow, renderErrorState, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
 import { Uploader, VideoUploadError, type UploadResult } from './uploader';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
@@ -70,6 +71,7 @@ export class VideoTool implements BlockTool {
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private resizeDetach: (() => void)[] = [];
   private controlsHandle: ControlsHandle | null = null;
+  private loopOverrideActive: boolean;
   // Ephemeral theater (cinema-width) state — presentation only, never saved.
   private theater = false;
   /** Set by `removed()`: this instance is no longer the document's block. */
@@ -86,6 +88,7 @@ export class VideoTool implements BlockTool {
     this.config = options.config ?? {};
     this.readOnly = options.readOnly;
     this.data = { ...options.data, url: options.data?.url ?? '', variants: readVariants(options.data?.variants) };
+    this.loopOverrideActive = this.data.loop !== undefined;
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
     this.uploader = new Uploader(this.config, this.api.uploader);
   }
@@ -108,7 +111,7 @@ export class VideoTool implements BlockTool {
     if (this.data.width !== undefined) out.width = this.data.width;
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;
     if (this.data.autoplay) out.autoplay = true;
-    if (this.data.loop) out.loop = true;
+    if (this.data.loop !== undefined) out.loop = this.data.loop;
     if (this.data.hideControls) out.hideControls = true;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
     if (this.data.mimeType !== undefined) out.mimeType = this.data.mimeType;
@@ -240,7 +243,7 @@ export class VideoTool implements BlockTool {
         icon: IconPlayerLoop,
         title: tr(i18n, 'tools.video.loop', 'Loop'),
         name: 'video-loop',
-        isActive: this.data.loop === true,
+        isActive: (this.root?.querySelector('video')?.loop ?? this.data.loop) === true,
         closeOnActivate: true,
         onActivate: (): void => this.toggleLoop(),
       },
@@ -276,6 +279,21 @@ export class VideoTool implements BlockTool {
         closeOnActivate: true,
         onActivate: (): void => this.copyUrl(),
       },
+      {
+        icon: IconCopy,
+        title: tr(i18n, 'tools.video.ctxCopyUrlAtTime', 'Copy video URL at current time'),
+        name: 'video-copy-url-at-time',
+        isDisabled: !this.root?.querySelector('video'),
+        closeOnActivate: true,
+        onActivate: (): void => this.copyUrlAtCurrentTime(),
+      },
+      ...(this.controlsHandle ? [{
+        icon: IconChart,
+        title: tr(i18n, 'tools.video.ctxStats', 'Playback statistics'),
+        name: 'video-statistics',
+        closeOnActivate: true,
+        onActivate: (): void => this.controlsHandle?.toggleStats(),
+      }] : []),
     ];
   }
 
@@ -705,26 +723,24 @@ export class VideoTool implements BlockTool {
 
   private renderError(): void {
     if (!this.root) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'blok-video-error-state';
-    wrap.setAttribute('data-role', 'video-error');
-
-    const message = document.createElement('span');
-    message.textContent = this.errorMessage ?? tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed');
-
-    wrap.appendChild(message);
-
-    // Viewers cannot replace the source — offering the button would only dead-end.
-    if (!this.readOnly) {
-      const retry = document.createElement('button');
-      retry.type = 'button';
-      retry.className = 'blok-video-retry';
-      retry.setAttribute('data-action', 'replace');
-      retry.textContent = tr(this.api.i18n, 'tools.video.errorReplace', 'Replace');
-      retry.addEventListener('click', () => this.transitionToEmpty());
-      wrap.appendChild(retry);
-    }
-    this.root.appendChild(wrap);
+    // Viewers cannot replace the source — offering either button would only dead-end.
+    const canUpload = !this.readOnly && this.config.sources !== 'url';
+    this.root.appendChild(renderErrorState({
+      message: this.errorMessage ?? tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed'),
+      width: this.data.width,
+      ...(this.readOnly
+        ? {}
+        : { replace: { label: tr(this.api.i18n, 'tools.video.errorReplace', 'Replace'), onReplace: () => this.transitionToEmpty() } }),
+      ...(canUpload
+        ? {
+          upload: {
+            label: tr(this.api.i18n, 'tools.video.emptyChooseFile', 'Choose a video'),
+            accept: (this.config.types ?? [...DEFAULT_MIME_TYPES]).join(','),
+            onFile: (file: File) => this.startUpload(file),
+          },
+        }
+        : {}),
+    }));
   }
 
   private renderRendered(): void {
@@ -759,7 +775,17 @@ export class VideoTool implements BlockTool {
           figure,
           glow: this.config.glow ?? 'minimal',
           loop: this.data.loop === true,
+          loopOverride: this.loopOverrideActive ? this.data.loop === true : undefined,
+          onLoopChange: () => {
+            this.loopOverrideActive = false;
+            // A saved block choice would override this gear choice after reload.
+            if (!this.readOnly && this.data.loop !== undefined) {
+              this.data.loop = undefined;
+              this.block.dispatchChange();
+            }
+          },
           i18n: this.api.i18n,
+          readOnly: this.readOnly,
         });
         media.appendChild(this.controlsHandle.element);
       }
@@ -858,7 +884,9 @@ export class VideoTool implements BlockTool {
   }
 
   private toggleLoop(): void {
-    this.data.loop = this.data.loop !== true ? true : undefined;
+    const currentLoop = (this.root?.querySelector('video')?.loop ?? this.data.loop) === true;
+    this.data.loop = !currentLoop;
+    this.loopOverrideActive = true;
     this.block.dispatchChange();
     this.renderState();
   }
@@ -898,7 +926,16 @@ export class VideoTool implements BlockTool {
   private copyUrl(): void {
     const clip = navigator.clipboard;
     if (clip && typeof clip.writeText === 'function') {
-      void clip.writeText(this.data.url);
+      void clip.writeText(this.root?.querySelector('video')?.currentSrc || this.data.url);
+    }
+  }
+
+  private copyUrlAtCurrentTime(): void {
+    const video = this.root?.querySelector('video');
+    const clip = navigator.clipboard;
+    if (video && clip && typeof clip.writeText === 'function') {
+      const url = (video.currentSrc || this.data.url).split('#', 1)[0];
+      void clip.writeText(`${url}#t=${Math.floor(video.currentTime)}`);
     }
   }
 }

@@ -2,7 +2,7 @@ import type { I18n, OutputData } from '../../../types';
 import type { Events } from '../../../types/api/events';
 import type { ToolsConfig } from '../../../types/api/tools';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
-import type { DatabaseRow, PropertyDefinition, PropertyType, PropertyValue } from './types';
+import type { DatabaseRow, DatabaseRowPages, PropertyDefinition, PropertyType, PropertyValue } from './types';
 import { IconChevronRight } from '../../components/icons';
 import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -22,6 +22,7 @@ export interface CardDrawerOptions {
   /** The outer editor's events, so the page body follows its direction flips. */
   events?: Pick<Events, 'on' | 'off'>;
   toolsConfig?: ToolsConfig;
+  rowPages?: DatabaseRowPages;
   titlePropertyId: string;
   descriptionPropertyId?: string;
   schema: PropertyDefinition[];
@@ -66,8 +67,9 @@ export class DatabaseCardDrawer {
   private readonly readOnly: boolean;
   private readonly i18n: I18n | undefined;
   private readonly toolsConfig: ToolsConfig | undefined;
+  private readonly rowPages: DatabaseRowPages | undefined;
   private readonly titlePropertyId: string;
-  private readonly descriptionPropertyId: string | undefined;
+  private descriptionPropertyId: string | undefined;
   private schema: PropertyDefinition[];
   private readonly onTitleChange: (rowId: string, title: string) => void;
   private readonly onDescriptionChange: (rowId: string, description: OutputData) => void;
@@ -78,7 +80,16 @@ export class DatabaseCardDrawer {
   private drawer: HTMLDivElement | null = null;
   private currentRowId: string | null = null;
   private currentRow: DatabaseRow | null = null;
+  private editorInitVersion = 0;
   private blokInstance: BlokInstance | null = null;
+  private pageMount: { destroy(): void } | null = null;
+  /** The page the holder shows or failed to mount. Kept while a peer's save drops `pageId`. */
+  private mountedPageId: string | undefined = undefined;
+  private readonly pendingBodyRows = new Set<string>();
+  /** Rows waiting for the host to say whether they have a page. */
+  private readonly lookupRows = new Set<string>();
+  /** Rows whose page the host could not resolve. */
+  private readonly failedLookupRows = new Set<string>();
   private isBodyChanged: ((data: OutputData) => boolean) | null = null;
   private escapeHandler: ((e: KeyboardEvent) => void) | null = null;
   private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
@@ -89,6 +100,7 @@ export class DatabaseCardDrawer {
     this.readOnly = options.readOnly;
     this.i18n = options.i18n;
     this.toolsConfig = options.toolsConfig;
+    this.rowPages = options.rowPages;
     this.titlePropertyId = options.titlePropertyId;
     this.descriptionPropertyId = options.descriptionPropertyId;
     this.schema = options.schema;
@@ -124,6 +136,46 @@ export class DatabaseCardDrawer {
 
   get isOpen(): boolean {
     return this.drawer !== null;
+  }
+
+  setDescriptionPropertyId(propertyId: string): void {
+    this.descriptionPropertyId = propertyId;
+  }
+
+  private descriptionFor(row: DatabaseRow): OutputData | undefined {
+    const hasBody = (value: PropertyValue | undefined): value is OutputData =>
+      value !== undefined && value !== null && typeof value === 'object' && !Array.isArray(value)
+      && Array.isArray(value.blocks) && value.blocks.length > 0;
+    const designated = this.schema.find((property) => property.id === this.descriptionPropertyId);
+    const designatedValue = this.descriptionPropertyId === undefined
+      ? undefined
+      : row.properties[this.descriptionPropertyId];
+
+    // An explicit empty body must not revive an older body column.
+    if (designatedValue !== undefined) {
+      return designatedValue === null ? undefined : designatedValue as OutputData;
+    }
+
+    // Peers can create duplicate body columns with the same name.
+    for (const property of this.schema) {
+      const value = row.properties[property.id];
+
+      if (property.type === 'richText' && property.name === designated?.name && hasBody(value)) {
+        return value;
+      }
+    }
+
+    // A backend-omitted column can still hold the row's saved body.
+    // New edits append a property key, so the latest orphan comes first.
+    for (const [propertyId, value] of Object.entries(row.properties).reverse()) {
+      if (!this.schema.some((property) => property.id === propertyId) && hasBody(value)) {
+        return value;
+      }
+    }
+
+    return this.descriptionPropertyId === undefined
+      ? undefined
+      : row.properties[this.descriptionPropertyId] as OutputData | undefined;
   }
 
   open(row: DatabaseRow): void {
@@ -243,8 +295,9 @@ export class DatabaseCardDrawer {
       }
 
       const target = e.target as Node | null;
+      const activeHolder = this.drawer?.querySelector('[data-blok-database-drawer-editor]');
 
-      if (target && editorHolder.contains(target)) {
+      if (target && activeHolder?.contains(target)) {
         return;
       }
 
@@ -330,7 +383,10 @@ export class DatabaseCardDrawer {
 
     if (editorHolder !== null) {
       editorHolder.innerHTML = '';
-      this.initNestedEditor(editorHolder, row);
+      const nextHolder = editorHolder.cloneNode(false) as HTMLElement;
+
+      editorHolder.replaceWith(nextHolder);
+      this.initNestedEditor(nextHolder, row);
     }
   }
 
@@ -385,13 +441,45 @@ export class DatabaseCardDrawer {
     return this.drawer === null ? null : this.currentRowId;
   }
 
+  setBodyMigrationPending(rowId: string, pending: boolean): void {
+    if (pending) {
+      this.pendingBodyRows.add(rowId);
+    } else {
+      this.pendingBodyRows.delete(rowId);
+    }
+    if (this.currentRowId !== rowId) return;
+    this.drawer?.querySelector('[data-blok-database-drawer-editor]')?.toggleAttribute('inert', pending);
+  }
+
+  /**
+   * Hold the body while the host looks the row's page up, show a failure when
+   * the lookup failed, or let the body load. A row the host may have moved
+   * must not open the legacy editor: its body there is stale.
+   */
+  setRowPageLookup(rowId: string, state: 'pending' | 'done' | 'failed'): void {
+    this.lookupRows.delete(rowId);
+    this.failedLookupRows.delete(rowId);
+    if (state === 'pending') this.lookupRows.add(rowId);
+    if (state === 'failed') this.failedLookupRows.add(rowId);
+    if (this.currentRowId !== rowId || this.currentRow === null || this.mountedPageId !== undefined) return;
+    const editorHolder = this.drawer?.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
+
+    if (editorHolder === null || editorHolder === undefined) return;
+    // Discard, not save: the legacy body may be stale.
+    this.blokInstance?.destroy();
+    this.blokInstance = null;
+    this.isBodyChanged = null;
+    editorHolder.replaceChildren();
+    this.initNestedEditor(editorHolder, this.currentRow);
+  }
+
   /**
    * Show the open row's data after undo, redo or a peer changed it, or close
    * when the row is gone. A stale title or body would be written back over
    * the change on the next keystroke.
    */
   syncOpenRow(row: DatabaseRow | undefined): void {
-    if (this.drawer === null) {
+    if (this.drawer === null || (row !== undefined && row.id !== this.currentRowId)) {
       return;
     }
 
@@ -416,14 +504,27 @@ export class DatabaseCardDrawer {
 
     this.refreshSchema(this.schema);
 
-    const description = this.descriptionPropertyId !== undefined
-      ? row.properties[this.descriptionPropertyId] as OutputData | undefined
-      : undefined;
+    const description = this.descriptionFor(row);
     const editorHolder = this.drawer.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
+
+    // An old client's save drops `pageId`; the page stays the body.
+    const shownPageId = row.pageId ?? (this.rowPages === undefined ? undefined : this.mountedPageId);
+
+    if (editorHolder !== null && shownPageId !== this.mountedPageId) {
+      this.blokInstance?.destroy();
+      this.blokInstance = null;
+      this.isBodyChanged = null;
+      this.pageMount?.destroy();
+      this.pageMount = null;
+      this.mountedPageId = undefined;
+      editorHolder.replaceChildren();
+      this.initNestedEditor(editorHolder, row);
+      return;
+    }
 
     // Discard, not save: saving the old editor would write the stale body
     // back over the change.
-    if (editorHolder !== null && this.isBodyChanged?.(description ?? { blocks: [] }) === true) {
+    if (editorHolder !== null && this.mountedPageId === undefined && this.isBodyChanged?.(description ?? { blocks: [] }) === true) {
       this.blokInstance?.destroy();
       this.blokInstance = null;
       this.isBodyChanged = null;
@@ -602,14 +703,19 @@ export class DatabaseCardDrawer {
   }
 
   private cleanupEditor(): void {
+    this.pageMount?.destroy();
+    this.pageMount = null;
+    this.mountedPageId = undefined;
     if (this.blokInstance) {
+      const instance = this.blokInstance;
+
       try {
-        const instance = this.blokInstance;
         const rowId = this.currentRowId;
+        const migrationPending = rowId !== null && this.pendingBodyRows.has(rowId);
         const isBodyChanged = this.isBodyChanged;
 
         instance.save().then((data) => {
-          if (rowId !== null && isBodyChanged?.(data) === true) {
+          if (rowId !== null && !migrationPending && !this.pendingBodyRows.has(rowId) && isBodyChanged?.(data) === true) {
             this.onDescriptionChange(rowId, data);
           }
           instance.destroy();
@@ -617,7 +723,7 @@ export class DatabaseCardDrawer {
           instance.destroy();
         });
       } catch {
-        // Blok may already be destroyed
+        (instance as Partial<BlokInstance>).destroy?.();
       }
       this.blokInstance = null;
       this.isBodyChanged = null;
@@ -635,30 +741,81 @@ export class DatabaseCardDrawer {
   }
 
   private initNestedEditor(editorHolder: HTMLElement, row: DatabaseRow): void {
+    const initVersion = ++this.editorInitVersion;
+
+    editorHolder.toggleAttribute('inert', this.pendingBodyRows.has(row.id));
+    if (row.pageId !== undefined && this.rowPages !== undefined) {
+      // Set even when mounting fails, so a later sync does not retry it.
+      this.mountedPageId = row.pageId;
+      try {
+        this.pageMount = this.rowPages.mount(row.pageId, editorHolder);
+      } catch {
+        this.showPageFailure(editorHolder);
+      }
+      return;
+    }
+    if (this.rowPages !== undefined && this.failedLookupRows.has(row.id)) {
+      this.showPageFailure(editorHolder);
+      return;
+    }
+    if (this.rowPages !== undefined && this.lookupRows.has(row.id)) {
+      editorHolder.toggleAttribute('inert', true);
+      return;
+    }
+
     import('../../blok').then(({ Blok }) => {
       const rowId = row.id;
+
+      if (this.currentRowId !== rowId || this.editorInitVersion !== initVersion) {
+        return;
+      }
+
       // The row may have changed while the editor loaded.
-      const latest = this.currentRow?.id === rowId ? this.currentRow : row;
-      const description = this.descriptionPropertyId !== undefined
-        ? latest.properties[this.descriptionPropertyId]
-        : undefined;
-      const isBodyChanged = createBodyChangeCheck(description as OutputData | undefined);
+      const latest = this.currentRow ?? row;
+
+      if (this.rowPages !== undefined && (latest.pageId !== undefined
+        || this.lookupRows.has(rowId) || this.failedLookupRows.has(rowId))) {
+        return;
+      }
+      const description = this.descriptionFor(latest);
+      const isBodyChanged = createBodyChangeCheck(description);
+      const saveState: {
+        started: number;
+        inFlight: number;
+        best: { order: number; data: OutputData } | null;
+      } = { started: 0, inFlight: 0, best: null };
       const blok = new Blok({
         ...this.toolsConfig,
         holder: editorHolder,
-        data: description as OutputData | undefined,
+        data: description,
         readOnly: this.readOnly,
+        // The card body belongs to the host's document; it must not sync or lead on its own.
+        tabSync: false,
         // A fresh editor defaults to LTR; the page body reads like its database.
         i18n: { direction: getElementDirection(editorHolder) },
         onChange: async () => {
+          if (this.pendingBodyRows.has(rowId)) return;
+          const save = ++saveState.started;
+
+          saveState.inFlight++;
           try {
             const data = await instance.save();
 
-            if (isBodyChanged(data)) {
-              this.onDescriptionChange(rowId, data);
+            if (saveState.best === null || save > saveState.best.order) {
+              saveState.best = { order: save, data };
             }
           } catch {
             // save may fail if editor is being destroyed
+          }
+
+          saveState.inFlight--;
+          if (saveState.inFlight === 0) {
+            const best = saveState.best;
+
+            saveState.best = null;
+            if (best !== null && !this.pendingBodyRows.has(rowId) && isBodyChanged(best.data)) {
+              this.onDescriptionChange(rowId, best.data);
+            }
           }
         },
       });
@@ -670,5 +827,13 @@ export class DatabaseCardDrawer {
     }).catch(() => {
       // Blok import may fail in unit tests (jsdom), drawer still works for title
     });
+  }
+
+  private showPageFailure(editorHolder: HTMLElement): void {
+    const failure = document.createElement('p');
+
+    failure.setAttribute('role', 'alert');
+    failure.textContent = this.i18n?.t('tools.stub.error') ?? englishDictionary['tools.stub.error'];
+    editorHolder.replaceChildren(failure);
   }
 }

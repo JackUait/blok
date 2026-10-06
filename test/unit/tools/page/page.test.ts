@@ -6,6 +6,13 @@ import { previewLines } from '../../../../src/tools/page/hover-preview';
 import { sanitizeBlocks } from '../../../../src/components/utils/sanitizer';
 import { convertBlockDataToString } from '../../../../src/components/utils/blocks';
 import type { API, BlockOrigin, BlockToolConstructorOptions } from '../../../../types';
+import { log } from '../../../../src/components/utils/logger';
+import type * as Logger from '../../../../src/components/utils/logger';
+
+vi.mock('../../../../src/components/utils/logger', async (importOriginal) => ({
+  ...await importOriginal<typeof Logger>(),
+  log: vi.fn(),
+}));
 
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -68,6 +75,15 @@ const click = (target: HTMLElement, init: MouseEventInit = {}): MouseEvent => {
   return event;
 };
 
+const renderResolved = async (tool: PageTool): Promise<HTMLElement> => {
+  const root = tool.render();
+
+  tool.rendered();
+  await flush();
+
+  return root;
+};
+
 describe('Page tool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -78,12 +94,12 @@ describe('Page tool', () => {
   });
 
   describe('render', () => {
-    it('renders a mutation-free page root with a link to the page', () => {
+    it('renders a mutation-free page root with a link after resolution', async () => {
       const tool = new PageTool(createOptions({
-        data: { pageId: 'p1', cache: { title: 'Roadmap' } },
-        config: { href: (id) => `/pages/${id}` },
+        data: { pageId: 'p1', cache: { title: 'Stale roadmap' } },
+        config: { resolve: () => ({ title: 'Roadmap' }), href: (id) => `/pages/${id}` },
       }));
-      const root = tool.render();
+      const root = await renderResolved(tool);
 
       expect(root.getAttribute('data-blok-tool')).toBe('page');
       expect(root.getAttribute('data-blok-mutation-free')).toBe('true');
@@ -91,65 +107,100 @@ describe('Page tool', () => {
       expect(titleOf(root).textContent).toBe('Roadmap');
     });
 
-    it('shows the title as text, never as markup', () => {
+    it('shows an authorized title as text, never as markup', async () => {
       const evil = '<img src=x onerror=alert(1)>';
-      const tool = new PageTool(createOptions({ data: { pageId: 'p1', cache: { title: evil } } }));
-      const root = tool.render();
+      const tool = new PageTool(createOptions({ config: { resolve: () => ({ title: evil }) } }));
+      const root = await renderResolved(tool);
 
       expect(titleOf(root).textContent).toBe(evil);
       expect(root.querySelector('img')).toBeNull();
     });
 
-    it('drops a javascript: href from the host', () => {
-      const tool = new PageTool(createOptions({ config: { href: () => 'javascript:alert(1)' } }));
-      const root = tool.render();
+    it('drops a javascript: href from the host', async () => {
+      const tool = new PageTool(createOptions({ config: { resolve: () => ({}), href: () => 'javascript:alert(1)' } }));
+      const root = await renderResolved(tool);
 
       expect(anchorOf(root).hasAttribute('href')).toBe(false);
     });
 
-    it('renders no href when the host gives no href()', () => {
-      const root = new PageTool(createOptions()).render();
+    it('renders no href when the host gives no href()', async () => {
+      const root = await renderResolved(new PageTool(createOptions({ config: { resolve: () => ({}) } })));
 
       expect(anchorOf(root).hasAttribute('href')).toBe(false);
     });
 
-    it('shows a localized placeholder for a page without a title', () => {
-      const root = new PageTool(createOptions({ data: { pageId: 'p1' } })).render();
+    it('keeps resolved metadata without a URL when the host href throws', async () => {
+      const tool = new PageTool(createOptions({
+        config: {
+          resolve: () => ({ title: 'Roadmap' }),
+          href: () => { throw new Error('URL unavailable'); },
+        },
+      }));
+      const root = await renderResolved(tool);
+
+      expect(titleOf(root).textContent).toBe('Roadmap');
+      expect(anchorOf(root).hasAttribute('href')).toBe(false);
+    });
+
+    it('removes a stale URL when the host href later throws', async () => {
+      let failHref = false;
+      const tool = new PageTool(createOptions({
+        config: {
+          resolve: () => ({ title: 'Roadmap' }),
+          href: () => {
+            if (failHref) {
+              throw new Error('URL unavailable');
+            }
+
+            return '/pages/p1';
+          },
+        },
+      }));
+      const root = await renderResolved(tool);
+
+      expect(anchorOf(root).getAttribute('href')).toBe('/pages/p1');
+      failHref = true;
+      expect(() => tool.setData({ pageId: 'p1' })).not.toThrow();
+      expect(anchorOf(root).hasAttribute('href')).toBe(false);
+    });
+
+    it('shows a localized placeholder for an authorized page without a title', async () => {
+      const root = await renderResolved(new PageTool(createOptions({ config: { resolve: () => ({}) } })));
 
       expect(titleOf(root).textContent).toBe('tools.page.untitled');
       expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('untitled');
     });
 
-    it('treats a whitespace-only title as untitled', () => {
-      const root = new PageTool(createOptions({ data: { pageId: 'p1', cache: { title: '   ' } } })).render();
+    it('treats a whitespace-only authorized title as untitled', async () => {
+      const root = await renderResolved(new PageTool(createOptions({ config: { resolve: () => ({ title: '   ' }) } })));
 
       expect(titleOf(root).textContent).toBe('tools.page.untitled');
     });
 
-    it('shows an emoji icon as text', () => {
-      const root = new PageTool(createOptions({
-        data: { pageId: 'p1', cache: { title: 'A', icon: { type: 'emoji', value: '🗺' } } },
-      })).render();
+    it('shows an authorized emoji icon as text', async () => {
+      const root = await renderResolved(new PageTool(createOptions({
+        config: { resolve: () => ({ title: 'A', icon: { type: 'emoji', value: '🗺' } }) },
+      })));
       const icon = root.querySelector('[data-blok-testid="page-icon"]');
 
       expect(icon?.textContent).toBe('🗺');
       expect(icon?.querySelector('svg')).toBeNull();
     });
 
-    it('shows an image icon from a safe url', () => {
-      const root = new PageTool(createOptions({
-        data: { pageId: 'p1', cache: { icon: { type: 'image', url: 'https://cdn.test/i.png' } } },
-      })).render();
+    it('shows an authorized image icon from a safe url', async () => {
+      const root = await renderResolved(new PageTool(createOptions({
+        config: { resolve: () => ({ icon: { type: 'image', url: 'https://cdn.test/i.png' } }) },
+      })));
       const img = root.querySelector('[data-blok-testid="page-icon"] img');
 
       expect(img?.getAttribute('src')).toBe('https://cdn.test/i.png');
       expect(img?.getAttribute('alt')).toBe('');
     });
 
-    it('falls back to the page glyph when the image icon url is unsafe', () => {
-      const root = new PageTool(createOptions({
-        data: { pageId: 'p1', cache: { icon: { type: 'image', url: 'javascript:alert(1)' } } },
-      })).render();
+    it('falls back to the page glyph when an authorized image icon url is unsafe', async () => {
+      const root = await renderResolved(new PageTool(createOptions({
+        config: { resolve: () => ({ icon: { type: 'image', url: 'javascript:alert(1)' } }) },
+      })));
       const icon = root.querySelector('[data-blok-testid="page-icon"]');
 
       expect(icon?.querySelector('img')).toBeNull();
@@ -188,9 +239,11 @@ describe('Page tool', () => {
   });
 
   describe('click', () => {
-    it('opens the page through the host on a plain left click', () => {
+    it('opens the authorized page through the host on a plain left click', async () => {
       const open = vi.fn();
-      const root = new PageTool(createOptions({ config: { open, href: (id) => `/p/${id}` } })).render();
+      const root = await renderResolved(new PageTool(createOptions({
+        config: { resolve: () => ({}), open, href: (id) => `/p/${id}` },
+      })));
       const event = click(anchorOf(root));
 
       expect(open).toHaveBeenCalledTimes(1);
@@ -204,20 +257,145 @@ describe('Page tool', () => {
       ['shift', { shiftKey: true }],
       ['alt', { altKey: true }],
       ['non-primary button', { button: 1 }],
-    ])('leaves a %s click to the browser', (_name, init) => {
+    ])('leaves a %s click to the browser', async (_name, init) => {
       const open = vi.fn();
-      const root = new PageTool(createOptions({ config: { open, href: (id) => `/p/${id}` } })).render();
+      const root = await renderResolved(new PageTool(createOptions({
+        config: { resolve: () => ({}), open, href: (id) => `/p/${id}` },
+      })));
       const event = click(anchorOf(root), init);
 
       expect(open).not.toHaveBeenCalled();
       expect(event.defaultPrevented).toBe(false);
     });
 
-    it('lets the link navigate when the host gives no open()', () => {
-      const root = new PageTool(createOptions({ config: { href: (id) => `/p/${id}` } })).render();
+    it('lets an authorized link navigate when the host gives no open()', async () => {
+      const root = await renderResolved(new PageTool(createOptions({
+        config: { resolve: () => ({}), href: (id) => `/p/${id}` },
+      })));
       const event = click(anchorOf(root));
 
       expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
+  describe('context menu actions', () => {
+    it('marks the page link as a block-menu surface', () => {
+      const root = new PageTool(createOptions({
+        config: { href: (id) => `/pages/${id}` },
+      })).render();
+
+      expect(anchorOf(root).hasAttribute('data-blok-block-context-menu')).toBe(true);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('opens a page URL in a new tab', async () => {
+      const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const tool = new PageTool(createOptions({
+        config: { resolve: () => ({}), href: (id) => `https://workspace.test/pages/${id}` },
+      }));
+
+      tool.render();
+      tool.rendered();
+      await flush();
+      const settings = tool.renderSettings() as Array<{ name?: string; title?: string; onActivate?: () => void }>;
+      const action = settings.find((item) => item.name === 'page-open-new-tab');
+
+      expect(action?.title).toBe('tools.file.previewOpenInNewTab');
+      action?.onActivate?.();
+      expect(open).toHaveBeenCalledWith('https://workspace.test/pages/p1', '_blank', 'noopener,noreferrer');
+    });
+
+    it('does not open a stale settings action after access is denied', async () => {
+      const opened = vi.spyOn(window, 'open').mockReturnValue(null);
+      let denied = false;
+      let notify: (() => void) | undefined;
+      const tool = new PageTool(createOptions({
+        config: {
+          resolve: () => denied ? { access: 'none' } : { title: 'Allowed' },
+          subscribe: (_id, onChange) => { notify = onChange; },
+          href: () => 'https://workspace.test/pages/p1',
+        },
+      }));
+
+      tool.render();
+      tool.rendered();
+      await flush();
+      const settings = tool.renderSettings() as Array<{ name?: string; onActivate?: () => void }>;
+      const action = settings.find((item) => item.name === 'page-open-new-tab');
+
+      denied = true;
+      notify?.();
+      await flush();
+      action?.onActivate?.();
+
+      expect(opened).not.toHaveBeenCalled();
+    });
+
+    it('does not duplicate the built-in copy-link tune', async () => {
+      const tool = new PageTool(createOptions({
+        config: { resolve: () => ({}), href: (id) => `https://workspace.test/pages/${id}` },
+      }));
+
+      tool.render();
+      tool.rendered();
+      await flush();
+      const settings = tool.renderSettings() as Array<{ name?: string }>;
+
+      expect(settings.some((item) => item.name === 'page-copy-url')).toBe(false);
+      expect(PageTool.copyAsLink({ pageId: 'p1' }, { href: (id) => `https://workspace.test/pages/${id}` })?.url)
+        .toBe('https://workspace.test/pages/p1');
+    });
+
+    it('does not copy a link when the host href throws', () => {
+      expect(PageTool.copyAsLink({ pageId: 'p1' }, {
+        href: () => { throw new Error('URL unavailable'); },
+      })).toBeNull();
+    });
+
+    it('does not offer a new-tab action when the host href later throws', async () => {
+      let failHref = false;
+      const tool = new PageTool(createOptions({
+        config: {
+          resolve: () => ({ title: 'Roadmap' }),
+          href: () => {
+            if (failHref) {
+              throw new Error('URL unavailable');
+            }
+
+            return '/pages/p1';
+          },
+        },
+      }));
+
+      await renderResolved(tool);
+      failHref = true;
+      const settings = tool.renderSettings() as Array<{ name?: string }>;
+
+      expect(settings.some((item) => item.name === 'page-open-new-tab')).toBe(false);
+    });
+
+    it('does not offer navigation for a missing page or unsafe URL', async () => {
+      const missing = new PageTool(createOptions({
+        config: { href: () => 'https://workspace.test/pages/p1', resolve: () => null },
+      }));
+      missing.render();
+      missing.rendered();
+      await flush();
+      const missingSettings = missing.renderSettings() as Array<{ name?: string }>;
+      const unsafe = new PageTool(createOptions({
+        config: { resolve: () => ({}), href: () => 'javascript:alert(1)' },
+      }));
+
+      unsafe.render();
+      unsafe.rendered();
+      await flush();
+      const unsafeSettings = unsafe.renderSettings() as Array<{ name?: string }>;
+
+      expect(missingSettings.some((item) => item.name === 'page-open-new-tab')).toBe(false);
+      expect(unsafeSettings.some((item) => item.name === 'page-open-new-tab')).toBe(false);
     });
   });
 
@@ -225,11 +403,11 @@ describe('Page tool', () => {
     const enter = (init: KeyboardEventInit = {}): KeyboardEvent =>
       new KeyboardEvent('keydown', { key: 'Enter', ...init });
 
-    it('opens the page through the host', () => {
+    it('opens the authorized page through the host', async () => {
       const open = vi.fn();
-      const tool = new PageTool(createOptions({ config: { open, href: (id) => `/p/${id}` } }));
+      const tool = new PageTool(createOptions({ config: { resolve: () => ({}), open, href: (id) => `/p/${id}` } }));
 
-      tool.render();
+      await renderResolved(tool);
       const event = enter({ metaKey: true });
 
       expect(tool.onNavigationEnter(event)).toBe(true);
@@ -237,29 +415,29 @@ describe('Page tool', () => {
       expect(open).toHaveBeenCalledWith('p1', { event });
     });
 
-    it('opens an untitled page too', () => {
+    it('opens an authorized untitled page too', async () => {
       const open = vi.fn();
-      const tool = new PageTool(createOptions({ data: { pageId: 'p1' }, config: { open } }));
+      const tool = new PageTool(createOptions({ config: { resolve: () => ({}), open } }));
 
-      tool.render();
+      await renderResolved(tool);
 
       expect(tool.onNavigationEnter(enter())).toBe(true);
       expect(open).toHaveBeenCalledTimes(1);
     });
 
-    it('opens the page in read-only mode', () => {
+    it('opens the authorized page in read-only mode', async () => {
       const open = vi.fn();
-      const tool = new PageTool(createOptions({ config: { open }, readOnly: true }));
+      const tool = new PageTool(createOptions({ config: { resolve: () => ({}), open }, readOnly: true }));
 
-      tool.render();
+      await renderResolved(tool);
 
       expect(tool.onNavigationEnter(enter())).toBe(true);
       expect(open).toHaveBeenCalledTimes(1);
     });
 
-    it('follows the link like a click when the host gives no open()', () => {
-      const tool = new PageTool(createOptions({ config: { href: (id) => `/p/${id}` } }));
-      const root = tool.render();
+    it('follows the link like a click when the host gives no open()', async () => {
+      const tool = new PageTool(createOptions({ config: { resolve: () => ({}), href: (id) => `/p/${id}` } }));
+      const root = await renderResolved(tool);
       const clicks: MouseEvent[] = [];
 
       anchorOf(root).addEventListener('click', (event) => {
@@ -275,10 +453,10 @@ describe('Page tool', () => {
     it.each([
       ['meta', { metaKey: true }],
       ['ctrl', { ctrlKey: true }],
-    ])('opens a new tab on %s+Enter when the host gives no open()', (_name, init) => {
+    ])('opens a new tab on %s+Enter when the host gives no open()', async (_name, init) => {
       const opened = vi.spyOn(window, 'open').mockReturnValue(null);
-      const tool = new PageTool(createOptions({ config: { href: (id) => `/p/${id}` } }));
-      const root = tool.render();
+      const tool = new PageTool(createOptions({ config: { resolve: () => ({}), href: (id) => `/p/${id}` } }));
+      const root = await renderResolved(tool);
       const clicks = vi.fn();
 
       anchorOf(root).addEventListener('click', clicks);
@@ -288,10 +466,10 @@ describe('Page tool', () => {
       expect(clicks).not.toHaveBeenCalled();
     });
 
-    it('does nothing when there is no open() and no href', () => {
-      const tool = new PageTool(createOptions());
+    it('does nothing when there is no open() and no href', async () => {
+      const tool = new PageTool(createOptions({ config: { resolve: () => ({}) } }));
 
-      tool.render();
+      await renderResolved(tool);
 
       expect(tool.onNavigationEnter(enter())).toBe(false);
     });
@@ -305,17 +483,16 @@ describe('Page tool', () => {
         config: { resolve, open, href: (id) => `/p/${id}` },
       }));
 
-      tool.render();
-      tool.rendered();
-      await flush();
+      await renderResolved(tool);
 
-      expect(tool.onNavigationEnter(enter())).toBe(false);
+      expect(tool.onNavigationEnter(enter())).toBe(_name === 'no-access');
       expect(open).not.toHaveBeenCalled();
+      tool.removed();
     });
   });
 
   describe('resolve', () => {
-    it('refreshes the cached title when the host knows a newer one', async () => {
+    it('shows a newer authorized title without writing to the document', async () => {
       const dispatchChange = vi.fn();
       const resolve = vi.fn().mockResolvedValue({ title: 'New' });
       const tool = new PageTool(createOptions({
@@ -330,9 +507,8 @@ describe('Page tool', () => {
 
       expect(resolve).toHaveBeenCalledTimes(1);
       expect(resolve).toHaveBeenCalledWith('p1');
-      expect(dispatchChange).toHaveBeenCalledTimes(1);
-      expect(dispatchChange).toHaveBeenCalledWith({ derived: true });
-      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'New' } });
+      expect(dispatchChange).not.toHaveBeenCalled();
+      expect(tool.save()).toEqual({ pageId: 'p1' });
       expect(titleOf(root).textContent).toBe('New');
     });
 
@@ -344,14 +520,15 @@ describe('Page tool', () => {
         dispatchChange,
       }));
 
-      tool.render();
-      tool.rendered();
-      await flush();
+      const root = await renderResolved(tool);
 
-      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'Sync', icon: { type: 'emoji', value: '📄' } } });
+      expect(titleOf(root).textContent).toBe('Sync');
+      expect(root.querySelector('[data-blok-testid="page-icon"]')?.textContent).toBe('📄');
+      expect(tool.save()).toEqual({ pageId: 'p1' });
+      expect(dispatchChange).not.toHaveBeenCalled();
     });
 
-    it('writes nothing when the host returns what is already cached', async () => {
+    it('does not write resolved metadata even when it matches the old cache', async () => {
       const dispatchChange = vi.fn();
       const tool = new PageTool(createOptions({
         data: { pageId: 'p1', cache: { title: 'Same', icon: { type: 'emoji', value: '📄' } } },
@@ -379,7 +556,7 @@ describe('Page tool', () => {
       await flush();
 
       expect(dispatchChange).not.toHaveBeenCalled();
-      expect(titleOf(root).textContent).toBe('Kept');
+      expect(titleOf(root).textContent).toBe('tools.page.unresolved');
     });
 
     it('resolves only once, even when rendered() runs again after a move', async () => {
@@ -420,7 +597,7 @@ describe('Page tool', () => {
 
       expect(open).not.toHaveBeenCalled();
       expect(dispatchChange).not.toHaveBeenCalled();
-      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'Gone' } });
+      expect(tool.save()).toEqual({ pageId: 'p1' });
     });
 
     it('shows no access and hides the cached title', async () => {
@@ -440,7 +617,8 @@ describe('Page tool', () => {
 
       expect(anchor.getAttribute('data-blok-page-state')).toBe('no-access');
       expect(anchor.hasAttribute('href')).toBe(false);
-      expect(anchor.getAttribute('aria-disabled')).toBe('true');
+      expect(anchor.getAttribute('role')).toBe('button');
+      expect(anchor.getAttribute('aria-haspopup')).toBe('dialog');
       expect(root.textContent).not.toContain('Secret plans');
       expect(titleOf(root).textContent).toBe('tools.page.noAccess');
 
@@ -448,6 +626,7 @@ describe('Page tool', () => {
 
       expect(open).not.toHaveBeenCalled();
       expect(dispatchChange).not.toHaveBeenCalled();
+      tool.removed();
     });
 
     it('shows a fresh title in read-only mode but never writes it', async () => {
@@ -465,10 +644,10 @@ describe('Page tool', () => {
 
       expect(titleOf(root).textContent).toBe('New');
       expect(dispatchChange).not.toHaveBeenCalled();
-      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'Old' } });
+      expect(tool.save()).toEqual({ pageId: 'p1' });
     });
 
-    it('resolves again and saves the new cache when the host says the page changed', async () => {
+    it('resolves again without saving metadata when the host says the page changed', async () => {
       const dispatchChange = vi.fn();
       let title = 'Old';
       let changed: (() => void) | undefined;
@@ -489,8 +668,8 @@ describe('Page tool', () => {
       await flush();
 
       expect(titleOf(root).textContent).toBe('Renamed in another tab');
-      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'Renamed in another tab' } });
-      expect(dispatchChange).toHaveBeenCalledWith({ derived: true });
+      expect(tool.save()).toEqual({ pageId: 'p1' });
+      expect(dispatchChange).not.toHaveBeenCalled();
       expect(subscribe).toHaveBeenCalledTimes(1);
       expect(subscribe).toHaveBeenCalledWith('p1', expect.any(Function));
     });
@@ -549,7 +728,7 @@ describe('Page tool', () => {
       expect(dispatchChange).not.toHaveBeenCalled();
     });
 
-    it('logs nothing and keeps the cache when resolve throws', async () => {
+    it('logs nothing and stays neutral when resolve throws', async () => {
       const dispatchChange = vi.fn();
       const tool = new PageTool(createOptions({
         data: { pageId: 'p1', cache: { title: 'Kept' } },
@@ -562,19 +741,19 @@ describe('Page tool', () => {
       await flush();
 
       expect(dispatchChange).not.toHaveBeenCalled();
-      expect(titleOf(root).textContent).toBe('Kept');
+      expect(titleOf(root).textContent).toBe('tools.page.unresolved');
     });
   });
 
   describe('save and data', () => {
-    it('saves only pageId and cache — never a top-level title', () => {
+    it('saves only pageId from legacy input', () => {
       const tool = new PageTool(createOptions({
         data: { pageId: 'p1', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } },
       }));
       const saved = tool.save();
 
-      expect(Object.keys(saved).sort()).toEqual(['cache', 'pageId']);
-      expect(saved).toEqual({ pageId: 'p1', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } });
+      expect(Object.keys(saved)).toEqual(['pageId']);
+      expect(saved).toEqual({ pageId: 'p1' });
     });
 
     it('omits an empty cache', () => {
@@ -600,14 +779,14 @@ describe('Page tool', () => {
       expect(cleaned.data).toEqual({ pageId: 'p1', cache: { title, icon: { type: 'image', url: 'https://x.test/a?b=1&c=2' } } });
     });
 
-    it('exports the title as escaped text so turn-into-text keeps it literal', () => {
+    it('does not export legacy cached text when turned into text', () => {
       const exported = convertBlockDataToString(
         { pageId: 'p1', cache: { title: '<i>x</i> & y' } },
         PageTool.conversionConfig
       );
 
-      expect(exported).toBe('&lt;i&gt;x&lt;/i&gt; &amp; y');
-      expect(convertBlockDataToString({ pageId: 'p1' }, PageTool.conversionConfig)).toBe('');
+      expect(exported).toBe('Page');
+      expect(convertBlockDataToString({ pageId: 'p1' }, PageTool.conversionConfig)).toBe('Page');
     });
   });
 
@@ -646,6 +825,26 @@ describe('Page tool', () => {
       expect(tool.save().pageId).toBe(minted);
     });
 
+    it('does not create a page after its pointer changes during insertion', async () => {
+      const create = vi.fn();
+      const dispatchChange = vi.fn();
+      const tool = new PageTool(createOptions({
+        data: { pageId: '' },
+        config: { create },
+        origin: 'user',
+        dispatchChange,
+      }));
+
+      tool.render();
+      tool.rendered();
+      tool.setData({ pageId: 'replacement' });
+      await flush();
+
+      expect(create).not.toHaveBeenCalled();
+      expect(dispatchChange).not.toHaveBeenCalled();
+      expect(tool.save().pageId).toBe('replacement');
+    });
+
     it('keeps the id and does not open when create fails', async () => {
       const open = vi.fn();
       const tool = new PageTool(createOptions({
@@ -661,6 +860,24 @@ describe('Page tool', () => {
 
       expect(open).not.toHaveBeenCalled();
       expect(tool.save().pageId).toBe(minted);
+    });
+
+    it('keeps a failed creation visibly missing when resolve has no answer', async () => {
+      const tool = new PageTool(createOptions({
+        data: { pageId: '' },
+        config: {
+          create: () => Promise.reject(new Error('creation failed')),
+          resolve: () => undefined,
+        },
+        origin: 'user',
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('missing');
+      expect(titleOf(root).textContent).toBe('tools.page.missing');
     });
 
     it('does not open a page whose block was removed while it was being created', async () => {
@@ -692,6 +909,19 @@ describe('Page tool', () => {
       expect(open).not.toHaveBeenCalled();
     });
 
+    it('keeps its own id and warns when create answers an API insert with another id', async () => {
+      const create = vi.fn().mockResolvedValue({ pageId: 'server-1' });
+      const tool = new PageTool(createOptions({ data: { pageId: '' }, config: { create }, origin: 'api' }));
+      const minted = tool.save().pageId;
+
+      tool.render();
+      tool.rendered();
+      await flush();
+
+      expect(tool.save().pageId).toBe(minted);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('server-1'), 'warn');
+    });
+
     it('resolves the new page only after it was created', async () => {
       const calls: string[] = [];
       const tool = new PageTool(createOptions({
@@ -714,6 +944,20 @@ describe('Page tool', () => {
       await flush();
 
       expect(calls).toEqual(['create', 'resolve']);
+    });
+
+    it('a pasted entry point to an existing page never creates or copies a page', async () => {
+      const create = vi.fn();
+      const resolve = vi.fn(() => ({ title: 'Plans' }));
+      const tool = new PageTool(createOptions({ data: { pageId: 'p1' }, config: { create, resolve }, origin: 'paste' }));
+
+      tool.render();
+      tool.rendered();
+      await flush();
+
+      expect(tool.save().pageId).toBe('p1');
+      expect(create).not.toHaveBeenCalled();
+      expect(resolve).toHaveBeenCalledWith('p1');
     });
 
     it.each<[string, Pick<Setup, 'origin' | 'replaySource'>]>([
@@ -770,6 +1014,72 @@ describe('Page tool', () => {
     });
   });
 
+  describe('prepareInsert (the toolbox asks before it inserts)', () => {
+    it('uses the id create returns', async () => {
+      const create = vi.fn().mockResolvedValue({ pageId: 'server-1' });
+
+      await expect(PageTool.prepareInsert({ create })).resolves.toEqual({ pageId: 'server-1' });
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(create).toHaveBeenCalledWith({ pageId: expect.stringMatching(/^[A-Za-z0-9_-]{10}$/) });
+    });
+
+    it.each([
+      ['nothing', undefined],
+      ['an empty id', { pageId: '' }],
+      ['a non-string id', { pageId: 7 }],
+    ])('keeps the id it passed when create returns %s', async (_name, answer) => {
+      const create = vi.fn().mockResolvedValue(answer);
+
+      const data = await PageTool.prepareInsert({ create: create as PageConfig['create'] });
+
+      expect(data).toEqual({ pageId: create.mock.calls[0]?.[0].pageId });
+    });
+
+    it('mints an id without a create hook', async () => {
+      await expect(PageTool.prepareInsert({})).resolves.toEqual({ pageId: expect.stringMatching(/^[A-Za-z0-9_-]{10}$/) });
+    });
+
+    it('rejects when create fails, so nothing is inserted', async () => {
+      await expect(PageTool.prepareInsert({ create: () => Promise.reject(new Error('down')) })).rejects.toThrow('down');
+    });
+
+    it('opens the inserted page once, without creating it again', async () => {
+      const create = vi.fn().mockResolvedValue({ pageId: 'server-2' });
+      const open = vi.fn();
+      const resolve = vi.fn().mockResolvedValue({ title: 'New' });
+      const config = { create, open, resolve };
+      const data = await PageTool.prepareInsert(config);
+      const tool = new PageTool(createOptions({ data, config, origin: 'user' }));
+
+      tool.render();
+      tool.rendered();
+      tool.rendered();
+      await flush();
+
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(open).toHaveBeenCalledWith('server-2', {});
+      expect(resolve).toHaveBeenCalledWith('server-2');
+      expect(tool.save().pageId).toBe('server-2');
+    });
+
+    it('does not open a page a later block points at', async () => {
+      const open = vi.fn();
+      const config = { create: vi.fn().mockResolvedValue({ pageId: 'server-3' }), open };
+      const data = await PageTool.prepareInsert(config);
+      const first = new PageTool(createOptions({ data, config, origin: 'user' }));
+      const second = new PageTool(createOptions({ data, config, origin: 'user' }));
+
+      first.render();
+      first.rendered();
+      second.render();
+      second.rendered();
+      await flush();
+
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('a failed create', () => {
     it('shows the page as missing, with no link to follow', async () => {
       const open = vi.fn();
@@ -808,44 +1118,45 @@ describe('Page tool', () => {
   });
 
   describe('setData (undo/redo and peers)', () => {
-    it('shows the new cache in place without asking resolve or writing', async () => {
+    it('ignores a same-page legacy cache without resolving or writing', async () => {
       const dispatchChange = vi.fn();
       const resolve = vi.fn().mockResolvedValue({ title: 'Mine' });
       const tool = new PageTool(createOptions({
-        data: { pageId: 'p1', cache: { title: 'Mine' } },
+        data: { pageId: 'p1', cache: { title: 'Old' } },
         config: { resolve },
         dispatchChange,
       }));
-      const root = tool.render();
+      const root = await renderResolved(tool);
 
-      tool.rendered();
-      await flush();
       resolve.mockClear();
-
       expect(tool.setData({ pageId: 'p1', cache: { title: 'Theirs' } })).toBe(true);
       await flush();
 
       expect(resolve).not.toHaveBeenCalled();
       expect(dispatchChange).not.toHaveBeenCalled();
-      expect(titleOf(root).textContent).toBe('Theirs');
-      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'Theirs' } });
+      expect(titleOf(root).textContent).toBe('Mine');
+      expect(tool.save()).toEqual({ pageId: 'p1' });
     });
 
-    it('drops a missing verdict when the block points at another page', async () => {
+    it('drops a missing verdict and rechecks access when the block points elsewhere', async () => {
       const tool = new PageTool(createOptions({
         data: { pageId: 'p1' },
-        config: { resolve: () => null, href: (id) => `/p/${id}` },
+        config: {
+          resolve: (id) => id === 'p1' ? null : { title: 'Other' },
+          href: (id) => `/p/${id}`,
+        },
       }));
-      const root = tool.render();
+      const root = await renderResolved(tool);
 
-      tool.rendered();
-      await flush();
       expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('missing');
-
-      tool.setData({ pageId: 'p2', cache: { title: 'Other' } });
+      tool.setData({ pageId: 'p2', cache: { title: 'Legacy other' } });
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('unresolved');
+      expect(anchorOf(root).hasAttribute('href')).toBe(false);
+      await flush();
 
       expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('normal');
       expect(anchorOf(root).getAttribute('href')).toBe('/p/p2');
+      expect(titleOf(root).textContent).toBe('Other');
     });
 
     it('ignores a resolve for the old page that lands after the page changed', async () => {
@@ -861,26 +1172,31 @@ describe('Page tool', () => {
       tool.rendered();
       await flush();
       tool.setData({ pageId: 'p2', cache: { title: 'Two' } });
-      pending.forEach((resolve) => resolve({ title: 'Stale one' }));
+      await flush();
+      pending[0]?.({ title: 'Stale one' });
       await flush();
 
       expect(dispatchChange).not.toHaveBeenCalled();
-      expect(titleOf(root).textContent).toBe('Two');
-      expect(tool.save()).toEqual({ pageId: 'p2', cache: { title: 'Two' } });
+      expect(titleOf(root).textContent).toBe('tools.page.unresolved');
+      pending[1]?.({ title: 'Fresh two' });
+      await flush();
+      expect(titleOf(root).textContent).toBe('Fresh two');
+      expect(tool.save()).toEqual({ pageId: 'p2' });
     });
 
-    it('reads incoming data like saved data', () => {
+    it('discards incoming legacy cache data', () => {
       const tool = new PageTool(createOptions());
+      const root = tool.render();
 
-      tool.render();
       tool.setData({ pageId: 'p1', cache: { title: 'T', icon: { type: 'emoji' } as never } });
 
-      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'T' } });
+      expect(root.textContent).not.toContain('T');
+      expect(tool.save()).toEqual({ pageId: 'p1' });
     });
   });
 
   describe('read-only, then editable', () => {
-    it('saves the fresh title it showed, once, when editing turns on', async () => {
+    it('keeps resolved metadata ephemeral when editing turns on', async () => {
       const dispatchChange = vi.fn();
       const resolve = vi.fn().mockResolvedValue({ title: 'New' });
       const tool = new PageTool(createOptions({
@@ -889,17 +1205,15 @@ describe('Page tool', () => {
         readOnly: true,
         dispatchChange,
       }));
-      const root = tool.render();
+      const root = await renderResolved(tool);
 
-      tool.rendered();
-      await flush();
       tool.setReadOnly(false);
       tool.setReadOnly(true);
       tool.setReadOnly(false);
       await flush();
 
-      expect(dispatchChange).toHaveBeenCalledTimes(1);
-      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'New' } });
+      expect(dispatchChange).not.toHaveBeenCalled();
+      expect(tool.save()).toEqual({ pageId: 'p1' });
       expect(titleOf(root).textContent).toBe('New');
       expect(resolve).toHaveBeenCalledTimes(1);
     });
@@ -910,10 +1224,7 @@ describe('Page tool', () => {
         config: { resolve: () => ({}) },
         readOnly: true,
       }));
-      const root = tool.render();
-
-      tool.rendered();
-      await flush();
+      const root = await renderResolved(tool);
 
       expect(titleOf(root).textContent).toBe('tools.page.untitled');
     });
@@ -943,7 +1254,7 @@ describe('Page tool', () => {
     });
 
     it('owns its link, so Blok shows no link card for it', async () => {
-      const { root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } } });
+      const { root } = await mount({ config: { resolve: () => ({ title: 'Roadmap' }) } });
 
       expect(anchorOf(root).closest('[data-blok-link-owner]')).not.toBeNull();
     });
@@ -979,7 +1290,7 @@ describe('Page tool', () => {
         { type: 'list', data: { text: 'First', style: 'unordered' } },
         { type: 'image', data: { url: 'x.png' } },
       ]));
-      const { root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } }, config: { preview } });
+      const { root } = await mount({ config: { resolve: () => ({ title: 'Roadmap' }), preview } });
 
       vi.useFakeTimers();
       hoverOver(anchorOf(root));
@@ -1007,7 +1318,7 @@ describe('Page tool', () => {
 
     it('asks for the content once per hover, and still shows the card when it fails', async () => {
       const preview = vi.fn(() => Promise.reject(new Error('offline')));
-      const { root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } }, config: { preview } });
+      const { root } = await mount({ config: { resolve: () => ({ title: 'Roadmap' }), preview } });
 
       vi.useFakeTimers();
       hoverOver(anchorOf(root));
@@ -1019,7 +1330,7 @@ describe('Page tool', () => {
     });
 
     it('names an untitled page and leaves out an empty path', async () => {
-      const { root } = await mount({ data: { pageId: 'p1' } });
+      const { root } = await mount({ config: { resolve: () => ({}) } });
 
       vi.useFakeTimers();
       hoverOver(anchorOf(root));
@@ -1030,7 +1341,7 @@ describe('Page tool', () => {
     });
 
     it('goes as soon as the pointer leaves the page block, even onto the card', async () => {
-      const { root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } } });
+      const { root } = await mount({ config: { resolve: () => ({ title: 'Roadmap' }) } });
       const link = anchorOf(root);
 
       vi.useFakeTimers();
@@ -1039,6 +1350,7 @@ describe('Page tool', () => {
 
       const card = preview();
 
+      expect(card).not.toBeNull();
       link.dispatchEvent(new MouseEvent('mouseleave'));
       card?.dispatchEvent(new MouseEvent('mouseenter'));
       expect(preview()).toBeNull();
@@ -1047,7 +1359,7 @@ describe('Page tool', () => {
     });
 
     it('lets the pointer pass through the card, so it never holds a hover', async () => {
-      const { root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } } });
+      const { root } = await mount({ config: { resolve: () => ({ title: 'Roadmap' }) } });
 
       vi.useFakeTimers();
       hoverOver(anchorOf(root));
@@ -1067,7 +1379,7 @@ describe('Page tool', () => {
     });
 
     it('goes away when the block is removed or the link is pressed', async () => {
-      const { tool, root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } } });
+      const { tool, root } = await mount({ config: { resolve: () => ({ title: 'Roadmap' }) } });
 
       vi.useFakeTimers();
       hoverOver(anchorOf(root));
@@ -1106,20 +1418,20 @@ describe('Page tool', () => {
   });
 
   describe('copyAsLink (copy, duplicate and paste carry a link, not a second block)', () => {
-    it('links to the absolute page url with the cached title', () => {
+    it('links to the absolute page url without leaking a legacy cached title', () => {
       const link = PageTool.copyAsLink(
         { pageId: 'p1', cache: { title: 'Plans' } },
         { href: (pageId) => `/editor/page/${pageId}` }
       );
 
-      expect(link).toEqual({ url: new URL('/editor/page/p1', document.baseURI).href, text: 'Plans' });
+      expect(link).toEqual({ url: new URL('/editor/page/p1', document.baseURI).href, text: 'Page' });
       expect(link?.url.startsWith('http')).toBe(true);
     });
 
-    it('uses an empty text for an untitled page', () => {
+    it('uses neutral text for an untitled page', () => {
       expect(PageTool.copyAsLink({ pageId: 'p1' }, { href: () => 'https://x.test/p1' })).toEqual({
         url: 'https://x.test/p1',
-        text: '',
+        text: 'Page',
       });
     });
 

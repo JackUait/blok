@@ -8,6 +8,7 @@ type NotifierModule = {
   show: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions, position?: NotifierPosition, directionSource?: Element) => void;
   dismiss: (options: NotifierOptions) => void;
   resolve: (options: NotifierOptions, message: string) => void;
+  settle: (options: NotifierOptions) => void;
   isClosed: (options: NotifierOptions) => boolean;
 };
 
@@ -116,6 +117,20 @@ export class Notifier {
     void this.loadNotifierModule()
       .then((notifier) => {
         notifier.resolve(options, message);
+      })
+      .catch((error) => {
+        console.error('[Blok] Failed to update notification. Reason:', error);
+      });
+  }
+
+  /**
+   * Stop the busy spinner on the card shown with this options object.
+   * @param options - the object passed to `show`
+   */
+  public settle(options: NotifierOptions): void {
+    void this.loadNotifierModule()
+      .then((notifier) => {
+        notifier.settle(options);
       })
       .catch((error) => {
         console.error('[Blok] Failed to update notification. Reason:', error);

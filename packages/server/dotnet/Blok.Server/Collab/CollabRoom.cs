@@ -252,6 +252,7 @@ internal sealed class CollabRoom : IDisposable
   private DateTimeOffset? exportRetryAt;
   private int exportFailures;
   private Task<string?>? inFlightSave;
+  private int purgeRequested;
   private bool disposed;
 
   // The pump draining activityQueue, and whether one is running. Both guarded
@@ -314,7 +315,9 @@ internal sealed class CollabRoom : IDisposable
   /// document is held by another process — and carries no error because
   /// nothing went wrong.
   /// </summary>
-  private readonly record struct LoadFailure(bool Unavailable, Exception? Error);
+  private readonly record struct LoadFailure(
+      CollabDocumentOpenOutcome? OpenOutcome,
+      Exception? Error);
 
   /// <summary>Raised inside the lane, exactly once, when the room stops serving.</summary>
   internal event Action<CollabRoom>? Closed;
@@ -332,6 +335,13 @@ internal sealed class CollabRoom : IDisposable
   /// <summary>Distinct actors <see cref="activityStamps"/> holds; read by its bound tests.</summary>
   internal int ActivityStampCount => activityStamps.Count;
 
+  private bool PurgeRequested => Volatile.Read(ref purgeRequested) != 0;
+
+  internal void RequestPurge()
+  {
+    Interlocked.Exchange(ref purgeRequested, 1);
+  }
+
   /// <summary>Null when the room has already closed — the caller should retry on a fresh room.</summary>
   internal Task<CollabJoinResult?> JoinAsync(
       ICollabMember member,
@@ -340,9 +350,29 @@ internal sealed class CollabRoom : IDisposable
     return RunAsync(
         async () =>
         {
+          if (PurgeRequested)
+          {
+            return new CollabJoinResult(CollabJoinStatus.Purged, null, null);
+          }
+
           if (state == RoomState.Closed)
           {
             return null;
+          }
+
+          if (!await IsMemberAllowedLockedAsync(member, cancellationToken))
+          {
+            if (state == RoomState.New)
+            {
+              await CloseRoomLocked(null);
+            }
+
+            return new CollabJoinResult(CollabJoinStatus.Forbidden, null, null);
+          }
+
+          if (PurgeRequested)
+          {
+            return new CollabJoinResult(CollabJoinStatus.Purged, null, null);
           }
 
           if (state == RoomState.New)
@@ -352,12 +382,20 @@ internal sealed class CollabRoom : IDisposable
               await CloseRoomLocked(null);
 
               return new CollabJoinResult(
-                  failure.Unavailable
-                    ? CollabJoinStatus.Unavailable
-                    : CollabJoinStatus.SeedFailed,
+                  failure.OpenOutcome switch
+                  {
+                    CollabDocumentOpenOutcome.Purged => CollabJoinStatus.Purged,
+                    CollabDocumentOpenOutcome.DocumentOpenElsewhere => CollabJoinStatus.Unavailable,
+                    _ => CollabJoinStatus.SeedFailed,
+                  },
                   null,
                   failure.Error);
             }
+          }
+
+          if (PurgeRequested)
+          {
+            return new CollabJoinResult(CollabJoinStatus.Purged, null, null);
           }
 
           if (cancellationToken.IsCancellationRequested)
@@ -398,6 +436,59 @@ internal sealed class CollabRoom : IDisposable
         cancellationToken);
   }
 
+  internal Task<int> RecheckAccessAsync(CancellationToken cancellationToken)
+  {
+    return RunAsync(
+        async () =>
+        {
+          if (state != RoomState.Ready)
+          {
+            return 0;
+          }
+
+          var expelled = 0;
+
+          foreach (var membership in members.ToArray())
+          {
+            if (!await IsMemberAllowedLockedAsync(membership.Member, cancellationToken))
+            {
+              ExpelLocked(membership, CollabCloseReason.Forbidden);
+              expelled++;
+            }
+          }
+
+          return expelled;
+        },
+        cancellationToken);
+  }
+
+  private async Task<bool> IsMemberAllowedLockedAsync(
+      ICollabMember member,
+      CancellationToken cancellationToken)
+  {
+    try
+    {
+      return await member.RecheckAccessAsync(cancellationToken);
+    }
+    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+    {
+      throw;
+    }
+    catch (Exception error)
+    {
+      try
+      {
+        log?.Invoke($"collab: room \"{DocId}\" could not recheck member access: {error.Message}");
+      }
+      catch (Exception)
+      {
+        // A failed logger must not keep a revoked member active.
+      }
+
+      return false;
+    }
+  }
+
   internal ValueTask ReceiveAsync(
       CollabMembership membership,
       byte[] frame,
@@ -408,7 +499,7 @@ internal sealed class CollabRoom : IDisposable
     return new ValueTask(RunAsync(
         async () =>
         {
-          if (state == RoomState.Ready && members.Contains(membership))
+          if (!PurgeRequested && state == RoomState.Ready && members.Contains(membership))
           {
             await ReceiveLocked(membership, frame);
           }
@@ -436,12 +527,17 @@ internal sealed class CollabRoom : IDisposable
   /// <summary>
   /// Block-level edits from POST /sync/{doc}/edit. Null when the room has
   /// already closed — the caller should retry on a fresh room.
+  ///
+  /// <c>expect</c> is the journal head the caller saw. It is checked after the
+  /// op-id lookup, so a committed retry still gets its own receipt, and in the
+  /// same lane hold as the apply, so nothing can land between check and write.
   /// </summary>
   internal Task<CollabEditResult?> EditAsync(
       IReadOnlyList<CollabEditOp> ops,
       string operationId,
       ReadOnlyMemory<byte> digest,
       string? actorId,
+      CollabEditPrecondition? expect,
       CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(ops);
@@ -449,6 +545,11 @@ internal sealed class CollabRoom : IDisposable
     return RunAsync<CollabEditResult?>(
         async () =>
         {
+          if (PurgeRequested)
+          {
+            return new CollabEditResult(CollabEditStatus.Purged, null);
+          }
+
           if (state == RoomState.Closed)
           {
             return null;
@@ -461,11 +562,19 @@ internal sealed class CollabRoom : IDisposable
               await CloseRoomLocked(null);
 
               return new CollabEditResult(
-                  failure.Unavailable
-                    ? CollabEditStatus.Unavailable
-                    : CollabEditStatus.SeedFailed,
+                  failure.OpenOutcome switch
+                  {
+                    CollabDocumentOpenOutcome.Purged => CollabEditStatus.Purged,
+                    CollabDocumentOpenOutcome.DocumentOpenElsewhere => CollabEditStatus.Unavailable,
+                    _ => CollabEditStatus.SeedFailed,
+                  },
                   failure.Error);
             }
+          }
+
+          if (PurgeRequested)
+          {
+            return new CollabEditResult(CollabEditStatus.Purged, null);
           }
 
           if (session is not null)
@@ -487,16 +596,34 @@ internal sealed class CollabRoom : IDisposable
               return new CollabEditResult(CollabEditStatus.Unavailable, null);
             }
 
+            // A room this request loaded has no member to arm its eviction,
+            // and every early return below would otherwise keep the journal lock.
             switch (committed.Outcome)
             {
               case CollabOperationLookupOutcome.Duplicate:
+                UpdateEvictionLocked();
+
                 return new CollabEditResult(
                     CollabEditStatus.Applied,
                     null,
                     new CollabEditReceipt(tag, committed.ServerSequence));
 
               case CollabOperationLookupOutcome.Conflict:
+                UpdateEvictionLocked();
+
                 return new CollabEditResult(CollabEditStatus.Conflict, null);
+            }
+
+            if (expect is not null &&
+                (!string.Equals(expect.Lineage, tag.Lineage, StringComparison.Ordinal) ||
+                 expect.Sequence != committedThrough))
+            {
+              UpdateEvictionLocked();
+
+              return new CollabEditResult(
+                  CollabEditStatus.PreconditionFailed,
+                  null,
+                  new CollabEditReceipt(tag, committedThrough));
             }
           }
 
@@ -597,6 +724,69 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
+  /// The export and the head it reflects, read in one lane hold so no edit
+  /// can land between them. Null when the room has already closed.
+  /// </summary>
+  internal Task<CollabStateResult?> StateAsync(CancellationToken cancellationToken)
+  {
+    return RunAsync<CollabStateResult?>(
+        async () =>
+        {
+          if (PurgeRequested)
+          {
+            return new CollabStateResult(CollabStateStatus.Purged, []);
+          }
+
+          if (state == RoomState.Closed)
+          {
+            return null;
+          }
+
+          if (state == RoomState.New && await TryLoadLocked() is { } failure)
+          {
+            await CloseRoomLocked(null);
+
+            return new CollabStateResult(
+                failure.OpenOutcome switch
+                {
+                  CollabDocumentOpenOutcome.Purged => CollabStateStatus.Purged,
+                  CollabDocumentOpenOutcome.DocumentOpenElsewhere => CollabStateStatus.Unavailable,
+                  _ => CollabStateStatus.SeedFailed,
+                },
+                [],
+                Error: failure.Error);
+          }
+
+          if (PurgeRequested)
+          {
+            return new CollabStateResult(CollabStateStatus.Purged, []);
+          }
+
+          // A room this read loaded has no member to arm its eviction.
+          UpdateEvictionLocked();
+
+          byte[] json;
+
+          try
+          {
+            json = DocEndpointClient.Serialize(converter.Export(doc!));
+          }
+          catch (Exception error)
+          {
+            log?.Invoke($"collab: room \"{DocId}\" could not export its state: {error.Message}");
+
+            return new CollabStateResult(CollabStateStatus.ExportFailed, [], Error: error);
+          }
+
+          return new CollabStateResult(
+              CollabStateStatus.Ready,
+              json,
+              session is null ? null : new CollabEditReceipt(tag, committedThrough));
+        },
+        cancellationToken);
+  }
+
+  /// <summary>
   /// Publishes a checkpoint through everything committed so far. The room
   /// drives this itself off the thresholds; this entry is what lets a host
   /// (and the tests) ask for one directly. False when there is nothing new to
@@ -616,7 +806,8 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private async Task<bool> CheckpointLocked()
   {
-    if (state != RoomState.Ready ||
+    if (PurgeRequested ||
+        state != RoomState.Ready ||
         session is null ||
         committedThrough == checkpointedThrough ||
         doc!.HasPending)
@@ -693,6 +884,11 @@ internal sealed class CollabRoom : IDisposable
     return RunAsync<CollabResetResult?>(
         async () =>
         {
+          if (PurgeRequested)
+          {
+            return new CollabResetResult(CollabResetStatus.Purged, null, null);
+          }
+
           if (state == RoomState.Closed)
           {
             return null;
@@ -704,11 +900,23 @@ internal sealed class CollabRoom : IDisposable
             {
               try
               {
-                if (!await TryOpenJournalLocked())
+                var open = await TryOpenJournalLocked();
+
+                if (PurgeRequested)
+                {
+                  return new CollabResetResult(CollabResetStatus.Purged, null, null);
+                }
+
+                if (open != CollabDocumentOpenOutcome.Opened)
                 {
                   await CloseRoomLocked(null);
 
-                  return new CollabResetResult(CollabResetStatus.Unavailable, null, null);
+                  return new CollabResetResult(
+                      open == CollabDocumentOpenOutcome.Purged
+                        ? CollabResetStatus.Purged
+                        : CollabResetStatus.Unavailable,
+                      null,
+                      null);
                 }
 
                 // An already-journalled document is HYDRATED here, so the
@@ -737,6 +945,19 @@ internal sealed class CollabRoom : IDisposable
                         $"so the reset drops it: {error.Message}");
                   }
                 }
+                else
+                {
+                  // A store that does not import working sets itself never
+                  // seeded this document. Adopt the working copy first, as the
+                  // built-in journal's import does, so the flush below sends
+                  // its edits to the endpoint this reset rebaselines from.
+                  NewDocLocked();
+
+                  if (await TryAdoptWorkingSetLocked())
+                  {
+                    state = RoomState.Ready;
+                  }
+                }
               }
               catch (Exception error)
               {
@@ -744,6 +965,11 @@ internal sealed class CollabRoom : IDisposable
 
                 return new CollabResetResult(CollabResetStatus.SeedFailed, null, error);
               }
+            }
+
+            if (PurgeRequested)
+            {
+              return new CollabResetResult(CollabResetStatus.Purged, null, null);
             }
 
             if (state == RoomState.Ready)
@@ -767,6 +993,30 @@ internal sealed class CollabRoom : IDisposable
                 log?.Invoke(
                     $"collab: room \"{DocId}\" could not flush before a reset: {error.Message}");
               }
+            }
+
+            // Strict, unlike the load path: a copy left beside the new lineage
+            // holds what this reset threw away, and a lost journal would adopt
+            // it again. Refused before anything is reset, so a retry is clean.
+            try
+            {
+              await store.RetireAsync(DocId, lifetime.Token);
+            }
+            catch (Exception error) when (!lifetime.IsCancellationRequested)
+            {
+              log?.Invoke(
+                  $"collab: room \"{DocId}\" could not retire its working set, so the reset is refused: {error.Message}");
+
+              if (state == RoomState.Ready)
+              {
+                UpdateEvictionLocked();
+              }
+              else
+              {
+                await CloseRoomLocked(null);
+              }
+
+              return new CollabResetResult(CollabResetStatus.Unavailable, null, error);
             }
 
             var head = session!.OpenResult.Head;
@@ -799,6 +1049,11 @@ internal sealed class CollabRoom : IDisposable
 
           await SettleInFlightPersistLocked();
 
+          if (PurgeRequested)
+          {
+            return new CollabResetResult(CollabResetStatus.Purged, null, null);
+          }
+
           var legacyNext = new CollabWorkingSetTag(
               legacyCurrent.Format,
               legacyCurrent.Epoch + 1,
@@ -809,6 +1064,38 @@ internal sealed class CollabRoom : IDisposable
           await CloseRoomLocked(CollabCloseReason.Reset);
 
           return new CollabResetResult(CollabResetStatus.Reset, legacyNext, null);
+        },
+        cancellationToken);
+  }
+
+  internal Task PurgeAsync(CancellationToken cancellationToken)
+  {
+    RequestPurge();
+
+    return RunAsync(
+        async () =>
+        {
+          if (state == RoomState.Closed)
+          {
+            return;
+          }
+
+          if (inFlightSave is { } save)
+          {
+            try
+            {
+              await save;
+            }
+            catch (Exception)
+            {
+              // A failed export does not block deletion.
+            }
+
+            inFlightSave = null;
+          }
+
+          await SettleInFlightPersistLocked();
+          await CloseRoomLocked(CollabCloseReason.Forbidden);
         },
         cancellationToken);
   }
@@ -1076,11 +1363,16 @@ internal sealed class CollabRoom : IDisposable
 
     if (dropped is { } lost)
     {
-      // Outside the lock: this is the host's logger, and it must not be able
-      // to leave the queue half-updated.
-      log?.Invoke(
-          $"collab: room \"{DocId}\" dropped an activity record ({lost.Kind}) " +
-          $"for \"{lost.Actor}\"; the activity observer is behind");
+      try
+      {
+        log?.Invoke(
+            $"collab: room \"{DocId}\" dropped an activity record ({lost.Kind}) " +
+            $"for \"{lost.Actor}\"; the activity observer is behind");
+      }
+      catch (Exception)
+      {
+        // A failed logger must not stop member cleanup.
+      }
     }
   }
 
@@ -1212,20 +1504,25 @@ internal sealed class CollabRoom : IDisposable
     doc.UpdateEmitted += OnLocalUpdate;
   }
 
-  private async Task<bool> TryOpenJournalLocked()
+  private async Task<CollabDocumentOpenOutcome> TryOpenJournalLocked()
   {
     var open = await operationStore!.OpenAsync(DocId, lifetime.Token);
+
+    if (open.Outcome == CollabDocumentOpenOutcome.Purged)
+    {
+      return CollabDocumentOpenOutcome.Purged;
+    }
 
     if (open.Session is null)
     {
       log?.Invoke($"collab: document \"{DocId}\" is open in another process");
 
-      return false;
+      return CollabDocumentOpenOutcome.DocumentOpenElsewhere;
     }
 
     session = open.Session;
 
-    return true;
+    return CollabDocumentOpenOutcome.Opened;
   }
 
   /// <summary>Load-or-seed. Returns the failure instead of throwing so the join can report it.</summary>
@@ -1237,9 +1534,11 @@ internal sealed class CollabRoom : IDisposable
 
       if (operationStore is not null)
       {
-        if (!await TryOpenJournalLocked())
+        var open = await TryOpenJournalLocked();
+
+        if (open != CollabDocumentOpenOutcome.Opened)
         {
-          return new LoadFailure(Unavailable: true, null);
+          return new LoadFailure(open, null);
         }
 
         await LoadFromJournalLocked();
@@ -1292,7 +1591,7 @@ internal sealed class CollabRoom : IDisposable
     {
       log?.Invoke($"collab: room \"{DocId}\" could not load: {error.Message}");
 
-      return new LoadFailure(Unavailable: false, error);
+      return new LoadFailure(null, error);
     }
   }
 
@@ -1343,6 +1642,10 @@ internal sealed class CollabRoom : IDisposable
 
     HydrateCommittedLocked(
         [.. opened.Tail.Select(record => record.Update)]);
+
+    // The journal is the record now, so a working set beside it is stale: a
+    // lost journal or a swapped store would otherwise adopt it again.
+    await DropWorkingSetLocked();
 
     // The previous room may have died with a projection owed — a crash, a
     // drain the endpoint refused, a converter refusal — and nothing else
@@ -1482,6 +1785,11 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private async Task SeedJournalLocked()
   {
+    if (await TryAdoptWorkingSetLocked())
+    {
+      return;
+    }
+
     var loaded = await endpoint.LoadAsync(DocId, lifetime.Token);
     version = loaded.Version;
     localUpdates.Clear();
@@ -1509,6 +1817,92 @@ internal sealed class CollabRoom : IDisposable
             baseline),
         lifetime.Token);
     tag = new CollabWorkingSetTag(head.Format, head.Epoch, head.Lineage);
+  }
+
+  /// <summary>
+  /// A working set left by a room that ran without the journal can hold edits
+  /// the endpoint never got (a failed write-back, a hard kill). Its own frames
+  /// and tag become the journal's baseline, so cached clients still merge.
+  /// False when there is nothing to adopt. A copy in another format, or one
+  /// that decodes but will not apply, throws and stays in place. A copy the
+  /// store cannot decode reads as absent: the local store moves it aside as
+  /// <c>.unreadable-*</c>, S3 leaves it, and neither is ever retired, so the
+  /// room seeds from the endpoint and the bytes are kept for repair.
+  /// </summary>
+  private async Task<bool> TryAdoptWorkingSetLocked()
+  {
+    var stored = await store.ReadAsync(DocId, lifetime.Token);
+
+    if (stored is null)
+    {
+      return false;
+    }
+
+    if (stored.Tag.Format != CollabWorkingSetTag.SchemaV2)
+    {
+      throw new InvalidDataException(
+          $"collab: the stored working set for \"{DocId}\" has format {stored.Tag.Format}; " +
+          $"this server reads format {CollabWorkingSetTag.SchemaV2}.");
+    }
+
+    if (!CollabWorkingSetCodec.TryDecodeFrames(stored.Updates, out var frames))
+    {
+      throw new InvalidDataException(
+          $"collab: the stored working set for \"{DocId}\" is not a valid update log.");
+    }
+
+    if (frames.Count == 0)
+    {
+      return false;
+    }
+
+    foreach (var frame in frames)
+    {
+      if (ApplyRemoteLocked(frame) is null)
+      {
+        throw new InvalidDataException(
+            $"collab: a stored update for \"{DocId}\" could not be applied.");
+      }
+    }
+
+    var adopted = stored.Tag.IsAnnounceable()
+      ? stored.Tag
+      : new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2, 0, CollabWorkingSetTag.NewLineage());
+    var head = await session!.ResetAsync(
+        new CollabOperationReset(
+            adopted.Format,
+            adopted.Epoch,
+            adopted.Lineage,
+            [.. frames.Select(frame => (ReadOnlyMemory<byte>)frame)]),
+        lifetime.Token);
+    tag = new CollabWorkingSetTag(head.Format, head.Epoch, head.Lineage);
+
+    // The endpoint may be behind what was adopted, so a projection is owed,
+    // and write-backs need its version handle.
+    StartVersionReadLocked();
+    MarkDirtyLocked();
+
+    // Only after the reset is durable: before it, the working set is the only copy.
+    await DropWorkingSetLocked();
+
+    return true;
+  }
+
+  /// <summary>
+  /// Best effort: the journal already holds the content, so a failed retire
+  /// costs no open, and the next load retries it. Retire, never delete: a
+  /// delete is purge and would take quarantined bytes with it.
+  /// </summary>
+  private async Task DropWorkingSetLocked()
+  {
+    try
+    {
+      await store.RetireAsync(DocId, lifetime.Token);
+    }
+    catch (Exception error) when (!lifetime.IsCancellationRequested)
+    {
+      log?.Invoke($"collab: room \"{DocId}\" could not drop its stale working set: {error.Message}");
+    }
   }
 
   /// <summary>Builds a standalone baseline; seeding the old doc would only make a diff.</summary>
@@ -1695,7 +2089,8 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private void SchedulePersistLocked()
   {
-    if (state != RoomState.Ready ||
+    if (PurgeRequested ||
+        state != RoomState.Ready ||
         inFlightPersist is not null ||
         blobVersion == persistedVersion)
     {
@@ -2614,7 +3009,7 @@ internal sealed class CollabRoom : IDisposable
 
   private async Task TryExportLocked()
   {
-    if (state != RoomState.Ready || !exportDirty || inFlightSave is not null)
+    if (PurgeRequested || state != RoomState.Ready || !exportDirty || inFlightSave is not null)
     {
       return;
     }

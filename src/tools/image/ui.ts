@@ -1,6 +1,7 @@
 import type { ImageCrop, ImageData, ImageSize } from '../../../types/tools/image';
 import type { MediaVariant } from '../../../types/configs/media';
 import { readVariants } from '../../shared/read-variants';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 /**
  * Mirror of the upstream ImageAlign* union from types/tools/image.d.ts,
  * kept local so the i18n regression scan finds no stray hardcoded copy.
@@ -10,7 +11,6 @@ import { onHover as tooltipOnHover, hide as tooltipHide, show as tooltipShow } f
 import type { I18nInstance } from '../../components/utils/tools';
 import {
   IconCaption,
-  IconCheck,
   IconChevronLeft,
   IconChevronRight,
   IconCollapseFullscreen,
@@ -103,6 +103,7 @@ export function renderImage(
   }
 
   const img = document.createElement('img');
+  img.setAttribute(DATA_ATTR.blockContextMenu, '');
   img.setAttribute('src', data.url);
   img.setAttribute('alt', data.alt ?? '');
   img.draggable = false;
@@ -213,30 +214,17 @@ export function renderAltPill(opts: AltPillOptions): HTMLButtonElement {
   btn.setAttribute('data-state', hasAlt ? 'set' : 'missing');
   btn.setAttribute('aria-pressed', hasAlt ? 'true' : 'false');
 
-  const mark = document.createElement('span');
-  mark.className = 'blok-image-alt-pill__mark';
-  mark.setAttribute('aria-hidden', 'true');
-  if (hasAlt) mark.innerHTML = IconCheck;
-  btn.appendChild(mark);
-
+  if (hasAlt) {
+    const label = document.createElement('span');
+    label.className = 'blok-image-alt-pill__label';
+    label.textContent = tr(opts.i18n, 'tools.image.altButton');
+    // The accessible name is built from text, so it needs a real space; CSS draws the visual gap.
+    btn.append(label, ' ');
+  }
   const text = document.createElement('span');
   text.className = 'blok-image-alt-pill__text';
-  if (hasAlt) {
-    const label = document.createElement('b');
-    label.textContent = tr(opts.i18n, 'tools.image.altButton');
-    text.append(label, opts.alt ?? '');
-  } else {
-    text.textContent = tr(opts.i18n, 'tools.image.altAdd');
-  }
+  text.textContent = hasAlt ? opts.alt ?? '' : tr(opts.i18n, 'tools.image.altAdd');
   btn.appendChild(text);
-
-  if (!hasAlt) {
-    const help = document.createElement('span');
-    help.className = 'blok-image-alt-pill__help';
-    help.setAttribute('aria-hidden', 'true');
-    help.textContent = '?';
-    btn.appendChild(help);
-  }
 
   const hint = document.createElement('div');
   hint.className = 'blok-image-alt-hint';
@@ -1217,8 +1205,6 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   tooltipOnHover(more, moreLabel);
   view.appendChild(more);
 
-  reanchorTooltipAfterSplit(root);
-
   // Delete is reachable from the popover; expose an invisible legacy button for consumers/tests.
   const deleteAlias = document.createElement('button');
   deleteAlias.type = 'button';
@@ -1323,22 +1309,6 @@ function appendAlignCtrl(parent: HTMLElement, opts: OverlayOptions): void {
     event.stopPropagation();
     if (popover.hidden) openPopover();
     else closePopover();
-  });
-}
-
-/**
- * The row rises into place, and a tooltip stays where it was first placed.
- * Once the row's own animation ends, show the hovered button's tooltip again at its final spot.
- */
-function reanchorTooltipAfterSplit(root: HTMLElement): void {
-  const pointer: { over: HTMLElement | null } = { over: null };
-  root.querySelectorAll<HTMLElement>('[data-island] button[data-action]').forEach((btn) => {
-    btn.addEventListener('mouseenter', () => { pointer.over = btn; });
-    btn.addEventListener('mouseleave', () => { if (pointer.over === btn) pointer.over = null; });
-  });
-  root.addEventListener('animationend', (event) => {
-    if (event.target !== root || pointer.over === null) return;
-    tooltipShow(pointer.over, pointer.over.getAttribute('aria-label') ?? '');
   });
 }
 

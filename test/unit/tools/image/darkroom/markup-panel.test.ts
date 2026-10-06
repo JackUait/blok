@@ -85,8 +85,8 @@ describe('markup panel', () => {
   let panel: MarkupPanel;
   const created: MarkupPanel[] = [];
 
-  const make = (state: Partial<MarkupPanelState> = {}): MarkupPanel => {
-    panel = createMarkupPanel({ i18n, state: { ...DEFAULT_MARKUP_STATE, ...state }, onChange, onDelete, onClear });
+  const make = (state: Partial<MarkupPanelState> = {}, url?: string): MarkupPanel => {
+    panel = createMarkupPanel({ i18n, url, state: { ...DEFAULT_MARKUP_STATE, ...state }, onChange, onDelete, onClear });
     created.push(panel);
     document.body.appendChild(panel.el);
 
@@ -265,7 +265,7 @@ describe('markup panel', () => {
 
     it('renders the fill toggle and delete button with names', () => {
       make({ tool: 'rect', fill: true });
-      panel.setSelection('rect');
+      panel.setSelection(['rect']);
 
       expect(q('markup-fill').getAttribute('aria-label')).toBe('Fill');
       expect(q('markup-fill').getAttribute('aria-pressed')).toBe('true');
@@ -286,7 +286,7 @@ describe('markup panel', () => {
 
     it('gives every button an accessible name and type=button', () => {
       make({ tool: 'text' });
-      panel.setSelection('text');
+      panel.setSelection(['text']);
 
       panel.el.querySelectorAll('button').forEach((b) => {
         expect(b.type).toBe('button');
@@ -358,7 +358,7 @@ describe('markup panel', () => {
 
     it('calls onDelete and onClear from their buttons', () => {
       make();
-      panel.setSelection('pen');
+      panel.setSelection(['pen']);
       panel.setHasMarkup(true);
       q('markup-delete').click();
       q('markup-reset').click();
@@ -443,6 +443,13 @@ describe('markup panel', () => {
       expect(tool('shapes')).toHaveFocus();
     });
 
+    it('the rail button shows only the last shape, with no dropdown arrow', () => {
+      make({ tool: 'star' });
+
+      expect(tool('shapes').querySelectorAll('svg')).toHaveLength(1);
+      expect(tool('shapes').getAttribute('aria-haspopup')).toBe('dialog');
+    });
+
     it('the rail button follows a shape picked elsewhere, like a tool key', () => {
       make();
       panel.pickTool('ellipse');
@@ -452,6 +459,80 @@ describe('markup panel', () => {
       panel.pickTool('pen');
       expect(tool('shapes').getAttribute('data-shape')).toBe('ellipse');
       expect(tool('shapes').getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('draws every shape tile in the current ink, stroke width and fill', () => {
+      make({ color: GREEN, size: 2, fill: true });
+      tool('shapes').click();
+
+      expect(picker()?.style.getPropertyValue('--blok-markup-color')).toBe(GREEN);
+      expect(picker()?.getAttribute('data-size')).toBe('2');
+      expect(picker()?.hasAttribute('data-fill')).toBe(true);
+      expect(SHAPE_GRID.filter((s) => shapeItem(s).hasAttribute('data-fillable')))
+        .toEqual(['rect', 'rounded-rect', 'ellipse', 'bubble', 'star', 'polygon']);
+      expect(SHAPE_GRID.filter((s) => shapeItem(s).hasAttribute('data-ink'))).toEqual(SHAPE_GRID.slice(0, 8));
+    });
+
+    it('lets each drawn glyph trace itself on, one tile after another', () => {
+      make();
+      tool('shapes').click();
+
+      SHAPE_GRID.slice(0, 8).forEach((s, i) => {
+        const marks = [...shapeItem(s).querySelectorAll('svg > *')];
+
+        expect(marks.length).toBeGreaterThan(0);
+        marks.forEach((m) => expect(m.getAttribute('pathLength')).toBe('1'));
+        expect(shapeItem(s).style.getPropertyValue('--blok-markup-shape-i')).toBe(String(i));
+      });
+    });
+
+    it('follows ink, width and fill picked while it is open', () => {
+      make({ color: GREEN, size: 0, fill: false });
+      tool('shapes').click();
+      panel.set({ ...DEFAULT_MARKUP_STATE, tool: 'pen', color: BLUE, size: 2, fill: true });
+
+      expect(picker()?.style.getPropertyValue('--blok-markup-color')).toBe(BLUE);
+      expect(picker()?.getAttribute('data-size')).toBe('2');
+      expect(picker()?.hasAttribute('data-fill')).toBe(true);
+    });
+
+    it('flags ink too dark to read on the dark glass, so the glyphs get a halo', () => {
+      make({ color: '#111111' });
+      tool('shapes').click();
+      expect(picker()?.hasAttribute('data-ink-dark')).toBe(true);
+      shapeItem('rect').click();
+
+      panel.set({ ...DEFAULT_MARKUP_STATE, color: WHITE });
+      tool('shapes').click();
+      expect(picker()?.hasAttribute('data-ink-dark')).toBe(false);
+    });
+
+    it('shows the real photo in the spotlight and magnifier tiles', () => {
+      make({}, 'https://example.com/cat.jpg');
+      tool('shapes').click();
+
+      (['spotlight', 'magnifier'] as const).forEach((s) => {
+        const imgs = [...shapeItem(s).querySelectorAll('img')];
+
+        expect(imgs.length).toBeGreaterThan(0);
+        imgs.forEach((img) => {
+          expect(img.getAttribute('src')).toBe('https://example.com/cat.jpg');
+          expect(img.getAttribute('alt')).toBe('');
+        });
+        expect(shapeItem(s).querySelector('svg')).toBeNull();
+        expect(shapeItem(s).getAttribute('aria-label')).not.toBe('');
+      });
+      expect(shapeItem('magnifier').querySelector('.blok-darkroom__markup-lens img')).not.toBeNull();
+      expect(shapeItem('spotlight').querySelector('.blok-darkroom__markup-spot')).not.toBeNull();
+    });
+
+    it('falls back to icons for the framing tiles without a photo', () => {
+      make();
+      tool('shapes').click();
+
+      expect(shapeItem('spotlight').querySelector('img')).toBeNull();
+      expect(shapeItem('spotlight').querySelector('svg')).not.toBeNull();
+      expect(shapeItem('magnifier').querySelector('svg')).not.toBeNull();
     });
 
     it('destroy closes an open picker', () => {
@@ -559,7 +640,7 @@ describe('markup panel', () => {
     const sizes = (): HTMLElement => group('Stroke width');
     const styles = (): HTMLElement => group('Text style');
 
-    interface Case { tool: MarkupTool; sel: MarkupSelectionKind; color: boolean; style: boolean; fill: boolean; del: boolean }
+    interface Case { tool: MarkupTool; sel: MarkupSelectionKind[number] | null; color: boolean; style: boolean; fill: boolean; del: boolean }
 
     const sizeShown = (c: Case): boolean => c.color || (c.tool === 'eraser' && c.sel === null);
 
@@ -593,7 +674,7 @@ describe('markup panel', () => {
 
     it.each(CASES)('tool $tool, selection $sel', (c) => {
       make({ tool: c.tool });
-      panel.setSelection(c.sel);
+      panel.setSelection(c.sel === null ? [] : [c.sel]);
 
       expect(shown(colors())).toBe(c.color);
       expect(shown(sizes())).toBe(sizeShown(c));
@@ -603,12 +684,24 @@ describe('markup panel', () => {
       expect(panel.el.hasAttribute('data-context-empty')).toBe(!sizeShown(c) && !c.style && !c.fill && !c.del);
     });
 
+    it('a mixed selection shows each control any of its marks takes', () => {
+      make({ tool: 'select' });
+      panel.setSelection(['rect', 'text', 'spotlight']);
+
+      expect(shown(colors())).toBe(true);
+      expect(shown(styles())).toBe(true);
+      expect(shown(q('markup-fill'))).toBe(true);
+      expect(shown(q('markup-delete'))).toBe(true);
+      panel.setSelection(['spotlight', 'magnifier']);
+      expect(shown(colors())).toBe(false);
+    });
+
     it('flags an empty context row as the user picks, so the rail can take its room', () => {
       make({ tool: 'pen' });
       expect(panel.el.hasAttribute('data-context-empty')).toBe(false);
       tool('select').click();
       expect(panel.el.hasAttribute('data-context-empty')).toBe(true);
-      panel.setSelection('rect');
+      panel.setSelection(['rect']);
       expect(panel.el.hasAttribute('data-context-empty')).toBe(false);
     });
 
@@ -646,27 +739,27 @@ describe('markup panel', () => {
 
     it('moves focus to the checked tool when a focused control hides', () => {
       make({ tool: 'select' });
-      panel.setSelection('rect');
+      panel.setSelection(['rect']);
       q('markup-delete').focus();
-      panel.setSelection(null);
+      panel.setSelection([]);
 
       expect(tool('select')).toHaveFocus();
     });
 
     it('moves focus to the checked tool when a focused swatch hides', () => {
       make({ tool: 'select' });
-      panel.setSelection('pen');
+      panel.setSelection(['pen']);
       swatch(RED).focus();
-      panel.setSelection(null);
+      panel.setSelection([]);
 
       expect(tool('select')).toHaveFocus();
     });
 
     it('leaves focus alone when the focused control stays', () => {
       make({ tool: 'select' });
-      panel.setSelection('pen');
+      panel.setSelection(['pen']);
       swatch(RED).focus();
-      panel.setSelection('arrow');
+      panel.setSelection(['arrow']);
 
       expect(swatch(RED)).toHaveFocus();
     });

@@ -79,7 +79,7 @@ export class BlocksAPI extends Module {
       beginTransaction: (): void => this.beginTransaction(),
       endTransaction: (): void => this.endTransaction(),
       setPointerDragActive: (active: boolean): void => this.setPointerDragActive(active),
-      scrollToBlock: (id: string): void => this.scrollToBlock(id),
+      scrollToBlock: (id: string, options?: { select?: boolean }): void => this.scrollToBlock(id, options),
     };
   }
 
@@ -292,6 +292,17 @@ export class BlocksAPI extends Module {
     // wholesale replace must do no work at all.
     this.refuseWholesaleReplace('render');
 
+    return this.replaceDocument(data, { keepId: false });
+  }
+
+  /**
+   * The body of {@link render}.
+   * @param data - the document to show
+   * @param options - replace behaviour
+   * @param options.keepId - true when only the content changes (Markdown
+   *   import), so an id-less `data` keeps the current document id
+   */
+  private async replaceDocument(data: OutputData | LooseOutputData, { keepId }: { keepId: boolean }): Promise<void> {
     if (data === undefined || data.blocks === undefined) {
       throw new Error('Incorrect data passed to the render() method');
     }
@@ -305,11 +316,23 @@ export class BlocksAPI extends Module {
      * current saved state and no-op on equality (time/version are ignored).
      */
     const currentContent = await this.Blok.Saver.save();
+    const incomingId = typeof data.id === 'string' && data.id !== '' ? data.id : null;
+
+    // The echo check ignores `id`, so adopt before it: same blocks under a
+    // new id is still a different document.
+    if (incomingId !== null) {
+      this.Blok.Saver.adoptDocumentRecordId(incomingId);
+    }
 
     if (currentContent !== undefined && equalsOutputData(currentContent, data)) {
       this.processPendingHashScroll();
 
       return;
+    }
+
+    // Only a real swap resets: an id-less echo would otherwise churn the id.
+    if (incomingId === null && !keepId) {
+      this.Blok.Saver.resetDocumentRecordId();
     }
 
     /**
@@ -381,7 +404,7 @@ export class BlocksAPI extends Module {
     const blocks = await markdownToBlocks(md, options);
     const data: OutputData = { blocks };
 
-    await this.render(data);
+    await this.replaceDocument(data, { keepId: true });
 
     return data;
   }
@@ -965,8 +988,10 @@ export class BlocksAPI extends Module {
    * Those adapters can drain that deferred navigation by calling this once the
    * holder connects, instead of hand-rolling a DOM-polling hook.
    * @param id - target block id
+   * @param options - `select: false` jumps without selecting the block, so a
+   *   following Backspace cannot delete it (in-page navigation such as a table of contents)
    */
-  public scrollToBlock(id: string): void {
+  public scrollToBlock(id: string, options: { select?: boolean } = {}): void {
     /**
      * `id` is a block id for every caller that knows one, but the deferred
      * boot-time hash lands here too — and that hash can be a heading anchor
@@ -1002,7 +1027,8 @@ export class BlocksAPI extends Module {
       ? undefined
       : this.Blok.BlockManager.getBlockById(target.blockId);
 
-    if (block !== undefined) {
+    if (block !== undefined && options.select !== false) {
+      this.Blok.BlockSelection.clearSelection();
       this.Blok.BlockSelection.selectBlock(block);
     }
 

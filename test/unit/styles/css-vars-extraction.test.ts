@@ -326,10 +326,19 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // declaration would shadow ancestor-level host overrides via
   // nearest-ancestor custom-property inheritance.
   '--blok-placeholder-color',
+  // Set at runtime on the find hop chip by hop() (modules/find/find-motion.ts):
+  // the field's type, so the flying word lands already in it. The chip only exists in flight.
+  '--blok-find-hop-land-family',
+  '--blok-find-hop-land-weight',
+  '--blok-find-hop-land-style',
+  '--blok-find-hop-land-color',
   // Set at runtime on the image figure by syncMediaHeight (tools/image/media-height.ts):
   // the picture's own height, so the ring, dots, readout and alt pill skip the caption row.
   // Every read carries a fallback for the moment before the image has loaded.
   '--blok-image-media-height',
+  // Set at runtime on the failed-upload card by renderErrorState (tools/image/error-state.ts):
+  // how far the resend bar had filled, so it drains back from there. Reads fall back to 0%.
+  '--blok-image-drain-from',
   // Consumer-supplied per-block font sizes (config.style.fontSize, or any
   // --blok-* channel: style.tokens / editor.tokens.set() / plain CSS). Each
   // falls back to that block's historical size, so an unconfigured editor is

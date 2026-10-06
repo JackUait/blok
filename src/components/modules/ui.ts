@@ -688,17 +688,6 @@ export class UI extends Module<UINodes> {
     }
   };
 
-  /**
-   * Right-click inside block content opens the block context menu (Block
-   * Settings) anchored at the cursor, mirroring a desktop application. This is
-   * a hover-independent path to the block menu that avoids the "wrong block"
-   * race in the hover-driven settings toggler.
-   *
-   * The native context menu is left intact on interactive and media elements
-   * (links, form fields, images, media) where it carries real value — only
-   * plain block content is hijacked.
-   * @param event - contextmenu event
-   */
   private redactorContextMenu = (event: Event): void => {
     if (!(event instanceof MouseEvent)) {
       return;
@@ -706,11 +695,21 @@ export class UI extends Module<UINodes> {
 
     const target = event.target;
 
-    if (!(target instanceof HTMLElement)) {
+    if (!(target instanceof Element)) {
       return;
     }
 
-    if (target.closest('a, input, textarea, select, img, video, audio')) {
+    if (!(target instanceof HTMLElement) && target.closest(`[${DATA_ATTR.blockContextMenu}]`) === null) {
+      return;
+    }
+
+    const nativeTarget = target.closest('a, input, textarea, select, img, video, audio');
+
+    if (nativeTarget !== null && (
+      this.Blok.ReadOnly.isEnabled ||
+      !nativeTarget.matches('a, img, video') ||
+      nativeTarget.closest(`[${DATA_ATTR.blockContextMenu}]`) === null
+    )) {
       return;
     }
 

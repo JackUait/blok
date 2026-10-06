@@ -50,10 +50,12 @@ export const DATA_ATTR = {
 
   /** Block unique identifier */
   id: 'data-blok-id',
+  pageId: 'data-blok-page-id',
   /** Block component/tool type */
   component: 'data-blok-component',
   /** Tool type attribute */
   tool: 'data-blok-tool',
+  blockContextMenu: 'data-blok-block-context-menu',
   /** Block nesting depth (derived from the parentId chain) */
   depth: 'data-blok-depth',
   /** Flat list-nesting indentation level (0 = root); tool-agnostic, mirrors list depth */
@@ -329,6 +331,21 @@ export const DATA_ATTR = {
    *  check `holder.closest([nestedBlocks])` — if truthy, the holder is already
    *  claimed by another container and must not be stolen. */
   nestedBlocks: 'data-blok-nested-blocks',
+
+  /** A drop zone. Empty value: an empty container's placeholder (an empty
+   *  tab); while the block's own holder shows one without the `hidden` class,
+   *  a drop on the block nests the dragged blocks as its first children.
+   *  A block id (a tab pill): a drop on the zone appends the dragged blocks
+   *  as the LAST children of that block. */
+  dropInto: 'data-blok-drop-into',
+
+  /** Set by core on a named drop zone while it is the drop target. */
+  dropIntoActive: 'data-blok-drop-into-active',
+
+  /** A container's empty-state hint that stands in for its first child block
+   *  (empty tab, empty toggle body). It is not a block, so hovering or pressing
+   *  it shows no block toolbar; the block a click creates gets its own. */
+  childStandIn: 'data-blok-child-stand-in',
 
   // ============================================
   // Mutation Tracking

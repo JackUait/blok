@@ -164,6 +164,15 @@ describe('ApiPage dev override seam documentation', () => {
   });
 });
 
+describe('ApiPage tab sync guide', () => {
+  it('renders the guide with its documentId advice', () => {
+    renderAt('/docs/tab-sync');
+
+    expect(screen.getByRole('heading', { level: 1, name: /tab sync/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/crypto\.randomUUID\(\)/).length).toBeGreaterThan(0);
+  });
+});
+
 describe('ApiPage on-this-page fallback', () => {
   it('renders a TOC dropdown affordance for the lg breakpoint range instead of hiding it entirely', () => {
     renderAt('/docs/caret-api');

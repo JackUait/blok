@@ -14,9 +14,11 @@
  */
 
 import type { BlockToolData } from '../../types';
+import type { PageInfo } from '../../types/tools/page';
 import { orderByContent } from '../shared/content-order';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from '../shared/table-grid';
 import { isPagePointer } from '../shared/page-pointer';
+import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 
 export interface SerializableBlock {
   /**
@@ -204,6 +206,71 @@ export const markdownTextEscaper = (html: string): TextEscaper => {
 /** The inline-equation attribute, spelled out: the core stays import-free. Matches `EQUATION_SOURCE_ATTR`. */
 const EQUATION_MARKER = 'data-latex';
 
+/** Characters a bare destination cannot hold: they end it or start raw HTML. */
+const DESTINATION_BREAKER = /[\u0000-\u0020\u007f<>]/;
+
+/** What follows `&` in a CommonMark character reference. The longest entity name is 31 letters. */
+const CHARACTER_REFERENCE_TAIL = /^(?:#\d{1,7}|#[xX][\da-fA-F]{1,6}|[A-Za-z][A-Za-z\d]{0,31});/;
+
+/**
+ * True when the parens in `url` pair up, as CommonMark requires of a bare
+ * destination. Every backslash before them is escaped, so all of them count.
+ * @param url - the raw URL
+ */
+const parensBalanced = (url: string): boolean => Array.from(url).reduce((depth, char) => {
+  /** Once below zero a `)` has closed the destination; later parens cannot fix it. */
+  if (depth < 0) {
+    return depth;
+  }
+
+  if (char === '(') {
+    return depth + 1;
+  }
+
+  return char === ')' ? depth - 1 : depth;
+}, 0) === 0;
+
+/**
+ * The URL to write as a Markdown destination, or null when it must not be
+ * written. A renderer turns every destination into a live link or image, so a
+ * script-capable URL is refused. `kind` is the Markdown shape: `![..](..)` is
+ * 'src', `[..](..)` is 'href' (a clickable link refuses data: and blob:).
+ *
+ * Only what would end the destination early is escaped, so a well-formed URL
+ * is written byte for byte. `\` is backslash-escaped, not percent-encoded:
+ * browsers read `\` as `/` in http URLs, so `%5C` would change the URL.
+ * @param url - the raw URL
+ * @param kind - 'src' for an image, 'href' for a link
+ */
+export const markdownDestination = (url: string, kind: 'href' | 'src'): string | null => {
+  if (hasUnsafeUrlProtocol(url, kind)) {
+    return null;
+  }
+
+  const escapeParens = !parensBalanced(url);
+  const chars = Array.from(url);
+  const pieces = chars.map((char, index) => {
+    if (DESTINATION_BREAKER.test(char)) {
+      return encodeURIComponent(char);
+    }
+    /** A renderer decodes `&#106;` to `j`, so `&#106;avascript:` would pass the check above. */
+    if (char === '&' && CHARACTER_REFERENCE_TAIL.test(chars.slice(index + 1, index + 40).join(''))) {
+      return '\\&';
+    }
+
+    return escapeParens && (char === '(' || char === ')') ? `\\${char}` : char;
+  });
+
+  /** Decided on the written next piece: `\%20` would escape the `%`. */
+  return pieces
+    .map((piece, index) => {
+      const next = pieces[index + 1];
+
+      return piece === '\\' && (next === undefined || ASCII_PUNCTUATION.test(next[0])) ? '\\\\' : piece;
+    })
+    .join('');
+};
+
 /**
  * Write an inline equation's source as `$…$` math. An empty source writes
  * nothing: `$$` would open display math. Trimmed, because `$ x $` is not
@@ -263,6 +330,8 @@ const CONTAINER_TOOLS = new Set([
   'column_list',
   'columns',
   'column',
+  'tabs',
+  'tab',
 ]);
 
 /**
@@ -287,6 +356,10 @@ interface SerializationContext {
   childrenOf: Map<string, SerializableBlock[]>;
   /** Reads inline HTML. */
   inline: InlineBackend;
+  /** Authorized page metadata for the static view. */
+  pageInfo?: (pageId: string) => PageInfo | null | undefined;
+  /** Link for an allowed page. Never asked for an unresolved, missing or denied one. */
+  pageHref?: (pageId: string) => string;
   /** Collects degradations; discarded when the caller asked for no report. */
   warnings: MarkdownDegradation[];
   /** Ids already on the render stack — breaks parent-reference cycles. */
@@ -556,7 +629,7 @@ const tablePresentationLosses = (
  *
  * The table splits on a `|` behind an EVEN backslash run, so every pipe must
  * end up behind an odd one. Escaped text always leaves an even run (+1). An
- * odd run is raw — a code span, a link target or an equation — and takes +2:
+ * odd run is raw — a code span or an equation — and takes +2:
  * the grid holds, but the content gains a backslash, so it is reported.
  * @param markdown - the cell's Markdown
  * @param onLossy - called when a raw backslash run sits before a pipe
@@ -695,7 +768,7 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
   warnPresentationLosses(context, block, 'a GFM pipe table', tablePresentationLosses(block.data, readTableGrid(block.data)));
 
   if (rawPipes.found) {
-    warn(context, block.tool, 'degraded', 'a backslash before a pipe inside code, a link target or an equation cannot be written exactly in a pipe table; it gains a backslash');
+    warn(context, block.tool, 'degraded', 'a backslash before a pipe inside code or an equation cannot be written exactly in a pipe table; it gains a backslash');
   }
 
   /** Code reports itself; a paragraph is what a cell reads back as, so it loses nothing. */
@@ -1094,9 +1167,29 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       return childrenToMarkdown(block, context);
     case 'column':
       return childrenToMarkdown(block, context);
+    /** Static Markdown cannot switch tabs, so every tab is written in order. */
+    case 'tabs':
+      if ((context.childrenOf.get(block.id ?? '') ?? []).some((child) => child.tool === 'tab')) {
+        warn(context, block.tool, 'degraded', 'tabs are written one after another, each under its bold title; switching between them is lost');
+      }
+
+      return childrenToMarkdown(block, context);
+    case 'tab': {
+      const label = escapePlainText([asString(data.icon), asString(data.title)].filter((part) => part !== '').join(' '));
+      const body = childrenToMarkdown(block, context);
+      // `****` alone would be a thematic break, so an empty label prints no line.
+      const title = label === '' ? '' : `**${label}**`;
+
+      return [title, body].filter((part) => part !== '').join('\n\n');
+    }
     /** Pure vertical whitespace — Markdown has no representation for a gap. */
     case 'spacer':
       warn(context, block.tool, 'dropped', 'spacer is purely visual and has no Markdown equivalent');
+
+      return '';
+    /** Its outline is derived from the headings, which serialize themselves. */
+    case 'table_of_contents':
+      warn(context, block.tool, 'dropped', 'a table of contents is built from the headings, which are exported on their own');
 
       return '';
     default:
@@ -1214,7 +1307,11 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
         warn(context, block.tool, 'degraded', 'image caption has no Markdown equivalent (the `![…]` slot is alt text); the caption is lost');
       }
 
-      return `${flatIndent}![${inlineMarkdown(context, alt)}](${asString(data.url)})`;
+      const src = markdownDestination(asString(data.url), 'src');
+
+      return src === null
+        ? `${flatIndent}${inlineMarkdown(context, alt)}`
+        : `${flatIndent}![${inlineMarkdown(context, alt)}](${src})`;
     }
     /**
      * Markdown has no media or embed syntax, so these degrade to a link — which
@@ -1232,19 +1329,34 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       const label = inlineMarkdown(context, asString(data.caption))
         || escapePlainText(asString(data.title) || asString(data.fileName) || asString(data.service) || url);
 
-      return `${flatIndent}[${label}](${url})`;
+      const href = markdownDestination(url, 'href');
+
+      return href === null ? `${flatIndent}${label}` : `${flatIndent}[${label}](${href})`;
     }
-    /**
-     * A page points at a separate document, so only its title line is here.
-     * The title is plain text: escaped, never read as inline HTML.
-     * "New page" matches the view's card.
-     */
-    case 'page': {
-      warn(context, block.tool, 'degraded', 'page is rendered as its title; the link to the sub-page is lost');
+    case 'page':
+    case 'page-link': {
+      const pageId = data.pageId;
+      const info = typeof pageId === 'string' && pageId !== '' ? context.pageInfo?.(pageId) : undefined;
+      const allowed = info !== null && info !== undefined && info.access !== 'none';
+      const rawHref = allowed && typeof pageId === 'string' ? context.pageHref?.(pageId) : undefined;
+      const href = typeof rawHref === 'string' && rawHref !== '' ? markdownDestination(rawHref, 'href') : null;
 
-      const title = isRecord(data.cache) ? asString(data.cache.title) : '';
+      if (href === null) {
+        warn(context, block.tool, 'degraded', 'page link is lost');
+      }
+      if (info === null) {
+        return `${flatIndent}Page not found`;
+      }
+      if (info === undefined) {
+        return `${flatIndent}Page`;
+      }
+      if (info.access === 'none') {
+        return `${flatIndent}No access`;
+      }
 
-      return `${flatIndent}${title === '' ? 'New page' : escapePlainText(title)}`;
+      const title = escapePlainText(typeof info.title === 'string' && info.title !== '' ? info.title : 'New page');
+
+      return href === null ? `${flatIndent}${title}` : `${flatIndent}[${title}](${href})`;
     }
     default: {
       const fallback = `${flatIndent}${text}`;
@@ -1274,7 +1386,9 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
 const buildContext = (
   blocks: SerializableBlock[],
   inline: InlineBackend,
-  warnings: MarkdownDegradation[]
+  warnings: MarkdownDegradation[],
+  pageInfo?: (pageId: string) => PageInfo | null | undefined,
+  pageHref?: (pageId: string) => string
 ): SerializationContext => {
   const byId = new Map<string, SerializableBlock>();
   const childrenOf = new Map<string, SerializableBlock[]>();
@@ -1305,6 +1419,8 @@ const buildContext = (
   return { byId,
     childrenOf,
     inline,
+    pageInfo,
+    pageHref,
     warnings,
     active: new Set<string>(),
     inlineSeen: new Set<string>() };
@@ -1379,10 +1495,12 @@ const collectOwnedIds = (blocks: SerializableBlock[], context: SerializationCont
  */
 export const serializeBlocksToMarkdown = (
   blocks: SerializableBlock[],
-  inline: InlineBackend
+  inline: InlineBackend,
+  pageInfo?: (pageId: string) => PageInfo | null | undefined,
+  pageHref?: (pageId: string) => string
 ): { markdown: string; warnings: MarkdownDegradation[] } => {
   const warnings: MarkdownDegradation[] = [];
-  const context = buildContext(blocks, inline, warnings);
+  const context = buildContext(blocks, inline, warnings, pageInfo, pageHref);
   const ownedIds = collectOwnedIds(blocks, context);
   const topLevel = blocks.filter((block) => block.id === undefined || !ownedIds.has(block.id));
 

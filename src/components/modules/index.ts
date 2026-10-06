@@ -22,6 +22,7 @@ import { TooltipAPI } from './api/tooltip';
 import { UiAPI } from './api/ui';
 
 import { ThemeAPI } from './api/theme';
+import { ViewStateAPI } from './api/viewState';
 import { BlockEvents } from './blockEvents';
 import { BlockManager } from './blockManager';
 import { BlockSelection } from './blockSelection';
@@ -32,6 +33,7 @@ import { Find } from './find';
 import { I18n } from './i18n';
 import { ModificationsObserver } from './modificationsObserver';
 import { Paste } from './paste';
+import { PageReferences } from './pageReferences';
 import { ReadOnly } from './readonly';
 import { RectangleSelection } from './rectangleSelection';
 import { Renderer } from './renderer';
@@ -44,6 +46,7 @@ import { Tools } from './tools';
 import { UI } from './ui';
 
 import { Collaboration } from './collaboration';
+import { TabSync } from './tabSync';
 import { ThemeManager } from './themeManager';
 import { UserDirectory } from './userDirectory';
 import { YjsManager } from './yjs';
@@ -76,6 +79,7 @@ export const Modules = {
   TooltipAPI,
   UiAPI,
   ThemeAPI,
+  ViewStateAPI,
 
   // Toolbar Modules
   BlockSettings,
@@ -93,6 +97,7 @@ export const Modules = {
   Find,
   ModificationsObserver,
   Paste,
+  PageReferences,
   ReadOnly,
   RectangleSelection,
   Renderer,
@@ -104,8 +109,9 @@ export const Modules = {
   ThemeManager,
   UserDirectory,
 
-  // Collaboration comes BEFORE YjsManager: destroy walks this map in order, and
-  // the provider's teardown needs a live document and a live awareness.
+  // Collaboration and TabSync come BEFORE YjsManager: destroy walks this map in
+  // order, and their teardown needs a live document and a live awareness.
   Collaboration,
+  TabSync,
   YjsManager,
 };

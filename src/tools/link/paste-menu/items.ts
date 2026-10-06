@@ -11,6 +11,7 @@ import {
   IconMap,
   IconMessage,
   IconMusic,
+  IconPage,
   IconPencil,
   IconTable,
   IconVideo,
@@ -69,6 +70,9 @@ const EMBED_TYPE_PRESENTATION: Record<EmbedServiceType, { icon: string; labelKey
   calendar: { icon: IconCalendar, labelKey: 'tools.linkPaste.embedCalendar' },
 };
 
+/** The icon for a provider's link type, shared with the embed tool's empty state. */
+export const embedTypeIcon = (type: EmbedServiceType): string => EMBED_TYPE_PRESENTATION[type].icon;
+
 /**
  * Resolves the label key and icon for a paste-menu action type.
  * Switch has no `default` branch so the compiler enforces exhaustiveness.
@@ -82,7 +86,8 @@ const presentationFor = (type: PasteMenuActionType): PasteMenuItemPresentation =
     case 'embed':
       return { labelKey: 'tools.linkPaste.embed', icon: IconGlobe };
     case 'mention':
-      return { labelKey: 'tools.linkPaste.mention', icon: IconLink };
+      // Only a page link is offered a mention.
+      return { labelKey: 'tools.linkPaste.mention', icon: IconPage };
   }
 };
 

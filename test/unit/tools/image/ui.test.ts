@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../../../src/components/utils/tooltip', () => ({
   onHover: vi.fn(),
@@ -11,6 +11,15 @@ import * as tooltip from '../../../../src/components/utils/tooltip';
 import { simulateKeydown, simulateMousedown } from '../../../helpers/simulate';
 
 describe('renderImage', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('marks the image as a block-menu surface', () => {
+    const image = renderImage({ url: 'https://x/y.png' }).querySelector('img');
+
+    expect(image?.hasAttribute('data-blok-block-context-menu')).toBe(true);
+  });
+
   it('returns figure with <img> carrying url and alt; width is set on figure so container fits image', () => {
     const fig = renderImage({ url: 'https://x/y.png', alt: 'photo', width: 60, alignment: 'center' });
     const img = fig.querySelector('img');
@@ -185,7 +194,7 @@ describe('renderAltPill', () => {
 
   afterEach(() => vi.clearAllMocks());
 
-  it('reads "Add alt text" with a help mark when alt is missing', () => {
+  it('reads "Add alt text" when alt is missing, with no tag and no extra marks', () => {
     const pill = renderAltPill({ onOpen: noopFn, isEditorOpen: () => false });
 
     expect(pill.getAttribute('data-action')).toBe('alt-edit');
@@ -193,20 +202,20 @@ describe('renderAltPill', () => {
     expect(pill.getAttribute('aria-pressed')).toBe('false');
     // Named by its visible text, so a voice user saying "click Add alt text" hits it.
     expect(pill.hasAttribute('aria-label')).toBe(false);
-    expect(pill.textContent).toContain('Add alt text');
-    expect(pill.querySelector('.blok-image-alt-pill__help')).not.toBeNull();
+    expect(pill.textContent).toBe('Add alt text');
+    expect(pill.querySelector('.blok-image-alt-pill__label')).toBeNull();
+    expect(pill.querySelector('.blok-image-alt-pill__help, .blok-image-alt-pill__mark')).toBeNull();
   });
 
-  it('shows "Alt" and the start of the text when alt is set, with no help mark', () => {
+  it('shows the Alt tag then the text, with a real space between them', () => {
     const pill = renderAltPill({ alt: 'Pink yarn mascot', onOpen: noopFn, isEditorOpen: () => false });
 
+    expect(pill.textContent).toBe('Alt Pink yarn mascot');
     expect(pill.getAttribute('data-state')).toBe('set');
     expect(pill.getAttribute('aria-pressed')).toBe('true');
-    expect(pill.textContent).toContain('Alt');
-    expect(pill.textContent).toContain('Pink yarn mascot');
-    expect(pill.querySelector('.blok-image-alt-pill__help')).toBeNull();
-    expect(pill.querySelector('.blok-image-alt-pill__mark svg')).not.toBeNull();
-    expect(pill.hasAttribute('aria-label')).toBe(false);
+    expect(pill.querySelector('.blok-image-alt-pill__label')?.textContent).toBe('Alt');
+    expect(pill.querySelector('.blok-image-alt-pill__text')?.textContent).toBe('Pink yarn mascot');
+    expect(pill.querySelector('svg')).toBeNull();
   });
 
   it('opens the editor on click without bubbling to the block', () => {
@@ -510,24 +519,11 @@ describe('renderOverlay', () => {
     expect(actions(islands[2])).toEqual(['fullscreen', 'download', 'more']);
   });
 
-  it('re-anchors the hovered button tooltip once the islands finish splitting apart', () => {
+  it('never re-shows a tooltip when an animation ends: nothing moves, so nothing needs re-anchoring', () => {
     const overlay = renderOverlay(makeOverlayOpts());
     const crop = overlay.querySelector<HTMLElement>('[data-action="crop"]');
     if (!crop) throw new Error('crop missing');
     crop.dispatchEvent(new MouseEvent('mouseenter'));
-    vi.mocked(tooltip.show).mockClear();
-
-    overlay.dispatchEvent(new Event('animationend'));
-
-    expect(tooltip.show).toHaveBeenCalledWith(crop, crop.getAttribute('aria-label'));
-  });
-
-  it('does not re-show a tooltip after the pointer left the button', () => {
-    const overlay = renderOverlay(makeOverlayOpts());
-    const crop = overlay.querySelector<HTMLElement>('[data-action="crop"]');
-    if (!crop) throw new Error('crop missing');
-    crop.dispatchEvent(new MouseEvent('mouseenter'));
-    crop.dispatchEvent(new MouseEvent('mouseleave'));
     vi.mocked(tooltip.show).mockClear();
 
     overlay.dispatchEvent(new Event('animationend'));
@@ -535,7 +531,7 @@ describe('renderOverlay', () => {
     expect(tooltip.show).not.toHaveBeenCalled();
   });
 
-  it('draws no dividers — each island is its own card', () => {
+  it('draws dividers in CSS, not as elements', () => {
     const overlay = renderOverlay(makeOverlayOpts());
 
     expect(overlay.querySelector('.blok-image-toolbar__divider')).toBeNull();

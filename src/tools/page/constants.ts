@@ -31,13 +31,29 @@ export const PAGE_LINK_CLASSES = [
 export const PAGE_LINK_ENABLED_CLASSES = [...SHARED_LINK_INK_CLASSES, 'cursor-pointer can-hover:hover:bg-item-hover-bg'].join(' ');
 
 /**
- * Missing or no-access page: muted and not a link. Important for the same
+ * Missing or unresolved page: muted and not a link. Important for the same
  * reason as the enabled ink: the holder's `[&_a]:text-link` outranks a plain utility.
  */
 export const PAGE_LINK_DISABLED_CLASSES = 'text-text-secondary! cursor-default';
+
+export const PAGE_LINK_DENIED_CLASSES = 'text-text-secondary! cursor-pointer can-hover:hover:bg-item-hover-bg';
 
 export const PAGE_ICON_CLASSES = SHARED_ICON_CLASSES.join(' ');
 
 export const PAGE_TITLE_CLASSES = SHARED_TITLE_CLASSES.join(' ');
 
 export const PAGE_TITLE_MUTED_CLASSES = SHARED_TITLE_MUTED_CLASSES.join(' ');
+
+/**
+ * Edit-only hover fill for an inline page reference. The anchor stays inline,
+ * so the fill hugs the icon and title instead of the whole line.
+ */
+export const PAGE_REFERENCE_HOVER_CLASSES = [
+  // The page block row's insets and corners, in em so they scale with the text.
+  'px-[0.25em]',
+  'py-[0.25em]',
+  'rounded-(--blok-radius-control)',
+  'box-decoration-clone',
+  'transition-colors duration-120 ease-out motion-reduce:transition-none',
+  'can-hover:hover:bg-item-hover-bg',
+].join(' ');

@@ -36,6 +36,8 @@ export interface DocumentModel {
   topLevel: ViewBlock[];
   /** Every identified block, keyed by id (first occurrence wins). */
   byId: Map<string, ViewBlock>;
+  /** Ids generated only to connect id-less legacy children. */
+  syntheticIds: ReadonlySet<string>;
   /**
    * Structural children of a block, in document order.
    * @param id - parent block id (undefined → no children)
@@ -144,11 +146,9 @@ const withCurrentShape = (block: ViewBlock): ViewBlock => {
   }
 
   if (type === 'toggleList' && 'title' in data) {
-    const isOpen = typeof data.isExpanded === 'boolean' ? { isOpen: data.isExpanded } : {};
-
     return typeof data.titleVariant === 'number'
-      ? { ...block, type: 'header', data: { text: data.title, level: data.titleVariant, isToggleable: true, ...isOpen } }
-      : { ...block, type: 'toggle', data: { text: data.title, ...isOpen } };
+      ? { ...block, type: 'header', data: { text: data.title, level: data.titleVariant, isToggleable: true } }
+      : { ...block, type: 'toggle', data: { text: data.title } };
   }
 
   if (type === 'callout' && 'body' in data) {
@@ -300,6 +300,89 @@ const legacyChildren = (block: ViewBlock): unknown[] => {
 };
 
 /**
+ * A table renders only the ids its cells list, so strays of a tabs block in a
+ * cell join that cell right after the tabs id, as the editor's table adopts
+ * them. Returns a copy: `data` still points into the caller's document.
+ * @param content - the table's raw `data.content`
+ * @param tabsId - the tabs block's id
+ * @param strays - the blocks leaving the tabs block, in order
+ */
+const withStraysInCell = (content: unknown, tabsId: string, strays: ViewBlock[]): unknown => {
+  if (!Array.isArray(content)) {
+    return content;
+  }
+
+  const ids = strays.flatMap((stray) => (stray.id === undefined ? [] : [stray.id]));
+  const placed = { done: false };
+
+  return content.map((row: unknown) => (!Array.isArray(row) ? row : row.map((cell: unknown) => {
+    const blocks: unknown[] = !placed.done && isRecord(cell) && Array.isArray(cell.blocks) ? cell.blocks : [];
+    const at = blocks.indexOf(tabsId);
+
+    if (at === -1 || !isRecord(cell)) {
+      return cell;
+    }
+
+    placed.done = true;
+
+    return { ...cell, blocks: [...blocks.slice(0, at + 1), ...ids, ...blocks.slice(at + 1)] };
+  })));
+};
+
+/**
+ * Move every non-`tab` child of a `tabs` block out, the way the tabs tool
+ * evicts them on load (`scheduleRogueEviction`): each lands in the tabs
+ * block's own parent, right after the tabs block, order and subtree kept.
+ * Tabs are handled in document order, so a stray `tabs` moved out by an outer
+ * one hands its own strays to its new parent, as in the editor.
+ * @param topLevel - root blocks, mutated in place
+ * @param children - children by parent id, mutated in place
+ */
+const hoistTabsStrays = (topLevel: ViewBlock[], children: Map<string, ViewBlock[]>): void => {
+  const parentOf = new Map<ViewBlock, ViewBlock | null>();
+  const tabsBlocks: ViewBlock[] = [];
+  const seen = new Set<ViewBlock>();
+
+  const walk = (block: ViewBlock, parent: ViewBlock | null): void => {
+    if (seen.has(block)) {
+      return;
+    }
+
+    seen.add(block);
+    parentOf.set(block, parent);
+
+    if (block.type === 'tabs') {
+      tabsBlocks.push(block);
+    }
+
+    (block.id === undefined ? [] : children.get(block.id) ?? []).forEach((child) => walk(child, block));
+  };
+
+  topLevel.forEach((block) => walk(block, null));
+
+  for (const tabs of tabsBlocks) {
+    const own = tabs.id === undefined ? [] : children.get(tabs.id) ?? [];
+    const strays = own.filter((child) => child.type !== 'tab');
+    const parent = parentOf.get(tabs) ?? null;
+    const siblings = parent === null ? topLevel : children.get(parent.id ?? '');
+    const at = siblings?.indexOf(tabs) ?? -1;
+
+    if (tabs.id === undefined || strays.length === 0 || siblings === undefined || at === -1) {
+      continue;
+    }
+
+    children.set(tabs.id, own.filter((child) => child.type === 'tab'));
+
+    strays.forEach((stray) => parentOf.set(stray, parent));
+    siblings.splice(at + 1, 0, ...strays);
+
+    if (parent?.type === 'table') {
+      parent.data = { ...parent.data, content: withStraysInCell(parent.data.content, tabs.id, strays) };
+    }
+  }
+};
+
+/**
  * Build the document model for one render run.
  * @param input - saved document, tolerant of the loose wire shape and nullish input
  */
@@ -325,6 +408,7 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
   }
 
   const synthetic = { count: 0 };
+  const syntheticIds = new Set<string>();
 
   /** An id for a legacy container that has none — children hang off an id. */
   const nextSyntheticId = (): string => {
@@ -380,6 +464,7 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
      */
     if (block.id === undefined && (children.length > 0 || nestedParentId !== null)) {
       block.id = nextSyntheticId();
+      syntheticIds.add(block.id);
     }
 
     entries.push({ block, parentId });
@@ -503,9 +588,12 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
     }
   }
 
+  hoistTabsStrays(topLevel, children);
+
   return {
     topLevel,
     byId,
+    syntheticIds,
     childrenOf: (id: string | undefined): ViewBlock[] => (id === undefined ? [] : children.get(id) ?? []),
     unresolvedContentOf: (id: string | undefined): string[] =>
       (id === undefined ? [] : unresolvedContent.get(id) ?? []),

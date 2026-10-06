@@ -360,6 +360,16 @@ export class CodeTool implements BlockTool {
     this.scheduleLineGeometry();
   }
 
+  /**
+   * Show the code when the preview hides it. Find calls this through
+   * block.call('expand') to reveal a match in the source.
+   */
+  public expand(): void {
+    if (this._viewMode === 'preview' && this._dom?.previewElement) {
+      this.setViewMode('code');
+    }
+  }
+
   private setViewMode(mode: CodeViewMode): void {
     this._viewMode = mode;
     this.applyViewMode();

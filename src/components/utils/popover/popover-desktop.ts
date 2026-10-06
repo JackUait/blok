@@ -2114,7 +2114,10 @@ export class PopoverDesktop extends PopoverAbstract {
     // Filtering slides rows under a resting pointer; that hover is not the user's.
     this.armSuppressSyncHover();
     this.isSearching = !isEmptyQuery;
-    const allTopLevel = data.topLevelItems as unknown as PopoverItemDefault[];
+    // An item hidden by name (a tool the container's childTools deny) stays
+    // hidden, so it must not count as a match or "Nothing found" never shows.
+    const allTopLevel = (data.topLevelItems as unknown as PopoverItemDefault[])
+      .filter(item => item.name === undefined || !this.isNamePermanentlyHidden(item.name));
 
     if (this.nodes.contextLabel !== undefined) {
       if (isEmptyQuery) {

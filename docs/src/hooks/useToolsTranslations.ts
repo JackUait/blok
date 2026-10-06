@@ -10,9 +10,11 @@ import type { ToolSection, ToolsSidebarSection } from '../components/tools/tools
  */
 const optionKey = (option: string): string => option.replace(/\./g, '_');
 
-export const useToolsTranslations = () => {
-  const { t, locale } = useI18n();
-
+/**
+ * One tool in a locale: its catalogue strings over the authored English. The
+ * page fingerprint calls this too, so a page is dated by what it renders.
+ */
+export const translateToolSection = (section: ToolSection, t: (key: string) => string): ToolSection => {
   // `t` returns the key itself when it cannot resolve it, so an unresolved key
   // has to be detected rather than treated as a falsy value.
   const translateOr = (key: string, fallback: string): string => {
@@ -20,20 +22,32 @@ export const useToolsTranslations = () => {
     return translated !== key ? translated : fallback;
   };
 
-  const toolSections = useMemo((): ToolSection[] => {
-    return TOOL_SECTIONS.map((section) => ({
-      ...section,
-      title: translateOr(`tools.links.${section.id}`, section.title),
-      description: translateOr(`tools.docs.${section.id}.description`, section.description),
-      configOptions: section.configOptions.map((option) => ({
-        ...option,
-        description: translateOr(
-          `tools.docs.${section.id}.options.${optionKey(option.option)}.description`,
-          option.description,
-        ),
-      })),
-    }));
-  }, [t, locale]);
+  return {
+    ...section,
+    title: translateOr(`tools.links.${section.id}`, section.title),
+    description: translateOr(`tools.docs.${section.id}.description`, section.description),
+    configOptions: section.configOptions.map((option) => ({
+      ...option,
+      description: translateOr(
+        `tools.docs.${section.id}.options.${optionKey(option.option)}.description`,
+        option.description,
+      ),
+    })),
+  };
+};
+
+export const useToolsTranslations = () => {
+  const { t, locale } = useI18n();
+
+  const translateOr = (key: string, fallback: string): string => {
+    const translated = t(key);
+    return translated !== key ? translated : fallback;
+  };
+
+  const toolSections = useMemo(
+    (): ToolSection[] => TOOL_SECTIONS.map((section) => translateToolSection(section, t)),
+    [t, locale],
+  );
 
   const sidebarSections = useMemo((): ToolsSidebarSection[] => {
     return [

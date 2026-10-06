@@ -5,6 +5,7 @@
   --blok-markup-handle-hit: 28px;
   --blok-markup-box-ink: rgba(255, 255, 255, 0.92);
   --blok-markup-box-shade: rgba(0, 0, 0, 0.35);
+  --blok-markup-marquee-fill: rgba(255, 255, 255, 0.08);
   --blok-markup-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(0, 0, 0, 0.25);
   --blok-markup-handle-fill: #fff;
   position: absolute;
@@ -48,6 +49,16 @@
   margin: calc(var(--blok-markup-handle-hit) / -2) 0 0 calc(var(--blok-markup-handle-hit) / -2);
   pointer-events: auto;
   touch-action: none;
+}
+
+/* Drag-to-select box. Neutral, like the selection box: blue is for links and focus only. */
+.blok-markup-marquee {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px dashed var(--blok-markup-box-ink);
+  box-shadow: 0 0 0 1px var(--blok-markup-box-shade);
+  background: var(--blok-markup-marquee-fill);
+  pointer-events: none;
 }
 
 /* The visible dot is small; the press target around it is finger sized. */

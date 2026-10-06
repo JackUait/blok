@@ -108,6 +108,10 @@ export const BlokEditor = defineComponent({
     persistence: { type: Object as PropType<BlokConfig['persistence']>, default: undefined },
     /** Real-time multiplayer against the server's sync service. Mutually exclusive with persistence. */
     collaboration: { type: Object as PropType<BlokConfig['collaboration']>, default: undefined },
+    /** Your app's id for this document; tabs showing the same id stay in sync. Mount-fixed. */
+    documentId: { type: String as PropType<BlokConfig['documentId']>, default: undefined },
+    /** Live sync between tabs of this browser. On by default. */
+    tabSync: { type: [Boolean, Object] as PropType<BlokConfig['tabSync']>, default: undefined },
     /** Opt-in: clicks on the host page below the editor append a block. */
     captureClicksBelowEditor: { type: Boolean as PropType<boolean | undefined>, default: undefined },
     /** Changing this prop's identity destroys and recreates the editor. */

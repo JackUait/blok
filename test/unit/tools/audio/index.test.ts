@@ -274,6 +274,56 @@ describe('AudioTool', () => {
     );
   });
 
+  describe('error state', () => {
+    const failDriveLink = async (config: AudioConfig, readOnly = false): Promise<HTMLElement> => {
+      const { AudioUploadError } = await import('../../../../src/tools/audio/uploader');
+      const tool = new AudioTool({ ...opts({ url: '' }, config), readOnly });
+      const el = tool.render();
+      const uploader = uploaderInstances.at(-1);
+      if (!uploader) throw new Error('uploader instance not captured');
+      uploader.handleUrl.mockRejectedValue(new AudioUploadError('GOOGLE_DRIVE_NEEDS_UPLOADER'));
+      tool.onPaste({ type: 'pattern', detail: { data: 'https://drive.google.com/file/d/abc/view' } } as never);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      return el;
+    };
+
+    it('marks a Google Drive failure so the card can name the service', async () => {
+      const el = await failDriveLink({});
+      const error = el.querySelector('[data-role="audio-error"]');
+      expect(error?.getAttribute('data-reason')).toBe('google-drive');
+    });
+
+    it('tops a share-link failure with a playful badge, not the service name', async () => {
+      const el = await failDriveLink({});
+      const badge = el.querySelector('[data-role="audio-error"] [data-role="audio-error-source"]');
+      expect(badge?.textContent).toBe('Needle skipped');
+    });
+
+    it('lets the user upload the downloaded file straight from the error', async () => {
+      const el = await failDriveLink({});
+      const input = el.querySelector<HTMLInputElement>('[data-role="audio-error"] input[type="file"]');
+      if (!input) throw new Error('upload input not rendered');
+      const file = new File(['x'], 'song.mp3', { type: 'audio/mpeg' });
+      Object.defineProperty(input, 'files', { value: [file] });
+      input.dispatchEvent(new Event('change'));
+
+      expect(uploaderInstances.at(-1)?.handleFile).toHaveBeenCalledWith(file, expect.anything());
+    });
+
+    it('offers no upload when the tool only takes links', async () => {
+      const el = await failDriveLink({ sources: 'url' });
+      expect(el.querySelector('[data-role="audio-error"] [data-action="upload"]')).toBeNull();
+    });
+
+    it('offers no upload in read-only mode', async () => {
+      const el = await failDriveLink({}, true);
+      expect(el.querySelector('[data-role="audio-error"] [data-action="upload"]')).toBeNull();
+    });
+  });
+
   it('with sources "upload" ignores a pasted URL pattern (no url set)', async () => {
     const tool = new AudioTool(opts({ url: '' }, { sources: 'upload' }));
     tool.render();

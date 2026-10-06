@@ -218,9 +218,10 @@ test.describe('Toggle block — live drop lifecycle inside a column', () => {
     expect(childrenOf(saved, toggleParent)).toEqual(['toggle1']);
 
     // The toggle's primary data fields round-trip through the drop.
-    const toggleData = findBlock(saved, 'toggle1')?.data as { text?: string; isOpen?: boolean };
+    const toggleData = findBlock(saved, 'toggle1')?.data as { text?: string };
     expect(toggleData.text).toBe('Toggle title');
-    expect(toggleData.isOpen).toBe(true);
+    // The open state is personal and never saved.
+    expect(toggleData).not.toHaveProperty('isOpen');
 
     // toggle -> child nesting holds in the model.
     expect(findBlock(saved, 'toggle1')?.content).toEqual(['tc1']);

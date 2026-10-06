@@ -351,7 +351,19 @@
   visibility: hidden;
 }
 
-.blok-darkroom__dock > .blok-darkroom__tabs { grid-row: 2; }
+.blok-darkroom__dock > .blok-darkroom__tabs { grid-row: 2; grid-column: 1; }
+
+/* Shares the tabs' cell, pinned to the right edge. Without grid-column on both, auto-placement pushes the tabs into a new column. */
+.blok-darkroom__dock > .blok-darkroom__help {
+  grid-row: 2;
+  grid-column: 1;
+  justify-self: end;
+  align-self: center;
+  /* The 20px icon plus padding of the other icon buttons; equal sides make the pill radius a circle. */
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
 
 .blok-darkroom__panel {
   display: flex;

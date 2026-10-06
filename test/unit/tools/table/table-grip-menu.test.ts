@@ -4,6 +4,7 @@ import { buildColumnMenuItems, buildRowMenuItems } from '../../../../src/tools/t
 import type { PopoverMenuOptions } from '../../../../src/tools/table/table-row-col-popover';
 import type { RowColAction } from '../../../../src/tools/table/table-row-col-controls';
 import { PopoverItemType } from '../../../../src/components/utils/popover';
+import { IconPaintRoller } from '../../../../src/components/icons';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
 import type { I18n } from '../../../../types/api';
 
@@ -76,6 +77,14 @@ describe('table grip menu (row/column popover items)', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('shows the paint roller icon on the color item of both menus', () => {
+    const rowColor = findByTitle(buildRowMenuItems(0, createOptions()), 'tools.table.cellColor');
+    const colColor = findByTitle(buildColumnMenuItems(0, createOptions()), 'tools.table.cellColor');
+
+    expect(rowColor && 'icon' in rowColor ? rowColor.icon : undefined).toBe(IconPaintRoller);
+    expect(colColor && 'icon' in colColor ? colColor.icon : undefined).toBe(IconPaintRoller);
   });
 
   describe('row menu', () => {

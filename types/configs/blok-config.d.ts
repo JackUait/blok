@@ -402,6 +402,9 @@ export interface BlokState {
    * destroy right after does not lose it — that call can land after
    * `api.readOnly.isEnabled` is already true.
    *
+   * With tab sync, only the tab the user is working in calls it; background
+   * tabs of the same document stay passive.
+   *
    * Its PRESENCE is load-bearing: setting it makes blok serialize the whole
    * document once per change batch. Set it only when you consume the output —
    * wrapping an optional host callback in an always-truthy arrow (`onSave={(d) =>
@@ -718,6 +721,33 @@ export interface BlokMountOptions {
      */
     onError?(error: unknown): void;
   };
+
+  /**
+   * Your app's id for this document. Tabs of this browser that show the same
+   * `documentId` stay in sync live, with no server.
+   *
+   * Use the id your app already loads and saves the document by: the route
+   * param, the id inside your `persistence` URLs, a record key. It must be
+   * unique across the whole site — prefix it per tenant if two tenants can
+   * share an id (`"acme:42"`).
+   *
+   * Without it, Blok uses the `id` it writes into saved data, plus the page
+   * path. That covers a document loaded through `persistence`. Pass
+   * `documentId` when your app copies stored documents or opens every
+   * document at one path.
+   *
+   * Fixed for the editor's life. To show another document, recreate the editor.
+   */
+  documentId?: string;
+
+  /**
+   * Live sync between tabs of this browser. On by default; `false` turns it
+   * off. `{ settings: false }` keeps document sync but stops syncing locale,
+   * theme mode and width. Never active with `collaboration`. Only the tab the
+   * user is working in saves (`persistence.save`, `onSave`).
+   * @default true
+   */
+  tabSync?: boolean | { settings?: boolean };
 
   uploader?: BlokUploader;
 
@@ -1048,6 +1078,14 @@ export interface BlokMountOptions {
      * `allowGenericEmbed: true` subsumes this list.
      */
     allowedEmbedOrigins?: string[];
+
+    /**
+     * Other hostnames that count as the editor's own site, next to the page's
+     * own hostname. Entries are hostnames (`example.com`) or wildcard subdomain
+     * patterns (`*.example.com` — any subdomain depth, never the bare suffix).
+     * Pasting a link to the own site never offers "Create bookmark".
+     */
+    hostAliases?: string[];
   };
 
   /**

@@ -188,6 +188,34 @@ export class PopoverItemDefault extends PopoverItem {
   }
 
   /**
+   * Shows a spinner while the item's action waits, e.g. on a host's backend.
+   * @param isBusy - true while waiting
+   */
+  public setBusy(isBusy: boolean): void {
+    const root = this.nodes.root;
+
+    if (root === null) {
+      return;
+    }
+
+    root.querySelector('[data-blok-testid="popover-item-spinner"]')?.remove();
+    root.removeAttribute('aria-busy');
+
+    if (!isBusy) {
+      return;
+    }
+
+    const spinner = document.createElement('div');
+
+    // Neutral ink: a busy item is not a selected one, so no blue.
+    spinner.className = 'ms-auto size-3.5 shrink-0 rounded-full border-2 border-solid [border-color:color-mix(in_srgb,var(--blok-text-primary)_14%,transparent)] [border-top-color:var(--blok-text-primary)] animate-[blok-image-retry-spin_0.9s_linear_infinite]';
+    spinner.setAttribute('data-blok-testid', 'popover-item-spinner');
+    spinner.setAttribute('aria-hidden', 'true');
+    root.setAttribute('aria-busy', 'true');
+    root.appendChild(spinner);
+  }
+
+  /**
    * Resets popover item to its original state
    */
   public reset(): void {

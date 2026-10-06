@@ -37,6 +37,7 @@ export interface DatabaseRow {
   id: string;
   position: string;
   properties: Record<string, PropertyValue>;
+  pageId?: string;
 }
 
 export interface DatabaseRowData extends BlockToolData {
@@ -51,6 +52,7 @@ export interface DatabaseRowData extends BlockToolData {
    * on load.
    */
   title?: string;
+  pageId?: string;
 }
 
 // ─── View config ───
@@ -159,8 +161,30 @@ export interface DatabaseAdapter {
   }): Promise<void>;
 }
 
+export interface DatabaseRowPageReceipt {
+  pageId: string;
+  transactionId: string;
+  acceptedBody: OutputData;
+}
+
+export interface DatabaseRowPages {
+  /** The row's page, or null when the row was never moved. */
+  lookup(input: { rowId: string }): Promise<{ pageId: string; acceptedBody: OutputData } | null>;
+  copyFromLegacy(input: { rowId: string; operationId: string; body: OutputData }): Promise<DatabaseRowPageReceipt>;
+  /** Merge a legacy body an old client changed after the copy into the page, keeping both. */
+  reconcileLegacy(input: {
+    rowId: string;
+    pageId: string;
+    operationId: string;
+    body: OutputData;
+    acceptedBody: OutputData;
+  }): Promise<DatabaseRowPageReceipt>;
+  mount(pageId: string, holder: HTMLElement): { destroy(): void };
+}
+
 export interface DatabaseConfig {
   adapter?: DatabaseAdapter;
+  rowPages?: DatabaseRowPages;
 }
 
 /**

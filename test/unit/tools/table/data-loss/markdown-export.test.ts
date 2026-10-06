@@ -228,7 +228,6 @@ describe('markdown export: table paths checked safe', () => {
   it.each([
     ['inline code', '<code>a\\|b</code>'],
     ['an equation', '<span data-latex="\\|x\\|"></span>'],
-    ['a link target', '<a href="https://e.test/a\\|b">l</a>'],
   ])('a raw backslash before a pipe in %s keeps the grid and is reported', async (_name, text) => {
     const blocks = [
       { id: 't', tool: 'table', data: { withHeadings: true, content: [[{ blocks: ['h'] }, { blocks: ['h2'] }], [{ blocks: ['a'] }, { blocks: ['b'] }]] } },
@@ -242,6 +241,15 @@ describe('markdown export: table paths checked safe', () => {
     expect(cells.map(row => row.length)).toEqual([2, 2]);
     expect(cells[1][1][0]?.data.text).toBe('B');
     expect(warningsOf(blocks).join('\n')).toContain('backslash');
+  });
+
+  /** A link destination escapes its own backslashes, so the pipe escape adds nothing to the URL. */
+  it('a backslash before a pipe in a link target comes back exactly and is not reported', async () => {
+    const blocks = oneCellTable([para('a', '<a href="https://e.test/a\\|b">l</a>')]);
+    const { cells } = await roundTrip(blocks);
+
+    expect(cells[1][0][0]?.data.text).toContain('href="https://e.test/a\\|b"');
+    expect(warningsOf(blocks).join('\n')).not.toContain('backslash');
   });
 
   it('a code block in a cell keeps each line, backticks and pipes included', async () => {

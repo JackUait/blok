@@ -77,15 +77,16 @@ export const escapePartitionSegment = (segment: string): string =>
   segment.replace(/%/g, '%25').replace(/\|/g, '%7C');
 
 /**
- * The store's own record of the session that wrote it. `writeDenied` and
- * `protocol` ride along so a reload restores the member's last known write
- * verdict and routes local edits the way the server will accept them.
+ * The store's own record of the session that wrote it. The write verdict,
+ * headless origin, and protocol let a reload decide whether editing can start
+ * and how to route local edits.
  */
 export interface StoredSessionMeta {
   format: number;
   epoch: number;
   lineage: string;
   writeDenied: boolean;
+  headlessDownload: boolean;
   protocol: SessionProtocol;
   savedAt: number;
 }
@@ -145,7 +146,9 @@ export interface OperationStore {
     tag: WorkingSetTag,
     writeDenied: boolean,
     protocol: SessionProtocol,
-    snapshot?: Uint8Array
+    snapshot?: Uint8Array,
+    signal?: AbortSignal,
+    headlessDownload?: boolean
   ) => Promise<void>;
 
   /** Local edit on a v2 session: one transaction writes `updates` + `outbox`. */
@@ -245,7 +248,7 @@ const toAdoptableMeta = (value: unknown): StoredSessionMeta | null => {
     return null;
   }
 
-  const { format, epoch, lineage, writeDenied, protocol, savedAt } = value as Record<string, unknown>;
+  const { format, epoch, lineage, writeDenied, headlessDownload, protocol, savedAt } = value as Record<string, unknown>;
 
   if (format !== SUPPORTED_FORMAT || typeof lineage !== 'string' || !LINEAGE_PATTERN.test(lineage)) {
     return null;
@@ -260,6 +263,7 @@ const toAdoptableMeta = (value: unknown): StoredSessionMeta | null => {
     epoch: typeof epoch === 'number' ? epoch : 0,
     lineage,
     writeDenied: writeDenied === true,
+    headlessDownload: headlessDownload === true,
     protocol,
     savedAt: typeof savedAt === 'number' ? savedAt : 0,
   };
@@ -785,8 +789,12 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
       }
     },
 
-    recordSession: async (tag, writeDenied, protocol, snapshot) => {
+    recordSession: async (tag, writeDenied, protocol, snapshot, signal, headlessDownload = false) => {
       await enqueue(async () => {
+        if (signal?.aborted) {
+          throw signal.reason ?? new Error('Offline download aborted');
+        }
+
         // Inside the queue like every other state write: a rejected tag must
         // not null the lineage from under an append already queued ahead.
         if (tag.format !== SUPPORTED_FORMAT || !LINEAGE_PATTERN.test(tag.lineage)) {
@@ -811,18 +819,27 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
           ? state.rows
           : (await rowsUnder(countStore, tag.lineage)).bytes.length;
 
+        if (signal?.aborted) {
+          throw signal.reason ?? new Error('Offline download aborted');
+        }
+
         const [updatesStore, metaStore] = idb.transact(db, [UPDATES_STORE, META_STORE]);
+        const transaction = metaStore.transaction;
+        const abort = (): void => abortQuietly(transaction);
+
+        signal?.addEventListener('abort', abort, { once: true });
 
         try {
           // Meta first, then the snapshot, in one transaction. Meta is the
           // adoption gate, and a meta with no snapshot behind it would adopt an
           // EMPTY document as editable.
-          await commitTogether(metaStore.transaction, () => {
+          await commitTogether(transaction, () => {
             metaStore.put({
               format: tag.format,
               epoch: tag.epoch,
               lineage: tag.lineage,
               writeDenied,
+              headlessDownload,
               protocol,
               savedAt: Date.now(),
             }, META_KEY);
@@ -837,6 +854,8 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
         } catch (error) {
           dropSession();
           throw error;
+        } finally {
+          signal?.removeEventListener('abort', abort);
         }
 
         state.rows = rows + (snapshot === undefined ? 0 : 1);

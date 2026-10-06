@@ -3,6 +3,7 @@ import { Header, type HeaderConfig, type HeaderData } from '../../../src/tools/h
 import type { API, BlockAPI } from '../../../types';
 import type { MenuConfigItem } from '../../../types/tools';
 import { PopoverDesktop } from '../../../src/components/utils/popover';
+import { createMemoryViewState } from '../../helpers/view-state';
 
 const popovers: PopoverDesktop[] = [];
 
@@ -12,6 +13,7 @@ const createHeader = (data: Partial<HeaderData> = {}, config: HeaderConfig = {})
     i18n: { t: (key: string) => key, has: () => false },
     events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
     blocks: { getChildren: () => [] },
+    viewState: createMemoryViewState(),
   } as unknown as API;
 
   const block = { id: 'header', dispatchChange: vi.fn() } as unknown as BlockAPI;
@@ -115,7 +117,7 @@ describe('Header settings controls', () => {
   });
 
   it('retains collapsed toggle state and children while using a direct level control', () => {
-    const header = createHeader({ isToggleable: true, isOpen: false, anchor: 'toggle-anchor' });
+    const header = createHeader({ isToggleable: true, anchor: 'toggle-anchor' });
     const wrapper = header.render();
     const children = wrapper.querySelector('[data-blok-nested-blocks]');
     const child = document.createElement('p');
@@ -126,7 +128,7 @@ describe('Header settings controls', () => {
     activateLevel(header, 1);
 
     expect(header.save(wrapper)).toEqual({
-      text: 'Section', level: 1, isToggleable: true, isOpen: false, anchor: 'toggle-anchor',
+      text: 'Section', level: 1, isToggleable: true, anchor: 'toggle-anchor',
     });
     expect(wrapper.querySelector('[data-blok-nested-blocks]')?.firstChild).toBe(child);
     expect(wrapper.querySelector('h1')?.getAttribute('data-blok-toggle-open')).toBe('false');

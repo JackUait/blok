@@ -152,19 +152,24 @@ test.describe('undo audit: setData apply sweep', () => {
     await expect(box).not.toBeChecked();
   });
 
-  // Undo must restore the exact prior state, also when the data lacks `isOpen`.
-  test('APL-6: undo of the first collapse on a toggle loaded without "isOpen" leaves it collapsed', async ({ page }) => {
+  // Open/close is personal state, not a document edit, so undo never reverts it.
+  test('APL-6: undo does not revert opening a toggle, and nothing saves "isOpen"', async ({ page }) => {
     await createBlok(page, [
       anchor,
       { id: 't', type: 'toggle', data: { text: 'Tog' }, content: ['tc'] },
       { id: 'tc', type: 'paragraph', data: { text: 'Kid' }, parent: 't' },
     ]);
-    await page.locator('[data-blok-id="t"] [data-blok-toggle-arrow]').first().click();
+    const arrow = page.locator('[data-blok-id="t"] [data-blok-toggle-arrow]').first();
+
+    await expect(page.getByText('Kid', { exact: true })).toBeHidden();
+    await arrow.click();
+    await expect(page.getByText('Kid', { exact: true })).toBeVisible();
     await wait(page, CAPTURE_WINDOW);
     await press(page, UNDO_SHORTCUT);
 
-    expect((await dataOf(page, 't'))?.isOpen).toBe(true);
+    await expect(arrow).toHaveAttribute('aria-expanded', 'true');
     await expect(page.getByText('Kid', { exact: true })).toBeVisible();
+    expect(await dataOf(page, 't')).not.toHaveProperty('isOpen');
   });
 
   // Redo must re-apply what undo reverted. The language picker UI path works; blocks.update does not.

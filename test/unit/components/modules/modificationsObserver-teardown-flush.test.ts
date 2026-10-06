@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Blok } from '../../../../src/blok';
-import { Paragraph } from '../../../../src/tools/paragraph';
+import { Paragraph, type ParagraphData } from '../../../../src/tools/paragraph';
 import { Table } from '../../../../src/tools/table';
 import { Header } from '../../../../src/tools/header';
 import { Renderer } from '../../../../src/components/modules/renderer';
 import { ModificationsObserver } from '../../../../src/components/modules/modificationsObserver';
 import { Saver } from '../../../../src/components/modules/saver';
-import type { OutputBlockData, OutputData } from '../../../../types';
+import type { BlokConfig, OutputBlockData, OutputData } from '../../../../types';
 
 /**
  * A real editor torn down inside the last batch window: the edit must still
@@ -21,6 +21,7 @@ interface TestEditor {
  * The API groups Blok attaches at runtime, which its class type does not declare.
  */
 type LiveEditor = TestEditor & {
+  save: () => Promise<OutputData>;
   blocks: { renderFromHTML: (html: string) => Promise<void> };
   i18n: { update: (options: { messages: Record<string, string> }) => Promise<void> };
   readOnly: { set: (state: boolean) => Promise<boolean> };
@@ -40,6 +41,15 @@ class NoInPlaceToggleTool {
 
   public save(): Record<string, never> {
     return {};
+  }
+}
+
+/**
+ * Returns its data through a promise, so no save can finish synchronously.
+ */
+class AsyncParagraph extends Paragraph {
+  public override save(toolsContent: HTMLDivElement): ParagraphData {
+    return Promise.resolve(super.save(toolsContent)) as unknown as ParagraphData;
   }
 }
 
@@ -111,6 +121,61 @@ describe('ModificationsObserver — final flush on teardown (real editor)', () =
     expect(saved.map((doc) => textOf(doc, 'p1'))).toContain('last words');
     expect(saved.map((doc) => textOf(doc, 'c01'))).toContain('b-last');
     expect(onError).not.toHaveBeenCalled();
+  }, 60_000);
+
+  it('hands onSave the final save before destroy() returns, matching save()', async () => {
+    const onSave = vi.fn<(data: OutputData) => void>();
+    const live = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, table: Table },
+      data: { blocks: structuredClone(BLOCKS) },
+      onSave,
+    }) as unknown as LiveEditor;
+
+    editor = live;
+    await live.isReady;
+    await wait(600);
+
+    typeInto('p1', 'sync words');
+    typeInto('c01', 'b-sync');
+    await wait(50);
+
+    const expected = await live.save();
+
+    live.destroy();
+    editor = undefined;
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0].blocks).toStrictEqual(expected.blocks);
+    expect(textOf(onSave.mock.calls[0][0], 'c01')).toBe('b-sync');
+
+    await wait(600);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+  }, 60_000);
+
+  it('falls back to the async final save when a tool saves asynchronously', async () => {
+    const onSave = vi.fn<(data: OutputData) => void>();
+    editor = new Blok({
+      holder,
+      tools: { paragraph: AsyncParagraph },
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'before' } }] },
+      onSave,
+    });
+
+    await editor.isReady;
+    await wait(600);
+
+    typeInto('p1', 'async words');
+    await wait(50);
+    editor.destroy();
+    editor = undefined;
+
+    expect(onSave).not.toHaveBeenCalled();
+
+    await wait(600);
+
+    expect(onSave.mock.calls.map(([data]) => textOf(data, 'p1'))).toStrictEqual(['async words']);
   }, 60_000);
 
   it('delivers an edit made right before destroy() to persistence.save', async () => {
@@ -305,7 +370,7 @@ describe('ModificationsObserver — final flush on teardown (real editor)', () =
     expect(onSave.mock.calls.map(([data]) => textOf(data, 'p1'))).toEqual(['typed']);
   }, 60_000);
 
-  describe.each([
+  describe.each<{ path: string; tools: BlokConfig['tools'] }>([
     { path: 'in-place', tools: { paragraph: Paragraph } },
     { path: 'full re-render', tools: { paragraph: Paragraph, plain: NoInPlaceToggleTool } },
   ])('read-only turned on right before destroy() ($path)', ({ tools }) => {

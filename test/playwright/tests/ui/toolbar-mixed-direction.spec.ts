@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const ACTIONS = '[data-blok-toolbar-actions]';
@@ -40,6 +41,7 @@ const createBlok = async (page: Page, direction: 'ltr' | 'rtl', data: OutputData
     window.blokInstance = blok;
     await blok.isReady;
   }, { holder: HOLDER_ID, direction, data });
+  await openFixtureToggles(page, data);
 };
 
 const box = async (page: Page, selector: string): Promise<Box> => {

@@ -1234,8 +1234,10 @@ export interface BlokViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>
   transformUrl?: BlocksToHtmlOptions['transformUrl'];
   /** Custom renderers for inline elements, keyed by lowercase tag name (equations, mentions). */
   inlineRenderers?: BlocksToHtmlOptions['inlineRenderers'];
-  /** Build the link for a `page` block from its `pageId`; without it a page card is not a link. */
+  /** Build the link for a `page` block from its `pageId`. A page card is a link only with this and an allowing {@link pageInfo}. */
   pageHref?: BlocksToHtmlOptions['pageHref'];
+  /** Host metadata (title, icon, access) for a `page` block. Without it a page card shows a neutral "Page" label and no link. */
+  pageInfo?: BlocksToHtmlOptions['pageInfo'];
   /**
    * Render with the editor's presentational classes and per-block scaffolding
    * so the output matches a read-only editor render (default `true`). Needs

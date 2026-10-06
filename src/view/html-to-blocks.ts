@@ -8,7 +8,8 @@
  *
  * It deliberately covers the STRUCTURAL subset a document body is made of:
  * headings, paragraphs, lists, tables, images, links, code, blockquotes,
- * toggles and dividers. Anything outside that subset is reported through
+ * toggles, dividers, and the tabs `blocksToHtml` writes. Anything outside that
+ * subset is reported through
  * {@link HtmlImportResult.warnings} rather than dropped in silence — a caller
  * storing the result has to be able to tell what did not survive.
  *
@@ -607,6 +608,20 @@ const emitQuote = (ctx: Ctx, element: P5Element): void => {
 };
 
 /**
+ * Give every block emitted since `before` that has no parent yet the given one.
+ * @param ctx - conversion state
+ * @param before - block count when the children started
+ * @param parent - the parent block
+ */
+const adoptSince = (ctx: Ctx, before: number, parent: OutputBlockData): void => {
+  for (const block of ctx.blocks.slice(before)) {
+    if (block.parent === undefined) {
+      block.parent = parent.id;
+    }
+  }
+};
+
+/**
  * Convert `details` into a toggle whose body blocks reference it as `parent`.
  * A toggle's title is one inline field, so an image the summary carries opens
  * the body instead, where it stays attached to the toggle.
@@ -618,7 +633,6 @@ const emitToggle = (ctx: Ctx, element: P5Element): void => {
   const segments = summary === undefined ? [] : splitOnImages(ctx, summary.childNodes);
   const toggle = push(ctx, 'toggle', {
     text: inlineHtml(ctx, segments.flatMap((segment) => 'inline' in segment ? segment.inline : [])),
-    isOpen: attr(element, 'open') !== undefined,
   });
 
   const body = element.childNodes.filter((node) => node !== summary);
@@ -626,11 +640,72 @@ const emitToggle = (ctx: Ctx, element: P5Element): void => {
 
   emitSegmentMedia(ctx, segments);
   convertNodes(ctx, body);
+  adoptSince(ctx, before, toggle);
+};
 
-  for (const block of ctx.blocks.slice(before)) {
-    if (block.parent === undefined) {
-      block.parent = toggle.id;
-    }
+/**
+ * @param node - node to test
+ * @param name - the marker attribute
+ */
+const hasMarker = (node: P5ChildNode, name: string): node is P5Element =>
+  isElement(node) && attr(node, name) !== undefined;
+
+/**
+ * Convert one `section[data-blok-tab]` into a tab block and its content. The
+ * title is the section's first element only when it carries the title marker,
+ * so a real H4 opening an untitled tab stays a header.
+ * @param ctx - conversion state
+ * @param section - the tab's section
+ * @param tabs - the tabs block
+ */
+const emitTab = (ctx: Ctx, section: P5Element, tabs: OutputBlockData): void => {
+  const first = section.childNodes.find(isElement);
+  const heading = first !== undefined && hasMarker(first, 'data-blok-tab-title') ? first : undefined;
+  const iconNode = heading?.childNodes.find((node) => hasMarker(node, 'data-blok-tab-icon'));
+  const icon = iconNode === undefined ? '' : rawText([iconNode]).trim();
+  const title = heading === undefined ? '' : rawText(heading.childNodes.filter((node) => node !== iconNode)).trim();
+  // Matches the tab tool, which never saves an empty icon.
+  const tab = push(ctx, 'tab', icon === '' ? { title } : { title, icon });
+
+  tab.parent = tabs.id;
+
+  const before = ctx.blocks.length;
+
+  convertNodes(ctx, section.childNodes.filter((node) => node !== heading));
+  adoptSince(ctx, before, tab);
+};
+
+/**
+ * Convert Blok's own `div[data-blok-tabs]`. Only its direct tab sections become
+ * tabs: a tabs block may hold nothing else. Other content follows the tabs
+ * block at its level. With no tab section at all the div is unwrapped, since
+ * the tool never adds tabs to a loaded empty tabs block.
+ * @param ctx - conversion state
+ * @param element - the tabs element
+ */
+const emitTabs = (ctx: Ctx, element: P5Element): void => {
+  const sections = element.childNodes.filter(
+    (node): node is P5Element => hasMarker(node, 'data-blok-tab') && node.tagName === 'section'
+  );
+
+  if (sections.length === 0) {
+    flatten(ctx, element);
+
+    return;
+  }
+
+  const tabs = push(ctx, 'tabs', {});
+
+  for (const section of sections) {
+    emitTab(ctx, section, tabs);
+  }
+
+  const tabNodes = new Set<P5ChildNode>(sections);
+  const rest = element.childNodes.filter((node) => !tabNodes.has(node) && node.nodeName !== '#comment');
+
+  if (rest.some((node) => isElement(node) || rawText([node]).trim() !== '')) {
+    warn(ctx, 'tabs', 'degraded', 'Content that is not a tab is moved out after the tabs block; a tabs block holds only tabs');
+    convertNodes(ctx, rest);
   }
 };
 
@@ -1182,6 +1257,12 @@ const convertElement = (ctx: Ctx, element: P5Element): void => {
 
   if (heading !== null) {
     emitInlineRun(ctx, element.childNodes, 'header', { level: Number(heading[1]) });
+
+    return;
+  }
+
+  if (tag === 'div' && attr(element, 'data-blok-tabs') !== undefined) {
+    emitTabs(ctx, element);
 
     return;
   }

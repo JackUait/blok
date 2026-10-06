@@ -15,7 +15,7 @@ import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { FileConfig, FileData, FileUploadResult } from '../../../types/tools/file';
 import type { ImageData } from '../../../types/tools/image';
 import type { VideoData } from '../../../types/tools/video';
-import { IconCaption, IconCopy, IconDownload, IconFile, IconReplace } from '../../components/icons';
+import { IconCaption, IconCopy, IconDownload, IconFile, IconLinkExternal, IconReplace } from '../../components/icons';
 import { PASTE_EXTENSIONS, PASTE_MIME_TYPES } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
@@ -24,7 +24,7 @@ import { Uploader } from './uploader';
 import { FileToolError } from './errors';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { resolveUploadError } from '../../components/utils/media-upload-error';
-import { safeHttpHref } from './url';
+import { safeHttpHref, safePreviewSrc } from './url';
 import { isPreviewable } from './preview';
 import { openFilePreview } from './preview-modal';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, writeDerived } from '../image/detached-upload';
@@ -119,6 +119,7 @@ export class FileTool implements BlockTool {
   public renderSettings(): MenuConfig {
     const i18n = this.api.i18n;
     const captionVisible = this.data.captionVisible ?? ((this.data.caption ?? '') !== '');
+    const href = this.data.url.trim() === '' ? null : safeHttpHref(this.data.url);
     return [
       {
         icon: IconCaption,
@@ -135,6 +136,15 @@ export class FileTool implements BlockTool {
         closeOnActivate: true,
         onActivate: (): void => this.transitionToEmpty(),
       },
+      ...(!isPreviewable(this.data) && href !== null ? [{
+        icon: IconLinkExternal,
+        title: i18n.t('tools.file.previewOpenInNewTab'),
+        name: 'file-open-new-tab',
+        closeOnActivate: true,
+        onActivate: (): void => {
+          window.open(href, '_blank', 'noopener,noreferrer');
+        },
+      }] : []),
       {
         icon: IconDownload,
         title: i18n.t('tools.file.download'),
@@ -437,13 +447,16 @@ export class FileTool implements BlockTool {
   }
 
   private download(): void {
-    const link = this.root?.querySelector<HTMLAnchorElement>('a[data-action="download"]');
-    if (link) {
-      link.click();
+    if (this.data.url.trim() === '') {
       return;
     }
-    const href = safeHttpHref(this.data.url);
+    const href = safeHttpHref(this.data.url) ?? safePreviewSrc(this.data.url);
     if (href === null) {
+      return;
+    }
+    const link = this.root?.querySelector<HTMLAnchorElement>('a[data-action="download"][href]');
+    if (link) {
+      link.click();
       return;
     }
     const anchor = document.createElement('a');

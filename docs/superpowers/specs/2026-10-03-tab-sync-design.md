@@ -145,3 +145,10 @@ Pre-existing gaps to verify (test first, fix if red):
 - A timed-out tab keeps listening and rejoins on the first leader message unless it has local edits.
 - Explicit `documentId` keys without the path; `origin` gains `'remote'`; personal state is the generic `api.viewState`.
 - Plain-http limitation documented; document ids minted with `nanoid`.
+
+## Revision 2 (2026-10-03, user-approved after the final review)
+
+- **The leader is the tab the user works in.** A follower that becomes visible and focused (after a short settle delay) asks the current leader to hand over. The leader flushes its typing buffer, starts its pending save, and yields; the claimant takes the lock. Background tabs are passive. Reason: `onSave` and adapter bindings (Vue `v-model:data`, Angular `[formControl]`, React state fed by `onSave`) must be current in the tab the user is using, and a hidden leader's timers are throttled by the browser. Read-only tabs and solo tabs with their own edits never claim.
+- A leader that turns read-only keeps its unsaved edit pending (no silent loss when it is the only tab).
+- Edits applied from another tab must not delay the leader's leading-edge `onChange`.
+- `render()` in any tab must not create an extra empty block in other tabs.

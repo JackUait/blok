@@ -1,5 +1,6 @@
 import type { PasteEvent, PasteEventDetail } from '../../../../../types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
+import { protectPageReferenceAnchor } from '../../../../shared/page-reference';
 import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
 import { Dom } from '../../../dom';
 import { clean } from '../../../utils/sanitizer';
@@ -427,8 +428,14 @@ export abstract class BasePasteHandler implements PasteHandler {
 
     // Inline-tool rules have no `br`. Keep it, like the block path does:
     // the field's own sanitize still decides on save.
-    Caret.insertContentAtCaretPosition(
-      clean(content.innerHTML, { ...currentBlock.tool.baseSanitizeConfig, br: {} })
-    );
+    const baseConfig = currentBlock.tool.baseSanitizeConfig;
+    const anchorRule = baseConfig.a;
+    const ordinaryAnchorRule = typeof anchorRule === 'string' ? false : anchorRule ?? false;
+
+    Caret.insertContentAtCaretPosition(clean(content.innerHTML, {
+      ...baseConfig,
+      a: protectPageReferenceAnchor(ordinaryAnchorRule),
+      br: {},
+    }));
   }
 }

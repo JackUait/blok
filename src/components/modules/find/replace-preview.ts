@@ -23,6 +23,13 @@ const UNIQUE_ATTRIBUTES = ['id', 'data-blok-testid'];
 const isClone = (node: Node): boolean => node instanceof Element && node.hasAttribute(CLONE);
 
 /**
+ * Whether `element` is in a block showing a preview. The copy is inert, so a
+ * click there targets the block around it, not the copy.
+ * @param element - any element
+ */
+export const isInPreviewedBlock = (element: Element): boolean => element.closest(`[${HOLDER}], [${CLONE}]`) !== null;
+
+/**
  * Whether a DOM change is only the preview being built or removed.
  * @param record - a change under the redactor
  */

@@ -19,4 +19,12 @@ public interface ICollabRoomManager
   /// raced the refusal.
   /// </returns>
   ValueTask DrainAsync(CancellationToken cancellationToken = default);
+
+  /// <summary>Closes revoked members of a live document and returns their count.</summary>
+  ValueTask<int> RecheckAccessAsync(
+      string documentId,
+      CancellationToken cancellationToken = default)
+  {
+    throw new NotSupportedException("This room manager does not support access rechecks.");
+  }
 }

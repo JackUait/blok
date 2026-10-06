@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const SETTINGS_TOGGLER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
@@ -54,6 +55,7 @@ const createBlokWithData = async (page: Page, blocks: OutputData['blocks']): Pro
     },
     { holder: HOLDER_ID, blokBlocks: blocks }
   );
+  await openFixtureToggles(page, { blocks });
 };
 
 /**

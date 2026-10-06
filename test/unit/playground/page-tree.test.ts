@@ -25,13 +25,13 @@ const titles = (nodes: Array<{ title: string }>): string[] => nodes.map((node) =
 describe('findPageLink', () => {
   const cached = (pageId: string, cache: unknown): OutputBlockData => ({ id: `p-${pageId}`, type: 'page', data: { pageId, cache } });
 
-  it('finds the page holding the link and the title and icon the link caches', () => {
+  it('finds the owner without using cached title or icon', () => {
     const blocks: Record<string, OutputBlockData[]> = {
       root: [pointer('guide')],
       guide: [cached('peer', { title: 'From a peer', icon: { type: 'emoji', value: '🌱' } })],
     };
 
-    expect(findPageLink((id) => blocks[id ?? 'root'], 'peer')).toEqual({ parentId: 'guide', title: 'From a peer', icon: '🌱' });
+    expect(findPageLink((id) => blocks[id ?? 'root'], 'peer')).toEqual({ parentId: 'guide', title: '' });
     expect(findPageLink((id) => blocks[id ?? 'root'], 'guide')).toEqual({ parentId: null, title: '' });
   });
 
@@ -88,7 +88,7 @@ describe('buildPageTree', () => {
     expect(tree.children[0].children[0].children).toEqual([]);
   });
 
-  it('shows a linked page this browser has no record of, titled from its block', () => {
+  it('shows a neutral linked page when this browser has no record', () => {
     const pages = new PageRegistry(seed());
     const linked: OutputBlockData = {
       id: 'p-elsewhere',
@@ -98,11 +98,11 @@ describe('buildPageTree', () => {
     const bare: OutputBlockData = { id: 'p-bare', type: 'page', data: { pageId: 'bare' } };
     const tree = buildPageTree(pages, (id) => (id === null ? [linked, bare, pointer('notes')] : pages.get(id)?.blocks));
 
-    expect(titles(tree.children)).toEqual(['Made elsewhere', 'New page', 'Notes']);
-    expect(tree.children[0].icon).toBe('🧭');
+    expect(titles(tree.children)).toEqual(['New page', 'New page', 'Notes']);
+    expect(tree.children[0].icon).toBeUndefined();
   });
 
-  it('prefers the record over the block cache, which can lag behind a rename', () => {
+  it('reads a known page name from its record instead of a block cache', () => {
     const pages = new PageRegistry(seed());
     const stale: OutputBlockData = { id: 'p-notes', type: 'page', data: { pageId: 'notes', cache: { title: 'Old name' } } };
 
@@ -210,12 +210,12 @@ describe('mountPageTree', () => {
       pages,
       blocksOf: (id) => ({ root: [linked], x: [inner] }[id ?? 'root'] ?? []),
       currentPageId: () => current,
-      href: () => '#',
+      href: (id) => id === null ? '/editor' : `/editor/page/${id}`,
       navigate,
     });
 
-    expect(visibleTitles()).toEqual(['Blok', 'X', 'Y']);
-    expect(row('Y').getAttribute('aria-current')).toBe('page');
+    expect(visibleTitles()).toEqual(['Blok', 'New page', 'New page']);
+    expect(panel().querySelector('a[aria-current="page"]')?.getAttribute('href')).toBe('/editor/page/y');
   });
 
   it('expands the ancestors once the open page shows up, when its document loads late', () => {
@@ -236,7 +236,7 @@ describe('mountPageTree', () => {
     state.loaded = true;
     tree.refresh();
 
-    expect(visibleTitles()).toEqual(['Blok', 'X', 'Y']);
+    expect(visibleTitles()).toEqual(['Blok', 'New page', 'New page']);
   });
 
   it('expands the ancestors of the open page and marks it current', () => {

@@ -55,6 +55,8 @@ const createBlocksApi = (
     // undefined disables render()'s echo-equality skip, so the render really runs
     Saver: {
       save: vi.fn(async () => undefined),
+      adoptDocumentRecordId: vi.fn(),
+      resetDocumentRecordId: vi.fn(),
     },
     InlineToolbar: {
       close: vi.fn(),

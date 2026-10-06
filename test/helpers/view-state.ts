@@ -1,0 +1,38 @@
+import type { OutputBlockData } from '../../types';
+import type { ViewState } from '../../types/api';
+import { createViewStateStore } from '../../src/components/utils/view-state-store';
+
+/**
+ * A memory-only `api.viewState` for tool unit tests. Nothing is created here,
+ * so toggles start collapsed unless a test opens them.
+ */
+export const createMemoryViewState = (): ViewState => {
+  const store = createViewStateStore({ scope: null, storage: null });
+
+  return {
+    get: (blockId, key) => store.get(blockId, key),
+    set: (blockId, key, value) => store.set(blockId, key, value),
+    onChange: (blockId, key, listener) => store.subscribe(blockId, key, listener),
+    isCreatedHere: () => false,
+  };
+};
+
+/**
+ * Store every fixture toggle's and toggle heading's open state as if this
+ * browser left it so, since neither reads `isOpen` from its data any more. Load the document
+ * with `data.id` equal to `documentId`: that id is the storage scope.
+ * Writes false too, so a value left by an earlier test never leaks in.
+ * @param documentId - the `data.id` the editor loads with
+ * @param blocks - fixture blocks; toggles and toggle headings marked `isOpen: true` start open
+ */
+export const storeToggleOpenState = (documentId: string, blocks: OutputBlockData[]): void => {
+  blocks
+    .filter(block => block.id !== undefined
+      && (block.type === 'toggle' || (block.type === 'header' && block.data.isToggleable === true)))
+    .forEach((block) => {
+      localStorage.setItem(
+        `blok:view:${documentId}:${block.id}:open`,
+        JSON.stringify({ v: block.data.isOpen === true, t: Date.now() })
+      );
+    });
+};

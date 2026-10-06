@@ -27,7 +27,7 @@ interface MockBlockManager {
 interface MockTools {
   available: Map<string, unknown>;
   unavailable: Map<string, { toolbox?: Array<{ title?: string }> }>;
-  blockTools: Map<string, { sanitizeConfig?: Record<string, unknown> }>;
+  blockTools: Map<string, { sanitizeConfig?: Record<string, unknown>; richTextFields?: string[] }>;
   stubTool: string;
 }
 
@@ -86,7 +86,7 @@ const createRenderer = (
   const defaultTools: MockTools = {
     available: new Map<string, unknown>(),
     unavailable: new Map<string, { toolbox?: Array<{ title?: string }> }>(),
-    blockTools: new Map<string, { sanitizeConfig?: Record<string, unknown> }>(),
+    blockTools: new Map<string, { sanitizeConfig?: Record<string, unknown>; richTextFields?: string[] }>(),
     stubTool: 'stub-tool',
   };
 

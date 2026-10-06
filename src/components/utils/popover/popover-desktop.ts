@@ -15,6 +15,7 @@ import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
 import { clampNestedPopoverTop, NESTED_POPOVER_VIEWPORT_MARGIN, resolveNestedPopoverBelowPlacement } from './popover-nested-position';
 import { resolvePosition } from './popover-position';
+import { getElementDirection } from '../direction';
 import { createPositionTracker, resolveBoundaryRect, type PositionTracker } from './anchored-position';
 import { promoteToTopLayer, removeFromTopLayer, stripPopoverAttribute } from '../top-layer';
 import { twMerge } from '../tw';
@@ -114,9 +115,9 @@ export interface PopoverCurrentItem {
 
 /**
  * Desktop popover.
- * On desktop devices popover behaves like a floating element. Nested popover appears at right or left side.
+ * On desktop devices popover behaves like a floating element. Nested popovers
+ * open toward the inline end: right, or left in RTL.
  * @internal
- * @todo support rtl for nested popovers and search
  */
 export class PopoverDesktop extends PopoverAbstract {
   /**
@@ -591,6 +592,8 @@ export class PopoverDesktop extends PopoverAbstract {
       document.body.appendChild(mountTarget);
     }
 
+    this.syncDirection();
+
     if (hasAnchor) {
       const { top, left, openTop, openLeft } = this.calculatePosition();
       this.nodes.popover.style.position = 'absolute';
@@ -743,8 +746,11 @@ export class PopoverDesktop extends PopoverAbstract {
     this.setOpenTop(openTop);
     this.setOpenLeft(openLeft);
 
+    // `data-align` is logical: in RTL the start edge is the right one.
+    const opensTowardEnd = openLeft === (getElementDirection(this.nodes.popover) === 'ltr');
+
     this.nodes.popover.setAttribute('data-side', openTop ? 'top' : 'bottom');
-    this.nodes.popover.setAttribute('data-align', openLeft ? 'end' : 'start');
+    this.nodes.popover.setAttribute('data-align', opensTowardEnd ? 'end' : 'start');
   }
 
   /**
@@ -795,6 +801,15 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * A submenu was placed for the old side, so it closes; the menu itself
+   * re-places for the new direction.
+   */
+  protected override onDirectionResync(): void {
+    this.destroyNestedPopoverIfExists(false);
+    this.reposition();
+  }
+
+  /**
    * Calculates position for the popover
    */
   private calculatePosition(): { top: number; left: number; openTop: boolean; openLeft: boolean } {
@@ -835,6 +850,7 @@ export class PopoverDesktop extends PopoverAbstract {
       scrollOffset: { x: window.scrollX, y: window.scrollY },
       offset: 8,
       leftAlignRect,
+      direction: getElementDirection(this.nodes.popover),
       placeLeftOfAnchor: this.placeLeftOfAnchor,
       asideSide: this.asideSide,
       viewportMargin: this.viewportMargin,
@@ -1547,6 +1563,7 @@ export class PopoverDesktop extends PopoverAbstract {
     // root (its offset parent), so viewport coordinates are converted into
     // that local coordinate space.
     const parentRect = this.nodes.popoverContainer.getBoundingClientRect();
+    const isRtl = getElementDirection(this.nodes.popover) === 'rtl';
     // Coordinates are relative to the container's containing block: the
     // pinned top-layer mount (the viewport origin), or else the parent root.
     const parentRootRect = this.nestedInTopLayer
@@ -1575,7 +1592,11 @@ export class PopoverDesktop extends PopoverAbstract {
         ? nestedContainer.offsetHeight
         : this.nestedPopover?.size.height ?? 0;
 
-      const anchorLeft = triggerItem.getElement()?.getBoundingClientRect().left ?? parentRect.left;
+      // In RTL the card's right edge lines up with the trigger's right edge.
+      const triggerRect = triggerItem.getElement()?.getBoundingClientRect();
+      const anchorLeft = isRtl
+        ? (triggerRect?.right ?? parentRect.right) - nestedWidth
+        : triggerRect?.left ?? parentRect.left;
       const { left, top, side } = resolveNestedPopoverBelowPlacement({
         parentRect: { left: anchorLeft, top: parentRect.top, bottom: parentRect.bottom },
         nestedWidth,
@@ -1610,19 +1631,20 @@ export class PopoverDesktop extends PopoverAbstract {
     // (0.25rem = 4px).
     const overlap = 4;
 
-    // Submenus otherwise ALWAYS open on the right of their parent, regardless
-    // of the parent's own side or the space available — a side that flips with
-    // geometry made the same menu open left or right on different blocks.
-    // Horizontal: place the submenu beside the parent, overlapping its trailing
-    // edge by `overlap` px, then convert to parent-root-relative pixels.
-    const viewportLeft = parentRect.right - overlap;
-
-    // The side never flips, but a wide submenu (the 320px convert menu) opened
-    // near the right edge would run off-screen, so slide it back in. A submenu
-    // wider than the viewport keeps its left margin instead of hanging left.
+    // Submenus otherwise ALWAYS open toward the inline end of their parent
+    // (right, or left in RTL), regardless of the parent's own side or the
+    // space available — a side that flips with geometry made the same menu
+    // open on different sides on different blocks. The submenu overlaps the
+    // parent's trailing edge by `overlap` px.
+    // A wide submenu (the 320px convert menu) near the viewport edge would
+    // run off-screen, so slide it back in. A submenu wider than the viewport
+    // keeps its left margin instead of hanging left.
     const nestedWidth = nestedContainer.offsetWidth > 0
       ? nestedContainer.offsetWidth
       : this.nestedPopover?.size.width ?? 0;
+    const viewportLeft = isRtl
+      ? parentRect.left + overlap - nestedWidth
+      : parentRect.right - overlap;
     const rightLimit = window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN - nestedWidth;
     const clampedLeft = nestedWidth > 0
       ? Math.max(NESTED_POPOVER_VIEWPORT_MARGIN, Math.min(viewportLeft, rightLimit))
@@ -1632,7 +1654,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Stamp the resolved side/align so CSS/animation can key off it, mirroring
     // the root popover's data-side/data-align contract.
-    actualPopoverEl.setAttribute('data-side', 'right');
+    actualPopoverEl.setAttribute('data-side', isRtl ? 'left' : 'right');
     actualPopoverEl.setAttribute('data-align', 'center');
 
     // Center nested popover vertically on the trigger item, then clamp
@@ -1697,10 +1719,22 @@ export class PopoverDesktop extends PopoverAbstract {
 
     container.className = twMerge(container.className, popoverCss.popoverContainerOpened);
 
+    // The clone's host is 0px wide, so an auto container would shrink to its
+    // min-content width. A tiled item grid collapses there, and the measured
+    // width ends up narrower than the longest row.
+    // Placement reads this size, so it must include the minWidth floor that
+    // show() applies to --width.
+    if (this.params.width === undefined || this.params.width === 'auto') {
+      popoverClone.style.setProperty('--width', 'max-content');
+      container.style.minWidth = this.params.minWidth ?? '';
+    }
+
     document.body.appendChild(popoverClone);
 
     size.height = container.offsetHeight;
-    size.width = container.offsetWidth;
+    // offsetWidth rounds to the nearest pixel. Rounding down locks --width a
+    // fraction short of the widest row, and its label gets cut off.
+    size.width = Math.ceil(container.getBoundingClientRect().width);
     popoverClone.remove();
 
     this._size = size;
@@ -2077,8 +2111,13 @@ export class PopoverDesktop extends PopoverAbstract {
   }): void => {
     const isEmptyQuery = data.query === '';
 
+    // Filtering slides rows under a resting pointer; that hover is not the user's.
+    this.armSuppressSyncHover();
     this.isSearching = !isEmptyQuery;
-    const allTopLevel = data.topLevelItems as unknown as PopoverItemDefault[];
+    // An item hidden by name (a tool the container's childTools deny) stays
+    // hidden, so it must not count as a match or "Nothing found" never shows.
+    const allTopLevel = (data.topLevelItems as unknown as PopoverItemDefault[])
+      .filter(item => item.name === undefined || !this.isNamePermanentlyHidden(item.name));
 
     if (this.nodes.contextLabel !== undefined) {
       if (isEmptyQuery) {

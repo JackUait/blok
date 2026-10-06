@@ -211,8 +211,7 @@ test.describe('undo audit: capture', () => {
   const turnToggleHeadingIntoHeading = async (page: Page): Promise<void> => {
     await openTunes(page, 'Toggle parent');
     await tuneItem(page, 'convert-to').dispatchEvent('mouseover');
-    await page.locator('[data-blok-testid="block-tunes-popover"] [data-blok-nested="true"] [data-blok-popover-tabs] [role="tab"][data-blok-popover-tab="heading"]').click();
-    await page.locator('[data-blok-testid="block-tunes-popover"] [data-blok-nested="true"] [data-blok-item-name="header-2"]').click();
+    await page.locator(NESTED_POPOVER).getByRole('menuitem', { name: 'Heading 2', exact: true }).click();
     await settle(page);
   };
 

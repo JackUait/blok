@@ -40,6 +40,10 @@ const STANDALONE_CSS_ENTRIES = [
     file: 'src/playground/playground.css',
     reason: 'Dev-page Tailwind entry, loaded by index.html alone — never reachable from main.css.',
   },
+  {
+    file: 'src/playground/page-tree.css',
+    reason: 'Dev-page drawer styles, imported by src/playground/page-tree.ts alone — never reachable from main.css.',
+  },
 ];
 
 /** Every local .css file main.css pulls in, transitively. */

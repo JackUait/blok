@@ -30,6 +30,7 @@ export { DatabaseTool as Database } from './database';
 export { DatabaseRowTool as DatabaseRow } from './database-row';
 export { DividerTool as Divider } from './divider';
 export { SpacerTool as Spacer } from './spacer';
+export { TableOfContentsTool as TableOfContents } from './table-of-contents';
 export { Quote } from './quote';
 export { CodeTool as Code } from './code';
 export { ImageTool as Image } from './image';
@@ -39,8 +40,13 @@ export { VideoTool as Video } from './video';
 export { ColumnList } from './column-list';
 export { Column } from './column';
 export { Columns } from './columns';
+export { TabsTool } from './tabs';
+export { TabTool } from './tab';
+export { Tabs } from './tabs-group';
 export { Embed } from './link/embed';
 export { Bookmark } from './link/bookmark';
+export { PageTool as Page } from './page';
+export { PageLink } from './page-link';
 
 // Embed-registry lookup. The registry itself stays private — these two are the
 // whole contract a host needs to turn a stored legacy URL into exactly the
@@ -83,6 +89,7 @@ export const defaultBlockTools = {
   'database-row': {},
   divider: {},
   spacer: {},
+  table_of_contents: {},
   quote: {},
   code: { inlineToolbar: false },
   image: {},
@@ -91,6 +98,8 @@ export const defaultBlockTools = {
   video: {},
   column_list: {},
   column: {},
+  tabs: {},
+  tab: {},
   embed: {},
   bookmark: {},
 } as const;

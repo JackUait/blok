@@ -442,6 +442,54 @@ describe('DatabaseModel', () => {
       expect(model.getViews()).toHaveLength(1);
       expect(model.getSchema()[0].id).toBe('p-original');
     });
+
+    it('does not save backend-omitted properties even when a row still has body blocks', () => {
+      const localTitle = makeProperty({ id: 'title', name: 'Local title', type: 'title', position: 'a0' });
+      const bodyProperty = makeProperty({ id: 'body', name: 'Details', type: 'richText', position: 'a1' });
+      const removedText = makeProperty({ id: 'removed-text', type: 'text', position: 'a2' });
+      const unusedBody = makeProperty({ id: 'unused-body', type: 'richText', position: 'a3' });
+      const backendTitle = makeProperty({ id: 'title', name: 'Backend title', type: 'title', position: 'a0' });
+      const model = new DatabaseModel(makeData({ schema: [localTitle, bodyProperty, removedText, unusedBody] }));
+
+      model.setRows([makeRow({
+        id: 'row-1',
+        properties: { body: { blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'Saved details' } }] } },
+      })]);
+      model.hydrate({ schema: [backendTitle] });
+
+      expect(model.snapshot().schema).toEqual([backendTitle]);
+      expect(model.getRow('row-1')?.properties.body).toEqual({
+        blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'Saved details' } }],
+      });
+    });
+
+    it('drops a locally added body property after the backend confirms then deletes it', () => {
+      const title = makeProperty({ id: 'title', name: 'Title', type: 'title' });
+      const model = new DatabaseModel(makeData({ schema: [title] }));
+      const bodyProperty = model.addProperty('Details', 'richText');
+      const body = { blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'Saved details' } }] };
+
+      model.setRows([makeRow({ id: 'row-1', properties: { [bodyProperty.id]: body } })]);
+      model.hydrate({ schema: [title, bodyProperty] });
+      model.hydrate({ schema: [title] });
+
+      expect(model.snapshot().schema).toEqual([title]);
+      expect(model.getRow('row-1')?.properties[bodyProperty.id]).toEqual(body);
+    });
+
+    it('uses a backend definition for a saved rich-text property with the same ID', () => {
+      const savedBody = makeProperty({ id: 'body', name: 'Local details', type: 'richText', position: 'a0' });
+      const backendBody = makeProperty({ id: 'body', name: 'Backend details', type: 'richText', position: 'a1' });
+      const model = new DatabaseModel(makeData({ schema: [savedBody] }));
+
+      model.setRows([makeRow({
+        id: 'row-1',
+        properties: { body: { blocks: [{ id: 'body-p', type: 'paragraph', data: { text: 'Saved details' } }] } },
+      })]);
+      model.hydrate({ schema: [backendBody] });
+
+      expect(model.getSchema()).toEqual([backendBody]);
+    });
   });
 
   describe('positionBetween', () => {

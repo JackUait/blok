@@ -87,10 +87,14 @@ test.describe('slash search radius inside table cell', () => {
     await expect(slashSearch).toHaveAttribute('data-blok-slash-search', /.+/);
 
     // The pill is painted by ::before; the editable itself has no background.
-    const radius = await slashSearch.evaluate(
-      (el) => window.getComputedStyle(el, '::before').borderTopLeftRadius
-    );
+    // tables.css hides placeholder ::before in cells; the pill must still paint.
+    const pill = await slashSearch.evaluate((el) => {
+      const before = window.getComputedStyle(el, '::before');
 
-    expect(radius).toBe('6px');
+      return { content: before.content, radius: before.borderTopLeftRadius };
+    });
+
+    expect(pill.content).not.toBe('none');
+    expect(pill.radius).toBe('6px');
   });
 });

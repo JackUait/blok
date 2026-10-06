@@ -318,7 +318,7 @@ const KHMER_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.image.uploadingLabel': 'កំពុងបង្ហោះ',
   'tools.image.cancelUpload': 'បោះបង់ការបង្ហោះ',
   'tools.image.uploadProgress': 'វឌ្ឍនភាពនៃការបង្ហោះ',
-  'tools.image.errorUploadFailed': 'ការបង្ហោះបានបរាជ័យ',
+  'tools.image.errorUploadFailed': 'ការបង្ហោះទៅម៉ាស៊ីនមេបានបរាជ័យ',
   'tools.image.errorUploadFailedTitle': 'ការបង្ហោះបានបរាជ័យ',
   'tools.image.errorDefaultMessage':
     'មិនអាចផ្ទុករូបភាពពី URL នេះបានទេ។ សូមសាកល្បងប្រភពផ្សេង ឬបង្ហោះឯកសារឡើងវិញ។',
@@ -859,7 +859,7 @@ const MACEDONIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
     'Опишете ја оваа слика за лицата што не можат да ја видат.',
   'tools.image.previewControls': 'Контроли за преглед на сликата',
   'tools.image.navigationControls': 'Навигација низ сликите',
-  'tools.image.errorUploadFailed': 'Прикачувањето не успеа',
+  'tools.image.errorUploadFailed': 'Прикачувањето на серверот не успеа',
   'tools.image.errorDefaultMessage':
     'Сликата не може да се вчита од овој URL. Обидете се со друг извор или повторно прикачете ја датотеката.',
   'tools.image.emptyUpload': 'Од уред',
@@ -1137,7 +1137,7 @@ const MONGOLIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.link.linkTitle': 'Холбоосын текст',
   'tools.image.toggleCaption':
     'Тайлбарыг харуулах эсвэл нуух',
-  'tools.image.crop': 'Тайрах',
+  'tools.image.crop': 'Засах',
   'tools.image.altEdit': 'Өөр текстийг засах',
   'tools.image.altDescription':
     'Энэ зургийг харах боломжгүй хүмүүст зориулан тайлбарлана уу.',
@@ -2213,7 +2213,7 @@ const PASHTO_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.image.alignmentLeftAria': 'کیڼ لوري ته برابر کړئ',
   'tools.image.alignmentCenterAria': 'منځ ته برابر کړئ',
   'tools.image.alignmentRightAria': 'ښي لوري ته برابر کړئ',
-  'tools.image.crop': 'پرې کړئ',
+  'tools.image.crop': 'سم یې کړئ',
   'tools.image.viewFullscreen': 'په بشپړه پرده کې وګورئ',
   'tools.image.exitFullscreen': 'له بشپړې پردې ووځئ',
   'tools.image.downloadOriginal': 'اصلي انځور ډاونلوډ کړئ',
@@ -3280,7 +3280,7 @@ const TAMIL_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.link.linkTitle': 'இணைப்பு உரை',
   'tools.image.toggleCaption': 'தலைப்புரையைக் காட்டு அல்லது மறை',
   'tools.image.captionPlaceholder': 'தலைப்புரையை எழுதவும்…',
-  'tools.image.crop': 'செதுக்கு',
+  'tools.image.crop': 'திருத்து',
   'tools.image.viewFullscreen': 'முழுத் திரையில் பார்',
   'tools.image.exitFullscreen': 'முழுத் திரையிலிருந்து வெளியேறு',
   'tools.image.uploading': 'பதிவேற்றப்படுகிறது…',
@@ -3290,7 +3290,7 @@ const TAMIL_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.image.altPlaceholder': 'மாற்று உரை',
   'tools.image.preview': 'பட முன்னோட்டம்',
   'tools.image.previewControls': 'பட முன்னோட்டக் கட்டுப்பாடுகள்',
-  'tools.image.errorUploadFailed': 'பதிவேற்றம் தோல்வியடைந்தது',
+  'tools.image.errorUploadFailed': 'சேவையகத்தில் பதிவேற்ற முடியவில்லை',
   'tools.image.errorUploadFailedTitle': 'பதிவேற்றம் தோல்வியடைந்தது',
   'tools.image.errorSourceOffline': 'மூலக் கோப்பு நகர்த்தப்பட்டிருக்கலாம் அல்லது கிடைக்காமல் இருக்கலாம்.',
   'tools.image.errorDefaultMessage': 'இந்த URL-இலிருந்து படத்தை ஏற்ற முடியவில்லை. வேறு மூலத்தை முயற்சிக்கவும் அல்லது கோப்பை மீண்டும் பதிவேற்றவும்.',
@@ -3774,7 +3774,7 @@ const YIDDISH_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.image.uploadProgress': 'פֿאָרשריט בײַם אַרויפֿלאָדן',
   'tools.image.altDescription': 'באַשרײַב דאָס בילד פֿאַר מענטשן וואָס קענען עס נישט זען.',
   'tools.image.previewControls': 'קאָנטראָלן פֿאַרן בילד־פֿאָרויסבליק',
-  'tools.image.errorUploadFailed': 'דאָס אַרויפֿלאָדן איז דורכגעפֿאַלן',
+  'tools.image.errorUploadFailed': 'דאָס אַרויפֿלאָדן אויפֿן סערווער איז דורכגעפֿאַלן',
   'tools.image.errorUploadFailedTitle': 'אַרויפֿלאָדן דורכגעפֿאַלן',
   'tools.image.errorUnavailable': 'דאָס בילד איז נישט פֿאַראַן',
   'tools.image.errorImageFailedToLoad': 'דאָס בילד האָט זיך נישט געלאָדן',
@@ -5227,6 +5227,13 @@ describe('translation guideline corpus integrity', () => {
       expect(actual).toEqual(expected);
     }
   );
+
+  // The image toolbar button opens the whole editor (crop, adjust, filters, markup), not just crop.
+  it.each(localeCodes)('%s labels the image editor button with its generic "Edit"', locale => {
+    const { messages } = readLocale(locale);
+
+    expect(messages['tools.image.crop']).toBe(messages['tools.link.edit']);
+  });
 
   it.each(Object.entries(ENGLISH_GUIDELINE_EXPECTATIONS))(
     'English %s uses the approved source wording',

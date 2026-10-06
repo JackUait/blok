@@ -16,6 +16,7 @@ import type { CrossBlockTextSelection } from '../selection/cross-block-range';
 import { SelectionUtils } from '../selection/index';
 import { announce } from '../utils/announcer';
 import { mouseButtons } from '../utils';
+import { horizontalArrowIntent } from './blockEvents/utils/keyboard';
 
 /**
  *
@@ -686,20 +687,17 @@ export class CrossBlockSelection extends Module {
 
     if (reason && reason instanceof KeyboardEvent) {
       /**
-       * Set caret depending on pressed key if pressed key is an arrow.
+       * Up and backward land at the start of the range, anything else at its
+       * end. The arrow is not prevented, so a wrong side would let the native
+       * move push the caret one character into the text.
        */
-      switch (reason.key) {
-        case 'ArrowDown':
-        case 'ArrowRight':
-          Caret.setToBlock(BlockManager.blocks[Math.max(fIndex, lIndex)], Caret.positions.END);
-          break;
+      const intent = horizontalArrowIntent(reason, this.Blok.UI.nodes.wrapper);
+      const toStart = reason.key === 'ArrowUp' || intent === 'backward';
 
-        case 'ArrowUp':
-        case 'ArrowLeft':
-          Caret.setToBlock(BlockManager.blocks[Math.min(fIndex, lIndex)], Caret.positions.START);
-          break;
-        default:
-          Caret.setToBlock(BlockManager.blocks[Math.max(fIndex, lIndex)], Caret.positions.END);
+      if (toStart) {
+        Caret.setToBlock(BlockManager.blocks[Math.min(fIndex, lIndex)], Caret.positions.START);
+      } else {
+        Caret.setToBlock(BlockManager.blocks[Math.max(fIndex, lIndex)], Caret.positions.END);
       }
     }
 

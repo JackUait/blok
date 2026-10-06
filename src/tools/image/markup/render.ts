@@ -1,12 +1,26 @@
 import type { ImageMarkup, ImageMarkupShape, ImageMarkupStroke, ImageMarkupText } from '../../../../types/tools/image';
 import type { Point, Size } from '../darkroom/camera';
+import { svgFilterSteps, type SvgFilterStep } from '../adjust';
 import { smoothStroke, strokeOutline } from './freehand';
-import { ARROW_HEAD_HALF_WIDTH, TEXT_LINE_HEIGHT, arrowHeadLength, contrastInk, isMarkupColor } from './model';
+import { ARROW_HEAD_HALF_WIDTH, TEXT_LINE_HEIGHT, arrowHeadLength, contrastInk, isMarkupColor, shapeOutline } from './model';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const FONT_FAMILY = "system-ui, -apple-system, 'Segoe UI', sans-serif";
-const HIGHLIGHTER_OPACITY = '0.45';
+/**
+ * Highlighter blend passes, back to front. Multiply keeps dark ink under it dark;
+ * screen keeps the colour visible over dark photo areas, where multiply alone turns muddy.
+ * markup-editor.ts paints its live highlighter with the same passes.
+ */
+export const HIGHLIGHTER_PASSES: readonly { blend: string; opacity: string }[] = [
+  { blend: 'multiply', opacity: '0.55' },
+  { blend: 'screen', opacity: '0.4' },
+];
 const FILL_OPACITY = '0.2';
+const SPOTLIGHT_DIM = '0.55';
+const LOUPE_ZOOM = 2;
+/** Lens ring width as a share of the image's short side, with a floor so it reads on small images. */
+const LOUPE_RING = 0.006;
+const LOUPE_RING_MIN = 2;
 const OUTLINE_WIDTH = 0.16;
 /** The head's concave back, in head lengths. */
 const HEAD_BACK_PULL = 0.55;
@@ -22,7 +36,7 @@ const BG_PAD_Y = 0.2;
 
 interface LayerState { seq: number; size: string }
 
-const counter = { layers: 0 };
+const counter = { layers: 0, loupes: 0 };
 const layers = new WeakMap<SVGSVGElement, LayerState>();
 /** What each mark node was drawn from; reused while the data is the same. */
 const drawn = new WeakMap<Element, { item: ImageMarkup; json: string }>();
@@ -71,18 +85,29 @@ const centreline = (pts: number[]): string => {
 const drawStroke = (item: ImageMarkupStroke, o: Size, width: number, color: string): SVGElement => {
   const pts = smoothStroke(pointsPx(item, o));
 
-  if (item.type === 'pen') return svgEl('path', { d: strokeOutline(pts, width, { taper: true }), fill: color });
+  if (item.type === 'pen') {
+    const taper = { start: item.cut !== 'start' && item.cut !== 'both', end: item.cut !== 'end' && item.cut !== 'both' };
 
-  return svgEl('path', {
-    d: centreline(pts),
-    fill: 'none',
-    stroke: color,
-    'stroke-width': fmt(width),
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round',
-    opacity: HIGHLIGHTER_OPACITY,
-    style: 'mix-blend-mode:multiply',
-  });
+    return svgEl('path', { d: strokeOutline(pts, width, { taper }), fill: color });
+  }
+
+  const d = centreline(pts);
+  const g = svgEl('g', {});
+
+  for (const pass of HIGHLIGHTER_PASSES) {
+    g.appendChild(svgEl('path', {
+      d,
+      fill: 'none',
+      stroke: color,
+      'stroke-width': fmt(width),
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+      opacity: pass.opacity,
+      style: `mix-blend-mode:${pass.blend}`,
+    }));
+  }
+
+  return g;
 };
 
 const lineAttrs = (color: string, width: number): Record<string, string> => ({
@@ -115,6 +140,116 @@ const drawArrow = (a: Point, b: Point, color: string, width: number): SVGElement
   ];
 };
 
+/** The photo this layer draws over: the img in the same plane. */
+const photoOf = (svg: SVGSVGElement): HTMLImageElement | null => svg.parentElement?.querySelector('img') ?? null;
+
+/** A plane img length (`%` of the plane, or px) in O px. */
+const inPlane = (value: string, side: number): number => {
+  const n = Number.parseFloat(value);
+
+  if (!Number.isFinite(n)) return 0;
+
+  return value.trim().endsWith('%') ? (n / 100) * side : n;
+};
+
+const filterStep = (step: SvgFilterStep): SVGElement => {
+  if (step.kind === 'saturate') return svgEl('feColorMatrix', { type: 'saturate', values: String(step.amount) });
+  if (step.kind === 'hue') return svgEl('feColorMatrix', { type: 'hueRotate', values: String(step.degrees) });
+  if (step.kind === 'matrix') return svgEl('feColorMatrix', { type: 'matrix', values: step.values.join(' ') });
+  const transfer = svgEl('feComponentTransfer');
+
+  for (const fn of ['feFuncR', 'feFuncG', 'feFuncB'] as const) {
+    transfer.appendChild(svgEl(fn, { type: 'linear', slope: String(step.slope), intercept: String(step.intercept) }));
+  }
+
+  return transfer;
+};
+
+/** Puts the photo's box, turn and paint on the lens copy; the plane places the img with these four lengths. */
+const copyPhoto = (from: HTMLImageElement, to: SVGImageElement, o: Size): void => {
+  const src = from.currentSrc || from.getAttribute('src') || '';
+  const { width, height, left, top, transform, filter } = from.style;
+  const paint = to.parentElement?.querySelector('filter');
+  const steps = svgFilterSteps(filter);
+
+  if (to.getAttribute('href') !== src) to.setAttribute('href', src);
+  to.setAttribute('x', fmt(inPlane(left, o.w)));
+  to.setAttribute('y', fmt(inPlane(top, o.h)));
+  to.setAttribute('width', fmt(width === '' ? o.w : inPlane(width, o.w)));
+  to.setAttribute('height', fmt(height === '' ? o.h : inPlane(height, o.h)));
+  to.style.setProperty('transform', transform);
+  paint?.replaceChildren(...steps.map(filterStep));
+  if (paint && steps.length > 0) to.setAttribute('filter', `url(#${paint.id})`);
+  else to.removeAttribute('filter');
+};
+
+const syncLoupes = (svg: SVGSVGElement, o: Size): void => {
+  const photo = photoOf(svg);
+
+  if (photo === null) return;
+  svg.querySelectorAll<SVGImageElement>('image[data-markup-loupe-photo]').forEach((copy) => copyPhoto(photo, copy, o));
+};
+
+/** The photo each layer's lenses copy, and the box it was last drawn at. */
+const watchers = new WeakMap<SVGSVGElement, { photo: HTMLImageElement; observer: MutationObserver; o: Size }>();
+
+/** Re-copies the photo into every lens when it turns, takes a filter or loads another source. */
+const watchPhoto = (svg: SVGSVGElement, o: Size): void => {
+  const photo = photoOf(svg);
+  const was = watchers.get(svg);
+
+  if (photo === null) return;
+  if (was?.photo === photo) {
+    watchers.set(svg, { ...was, o });
+
+    return;
+  }
+  was?.observer.disconnect();
+  const resync = (): void => {
+    const now = watchers.get(svg);
+
+    if (now) syncLoupes(svg, now.o);
+  };
+  const observer = new MutationObserver(resync);
+
+  observer.observe(photo, { attributes: true, attributeFilter: ['style', 'src', 'srcset'] });
+  photo.addEventListener('load', resync);
+  watchers.set(svg, { photo, observer, o });
+};
+
+/*
+ * SVG all the way down: WebKit paints HTML in a foreignObject above the clip and the
+ * other marks, so a foreignObject img would cover the whole image.
+ */
+const drawLoupe = (o: Size, c: Point, r: number): SVGElement[] => {
+  // Minted, never the mark id: a saved id may hold a space or a bracket, which breaks url(#…).
+  counter.loupes += 1;
+  const clipId = `blok-markup-loupe-${counter.loupes}`;
+  const clip = svgEl('clipPath', { id: clipId });
+  const lens = svgEl('g', { 'clip-path': `url(#${clipId})` });
+  const zoom = svgEl('g', { transform: `translate(${fmt(c.x)} ${fmt(c.y)}) scale(${LOUPE_ZOOM}) translate(${fmt(-c.x)} ${fmt(-c.y)})` });
+  const copy = svgEl('image', { 'data-markup-loupe-photo': '', preserveAspectRatio: 'none' });
+  const paint = svgEl('filter', {
+    id: `blok-markup-loupe-paint-${counter.loupes}`, 'color-interpolation-filters': 'sRGB',
+    x: '0', y: '0', width: '1', height: '1',
+  });
+  const ring = Math.max(LOUPE_RING_MIN, LOUPE_RING * Math.min(o.w, o.h));
+
+  clip.appendChild(svgEl('circle', { cx: fmt(c.x), cy: fmt(c.y), r: fmt(r) }));
+  // The plane turns the img about its own centre.
+  copy.style.setProperty('transform-box', 'fill-box');
+  copy.style.setProperty('transform-origin', 'center');
+  zoom.append(paint, copy);
+  lens.appendChild(zoom);
+
+  return [
+    clip,
+    lens,
+    svgEl('circle', { cx: fmt(c.x), cy: fmt(c.y), r: fmt(r), fill: 'none', stroke: '#000', 'stroke-opacity': '0.35', 'stroke-width': fmt(ring * 2) }),
+    svgEl('circle', { cx: fmt(c.x), cy: fmt(c.y), r: fmt(r), fill: 'none', stroke: '#fff', 'stroke-width': fmt(ring) }),
+  ];
+};
+
 const drawShape = (item: ImageMarkupShape, o: Size, width: number, color: string): SVGElement[] => {
   const a = { x: item.x1 * o.w, y: item.y1 * o.h };
   const b = { x: item.x2 * o.w, y: item.y2 * o.h };
@@ -129,7 +264,17 @@ const drawShape = (item: ImageMarkupShape, o: Size, width: number, color: string
   const w = Math.abs(b.x - a.x);
   const h = Math.abs(b.y - a.y);
 
+  const outline = shapeOutline(item, o);
+
+  if (outline !== null) {
+    const d = outline.map((p, i) => `${i === 0 ? 'M' : 'L'}${fmt(p.x)} ${fmt(p.y)}`).join('');
+
+    return [svgEl('path', { d: `${d}Z`, ...paint })];
+  }
   if (item.type === 'rect') return [svgEl('rect', { x: fmt(x), y: fmt(y), width: fmt(w), height: fmt(h), ...paint })];
+  if (item.type === 'magnifier') return drawLoupe(o, { x: x + w / 2, y: y + h / 2 }, Math.min(w, h) / 2);
+  // The layer's one dim sheet paints it; this box only gives selection and the erase fade a size.
+  if (item.type === 'spotlight') return [svgEl('rect', { x: fmt(x), y: fmt(y), width: fmt(w), height: fmt(h), fill: 'none', stroke: 'none' })];
 
   return [svgEl('ellipse', { cx: fmt(x + w / 2), cy: fmt(y + h / 2), rx: fmt(w / 2), ry: fmt(h / 2), ...paint })];
 };
@@ -240,6 +385,31 @@ const syncFilters = (defs: Element, markup: ImageMarkup[], state: LayerState): v
   }
 };
 
+/** One dim sheet over the whole box with a hole per spotlight; null when there is none. */
+const syncSpotlight = (svg: SVGSVGElement, markup: ImageMarkup[], o: Size): Element | null => {
+  const old = svg.querySelector(':scope > [data-role="markup-spotlight"]');
+  const holes = markup.flatMap((m) => {
+    if (m.type !== 'spotlight') return [];
+    const x = Math.min(m.x1, m.x2) * o.w;
+    const y = Math.min(m.y1, m.y2) * o.h;
+
+    return [`M${fmt(x)} ${fmt(y)}H${fmt(Math.max(m.x1, m.x2) * o.w)}V${fmt(Math.max(m.y1, m.y2) * o.h)}H${fmt(x)}Z`];
+  });
+
+  if (holes.length === 0) {
+    old?.remove();
+
+    return null;
+  }
+  const sheet = old ?? svgEl('path', {
+    'data-role': 'markup-spotlight', fill: '#000', 'fill-opacity': SPOTLIGHT_DIM, 'fill-rule': 'evenodd', 'pointer-events': 'none',
+  });
+
+  sheet.setAttribute('d', `M0 0H${fmt(o.w)}V${fmt(o.h)}H0Z${holes.join('')}`);
+
+  return sheet;
+};
+
 /** Draws `markup` into `svg`, reusing the node of every mark whose data and box are unchanged. */
 export function updateMarkupLayer(svg: SVGSVGElement, markup: ImageMarkup[], o: Size): void {
   const state = layers.get(svg) ?? { seq: ++counter.layers, size: '' };
@@ -270,7 +440,8 @@ export function updateMarkupLayer(svg: SVGSVGElement, markup: ImageMarkup[], o: 
 
     return old !== undefined && unchanged(old, item) ? old : drawMark(item, o, state);
   });
-  const keep = new Set<Node>([defs, ...nodes]);
+  const sheet = syncSpotlight(svg, markup, o);
+  const keep = new Set<Node>([defs, ...(sheet ? [sheet] : []), ...nodes]);
 
   for (const stale of Array.from(svg.childNodes).filter((n) => !keep.has(n))) stale.remove();
 
@@ -280,9 +451,19 @@ export function updateMarkupLayer(svg: SVGSVGElement, markup: ImageMarkup[], o: 
     svg.insertBefore(node, cursor);
 
     return cursor;
-  }, defs.nextSibling);
+  }, ((): ChildNode | null => {
+    // The sheet goes first, under every mark.
+    if (sheet === null) return defs.nextSibling;
+    if (defs.nextSibling !== sheet) svg.insertBefore(sheet, defs.nextSibling);
+
+    return sheet.nextSibling;
+  })());
 
   syncFilters(defs, markup, state);
+  if (markup.some((m) => m.type === 'magnifier')) {
+    watchPhoto(svg, o);
+    syncLoupes(svg, o);
+  }
 }
 
 /** An inert overlay for the O box. With `o` null it stays empty until `updateMarkupLayer`. */

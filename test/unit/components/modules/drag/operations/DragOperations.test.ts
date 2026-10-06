@@ -6,6 +6,8 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { DragOperations } from '../../../../../../src/components/modules/drag/operations/DragOperations';
 import { BlockToolAPI } from '../../../../../../src/components/block';
 import type { Block } from '../../../../../../src/components/block';
+import { flatIndexForPlacement } from '../../../../../../src/components/utils/tree-order';
+import type { TreePlacement } from '../../../../../../src/components/utils/tree-order';
 import type { SavedData } from '../../../../../../types/data-formats';
 
 describe('DragOperations', () => {
@@ -659,31 +661,148 @@ describe('DragOperations', () => {
     });
   });
 
+  describe('duplicateBlocks - tables and databases', () => {
+    const withCopiesOwnChildren = (block: Block): Block => Object.assign(block, { tool: { copiesOwnChildren: true } });
+    const withLookup = (): void => {
+      mockBlockManager.getBlockById = vi.fn((id: string) => mockBlockManager.blocks.find(b => b.id === id));
+    };
+
+    it('leaves the cell blocks of a copied table out of the plan, since the table copy duplicates them', async () => {
+      const table = withCopiesOwnChildren(createMockBlock('tbl', 'table', {}, ['a', 'b'], null));
+      const cellA = createMockBlock('a', 'paragraph', { text: 'A' }, ['nested'], 'tbl');
+      const nested = createMockBlock('nested', 'paragraph', { text: 'N' }, [], 'a');
+      const cellB = createMockBlock('b', 'paragraph', { text: 'B' }, [], 'tbl');
+      const after = createMockBlock('z', 'paragraph', { text: 'z' });
+
+      configureBlockOrder([table, cellA, nested, cellB, after]);
+
+      const prep = await operations.prepareDuplicates([table, cellA, nested, cellB], cellB, 'bottom');
+
+      expect(prep.sortedBlocks.map(b => b.id)).toEqual(['tbl']);
+      expect(prep.validResults).toHaveLength(1);
+      expect(prep.baseInsertIndex).toBe(4);
+    });
+
+    it('leaves out the children of any copied block whose tool rebuilds them itself, whatever its name', async () => {
+      const grid = withCopiesOwnChildren(createMockBlock('g', 'my-grid', {}, ['a'], null));
+      const child = createMockBlock('a', 'paragraph', { text: 'A' }, [], 'g');
+
+      configureBlockOrder([grid, child]);
+
+      const prep = await operations.prepareDuplicates([grid, child], child, 'bottom');
+
+      expect(prep.sortedBlocks.map(b => b.id)).toEqual(['g']);
+    });
+
+    it('keeps the children of a block named table whose tool does not declare it', async () => {
+      const table = createMockBlock('tbl', 'table', {}, ['a'], null);
+      const child = createMockBlock('a', 'paragraph', { text: 'A' }, [], 'tbl');
+
+      configureBlockOrder([table, child]);
+
+      const prep = await operations.prepareDuplicates([table, child], child, 'bottom');
+
+      expect(prep.sortedBlocks.map(b => b.id)).toEqual(['tbl', 'a']);
+    });
+
+    it('keeps the rows of a copied database in the plan, since a database reads its rows from its children', async () => {
+      const database = createMockBlock('db', 'database', {}, ['row'], null);
+      const row = createMockBlock('row', 'database-row', {}, [], 'db');
+
+      configureBlockOrder([database, row]);
+
+      const prep = await operations.prepareDuplicates([database, row], row, 'bottom');
+
+      expect(prep.sortedBlocks.map(b => b.id)).toEqual(['db', 'row']);
+    });
+
+    it('inserts a copy that stays in a table cell by index, so the table places it', async () => {
+      const table = createMockBlock('tbl', 'table', {}, ['a'], null);
+      const cellA = createMockBlock('a', 'paragraph', { text: 'A' }, [], 'tbl');
+      const after = createMockBlock('z', 'paragraph', { text: 'z' });
+
+      configureBlockOrder([table, cellA, after]);
+      withLookup();
+      mockBlockManager.insert = vi.fn(() => createMockBlock('dup', 'paragraph', { text: 'A' }));
+
+      await operations.duplicateBlocks([cellA], cellA, 'bottom');
+
+      expect(mockBlockManager.insert).toHaveBeenCalledWith(expect.objectContaining({ index: 2 }));
+      expect(mockBlockManager.insert).not.toHaveBeenCalledWith(expect.objectContaining({ placement: expect.anything() }));
+    });
+
+    it('inserts a copied table that follows a table at the root by placement, not after the last cell', async () => {
+      const table = withCopiesOwnChildren(createMockBlock('tbl', 'table', {}, ['a'], null));
+      const cellA = createMockBlock('a', 'paragraph', { text: 'A' }, [], 'tbl');
+      const after = createMockBlock('z', 'paragraph', { text: 'z' });
+
+      configureBlockOrder([table, cellA, after]);
+      withLookup();
+      mockBlockManager.insert = vi.fn(() => createMockBlock('dup', 'table', {}));
+
+      await operations.duplicateBlocks([table, cellA], cellA, 'bottom');
+
+      expect(mockBlockManager.insert).toHaveBeenCalledTimes(1);
+      expect(mockBlockManager.insert).toHaveBeenCalledWith(expect.objectContaining({
+        tool: 'table',
+        placement: { parentId: null, afterId: 'tbl' },
+      }));
+    });
+  });
+
+  describe('duplicateBlocks - a block that copies as a link', () => {
+    it('inserts the link entry instead of a second page block', async () => {
+      const page = createMockBlock('page-1', 'page', { pageId: 'p1', cache: { title: 'Plans' } });
+      const para = createMockBlock('para-1', 'paragraph', { text: 'x' });
+      const asLink = vi.fn((toolName: string, data: Record<string, unknown>) =>
+        toolName === 'page' ? { tool: 'paragraph', data: { text: `<a href="https://x.test/${String(data.pageId)}">Plans</a>` } } : null
+      );
+      const ops = new DragOperations(mockBlockManager, mockYjsManager, mockBlockSelection, asLink);
+
+      configureBlockOrder([page, para]);
+      mockBlockManager.insert = vi.fn((config: { tool: string; data: Record<string, unknown> }) =>
+        createMockBlock(`dup-${config.tool}`, config.tool, config.data));
+
+      const result = await ops.duplicateBlocks([page, para], para, 'bottom');
+      const inserts = vi.mocked(mockBlockManager.insert).mock.calls.map(([config]) => config);
+
+      expect(inserts.some((config) => config.tool === 'page')).toBe(false);
+      expect(inserts[0]).toMatchObject({
+        tool: 'paragraph',
+        data: { text: '<a href="https://x.test/p1">Plans</a>' },
+        tunes: {},
+        placement: { parentId: null, afterId: 'para-1' },
+      });
+      expect(inserts[1]).toMatchObject({ tool: 'paragraph', data: { text: 'x' }, placement: { parentId: null, afterId: 'para-1' } });
+      expect(result.duplicatedBlocks).toHaveLength(2);
+    });
+  });
+
   describe('duplicateBlocks', () => {
     it('should duplicate blocks at target position', async () => {
       const block1 = createMockBlock('block-1', 'paragraph', { text: '1' });
       const block2 = createMockBlock('block-2', 'paragraph', { text: '2' });
+      const middle = createMockBlock('middle', 'paragraph', { text: 'm' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
       const newBlock1 = createMockBlock('new-1', 'paragraph', { text: 'new-1' });
       const newBlock2 = createMockBlock('new-2', 'paragraph', { text: 'new-2' });
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === block1) return 0;
-        if (block === block2) return 1;
-        if (block === targetBlock) return 3;
-        return -1;
-      });
+      configureBlockOrder([block1, block2, middle, targetBlock]);
+      const isPlacementInsert = (config: Record<string, unknown>): config is Record<string, unknown> & { placement: TreePlacement } => 'placement' in config;
 
-      mockBlockManager.insert = vi.fn((config: {
-        tool: string;
-        data: Record<string, unknown>;
-        tunes: Record<string, unknown>;
-        index: number;
-        needToFocus: boolean;
-      }): Block => {
-        if (config.index === 4) return newBlock1;
-        if (config.index === 5) return newBlock2;
-        return targetBlock;
+      mockBlockManager.insert = vi.fn((config: Record<string, unknown>): Block => {
+        const newBlock = mockBlockManager.blocks.includes(newBlock1) ? newBlock2 : newBlock1;
+
+        if (!isPlacementInsert(config)) {
+          throw new Error('expected a placement insert');
+        }
+        mockBlockManager.blocks.splice(
+          flatIndexForPlacement({ blocks: mockBlockManager.blocks, getById: (id: string) => mockBlockManager.blocks.find(b => b.id === id) }, config.placement),
+          0,
+          newBlock
+        );
+
+        return newBlock;
       });
 
       const result = await operations.duplicateBlocks(
@@ -696,16 +815,17 @@ describe('DragOperations', () => {
         tool: 'paragraph',
         data: { text: '1' },
         tunes: {},
-        index: 4,
+        placement: { parentId: null, afterId: 'target' },
         needToFocus: false,
       });
       expect(mockBlockManager.insert).toHaveBeenCalledWith({
         tool: 'paragraph',
         data: { text: '2' },
         tunes: {},
-        index: 5,
+        placement: { parentId: null, afterId: 'new-1' },
         needToFocus: false,
       });
+      expect(mockBlockManager.blocks.map(b => b.id)).toEqual(['block-1', 'block-2', 'middle', 'target', 'new-1', 'new-2']);
       expect(result.duplicatedBlocks).toEqual([newBlock1, newBlock2]);
       expect(result.targetIndex).toBe(4);
     });
@@ -1025,12 +1145,11 @@ describe('DragOperations', () => {
         };
       });
 
-      await operations.duplicateBlocks([sourceBlock], targetBlock, 'bottom');
+      const result = await operations.duplicateBlocks([sourceBlock], targetBlock, 'bottom');
 
-      // edge=bottom → insert at targetIndex + 1 = 7 (NOT the pre-save 5)
-      expect(mockBlockManager.insert).toHaveBeenCalledWith(
-        expect.objectContaining({ index: 7 })
-      );
+      // edge=bottom → the slot is targetIndex + 1 = 7 (NOT the pre-save 5)
+      expect(result.targetIndex).toBe(7);
+      expect(mockBlockManager.insert).toHaveBeenCalledTimes(1);
     });
   });
 

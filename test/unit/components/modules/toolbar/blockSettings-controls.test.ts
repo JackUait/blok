@@ -43,7 +43,7 @@ const createSettings = (commonTunes: MenuConfigItem[], toolTunes: MenuConfigItem
         } as unknown as API['blocks'],
       },
     },
-    Toolbar: { close: vi.fn(), isPositionedRight: false },
+    Toolbar: { close: vi.fn(), isDockedPhysicallyRight: false },
     DragManager: { duplicateBlocksInPlace: duplicate },
     I18n: {
       t: (key: string) => translations[key] ?? key,

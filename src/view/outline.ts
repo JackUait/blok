@@ -13,6 +13,9 @@ import type { DocumentModel, ViewBlock } from './document-model';
 import { htmlTextContent } from './html-text';
 
 import type { LooseOutputData, OutputData } from '../../types';
+import { isPagePointer } from '../shared/page-pointer';
+import { normalizeHeadingAnchor } from '../shared/heading-anchor';
+import { OUTLINE_CONTAINERS, outlineDepths } from '../shared/outline-depths';
 
 /**
  * One entry in a document outline.
@@ -84,7 +87,11 @@ export const outlineFromOutputData = (
 
     try {
       collectHeader(block);
-      model.childrenOf(block.id).forEach(visit);
+
+      /** A page's body lives in another document; children here are malformed. */
+      if (!isPagePointer(block.type, block.data)) {
+        model.childrenOf(block.id).forEach(visit);
+      }
     } finally {
       if (block.id !== undefined) {
         active.delete(block.id);
@@ -95,4 +102,78 @@ export const outlineFromOutputData = (
   model.topLevel.forEach(visit);
 
   return outline;
+};
+
+/** One entry of a rendered table of contents. */
+export interface TocEntry {
+  /** The heading block. */
+  block: ViewBlock;
+  /** The fragment the entry links to: the heading's anchor, else its block id. */
+  target: string;
+  /** Indent depth, 0 at the margin. */
+  depth: number;
+  /** Plain-text label, whitespace collapsed. */
+  text: string;
+}
+
+/**
+ * The table of contents of a saved document, by the editor tool's rule: only
+ * headings on a path of {@link OUTLINE_CONTAINERS} count, and an empty or
+ * unaddressable heading is skipped.
+ * @param model - document model
+ * @returns null when the document has no table_of_contents block, else its entries
+ */
+export const tableOfContents = (model: DocumentModel): TocEntry[] | null => {
+  const candidates: Array<{ block: ViewBlock; target: string }> = [];
+  const active = new Set<string>();
+  const tocBlocks: ViewBlock[] = [];
+
+  const visit = (block: ViewBlock, onOutline: boolean): void => {
+    if (block.id !== undefined && active.has(block.id)) {
+      return;
+    }
+
+    if (block.id !== undefined) {
+      active.add(block.id);
+    }
+
+    try {
+      if (block.type === 'table_of_contents') {
+        tocBlocks.push(block);
+      }
+
+      const target = normalizeHeadingAnchor(block.data.anchor) ?? block.id;
+
+      if (onOutline && block.type === 'header' && target !== undefined) {
+        candidates.push({ block, target });
+      }
+
+      if (!isPagePointer(block.type, block.data)) {
+        const childrenOnOutline = onOutline && OUTLINE_CONTAINERS.has(block.type);
+
+        model.childrenOf(block.id).forEach((child) => visit(child, childrenOnOutline));
+      }
+    } finally {
+      if (block.id !== undefined) {
+        active.delete(block.id);
+      }
+    }
+  };
+
+  model.topLevel.forEach((block) => visit(block, true));
+
+  if (tocBlocks.length === 0) {
+    return null;
+  }
+
+  const headings = candidates
+    .map((candidate) => ({
+      ...candidate,
+      text: htmlTextContent(typeof candidate.block.data.text === 'string' ? candidate.block.data.text : '').replace(/\s+/g, ' ').trim(),
+    }))
+    .filter((heading) => heading.text !== '');
+  // Same clamp as the header emitter, so the depth follows the rendered tag.
+  const depths = outlineDepths(headings.map(({ block }) => Math.min(Math.max(Number(block.data.level) || 1, 1), 6)));
+
+  return headings.map((heading, index) => ({ ...heading, depth: depths[index] }));
 };

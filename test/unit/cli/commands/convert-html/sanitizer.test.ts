@@ -85,11 +85,11 @@ describe('sanitize', () => {
       expect(result).toContain('background-color');
     });
 
-    it('preserves <img> with src', () => {
+    it('preserves <img> with src and alt', () => {
       const result = run('<img src="https://example.com/img.png" alt="pic" class="x">');
 
       expect(result).toContain('src="https://example.com/img.png"');
-      expect(result).not.toContain('alt=');
+      expect(result).toContain('alt="pic"');
       expect(result).not.toContain('class=');
     });
 

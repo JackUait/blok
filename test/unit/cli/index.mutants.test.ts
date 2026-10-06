@@ -18,9 +18,11 @@ const mocks = vi.hoisted(() => ({
       window: {
         DOMParser: class MockDOMParser {},
         Node: { ELEMENT_NODE: 1, TEXT_NODE: 3 },
-        // Handed back so the gdocs branch does not blank out jsdom's own
-        // `globalThis.document` for the rest of this file.
+        // Handed back so the CLI does not blank out jsdom's own globals
+        // for the rest of this file.
         document: globalThis.document,
+        HTMLElement: globalThis.HTMLElement,
+        HTMLInputElement: globalThis.HTMLInputElement,
       },
     };
   }),

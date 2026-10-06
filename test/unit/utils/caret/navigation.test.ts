@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   getCaretXPosition,
   setCaretAtXPosition,
@@ -11,11 +11,13 @@ describe('caret/navigation', () => {
   const containerState = { element: null as HTMLElement | null };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     containerState.element = document.createElement('div');
     document.body.appendChild(containerState.element);
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     // Clear selection
     window.getSelection()?.removeAllRanges();
     if (containerState.element) {
@@ -97,6 +99,36 @@ describe('caret/navigation', () => {
       // Should return element's left position as fallback
       expect(result).not.toBeNull();
       expect(typeof result).toBe('number');
+    });
+
+    describe('when the range has no box', () => {
+      const placeCaretInEmptyLine = (dir: 'ltr' | 'rtl'): void => {
+        const div = document.createElement('div');
+
+        div.setAttribute('dir', dir);
+        div.innerHTML = 'Hello<br><br>';
+        getContainer().appendChild(div);
+        vi.spyOn(div, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 0, 500, 20));
+
+        const range = document.createRange();
+
+        range.setStart(div, 2);
+        range.collapse(true);
+        window.getSelection()?.removeAllRanges();
+        window.getSelection()?.addRange(range);
+      };
+
+      it('reads the left edge of a left-to-right element', () => {
+        placeCaretInEmptyLine('ltr');
+
+        expect(getCaretXPosition()).toBe(100);
+      });
+
+      it('reads the right edge of a right-to-left element, where its caret sits', () => {
+        placeCaretInEmptyLine('rtl');
+
+        expect(getCaretXPosition()).toBe(600);
+      });
     });
   });
 
@@ -337,6 +369,83 @@ describe('caret/navigation', () => {
 
       // Should be clamped to text length
       expect(result).toBeLessThanOrEqual(input.value.length);
+    });
+
+    // 16px font => ~9.6px per char; 48px from the inline start is char 5.
+    const mountInput = (direction: 'ltr' | 'rtl'): HTMLInputElement => {
+      const input = document.createElement('input');
+
+      input.value = 'مرحبا بالعالم';
+      input.style.direction = direction;
+      input.style.fontSize = '16px';
+      input.style.paddingLeft = direction === 'ltr' ? '10px' : '0px';
+      input.style.paddingRight = direction === 'rtl' ? '10px' : '0px';
+      getContainer().appendChild(input);
+      Object.defineProperty(input, 'getBoundingClientRect', {
+        value: () => ({ left: 100, top: 0, width: 200, height: 20, right: 300, bottom: 20 }),
+        configurable: true,
+      });
+
+      return input;
+    };
+
+    it('measures from the right edge and right padding in an RTL input', () => {
+      const input = mountInput('rtl');
+
+      expect(findBestPositionInRange(input, 0, input.value.length, 300 - 10)).toBe(0);
+      expect(findBestPositionInRange(input, 0, input.value.length, 300 - 10 - 48)).toBe(5);
+    });
+
+    it('measures from the left edge and left padding in an LTR input', () => {
+      const input = mountInput('ltr');
+
+      expect(findBestPositionInRange(input, 0, input.value.length, 100 + 10)).toBe(0);
+      expect(findBestPositionInRange(input, 0, input.value.length, 100 + 10 + 48)).toBe(5);
+    });
+
+    describe('with a canvas to measure text', () => {
+      // A font where every glyph is 7px wide, so the 0.6em (9.6px) guess is wrong.
+      const measuredFont = { font: '', letterSpacing: '', measureText: (text: string) => ({ width: text.length * 7 }) };
+
+      beforeEach(() => {
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(measuredFont as unknown as CanvasRenderingContext2D);
+      });
+
+      it('picks the character whose measured edge is nearest in an RTL input', () => {
+        const input = mountInput('rtl');
+
+        // 70px in from the right padding: ten 7px glyphs.
+        expect(findBestPositionInRange(input, 0, input.value.length, 300 - 10 - 70)).toBe(10);
+        expect(findBestPositionInRange(input, 0, input.value.length, 300 - 10 - 73)).toBe(10);
+        expect(findBestPositionInRange(input, 0, input.value.length, 300 - 10 - 74)).toBe(11);
+      });
+
+      it('picks the character whose measured edge is nearest in an LTR input', () => {
+        const input = mountInput('ltr');
+
+        expect(findBestPositionInRange(input, 0, input.value.length, 100 + 10 + 70)).toBe(10);
+        expect(findBestPositionInRange(input, 0, input.value.length, 100 + 10 + 1000)).toBe(input.value.length);
+      });
+
+      it('measures the font from the input longhands', () => {
+        const input = mountInput('ltr');
+
+        input.style.fontStyle = 'italic';
+        input.style.fontWeight = '700';
+        input.style.fontFamily = 'Georgia';
+        findBestPositionInRange(input, 0, input.value.length, 150);
+
+        expect(measuredFont.font).toBe('italic 700 16px Georgia');
+      });
+
+      it('adds the scrolled-away text of an input scrolled toward its end', () => {
+        const input = mountInput('rtl');
+
+        Object.defineProperty(input, 'scrollLeft', { value: -21, configurable: true });
+
+        // 49px on screen plus 21px scrolled out of view: 70px, ten glyphs.
+        expect(findBestPositionInRange(input, 0, input.value.length, 300 - 10 - 49)).toBe(10);
+      });
     });
   });
 });

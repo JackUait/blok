@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { IconMarker } from '../../../../src/components/icons';
+import { IconPaintRoller } from '../../../../src/components/icons';
 import { MarkerInlineTool } from '../../../../src/components/inline-tools/inline-tool-marker';
 import { COLOR_PRESETS, colorVarName } from '../../../../src/components/shared/color-presets';
 import type { PopoverItemDefaultBaseParams, PopoverItemHtmlParams, WithChildren } from '../../../../types/utils/popover';
@@ -51,10 +51,10 @@ describe('MarkerInlineTool', () => {
     expect(typeof MarkerInlineTool.sanitize.mark).toBe('function');
   });
 
-  it('renders menu config with marker icon and children', () => {
+  it('renders menu config with the paint roller icon and children', () => {
     const config = tool.render();
 
-    expect(config).toHaveProperty('icon', IconMarker);
+    expect(config).toHaveProperty('icon', IconPaintRoller);
     expect(config).toHaveProperty('name', 'marker');
     expect(config).toHaveProperty('isActive');
     expect(config).toHaveProperty('children');

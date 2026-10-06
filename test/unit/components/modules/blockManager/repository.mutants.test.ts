@@ -38,7 +38,11 @@ const makeBlock = (options: BlockFixtureOptions): Block => {
     isEmpty: options.isEmpty ?? false,
     parentId: options.parentId ?? null,
     contentIds: [] as string[],
-    tool: { ownsChildren: options.ownsChildren ?? false },
+    tool: {
+      ownsChildren: options.ownsChildren ?? false,
+      // Mirrors the real column / column_list declarations.
+      isLayout: options.name === 'column' || options.name === 'column_list',
+    },
     call: vi.fn(),
   };
 

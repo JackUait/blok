@@ -23,6 +23,7 @@ interface Harness {
   video: HTMLVideoElement;
   controls: HTMLElement;
   setTheater(on: boolean): void;
+  toggleStats(): void;
   destroy(): void;
 }
 
@@ -45,11 +46,11 @@ const mount = (opts: Partial<ControlsOptions> = {}): Harness => {
   slot.appendChild(figure);
   document.body.appendChild(slot);
 
-  const { element, setTheater, destroy } = attachControls({ video, figure, ...opts });
+  const { element, setTheater, toggleStats, destroy } = attachControls({ video, figure, ...opts });
 
   figure.appendChild(element);
 
-  return { figure, slot, video, controls: element, setTheater, destroy };
+  return { figure, slot, video, controls: element, setTheater, toggleStats, destroy };
 };
 
 const q = <T extends HTMLElement>(root: HTMLElement, sel: string): T => {
@@ -99,9 +100,8 @@ const iconHtml = (svg: string): string => {
 // so a swapped or emptied key shows up as the English fallback instead.
 const I18N_KEYS = [
   'play', 'pause', 'seek', 'toggleTimeDisplay', 'mute', 'unmute', 'volume',
-  'fullscreen', 'fullscreenExit', 'settings', 'playbackSpeed', 'back', 'loop',
-  'on', 'off', 'speedDecrease', 'speedIncrease', 'speedPresets', 'theater',
-  'theaterExit', 'pip', 'ctxCopyUrl', 'ctxCopyUrlAtTime', 'ctxStats',
+  'fullscreen', 'fullscreenExit', 'settings', 'playbackSpeed', 'loop',
+  'speedPresets', 'theater', 'theaterExit', 'pip',
 ];
 
 const sentinel = (key: string): string => `i18n:${key}`;
@@ -155,7 +155,6 @@ describe('video controls — built DOM contract', () => {
     expect(cls('[data-role="mini-progress"]')).toBe('blok-video-controls__mini');
     expect(cls('[data-role="video-title"]')).toBe('blok-video-controls__title');
     expect(cls('[data-role="video-ambient"]')).toBe('blok-video-controls__ambient');
-    expect(cls('[data-role="video-menu"]')).toBe('blok-video-controls__ctx');
     expect(cls('[data-role="video-stats"]')).toBe('blok-video-controls__stats');
     expect(q(h.controls, '[data-role="play-burst"]').parentElement).toBe(h.controls);
   });
@@ -182,7 +181,6 @@ describe('video controls — built DOM contract', () => {
   it('starts the spinner idle and the title bar empty and hidden', () => {
     expect(q(h.controls, '[data-role="buffer-spinner"]').getAttribute('data-active')).toBe('false');
     expect(q(h.controls, '[data-role="video-title"]').hidden).toBe(true);
-    expect(q(h.controls, '[data-role="video-menu"]').hidden).toBe(true);
   });
 
   it('configures the seek slider as a full-range continuous scrubber', () => {
@@ -293,29 +291,14 @@ describe('video controls — label i18n keys', () => {
   });
 
   it('resolves every settings-menu label through its own key', () => {
-    expect(flatText(q(h.figure, '[data-action="open-speed"]'))).toContain(sentinel('playbackSpeed'));
-    expect(flatText(q(h.figure, '[data-action="loop"]'))).toContain(sentinel('loop'));
-    expect(q(h.figure, '[data-role="menu-value-loop"]').textContent).toBe(sentinel('off'));
-    expect(label('[data-action="speed-back"]')).toBe(sentinel('back'));
-    expect(flatText(q(h.figure, '[data-action="speed-back"]'))).toBe(sentinel('playbackSpeed'));
-    expect(label('[data-role="menu-speed"]')).toBe(sentinel('playbackSpeed'));
+    expect(label('[data-role="playback-menu"]')).toBe(sentinel('settings'));
+    expect(label('[data-role="speed-section"]')).toBe(sentinel('playbackSpeed'));
+    expect(flatText(q(h.figure, '.blok-video-controls__speed-head'))).toBe(sentinel('playbackSpeed'));
     expect(label('[data-role="speed-slider"]')).toBe(sentinel('playbackSpeed'));
-    expect(label('[data-action="speed-dec"]')).toBe(sentinel('speedDecrease'));
-    expect(label('[data-action="speed-inc"]')).toBe(sentinel('speedIncrease'));
+    expect(flatText(q(h.figure, '[data-action="loop"]'))).toBe(sentinel('loop'));
     expect(q(h.figure, '[data-action="speed-0.5"]').parentElement?.getAttribute('aria-label')).toBe(sentinel('speedPresets'));
   });
 
-  it('resolves the loop "on" label through its own key', () => {
-    q(h.figure, '[data-action="loop"]').click();
-    expect(q(h.figure, '[data-role="menu-value-loop"]').textContent).toBe(sentinel('on'));
-  });
-
-  it('resolves every context-menu label through its own key', () => {
-    expect(q(h.controls, '[data-action="ctx-loop"]').textContent).toBe(sentinel('loop'));
-    expect(q(h.controls, '[data-action="copy-url"]').textContent).toBe(sentinel('ctxCopyUrl'));
-    expect(q(h.controls, '[data-action="copy-url-at-time"]').textContent).toBe(sentinel('ctxCopyUrlAtTime'));
-    expect(q(h.controls, '[data-action="stats"]').textContent).toBe(sentinel('ctxStats'));
-  });
 });
 
 describe('video controls — English fallback labels', () => {
@@ -325,27 +308,11 @@ describe('video controls — English fallback labels', () => {
   afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
 
   it('falls back to the canonical English copy for the settings menu', () => {
-    expect(flatText(q(h.figure, '[data-action="open-speed"]'))).toBe('Playback speed1×');
-    expect(flatText(q(h.figure, '[data-action="loop"]'))).toBe('LoopOff');
-    expect(q(h.figure, '[data-action="speed-back"]').getAttribute('aria-label')).toBe('Back');
-    expect(flatText(q(h.figure, '[data-action="speed-back"]'))).toBe('Playback speed');
-    expect(q(h.figure, '[data-role="menu-speed"]').getAttribute('aria-label')).toBe('Playback speed');
+    expect(q(h.figure, '[data-role="playback-menu"]').getAttribute('aria-label')).toBe('Settings');
+    expect(flatText(q(h.figure, '.blok-video-controls__speed-head'))).toBe('Playback speed');
     expect(q(h.figure, '[data-role="speed-slider"]').getAttribute('aria-label')).toBe('Playback speed');
-    expect(q(h.figure, '[data-action="speed-dec"]').getAttribute('aria-label')).toBe('Decrease playback speed');
-    expect(q(h.figure, '[data-action="speed-inc"]').getAttribute('aria-label')).toBe('Increase playback speed');
+    expect(flatText(q(h.figure, '[data-action="loop"]'))).toBe('Loop');
     expect(q(h.figure, '[data-action="speed-0.5"]').parentElement?.getAttribute('aria-label')).toBe('Speed presets');
-  });
-
-  it('falls back to the canonical English copy for the context menu', () => {
-    expect(q(h.controls, '[data-action="ctx-loop"]').textContent).toBe('Loop');
-    expect(q(h.controls, '[data-action="copy-url"]').textContent).toBe('Copy video URL');
-    expect(q(h.controls, '[data-action="copy-url-at-time"]').textContent).toBe('Copy video URL at current time');
-    expect(q(h.controls, '[data-action="stats"]').textContent).toBe('Playback statistics');
-  });
-
-  it('falls back to "On" when loop is switched on', () => {
-    q(h.figure, '[data-action="loop"]').click();
-    expect(q(h.figure, '[data-role="menu-value-loop"]').textContent).toBe('On');
   });
 
   it('falls back to "Pause" once playing and "Unmute" once muted', () => {
@@ -371,87 +338,78 @@ describe('video controls — menu structure', () => {
   beforeEach(() => { vi.clearAllMocks(); h = mount(); });
   afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
 
-  it('names the menu shell and its panes', () => {
-    expect(q(h.figure, '[data-role="playback-menu"]').getAttribute('class')).toBe('blok-video-controls__menu');
-    expect(q(h.figure, '[data-role="playback-menu"]').getAttribute('role')).toBe('menu');
-    expect(q(h.figure, '[data-role="playback-menu"]').getAttribute('data-view')).toBe('main');
-    expect(q(h.figure, '[data-role="menu-main"]').getAttribute('class')).toBe('blok-video-controls__menu-pane');
-    expect(q(h.figure, '[data-role="menu-speed"]').getAttribute('class')).toBe('blok-video-controls__menu-pane');
-    expect(q(h.figure, '[data-role="menu-main"]').parentElement?.getAttribute('class')).toBe('blok-video-controls__menu-track');
+  it('names the menu shell as a labelled dialog the gear opens', () => {
+    const menu = q(h.figure, '[data-role="playback-menu"]');
+
+    expect(menu.getAttribute('class')).toBe('blok-video-controls__menu');
+    expect(menu.getAttribute('role')).toBe('dialog');
+    expect(menu.getAttribute('aria-label')).toBe('Settings');
+    expect(q(h.figure, '[data-action="gear"]').getAttribute('aria-haspopup')).toBe('dialog');
     expect(q(h.figure, '[data-action="gear"]').parentElement?.getAttribute('class')).toBe('blok-video-controls__menu-wrap');
   });
 
-  it('builds the speed nav row as a menuitem with icon, label, value and chevron', () => {
-    const row = q<HTMLButtonElement>(h.figure, '[data-action="open-speed"]');
-
-    expect(row.type).toBe('button');
-    expect(row.getAttribute('class')).toBe('blok-video-controls__menu-row');
-    expect(row.getAttribute('role')).toBe('menuitem');
-    // Four element children and no stray text: an icon span, the label, the value
-    // and the chevron, in that order.
-    expect(row.childNodes.length).toBe(4);
-    expect((row.childNodes[0] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__menu-icon');
-    expect((row.childNodes[0] as HTMLElement).getAttribute('aria-hidden')).toBe('true');
-    expect((row.childNodes[1] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__menu-label');
-    expect((row.childNodes[2] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__menu-value');
-    expect((row.childNodes[3] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__menu-chevron');
-    expect((row.childNodes[3] as HTMLElement).getAttribute('aria-hidden')).toBe('true');
-  });
-
-  it('builds the loop row as a checkable menu item', () => {
+  it('builds the loop row as a switch with icon, label and track', () => {
     const row = q<HTMLButtonElement>(h.figure, '[data-action="loop"]');
 
     expect(row.type).toBe('button');
     expect(row.getAttribute('class')).toBe('blok-video-controls__menu-row');
-    expect(row.getAttribute('role')).toBe('menuitemcheckbox');
+    expect(row.getAttribute('role')).toBe('switch');
     expect(row.getAttribute('aria-checked')).toBe('false');
-    expect(q(h.figure, '[data-role="menu-value-loop"]').getAttribute('class')).toBe('blok-video-controls__menu-value');
+    // Three element children and no stray text: icon, label, switch track.
+    expect(row.childNodes.length).toBe(3);
+    expect((row.childNodes[0] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__menu-icon');
+    expect((row.childNodes[0] as HTMLElement).getAttribute('aria-hidden')).toBe('true');
     expect((row.childNodes[1] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__menu-label');
-    expect((row.childNodes[3] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__menu-chevron');
-    expect((row.childNodes[3] as HTMLElement).getAttribute('aria-hidden')).toBe('true');
+    expect((row.childNodes[2] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__switch');
+    expect((row.childNodes[2] as HTMLElement).getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('builds the speed pane as a labelled group with a back header and readout', () => {
-    const back = q<HTMLButtonElement>(h.figure, '[data-action="speed-back"]');
+  it('builds the speed section as a labelled group with a hidden header and readout', () => {
+    const section = q(h.figure, '[data-role="speed-section"]');
+    const head = q(h.figure, '.blok-video-controls__speed-head');
+    const readout = q(h.figure, '[data-role="speed-readout"]');
 
-    expect(q(h.figure, '[data-role="menu-speed"]').getAttribute('role')).toBe('group');
-    expect(back.type).toBe('button');
-    expect(back.getAttribute('class')).toBe('blok-video-controls__menu-row blok-video-controls__menu-back');
-    // The chevron and the label are both appended — a dropped append leaves an
-    // unreadable, unlabelled back row.
-    expect(back.childNodes.length).toBe(2);
-    expect((back.childNodes[0] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__menu-chevron');
-    expect((back.childNodes[0] as HTMLElement).getAttribute('aria-hidden')).toBe('true');
-    expect((back.childNodes[1] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__menu-label');
-    expect(q(h.figure, '[data-role="speed-readout"]').getAttribute('class')).toBe('blok-video-controls__speed-readout');
-    expect(q(h.figure, '[data-role="speed-readout"]').getAttribute('aria-hidden')).toBe('true');
+    expect(section.getAttribute('class')).toBe('blok-video-controls__speed-section');
+    expect(section.getAttribute('role')).toBe('group');
+    // The group carries the name, so the visible header stays out of the AT tree.
+    expect(head.getAttribute('aria-hidden')).toBe('true');
+    expect(head.childNodes.length).toBe(2);
+    expect((head.childNodes[0] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__menu-icon');
+    expect(readout.getAttribute('class')).toBe('blok-video-controls__speed-readout');
+    expect(readout.getAttribute('aria-hidden')).toBe('true');
+    expect(readout.childNodes.length).toBe(2);
+    expect((readout.childNodes[1] as HTMLElement).getAttribute('class')).toBe('blok-video-controls__speed-readout-unit');
+    expect(readout.childNodes[1].textContent).toBe('×');
   });
 
-  it('builds the speed steppers, slider and preset chips', () => {
-    expect(q<HTMLButtonElement>(h.figure, '[data-action="speed-dec"]').type).toBe('button');
-    expect(q(h.figure, '[data-action="speed-dec"]').getAttribute('class')).toBe('blok-video-controls__speed-step');
-    expect(q(h.figure, '[data-action="speed-inc"]').getAttribute('class')).toBe('blok-video-controls__speed-step');
+  it('builds the ruler around the tape, needle and native range, with preset chips below', () => {
+    const ruler = q(h.figure, '[data-role="speed-ruler"]');
+
+    expect(ruler.getAttribute('class')).toBe('blok-video-controls__speed-ruler');
+    expect(ruler.dir).toBe('ltr');
+    // CSS spaces the ticks with this number; the drag math uses the same 9px.
+    expect(ruler.style.getPropertyValue('--blok-speed-step-px')).toBe('9px');
+    expect(q(ruler, '.blok-video-controls__speed-tape').getAttribute('aria-hidden')).toBe('true');
+    expect(q(ruler, '.blok-video-controls__speed-needle').getAttribute('aria-hidden')).toBe('true');
     expect(q(h.figure, '[data-role="speed-slider"]').getAttribute('class')).toBe('blok-video-controls__speed-slider');
-    expect(q(h.figure, '[data-action="speed-dec"]').parentElement?.getAttribute('class')).toBe('blok-video-controls__speed-slider-row');
+    expect(q(h.figure, '[data-role="speed-slider"]').parentElement).toBe(ruler);
     expect(q<HTMLButtonElement>(h.figure, '[data-action="speed-2"]').type).toBe('button');
+    expect(q(h.figure, '[data-action="speed-2"]').getAttribute('class')).toBe('blok-video-controls__speed-chip');
     expect(q(h.figure, '[data-action="speed-2"]').parentElement?.getAttribute('class')).toBe('blok-video-controls__speed-chips');
   });
 
-  it('paints the speed slider fill from the rate position inside its range', () => {
-    // (1 - 0.25) / (2 - 0.25) — any other arithmetic paints the wrong fill.
-    expect(q(h.figure, '[data-role="speed-slider"]').style.getPropertyValue('--blok-speed-pct'))
-      .toBe('42.857142857142854%');
+  it('draws a tall tick on every quarter rate and places each tick by its step index', () => {
+    const ticks = Array.from(h.figure.querySelectorAll<HTMLElement>('.blok-video-controls__speed-tick'));
+    const majors = ticks
+      .map((tick, i) => (tick.classList.contains('is-major') ? i : -1))
+      .filter((i) => i >= 0);
+
+    // 0.25, 0.5 … 2 sit every 5th step from the 0.25× start.
+    expect(majors).toEqual([0, 5, 10, 15, 20, 25, 30, 35]);
+    expect(ticks[0].style.getPropertyValue('--blok-speed-tick')).toBe('0');
+    expect(ticks[35].style.getPropertyValue('--blok-speed-tick')).toBe('35');
   });
 
-  it('builds the context menu items as menu items', () => {
-    const copy = q<HTMLButtonElement>(h.controls, '[data-action="copy-url"]');
-
-    expect(copy.type).toBe('button');
-    expect(copy.getAttribute('class')).toBe('blok-video-controls__ctx-item');
-    expect(copy.getAttribute('role')).toBe('menuitem');
-    expect(q(h.controls, '[data-action="ctx-loop"]').getAttribute('role')).toBe('menuitemcheckbox');
-    expect(q(h.controls, '[data-role="video-menu"]').getAttribute('role')).toBe('menu');
-  });
 });
 
 describe('video controls — centre play, spinner and time readout', () => {
@@ -1191,6 +1149,15 @@ describe('video controls — settings menu behaviour', () => {
     expect(menu().style.bottom).toBe('28px');
   });
 
+  it('anchors the card to the gear\'s left edge in RTL, growing toward the inline start', () => {
+    h.figure.setAttribute('dir', 'rtl');
+    setProp(gear(), 'getBoundingClientRect', () => rect({ left: 40, right: 70, top: 380 }));
+    setProp(h.figure, 'getBoundingClientRect', () => rect({ left: 10, right: 600, bottom: 400 }));
+    gear().click();
+    expect(menu().style.left).toBe('30px');
+    expect(menu().style.right).toBe('');
+  });
+
   it('re-anchors the card when the viewport changes under it', () => {
     stubRects(500, 380, 600, 400);
     gear().click();
@@ -1207,12 +1174,6 @@ describe('video controls — settings menu behaviour', () => {
     window.dispatchEvent(new Event('resize'));
     expect(menu().style.right).toBe('100px');
     expect(gear().getAttribute('aria-expanded')).toBe('false');
-  });
-
-  it('hands the card back to CSS transitions once it has snapped open', () => {
-    gear().click();
-    expect(menu().style.transition).toBe('');
-    expect(q(h.figure, '[data-role="menu-main"]').parentElement?.style.transition).toBe('');
   });
 
   it('keeps the card open for a press on the gear itself', () => {
@@ -1242,26 +1203,6 @@ describe('video controls — settings menu behaviour', () => {
     Object.defineProperty(menu(), 'scrollTop', { configurable: true, get: () => 0, set: writes });
     menu().dispatchEvent(new Event('scroll'));
     expect(writes).not.toHaveBeenCalled();
-  });
-
-  it('sizes the card to whichever pane is on screen', () => {
-    const mainPane = q(h.figure, '[data-role="menu-main"]');
-    const speedPane = q(h.figure, '[data-role="menu-speed"]');
-
-    Object.defineProperty(mainPane, 'scrollHeight', { configurable: true, value: 80 });
-    Object.defineProperty(speedPane, 'scrollHeight', { configurable: true, value: 240 });
-    gear().click();
-    expect(menu().style.height).toBe('80px');
-    q(h.figure, '[data-action="open-speed"]').click();
-    expect(menu().style.height).toBe('240px');
-  });
-
-  it('sizes nothing while the card is closed', () => {
-    const speedPane = q(h.figure, '[data-role="menu-speed"]');
-
-    Object.defineProperty(speedPane, 'scrollHeight', { configurable: true, value: 240 });
-    q(h.figure, '[data-action="open-speed"]').click();
-    expect(menu().style.height).toBe('');
   });
 });
 
@@ -1296,33 +1237,17 @@ describe('video controls — speed control', () => {
     cbs.forEach((cb) => cb(at));
   };
 
-  it('repaints the slider fill for the chosen rate', () => {
-    q(h.figure, '[data-action="speed-inc"]').click();
-    // (1.05 - 0.25) / 1.75
-    expect(slider().style.getPropertyValue('--blok-speed-pct')).toBe('45.714285714285715%');
-  });
-
-  it('disables the stepper that would leave the allowed range', () => {
-    const dec = q<HTMLButtonElement>(h.figure, '[data-action="speed-dec"]');
-    const inc = q<HTMLButtonElement>(h.figure, '[data-action="speed-inc"]');
-
-    expect(dec.disabled).toBe(false);
-    expect(inc.disabled).toBe(false);
-    chip('0.5').click();
-    expect(dec.disabled).toBe(false);
-    chip('2').click();
-    expect(inc.disabled).toBe(true);
-    expect(dec.disabled).toBe(false);
-  });
-
-  it('disables the decrease stepper only at the floor', () => {
-    for (let i = 0; i < 20; i += 1) q(h.figure, '[data-action="speed-dec"]').click();
-    expect(q<HTMLButtonElement>(h.figure, '[data-action="speed-dec"]').disabled).toBe(true);
-    expect(h.video.playbackRate).toBe(0.25);
+  it('repaints the tape position rounded off the float drift of the chosen rate', () => {
+    slider().value = '1.15';
+    slider().dispatchEvent(new Event('input', { bubbles: true }));
+    // (1.15 - 0.25) / 0.05 is 17.999999999999996 in floats; the tape must park on 18.
+    expect(q(h.figure, '[data-role="speed-ruler"]').style.getPropertyValue('--blok-speed-pos')).toBe('18');
   });
 
   it('never hands the frame scheduler an undefined id when nothing is gliding', () => {
-    q(h.figure, '[data-action="speed-inc"]').click();
+    caf.mockClear();
+    slider().value = '1.05';
+    slider().dispatchEvent(new Event('input', { bubbles: true }));
     expect(caf).toHaveBeenCalledWith(0);
   });
 
@@ -1336,7 +1261,8 @@ describe('video controls — speed control', () => {
     // A quarter through the 240ms tween, ease-out-cubic has covered 57.8125%.
     runFrame(1060);
     expect(slider().value).toBe('1.578125');
-    expect(slider().style.getPropertyValue('--blok-speed-pct')).toBe('75.89285714285714%');
+    // (1.578125 - 0.25) / 0.05 = 26.5625 steps, kept to 2dp.
+    expect(q(h.figure, '[data-role="speed-ruler"]').style.getPropertyValue('--blok-speed-pos')).toBe('26.56');
   });
 
   it('lands the thumb exactly on the target when the tween completes', () => {
@@ -1366,6 +1292,89 @@ describe('video controls — speed control', () => {
     caf.mockClear();
     chip('0.5').click();
     expect(caf).toHaveBeenCalledWith(first);
+  });
+});
+
+describe('video controls — speed ruler math', () => {
+  let h: Harness;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Reduced motion: a tap jumps with no glide, so nothing repaints behind the assertions.
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
+    h = mount();
+  });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  const ruler = (): HTMLElement => q(h.figure, '[data-role="speed-ruler"]');
+  const pointer = (type: string, clientX: number): void => {
+    ruler().dispatchEvent(new MouseEvent(type, { clientX, bubbles: true, cancelable: true }));
+  };
+  const wheel = (init: WheelEventInit): WheelEvent => {
+    const ev = new WheelEvent('wheel', { bubbles: true, cancelable: true, ...init });
+
+    ruler().dispatchEvent(ev);
+
+    return ev;
+  };
+  // The needle sits at the ruler centre, 120px in.
+  const stubRuler = (): void => {
+    setProp(ruler(), 'getBoundingClientRect', () => ({
+      left: 0, right: 240, top: 0, bottom: 40, width: 240, height: 40, x: 0, y: 0, toJSON: () => ({}),
+    }));
+  };
+
+  it('snaps a drag to the nearest step, flipping at half of the 9px step', () => {
+    // Rates snap to the nearest 0.05, so the first step lands at 4.5px, not 9px.
+    pointer('pointerdown', 100);
+    pointer('pointermove', 96);
+    expect(h.video.playbackRate).toBe(1);
+    pointer('pointermove', 95);
+    expect(h.video.playbackRate).toBe(1.05);
+    pointer('pointermove', 87);
+    expect(h.video.playbackRate).toBe(1.05);
+    pointer('pointermove', 86);
+    expect(h.video.playbackRate).toBe(1.1);
+  });
+
+  it('treats a press that moves 2px as a tap and jumps to the rate under it', () => {
+    stubRuler();
+    // 47px right of the needle is ~5.2 steps, which snaps to 1.25×.
+    pointer('pointerdown', 165);
+    pointer('pointermove', 167);
+    pointer('pointerup', 167);
+    expect(h.video.playbackRate).toBe(1.25);
+  });
+
+  it('treats a press that moves 3px as a drag, with no tap jump on release', () => {
+    stubRuler();
+    // Leftward, so a slop check that lost its Math.abs would still read it as a tap.
+    pointer('pointerdown', 165);
+    pointer('pointermove', 162);
+    pointer('pointerup', 162);
+    expect(h.video.playbackRate).toBe(1);
+  });
+
+  it('carries wheel travel below one step over to the next event', () => {
+    wheel({ deltaY: 5 });
+    expect(h.video.playbackRate).toBe(1);
+    wheel({ deltaY: 5 });
+    expect(h.video.playbackRate).toBe(1.05);
+    // 1px carried over + 5px is still short of a step.
+    wheel({ deltaY: 5 });
+    expect(h.video.playbackRate).toBe(1.05);
+  });
+
+  it('rounds partial backward wheel travel toward zero, not down a whole step', () => {
+    const ev = wheel({ deltaY: -5 });
+
+    expect(h.video.playbackRate).toBe(1);
+    expect(ev.defaultPrevented).toBe(true);
+  });
+
+  it('reads the wheel from whichever axis moved further', () => {
+    wheel({ deltaX: 18, deltaY: -9 });
+    expect(h.video.playbackRate).toBe(1.1);
   });
 });
 
@@ -1851,70 +1860,19 @@ describe('video controls — idle auto-hide', () => {
   });
 });
 
-describe('video controls — context menu', () => {
+describe('video controls — context menu handoff', () => {
   let h: Harness;
 
   beforeEach(() => { vi.clearAllMocks(); h = mount(); });
   afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
 
-  const ctx = (): HTMLElement => q(h.controls, '[data-role="video-menu"]');
-  const openCtx = (clientX = 30, clientY = 40): MouseEvent => {
-    const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX, clientY });
+  it('leaves the context event untouched for the editor menu', () => {
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
 
-    h.video.dispatchEvent(ev);
+    h.video.dispatchEvent(event);
 
-    return ev;
-  };
-
-  it('opens at the pointer position it was summoned from', () => {
-    openCtx(30, 40);
-    expect(ctx().hidden).toBe(false);
-    expect(ctx().style.getPropertyValue('--blok-ctx-x')).toBe('30px');
-    expect(ctx().style.getPropertyValue('--blok-ctx-y')).toBe('40px');
-  });
-
-  it('closes on a press outside it', () => {
-    openCtx();
-    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    expect(ctx().hidden).toBe(true);
-  });
-
-  it('stays open for a press on one of its own items', () => {
-    openCtx();
-    q(h.controls, '[data-action="copy-url"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    expect(ctx().hidden).toBe(false);
-  });
-
-  it('ignores keys other than Escape while open', () => {
-    openCtx();
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
-    expect(ctx().hidden).toBe(false);
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    expect(ctx().hidden).toBe(true);
-  });
-
-  it('closes after every item it offers', () => {
-    for (const action of ['ctx-loop', 'copy-url', 'copy-url-at-time', 'stats']) {
-      openCtx();
-      q(h.controls, `[data-action="${action}"]`).click();
-      expect(ctx().hidden).toBe(true);
-    }
-  });
-
-  it('does not throw on a browser with no clipboard write', () => {
-    const onError = vi.fn();
-
-    window.addEventListener('error', onError);
-    vi.stubGlobal('navigator', { clipboard: {} });
-    openCtx();
-    q(h.controls, '[data-action="copy-url"]').click();
-    vi.stubGlobal('navigator', {});
-    openCtx();
-    q(h.controls, '[data-action="copy-url-at-time"]').click();
-    window.removeEventListener('error', onError);
-    vi.unstubAllGlobals();
-    expect(onError).not.toHaveBeenCalled();
-    expect(ctx().hidden).toBe(true);
+    expect(event.defaultPrevented).toBe(false);
+    expect(h.controls.querySelector('[data-role="video-menu"]')).toBeNull();
   });
 });
 
@@ -1925,10 +1883,7 @@ describe('video controls — playback statistics', () => {
   afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
 
   const stats = (): HTMLElement => q(h.controls, '[data-role="video-stats"]');
-  const openStats = (): void => {
-    h.video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    q(h.controls, '[data-action="stats"]').click();
-  };
+  const openStats = (): void => h.toggleStats();
 
   it('refreshes the open overlay as playback advances', () => {
     setProp(h.video, 'buffered', fakeRanges([[0, 30]]));
@@ -1950,8 +1905,7 @@ describe('video controls — playback statistics', () => {
     expect(stats().textContent).toContain('Resolution: Not available');
     setProp(h.video, 'videoWidth', 640);
     setProp(h.video, 'videoHeight', 360);
-    h.video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    q(h.controls, '[data-action="stats"]').click();
+    h.toggleStats();
     expect(stats().hidden).toBe(true);
     expect(stats().textContent).toContain('Resolution: Not available');
   });
@@ -2245,8 +2199,7 @@ describe('video controls — teardown detaches every listener', () => {
   it('stops refreshing the statistics overlay', () => {
     setProp(h.video, 'buffered', fakeRanges([[0, 30]]));
     setProp(h.video, 'currentTime', 10);
-    h.video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    at('[data-action="stats"]').click();
+    h.toggleStats();
     h.destroy();
     setProp(h.video, 'currentTime', 25);
     h.video.dispatchEvent(new Event('timeupdate'));
@@ -2308,23 +2261,6 @@ describe('video controls — teardown detaches every listener', () => {
     document.dispatchEvent(new Event('fullscreenchange'));
     setProp(document, 'fullscreenElement', null);
     expect(h.figure.hasAttribute('data-fullscreen')).toBe(false);
-  });
-
-  it('stops claiming the right-click menu', () => {
-    h.destroy();
-    const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
-
-    h.video.dispatchEvent(ev);
-    expect(ev.defaultPrevented).toBe(false);
-    expect(at('[data-role="video-menu"]').hidden).toBe(true);
-  });
-
-  it('leaves an open right-click menu untouched by later document events', () => {
-    h.video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    h.destroy();
-    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    expect(at('[data-role="video-menu"]').hidden).toBe(false);
   });
 
   it('stops answering pointer and keyboard input on the video', () => {
@@ -2528,22 +2464,13 @@ describe('video controls — secondary-state labels', () => {
     expect(label('[data-action="theater"]')).toBe(sentinel('theater'));
   });
 
-  it('reads the loop row as on at mount and off after its own toggle', () => {
+  it('reads the loop switch as on at mount and off after its own toggle', () => {
     h = mount({ loop: true });
-    const value = q(h.figure, '[data-role="menu-value-loop"]');
+    const row = q(h.figure, '[data-action="loop"]');
 
-    expect(value.textContent).toBe('On');
-    q(h.figure, '[data-action="loop"]').click();
-    expect(value.textContent).toBe('Off');
-  });
-
-  it('resolves the loop on and off rows through their own keys', () => {
-    h = mount({ loop: true, i18n: fakeI18n() });
-    const value = q(h.figure, '[data-role="menu-value-loop"]');
-
-    expect(value.textContent).toBe(sentinel('on'));
-    q(h.figure, '[data-action="loop"]').click();
-    expect(value.textContent).toBe(sentinel('off'));
+    expect(row.getAttribute('aria-checked')).toBe('true');
+    row.click();
+    expect(row.getAttribute('aria-checked')).toBe('false');
   });
 
   it('resolves the picture-in-picture label through its own key', () => {
@@ -2591,13 +2518,13 @@ describe('video controls — preset glide ownership', () => {
     cbs.forEach((cb) => cb(at));
   };
 
-  it('drops a preset glide the moment a stepper takes the rate over', () => {
+  it('drops a preset glide the moment a tape drag takes the rate over', () => {
+    const ruler = q(h.figure, '[data-role="speed-ruler"]');
+
     q(h.figure, '[data-action="speed-2"]').click();
-    // setRate lands on 2, then the glide repaints the start of its tween.
-    expect(slider().value).toBe('1');
-    q(h.figure, '[data-action="speed-dec"]').click();
-    expect(slider().value).toBe('1.95');
-    // The preset's tween must not still own the thumb once the stepper set it.
+    // One 9px step right from 2× is 1.95×.
+    ruler.dispatchEvent(new MouseEvent('pointerdown', { clientX: 100, bubbles: true, cancelable: true }));
+    ruler.dispatchEvent(new MouseEvent('pointermove', { clientX: 109, bubbles: true, cancelable: true }));
     flush(2000);
     expect(slider().value).toBe('1.95');
   });
@@ -2919,7 +2846,8 @@ describe('video controls — speed glide ownership', () => {
     const slider = q<HTMLInputElement>(h.figure, '[data-role="speed-slider"]');
 
     q<HTMLButtonElement>(h.figure, '[data-action="speed-2"]').click(); // 1× → 2×, glide armed
-    q<HTMLButtonElement>(h.figure, '[data-action="speed-dec"]').click(); // steps to 1.95×
+    // One 9px wheel notch back steps to 1.95×.
+    q(h.figure, '[data-role="speed-ruler"]').dispatchEvent(new WheelEvent('wheel', { deltaY: -9, bubbles: true, cancelable: true }));
 
     const pending = [...frames.values()];
 

@@ -1,4 +1,5 @@
 import { preprocessGoogleDocsHtml } from '../../../components/modules/paste/google-docs-preprocessor';
+import { stampPastedTableDirection } from '../../../components/modules/paste/table-direction-preprocessor';
 import { preprocessLegacyCmsHtmlIn } from '../../../preprocess/legacy-cms-html';
 import { sanitize } from '../convert-html/sanitizer';
 import { buildBlocks } from '../convert-html/block-builder';
@@ -11,7 +12,8 @@ declare const __CLI_VERSION__: string;
  * Runs: Google Docs preprocess -> general preprocess -> sanitize -> build blocks -> serialize.
  */
 export function convertGdocs(html: string): string {
-  const preprocessed = preprocessGoogleDocsHtml(html);
+  // Before the Docs pass: it drops <body dir>, as in the editor's paste.
+  const preprocessed = preprocessGoogleDocsHtml(stampPastedTableDirection(html));
 
   const dom = new DOMParser().parseFromString(preprocessed, 'text/html');
   const wrapper = dom.body;

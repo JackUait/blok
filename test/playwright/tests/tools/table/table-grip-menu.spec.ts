@@ -281,34 +281,65 @@ test.describe('Table grips over a merged cell', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
-  test('sliding from row 1 across a rowspan to the grip deletes row 1, not row 0', async ({ page }) => {
+  test('sweeping the pointer across a merged cell keeps one row pill, centred on the cell', async ({ page }) => {
     await createMergedTable(page);
     await expect(getCell(page, 0, 0)).toHaveAttribute('rowspan', '3');
 
-    const rowCell = await getCell(page, 1, 2).boundingBox();
     const originCell = await getCell(page, 0, 0).boundingBox();
 
-    if (!rowCell || !originCell) {
-      throw new Error('table cells have no box');
+    if (!originCell) {
+      throw new Error('merged cell has no box');
     }
 
-    const y = rowCell.y + rowCell.height / 2;
+    const visibleGrips = page.locator(`[${ROW_GRIP_ATTR}][data-blok-table-grip-visible]`);
+    const centreY = originCell.y + originCell.height / 2;
 
-    // Enter row 1 at col 2, then slide left across the merged cell to the table edge.
-    await page.mouse.move(rowCell.x + rowCell.width / 2, y);
+    for (const fraction of [0.1, 0.5, 0.9]) {
+      await page.mouse.move(originCell.x + originCell.width / 2, originCell.y + originCell.height * fraction, { steps: 4 });
+
+      await expect(visibleGrips).toHaveCount(1);
+      await expect(visibleGrips).toHaveAttribute(ROW_GRIP_ATTR, '0');
+
+      const box = await visibleGrips.boundingBox();
+
+      expect(Math.abs((box?.y ?? 0) + (box?.height ?? 0) / 2 - centreY)).toBeLessThan(2);
+    }
+  });
+
+  test('Delete from the grip of a merged cell removes every row the cell covers', async ({ page }) => {
+    await createMergedTable(page);
+    await expect(getCell(page, 0, 0)).toHaveAttribute('rowspan', '3');
+
+    const originCell = await getCell(page, 0, 0).boundingBox();
+
+    if (!originCell) {
+      throw new Error('merged cell has no box');
+    }
+
+    const y = originCell.y + originCell.height / 2;
+
+    await page.mouse.move(originCell.x + originCell.width / 2, y);
     await page.mouse.move(originCell.x + 2, y, { steps: 10 });
     await page.mouse.move(originCell.x, y, { steps: 2 });
 
     const visibleGrip = page.locator(`[${ROW_GRIP_ATTR}][data-blok-table-grip-visible]`);
 
-    await expect(visibleGrip).toHaveAttribute(ROW_GRIP_ATTR, '1');
+    await expect(visibleGrip).toHaveAttribute(ROW_GRIP_ATTR, '0');
 
     await page.mouse.down();
     await page.mouse.up();
     await page.getByText('Delete', { exact: true }).click();
 
-    await expect(page.getByText('R1', { exact: true })).toHaveCount(0);
-    await expect(page.getByText('R0', { exact: true })).toBeVisible();
-    await expect(page.locator('[data-blok-table-row]')).toHaveCount(3);
+    await expect(page.locator('[data-blok-table-row]')).toHaveCount(1);
+    await expect(page.getByText('R3', { exact: true })).toBeVisible();
+    await expect(page.getByText('R0', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('R2', { exact: true })).toHaveCount(0);
+
+    // One gesture, one undo step: a single undo brings back every row and the merge.
+    await page.keyboard.press('ControlOrMeta+z');
+
+    await expect(page.locator('[data-blok-table-row]')).toHaveCount(4);
+    await expect(page.getByText('R2', { exact: true })).toBeVisible();
+    await expect(getCell(page, 0, 0)).toHaveAttribute('rowspan', '3');
   });
 });

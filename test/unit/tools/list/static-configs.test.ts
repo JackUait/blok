@@ -63,20 +63,15 @@ describe('static-configs', () => {
       }
     });
 
-    it('allows anchor tags with href, target, and rel', () => {
-      const config = getListSanitizeConfig();
+    it('keeps ordinary anchor attributes and strips stale page-reference metadata', () => {
+      const ordinary = '<a href="#section" target="_self" rel="noopener">Jump</a>';
+      const staleReference = '<a data-blok-page-id="p1" href="/old">Old</a>';
+      const [result] = sanitizeBlocks(
+        [{ tool: 'list', data: { text: `${ordinary} ${staleReference}` } }],
+        getListSanitizeConfig()
+      );
 
-      if (isSanitizerConfig(config.text)) {
-        // Values are `true`, not fixed strings: a same-page link saves
-        // target="_self" and must not be rewritten to "_blank".
-        expect(config.text.a).toEqual({
-          href: true,
-          target: true,
-          rel: true,
-        });
-      } else {
-        throw new Error('Expected text to be a SanitizerConfig');
-      }
+      expect(result?.data.text).toBe(`${ordinary} <a data-blok-page-id="p1">Page</a>`);
     });
 
     it('allows b tags for bold text', () => {

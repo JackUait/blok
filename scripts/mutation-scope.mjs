@@ -440,11 +440,7 @@ export const orderQueue = ({ queued, mutate }) => {
 export const deadlineSeconds = ({ deadline, stopAt, now }) =>
   (stopAt === undefined ? deadline : Math.max(1, Math.min(deadline, stopAt - now)));
 
-/**
- * The ledger after Stryker was stopped at the deadline. Stryker writes its
- * incremental file only when it finishes, so the ledger is untouched and the
- * bar stays. The batch goes to the sweep, and the diff counts as accounted for.
- */
+/** Keeps the prior ledger and parks the batch when Stryker hits the deadline. */
 export const stateAfterDeadline = ({ state, sha, scope }) => ({
   lastCheckedSha: sha,
   survivorTotal: state.survivorTotal ?? null,
@@ -579,6 +575,20 @@ const readJson = (path, fallback) => {
     return JSON.parse(readFileSync(path, 'utf8'));
   } catch {
     return fallback;
+  }
+};
+
+export const hasValidIncrementalState = (stateDir) => {
+  try {
+    const report = JSON.parse(readFileSync(join(stateDir, 'stryker-incremental.json'), 'utf8'));
+    const state = JSON.parse(readFileSync(join(stateDir, 'state.json'), 'utf8'));
+
+    return report !== null && typeof report === 'object' &&
+      report.files !== null && typeof report.files === 'object' && !Array.isArray(report.files) &&
+      Object.values(report.files).every((file) => Array.isArray(file?.mutants)) &&
+      typeof state?.lastCheckedSha === 'string' && state.lastCheckedSha !== '';
+  } catch {
+    return false;
   }
 };
 
@@ -870,6 +880,29 @@ const runStryker = (args, seconds) => new Promise((resolvePromise, reject) => {
   });
 });
 
+export const runWithIncrementalBackup = async (stateDir, work) => {
+  const file = join(stateDir, 'stryker-incremental.json');
+  const previous = existsSync(file) ? readFileSync(file) : null;
+  let completed = false;
+
+  try {
+    const result = await work();
+
+    completed = result === 'done';
+
+    return result;
+  } finally {
+    if (!completed) {
+      // A hard stop can leave Stryker's direct write incomplete.
+      if (previous === null) {
+        rmSync(file, { force: true });
+      } else {
+        writeFileSync(file, previous);
+      }
+    }
+  }
+};
+
 const writeState = (stateDir, state) => {
   mkdirSync(stateDir, { recursive: true });
   writeFileSync(join(stateDir, 'state.json'), `${JSON.stringify(state, null, 2)}\n`);
@@ -906,7 +939,7 @@ const run = async (stateDir, { allowFull, budget, deadline, sweep }) => {
     return;
   }
 
-  if (await runStryker(args, seconds) === 'deadline') {
+  if (await runWithIncrementalBackup(stateDir, () => runStryker(args, seconds)) === 'deadline') {
     const next = stateAfterDeadline({ state, sha: git('rev-parse', 'HEAD'), scope });
 
     process.stdout.write(
@@ -959,8 +992,16 @@ const main = async () => {
     return;
   }
 
+  if (command === 'validate') {
+    if (!hasValidIncrementalState(stateDir)) {
+      throw new Error(`Invalid Stryker incremental state: ${join(stateDir, 'stryker-incremental.json')}`);
+    }
+
+    return;
+  }
+
   throw new Error(
-    'Usage: node scripts/mutation-scope.mjs <run|plan|seed> [stateDir] [--sweep] [--budget=S] [--deadline=S]',
+    'Usage: node scripts/mutation-scope.mjs <run|plan|seed|validate> [stateDir] [--sweep] [--budget=S] [--deadline=S]',
   );
 };
 

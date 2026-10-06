@@ -46,7 +46,7 @@ describe('DocumentStore', () => {
       expect((store as unknown as { ydoc: unknown }).ydoc).toBeDefined();
       expect(store.blocksMap).toBeDefined();
       expect(store.rootOrder).toBeDefined();
-      expect(store.undoScope).toEqual([store.blocksMap, store.rootOrder]);
+      expect(store.undoScope).toEqual([store.blocksMap, store.rootOrder, store.values]);
     });
 
     it('starts with empty blocks array', () => {

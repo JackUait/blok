@@ -159,6 +159,13 @@ export class KeyboardController extends Controller {
       return;
     }
 
+    // A word-boundary checkpoint that is due must close BEFORE the browser
+    // writes this character. By `input` the mutation observer has already
+    // buffered it, and the split's flush would carry it into the old step.
+    if (event instanceof InputEvent && event.inputType === 'insertText' && event.data !== null) {
+      this.Blok.YjsManager.checkAndHandleBoundary();
+    }
+
     // force: a beforeinput is the start of a fresh user edit, so the
     // caret-before is the caret right now — discard any stale pending snapshot
     // left dangling by a previous operation's no-op follow-up write.
@@ -322,6 +329,11 @@ export class KeyboardController extends Controller {
       if (closestEditor !== null && closestEditor !== this.wrapperElement) {
         return;
       }
+    }
+
+    if (key === 'Enter' && this.Blok.PageReferences.ownsTarget(target)) {
+      // The reference module rechecks access before opening.
+      return;
     }
 
     if (historyKey && !this.ownsHistoryKeyTarget(target)) {
@@ -790,6 +802,13 @@ export class KeyboardController extends Controller {
     if (this.Blok.BlockEvents.emojiTrigger.opened) {
       event.stopPropagation();
       this.Blok.BlockEvents.emojiTrigger.close();
+
+      return;
+    }
+
+    if (this.Blok.BlockEvents.pageReferenceTrigger.opened) {
+      event.stopPropagation();
+      this.Blok.BlockEvents.pageReferenceTrigger.close();
 
       return;
     }

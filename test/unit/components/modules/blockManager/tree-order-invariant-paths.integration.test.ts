@@ -19,6 +19,7 @@ import { CalloutTool } from '../../../../../src/tools/callout';
 import { Column } from '../../../../../src/tools/column';
 import { addColumnToList, wrapInNewColumnList } from '../../../../../src/tools/column-drop';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { storeToggleOpenState } from '../../../../helpers/view-state';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -84,6 +85,8 @@ let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
 const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
+  storeToggleOpenState('doc', blocks);
+
   const instance = new Blok({
     holder,
     dataModel: 'hierarchical',
@@ -97,7 +100,7 @@ const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
       list: ListItem,
       callout: CalloutTool,
     },
-    data: { blocks },
+    data: { id: 'doc', blocks },
   }) as unknown as TestEditor;
 
   editor = instance;

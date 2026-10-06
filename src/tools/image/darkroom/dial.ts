@@ -19,6 +19,10 @@ export interface DialOptions {
   onCommit(v: number): void;
   /** Adds a reset-to-0 button with this accessible name, shown while the value is off 0. */
   resetLabel?: string;
+  /** Where a double-click goes. Default 0. */
+  resetTo?: number;
+  /** A Shift drag lands on whole multiples of this. */
+  shiftSnap?: number;
 }
 
 export type DialSetup = Pick<DialOptions, 'min' | 'max' | 'label' | 'valueText' | 'resetLabel'> & { value: number };
@@ -55,10 +59,11 @@ const el = (cls: string, role: string): HTMLElement => {
 
 const decimals = (n: number): number => (String(n).split('.')[1] ?? '').length;
 
-const format = (v: number): string => {
+/** A plus sign only where the range also goes below zero. */
+const format = (v: number, signed: boolean): string => {
   const text = String(Math.abs(Math.round(v * 10) / 10));
 
-  if (v > 0) return `+${text}`;
+  if (v > 0) return signed ? `+${text}` : text;
 
   // U+2212 minus: the hyphen reads too short next to digits.
   return v < 0 ? `−${text}` : '0';
@@ -123,7 +128,7 @@ export function createDial(o: DialOptions): Dial {
     root.setAttribute('aria-valuemax', String(setup.max));
     root.setAttribute('aria-valuenow', String(st.value));
     root.setAttribute('aria-valuetext', setup.valueText(st.value));
-    label.textContent = format(st.value);
+    label.textContent = format(st.value, setup.min < 0);
     ruler.style.transform = `translateX(${-st.value * PX_PER_UNIT + 0}px)`;
     if (!reset) return;
     const shown = st.value !== 0;
@@ -169,12 +174,14 @@ export function createDial(o: DialOptions): Dial {
     }
   };
 
-  // One step: drops a pending key burst, then commits 0 at once.
-  const resetToZero = (): void => {
-    if (st.value === 0) return;
+  // One step: drops a pending key burst, then commits the rest value at once.
+  const resetToRest = (): void => {
+    const rest = o.resetTo ?? 0;
+
+    if (st.value === rest) return;
     flush();
-    change(0);
-    o.onCommit(0);
+    change(rest);
+    o.onCommit(rest);
   };
 
   // Reads what a person types: a typographic minus, a plus sign, a decimal comma.
@@ -272,6 +279,11 @@ export function createDial(o: DialOptions): Dial {
     // The ruler moves under a fixed needle: dragging it left brings higher values to the centre.
     const raw = clamp(snap(st.startValue - (e.clientX - st.startX) / PX_PER_UNIT));
 
+    if (e.shiftKey && o.shiftSnap !== undefined) {
+      change(clamp(Math.round(raw / o.shiftSnap) * o.shiftSnap));
+
+      return;
+    }
     change(clamp(Math.abs(raw) < DETENT ? 0 : raw));
   };
 
@@ -287,8 +299,8 @@ export function createDial(o: DialOptions): Dial {
   root.addEventListener('pointermove', onMove);
   root.addEventListener('pointerup', onEnd);
   root.addEventListener('pointercancel', onEnd);
-  root.addEventListener('dblclick', resetToZero);
-  reset?.addEventListener('click', resetToZero);
+  root.addEventListener('dblclick', resetToRest);
+  reset?.addEventListener('click', resetToRest);
   const onLabelClick = (): void => openEditor(String(st.value));
 
   label.addEventListener('click', onLabelClick);
@@ -322,8 +334,8 @@ export function createDial(o: DialOptions): Dial {
       root.removeEventListener('pointermove', onMove);
       root.removeEventListener('pointerup', onEnd);
       root.removeEventListener('pointercancel', onEnd);
-      root.removeEventListener('dblclick', resetToZero);
-      reset?.removeEventListener('click', resetToZero);
+      root.removeEventListener('dblclick', resetToRest);
+      reset?.removeEventListener('click', resetToRest);
     },
   };
 }

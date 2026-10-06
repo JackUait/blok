@@ -1,8 +1,6 @@
 import { fromMarkdown } from 'mdast-util-from-markdown';
-import type { Extension as MdastExtension } from 'mdast-util-from-markdown';
 import { gfm } from 'micromark-extension-gfm';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
-import type { Extension as MicromarkExtension } from 'micromark-util-types';
 import type { Root, RootContent } from 'mdast';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { InternalMarkdownImportConfig, MarkdownImportConfig } from './types';
@@ -11,6 +9,7 @@ import { safeHref, safeImageSrc, urlScheme } from '../components/utils/sanitize-
 import type { MarkdownDegradation } from './blocks-to-markdown-core';
 import { isBareBreak } from './phrasing-to-html';
 import { matchAlert } from './alerts';
+import { hasMathSignal, loadMathExtensions } from './math-syntax';
 
 export type { MarkdownImportConfig, ToolMapEntry } from './types';
 export type { MarkdownDegradation } from './blocks-to-markdown-core';
@@ -21,30 +20,6 @@ export interface MarkdownImportResult {
   blocks: OutputBlockData[];
   /** Constructs that arrived degraded, in document order. */
   warnings: MarkdownDegradation[];
-}
-
-/**
- * Does the source look like it carries math? Gates the extension load.
- *
- * A `$` followed by a digit opens a price, not a formula: without that guard
- * `$5-$10` parses as inline math and tears the paragraph into a latex code
- * block plus two fragments. Real math almost never opens on a bare digit.
- */
-const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?![\s\d$])[^$]+(?<=\S)\$(?!\$)/;
-
-/**
- * Lazily load math micromark/mdast extensions only when needed.
- */
-async function loadMathExtensions(): Promise<{
-  mathSyntax: MicromarkExtension;
-  mathFromMarkdown: MdastExtension;
-}> {
-  const [{ math }, { mathFromMarkdown }] = await Promise.all([
-    import('micromark-extension-math'),
-    import('mdast-util-math'),
-  ]);
-
-  return { mathSyntax: math(), mathFromMarkdown: mathFromMarkdown() };
 }
 
 /**
@@ -74,7 +49,7 @@ const IMPORT_DEGRADATIONS: Record<string, MarkdownDegradation> = {
   inlineMath: {
     construct: 'inlineMath',
     action: 'degraded',
-    detail: 'Inline math becomes a latex code block, splitting the paragraph around it',
+    detail: 'Inline math in a paragraph becomes a latex code block, splitting the paragraph around it',
   },
   footnoteReference: {
     construct: 'footnoteReference',
@@ -142,6 +117,20 @@ function blockquoteDegradation(node: RootContent): MarkdownDegradation | null {
 }
 
 /**
+ * Whether a node that is lossy elsewhere arrives intact here: a bare `<br>`, or
+ * inline math in a table cell or heading, which keep it as an equation mark.
+ * @param node - the node to inspect
+ * @param parent - its parent, or null at the top level
+ */
+function keptInline(node: RootContent, parent: RootContent | null): boolean {
+  if (node.type === 'html') {
+    return isBareBreak(node.value);
+  }
+
+  return node.type === 'inlineMath' && (parent?.type === 'tableCell' || parent?.type === 'heading');
+}
+
+/**
  * Collect every degradation the import leaves behind.
  *
  * @param tree - the parsed Markdown tree
@@ -153,9 +142,10 @@ function collectImportWarnings(tree: Root): MarkdownDegradation[] {
   /**
    * Visit one node and its children.
    * @param node - the node to visit
+   * @param parent - its parent, or null at the top level
    */
-  const visit = (node: RootContent): void => {
-    const degradation = node.type === 'html' && isBareBreak(node.value)
+  const visit = (node: RootContent, parent: RootContent | null): void => {
+    const degradation = keptInline(node, parent)
       ? null
       : IMPORT_DEGRADATIONS[node.type] ?? unsafeUrlDegradation(node) ?? blockquoteDegradation(node);
 
@@ -164,11 +154,11 @@ function collectImportWarnings(tree: Root): MarkdownDegradation[] {
     }
 
     if ('children' in node && Array.isArray(node.children)) {
-      node.children.forEach(visit);
+      node.children.forEach((child: RootContent) => visit(child, node));
     }
   };
 
-  tree.children.forEach(visit);
+  tree.children.forEach((child) => visit(child, null));
 
   return warnings;
 }
@@ -210,7 +200,7 @@ export async function markdownToBlocksWithReport(
   config: MarkdownImportConfig = {}
 ): Promise<MarkdownImportResult> {
   const enableGfm = config.gfm !== false;
-  const hasMath = MATH_SIGNAL.test(md);
+  const hasMath = hasMathSignal(md);
 
   const extensions = [
     ...(enableGfm ? [gfm()] : []),

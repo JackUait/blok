@@ -6,7 +6,7 @@ import { TableGrid } from '../../../../src/tools/table/table-core';
 import { TableModel } from '../../../../src/tools/table/table-model';
 import { CELL_BLOCKS_ATTR } from '../../../../src/tools/table/table-cell-blocks';
 import type { TableCellBlocks } from '../../../../src/tools/table/table-cell-blocks';
-import type { TableData } from '../../../../src/tools/table/types';
+import type { ClipboardBlockData, TableData } from '../../../../src/tools/table/types';
 import type { API, BlockAPI } from '../../../../types';
 
 const CELL_ROW_ATTR = 'data-blok-table-cell-row';
@@ -29,6 +29,8 @@ interface Harness {
   dispatchChange: ReturnType<typeof vi.fn>;
   cellOf: (row: number, col: number) => HTMLElement;
   editablesOf: (row: number, col: number) => HTMLElement[];
+  addChild: (parentId: string, id: string, data: { text: string }) => void;
+  childrenOf: (parentId: string) => BlockAPI[];
 }
 
 /**
@@ -84,6 +86,9 @@ const createHarness = (): Harness => {
   document.body.appendChild(element);
 
   const blocks = new Map<string, BlockAPI>();
+  const parents = new Map<string, string>();
+  const childrenOf = (parentId: string): BlockAPI[] =>
+    Array.from(blocks.values()).filter(block => parents.get(block.id) === parentId);
   const dispatchChange = vi.fn();
 
   const cellOf = (row: number, col: number): HTMLElement => {
@@ -113,9 +118,21 @@ const createHarness = (): Harness => {
     blocks: {
       setPointerDragActive: vi.fn(),
       getBlocksCount: () => blocks.size,
-      setBlockParent: vi.fn(),
+      setBlockParent: vi.fn((id: string, parentId: string) => {
+        parents.set(id, parentId);
+      }),
+      getChildren: childrenOf,
       getById: (id: string): BlockAPI | null => blocks.get(id) ?? null,
-      insert: (tool: string, data: { text?: string }): BlockAPI => {
+      insert: (
+        tool: string,
+        data: { text?: string },
+        _config?: unknown,
+        _index?: number,
+        _needToFocus?: boolean,
+        _replace?: boolean,
+        _id?: string,
+        tunes: Record<string, unknown> = {}
+      ): BlockAPI => {
         const id = `new-${nextId++}`;
         const holder = document.createElement('div');
 
@@ -133,7 +150,7 @@ const createHarness = (): Harness => {
           holder,
           dispatchChange,
           preservedData: data,
-          preservedTunes: {},
+          preservedTunes: tunes,
         } as unknown as BlockAPI;
 
         blocks.set(id, blockApi);
@@ -156,8 +173,19 @@ const createHarness = (): Harness => {
       ),
     deleteBlocks: (ids: string[]): void => {
       ids.forEach((id) => {
-        blocks.get(id)?.holder.remove();
+        blocks.get(id)?.holder?.remove();
         blocks.delete(id);
+        parents.delete(id);
+      });
+    },
+    insertClipboardBlock: (block: ClipboardBlockData): BlockAPI =>
+      api.blocks.insert(block.tool, block.data, {}, blocks.size, false, false, undefined, block.tunes),
+    insertClipboardChildren: function insertChildren(parentId: string, children: ClipboardBlockData[] | undefined): void {
+      children?.forEach((child) => {
+        const block = api.blocks.insert(child.tool, child.data, {}, undefined, false, false, undefined, child.tunes);
+
+        api.blocks.setBlockParent(block.id, parentId);
+        insertChildren(block.id, child.children);
       });
     },
     ensureCellHasBlock: vi.fn(),
@@ -201,7 +229,12 @@ const createHarness = (): Harness => {
     });
   });
 
-  return { subsystems, gridEl, transactSpy, blocks, dispatchChange, cellOf, editablesOf };
+  const addChild = (parentId: string, id: string, data: { text: string }): void => {
+    blocks.set(id, { id, name: 'paragraph', preservedData: data, preservedTunes: {} } as unknown as BlockAPI);
+    parents.set(id, parentId);
+  };
+
+  return { subsystems, gridEl, transactSpy, blocks, dispatchChange, cellOf, editablesOf, addChild, childrenOf };
 };
 
 const pressShortcut = (target: HTMLElement, key: string, modifiers: Partial<KeyboardEventInit> = {}): void => {
@@ -338,6 +371,33 @@ describe('table bulk cell formatting and fill', () => {
       pressShortcut(harness.cellOf(0, 0), 'r');
 
       expect(harness.transactSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('fill carries inline marks, tunes and nested children as copies', () => {
+      const source = harness.blocks.get('b-0-0');
+
+      if (!source) {
+        throw new Error('seed block missing');
+      }
+
+      Object.assign(source, {
+        preservedData: { text: '<b>bold</b> <mark style="color: red">red</mark>' },
+        preservedTunes: { alignment: { align: 'center' } },
+      });
+      harness.addChild('b-0-0', 'child-1', { text: '<i>nested</i>' });
+
+      harness.subsystems.cellSelectionSubsystem?.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
+      pressShortcut(harness.cellOf(0, 0), 'r');
+
+      const targetId = harness.editablesOf(0, 1)[0].closest('[data-blok-id]')?.getAttribute('data-blok-id') ?? '';
+      const target = harness.blocks.get(targetId);
+
+      expect(target?.preservedData).toEqual({ text: '<b>bold</b> <mark style="color: red">red</mark>' });
+      expect(target?.preservedTunes).toEqual({ alignment: { align: 'center' } });
+      expect(harness.childrenOf(targetId).map(child => child.preservedData)).toEqual([{ text: '<i>nested</i>' }]);
+      // A copy, not the source's live saved object.
+      expect(target?.preservedData).not.toBe(source.preservedData);
+      expect(harness.childrenOf('b-0-0').map(child => child.id)).toEqual(['child-1']);
     });
   });
 });

@@ -1,0 +1,342 @@
+/*
+ * Tabs block — a folder: the open tab and its panel are one sheet of paper
+ * rising out of a recessed band of closed tabs.
+ *
+ * The open tab is never painted by the pill itself: one shared indicator
+ * sits behind the strip (motion.ts folds it between pills), carrying the two concave
+ * corners that join it to the sheet, so the pills only change ink.
+ * Selected = sheet surface + primary ink, never blue (selected-state-neutral).
+ */
+[data-blok-tabs] {
+  --blok-tabs-pill-height: 2rem;
+  --blok-tabs-neck-radius: var(--blok-radius-control-lg);
+  --blok-tabs-sheet: var(--blok-bg-primary);
+  --blok-tabs-band: var(--blok-bg-secondary);
+  --blok-tabs-edge: var(--blok-border-subtle);
+  --blok-tabs-inner-radius: max(var(--blok-radius-floor), calc(var(--blok-radius-block) - var(--blok-border-width-hairline)));
+  display: flex;
+  flex-direction: column;
+  border: var(--blok-border-width-hairline) solid var(--blok-tabs-edge);
+  border-radius: var(--blok-radius-block);
+}
+
+@media (hover: hover) {
+  [data-blok-tabs]:hover {
+    --blok-tabs-edge: var(--blok-border-primary);
+  }
+}
+
+[data-blok-tabs-strip] {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--blok-space-0-5);
+  padding-block-start: calc(var(--blok-space-1-5) - var(--blok-border-width-hairline));
+  padding-block-end: 0;
+  padding-inline: var(--blok-space-1);
+  border-start-start-radius: var(--blok-tabs-inner-radius);
+  border-start-end-radius: var(--blok-tabs-inner-radius);
+  background-color: var(--blok-tabs-band);
+  /* The band's bottom edge. The open tab covers it, opening the sheet. */
+  box-shadow: inset 0 calc(-1 * var(--blok-border-width-hairline)) 0 var(--blok-tabs-edge);
+  user-select: none;
+}
+
+[data-blok-tabs-scroller] {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  min-width: 0;
+  overflow-x: auto;
+  /* overflow-x also clips the block axis: room for the open tab's top outline. */
+  padding-block-start: var(--blok-border-width-hairline);
+  padding-inline: var(--blok-tabs-neck-radius);
+  /* Pills scrolled into view stop clear of the edge fades below. */
+  scroll-padding-inline: var(--blok-space-6);
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+}
+
+[data-blok-tabs-scroller]::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fade the edge a hidden pill sits behind, so overflow reads as "more". */
+[data-blok-tabs-scroller][data-overflow-end] {
+  mask-image: linear-gradient(to var(--_blok-end-side, right), black calc(100% - var(--blok-space-6)), transparent);
+}
+
+[data-blok-tabs-scroller][data-overflow-start] {
+  mask-image: linear-gradient(to var(--_blok-start-side, left), black calc(100% - var(--blok-space-6)), transparent);
+}
+
+[data-blok-tabs-scroller][data-overflow-start][data-overflow-end] {
+  mask-image: linear-gradient(
+    to var(--_blok-end-side, right),
+    transparent,
+    black var(--blok-space-6),
+    black calc(100% - var(--blok-space-6)),
+    transparent
+  );
+}
+
+[data-blok-tabs-indicator] {
+  position: absolute;
+  inset-block-start: var(--blok-border-width-hairline);
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  width: 0;
+  border-radius: var(--blok-tabs-neck-radius) var(--blok-tabs-neck-radius) 0 0;
+  background-color: var(--blok-tabs-sheet);
+  /* Top and side outline. Outer shadows only paint outside the box. */
+  box-shadow:
+    0 calc(-1 * var(--blok-border-width-hairline)) 0 var(--blok-tabs-edge),
+    var(--blok-border-width-hairline) 0 0 var(--blok-tabs-edge),
+    calc(-1 * var(--blok-border-width-hairline)) 0 0 var(--blok-tabs-edge);
+  opacity: 0;
+  pointer-events: none;
+  /* Tabs fold on the band edge (motion.ts). */
+  transform-origin: 50% 100%;
+  transition: opacity var(--blok-duration-slow) var(--blok-ease-standard);
+}
+
+[data-blok-tabs-indicator][data-placed] {
+  opacity: 1;
+}
+
+/* The concave corners where the tab flares into the sheet. Each is a square
+ * of sheet with a circle cut from its outer top corner; the hairline ring on
+ * that circle continues the tab's side into the band's bottom edge. */
+[data-blok-tabs-indicator]::before,
+[data-blok-tabs-indicator]::after {
+  content: "";
+  position: absolute;
+  inset-block-end: 0;
+  width: var(--blok-tabs-neck-radius);
+  height: var(--blok-tabs-neck-radius);
+}
+
+[data-blok-tabs-indicator]::before {
+  inset-inline-start: calc(-1 * var(--blok-tabs-neck-radius));
+  background: radial-gradient(
+    circle at calc(50% - 50% * var(--_blok-inline-sign, 1)) 0,
+    transparent calc(var(--blok-tabs-neck-radius) - var(--blok-border-width-hairline)),
+    var(--blok-tabs-edge) calc(var(--blok-tabs-neck-radius) - var(--blok-border-width-hairline) + 0.5px),
+    var(--blok-tabs-edge) var(--blok-tabs-neck-radius),
+    var(--blok-tabs-sheet) calc(var(--blok-tabs-neck-radius) + 0.5px)
+  );
+}
+
+[data-blok-tabs-indicator]::after {
+  inset-inline-end: calc(-1 * var(--blok-tabs-neck-radius));
+  background: radial-gradient(
+    circle at calc(50% + 50% * var(--_blok-inline-sign, 1)) 0,
+    transparent calc(var(--blok-tabs-neck-radius) - var(--blok-border-width-hairline)),
+    var(--blok-tabs-edge) calc(var(--blok-tabs-neck-radius) - var(--blok-border-width-hairline) + 0.5px),
+    var(--blok-tabs-edge) var(--blok-tabs-neck-radius),
+    var(--blok-tabs-sheet) calc(var(--blok-tabs-neck-radius) + 0.5px)
+  );
+}
+
+[data-blok-tabs-pill] {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  height: var(--blok-tabs-pill-height);
+  padding-inline: var(--blok-space-3);
+  border-radius: var(--blok-radius-control);
+  font-size: var(--blok-font-size-body);
+  /* Equal to the height: the block toolbar centers on this line box. */
+  line-height: var(--blok-tabs-pill-height);
+  white-space: nowrap;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--blok-duration-standard) var(--blok-ease-standard),
+    background-color var(--blok-duration-base) var(--blok-ease-standard),
+    transform var(--blok-duration-base) var(--blok-ease-standard);
+}
+
+@media (hover: hover) {
+  [data-blok-tabs-pill]:hover {
+    color: var(--blok-text-primary);
+  }
+}
+
+[data-blok-tabs-pill]:active:not([data-renaming]) {
+  transform: scale(0.96);
+}
+
+/* Inside the pill: the scroller is one pill tall and clips anything outside.
+ * Matches the 2px width of the shared ring in preflight.css. */
+[data-blok-tabs-pill]:focus-visible {
+  outline-offset: -2px;
+}
+
+[data-blok-tabs-pill][aria-selected="true"] {
+  color: var(--blok-text-primary);
+}
+
+[data-blok-tabs-pill-icon] {
+  font-size: var(--blok-font-size-body);
+  line-height: 1;
+}
+
+[data-blok-tabs-pill-label] {
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-blok-tabs-rename-input] {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+[data-blok-tabs-add] {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--blok-tabs-pill-height) - var(--blok-space-1));
+  height: calc(var(--blok-tabs-pill-height) - var(--blok-space-1));
+  /* Lifted off the band edge, so its hover fill never touches the hairline. */
+  margin-block-end: var(--blok-space-0-5);
+  border-radius: var(--blok-radius-control);
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--blok-duration-slow) var(--blok-ease-standard),
+    background-color var(--blok-duration-base) var(--blok-ease-standard),
+    color var(--blok-duration-base) var(--blok-ease-standard);
+}
+
+[data-blok-tabs-add] svg {
+  width: var(--blok-space-4);
+  height: var(--blok-space-4);
+}
+
+[data-blok-tabs]:hover [data-blok-tabs-add],
+[data-blok-tabs-add]:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  [data-blok-tabs-add] {
+    opacity: 1;
+  }
+}
+
+@media (hover: hover) {
+  [data-blok-tabs-add]:hover {
+    background-color: var(--blok-item-hover-bg);
+    color: var(--blok-text-primary);
+  }
+}
+
+[data-blok-tabs-panels] {
+  padding: var(--blok-space-2);
+  border-end-start-radius: var(--blok-tabs-inner-radius);
+  border-end-end-radius: var(--blok-tabs-inner-radius);
+  background-color: var(--blok-tabs-sheet);
+}
+
+/* The hint stands in for the first block, so it takes the box of the empty
+ * paragraph a click puts there (PARAGRAPH_CLASSES + .blok-block): the tab
+ * keeps its height and the text does not jump. The hover fill reaches out
+ * past the text with a negative margin, so the text stays put. */
+[data-blok-tab-empty] {
+  margin-block: var(--blok-space-0-25);
+  margin-inline: calc(-1 * var(--blok-space-1));
+  padding-block: var(--blok-block-padding-top, 7px) var(--blok-block-padding-bottom, 7px);
+  padding-inline: calc(var(--blok-block-padding-inline, 2px) + var(--blok-space-1));
+  border-radius: var(--blok-radius-control);
+  font-size: var(--blok-paragraph-font-size, inherit);
+  line-height: 1.5;
+  color: var(--blok-text-secondary);
+  cursor: text;
+  user-select: none;
+  transition: background-color var(--blok-duration-base) var(--blok-ease-standard);
+}
+
+@media (hover: hover) {
+  [data-blok-tab-empty]:hover {
+    background-color: var(--blok-item-hover-bg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tabs-indicator],
+  [data-blok-tabs-pill],
+  [data-blok-tabs-add],
+  [data-blok-tab-empty] {
+    transition: none;
+  }
+
+  [data-blok-tabs-pill]:active:not([data-renaming]) {
+    transform: none;
+  }
+}
+
+/* Reordering: the dragged pill lifts and follows the pointer; the others
+ * slide out of its way (pill-gestures.ts sets their transforms). */
+[data-blok-tabs-strip][data-reordering] [data-blok-tabs-pill] {
+  cursor: grabbing;
+}
+
+[data-blok-tabs-pill][data-shifting] {
+  transition: transform var(--blok-duration-slow) var(--blok-ease-popover);
+}
+
+[data-blok-tabs-pill][data-dragging] {
+  z-index: 2;
+  background-color: var(--blok-bg-primary);
+  color: var(--blok-text-primary);
+  box-shadow: var(--blok-shadow-tab-ghost);
+  transition: box-shadow var(--blok-duration-slow) var(--blok-ease-standard);
+}
+
+/* A dragged block rests on a pill: fill it from the inline start like a
+ * charging bar, then the tab opens. Matches the dwell time in pill-gestures.ts. */
+[data-blok-tabs-pill][data-dwell] {
+  background-image: linear-gradient(to var(--_blok-end-side, right), var(--blok-item-hover-bg), var(--blok-item-hover-bg));
+  background-repeat: no-repeat;
+  background-position: var(--_blok-start-side, left) center;
+  animation: blok-tabs-dwell 450ms linear forwards;
+}
+
+/* The pill is the drop target: the dragged blocks will land at the end of its
+ * tab. Core sets the attribute (DragController); same colour as the drop line. */
+[data-blok-tabs-pill][data-blok-drop-into-active] {
+  box-shadow: inset 0 0 0 2px var(--blok-dnd-drop-indicator-bg);
+}
+
+@keyframes blok-tabs-dwell {
+  from {
+    background-size: 0% 100%;
+  }
+
+  to {
+    background-size: 100% 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tabs-pill][data-shifting] {
+    transition: none;
+  }
+
+  [data-blok-tabs-pill][data-dwell] {
+    animation: none;
+    background-size: 100% 100%;
+  }
+}

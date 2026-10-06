@@ -32,6 +32,13 @@ export const DATA_ATTR: {
    *  inserting blocks into the DOM; removed while a re-render is in flight.
    *  Acts as a stable render-readiness gate for consumers (e.g. E2E waits). */
   readonly rendered: 'data-blok-rendered';
+  /** Present on the editor wrapper while the loading skeleton owns it.
+   *  Public styling hook. */
+  readonly loading: 'data-blok-loading';
+  /** The loading skeleton overlay (a wrapper child, never inside the redactor). */
+  readonly loadingSkeleton: 'data-blok-loading-skeleton';
+  /** One skeleton row; the value is its kind: heading | paragraph | list. */
+  readonly skeletonBar: 'data-blok-skeleton-bar';
   /** Blok version number stamped on the editor wrapper (e.g. '1.10.0', 'dev').
    *  Consumed by browser extensions to identify the running version. */
   readonly version: 'data-blok-version';
@@ -40,10 +47,12 @@ export const DATA_ATTR: {
 
   /** Block unique identifier */
   readonly id: 'data-blok-id';
+  readonly pageId: 'data-blok-page-id';
   /** Block component/tool type */
   readonly component: 'data-blok-component';
   /** Tool type attribute */
   readonly tool: 'data-blok-tool';
+  readonly blockContextMenu: 'data-blok-block-context-menu';
   /** Block nesting depth (derived from the parentId chain) */
   readonly depth: 'data-blok-depth';
   /** Flat list-nesting indentation level (0 = root); tool-agnostic, mirrors list depth */
@@ -292,6 +301,21 @@ export const DATA_ATTR: {
    *  claimed by another container and must not be stolen. */
   readonly nestedBlocks: 'data-blok-nested-blocks';
 
+  /** A drop zone. Empty value: an empty container's placeholder (an empty
+   *  tab); while the block's own holder shows one without the `hidden` class,
+   *  a drop on the block nests the dragged blocks as its first children.
+   *  A block id (a tab pill): a drop on the zone appends the dragged blocks
+   *  as the LAST children of that block. */
+  readonly dropInto: 'data-blok-drop-into';
+
+  /** Set by core on a named drop zone while it is the drop target. */
+  readonly dropIntoActive: 'data-blok-drop-into-active';
+
+  /** A container's empty-state hint that stands in for its first child block
+   *  (empty tab, empty toggle body). It is not a block, so hovering or pressing
+   *  it shows no block toolbar; the block a click creates gets its own. */
+  readonly childStandIn: 'data-blok-child-stand-in';
+
   // Mutation Tracking
 
   /** Element excluded from mutation tracking */
@@ -321,6 +345,10 @@ export const DATA_ATTR: {
    *  to walk a suggestion list), which is exactly what this attribute is for.
    *  Public authoring hook. */
   readonly keyboardOwner: 'data-blok-keyboard-owner';
+  /** Marks a subtree whose links belong to the tool: Blok's link hover card
+   *  and link-click navigation stand down inside it. For a link the tool opens
+   *  and previews itself (the page block). Public authoring hook. */
+  readonly linkOwner: 'data-blok-link-owner';
 
   // Navigation
 

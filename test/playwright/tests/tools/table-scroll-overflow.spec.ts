@@ -187,4 +187,48 @@ test.describe('table horizontal overflow', () => {
     // never be dragged.
     expect(handleRight).toBeGreaterThanOrEqual(gridRight - 2);
   });
+
+  test('the cell pill of a last-column cell sits whole on the border', async ({ page }) => {
+    await createBlok(page, { data: fluidTable(3) });
+
+    await page.locator(`${SCROLL_SELECTOR} [data-blok-table-cell]`).nth(2).click();
+
+    const pill = page.locator(`${SCROLL_SELECTOR} [data-blok-table-selection-pill]`);
+
+    await expect(pill).toBeVisible();
+
+    const measure = async (): Promise<{ pillLeft: number; pillRight: number; borderX: number; clipRight: number }> =>
+      pill.evaluate((el) => {
+        const sc = el.closest('[data-blok-table-scroll]');
+        const overlay = sc?.querySelector('[data-blok-table-selection-overlay]');
+
+        if (!(sc instanceof HTMLElement) || !(overlay instanceof HTMLElement)) {
+          throw new Error('scroll container or overlay not found');
+        }
+
+        const pillRect = el.getBoundingClientRect();
+        const scRect = sc.getBoundingClientRect();
+
+        return {
+          pillLeft: pillRect.left,
+          pillRight: pillRect.right,
+          // The 2px box border's middle.
+          borderX: overlay.getBoundingClientRect().right - 1,
+          // Content past the padding box is clipped.
+          clipRight: scRect.left + sc.clientLeft + sc.clientWidth,
+        };
+      });
+
+    const expectWholeOnBorder = (m: Awaited<ReturnType<typeof measure>>): void => {
+      expect(m.pillRight).toBeLessThanOrEqual(m.clipRight);
+      expect(Math.abs((m.pillLeft + m.pillRight) / 2 - m.borderX)).toBeLessThanOrEqual(1);
+    };
+
+    expectWholeOnBorder(await measure());
+
+    await pill.hover();
+    await expect.poll(async () => (await pill.boundingBox())?.width ?? 0).toBeGreaterThan(4);
+
+    expectWholeOnBorder(await measure());
+  });
 });

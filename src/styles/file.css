@@ -790,7 +790,7 @@
 
 .blok-file-preview-md ul,
 .blok-file-preview-md ol {
-  padding-left: 1.5em;
+  padding-inline-start: 1.5em;
 }
 
 .blok-file-preview-md li {
@@ -804,8 +804,8 @@
 
 .blok-file-preview-md blockquote {
   padding-block: var(--blok-space-1);
-  padding-left: var(--blok-space-4);
-  border-left: 3px solid var(--blok-border-strong);
+  padding-inline-start: var(--blok-space-4);
+  border-inline-start: 3px solid var(--blok-border-strong);
   color: var(--blok-text-secondary);
 }
 
@@ -855,7 +855,7 @@
 .blok-file-preview-md td {
   padding: var(--blok-space-2) var(--blok-space-3);
   border: 1px solid var(--blok-border-subtle);
-  text-align: left;
+  text-align: start;
   vertical-align: top;
 }
 
@@ -940,12 +940,12 @@
   list-style: none;
 }
 
-/* GitHub-style alerts: a tinted callout with a coloured left rule and a
+/* GitHub-style alerts: a tinted callout with a coloured inline-start rule and a
    semantic title. Kind colours come from the shared palette tokens so they
    adapt to light/dark automatically. */
 .blok-md-alert {
   padding: var(--blok-space-3) var(--blok-space-4);
-  border-left: 3px solid var(--blok-color-blue-text);
+  border-inline-start: 3px solid var(--blok-color-blue-text);
   border-radius: var(--blok-radius-block);
   background: var(--blok-color-blue-bg);
 }
@@ -961,7 +961,7 @@
 }
 
 .blok-md-alert-tip {
-  border-left-color: var(--blok-color-green-text);
+  border-inline-start-color: var(--blok-color-green-text);
   background: var(--blok-color-green-bg);
 }
 
@@ -970,7 +970,7 @@
 }
 
 .blok-md-alert-important {
-  border-left-color: var(--blok-color-purple-text);
+  border-inline-start-color: var(--blok-color-purple-text);
   background: var(--blok-color-purple-bg);
 }
 
@@ -979,7 +979,7 @@
 }
 
 .blok-md-alert-warning {
-  border-left-color: var(--blok-color-yellow-text);
+  border-inline-start-color: var(--blok-color-yellow-text);
   background: var(--blok-color-yellow-bg);
 }
 
@@ -988,7 +988,7 @@
 }
 
 .blok-md-alert-caution {
-  border-left-color: var(--blok-color-red-text);
+  border-inline-start-color: var(--blok-color-red-text);
   background: var(--blok-color-red-bg);
 }
 
@@ -1004,7 +1004,7 @@
 }
 
 .blok-md-footnotes ol {
-  padding-left: 1.25em;
+  padding-inline-start: 1.25em;
 }
 
 .blok-md-fnref a,
@@ -1014,7 +1014,7 @@
 }
 
 .blok-md-fnback {
-  margin-left: var(--blok-space-1);
+  margin-inline-start: var(--blok-space-1);
 }
 
 /* Office previews (docx/xlsx/pptx) render into this scroll container inside the
@@ -1074,7 +1074,7 @@
 .blok-file-preview-xlsx-table td {
   min-width: 3rem;
   padding: var(--blok-space-2) var(--blok-space-3);
-  border-right: 1px solid var(--blok-border-subtle);
+  border-inline-end: 1px solid var(--blok-border-subtle);
   border-bottom: 1px solid var(--blok-border-subtle);
   white-space: pre;
 }
@@ -1086,7 +1086,7 @@
 }
 
 .blok-file-preview-xlsx-table td:last-child {
-  border-right: 0;
+  border-inline-end: 0;
 }
 
 .blok-file-preview-xlsx-table tr:last-child td {

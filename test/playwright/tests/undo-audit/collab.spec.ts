@@ -170,9 +170,15 @@ test.describe('undo audit: collab in two real editors', () => {
 
     await setup(pages, [{ id: 'p',
       data: { text: 'hello' } }]);
-    await typeAt(pages.a, 'alpha', 'p', 'End', ' aa');
-    await typeAt(pages.b, 'beta', 'p', 'Home', 'X');
-    await expect(editable(pages.a, 'alpha', 'p')).toHaveText('Xhello aa');
+    // Everything from alpha's first burst to its second must fit in the 500ms
+    // capture window, or the pause alone splits the step. A click on the other
+    // page can take that long on CI, so beta's caret is placed before alpha types.
+    await editable(pages.b, 'beta', 'p').click();
+    await pages.b.keyboard.press('Home');
+    // No space: a space followed by a 100ms pause closes the step on purpose.
+    await typeAt(pages.a, 'alpha', 'p', 'End', 'aa');
+    await pages.b.keyboard.type('X');
+    await expect(editable(pages.a, 'alpha', 'p')).toHaveText('Xhelloaa');
     await pages.a.keyboard.type('bb');
     await wait(pages.a);
     await converged(pages);

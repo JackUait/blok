@@ -5,6 +5,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const TOGGLE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="toggle"]`;
@@ -54,6 +55,7 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
     },
     { holder: HOLDER_ID, initialData: data ?? null }
   );
+  await openFixtureToggles(page, data);
 };
 
 test.describe('Toggle Content - Adding blocks inside toggles', () => {
@@ -219,6 +221,8 @@ test.describe('Toggle Content - Adding blocks inside toggles', () => {
 
         window.blokInstance = newBlok;
         await newBlok.isReady;
+        // A loaded toggle starts collapsed; open it as this browser would have.
+        newBlok.blocks.getById('toggle-1')?.call('expand');
       });
 
       // Toggle is explicitly open via isOpen: true — verify
@@ -293,6 +297,8 @@ test.describe('nesting any block type via toolbox inside toggle', () => {
 
       window.blokInstance = newBlok;
       await newBlok.isReady;
+      // A loaded toggle starts collapsed; open it as this browser would have.
+      newBlok.blocks.getById('toggle-1')?.call('expand');
     });
 
     // Verify toggle is open
@@ -380,6 +386,8 @@ test.describe('nesting any block type via toolbox inside toggle', () => {
 
       window.blokInstance = newBlok;
       await newBlok.isReady;
+      // A loaded toggle starts collapsed; open it as this browser would have.
+      newBlok.blocks.getById('toggle-1')?.call('expand');
     });
 
     // Verify toggle is open
@@ -472,6 +480,8 @@ test.describe('nesting any block type via toolbox inside toggle', () => {
 
       window.blokInstance = newBlok;
       await newBlok.isReady;
+      // A loaded toggle heading starts collapsed; open it as this browser would have.
+      newBlok.blocks.getById('toggle-heading-1')?.call('expand');
     });
 
     // Verify toggle heading is open

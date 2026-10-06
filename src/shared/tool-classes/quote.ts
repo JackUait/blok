@@ -18,7 +18,7 @@
  */
 export const QUOTE_BASE_CLASSES: readonly string[] = [
   'blok-block',
-  'border-l-[3px]',
+  'border-s-[3px]',
   'border-current',
   'pl-[0.9em]',
   'pr-[0.9em]',

@@ -33,6 +33,13 @@ describe('normalizeLocale (public BCP-47 normalizer)', () => {
     expect(normalizeLocale('ckb-IR')).toBe('ku');
   });
 
+  it('aliases the legacy Hebrew and Yiddish tags iw and ji', () => {
+    expect(normalizeLocale('iw')).toBe('he');
+    expect(normalizeLocale('iw-IL')).toBe('he');
+    expect(normalizeLocale('ji')).toBe('yi');
+    expect(normalizeLocale('ji-US')).toBe('yi');
+  });
+
   it('preserves Chinese script/region', () => {
     expect(normalizeLocale('zh-TW')).toBe('zh-TW');
     expect(normalizeLocale('zh-Hant')).toBe('zh-TW');

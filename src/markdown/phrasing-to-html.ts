@@ -104,7 +104,13 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap): strin
       // has no hard break (headings, table cells).
       return isBareBreak(node.value) ? '<br>' : escapeHtml(node.value);
 
-    case 'inlineMath':
+    case 'inlineMath': {
+      // The equation sanitizer rewrites the span's text to its source, so they must match.
+      const latex = escapeHtml(node.value ?? '');
+
+      return `<span data-latex="${latex}">${latex}</span>`;
+    }
+
     case 'footnoteReference':
       return '';
 

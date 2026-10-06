@@ -43,4 +43,35 @@ describe('InlinePositioner selection-start alignment', () => {
 
     expect(wrapper.style.left).toBe('62px');
   });
+
+  it('in RTL, ends at the selection right edge, the selection start', () => {
+    const wrapper = document.createElement('div');
+
+    new InlinePositioner(false).apply({
+      wrapper,
+      selectionRect: new DOMRect(900, 200, 150, 24),
+      wrapperOffset: new DOMRect(400, 100, 320, 500),
+      contentRect: new DOMRect(400, 100, 700, 500),
+      popoverWidth: 450,
+      direction: 'rtl',
+    });
+
+    // right edge 1050 - width 450 = 600 viewport, minus wrapper x 400
+    expect(wrapper.style.left).toBe('200px');
+  });
+
+  it('in RTL, shifts right only as far as the viewport edge requires', () => {
+    const wrapper = document.createElement('div');
+
+    new InlinePositioner(false).apply({
+      wrapper,
+      selectionRect: new DOMRect(100, 200, 150, 24),
+      wrapperOffset: new DOMRect(0, 100, 320, 500),
+      contentRect: new DOMRect(0, 100, 700, 500),
+      popoverWidth: 450,
+      direction: 'rtl',
+    });
+
+    expect(wrapper.style.left).toBe('8px');
+  });
 });

@@ -1,0 +1,162 @@
+import { DATA_ATTR } from '../constants/data-attributes';
+import { announce } from './announcer';
+import type { ResolvedLoaderConfig } from './loader-config';
+import { buildLoadingSkeleton } from './loading-skeleton';
+import { logLabeled } from './logger';
+import { HANDOFF_DURATION, HANDOFF_STAGGER, runSkeletonHandoff } from './skeleton-handoff';
+
+/** Once shown, shorter than this reads as a flicker. */
+export const MIN_VISIBLE = 400;
+
+/** Extra time past the handoff's own length before we stop waiting for it. */
+const HANDOFF_GRACE = 250;
+
+export class LoadingController {
+  private skeleton: { root: HTMLElement; bars: HTMLElement[] } | null = null;
+  private wait: { timer: ReturnType<typeof setTimeout>; resolve: () => void } | null = null;
+  private hiding: Promise<void> | null = null;
+  /** The host's own inline min-height, saved only while the skeleton holds the wrapper open. */
+  private savedMinHeight: { value: string; priority: string } | null = null;
+  private shownAt = 0;
+  private started = false;
+  private destroyed = false;
+  private busy = false;
+
+  constructor(private readonly args: { wrapper: HTMLElement; content: HTMLElement; config: ResolvedLoaderConfig; label: string }) {}
+
+  public get isVisible(): boolean {
+    return this.skeleton !== null && this.elapsed() >= this.args.config.delay;
+  }
+
+  /** From show() until teardown: the document is not live yet, so nothing may edit it. */
+  public get isBusy(): boolean {
+    return this.busy;
+  }
+
+  public show(): void {
+    // Blok boots once per controller, so showing again during or after a hide is not supported.
+    if (!this.args.config.enabled || this.started || this.hiding !== null || this.destroyed) {
+      return;
+    }
+
+    this.started = true;
+    this.busy = true;
+    this.args.wrapper.setAttribute('aria-busy', 'true');
+    // onChange is wired only after the handoff, so an edit made under the skeleton would never reach the host.
+    this.args.content.setAttribute('inert', '');
+    // The shared region lives on body, outside the busy subtree, and is filled a task after it is cleared.
+    announce(this.args.label, { politeness: 'polite' });
+
+    // Mounted now, painted after the delay by CSS: loading is when the main thread is blocked, and a timer would starve.
+    this.skeleton = buildLoadingSkeleton(this.args.config.skeleton);
+    this.skeleton.root.style.setProperty('--blok-skeleton-delay', `${this.args.config.delay}ms`);
+    this.args.wrapper.setAttribute(DATA_ATTR.loading, '');
+    this.args.wrapper.appendChild(this.skeleton.root);
+    // The overlay is absolute and a read-only boot has no bottom zone, so without this it paints over what follows the editor.
+    // Important: isolation.css sets `all: initial !important` on this wrapper.
+    const { style } = this.args.wrapper;
+
+    this.savedMinHeight = { value: style.getPropertyValue('min-height'), priority: style.getPropertyPriority('min-height') };
+    style.setProperty('min-height', `${this.skeleton.root.getBoundingClientRect().height}px`, 'important');
+    this.shownAt = performance.now();
+  }
+
+  public hide(targets: HTMLElement[]): Promise<void> {
+    if (this.hiding !== null) {
+      return this.hiding;
+    }
+
+    if (!this.started || this.destroyed) {
+      return Promise.resolve();
+    }
+
+    this.started = false;
+    this.hiding = this.runHide(targets);
+
+    return this.hiding;
+  }
+
+  public destroy(): void {
+    this.destroyed = true;
+
+    this.stopWaiting();
+    this.teardown();
+  }
+
+  private async runHide(targets: HTMLElement[]): Promise<void> {
+    const skeleton = this.skeleton;
+
+    if (skeleton !== null && this.isVisible) {
+      const remaining = MIN_VISIBLE - (this.elapsed() - this.args.config.delay);
+
+      if (remaining > 0) {
+        await this.sleep(remaining);
+      }
+
+      if (this.destroyed) {
+        return;
+      }
+
+      const { content, wrapper } = this.args;
+
+      content.style.opacity = '0';
+      wrapper.removeAttribute(DATA_ATTR.loading);
+
+      try {
+        // `finished` may never settle in a background tab; a stuck boot is worse than a cut animation.
+        await Promise.race([
+          runSkeletonHandoff({ bars: skeleton.bars, targets, content }),
+          this.sleep(skeleton.bars.length * HANDOFF_STAGGER + HANDOFF_DURATION + HANDOFF_GRACE),
+        ]);
+      } catch (error) {
+        // Render awaits this hide, so a failed animation must not fail the boot.
+        logLabeled('The loading skeleton handoff failed', 'warn', error);
+      } finally {
+        this.stopWaiting();
+        // The handoff uses fill: 'forwards', which would pin opacity and filter on the content.
+        content.getAnimations?.().forEach(animation => animation.cancel());
+        content.style.removeProperty('opacity');
+        this.teardown();
+      }
+
+      return;
+    }
+
+    this.teardown();
+  }
+
+  private elapsed(): number {
+    return performance.now() - this.shownAt;
+  }
+
+  /** Only one hide runs, so one wait slot is enough. destroy() resolves it early so the pending hide() settles. */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => {
+      this.wait = { timer: setTimeout(() => this.stopWaiting(), ms), resolve };
+    });
+  }
+
+  private stopWaiting(): void {
+    if (this.wait === null) {
+      return;
+    }
+
+    clearTimeout(this.wait.timer);
+    this.wait.resolve();
+    this.wait = null;
+  }
+
+  private teardown(): void {
+    this.skeleton?.root.remove();
+    this.skeleton = null;
+    this.args.wrapper.removeAttribute(DATA_ATTR.loading);
+    this.args.wrapper.removeAttribute('aria-busy');
+    this.args.content.removeAttribute('inert');
+    this.busy = false;
+
+    if (this.savedMinHeight !== null) {
+      this.args.wrapper.style.setProperty('min-height', this.savedMinHeight.value, this.savedMinHeight.priority);
+      this.savedMinHeight = null;
+    }
+  }
+}

@@ -223,9 +223,7 @@ function expandTable(
   const rowIds = (Array.isArray(table.subNodes) ? table.subNodes : []).filter(
     (rowId): rowId is string => typeof rowId === 'string'
   );
-  const columnOrder = Array.isArray(format.tableBlockColumnOrder)
-    ? format.tableBlockColumnOrder.filter((columnId): columnId is string => typeof columnId === 'string')
-    : [];
+  const columnOrder = resolveColumnOrder(format.tableBlockColumnOrder, rowIds, byId);
   const cells: NextSpaceParsedBlock[] = [];
   const content: { blocks: string[] }[][] = rowIds.map((rowId) => {
     visited.add(rowId);
@@ -260,6 +258,27 @@ function expandTable(
   cells.forEach((cell) => result.push(cell));
 }
 
+/**
+ * The column id order for a table: the explicit `tableBlockColumnOrder`, or
+ * (when absent) the `collectionProperties` keys of the first populated row.
+ */
+function resolveColumnOrder(order: unknown, rowIds: string[], byId: Map<string, NextSpaceNode>): string[] {
+  if (Array.isArray(order) && order.length > 0) {
+    return order.filter((columnId): columnId is string => typeof columnId === 'string');
+  }
+
+  for (const rowId of rowIds) {
+    const properties = byId.get(rowId)?.data?.collectionProperties;
+    const keys = isPlainObject(properties) ? Object.keys(properties) : [];
+
+    if (keys.length > 0) {
+      return keys;
+    }
+  }
+
+  return [];
+}
+
 /** Map one buildin node to a Blok tool + data, or `null` to skip (table rows). */
 function mapNode(node: NextSpaceNode): Mapped | null {
   const data = node.data ?? {};
@@ -277,9 +296,9 @@ function mapNode(node: NextSpaceNode): Mapped | null {
     case 7:
       return { tool: 'header', data: { text, level: data.level } };
     case 38:
-      return { tool: 'header', data: { text, level: data.level, isToggleable: true, isOpen: true } };
+      return { tool: 'header', data: { text, level: data.level, isToggleable: true } };
     case 6:
-      return { tool: 'toggle', data: { text, isOpen: true } };
+      return { tool: 'toggle', data: { text } };
     case 9:
       return { tool: 'divider', data: {} };
     case 12:

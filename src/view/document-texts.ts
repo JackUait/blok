@@ -15,6 +15,8 @@
  */
 import type { OutputData } from '../../types';
 import { repairedTableRows, sourceCellsInDisplayOrder, tableRows } from './table-grid';
+import { cloneJson } from './json-clone';
+import { ownEntry } from '../shared/own-entry';
 
 /** Options shared by extraction and injection — they must match, or the counts will not. */
 export interface DocumentTextsOptions {
@@ -34,6 +36,8 @@ const PROSE_FIELDS: Record<string, string[]> = {
   /** A legacy quote's attribution lives in `caption` and renders as a `<cite>`. */
   quote: ['text', 'caption'],
   toggle: ['text'],
+  /** Plain text, not HTML. `icon` is an emoji, not prose. */
+  tab: ['title'],
   list: ['text'],
   /** `alt` is written for a reader who cannot see the image, so it is prose too. */
   image: ['caption', 'alt'],
@@ -55,6 +59,7 @@ const PROSE_FIELDS: Record<string, string[]> = {
   callout: ['title'],
   /** Legacy only: the editor migrates a warning to a callout with these as paragraphs. */
   warning: ['title', 'message'],
+  page: [],
 };
 
 /** Types whose LEGACY data nests item text in `data.items[]`. Current list blocks are flat. */
@@ -81,7 +86,7 @@ const fieldsFor = (type: string, options: DocumentTextsOptions): string[] => {
   }
 
   /** An unfamiliar tool storing prose in `data.text` is still translatable. */
-  return PROSE_FIELDS[type] ?? ['text'];
+  return ownEntry(PROSE_FIELDS, type) ?? ['text'];
 };
 
 /** One translatable string and the write-back that puts its translation in place. */
@@ -281,33 +286,6 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
 const blocksOf = (data: unknown): unknown[] => (isRecord(data) && Array.isArray(data.blocks) ? data.blocks : []);
 
 /**
- * Clone a record's values structurally.
- * @param record - record to clone
- */
-const cloneRecord = (record: Record<string, unknown>): Record<string, unknown> => {
-  const out: Record<string, unknown> = {};
-
-  for (const key of Object.keys(record)) {
-    out[key] = cloneValue(record[key]);
-  }
-
-  return out;
-};
-
-/**
- * Structural clone of a parsed-JSON value. Hand-written because the bare
- * ECMAScript engine this module is bundled for has no `structuredClone`.
- * @param value - value to clone
- */
-const cloneValue = (value: unknown): unknown => {
-  if (Array.isArray(value)) {
-    return value.map(cloneValue);
-  }
-
-  return isRecord(value) ? cloneRecord(value) : value;
-};
-
-/**
  * Every translatable string of a saved document, in document order.
  * Empty and whitespace-only values are skipped.
  * @param data - saved document (anything else yields no texts)
@@ -326,7 +304,7 @@ export const extractTexts = (data: unknown, options: DocumentTextsOptions = {}):
  * @returns a new document; the input is not mutated
  */
 export const injectTexts = (data: unknown, texts: readonly string[], options: DocumentTextsOptions = {}): OutputData => {
-  const envelope = isRecord(data) ? cloneRecord(data) : {};
+  const envelope = isRecord(data) ? cloneJson(data) as Record<string, unknown> : {};
   const blocks = blocksOf(envelope);
   const slots = collectSlots(blocks, options);
 

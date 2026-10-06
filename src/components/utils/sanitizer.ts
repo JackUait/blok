@@ -32,6 +32,7 @@ import HTMLJanitor from 'html-janitor';
 import type { BlockToolData, SanitizerConfig, SanitizerRule } from '../../../types';
 import type { TagConfig, ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../types/data-formats';
+import { protectPageReferenceAnchor } from '../../shared/page-reference';
 import { isSafeAttribute, PLAINTEXT } from '../../shared/sanitize-rules';
 import { hasUnsafeUrlProtocol } from '../../shared/url-policy';
 import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
@@ -123,6 +124,11 @@ export const clean = (taintString: string, customConfig: SanitizerConfig = {}): 
   const tags = Object.fromEntries(
     Object.entries(customConfig).filter(([, rule]) => !isPlaintextRule(rule))
   ) as Record<string, TagConfig | ((el: Element) => TagConfig)>;
+  const anchorRule = tags.a;
+
+  if (anchorRule !== undefined && anchorRule !== false) {
+    tags.a = protectPageReferenceAnchor(anchorRule);
+  }
 
   const sanitizerConfig = {
     tags,

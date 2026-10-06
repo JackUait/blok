@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { runInNewContext } from 'node:vm';
 
 /**
  * The block-states gallery spec (BLOCK_STATES_RAW) lives inline in index.html.
@@ -89,6 +90,66 @@ describe('playground block states spec (index.html)', () => {
     test('script state uses the script kind', () => {
       expect(sectionFor('embed')).toContain("kind: 'script'");
     });
+
+    test.each([
+      ['Typing · YouTube (video)', 'https://www.youtube.com/watch?v=aqz-KE-bpKQ'],
+      ['Typing · Spotify (audio)', 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC'],
+      ['Typing · GIPHY (image)', 'https://giphy.com/gifs/cat-JIX9t2j0ZTN9S'],
+      ['Typing · Instagram (social)', 'https://www.instagram.com/p/C1a2B3c4D5e/'],
+      ['Typing · Google Docs (document)', 'https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/edit'],
+      ['Typing · Airtable (table)', 'https://airtable.com/shrAbCdEfGh123456'],
+      ['Typing · Typeform (form)', 'https://form.typeform.com/to/abc123'],
+      ['Typing · CodePen (code)', 'https://codepen.io/team/codepen/pen/PNaGbb'],
+      ['Typing · Figma (design)', 'https://www.figma.com/file/abc123XYZ/Design-system'],
+      ['Typing · Flourish (chart)', 'https://public.flourish.studio/visualisation/1234567/'],
+      ['Typing · OpenStreetMap (map)', 'https://www.openstreetmap.org/#map=13/51.5072/-0.1276'],
+      ['Typing · Calendly (calendar)', 'https://calendly.com/acme/intro-call'],
+      ['Typing · Unknown site (generic)', 'https://dashboards.example.com/q3'],
+      ['Typing · Not embeddable', 'https://example.com/page'],
+      ['Rejected link', 'https://example.com/rejected'],
+    ])('covers the "%s" empty state with a typed draft', (label, url) => {
+      const section = sectionFor('embed');
+      const start = section.indexOf(`label: '${label}'`);
+
+      expect(start, `state '${label}'`).toBeGreaterThan(-1);
+      expect(section.slice(start, section.indexOf('\n', start))).toContain(`url: '${url}'`);
+    });
+
+    test('the rejected state submits its draft', () => {
+      const section = sectionFor('embed');
+      const start = section.indexOf("label: 'Rejected link'");
+
+      expect(section.slice(start, section.indexOf('\n', start))).toContain('submit: true');
+    });
+
+    test('the generic draft runs with generic embeds allowed', () => {
+      const section = sectionFor('embed');
+      const start = section.indexOf("label: 'Typing · Unknown site (generic)'");
+
+      expect(section.slice(start, section.indexOf('\n', start))).toContain('linkPaste: { allowGenericEmbed: true }');
+    });
+
+    test.each([
+      ['Read-only empty', 'readOnly: true'],
+      ['Narrow (window hidden)', 'width: 320'],
+      ['Link card (not embeddable)', "source: 'https://example.com/"],
+      ['Tampered data (inert)', "service: 'youtube'"],
+      ['Generic iframe (opted in)', 'linkPaste: { allowGenericEmbed: true }'],
+      ['Allowed origin iframe', 'linkPaste: { allowedEmbedOrigins: ['],
+    ])('covers the "%s" state', (label, marker) => {
+      const section = sectionFor('embed');
+      const start = section.indexOf(`label: '${label}'`);
+
+      expect(start, `state '${label}'`).toBeGreaterThan(-1);
+      expect(section.slice(start, section.indexOf('] },', start))).toContain(marker);
+    });
+
+    test('mountStateSegment honours drafts, read-only, editor config and width', () => {
+      expect(mountTools).toContain('readOnly');
+      expect(mountTools).toContain('editorConfig');
+      expect(mountTools).toContain('style.maxWidth');
+      expect(html).toContain('[data-role="embed-url-input"]');
+    });
   });
 
   describe('file entry', () => {
@@ -136,7 +197,7 @@ describe('playground block states spec (index.html)', () => {
 
     test('the Google Drive error demo is force-rendered after mount', () => {
       expect(html).toContain('[data-blok-id="au-drive-error"] [data-blok-tool="audio"]');
-      expect(html).toContain('blok-audio-error-state');
+      expect(html).toContain('renderAudioErrorState({');
     });
   });
 
@@ -174,6 +235,82 @@ describe('playground block states spec (index.html)', () => {
     });
   });
 
+  describe('page entry', () => {
+    test('has a page tab', () => {
+      expect(rawSpec).toContain("tool: 'page'");
+    });
+
+    test.each([
+      'Page',
+      'Emoji icon',
+      'Image icon',
+      'Long title',
+      'Untitled',
+      'Loading',
+      'Missing',
+      'No access',
+    ])('covers the "%s" state', (label) => {
+      expect(sectionFor('page')).toContain(`label: '${label}'`);
+    });
+
+    test('all page states use the page block type', () => {
+      expect(sectionFor('page')).toContain("type: 'page'");
+    });
+
+    test('every page state has its own fixture in the resolve map', () => {
+      const section = sectionFor('page');
+      const ids = [...section.matchAll(/pageId: '([^']+)'/g)].map((match) => match[1]);
+      const mapStart = html.indexOf('const PAGE_STATE_INFO = {');
+
+      expect(ids.length).toBeGreaterThanOrEqual(8);
+      expect(mapStart).toBeGreaterThan(-1);
+
+      const map = html.slice(mapStart, html.indexOf('};', mapStart));
+
+      for (const id of ids.filter((pageId) => pageId !== 'pg-state-loading')) {
+        expect(map, `PAGE_STATE_INFO entry for '${id}'`).toContain(`'${id}':`);
+      }
+    });
+
+    test('the missing state resolves to null and the no-access state is denied', () => {
+      const map = html.slice(html.indexOf('const PAGE_STATE_INFO = {'));
+
+      expect(map).toMatch(/'pg-state-missing': null/);
+      expect(map).toMatch(/'pg-state-denied': \{ access: 'none' \}/);
+    });
+  });
+
+  describe('tabs entry', () => {
+    test.each([
+      'Three tabs',
+      'With icons',
+      'Empty tab',
+      'Single tab',
+      'Untitled tab',
+      'Long titles',
+      'Overflowing strip',
+      'Rich content',
+      'Tabs inside a tab',
+      'Inside columns',
+      'Read-only',
+      'Right-to-left',
+    ])('covers the "%s" state', (label) => {
+      expect(sectionFor('tabs')).toContain(`label: '${label}'`);
+    });
+
+    test('the read-only state renders without the editing chrome', () => {
+      expect(sectionFor('tabs')).toMatch(/label: 'Read-only', readOnly: true/);
+    });
+
+    test('the right-to-left state sets the editor direction', () => {
+      expect(sectionFor('tabs')).toMatch(/label: 'Right-to-left', editorConfig: \{ i18n: \{ direction: 'rtl' \} \}/);
+    });
+
+    test('the overflowing strip is narrow enough to scroll', () => {
+      expect(sectionFor('tabs')).toMatch(/label: 'Overflowing strip', width: \d+/);
+    });
+  });
+
   describe('gallery preview tools', () => {
     test('mountStatePreview registers the embed tool', () => {
       expect(mountTools).toContain('embed: Embed');
@@ -181,6 +318,54 @@ describe('playground block states spec (index.html)', () => {
 
     test('mountStatePreview registers the bookmark tool', () => {
       expect(mountTools).toContain('bookmark: { class: Bookmark');
+    });
+
+    test('mountStatePreview registers the page tool with a resolve fixture', () => {
+      expect(mountTools).toContain('page: {');
+      expect(mountTools).toContain('class: Page');
+      expect(mountTools).toContain('resolve: (id) => PAGE_STATE_INFO[id]');
+    });
+  });
+
+  describe('flattenStates', () => {
+    const loadFlatten = (): ((tool: string, label: string, states: unknown[]) => { wide?: boolean; segments: Array<Record<string, unknown>> }) => {
+      const start = html.indexOf('const WIDE_STATE_TOOLS');
+      const end = html.indexOf('const BLOCK_STATES_RAW');
+
+      expect(start, 'WIDE_STATE_TOOLS precedes flattenStates').toBeGreaterThan(-1);
+
+      return runInNewContext(`${html.slice(start, end)}; flattenStates`) as ReturnType<typeof loadFlatten>;
+    };
+
+    test('gives every state its own labelled segment without a header block', () => {
+      const flatten = loadFlatten();
+      const result = flatten('paragraph', 'Paragraph', [
+        { label: 'Empty', blocks: [ { id: 'a', type: 'paragraph', data: { text: '' } } ] },
+        { label: 'Wide', width: 320, blocks: [ { id: 'b', type: 'paragraph', data: { text: 'x' } } ] },
+      ]);
+
+      expect(result.segments.map((s) => s.label)).toEqual([ 'Empty', 'Wide' ]);
+      expect(result.segments.map((s) => (s.blocks as Array<{ id: string }>).map((b) => b.id))).toEqual([ [ 'a' ], [ 'b' ] ]);
+      expect(result.segments[1].width).toBe(320);
+      expect(result.wide).toBe(false);
+    });
+
+    test.each([ 'table', 'column_list', 'tabs', 'database', 'code', 'image', 'video', 'embed' ])('lays %s states across the whole row', (tool) => {
+      expect(loadFlatten()('paragraph', 'p', []).wide).toBe(false);
+      expect(loadFlatten()(tool, tool, []).wide).toBe(true);
+    });
+  });
+
+  describe('callout entry', () => {
+    test('every callout state carries its text as a child block, the only body the tool renders', () => {
+      const section = sectionFor('callout');
+      const callouts = section.match(/type: 'callout'[^\n]*/g) ?? [];
+
+      expect(callouts).toHaveLength(5);
+      callouts.forEach((line) => {
+        expect(line).toMatch(/content: \['c-[a-z]+-p'\]/);
+        expect(line).not.toContain('text:');
+      });
     });
   });
 });

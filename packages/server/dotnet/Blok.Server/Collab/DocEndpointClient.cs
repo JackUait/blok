@@ -185,7 +185,8 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
     client.Dispose();
   }
 
-  private static byte[] Serialize(JsonNode outputData)
+  /// <summary>The bytes a PUT sends; GET /sync/{doc}/state serves the same.</summary>
+  internal static byte[] Serialize(JsonNode outputData)
   {
     try
     {

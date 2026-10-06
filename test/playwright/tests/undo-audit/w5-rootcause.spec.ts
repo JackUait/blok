@@ -12,6 +12,7 @@ import { test as isolatedTest } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const UNDO = `${MOD}+z`;
@@ -67,6 +68,7 @@ const mount = async (page: Page, blocks: OutputData['blocks'], withTools = true)
     window.blokInstance = blok;
     await blok.isReady;
   }, { list: blocks, tools: withTools });
+  await openFixtureToggles(page, { blocks });
 };
 
 /*
@@ -540,8 +542,11 @@ test.describe('W5R root causes', () => {
   // window) closes the group, so "deep" becomes the next step. Unloaded, CPU throttling 4x/6x and a 50 ms stall
   // do not split it; 150 ms and 450 ms stalls always do. Under parallel load (--repeat-each=3) even the plain
   // run pauses >= 100 ms after the space now and then; the test asserts split <=> checkpoint fired.
-  for (const variant of ['plain', 'cpu4', 'cpu6', 'stall50', 'stall150', 'stall450'] as const) {
-    test(`W5R-5 ${variant}: toggle > callout > list > nested list, 3 undos after " deep", Enter, "new item"`, async ({ page }) => {
+  // "Level two d" was a defect: when the timer had not run yet, the next key's late check split the group on
+  // `input`, after "d" was already buffered, so "d" joined the space's step. longtask150 forces that path.
+  // "new item" holds a space too, so a pause there splits it: undo until Enter is undone, not a fixed count.
+  for (const variant of ['plain', 'cpu4', 'cpu6', 'stall50', 'stall150', 'stall450', 'longtask150'] as const) {
+    test(`W5R-5 ${variant}: toggle > callout > list > nested list, first undo past Enter after " deep", Enter, "new item"`, async ({ page }) => {
       await mount(page, [
         { id: 'top', type: 'paragraph', data: { text: 'Top' } },
         { id: 't', type: 'toggle', data: { text: 'Tog', isOpen: true }, content: ['co'] },
@@ -553,6 +558,7 @@ test.describe('W5R root causes', () => {
       const cdp = await page.context().newCDPSession(page);
       const rates: Record<string, number> = { cpu4: 4, cpu6: 6 };
       const stall = variant.startsWith('stall') ? Number(variant.slice('stall'.length)) : 0;
+      const longTask = variant.startsWith('longtask') ? Number(variant.slice('longtask'.length)) : 0;
 
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: rates[variant] ?? 1 });
       const l2 = async (): Promise<{ doc: string | undefined; saved: string | undefined }> =>
@@ -563,9 +569,19 @@ test.describe('W5R root causes', () => {
       await mark(page, 'TYPE');
       await page.keyboard.type(' ');
       await gap(page, stall);
+      await page.evaluate((ms) => {
+        if (ms > 0) {
+          window.addEventListener('keydown', () => {
+            const end = performance.now() + ms;
+
+            while (performance.now() < end) { /* busy */ }
+          }, { capture: true, once: true });
+        }
+      }, longTask);
       await page.keyboard.type('deep');
       await gap(page);
       const s1 = await l2();
+      const blocksBeforeEnter = (await savedText(page)).length;
 
       await page.keyboard.press('Enter');
       await gap(page);
@@ -573,12 +589,19 @@ test.describe('W5R root causes', () => {
       await gap(page);
       const steps: Array<{ doc: string | undefined; saved: string | undefined }> = [];
 
-      for (let i = 0; i < 3; i++) {
-        await mark(page, `UNDO ${i}`);
+      while ((await savedText(page)).length > blocksBeforeEnter) {
+        expect(steps.length, '"new item" and Enter undo within 8 presses').toBeLessThan(8);
+        await mark(page, `UNDO ${steps.length}`);
         await page.keyboard.press(UNDO);
         await gap(page, 500);
         steps.push(await l2());
       }
+      const enterUndone = steps.at(-1);
+
+      await mark(page, 'UNDO DEEP');
+      await page.keyboard.press(UNDO);
+      await gap(page, 500);
+      const deepUndone = await l2();
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
       const log = await readLog(page);
 
@@ -591,11 +614,12 @@ test.describe('W5R root causes', () => {
       // implicit `stopCapturing`, which only flushes once a gesture has started.
       const checkpoint = boundaryAt >= 0 && typed.slice(boundaryAt, nextWriteAt).some((e) => e.k === 'uh.splitStep');
 
-      dump(`5-${variant}`, { s1, steps, checkpoint, log });
+      dump(`5-${variant}`, { s1, steps, deepUndone, checkpoint, log });
       expect(spaceWrite?.origin, 'the typed space is written as a tracked local change').toBe('local');
-      expect(checkpoint || stall < 100, 'a stall of 100 ms or more after the space always closes the group').toBe(true);
-      // The space survives the third undo exactly when the checkpoint fired, whatever caused the pause.
-      expect(steps[2]).toEqual(checkpoint
+      expect(enterUndone, 'undoing Enter leaves " deep" whole').toEqual({ doc: 'Level two deep', saved: 'l2:Level two deep' });
+      expect(checkpoint || stall + longTask < 100, 'a stall of 100 ms or more after the space always closes the group').toBe(true);
+      // The space survives the undo of "deep" exactly when the checkpoint fired, whatever caused the pause.
+      expect(deepUndone).toEqual(checkpoint
         ? { doc: 'Level two&nbsp;', saved: 'l2:Level two&nbsp;' }
         : { doc: 'Level two', saved: 'l2:Level two' });
     });

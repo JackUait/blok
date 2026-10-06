@@ -63,7 +63,7 @@ describe('blocks-to-markdown (view) — inline HTML through parse5', () => {
 
   it('serializes an inline image and an equation source', () => {
     expect(inline('before <img src="https://i/x.png" alt="A shot"> after')).toBe('before ![A shot](https://i/x.png) after');
-    expect(inline('<span data-latex="x^2"><span>x^2</span></span>')).toBe('x^2');
+    expect(inline('<span data-latex="x^2"><span>x^2</span></span>')).toBe('$x^2$');
   });
 });
 

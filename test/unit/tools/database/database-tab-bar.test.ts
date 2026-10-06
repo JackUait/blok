@@ -122,6 +122,7 @@ vi.mock('../../../../src/tools/database/database-view-popover', () => {
 });
 
 import { DatabaseTabBar } from '../../../../src/tools/database/database-tab-bar';
+import { resyncPortalDirections } from '../../../../src/components/utils/portal-direction';
 import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
 import type { API } from '../../../../types';
 
@@ -487,6 +488,59 @@ describe('DatabaseTabBar', () => {
 
       bar.destroy();
       el.remove();
+    });
+
+    it('gives the overflow dropdown the tab bar direction', () => {
+      const views = Array.from({ length: 6 }, (_, i) =>
+        makeView({ id: `v${i}`, position: `a${i}`, name: `Board ${i}` })
+      );
+      const bar = createTabBar(views, 'v0');
+      const el = bar.render();
+      el.style.direction = 'rtl';
+      document.body.appendChild(el);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (bar as any).handleOverflow(3);
+      (el.querySelector('[data-blok-database-tab-more]') as HTMLElement).click();
+
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')?.getAttribute('dir')).toBe('rtl');
+
+      bar.destroy();
+    });
+
+    it('re-places an open overflow dropdown after the editor flips direction', () => {
+      const views = Array.from({ length: 6 }, (_, i) =>
+        makeView({ id: `v${i}`, position: `a${i}`, name: `Board ${i}` })
+      );
+      const bar = createTabBar(views, 'v0');
+      const editor = document.createElement('div');
+      const el = bar.render();
+
+      editor.setAttribute('data-blok-editor', '');
+      editor.style.direction = 'ltr';
+      editor.appendChild(el);
+      document.body.appendChild(editor);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (bar as any).handleOverflow(3);
+      const moreBtn = el.querySelector('[data-blok-database-tab-more]') as HTMLElement;
+
+      vi.spyOn(moreBtn, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 50, 60, 20));
+      moreBtn.click();
+      const dropdown = document.querySelector<HTMLElement>('[data-blok-database-tab-overflow-dropdown]');
+
+      expect(dropdown?.style.left).toBe('100px');
+
+      // The mirrored tab bar puts the button on the other side.
+      vi.spyOn(moreBtn, 'getBoundingClientRect').mockReturnValue(new DOMRect(700, 50, 60, 20));
+      editor.style.direction = 'rtl';
+      resyncPortalDirections(editor);
+
+      expect(dropdown?.getAttribute('dir')).toBe('rtl');
+      expect(dropdown?.style.left).not.toBe('100px');
+
+      bar.destroy();
+      editor.remove();
     });
 
     it('opens dropdown listing all views when "N more…" is clicked', () => {

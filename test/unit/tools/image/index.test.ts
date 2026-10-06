@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { ImageTool } from '../../../../src/tools/image';
+import { RESEND_STAGE_MS } from '../../../../src/tools/image/constants';
 import { updateOverlayTier, isTinyImage, applyAutoFull } from '../../../../src/tools/image/ui';
 import type { ImageData, ImageConfig } from '../../../../types/tools/image';
 import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, HTMLPasteEvent, PatternPasteEvent } from '../../../../types';
@@ -16,6 +17,15 @@ vi.mock('../../../../src/components/media-variants/image-variants', () => ({
 }));
 import { produceImageVariants } from '../../../../src/components/media-variants/image-variants';
 const mockProduce = vi.mocked(produceImageVariants);
+
+vi.mock('../../../../src/tools/image/tone-sampler', async (importOriginal) => ({
+  ...(await importOriginal<typeof ToneSampler>()),
+  sampleToneGrid: vi.fn(async () => ({ width: 1, height: 1, luminance: new Float32Array([1]) })),
+  applyTones: vi.fn(() => ({ 'image-overlay': 'graphite' })),
+  stampTones: vi.fn(),
+}));
+import { applyTones, sampleToneGrid, stampTones } from '../../../../src/tools/image/tone-sampler';
+import type * as ToneSampler from '../../../../src/tools/image/tone-sampler';
 
 const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
@@ -397,7 +407,26 @@ describe('ImageTool — overlay actions', () => {
       left: 220, top: 0, right: 580, bottom: 100, width: 360, height: 100, x: 220, y: 0, toJSON: () => ({}),
     });
 
-    expect(tool.getContentOffset(figure)).toEqual({ left: 120 });
+    expect(tool.getContentOffset(figure)).toStrictEqual({ left: 120, right: 120 });
+  });
+
+  it('getContentOffset() reports physical insets: a figure flush with the root left edge has only a right inset, whatever the caption direction', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png', width: 60, alignment: 'left', caption: 'مرحبا بالعالم' }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!figure) throw new Error('figure missing');
+    root.setAttribute('dir', 'rtl');
+    document.body.appendChild(root);
+
+    vi.spyOn(root, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 0, right: 700, bottom: 100, width: 600, height: 100, x: 100, y: 0, toJSON: () => ({}),
+    });
+    vi.spyOn(figure, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 0, right: 460, bottom: 100, width: 360, height: 100, x: 100, y: 0, toJSON: () => ({}),
+    });
+
+    expect(tool.getContentOffset(figure)).toStrictEqual({ left: 0, right: 240 });
+    root.remove();
   });
 
   it('getContentOffset() returns undefined when figure is missing (empty state)', () => {
@@ -1210,8 +1239,10 @@ describe('ImageTool — error state', () => {
     Object.defineProperty(event, 'type', { value: 'file' });
     tool.onPaste(event);
     await new Promise((r) => setTimeout(r, 0));
+    vi.useFakeTimers();
     root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.click();
-    await new Promise((r) => setTimeout(r, 0));
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+    vi.useRealTimers();
     expect(root.getAttribute('data-state')).toBe('error');
     expect(root.getAttribute('data-retrying')).toBeNull();
     expect(root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.disabled).toBe(false);
@@ -1231,6 +1262,148 @@ describe('ImageTool — error state', () => {
     await new Promise((r) => setTimeout(r, 0));
     root.querySelector<HTMLButtonElement>('[data-action="replace"]')?.click();
     expect(root.getAttribute('data-state')).toBe('empty');
+  });
+});
+
+describe('ImageTool — sending a failed upload again', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  const failedUpload = async (
+    uploadByFile: (file: File, options: { onProgress?: (percent: number) => void }) => Promise<{ url: string }>
+  ): Promise<{ tool: ImageTool; root: HTMLElement; options: BlockToolConstructorOptions<ImageData, ImageConfig> }> => {
+    const options = createOptions({}, { uploader: { uploadByFile } });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await vi.advanceTimersByTimeAsync(0);
+
+    return { tool, root, options };
+  };
+  const card = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-role="error-state"]');
+  const retry = (root: HTMLElement): void => {
+    root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.click();
+  };
+
+  it('turns the failed card into a sending card in place', async () => {
+    const { root } = await failedUpload(vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockReturnValueOnce(new Promise(() => undefined)));
+    const failed = card(root);
+
+    retry(root);
+
+    expect(card(root)).toBe(failed);
+    expect(failed?.getAttribute('data-sending')).toBe('true');
+    expect(failed?.getAttribute('aria-busy')).toBe('true');
+    expect(failed?.querySelector('.blok-image-error__msg')?.textContent).toBe('Uploading…');
+    expect(failed?.querySelector('[role="progressbar"]')).not.toBeNull();
+    expect(root.querySelector<HTMLButtonElement>('[data-action="replace"]')?.disabled).toBe(true);
+  });
+
+  it('fills the progress line from the uploader', async () => {
+    const { root } = await failedUpload(vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockImplementationOnce((_file: File, { onProgress }: { onProgress?: (percent: number) => void }) => {
+        onProgress?.(40);
+
+        return new Promise(() => undefined);
+      }));
+
+    retry(root);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const bar = card(root)?.querySelector('[role="progressbar"]');
+
+    expect(bar?.getAttribute('aria-valuenow')).toBe('40');
+    expect(bar?.hasAttribute('data-indeterminate')).toBe(false);
+  });
+
+  it('keeps the sending card up for the whole send even when the server fails at once', async () => {
+    const { root } = await failedUpload(vi.fn().mockRejectedValue(new Error('still broken')));
+
+    retry(root);
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS - 50);
+
+    expect(card(root)?.getAttribute('data-sending')).toBe('true');
+    await vi.advanceTimersByTimeAsync(50);
+    expect(card(root)?.hasAttribute('data-sending')).toBe(false);
+    expect(card(root)?.getAttribute('data-resent')).toBe('true');
+  });
+
+  it('does not hold back a send that works', async () => {
+    const { root } = await failedUpload(vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce({ url: 'https://cdn/ok.png' }));
+
+    retry(root);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(root.getAttribute('data-state')).toBe('rendered');
+  });
+
+  it('drains the failure from where the fill reached', async () => {
+    const { root } = await failedUpload(vi.fn().mockRejectedValue(new Error('still broken')));
+
+    retry(root);
+    const sending = card(root);
+    const fill = sending?.querySelector<HTMLElement>('.blok-image-error__fill');
+
+    if (!sending || !fill) throw new Error('sending card or fill missing');
+    vi.spyOn(sending, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 60));
+    vi.spyOn(fill, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 184, 60));
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+
+    expect(card(root)?.style.getPropertyValue('--blok-image-drain-from')).toBe('46%');
+  });
+
+  it('counts the tries on the card after each failed send', async () => {
+    const { root } = await failedUpload(vi.fn().mockRejectedValue(new Error('still broken')));
+    const count = (): string | null | undefined => card(root)?.querySelector('.blok-image-error__attempt')?.textContent;
+
+    expect(count()).toBeUndefined();
+    retry(root);
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+    expect(count()).toBe('×2');
+    retry(root);
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+    expect(count()).toBe('×3');
+  });
+
+  it('develops the picture that a send brought back', async () => {
+    const { root } = await failedUpload(vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce({ url: 'https://cdn/ok.png' }));
+
+    retry(root);
+    await vi.advanceTimersByTimeAsync(0);
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+
+    expect(root.querySelector('.blok-image-inner')?.getAttribute('data-developing')).toBe('true');
+  });
+
+  it('drops a held failure when the block is deleted during the send', async () => {
+    const { tool, root, options } = await failedUpload(vi.fn().mockRejectedValue(new Error('still broken')));
+    const report = vi.mocked(options.api.media.reportFailure);
+
+    retry(root);
+    await vi.advanceTimersByTimeAsync(0);
+    report.mockClear();
+    tool.removed();
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+
+    expect(report).not.toHaveBeenCalled();
   });
 });
 
@@ -2509,7 +2682,27 @@ describe('ImageTool — failure reporting', () => {
     expect(revoke).toHaveBeenCalledWith('blob:preview');
   });
 
-  it('frees the old preview when the upload fails again', async () => {
+  it('keeps the same preview when the same file fails again, so the thumbnail never blinks', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValueOnce('blob:first').mockReturnValueOnce('blob:second');
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const options = createOptions({}, { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+
+    pasteFile(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    vi.useFakeTimers();
+    vi.mocked(options.api.media.reportFailure).mock.calls[0][0].retry();
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+    vi.useRealTimers();
+
+    expect(root.querySelector<HTMLImageElement>('[data-role="error-state"] img')?.getAttribute('src')).toBe('blob:first');
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(revoke).not.toHaveBeenCalled();
+  });
+
+  it('frees the old preview when a different file fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     vi.spyOn(URL, 'createObjectURL').mockReturnValueOnce('blob:first').mockReturnValueOnce('blob:second');
     const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
@@ -2519,7 +2712,7 @@ describe('ImageTool — failure reporting', () => {
     tool.render();
     pasteFile(tool);
     await new Promise((r) => setTimeout(r, 0));
-    vi.mocked(options.api.media.reportFailure).mock.calls[0][0].retry();
+    pasteFile(tool);
     await new Promise((r) => setTimeout(r, 0));
 
     expect(revoke).toHaveBeenCalledWith('blob:first');
@@ -2694,12 +2887,41 @@ describe('ImageTool — save() geometry and adjust', () => {
       rotation: 45,
       flipX: 'yes',
       straighten: 0,
-      filter: 'lomo',
+      filter: '',
+      filterStrength: 30,
       adjust: { brightness: 0, contrast: 0, saturation: 0 },
     };
     const tool = new ImageTool(createOptions(bad as Partial<ImageData>));
 
     expect(tool.save()).toEqual({ url: 'https://x/y.png' });
+  });
+
+  it('keeps a filter name this host does not know, and its strength', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png', filter: 'other-host-look', filterStrength: 40 }));
+
+    expect(tool.save()).toEqual({ url: 'https://x/y.png', filter: 'other-host-look', filterStrength: 40 });
+  });
+
+  it('omits full strength', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png', filter: 'noir', filterStrength: 100 }));
+
+    expect(tool.save()).toEqual({ url: 'https://x/y.png', filter: 'noir' });
+  });
+
+  it('renders a host filter at its strength from the tool config', () => {
+    const config: ImageConfig = { filters: [{ name: 'brand', title: 'Brand', css: 'sepia(0.8)' }] };
+    const root = new ImageTool(createOptions({ url: 'https://x/y.png', filter: 'brand', filterStrength: 50 }, config)).render();
+
+    expect(root.querySelector<HTMLImageElement>('[data-role="image-figure"] img')?.style.filter).toBe('sepia(0.4)');
+  });
+
+  it('shows a host filter in the lightbox too', () => {
+    const config: ImageConfig = { filters: [{ name: 'brand', title: 'Brand', css: 'sepia(0.8)' }] };
+    const root = new ImageTool(createOptions({ url: 'https://x/y.png', filter: 'brand' }, config)).render();
+
+    root.querySelector<HTMLImageElement>('img')?.click();
+    expect(document.querySelector<HTMLImageElement>('[role="dialog"] img')?.style.filter).toBe('sepia(0.8)');
+    document.querySelectorAll('[role="dialog"]').forEach((el) => el.remove());
   });
 
   it('omits every new key for an old document', () => {
@@ -2708,3 +2930,149 @@ describe('ImageTool — save() geometry and adjust', () => {
     expect(Object.keys(saved)).toEqual(['url']);
   });
 });
+
+describe('ImageTool — paper and graphite', () => {
+  let resizeCallbacks: ResizeObserverCallback[] = [];
+  let OriginalResizeObserver: typeof ResizeObserver;
+
+  beforeAll(() => {
+    OriginalResizeObserver = window.ResizeObserver;
+    window.ResizeObserver = class MockRO {
+      constructor(cb: ResizeObserverCallback) { resizeCallbacks.push(cb); }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    };
+  });
+  afterAll(() => {
+    window.ResizeObserver = OriginalResizeObserver;
+  });
+  beforeEach(() => {
+    resizeCallbacks = [];
+    vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const flush = (): Promise<void> => new Promise((r) => { setTimeout(r, 0); });
+
+  it('reads the picture once it loads and tones the chrome', async () => {
+    const { root } = renderRenderedImage();
+    const img = root.querySelector('img');
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!img || !figure) throw new Error('image missing');
+
+    img.dispatchEvent(new Event('load'));
+    await flush();
+
+    expect(sampleToneGrid).toHaveBeenCalledWith(img, expect.objectContaining({ url: 'https://x/y.png' }), expect.anything());
+    expect(applyTones).toHaveBeenLastCalledWith(figure, expect.objectContaining({ width: 1 }));
+  });
+
+  it('read-only has no chrome, so it reads nothing', async () => {
+    const { root } = renderRenderedImage({}, { readOnly: true });
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+
+    expect(sampleToneGrid).not.toHaveBeenCalled();
+  });
+
+  it('a sample that lands after a re-render does not tone the old, detached figure', async () => {
+    const pending: Array<(g: { width: number; height: number; luminance: Float32Array }) => void> = [];
+
+    vi.mocked(sampleToneGrid).mockImplementationOnce(() => new Promise((r) => { pending.push(r); }));
+    const { root } = renderRenderedImage();
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    root.querySelector<HTMLButtonElement>('[data-action="caption-toggle"]')?.click();
+    vi.mocked(applyTones).mockClear();
+    pending.forEach((resolve) => resolve({ width: 1, height: 1, luminance: new Float32Array([0]) }));
+    await flush();
+
+    const detached = vi.mocked(applyTones).mock.calls.filter(([fig]) => !fig.isConnected);
+
+    expect(pending).toHaveLength(1);
+    expect(detached).toHaveLength(0);
+  });
+
+  it('a re-render of the same picture keeps its tones at once and reads no pixels again', async () => {
+    const { root } = renderRenderedImage();
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+    root.querySelector<HTMLButtonElement>('[data-action="caption-toggle"]')?.click();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+
+    // Before the new img loads: the last tones are already on the new chrome.
+    expect(stampTones).toHaveBeenLastCalledWith(figure, { 'image-overlay': 'graphite' });
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+
+    expect(sampleToneGrid).toHaveBeenCalledTimes(1);
+    expect(applyTones).toHaveBeenLastCalledWith(figure, expect.objectContaining({ width: 1 }));
+  });
+
+  it('a resize re-maps the controls over the same grid', async () => {
+    const { root } = renderRenderedImage();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+    vi.mocked(applyTones).mockClear();
+    resizeCallbacks.at(-1)?.([], {} as ResizeObserver);
+
+    expect(applyTones).toHaveBeenCalledWith(figure, expect.objectContaining({ width: 1 }));
+  });
+
+  it('before its first sample lands, a resize stamps nothing', () => {
+    renderRenderedImage();
+    resizeCallbacks.at(-1)?.([], {} as ResizeObserver);
+
+    expect(applyTones).not.toHaveBeenCalled();
+  });
+
+  it('a different picture drops the old tones and reads its own pixels', async () => {
+    const { root, tool } = renderRenderedImage();
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+    vi.mocked(stampTones).mockClear();
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/other.png' } }) as PatternPasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await flush();
+
+    expect(stampTones).not.toHaveBeenCalledWith(expect.anything(), { 'image-overlay': 'graphite' });
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flush();
+
+    expect(sampleToneGrid).toHaveBeenCalledTimes(2);
+  });
+
+  it('a sample of the old picture that lands after a new one is pasted never reaches the new chrome', async () => {
+    const pending: Array<(g: { width: number; height: number; luminance: Float32Array }) => void> = [];
+
+    vi.mocked(sampleToneGrid).mockImplementationOnce(() => new Promise((r) => { pending.push(r); }));
+    const { root, tool } = renderRenderedImage();
+
+    root.querySelector('img')?.dispatchEvent(new Event('load'));
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/other.png' } }) as PatternPasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await flush();
+    const stale = { width: 9, height: 9, luminance: new Float32Array(81) };
+
+    pending.forEach((resolve) => resolve(stale));
+    await flush();
+    vi.mocked(applyTones).mockClear();
+    resizeCallbacks.at(-1)?.([], {} as ResizeObserver);
+
+    expect(applyTones).not.toHaveBeenCalledWith(expect.anything(), stale);
+  });
+});
+

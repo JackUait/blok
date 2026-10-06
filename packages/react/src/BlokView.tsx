@@ -26,6 +26,10 @@ export interface BlokViewProps extends Omit<HTMLAttributes<HTMLDivElement>, 'chi
   transformUrl?: BlocksToHtmlOptions['transformUrl'];
   /** Custom renderers for inline elements, keyed by lowercase tag name (equations, mentions). */
   inlineRenderers?: BlocksToHtmlOptions['inlineRenderers'];
+  /** Build the link for a `page` block from its `pageId`. A page card is a link only with this and an allowing {@link pageInfo}. */
+  pageHref?: BlocksToHtmlOptions['pageHref'];
+  /** Host metadata (title, icon, access) for a `page` block. Without it a page card shows a neutral "Page" label and no link. */
+  pageInfo?: BlocksToHtmlOptions['pageInfo'];
   /**
    * Render with the editor's presentational classes and per-block scaffolding
    * so the output matches a read-only editor render (default `true`). Needs
@@ -33,6 +37,8 @@ export interface BlokViewProps extends Omit<HTMLAttributes<HTMLDivElement>, 'chi
    * semantic markup.
    */
   classes?: BlocksToHtmlOptions['classes'];
+  /** Document direction: set as `dir` on the wrapper, and each block follows its own text. */
+  direction?: BlocksToHtmlOptions['direction'];
 }
 
 /**
@@ -59,7 +65,10 @@ export const BlokView = ({
   blockIds,
   transformUrl,
   inlineRenderers,
+  pageHref,
+  pageInfo,
   classes,
+  direction,
   ...divProps
 }: BlokViewProps): ReactNode => {
   /**
@@ -77,7 +86,10 @@ export const BlokView = ({
     blockIds,
     transformUrl,
     inlineRenderers,
+    pageHref,
+    pageInfo,
     classes: classes ?? true,
+    direction,
   });
 
   /**
@@ -90,5 +102,5 @@ export const BlokView = ({
    *
    * Written BEFORE the `divProps` spread so a caller can still override it.
    */
-  return <div data-blok-interface="view" {...divProps}>{content}</div>;
+  return <div data-blok-interface="view" dir={direction} {...divProps}>{content}</div>;
 };

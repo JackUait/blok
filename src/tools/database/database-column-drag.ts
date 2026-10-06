@@ -1,3 +1,4 @@
+import { getElementDirection, inlineStartOffset } from '../../components/utils/direction';
 import { copyGhostRadius } from './copy-ghost-radius';
 
 const DRAG_THRESHOLD = 10;
@@ -186,7 +187,7 @@ export class DatabaseColumnDrag {
   }
 
   /**
-   * Opens a gap at the drop position by applying margin-left to the target column,
+   * Opens a gap at the drop position by applying an inline-start margin to the target column,
    * matching the card drag pattern of gap-based drop indicators.
    */
   private updateDropIndicator(clientX: number): void {
@@ -198,7 +199,7 @@ export class DatabaseColumnDrag {
       }
 
       this.clearGap();
-      position.beforeColumn.style.marginLeft = `${this.sourceColumnWidth}px`;
+      position.beforeColumn.style.marginInlineStart = `${this.sourceColumnWidth}px`;
       this.gapTarget = position.beforeColumn;
     } else {
       this.applyEndGap();
@@ -213,18 +214,18 @@ export class DatabaseColumnDrag {
     }
 
     this.clearGap();
-    boardArea.style.paddingRight = `${this.sourceColumnWidth}px`;
+    boardArea.style.paddingInlineEnd = `${this.sourceColumnWidth}px`;
     this.gapContainer = boardArea;
   }
 
   private clearGap(): void {
     if (this.gapTarget) {
-      this.gapTarget.style.marginLeft = '';
+      this.gapTarget.style.marginInlineStart = '';
       this.gapTarget = null;
     }
 
     if (this.gapContainer) {
-      this.gapContainer.style.paddingRight = '';
+      this.gapContainer.style.paddingInlineEnd = '';
       this.gapContainer = null;
     }
   }
@@ -233,12 +234,12 @@ export class DatabaseColumnDrag {
     const columns = Array.from(
       this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column]')
     ).filter((col) => col.getAttribute('data-option-id') !== this.optionId);
+    const direction = getElementDirection(this.wrapper);
 
     for (const col of columns) {
       const rect = col.getBoundingClientRect();
-      const midX = rect.left + rect.width / 2;
 
-      if (clientX < midX) {
+      if (inlineStartOffset(clientX, rect, direction) < rect.width / 2) {
         const idx = columns.indexOf(col);
 
         return {

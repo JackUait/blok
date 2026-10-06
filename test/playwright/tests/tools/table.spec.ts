@@ -934,6 +934,73 @@ test.describe('table tool', () => {
       await expect(page.getByText('Move Column Right')).toHaveCount(0);
     });
 
+    test('clicking the open grip again keeps the same menu open', async ({ page }) => {
+      await createTable2x2(page);
+      await page.locator(CELL_SELECTOR).first().click();
+
+      const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+
+      await expect(colGrip).toBeVisible();
+      await colGrip.click();
+      await expect(page.getByText('Insert Column Left')).toBeVisible();
+
+      await page.evaluate(() => {
+        Object.assign(window, { firstMenu: document.querySelector('[data-blok-popover-opened]') });
+      });
+      await colGrip.click();
+
+      const menu = await page.evaluate(() => {
+        const opened = document.querySelector('[data-blok-popover-opened]');
+        const container = opened?.querySelector('[data-blok-popover-container]');
+
+        return {
+          same: opened !== null && opened === (window as unknown as { firstMenu: Element | null }).firstMenu,
+          opacity: container ? getComputedStyle(container).opacity : null,
+        };
+      });
+
+      expect(menu).toStrictEqual({ same: true, opacity: '1' });
+    });
+
+    // Locales whose header label used to end in an ellipsis.
+    for (const locale of ['en', 'el', 'bn', 'bs']) {
+      test(`header toggles show their full label (${locale})`, async ({ page }) => {
+        await resetBlok(page);
+        await page.waitForFunction(() => typeof window.Blok === 'function');
+        await page.evaluate(async ({ holder, locale: lang }) => {
+          window.blokInstance = new window.Blok({
+            holder,
+            i18n: { locale: lang },
+            data: { blocks: [{ type: 'table', data: { withHeadings: false, content: [['A', 'B'], ['C', 'D']] } }] },
+          });
+          await window.blokInstance.isReady;
+        }, { holder: HOLDER_ID, locale });
+
+        for (const gripSelector of [COL_GRIP_SELECTOR, ROW_GRIP_SELECTOR]) {
+          await page.locator(CELL_SELECTOR).first().click();
+          await page.locator(gripSelector).first().click();
+
+          const toggle = page.getByRole('switch');
+
+          await expect(toggle).toBeVisible();
+
+          const fit = await toggle.evaluate((row) => {
+            const label = row.querySelector('span') ?? row;
+            const range = document.createRange();
+
+            range.selectNodeContents(label);
+
+            return { text: range.getBoundingClientRect().width, box: label.getBoundingClientRect().width };
+          });
+
+          expect(fit.text, `${gripSelector} label is cut off`).toBeLessThanOrEqual(fit.box);
+
+          await page.keyboard.press('Escape');
+          await expect(toggle).toHaveCount(0);
+        }
+      });
+    }
+
     test('clicking row grip opens popover menu', async ({ page }) => {
       await createTable2x2(page);
 

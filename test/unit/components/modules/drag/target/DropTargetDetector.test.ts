@@ -14,7 +14,7 @@ describe('DropTargetDetector', () => {
     getBlockByIndex: Mock<(index: number) => Block | undefined>;
     getBlockIndex: Mock<(block: Block) => number>;
   };
-  let mockUI: { contentRect: { left: number } };
+  let mockUI: { contentRect: { left: number; right: number } };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -27,7 +27,7 @@ describe('DropTargetDetector', () => {
     };
 
     mockUI = {
-      contentRect: { left: 100 },
+      contentRect: { left: 100, right: 750 },
     };
 
     detector = new DropTargetDetector(mockUI, mockBlockManager);
@@ -113,19 +113,19 @@ describe('DropTargetDetector', () => {
     });
   });
 
-  describe('findBlockInLeftDropZone', () => {
+  describe('findBlockInGutterDropZone', () => {
     it('should return null when cursor is to the right of content', () => {
-      mockUI.contentRect = { left: 100 };
+      mockUI.contentRect = { left: 100, right: 750 };
 
-      const result = detector.findBlockInLeftDropZone(150, 50);
+      const result = detector.findBlockInGutterDropZone(150, 50);
 
       expect(result).toBeNull();
     });
 
     it('should return null when cursor is too far left', () => {
-      mockUI.contentRect = { left: 100 };
+      mockUI.contentRect = { left: 100, right: 750 };
 
-      const result = detector.findBlockInLeftDropZone(40, 50); // 60px from edge, more than 50px zone
+      const result = detector.findBlockInGutterDropZone(40, 50); // 60px from edge, more than 50px zone
 
       expect(result).toBeNull();
     });
@@ -147,9 +147,9 @@ describe('DropTargetDetector', () => {
       });
 
       mockBlockManager.blocks = [block1, block2];
-      mockUI.contentRect = { left: 100 };
+      mockUI.contentRect = { left: 100, right: 750 };
 
-      const result = detector.findBlockInLeftDropZone(70, 75);
+      const result = detector.findBlockInGutterDropZone(70, 75);
 
       expect(result).toBe(block1);
     });
@@ -183,10 +183,10 @@ describe('DropTargetDetector', () => {
 
       mockBlockManager.blocks = [block1, block2];
       detector.setSourceBlocks([block1]);
-      mockUI.contentRect = { left: 100 };
+      mockUI.contentRect = { left: 100, right: 750 };
 
       // Cursor at block1's Y position, but block1 is a source block
-      const result = detector.findBlockInLeftDropZone(70, 75);
+      const result = detector.findBlockInGutterDropZone(70, 75);
 
       expect(result).toBeNull();
     });
@@ -207,12 +207,35 @@ describe('DropTargetDetector', () => {
       });
 
       mockBlockManager.blocks = [block1];
-      mockUI.contentRect = { left: 100 };
+      mockUI.contentRect = { left: 100, right: 750 };
 
       // Cursor at Y position with no block
-      const result = detector.findBlockInLeftDropZone(70, 150);
+      const result = detector.findBlockInGutterDropZone(70, 150);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('drop zone follows the block controls to the right gutter', () => {
+    const holderRect = (top: number, bottom: number): DOMRect => ({
+      top, bottom, left: 100, right: 500, width: 400, height: bottom - top, x: 100, y: top, toJSON: () => ({}),
+    });
+
+    it('finds the block in the right-hand gutter when the controls dock right', () => {
+      const block = createMockBlock('block-1');
+
+      vi.spyOn(block.holder, 'getBoundingClientRect').mockReturnValue(holderRect(50, 100));
+      mockBlockManager.blocks = [block];
+
+      const rightDocked = new DropTargetDetector(
+        { contentRect: { left: 100, right: 500 } },
+        mockBlockManager,
+        { controlsOnRight: () => true }
+      );
+
+      expect(rightDocked.findBlockInGutterDropZone(530, 75)).toBe(block);
+      expect(rightDocked.findBlockInGutterDropZone(70, 75)).toBeNull();
+      expect(rightDocked.findBlockInGutterDropZone(560, 75)).toBeNull();
     });
   });
 
@@ -854,6 +877,74 @@ describe('DropTargetDetector', () => {
         expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 700)).toBe(1);
       });
 
+      it('measures the indent from the inline-start (right) edge in an RTL editor', () => {
+        // contentRect 100..750. In RTL depth 0 sits at the right edge and nesting
+        // grows leftward, so a cursor near the right edge must stay at root.
+        const rtlRoot = document.createElement('div');
+
+        rtlRoot.setAttribute('dir', 'rtl');
+        document.body.appendChild(rtlRoot);
+
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 0);
+
+        rtlRoot.append(previousBlock.holder, targetBlock.holder);
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
+
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 745)).toBe(0);
+        // 30px in from the right edge ≈ one indent step.
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 720)).toBe(1);
+
+        rtlRoot.remove();
+      });
+
+      it('measures the indent from the target text inline start when it runs against the editor', () => {
+        // An RTL item in an LTR editor indents from the right, so depth 0 sits
+        // at the right edge even though the editor reads left to right.
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 0);
+        const content = document.createElement('div');
+
+        content.setAttribute('data-blok-element-content', '');
+        content.setAttribute('dir', 'rtl');
+        content.append(...targetBlock.holder.childNodes);
+        targetBlock.holder.appendChild(content);
+        document.body.append(previousBlock.holder, targetBlock.holder);
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
+
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 745)).toBe(0);
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 720)).toBe(1);
+
+        previousBlock.holder.remove();
+        targetBlock.holder.remove();
+      });
+
+      it('keeps the editor axis for a non-list target whose text runs against the editor', () => {
+        // A nested non-list block indents on its holder, in the editor's direction.
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = { id: 'target', holder: document.createElement('div'), name: 'paragraph', stretched: false } as Block;
+        const sourceBlock = createMockListBlock('source', 0);
+        const content = document.createElement('div');
+
+        targetBlock.holder.setAttribute(DATA_ATTR.element, 'block');
+        content.setAttribute('data-blok-element-content', '');
+        content.setAttribute('dir', 'rtl');
+        targetBlock.holder.appendChild(content);
+        document.body.append(previousBlock.holder, targetBlock.holder);
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
+
+        // 5px in from the left edge: root on the editor's (LTR) axis.
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 105)).toBe(0);
+
+        previousBlock.holder.remove();
+        targetBlock.holder.remove();
+      });
+
       it('falls back to auto-resolution when clientX is omitted', () => {
         const previousBlock = createMockListBlock('prev', 0);
         const targetBlock = createMockListBlock('target', 0);
@@ -905,8 +996,8 @@ describe('DropTargetDetector', () => {
       getBlockById: (id: string) => blocks.find(b => b.id === id),
     });
 
-    const createToggleUIAdapter = (): { contentRect: { left: number } } => ({
-      contentRect: { left: 0 },
+    const createToggleUIAdapter = (): { contentRect: { left: number; right: number } } => ({
+      contentRect: { left: 0, right: 650 },
     });
 
     afterEach(() => {
@@ -1069,6 +1160,174 @@ describe('DropTargetDetector', () => {
       expect(result?.parentId).toBe('toggle-1');
 
       document.body.removeChild(toggle.holder);
+    });
+
+    describe('drop-into zone', () => {
+      const createZoneOwner = (id: string, parentId: string | null, childTools?: { allow?: string[]; deny?: string[] }): { block: Block; zone: HTMLElement } => {
+        const block = createToggleTestBlock({ id, parentId, name: 'tab' });
+        const zone = document.createElement('div');
+
+        zone.setAttribute('data-blok-drop-into', '');
+        block.holder.appendChild(zone);
+        Object.assign(block, { tool: { childTools } });
+
+        return { block, zone };
+      };
+
+      const mockRect = (block: Block): void => {
+        vi.spyOn(block.holder, 'getBoundingClientRect').mockReturnValue({
+          top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+        });
+      };
+
+      it('nests into the owner as its first child even from the top half, never the previous sibling', () => {
+        const tabs = createToggleTestBlock({ id: 'tabs', contentIds: ['tab-1', 'tab-2'], name: 'tabs' });
+        const hiddenTab = createToggleTestBlock({ id: 'tab-1', parentId: 'tabs', name: 'tab' });
+        const { block: emptyTab, zone } = createZoneOwner('tab-2', 'tabs');
+        const outsider = createToggleTestBlock({ id: 'outsider' });
+
+        hiddenTab.holder.classList.add('hidden');
+
+        const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([tabs, hiddenTab, emptyTab, outsider]));
+
+        det.setSourceBlocks([outsider]);
+        mockRect(emptyTab);
+        document.body.appendChild(emptyTab.holder);
+
+        const result = det.determineDropTarget(zone, 100, 10, outsider);
+
+        expect(result).toStrictEqual({ block: emptyTab, edge: 'bottom', depth: 0, parentId: 'tab-2' });
+
+        document.body.removeChild(emptyTab.holder);
+      });
+
+      it('ignores a zone the owner has hidden (it has children, or is read-only)', () => {
+        const tabs = createToggleTestBlock({ id: 'tabs', contentIds: ['tab-1'], name: 'tabs' });
+        const { block: tab, zone } = createZoneOwner('tab-1', 'tabs');
+        const outsider = createToggleTestBlock({ id: 'outsider' });
+
+        zone.classList.add('hidden');
+
+        const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([tabs, tab, outsider]));
+
+        det.setSourceBlocks([outsider]);
+        mockRect(tab);
+        document.body.appendChild(tab.holder);
+
+        const result = det.determineDropTarget(tab.holder, 100, 90, outsider);
+
+        expect(result?.parentId).not.toBe('tab-1');
+
+        document.body.removeChild(tab.holder);
+      });
+
+      it('refuses a zone owned by a dragged block or one of its descendants', () => {
+        const tabs = createToggleTestBlock({ id: 'tabs', contentIds: ['tab-1'], name: 'tabs' });
+        const { block: tab, zone } = createZoneOwner('tab-1', 'tabs');
+
+        const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([tabs, tab]));
+
+        det.setSourceBlocks([tabs]);
+        mockRect(tab);
+        document.body.appendChild(tab.holder);
+
+        const result = det.determineDropTarget(zone, 100, 50, tabs);
+
+        expect(result?.parentId).not.toBe('tab-1');
+
+        document.body.removeChild(tab.holder);
+      });
+
+      it('refuses a zone whose owner does not allow a dragged tool', () => {
+        const { block: tab, zone } = createZoneOwner('tab-1', null, { deny: ['tabs'] });
+        const nested = createToggleTestBlock({ id: 'nested-tabs', name: 'tabs' });
+
+        const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([tab, nested]));
+
+        det.setSourceBlocks([nested]);
+        mockRect(tab);
+        document.body.appendChild(tab.holder);
+
+        const result = det.determineDropTarget(zone, 100, 50, nested);
+
+        expect(result?.parentId).not.toBe('tab-1');
+
+        document.body.removeChild(tab.holder);
+      });
+
+      describe('named zone (a tab pill)', () => {
+        const createTabsWithPill = (childTools?: { allow?: string[]; deny?: string[] }): { tabs: Block; closedTab: Block; pill: HTMLElement } => {
+          const tabs = createToggleTestBlock({ id: 'tabs', contentIds: ['tab-1', 'tab-2'], name: 'tabs' });
+          const closedTab = createToggleTestBlock({ id: 'tab-2', parentId: 'tabs', name: 'tab' });
+          const pill = document.createElement('button');
+
+          pill.setAttribute('role', 'tab');
+          pill.setAttribute('data-blok-drop-into', 'tab-2');
+          tabs.holder.appendChild(pill);
+          closedTab.holder.classList.add('hidden');
+          tabs.holder.appendChild(closedTab.holder);
+          Object.assign(closedTab, { tool: { childTools } });
+          mockRect(tabs);
+
+          return { tabs, closedTab, pill };
+        };
+
+        it('appends into the block the pill names', () => {
+          const { tabs, closedTab, pill } = createTabsWithPill();
+          const outsider = createToggleTestBlock({ id: 'outsider' });
+          const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([outsider, tabs, closedTab]));
+
+          det.setSourceBlocks([outsider]);
+          document.body.appendChild(tabs.holder);
+
+          const result = det.determineDropTarget(pill, 100, 10, outsider);
+
+          expect(result).toStrictEqual({ block: closedTab, edge: 'bottom', depth: 0, parentId: 'tab-2', zone: pill });
+
+          document.body.removeChild(tabs.holder);
+        });
+
+        it('does not make the block that hosts the pill a drop-into owner', () => {
+          const { tabs, closedTab } = createTabsWithPill();
+          const outsider = createToggleTestBlock({ id: 'outsider' });
+          const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([outsider, tabs, closedTab]));
+
+          det.setSourceBlocks([outsider]);
+          document.body.appendChild(tabs.holder);
+
+          const result = det.determineDropTarget(tabs.holder, 100, 90, outsider);
+
+          expect(result?.parentId).not.toBe('tabs');
+
+          document.body.removeChild(tabs.holder);
+        });
+
+        it('refuses the drop when the named block does not allow a dragged tool', () => {
+          const { tabs, closedTab, pill } = createTabsWithPill({ deny: ['tabs'] });
+          const nested = createToggleTestBlock({ id: 'nested-tabs', name: 'tabs' });
+          const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([nested, tabs, closedTab]));
+
+          det.setSourceBlocks([nested]);
+          document.body.appendChild(tabs.holder);
+
+          expect(det.determineDropTarget(pill, 100, 10, nested)).toBeNull();
+
+          document.body.removeChild(tabs.holder);
+        });
+
+        it('refuses the drop when the named block is inside a dragged block', () => {
+          const { tabs, closedTab, pill } = createTabsWithPill();
+          const other = createToggleTestBlock({ id: 'other' });
+          const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([other, tabs, closedTab]));
+
+          det.setSourceBlocks([other, tabs]);
+          document.body.appendChild(tabs.holder);
+
+          expect(det.determineDropTarget(pill, 100, 10, other)).toBeNull();
+
+          document.body.removeChild(tabs.holder);
+        });
+      });
     });
 
     it('should set parentId for toggle heading (header with toggle-open)', () => {
@@ -1413,8 +1672,8 @@ describe('DropTargetDetector', () => {
       getBlockById: (id: string) => blocks.find(b => b.id === id),
     });
 
-    const createSideUIAdapter = (): { contentRect: { left: number } } => ({
-      contentRect: { left: 0 },
+    const createSideUIAdapter = (): { contentRect: { left: number; right: number } } => ({
+      contentRect: { left: 0, right: 650 },
     });
 
     /**
@@ -2371,8 +2630,8 @@ describe('DropTargetDetector', () => {
       getBlockById: (id: string) => blocks.find(b => b.id === id),
     });
 
-    const createToggleUIAdapter = (): { contentRect: { left: number } } => ({
-      contentRect: { left: 0 },
+    const createToggleUIAdapter = (): { contentRect: { left: number; right: number } } => ({
+      contentRect: { left: 0, right: 650 },
     });
 
     afterEach(() => {

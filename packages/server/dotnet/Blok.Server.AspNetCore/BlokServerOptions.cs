@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using Blok.Server.Tickets;
 
 namespace Blok.Server.AspNetCore;
 
@@ -177,6 +178,17 @@ public sealed class BlokServerOptions
   public string CollabS3Prefix { get; set; } = "";
 
   /// <summary>
+  /// Puts the built-in local operation journal behind collaboration, under
+  /// <see cref="CollabDirectory"/>. This turns on the acknowledged profile:
+  /// blok-sync.v2, edit receipts and <c>Blok-Idempotency-Key</c> dedupe. It
+  /// needs <see cref="CollabEnabled"/> and is refused with
+  /// <see cref="CollabS3Prefix"/>: the journal lives on this machine's disk,
+  /// so a second instance would not see it. A store registered with
+  /// <c>UseCollabOperationStore&lt;T&gt;()</c> replaces it.
+  /// </summary>
+  public bool CollabJournal { get; set; }
+
+  /// <summary>
   /// Live sync connections one user may hold on one document. Must be
   /// positive: a zero cap refuses every sync connection.
   /// </summary>
@@ -272,9 +284,9 @@ public sealed class BlokServerOptions
         throw new InvalidOperationException(
             $"--auth proxy trusts every caller, so it may only bind loopback, not \"{ListenAddress}\"" +
             $"{BindScope(ListenAddress)} — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service");
-      case "ticket" when Secret.Length < 32:
+      case "ticket" when Secret.Length < BlokTicket.MinimumSecretLength:
         throw new InvalidOperationException(
-            $"--secret must be at least 32 characters (got {Secret.Length})");
+            $"--secret must be at least {BlokTicket.MinimumSecretLength} characters (got {Secret.Length})");
       case "ticket" when AllowedOrigins.Count == 0:
         throw new InvalidOperationException(
             "a public service needs --allow-origin: without it anyone who finds this address can drive " +
@@ -454,7 +466,20 @@ public sealed class BlokServerOptions
             "--collab-s3-prefix needs --collab: without it no working set is ever written and the prefix would be silently ignored");
       }
 
+      if (CollabJournal)
+      {
+        throw new InvalidOperationException(
+            "--collab-journal needs --collab: without it no sync room ever runs and the journal would be silently ignored");
+      }
+
       return;
+    }
+
+    if (CollabJournal && CollabS3Prefix != "")
+    {
+      throw new InvalidOperationException(
+          "--collab-journal cannot be used with --collab-s3-prefix: the journal is kept on this machine's disk, " +
+          "so a second instance sharing the bucket would not see it and would accept edits the journal never holds");
     }
 
     if (DocEndpoint == "")

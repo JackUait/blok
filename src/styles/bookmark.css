@@ -78,7 +78,7 @@
   flex: 0 0 auto;
   width: 1.33333em;
   height: 1.33333em;
-  margin-right: var(--bookmark-gap);
+  margin-inline-end: var(--bookmark-gap);
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__url {

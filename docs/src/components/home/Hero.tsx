@@ -7,6 +7,8 @@ import {
   CARD_KEYS,
   LAYOUTS,
   SPIN_VIEWS,
+  SNAP_VIEWS,
+  ASSEMBLE_PAGE,
   TRANSIT_Z,
   posesForVariant,
   pickNextAnimation,
@@ -566,7 +568,48 @@ export const Hero: React.FC = () => {
       }
     };
 
-    const transitionTo = (next: Pose[], spin: boolean): number => {
+    /** Fling-and-snap into a snap view: each card is thrown deep into the scene, tumbling,
+     *  then springs into its slot, one after another top to bottom. No kind swap mid-flight:
+     *  the cards never turn edge-on here, so a swap would show. */
+    const snapTo = (next: Pose[]): number => {
+      const duration = rand(1500, 1750);
+      const STAGGER = 95;
+      cardAnims = els.map((el, i) => {
+        const a = current[i];
+        const b = next[i];
+        const aHidden = a.scale < 0.05;
+        const fling: Pose = {
+          tx: (aHidden ? 0 : a.tx * 1.35) + rand(-70, 70),
+          ty: (a.ty + b.ty) / 2 + rand(-40, 40),
+          tz: -240 - i * 70,
+          rot: rand(12, 26) * sign(),
+          scale: 0.62,
+          rx: rand(30, 52) * sign(),
+          ry: rand(40, 62) * sign(),
+          kx: 0,
+        };
+        return el.animate(
+          [
+            { transform: toTransform(a), opacity: aHidden ? 0 : 1, easing: 'cubic-bezier(0.3, 0, 0.6, 1)' },
+            { transform: toTransform(fling), opacity: 1, offset: 0.42, easing: 'cubic-bezier(0.25, 1.5, 0.45, 1)' },
+            { transform: toTransform(b), opacity: 1 },
+          ],
+          { duration, delay: i * STAGGER, fill: 'both' }
+        );
+      });
+      if (stackDeg % 360 !== 0) {
+        const fromDeg = stackDeg;
+        stackDeg = Math.round(stackDeg / 360) * 360;
+        stackAnim = stack.animate([{ rotate: `${fromDeg}deg` }, { rotate: `${stackDeg}deg` }], {
+          duration,
+          fill: 'forwards',
+          easing: 'ease-in-out',
+        });
+      }
+      return duration + STAGGER * (els.length - 1);
+    };
+
+    const transitionTo = (next: Pose[], spin: boolean, burst = false): number => {
       const duration = rand(1300, 1900);
       cardAnims = els.map((el, i) => {
         const a = current[i];
@@ -575,7 +618,8 @@ export const Hero: React.FC = () => {
         const dy = b.ty - a.ty;
         const len = Math.hypot(dx, dy) || 1;
         const s = sign();
-        const amp = rand(26, 46);
+        // A burst out of a page throws the cards much wider and nearer than a normal move.
+        const amp = burst ? rand(90, 140) : rand(26, 46);
         const flip = sign(); // each card flips a random direction — organic, not in lock-step
         // A card is "hidden" at either end when it's parked out of this/the previous view
         // (scale ~0). Those legs are an appear/disappear, not a flip-morph — so they grow or
@@ -597,7 +641,7 @@ export const Hero: React.FC = () => {
           // crossing the same screen region are always depth-sorted — one slab slides cleanly
           // OVER another instead of interpenetrating. (Resting formations keep their authored
           // depth; this only governs the waypoint where the paths converge.)
-          tz: TRANSIT_Z[CARD_KEYS[i]],
+          tz: TRANSIT_Z[CARD_KEYS[i]] + (burst ? 140 : 0),
           rot: (a.rot + b.rot) / 2 + rand(3, 7) * sign(),
           // Genuinely recede mid-arc: two big neighbouring cards (e.g. the tall media card and
           // the code block) swap slots by crossing the centre, so if they stayed near full size
@@ -677,15 +721,27 @@ export const Hero: React.FC = () => {
         const variant = LAYOUTS[view][count][variantIndex];
         stack.dataset.heroAnim = `${view}@${count}#${variantIndex}`;
         const next = posesForVariant(variant);
-        const duration = transitionTo(next, SPIN_VIEWS.has(view));
+        const snapping = SNAP_VIEWS.has(view);
+        const leavingPage = stack.dataset.heroPage !== undefined;
+        if (leavingPage) {
+          // Give the cards their chrome back before the page bursts apart.
+          delete stack.dataset.heroPage;
+          await wait(280);
+          if (!running) break;
+        }
+        if (snapping) stack.dataset.heroSnap = '';
+        else delete stack.dataset.heroSnap;
+        const duration = snapping ? snapTo(next) : transitionTo(next, SPIN_VIEWS.has(view), leavingPage);
         // Reshuffle the blocks at the transition midpoint — exactly when the cards blink to
         // their dimmest — so the fresh, random mix only emerges as they fade back in.
         // Each slot draws a new kind from its own pool, never repeating its current one.
-        swapTimer = window.setTimeout(() => {
-          if (!running) return;
-          const dealt = sequencer.next();
-          setKinds(CARD_KEYS.map((slot) => dealt[slot]));
-        }, duration / 2);
+        if (!snapping) {
+          swapTimer = window.setTimeout(() => {
+            if (!running) return;
+            const dealt = sequencer.next();
+            setKinds(CARD_KEYS.map((slot) => dealt[slot]));
+          }, duration / 2);
+        }
         try {
           await Promise.all(cardAnims.map((a) => a.finished));
         } catch {
@@ -693,7 +749,16 @@ export const Hero: React.FC = () => {
         }
         if (!running) break;
         current = next;
-        await wait(rand(2100, 3300)); // hold the formation — fewer, bolder views earn a longer beat
+        if (snapping) {
+          // The blocks have landed: the page forms under them with a small impact.
+          stack.dataset.heroPage = '';
+          stack.animate([{ scale: '1' }, { scale: '0.97' }, { scale: '1.008' }, { scale: '1' }], {
+            duration: 560,
+            easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)',
+          });
+        }
+        // Hold the formation — fewer, bolder views earn a longer beat; a finished page longest.
+        await wait(snapping ? rand(3000, 3800) : rand(2100, 3300));
       }
     })();
 
@@ -742,29 +807,34 @@ export const Hero: React.FC = () => {
 
   return (
     <section className="relative overflow-hidden pt-28 pb-16 sm:pt-32 sm:pb-24">
-      {/* Soft brand wash backdrop */}
-      <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
-        <div className="absolute -top-32 left-1/2 size-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute right-[-8rem] top-24 size-[24rem] rounded-full bg-chart-3/10 blur-3xl" />
-        {/* faint dotted grid — gives the empty space texture without noise */}
-        <div className="absolute inset-0 opacity-[0.4] [background-image:radial-gradient(var(--color-border)_1px,transparent_1px)] [background-size:26px_26px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_72%)]" />
+      {/* Dawn: a warm sky, drifting aurora, and a planet whose rim catches the sunrise. */}
+      <div className="hero-backdrop pointer-events-none absolute inset-0 -z-10" data-blok-testid="hero-backdrop" aria-hidden="true">
+        <div className="hero-aurora hero-aurora-a" />
+        <div className="hero-aurora hero-aurora-b" />
+        <div className="hero-aurora hero-aurora-c" />
+        <div className="hero-keylight" />
+        <div className="hero-horizon">
+          <div className="hero-horizon-glow" />
+          <div className="hero-horizon-glint" />
+        </div>
+        <div className="hero-grain" />
       </div>
 
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="text-center lg:text-left" data-blok-testid="hero-content">
-          <h1 className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both text-4xl font-extrabold leading-[1.05] tracking-tight duration-700 sm:text-5xl lg:text-6xl">
-            <Typo>{t('home.hero.title')}</Typo>
+          <h1 className="hero-title hero-reveal text-5xl font-extrabold sm:text-6xl lg:text-7xl">
+            <Typo>{t('home.hero.title')}</Typo>{' '}
             <br />
-            <span className="text-brand-gradient"><Typo>{t('home.hero.titleGradient')}</Typo></span>
+            <span className="hero-title-glow text-brand-gradient"><Typo>{t('home.hero.titleGradient')}</Typo></span>
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-100 lg:mx-0">
+          <p className="hero-reveal hero-reveal-2 mx-auto mt-7 max-w-xl text-lg leading-relaxed text-foreground/75 lg:mx-0">
             <Typo>{t('home.hero.description')}</Typo>
           </p>
-          <div className="mt-9 hidden flex-col items-center justify-center gap-3 duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-200 sm:flex sm:flex-row lg:justify-start">
-            <Button variant="brand" size="lg" asChild>
+          <div className="hero-reveal hero-reveal-3 mt-10 hidden flex-col items-center justify-center gap-3 sm:flex sm:flex-row lg:justify-start">
+            <Button variant="brand" size="lg" className="hero-cta-glow relative" asChild>
               <Link to="/docs"><Typo>{t('home.hero.ctaGetStarted')}</Typo></Link>
             </Button>
-            <Button variant="outline" size="lg" asChild>
+            <Button variant="outline" size="lg" className="bg-background/60" asChild>
               <Link to="/demo">
                 <svg
                   width="16"
@@ -807,6 +877,18 @@ export const Hero: React.FC = () => {
               {/* Four block cards — each slot shows a random block kind, reshuffled per
                   transition (a tour of capabilities); the slot keeps each card's formation
                   identity + height stable. */}
+              {/* The page the blocks snap into (the assemble view). Hidden until they land. */}
+              <div
+                className="hero-page"
+                style={{ width: ASSEMBLE_PAGE.w, height: ASSEMBLE_PAGE.h }}
+                aria-hidden="true"
+              >
+                <div className="flex items-center gap-2.5 px-5 pt-[18px]">
+                  <span className="size-5 shrink-0 rounded-md bg-brand-gradient" />
+                  <span className="h-2.5 w-2/5 rounded-full bg-foreground/80" />
+                  <span className="ml-auto h-1.5 w-10 rounded-full bg-muted" />
+                </div>
+              </div>
               {CARD_KEYS.map((slot, i) => (
                 <HeroCard key={slot} slot={slot} kind={kinds[i]} />
               ))}

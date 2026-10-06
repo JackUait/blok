@@ -464,6 +464,7 @@ describe('BlockManager.setBlockParent applyPlacement delegation', () => {
       parentId: options.parentId ?? null,
       contentIds: options.contentIds ?? [],
       call: vi.fn(),
+      tool: { isLayout: false },
     } as unknown as Block;
   };
 

@@ -27,6 +27,18 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('attachControls', () => {
+  // A native range reverses in RTL while its painted fill runs left to right,
+  // and the waveform seeks left to right, so the sliders read LTR too.
+  it('pins every slider to LTR', () => {
+    const figure = document.createElement('figure');
+    const h = attachControls({ media: makeMedia(), figure, data: { url: 'u' } });
+    const ranges = Array.from(h.element.querySelectorAll('input[type="range"]'));
+
+    expect(ranges.length).toBeGreaterThanOrEqual(2);
+    expect(ranges.map((range) => range.getAttribute('dir'))).toEqual(ranges.map(() => 'ltr'));
+    h.destroy();
+  });
+
   it('toggles playback from the play button', () => {
     const media = makeMedia();
     const figure = document.createElement('figure');

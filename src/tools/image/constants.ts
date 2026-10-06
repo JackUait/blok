@@ -3,6 +3,11 @@ export const DEFAULT_MIME_TYPES = ['image/*'] as const;
 
 export const DEFAULT_MAX_SIZE = 30 * 1024 * 1024; // 30 MiB
 
+// How long a resend stays on stage. A server that rejects at once would
+// otherwise swap the card back before the send is seen; image.css's lift
+// keyframes are timed to it.
+export const RESEND_STAGE_MS = 900;
+
 export const DEFAULT_CAPTION_PLACEHOLDER = 'Write a caption…';
 
 export const MIN_WIDTH_PERCENT = 10;

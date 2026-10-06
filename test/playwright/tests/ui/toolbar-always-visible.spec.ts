@@ -139,7 +139,7 @@ test.describe('ui.toolbar-always-visible', () => {
     expect(distanceToLastBlock).toBeLessThan(distanceToFirstBlock);
   });
 
-  test('should show toolbar when cursor is above all blocks', async ({ page }) => {
+  test('should hide toolbar when cursor moves above the editor', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
@@ -156,46 +156,20 @@ test.describe('ui.toolbar-always-visible', () => {
     ]);
 
     const firstBlock = getBlockByIndex(page, 0);
-    const lastBlock = getBlockByIndex(page, 1);
-    const firstBox = await getRequiredBoundingBox(firstBlock);
-    const lastBox = await getRequiredBoundingBox(lastBlock);
-
-    /**
-     * Move cursor 50px above the first block, but stay within the page.
-     * Math.max(1, ...) ensures we don't go to y=0 or negative values.
-     */
-    await page.mouse.move(
-      firstBox.x + firstBox.width / 2,
-      Math.max(1, firstBox.y - 50)
-    );
-
+    const editorBox = await getRequiredBoundingBox(page.locator(`#${HOLDER_ID} [data-blok-editor]`));
     const toolbar = page.locator(TOOLBAR_SELECTOR);
 
+    await firstBlock.hover();
     await expect(toolbar).toHaveAttribute('data-blok-opened', 'true');
 
     /**
-     * Wait for toolbar to settle at its final position
+     * Above the editor is where a host puts its page title. The controls
+     * must not stay on, or jump to, the first block from there.
      */
-    await page.waitForFunction(() => {
-      const tb = document.querySelector('[data-blok-testid="toolbar"]');
+    expect(editorBox.y).toBeGreaterThan(20);
+    await page.mouse.move(editorBox.x + editorBox.width / 2, editorBox.y - 10);
 
-      if (!tb) {
-        return false;
-      }
-      const rect = tb.getBoundingClientRect();
-
-      return rect.top > 0 && rect.top < 1000;
-    }, { timeout: 2000 });
-
-    const toolbarBox = await getRequiredBoundingBox(toolbar);
-
-    /**
-     * Toolbar should be positioned near the first block, not the last block.
-     */
-    const distanceToFirstBlock = Math.abs(toolbarBox.y - firstBox.y);
-    const distanceToLastBlock = Math.abs(toolbarBox.y - lastBox.y);
-
-    expect(distanceToFirstBlock).toBeLessThan(distanceToLastBlock);
+    await expect(toolbar).not.toHaveAttribute('data-blok-opened', 'true');
   });
 
   test('should switch toolbar to nearest block when moving between gaps', async ({ page }) => {

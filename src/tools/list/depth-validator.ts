@@ -5,7 +5,7 @@
  * making it testable in isolation without DOM rendering.
  */
 
-import { TOOL_NAME, INDENT_PER_LEVEL } from './constants';
+import { TOOL_NAME } from './constants';
 import type { BlocksAPI } from './marker-calculator';
 import type { IndexMoveNeighbours } from '../../components/utils/index-move-neighbours';
 
@@ -261,8 +261,8 @@ export class ListDepthValidator {
       return 0;
     }
 
-    const styleAttr = block.holder?.querySelector('[role="listitem"]')?.getAttribute('style');
-    const marginMatch = styleAttr?.match(/margin-left:\s*(\d+)px/);
-    return marginMatch ? Math.round(parseInt(marginMatch[1], 10) / INDENT_PER_LEVEL) : 0;
+    const depth = Number(block.holder?.querySelector('[data-list-depth]')?.getAttribute('data-list-depth'));
+
+    return Number.isInteger(depth) && depth > 0 ? depth : 0;
   }
 }

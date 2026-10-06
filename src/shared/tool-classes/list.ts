@@ -53,7 +53,7 @@ export const LIST_ITEM_CLASSES: readonly string[] = [
 export const LIST_ITEM_ROW_CLASSES: readonly string[] = [
   'flex',
   'items-start',
-  'pl-0.5',
+  'ps-0.5',
   'leading-[1.5]',
   'gap-[var(--blok-list-gap,0px)]',
 ];
@@ -66,7 +66,7 @@ export const LIST_ITEM_ROW_CLASSES: readonly string[] = [
 export const LIST_CHECKLIST_ROW_CLASSES: readonly string[] = [
   'flex',
   'items-start',
-  'pl-0.5',
+  'ps-0.5',
   'gap-[var(--blok-list-gap,0px)]',
 ];
 
@@ -101,7 +101,7 @@ export const LIST_CHECKED_CLASSES: readonly string[] = ['line-through', 'opacity
 export const LIST_CHECKBOX_CLASSES: readonly string[] = [
   'mt-[calc((1.5em_-_1.25rem)/2)]',
   'w-5',
-  'mr-2',
+  'me-2',
   'h-5',
   'cursor-pointer',
   'accent-current',

@@ -43,4 +43,36 @@ describe('content alignment CSS', () => {
     expect(body).toMatch(/margin-left:\s*auto/);
     expect(body).toMatch(/margin-right:\s*0/);
   });
+
+  describe('in an RTL editor', () => {
+    // Keyed on the wrapper, not logical margins on the content: each block's
+    // content carries its own dir, and the column follows the editor's.
+    const rtlRuleBody = (align: string): string => {
+      const match = css.match(
+        new RegExp(`\\[data-blok-rtl="true"\\]\\[data-blok-content-align="${align}"\\] \\[data-blok-element-content\\]\\s*\\{([^}]*)\\}`)
+      );
+
+      if (match === null) {
+        throw new Error(`no RTL rule found for contentAlign "${align}"`);
+      }
+
+      return match[1];
+    };
+
+    it('left pins the content to the right (inline-start) edge', () => {
+      const body = rtlRuleBody('left');
+      expect(body).toMatch(/margin-left:\s*auto/);
+      expect(body).toMatch(/margin-right:\s*0/);
+    });
+
+    it('right pins the content to the left (inline-end) edge', () => {
+      const body = rtlRuleBody('right');
+      expect(body).toMatch(/margin-left:\s*0/);
+      expect(body).toMatch(/margin-right:\s*auto/);
+    });
+
+    it('never uses logical margins, which would follow each block\'s own dir', () => {
+      expect(css).not.toMatch(/\[data-blok-content-align="(left|right)"\][^{]*\{[^}]*margin-inline/);
+    });
+  });
 });

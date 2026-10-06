@@ -4,12 +4,16 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 interface Workflow {
+  concurrency?: Record<string, unknown>;
   on: Record<string, unknown>;
   jobs: Record<string, {
     if?: string;
     needs?: string | string[];
+    permissions?: Record<string, string>;
+    'timeout-minutes'?: number;
     steps?: Array<{
       env?: Record<string, unknown>;
+      id?: string;
       name?: string;
       run?: string;
       uses?: string;
@@ -18,9 +22,35 @@ interface Workflow {
   }>;
 }
 
-const workflow = parse(
-  readFileSync(join(__dirname, '../../../.github/workflows/deploy-docs.yml'), 'utf-8'),
-) as Workflow;
+const source = readFileSync(join(__dirname, '../../../.github/workflows/deploy-docs.yml'), 'utf-8');
+const workflow = parse(source) as Workflow;
+
+const stepNamed = (job: string, name: string) =>
+  workflow.jobs[job].steps?.find((step) => step.name === name);
+
+// release-server.yml publishes with GITHUB_TOKEN, which triggers no `release`
+// run, then dispatches this workflow with release_tag. Both paths carry the tag.
+const RELEASE_TAG = 'github.event.release.tag_name || inputs.release_tag';
+
+type Context = { event: { release?: { tag_name: string } }; inputs: { release_tag?: string } };
+
+/** Resolves an `a || b || 'literal'` chain the way GitHub does: first non-empty operand. */
+const firstTruthy = (chain: string, context: Context): string => {
+  for (const operand of chain.split(' || ')) {
+    const values: Record<string, string | undefined> = {
+      'github.event.release.tag_name': context.event.release?.tag_name,
+      'inputs.release_tag': context.inputs.release_tag,
+    };
+    const value = /^'(.*)'$/.exec(operand)?.[1] ?? values[operand];
+
+    if (value) return value;
+  }
+
+  return '';
+};
+
+const mainPush: Context = { event: {}, inputs: {} };
+const dispatched = (tag: string): Context => ({ event: {}, inputs: { release_tag: tag } });
 
 describe('docs deployment workflow', () => {
   it('runs after the CI workflow completes on main', () => {
@@ -41,6 +71,12 @@ describe('docs deployment workflow', () => {
           required: false,
           type: 'string',
         },
+        dry_run: {
+          description: 'Build and verify the site without deploying it',
+          required: false,
+          type: 'boolean',
+          default: false,
+        },
       },
     });
   });
@@ -58,12 +94,13 @@ describe('docs deployment workflow', () => {
       `(github.event_name == 'workflow_run' && ${trustedRun})`
       + " || github.event_name == 'release' || inputs.release_tag != ''",
     );
-    expect(workflow.jobs.build.needs).toEqual(['docs-tests', 'verify-release']);
+    expect(workflow.jobs.build.needs).toEqual(['docs-tests', 'verify-release', 'snapshot']);
     // A skipped `needs` job skips its dependents unless the dependent accepts it.
     expect(workflow.jobs.build.if).toBe(
       '${{ !cancelled()'
       + " && needs.docs-tests.result == 'success'"
       + " && (needs.verify-release.result == 'success' || needs.verify-release.result == 'skipped')"
+      + " && (needs.snapshot.result == 'success' || needs.snapshot.result == 'skipped')"
       + " && (github.event_name != 'workflow_run'"
       + ` || (${trustedRun})) }}`,
     );
@@ -122,10 +159,155 @@ describe('docs deployment workflow', () => {
     // copying the library dist only inflates the Pages artifact.
     expect(runSteps.some((step) => step.run?.includes('docs/dist/dist'))).toBe(false);
     // The changelog page fetches /CHANGELOG.md at runtime — that copy stays.
-    expect(runSteps.map((step) => step.run)).toContain('cp CHANGELOG.md docs/dist/CHANGELOG.md');
+    expect(stepNamed('build', 'Assemble versioned site')?.run).toContain('cp CHANGELOG.md site/CHANGELOG.md');
   });
 
   it('deploys only the release-gated build artifact', () => {
     expect(workflow.jobs.deploy.needs).toBe('build');
+  });
+
+  it('snapshots only stable releases, from the release tag with full history', () => {
+    const job = workflow.jobs.snapshot;
+    const checkout = job.steps?.find((step) => step.name === 'Checkout code');
+    const build = job.steps?.find((step) => step.name === 'Build snapshots');
+    const upload = job.steps?.find((step) => step.name === 'Attach snapshots to the release');
+
+    expect(job.if).toBe(
+      `(${RELEASE_TAG}) != ''`
+      + ' && !github.event.release.prerelease'
+      + ` && !contains(${RELEASE_TAG}, '-')`,
+    );
+    expect(job.needs).toEqual(['docs-tests', 'verify-release']);
+    expect(job.permissions).toEqual({ contents: 'write' });
+    expect(job['timeout-minutes']).toBe(7);
+    expect(checkout?.with).toMatchObject({
+      ref: `\${{ ${RELEASE_TAG} }}`,
+      // Tags older than the lastmod ledger date pages from `git log`; a shallow
+      // tag checkout collapses every lastmod to the release date.
+      'fetch-depth': 0,
+      'persist-credentials': false,
+    });
+    expect(build?.env).toBeUndefined();
+    expect(build?.run).toContain('yarn build\n');
+    expect(build?.run).toContain('node docs/scripts/build-snapshot.mjs --version "$minor" --base / --out docs-root.tgz');
+    expect(build?.run).toContain(
+      'node docs/scripts/build-snapshot.mjs --version "$minor" --base "/v/$minor/" --out "docs-v$minor.tgz"',
+    );
+    expect(build?.run).toContain('echo "minor=$minor" >> "$GITHUB_OUTPUT"');
+    expect(upload?.env).toEqual({
+      GH_TOKEN: '${{ github.token }}',
+      GH_REPO: '${{ github.repository }}',
+      TAG: `\${{ ${RELEASE_TAG} }}`,
+      MINOR: `\${{ steps.${build?.id ?? 'missing'}.outputs.minor }}`,
+    });
+    expect(upload?.run).toBe('gh release upload "$TAG" docs-root.tgz "docs-v$MINOR.tgz" --clobber\n');
+  });
+
+  it('snapshots a stable release that release-server dispatches', () => {
+    const gate = workflow.jobs.snapshot.if ?? '';
+
+    // Nothing in the gate may require the `release` event itself.
+    expect(gate).not.toContain('github.event_name');
+    expect(gate).toContain(`(${RELEASE_TAG}) != ''`);
+    expect(firstTruthy(RELEASE_TAG, dispatched('v1.16.0'))).toBe('v1.16.0');
+    expect(firstTruthy(RELEASE_TAG, dispatched('v1.16.0')).includes('-')).toBe(false);
+  });
+
+  it('never snapshots a dispatched beta tag', () => {
+    const gate = workflow.jobs.snapshot.if ?? '';
+
+    // release-server dispatches every v* tag; a beta has no `prerelease` flag
+    // on that path, so the tag's `-` is the only thing that keeps it off root.
+    expect(gate).toContain(`!contains(${RELEASE_TAG}, '-')`);
+    expect(firstTruthy(RELEASE_TAG, dispatched('v1.16.0-beta.1')).includes('-')).toBe(true);
+  });
+
+  it('assembles root, next and archives into one site and publishes that', () => {
+    const next = stepNamed('build', 'Build next snapshot');
+    const assemble = stepNamed('build', 'Assemble versioned site');
+    const upload = stepNamed('build', 'Upload Pages artifact');
+
+    expect(stepNamed('build', 'Build docs')).toBeUndefined();
+    expect(next?.run).toBe('node docs/scripts/build-snapshot.mjs --version next --base /next/ --out next.tgz\n');
+    expect(assemble?.env).toEqual({
+      GH_TOKEN: '${{ github.token }}',
+      GH_REPO: '${{ github.repository }}',
+    });
+    expect(assemble?.run).toBe(
+      'node docs/scripts/assemble-site.mjs --next next.tgz --out site\n'
+      + 'cp CHANGELOG.md site/CHANGELOG.md\n',
+    );
+    expect(upload?.with?.path).toBe('site/');
+  });
+
+  it('verifies the assembled site before publishing it', () => {
+    const run = stepNamed('build', 'Verify deploy artifact')?.run ?? '';
+
+    for (const check of [
+      'test -f site/next/docs/quick-start/index.html',
+      "grep -q 'noindex' site/next/docs/quick-start/index.html",
+      'test -s site/versions.json',
+      'if [ -n "$archive" ]; then test -f "site${archive}index.html"; grep -q \'noindex\' "site${archive}index.html"; fi',
+      'test -s site/robots.txt',
+      'test -s site/sitemap.xml',
+    ]) {
+      expect(run).toContain(check);
+    }
+    // `set -e` ignores a `!` command, so the negated check is a plain if/exit.
+    expect(run).not.toMatch(/^\s*!/m);
+    expect(run).toContain("if grep -q 'noindex' site/docs/quick-start/index.html; then");
+  });
+
+  it('takes the deploy marker from the next build, which changes on every main push', () => {
+    const run = stepNamed('build', 'Record deploy marker')?.run ?? '';
+
+    expect(run).toContain("find site/next/assets -name 'client-*.js' -print -quit");
+    expect(run).toContain('echo "path=/${asset#site/}" >> "$GITHUB_OUTPUT"');
+  });
+
+  it('skips deploy and the live check on a dry run without breaking the skip guard', () => {
+    expect(workflow.jobs.deploy.if).toBe(
+      "${{ !cancelled() && needs.build.result == 'success' && !inputs.dry_run }}",
+    );
+    expect(workflow.jobs['seo-smoke'].if).toBe(
+      "${{ !cancelled() && needs.deploy.result == 'success' && !inputs.dry_run }}",
+    );
+  });
+
+  it('keeps release runs out of the group a main push cancels', () => {
+    expect(workflow.concurrency).toEqual({
+      group: `\${{ github.workflow }}-\${{ ${RELEASE_TAG} || 'deploy' }}`,
+      'cancel-in-progress': true,
+    });
+  });
+
+  it('gives a dispatched release its own concurrency group, apart from main pushes', () => {
+    const group = workflow.concurrency?.group;
+    if (typeof group !== 'string') throw new Error('deploy-docs has no concurrency group');
+
+    const chain = /-\$\{\{ (.+) \}\}$/.exec(group)?.[1] ?? '';
+
+    expect(firstTruthy(chain, mainPush)).toBe('deploy');
+    expect(firstTruthy(chain, dispatched('v1.16.0'))).toBe('v1.16.0');
+    expect(firstTruthy(chain, { event: { release: { tag_name: 'v1.16.0' } }, inputs: {} })).toBe('v1.16.0');
+  });
+
+  // Build and dependency scripts run arbitrary package code; a token in their
+  // env is readable by all of it, and the release jobs hold contents: write.
+  it.each(['deploy-docs.yml', 'docs-backfill.yml'])('keeps GH_TOKEN out of every build step in %s', (file) => {
+    const parsed = parse(readFileSync(join(__dirname, '../../../.github/workflows', file), 'utf-8')) as Workflow;
+    const buildSteps = Object.values(parsed.jobs)
+      .flatMap((job) => job.steps ?? [])
+      .filter((step) => /yarn build|build-snapshot\.mjs/.test(step.run ?? ''));
+
+    expect(buildSteps.length).toBeGreaterThan(0);
+    expect(buildSteps.filter((step) => step.env?.GH_TOKEN !== undefined).map((step) => step.name)).toEqual([]);
+  });
+
+  it('never interpolates expressions inside run scripts', () => {
+    const runs = Object.values(workflow.jobs).flatMap((job) => job.steps ?? []).map((step) => step.run ?? '');
+
+    expect(runs.filter((run) => run.includes('${{'))).toEqual([]);
+    expect(source).not.toMatch(/run: .*\$\{\{/);
   });
 });

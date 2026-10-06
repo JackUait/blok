@@ -553,7 +553,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const text = Paragraph.sanitize.text as Record<string, unknown>;
 
       expect(text.br).toBe(true);
-      expect(text.img).toEqual({ src: true, style: true });
+      expect(text.img).toEqual({ src: true, alt: true, style: true });
       expect(text.p).toBe(true);
       expect(text.ul).toBe(true);
       expect(text.li).toBe(true);

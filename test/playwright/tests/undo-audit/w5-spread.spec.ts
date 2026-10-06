@@ -246,13 +246,10 @@ const openTunes = async (page: Page, id: string): Promise<void> => {
   throw new Error(`could not open the block menu for ${id}`);
 };
 
-const convert = async (page: Page, id: string, to: string, tab?: string): Promise<void> => {
+const convert = async (page: Page, id: string, to: string): Promise<void> => {
   await openTunes(page, id);
   await page.locator(`${TUNES_POPOVER} [data-blok-testid="popover-item"][data-blok-item-name="convert-to"]`).click();
-  if (tab !== undefined) {
-    await page.locator(`${NESTED_POPOVER} [data-blok-popover-tab="${tab}"][role="tab"]`).click();
-  }
-  await page.locator(`${NESTED_POPOVER} [data-blok-testid="popover-item"][data-blok-item-name="${to}"]`).click();
+  await page.locator(NESTED_POPOVER).getByRole('menuitem', { name: to, exact: true }).click();
 };
 
 const P = (id: string, text: string, parent?: string): Blocks[number] => ({ id, type: 'paragraph', data: { text }, ...(parent === undefined ? {} : { parent }) });
@@ -426,18 +423,18 @@ test.describe('W5F: spread of the wave-4 families', () => {
   // Typing in the block first heals it (W5F-27 passes): the typing save-back writes size inside the typing step.
   // List, heading, code and pasted <blockquote> conversions carry every key (W5F-21..24, W5F-26 pass).
 
-  const A2: Array<{ id: string; to: string; tab?: string; split: number }> = [
-    { id: 'W5F-20', to: 'quote', split: 3 },
-    { id: 'W5F-21', to: 'check-list', split: 3 },
-    { id: 'W5F-22', to: 'header-2', tab: 'heading', split: 3 },
-    { id: 'W5F-23', to: 'bulleted-list', split: 3 },
+  const A2: Array<{ id: string; to: string; split: number }> = [
+    { id: 'W5F-20', to: 'Quote', split: 3 },
+    { id: 'W5F-21', to: 'To-do list', split: 3 },
+    { id: 'W5F-22', to: 'Heading 2', split: 3 },
+    { id: 'W5F-23', to: 'Bulleted list', split: 3 },
   ];
 
   for (const c of A2) {
     test(`${c.id}: after "turn into ${c.to}", Enter in the middle of the new block is one undo step`, async ({ page }) => {
       pin(c.id);
       await create(page, [P('p-before', 'before'), P('x', 'Plain text'), P('p-after', 'after')]);
-      await convert(page, 'x', c.to, c.tab);
+      await convert(page, 'x', c.to);
       await gap(page);
       await page.keyboard.press('Escape');
       await caretAt(page, 'x', c.split);
@@ -449,7 +446,7 @@ test.describe('W5F: spread of the wave-4 families', () => {
 
   test('W5F-24: after "turn into code", one undo turns it back and nothing else is on the stack', async ({ page }) => {
     await create(page, [P('p-before', 'before'), P('x', 'Plain text'), P('p-after', 'after')]);
-    const t = await trip(page, () => convert(page, 'x', 'code'));
+    const t = await trip(page, () => convert(page, 'x', 'Code'));
 
     expect(t.undone, `one undo restores the paragraph (${explain(t)})`).toEqual(t.before);
     expect(t.steps, 'the conversion is one undo entry').toBe(1);
@@ -674,7 +671,7 @@ test.describe('W5F: spread of the wave-4 families', () => {
       blocks: C_DOC,
       target: 'b',
       gesture: async (page) => {
-        await convert(page, 'b', 'header-2', 'heading');
+        await convert(page, 'b', 'Heading 2');
       },
     },
     {
@@ -695,15 +692,6 @@ test.describe('W5F: spread of the wave-4 families', () => {
       target: 'b',
       gesture: async (page) => {
         await page.locator('[data-blok-id="b"]').getByRole('checkbox').click();
-      },
-    },
-    {
-      id: 'W5F-64',
-      title: 'a toggle arrow click',
-      blocks: () => [P('a', 'Alpha one'), P('m', 'Middle'), { id: 'b', type: 'toggle', data: { text: 'Bravo two', isOpen: true }, content: ['bk'] }, P('bk', 'kid', 'b'), P('c', 'Charlie')],
-      target: 'b',
-      gesture: async (page) => {
-        await page.locator('[data-blok-id="b"] [data-blok-toggle-arrow]').first().click();
       },
     },
     {
@@ -772,6 +760,23 @@ test.describe('W5F: spread of the wave-4 families', () => {
       },
     },
   ];
+
+  // Open/close is personal state, so an arrow click adds no undo step and undo leaves it as clicked.
+  test('W5F-64: a toggle arrow click is not an undo step', async ({ page }) => {
+    await create(page, [P('a', 'Alpha one'), P('m', 'Middle'), { id: 'b', type: 'toggle', data: { text: 'Bravo two' }, content: ['bk'] }, P('bk', 'kid', 'b'), P('c', 'Charlie')]);
+    await gap(page);
+    await caretAt(page, 'b', 3);
+    await gap(page, 200);
+    const arrow = page.locator('[data-blok-id="b"] [data-blok-toggle-arrow]').first();
+
+    await arrow.click();
+    await gap(page);
+    await expect(arrow).toHaveAttribute('aria-expanded', 'true');
+    expect(await page.evaluate(() => window.blokInstance?.history.canUndo()), 'the click is not undoable').toBe(false);
+    await undo(page);
+
+    await expect(arrow).toHaveAttribute('aria-expanded', 'true');
+  });
 
   for (const c of C) {
     for (const withNoOp of [true, false]) {

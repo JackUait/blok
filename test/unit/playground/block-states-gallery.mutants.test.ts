@@ -36,14 +36,16 @@ describe('renderBlockStatesGallery mutants', () => {
     {
       tool: 'paragraph',
       label: 'Paragraph',
-      segments: [ { blocks: [ { id: 'p-1',
+      segments: [ { label: 'Filled',
+        blocks: [ { id: 'p-1',
         type: 'paragraph',
         data: { text: 'Hello' } } ] } ],
     },
     {
       tool: 'header',
       label: 'Header',
-      segments: [ { blocks: [ { id: 'h-1',
+      segments: [ { label: 'H1',
+        blocks: [ { id: 'h-1',
         type: 'header',
         data: { text: 'Title',
           level: 1 } } ] } ],

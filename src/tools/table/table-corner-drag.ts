@@ -1,6 +1,11 @@
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { I18n } from '../../../types/api';
 import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { show as showTooltip, hide as hideTooltip } from '../../components/utils/tooltip';
+import { getElementDirection } from '../../components/utils/direction';
+
+import { inlineAxis, scrollToInlineEnd } from './table-direction';
+import type { InlineAxis } from './table-direction';
 
 const CORNER_DRAG_ATTR = 'data-blok-table-corner-drag';
 
@@ -70,7 +75,12 @@ const AUTO_SCROLL_RETREAT_SLACK = 4;
 /** Which way the page auto-scroll is running, if at all. */
 type VerticalAutoScroll = 'none' | 'down' | 'up';
 
+/**
+ * Horizontal positions in the drag state are mirrored for RTL by `axis`, so
+ * "right"/"outward" below always means toward the table's inline end.
+ */
 interface DragState {
+  axis: InlineAxis;
   startX: number;
   startY: number;
   /**
@@ -98,7 +108,7 @@ interface DragState {
   /** Furthest the pointer has reached past the container edge, or null inside it. */
   retreatPeak: number | null;
   /**
-   * Leftmost point of a pull-back that began past the container edge, or null.
+   * Innermost point of a pull-back that began past the container edge, or null.
    * While set, the auto-scroll does not grow the table: heading back toward it
    * must never add columns.
    */
@@ -163,6 +173,8 @@ export class TableCornerDrag {
 
     this.hitZone = document.createElement('div');
     this.hitZone.setAttribute(CORNER_DRAG_ATTR, '');
+    // Chrome, not content: placing it (scroll, direction flip) is not an edit.
+    this.hitZone.setAttribute(DATA_ATTR.mutationFree, 'true');
     this.hitZone.setAttribute('contenteditable', 'false');
     this.hitZone.style.position = 'absolute';
     this.hitZone.style.width = '36px';
@@ -208,14 +220,23 @@ export class TableCornerDrag {
       return;
     }
 
-    const visibleRight = this.scrollContainer !== null
-      ? Math.min(gridRect.right, this.scrollContainer.getBoundingClientRect().right)
-      : gridRect.right;
+    const isRtl = getElementDirection(this.gridEl) === 'rtl';
+    const axis = inlineAxis(isRtl ? 'rtl' : 'ltr');
+    const visibleEnd = this.scrollContainer !== null
+      ? Math.min(axis.end(gridRect), axis.end(this.scrollContainer.getBoundingClientRect()))
+      : axis.end(gridRect);
+    // The corner sits at the inline end: measure from the wrapper's left in LTR, its right in RTL.
+    const fromStart = `${visibleEnd - axis.start(wrapperRect) - CORNER_OFFSET}px`;
 
     this.hitZone.style.bottom = '';
-    this.hitZone.style.right = '';
-    this.hitZone.style.left = `${visibleRight - wrapperRect.left - CORNER_OFFSET}px`;
+    this.hitZone.style.left = isRtl ? '' : fromStart;
+    this.hitZone.style.right = isRtl ? fromStart : '';
     this.hitZone.style.top = `${gridRect.bottom - wrapperRect.top - CORNER_OFFSET}px`;
+    this.hitZone.style.cursor = this.resizeCursor(isRtl);
+  }
+
+  private resizeCursor(isRtl: boolean): string {
+    return isRtl ? 'nesw-resize' : 'nwse-resize';
   }
 
   public attachScrollContainer(sc: HTMLElement): void {
@@ -281,22 +302,25 @@ export class TableCornerDrag {
    * merged across the last two columns does not report the pair as one column
    * whenever some other row still splits them.
    */
-  private measureLastColumnWidth(gridRight: number): number {
+  private measureLastColumnWidth(gridRect: DOMRect, axis: InlineAxis): number {
+    const gridEnd = axis.end(gridRect);
     const cells = Array.from(this.gridEl.querySelectorAll<HTMLElement>('[data-blok-table-cell]'));
-    const left = cells.reduce((innermost, cell) => {
+    const start = cells.reduce((innermost, cell) => {
       const rect = cell.getBoundingClientRect();
 
-      return Math.abs(rect.right - gridRight) <= 1 && rect.left > innermost ? rect.left : innermost;
+      return Math.abs(axis.end(rect) - gridEnd) <= 1 && axis.start(rect) > innermost ? axis.start(rect) : innermost;
     }, -Infinity);
 
-    return left === -Infinity ? 0 : gridRight - left;
+    return start === -Infinity ? 0 : gridEnd - start;
   }
 
   private handlePointerDown(e: PointerEvent): void {
     const gridRect = this.gridEl.getBoundingClientRect();
+    const axis = inlineAxis(getElementDirection(this.gridEl));
 
     this.dragState = {
-      startX: e.clientX,
+      axis,
+      startX: axis.x(e.clientX),
       startY: e.clientY,
       targetWidth: gridRect.width,
       edgeTargetWidth: gridRect.width,
@@ -305,7 +329,7 @@ export class TableCornerDrag {
       retreatFloor: null,
       pointerId: e.pointerId,
       didDrag: false,
-      pointerX: e.clientX,
+      pointerX: axis.x(e.clientX),
       pointerY: e.clientY,
       autoScrollFrame: null,
       autoScrollAt: 0,
@@ -358,7 +382,8 @@ export class TableCornerDrag {
       return;
     }
 
-    const dx = e.clientX - this.dragState.startX;
+    const pointerX = this.dragState.axis.x(e.clientX);
+    const dx = pointerX - this.dragState.startX;
     const dy = e.clientY - this.dragState.startY;
 
     if (!this.dragState.didDrag) {
@@ -369,18 +394,18 @@ export class TableCornerDrag {
       }
 
       this.dragState.didDrag = true;
-      document.body.style.cursor = 'nwse-resize';
+      document.body.style.cursor = this.resizeCursor(getElementDirection(this.gridEl) === 'rtl');
       document.body.style.userSelect = 'none';
       this.onDragStart();
     }
 
     const previousX = this.dragState.pointerX;
 
-    this.dragState.pointerX = e.clientX;
+    this.dragState.pointerX = pointerX;
     this.dragState.pointerY = e.clientY;
-    this.updateRetreat(e.clientX);
+    this.updateRetreat(pointerX);
     this.updateVerticalArming();
-    this.dragState.targetWidth = this.nextTargetWidth(previousX, e.clientX);
+    this.dragState.targetWidth = this.nextTargetWidth(previousX, pointerX);
 
     const rect = this.gridEl.getBoundingClientRect();
     const targetBottom = this.verticalAutoScroll() === 'none'
@@ -407,7 +432,7 @@ export class TableCornerDrag {
       return;
     }
 
-    const edge = this.scrollContainer?.getBoundingClientRect().right ?? Infinity;
+    const edge = this.scrollContainer ? state.axis.end(this.scrollContainer.getBoundingClientRect()) : Infinity;
 
     if (nextX <= edge) {
       state.retreatPeak = null;
@@ -454,7 +479,7 @@ export class TableCornerDrag {
       return state.targetWidth + nextX - previousX;
     }
 
-    const edge = this.scrollContainer.getBoundingClientRect().right;
+    const edge = state.axis.end(this.scrollContainer.getBoundingClientRect());
     const outward = Math.max(nextX, edge) - Math.max(previousX, edge);
     const inward = Math.min(nextX, edge) - Math.min(previousX, edge);
 
@@ -522,7 +547,7 @@ export class TableCornerDrag {
       return false;
     }
 
-    return this.dragState.pointerX > sc.getBoundingClientRect().right + AUTO_SCROLL_OVERSHOOT;
+    return this.dragState.pointerX > this.dragState.axis.end(sc.getBoundingClientRect()) + AUTO_SCROLL_OVERSHOOT;
   }
 
   private shouldAutoScrollDown(): boolean {
@@ -537,7 +562,7 @@ export class TableCornerDrag {
       return 0;
     }
 
-    return Math.max(0, this.dragState.pointerX - sc.getBoundingClientRect().right);
+    return Math.max(0, this.dragState.pointerX - this.dragState.axis.end(sc.getBoundingClientRect()));
   }
 
   private overshootDown(): number {
@@ -671,7 +696,7 @@ export class TableCornerDrag {
       state.pendingX += this.overshootRight() * AUTO_SCROLL_GAIN_PER_SECOND * elapsed;
 
       const rect = this.gridEl.getBoundingClientRect();
-      const step = this.measureLastColumnWidth(rect.right);
+      const step = this.measureLastColumnWidth(rect, state.axis);
 
       if (step > 0 && state.pendingX >= step) {
         state.pendingX -= step;
@@ -700,7 +725,7 @@ export class TableCornerDrag {
 
     // Scrolling stays per-frame even between columns, so the reveal is smooth.
     if (right && this.scrollContainer !== null) {
-      this.scrollContainer.scrollLeft = this.scrollContainer.scrollWidth;
+      scrollToInlineEnd(this.scrollContainer);
     }
 
     if (down) {
@@ -770,7 +795,7 @@ export class TableCornerDrag {
     // Measuring the last column costs a pass over every cell; only pay for it
     // while the corner is actually being dragged back into the grid.
     while (targetWidth < cursor.rect.width && cursor.steps++ < MAX_STEPS_PER_MOVE && this.canRemoveLastColumn()) {
-      const width = this.measureLastColumnWidth(cursor.rect.right);
+      const width = this.measureLastColumnWidth(cursor.rect, this.dragState?.axis ?? inlineAxis(getElementDirection(this.gridEl)));
 
       if (width <= 0 || targetWidth > cursor.rect.width - width) {
         break;

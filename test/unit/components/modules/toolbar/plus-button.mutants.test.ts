@@ -215,8 +215,6 @@ describe('PlusButtonHandler — mutation coverage', () => {
         'mobile:z-2',
         'mobile:w-toolbox-btn-mobile',
         'mobile:h-toolbox-btn-mobile',
-        'group-data-[blok-rtl=true]:right-[calc(-1*(var(--spacing-toolbox-btn)))]',
-        'group-data-[blok-rtl=true]:left-auto',
       ]);
     });
 

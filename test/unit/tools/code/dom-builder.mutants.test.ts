@@ -91,7 +91,7 @@ describe('buildCodeDOM — attributes the code tool reads back', () => {
   it('gives the chevron its own layout class and testid', () => {
     const { languageChevron } = build();
 
-    expect(languageChevron.className).toBe('inline-flex items-center ml-0.5 -mr-0.5');
+    expect(languageChevron.className).toBe('inline-flex items-center ms-0.5 -me-0.5');
     expect(languageChevron.getAttribute('data-blok-testid')).toBe('code-language-chevron');
   });
 

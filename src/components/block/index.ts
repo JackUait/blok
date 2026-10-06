@@ -24,8 +24,9 @@ import { EventsDispatcher } from '../utils/events';
 import { hasContentMatching, isContentEmpty } from '../utils/own-element';
 
 import { BlockAPI } from './api';
-import { DataPersistenceManager } from './data-persistence-manager';
+import { DataPersistenceManager, NOT_SYNC } from './data-persistence-manager';
 import { InputManager } from './input-manager';
+import { syncContentDirection } from './content-direction';
 import { MutationHandler } from './mutation-handler';
 import { SelectionManager } from './selection-manager';
 import { StyleManager } from './style-manager';
@@ -415,7 +416,10 @@ export class Block extends EventsDispatcher<BlockEvents> {
       }
     }
 
-    void this.ready.then(() => this.hydrateInlineTools());
+    void this.ready.then(() => {
+      this.hydrateInlineTools();
+      this.syncContentDirection();
+    });
   }
 
   /**
@@ -526,9 +530,9 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * Delegates to the tool's getContentOffset method if implemented.
    *
    * @param hoveredElement - The element that is currently being hovered
-   * @returns Object with left offset in pixels, or undefined if no offset should be applied
+   * @returns Physical left/right insets in px, or undefined if no offset should be applied
    */
-  public getContentOffset(hoveredElement: Element): { left: number } | undefined {
+  public getContentOffset(hoveredElement: Element): { left: number; right?: number } | undefined {
     if (typeof this.toolInstance.getContentOffset === 'function') {
       return this.toolInstance.getContentOffset(hoveredElement);
     }
@@ -551,21 +555,55 @@ export class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
+   * Runs the tool's `onNavigationEnter` for Enter on the navigation-mode target.
+   *
+   * @param event - the Enter keydown
+   * @returns true only when the tool says it handled the key
+   */
+  public onNavigationEnter(event: KeyboardEvent): boolean {
+    if (typeof this.toolInstance.onNavigationEnter !== 'function') {
+      return false;
+    }
+
+    try {
+      // A plain-JS tool may return anything; only a real true counts.
+      const handled: unknown = this.toolInstance.onNavigationEnter(event);
+
+      return handled === true;
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+
+      log(`Error during 'onNavigationEnter' call: ${errorMessage}`, 'error');
+
+      return false;
+    }
+  }
+
+  /**
    * Extracts data from Block
    * Groups Tool's save processing time
    * @returns {object}
    */
   public async save(): Promise<undefined | BlockSaveResult> {
-    const result = await this.dataPersistenceManager.save();
+    return this.withBlockId(await this.dataPersistenceManager.save());
+  }
 
-    if (result === undefined) {
-      return undefined;
-    }
+  /**
+   * {@link save} without awaiting, for a save that must finish inside the caller.
+   * @returns the saved data, or NOT_SYNC when the tool's save() returned a promise
+   */
+  public saveSync(): undefined | BlockSaveResult | typeof NOT_SYNC {
+    const result = this.dataPersistenceManager.saveSync();
 
+    return result === NOT_SYNC ? NOT_SYNC : this.withBlockId(result);
+  }
+
+  /**
+   * @param result - what the persistence manager extracted
+   */
+  private withBlockId(result: undefined | BlockSaveResult): undefined | BlockSaveResult {
     // Override id with the actual block id
-    result.id = this.id;
-
-    return result;
+    return result === undefined ? undefined : { ...result, id: this.id };
   }
 
   /**
@@ -577,6 +615,15 @@ export class Block extends EventsDispatcher<BlockEvents> {
    */
   public async validate(data: BlockToolData): Promise<boolean> {
     return this.dataPersistenceManager.validate(data);
+  }
+
+  /**
+   * {@link validate} without awaiting.
+   * @param data - data to validate
+   * @returns the verdict, or NOT_SYNC when the tool's validate() returned a promise
+   */
+  public validateSync(data: BlockToolData): boolean | typeof NOT_SYNC {
+    return this.dataPersistenceManager.validateSync(data);
   }
 
   /**
@@ -645,6 +692,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
       // update path (undo/redo, a controlled host, api.blocks.update), which
       // deliberately does NOT recompose the Block.
       this.hydrateInlineTools();
+      this.syncContentDirection();
     }
 
     return applied;
@@ -722,6 +770,9 @@ export class Block extends EventsDispatcher<BlockEvents> {
     if (typeof (this.toolInstance as unknown as { setReadOnly?: unknown }).setReadOnly === 'function') {
       (this.toolInstance as unknown as { setReadOnly: (s: boolean) => void }).setReadOnly(state);
     }
+
+    // Which elements count as text depends on the mode.
+    this.syncContentDirection();
   }
 
   /**
@@ -1000,6 +1051,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.inputManager.dropCache();
     this.inputManager.updateCurrentInput();
     this.toggleInputsEmptyMark();
+    this.syncContentDirection();
     this.call(BlockToolAPI.UPDATED);
     this.emit('didMutated', this);
   };
@@ -1039,6 +1091,22 @@ export class Block extends EventsDispatcher<BlockEvents> {
     // The tool just replaced or rewrote its element (this is the post-onPaste
     // hook), so marks with derived DOM have to be rebuilt over what it wrote.
     this.hydrateInlineTools();
+    this.syncContentDirection();
+  }
+
+  /**
+   * Stamp the content element's `dir` from the block's own text. Every path
+   * that changes a block's text (render, typing, paste, setData from undo,
+   * redo and remote updates) calls this, so it is the one place to change.
+   */
+  private syncContentDirection(): void {
+    const { contentElement, toolRenderedElement } = this.toolRenderer;
+
+    if (contentElement === null || toolRenderedElement === null) {
+      return;
+    }
+
+    syncContentDirection(contentElement, toolRenderedElement, this.holder, this.readOnly);
   }
 
   /**

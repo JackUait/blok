@@ -147,6 +147,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolNames.marker',
     // Same Spanish cognate reused as the toolbox Color section title.
     'toolbox.sectionColor',
+    // "General" is the Spanish adjective too, and the OS name for a General section.
+    'tools.image.shortcutsGeneral',
   ]),
   // "Link" is the standard loanword for a hyperlink in Estonian UIs; "OK" is
   // the conventional compact confirmation label.
@@ -162,6 +164,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   // "Media" is the standard Finnish loanword for media content.
   fi: new Set(['notifier.ok', 'toolbox.sectionMedia']),
   fil: new Set([
+    // "Spotlight" is the Filipino/Taglish loanword for the dim-around effect.
+    'tools.image.markupSpotlight',
     'tools.link.emailAddress',
     'tools.code.autoDetected',
     // "Superscript"/"Subscript" are the established Filipino office terms
@@ -222,6 +226,9 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.propertyTypeDate',
     'tools.file.previewRaw',
     'notifier.ok',
+    // French "page" is the native noun, spelled as in English.
+    'toolNames.page',
+    'tools.page.unresolved',
   ]),
   // "Oval" is the standard Croatian geometric noun, identical to English.
   hr: new Set(['tools.image.cropRatioOval']),
@@ -371,6 +378,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   // "Media" is the standard Albanian loanword for media content.
   sq: new Set(['searchTerms.program', 'tools.image.cropRatioOval', 'toolbox.sectionMedia']),
   sv: new Set([
+    // "Polygon" is the standard Swedish geometry noun.
+    'tools.image.markupPolygon',
     'toolNames.text',
     // "Media" is the standard Swedish term for media content.
     'toolbox.sectionMedia',
@@ -479,15 +488,18 @@ for (const [locale, keys] of Object.entries(AUDIO_COGNATE_RETENTIONS)) {
  * these locales. Each entry needs a matching ledger retention row.
  */
 const IMAGE_EDIT_COGNATE_RETENTIONS: Record<string, string[]> = {
+  cs: ['tools.image.filterRetro'],
   da: ['tools.image.filterNone', 'tools.image.filterSepia'],
   de: ['tools.image.filterNone', 'tools.image.filterWarm', 'tools.image.filterSepia'],
   es: ['tools.image.filterNone', 'tools.image.filterSepia'],
+  fi: ['tools.image.filterRetro'],
   fr: ['tools.image.adjustSaturation', 'tools.image.filterNone'],
   nl: ['tools.image.editModeFilters', 'tools.image.adjustContrast', 'tools.image.filterPresets', 'tools.image.filterWarm', 'tools.image.filterSepia'],
   no: ['tools.image.filterNone'],
-  pl: ['tools.image.filterSepia'],
+  pl: ['tools.image.filterSepia', 'tools.image.filterRetro'],
   pt: ['tools.image.filterNone'],
   ro: ['tools.image.adjustContrast', 'tools.image.filterSepia'],
+  sl: ['tools.image.filterRetro'],
   sv: ['tools.image.filterNone'],
 };
 
@@ -513,6 +525,19 @@ const IMAGE_MARKUP_COGNATE_RETENTIONS: Record<string, string[]> = {
 };
 
 for (const [locale, keys] of Object.entries(IMAGE_MARKUP_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
+// Filipino, Indonesian and Malay borrow "tab" as the UI word for a tab, so
+// "Tab" / "Tab {number}" stay as-is.
+const TABS_COGNATE_RETENTIONS: Record<string, string[]> = {
+  fil: ['toolNames.tab', 'tools.tabs.defaultTitle'],
+  id: ['toolNames.tab', 'tools.tabs.defaultTitle'],
+  ms: ['toolNames.tab', 'tools.tabs.defaultTitle'],
+};
+
+for (const [locale, keys] of Object.entries(TABS_COGNATE_RETENTIONS)) {
   const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
   for (const key of keys) set.add(key);
 }

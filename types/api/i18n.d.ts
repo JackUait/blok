@@ -67,10 +67,11 @@ export interface I18nUpdateOptions {
 
   /**
    * Explicit text direction, overriding the direction implied by the locale.
-   * Omit it to let the locale decide — which is what a language switcher
-   * wants, since the implied direction is already correct.
+   * Omit it to keep the current direction. Pass `null` to drop an explicit
+   * direction and let the locale decide again. A locale change also resets
+   * the direction to the one the new locale implies.
    */
-  direction?: 'ltr' | 'rtl';
+  direction?: 'ltr' | 'rtl' | null;
 }
 
 /**

@@ -105,9 +105,9 @@ describe('ListItem structural-depth drift proofing', () => {
     document.body.appendChild(element);
 
     const listItem = element.querySelector('[role="listitem"]');
-    const marginLeft = (listItem as HTMLElement | null)?.style.marginLeft ?? '';
+    const indent = (listItem as HTMLElement | null)?.style.marginInlineStart ?? '';
 
     // Structural depth 1 => one indent level, NOT 3 * INDENT.
-    expect(marginLeft).toBe(`${1 * INDENT_PER_LEVEL}px`);
+    expect(indent).toBe(`${1 * INDENT_PER_LEVEL}px`);
   });
 });

@@ -1648,6 +1648,45 @@ describe('CrossBlockSelection — mutation coverage', () => {
       expect(setToBlock.mock.calls[0][0]).toBe(p[3]);
       expect(setToBlock.mock.calls[0][1]).toBe('end');
     });
+
+    describe('in a right-to-left editor', () => {
+      beforeEach(() => {
+        wrapper.setAttribute('dir', 'rtl');
+      });
+
+      afterEach(() => {
+        wrapper.removeAttribute('dir');
+      });
+
+      it('moves the caret to the end of the range on ArrowLeft', () => {
+        selectForwardRange();
+
+        module.clear(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+
+        expect(setToBlock.mock.calls[0][0]).toBe(p[3]);
+        expect(setToBlock.mock.calls[0][1]).toBe('end');
+      });
+
+      it('moves the caret to the start of the range on ArrowRight', () => {
+        selectForwardRange();
+
+        module.clear(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+
+        expect(setToBlock.mock.calls[0][0]).toBe(p[1]);
+        expect(setToBlock.mock.calls[0][1]).toBe('start');
+      });
+
+      it('reads the key by the direction of the block holding the caret', () => {
+        selectForwardRange();
+        inputOf(p[1]).setAttribute('dir', 'ltr');
+        selectionAnchors.anchorNode = inputOf(p[1]);
+
+        module.clear(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+
+        expect(setToBlock.mock.calls[0][0]).toBe(p[3]);
+        expect(setToBlock.mock.calls[0][1]).toBe('end');
+      });
+    });
   });
 
   describe('mousedown on the editor but not on a block', () => {

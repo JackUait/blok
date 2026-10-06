@@ -1,5 +1,6 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { Block } from '../../../block';
+import { acceptsChildren, isChildToolAllowed } from '../../../utils/child-tools';
 
 type BlockManager = BlokModules['BlockManager'];
 
@@ -52,11 +53,40 @@ export const getPrecedingSibling = (BlockManager: BlockManager, block: Block): B
 export const getIndentTarget = (BlockManager: BlockManager, block: Block): Block | null => {
   const precedingSibling = getPrecedingSibling(BlockManager, block);
 
-  if (precedingSibling === null || precedingSibling.tool.ownsChildren) {
+  if (precedingSibling === null || precedingSibling.tool.ownsChildren || !acceptsChildren(precedingSibling)) {
     return null;
   }
 
   return precedingSibling;
+};
+
+/**
+ * Whether Shift+Tab may lift `block` one level, to its grandparent.
+ *
+ * A layout piece (`isLayout`: column, tab) is where the block sits on the page,
+ * not an indent level, so its direct children never leave it: lifting one out of
+ * a tab would make it a rogue child of the tabs block. The grandparent must also
+ * take the block, by `childTools`/`acceptsChildren`.
+ *
+ * Shared by single-block Shift+Tab (keyboardNavigation) and multi-select
+ * Shift+Tab (blockSelectionKeys).
+ * @param BlockManager - the BlockManager module
+ * @param block - the block being outdented
+ */
+export const canOutdent = (BlockManager: BlockManager, block: Block): boolean => {
+  if (block.parentId === null) {
+    return false;
+  }
+
+  const parent = BlockManager.getBlockById(block.parentId);
+
+  if (parent === undefined || parent.tool.isLayout) {
+    return false;
+  }
+
+  const grandparent = parent.parentId === null ? null : BlockManager.getBlockById(parent.parentId);
+
+  return isChildToolAllowed(grandparent, block.name);
 };
 
 /**

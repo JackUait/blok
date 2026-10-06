@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { ImageTool } from '../../../../src/tools/image';
+import { renderImagePreview } from '../../../../src/tools/image/preview';
 import { URL_PATTERN } from '../../../../src/tools/image/constants';
 import { ImageError } from '../../../../src/tools/image/errors';
 import {
@@ -8,6 +9,7 @@ import {
   IconAlignLeft,
   IconAlignRight,
   IconImage,
+  IconSliders,
 } from '../../../../src/components/icons';
 import type {
   ImageAlignment,
@@ -284,6 +286,7 @@ describe('ImageTool — static tool registration', () => {
       titleKey: 'image',
       searchTerms: ['image', 'img', 'picture', 'photo', 'media'],
       section: 'media',
+      preview: { render: renderImagePreview, descriptionKey: 'toolbox.preview.image' },
     });
   });
 
@@ -328,6 +331,14 @@ describe('ImageTool — renderSettings menu contents', () => {
       ['image-download', 'tools.image.downloadOriginal'],
       ['image-copy-url', 'tools.image.copyUrl'],
     ]);
+  });
+
+  it('shows the image editor icon on the entry that opens the editor', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+
+    tool.render();
+
+    expect(settingsItems(tool).find((i) => i.name === 'image-crop')?.icon).toBe(IconSliders);
   });
 
   it('closes the popover after every entry is activated', () => {
@@ -1552,6 +1563,7 @@ const darkroomResult = (
   crop,
   geometry: { rotation: 0, flipX: false, straighten: 0 },
   filter: 'none',
+  strength: 100,
   adjust: { brightness: 0, contrast: 0, saturation: 0 },
   markup: [],
   ...over,
@@ -1717,6 +1729,7 @@ describe('ImageTool — cropping', () => {
     cropModalOptions().onApply(darkroomResult({ x: 10, y: 10, w: 50, h: 50 }, {
       geometry: { rotation: 270, flipX: true, straighten: -2.5 },
       filter: 'noir',
+      strength: 40,
       adjust: { brightness: 15, contrast: 0, saturation: -30 },
     }));
 
@@ -1727,13 +1740,27 @@ describe('ImageTool — cropping', () => {
       flipX: true,
       straighten: -2.5,
       filter: 'noir',
+      filterStrength: 40,
       adjust: { brightness: 15, saturation: -30 },
     });
   });
 
+  it('opens the darkroom on the saved strength and the host filter list', () => {
+    const tool = new ImageTool(createOptions({ url: 'u', filter: 'brand', filterStrength: 25 }, {
+      filters: [{ name: 'brand', title: 'Brand', css: 'sepia(1)' }],
+    }));
+
+    tool.render();
+    openCrop(tool);
+    const opts = cropModalOptions();
+
+    expect(opts).toMatchObject({ initialFilter: 'brand', initialStrength: 25 });
+    expect(opts.filters?.order).toEqual(['none', 'brand']);
+  });
+
   it('Done drops every edit field that went back to its default', () => {
     const tool = new ImageTool(createOptions({
-      url: 'u', rotation: 180, flipX: true, straighten: 5, filter: 'warm', adjust: { brightness: 40 },
+      url: 'u', rotation: 180, flipX: true, straighten: 5, filter: 'warm', filterStrength: 30, adjust: { brightness: 40 },
     }));
 
     tool.render();

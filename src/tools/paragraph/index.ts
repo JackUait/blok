@@ -484,6 +484,7 @@ export class Paragraph implements BlockTool {
         ...INLINE_TEXT_SANITIZE,
         img: {
           src: true,
+          alt: true,
           style: true,
         },
         p: true,

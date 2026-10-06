@@ -289,7 +289,8 @@ class Tooltip {
      * Refresh on every show so simultaneous RTL and LTR editors cannot leak a
      * stale direction into one another.
      */
-    syncPortalDirection(this.nodes.wrapper, { source: element });
+    // A flip moves the anchor; the bubble goes rather than float at the old spot.
+    syncPortalDirection(this.nodes.wrapper, { source: element, onResync: () => this.hide() });
 
     const resolvedPlacement = this.resolvePlacement(element, showingOptions.placement ?? 'bottom');
 
@@ -333,7 +334,7 @@ class Tooltip {
          * which would reveal the bubble at coordinates measured against an
          * element that is no longer on screen.
          */
-        if (!this.canAnchorTo(element)) {
+        if (!this.canAnchorTo(element) || this.isBehindOpenPopover(element)) {
           this.hide();
 
           return;
@@ -559,6 +560,16 @@ class Tooltip {
    * @param {TooltipContent} content — any HTML Element of String that will be used as content
    * @param {TooltipOptions} options — Available options {@link TooltipOptions}
    */
+  /**
+   * Whether a popover is open that `element` is not part of, so its bubble would sit over the menu.
+   * @param element - the trigger
+   */
+  private isBehindOpenPopover(element: HTMLElement): boolean {
+    const openedPopover = document.querySelector('[data-blok-popover-opened="true"]');
+
+    return openedPopover !== null && !openedPopover.contains(element);
+  }
+
   public onHover(element: HTMLElement, content: TooltipContent, options: TooltipOptions = {}): void {
     if (this.destroyed) {
       return;
@@ -571,15 +582,7 @@ class Tooltip {
     this.hoverBindings.get(element)?.();
 
     const revealFor = (revealOptions: TooltipOptions): void => {
-      /**
-       * Don't show tooltip if any Popover is currently open,
-       * unless the element is inside the open popover (e.g., inline toolbar items)
-       * This prevents tooltips from appearing over open menus while still allowing
-       * tooltips on items within the popover itself
-       */
-      const openedPopover = document.querySelector('[data-blok-popover-opened="true"]');
-
-      if (openedPopover !== null && !openedPopover.contains(element)) {
+      if (this.isBehindOpenPopover(element)) {
         return;
       }
 

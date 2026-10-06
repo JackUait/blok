@@ -4,13 +4,11 @@ import { Dom as dom$ } from '../../dom';
 import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 import { normalizeInlineMarkupHtml } from '../../utils/inline-normalization';
 import { findOwn } from '../../utils/own-element';
+import { recordPasteHandling } from '../../utils/paste-continuation';
+import { preservePageReferenceAnchor } from '../../../shared/page-reference';
 
 import { SAFE_STRUCTURAL_TAGS } from './constants';
-import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
-import { preprocessNotionHtml } from './notion-preprocessor';
-import { preprocessAiChatHtml } from './ai-chat-preprocessor';
-import { recoverGfmToggles } from './gfm-toggle-recovery';
-import { preprocessDivLines } from './div-lines-preprocessor';
+import { preprocessPastedHtml } from './preprocess-pasted-html';
 import { NOTION_BLOCKS_V3_MIME, parseNotionBlocksV3 } from './notion-blocks-v3';
 import { NEXT_SPACE_MIMES, parseNextSpaceBlocks } from './next-space-blocks';
 import type { PasteHandler } from './handlers/base';
@@ -171,7 +169,7 @@ export class Paste extends Module {
       return '';
     }
 
-    const parsed = parseNotionBlocksV3(raw);
+    const parsed = parseNotionBlocksV3(raw, tool => this.Blok.Tools.blockTools.has(tool));
 
     if (parsed === null || parsed.length === 0) {
       return '';
@@ -311,13 +309,11 @@ export class Paste extends Module {
       structuralTagsConfig,
       toolsTags,
       inlineSanitizeConfig,
-      { br: {} },
+      { a: preservePageReferenceAnchor, br: {} },
       this.config.sanitizer as SanitizerConfig
     );
 
-    const preprocessed = preprocessDivLines(recoverGfmToggles(
-      preprocessNotionHtml(preprocessAiChatHtml(preprocessGoogleDocsHtml(rawHtmlData)))
-    ));
+    const preprocessed = preprocessPastedHtml(rawHtmlData);
     /**
      * Clipboard sources describe formatting run by run, so pasted markup
      * arrives fragmented no matter which app it came from. Collapse it here,
@@ -394,7 +390,7 @@ export class Paste extends Module {
    * Wrapper handler for paste event that matches listeners.on signature.
    */
   private handlePasteEventWrapper = (event: Event): void => {
-    void this.handlePasteEvent(event as ClipboardEvent);
+    recordPasteHandling(event, this.handlePasteEvent(event as ClipboardEvent));
   };
 
   /**

@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 // ---------------------------------------------------------------------------
 // Selectors
@@ -98,6 +99,7 @@ const createBlokWithData = async (
     },
     { holder: HOLDER_ID, blokBlocks: blocks, readOnlyMode: readOnly }
   );
+  await openFixtureToggles(page, { blocks });
 };
 
 const createBlokEmpty = async (page: Page): Promise<void> => {
@@ -215,20 +217,18 @@ test.describe('Toggle Heading', () => {
       await expect(page.locator('[data-blok-toggle-body-placeholder]')).toBeVisible();
     });
 
-    test('body placeholder is visible when toggle heading is open (default state) with no children', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Open No Children', 2)]);
+    test('body placeholder is hidden when a loaded toggle heading starts collapsed', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Collapsed No Children', 2)]);
 
-      // Toggle starts open by default — body placeholder should be visible
-      await expect(page.locator('[data-blok-toggle-body-placeholder]')).toBeVisible();
+      await expect(page.locator('[data-blok-toggle-body-placeholder]')).not.toBeVisible();
     });
 
-    test('toggle heading defaults to open in edit mode when isOpen is absent from saved data', async ({ page }) => {
-      // Saved data has isToggleable but no isOpen — should default to open.
-      await createBlokWithData(page, [makeToggleHeadingBlock('Default Open', 2)]);
+    test('toggle heading loads collapsed in edit mode when nothing is stored for it', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Default Collapsed', 2)]);
 
-      const header = page.getByRole('heading', { level: 2, name: 'Default Open' });
+      const header = page.getByRole('heading', { level: 2, name: 'Default Collapsed' });
 
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
     test('renders toggle H1 correctly', async ({ page }) => {
@@ -268,28 +268,28 @@ test.describe('Toggle Heading', () => {
       await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('tabindex', '0');
     });
 
-    test('arrow has aria-expanded="true" when heading is open (default)', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Open Aria', 2)]);
+    test('arrow has aria-expanded="true" when heading is open', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Open Aria', 2, true)]);
 
       await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-expanded', 'true');
     });
 
     test('arrow has aria-expanded="false" after collapsing', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Collapse Aria', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Collapse Aria', 2, true)]);
 
       await page.locator(TOGGLE_ARROW_SELECTOR).click();
 
       await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-expanded', 'false');
     });
 
-    test('arrow aria-label is "Collapse" when heading is open (default)', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Label Open', 2)]);
+    test('arrow aria-label is "Collapse" when heading is open', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Label Open', 2, true)]);
 
       await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-label', 'Collapse');
     });
 
     test('arrow aria-label is "Expand" when heading is collapsed', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Label Closed', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Label Closed', 2, true)]);
 
       await page.locator(TOGGLE_ARROW_SELECTOR).click();
 
@@ -303,7 +303,7 @@ test.describe('Toggle Heading', () => {
 
   test.describe('expand and collapse', () => {
     test('collapses when arrow is clicked — data-blok-toggle-open changes to "false"', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Collapsible H2', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Collapsible H2', 2, true)]);
 
       const header = page.getByRole('heading', { level: 2, name: 'Collapsible H2' });
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
@@ -316,7 +316,7 @@ test.describe('Toggle Heading', () => {
     });
 
     test('re-expands when arrow is clicked again', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Re-expandable H2', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Re-expandable H2', 2, true)]);
 
       const header = page.getByRole('heading', { level: 2, name: 'Re-expandable H2' });
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
@@ -362,6 +362,7 @@ test.describe('Toggle Heading', () => {
         },
         { holder: HOLDER_ID, toggleId, childId }
       );
+      await openFixtureToggles(page, { blocks: [{ id: toggleId, type: 'header', data: { level: 2, isToggleable: true, isOpen: true } }] });
 
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
       const child = page.locator(PARAGRAPH_BLOCK_SELECTOR);
@@ -411,8 +412,7 @@ test.describe('Toggle Heading', () => {
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
       const child = page.locator(PARAGRAPH_BLOCK_SELECTOR);
 
-      // Collapse then expand
-      await arrow.click();
+      // A loaded toggle heading starts collapsed, whatever isOpen says.
       await expect(child).not.toBeVisible();
 
       await arrow.click();
@@ -607,12 +607,11 @@ test.describe('Toggle Heading', () => {
       expect(data.isToggleable).toBe(true);
     });
 
-    test('saves isOpen reflecting the current collapsed state', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Collapsible Save', 2)]);
+    test('never saves isOpen, whatever the open state', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Collapsible Save', 2, true)]);
 
       await page.locator(TOGGLE_ARROW_SELECTOR).click();
 
-      // After collapsing (starts open), heading attribute should be "false"
       await expect(page.getByRole('heading', { level: 2, name: 'Collapsible Save' })).toHaveAttribute(
         'data-blok-toggle-open',
         'false'
@@ -621,7 +620,7 @@ test.describe('Toggle Heading', () => {
       const savedData = await page.evaluate(async () => window.blokInstance?.save());
       const data = getHeaderData(savedData);
 
-      expect(data.isOpen).toBe(false);
+      expect(data).not.toHaveProperty('isOpen');
     });
 
     test('does not save isToggleable for regular headers', async ({ page }) => {
@@ -656,13 +655,12 @@ test.describe('Toggle Heading', () => {
   // =========================================================================
 
   test.describe('read-only mode', () => {
-    test('toggle heading starts open in read-only mode when no isOpen in saved data', async ({ page }) => {
-      // isToggleable true but no isOpen — default is open
-      await createBlokWithData(page, [makeToggleHeadingBlock('Read-Only Open', 2)], true);
+    test('toggle heading loads collapsed in read-only mode when nothing is stored for it', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Read-Only Collapsed', 2)], true);
 
-      const header = page.getByRole('heading', { level: 2, name: 'Read-Only Open' });
+      const header = page.getByRole('heading', { level: 2, name: 'Read-Only Collapsed' });
 
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
     test('toggle heading arrow is present in read-only mode', async ({ page }) => {
@@ -671,15 +669,39 @@ test.describe('Toggle Heading', () => {
       await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toBeVisible();
     });
 
-    test('toggle heading starts with explicit isOpen:true preserved in read-only mode', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Read-Only Open', 2, true)], true);
+    test('toggle heading opens from personal state in read-only mode', async ({ page }) => {
+      // The document id is the storage scope of the personal state.
+      const documentId = 'toggle-heading-read-only-personal';
+      const storageKey = `blok:view:${documentId}:h:open`;
+      const mount = async (readOnly: boolean): Promise<void> => {
+        await resetBlok(page);
+        await page.evaluate(async ({ holder, id, readOnlyMode }) => {
+          const blok = new window.Blok({
+            holder,
+            readOnly: readOnlyMode,
+            data: { id, blocks: [{ id: 'h', type: 'header', data: { text: 'Read-Only Open', level: 2, isToggleable: true } }] },
+          });
 
+          window.blokInstance = blok;
+          await blok.isReady;
+        }, { holder: HOLDER_ID, id: documentId, readOnlyMode: readOnly });
+      };
       const header = page.getByRole('heading', { level: 2, name: 'Read-Only Open' });
+
+      await mount(false);
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
+      await page.locator(TOGGLE_ARROW_SELECTOR).click();
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), storageKey)).not.toBeNull();
+
+      await page.reload();
+      await page.waitForFunction(() => typeof window.Blok === 'function');
+      await mount(true);
 
       await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
     });
 
-    test('toggle heading starts with explicit isOpen:false preserved in read-only mode', async ({ page }) => {
+    test('toggle heading ignores isOpen:false in saved data and loads collapsed in read-only mode', async ({ page }) => {
       await createBlokWithData(page, [makeToggleHeadingBlock('Read-Only Explicit Closed', 2, false)], true);
 
       const header = page.getByRole('heading', { level: 2, name: 'Read-Only Explicit Closed' });

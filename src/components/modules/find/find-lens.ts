@@ -83,10 +83,14 @@ export class FindLens {
       this.boxes.pop()?.remove();
     }
 
+    // Page coordinates: the browser then scrolls the ring with the text. A
+    // viewport-fixed ring moved by a scroll listener trails it by a frame or more.
+    const { scrollX, scrollY } = window;
+
     rects.forEach((rect, index) => {
       const box = this.boxes[index] ?? this.makeBox(root);
 
-      box.style.transform = `translate(${rect.left}px, ${rect.top}px)`;
+      box.style.transform = `translate(${rect.left + scrollX}px, ${rect.top + scrollY}px)`;
       box.style.width = `${rect.width}px`;
       box.style.height = `${rect.height}px`;
 

@@ -1,4 +1,4 @@
-import type { BlockId } from '../../../types';
+import type { BlockId, OutputData } from '../../../types';
 import type { BlockMutationEvent, BlockMutationType } from '../../../types/events/block';
 import type { ModuleConfig } from '../../types-internal/module-config';
 import { Module } from '../__module';
@@ -6,6 +6,8 @@ import { modificationsObserverBatchTimeout } from '../constants';
 import { BlockChanged, FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged } from '../events';
 import { isFunction } from '../utils';
 import { registerUnsavedWork } from '../utils/persistence';
+
+import type { TabRole } from './tabSync';
 
 /**
  * We use map of block mutations to filter only unique events
@@ -60,6 +62,13 @@ export class ModificationsObserver extends Module {
   private leadingFlushScheduled = false;
 
   /**
+   * Whether the open window has had its leading-edge onChange. Only markDirty
+   * opens an unled window: the tab change it marks fires its BlockChanged
+   * later, and that event must still lead.
+   */
+  private windowLed = false;
+
+  /**
    * Set when a change enters the open window, cleared once a serialization for
    * it has STARTED. onSave cannot key off the event queue like onChange does,
    * because the leading-edge delivery drains that queue before the window
@@ -80,6 +89,29 @@ export class ModificationsObserver extends Module {
    * host never received was still outstanding.
    */
   private savesInFlight = 0;
+
+  /** Waiting for {@link savesInFlight} to reach zero. */
+  private savesSettledWaiters: Array<() => void> = [];
+
+  /**
+   * Set when this tab turned read-only as leader. Its unsaved edit is its own,
+   * so as a follower it keeps it until it saves again as leader or solo.
+   */
+  private keepsOwnEdit = false;
+
+  /**
+   * Set while this follower's takeover waits for the old leader: nobody saves
+   * meanwhile, so its own typing is its to save once it leads.
+   */
+  private keepsLocalEdits = false;
+
+  /** The role onRoleChanged last gave; null until it is called. */
+  private toldRole: TabRole | null = null;
+
+  /**
+   * The newest save started by {@link flushBeforeTeardown} that has not settled.
+   */
+  private teardownSafeSave: Promise<void> | null = null;
 
   /**
    * Array of onChange events used to batch them
@@ -156,6 +188,56 @@ export class ModificationsObserver extends Module {
   }
 
   /**
+   * Whether an edit waits for a save that has not started yet.
+   */
+  public get hasPendingSave(): boolean {
+    return this.pendingSave;
+  }
+
+  /**
+   * Whether a serialization for onSave is running.
+   */
+  public get isSaving(): boolean {
+    return this.savesInFlight > 0;
+  }
+
+  /**
+   * Resolves once no serialization runs. TabSync waits on it to report a
+   * save it dropped when it stopped leading.
+   */
+  public whenSavesSettled(): Promise<void> {
+    if (this.savesInFlight === 0) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      this.savesSettledWaiters.push(resolve);
+    });
+  }
+
+  private endSave(): void {
+    this.savesInFlight = Math.max(0, this.savesInFlight - 1);
+    if (this.savesInFlight > 0) {
+      return;
+    }
+    const waiters = this.savesSettledWaiters;
+
+    this.savesSettledWaiters = [];
+    waiters.forEach((resolve) => resolve());
+  }
+
+  /**
+   * Only `solo` and `leader` save: a tab demoted mid-serialization must not
+   * write with its successor's version. The role onRoleChanged last gave wins
+   * over TabSync's field, which may not be updated yet.
+   */
+  private get savesHere(): boolean {
+    const role = this.toldRole ?? this.tabRole;
+
+    return role === 'solo' || role === 'leader';
+  }
+
+  /**
    * Whether onChange/onSave may reach the host right now.
    *
    * Read at DELIVERY time, never at enqueue time: a batch window and a
@@ -165,6 +247,124 @@ export class ModificationsObserver extends Module {
    */
   private get isDeliverySuppressed(): boolean {
     return this.destroyed || this.disabled || this.Blok.ReadOnly.isEnabled;
+  }
+
+  /**
+   * An editor without a TabSync module (unit fixtures) is `solo`, which saves as before.
+   */
+  private get tabRole(): TabRole {
+    return this.Blok.TabSync?.role ?? 'solo';
+  }
+
+  /**
+   * Puts an undelivered save back, unless the leader saves for this tab.
+   */
+  private rearmSave(): void {
+    if (this.tabRole !== 'follower' || this.keepsOwnEdit) {
+      this.pendingSave = true;
+    }
+    this.syncUnloadGuard();
+  }
+
+  /**
+   * Called by TabSync when this tab's role changes. Acts on `role`, not on
+   * TabSync's own field, so it works whichever is updated first.
+   * @param role - the role this tab now has
+   * @param options - role change details
+   * @param options.keepPendingSave - true when a leader turned read-only: its
+   * edit cannot be saved now and nobody is known to have saved it
+   * @returns whether this call started a save
+   */
+  public onRoleChanged(role: TabRole, { keepPendingSave = false }: { keepPendingSave?: boolean } = {}): boolean {
+    this.toldRole = role;
+    this.keepsOwnEdit = role === 'follower' && keepPendingSave;
+    this.keepsLocalEdits = false;
+
+    if (role === 'follower') {
+      if (!this.keepsOwnEdit) {
+        this.discardPendingSave();
+      }
+
+      return false;
+    }
+
+    return (role === 'solo' || role === 'leader') && this.saveIfPending();
+  }
+
+  /**
+   * TabSync calls it while a takeover waits for the old leader's last save.
+   * Turned off with the wait cancelled, it drops what it kept: the leader saves it.
+   * @param keep - whether this follower keeps its own typing
+   */
+  public keepLocalEdits(keep: boolean): void {
+    const dropping = this.keepsLocalEdits && !keep;
+
+    this.keepsLocalEdits = keep;
+    if (dropping && !this.keepsOwnEdit) {
+      this.discardPendingSave();
+    }
+  }
+
+  /**
+   * Puts back an edit whose save never landed: TabSync dropped that save when
+   * this tab stopped leading. It stays unsaved until this tab saves again.
+   */
+  public keepUnsavedEdit(): void {
+    this.pendingSave = true;
+    if (this.savesHere) {
+      this.saveIfPending();
+    } else {
+      this.keepsOwnEdit = true;
+    }
+    this.syncUnloadGuard();
+  }
+
+  /**
+   * Saves now, edit or not. TabSync calls it when this tab takes over saving
+   * (or unloads as leader) while the document may hold edits nobody saved.
+   * Does nothing in a follower or a joining tab: they do not save, and a set
+   * `pendingSave` would arm their close prompt.
+   */
+  public flushNow(): void {
+    const role = this.tabRole;
+
+    if (role === 'follower' || role === 'joining') {
+      return;
+    }
+
+    this.pendingSave = true;
+    this.saveIfPending();
+    this.syncUnloadGuard();
+  }
+
+  /**
+   * Marks the document unsaved and saves it when the batch window closes.
+   * TabSync calls it for a change from another tab: a move emits no
+   * BlockChanged, so nothing else would save it. No onChange: the block
+   * events that do fire already carry it.
+   */
+  public markDirty(): void {
+    const role = this.tabRole;
+
+    if (role === 'follower' || role === 'joining') {
+      return;
+    }
+
+    this.pendingSave = true;
+    this.syncUnloadGuard();
+    // A disabled observer opens the window in enable().
+    if (!this.disabled && this.batchingTimeout === null) {
+      this.openBatchWindow({ led: false });
+    }
+  }
+
+  /**
+   * Forgets the unsaved edit without touching queued onChange events: the
+   * leader saves it, and onChange fires in every role.
+   */
+  private discardPendingSave(): void {
+    this.pendingSave = false;
+    this.syncUnloadGuard();
   }
 
   /**
@@ -213,6 +413,7 @@ export class ModificationsObserver extends Module {
    */
   public discardPendingChanges(): void {
     this.pendingSave = false;
+    this.keepsOwnEdit = false;
     this.batchingOnChangeQueue.clear();
 
     if (this.batchingTimeout !== null) {
@@ -261,29 +462,46 @@ export class ModificationsObserver extends Module {
       return;
     }
 
-    this.batchingOnChangeQueue.set(`block:${event.detail.target.id}:event:${event.type as BlockMutationType}`, event);
-    this.pendingSave = true;
-    this.syncUnloadGuard();
+    const key: UniqueBlockMutationKey = `block:${event.detail.target.id}:event:${event.type as BlockMutationType}`;
+    const queued = this.batchingOnChangeQueue.get(key);
+
+    // One event per key, so a later tab or peer change must not hide a
+    // queued local one from the host.
+    if (queued?.detail.origin !== 'local' || event.detail.origin === 'local') {
+      this.batchingOnChangeQueue.set(key, event);
+    }
+
+    // The leader saves for a follower, so a follower is dirty only with an
+    // edit of its own it saves once it leads.
+    if (this.tabRole !== 'follower' || (this.keepsLocalEdits && event.detail.origin === 'local')) {
+      this.pendingSave = true;
+      this.syncUnloadGuard();
+    }
 
     /**
-     * A window is already open — this change rides its trailing edge. Leaving
-     * the timer alone is what bounds latency at one window: hosts drive UI off
-     * onChange ("document is dirty" -> reveal the Save button), and a change
-     * still sitting in the queue is indistinguishable from no change at all.
+     * A window already led by a change — this one rides its trailing edge.
+     * Leaving the timer alone is what bounds latency at one window: hosts drive
+     * UI off onChange ("document is dirty" -> reveal the Save button), and a
+     * change still sitting in the queue is indistinguishable from no change at
+     * all. Never a second timer: that would save twice per window.
      */
-    if (this.batchingTimeout !== null) {
+    if (this.batchingTimeout === null) {
+      this.openBatchWindow();
+    } else if (this.windowLed) {
       return;
     }
 
+    this.windowLed = true;
     this.scheduleLeadingFlush();
-
-    this.openBatchWindow();
   }
 
   /**
    * Arms the trailing edge of a batch window.
+   * @param options - window options
+   * @param options.led - false lets the next change lead the window
    */
-  private openBatchWindow(): void {
+  private openBatchWindow({ led = true }: { led?: boolean } = {}): void {
+    this.windowLed = led;
     this.batchingTimeout = setTimeout(() => {
       this.batchingTimeout = null;
       this.flushTrailing();
@@ -326,19 +544,34 @@ export class ModificationsObserver extends Module {
   }
 
   /**
-   * Serializes once for the batch that just closed, if the host can still
-   * receive it.
+   * Serializes once for the batch that just closed, if this tab saves and the
+   * host can still receive it.
    */
   private flushPendingSave(): void {
-    if (!this.pendingSave || this.isDeliverySuppressed) {
+    const role = this.tabRole;
+
+    // A joining tab keeps its edit: onRoleChanged saves or drops it.
+    if (role === 'joining' || role === 'follower') {
       return;
+    }
+
+    this.saveIfPending();
+  }
+
+  /**
+   * Serializes once if an edit is waiting and the host can still receive it.
+   * @returns whether a serialization started
+   */
+  private saveIfPending(): boolean {
+    if (!this.pendingSave || this.isDeliverySuppressed) {
+      return false;
     }
 
     if (!isFunction(this.config.onSave)) {
       this.pendingSave = false;
       this.syncUnloadGuard();
 
-      return;
+      return false;
     }
 
     /**
@@ -348,7 +581,9 @@ export class ModificationsObserver extends Module {
      * puts the flag back whenever the data never reached the host.
      */
     this.pendingSave = false;
-    this.emitOnSave();
+    void this.emitOnSave();
+
+    return true;
   }
 
   /**
@@ -359,8 +594,9 @@ export class ModificationsObserver extends Module {
     /**
      * Read-only is honored at DELIVERY time, not just at enqueue: a change can
      * be queued while editable and read-only toggled on before this batch
-     * fires. Consumers can therefore rely on onChange/onSave never firing in
-     * read-only mode without guarding on `api.readOnly.isEnabled` themselves.
+     * fires. Consumers can therefore rely on onChange never firing in
+     * read-only mode. onSave has one exception: the save started by
+     * `flushBeforeReadOnly` for an edit made while editable.
      *
      * `destroyed` and `disabled` are checked here too because a queued
      * microtask, unlike the batching timeout, cannot be cancelled.
@@ -400,38 +636,15 @@ export class ModificationsObserver extends Module {
    * frozen, paused or destroyed while the (async) serialization was in flight,
    * and puts the document back to dirty when it does.
    */
-  private emitOnSave(): void {
+  private emitOnSave(outlivesTeardown = false, outlivesReadOnly = false): Promise<void> {
     this.savesInFlight += 1;
 
-    void this.Blok.Saver.save()
+    const startedHere = this.savesHere;
+    const serialization = outlivesTeardown ? this.Blok.Saver.saveBeforeTeardown() : this.Blok.Saver.save();
+
+    return serialization
       .then((data) => {
-        this.savesInFlight = Math.max(0, this.savesInFlight - 1);
-
-        /**
-         * Re-checked after the await: the host can freeze or tear down the
-         * document while the serialization runs. `data` is undefined when the
-         * Saver swallowed a failure of its own.
-         *
-         * Either way the host never saw this batch, so the document goes back
-         * to dirty and the next window retries it.
-         */
-        if (this.isDeliverySuppressed || data === undefined) {
-          this.pendingSave = true;
-          this.syncUnloadGuard();
-
-          return;
-        }
-
-        const { onSave } = this.config;
-
-        if (isFunction(onSave)) {
-          onSave(data, this.Blok.API.methods);
-        }
-
-        // After onSave, never before: the queue's pump IS an onSave, so syncing
-        // first would drop the guard for an instant and re-attach it — and a
-        // browser that unloads in that gap asks nothing.
-        this.syncUnloadGuard();
+        this.deliverSave(data, outlivesTeardown, outlivesReadOnly, startedHere);
       })
       .catch(() => {
         /**
@@ -439,10 +652,153 @@ export class ModificationsObserver extends Module {
          * own channel, so swallow here to avoid an unhandled rejection. The
          * batch is not swallowed with it.
          */
-        this.savesInFlight = Math.max(0, this.savesInFlight - 1);
-        this.pendingSave = true;
-        this.syncUnloadGuard();
+        this.markUndelivered();
       });
+  }
+
+  /**
+   * Hands a finished serialization to onSave, or puts the document back to
+   * dirty when it cannot. Ends one of the {@link savesInFlight}.
+   * @param data - the serialization, undefined when the Saver failed
+   * @param outlivesTeardown - see {@link emitOnSave}
+   * @param outlivesReadOnly - see {@link flushBeforeTeardown}
+   * @param startedHere - whether this tab saved when the serialization started
+   */
+  private deliverSave(data: OutputData | undefined, outlivesTeardown: boolean, outlivesReadOnly: boolean, startedHere: boolean): void {
+    this.endSave();
+
+    /**
+     * Re-checked after the await: the host can freeze or tear down the
+     * document while the serialization runs. `data` is undefined when the
+     * Saver swallowed a failure of its own.
+     *
+     * Either way the host never saw this batch, so the document goes back
+     * to dirty and the next window retries it.
+     */
+    // This save must outlive `destroyed` and the render's `disable()`, but
+    // read-only still blocks it — unless the document was read before
+    // read-only engaged. That save also lands in a leader that stepped down
+    // on read-only: TabSync holds the lock until the write settles.
+    const suppressed = outlivesTeardown
+      ? !outlivesReadOnly && this.Blok.ReadOnly.isEnabled
+      : this.isDeliverySuppressed;
+
+    const mayDeliver = this.savesHere || (outlivesReadOnly && startedHere);
+
+    if (suppressed || data === undefined || !mayDeliver) {
+      this.rearmSave();
+
+      return;
+    }
+
+    const { onSave } = this.config;
+
+    if (isFunction(onSave)) {
+      onSave(data, this.Blok.API.methods);
+    }
+
+    // After onSave, never before: the queue's pump IS an onSave, so syncing
+    // first would drop the guard for an instant and re-attach it — and a
+    // browser that unloads in that gap asks nothing.
+    this.syncUnloadGuard();
+  }
+
+  /**
+   * A started save never reached the host: the document is dirty again.
+   */
+  private markUndelivered(): void {
+    this.endSave();
+    this.rearmSave();
+  }
+
+  /**
+   * Whether an edit is waiting for onSave, this tab saves, and the host can
+   * still receive it. A follower never starts a teardown save: the leader saves.
+   */
+  private get hasFlushableSave(): boolean {
+    return this.pendingSave && this.savesHere && !this.isDeliverySuppressed && isFunction(this.config.onSave);
+  }
+
+  /**
+   * Starts the save for an edit still inside its batch window. Teardown calls
+   * this before marking any module destroyed, because the Saver must read the
+   * blocks while they are still mounted.
+   * @param outlivesReadOnly - deliver even if read-only engages before it lands
+   * @returns the delivery still to land, or null when there is none
+   */
+  public flushBeforeTeardown(outlivesReadOnly = false): Promise<void> | null {
+    // An early save from flushPendingBeforeRender may still be running: hand it
+    // back so teardown keeps the persistence queue until it lands.
+    if (!this.hasFlushableSave) {
+      return this.teardownSafeSave;
+    }
+
+    this.pendingSave = false;
+
+    const delivery = this.emitOnSave(true, outlivesReadOnly).finally(() => {
+      if (this.teardownSafeSave === delivery) {
+        this.teardownSafeSave = null;
+      }
+    });
+
+    this.teardownSafeSave = delivery;
+
+    return delivery;
+  }
+
+  /**
+   * The flush `destroy()` runs. When every block saves synchronously, onSave
+   * gets the data before this returns: a host's own teardown may drop its
+   * listeners right after it, as Angular does for `[(ngModel)]`. Otherwise
+   * it falls back to {@link flushBeforeTeardown}. Either way the edit is
+   * delivered once.
+   * @returns the delivery still to land, or null when there is none
+   */
+  public flushOnDestroy(): Promise<void> | null {
+    const data = this.hasFlushableSave ? this.Blok.Saver.saveSyncBeforeTeardown() : undefined;
+
+    if (data === undefined) {
+      return this.flushBeforeTeardown();
+    }
+
+    this.pendingSave = false;
+    this.savesInFlight += 1;
+
+    // A throwing onSave must not abort the teardown that called this.
+    try {
+      this.deliverSave(data, true, false, true);
+    } catch {
+      this.markUndelivered();
+    }
+
+    return this.teardownSafeSave;
+  }
+
+  /**
+   * Closes the open batch window early, before a same-document re-render (i18n
+   * repaint, full read-only flip). Call it BEFORE `disable()`: a disabled
+   * observer is skipped by the teardown flush, so a destroy landing mid-render
+   * would drop the edit. Clears `pendingSave`, so the window `enable()` opens
+   * after the render does not deliver it again — which is also why the queued
+   * onChange events go now: no later window would carry them.
+   */
+  public flushPendingBeforeRender(): void {
+    this.deliverQueuedChanges();
+    void this.flushBeforeTeardown();
+  }
+
+  /**
+   * Starts the save for an edit made while editable, right before read-only
+   * engages. Read-only suppresses every later delivery, so without this a
+   * destroy inside the window drops the edit. Call it while
+   * `ReadOnly.isEnabled` is still false. With no render pending the Saver reads
+   * the blocks inside this call, so nothing made in read-only reaches onSave;
+   * the onSave call itself lands after read-only is on.
+   *
+   * Only the save: queued onChange events are still dropped, as documented.
+   */
+  public flushBeforeReadOnly(): void {
+    void this.flushBeforeTeardown(true);
   }
 
   /**
@@ -463,8 +819,15 @@ export class ModificationsObserver extends Module {
      * window is real, and tearing the editor down must not be the thing that
      * loses it. Only the save half — the queued onChange events are dropped, as
      * they always were.
+     *
+     * A joining tab saves too: TabSync is destroyed after this module, so its
+     * switch to solo comes too late.
      */
-    this.flushPendingSave();
+    if (this.tabRole === 'joining') {
+      this.saveIfPending();
+    } else {
+      this.flushPendingSave();
+    }
 
     this.disabled = true;
     this.destroyed = true;

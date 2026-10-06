@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { isBuildStale, parseDevArgs, resolveBackendMode, vitePort } from '../../../scripts/dev.mjs';
+import { isBuildStale, parseDevArgs, playgroundSeedFor, resolveBackendMode, vitePort } from '../../../scripts/dev.mjs';
 
 describe('parseDevArgs', () => {
   it('takes --no-server off the list Vite receives', () => {
@@ -86,5 +86,26 @@ describe('isBuildStale', () => {
 
   it('reuses the binary when the newest source is exactly as old', () => {
     expect(isBuildStale({ binaryMtimeMs: 1000, newestSourceMtimeMs: 1000 })).toBe(false);
+  });
+});
+
+describe('playgroundSeedFor', () => {
+  const showcase = { blocks: [{ id: 's', type: 'paragraph', data: { text: 'showcase' } }] };
+  const pages = {
+    'getting-started': { blocks: [{ id: 'g', type: 'paragraph', data: { text: 'guide' } }] },
+  };
+  const seedFor = playgroundSeedFor({ showcase, pages });
+
+  it('seeds the root document with the showcase', () => {
+    expect(seedFor('playground')).toEqual(showcase);
+  });
+
+  // Each page is its own room; a page the user just made must open empty.
+  it('seeds a new page empty', () => {
+    expect(seedFor('playground--page--AChzQBnLop')).toEqual({ blocks: [] });
+  });
+
+  it('seeds a demo page with its own blocks', () => {
+    expect(seedFor('playground--page--getting-started')).toEqual({ blocks: pages['getting-started'].blocks });
   });
 });

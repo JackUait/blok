@@ -4,6 +4,7 @@ import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 
@@ -51,6 +52,7 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
     },
     { holder: HOLDER_ID, initialData: data ?? null }
   );
+  await openFixtureToggles(page, data);
 };
 
 const createHeaderData = (text: string, level: number, isToggleable?: boolean): OutputData => ({
@@ -64,6 +66,11 @@ const createHeaderData = (text: string, level: number, isToggleable?: boolean): 
       },
     },
   ],
+});
+
+/** Mark the fixture's heading open, so `createBlok` opens it as this browser would have. */
+const openHeader = (data: OutputData): OutputData => ({
+  blocks: data.blocks.map(block => ({ ...block, data: { ...block.data, isOpen: true } })),
 });
 
 test.describe('Toggle Headings', () => {
@@ -106,12 +113,12 @@ test.describe('Toggle Headings', () => {
       await expect(arrow).toHaveCount(0);
     });
 
-    test('toggle heading starts open by default in editing mode', async ({ page }) => {
-      await createBlok(page, createHeaderData('Open H2', 2, true));
+    test('toggle heading starts collapsed in editing mode when nothing is stored for it', async ({ page }) => {
+      await createBlok(page, createHeaderData('Collapsed H2', 2, true));
 
-      const header = page.getByRole('heading', { level: 2, name: 'Open H2' });
+      const header = page.getByRole('heading', { level: 2, name: 'Collapsed H2' });
 
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
     test('arrow is vertically centered in toggle heading', async ({ page }) => {
@@ -182,8 +189,8 @@ test.describe('Toggle Headings', () => {
   });
 
   test.describe('expand/collapse', () => {
-    test('collapses when arrow is clicked (starts open)', async ({ page }) => {
-      await createBlok(page, createHeaderData('Collapsible H2', 2, true));
+    test('collapses when arrow is clicked', async ({ page }) => {
+      await createBlok(page, openHeader(createHeaderData('Collapsible H2', 2, true)));
 
       const header = page.getByRole('heading', { level: 2, name: 'Collapsible H2' });
       const arrow = page.locator('[data-blok-toggle-arrow]');
@@ -196,12 +203,12 @@ test.describe('Toggle Headings', () => {
     });
 
     test('re-expands when arrow is clicked again', async ({ page }) => {
-      await createBlok(page, createHeaderData('Re-expandable H2', 2, true));
+      await createBlok(page, openHeader(createHeaderData('Re-expandable H2', 2, true)));
 
       const header = page.getByRole('heading', { level: 2, name: 'Re-expandable H2' });
       const arrow = page.locator('[data-blok-toggle-arrow]');
 
-      // Collapse (starts open)
+      // Collapse
       await arrow.click();
       await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
 

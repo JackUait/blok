@@ -30,7 +30,7 @@ export const DEFAULT_EMOJI = '💡';
 // CSS — Tailwind classes
 // Vertical padding is the card's own inset via --blok-callout-padding-block
 // (flat 5px default; see shared/tool-classes/callout.ts for why it must not
-// ride the block-rhythm tokens). pl-8/pr-4 are the horizontal card inset,
+// ride the block-rhythm tokens). ps-8/pe-4 are the horizontal card inset,
 // not the generic block inset — they stay hardcoded.
 /**
  * Static presentational classes live in `src/shared/tool-classes/callout.ts` so

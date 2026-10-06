@@ -1659,7 +1659,7 @@ test.describe('api.blocks', () => {
       await expect(firstHeaderItem).toBeVisible();
     });
 
-    test('should filter out toolbox item with same data as current block (isSameBlockData)', async ({ page }) => {
+    test('should mark the current toolbox item selected and keep the alternative available', async ({ page }) => {
       const HEADER_TOOL_SOURCE = `class HeaderTool {
         constructor(options) {
           this.data = options.data;
@@ -1733,10 +1733,11 @@ test.describe('api.blocks', () => {
 
       const convertToMenu = await openConvertToMenu(page);
 
-      // Header tool should be available, but H1 option should be filtered out (same data)
-      // H2 should still be available
-      // Note: item name is 'header' (tool name) since toolbox entries have no 'name' property
-      await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
+      const headerItems = convertToMenu.locator('[data-blok-item-name="header"]');
+
+      await expect(headerItems).toHaveCount(2);
+      await expect(convertToMenu.getByRole('menuitemcheckbox', { name: 'Header' })).toHaveAttribute('aria-checked', 'true');
+      await expect(convertToMenu.getByRole('menuitem', { name: 'Header' })).toBeVisible();
     });
 
     test('should filter out tools without toolbox from conversion options', async ({ page }) => {

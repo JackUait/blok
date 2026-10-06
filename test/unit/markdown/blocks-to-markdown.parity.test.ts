@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 
 import { blocksToMarkdown as domBlocksToMarkdown } from '../../../src/markdown/blocks-to-markdown';
 import { blocksToMarkdown as viewBlocksToMarkdown } from '../../../src/view/blocks-to-markdown';
@@ -154,6 +154,16 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
     ]),
   },
   {
+    name: 'tabs holding blocks',
+    document: doc([
+      { id: 'tabs', type: 'tabs', data: {} },
+      { id: 'tab1', type: 'tab', data: { title: 'One *star*', icon: '📋' }, parent: 'tabs' },
+      { id: 'p1', type: 'paragraph', data: { text: 'First <b>tab</b>' }, parent: 'tab1' },
+      { id: 'tab2', type: 'tab', data: { title: 'Two & <b>three</b>' }, parent: 'tabs' },
+      { id: 'p2', type: 'list', data: { text: 'item', style: 'unordered' }, parent: 'tab2' },
+    ]),
+  },
+  {
     name: 'a table with block-backed and legacy cells',
     document: doc([
       {
@@ -181,6 +191,46 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
     ]),
   },
   {
+    name: 'script-capable URLs',
+    document: doc([
+      { type: 'paragraph', data: { text: '<a href="javascript:alert(1)">js</a> <a href=" java\tscript:x">ws</a> <img src="javascript:x" alt="i">' } },
+      { type: 'image', data: { url: 'javascript:alert(1)', alt: 'Alt' } },
+      { type: 'bookmark', data: { url: 'vbscript:x', title: 'X' } },
+    ]),
+  },
+  {
+    name: 'URLs that would break out of a destination',
+    document: doc([
+      { type: 'paragraph', data: { text: '<a href="https://ok.example/x) [evil](javascript:alert(1)">b</a> <a href="https://x/a b<i>">s</a> <a href="https://x/a\\">t</a> <img src="https://i/(x.png" alt="i">' } },
+      { type: 'image', data: { url: 'https://i/x.png) [e](https://e', alt: 'A' } },
+      { type: 'bookmark', data: { url: 'https://x.com/a b', title: 'X' } },
+      { type: 'paragraph', data: { text: '<a href="https://en.wikipedia.org/wiki/Foo_(bar)">w</a>' } },
+    ]),
+  },
+  {
+    name: 'URLs holding a character reference',
+    document: doc([
+      { type: 'paragraph', data: { text: '<a href="&amp;#106;avascript:x">a</a> <img src="\\&amp;Tab;x" alt="i"> <a href="https://x/?a=1&amp;b=2">q</a>' } },
+    ]),
+  },
+  {
+    name: 'a non-owning page reference',
+    document: doc([{ id: 'r1', type: 'page-link', data: { pageId: 'p1' } }]),
+  },
+  /**
+   * Saved inline refs are sanitized to the label `Page`, which the DOM backend
+   * reads as text and the view backend writes as its fallback. Page titles and
+   * links come only from `pageInfo`/`pageHref`, which only the view takes: the
+   * editor's clipboard has no host metadata to pass.
+   */
+  {
+    name: 'an owning page block and an inline page reference',
+    document: doc([
+      { id: 'pg', type: 'page', data: { pageId: 'p1' } },
+      { type: 'paragraph', data: { text: 'See <a data-blok-page-id="p2">Page</a>.' } },
+    ]),
+  },
+  {
     name: 'a spacer between paragraphs',
     document: doc([
       { type: 'paragraph', data: { text: 'A' } },
@@ -191,6 +241,14 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
 ];
 
 describe('blocksToMarkdown backend parity', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it.each(FIXTURES)('DOM and parse5 agree on $name', ({ document: fixture }) => {
     expect(viewBlocksToMarkdown(fixture)).toBe(domBlocksToMarkdown(toSerializable(fixture)));
   });
@@ -198,7 +256,7 @@ describe('blocksToMarkdown backend parity', () => {
   it('covers every tool that has a dedicated serialization case', () => {
     const covered = new Set(FIXTURES.flatMap(({ document: fixture }) => fixture.blocks.map((block) => block.type)));
 
-    for (const tool of ['header', 'quote', 'divider', 'list', 'code', 'table', 'callout', 'toggle', 'column_list', 'column', 'spacer', 'image', 'video', 'file', 'bookmark', 'embed']) {
+    for (const tool of ['header', 'quote', 'divider', 'list', 'code', 'table', 'callout', 'toggle', 'column_list', 'column', 'tabs', 'tab', 'spacer', 'image', 'video', 'file', 'bookmark', 'embed', 'page-link']) {
       expect(covered, `no parity fixture exercises the \`${tool}\` tool`).toContain(tool);
     }
   });

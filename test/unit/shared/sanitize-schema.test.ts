@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { composeBaseSanitizeConfig, defineBlokSchema } from '../../../src/shared/sanitize-schema';
 
 import { Core } from '../../../src/components/core';
+import { clean } from '../../../src/components/utils/sanitizer';
 import { BoldInlineTool } from '../../../src/components/inline-tools/inline-tool-bold';
 import { ItalicInlineTool } from '../../../src/components/inline-tools/inline-tool-italic';
 import { LinkInlineTool } from '../../../src/components/inline-tools/inline-tool-link';
@@ -171,14 +172,14 @@ describe('defineBlokSchema', () => {
       },
     });
 
+    expect(clean('<a data-blok-page-id="p1" href="/old">Old</a>', viewSchema.baseSanitize))
+      .toBe('<a data-blok-page-id="p1">Page</a>');
+    expect(clean('<a href="#section" target="_self" rel="noopener">Jump</a>', viewSchema.baseSanitize))
+      .toBe('<a href="#section" target="_self" rel="noopener">Jump</a>');
     expect(viewSchema.baseSanitize).toEqual({
       strong: {},
       b: {},
-      a: {
-        href: true,
-        target: true,
-        rel: true,
-      },
+      a: expect.any(Function),
     });
   });
 

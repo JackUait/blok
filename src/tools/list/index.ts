@@ -59,6 +59,8 @@ export class ListItem implements BlockTool {
   private markerManager: OrderedMarkerManager | null;
   private placeholderCleanup: (() => void) | null = null;
   private boundHandleKeyDown: ((event: KeyboardEvent) => void) | null = null;
+  /** The checkbox whose change listener is attached. A read-only render attaches none. */
+  private wiredCheckbox: HTMLInputElement | null = null;
 
   /**
    * Whether this item was structurally nested (had a list parent) at the last
@@ -174,6 +176,7 @@ export class ListItem implements BlockTool {
       },
       keydownHandler: this.readOnly ? undefined : this.boundHandleKeyDown,
     });
+    this.wiredCheckbox = this.readOnly ? null : this.findCheckbox();
 
     return this._element;
   }
@@ -193,10 +196,20 @@ export class ListItem implements BlockTool {
     }
 
     // Toggle checkbox disabled state for checklists
-    const checkbox = this._element.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    const checkbox = this.findCheckbox();
 
     if (checkbox) {
       checkbox.disabled = state;
+    }
+
+    // Collaboration renders read-only until the first sync: without this a
+    // click ticks the box but never reaches the saved data.
+    if (!state && checkbox !== null && checkbox !== this.wiredCheckbox) {
+      checkbox.addEventListener('change', () => {
+        applyChecklistCheckedState(checkbox, this.getContentElement(), checkbox.checked);
+        this._data.checked = checkbox.checked;
+      });
+      this.wiredCheckbox = checkbox;
     }
 
     // Toggle keydown handler and placeholder
@@ -436,6 +449,10 @@ export class ListItem implements BlockTool {
     }
   }
 
+  private findCheckbox(): HTMLInputElement | null {
+    return this._element?.querySelector<HTMLInputElement>('input[type="checkbox"]') ?? null;
+  }
+
   private updateCheckboxState(checked: boolean): void {
     const checkbox = this._element?.querySelector('input[type="checkbox"]');
 
@@ -673,6 +690,7 @@ export class ListItem implements BlockTool {
 
     if (newElement) {
       this._element = newElement;
+      this.wiredCheckbox = this.readOnly ? null : this.findCheckbox();
       // After rerender, update markers for ordered lists to ensure correct numeration
       this.updateMarkersAfterPositionChange();
     }
@@ -757,7 +775,7 @@ export class ListItem implements BlockTool {
     return true;
   }
 
-  public getContentOffset(hoveredElement: Element): { left: number } | undefined {
+  public getContentOffset(hoveredElement: Element): { left: number; right?: number } | undefined {
     return getContentOffset(hoveredElement);
   }
 

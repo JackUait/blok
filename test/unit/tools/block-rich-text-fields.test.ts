@@ -4,9 +4,7 @@ import { BlockToolAdapter } from '../../../src/components/tools/block';
 import { InlineToolAdapter } from '../../../src/components/tools/inline';
 import { ToolsCollection } from '../../../src/components/tools/collection';
 import { CURRENT_RICH_TEXT_FIELDS, RICH_TEXT_FIELDS } from '../../../src/shared/rich-text/fields';
-import {
-  Callout, Code, DatabaseRow, Header, List, Paragraph, Quote, Table, Toggle,
-} from '../../../src/tools';
+import * as builtInExports from '../../../src/tools';
 
 type BlockToolAdapterOptions = ConstructorParameters<typeof BlockToolAdapter>[0];
 
@@ -103,10 +101,17 @@ describe('built-in tools and the tool-less field tables', () => {
   });
 
   // The view and @bloklabs/core/migrate have no tool classes and read the tables instead.
-  const builtIns: Array<[string, unknown]> = [
-    ['paragraph', Paragraph], ['header', Header], ['list', List], ['toggle', Toggle], ['quote', Quote],
-    ['table', Table], ['callout', Callout], ['code', Code], ['database-row', DatabaseRow],
-  ];
+  const registeredName: Record<string, string> = {
+    Paragraph: 'paragraph', Header: 'header', List: 'list', Toggle: 'toggle', Quote: 'quote',
+  };
+  const builtIns = Object.entries(builtInExports)
+    .filter(([, value]) => typeof value === 'function' && typeof Reflect.get(value, 'prototype')?.render === 'function')
+    .filter(([, value]) => Reflect.get(value, 'isInline') !== true)
+    .map(([exportName, value]): [string, unknown] => [registeredName[exportName] ?? exportName, value]);
+
+  it('finds every built-in block tool', () => {
+    expect(builtIns.length).toBeGreaterThanOrEqual(25);
+  });
 
   it.each(builtIns)('%s declares the fields migrate converts, and the view reads them', (name, constructable) => {
     const fields = createAdapter({ name, constructable: constructable as BlockToolConstructable }).richTextFields;

@@ -603,37 +603,20 @@ describe('FindBar', () => {
       type(findInput(), 'zzz');
     });
 
-    it('tints the field and shakes it once', () => {
+    it('tints the field, without a shake', () => {
       bar.setResults({ current: -1, total: 0 });
 
       expect(field().hasAttribute('data-blok-find-empty')).toBe(true);
-      expect(field().hasAttribute('data-blok-find-shake')).toBe(true);
+      expect(field().hasAttribute('data-blok-find-shake')).toBe(false);
       expect(findInput().getAttribute('aria-invalid')).toBe('true');
     });
 
-    it('does not shake again while it stays at zero', () => {
+    it('clears the tint once there are results again', () => {
       bar.setResults({ current: -1, total: 0 });
-      field().dispatchEvent(new Event('animationend'));
-
-      expect(field().hasAttribute('data-blok-find-shake')).toBe(false);
-
-      bar.setResults({ current: -1, total: 0 });
-
-      expect(field().hasAttribute('data-blok-find-shake')).toBe(false);
-    });
-
-    it('shakes again after leaving zero and coming back', () => {
-      bar.setResults({ current: -1, total: 0 });
-      field().dispatchEvent(new Event('animationend'));
-
       bar.setResults({ current: 0, total: 1 });
 
       expect(field().hasAttribute('data-blok-find-empty')).toBe(false);
       expect(findInput().hasAttribute('aria-invalid')).toBe(false);
-
-      bar.setResults({ current: -1, total: 0 });
-
-      expect(field().hasAttribute('data-blok-find-shake')).toBe(true);
     });
 
     it('is not a no-results state when the query is empty', () => {

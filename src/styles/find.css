@@ -199,10 +199,6 @@
   background: var(--blok-find-empty-bg);
 }
 
-[data-blok-find-field][data-blok-find-shake] {
-  animation: blok-find-shake 360ms var(--blok-ease-bounce);
-}
-
 /* The hop chip's tint, so the landed word keeps the same highlight. */
 [data-blok-find-field] > input::selection {
   background: var(--blok-selection-inline);
@@ -552,14 +548,6 @@
   animation: blok-find-arrive var(--blok-duration-popover-enter) var(--blok-ease-popover);
 }
 
-@keyframes blok-find-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-4px); }
-  40% { transform: translateX(3px); }
-  60% { transform: translateX(-2px); }
-  80% { transform: translateX(1px); }
-}
-
 @keyframes blok-find-count {
   from { opacity: 0.4; transform: translateY(2px); }
   to { opacity: 1; transform: none; }
@@ -595,7 +583,6 @@
     transition: none;
   }
 
-  [data-blok-find-field][data-blok-find-shake],
   [data-blok-find-counter][data-blok-find-bump],
   [data-blok-find-roll],
   [data-blok-find-lens-box][data-blok-find-lens-arrive] {

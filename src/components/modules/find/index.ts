@@ -44,6 +44,27 @@ const placeCaretAt = (x: number, y: number): void => {
   window.getSelection()?.collapse(point.node, point.offset);
 };
 
+/**
+ * Running animations that move the text of `range`: those on its ancestors.
+ * @param range - a match
+ */
+const animationsAround = (range: Range): Animation[] => {
+  const node = range.startContainer;
+
+  if (typeof document.getAnimations !== 'function') {
+    return [];
+  }
+
+  return document.getAnimations().filter((animation) => {
+    const target = animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
+
+    // A looping animation never finishes; waiting on it would keep the lens hidden.
+    const ends = animation.effect?.getComputedTiming().endTime !== Infinity;
+
+    return animation.playState === 'running' && ends && target !== null && target.contains(node);
+  });
+};
+
 const QUERY_DEBOUNCE_MS = 40;
 const DOM_DEBOUNCE_MS = 120;
 /** Space kept between a revealed match and the viewport edge (or the find bar). */
@@ -748,7 +769,21 @@ export class Find extends Module {
     if (options.reveal) {
       this.scrollIntoView(this.onScreen(current));
     }
-    this.placeLens(this.onScreen(current), options.pulse === true);
+    const moving = animationsAround(this.onScreen(current));
+
+    if (moving.length === 0) {
+      this.placeLens(this.onScreen(current), options.pulse === true);
+
+      return;
+    }
+
+    // A tab just opened animates its rows in: measured now, the lens would stay where the row started.
+    this.lens?.hide();
+    void Promise.all(moving.map((animation) => animation.finished.catch(() => undefined))).then(() => {
+      if (this.isOpen && this.ranges[this.active] === current) {
+        this.placeLens(this.onScreen(current), options.pulse === true);
+      }
+    });
   }
 
   /**

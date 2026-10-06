@@ -15015,10 +15015,6 @@ span[data-blok-slash-search] {
   background: var(--blok-find-empty-bg);
 }
 
-[data-blok-find-field][data-blok-find-shake] {
-  animation: blok-find-shake 360ms var(--blok-ease-bounce);
-}
-
 [data-blok-find-field] > input::selection {
   background: var(--blok-selection-inline);
 }
@@ -15309,7 +15305,7 @@ span[data-blok-slash-search] {
   transition: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-find-field][data-blok-find-shake], [data-blok-find-counter][data-blok-find-bump], [data-blok-find-roll], [data-blok-find-lens-box][data-blok-find-lens-arrive] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-find-counter][data-blok-find-bump], [data-blok-find-roll], [data-blok-find-lens-box][data-blok-find-lens-arrive] {
   animation: none;
 }
 

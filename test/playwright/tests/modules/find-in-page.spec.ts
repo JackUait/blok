@@ -591,6 +591,43 @@ test.describe('find in page', () => {
   });
 
   test.describe('closing', () => {
+    test('stepping into a closed tab puts the lens on the match once the tab has animated in', async ({ page }) => {
+      await createEditor(page, [
+        { id: 'tabs1', type: 'tabs', data: {}, content: ['t1', 't2'] },
+        { id: 't1', type: 'tab', data: { title: 'Alpha' }, parent: 'tabs1', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'needle here' }, parent: 't1' },
+        { id: 't2', type: 'tab', data: { title: 'Beta' }, parent: 'tabs1', content: ['p2'] },
+        { id: 'p2', type: 'paragraph', data: { text: 'the hidden needle' }, parent: 't2' },
+      ]);
+      await focusParagraph(page, 'needle here');
+      await openFind(page, 'needle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      await page.keyboard.press('Enter');
+      await expect(page.getByText('the hidden needle')).toBeVisible();
+      await expect.poll(() => page.evaluate(() => document.getAnimations().filter((animation) => {
+        const target = (animation.effect as KeyframeEffect | null)?.target;
+
+        return target instanceof Element && target.closest('[data-blok-testid="find-lens"]') === null && animation.playState === 'running';
+      }).length)).toBe(0);
+
+      const offset = await page.getByTestId('find-lens-box').evaluate((box) => {
+        const [range] = [...CSS.highlights.get('blok-find-match-active') ?? []];
+
+        if (!(range instanceof Range)) {
+          return null;
+        }
+
+        const ring = box.getBoundingClientRect();
+        const fill = range.getBoundingClientRect();
+
+        return Math.max(Math.abs(ring.top - fill.top), Math.abs(ring.bottom - fill.bottom), Math.abs(ring.left - fill.left));
+      });
+
+      expect(offset).not.toBeNull();
+      expect(offset).toBeLessThanOrEqual(1.5);
+    });
+
     test('a click back in the content closes the bar and edits where it landed', async ({ page }) => {
       await createEditor(page, paragraphs('alpha foo', 'beta foo'));
       await focusParagraph(page, 'alpha foo');

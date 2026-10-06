@@ -196,14 +196,6 @@
   to { color: transparent }
 }
 
-@keyframes blok-find-shake {
-  0%, 100% { transform: translateX(0) }
-  20% { transform: translateX(-4px) }
-  40% { transform: translateX(3px) }
-  60% { transform: translateX(-2px) }
-  80% { transform: translateX(1px) }
-}
-
 @keyframes blok-image-develop {
   from { opacity: 0; filter: blur(16px) grayscale(1) brightness(1.25) }
   55% { opacity: 1; filter: blur(3px) grayscale(0.4) brightness(1.08) }

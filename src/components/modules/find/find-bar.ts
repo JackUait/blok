@@ -71,7 +71,6 @@ const ATTR = {
   active: 'data-blok-find-active',
   empty: 'data-blok-find-empty',
   overflow: 'data-blok-find-overflow',
-  shake: 'data-blok-find-shake',
   hopping: 'data-blok-find-hopping',
   bump: 'data-blok-find-bump',
   roll: 'data-blok-find-roll',
@@ -166,7 +165,6 @@ export class FindBar {
   private currentUnchanged = false;
   /** The count the counter shows now, -1 when it shows none. */
   private shown = { current: -1, total: 0 };
-  private noResults = false;
 
   private optionsMenu: PopoverDesktop | null = null;
   private replaceMenu: PopoverDesktop | null = null;
@@ -317,11 +315,6 @@ export class FindBar {
     this.listen(this.replaceButton, 'click', () => this.callbacks.onReplace(this.replaceInput.value));
     this.listen(this.replaceMenuButton, 'click', () => this.toggleReplaceMenu());
     this.listen(this.replaceInput, 'input', () => this.callbacks.onReplaceChange());
-    this.listen(this.field, 'animationend', (event) => {
-      if (event.target === this.field) {
-        this.field.removeAttribute(ATTR.shake);
-      }
-    });
     this.listen(this.counter, 'animationend', () => this.counter.removeAttribute(ATTR.bump));
     this.watchInputWidth();
     this.place(init.placement, init.offset);
@@ -831,15 +824,6 @@ export class FindBar {
       this.input.removeAttribute('aria-invalid');
     }
 
-    if (noResults && !this.noResults) {
-      replay(this.field, ATTR.shake);
-    }
-
-    if (!noResults) {
-      this.field.removeAttribute(ATTR.shake);
-    }
-
-    this.noResults = noResults;
 
     const none = this.total === 0;
     const disabled = new Map([

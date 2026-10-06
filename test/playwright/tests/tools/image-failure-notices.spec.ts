@@ -170,6 +170,11 @@ test.describe('image failure notices', () => {
 
     const drift = await page.evaluate(async () => {
       const card = document.querySelector<HTMLElement>('[data-blok-toast="card"][data-state="open"]');
+
+      // The launch spring scales the card, so its box only sits at rest once that ends.
+      await Promise.all((card?.getAnimations() ?? [])
+        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)));
       const left = card?.getBoundingClientRect().left ?? 0;
       const lefts: number[] = [];
 

@@ -75,24 +75,53 @@ const stripComments = (text: string): string => {
 };
 
 /**
+ * Index just past the CSS whitespace and CDO (`<!--`) / CDC (`-->`) tokens at
+ * the start of `text[from…]`. Excel wraps its rules in `<!-- … -->`.
+ */
+const skipCdoCdc = (text: string, from: number): number => {
+  const cursor = { at: from };
+
+  for (;;) {
+    while (cursor.at < text.length && ' \t\n\r\f'.includes(text.charAt(cursor.at))) {
+      cursor.at += 1;
+    }
+
+    if (text.startsWith('<!--', cursor.at)) {
+      cursor.at += 4;
+    } else if (text.startsWith('-->', cursor.at)) {
+      cursor.at += 3;
+    } else {
+      return cursor.at;
+    }
+  }
+};
+
+/**
  * Every `selector { body }` with no brace inside. A selector starts after the
  * last brace of either kind, so in `@media x { .a { … } }` the rule is `.a`.
+ * CSS skips CDO/CDC only between top-level rules; anywhere else they stay and
+ * make the selector or value invalid, so they are not stripped there.
  */
 const splitRules = (text: string): Array<[string, string]> => {
   const rules: Array<[string, string]> = [];
-  const state = { selectorStart: 0, open: -1 };
+  const state = { selectorStart: 0, open: -1, depth: 0, preludeDepth: 0 };
 
   for (const { index, 0: brace } of text.matchAll(/[{}]/g)) {
     if (brace === '}' && state.open !== -1) {
-      rules.push([text.slice(state.selectorStart, state.open), text.slice(state.open + 1, index)]);
+      const start = state.preludeDepth === 0 ? skipCdoCdc(text, state.selectorStart) : state.selectorStart;
+
+      rules.push([text.slice(start, state.open), text.slice(state.open + 1, index)]);
     }
 
     if (brace === '{') {
       state.selectorStart = state.open === -1 ? state.selectorStart : state.open + 1;
+      state.preludeDepth = state.depth;
       state.open = index;
+      state.depth += 1;
     } else {
       state.selectorStart = index + 1;
       state.open = -1;
+      state.depth = Math.max(0, state.depth - 1);
     }
   }
 
@@ -102,7 +131,7 @@ const splitRules = (text: string): Array<[string, string]> => {
 /** Rules whose whole selector is one class, e.g. `.xl65`. Everything else is skipped. */
 const readClassRules = (styleText: string): Map<string, Declarations> => {
   const rules = new Map<string, Declarations>();
-  const text = stripComments(styleText.replace(/<!--|-->/g, ' '));
+  const text = stripComments(styleText);
 
   for (const [selector, body] of splitRules(text)) {
     const className = /^\s*\.([A-Za-z_][\w-]*)\s*$/.exec(selector)?.[1];

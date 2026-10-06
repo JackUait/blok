@@ -143,11 +143,34 @@ describe('preprocessExcelClassStyles rule reading', () => {
     expect(boldIn(styleText)).toBe(expected);
   });
 
+  // `<!--` and `-->` are CSS tokens (CDO/CDC), not an HTML comment: the <style>
+  // ends only at </style>. CSS skips them only between top-level rules; anywhere
+  // else they make the selector or value invalid. Expected results are what
+  // Chrome's own parse (CSSStyleSheet.replaceSync) keeps.
+  it.each([
+    ['Excel\'s wrapper around the rules', '<!-- .a {font-weight:700} -->', '<b>A</b>'],
+    ['a CDO glued to the selector', '<!--.a {font-weight:700}', '<b>A</b>'],
+    ['a CDC glued to the selector', '-->.a {font-weight:700}', '<b>A</b>'],
+    ['several CDO and CDC tokens', '<!-- <!-- --> --> .a {font-weight:700}', '<b>A</b>'],
+    ['a CDO between two rules', '.b {color:red} <!-- .a {font-weight:700}', '<b>A</b>'],
+    ['--!>, which is not a CSS token', '<!-- .b {color:red} --!> .a {font-weight:700}', 'A'],
+    ['a CDO inside the selector', '.a<!-- {font-weight:700}', 'A'],
+    ['a CDC after the selector', '.a--> {font-weight:700}', 'A'],
+    ['a CDO inside the value', '.a {font-weight:<!--700}', 'A'],
+    ['a CDC inside the value', '.a {font-weight:700-->}', 'A'],
+    ['a CDO inside @media', '@media print { <!-- .a {font-weight:700} }', 'A'],
+    ['a CDC inside @media', '@media print { --> .a {font-weight:700} }', 'A'],
+  ])('reads CDO/CDC like the browser: %s', (_label, styleText, expected) => {
+    expect(boldIn(styleText)).toBe(expected);
+  });
+
   // A hostile clipboard must not freeze the tab. Each shape never completes a match.
   it.each([
     ['no brace at all', 'a'.repeat(200_000)],
     ['a rule that never closes', `.a {${'b'.repeat(200_000)}`],
     ['many comments that never close', '/*a'.repeat(66_000)],
+    ['CDO and CDC tokens', '<!--  -->'.repeat(22_000)],
+    ['CDC runs inside a selector', `.a${'-->'.repeat(66_000)}`],
   ])('reads a 200k <style> with %s in linear time', (_label, styleText) => {
     const html = `<html><head><style>${styleText}</style></head><body><table><tr><td class=a>A</td></tr></table></body></html>`;
     const start = performance.now();

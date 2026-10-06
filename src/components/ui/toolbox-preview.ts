@@ -6,11 +6,8 @@ import type { ToolboxPreviewConfig } from '@/types';
 /** Must match the card width in block-preview.css; placement math uses it before layout. */
 export const PREVIEW_CARD_WIDTH = 248;
 
-/** How long the pointer rests on a row before the first card opens. */
+/** How long the pointer rests on a row before a card opens. A hint never opens instantly (see CLAUDE.md). */
 export const PREVIEW_OPEN_DELAY = 320;
-
-/** After a close, the next card opens without the delay for this long (moving between rows). */
-const WARM_WINDOW = 400;
 
 const GAP = 8;
 const VIEWPORT_MARGIN = 8;
@@ -21,7 +18,6 @@ export interface ToolboxPreviewShowParams {
   /** The menu surface; the card sits beside it, never over it. */
   surface: HTMLElement;
   config: ToolboxPreviewConfig;
-  source: 'pointer' | 'keyboard';
 }
 
 interface ToolboxPreviewOptions {
@@ -53,7 +49,6 @@ export class ToolboxPreview {
   private paper: HTMLElement | null = null;
   private caption: HTMLElement | null = null;
   private openTimer: ReturnType<typeof setTimeout> | null = null;
-  private warmUntil = 0;
   private visible = false;
   private current: ToolboxPreviewShowParams | null = null;
   private pending: ToolboxPreviewShowParams | null = null;
@@ -64,11 +59,16 @@ export class ToolboxPreview {
   public show(params: ToolboxPreviewShowParams): void {
     this.stopWaitingForPointer();
 
-    if (this.visible || params.source === 'keyboard' || Date.now() < this.warmUntil) {
+    if (this.visible && this.current?.item === params.item) {
       this.cancelOpen();
       this.open(params);
 
       return;
+    }
+
+    // Swapping an open card to a new row would show that row's hint with no wait.
+    if (this.visible) {
+      this.hide();
     }
 
     // The delay runs once per hover: moving to the next row swaps the card it will open.
@@ -100,7 +100,6 @@ export class ToolboxPreview {
 
     this.visible = false;
     this.current = null;
-    this.warmUntil = Date.now() + WARM_WINDOW;
     this.root.hidden = true;
     this.root.removeAttribute('data-state');
     removeFromTopLayer(this.root);
@@ -232,7 +231,7 @@ export class ToolboxPreview {
     this.stopWaitingForPointer();
 
     if (params !== null && event.target instanceof Node && params.item.contains(event.target)) {
-      this.open(params);
+      this.show(params);
     }
   };
 

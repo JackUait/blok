@@ -706,7 +706,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         return;
       }
 
-      preview.show({ item: current.element, surface, config, source: current.source });
+      preview.show({ item: current.element, surface, config });
     });
   }
 

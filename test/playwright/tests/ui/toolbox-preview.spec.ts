@@ -127,6 +127,8 @@ test.describe('Toolbox hover preview', () => {
   });
 
   test('the live card keeps its 232x156 paper on every row', async ({ page }) => {
+    // Every row waits out the open delay again, and there are ~40 rows.
+    test.setTimeout(60_000);
     await openToolbox(page);
 
     const rows = page.getByTestId('toolbox-popover').getByRole('option');

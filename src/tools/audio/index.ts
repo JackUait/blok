@@ -743,7 +743,7 @@ export class AudioTool implements BlockTool {
     row.classList.add('is-collapsed');
     figure.appendChild(row);
     // Commit the collapsed start frame, then settle the inner into place.
-    void row.offsetHeight;
+    row.offsetHeight;
     row.classList.remove('is-collapsed');
   }
 

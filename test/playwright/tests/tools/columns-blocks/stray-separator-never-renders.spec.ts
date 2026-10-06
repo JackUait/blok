@@ -65,7 +65,7 @@ const measureStraySeparator = async (
     }
 
     // Force layout.
-    void row.offsetWidth;
+    row.offsetWidth;
 
     const display = getComputedStyle(stray).display;
     const width = stray.getBoundingClientRect().width;

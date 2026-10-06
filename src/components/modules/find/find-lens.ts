@@ -97,7 +97,7 @@ export class FindLens {
       if (options.pulse === true) {
         // Remove, reflow, re-add: restarts the arrival when it is already playing.
         box.removeAttribute(ARRIVE);
-        void box.offsetWidth;
+        box.offsetWidth;
         box.setAttribute(ARRIVE, '');
       }
     });

@@ -59,10 +59,9 @@ const createLiveBlocksApi = (): {
 
   const setBlockParent = vi.fn();
   const move = vi.fn();
-  const insertInsideParent = vi.fn((parentId: string, insertIndex: number, childData?: BlockToolData) => {
+  const insertInsideParent = vi.fn((parentId: string, insertIndex: number, _childData?: BlockToolData) => {
     const created = createFakeBlock(`created-${insertIndex}`, parentId);
 
-    void childData;
     flat.splice(insertIndex, 0, created);
 
     return created;

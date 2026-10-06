@@ -28,7 +28,6 @@ class MutationObserverStub {
    * @param _callback - mutation callback, unused by these tests
    */
   constructor(_callback: MutationCallback) {
-    void _callback;
   }
 }
 

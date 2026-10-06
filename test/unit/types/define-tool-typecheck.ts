@@ -25,7 +25,6 @@ const headerSettings = defineTool(Header, {
 // The returned settings must carry the tool class so it drops straight into
 // the editor's `tools` map.
 const _class: unknown = headerSettings.class;
-void _class;
 
 // THE INTEGRATION ASSERTION (this is the one that matters): the value
 // `defineTool` returns must be assignable into the editor's `tools` map for a
@@ -39,7 +38,6 @@ const _cfg: BlokConfig = {
     paragraph: defineTool(Paragraph, { config: { placeholder: 'Type…' } }),
   },
 };
-void _cfg;
 
 // A typo in the tool's config must be rejected. `defaultLevle` is not a
 // HeaderConfig key, so this is the whole point of the helper.
@@ -49,15 +47,12 @@ const _typo = defineTool(Header, {
     defaultLevle: 1,
   },
 });
-void _typo;
 
 // An unknown top-level settings key must also be rejected.
 const _badKey = defineTool(Paragraph, {
   // @ts-expect-error - `inlineToolbr` is not a tool-settings key
   inlineToolbr: true,
 });
-void _badKey;
 
 // Works when called with only a class (no settings).
 const _bare = defineTool(Paragraph);
-void _bare;

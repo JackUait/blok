@@ -544,7 +544,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       const pasted = ev instanceof InputEvent && ev.inputType === 'insertFromPaste';
       if (!stage || !pasted || !isValid(urlInput.value)) return;
       stage.classList.remove('is-caught');
-      void stage.offsetWidth;
+      stage.offsetWidth;
       stage.classList.add('is-caught');
     });
     urlInput.addEventListener('keydown', (ev) => {

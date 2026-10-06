@@ -21,7 +21,7 @@ export function highlightBlockArrival(el: Element): void {
   // the keyframes restart.
   el.classList.remove(TARGET_CLASS);
   // Force reflow to guarantee the animation restarts when class is re-added.
-  void (el as HTMLElement).offsetWidth;
+  (el as HTMLElement).offsetWidth;
   el.classList.add(TARGET_CLASS);
 
   const state = { removed: false };

@@ -281,8 +281,7 @@ describe('anchored-position — mutation coverage', () => {
     const disconnect = vi.fn();
 
     class MockResizeObserver {
-      public constructor(callback: () => void) {
-        void callback;
+      public constructor(_callback: () => void) {
       }
 
       public observe = observe;

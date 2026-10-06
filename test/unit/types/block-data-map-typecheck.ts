@@ -19,24 +19,21 @@ declare const block: OutputBlockData;
 
 // The guard narrows `data` to the built-in tool's mapped shape — no cast.
 if (isBlockType(block, 'header')) {
-  const level: number = block.data.level;
-  void level;
+  const _level: number = block.data.level;
 }
 
 // The collection helper narrows every result's `data` off the registry too —
 // no `data as HeaderData` cast, and it is null-tolerant at the call site.
 declare const doc: OutputData | null | undefined;
 const headers = blocksOfType(doc, 'header');
-const firstLevel: number | undefined = headers[0]?.data.level;
-void firstLevel;
+const _firstLevel: number | undefined = headers[0]?.data.level;
 
 // @ts-expect-error - 'not-a-tool' is not a BlokBlockDataMap key
 void blocksOfType(doc, 'not-a-tool');
 
 if (isBlockType(block, 'table')) {
   // TableData carries `content`; property access is typed, not `unknown`.
-  const rows = block.data.content;
-  void rows;
+  const _rows = block.data.content;
 }
 
 // A type that is not a registered block must be rejected at the call site.
@@ -55,9 +52,7 @@ type _AssertBuiltins =
 
 // A tab's saved title is typed through the map.
 const _tabTitle: BlokBlockDataMap['tab']['title'] = 'Tab 1';
-void _tabTitle;
 declare const _builtins: _AssertBuiltins;
-void _builtins;
 
 // The map is augmentable: a consumer registers their own tool's data shape and
 // the guard narrows to it.
@@ -67,6 +62,5 @@ declare module '../../../types/tools-entry' {
   }
 }
 if (isBlockType(block, 'my-widget')) {
-  const id: string = block.data.widgetId;
-  void id;
+  const _id: string = block.data.widgetId;
 }

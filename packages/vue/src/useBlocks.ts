@@ -86,7 +86,7 @@ export function useBlocks(
   // The reactivity seam handed to the shared core: every read method calls it,
   // so a read inside a Vue effect tracks `version` and re-runs on mutation.
   const touch = (): void => {
-    void version.value;
+    version.value;
   };
 
   // The API bound to the CURRENT editor. Rebuilt by the watch below when the

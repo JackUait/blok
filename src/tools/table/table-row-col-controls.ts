@@ -887,7 +887,7 @@ export class TableRowColControls {
     el.setAttribute('data-blok-table-grip-visible', '');
 
     if (instant) {
-      void el.offsetHeight;
+      el.offsetHeight;
       el.style.transition = '';
     }
 
@@ -943,7 +943,7 @@ export class TableRowColControls {
     }
 
     if (this.isInsideTable) {
-      void el.offsetHeight;
+      el.offsetHeight;
       el.style.transition = '';
     }
   }

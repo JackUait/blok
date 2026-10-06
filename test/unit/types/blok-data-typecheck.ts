@@ -53,11 +53,3 @@ const _typedBlock: OutputBlockData<'task', BlokData<TaskData>> = {
   type: 'task',
   data: { title: 'x', done: false },
 };
-
-void _slotRejectsInterface;
-void _slotAcceptsAlias;
-void _slotAcceptsWrapped;
-void _title;
-void _done;
-void _asRecord;
-void _typedBlock;

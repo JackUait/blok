@@ -21,8 +21,6 @@ type IsAny<T> = 0 extends 1 & T ? true : false;
 type _DataNotAny = IsAny<OutputBlockData['data']> extends false ? true : never;
 const _assertDataNotAny: _DataNotAny = true;
 
-void _assertDataNotAny;
-
 // Backend wire DTOs (Editor.js-style APIs) may carry `data: null`, `id: null`,
 // `time: null` and — for a root-level, childless block — `parent: null` /
 // `content: null`. Every INPUT position — the `data` config option and the
@@ -47,16 +45,11 @@ void editor.render(dtoFromBackend);
 void editor.blocks.render(dtoFromBackend);
 void editor.blocks.insertMany(dtoFromBackend.blocks);
 
-void _configAcceptsLooseDto;
-
 // The published comparison/emptiness utilities must accept both the strict
 // saved shape and the loose wire shape, including nullish documents.
 declare const maybeSaved: OutputData | undefined;
 const _equalsAcceptsLoose: boolean = equalsOutputData(maybeSaved, dtoFromBackend);
 const _isEmptyAcceptsLoose: boolean = isEmptyOutputData(dtoFromBackend);
-
-void _equalsAcceptsLoose;
-void _isEmptyAcceptsLoose;
 
 // The loose-wire normalizers must live on the STABLE main entry (not only the
 // no-semver `./adapters` entry): a consumer holding a backend DTO turns it into
@@ -66,7 +59,3 @@ void _isEmptyAcceptsLoose;
 const _normalizedDoc: OutputData = normalizeOutputData(dtoFromBackend);
 const _normalizedDocFromNull: OutputData = normalizeOutputData(null);
 const _normalizedBlocks: OutputBlockData[] = normalizeOutputBlocks(dtoFromBackend.blocks);
-
-void _normalizedDoc;
-void _normalizedDocFromNull;
-void _normalizedBlocks;

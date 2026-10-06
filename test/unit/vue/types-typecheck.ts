@@ -49,5 +49,3 @@ export type { _ConfigMatches, _ContentPropsMatch, _BlocksApiMatches, _ExportsCov
 
 // The exposed facade must carry confirmLeave, the ref-side route to Blok.confirmLeave.
 const _exposedConfirmLeave: ReturnType<Published.BlokEditorExposed['confirmLeave']> extends Promise<boolean> ? true : never = true;
-
-void _exposedConfirmLeave;

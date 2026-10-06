@@ -70,5 +70,3 @@ export const USE_BLOK_CONFIG_KEYS = [
  */
 type _MissingConfigKey = Exclude<keyof UseBlokConfig, (typeof USE_BLOK_CONFIG_KEYS)[number]>;
 const _exhaustive: _MissingConfigKey extends never ? true : never = true;
-
-void _exhaustive;

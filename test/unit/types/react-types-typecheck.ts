@@ -117,25 +117,3 @@ const _inlineToolRenderProps: AssertExact<
   SourceReactInlineToolRenderProps<{ palette: string }>
 > = true;
 const _inlineToolSpec: AssertExact<PublishedCreateReactInlineToolSpec, SourceCreateReactInlineToolSpec> = true;
-
-void _useBlokConfig;
-void _renderProps;
-void _blockSpec;
-void _propSchema;
-void _propSchemaEntry;
-void _portalEntry;
-void _portalRegistry;
-void _portalHostProps;
-void _inlineToolRenderProps;
-void _inlineToolSpec;
-void _contentProps;
-void _editorProps;
-void _blockNode;
-void _caretTarget;
-void _insertPosition;
-void _insertSpec;
-void _treeInsertSpec;
-void _moveTarget;
-void _useBlocksApi;
-void _editorHandle;
-void _viewProps;

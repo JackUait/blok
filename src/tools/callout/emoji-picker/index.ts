@@ -395,7 +395,7 @@ export class EmojiPicker {
     this._positionTracker.attach();
 
     // Replay the opening animation
-    void this._element.offsetHeight;
+    this._element.offsetHeight;
     this._element.style.animation = '';
 
     if (!this._inline) {

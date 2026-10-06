@@ -49,19 +49,6 @@ const _onBeforePaste: Exact<OnBeforePasteHandler, NonNullable<BlokConfig['onBefo
 const _style: Exact<BlokStyleConfig, NonNullable<BlokConfig['style']>> = true;
 const _link: Exact<BlokLinkConfig, NonNullable<BlokConfig['link']>> = true;
 
-void _onReady;
-void _onChange;
-void _onSave;
-void _onError;
-void _onEnter;
-void _onSubmit;
-void _onBeforeRender;
-void _onAfterRender;
-void _onThemeChange;
-void _onBeforePaste;
-void _style;
-void _link;
-
 // A consumer wrapper can now declare its props with the named alias directly,
 // with no BlokConfig index-access anywhere in its source.
 declare const saveHandler: OnSaveHandler;
@@ -83,7 +70,3 @@ const _persistedDocument: Exact<
 > = true;
 const _saveContext: Exact<SaveContext, Parameters<Persistence['save']>[1]> = true;
 const _saveResult: Exact<SaveResult | void, Awaited<ReturnType<Persistence['save']>>> = true;
-
-void _persistedDocument;
-void _saveContext;
-void _saveResult;

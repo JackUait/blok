@@ -15,32 +15,25 @@
 import type { BlokMessageKey, BlokMessages, ToolNameMessageKey } from '../../../types';
 
 // A real built-in key is a valid BlokMessageKey.
-const knownKey: BlokMessageKey = 'tools.link.addLink';
-void knownKey;
+const _knownKey: BlokMessageKey = 'tools.link.addLink';
 
 // @ts-expect-error - a renamed/typo'd built-in key is rejected at the override site.
-const typoKey: BlokMessageKey = 'tools.link.addLnk';
-void typoKey;
+const _typoKey: BlokMessageKey = 'tools.link.addLnk';
 
 // Overrides typed as BlokMessages catch a typo'd key via `satisfies`.
-const overrides = {
+const _overrides = {
   'toolNames.text': 'Текст',
   'tools.link.addLink': 'Добавить ссылку',
 } satisfies BlokMessages;
-void overrides;
 
-const badOverrides = {
+const _badOverrides = {
   // @ts-expect-error - 'toolName.text' (missing plural) is not a built-in key.
   'toolName.text': 'Текст',
 } satisfies BlokMessages;
-void badOverrides;
 
 // The tool-name namespace is an open template type: any registration name works.
-const builtinToolName: ToolNameMessageKey = 'toolNames.header';
-const customToolName: ToolNameMessageKey = 'toolNames.myCustomWidget';
-void builtinToolName;
-void customToolName;
+const _builtinToolName: ToolNameMessageKey = 'toolNames.header';
+const _customToolName: ToolNameMessageKey = 'toolNames.myCustomWidget';
 
 // @ts-expect-error - a key outside the toolNames namespace is not a ToolNameMessageKey.
-const notAToolName: ToolNameMessageKey = 'tools.link.addLink';
-void notAToolName;
+const _notAToolName: ToolNameMessageKey = 'tools.link.addLink';

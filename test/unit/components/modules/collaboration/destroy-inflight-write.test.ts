@@ -158,11 +158,10 @@ class RoomSocket {
   }
 
   /**
-   * @param code - close code the client asked for
+   * @param _code - close code the client asked for
    */
-  public close(code?: number): void {
+  public close(_code?: number): void {
     this.readyState = 3;
-    void code;
   }
 
   /**

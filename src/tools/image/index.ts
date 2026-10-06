@@ -1471,7 +1471,7 @@ export class ImageTool implements BlockTool {
     if (Math.abs(dx) < 0.5) return;
     nextFigure.style.transition = 'none';
     nextFigure.style.transform = `translateX(${dx}px)`;
-    void nextFigure.offsetWidth;
+    nextFigure.offsetWidth;
     nextFigure.style.transition = 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)';
     nextFigure.style.transform = 'translateX(0)';
     const cleanup = (): void => {

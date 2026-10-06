@@ -637,10 +637,10 @@ const walkTsFiles = (dir: string, acc: string[] = []): string[] => {
   return acc;
 };
 
-const STRING_LITERAL = /(['"`])((?:\\.|(?!\1).){1,200})\1/g;
-const ENGLISH_WORD = /^[A-Z][A-Za-z0-9 ,.'’\-–—!?&()…/·:]{1,}$/;
-const LOOKS_LIKE_CODE = /^[a-z][A-Za-z0-9]*$/; // camelCase identifiers
-const SKIP_VALUES = new Set([
+const _STRING_LITERAL = /(['"`])((?:\\.|(?!\1).){1,200})\1/g;
+const _ENGLISH_WORD = /^[A-Z][A-Za-z0-9 ,.'’\-–—!?&()…/·:]{1,}$/;
+const _LOOKS_LIKE_CODE = /^[a-z][A-Za-z0-9]*$/; // camelCase identifiers
+const _SKIP_VALUES = new Set([
   'true', 'false', 'null', 'undefined',
   'button', 'textbox', 'checkbox', 'radio', 'menu', 'menuitem',
   'dialog', 'listbox', 'option', 'tab', 'tabpanel', 'tablist',
@@ -760,11 +760,3 @@ describe('hardcoded user-facing strings bypass i18n', () => {
     ).toEqual([]);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Helpers exercised indirectly (silence unused warnings)
-// ---------------------------------------------------------------------------
-void STRING_LITERAL;
-void ENGLISH_WORD;
-void LOOKS_LIKE_CODE;
-void SKIP_VALUES;

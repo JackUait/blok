@@ -463,7 +463,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const isMuted = (): boolean => video.muted || video.volume === 0;
   const bumpMute = (): void => {
     muteToggle.classList.remove('is-bumped');
-    void muteToggle.offsetWidth;
+    muteToggle.offsetWidth;
     muteToggle.classList.add('is-bumped');
   };
   const onVolumeChange = (): void => {
@@ -509,7 +509,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const flashBurst = (willPlay: boolean): void => {
     burst.innerHTML = willPlay ? IconPlayerPlay : IconPlayerPause;
     burst.classList.remove('is-active');
-    void burst.offsetWidth;
+    burst.offsetWidth;
     burst.classList.add('is-active');
   };
   // Clear on the disc's own animation only — the radiating ring (::after) ends
@@ -594,7 +594,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     seekFlash.setAttribute('data-side', side);
     seekFlash.innerHTML = side === 'forward' ? `${label}${icon}` : `${icon}${label}`;
     seekFlash.classList.remove('is-active');
-    void seekFlash.offsetWidth;
+    seekFlash.offsetWidth;
     seekFlash.classList.add('is-active');
   };
   // Clear on the pill's own slide animation only — the glyph marquee (svg) ends

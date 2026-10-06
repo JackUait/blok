@@ -2673,9 +2673,9 @@ describe('UI module — mutants', () => {
       vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({ width: 777 } as DOMRect);
       wrapper.appendChild(blockContent);
 
-      void ui.contentRect;
+      ui.contentRect;
       ui.setDirection('rtl');
-      void ui.contentRect;
+      ui.contentRect;
 
       expect(blockContent.getBoundingClientRect).toHaveBeenCalledTimes(2);
     });

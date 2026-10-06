@@ -228,7 +228,7 @@ describe('CopyLinkTune', () => {
   });
 
   it('percent-encodes the block id when it contains URL-unsafe characters', async () => {
-    const { api, notifier } = createMocks();
+    const { api } = createMocks();
     const blockWithUnsafeId = { id: 'Hello World & More' } as unknown as BlockAPI;
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
 
@@ -251,7 +251,6 @@ describe('CopyLinkTune', () => {
       'https://example.com/page#Hello%20World%20%26%20More'
     );
 
-    void notifier;
   });
 
   it('does not alter a valid nanoid block id in the URL', async () => {

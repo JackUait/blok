@@ -21,7 +21,7 @@ const isInView = (el: Element): boolean => {
 const light = (target: HTMLElement): void => {
   // Removing first restarts the pulse when Show is pressed again.
   target.removeAttribute(DATA_ATTR.spotlight);
-  void target.offsetWidth;
+  target.offsetWidth;
   target.setAttribute(DATA_ATTR.spotlight, 'true');
   window.setTimeout(() => target.removeAttribute(DATA_ATTR.spotlight), SPOTLIGHT_MS);
 };

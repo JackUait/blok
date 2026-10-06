@@ -18,9 +18,7 @@ assert<Equal<Parameters<NonNullable<BlokConfig['onImageFailure']>>[0], ImageFail
 assert<Equal<ImageFailureReport['reason'], 'fail' | 'save' | 'leave'>>();
 assert<Equal<ReturnType<Blok['confirmLeave']>, Promise<boolean>>>();
 
-const failure: ImageFailure = { blockId: 'b', tool: 'image', kind: 'load', retry: () => undefined, scrollTo: () => undefined };
-
-void failure;
+const _failure: ImageFailure = { blockId: 'b', tool: 'image', kind: 'load', retry: () => undefined, scrollTo: () => undefined };
 
 import type { NotifierAction, NotifierOptions } from '../../../types/configs/notifier';
 import type { MediaFailureInput } from '../../../types/api/media';

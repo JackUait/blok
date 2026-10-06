@@ -611,7 +611,7 @@ export class CalloutTool implements BlockTool {
     // A rapid re-pick interrupts the running choreography — clear it first
     emojiButton.querySelector('[data-blok-testid="callout-emoji-ghost"]')?.remove();
     emojiFace.classList.remove(EMOJI_JUMP_IN_ANIMATION);
-    void emojiButton.offsetWidth; // reflow so re-adding the class restarts the animation
+    emojiButton.offsetWidth; // reflow so re-adding the class restarts the animation
 
     if (previous !== '') {
       const ghost = document.createElement('span');

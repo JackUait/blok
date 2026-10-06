@@ -417,7 +417,7 @@ describe('BoldInlineTool mutants', () => {
       const { Bold, cleanup } = await loadFreshBold();
 
       try {
-        void new Bold();
+        new Bold();
       } finally {
         cleanup();
       }
@@ -431,9 +431,9 @@ describe('BoldInlineTool mutants', () => {
       const { Bold, Manager, cleanup } = await loadFreshBold();
 
       try {
-        void new Bold();
+        new Bold();
         Manager.getInstance().unregister('bold');
-        void new Bold();
+        new Bold();
       } finally {
         cleanup();
       }
@@ -445,11 +445,11 @@ describe('BoldInlineTool mutants', () => {
       const { Bold, Manager, cleanup } = await loadFreshBold();
 
       try {
-        void new Bold();
+        new Bold();
         // Re-registering is the only way the second construction reaches the
         // observer setup again; the handler short-circuits everything else.
         Manager.getInstance().unregister('bold');
-        void new Bold();
+        new Bold();
       } finally {
         cleanup();
       }
@@ -461,7 +461,7 @@ describe('BoldInlineTool mutants', () => {
       const { Bold, cleanup } = await loadFreshBold();
 
       try {
-        void new Bold();
+        new Bold();
 
         const editor = elementWith('div', { 'data-blok-editor': '' });
         const wrapper = document.createElement('div');
@@ -488,7 +488,7 @@ describe('BoldInlineTool mutants', () => {
       const { Bold, cleanup } = await loadFreshBold();
 
       try {
-        void new Bold();
+        new Bold();
 
         const text = mustFind(editor, 'b').firstChild;
 
@@ -742,7 +742,7 @@ describe('BoldInlineTool mutants', () => {
       const { Bold, cleanup } = await loadFreshBold();
 
       try {
-        void new Bold();
+        new Bold();
 
         const legacy = document.createElement('b');
 
@@ -767,7 +767,7 @@ describe('BoldInlineTool mutants', () => {
       }
 
       try {
-        void new Bold();
+        new Bold();
         observerCallbacks[0]([characterDataRecord(text)], liveObservers[0]);
 
         expect(editor.querySelector('b')).toBeNull();
@@ -782,7 +782,7 @@ describe('BoldInlineTool mutants', () => {
       const { Bold, cleanup } = await loadFreshBold();
 
       try {
-        void new Bold();
+        new Bold();
         observerCallbacks[0]([childListRecord(editor, [])], liveObservers[0]);
 
         expect(editor.querySelector('b')).not.toBeNull();
@@ -801,7 +801,7 @@ describe('BoldInlineTool mutants', () => {
       }
 
       try {
-        void new Bold();
+        new Bold();
         select(text, 2, 3);
         observerCallbacks[0]([characterDataRecord(text)], liveObservers[0]);
 
@@ -821,7 +821,7 @@ describe('BoldInlineTool mutants', () => {
       }
 
       try {
-        void new Bold();
+        new Bold();
         vi.spyOn(window, 'getSelection').mockReturnValue(null);
         observerCallbacks[0]([characterDataRecord(text)], liveObservers[0]);
 
@@ -841,7 +841,7 @@ describe('BoldInlineTool mutants', () => {
       }
 
       try {
-        void new Bold();
+        new Bold();
         observerCallbacks[0]([characterDataRecord(text)], liveObservers[0]);
 
         expect(editor.querySelectorAll('strong')).toHaveLength(3);
@@ -863,7 +863,7 @@ describe('BoldInlineTool mutants', () => {
       }
 
       try {
-        void new Bold();
+        new Bold();
         observerCallbacks[0]([characterDataRecord(firstText)], liveObservers[0]);
         expect(first.querySelector('b')).toBeNull();
 
@@ -878,7 +878,7 @@ describe('BoldInlineTool mutants', () => {
       const { Bold, cleanup } = await loadFreshBold();
 
       try {
-        void new Bold();
+        new Bold();
 
         const editor = elementWith('div', { 'data-blok-editor': '' });
 

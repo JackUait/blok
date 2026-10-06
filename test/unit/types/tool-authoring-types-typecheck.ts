@@ -22,15 +22,11 @@ const _settings: MenuConfig = [
   },
 ];
 
-void _settings;
-
 // MoveEvent must be importable and usable to type a moved() handler argument.
 const _onMoved = (event: MoveEvent): void => {
-  void event.fromIndex;
-  void event.toIndex;
+  event.fromIndex;
+  event.toIndex;
 };
-
-void _onMoved;
 
 // The names must be exactly the types the BlockTool contract references, so a
 // custom tool can annotate its own implementation with the imported names.
@@ -42,5 +38,3 @@ const _tool: Pick<BlockTool, 'renderSettings' | 'moved'> = {
     _onMoved(event);
   },
 };
-
-void _tool;

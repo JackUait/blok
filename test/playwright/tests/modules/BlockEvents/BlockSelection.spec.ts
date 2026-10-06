@@ -29,7 +29,7 @@ const resetBlok = async (page: Page): Promise<void> => {
 
     // Force a layout calculation to ensure the DOM is fully updated
     // This helps WebKit and other browsers flush any pending updates
-    void container.offsetHeight;
+    container.offsetHeight;
   }, { holder: HOLDER_ID });
 };
 

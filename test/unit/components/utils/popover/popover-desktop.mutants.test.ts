@@ -1159,7 +1159,7 @@ describe('PopoverDesktop — size measurement', () => {
     });
 
     popover.invalidateSizeCache();
-    void instance.size;
+    instance.size;
 
     expect(clone).toBeDefined();
     expect(clone?.style.visibility).toBe('hidden');
@@ -1181,9 +1181,9 @@ describe('PopoverDesktop — size measurement', () => {
       return originalAppend(node);
     });
 
-    void asInternal(createPopover()).size;
-    void asInternal(createPopover({ minWidth: '280px' })).size;
-    void asInternal(createPopover({ width: '240px' })).size;
+    asInternal(createPopover()).size;
+    asInternal(createPopover({ minWidth: '280px' })).size;
+    asInternal(createPopover({ width: '240px' })).size;
 
     expect(measured).toStrictEqual(['max-content', 'max-content', '240px']);
   });
@@ -1200,7 +1200,7 @@ describe('PopoverDesktop — size measurement', () => {
       return originalAppend(node);
     });
 
-    void asInternal(createPopover({ minWidth: '280px' })).size;
+    asInternal(createPopover({ minWidth: '280px' })).size;
 
     expect(floors).toStrictEqual(['280px']);
   });

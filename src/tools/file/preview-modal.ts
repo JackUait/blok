@@ -165,7 +165,7 @@ async function renderMarkdown(
   // track's left edge on open, then restore the transition for later moves.
   indicator.style.transition = 'none';
   show(false);
-  void indicator.offsetWidth;
+  indicator.offsetWidth;
   indicator.style.transition = '';
 
   ensurePrismStyles();

@@ -1181,7 +1181,7 @@ export class Embed implements BlockTool {
 
     figure.style.transition = 'none';
     figure.style.transform = `translateX(${dx}px)`;
-    void figure.offsetWidth;
+    figure.offsetWidth;
     figure.style.transition = 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)';
     figure.style.transform = 'translateX(0)';
 

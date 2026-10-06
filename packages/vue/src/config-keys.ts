@@ -80,5 +80,3 @@ export type EmitMappedConfigKey = 'onReady' | 'onChange' | 'onSave' | 'onAfterRe
  */
 type _UncoveredConfigKey = Exclude<keyof UseBlokConfig, BlokEditorConfigKey | EmitMappedConfigKey>;
 const _uncovered: _UncoveredConfigKey extends never ? true : never = true;
-
-void _uncovered;

@@ -221,8 +221,6 @@ const _subclasses: BlockToolConstructable[] = [
   SubBookmark,
 ];
 
-void _subclasses;
-
 // The classes themselves must be usable as ToolSettings.class / tools map values.
 const _settings: ToolSettings = { class: Paragraph };
 const _tools: Record<string, BlockToolConstructable> = {
@@ -248,40 +246,31 @@ const _tools: Record<string, BlockToolConstructable> = {
   bookmark: Bookmark,
 };
 
-void _settings;
-void _tools;
-
 // The class names must double as instance-type annotations (declare class
 // provides both the value and the type under the same name).
 const _useInstances = (
-  p: Paragraph,
-  h: Header,
-  l: List,
-  t: Table,
-  tg: Toggle,
-  d: Divider,
-  s: Spacer,
-  c: Callout,
-  q: Quote,
-  cl: ColumnList,
-  co: Column,
-  db: Database,
-  dbr: DatabaseRow,
-  im: Image,
-  fi: File,
-  au: Audio,
-  vi: Video,
-  cd: Code,
-  em: Embed,
-  bm: Bookmark,
+  _p: Paragraph,
+  _h: Header,
+  _l: List,
+  _t: Table,
+  _tg: Toggle,
+  _d: Divider,
+  _s: Spacer,
+  _c: Callout,
+  _q: Quote,
+  _cl: ColumnList,
+  _co: Column,
+  _db: Database,
+  _dbr: DatabaseRow,
+  _im: Image,
+  _fi: File,
+  _au: Audio,
+  _vi: Video,
+  _cd: Code,
+  _em: Embed,
+  _bm: Bookmark,
 ): void => {
-  void p; void h; void l; void t; void tg; void d;
-  void s; void c; void q; void cl; void co;
-  void db; void dbr; void im; void fi; void au;
-  void vi; void cd; void em; void bm;
 };
-
-void _useInstances;
 
 // Every XConstructorOptions alias must be exported and match the constructor.
 const _optionUsers = (
@@ -328,8 +317,6 @@ const _optionUsers = (
   new Bookmark(bm),
 ];
 
-void _optionUsers;
-
 // Zero-cast replica of the consumer pattern: a subclass with a widened config
 // that forwards to super. Must compile without TS2510 and stay registrable.
 class CustomParagraph extends Paragraph {
@@ -344,6 +331,3 @@ class CustomParagraph extends Paragraph {
 
 const _customParagraph: BlockToolConstructable = CustomParagraph;
 const _customSettings: ToolSettings = { class: CustomParagraph };
-
-void _customParagraph;
-void _customSettings;

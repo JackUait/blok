@@ -47,7 +47,7 @@ const conflictingLifecycle: PopoverParams = {
   positionLifecycle: 'dismiss-on-nested-scroll',
 };
 
-void [
+const _checked = [
   ordinaryTrigger,
   trackedVirtualPosition,
   dismissibleVirtualPosition,

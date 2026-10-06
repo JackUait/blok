@@ -915,7 +915,7 @@ describe('Header Tool - Custom Configurations', () => {
         // Arrow should exist before data access
         expect(element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).not.toBeNull();
 
-        void header.data;
+        header.data;
 
         // Arrow should still exist after data access
         expect(element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).not.toBeNull();

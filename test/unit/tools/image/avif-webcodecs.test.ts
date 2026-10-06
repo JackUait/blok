@@ -89,12 +89,9 @@ const installWebCodecs = (): void => {
   class FakeOffscreenCanvas {
     constructor(public width: number, public height: number) {}
     getContext(): unknown {
-      const canvas = this;
-
       return {
         drawImage: vi.fn(),
         getImageData(_x: number, _y: number, w: number, h: number): { data: Uint8ClampedArray } {
-          void canvas;
           const data = new Uint8ClampedArray(w * h * 4);
 
           data.fill(200);

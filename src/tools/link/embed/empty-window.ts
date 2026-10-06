@@ -186,7 +186,7 @@ export const createEmbedWindow = (): EmbedWindow => {
   const play = (anim: 'caught' | 'rejected'): void => {
     // Restart a running animation of the same name.
     element.removeAttribute('data-anim');
-    void element.offsetWidth;
+    element.offsetWidth;
     element.setAttribute('data-anim', anim);
   };
 

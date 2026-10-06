@@ -122,7 +122,7 @@ const build = <K extends keyof HTMLElementTagNameMap>(
  */
 const replay = (element: HTMLElement, attribute: string): void => {
   element.removeAttribute(attribute);
-  void element.offsetWidth;
+  element.offsetWidth;
   element.setAttribute(attribute, '');
 };
 

@@ -8,37 +8,24 @@ import type { BlokConfig, API, UploadContext } from '../../../types';
 import type { ImageData } from '../../../types/tools/image';
 import type { VideoData } from '../../../types/tools/video';
 
-const ok: BlokConfig['media'] = {
+const _ok: BlokConfig['media'] = {
   formats: { image: ['avif', 'webp', 'jpeg'], video: ['av1', 'webm', 'mp4'] },
   convert: async (_file, _formats, ctx) => (ctx.kind === 'image' ? null : []),
   maxTranscodeDuration: 600,
   mediabunny: async () => ({ Conversion: {} }),
 };
 
-void ok;
-
 // AVIF is an image format; `<video>` cannot play it.
 // @ts-expect-error — not a VideoFormat
-const badVideo: BlokConfig['media'] = { formats: { video: ['avif'] } };
-
-void badVideo;
+const _badVideo: BlokConfig['media'] = { formats: { video: ['avif'] } };
 
 // @ts-expect-error — not an ImageFormat
-const badImage: BlokConfig['media'] = { formats: { image: ['mp4'] } };
+const _badImage: BlokConfig['media'] = { formats: { image: ['mp4'] } };
 
-void badImage;
+const _image: ImageData = { url: 'a.jpg', variants: [{ url: 'a.avif', mimeType: 'image/avif' }] };
+const _video: VideoData = { url: 'a.mp4', variants: [{ url: 'a.webm', mimeType: 'video/webm' }] };
 
-const image: ImageData = { url: 'a.jpg', variants: [{ url: 'a.avif', mimeType: 'image/avif' }] };
-const video: VideoData = { url: 'a.mp4', variants: [{ url: 'a.webm', mimeType: 'video/webm' }] };
-
-void image;
-void video;
-
-const ctx: UploadContext = { kind: 'image', variant: { mimeType: 'image/avif', role: 'variant' } };
-
-void ctx;
+const _ctx: UploadContext = { kind: 'image', variant: { mimeType: 'image/avif', role: 'variant' } };
 
 declare const api: API;
-const formats: readonly string[] | undefined = api.config.media?.formats?.image;
-
-void formats;
+const _formats: readonly string[] | undefined = api.config.media?.formats?.image;

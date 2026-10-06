@@ -366,9 +366,8 @@ export const unmountCollabEditor = async (page: Page, name: string): Promise<voi
 
     await editor.destroy();
 
-    const { [editorName]: removed, ...rest } = window.__collabEditors ?? {};
+    const { [editorName]: _removed, ...rest } = window.__collabEditors ?? {};
 
-    void removed;
     window.__collabEditors = rest;
     window.__blokInstances = window.__blokInstances?.filter((instance) => instance !== editor);
     document.getElementById(editorName)?.remove();

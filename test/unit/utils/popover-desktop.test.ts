@@ -2072,7 +2072,7 @@ describe('PopoverDesktop', () => {
 
       // Invalidate cache and re-measure
       popover.invalidateSizeCache();
-      void instance.size;
+      instance.size;
 
       // The clone's container should include the opened-state padding. The top gap was
       // moved off the container (no pt) so the first item sits flush to the top edge.

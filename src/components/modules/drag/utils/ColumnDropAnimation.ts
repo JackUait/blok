@@ -152,7 +152,7 @@ export const animateColumnWidths = (params: {
   }
 
   // Force a reflow so the pinned grows become the transition's start keyframe.
-  void holders[0].offsetWidth;
+  holders[0].offsetWidth;
 
   const transition = `flex-grow ${COLUMN_DROP_ANIMATION_MS}ms ${COLUMN_DROP_EASING}, opacity ${COLUMN_DROP_ANIMATION_MS}ms ${COLUMN_DROP_EASING}`;
 
@@ -228,7 +228,7 @@ export const playSiblingShift = (captured: SiblingTopCapture[]): void => {
     }
 
     element.style.transform = `translateY(${deltaY}px)`;
-    void element.offsetWidth;
+    element.offsetWidth;
     element.style.transition = `transform ${COLUMN_DROP_ANIMATION_MS}ms ${COLUMN_DROP_EASING}`;
     element.style.transform = '';
 

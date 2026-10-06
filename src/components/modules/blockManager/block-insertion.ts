@@ -11,6 +11,7 @@ import { BlockToolAPI } from '../../block';
 import { Dom as $ } from '../../dom';
 import { generateBlockId } from '../../utils';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
+import { richTextInputToHtml } from '../../utils/rich-text-input';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { acceptsChildren, resolveChildTool } from '../../utils/child-tools';
 import { subtreeEndIndex } from '../../utils/blocks-tree';
@@ -1129,7 +1130,9 @@ export class BlockInsertion {
      * no `text` field would write junk into the saved document. An explicitly
      * requested tool starts from `{}` so its own defaults / propSchema apply.
      */
-    const resolvedChildData = childData ?? (toolName === undefined ? { text: '' } : {});
+    const seedData = childData ?? (toolName === undefined ? { text: '' } : {});
+    // Converted with the RESOLVED tool: a demoted child's rich fields are the target tool's.
+    const resolvedChildData = richTextInputToHtml(this.factory.getTool(resolvedTool), seedData, name => this.factory.getTool(name));
 
     // Validate the requested tool BEFORE any mutation runs, mirroring
     // splitBlockWithData: the Yjs write below happens before the DOM insert, so

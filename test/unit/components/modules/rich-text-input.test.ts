@@ -256,6 +256,77 @@ describe('rich text segments on input', () => {
   }, 60_000);
 });
 
+describe('a child demoted to another tool', () => {
+  /** Only paragraphs may be its children. */
+  class ParagraphsOnly {
+    public static get childTools(): { allow: string[] } {
+      return { allow: ['paragraph'] };
+    }
+
+    public render(): HTMLElement {
+      return document.createElement('div');
+    }
+
+    public save(): Record<string, never> {
+      return {};
+    }
+  }
+
+  /** Declares no rich fields, so its own data is never read as segments. */
+  class Plain {
+    private readonly data: Record<string, unknown>;
+
+    constructor({ data }: { data: Record<string, unknown> }) {
+      this.data = data;
+    }
+
+    public render(): HTMLElement {
+      return document.createElement('div');
+    }
+
+    public save(): Record<string, unknown> {
+      return this.data;
+    }
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    holder?.remove();
+    editor = undefined;
+    holder = undefined;
+    vi.restoreAllMocks();
+  });
+
+  it('converts its data with the tool it was demoted to', async () => {
+    const instance = new Blok({
+      holder,
+      tools: {
+        paragraph: Paragraph,
+        plain: Plain as unknown as BlockToolConstructable,
+        only: ParagraphsOnly as unknown as BlockToolConstructable,
+      },
+      data: { blocks: [{ id: 'c', type: 'only', data: {} }, { id: 'p', type: 'paragraph', data: { text: 'x' } }] },
+    }) as unknown as TestEditor;
+
+    editor = instance;
+    await instance.isReady;
+
+    const text = [{ text: 'a < b', marks: { bold: true } }];
+    const demoted = instance.blocks.insertInsideParent('c', 1, { text }, 'plain');
+    const direct = instance.blocks.insert('paragraph', { text });
+    const yjsData = (id: string): unknown => instance.module.yjsManager.toJSON().find(block => block.id === id)?.data;
+
+    expect(demoted.name).toBe('paragraph');
+    expect(yjsData(demoted.id)).toEqual(yjsData(direct.id));
+  }, 60_000);
+});
+
 describe('a third-party tool that declares no richTextFields', () => {
   /** Tag-map and `{}` rules, but neither field is rich text. */
   class ItemsTool {

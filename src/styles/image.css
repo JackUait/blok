@@ -1199,10 +1199,8 @@
   inset-block: 0;
   inset-inline-start: 100%;
   width: 48px;
-  background: linear-gradient(90deg, var(--blok-image-fill-ink), transparent);
-}
-:is(.blok-image-error__fill, .blok-image-error[data-resent="true"]):dir(rtl)::after {
-  background: linear-gradient(270deg, var(--blok-image-fill-ink), transparent);
+  /* -90deg in RTL: the sign var follows the nearest [dir]. */
+  background: linear-gradient(calc(90deg * var(--_blok-inline-sign, 1)), var(--blok-image-fill-ink), transparent);
 }
 /* No progress from the uploader: a trickle, quick then ever slower, that
    never claims the end. */

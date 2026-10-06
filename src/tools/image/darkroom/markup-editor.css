@@ -5,6 +5,7 @@
   --blok-markup-handle-hit: 28px;
   --blok-markup-box-ink: rgba(255, 255, 255, 0.92);
   --blok-markup-box-shade: rgba(0, 0, 0, 0.35);
+  --blok-markup-marquee-fill: rgba(255, 255, 255, 0.08);
   --blok-markup-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(0, 0, 0, 0.25);
   --blok-markup-handle-fill: #fff;
   position: absolute;
@@ -56,7 +57,7 @@
   box-sizing: border-box;
   border: 1px dashed var(--blok-markup-box-ink);
   box-shadow: 0 0 0 1px var(--blok-markup-box-shade);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--blok-markup-marquee-fill);
   pointer-events: none;
 }
 

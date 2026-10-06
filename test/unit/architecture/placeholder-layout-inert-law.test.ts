@@ -29,7 +29,7 @@
  * Mechanically enforced two ways:
  *
  * 1. Tailwind class strings in src/**\/*.ts. Every literal carrying
- *    `<variant>before:content-[attr(…)]` requires the same file to declare
+ *    `<variant>before:content-[attr(data-…placeholder…)]` requires the same file to declare
  *    `<variant>before:inline-block`, `<variant>before:w-0` and
  *    `<variant>before:whitespace-nowrap` — same variant prefix, so a rule that
  *    only shows the placeholder in one state cannot be made inert in another.
@@ -92,8 +92,13 @@ interface Violation {
 /** Utilities that must accompany a placeholder `::before`, keyed by variant prefix. */
 const INERT_UTILITIES = ['inline-block', 'w-0', 'whitespace-nowrap'];
 
-/** `<prefix>before:content-[attr(<attribute>)]` inside a quoted class string. */
-const TW_PLACEHOLDER_CONTENT = /before:content-\[attr\((data-[a-z-]+)\)\]/;
+/**
+ * `<prefix>before:content-[attr(<placeholder attribute>)]` inside a quoted class
+ * string. Same attribute test as the CSS half: a ::before that draws an icon
+ * from another attribute (the page mention's `data-blok-emoji`) is the icon
+ * itself, not a placeholder, and needs its width to stay centred.
+ */
+const TW_PLACEHOLDER_CONTENT = /before:content-\[attr\(data-[a-z-]*placeholder[a-z-]*\)\]/i;
 
 const extractStringLiterals = (source: string): string[] => {
   const literals: string[] = [];
@@ -225,5 +230,13 @@ describe('Placeholder Layout-Inert Law', () => {
     expect(
       violations.map(violation => `${violation.file} — ${violation.where}: ${violation.detail}`)
     ).toEqual([]);
+  });
+
+  it('flags an in-flow placeholder pseudo in a class string', () => {
+    expect(findTsViolations('x.ts', "const c = 'empty:before:content-[attr(data-placeholder)]';")).toHaveLength(1);
+  });
+
+  it('ignores a ::before that draws an icon glyph from a data attribute', () => {
+    expect(findTsViolations('x.ts', "const c = '[&[data-blok-emoji]]:before:content-[attr(data-blok-emoji)]';")).toEqual([]);
   });
 });

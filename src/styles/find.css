@@ -340,7 +340,7 @@
   place-items: center;
   min-width: 14px;
   height: 14px;
-  border-radius: var(--blok-radius-full);
+  border-radius: var(--blok-radius-pill);
   background: var(--blok-text-primary);
   box-shadow: 0 0 0 1.5px var(--blok-bg-primary);
   color: var(--blok-bg-primary);
@@ -454,7 +454,7 @@
 [data-blok-find-split] {
   display: flex;
   flex: 1 1 auto;
-  gap: 1px;
+  gap: var(--blok-border-width-hairline);
 }
 
 [data-blok-find-split] > [data-blok-find-text-button] {
@@ -498,7 +498,7 @@
 [data-blok-find-hop-chip] {
   position: absolute;
   z-index: 1;
-  padding-inline: 1px;
+  padding-inline: var(--blok-space-0-25);
   border-radius: var(--blok-radius-notch);
   background: var(--blok-selection-inline);
   line-height: var(--blok-line-height-body);

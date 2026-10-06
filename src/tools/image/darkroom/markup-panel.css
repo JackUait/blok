@@ -296,7 +296,7 @@
   content: "";
   position: absolute;
   inset: 27% 21%;
-  border-radius: 15%;
+  border-radius: var(--blok-radius-mark);
   box-shadow: 0 0 0 1px var(--blok-markup-spot-edge), 0 0 0 40px var(--blok-markup-spot-dim);
   animation: blok-markup-spot-open var(--blok-markup-shape-trace) var(--blok-markup-spring) calc(var(--blok-markup-shape-lead) + var(--blok-markup-shape-i) * var(--blok-markup-shape-step)) backwards;
 }

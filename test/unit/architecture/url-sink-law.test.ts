@@ -65,6 +65,8 @@ const EXEMPT_SINKS: Record<string, string> = {
     'HTMLImageElement src (fly-out clone) — <img> is not a script-execution sink',
   'tools/image/darkroom/filter-strip.ts » o.url':
     'HTMLImageElement src (filter preset thumbnails, same url as the darkroom photo) — <img> is not a script-execution sink',
+  'tools/image/darkroom/markup-panel.ts » url':
+    'HTMLImageElement src (spotlight and magnifier shape tiles, same url as the darkroom photo) — <img> is not a script-execution sink',
   'components/utils/notifier/draw.ts » source':
     'HTMLImageElement src (failed-image toast tile), set only after SAFE_THUMBNAIL allows blob: or a raster data: image — <img> is not a script-execution sink',
   'tools/image/probe-dimensions.ts » url':

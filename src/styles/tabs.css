@@ -13,7 +13,7 @@
   --blok-tabs-sheet: var(--blok-bg-primary);
   --blok-tabs-band: var(--blok-bg-secondary);
   --blok-tabs-edge: var(--blok-border-subtle);
-  --_blok-tabs-inner-radius: calc(var(--blok-radius-block) - var(--blok-border-width-hairline));
+  --blok-tabs-inner-radius: max(var(--blok-radius-floor), calc(var(--blok-radius-block) - var(--blok-border-width-hairline)));
   display: flex;
   flex-direction: column;
   border: var(--blok-border-width-hairline) solid var(--blok-tabs-edge);
@@ -33,8 +33,8 @@
   padding-block-start: calc(var(--blok-space-1-5) - var(--blok-border-width-hairline));
   padding-block-end: 0;
   padding-inline: var(--blok-space-1);
-  border-start-start-radius: var(--_blok-tabs-inner-radius);
-  border-start-end-radius: var(--_blok-tabs-inner-radius);
+  border-start-start-radius: var(--blok-tabs-inner-radius);
+  border-start-end-radius: var(--blok-tabs-inner-radius);
   background-color: var(--blok-tabs-band);
   /* The band's bottom edge. The open tab covers it, opening the sheet. */
   box-shadow: inset 0 calc(-1 * var(--blok-border-width-hairline)) 0 var(--blok-tabs-edge);
@@ -243,8 +243,8 @@
 
 [data-blok-tabs-panels] {
   padding: var(--blok-space-2);
-  border-end-start-radius: var(--_blok-tabs-inner-radius);
-  border-end-end-radius: var(--_blok-tabs-inner-radius);
+  border-end-start-radius: var(--blok-tabs-inner-radius);
+  border-end-end-radius: var(--blok-tabs-inner-radius);
   background-color: var(--blok-tabs-sheet);
 }
 
@@ -253,7 +253,7 @@
  * keeps its height and the text does not jump. The hover fill reaches out
  * past the text with a negative margin, so the text stays put. */
 [data-blok-tab-empty] {
-  margin-block: 1px;
+  margin-block: var(--blok-space-0-25);
   margin-inline: calc(-1 * var(--blok-space-1));
   padding-block: var(--blok-block-padding-top, 7px) var(--blok-block-padding-bottom, 7px);
   padding-inline: calc(var(--blok-block-padding-inline, 2px) + var(--blok-space-1));

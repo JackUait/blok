@@ -358,7 +358,7 @@
 /* A faint hairline a little below the host; padding moves it down without
    touching the text, so the caret stays on its glyph. */
 .blok-embed-empty__bar .blok-media-empty__url-host {
-  padding-bottom: 2px;
+  padding-bottom: var(--blok-space-0-5);
   background-image: linear-gradient(color-mix(in srgb, currentColor 30%, transparent), color-mix(in srgb, currentColor 30%, transparent));
   background-size: 0 1px;
 }

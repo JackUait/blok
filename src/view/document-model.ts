@@ -8,8 +8,9 @@
  * PURITY CONTRACT: no DOM access, no editor-module imports. The legacy grammar
  * is the one exception: it is zero-dependency and DOM-free.
  */
-import type { LooseOutputData, OutputData } from '../../types';
+import type { LooseOutputData, OutputBlockData, OutputData } from '../../types';
 import { orderByContent } from '../shared/content-order';
+import { viewBlocksToHtml } from './rich-text-input';
 import {
   CALLOUT_DEFAULT_EMOJI,
   VARIANT_TO_BG_PRESET,
@@ -387,7 +388,7 @@ const hoistTabsStrays = (topLevel: ViewBlock[], children: Map<string, ViewBlock[
  * @param input - saved document, tolerant of the loose wire shape and nullish input
  */
 export const buildDocumentModel = (input: OutputData | LooseOutputData | null | undefined): DocumentModel => {
-  const rawBlocks: unknown[] = Array.isArray(input?.blocks) ? input.blocks : [];
+  const rawBlocks: unknown[] = Array.isArray(input?.blocks) ? viewBlocksToHtml(input.blocks as OutputBlockData[]) : [];
 
   const entries: Array<{ block: ViewBlock; parentId: string | null }> = [];
   const byId = new Map<string, ViewBlock>();

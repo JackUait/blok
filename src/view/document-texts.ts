@@ -17,6 +17,9 @@ import type { OutputData } from '../../types';
 import { repairedTableRows, sourceCellsInDisplayOrder, tableRows } from './table-grid';
 import { cloneJson } from './json-clone';
 import { ownEntry } from '../shared/own-entry';
+import { isRichText } from '../shared/rich-text/guards';
+import { segmentsToHtml } from '../shared/rich-text/segments-to-html';
+import { htmlToSegmentsNode } from './rich-text-parse5';
 
 /** Options shared by extraction and injection — they must match, or the counts will not. */
 export interface DocumentTextsOptions {
@@ -138,7 +141,9 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
    * @param key - field name or array index
    */
   const pushSlot = (holder: Record<string, unknown> | unknown[], key: string | number): void => {
-    const value: unknown = Reflect.get(holder, key);
+    const raw: unknown = Reflect.get(holder, key);
+    const segments = isRichText(raw);
+    const value = segments ? segmentsToHtml(raw) : raw;
 
     /** Blank values are not worth a model round-trip — and inject skips them identically. */
     if (typeof value !== 'string' || value.trim() === '') {
@@ -147,8 +152,9 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
 
     slots.push({
       value,
+      /** A field goes back in the shape it came in, or a segments host's document turns into HTML. */
       write: (text: string): void => {
-        Reflect.set(holder, key, text);
+        Reflect.set(holder, key, segments ? htmlToSegmentsNode(text) : text);
       },
     });
   };

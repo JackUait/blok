@@ -18,6 +18,68 @@
 /** Horizontal placement, shared by the media and embed tools. */
 const ALIGNMENT = ['left', 'center', 'right'] as const;
 
+/** Formatting on one run of rich text. */
+const RICH_TEXT_MARKS = {
+  type: 'object',
+  description: 'Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.',
+  properties: {
+    bold: { const: true },
+    italic: { const: true },
+    underline: { const: true },
+    strikethrough: { const: true },
+    code: { const: true },
+    sup: { const: true },
+    sub: { const: true },
+    highlight: { const: true, description: 'A highlight with no colour of its own.' },
+    color: { type: 'string', description: 'Preset name ("red") or any CSS colour.' },
+    background: { type: 'string', description: 'Preset name ("red") or any CSS colour.' },
+    link: {
+      type: 'object',
+      required: ['href'],
+      additionalProperties: false,
+      properties: { href: { type: 'string' }, target: { type: 'string' }, rel: { type: 'string' } },
+    },
+  },
+  patternProperties: { '^tag:': { type: 'object', additionalProperties: { type: 'string' } } },
+} as const;
+
+/** A rich-text field: inline HTML, or an array of segments (types/rich-text.d.ts). */
+const richText = (description: string): Record<string, unknown> => ({
+  description,
+  oneOf: [
+    { type: 'string', description: 'Inline HTML: <b>, <i>, <u>, <s>, <a>, <code>, <mark>, <sup>, <sub>, <br>.' },
+    {
+      type: 'array',
+      description: 'Rich-text segments, in order.',
+      items: {
+        anyOf: [
+          {
+            type: 'object',
+            required: ['text'],
+            additionalProperties: false,
+            properties: { text: { type: 'string', description: 'Line breaks are "\\n".' }, marks: RICH_TEXT_MARKS },
+          },
+          {
+            type: 'object',
+            required: ['embed'],
+            additionalProperties: false,
+            properties: {
+              embed: {
+                oneOf: [
+                  { type: 'object', required: ['equation'], additionalProperties: false, properties: { equation: { type: 'object', required: ['expression'], properties: { expression: { type: 'string' } } } } },
+                  { type: 'object', required: ['page'], additionalProperties: false, properties: { page: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } } } },
+                  { type: 'object', required: ['html'], additionalProperties: false, properties: { html: { type: 'string', description: 'Inline markup the segment model has no slot for, kept verbatim.' } } },
+                ],
+              },
+              marks: RICH_TEXT_MARKS,
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+
 export const blokDocumentSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   $id: 'https://blokeditor.com/schemas/document.schema.json',
@@ -121,7 +183,7 @@ export const blokDocumentSchema = {
       required: ['text'],
       additionalProperties: false,
       properties: {
-        text: { type: 'string', description: 'Inline HTML: <b>, <i>, <u>, <s>, <a>, <code>, <mark>, <sup>, <sub>, <br>.' },
+        text: richText('The line\'s rich text.'),
         textColor: { type: 'string', description: 'Text color preset name, e.g. "red".' },
         backgroundColor: { type: 'string', description: 'Background color preset name.' },
       },
@@ -133,7 +195,7 @@ export const blokDocumentSchema = {
       required: ['text', 'level'],
       additionalProperties: false,
       properties: {
-        text: { type: 'string', description: 'Inline HTML of the heading.' },
+        text: richText('Rich text of the heading.'),
         level: { type: 'integer', minimum: 1, maximum: 6 },
         isToggleable: { type: 'boolean', description: 'Heading collapses/expands its children.' },
         isOpen: { type: 'boolean', deprecated: true, description: 'Ignored. Open state is personal and never saved.' },
@@ -149,7 +211,7 @@ export const blokDocumentSchema = {
       required: ['text', 'style'],
       additionalProperties: false,
       properties: {
-        text: { type: 'string', description: 'Inline HTML of the item.' },
+        text: richText('Rich text of the item.'),
         style: { type: 'string', enum: ['unordered', 'ordered', 'checklist'] },
         checked: { type: 'boolean', description: 'Checklist state. Only emitted for style "checklist".' },
         start: { type: 'integer', description: 'Starting number of an ordered run. Omitted when 1.' },
@@ -220,7 +282,7 @@ export const blokDocumentSchema = {
       required: ['text'],
       additionalProperties: false,
       properties: {
-        text: { type: 'string', description: 'Inline HTML of the summary.' },
+        text: richText('Rich text of the summary.'),
         isOpen: { type: 'boolean', deprecated: true, description: 'Ignored. Open state is personal and never saved.' },
       },
     },
@@ -380,7 +442,7 @@ export const blokDocumentSchema = {
       required: ['text'],
       additionalProperties: false,
       properties: {
-        text: { type: 'string', description: 'Inline HTML of the quote.' },
+        text: richText('Rich text of the quote.'),
         size: { type: 'string', enum: ['default', 'large'] },
       },
     },

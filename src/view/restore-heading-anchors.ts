@@ -27,6 +27,7 @@ import type { DefaultTreeAdapterMap } from 'parse5';
 
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
 import { htmlTextContent } from './html-text';
+import { viewBlocksToHtml } from './rich-text-input';
 
 import type { OutputBlockData, OutputData } from '../../types';
 
@@ -205,7 +206,9 @@ const isRepairableHeading = (block: OutputBlockData): boolean =>
  * @returns a new document with anchors filled in, and what the pass decided
  */
 export const restoreHeadingAnchors = (data: OutputData): HeadingAnchorResult => {
-  const blocks = data.blocks ?? [];
+  const original = data.blocks ?? [];
+  /** Read through HTML; the returned blocks are the originals, so segments stay segments. */
+  const blocks = viewBlocksToHtml(original);
 
   /**
    * A fragment is live when something already answers to it — a heading's own
@@ -299,7 +302,7 @@ export const restoreHeadingAnchors = (data: OutputData): HeadingAnchorResult => 
   return {
     data: {
       ...data,
-      blocks: blocks.map((block) => {
+      blocks: original.map((block) => {
         const anchor = block.id === undefined ? undefined : placed.get(block.id);
 
         return anchor === undefined

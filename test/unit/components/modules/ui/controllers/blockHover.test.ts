@@ -730,6 +730,68 @@ describe('BlockHoverController', () => {
     });
   });
 
+  describe('container empty hint (data-blok-child-stand-in)', () => {
+    const setUp = (): ReturnType<typeof createBlockHoverController> & { block: Block; hint: HTMLElement; title: HTMLElement } => {
+      const setup = createBlockHoverController();
+      const block = createMockBlock('toggle-block', 100, 300);
+      const title = document.createElement('div');
+      const hint = document.createElement('div');
+
+      block.holder.setAttribute('data-blok-testid', 'block-wrapper');
+      hint.setAttribute('data-blok-child-stand-in', '');
+      block.holder.append(title, hint);
+      document.body.appendChild(block.holder);
+      (setup.controller as unknown as { enable: () => void }).enable();
+      (setup.blok.BlockManager as { blocks: typeof setup.blok.BlockManager.blocks }).blocks = [block];
+      vi.mocked(setup.blok.BlockManager.getBlockByChildNode).mockReturnValue(block);
+      (setup.blok.Toolbar as unknown as { opened: boolean }).opened = true;
+
+      return { ...setup, block, hint, title };
+    };
+
+    const moveOver = (target: Element): void => {
+      const event = new MouseEvent('mousemove', { clientX: 300, clientY: 200, bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: target });
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+    };
+
+    it('hides the controls while the pointer is over the hint', () => {
+      const { blok, eventsDispatcher, hint } = setUp();
+
+      moveOver(hint);
+
+      expect(blok.Toolbar.close).toHaveBeenCalled();
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    // The hover handler is throttled: a move queued over the hint can run just
+    // after a click replaced the hint with the block it created. That hidden
+    // hint stands in for nothing and must not close the new block's toolbar.
+    it('keeps the controls when a late move lands on a hint that is no longer shown', () => {
+      const { blok, hint } = setUp();
+
+      Object.assign(hint, { checkVisibility: () => false });
+      moveOver(hint);
+
+      expect(blok.Toolbar.close).not.toHaveBeenCalled();
+    });
+
+    // The hint sits inside its block, so leaving it for the block's own line
+    // must count as a new hover even though the block id did not change.
+    it('brings the controls back when the pointer leaves the hint for the same block', () => {
+      const { eventsDispatcher, block, hint, title } = setUp();
+
+      moveOver(title);
+      moveOver(hint);
+      vi.mocked(eventsDispatcher.emit).mockClear();
+      moveOver(title);
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, { block, target: title });
+    });
+  });
+
   describe('callout child toolbar (data-blok-child-toolbar)', () => {
     it('resolves first child to parent when container has data-blok-child-toolbar', () => {
       /**

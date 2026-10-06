@@ -158,6 +158,17 @@ export class BlockHoverController extends Controller {
         return;
       }
 
+      /**
+       * Over a container's empty hint no block owns the toolbar. Releasing also
+       * clears the last hovered id, so leaving the hint for its own block's
+       * line counts as a new hover.
+       */
+      if (resolution.kind === 'stand-in') {
+        this.releaseHover();
+
+        return;
+      }
+
       const hoveredBlockElement = resolution.kind === 'block' ? resolution.wrapper : null;
 
       /**

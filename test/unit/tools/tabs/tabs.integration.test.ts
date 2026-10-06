@@ -279,6 +279,15 @@ describe('tabs block', () => {
     expect(anchor?.closest('[data-blok-tabs-strip]') instanceof HTMLElement).toBe(true);
   });
 
+  it('marks the empty-tab hint as a stand-in for the first block', async () => {
+    await boot([
+      { id: 'tabs', type: 'tabs', data: {}, content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: 'Empty' }, parent: 'tabs', content: [] },
+    ]);
+
+    expect(document.querySelector('[data-blok-tab-empty]')?.hasAttribute('data-blok-child-stand-in')).toBe(true);
+  });
+
   it('opens a labelled tab menu from the context menu', async () => {
     await boot(doc());
 

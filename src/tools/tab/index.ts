@@ -72,6 +72,7 @@ export class TabTool implements BlockTool, TabHandle {
     placeholder.setAttribute(TABS_ATTR.empty, '');
     // A block dragged over the empty tab drops in as its first child.
     placeholder.setAttribute(DATA_ATTR.dropInto, '');
+    placeholder.setAttribute(DATA_ATTR.childStandIn, '');
     placeholder.setAttribute(DATA_ATTR.chrome, '');
     placeholder.setAttribute(DATA_ATTR.mutationFree, 'true');
     placeholder.setAttribute('contenteditable', 'false');

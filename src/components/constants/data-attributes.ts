@@ -342,6 +342,11 @@ export const DATA_ATTR = {
   /** Set by core on a named drop zone while it is the drop target. */
   dropIntoActive: 'data-blok-drop-into-active',
 
+  /** A container's empty-state hint that stands in for its first child block
+   *  (empty tab, empty toggle body). It is not a block, so hovering or pressing
+   *  it shows no block toolbar; the block a click creates gets its own. */
+  childStandIn: 'data-blok-child-stand-in',
+
   // ============================================
   // Mutation Tracking
   // ============================================

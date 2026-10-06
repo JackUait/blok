@@ -305,4 +305,50 @@ test.describe('Tabs tool', () => {
     expect(belowAfter?.y).toBeCloseTo(belowBefore?.y ?? Number.NaN, 0);
     expect(paragraphTextStart).toBeCloseTo(hintTextStart, 0);
   });
+
+  // The hint is not a block, so it shows no handles; the block a click adds
+  // gets its own on its own row. Reached from the strip (same block) and from below.
+  test('shows no block handles over the empty-tab hint, then the new block\'s own', async ({ page }) => {
+    await createBlok(page, [
+      { id: 'tabs1', type: 'tabs', data: {}, content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: 'Alpha' }, parent: 'tabs1', content: [] },
+      { id: 'below', type: 'paragraph', data: { text: 'Below the tabs' } },
+    ]);
+
+    const hint = panel(page, 'Alpha').getByText(EMPTY_TAB_TEXT);
+    const plus = page.getByTestId('plus-button');
+    const box = await hint.boundingBox();
+    const belowBox = await page.getByText('Below the tabs').boundingBox();
+
+    if (box === null || belowBox === null) {
+      throw new Error('missing boxes');
+    }
+
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await tab(page, 'Alpha').hover();
+    await expect(plus).toBeVisible();
+    await page.mouse.move(x, y, { steps: 6 });
+    await expect(plus).toBeHidden();
+
+    await page.mouse.move(x, belowBox.y + belowBox.height / 2, { steps: 6 });
+    await expect(plus).toBeVisible();
+    await page.mouse.move(x, y, { steps: 6 });
+    await expect(plus).toBeHidden();
+
+    await page.mouse.click(x, y);
+
+    const paragraph = panel(page, 'Alpha').locator('[contenteditable="true"]');
+
+    await expect(paragraph).toBeFocused();
+    await expect(plus).toBeVisible();
+
+    const plusBox = await plus.boundingBox();
+    const paragraphBox = await paragraph.boundingBox();
+    const plusCenter = (plusBox?.y ?? 0) + (plusBox?.height ?? 0) / 2;
+
+    expect(plusCenter).toBeGreaterThan(paragraphBox?.y ?? Number.NaN);
+    expect(plusCenter).toBeLessThan((paragraphBox?.y ?? 0) + (paragraphBox?.height ?? 0));
+  });
 });

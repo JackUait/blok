@@ -6,6 +6,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../../src/blok';
+import { DatabaseTool } from '../../../../src/tools/database';
+import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { Header } from '../../../../src/tools/header';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import { Table } from '../../../../src/tools/table';
@@ -35,6 +37,8 @@ const createEditor = async (config: Partial<BlokConfig>): Promise<TestEditor> =>
       paragraph: Paragraph,
       header: Header as unknown as BlockToolConstructable,
       table: Table as unknown as BlockToolConstructable,
+      database: DatabaseTool as unknown as BlockToolConstructable,
+      'database-row': DatabaseRowTool as unknown as BlockToolConstructable,
     },
     ...config,
   }) as unknown as TestEditor;
@@ -52,6 +56,35 @@ const tableWithBoldCells = (): OutputBlockData[] => [
   { id: 'c1', type: 'paragraph', data: { text: '<b>a</b>' }, parent: 't' },
   { id: 'c2', type: 'paragraph', data: { text: 'plain' }, parent: 't' },
 ];
+
+const databaseWithNotes = (notes: unknown): OutputBlockData[] => [
+  {
+    id: 'db',
+    type: 'database',
+    data: {
+      title: 'Tasks',
+      schema: [
+        { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'p-notes', name: 'Notes', type: 'richText', position: 'a1' },
+      ],
+      views: [{ id: 'v-list', name: 'List', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      activeViewId: 'v-list',
+    },
+    content: ['r1'],
+  },
+  {
+    id: 'r1',
+    type: 'database-row',
+    data: { properties: { 'p-title': 'one', 'p-notes': { blocks: [{ type: 'paragraph', data: { text: notes } }] } }, position: 'a0', title: 'one' },
+    parent: 'db',
+  },
+];
+
+const notesText = (data: unknown): unknown => {
+  const properties = (data as { properties?: Record<string, { blocks?: Array<{ data: { text: unknown } }> }> } | undefined)?.properties;
+
+  return properties?.['p-notes']?.blocks?.[0]?.data.text;
+};
 
 const blockData = (saved: OutputData, id: string): Record<string, unknown> | undefined =>
   saved.blocks.find(block => block.id === id)?.data;
@@ -108,5 +141,13 @@ describe('built-in tools — richText segments', { timeout: 60_000 }, () => {
 
     expect(segments.blocks[0]).toMatchObject({ type: 'header', data: { text: bold, level: 2 } });
     expect(html.blocks[0]).toMatchObject({ type: 'header', data: { text: '<strong>a</strong>', level: 2 } });
+  });
+
+  it('a database row given segment notes keeps them as HTML inside and hands the host segments', async () => {
+    const editor = await createEditor({ richText: 'segments', data: { blocks: databaseWithNotes(bold) } });
+
+    // The card body editor runs in html mode and reads this document as-is.
+    expect(notesText(editor.blocks.getById('r1')?.preservedData)).toBe('<strong>a</strong>');
+    expect(notesText(blockData(await editor.save(), 'r1'))).toEqual(bold);
   });
 });

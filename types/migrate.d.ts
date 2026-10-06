@@ -6,6 +6,7 @@
  */
 import { OutputBlockData, OutputData } from './data-formats/output-data';
 import { BlockToolData } from './tools/block-tool-data';
+import { RichText } from './rich-text';
 
 /**
  * A single "old data shape → new data shape" rule for one block type.
@@ -274,3 +275,40 @@ export declare function migrate(
  * coverage (which legacy types migrate, to what, and what each mapping drops).
  */
 export declare const LEGACY_GRAMMAR: LegacyGrammarEntry[];
+
+/** A rich-text field that {@link migrateToRichText} could not map to plain marks. */
+export interface RichTextLossyReport {
+  blockId?: string;
+  blockType: string;
+  field: string;
+  /** `html-embed`: markup kept verbatim. `custom-mark`: an unknown tag kept as a `tag:*` mark. */
+  reason: 'html-embed' | 'custom-mark';
+}
+
+/** Options for {@link migrateToRichText}. */
+export interface MigrateToRichTextOptions {
+  onLossy?: (report: RichTextLossyReport) => void;
+}
+
+/**
+ * Convert the HTML rich-text fields of a stored document to segments, without a DOM.
+ * Only built-in block types are converted: a custom tool's fields are left as they are.
+ * Fields that already hold segments pass through, so running it twice is safe.
+ * @param data - a stored OutputData document
+ * @param options - `onLossy` hears about markup kept as an embed or a custom mark
+ * @returns the document with segment fields
+ */
+export declare function migrateToRichText(data: OutputData, options?: MigrateToRichTextOptions): OutputData;
+
+/**
+ * Canonical HTML for segments, the same string the editor saves.
+ * @param rich - segments
+ */
+export declare function richTextToHtml(rich: RichText): string;
+
+/**
+ * Plain text of segments. Line breaks stay `\n`; an equation gives its source,
+ * a page link gives `Page`, an HTML embed gives its text.
+ * @param rich - segments
+ */
+export declare function richTextToPlainText(rich: RichText): string;

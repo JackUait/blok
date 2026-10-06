@@ -34,6 +34,14 @@ export { LEGACY_GRAMMAR } from '../components/migration/legacy-grammar.mjs';
 import type { LegacyGrammarEntry } from '../components/migration/legacy-grammar.d.mts';
 import { migrateBlocks } from '../components/migration/block-migrations';
 import type { BlockMigrations } from '../components/migration/block-migrations';
+import type { RichText, RichTextEmbed } from '../../types/rich-text';
+import { outputBlocksToSegments } from '../shared/rich-text/block-data';
+import { RICH_TEXT_FIELDS } from '../shared/rich-text/fields';
+import { isRichText } from '../shared/rich-text/guards';
+import { segmentsToHtml } from '../shared/rich-text/segments-to-html';
+import { PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
+import { htmlToSegmentsNode } from '../view/rich-text-parse5';
+import { htmlTextContent } from '../view/html-text';
 
 /**
  * Host-supplied per-type block migrations. Lets a host declare "old data shape →
@@ -259,3 +267,120 @@ export const migrate = (
     report: { lossyFields, errors },
   };
 };
+
+/** A rich-text field that {@link migrateToRichText} could not map to plain marks. */
+export interface RichTextLossyReport {
+  blockId?: string;
+  blockType: string;
+  field: string;
+  /** `html-embed`: markup kept verbatim. `custom-mark`: an unknown tag kept as a `tag:*` mark. */
+  reason: 'html-embed' | 'custom-mark';
+}
+
+export interface MigrateToRichTextOptions {
+  onLossy?: (report: RichTextLossyReport) => void;
+}
+
+// Unknown types are skipped: the migrator cannot know which of their fields hold HTML.
+const knownRichTextFields = (type: string): string[] =>
+  Object.prototype.hasOwnProperty.call(RICH_TEXT_FIELDS, type) ? RICH_TEXT_FIELDS[type] : [];
+
+const lossyReasons = (rich: RichText): Set<RichTextLossyReport['reason']> => {
+  const reasons = new Set<RichTextLossyReport['reason']>();
+
+  for (const segment of rich) {
+    if ('embed' in segment && 'html' in segment.embed) {
+      reasons.add('html-embed');
+    }
+    if (Object.keys(segment.marks ?? {}).some(key => key.startsWith('tag:'))) {
+      reasons.add('custom-mark');
+    }
+  }
+
+  return reasons;
+};
+
+const isNestedDocument = (value: unknown): value is { blocks: OutputBlockData[] } =>
+  typeof value === 'object' && value !== null && Array.isArray((value as { blocks?: unknown }).blocks);
+
+/** Walks input and output side by side, so only fields converted in this pass are reported. */
+const reportLossy = (
+  before: OutputBlockData[],
+  after: OutputBlockData[],
+  onLossy: (report: RichTextLossyReport) => void
+): void => {
+  before.forEach((block, index) => {
+    const oldData: Record<string, unknown> = block.data ?? {};
+    const newData: Record<string, unknown> = after[index].data ?? {};
+
+    for (const field of knownRichTextFields(block.type)) {
+      const value = newData[field];
+
+      if (typeof oldData[field] === 'string' && isRichText(value)) {
+        lossyReasons(value).forEach(reason => onLossy({ blockId: block.id, blockType: block.type, field, reason }));
+      }
+    }
+
+    reportNestedLossy(oldData.properties, newData.properties, onLossy);
+  });
+};
+
+/** database-row: a richText property is a whole nested document. */
+const reportNestedLossy = (
+  before: unknown,
+  after: unknown,
+  onLossy: (report: RichTextLossyReport) => void
+): void => {
+  if (typeof before !== 'object' || before === null || typeof after !== 'object' || after === null) {
+    return;
+  }
+
+  for (const [key, value] of Object.entries(before)) {
+    const next: unknown = (after as Record<string, unknown>)[key];
+
+    if (isNestedDocument(value) && isNestedDocument(next)) {
+      reportLossy(value.blocks, next.blocks, onLossy);
+    }
+  }
+};
+
+/**
+ * Convert the HTML rich-text fields of a stored document to segments, without a DOM.
+ * Only built-in block types are converted. Fields that already hold segments pass through.
+ * @param data - a stored OutputData document
+ * @param options - `onLossy` hears about markup kept as an embed or a custom mark
+ * @returns the document with segment fields
+ */
+export const migrateToRichText = (data: OutputData, options?: MigrateToRichTextOptions): OutputData => {
+  const blocks = outputBlocksToSegments(data.blocks, knownRichTextFields, htmlToSegmentsNode);
+
+  if (options?.onLossy !== undefined) {
+    reportLossy(data.blocks, blocks, options.onLossy);
+  }
+
+  return { ...data, blocks };
+};
+
+/**
+ * Canonical HTML for segments, the same string the editor saves.
+ * @param rich - segments
+ */
+export const richTextToHtml = (rich: RichText): string => segmentsToHtml(rich);
+
+const embedText = (embed: RichTextEmbed): string => {
+  if ('equation' in embed) {
+    return embed.equation.expression;
+  }
+  if ('page' in embed) {
+    return PAGE_REFERENCE_FALLBACK;
+  }
+
+  return htmlTextContent(embed.html);
+};
+
+/**
+ * Plain text of segments. Line breaks stay `\n`.
+ * @param rich - segments
+ */
+export const richTextToPlainText = (rich: RichText): string =>
+  rich.map(segment => ('embed' in segment ? embedText(segment.embed) : segment.text)).join('');

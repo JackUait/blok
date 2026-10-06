@@ -94,6 +94,17 @@ describe('WhyBlok', () => {
     expect(within(blocksRow as HTMLElement).getByText(`${count} built-in`)).toBeInTheDocument();
   });
 
+  it('shows the same built-in block count in Russian', () => {
+    render(
+      <I18nProvider locale="ru">
+        <WhyBlok />
+      </I18nProvider>
+    );
+    const count = Object.keys(defaultBlockTools).length;
+    const adjective = new Intl.PluralRules('ru').select(count) === 'one' ? 'встроенный' : 'встроенных';
+    expect(screen.getByText(`${count} ${adjective}`)).toBeInTheDocument();
+  });
+
   it('renders Russian copy when locale is ru', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     renderTable();

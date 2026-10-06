@@ -896,6 +896,78 @@ const editor = new Blok({
   },
 });`,
   },
+  {
+    id: 'tabs',
+    exportName: 'TabsTool',
+    type: 'block',
+    title: 'Tabs',
+    description:
+      'A block that splits content into tabs. A strip of tabs sits on top, and the open tab\'s content shows below it. Insert it from the toolbox, or type `/tabs`. A new tabs block starts with three tabs: Tab 1, Tab 2, and Tab 3.\n\nEach tab is a child `tab` block, and the blocks you write live inside the tabs (via `contentIds`). The tabs block itself saves nothing. Which tab is open is UI state, kept per editor, and never saved. A tabs block holds only `tab` blocks. Any other child is moved out to just after it.\n\nTo manage tabs:\n- click "+" to add a tab\n- click the open tab, right-click a tab, or press Shift+F10 or the ContextMenu key on it to open its menu: Rename, Edit icon, and Delete\n- press F2 on a tab to rename it\n- drag a tab sideways to reorder it\n\nThe last tab cannot be deleted. Delete the whole block instead. Deleting a tab deletes its content, and deleting the tabs block deletes every tab.\n\nThe arrow keys, Home, and End move between tabs. While you drag a block, rest it on a tab to open that tab, or drop it on the tab to add it at the end of that tab. Find in page opens the tab that holds a match.\n\nYou can register both tools at once with the `Tabs` group handle: `tools: { tabs: Tabs }` expands to the `tabs` and `tab` tools. The saved JSON still contains `tabs` and `tab` blocks.\n\nIt works in read-only mode. Pasting tabs from Notion creates this block. Markdown export writes every tab in order, each under its bold title. `blocksToHtml` writes a `<div data-blok-tabs>` with one `<section data-blok-tab>` per tab, and `htmlToBlocks` reads that HTML back as tabs.',
+    importExample: `import { TabsTool } from '@bloklabs/core/tools';
+// …or register both tab tools at once with the group handle:
+import { Tabs } from '@bloklabs/core/tools';`,
+    configOptions: [],
+    saveDataShape: `interface TabsData {
+  // No persisted fields. The tabs are the child \`tab\` blocks, referenced by
+  // the block's saved \`content\` array (exposed as \`contentIds\` on the
+  // in-memory Block). The open tab is UI state and is never saved.
+}`,
+    saveDataExample: `{
+  "id": "tabs001",
+  "type": "tabs",
+  "data": {},
+  "content": ["tab1", "tab2"]
+}`,
+    usageExample: `import { Blok } from '@bloklabs/core';
+import { TabsTool, TabTool } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    tabs: {
+      class: TabsTool,
+    },
+    tab: {
+      class: TabTool,
+    },
+  },
+});`,
+  },
+  {
+    id: 'tab',
+    exportName: 'TabTool',
+    type: 'block',
+    title: 'Tab',
+    description:
+      'A single tab inside a tabs block. It is not user-insertable on its own. The parent `tabs` block creates and manages its tabs.\n\nThe tab saves its `title` and an optional emoji `icon`, both as plain text (no HTML). An empty icon is not saved. Child blocks are nested inside the tab via `contentIds`. A tab cannot hold another tabs block.\n\nAn empty tab shows "Empty tab. Click or drop blocks inside." Clicking it adds a paragraph to the tab.',
+    importExample: `import { TabTool } from '@bloklabs/core/tools';`,
+    configOptions: [],
+    saveDataShape: `interface TabData {
+  title: string; // Plain text label shown in the tab strip
+  icon?: string; // Optional emoji shown before the title
+}
+// Child blocks are referenced via the block's saved \`content\` array
+// (the in-memory \`contentIds\`), not stored here.`,
+    saveDataExample: `{
+  "id": "tab1",
+  "type": "tab",
+  "data": {
+    "title": "Overview",
+    "icon": "📘"
+  },
+  "content": ["block1", "block2"]
+}`,
+    usageExample: `// Tab is not inserted directly — it is created by the TabsTool.
+import { TabsTool, TabTool } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    tabs: { class: TabsTool },
+    tab: { class: TabTool },
+  },
+});`,
+  },
 
   {
     id: 'embed',

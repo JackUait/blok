@@ -435,6 +435,18 @@ const TOOL_COPY: Record<string, Copy> = {
       'A single column inside a column list, carrying a width fraction and its own list of child blocks.',
     h1: 'Column block: one column of a layout',
   },
+  tabs: {
+    title: 'Tabs Block — Content Split into Switchable Tabs',
+    description:
+      'A block with a strip of tabs over the open tab\'s content. Each tab is a child block, and the open tab is never saved.',
+    h1: 'Tabs block: content in switchable tabs',
+  },
+  tab: {
+    title: 'Tab Block — One Tab of a Tabs Block',
+    description:
+      'A single tab inside a tabs block, carrying a plain-text title, an optional emoji icon, and its own child blocks.',
+    h1: 'Tab block: one tab of a tabs block',
+  },
   embed: {
     title: 'Embed Block — 115 Supported Services',
     description:

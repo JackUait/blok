@@ -1656,7 +1656,7 @@
         "htmlOrJson": "HTML / JSON",
         "flat": "Flat",
         "nodes": "Nodes",
-        "builtInCount": "21 built-in",
+        "builtInCount": "23 built-in",
         "paragraphOnly": "Paragraph only",
         "basicsOnly": "Basics only",
         "primitives": "Primitives",
@@ -2047,6 +2047,8 @@
       "image": "Image",
       "column_list": "Columns",
       "column": "Column",
+      "tabs": "Tabs",
+      "tab": "Tab",
       "embed": "Embed",
       "bookmark": "Bookmark",
       "page": "Page",
@@ -2237,6 +2239,12 @@
       },
       "column": {
         "description": "A single column inside a column list. It is not user-insertable on its own. The parent `column_list` block creates and manages the columns.\n\nChild blocks are nested inside the column via `contentIds`. The optional `widthRatio` sets the column's width relative to its siblings, applied as flex-grow. Omit it for equal width."
+      },
+      "tabs": {
+        "description": "A block that splits content into tabs. A strip of tabs sits on top, and the open tab's content shows below it. Insert it from the toolbox, or type `/tabs`. A new tabs block starts with three tabs: Tab 1, Tab 2, and Tab 3.\n\nEach tab is a child `tab` block, and the blocks you write live inside the tabs (via `contentIds`). The tabs block itself saves nothing. Which tab is open is UI state, kept per editor, and never saved. A tabs block holds only `tab` blocks. Any other child is moved out to just after it.\n\nTo manage tabs:\n- click \"+\" to add a tab\n- click the open tab, right-click a tab, or press Shift+F10 or the ContextMenu key on it to open its menu: Rename, Edit icon, and Delete\n- press F2 on a tab to rename it\n- drag a tab sideways to reorder it\n\nThe last tab cannot be deleted. Delete the whole block instead. Deleting a tab deletes its content, and deleting the tabs block deletes every tab.\n\nThe arrow keys, Home, and End move between tabs. While you drag a block, rest it on a tab to open that tab, or drop it on the tab to add it at the end of that tab. Find in page opens the tab that holds a match.\n\nYou can register both tools at once with the `Tabs` group handle: `tools: { tabs: Tabs }` expands to the `tabs` and `tab` tools. The saved JSON still contains `tabs` and `tab` blocks.\n\nIt works in read-only mode. Pasting tabs from Notion creates this block. Markdown export writes every tab in order, each under its bold title. `blocksToHtml` writes a `<div data-blok-tabs>` with one `<section data-blok-tab>` per tab, and `htmlToBlocks` reads that HTML back as tabs."
+      },
+      "tab": {
+        "description": "A single tab inside a tabs block. It is not user-insertable on its own. The parent `tabs` block creates and manages its tabs.\n\nThe tab saves its `title` and an optional emoji `icon`, both as plain text (no HTML). An empty icon is not saved. Child blocks are nested inside the tab via `contentIds`. A tab cannot hold another tabs block.\n\nAn empty tab shows \"Empty tab. Click or drop blocks inside.\" Clicking it adds a paragraph to the tab."
       },
       "embed": {
         "description": "A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion's \"Create embed\". It works purely on the client: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL.\n\nBy default only registry-matched URLs are embedded. Set the editor-level `linkPaste.allowGenericEmbed: true` to also embed unmatched https URLs in a generic sandboxed iframe (saved with an empty `service`).\n\nIt supports resizing, alignment (left/center/right), and an optional caption. A document-style provider such as Google Docs, Sheets, Slides, Forms or Drive also gets a bottom handle for adjusting the embed height."

@@ -512,6 +512,9 @@ test.describe('Columns tool', () => {
   }
 
   test('drag-beside plays the column-drop animation and the ghost settles into place', async ({ page }) => {
+    // Linux WebKit 26.6 (Playwright 1.63) reports reduced motion by default,
+    // which correctly skips the animation this test asserts.
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {
       blocks: [

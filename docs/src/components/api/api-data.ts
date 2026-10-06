@@ -2728,8 +2728,8 @@ editor.tooltip.show(button, 'Click to save', {
             name: "options.delay",
             type: "number",
             required: false,
-            default: "0",
-            description: "Milliseconds to wait before showing. It is skipped entirely when another tooltip hid within the previous 300 ms, so sweeping across adjacent triggers stays instant.",
+            default: "500",
+            description: "Milliseconds to wait before showing. A hint never shows instantly: values below 300 are raised to 300, and moving to the next trigger waits again.",
           },
           {
             name: "options.marginTop",
@@ -2763,7 +2763,7 @@ editor.tooltip.show(button, 'Click to save', {
       {
         name: "tooltip.onHover(element, content, options?)",
         returnType: "void",
-        description: "Show tooltip on hover using event listeners. It takes the same `options` as `show()`. Keyboard-focus reveals ignore `delay`, so keyboard users never wait.",
+        description: "Show tooltip on hover using event listeners, after `delay`. It takes the same `options` as `show()`. Focus does not show it, so a click on the element shows nothing at once.",
         example: `const button = document.querySelector('button');
 editor.tooltip.onHover(button, 'Click me', {
   placement: 'bottom'

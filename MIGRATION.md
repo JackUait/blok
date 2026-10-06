@@ -759,7 +759,7 @@ richTextToPlainText([{ text: 'Hi ' }, { text: 'there', marks: { bold: true } }])
 //=> 'Hi there'
 ```
 
-- Run `migrate()` first on Editor.js data, then `migrateToRichText`. The other order loses legacy fields such as a `warning` title and message, or a `quote` caption.
+- Run `migrate()` first on Editor.js data, then `migrateToRichText`. `migrateToRichText` leaves a block in a legacy shape untouched and reports it to `onLossy` as `'legacy-shape'`.
 - It converts only built-in block types. A custom tool's fields are left as they are.
 - Fields that already hold segments pass through, so running it twice is safe.
 - `onLossy` reports `'html-embed'` for markup kept as an `{ embed: { html } }` segment, and `'custom-mark'` for an unknown tag kept as a `tag:<name>` mark.

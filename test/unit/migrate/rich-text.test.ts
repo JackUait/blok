@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { migrateToRichText, richTextToHtml, richTextToPlainText } from '../../../src/migrate';
+import { migrate, migrateToRichText, richTextToHtml, richTextToPlainText } from '../../../src/migrate';
+import type { OutputData } from '../../../types';
 import type { RichText } from '../../../types/rich-text';
 
 describe('migrate rich text', () => {
@@ -93,5 +94,42 @@ describe('migrate rich text', () => {
     const rich: RichText = [{ embed: { page: { id: 'p1' } } }, { embed: { html: '<abbr>a &amp; b</abbr>' } }];
 
     expect(richTextToPlainText(rich)).toBe('Pagea & b');
+  });
+
+  describe('legacy Editor.js shapes', () => {
+    const counterIds = (): (() => string) => {
+      let n = 0;
+
+      return () => `id-${n++}`;
+    };
+
+    it.each<[string, OutputData]>([
+      ['a warning title and message', { blocks: [{ id: 'w', type: 'warning', data: { title: '<b>T</b>', message: 'M' } }] }],
+      ['a quote caption', { blocks: [{ id: 'q', type: 'quote', data: { text: 'Q', caption: '<b>C</b>' } }] }],
+      ['a callout title with a body', { blocks: [{
+        id: 'c',
+        type: 'callout',
+        data: { title: '<b>T</b>', body: { blocks: [{ id: 'b', type: 'paragraph', data: { text: '<i>inner</i>' } }] } },
+      }] }],
+      ['a toggleList title', { blocks: [{ id: 't', type: 'toggleList', data: { title: '<b>T</b>' } }] }],
+      ['legacy list items', { blocks: [{ id: 'l', type: 'list', data: { style: 'unordered', items: [{ content: '<b>a</b>', items: [] }] } }] }],
+    ])('keeps %s when run before migrate()', (_label, doc) => {
+      const onLossy = vi.fn();
+      const converted = migrateToRichText(doc, { onLossy });
+      const block = doc.blocks[0];
+
+      expect(converted).toEqual(doc);
+      expect(migrate(converted, { generateId: counterIds() })).toEqual(migrate(doc, { generateId: counterIds() }));
+      expect(onLossy).toHaveBeenCalledWith({ blockId: block.id, blockType: block.type, field: 'data', reason: 'legacy-shape' });
+    });
+
+    it('still converts current blocks next to a legacy one', () => {
+      const out = migrateToRichText({ blocks: [
+        { id: 'w', type: 'warning', data: { title: 'T', message: 'M' } },
+        { id: 'p', type: 'paragraph', data: { text: '<b>a</b>' } },
+      ] });
+
+      expect(out.blocks[1].data.text).toEqual([{ text: 'a', marks: { bold: true } }]);
+    });
   });
 });

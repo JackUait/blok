@@ -35,8 +35,7 @@ import type { LegacyGrammarEntry } from '../components/migration/legacy-grammar.
 import { migrateBlocks } from '../components/migration/block-migrations';
 import type { BlockMigrations } from '../components/migration/block-migrations';
 import type { RichText, RichTextEmbed } from '../../types/rich-text';
-import { isNestedDocument, nestedDocumentsFor, outputBlocksToSegments } from '../shared/rich-text/block-data';
-import { RICH_TEXT_FIELDS } from '../shared/rich-text/fields';
+import { blockDataToSegments, isNestedDocument, nestedDocumentsFor } from '../shared/rich-text/block-data';
 import { isRichText } from '../shared/rich-text/guards';
 import { segmentsToHtml } from '../shared/rich-text/segments-to-html';
 import { PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
@@ -273,17 +272,30 @@ export interface RichTextLossyReport {
   blockId?: string;
   blockType: string;
   field: string;
-  /** `html-embed`: markup kept verbatim. `custom-mark`: an unknown tag kept as a `tag:*` mark. */
-  reason: 'html-embed' | 'custom-mark';
+  /**
+   * `html-embed`: markup kept verbatim. `custom-mark`: an unknown tag kept as a `tag:*` mark.
+   * `legacy-shape`: an Editor.js block left unconverted (`field` is `'data'`); run `migrate()` first.
+   */
+  reason: 'html-embed' | 'custom-mark' | 'legacy-shape';
 }
 
 export interface MigrateToRichTextOptions {
   onLossy?: (report: RichTextLossyReport) => void;
 }
 
-// Unknown types are skipped: the migrator cannot know which of their fields hold HTML.
-const knownRichTextFields = (type: string): string[] =>
-  Object.prototype.hasOwnProperty.call(RICH_TEXT_FIELDS, type) ? RICH_TEXT_FIELDS[type] : [];
+// Fields of the CURRENT data model only. Not RICH_TEXT_FIELDS: its legacy-only
+// fields (quote.caption, warning.title, …) must stay strings, or the legacy
+// grammar in migrate() drops them. Unknown types are skipped: their fields are not ours to know.
+const CURRENT_RICH_TEXT_FIELDS: Record<string, string[]> = {
+  paragraph: ['text'],
+  header: ['text'],
+  quote: ['text'],
+  toggle: ['text'],
+  list: ['text'],
+};
+
+const currentRichTextFields = (type: string): string[] =>
+  Object.prototype.hasOwnProperty.call(CURRENT_RICH_TEXT_FIELDS, type) ? CURRENT_RICH_TEXT_FIELDS[type] : [];
 
 const lossyReasons = (rich: RichText): Set<RichTextLossyReport['reason']> => {
   const reasons = new Set<RichTextLossyReport['reason']>();
@@ -300,65 +312,63 @@ const lossyReasons = (rich: RichText): Set<RichTextLossyReport['reason']> => {
   return reasons;
 };
 
-/** Walks input and output side by side, so only fields converted in this pass are reported. */
-const reportLossy = (
-  before: OutputBlockData[],
-  after: OutputBlockData[],
-  onLossy: (report: RichTextLossyReport) => void
-): void => {
-  before.forEach((block, index) => {
-    const oldData: Record<string, unknown> = block.data ?? {};
-    const newData: Record<string, unknown> = after[index].data ?? {};
-
-    for (const field of knownRichTextFields(block.type)) {
-      const value = newData[field];
-
-      if (typeof oldData[field] === 'string' && isRichText(value)) {
-        lossyReasons(value).forEach(reason => onLossy({ blockId: block.id, blockType: block.type, field, reason }));
-      }
-    }
-
-    if (nestedDocumentsFor(block.type).nestedDocuments === true) {
-      reportNestedLossy(oldData.properties, newData.properties, onLossy);
-    }
-  });
-};
+type LossySink = (report: RichTextLossyReport) => void;
 
 /** database-row: a richText property is a whole nested document. */
-const reportNestedLossy = (
-  before: unknown,
-  after: unknown,
-  onLossy: (report: RichTextLossyReport) => void
-): void => {
-  if (typeof before !== 'object' || before === null || typeof after !== 'object' || after === null) {
-    return;
+const convertProperties = (properties: unknown, onLossy: LossySink): unknown => {
+  if (typeof properties !== 'object' || properties === null || Array.isArray(properties)) {
+    return properties;
   }
 
-  for (const [key, value] of Object.entries(before)) {
-    const next: unknown = (after as Record<string, unknown>)[key];
+  return Object.fromEntries(Object.entries(properties).map(([key, value]) => [
+    key,
+    isNestedDocument(value) ? { ...value, blocks: convertBlocks(value.blocks, onLossy) } : value,
+  ]));
+};
 
-    if (isNestedDocument(value) && isNestedDocument(next)) {
-      reportLossy(value.blocks, next.blocks, onLossy);
+const convertBlock = (block: OutputBlockData, onLossy: LossySink): OutputBlockData => {
+  // A legacy block keeps its strings so migrate() can still read every field.
+  if (matchLegacyRuleInGrammar(block) !== null) {
+    onLossy({ blockId: block.id, blockType: block.type, field: 'data', reason: 'legacy-shape' });
+
+    return block;
+  }
+
+  const data: Record<string, unknown> = block.data ?? {};
+  const fields = currentRichTextFields(block.type);
+  const next = blockDataToSegments(data, fields, () => [], htmlToSegmentsNode);
+
+  for (const field of fields) {
+    const value = next[field];
+
+    if (typeof data[field] === 'string' && isRichText(value)) {
+      lossyReasons(value).forEach(reason => onLossy({ blockId: block.id, blockType: block.type, field, reason }));
     }
   }
+
+  if (nestedDocumentsFor(block.type).nestedDocuments === true && 'properties' in next) {
+    next.properties = convertProperties(next.properties, onLossy);
+  }
+
+  return { ...block, data: next };
 };
+
+const convertBlocks = (blocks: OutputBlockData[], onLossy: LossySink): OutputBlockData[] =>
+  blocks.map(block => convertBlock(block, onLossy));
 
 /**
  * Convert the HTML rich-text fields of a stored document to segments, without a DOM.
- * Only built-in block types are converted. Fields that already hold segments pass through.
+ * Only built-in block types in the current data model are converted. A block in a
+ * legacy Editor.js shape is left as it is and reported as `legacy-shape`: run
+ * {@link migrate} first. Fields that already hold segments pass through.
  * @param data - a stored OutputData document
- * @param options - `onLossy` hears about markup kept as an embed or a custom mark
+ * @param options - `onLossy` hears about legacy blocks and markup kept as an embed or a custom mark
  * @returns the document with segment fields
  */
-export const migrateToRichText = (data: OutputData, options?: MigrateToRichTextOptions): OutputData => {
-  const blocks = outputBlocksToSegments(data.blocks, knownRichTextFields, htmlToSegmentsNode);
-
-  if (options?.onLossy !== undefined) {
-    reportLossy(data.blocks, blocks, options.onLossy);
-  }
-
-  return { ...data, blocks };
-};
+export const migrateToRichText = (data: OutputData, options?: MigrateToRichTextOptions): OutputData => ({
+  ...data,
+  blocks: convertBlocks(data.blocks, options?.onLossy ?? (() => undefined)),
+});
 
 /**
  * Canonical HTML for segments, the same string the editor saves.

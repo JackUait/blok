@@ -159,6 +159,13 @@ export class KeyboardController extends Controller {
       return;
     }
 
+    // A word-boundary checkpoint that is due must close BEFORE the browser
+    // writes this character. By `input` the mutation observer has already
+    // buffered it, and the split's flush would carry it into the old step.
+    if (event instanceof InputEvent && event.inputType === 'insertText' && event.data !== null) {
+      this.Blok.YjsManager.checkAndHandleBoundary();
+    }
+
     // force: a beforeinput is the start of a fresh user edit, so the
     // caret-before is the caret right now — discard any stale pending snapshot
     // left dangling by a previous operation's no-op follow-up write.

@@ -224,6 +224,9 @@ const createHarness = (options?: {
       markCaretBeforeChange: vi.fn(() => {
         order.push('controller');
       }),
+      checkAndHandleBoundary: vi.fn(() => {
+        order.push('boundary');
+      }),
       undo: vi.fn(),
       redo: vi.fn(),
       stopCapturing: vi.fn(),
@@ -387,6 +390,22 @@ describe('KeyboardController — mutation coverage', () => {
       harness.redactor.dispatchEvent(new InputEvent('beforeinput', { bubbles: true }));
 
       expect(harness.blok.YjsManager.markCaretBeforeChange).toHaveBeenCalledWith(true);
+    });
+
+    it('closes a timed-out word-boundary step before the typed character is written', () => {
+      const harness = enabledHarness();
+
+      harness.redactor.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: 'd' }));
+
+      expect(harness.order).toStrictEqual(['boundary', 'controller']);
+    });
+
+    it('leaves the word-boundary step alone for input that is not typed text', () => {
+      const harness = enabledHarness();
+
+      harness.redactor.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'deleteContentBackward' }));
+
+      expect(harness.blok.YjsManager.checkAndHandleBoundary).not.toHaveBeenCalled();
     });
   });
 

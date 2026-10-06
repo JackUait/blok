@@ -450,8 +450,7 @@ export class BlockEvents extends Module {
 
     const char = event.data;
 
-    // Check if previous boundary has timed out (user resumed typing after pause)
-    yjsManager.checkAndHandleBoundary();
+    // A boundary that timed out was closed on beforeinput (keyboard controller).
 
     // Access static method via constructor
     if (YjsManager.isBoundaryCharacter(char)) {

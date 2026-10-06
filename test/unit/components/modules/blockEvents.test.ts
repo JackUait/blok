@@ -945,12 +945,8 @@ describe('BlockEvents', () => {
         expect(boundaryTimestamp).toBeGreaterThan(0);
       });
 
-      it('checks and handles boundary on non-boundary character', () => {
-        let boundaryChecked = false;
-
-        const checkAndHandleBoundarySpy = vi.fn(() => {
-          boundaryChecked = true;
-        });
+      it('does not close a timed-out boundary once the character is already in the DOM', () => {
+        const checkAndHandleBoundarySpy = vi.fn();
 
         const blockEvents = createBlockEvents({
           YjsManager: {
@@ -968,8 +964,9 @@ describe('BlockEvents', () => {
 
         blockEvents.input(event);
 
-        expect(checkAndHandleBoundarySpy).toHaveBeenCalled();
-        expect(boundaryChecked).toBe(true);
+        // The keyboard controller closes it on beforeinput. Here the character's own write is
+        // already buffered, so a split would put it on the wrong side of the boundary.
+        expect(checkAndHandleBoundarySpy).not.toHaveBeenCalled();
       });
 
       it('clears boundary when non-boundary follows boundary quickly', () => {

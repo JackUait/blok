@@ -1365,7 +1365,7 @@
         },
         "save": {
           "title": "Save it to JSON",
-          "body": "Call `save()` to get your content as a plain object. The structure is typed JSON with no hidden state, only blocks you can store anywhere. Inline formatting is stored as HTML in rich text fields.",
+          "body": "Call `save()` to get your content as a plain object. The structure is typed JSON with no hidden state, only blocks you can store anywhere. Inline formatting is stored as HTML in rich text fields.\n\nSet `richText: 'segments'` to store it as an array of `{ text, marks }` runs instead.",
           "payoff": "That object is the whole point. It's portable JSON you can drop into a database, a file, or an API. It's exactly what you'll load back next."
         },
         "render": {

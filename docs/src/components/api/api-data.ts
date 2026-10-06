@@ -490,6 +490,13 @@ const editor = new Blok(config);`,
           "Input/output data model. 'auto' detects the format of the data you render and preserves it on save. 'legacy' always uses the nested `items[]` structure. 'hierarchical' always uses flat blocks with `parent`/`content` references.",
       },
       {
+        option: "richText",
+        type: "'html' | 'segments'",
+        default: "'html'",
+        description:
+          "The shape of rich text fields in saved data, such as `paragraph.text`. 'html' saves an inline HTML string. 'segments' saves an array of runs, for example `[{ text: 'Hello ' }, { text: 'world', marks: { bold: true } }]`.\n\nBlok reads both shapes on input, whatever this says. In segments mode, `save()`, `onSave`, `BlockAPI.save()` and the adapters' `getBlockData` all return segments.\n\nThe output stays HTML, with one console warning, in two cases.\n\n- `dataModel` is 'legacy', or 'auto' with legacy input.\n- `collaboration` is configured.\n\nSee the migration guide for the full shape and for converting stored documents.",
+      },
+      {
         option: "sanitizer",
         type: "SanitizerConfig",
         default: "{}",
@@ -3872,6 +3879,20 @@ const { data } = migrate(storedDocument, { rules: [alertRule] });
 LEGACY_GRAMMAR.map((entry) => [entry.legacyType, entry.targetType, entry.lossyFields]);`,
         note:
           "A container rule whose body is stored as a COUNT of following siblings returns `{ blocks, consumed }`. The interpreter skips exactly that many siblings, so the children are re-parented once and never emitted twice.",
+      },
+      {
+        name: "migrateToRichText(data, options?)",
+        returnType: "OutputData",
+        description:
+          "Converts the HTML rich text fields of a stored document to segments, the shape `richText: 'segments'` saves. It is exported from `@bloklabs/core/migrate` and runs in Node without a DOM.\n\nOnly built-in block types are converted. A custom tool's fields are left as they are. Fields that already hold segments pass through, so running it twice is safe.\n\n`onLossy` hears about markup that has no plain mark.\n\n- `html-embed`: markup kept verbatim as an `{ embed: { html } }` segment.\n- `custom-mark`: an unknown tag kept as a `tag:<name>` mark.\n\n`richTextToHtml(rich)` turns segments back into the HTML the editor saves. `richTextToPlainText(rich)` returns the plain text.",
+        example: `import { migrateToRichText, richTextToHtml, richTextToPlainText } from '@bloklabs/core/migrate';
+
+const converted = migrateToRichText(storedDocument, {
+  onLossy: ({ blockType, field, reason }) => report(blockType, field, reason),
+});
+
+richTextToHtml([{ text: 'Hi ' }, { text: 'there', marks: { bold: true } }]); // 'Hi <strong>there</strong>'
+richTextToPlainText([{ text: 'Hi ' }, { text: 'there', marks: { bold: true } }]); // 'Hi there'`,
       },
     ],
   },

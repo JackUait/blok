@@ -73,6 +73,8 @@ export const TOOL_SECTIONS: ToolSection[] = [
     ],
     saveDataShape: `interface ParagraphData {
   text: string;             // HTML string (may include <b>, <i>, <a>, <mark>)
+                            // With richText: 'segments', an array of runs instead:
+                            // [{ "text": "Hello " }, { "text": "world", "marks": { "bold": true } }]
   textColor?: string;       // Block colour preset, present when set
   backgroundColor?: string; // Block background colour preset, present when set
 }`,
@@ -146,7 +148,7 @@ const editor = new Blok({
       },
     ],
     saveDataShape: `interface HeaderData {
-  text: string;             // Heading HTML content
+  text: string;             // Heading HTML content (segments with richText: 'segments')
   level: number;            // 1–6
   isToggleable?: boolean;   // true when the heading has toggle (collapse/expand)
   textColor?: string;       // Block colour preset, present when set
@@ -217,7 +219,7 @@ const editor = new Blok({
       },
     ],
     saveDataShape: `interface ListData {
-  text: string;                                    // Item HTML content
+  text: string;                                    // Item HTML content (segments with richText: 'segments')
   style: 'unordered' | 'ordered' | 'checklist'; // List type
   checked?: boolean;  // Checklist check state
   start?: number;     // First number for ordered lists (root items only); omitted when 1
@@ -356,7 +358,7 @@ const editor = new Blok({
       },
     ],
     saveDataShape: `interface ToggleData {
-  text: string; // Toggle title HTML content
+  text: string; // Toggle title HTML content (segments with richText: 'segments')
 }`,
     saveDataExample: `{
   "id": "mno345",
@@ -631,7 +633,7 @@ const editor = new Blok({
     importExample: `import { Quote } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface QuoteData {
-  text: string;                  // Quote HTML content
+  text: string;                  // Quote HTML content (segments with richText: 'segments')
   size: 'default' | 'large';    // Text size variant
 }`,
     saveDataExample: `{

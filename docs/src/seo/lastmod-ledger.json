@@ -76,7 +76,7 @@
     "date": "2026-10-05"
   },
   "/docs/config": {
-    "hash": "bfdf22156230f741",
+    "hash": "0500510cb8f71d06",
     "date": "2026-10-06"
   },
   "/docs/core": {
@@ -120,7 +120,7 @@
     "date": "2026-09-28"
   },
   "/docs/header": {
-    "hash": "097ed82897a3f4a4",
+    "hash": "876aa9326c57c49f",
     "date": "2026-10-06"
   },
   "/docs/history-api": {
@@ -152,8 +152,8 @@
     "date": "2026-09-08"
   },
   "/docs/list": {
-    "hash": "87a9151aa9fdbb2b",
-    "date": "2026-09-08"
+    "hash": "eda69a4e29be8af2",
+    "date": "2026-10-06"
   },
   "/docs/listeners-api": {
     "hash": "f6cda1d7503bda39",
@@ -172,7 +172,7 @@
     "date": "2026-09-08"
   },
   "/docs/output-data": {
-    "hash": "1d7ae6750b8d86b1",
+    "hash": "cb6a92f0f0028f33",
     "date": "2026-10-06"
   },
   "/docs/page": {
@@ -184,8 +184,8 @@
     "date": "2026-10-05"
   },
   "/docs/paragraph": {
-    "hash": "46e6ab08d8b46da5",
-    "date": "2026-09-08"
+    "hash": "397c096c0fa4ae06",
+    "date": "2026-10-06"
   },
   "/docs/placeholder-api": {
     "hash": "b85675e8c13ef6e0",
@@ -196,8 +196,8 @@
     "date": "2026-09-08"
   },
   "/docs/quote": {
-    "hash": "ad2c75ae8f29fa89",
-    "date": "2026-09-08"
+    "hash": "6fd70d6812f26703",
+    "date": "2026-10-06"
   },
   "/docs/readonly-api": {
     "hash": "e30c734e1732cf9f",
@@ -256,7 +256,7 @@
     "date": "2026-09-08"
   },
   "/docs/toggle": {
-    "hash": "a10e8716a3c22ab6",
+    "hash": "58390cdb2942db34",
     "date": "2026-10-06"
   },
   "/docs/toolbar-api": {
@@ -272,8 +272,8 @@
     "date": "2026-09-08"
   },
   "/docs/tutorial": {
-    "hash": "7814d57f3f2dc1bd",
-    "date": "2026-10-05"
+    "hash": "6e5d5d84003d597e",
+    "date": "2026-10-06"
   },
   "/docs/ui-api": {
     "hash": "ca032a6baf9e75fe",
@@ -396,7 +396,7 @@
     "date": "2026-10-05"
   },
   "/ru/docs/config": {
-    "hash": "1f7977d0cd6287e3",
+    "hash": "a0f0b2120820902f",
     "date": "2026-10-06"
   },
   "/ru/docs/core": {
@@ -440,7 +440,7 @@
     "date": "2026-09-28"
   },
   "/ru/docs/header": {
-    "hash": "f7c9436e1ce9d356",
+    "hash": "f88d54b8785e3570",
     "date": "2026-10-06"
   },
   "/ru/docs/history-api": {
@@ -472,8 +472,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/list": {
-    "hash": "a7f27c5a1f788c9b",
-    "date": "2026-09-08"
+    "hash": "9c720df6e36e5646",
+    "date": "2026-10-06"
   },
   "/ru/docs/listeners-api": {
     "hash": "8647d11c003ca907",
@@ -492,7 +492,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/output-data": {
-    "hash": "81fd18a0e52a9df6",
+    "hash": "2a57bd8016a4145a",
     "date": "2026-10-06"
   },
   "/ru/docs/page": {
@@ -504,8 +504,8 @@
     "date": "2026-10-05"
   },
   "/ru/docs/paragraph": {
-    "hash": "99547f1981936c61",
-    "date": "2026-09-08"
+    "hash": "56fce0fc056e79be",
+    "date": "2026-10-06"
   },
   "/ru/docs/placeholder-api": {
     "hash": "10b8b863c99d5715",
@@ -516,8 +516,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/quote": {
-    "hash": "495315a84da3adbb",
-    "date": "2026-09-08"
+    "hash": "c6669578c7d17d0d",
+    "date": "2026-10-06"
   },
   "/ru/docs/readonly-api": {
     "hash": "817b46fd30ee1ace",
@@ -576,7 +576,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/toggle": {
-    "hash": "0514b00e60757180",
+    "hash": "7e9e055478288e5b",
     "date": "2026-10-06"
   },
   "/ru/docs/toolbar-api": {
@@ -592,8 +592,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/tutorial": {
-    "hash": "230acd0ed42fa142",
-    "date": "2026-10-05"
+    "hash": "7d2de1bc6cfdf6ea",
+    "date": "2026-10-06"
   },
   "/ru/docs/ui-api": {
     "hash": "8335da2ee4ec9715",

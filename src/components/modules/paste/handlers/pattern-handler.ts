@@ -1,7 +1,11 @@
 import type { BlokConfig } from '../../../../../types/configs/blok-config';
 import { isHttpUrl, isSamePageLink } from '../../../../tools/link/registry';
-import { PasteMenuController, type LinkPasteMenu } from '../../../../tools/link/paste-menu/controller';
-import type { PasteMenuActionType } from '../../../../tools/link/paste-menu/options';
+import {
+  PasteMenuController,
+  buildLivePasteMenuOptions,
+  type LinkPasteMenu,
+} from '../../../../tools/link/paste-menu/controller';
+import { isOwnHostLink, type PasteMenuActionType } from '../../../../tools/link/paste-menu/options';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { applyResolvedLinkAttributes, resolveLinkAttributes } from '../../../utils/resolve-link-attributes';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
@@ -78,6 +82,11 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       if (this.linkSelection(data.trim())) {
         return true;
       }
+
+      // Bookmark's catch-all pattern would claim it; let the text handler take it.
+      if (pattern.tool.name === 'bookmark' && isOwnHostLink(data, this.ownHosts())) {
+        return false;
+      }
     }
 
     const event = this.composePasteEvent('pattern', {
@@ -152,6 +161,15 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     return selection !== null && !selection.isCollapsed && selection.toString().length > 0;
   }
 
+  /** The page's hostname plus the configured `linkPaste.hostAliases`. */
+  private ownHosts(): string[] {
+    const aliases = this.config?.linkPaste?.hostAliases ?? [];
+    // Empty under file:// and about:blank; it must not count as a host.
+    const current = typeof window === 'undefined' ? '' : window.location.hostname;
+
+    return current === '' ? [...aliases] : [current, ...aliases];
+  }
+
   private getCaretRect(): DOMRect | null {
     const selection = window.getSelection();
 
@@ -183,10 +201,20 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       this.insertInlineLink(url);
     }
 
+    const hasSelection = this.hasSelection();
+    const allowGenericEmbed = this.config?.linkPaste?.allowGenericEmbed === true;
+    const ownHosts = this.ownHosts();
+
+    // The link is already in; a menu offering only "keep it" is noise.
+    if (buildLivePasteMenuOptions(url, { hasSelection, allowGenericEmbed, ownHosts }).every((o) => o.type === 'plain')) {
+      return;
+    }
+
     this.menu.open({
       url,
-      hasSelection: this.hasSelection(),
-      allowGenericEmbed: this.config?.linkPaste?.allowGenericEmbed === true,
+      hasSelection,
+      allowGenericEmbed,
+      ownHosts,
       position: this.getLinkEndRect(linkBlock, url) ?? this.getCaretRect(),
       ...(linkBlock?.holder ? { trigger: linkBlock.holder } : {}),
       ...(this.config?.i18n?.direction ? { direction: this.config.i18n.direction } : {}),

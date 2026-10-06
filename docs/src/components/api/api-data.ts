@@ -665,10 +665,10 @@ const editor = new Blok(config);`,
       },
       {
         option: "linkPaste",
-        type: "{ allowGenericEmbed?: boolean; allowedEmbedOrigins?: string[] }",
+        type: "{ allowGenericEmbed?: boolean; allowedEmbedOrigins?: string[]; hostAliases?: string[] }",
         default: "undefined",
         description:
-          "Notion-style link-paste behavior. Set `allowGenericEmbed: true` to also offer \"Create embed\" (framed in a sandboxed iframe) for URLs that match no registered embed provider. The default keeps Blok's registry-only embed guarantee.\n\n`allowedEmbedOrigins` is the fine-grained middle ground: hostnames (`dashboards.example.com`) or wildcard subdomain patterns (`*.internal.example.dev`) that may be framed as generic embeds. A stored generic embed matching neither renders as a safe clickable link card instead of an iframe, so the URL stays visible without being framed.\n\nPaste a URL while text is selected, and the selected text becomes a link to it. No menu opens.",
+          "Notion-style link-paste behavior. Set `allowGenericEmbed: true` to also offer \"Create embed\" (framed in a sandboxed iframe) for URLs that match no registered embed provider. The default keeps Blok's registry-only embed guarantee.\n\n`allowedEmbedOrigins` is the fine-grained middle ground: hostnames (`dashboards.example.com`) or wildcard subdomain patterns (`*.internal.example.dev`) that may be framed as generic embeds. A stored generic embed matching neither renders as a safe clickable link card instead of an iframe, so the URL stays visible without being framed.\n\nPaste a URL while text is selected, and the selected text becomes a link to it. No menu opens.\n\n`hostAliases` lists other hostnames (or `*.` wildcards) that count as your own site, next to the page's hostname. A pasted link to your own site never offers \"Create bookmark\". If no other choice is left, no menu opens.",
       },
       {
         option: "user",

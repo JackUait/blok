@@ -56,3 +56,37 @@ describe('buildPasteMenuOptions — generic embed flag', () => {
     expect(typesWith('not a url', true)).toEqual(['plain']);
   });
 });
+
+const typesOwnHosts = (url: string, ownHosts: string[], allowGenericEmbed = false): string[] =>
+  buildPasteMenuOptions(url, { hasSelection: false, ownHosts, allowGenericEmbed }).map((o) => o.type);
+
+describe('buildPasteMenuOptions — own host', () => {
+  it('does not offer bookmark for a link to the editor host', () => {
+    expect(typesOwnHosts('https://app.example.com/doc/1', ['app.example.com'])).not.toContain('bookmark');
+  });
+
+  it('ignores the port and letter case when matching the host', () => {
+    expect(typesOwnHosts('http://APP.example.com:8080/doc', ['app.example.com'])).not.toContain('bookmark');
+  });
+
+  it('does not offer bookmark for a link to a host alias', () => {
+    expect(typesOwnHosts('https://example.com/doc', ['app.example.com', 'example.com'])).not.toContain('bookmark');
+  });
+
+  it('matches a wildcard alias on any subdomain but not the bare domain', () => {
+    expect(typesOwnHosts('https://a.b.example.com/doc', ['*.example.com'])).not.toContain('bookmark');
+    expect(typesOwnHosts('https://example.com/doc', ['*.example.com'])).toContain('bookmark');
+  });
+
+  it('still offers bookmark for a link to another host', () => {
+    expect(typesOwnHosts('https://other.com/doc', ['app.example.com'])).toContain('bookmark');
+  });
+
+  it('does not match a host that only ends with the own host name', () => {
+    expect(typesOwnHosts('https://evilexample.com/doc', ['example.com'])).toContain('bookmark');
+  });
+
+  it('keeps embed for an own-host link when embeds apply', () => {
+    expect(typesOwnHosts('https://app.example.com/doc', ['app.example.com'], true)).toEqual(['embed', 'mention', 'plain']);
+  });
+});

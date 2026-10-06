@@ -3,7 +3,12 @@ import type { PopoverVirtualPositionParams } from '../../../../types/utils/popov
 import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
 
 import { buildPasteMenuItems, type PasteMenuI18n } from './items';
-import { buildPasteMenuOptions, type PasteMenuActionType } from './options';
+import {
+  buildPasteMenuOptions,
+  type PasteMenuActionType,
+  type PasteMenuContext,
+  type PasteMenuOption,
+} from './options';
 
 export interface PasteMenuOpenParams {
   /** The pasted URL the menu acts on. */
@@ -12,6 +17,8 @@ export interface PasteMenuOpenParams {
   hasSelection: boolean;
   /** When true, unmatched URLs also offer a generic embed. */
   allowGenericEmbed?: boolean;
+  /** Hostnames that count as the editor's own site; their links get no bookmark. */
+  ownHosts?: readonly string[];
   /** Caret rect to anchor the popover at, or null to let the popover self-place. */
   position: DOMRect | null;
   /**
@@ -44,6 +51,10 @@ const LIVE_ACTIONS: ReadonlySet<PasteMenuActionType> = new Set<PasteMenuActionTy
   'bookmark',
   'embed',
 ]);
+
+/** The options the live menu shows for `url`. */
+export const buildLivePasteMenuOptions = (url: string, context: PasteMenuContext): PasteMenuOption[] =>
+  buildPasteMenuOptions(url, context).filter((option) => LIVE_ACTIONS.has(option.type));
 
 const virtualPositionParams = (
   position: DOMRect | null,
@@ -78,10 +89,11 @@ export class PasteMenuController implements LinkPasteMenu {
   public open(params: PasteMenuOpenParams): void {
     this.closeExisting();
 
-    const options = buildPasteMenuOptions(params.url, {
+    const options = buildLivePasteMenuOptions(params.url, {
       hasSelection: params.hasSelection,
       allowGenericEmbed: params.allowGenericEmbed === true,
-    }).filter((option) => LIVE_ACTIONS.has(option.type));
+      ...(params.ownHosts ? { ownHosts: params.ownHosts } : {}),
+    });
 
     // Mutable flags held on a const object (the lint config forbids `let`).
     const state = { picked: false, closed: false };

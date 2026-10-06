@@ -1048,6 +1048,14 @@ export interface BlokMountOptions {
      * `allowGenericEmbed: true` subsumes this list.
      */
     allowedEmbedOrigins?: string[];
+
+    /**
+     * Other hostnames that count as the editor's own site, next to the page's
+     * own hostname. Entries are hostnames (`example.com`) or wildcard subdomain
+     * patterns (`*.example.com` — any subdomain depth, never the bare suffix).
+     * Pasting a link to the own site never offers "Create bookmark".
+     */
+    hostAliases?: string[];
   };
 
   /**

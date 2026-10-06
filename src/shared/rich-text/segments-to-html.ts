@@ -1,7 +1,7 @@
 import { COLOR_PRESETS, colorVarName } from '../../components/shared/color-presets';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../page-reference';
 import { EQUATION_SOURCE_ATTR } from '../equation-mark';
-import { canonicalizeSegments } from './html-to-segments';
+import { canonicalizeSegments, isTextSegment } from './html-to-segments';
 import type { RichText, RichTextMarks, RichTextSegment } from '../../../types/rich-text';
 
 const PRESET_NAMES = new Set(COLOR_PRESETS.map(preset => preset.name));
@@ -97,7 +97,7 @@ const sortKeys = (value: unknown): unknown => {
 const stableKey = (value: unknown): string => JSON.stringify(sortKeys(value)) ?? 'undefined';
 
 const leaf = (segment: RichTextSegment): string => {
-  if ('text' in segment) {
+  if (isTextSegment(segment)) {
     return escapeText(segment.text).replace(/\n/g, '<br>');
   }
 
@@ -169,5 +169,5 @@ export const segmentsToHtml = (input: RichText): string => {
   const last = rich[rich.length - 1];
 
   // A lone trailing <br> in a contenteditable shows no line; a typed trailing break needs a second one.
-  return last !== undefined && 'text' in last && last.text.endsWith('\n') ? `${html}<br>` : html;
+  return last !== undefined && isTextSegment(last) && last.text.endsWith('\n') ? `${html}<br>` : html;
 };

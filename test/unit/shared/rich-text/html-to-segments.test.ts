@@ -128,6 +128,11 @@ describe('isRichText', () => {
     expect(isRichText([{ embed: { html: 'x' }, marks: undefined }])).toBe(true);
   });
 
+  it('rejects an item holding both a text and an embed key, even when one is undefined', () => {
+    expect(isRichText([{ text: undefined, embed: { html: '<hr>' } }])).toBe(false);
+    expect(isRichText([{ text: 'a', embed: undefined }])).toBe(false);
+  });
+
   it('rejects marks that are not a plain record', () => {
     expect(isRichText([{ text: 'a', marks: 'bold' }])).toBe(false);
     expect(isRichText([{ text: 'a', marks: ['bold'] }])).toBe(false);

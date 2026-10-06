@@ -77,6 +77,12 @@ describe('segmentsToHtml', () => {
       .toBe('<abbr lang="en" title="T">x</abbr>');
   });
 
+  it('renders an embed whose item also carries an undefined text key', () => {
+    const rich = [{ text: 'a' }, { text: undefined, embed: { html: '<hr>' } }] as unknown as RichText;
+
+    expect(segmentsToHtml(rich)).toBe('a<hr>');
+  });
+
   it('returns an empty string for no segments', () => {
     expect(segmentsToHtml([])).toBe('');
   });

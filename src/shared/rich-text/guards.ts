@@ -13,7 +13,8 @@ const hasOnlyKeys = (record: Record<string, unknown>, allowed: string[]): boolea
  * @param item - one array entry
  */
 const isSegment = (item: unknown): boolean => {
-  if (!isRecord(item) || (item.marks !== undefined && !isRecord(item.marks))) {
+  // Both keys, even one undefined, is ambiguous; the converters would read it as text.
+  if (!isRecord(item) || ('text' in item && 'embed' in item) || (item.marks !== undefined && !isRecord(item.marks))) {
     return false;
   }
 

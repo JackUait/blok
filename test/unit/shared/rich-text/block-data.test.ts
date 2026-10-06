@@ -63,6 +63,10 @@ describe('block data converters', () => {
     expect(blockDataToHtml(data, ['text'], resolve)).toEqual({ text: 'a<strong>b</strong><hr>' });
   });
 
+  it('keeps the embed of an item that also carries an undefined text key', () => {
+    expect(blockDataToHtml({ text: [{ text: undefined, embed: { html: '<hr>' } }] }, ['text'], resolve)).toEqual({ text: '<hr>' });
+  });
+
   it('returns the very same data object when no field converts', () => {
     const html = { text: '<b>a</b>', level: 2 };
     const row = { properties: { notes: { blocks: [{ id: 'n1', type: 'paragraph', data: { text: '<i>x</i>' } }] }, status: 'done' } };

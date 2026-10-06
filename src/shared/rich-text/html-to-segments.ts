@@ -2,7 +2,7 @@ import { COLOR_PRESETS } from '../../components/shared/color-presets';
 import { PAGE_REFERENCE_ATTR } from '../page-reference';
 import { EQUATION_SOURCE_ATTR } from '../equation-mark';
 import type { InlineNode } from './inline-tree';
-import type { RichText, RichTextMarks, RichTextSegment } from '../../../types/rich-text';
+import type { RichText, RichTextMarks, RichTextSegment, RichTextTextSegment } from '../../../types/rich-text';
 
 const SIMPLE_MARKS: Record<string, keyof RichTextMarks> = {
   strong: 'bold', b: 'bold', em: 'italic', i: 'italic', u: 'underline',
@@ -137,6 +137,10 @@ const sortKeys = (value: unknown): unknown => {
 const sameMarks = (a: RichTextSegment, b: RichTextSegment): boolean =>
   JSON.stringify(sortKeys(a.marks ?? {})) === JSON.stringify(sortKeys(b.marks ?? {}));
 
+// `'text' in` alone is true for a present-but-undefined key that an embed item may carry.
+export const isTextSegment = (segment: RichTextSegment): segment is RichTextTextSegment =>
+  'text' in segment && typeof segment.text === 'string';
+
 const withoutMarks = (segment: RichTextSegment): RichTextSegment => {
   const { marks: _marks, ...rest } = segment;
 
@@ -156,10 +160,10 @@ export const canonicalizeSegments = (rich: RichText): RichText => {
     const segment = withMarks(withoutMarks(raw), raw.marks ?? {});
     const previous = out[out.length - 1];
 
-    if ('text' in segment && segment.text === '') {
+    if (isTextSegment(segment) && segment.text === '') {
       continue;
     }
-    if ('text' in segment && previous !== undefined && 'text' in previous && sameMarks(previous, segment)) {
+    if (isTextSegment(segment) && previous !== undefined && isTextSegment(previous) && sameMarks(previous, segment)) {
       out[out.length - 1] = { ...previous, text: previous.text + segment.text };
       continue;
     }
@@ -173,7 +177,7 @@ export const canonicalizeSegments = (rich: RichText): RichText => {
 const dropPlaceholderBreak = (rich: RichText): RichText => {
   const last = rich[rich.length - 1];
 
-  if (last === undefined || !('text' in last) || !last.text.endsWith('\n')) {
+  if (last === undefined || !isTextSegment(last) || !last.text.endsWith('\n')) {
     return rich;
   }
 

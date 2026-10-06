@@ -162,9 +162,8 @@ export enum InternalBlockToolSettings {
    */
   UpgradeData = 'upgradeData',
   /**
-   * The data fields that hold inline rich text. Wins over the fields read from
-   * the sanitize config, for a tool whose tag-map field is not a text field
-   * (a table's 2D `content`).
+   * The data fields that hold inline rich text. Only these are converted
+   * between HTML and segments.
    */
   RichTextFields = 'richTextFields'
 }

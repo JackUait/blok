@@ -744,6 +744,10 @@ export class Header implements BlockTool {
     };
   }
 
+  public static get richTextFields(): string[] {
+    return ['text'];
+  }
+
   /**
    * Sanitizer Rules
    */

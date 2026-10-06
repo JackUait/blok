@@ -59,7 +59,7 @@ describe('block data converters', () => {
 
   it('lists legacy rich fields', () => {
     expect(richTextFieldsFor('warning')).toEqual(['title', 'message']);
-    expect(richTextFieldsFor('some-custom-tool')).toEqual(['text']);
+    expect(richTextFieldsFor('some-custom-tool')).toEqual([]);
   });
 
   it.each([

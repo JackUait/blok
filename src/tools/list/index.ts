@@ -741,6 +741,10 @@ export class ListItem implements BlockTool {
     return getListConversionConfig();
   }
 
+  public static get richTextFields(): string[] {
+    return ['text'];
+  }
+
   public static get sanitize(): ToolSanitizerConfig {
     return getListSanitizeConfig();
   }

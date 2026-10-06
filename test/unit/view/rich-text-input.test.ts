@@ -104,6 +104,15 @@ describe('src/view reads rich-text segments like HTML', () => {
     });
   });
 
+  it('hands an unknown type\'s segment-shaped text to its custom renderer unchanged', () => {
+    const doc: OutputData = { blocks: [{ id: 'u', type: 'acme-note', data: { text: [{ text: 'a' }, { text: 'b' }] } }] };
+    const seen: unknown[] = [];
+
+    blocksToHtml(doc, { renderers: { 'acme-note': (data) => { seen.push(data.text); return ''; } } });
+
+    expect(seen).toEqual([doc.blocks[0].data.text]);
+  });
+
   describe('prose fields that are not rich text', () => {
     it('leave an array-valued tab title alone', () => {
       const doc: OutputData = { blocks: [{ id: 't', type: 'tab', data: { title: [{ text: 'Tab' }] } }] };

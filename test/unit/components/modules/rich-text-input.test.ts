@@ -217,6 +217,71 @@ describe('rich text segments on input', () => {
   }, 60_000);
 });
 
+describe('a third-party tool that declares no richTextFields', () => {
+  /** Tag-map and `{}` rules, but neither field is rich text. */
+  class ItemsTool {
+    public static get sanitize(): Record<string, unknown> {
+      return { items: { br: true }, style: {} };
+    }
+
+    private readonly data: Record<string, unknown>;
+
+    constructor({ data }: { data: Record<string, unknown> }) {
+      this.data = data;
+    }
+
+    public render(): HTMLElement {
+      return document.createElement('div');
+    }
+
+    public save(): Record<string, unknown> {
+      return this.data;
+    }
+  }
+
+  const bootItems = async (data: Record<string, unknown>, richText?: 'segments'): Promise<OutputBlockData> => {
+    const instance = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, items: ItemsTool as unknown as BlockToolConstructable },
+      ...(richText !== undefined ? { richText } : {}),
+      data: { blocks: [{ id: 'i1', type: 'items', data }] },
+    }) as unknown as TestEditor;
+
+    editor = instance;
+    await instance.isReady;
+
+    const saved = await instance.save();
+
+    return saved.blocks[0];
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    holder?.remove();
+    editor = undefined;
+    holder = undefined;
+    vi.restoreAllMocks();
+  });
+
+  it('saves an empty items array unchanged', async () => {
+    expect((await bootItems({ items: [], style: 'ordered' })).data).toEqual({ items: [], style: 'ordered' });
+  }, 60_000);
+
+  it('saves an items array of text records unchanged', async () => {
+    expect((await bootItems({ items: [{ text: 'x' }], style: 'ordered' })).data).toEqual({ items: [{ text: 'x' }], style: 'ordered' });
+  }, 60_000);
+
+  it('saves a {}-rule string field unchanged in segments mode', async () => {
+    expect((await bootItems({ items: [], style: 'ordered' }, 'segments')).data).toEqual({ items: [], style: 'ordered' });
+  }, 60_000);
+});
+
 describe('richTextInputToHtml on the table tool', () => {
   beforeEach(() => {
     vi.clearAllMocks();

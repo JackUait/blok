@@ -240,6 +240,10 @@ export class Quote implements BlockTool {
     };
   }
 
+  public static get richTextFields(): string[] {
+    return ['text'];
+  }
+
   public static get sanitize(): ToolSanitizerConfig {
     return {
       text: {

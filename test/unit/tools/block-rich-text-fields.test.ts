@@ -3,6 +3,10 @@ import type { API, BlockToolConstructable, SanitizerConfig } from '@/types';
 import { BlockToolAdapter } from '../../../src/components/tools/block';
 import { InlineToolAdapter } from '../../../src/components/tools/inline';
 import { ToolsCollection } from '../../../src/components/tools/collection';
+import { CURRENT_RICH_TEXT_FIELDS, RICH_TEXT_FIELDS } from '../../../src/shared/rich-text/fields';
+import {
+  Callout, Code, DatabaseRow, Header, List, Paragraph, Quote, Table, Toggle,
+} from '../../../src/tools';
 
 type BlockToolAdapterOptions = ConstructorParameters<typeof BlockToolAdapter>[0];
 
@@ -59,8 +63,14 @@ describe('BlockToolAdapter rich text fields', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists fields whose own sanitize rule is a tag map', () => {
-    expect(createAdapter().richTextFields).toEqual(['text']);
+  it('lists nothing for a tag-map sanitize rule the tool did not declare as rich text', () => {
+    expect(createAdapter().richTextFields).toEqual([]);
+  });
+
+  it('lists the fields a static richTextFields declares', () => {
+    const constructable = Object.assign(createConstructable({ text: { b: true } }), { richTextFields: ['text', 3] });
+
+    expect(createAdapter({ constructable }).richTextFields).toEqual(['text']);
   });
 
   it('lists nothing for a tool without its own sanitize config', () => {
@@ -71,7 +81,7 @@ describe('BlockToolAdapter rich text fields', () => {
     expect(adapter.richTextFields).toEqual([]);
   });
 
-  it('lets a static richTextFields on the tool win over the sanitize rules', () => {
+  it('lets a static empty richTextFields stand', () => {
     const constructable = Object.assign(createConstructable({ content: { b: true } }), { richTextFields: [] });
 
     expect(createAdapter({ constructable }).richTextFields).toEqual([]);
@@ -80,5 +90,34 @@ describe('BlockToolAdapter rich text fields', () => {
   it('reports the configured output format, html by default', () => {
     expect(createAdapter().richTextFormat).toBe('html');
     expect(createAdapter({ richTextFormat: 'segments' }).richTextFormat).toBe('segments');
+  });
+});
+
+describe('built-in tools and the tool-less field tables', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // The view and @bloklabs/core/migrate have no tool classes and read the tables instead.
+  const builtIns: Array<[string, unknown]> = [
+    ['paragraph', Paragraph], ['header', Header], ['list', List], ['toggle', Toggle], ['quote', Quote],
+    ['table', Table], ['callout', Callout], ['code', Code], ['database-row', DatabaseRow],
+  ];
+
+  it.each(builtIns)('%s declares the fields migrate converts, and the view reads them', (name, constructable) => {
+    const fields = createAdapter({ name, constructable: constructable as BlockToolConstructable }).richTextFields;
+
+    expect(fields).toEqual(CURRENT_RICH_TEXT_FIELDS[name] ?? []);
+    expect(RICH_TEXT_FIELDS[name] ?? []).toEqual(expect.arrayContaining(fields));
+  });
+
+  it('lists the current model\'s rich fields', () => {
+    expect(CURRENT_RICH_TEXT_FIELDS).toEqual({
+      paragraph: ['text'], header: ['text'], quote: ['text'], toggle: ['text'], list: ['text'],
+    });
   });
 });

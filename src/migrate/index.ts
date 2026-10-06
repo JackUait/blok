@@ -37,6 +37,7 @@ import type { BlockMigrations } from '../components/migration/block-migrations';
 import type { RichText, RichTextEmbed } from '../../types/rich-text';
 import { blockDataToSegments, isNestedDocument, nestedDocumentsFor } from '../shared/rich-text/block-data';
 import { isRichText } from '../shared/rich-text/guards';
+import { CURRENT_RICH_TEXT_FIELDS } from '../shared/rich-text/fields';
 import { segmentsToHtml } from '../shared/rich-text/segments-to-html';
 import { PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
 import { htmlToSegmentsNode } from '../view/rich-text-parse5';
@@ -282,17 +283,6 @@ export interface RichTextLossyReport {
 export interface MigrateToRichTextOptions {
   onLossy?: (report: RichTextLossyReport) => void;
 }
-
-// Fields of the CURRENT data model only. Not RICH_TEXT_FIELDS: its legacy-only
-// fields (quote.caption, warning.title, …) must stay strings, or the legacy
-// grammar in migrate() drops them. Unknown types are skipped: their fields are not ours to know.
-const CURRENT_RICH_TEXT_FIELDS: Record<string, string[]> = {
-  paragraph: ['text'],
-  header: ['text'],
-  quote: ['text'],
-  toggle: ['text'],
-  list: ['text'],
-};
 
 const currentRichTextFields = (type: string): string[] =>
   Object.prototype.hasOwnProperty.call(CURRENT_RICH_TEXT_FIELDS, type) ? CURRENT_RICH_TEXT_FIELDS[type] : [];

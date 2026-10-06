@@ -185,6 +185,32 @@ describe('tabs switch motion', () => {
       expect(tilt(fold?.frames[0])).toBe(40);
     });
 
+    // A flat tab still covers the band's bottom line. Unseen, it leaves the line whole.
+    it('keeps the band edge unbroken under a tab that lies flat', () => {
+      const { scroller, indicator } = strip();
+
+      moveIndicator(indicator, { start: 0, width: 80 }, { start: 120, width: 60 });
+
+      const rise = calls.find(call => call.target === indicator);
+      const fold = calls.find(call => call.target === ghosts(scroller)[0]);
+
+      expect(rise?.frames[0].opacity).toBe(0);
+      expect(rise?.frames[rise.frames.length - 1].opacity).toBe(1);
+      expect(fold?.frames[0].opacity).toBe(1);
+      expect(fold?.frames[fold.frames.length - 1].opacity).toBe(0);
+    });
+
+    it('folds a half-faded tab down from the opacity it has reached', () => {
+      const { scroller, indicator } = strip();
+
+      indicator.style.opacity = '0.4';
+      moveIndicator(indicator, { start: 0, width: 80 }, { start: 120, width: 60 });
+
+      const fold = calls.find(call => call.target === ghosts(scroller)[0]);
+
+      expect(fold?.frames[0].opacity).toBe(0.4);
+    });
+
     it('puts the tab in place without motion the first time', () => {
       const { scroller, indicator } = strip();
 

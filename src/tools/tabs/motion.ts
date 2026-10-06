@@ -20,6 +20,9 @@ const RISE_MS = 560;
 const RISE_DELAY_MS = 150;
 // Short of 90deg: an edge-on tab would vanish and pop back.
 const FLAT = 'perspective(240px) rotateX(88deg)';
+// A flat tab still covers the band's bottom line, so it is faded out near flat.
+const RISE_SHOWN_AT = 0.2;
+const FADE_FROM = 0.15;
 const UPRIGHT = 'perspective(240px) rotateX(0deg)';
 const CASCADE_MS = 520;
 const CASCADE_STEP_MS = 70;
@@ -94,7 +97,8 @@ export const measurePill = (pill: HTMLElement): PillBox => {
  */
 export const moveIndicator = (indicator: HTMLElement, from: PillBox | null, to: PillBox): void => {
   // Read before the cancel below: a tab still rising folds from where it is.
-  const tilt = getComputedStyle(indicator).transform;
+  const { transform: tilt, opacity } = getComputedStyle(indicator);
+  const shown = opacity === '' || Number.isNaN(Number(opacity)) ? 1 : Number(opacity);
 
   indicator.style.setProperty('inset-inline-start', `${to.start}px`);
   indicator.style.setProperty('width', `${to.width}px`);
@@ -117,8 +121,9 @@ export const moveIndicator = (indicator: HTMLElement, from: PillBox | null, to: 
 
   const fold = old.animate(
     [
-      { transform: tilt === '' || tilt === 'none' ? UPRIGHT : tilt, filter: 'brightness(1)' },
-      { transform: FLAT, filter: 'brightness(0.92)' },
+      { transform: tilt === '' || tilt === 'none' ? UPRIGHT : tilt, filter: 'brightness(1)', opacity: shown },
+      { opacity: shown, offset: FADE_FROM },
+      { transform: FLAT, filter: 'brightness(0.92)', opacity: 0 },
     ],
     { duration: FOLD_MS, easing: 'cubic-bezier(0.5, 0, 0.9, 0.6)', fill: 'forwards' }
   );
@@ -127,7 +132,11 @@ export const moveIndicator = (indicator: HTMLElement, from: PillBox | null, to: 
   fold.oncancel = (): void => old.remove();
 
   indicator.animate(
-    [{ transform: FLAT }, { transform: UPRIGHT }],
+    [
+      { transform: FLAT, opacity: 0 },
+      { opacity: 1, offset: RISE_SHOWN_AT },
+      { transform: UPRIGHT, opacity: 1 },
+    ],
     { duration: RISE_MS, delay: RISE_DELAY_MS, easing: spring(), fill: 'backwards' }
   );
 };

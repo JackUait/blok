@@ -2667,7 +2667,27 @@ describe('ImageTool — failure reporting', () => {
     expect(revoke).toHaveBeenCalledWith('blob:preview');
   });
 
-  it('frees the old preview when the upload fails again', async () => {
+  it('keeps the same preview when the same file fails again, so the thumbnail never blinks', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValueOnce('blob:first').mockReturnValueOnce('blob:second');
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const options = createOptions({}, { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+
+    pasteFile(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    vi.useFakeTimers();
+    vi.mocked(options.api.media.reportFailure).mock.calls[0][0].retry();
+    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
+    vi.useRealTimers();
+
+    expect(root.querySelector<HTMLImageElement>('[data-role="error-state"] img')?.getAttribute('src')).toBe('blob:first');
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(revoke).not.toHaveBeenCalled();
+  });
+
+  it('frees the old preview when a different file fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     vi.spyOn(URL, 'createObjectURL').mockReturnValueOnce('blob:first').mockReturnValueOnce('blob:second');
     const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
@@ -2677,10 +2697,8 @@ describe('ImageTool — failure reporting', () => {
     tool.render();
     pasteFile(tool);
     await new Promise((r) => setTimeout(r, 0));
-    vi.useFakeTimers();
-    vi.mocked(options.api.media.reportFailure).mock.calls[0][0].retry();
-    await vi.advanceTimersByTimeAsync(RESEND_STAGE_MS);
-    vi.useRealTimers();
+    pasteFile(tool);
+    await new Promise((r) => setTimeout(r, 0));
 
     expect(revoke).toHaveBeenCalledWith('blob:first');
   });

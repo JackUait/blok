@@ -129,6 +129,7 @@ export class ImageTool implements BlockTool {
   private detached = false;
   /** Object URL of the picked file shown in the failure notice; freed when the failure ends. */
   private failurePreview: string | null = null;
+  private failurePreviewFile: File | null = null;
   /** Put back with the old `url` when an entered link fails. */
   private variantsBeforeLink: ImageData['variants'];
 
@@ -627,8 +628,12 @@ export class ImageTool implements BlockTool {
     this.retrying = false;
     if (outcome.kind === 'message') {
       // Before rendering: the card shows this preview as the failed file's thumbnail.
-      this.releaseFailurePreview();
-      this.failurePreview = source.file === undefined ? null : URL.createObjectURL(source.file);
+      // The same file keeps its URL: a new one is decoded again and the tile blinks.
+      if (source.file === undefined || source.file !== this.failurePreviewFile) {
+        this.releaseFailurePreview();
+        this.failurePreview = source.file === undefined ? null : URL.createObjectURL(source.file);
+        this.failurePreviewFile = source.file ?? null;
+      }
     }
     this.renderState();
     if (outcome.kind === 'message') {
@@ -775,6 +780,7 @@ export class ImageTool implements BlockTool {
     if (this.failurePreview !== null) {
       URL.revokeObjectURL(this.failurePreview);
       this.failurePreview = null;
+      this.failurePreviewFile = null;
     }
   }
 

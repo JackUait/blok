@@ -175,6 +175,7 @@ test.describe('Toolbox hover preview', () => {
 
     await page.mouse.move(center.x, center.y, { steps: 6 });
 
+    await expect(page.getByTestId('toolbox-preview')).toBeVisible();
     await expect(page.getByTestId('toolbox-preview')).toContainText('Big section heading');
   });
 
@@ -182,20 +183,27 @@ test.describe('Toolbox hover preview', () => {
     await page.mouse.move(1, 1);
     await openToolbox(page);
 
-    for (const name of [ 'paragraph', 'header-1', 'header-2', 'header-3' ]) {
+    for (const name of [ 'paragraph', 'header-1', 'header-2', 'header-3', 'header-4' ]) {
       const center = await rowCenter(page, name);
 
-      await page.mouse.move(center.x, center.y, { steps: 3 });
-      // Each rest is shorter than the open delay (PREVIEW_OPEN_DELAY = 320ms).
-      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 200)));
+      await page.mouse.move(center.x, center.y);
+      // Each rest is well under the open delay (PREVIEW_OPEN_DELAY = 320ms).
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 150)));
     }
 
-    await expect(page.getByTestId('toolbox-preview')).toBeVisible();
+    // A short timeout: the default retry outlasts a delay that restarts on the last row.
+    await expect(page.getByTestId('toolbox-preview')).toBeVisible({ timeout: 50 });
   });
 
-  test('comes back on the next pointer move after a page scroll closed it', async ({ page }) => {
+  test('comes back on the next pointer move after a scroll closed it', async ({ page }) => {
+    // A scroll box away from the menu: scrolling it closes the card but leaves the rows where they are.
     await page.evaluate(() => {
-      document.body.style.minHeight = '4000px';
+      const box = document.createElement('div');
+
+      box.setAttribute('data-blok-testid', 'scroll-box');
+      box.style.cssText = 'position:fixed;left:0;bottom:0;width:40px;height:40px;overflow:auto';
+      box.innerHTML = '<div style="height:400px"></div>';
+      document.body.appendChild(box);
     });
     await openToolbox(page);
 
@@ -203,10 +211,12 @@ test.describe('Toolbox hover preview', () => {
 
     await page.mouse.move(center.x, center.y, { steps: 3 });
     await expect(page.getByTestId('toolbox-preview')).toBeVisible();
-    await page.evaluate(() => window.scrollBy(0, 1));
+    await page.getByTestId('scroll-box').evaluate((box) => box.scrollBy(0, 1));
     await expect(page.getByTestId('toolbox-preview')).toBeHidden();
     await page.mouse.move(center.x + 4, center.y + 1, { steps: 2 });
 
+    // toContainText alone also passes on the hidden card.
+    await expect(page.getByTestId('toolbox-preview')).toBeVisible();
     await expect(page.getByTestId('toolbox-preview')).toContainText('Big section heading');
   });
 

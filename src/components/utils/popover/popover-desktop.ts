@@ -933,11 +933,6 @@ export class PopoverDesktop extends PopoverAbstract {
     this.currentItemElement = element;
     this.currentItemSource = source;
 
-    // The pointer may still rest on the row it hovered: let it claim that row again.
-    if (source === 'keyboard') {
-      this.previouslyHoveredItem = null;
-    }
-
     const current = item !== null && element !== null ? { name: item.name, element, source } : null;
 
     this.currentItemListeners.forEach(listener => listener(current));
@@ -1137,6 +1132,9 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     if (this.previouslyHoveredItem === item) {
+      // The keyboard may have moved the current row away while the pointer rested here.
+      this.reportCurrentItem(item, 'pointer');
+
       return;
     }
 

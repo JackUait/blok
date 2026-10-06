@@ -185,16 +185,21 @@ test.describe('Toolbox hover preview', () => {
     await page.mouse.move(1, 1);
     await openToolbox(page);
 
-    for (const name of [ 'paragraph', 'header-1', 'header-2', 'header-3', 'header-4' ]) {
-      const center = await rowCenter(page, name);
+    const centers = [];
 
-      await page.mouse.move(center.x, center.y);
-      // Each rest is well under the open delay (PREVIEW_OPEN_DELAY = 320ms).
-      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 150)));
+    for (const name of [ 'paragraph', 'header-1', 'header-2' ]) {
+      centers.push(await rowCenter(page, name));
     }
 
-    // A short timeout: the default retry outlasts a delay that restarts on the last row.
-    await expect(page.getByTestId('toolbox-preview')).toBeVisible({ timeout: 50 });
+    // ~200ms of moving, under PREVIEW_OPEN_DELAY (320ms), so the card first opens on the last row.
+    for (const center of centers) {
+      await page.mouse.move(center.x, center.y);
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 100)));
+    }
+
+    // Under 320ms: a delay that restarted on each row would not be done yet.
+    await expect(page.getByTestId('toolbox-preview')).toBeVisible({ timeout: 250 });
+    await expect(page.getByTestId('toolbox-preview')).toContainText('Medium section heading');
   });
 
   test('comes back on the next pointer move after a scroll closed it', async ({ page }) => {

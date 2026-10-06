@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { runInNewContext } from 'node:vm';
 
 /**
  * The block-states gallery spec (BLOCK_STATES_RAW) lives inline in index.html.
@@ -323,6 +324,48 @@ describe('playground block states spec (index.html)', () => {
       expect(mountTools).toContain('page: {');
       expect(mountTools).toContain('class: Page');
       expect(mountTools).toContain('resolve: (id) => PAGE_STATE_INFO[id]');
+    });
+  });
+
+  describe('flattenStates', () => {
+    const loadFlatten = (): ((tool: string, label: string, states: unknown[]) => { wide?: boolean; segments: Array<Record<string, unknown>> }) => {
+      const start = html.indexOf('const WIDE_STATE_TOOLS');
+      const end = html.indexOf('const BLOCK_STATES_RAW');
+
+      expect(start, 'WIDE_STATE_TOOLS precedes flattenStates').toBeGreaterThan(-1);
+
+      return runInNewContext(`${html.slice(start, end)}; flattenStates`) as ReturnType<typeof loadFlatten>;
+    };
+
+    test('gives every state its own labelled segment without a header block', () => {
+      const flatten = loadFlatten();
+      const result = flatten('paragraph', 'Paragraph', [
+        { label: 'Empty', blocks: [ { id: 'a', type: 'paragraph', data: { text: '' } } ] },
+        { label: 'Wide', width: 320, blocks: [ { id: 'b', type: 'paragraph', data: { text: 'x' } } ] },
+      ]);
+
+      expect(result.segments.map((s) => s.label)).toEqual([ 'Empty', 'Wide' ]);
+      expect(result.segments.map((s) => (s.blocks as Array<{ id: string }>).map((b) => b.id))).toEqual([ [ 'a' ], [ 'b' ] ]);
+      expect(result.segments[1].width).toBe(320);
+      expect(result.wide).toBe(false);
+    });
+
+    test.each([ 'table', 'column_list', 'tabs', 'database', 'code', 'image', 'video', 'embed' ])('lays %s states across the whole row', (tool) => {
+      expect(loadFlatten()('paragraph', 'p', []).wide).toBe(false);
+      expect(loadFlatten()(tool, tool, []).wide).toBe(true);
+    });
+  });
+
+  describe('callout entry', () => {
+    test('every callout state carries its text as a child block, the only body the tool renders', () => {
+      const section = sectionFor('callout');
+      const callouts = section.match(/type: 'callout'[^\n]*/g) ?? [];
+
+      expect(callouts).toHaveLength(5);
+      callouts.forEach((line) => {
+        expect(line).toMatch(/content: \['c-[a-z]+-p'\]/);
+        expect(line).not.toContain('text:');
+      });
     });
   });
 });

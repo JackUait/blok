@@ -363,32 +363,47 @@
     /* Dark mode page styles */
     .dark-mode { background: #191919; color: #ffffff; }
 
-    /* Block states gallery */
-    .block-states-gallery { padding: 24px 0 120px; }
-    /* Full-bleed so the side menu hugs the left edge (ID beats Tailwind utilities) */
-    #block-states-gallery { max-width: none; margin: 0; padding: 24px 56px 120px; }
-    /* Side menu layout: fixed-width centre column flanked by equal 1fr gutters
-       keeps the content viewport-centered, while the menu sits at the start of
-       the left gutter and is sticky so it stays in place while scrolling.
-       (Below 1280px gutters get too tight → stacked layout.) */
+    /* Block states gallery (src/playground/block-states-gallery.ts) */
+    #block-states-gallery {
+      --bs-card: #ffffff;
+      --bs-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 14px -6px rgba(0,0,0,0.08);
+      --bs-shadow-hover: 0 2px 4px rgba(0,0,0,0.05), 0 14px 32px -10px rgba(0,0,0,0.16);
+      max-width: none; margin: 0; padding: 24px 56px 120px;
+    }
+    .dark-mode #block-states-gallery {
+      --pg-ink: #ffffff; --pg-muted: #a8a8a8; --pg-line: #2f2f2f; --pg-line-strong: #3d3d3d; --pg-hover: #232323;
+      --bs-card: #1f1f1f;
+      --bs-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 4px 14px -6px rgba(0,0,0,0.5);
+      --bs-shadow-hover: 0 2px 4px rgba(0,0,0,0.4), 0 14px 32px -10px rgba(0,0,0,0.7);
+    }
     .block-states-layout {
       display: grid;
-      grid-template-columns: 1fr 720px 1fr;
+      grid-template-columns: 208px minmax(0, 1fr);
+      gap: 56px;
       align-items: start;
     }
     .block-states-tabs {
-      grid-column: 1;
-      justify-self: start;
-      align-self: start;
       position: sticky;
       top: 96px;
       display: flex;
       flex-direction: column;
       gap: 2px;
-      width: 196px;
-      padding-top: 0;
+    }
+    .block-states-tabs__pill {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      border-radius: 9px;
+      background: var(--pg-ink);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .block-states-tabs[data-ready] .block-states-tabs__pill {
+      opacity: 1;
+      /* Overshoot matches the top nav's pill bounce. */
+      transition: transform 0.32s cubic-bezier(0.3, 1.35, 0.5, 1), height 0.32s ease;
     }
     .block-states-tab {
+      position: relative;
       font-family: var(--pg-font);
       font-size: 14px;
       font-weight: 500;
@@ -397,68 +412,104 @@
       border: 0;
       border-radius: 9px;
       background: transparent;
-      color: var(--pg-ink-soft, #6b6b6b);
+      color: var(--pg-muted);
       cursor: pointer;
-      transition: color 0.15s, background 0.15s;
+      transition: color 0.2s, background 0.15s;
     }
-    .block-states-tab:hover {
-      background: var(--pg-hover);
-      color: var(--pg-ink);
-    }
+    .block-states-tab:hover { background: var(--pg-hover); color: var(--pg-ink); }
     .block-states-tab[aria-selected="true"],
-    .block-states-tab[aria-selected="true"]:hover {
-      background: var(--pg-ink);
-      color: #ffffff;
+    .block-states-tab[aria-selected="true"]:hover { background: transparent; color: #ffffff; }
+    .dark-mode .block-states-tab[aria-selected="true"] { color: #191919; }
+    /* Until the pill is placed, the selected tab paints its own fill. */
+    .block-states-tabs:not([data-ready]) .block-states-tab[aria-selected="true"] { background: var(--pg-ink); }
+
+    .block-states-panels { max-width: 1040px; width: 100%; margin: 0 auto; }
+    :root[data-bs-vt] .block-states-panels { view-transition-name: bs-panels; }
+    .block-states-panel.hidden { display: none; }
+    .block-states-head { margin: 8px 0 28px; font-family: var(--pg-font); }
+    .block-states-title { margin: 0; font-size: 30px; font-weight: 700; line-height: 1.2; color: var(--pg-ink); }
+    .block-states-count { margin: 6px 0 0; font-size: 15px; color: var(--pg-muted); }
+    .block-states-jumps { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .block-states-jump {
+      font-family: var(--pg-font);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 13px;
+      border: 1px solid var(--pg-line-strong);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--pg-ink);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
     }
-    .dark-mode .block-states-tab { color: #9a9a9a; background: transparent; }
-    .dark-mode .block-states-tab:hover { background: rgba(255,255,255,0.07); color: #ffffff; }
-    .dark-mode .block-states-tab[aria-selected="true"],
-    .dark-mode .block-states-tab[aria-selected="true"]:hover {
-      background: #ffffff;
-      color: #191919;
+    .block-states-jump:hover { border-color: var(--pg-ink); }
+    .block-states-jump:active { background: var(--pg-hover); }
+
+    .block-states-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      align-items: start;
     }
-    .block-states-panels {
-      grid-column: 2;
-      max-width: 720px;
-      margin: 0 0 64px;
-      padding-top: 16px;
+    .block-states-panel[data-wide] .block-states-grid { grid-template-columns: minmax(0, 1fr); }
+    .block-states-card {
+      position: relative;
+      min-width: 0;
+      /* Blok's redactor keeps a 56px gutter for the + and drag handles, so the
+         card's own left padding is small and the label indents to the text. */
+      padding: 20px 56px 24px 0;
+      border: 1px solid var(--pg-line);
+      border-radius: 16px;
+      background: var(--bs-card);
+      box-shadow: var(--bs-shadow);
+      scroll-margin: 120px;
+      transition: box-shadow 0.3s ease, outline-color 0.3s ease;
+      outline: 2px solid transparent;
+      outline-offset: 3px;
+      animation: bs-rise 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      animation-delay: calc(min(var(--i, 0), 10) * 30ms);
     }
-    /* Below 1280px the far-left menu would overlap the centered content,
-       so fall back to a horizontal pill row above the content. */
-    @media (max-width: 1280px) {
+    .block-states-card:hover { box-shadow: var(--bs-shadow-hover); }
+    .block-states-card[data-flash] { outline-color: var(--pg-ink); }
+    .block-states-card__label {
+      margin: 0 0 10px 56px;
+      font-family: var(--pg-font);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--pg-muted);
+    }
+    @keyframes bs-rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+    @keyframes bs-sink {
+      to { opacity: 0; transform: translateY(6px); }
+    }
+    /* Only the old panel needs the VT; the new cards rise on their own and the
+       sidebar pill keeps animating in the live root. */
+    :root[data-bs-vt]::view-transition-old(root), :root[data-bs-vt]::view-transition-new(root) { animation: none; }
+    :root[data-bs-vt]::view-transition-group(bs-panels) { animation: none; }
+    :root[data-bs-vt]::view-transition-old(bs-panels) { animation: bs-sink 0.16s ease-in both; }
+    :root[data-bs-vt]::view-transition-new(bs-panels) { animation: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .block-states-card { animation: none; }
+      .block-states-tabs[data-ready] .block-states-tabs__pill { transition: none; }
+    }
+
+    @media (max-width: 1100px) {
       .block-states-layout { display: block; }
-      .block-states-tabs {
-        position: static;
-        width: 100%;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 32px;
-        padding-bottom: 4px;
-      }
-      .block-states-panels { max-width: 720px; margin: 0 auto 64px; }
-      .block-states-tab {
-        border: 1px solid var(--pg-line-strong);
-        border-radius: 999px;
-        padding: 7px 14px;
-        font-size: 13px;
-        color: var(--pg-ink);
-      }
+      .block-states-tabs { position: static; flex-direction: row; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+      .block-states-tabs__pill { display: none; }
+      .block-states-tab { border: 1px solid var(--pg-line-strong); border-radius: 999px; padding: 7px 14px; font-size: 13px; color: var(--pg-ink); }
       .block-states-tab[aria-selected="true"],
-      .block-states-tab[aria-selected="true"]:hover {
-        border-color: var(--pg-ink);
-      }
-      .dark-mode .block-states-tab { border-color: #3d3d3d; }
-      .block-states-panels { padding-top: 0; }
+      .block-states-tab[aria-selected="true"]:hover,
+      .block-states-tabs:not([data-ready]) .block-states-tab[aria-selected="true"] { background: var(--pg-ink); border-color: var(--pg-ink); }
+      .block-states-grid { grid-template-columns: minmax(0, 1fr); }
     }
     @media (max-width: 768px) {
       #block-states-gallery { padding-left: 20px; padding-right: 20px; }
-      .block-states-panels { max-width: 100%; }
-    }
-    .block-states-panel { display: block; }
-    .block-states-panel.hidden { display: none; }
-    .block-states-preview {
-      padding: 0;
+      .block-states-card { padding: 16px 20px 18px 0; }
     }
 
     /* Icon gallery */
@@ -3196,37 +3247,21 @@
     // segment; a state with `toolConfig` gets its own segment (and thus its
     // own editor instance) so tool-level options like `sources` can vary
     // per state.
+    // Tools whose states need the full row: they lay out wide content.
+    const WIDE_STATE_TOOLS = ['table', 'column_list', 'tabs', 'database', 'code', 'image', 'video', 'embed'];
+
     function flattenStates(tool, label, states) {
-      const segments = [];
-      let current = null;
-      states.forEach((state, i) => {
-        const header = {
-          id: `${tool}-label-${i}`,
-          type: 'header',
-          data: { text: state.label, level: 3 },
-        };
+      const segments = states.map((state) => ({
+        label: state.label,
+        blocks: state.blocks,
+        toolConfig: state.toolConfig,
+        readOnly: state.readOnly,
+        editorConfig: state.editorConfig,
+        width: state.width,
         // A typed draft is filled into the first block's URL field after mount.
-        const drafts = state.draft ? [{ id: state.blocks[0].id, ...state.draft }] : [];
-        if (state.toolConfig || state.readOnly || state.editorConfig || state.width) {
-          segments.push({
-            blocks: [header, ...state.blocks],
-            toolConfig: state.toolConfig,
-            readOnly: state.readOnly,
-            editorConfig: state.editorConfig,
-            width: state.width,
-            drafts,
-          });
-          current = null;
-        } else {
-          if (!current) {
-            current = { blocks: [], drafts: [] };
-            segments.push(current);
-          }
-          current.blocks.push(header, ...state.blocks);
-          current.drafts.push(...drafts);
-        }
-      });
-      return { tool, label, segments };
+        drafts: state.draft ? [{ id: state.blocks[0].id, ...state.draft }] : [],
+      }));
+      return { tool, label, wide: WIDE_STATE_TOOLS.includes(tool), segments };
     }
 
     const BLOCK_STATES_RAW = [
@@ -3368,11 +3403,26 @@
         tool: 'callout',
         label: 'Callout',
         states: [
-          { label: 'No emoji', blocks: [{ id: 'c-plain', type: 'callout', data: { text: 'Plain callout without emoji.', emoji: '' } }] },
-          { label: 'With emoji', blocks: [{ id: 'c-emoji', type: 'callout', data: { text: 'Tip: prefer composition over inheritance.', emoji: '💡' } }] },
-          { label: 'Colored bg', blocks: [{ id: 'c-bg', type: 'callout', data: { text: 'Heads up — background color set.', emoji: '⚠️', backgroundColor: 'yellow' } }] },
-          { label: 'Colored text', blocks: [{ id: 'c-text', type: 'callout', data: { text: 'Red text on plain background.', emoji: '🔥', textColor: 'red' } }] },
-          { label: 'Both colors', blocks: [{ id: 'c-both', type: 'callout', data: { text: 'Both colors set.', emoji: '✨', backgroundColor: 'blue', textColor: 'white' } }] },
+          { label: 'No emoji', blocks: [
+            { id: 'c-plain', type: 'callout', data: { emoji: '' }, content: ['c-plain-p'] },
+            { id: 'c-plain-p', type: 'paragraph', data: { text: 'Plain callout without emoji.' }, parent: 'c-plain' },
+          ] },
+          { label: 'With emoji', blocks: [
+            { id: 'c-emoji', type: 'callout', data: { emoji: '💡' }, content: ['c-emoji-p'] },
+            { id: 'c-emoji-p', type: 'paragraph', data: { text: 'Tip: prefer composition over inheritance.' }, parent: 'c-emoji' },
+          ] },
+          { label: 'Colored bg', blocks: [
+            { id: 'c-bg', type: 'callout', data: { emoji: '⚠️', backgroundColor: 'yellow' }, content: ['c-bg-p'] },
+            { id: 'c-bg-p', type: 'paragraph', data: { text: 'Heads up — background color set.' }, parent: 'c-bg' },
+          ] },
+          { label: 'Colored text', blocks: [
+            { id: 'c-text', type: 'callout', data: { emoji: '🔥', textColor: 'red' }, content: ['c-text-p'] },
+            { id: 'c-text-p', type: 'paragraph', data: { text: 'Red text on plain background.' }, parent: 'c-text' },
+          ] },
+          { label: 'Both colors', blocks: [
+            { id: 'c-both', type: 'callout', data: { emoji: '✨', backgroundColor: 'blue', textColor: 'white' }, content: ['c-both-p'] },
+            { id: 'c-both-p', type: 'paragraph', data: { text: 'Both colors set.' }, parent: 'c-both' },
+          ] },
         ],
       },
       {

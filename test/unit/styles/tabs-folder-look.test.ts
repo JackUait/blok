@@ -35,6 +35,14 @@ describe('tabs folder look', () => {
     expect(declaration(ruleBody('[data-blok-tabs-panels]'), 'background-color')).toBe('var(--blok-tabs-sheet)');
   });
 
+  // Strip inset + scroller inset + pill inset puts the first label's text here;
+  // the panel takes the paragraph's own inset back off so the text lines up.
+  it('starts the panel text where the first tab label starts', () => {
+    expect(declaration(ruleBody('[data-blok-tabs-panels]'), 'padding-inline')).toBe(
+      'calc(var(--blok-space-1) + var(--blok-tabs-neck-radius) + var(--blok-space-3) - var(--blok-tabs-paragraph-inset))'
+    );
+  });
+
   it('sets the strip on a band that differs from the sheet', () => {
     const root = ruleBody('[data-blok-tabs]');
     const band = declaration(root, '--blok-tabs-band');
@@ -104,7 +112,7 @@ describe('tabs folder look', () => {
     const hint = ruleBody('[data-blok-tab-empty]');
 
     expect(declaration(hint, 'margin-inline')).toBe('calc(-1 * var(--blok-space-1))');
-    expect(declaration(hint, 'padding-inline')).toBe('calc(var(--blok-block-padding-inline, 2px) + var(--blok-space-1))');
+    expect(declaration(hint, 'padding-inline')).toBe('calc(var(--blok-tabs-paragraph-inset) + var(--blok-space-1))');
   });
 
   // A `size` in characters sizes by average glyph width, so a short title got a wide box.

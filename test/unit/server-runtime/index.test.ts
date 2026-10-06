@@ -123,13 +123,13 @@ describe('server runtime boundary', () => {
       'blocksToHtml',
       JSON.stringify({
         blocks: [
-          { id: 'toggle', type: 'toggle', data: { text: 'Parent', isOpen: true } },
+          { id: 'toggle', type: 'toggle', data: { text: 'Parent' } },
           { id: 'child', type: 'paragraph', parentId: 'toggle', data: { text: 'Child' } },
         ],
       })
     );
 
-    expect(html).toBe('<details open><summary>Parent</summary><p>Child</p></details>');
+    expect(html).toBe('<details><summary>Parent</summary><p>Child</p></details>');
   });
 
   it('orders children by the parent content, then unlisted ones', async () => {
@@ -137,7 +137,7 @@ describe('server runtime boundary', () => {
       'blocksToHtml',
       JSON.stringify({
         blocks: [
-          { id: 't', type: 'toggle', data: { text: 'Parent', isOpen: true }, content: ['b', 'a'] },
+          { id: 't', type: 'toggle', data: { text: 'Parent' }, content: ['b', 'a'] },
           { id: 'a', type: 'paragraph', parent: 't', data: { text: 'A' } },
           { id: 'c', type: 'paragraph', parent: 't', data: { text: 'C' } },
           { id: 'b', type: 'paragraph', parent: 't', data: { text: 'B' } },
@@ -145,7 +145,7 @@ describe('server runtime boundary', () => {
       })
     );
 
-    expect(html).toBe('<details open><summary>Parent</summary><p>B</p><p>A</p><p>C</p></details>');
+    expect(html).toBe('<details><summary>Parent</summary><p>B</p><p>A</p><p>C</p></details>');
   });
 
   /**
@@ -158,13 +158,13 @@ describe('server runtime boundary', () => {
       'blocksToHtml',
       JSON.stringify({
         blocks: [
-          { id: 'toggle', type: 'toggle', data: { text: 'Parent', isOpen: true }, content: ['child'] },
+          { id: 'toggle', type: 'toggle', data: { text: 'Parent' }, content: ['child'] },
           { id: 'child', type: 'paragraph', data: { text: 'Child' } },
         ],
       })
     );
 
-    expect(html).toBe('<details open><summary>Parent</summary><p>Child</p></details>');
+    expect(html).toBe('<details><summary>Parent</summary><p>Child</p></details>');
   });
 
   it('reports a content reference the document does not carry', async () => {

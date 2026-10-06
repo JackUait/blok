@@ -10,12 +10,13 @@ import { Column } from '../../../../src/tools/column';
 import { TabsTool } from '../../../../src/tools/tabs';
 import { TabTool } from '../../../../src/tools/tab';
 import type { Block } from '../../../../src/components/block';
-import type { OutputBlockData, OutputData } from '../../../../types';
+import type { API, OutputBlockData, OutputData } from '../../../../types';
 
 interface TestEditor {
   isReady: Promise<unknown>;
   save: () => Promise<OutputData>;
   destroy: () => void;
+  viewState: API['viewState'];
   module: {
     blockManager: { getBlockById: (id: string) => Block | undefined };
     blockSelection: { selectBlock: (block: Block) => void };
@@ -50,6 +51,12 @@ const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
 
   editor = instance;
   await instance.isReady;
+  // Open state is personal, not saved data: the fixtures' toggles start open here.
+  blocks.filter(block => block.type === 'toggle').forEach(block => {
+    if (block.id !== undefined) {
+      instance.viewState.set(block.id, 'open', true);
+    }
+  });
   await wait(0);
   await wait(0);
   // jsdom does not reflect contentEditable to the attribute Blok's input lookup reads.
@@ -122,7 +129,7 @@ const doc = (): OutputBlockData[] => [
   { id: 'l1', type: 'list', data: { text: 'one', style: 'unordered' }, parent: 't1' },
   { id: 'l2', type: 'list', data: { text: 'two', style: 'unordered' }, parent: 't1' },
   { id: 't2', type: 'tab', data: { title: 'Beta' }, parent: 'tabs', content: ['tg', 'bp'] },
-  { id: 'tg', type: 'toggle', data: { text: 'Toggle', isOpen: true }, parent: 't2', content: ['in'] },
+  { id: 'tg', type: 'toggle', data: { text: 'Toggle' }, parent: 't2', content: ['in'] },
   P('in', 'Inside toggle', 'tg'),
   P('bp', 'Beta paragraph', 't2'),
   { id: 't3', type: 'tab', data: { title: 'Gamma' }, parent: 'tabs', content: ['gp'] },
@@ -337,7 +344,7 @@ describe('tabs block: ArrowUp / ArrowDown with a later tab open', () => {
     await boot([
       { id: 'cl', type: 'column_list', data: {}, content: ['c1', 'c2'] },
       { id: 'c1', type: 'column', data: {}, parent: 'cl', content: ['tg', 'b'] },
-      { id: 'tg', type: 'toggle', data: { text: 'Toggle', isOpen: true }, parent: 'c1', content: ['in'] },
+      { id: 'tg', type: 'toggle', data: { text: 'Toggle' }, parent: 'c1', content: ['in'] },
       P('in', 'in', 'tg'),
       P('b', 'b', 'c1'),
       { id: 'c2', type: 'column', data: {}, parent: 'cl', content: ['c'] },

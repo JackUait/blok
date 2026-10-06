@@ -5,13 +5,14 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { ToggleItem as Toggle } from '../../../../src/tools/toggle';
 import { TabsTool } from '../../../../src/tools/tabs';
 import { TabTool } from '../../../../src/tools/tab';
-import type { OutputBlockData, OutputData } from '../../../../types';
+import type { API, OutputBlockData, OutputData } from '../../../../types';
 
 interface TestEditor {
   isReady: Promise<unknown>;
   save: () => Promise<OutputData>;
   destroy: () => void;
-  history: { undo: () => void; redo: () => void };
+  history: { undo: () => void; redo: () => void; canUndo: () => boolean };
+  viewState: API['viewState'];
   module: { yjsManager: { stopCapturing: () => void } };
 }
 
@@ -212,13 +213,18 @@ describe('tabs block: undo and redo', () => {
 });
 
 describe('toggle block: undo', () => {
-  it('collapse and typing inside a toggle undo and redo in order', async () => {
+  // Open state is personal view state, not document data, so it stays off the undo stack.
+  it('collapsing a toggle is not an undo step, while typing inside it undoes and redoes', async () => {
     const instance = await boot([
       { id: 'tg', type: 'toggle', data: { text: 'head' }, content: ['c1'] },
       P('c1', 'child', 'tg'),
     ]);
     const isOpen = (): string | null | undefined =>
       holderOf('tg').querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open');
+
+    instance.viewState.set('tg', 'open', true);
+    await settle();
+    expect(isOpen()).toBe('true');
 
     await typeInto(instance, 'c1', 'child more');
     holderOf('tg').querySelector<HTMLElement>('[data-blok-toggle-arrow]')?.click();
@@ -229,18 +235,15 @@ describe('toggle block: undo', () => {
 
     instance.history.undo();
     await settle();
+    // One undo reverts the typing and empties the stack: the collapse was never a step.
+    expect(await textOf(instance, 'c1')).toBe('child');
+    expect(instance.history.canUndo()).toBe(false);
+    // Undo opens the toggle to put the caret back in its child.
     expect(isOpen()).toBe('true');
 
-    instance.history.undo();
-    await settle();
-    expect(await textOf(instance, 'c1')).toBe('child');
-
-    instance.history.redo();
-    await settle();
     instance.history.redo();
     await settle();
 
     expect(await textOf(instance, 'c1')).toBe('child more');
-    expect(isOpen()).toBe('false');
   }, 30_000);
 });

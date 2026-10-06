@@ -95,7 +95,7 @@ const nestedDoc = (): OutputBlockData[] => [
     },
     content: ['tg', 'b', 'l1', 'd'],
   },
-  { id: 'tg', type: 'toggle', parent: 'tbl', data: { text: 'Toggle', isOpen: true }, content: ['k'] },
+  { id: 'tg', type: 'toggle', parent: 'tbl', data: { text: 'Toggle' }, content: ['k'] },
   { id: 'k', type: 'paragraph', parent: 'tg', data: { text: RED }, tunes: { marker: { mark: 'kid' } } },
   { id: 'b', type: 'paragraph', parent: 'tbl', data: { text: 'B' } },
   { id: 'l1', type: 'list', parent: 'tbl', data: { text: 'L1', style: 'checklist', checked: true }, content: ['l2'] },
@@ -166,7 +166,7 @@ const expectConsistentTree = (out: OutputData): void => {
 
 const TOGGLE_TREE: Node[] = [{
   type: 'toggle',
-  data: { text: 'Toggle', isOpen: true },
+  data: { text: 'Toggle' },
   children: [{ type: 'paragraph', data: { text: RED }, tunes: { marker: { mark: 'kid' } }, children: [] }],
 }];
 
@@ -179,7 +179,7 @@ const CHECKLIST_TREE: Node[] = [{
 /** Saved trees keep only the fields the fixtures pin. */
 const pick = (nodes: Node[]): Node[] => nodes.map(node => ({
   type: node.type,
-  data: Object.fromEntries(Object.entries(node.data).filter(([key]) => ['text', 'isOpen', 'style', 'checked', 'depth'].includes(key))),
+  data: Object.fromEntries(Object.entries(node.data).filter(([key]) => ['text', 'style', 'checked', 'depth'].includes(key))),
   // The tune saves `{}` on blocks that never had a mark.
   ...(Object.keys(node.tunes?.marker ?? {}).length > 0 ? { tunes: { marker: node.tunes?.marker } } : {}),
   children: pick(node.children),

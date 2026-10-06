@@ -1051,7 +1051,7 @@ describe('htmlToBlocks — tabs', () => {
     );
 
     expect(shape(blocks)).toEqual([
-      { type: 'toggle', data: { text: 'T', isOpen: false } },
+      { type: 'toggle', data: { text: 'T' } },
       { type: 'tabs', data: {}, parent: 0 },
       { type: 'tab', data: { title: 'One' }, parent: 1 },
       { type: 'paragraph', data: { text: 'stray' }, parent: 0 },
@@ -1063,7 +1063,7 @@ describe('htmlToBlocks — tabs', () => {
 
   it('round-trips tabs through blocksToHtml, nested in a toggle', () => {
     const blocks: OutputBlockData[] = [
-      { id: 'tg', type: 'toggle', data: { text: 'Wrap', isOpen: true } },
+      { id: 'tg', type: 'toggle', data: { text: 'Wrap' } },
       { id: 'tabs', type: 'tabs', parent: 'tg', data: {} },
       { id: 't1', type: 'tab', parent: 'tabs', data: { title: 'First & <One>', icon: '🍎' } },
       { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'A' } },
@@ -1076,7 +1076,7 @@ describe('htmlToBlocks — tabs', () => {
     ];
 
     expect(shape(htmlToBlocks(blocksToHtml({ blocks })))).toEqual([
-      { type: 'toggle', data: { text: 'Wrap', isOpen: true } },
+      { type: 'toggle', data: { text: 'Wrap' } },
       { type: 'tabs', data: {}, parent: 0 },
       { type: 'tab', data: { title: 'First & <One>', icon: '🍎' }, parent: 1 },
       { type: 'paragraph', data: { text: 'A' }, parent: 2 },

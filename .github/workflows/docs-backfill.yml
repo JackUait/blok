@@ -28,13 +28,13 @@ jobs:
           TAGS: ${{ inputs.tags }}
           ROOT_TAG: ${{ inputs.root_tag }}
         run: |
-          tags="$(jq -cn --arg t "$TAGS" '$t | split(" ") | map(select(length > 0))')"
+          tag_list="$(jq -cn --arg t "$TAGS" '$t | split(" ") | map(select(length > 0))')"
           # Otherwise no job builds the root snapshot and the run still looks green.
-          if ! jq -e --arg r "$ROOT_TAG" 'any(.[]; . == $r)' <<<"$tags" >/dev/null; then
+          if ! jq -e --arg r "$ROOT_TAG" 'any(.[]; . == $r)' <<<"$tag_list" >/dev/null; then
             echo "::error::root_tag '$ROOT_TAG' is not in tags: $TAGS"
             exit 1
           fi
-          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "tags=$tag_list" >> "$GITHUB_OUTPUT"
 
   snapshot:
     name: Snapshot ${{ matrix.tag }}

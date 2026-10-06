@@ -21,7 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.8.0" />
+    <PackageReference Include="AngleSharp" Version="1.8.3" />
     <!--
       5 MB that only macOS ever loads, and only for an outbound link preview
       over https. It cannot be made optional: the assembly has to be present
@@ -39,7 +39,7 @@
       `using Jint.Runtime;` against a package it never declared. Runtime assets
       still flow, so the engine is restored and loaded exactly as before.
     -->
-    <PackageReference Include="Jint" Version="4.16.1"
+    <PackageReference Include="Jint" Version="4.16.4"
                       PrivateAssets="compile;contentfiles;analyzers;build" />
   </ItemGroup>
 

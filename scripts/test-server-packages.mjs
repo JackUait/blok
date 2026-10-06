@@ -243,9 +243,9 @@ function assertPackageMetadata(packageId, nuspec) {
         .map(({ id, version, exclude }) => ({ id, version, exclude }))
         .sort((left, right) => left.id.localeCompare(right.id)),
       [
-        { id: 'AngleSharp', version: '1.8.0', exclude: 'Build,Analyzers' },
+        { id: 'AngleSharp', version: '1.8.3', exclude: 'Build,Analyzers' },
         { id: 'BouncyCastle.Cryptography', version: '2.7.0', exclude: 'Compile,Build,Analyzers' },
-        { id: 'Jint', version: '4.16.1', exclude: 'Compile,Build,Analyzers' },
+        { id: 'Jint', version: '4.16.4', exclude: 'Compile,Build,Analyzers' },
       ],
       'Blok.Server must retain its exact direct package dependencies and asset exclusions',
     );

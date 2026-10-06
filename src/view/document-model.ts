@@ -302,6 +302,36 @@ const legacyChildren = (block: ViewBlock): unknown[] => {
 };
 
 /**
+ * A table renders only the ids its cells list, so strays of a tabs block in a
+ * cell join that cell right after the tabs id, as the editor's table adopts
+ * them. Returns a copy: `data` still points into the caller's document.
+ * @param content - the table's raw `data.content`
+ * @param tabsId - the tabs block's id
+ * @param strays - the blocks leaving the tabs block, in order
+ */
+const withStraysInCell = (content: unknown, tabsId: string, strays: ViewBlock[]): unknown => {
+  if (!Array.isArray(content)) {
+    return content;
+  }
+
+  const ids = strays.flatMap((stray) => (stray.id === undefined ? [] : [stray.id]));
+  const placed = { done: false };
+
+  return content.map((row: unknown) => (!Array.isArray(row) ? row : row.map((cell: unknown) => {
+    const blocks: unknown[] = !placed.done && isRecord(cell) && Array.isArray(cell.blocks) ? cell.blocks : [];
+    const at = blocks.indexOf(tabsId);
+
+    if (at === -1 || !isRecord(cell)) {
+      return cell;
+    }
+
+    placed.done = true;
+
+    return { ...cell, blocks: [...blocks.slice(0, at + 1), ...ids, ...blocks.slice(at + 1)] };
+  })));
+};
+
+/**
  * Move every non-`tab` child of a `tabs` block out, the way the tabs tool
  * evicts them on load (`scheduleRogueEviction`): each lands in the tabs
  * block's own parent, right after the tabs block, order and subtree kept.
@@ -347,6 +377,10 @@ const hoistTabsStrays = (topLevel: ViewBlock[], children: Map<string, ViewBlock[
 
     strays.forEach((stray) => parentOf.set(stray, parent));
     siblings.splice(at + 1, 0, ...strays);
+
+    if (parent?.type === 'table') {
+      parent.data = { ...parent.data, content: withStraysInCell(parent.data.content, tabs.id, strays) };
+    }
   }
 };
 

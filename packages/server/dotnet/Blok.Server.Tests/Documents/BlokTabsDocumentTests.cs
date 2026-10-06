@@ -174,4 +174,38 @@ public sealed class BlokTabsDocumentTests
         + "<p>Stray</p><p>After</p></details>",
         html);
   }
+
+  /// <summary>
+  /// A table shows only the blocks its cells list. The editor keeps a stray of
+  /// a tabs block in a cell in that cell, right after the tabs block, and so
+  /// does every export.
+  /// </summary>
+  [Fact]
+  public async Task KeepsAStrayOfTabsInATableCellInThatCell()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    const string document = """
+        {"blocks":[
+          {"id":"tbl","type":"table","data":{"withHeadings":false,"content":[[{"blocks":["tabs"]},{"blocks":["c2"]}]]},"content":["tabs","c2"]},
+          {"id":"tabs","type":"tabs","data":{},"parent":"tbl","content":["s1","t1"]},
+          {"id":"s1","type":"paragraph","data":{"text":"STRAYTEXT"},"parent":"tabs"},
+          {"id":"t1","type":"tab","data":{"title":"Do"},"parent":"tabs","content":["p1"]},
+          {"id":"p1","type":"paragraph","data":{"text":"one"},"parent":"t1"},
+          {"id":"c2","type":"paragraph","data":{"text":"Two"},"parent":"tbl"}
+        ]}
+        """;
+
+    var markdown = (await converter.ToMarkdownAsync(document)).Markdown;
+    var text = (await converter.ToPlainTextWithReportAsync(document)).Text;
+
+    Assert.Equal(
+        "<table><tbody><tr><td>"
+        + "<div data-blok-tabs><section data-blok-tab><h4 data-blok-tab-title>Do</h4><p>one</p></section></div>"
+        + "<p>STRAYTEXT</p></td><td><p>Two</p></td></tr></tbody></table>",
+        await converter.ToHtmlAsync(document));
+    Assert.Single(markdown.Split("STRAYTEXT").Skip(1));
+    Assert.True(markdown.IndexOf("one", StringComparison.Ordinal) < markdown.IndexOf("STRAYTEXT", StringComparison.Ordinal));
+    Assert.Single(text.Split("STRAYTEXT").Skip(1));
+    Assert.True(text.IndexOf("one", StringComparison.Ordinal) < text.IndexOf("STRAYTEXT", StringComparison.Ordinal));
+  }
 }

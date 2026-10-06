@@ -5,6 +5,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { TabsTool } from '../../../../src/tools/tabs';
 import { TabTool } from '../../../../src/tools/tab';
 import { ToggleItem } from '../../../../src/tools/toggle';
+import { Table } from '../../../../src/tools/table/index';
 import type { OutputBlockData, OutputData } from '../../../../types';
 
 interface TestEditor {
@@ -36,6 +37,7 @@ const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
       tabs: TabsTool,
       tab: TabTool,
       toggle: ToggleItem,
+      table: Table,
     },
     data: { blocks },
   }) as unknown as TestEditor;
@@ -187,5 +189,92 @@ describe('tabs block evicting non-tab children', () => {
     const saved = await instance.save();
 
     expect(shape(saved)).toEqual(['tabs<root', 't1<tabs', 'p1<t1', 's1<root', 's1c<s1', 's2<root', 'tail<root']);
+  });
+
+  /** Tabs in the first cell of a two-cell table; `parent` puts the table in a container. */
+  const tabsInTable = (parent?: string): OutputBlockData[] => [
+    {
+      id: 'tbl',
+      type: 'table',
+      ...(parent === undefined ? {} : { parent }),
+      data: { withHeadings: false, content: [[{ blocks: ['tabs'] }, { blocks: ['c2'] }]] },
+      content: ['tabs', 'c2'],
+    },
+    { id: 'tabs', type: 'tabs', data: {}, parent: 'tbl', content: ['s1', 't1', 's2'] },
+    { id: 's1', type: 'paragraph', data: { text: 'STRAYTEXT' }, parent: 'tabs' },
+    { id: 't1', type: 'tab', data: { title: 'One' }, parent: 'tabs', content: ['p1'] },
+    { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+    { id: 's2', type: 'paragraph', data: { text: 'S2' }, parent: 'tabs' },
+    { id: 'c2', type: 'paragraph', data: { text: 'cell two' }, parent: 'tbl' },
+  ];
+
+  const cellsOf = (data: OutputData): unknown =>
+    (data.blocks.find(block => block.id === 'tbl')?.data.content as Array<Array<{ blocks: string[] }>>)
+      .map(row => row.map(cell => cell.blocks));
+
+  const expectStraysShownAfterTabs = (): void => {
+    const holderOf = (id: string): Element | null => document.querySelector(`[data-blok-id="${id}"]`);
+
+    expect(holderOf('tabs')?.contains(holderOf('s1'))).toBe(false);
+    expect(holderOf('tabs')?.nextElementSibling).toBe(holderOf('s1'));
+    expect(holderOf('s1')?.nextElementSibling).toBe(holderOf('s2'));
+  };
+
+  it('keeps strays of a tabs block in a root table cell in that cell, right after the tabs block', async () => {
+    const instance = await boot([...tabsInTable(), { id: 'tail', type: 'paragraph', data: { text: 'tail' } }]);
+    const saved = await instance.save();
+
+    expect(cellsOf(saved)).toEqual([[['tabs', 's1', 's2'], ['c2']]]);
+    expect(contentOf(saved, 'tbl')).toEqual(['tabs', 's1', 's2', 'c2']);
+    expect(shape(saved)).toEqual(['tbl<root', 'tabs<tbl', 't1<tabs', 'p1<t1', 's1<tbl', 's2<tbl', 'c2<tbl', 'tail<root']);
+    expectStraysShownAfterTabs();
+  });
+
+  it('keeps strays of a tabs block in a cell of a table inside a toggle in that cell', async () => {
+    const instance = await boot([
+      { id: 'o', type: 'toggle', data: { text: 'O' }, content: ['tbl', 'after'] },
+      ...tabsInTable('o'),
+      { id: 'after', type: 'paragraph', data: { text: 'A' }, parent: 'o' },
+    ]);
+    const saved = await instance.save();
+
+    expect(cellsOf(saved)).toEqual([[['tabs', 's1', 's2'], ['c2']]]);
+    expect(shape(saved)).toEqual(['o<root', 'tbl<o', 'tabs<tbl', 't1<tabs', 'p1<t1', 's1<tbl', 's2<tbl', 'c2<tbl', 'after<o']);
+    expectStraysShownAfterTabs();
+  });
+
+  it('shows a table-cell stray’s own children after it, not inside the tabs block', async () => {
+    const instance = await boot([
+      { id: 'tbl', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['tabs'] }, { blocks: ['c2'] }]] }, content: ['tabs', 'c2'] },
+      { id: 'tabs', type: 'tabs', data: {}, parent: 'tbl', content: ['s1', 't1', 'sg'] },
+      { id: 's1', type: 'paragraph', data: { text: 'STRAYTEXT' }, parent: 'tabs', content: ['s1c'] },
+      { id: 's1c', type: 'paragraph', data: { text: 'STRAYCHILD' }, parent: 's1' },
+      { id: 't1', type: 'tab', data: { title: 'One' }, parent: 'tabs' },
+      { id: 'sg', type: 'toggle', data: { text: 'TOG' }, parent: 'tabs', content: ['sgc'] },
+      { id: 'sgc', type: 'paragraph', data: { text: 'TOGCHILD' }, parent: 'sg' },
+      { id: 'c2', type: 'paragraph', data: { text: 'cell two' }, parent: 'tbl' },
+    ]);
+    const holderOf = (id: string): Element | null => document.querySelector(`[data-blok-id="${id}"]`);
+
+    expect(holderOf('tabs')?.contains(holderOf('s1c'))).toBe(false);
+    expect(holderOf('s1')?.nextElementSibling).toBe(holderOf('s1c'));
+    expect(holderOf('s1c')?.nextElementSibling).toBe(holderOf('sg'));
+    expect(holderOf('sg')?.contains(holderOf('sgc'))).toBe(true);
+
+    const saved = await instance.save();
+
+    expect(cellsOf(saved)).toEqual([[['tabs', 's1', 'sg'], ['c2']]]);
+    expect(shape(saved)).toEqual(['tbl<root', 'tabs<tbl', 't1<tabs', 's1<tbl', 's1c<s1', 'sg<tbl', 'sgc<sg', 'c2<tbl']);
+  });
+
+  it('saves a table-cell stray the same after a reload', async () => {
+    const first = await (await boot(tabsInTable())).save();
+
+    editor?.destroy();
+    const again = await (await boot(first.blocks)).save();
+
+    expect(cellsOf(again)).toEqual(cellsOf(first));
+    expect(shape(again)).toEqual(shape(first));
+    expectStraysShownAfterTabs();
   });
 });

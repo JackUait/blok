@@ -516,12 +516,32 @@ export class TabsTool implements BlockTool, TabsHandle {
 
       // Strays stay in the tabs block's container. Last first: each one lands
       // right after the tabs block, so the reverse keeps their order.
-      const parentId = this.api.blocks.getById(this.blockId)?.parentId ?? null;
+      const tabs = this.api.blocks.getById(this.blockId);
+      const parentId = tabs?.parentId ?? null;
+      const subtree = (id: string): BlockAPI[] =>
+        this.api.blocks.getChildren(id).flatMap(child => [child, ...subtree(child.id)]);
 
       this.api.blocks.getChildren(this.blockId)
         .filter(child => child.name !== TAB_TOOL)
         .reverse()
-        .forEach(child => this.api.blocks.setBlockParent(child.id, parentId));
+        .forEach(child => {
+          this.api.blocks.setBlockParent(child.id, parentId);
+
+          // A table parent keeps the holders where they are (inside this
+          // block's panels) and only adopts the id into the tabs block's cell.
+          // A holder inside a moved one rides along, so it is checked late.
+          if (tabs !== undefined && tabs !== null) {
+            [child, ...subtree(child.id)].reduce<Element>((anchor, member) => {
+              if (!tabs.holder.contains(member.holder)) {
+                return anchor.contains(member.holder) ? anchor : member.holder;
+              }
+
+              anchor.after(member.holder);
+
+              return member.holder;
+            }, tabs.holder);
+          }
+        });
     };
 
     requestAnimationFrame(run);

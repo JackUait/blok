@@ -18,7 +18,7 @@ import { viewNodesToReact } from './view-nodes-to-react';
  * bindings map from remains `@experimental` — but consumers of this hook never
  * touch it directly.
  * @param data - saved document (strict or loose wire shape; nullish tolerated)
- * @param options - schema / renderers / inlineRenderers / unknown-block policy / toolAttributes / blockIds / transformUrl / pageHref
+ * @param options - schema / renderers / inlineRenderers / unknown-block policy / toolAttributes / blockIds / transformUrl / pageHref / pageInfo
  */
 export const useBlokView = (
   data: OutputData | LooseOutputData | null | undefined,
@@ -32,6 +32,7 @@ export const useBlokView = (
   const transformUrl = options?.transformUrl;
   const inlineRenderers = options?.inlineRenderers;
   const pageHref = options?.pageHref;
+  const pageInfo = options?.pageInfo;
   const classes = options?.classes;
   const direction = options?.direction;
 
@@ -49,6 +50,7 @@ export const useBlokView = (
           transformUrl,
           inlineRenderers,
           pageHref,
+          pageInfo,
           /**
            * Opt-in, NOT defaulted on. Parity rendering wraps every block in the
            * core's holder → content scaffolding, which would contradict this
@@ -64,5 +66,5 @@ export const useBlokView = (
         })
       )
     );
-  }, [data, schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl, inlineRenderers, pageHref, classes, direction]);
+  }, [data, schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl, inlineRenderers, pageHref, pageInfo, classes, direction]);
 };

@@ -152,15 +152,17 @@ describe('BlokView', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/pic.png');
   });
 
-  it('forwards pageHref so a page card links to its sub-page', () => {
+  it('forwards pageInfo and pageHref so a page card links to its sub-page', () => {
     const { container } = render(
       <BlokView
-        data={{ blocks: [{ type: 'page', data: { pageId: 'p1', cache: { title: 'Roadmap' } } }] }}
+        data={{ blocks: [{ type: 'page', data: { pageId: 'p1' } }] }}
+        pageInfo={() => ({ title: 'Roadmap' })}
         pageHref={(pageId) => `/pages/${pageId}`}
       />
     );
 
     expect(container.querySelector('a')?.getAttribute('href')).toBe('/pages/p1');
+    expect(container.querySelector('a')).toHaveTextContent('Roadmap');
   });
 
   it('forwards id and arbitrary div attributes onto the wrapper', () => {
@@ -241,11 +243,11 @@ describe('useBlokView', () => {
     expect(Object.is(results[0], results[1])).toBe(false);
   });
 
-  it('forwards pageHref', () => {
+  it('forwards pageInfo and pageHref', () => {
     const Probe = (): React.ReactNode => {
       const content = useBlokView(
-        { blocks: [{ type: 'page', data: { pageId: 'p1', cache: { title: 'Roadmap' } } }] },
-        { pageHref: (pageId) => `/pages/${pageId}` }
+        { blocks: [{ type: 'page', data: { pageId: 'p1' } }] },
+        { pageInfo: () => ({ title: 'Roadmap' }), pageHref: (pageId) => `/pages/${pageId}` }
       );
 
       return <div data-testid="probe">{content}</div>;
@@ -253,7 +255,10 @@ describe('useBlokView', () => {
 
     render(<Probe />);
 
-    expect(screen.getByTestId('probe').querySelector('a')?.getAttribute('href')).toBe('/pages/p1');
+    const link = screen.getByTestId('probe').querySelector('a');
+
+    expect(link?.getAttribute('href')).toBe('/pages/p1');
+    expect(link).toHaveTextContent('Roadmap');
   });
 
   it('forwards toolAttributes / blockIds / transformUrl options', () => {

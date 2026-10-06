@@ -11546,6 +11546,7 @@ span[data-blok-slash-search] {
   box-shadow: 0 calc(-1 * var(--blok-border-width-hairline)) 0 var(--blok-tabs-edge), var(--blok-border-width-hairline) 0 0 var(--blok-tabs-edge), calc(-1 * var(--blok-border-width-hairline)) 0 0 var(--blok-tabs-edge);
   opacity: 0;
   pointer-events: none;
+  transform-origin: 50% 100%;
   transition: opacity var(--blok-duration-slow) var(--blok-ease-standard);
 }
 

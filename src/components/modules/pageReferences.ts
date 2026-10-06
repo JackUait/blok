@@ -1,8 +1,80 @@
-import type { PageConfig, PageInfo } from '../../tools/page/types';
+import type { PageConfig, PageIcon, PageInfo } from '../../tools/page/types';
+import { pageIconNode } from '../../tools/page/icon-node';
 import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
+import {
+  PAGE_REFERENCE_ARROW_CLASSES,
+  PAGE_REFERENCE_CLASSES,
+  PAGE_REFERENCE_ICON_CLASSES,
+  PAGE_REFERENCE_INK_CLASSES,
+  PAGE_REFERENCE_MUTED_CLASSES,
+  PAGE_REFERENCE_TITLE_CLASSES,
+} from '../../shared/tool-classes/page';
+import { PAGE_REFERENCE_ARROW_HOVER_CLASSES, PAGE_REFERENCE_HOVER_CLASSES } from '../../tools/page/constants';
+import { IconArrowDiagonal } from '../icons';
 import { Module } from '../__module';
 import { DATA_ATTR } from '../constants/data-attributes';
 import { safeHref } from '../utils/sanitize-url';
+
+const ICON_TESTID = 'page-reference-icon';
+const TITLE_TESTID = 'page-reference-title';
+const EMOJI_ATTR = 'data-blok-emoji';
+
+/** Which icon an anchor shows, so a repaint rebuilds it only on change. */
+const iconKeys = new WeakMap<HTMLElement, string>();
+
+const iconKey = (icon: PageIcon | undefined): string => {
+  if (icon === undefined) {
+    return 'page';
+  }
+
+  return icon.type === 'emoji' ? `emoji:${icon.value}` : `image:${icon.url}`;
+};
+
+/**
+ * The icon constants are indented markup. Their blank text nodes would join the
+ * reference's text, which caret offsets and find read.
+ */
+const dropBlankText = (root: HTMLElement): void => {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const texts: Node[] = [];
+
+  while (walker.nextNode() !== null) {
+    texts.push(walker.currentNode);
+  }
+  texts.filter((node) => node.textContent?.trim() === '').forEach((node) => node.parentNode?.removeChild(node));
+};
+
+const buildArrow = (): HTMLElement => {
+  const arrow = document.createElement('span');
+
+  arrow.className = [...PAGE_REFERENCE_ARROW_CLASSES, PAGE_REFERENCE_ARROW_HOVER_CLASSES].join(' ');
+  arrow.setAttribute(DATA_ATTR.testid, 'page-reference-arrow');
+  // A trusted constant from the icon module, not user input.
+  arrow.innerHTML = IconArrowDiagonal;
+
+  return arrow;
+};
+
+const paintIcon = (slot: HTMLElement, icon: PageIcon | undefined): void => {
+  const key = iconKey(icon);
+
+  if (iconKeys.get(slot) === key) {
+    return;
+  }
+  iconKeys.set(slot, key);
+
+  if (icon?.type === 'emoji') {
+    slot.setAttribute(EMOJI_ATTR, icon.value);
+    slot.replaceChildren(buildArrow());
+    dropBlankText(slot);
+
+    return;
+  }
+
+  slot.removeAttribute(EMOJI_ATTR);
+  slot.replaceChildren(pageIconNode(icon), buildArrow());
+  dropBlankText(slot);
+};
 
 interface PageEntry {
   anchors: Set<HTMLAnchorElement>;
@@ -170,9 +242,17 @@ export class PageReferences extends Module {
       ? this.Blok.I18n.t('tools.page.noAccess')
       : visibleTitle;
 
-    if (anchor.textContent !== title) {
-      anchor.textContent = title;
+    const { icon, label } = this.parts(anchor);
+
+    paintIcon(icon, allowed && info.icon !== undefined ? info.icon : undefined);
+    if (label.textContent !== title) {
+      label.textContent = title;
     }
+    anchor.className = [
+      ...PAGE_REFERENCE_CLASSES,
+      ...(allowed ? PAGE_REFERENCE_INK_CLASSES : PAGE_REFERENCE_MUTED_CLASSES),
+      PAGE_REFERENCE_HOVER_CLASSES,
+    ].join(' ');
 
     anchor.removeAttribute('href');
     anchor.removeAttribute('role');
@@ -190,6 +270,28 @@ export class PageReferences extends Module {
     } else {
       anchor.setAttribute('role', 'link');
     }
+  }
+
+  /** The icon and title slots, built on first paint over the saved fallback text. */
+  private parts(anchor: HTMLAnchorElement): { icon: HTMLElement; label: HTMLElement } {
+    const icon = anchor.querySelector<HTMLElement>(`:scope > [${DATA_ATTR.testid}="${ICON_TESTID}"]`);
+    const label = anchor.querySelector<HTMLElement>(`:scope > [${DATA_ATTR.testid}="${TITLE_TESTID}"]`);
+
+    if (icon !== null && label !== null) {
+      return { icon, label };
+    }
+
+    const newIcon = document.createElement('span');
+    const newLabel = document.createElement('span');
+
+    newIcon.className = PAGE_REFERENCE_ICON_CLASSES.join(' ');
+    newIcon.setAttribute(DATA_ATTR.testid, ICON_TESTID);
+    newIcon.setAttribute('aria-hidden', 'true');
+    newLabel.className = PAGE_REFERENCE_TITLE_CLASSES.join(' ');
+    newLabel.setAttribute(DATA_ATTR.testid, TITLE_TESTID);
+    anchor.replaceChildren(newIcon, newLabel);
+
+    return { icon: newIcon, label: newLabel };
   }
 
   private href(pageId: string): string | null {

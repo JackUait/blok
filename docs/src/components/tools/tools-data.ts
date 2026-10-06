@@ -1017,6 +1017,13 @@ const editor = new Blok({
           'Builds the page\'s URL from its id. Blok puts it on the link, so Cmd/Ctrl-click or middle click opens the page in a new tab. Without it the link has no URL. Unsafe schemes such as `javascript:` are dropped.',
       },
       {
+        option: 'pageIdFromHref',
+        type: '(href: string) => string | null | undefined',
+        default: 'undefined',
+        description:
+          'Turns a URL back into a page id, or returns `null` when the URL is not a page link. Blok passes an absolute URL. With it, pasting a page link offers Mention, which inserts an inline reference to the page instead of a plain link.',
+      },
+      {
         option: 'open',
         type: '(pageId: string, ctx: { event?: MouseEvent | KeyboardEvent }) => void',
         default: 'undefined',

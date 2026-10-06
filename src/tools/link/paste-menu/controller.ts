@@ -19,6 +19,8 @@ export interface PasteMenuOpenParams {
   allowGenericEmbed?: boolean;
   /** Hostnames that count as the editor's own site; their links get no bookmark. */
   ownHosts?: readonly string[];
+  /** The page the URL links to; offers a page mention. */
+  pageId?: string;
   /** Caret rect to anchor the popover at, or null to let the popover self-place. */
   position: DOMRect | null;
   /**
@@ -42,9 +44,9 @@ export interface LinkPasteMenu {
 }
 
 /**
- * Actions the live menu currently serves. `mention` is built and unit-tested but
- * its save round-trip needs a registered inline tool (per-block sanitize), so it
- * is filtered out here until that lands.
+ * Actions the live menu serves for any URL. A URL `mention` would save as a
+ * plain link, since no inline tool keeps its markup; only a page mention,
+ * which saves as a page reference, is served.
  */
 const LIVE_ACTIONS: ReadonlySet<PasteMenuActionType> = new Set<PasteMenuActionType>([
   'plain',
@@ -54,7 +56,8 @@ const LIVE_ACTIONS: ReadonlySet<PasteMenuActionType> = new Set<PasteMenuActionTy
 
 /** The options the live menu shows for `url`. */
 export const buildLivePasteMenuOptions = (url: string, context: PasteMenuContext): PasteMenuOption[] =>
-  buildPasteMenuOptions(url, context).filter((option) => LIVE_ACTIONS.has(option.type));
+  buildPasteMenuOptions(url, context).filter((option) =>
+    LIVE_ACTIONS.has(option.type) || (option.type === 'mention' && context.pageId !== undefined));
 
 const virtualPositionParams = (
   position: DOMRect | null,
@@ -93,6 +96,7 @@ export class PasteMenuController implements LinkPasteMenu {
       hasSelection: params.hasSelection,
       allowGenericEmbed: params.allowGenericEmbed === true,
       ...(params.ownHosts ? { ownHosts: params.ownHosts } : {}),
+      ...(params.pageId !== undefined ? { pageId: params.pageId } : {}),
     });
 
     // Mutable flags held on a const object (the lint config forbids `let`).

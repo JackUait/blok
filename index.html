@@ -1958,6 +1958,11 @@
         class: Page,
         config: {
           href: (id) => pagePath(id, window.location.search),
+          pageIdFromHref: (href) => {
+            const url = new URL(href);
+
+            return url.origin === window.location.origin ? pageIdFromPath(url.pathname) : null;
+          },
           // Deferred: the tool keeps working on its block right after `open`.
           open: (id) => setTimeout(() => goToPage(id), 0),
           ...(remotePages !== null ? remotePages.pageTool(pageId) : {

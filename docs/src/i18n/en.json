@@ -2258,6 +2258,9 @@
           "href": {
             "description": "Builds the page's URL from its id. Blok puts it on the link, so Cmd/Ctrl-click or middle click opens the page in a new tab. Without it the link has no URL. Unsafe schemes such as `javascript:` are dropped."
           },
+          "pageIdFromHref": {
+            "description": "Turns a URL back into a page id, or returns `null` when the URL is not a page link. Blok passes an absolute URL. With it, pasting a page link offers Mention, which inserts an inline reference to the page instead of a plain link."
+          },
           "open": {
             "description": "Opens the page. Blok calls it on a plain left click. Without it, a click follows `href`.\n\nEnter also opens the page when the block is selected from the keyboard (Escape, then the arrow keys). Then `ctx.event` is that key press.\n\nBlok also calls it once right after a user inserts a new page from the toolbox. Then `ctx.event` is empty. It is not called for a page inserted through the API, or when `create` throws."
           },

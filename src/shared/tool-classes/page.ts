@@ -79,3 +79,61 @@ export const PAGE_LOCK_ICON = `
   <circle cx="10" cy="12.5" r="0.75" fill="currentColor"/>
 </svg>
 `;
+
+/**
+ * An inline page reference (a mention). The `!` beats the holder's
+ * `[&_a]:underline` and `[&_a]:text-link`; the title draws its own underline
+ * so the icon stays clear of it.
+ */
+export const PAGE_REFERENCE_CLASSES: readonly string[] = [
+  'no-underline!',
+  'font-medium',
+  'whitespace-nowrap',
+  'cursor-pointer',
+];
+
+export const PAGE_REFERENCE_INK_CLASSES: readonly string[] = ['text-text-primary!'];
+
+export const PAGE_REFERENCE_MUTED_CLASSES: readonly string[] = ['text-text-secondary!'];
+
+/** An emoji icon is drawn from `data-blok-emoji`, so it never joins the text. */
+export const PAGE_REFERENCE_ICON_CLASSES: readonly string[] = [
+  'relative',
+  'inline-flex',
+  'items-center',
+  'justify-center',
+  'size-[1.2em]',
+  'me-[0.375em]',
+  'align-middle',
+  'leading-none',
+  'text-text-secondary',
+  // Only with an emoji: an empty ::before would become the box's baseline.
+  '[&[data-blok-emoji]]:before:content-[attr(data-blok-emoji)]',
+  'before:text-[1.05em]',
+  '[&>svg]:size-full',
+  '[&>img]:size-full',
+  '[&>img]:object-cover',
+  '[&>img]:rounded-(--blok-radius-mark)',
+];
+
+/** The arrow badge on the icon's corner: it says "link to a page". */
+export const PAGE_REFERENCE_ARROW_CLASSES: readonly string[] = [
+  'absolute',
+  'end-0',
+  'bottom-0',
+  'inline-flex',
+  'size-[0.55em]',
+  'p-[0.04em]',
+  'rounded-ss-[0.15em]',
+  'bg-(--blok-bg-primary)',
+  'text-text-primary',
+  '[&>svg]:size-full',
+  '[&>svg_path]:[stroke-width:3]',
+];
+
+export const PAGE_REFERENCE_TITLE_CLASSES: readonly string[] = [
+  'underline',
+  'decoration-[color:var(--blok-text-tertiary)]',
+  'decoration-1',
+  'underline-offset-[0.2em]',
+];

@@ -18,6 +18,8 @@ export interface PasteMenuContext {
    * bookmark of the site the reader is already on adds nothing.
    */
   ownHosts?: readonly string[];
+  /** The page the URL links to, when the page tool recognizes it. */
+  pageId?: string;
 }
 
 /** Whether `url` points at one of `ownHosts`. The port is ignored. */
@@ -42,6 +44,8 @@ export function isOwnHostLink(url: string, ownHosts: readonly string[] | undefin
  * - `bookmark` for any safe http(s) URL outside `ownHosts`.
  * - `mention` for any safe http(s) URL.
  * - `plain` is always available (dismiss / keep as link).
+ * - A page link offers only `mention` and `plain`: a bookmark or embed of a
+ *   page in this app adds nothing.
  */
 export function buildPasteMenuOptions(
   url: string,
@@ -49,6 +53,10 @@ export function buildPasteMenuOptions(
 ): PasteMenuOption[] {
   if (context.hasSelection || !isHttpUrl(url)) {
     return [{ type: 'plain' }];
+  }
+
+  if (context.pageId !== undefined) {
+    return [{ type: 'mention' }, { type: 'plain' }];
   }
 
   const options: PasteMenuOption[] = [];

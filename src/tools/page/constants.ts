@@ -43,3 +43,22 @@ export const PAGE_ICON_CLASSES = SHARED_ICON_CLASSES.join(' ');
 export const PAGE_TITLE_CLASSES = SHARED_TITLE_CLASSES.join(' ');
 
 export const PAGE_TITLE_MUTED_CLASSES = SHARED_TITLE_MUTED_CLASSES.join(' ');
+
+/**
+ * Edit-only hover fill for an inline page reference. The anchor stays inline,
+ * so the fill hugs the icon and title instead of the whole line.
+ */
+export const PAGE_REFERENCE_HOVER_CLASSES = [
+  // The page block row's insets and corners, in em so they scale with the text.
+  'px-[0.25em]',
+  'py-[0.25em]',
+  'rounded-(--blok-radius-control)',
+  'box-decoration-clone',
+  'transition-colors duration-120 ease-out motion-reduce:transition-none',
+  'can-hover:hover:bg-item-hover-bg',
+  'group/page-reference',
+].join(' ');
+
+/** The arrow badge's paper cutout takes the same tint, or it shows as a white square. */
+export const PAGE_REFERENCE_ARROW_HOVER_CLASSES =
+  'can-hover:group-hover/page-reference:bg-[image:linear-gradient(var(--blok-item-hover-bg),var(--blok-item-hover-bg))]';

@@ -52,6 +52,8 @@ export interface PageConfig {
   search?(query: string): Promise<readonly PageSearchResult[]>;
   /** The page's URL. Without it the link has no href. */
   href?(pageId: string): string;
+  /** The reverse of `href`: the page an absolute URL points at, or `null`. */
+  pageIdFromHref?(href: string): string | null | undefined;
   /** Opens the page on a plain click. Without it the link navigates to `href`. */
   open?(pageId: string, ctx: { event?: MouseEvent | KeyboardEvent }): void;
   /** Authorized metadata. `null` means missing; `undefined` means unresolved. */

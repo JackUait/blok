@@ -11,6 +11,7 @@ import {
   IconMap,
   IconMessage,
   IconMusic,
+  IconPage,
   IconPencil,
   IconTable,
   IconVideo,
@@ -85,7 +86,8 @@ const presentationFor = (type: PasteMenuActionType): PasteMenuItemPresentation =
     case 'embed':
       return { labelKey: 'tools.linkPaste.embed', icon: IconGlobe };
     case 'mention':
-      return { labelKey: 'tools.linkPaste.mention', icon: IconLink };
+      // Only a page link is offered a mention.
+      return { labelKey: 'tools.linkPaste.mention', icon: IconPage };
   }
 };
 

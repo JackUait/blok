@@ -6,6 +6,8 @@ import {
   type LinkPasteMenu,
 } from '../../../../tools/link/paste-menu/controller';
 import { isOwnHostLink, type PasteMenuActionType } from '../../../../tools/link/paste-menu/options';
+import type { PageConfig } from '../../../../tools/page/types';
+import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { applyResolvedLinkAttributes, resolveLinkAttributes } from '../../../utils/resolve-link-attributes';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
@@ -56,7 +58,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
 
     const pattern = this.toolRegistry.findToolForPattern(text);
 
-    return pattern ? 60 : 0;
+    return pattern || this.pageIdFor(text) !== undefined ? 60 : 0;
   }
 
   async handle(data: unknown, context: HandlerContext): Promise<boolean> {
@@ -66,7 +68,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
 
     const pattern = this.toolRegistry.findToolForPattern(data);
 
-    if (!pattern) {
+    if (!pattern && this.pageIdFor(data) === undefined) {
       return false;
     }
 
@@ -84,9 +86,13 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       }
 
       // Bookmark's catch-all pattern would claim it; let the text handler take it.
-      if (pattern.tool.name === 'bookmark' && isOwnHostLink(data, this.ownHosts())) {
+      if (!pattern || (pattern.tool.name === 'bookmark' && isOwnHostLink(data, this.ownHosts()))) {
         return false;
       }
+    }
+
+    if (!pattern) {
+      return false;
     }
 
     const event = this.composePasteEvent('pattern', {
@@ -161,6 +167,23 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     return selection !== null && !selection.isCollapsed && selection.toString().length > 0;
   }
 
+  /** The page a pasted URL links to, asked of the page tool's `pageIdFromHref`. */
+  private pageIdFor(text: string): string | undefined {
+    const page = this.Blok.Tools?.blockTools.get('page')?.settings as PageConfig | undefined;
+
+    if (page?.pageIdFromHref === undefined || !isHttpUrl(text)) {
+      return undefined;
+    }
+
+    try {
+      const pageId = page.pageIdFromHref(new URL(text.trim(), document.baseURI).href);
+
+      return typeof pageId === 'string' && pageId !== '' ? pageId : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   /** The page's hostname plus the configured `linkPaste.hostAliases`. */
   private ownHosts(): string[] {
     const aliases = this.config?.linkPaste?.hostAliases ?? [];
@@ -204,9 +227,11 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     const hasSelection = this.hasSelection();
     const allowGenericEmbed = this.config?.linkPaste?.allowGenericEmbed === true;
     const ownHosts = this.ownHosts();
+    const pageId = this.pageIdFor(url);
+    const page = pageId === undefined ? {} : { pageId };
 
     // The link is already in; a menu offering only "keep it" is noise.
-    if (buildLivePasteMenuOptions(url, { hasSelection, allowGenericEmbed, ownHosts }).every((o) => o.type === 'plain')) {
+    if (buildLivePasteMenuOptions(url, { hasSelection, allowGenericEmbed, ownHosts, ...page }).every((o) => o.type === 'plain')) {
       return;
     }
 
@@ -215,11 +240,12 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       hasSelection,
       allowGenericEmbed,
       ownHosts,
+      ...page,
       position: this.getLinkEndRect(linkBlock, url) ?? this.getCaretRect(),
       ...(linkBlock?.holder ? { trigger: linkBlock.holder } : {}),
       ...(this.config?.i18n?.direction ? { direction: this.config.i18n.direction } : {}),
       onSelect: (type: PasteMenuActionType): void => {
-        void this.applyMenuAction(type, url, linkBlock, canReplace);
+        void this.applyMenuAction(type, url, linkBlock, canReplace, pageId);
       },
       onDismiss: (): void => {
         // The link is already inserted; dismissing simply keeps it as-is.
@@ -285,7 +311,8 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     type: PasteMenuActionType,
     url: string,
     linkBlock: TargetBlock,
-    canReplace: boolean
+    canReplace: boolean,
+    pageId?: string
   ): Promise<void> {
     switch (type) {
       case 'bookmark':
@@ -312,9 +339,43 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
         // The link is already shown; nothing more to do.
         break;
       case 'mention':
-        // Built + unit-tested, but not yet served live (see PasteMenuController).
+        // Only a page link is offered a mention (see PasteMenuController).
+        if (pageId !== undefined) {
+          this.mentionPage(linkBlock, url, pageId);
+        }
         break;
     }
+  }
+
+  /**
+   * Swap the pasted link for an inline reference to the page. The
+   * PageReferences module paints it.
+   */
+  private mentionPage(block: TargetBlock, url: string, pageId: string): void {
+    const link = this.findInsertedAnchor(block, url);
+
+    if (block === null || link === null) {
+      return;
+    }
+
+    const reference = document.createElement('a');
+
+    reference.setAttribute(PAGE_REFERENCE_ATTR, pageId);
+    reference.textContent = PAGE_REFERENCE_FALLBACK;
+
+    link.replaceWith(reference);
+
+    const selection = window.getSelection();
+    const after = document.createRange();
+
+    after.setStartAfter(reference);
+    after.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(after);
+    block.dispatchChange();
+    // Flushes the write now, so the swap is its own undo step and one Cmd+Z
+    // brings the link back.
+    this.Blok.YjsManager.stopCapturing();
   }
 
   /**

@@ -63,6 +63,12 @@ export interface PageConfig {
    */
   href?(pageId: string): string;
   /**
+   * The reverse of `href`: the page a pasted URL points at, or `null` when it
+   * is not a page link. Gets an absolute URL. With it, pasting a page link
+   * offers "Mention", which inserts an inline reference to the page.
+   */
+  pageIdFromHref?(href: string): string | null | undefined;
+  /**
    * Opens the page on a plain left click, or on Enter when the block is selected.
    * Without it the link navigates to `href`. Also called once after the user
    * inserts a new page from the toolbox and `create` succeeds.

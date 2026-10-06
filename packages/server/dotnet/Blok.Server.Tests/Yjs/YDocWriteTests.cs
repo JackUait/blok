@@ -301,14 +301,20 @@ public sealed class YDocWriteTests
   }
 
   /// <summary>
-  /// The two scenarios whose engine steps write text. The runner compares the
+  /// The scenarios whose engine steps write text. The runner compares the
   /// engine's own bytes with the mirror document's on every engineWrites step,
-  /// so a divergence in the insert position fails here first.
+  /// so a divergence in the insert position fails here first. Then yjs reads
+  /// the engine's whole state back.
   /// </summary>
   [Theory]
   [InlineData("nul-and-astral-strings")]
   [InlineData("text-format-and-embed")]
-  public void TextInsertAndDeleteMatchYjs(string name)
+  [InlineData("formatted-text-engine-writes")]
+  [InlineData("formatted-text-prelim-queue")]
+  [InlineData("formatted-text-link-key-order")]
+  [InlineData("formatted-text-equal-links-cleanup")]
+  [InlineData("formatted-text-remote-overlap")]
+  public void TextWritesMatchYjs(string name)
   {
     var testCase = ScenarioSupport.Scenarios().Single(candidate => candidate.Name == name);
     var runner = new ScenarioRunner(testCase);
@@ -318,10 +324,13 @@ public sealed class YDocWriteTests
     Assert.True(runner.Checks > 0, $"\"{name}\" asserted nothing");
 
     var replay = NodeReplay.Run(testCase.Roots, [runner.Doc.EncodeStateAsUpdate()], null);
+    var rendered = JsonRenderer.Render(runner.Doc, testCase.Roots);
 
     Assert.Equal(
-        YjsEngineFixtures.Canonicalize(JsonRenderer.Render(runner.Doc, testCase.Roots)),
-        YjsEngineFixtures.Canonicalize(replay.Json));
+        YjsEngineFixtures.Canonicalize(
+            testCase.Segments ? ScenarioSupport.MergeTextRuns(rendered) : rendered),
+        YjsEngineFixtures.Canonicalize(
+            testCase.Segments ? ScenarioSupport.MergeTextRuns(replay.Json) : replay.Json));
   }
 
   /// <summary>

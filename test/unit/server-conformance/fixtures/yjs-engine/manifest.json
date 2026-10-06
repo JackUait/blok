@@ -16,7 +16,7 @@
     "opsPerSeed": 40,
     "stepGrammarNote": "A seed file replays against the engine doc alone, so it records only engine-touching steps and drops two pieces of scenario scaffolding: a \"deliver\" step has no `to` (the engine is the only target) and the oracle rides on each step as an `expect` field instead of a separate \"expect\" step. Restoring both would add ~100 KiB across the 50 seeds. One C# step record with optional Deliver/To/Expect fields reads scenarios.json and a seed file alike.",
     "opsPerSeedNote": "The plan asked for ~80; at 80 ops a seed weighs ~24 KiB — the per-step sha256 oracle alone is half of it — and 50 of those blow past the 1 MB fixture budget. Seed COUNT was kept because a seed is the unit a failing case is promoted from.",
-    "noFormattingNote": "The fuzzer never formats text. yjs deletes redundant format items in a per-transaction cleanup, so two docs holding identical state can report different toDelta run boundaries and the JSON oracle would be unreachable. Formatting is pinned by structs.json (text-insert-format-embed) and by the text-format-and-embed scenario instead.",
+    "noFormattingNote": "The fuzzer never formats text. yjs deletes redundant format items in a per-transaction cleanup, so two docs holding identical state can report different toDelta run boundaries and the JSON oracle would be unreachable. Formatting is pinned by structs.json (text-insert-format-embed) and by the text-format-and-embed and formatted-text-* scenarios instead.",
     "astralNote": "Astral characters appear in map and array values but never in fuzzed text: a random text.delete would split a surrogate pair, and lib0 writes a lone half as U+FFFD.",
     "bigintNote": "A bigint is only ever a peer map.set value. Real yjs throws on one inside an array insert, and Locked Decision 2 keeps it off the engine write path entirely (decode-only)."
   },
@@ -340,8 +340,8 @@
     {
       "path": "scenarios.json",
       "description": "Deterministic multi-doc delivery scripts with a per-step oracle.",
-      "bytes": 49803,
-      "sha256": "96a23a835766962db57ffcf8f06498e63452d623448ed08414d62ea625a9b9dc"
+      "bytes": 104310,
+      "sha256": "4004f27cd6995d39555e726cc26fb60eec1bb0202295cf902533bdcade12f5de"
     },
     {
       "path": "structs.json",

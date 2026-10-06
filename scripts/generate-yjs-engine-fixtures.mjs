@@ -173,7 +173,15 @@ function buildValue(desc) {
   }
 
   if ('$yxmltext' in desc) {
-    return new Y.XmlText(desc.$yxmltext);
+    const text = new Y.XmlText(desc.$yxmltext);
+
+    // Writes on a text that is not in a doc yet; yjs queues them and replays
+    // them in order when the text integrates.
+    for (const op of desc.ops ?? []) {
+      applyTextOp(text, op);
+    }
+
+    return text;
   }
 
   if ('$yxmlelement' in desc) {
@@ -232,17 +240,34 @@ function applyOp(doc, op) {
     case 'array.delete':
       target.delete(op.index, op.length);
       break;
+    default:
+      applyTextOp(target, op);
+  }
+}
+
+/**
+ * Attributes go through buildValue so every op gets FRESH objects: yjs
+ * compares object marks by reference in places (cleanupFormattingGap), and
+ * the C# side builds a new object per op too.
+ * @param {Y.Text} target
+ * @param {Record<string, unknown>} op
+ * @returns {void}
+ */
+function applyTextOp(target, op) {
+  const attributes = op.attributes === undefined ? undefined : buildValue(op.attributes);
+
+  switch (op.op) {
     case 'text.insert':
-      target.insert(op.index, op.text, op.attributes ?? undefined);
+      target.insert(op.index, op.text, attributes);
       break;
     case 'text.delete':
       target.delete(op.index, op.length);
       break;
     case 'text.format':
-      target.format(op.index, op.length, op.attributes);
+      target.format(op.index, op.length, attributes);
       break;
     case 'text.embed':
-      target.insertEmbed(op.index, buildValue(op.embed), op.attributes ?? undefined);
+      target.insertEmbed(op.index, buildValue(op.embed), attributes);
       break;
     default:
       throw new TypeError(`unknown op "${op.op}"`);
@@ -1055,6 +1080,14 @@ const arrayDelete = (index, length) => ({ op: 'array.delete', root: 'list', root
 const textInsert = (index, text) => ({ op: 'text.insert', root: 'content', rootKind: 'text', path: [], index, text });
 const textDelete = (index, length) => ({ op: 'text.delete', root: 'content', rootKind: 'text', path: [], index, length });
 
+// Formatted text the way Blok stores it: a Y.XmlText under a map key.
+const richOp = (op, extra) => ({ op, root: 'blocks', rootKind: 'map', path: ['b1'], ...extra });
+const richInsert = (index, text, attributes) => richOp('text.insert', { index, text, attributes });
+const richFormat = (index, length, attributes) => richOp('text.format', { index, length, attributes });
+const richEmbed = (index, embed, attributes) => richOp('text.embed', { index, embed, attributes });
+const richDelete = (index, length) => richOp('text.delete', { index, length });
+const prelimOp = (op, extra) => ({ op, ...extra });
+
 const MAP_ROOTS = { blocks: 'map' };
 const LIST_ROOTS = { list: 'array' };
 const TEXT_ROOTS = { content: 'text' };
@@ -1216,6 +1249,89 @@ const SCENARIOS = [
     ],
   },
   {
+    name: 'formatted-text-engine-writes',
+    description: 'The engine writes every formatted-text op into a fresh Y.XmlText: inserts with attributes, format add and remove, an object-valued mark, embeds with and without attributes, a delete across marks, and a format that runs past the end.',
+    roots: MAP_ROOTS,
+    steps: [
+      { engine: true, op: mapSet('b1', { $yxmltext: '' }), deliver: ['A'] },
+      { engine: true, op: richInsert(0, 'Hello world', {}), deliver: ['A'] },
+      { engine: true, op: richFormat(0, 5, { bold: true }), deliver: ['A'] },
+      { engine: true, op: richFormat(6, 5, { link: { href: 'https://blok.dev', rel: 'noopener' } }), deliver: ['A'] },
+      { engine: true, op: richFormat(2, 2, { bold: null }), deliver: ['A'] },
+      { engine: true, op: richInsert(11, '!', {}), deliver: ['A'] },
+      { engine: true, op: richInsert(0, 'A', { bold: true, color: 'red' }), deliver: ['A'] },
+      { engine: true, op: richInsert(3, 'z'), deliver: ['A'] },
+      { engine: true, op: richEmbed(5, { equation: { expression: 'x^2' } }, { italic: true }), deliver: ['A'] },
+      { engine: true, op: richEmbed(1, { page: { id: 'p1' } }), deliver: ['A'] },
+      { engine: true, op: richFormat(0, 3, { 'tag:abbr': { title: 'Blok' }, background: '#fff' }), deliver: ['A'] },
+      { engine: true, op: richDelete(3, 4), deliver: ['A'] },
+      { engine: true, op: richFormat(10, 50, { italic: true }), deliver: ['A'] },
+      { engine: true, op: richInsert(2, `a${NUL}${ASTRAL}\n"<b>`, { code: true, 7: 'x', 2: 'y' }), deliver: ['A'] },
+    ],
+  },
+  {
+    name: 'formatted-text-prelim-queue',
+    description: 'Writes on a Y.XmlText that is not in a doc yet are queued and replayed in order when it integrates.',
+    roots: MAP_ROOTS,
+    steps: [
+      {
+        engine: true,
+        op: mapSet('b1', {
+          $yxmltext: 'seed',
+          ops: [
+            prelimOp('text.insert', { index: 4, text: 'abc', attributes: { bold: true } }),
+            prelimOp('text.format', { index: 1, length: 4, attributes: { italic: true } }),
+            prelimOp('text.embed', { index: 7, embed: { html: '<hr>' }, attributes: {} }),
+            prelimOp('text.insert', { index: 0, text: 'x' }),
+            prelimOp('text.delete', { index: 2, length: 2 }),
+            prelimOp('text.format', { index: 0, length: 2, attributes: { italic: null } }),
+          ],
+        }),
+        deliver: ['A'],
+      },
+    ],
+  },
+  {
+    name: 'formatted-text-link-key-order',
+    description: 'A peer links "ab" with {href, rel}; the engine types right after it with {rel, href}. yjs compares object marks flat and key-order-free, so it writes no format item.',
+    roots: MAP_ROOTS,
+    steps: [
+      { doc: 'A', op: mapSet('b1', { $yxmltext: '' }), deliver: ['C'] },
+      { doc: 'A', op: richInsert(0, 'ab', { link: { href: 'https://blok.dev', rel: 'noopener' } }), deliver: ['C'] },
+      { engine: true, op: richInsert(2, 'c', { link: { rel: 'noopener', href: 'https://blok.dev' } }), deliver: ['A'] },
+      { engine: true, op: richInsert(3, 'd', {}), deliver: ['A'] },
+    ],
+  },
+  {
+    name: 'formatted-text-equal-links-cleanup',
+    description: 'Deleting the plain gap between two equal but distinct link marks keeps both: yjs cleanupFormattingGap compares with ===, which is reference identity for objects.',
+    roots: MAP_ROOTS,
+    steps: [
+      { engine: true, op: mapSet('b1', { $yxmltext: '' }), deliver: ['A'] },
+      { engine: true, op: richInsert(0, 'a', { link: { href: 'h' } }), deliver: ['A'] },
+      { engine: true, op: richInsert(1, 'b', {}), deliver: ['A'] },
+      { engine: true, op: richInsert(2, 'c', { link: { href: 'h' } }), deliver: ['A'] },
+      { engine: true, op: richDelete(1, 1), deliver: ['A'] },
+      { engine: true, op: richInsert(1, 'e'), deliver: ['A'] },
+    ],
+  },
+  {
+    name: 'formatted-text-remote-overlap',
+    description: 'Two peers bold overlapping ranges concurrently. The receiving yjs doc runs its format cleanup, the engine does not (contract section 7), so only canonical segments are comparable: see `compare`.',
+    compare: 'segments',
+    roots: MAP_ROOTS,
+    steps: [
+      { doc: 'A', op: mapSet('b1', { $yxmltext: '' }), deliver: ['B', 'C'] },
+      { doc: 'A', op: richInsert(0, 'abcdef', {}), deliver: ['B', 'C'] },
+      { doc: 'A', op: richFormat(0, 4, { bold: true }) },
+      { doc: 'B', op: richFormat(2, 4, { bold: true }) },
+      { deliverOf: 's3', to: ['B', 'C'] },
+      { deliverOf: 's4', to: ['A', 'C'] },
+      { engine: true, op: richInsert(3, 'X', { bold: true }) },
+      { engine: true, op: richFormat(1, 2, { italic: true }) },
+    ],
+  },
+  {
     name: 'engine-writes-while-pending',
     description: 'The edit-API path: the engine writes locally while it still holds a parked struct, so its own diff has to interleave local structs with pending ones.',
     roots: MAP_ROOTS,
@@ -1321,6 +1437,7 @@ function runScenario(spec) {
   return {
     name: spec.name,
     description: spec.description,
+    ...(spec.compare === undefined ? {} : { compare: spec.compare }),
     gc: spec.gc ?? true,
     roots: spec.roots,
     engine,
@@ -1341,7 +1458,9 @@ function buildScenarios() {
       'duplicate delivery of the update produced by step `updateOf`; substitute the engine\'s own ' +
       'bytes when that step was an engineWrites), and "expect" (assert `sv`, `hasPending` and ' +
       '`json` on the engine doc). Update bytes need not match yjs byte-for-byte, but `sv` and ' +
-      '`json` must. Nested $ymap/$yarray/$ytext values integrate the container item first and then ' +
+      '`json` must. A case with `compare: "segments"` has remote formatting, which yjs cleans up ' +
+      'after the transaction and the engine does not: compare only `json`, with every Y.Text ' +
+      'delta merged into runs of equal attributes, and skip engine bytes and `sv`. Nested $ymap/$yarray/$ytext values integrate the container item first and then ' +
       'their entries in listed order — get that order wrong and the state vector diverges. The fuzz ' +
       'seed files use this same op grammar with two step shortcuts of their own, which each of them ' +
       'states in its own $description.',
@@ -1350,14 +1469,15 @@ function buildScenarios() {
       'map.delete': 'delete `key`',
       'array.insert': 'insert `values` at `index`',
       'array.delete': 'delete `length` entries at `index`',
-      'text.insert': 'insert `text` at `index` (optional `attributes`)',
+      'text.insert': 'insert `text` at `index` (optional `attributes`; absent means inherit the marks in force)',
       'text.delete': 'delete `length` code units at `index`',
       'text.format': 'apply `attributes` over `length` code units at `index`',
       'text.embed': 'insert `embed` at `index` (optional `attributes`)',
     },
     values:
       'JSON, except objects carrying one of $num/$bigint/$u8/$undefined (leaves) or ' +
-      '$ymap/$yarray/$ytext/$yxmlfragment/$yxmlelement/$yxmltext (shared types).',
+      '$ymap/$yarray/$ytext/$yxmlfragment/$yxmlelement/$yxmltext (shared types). A $yxmltext may ' +
+      'carry `ops`: text ops (no root/path) written while it is not in a doc yet, replayed in order.',
     cases: SCENARIOS.map(runScenario),
   };
 }
@@ -1738,7 +1858,8 @@ writeJson(
         'The fuzzer never formats text. yjs deletes redundant format items in a per-transaction ' +
         'cleanup, so two docs holding identical state can report different toDelta run boundaries ' +
         'and the JSON oracle would be unreachable. Formatting is pinned by structs.json ' +
-        '(text-insert-format-embed) and by the text-format-and-embed scenario instead.',
+        '(text-insert-format-embed) and by the text-format-and-embed and formatted-text-* ' +
+        'scenarios instead.',
       astralNote:
         'Astral characters appear in map and array values but never in fuzzed text: a random ' +
         'text.delete would split a surrogate pair, and lib0 writes a lone half as U+FFFD.',

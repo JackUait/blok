@@ -24,7 +24,10 @@ describe('convert-menu icon weight', () => {
     vi.restoreAllMocks();
   });
 
-  it.each(Object.entries(menuIcons))('%s draws strokes at or below the house hairline', (_name, icon) => {
+  // IconQuote is solid punctuation with no stroke at all.
+  const strokedMenuIcons = Object.entries(menuIcons).filter(([name]) => name !== 'IconQuote');
+
+  it.each(strokedMenuIcons)('%s draws strokes at or below the house hairline', (_name, icon) => {
     const stroked = Array.from(svgOf(icon).querySelectorAll('[stroke="currentColor"]'));
 
     expect(stroked.length).toBeGreaterThan(0);

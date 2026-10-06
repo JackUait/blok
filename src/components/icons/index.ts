@@ -518,10 +518,11 @@ export const IconReturn = `
 </svg>
 `;
 
-// Quote icon
+// Quote icon — solid round quotation marks: a ball with a thin hook that ends
+// in a round cap. The second mark is the first moved right by 5.4.
 export const IconQuote = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.5 4.5v11M8 6h8.5M8 10h8.5M8 14h5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.9 11.1C4.9 8.1 6.3 6.8 8.3 6.55A0.55 0.55 0 0 1 8.35 7.65C6.85 7.8 5.8 8.35 5.55 9.46A2.4 2.4 0 1 1 4.9 11.1ZM10.3 11.1C10.3 8.1 11.7 6.8 13.7 6.55A0.55 0.55 0 0 1 13.75 7.65C12.25 7.8 11.2 8.35 10.95 9.46A2.4 2.4 0 1 1 10.3 11.1Z" fill="currentColor"/>
 </svg>
 `;
 

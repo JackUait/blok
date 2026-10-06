@@ -4,7 +4,9 @@ import { log } from '../utils/logger';
 import { safeHref } from '../utils/sanitize-url';
 
 import { BaseToolAdapter,  InternalBlockToolSettings, UserSettings  } from './base';
+import type { ConstructorOptions } from './base';
 import { ToolsCollection } from './collection';
+import type { RichTextFormat } from '../../../types/rich-text';
 import type { ChildToolRestrictions } from '../../../types/tools';
 import type { InlineToolAdapter } from './inline';
 import type { BlockTuneAdapter } from './tune';
@@ -59,6 +61,13 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * Cache for base sanitize configuration
    */
   private _baseSanitizeConfig: SanitizerConfig | undefined;
+
+  private readonly richTextFormatOption: RichTextFormat | undefined;
+
+  constructor(options: ConstructorOptions & { richTextFormat?: RichTextFormat }) {
+    super(options);
+    this.richTextFormatOption = options.richTextFormat;
+  }
 
   /**
    * Creates new Tool instance
@@ -545,6 +554,23 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
     const prototype = (this.constructable as unknown as { prototype?: { onPaste?: unknown } })?.prototype;
 
     return typeof prototype?.onPaste === 'function';
+  }
+
+  /**
+   * Fields holding inline HTML: those whose rule in the tool's OWN sanitize
+   * config is a tag map. Read from `super.sanitizeConfig`, not the merged
+   * getter — for a tool with no rules of its own the merged config is the flat
+   * inline-tool tag map, whose keys are tag names, not fields.
+   */
+  public get richTextFields(): string[] {
+    const toolRules = super.sanitizeConfig;
+
+    return Object.keys(toolRules).filter(field => isObject(toolRules[field]));
+  }
+
+  /** What hosts receive for {@link richTextFields}. */
+  public get richTextFormat(): RichTextFormat {
+    return this.richTextFormatOption ?? 'html';
   }
 
   /**

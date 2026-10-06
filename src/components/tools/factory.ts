@@ -104,6 +104,7 @@ export class ToolsFactory {
       api: toolApi,
       isDefault: name === this.blokConfig.defaultBlock,
       defaultPlaceholder: this.blokConfig.placeholder,
+      richTextFormat: this.blokConfig.richText,
       isInternal,
     });
   }

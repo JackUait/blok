@@ -190,7 +190,7 @@ type ToolPreparePayload = {
   config: ToolConfig;
 };
 
-interface ConstructorOptions {
+export interface ConstructorOptions {
   name: string;
   constructable: ToolConstructable;
   config: ToolOptions;

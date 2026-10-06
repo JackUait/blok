@@ -319,6 +319,15 @@ describe('ToolsFactory', () => {
     expect(instantiatedOptions?.api).not.toBe(apiStub.methods);
   });
 
+  it('passes the configured rich text format to the adapter', () => {
+    const toolName = 'blockTool';
+    const { factory } = createFactory({ [toolName]: createToolConfig() }, { richText: 'segments' });
+
+    factory.get(toolName);
+
+    expect(blockAdapterMockControl.instances.at(-1)?.options).toMatchObject({ richTextFormat: 'segments' });
+  });
+
   describe('updateConfig', () => {
     it('merges new config so a freshly built adapter carries it', () => {
       const toolName = 'image';

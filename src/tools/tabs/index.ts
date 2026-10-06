@@ -18,7 +18,7 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { mountChildBlocks } from '../nested-blocks';
 import { TABS_ATTR, TAB_TOOL } from './constants';
 import { attachPillGestures } from './pill-gestures';
-import { cascadeIn, foldPill, looksTheSame, measurePill, morphPanelsHeight, moveIndicator, panelRows, popInPill, type PillBox } from './motion';
+import { foldPill, measurePill, moveIndicator, popInPill, type PillBox } from './motion';
 import { renderTabsPreview } from './preview';
 import { tabRegistry, type TabsHandle } from './registry';
 import type { TabData, TabsData } from './types';
@@ -743,7 +743,6 @@ export class TabsTool implements BlockTool, TabsHandle {
     const previousIndex = tabs.findIndex(tab => !tab.holder.classList.contains('hidden'));
     const nextIndex = tabs.findIndex(tab => tab.id === activeId);
     const switching = previousIndex !== nextIndex;
-    const fromHeight = panels.offsetHeight;
 
     options.closing?.classList.add('hidden');
     options.closing?.setAttribute('aria-hidden', 'true');
@@ -769,16 +768,8 @@ export class TabsTool implements BlockTool, TabsHandle {
       this.indicator.toggleAttribute('data-placed', box.width > 0);
     }
 
+    // The content swaps at once; only the tab moves.
     if (options.animate && switching) {
-      morphPanelsHeight(panels, fromHeight);
-
-      const panel = tabs[nextIndex]?.holder;
-      const closing = tabs[previousIndex]?.holder;
-
-      // A delete only reveals the neighbour, so its blocks do not cascade in.
-      if (panel !== undefined && options.closing === undefined && (closing === undefined || !looksTheSame(panelRows(closing), panelRows(panel)))) {
-        cascadeIn(panelRows(panel));
-      }
       pill?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
     }
   }

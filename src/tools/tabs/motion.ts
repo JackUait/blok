@@ -1,8 +1,5 @@
-import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { getElementDirection } from '../../components/utils/direction';
-
-import { TABS_ATTR } from './constants';
 
 /** Where a pill sits, measured from the strip's inline start. */
 export interface PillBox {
@@ -10,7 +7,6 @@ export interface PillBox {
   width: number;
 }
 
-const PANEL_MS = 360;
 const ENTER_MS = 300;
 // --blok-ease-popover: fast out, long settle. WAAPI cannot read a CSS var.
 const EASE_SETTLE = 'cubic-bezier(0.16, 1, 0.3, 1)';
@@ -24,10 +20,6 @@ const FLAT = 'perspective(240px) rotateX(88deg)';
 const RISE_SHOWN_AT = 0.2;
 const FADE_FROM = 0.15;
 const UPRIGHT = 'perspective(240px) rotateX(0deg)';
-const CASCADE_MS = 520;
-const CASCADE_STEP_MS = 70;
-// Rows past this land together, so a long tab never makes the reader wait.
-const CASCADE_STAGGERED_ROWS = 8;
 
 const springCache: { easing?: string } = {};
 
@@ -66,9 +58,6 @@ const spring = (): string => {
 
   return springCache.easing;
 };
-
-// Only our own animations: cancelling a row's CSS transitions would break the block.
-const running = new WeakMap<Element, Animation>();
 
 const canAnimate = (element: Element): boolean =>
   typeof (element as HTMLElement).animate === 'function' && !prefersReducedMotion();
@@ -148,28 +137,6 @@ export const moveIndicator = (indicator: HTMLElement, from: PillBox | null, to: 
 };
 
 /**
- * Morph the panel area from its old height to the new panel's height.
- * @param panels - the slot holding every tab panel
- * @param fromHeight - the area's height before the switch
- */
-export const morphPanelsHeight = (panels: HTMLElement, fromHeight: number): void => {
-  const toHeight = panels.offsetHeight;
-
-  if (fromHeight === toHeight || !canAnimate(panels)) {
-    return;
-  }
-
-  panels.getAnimations().forEach(animation => animation.cancel());
-  panels.animate(
-    [
-      { height: `${fromHeight}px`, overflow: 'clip' },
-      { height: `${toHeight}px`, overflow: 'clip' },
-    ],
-    { duration: PANEL_MS, easing: EASE_SETTLE }
-  );
-};
-
-/**
  * A new pill grows out of the strip.
  * @param pill - the pill that was just added
  */
@@ -210,66 +177,3 @@ export const foldPill = (pill: HTMLElement, done: () => void): void => {
   animation.onfinish = done;
   animation.oncancel = done;
 };
-
-/**
- * The rows a tab shows: its child block holders, or the empty hint.
- * @param tabHolder - the holder of a `tab` block
- */
-export const panelRows = (tabHolder: HTMLElement): HTMLElement[] => {
-  const root = tabHolder.querySelector<HTMLElement>(`[${TABS_ATTR.tab}]`);
-
-  if (root === null) {
-    return [];
-  }
-
-  return Array.from(root.querySelectorAll<HTMLElement>(
-    `:scope > [${TABS_ATTR.tabChildren}] > *, :scope > [${TABS_ATTR.empty}]`
-  )).filter(row => !row.classList.contains('hidden'));
-};
-
-/**
- * Drop the rows of the tab that just opened in one after another.
- * @param rows - the new tab's rows, top to bottom
- */
-export const cascadeIn = (rows: HTMLElement[]): void => {
-  rows.forEach((row, index) => {
-    running.get(row)?.cancel();
-
-    if (!canAnimate(row)) {
-      return;
-    }
-
-    const animation = row.animate(
-      [
-        { opacity: 0, transform: 'translateY(14px) scale(0.98)', filter: 'blur(3px)' },
-        { opacity: 1, transform: 'none', filter: 'none' },
-      ],
-      {
-        duration: CASCADE_MS,
-        delay: Math.min(index, CASCADE_STAGGERED_ROWS - 1) * CASCADE_STEP_MS,
-        easing: spring(),
-        fill: 'backwards',
-      }
-    );
-
-    running.set(row, animation);
-  });
-};
-
-/**
- * What a row draws. A block's content wrapper carries no block id, so two
- * blocks that render the same content give the same picture.
- */
-const rowPicture = (row: HTMLElement): string =>
-  row.hasAttribute(TABS_ATTR.empty)
-    ? TABS_ATTR.empty
-    : row.querySelector(`[${DATA_ATTR.elementContent}]`)?.innerHTML ?? row.innerHTML;
-
-/**
- * Whether two tabs show the same thing, e.g. two empty tabs and their hints.
- * Any difference counts, so a doubtful pair still animates.
- * @param from - the closing tab's rows
- * @param to - the opening tab's rows
- */
-export const looksTheSame = (from: HTMLElement[], to: HTMLElement[]): boolean =>
-  from.length === to.length && from.every((row, index) => rowPicture(row) === rowPicture(to[index]));

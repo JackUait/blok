@@ -311,7 +311,7 @@ describe('Renderer module', () => {
     const { renderer, blockManager, tools } = createRenderer();
 
     tools.available.set('paragraph', {});
-    tools.blockTools.set('paragraph', { sanitizeConfig: Paragraph.sanitize });
+    tools.blockTools.set('paragraph', { sanitizeConfig: Paragraph.sanitize, richTextFields: ['text'] });
 
     const storedIframe = '<iframe src="https://drive.google.com/file/d/x/preview" width="640" height="480"></iframe>';
 

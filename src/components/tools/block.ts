@@ -560,9 +560,16 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * Fields holding inline HTML: those whose rule in the tool's OWN sanitize
    * config is a tag map. Read from `super.sanitizeConfig`, not the merged
    * getter — for a tool with no rules of its own the merged config is the flat
-   * inline-tool tag map, whose keys are tag names, not fields.
+   * inline-tool tag map, whose keys are tag names, not fields. A static
+   * `richTextFields` on the tool wins.
    */
   public get richTextFields(): string[] {
+    const declared = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.RichTextFields];
+
+    if (Array.isArray(declared)) {
+      return declared.filter((field): field is string => typeof field === 'string');
+    }
+
     const toolRules = super.sanitizeConfig;
 
     return Object.keys(toolRules).filter(field => isObject(toolRules[field]));

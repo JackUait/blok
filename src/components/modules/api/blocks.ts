@@ -2,6 +2,7 @@ import type { BlockOrigin, BlockToolData, LooseOutputBlockData, LooseOutputData,
 import type { BlockAPI as BlockAPIInterface, Blocks, InsertAtOptions, MoveToTarget } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { DerivedSource } from '../blockManager/types';
+import type { BlockToolAdapter } from '../../tools/block';
 import type { InsertInsideParentWithCurrentOptions } from '../blockManager/block-insertion';
 import { blocksToMarkdown } from '../../../markdown/blocks-to-markdown';
 import type { MarkdownImportConfig } from '../../../markdown/types';
@@ -11,6 +12,7 @@ import { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { capitalize } from '../../utils';
+import { richTextInputToHtml } from '../../utils/rich-text-input';
 import { announce } from '../../utils/announcer';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
@@ -678,7 +680,7 @@ export class BlocksAPI extends Module {
     if (derivedFrom === undefined) {
       this.Blok.YjsManager.beginApiCall();
     }
-    const updatedBlock = await BlockManager.update(block, data, tunes, derivedFrom);
+    const updatedBlock = await BlockManager.update(block, data === undefined ? data : this.richTextToHtml(block.name, data), tunes, derivedFrom);
 
     return new BlockAPI(updatedBlock, this.Blok.API);
   };
@@ -710,7 +712,8 @@ export class BlocksAPI extends Module {
 
     if (originalBlockConvertable && targetBlockConvertable) {
       this.Blok.YjsManager.beginApiCall();
-      const newBlock = await BlockManager.convert(blockToConvert, newType, dataOverrides);
+      // Overrides reach the Yjs document before the factory converts anything.
+      const newBlock = await BlockManager.convert(blockToConvert, newType, dataOverrides === undefined ? dataOverrides : this.richTextToHtml(newType, dataOverrides));
 
       return new BlockAPI(newBlock, this.Blok.API);
     } else {
@@ -859,6 +862,17 @@ export class BlocksAPI extends Module {
   }
 
   /**
+   * Segment arrays in `data` → HTML, with the given tool's rich fields.
+   * @param toolName - the tool the data belongs to
+   * @param data - data from the host
+   */
+  private richTextToHtml<T extends Partial<BlockToolData>>(toolName: string, data: T): T {
+    const resolveTool = (name: string): BlockToolAdapter | undefined => this.Blok.Tools.blockTools.get(name);
+
+    return richTextInputToHtml(resolveTool(toolName), data, resolveTool) as T;
+  }
+
+  /**
    * Atomically splits a block by updating the current block's data and inserting a new block.
    * Both operations are grouped into a single undo entry.
    *
@@ -879,11 +893,13 @@ export class BlocksAPI extends Module {
     // Force new undo group so block split is separate from previous typing.
     this.Blok.YjsManager.stopCapturing();
 
+    const currentBlockName = this.Blok.BlockManager.getBlockById(currentBlockId)?.name;
+    // Both halves are written to the Yjs document as given, before any factory runs.
     const newBlock = this.Blok.BlockManager.splitBlockWithData(
       currentBlockId,
-      currentBlockData,
+      currentBlockName === undefined ? currentBlockData : this.richTextToHtml(currentBlockName, currentBlockData),
       newBlockType,
-      newBlockData,
+      this.richTextToHtml(newBlockType, newBlockData),
       insertIndex
     );
 

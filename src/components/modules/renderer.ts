@@ -15,6 +15,7 @@ import {
 } from '../utils/data-model-transform';
 import { migrateMarkColors } from '../utils/color-migration';
 import { migrateBlocks } from '../migration/block-migrations';
+import { richTextInputToHtml } from '../utils/rich-text-input';
 import { applyLinkConfig } from '../utils/apply-link-config';
 import { DATA_ATTR } from '../constants';
 import { BlocksRendered } from '../events';
@@ -237,11 +238,18 @@ export class Renderer extends Module {
     // save, quietly undoing the migration. Rules are contractually pure and
     // idempotent, so the composeBlock pass (which also covers blocks inserted
     // through the API later) can safely see already-migrated data.
-    const sourceBlocks = this.config.migrations !== undefined
+    const migratedBlocks = this.config.migrations !== undefined
       ? migrateBlocks(hookedBlocks, this.config.migrations, (type, error) => {
         logLabeled(`Migration for «${type}» blocks failed; keeping stored data.`, 'warn', error);
       })
       : hookedBlocks;
+    // Before `sanitizeToolData` below: it would HTML-parse a segment's plain text.
+    const resolveTool = (name: string): BlockToolAdapter | undefined => Tools.blockTools.get(name);
+    const sourceBlocks = migratedBlocks.map(block => {
+      const data = richTextInputToHtml(resolveTool(block.type), block.data, resolveTool);
+
+      return data === block.data ? block : { ...block, data };
+    });
 
     if (sourceBlocks.length === 0) {
       /**

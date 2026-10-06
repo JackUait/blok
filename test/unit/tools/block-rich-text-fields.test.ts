@@ -71,6 +71,12 @@ describe('BlockToolAdapter rich text fields', () => {
     expect(adapter.richTextFields).toEqual([]);
   });
 
+  it('lets a static richTextFields on the tool win over the sanitize rules', () => {
+    const constructable = Object.assign(createConstructable({ content: { b: true } }), { richTextFields: [] });
+
+    expect(createAdapter({ constructable }).richTextFields).toEqual([]);
+  });
+
   it('reports the configured output format, html by default', () => {
     expect(createAdapter().richTextFormat).toBe('html');
     expect(createAdapter({ richTextFormat: 'segments' }).richTextFormat).toBe('segments');

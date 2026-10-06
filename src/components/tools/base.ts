@@ -160,7 +160,13 @@ export enum InternalBlockToolSettings {
    * legacy shape the tool once wrote into the shape it reads today. Runs at load
    * (block composition), before the tool is constructed.
    */
-  UpgradeData = 'upgradeData'
+  UpgradeData = 'upgradeData',
+  /**
+   * The data fields that hold inline rich text. Wins over the fields read from
+   * the sanitize config, for a tool whose tag-map field is not a text field
+   * (a table's 2D `content`).
+   */
+  RichTextFields = 'richTextFields'
 }
 
 /**

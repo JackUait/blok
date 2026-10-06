@@ -540,6 +540,14 @@ export class Table implements BlockTool {
     };
   }
 
+  /**
+   * None: `content` has a tag-map sanitize rule but holds a 2D array of cells,
+   * and an empty `[]` would read as empty rich text.
+   */
+  public static get richTextFields(): string[] {
+    return [];
+  }
+
   public static get sanitize(): ToolSanitizerConfig {
     return {
       content: {

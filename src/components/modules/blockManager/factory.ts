@@ -13,6 +13,7 @@ import type { EventsDispatcher } from '../../utils/events';
 import { log } from '../../utils';
 import { applyBlockMigration } from '../../migration/block-migrations';
 import type { BlockMigrations } from '../../migration/block-migrations';
+import { richTextInputToHtml } from '../../utils/rich-text-input';
 import type { API } from '../api';
 
 import type { BlockOrigin } from '../../../../types';
@@ -99,18 +100,20 @@ export class BlockFactory {
     // the shape it reads today — the per-tool migration core's global grammar
     // cannot know about (columns, custom media). No-op unless the Tool declares
     // a static `upgradeData`; a throwing hook falls back to the stored data.
-    const upgradedData = tool.upgradeData(data ?? {});
+    const resolveTool = (toolName: string): BlockToolAdapter | undefined => this.dependencies.tools.get(toolName);
+    const upgradedData = tool.upgradeData(richTextInputToHtml(tool, data ?? {}, resolveTool));
 
     // Apply the host's own config-level migration for this type on top of the
     // Tool's `upgradeData` — the rules a host declares from the OUTSIDE for a
     // tool it doesn't own (or its own tool without editing the class). A
     // throwing rule falls back to the pre-migration data, never a blank editor.
-    const migratedData = applyBlockMigration(
+    // Converted again: a host migration may itself return segments.
+    const migratedData = richTextInputToHtml(tool, applyBlockMigration(
       name,
       upgradedData,
       this.dependencies.migrations,
       (migratedType, error) => log(`Migration for block «${migratedType}» threw; loading the block with its stored data instead.`, 'warn', error)
-    );
+    ), resolveTool);
 
     const block = new Block({
       id,

@@ -37,6 +37,37 @@ public sealed class JintBlokRuntimeTests
   }
 
   [Fact]
+  public async Task ConvertsHtmlFieldsToSegmentsInOrder()
+  {
+    var runtime = JintBlokRuntime.FromEmbeddedResource(poolSize: 1);
+
+    var output = await runtime.InvokeAsync(
+        "htmlFieldsToSegments",
+        """[{"id":"a","type":"paragraph","field":"text","html":"Hi <b>there</b>"},{"type":"header","field":"text","html":"a &lt; b &amp;&amp; <img src=\"x.png\">"}]""");
+
+    using var document = JsonDocument.Parse(output);
+    var fields = document.RootElement;
+    Assert.Equal(2, fields.GetArrayLength());
+
+    var first = fields[0];
+    Assert.Equal("a", first.GetProperty("id").GetString());
+    Assert.Equal("paragraph", first.GetProperty("type").GetString());
+    Assert.Equal("text", first.GetProperty("field").GetString());
+    Assert.Equal(
+        """[{"text":"Hi "},{"text":"there","marks":{"bold":true}}]""",
+        first.GetProperty("segments").GetRawText());
+
+    var second = fields[1];
+    Assert.False(second.TryGetProperty("id", out _));
+    Assert.Equal("header", second.GetProperty("type").GetString());
+    var segments = second.GetProperty("segments");
+    Assert.Equal(2, segments.GetArrayLength());
+    Assert.Equal("a < b && ", segments[0].GetProperty("text").GetString());
+    Assert.False(segments[0].TryGetProperty("marks", out _));
+    Assert.Equal("<img src=\"x.png\">", segments[1].GetProperty("embed").GetProperty("html").GetString());
+  }
+
+  [Fact]
   public async Task RendersHtml()
   {
     var runtime = JintBlokRuntime.FromEmbeddedResource(poolSize: 1);

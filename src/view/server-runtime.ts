@@ -14,7 +14,9 @@ import type { DocumentTextsOptions } from './document-texts';
 import { extractTexts, injectTexts } from './document-texts';
 import { findRemapProblems, remapPageDocument } from './page-document-remap';
 import { pageIndex } from './page-index';
+import { htmlToSegmentsNode } from './rich-text-parse5';
 import type { PageIcon, PageInfo } from '../../types/tools/page';
+import type { RichText } from '../../types/rich-text';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -330,6 +332,46 @@ const injectTextsResult = (inputJson: string): string => {
   }
 };
 
+interface HtmlField {
+  id?: string;
+  type: string;
+  field: string;
+  html: string;
+}
+
+/**
+ * Read an `htmlFieldsToSegments` batch: a JSON array of fields. Throws on any
+ * bad entry rather than skipping it — the server rewrites fields by position,
+ * so a dropped entry would shift every later answer onto the wrong field.
+ * @param inputJson - the serialized batch
+ */
+const parseHtmlFields = (inputJson: string): HtmlField[] => {
+  const input: unknown = JSON.parse(inputJson);
+
+  if (!Array.isArray(input)) {
+    throw new TypeError('htmlFieldsToSegments input must be a JSON array.');
+  }
+
+  return input.map((entry: unknown, index): HtmlField => {
+    if (
+      !isRecord(entry)
+      || typeof entry.type !== 'string'
+      || typeof entry.field !== 'string'
+      || typeof entry.html !== 'string'
+      || (entry.id !== undefined && typeof entry.id !== 'string')
+    ) {
+      throw new TypeError(`htmlFieldsToSegments entry ${index} needs string \`type\`, \`field\` and \`html\` (and a string \`id\` if any).`);
+    }
+
+    return {
+      ...(entry.id === undefined ? {} : { id: entry.id }),
+      type: entry.type,
+      field: entry.field,
+      html: entry.html,
+    };
+  });
+};
+
 export const invoke = async (operation: string, inputJson: string): Promise<string> => {
   switch (operation) {
     case 'markdownToBlocks':
@@ -434,6 +476,15 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
       return JSON.stringify(pageIndex(readRawDocument(parseRecord(inputJson), 'pageIndex')));
     case 'remapPageDocument':
       return remapPageDocumentResult(inputJson);
+    /**
+     * Legacy HTML in rich fields → segments, for the C# server, which has no
+     * parser of its own that matches this one.
+     */
+    case 'htmlFieldsToSegments':
+      return JSON.stringify(parseHtmlFields(inputJson).map(({ html, ...address }): Omit<HtmlField, 'html'> & { segments: RichText } => ({
+        ...address,
+        segments: htmlToSegmentsNode(html),
+      })));
     default:
       throw new TypeError(`Unsupported Blok runtime operation: ${operation}`);
   }

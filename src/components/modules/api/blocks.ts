@@ -825,7 +825,11 @@ export class BlocksAPI extends Module {
       this.Blok.YjsManager.stopCapturing();
     }
 
-    const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex, childData, toolName, options);
+    // The child data is written to the Yjs document before any factory runs.
+    const htmlChildData = childData === undefined
+      ? childData
+      : this.richTextToHtml(toolName ?? this.config.defaultBlock ?? 'paragraph', childData);
+    const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex, htmlChildData, toolName, options);
 
     // NOTE: Do NOT call stopCapturing in a trailing microtask. Late
     // mutation-observer writes from deferred DOM callbacks belong to this

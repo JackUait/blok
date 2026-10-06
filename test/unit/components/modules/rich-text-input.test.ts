@@ -103,6 +103,23 @@ describe('rich text segments on input', () => {
     expect((await lastBlock(instance)).data.text).toBe('a &lt; b');
   }, 60_000);
 
+  it('inserts segments under a parent into the document as HTML', async () => {
+    const instance = await boot([{ id: 'p', type: 'paragraph', data: { text: 'parent' } }]);
+
+    const child = instance.blocks.insertAt('paragraph', { text: [{ text: 'a < b', marks: { bold: true } }] }, { parentId: 'p' });
+
+    expect(instance.module.yjsManager.toJSON().find(block => block.id === child.id)?.data.text).toBe('<strong>a &lt; b</strong>');
+    expect((await instance.save()).blocks.find(block => block.id === child.id)?.data.text).toBe('<strong>a &lt; b</strong>');
+  }, 60_000);
+
+  it('converts segments for the default tool when insertInsideParent names none', async () => {
+    const instance = await boot([{ id: 'p', type: 'paragraph', data: { text: 'parent' } }]);
+
+    const child = instance.blocks.insertInsideParent('p', 1, { text: [{ text: 'x & y' }] });
+
+    expect(instance.module.yjsManager.toJSON().find(block => block.id === child.id)?.data.text).toBe('x &amp; y');
+  }, 60_000);
+
   it('updates a block with segments', async () => {
     const instance = await boot([{ id: 'p1', type: 'paragraph', data: { text: 'old' } }]);
 

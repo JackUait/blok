@@ -19,7 +19,7 @@ import { toggleChecklistChecked } from '../../../../src/tools/list/list-keyboard
 import type { KeyboardContext } from '../../../../src/tools/list/list-keyboard';
 import type { ListItemData } from '../../../../src/tools/list/types';
 
-const buildChecklistTool = (checked: boolean): { tool: ListItem } => {
+const buildChecklistTool = (checked: boolean, readOnly = false): { tool: ListItem } => {
   const blocksAPI = {
     getById: (): null => null,
     getBlockIndex: (): number | undefined => 0,
@@ -41,7 +41,7 @@ const buildChecklistTool = (checked: boolean): { tool: ListItem } => {
     data,
     config: {},
     api,
-    readOnly: false,
+    readOnly,
     block: { id: 'todo' } as never,
   });
 
@@ -108,6 +108,23 @@ describe('checklist checked-state DOM sync', () => {
       checkbox.dispatchEvent(new Event('change'));
 
       expectUncheckedDom(checkbox, content);
+    });
+  });
+
+  describe('rendered read-only, then made editable', () => {
+    // Collaboration renders read-only until the first sync, then flips.
+    it('a click after setReadOnly(false) is saved', () => {
+      const { tool } = buildChecklistTool(false, true);
+      const element = tool.render();
+      document.body.appendChild(element);
+      tool.setReadOnly(false);
+      const { checkbox, content } = getParts(element);
+
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event('change'));
+
+      expect(tool.save().checked).toBe(true);
+      expectCheckedDom(checkbox, content);
     });
   });
 

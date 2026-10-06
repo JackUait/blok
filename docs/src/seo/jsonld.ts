@@ -1,6 +1,7 @@
 // docs/src/seo/jsonld.ts
 import type { Locale } from '../i18n';
 import { BLOK_VERSION } from '../utils/constants';
+import { lastModified } from './lastmod';
 import { DEFAULT_LOCALE, SITE_URL, absoluteUrl, localizedPath } from './locales';
 import { getRouteMetadata, type RouteMetadata } from './route-metadata';
 
@@ -77,19 +78,23 @@ const softwareSourceCode = (meta: RouteMetadata): JsonLdNode => ({
   author: { '@id': ORGANIZATION_ID },
 });
 
-const techArticle = (meta: RouteMetadata, locale: Locale): JsonLdNode => ({
-  '@type': ['TechArticle', 'Article'],
-  headline: meta.h1,
-  name: meta.title,
-  description: meta.description,
-  url: meta.canonical,
-  mainEntityOfPage: meta.canonical,
-  inLanguage: locale,
-  isPartOf: { '@id': websiteId(locale) },
-  author: { '@id': ORGANIZATION_ID },
-  publisher: { '@id': ORGANIZATION_ID },
-  ...(meta.dateModified && { dateModified: meta.dateModified }),
-});
+const techArticle = (path: string, meta: RouteMetadata, locale: Locale): JsonLdNode => {
+  // Same ledger record as the sitemap's lastmod; absent when the page has none.
+  const dateModified = lastModified(localizedPath(path, locale));
+  return {
+    '@type': ['TechArticle', 'Article'],
+    headline: meta.h1,
+    name: meta.title,
+    description: meta.description,
+    url: meta.canonical,
+    mainEntityOfPage: meta.canonical,
+    inLanguage: locale,
+    isPartOf: { '@id': websiteId(locale) },
+    author: { '@id': ORGANIZATION_ID },
+    publisher: { '@id': ORGANIZATION_ID },
+    ...(dateModified && { dateModified }),
+  };
+};
 
 const breadcrumbList = (meta: RouteMetadata): JsonLdNode | undefined =>
   meta.breadcrumbs && {
@@ -118,7 +123,7 @@ export const buildJsonLd = (
   }
 
   if (path.startsWith('/docs/')) {
-    graph.push(techArticle(meta, locale));
+    graph.push(techArticle(path, meta, locale));
     const crumbs = breadcrumbList(meta);
     if (crumbs) graph.push(crumbs);
   }

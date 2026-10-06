@@ -84,6 +84,13 @@ const EXEMPT_SITES: ExemptSite[] = [
       'buildClipboardPlainText feeds the text/plain TSV channel — cells cannot ' +
       'contain newlines and plain text carries no list structure by definition',
   },
+  {
+    file: 'src/tools/table/table-core.ts',
+    snippet: "].filter(Boolean).join(' ')",
+    reason:
+      'markCornerCells joins corner names (top-start, bottom-end…) into an ' +
+      'attribute token list; no block text passes through it',
+  },
 ];
 
 /**

@@ -1522,9 +1522,11 @@ public sealed class CollabRoomTests
 
     var reset = await manager.ResetAsync(DocId, CancellationToken.None);
 
+    // One read, after the open: the reset looks for a working copy to adopt
+    // (there is none here), so the journal's tombstone always wins first.
     Assert.Equal(1, operations.Opens);
     Assert.Equal(1, endpoint.Loads);
-    Assert.Equal(0, store.Reads);
+    Assert.Equal(1, store.Reads);
     Assert.Equal(1, reset.Epoch);
     Assert.Equal(0, manager.LiveRoomCount);
   }
@@ -1548,7 +1550,7 @@ public sealed class CollabRoomTests
     var reset = Assert.IsType<CollabResetResult>(result);
     Assert.Equal(CollabResetStatus.Reset, reset.Status);
     Assert.Equal(0, store.Resets);
-    Assert.Equal(0, store.Reads);
+    Assert.Equal(0, store.Writes);
     Assert.Equal(reset.Tag?.Lineage, operations.Head(DocId)?.Lineage);
   }
 
@@ -2366,6 +2368,437 @@ public sealed class CollabRoomTests
     Assert.Equal("hello", await ExportedTextAsync(manager));
   }
 
+  /// <summary>
+  /// Turning a journal on must not lose what the working copy holds and the
+  /// endpoint does not (a failed write-back, a hard kill). The working set's
+  /// own frames and lineage become the baseline, so cached clients still merge.
+  /// </summary>
+  [Fact]
+  public async Task AHeadlessJournalAdoptsTheWorkingSetAndThenDropsIt()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("from-ws"))], Tags.At(3));
+    var manager = CreateJournalManager();
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("""{"text":"from-ws"}""", Encoding.UTF8.GetString(state.Json));
+    var head = Assert.IsType<CollabDocumentHead>(operations.Head(DocId));
+    Assert.Equal(Tags.Lineage, head.Lineage);
+    Assert.Equal(3, head.Epoch);
+    Assert.False(store.Holds(DocId));
+
+    // The adopted content is owed to the endpoint, and the journal serves it after a reload.
+    await manager.DrainAsync(CancellationToken.None);
+    Assert.Equal("from-ws", endpoint.Saves[^1].Data["text"]?.GetValue<string>());
+    var reloaded = await CreateJournalManager().StateAsync(DocId, CancellationToken.None);
+    Assert.Equal("""{"text":"from-ws"}""", Encoding.UTF8.GetString(reloaded.Json));
+  }
+
+  [Fact]
+  public async Task AHeadlessJournalWithAnEmptyWorkingSetSeedsFromTheEndpoint()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [], Tags.At(3));
+    var manager = CreateJournalManager();
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("""{"text":"from-endpoint"}""", Encoding.UTF8.GetString(state.Json));
+    Assert.NotEqual(Tags.Lineage, Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Lineage);
+  }
+
+  [Fact]
+  public async Task AWorkingSetInAnotherFormatFailsTheOpenAndIsKept()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(
+        DocId,
+        [YDocs.FullState(YDocs.DocWith("from-ws"))],
+        new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2 + 1, 0, Tags.Lineage));
+    var manager = CreateJournalManager();
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.SeedFailed, state.Status);
+    Assert.True(store.Holds(DocId));
+    Assert.Null(operations.Head(DocId));
+  }
+
+  [Fact]
+  public async Task AFailedWorkingSetRetireStillOpensAndTheNextLoadRetriesIt()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("from-ws"))], Tags.At(3));
+    store.FailRetires = _ => new IOException("the disk is busy");
+    var manager = CreateJournalManager();
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Ready, state.Status);
+    Assert.Equal("""{"text":"from-ws"}""", Encoding.UTF8.GetString(state.Json));
+    Assert.True(store.Holds(DocId));
+
+    await manager.DrainAsync(CancellationToken.None);
+    store.FailRetires = null;
+    var reloaded = await CreateJournalManager().StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("""{"text":"from-ws"}""", Encoding.UTF8.GetString(reloaded.Json));
+    Assert.False(store.Holds(DocId));
+  }
+
+  /// <summary>
+  /// A working set beside a journal head is stale by definition. Left there, a
+  /// lost journal or a swapped store would adopt it and bring old content back.
+  /// </summary>
+  [Fact]
+  public async Task AStaleWorkingSetBesideAJournalHeadIsIgnoredAndDropped()
+  {
+    endpoint.Holds(DocId, "hello");
+    var first = CreateJournalManager();
+    await HttpEdit(first, OpOne, "!");
+    await first.DrainAsync(CancellationToken.None);
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("stale"))], Tags.At(0));
+
+    var state = await CreateJournalManager().StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("""{"text":"hello!"}""", Encoding.UTF8.GetString(state.Json));
+    Assert.False(store.Holds(DocId));
+  }
+
+  [Fact]
+  public async Task AResetOfAHeadlessDocumentDropsItsWorkingSet()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("from-ws"))], Tags.At(3));
+    var manager = CreateJournalManager();
+
+    await manager.ResetAsync(DocId);
+
+    Assert.False(store.Holds(DocId));
+    Assert.Equal(
+        """{"text":"from-endpoint"}""",
+        Encoding.UTF8.GetString((await manager.StateAsync(DocId, CancellationToken.None)).Json));
+  }
+
+  /// <summary>
+  /// A damaged working copy is moved aside by the store and the room seeds from
+  /// the endpoint. Retiring a working copy later must not take the quarantined
+  /// bytes with it: only a purge may.
+  /// </summary>
+  [Fact]
+  public async Task AQuarantinedWorkingCopySurvivesTheJournalTakingOver()
+  {
+    var directory = Path.Combine(Path.GetTempPath(), $"blok-quarantine-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(directory);
+
+    try
+    {
+      var local = new LocalCollabStore(directory, log.Add);
+      var damaged = Path.Combine(directory, CollabDocKey.For(DocId));
+      File.WriteAllBytes(damaged, [9, 9, 9]);
+      endpoint.Holds(DocId, "from-endpoint");
+
+      var first = new CollabRoomManager(local, endpoint, converter, new CollabRoomOptions(), time, log.Add, operations);
+      var opened = await first.StateAsync(DocId, CancellationToken.None);
+      await first.DrainAsync(CancellationToken.None);
+      var second = new CollabRoomManager(local, endpoint, converter, new CollabRoomOptions(), time, log.Add, operations);
+      await second.StateAsync(DocId, CancellationToken.None);
+      await second.DrainAsync(CancellationToken.None);
+
+      Assert.Equal("""{"text":"from-endpoint"}""", Encoding.UTF8.GetString(opened.Json));
+      var aside = Assert.Single(Directory.GetFiles(directory, CollabDocKey.For(DocId) + ".unreadable-*"));
+      Assert.Equal([9, 9, 9], File.ReadAllBytes(aside));
+    }
+    finally
+    {
+      Directory.Delete(directory, recursive: true);
+    }
+  }
+
+  /// <summary>
+  /// A reset rebaselines from the endpoint, so whatever only the working copy
+  /// held must reach the endpoint first, the way the built-in journal imports
+  /// and flushes before it resets.
+  /// </summary>
+  [Fact]
+  public async Task AResetOfAHeadlessDocumentAdoptsAndFlushesTheWorkingSetFirst()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("from-ws"))], Tags.At(3));
+    var manager = CreateJournalManager();
+
+    var result = await manager.ResetForHttpAsync(DocId);
+
+    Assert.Equal(CollabResetStatus.Reset, result.Status);
+    Assert.Contains(endpoint.Saves, save => save.Data["text"]?.GetValue<string>() == "from-ws");
+    // The reset raised the ADOPTED epoch, so it ran on the adopted history.
+    Assert.Equal(4, Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Epoch);
+    Assert.False(store.Holds(DocId));
+  }
+
+  /// <summary>
+  /// A working copy left beside a reset journal holds content the reset threw
+  /// away, and a lost journal would adopt it again. So a reset that cannot
+  /// retire it is refused, and the operator's retry finishes it.
+  /// </summary>
+  [Fact]
+  public async Task AResetThatCannotRetireTheWorkingCopyIsRefused()
+  {
+    endpoint.Holds(DocId, "from-endpoint");
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("from-ws"))], Tags.At(3));
+    store.FailRetires = _ => new IOException("the disk is busy");
+    var manager = CreateJournalManager();
+
+    var refused = await manager.ResetForHttpAsync(DocId);
+
+    Assert.Equal(CollabResetStatus.Unavailable, refused.Status);
+    Assert.Equal(3, Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Epoch);
+    Assert.True(store.Holds(DocId));
+
+    store.FailRetires = null;
+    var retried = await manager.ResetForHttpAsync(DocId);
+
+    Assert.Equal(CollabResetStatus.Reset, retried.Status);
+    Assert.Equal(4, Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Epoch);
+    Assert.False(store.Holds(DocId));
+  }
+
+  [Fact]
+  public async Task AJournalRoomNeverWritesTheWorkingSet()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await HttpEdit(manager, OpOne, "!");
+
+    await manager.DrainAsync(CancellationToken.None);
+
+    Assert.Equal(0, store.Writes);
+    Assert.False(store.Holds(DocId));
+  }
+
+  [Fact]
+  public async Task StateIsTheLiveExportAndTheHeadItReflects()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var edit = await HttpEdit(manager, OpOne, "!");
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Ready, state.Status);
+    Assert.Equal("""{"text":"hello!"}""", Encoding.UTF8.GetString(state.Json));
+    Assert.Equal(edit.Receipt, state.Head);
+  }
+
+  [Fact]
+  public async Task StateWithoutAJournalHasNoHead()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    await manager.EditAsync(DocId, [Appending("b-1", "!")], CancellationToken.None);
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Ready, state.Status);
+    Assert.Equal("""{"text":"hello!"}""", Encoding.UTF8.GetString(state.Json));
+    Assert.Null(state.Head);
+  }
+
+  [Fact]
+  public async Task AColdRoomLoadedByStateIsEvicted()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Ready, state.Status);
+    Assert.Equal(1, manager.LiveRoomCount);
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+  }
+
+  [Fact]
+  public async Task StateOfAPurgedDocumentIsRefused()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await HttpEdit(manager, OpOne, "!");
+    await ((ICollabDocumentPurger)manager).PurgeDocumentAsync(
+        DocId,
+        _ => ValueTask.FromResult(true));
+    var loads = endpoint.Loads;
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Purged, state.Status);
+    Assert.Equal(loads, endpoint.Loads);
+  }
+
+  [Fact]
+  public async Task StateIsRefusedWhileDraining()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await manager.DrainAsync(CancellationToken.None);
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Draining, state.Status);
+  }
+
+  [Fact]
+  public async Task AnExportFailureIsReportedWithoutClosingTheRoom()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await HttpEdit(manager, OpOne, "!");
+    converter.NextExportFailure = new InvalidOperationException("unreadable block");
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.ExportFailed, state.Status);
+    Assert.Equal(1, manager.LiveRoomCount);
+  }
+
+  [Fact]
+  public async Task AColdRoomLoadedByACommittedKeyReplayIsStillEvicted()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await HttpEdit(manager, OpOne, "!");
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the first room to be evicted");
+
+    var replay = await HttpEdit(manager, OpOne, "!");
+
+    Assert.Equal(CollabEditStatus.Applied, replay.Status);
+    Assert.Equal(1, manager.LiveRoomCount);
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the replay's room to be evicted");
+  }
+
+  [Fact]
+  public async Task AColdRoomLoadedByAReusedKeyConflictIsStillEvicted()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    await HttpEdit(manager, OpOne, "!");
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the first room to be evicted");
+
+    var conflict = await HttpEdit(manager, OpOne, "different");
+
+    Assert.Equal(CollabEditStatus.Conflict, conflict.Status);
+    Assert.Equal(1, manager.LiveRoomCount);
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the conflict's room to be evicted");
+  }
+
+  [Fact]
+  public async Task AStaleEditPreconditionIsRefusedWithTheHeadAndNothingApplied()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var first = await HttpEdit(manager, OpOne, "!");
+    var head = Assert.IsType<CollabEditReceipt>(first.Receipt);
+    var observer = new FakeMember();
+    await Join(manager, observer);
+    observer.Received.Clear();
+
+    var staleSequence = await HttpEdit(
+        manager,
+        OpTwo,
+        "?",
+        new CollabEditPrecondition(head.Tag.Lineage, 0));
+    var otherLineage = await HttpEdit(
+        manager,
+        OpThree,
+        "?",
+        new CollabEditPrecondition(new string('0', 32), head.ServerSequence));
+
+    Assert.Equal(CollabEditStatus.PreconditionFailed, staleSequence.Status);
+    Assert.Equal(CollabEditStatus.PreconditionFailed, otherLineage.Status);
+    Assert.Equal(head, staleSequence.Receipt);
+    Assert.Equal(head, otherLineage.Receipt);
+    Assert.Single(operations.Committed(DocId));
+    Assert.Empty(observer.Received);
+    Assert.Equal("hello!", await ExportedTextAsync(manager));
+  }
+
+  [Fact]
+  public async Task AMatchingEditPreconditionAppliesAtTheNextSequence()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var head = Assert.IsType<CollabEditReceipt>((await HttpEdit(manager, OpOne, "!")).Receipt);
+
+    var result = await HttpEdit(
+        manager,
+        OpTwo,
+        "?",
+        new CollabEditPrecondition(head.Tag.Lineage, head.ServerSequence));
+
+    Assert.Equal(CollabEditStatus.Applied, result.Status);
+    Assert.Equal(new CollabEditReceipt(head.Tag, 2), result.Receipt);
+    Assert.Equal("hello!?", await ExportedTextAsync(manager));
+  }
+
+  [Fact]
+  public async Task ACommittedKeyReplaysItsReceiptEvenWhenItsPreconditionIsNowStale()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var original = await HttpEdit(manager, OpOne, "!");
+    await HttpEdit(manager, OpTwo, "?");
+
+    var replay = await HttpEdit(
+        manager,
+        OpOne,
+        "!",
+        new CollabEditPrecondition(Assert.IsType<CollabEditReceipt>(original.Receipt).Tag.Lineage, 0));
+
+    Assert.Equal(CollabEditStatus.Applied, replay.Status);
+    Assert.Equal(original.Receipt, replay.Receipt);
+    Assert.Equal(2, operations.Committed(DocId).Count);
+  }
+
+  [Fact]
+  public async Task AnEditPreconditionWithoutAJournalIsRefusedBeforeTheRoomLoads()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+
+    var result = await HttpEdit(
+        manager,
+        OpOne,
+        "!",
+        new CollabEditPrecondition(new string('0', 32), 0));
+
+    Assert.Equal(CollabEditStatus.PreconditionRequired, result.Status);
+    Assert.Equal(0, endpoint.Loads);
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  [Fact]
+  public async Task AColdRoomLoadedByAFailedPreconditionIsStillEvicted()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+
+    var result = await HttpEdit(
+        manager,
+        OpOne,
+        "!",
+        new CollabEditPrecondition(new string('0', 32), 0));
+
+    Assert.Equal(CollabEditStatus.PreconditionFailed, result.Status);
+    Assert.Equal(1, manager.LiveRoomCount);
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+  }
+
   [Fact]
   public async Task AnEditIsRefusedWhileAnotherProcessHoldsTheDocument()
   {
@@ -2588,6 +3021,77 @@ public sealed class CollabRoomTests
         () => log.Any(line =>
             line.Contains("could not read the document version", StringComparison.Ordinal)),
         "the version read to report its failure");
+  }
+
+  /// <summary>
+  /// The host guide promises this exact traffic for a null seed under a
+  /// journal: nothing on the first open, then one PUT of an empty document
+  /// with no Blok-Doc-Version on the reopen (the load-time catch-up PUT).
+  /// </summary>
+  [Fact]
+  public async Task UnderAJournalANullSeedPutsNothingAndItsReopenPutsOneEmptyDocument()
+  {
+    endpoint.HoldsNothing(DocId);
+    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time));
+    var first = await Join(manager, V2Member());
+    var lineage = Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Lineage;
+    await first.LeaveAsync();
+    await RunTimersAsync(manager);
+
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Empty(endpoint.Saves);
+
+    // A journal room holds the owed PUT until a checkpoint, eviction or drain.
+    var reopened = await Join(manager, V2Member());
+    await reopened.LeaveAsync();
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count > 0,
+        "the reopen PUT");
+    await RunTimersAsync(manager);
+
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Equal(2, endpoint.Loads);
+    var save = Assert.Single(endpoint.Saves);
+    Assert.Empty(Assert.IsType<JsonArray>(save.Data["blocks"]));
+    Assert.Null(save.Version);
+    Assert.Equal(new DocProjection(lineage, 0), save.Projection);
+  }
+
+  /// <summary>
+  /// A /state read of an id Blok has never seen seeds the journal like a
+  /// join does, so the reopen PUT above applies to a /state-only id too.
+  /// </summary>
+  [Fact]
+  public async Task UnderAJournalAStateReadSeedsANullDocumentAndItsReopenPutsOnce()
+  {
+    endpoint.HoldsNothing(DocId);
+    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time));
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Ready, state.Status);
+    var lineage = Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Lineage;
+    await RunTimersAsync(manager);
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Empty(endpoint.Saves);
+
+    // A journal room holds the owed PUT until a checkpoint, eviction or drain.
+    var reopened = await Join(manager, V2Member());
+    await reopened.LeaveAsync();
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count > 0,
+        "the reopen PUT");
+    await RunTimersAsync(manager);
+
+    Assert.Equal(2, endpoint.Loads);
+    var save = Assert.Single(endpoint.Saves);
+    Assert.Empty(Assert.IsType<JsonArray>(save.Data["blocks"]));
+    Assert.Null(save.Version);
+    Assert.Equal(new DocProjection(lineage, 0), save.Projection);
   }
 
   /// <summary>
@@ -4103,9 +4607,9 @@ public sealed class CollabRoomTests
 
   /// <summary>
   /// Load comes from the fenced session: the baseline first, then the tail
-  /// that came after it. The blob is neither read nor written, so a decoy
-  /// working set survives the room's whole life untouched — which is what
-  /// "no second copy" means from the store's side.
+  /// that came after it. The blob is neither read nor written. A decoy beside
+  /// a head is stale by definition, so the load drops it: kept, a lost
+  /// journal or a swapped store would adopt it and serve the wrong history.
   /// </summary>
   [Fact]
   public async Task OperationStoreRoomLoadsBaselineAndTailThroughTheFencedSession()
@@ -4143,10 +4647,9 @@ public sealed class CollabRoomTests
     await manager.DrainAsync(CancellationToken.None);
 
     Assert.Equal("base-tail", served);
-    Assert.Equal("blob", YDocs.Replay(store.FramesOf(DocId)));
-    Assert.Equal(Tags.At(9), store.Stored(DocId).Tag);
     Assert.Equal(0, store.Reads);
     Assert.Equal(0, store.Writes);
+    Assert.False(store.Holds(DocId));
   }
 
   /// <summary>
@@ -5507,13 +6010,48 @@ public sealed class CollabRoomTests
         activity);
   }
 
+  /// <summary>
+  /// Runs every debounce, retry and idle-eviction timer well past its window.
+  /// The waits let posted lane callbacks arm their timers between advances.
+  /// </summary>
+  private async Task RunTimersAsync(CollabRoomManager manager)
+  {
+    for (var tick = 0; tick < 5; tick++)
+    {
+      await Task.Delay(10);
+      time.Advance(TimeSpan.FromSeconds(30));
+      await manager.SettleAsync();
+    }
+  }
+
   /// <summary>A room backed by an operation store, which is what turns on the commit path.</summary>
-  private CollabRoomManager CreateJournalManager(CollabRoomOptions? options = null)
+  /// <summary>An HTTP edit whose idempotency digest is the canonical body, as the endpoint sends it.</summary>
+  private static async Task<CollabEditResult> HttpEdit(
+      CollabRoomManager manager,
+      string operationId,
+      string text,
+      CollabEditPrecondition? expect = null)
+  {
+    CollabEditOp[] ops = [Appending($"b-{text}", text)];
+
+    return await manager.EditAsync(
+        DocId,
+        ops,
+        operationId,
+        CollabEditOps.CanonicalBodyDigest(ops),
+        actorId: null,
+        expect,
+        CancellationToken.None);
+  }
+
+  private CollabRoomManager CreateJournalManager(
+      CollabRoomOptions? options = null,
+      ICollabDocConverter? docConverter = null)
   {
     return new CollabRoomManager(
         store,
         endpoint,
-        converter,
+        docConverter ?? converter,
         options ?? new CollabRoomOptions(),
         time,
         log.Add,

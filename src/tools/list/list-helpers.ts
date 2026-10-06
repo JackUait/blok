@@ -62,7 +62,7 @@ export const adjustDepthTo = (
   const listItemEl = element?.querySelector('[role="listitem"]');
 
   if (listItemEl instanceof HTMLElement) {
-    listItemEl.style.marginLeft = newDepth > 0
+    listItemEl.style.marginInlineStart = newDepth > 0
       ? `${newDepth * INDENT_PER_LEVEL}px`
       : '';
   }

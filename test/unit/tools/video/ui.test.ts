@@ -1,12 +1,22 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { renderVideo, renderCaptionRow } from '../../../../src/tools/video/ui';
+import { renderVideo, renderCaptionRow, renderErrorState } from '../../../../src/tools/video/ui';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 describe('renderVideo', () => {
+  it('marks the video as a block-menu surface', () => {
+    const video = renderVideo({ url: 'https://example.com/clip.mp4' }).querySelector('video');
+
+    expect(video?.hasAttribute('data-blok-block-context-menu')).toBe(true);
+  });
+
   it('returns figure with <video> carrying the src url', () => {
     const fig = renderVideo({ url: 'https://example.com/clip.mp4' });
     const video = fig.querySelector('video');
@@ -141,5 +151,87 @@ describe('renderVideo with stale variants', () => {
 
     expect(video?.getAttribute('src')).toBe('https://x/NEW.mp4');
     expect(video?.querySelectorAll('source')).toHaveLength(0);
+  });
+});
+
+describe('renderErrorState', () => {
+  const base = {
+    message: 'Upload failed',
+    replace: { label: 'Replace', onReplace: (): void => {} },
+  };
+
+  it('keeps the hooks hosts and tests target', () => {
+    const el = renderErrorState(base);
+    expect(el.getAttribute('data-role')).toBe('video-error');
+    expect(el.classList.contains('blok-video-error-state')).toBe(true);
+    const replace = el.querySelector('button[data-action="replace"]');
+    expect(replace?.classList.contains('blok-video-retry')).toBe(true);
+    expect(replace?.textContent).toBe('Replace');
+  });
+
+  it('announces the message politely and hides the static from screen readers', () => {
+    const el = renderErrorState(base);
+    const message = el.querySelector('[data-role="video-error-message"]');
+    expect(message?.textContent).toBe('Upload failed');
+    expect(message?.getAttribute('role')).toBe('status');
+    const screen = el.querySelector('[data-role="video-error-screen"]');
+    expect(screen?.getAttribute('aria-hidden')).toBe('true');
+    expect(screen?.contains(message ?? null)).toBe(false);
+  });
+
+  it('draws the tear as colour bars inside the static', () => {
+    const el = renderErrorState(base);
+    const bars = el.querySelectorAll('[data-role="video-error-screen"] .blok-video-error-state__tear span');
+    expect(bars.length).toBe(7);
+  });
+
+  it('replaces the video when Replace is pressed', () => {
+    const onReplace = vi.fn();
+    const el = renderErrorState({ ...base, replace: { label: 'Replace', onReplace } });
+    el.querySelector<HTMLButtonElement>('[data-action="replace"]')?.click();
+    expect(onReplace).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers no Replace unless asked', () => {
+    const el = renderErrorState({ message: 'Upload failed' });
+    expect(el.querySelector('[data-action="replace"]')).toBeNull();
+  });
+
+  it('offers no file picker unless asked', () => {
+    const el = renderErrorState(base);
+    expect(el.querySelector('[data-action="upload"]')).toBeNull();
+    expect(el.querySelector('input[type="file"]')).toBeNull();
+  });
+
+  it('picks a file and hands it over', () => {
+    const onFile = vi.fn();
+    const el = renderErrorState({ ...base, upload: { label: 'Choose a video', accept: 'video/mp4,video/webm', onFile } });
+    const button = el.querySelector<HTMLButtonElement>('button[data-action="upload"]');
+    const input = el.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!button || !input) throw new Error('upload not rendered');
+    expect(button.textContent?.trim()).toBe('Choose a video');
+    expect(input.accept).toBe('video/mp4,video/webm');
+    expect(input.hidden).toBe(true);
+
+    const pick = vi.spyOn(input, 'click');
+    button.click();
+    expect(pick).toHaveBeenCalledTimes(1);
+
+    const file = new File(['x'], 'clip.mp4', { type: 'video/mp4' });
+    Object.defineProperty(input, 'files', { value: [file] });
+    input.dispatchEvent(new Event('change'));
+    expect(onFile).toHaveBeenCalledWith(file);
+  });
+
+  it('puts the upload button before Replace', () => {
+    const el = renderErrorState({ ...base, upload: { label: 'Choose a video', accept: 'video/*', onFile: () => {} } });
+    const actions = [...el.querySelectorAll('button')].map((b) => b.getAttribute('data-action'));
+    expect(actions).toEqual(['upload', 'replace']);
+  });
+
+  it('sizes the screen like the player it stands in for', () => {
+    const el = renderErrorState({ ...base, width: 45 });
+    expect(el.style.width).toBe('45%');
+    expect(renderErrorState(base).style.width).toBe('');
   });
 });

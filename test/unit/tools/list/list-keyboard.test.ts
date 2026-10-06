@@ -12,10 +12,13 @@ import type { ListItemData } from '../../../../src/tools/list/types';
 const createMockBlock = (options: { id?: string; name?: string; depth?: number } = {}) => {
   const { id = `block-${Math.random()}`, name = 'list', depth = 0 } = options;
 
+  const wrapper = document.createElement('div');
+  wrapper.setAttribute('data-list-depth', String(depth));
+
   const roleItem = document.createElement('div');
   roleItem.setAttribute('role', 'listitem');
   if (depth > 0) {
-    roleItem.style.marginLeft = `${depth * 27}px`;
+    roleItem.style.marginInlineStart = `${depth * 27}px`;
   }
 
   return {
@@ -24,6 +27,7 @@ const createMockBlock = (options: { id?: string; name?: string; depth?: number }
     holder: {
       querySelector: (selector: string) => {
         if (selector === '[role="listitem"]') return roleItem;
+        if (selector === '[data-list-depth]') return wrapper;
         return null;
       },
     },

@@ -29,9 +29,15 @@ const idState = { count: 0 };
  * @param summary - what is wrong, e.g. "Won't be saved: 2"
  * @param labels - localized texts
  * @param handlers - one per button; Escape runs `onStay`
+ * @param directionSource - editor element whose direction the banner takes
  * @returns a handle to update the summary or close the banner
  */
-export const openLeaveBanner = (summary: string, labels: LeaveBannerLabels, handlers: LeaveBannerHandlers): LeaveBanner => {
+export const openLeaveBanner = (
+  summary: string,
+  labels: LeaveBannerLabels,
+  handlers: LeaveBannerHandlers,
+  directionSource?: Element | null
+): LeaveBanner => {
   const banner = document.createElement('div');
   const title = document.createElement('div');
   const text = document.createElement('div');
@@ -81,6 +87,7 @@ export const openLeaveBanner = (summary: string, labels: LeaveBannerLabels, hand
     labelledBy: title.id,
     describedBy: text.id,
     initialFocus: () => first,
+    directionSource,
     onDismiss: () => handlers.onStay(),
     container: null,
     // The top-layer reset (inset/padding/border) would undo the banner's own placement and chrome.

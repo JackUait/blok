@@ -217,6 +217,30 @@ describe('Blok i18n runtime API', () => {
     expect(wrapper.hasAttribute('data-blok-rtl')).toBe(false);
   });
 
+  it('reports an explicit direction as the one in effect', async () => {
+    const editor = await createEditor({ i18n: { locale: 'en', direction: 'rtl' } });
+
+    expect(editorWrapper().getAttribute('dir')).toBe('rtl');
+    expect(editor.i18n.getDirection()).toBe('rtl');
+
+    await editor.i18n.update({ direction: 'ltr' });
+
+    expect(editor.i18n.getDirection()).toBe('ltr');
+  });
+
+  it('clears an explicit direction back to the locale with direction: null', async () => {
+    const editor = await createEditor({ i18n: { locale: 'en' } });
+
+    await editor.i18n.update({ direction: 'rtl' });
+
+    expect(editorWrapper().getAttribute('dir')).toBe('rtl');
+
+    await editor.i18n.update({ direction: null });
+
+    expect(editorWrapper().getAttribute('dir')).toBe('ltr');
+    expect(editor.i18n.getDirection()).toBe('ltr');
+  });
+
   it('relabels the eagerly-stamped editor chrome', async () => {
     const editor = await createEditor();
     const toolbar = document.querySelector<HTMLElement>('[data-blok-testid="toolbar"]');

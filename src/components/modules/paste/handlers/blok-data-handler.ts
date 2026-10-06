@@ -1,8 +1,16 @@
 import type { SanitizerConfig } from '../../../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../../../types/data-formats';
+import type { BlockToolData } from '../../../../../types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { Block } from '../../../block';
+import { convertBlockDataToString, convertStringToBlockData } from '../../../utils/blocks';
+import { linkToBlock, takeCut, type CopyLink } from '../../../utils/copy-as-link';
 import { sanitizeBlocks } from '../../../utils/sanitizer';
+import { safeHref } from '../../../utils/sanitize-url';
+import { isPagePointer } from '../../../../shared/page-pointer';
+import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
+import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
+import { enclosingCellTable } from '../../../utils/enclosing-cell-table';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PatternMatch } from '../types';
@@ -18,6 +26,10 @@ import { PatternHandler } from './pattern-handler';
 interface BlokClipboardBlock extends Pick<SavedData, 'id' | 'data' | 'tool'> {
   parentId?: string | null;
   contentIds?: string[];
+  /** Set by a cut of a `copyAsLink` block: its first paste may recreate it. */
+  cut?: string;
+  /** The link a `copyAsLink` block stood for when it was cut. */
+  link?: CopyLink;
 }
 
 
@@ -127,6 +139,162 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
+   * A `copyAsLink` block pastes as its link, except:
+   * - a page block stays a block while a block for the same page is live in
+   *   this document: it is another entry point to that page;
+   * - the first paste of a cut from this tab recreates the block, while no
+   *   live block links to the same url.
+   * This holds for any payload: another tab, an older build, a hand-written one.
+   *
+   * With no link at all the entry becomes a page reference or the tool's
+   * exported text, or is dropped when that is empty.
+   * @param entries - the parsed clipboard entries
+   */
+  private linksForSingletons(entries: BlokClipboardBlock[]): BlokClipboardBlock[] {
+    const { Tools, BlockManager } = this.Blok;
+    // Built on first need: most pastes hold no such block.
+    const live = { urls: undefined as Set<string> | undefined, pageIds: undefined as Set<string> | undefined };
+    const liveUrls = (): Set<string> => {
+      live.urls ??= new Set(
+        BlockManager.blocks
+          .map((block) => block.tool.copyAsLink(block.preservedData)?.url)
+          .filter((url): url is string => url !== undefined)
+      );
+
+      return live.urls;
+    };
+    const livePageIds = (): Set<string> => {
+      live.pageIds ??= new Set(
+        BlockManager.blocks
+          .filter((block) => isPagePointer(block.name, block.preservedData))
+          .map((block) => block.preservedData.pageId)
+          .filter((pageId): pageId is string => typeof pageId === 'string')
+      );
+
+      return live.pageIds;
+    };
+    // Each token is taken once per paste, so every entry of one cut agrees.
+    const cuts = new Map<string, boolean>();
+    const isFreshCut = (token: unknown): boolean => {
+      if (typeof token !== 'string') {
+        return false;
+      }
+      if (!cuts.has(token)) {
+        cuts.set(token, takeCut(token));
+      }
+
+      return cuts.get(token) === true;
+    };
+
+    // Entries replaced by a link, and so their subtrees. Entries come parents first.
+    const replaced = new Set<string>();
+
+    return entries.flatMap((entry): BlokClipboardBlock[] => {
+      if (typeof entry.parentId === 'string' && replaced.has(entry.parentId)) {
+        replaced.add(entry.id);
+
+        return [];
+      }
+
+      const tool = Tools.blockTools.get(entry.tool);
+      const built = tool?.copyAsLink?.(entry.data);
+
+      if (tool === undefined || built === undefined) {
+        return [entry];
+      }
+
+      const link = isCopyLink(entry.link) ? entry.link : built;
+      const pageId = isPagePointer(entry.tool, entry.data) && typeof entry.data.pageId === 'string'
+        ? entry.data.pageId
+        : undefined;
+      // The cut is taken even when a live block wins, so a later paste of it links too.
+      const fresh = isFreshCut(entry.cut);
+
+      if (pageId !== undefined && livePageIds().has(pageId)) {
+        return [entry];
+      }
+
+      if (fresh && (link === null || !liveUrls().has(link.url))) {
+        if (link !== null) {
+          liveUrls().add(link.url);
+        }
+        if (pageId !== undefined) {
+          livePageIds().add(pageId);
+        }
+
+        return [entry];
+      }
+
+      const shape = { id: entry.id, parentId: entry.parentId };
+
+      replaced.add(entry.id);
+
+      if (link !== null) {
+        return [{ ...shape, ...linkToBlock(link, Tools.defaultTool) }];
+      }
+
+      const pageLink = pageId === undefined ? undefined : Tools.blockTools.get('page-link');
+
+      if (pageId !== undefined && pageLink?.name === 'page-link') {
+        return [{ ...shape, tool: pageLink.name, data: { pageId } }];
+      }
+
+      const reference = pageId === undefined ? undefined : this.pageReference(pageId);
+
+      if (reference !== undefined) {
+        return [{ ...shape, ...reference }];
+      }
+
+      const exported: unknown = convertBlockDataToString(entry.data, tool.conversionConfig);
+      const text = typeof exported === 'string' ? exported : '';
+
+      if (text.trim() === '') {
+        return [];
+      }
+
+      const { defaultTool } = Tools;
+
+      return [{ ...shape, tool: defaultTool.name, data: convertStringToBlockData(text, defaultTool.conversionConfig, defaultTool.settings) }];
+    });
+  }
+
+  /**
+   * A non-owning page reference in a paragraph, when Paragraph can import it.
+   * @param pageId - the page the reference names
+   */
+  private pageReference(pageId: string): { tool: string; data: BlockToolData } | undefined {
+    const paragraph = this.Blok.Tools.blockTools.get('paragraph');
+    const importRule = paragraph?.conversionConfig?.import;
+
+    if (paragraph === undefined || (typeof importRule !== 'string' && typeof importRule !== 'function')) {
+      return undefined;
+    }
+
+    const anchor = document.createElement('a');
+
+    anchor.setAttribute(PAGE_REFERENCE_ATTR, pageId);
+    anchor.textContent = PAGE_REFERENCE_FALLBACK;
+
+    return { tool: paragraph.name, data: convertStringToBlockData(anchor.outerHTML, paragraph.conversionConfig, paragraph.settings) };
+  }
+
+  /**
+   * The table enclosing the caret cell, when the batch holds a tool barred from cells.
+   * @param blocks - the clipboard entries, nested ones included
+   */
+  private tableToLeave(blocks: BlokClipboardBlock[]): Block | undefined {
+    const { BlockManager } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+    const restricted = new Set(getRestrictedTools());
+
+    if (currentBlock === undefined || !blocks.some(block => restricted.has(block.tool))) {
+      return undefined;
+    }
+
+    return enclosingCellTable(currentBlock, id => BlockManager.getBlockById(id));
+  }
+
+  /**
    * Insert Blok JSON blocks using a two-pass approach:
    *
    * Pass 1 — TABLE cell children (blocks whose parentId is a pasted table) are
@@ -157,15 +325,25 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     // on the children themselves. Backfill parentId before classification so
     // those children get adopted by the table during the two-pass insert
     // instead of becoming detached top-level paragraphs.
-    const blocks = backfillTableChildParents(rawBlocks);
+    const blocks = backfillTableChildParents(this.linksForSingletons(rawBlocks));
     const sanitizedBlocks = sanitizeBlocks(
       blocks,
       (name) => Tools.blockTools.get(name)?.sanitizeConfig ?? {},
       this.config.sanitizer
     );
 
+    // A tool barred from cells sends the whole batch out of the table, right
+    // after its subtree, as BasePasteHandler.redirectToTableParentIfNeeded does.
+    const redirectTable = this.tableToLeave(blocks);
+
+    if (redirectTable !== undefined) {
+      // An insert after a table goes after its whole run, at its level.
+      BlockManager.currentBlock = redirectTable;
+    }
+
     // Capture replace intent before any insertions move the current block pointer.
     const shouldReplaceFirst =
+      redirectTable === undefined &&
       canReplace &&
       Boolean(BlockManager.currentBlock?.tool.isDefault) &&
       Boolean(BlockManager.currentBlock?.isEmpty);
@@ -188,9 +366,10 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
     const isInContainerTitle = childContainer !== null &&
       !childContainer.contains(currentBlock?.currentInput ?? null);
-    const contextParentId = isInContainerTitle
+    const caretParentId = isInContainerTitle
       ? (currentBlock?.id ?? null)
       : (currentBlock?.parentId ?? null);
+    const contextParentId = redirectTable !== undefined ? redirectTable.parentId : caretParentId;
 
     // IDs of pasted table blocks. ONLY a table's cell children must be inserted
     // before their parent: the table block's `data.content` references its cell
@@ -316,6 +495,15 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     }
   }
 }
+
+/** Any page can write this payload, so a carried url must be a safe href. */
+const isCopyLink = (value: unknown): value is CopyLink =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as { url?: unknown }).url === 'string' &&
+  (value as { url: string }).url !== '' &&
+  safeHref((value as { url: string }).url) !== null &&
+  typeof (value as { text?: unknown }).text === 'string';
 
 /**
  * Records each cell-referenced child id under its owning table.

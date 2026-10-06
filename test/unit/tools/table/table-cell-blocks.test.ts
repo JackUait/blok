@@ -1,6 +1,6 @@
 import type { API } from '../../../../types';
 import type { TableModel } from '../../../../src/tools/table/table-model';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const createMockModel = (): TableModel => ({
   findCellForBlock: vi.fn(() => null),
@@ -30,6 +30,10 @@ const createMockModel = (): TableModel => ({
 describe('TableCellBlocks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('CellContent type', () => {
@@ -122,6 +126,64 @@ describe('TableCellBlocks', () => {
       });
 
       expect(cellBlocks).toBeInstanceOf(TableCellBlocks);
+    });
+
+    it('passes a clipboard block\'s tunes to insert as the 8th argument', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        model: createMockModel(),
+      });
+
+      cellBlocks.insertClipboardBlock({ tool: 'paragraph', data: { text: 'a' }, tunes: { align: 'center' } }, 3);
+
+      expect(mockApi.blocks.insert).toHaveBeenCalledWith(
+        'paragraph', { text: 'a' }, {}, 3, false, false, undefined, { align: 'center' }
+      );
+    });
+
+    it('copies an owning cell block into the configured default tool', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+      const api = {
+        ...mockApi,
+        tools: {
+          getBlockTools: () => [
+            { name: 'owner', isDefault: false, copyAsLink: () => ({ url: 'https://x.test/p1', text: 'Page' }) },
+            { name: 'custom', isDefault: true, conversionConfig: { import: (html: string) => ({ body: html }) }, settings: {} },
+          ],
+        },
+      } as unknown as API;
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        model: createMockModel(),
+      });
+
+      cellBlocks.insertClipboardBlock({ tool: 'owner', data: { pageId: 'p1' } }, 3);
+
+      expect(mockApi.blocks.insert).toHaveBeenCalledWith(
+        'custom', { body: '<a href="https://x.test/p1">Page</a>' }, {}, 3, false, false, undefined, undefined
+      );
+    });
+
+    it('pastes an unregistered clipboard tool as a paragraph holding its text', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        model: createMockModel(),
+      });
+
+      mockApi.blocks.insert.mockImplementationOnce(() => {
+        throw new Error('unknown tool');
+      });
+      cellBlocks.insertClipboardBlock({ tool: 'missing', data: { code: 'a<b' } }, 2);
+
+      expect(mockApi.blocks.insert).toHaveBeenLastCalledWith('paragraph', { text: 'a&lt;b' }, {}, 2, false);
     });
 
     it('should track active cell with blocks', async () => {
@@ -1536,6 +1598,7 @@ describe('TableCellBlocks', () => {
           getBlockByIndex: vi.fn(() => ({ id: 'x', name: 'paragraph', holder: shared, parentId: 't1', preservedData: { text: 'x' } })),
           getById: vi.fn(() => null),
           setBlockParent: vi.fn(),
+          getChildren: vi.fn(() => []),
           isSyncingFromYjs: true,
         },
         events: { on: vi.fn(), off: vi.fn() },
@@ -1601,6 +1664,61 @@ describe('TableCellBlocks', () => {
 
       expect(mockInsert).not.toHaveBeenCalled();
       expect(result[0][0].blocks).toEqual(['not-here-yet']);
+    });
+
+    it('keeps a cell\'s blocks in the order its data names them when the flat array lists them the other way', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const container = document.createElement('div');
+      const holders = new Map(['a', 'late'].map((id) => {
+        const holder = document.createElement('div');
+
+        holder.setAttribute('data-blok-id', id);
+
+        return [id, holder];
+      }));
+      // The flat array lists `late` first.
+      const flat = ['late', 'a'];
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlocksCount: vi.fn(() => flat.length),
+          getBlockIndex: vi.fn((id: string) => {
+            const index = flat.indexOf(id);
+
+            return index === -1 ? undefined : index;
+          }),
+          getBlockByIndex: vi.fn((index: number) => ({ id: flat[index], name: 'paragraph', holder: holders.get(flat[index]), parentId: 't1' })),
+          getById: vi.fn(() => null),
+          // Core re-sorts a holder already in the cell by flat order.
+          setBlockParent: vi.fn((id: string) => {
+            const holder = holders.get(id);
+
+            if (holder !== undefined && flat.indexOf(id) === 0) {
+              container.prepend(holder);
+            }
+          }),
+          isSyncingFromYjs: true,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      cellBlocks.initializeCells([[{ blocks: ['a', 'late'] }]]);
+
+      expect(Array.from(container.children).map((child) => child.getAttribute('data-blok-id'))).toEqual(['a', 'late']);
     });
 
     it('should NOT insert a block when cell already has blocks', async () => {
@@ -2354,6 +2472,7 @@ describe('TableCellBlocks', () => {
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
           setBlockParent: vi.fn(),
+          getChildren: vi.fn(() => []),
         },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
@@ -2708,6 +2827,7 @@ describe('TableCellBlocks', () => {
             return undefined;
           }),
           delete: mockDelete,
+          getChildren: vi.fn(() => []),
         },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
@@ -2724,6 +2844,28 @@ describe('TableCellBlocks', () => {
       expect(mockDelete.mock.calls[2][0]).toBe(0);
     });
 
+    it('deletes each listed block\'s children too, each index once', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockDelete = vi.fn();
+      const indexOf: Record<string, number> = { l1: 0, l2: 1, l3: 2 };
+      const childrenOf: Record<string, string[]> = { l1: ['l2'], l2: ['l3'] };
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => indexOf[id]),
+          getChildren: vi.fn((id: string) => (childrenOf[id] ?? []).map(child => ({ id: child }))),
+          delete: mockDelete,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement: document.createElement('div'), tableBlockId: 't1', model: createMockModel() });
+
+      cellBlocks.deleteBlocks(['l1', 'l2']);
+
+      expect(mockDelete.mock.calls.map((call): unknown => call[0])).toEqual([2, 1, 0]);
+    });
+
     it('should skip block IDs that have no index', async () => {
       const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
 
@@ -2736,6 +2878,7 @@ describe('TableCellBlocks', () => {
             return undefined;
           }),
           delete: mockDelete,
+          getChildren: vi.fn(() => []),
         },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
@@ -2757,6 +2900,7 @@ describe('TableCellBlocks', () => {
         blocks: {
           getBlockIndex: vi.fn((id: string) => (id === 'b1' ? 0 : undefined)),
           delete: mockDelete,
+          getChildren: vi.fn(() => []),
         },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
@@ -2800,6 +2944,7 @@ describe('TableCellBlocks', () => {
             return undefined;
           }),
           delete: mockDelete,
+          getChildren: vi.fn(() => []),
         },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
@@ -2842,6 +2987,7 @@ describe('TableCellBlocks', () => {
             return undefined;
           }),
           delete: mockDelete,
+          getChildren: vi.fn(() => []),
         },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
@@ -3199,6 +3345,7 @@ describe('TableCellBlocks', () => {
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
           setBlockParent: vi.fn(),
+          getChildren: vi.fn(() => []),
         },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
@@ -3276,6 +3423,7 @@ describe('TableCellBlocks', () => {
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
           setBlockParent: vi.fn(),
+          getChildren: vi.fn(() => []),
         },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
@@ -3298,7 +3446,10 @@ describe('TableCellBlocks', () => {
         { text: 'Зеленая зона' },
         {},
         expect.any(Number),
-        false
+        false,
+        false,
+        undefined,
+        undefined
       );
 
       // The cloned holder must be in the new container, and the normalized
@@ -3367,6 +3518,7 @@ describe('TableCellBlocks', () => {
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
           setBlockParent: vi.fn(),
+          getChildren: vi.fn(() => []),
         },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
@@ -3389,7 +3541,10 @@ describe('TableCellBlocks', () => {
         { text: 'Original paragraph' },
         {},
         expect.any(Number),
-        false
+        false,
+        false,
+        undefined,
+        undefined
       );
 
       // The duplicate's holder must be mounted in the new container
@@ -3452,6 +3607,7 @@ describe('TableCellBlocks', () => {
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
           setBlockParent: vi.fn(),
+          getChildren: vi.fn(() => []),
         },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;

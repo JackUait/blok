@@ -64,10 +64,8 @@ const BORDER = '--blok-border-width-hairline';
 const RADII: Array<[string, string, string]> = [
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-inner img', role('block')],
   ['styles/image.css', '[data-blok-element-content].bg-selection:has([data-blok-tool="image"]) .blok-image-inner', role('block')],
-  ['styles/image.css', '[data-blok-tool="image"] .blok-image-alt-pill', role('pill')],
-  ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar__island', role('surface')],
-  ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar__island::before', role('surface')],
-  ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar::after', role('surface')],
+  ['styles/image.css', '[data-blok-tool="image"] .blok-image-alt-pill', role('control')],
+  ['styles/main.css', '[data-blok-tool="image"] .blok-image-toolbar', role('surface')],
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar button', nested('control')],
   ['styles/image.css', '[data-blok-tool="image"] [data-role="image-selection-ring"]', 'calc(var(--blok-radius-block) + var(--blok-image-ring-gap))'],
   ['styles/image.css', '[data-blok-tool="image"][data-rounded="off"] [data-role="image-selection-ring"]', '0'],
@@ -81,7 +79,7 @@ const RADII: Array<[string, string, string]> = [
   ['styles/file.css', '[data-blok-tool="file"] [data-role="file-card"]', 'inherit'],
   ['styles/image.css', '.blok-image-uploading__card', role('block')],
   ['styles/image.css', '.blok-image-uploading__cancel', nested('control')],
-  ['styles/image.css', '.blok-image-uploading__cancel:focus-visible', nested('control')],
+  ['styles/image.css', ':where(:root:not([data-blok-modality="pointer"])) .blok-image-uploading__cancel:focus-visible', nested('control')],
   ['styles/image.css', '.blok-image-uploading__tile', role('control-lg')],
   ['styles/image.css', '.blok-image-uploading__bar', role('pill')],
   ['styles/image.css', '.blok-image-error', role('block')],
@@ -107,8 +105,9 @@ const RADII: Array<[string, string, string]> = [
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-retry', role('control')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__menu', role('surface')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__menu-row', nested('control')],
-  ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__speed-step', nested('control')],
+  ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__speed-chips', nested('control')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__speed-chip', nested('control')],
+  ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__switch', role('pill')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__seek-tooltip', role('control')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__seek-thumb', nested('control-sm')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-media video', role('block')],
@@ -130,7 +129,6 @@ const RADII: Array<[string, string, string]> = [
   ['styles/embed.css', '[data-blok-tool="embed"] .blok-embed-toolbar button', nested('control')],
   ['styles/embed.css', '[data-blok-tool="embed"] .blok-embed-toolbar__align-popover', role('surface')],
   ['styles/embed.css', '.blok-embed-empty__submit', role('control-sm')],
-  ['styles/embed.css', '.blok-embed-empty__kbd', role('control-sm')],
   ['styles/embed.css', '.blok-embed-empty__readonly', role('block')],
   ['styles/embed.css', '.blok-embed-linkcard', role('block')],
   ['styles/embed.css', '.blok-embed-linkcard__action', nested('control')],
@@ -171,12 +169,14 @@ const RADII: Array<[string, string, string]> = [
 
 /** Containers publish --blok-radius-inner from their own role, border and padding tokens. */
 const INNER: Array<[string, string, string]> = [
-  ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar__island', inner('surface', '--blok-space-0-75')],
+  ['styles/main.css', '[data-blok-tool="image"] .blok-image-toolbar', inner('surface', '--blok-space-0-75')],
   ['styles/image.css', '.blok-image-uploading__header', inner('block', BORDER, '--blok-space-2')],
   ['styles/main.css', '[data-blok-tool="image"] .blok-image-toolbar__align-popover', inner('surface', '--blok-space-1')],
   ['styles/main.css', '.blok-image-lightbox__bar', inner('surface', '--blok-space-1-5')],
   ['styles/main.css', '.blok-image-lightbox__nav', inner('surface', '--blok-space-1-5')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__menu', inner('surface', BORDER, '--blok-space-1-5')],
+  // The preset bar sits on the card's padding edge, so its chips nest one more ring in.
+  ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__speed-chips', inner('surface', BORDER, '--blok-space-1-5', '--blok-space-0-5')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__seek-tooltip', inner('control', '--blok-space-1')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__ctx', inner('surface', '--blok-space-1-5')],
   ['styles/audio.css', '.blok-audio-cover-picker', inner('surface', BORDER, '--blok-space-2')],
@@ -232,11 +232,5 @@ describe('media files hold no off-system radius', () => {
   it('no dead image popover, toolbar pill or audio radius CSS is left', () => {
     expect(read('styles/image.css')).not.toMatch(/blok-image-popover|blok-image-toolbar__pill/);
     expect(read('styles/audio.css')).not.toContain('--blok-audio-radius');
-  });
-
-  it('the island neck overlaps each card by exactly its corner radius', () => {
-    const neck = declared(cssOf('styles/image.css'), '[data-blok-tool="image"] .blok-image-toolbar__island::after', 'left');
-
-    expect(neck).toBe('calc(100% - var(--blok-radius-surface))');
   });
 });

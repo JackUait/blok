@@ -20,6 +20,17 @@ describe('preprocessGoogleDocsHtml', () => {
       expect(result).not.toContain('<mark');
     });
 
+    it('keeps a span highlight written as the background shorthand (Word, Writer)', () => {
+      expect(preprocessGoogleDocsHtml('<span style="background:yellow;mso-highlight:yellow">Hl</span>')).toMatch(/<mark style="[^"]*background-color: yellow/);
+      expect(preprocessGoogleDocsHtml('<span style="background: #ffff00">Hl</span>')).toMatch(/<mark style="[^"]*background-color: #/);
+    });
+
+    it('drops an invisible or non-colour background shorthand', () => {
+      expect(preprocessGoogleDocsHtml('<span style="background: white">a</span>')).not.toContain('<mark');
+      expect(preprocessGoogleDocsHtml('<span style="background: url(x.png)">a</span>')).not.toContain('<mark');
+      expect(preprocessGoogleDocsHtml('<span style="background: currentcolor">a</span>')).not.toContain('<mark');
+    });
+
     it('should not convert plain browser span with only font styles', () => {
       const html = '<span style="font-size: 16px; font-family: sans-serif;">text</span>';
       const result = preprocessGoogleDocsHtml(html);
@@ -399,6 +410,22 @@ describe('preprocessGoogleDocsHtml', () => {
     expect(result).not.toContain('<mark');
   });
 
+  it.each([
+    ['Gemini body ink on a span', '<span style="color: rgb(31, 31, 31)">body text</span>'],
+    ['Google body ink in a Docs paste', gdocs('<span style="color: #202124">body text</span>')],
+  ])('does not create <mark> for near-black text: %s', (_label, html) => {
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).not.toContain('<mark');
+    expect(result).toContain('body text');
+  });
+
+  it('still creates <mark> for a dark but real text color', () => {
+    const result = preprocessGoogleDocsHtml('<span style="color: rgb(120, 60, 20)">brown</span>');
+
+    expect(result).toContain('<mark');
+  });
+
   it('converts span with both color and background-color to <mark> with both styles', () => {
     const html = gdocs('<span style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0)">colored highlighted</span>');
     const result = preprocessGoogleDocsHtml(html);
@@ -439,6 +466,55 @@ describe('preprocessGoogleDocsHtml', () => {
 
     expect(result).toContain('<td>line one<br>line two</td>');
     expect(result).not.toContain('<p>');
+  });
+
+  describe('cell alignment carried on the inner <p>', () => {
+    const cellStyleAfter = (cellHtml: string): string | null => {
+      const html = `<table><tr>${cellHtml}</tr><tr><td><p>x</p></td></tr></table>`;
+      const doc = new DOMParser().parseFromString(preprocessGoogleDocsHtml(html), 'text/html');
+
+      return doc.querySelector('td, th')?.getAttribute('style') ?? null;
+    };
+
+    it('moves a text-align every paragraph shares onto the cell', () => {
+      expect(cellStyleAfter(
+        '<td><p style="text-align:center">a</p><p>&nbsp;</p><p style="text-align: center;">b</p></td>'
+      )).toMatch(/text-align:\s*center/);
+    });
+
+    it('leaves the cell alone when its paragraphs disagree', () => {
+      expect(cellStyleAfter(
+        '<td><p style="text-align:center">a</p><p style="text-align:right">b</p></td>'
+      )).toBeNull();
+    });
+
+    it('keeps the cell\'s own text-align', () => {
+      expect(cellStyleAfter(
+        '<td style="text-align:right"><p style="text-align:center">a</p></td>'
+      )).toBe('text-align:right');
+    });
+
+    it('reads LibreOffice Writer\'s align attribute on the paragraphs', () => {
+      expect(cellStyleAfter('<td><p align="center">a</p></td>')).toMatch(/text-align:\s*center/);
+    });
+
+    it('lets a paragraph\'s style win over its align attribute', () => {
+      expect(cellStyleAfter('<td><p align="right" style="text-align:center">a</p></td>')).toMatch(/text-align:\s*center/);
+    });
+
+    it('ignores an align attribute that is not a keyword', () => {
+      expect(cellStyleAfter('<td><p align="center;color:red">a</p></td>')).toBeNull();
+    });
+
+    it('does not give a nested table\'s alignment to the outer cell', () => {
+      const html = '<table><tr><td><p>outer</p><table><tr><td><p style="text-align:center">inner</p></td></tr></table></td></tr>'
+        + '<tr><td><p>x</p></td></tr></table>';
+      const doc = new DOMParser().parseFromString(preprocessGoogleDocsHtml(html), 'text/html');
+      const [outer, inner] = Array.from(doc.querySelectorAll('td'));
+
+      expect(outer.getAttribute('style')).toBeNull();
+      expect(inner.getAttribute('style')).toMatch(/text-align:\s*center/);
+    });
   });
 
   it('converts <p> boundaries to <br> inside <th> cells', () => {

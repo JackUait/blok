@@ -42,3 +42,5 @@ type ValueOf<T> = T[keyof T];
  * CustomEvent describing a change related to a block
  */
 export type BlockMutationEvent = ValueOf<BlockMutationEventMap>;
+
+export type { BlockMutationOrigin } from './Base';

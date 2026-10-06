@@ -92,11 +92,13 @@ export interface EmbedMatch {
  */
 export function resolveEmbedServiceTitle(
   service: Pick<EmbedService, 'title' | 'localizedTitles'>,
-  locale?: SupportedLocale
+  locale?: string
 ): string {
+  const titles: Readonly<Partial<Record<string, string>>> | undefined = service.localizedTitles;
+
   return locale === undefined
     ? service.title
-    : service.localizedTitles?.[locale] ?? service.title;
+    : titles?.[locale] ?? service.title;
 }
 
 const REMOTE_ID_TEMPLATE = /<%=\s*remote_id\s*%>/;

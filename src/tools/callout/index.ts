@@ -375,30 +375,29 @@ export class CalloutTool implements BlockTool {
   }
 
   public renderSettings(): MenuConfig {
-    if (this._colorPicker === null) {
-      const picker = createColorPicker({
-        i18n: this.api.i18n,
-        testIdPrefix: 'callout-color',
-        modes: [
-          { key: 'color', labelKey: 'tools.marker.textColor', presetField: 'text' },
-          { key: 'background-color', labelKey: 'tools.marker.background', presetField: 'bg' },
-        ],
-        onColorSelect: (color, modeKey) => {
-          const presetName = color !== null ? mapToNearestPresetName(color, modeKey === 'color' ? 'text' : 'bg') : null;
+    // Built per open: the picker reads recent colors only when it is created.
+    const picker = createColorPicker({
+      i18n: this.api.i18n,
+      testIdPrefix: 'callout-color',
+      modes: [
+        { key: 'color', labelKey: 'tools.marker.textColor', presetField: 'text' },
+        { key: 'background-color', labelKey: 'tools.marker.background', presetField: 'bg' },
+      ],
+      onColorSelect: (color, modeKey) => {
+        const presetName = color !== null ? mapToNearestPresetName(color, modeKey === 'color' ? 'text' : 'bg') : null;
 
-          if (modeKey === 'color') {
-            this._data.textColor = presetName;
-          } else {
-            this._data.backgroundColor = presetName;
-          }
+        if (modeKey === 'color') {
+          this._data.textColor = presetName;
+        } else {
+          this._data.backgroundColor = presetName;
+        }
 
-          picker.setActiveColor(color, modeKey);
-          this.applyColors();
-        },
-      });
+        picker.setActiveColor(color, modeKey);
+        this.applyColors();
+      },
+    });
 
-      this._colorPicker = picker;
-    }
+    this._colorPicker = picker;
 
     // Sync active state with current data
     this.syncPickerActiveColors();

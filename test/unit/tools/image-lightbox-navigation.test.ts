@@ -8,6 +8,7 @@ vi.mock('../../../src/components/utils/tooltip', () => ({
 }));
 
 import { openLightbox } from '../../../src/tools/image/ui';
+import { IconChevronLeft, IconChevronRight } from '../../../src/components/icons';
 
 afterEach(() => {
   document.querySelectorAll('[role="dialog"][aria-modal="true"]').forEach((el) => el.remove());
@@ -155,6 +156,52 @@ describe('openLightbox navigation', () => {
     img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
     expect(img?.getAttribute('src')).toBe('https://x/a.png');
     close();
+  });
+
+  describe('in a right-to-left editor', () => {
+    const openRtl = (): (() => void) => openLightbox({
+      url: 'https://x/a.png',
+      direction: 'rtl',
+      navigation: {
+        items: [
+          { url: 'https://x/a.png' },
+          { url: 'https://x/b.png' },
+          { url: 'https://x/c.png' },
+        ],
+        startIndex: 0,
+      },
+    });
+    const shownSrc = (): string | null | undefined =>
+      document.querySelector<HTMLImageElement>('[role="dialog"] img')?.getAttribute('src');
+
+    it('ArrowLeft advances to the next item, ArrowRight goes back', () => {
+      const close = openRtl();
+
+      simulateKeydown(document, 'ArrowLeft');
+      expect(shownSrc()).toBe('https://x/b.png');
+
+      simulateKeydown(document, 'ArrowRight');
+      expect(shownSrc()).toBe('https://x/a.png');
+      close();
+    });
+
+    it('points the next button left and the previous button right', () => {
+      const close = openRtl();
+      const prev = document.querySelector('[data-action="lightbox-prev"]');
+      const next = document.querySelector('[data-action="lightbox-next"]');
+
+      const asMarkup = (svg: string): string => {
+        const holder = document.createElement('div');
+
+        holder.innerHTML = svg;
+
+        return holder.innerHTML;
+      };
+
+      expect(prev?.innerHTML).toBe(asMarkup(IconChevronRight));
+      expect(next?.innerHTML).toBe(asMarkup(IconChevronLeft));
+      close();
+    });
   });
 
   it('clicking nav buttons does not close the lightbox', () => {

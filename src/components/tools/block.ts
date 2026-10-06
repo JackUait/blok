@@ -1,6 +1,7 @@
 import { composeBaseSanitizeConfig } from '../../shared/sanitize-schema';
 import { isEmpty, isObject } from '../utils';
 import { log } from '../utils/logger';
+import { safeHref } from '../utils/sanitize-url';
 
 import { BaseToolAdapter,  InternalBlockToolSettings, UserSettings  } from './base';
 import { ToolsCollection } from './collection';
@@ -21,6 +22,14 @@ import type {
 } from '@/types';
 import type { BlockToolAdapter as BlockToolAdapterInterface } from '@/types/tools/adapters/block-tool-adapter';
 import { ToolType } from '@/types/tools/adapters/tool-type';
+
+/** A tool's link reaches an href on copy, paste and the copy-link tune. */
+const isLink = (value: unknown): value is { url: string; text: string } =>
+  isObject(value) &&
+  typeof value.url === 'string' &&
+  value.url !== '' &&
+  safeHref(value.url) !== null &&
+  typeof value.text === 'string';
 
 /**
  * Class to work with Block tools constructables
@@ -141,6 +150,106 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * False when the Tool's block never has children. `childTools` cannot say
+   * this: an empty `allow` reads as "no restriction".
+   */
+  public get acceptsChildren(): boolean {
+    return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.AcceptsChildren] !== false;
+  }
+
+  /**
+   * How the block menu is laid out: `titled` heads it with the tool's name
+   * and puts Turn into first; `trash` reads Delete as "Move to Trash".
+   */
+  public get blockMenu(): { titled: boolean; trash: boolean } {
+    const menu: unknown = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.BlockMenu];
+    const read = (key: 'titled' | 'trash'): boolean =>
+      typeof menu === 'object' && menu !== null && (menu as Record<string, unknown>)[key] === true;
+
+    return { titled: read('titled'), trash: read('trash') };
+  }
+
+  /**
+   * The data Duplicate and Alt-drag insert instead of a copy or a link.
+   * Undefined means no hook, a throwing hook or a null answer.
+   * @param data - the block's saved data
+   */
+  public duplicateData(data: BlockToolData): BlockToolData | undefined {
+    const duplicateData = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.DuplicateData];
+
+    if (typeof duplicateData !== 'function') {
+      return undefined;
+    }
+
+    try {
+      const copy: unknown = duplicateData.call(this.constructable, data, this.settings);
+
+      return typeof copy === 'object' && copy !== null && !Array.isArray(copy) ? copy as BlockToolData : undefined;
+    } catch (error) {
+      log(`Tool «${this.name}» duplicateData() threw; copying the block as usual.`, 'warn', error);
+
+      return undefined;
+    }
+  }
+
+  /**
+   * The data a toolbox insert waits for. Undefined means no hook; a rejection
+   * means insert nothing.
+   */
+  public prepareInsert(): Promise<BlockToolData> | undefined {
+    const prepareInsert = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.PrepareInsert];
+
+    if (typeof prepareInsert !== 'function') {
+      return undefined;
+    }
+
+    return new Promise<unknown>((resolve) => resolve(prepareInsert.call(this.constructable, this.settings)))
+      .then((data) => {
+        if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+          throw new Error(`Tool «${this.name}» prepareInsert() did not return block data`);
+        }
+
+        return data as BlockToolData;
+      });
+  }
+
+  /**
+   * True when a copy of the Tool's block rebuilds its children from its own
+   * data, so Duplicate and Alt-drag leave them out.
+   */
+  public get copiesOwnChildren(): boolean {
+    return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.CopiesOwnChildren] === true;
+  }
+
+  /** True when the Tool declares `copyAsLink`, without calling it. */
+  public get hasCopyAsLink(): boolean {
+    return typeof (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.CopyAsLink] === 'function';
+  }
+
+  /**
+   * The link a copy carries. Undefined means no hook or a throwing hook;
+   * null means the hook returned no valid link.
+   * @param data - the block's saved data
+   */
+  public copyAsLink(data: BlockToolData): { url: string; text: string } | null | undefined {
+    const copyAsLink = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.CopyAsLink];
+
+    if (typeof copyAsLink !== 'function') {
+      return undefined;
+    }
+
+    try {
+      const link: unknown = copyAsLink.call(this.constructable, data, this.settings);
+
+      return isLink(link) ? link : null;
+    } catch (error) {
+      log(`Tool «${this.name}» copyAsLink() threw; copying the block without a link.`, 'warn', error);
+
+      return undefined;
+    }
+  }
+
+  /**
    * Returns true when Enter on this container's empty LAST child must create
    * the new line INSIDE the container rather than escaping it.
    *
@@ -153,6 +262,34 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    */
   public get keepsChildrenOnEnter(): boolean {
     return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.KeepsChildrenOnEnter] === true;
+  }
+
+  /**
+   * True when deleting this Tool's block deletes its whole subtree rather than
+   * promoting its children to the block's parent.
+   */
+  public get deletesChildren(): boolean {
+    return this.layoutLever(InternalBlockToolSettings.DeletesChildren);
+  }
+
+  /**
+   * True when the block is a pure layout piece: no hover toolbar, never a
+   * selection unit, and its descendants are laid out flush (no depth indent).
+   */
+  public get isLayout(): boolean {
+    return this.layoutLever(InternalBlockToolSettings.IsLayout);
+  }
+
+  /**
+   * A declared lever wins. Undeclared, the names `column` and `column_list`
+   * keep the rules core applied to them by name before these levers existed,
+   * so a host tool registered under those names behaves as it did.
+   * @param setting - the static to read
+   */
+  private layoutLever(setting: InternalBlockToolSettings): boolean {
+    const declared = (this.constructable as unknown as Record<string, boolean | undefined>)[setting];
+
+    return declared ?? (this.name === 'column' || this.name === 'column_list');
   }
 
   /**

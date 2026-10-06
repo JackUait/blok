@@ -25,6 +25,8 @@ export interface FilePreviewOptions {
     openInNewTab?: string;
     backToContent?: string;
   };
+  /** Element whose direction the preview takes (it mounts outside the editor). */
+  directionSource?: Element | null;
 }
 
 interface PreviewElements {
@@ -300,6 +302,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   const dialogHandle = openModalDialog({
     content: backdrop,
     surface: dialog,
+    directionSource: opts.directionSource,
     role: 'dialog',
     label,
     initialFocus: () => closeButton,

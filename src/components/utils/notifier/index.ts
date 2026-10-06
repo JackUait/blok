@@ -1,7 +1,10 @@
 import { registerLayer } from '../dismissable-layer';
+import { syncPortalDirection } from '../portal-direction';
+import { prefersReducedMotion } from '../reduced-motion';
 import { promoteToTopLayer, removeFromTopLayer } from '../top-layer';
 
-import { alert, confirm, drawResolved, getWrapper, modalCleanups, prompt, setToastDismisser } from './draw';
+import { dissolve } from './dust';
+import { alert, confirm, drawResolved, drawSettled, getWrapper, modalCleanups, prompt, setToastDismisser } from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions, NotifierPosition } from './types';
 import { DEFAULT_NOTIFIER_POSITION } from './types';
 
@@ -22,6 +25,151 @@ const toastCleanups = new WeakMap<HTMLElement, () => void>();
 // Keyed by the caller's options object so `dismiss` closes only the toast that caller showed.
 const toastsByOptions = new WeakMap<NotifierOptions, HTMLElement>();
 const toastDismiss = new WeakMap<HTMLElement, () => void>();
+
+/**
+ * Cards waiting behind the front card, oldest first. Each is drawn only when it
+ * reaches the front: a detached element would read as closed to `isClosed`.
+ */
+const waiting: { options: NotifierOptions; mount: () => void }[] = [];
+
+// Cards dropped from the stack before anyone saw them; `isClosed` reports them closed.
+const dropped = new WeakSet<NotifierOptions>();
+
+/** Cards drawn behind the front one. More waiting cards do not add depth. */
+const MAX_BEHIND = 2;
+
+const isCard = (options: NotifierOptions): boolean =>
+  options.type !== 'confirm' && options.type !== 'prompt' && options.actions !== undefined && options.actions.length > 0;
+
+const frontCard = (): HTMLElement | null =>
+  document.querySelector<HTMLElement>('[data-blok-testid="notifier-container"] > [data-blok-toast="card"][data-state="open"]');
+
+/** How far each waiting card peeks out; matches --blok-toast-peek in notifier-card.css. */
+const PEEK_PX = 8;
+
+/** How much narrower each peek is on each side; matches the peek insets in notifier-card.css. */
+const PEEK_INSET_PX = 12;
+
+const px = (value: number): string => `${value}px`;
+
+/**
+ * The wrapper draws the waiting cards as edges peeking out behind the front one.
+ * The edges follow the front card's box: mid-swap the wrapper also spans the leaving card.
+ * Measured a microtask later, once a just-mounted card has its text.
+ */
+const syncBehind = (): void => {
+  const wrapper = document.querySelector<HTMLElement>('[data-blok-testid="notifier-container"]');
+
+  if (wrapper === null) {
+    return;
+  }
+  if (waiting.length === 0) {
+    wrapper.removeAttribute('data-blok-toast-behind');
+
+    return;
+  }
+  wrapper.setAttribute('data-blok-toast-behind', String(Math.min(waiting.length, MAX_BEHIND)));
+  queueMicrotask(() => {
+    const card = frontCard();
+
+    if (card === null || card.parentElement !== wrapper) {
+      return;
+    }
+    // Offsets, not rects: a rising card is translated, and a rect would include that.
+    wrapper.style.setProperty('--_blok-toast-peek-left', px(card.offsetLeft));
+    wrapper.style.setProperty('--_blok-toast-peek-right', px(wrapper.clientWidth - card.offsetLeft - card.offsetWidth));
+    wrapper.style.setProperty('--_blok-toast-peek-top', px(card.offsetTop));
+    wrapper.style.setProperty('--_blok-toast-peek-bottom', px(wrapper.clientHeight - card.offsetTop - card.offsetHeight));
+  });
+};
+
+/**
+ * Starts the next card in the leaving card's peek shape, so the stack reads as one
+ * deck even when the two cards differ in size. CSS unfolds it from there.
+ * @param leaving - the card being closed
+ * @param next - the card taking its place
+ * @param position - where the stack sits; a top stack peeks downward
+ */
+const shapeRise = (leaving: HTMLElement, next: HTMLElement, position: NotifierPosition): void => {
+  queueMicrotask(() => {
+    const shift = position.startsWith('top') ? PEEK_PX : -PEEK_PX;
+    const peekLeft = leaving.offsetLeft + PEEK_INSET_PX;
+    const peekRight = leaving.offsetLeft + leaving.offsetWidth - PEEK_INSET_PX;
+
+    next.style.setProperty('--_blok-toast-rise-left', px(peekLeft - next.offsetLeft));
+    next.style.setProperty('--_blok-toast-rise-right', px(next.offsetLeft + next.offsetWidth - peekRight));
+    next.style.setProperty('--_blok-toast-rise-bottom', px(next.offsetHeight - leaving.offsetHeight));
+    next.style.setProperty('--_blok-toast-rise-y', px(leaving.offsetTop + shift - next.offsetTop));
+  });
+};
+
+/** When a launching card reaches its spot; matches the spring's first crossing in blok-toast-launch (notifier-card.css). */
+const LAND_MS = 320;
+
+const NUDGE_MS = 460;
+
+// When each card started its launch, so a card queued mid-flight waits for it to land.
+const launchedAt = new WeakMap<HTMLElement, number>();
+
+// When each front card's dip ends.
+const nudgeEnds = new WeakMap<HTMLElement, number>();
+
+/**
+ * The deck forms behind the front card: the edges spring out and the card dips away from them.
+ * Both wait while a launching card is still on its way, or the edges would show where it lands.
+ * @param position - where the stack sits; a top stack peeks downward, so the card dips up
+ */
+const nudgeFront = (position: NotifierPosition): void => {
+  const card = frontCard();
+
+  if (card === null) {
+    return;
+  }
+  const now = Date.now();
+  const wait = Math.max(0, (launchedAt.get(card) ?? 0) + LAND_MS - now);
+
+  // Only the edge that just appeared reads this; a later write would shift the one already out.
+  if (waiting.length === 1) {
+    card.parentElement?.style.setProperty('--_blok-toast-peek-delay', `${wait}ms`);
+  }
+  // jsdom and old engines have no Web Animations API. Dips in a burst would add up, so one plays at a time.
+  if (prefersReducedMotion() || typeof card.animate !== 'function' || now < (nudgeEnds.get(card) ?? 0)) {
+    return;
+  }
+  nudgeEnds.set(card, now + wait + NUDGE_MS);
+  const dip = position.startsWith('top') ? -3 : 3;
+
+  // Added on top of its CSS animations, so an entrance still running is not cut.
+  card.animate(
+    [
+      { transform: 'none' },
+      { transform: `translateY(${dip}px) scale(0.985)`, offset: 0.3 },
+      { transform: 'none' },
+    ],
+    { duration: NUDGE_MS, delay: wait, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)', composite: 'add' }
+  );
+};
+
+const dropWaiting = (): void => {
+  waiting.splice(0).forEach((entry) => dropped.add(entry.options));
+  syncBehind();
+};
+
+/**
+ * @param options - the object passed to `show`
+ * @returns true when that card was still waiting and is now out of the stack
+ */
+const unqueue = (options: NotifierOptions): boolean => {
+  const index = waiting.findIndex((entry) => entry.options === options);
+
+  if (index === -1) {
+    return false;
+  }
+  waiting.splice(index, 1);
+  syncBehind();
+
+  return true;
+};
 
 /**
  * A pausable auto-dismiss timer. Instead of a fixed `setTimeout` (which keeps
@@ -182,16 +330,39 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
     }
 
     notify.setAttribute('data-state', 'closed');
-    dismissWithAnimation(notify, position);
 
-    // Release the Top Layer once the toast has finished animating out and no
-    // other notification remains in the wrapper. Registered after
-    // dismissWithAnimation so it runs *after* that handler removes the node.
-    notify.addEventListener('animationend', () => {
+    const next = waiting.shift();
+
+    if (next !== undefined) {
+      const hadFocus = notify.contains(document.activeElement);
+
+      next.mount();
+      syncBehind();
+
+      const risen = frontCard();
+
+      if (risen !== null) {
+        shapeRise(notify, risen, position);
+      }
+      if (hadFocus) {
+        frontCard()?.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]')?.focus();
+      }
+    }
+    // Release the Top Layer once the toast is gone and no other notification remains.
+    const release = (): void => {
+      syncBehind();
       if (wrapper.querySelector(NOTIFICATION_SELECTOR) === null) {
         removeFromTopLayer(wrapper);
       }
-    }, { once: true });
+    };
+
+    // The wrapper shrinks once the leaving card is out of the layout, so the peeks re-measure.
+    if (notify.getAttribute('data-blok-toast') === 'card' && dissolve(notify, release, syncBehind)) {
+      return;
+    }
+    dismissWithAnimation(notify, position);
+    // Registered after dismissWithAnimation so it runs *after* that handler removes the node.
+    notify.addEventListener('animationend', release, { once: true });
   };
 
   // A toast with actions waits for the user. Never pass Infinity instead:
@@ -248,10 +419,15 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
  * Appends the notification to the wrapper and, for transient toasts, starts
  * their auto-dismiss lifecycle.
  */
-const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number, autoDismiss: boolean, sticky: boolean): void => {
+const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number, autoDismiss: boolean, sticky: boolean, rise = false): void => {
   wrapper.appendChild(notify);
-  notify.classList.add(getSlideInClass(position));
-  notify.setAttribute('data-blok-bounce-in', 'true');
+  if (rise) {
+    notify.setAttribute('data-blok-toast-rise', 'true');
+  } else {
+    notify.classList.add(getSlideInClass(position));
+    notify.setAttribute('data-blok-bounce-in', 'true');
+    launchedAt.set(notify, Date.now());
+  }
 
   // Modal dialogs (confirm/prompt) stay until the user resolves them.
   if (!autoDismiss) {
@@ -265,8 +441,13 @@ const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: Notif
  * Show new notification
  * @param {NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions} options - notification options
  * @param {NotifierPosition} position - notification container position
+ * @param directionSource - element whose direction the toast takes
  */
-export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions, position: NotifierPosition = DEFAULT_NOTIFIER_POSITION): void => {
+export const show = (
+  options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions,
+  position: NotifierPosition = DEFAULT_NOTIFIER_POSITION,
+  directionSource?: Element | null
+): void => {
   if (!options.message) {
     return;
   }
@@ -276,7 +457,16 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
   const autoDismiss = options.type !== 'confirm' && options.type !== 'prompt';
   const sticky = options.actions !== undefined && options.actions.length > 0;
 
+  // The wrapper is shared by every editor on the page, so each toast carries its own direction.
   const buildNotify = (): HTMLElement => {
+    const notify = buildByType();
+
+    syncPortalDirection(notify, { source: directionSource });
+
+    return notify;
+  };
+
+  const buildByType = (): HTMLElement => {
     const type = options.type;
 
     if (type === 'confirm') {
@@ -293,6 +483,16 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
 
     return notify;
   };
+
+  if (isCard(options) && frontCard() !== null) {
+    waiting.push({ options, mount: () => appendNotify(prepare_(position), buildNotify(), position, time, autoDismiss, sticky, true) });
+    syncBehind();
+    nudgeFront(position);
+
+    return;
+  }
+
+  dropWaiting();
 
   const existing = wrapper.querySelector<HTMLElement>('[data-blok-testid]');
 
@@ -333,6 +533,9 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
  * @param options - the object passed to `show`
  */
 export const dismiss = (options: NotifierOptions): void => {
+  if (unqueue(options)) {
+    return;
+  }
   const notify = toastsByOptions.get(options);
 
   if (notify?.isConnected === true) {
@@ -345,6 +548,9 @@ export const dismiss = (options: NotifierOptions): void => {
  * @returns true once that toast was drawn and has closed; false while it is still mounting
  */
 export const isClosed = (options: NotifierOptions): boolean => {
+  if (dropped.has(options)) {
+    return true;
+  }
   const notify = toastsByOptions.get(options);
 
   return notify !== undefined && (!notify.isConnected || notify.getAttribute('data-state') !== 'open');
@@ -361,6 +567,9 @@ export const RESOLVED_HOLD_MS = 1600;
  * @param message - plain text, e.g. "Image restored"
  */
 export const resolve = (options: NotifierOptions, message: string): void => {
+  if (unqueue(options)) {
+    return;
+  }
   const notify = toastsByOptions.get(options);
 
   if (notify?.isConnected !== true || notify.hasAttribute('data-resolved')) {
@@ -370,9 +579,22 @@ export const resolve = (options: NotifierOptions, message: string): void => {
   window.setTimeout(() => toastDismiss.get(notify)?.(), RESOLVED_HOLD_MS);
 };
 
+/**
+ * Stop the busy spinner on the card shown with these options, so its actions work again.
+ * @param options - the object passed to `show`
+ */
+export const settle = (options: NotifierOptions): void => {
+  const notify = toastsByOptions.get(options);
+
+  if (notify?.isConnected === true) {
+    drawSettled(notify);
+  }
+};
+
 export const Notifier = {
   show,
   dismiss,
   resolve,
+  settle,
   isClosed,
 };

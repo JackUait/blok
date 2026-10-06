@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlockEvents } from '../../../../src/components/modules/blockEvents';
+import type { PageReferenceTrigger } from '../../../../src/components/modules/blockEvents/composers/pageReferenceTrigger';
+import { KeyboardNavigation } from '../../../../src/components/modules/blockEvents/composers/keyboardNavigation';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { BlokEventMap } from '../../../../src/components/events';
@@ -97,6 +99,9 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     Tools: {
       blockTools: new Map(),
     } as unknown as BlokModules['Tools'],
+    ReadOnly: {
+      isEnabled: false,
+    } as unknown as BlokModules['ReadOnly'],
     YjsManager: {
       stopCapturing: vi.fn(),
       startSubStep: vi.fn(),
@@ -268,7 +273,7 @@ describe('BlockEvents', () => {
       await copySelectedBlocks.mock.results[0].value;
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(copySelectedBlocks).toHaveBeenCalledWith(event);
+      expect(copySelectedBlocks).toHaveBeenCalledWith(event, { cut: true });
       expect(deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
       expect(setToBlock).toHaveBeenCalledWith(insertedBlock, 'start-position');
       expect(clearSelection).toHaveBeenCalledWith(event);
@@ -325,6 +330,24 @@ describe('BlockEvents', () => {
       const event = createKeyboardEvent({ keyCode: keyCodes.TAB });
 
       expect(() => blockEvents.keydown(event)).not.toThrow();
+    });
+
+    it('lets Tab leave when the page picker closes', () => {
+      const blockEvents = createBlockEvents();
+      const handlePickerKeydown = vi.fn(() => false);
+      const handleTab = vi.spyOn(KeyboardNavigation.prototype, 'handleTab').mockImplementation(() => {});
+
+      vi.spyOn(blockEvents, 'pageReferenceTrigger', 'get').mockReturnValue({
+        opened: true,
+        handleKeydown: handlePickerKeydown,
+      } as unknown as PageReferenceTrigger);
+      const event = createKeyboardEvent({ key: 'Tab', keyCode: keyCodes.TAB });
+
+      blockEvents.keydown(event);
+
+      expect(handleTab).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(handlePickerKeydown).toHaveBeenCalledWith(event);
     });
 
     it.each([
@@ -922,12 +945,8 @@ describe('BlockEvents', () => {
         expect(boundaryTimestamp).toBeGreaterThan(0);
       });
 
-      it('checks and handles boundary on non-boundary character', () => {
-        let boundaryChecked = false;
-
-        const checkAndHandleBoundarySpy = vi.fn(() => {
-          boundaryChecked = true;
-        });
+      it('does not close a timed-out boundary once the character is already in the DOM', () => {
+        const checkAndHandleBoundarySpy = vi.fn();
 
         const blockEvents = createBlockEvents({
           YjsManager: {
@@ -945,8 +964,9 @@ describe('BlockEvents', () => {
 
         blockEvents.input(event);
 
-        expect(checkAndHandleBoundarySpy).toHaveBeenCalled();
-        expect(boundaryChecked).toBe(true);
+        // The keyboard controller closes it on beforeinput. Here the character's own write is
+        // already buffered, so a split would put it on the wrong side of the boundary.
+        expect(checkAndHandleBoundarySpy).not.toHaveBeenCalled();
       });
 
       it('clears boundary when non-boundary follows boundary quickly', () => {

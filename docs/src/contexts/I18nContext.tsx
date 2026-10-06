@@ -11,6 +11,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { type Locale, defaultLocale, getTranslation, localeNames } from '../i18n';
 import { DEFAULT_LOCALE, localizedPath, servedPath, splitLocalePath } from '../seo/locales';
 import { getRouteMetadata } from '../seo/route-metadata';
+import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics';
 
 interface I18nContextType {
   locale: Locale;
@@ -85,6 +86,25 @@ export const useI18n = (): I18nContextType => {
     throw new Error('useI18n must be used within an I18nProvider');
   }
   return context;
+};
+
+/**
+ * A reader picking a language. Every language switch uses this, so they all
+ * report the same `select_language` event. Programmatic callers keep using
+ * `setLocale`, which records nothing.
+ */
+export const useSelectLocale = (): ((newLocale: Locale) => void) => {
+  const { locale, setLocale } = useI18n();
+  return useCallback(
+    (newLocale: Locale) => {
+      // Re-picking the active locale is a dismissal, not a language change.
+      if (newLocale !== locale) {
+        trackEvent(ANALYTICS_EVENTS.selectLanguage, { locale: newLocale });
+      }
+      setLocale(newLocale);
+    },
+    [locale, setLocale],
+  );
 };
 
 /** The locale the current URL resolves to — what the app feeds `I18nProvider`. */

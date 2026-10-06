@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 /**
  * Every path that moves blocks — not only the pointer drag — keeps a toggle's
@@ -63,6 +64,7 @@ const createBlok = async (page: Page, blocks: BlockData[]): Promise<void> => {
     window.blokInstance = blok;
     await blok.isReady;
   }, { holder: HOLDER_ID, blokBlocks: blocks });
+  await openFixtureToggles(page, { blocks });
 };
 
 const gap = async (page: Page): Promise<void> => {

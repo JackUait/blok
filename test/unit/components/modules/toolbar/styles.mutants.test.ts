@@ -27,7 +27,7 @@ describe('getToolbarStyles mutants', () => {
       toolbarOpened: 'block',
       toolbarClosed: 'hidden',
       content: 'relative mx-auto max-w-blok-content',
-      actions: 'absolute flex opacity-0 pr-[5px] right-full mobile:right-auto group-data-[blok-rtl=true]:right-auto group-data-[blok-rtl=true]:left-[calc(-1*(var(--spacing-toolbox-btn)))] mobile:group-data-[blok-rtl=true]:ml-0 mobile:group-data-[blok-rtl=true]:mr-auto mobile:group-data-[blok-rtl=true]:pr-0 mobile:group-data-[blok-rtl=true]:pl-[10px]',
+      actions: 'absolute flex opacity-0 pe-[5px] end-full mobile:end-auto',
       actionsOpened: 'opacity-100',
       settingsTogglerHidden: 'hidden',
     });

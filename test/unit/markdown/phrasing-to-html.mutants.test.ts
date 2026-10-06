@@ -1,11 +1,8 @@
 /**
  * PROVEN EQUIVALENT (no test can distinguish these mutants):
  *
- * - L98 `'inlineMath'` -> `""` and L99 `'footnoteReference'` -> `""`: the
- *   renamed cases stop matching and fall to `default`, which returns the
- *   same ''.
- * - L99 case-label swap between the two: both labels share one body, so any
- *   relabeling routes to the same '' (or the identical default).
+ * - `'footnoteReference'` -> `""`: the renamed case stops matching and falls
+ *   to `default`, which returns the same ''.
  * - L100/L103 `return ''` -> `return ""`: the two literals are the same string.
  * - L102 `default:` -> `default:`: identity.
  */

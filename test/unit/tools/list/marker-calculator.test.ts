@@ -18,6 +18,7 @@ describe('ListMarkerCalculator', () => {
 
     const listItemEl = document.createElement('div');
     listItemEl.setAttribute('data-list-style', style);
+    listItemEl.setAttribute('data-list-depth', String(depth));
     if (start !== 1) {
       listItemEl.setAttribute('data-list-start', String(start));
     }
@@ -25,7 +26,7 @@ describe('ListMarkerCalculator', () => {
     const roleItem = document.createElement('div');
     roleItem.setAttribute('role', 'listitem');
     if (depth > 0) {
-      roleItem.style.marginLeft = `${depth * 27}px`;
+      roleItem.style.marginInlineStart = `${depth * 27}px`;
     }
     listItemEl.appendChild(roleItem);
 
@@ -34,7 +35,7 @@ describe('ListMarkerCalculator', () => {
       name,
       holder: {
         querySelector: (selector: string) => {
-          if (selector === '[data-list-style]') return listItemEl;
+          if (selector === '[data-list-style]' || selector === '[data-list-depth]') return listItemEl;
           if (selector === '[role="listitem"]') return roleItem;
           return null;
         },
@@ -207,7 +208,7 @@ describe('ListMarkerCalculator', () => {
   });
 
   describe('getBlockDepth', () => {
-    it('returns 0 for blocks with no margin-left', () => {
+    it('returns 0 for a root-level item', () => {
       const block = createMockBlock({ depth: 0 });
       const blocksAPI = createMockBlocksAPI([]);
       const calc = new ListMarkerCalculator(blocksAPI);
@@ -215,7 +216,7 @@ describe('ListMarkerCalculator', () => {
       expect(calc.getBlockDepth(block)).toBe(0);
     });
 
-    it('calculates depth from margin-left', () => {
+    it('reads the depth the list tool stamped on its wrapper', () => {
       const block = createMockBlock({ depth: 2 });
       const blocksAPI = createMockBlocksAPI([]);
       const calc = new ListMarkerCalculator(blocksAPI);

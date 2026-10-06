@@ -48,6 +48,7 @@ const ROLES: Record<string, string> = {
   'control-sm': '4',
   mark: '2',
   floor: '4',
+  table: '2',
 };
 
 describe('radius primitives', () => {

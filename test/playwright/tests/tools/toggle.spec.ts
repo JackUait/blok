@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
@@ -72,6 +72,15 @@ const createToggleData = (text: string, extra: Record<string, unknown> = {}): Ou
   ],
 });
 
+/**
+ * Open the first toggle the way another tab or a host would, without a click,
+ * since a loaded toggle starts collapsed.
+ */
+const expandToggle = async (page: Page): Promise<void> => {
+  await page.evaluate(() => window.blokInstance?.blocks.getBlockByIndex(0)?.call('expand'));
+  await expect(page.locator('[data-blok-toggle-open]').first()).toHaveAttribute('data-blok-toggle-open', 'true');
+};
+
 const createToggleWithChild = async (page: Page): Promise<void> => {
   await resetBlok(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
@@ -125,12 +134,12 @@ test.describe('Toggle Tool', () => {
       await expect(arrow).toHaveAttribute('tabindex', '0');
     });
 
-    test('defaults to open (data-blok-toggle-open="true") in edit mode when isOpen not in saved data', async ({ page }) => {
-      await createBlok(page, createToggleData('Open by default'));
+    test('loads collapsed (data-blok-toggle-open="false") in edit mode when nothing is stored for it', async ({ page }) => {
+      await createBlok(page, createToggleData('Collapsed by default'));
 
       const wrapper = page.locator('[data-blok-toggle-open]');
 
-      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
     test('renders with isOpen=false when saved data specifies it', async ({ page }) => {
@@ -141,12 +150,12 @@ test.describe('Toggle Tool', () => {
       await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
-    test('renders with isOpen=true when saved data specifies it', async ({ page }) => {
+    test('ignores isOpen=true in saved data and loads collapsed', async ({ page }) => {
       await createBlok(page, createToggleData('Explicitly open', { isOpen: true }));
 
       const wrapper = page.locator('[data-blok-toggle-open]');
 
-      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
     test('renders children container', async ({ page }) => {
@@ -161,6 +170,7 @@ test.describe('Toggle Tool', () => {
   test.describe('expand and collapse', () => {
     test('arrow has aria-label="Collapse" and aria-expanded="true" when open', async ({ page }) => {
       await createBlok(page, createToggleData('Open toggle'));
+      await expandToggle(page);
 
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
 
@@ -179,6 +189,7 @@ test.describe('Toggle Tool', () => {
 
     test('clicking arrow collapses an open toggle', async ({ page }) => {
       await createBlok(page, createToggleData('Collapsible'));
+      await expandToggle(page);
 
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
       const wrapper = page.locator('[data-blok-toggle-open]');
@@ -205,6 +216,7 @@ test.describe('Toggle Tool', () => {
 
     test('aria attributes update after collapsing', async ({ page }) => {
       await createBlok(page, createToggleData('Aria update test'));
+      await expandToggle(page);
 
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
 
@@ -227,6 +239,7 @@ test.describe('Toggle Tool', () => {
 
     test('children are hidden when toggle is collapsed', async ({ page }) => {
       await createToggleWithChild(page);
+      await expandToggle(page);
 
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
 
@@ -243,10 +256,12 @@ test.describe('Toggle Tool', () => {
     test('children are visible when toggle is expanded', async ({ page }) => {
       await createToggleWithChild(page);
 
-      // Starts expanded in edit mode
-      await expect(page.locator('[data-blok-toggle-open]')).toHaveAttribute('data-blok-toggle-open', 'true');
-
       const child = page.locator(PARAGRAPH_BLOCK_SELECTOR).filter({ hasText: 'Child paragraph' });
+
+      await expect(page.locator('[data-blok-toggle-open]')).toHaveAttribute('data-blok-toggle-open', 'false');
+      await expect(child).not.toBeVisible();
+
+      await page.locator(TOGGLE_ARROW_SELECTOR).click();
 
       await expect(child).toBeVisible();
     });
@@ -255,6 +270,7 @@ test.describe('Toggle Tool', () => {
   test.describe('body placeholder', () => {
     test('body placeholder is visible when toggle is open with no children', async ({ page }) => {
       await createBlok(page, createToggleData('Empty open toggle'));
+      await expandToggle(page);
 
       const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);
 
@@ -262,8 +278,31 @@ test.describe('Toggle Tool', () => {
       await expect(placeholder).toHaveText('Empty toggle. Click to add a block, or drag blocks here.');
     });
 
+    // The placeholder stands in for the first child; it is not a block, so it
+    // shows no block handles. Reached from the toggle's own title line.
+    test('shows no block handles over the body placeholder', async ({ page }) => {
+      await createBlok(page, createToggleData('Empty open toggle'));
+      await expandToggle(page);
+
+      const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);
+      const plus = page.getByTestId('plus-button');
+
+      await page.getByText('Empty open toggle').hover();
+      await expect(plus).toBeVisible();
+
+      const box = await placeholder.boundingBox();
+
+      if (box === null) {
+        throw new Error('no placeholder box');
+      }
+
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 6 });
+      await expect(plus).toBeHidden();
+    });
+
     test('body placeholder is hidden when toggle is collapsed', async ({ page }) => {
       await createBlok(page, createToggleData('Collapsible for placeholder'));
+      await expandToggle(page);
 
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
       const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);
@@ -282,6 +321,40 @@ test.describe('Toggle Tool', () => {
 
       await expect(placeholder).not.toBeVisible();
     });
+
+    test('hover fill is 8px shorter than the space the placeholder takes, and clicking it does not shift layout', async ({ page }) => {
+      await createBlok(page, createToggleData('Measured toggle'));
+      await expandToggle(page);
+
+      const toggle = page.locator(TOGGLE_BLOCK_SELECTOR);
+      const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);
+
+      await expect(placeholder).toBeVisible();
+
+      const fill = await placeholder.evaluate((el) => {
+        const style = getComputedStyle(el);
+
+        return {
+          height: el.getBoundingClientRect().height,
+          lineHeight: parseFloat(style.lineHeight),
+          marginTop: parseFloat(style.marginTop),
+          marginBottom: parseFloat(style.marginBottom),
+        };
+      });
+
+      expect(fill.height).toBeCloseTo(fill.lineHeight + 8, 0);
+      expect(fill.marginTop + fill.marginBottom).toBe(8);
+
+      const heightBefore = (await toggle.boundingBox())?.height ?? 0;
+
+      await placeholder.click();
+      await expect(page.locator(`${TOGGLE_CHILDREN_SELECTOR} [data-blok-component="paragraph"]`)).toHaveCount(1);
+      await expect(placeholder).not.toBeVisible();
+
+      const heightAfter = (await toggle.boundingBox())?.height ?? 0;
+
+      expect(heightAfter).toBeCloseTo(heightBefore, 0);
+    });
   });
 
   test.describe('save data', () => {
@@ -296,8 +369,9 @@ test.describe('Toggle Tool', () => {
       expect((saved?.blocks[0].data as { text: string }).text).toBe('Saved text');
     });
 
-    test('save() preserves isOpen state when collapsed', async ({ page }) => {
+    test('save() never writes isOpen after collapsing', async ({ page }) => {
       await createBlok(page, createToggleData('Collapsible save'));
+      await expandToggle(page);
 
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
 
@@ -307,16 +381,18 @@ test.describe('Toggle Tool', () => {
       const saved = await page.evaluate(async () => window.blokInstance?.save());
 
       expect(saved).toBeDefined();
-      expect((saved?.blocks[0].data as { isOpen: boolean }).isOpen).toBe(false);
+      expect(saved?.blocks[0].data).not.toHaveProperty('isOpen');
     });
 
-    test('save() preserves isOpen state when expanded', async ({ page }) => {
+    test('save() never writes isOpen after expanding', async ({ page }) => {
       await createBlok(page, createToggleData('Expanded save'));
+      await page.locator(TOGGLE_ARROW_SELECTOR).click();
+      await expect(page.locator('[data-blok-toggle-open]')).toHaveAttribute('data-blok-toggle-open', 'true');
 
       const saved = await page.evaluate(async () => window.blokInstance?.save());
 
       expect(saved).toBeDefined();
-      expect((saved?.blocks[0].data as { isOpen: boolean }).isOpen).toBe(true);
+      expect(saved?.blocks[0].data).not.toHaveProperty('isOpen');
     });
 
     test('round-trip preserves toggle text and open state', async ({ page }) => {
@@ -355,6 +431,8 @@ test.describe('Toggle Tool', () => {
       const toggle = page.locator(TOGGLE_BLOCK_SELECTOR);
 
       await expect(toggle).toBeVisible();
+      // A toggle created in this tab starts open for its creator.
+      await expect(page.locator('[data-blok-toggle-open]')).toHaveAttribute('data-blok-toggle-open', 'true');
     });
 
     test('toolbox item for toggle is labelled "Toggle list"', async ({ page }) => {
@@ -419,8 +497,7 @@ test.describe('Toggle Tool', () => {
   test.describe('keyboard behavior', () => {
     test('Enter at end of open toggle creates a child paragraph inside the toggle', async ({ page }) => {
       await createBlok(page, createToggleData('Parent toggle'));
-
-      await expect(page.locator('[data-blok-toggle-open]')).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expandToggle(page);
 
       const content = page.locator(TOGGLE_CONTENT_SELECTOR);
 
@@ -459,6 +536,43 @@ test.describe('Toggle Tool', () => {
     });
   });
 
+  test.describe('personal open state', () => {
+    test('a toggle opened here stays open after a reload, and a fresh browser sees it collapsed', async ({ page, browser }) => {
+      // The document id is the storage scope of the personal state.
+      const data: OutputData = {
+        id: 'toggle-personal-round-trip',
+        blocks: [{ id: 'rt', type: 'toggle', data: { text: 'Round trip toggle' } }],
+      };
+      const wrapper = page.locator('[data-blok-toggle-open]');
+
+      await createBlok(page, data);
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'false');
+      await page.locator(TOGGLE_ARROW_SELECTOR).click();
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect.poll(() => page.evaluate(() => localStorage.getItem('blok:view:toggle-personal-round-trip:rt:open'))).not.toBeNull();
+
+      await page.reload();
+      await page.waitForFunction(() => typeof window.Blok === 'function');
+      await createBlok(page, data);
+
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'true');
+
+      const freshContext = await browser.newContext();
+
+      try {
+        const freshPage = await freshContext.newPage();
+
+        await freshPage.goto(TEST_PAGE_URL);
+        await freshPage.waitForFunction(() => typeof window.Blok === 'function');
+        await createBlok(freshPage, data);
+
+        await expect(freshPage.locator('[data-blok-toggle-open]')).toHaveAttribute('data-blok-toggle-open', 'false');
+      } finally {
+        await freshContext.close();
+      }
+    });
+  });
+
   test.describe('read-only mode', () => {
     test('toggle renders with arrow visible in read-only mode', async ({ page }) => {
       await createBlok(page, createToggleData('Read-only toggle'), true);
@@ -472,12 +586,12 @@ test.describe('Toggle Tool', () => {
       await expect(arrow).toBeVisible();
     });
 
-    test('toggle defaults to open (isOpen=true) in read-only mode when isOpen not in saved data', async ({ page }) => {
-      await createBlok(page, createToggleData('Read-only open'), true);
+    test('toggle loads collapsed in read-only mode when nothing is stored for it', async ({ page }) => {
+      await createBlok(page, createToggleData('Read-only collapsed'), true);
 
       const wrapper = page.locator('[data-blok-toggle-open]');
 
-      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
     test('clicking arrow in read-only mode still toggles open state', async ({ page }) => {

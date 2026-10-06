@@ -146,6 +146,21 @@
 
 .blok-darkroom__stage:active { cursor: grabbing; }
 
+.blok-darkroom__viewport {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
+/* Zoomed, the crop is not editable: Z or Cmd/Ctrl+0 goes back to fit. */
+.blok-darkroom__surface[data-zoomed] [data-handle] {
+  display: none;
+}
+
+.blok-darkroom__surface[data-space] [data-role="markup-layer"] {
+  cursor: grab;
+}
+
 .blok-darkroom__photo {
   position: absolute;
   left: 0;
@@ -169,6 +184,12 @@
 
 .blok-darkroom__surface[data-peek] .blok-darkroom__frame {
   box-shadow: 0 0 0 0 transparent, 0 0 0 9999px var(--blok-darkroom-dim-off);
+}
+
+/* Hold M: the original, without marks. The look is lifted in index.ts, where it is an inline style. */
+.blok-darkroom__surface[data-original] [data-role="image-markup"],
+.blok-darkroom__surface[data-original] [data-role="markup-layer"] {
+  visibility: hidden;
 }
 
 .blok-darkroom__grid {
@@ -262,6 +283,8 @@
   width: min(360px, 100%);
 }
 
+.blok-darkroom__dial-box[hidden] { display: none; }
+
 .blok-darkroom__dial-reset {
   position: absolute;
   top: -4px;
@@ -328,7 +351,19 @@
   visibility: hidden;
 }
 
-.blok-darkroom__dock > .blok-darkroom__tabs { grid-row: 2; }
+.blok-darkroom__dock > .blok-darkroom__tabs { grid-row: 2; grid-column: 1; }
+
+/* Shares the tabs' cell, pinned to the right edge. Without grid-column on both, auto-placement pushes the tabs into a new column. */
+.blok-darkroom__dock > .blok-darkroom__help {
+  grid-row: 2;
+  grid-column: 1;
+  justify-self: end;
+  align-self: center;
+  /* The 20px icon plus padding of the other icon buttons; equal sides make the pill radius a circle. */
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
 
 .blok-darkroom__panel {
   display: flex;
@@ -632,6 +667,15 @@
   transform: translateX(-50%);
 }
 
+.blok-darkroom__filter-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-3);
+  min-width: 0;
+  max-width: 100%;
+}
+
 .blok-darkroom__filters {
   display: flex;
   gap: var(--blok-space-2);
@@ -645,9 +689,40 @@
 
 .blok-darkroom__filters::-webkit-scrollbar { display: none; }
 
+/* Auto margins centre a short row; justify-content: center would clip an overflowing one at the start. */
+.blok-darkroom__filters > :first-child { margin-inline-start: auto; }
+
+.blok-darkroom__filters > :last-child { margin-inline-end: auto; }
+
+.blok-darkroom__filter-divider {
+  flex: none;
+  width: 1px;
+  margin: var(--blok-space-2) var(--blok-space-1) var(--blok-space-6);
+  background: var(--blok-darkroom-pill-edge);
+}
+
+/* Lighter than the mode tabs below, so the two rows never read as the same control. */
+.blok-darkroom__tabs--families {
+  display: flex;
+  max-width: 100%;
+  padding: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.blok-darkroom__tabs--families::-webkit-scrollbar { display: none; }
+
+.blok-darkroom__tabs--families > :first-child { margin-inline-start: auto; }
+
+.blok-darkroom__tabs--families > :last-child { margin-inline-end: auto; }
+
 .blok-darkroom__filter {
   appearance: none;
   flex: none;
+  width: 72px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -666,6 +741,20 @@
   transition: background-color 120ms ease, color 120ms ease;
 }
 
+.blok-darkroom__filter[hidden] { display: none; }
+
+.blok-darkroom__filter-name {
+  display: -webkit-box;
+  max-width: 100%;
+  min-height: 2.4em;
+  overflow: hidden;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .blok-darkroom__filter:hover { color: var(--blok-darkroom-ink); }
 
 .blok-darkroom__filter[data-active="true"] {
@@ -682,7 +771,88 @@
   pointer-events: none;
 }
 
+/* Original plus five looks must fit a 390px phone. */
+@media (max-width: 480px) {
+  .blok-darkroom__filters { gap: var(--blok-space-1); }
+  .blok-darkroom__filter { width: 56px; }
+  .blok-darkroom__filter-thumb { width: 48px; height: 48px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .blok-darkroom__tab,
   .blok-darkroom__filter { transition: none; }
+}
+
+/* The ? sheet: one dark-glass card in the middle of the darkroom. It is a top-layer
+   popover, so every box property is restated at the specificity of main.css's
+   [data-blok-top-layer][popover] reset (see the audio cover picker). */
+.blok-darkroom__shortcuts,
+.blok-darkroom__shortcuts[data-blok-top-layer][popover] {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: min(720px, calc(100vw - 32px));
+  height: fit-content;
+  max-height: calc(100vh - 64px);
+  overflow: auto;
+  margin: auto;
+  padding: var(--blok-space-4) var(--blok-space-5);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--blok-space-2) var(--blok-space-6);
+  border: var(--blok-border-width-hairline) solid var(--blok-darkroom-pill-edge);
+  border-radius: var(--blok-radius-surface);
+  background: var(--blok-darkroom-bg-center);
+  box-shadow: 0 12px 40px var(--blok-darkroom-pill-shadow);
+  color: var(--blok-darkroom-ink);
+  font-size: 13px;
+  outline: none;
+}
+
+.blok-darkroom__shortcuts-title {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.blok-darkroom__shortcuts-group h3 {
+  margin: var(--blok-space-2) 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blok-darkroom-ink-faint);
+}
+
+.blok-darkroom__shortcuts-group dl {
+  margin: 0;
+}
+
+.blok-darkroom__shortcuts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blok-space-3);
+  padding: var(--blok-space-1) 0;
+}
+
+.blok-darkroom__shortcuts-row dt {
+  color: var(--blok-darkroom-ink-muted);
+}
+
+.blok-darkroom__shortcuts-row dd {
+  display: flex;
+  gap: var(--blok-space-1);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.blok-darkroom__shortcuts-row kbd {
+  min-width: 20px;
+  padding: 0 var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
+  background: var(--blok-darkroom-btn-hover-bg);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
 }

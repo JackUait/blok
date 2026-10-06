@@ -48,6 +48,16 @@ export declare class ColumnList implements BlockTool {
    */
   static keepsChildrenOnEnter?: boolean;
 
+  /**
+   * Deleting it deletes everything inside it
+   */
+  static deletesChildren?: boolean;
+
+  /**
+   * Pure layout: no toolbar, no selection, no indent for what is inside
+   */
+  static isLayout?: boolean;
+
   constructor(options: ColumnListConstructorOptions);
 
   /**

@@ -3,6 +3,7 @@ import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants';
 import { announce } from '../../utils/announcer';
+import { getElementDirection, logicalSide } from '../../utils/direction';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 import { hide as hideTooltip } from '../../utils/tooltip';
 
@@ -25,11 +26,14 @@ import { findScrollableAncestor } from './utils/findScrollableAncestor';
 import { ListItemDescendants } from './utils/ListItemDescendants';
 import { getListItemDepth } from './utils/depthUtils';
 import { resolveStructuralParent } from './utils/structuralParent';
+import { acceptsChildren } from '../../utils/child-tools';
 import { findOwn } from '../../utils/own-element';
+import { linkToBlock } from '../../utils/copy-as-link';
+import { isPagePointer } from '../../../shared/page-pointer';
 import {
   areSourceRootsChildrenOf,
   isCollapsedToggleBlock,
-  isOpenToggleBlock,
+  takesDropAsFirstChild,
 } from './utils/toggleState';
 import {
   hasLogicalSourceAncestor,
@@ -52,6 +56,8 @@ export class DragController extends Module {
   private a11y: DragA11y | null = null;
   private autoScroll: AutoScroll | null = null;
   private springLoader: ToggleSpringLoader = new ToggleSpringLoader();
+  /** The named drop zone (a tab pill) that is the current drop target. */
+  private dropZone: HTMLElement | null = null;
   private listItemDescendants: ListItemDescendants | null = null;
   private boundHandlers: BoundHandlers | null = null;
   /**
@@ -88,8 +94,11 @@ export class DragController extends Module {
       return; // Already initialized
     }
 
+    const { UI } = this.Blok;
+
     this.targetDetector = new DropTargetDetector(
-      { contentRect: this.Blok.UI.contentRect },
+      // A getter: the rect changes on resize and direction flips after init.
+      { get contentRect() { return UI.contentRect; } },
       this.Blok.BlockManager,
       {
         isColumnsEnabled: () => {
@@ -97,13 +106,39 @@ export class DragController extends Module {
 
           return blockTools.has('column_list') && blockTools.has('column');
         },
+        controlsOnRight: () => this.Blok.Toolbar.isDockedPhysicallyRight,
       }
     );
 
     this.operations = new DragOperations(
       this.Blok.BlockManager,
       this.Blok.YjsManager,
-      this.Blok.BlockSelection
+      this.Blok.BlockSelection,
+      (toolName, data) => {
+        // The copy lands in this document: another entry point to the same page.
+        if (isPagePointer(toolName, data)) {
+          return null;
+        }
+
+        const tool = this.Blok.Tools.blockTools.get(toolName);
+        const copy = tool?.duplicateData?.(data);
+
+        if (copy !== undefined) {
+          return { tool: toolName, data: copy };
+        }
+
+        const link = tool?.copyAsLink(data);
+
+        if (link === undefined) {
+          return null;
+        }
+
+        if (link === null) {
+          return false;
+        }
+
+        return linkToBlock(link, this.Blok.Tools.defaultTool);
+      }
     );
 
     this.a11y = new DragA11y(
@@ -399,6 +434,7 @@ export class DragController extends Module {
       currentState.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
       this.clearContentIndicatorOffsets(currentState.targetBlock);
     }
+    this.clearDropZone();
 
     // Find element under cursor (temporarily hide preview)
     this.preview.hide();
@@ -438,13 +474,14 @@ export class DragController extends Module {
       dropTarget.edge === 'top' || dropTarget.edge === 'bottom'
         ? dropTarget.edge
         : null;
+    const appendInto = dropTarget.zone !== undefined;
     const hasValidMoveDestination = hasLiveParticipants && (
       verticalEdge !== null
         ? isDuplicate
           || resolveMoveDestination(
             blocks,
             sourceBlocks,
-            dropTarget.block,
+            appendInto ? this.lastStayingDescendant(dropTarget.block, sourceBlocks) : dropTarget.block,
             verticalEdge
           ) !== null
         : isMoveTargetValid(blocks, sourceBlocks, dropTarget.block)
@@ -460,6 +497,15 @@ export class DragController extends Module {
     this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge, dropTarget.parentId);
     // Spring-load closed toggles: auto-expand after 500ms hover
     this.springLoader.update(dropTarget.block);
+
+    // A named zone shows the indicator itself: the block it names may be hidden.
+    if (dropTarget.zone !== undefined) {
+      this.dropZone = dropTarget.zone;
+      dropTarget.zone.setAttribute(DATA_ATTR.dropIntoActive, '');
+      this.announceDropPosition(dropTarget.block, 'bottom', sourceBlocks, isDuplicate, true);
+
+      return;
+    }
 
     // Show drop indicator
     dropTarget.block.holder.setAttribute('data-drop-indicator', dropTarget.edge);
@@ -483,25 +529,43 @@ export class DragController extends Module {
     // marks an insertion BETWEEN them rather than at one column's edge.
     this.centerSideIndicatorInGutter(dropTarget.block, dropTarget.edge);
 
-    // Announce drop position change to screen readers. A bottom drop beside a
-    // toggle lands after its last descendant, so announce against that block.
-    if (this.a11y) {
-      const announceTarget = verticalEdge === null
-        ? dropTarget.block
-        : this.resolveMoveAnchor(
-          dropTarget.block,
-          verticalEdge,
-          this.resolveParentForDrop(dropTarget.block, verticalEdge, sourceBlocks),
-          sourceBlocks
-        );
+    this.announceDropPosition(dropTarget.block, dropTarget.edge, sourceBlocks, isDuplicate, false);
+  }
 
-      this.a11y.announceDropPosition(
-        announceTarget,
-        dropTarget.edge,
-        sourceBlocks,
-        isDuplicate
-      );
+  /**
+   * Announces the drop position to screen readers. A bottom drop beside a
+   * toggle lands after its last descendant, so announce against that block.
+   */
+  private announceDropPosition(
+    targetBlock: Block,
+    edge: 'top' | 'bottom' | 'left' | 'right',
+    sourceBlocks: Block[],
+    isDuplicate: boolean,
+    appendInto: boolean
+  ): void {
+    if (!this.a11y) {
+      return;
     }
+
+    const announceTarget = edge === 'left' || edge === 'right'
+      ? targetBlock
+      : this.resolveMoveAnchor(
+        targetBlock,
+        edge,
+        this.resolveParentForDrop(targetBlock, edge, sourceBlocks, undefined, appendInto),
+        sourceBlocks,
+        appendInto
+      );
+
+    this.a11y.announceDropPosition(announceTarget, edge, sourceBlocks, isDuplicate);
+  }
+
+  /**
+   * Removes the drop-target mark from the named drop zone, if one is marked.
+   */
+  private clearDropZone(): void {
+    this.dropZone?.removeAttribute(DATA_ATTR.dropIntoActive);
+    this.dropZone = null;
   }
 
   /**
@@ -541,11 +605,12 @@ export class DragController extends Module {
   }
 
   /**
-   * Aligns the horizontal drop indicator with a list item: `--drop-indicator-
-   * side-left` to the item's start (the marker, at the predicted nesting depth)
-   * and `--drop-indicator-side-right` to the text end. The full indent is baked
-   * into the left offset, so `--drop-indicator-depth` is zeroed to cancel the
-   * CSS depth multiplier. No-op for non-list blocks.
+   * Aligns the horizontal drop indicator with a list item: one side offset to
+   * the item's start (the marker, at the predicted nesting depth) and the other
+   * to the text end — `--drop-indicator-side-left` is the start in LTR and the
+   * text end in RTL. The full indent is baked into the start offset, so
+   * `--drop-indicator-depth` is zeroed to cancel the CSS depth multiplier.
+   * No-op for non-list blocks.
    *
    * @param block - The drop target block
    * @param holderRect - The block holder's bounding rect (already measured)
@@ -563,53 +628,59 @@ export class DragController extends Module {
     }
 
     // The blue line starts at the very beginning of the list item — the marker
-    // (bullet/number/checkbox) — which is the left edge of the listitem element.
-    // It falls back to the text container if the listitem wrapper is missing.
+    // (bullet/number/checkbox) — which is the inline-start edge of the listitem
+    // element. It falls back to the text container if the listitem wrapper is missing.
     const item = findOwn(block.holder, '[role="listitem"]');
-    const startRect = item instanceof HTMLElement
-      ? item.getBoundingClientRect()
-      : container.getBoundingClientRect();
+    const startElement = item instanceof HTMLElement ? item : container;
+    const startRect = startElement.getBoundingClientRect();
+    const isRtl = getElementDirection(startElement) === 'rtl';
 
     const containerRect = container.getBoundingClientRect();
 
     // Shift the line to the PREDICTED depth relative to the target item's own
-    // depth. The shift is signed: a deeper predicted depth pushes the line right
-    // (nest), a shallower one (e.g. a block landing at root next to a nested
-    // item) pulls it back toward the editor edge — without this, the indicator
-    // would tuck under the nested item yet the block would land at root, the
-    // exact indicator-vs-drop mismatch this whole path exists to prevent.
+    // depth. The shift is signed: a deeper predicted depth pushes the line toward
+    // the inline end (nest), a shallower one (e.g. a block landing at root next to
+    // a nested item) pulls it back toward the editor edge — without this, the
+    // indicator would tuck under the nested item yet the block would land at root,
+    // the exact indicator-vs-drop mismatch this whole path exists to prevent.
     const targetDepth = getListItemDepth(block) ?? 0;
     const depthShift = (predictedDepth - targetDepth) * INDENT_PER_LEVEL;
 
-    const textRight = this.measureTextRight(container) ?? containerRect.right;
-    const left = Math.max(0, startRect.left - holderRect.left + depthShift);
-    const right = Math.max(0, holderRect.right - textRight);
+    const textRect = this.measureTextRect(container);
+    // Distances from the holder edges: `start` to where the line begins (the
+    // marker side), `end` to where the text ends.
+    const start = Math.max(0, isRtl
+      ? holderRect.right - startRect.right + depthShift
+      : startRect.left - holderRect.left + depthShift);
+    const end = Math.max(0, isRtl
+      ? (textRect?.left ?? containerRect.left) - holderRect.left
+      : holderRect.right - (textRect?.right ?? containerRect.right));
 
-    block.holder.style.setProperty('--drop-indicator-side-left', `${left}px`);
-    block.holder.style.setProperty('--drop-indicator-side-right', `${right}px`);
+    block.holder.style.setProperty('--drop-indicator-side-left', `${isRtl ? end : start}px`);
+    block.holder.style.setProperty('--drop-indicator-side-right', `${isRtl ? start : end}px`);
     block.holder.style.setProperty('--drop-indicator-depth', '0');
 
     // Enable the grayish lead-in segment (editor edge → blue line start) only
-    // when the line is actually offset from the editor edge (left > 0). A list
-    // reorder always tucks under the marker (left = the bullet/number gap), so it
-    // keeps the lead even at depth 0; a block landing flush at root (left = 0) is
+    // when the line is actually offset from the editor edge (start > 0). A list
+    // reorder always tucks under the marker (start = the bullet/number gap), so it
+    // keeps the lead even at depth 0; a block landing flush at root (start = 0) is
     // full-width and gets no lead — leaving it on would falsely preview a nest.
-    if (left > 0) {
-      block.holder.setAttribute('data-drop-indicator-lead', '');
+    // The value names the physical edge the lead grows from.
+    if (start > 0) {
+      block.holder.setAttribute('data-drop-indicator-lead', isRtl ? 'right' : '');
     } else {
       block.holder.removeAttribute('data-drop-indicator-lead');
     }
   }
 
   /**
-   * Returns the x-coordinate where the rendered text inside a container ends, by
-   * measuring its content range. Returns null when the range has no measurable
-   * width (empty text, or environments without layout) so callers can fall back
-   * to the container edge.
+   * Returns the box of the rendered text inside a container, from its content
+   * range. Returns null when the range has no measurable width (empty text, or
+   * environments without layout) so callers can fall back to the container edge.
    *
    * @param container - The contenteditable text container of a list item
    */
-  private measureTextRight(container: HTMLElement): number | null {
+  private measureTextRect(container: HTMLElement): DOMRect | null {
     const range = document.createRange();
 
     range.selectNodeContents(container);
@@ -620,7 +691,7 @@ export class DragController extends Module {
 
     const rect = range.getBoundingClientRect();
 
-    return rect.width > 0 ? rect.right : null;
+    return rect.width > 0 ? rect : null;
   }
 
   /**
@@ -676,7 +747,7 @@ export class DragController extends Module {
       return;
     }
 
-    const separator = edge === 'left'
+    const separator = logicalSide(edge, getElementDirection(columnHolder.parentElement)) === 'start'
       ? columnHolder.previousElementSibling
       : columnHolder.nextElementSibling;
 
@@ -737,6 +808,9 @@ export class DragController extends Module {
       return;
     }
 
+    // Read before cleanup clears it; the duplicate path resolves after an await.
+    const appendInto = this.dropZone !== null;
+
     this.stateMachine.drop();
 
     if (!this.operations) {
@@ -753,9 +827,9 @@ export class DragController extends Module {
     }
 
     if (e.altKey) {
-      void this.handleDuplicate(sourceBlocks, targetBlock, targetEdge);
+      void this.handleDuplicate(sourceBlocks, targetBlock, targetEdge, appendInto);
     } else {
-      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge, e.clientX);
+      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge, e.clientX, appendInto);
     }
 
     this.cleanup(false, e.altKey);
@@ -887,7 +961,8 @@ export class DragController extends Module {
     sourceBlocks: Block[],
     targetBlock: Block,
     edge: 'top' | 'bottom',
-    clientX?: number
+    clientX?: number,
+    appendInto = false
   ): void {
     // History integration: wrap the entire drop (array move + every
     // subsequent `setBlockParent`) in a single `YjsManager.transactMoves`
@@ -926,13 +1001,13 @@ export class DragController extends Module {
 
     if (yjsManager !== undefined && typeof yjsManager.transactMoves === 'function') {
       yjsManager.transactMoves(() => {
-        this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge, clientX);
+        this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge, clientX, appendInto);
       }, true);
 
       return;
     }
 
-    this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge, clientX);
+    this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge, clientX, appendInto);
   }
 
   private handleDropImpl(
@@ -940,7 +1015,8 @@ export class DragController extends Module {
     sourceBlocks: Block[],
     targetBlock: Block,
     edge: 'top' | 'bottom',
-    clientX?: number
+    clientX?: number,
+    appendInto = false
   ): void {
     const isMultiBlockDrag = sourceBlocks.length > 1;
 
@@ -962,14 +1038,16 @@ export class DragController extends Module {
     // indicator showed, so the block lands exactly where the preview promised.
     // Applied below to non-list blocks; list items derive their own depth via
     // the list tool's moved() hook.
-    const dropDepth = this.targetDetector
+    // An append into a named zone showed depth 0; the target's flat neighbour
+    // is its FIRST child, so measuring it would not match.
+    const dropDepth = this.targetDetector && !appendInto
       ? this.targetDetector.calculateTargetDepth(targetBlock, edge, sourceBlock, clientX)
       : 0;
 
     // Resolve the parent BEFORE the move: moveBlocks can mount a source holder
     // inside the target's DOM, and the target's toggle state is read from it.
-    const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks, preMoveParentIds);
-    const moveAnchor = this.resolveMoveAnchor(targetBlock, edge, newParentId, sourceBlocks);
+    const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks, preMoveParentIds, appendInto);
+    const moveAnchor = this.resolveMoveAnchor(targetBlock, edge, newParentId, sourceBlocks, appendInto);
 
     const result = this.operations.moveBlocks(sourceBlocks, moveAnchor, edge);
 
@@ -1137,6 +1215,7 @@ export class DragController extends Module {
       .map(candidate => ({
         id: candidate.id,
         isList: candidate.name === 'list',
+        acceptsChildren: acceptsChildren(candidate),
         depth: this.Blok.BlockManager.getBlockDepth(candidate),
       }));
 
@@ -1232,11 +1311,16 @@ export class DragController extends Module {
     targetBlock: Block,
     edge: 'top' | 'bottom',
     sourceBlocks: Block[],
-    preMoveParentIds?: Map<string, string | null>
+    preMoveParentIds?: Map<string, string | null>,
+    appendInto = false
   ): string | null {
-    // If dropping below a toggleable block, the block becomes a child of the toggle.
-    // Detect via DOM attribute (covers both toggle list blocks AND toggle headings).
-    if (edge === 'bottom' && isOpenToggleBlock(targetBlock)) {
+    if (appendInto) {
+      return targetBlock.id;
+    }
+
+    // If dropping below an open toggle (list or heading, read from the DOM) or
+    // on an empty container's drop-into zone, the block becomes its first child.
+    if (edge === 'bottom' && takesDropAsFirstChild(targetBlock)) {
       // Dragged roots that are already its children don't re-enter the toggle,
       // so a child can escape its own toggle by dragging to the bottom edge.
       const parentIdOf = (block: Block): string | null =>
@@ -1275,8 +1359,13 @@ export class DragController extends Module {
     targetBlock: Block,
     edge: 'top' | 'bottom',
     newParentId: string | null,
-    sourceBlocks: Block[]
+    sourceBlocks: Block[],
+    appendInto = false
   ): Block {
+    if (appendInto) {
+      return this.lastStayingDescendant(targetBlock, sourceBlocks);
+    }
+
     if (edge !== 'bottom' || newParentId === targetBlock.id) {
       return targetBlock;
     }
@@ -1303,15 +1392,28 @@ export class DragController extends Module {
       return targetBlock;
     }
 
+    return this.lastStayingDescendant(sibling, sourceBlocks, targetBlock);
+  }
+
+  /**
+   * The last block in flat order among `container`'s descendants that are not
+   * being dragged, or `fallback` when none comes after it.
+   *
+   * @param container - the block whose subtree is searched
+   * @param sourceBlocks - every dragged block
+   * @param fallback - returned when no staying descendant follows it
+   */
+  private lastStayingDescendant(container: Block, sourceBlocks: Block[], fallback: Block = container): Block {
+    const blockManager = this.Blok.BlockManager;
     const sourceIds = new Set(sourceBlocks.map(block => block.id));
-    const staying = this.getHierarchyDescendants(sibling).filter(
+    const staying = this.getHierarchyDescendants(container).filter(
       block => !sourceIds.has(block.id)
         && !hasLogicalSourceAncestor(blockManager.blocks, sourceBlocks, block)
     );
 
     return staying.reduce(
       (last, block) => blockManager.getBlockIndex(block) > blockManager.getBlockIndex(last) ? block : last,
-      targetBlock
+      fallback
     );
   }
 
@@ -1339,7 +1441,8 @@ export class DragController extends Module {
   private async handleDuplicate(
     sourceBlocks: Block[],
     targetBlock: Block,
-    edge: 'top' | 'bottom'
+    edge: 'top' | 'bottom',
+    appendInto = false
   ): Promise<void> {
     if (!this.operations) {
       return;
@@ -1353,8 +1456,9 @@ export class DragController extends Module {
     const moveAnchor = this.resolveMoveAnchor(
       targetBlock,
       edge,
-      this.resolveParentForDrop(targetBlock, edge, sourceBlocks),
-      sourceBlocks
+      this.resolveParentForDrop(targetBlock, edge, sourceBlocks, undefined, appendInto),
+      sourceBlocks,
+      appendInto
     );
     const prep = await this.operations.prepareDuplicates(sourceBlocks, moveAnchor, edge);
 
@@ -1386,7 +1490,9 @@ export class DragController extends Module {
       if (!this.operations) {
         return;
       }
-      resultRef.current = this.operations.applyDuplicates(prep);
+      const dropParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks, undefined, appendInto);
+
+      resultRef.current = this.operations.applyDuplicates(prep, () => dropParentId);
 
       if (resultRef.current.duplicatedBlocks.length === 0) {
         return;
@@ -1394,7 +1500,6 @@ export class DragController extends Module {
 
       // Only the copied ROOTS take the drop parent. applyDuplicates already
       // put each copied descendant under its copied parent.
-      const dropParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks);
       const copyIds = new Set(resultRef.current.duplicatedBlocks.map(dupBlock => dupBlock.id));
 
       for (const dupBlock of resultRef.current.duplicatedBlocks) {
@@ -1420,7 +1525,7 @@ export class DragController extends Module {
     // Recompute the affected-parent set from the final duplicate state so
     // toggle tools still receive their `rendered` nudge after the group
     // closes. Only parents that actually received a duplicate need notifying.
-    const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks);
+    const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks, undefined, appendInto);
     const affectedParentIds = new Set<string>();
 
     for (const dupBlock of result.duplicatedBlocks) {
@@ -1661,6 +1766,7 @@ export class DragController extends Module {
       this.clearContentIndicatorOffsets(state.targetBlock);
     }
 
+    this.clearDropZone();
     this.springLoader.cancel();
     this.preview.destroy();
 
@@ -1701,27 +1807,25 @@ export class DragController extends Module {
   }
 
   /**
-   * Collects a block's full set of duplicable descendants, unifying the two
-   * nesting carriers: list/flat-indent followers (via `data-list-depth`) take
-   * precedence, otherwise toggle/callout children via `parentId`/`contentIds`.
-   * Returns an empty array for a leaf block.
+   * Depth followers plus contentIds subtrees; table cells carry no depth marker.
    * @param block - block whose subtree should be collected
    * @returns descendant blocks (excluding the block itself)
    */
   private collectDuplicateDescendants(block: Block): Block[] {
-    const listDescendants = this.listItemDescendants
-      ? this.listItemDescendants.getDescendants(block)
-      : [];
+    const depthFollowers = this.listItemDescendants?.getDescendants(block) ?? [];
+    const found = new Map<string, Block>();
 
-    if (listDescendants.length > 0) {
-      return listDescendants;
+    for (const member of [block, ...depthFollowers]) {
+      found.set(member.id, member);
+      for (const descendant of this.getHierarchyDescendants(member)) {
+        found.set(descendant.id, descendant);
+      }
     }
+    found.delete(block.id);
 
-    if (block.contentIds?.length > 0) {
-      return this.getHierarchyDescendants(block);
-    }
+    const blockManager = this.Blok.BlockManager;
 
-    return [];
+    return [...found.values()].sort((a, b) => blockManager.getBlockIndex(a) - blockManager.getBlockIndex(b));
   }
 
   /**

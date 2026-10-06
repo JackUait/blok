@@ -88,6 +88,7 @@ vi.mock('../../../../src/tools/table/table-row-col-controls', () => ({
     public hideAllGrips = vi.fn();
     public setGripsDisplay = vi.fn();
     public setActiveGrip = vi.fn();
+    public pinCell = vi.fn();
 
     public get isPopoverOpen(): boolean {
       return captured.popoverOpen;
@@ -107,6 +108,7 @@ vi.mock('../../../../src/tools/table/table-cell-selection', () => ({
     public selectColumn = vi.fn();
     public selectRange = vi.fn();
     public clearActiveSelection = vi.fn();
+    public getSelectedRange = vi.fn(() => null);
 
     public constructor(options: unknown) {
       captured.cellSelection.push(options);
@@ -259,12 +261,14 @@ interface MockRowColControls {
   hideAllGrips: Mock;
   setGripsDisplay: Mock;
   setActiveGrip: Mock;
+  pinCell: Mock;
 }
 
 interface MockCellSelection {
   destroy: Mock;
   selectRow: Mock;
   selectColumn: Mock;
+  getSelectedRange: Mock;
 }
 
 interface MockResize {
@@ -449,6 +453,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
       setBlockParent,
       getBlocksCount: (): number => order.length,
       getById: (id: string): BlockAPI | null => registry.get(id) ?? null,
+      getChildren: (): BlockAPI[] => [],
       getBlockIndex: (id: string): number | undefined => {
         const index = order.indexOf(id);
 
@@ -510,6 +515,9 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     ensureCellHasBlock,
     focusClearedCell,
     indexAfterTableSubtree: (): number => order.length,
+    insertClipboardBlock: (block: ClipboardBlockData): BlockAPI =>
+      api.blocks.insert(block.tool, block.data, {}, order.length, false, false, undefined, block.tunes),
+    insertClipboardChildren: vi.fn(),
   } as unknown as TableCellBlocks;
 
   const transactions: string[] = [];
@@ -2637,7 +2645,7 @@ describe('cell-selection wiring', () => {
 
     cellSelectionOptions().onSelectionActiveChange(true, false);
 
-    expect(resizeMock().enabled).toBe(false);
+    expect(resizeMock().enabled).toBe(true);
     expect(addControlsMock().setInteractive).toHaveBeenCalledWith(true);
     expect(cornerDragMock().setInteractive).toHaveBeenCalledWith(true);
     expect(rowColMock().setGripsDisplay).toHaveBeenCalledWith(false);
@@ -2648,6 +2656,7 @@ describe('cell-selection wiring', () => {
 
     cellSelectionOptions().onSelectionActiveChange(true, true);
 
+    expect(resizeMock().enabled).toBe(false);
     expect(addControlsMock().setInteractive).toHaveBeenCalledWith(false);
     expect(cornerDragMock().setInteractive).toHaveBeenCalledWith(false);
   });
@@ -2660,6 +2669,32 @@ describe('cell-selection wiring', () => {
     expect(resizeMock().enabled).toBe(true);
     expect(addControlsMock().setInteractive).toHaveBeenCalledWith(true);
     expect(rowColMock().setGripsDisplay).toHaveBeenCalledWith(true);
+  });
+
+  it('pins the grips of the single cell holding the caret, at a merge origin', () => {
+    createHarness();
+    cellSelectionMock().getSelectedRange.mockReturnValue({ minRow: 1, maxRow: 2, minCol: 0, maxCol: 1 });
+
+    cellSelectionOptions().onSelectionActiveChange(true, false);
+
+    expect(rowColMock().pinCell).toHaveBeenLastCalledWith({ row: 1, col: 0, rowSpan: 2, colSpan: 2 });
+  });
+
+  it('releases the pinned grips for a multi-cell range', () => {
+    createHarness();
+    cellSelectionMock().getSelectedRange.mockReturnValue({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
+
+    cellSelectionOptions().onSelectionActiveChange(true, true);
+
+    expect(rowColMock().pinCell).toHaveBeenLastCalledWith(null);
+  });
+
+  it('releases the pinned grips when the selection is dropped', () => {
+    createHarness();
+
+    cellSelectionOptions().onSelectionActiveChange(false, false);
+
+    expect(rowColMock().pinCell).toHaveBeenLastCalledWith(null);
   });
 
   it('brings the grips back once the range is finalized', () => {
@@ -3004,6 +3039,16 @@ describe('copy and cut', () => {
     expect(setData.mock.calls[0][0]).toBe('text/html');
     expect(setData.mock.calls[0][1]).toContain('data-blok-table-cells');
     expect(setData.mock.calls[1]).toEqual(['text/plain', 'r0c0\tr0c1']);
+  });
+
+  it('copies a parented cell block when the table has no block id', () => {
+    const harness = createHarness({ blockId: undefined });
+    const block = harness.api.blocks.getById(harness.idsOf(0, 0)[0]);
+
+    Object.assign(block ?? {}, { parentId: 'table-1' });
+    cellSelectionOptions().onCopy([harness.cellOf(0, 0)], clipboard());
+
+    expect(String(setData.mock.calls[0][1])).toContain('"text":"r0c0"');
   });
 
   it('writes the same payload on cut', () => {
@@ -3363,13 +3408,33 @@ describe('scroll haze and lifecycle', () => {
   it('creates only the haze on the read-only render path', () => {
     const harness = createHarness({ init: false });
 
-    harness.subsystems.initScrollHazeOnly();
+    harness.subsystems.initScrollHazeOnly(harness.gridEl);
 
     expect(captured.scrollHazeSelf).toHaveLength(1);
     expect(captured.addControls).toHaveLength(0);
     expect(captured.cellSelection).toHaveLength(0);
     expect(harness.subsystems.cellSelectionSubsystem).toBeNull();
     expect(harness.subsystems.rowColControlsSubsystem).toBeNull();
+  });
+
+  it('re-places the read-only haze when the editor flips direction', async () => {
+    const harness = createHarness({ init: false });
+    const root = document.createElement('div');
+
+    root.setAttribute('data-blok-editor', '');
+    root.setAttribute('dir', 'ltr');
+    document.body.appendChild(root);
+    root.appendChild(harness.gridEl.closest('div')?.parentElement ?? harness.gridEl);
+
+    harness.subsystems.initScrollHazeOnly(harness.gridEl);
+    scrollHazeMock().update.mockClear();
+
+    root.setAttribute('dir', 'rtl');
+    root.style.direction = 'rtl';
+    await Promise.resolve();
+
+    expect(scrollHazeMock().update).toHaveBeenCalled();
+    root.remove();
   });
 
   it('exposes the cell-selection and grip subsystems once initialized', () => {
@@ -3522,7 +3587,7 @@ describe('wiring that must survive missing collaborators', () => {
 });
 
 describe('wiring that must survive a missing cell-blocks manager', () => {
-  it('pastes a rectangle with nothing to delete or re-seed', () => {
+  it('pastes a rectangle without creating blocks it cannot place', () => {
     const harness = createHarness({ noCellBlocks: true });
 
     pasteInto(harness, 0, 0, clipHtml([
@@ -3531,7 +3596,7 @@ describe('wiring that must survive a missing cell-blocks manager', () => {
     ]));
 
     expect(harness.model.getCellBlocks(0, 0)).toEqual([]);
-    expect(harness.insertCalls).toHaveLength(2);
+    expect(harness.insertCalls).toHaveLength(0);
   });
 
   it('rebuilds a pasted merge with no blocks to clear', () => {

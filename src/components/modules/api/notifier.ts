@@ -35,7 +35,8 @@ export class NotifierAPI extends Module {
   constructor({ config, eventsDispatcher }: ModuleConfig) {
     super({ config, eventsDispatcher });
 
-    this.builtInNotifier = new Notifier(config.notifierPosition ?? DEFAULT_NOTIFIER_POSITION);
+    // Toasts mount outside the editor, so they read its direction from the wrapper.
+    this.builtInNotifier = new Notifier(config.notifierPosition ?? DEFAULT_NOTIFIER_POSITION, () => this.Blok.UI?.nodes.wrapper);
     this.customNotifier = config.notifier;
   }
 
@@ -67,6 +68,16 @@ export class NotifierAPI extends Module {
   public resolve(options: NotifierOptions, message: string): void {
     if (this.customNotifier === undefined) {
       this.builtInNotifier.resolve(this.sentCopies.get(options) ?? options, message);
+    }
+  }
+
+  /**
+   * Stop a card's busy spinner. A custom notifier cannot be reached from here.
+   * @param options - the object passed to `show`
+   */
+  public settle(options: NotifierOptions): void {
+    if (this.customNotifier === undefined) {
+      this.builtInNotifier.settle(this.sentCopies.get(options) ?? options);
     }
   }
 

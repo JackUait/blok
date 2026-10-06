@@ -108,6 +108,13 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
 
 export interface OutputData {
   /**
+   * The document's id. Blok mints one on the first save when the loaded
+   * document has none, and keeps it. Tab sync uses it to find the other tabs
+   * showing this document.
+   */
+  id?: string;
+
+  /**
    * Blok's version
    */
   version?: string;
@@ -166,6 +173,9 @@ export type LooseOutputBlockData<Type extends string = string, Data extends obje
  * See {@link LooseOutputBlockData}.
  */
 export interface LooseOutputData {
+  /** See {@link OutputData.id}. `null` and `''` mean absent. */
+  id?: string | null;
+
   /**
    * Blok's version
    */

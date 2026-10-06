@@ -6,6 +6,7 @@ import { FrameworkProvider } from './contexts/FrameworkContext';
 import { buildMetaDescriptors } from './seo/meta-descriptors';
 import { MarkdownPointer } from './seo/MarkdownPointer';
 import { HTML_LANG, splitLocalePath } from './seo/locales';
+import { INPUT_MODALITY_SCRIPT } from './lib/input-modality';
 import stylesheet from './index.css?url';
 // The manifest is the single declaration of the brand colour. Imported raw
 // (not re-typed here) so the tag and the manifest cannot drift apart.
@@ -109,6 +110,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
         <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
         <script dangerouslySetInnerHTML={{ __html: GTAG_INIT }} />
         <script dangerouslySetInnerHTML={{ __html: THEME_FLASH }} />
+        <script dangerouslySetInnerHTML={{ __html: INPUT_MODALITY_SCRIPT }} />
       </head>
       <body>
         {children}

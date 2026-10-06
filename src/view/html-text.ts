@@ -11,6 +11,7 @@ import { parseFragment } from 'parse5';
 import type { DefaultTreeAdapterMap } from 'parse5';
 
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
+import { PAGE_REFERENCE_ATTR } from '../shared/page-reference';
 
 type P5ChildNode = DefaultTreeAdapterMap['childNode'];
 
@@ -18,7 +19,11 @@ type P5ChildNode = DefaultTreeAdapterMap['childNode'];
  * Collect the concatenated text of parse5 child nodes.
  * @param nodes - nodes to walk
  */
-const collect = (nodes: P5ChildNode[]): string => {
+const collect = (
+  nodes: P5ChildNode[],
+  equations: 'source' | 'skip' = 'source',
+  pageReferenceText?: (pageId: string) => string
+): string => {
   return nodes.map((node) => {
     if (node.nodeName === '#text') {
       return (node as DefaultTreeAdapterMap['textNode']).value;
@@ -35,14 +40,22 @@ const collect = (nodes: P5ChildNode[]): string => {
      * HTML layers. See the law in `src/shared/equation-mark.ts`.
      */
     if ('attrs' in node) {
+      const pageId = node.nodeName === 'a'
+        ? node.attrs.find((attr) => attr.name === PAGE_REFERENCE_ATTR)?.value
+        : undefined;
+
+      if (pageId && pageReferenceText !== undefined) {
+        return pageReferenceText(pageId);
+      }
+
       const source = node.attrs.find((attr) => attr.name === EQUATION_SOURCE_ATTR);
 
       if (source !== undefined) {
-        return source.value;
+        return equations === 'source' ? source.value : '';
       }
     }
 
-    return 'childNodes' in node ? collect(node.childNodes) : '';
+    return 'childNodes' in node ? collect(node.childNodes, equations, pageReferenceText) : '';
   }).join('');
 };
 
@@ -107,10 +120,23 @@ export const parseInlineFragment = (html: string): DefaultTreeAdapterMap['docume
  * Extract the plain text of an HTML fragment.
  * @param html - fragment markup
  */
-export const htmlTextContent = (html: string): string => {
+export const htmlTextContent = (html: string, pageReferenceText?: (pageId: string) => string): string => {
   if (html === '' || !needsTokenizing(html)) {
     return html;
   }
 
-  return collect(parseInlineFragment(html).childNodes);
+  return collect(parseInlineFragment(html).childNodes, 'source', pageReferenceText);
+};
+
+/**
+ * Plain text without inline equations: the letters that set a block's
+ * direction. Math is always LTR, so its source says nothing about the prose.
+ * @param html - fragment markup
+ */
+export const proseTextContent = (html: string): string => {
+  if (html === '' || !needsTokenizing(html)) {
+    return html;
+  }
+
+  return collect(parseInlineFragment(html).childNodes, 'skip');
 };

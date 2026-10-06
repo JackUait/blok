@@ -58,6 +58,18 @@ describe('openCoverPicker', () => {
     expect(document.querySelector('[data-role="audio-cover-picker"]')).toBeNull();
   });
 
+  it('takes the anchor direction so it mirrors in an RTL editor', () => {
+    const anchor = document.createElement('div');
+    anchor.style.direction = 'rtl';
+    document.body.appendChild(anchor);
+    const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
+
+    expect(document.querySelector('[data-role="audio-cover-picker"]')?.getAttribute('dir')).toBe('rtl');
+
+    handle.close();
+    anchor.remove();
+  });
+
   it('slides the new panel in on tab switch without tweening the popover height', () => {
     // Make the WAAPI path reachable: real animate + reduced-motion off. A
     // floating popover has nothing reflowing beneath it, so the inline height

@@ -721,7 +721,7 @@ describe('LinkHoverCard mutants', () => {
         'underline-offset-2 can-hover:hover:underline can-hover:hover:text-text-primary',
       ].join(' '));
       expect(copy?.type).toBe('button');
-      expect(copy?.parentElement?.className).toBe('flex items-center shrink-0 gap-0.5 ml-2');
+      expect(copy?.parentElement?.className).toBe('flex items-center shrink-0 gap-0.5 ms-2');
       expect(edit?.parentElement).toBe(copy?.parentElement);
       expect(copy?.className).toBe(`${ACTION_BUTTON_BASE} w-7 [&>svg]:size-4`);
       expect(copy?.innerHTML).toBe(asDomHtml(IconCopy));

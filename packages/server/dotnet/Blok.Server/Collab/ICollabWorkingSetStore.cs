@@ -62,11 +62,25 @@ internal interface ICollabWorkingSetStore
 
   /// <summary>
   /// Atomically rewrites the working set to an empty log carrying the new
-  /// tag. There is no bare delete — a reset is the only way to discard
-  /// updates, so the epoch always moves forward.
+  /// tag, so the epoch moves forward.
   /// </summary>
   Task ResetAsync(
       string docId,
       CollabWorkingSetTag newTag,
+      CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Removes a working set a journal has taken over. Unlike
+  /// <see cref="DeleteAsync"/>, which is purge, it removes only a copy that
+  /// reads back, and never quarantined or unreadable bytes: those are kept for
+  /// repair. Absence is success.
+  /// </summary>
+  Task RetireAsync(
+      string docId,
+      CancellationToken cancellationToken = default);
+
+  /// <summary>Deletes a document's working set; absence is success.</summary>
+  Task DeleteAsync(
+      string docId,
       CancellationToken cancellationToken = default);
 }

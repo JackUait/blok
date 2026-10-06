@@ -731,10 +731,39 @@ test.describe('Cell Editing', () => {
     await expect(firstCellEditable).not.toHaveAttribute('data-placeholder');
   });
 
-  test('Ghost children (blocks with parent but not in any cell) are cleaned up on render', async ({ page }) => {
-    // Set up data that simulates stale ghost children:
-    // - A table with a 2x2 grid where cells reference specific child blocks
-    // - Additional paragraph blocks that claim the table as parent but are NOT in any cell's blocks array
+  // Cells strip the attributes on the paths they know about. Any other path
+  // (a new block tool, a conversion) leaves them, so the stylesheet is the
+  // backstop: no placeholder paints inside a cell, whatever carries it.
+  test('Cell placeholder never paints, even on a block that kept its placeholder attributes', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['', ''], ['', '']],
+            },
+          },
+        ],
+      },
+    });
+
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.evaluate((el) => {
+      el.setAttribute('data-blok-placeholder-active', 'Write something');
+      el.setAttribute('data-placeholder', 'Write something');
+    });
+    await firstCellEditable.click();
+
+    const painted = await firstCellEditable.evaluate((el) => getComputedStyle(el, '::before').content);
+
+    expect(painted).not.toContain('Write something');
+  });
+
+  test('Unreferenced table children keep content and drop empty blocks on render', async ({ page }) => {
     const tableId = 'table-ghost-test';
     const cellBlock1 = 'cell-block-1';
     const cellBlock2 = 'cell-block-2';
@@ -759,12 +788,10 @@ test.describe('Cell Editing', () => {
               ],
             },
           },
-          // Legitimate child blocks referenced by cells
           { id: cellBlock1, type: 'paragraph', data: { text: 'Cell 1' }, parent: tableId },
           { id: cellBlock2, type: 'paragraph', data: { text: 'Cell 2' }, parent: tableId },
           { id: cellBlock3, type: 'paragraph', data: { text: 'Cell 3' }, parent: tableId },
           { id: cellBlock4, type: 'paragraph', data: { text: 'Cell 4' }, parent: tableId },
-          // Ghost children: have parent=tableId but are NOT in any cell's blocks array
           { id: ghostBlock1, type: 'paragraph', data: { text: 'Ghost 1' }, parent: tableId },
           { id: ghostBlock2, type: 'paragraph', data: { text: '' }, parent: tableId },
           { id: ghostBlock3, type: 'paragraph', data: { text: 'Ghost 3' }, parent: tableId },
@@ -772,8 +799,6 @@ test.describe('Cell Editing', () => {
       },
     });
 
-    // 1. Verify ghost blocks are NOT visible in the working area outside the table
-    // Check that ghost block holders don't exist as direct children of the working area
     const ghostBlocksInWorkingArea = await page.evaluate(
       ({ ghostIds }) => {
         const workingArea = document.querySelector('[data-blok-redactor]');
@@ -789,24 +814,22 @@ test.describe('Cell Editing', () => {
       { ghostIds: [ghostBlock1, ghostBlock2, ghostBlock3] }
     );
 
-    expect(ghostBlocksInWorkingArea).toHaveLength(0);
+    expect(ghostBlocksInWorkingArea).toEqual([ghostBlock1, ghostBlock3]);
 
-    // 2. Verify the "Ghost" text does not appear anywhere outside the table
     const table = page.locator(TABLE_SELECTOR);
 
     await expect(table).toBeVisible();
+    await expect(table).not.toContainText('Ghost 1');
+    await expect(table).not.toContainText('Ghost 3');
+    await expect(page.getByText('Ghost 1')).toBeVisible();
+    await expect(page.getByText('Ghost 3')).toBeVisible();
+    await expect(page.locator(`[data-blok-id="${ghostBlock2}"]`)).toHaveCount(0);
 
-    // Ghost text should not be present on the page at all
-    await expect(page.getByText('Ghost 1')).toHaveCount(0);
-    await expect(page.getByText('Ghost 3')).toHaveCount(0);
-
-    // 3. Verify legitimate cell blocks still render correctly inside the table
     await expect(table).toContainText('Cell 1');
     await expect(table).toContainText('Cell 2');
     await expect(table).toContainText('Cell 3');
     await expect(table).toContainText('Cell 4');
 
-    // 4. Save and verify ghost blocks are excluded from output
     const savedData = await page.evaluate(async () => {
       return window.blokInstance?.save();
     });
@@ -815,12 +838,10 @@ test.describe('Cell Editing', () => {
       (b: { id?: string }) => b.id
     ) ?? [];
 
-    // Ghost block IDs should not appear in saved data
-    expect(savedBlockIds).not.toContain(ghostBlock1);
+    expect(savedBlockIds).toContain(ghostBlock1);
     expect(savedBlockIds).not.toContain(ghostBlock2);
-    expect(savedBlockIds).not.toContain(ghostBlock3);
+    expect(savedBlockIds).toContain(ghostBlock3);
 
-    // Legitimate cell block IDs should still be present
     expect(savedBlockIds).toContain(cellBlock1);
     expect(savedBlockIds).toContain(cellBlock2);
     expect(savedBlockIds).toContain(cellBlock3);

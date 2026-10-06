@@ -56,6 +56,7 @@ vi.mock('../../src/components/core', () => {
           caret: { focus: vi.fn() },
           events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
           saver: { save: vi.fn() },
+          media: { confirmLeave: vi.fn() },
           rectangleSelection: {
             cancelActiveSelection: vi.fn(),
             isRectActivated: vi.fn(),

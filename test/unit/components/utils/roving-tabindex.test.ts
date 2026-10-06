@@ -52,6 +52,54 @@ describe('RovingTabindexController', () => {
     });
   });
 
+  describe('horizontal arrow navigation in a right-to-left group', () => {
+    const wrapInRtl = (): HTMLElement => {
+      const group = document.createElement('div');
+
+      group.setAttribute('dir', 'rtl');
+      group.append(...items);
+      document.body.appendChild(group);
+
+      return group;
+    };
+
+    it('moves focus to the next item on ArrowLeft', () => {
+      const group = wrapInRtl();
+
+      controller = new RovingTabindexController(items);
+      items[0].focus();
+
+      items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+
+      expect(items[1]).toHaveFocus();
+      group.remove();
+    });
+
+    it('moves focus to the previous item on ArrowRight', () => {
+      const group = wrapInRtl();
+
+      controller = new RovingTabindexController(items);
+      controller.focus(2);
+
+      items[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+
+      expect(items[1]).toHaveFocus();
+      group.remove();
+    });
+
+    it('leaves vertical groups alone', () => {
+      const group = wrapInRtl();
+
+      controller = new RovingTabindexController(items, { orientation: 'vertical' });
+      items[0].focus();
+
+      items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+
+      expect(items[1]).toHaveFocus();
+      group.remove();
+    });
+  });
+
   describe('horizontal arrow navigation (default orientation)', () => {
     it('moves focus to the next item on ArrowRight and rolls the tabindex', () => {
       controller = new RovingTabindexController(items);

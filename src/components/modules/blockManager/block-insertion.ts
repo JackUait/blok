@@ -12,13 +12,13 @@ import { Dom as $ } from '../../dom';
 import { generateBlockId } from '../../utils';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
-import { resolveChildTool } from '../../utils/child-tools';
+import { acceptsChildren, resolveChildTool } from '../../utils/child-tools';
 import { subtreeEndIndex } from '../../utils/blocks-tree';
 import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { findOwn } from '../../utils/own-element';
 import { canAdoptChild, releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
 import { flatIndexForPlacement, subtreeEnd, type TreePlacement } from '../../utils/tree-order';
-import { lastChildBefore } from '../api/block-placement';
+import { BlockPlacementError, lastChildBefore } from '../api/block-placement';
 import type { BlockFactory } from './factory';
 import { hideUnderCollapsedParent, isSelfPlacedParent } from './new-block-placement';
 import type { BlockHierarchy } from './hierarchy';
@@ -116,6 +116,14 @@ export class BlockInsertion {
    */
   public insert(options: InsertBlockOptions = {}, blocksStore: BlocksStore): Block {
     if (options.placement !== undefined) {
+      const { parentId } = options.placement;
+
+      // Only a caller-named parent is refused. An inferred one (Enter in a child
+      // already stored under such a block) must still produce a block.
+      if (parentId !== null && !acceptsChildren(this.repository.getBlockById(parentId))) {
+        throw new BlockPlacementError(`"${parentId}" takes no children`);
+      }
+
       return this.insertAtPlacement(options, options.placement, blocksStore);
     }
 
@@ -371,6 +379,8 @@ export class BlockInsertion {
         this.dependencies.YjsManager.continueUndoEntryThatCreated(replacedIdToRemove);
       }
 
+      this.yjsSync.noteLocalAddDuringSync(block.id);
+
       this.dependencies.YjsManager.transact(() => {
         if (replacedIdToRemove !== undefined) {
           this.dependencies.YjsManager.removeBlock(replacedIdToRemove);
@@ -536,6 +546,7 @@ export class BlockInsertion {
 
     // Same gate as insert(): a Yjs replay still adds a block the doc lacks.
     if (!skipYjsSync && (!this.yjsSync.isSyncingFromYjs || this.dependencies.YjsManager.getBlockById(block.id) === undefined)) {
+      this.yjsSync.noteLocalAddDuringSync(block.id);
       this.dependencies.YjsManager.transact(() => {
         this.dependencies.YjsManager.addBlockAt({
           id: block.id,
@@ -1085,6 +1096,10 @@ export class BlockInsertion {
       throw new Error(`Parent block with id "${parentId}" not found`);
     }
 
+    if (!acceptsChildren(parentBlock)) {
+      throw new BlockPlacementError(`"${parentId}" takes no children`);
+    }
+
     const { id: requestedId, tunes, focus = false, keepCurrent = false } = options;
     const insertIndex = this.clampIntoSubtree(parentBlock, requestedIndex);
     const newBlockId = requestedId ?? generateBlockId();
@@ -1197,6 +1212,26 @@ export class BlockInsertion {
     toolName: string,
     pasteEvent: PasteEvent,
     replace = false,
+    blocksStore: BlocksStore,
+    data?: BlockToolData
+  ): Promise<Block> {
+    // The pasted block's children reach the doc one write at a time across
+    // the awaits in pasteAndSync, and the block itself last. A gap past the capture
+    // timeout would split the paste into undo steps, and undoing only the
+    // newest one would leave the children orphaned in the doc.
+    this.dependencies.YjsManager.holdCapture();
+
+    try {
+      return await this.pasteAndSync(toolName, pasteEvent, replace, blocksStore, data);
+    } finally {
+      this.dependencies.YjsManager.releaseCapture();
+    }
+  }
+
+  private async pasteAndSync(
+    toolName: string,
+    pasteEvent: PasteEvent,
+    replace: boolean,
     blocksStore: BlocksStore,
     data?: BlockToolData
   ): Promise<Block> {

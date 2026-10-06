@@ -357,6 +357,32 @@ public sealed class BlokDocumentConverterTests
   }
 
   /// <summary>
+  /// The editor builds the outline live and saves only its colours, so the
+  /// server has to rebuild it from the headings — and give each heading the id
+  /// its link points at.
+  /// </summary>
+  [Fact]
+  public async Task RendersATableOfContentsThatLinksToItsHeadings()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    const string document = """
+        {"blocks":[
+          {"id":"toc","type":"table_of_contents","data":{}},
+          {"id":"h1","type":"header","data":{"text":"Intro","level":2}},
+          {"id":"h2","type":"header","data":{"text":"Details","level":3}}
+        ]}
+        """;
+
+    Assert.Equal(
+        "<nav><ol>"
+        + "<li data-depth=\"0\"><a href=\"#h1\">Intro</a></li>"
+        + "<li data-depth=\"1\"><a href=\"#h2\">Details</a></li>"
+        + "</ol></nav>"
+        + "<h2 id=\"h1\">Intro</h2><h3 id=\"h2\">Details</h3>",
+        await converter.ToHtmlAsync(document));
+  }
+
+  /// <summary>
   /// A consumer stores hand-edited and legacy documents, so one unreadable
   /// block must not cost it the whole article. The skip is reported, not
   /// silent.

@@ -43,6 +43,12 @@ public static class BlokServerBuilderExtensions
   /// <see cref="ICollabOperationStore"/>'s remarks before writing one, because
   /// every guarantee the protocol makes to a client rests on the store keeping
   /// them.
+  /// <para>
+  /// To purge documents, <typeparamref name="T"/> must also implement
+  /// <see cref="ICollabOperationPurgeStore"/>. Without it
+  /// <see cref="ICollabDocumentPurger.PurgeDocumentAsync"/> throws
+  /// <see cref="NotSupportedException"/> and changes nothing.
+  /// </para>
   /// </remarks>
   /// <typeparam name="T">The application's operation store.</typeparam>
   /// <param name="builder">The server being built.</param>

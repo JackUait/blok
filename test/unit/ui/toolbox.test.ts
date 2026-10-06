@@ -229,6 +229,7 @@ describe('Toolbox', () => {
         icon: '<svg>test</svg>',
       },
       shortcut: 'CMD+T',
+      prepareInsert: () => undefined,
     } as unknown as BlockToolAdapter;
 
     // Mock ToolsCollection using helper
@@ -2210,6 +2211,7 @@ describe('Toolbox', () => {
           { title: '2 columns', icon: '<svg>cols</svg>', name: 'column_list-2', data: { columnCount: 2 } },
           { title: '3 columns', icon: '<svg>cols</svg>', name: 'column_list-3', data: { columnCount: 3 } },
         ],
+        prepareInsert: () => undefined,
       } as unknown as BlockToolAdapter;
 
       return createToolsCollection([
@@ -2279,6 +2281,7 @@ describe('Toolbox', () => {
         { title: '2 columns', icon: '<svg>cols</svg>', name: 'column_list-2', data: { columnCount: 2 } },
         { title: '3 columns', icon: '<svg>cols</svg>', name: 'column_list-3', data: { columnCount: 3 } },
       ],
+      prepareInsert: () => undefined,
     } as unknown as BlockToolAdapter;
 
     it('hides all column_list presets when opened inside a table cell', () => {

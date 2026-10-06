@@ -40,8 +40,14 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..');
  * media styling pushes the sheet past the budget is to split it into an opt-in
  * `view-media.css`, so hosts rendering text-only documents keep paying for text
  * only — not to pick a bigger number.
+ *
+ * The page card is text, not media, so its rules stay in the base sheet.
+ *
+ * Raised to 60,000 (owner's decision) for the table of contents: the sheet
+ * was already at 56,396 and its rules add ~2.3 KB. The media split stays the
+ * next step.
  */
-const VIEW_CSS_BYTE_BUDGET = 53_000;
+const VIEW_CSS_BYTE_BUDGET = 60_000;
 
 const readManifest = (): Record<string, unknown> =>
   JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8')) as Record<string, unknown>;
@@ -82,6 +88,12 @@ describe('view baseline stylesheet law', () => {
     expect(css).toContain('var(--blok-block-padding-top, 7px)');
     expect(css).toContain('var(--blok-block-padding-bottom, 7px)');
     expect(css).toContain('var(--blok-block-padding-inline, 2px)');
+  });
+
+  it('constrains static images and videos to their container', () => {
+    const css = readFileSync(join(repoRoot, 'view.css'), 'utf-8');
+
+    expect(css.match(/:where\(\[data-blok-interface\], \[data-blok-popover\]\) :is\(img, video\)\s*\{\s*max-width:\s*100%;\s*height:\s*auto;/)?.[0]).toBeDefined();
   });
 
   it('reads the same padding-token defaults the editor declares', () => {

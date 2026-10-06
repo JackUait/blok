@@ -122,6 +122,9 @@ const pressures = (s: Sample[], width: number, usePressure: boolean): number[] =
 
 const radiusFor = (width: number, p: number): number => (width / 2) * (MIN_WIDTH_SCALE + WIDTH_SCALE_RANGE * p);
 
+/** How far pen ink of `width` reaches from the centreline at pressure `p`. */
+export const inkRadius = (width: number, p: number): number => radiusFor(width, Math.min(1, Math.max(0, p)));
+
 const dot = (c: Vec, r: number): string => {
   const a = { x: c.x - r, y: c.y };
   const b = { x: c.x + r, y: c.y };
@@ -147,7 +150,9 @@ const thin = (s: Sample[], r: number[], min: number): Node[] => {
   return out;
 };
 
-const taper = (c: Node[], width: number): Node[] => {
+interface Ends { start: boolean; end: boolean }
+
+const taper = (c: Node[], width: number, ends: Ends): Node[] => {
   const s: number[] = [0];
 
   c.forEach((v, i) => {
@@ -161,7 +166,10 @@ const taper = (c: Node[], width: number): Node[] => {
 
   const ease = (d: number): number => TAPER_MIN + (1 - TAPER_MIN) * Math.sin((Math.min(1, d / span) * Math.PI) / 2);
 
-  return c.map((v, i) => ({ ...v, r: v.r * ease(s[i] ?? 0) * ease(total - (s[i] ?? 0)) }));
+  return c.map((v, i) => ({
+    ...v,
+    r: v.r * (ends.start ? ease(s[i] ?? 0) : 1) * (ends.end ? ease(total - (s[i] ?? 0)) : 1),
+  }));
 };
 
 /** Limits how fast the radius may grow between neighbours, in both directions. */
@@ -363,7 +371,7 @@ const bentPieces = (c: Node[]): Node[][] => {
  * SVG path `d` of a filled, round-capped outline around x, y, pressure triples.
  * Pressure 0.5 is the nominal `width`; with every pressure at 0.5 (a mouse) speed stands in for it.
  */
-export function strokeOutline(points: number[], width: number, opts?: { taper?: boolean; pressure?: boolean }): string {
+export function strokeOutline(points: number[], width: number, opts?: { taper?: boolean | Ends; pressure?: boolean }): string {
   const s = readSamples(points);
   const first = s[0];
 
@@ -380,7 +388,8 @@ export function strokeOutline(points: number[], width: number, opts?: { taper?: 
     return dot(first, real ? radiusFor(width, first.p) : nominal);
   }
 
-  const shaped = limitSlope(opts?.taper === false ? nodes : taper(densify(nodes, width * TAPER_WIDTHS / 2), width));
+  const ends = typeof opts?.taper === 'object' ? opts.taper : { start: opts?.taper !== false, end: opts?.taper !== false };
+  const shaped = limitSlope(ends.start || ends.end ? taper(densify(nodes, width * TAPER_WIDTHS / 2), width, ends) : nodes);
 
   return splitWhere(shaped, (a, b, n) => turnAt(a, b, n).cos < CORNER_COS)
     .flatMap((run) => bentPieces(resample(run, nominal * RESAMPLE_STEP)))

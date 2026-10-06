@@ -455,6 +455,45 @@ describe('createAngularBlock — core tool-contract passthrough', () => {
     expect(tool.getToolbarAnchorElement()).toBeUndefined();
   });
 
+  it('forwards Enter in navigation mode to the spec, with the block', () => {
+    const blockApi = makeBlockApi();
+    const onNavigationEnter = vi.fn(() => true);
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+      onNavigationEnter,
+    });
+    const tool = new Tool({
+      data: {} as BlockToolData,
+      block: blockApi,
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: makeRegistry() },
+    } as BlockToolConstructorOptions);
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+
+    expect(tool.onNavigationEnter(event)).toBe(true);
+    expect(onNavigationEnter).toHaveBeenCalledWith(event, blockApi);
+  });
+
+  it('leaves Enter in navigation mode to core when the spec has no handler', () => {
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+    });
+    const tool = new Tool({
+      data: {} as BlockToolData,
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: makeRegistry() },
+    } as BlockToolConstructorOptions);
+
+    expect(tool.onNavigationEnter(new KeyboardEvent('keydown', { key: 'Enter' }))).toBe(false);
+  });
+
   it('forwards authored statics onto the generated tool class', () => {
     const conversionConfig = { export: 'text', import: 'text' };
     const Tool = createAngularBlock<CounterData>({

@@ -10,12 +10,11 @@ describe('BODY_PLACEHOLDER_STYLES', () => {
     expect(BODY_PLACEHOLDER_STYLES).toContain('leading-[1.5]');
   });
 
-  it('uses pt-[8px] to match paragraph top padding (7px) + top margin (1px)', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('pt-[8px]');
-  });
-
-  it('uses pb-[8px] to match paragraph bottom padding (7px) + bottom margin (1px)', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('pb-[8px]');
+  it('takes 8px per side (4px margin + 4px padding) to match a paragraph, with only the padding under the hover fill', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('my-[4px]');
+    expect(BODY_PLACEHOLDER_STYLES).toContain('py-[4px]');
+    expect(BODY_PLACEHOLDER_STYLES).not.toContain('pt-[8px]');
+    expect(BODY_PLACEHOLDER_STYLES).not.toContain('pb-[8px]');
   });
 
   it('does not contain py-1 (would cause layout shift vs paragraph block)', () => {
@@ -26,8 +25,15 @@ describe('BODY_PLACEHOLDER_STYLES', () => {
     expect(BODY_PLACEHOLDER_STYLES).not.toContain('py-[7px]');
   });
 
-  it('uses pl-7 to align body placeholder with toggle list title text start', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('pl-7');
+  it('starts its text at 28px (ms-5.5 + px-1.5) to align with the toggle list title text start', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('ms-5.5');
+    expect(BODY_PLACEHOLDER_STYLES).toContain('px-1.5');
+    expect(BODY_PLACEHOLDER_STYLES).not.toContain('ps-7');
+  });
+
+  it('highlights its own box on hover, not the indent under the arrow', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('can-hover:hover:bg-item-hover-bg');
+    expect(BODY_PLACEHOLDER_STYLES).toContain('rounded-(--blok-radius-control)');
   });
 
   it('does not use pl-[1.1em] (body should align with title, not use Notion indent)', () => {
@@ -72,8 +78,8 @@ describe('ARROW_STYLES (fixed-size pill, first-line aligned)', () => {
 });
 
 describe('TOGGLE_CHILDREN_STYLES (title alignment)', () => {
-  it('uses pl-7 to align children with toggle list title text start (arrow button width)', () => {
-    expect(TOGGLE_CHILDREN_STYLES).toContain('pl-7');
+  it('uses ps-7 to align children with toggle list title text start (arrow button width)', () => {
+    expect(TOGGLE_CHILDREN_STYLES).toContain('ps-7');
   });
 
   it('does not use pl-[1.1em] (children should start at same point as title, not Notion indent)', () => {

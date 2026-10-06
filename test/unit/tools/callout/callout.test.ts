@@ -336,6 +336,26 @@ describe('CalloutTool', () => {
       const settings = tool.renderSettings() as Array<{ children: { hideChevron?: boolean } }>;
       expect(settings[1].children.hideChevron).toBeUndefined();
     });
+
+    it('a reopened color menu shows recent colors picked elsewhere since the last open', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      type Settings = Array<{ children: { items: Array<{ element: HTMLElement }> } }>;
+      const pickerOf = (): HTMLElement => (tool.renderSettings() as Settings)[1].children.items[0].element;
+
+      tool.render();
+      localStorage.removeItem('blok-recent-colors');
+      pickerOf();
+
+      try {
+        localStorage.setItem('blok-recent-colors', JSON.stringify([{ name: 'red', field: 'text' }]));
+        window.dispatchEvent(new StorageEvent('storage', { key: 'blok-recent-colors', storageArea: localStorage }));
+
+        expect(pickerOf().querySelector('[data-blok-testid="callout-color-swatch-recent-text-red"]')).not.toBeNull();
+      } finally {
+        localStorage.removeItem('blok-recent-colors');
+      }
+    });
   });
 
   describe('color change via picker', () => {

@@ -160,7 +160,7 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
       redactor: document.createElement('div'),
       holder: document.createElement('div'),
     },
-    contentRect: { left: 0 },
+    contentRect: { left: 0, right: 650 },
   };
 
   const i18n = {

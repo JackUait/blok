@@ -9,6 +9,7 @@ import { ToggleItem } from '../../../../src/tools/toggle';
 import type { ToggleItemData } from '../../../../src/tools/toggle/types';
 import { colorVarName } from '../../../../src/components/shared/color-presets';
 import { TOGGLE_ATTR } from '../../../../src/tools/toggle/constants';
+import { createMemoryViewState } from '../../../helpers/view-state';
 
 const createApi = (): API => ({
   i18n: { t: (key: string) => key, has: () => false },
@@ -18,6 +19,7 @@ const createApi = (): API => ({
     getBlocksCount: vi.fn().mockReturnValue(1),
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
   },
+  viewState: createMemoryViewState(),
 } as unknown as API);
 
 const dispatchChange = vi.fn();
@@ -54,7 +56,7 @@ describe('toggle block colour', () => {
 
     toggle.render();
 
-    expect(toggle.save()).toEqual({ text: 'Title', isOpen: true, textColor: 'red', backgroundColor: 'blue' });
+    expect(toggle.save()).toEqual({ text: 'Title', textColor: 'red', backgroundColor: 'blue' });
   });
 
   it('saves no colour keys when it has none', () => {
@@ -62,7 +64,7 @@ describe('toggle block colour', () => {
 
     toggle.render();
 
-    expect(toggle.save()).toEqual({ text: 'Title', isOpen: true });
+    expect(toggle.save()).toEqual({ text: 'Title' });
   });
 
   it('paints the colour on its title', () => {
@@ -92,6 +94,6 @@ describe('toggle block colour', () => {
 
     expect(title.style.getPropertyValue('color')).toBe(colorVarName('green', 'text'));
     expect(title.style.getPropertyValue('background-color')).toBe('');
-    expect(toggle.save()).toEqual({ text: 'Title', isOpen: true, textColor: 'green' });
+    expect(toggle.save()).toEqual({ text: 'Title', textColor: 'green' });
   });
 });

@@ -19,12 +19,16 @@ type ObserverMock = {
   disable: ReturnType<typeof vi.fn>;
   enable: ReturnType<typeof vi.fn>;
   discardPendingChanges: ReturnType<typeof vi.fn>;
+  flushPendingBeforeRender: ReturnType<typeof vi.fn>;
+  flushBeforeReadOnly: ReturnType<typeof vi.fn>;
 };
 
 const createObserverMock = (): ObserverMock => ({
   disable: vi.fn(),
   enable: vi.fn(),
   discardPendingChanges: vi.fn(),
+  flushPendingBeforeRender: vi.fn(),
+  flushBeforeReadOnly: vi.fn(),
 });
 
 const createBlocksApi = (
@@ -51,6 +55,8 @@ const createBlocksApi = (
     // undefined disables render()'s echo-equality skip, so the render really runs
     Saver: {
       save: vi.fn(async () => undefined),
+      adoptDocumentRecordId: vi.fn(),
+      resetDocumentRecordId: vi.fn(),
     },
     InlineToolbar: {
       close: vi.fn(),
@@ -115,6 +121,7 @@ const createReadOnly = (
     },
     YjsManager: {
       captureCaretSnapshot: vi.fn(() => null),
+      transactWithoutCapture: vi.fn((fn: () => void) => fn()),
     },
     Caret: {
       setToInput: vi.fn(),

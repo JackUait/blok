@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UI } from "../../../../src/components/modules/ui";
 import { Flipper } from "../../../../src/components/flipper";
 import {
@@ -424,52 +424,49 @@ describe("UI module", () => {
   });
 
   describe("block context menu (right-click)", () => {
+    const contextMenuUIs: UI[] = [];
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+      for (const ui of contextMenuUIs) {
+        ui.destroy();
+      }
+      contextMenuUIs.length = 0;
+    });
+
     interface ContextMenuHarness {
-      redactor: HTMLDivElement;
+      redactor: HTMLElement;
       open: ReturnType<typeof vi.fn>;
       moveAndOpen: ReturnType<typeof vi.fn>;
-      block: { holder: HTMLElement };
+      block: { holder: HTMLElement; name: string };
     }
 
-    const setupContextMenu = (): ContextMenuHarness => {
+    const setupContextMenu = async (options: { blockName?: string; readOnly?: boolean } = {}): Promise<ContextMenuHarness> => {
       const open = vi.fn(() => Promise.resolve());
       const moveAndOpen = vi.fn();
-      const block = { holder: document.createElement("div") };
-      const { ui, redactor } = createUI({
-        blokOverrides: {
-          BlockManager: {
-            currentBlock: block,
-            setCurrentBlockByChildNode: vi.fn(() => block),
-          },
-          BlockSettings: {
-            opened: false,
-            open,
-            close: vi.fn(),
-            contains: vi.fn(() => false),
-            nodes: { wrapper: document.createElement("div") },
-          },
-          Toolbar: {
-            opened: false,
-            moveAndOpen,
-            close: vi.fn(),
-            toolbox: { opened: false, close: vi.fn(), hasFocus: vi.fn(() => false) },
-            contains: vi.fn(() => false),
-            nodes: {
-              wrapper: document.createElement("div"),
-              settingsToggler: document.createElement("button"),
-              plusButton: document.createElement("button"),
-            },
-          },
-        } as unknown as Partial<ReturnType<typeof createUI>["blok"]>,
+      const block = { holder: document.createElement("div"), name: options.blockName ?? "paragraph" };
+      const { ui, blok } = createUI({ attachNodes: false });
+
+      Object.assign(blok.BlockManager, {
+        currentBlock: block,
+        getBlockByChildNode: vi.fn(() => block),
+        setCurrentBlockByChildNode: vi.fn(() => block),
       });
+      Object.assign(blok.ReadOnly, { isEnabled: options.readOnly ?? false });
+      Object.assign(blok.BlockSettings, { open });
+      Object.assign(blok.Toolbar, { moveAndOpen });
 
-      (ui as unknown as { bindReadOnlyInsensitiveListeners: () => void }).bindReadOnlyInsensitiveListeners();
+      contextMenuUIs.push(ui);
+      await ui.prepare();
 
-      return { redactor, open, moveAndOpen, block };
+      return { redactor: ui.nodes.redactor, open, moveAndOpen, block };
     };
 
-    it("opens Block Settings anchored at the cursor and suppresses the native menu", () => {
-      const { redactor, open, moveAndOpen, block } = setupContextMenu();
+    it("opens Block Settings anchored at the cursor and suppresses the native menu", async () => {
+      const { redactor, open, moveAndOpen, block } = await setupContextMenu();
 
       const content = document.createElement("div");
 
@@ -495,8 +492,8 @@ describe("UI module", () => {
       expect(passedAnchor).toMatchObject({ left: 120, top: 240 });
     });
 
-    it("leaves the native context menu untouched on links", () => {
-      const { redactor, open, moveAndOpen } = setupContextMenu();
+    it("leaves the native context menu untouched on links", async () => {
+      const { redactor, open, moveAndOpen } = await setupContextMenu();
 
       const link = document.createElement("a");
 
@@ -513,6 +510,153 @@ describe("UI module", () => {
       expect(event.defaultPrevented).toBe(false);
       expect(moveAndOpen).not.toHaveBeenCalled();
       expect(open).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      { blockName: "page", tagName: "a" },
+      { blockName: "bookmark", tagName: "a" },
+      { blockName: "bookmark", tagName: "img" },
+      { blockName: "file", tagName: "a" },
+      { blockName: "embed", tagName: "a" },
+      { blockName: "image", tagName: "img" },
+      { blockName: "video", tagName: "video" },
+    ])("opens block actions for $blockName on $tagName", async ({ blockName, tagName }) => {
+      const { redactor, open, moveAndOpen, block } = await setupContextMenu({ blockName });
+      const target = document.createElement(tagName);
+      const marked = blockName === "bookmark" && tagName === "img" ? document.createElement("a") : target;
+
+      marked.setAttribute("data-blok-block-context-menu", "");
+      if (marked !== target) {
+        marked.appendChild(target);
+      }
+      redactor.appendChild(marked);
+      const event = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 35,
+        clientY: 45,
+      });
+
+      target.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(moveAndOpen).toHaveBeenCalledWith(block);
+      expect(open).toHaveBeenCalledWith(block, expect.objectContaining({ left: 35, top: 45 }));
+    });
+
+    it("opens block actions on a marked link registered under an alias", async () => {
+      const { redactor, open } = await setupContextMenu({ blockName: "subpage" });
+      const link = document.createElement("a");
+      link.setAttribute("data-blok-block-context-menu", "");
+      redactor.appendChild(link);
+      const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+
+      link.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the native menu on an unmarked link even with a built-in tool name", async () => {
+      const { redactor, open } = await setupContextMenu({ blockName: "embed" });
+      const link = document.createElement("a");
+      redactor.appendChild(link);
+      const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+
+      link.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it.each(["page", "bookmark", "subpage"])("opens block actions when a marked %s link's SVG icon is right-clicked", async (blockName) => {
+      const { redactor, open } = await setupContextMenu({ blockName });
+      const link = document.createElement("a");
+      link.setAttribute("data-blok-block-context-menu", "");
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      svg.appendChild(path);
+      link.appendChild(svg);
+      redactor.appendChild(link);
+      const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+
+      path.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+
+    it("opens block actions when a marked video-controls button's SVG path is right-clicked", async () => {
+      const { redactor, open, moveAndOpen, block } = await setupContextMenu({ blockName: "video" });
+      const controls = document.createElement("div");
+      const button = document.createElement("button");
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+      controls.setAttribute(DATA_ATTR.blockContextMenu, "");
+      svg.appendChild(path);
+      button.appendChild(svg);
+      controls.appendChild(button);
+      redactor.appendChild(controls);
+      const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+
+      path.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(moveAndOpen).toHaveBeenCalledWith(block);
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      { kind: "SVG", namespace: "http://www.w3.org/2000/svg", root: "svg", child: "path" },
+      { kind: "MathML", namespace: "http://www.w3.org/1998/Math/MathML", root: "math", child: "mi" },
+    ])("preserves the native menu on an unmarked standalone $kind descendant", async ({ namespace, root, child }) => {
+      const { redactor, open } = await setupContextMenu();
+      const element = document.createElementNS(namespace, root);
+      const descendant = document.createElementNS(namespace, child);
+
+      element.appendChild(descendant);
+      redactor.appendChild(element);
+      const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+
+      descendant.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it.each(["input", "textarea", "select"])("preserves the native menu on %s", async (tagName) => {
+      const { redactor, open } = await setupContextMenu({ blockName: "page" });
+      const target = document.createElement(tagName);
+      target.setAttribute("data-blok-block-context-menu", "");
+
+      redactor.appendChild(target);
+      const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+
+      target.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it("preserves native link, image, and video menus in read-only mode", async () => {
+      for (const { blockName, tagName } of [
+        { blockName: "page", tagName: "a" },
+        { blockName: "image", tagName: "img" },
+        { blockName: "video", tagName: "video" },
+      ]) {
+        const { redactor, open } = await setupContextMenu({ blockName, readOnly: true });
+        const target = document.createElement(tagName);
+        target.setAttribute("data-blok-block-context-menu", "");
+
+        redactor.appendChild(target);
+        const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+
+        target.dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(open).not.toHaveBeenCalled();
+      }
     });
   });
 
@@ -838,6 +982,35 @@ describe("UI module", () => {
 
       expect(holder.innerHTML).toBe("");
       expect(unbindSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("loading skeleton", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    // Collaboration and pre-ready destroy call hideLoading() fire-and-forget, so a rejection would go unhandled.
+    it("hideLoading() never rejects and still ends the busy state when the blocks cannot be read", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const blockManager = {
+        get blocks(): never {
+          throw new Error("BlockManager not ready");
+        },
+      };
+      const { ui, wrapper } = createUI({
+        blokOverrides: {
+          BlockManager: blockManager as unknown as UI["Blok"]["BlockManager"],
+          I18n: { t: (key: string) => key } as unknown as UI["Blok"]["I18n"],
+        },
+      });
+
+      ui.showLoading();
+      expect(wrapper.getAttribute("aria-busy")).toBe("true");
+
+      await expect(ui.hideLoading()).resolves.toBeUndefined();
+      expect(wrapper.hasAttribute("aria-busy")).toBe(false);
+      expect(warn).toHaveBeenCalledTimes(1);
     });
   });
 

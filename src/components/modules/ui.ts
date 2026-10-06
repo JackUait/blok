@@ -18,7 +18,10 @@ import { debounce, getBlokVersion, getValidUrl, isEmpty, openSameWindow, openTab
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { buildFontSizeVarLines } from '../utils/font-size-tokens';
 import { LinkHoverCard } from '../utils/link-hover-card';
-import { log } from '../utils/logger';
+import { resolveLoaderConfig } from '../utils/loader-config';
+import { LoadingController } from '../utils/loading-controller';
+import { log, logLabeled } from '../utils/logger';
+import { resyncPortalDirections } from '../utils/portal-direction';
 import { decodeHashFragment, resolveHashTarget } from '../utils/hash-target';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { isSamePageLink } from '../../tools/link/registry';
@@ -112,6 +115,8 @@ export class UI extends Module<UINodes> {
    * {@link readOnlyMutableListeners}).
    */
   private linkHoverCard: LinkHoverCard | null = null;
+
+  private loading: LoadingController | null = null;
 
   /**
    * Handlers for simple event behaviors
@@ -494,14 +499,33 @@ export class UI extends Module<UINodes> {
    */
   public setDirection(direction: 'ltr' | 'rtl'): void {
     const isRtl = direction === 'rtl';
+    const flipped = this.nodes.wrapper.getAttribute('dir') !== direction;
+
+    // These menus were placed for the old side and do not re-place
+    // themselves (block menu side, inline toolbar anchor). The slash menu is
+    // rebuilt on every i18n update anyway.
+    if (flipped) {
+      this.closeAllToolbars();
+    }
 
     this.nodes.wrapper.classList.toggle('[direction:rtl]', isRtl);
     this.nodes.wrapper.setAttribute('dir', direction);
+    // The content column mirrors, so the cached rect is on the old side.
+    this.contentRectCache = null;
 
     if (isRtl) {
       this.nodes.wrapper.setAttribute(DATA_ATTR.rtl, 'true');
     } else {
       this.nodes.wrapper.removeAttribute(DATA_ATTR.rtl);
+    }
+
+    // Open menus, the find bar and toasts live outside the wrapper.
+    resyncPortalDirections(this.nodes.wrapper);
+    // Before relayout: the toolbar reads its own dir to pick a side.
+    this.Blok.Toolbar.syncDirection();
+
+    if (flipped) {
+      this.Blok.Toolbar.relayout();
     }
   }
 
@@ -541,10 +565,56 @@ export class UI extends Module<UINodes> {
   }
 
   /**
+   * Starts the boot skeleton; it appears only if the wait outlasts `loader.delay`.
+   */
+  public showLoading(): void {
+    // A destroy() that lands before render() must not start a skeleton nobody will hide.
+    if (this.isDestroyed) {
+      return;
+    }
+
+    this.loading ??= new LoadingController({
+      wrapper: this.nodes.wrapper,
+      content: this.nodes.redactor,
+      config: resolveLoaderConfig(this.config.loader),
+      label: this.Blok.I18n.t('a11y.loadingContent'),
+    });
+    this.loading.show();
+  }
+
+  /**
+   * Hands the skeleton off to the blocks now in the redactor.
+   */
+  public async hideLoading(): Promise<void> {
+    // destroy() may call this before BlockManager is prepared, when blocks cannot be read yet.
+    if (this.loading === null) {
+      return;
+    }
+
+    // Never rejects: collaboration and a pre-ready destroy() call this without awaiting it.
+    const targets = ((): HTMLElement[] => {
+      try {
+        // Bar i must land on block i's visible content box. Direct child only, so a nested block's box is never picked.
+        return this.Blok.BlockManager.blocks.map(({ holder }) =>
+          holder.querySelector<HTMLElement>(`:scope > [${DATA_ATTR.elementContent}]`) ?? holder
+        );
+      } catch (error) {
+        logLabeled('The loading skeleton could not read the blocks', 'warn', error);
+
+        return [];
+      }
+    })();
+
+    await this.loading.hide(targets);
+  }
+
+  /**
    * Clean blok`s UI
    */
   public destroy(): void {
     this.toggleShortcuts?.unregister();
+    this.loading?.destroy();
+    this.loading = null;
     this.nodes.holder.innerHTML = '';
 
     this.unbindReadOnlyInsensitiveListeners();
@@ -618,17 +688,6 @@ export class UI extends Module<UINodes> {
     }
   };
 
-  /**
-   * Right-click inside block content opens the block context menu (Block
-   * Settings) anchored at the cursor, mirroring a desktop application. This is
-   * a hover-independent path to the block menu that avoids the "wrong block"
-   * race in the hover-driven settings toggler.
-   *
-   * The native context menu is left intact on interactive and media elements
-   * (links, form fields, images, media) where it carries real value — only
-   * plain block content is hijacked.
-   * @param event - contextmenu event
-   */
   private redactorContextMenu = (event: Event): void => {
     if (!(event instanceof MouseEvent)) {
       return;
@@ -636,11 +695,21 @@ export class UI extends Module<UINodes> {
 
     const target = event.target;
 
-    if (!(target instanceof HTMLElement)) {
+    if (!(target instanceof Element)) {
       return;
     }
 
-    if (target.closest('a, input, textarea, select, img, video, audio')) {
+    if (!(target instanceof HTMLElement) && target.closest(`[${DATA_ATTR.blockContextMenu}]`) === null) {
+      return;
+    }
+
+    const nativeTarget = target.closest('a, input, textarea, select, img, video, audio');
+
+    if (nativeTarget !== null && (
+      this.Blok.ReadOnly.isEnabled ||
+      !nativeTarget.matches('a, img, video') ||
+      nativeTarget.closest(`[${DATA_ATTR.blockContextMenu}]`) === null
+    )) {
       return;
     }
 
@@ -1250,7 +1319,8 @@ export class UI extends Module<UINodes> {
    * open the toolbar. Returns false when the editor guards reject the action.
    */
   private appendBlockAtBottom(): boolean {
-    if (!Selection.isCollapsed) {
+    // The redactor is inert while loading, but the bottom zone is not; onChange is not wired yet.
+    if (this.loading?.isBusy === true || !Selection.isCollapsed) {
       return false;
     }
 
@@ -1359,6 +1429,10 @@ export class UI extends Module<UINodes> {
     const anchor = target?.closest?.('a');
 
     if (!(anchor instanceof HTMLAnchorElement) || !this.nodes.redactor.contains(anchor)) {
+      return;
+    }
+
+    if (anchor.closest(`[${DATA_ATTR.linkOwner}]`) !== null) {
       return;
     }
 
@@ -1560,7 +1634,7 @@ export class UI extends Module<UINodes> {
       return;
     }
 
-    if (!anchor.getAttribute('href')) {
+    if (!anchor.getAttribute('href') || anchor.closest(`[${DATA_ATTR.linkOwner}]`) !== null) {
       return;
     }
 

@@ -28,6 +28,10 @@ export const blokDocumentSchema = {
   required: ['blocks'],
   additionalProperties: false,
   properties: {
+    id: {
+      type: 'string',
+      description: 'The document id. Blok writes it on the first save and keeps it.',
+    },
     time: {
       type: 'integer',
       description: 'Unix epoch milliseconds when the document was saved.',
@@ -90,6 +94,7 @@ export const blokDocumentSchema = {
           { if: { required: ['type'], properties: { type: { const: 'database-row' } } }, then: { properties: { data: { $ref: '#/$defs/database-row' } } } },
           { if: { required: ['type'], properties: { type: { const: 'divider' } } }, then: { properties: { data: { $ref: '#/$defs/divider' } } } },
           { if: { required: ['type'], properties: { type: { const: 'spacer' } } }, then: { properties: { data: { $ref: '#/$defs/spacer' } } } },
+          { if: { required: ['type'], properties: { type: { const: 'table_of_contents' } } }, then: { properties: { data: { $ref: '#/$defs/table_of_contents' } } } },
           { if: { required: ['type'], properties: { type: { const: 'quote' } } }, then: { properties: { data: { $ref: '#/$defs/quote' } } } },
           { if: { required: ['type'], properties: { type: { const: 'code' } } }, then: { properties: { data: { $ref: '#/$defs/code' } } } },
           { if: { required: ['type'], properties: { type: { const: 'image' } } }, then: { properties: { data: { $ref: '#/$defs/image' } } } },
@@ -98,8 +103,12 @@ export const blokDocumentSchema = {
           { if: { required: ['type'], properties: { type: { const: 'video' } } }, then: { properties: { data: { $ref: '#/$defs/video' } } } },
           { if: { required: ['type'], properties: { type: { const: 'column_list' } } }, then: { properties: { data: { $ref: '#/$defs/column_list' } } } },
           { if: { required: ['type'], properties: { type: { const: 'column' } } }, then: { properties: { data: { $ref: '#/$defs/column' } } } },
+          { if: { required: ['type'], properties: { type: { const: 'tabs' } } }, then: { properties: { data: { $ref: '#/$defs/tabs' } } } },
+          { if: { required: ['type'], properties: { type: { const: 'tab' } } }, then: { properties: { data: { $ref: '#/$defs/tab' } } } },
           { if: { required: ['type'], properties: { type: { const: 'embed' } } }, then: { properties: { data: { $ref: '#/$defs/embed' } } } },
           { if: { required: ['type'], properties: { type: { const: 'bookmark' } } }, then: { properties: { data: { $ref: '#/$defs/bookmark' } } } },
+          { if: { required: ['type'], properties: { type: { const: 'page' } } }, then: { properties: { data: { $ref: '#/$defs/page' } } } },
+          { if: { required: ['type'], properties: { type: { const: 'page-link' } } }, then: { properties: { data: { $ref: '#/$defs/page-link' } } } },
         ],
       },
     },
@@ -127,7 +136,7 @@ export const blokDocumentSchema = {
         text: { type: 'string', description: 'Inline HTML of the heading.' },
         level: { type: 'integer', minimum: 1, maximum: 6 },
         isToggleable: { type: 'boolean', description: 'Heading collapses/expands its children.' },
-        isOpen: { type: 'boolean', description: 'Expanded state of a toggle heading.' },
+        isOpen: { type: 'boolean', deprecated: true, description: 'Ignored. Open state is personal and never saved.' },
         textColor: { type: 'string' },
         backgroundColor: { type: 'string' },
         anchor: { type: 'string', description: 'Anchor id rendered as the heading element\'s `id`.' },
@@ -212,7 +221,7 @@ export const blokDocumentSchema = {
       additionalProperties: false,
       properties: {
         text: { type: 'string', description: 'Inline HTML of the summary.' },
-        isOpen: { type: 'boolean' },
+        isOpen: { type: 'boolean', deprecated: true, description: 'Ignored. Open state is personal and never saved.' },
       },
     },
 
@@ -323,7 +332,7 @@ export const blokDocumentSchema = {
 
     'database-row': {
       type: 'object',
-      description: 'One row of a database block. Rich page content lives in this block\'s children, not here.',
+      description: 'One row of a database block. Optional pageId points to a separate body document.',
       required: ['properties', 'position'],
       additionalProperties: false,
       properties: {
@@ -337,6 +346,7 @@ export const blokDocumentSchema = {
           type: 'string',
           description: 'Row title, mirrored from the title column. Absent on rows written before this key existed.',
         },
+        pageId: { type: 'string', minLength: 1, description: 'Id of the separate document that holds the row page body.' },
       },
     },
 
@@ -352,6 +362,16 @@ export const blokDocumentSchema = {
       additionalProperties: false,
       properties: {
         height: { type: 'number', minimum: 38, maximum: 600, description: 'Gap in pixels. Defaults to 38; out-of-range values are clamped on load.' },
+      },
+    },
+
+    table_of_contents: {
+      type: 'object',
+      description: 'An outline of the page headings. The list is read from the document each time and never saved.',
+      additionalProperties: false,
+      properties: {
+        textColor: { type: 'string', description: 'Text color preset name, e.g. "red".' },
+        backgroundColor: { type: 'string', description: 'Background color preset name.' },
       },
     },
 
@@ -424,9 +444,10 @@ export const blokDocumentSchema = {
         straighten: { type: 'number', minimum: -45, maximum: 45, description: 'Clockwise degrees, after the turn. Omitted for 0.' },
         filter: {
           type: 'string',
-          enum: ['none', 'vivid', 'dramatic', 'warm', 'mono', 'noir', 'fade', 'sepia'],
-          description: 'Colour preset. Omitted for "none".',
+          minLength: 1,
+          description: 'Colour look: a built-in preset (vivid, noir, sepia, …) or a host filter name from the image tool\'s `filters` config. Omitted for "none".',
         },
+        filterStrength: { type: 'number', minimum: 0, maximum: 100, description: 'How strongly `filter` applies. Omitted for 100 and when there is no filter.' },
         adjust: {
           type: 'object',
           description: 'Colour adjustments, each -100..100. Zero entries are omitted, and so is an empty object.',
@@ -576,6 +597,24 @@ export const blokDocumentSchema = {
       },
     },
 
+    tabs: {
+      type: 'object',
+      description: 'A set of tabs. Carries no data — the tabs are its `content` children, which are only `tab` blocks. The open tab is not saved.',
+      additionalProperties: false,
+      properties: {},
+    },
+
+    tab: {
+      type: 'object',
+      description: 'One tab of a tabs block. Its content is its `content` children.',
+      required: ['title'],
+      additionalProperties: false,
+      properties: {
+        title: { type: 'string', description: 'Plain text, not HTML. Empty for an untitled tab.' },
+        icon: { type: 'string', description: 'Emoji shown before the title. Omitted when the tab has none.' },
+      },
+    },
+
     embed: {
       type: 'object',
       description: 'A live third-party embed. Only registry-matched provider URLs are embedded.',
@@ -607,6 +646,28 @@ export const blokDocumentSchema = {
         image: { type: 'string', description: 'Preview image URL.' },
         favicon: { type: 'string' },
         domain: { type: 'string' },
+      },
+    },
+
+    page: {
+      type: 'object',
+      description: 'A link to a sub-page. The page body lives in a separate document named by `pageId`, not in this one, so the block has no children.',
+      required: ['pageId'],
+      additionalProperties: false,
+      properties: {
+        pageId: { type: 'string', description: 'Id of the separate document that holds the page.' },
+        textColor: { type: 'string', description: 'Text color preset name, e.g. "red".' },
+        backgroundColor: { type: 'string', description: 'Background color preset name.' },
+      },
+    },
+
+    'page-link': {
+      type: 'object',
+      description: 'A non-owning reference to a page. It has no children.',
+      required: ['pageId'],
+      additionalProperties: false,
+      properties: {
+        pageId: { type: 'string', minLength: 1, description: 'Id of the referenced page.' },
       },
     },
   },

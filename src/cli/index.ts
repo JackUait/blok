@@ -49,6 +49,20 @@ const parseArgs = (argv: string[]): { command: string | null; output?: string } 
   return { command: null };
 };
 
+/**
+ * DOM globals the converters read under plain Node. The table cell parser
+ * creates elements and tests `instanceof HTMLElement` / `HTMLInputElement`.
+ */
+const installDomGlobals = (win: Pick<typeof globalThis, 'DOMParser' | 'Node' | 'document' | 'HTMLElement' | 'HTMLInputElement'>): void => {
+  const target = globalThis as Record<string, unknown>;
+
+  target.DOMParser = win.DOMParser;
+  target.Node = win.Node;
+  target.document = win.document;
+  target.HTMLElement = win.HTMLElement;
+  target.HTMLInputElement = win.HTMLInputElement;
+};
+
 export const run = async (argv: string[], version: string): Promise<void> => {
   const { command, output } = parseArgs(argv);
 
@@ -57,8 +71,7 @@ export const run = async (argv: string[], version: string): Promise<void> => {
       const jsdom = await import('jsdom');
       const dom = new jsdom.JSDOM('');
 
-      globalThis.DOMParser = dom.window.DOMParser;
-      globalThis.Node = dom.window.Node;
+      installDomGlobals(dom.window);
 
       const { convertHtml } = await import('./commands/convert-html/index');
       const fs = await import('node:fs');
@@ -74,9 +87,7 @@ export const run = async (argv: string[], version: string): Promise<void> => {
       const jsdom = await import('jsdom');
       const dom = new jsdom.JSDOM('');
 
-      globalThis.DOMParser = dom.window.DOMParser;
-      globalThis.Node = dom.window.Node;
-      (globalThis as Record<string, unknown>).document = dom.window.document;
+      installDomGlobals(dom.window);
 
       const { convertGdocs } = await import('./commands/convert-gdocs/index');
       const fs = await import('node:fs');

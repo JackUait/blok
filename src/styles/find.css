@@ -47,9 +47,35 @@
   border: 0;
   background: transparent;
   overflow: visible;
+  transform-origin: top right;
   transition:
+    opacity var(--blok-duration-base) var(--blok-ease-exit),
+    transform var(--blok-duration-base) var(--blok-ease-exit),
     display var(--blok-duration-base) allow-discrete,
     overlay var(--blok-duration-base) allow-discrete;
+}
+
+/*
+  The bar's paint. find-motion.ts grows this layer from a dot while the bar's
+  layout box stays put, so the host's placement holds on every frame.
+*/
+[data-blok-find]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--blok-radius-surface);
+  background: var(--blok-popover-bg);
+  box-shadow: var(--blok-popover-box-shadow);
+  pointer-events: none;
+}
+
+/* Fades out; showing is find-motion.ts's bloom. From display:none no transition runs on show. */
+[data-blok-find][hidden] {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
 }
 
 [data-blok-find][data-blok-find-placement^="top"],
@@ -72,7 +98,7 @@
   inset-inline-start: var(--blok-find-offset-x);
 }
 
-/* `translate`, not `transform`: the bar's own entrance animation owns transform. */
+/* `translate`, not `transform`: the dock's exit fade owns transform. */
 [data-blok-find][data-blok-find-placement$="-center"],
 [data-blok-find][data-blok-top-layer][popover][data-blok-find-placement$="-center"] {
   left: 50%;
@@ -94,45 +120,24 @@
   padding: var(--blok-space-1-5);
   border-radius: var(--blok-radius-surface);
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1-5)));
-  background: var(--blok-popover-bg);
   color: var(--blok-text-primary);
-  box-shadow: var(--blok-popover-box-shadow);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   font-size: var(--blok-font-size-ui-label);
   line-height: var(--blok-line-height-body);
-  transform-origin: top right;
-  transition:
-    opacity var(--blok-duration-popover-enter) var(--blok-ease-popover),
-    transform var(--blok-duration-popover-enter) var(--blok-ease-popover);
 }
 
-[data-blok-find][data-blok-find-placement^="bottom"] [data-blok-find-bar] {
+[data-blok-find][data-blok-find-placement^="bottom"] {
   transform-origin: bottom right;
 }
 
 /* The dock carries `dir` (syncPortalDirection). The dir pseudo-class would be lowered to
    page-`lang` rules by the build, so select the attribute instead. */
-[data-blok-find][dir="rtl"] [data-blok-find-bar] {
+[data-blok-find][dir="rtl"] {
   transform-origin: top left;
 }
 
-[data-blok-find][dir="rtl"][data-blok-find-placement^="bottom"] [data-blok-find-bar] {
+[data-blok-find][dir="rtl"][data-blok-find-placement^="bottom"] {
   transform-origin: bottom left;
-}
-
-[data-blok-find][hidden] [data-blok-find-bar] {
-  opacity: 0;
-  transform: translateY(-4px) scale(0.98);
-  transition:
-    opacity var(--blok-duration-base) var(--blok-ease-exit),
-    transform var(--blok-duration-base) var(--blok-ease-exit);
-}
-
-@starting-style {
-  [data-blok-find]:not([hidden]) [data-blok-find-bar] {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.97);
-  }
 }
 
 [data-blok-find-bar] :where(button, input) {
@@ -165,10 +170,6 @@
   gap: var(--blok-space-0-5);
 }
 
-[data-blok-find-replace-row] [data-blok-find-controls] {
-  gap: var(--blok-space-1);
-}
-
 /* ─── Field ─── */
 
 /* The box itself is the shared field look (field.css, data-blok-field). */
@@ -198,8 +199,9 @@
   background: var(--blok-find-empty-bg);
 }
 
-[data-blok-find-field][data-blok-find-shake] {
-  animation: blok-find-shake 360ms var(--blok-ease-bounce);
+/* The hop chip's tint, so the landed word keeps the same highlight. */
+[data-blok-find-field] > input::selection {
+  background: var(--blok-selection-inline);
 }
 
 [data-blok-find-field] input::-webkit-search-cancel-button,
@@ -308,37 +310,57 @@
   transform: rotate(90deg);
 }
 
+/* Collapsed, the toggle points toward the inline end: left in RTL. */
+[data-blok-find][dir="rtl"] [data-blok-find-bar]:not([data-blok-find-open]) [data-blok-find-replace-toggle] svg {
+  transform: scaleX(-1);
+}
+
 [data-blok-find-replace-toggle] {
   width: 20px;
 }
 
-[data-blok-find-toggle] > span {
-  font-size: var(--blok-font-size-ui-compact);
-  font-weight: var(--blok-font-weight-semibold);
-  letter-spacing: -0.01em;
-}
-
-/* Whole word: a bracket under "ab", the classic word-boundary glyph. */
-[data-blok-find-toggle='find-whole-word'] > span {
-  position: relative;
-  padding-inline: var(--blok-space-0-5);
-}
-
-[data-blok-find-toggle='find-whole-word'] > span::after {
-  content: '';
-  position: absolute;
-  inset-inline: 0;
-  bottom: -2px;
-  height: 3px;
-  border: 1.25px solid currentColor;
-  border-top: 0;
-  border-radius: 0 0 var(--blok-radius-notch) var(--blok-radius-notch);
-}
-
-[data-blok-find-toggle][aria-pressed='true'],
-[data-blok-find-toggle][aria-pressed='true']:hover {
+/* An option is on: say so, or a filtered search looks unfiltered. */
+[data-blok-find-options][data-blok-find-options-active],
+[data-blok-find-options][data-blok-find-options-active]:hover,
+[data-blok-find-options][aria-expanded='true'] {
   background: var(--blok-popover-icon-active-bg);
   color: var(--blok-icon-active-text);
+}
+
+/* How many options are on. Ink on the page color: it flips in dark mode and is never blue. */
+[data-blok-find-options] {
+  position: relative;
+}
+
+[data-blok-find-options-count] {
+  position: absolute;
+  top: 1px;
+  inset-inline-end: 1px;
+  display: grid;
+  place-items: center;
+  min-width: 14px;
+  height: 14px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-text-primary);
+  box-shadow: 0 0 0 1.5px var(--blok-bg-primary);
+  color: var(--blok-bg-primary);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+[data-blok-find-options-count][hidden] {
+  display: none;
+}
+
+/*
+  The check sits in the icon column, so a row keeps its width when checked
+  and the shortcut ends the row. Only a checked row shows it.
+*/
+[data-blok-find-options-menu] [data-blok-popover-item]:not([data-blok-popover-item-active]) > [data-blok-testid='popover-item-icon'] {
+  visibility: hidden;
 }
 
 [data-blok-find-bar] button:focus-visible {
@@ -346,97 +368,46 @@
   outline-offset: -2px;
 }
 
-[data-blok-find-divider] {
-  flex: none;
-  width: 1px;
-  height: 16px;
-  margin-inline: var(--blok-space-1);
-  background: var(--blok-border-secondary);
-}
-
-/* ─── Match map ─── */
-
-/* The margin equals the line's overhang: the line spans field edge to close button. */
-[data-blok-find-map] {
-  --blok-find-map-overhang: 4px;
-
-  position: relative;
-  grid-column: 2 / -1;
-  height: 16px;
-  margin: var(--blok-space-1-5) var(--blok-find-map-overhang) 0;
-  cursor: pointer;
-}
-
 /*
-  A hairline baseline. It runs past the box by half the active mark and its
-  ring, so a mark at 0% or 100% still sits on it. The 16px box is the hit area.
+  Grows into the slack the wider Replace buttons leave in the shared column,
+  so the options button stays against the find field. The line stays centred.
 */
-[data-blok-find-map]::before {
-  content: '';
-  position: absolute;
-  inset-inline: calc(-1 * var(--blok-find-map-overhang));
-  top: 50%;
-  height: 1px;
-  background: var(--blok-find-track);
-  transform: translateY(-50%);
-}
-
-/* The tick colour is opaque: stacked translucent ticks would paint darker. */
-[data-blok-find-tick] {
-  position: absolute;
-  top: 50%;
-  width: 2px;
-  height: 10px;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-find-tick);
-  transform: translate(-50%, -50%);
-  transition:
-    width var(--blok-duration-slow) var(--blok-ease-popover),
-    height var(--blok-duration-slow) var(--blok-ease-popover),
-    background-color var(--blok-duration-slow) var(--blok-ease-popover);
-}
-
-[data-blok-find-tick]:hover {
-  height: 14px;
-  background: var(--blok-text-secondary);
-}
-
-/* The ring is the bar's own colour: it cuts the mark out of the baseline and its neighbours. */
-[data-blok-find-tick][data-blok-find-active] {
-  z-index: 1;
-  width: 3px;
+[data-blok-find-divider] {
+  flex: 1 0 calc(1px + 2 * var(--blok-space-1));
   height: 16px;
-  background: var(--blok-find-tick-active);
-  box-shadow: 0 0 0 2px var(--blok-popover-bg);
+  background: linear-gradient(var(--blok-border-secondary), var(--blok-border-secondary)) center / 1px 100% no-repeat;
 }
 
 /* ─── Replace row ─── */
 
-/* 0fr → 1fr grid rows animate an auto height; the inner row clips while it grows. */
+/* Opening snaps: find-motion.ts springs the skin and clip over it. Closing still eases. */
 [data-blok-find-replace-row] {
   display: grid;
   grid-template-rows: 1fr;
   margin-top: var(--blok-space-1);
   opacity: 1;
-  transition:
-    grid-template-rows var(--blok-duration-slow) var(--blok-ease-popover),
-    margin-top var(--blok-duration-slow) var(--blok-ease-popover),
-    opacity var(--blok-duration-slow) var(--blok-ease-popover),
-    display var(--blok-duration-slow) allow-discrete;
+}
+
+/*
+  A closed row stays in layout, flat and invisible, so its wider buttons
+  still size the shared controls column and the find row never moves on
+  toggle. !important beats preflight's [hidden] display: none. Read-only
+  has no replace row, so it keeps display: none.
+*/
+[data-blok-find-bar]:not([data-blok-find-read-only]) [data-blok-find-replace-row][hidden] {
+  display: grid !important;
 }
 
 [data-blok-find-replace-row][hidden] {
   grid-template-rows: 0fr;
   margin-top: 0;
   opacity: 0;
-}
-
-@starting-style {
-  [data-blok-find-replace-row]:not([hidden]) {
-    grid-template-rows: 0fr;
-    margin-top: 0;
-    opacity: 0;
-  }
+  visibility: hidden;
+  transition:
+    grid-template-rows var(--blok-duration-slow) var(--blok-ease-popover),
+    margin-top var(--blok-duration-slow) var(--blok-ease-popover),
+    opacity var(--blok-duration-slow) var(--blok-ease-popover),
+    visibility var(--blok-duration-slow) allow-discrete;
 }
 
 [data-blok-find-replace-row] > [data-blok-find-row] {
@@ -478,17 +449,90 @@
   cursor: default;
 }
 
+/* Replace and its chevron read as one button, split by a hairline. It fills
+   the column, so Replace starts under the options button. */
+[data-blok-find-split] {
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--blok-border-width-hairline);
+}
+
+[data-blok-find-split] > [data-blok-find-text-button] {
+  flex: 1 1 auto;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+[data-blok-find-split] > [data-blok-find-replace-menu] {
+  width: 22px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  background: var(--blok-icon-bg);
+  color: var(--blok-text-primary);
+}
+
+[data-blok-find-split] > [data-blok-find-replace-menu] svg {
+  width: 14px;
+  height: 14px;
+}
+
+[data-blok-find-replace-menu][aria-expanded='true'] {
+  background: var(--blok-popover-icon-active-bg);
+  color: var(--blok-icon-active-text);
+}
+
+/* ─── Word hop ─── */
+
+/* The word flies in on a copy; its text in the field shows when it lands. */
+[data-blok-find-field][data-blok-find-hopping] > input {
+  color: transparent;
+  caret-color: transparent;
+}
+
+[data-blok-find-field][data-blok-find-hopping] > input::selection {
+  background: transparent;
+}
+
+/* JS sets the place and the copied type. The tint stays on: the field's
+   selection takes it over on landing. */
+[data-blok-find-hop-chip] {
+  position: absolute;
+  z-index: 1;
+  padding-inline: var(--blok-space-0-25);
+  border-radius: var(--blok-radius-notch);
+  background: var(--blok-selection-inline);
+  line-height: var(--blok-line-height-body);
+  white-space: pre;
+  pointer-events: none;
+}
+
+/* The same text in the field's type; JS fades it in as the page's type fades out. */
+[data-blok-find-hop-chip]::after {
+  content: attr(data-blok-find-hop-text);
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  padding-inline: inherit;
+  font-family: var(--blok-find-hop-land-family);
+  font-weight: var(--blok-find-hop-land-weight);
+  font-style: var(--blok-find-hop-land-style);
+  color: var(--blok-find-hop-land-color);
+  opacity: 0;
+}
+
 /* ─── Active match lens ─── */
 
+/* At the page origin, so the boxes scroll with the page (find-lens.ts adds the scroll offset). */
 [data-blok-find-lens] {
-  position: fixed;
-  inset: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
   z-index: var(--blok-z-find, 25);
   overflow: visible;
 }
 
 /*
-  Drawn from the viewport's top-left; JS supplies translate, width and height.
+  Drawn from the page's top-left; JS supplies translate, width and height.
   No padding: the box must match the ::highlight fill exactly, or a band of
   page shows between fill and ring. The ring is an outer shadow, so it paints
   over the fill's square corners that the radius leaves bare.
@@ -504,14 +548,6 @@
 /* Closes in on the match in place. Never animate transform: it places the box. */
 [data-blok-find-lens-box][data-blok-find-lens-arrive] {
   animation: blok-find-arrive var(--blok-duration-popover-enter) var(--blok-ease-popover);
-}
-
-@keyframes blok-find-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-4px); }
-  40% { transform: translateX(3px); }
-  60% { transform: translateX(-2px); }
-  80% { transform: translateX(1px); }
 }
 
 @keyframes blok-find-count {
@@ -541,17 +577,14 @@
 
 @media (prefers-reduced-motion: reduce) {
   [data-blok-find],
-  [data-blok-find-bar],
-  [data-blok-find][hidden] [data-blok-find-bar],
+  [data-blok-find][hidden],
   [data-blok-find-icon-button],
   [data-blok-find-icon-button] svg,
-  [data-blok-find-tick],
-  [data-blok-find-replace-row],
+  [data-blok-find-replace-row][hidden],
   [data-blok-find-text-button] {
     transition: none;
   }
 
-  [data-blok-find-field][data-blok-find-shake],
   [data-blok-find-counter][data-blok-find-bump],
   [data-blok-find-roll],
   [data-blok-find-lens-box][data-blok-find-lens-arrive] {
@@ -560,5 +593,9 @@
 
   [data-blok-find-roll]::before {
     content: none;
+  }
+
+  [data-blok-find-hop-chip] {
+    display: none;
   }
 }

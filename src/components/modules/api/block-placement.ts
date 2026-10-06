@@ -1,7 +1,7 @@
 import type { BlockPosition } from '../../../../types/api';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import type { Block } from '../../block';
-import { isChildToolAllowed } from '../../utils/child-tools';
+import { acceptsChildren, isChildToolAllowed } from '../../utils/child-tools';
 import { subtreeEnd } from '../../utils/tree-order';
 
 /**
@@ -185,6 +185,10 @@ export const assertCanMoveUnder = (tree: BlockTree, block: Block, parentId: stri
   }
 
   const oldParent = block.parentId === null ? undefined : tree.getBlockById(block.parentId);
+
+  if (!acceptsChildren(parent)) {
+    throw new BlockPlacementError(`${nameOf(parentId)} takes no children`);
+  }
 
   if (parent?.tool.ownsChildren === true) {
     throw new BlockPlacementError(`${nameOf(parentId)} owns its children`);

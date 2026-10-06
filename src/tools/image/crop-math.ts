@@ -122,3 +122,12 @@ export function applyRatio(
 
   return clampRect({ x, y, w, h });
 }
+
+/** Swaps the crop's pixel width and height about its centre, shrunk to fit the image. `size` is the image in px. */
+export function swapAspect(r: ImageCrop, size: { w: number; h: number }): ImageCrop {
+  const w = (r.h / 100) * size.h;
+  const h = (r.w / 100) * size.w;
+  const k = Math.min(1, size.w / w, size.h / h);
+
+  return clampRect({ x: r.x + r.w / 2 - (w * k * 50) / size.w, y: r.y + r.h / 2 - (h * k * 50) / size.h, w: (w * k * 100) / size.w, h: (h * k * 100) / size.h });
+}

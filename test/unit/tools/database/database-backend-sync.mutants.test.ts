@@ -282,7 +282,7 @@ describe('DatabaseBackendSync — mutation coverage', () => {
       expect(adapter.updateRow.mock.calls).toStrictEqual([[{ rowId: 'r1', properties: { title: 'A' } }]]);
     });
 
-    it('drops the flushed payload, so the next update to the same row is sent alone', () => {
+    it('drops the flushed payload, so the next update to the same row is sent alone', async () => {
       const adapter = createAdapter();
       const sync = new DatabaseBackendSync(adapter);
 
@@ -290,6 +290,7 @@ describe('DatabaseBackendSync — mutation coverage', () => {
       sync.flushPendingUpdates();
       sync.syncUpdateRow({ rowId: 'r1', properties: { status: 'done' } });
       sync.flushPendingUpdates();
+      await vi.advanceTimersByTimeAsync(500);
 
       expect(adapter.updateRow.mock.calls).toStrictEqual([
         [{ rowId: 'r1', properties: { title: 'A' } }],

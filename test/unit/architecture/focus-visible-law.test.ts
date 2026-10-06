@@ -158,6 +158,11 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     reason: 'Text input: the shared field keys its focus look on the text input or textarea only (never a button inside the box), so it may look active however the field was focused.',
   },
   {
+    file: 'src/styles/embed.css',
+    match: 'input:focus)',
+    reason: 'Text input: the embed address bar restates the shared field\'s input-only focus border at its own specificity.',
+  },
+  {
     file: 'src/styles/media-empty.css',
     match: '.blok-media-empty__input',
     reason: 'Text input: the URL field may look active however it was focused.',
@@ -196,6 +201,11 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     file: 'src/components/utils/notifier/draw.ts',
     match: 'focus:border-white/20',
     reason: 'Text input: the notifier prompt field.',
+  },
+  {
+    file: 'docs/src/components/ui/input.tsx',
+    match: 'focus:border-foreground/40',
+    reason: 'Text input: the docs field darkens its border however it was focused. It paints no ring.',
   },
 ];
 

@@ -189,4 +189,31 @@ describe('Table grip overlay', () => {
       expect(element.classList.contains('overflow-x-clip')).toBe(false);
     });
   });
+
+  describe('caret cell grips', () => {
+    it('keep the caret cell grips visible while another cell is hovered', () => {
+      const table = new Table(createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      }));
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const cells = element.querySelectorAll<HTMLElement>('[data-blok-table-cell]');
+      const isVisible = (selector: string): boolean =>
+        element.querySelector(selector)?.hasAttribute('data-blok-table-grip-visible') ?? false;
+
+      cells[0].dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      cells[3].dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+      expect(isVisible('[data-blok-table-grip-row="0"]')).toBe(true);
+      expect(isVisible('[data-blok-table-grip-col="0"]')).toBe(true);
+      expect(isVisible('[data-blok-table-grip-row="1"]')).toBe(true);
+      expect(isVisible('[data-blok-table-grip-col="1"]')).toBe(true);
+
+      table.destroy();
+      element.remove();
+    });
+  });
 });

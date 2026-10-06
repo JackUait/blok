@@ -28,6 +28,12 @@ Nothing else renders. `**bold**`, `# heading`, `1. ` and `> ` reach the reader a
 
 **Do not relax a threshold to make the guard pass.** Raising a number hides the debt across every value at once. Either fix the prose, or add a `LONG_SENTENCE_EXEMPT` entry whose value states what makes that one value an exception — an entry with no reason is a suppressed failure.
 
+## Page dates (lastmod ledger)
+
+After changing page content (data modules, locale strings, route copy, page components), run `node docs/scripts/update-lastmod-ledger.mjs` and commit `docs/src/seo/lastmod-ledger.json`. `docs/src/seo/lastmod-ledger.test.ts` fails until you do. Run it after rebasing, not before.
+
+The ledger drives the sitemap `lastmod`, the mirror `lastmod`, TechArticle `dateModified` and the visible "Last updated" line. If you change what goes into a fingerprint rather than a page's content, keep the old dates and update only the hashes. `CHANGELOG.md` is not a fingerprint input: the changelog takes its newest release heading's date, so a release needs no ledger update.
+
 ## Plans Directory
 
 `docs/plans/` contains design documents for refactoring work. These are architectural plans, not implementation tasks.

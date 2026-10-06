@@ -464,6 +464,30 @@ test.describe('Link paste', () => {
     await expect(page.locator('[data-blok-testid="bookmark-card"]')).toBeVisible();
   });
 
+  test('a link to the editor\'s own host offers no bookmark', async ({ page }) => {
+    await createBlok(page);
+    const editable = firstEditable(page);
+    const ownUrl = await page.evaluate(() => `${window.location.origin}/some/page`);
+
+    await editable.click();
+    await pasteText(editable, ownUrl);
+
+    await expect(page.getByRole('link', { name: ownUrl, exact: true })).toHaveCount(1);
+    await expect(page.locator('[data-blok-item-name="paste-menu-plain"]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-item-name="paste-menu-bookmark"]')).toHaveCount(0);
+  });
+
+  test('a link to a configured host alias offers no bookmark', async ({ page }) => {
+    await createBlok(page, undefined, { linkPaste: { hostAliases: ['*.example.com'] } });
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await pasteText(editable, 'https://docs.example.com/article');
+
+    await expect(page.getByRole('link', { name: 'https://docs.example.com/article', exact: true })).toHaveCount(1);
+    await expect(page.locator('[data-blok-item-name="paste-menu-bookmark"]')).toHaveCount(0);
+  });
+
   test('choosing Plain link keeps the URL as a link, not a card', async ({ page }) => {
     await createBlok(page);
     const editable = firstEditable(page);

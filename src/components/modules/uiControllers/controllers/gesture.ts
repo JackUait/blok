@@ -1,5 +1,6 @@
 import { DATA_ATTR } from '../../../constants';
 import { isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../../utils/caret/boundaries';
+import { isPasteContinuation } from '../../../utils/paste-continuation';
 
 import { Controller } from './_base';
 
@@ -54,7 +55,7 @@ export class GestureController extends Controller {
   };
 
   private readonly discreteHandler = (event: Event): void => {
-    if (this.owns(event)) {
+    if (this.owns(event) && !isPasteContinuation(event)) {
       this.Blok.YjsManager.beginGesture('discrete');
     }
   };

@@ -119,7 +119,7 @@ describe('dom-builder', () => {
 
       const content = buildStandardContent(context);
 
-      expect(content.style.marginLeft).toBe('54px'); // 2 * 27px
+      expect(content.style.marginInlineStart).toBe('54px'); // 2 * 27px
     });
 
     it('applies smaller indentation for nested ordered items (26px per level) to match Notion', () => {
@@ -129,7 +129,7 @@ describe('dom-builder', () => {
 
       const content = buildStandardContent(context);
 
-      expect(content.style.marginLeft).toBe('52px'); // 2 * 26px
+      expect(content.style.marginInlineStart).toBe('52px'); // 2 * 26px
     });
 
     it('applies custom color when configured', () => {
@@ -272,9 +272,9 @@ describe('dom-builder', () => {
       });
 
       const content = buildChecklistContent(context);
-      const marginLeft = content.style.marginLeft;
+      const indent = content.style.marginInlineStart;
 
-      expect(marginLeft).toBe('27px'); // 1 * 27px
+      expect(indent).toBe('27px'); // 1 * 27px
     });
 
     it('creates editable content div', () => {
@@ -305,7 +305,7 @@ describe('dom-builder', () => {
 
       expect(marker).toHaveTextContent('1.');
       expect(marker).toHaveAttribute('aria-hidden', 'true');
-      expect(marker.style.paddingRight).toBe('0.6875em');
+      expect(marker.style.paddingInlineEnd).toBe('0.6875em');
       expect(marker.style.minWidth).toBe('fit-content');
     });
 
@@ -355,7 +355,7 @@ describe('dom-builder', () => {
 
       // 0.6875em is the historical 11px gutter, expressed against the item's
       // font size so it stays 11px at the default and grows with the text.
-      expect(marker.style.paddingRight).toBe('0.6875em');
+      expect(marker.style.paddingInlineEnd).toBe('0.6875em');
       expect(marker.style.minWidth).toBe('fit-content');
     });
 
@@ -372,14 +372,14 @@ describe('dom-builder', () => {
       const markerPx = emsOf(marker.style.fontSize) * 16;
 
       expect(markerPx).toBe(24);
-      expect(emsOf(marker.style.paddingLeft) * markerPx).toBeCloseTo(1, 3);
-      expect(emsOf(marker.style.paddingRight) * markerPx).toBeCloseTo(13, 3);
+      expect(emsOf(marker.style.paddingInlineStart) * markerPx).toBeCloseTo(1, 3);
+      expect(emsOf(marker.style.paddingInlineEnd) * markerPx).toBeCloseTo(13, 3);
       expect(marker.style.fontFamily).toBe('Arial');
     });
 
     it('sizes the unordered marker with no absolute unit, so it scales with the item font', () => {
       const marker = createMarker('unordered', 0);
-      const metrics = [marker.style.fontSize, marker.style.lineHeight, marker.style.paddingLeft, marker.style.paddingRight];
+      const metrics = [marker.style.fontSize, marker.style.lineHeight, marker.style.paddingInlineStart, marker.style.paddingInlineEnd];
 
       // A px/rem metric here pins the bullet to one font size: the glyph stayed
       // 24px while host-scaled text grew past it, dropping the bullet 6px off

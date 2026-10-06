@@ -86,3 +86,43 @@ describe('Blok Line image transform icons', () => {
     expect(10 - apex - stroke).toBeGreaterThanOrEqual(stroke);
   });
 });
+
+describe('Blok Line image edit icon', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('breaks each slider rail around its knob and staggers the knobs', () => {
+    const svg = svgOf(Icons.IconSliders);
+    const knobs = Array.from(svg.querySelectorAll('circle'));
+    const rails = Array.from(svg.querySelectorAll('path'));
+    const stroke = Number(rails[0].getAttribute('stroke-width'));
+
+    expect(knobs).toHaveLength(3);
+    expect(rails).toHaveLength(3);
+
+    knobs.forEach((knob, row) => {
+      const cx = Number(knob.getAttribute('cx'));
+      const cy = Number(knob.getAttribute('cy'));
+      const outer = Number(knob.getAttribute('r')) + stroke / 2;
+      // Each rail: "M a y H b M c y H d" — two segments on the knob's row.
+      const [a, y1, b, c, y2, d] = numbers(rails[row]);
+
+      expect([y1, y2]).toEqual([cy, cy]);
+      expect(a).toBe(3.5);
+      expect(d).toBe(16.5);
+      // A visible gap of at least half a stroke between rail cap and knob ring.
+      expect(cx - outer - (b + stroke / 2)).toBeGreaterThanOrEqual(stroke / 2);
+      expect((c - stroke / 2) - (cx + outer)).toBeGreaterThanOrEqual(stroke / 2);
+    });
+
+    const [top, middle, bottom] = knobs.map(knob => Number(knob.getAttribute('cx')));
+
+    expect(middle).not.toBe(top);
+    expect(middle).not.toBe(bottom);
+  });
+});

@@ -1,13 +1,21 @@
+import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { getElementDirection, inlineDelta } from '../../components/utils/direction';
+import type { TextDirection } from '../../components/utils/direction';
+
 import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, MIN_COL_WIDTH, ROW_ATTR } from './table-core';
+import { gridX } from './table-direction';
 
 const RESIZE_ATTR = 'data-blok-table-resize';
+/** Set by TableCellSelection on the box it draws around the selected cells. */
+const SELECTION_OVERLAY_SELECTOR = ':scope > [data-blok-table-selection-overlay]';
 const HANDLE_HIT_WIDTH = 16;
+const RESIZE_LINE_WIDTH = 2;
 /** Two clicks on the same handle within this window count as a double-click. */
 const DBLCLICK_MS = 300;
 
 /**
  * Handles column resize drag interaction on the table grid.
- * Each handle controls the column to its left.
+ * Each handle controls the column on its inline-start side.
  * Table width = sum of all column widths.
  */
 export class TableResize {
@@ -21,6 +29,7 @@ export class TableResize {
   private onResetWidths: (() => void) | null;
   private isDragging = false;
   private dragStartX = 0;
+  private dragDirection: TextDirection = 'ltr';
   private dragColIndex = -1;
   private startColWidth = 0;
   /** True once a drag has moved — so a no-move press-release reads as a click. */
@@ -115,6 +124,8 @@ export class TableResize {
     const handle = document.createElement('div');
 
     handle.setAttribute(RESIZE_ATTR, '');
+    // Chrome, not content: placing it (scroll, direction flip) is not an edit.
+    handle.setAttribute(DATA_ATTR.mutationFree, 'true');
     handle.setAttribute('data-col', String(colIndex));
     handle.style.position = 'absolute';
     handle.style.top = `-${BORDER_WIDTH}px`;
@@ -123,16 +134,21 @@ export class TableResize {
     handle.style.left = `${this.getHandleOffsetPx(colIndex)}px`;
     handle.style.cursor = 'col-resize';
     handle.style.zIndex = '2';
-    handle.style.background = 'linear-gradient(to right, transparent 7px, #3b82f6 7px, #3b82f6 9px, transparent 9px)';
+    handle.style.setProperty('--blok-table-resize-line-x', `${this.getLineOffsetPx(colIndex)}px`);
+    handle.style.background = `linear-gradient(to right, transparent var(--blok-table-resize-line-x), #3b82f6 var(--blok-table-resize-line-x), #3b82f6 calc(var(--blok-table-resize-line-x) + ${RESIZE_LINE_WIDTH}px), transparent calc(var(--blok-table-resize-line-x) + ${RESIZE_LINE_WIDTH}px))`;
     handle.style.opacity = '0';
     handle.style.transition = 'opacity 150ms ease';
     handle.setAttribute('contenteditable', 'false');
+    this.roundOuterEdge(handle, colIndex);
 
-    handle.addEventListener('mouseenter', () => {
+    const showUnlessOnSelection = (e: MouseEvent): void => {
       if (!this.isDragging) {
-        handle.style.opacity = '1';
+        handle.style.opacity = this.isOnSelectionEdge(handle, e.clientY) ? '0' : '1';
       }
-    });
+    };
+
+    handle.addEventListener('mouseenter', showUnlessOnSelection);
+    handle.addEventListener('mousemove', showUnlessOnSelection);
 
     handle.addEventListener('mouseleave', () => {
       if (!this.isDragging) {
@@ -141,6 +157,47 @@ export class TableResize {
     });
 
     return handle;
+  }
+
+  /**
+   * The selected cell's box draws its own inline-end border with the options
+   * pill on it, so the resize line there would paint over both. The overlay
+   * edge sits within the hit width of exactly one handle.
+   */
+  private isOnSelectionEdge(handle: HTMLElement, clientY: number): boolean {
+    const overlay = this.gridEl.querySelector<HTMLElement>(SELECTION_OVERLAY_SELECTOR);
+
+    if (overlay === null) {
+      return false;
+    }
+
+    const box = overlay.getBoundingClientRect();
+
+    if (clientY < box.top || clientY > box.bottom) {
+      return false;
+    }
+
+    const edgeX = getElementDirection(this.gridEl) === 'rtl' ? box.left : box.right;
+    const handleRect = handle.getBoundingClientRect();
+
+    return edgeX >= handleRect.left && edgeX <= handleRect.right;
+  }
+
+  /**
+   * The last handle's line runs along the table's outer edge, so its outer
+   * corners follow the table's rounding.
+   */
+  private roundOuterEdge(handle: HTMLElement, colIndex: number): void {
+    const isOuter = colIndex === this.colWidths.length - 1;
+    const isRtl = getElementDirection(this.gridEl) === 'rtl';
+    const right = isOuter && !isRtl ? 'var(--blok-radius-table)' : '';
+    const left = isOuter && isRtl ? 'var(--blok-radius-table)' : '';
+    const el: HTMLElement = handle;
+
+    el.style.borderTopRightRadius = right;
+    el.style.borderBottomRightRadius = right;
+    el.style.borderTopLeftRadius = left;
+    el.style.borderBottomLeftRadius = left;
   }
 
   /**
@@ -269,7 +326,7 @@ export class TableResize {
    * grid's own box.
    *
    * A handle is a HANDLE_HIT_WIDTH-wide hit area centred on the column border
-   * it controls. For the last column that border IS the table's right edge, so
+   * it controls. For the last column that border IS the table's inline-end edge, so
    * a centred handle would hang HANDLE_HIT_WIDTH / 2 px past the grid — and the
    * grid lives inside an `overflow-x: auto` scroll container (every table has
    * one, see Table.render), which counts that overhang as scrollable content.
@@ -279,10 +336,36 @@ export class TableResize {
    * grabbable, but contributing nothing to scrollWidth.
    */
   private getHandleOffsetPx(colIndex: number): number {
-    const centred = this.getHandleLeftPx(colIndex) - HANDLE_HIT_WIDTH / 2;
     const gridWidth = this.colWidths.reduce((sum, w) => sum + w, 0);
+    const centred = this.getBorderX(colIndex) - HANDLE_HIT_WIDTH / 2;
 
     return Math.max(0, Math.min(centred, gridWidth - HANDLE_HIT_WIDTH));
+  }
+
+  private getBorderX(colIndex: number): number {
+    const gridWidth = this.colWidths.reduce((sum, w) => sum + w, 0);
+
+    return gridX(this.getHandleLeftPx(colIndex), gridWidth, getElementDirection(this.gridEl));
+  }
+
+  /**
+   * Where the 2px line starts inside its handle. The border it marks is the
+   * physically-left cell's 1px border-right, which ends AT the border x, so
+   * its centre is BORDER_WIDTH / 2 before it. Clamped so an edge handle (see
+   * getHandleOffsetPx) still draws its whole line.
+   */
+  private getLineOffsetPx(colIndex: number): number {
+    const lineStart = this.getBorderX(colIndex) - BORDER_WIDTH / 2 - RESIZE_LINE_WIDTH / 2;
+
+    return Math.max(0, Math.min(lineStart - this.getHandleOffsetPx(colIndex), HANDLE_HIT_WIDTH - RESIZE_LINE_WIDTH));
+  }
+
+  /**
+   * Re-place the handles after a direction flip. Moves them in place: a
+   * rebuild adds and removes DOM in the block, which counts as an edit.
+   */
+  public reposition(): void {
+    this.updateHandlePositions();
   }
 
   private updateHandlePositions(): void {
@@ -290,6 +373,8 @@ export class TableResize {
       const handleEl: HTMLElement = handle;
 
       handleEl.style.left = `${this.getHandleOffsetPx(i)}px`;
+      handleEl.style.setProperty('--blok-table-resize-line-x', `${this.getLineOffsetPx(i)}px`);
+      this.roundOuterEdge(handleEl, i);
     });
   }
 
@@ -346,6 +431,7 @@ export class TableResize {
     this.didDrag = false;
     this.isDragging = true;
     this.dragStartX = e.clientX;
+    this.dragDirection = getElementDirection(this.gridEl);
     this.startColWidth = this.colWidths[this.dragColIndex];
     this.dragColElements = this.resolveColElements();
 
@@ -373,7 +459,7 @@ export class TableResize {
       return;
     }
 
-    const deltaPx = e.clientX - this.dragStartX;
+    const deltaPx = inlineDelta(e.clientX - this.dragStartX, this.dragDirection);
     const rawWidth = this.startColWidth + deltaPx;
     const newWidth = Math.max(MIN_COL_WIDTH, rawWidth);
 
@@ -399,7 +485,7 @@ export class TableResize {
    * render/save. Committing keeps model and DOM in agreement and keeps the
    * result the user was looking at when the gesture was taken away.
    */
-  private onPointerEnd(): void {
+  private onPointerEnd(e: PointerEvent): void {
     if (!this.isDragging) {
       return;
     }
@@ -414,7 +500,9 @@ export class TableResize {
 
     const activeHandle = this.handles[this.dragColIndex];
 
-    if (activeHandle) {
+    // Released still on the border: keep the line. Hiding it here and letting
+    // the next mouseenter bring it back blinks it.
+    if (activeHandle && (!activeHandle.matches(':hover') || this.isOnSelectionEdge(activeHandle, e.clientY))) {
       activeHandle.style.opacity = '0';
     }
 

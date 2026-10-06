@@ -144,21 +144,26 @@ const handleInsertCol = (
 };
 
 /**
- * Duplicate = insert an empty row directly below, then let the caller copy the
- * source row's content/colors into it (the caller owns the block API; this file
+ * Duplicate = insert `count` empty rows directly below, then let the caller copy the
+ * source rows' content/colors into them (the caller owns the block API; this file
  * owns only the grid). The DOM half is the same physical insert as
  * handleInsertRow — and therefore must obey the same merged-grid law.
  */
 const handleDuplicateRow = (
   gridEl: HTMLElement,
   index: number,
+  count: number,
   ctx: ActionContext,
 ): ActionResult => {
-  applyStructuralDom(ctx, () => ctx.grid.addRow(gridEl, index + 1));
+  applyStructuralDom(ctx, () => {
+    Array.from({ length: count }).forEach(() => {
+      ctx.grid.addRow(gridEl, index + count);
+    });
+  });
   populateNewCells(gridEl, ctx.cellBlocks);
 
   return {
-    pendingHighlight: { type: 'row', index: index + 1 },
+    pendingHighlight: { type: 'row', index: index + count },
     moveSelection: null,
     colWidths: ctx.data.colWidths,
     withHeadings: ctx.data.withHeadings,
@@ -179,30 +184,31 @@ const handleDuplicateRow = (
 const planDuplicateColumnWidths = (
   colWidths: number[] | undefined,
   index: number,
+  count: number,
 ): number[] | undefined => {
   if (colWidths === undefined || colWidths.length === 0) {
     return undefined;
   }
 
-  const next = [...colWidths];
+  const copies = colWidths.slice(index, index + count);
 
-  next.splice(index + 1, 0, next[index] ?? computeHalfAvgWidth(colWidths));
-
-  return next;
+  return [...colWidths.slice(0, index + count), ...copies, ...colWidths.slice(index + count)];
 };
 
 const handleDuplicateCol = (
   gridEl: HTMLElement,
   index: number,
+  count: number,
   ctx: ActionContext,
 ): ActionResult => {
-  const next = planDuplicateColumnWidths(ctx.data.colWidths, index);
+  const next = planDuplicateColumnWidths(ctx.data.colWidths, index, count);
 
   applyStructuralDom(ctx, () => {
     const domWidths = ctx.data.colWidths ?? readPixelWidths(gridEl);
-    const inserted = domWidths[index] ?? computeHalfAvgWidth(domWidths);
 
-    ctx.grid.addColumn(gridEl, index + 1, domWidths, inserted);
+    Array.from({ length: count }).forEach((_, i) => {
+      ctx.grid.addColumn(gridEl, index + count + i, domWidths, domWidths[index + i] ?? computeHalfAvgWidth(domWidths));
+    });
   });
 
   if (next) {
@@ -214,7 +220,7 @@ const handleDuplicateCol = (
   populateNewCells(gridEl, ctx.cellBlocks);
 
   return {
-    pendingHighlight: { type: 'col', index: index + 1 },
+    pendingHighlight: { type: 'col', index: index + count },
     moveSelection: null,
     colWidths: next,
     withHeadings: ctx.data.withHeadings,
@@ -296,13 +302,18 @@ const handleMoveCol = (
 const handleDeleteRow = (
   gridEl: HTMLElement,
   index: number,
+  count: number,
   ctx: ActionContext,
 ): ActionResult => {
   ctx.cellBlocks?.deleteBlocks(ctx.blocksToDelete ?? []);
 
   // On a merged grid the physical-index DOM delete can't render cells the model
   // promotes out of a merge. Rebuild from the (already-updated) model instead.
-  applyStructuralDom(ctx, () => ctx.grid.deleteRow(gridEl, index));
+  applyStructuralDom(ctx, () => {
+    Array.from({ length: count }).forEach(() => {
+      ctx.grid.deleteRow(gridEl, index);
+    });
+  });
 
   const newRowCount = ctx.grid.getRowCount(gridEl);
   const neighborRow = index < newRowCount ? index : index - 1;
@@ -319,15 +330,23 @@ const handleDeleteRow = (
 const handleDeleteCol = (
   gridEl: HTMLElement,
   index: number,
+  count: number,
   ctx: ActionContext,
 ): ActionResult => {
   ctx.cellBlocks?.deleteBlocks(ctx.blocksToDelete ?? []);
 
   // See handleDeleteRow: merged grids must rebuild from the model so promoted
   // cells render with an editable target instead of vanishing.
-  applyStructuralDom(ctx, () => ctx.grid.deleteColumn(gridEl, index));
+  applyStructuralDom(ctx, () => {
+    Array.from({ length: count }).forEach(() => {
+      ctx.grid.deleteColumn(gridEl, index);
+    });
+  });
 
-  const colWidths = syncColWidthsAfterDeleteColumn(ctx.data.colWidths, index);
+  const colWidths = Array.from({ length: count }).reduce<number[] | undefined>(
+    widths => syncColWidthsAfterDeleteColumn(widths, index),
+    ctx.data.colWidths
+  );
 
   if (colWidths) {
     applyPixelWidths(gridEl, colWidths);
@@ -367,17 +386,17 @@ export const executeRowColAction = (
     case 'insert-col-right':
       return handleInsertCol(gridEl, action.index + 1, ctx);
     case 'duplicate-row':
-      return handleDuplicateRow(gridEl, action.index, ctx);
+      return handleDuplicateRow(gridEl, action.index, action.count ?? 1, ctx);
     case 'duplicate-col':
-      return handleDuplicateCol(gridEl, action.index, ctx);
+      return handleDuplicateCol(gridEl, action.index, action.count ?? 1, ctx);
     case 'move-row':
       return handleMoveRow(gridEl, action.fromIndex, action.toIndex, ctx);
     case 'move-col':
       return handleMoveCol(gridEl, action.fromIndex, action.toIndex, ctx);
     case 'delete-row':
-      return handleDeleteRow(gridEl, action.index, ctx);
+      return handleDeleteRow(gridEl, action.index, action.count ?? 1, ctx);
     case 'delete-col':
-      return handleDeleteCol(gridEl, action.index, ctx);
+      return handleDeleteCol(gridEl, action.index, action.count ?? 1, ctx);
     case 'toggle-heading':
       return {
         pendingHighlight: { type: 'row', index: 0 },

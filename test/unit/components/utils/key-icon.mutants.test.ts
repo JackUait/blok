@@ -47,7 +47,7 @@ const DEL_SVG =
   '>Del</text>' +
   '</svg>';
 
-const OPEN = '<span style="display:inline-flex;align-items:center;line-height:1">';
+const OPEN = '<span style="display:inline-flex;align-items:center;line-height:1;direction:ltr">';
 
 beforeEach(() => {
   vi.clearAllMocks();

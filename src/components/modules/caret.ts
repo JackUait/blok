@@ -194,11 +194,11 @@ export class Caret extends Module {
 
     const getElement = (): HTMLElement | undefined => {
       if (position === this.positions.START) {
-        return block.firstInput;
+        return this.findEdgeInput(block, true);
       }
 
       if (position === this.positions.END) {
-        return block.lastInput;
+        return this.findEdgeInput(block, false);
       }
 
       return block.currentInput;
@@ -338,7 +338,7 @@ export class Caret extends Module {
       return;
     }
 
-    const element = atFirstLine ? block.firstInput : block.lastInput;
+    const element = this.findEdgeInput(block, atFirstLine);
 
     if (!element) {
       return;
@@ -357,6 +357,30 @@ export class Caret extends Module {
     if (updatedBlock) {
       updatedBlock.currentInput = element;
     }
+  }
+
+  /**
+   * First or last input of the block that is not hidden inside it. A block's
+   * inputs include its descendants', and an inactive tab or a collapsed toggle
+   * hides some of them with the `hidden` class.
+   * @param block - the block to search
+   * @param first - true for the first input, false for the last
+   */
+  private findEdgeInput(block: Block, first: boolean): HTMLElement | undefined {
+    const isVisible = (input: HTMLElement): boolean => {
+      const hiddenAncestor = input.closest('.hidden');
+
+      return hiddenAncestor === null || hiddenAncestor === block.holder || !block.holder.contains(hiddenAncestor);
+    };
+    const edge = first ? block.firstInput : block.lastInput;
+
+    if (edge === undefined || isVisible(edge)) {
+      return edge;
+    }
+
+    const visible = block.inputs.filter(isVisible);
+
+    return first ? visible[0] : visible[visible.length - 1];
   }
 
   /**
@@ -1212,7 +1236,44 @@ export class Caret extends Module {
       return true;
     }
 
+    /**
+     * Both blocks sit in the same layout piece (one column, one tab): the move
+     * stays in that piece even when their DOM containers differ, as when one of
+     * them is inside a toggle.
+     */
+    const ownLayout = this.findLayoutAncestorId(currentBlock);
+
+    if (ownLayout !== null && ownLayout === this.findLayoutAncestorId(candidate)) {
+      return false;
+    }
+
     return this.isWithinContainer(candidate, containerId);
+  }
+
+  /**
+   * Id of the nearest ancestor whose tool is a layout piece (`isLayout`:
+   * column, tab), or null when there is none. Cycle-safe.
+   * @param block - the block to start from (not itself checked)
+   */
+  private findLayoutAncestorId(block: Block): string | null {
+    const { BlockManager } = this.Blok;
+    const seen = new Set<string>([block.id]);
+    const walk = (parentId: string | null): string | null => {
+      if (parentId === null || seen.has(parentId)) {
+        return null;
+      }
+      seen.add(parentId);
+
+      const parent = BlockManager.getBlockById?.(parentId);
+
+      if (parent === undefined) {
+        return null;
+      }
+
+      return parent.tool.isLayout ? parent.id : walk(parent.parentId);
+    };
+
+    return walk(block.parentId);
   }
 
   /**
@@ -1306,7 +1367,12 @@ export class Caret extends Module {
     /** Cross-browser caret insertion */
     const newRange = document.createRange();
 
-    const nodeToSetCaret = lastChild.nodeType === Node.TEXT_NODE ? lastChild : lastChild.firstChild;
+    /**
+     * The caret offset is a character count, so it must sit in a text node.
+     * On an element it counts children: nested marks like <s><u>x</u></s> throw IndexSizeError.
+     */
+    const deepest = $.getDeepestNode(lastChild, true);
+    const nodeToSetCaret = deepest?.nodeType === Node.TEXT_NODE ? deepest : null;
 
     if (nodeToSetCaret !== null && nodeToSetCaret.textContent !== null) {
       newRange.setStart(nodeToSetCaret, nodeToSetCaret.textContent.length);

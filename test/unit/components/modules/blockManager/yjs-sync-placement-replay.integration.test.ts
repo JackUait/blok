@@ -13,6 +13,7 @@ import { mountChildBlocks, withSlotlessDescendants } from '../../../../../src/to
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../../types';
 import type { OutputBlockData } from '../../../../../types';
+import { storeToggleOpenState } from '../../../../helpers/view-state';
 
 interface Runtime {
   isReady: Promise<unknown>;
@@ -111,10 +112,12 @@ const boot = async (blocks: OutputBlockData[]): Promise<Runtime> => {
   document.body.appendChild(holder);
   holders.push(holder);
 
+  storeToggleOpenState('doc', blocks);
+
   const editor = new Blok({
     holder,
     tools: { paragraph: Paragraph, toggle: Toggle, callout: Callout, header: Header, two: TwoSlots },
-    data: { blocks },
+    data: { id: 'doc', blocks },
   }) as unknown as Runtime;
 
   editors.push(editor);

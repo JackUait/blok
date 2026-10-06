@@ -1,3 +1,5 @@
+import { getElementDirection, logicalArrow } from './direction';
+
 /**
  * Roving-tabindex keyboard controller for a set of radios (or tabs) that behave
  * as a single-select group — the Radix `RadioGroup` interaction contract adapted
@@ -30,7 +32,8 @@ export interface RovingRadioGroupOptions {
   onSelect(index: number): void;
   /**
    * Which arrow-key axis moves between radios. Defaults to `'horizontal'`
-   * (Left/Right); `'vertical'` uses Up/Down; `'both'` accepts either axis.
+   * (Left/Right, in the group's reading order); `'vertical'` uses Up/Down;
+   * `'both'` accepts either axis.
    */
   orientation?: RovingOrientation;
 }
@@ -46,18 +49,14 @@ export function rovingRadioGroup(options: RovingRadioGroupOptions): RovingRadioG
   const { radios, getSelectedIndex, onSelect } = options;
   const orientation = options.orientation ?? 'horizontal';
 
-  const prevKeysByOrientation: Record<RovingOrientation, string[]> = {
-    vertical: ['ArrowUp'],
-    both: ['ArrowLeft', 'ArrowUp'],
-    horizontal: ['ArrowLeft'],
+  const verticalStep = (key: string): 'forward' | 'backward' | null => {
+    if (orientation === 'horizontal') return null;
+    if (key === 'ArrowDown') return 'forward';
+    return key === 'ArrowUp' ? 'backward' : null;
   };
-  const nextKeysByOrientation: Record<RovingOrientation, string[]> = {
-    vertical: ['ArrowDown'],
-    both: ['ArrowRight', 'ArrowDown'],
-    horizontal: ['ArrowRight'],
-  };
-  const prevKeys = prevKeysByOrientation[orientation];
-  const nextKeys = nextKeysByOrientation[orientation];
+  // Left/Right follow the group's reading order: ArrowLeft is next in RTL.
+  const horizontalStep = (key: string, radio: HTMLElement): 'forward' | 'backward' | null =>
+    orientation === 'vertical' ? null : logicalArrow(key, getElementDirection(radio));
 
   const applyTabStop = (): void => {
     const selected = getSelectedIndex();
@@ -81,10 +80,12 @@ export function rovingRadioGroup(options: RovingRadioGroupOptions): RovingRadioG
     const current = radios.indexOf(event.currentTarget as HTMLElement);
     if (current < 0) return;
 
-    if (nextKeys.includes(event.key)) {
+    const step = verticalStep(event.key) ?? horizontalStep(event.key, radios[current]);
+
+    if (step === 'forward') {
       event.preventDefault();
       move(current + 1);
-    } else if (prevKeys.includes(event.key)) {
+    } else if (step === 'backward') {
       event.preventDefault();
       move(current - 1);
     } else if (event.key === 'Home') {

@@ -8,6 +8,9 @@ import {
   TRANSIT_Z,
   TRANSIT_Z_GAP,
   VIEW_KEYS,
+  SNAP_VIEWS,
+  ASSEMBLE_GAP,
+  ASSEMBLE_PAGE,
   posesForVariant,
   pickNextAnimation,
   createKindSequencer,
@@ -51,6 +54,7 @@ describe('LAYOUTS matrix', () => {
       explode: [2, 3, 4],
       cascade: [2, 3, 4],
       orbit: [3, 4],
+      assemble: [4],
     };
     for (const [view, counts] of Object.entries(required)) {
       const present = Object.keys(LAYOUTS[view] ?? {})
@@ -86,7 +90,8 @@ describe('LAYOUTS matrix', () => {
     // orbit ring: orbit@3 left only ~14px between its two lower cards, orbit@4 ~12px.)
     const WANDER_MARGIN = 22;
     const violations: string[] = [];
-    for (const { view, count, variant, vi } of cells) {
+    // Snap views sit flush on purpose; the drift is switched off for them (see below).
+    for (const { view, count, variant, vi } of cells.filter((c) => !SNAP_VIEWS.has(c.view))) {
       for (let i = 0; i < variant.length; i++) {
         for (let j = i + 1; j < variant.length; j++) {
           const a = boxFor(variant[i].slot, variant[i].pose);
@@ -105,6 +110,49 @@ describe('LAYOUTS matrix', () => {
       }
     }
     expect(violations, `cards closer than ${WANDER_MARGIN}px:\n${violations.join('\n')}`).toEqual([]);
+  });
+
+  describe('assemble — the blocks snap into one page', () => {
+    const variant = LAYOUTS.assemble[4][0];
+    const ordered = CARD_KEYS.map((slot) => variant.find((entry) => entry.slot === slot));
+
+    it('is a snap view, so the drift is off while it holds', () => {
+      expect(SNAP_VIEWS.has('assemble')).toBe(true);
+    });
+
+    it('lays every block face-on, centred and at one scale', () => {
+      const scales = new Set(variant.map((entry) => entry.pose[3]));
+      expect(scales.size).toBe(1);
+      for (const { slot, pose } of variant) {
+        const [x, , rot, , rx, ry, kx] = pose;
+        expect([x, rot, rx, ry, kx], slot).toEqual([0, 0, 0, 0, 0]);
+      }
+    });
+
+    it('stacks the blocks a→d with the same small gap between each pair', () => {
+      for (let i = 1; i < ordered.length; i++) {
+        const prev = ordered[i - 1];
+        const next = ordered[i];
+        if (!prev || !next) throw new Error('assemble must name every slot');
+        const a = boxFor(prev.slot, prev.pose);
+        const b = boxFor(next.slot, next.pose);
+        const gap = b.y - b.h / 2 - (a.y + a.h / 2);
+        expect(gap, `${prev.slot}→${next.slot}`).toBeCloseTo(ASSEMBLE_GAP, 5);
+      }
+    });
+
+    it('keeps the page sheet around every block with room for its header on top', () => {
+      for (const { slot, pose } of variant) {
+        const box = boxFor(slot, pose);
+        expect(box.x - box.w / 2, slot).toBeGreaterThanOrEqual(ASSEMBLE_PAGE.x - ASSEMBLE_PAGE.w / 2);
+        expect(box.x + box.w / 2, slot).toBeLessThanOrEqual(ASSEMBLE_PAGE.x + ASSEMBLE_PAGE.w / 2);
+        expect(box.y + box.h / 2, slot).toBeLessThanOrEqual(ASSEMBLE_PAGE.y + ASSEMBLE_PAGE.h / 2);
+      }
+      const first = ordered[0];
+      if (!first) throw new Error('assemble must name slot a');
+      const top = boxFor(first.slot, first.pose);
+      expect(top.y - top.h / 2 - (ASSEMBLE_PAGE.y - ASSEMBLE_PAGE.h / 2)).toBeGreaterThanOrEqual(ASSEMBLE_PAGE.header);
+    });
   });
 
   it('uses a number of cards equal to its count key', () => {

@@ -6,6 +6,9 @@
  * Uses a passive scroll event listener with rAF throttling.
  */
 
+import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { getElementDirection, scrollFromInlineStart } from '../../components/utils/direction';
+
 const HAZE_ATTR = 'data-blok-table-haze';
 const HAZE_VISIBLE_ATTR = 'data-blok-table-haze-visible';
 
@@ -25,14 +28,12 @@ const HAZE_CLASSES = [
 ];
 
 const LEFT_HAZE_CLASSES = [
-  'left-0',
   'bg-linear-to-r',
   'from-white/80',
   'to-transparent',
 ];
 
 const RIGHT_HAZE_CLASSES = [
-  'right-5',
   'bg-linear-to-l',
   'from-white/80',
   'to-transparent',
@@ -46,6 +47,7 @@ export class TableScrollHaze {
   private leftHaze: HTMLDivElement | null = null;
   private rightHaze: HTMLDivElement | null = null;
   private scrollContainer: HTMLElement | null = null;
+  private wrapper: HTMLElement | null = null;
   private boundOnScroll: (() => void) | null = null;
   private ticking = false;
 
@@ -57,6 +59,7 @@ export class TableScrollHaze {
    */
   public init(wrapper: HTMLElement, scrollContainer: HTMLElement): void {
     this.scrollContainer = scrollContainer;
+    this.wrapper = wrapper;
 
     this.leftHaze = this.createHazeElement('left');
     this.rightHaze = this.createHazeElement('right');
@@ -100,6 +103,7 @@ export class TableScrollHaze {
     this.leftHaze = null;
     this.rightHaze = null;
     this.scrollContainer = null;
+    this.wrapper = null;
     this.boundOnScroll = null;
     this.ticking = false;
   }
@@ -108,6 +112,8 @@ export class TableScrollHaze {
     const el = document.createElement('div');
 
     el.setAttribute(HAZE_ATTR, side);
+    // Chrome, not content: showing or placing it on scroll is not an edit.
+    el.setAttribute(DATA_ATTR.mutationFree, 'true');
     el.setAttribute('aria-hidden', 'true');
     el.classList.add(...HAZE_CLASSES, ...(side === 'left' ? LEFT_HAZE_CLASSES : RIGHT_HAZE_CLASSES));
 
@@ -131,11 +137,32 @@ export class TableScrollHaze {
       return;
     }
 
-    const { scrollLeft, scrollWidth, clientWidth } = sc;
-    const maxScroll = scrollWidth - clientWidth;
+    const direction = getElementDirection(sc);
+    const fromStart = scrollFromInlineStart(sc, direction);
+    const maxScroll = sc.scrollWidth - sc.clientWidth;
+    const startHidden = fromStart > SCROLL_THRESHOLD;
+    const endHidden = maxScroll > SCROLL_THRESHOLD && fromStart < maxScroll - SCROLL_THRESHOLD;
 
-    this.setVisible(this.leftHaze, scrollLeft > SCROLL_THRESHOLD);
-    this.setVisible(this.rightHaze, maxScroll > SCROLL_THRESHOLD && scrollLeft < maxScroll - SCROLL_THRESHOLD);
+    this.placeHazes();
+    this.setVisible(this.leftHaze, direction === 'rtl' ? endHidden : startHidden);
+    this.setVisible(this.rightHaze, direction === 'rtl' ? startHidden : endHidden);
+  }
+
+  /**
+   * Hazes hug the scroller's clip box. It is not the wrapper's content box:
+   * the scroller hangs into the inline-end padding (pill room in tables.css).
+   */
+  private placeHazes(): void {
+    const sc = this.scrollContainer;
+
+    if (!this.leftHaze || !this.rightHaze || !sc || !this.wrapper) {
+      return;
+    }
+
+    const right = this.wrapper.clientWidth - sc.offsetLeft - sc.offsetWidth;
+
+    this.leftHaze.style.left = `${sc.offsetLeft}px`;
+    this.rightHaze.style.right = `${right}px`;
   }
 
   private setVisible(el: HTMLElement | null, visible: boolean): void {

@@ -199,4 +199,30 @@ describe('Hero', () => {
 
     expect(link.getAttribute('aria-hidden')).toBeNull();
   });
+  it('keeps the full title as the heading name', () => {
+    render(
+      <I18nProvider>
+        <MemoryRouter>
+          <Hero />
+        </MemoryRouter>
+      </I18nProvider>
+    );
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Build beautiful block-based editors' })).toBeInTheDocument();
+  });
+
+  it('hides the light backdrop from assistive tech', () => {
+    const { container } = render(
+      <I18nProvider>
+        <MemoryRouter>
+          <Hero />
+        </MemoryRouter>
+      </I18nProvider>
+    );
+
+    const backdrop = container.querySelector('[data-blok-testid="hero-backdrop"]');
+
+    expect(backdrop).not.toBeNull();
+    expect(backdrop?.getAttribute('aria-hidden')).toBe('true');
+  });
 });

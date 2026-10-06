@@ -137,4 +137,26 @@ describe('useBlok reactive i18n', () => {
 
     expect(instances[0].i18n.update).toHaveBeenCalledWith({ locale: 'en', direction: 'rtl' });
   });
+
+  it('clears the direction when the host drops it', async () => {
+    const { rerender } = render(<Harness config={{ i18n: { locale: 'en', direction: 'rtl' } }} />);
+
+    await flush();
+
+    rerender(<Harness config={{ i18n: { locale: 'en' } }} />);
+    await flush();
+
+    expect(instances[0].i18n.update).toHaveBeenLastCalledWith({ locale: 'en', direction: null });
+  });
+
+  it('clears the direction when the host drops the whole i18n prop', async () => {
+    const { rerender } = render(<Harness config={{ i18n: { direction: 'rtl' } }} />);
+
+    await flush();
+
+    rerender(<Harness config={{}} />);
+    await flush();
+
+    expect(instances[0].i18n.update).toHaveBeenLastCalledWith({ direction: null });
+  });
 });

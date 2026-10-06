@@ -146,6 +146,8 @@ export function attachControls({
 
   const volumeInput = document.createElement('input');
   volumeInput.type = 'range';
+  // Native ranges reverse in RTL; the fill gradient and pointer math run LTR.
+  volumeInput.dir = 'ltr';
   volumeInput.min = '0';
   volumeInput.max = '1';
   volumeInput.step = '0.05';
@@ -188,8 +190,7 @@ export function attachControls({
   };
 
   // Restore volume immediately on attach; position restored on loadedmetadata.
-  const restoreVolume = (): void => {
-    const raw = safeGet(VOL_KEY);
+  const restoreVolume = (raw: string | null = safeGet(VOL_KEY)): void => {
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as { volume?: number; muted?: boolean };
@@ -252,6 +253,7 @@ export function attachControls({
 
   const speedSlider = document.createElement('input');
   speedSlider.type = 'range';
+  speedSlider.dir = 'ltr';
   speedSlider.className = 'blok-audio-controls__speed-slider';
   speedSlider.min = String(SPEED_MIN);
   speedSlider.max = String(SPEED_MAX);
@@ -352,6 +354,22 @@ export function attachControls({
   if (storedLoop !== null) media.loop = storedLoop === 'true';
   const loopBtn = button('audio-loop', i18nLabel('loop', 'Loop'), IconPlayerLoop);
   loopBtn.setAttribute('aria-pressed', String(media.loop));
+
+  // Another tab changed a shared preference. Exact keys only: position is per-tab.
+  // Like the mount-time restore, this never notifies onLoopChange.
+  const onStorage = (event: StorageEvent): void => {
+    if (event.storageArea !== resolvedStorage || event.newValue === null) return;
+    if (event.key === VOL_KEY) {
+      restoreVolume(event.newValue);
+    } else if (event.key === RATE_KEY) {
+      const rate = Number(event.newValue);
+      if (Number.isFinite(rate) && rate > 0) setRate(rate);
+    } else if (event.key === LOOP_KEY) {
+      media.loop = event.newValue === 'true';
+      loopBtn.setAttribute('aria-pressed', String(media.loop));
+    }
+  };
+  window.addEventListener('storage', onStorage);
 
   // ----- assemble bar -----
   const volumeWrap = document.createElement('div');
@@ -483,6 +501,7 @@ export function attachControls({
     media.removeEventListener('volumechange', onVolumeChange);
 
     figure.removeEventListener('keydown', onFigureKeydown);
+    window.removeEventListener('storage', onStorage);
 
     speedMenu.remove();
     root.remove();

@@ -5,7 +5,7 @@
  * making it testable in isolation without DOM rendering.
  */
 
-import { INDENT_PER_LEVEL, TOOL_NAME } from './constants';
+import { TOOL_NAME } from './constants';
 import type { ListItemStyle } from './types';
 import { numberToLowerAlpha, numberToLowerRoman } from './utils';
 
@@ -236,9 +236,9 @@ export class ListMarkerCalculator {
       return 0;
     }
 
-    const styleAttr = block.holder?.querySelector('[role="listitem"]')?.getAttribute('style');
-    const marginMatch = styleAttr?.match(/margin-left:\s*(\d+)px/);
-    return marginMatch ? Math.round(parseInt(marginMatch[1], 10) / INDENT_PER_LEVEL) : 0;
+    const depth = Number(block.holder?.querySelector('[data-list-depth]')?.getAttribute('data-list-depth'));
+
+    return Number.isInteger(depth) && depth > 0 ? depth : 0;
   }
 
   /**

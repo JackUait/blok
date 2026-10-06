@@ -24,6 +24,12 @@ interface CodeBlockProps {
    * expected to label the block itself.
    */
   embedded?: boolean;
+  /**
+   * Sent as `copy_kind` on copy, so install copies can be told apart from
+   * other snippets. Defaults to "install" when the package-manager toggle
+   * shows, otherwise "snippet".
+   */
+  copyKind?: "install" | "snippet";
 }
 
 const getInstallCommand = (
@@ -164,6 +170,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   packageName,
   onPackageManagerChange,
   embedded = false,
+  copyKind,
 }) => {
   const { copyToClipboard } = useCopyToClipboard();
   const { t } = useI18n();
@@ -273,10 +280,13 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       trackEvent(ANALYTICS_EVENTS.copyCode, {
-        language,
+        // Not `language`: gtag.js takes that as the user's language and drops it
+        // from the event.
+        code_language: language,
         // Only meaningful when the install-command toggle is on screen; omitted
         // (dropped by trackEvent) for plain code blocks.
         package_manager: hasPackageManagerToggle ? packageManager : undefined,
+        copy_kind: copyKind ?? (hasPackageManagerToggle ? "install" : "snippet"),
       });
     }
   };

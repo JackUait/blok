@@ -29,7 +29,9 @@
   @apply bg-search-input-bg rounded-(--blok-radius-control) pointer-events-none;
   position: absolute;
   inset-inline: 0;
-  width: auto;
+  /* !important: an empty block also matches the placeholder's
+     `empty:before:w-0`, which is more specific and would hide the pill. */
+  width: auto !important;
   height: calc(1lh + 2 * var(--_blok-slash-search-pad));
   margin-top: calc(-1 * var(--_blok-slash-search-pad));
   z-index: -1;

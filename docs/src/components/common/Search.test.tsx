@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { Search } from './Search';
@@ -190,7 +190,7 @@ describe('Search', () => {
       expect(dialog).toHaveAttribute('aria-modal', 'true');
     });
 
-    it('renders a visible focus ring on the search input', () => {
+    it('paints no focus ring on the search input; the caret shows focus', () => {
       render(
         <I18nProvider>
           <MemoryRouter>
@@ -200,7 +200,7 @@ describe('Search', () => {
       );
 
       const input = screen.getByPlaceholderText('Search docs...');
-      expect(input.className).toMatch(/focus-visible:ring-ring/);
+      expect(input.className).not.toMatch(/ring/);
     });
 
     it('marks sibling content inert while open', () => {
@@ -676,6 +676,197 @@ describe('Search', () => {
 
       const link = await screen.findByRole('link', { name: /Result 0/ }, { timeout: 3000 });
       expect(link).toHaveAttribute('href', '/docs/');
+    });
+  });
+  describe('launchpad', () => {
+    const renderSearch = () =>
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+    const realIndex = async () => {
+      const actual = await vi.importActual<typeof import('@/utils/search')>('@/utils/search');
+      return actual.getSearchIndex();
+    };
+
+    it('offers suggestion chips that each find real results', async () => {
+      renderSearch();
+      const chips = screen.getAllByTestId('search-suggestion');
+      expect(chips.length).toBeGreaterThanOrEqual(3);
+
+      const actual = await vi.importActual<typeof import('@/utils/search')>('@/utils/search');
+      for (const chip of chips) {
+        const text = chip.textContent ?? '';
+        expect(actual.search(text, actual.getSearchIndex()).length).toBeGreaterThan(0);
+      }
+    });
+
+    it('fills the query when a suggestion is clicked', async () => {
+      renderSearch();
+      const chip = screen.getAllByTestId('search-suggestion')[0];
+      fireEvent.click(chip);
+
+      const input = screen.getByPlaceholderText('Search docs...');
+      expect(input).toHaveValue(chip.textContent);
+      await waitFor(() => expect(screen.getByTestId('search-results-count')).toBeInTheDocument());
+    });
+
+    it('shows one tile per module with its real entry count', async () => {
+      renderSearch();
+      const index = await realIndex();
+      const modules = [...new Set(index.map(item => item.module))];
+      const tiles = screen.getAllByTestId('search-module-tile');
+
+      expect(tiles.map(t => t.dataset.module).sort()).toEqual([...modules].sort());
+      for (const tile of tiles) {
+        const count = index.filter(item => item.module === tile.dataset.module).length;
+        expect(tile).toHaveTextContent(String(count));
+      }
+    });
+
+    it('gives every module tile its own icon', () => {
+      renderSearch();
+      const icons = screen
+        .getAllByTestId('search-module-tile')
+        .map(tile => tile.querySelector('svg')?.innerHTML ?? '');
+
+      expect(icons.every(Boolean)).toBe(true);
+      expect(new Set(icons).size).toBe(icons.length);
+    });
+
+    it('names section tiles and the scope chip in the reader\'s language', () => {
+      render(
+        <I18nProvider locale="ru">
+          <MemoryRouter>
+            <Search open onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+      const tile = screen.getAllByTestId('search-module-tile').find(t => t.dataset.module === 'Editing');
+      if (!tile) throw new Error('Editing tile missing');
+
+      expect(tile).toHaveTextContent('Редактирование');
+      fireEvent.click(tile);
+      expect(screen.getByTestId('search-scope')).toHaveTextContent('Редактирование');
+    });
+
+    it('browses a module when its tile is clicked, and Backspace leaves it', async () => {
+      renderSearch();
+      const index = await realIndex();
+      const tile = screen.getAllByTestId('search-module-tile')[0];
+      const module = tile.dataset.module;
+      fireEvent.click(tile);
+
+      expect(screen.getByTestId('search-scope')).toHaveTextContent(module ?? '');
+      const links = screen.getAllByRole('link');
+      expect(links).toHaveLength(index.filter(item => item.module === module).length);
+
+      fireEvent.keyDown(screen.getByPlaceholderText('Search docs...'), { key: 'Backspace' });
+      expect(screen.queryByTestId('search-scope')).not.toBeInTheDocument();
+      expect(screen.getAllByTestId('search-module-tile').length).toBeGreaterThan(0);
+    });
+
+    it('keeps typed results inside the browsed module', async () => {
+      vi.mocked(searchUtils.search).mockReturnValue([
+        ...buildResults(2, 'core'),
+        { ...buildResults(1, 'other')[0], module: 'Somewhere else' },
+      ]);
+      vi.mocked(searchUtils.getSearchIndex).mockReturnValue([
+        { ...buildResults(1, 'core')[0], keywords: [] },
+        { ...buildResults(1, 'other')[0], module: 'Somewhere else', keywords: [] },
+      ]);
+      renderSearch();
+
+      const coreTile = screen.getAllByTestId('search-module-tile').find(t => t.dataset.module === 'Core');
+      if (!coreTile) throw new Error('Core tile missing');
+      fireEvent.click(coreTile);
+      fireEvent.change(screen.getByPlaceholderText('Search docs...'), { target: { value: 'Result' } });
+
+      await waitFor(() => expect(screen.getByTestId('search-results-count')).toHaveTextContent('2'));
+      expect(screen.queryByRole('link', { name: /other/ })).not.toBeInTheDocument();
+    });
+
+    it('starts on the first launchpad item, moves with the arrow keys, and Enter picks one', () => {
+      renderSearch();
+      const input = screen.getByPlaceholderText('Search docs...');
+      const [first, second] = screen.getAllByTestId('search-suggestion');
+      expect(first).toHaveAttribute('data-selected', 'true');
+
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      expect(second).toHaveAttribute('data-selected', 'true');
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(input).toHaveValue(second.textContent);
+    });
+
+    it('paints the selected launchpad item gray, not coloured', () => {
+      renderSearch();
+      const selected = screen.getAllByTestId('search-suggestion')[0];
+      const other = screen.getAllByTestId('search-suggestion')[1];
+      expect(selected).toHaveAttribute('data-selected', 'true');
+      expect(selected.className).toMatch(/\bbg-secondary\b/);
+      expect(selected.className).not.toMatch(/bg-(primary|blue)/);
+      expect(selected.className.match(/\btext-\S+/g)).toEqual(other.className.match(/\btext-\S+/g));
+    });
+
+    it('previews the highlighted section with its real size and first entries', async () => {
+      renderSearch();
+      const index = await realIndex();
+      const input = screen.getByPlaceholderText('Search docs...');
+      const rows = screen.getAllByTestId('search-module-tile');
+      const coreAt = screen.getAllByTestId('search-suggestion').length + rows.findIndex(r => r.dataset.module === 'Core');
+      for (let i = 0; i < coreAt; i++) fireEvent.keyDown(input, { key: 'ArrowDown' });
+
+      const preview = screen.getByTestId('search-preview');
+      const core = index.filter(item => item.module === 'Core');
+      expect(preview).toHaveTextContent('Core');
+      expect(preview).toHaveTextContent(`${core.length} entries`);
+      expect(preview).toHaveTextContent(core[0].title);
+    });
+
+    it('previews a suggestion with the top results it would find', async () => {
+      renderSearch();
+      const actual = await vi.importActual<typeof import('@/utils/search')>('@/utils/search');
+      const value = screen.getAllByTestId('search-suggestion')[0].textContent ?? '';
+      const top = actual.search(value, actual.getSearchIndex())[0];
+
+      expect(screen.getByTestId('search-preview')).toHaveTextContent(top.title.split('(')[0]);
+    });
+
+    it('previews the highlighted result with its breadcrumb and full description', async () => {
+      vi.mocked(searchUtils.search).mockReturnValue([
+        { ...buildResults(1)[0], title: 'blocks.insert(type?, data?)', description: 'Insert a new block with full control.', section: 'Blocks API' },
+        ...buildResults(2, 'more'),
+      ]);
+      renderSearch();
+      fireEvent.change(screen.getByPlaceholderText('Search docs...'), { target: { value: 'insert' } });
+
+      const preview = await screen.findByTestId('search-preview');
+      await waitFor(() => expect(preview).toHaveTextContent('blocks.insert(type?, data?)'));
+      expect(preview).toHaveTextContent('Insert a new block with full control.');
+      expect(preview).toHaveTextContent('Blocks API');
+
+      fireEvent.mouseEnter(screen.getByRole('link', { name: /Result 0/ }));
+      expect(screen.getByTestId('search-preview')).toHaveTextContent('Result 0');
+    });
+
+    it('follows the pointer: hovering a launchpad row previews it', () => {
+      renderSearch();
+      const row = screen.getAllByTestId('search-module-tile').find(r => r.dataset.module === 'Editing');
+      if (!row) throw new Error('Editing row missing');
+      fireEvent.mouseEnter(row);
+
+      expect(row).toHaveAttribute('data-selected', 'true');
+      expect(screen.getByTestId('search-preview')).toHaveTextContent('Editing');
+    });
+
+    it('shows an Escape hint in the footer', () => {
+      renderSearch();
+      expect(screen.getByText('close')).toBeInTheDocument();
     });
   });
 });

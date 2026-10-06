@@ -1,5 +1,6 @@
 import { Flipper } from '../../../flipper';
 import { hasEscapeLayer } from '../../../utils/dismissable-layer';
+import { getElementDirection, logicalArrow } from '../../../utils/direction';
 import { isInsideKeyboardOwner } from '../../blockEvents/utils/keyboard';
 
 import type { PopoverInline } from '../../../utils/popover/popover-inline';
@@ -140,7 +141,7 @@ export class InlineKeyboardHandler {
       event.stopImmediatePropagation();
 
       if (flipper instanceof Flipper) {
-        this.flipToolbarItem(flipper, event.key);
+        this.flipToolbarItem(flipper, event.key, popover?.getElement?.());
       }
 
       return;
@@ -148,10 +149,11 @@ export class InlineKeyboardHandler {
   }
 
   /**
-   * Move focus between horizontal toolbar items in the direction of the pressed arrow key
+   * Move focus between horizontal toolbar items in the direction of the pressed
+   * arrow key. Items run right to left in an RTL toolbar, so ArrowLeft is next.
    */
-  private flipToolbarItem(flipper: Flipper, key: string): void {
-    if (key === 'ArrowRight') {
+  private flipToolbarItem(flipper: Flipper, key: string, toolbar: HTMLElement | undefined): void {
+    if (logicalArrow(key, getElementDirection(toolbar)) === 'forward') {
       flipper.flipRight();
     } else {
       flipper.flipLeft();

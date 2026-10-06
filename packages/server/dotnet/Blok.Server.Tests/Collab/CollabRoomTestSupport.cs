@@ -229,6 +229,8 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
   private int reads;
   private int writes;
   private int resets;
+  private int deletes;
+  private int retires;
   private int maxConcurrentEntries;
   private long writtenBytes;
   private int largestWriteBytes;
@@ -239,6 +241,8 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
   internal int Writes => Volatile.Read(ref writes);
 
   internal int Resets => Volatile.Read(ref resets);
+
+  internal int Deletes => Volatile.Read(ref deletes);
 
   internal int MaxConcurrentEntries => Volatile.Read(ref maxConcurrentEntries);
 
@@ -262,6 +266,10 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
   }
 
   internal Func<Task>? BeforeWrite { get; set; }
+
+  internal Func<Task>? BeforeDelete { get; set; }
+
+  internal Func<string, Exception?>? FailDeletes { get; set; }
 
   /// <summary>When it answers non-null for a doc, that doc's WriteAsync throws it instead of storing.</summary>
   internal Func<string, Exception?>? FailWrites { get; set; }
@@ -371,6 +379,54 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
 
     AfterReset?.Invoke();
     cancellationToken.ThrowIfCancellationRequested();
+  }
+
+  /// <summary>When it answers non-null for a doc, that doc's RetireAsync throws it.</summary>
+  internal Func<string, Exception?>? FailRetires { get; set; }
+
+  internal int Retires => Volatile.Read(ref retires);
+
+  public Task RetireAsync(string docId, CancellationToken cancellationToken = default)
+  {
+    Interlocked.Increment(ref retires);
+    cancellationToken.ThrowIfCancellationRequested();
+
+    if (FailRetires?.Invoke(docId) is { } failure)
+    {
+      throw failure;
+    }
+
+    lock (guard)
+    {
+      documents.Remove(docId);
+      journal.Add("retire");
+    }
+
+    return Task.CompletedTask;
+  }
+
+  public async Task DeleteAsync(string docId, CancellationToken cancellationToken = default)
+  {
+    using var entry = Enter();
+    Interlocked.Increment(ref deletes);
+
+    if (BeforeDelete is not null)
+    {
+      await BeforeDelete();
+    }
+
+    cancellationToken.ThrowIfCancellationRequested();
+
+    if (FailDeletes?.Invoke(docId) is { } failure)
+    {
+      throw failure;
+    }
+
+    lock (guard)
+    {
+      documents.Remove(docId);
+      journal.Add("delete");
+    }
   }
 
   private Entry Enter()
@@ -659,6 +715,31 @@ internal sealed class FakeMember(
 
   internal List<CollabCloseReason> Closes { get; } = [];
 
+  internal bool Allowed { get; set; } = true;
+
+  internal Exception? RecheckFailure { get; set; }
+
+  internal TaskCompletionSource? RecheckEntered { get; set; }
+
+  internal TaskCompletionSource? RecheckGate { get; set; }
+
+  public async ValueTask<bool> RecheckAccessAsync(CancellationToken cancellationToken)
+  {
+    RecheckEntered?.TrySetResult();
+
+    if (RecheckGate is not null)
+    {
+      await RecheckGate.Task.WaitAsync(cancellationToken);
+    }
+
+    if (RecheckFailure is not null)
+    {
+      throw RecheckFailure;
+    }
+
+    return Allowed;
+  }
+
   public void Send(byte[] frame)
   {
     Assert.True(SyncWire.TryDecode(frame, out var message, out var error), error);
@@ -937,12 +1018,13 @@ internal static class Waits
 /// store behaviours a room has to survive — slow, failing, and "committed but
 /// could not say so".
 /// </summary>
-internal sealed class FakeCollabOperationStore : ICollabOperationStore
+internal sealed class FakeCollabOperationStore : ICollabOperationStore, ICollabOperationPurgeStore
 {
   private readonly Dictionary<string, FakeOperationDocument> documents =
       new(StringComparer.Ordinal);
   private readonly Lock guard = new();
   private int opens;
+  private int purges;
 
   /// <summary>
   /// Awaited inside every append before it commits — a slow store. The wait
@@ -968,6 +1050,12 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
 
   /// <summary>Documents opened, so a test can see what a rejoin did NOT re-read.</summary>
   internal int Opens => Volatile.Read(ref opens);
+
+  internal int Purges => Volatile.Read(ref purges);
+
+  internal Func<string, Exception?>? FailPurgeAfterTombstone { get; set; }
+
+  internal Action<string>? OnPurge { get; set; }
 
   /// <summary>
   /// When it answers non-null for a doc, that doc's AppendAsync throws it. An
@@ -1038,6 +1126,11 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
     {
       var document = Document(documentId);
 
+      if (document.Purged)
+      {
+        return ValueTask.FromResult(CollabDocumentOpen.Purged);
+      }
+
       if (document.IsOpen)
       {
         return ValueTask.FromResult(CollabDocumentOpen.DocumentOpenElsewhere);
@@ -1056,6 +1149,39 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
       return ValueTask.FromResult(
           CollabDocumentOpen.Opened(
               new FakeOperationSession(this, documentId, document.Fence, openResult)));
+    }
+  }
+
+  public ValueTask<CollabDocumentPurgeOutcome> PurgeAsync(
+      string documentId,
+      CancellationToken cancellationToken = default)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+    Interlocked.Increment(ref purges);
+
+    lock (guard)
+    {
+      var document = Document(documentId);
+
+      if (document.IsOpen)
+      {
+        return ValueTask.FromResult(CollabDocumentPurgeOutcome.DocumentOpenElsewhere);
+      }
+
+      document.Purged = true;
+      OnPurge?.Invoke(documentId);
+
+      if (FailPurgeAfterTombstone?.Invoke(documentId) is { } failure)
+      {
+        throw failure;
+      }
+
+      document.Baseline.Clear();
+      document.Records.Clear();
+      document.Checkpoint = null;
+      document.Head = null;
+
+      return ValueTask.FromResult(CollabDocumentPurgeOutcome.Purged);
     }
   }
 
@@ -1083,6 +1209,8 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
     internal long Fence { get; set; }
 
     internal bool IsOpen { get; set; }
+
+    internal bool Purged { get; set; }
   }
 
   private sealed class FakeOperationSession(

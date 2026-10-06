@@ -378,6 +378,75 @@ describe('Toolbar — public surface', () => {
     });
   });
 
+  describe('isDockedPhysicallyRight', () => {
+    const dock = (toolbarPosition: 'left' | 'right', direction: 'ltr' | 'rtl'): boolean => {
+      const h = createHarness({ config: { toolbarPosition } });
+
+      h.editorWrapper.style.direction = direction;
+
+      return h.toolbar.isDockedPhysicallyRight;
+    };
+
+    it('docks left by default in LTR and right with toolbarPosition right', () => {
+      expect(dock('left', 'ltr')).toBe(false);
+      expect(dock('right', 'ltr')).toBe(true);
+    });
+
+    it('mirrors both sides in RTL', () => {
+      expect(dock('left', 'rtl')).toBe(true);
+      expect(dock('right', 'rtl')).toBe(false);
+    });
+  });
+
+  describe('syncDirection()', () => {
+    // Inside a nested child's holder the toolbar sits under the PARENT block's
+    // content, which carries that block's own dir.
+    const dockUnderBlockDir = (
+      editorDir: 'ltr' | 'rtl',
+      blockDir: 'ltr' | 'rtl'
+    ): { dir: string | null; physicallyRight: boolean } => {
+      const h = createHarness();
+      const parentContent = document.createElement('div');
+
+      h.editorWrapper.setAttribute('dir', editorDir);
+      parentContent.setAttribute('dir', blockDir);
+      h.editorWrapper.appendChild(parentContent);
+      parentContent.appendChild(h.wrapper);
+
+      h.toolbar.syncDirection();
+
+      return { dir: h.wrapper.getAttribute('dir'), physicallyRight: h.toolbar.isDockedPhysicallyRight };
+    };
+
+    it('an LTR editor docks left even under an RTL block', () => {
+      expect(dockUnderBlockDir('ltr', 'rtl')).toStrictEqual({ dir: 'ltr', physicallyRight: false });
+    });
+
+    it('an RTL editor docks right even under an LTR block', () => {
+      expect(dockUnderBlockDir('rtl', 'ltr')).toStrictEqual({ dir: 'rtl', physicallyRight: true });
+    });
+
+    // The toolbar is drawn on idle, possibly before the host attaches the
+    // editor; a detached element has no computed direction.
+    it('reads the editor dir even while the editor is detached', () => {
+      const h = createHarness();
+
+      h.editorWrapper.remove();
+      h.editorWrapper.setAttribute('dir', 'rtl');
+      vi.spyOn(window, 'getComputedStyle').mockReturnValue({ direction: '' } as CSSStyleDeclaration);
+
+      h.toolbar.syncDirection();
+
+      expect(h.wrapper.getAttribute('dir')).toBe('rtl');
+    });
+
+    it('does nothing before the toolbar is drawn', () => {
+      const h = createHarness({ omitWrapper: true });
+
+      expect(() => h.toolbar.syncDirection()).not.toThrow();
+    });
+  });
+
   describe('setPosition()', () => {
     it('writes the wrapper attribute when the side changes', () => {
       const h = createHarness({ config: { toolbarPosition: 'left' } });
@@ -1821,6 +1890,8 @@ describe('Toolbar — public surface', () => {
       expect((args?.[1] as { hoveredTarget: Element | null }).hoveredTarget).toBe(target);
       expect((args?.[1] as { isMobile: boolean }).isMobile).toBe(true);
       expect((args?.[1] as { dockedToEnd: boolean }).dockedToEnd).toBe(true);
+      // LTR + toolbarPosition 'right' puts the controls on the physical right.
+      expect((args?.[1] as { physicallyRight: boolean }).physicallyRight).toBe(true);
       expect(args?.[2]).toBe(h.plusButton);
     });
 
@@ -1927,6 +1998,24 @@ describe('Toolbar — public surface', () => {
       expect(window.innerWidth).toBe(1024);
       expect(h.content.style.marginLeft).toBe('324px');
       expect(h.content.style.maxWidth).toBe('400px');
+    });
+
+    it('pulls the end-docked bar back on screen when the content fills the viewport', () => {
+      // No gutter and no slack: the column must shift left by the bar's width.
+      const h = alignFixture('right', {
+        wrapper: {
+          left: 0,
+          right: 1024,
+          width: 1024,
+        },
+        content: {
+          left: 0,
+          width: 1024,
+        },
+        actionsWidth: 50,
+      });
+
+      expect(h.content.style.marginLeft).toBe('-50px');
     });
   });
 

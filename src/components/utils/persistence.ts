@@ -36,6 +36,8 @@ type SaveHandler = NonNullable<BlokConfig['onSave']>;
 type PendingSave = {
   document: OutputData;
   recordedBefore: number;
+  /** The queue generation it was handed over in; `abandon()` moves on. */
+  generation: number;
 };
 
 /**
@@ -169,6 +171,32 @@ type UnsavedWorkRegistrar = (isDirty: () => boolean) => () => void;
  */
 const registrars = new WeakMap<ExpandedPersistence, UnsavedWorkRegistrar>();
 
+/** How tab sync reads and moves an editor's document version. */
+export interface PersistenceVersionAccess {
+  get(): string | null;
+  set(version: string | null): void;
+  /** Called after each successful save with the version the endpoint reported (or the one it kept). */
+  onSaved(listener: (version: string | null) => void): () => void;
+  /** `saving` covers retries; `failed` = the payload is parked until the next save. */
+  saveState(): 'idle' | 'saving' | 'failed';
+  /** Whether a payload waits in the queue, parked or behind the request in flight. */
+  hasQueuedPayload(): boolean;
+  /**
+   * Gives up the current payload: no retry, no queued save. A tab that stops
+   * leading calls it, or its retry would carry the next leader's version over
+   * newer content. The request already sent cannot be stopped.
+   * @returns null with no request in flight; else whether that request landed
+   */
+  abandon(): Promise<boolean> | null;
+}
+
+/**
+ * Keyed by the same handle as the pump. A follower tab must take over the
+ * version its leader saved, or the next `If-Match` it sends as leader names a
+ * version the store has already moved past.
+ */
+const versionAccess = new WeakMap<ExpandedPersistence, PersistenceVersionAccess>();
+
 const noop = (): void => undefined;
 
 /**
@@ -194,6 +222,14 @@ export function registerUnsavedWork(
   const register = owner === undefined ? undefined : registrars.get(owner);
 
   return register === undefined ? noop : register(isDirty);
+}
+
+/**
+ * The version handle of an editor's save queue, or `null` without `persistence`.
+ * @param owner - the editor's expanded `persistence` block, if it has one
+ */
+export function persistenceVersionAccess(owner: ExpandedPersistence | undefined): PersistenceVersionAccess | null {
+  return owner === undefined ? null : versionAccess.get(owner) ?? null;
 }
 
 /**
@@ -326,6 +362,10 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
      * flight when the release ran; its result is discarded.
      */
     released: boolean;
+    /** Bumped by `abandon()`; payloads of an older generation are never sent again. */
+    generation: number;
+    /** Requests that landed; tells `abandon()` whether the one in flight did. */
+    landed: number;
   } = {
     inFlight: null,
     pending: null,
@@ -336,6 +376,8 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     failures: 0,
     reported: false,
     released: false,
+    generation: 0,
+    landed: 0,
   };
 
   const guardUnload = (event: BeforeUnloadEvent): void => {
@@ -436,8 +478,27 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     }
   };
 
+  const savedListeners = new Set<(version: string | null) => void>();
+
+  /**
+   * Runs outside the save's try block: a throwing listener there would read as
+   * a rejected save and write the document again.
+   */
+  const notifySaved = (): void => {
+    for (const listener of savedListeners) {
+      try {
+        listener(queue.version);
+      } catch (error: unknown) {
+        log('A save listener threw. The save itself landed.', 'warn', error);
+      }
+    }
+  };
+
+  /** Released, or abandoned by a tab that stopped leading. */
+  const stopped = (payload: PendingSave): boolean => queue.released || payload.generation !== queue.generation;
+
   const attemptSave = async (payload: PendingSave, attempt: number): Promise<void> => {
-    if (queue.released) {
+    if (stopped(payload)) {
       return;
     }
 
@@ -454,8 +515,9 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
 
       queue.failures = 0;
       queue.reported = false;
+      queue.landed += 1;
     } catch (error: unknown) {
-      if (queue.released) {
+      if (stopped(payload)) {
         return;
       }
 
@@ -488,7 +550,7 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
 
       await backoff(RETRY_DELAYS_MS[attempt]);
 
-      if (queue.released) {
+      if (stopped(payload)) {
         return;
       }
 
@@ -510,6 +572,8 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     if (queue.released) {
       return;
     }
+
+    notifySaved();
 
     // A newer payload is already queued, and IT is the live document: the one
     // that just landed may have dropped a URL the newer one still names — an
@@ -611,10 +675,49 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     queue.cancelBackoff?.();
   });
 
+  versionAccess.set(expanded, {
+    get: () => queue.version,
+    set: (version) => {
+      queue.version = version;
+    },
+    onSaved: (listener) => {
+      savedListeners.add(listener);
+
+      return () => {
+        savedListeners.delete(listener);
+      };
+    },
+    saveState: () => {
+      if (queue.parked) {
+        return 'failed';
+      }
+
+      return queue.inFlight !== null || queue.pending !== null ? 'saving' : 'idle';
+    },
+    hasQueuedPayload: () => queue.pending !== null,
+    abandon: () => {
+      queue.generation += 1;
+      queue.pending = null;
+      queue.parked = false;
+      queue.cancelBackoff?.();
+      syncUnloadGuard();
+
+      const flight = queue.inFlight;
+
+      if (flight === null) {
+        return null;
+      }
+
+      const landedBefore = queue.landed;
+
+      return flight.then(() => queue.landed > landedBefore);
+    },
+  });
+
   pumps.set(expanded, (data: OutputData): void => {
     // The sweep mark is taken HERE, as the serialized document arrives, and
     // travels with it through the queue and through every retry. See PendingSave.
-    queue.pending = { document: data, recordedBefore: sweep.beginSave() };
+    queue.pending = { document: data, recordedBefore: sweep.beginSave(), generation: queue.generation };
     queue.parked = false;
     // A backoff still running belongs to a document this one replaces; waking
     // it now lets the queue move on to the newest payload immediately.

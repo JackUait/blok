@@ -59,6 +59,28 @@ interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
   childTools: ChildToolRestrictions | undefined;
 
   /**
+   * False when this Tool's block never has children. Declared by the Tool as
+   * `static acceptsChildren` — see {@link BlockToolConstructable.acceptsChildren}.
+   */
+  acceptsChildren: boolean;
+
+  /**
+   * True when a copy of this Tool's block rebuilds its children from its own
+   * data. Declared by the Tool as `static copiesOwnChildren` — see
+   * {@link BlockToolConstructable.copiesOwnChildren}.
+   */
+  copiesOwnChildren: boolean;
+
+  /**
+   * The link a copy of this block carries, from the Tool's
+   * `static copyAsLink` — see {@link BlockToolConstructable.copyAsLink}.
+   * Undefined when the Tool declares none or the hook throws; null when it
+   * has no valid link.
+   * @param data - the block's saved data
+   */
+  copyAsLink(data: BlockToolData): { url: string; text: string } | null | undefined;
+
+  /**
    * Returns true if Tool supports linebreaks
    */
   isLineBreaksEnabled: boolean;

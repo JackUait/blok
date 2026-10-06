@@ -4,6 +4,7 @@ import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const TOGGLE_CHILDREN_SELECTOR = '[data-blok-toggle-children]';
@@ -53,6 +54,7 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
     },
     { holder: HOLDER_ID, initialData: data ?? null }
   );
+  await openFixtureToggles(page, data);
 };
 
 test.describe('Toggle - Backspace key behavior', () => {
@@ -72,7 +74,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       // It must NOT promote child-1 to root level.
       await createBlok(page, {
         blocks: [
-          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1', 'child-2'] },
+          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true }, content: ['child-1', 'child-2'] },
           { id: 'child-1', type: 'paragraph', data: { text: '' }, parent: 'toggle-1' },
           { id: 'child-2', type: 'paragraph', data: { text: 'Content' }, parent: 'toggle-1' },
           { id: 'root-1', type: 'paragraph', data: { text: 'Root' } },
@@ -105,7 +107,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       // Backspace should do nothing to prevent orphaning the toggle.
       await createBlok(page, {
         blocks: [
-          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1'] },
+          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true }, content: ['child-1'] },
           { id: 'child-1', type: 'paragraph', data: { text: '' }, parent: 'toggle-1' },
           { id: 'root-1', type: 'paragraph', data: { text: 'Root' } },
         ],
@@ -135,7 +137,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       // Backspace should remove child-2 and focus child-1 (inside toggle), NOT promote child-2 to root.
       await createBlok(page, {
         blocks: [
-          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1', 'child-2'] },
+          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true }, content: ['child-1', 'child-2'] },
           { id: 'child-1', type: 'paragraph', data: { text: 'Previous' }, parent: 'toggle-1' },
           { id: 'child-2', type: 'paragraph', data: { text: '' }, parent: 'toggle-1' },
           { id: 'root-1', type: 'paragraph', data: { text: 'Root' } },
@@ -171,7 +173,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       // into the toggle title or stay put (the old no-op divergence).
       await createBlok(page, {
         blocks: [
-          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1'] },
+          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true }, content: ['child-1'] },
           { id: 'child-1', type: 'paragraph', data: { text: 'Hello world' }, parent: 'toggle-1' },
           { id: 'root-1', type: 'paragraph', data: { text: 'Root' } },
         ],
@@ -208,9 +210,9 @@ test.describe('Toggle - Backspace key behavior', () => {
       // toggle's content (no cross-container merge).
       await createBlok(page, {
         blocks: [
-          { id: 'toggle-a', type: 'toggle', data: { text: 'Toggle A' }, content: ['child-a'] },
+          { id: 'toggle-a', type: 'toggle', data: { text: 'Toggle A', isOpen: true }, content: ['child-a'] },
           { id: 'child-a', type: 'paragraph', data: { text: 'Inside A' }, parent: 'toggle-a' },
-          { id: 'toggle-b', type: 'toggle', data: { text: 'Toggle B' }, content: ['child-b'] },
+          { id: 'toggle-b', type: 'toggle', data: { text: 'Toggle B', isOpen: true }, content: ['child-b'] },
           { id: 'child-b', type: 'paragraph', data: { text: 'Inside B' }, parent: 'toggle-b' },
         ],
       });
@@ -248,7 +250,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       // Backspace should merge child-2 into child-1 (standard merge), NOT promote child-2 to root.
       await createBlok(page, {
         blocks: [
-          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1', 'child-2'] },
+          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true }, content: ['child-1', 'child-2'] },
           { id: 'child-1', type: 'paragraph', data: { text: 'First' }, parent: 'toggle-1' },
           { id: 'child-2', type: 'paragraph', data: { text: 'Second' }, parent: 'toggle-1' },
           { id: 'root-1', type: 'paragraph', data: { text: 'Root' } },
@@ -288,7 +290,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       // Backspace should remove child-1 and focus child-2 (still inside the toggle heading).
       await createBlok(page, {
         blocks: [
-          { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true }, content: ['child-1', 'child-2'] },
+          { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true, isOpen: true }, content: ['child-1', 'child-2'] },
           { id: 'child-1', type: 'paragraph', data: { text: '' }, parent: 'header-1' },
           { id: 'child-2', type: 'paragraph', data: { text: 'Content' }, parent: 'header-1' },
           { id: 'root-1', type: 'paragraph', data: { text: 'Root' } },
@@ -319,7 +321,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       // Empty only child in toggle heading — no siblings. Backspace should do nothing.
       await createBlok(page, {
         blocks: [
-          { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true }, content: ['child-1'] },
+          { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true, isOpen: true }, content: ['child-1'] },
           { id: 'child-1', type: 'paragraph', data: { text: '' }, parent: 'header-1' },
           { id: 'root-1', type: 'paragraph', data: { text: 'Root' } },
         ],

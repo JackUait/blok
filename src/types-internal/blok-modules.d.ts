@@ -20,6 +20,7 @@ import { TooltipAPI } from '../components/modules/api/tooltip';
 import { UiAPI } from '../components/modules/api/ui';
 
 import { ThemeAPI } from '../components/modules/api/theme';
+import { ViewStateAPI } from '../components/modules/api/viewState';
 /** ./toolbar */
 import { BlockSettings } from '../components/modules/toolbar/blockSettings';
 import { Toolbar } from '../components/modules/toolbar/index';
@@ -35,6 +36,7 @@ import { DragController as DragManager } from '../components/modules/drag/DragCo
 import { Find } from '../components/modules/find';
 import { ModificationsObserver } from '../components/modules/modificationsObserver';
 import { Paste } from '../components/modules/paste';
+import { PageReferences } from '../components/modules/pageReferences';
 import { ReadOnly } from '../components/modules/readonly';
 import { RectangleSelection } from '../components/modules/rectangleSelection';
 import { Renderer } from '../components/modules/renderer';
@@ -48,6 +50,7 @@ import { UploaderAPI } from '../components/modules/api/uploader';
 import { I18n } from '../components/modules/i18n';
 
 import { Collaboration } from '../components/modules/collaboration';
+import { TabSync } from '../components/modules/tabSync';
 import { ThemeManager } from '../components/modules/themeManager';
 import { UserDirectory } from '../components/modules/userDirectory';
 import { YjsManager } from '../components/modules/yjs';
@@ -77,6 +80,7 @@ export interface BlokModules {
   TooltipAPI: TooltipAPI,
   UiAPI: UiAPI,
   ThemeAPI: ThemeAPI,
+  ViewStateAPI: ViewStateAPI,
 
   // Toolbar Modules
   BlockSettings: BlockSettings,
@@ -94,6 +98,7 @@ export interface BlokModules {
   DragManager: DragManager,
   ModificationsObserver: ModificationsObserver,
   Paste: Paste,
+  PageReferences: PageReferences,
   ReadOnly: ReadOnly,
   RectangleSelection: RectangleSelection,
   Renderer: Renderer,
@@ -104,5 +109,6 @@ export interface BlokModules {
   ThemeManager: ThemeManager,
   UserDirectory: UserDirectory,
   Collaboration: Collaboration,
+  TabSync: TabSync,
   YjsManager: YjsManager,
 }

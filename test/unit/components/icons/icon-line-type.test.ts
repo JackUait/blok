@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  IconBold, IconItalic, IconMarker, IconUnderline, IconClearFormat, IconStrikethrough,
+  IconBold, IconItalic, IconUnderline, IconClearFormat, IconStrikethrough,
   IconHeading, IconH1, IconH2, IconH3, IconH4, IconH5, IconH6,
   IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6,
   IconListBulleted, IconListNumbered, IconListChecklist, IconToggleList,
@@ -78,23 +78,6 @@ describe('Blok Line type family', () => {
 
     expect(top).toContain('10 5');
     expect(bottom).toContain('10 15');
-  });
-
-  it('contains the marker letter inside the shared panel with clear space', () => {
-    const doc = new DOMParser().parseFromString(IconMarker, 'image/svg+xml');
-    const rect = doc.querySelector('rect');
-
-    expect(rect).not.toBeNull();
-    expect(['x', 'y', 'width', 'height', 'rx'].map((attr) => Number(rect?.getAttribute(attr))))
-      .toEqual([3, 4, 14, 12, 2]);
-    const numbers = pathOf(IconMarker).match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
-    const xs = numbers.filter((_value, index) => index % 2 === 0);
-    const ys = numbers.filter((_value, index) => index % 2 === 1);
-
-    expect(Math.min(...xs) - 3).toBeGreaterThanOrEqual(2);
-    expect(17 - Math.max(...xs)).toBeGreaterThanOrEqual(2);
-    expect(Math.min(...ys) - 4).toBeGreaterThanOrEqual(2);
-    expect(16 - Math.max(...ys)).toBeGreaterThanOrEqual(2);
   });
 
   it.each([

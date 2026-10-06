@@ -29,6 +29,10 @@ describe('blocksToPlainTextWithReport', () => {
     expect(blocksToPlainTextWithReport(document).text).toBe(blocksToPlainText(document));
   });
 
+  it('knows the page block, even untitled', () => {
+    expect(blocksToPlainTextWithReport(doc([{ type: 'page', data: { pageId: 'p1' } }])).warnings).toEqual([]);
+  });
+
   /**
    * The whole reason this exists: a document of tools the reader does not know
    * reads as `''`, exactly like an empty one, and the caller could not tell
@@ -59,10 +63,22 @@ describe('blocksToPlainTextWithReport', () => {
       { type: 'spacer', data: { height: 24 } },
       { type: 'callout', data: { emoji: '💡' } },
       { type: 'column_list', data: {} },
+      { type: 'tabs', data: {} },
       { type: 'database', data: { schema: [], views: [], activeViewId: 'v' } },
     ]));
 
     expect(report.text).toBe('');
+    expect(report.warnings).toEqual([]);
+  });
+
+  /** Its outline is built from the headings, which are read on their own. */
+  it('reads a table of contents as nothing, without reporting it', () => {
+    const report = blocksToPlainTextWithReport(doc([
+      { type: 'header', data: { text: 'Intro', level: 2 } },
+      { type: 'table_of_contents', data: { text: 'stray', textColor: 'red' } },
+    ]));
+
+    expect(report.text).toBe('Intro');
     expect(report.warnings).toEqual([]);
   });
 

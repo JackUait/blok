@@ -15,6 +15,7 @@ import { applyBlockMigration } from '../../migration/block-migrations';
 import type { BlockMigrations } from '../../migration/block-migrations';
 import type { API } from '../api';
 
+import type { BlockOrigin } from '../../../../types';
 import type { ComposeBlockOptions } from './types';
 
 /**
@@ -34,6 +35,8 @@ export interface BlockFactoryDependencies {
    * (`config.migrations`). Applied at load, after each Tool's own `upgradeData`.
    */
   migrations?: BlockMigrations;
+  /** Called with every Block built here, before it joins the document. */
+  onComposed?: (block: Block, origin: BlockOrigin) => void;
 }
 
 /**
@@ -126,6 +129,8 @@ export class BlockFactory {
       origin,
       replaySource,
     }, this.dependencies.eventsDispatcher);
+
+    this.dependencies.onComposed?.(block, origin);
 
     if (this.readOnlyState) {
       return block;

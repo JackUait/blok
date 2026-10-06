@@ -16,6 +16,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { startDocumentStore } from './dev-doc-store.mjs';
+import { playgroundPageSeed, startPageHostNear } from './dev-page-host.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DEV_DIRECTORY = join(ROOT, '.dev');
@@ -24,11 +25,15 @@ const BINARY = join(BINARY_DIRECTORY, process.platform === 'win32' ? 'Blok.Serve
 const SERVER_SOURCES = join(ROOT, 'packages/server/dotnet');
 const HOST_PROJECT = join(SERVER_SOURCES, 'Blok.Server.Host/Blok.Server.Host.csproj');
 const PLAYGROUND_DOCUMENT = join(ROOT, 'playground-document.json');
+const PLAYGROUND_PAGES = join(ROOT, 'playground-pages.json');
+// Must match the room name `collaborationConfig` in index.html gives a page.
+const PAGE_ROOM = '--page--';
 const VITE = join(ROOT, 'node_modules/.bin', process.platform === 'win32' ? 'vite.cmd' : 'vite');
 
 const SYNC_PORT = 4000;
 const DOCUMENT_PORT = 4500;
 const DEFAULT_VITE_PORT = 3303;
+const PAGE_HOST_PORT = 4600;
 
 /**
  * Split our own flags from Vite's.
@@ -159,6 +164,27 @@ export function vitePort(viteArgs) {
   return Number.isInteger(value) ? value : DEFAULT_VITE_PORT;
 }
 
+/**
+ * The first content of each collaboration room: the showcase for the root
+ * document, a demo page's own blocks, and nothing for a page the user made.
+ *
+ * @param {object} options
+ * @param {unknown} options.showcase The root document.
+ * @param {Record<string, { blocks: unknown[] }>} options.pages Demo pages, by page id.
+ * @returns {(id: string) => unknown}
+ */
+export function playgroundSeedFor({ showcase, pages }) {
+  return (id) => {
+    const at = id.indexOf(PAGE_ROOM);
+
+    if (at === -1) {
+      return showcase;
+    }
+
+    return { blocks: pages[id.slice(at + PAGE_ROOM.length)]?.blocks ?? [] };
+  };
+}
+
 async function main() {
   const { noServer, viteArgs } = parseDevArgs(process.argv.slice(2));
   const mode = resolveBackendMode({ noServer, hasDotnet: noServer ? false : hasDotnet() });
@@ -206,7 +232,10 @@ async function main() {
 
       await startDocumentStore({
         port: DOCUMENT_PORT,
-        seed: { blocks: JSON.parse(readFileSync(PLAYGROUND_DOCUMENT, 'utf8')) },
+        seedFor: playgroundSeedFor({
+          showcase: { blocks: JSON.parse(readFileSync(PLAYGROUND_DOCUMENT, 'utf8')) },
+          pages: JSON.parse(readFileSync(PLAYGROUND_PAGES, 'utf8')),
+        }),
       });
 
       const origins = [`http://localhost:${vitePort(viteArgs)}`, `http://127.0.0.1:${vitePort(viteArgs)}`];
@@ -228,6 +257,22 @@ async function main() {
     }
   }
 
+  // The reference page host behind `?host=remote`. Optional: the playground
+  // keeps its localStorage registry without it.
+  const pageHost = await startPageHostNear({
+    from: PAGE_HOST_PORT,
+    attempts: 10,
+    seed: playgroundPageSeed(JSON.parse(readFileSync(PLAYGROUND_PAGES, 'utf8'))),
+  }).catch((error) => {
+    console.error(`[blok] the page host did not start (${error.message}) — ?host=remote is unavailable.`);
+
+    return null;
+  });
+
+  if (pageHost !== null) {
+    console.log(`[blok] page host at ${pageHost.url} — open the playground with ?host=remote to use it.`);
+  }
+
   supervise('vite', spawn(VITE, [
     // Collaboration is pinned to the origin above; letting Vite drift to the
     // next free port would break the socket with no visible cause.
@@ -236,7 +281,11 @@ async function main() {
   ], {
     cwd: ROOT,
     stdio: 'inherit',
-    env: { ...process.env, BLOK_DEV_BACKEND: backendRunning ? '1' : '0' },
+    env: {
+      ...process.env,
+      BLOK_DEV_BACKEND: backendRunning ? '1' : '0',
+      ...(pageHost !== null && { VITE_BLOK_PAGE_HOST_URL: pageHost.url }),
+    },
   }));
 }
 

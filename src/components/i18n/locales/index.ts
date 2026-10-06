@@ -54,11 +54,15 @@ export const ALL_LOCALE_CODES: readonly SupportedLocale[] = [
  *   catalog ships under the legacy `ku` code.
  * - `nb` (Norwegian Bokmål) is what browsers and most apps emit for Norwegian;
  *   Blok ships a single `no` catalog.
+ * - `iw` and `ji` are the withdrawn ISO codes for Hebrew and Yiddish; Java
+ *   and old Android still emit them.
  * @internal
  */
 const LOCALE_ALIASES: Readonly<Record<string, SupportedLocale>> = {
   ckb: 'ku',
   nb: 'no',
+  iw: 'he',
+  ji: 'yi',
 };
 
 const supportedSet: ReadonlySet<string> = new Set(ALL_LOCALE_CODES);

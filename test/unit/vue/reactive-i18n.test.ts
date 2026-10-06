@@ -85,4 +85,24 @@ describe('useBlok reactive i18n', () => {
 
     expect(blokRegistry.last!.i18n.update).not.toHaveBeenCalled();
   });
+
+  it('clears the direction when the host drops it', async () => {
+    const { config } = await mountReady({ i18n: { locale: 'en', direction: 'rtl' } });
+    const instance = blokRegistry.last!;
+
+    config.i18n = { locale: 'en' };
+    await nextTick();
+
+    expect(instance.i18n.update).toHaveBeenLastCalledWith({ locale: 'en', direction: null });
+  });
+
+  it('clears the direction when the host drops the whole i18n key', async () => {
+    const { config } = await mountReady({ i18n: { direction: 'rtl' } });
+    const instance = blokRegistry.last!;
+
+    config.i18n = undefined;
+    await nextTick();
+
+    expect(instance.i18n.update).toHaveBeenLastCalledWith({ direction: null });
+  });
 });

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../../../../src/components/constants';
 import { destroy, hide, onHover, show } from '../../../../src/components/utils/tooltip';
 import type { TooltipContent } from '../../../../src/components/utils/tooltip';
+import { resyncPortalDirections } from '../../../../src/components/utils/portal-direction';
 
 const tooltipSelector = `[${DATA_ATTR.interface}="${TOOLTIP_INTERFACE_VALUE}"]`;
 
@@ -218,6 +219,23 @@ describe('Tooltip utility', () => {
     expect(wrapper).toHaveAttribute('dir', 'rtl');
     expect(wrapper?.style.getPropertyValue('direction')).toBe('rtl');
     expect(wrapper?.style.getPropertyPriority('direction')).toBe('important');
+  });
+
+  it('hides an open tooltip when its editor flips direction, since the anchor moved', () => {
+    const editor = document.createElement('div');
+    const target = createTargetElement();
+
+    editor.setAttribute('data-blok-editor', '');
+    editor.style.direction = 'ltr';
+    editor.appendChild(target);
+    document.body.appendChild(editor);
+    show(target, 'Help');
+    expect(getTooltipWrapper()).toHaveAttribute('data-blok-shown', 'true');
+
+    editor.style.direction = 'rtl';
+    resyncPortalDirections(editor);
+
+    expect(getTooltipWrapper()).toHaveAttribute('data-blok-shown', 'false');
   });
 
   it('uses position: fixed so Top-Layer placement is viewport-relative', () => {
@@ -620,6 +638,26 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
 
     // Clean up
+    hide();
+  });
+
+  // A quick hover-then-click opens the trigger's menu before the hover delay runs out.
+  it('does not reveal a delayed tooltip once a Popover has opened during the delay', () => {
+    vi.useFakeTimers();
+    vi.advanceTimersByTime(5000);
+
+    const target = createTargetElement();
+    const openPopover = document.createElement('div');
+
+    onHover(target, 'hover text', { delay: 400 });
+    target.dispatchEvent(new Event('mouseenter'));
+    openPopover.setAttribute('data-blok-popover-opened', 'true');
+    document.body.appendChild(openPopover);
+    vi.advanceTimersByTime(500);
+
+    expect(getTooltipWrapper()?.getAttribute('data-blok-shown')).not.toBe('true');
+
+    openPopover.remove();
     hide();
   });
 

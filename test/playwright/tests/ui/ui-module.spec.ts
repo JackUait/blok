@@ -640,7 +640,7 @@ test.describe('ui module', () => {
       expect(newBlockId).toBe('block-1');
     });
 
-    test('does not trigger hover when cursor is beyond the extended zone boundary', async ({ page }) => {
+    test('hides the toolbar when cursor moves beyond the extended zone boundary', async ({ page }) => {
       await createBlok(page, { data: threeBlocksData, holderStyle: { marginLeft: '300px' } });
 
       // Get positions first
@@ -660,19 +660,12 @@ test.describe('ui module', () => {
 
       expect(zoneBlockId).toBe('block-1');
 
-      // Now move far outside the zone (200px left of content, beyond the 100px limit)
-      // Keep same Y position - since we're outside the zone, no new hover should trigger
+      // 200px left of content is beyond the 100px zone: the pointer has left the editor
       const outsideZoneX = positions.contentLeft - 200;
 
       await page.mouse.move(outsideZoneX, blockY);
 
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for potential hover event
-      await page.waitForTimeout(100);
-
-      // Toolbar should still be on first block (no new block detected outside zone)
-      const afterOutsideBlockId = await getToolbarBlockId(page);
-
-      expect(afterOutsideBlockId).toBe('block-1');
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`)).not.toHaveAttribute('data-blok-opened', 'true');
     });
 
     test('switches between blocks when moving vertically in the extended zone', async ({ page }) => {
@@ -747,8 +740,7 @@ test.describe('ui module', () => {
         async ({ holder, blokData }) => {
           const blokConfig: Record<string, unknown> = {
             holder: holder,
-            // Enable RTL mode
-            rtl: true,
+            i18n: { direction: 'rtl' },
           };
 
           if (blokData) {
@@ -765,6 +757,8 @@ test.describe('ui module', () => {
           blokData: data,
         }
       );
+      // Guard against a config that silently stays LTR.
+      await expect(page.locator(BLOK_INTERFACE_SELECTOR)).toHaveAttribute('data-blok-rtl', 'true');
     };
 
     /**
@@ -842,10 +836,19 @@ test.describe('ui module', () => {
       const newBlockId = await getToolbarBlockId(page);
 
       expect(newBlockId).toBe('block-rtl-1');
+
+      // The controls live in that same right-hand (inline-start) gutter.
+      const actionsBox = await getRequiredBoundingBox(page.locator('[data-blok-toolbar-actions]'));
+
+      expect(actionsBox.x).toBeGreaterThanOrEqual(positions.contentRight - 1);
     });
 
-    test('does not trigger hover when cursor is beyond the RTL extended zone boundary', async ({ page }) => {
+    test('hides the toolbar when cursor moves beyond the RTL extended zone boundary', async ({ page }) => {
       await createBlokRTL(page, threeBlocksDataRTL);
+      // Leaves room right of the content so the out-of-zone point is on screen
+      await page.evaluate((holder) => {
+        document.getElementById(holder)?.style.setProperty('margin-right', '300px');
+      }, HOLDER_ID);
 
       // Get positions first
       const positions = await getHoverZonePositionsRTL(page);
@@ -864,18 +867,13 @@ test.describe('ui module', () => {
 
       expect(zoneBlockId).toBe('block-rtl-1');
 
-      // Now move far outside the zone (200px right of content, beyond the 100px limit)
+      // 200px right of content is beyond the 100px zone: the pointer has left the editor
       const outsideZoneX = positions.contentRight + 200;
 
+      expect(outsideZoneX).toBeLessThan(page.viewportSize()?.width ?? 0);
       await page.mouse.move(outsideZoneX, blockY);
 
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for potential hover event
-      await page.waitForTimeout(100);
-
-      // Toolbar should still be on first block (no new block detected outside zone)
-      const afterOutsideBlockId = await getToolbarBlockId(page);
-
-      expect(afterOutsideBlockId).toBe('block-rtl-1');
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`)).not.toHaveAttribute('data-blok-opened', 'true');
     });
 
     test('switches between blocks when moving vertically in the RTL extended zone', async ({ page }) => {
@@ -913,14 +911,14 @@ test.describe('ui module', () => {
   });
 
   test.describe('toolbar persistence and full-width hover', () => {
-    test('toolbar remains visible when clicking outside the editor', async ({ page }) => {
+    test('toolbar remains visible when clicking just outside the editor, within the hover zone', async ({ page }) => {
       const singleBlockData: OutputData = {
         blocks: [
           { id: 'block-persist-1', type: 'paragraph', data: { text: 'Test block' } },
         ],
       };
 
-      await createBlok(page, { data: singleBlockData });
+      await createBlok(page, { data: singleBlockData, holderStyle: { marginLeft: '300px' } });
 
       // First, hover over a block to show the toolbar
       const paragraph = page.locator(`${PARAGRAPH_SELECTOR}[data-blok-id="block-persist-1"]`);
@@ -945,8 +943,20 @@ test.describe('ui module', () => {
       expect(toolbarStateBefore.hasOpenedAttr).toBe(true);
       expect(toolbarStateBefore.isVisible).toBe(true);
 
-      // Click outside the editor (on the body)
-      await page.mouse.click(10, 10);
+      /**
+       * Left of the editor, but close enough to the content to stay in the
+       * hover zone. Farther away, the pointer leaving hides the toolbar anyway.
+       */
+      const editorBox = await page.locator(`${BLOK_INTERFACE_SELECTOR}`).first().boundingBox();
+      const paragraphBox = await paragraph.boundingBox();
+
+      expect(editorBox).not.toBeNull();
+      expect(paragraphBox).not.toBeNull();
+
+      const clickX = (editorBox?.x ?? 0) - 10;
+
+      expect(clickX).toBeGreaterThan((paragraphBox?.x ?? 0) - 100);
+      await page.mouse.click(clickX, (paragraphBox?.y ?? 0) + (paragraphBox?.height ?? 0) / 2);
 
       // Verify toolbar is still visible (this is the desired behavior)
       const toolbarStateAfter = await page.evaluate(() => {

@@ -128,7 +128,7 @@
 
 [data-blok-emoji-picker] [data-emoji-picker-skin-tone] {
   top: calc(100% - 4px);
-  right: 12px;
+  inset-inline-end: 12px;
   width: min(236px, calc(100% - 24px));
   box-sizing: border-box;
   margin: 0;
@@ -143,6 +143,11 @@
   box-shadow: var(--blok-popover-box-shadow);
   transform-origin: right top;
   animation: blok-emoji-tones-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The picker root carries `dir` (syncPortalDirection): the tray grows from its end corner. */
+[data-blok-emoji-picker][dir="rtl"] [data-emoji-picker-skin-tone] {
+  transform-origin: left top;
 }
 
 [data-blok-emoji-picker] [data-emoji-picker-skin-tone] button {
@@ -165,7 +170,7 @@
 [data-blok-emoji-picker] [data-emoji-skin-indicator] {
   position: absolute;
   top: 5px;
-  left: 5px;
+  inset-inline-start: 5px;
   width: calc((100% - 10px) / 6);
   height: 36px;
   box-sizing: border-box;
@@ -175,6 +180,11 @@
   transform: translateX(calc(var(--emoji-skin-index, 0) * 100%));
   transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
+}
+
+/* Tones run right to left in RTL, so the highlight steps leftward. */
+[data-blok-emoji-picker][dir="rtl"] [data-emoji-skin-indicator] {
+  transform: translateX(calc(var(--emoji-skin-index, 0) * -100%));
 }
 
 [data-blok-emoji-picker] [data-emoji-skin-glyph] {
@@ -208,7 +218,7 @@
 
 [data-blok-emoji-picker][data-emoji-picker-inline] [data-emoji-picker-skin-tone] {
   top: calc(100% + 2px);
-  right: 0;
+  inset-inline-end: 0;
   width: min(236px, 100%);
 }
 

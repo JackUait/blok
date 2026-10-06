@@ -481,6 +481,37 @@ describe('createVueBlock — core tool-contract passthrough', () => {
     unmount();
   });
 
+  it('forwards Enter in navigation mode to the spec, with the block', () => {
+    const blockApi = makeBlockApi();
+    const onNavigationEnter = vi.fn(() => true);
+    const Tool = createVueBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      setup() {
+        return () => h('div');
+      },
+      onNavigationEnter,
+    });
+    const tool = new Tool({ data: {}, block: blockApi, api: makeApi(), readOnly: false, config: {} });
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+
+    expect(tool.onNavigationEnter(event)).toBe(true);
+    expect(onNavigationEnter).toHaveBeenCalledWith(event, blockApi);
+  });
+
+  it('leaves Enter in navigation mode to core when the spec has no handler', () => {
+    const Tool = createVueBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      setup() {
+        return () => h('div');
+      },
+    });
+    const tool = new Tool({ data: {}, block: makeBlockApi(), api: makeApi(), readOnly: false, config: {} });
+
+    expect(tool.onNavigationEnter(new KeyboardEvent('keydown', { key: 'Enter' }))).toBe(false);
+  });
+
   it('forwards authored statics onto the generated tool class', () => {
     const conversionConfig = { export: 'text', import: 'text' };
 

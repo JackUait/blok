@@ -260,7 +260,7 @@ describe('list-lifecycle', () => {
     const result = renderListItem(context);
 
     const listItem = result.querySelector('[role="listitem"]') as HTMLElement;
-    expect(listItem?.style.marginLeft).toBe('54px');
+    expect(listItem?.style.marginInlineStart).toBe('54px');
   });
 
   it('passes content element to onCheckboxChange callback', () => {

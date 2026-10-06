@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resizeRect, clampRect, widthForAspectChange, applyRatio } from '../../../../src/tools/image/crop-math';
+import { resizeRect, clampRect, widthForAspectChange, applyRatio, swapAspect } from '../../../../src/tools/image/crop-math';
 
 describe('widthForAspectChange', () => {
   it('keeps width when aspect unchanged', () => {
@@ -175,5 +175,34 @@ describe('clampRect', () => {
   });
   it('clamps w into [MIN, 100]', () => {
     expect(clampRect({ x: 0, y: 0, w: 1, h: 100 }).w).toBe(5);
+  });
+});
+
+describe('swapAspect', () => {
+  const O = { w: 800, h: 400 };
+  const px = (r: { w: number; h: number }): { w: number; h: number } => ({ w: (r.w / 100) * O.w, h: (r.h / 100) * O.h });
+
+  it('swaps the pixel width and height about the same centre', () => {
+    const next = swapAspect({ x: 40, y: 30, w: 10, h: 40 }, O);
+
+    expect(px(next).w).toBeCloseTo(160);
+    expect(px(next).h).toBeCloseTo(80);
+    expect(next.x + next.w / 2).toBeCloseTo(45);
+    expect(next.y + next.h / 2).toBeCloseTo(50);
+  });
+
+  it('shrinks a swap that would not fit the image, keeping the swapped aspect', () => {
+    const next = swapAspect({ x: 0, y: 0, w: 100, h: 100 }, O);
+
+    expect(next.h).toBeCloseTo(100);
+    expect(px(next).w / px(next).h).toBeCloseTo(400 / 800);
+  });
+
+  it('slides the swapped rect back inside the image', () => {
+    const next = swapAspect({ x: 0, y: 0, w: 20, h: 10 }, O);
+
+    expect(next.x).toBeGreaterThanOrEqual(0);
+    expect(next.y).toBeGreaterThanOrEqual(0);
+    expect(next.y + next.h).toBeLessThanOrEqual(100);
   });
 });

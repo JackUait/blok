@@ -66,6 +66,7 @@ const createBlokStub = (rectangleSelection: Record<string, unknown>): BlokModule
     ReadOnlyAPI: emptyMethods,
     UiAPI: emptyMethods,
     ThemeAPI: emptyMethods,
+    ViewStateAPI: emptyMethods,
     RectangleSelection: rectangleSelection,
   } as unknown as BlokModules
 }

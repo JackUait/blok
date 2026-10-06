@@ -151,7 +151,7 @@ test.describe('block-level color survives turn-into', () => {
     await expect(toggleTitle).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 
     await expect.poll(async () => (await save(page))?.blocks).toEqual([
-      { id: 'p', type: 'toggle', data: { text: 'Colored text', isOpen: true, backgroundColor: 'blue' } },
+      { id: 'p', type: 'toggle', data: { text: 'Colored text', backgroundColor: 'blue' } },
     ]);
 
     await toggleTitle.click();

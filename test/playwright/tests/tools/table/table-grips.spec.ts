@@ -175,6 +175,29 @@ test.describe('Row and Column Grip Controls', () => {
     await expect(rowGrip).toBeVisible({ timeout: 2000 });
   });
 
+  test('Clicked cell keeps its grips while another cell is hovered', async ({ page }) => {
+    await createTable2x2(page);
+
+    const cells = page.locator(CELL_SELECTOR);
+    const colGrips = page.locator(COL_GRIP_SELECTOR);
+    const rowGrips = page.locator(ROW_GRIP_SELECTOR);
+
+    await cells.nth(0).click();
+    await cells.nth(3).hover();
+
+    await expect(colGrips.nth(0)).toHaveAttribute('data-blok-table-grip-visible', '');
+    await expect(rowGrips.nth(0)).toHaveAttribute('data-blok-table-grip-visible', '');
+    await expect(colGrips.nth(1)).toHaveAttribute('data-blok-table-grip-visible', '');
+    await expect(rowGrips.nth(1)).toHaveAttribute('data-blok-table-grip-visible', '');
+
+    await page.mouse.move(1, 1);
+
+    await expect(colGrips.nth(1)).not.toHaveAttribute('data-blok-table-grip-visible', '');
+    await expect(rowGrips.nth(1)).not.toHaveAttribute('data-blok-table-grip-visible', '');
+    await expect(colGrips.nth(0)).toHaveAttribute('data-blok-table-grip-visible', '');
+    await expect(rowGrips.nth(0)).toHaveAttribute('data-blok-table-grip-visible', '');
+  });
+
   test('Click column grip shows popover with Insert Column Left, Insert Column Right, Delete', async ({ page }) => {
     // Initialize 2x2 table and click cell to show grips
     await createTable2x2(page);

@@ -1,7 +1,8 @@
 import { rovingRadioGroup } from '../../../components/utils/roving-radio-group';
 
 export interface ModeTabsOptions {
-  modes: { key: string; label: string }[];
+  /** `shortcut` is the bare letter that picks the tab; the caller listens for it. */
+  modes: { key: string; label: string; shortcut?: string }[];
   panels: Record<string, HTMLElement>;
   selected: string;
   label: string;
@@ -12,6 +13,8 @@ export interface ModeTabs {
   el: HTMLElement;
   /** Switches without calling onSelect. */
   select(key: string): void;
+  /** Switches as a click would, onSelect included. */
+  pick(key: string): void;
   destroy(): void;
 }
 
@@ -26,7 +29,7 @@ export function createModeTabs(o: ModeTabsOptions): ModeTabs {
   list.setAttribute('role', 'tablist');
   list.setAttribute('aria-label', o.label);
 
-  const tabs = o.modes.map(({ key, label }) => {
+  const tabs = o.modes.map(({ key, label, shortcut }) => {
     const tab = document.createElement('button');
     const panel = o.panels[key];
 
@@ -36,6 +39,10 @@ export function createModeTabs(o: ModeTabsOptions): ModeTabs {
     tab.setAttribute('role', 'tab');
     tab.setAttribute('data-mode', key);
     tab.textContent = label;
+    if (shortcut !== undefined) {
+      tab.title = `${label} (${shortcut})`;
+      tab.setAttribute('aria-keyshortcuts', shortcut);
+    }
     if (panel !== undefined) {
       panel.id = panel.id === '' ? `${prefix}-panel-${key}` : panel.id;
       panel.setAttribute('role', 'tabpanel');
@@ -88,6 +95,7 @@ export function createModeTabs(o: ModeTabsOptions): ModeTabs {
       st.current = key;
       render();
     },
+    pick: choose,
     destroy(): void {
       roving.destroy();
       tabs.forEach((tab) => tab.removeEventListener('click', onClick));

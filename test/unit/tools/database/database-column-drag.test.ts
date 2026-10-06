@@ -7,8 +7,10 @@ import type { GroupDragResult } from '../../../../src/tools/database/database-co
  * Each column has data-blok-database-column and data-option-id.
  * Columns are arranged horizontally.
  */
-const createWrapper = (columnCount: number): HTMLDivElement => {
+const createWrapper = (columnCount: number, dir: 'ltr' | 'rtl' = 'ltr'): HTMLDivElement => {
   const wrapper = document.createElement('div');
+
+  wrapper.setAttribute('dir', dir);
 
   for (let c = 0; c < columnCount; c++) {
     const column = document.createElement('div');
@@ -16,7 +18,8 @@ const createWrapper = (columnCount: number): HTMLDivElement => {
     column.setAttribute('data-blok-database-column', '');
     column.setAttribute('data-option-id', `opt-${c}`);
 
-    const left = c * 200;
+    // RTL lays column 0 out on the right.
+    const left = dir === 'rtl' ? (columnCount - 1 - c) * 200 : c * 200;
     const right = left + 200;
 
     Object.defineProperty(column, 'getBoundingClientRect', {
@@ -154,6 +157,51 @@ describe('DatabaseColumnDrag', () => {
       optionId: 'opt-0',
       beforeOptionId: null,
       afterOptionId: 'opt-2',
+    });
+  });
+
+  describe('in RTL', () => {
+    beforeEach(() => {
+      drag.destroy();
+      wrapper.remove();
+      // opt-0 [400-600], opt-1 [200-400], opt-2 [0-200]
+      wrapper = createWrapper(3, 'rtl');
+      drag = new DatabaseColumnDrag({ wrapper, onDrop });
+    });
+
+    it('drops past a column\'s middle toward the inline end (left)', () => {
+      drag.beginTracking('opt-0', 550, 50);
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 530, clientY: 50 }));
+      // x=250 is left of opt-1's middle (300), right of opt-2's middle (100).
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 250, clientY: 50 }));
+
+      expect(onDrop).toHaveBeenCalledWith({
+        optionId: 'opt-0',
+        beforeOptionId: 'opt-2',
+        afterOptionId: 'opt-1',
+      });
+    });
+
+    it('drops at the end when the pointer passes the last column on the left', () => {
+      drag.beginTracking('opt-0', 550, 50);
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 530, clientY: 50 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 50 }));
+
+      expect(onDrop).toHaveBeenCalledWith({
+        optionId: 'opt-0',
+        beforeOptionId: null,
+        afterOptionId: 'opt-2',
+      });
+    });
+
+    it('opens the gap on the inline-start side of the target column', () => {
+      drag.beginTracking('opt-0', 550, 50);
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 250, clientY: 50 }));
+
+      const target = wrapper.querySelector<HTMLElement>('[data-option-id="opt-2"]');
+
+      expect(target?.style.marginInlineStart).not.toBe('');
+      expect(target?.style.marginLeft).toBe('');
     });
   });
 });

@@ -122,7 +122,8 @@ export function makeShortcutHtml(shortcut: string): string {
 
   const svgs = tokens.map((token) => makeKeySvg(resolveLabel(token)));
 
-  return `<span style="display:inline-flex;align-items:center;line-height:1">${svgs.join('')}</span>`;
+  // Glyphs follow keyboard order, not reading order: an RTL menu would reverse them.
+  return `<span style="display:inline-flex;align-items:center;line-height:1;direction:ltr">${svgs.join('')}</span>`;
 }
 
 /**

@@ -1009,6 +1009,7 @@ describe('AudioTool — enrichment from the audio bytes', () => {
     expect(call?.peaks).toStrictEqual([0.2, 0.8]);
     expect(call?.media).toBe(fixture.root.querySelector('[data-role="audio-media"]'));
     expect(call?.mount).toBe(fixture.root.querySelector('[data-role="audio-waveform"]'));
+    expect(call?.stage).toBe(fixture.root.querySelector('[data-role="audio-figure"]'));
     expect(fixture.dispatchChange).toHaveBeenCalledTimes(2);
   });
 

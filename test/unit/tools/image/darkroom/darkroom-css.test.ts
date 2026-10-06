@@ -42,6 +42,14 @@ describe('darkroom.css', () => {
     expect(chipScope).not.toMatch(BLUE);
   });
 
+  it('the ? button is a circle, as big as the icon buttons beside Reset', () => {
+    const help = rule('.blok-darkroom__dock > .blok-darkroom__help');
+
+    expect(help).toMatch(/width:\s*32px;/);
+    expect(help).toMatch(/height:\s*32px;/);
+    expect(rule('.blok-darkroom__btn')).toMatch(/border-radius:\s*var\(--blok-radius-pill\)/);
+  });
+
   it('Done is white on black, not blue', () => {
     const done = rule('.blok-darkroom__btn--primary');
 
@@ -231,4 +239,22 @@ describe('darkroom.css', () => {
     expect(main).not.toContain('crop-editor.css');
     expect(main).not.toContain('crop-modal.css');
   });
+  it('holding M for the original hides the marks and the drawing layer', () => {
+    const original = rule('.blok-darkroom__surface[data-original] [data-role="markup-layer"]');
+
+    expect(css).toContain('.blok-darkroom__surface[data-original] [data-role="image-markup"],');
+    expect(original).toMatch(/visibility:\s*hidden;/);
+  });
+  it('zoomed, the crop handles are hidden: the crop is not editable then', () => {
+    expect(rule('.blok-darkroom__surface[data-zoomed] [data-handle]')).toMatch(/display:\s*none;/);
+  });
+
+  it('the viewport fills the stage and scales from its corner', () => {
+    const viewport = rule('.blok-darkroom__viewport');
+
+    expect(viewport).toMatch(/position:\s*absolute;/);
+    expect(viewport).toMatch(/inset:\s*0;/);
+    expect(viewport).toMatch(/transform-origin:\s*0 0;/);
+  });
+
 });

@@ -327,21 +327,11 @@ describe('rich text known losses (accepted limitations)', () => {
     sync(a, b);
 
     // The word comes back, but the peer's bold on "uic" does not.
-    expect(deltaOf(a)).toEqual([{ insert: 'The quic' }, { insert: 'k fox' }]);
+    expect(new YBlockSerializer().readRichText(liveText(a))).toEqual([{ text: 'The quick fox' }]);
     expect(deltaOf(b)).toEqual(deltaOf(a));
   });
-});
 
-/**
- * Measured, NOT an accepted limitation: nobody has ruled on it yet. It
- * asserts today's lossy value so a fix turns it red.
- */
-describe('rich text undo, open defects', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it.each(ORDERS)('OPEN DEFECT (awaiting a ruling): undoing a block\'s creation unbolds a peer\'s character typed in its bold run (ids %i/%i)', (ownId, peerId) => {
+  it.each(ORDERS)('ACCEPTED: undoing a block\'s creation unbolds a peer\'s character typed in its bold run (ids %i/%i)', (ownId, peerId) => {
     const a = createStore(ownId);
     const b = createStore(peerId);
 
@@ -359,8 +349,7 @@ describe('rich text undo, open defects', () => {
     history.undo();
     sync(a, b);
 
-    // The block is spared for the peer's "X", but the bold it sat in was
-    // this editor's and goes with the undo.
+    // Undo policy, same as format 1: a spared born block still loses this editor's text items (undo-history.ts:524-529).
     expect(deltaOf(a)).toEqual([{ insert: 'X' }]);
     expect(deltaOf(b)).toEqual(deltaOf(a));
   });

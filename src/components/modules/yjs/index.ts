@@ -1,5 +1,6 @@
 import type * as Y from 'yjs';
 
+import type { RichText } from '../../../../types/rich-text';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { modificationsObserverBatchTimeout } from '../../constants';
@@ -1353,6 +1354,16 @@ export class YjsManager extends Module {
    */
   public yMapToObject(ymap: Y.Map<unknown>): Record<string, unknown> {
     return this.serializer.yMapToObject(ymap);
+  }
+
+  /**
+   * A rich field value (HTML or segments) in the canonical form the write path
+   * compares by; null for any other shape. Equal results are the same content
+   * however the HTML is spelled.
+   * @param value - the field's value
+   */
+  public richSegmentsOf(value: unknown): RichText | null {
+    return this.serializer.toRichSegments(value);
   }
 
   // ========== Lifecycle ==========

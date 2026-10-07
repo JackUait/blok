@@ -116,8 +116,9 @@ describe('lineage reset', () => {
 
       expect(store.blocksMap.has('b1')).toBe(true);
       expect(store.rootOrder.toArray()).toEqual(['b1']);
-      expect(store.undoScope).toEqual([store.blocksMap, store.rootOrder, store.values]);
+      expect(store.undoScope).toEqual([store.blocksMap, store.rootOrder, store.values, store.page]);
       expect(store.values.doc).toBe(store.blocksMap.doc);
+      expect(store.page.doc).toBe(store.blocksMap.doc);
     });
 
     it('re-attaches the seam update handlers to the fresh document', () => {

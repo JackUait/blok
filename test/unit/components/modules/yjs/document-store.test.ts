@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import * as Y from 'yjs';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
+import { readPageFields } from '../../../../../src/components/modules/yjs/page-fields';
 import type { OutputBlockData } from '../../../../../types/data-formats/output-data';
 
 const serializer = new YBlockSerializer();
@@ -46,11 +47,49 @@ describe('DocumentStore', () => {
       expect((store as unknown as { ydoc: unknown }).ydoc).toBeDefined();
       expect(store.blocksMap).toBeDefined();
       expect(store.rootOrder).toBeDefined();
-      expect(store.undoScope).toEqual([store.blocksMap, store.rootOrder, store.values]);
+      expect(store.undoScope).toEqual([store.blocksMap, store.rootOrder, store.values, store.page]);
     });
 
     it('starts with empty blocks array', () => {
       expect(store.toJSON()).toEqual([]);
+    });
+  });
+
+  describe('page map', () => {
+    it('seeds title and icon from JSON and reads them back', () => {
+      const store = createDocumentStore();
+
+      store.pageFromJSON({ title: 'Plans', icon: { type: 'emoji', value: '🚀' } });
+
+      expect(readPageFields(store.page)).toEqual({ title: 'Plans', icon: { type: 'emoji', value: '🚀' } });
+    });
+
+    it('drops fields the incoming JSON lacks', () => {
+      const store = createDocumentStore();
+
+      store.pageFromJSON({ title: 'Plans', icon: { type: 'emoji', value: '🚀' } });
+      store.pageFromJSON({});
+
+      expect(readPageFields(store.page)).toEqual({});
+    });
+
+    it('treats an empty title as absent', () => {
+      const store = createDocumentStore();
+
+      store.pageFromJSON({ title: '' });
+
+      expect(store.page.has('title')).toBe(false);
+    });
+
+    it('gives a fresh page map after a lineage reset', () => {
+      const store = createDocumentStore();
+      const before = store.page;
+
+      store.pageFromJSON({ title: 'Old' });
+      store.resetForRelineage();
+
+      expect(store.page).not.toBe(before);
+      expect(readPageFields(store.page)).toEqual({});
     });
   });
 

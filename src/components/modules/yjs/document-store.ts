@@ -5,6 +5,7 @@ import * as Y from 'yjs';
 import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, isOrderedIdArrayKey, stripNul, toSerializableValue, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
 import { writeRichText } from './rich-text-write';
 import { diffText } from './text-diff';
+import { writePageField, type PageFields } from './page-fields';
 import { LOCAL_ORIGIN_TAGS, type AwarenessChange, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
 // The narrow module, not the utils barrel: the collab fixture generator
 // bundles this file for node.
@@ -160,6 +161,11 @@ export class DocumentStore {
   private yValues: Y.Map<unknown> = this.ydoc.getMap('values');
 
   /**
+   * The document's built-in page fields (title, icon).
+   */
+  private yPage: Y.Map<unknown> = this.ydoc.getMap('page');
+
+  /**
    * Serializer for converting between Yjs and OutputBlockData formats
    */
   private serializer: YBlockSerializer;
@@ -206,7 +212,23 @@ export class DocumentStore {
    * inside `blocksMap` values, so the two block roots cover every block write.
    */
   public get undoScope(): UndoScopeType[] {
-    return [this.yBlocksMap, this.yRootOrder, this.yValues];
+    // blocksMap first: UndoHistory takes the first Y.Map as the blocks scope.
+    return [this.yBlocksMap, this.yRootOrder, this.yValues, this.yPage];
+  }
+
+  /**
+   * The document's built-in page fields (title, icon).
+   */
+  public get page(): Y.Map<unknown> {
+    return this.yPage;
+  }
+
+  /** Origin 'load': not undoable, and the page observer stays silent. */
+  public pageFromJSON(fields: PageFields): void {
+    this.ydoc.transact(() => {
+      writePageField(this.yPage, 'title', fields.title);
+      writePageField(this.yPage, 'icon', fields.icon);
+    }, 'load');
   }
 
   /**
@@ -2673,6 +2695,7 @@ export class DocumentStore {
     this.yBlocksMap = this.ydoc.getMap('blocks');
     this.yRootOrder = this.ydoc.getArray('root');
     this.yValues = this.ydoc.getMap('values');
+    this.yPage = this.ydoc.getMap('page');
 
     previous.destroy();
 

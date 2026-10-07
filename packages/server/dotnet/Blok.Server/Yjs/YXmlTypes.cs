@@ -20,11 +20,19 @@ internal sealed class YXmlHook(string? hookName) : YAbstractType
   public string? HookName { get; } = hookName;
 }
 
-/// <summary>An XML text node, which exports its string exactly as a Y.Text does.</summary>
-internal sealed class YXmlText : YAbstractType
+/// <summary>
+/// An XML text node: a Y.Text under another type ref. Blok's formatted rich
+/// text is one. Unlike yjs, it is not a <see cref="YText"/> here.
+/// </summary>
+internal sealed class YXmlText : YTextBase
 {
-  public override string ToString()
+  public YXmlText()
+      : base(null)
   {
-    return ConcatenateStrings(Start);
+  }
+
+  public YXmlText(string text)
+      : base(text)
+  {
   }
 }

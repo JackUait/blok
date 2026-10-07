@@ -1,6 +1,7 @@
 using Blok.Server.AspNetCore.Collab;
 using Blok.Server.Collab;
 using Blok.Server.Outbound;
+using Blok.Server.Runtime;
 using Blok.Server.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -157,7 +158,11 @@ public static class BlokServerServiceCollectionExtensions
                   new Uri(effectiveOptions.DocEndpoint),
                   effectiveOptions.DocEndpointAuth,
                   DocEndpointRequestTimeout)),
-          new CollabDocConverter(timeProvider, CollabLog(provider)),
+          new CollabDocConverter(
+              timeProvider,
+              new RuntimeRichTextHtmlReader(provider.GetRequiredService<IBlokRuntime>()),
+              RichTextFields.With(effectiveOptions.RichTextFields),
+              CollabLog(provider)),
           new CollabRoomOptions
           {
             AnnouncedMaxMessageBytes = effectiveOptions.CollabMaxMessageBytes,

@@ -7,8 +7,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { blocksToMarkdown, type SerializableBlock } from '../../../../../src/markdown/blocks-to-markdown';
 import { blocksToMarkdownWithReport } from '../../../../../src/view/blocks-to-markdown';
-import { markdownToBlocksWithReport } from '../../../../../src/markdown/index';
+import { markdownToBlocksWithReport as markdownToSegmentBlocksWithReport } from '../../../../../src/markdown/index';
+import type { MarkdownImportResult } from '../../../../../src/markdown/index';
+import { richTextAsHtml } from '../../../helpers/rich-text-as-html';
 import type { OutputBlockData } from '../../../../../types';
+
+/** Rich fields read back as HTML, the shape these grid assertions read. */
+const markdownToBlocksWithReport = async (md: string): Promise<MarkdownImportResult> => {
+  const result = await markdownToSegmentBlocksWithReport(md);
+
+  return { ...result, blocks: richTextAsHtml(result.blocks) };
+};
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '');
 

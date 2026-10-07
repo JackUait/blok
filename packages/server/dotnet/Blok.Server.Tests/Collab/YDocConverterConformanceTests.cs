@@ -34,9 +34,9 @@ public sealed class YDocConverterConformanceTests
     var fixture = YDocConverterFixtures.Load(name);
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, fixture.Input);
+    RichTextRuntime.Seed(doc, fixture.Input);
 
-    AssertJsonEqual(fixture.Canonical, YDocConverter.Export(doc));
+    AssertJsonEqual(Expected(fixture), RichTextRuntime.Export(doc));
   }
 
   [Theory]
@@ -48,7 +48,7 @@ public sealed class YDocConverterConformanceTests
 
     Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(fixture.Update).Outcome);
 
-    AssertJsonEqual(fixture.Canonical, YDocConverter.Export(doc));
+    AssertJsonEqual(Expected(fixture), RichTextRuntime.Export(doc));
   }
 
   [Theory]
@@ -59,16 +59,29 @@ public sealed class YDocConverterConformanceTests
     var source = new YDoc();
     var replica = new YDoc();
 
-    YDocConverter.Seed(source, fixture.Input);
+    RichTextRuntime.Seed(source, fixture.Input);
 
     var diff = source.EncodeStateAsUpdate(replica.EncodeStateVector());
 
     Assert.Equal(ApplyOutcome.Applied, replica.ApplyUpdate(diff).Outcome);
 
-    var exported = YDocConverter.Export(replica);
+    var exported = RichTextRuntime.Export(replica);
 
-    AssertJsonEqual(fixture.Canonical, exported);
-    AssertJsonEqual(YDocConverter.Export(source), exported);
+    AssertJsonEqual(Expected(fixture), exported);
+    AssertJsonEqual(RichTextRuntime.Export(source), exported);
+  }
+
+  /// <summary>
+  /// The host shape (contract §9): <c>canonical.segments.json</c>, which the
+  /// format-2 generator writes next to <c>canonical.json</c> (the editor
+  /// reader's HTML). No fallback: until those fixtures exist these tests are
+  /// red on purpose.
+  /// </summary>
+  private static System.Text.Json.Nodes.JsonArray Expected(YDocConverterFixture fixture)
+  {
+    return fixture.CanonicalSegments ?? throw new InvalidDataException(
+        $"collab fixture \"{fixture.Name}\" has no canonical.segments.json; regenerate the " +
+        "fixtures with the format-2 client (scripts/generate-collab-fixtures.mjs).");
   }
 
   private static void AssertJsonEqual(

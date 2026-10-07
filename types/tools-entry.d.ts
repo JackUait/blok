@@ -112,16 +112,16 @@ export const Tabs: BlockToolConstructable & {
 };
 
 // Re-export data and config types for convenience
-export { HeaderData, HeaderConfig } from './tools/header';
-export { ParagraphData, ParagraphConfig } from './tools/paragraph';
-export { ListData, ListConfig, ListStyle } from './tools/list';
+export { HeaderData, HeaderToolData, HeaderConfig } from './tools/header';
+export { ParagraphData, ParagraphToolData, ParagraphConfig } from './tools/paragraph';
+export { ListData, ListToolData, ListConfig, ListStyle } from './tools/list';
 export { TableData, TableConfig, CellContent } from './tools/table';
-export { ToggleData, ToggleConfig } from './tools/toggle';
+export { ToggleData, ToggleToolData, ToggleConfig } from './tools/toggle';
 export { DividerData } from './tools/divider';
 export { SpacerData } from './tools/spacer';
 export { TableOfContentsData } from './tools/table-of-contents';
 export { CalloutData, CalloutConfig } from './tools/callout';
-export { QuoteData } from './tools/quote';
+export { QuoteData, QuoteToolData } from './tools/quote';
 export { DatabaseData, DatabaseConfig, DatabaseAdapter, DatabaseViewConfig, DatabaseRowData } from './tools/database';
 export { ImageData, ImageConfig, ImageUploader, ImageAlignment, ImageSize, ImageFrame, ImageCrop, ImageCropShape, ImageRotation, ImageFilterPreset, ImageFilterDefinition, ImageAdjust } from './tools/image';
 export { FileData, FileConfig, FileUploader, FileUploadContext, FileUploadResult } from './tools/file';

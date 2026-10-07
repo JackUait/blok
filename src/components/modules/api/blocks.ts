@@ -5,7 +5,7 @@ import type { DerivedSource } from '../blockManager/types';
 import type { BlockToolAdapter } from '../../tools/block';
 import type { InsertInsideParentWithCurrentOptions } from '../blockManager/block-insertion';
 import { blocksToMarkdown } from '../../../markdown/blocks-to-markdown';
-import type { MarkdownImportConfig } from '../../../markdown/types';
+import type { InternalMarkdownImportConfig, MarkdownImportConfig } from '../../../markdown/types';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { Module } from '../../__module';
 import { Block } from '../../block';
@@ -18,7 +18,7 @@ import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { equalsOutputData, normalizeOutputBlocks } from '../../../shared/output-data';
-import { outputBlocksToHtml, outputBlocksToSegments } from '../../../shared/rich-text/block-data';
+import { outputBlocksToSegments } from '../../../shared/rich-text/block-data';
 import { htmlToSegmentsDom } from '../../utils/rich-text-dom';
 import { resolveHashTarget } from '../../utils/hash-target';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
@@ -419,7 +419,9 @@ export class BlocksAPI extends Module {
     this.refuseWholesaleReplace('importMarkdown');
 
     const { markdownToBlocks } = await import('../../../markdown/index');
-    const blocks = await markdownToBlocks(md, options);
+    // HTML in, so the Saver's own format gates below decide what the host gets.
+    const config: InternalMarkdownImportConfig = { ...options, htmlText: true };
+    const blocks = await markdownToBlocks(md, config);
     const data: OutputData = { blocks };
 
     await this.replaceDocument(data, { keepId: true });
@@ -445,15 +447,13 @@ export class BlocksAPI extends Module {
    * @returns the document as Markdown ('' when there is nothing to save)
    */
   public async exportMarkdown(): Promise<string> {
-    const saved = await this.Blok.Saver.save();
+    // Internal dialect: blocksToMarkdown reads flat blocks holding HTML. The host
+    // dialect holds segments and, with legacy output, list items[] and toggleList.
+    const output = await this.Blok.Saver.save({ dialect: 'internal' });
 
-    if (saved === undefined) {
+    if (output === undefined) {
       return '';
     }
-
-    // blocksToMarkdown reads HTML; the host save may hold segments. The
-    // internal dialect would avoid this, but it also skips the legacy collapse.
-    const output = { ...saved, blocks: outputBlocksToHtml(saved.blocks, type => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? []) };
 
     const parentOf = new Map<string, string | null>();
 

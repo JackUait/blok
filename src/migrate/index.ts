@@ -35,9 +35,9 @@ import type { LegacyGrammarEntry } from '../components/migration/legacy-grammar.
 import { migrateBlocks } from '../components/migration/block-migrations';
 import type { BlockMigrations } from '../components/migration/block-migrations';
 import type { RichText, RichTextEmbed } from '../../types/rich-text';
-import { blockDataToSegments, isNestedDocument, nestedDocumentsFor } from '../shared/rich-text/block-data';
+import { blockDataToSegments, isNestedDocument, legacyNestingFor, nestedDocumentsFor } from '../shared/rich-text/block-data';
 import { isRichText } from '../shared/rich-text/guards';
-import { CURRENT_RICH_TEXT_FIELDS } from '../shared/rich-text/fields';
+import { LEGACY_BODY_TYPES, LEGACY_ITEM_TYPES, richTextFieldsFor } from '../shared/rich-text/fields';
 import { segmentsToHtml } from '../shared/rich-text/segments-to-html';
 import { PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
 import { htmlToSegmentsNode } from '../view/rich-text-parse5';
@@ -268,24 +268,19 @@ export const migrate = (
   };
 };
 
-/** What {@link migrateToRichText} could not convert cleanly: markup with no plain mark, or a legacy block it left as it is. */
+/** What {@link migrateToRichText} could not convert cleanly: markup with no plain mark. */
 export interface RichTextLossyReport {
   blockId?: string;
   blockType: string;
+  /** The field, or `'items'` for legacy list item text. */
   field: string;
-  /**
-   * `html-embed`: markup kept verbatim. `custom-mark`: an unknown tag kept as a `tag:*` mark.
-   * `legacy-shape`: an Editor.js block left unconverted (`field` is `'data'`); run `migrate()` first.
-   */
-  reason: 'html-embed' | 'custom-mark' | 'legacy-shape';
+  /** `html-embed`: markup kept verbatim. `custom-mark`: an unknown tag kept as a `tag:*` mark. */
+  reason: 'html-embed' | 'custom-mark';
 }
 
 export interface MigrateToRichTextOptions {
   onLossy?: (report: RichTextLossyReport) => void;
 }
-
-const currentRichTextFields = (type: string): string[] =>
-  Object.prototype.hasOwnProperty.call(CURRENT_RICH_TEXT_FIELDS, type) ? CURRENT_RICH_TEXT_FIELDS[type] : [];
 
 const lossyReasons = (rich: RichText): Set<RichTextLossyReport['reason']> => {
   const reasons = new Set<RichTextLossyReport['reason']>();
@@ -317,27 +312,40 @@ const convertProperties = (properties: unknown, onLossy: LossySink): unknown => 
 };
 
 const convertBlock = (block: OutputBlockData, onLossy: LossySink): OutputBlockData => {
-  // A legacy block keeps its strings so migrate() can still read every field.
-  if (matchLegacyRuleInGrammar(block) !== null) {
-    onLossy({ blockId: block.id, blockType: block.type, field: 'data', reason: 'legacy-shape' });
-
-    return block;
-  }
-
   const data: Record<string, unknown> = block.data ?? {};
-  const fields = currentRichTextFields(block.type);
-  const next = blockDataToSegments(data, fields, () => [], htmlToSegmentsNode);
+  // Legacy fields too (toggleList.title, quote.caption, …): the grammar in migrate() passes arrays through.
+  const fields = richTextFieldsFor(block.type);
+  // A copy: the writes below must not reach the caller's document.
+  const next = { ...blockDataToSegments(data, fields, () => [], htmlToSegmentsNode) };
+  const report = (field: string) => (rich: RichText): void =>
+    lossyReasons(rich).forEach(reason => onLossy({ blockId: block.id, blockType: block.type, field, reason }));
 
   for (const field of fields) {
     const value = next[field];
 
     if (typeof data[field] === 'string' && isRichText(value)) {
-      lossyReasons(value).forEach(reason => onLossy({ blockId: block.id, blockType: block.type, field, reason }));
+      report(field)(value);
     }
   }
 
   if (nestedDocumentsFor(block.type).nestedDocuments === true && 'properties' in next) {
     next.properties = convertProperties(next.properties, onLossy);
+  }
+
+  if (LEGACY_BODY_TYPES.has(block.type) && isNestedDocument(next.body)) {
+    next.body = { ...next.body, blocks: convertBlocks(next.body.blocks, onLossy) };
+  }
+
+  if (LEGACY_ITEM_TYPES.has(block.type) && Array.isArray(next.items)) {
+    const readItem = (html: string): RichText => {
+      const rich = htmlToSegmentsNode(html);
+
+      report('items')(rich);
+
+      return rich;
+    };
+
+    return { ...block, data: blockDataToSegments(next, [], () => [], readItem, legacyNestingFor(block.type)) };
   }
 
   return { ...block, data: next };
@@ -348,11 +356,13 @@ const convertBlocks = (blocks: OutputBlockData[], onLossy: LossySink): OutputBlo
 
 /**
  * Convert the HTML rich-text fields of a stored document to segments, without a DOM.
- * Only built-in block types in the current data model are converted. A block in a
- * legacy Editor.js shape is left as it is and reported as `legacy-shape`: run
- * {@link migrate} first. Fields that already hold segments pass through.
+ * Only built-in block types are converted, legacy Editor.js shapes included
+ * (list items, toggleList/callout titles and bodies, quote captions, warnings);
+ * {@link migrate} reads the result either before or after. Table string cells,
+ * `raw.html` and `attaches.title` stay strings. Fields that already hold
+ * segments pass through.
  * @param data - a stored OutputData document
- * @param options - `onLossy` hears about legacy blocks and markup kept as an embed or a custom mark
+ * @param options - `onLossy` hears about markup kept as an embed or a custom mark
  * @returns the document with segment fields
  */
 export const migrateToRichText = (data: OutputData, options?: MigrateToRichTextOptions): OutputData => ({

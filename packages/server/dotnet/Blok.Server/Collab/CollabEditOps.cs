@@ -13,7 +13,7 @@ internal sealed class CollabEditException(
 /// <summary>
 /// One block-level operation from POST /sync/{doc}/edit. Parsed and
 /// NUL-screened by <see cref="CollabEditOps.Parse"/>; validated against the
-/// doc and applied by <see cref="ICollabDocConverter.ApplyOps"/>.
+/// doc and applied by <see cref="ICollabDocConverter.ApplyOpsAsync"/>.
 /// </summary>
 internal abstract record CollabEditOp
 {

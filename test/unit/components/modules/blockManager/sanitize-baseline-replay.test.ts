@@ -181,12 +181,14 @@ describe('the replay baseline under a sanitizer that normalises', () => {
   const docText = (): unknown => {
     const data = yjsManager.getBlockById('p1')?.get('data');
 
-    return data instanceof Y.Map ? (data.toJSON() as Record<string, unknown>).text : undefined;
+    // The reader's own path: a paragraph's formatted text has no HTML toJSON().
+    return data instanceof Y.Map ? yjsManager.yMapToObject(data).text : undefined;
   };
 
   it('replays a paste that lands while a bare-& block is being rewritten by a peer', async () => {
     seed('a & b');
-    expect(docText()).toBe('a & b');
+    // Paragraph text is stored as segments and read back as canonical HTML.
+    expect(docText()).toBe('a &amp; b');
 
     duringRewrite = () => {
       // The user pastes into the block the reconciler is mid-rewrite.
@@ -226,10 +228,16 @@ describe('the replay baseline under a sanitizer that normalises', () => {
     };
 
     pushPeerEdit('x & y');
+
+    const clocksBefore = Y.decodeStateVector(yjsManager.getStateVector());
+
     await settle();
 
+    // The defect assertion first: no write at all from this client.
+    expect(Y.decodeStateVector(yjsManager.getStateVector())).toEqual(clocksBefore);
     expect(domText).toBe('x &amp; y');
-    expect(docText()).toBe('x & y');
+    // Both spellings are the same segments, so the doc reads canonical HTML.
+    expect(docText()).toBe('x &amp; y');
   });
 
   it('reports a tool whose save() throws during the replay, and rejects nothing', async () => {

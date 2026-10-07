@@ -1,6 +1,7 @@
 import { ConversionConfig, PasteConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
+import { RichText } from '../rich-text';
 import { MenuConfig } from './menu-config';
 import { ToolboxConfig } from './tool-settings';
 
@@ -10,10 +11,26 @@ import { ToolboxConfig } from './tool-settings';
 export type ListStyle = 'unordered' | 'ordered' | 'checklist';
 
 /**
- * List Tool's input and output data format
+ * A saved list item, as the editor hands it to the host.
  */
 export interface ListData extends BlockToolData {
-  /** Item text content (can include HTML) */
+  text: RichText;
+  /** List style: unordered, ordered, or checklist */
+  style: ListStyle;
+  /** Checked state for checklist items */
+  checked?: boolean;
+  /** Starting number for ordered lists (only applies to root items) */
+  start?: number;
+  /** Nesting depth level (0 = root, 1 = first indent, etc.) */
+  depth?: number;
+}
+
+/**
+ * The data the List tool class reads and writes (constructor, `merge`,
+ * `validate`, `save`). The editor converts it to {@link ListData} on output.
+ */
+export interface ListToolData extends BlockToolData {
+  /** Inline HTML. */
   text: string;
   /** List style: unordered, ordered, or checklist */
   style: ListStyle;
@@ -59,7 +76,7 @@ export interface ListConfig {
 /**
  * List Tool constructor options
  */
-export type ListConstructorOptions = BlockToolConstructorOptions<ListData, ListConfig>;
+export type ListConstructorOptions = BlockToolConstructorOptions<ListToolData, ListConfig>;
 
 /**
  * List Tool for the Blok Editor
@@ -107,17 +124,17 @@ export declare class List implements BlockTool {
    * Method that specified how to merge two List blocks.
    * Called by Editor by backspace at the beginning of the Block
    */
-  merge(data: ListData): void;
+  merge(data: ListToolData): void;
 
   /**
    * Validate List block data
    */
-  validate(blockData: ListData): boolean;
+  validate(blockData: ListToolData): boolean;
 
   /**
    * Extract Tool's data from the view
    */
-  save(): ListData;
+  save(): ListToolData;
 }
 
 /**

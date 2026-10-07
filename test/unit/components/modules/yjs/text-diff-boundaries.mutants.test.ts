@@ -161,7 +161,8 @@ describe('DocumentStore — index arithmetic in the text diff', () => {
       // A search that never reports "done" falls through to the single-region
       // fallback, which rewrites the whole string and drops one of the two
       // intents. Both must be here.
-      expect(textOf(a)).toBe('The <b>quick</b> brown fox jumps');
+      // Read back in canonical spelling.
+      expect(textOf(a)).toBe('The <strong>quick</strong> brown fox jumps');
       expect(textOf(b)).toBe(textOf(a));
     });
 

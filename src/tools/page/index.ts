@@ -45,6 +45,7 @@ import {
 import { PageHoverPreview, pageIconNode, previewLines, type PageHoverContent, type PagePreviewLine } from './hover-preview';
 import { renderPagePreview } from './preview';
 import { outputBlocksToHtml } from '../../shared/rich-text/block-data';
+import { declaredRichTextFields } from '../../components/tools/base';
 import { richTextFieldsFor } from '../../shared/rich-text/fields';
 import type { PageConfig, PageData, PageIcon, PageInfo } from './types';
 
@@ -668,9 +669,10 @@ export class PageTool implements BlockTool {
     }
     const installed = typeof this.api.tools?.getBlockTools === 'function' ? this.api.tools.getBlockTools() : [];
     const fieldsOf = (type: string): string[] => {
-      const declared: unknown = Reflect.get(installed.find((tool) => tool.name === type) ?? {}, 'richTextFields');
+      const tool = installed.find((candidate) => candidate.name === type);
 
-      return Array.isArray(declared) ? declared.filter((field): field is string => typeof field === 'string') : richTextFieldsFor(type);
+      // The built-in table only for uninstalled types: the preview writes nothing back.
+      return tool === undefined ? richTextFieldsFor(type) : declaredRichTextFields(Reflect.get(tool, 'constructable'));
     };
 
     return blocks.map((block: unknown) => (isOutputBlock(block) ? outputBlocksToHtml([block], fieldsOf)[0] : block));

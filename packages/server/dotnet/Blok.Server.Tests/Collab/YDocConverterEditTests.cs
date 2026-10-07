@@ -23,7 +23,7 @@ public sealed class YDocConverterEditTests
 
     Apply(doc, """{ "op": "insert", "id": "new", "block": { "type": "header", "data": {} } }""");
 
-    Assert.Equal(["new", "root", "second"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["new", "root", "second"], Ids(RichTextRuntime.Export(doc)));
   }
 
   [Fact]
@@ -38,10 +38,10 @@ public sealed class YDocConverterEditTests
           "block": { "type": "header", "data": { "text": "n", "level": 2 } } }
         """);
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
     Assert.Equal(["root", "new", "second"], Ids(exported));
     Assert.Equal("header", BlockNamed(exported, "new")["type"]?.GetValue<string>());
-    Assert.Equal("n", BlockNamed(exported, "new")["data"]?["text"]?.GetValue<string>());
+    Assert.Equal("""[{"text":"n"}]""", BlockNamed(exported, "new")["data"]?["text"]?.ToJsonString());
   }
 
   /// <summary>
@@ -63,7 +63,7 @@ public sealed class YDocConverterEditTests
           "block": { "type": "paragraph", "data": { "text": "n" } } }
         """);
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
     Assert.Equal(["root", "kid", "new"], Ids(exported));
     Assert.Equal("root", BlockNamed(exported, "new")["parent"]?.GetValue<string>());
     Assert.Equal(["kid", "new"], Strings(BlockNamed(exported, "root")["content"]));
@@ -81,7 +81,7 @@ public sealed class YDocConverterEditTests
         """{ "op": "update", "id": "b", "data": { "text": "late" } }""",
         """{ "op": "remove", "id": "root" }""");
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
     Assert.Equal(["a", "b"], Ids(exported));
     Assert.Equal("late", BlockNamed(exported, "b")["data"]?["text"]?.GetValue<string>());
   }
@@ -94,8 +94,8 @@ public sealed class YDocConverterEditTests
 
     Apply(doc, """{ "op": "update", "id": "root", "data": { "text": "new" } }""");
 
-    var data = BlockNamed(YDocConverter.Export(doc), "root")["data"]?.AsObject();
-    Assert.Equal("new", data?["text"]?.GetValue<string>());
+    var data = BlockNamed(RichTextRuntime.Export(doc), "root")["data"]?.AsObject();
+    Assert.Equal("""[{"text":"new"}]""", data?["text"]?.ToJsonString());
     Assert.Null(data?["level"]);
   }
 
@@ -114,10 +114,10 @@ public sealed class YDocConverterEditTests
         """{ "op": "insert", "id": "q", "block": { "type": "paragraph", "data": { "text": "q" } } }""",
         """{ "op": "update", "id": "q", "data": {} }""");
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
-    Assert.Equal("", BlockNamed(exported, "p")["data"]?["text"]?.GetValue<string>());
-    Assert.Equal("", BlockNamed(exported, "q")["data"]?["text"]?.GetValue<string>());
+    Assert.Equal("[]", BlockNamed(exported, "p")["data"]?["text"]?.ToJsonString());
+    Assert.Equal("[]", BlockNamed(exported, "q")["data"]?["text"]?.ToJsonString());
     Assert.Empty(BlockNamed(exported, "h")["data"]!.AsObject());
   }
 
@@ -128,7 +128,7 @@ public sealed class YDocConverterEditTests
 
     Apply(doc, """{ "op": "update", "id": "second", "data": { "text": "new" } }""");
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
     Assert.Equal(["root", "second"], Ids(exported));
     Assert.Equal("paragraph", BlockNamed(exported, "second")["type"]?.GetValue<string>());
   }
@@ -144,7 +144,7 @@ public sealed class YDocConverterEditTests
 
     Apply(doc, """{ "op": "remove", "id": "kid" }""");
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
     Assert.Equal(["root", "other"], Ids(exported));
     Assert.Equal(["other"], Strings(BlockNamed(exported, "root")["content"]));
   }
@@ -164,7 +164,7 @@ public sealed class YDocConverterEditTests
 
     Apply(doc, """{ "op": "remove", "id": "gone" }""");
 
-    Assert.Equal(["root"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["root"], Ids(RichTextRuntime.Export(doc)));
   }
 
   /// <summary>
@@ -181,7 +181,7 @@ public sealed class YDocConverterEditTests
 
     Apply(doc, """{ "op": "remove", "id": "gone" }""");
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
     Assert.Equal(["root", "x"], Ids(exported));
     Assert.Equal(["x"], Strings(BlockNamed(exported, "root")["content"]));
   }
@@ -203,9 +203,9 @@ public sealed class YDocConverterEditTests
           "block": { "type": "paragraph", "data": { "text": "again" } } }
         """);
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
     Assert.Equal(["second", "root"], Ids(exported));
-    Assert.Equal("again", BlockNamed(exported, "root")["data"]?["text"]?.GetValue<string>());
+    Assert.Equal("""[{"text":"again"}]""", BlockNamed(exported, "root")["data"]?["text"]?.ToJsonString());
   }
 
   /// <summary>
@@ -227,7 +227,7 @@ public sealed class YDocConverterEditTests
     var message = Refused(doc, op);
 
     Assert.Contains("not a block", message, StringComparison.Ordinal);
-    Assert.Equal(["root"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["root"], Ids(RichTextRuntime.Export(doc)));
   }
 
   /// <summary>
@@ -259,11 +259,11 @@ public sealed class YDocConverterEditTests
 
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, blocks);
+    RichTextRuntime.Seed(doc, blocks);
 
     YDocConverter.ApplyOps(doc, Ops("""{ "op": "remove", "id": "n0" }"""), out var visited);
 
-    Assert.Equal(3999, YDocConverter.Export(doc).Count);
+    Assert.Equal(3999, RichTextRuntime.Export(doc).Count);
     Assert.Equal(ChainLength + 1, visited);
   }
 
@@ -282,7 +282,7 @@ public sealed class YDocConverterEditTests
 
     Apply(doc, """{ "op": "remove", "id": "owner" }""");
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Equal(["lister"], Ids(exported));
     Assert.Equal([], Strings(BlockNamed(exported, "lister")["content"]));
@@ -308,7 +308,7 @@ public sealed class YDocConverterEditTests
         """,
         """{ "op": "remove", "id": "x" }""");
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Equal(["root", "kid"], Ids(exported));
     Assert.Equal(["kid"], Strings(BlockNamed(exported, "root")["content"]));
@@ -336,7 +336,7 @@ public sealed class YDocConverterEditTests
         """,
         """{ "op": "remove", "id": "p" }""");
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Equal(["q", "x"], Ids(exported));
     Assert.Equal("q", BlockNamed(exported, "x")["parent"]?.GetValue<string>());
@@ -358,7 +358,7 @@ public sealed class YDocConverterEditTests
 
     Apply(doc, """{ "op": "remove", "id": "root" }""");
 
-    Assert.Equal(["second"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["second"], Ids(RichTextRuntime.Export(doc)));
   }
 
   [Fact]
@@ -445,7 +445,7 @@ public sealed class YDocConverterEditTests
       : (CollabEditOp)new CollabEditOp.Update("root\u0000x", new JsonObject());
 
     var message = Assert.Throws<CollabEditException>(
-        () => YDocConverter.ApplyOps(doc, [op])).Message;
+        () => RichTextRuntime.ApplyOps(doc, [op])).Message;
 
     Assert.Contains("NUL", message, StringComparison.Ordinal);
   }
@@ -495,7 +495,7 @@ public sealed class YDocConverterEditTests
         """{ "op": "insert", "id": "new", "after": "kid", "block": { "type": "p", "data": {} } }""");
 
     Assert.Contains("kid", message, StringComparison.Ordinal);
-    Assert.Equal(["root", "kid"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["root", "kid"], Ids(RichTextRuntime.Export(doc)));
   }
 
   [Fact]
@@ -530,7 +530,7 @@ public sealed class YDocConverterEditTests
     var message = Refused(doc, $$"""{ "op": "update", "id": "root", "data": {{deep}} }""");
 
     Assert.Contains("nested", message, StringComparison.Ordinal);
-    Assert.Equal(["root"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["root"], Ids(RichTextRuntime.Export(doc)));
   }
 
   /// <summary>
@@ -551,11 +551,11 @@ public sealed class YDocConverterEditTests
     var doc = SeededDoc(Root);
 
     var message = Assert.Throws<CollabEditException>(
-        () => YDocConverter.ApplyOps(doc, [NulOp(position)])).Message;
+        () => RichTextRuntime.ApplyOps(doc, [NulOp(position)])).Message;
 
     Assert.StartsWith("collab: op 0:", message, StringComparison.Ordinal);
     Assert.Contains("NUL", message, StringComparison.Ordinal);
-    Assert.Equal(["root"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["root"], Ids(RichTextRuntime.Export(doc)));
   }
 
   /// <summary>
@@ -641,13 +641,13 @@ public sealed class YDocConverterEditTests
         """{ "op": "remove", "id": "second" }""");
 
     Assert.Equal(1, emitted);
-    Assert.Equal(["root", "first", "third"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["root", "first", "third"], Ids(RichTextRuntime.Export(doc)));
   }
 
   private static YDoc SeededDoc(params string[] blockJson)
   {
     var doc = new YDoc();
-    YDocConverter.Seed(
+    RichTextRuntime.Seed(
         doc,
         new JsonArray(blockJson.Select(json => JsonNode.Parse(json)).ToArray()));
 
@@ -656,13 +656,13 @@ public sealed class YDocConverterEditTests
 
   private static void Apply(YDoc doc, params string[] opJson)
   {
-    YDocConverter.ApplyOps(doc, Ops(opJson));
+    RichTextRuntime.ApplyOps(doc, Ops(opJson));
   }
 
   private static string Refused(YDoc doc, params string[] opJson)
   {
     return Assert.Throws<CollabEditException>(
-        () => YDocConverter.ApplyOps(doc, Ops(opJson))).Message;
+        () => RichTextRuntime.ApplyOps(doc, Ops(opJson))).Message;
   }
 
   /// <summary>Ops as the endpoint builds them, so the tests carry the real request shape.</summary>
@@ -674,7 +674,7 @@ public sealed class YDocConverterEditTests
 
   private static string Canonical(YDoc doc)
   {
-    return YDocConverterFixtures.Canonicalize(YDocConverter.Export(doc));
+    return YDocConverterFixtures.Canonicalize(RichTextRuntime.Export(doc));
   }
 
   private static string[] Ids(JsonArray exported)

@@ -6,7 +6,7 @@ import { Table } from '../../../../../src/tools/table';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import { CalloutTool } from '../../../../../src/tools/callout';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
-import { htmlOf } from '../../../helpers/saved-as-html';
+import { blockTextAsHtml, type HtmlReadOptions } from '../../../helpers/saved-as-html';
 
 export interface TestEditor {
   isReady: Promise<unknown>;
@@ -88,12 +88,12 @@ export interface TableView {
   rootTexts: string[];
 }
 
-const textOf = (block: OutputBlockData | undefined): string => {
+const textOf = (block: OutputBlockData | undefined, options: HtmlReadOptions): string => {
   if (block === undefined) {
     return '<missing>';
   }
   const data = block.data;
-  const text = htmlOf(data.text);
+  const text = blockTextAsHtml(block, options);
 
   return `${block.type}:${typeof text === 'string' ? text : JSON.stringify(data)}`;
 };
@@ -101,8 +101,11 @@ const textOf = (block: OutputBlockData | undefined): string => {
 /**
  * Id-free projection of the first table in a document. Legacy string cells
  * project to their string so a string input can be compared too.
+ * @param output - a host save, or (with `allowHtml`) an input document or HTML output
+ * @param tableIndex - which table
+ * @param options - see {@link HtmlReadOptions}
  */
-export const viewTable = (output: OutputData | undefined, tableIndex = 0): TableView | null => {
+export const viewTable = (output: OutputData | undefined, tableIndex = 0, options: HtmlReadOptions = {}): TableView | null => {
   if (output === undefined) {
     return null;
   }
@@ -121,7 +124,7 @@ export const viewTable = (output: OutputData | undefined, tableIndex = 0): Table
     }
     const c = cell as Record<string, unknown>;
     const ids = (c.blocks ?? []) as string[];
-    const view: CellView = { texts: ids.map(id => textOf(byId.get(id))) };
+    const view: CellView = { texts: ids.map(id => textOf(byId.get(id), options)) };
 
     for (const key of ['colspan', 'rowspan', 'mergedInto', 'color', 'textColor', 'placement'] as const) {
       if (c[key] !== undefined) {
@@ -133,7 +136,7 @@ export const viewTable = (output: OutputData | undefined, tableIndex = 0): Table
   }));
   const rootTexts = output.blocks
     .filter(b => b.type !== 'table' && (b.parent === undefined || b.parent === null))
-    .map(b => textOf(b));
+    .map(b => textOf(b, options));
 
   return {
     withHeadings: data.withHeadings,
@@ -147,5 +150,5 @@ export const viewTable = (output: OutputData | undefined, tableIndex = 0): Table
   };
 };
 
-export const allTexts = (output: OutputData | undefined): string[] =>
-  (output?.blocks ?? []).filter(b => b.type !== 'table').map(b => textOf(b)).sort();
+export const allTexts = (output: OutputData | undefined, options: HtmlReadOptions = {}): string[] =>
+  (output?.blocks ?? []).filter(b => b.type !== 'table').map(b => textOf(b, options)).sort();

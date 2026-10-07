@@ -79,7 +79,7 @@ describe('CLI --convert-html: table data', () => {
     const out = run('<table><tr><td><p>first</p><p>second</p></td><td>x</td></tr></table>');
 
     booted = await boot(out);
-    const saved = savedAsHtml(await booted.editor.save());
+    const saved = await booted.editor.save();
     const texts = viewTable(saved)?.grid[0][0].texts ?? [];
 
     expect(texts.join(' | ')).toMatch(/first.*\|.*second/);
@@ -89,7 +89,7 @@ describe('CLI --convert-html: table data', () => {
     const out = run('<table><tr><td><ul><li>one</li><li>two</li></ul></td><td>x</td></tr></table>');
 
     booted = await boot(out);
-    const saved = savedAsHtml(await booted.editor.save());
+    const saved = await booted.editor.save();
     const texts = viewTable(saved)?.grid[0][0].texts ?? [];
 
     expect(texts.filter(t => t.startsWith('list:'))).toHaveLength(2);
@@ -99,7 +99,7 @@ describe('CLI --convert-html: table data', () => {
     const out = run('<table><tr><th>H1</th><th>H2</th></tr><tr><td>a</td><td>b</td></tr></table>');
 
     booted = await boot(out);
-    const saved = savedAsHtml(await booted.editor.save());
+    const saved = await booted.editor.save();
     const texts = (viewTable(saved)?.grid ?? []).flat().flatMap(c => c.texts);
 
     expect(texts).toEqual(['paragraph:H1', 'paragraph:H2', 'paragraph:a', 'paragraph:b']);

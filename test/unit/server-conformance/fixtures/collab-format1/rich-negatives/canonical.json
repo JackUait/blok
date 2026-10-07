@@ -1,0 +1,73 @@
+[
+  {
+    "id": "n-code",
+    "type": "code",
+    "data": {
+      "code": "<b>not markup</b> &amp; a < b",
+      "language": "html"
+    }
+  },
+  {
+    "id": "n-image",
+    "type": "image",
+    "data": {
+      "url": "https://example.com/i.png",
+      "caption": "a <b>bold</b> caption"
+    }
+  },
+  {
+    "id": "n-callout",
+    "type": "callout",
+    "data": {
+      "title": "<b>legacy</b> title",
+      "icon": {
+        "emoji": "💡"
+      }
+    }
+  },
+  {
+    "id": "n-widget",
+    "type": "widget",
+    "data": {
+      "text": "<b>custom</b> tool text"
+    }
+  },
+  {
+    "id": "n-db",
+    "type": "database",
+    "data": {
+      "name": "T",
+      "schema": [
+        {
+          "id": "notes",
+          "name": "Notes",
+          "type": "richText"
+        }
+      ],
+      "views": []
+    },
+    "content": [
+      "n-row"
+    ]
+  },
+  {
+    "id": "n-row",
+    "type": "database-row",
+    "data": {
+      "properties": {
+        "notes": {
+          "blocks": [
+            {
+              "id": "nb1",
+              "type": "paragraph",
+              "data": {
+                "text": "<b>nested</b> doc"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "parent": "n-db"
+  }
+]

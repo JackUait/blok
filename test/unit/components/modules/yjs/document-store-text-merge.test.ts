@@ -82,8 +82,9 @@ describe('DocumentStore — concurrent edits to one block\'s text', () => {
 
     sync(storeA, storeB);
 
-    // Both intents survive: the markup and the exclamation marks.
-    expect(textOf(storeA, 'b1')).toContain('<b>');
+    // Both intents survive: the markup and the exclamation marks. Paragraph
+    // text reads back in canonical spelling, so <b> is <strong>.
+    expect(textOf(storeA, 'b1')).toContain('<strong>');
     expect(textOf(storeA, 'b1')).toContain('!!!');
     expect(textOf(storeB, 'b1')).toBe(textOf(storeA, 'b1'));
   });
@@ -109,7 +110,7 @@ describe('DocumentStore — concurrent edits to one block\'s text', () => {
     expect(textOf(storeB, 'b1')).toBe(merged);
     // Every word exactly once, and both peers' markup present.
     expect(stripTags(merged)).toBe('The quick brown fox');
-    expect(merged).toContain('<b>');
+    expect(merged).toContain('<strong>');
     expect(merged).toContain('<i>');
   });
 

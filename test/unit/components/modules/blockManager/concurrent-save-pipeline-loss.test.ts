@@ -95,7 +95,8 @@ describe('concurrent save pipeline — what a peer edit makes the local pipeline
 
     const text = data.get('text');
 
-    return text instanceof Y.Text ? text.toJSON() : text;
+    // The reader's own path: a paragraph's formatted text has no HTML toJSON().
+    return new YBlockSerializer().yValueToPlain(text);
   };
 
   /** A local DOM mutation with NO preceding `beforeinput` — paste / inline tool. */
@@ -267,7 +268,7 @@ describe('concurrent save pipeline — what a peer edit makes the local pipeline
     mutateWithoutBeforeinput(blockA, '<b>peer typed</b>');
     await settle();
 
-    expect(readText('A')).toBe('<b>peer typed</b>');
+    expect(readText('A')).toBe('<strong>peer typed</strong>');
   });
 
   it('keeps a PASTE into ANOTHER block while a peer INSERT reconciles', async () => {

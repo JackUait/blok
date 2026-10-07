@@ -1218,19 +1218,19 @@ export class Saver extends Module {
     const dataModelConfig = this.config.dataModel || 'auto';
     const detectedInputFormat = this.Blok.Renderer?.getDetectedInputFormat?.() ?? 'flat';
 
-    const finalBlocks = dialect === 'host' && shouldCollapseToLegacy(dataModelConfig, detectedInputFormat)
-      ? collapseToLegacy(extractedBlocks)
+    // Collaboration stays HTML for now, silently.
+    const collaborating = this.Blok.Collaboration?.isEnabled ?? false;
+    const resolve = (type: string): string[] => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? [];
+
+    // Convert BEFORE the collapse: it moves text into legacy paths (items[].content,
+    // toggleList.title, body.blocks) that a tool's flat richTextFields cannot name.
+    const segmentBlocks = dialect === 'host' && !collaborating
+      ? outputBlocksToSegments(extractedBlocks, resolve, htmlToSegmentsDom)
       : extractedBlocks;
 
-    // collapseToLegacy always returns a new array, so identity tells a collapse.
-    const collapsed = finalBlocks !== extractedBlocks;
-    // Collaboration and legacy output stay HTML for now, silently.
-    const collaborating = this.Blok.Collaboration?.isEnabled ?? false;
-
-    const resolve = (type: string): string[] => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? [];
-    const hostBlocks = dialect === 'host' && !collapsed && !collaborating
-      ? outputBlocksToSegments(finalBlocks, resolve, htmlToSegmentsDom)
-      : finalBlocks;
+    const hostBlocks = dialect === 'host' && shouldCollapseToLegacy(dataModelConfig, detectedInputFormat)
+      ? collapseToLegacy(segmentBlocks)
+      : segmentBlocks;
 
     // Defense-in-depth: assert the parent/content invariant on the final output
     // in test/dev builds. Any drift here means a mutation path elsewhere is
@@ -1271,13 +1271,9 @@ export class Saver extends Module {
    * @returns `data` itself when nothing converts
    */
   public blockDataForHost(tool: BlockToolAdapter, data: BlockToolData): BlockToolData {
-    const legacyOutput = shouldCollapseToLegacy(
-      this.config.dataModel || 'auto',
-      this.Blok.Renderer?.getDetectedInputFormat?.() ?? 'flat'
-    );
     const collaborating = this.Blok.Collaboration?.isEnabled ?? false;
 
-    return richTextOutputForHost(tool, data, name => this.Blok.Tools.blockTools.get(name), { collaborating, legacyOutput });
+    return richTextOutputForHost(tool, data, name => this.Blok.Tools.blockTools.get(name), { collaborating });
   }
 
   /**

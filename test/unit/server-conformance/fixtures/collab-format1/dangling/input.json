@@ -1,0 +1,29 @@
+[
+  {
+    "id": "d-root",
+    "type": "paragraph",
+    "data": {
+      "text": "root"
+    },
+    "content": [
+      "present",
+      "missing-child"
+    ]
+  },
+  {
+    "id": "present",
+    "type": "paragraph",
+    "data": {
+      "text": "present child"
+    },
+    "parent": "d-root"
+  },
+  {
+    "id": "stray",
+    "type": "paragraph",
+    "data": {
+      "text": "parent never arrived"
+    },
+    "parent": "not-yet-arrived"
+  }
+]

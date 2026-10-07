@@ -1,0 +1,61 @@
+[
+  {
+    "id": "a1",
+    "type": "widget",
+    "data": {
+      "strings": [
+        "x",
+        "y"
+      ],
+      "empty": [],
+      "mixed": [
+        1,
+        {
+          "a": 1
+        }
+      ],
+      "withNull": [
+        null,
+        "z"
+      ],
+      "numbers": [
+        1,
+        -2,
+        2.5,
+        0.1,
+        1099511627776,
+        0,
+        1e+21
+      ],
+      "booleans": [
+        true,
+        false
+      ],
+      "objects": [
+        {
+          "k": "one",
+          "n": 1
+        },
+        {
+          "k": "two",
+          "nested": {
+            "deep": [
+              1,
+              2
+            ]
+          }
+        }
+      ],
+      "emptyObjectsInArray": [
+        {},
+        {}
+      ],
+      "arraysAndScalars": [
+        [
+          1
+        ],
+        "x"
+      ]
+    }
+  }
+]

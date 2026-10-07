@@ -64,8 +64,8 @@ public sealed class YrsCompatCorpusTests
 
       Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(entry.Update).Outcome);
 
-      var expected = YDocConverterFixtures.Canonicalize(entry.Canonical);
-      var actual = YDocConverterFixtures.Canonicalize(YDocConverter.Export(doc));
+      var expected = YDocConverterFixtures.Canonicalize(RichTextRuntime.WithSegments(entry.Canonical));
+      var actual = YDocConverterFixtures.Canonicalize(RichTextRuntime.Export(doc));
 
       Assert.True(
           string.Equals(expected, actual, StringComparison.Ordinal),

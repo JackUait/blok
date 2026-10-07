@@ -72,9 +72,9 @@ export const TOOL_SECTIONS: ToolSection[] = [
       },
     ],
     saveDataShape: `interface ParagraphData {
-  text: string;             // HTML string (may include <b>, <i>, <a>, <mark>)
-                            // With richText: 'segments', an array of runs instead:
+  text: RichText;           // Runs of text with marks:
                             // [{ "text": "Hello " }, { "text": "world", "marks": { "bold": true } }]
+                            // The tool class itself reads and writes HTML (ParagraphToolData)
   textColor?: string;       // Block colour preset, present when set
   backgroundColor?: string; // Block background colour preset, present when set
 }`,
@@ -82,7 +82,7 @@ export const TOOL_SECTIONS: ToolSection[] = [
   "id": "abc123",
   "type": "paragraph",
   "data": {
-    "text": "Hello <b>world</b>"
+    "text": [{ "text": "Hello " }, { "text": "world", "marks": { "bold": true } }]
   }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
@@ -148,7 +148,7 @@ const editor = new Blok({
       },
     ],
     saveDataShape: `interface HeaderData {
-  text: string;             // Heading HTML content (segments with richText: 'segments')
+  text: RichText;           // Heading text as segments (HeaderToolData holds HTML)
   level: number;            // 1–6
   isToggleable?: boolean;   // true when the heading has toggle (collapse/expand)
   textColor?: string;       // Block colour preset, present when set
@@ -159,7 +159,7 @@ const editor = new Blok({
   "id": "def456",
   "type": "header",
   "data": {
-    "text": "Getting Started",
+    "text": [{ "text": "Getting Started" }],
     "level": 2
   }
 }`,
@@ -219,7 +219,7 @@ const editor = new Blok({
       },
     ],
     saveDataShape: `interface ListData {
-  text: string;                                    // Item HTML content (segments with richText: 'segments')
+  text: RichText;     // Item text as segments (ListToolData holds HTML)
   style: 'unordered' | 'ordered' | 'checklist'; // List type
   checked?: boolean;  // Checklist check state
   start?: number;     // First number for ordered lists (root items only); omitted when 1
@@ -229,7 +229,7 @@ const editor = new Blok({
   "id": "ghi789",
   "type": "list",
   "data": {
-    "text": "First item",
+    "text": [{ "text": "First item" }],
     "style": "unordered"
   }
 }`,
@@ -358,13 +358,13 @@ const editor = new Blok({
       },
     ],
     saveDataShape: `interface ToggleData {
-  text: string; // Toggle title HTML content (segments with richText: 'segments')
+  text: RichText; // Toggle title as segments (ToggleToolData holds HTML)
 }`,
     saveDataExample: `{
   "id": "mno345",
   "type": "toggle",
   "data": {
-    "text": "Click to expand"
+    "text": [{ "text": "Click to expand" }]
   }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
@@ -633,14 +633,14 @@ const editor = new Blok({
     importExample: `import { Quote } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface QuoteData {
-  text: string;                  // Quote HTML content (segments with richText: 'segments')
+  text: RichText;                // Quote text as segments (QuoteToolData holds HTML)
   size: 'default' | 'large';    // Text size variant
 }`,
     saveDataExample: `{
   "id": "qot001",
   "type": "quote",
   "data": {
-    "text": "The only way to do great work is to love what you do.",
+    "text": [{ "text": "The only way to do great work is to love what you do." }],
     "size": "default"
   }
 }`,

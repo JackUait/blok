@@ -161,7 +161,7 @@ describe('inline page-reference mark', () => {
   it('imports a page reference into a paragraph without stale metadata', () => {
     const [block] = htmlToBlocks(`<p>See ${staleReference}</p>`);
 
-    expect(block?.data.text).toBe(`See ${savedReference}`);
+    expect(block?.data.text).toEqual([{ text: 'See ' }, { embed: { page: { id: 'p1' } } }]);
   });
 
   it('keeps the ID through the Link inline tool sanitizer', () => {

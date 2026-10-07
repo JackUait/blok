@@ -633,7 +633,7 @@ internal sealed class CollabRoom : IDisposable
           {
             try
             {
-              converter.ApplyOps(doc!, ops);
+              await converter.ApplyOpsAsync(doc!, ops, lifetime.Token);
             }
             catch (CollabEditException refusal)
             {
@@ -664,12 +664,26 @@ internal sealed class CollabRoom : IDisposable
             return new CollabEditResult(CollabEditStatus.Applied, null);
           }
 
+          var stateBefore = doc!.EncodeStateVector();
+
           try
           {
-            converter.ApplyOps(doc!, ops);
+            await converter.ApplyOpsAsync(doc!, ops, lifetime.Token);
 
-            // One update is what the append journals; zero or many means the
-            // document moved by bytes the journal would never see.
+            // An edit that changed nothing (the same data again, or rich text
+            // spelled differently) wrote no bytes: applied, nothing to append.
+            if (localUpdates.Count == 0 && doc!.EncodeStateVector().AsSpan().SequenceEqual(stateBefore))
+            {
+              UpdateEvictionLocked();
+
+              return new CollabEditResult(
+                  CollabEditStatus.Applied,
+                  null,
+                  new CollabEditReceipt(tag, committedThrough));
+            }
+
+            // One update is what the append journals; zero with a moved doc,
+            // or many, means bytes the journal would never see.
             if (localUpdates.Count != 1)
             {
               throw new InvalidOperationException(
@@ -769,7 +783,7 @@ internal sealed class CollabRoom : IDisposable
 
           try
           {
-            json = DocEndpointClient.Serialize(converter.Export(doc!));
+            json = DocEndpointClient.Serialize(await converter.ExportAsync(doc!, cancellationToken));
           }
           catch (Exception error)
           {
@@ -1796,7 +1810,7 @@ internal sealed class CollabRoom : IDisposable
 
     if (loaded.Data is not null)
     {
-      converter.Seed(doc!, loaded.Data);
+      await converter.SeedAsync(doc!, loaded.Data, lifetime.Token);
     }
 
     var baseline = new List<ReadOnlyMemory<byte>>();
@@ -1921,7 +1935,7 @@ internal sealed class CollabRoom : IDisposable
 
     if (loaded.Data is not null)
     {
-      converter.Seed(resetDoc, loaded.Data);
+      await converter.SeedAsync(resetDoc, loaded.Data, lifetime.Token);
     }
 
     var head = await session!.ResetAsync(
@@ -1980,7 +1994,7 @@ internal sealed class CollabRoom : IDisposable
 
     if (loaded.Data is not null)
     {
-      converter.Seed(doc!, loaded.Data);
+      await converter.SeedAsync(doc!, loaded.Data, lifetime.Token);
     }
 
     PublishLocalUpdatesLocked();
@@ -2947,6 +2961,17 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
+  /// An export failure a retry may heal, which backs off instead of being
+  /// refused: <see cref="CollabTransientException"/> (reading rich text HTML
+  /// ran past the runtime's timeout or allocation budget, or an engine wait
+  /// was cancelled) or a cancelled export.
+  /// </summary>
+  private static bool IsTransientExportFailure(Exception error)
+  {
+    return error is CollabTransientException or OperationCanceledException;
+  }
+
+  /// <summary>
   /// The converter refusing the room's own document — an unreadable block
   /// shape, a depth the JSON writer will not take. Retrying cannot heal it,
   /// and on a journal-backed room every operation is already durable, so the
@@ -3027,7 +3052,7 @@ internal sealed class CollabRoom : IDisposable
     // off and retried, never left for the next edit to re-arm.
     try
     {
-      var snapshot = converter.Export(doc!);
+      var snapshot = await converter.ExportAsync(doc!, lifetime.Token);
 
       // Cleared at the SNAPSHOT, not at the save's completion: this document
       // is what the checkpoint owed, and clearing on completion would re-arm
@@ -3037,10 +3062,15 @@ internal sealed class CollabRoom : IDisposable
     }
     catch (Exception error)
     {
-      if (session is not null)
+      if (session is not null && !IsTransientExportFailure(error))
       {
         RefuseProjectionLocked(error);
 
+        return;
+      }
+
+      if (lifetime.IsCancellationRequested)
+      {
         return;
       }
 
@@ -3231,12 +3261,12 @@ internal sealed class CollabRoom : IDisposable
 
     try
     {
-      snapshot = converter.Export(doc!);
+      snapshot = await converter.ExportAsync(doc!, deadline.Token);
       projectionOwed = false;
     }
     catch (Exception error) when (!lifetime.IsCancellationRequested)
     {
-      if (session is not null)
+      if (session is not null && !IsTransientExportFailure(error))
       {
         RefuseProjectionLocked(error);
       }

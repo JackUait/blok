@@ -136,7 +136,7 @@ describe('host APIs that bypass the Saver — segments', { timeout: 60_000 }, ()
     expect(saved?.data).toEqual(nested);
   });
 
-  it('BlockAPI.save keeps HTML with legacy output, like the document save', async () => {
+  it('BlockAPI.save returns segments with legacy output, like the document save', async () => {
     const editor = await createEditor({
       dataModel: 'legacy',
       data: { blocks: [{ type: 'paragraph', data: { text: '<b>a</b>' } }] },
@@ -145,8 +145,8 @@ describe('host APIs that bypass the Saver — segments', { timeout: 60_000 }, ()
     const saved = await editor.blocks.getBlockByIndex(0)?.save();
     const document = await editor.save();
 
-    expect(saved?.data.text).toBe('<strong>a</strong>');
-    expect(document.blocks[0].data.text).toBe('<strong>a</strong>');
+    expect(saved?.data.text).toEqual([{ text: 'a', marks: { bold: true } }]);
+    expect(document.blocks[0].data.text).toEqual([{ text: 'a', marks: { bold: true } }]);
   });
 
   it('onChange target.save returns segments', async () => {
@@ -178,6 +178,15 @@ describe('host APIs that bypass the Saver — segments', { timeout: 60_000 }, ()
     const data = await editor.blocks.importMarkdown('**a**');
 
     expect(data.blocks[0].data.text).toEqual(bold);
+  });
+
+  it('importMarkdown returns what the editor saves, HTML in the default format', async () => {
+    const editor = await createEditor({});
+
+    const data = await editor.blocks.importMarkdown('**a**');
+
+    expect(data.blocks[0].data.text).toBe('<strong>a</strong>');
+    expect((await editor.save()).blocks[0].data.text).toBe('<strong>a</strong>');
   });
 
   it('exportMarkdown still writes markdown', async () => {

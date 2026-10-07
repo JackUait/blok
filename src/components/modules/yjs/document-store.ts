@@ -3,6 +3,7 @@ import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwareness
 import * as Y from 'yjs';
 
 import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, isOrderedIdArrayKey, stripNul, toSerializableValue, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
+import { writeRichText } from './rich-text-write';
 import { diffText } from './text-diff';
 import { LOCAL_ORIGIN_TAGS, type AwarenessChange, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
 // The narrow module, not the utils barrel: the collab fixture generator
@@ -741,7 +742,7 @@ export class DocumentStore {
       // No readable data map to merge into (a peer wrote a non-map, or the
       // block never carried one): build one, which is what this always did.
       if (!(ydata instanceof Y.Map)) {
-        yblock.set('data', this.serializer.blockDataToYMap(normalized));
+        yblock.set('data', this.serializer.blockDataToYMap(normalized, type));
 
         return;
       }
@@ -1418,6 +1419,24 @@ export class DocumentStore {
       return true;
     }
 
+    // Formatted rich text. Before the Y.Text branch: an XmlText IS a Y.Text,
+    // and diffing HTML into it would store tags as characters.
+    const richSegments = currentValue instanceof Y.XmlText ? this.serializer.toRichSegments(value) : null;
+
+    if (currentValue instanceof Y.XmlText && richSegments !== null) {
+      const current = this.serializer.readRichText(currentValue);
+
+      if (equals(current, richSegments)) {
+        return false;
+      }
+
+      this.transact(() => {
+        writeRichText(currentValue, current, richSegments);
+      }, 'local');
+
+      return true;
+    }
+
     // Mergeable text over a live Y.Text: apply the whole saved string as a
     // diff, so two peers typing in one block keep both bursts instead of the
     // later write taking the paragraph. Runs BEFORE the generic guard below —
@@ -1471,6 +1490,18 @@ export class DocumentStore {
     // an ABSENT key there is no accumulated text for the loser to lose — two
     // peers first-typing a caption at the same instant lose one burst exactly as
     // they do today with plain strings.
+    const mintedSegments = currentValue === undefined && this.serializer.isRichTextField(yblock.get('type'), dataKey)
+      ? this.serializer.toRichSegments(value)
+      : null;
+
+    if (mintedSegments !== null) {
+      this.transact(() => {
+        ydata.set(dataKey, this.serializer.mintRichText(mintedSegments));
+      }, 'local');
+
+      return true;
+    }
+
     if (isDiffableTextKey(dataKey) && typeof value === 'string' && currentValue === undefined) {
       this.transact(() => {
         ydata.set(dataKey, new Y.Text(stripNul(value)));

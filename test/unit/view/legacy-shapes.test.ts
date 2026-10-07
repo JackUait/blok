@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { blocksToHtml, blocksToPlainText, blocksToMarkdown, extractTexts } from '../../../src/view';
+import { blocksToHtml, blocksToPlainText, blocksToMarkdown, extractTexts, injectTexts } from '../../../src/view';
 
 import type { LooseOutputData } from '../../../types';
 
@@ -279,5 +279,76 @@ describe('legacy blocks read like their migration result', () => {
     const texts = extractTexts({ blocks: [{ type: 'warning', data: { title: 'Heads up', message: 'Read this' } }] });
 
     expect(texts).toEqual(['Heads up', 'Read this']);
+  });
+});
+
+describe('legacy documents holding segments', () => {
+  const TRICKY = 'a < b && <script>y';
+  const segmentsDocument: LooseOutputData = {
+    blocks: [
+      {
+        type: 'toggleList',
+        data: {
+          title: [{ text: 'T', marks: { bold: true } }],
+          body: { blocks: [{ type: 'paragraph', data: { text: [{ text: 'BODY', marks: { bold: true } }] } }] },
+        },
+      },
+      {
+        type: 'list',
+        data: {
+          style: 'unordered',
+          items: [
+            { content: [{ text: 'ITEM', marks: { bold: true } }], items: [{ content: [{ text: TRICKY }], items: [] }] },
+            [{ text: 'BARE' }],
+          ],
+        },
+      },
+      {
+        type: 'callout',
+        data: { title: [{ text: 'CALLOUT' }], body: { blocks: [{ type: 'paragraph', data: { text: [{ text: 'CBODY' }] } }] } },
+      },
+      { type: 'checklist', data: { items: [{ text: [{ text: 'CHECK' }], checked: true }] } },
+    ],
+  };
+  const htmlDocument: LooseOutputData = {
+    blocks: [
+      { type: 'toggleList', data: { title: '<strong>T</strong>', body: { blocks: [{ type: 'paragraph', data: { text: '<strong>BODY</strong>' } }] } } },
+      {
+        type: 'list',
+        data: {
+          style: 'unordered',
+          items: [{ content: '<strong>ITEM</strong>', items: [{ content: 'a &lt; b &amp;&amp; &lt;script&gt;y', items: [] }] }, 'BARE'],
+        },
+      },
+      { type: 'callout', data: { title: 'CALLOUT', body: { blocks: [{ type: 'paragraph', data: { text: 'CBODY' } }] } } },
+      { type: 'checklist', data: { items: [{ text: 'CHECK', checked: true }] } },
+    ],
+  };
+
+  it('renders every nested text, like the same document in HTML', () => {
+    expect(blocksToHtml(segmentsDocument)).toBe(blocksToHtml(htmlDocument));
+    expect(blocksToHtml(segmentsDocument)).toContain('BODY');
+    expect(blocksToHtml(segmentsDocument)).toContain('a &lt; b &amp;&amp; &lt;script&gt;y');
+  });
+
+  it('keeps every nested text as plain text', () => {
+    const text = blocksToPlainText(segmentsDocument);
+
+    expect(text).toBe(blocksToPlainText(htmlDocument));
+    expect(text).toContain(TRICKY);
+    expect(text).toContain('BARE');
+    expect(text).toContain('CHECK');
+  });
+
+  it('offers every nested text for translation and writes it back as segments', () => {
+    const texts = extractTexts(segmentsDocument);
+
+    expect(texts).toEqual(extractTexts(htmlDocument));
+
+    const injected = injectTexts(segmentsDocument, texts.map(text => text.replace('ITEM', 'POS').replace('BARE', 'NU')));
+    const list = injected.blocks[1].data as { items: [{ content: unknown }, unknown] };
+
+    expect(list.items[0].content).toEqual([{ text: 'POS', marks: { bold: true } }]);
+    expect(list.items[1]).toEqual([{ text: 'NU' }]);
   });
 });

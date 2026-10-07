@@ -3718,13 +3718,14 @@ declare module '@bloklabs/core/tools' {
         description:
           "The collection counterpart of `isBlockType`, also exported from `@bloklabs/core/tools`. It collects every saved block of a given type from a document, and each result's `data` is typed through `BlokBlockDataMap`.\n\nIt tolerates null: a `null` or `undefined` document is accepted, and so is the loose `LooseOutputData` wire shape. So it replaces the `(data?.blocks ?? []).filter(...)` plus cast that every feature re-writes.",
         example: `import { blocksOfType } from '@bloklabs/core/tools';
+import { richTextToPlainText } from '@bloklabs/core/migrate';
 import type { OutputData } from '@bloklabs/core';
 
 // \`saved\` may be null — blocksOfType tolerates it and returns []
 function buildToc(saved: OutputData | null) {
   return blocksOfType(saved, 'header')
-    // data.text / data.level are typed — no cast
-    .map((block) => ({ text: block.data.text, level: block.data.level }));
+    // data.text is RichText, data.level is number — no cast
+    .map((block) => ({ text: richTextToPlainText(block.data.text), level: block.data.level }));
 }`,
       },
       {
@@ -3884,7 +3885,7 @@ LEGACY_GRAMMAR.map((entry) => [entry.legacyType, entry.targetType, entry.lossyFi
         name: "migrateToRichText(data, options?)",
         returnType: "OutputData",
         description:
-          "Converts the HTML rich text fields of a stored document to segments, the shape `richText: 'segments'` saves. It is exported from `@bloklabs/core/migrate` and runs in Node without a DOM.\n\nOnly built-in block types are converted. A custom tool's fields are left as they are. Fields that already hold segments pass through, so running it twice is safe.\n\n`onLossy` hears about markup that has no plain mark.\n\n- `html-embed`: markup kept verbatim as an `{ embed: { html } }` segment.\n- `custom-mark`: an unknown tag kept as a `tag:<name>` mark.\n- `legacy-shape`: a block in a legacy Editor.js shape, left untouched. Run `migrate()` first to upgrade it.\n\n`richTextToHtml(rich)` turns segments back into canonical HTML. The editor can save a different string for the same segments. On render it maps a raw colour to the nearest preset and can add `target` and `rel` to a link.\n\n`richTextToPlainText(rich)` returns the plain text.",
+          "Converts the HTML rich text fields of a stored document to segments, the shape `richText: 'segments'` saves. It is exported from `@bloklabs/core/migrate` and runs in Node without a DOM.\n\nOnly built-in block types are converted. A custom tool's fields are left as they are. Legacy Editor.js shapes are converted too, so `migrate()` can run before or after it. Fields that already hold segments pass through, so running it twice is safe.\n\n`onLossy` hears about markup that has no plain mark.\n\n- `html-embed`: markup kept verbatim as an `{ embed: { html } }` segment.\n- `custom-mark`: an unknown tag kept as a `tag:<name>` mark.\n\n`richTextToHtml(rich)` turns segments back into canonical HTML. The editor can save a different string for the same segments. On render it maps a raw colour to the nearest preset and can add `target` and `rel` to a link.\n\n`richTextToPlainText(rich)` returns the plain text.",
         example: `import { migrateToRichText, richTextToHtml, richTextToPlainText } from '@bloklabs/core/migrate';
 
 const converted = migrateToRichText(storedDocument, {

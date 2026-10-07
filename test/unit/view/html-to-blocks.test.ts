@@ -1,10 +1,21 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
 
-import { blocksToHtml, blocksToPlainText, htmlToBlocks, htmlToBlocksWithReport } from '../../../src/view';
+import { blocksToHtml, blocksToPlainText, htmlToBlocks as htmlToSegmentBlocks, htmlToBlocksWithReport as htmlToSegmentBlocksWithReport } from '../../../src/view';
+import type { HtmlImportResult } from '../../../src/view/html-to-blocks';
+import { richTextAsHtml } from '../helpers/rich-text-as-html';
 
 import type { OutputBlockData } from '../../../types';
 import { COLOR_PRESETS, COLOR_PRESETS_DARK } from '../../../src/components/shared/color-presets';
+
+/** Rich fields read back as HTML; the rich text output tests below pin segments. */
+const htmlToBlocks = (html: string): OutputBlockData[] => richTextAsHtml(htmlToSegmentBlocks(html));
+
+const htmlToBlocksWithReport = (html: string): HtmlImportResult => {
+  const result = htmlToSegmentBlocksWithReport(html);
+
+  return { ...result, blocks: richTextAsHtml(result.blocks) };
+};
 
 /**
  * Blocks without their generated ids, so a test asserts shape rather than the
@@ -20,6 +31,25 @@ const shape = (blocks: OutputBlockData[]): unknown[] => {
   ));
 };
 
+describe('htmlToBlocks — rich text output', () => {
+  it('returns paragraph text as segments, entities decoded', () => {
+    expect(shape(htmlToSegmentBlocks('<p>a <strong>b</strong> &amp; c</p>'))).toEqual([
+      { type: 'paragraph', data: { text: [{ text: 'a ' }, { text: 'b', marks: { bold: true } }, { text: ' & c' }] } },
+    ]);
+  });
+
+  it('returns segments in every built-in rich field and leaves other fields alone', () => {
+    const blocks = htmlToSegmentBlocks('<h2>T</h2><blockquote>q</blockquote><ul><li>i</li></ul><pre><code>&lt;b&gt;</code></pre>');
+
+    expect(shape(blocks)).toEqual([
+      { type: 'header', data: { text: [{ text: 'T' }], level: 2 } },
+      { type: 'quote', data: expect.objectContaining({ text: [{ text: 'q' }] }) },
+      { type: 'list', data: expect.objectContaining({ text: [{ text: 'i' }] }) },
+      { type: 'code', data: expect.objectContaining({ code: '<b>' }) },
+    ]);
+  });
+});
+
 describe('htmlToBlocks — structure', () => {
   it('converts headings at every level', () => {
     expect(shape(htmlToBlocks('<h1>One</h1><h3>Three</h3><h6>Six</h6>'))).toEqual([
@@ -31,7 +61,7 @@ describe('htmlToBlocks — structure', () => {
 
   it('keeps inline markup and links inside a paragraph', () => {
     expect(shape(htmlToBlocks('<p>a <b>bold</b> <a href="https://x.dev" rel="nofollow">link</a></p>'))).toEqual([
-      { type: 'paragraph', data: { text: 'a <b>bold</b> <a href="https://x.dev" rel="nofollow">link</a>' } },
+      { type: 'paragraph', data: { text: 'a <strong>bold</strong> <a href="https://x.dev" rel="nofollow">link</a>' } },
     ]);
   });
 
@@ -652,7 +682,7 @@ describe('htmlToBlocks — edges', () => {
 
   it('leaves an inline run with no image in it serialized whole', () => {
     expect(shape(htmlToBlocks('<p>a <span class="x"><b>b</b> c</span> d</p>'))).toEqual([
-      { type: 'paragraph', data: { text: 'a <b>b</b> c d' } },
+      { type: 'paragraph', data: { text: 'a <strong>b</strong> c d' } },
     ]);
   });
 

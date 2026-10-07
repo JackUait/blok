@@ -18,7 +18,7 @@ import { repairedTableRows, sourceCellsInDisplayOrder, tableRows } from './table
 import { cloneJson } from './json-clone';
 import { ownEntry } from '../shared/own-entry';
 import { isRichText } from '../shared/rich-text/guards';
-import { richTextFieldsFor } from '../shared/rich-text/fields';
+import { LEGACY_BODY_TYPES, LEGACY_ITEM_TYPES, richTextFieldsFor } from '../shared/rich-text/fields';
 import { segmentsToHtml } from '../shared/rich-text/segments-to-html';
 import { htmlToSegmentsNode } from './rich-text-parse5';
 
@@ -66,11 +66,6 @@ const PROSE_FIELDS: Record<string, string[]> = {
   page: [],
 };
 
-/** Types whose LEGACY data nests item text in `data.items[]`. Current list blocks are flat. */
-const LEGACY_ITEM_TYPES = new Set(['list', 'checklist']);
-
-/** Types whose LEGACY data nests child blocks in `data.body.blocks[]`. */
-const LEGACY_BODY_TYPES = new Set(['callout', 'toggleList']);
 
 /**
  * Narrow an unknown value to a plain record.
@@ -140,11 +135,11 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
    * holds prose.
    * @param holder - record or array owning the value
    * @param key - field name or array index
-   * @param richFields - fields that may hold segments; any other array is not prose
+   * @param richFields - fields (or item indexes) that may hold segments; any other array is not prose
    */
-  const pushSlot = (holder: Record<string, unknown> | unknown[], key: string | number, richFields: string[] = []): void => {
+  const pushSlot = (holder: Record<string, unknown> | unknown[], key: string | number, richFields: Array<string | number> = []): void => {
     const raw: unknown = Reflect.get(holder, key);
-    const segments = typeof key === 'string' && richFields.includes(key) && isRichText(raw);
+    const segments = richFields.includes(key) && isRichText(raw);
     const value = segments ? segmentsToHtml(raw) : raw;
 
     /** Blank values are not worth a model round-trip — and inject skips them identically. */
@@ -168,13 +163,15 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
   const walkItems = (items: unknown[]): void => {
     items.forEach((item, index) => {
       if (!isRecord(item)) {
-        pushSlot(items, index);
+        pushSlot(items, index, [ index ]);
 
         return;
       }
 
       /** Nested-list items name the field `content`; old checklist items name it `text`. */
-      pushSlot(item, typeof item.content === 'string' ? 'content' : 'text');
+      const key = 'content' in item ? 'content' : 'text';
+
+      pushSlot(item, key, [ key ]);
 
       if (Array.isArray(item.items)) {
         walkItems(item.items);

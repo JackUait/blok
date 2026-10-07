@@ -1,0 +1,51 @@
+[
+  {
+    "id": "e-equation",
+    "type": "paragraph",
+    "data": {
+      "text": "energy <span data-latex=\"E=mc^2\">E=mc^2</span> done"
+    }
+  },
+  {
+    "id": "e-equation-escaped",
+    "type": "paragraph",
+    "data": {
+      "text": "<span data-latex=\"a &lt; b &amp; c\">a &lt; b &amp; c</span>"
+    }
+  },
+  {
+    "id": "e-equation-bold",
+    "type": "paragraph",
+    "data": {
+      "text": "<b>bold <span data-latex=\"x^2\">x^2</span></b>"
+    }
+  },
+  {
+    "id": "e-page",
+    "type": "paragraph",
+    "data": {
+      "text": "see <a data-blok-page-id=\"page-1\">Page</a> for more"
+    }
+  },
+  {
+    "id": "e-page-italic",
+    "type": "paragraph",
+    "data": {
+      "text": "<i><a data-blok-page-id=\"page-2\">Page</a></i>"
+    }
+  },
+  {
+    "id": "e-img",
+    "type": "paragraph",
+    "data": {
+      "text": "pic <img src=\"https://example.com/a.png\" alt=\"a\"> end"
+    }
+  },
+  {
+    "id": "e-checkbox",
+    "type": "paragraph",
+    "data": {
+      "text": "a<input type=\"checkbox\" checked=\"\">b"
+    }
+  }
+]

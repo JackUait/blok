@@ -104,7 +104,8 @@ describe('stored <sup>/<sub> survive load → save whatever the inline config', 
       data: { withHeadings: false, content: [[TEXT]] },
     });
     const saved = await instance.save();
-    const texts = saved.blocks.filter((b) => b.id !== 't1').map((b) => htmlOf(b.data.text));
+    // A legacy string cell makes the output legacy, still HTML until task A3.
+    const texts = saved.blocks.filter((b) => b.id !== 't1').map((b) => htmlOf(b.data.text, { allowHtml: true }));
 
     expect(texts).toContain(TEXT);
   });

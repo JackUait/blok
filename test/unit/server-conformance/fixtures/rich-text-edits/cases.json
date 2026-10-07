@@ -1,0 +1,1189 @@
+[
+  {
+    "name": "unchanged",
+    "description": "Same segments: no write.",
+    "current": [
+      {
+        "text": "hello",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "next": [
+      {
+        "text": "hello",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "ops": [],
+    "expected": {
+      "writes": false,
+      "segments": [
+        {
+          "text": "hello",
+          "marks": {
+            "bold": true
+          }
+        }
+      ],
+      "delta": [
+        {
+          "insert": "hello",
+          "attributes": {
+            "bold": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "respelled-marks-write-nothing",
+    "description": "Review Focus 1: key order, a link key segments do not carry, bold:false and a split run are respellings, not changes.",
+    "current": [
+      {
+        "text": "ab",
+        "marks": {
+          "link": {
+            "href": "h",
+            "rel": "r"
+          },
+          "italic": true
+        }
+      }
+    ],
+    "next": [
+      {
+        "text": "a",
+        "marks": {
+          "italic": true,
+          "bold": false,
+          "link": {
+            "rel": "r",
+            "href": "h",
+            "title": "t"
+          }
+        }
+      },
+      {
+        "text": "b",
+        "marks": {
+          "link": {
+            "rel": "r",
+            "href": "h"
+          },
+          "italic": true
+        }
+      }
+    ],
+    "ops": [],
+    "expected": {
+      "writes": false,
+      "segments": [
+        {
+          "text": "ab",
+          "marks": {
+            "link": {
+              "href": "h",
+              "rel": "r"
+            },
+            "italic": true
+          }
+        }
+      ],
+      "delta": [
+        {
+          "insert": "ab",
+          "attributes": {
+            "italic": true,
+            "link": {
+              "href": "h",
+              "rel": "r"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "type-in-the-middle",
+    "description": "Only the typed characters are inserted.",
+    "current": [
+      {
+        "text": "hello world"
+      }
+    ],
+    "next": [
+      {
+        "text": "hello big world"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 6,
+        "text": "big ",
+        "attributes": {}
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "hello big world"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "hello big world"
+        }
+      ]
+    }
+  },
+  {
+    "name": "bold-a-word",
+    "description": "A mark added over kept text is one format call; no text is rewritten.",
+    "current": [
+      {
+        "text": "hello world"
+      }
+    ],
+    "next": [
+      {
+        "text": "hello "
+      },
+      {
+        "text": "world",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "format",
+        "index": 6,
+        "length": 5,
+        "attributes": {
+          "bold": true
+        }
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "hello "
+        },
+        {
+          "text": "world",
+          "marks": {
+            "bold": true
+          }
+        }
+      ],
+      "delta": [
+        {
+          "insert": "hello "
+        },
+        {
+          "insert": "world",
+          "attributes": {
+            "bold": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "unbold-a-word",
+    "description": "A removed mark is formatted to null.",
+    "current": [
+      {
+        "text": "hello "
+      },
+      {
+        "text": "world",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "next": [
+      {
+        "text": "hello world"
+      }
+    ],
+    "ops": [
+      {
+        "op": "format",
+        "index": 6,
+        "length": 5,
+        "attributes": {
+          "bold": null
+        }
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "hello world"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "hello world"
+        }
+      ]
+    }
+  },
+  {
+    "name": "typing-after-a-link-is-not-linked",
+    "description": "Review Focus 2: the insert names its marks ({}), so it does not inherit the link before it.",
+    "current": [
+      {
+        "text": "go",
+        "marks": {
+          "link": {
+            "href": "https://a.example"
+          }
+        }
+      }
+    ],
+    "next": [
+      {
+        "text": "go",
+        "marks": {
+          "link": {
+            "href": "https://a.example"
+          }
+        }
+      },
+      {
+        "text": " now"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 2,
+        "text": " now",
+        "attributes": {}
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "go",
+          "marks": {
+            "link": {
+              "href": "https://a.example"
+            }
+          }
+        },
+        {
+          "text": " now"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "go",
+          "attributes": {
+            "link": {
+              "href": "https://a.example"
+            }
+          }
+        },
+        {
+          "insert": " now"
+        }
+      ]
+    }
+  },
+  {
+    "name": "typing-inside-a-bold-run",
+    "description": "The insert carries the run's marks explicitly.",
+    "current": [
+      {
+        "text": "ab",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "next": [
+      {
+        "text": "aXb",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 1,
+        "text": "X",
+        "attributes": {
+          "bold": true
+        }
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "aXb",
+          "marks": {
+            "bold": true
+          }
+        }
+      ],
+      "delta": [
+        {
+          "insert": "aXb",
+          "attributes": {
+            "bold": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "replace-a-word-and-mark-it",
+    "description": "A replaced word is inserted with its marks, then the old word deleted.",
+    "current": [
+      {
+        "text": "the cat sat"
+      }
+    ],
+    "next": [
+      {
+        "text": "the "
+      },
+      {
+        "text": "dog",
+        "marks": {
+          "bold": true
+        }
+      },
+      {
+        "text": " sat"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 4,
+        "text": "dog",
+        "attributes": {
+          "bold": true
+        }
+      },
+      {
+        "op": "delete",
+        "index": 7,
+        "length": 3
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "the "
+        },
+        {
+          "text": "dog",
+          "marks": {
+            "bold": true
+          }
+        },
+        {
+          "text": " sat"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "the "
+        },
+        {
+          "insert": "dog",
+          "attributes": {
+            "bold": true
+          }
+        },
+        {
+          "insert": " sat"
+        }
+      ]
+    }
+  },
+  {
+    "name": "insert-an-embed",
+    "description": "An embed is one unit, inserted with insertEmbed.",
+    "current": [
+      {
+        "text": "ab"
+      }
+    ],
+    "next": [
+      {
+        "text": "a"
+      },
+      {
+        "embed": {
+          "page": {
+            "id": "p1"
+          }
+        }
+      },
+      {
+        "text": "b"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insertEmbed",
+        "index": 1,
+        "embed": {
+          "page": {
+            "id": "p1"
+          }
+        },
+        "attributes": {}
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "a"
+        },
+        {
+          "embed": {
+            "page": {
+              "id": "p1"
+            }
+          }
+        },
+        {
+          "text": "b"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "a"
+        },
+        {
+          "insert": {
+            "page": {
+              "id": "p1"
+            }
+          }
+        },
+        {
+          "insert": "b"
+        }
+      ]
+    }
+  },
+  {
+    "name": "embed-content-changed",
+    "description": "Embeds are compared by content, never by U+FFFC alone: a changed equation is replaced.",
+    "current": [
+      {
+        "text": "a"
+      },
+      {
+        "embed": {
+          "equation": {
+            "expression": "x"
+          }
+        }
+      },
+      {
+        "text": "b"
+      }
+    ],
+    "next": [
+      {
+        "text": "a"
+      },
+      {
+        "embed": {
+          "equation": {
+            "expression": "y"
+          }
+        }
+      },
+      {
+        "text": "b"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insertEmbed",
+        "index": 1,
+        "embed": {
+          "equation": {
+            "expression": "y"
+          }
+        },
+        "attributes": {}
+      },
+      {
+        "op": "delete",
+        "index": 2,
+        "length": 1
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "a"
+        },
+        {
+          "embed": {
+            "equation": {
+              "expression": "y"
+            }
+          }
+        },
+        {
+          "text": "b"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "a"
+        },
+        {
+          "insert": {
+            "equation": {
+              "expression": "y"
+            }
+          }
+        },
+        {
+          "insert": "b"
+        }
+      ]
+    }
+  },
+  {
+    "name": "embed-marks-changed",
+    "description": "A kept embed whose marks change is formatted like text.",
+    "current": [
+      {
+        "text": "a"
+      },
+      {
+        "embed": {
+          "page": {
+            "id": "p1"
+          }
+        }
+      }
+    ],
+    "next": [
+      {
+        "text": "a"
+      },
+      {
+        "embed": {
+          "page": {
+            "id": "p1"
+          }
+        },
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "format",
+        "index": 1,
+        "length": 1,
+        "attributes": {
+          "bold": true
+        }
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "a"
+        },
+        {
+          "embed": {
+            "page": {
+              "id": "p1"
+            }
+          },
+          "marks": {
+            "bold": true
+          }
+        }
+      ],
+      "delta": [
+        {
+          "insert": "a"
+        },
+        {
+          "insert": {
+            "page": {
+              "id": "p1"
+            }
+          },
+          "attributes": {
+            "bold": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "text-fffc-is-not-an-embed",
+    "description": "A typed U+FFFC and an embed project to the same character but are different content.",
+    "current": [
+      {
+        "text": "a￼b"
+      }
+    ],
+    "next": [
+      {
+        "text": "a"
+      },
+      {
+        "embed": {
+          "html": "<hr>"
+        }
+      },
+      {
+        "text": "b"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insertEmbed",
+        "index": 1,
+        "embed": {
+          "html": "<hr>"
+        },
+        "attributes": {}
+      },
+      {
+        "op": "delete",
+        "index": 2,
+        "length": 1
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "a"
+        },
+        {
+          "embed": {
+            "html": "<hr>"
+          }
+        },
+        {
+          "text": "b"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "a"
+        },
+        {
+          "insert": {
+            "html": "<hr>"
+          }
+        },
+        {
+          "insert": "b"
+        }
+      ]
+    }
+  },
+  {
+    "name": "change-a-link-target",
+    "description": "A changed object mark is formatted with its normalised (sorted) value.",
+    "current": [
+      {
+        "text": "go",
+        "marks": {
+          "link": {
+            "href": "h1"
+          }
+        }
+      }
+    ],
+    "next": [
+      {
+        "text": "go",
+        "marks": {
+          "link": {
+            "href": "h2",
+            "target": "_blank",
+            "rel": "noopener"
+          }
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "format",
+        "index": 0,
+        "length": 2,
+        "attributes": {
+          "link": {
+            "href": "h2",
+            "rel": "noopener",
+            "target": "_blank"
+          }
+        }
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "go",
+          "marks": {
+            "link": {
+              "href": "h2",
+              "target": "_blank",
+              "rel": "noopener"
+            }
+          }
+        }
+      ],
+      "delta": [
+        {
+          "insert": "go",
+          "attributes": {
+            "link": {
+              "href": "h2",
+              "rel": "noopener",
+              "target": "_blank"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "several-marks-change-at-once",
+    "description": "Only the changed keys, sorted, in one call.",
+    "current": [
+      {
+        "text": "ab",
+        "marks": {
+          "bold": true,
+          "italic": true
+        }
+      }
+    ],
+    "next": [
+      {
+        "text": "ab",
+        "marks": {
+          "italic": true,
+          "underline": true,
+          "color": "red"
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "format",
+        "index": 0,
+        "length": 2,
+        "attributes": {
+          "bold": null,
+          "color": "red",
+          "underline": true
+        }
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "ab",
+          "marks": {
+            "color": "red",
+            "italic": true,
+            "underline": true
+          }
+        }
+      ],
+      "delta": [
+        {
+          "insert": "ab",
+          "attributes": {
+            "color": "red",
+            "underline": true,
+            "italic": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "tag-record-changed",
+    "description": "A custom inline tool's attributes change.",
+    "current": [
+      {
+        "text": "HTML",
+        "marks": {
+          "tag:abbr": {
+            "title": "Hyper"
+          }
+        }
+      }
+    ],
+    "next": [
+      {
+        "text": "HTML",
+        "marks": {
+          "tag:abbr": {
+            "title": "HyperText",
+            "lang": "en"
+          }
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "format",
+        "index": 0,
+        "length": 4,
+        "attributes": {
+          "tag:abbr": {
+            "lang": "en",
+            "title": "HyperText"
+          }
+        }
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "HTML",
+          "marks": {
+            "tag:abbr": {
+              "lang": "en",
+              "title": "HyperText"
+            }
+          }
+        }
+      ],
+      "delta": [
+        {
+          "insert": "HTML",
+          "attributes": {
+            "tag:abbr": {
+              "lang": "en",
+              "title": "HyperText"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "markup-characters-stay-text",
+    "description": "Review Focus 3: characters that look like markup are plain text.",
+    "current": [
+      {
+        "text": "a"
+      }
+    ],
+    "next": [
+      {
+        "text": "a < b && \"c\" <b>"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 1,
+        "text": " < b && \"c\" <b>",
+        "attributes": {}
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "a < b && \"c\" <b>"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "a < b && \"c\" <b>"
+        }
+      ]
+    }
+  },
+  {
+    "name": "delete-everything",
+    "description": "An empty field is [].",
+    "current": [
+      {
+        "text": "abc",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "next": [],
+    "ops": [
+      {
+        "op": "delete",
+        "index": 0,
+        "length": 3
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [],
+      "delta": []
+    }
+  },
+  {
+    "name": "fill-an-empty-text",
+    "description": "From [], one marked insert.",
+    "current": [],
+    "next": [
+      {
+        "text": "x",
+        "marks": {
+          "italic": true
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 0,
+        "text": "x",
+        "attributes": {
+          "italic": true
+        }
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "x",
+          "marks": {
+            "italic": true
+          }
+        }
+      ],
+      "delta": [
+        {
+          "insert": "x",
+          "attributes": {
+            "italic": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "line-break",
+    "description": "A line break is a \\n character.",
+    "current": [
+      {
+        "text": "a"
+      }
+    ],
+    "next": [
+      {
+        "text": "a\nb"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 1,
+        "text": "\nb",
+        "attributes": {}
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "a\nb"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "a\nb"
+        }
+      ]
+    }
+  },
+  {
+    "name": "astral-character",
+    "description": "Typing after an emoji never splits its surrogate pair.",
+    "current": [
+      {
+        "text": "a😀"
+      }
+    ],
+    "next": [
+      {
+        "text": "a😀b"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 3,
+        "text": "b",
+        "attributes": {}
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "a😀b"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "a😀b"
+        }
+      ]
+    }
+  },
+  {
+    "name": "two-separate-edits",
+    "description": "Two regions, applied back to front with indices from the old text.",
+    "current": [
+      {
+        "text": "abc def ghi"
+      }
+    ],
+    "next": [
+      {
+        "text": "abXc def gYhi"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 9,
+        "text": "Y",
+        "attributes": {}
+      },
+      {
+        "op": "insert",
+        "index": 2,
+        "text": "X",
+        "attributes": {}
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "abXc def gYhi"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "abXc def gYhi"
+        }
+      ]
+    }
+  },
+  {
+    "name": "edit-and-format-together",
+    "description": "Content ops first (back to front), then format calls (front to back) in final positions.",
+    "current": [
+      {
+        "text": "one two three"
+      }
+    ],
+    "next": [
+      {
+        "text": "one "
+      },
+      {
+        "text": "two",
+        "marks": {
+          "italic": true
+        }
+      },
+      {
+        "text": " and three"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 8,
+        "text": "and ",
+        "attributes": {}
+      },
+      {
+        "op": "format",
+        "index": 4,
+        "length": 3,
+        "attributes": {
+          "italic": true
+        }
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "one "
+        },
+        {
+          "text": "two",
+          "marks": {
+            "italic": true
+          }
+        },
+        {
+          "text": " and three"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "one "
+        },
+        {
+          "insert": "two",
+          "attributes": {
+            "italic": true
+          }
+        },
+        {
+          "insert": " and three"
+        }
+      ]
+    }
+  }
+]

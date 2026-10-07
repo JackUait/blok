@@ -258,8 +258,9 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     try {
       const { markdownToBlocks } = await import('./index');
 
-      // A line break the user pasted is one they can see; keep it.
-      const config: InternalMarkdownImportConfig = { softBreaks: true };
+      // A line break the user pasted is one they can see; keep it. HTML text:
+      // an inline paste below writes it into the DOM.
+      const config: InternalMarkdownImportConfig = { softBreaks: true, htmlText: true };
 
       return await markdownToBlocks(data, config);
     } catch (e) {

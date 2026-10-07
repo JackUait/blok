@@ -36,8 +36,8 @@ namespace Blok.Server.Collab;
 /// make every following SyncStep2 resend it forever). The JSON seed and edit
 /// paths are the other direction — a consumer's record, PUT back to the
 /// consumer — and the endpoint contract has never accepted a NUL there. So
-/// <see cref="Seed"/> and the edit ops REJECT one anywhere, while
-/// <see cref="Export"/> carries whatever the document holds.
+/// <c>Seed</c> and the edit ops REJECT one anywhere, while
+/// <c>Export</c> carries whatever the document holds.
 /// </summary>
 internal static class YDocConverter
 {
@@ -131,38 +131,27 @@ internal static class YDocConverter
   /// </summary>
   internal static void Seed(YDoc doc, JsonArray blocks)
   {
+    Seed(doc, blocks, RichTextInput.Refusing(RichTextFields.BuiltIn));
+  }
+
+  /// <summary>
+  /// <paramref name="input"/> says which fields are rich and holds the
+  /// segments for the HTML strings in them (see
+  /// <see cref="CollectSeedHtml"/>); an HTML string it has no answer for is
+  /// refused.
+  /// </summary>
+  internal static void Seed(YDoc doc, JsonArray blocks, RichTextInput input)
+  {
     ArgumentNullException.ThrowIfNull(doc);
     ArgumentNullException.ThrowIfNull(blocks);
+    ArgumentNullException.ThrowIfNull(input);
 
     var blockMap = doc.GetMap(BlocksRoot);
     var rootOrder = doc.GetArray(OrderRoot);
-    var prepared = new List<(string Id, YMap Block)>();
-    var topLevelIds = new List<object?>();
 
     // Composed BEFORE the transaction opens, because composing is where the
     // NUL and depth guards fire: a refused document leaves the doc as it was.
-    foreach (var node in blocks)
-    {
-      // fromJSON reads `block.id` off every entry: null throws there,
-      // a primitive yields undefined and is skipped.
-      if (node is null)
-      {
-        throw new InvalidDataException("collab: a block entry is null.");
-      }
-
-      if (node is not JsonObject block || !TryGetString(block, "id", out var id))
-      {
-        continue;
-      }
-
-      NoNul(id, "a block id");
-      prepared.Add((id, InputWriter.Block(id, block)));
-
-      if (!block.ContainsKey("parent"))
-      {
-        topLevelIds.Add(id);
-      }
-    }
+    var (prepared, topLevelIds) = Compose(blocks, input);
 
     doc.Transact(transaction =>
     {
@@ -188,6 +177,54 @@ internal static class YDocConverter
   }
 
   /// <summary>
+  /// The HTML strings in the rich fields of <paramref name="blocks"/>, each
+  /// once, found by the same walk <see cref="Seed(YDoc, JsonArray, RichTextInput)"/>
+  /// runs. Writes nothing; throws what that seed would throw.
+  /// </summary>
+  internal static IReadOnlyList<RichTextHtml> CollectSeedHtml(JsonArray blocks, RichTextFields fields)
+  {
+    ArgumentNullException.ThrowIfNull(blocks);
+
+    var input = RichTextInput.Collecting(fields);
+
+    Compose(blocks, input);
+
+    return input.Found;
+  }
+
+  private static (List<(string Id, YMap Block)> Prepared, List<object?> TopLevelIds) Compose(
+      JsonArray blocks, RichTextInput input)
+  {
+    var prepared = new List<(string Id, YMap Block)>();
+    var topLevelIds = new List<object?>();
+
+    foreach (var node in blocks)
+    {
+      // fromJSON reads `block.id` off every entry: null throws there,
+      // a primitive yields undefined and is skipped.
+      if (node is null)
+      {
+        throw new InvalidDataException("collab: a block entry is null.");
+      }
+
+      if (node is not JsonObject block || !TryGetString(block, "id", out var id))
+      {
+        continue;
+      }
+
+      NoNul(id, "a block id");
+      prepared.Add((id, InputWriter.Block(id, block, input)));
+
+      if (!block.ContainsKey("parent"))
+      {
+        topLevelIds.Add(id);
+      }
+    }
+
+    return (prepared, topLevelIds);
+  }
+
+  /// <summary>
   /// Applies block-level edit ops (POST /sync/{doc}/edit) in request order;
   /// a later op sees what the earlier ones did.
   ///
@@ -199,7 +236,32 @@ internal static class YDocConverter
   /// </summary>
   internal static void ApplyOps(YDoc doc, IReadOnlyList<CollabEditOp> ops)
   {
-    ApplyOps(doc, ops, out _);
+    ApplyOps(doc, ops, RichTextInput.Refusing(RichTextFields.BuiltIn), out _);
+  }
+
+  internal static void ApplyOps(YDoc doc, IReadOnlyList<CollabEditOp> ops, RichTextInput input)
+  {
+    ApplyOps(doc, ops, input, out _);
+  }
+
+  /// <summary>
+  /// The HTML strings the rich fields of <paramref name="ops"/> carry, each
+  /// once. Plans the request exactly as <see cref="ApplyOps(YDoc, IReadOnlyList{CollabEditOp}, RichTextInput)"/>
+  /// does — an update reads its block's type from the doc or from an insert
+  /// earlier in the request — and writes nothing. A refusal throws here,
+  /// before any HTML is converted.
+  /// </summary>
+  internal static IReadOnlyList<RichTextHtml> CollectOpsHtml(
+      YDoc doc, IReadOnlyList<CollabEditOp> ops, RichTextFields fields)
+  {
+    ArgumentNullException.ThrowIfNull(doc);
+    ArgumentNullException.ThrowIfNull(ops);
+
+    var input = RichTextInput.Collecting(fields);
+
+    new EditPlanner(doc.GetMap(BlocksRoot), doc.GetArray(OrderRoot), input).Plan(ops);
+
+    return input.Found;
   }
 
   /// <summary>
@@ -208,9 +270,16 @@ internal static class YDocConverter
   /// </summary>
   internal static void ApplyOps(YDoc doc, IReadOnlyList<CollabEditOp> ops, out int visited)
   {
+    ApplyOps(doc, ops, RichTextInput.Refusing(RichTextFields.BuiltIn), out visited);
+  }
+
+  private static void ApplyOps(
+      YDoc doc, IReadOnlyList<CollabEditOp> ops, RichTextInput input, out int visited)
+  {
     visited = 0;
     ArgumentNullException.ThrowIfNull(doc);
     ArgumentNullException.ThrowIfNull(ops);
+    ArgumentNullException.ThrowIfNull(input);
 
     if (ops.Count == 0)
     {
@@ -219,7 +288,7 @@ internal static class YDocConverter
 
     var blockMap = doc.GetMap(BlocksRoot);
     var rootOrder = doc.GetArray(OrderRoot);
-    var planner = new EditPlanner(blockMap, rootOrder);
+    var planner = new EditPlanner(blockMap, rootOrder, input);
     var steps = planner.Plan(ops);
 
     visited = planner.Visited;
@@ -262,9 +331,38 @@ internal static class YDocConverter
   /// </summary>
   internal static JsonArray Export(YDoc doc, Action<string>? warn = null)
   {
-    ArgumentNullException.ThrowIfNull(doc);
+    var blocks = Export(doc, RichTextFields.BuiltIn, warn, out var slots);
 
-    return new DocReader(doc.GetMap(BlocksRoot), doc.GetArray(OrderRoot), warn).Export();
+    if (slots.Count > 0)
+    {
+      throw new InvalidOperationException(
+          "collab: the document holds HTML in a rich text field; export it with the slots overload " +
+          "and convert them.");
+    }
+
+    return blocks;
+  }
+
+  /// <summary>
+  /// A formatted text exports as canonical segments wherever it is (contract
+  /// §9: by class, never by field list). A rich field that still holds HTML —
+  /// a legacy plain text or string at the top level of a rich (type, key), or
+  /// a string in a database-row's nested document — is left as that string
+  /// and listed in <paramref name="slots"/>: converting HTML needs the async
+  /// runtime, so the caller does it and writes the segments into each slot.
+  /// </summary>
+  internal static JsonArray Export(
+      YDoc doc, RichTextFields fields, Action<string>? warn, out IReadOnlyList<RichTextHtmlSlot> slots)
+  {
+    ArgumentNullException.ThrowIfNull(doc);
+    ArgumentNullException.ThrowIfNull(fields);
+
+    var reader = new DocReader(doc.GetMap(BlocksRoot), doc.GetArray(OrderRoot), fields, warn);
+    var blocks = reader.Export();
+
+    slots = reader.Slots;
+
+    return blocks;
   }
 
   private static bool TryGetString(JsonObject block, string key, out string value)
@@ -355,11 +453,11 @@ internal static class YDocConverter
     }
   }
 
-  /// <summary>Empty paragraph data becomes { text: "" }; nothing else changes.</summary>
+  /// <summary>Empty paragraph data becomes { text: [] }; nothing else changes.</summary>
   private static JsonObject NormalizeBlockData(string? type, JsonObject data)
   {
     return type == "paragraph" && data.Count == 0
-      ? new JsonObject { ["text"] = "" }
+      ? new JsonObject { ["text"] = new JsonArray() }
       : data;
   }
 
@@ -392,7 +490,7 @@ internal static class YDocConverter
   /// dangling parent and resurface as a root orphan on the client's orphan
   /// pass — and why a listed child that names a different parent survives.
   /// </summary>
-  private sealed class EditPlanner(YMap blockMap, YArray rootOrder)
+  private sealed class EditPlanner(YMap blockMap, YArray rootOrder, RichTextInput input)
   {
     private readonly Dictionary<string, string?> parents = new(StringComparer.Ordinal);
 
@@ -647,7 +745,7 @@ internal static class YDocConverter
         block["parent"] = op.Parent;
       }
 
-      var composed = InputWriter.Block(NoNul(op.Id, "a block id"), block);
+      var composed = InputWriter.Block(NoNul(op.Id, "a block id"), block, input);
 
       parents[op.Id] = op.Parent;
       types[op.Id] = TryGetString(op.Block, "type", out var type) ? type : null;
@@ -702,8 +800,8 @@ internal static class YDocConverter
 
       RefuseUnlessBlockMap(op.Id, index);
 
-      var entries = InputWriter.BlockDataEntries(
-          NormalizeBlockData(types.GetValueOrDefault(op.Id), op.Data));
+      var type = types.GetValueOrDefault(op.Id);
+      var entries = InputWriter.BlockDataEntries(type, NormalizeBlockData(type, op.Data), input);
 
       // The values reach the doc as the plain JSON they came in as, so the
       // guards the conversion carries have to be run over them HERE, while
@@ -911,6 +1009,24 @@ internal static class YDocConverter
 
         foreach (var (key, value) in data)
         {
+          // A formatted text is edited in place. Anything else under the key
+          // — a legacy plain text included — is replaced by a whole-key set,
+          // which is last-writer-wins against a peer typing into the old
+          // value at that moment; it happens once per field.
+          if (value is MergeableRichText rich)
+          {
+            if (Value(existing, key) is YXmlText liveRich)
+            {
+              RichTextEdit.Apply(transaction, liveRich, RichTextEdit.Plan(liveRich.ToDelta(), rich.Segments));
+            }
+            else
+            {
+              existing.Set(transaction, key, InputWriter.NewRichText(rich.Segments));
+            }
+
+            continue;
+          }
+
           if (value is MergeableText text)
           {
             if (Value(existing, key) is YText live)
@@ -1800,7 +1916,7 @@ internal static class YDocConverter
     /// Whether the live value already IS the plain value.
     ///
     /// Comparison only. A shape this writer can produce reads exactly as
-    /// <see cref="Export"/> reads it; anything else — a foreign peer's XML
+    /// <c>Export</c> reads it; anything else — a foreign peer's XML
     /// type, bytes, a bigint, a value nested past the depth cap — answers
     /// "not the same", so the caller writes over it, which is what a
     /// whole-key set did for EVERY value before this path existed. A
@@ -1848,8 +1964,12 @@ internal static class YDocConverter
         case AnyArray items:
           return TryPlainItems(items, depth + 1, out plain);
 
-        // A block's mergeable text renders as its string form, exactly as the
-        // export renders it.
+        // Each text class reads exactly as the export reads it.
+        case YXmlText rich:
+          plain = RichText.ToJson(RichText.FromDelta(rich.ToDelta()));
+
+          return true;
+
         case YText text:
           plain = JsonValue.Create(text.ToString());
 
@@ -1958,7 +2078,8 @@ internal static class YDocConverter
     /// values for real (the update path) must run <see cref="Screen"/> over
     /// them while planning.
     /// </summary>
-    internal static List<KeyValuePair<string, object?>> BlockDataEntries(JsonObject data)
+    internal static List<KeyValuePair<string, object?>> BlockDataEntries(
+        string? type, JsonObject data, RichTextInput input)
     {
       GuardDepth(BlockFieldDepth, "a data value");
 
@@ -1967,17 +2088,66 @@ internal static class YDocConverter
       foreach (var (key, child) in data)
       {
         var dataKey = NoNul(key, "a data key");
+        var isString = child is JsonValue scalar && scalar.GetValueKind() == JsonValueKind.String;
+
+        // A rich field is segments (an array) or HTML (a string). Any other
+        // value is not rich text and stays a plain leaf, as on the client.
+        if (input.Fields.IsRich(type, dataKey) && (isString || child is JsonArray))
+        {
+          entries.Add(Pair(dataKey, new MergeableRichText(RichSegments(type!, dataKey, child!, input))));
+
+          continue;
+        }
 
         entries.Add(Pair(
             dataKey,
-            IsDiffableTextKey(dataKey) &&
-            child is JsonValue scalar &&
-            scalar.GetValueKind() == JsonValueKind.String
-              ? new MergeableText(NoNul(scalar.GetValue<string>(), "a string value"))
+            IsDiffableTextKey(dataKey) && isString
+              ? new MergeableText(NoNul(child!.GetValue<string>(), "a string value"))
               : child));
       }
 
       return entries;
+    }
+
+    /// <summary>
+    /// A rich field's value as canonical segments: HTML through the
+    /// caller's conversion table, then the NUL and depth guards, then the
+    /// client's input reading (guards, lenient read, unknown marks dropped).
+    /// </summary>
+    private static AnyArray RichSegments(string type, string key, JsonNode value, RichTextInput input)
+    {
+      var segments = value is JsonArray array
+        ? array
+        : input.Segments(type, key, NoNul(value.GetValue<string>(), "a string value"));
+
+      return RichText.ReadInput((AnyArray)Atomic(segments, BlockFieldDepth + 1)!);
+    }
+
+    /// <summary>
+    /// A prelim formatted text built from canonical segments. Every insert
+    /// names its marks, <c>{}</c> included: an insert without them inherits
+    /// the marks in force and would extend the run before it.
+    /// </summary>
+    internal static YXmlText NewRichText(AnyArray segments)
+    {
+      var text = new YXmlText();
+      var index = 0;
+
+      foreach (var op in RichText.ToWriteOps(segments))
+      {
+        if (op.Insert is string characters)
+        {
+          text.Insert(null, index, characters, op.Attributes);
+        }
+        else
+        {
+          text.InsertEmbed(null, index, op.Insert, op.Attributes);
+        }
+
+        index += op.Length;
+      }
+
+      return text;
     }
 
     /// <summary>
@@ -2011,12 +2181,15 @@ internal static class YDocConverter
     /// </summary>
     internal static object? ToShared(object? value, int depth)
     {
-      return value is MergeableText text
-        ? new YText(text.Value)
-        : PlainToYValue(value as JsonNode, depth);
+      return value switch
+      {
+        MergeableRichText rich => NewRichText(rich.Segments),
+        MergeableText text => new YText(text.Value),
+        _ => PlainToYValue(value as JsonNode, depth),
+      };
     }
 
-    internal static YMap Block(string id, JsonObject block)
+    internal static YMap Block(string id, JsonObject block, RichTextInput input)
     {
       // Export skips such a block, so accepting it here would PUT the record
       // back a block shorter.
@@ -2032,7 +2205,9 @@ internal static class YDocConverter
         Pair(
             "data",
             ToDataMap(BlockDataEntries(
-                NormalizeBlockData(type, ObjectEntries(block["data"], $"block \"{id}\" data"))))),
+                type,
+                NormalizeBlockData(type, ObjectEntries(block["data"], $"block \"{id}\" data")),
+                input))),
       };
 
       // EAGER, always — even with no tunes. Same law as `contentIds` below and
@@ -2502,6 +2677,13 @@ internal static class YDocConverter
   private sealed record MergeableText(string Value);
 
   /// <summary>
+  /// A rich field's canonical segments, bound for a <see cref="YXmlText"/>.
+  /// Kept as segments for the same reason as <see cref="MergeableText"/>: the
+  /// update path diffs them against the live text.
+  /// </summary>
+  private sealed record MergeableRichText(AnyArray Segments);
+
+  /// <summary>
   /// One block's map entry as read while the export walks the doc.
   /// </summary>
   private sealed record BlockEntry(
@@ -2516,7 +2698,9 @@ internal static class YDocConverter
   private sealed class DocReader
   {
     private readonly YArray rootOrder;
+    private readonly RichTextFields fields;
     private readonly Action<string>? warn;
+    private readonly List<RichTextHtmlSlot> slots = [];
 
     /// <summary>Keys from the block down to the value being read, for the error that names them.</summary>
     private readonly List<string> path = [];
@@ -2527,9 +2711,10 @@ internal static class YDocConverter
     /// <summary>Map-valued entries only; the others are never emitted.</summary>
     private readonly Dictionary<string, BlockEntry> entries = new(StringComparer.Ordinal);
 
-    internal DocReader(YMap blockMap, YArray rootOrder, Action<string>? warn)
+    internal DocReader(YMap blockMap, YArray rootOrder, RichTextFields fields, Action<string>? warn)
     {
       this.rootOrder = rootOrder;
+      this.fields = fields;
       this.warn = warn;
 
       foreach (var id in blockMap.Keys.ToArray())
@@ -2542,6 +2727,9 @@ internal static class YDocConverter
         }
       }
     }
+
+    /// <summary>Rich fields the export left holding HTML; see <c>YDocConverter.Export</c>.</summary>
+    internal IReadOnlyList<RichTextHtmlSlot> Slots => slots;
 
     internal JsonArray Export()
     {
@@ -2847,14 +3035,30 @@ internal static class YDocConverter
 
       Enter("data");
 
+      var blockData = YMapToObject(data, BlockFieldDepth);
       var block = new JsonObject
       {
         ["id"] = id,
         ["type"] = type,
-        ["data"] = YMapToObject(data, BlockFieldDepth),
+        ["data"] = blockData,
       };
 
       Leave();
+
+      // After the generic read, which already turned every formatted text
+      // into segments: what is left holding HTML is a legacy text or string.
+      foreach (var dataKey in data.Keys.ToArray())
+      {
+        if (fields.IsRich(type, dataKey) &&
+            Value(data, dataKey) is YText or string &&
+            blockData[dataKey] is JsonValue html)
+        {
+          slots.Add(new RichTextHtmlSlot(
+              blockData, dataKey, new RichTextHtml(type, dataKey, html.GetValue<string>())));
+        }
+      }
+
+      NestedDocumentSlots(type, blockData);
 
       if (Value(entry.Map, "tunes") is YMap { Count: > 0 } tunes)
       {
@@ -2892,6 +3096,56 @@ internal static class YDocConverter
       }
 
       return block;
+    }
+
+    /// <summary>
+    /// A database-row stores whole nested documents in
+    /// <c>properties.*.blocks</c> as plain JSON (contract §8), and the client's
+    /// host output converts their rich HTML fields to segments
+    /// (<c>blockDataToSegments</c> with <c>nestedDocumentsFor</c>,
+    /// src/shared/rich-text/block-data.ts). Same walk here; arrays pass through
+    /// as they do there.
+    /// </summary>
+    private void NestedDocumentSlots(string type, JsonObject data)
+    {
+      if (type != "database-row" || data["properties"] is not JsonObject properties)
+      {
+        return;
+      }
+
+      foreach (var (_, property) in properties)
+      {
+        if (property is not JsonObject document || document["blocks"] is not JsonArray nested)
+        {
+          continue;
+        }
+
+        foreach (var node in nested)
+        {
+          if (node is not JsonObject block ||
+              block["type"] is not JsonValue typeNode ||
+              typeNode.GetValueKind() != JsonValueKind.String ||
+              block["data"] is not JsonObject nestedData)
+          {
+            continue;
+          }
+
+          var nestedType = typeNode.GetValue<string>();
+
+          foreach (var (key, value) in nestedData)
+          {
+            if (fields.IsRich(nestedType, key) &&
+                value is JsonValue html &&
+                html.GetValueKind() == JsonValueKind.String)
+            {
+              slots.Add(new RichTextHtmlSlot(
+                  nestedData, key, new RichTextHtml(nestedType, key, html.GetValue<string>())));
+            }
+          }
+
+          NestedDocumentSlots(nestedType, nestedData);
+        }
+      }
     }
 
     /// <summary>
@@ -3035,23 +3289,20 @@ internal static class YDocConverter
 
           return true;
 
-        // A block's mergeable text: the JS client stores `data.text` as a
-        // Y.Text so two peers typing in one block keep both edits, and renders
-        // it as its string form (`JSON.stringify` calls the type's own
-        // toJSON). This does the same, so the export shape is unchanged. Any
-        // other shared type a foreign peer nests reads the same way rather
-        // than making the room permanently unreadable.
-        //
-        // NOTE: the WRITE side mints one too, for the keys DiffableTextKeys
-        // names. Any OTHER Y.Text is a foreign peer's, and reads the same way
-        // rather than making the room permanently unreadable.
-        case YText text:
-          plain = JsonValue.Create(text.ToString());
+        // Formatted rich text, wherever it sits: by CLASS, never by field
+        // list (contract §9), so a field list that drifted from the client's
+        // cannot strip the marks. Read through the delta — its plain string
+        // form would turn the embeds and marks into bare characters.
+        case YXmlText rich:
+          plain = RichText.ToJson(RichText.FromDelta(rich.ToDelta()));
 
           return true;
 
-        case YXmlText xmlText:
-          plain = JsonValue.Create(xmlText.ToString());
+        // An unformatted text reads as its string form (`JSON.stringify` calls
+        // the type's own toJSON): a diffable plain field, or a legacy HTML
+        // rich field, which the export then lists as a slot.
+        case YText text:
+          plain = JsonValue.Create(text.ToString());
 
           return true;
 

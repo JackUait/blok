@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { blocksToMarkdown, type SerializableBlock } from '../../../src/markdown/blocks-to-markdown';
 import { blocksToMarkdown as viewBlocksToMarkdown } from '../../../src/view/blocks-to-markdown';
-import { markdownToBlocks, markdownToBlocksWithReport } from '../../../src/markdown/index';
+import { markdownToBlocks as markdownToSegmentBlocks, markdownToBlocksWithReport } from '../../../src/markdown/index';
+import type { MarkdownImportConfig } from '../../../src/markdown/index';
 import type { InternalMarkdownImportConfig } from '../../../src/markdown/types';
 import { markdownToHtml } from '../../../src/markdown/markdownToHtml';
 import type { OutputBlockData } from '../../../types';
+import { richTextAsHtml } from '../helpers/rich-text-as-html';
 
 /**
  * Export with BOTH inline backends and require they agree.
@@ -26,8 +28,15 @@ const exportBoth = (blocks: SerializableBlock[]): string => {
   return editor;
 };
 
-const reimport = async (markdown: string): Promise<Awaited<ReturnType<typeof markdownToBlocksWithReport>>> =>
-  markdownToBlocksWithReport(markdown);
+/** Rich fields read back as HTML, the shape the exporters above take. */
+const reimport = async (markdown: string): Promise<Awaited<ReturnType<typeof markdownToBlocksWithReport>>> => {
+  const result = await markdownToBlocksWithReport(markdown);
+
+  return { ...result, blocks: richTextAsHtml(result.blocks) };
+};
+
+const markdownToBlocks = async (markdown: string, config?: MarkdownImportConfig): Promise<OutputBlockData[]> =>
+  richTextAsHtml(await markdownToSegmentBlocks(markdown, config));
 
 describe('markdown round trip: <br> is a hard break', () => {
   beforeEach(() => {
@@ -137,9 +146,9 @@ describe('markdown import: raw <br>', () => {
   });
 
   it('still escapes a <br> that carries attributes', async () => {
-    const { blocks, warnings } = await reimport('a<br onclick="x()">b');
+    const { blocks, warnings } = await markdownToBlocksWithReport('a<br onclick="x()">b');
 
-    expect(blocks[0].data.text).toBe('a&lt;br onclick=&quot;x()&quot;&gt;b');
+    expect(blocks[0].data.text).toEqual([{ text: 'a<br onclick="x()">b' }]);
     expect(warnings).toHaveLength(1);
   });
 

@@ -164,4 +164,37 @@ describe('canonicalizeSegments', () => {
     expect(JSON.stringify(canonicalizeSegments([{ text: 'a', marks: {} }, { text: 'b' }])))
       .toBe(JSON.stringify([{ text: 'ab' }]));
   });
+
+  it('writes a link as { href, target, rel }, dropping undefined members', () => {
+    const out = canonicalizeSegments([
+      { text: 'a', marks: { link: { rel: 'r', href: 'h', target: '_blank' } } },
+      { text: 'b', marks: { link: { href: 'h', target: undefined } } },
+    ]);
+
+    expect(JSON.stringify(out)).toBe(JSON.stringify([
+      { text: 'a', marks: { link: { href: 'h', target: '_blank', rel: 'r' } } },
+      { text: 'b', marks: { link: { href: 'h' } } },
+    ]));
+  });
+
+  it('drops a link mark that is not a record with a string href', () => {
+    const rich = [
+      { text: 'a', marks: { link: null, bold: true } },
+      { text: 'b', marks: { link: 'x' } },
+      { text: 'c', marks: { link: { target: '_blank' } } },
+    ] as unknown as RichText;
+
+    expect(JSON.stringify(canonicalizeSegments(rich))).toBe(JSON.stringify([{ text: 'a', marks: { bold: true } }, { text: 'bc' }]));
+  });
+
+  it('treats a null mark as absent, for known and unknown keys', () => {
+    const rich = [{ text: 'a', marks: { color: null, background: null, 'tag:abbr': null } }] as unknown as RichText;
+
+    expect(JSON.stringify(canonicalizeSegments(rich))).toBe(JSON.stringify([{ text: 'a' }]));
+  });
+
+  it('sorts the attributes of a custom tag mark', () => {
+    expect(JSON.stringify(canonicalizeSegments([{ text: 'a', marks: { 'tag:span': { 'data-a': '1', class: 'c' } } }])))
+      .toBe(JSON.stringify([{ text: 'a', marks: { 'tag:span': { class: 'c', 'data-a': '1' } } }]));
+  });
 });

@@ -1,0 +1,161 @@
+{
+  "frozen": "format 1 (HTML strings in unformatted Y.Text). Never regenerate; see README.md.",
+  "generatedFrom": "961fabb7 (feat/rt-b01), scripts/generate-collab-fixtures.mjs cases copied verbatim + rich-* cases",
+  "cases": [
+    {
+      "name": "nested-data-maps",
+      "description": "nested data objects become nested Y.Maps at any depth; empty objects and null leaves survive",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "keyed-grid",
+      "description": "arrays of arrays take the keyed __rows/__rowKeys shape; empty rows and [[],[]] stay grids; grids nest",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "table-row-ids",
+      "description": "a grid row whose cells all carry one `rowId` is keyed by it; a row whose cells disagree, or an empty row, gets a minted key",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "cell-block-ids",
+      "description": "a table cell's `blocks` id list is a Y.Array at every nesting depth, empty and all-string included, so concurrent inserts into one cell merge",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "array-kinds",
+      "description": "convertible arrays (all objects) become Y.Arrays; primitive, mixed and empty arrays stay atomic leaves",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "tunes",
+      "description": "tunes are emitted only when the Y.Map is non-empty; {} and absent both read back as absent",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "hierarchy-3-deep",
+      "description": "flat order is DFS from root through contentIds, independent of input order",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "cycle",
+      "description": "parent cycles: the smallest id keeps its parent, the rest go to root; a self-parent is always broken",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "duplicate-id",
+      "description": "an id in two order arrays is emitted at its first PARENT-AGREEING occurrence; repeats in one array are kept",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "orphans",
+      "description": "unreached blocks append in two sorted passes: tops (no parent entry) first, then the rest; sort is UTF-16 code-unit order",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "dangling",
+      "description": "a parentId with no map entry is kept; a content id with no map entry is kept in content and skipped in order",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "parent-null",
+      "description": "parent: null is written as a doc-side null, reads back as no parent, and is NOT in the root order (orphan tail)",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "edit-metadata",
+      "description": "lastEditedAt survives only as a number, lastEditedBy only as a string",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "paragraph-normalization",
+      "description": "an empty paragraph data {} becomes { text: \"\" }; other tools and non-empty paragraphs are untouched",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "unicode-text",
+      "description": "non-ASCII text, emoji (incl. ZWJ sequences), combining marks, RTL and escapes in values, keys and ids",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "content-string-code-points",
+      "description": "a string content spreads by code point (Y.Array.from): a surrogate pair is one entry, a combining sequence stays two",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "database-rows",
+      "description": "arrays of plain objects (schema, views, options) are element-wise Y.Arrays, never grids; rows are child blocks",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "grid-normalization",
+      "description": "doc-only: duplicated row key → first wins; key without a row → dropped; rows absent from the order → appended sorted by key",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "legacy-bare-grid",
+      "description": "doc-only: a bare Y.Array of row Y.Arrays (pre-keyed docs) still reads back as rows",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "empty-doc",
+      "description": "an empty block list seeds an empty doc",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "malformed-blocks",
+      "description": "a non-string id is skipped entirely; non-string content entries and parents pass through the type checks",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "proto-key",
+      "description": "a __proto__ key is an ordinary own key in data, tunes and nested objects; other Object.prototype names are ordinary too",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "lenient-seed",
+      "description": "malformed records fromJSON tolerates: Object.entries leniency for data/tunes, iterable content, non-object entries skipped",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "malformed-doc-blocks",
+      "description": "doc-only: a block whose id or type is not a string, or whose data is not a map, is skipped on export (its order slot with it); a value nested past 256 levels exports as null",
+      "source": "copied from fixtures/collab"
+    },
+    {
+      "name": "rich-marks",
+      "description": "paragraphs holding every simple mark, nested marks, <mark> highlight, preset and custom colours, and an unknown tag",
+      "source": "rich format-1 case"
+    },
+    {
+      "name": "rich-links",
+      "description": "links: plain, target+rel, marked, an escaped query string, and a link around a mark",
+      "source": "rich format-1 case"
+    },
+    {
+      "name": "rich-embeds",
+      "description": "inline equations, page mentions, and opaque html (img, checkbox) inside rich text, some under marks",
+      "source": "rich format-1 case"
+    },
+    {
+      "name": "rich-text-edges",
+      "description": "line breaks, a trailing placeholder <br>, &nbsp;, escaped markup characters, empty text, emoji under marks",
+      "source": "rich format-1 case"
+    },
+    {
+      "name": "rich-block-types",
+      "description": "marked HTML in every format-1 rich type: header, quote, toggle with a child, and lists (bulleted, numbered, checklist, nested by depth)",
+      "source": "rich format-1 case"
+    },
+    {
+      "name": "rich-negatives",
+      "description": "markup-looking strings C3 must NOT convert: code/caption (diffable, not rich), legacy callout title, a custom tool text, a database-row nested document",
+      "source": "rich format-1 case"
+    },
+    {
+      "name": "rich-segments-spelling",
+      "description": "segmentsToHtml output (how segment input reaches Yjs today) for the round-trip corpus, one paragraph each",
+      "source": "rich format-1 case"
+    }
+  ]
+}

@@ -17,8 +17,11 @@ const flatten = (out: OutputData | undefined): OutputData | undefined => {
   return { ...out, blocks: walk(out.blocks) };
 };
 
+// Legacy output stays HTML until task A3.
+const LEGACY_HTML = { allowHtml: true };
+
 const cellTexts = (out: OutputData | undefined): string[][] | undefined =>
-  viewTable(flatten(out))?.grid.map(row => row.map(cell => cell.texts.join(' | ')));
+  viewTable(flatten(out), 0, LEGACY_HTML)?.grid.map(row => row.map(cell => cell.texts.join(' | ')));
 
 /** A legacy list makes the document "legacy", so save collapses to the legacy model. */
 const legacyDocWithNestedTable = (): OutputData => ({
@@ -55,7 +58,7 @@ describe('extra round trips', () => {
 
       expect(booted.onError).not.toHaveBeenCalled();
       expect(cellTexts(second)).toEqual([['paragraph:A', 'paragraph:B']]);
-      expect(viewTable(flatten(second))?.grid[0][0].color).toBe('#fbecdd');
+      expect(viewTable(flatten(second), 0, LEGACY_HTML)?.grid[0][0].color).toBe('#fbecdd');
     });
 
     it(`dataModel ${dataModel}: a legacy list's items all survive load → save`, async () => {

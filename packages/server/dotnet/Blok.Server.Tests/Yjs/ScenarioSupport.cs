@@ -9,8 +9,22 @@ using Xunit;
 namespace Blok.Server.Tests.Yjs;
 
 /// <summary>What a step says the engine document must look like once it has run.</summary>
+/// <param name="Diverges">
+/// A known gap: the yjs mirror ran a format cleanup the engine does not
+/// port, so the merged json must DIFFER from <paramref name="Json"/> until a
+/// peer's cleanup arrives.
+/// </param>
+/// <param name="NoCleanup">
+/// The same doc as yjs holds it with the cleanup suppressed, which is what
+/// the engine must equal exactly.
+/// </param>
 internal sealed record ScenarioExpect(
-    byte[]? StateVector, bool? HasPending, JsonNode? Json, string? JsonSha256);
+    byte[]? StateVector,
+    bool? HasPending,
+    JsonNode? Json,
+    string? JsonSha256,
+    bool Diverges = false,
+    ScenarioExpect? NoCleanup = null);
 
 /// <summary>
 /// One step of a scenario or a fuzz seed, in the one shape both files reduce
@@ -25,15 +39,22 @@ internal sealed record ScenarioStep(
     byte[]? Update,
     string? UpdateOf,
     IReadOnlyList<string>? To,
-    ScenarioExpect? Expect);
+    ScenarioExpect? Expect,
+    byte[]? NoCleanupUpdate = null);
 
+/// <param name="Segments">
+/// The case carries remote formatting, which yjs cleans up after the
+/// transaction and the engine does not: the mirror compares as merged runs
+/// only, and the no-cleanup oracle compares exactly.
+/// </param>
 internal sealed record ScenarioCase(
     string Name,
     bool Gc,
     IReadOnlyDictionary<string, string> Roots,
     string Engine,
     uint EngineClientId,
-    IReadOnlyList<ScenarioStep> Steps);
+    IReadOnlyList<ScenarioStep> Steps,
+    bool Segments = false);
 
 /// <summary>
 /// Reads scenarios.json and the fuzz seeds and replays them against the
@@ -75,12 +96,6 @@ internal static class ScenarioSupport
     var target = Target(doc, op);
     var kind = String(op["op"]);
 
-    if (op["attributes"] is not null)
-    {
-      throw new NotSupportedException(
-          $"\"{kind}\" carries attributes; the engine's Y.Text has no formatting API");
-    }
-
     return doc.Transact(transaction =>
     {
       switch (kind)
@@ -102,18 +117,113 @@ internal static class ScenarioSupport
           Array(target).Delete(transaction, Number(op["index"]), Number(op["length"]));
           break;
 
-        case "text.insert":
-          Text(target).Insert(transaction, Number(op["index"]), String(op["text"]));
-          break;
-
-        case "text.delete":
-          Text(target).Delete(transaction, Number(op["index"]), Number(op["length"]));
-          break;
-
         default:
-          throw new NotSupportedException($"\"{kind}\" is not an op the engine performs");
+          ApplyTextOp(Text(target), transaction, op);
+          break;
       }
     });
+  }
+
+  /// <summary>
+  /// A text op on an attached text (inside <paramref name="transaction"/>) or
+  /// on a prelim one (transaction null, so the text queues it).
+  /// </summary>
+  private static void ApplyTextOp(YTextBase text, YTransaction? transaction, JsonObject op)
+  {
+    var kind = String(op["op"]);
+    var attributes = op["attributes"] is null ? null : Attributes(op["attributes"]);
+
+    switch (kind)
+    {
+      case "text.insert":
+        text.Insert(transaction, Number(op["index"]), String(op["text"]), attributes);
+        break;
+
+      case "text.delete":
+        text.Delete(transaction, Number(op["index"]), Number(op["length"]));
+        break;
+
+      case "text.format":
+        text.Format(
+            transaction,
+            Number(op["index"]),
+            Number(op["length"]),
+            attributes ?? throw new InvalidDataException("a format op carries no attributes"));
+        break;
+
+      case "text.embed":
+        text.InsertEmbed(
+            transaction,
+            Number(op["index"]),
+            BuildValue(op["embed"]) ?? throw new InvalidDataException("an embed op carries no embed"),
+            attributes);
+        break;
+
+      default:
+        throw new NotSupportedException($"\"{kind}\" is not an op the engine performs");
+    }
+  }
+
+  private static AnyObject Attributes(JsonNode? node)
+  {
+    return BuildValue(node) as AnyObject ??
+        throw new InvalidDataException("an op's attributes are not an object");
+  }
+
+  /// <summary>
+  /// The json oracle with every Y.Text delta merged into runs of equal
+  /// attributes, so redundant marks that only split runs compare equal.
+  /// </summary>
+  internal static JsonNode? MergeTextRuns(JsonNode? node)
+  {
+    switch (node)
+    {
+      case JsonObject { Count: 1 } wrapper when wrapper["$text"] is JsonArray delta:
+        return new JsonObject { ["$text"] = MergeDelta(delta) };
+
+      case JsonObject members:
+        var merged = new JsonObject();
+
+        foreach (var (key, value) in members)
+        {
+          merged[key] = MergeTextRuns(value);
+        }
+
+        return merged;
+
+      case JsonArray items:
+        return new JsonArray([.. items.Select(MergeTextRuns)]);
+
+      default:
+        return node?.DeepClone();
+    }
+  }
+
+  private static JsonArray MergeDelta(JsonArray delta)
+  {
+    var merged = new JsonArray();
+    JsonObject? last = null;
+
+    foreach (var entry in delta)
+    {
+      var operation = Object(entry);
+      var attributes = YjsEngineFixtures.Canonicalize(operation["attributes"] ?? new JsonObject());
+
+      if (last is not null &&
+          operation["insert"] is JsonValue text && text.TryGetValue<string>(out var characters) &&
+          last["insert"] is JsonValue previous && previous.TryGetValue<string>(out var before) &&
+          YjsEngineFixtures.Canonicalize(last["attributes"] ?? new JsonObject()) == attributes)
+      {
+        last["insert"] = before + characters;
+
+        continue;
+      }
+
+      last = Object(operation.DeepClone());
+      merged.Add(last);
+    }
+
+    return merged;
   }
 
   /// <summary>
@@ -199,6 +309,18 @@ internal static class ScenarioSupport
       return new YText(String(characters));
     }
 
+    if (members["$yxmltext"] is { } xmlCharacters)
+    {
+      var text = new YXmlText(String(xmlCharacters));
+
+      foreach (var op in members["ops"]?.AsArray() ?? [])
+      {
+        ApplyTextOp(text, null, Object(op));
+      }
+
+      return text;
+    }
+
     foreach (var key in members.Select(entry => entry.Key))
     {
       if (key.StartsWith("$yxml", StringComparison.Ordinal))
@@ -251,9 +373,9 @@ internal static class ScenarioSupport
     return target as YArray ?? throw new InvalidDataException("the op's target is not a Y.Array");
   }
 
-  private static YText Text(YAbstractType target)
+  private static YTextBase Text(YAbstractType target)
   {
-    return target as YText ?? throw new InvalidDataException("the op's target is not a Y.Text");
+    return target as YTextBase ?? throw new InvalidDataException("the op's target is not a Y.Text");
   }
 
   private static JsonArray Values(JsonNode? node)
@@ -425,7 +547,13 @@ internal static class ScenarioSupport
         engine,
         testCase["docs"]?[engine]?.GetValue<uint>() ??
             throw new InvalidDataException($"the case has no client id for \"{engine}\""),
-        [.. testCase["steps"]?.AsArray().Select(ReadScenarioStep) ?? []]);
+        [.. testCase["steps"]?.AsArray().Select(ReadScenarioStep) ?? []],
+        testCase["compare"]?.GetValue<string>() switch
+        {
+          null => false,
+          "segments" => true,
+          var other => throw new InvalidDataException($"\"{other}\" is not a compare mode"),
+        });
   }
 
   private static ScenarioStep ReadScenarioStep(JsonNode? node)
@@ -441,7 +569,14 @@ internal static class ScenarioSupport
         Bytes(step["update"]),
         step["updateOf"]?.GetValue<string>(),
         Names(kind == "deliver" ? step["to"] : step["deliver"]),
-        ReadExpect(step["expect"]));
+        ReadExpect(step["expect"]) is { } expect
+            ? expect with
+            {
+              Diverges = step["diverges"]?.GetValue<bool>() ?? false,
+              NoCleanup = ReadExpect(step["noCleanup"]),
+            }
+            : null,
+        Bytes(step["noCleanupUpdate"]));
   }
 
   private static ScenarioCase ReadSeed(string fileName)
@@ -607,7 +742,10 @@ internal sealed class ScenarioRunner
         step.Op ?? throw new InvalidDataException($"step \"{step.Id}\" carries no op"));
 
     Assert.NotNull(written);
-    AssertMirrorBytes(step, written);
+
+    // In a segments case the mirror ran yjs's cleanup; the no-cleanup doc
+    // wrote the bytes the engine must.
+    AssertMirrorBytes(step, written, testCase.Segments ? step.NoCleanupUpdate : step.Update);
 
     if (step.Id is { } id)
     {
@@ -615,9 +753,9 @@ internal sealed class ScenarioRunner
     }
   }
 
-  private void AssertMirrorBytes(ScenarioStep step, byte[] written)
+  private void AssertMirrorBytes(ScenarioStep step, byte[] written, byte[]? expected)
   {
-    var mirror = step.Update ??
+    var mirror = expected ??
         throw new InvalidDataException($"step \"{step.Id}\" carries no mirror update");
     var where = $"{testCase.Name} step \"{step.Id}\" ({step.Op?.ToJsonString()})";
 
@@ -658,6 +796,7 @@ internal sealed class ScenarioRunner
 
   private void Check(ScenarioExpect expect)
   {
+    // The cleanup only deletes, so the clocks agree even where the text does not.
     if (expect.StateVector is { } vector)
     {
       Assert.Equal(vector, Doc.EncodeStateVector());
@@ -672,8 +811,31 @@ internal sealed class ScenarioRunner
 
     if (expect.Json is { } json)
     {
+      var rendered = JsonRenderer.Render(Doc, testCase.Roots);
+      var wanted = YjsEngineFixtures.Canonicalize(
+          testCase.Segments ? ScenarioSupport.MergeTextRuns(json) : json);
+      var actual = YjsEngineFixtures.Canonicalize(
+          testCase.Segments ? ScenarioSupport.MergeTextRuns(rendered) : rendered);
+
+      if (expect.Diverges)
+      {
+        Assert.NotEqual(wanted, actual);
+      }
+      else
+      {
+        Assert.Equal(wanted, actual);
+      }
+
+      Checks++;
+    }
+
+    if (expect.NoCleanup is { } noCleanup)
+    {
       Assert.Equal(
-          YjsEngineFixtures.Canonicalize(json),
+          noCleanup.StateVector ?? throw new InvalidDataException("the no-cleanup oracle has no sv"),
+          Doc.EncodeStateVector());
+      Assert.Equal(
+          YjsEngineFixtures.Canonicalize(noCleanup.Json),
           YjsEngineFixtures.Canonicalize(JsonRenderer.Render(Doc, testCase.Roots)));
       Checks++;
     }

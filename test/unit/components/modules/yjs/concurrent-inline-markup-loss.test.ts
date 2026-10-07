@@ -165,7 +165,8 @@ describe('concurrent inline markup — marking a word the other peer is fixing',
       host.innerHTML = merged;
 
       const showsMarkup = (host.textContent ?? '').includes('<');
-      const lostTheTag = host.querySelector(tag) === null;
+      // A paragraph's text is read back in canonical spelling: <b> as <strong>.
+      const lostTheTag = host.querySelector(tag === 'b' ? 'strong' : tag) === null;
 
       if (showsMarkup || lostTheTag) {
         damaged.push(merged);

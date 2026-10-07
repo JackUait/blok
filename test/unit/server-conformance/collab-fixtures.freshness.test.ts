@@ -8,6 +8,9 @@ import { describe, expect, it } from 'vitest';
 
 import { DocumentStore } from '../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { outputBlocksToSegments } from '../../../src/shared/rich-text/block-data';
+import { CURRENT_RICH_TEXT_FIELDS } from '../../../src/shared/rich-text/fields';
 import type { OutputBlockData } from '../../../types/data-formats/output-data';
 
 /**
@@ -30,6 +33,7 @@ interface CollabFixtureManifest {
 
 interface CollabFixtureCase {
   canonical: OutputBlockData[];
+  canonicalSegments: OutputBlockData[];
   input: OutputBlockData[];
   name: string;
   update: Uint8Array;
@@ -96,11 +100,20 @@ function readCase(name: string): CollabFixtureCase {
     name,
     input: readBlocks(join(directory, 'input.json'), false),
     canonical: readBlocks(join(directory, 'canonical.json'), true),
+    canonicalSegments: readBlocks(join(directory, 'canonical.segments.json'), true),
     update: new Uint8Array(Buffer.from(base64, 'base64')),
   };
 }
 
-const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer());
+// Node has no DOM; the generator parses rich-field HTML with parse5 too.
+const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer({ htmlToSegments: htmlToSegmentsNode }));
+
+/** Host shape (contract §9): what the C# Export must produce for the doc. */
+const hostSegments = (blocks: OutputBlockData[]): OutputBlockData[] => outputBlocksToSegments(
+  blocks,
+  type => (Object.prototype.hasOwnProperty.call(CURRENT_RICH_TEXT_FIELDS, type) ? CURRENT_RICH_TEXT_FIELDS[type] : []),
+  htmlToSegmentsNode
+);
 
 const caseNames = listCaseDirectories();
 
@@ -132,6 +145,14 @@ describe('collab lockstep fixtures', () => {
       store.fromJSON(fixture.input);
 
       expect(store.toJSON()).toEqual(fixture.canonical);
+    });
+
+    it('holds canonical.json in host shape as canonical.segments.json (the C# Export target)', () => {
+      const store = createStore();
+
+      store.applyRemoteUpdate(fixture.update);
+
+      expect(hostSegments(store.toJSON())).toEqual(fixture.canonicalSegments);
     });
 
     it('round-trips canonical.json through fromJSON/toJSON unchanged', () => {

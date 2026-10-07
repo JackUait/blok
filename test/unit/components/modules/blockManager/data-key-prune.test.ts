@@ -160,7 +160,7 @@ const createHarness = (seed: SeedBlock[]): Harness => {
     readData: (blockId: string): Record<string, unknown> | undefined => {
       const data = yjsManager.getBlockById(blockId)?.get('data');
 
-      return data instanceof Y.Map ? data.toJSON() : undefined;
+      return data instanceof Y.Map ? yjsManager.yMapToObject(data) : undefined;
     },
     derive: async (blockId: string, data: Record<string, unknown>, from: readonly string[] = []): Promise<void> => {
       const stub = stubs.get(blockId);
@@ -479,6 +479,7 @@ describe('what a data write stores', () => {
 
     await mutate('p1', { text: '<b>bold</b><span class="katex">rendered</span>' });
 
-    expect(readData('p1')).toEqual({ text: '<b>bold</b>rendered' });
+    // Paragraph text is read back in canonical spelling.
+    expect(readData('p1')).toEqual({ text: '<strong>bold</strong>rendered' });
   });
 });

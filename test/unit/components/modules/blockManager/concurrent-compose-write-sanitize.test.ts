@@ -105,7 +105,10 @@ const peerData = (id: string): Y.Map<unknown> => {
   return data;
 };
 
-/** The peer types `insert` at offset `at` inside its own copy of the block. */
+/**
+ * The peer types `insert` at offset `at` inside its own copy of the block.
+ * On a formatted text (format 2) this is just characters, never markup.
+ */
 const peerTypes = (id: string, at: number, insert: string): void => {
   const text = peerData(id).get('text');
 
@@ -113,7 +116,44 @@ const peerTypes = (id: string, at: number, insert: string): void => {
     throw new Error(`the peer's «${id}».text is not mergeable`);
   }
 
-  text.insert(at, insert);
+  text.insert(at, insert, {});
+};
+
+/** The peer's formatted text (format 2) for a block. */
+const peerRichText = (id: string): Y.XmlText => {
+  const text = peerData(id).get('text');
+
+  if (!(text instanceof Y.XmlText)) {
+    throw new Error(`the peer's «${id}».text is not formatted`);
+  }
+
+  return text;
+};
+
+/** Format 2: a raw HTML embed, the way a hostile peer writes it. */
+const peerInsertsHtmlEmbed = (id: string, at: number, html: string): void => {
+  peerRichText(id).insertEmbed(at, { html }, {});
+};
+
+/** Format 2: a link mark over existing characters. */
+const peerLinks = (id: string, at: number, length: number, href: string): void => {
+  peerRichText(id).format(at, length, { link: { href } });
+};
+
+/**
+ * Format 1: the field is an unformatted Y.Text holding HTML, as in a room an
+ * old client or server seeded. The peer types HTML into it.
+ */
+const peerTypesFormat1Html = (id: string, at: number, html: string): void => {
+  const data = peerData(id);
+  const current = data.get('text');
+  const plain = current instanceof Y.Text && !(current instanceof Y.XmlText) ? current : null;
+
+  if (plain === null) {
+    throw new Error(`the peer's «${id}».text is not a format-1 Y.Text`);
+  }
+
+  plain.insert(at, html);
 };
 
 const settle = async (call: Promise<unknown>): Promise<'landed' | 'refused'> =>
@@ -223,6 +263,96 @@ describe('composeWrite overlaying the shared document into a Tool', () => {
 
       // The defect assertion first.
       expect(hrefs.filter((href) => href !== null && hasUnsafeScheme(href))).toHaveLength(0);
+    });
+  });
+
+  describe('format 2: a peer writing marks and embeds the sanitizer must reject', () => {
+    const unsafeHrefs = (): string[] => Array.from(requireHolder().querySelectorAll('a'))
+      .map((anchor) => anchor.getAttribute('href'))
+      .filter((href): href is string => href !== null && hasUnsafeScheme(href));
+
+    const savedText = async (): Promise<string> => {
+      const saved = await (editor as unknown as { save: () => Promise<OutputData> }).save();
+
+      return JSON.stringify(saved.blocks.find((block) => block.id === 'h')?.data ?? {});
+    };
+
+    it('does not render an <img onerror> html embed when an update races the write', async () => {
+      const instance = await boot(header());
+      const pending = instance.blocks.update('h', { level: 3 });
+
+      peerInsertsHtmlEmbed('h', 2, IMG_PAYLOAD);
+      deliverPeerUpdate();
+
+      await pending;
+      await frame();
+
+      expect(requireHolder().querySelectorAll('img[onerror], [onerror]')).toHaveLength(0);
+      expect(await savedText()).not.toContain('onerror');
+      // Not vacuous: the document's reader hands the payload on as HTML.
+      expect(dataOf('peer', 'h').text).toContain('onerror');
+      expect(dataOf('local', 'h').level).toBe(3);
+    });
+
+    it('does not render an <img onerror> html embed with no racing update', async () => {
+      await boot(header());
+
+      peerInsertsHtmlEmbed('h', 2, IMG_PAYLOAD);
+      deliverPeerUpdate();
+      await frame();
+
+      expect(requireHolder().querySelectorAll('img[onerror], [onerror]')).toHaveLength(0);
+      expect(await savedText()).not.toContain('onerror');
+      // Not vacuous: the document's reader hands the payload on as HTML.
+      expect(dataOf('peer', 'h').text).toContain('onerror');
+    });
+
+    it('does not render a javascript: link mark when an update races the write', async () => {
+      const instance = await boot(header());
+      const pending = instance.blocks.update('h', { level: 3 });
+
+      peerLinks('h', 0, 5, 'javascript:alert(1)');
+      deliverPeerUpdate();
+
+      await pending;
+      await frame();
+
+      expect(unsafeHrefs()).toHaveLength(0);
+      expect(await savedText()).not.toContain('javascript:');
+      // Not vacuous: the peer's own reader renders the mark as a javascript: href.
+      expect(dataOf('peer', 'h').text).toContain('href="javascript:alert(1)"');
+    });
+
+    it('does not render a javascript: link mark with no racing update', async () => {
+      await boot(header());
+
+      peerLinks('h', 0, 5, 'javascript:alert(1)');
+      deliverPeerUpdate();
+      await frame();
+
+      expect(unsafeHrefs()).toHaveLength(0);
+      expect(await savedText()).not.toContain('javascript:');
+      // Not vacuous: the peer's own reader renders the mark as a javascript: href.
+      expect(dataOf('peer', 'h').text).toContain('href="javascript:alert(1)"');
+    });
+
+    it('format 1: HTML typed into an unformatted Y.Text renders no <img> and no javascript: href', async () => {
+      await boot(header());
+
+      // Turn the field into a format-1 HTML Y.Text on both sides first.
+      peerData('h').set('text', new Y.Text('title'));
+      deliverPeerUpdate();
+      await frame();
+
+      peerTypesFormat1Html('h', 5, `${IMG_PAYLOAD}${LINK_PAYLOAD}`);
+      deliverPeerUpdate();
+      await frame();
+
+      expect(requireHolder().querySelectorAll('img')).toHaveLength(0);
+      expect(unsafeHrefs()).toHaveLength(0);
+      expect(await savedText()).not.toContain('onerror');
+      expect(await savedText()).not.toContain('javascript:');
+      expect(dataOf('peer', 'h').text).toContain('onerror');
     });
   });
 

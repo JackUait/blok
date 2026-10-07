@@ -14,6 +14,7 @@ import * as Y from 'yjs';
 
 import { DocumentStore } from '../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
 import type { OutputBlockData } from '../../../types/data-formats/output-data';
 import { startDocEndpoint, type FixtureDocEndpoint } from './doc-endpoint';
 import { startServer, type RunningServer } from './run-against';
@@ -317,7 +318,7 @@ async function withSyncServer(
   }
 }
 
-const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer());
+const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer({ htmlToSegments: htmlToSegmentsNode }));
 
 /**
  * Edits a stock client's doc through the real DocumentStore, using only its

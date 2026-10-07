@@ -10,7 +10,7 @@
     "id": "u2",
     "type": "paragraph",
     "data": {
-      "text": "tabs\tand\nnewlines\r\nand \"quotes\" \\ backslashes <b>&amp;</b>"
+      "text": "tabs\tand newlines and \"quotes\" \\ backslashes <strong>&amp;</strong>"
     }
   },
   {

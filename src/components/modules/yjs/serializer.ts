@@ -2,6 +2,12 @@ import { nanoid } from 'nanoid';
 import * as Y from 'yjs';
 
 import type { OutputBlockData } from '../../../../types/data-formats/output-data';
+import type { RichText } from '../../../../types/rich-text';
+import { htmlToSegmentsDom } from '../../utils/rich-text-dom';
+import { deltaToSegments, normalizeMarkValue, segmentsToDeltaOps, type ReadDeltaOp } from '../../../shared/rich-text/delta';
+import { CURRENT_RICH_TEXT_FIELDS } from '../../../shared/rich-text/fields';
+import { isRichText } from '../../../shared/rich-text/guards';
+import { segmentsToHtml } from '../../../shared/rich-text/segments-to-html';
 
 /** The NUL character. Kept as a code-point so no raw NUL byte lives in source. */
 const NUL_CHAR = String.fromCharCode(0);
@@ -319,11 +325,95 @@ export const isBoundaryCharacter = (char: string): boolean => {
   return BOUNDARY_CHARACTERS.has(char);
 };
 
+export interface YBlockSerializerOptions {
+  /** A tool's own `static richTextFields`, added to the built-in table. */
+  richTextFieldsFor?: (type: string) => string[];
+  /** Defaults to the DOM parser; node callers (fixtures, server tests) pass parse5's. */
+  htmlToSegments?: (html: string) => RichText;
+}
+
 /**
  * Serializer for converting between Yjs and YjsOutputBlockData formats.
- * This is a stateless utility class - all methods are pure functions.
+ * Stateless apart from the two lookups it is given.
  */
 export class YBlockSerializer {
+  private readonly richTextFieldsFor: (type: string) => string[];
+  private readonly htmlToSegments: (html: string) => RichText;
+
+  constructor(options: YBlockSerializerOptions = {}) {
+    this.richTextFieldsFor = options.richTextFieldsFor ?? ((): string[] => []);
+    this.htmlToSegments = options.htmlToSegments ?? htmlToSegmentsDom;
+  }
+
+  /**
+   * Whether `key` of a `type` block is minted as formatted text. Asked only
+   * at mint time: afterwards the stored class decides, because a block's type
+   * can change under a peer's feet.
+   */
+  public isRichTextField(type: unknown, key: string): boolean {
+    if (typeof type !== 'string') {
+      return false;
+    }
+
+    const builtIn = Object.prototype.hasOwnProperty.call(CURRENT_RICH_TEXT_FIELDS, type)
+      ? CURRENT_RICH_TEXT_FIELDS[type]
+      : [];
+
+    return builtIn.includes(key) || this.richTextFieldsFor(type).includes(key);
+  }
+
+  /**
+   * Rich field input (HTML or segments) in the exact form `readRichText`
+   * returns once stored: canonical, NUL-free, embed payloads normalised. Null
+   * for any other shape. Equal results mean the write changes nothing.
+   */
+  public toRichSegments(value: unknown): RichText | null {
+    const rich = typeof value === 'string' ? this.htmlToSegments(value) : value;
+
+    if (!isRichText(rich)) {
+      return null;
+    }
+
+    return deltaToSegments(segmentsToDeltaOps(rich).map(op => ({
+      insert: typeof op.insert === 'string' ? stripNul(op.insert) : normalizeMarkValue(op.insert),
+      attributes: op.attributes,
+    })));
+  }
+
+  /**
+   * A new formatted text holding `segments`. Every insert names its marks,
+   * `{}` included, so no run inherits the marks of the run before it.
+   */
+  public mintRichText(segments: RichText): Y.XmlText {
+    const text = new Y.XmlText();
+
+    this.insertRichText(text, 0, segments);
+
+    return text;
+  }
+
+  /** Insert `segments` at `index` with explicit marks per run; NUL is scrubbed again here as the write chokepoint. */
+  public insertRichText(text: Y.XmlText, index: number, segments: RichText): void {
+    segmentsToDeltaOps(segments).reduce((at, op) => {
+      if (typeof op.insert !== 'string') {
+        text.insertEmbed(at, normalizeMarkValue(op.insert) as Record<string, unknown>, op.attributes);
+
+        return at + 1;
+      }
+
+      const chars = stripNul(op.insert);
+
+      text.insert(at, chars, op.attributes);
+
+      return at + chars.length;
+    }, index);
+  }
+
+  /** Canonical segments of a formatted text, read from its delta (never `toJSON`). */
+  public readRichText(text: Y.XmlText): RichText {
+    return deltaToSegments(text.toDelta() as ReadDeltaOp[]);
+  }
+
   /**
    * Convert YjsOutputBlockData to Y.Map
    */
@@ -338,7 +428,7 @@ export class YBlockSerializer {
     // Normalize empty paragraph data to { text: '' } for consistent undo/redo behavior
     const normalizedData = this.normalizeBlockData(blockData.type, blockData.data);
 
-    yblock.set('data', this.blockDataToYMap(normalizedData));
+    yblock.set('data', this.blockDataToYMap(normalizedData, blockData.type));
 
     // EAGER, always — the same law as `contentIds` below and the `Y.Text` in
     // `blockDataToYMap`: a container two peers can create must be minted by the
@@ -467,22 +557,28 @@ export class YBlockSerializer {
    * peers `set(key, freshText)` at once, and map-set is last-writer-wins — the
    * loser's container is discarded with everything typed into it.
    *
-   * Read-back is unchanged: `yValueToPlain` renders a shared type through
-   * `toJSON()`, and an unformatted `Y.Text`'s is the string it holds.
+   * A rich field (`isRichTextField`) is a formatted `Y.XmlText`, from HTML or
+   * segments; any other diffable key stays an unformatted `Y.Text`.
    * @param data - the block's plain data object
+   * @param type - the block's type, which picks the rich fields
    */
-  public blockDataToYMap(data: Record<string, unknown>): Y.Map<unknown> {
+  public blockDataToYMap(data: Record<string, unknown>, type?: unknown): Y.Map<unknown> {
     const ymap = new Y.Map<unknown>();
 
     for (const [key, value] of Object.entries(data)) {
       const dataKey = stripNul(key);
+      const segments = this.isRichTextField(type, dataKey) ? this.toRichSegments(value) : null;
 
-      ymap.set(
-        dataKey,
-        isDiffableTextKey(dataKey) && typeof value === 'string'
-          ? new Y.Text(stripNul(value))
-          : this.plainToYValue(value)
-      );
+      if (segments !== null) {
+        ymap.set(dataKey, this.mintRichText(segments));
+      } else {
+        ymap.set(
+          dataKey,
+          isDiffableTextKey(dataKey) && typeof value === 'string'
+            ? new Y.Text(stripNul(value))
+            : this.plainToYValue(value)
+        );
+      }
     }
 
     return ymap;
@@ -836,14 +932,20 @@ export class YBlockSerializer {
       return this.yArrayToPlain(value, depth);
     }
 
-    // A block's mergeable text is a Y.Text and reads back through `toJSON()`
-    // as the string it holds, so OutputData is unchanged. A foreign or
-    // future-format client can nest other shared types; falling through would
-    // leak a live shared object (or a subdocument) into OutputData.
+    // A foreign or future-format client can nest other shared types; falling
+    // through would leak a live shared object (or a subdocument) into OutputData.
     if (value instanceof Y.Doc) {
       return null;
     }
 
+    // Before the generic branch: XmlText's `toJSON()` renders its marks as
+    // fake tags around UNESCAPED text and drops embeds. Tools read HTML.
+    if (value instanceof Y.XmlText) {
+      return segmentsToHtml(this.readRichText(value));
+    }
+
+    // An unformatted Y.Text (a diffable key, or a format-1 rich field) holds
+    // the string itself.
     if (value instanceof Y.AbstractType) {
       const plain: unknown = value.toJSON();
 

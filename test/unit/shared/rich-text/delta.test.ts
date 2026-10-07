@@ -38,6 +38,12 @@ const EXTRA: RichText[] = [
   [{ text: 'run', marks: { bold: true } }, { text: 'after' }],
   [{ embed: { equation: { expression: 'x' } }, marks: { bold: true } }, { text: 'tail', marks: { bold: true } }],
   [{ text: 'x', marks: { 'tag:span': { 'data-a': '1', class: 'c' } } }],
+  // Off marks spelled as null, and links that are not links: canonical form and Yjs form must both drop them.
+  [
+    { text: 'a', marks: { color: null, 'tag:abbr': null, bold: true } },
+    { text: 'b', marks: { link: null } },
+    { text: 'c', marks: { link: 'x' } },
+  ] as unknown as RichText,
 ];
 
 const ALL = [...CANONICAL, ...EXTRA];

@@ -50,28 +50,53 @@ const sortedRecord = (record: Record<string, string>): Record<string, string> =>
 
 const BOOLEAN_MARKS = new Set<keyof RichTextMarks>(['highlight', 'bold', 'italic', 'underline', 'strikethrough', 'code', 'sup', 'sub']);
 
-/** Yjs stores link keys sorted; this order is the one the echo check and the C# export compare. */
-const canonicalLink = (link: RichTextLink): RichTextLink => ({
-  href: link.href,
-  ...(link.target === undefined ? {} : { target: link.target }),
-  ...(link.rel === undefined ? {} : { rel: link.rel }),
-});
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * Segments write a link `{ href, target, rel }`; Yjs stores the keys sorted.
+ * The two orders differ on purpose: readers rebuild this one, and the echo
+ * check and the C# export compare it. A link without a string href is dropped.
+ */
+const canonicalLink = (link: unknown): RichTextLink | undefined => {
+  if (!isRecord(link) || typeof link.href !== 'string') {
+    return undefined;
+  }
+
+  return {
+    href: link.href,
+    ...(typeof link.target === 'string' ? { target: link.target } : {}),
+    ...(typeof link.rel === 'string' ? { rel: link.rel } : {}),
+  };
+};
+
+/** Off marks are absent: `null` (a Yjs format removal) counts as `undefined`. */
+const markValue = (key: string, value: unknown): unknown => {
+  if (key === 'link') {
+    return canonicalLink(value);
+  }
+  if (BOOLEAN_MARKS.has(key as keyof RichTextMarks)) {
+    // A host may write `bold: false`; only `true` is a mark.
+    return value === true ? true : undefined;
+  }
+  if (value === null) {
+    return undefined;
+  }
+
+  return key.startsWith('tag:') && isRecord(value) ? sortedRecord(value as Record<string, string>) : value;
+};
 
 const orderMarks = (marks: RichTextMarks): RichTextMarks | undefined => {
+  const record = marks as Record<string, unknown>;
+  const unknownKeys = Object.keys(record).filter(name => !MARK_ORDER.includes(name as keyof RichTextMarks)).sort();
   const ordered: Record<string, unknown> = {};
 
-  for (const key of MARK_ORDER) {
-    // A host may write `bold: false`; only `true` is a mark.
-    if (BOOLEAN_MARKS.has(key) ? marks[key] === true : marks[key] !== undefined) {
-      ordered[key] = key === 'link' && marks.link !== undefined ? canonicalLink(marks.link) : marks[key];
-    }
-  }
-  for (const key of Object.keys(marks).filter(name => !MARK_ORDER.includes(name as keyof RichTextMarks)).sort()) {
-    const value = (marks as Record<string, unknown>)[key];
+  for (const key of [...MARK_ORDER, ...unknownKeys]) {
+    const value = markValue(key, record[key]);
 
-    ordered[key] = key.startsWith('tag:') && typeof value === 'object' && value !== null && !Array.isArray(value)
-      ? sortedRecord(value as Record<string, string>)
-      : value;
+    if (value !== undefined) {
+      ordered[key] = value;
+    }
   }
 
   return Object.keys(ordered).length === 0 ? undefined : ordered as RichTextMarks;

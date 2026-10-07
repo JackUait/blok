@@ -101,4 +101,47 @@ describe('frozen format-1 collab fixtures', () => {
       expect(caseNames().some(name => richTexts(name).length > 0 && (readJson(join(FIXTURE_ROOT, name, 'canonical.json')) as CanonicalBlock[]).some(block => block.type === type && typeof block.data?.text === 'string' && block.data.text.includes('<'))), type).toBe(true);
     }
   });
+
+  it('keeps the fields C3 must not convert as unformatted HTML', () => {
+    const data = (id: string): Y.Map<unknown> => {
+      const block = loadDoc('rich-negatives').getMap<Y.Map<unknown>>('blocks').get(id);
+      const value = block?.get('data');
+
+      if (!(value instanceof Y.Map)) {
+        throw new Error(`rich-negatives: ${id} has no data map`);
+      }
+
+      return value as Y.Map<unknown>;
+    };
+    const plainText = [
+      ['n-code', 'code', '<b>not markup</b> &amp; a < b'],
+      ['n-image', 'caption', 'a <b>bold</b> caption'],
+      ['n-callout', 'title', '<b>legacy</b> title'],
+      ['n-widget', 'text', '<b>custom</b> tool text'],
+    ] as const;
+
+    for (const [id, key, html] of plainText) {
+      const value = data(id).get(key);
+
+      expect(value, id).toBeInstanceOf(Y.Text);
+      expect(value, id).not.toBeInstanceOf(Y.XmlText);
+      expect((value as Y.Text).toDelta(), id).toStrictEqual([{ insert: html }]);
+    }
+
+    const properties = data('n-row').get('properties');
+    const nested: unknown[] = [];
+
+    expect(properties).toBeInstanceOf(Y.Map);
+    // The nested row document is plain JSON in Yjs: no text type anywhere under it.
+    const walk = (value: unknown): void => {
+      nested.push(value);
+      if (value instanceof Y.Map || value instanceof Y.Array) {
+        value.forEach((child: unknown) => walk(child));
+      }
+    };
+
+    walk(properties);
+    expect(nested.some(value => value instanceof Y.Text)).toBe(false);
+    expect(JSON.stringify((properties as Y.Map<unknown>).toJSON())).toContain('"text":"<b>nested</b> doc"');
+  });
 });

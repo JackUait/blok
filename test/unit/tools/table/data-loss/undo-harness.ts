@@ -11,7 +11,7 @@ import { ListItem } from '../../../../../src/tools/list';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import type { CellContent, LegacyCellContent, TableData } from '../../../../../src/tools/table/types';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
-import { htmlOf } from '../../../helpers/saved-as-html';
+import { blockTextAsHtml, type HtmlReadOptions } from '../../../helpers/saved-as-html';
 
 export const TABLE_ID = 'tbl';
 /** Past the history capture window so the prior step is its own entry. */
@@ -96,20 +96,23 @@ export const contentOf = (output: OutputData): CellContent[][] => {
 export const tableDataOf = (output: OutputData): TableData | undefined =>
   output.blocks.find(b => b.id === TABLE_ID)?.data as TableData | undefined;
 
-const htmlTextOf = (block: OutputBlockData): string => {
-  const text = htmlOf((block.data as { text?: unknown }).text);
+/** Docs read from Yjs: internal data, still HTML on purpose. */
+const internalDocs = new WeakSet<OutputData>();
+
+const htmlTextOf = (block: OutputBlockData, output: OutputData, options: HtmlReadOptions = {}): string => {
+  const text = blockTextAsHtml(block, { allowHtml: options.allowHtml === true || internalDocs.has(output) });
 
   return typeof text === 'string' ? text : '';
 };
 
-const textById = (output: OutputData): Map<string, string> => new Map(output.blocks.map(b => [
+const textById = (output: OutputData, options: HtmlReadOptions): Map<string, string> => new Map(output.blocks.map(b => [
   b.id ?? '',
-  htmlTextOf(b),
+  htmlTextOf(b, output, options),
 ]));
 
 /** Saved texts per cell, row-major: what a reader of the saved JSON sees. */
-export const savedCellTexts = (output: OutputData): string[][] => {
-  const texts = textById(output);
+export const savedCellTexts = (output: OutputData, options: HtmlReadOptions = {}): string[][] => {
+  const texts = textById(output, options);
 
   return contentOf(output).map(row => row.map(cell => {
     if (typeof cell === 'string') {
@@ -264,7 +267,11 @@ export const settle = async (editor: TestEditor): Promise<void> => {
 export const yjsDoc = async (editor: TestEditor): Promise<OutputData> => {
   await settle(editor);
 
-  return { blocks: editor.module.yjsManager.toJSON() };
+  const doc = { blocks: editor.module.yjsManager.toJSON() };
+
+  internalDocs.add(doc);
+
+  return doc;
 };
 
 /** Every block id in the Yjs doc, sorted. */
@@ -284,7 +291,11 @@ export const reload = async (editor: TestEditor): Promise<{ editor: TestEditor; 
 };
 
 /** Saved table content, cell texts and ids vs what the Yjs doc holds. */
-export const consistency = async (editor: TestEditor): Promise<{
+/**
+ * @param editor - the editor
+ * @param options - pass `allowHtml` when the editor's output is legacy (still HTML)
+ */
+export const consistency = async (editor: TestEditor, options: HtmlReadOptions = {}): Promise<{
   savedTexts: string[][];
   yjsTexts: string[][];
   savedIds: string[];
@@ -294,7 +305,7 @@ export const consistency = async (editor: TestEditor): Promise<{
   const saved = await editor.save();
 
   return {
-    savedTexts: savedCellTexts(saved),
+    savedTexts: savedCellTexts(saved, options),
     yjsTexts: savedCellTexts(doc),
     savedIds: saved.blocks.map(b => b.id ?? '').sort(),
     yjsIds: doc.blocks.map(b => b.id ?? '').sort(),
@@ -303,7 +314,7 @@ export const consistency = async (editor: TestEditor): Promise<{
 
 /** Every block as "id:type:parent:text", sorted — catches loss at any depth. */
 export const blockFacts = (output: OutputData): string[] => output.blocks.map(b =>
-  `${b.id ?? ''}:${b.type}:${b.parent ?? ''}:${htmlTextOf(b)}`
+  `${b.id ?? ''}:${b.type}:${b.parent ?? ''}:${htmlTextOf(b, output)}`
 ).sort();
 
 export const pasteHtml = (target: HTMLElement, html: string): void => {

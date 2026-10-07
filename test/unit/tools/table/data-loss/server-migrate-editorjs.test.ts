@@ -34,7 +34,8 @@ describe('migrate(): editor.js tables', () => {
 
     expect(table?.data, JSON.stringify(lossy)).toMatchObject({ withHeadings: true, stretched: true });
 
-    const view = viewTable(out);
+    // migrate() output is input data, still HTML.
+    const view = viewTable(out, 0, { allowHtml: true });
 
     expect(view?.grid.flat().map(c => c.texts)).toEqual([['paragraph:H1'], ['paragraph:H2'], ['paragraph:a'], ['paragraph:b']]);
     const children = out.blocks.filter(b => b.type !== 'table');

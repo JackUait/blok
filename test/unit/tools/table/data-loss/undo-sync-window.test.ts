@@ -10,6 +10,9 @@ import {
   savedCellTexts, setup, sleep, teardown, typeInto, undo, yjsIds,
 } from './undo-harness';
 
+// String-cell input is legacy, so the save stays HTML until task A3.
+const LEGACY_HTML = { allowHtml: true };
+
 describe('undo probes: replays inside the sync window', () => {
   beforeEach(setup);
   afterEach(teardown);
@@ -70,7 +73,7 @@ describe('undo probes: replays inside the sync window', () => {
 
   it('legacy string-cell table: delete row -> undo -> redo -> undo, then reload', async () => {
     const editor = await boot(buildDoc([['A', 'B'], ['C', 'D']], {}));
-    const first = await consistency(editor);
+    const first = await consistency(editor, LEGACY_HTML);
 
     expect(first.savedTexts).toEqual([['A', 'B'], ['C', 'D']]);
     expect(first.yjsTexts).toEqual(first.savedTexts);
@@ -78,7 +81,7 @@ describe('undo probes: replays inside the sync window', () => {
     gripAction('row', 1, 'Delete');
     await sleep(CAPTURE);
     await undo(editor);
-    const c = await consistency(editor);
+    const c = await consistency(editor, LEGACY_HTML);
 
     expect(c.savedTexts).toEqual([['A', 'B'], ['C', 'D']]);
     expect(c.yjsTexts).toEqual(c.savedTexts);
@@ -86,7 +89,7 @@ describe('undo probes: replays inside the sync window', () => {
 
     await redo(editor);
     await undo(editor);
-    const c2 = await consistency(editor);
+    const c2 = await consistency(editor, LEGACY_HTML);
 
     expect(c2.savedTexts).toEqual([['A', 'B'], ['C', 'D']]);
     expect(c2.yjsTexts).toEqual(c2.savedTexts);
@@ -105,12 +108,12 @@ describe('undo probes: replays inside the sync window', () => {
     await typeInto(cellId, 'C typed');
     await sleep(CAPTURE);
     await undo(editor);
-    const c = await consistency(editor);
+    const c = await consistency(editor, LEGACY_HTML);
 
     expect(c.savedTexts).toEqual([['A', 'B'], ['C', 'D']]);
     expect(c.yjsTexts).toEqual(c.savedTexts);
     await redo(editor);
-    const r = await consistency(editor);
+    const r = await consistency(editor, LEGACY_HTML);
 
     expect(r.savedTexts).toEqual([['A', 'B'], ['C typed', 'D']]);
     expect(r.yjsTexts).toEqual(r.savedTexts);
@@ -150,14 +153,14 @@ describe('undo probes: replays inside the sync window', () => {
     await sleep(100);
     await editor.readOnly.set(false);
     await sleep(CAPTURE);
-    const first = await consistency(editor);
+    const first = await consistency(editor, LEGACY_HTML);
 
     expect(first.yjsTexts).toEqual(first.savedTexts);
 
     gripAction('row', 0, 'Delete');
     await sleep(CAPTURE);
     await undo(editor);
-    const c = await consistency(editor);
+    const c = await consistency(editor, LEGACY_HTML);
 
     expect(c.savedTexts).toEqual([['A', 'B'], ['C', 'D']]);
     expect(c.yjsTexts).toEqual(c.savedTexts);

@@ -1170,6 +1170,13 @@ describe("rich text segments are the only saved shape", () => {
     }
   });
 
+  it.each(["output-data", "block-data"])("shows rich text as segments in the %s example", (id) => {
+    const example = API_SECTIONS.find((section) => section.id === id)?.example ?? "";
+
+    expect(example).toContain('"text": [');
+    expect(example).not.toMatch(/data"?:\s*\{\s*"text":\s*"/);
+  });
+
   it("migrates a stored document before blocksOfType reads it", () => {
     const example = allMethods.find((method) => method.name === "blocksOfType(data, type)")?.example ?? "";
     const migrateAt = example.indexOf("migrateToRichText(");

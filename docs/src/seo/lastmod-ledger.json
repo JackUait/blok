@@ -28,8 +28,8 @@
     "date": "2026-10-07"
   },
   "/docs/block-data": {
-    "hash": "7b692bdc21e25883",
-    "date": "2026-10-05"
+    "hash": "32d9f207d84d5c59",
+    "date": "2026-10-07"
   },
   "/docs/blocks-api": {
     "hash": "cde719e5b7b43e33",
@@ -80,7 +80,7 @@
     "date": "2026-10-07"
   },
   "/docs/core": {
-    "hash": "2014db5f522c91fc",
+    "hash": "915a35045f93e8fe",
     "date": "2026-10-07"
   },
   "/docs/custom-block-tool": {
@@ -172,7 +172,7 @@
     "date": "2026-09-08"
   },
   "/docs/output-data": {
-    "hash": "49689d6fffc1e1a1",
+    "hash": "5acb96fa31dba4d0",
     "date": "2026-10-07"
   },
   "/docs/page": {
@@ -348,8 +348,8 @@
     "date": "2026-10-07"
   },
   "/ru/docs/block-data": {
-    "hash": "c11fa33e63176bcc",
-    "date": "2026-10-05"
+    "hash": "28db746ca4575998",
+    "date": "2026-10-07"
   },
   "/ru/docs/blocks-api": {
     "hash": "37b5843bb5bb4afa",
@@ -400,7 +400,7 @@
     "date": "2026-10-07"
   },
   "/ru/docs/core": {
-    "hash": "c50475becb89711b",
+    "hash": "6b8b5c6a704bc791",
     "date": "2026-10-07"
   },
   "/ru/docs/custom-block-tool": {
@@ -492,7 +492,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/output-data": {
-    "hash": "e8a1ecc334304ea4",
+    "hash": "445b8b3721707d9c",
     "date": "2026-10-07"
   },
   "/ru/docs/page": {

@@ -130,7 +130,7 @@ export const API_SECTIONS: ApiSection[] = [
         name: "save()",
         returnType: "Promise<OutputData>",
         description:
-          "Extracts the current editor content as structured JSON data. This is the main method for saving editor content.\n\nRich text fields, such as `paragraph.text`, hold segments: arrays of `{ text, marks? }` runs. The migration guide describes the shape.",
+          "Extracts the current editor content as structured JSON data. This is the main method for saving editor content.\n\nRich text fields, such as `paragraph.text`, hold segments: arrays of `{ text, marks? }` runs. A document saved by an older version can hold HTML strings until it is saved again. `migrateToRichText` converts it.",
         example: `// Save editor content
 const data = await editor.save();
 console.log(data.blocks); // Array of block data`,
@@ -3559,12 +3559,12 @@ interface OutputData {
     {
       "id": "p6QK0Xz1Ab",
       "type": "paragraph",
-      "data": { "text": "Hello, world!" }
+      "data": { "text": [{ "text": "Hello, world!" }] }
     },
     {
       "id": "hM3lTn9RdC",
       "type": "header",
-      "data": { "text": "Title", "level": 2 }
+      "data": { "text": [{ "text": "Title" }], "level": 2 }
     }
   ]
 }`,
@@ -3915,13 +3915,13 @@ interface OutputBlockData {
 const paragraphBlock: OutputBlockData = {
   id: "p6QK0Xz1Ab",
   type: "paragraph",
-  data: { "text": "Hello, world!" }
+  data: { "text": [{ "text": "Hello, world!" }] }
 };
 
 const headerBlock: OutputBlockData = {
   id: "hM3lTn9RdC",
   type: "header",
-  data: { "text": "Chapter 1", "level": 1 }
+  data: { "text": [{ "text": "Chapter 1" }], "level": 1 }
 };
 
 // Each list item is its own block — the list tool saves a single item,
@@ -3930,7 +3930,7 @@ const listItemBlock: OutputBlockData = {
   id: "wY7bV2sQ8e",
   type: "list",
   data: {
-    "text": "Item 1",
+    "text": [{ "text": "Item 1" }],
     "style": "unordered"
   }
 };`,

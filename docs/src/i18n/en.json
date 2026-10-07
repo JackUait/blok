@@ -120,7 +120,7 @@
       "description": "The main editor class. It creates the Blok editor instance and manages it. Every namespace a tool reaches through `api.*` is also on the instance as `editor.*`. The properties below are that same surface, plus the `width`, `placeholder`, `tokens` and `i18n` namespaces the class declares itself.",
       "methods": {
         "save": {
-          "description": "Extracts the current editor content as structured JSON data. This is the main method for saving editor content.\n\nRich text fields, such as `paragraph.text`, hold segments: arrays of `{ text, marks? }` runs. The migration guide describes the shape.",
+          "description": "Extracts the current editor content as structured JSON data. This is the main method for saving editor content.\n\nRich text fields, such as `paragraph.text`, hold segments: arrays of `{ text, marks? }` runs. A document saved by an older version can hold HTML strings until it is saved again. `migrateToRichText` converts it.",
           "note": "Call it after `await editor.isReady`. The returned JSON is your source of truth. Store it and pass it back to `render()`."
         },
         "render": {

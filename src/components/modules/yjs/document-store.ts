@@ -759,7 +759,9 @@ export class DocumentStore {
       // (paragraph → header, list item → quote) keeps the peer's characters. A
       // conversion to a different shape (paragraph → image) does not, and must
       // not — the field is gone from the new tool's data, so the prune below
-      // removes it on both peers. Replace still replaces.
+      // removes it on both peers. Replace still replaces. Nor does a flip
+      // between rich and non-rich below: it re-mints the key, so a peer's
+      // concurrent characters in the old value are lost.
       for (const [key, value] of Object.entries(normalized)) {
         const dataKey = stripNul(key);
         const current: unknown = ydata.get(dataKey);
@@ -1432,6 +1434,23 @@ export class DocumentStore {
           // Through plainToYValue so a primitive-array leaf is NUL-scrubbed.
           ydata.set(dataKey, this.serializer.plainToYValue(value));
         }
+      }, 'local');
+
+      return true;
+    }
+
+    // A formatted text under a field its registered tool does not declare
+    // rich: what a lost type race leaves (A converts custom → paragraph while
+    // B's custom keeps the type). Downgrade it to an HTML Y.Text on a save
+    // that changes it; last-writer-wins once per field, like the upgrade.
+    if (currentValue instanceof Y.XmlText && typeof value === 'string' &&
+      this.serializer.isPlainTextField(yblock.get('type'), dataKey)) {
+      if (equals(this.serializer.readRichText(currentValue), this.serializer.toRichSegments(value))) {
+        return false;
+      }
+
+      this.transact(() => {
+        ydata.set(dataKey, this.serializer.mintDataValue(yblock.get('type'), dataKey, value));
       }, 'local');
 
       return true;

@@ -14,8 +14,9 @@ import type { BlokModules } from '../../../../../src/types-internal/blok-modules
  * under a rich field must heal on the next local write.
  */
 
-const createStore = (clientId: number): DocumentStore => {
-  const store = new DocumentStore(new YBlockSerializer());
+/** `knownTypes`: the tools registered on this client (none by default). */
+const createStore = (clientId: number, knownTypes: string[] = []): DocumentStore => {
+  const store = new DocumentStore(new YBlockSerializer({ isKnownType: type => knownTypes.includes(type) }));
   const doc = store.blocksMap.doc;
 
   if (doc !== null) {
@@ -133,7 +134,7 @@ describe('concurrent paragraph → custom and paragraph → header (e8)', () => 
   it.each([
     [1, 2],
     [2, 1],
-  ])('converges, reads as text, and heals on the next local write (clientIDs A=%i B=%i)', (idA, idB) => {
+  ])('converges, reads as text, and heals on the next local write; the peer keystroke typed during the flip is lost (accepted) (clientIDs A=%i B=%i)', (idA, idB) => {
     const a = createStore(idA);
     const b = createStore(idB);
 
@@ -213,5 +214,99 @@ describe('concurrent paragraph → custom and paragraph → header (e8)', () => 
     expect(storedText(a, 'b1')).toBeInstanceOf(Y.XmlText);
     expect(storedText(b, 'b1')).toBeInstanceOf(Y.XmlText);
     expect(textOf(a, 'b1')).toBe(textOf(b, 'b1'));
+  });
+});
+
+describe('a plain HTML Y.Text under a rich field', () => {
+  it('writes nothing when a save only respells it (Review Focus 1, format 1)', () => {
+    const store = createStore(1);
+
+    store.fromJSON([{ id: 'b1', type: 'custom', data: { text: '<b>x</b>' } }]);
+    (store.getBlockById('b1') as Y.Map<unknown>).set('type', 'paragraph');
+
+    const doc = store.blocksMap.doc;
+    const counter = { updates: 0 };
+
+    doc?.on('update', () => {
+      counter.updates += 1;
+    });
+
+    expect(store.updateBlockData('b1', 'text', '<strong>x</strong>')).toBe(false);
+    expect(counter.updates).toBe(0);
+    expect(storedText(store, 'b1')).not.toBeInstanceOf(Y.XmlText);
+  });
+});
+
+describe('concurrent custom → paragraph that loses the type race', () => {
+  it.each([
+    [1, 2],
+    [2, 1],
+  ])('a registered tool that does not declare the key gets a plain Y.Text back on its next save (clientIDs A=%i B=%i)', (idA, idB) => {
+    const a = createStore(idA, ['custom']);
+    const b = createStore(idB, ['custom']);
+
+    a.fromJSON([{ id: 'b1', type: 'custom', data: { text: '<b>a</b>' } }]);
+    sync(a, b);
+
+    a.replaceBlockContent('b1', 'paragraph', { text: '<b>a</b>' });
+    b.replaceBlockContent('b1', 'custom', { text: '<b>a</b>' });
+    sync(a, b);
+
+    if (blockOf(a, 'b1')?.type !== 'custom') {
+      expect(storedText(a, 'b1')).toBeInstanceOf(Y.XmlText);
+
+      return;
+    }
+
+    // The custom block holds A's formatted text. B's next save downgrades it.
+    expect(storedText(b, 'b1')).toBeInstanceOf(Y.XmlText);
+
+    b.updateBlockData('b1', 'text', '<b>a</b><div>block</div>');
+    sync(a, b);
+
+    for (const store of [a, b]) {
+      const text = storedText(store, 'b1');
+
+      expect(text).not.toBeInstanceOf(Y.XmlText);
+      expect((text as Y.Text).toJSON()).toBe('<b>a</b><div>block</div>');
+    }
+  });
+
+  it('runs the custom-wins order at least once', () => {
+    const winners = [[1, 2], [2, 1]].map(([idA, idB]) => {
+      const a = createStore(idA, ['custom']);
+      const b = createStore(idB, ['custom']);
+
+      a.fromJSON([{ id: 'b1', type: 'custom', data: { text: 'x' } }]);
+      sync(a, b);
+      a.replaceBlockContent('b1', 'paragraph', { text: 'x' });
+      b.replaceBlockContent('b1', 'custom', { text: 'x' });
+      sync(a, b);
+
+      return blockOf(a, 'b1')?.type;
+    });
+
+    expect(winners).toContain('custom');
+  });
+
+  it('a save that changes nothing does not downgrade', () => {
+    const store = createStore(1, ['custom']);
+
+    store.fromJSON([{ id: 'b1', type: 'paragraph', data: { text: '<b>a</b>' } }]);
+    (store.getBlockById('b1') as Y.Map<unknown>).set('type', 'custom');
+
+    expect(store.updateBlockData('b1', 'text', '<strong>a</strong>')).toBe(false);
+    expect(storedText(store, 'b1')).toBeInstanceOf(Y.XmlText);
+  });
+
+  it('an unregistered tool keeps its formatted text', () => {
+    const store = createStore(1);
+
+    store.fromJSON([{ id: 'b1', type: 'paragraph', data: { text: '<b>a</b>' } }]);
+    (store.getBlockById('b1') as Y.Map<unknown>).set('type', 'custom');
+    store.updateBlockData('b1', 'text', '<b>a</b>!');
+
+    expect(storedText(store, 'b1')).toBeInstanceOf(Y.XmlText);
+    expect(textOf(store, 'b1')).toBe('<strong>a</strong>!');
   });
 });

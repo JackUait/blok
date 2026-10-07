@@ -328,6 +328,8 @@ export const isBoundaryCharacter = (char: string): boolean => {
 export interface YBlockSerializerOptions {
   /** A tool's own `static richTextFields`, added to the built-in table. */
   richTextFieldsFor?: (type: string) => string[];
+  /** Whether a tool of this type is registered here. Unknown types never downgrade a formatted text. */
+  isKnownType?: (type: string) => boolean;
   /** Defaults to the DOM parser; node callers (fixtures, server tests) pass parse5's. */
   htmlToSegments?: (html: string) => RichText;
 }
@@ -339,16 +341,20 @@ export interface YBlockSerializerOptions {
 export class YBlockSerializer {
   private readonly richTextFieldsFor: (type: string) => string[];
   private readonly htmlToSegments: (html: string) => RichText;
+  private readonly isKnownType: (type: string) => boolean;
 
   constructor(options: YBlockSerializerOptions = {}) {
     this.richTextFieldsFor = options.richTextFieldsFor ?? ((): string[] => []);
+    this.isKnownType = options.isKnownType ?? ((): boolean => false);
     this.htmlToSegments = options.htmlToSegments ?? htmlToSegmentsDom;
   }
 
   /**
-   * Whether `key` of a `type` block is minted as formatted text. Asked only
-   * at mint time: afterwards the stored class decides, because a block's type
-   * can change under a peer's feet.
+   * Whether `key` of a `type` block should be formatted text. Asked when a
+   * value is minted and by writes that fix a class that no longer fits the
+   * type (a conversion, or an upgrade/downgrade on save). Reads never ask:
+   * they go by the stored class, because a block's type can change under a
+   * peer's feet.
    */
   public isRichTextField(type: unknown, key: string): boolean {
     if (typeof type !== 'string') {
@@ -360,6 +366,15 @@ export class YBlockSerializer {
       : [];
 
     return builtIn.includes(key) || this.richTextFieldsFor(type).includes(key);
+  }
+
+  /**
+   * Whether `key` of a `type` block is known NOT to be rich: the tool is
+   * registered here and does not declare it. False for an unknown tool,
+   * whose fields this client cannot judge.
+   */
+  public isPlainTextField(type: unknown, key: string): boolean {
+    return typeof type === 'string' && this.isKnownType(type) && !this.isRichTextField(type, key);
   }
 
   /**

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "grid",
+    "type": "table",
+    "data": {
+      "content": [
+        [
+          {
+            "text": "r1"
+          }
+        ],
+        [
+          {
+            "text": "r2"
+          }
+        ],
+        [
+          {
+            "text": "orphan a"
+          }
+        ],
+        [
+          {
+            "text": "orphan z"
+          }
+        ]
+      ]
+    }
+  }
+]

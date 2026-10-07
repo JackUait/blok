@@ -1,0 +1,99 @@
+[
+  {
+    "id": "anchor",
+    "type": "paragraph",
+    "data": {
+      "text": [
+        {
+          "text": "root anchor"
+        }
+      ]
+    }
+  },
+  {
+    "id": "c3-b",
+    "type": "paragraph",
+    "data": {
+      "text": [
+        {
+          "text": "B"
+        }
+      ]
+    },
+    "content": [
+      "c3-a"
+    ]
+  },
+  {
+    "id": "c3-a",
+    "type": "paragraph",
+    "data": {
+      "text": [
+        {
+          "text": "A"
+        }
+      ]
+    },
+    "parent": "c3-b"
+  },
+  {
+    "id": "c3-c",
+    "type": "paragraph",
+    "data": {
+      "text": [
+        {
+          "text": "C"
+        }
+      ]
+    }
+  },
+  {
+    "id": "q",
+    "type": "paragraph",
+    "data": {
+      "text": [
+        {
+          "text": "Q"
+        }
+      ]
+    },
+    "content": [
+      "p"
+    ]
+  },
+  {
+    "id": "p",
+    "type": "paragraph",
+    "data": {
+      "text": [
+        {
+          "text": "P"
+        }
+      ]
+    },
+    "parent": "q"
+  },
+  {
+    "id": "selfie",
+    "type": "paragraph",
+    "data": {
+      "text": [
+        {
+          "text": "self parent"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tail",
+    "type": "paragraph",
+    "data": {
+      "text": [
+        {
+          "text": "hangs off the cycle"
+        }
+      ]
+    },
+    "parent": "p"
+  }
+]

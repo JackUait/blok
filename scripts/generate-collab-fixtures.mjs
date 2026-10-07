@@ -3,7 +3,8 @@
  * `test/unit/server-conformance/fixtures/collab/<case>/`:
  *
  *   input.json     — the block array `DocumentStore.fromJSON` receives
- *   canonical.json — `DocumentStore.toJSON()` of the seeded doc
+ *   canonical.json — `DocumentStore.toJSON()` of the seeded doc (rich fields as HTML)
+ *   canonical.segments.json — the same in host shape: rich fields as segments
  *   update.b64     — `encodeStateAsUpdate()` of the seeded doc, base64
  *
  * plus `manifest.json` (case names + one-line descriptions). The folder is
@@ -55,6 +56,18 @@ const BUNDLE_DIR = join(REPO_ROOT, 'node_modules', '.cache', 'blok-collab-fixtur
  * resolving to node_modules, so the store and this script share ONE yjs
  * instance — the mutate steps hand it prelim Y types.
  */
+/**
+ * canonical.json in host shape: built-in rich fields as segments (contract §9),
+ * database-row nested documents converted too. This is what the C# Export
+ * must produce; canonical.json is the editor's HTML read of the same doc.
+ */
+function hostSegments(client, blocks) {
+  const fields = (type) =>
+    Object.prototype.hasOwnProperty.call(client.CURRENT_RICH_TEXT_FIELDS, type) ? client.CURRENT_RICH_TEXT_FIELDS[type] : [];
+
+  return client.outputBlocksToSegments(blocks, fields, client.htmlToSegmentsNode);
+}
+
 async function loadClient() {
   const modulePath = (name) => JSON.stringify(join(REPO_ROOT, 'src', 'components', 'modules', 'yjs', name));
   const outfile = join(BUNDLE_DIR, 'client.mjs');
@@ -65,7 +78,9 @@ async function loadClient() {
       contents:
         `export { DocumentStore } from ${modulePath('document-store.ts')};\n` +
         `export { YBlockSerializer, GRID_ORDER_KEY, GRID_ROWS_KEY } from ${modulePath('serializer.ts')};\n` +
-        `export { htmlToSegmentsNode } from ${JSON.stringify(join(REPO_ROOT, 'src', 'view', 'rich-text-parse5.ts'))};\n`,
+        `export { htmlToSegmentsNode } from ${JSON.stringify(join(REPO_ROOT, 'src', 'view', 'rich-text-parse5.ts'))};\n` +
+        `export { outputBlocksToSegments } from ${JSON.stringify(join(REPO_ROOT, 'src', 'shared', 'rich-text', 'block-data.ts'))};\n` +
+        `export { CURRENT_RICH_TEXT_FIELDS } from ${JSON.stringify(join(REPO_ROOT, 'src', 'shared', 'rich-text', 'fields.ts'))};\n`,
       resolveDir: REPO_ROOT,
       loader: 'ts',
     },
@@ -587,6 +602,7 @@ async function main() {
     mkdirSync(directory);
     writeJson(join(directory, 'input.json'), input);
     writeJson(join(directory, 'canonical.json'), canonical);
+    writeJson(join(directory, 'canonical.segments.json'), hostSegments(client, canonical));
     writeFileSync(join(directory, 'update.b64'), toBase64Lines(update), 'utf8');
   }
 

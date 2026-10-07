@@ -1,0 +1,40 @@
+[
+  {
+    "id": "keeper",
+    "type": "paragraph",
+    "data": {
+      "text": [
+        {
+          "text": "kept"
+        }
+      ]
+    },
+    "content": [
+      7,
+      "kid"
+    ]
+  },
+  {
+    "id": "kid",
+    "type": "paragraph",
+    "data": {
+      "text": [
+        {
+          "text": "kid"
+        }
+      ]
+    },
+    "parent": "keeper"
+  },
+  {
+    "id": "num-parent",
+    "type": "paragraph",
+    "data": {
+      "text": [
+        {
+          "text": "numeric parent reads as no parent"
+        }
+      ]
+    }
+  }
+]

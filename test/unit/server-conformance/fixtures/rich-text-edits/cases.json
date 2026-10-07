@@ -1009,6 +1009,41 @@
     }
   },
   {
+    "name": "markup-characters-next-to-a-cluster",
+    "description": "Tag-shaped text next to a multi-code-point character: the tag characters still diff one at a time, and the emoji with its skin tone stays one unit.",
+    "current": [
+      {
+        "text": "<b>👍🏽"
+      }
+    ],
+    "next": [
+      {
+        "text": "<bQ>👍🏽"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 2,
+        "text": "Q",
+        "attributes": {}
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "<bQ>👍🏽"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "<bQ>👍🏽"
+        }
+      ]
+    }
+  },
+  {
     "name": "delete-everything",
     "description": "An empty field is [].",
     "current": [

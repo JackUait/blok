@@ -295,13 +295,13 @@ describe('concurrent edits converge', () => {
     b.updateBlockData('b1', 'text', 'The quick brXown fox jumps');
     sync(a, b);
 
-    const text = (deltaOf(a) as Array<{ insert: string }>).map(op => op.insert).join('');
-
-    // The peer's keystroke survives and lands inside the replaced phrase,
-    // never in front of it.
-    expect(text).toContain('X');
-    expect(text.startsWith('The ')).toBe(true);
-    expect(text.endsWith(' jumps')).toBe(true);
+    // The keystroke survives inside the pasted phrase (next to the `l` the
+    // diff kept), never in front of it, and takes the paste's marks.
+    expect(deltaOf(a)).toEqual([
+      { insert: 'The ' },
+      { insert: 'slXow red hen', attributes: { italic: true } },
+      { insert: ' jumps' },
+    ]);
     expect(deltaOf(b)).toEqual(deltaOf(a));
   });
 });

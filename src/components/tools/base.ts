@@ -169,6 +169,20 @@ export enum InternalBlockToolSettings {
 }
 
 /**
+ * A tool class's `static richTextFields`, or none. The one reader: the block
+ * adapter and the database card body both use it, so they agree on which
+ * fields convert.
+ * @param constructable - the tool class
+ */
+export const declaredRichTextFields = (constructable: unknown): string[] => {
+  const declared: unknown = constructable === null || constructable === undefined
+    ? undefined
+    : Reflect.get(Object(constructable), InternalBlockToolSettings.RichTextFields);
+
+  return Array.isArray(declared) ? declared.filter((field): field is string => typeof field === 'string') : [];
+};
+
+/**
  * Enum of Tool options provided by Inline Tool
  */
 export enum InternalInlineToolSettings {

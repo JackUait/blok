@@ -10,6 +10,7 @@ import { DatabasePropertyTypePopover } from './database-property-type-popover';
 import { outputBlocksToHtml, outputBlocksToSegments, richTextFieldsFor } from '../../shared/rich-text/block-data';
 import type { FieldsResolver } from '../../shared/rich-text/block-data';
 import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
+import { declaredRichTextFields } from '../../components/tools/base';
 
 interface BlokInstance {
   save(): Promise<OutputData>;
@@ -44,12 +45,7 @@ const richFieldsOf = (tools: ToolsConfig['tools']): FieldsResolver => (type) => 
   const entry = tools?.[type];
   const constructable: unknown = typeof entry === 'function' ? entry : entry?.class;
 
-  if (constructable === undefined) {
-    return richTextFieldsFor(type);
-  }
-  const declared: unknown = Reflect.get(Object(constructable), 'richTextFields');
-
-  return Array.isArray(declared) ? declared.filter((field): field is string => typeof field === 'string') : [];
+  return constructable === undefined ? richTextFieldsFor(type) : declaredRichTextFields(constructable);
 };
 
 /**

@@ -3,7 +3,7 @@ import { isEmpty, isObject } from '../utils';
 import { log } from '../utils/logger';
 import { safeHref } from '../utils/sanitize-url';
 
-import { BaseToolAdapter,  InternalBlockToolSettings, UserSettings  } from './base';
+import { BaseToolAdapter, declaredRichTextFields, InternalBlockToolSettings, UserSettings } from './base';
 import { ToolsCollection } from './collection';
 import type { ChildToolRestrictions } from '../../../types/tools';
 import type { InlineToolAdapter } from './inline';
@@ -553,9 +553,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * enum fields, which would then be rewritten as rich text.
    */
   public get richTextFields(): string[] {
-    const declared = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.RichTextFields];
-
-    return Array.isArray(declared) ? declared.filter((field): field is string => typeof field === 'string') : [];
+    return declaredRichTextFields(this.constructable);
   }
 
   /**

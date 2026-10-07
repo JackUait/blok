@@ -24,6 +24,7 @@ import { isCellWithBlocks } from '../../../../../src/tools/table/types';
 import { blocksToHtml } from '../../../../../src/view';
 import type { TableData } from '../../../../../src/tools/table/types';
 import type { OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -215,7 +216,7 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
       ],
     ]), 'under\tstruck\nx2\tH2O\nlink\tboth');
 
-    return editor.save();
+    return savedAsHtml(await editor.save());
   };
 
   it('google docs: an underlined span stays underlined', async () => {
@@ -257,7 +258,7 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
       + '</tbody></table>',
       'under\tstruck\nx2\tH2O'
     );
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(cellHtml(saved, 0, 0)).toMatch(/<u>under<\/u>/);
     expect(cellHtml(saved, 0, 1)).toMatch(/<s>struck<\/s>/);
@@ -269,7 +270,7 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
     const editor = await bootWithTable({ image: Image, code: Code });
 
     await pasteIntoCell(tableWithFirstCell('a<img src="https://example.com/x.png" alt="x">b'), 'ab\tz\nq\tw');
-    const blocks = cellBlocksAt(await editor.save(), 0, 0);
+    const blocks = cellBlocksAt(savedAsHtml(await editor.save()), 0, 0);
 
     expect(blocks.find(block => block.type === 'image')?.data).toMatchObject({ url: 'https://example.com/x.png', alt: 'x' });
     expect(blocks.map(block => block.type === 'paragraph' ? `paragraph:${String(block.data.text)}` : block.type))
@@ -281,7 +282,7 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
     const src = 'data:image/png;base64,iVBORw0KGgo=';
 
     await pasteIntoCell(tableWithFirstCell(`<img src="${src}">`), '\tz\nq\tw');
-    const blocks = cellBlocksAt(await editor.save(), 0, 0);
+    const blocks = cellBlocksAt(savedAsHtml(await editor.save()), 0, 0);
 
     expect(blocks.find(block => block.type === 'image')?.data).toMatchObject({ url: src });
   });
@@ -293,7 +294,7 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
     const editor = await bootWithTable({ image: Image, code: Code });
 
     await pasteIntoCell(tableWithFirstCell(`a<img src="${src}">b`), 'ab\tz\nq\tw');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(saved.blocks.some(block => block.type === 'image')).toBe(false);
     expect(JSON.stringify(saved)).not.toContain(scheme);
@@ -304,7 +305,7 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
     const editor = await bootWithTable({ image: Image, code: Code });
 
     await pasteIntoCell(tableWithFirstCell('<pre><code>const x = 1;\nfoo();</code></pre>'), 'const x = 1;\tz\nq\tw');
-    const blocks = cellBlocksAt(await editor.save(), 0, 0);
+    const blocks = cellBlocksAt(savedAsHtml(await editor.save()), 0, 0);
 
     expect(blocks.map(block => block.type)).toEqual(['code']);
     expect(blocks[0].data.code).toBe('const x = 1;\nfoo();');
@@ -314,7 +315,7 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
     const editor = await bootWithTable();
 
     await pasteIntoCell(tableWithFirstCell('<pre>a &lt; b</pre>'), 'a < b\tz\nq\tw');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(cellBlocksAt(saved, 0, 0).map(block => block.data.text)).toEqual(['a &lt; b']);
     expect(cellBlocksAt(saved, 0, 1).map(block => block.data.text)).toEqual(['z']);
@@ -329,7 +330,7 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
       [gdocsP(gdocsSpan('a'), 'center') + gdocsP('&nbsp;'), gdocsP(gdocsSpan('b'), 'right')],
       [gdocsP(gdocsSpan('c')), gdocsP(gdocsSpan('d'), 'center')],
     ]), 'a\tb\nc\td');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(placementAt(saved, 0, 0)).toBe('top-center');
     expect(placementAt(saved, 0, 1)).toBe('top-right');
@@ -343,7 +344,7 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
 
     expect(html).toContain('text-align:var(--_blok-end-side, right)');
     await pasteIntoCell(html, 'a\tb\nc\td');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(PLACEMENTS.map((row, r) => row.map((_, c) => placementAt(saved, r, c)))).toStrictEqual(PLACEMENTS);
   });
@@ -355,7 +356,7 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
       [gdocsP(gdocsSpan('a'), 'center') + gdocsP(gdocsSpan('b'), 'right'), gdocsP(gdocsSpan('z'))],
       [gdocsP(gdocsSpan('q')), gdocsP(gdocsSpan('w'))],
     ]), 'a\nb\tz\nq\tw');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(placementAt(saved, 0, 0)).toBeUndefined();
     expect(cellHtml(saved, 0, 0)).toContain('a');
@@ -369,7 +370,7 @@ describe('clipboard data loss: html pasted into cells of an existing table', { t
         + '<tr><td>q</td><td>w</td></tr></tbody></table>',
       'Title body\tSaid after\nq\tw'
     );
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(cellBlocksAt(saved, 0, 0).map(block => [block.type, block.data.text])).toStrictEqual([
       ['paragraph', 'Title'],

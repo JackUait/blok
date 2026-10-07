@@ -12,6 +12,7 @@ import { Table } from '../../../../../src/tools/table';
 import { Callout, Header, Toggle } from '../../../../../src/tools';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
 import { settle } from './roundtrip-harness';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '');
 
@@ -102,7 +103,7 @@ describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
     const instance = await bootTable();
 
     await pasteIntoLastCell(instance, '- one\n- two');
-    const saved = await instance.save();
+    const saved = savedAsHtml(await instance.save());
 
     expect(textsOf(cellOf(saved, 1, 1))).toEqual(expect.arrayContaining(['list:one', 'list:two']));
     expect(textsOf(cellOf(saved, 0, 0))).toEqual(['paragraph:keep']);
@@ -112,7 +113,7 @@ describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
     const instance = await bootTable();
 
     await pasteIntoLastCell(instance, '# Title\n\nbody');
-    const saved = await instance.save();
+    const saved = savedAsHtml(await instance.save());
 
     expect(saved.blocks.filter(block => block.type === 'header' && block.parent === 't')).toEqual([]);
     expect(textsOf(cellOf(saved, 0, 0))).toEqual(['paragraph:keep']);
@@ -122,7 +123,7 @@ describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
     const instance = await bootTable();
 
     await pasteIntoLastCell(instance, '| A | B |\n| --- | --- |\n| 1 | 2 |');
-    const saved = await instance.save();
+    const saved = savedAsHtml(await instance.save());
 
     expect(saved.blocks.filter(block => block.type === 'table' && block.parent === 't')).toEqual([]);
     expect(textsOf(cellOf(saved, 0, 0))).toEqual(['paragraph:keep']);
@@ -132,7 +133,7 @@ describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
     const instance = await bootTable();
 
     await pasteIntoLastCell(instance, '# Title\n\nbody');
-    const saved = await instance.save();
+    const saved = savedAsHtml(await instance.save());
     const header = saved.blocks.find(block => block.type === 'header');
     const ids = saved.blocks.map(block => block.id);
 
@@ -145,7 +146,7 @@ describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
     const instance = await bootTable();
 
     await pasteIntoLastCell(instance, '> [!NOTE]\n> inside');
-    const saved = await instance.save();
+    const saved = savedAsHtml(await instance.save());
     const cell = cellOf(saved, 1, 1);
     const callout = cell.find(block => block.type === 'callout');
     const body = saved.blocks.find(block => block.type === 'paragraph' && str(block.data.text) === 'inside');
@@ -159,7 +160,7 @@ describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
     const instance = await bootTable();
 
     await pasteIntoLastCell(instance, '> [!NOTE]\n> # Title');
-    const saved = await instance.save();
+    const saved = savedAsHtml(await instance.save());
     const header = saved.blocks.find(block => block.type === 'header');
 
     expect(header).toBeDefined();
@@ -173,7 +174,7 @@ describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
     ]);
 
     await pasteIntoLastCell(instance, '# Title\n\nmore', 'cb');
-    const saved = await instance.save();
+    const saved = savedAsHtml(await instance.save());
     const header = saved.blocks.find(block => block.type === 'header');
 
     expect(header).toBeDefined();
@@ -186,7 +187,7 @@ describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
     ]);
 
     await pasteIntoLastCell(instance, '- one\n- two');
-    const saved = await instance.save();
+    const saved = savedAsHtml(await instance.save());
     const items = saved.blocks.filter(block => block.type === 'list');
 
     expect(items.map(block => str(block.data.text))).toEqual(['one', 'two']);
@@ -207,18 +208,18 @@ describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
 
     it('a markdown list pasted in a cell', async () => {
       const instance = await bootTable();
-      const before = await instance.save();
+      const before = savedAsHtml(await instance.save());
 
       await wait(CAPTURE);
       await pasteIntoLastCell(instance, '- one\n- two');
-      const pasted = await instance.save();
+      const pasted = savedAsHtml(await instance.save());
 
       expect(textsOf(cellOf(pasted, 1, 1))).toEqual(expect.arrayContaining(['list:one', 'list:two']));
 
       await wait(CAPTURE);
       instance.history.undo();
       await wait(300);
-      const undone = await instance.save();
+      const undone = savedAsHtml(await instance.save());
 
       expect(undone.blocks.filter(block => block.type === 'list')).toEqual([]);
       expect(cellIds(undone)).toEqual(cellIds(before));
@@ -227,18 +228,18 @@ describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
 
     it('a markdown heading sent out of the table', async () => {
       const instance = await bootTable();
-      const before = await instance.save();
+      const before = savedAsHtml(await instance.save());
 
       await wait(CAPTURE);
       await pasteIntoLastCell(instance, '# Title\n\nbody');
-      const pasted = await instance.save();
+      const pasted = savedAsHtml(await instance.save());
 
       expect(pasted.blocks.map(block => str(block.data.text))).toEqual(expect.arrayContaining(['Title', 'body']));
 
       await wait(CAPTURE);
       instance.history.undo();
       await wait(300);
-      const undone = await instance.save();
+      const undone = savedAsHtml(await instance.save());
 
       expect(undone.blocks.map(block => str(block.data.text))).not.toContain('Title');
       expect(undone.blocks.map(block => str(block.data.text))).not.toContain('body');
@@ -252,7 +253,7 @@ describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
     const instance = await bootTable();
 
     await pasteIntoLastCell(instance, 'one\ntwo');
-    const saved = await instance.save();
+    const saved = savedAsHtml(await instance.save());
 
     expect(textsOf(cellOf(saved, 1, 1))).toEqual(['paragraph:', 'paragraph:one', 'paragraph:two']);
     expect(textsOf(cellOf(saved, 0, 0))).toEqual(['paragraph:keep']);

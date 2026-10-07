@@ -18,6 +18,7 @@ import { DatabaseRowTool } from '../../../src/tools/database-row';
 import { addColumnToList, wrapBlocksInColumns, wrapInNewColumnList } from '../../../src/tools/column-drop';
 import type { API, BlockMutationEvent, OutputBlockData, OutputData } from '../../../types';
 import { storeToggleOpenState } from '../../helpers/view-state';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -148,7 +149,7 @@ const state = async (instance: TestEditor, name: Name): Promise<Record<string, u
   const ids = new Set(blocks.map(block => block.id));
   const holders = Array.from(holder?.querySelectorAll('[data-blok-id]') ?? [])
     .map(element => name(element.getAttribute('data-blok-id')));
-  const saved = await instance.save();
+  const saved = savedAsHtml(await instance.save());
   const doc = instance.module.yjsManager.toJSON();
 
   doc.forEach(block => block.id !== undefined && ids.add(block.id));

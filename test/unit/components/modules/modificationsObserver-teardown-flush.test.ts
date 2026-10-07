@@ -7,6 +7,7 @@ import { Renderer } from '../../../../src/components/modules/renderer';
 import { ModificationsObserver } from '../../../../src/components/modules/modificationsObserver';
 import { Saver } from '../../../../src/components/modules/saver';
 import type { BlokConfig, OutputBlockData, OutputData } from '../../../../types';
+import { htmlOf } from '../../helpers/saved-as-html';
 
 /**
  * A real editor torn down inside the last batch window: the edit must still
@@ -78,7 +79,7 @@ const typeInto = (blockId: string, text: string): void => {
   editable.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text.slice(-1) }));
 };
 
-const textOf = (doc: OutputData, id: string): unknown => doc.blocks.find((block) => block.id === id)?.data.text;
+const textOf = (doc: OutputData, id: string): unknown => htmlOf(doc.blocks.find((block) => block.id === id)?.data.text);
 
 describe('ModificationsObserver — final flush on teardown (real editor)', () => {
   beforeEach(() => {
@@ -247,7 +248,7 @@ describe('ModificationsObserver — final flush on teardown (real editor)', () =
     editor = undefined;
     await wait(1000);
 
-    const saved = save.mock.calls.map(([data]) => data.blocks.map((block) => block.data.text));
+    const saved = save.mock.calls.map(([data]) => data.blocks.map((block) => String(htmlOf(block.data.text))));
 
     expect(saved.filter((texts) => texts.join('|') !== 'A|one|B|two')).toEqual([]);
   }, 60_000);

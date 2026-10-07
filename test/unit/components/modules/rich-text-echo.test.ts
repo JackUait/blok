@@ -55,7 +55,6 @@ describe('rich text segments — controlled-component echo', { timeout: 60_000 }
 
   it('re-rendering the saved segments is a no-op', async () => {
     const editor = await createEditor({
-      richText: 'segments',
       data: { blocks: [ { type: 'paragraph', data: { text: '<strong>a</strong> <mark style="color: var(--blok-color-red-text);">b</mark>' } } ] },
     });
     const saved = await editor.save();
@@ -69,11 +68,10 @@ describe('rich text segments — controlled-component echo', { timeout: 60_000 }
 
   it('an editor booted from saved segments takes their echo without a rebuild', async () => {
     const source = await createEditor({
-      richText: 'segments',
       data: { blocks: [ { type: 'paragraph', data: { text: '<strong>a</strong> <mark style="color: var(--blok-color-red-text);">b</mark>' } } ] },
     });
     const saved = await source.save();
-    const editor = await createEditor({ richText: 'segments', data: saved });
+    const editor = await createEditor({ data: saved });
     const rebuild = spyOnRebuild();
 
     await editor.render(saved);
@@ -82,7 +80,7 @@ describe('rich text segments — controlled-component echo', { timeout: 60_000 }
   });
 
   it('a changed document still rebuilds', async () => {
-    const editor = await createEditor({ richText: 'segments', data: { blocks: [ { type: 'paragraph', data: { text: 'a' } } ] } });
+    const editor = await createEditor({ data: { blocks: [ { type: 'paragraph', data: { text: 'a' } } ] } });
     const rebuild = spyOnRebuild();
 
     await editor.render({ blocks: [ { type: 'paragraph', data: { text: [ { text: 'b' } ] } } ] });
@@ -91,7 +89,7 @@ describe('rich text segments — controlled-component echo', { timeout: 60_000 }
   });
 
   it('a raw hex colour\'s saved output echoes without a rebuild', async () => {
-    const editor = await createEditor({ richText: 'segments' });
+    const editor = await createEditor({});
     const input: OutputData = { blocks: [ { type: 'paragraph', data: { text: '<mark style="color: #d44c47;">b</mark>' } } ] };
 
     await editor.render(input);
@@ -99,6 +97,16 @@ describe('rich text segments — controlled-component echo', { timeout: 60_000 }
     const rebuild = spyOnRebuild();
 
     await editor.render(saved);
+
+    expect(rebuild.rendered()).toBe(false);
+  });
+
+  it('re-rendering the HTML the editor was booted with is a no-op', async () => {
+    const input: OutputData = { blocks: [ { type: 'paragraph', data: { text: '<b>a</b> b' } } ] };
+    const editor = await createEditor({ data: input });
+    const rebuild = spyOnRebuild();
+
+    await editor.render(input);
 
     expect(rebuild.rendered()).toBe(false);
   });

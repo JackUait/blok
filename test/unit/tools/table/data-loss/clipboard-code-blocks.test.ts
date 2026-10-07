@@ -11,6 +11,7 @@ import { Code, Column, ColumnList, Header, Image, List } from '../../../../../sr
 import { isCellWithBlocks } from '../../../../../src/tools/table/types';
 import type { CellContent, TableConfig, TableData } from '../../../../../src/tools/table/types';
 import type { BlockToolConstructorOptions, OutputBlockData, OutputData, ToolConstructable, ToolSettings } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface SelectionRange { minRow: number; maxRow: number; minCol: number; maxCol: number }
 
@@ -198,7 +199,7 @@ describe('clipboard data loss: code blocks in table cells', { timeout: 60_000 },
     const editor = await boot(codeTable());
 
     await paste(freeEditable('free'), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 }));
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const [first] = blocksIn(saved, cellOf(newTable(saved, ['src']), 0, 0));
 
     expect(first).toMatchObject({ type: 'code', data: { code: CODE } });
@@ -209,7 +210,7 @@ describe('clipboard data loss: code blocks in table cells', { timeout: 60_000 },
     const clip = copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
 
     await paste(freeEditable('free'), { 'text/html': asExternalHtml(clip['text/html']), 'text/plain': clip['text/plain'] });
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const [first] = blocksIn(saved, cellOf(newTable(saved, ['src']), 0, 0));
 
     expect(first).toMatchObject({ type: 'code', data: { code: CODE } });
@@ -225,7 +226,7 @@ describe('clipboard data loss: code blocks in table cells', { timeout: 60_000 },
     const clip = copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
 
     await paste(cellEditable('dst', 0, 0), { 'text/html': asExternalHtml(clip['text/html']), 'text/plain': clip['text/plain'] });
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const [first] = blocksIn(saved, cellOf(saved.blocks.find(block => block.id === 'dst') as OutputBlockData, 0, 0));
 
     expect(first).toMatchObject({ type: 'code', data: { code: CODE } });
@@ -235,7 +236,7 @@ describe('clipboard data loss: code blocks in table cells', { timeout: 60_000 },
     const editor = await boot([{ id: 'free', type: 'paragraph', data: { text: '' } }]);
 
     await paste(freeEditable('free'), { 'text/html': EXTERNAL_PRE_TABLE, 'text/plain': '' });
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const [first] = blocksIn(saved, cellOf(newTable(saved, []), 0, 0));
 
     expect(first).toMatchObject({ type: 'code', data: { code: 'line one\n  line two' } });
@@ -249,7 +250,7 @@ describe('clipboard data loss: code blocks in table cells', { timeout: 60_000 },
     ]);
 
     await paste(cellEditable('dst', 0, 0), { 'text/html': EXTERNAL_PRE_TABLE, 'text/plain': '' });
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const [first] = blocksIn(saved, cellOf(saved.blocks.find(block => block.id === 'dst') as OutputBlockData, 0, 0));
 
     expect(first).toMatchObject({ type: 'code', data: { code: 'line one\n  line two' } });
@@ -262,7 +263,7 @@ describe('clipboard data loss: code blocks in table cells', { timeout: 60_000 },
     );
 
     await paste(freeEditable('free'), { 'text/html': EXTERNAL_PRE_TABLE, 'text/plain': '' });
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const blocks = blocksIn(saved, cellOf(newTable(saved, []), 0, 0));
 
     expect(blocks.map(block => block.type)).toStrictEqual(['paragraph']);
@@ -276,7 +277,7 @@ describe('clipboard data loss: code blocks in table cells', { timeout: 60_000 },
     );
 
     await paste(freeEditable('free'), { 'text/html': EXTERNAL_PRE_TABLE, 'text/plain': '' });
-    const saved = JSON.stringify(await editor.save());
+    const saved = JSON.stringify(savedAsHtml(await editor.save()));
 
     expect(saved).not.toContain('blok-cell-code');
     expect(saved).toContain('line one');
@@ -295,9 +296,9 @@ describe('clipboard data loss: code blocks in table cells', { timeout: 60_000 },
     await paste(freeEditable('free'), { 'text/html': html, 'text/plain': '' });
     // The column paste fills its columns asynchronously; slow runs (coverage) need the wait.
     await vi.waitFor(async () => {
-      expect(JSON.stringify(await editor.save())).toContain('line one');
+      expect(JSON.stringify(savedAsHtml(await editor.save()))).toContain('line one');
     }, { timeout: 5000 });
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const json = JSON.stringify(saved);
 
     expect(saved.blocks.some(block => block.type === 'column_list')).toBe(true);
@@ -309,7 +310,7 @@ describe('clipboard data loss: code blocks in table cells', { timeout: 60_000 },
     const editor = await boot([{ id: 'free', type: 'paragraph', data: { text: '' } }]);
 
     await paste(freeEditable('free'), { 'text/html': '<pre>top\n  level</pre>', 'text/plain': '' });
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(saved.blocks.find(block => block.type === 'code')).toMatchObject({ data: { code: 'top\n  level' } });
   });

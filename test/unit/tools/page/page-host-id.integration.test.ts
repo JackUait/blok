@@ -9,6 +9,7 @@ import { PageTool } from '../../../../src/tools/page';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import type { PageConfig } from '../../../../src/tools/page/types';
 import type { API, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 interface Runtime {
   isReady: Promise<unknown>;
@@ -83,7 +84,7 @@ const pickPage = async (instance: Runtime): Promise<HTMLElement> => {
 };
 
 const types = async (instance: Runtime): Promise<Array<{ type: string; data: Record<string, unknown> }>> => {
-  const output = await instance.save();
+  const output = savedAsHtml(await instance.save());
 
   return output.blocks.map(block => ({ type: block.type, data: block.data }));
 };

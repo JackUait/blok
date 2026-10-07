@@ -12,6 +12,7 @@ import { ListItem } from '../../../../../src/tools/list';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import { BoldInlineTool } from '../../../../../src/components/inline-tools/inline-tool-bold';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { htmlOf } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -61,7 +62,7 @@ const pasteInto = async (instance: TestEditor, id: string, data: Record<string, 
 };
 
 const savedText = async (instance: TestEditor, id: string): Promise<unknown> =>
-  (await instance.save()).blocks.find(block => block.id === id)?.data.text;
+  htmlOf((await instance.save()).blocks.find(block => block.id === id)?.data.text);
 
 const HTML = 'Line one<br>Line <strong>bold</strong> two';
 const PLAIN = 'Line one\nLine bold two';

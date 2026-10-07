@@ -12,6 +12,7 @@ import { List } from '../../../../../src/tools';
 import type { OutputData } from '../../../../../types';
 import { preprocessWordLists } from '../../../../../src/components/modules/paste/word-list-preprocessor';
 import { parseUntrustedHtml } from '../../../../../src/components/utils/inert-html';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 const item = (text: string, level = 1, glyph = '·', list = 0): string =>
   `<p class=MsoListParagraphCxSpMiddle style='margin-left:.5in;text-indent:-.25in;mso-list:l${list} level${level} lfo1'>`
@@ -143,7 +144,7 @@ describe('word list paste at top level', () => {
     target.focus();
     target.dispatchEvent(event);
 
-    const textBlocks = (saved: OutputData): unknown[][] => saved.blocks
+    const textBlocks = (saved: OutputData): unknown[][] => savedAsHtml(saved).blocks
       .filter(block => typeof block.data.text === 'string' && block.data.text !== '')
       .map(block => [block.type, String(block.data.text).trim(), block.data.depth ?? 0]);
     let lists = textBlocks(await editor.save());

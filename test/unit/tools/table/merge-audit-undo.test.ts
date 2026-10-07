@@ -8,6 +8,7 @@ import { Table } from '../../../../src/tools/table/index';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import type { CellContent, LegacyCellContent, TableData } from '../../../../src/tools/table/types';
 import type { OutputBlockData, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 const TABLE_ID = 'tbl';
 
@@ -193,19 +194,19 @@ describe('merge audit: undo/redo of merge and split', () => {
 
   it('merge of a 2x2 is one undo step that restores every block to its original cell', async () => {
     const editor = await boot(buildDoc(FLAT_2X2, TEXTS_2X2));
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
 
     merge({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
     await sleep(CAPTURE);
 
-    const merged = await editor.save();
+    const merged = savedAsHtml(await editor.save());
 
     expect(contentOf(merged)[0][0]).toMatchObject({ blocks: ['a', 'b', 'c', 'd'], colspan: 2, rowspan: 2 });
 
     editor.history.undo();
     await sleep(300);
 
-    const undone = await editor.save();
+    const undone = savedAsHtml(await editor.save());
 
     expect(contentOf(undone)).toEqual(contentOf(before));
     expect(blockIdsSorted(undone)).toEqual(blockIdsSorted(before));
@@ -215,7 +216,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     expect(editor.history.canUndo()).toBe(false);
     editor.history.undo();
     await sleep(300);
-    expect((await editor.save()).blocks).toEqual(undone.blocks);
+    expect((savedAsHtml(await editor.save())).blocks).toEqual(undone.blocks);
   }, 90_000);
 
   const typeInto = async (blockId: string, text: string): Promise<void> => {
@@ -240,11 +241,11 @@ describe('merge audit: undo/redo of merge and split', () => {
 
   it('redo of a merge re-applies it with the same block ids, no duplicates, DOM matching data', async () => {
     const editor = await boot(buildDoc(FLAT_2X2, TEXTS_2X2));
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
 
     merge({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
     await sleep(CAPTURE);
-    const merged = await editor.save();
+    const merged = savedAsHtml(await editor.save());
     const mergedDom = domShape();
 
     editor.history.undo();
@@ -252,7 +253,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     editor.history.redo();
     await sleep(300);
 
-    const redone = await editor.save();
+    const redone = savedAsHtml(await editor.save());
 
     expect(contentOf(redone)).toEqual(contentOf(merged));
     expect(blockIdsSorted(redone)).toEqual(blockIdsSorted(before));
@@ -267,7 +268,7 @@ describe('merge audit: undo/redo of merge and split', () => {
       [{ blocks: ['c'], placement: 'bottom-right' }, { blocks: ['d'], textColor: '#ffa500' }],
     ];
     const editor = await boot(buildDoc(styled, TEXTS_2X2));
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
     const paint = (): string[] => Array.from(holder.querySelectorAll<HTMLElement>('[data-blok-table-cell]'))
       .map(el => `${el.getAttribute('data-blok-table-cell-row') ?? ''},${el.getAttribute('data-blok-table-cell-col') ?? ''}:${el.style.backgroundColor}|${el.style.color}|${el.querySelector('[data-blok-cell-placement]')?.getAttribute('data-blok-cell-placement') ?? ''}`);
     const paintBefore = paint();
@@ -276,7 +277,7 @@ describe('merge audit: undo/redo of merge and split', () => {
 
     merge({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
     await sleep(CAPTURE);
-    const merged = contentOf(await editor.save());
+    const merged = contentOf(savedAsHtml(await editor.save()));
 
     expect(merged[0][1].color).toBeUndefined();
     expect(merged[0][0].placement).toBeUndefined();
@@ -284,7 +285,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     editor.history.undo();
     await sleep(300);
 
-    expect(contentOf(await editor.save())).toEqual(contentOf(before));
+    expect(contentOf(savedAsHtml(await editor.save()))).toEqual(contentOf(before));
     const td = (r: number, c: number): HTMLElement | null => holder.querySelector<HTMLElement>(
       `[data-blok-table-cell-row="${r}"][data-blok-table-cell-col="${c}"]`
     );
@@ -300,7 +301,7 @@ describe('merge audit: undo/redo of merge and split', () => {
 
   it('split then undo: the revealed-cell paragraph split created is removed again', async () => {
     const editor = await boot(buildDoc(MERGED_ROW0, TEXTS_2X2));
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
     const countBefore = editor.blocks.getBlocksCount();
 
     expect(domShape().spans).toEqual(['0,0:2x1']);
@@ -320,7 +321,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     expect(domShape()).toEqual({ cells: 3, spans: ['0,0:2x1'], holders: { '0,0': ['a', 'b'], '1,0': ['c'], '1,1': ['d'] } });
     expect(editor.blocks.getBlocksCount()).toBe(countBefore);
 
-    const undone = await editor.save();
+    const undone = savedAsHtml(await editor.save());
 
     expect(contentOf(undone)).toEqual(contentOf(before));
     expect(blockIdsSorted(undone)).toEqual(blockIdsSorted(before));
@@ -349,14 +350,14 @@ describe('merge audit: undo/redo of merge and split', () => {
   it('production mode: split then undo leaves no leftover block in the document', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     const editor = await boot(buildDoc(MERGED_ROW0, TEXTS_2X2));
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
 
     split(0, 0);
     await sleep(CAPTURE);
     editor.history.undo();
     await sleep(300);
 
-    const undone = await editor.save();
+    const undone = savedAsHtml(await editor.save());
 
     expect(blockIdsSorted(undone)).toEqual(blockIdsSorted(before));
     expect(editor.blocks.getBlocksCount()).toBe(before.blocks.length);
@@ -367,7 +368,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     addColumn();
     await sleep(CAPTURE);
 
-    const withCol = contentOf(await editor.save());
+    const withCol = contentOf(savedAsHtml(await editor.save()));
     const x = withCol[0][1].blocks[0];
     const y = withCol[1][1].blocks[0];
 
@@ -376,7 +377,7 @@ describe('merge audit: undo/redo of merge and split', () => {
 
     // What the user saw after the merge: row-major.
     expect(domShape().holders['0,0']).toEqual(['a', x, 'c', y]);
-    const merged = await editor.save();
+    const merged = savedAsHtml(await editor.save());
 
     expect(contentOf(merged)[0][0].blocks).toEqual(['a', x, 'c', y]);
 
@@ -388,7 +389,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     await sleep(300);
 
     expect(domShape().holders['0,0']).toEqual(['a', x, 'c', y]);
-    expect(contentOf(await editor.save())).toEqual(contentOf(merged));
+    expect(contentOf(savedAsHtml(await editor.save()))).toEqual(contentOf(merged));
   }, 90_000);
 
   it('reloading the saved result of a merge shows the merged cell in the same order', async () => {
@@ -398,7 +399,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     merge({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
     await sleep(CAPTURE);
 
-    const merged = await editor.save();
+    const merged = savedAsHtml(await editor.save());
     const seen = domShape().holders['0,0'];
 
     editor.destroy();
@@ -415,7 +416,7 @@ describe('merge audit: undo/redo of merge and split', () => {
       [{ blocks: [] }, { blocks: [] }],
     ];
     const editor = await boot(buildDoc(doc, { a: 'A' }));
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
     const beforeDom = domShape();
     const countBefore = editor.blocks.getBlocksCount();
 
@@ -428,14 +429,14 @@ describe('merge audit: undo/redo of merge and split', () => {
 
     expect(domShape()).toEqual(beforeDom);
     expect(editor.blocks.getBlocksCount()).toBe(countBefore);
-    const undone = await editor.save();
+    const undone = savedAsHtml(await editor.save());
 
     expect(blockIdsSorted(undone)).toEqual(blockIdsSorted(before));
   }, 90_000);
 
   it('merge over an existing merge: undo returns to the earlier merge', async () => {
     const editor = await boot(buildDoc(MERGED_ROW0, TEXTS_2X2));
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
     const beforeDom = domShape();
 
     merge({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
@@ -444,37 +445,37 @@ describe('merge audit: undo/redo of merge and split', () => {
 
     editor.history.undo();
     await sleep(300);
-    expect(contentOf(await editor.save())).toEqual(contentOf(before));
+    expect(contentOf(savedAsHtml(await editor.save()))).toEqual(contentOf(before));
     expect(domShape()).toEqual(beforeDom);
 
     editor.history.redo();
     await sleep(300);
     expect(domShape().spans).toEqual(['0,0:2x2']);
-    expect(blockIdsSorted(await editor.save())).toEqual(blockIdsSorted(before));
+    expect(blockIdsSorted(savedAsHtml(await editor.save()))).toEqual(blockIdsSorted(before));
   }, 90_000);
 
   it('merge, type in origin, undo twice: text then merge revert, in that order', async () => {
     const editor = await boot(buildDoc(FLAT_2X2, TEXTS_2X2));
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
 
     merge({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
     await sleep(CAPTURE);
-    const merged = await editor.save();
+    const merged = savedAsHtml(await editor.save());
 
     await typeInto('a', 'A typed');
     await sleep(CAPTURE);
-    expect(textOf(await editor.save(), 'a')).toBe('A typed');
+    expect(textOf(savedAsHtml(await editor.save()), 'a')).toBe('A typed');
 
     editor.history.undo();
     await sleep(300);
-    const once = await editor.save();
+    const once = savedAsHtml(await editor.save());
 
     expect(textOf(once, 'a')).toBe('A');
     expect(contentOf(once)).toEqual(contentOf(merged));
 
     editor.history.undo();
     await sleep(300);
-    const twice = await editor.save();
+    const twice = savedAsHtml(await editor.save());
 
     expect(contentOf(twice)).toEqual(contentOf(before));
     expect(domShape().spans).toEqual([]);
@@ -483,7 +484,7 @@ describe('merge audit: undo/redo of merge and split', () => {
 
   it('merge, type in origin within the capture window, undo, undo: reaches the unmerged original', async () => {
     const editor = await boot(buildDoc(FLAT_2X2, TEXTS_2X2));
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
 
     merge({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
     await typeInto('a', 'A typed');
@@ -493,7 +494,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     await sleep(300);
     editor.history.undo();
     await sleep(300);
-    const after = await editor.save();
+    const after = savedAsHtml(await editor.save());
 
     expect(contentOf(after)).toEqual(contentOf(before));
     expect(textOf(after, 'a')).toBe('A');
@@ -510,11 +511,11 @@ describe('merge audit: undo/redo of merge and split', () => {
 
     await typeInto('c', 'C typed');
     await sleep(CAPTURE);
-    const afterEdit = await editor.save();
+    const afterEdit = savedAsHtml(await editor.save());
 
     editor.history.redo();
     await sleep(300);
-    const afterRedo = await editor.save();
+    const afterRedo = savedAsHtml(await editor.save());
 
     expect(contentOf(afterRedo)).toEqual(contentOf(afterEdit));
     expect(textOf(afterRedo, 'c')).toBe('C typed');
@@ -526,7 +527,7 @@ describe('merge audit: undo/redo of merge and split', () => {
 
     merge({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
     await sleep(CAPTURE);
-    const afterFirst = await editor.save();
+    const afterFirst = savedAsHtml(await editor.save());
 
     merge({ minRow: 1, maxRow: 1, minCol: 0, maxCol: 1 });
     await sleep(CAPTURE);
@@ -535,7 +536,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     editor.history.undo();
     await sleep(300);
 
-    expect(contentOf(await editor.save())).toEqual(contentOf(afterFirst));
+    expect(contentOf(savedAsHtml(await editor.save()))).toEqual(contentOf(afterFirst));
     expect(domShape().spans).toEqual(['0,0:2x1']);
     expect(domShape().holders).toEqual({ '0,0': ['a', 'b'], '1,0': ['c'], '1,1': ['d'] });
   }, 90_000);
@@ -546,7 +547,7 @@ describe('merge audit: undo/redo of merge and split', () => {
       [{ blocks: ['c'] }, { blocks: ['d'] }],
     ];
     const editor = await boot(buildDoc(multi, { ...TEXTS_2X2, a2: 'A2', b2: 'B2' }));
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
 
     merge({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
     await sleep(CAPTURE);
@@ -554,13 +555,13 @@ describe('merge audit: undo/redo of merge and split', () => {
 
     editor.history.undo();
     await sleep(300);
-    expect(contentOf(await editor.save())).toEqual(contentOf(before));
+    expect(contentOf(savedAsHtml(await editor.save()))).toEqual(contentOf(before));
     expect(domShape().holders).toEqual({ '0,0': ['a', 'a2'], '0,1': ['b', 'b2'], '1,0': ['c'], '1,1': ['d'] });
-    expect(before.blocks.map(b => b.id)).toEqual((await editor.save()).blocks.map(b => b.id));
+    expect(before.blocks.map(b => b.id)).toEqual((savedAsHtml(await editor.save())).blocks.map(b => b.id));
 
     editor.history.redo();
     await sleep(300);
-    const redone = await editor.save();
+    const redone = savedAsHtml(await editor.save());
 
     expect(contentOf(redone)[0][0].blocks).toEqual(['a', 'a2', 'b', 'b2']);
     expect(domShape().holders['0,0']).toEqual(['a', 'a2', 'b', 'b2']);
@@ -568,7 +569,7 @@ describe('merge audit: undo/redo of merge and split', () => {
 
   it('merge -> undo -> redo -> undo cycles converge (no ghost blocks)', async () => {
     const editor = await boot(buildDoc(FLAT_2X2, TEXTS_2X2));
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
 
     merge({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
     await sleep(CAPTURE);
@@ -580,7 +581,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     }
     editor.history.undo();
     await sleep(300);
-    const after = await editor.save();
+    const after = savedAsHtml(await editor.save());
 
     expect(blockIdsSorted(after)).toEqual(blockIdsSorted(before));
     expect(contentOf(after)).toEqual(contentOf(before));

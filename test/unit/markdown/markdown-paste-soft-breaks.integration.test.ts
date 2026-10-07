@@ -12,6 +12,7 @@ import { ListItem } from '../../../src/tools/list';
 import { BoldInlineTool } from '../../../src/components/inline-tools/inline-tool-bold';
 import { markdownToBlocks } from '../../../src/markdown/index';
 import type { API, OutputBlockData, OutputData } from '../../../types';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -62,7 +63,7 @@ const pastePlain = async (instance: TestEditor, id: string, plain: string): Prom
     expect((await instance.save()).blocks.some(block => block.id !== id)).toBe(true);
   });
 
-  return (await instance.save()).blocks;
+  return blocksAsHtml((await instance.save()).blocks);
 };
 
 describe('markdown paste keeps soft line breaks', () => {

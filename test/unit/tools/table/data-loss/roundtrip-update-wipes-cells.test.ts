@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OutputBlockData, OutputData } from '../../../../../types';
 import { boot, settle, viewTable, type Booted } from './roundtrip-harness';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 /**
  * `blocks.update(tableId, data)` on an editable table goes through
@@ -68,7 +69,7 @@ describe('blocks.update on an editable table keeps the cell blocks it still refe
     });
     await settle();
 
-    const out = await booted.editor.save();
+    const out = savedAsHtml(await booted.editor.save());
 
     expect(gridTexts(out)).toEqual(EXPECTED_TEXTS);
     expect(viewTable(out)?.grid[0][0].color).toBe('#fbecdd');
@@ -79,7 +80,7 @@ describe('blocks.update on an editable table keeps the cell blocks it still refe
     await booted.editor.blocks.update('t', { withHeadings: true });
     await settle();
 
-    const out = await booted.editor.save();
+    const out = savedAsHtml(await booted.editor.save());
 
     expect(gridTexts(out)).toEqual(EXPECTED_TEXTS);
   });
@@ -90,7 +91,7 @@ describe('blocks.update on an editable table keeps the cell blocks it still refe
     await booted.editor.blocks.update('t', { withHeadings: true });
     await settle();
 
-    const out = await booted.editor.save();
+    const out = savedAsHtml(await booted.editor.save());
 
     expect(gridTexts(out)).toEqual(EXPECTED_TEXTS);
     expect(out?.blocks.map(b => (b.data as { text?: string }).text).filter(Boolean)).toEqual(['A', 'B', 'C', 'D']);
@@ -109,7 +110,7 @@ describe('blocks.update on an editable table keeps the cell blocks it still refe
     await booted.editor.blocks.update('t', { withHeadings: true });
     await settle();
 
-    const out = await booted.editor.save();
+    const out = savedAsHtml(await booted.editor.save());
     const content = (out?.blocks.find(b => b.id === 't')?.data as { content: Array<Array<{ blocks: string[] }>> }).content;
 
     expect(content.map(row => row.map(cell => cell.blocks))).toEqual([[['a'], ['b']], [['c'], ['d']]]);
@@ -133,7 +134,7 @@ describe('blocks.update on an editable table keeps the cell blocks it still refe
     await booted.editor.blocks.update('t', { withHeadings: true });
     await settle();
 
-    const out = await booted.editor.save();
+    const out = savedAsHtml(await booted.editor.save());
     const kid = out?.blocks.find(b => b.id === 'k');
 
     expect(kid?.parent).toBe('tg');
@@ -160,7 +161,7 @@ describe('blocks.update on an editable table keeps the cell blocks it still refe
     await booted.editor.blocks.update('t', { withHeadings: true });
     await settle();
 
-    const out = await booted.editor.save();
+    const out = savedAsHtml(await booted.editor.save());
     const p = out?.blocks.find(b => b.id === 'p');
 
     expect(p?.parent).toBe('nt');
@@ -177,7 +178,7 @@ describe('blocks.update on an editable table keeps the cell blocks it still refe
     });
     await settle();
 
-    const out = await booted.editor.save();
+    const out = savedAsHtml(await booted.editor.save());
 
     expect(booted.editor.blocks.getById('d')).toBeNull();
     expect(out?.blocks.some(b => b.id === 'd')).toBe(false);

@@ -9,6 +9,7 @@ import { PageTool } from '../../../../src/tools/page';
 import { Bold, Link } from '../../../../src/tools';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import type { API, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 interface Runtime {
   isReady: Promise<unknown>;
@@ -33,7 +34,7 @@ const settleFrame = async (): Promise<void> => {
 };
 
 const pageIds = async (instance: Runtime): Promise<string[]> => {
-  const output = await instance.save();
+  const output = savedAsHtml(await instance.save());
 
   return output.blocks.filter(block => block.type === 'page').map(block => String(block.data.pageId));
 };
@@ -130,7 +131,7 @@ describe('a saved page block', () => {
     await instance.isReady;
     await settleFrame();
 
-    const output = await instance.save();
+    const output = savedAsHtml(await instance.save());
 
     expect(output.blocks.find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1' });
     expect(instance.module.yjsManager.toJSON().find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1' });
@@ -215,7 +216,7 @@ describe('a page block in a real editor', () => {
     await instance.readOnly.toggle(false);
     await settleFrame();
 
-    expect((await instance.save()).blocks.find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1' });
+    expect((savedAsHtml(await instance.save())).blocks.find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1' });
     expect(instance.module.yjsManager.toJSON().find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1' });
     expect(holder?.querySelector('[data-blok-testid="page-title"]')?.textContent).toBe('New');
     expect(resolve).toHaveBeenCalledTimes(1);
@@ -239,6 +240,6 @@ describe('a page block in a real editor', () => {
 
     expect(converted.holder.textContent).toBe('Page');
     expect(converted.holder.querySelector('i')).toBeNull();
-    expect((await instance.save()).blocks).toMatchObject([{ type: 'paragraph', data: { text: 'Page' } }]);
+    expect((savedAsHtml(await instance.save())).blocks).toMatchObject([{ type: 'paragraph', data: { text: 'Page' } }]);
   }, 30_000);
 });

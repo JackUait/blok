@@ -6,6 +6,7 @@ import { Table } from '../../../../../src/tools/table';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import { CalloutTool } from '../../../../../src/tools/callout';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { htmlOf } from '../../../helpers/saved-as-html';
 
 export interface TestEditor {
   isReady: Promise<unknown>;
@@ -92,8 +93,9 @@ const textOf = (block: OutputBlockData | undefined): string => {
     return '<missing>';
   }
   const data = block.data;
+  const text = htmlOf(data.text);
 
-  return `${block.type}:${typeof data.text === 'string' ? data.text : JSON.stringify(data)}`;
+  return `${block.type}:${typeof text === 'string' ? text : JSON.stringify(data)}`;
 };
 
 /**

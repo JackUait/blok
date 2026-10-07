@@ -8,6 +8,7 @@ import { Blok } from '../../../../../src/blok';
 import { Table } from '../../../../../src/tools/table/index';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -129,7 +130,7 @@ describe('keyboard at table boundaries keeps cell data', () => {
     const instance = await boot(doc());
 
     await press('c2', 'Backspace', 'start');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B'], ['C1C2', 'D']]);
   }, 30_000);
@@ -152,7 +153,7 @@ describe('keyboard at table boundaries keeps cell data', () => {
     const instance = await boot(doc());
 
     await press('b', 'Backspace', 'start');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B'], ['C1|C2', 'D']]);
   }, 30_000);
@@ -161,7 +162,7 @@ describe('keyboard at table boundaries keeps cell data', () => {
     const instance = await boot(doc());
 
     await press('a', 'Backspace', 'start');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B'], ['C1|C2', 'D']]);
     expect(rootTexts(out)).toEqual(['Top', 'After']);
@@ -171,7 +172,7 @@ describe('keyboard at table boundaries keeps cell data', () => {
     const instance = await boot(doc());
 
     await press('a', 'Delete', 'end');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B'], ['C1|C2', 'D']]);
   }, 30_000);
@@ -180,7 +181,7 @@ describe('keyboard at table boundaries keeps cell data', () => {
     const instance = await boot(doc());
 
     await press('d', 'Delete', 'end');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(allText(out)).toContain('After');
     expect(savedTexts(out)[0]).toEqual(['A', 'B']);
@@ -190,7 +191,7 @@ describe('keyboard at table boundaries keeps cell data', () => {
     const instance = await boot(doc());
 
     await press('top', 'Delete', 'end');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B'], ['C1|C2', 'D']]);
     expect(rootTexts(out)).toContain('Top');
@@ -200,7 +201,7 @@ describe('keyboard at table boundaries keeps cell data', () => {
     const instance = await boot(doc());
 
     await press('after', 'Backspace', 'start');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(allText(out)).toContain('After');
     expect(savedTexts(out)[0]).toEqual(['A', 'B']);

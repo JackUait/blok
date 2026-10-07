@@ -91,8 +91,6 @@ export class Saver extends Module {
   private documentRecordId: string | null = null;
   private mintedDocumentId = false;
 
-  private richTextFallbackWarned = false;
-
   /**
    * @param options - module options
    * @param options.config - Blok configuration object
@@ -1226,15 +1224,11 @@ export class Saver extends Module {
 
     // collapseToLegacy always returns a new array, so identity tells a collapse.
     const collapsed = finalBlocks !== extractedBlocks;
+    // Collaboration and legacy output stay HTML for now, silently.
     const collaborating = this.Blok.Collaboration?.isEnabled ?? false;
-    const wantsSegments = this.config.richText === 'segments';
-
-    if (wantsSegments && (collapsed || collaborating)) {
-      this.warnRichTextFallbackOnce(collapsed ? 'the legacy data model' : 'collaboration');
-    }
 
     const resolve = (type: string): string[] => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? [];
-    const hostBlocks = dialect === 'host' && wantsSegments && !collapsed && !collaborating
+    const hostBlocks = dialect === 'host' && !collapsed && !collaborating
       ? outputBlocksToSegments(finalBlocks, resolve, htmlToSegmentsDom)
       : finalBlocks;
 
@@ -1277,29 +1271,13 @@ export class Saver extends Module {
    * @returns `data` itself when nothing converts
    */
   public blockDataForHost(tool: BlockToolAdapter, data: BlockToolData): BlockToolData {
-    if (tool.richTextFormat !== 'segments') {
-      return data;
-    }
-
     const legacyOutput = shouldCollapseToLegacy(
       this.config.dataModel || 'auto',
       this.Blok.Renderer?.getDetectedInputFormat?.() ?? 'flat'
     );
     const collaborating = this.Blok.Collaboration?.isEnabled ?? false;
 
-    if (legacyOutput || collaborating) {
-      this.warnRichTextFallbackOnce(legacyOutput ? 'the legacy data model' : 'collaboration');
-    }
-
     return richTextOutputForHost(tool, data, name => this.Blok.Tools.blockTools.get(name), { collaborating, legacyOutput });
-  }
-
-  private warnRichTextFallbackOnce(reason: string): void {
-    if (this.richTextFallbackWarned) {
-      return;
-    }
-    this.richTextFallbackWarned = true;
-    logLabeled(`richText: "segments" is ignored with ${reason}; rich text stays HTML.`, 'warn');
   }
 
   /**

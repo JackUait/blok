@@ -24,6 +24,7 @@ import {
 import { isCellWithBlocks } from '../../../../../src/tools/table/types';
 import type { CellContent, TableData } from '../../../../../src/tools/table/types';
 import type { OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -102,11 +103,11 @@ const paste = async (target: HTMLElement, flavors: Record<string, string>): Prom
 
 /** Save until two consecutive saves agree (markdown paste lazy-loads its converter). */
 const stableSave = async (editor: TestEditor): Promise<OutputData> => {
-  let previous = JSON.stringify((await editor.save()).blocks);
+  let previous = JSON.stringify((savedAsHtml(await editor.save())).blocks);
 
   for (let i = 0; i < 40; i++) {
     await settle(25);
-    const next = await editor.save();
+    const next = savedAsHtml(await editor.save());
     const json = JSON.stringify(next.blocks);
 
     if (json === previous && i > 2) {

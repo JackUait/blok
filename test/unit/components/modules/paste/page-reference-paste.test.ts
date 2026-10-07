@@ -5,6 +5,7 @@ import { PageTool } from '../../../../../src/tools/page';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { LinkInlineTool } from '../../../../../src/components/inline-tools/inline-tool-link';
 import type { API, OutputData } from '../../../../../types';
+import { htmlOf } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -68,7 +69,7 @@ describe('inline page reference paste', () => {
     const output = await instance.save();
     const current = output.blocks.find((block) => block.id === 'before');
 
-    expect(current?.data.text).toBe('Before <a data-blok-page-id="p1">Page</a>');
+    expect(htmlOf(current?.data.text)).toBe('Before <a data-blok-page-id="p1">Page</a>');
     expect(output.blocks.filter((block) => block.type === 'page')).toHaveLength(1);
     expect(JSON.stringify(output)).not.toContain('old-title');
     expect(JSON.stringify(output)).not.toContain('Old title');
@@ -104,7 +105,7 @@ describe('inline page reference paste', () => {
 
     const output = await instance.save();
 
-    expect(output.blocks.find((block) => block.id === 'before')?.data.text)
+    expect(htmlOf(output.blocks.find((block) => block.id === 'before')?.data.text))
       .toBe('Before <a href="https://example.test/">Site</a>');
   });
 });

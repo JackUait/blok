@@ -15,6 +15,7 @@ import {
   parseNotionBlocksV3,
   NOTION_BLOCKS_V3_MIME,
 } from '../../../../../src/components/modules/paste/notion-blocks-v3';
+import { htmlOf } from '../../../helpers/saved-as-html';
 
 /**
  * Page-root id used by the real fixture. Top-level blocks point their
@@ -1370,7 +1371,7 @@ describe('Notion v3 paste with optional page tools', () => {
 
     const saved = await pasteV3(editor, raw);
 
-    expect(saved.blocks.filter(block => block.type === 'paragraph').map(block => block.data.text)).toEqual([
+    expect(saved.blocks.filter(block => block.type === 'paragraph').map(block => htmlOf(block.data.text))).toEqual([
       '<a href="https://www.notion.so/pageid">Project</a>',
       '<a href="https://www.notion.so/targetid">Page</a>',
     ]);

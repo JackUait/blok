@@ -5,6 +5,7 @@ import type { Paste } from '../../../../src/components/modules/paste';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import { PageTool, type PageConfig, type PageInfo } from '../../../../src/tools/page';
 import type { API, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 /**
  * A copied page link pastes as a mention: an inline reference to the page,
@@ -56,7 +57,7 @@ const menuItem = (name: string): HTMLElement | null =>
   document.querySelector<HTMLElement>(`[data-blok-item-name="paste-menu-${name}"]`);
 
 const savedText = async (instance: TestEditor): Promise<string> => {
-  const output = await instance.save();
+  const output = savedAsHtml(await instance.save());
 
   const text: unknown = output.blocks[0]?.data.text;
 

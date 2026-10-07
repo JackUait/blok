@@ -5,6 +5,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { TabsTool } from '../../../../src/tools/tabs';
 import { TabTool } from '../../../../src/tools/tab';
 import type { OutputBlockData, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -61,7 +62,7 @@ const press = async (id: string, key: 'Backspace' | 'Delete', at: 'start' | 'end
 };
 
 const ids = async (instance: TestEditor): Promise<string[]> =>
-  (await instance.save()).blocks.map(block => block.id ?? '');
+  (savedAsHtml(await instance.save())).blocks.map(block => block.id ?? '');
 
 const P = (id: string, text: string, parent?: string): OutputBlockData =>
   ({ id, type: 'paragraph', data: { text }, ...(parent === undefined ? {} : { parent }) });
@@ -107,7 +108,7 @@ describe('tabs block: Backspace and Delete next to it', () => {
 
     await press('after', 'Backspace', 'start');
 
-    const saved = await instance.save();
+    const saved = savedAsHtml(await instance.save());
 
     expect(saved.blocks.map(block => block.id)).toEqual(['tabs', 't1', 'p1', 't2', 'p2', 'after']);
     expect(saved.blocks.find(block => block.id === 'p2')?.data.text).toBe('hidden');

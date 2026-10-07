@@ -12,7 +12,6 @@ export const USE_BLOK_CONFIG_KEYS = [
   'autofocus',
   'defaultBlock',
   'dataModel',
-  'richText',
   'placeholder',
   'sanitizer',
   'hideToolbar',

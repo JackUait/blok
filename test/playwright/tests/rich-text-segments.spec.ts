@@ -18,7 +18,7 @@ const mount = async (page: Page, blocks: OutputData['blocks']): Promise<void> =>
     holder.id = 'blok';
     holder.setAttribute('data-blok-testid', 'blok');
     document.body.appendChild(holder);
-    const blok = new window.Blok({ holder: 'blok', richText: 'segments', data: { blocks: list } });
+    const blok = new window.Blok({ holder: 'blok', data: { blocks: list } });
 
     window.blokInstance = blok;
     await blok.isReady;
@@ -31,7 +31,7 @@ const savedText = (page: Page): Promise<unknown> => page.evaluate(async () => {
   return output?.blocks[0]?.data.text;
 });
 
-test.describe('richText: segments', () => {
+test.describe('rich text segments', () => {
   test('typing bold text saves segments', async ({ page }) => {
     await mount(page, [ { id: 'a', type: 'paragraph', data: { text: '' } } ]);
 

@@ -16,6 +16,7 @@ import { Paragraph } from '../../../../../src/tools/paragraph';
 import { Table } from '../../../../../src/tools/table';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
 import type { BlockToolConstructable } from '../../../../../types/tools';
+import { htmlOf, savedAsHtml } from '../../../helpers/saved-as-html';
 
 const LINEAGE = '0123456789abcdef0123456789abcdef';
 
@@ -99,7 +100,7 @@ const newHolder = (): HTMLElement => {
 };
 
 const textOf = (data: OutputData | undefined, id: string): unknown =>
-  data?.blocks.find((block) => block.id === id)?.data.text;
+  htmlOf(data?.blocks.find((block) => block.id === id)?.data.text);
 
 /** Types into the cell paragraph so the change is still inside its batch window. */
 const typeInto = (holder: HTMLElement, id: string, text: string): void => {
@@ -271,7 +272,7 @@ describe('closing the editor is not a deletion', { timeout: 60000 }, () => {
     await blok.blocks.delete(0, false);
     await settle();
 
-    const saved: OutputData = await blok.save();
+    const saved: OutputData = savedAsHtml(await blok.save());
     const ids = saved.blocks.map((block) => block.id);
 
     expect(ids.filter((id) => id === 'table-1' || id === 'c00' || id === 'c01')).toEqual([]);

@@ -4,6 +4,7 @@ import { convertGdocs } from '../../../../../src/cli/commands/convert-gdocs/inde
 import type { OutputBlockData, OutputData } from '../../../../../types';
 import { boot, viewTable, type Booted } from './roundtrip-harness';
 import { Image } from '../../../../../src/tools';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 const run = (html: string, via: (html: string) => string = convertHtml): OutputData => JSON.parse(via(html)) as OutputData;
 
@@ -78,7 +79,7 @@ describe('CLI --convert-html: table data', () => {
     const out = run('<table><tr><td><p>first</p><p>second</p></td><td>x</td></tr></table>');
 
     booted = await boot(out);
-    const saved = await booted.editor.save();
+    const saved = savedAsHtml(await booted.editor.save());
     const texts = viewTable(saved)?.grid[0][0].texts ?? [];
 
     expect(texts.join(' | ')).toMatch(/first.*\|.*second/);
@@ -88,7 +89,7 @@ describe('CLI --convert-html: table data', () => {
     const out = run('<table><tr><td><ul><li>one</li><li>two</li></ul></td><td>x</td></tr></table>');
 
     booted = await boot(out);
-    const saved = await booted.editor.save();
+    const saved = savedAsHtml(await booted.editor.save());
     const texts = viewTable(saved)?.grid[0][0].texts ?? [];
 
     expect(texts.filter(t => t.startsWith('list:'))).toHaveLength(2);
@@ -98,7 +99,7 @@ describe('CLI --convert-html: table data', () => {
     const out = run('<table><tr><th>H1</th><th>H2</th></tr><tr><td>a</td><td>b</td></tr></table>');
 
     booted = await boot(out);
-    const saved = await booted.editor.save();
+    const saved = savedAsHtml(await booted.editor.save());
     const texts = (viewTable(saved)?.grid ?? []).flat().flatMap(c => c.texts);
 
     expect(texts).toEqual(['paragraph:H1', 'paragraph:H2', 'paragraph:a', 'paragraph:b']);
@@ -199,7 +200,7 @@ describe('CLI --convert-html: table data', () => {
     const out = run('<table><tr><td>before <img src="https://x.test/cat.png" alt="a cat"> after</td></tr></table>');
 
     booted = await boot(out, { tools: { image: Image } });
-    const saved = await booted.editor.save();
+    const saved = savedAsHtml(await booted.editor.save());
 
     expect(cellBlocks(saved).map(b => b.type === 'image' ? b.data : b.data.text)).toEqual([
       'before ',

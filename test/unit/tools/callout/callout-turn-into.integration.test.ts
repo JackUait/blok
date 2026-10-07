@@ -14,6 +14,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { Quote } from '../../../../src/tools/quote';
 import { ToggleItem } from '../../../../src/tools/toggle';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 interface Runtime {
   isReady: Promise<unknown>;
@@ -74,10 +75,10 @@ const convert = async (instance: Runtime, tool: string, data?: Record<string, un
 };
 
 const tree = async (instance: Runtime): Promise<string[]> =>
-  (await instance.save()).blocks.map(block => `${block.id}:${block.type}:${block.parent ?? 'root'}`);
+  (savedAsHtml(await instance.save())).blocks.map(block => `${block.id}:${block.type}:${block.parent ?? 'root'}`);
 
 const textOf = async (instance: Runtime, id: string): Promise<unknown> =>
-  (await instance.save()).blocks.find(block => block.id === id)?.data.text;
+  (savedAsHtml(await instance.save())).blocks.find(block => block.id === id)?.data.text;
 
 describe('callout: turn into another block', () => {
   beforeEach(() => {
@@ -222,7 +223,7 @@ describe('callout: turn into another block', () => {
   ] as const) {
     it(`comes back exactly as it was after one undo (${label})`, async () => {
       const instance = await boot([...blocks]);
-      const before = JSON.stringify((await instance.save()).blocks);
+      const before = JSON.stringify((savedAsHtml(await instance.save())).blocks);
 
       await convert(instance, tool, data);
       instance.module.yjsManager.stopCapturing();
@@ -230,13 +231,13 @@ describe('callout: turn into another block', () => {
       instance.history.undo();
       await settleFrame();
 
-      expect(JSON.stringify((await instance.save()).blocks)).toBe(before);
+      expect(JSON.stringify((savedAsHtml(await instance.save())).blocks)).toBe(before);
     }, 30_000);
   }
 
   it('gets its background back after one undo from a toggle', async () => {
     const instance = await boot();
-    const before = JSON.stringify((await instance.save()).blocks);
+    const before = JSON.stringify((savedAsHtml(await instance.save())).blocks);
 
     await convert(instance, 'toggle');
     instance.module.yjsManager.stopCapturing();
@@ -244,6 +245,6 @@ describe('callout: turn into another block', () => {
     instance.history.undo();
     await settleFrame();
 
-    expect(JSON.stringify((await instance.save()).blocks)).toBe(before);
+    expect(JSON.stringify((savedAsHtml(await instance.save())).blocks)).toBe(before);
   }, 30_000);
 });

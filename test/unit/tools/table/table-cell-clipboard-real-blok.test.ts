@@ -25,6 +25,8 @@ import { buildClipboardHtml, serializeCellsToClipboard } from '../../../../src/t
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
 import type { CellContent, CellPlacement, TableCellsClipboard, TableConfig, TableData } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions, ConversionConfig, OutputBlockData, OutputData, PasteConfig } from '../../../../types';
+import { htmlToSegmentsDom } from '../../../../src/components/utils/rich-text-dom';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 interface CellSelectionHandle {
   selectRow: (row: number) => void;
@@ -256,7 +258,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
 
     pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(saved.blocks.filter(block => block.type === 'page' && block.data.pageId === 'p1')).toHaveLength(1);
     expect(savedCell(saved, 'src', 0, 0).blocks).toContain('pg');
@@ -277,7 +279,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
 
     pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
 
     expect(saved.blocks.find(block => block.id === copiedId)).toMatchObject({
@@ -300,7 +302,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
 
     pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
 
     expect(saved.blocks.find(block => block.id === copiedId)).toMatchObject({
@@ -323,7 +325,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
 
     pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
 
     expect(saved.blocks.find(block => block.id === copiedId)).toMatchObject({
@@ -349,7 +351,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
 
     pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
 
     expect(saved.blocks.find(block => block.id === copiedId)).toMatchObject({
@@ -369,7 +371,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
     }, {}, 1, false);
 
     await settle();
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(saved.blocks.filter(block => block.type === 'page' && block.data.pageId === 'p1')).toHaveLength(1);
     expect(savedCell(saved, table.id, 0, 0).blocks).not.toContain('pg');
@@ -419,7 +421,8 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
 
     it('pasting into another table keeps every mark the source cell saved', async () => {
       const editor = await boot(sourceAndTarget(MARKED));
-      const sourceText = cellTexts(await editor.save(), savedCell(await editor.save(), 'src', 0, 0))[0];
+      const before = await editor.save();
+      const sourceText = cellTexts(before, savedCell(before, 'src', 0, 0))[0];
 
       pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
       await settle();
@@ -427,7 +430,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
       const saved = await editor.save();
 
       expect(cellTexts(saved, savedCell(saved, 'dst', 0, 0))).toStrictEqual([sourceText]);
-      expect(sourceText).toBe(MARKED);
+      expect(sourceText).toStrictEqual(htmlToSegmentsDom(MARKED));
     });
 
     it('pasting outside a table keeps every mark the source cell saved', async () => {
@@ -443,7 +446,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
         throw new Error('no pasted table');
       }
 
-      expect(cellTexts(saved, savedCell(saved, pasted.id, 0, 0))).toStrictEqual([MARKED]);
+      expect(cellTexts(saved, savedCell(saved, pasted.id, 0, 0))).toStrictEqual([htmlToSegmentsDom(MARKED)]);
     });
 
     it('still strips a script, an event handler and a javascript: link', async () => {
@@ -471,7 +474,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
       expect(rendered).not.toMatch(/script|onerror|onclick|javascript:/);
       expect(rendered).toContain('<u>u</u>');
 
-      const saved = await editor.save();
+      const saved = savedAsHtml(await editor.save());
       const [text] = cellTexts(saved, savedCell(saved, 'dst', 0, 0));
 
       expect(text).not.toMatch(/script|onerror|onclick|javascript:/);
@@ -498,7 +501,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
     pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
 
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(savedCell(saved, 'dst', 0, 0).placement).toBe('middle-center');
     expect(savedCell(saved, 'dst', 0, 0).colspan).toBe(2);
@@ -528,7 +531,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
       pasteHtml(cellEditable('dst', 0, 0), html);
       await settle();
 
-      const saved = await editor.save();
+      const saved = savedAsHtml(await editor.save());
 
       expect(savedCell(saved, 'dst', 0, 0).placement).toBe('bottom-right');
       expect(savedCell(saved, 'dst', 0, 1).placement).toBe('middle-left');
@@ -559,7 +562,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
 
     expect(onChange).toHaveBeenCalledTimes(1);
 
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(savedCell(saved, 'tbl', 0, 0).placement).toBe('middle-center');
   });

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Blok } from '../../../../../src/blok';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { OutputData } from '../../../../../types';
+import { htmlOf } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -30,7 +31,7 @@ const flush = async (): Promise<void> => {
 const nextTask = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 const savedTexts = async (instance: TestEditor): Promise<unknown[]> =>
-  (await instance.save()).blocks.map((block) => block.data.text);
+  (await instance.save()).blocks.map((block) => htmlOf(block.data.text));
 
 describe('blocks.transact — undo steps', () => {
   beforeEach(() => {

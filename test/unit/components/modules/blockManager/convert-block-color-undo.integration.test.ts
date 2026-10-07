@@ -72,7 +72,7 @@ describe('turning a coloured block into another block', () => {
     await settleFrame();
 
     expect((await instance.save()).blocks).toEqual([
-      { id: 'p', type: 'toggle', data: { text: 'Hello', textColor: 'red', backgroundColor: 'blue' } },
+      { id: 'p', type: 'toggle', data: { text: [{ text: 'Hello' }], textColor: 'red', backgroundColor: 'blue' } },
     ]);
   }, 30_000);
 

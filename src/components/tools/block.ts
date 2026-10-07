@@ -4,9 +4,7 @@ import { log } from '../utils/logger';
 import { safeHref } from '../utils/sanitize-url';
 
 import { BaseToolAdapter,  InternalBlockToolSettings, UserSettings  } from './base';
-import type { ConstructorOptions } from './base';
 import { ToolsCollection } from './collection';
-import type { RichTextFormat } from '../../../types/rich-text';
 import type { ChildToolRestrictions } from '../../../types/tools';
 import type { InlineToolAdapter } from './inline';
 import type { BlockTuneAdapter } from './tune';
@@ -61,13 +59,6 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * Cache for base sanitize configuration
    */
   private _baseSanitizeConfig: SanitizerConfig | undefined;
-
-  private readonly richTextFormatOption: RichTextFormat | undefined;
-
-  constructor(options: ConstructorOptions & { richTextFormat?: RichTextFormat }) {
-    super(options);
-    this.richTextFormatOption = options.richTextFormat;
-  }
 
   /**
    * Creates new Tool instance
@@ -565,11 +556,6 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
     const declared = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.RichTextFields];
 
     return Array.isArray(declared) ? declared.filter((field): field is string => typeof field === 'string') : [];
-  }
-
-  /** What hosts receive for {@link richTextFields}. */
-  public get richTextFormat(): RichTextFormat {
-    return this.richTextFormatOption ?? 'html';
   }
 
   /**

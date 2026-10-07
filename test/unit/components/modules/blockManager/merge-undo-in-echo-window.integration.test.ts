@@ -9,6 +9,7 @@ import type { Block } from '../../../../../src/components/block';
 import { ListItem } from '../../../../../src/tools/list';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { htmlOf } from '../../../helpers/saved-as-html';
 
 interface Runtime {
   isReady: Promise<unknown>;
@@ -50,7 +51,7 @@ const boot = async (blocks: OutputBlockData[]): Promise<Runtime> => {
 };
 
 const texts = async (instance: Runtime): Promise<string[]> =>
-  (await instance.save()).blocks.map(block => `${String(block.id)}:${String((block.data as { text?: unknown }).text)}`);
+  (await instance.save()).blocks.map(block => `${String(block.id)}:${String(htmlOf((block.data as { text?: unknown }).text))}`);
 
 const blockById = (instance: Runtime, id: string): Block => {
   const block = instance.module.blockManager.getBlockById(id);

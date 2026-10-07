@@ -12,6 +12,7 @@ import { UnderlineInlineTool } from '../../../../src/components/inline-tools/inl
 import { Paragraph } from '../../../../src/tools/paragraph';
 import { ToggleItem } from '../../../../src/tools/toggle';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
+import { htmlToSegmentsDom } from '../../../../src/components/utils/rich-text-dom';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -51,11 +52,11 @@ const boot = async (blocks: OutputBlockData[], inlineToolbar: boolean): Promise<
   return instance;
 };
 
-const textOf = async (instance: TestEditor, type: string): Promise<string | undefined> => {
+const textOf = async (instance: TestEditor, type: string): Promise<unknown> => {
   const saved = await instance.save();
   const block = saved.blocks.find(candidate => candidate.type === type);
 
-  return block?.data.text as string | undefined;
+  return block?.data.text;
 };
 
 describe('toggle text keeps inline marks', () => {
@@ -75,7 +76,7 @@ describe('toggle text keeps inline marks', () => {
   it('survives load and save with the inline toolbar off', async () => {
     const instance = await boot([{ id: 't', type: 'toggle', data: { text: RICH } }], false);
 
-    expect(await textOf(instance, 'toggle')).toBe(RICH);
+    expect(await textOf(instance, 'toggle')).toStrictEqual(htmlToSegmentsDom(RICH));
   });
 
   it('survives converting a paragraph into a toggle with the inline toolbar off', async () => {
@@ -84,7 +85,7 @@ describe('toggle text keeps inline marks', () => {
     await instance.blocks.convert('p', 'toggle');
     await settle();
 
-    expect(await textOf(instance, 'toggle')).toBe(RICH);
+    expect(await textOf(instance, 'toggle')).toStrictEqual(htmlToSegmentsDom(RICH));
   });
 
   // Paste keeps only the inline tools' tags, so they must be registered here.
@@ -98,6 +99,6 @@ describe('toggle text keeps inline marks', () => {
     );
     await settle();
 
-    expect(await textOf(instance, 'toggle')).toBe('Sum <strong>B</strong> <u>U</u> <s>S</s>');
+    expect(await textOf(instance, 'toggle')).toStrictEqual(htmlToSegmentsDom('Sum <strong>B</strong> <u>U</u> <s>S</s>'));
   });
 });

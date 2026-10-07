@@ -9,6 +9,7 @@ import type { Block } from '../../../../../src/components/block';
 import { Table } from '../../../../../src/tools/table/index';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -129,7 +130,7 @@ describe('cell selection gestures keep cell data', () => {
 
     selectionOf(instance).selectRange({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
     await pillAction('Merge cells');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
     const merged = savedTexts(out)[0][0].split('|').sort();
 
     expect(merged).toEqual(['A', 'B', 'D', 'E']);
@@ -144,7 +145,7 @@ describe('cell selection gestures keep cell data', () => {
     await pillAction('Merge cells');
     selectionOf(instance).selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 });
     await pillAction('Split cell');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out).flat().join('|').split('|').filter(t => t !== '').sort()).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']);
   }, 30_000);
@@ -157,7 +158,7 @@ describe('cell selection gestures keep cell data', () => {
     instance.module.yjsManager.stopCapturing();
     instance.history.undo();
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B', 'C'], ['D', 'E', 'F'], ['G', 'H', 'I']]);
     expect(visibleTexts()).toEqual([['A', 'B', 'C'], ['D', 'E', 'F'], ['G', 'H', 'I']]);
@@ -172,7 +173,7 @@ describe('cell selection gestures keep cell data', () => {
     selectionOf(instance).selectRange({ minRow: 1, maxRow: 1, minCol: 0, maxCol: 1 });
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', '~', 'C'], ['', '', 'F']]);
   }, 30_000);
@@ -186,7 +187,7 @@ describe('cell selection gestures keep cell data', () => {
     instance.module.yjsManager.stopCapturing();
     instance.history.undo();
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B', 'C'], ['D', 'E', 'F'], ['G', 'H', 'I']]);
     expect(visibleTexts()).toEqual([['A', 'B', 'C'], ['D', 'E', 'F'], ['G', 'H', 'I']]);
@@ -200,7 +201,7 @@ describe('cell selection gestures keep cell data', () => {
 
     selectionOf(instance).selectRange({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 2 });
     await pillAction('Merge cells');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)[0][0].split('|').sort()).toEqual(['A', 'C', 'D', 'E', 'F']);
   }, 30_000);

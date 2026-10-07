@@ -9,6 +9,7 @@ import { BlokEditor } from '../../../packages/vue/src';
 import type { Blok, OutputData } from '@/types';
 import { Paragraph } from '../../../src/tools/paragraph';
 import { Table } from '../../../src/tools/table/index';
+import { htmlOf } from '../helpers/saved-as-html';
 
 const TOOLS = { paragraph: { class: Paragraph }, table: { class: Table } };
 
@@ -38,7 +39,7 @@ const readGrid = (root: Element): string[][] => {
 };
 
 const cellText = (doc: OutputData | undefined, id: string): unknown =>
-  (doc?.blocks.find((b) => b.id === id)?.data as { text?: string } | undefined)?.text;
+  htmlOf((doc?.blocks.find((b) => b.id === id)?.data as { text?: unknown } | undefined)?.text);
 
 const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 

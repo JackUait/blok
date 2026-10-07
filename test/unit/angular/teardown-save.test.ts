@@ -11,6 +11,7 @@ import type { Blok, OutputData } from '@/types';
 import { BlokEditorComponent } from '../../../packages/angular/src/blok-editor.component';
 import { Paragraph, type ParagraphData } from '../../../src/tools/paragraph';
 import { Table } from '../../../src/tools/table/index';
+import { htmlOf } from '../helpers/saved-as-html';
 
 const TOOLS = { paragraph: { class: Paragraph }, table: { class: Table } };
 
@@ -122,7 +123,7 @@ class AsyncToolHost {
 }
 
 const textOf = (doc: OutputData | undefined, id: string): unknown =>
-  (doc?.blocks.find((b) => b.id === id)?.data as { text?: string } | undefined)?.text;
+  htmlOf((doc?.blocks.find((b) => b.id === id)?.data as { text?: unknown } | undefined)?.text);
 
 const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 

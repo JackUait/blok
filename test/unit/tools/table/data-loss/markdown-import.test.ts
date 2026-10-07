@@ -11,6 +11,7 @@ import { Image } from '../../../../../src/tools';
 import { markdownToBlocksWithReport } from '../../../../../src/markdown/index';
 import type { OutputBlockData, OutputData } from '../../../../../types';
 import { settle } from './roundtrip-harness';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '');
 
@@ -74,7 +75,7 @@ const bootAndSave = async (blocks: OutputBlockData[]): Promise<OutputBlockData[]
   await editor.isReady;
   await settle();
 
-  const saved = (await editor.save()).blocks;
+  const saved = (savedAsHtml(await editor.save())).blocks;
 
   editor.destroy();
 

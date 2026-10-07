@@ -293,9 +293,8 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   acceptsChildren?: boolean;
 
   /**
-   * The data fields that hold inline rich text, such as `['text']`. With
-   * `richText: 'segments'`, Blok saves them as segment arrays and reads either
-   * shape on input. Fields not listed stay as the tool stores them, in both
+   * The data fields that hold inline rich text, such as `['text']`. Blok
+   * saves them as segment arrays and reads either shape on input. Fields not listed stay as the tool stores them, in both
    * directions. The sanitize config does not count: list every field here.
    */
   richTextFields?: string[];

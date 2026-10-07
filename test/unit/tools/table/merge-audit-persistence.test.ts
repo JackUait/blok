@@ -7,6 +7,7 @@ import { CELL_ATTR } from '../../../../src/tools/table/table-core';
 import { TableModel } from '../../../../src/tools/table/table-model';
 import type { LegacyCellContent, TableData, TableConfig } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions, OutputBlockData, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 const TABLE_ID = 'table-1';
 
@@ -272,7 +273,7 @@ describe('merge audit: editor load of malformed merge data', () => {
       await instance.readOnly.set(false);
     }
 
-    expect(originTexts(await instance.save())).toStrictEqual(['Alpha', 'claimed']);
+    expect(originTexts(savedAsHtml(await instance.save()))).toStrictEqual(['Alpha', 'claimed']);
   });
 
   it('edit mode: a text-only origin keeps its text before a claimed legacy string', async () => {
@@ -288,7 +289,7 @@ describe('merge audit: editor load of malformed merge data', () => {
       await instance.readOnly.set(false);
     }
 
-    expect(originTexts(await instance.save())).toStrictEqual(['orig', 'legacy']);
+    expect(originTexts(savedAsHtml(await instance.save()))).toStrictEqual(['orig', 'legacy']);
   });
 
   it('edit mode: a text-only cell a rowspan claims is saved inside the origin, after a cell to its right', async () => {
@@ -296,7 +297,7 @@ describe('merge audit: editor load of malformed merge data', () => {
       [{ blocks: ['a'], rowspan: 2 }, { blocks: ['b'] }],
       [{ blocks: [], text: 'claimed' }, { blocks: ['d'] }],
     ], false, { a: 'Alpha', b: 'Bravo', d: 'Delta' });
-    const output = await instance.save();
+    const output = savedAsHtml(await instance.save());
 
     expect(originTexts(output)).toStrictEqual(['Alpha', 'claimed']);
     expect(tableEl().querySelector('td[rowspan="2"]')?.textContent).toBe('Alphaclaimed');
@@ -312,7 +313,7 @@ describe('merge audit: editor load of malformed merge data', () => {
 
     expect((instance.blocks.getById(TABLE_ID)?.contentIds ?? []).map(textOf)).toStrictEqual(['P0', 'cov', 'P2', 'P3']);
 
-    const output = await instance.save();
+    const output = savedAsHtml(await instance.save());
     const savedTexts = output.blocks
       .filter(block => block.parent === TABLE_ID)
       .map(block => (typeof block.data.text === 'string' ? block.data.text : ''));
@@ -328,7 +329,7 @@ describe('merge audit: editor load of malformed merge data', () => {
       [{ blocks: ['a'], text: 'Stale copy', colspan: 3 }, { blocks: ['b'], text: 'Stale too' }, { blocks: [], text: 'claimed' }],
     ], false, { a: 'Alpha', b: 'Bravo' });
 
-    expect(originTexts(await instance.save())).toStrictEqual(['Alpha', 'Bravo', 'claimed']);
+    expect(originTexts(savedAsHtml(await instance.save()))).toStrictEqual(['Alpha', 'Bravo', 'claimed']);
   });
 
   it('read-only keeps the colspan and renders no merge/grip UI', async () => {
@@ -353,7 +354,7 @@ describe('merge audit: editor load of malformed merge data', () => {
 
   it('edit mode: a plain cell inside a live span keeps its block through save', async () => {
     const instance = await boot(plainCellInsideSpan());
-    const output = await instance.save();
+    const output = savedAsHtml(await instance.save());
 
     expect(savedIds(output)).toContain('d');
   });
@@ -367,7 +368,7 @@ describe('merge audit: editor load of malformed merge data', () => {
 
   it('edit mode: a colspan past the last column loads without losing content', async () => {
     const instance = await boot(colspanPastGrid());
-    const output = await instance.save();
+    const output = savedAsHtml(await instance.save());
 
     expect(savedIds(output)).toEqual(expect.arrayContaining(['o', 'a', 'b']));
     expect(tableEl().textContent).toContain('Bravo');
@@ -379,7 +380,7 @@ describe('merge audit: editor load of malformed merge data', () => {
       [{ blocks: [], mergedInto: [0, 0] }, { blocks: ['b'] }],
     ]);
 
-    const output = await instance.save();
+    const output = savedAsHtml(await instance.save());
 
     expect(savedIds(output)).toEqual(expect.arrayContaining(['o', 'a', 'b']));
   });
@@ -403,7 +404,7 @@ describe('merge audit: editor load of malformed merge data', () => {
       [{ blocks: ['o'] }, { blocks: [], mergedInto: [0, 0] }],
       [{ blocks: ['a'] }, { blocks: ['b'] }],
     ]);
-    const output = await instance.save();
+    const output = savedAsHtml(await instance.save());
 
     expect((savedTableContent(output)[0][1] as { mergedInto?: unknown }).mergedInto).toBeUndefined();
   });

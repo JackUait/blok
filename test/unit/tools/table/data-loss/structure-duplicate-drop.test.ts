@@ -11,6 +11,7 @@ import { Paragraph } from '../../../../../src/tools/paragraph';
 import { Header } from '../../../../../src/tools/header';
 import { CalloutTool } from '../../../../../src/tools/callout';
 import type { OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface DragManager {
   lazyInit: () => void;
@@ -77,7 +78,7 @@ const prodSave = async (instance: TestEditor): Promise<OutputData> => {
   vi.stubEnv('NODE_ENV', 'production');
 
   try {
-    return await instance.save();
+    return savedAsHtml(await instance.save());
   } finally {
     vi.unstubAllEnvs();
   }

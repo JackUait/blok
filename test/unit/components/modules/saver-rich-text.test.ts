@@ -48,8 +48,9 @@ const blocks: OutputData['blocks'] = [
   { type: 'image', data: { url: 'https://example.com/a.png', caption: 'cap' } },
 ];
 
-const fallbackWarnings = (spy: MockInstance): unknown[][] =>
-  spy.mock.calls.filter(call => call.some(arg => typeof arg === 'string' && arg.includes('richText: "segments" is ignored')));
+/** Any warning about rich text: the fallbacks are silent. */
+const richTextWarnings = (spy: MockInstance): unknown[][] =>
+  spy.mock.calls.filter(call => call.some(arg => typeof arg === 'string' && /rich ?text|segments/i.test(arg)));
 
 /** A Saver driven through the module with one paragraph block, as saver.test.ts does. */
 const createModuleSaver = (config: Partial<BlokConfig>, collaborating: boolean): Saver => {
@@ -88,7 +89,7 @@ const createModuleSaver = (config: Partial<BlokConfig>, collaborating: boolean):
   return saver;
 };
 
-describe('Saver — richText output format', { timeout: 60_000 }, () => {
+describe('Saver — rich text output', { timeout: 60_000 }, () => {
   let warnSpy: MockInstance;
 
   beforeEach(() => {
@@ -102,30 +103,21 @@ describe('Saver — richText output format', { timeout: 60_000 }, () => {
     vi.restoreAllMocks();
   });
 
-  it('saves rich fields as segments when richText is segments', async () => {
-    const editor = await createEditor({ richText: 'segments', data: { blocks } });
+  it('saves rich fields as segments by default', async () => {
+    const editor = await createEditor({ data: { blocks } });
 
     const saved = await editor.save();
 
     expect(saved.blocks[0].data.text).toEqual([{ text: 'a', marks: { bold: true } }, { text: ' b' }]);
     expect(saved.blocks[1].data.text).toEqual([{ text: 'h', marks: { italic: true } }]);
     expect(saved.blocks[2].data.caption).toBe('cap');
-    expect(fallbackWarnings(warnSpy)).toHaveLength(0);
-  });
-
-  it('keeps HTML by default', async () => {
-    const editor = await createEditor({ data: { blocks } });
-
-    const saved = await editor.save();
-
-    expect(saved.blocks[0].data.text).toBe('<strong>a</strong> b');
+    expect(richTextWarnings(warnSpy)).toHaveLength(0);
   });
 
   it('saves an empty paragraph as an empty array that still counts as empty', async () => {
     // Two blocks: a lone empty default block is dropped from the output.
     // preserveBlank: without it the paragraph fails validate() and is skipped.
     const editor = await createEditor({
-      richText: 'segments',
       tools: { paragraph: { class: Paragraph, config: { preserveBlank: true } } },
       data: { blocks: [{ type: 'paragraph', data: { text: '' } }, { type: 'paragraph', data: { text: '' } }] },
     });
@@ -136,32 +128,28 @@ describe('Saver — richText output format', { timeout: 60_000 }, () => {
     expect(isEmptyOutputData(saved)).toBe(true);
   });
 
-  it('keeps HTML and warns once when the output is collapsed to legacy', async () => {
-    const editor = await createEditor({ richText: 'segments', dataModel: 'legacy', data: { blocks } });
+  it('keeps HTML, silently, when the output is collapsed to legacy', async () => {
+    const editor = await createEditor({ dataModel: 'legacy', data: { blocks } });
 
-    await editor.save();
     const saved = await editor.save();
 
     expect(saved.blocks[0].data.text).toBe('<strong>a</strong> b');
-    expect(fallbackWarnings(warnSpy)).toHaveLength(1);
+    expect(richTextWarnings(warnSpy)).toHaveLength(0);
   });
 
-  it('keeps HTML and warns once under collaboration', async () => {
-    const control = await createModuleSaver({ richText: 'segments' }, false).save();
+  it('keeps HTML, silently, under collaboration', async () => {
+    const control = await createModuleSaver({}, false).save();
 
     expect(Array.isArray(control?.blocks[0].data.text)).toBe(true);
 
-    const saver = createModuleSaver({ richText: 'segments' }, true);
-
-    await saver.save();
-    const saved = await saver.save();
+    const saved = await createModuleSaver({}, true).save();
 
     expect(typeof saved?.blocks[0].data.text).toBe('string');
-    expect(fallbackWarnings(warnSpy)).toHaveLength(1);
+    expect(richTextWarnings(warnSpy)).toHaveLength(0);
   });
 
   it('internal saves stay HTML', async () => {
-    const saver = createModuleSaver({ richText: 'segments' }, false);
+    const saver = createModuleSaver({}, false);
 
     const host = await saver.save();
     const internal = await saver.save({ dialect: 'internal' });

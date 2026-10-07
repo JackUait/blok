@@ -4,8 +4,8 @@ import { blockDataToSegments, nestedDocumentsFor } from '../../shared/rich-text/
 import { htmlToSegmentsDom } from './rich-text-dom';
 
 /**
- * Internal HTML → what the host asked for. A no-op in the default 'html'
- * format, under collaboration, and with legacy output (same gates as the Saver).
+ * Internal HTML → segments for the host. A no-op under collaboration and with
+ * legacy output (same gates as the Saver).
  * The no-op returns `data` itself, so callers can tell nothing changed.
  * @param tool - the block's tool
  * @param data - block data as the tool saved it
@@ -17,7 +17,7 @@ export const richTextOutputForHost = (
   data: BlockToolData,
   resolveTool: (name: string) => BlockToolAdapter | undefined,
   options: { collaborating: boolean; legacyOutput: boolean }
-): BlockToolData => (tool.richTextFormat === 'segments' && !options.collaborating && !options.legacyOutput
+): BlockToolData => (!options.collaborating && !options.legacyOutput
   ? blockDataToSegments(
     data,
     // Test doubles and hand-built adapters may lack the getter.

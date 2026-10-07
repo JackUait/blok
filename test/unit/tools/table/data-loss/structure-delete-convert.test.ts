@@ -7,6 +7,7 @@ import { Paragraph } from '../../../../../src/tools/paragraph';
 import { Header } from '../../../../../src/tools/header';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -113,7 +114,7 @@ describe('table block moves, delete+undo, in-cell convert and nesting keep data'
 
     instance.blocks.move(instance.blocks.getBlockIndex('z') ?? 0, 0);
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(out.blocks[0].id).toBe('z');
     expect(cellTexts(out, 'tbl')).toEqual([['A', 'B'], ['C', 'D']]);
@@ -127,7 +128,7 @@ describe('table block moves, delete+undo, in-cell convert and nesting keep data'
     instance.module.yjsManager.stopCapturing();
     instance.history.undo();
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(cellTexts(out, 'tbl')).toEqual([['A', 'B'], ['C', 'D']]);
     expect(visibleTexts('tbl')).toEqual([['A', 'B'], ['C', 'D']]);
@@ -139,7 +140,7 @@ describe('table block moves, delete+undo, in-cell convert and nesting keep data'
     const converted = await instance.blocks.convert('tblb', 'header', { level: 2 });
 
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
     const tbl = out.blocks.find(b => b.id === 'tbl') as Saved;
     const content = (tbl.data as { content: Array<Array<{ blocks: string[] }>> }).content;
 
@@ -153,7 +154,7 @@ describe('table block moves, delete+undo, in-cell convert and nesting keep data'
       { id: 'tg', type: 'toggle', data: { text: 'T', isOpen: true }, content: ['tbl'] },
       ...table2x2('tbl', 'tg'),
     ]);
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(cellTexts(out, 'tbl')).toEqual([['A', 'B'], ['C', 'D']]);
   }, 30_000);

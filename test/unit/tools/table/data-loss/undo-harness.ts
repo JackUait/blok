@@ -11,6 +11,7 @@ import { ListItem } from '../../../../../src/tools/list';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import type { CellContent, LegacyCellContent, TableData } from '../../../../../src/tools/table/types';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { htmlOf } from '../../../helpers/saved-as-html';
 
 export const TABLE_ID = 'tbl';
 /** Past the history capture window so the prior step is its own entry. */
@@ -95,9 +96,15 @@ export const contentOf = (output: OutputData): CellContent[][] => {
 export const tableDataOf = (output: OutputData): TableData | undefined =>
   output.blocks.find(b => b.id === TABLE_ID)?.data as TableData | undefined;
 
+const htmlTextOf = (block: OutputBlockData): string => {
+  const text = htmlOf((block.data as { text?: unknown }).text);
+
+  return typeof text === 'string' ? text : '';
+};
+
 const textById = (output: OutputData): Map<string, string> => new Map(output.blocks.map(b => [
   b.id ?? '',
-  String((b.data as { text?: string }).text ?? ''),
+  htmlTextOf(b),
 ]));
 
 /** Saved texts per cell, row-major: what a reader of the saved JSON sees. */
@@ -296,7 +303,7 @@ export const consistency = async (editor: TestEditor): Promise<{
 
 /** Every block as "id:type:parent:text", sorted — catches loss at any depth. */
 export const blockFacts = (output: OutputData): string[] => output.blocks.map(b =>
-  `${b.id ?? ''}:${b.type}:${b.parent ?? ''}:${String((b.data as { text?: string }).text ?? '')}`
+  `${b.id ?? ''}:${b.type}:${b.parent ?? ''}:${htmlTextOf(b)}`
 ).sort();
 
 export const pasteHtml = (target: HTMLElement, html: string): void => {

@@ -6,6 +6,7 @@ import { ToggleItem as Toggle } from '../../../../src/tools/toggle';
 import { TabsTool } from '../../../../src/tools/tabs';
 import { TabTool } from '../../../../src/tools/tab';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -93,7 +94,7 @@ const typeInto = async (instance: TestEditor, id: string, text: string): Promise
 };
 
 const textOf = async (instance: TestEditor, id: string): Promise<unknown> =>
-  (await instance.save()).blocks.find(block => block.id === id)?.data.text;
+  (savedAsHtml(await instance.save())).blocks.find(block => block.id === id)?.data.text;
 
 const P = (id: string, text: string, parent?: string): OutputBlockData =>
   ({ id, type: 'paragraph', data: { text }, ...(parent === undefined ? {} : { parent }) });

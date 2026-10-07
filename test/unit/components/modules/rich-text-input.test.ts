@@ -67,7 +67,7 @@ describe('rich text segments on input', () => {
     const instance = await boot([{ type: 'paragraph', data: { text: [{ text: 'a < b', marks: { bold: true } }] } }]);
     const saved = await instance.save();
 
-    expect(saved.blocks[0].data.text).toBe('<strong>a &lt; b</strong>');
+    expect(saved.blocks[0].data.text).toEqual([{ text: 'a < b', marks: { bold: true } }]);
   }, 60_000);
 
   it('renders segments given to blocks.render', async () => {
@@ -76,7 +76,7 @@ describe('rich text segments on input', () => {
     await instance.blocks.render({ blocks: [{ type: 'paragraph', data: { text: [{ text: 'a < b', marks: { bold: true } }] } }] });
     const saved = await instance.save();
 
-    expect(saved.blocks[0].data.text).toBe('<strong>a &lt; b</strong>');
+    expect(saved.blocks[0].data.text).toEqual([{ text: 'a < b', marks: { bold: true } }]);
   }, 60_000);
 
   it('inserts segments through blocks.insert without escaping typed text twice', async () => {
@@ -84,7 +84,7 @@ describe('rich text segments on input', () => {
 
     instance.blocks.insert('paragraph', { text: [{ text: 'a < b && c' }] }, {}, 1);
 
-    expect((await lastBlock(instance)).data.text).toBe('a &lt; b &amp;&amp; c');
+    expect((await lastBlock(instance)).data.text).toEqual([{ text: 'a < b && c' }]);
   }, 60_000);
 
   it('keeps typed quotes byte-equal through blocks.insert', async () => {
@@ -92,7 +92,7 @@ describe('rich text segments on input', () => {
 
     instance.blocks.insert('paragraph', { text: [{ text: 'say "hi" & \'bye\'' }] }, {}, 1);
 
-    expect((await lastBlock(instance)).data.text).toBe('say "hi" &amp; \'bye\'');
+    expect((await lastBlock(instance)).data.text).toEqual([{ text: 'say "hi" & \'bye\'' }]);
   }, 60_000);
 
   it('inserts segments through blocks.insertMany into the document as HTML', async () => {
@@ -101,7 +101,7 @@ describe('rich text segments on input', () => {
     instance.blocks.insertMany([{ id: 'm1', type: 'paragraph', data: { text: [{ text: 'a < b' }] } }]);
 
     expect(instance.module.yjsManager.toJSON().find(block => block.id === 'm1')?.data.text).toBe('a &lt; b');
-    expect((await lastBlock(instance)).data.text).toBe('a &lt; b');
+    expect((await lastBlock(instance)).data.text).toEqual([{ text: 'a < b' }]);
   }, 60_000);
 
   it('inserts segments under a parent into the document as HTML', async () => {
@@ -110,7 +110,7 @@ describe('rich text segments on input', () => {
     const child = instance.blocks.insertAt('paragraph', { text: [{ text: 'a < b', marks: { bold: true } }] }, { parentId: 'p' });
 
     expect(instance.module.yjsManager.toJSON().find(block => block.id === child.id)?.data.text).toBe('<strong>a &lt; b</strong>');
-    expect((await instance.save()).blocks.find(block => block.id === child.id)?.data.text).toBe('<strong>a &lt; b</strong>');
+    expect((await instance.save()).blocks.find(block => block.id === child.id)?.data.text).toEqual([{ text: 'a < b', marks: { bold: true } }]);
   }, 60_000);
 
   it('converts segments for the default tool when insertInsideParent names none', async () => {
@@ -127,7 +127,7 @@ describe('rich text segments on input', () => {
     await instance.blocks.update('p1', { text: [{ text: 'x', marks: { italic: true } }] });
 
     expect(instance.module.yjsManager.toJSON()[0].data.text).toBe('<i>x</i>');
-    expect((await instance.save()).blocks[0].data.text).toBe('<i>x</i>');
+    expect((await instance.save()).blocks[0].data.text).toEqual([{ text: 'x', marks: { italic: true } }]);
   }, 60_000);
 
   it('accepts segments in splitBlock', async () => {
@@ -140,7 +140,7 @@ describe('rich text segments on input', () => {
     // write it into the DOM here; the document is where it lands.
     expect(stored.find(block => block.id === 'p1')?.data.text).toBe('a &lt; b');
     expect(stored.find(block => block.id === tail.id)?.data.text).toBe('<strong>c</strong>');
-    expect((await instance.save()).blocks[1].data.text).toBe('<strong>c</strong>');
+    expect((await instance.save()).blocks[1].data.text).toEqual([{ text: 'c', marks: { bold: true } }]);
   }, 60_000);
 
   it('accepts segments in a convert override', async () => {
@@ -150,7 +150,7 @@ describe('rich text segments on input', () => {
 
     // The override is written to the document before the factory runs.
     expect(instance.module.yjsManager.toJSON()[0].data.text).toBe('a &lt; b');
-    expect((await instance.save()).blocks[0].data.text).toBe('a &lt; b');
+    expect((await instance.save()).blocks[0].data.text).toEqual([{ text: 'a < b' }]);
   }, 60_000);
 
   it('hands a tool\'s upgradeData HTML, not segments', async () => {
@@ -190,7 +190,7 @@ describe('rich text segments on input', () => {
 
     const saved = await instance.save();
 
-    expect(saved.blocks[1].data.text).toBe('ab');
+    expect(saved.blocks[1].data.text).toEqual([{ text: 'ab' }]);
     expect(warningsAbout(warnSpy, 'acme:once')).toBe(1);
   }, 60_000);
 
@@ -202,7 +202,7 @@ describe('rich text segments on input', () => {
       text: [{ text: 'a', marks: { 'tag:x y': {} } }, { text: 'b', marks: { 'tag:x y': {} } }],
     }, {}, 1);
 
-    expect((await lastBlock(instance)).data.text).toBe('ab');
+    expect((await lastBlock(instance)).data.text).toEqual([{ text: 'ab' }]);
     expect(warningsAbout(warnSpy, 'tag:x y')).toBe(1);
   }, 60_000);
 
@@ -211,7 +211,7 @@ describe('rich text segments on input', () => {
 
     instance.blocks.insert('paragraph', { text: [{ text: 'a', marks: undefined }, { text: 'b', marks: { bold: true } }] }, {}, 1);
 
-    expect((await lastBlock(instance)).data.text).toBe('a<strong>b</strong>');
+    expect((await lastBlock(instance)).data.text).toEqual([{ text: 'a' }, { text: 'b', marks: { bold: true } }]);
   }, 60_000);
 
   it('reads a malformed segment array leniently and warns once per field', async () => {
@@ -223,7 +223,7 @@ describe('rich text segments on input', () => {
 
     const saved = await instance.save();
 
-    expect(saved.blocks.slice(1).map(block => block.data.text)).toEqual(['ab', 'c']);
+    expect(saved.blocks.slice(1).map(block => block.data.text)).toEqual([[{ text: 'ab' }], [{ text: 'c' }]]);
     expect(warningsAbout(warnSpy, 'paragraph.text')).toBe(1);
     expect(warningsAbout(warnSpy, 'acme:lenient')).toBe(1);
   }, 60_000);
@@ -234,7 +234,7 @@ describe('rich text segments on input', () => {
 
     instance.blocks.insert('paragraph', { text: [{ text: 'x', marks: { 'tag:abbr': { title: 't' } } }] }, {}, 1);
 
-    expect((await lastBlock(instance)).data.text).toBe('x');
+    expect((await lastBlock(instance)).data.text).toEqual([{ text: 'x' }]);
     expect(warningsAbout(warnSpy, 'tag:abbr')).toBe(0);
   }, 60_000);
 
@@ -245,7 +245,7 @@ describe('rich text segments on input', () => {
     );
     const saved = await instance.save();
 
-    expect(saved.blocks[0].data.text).toBe('migrated');
+    expect(saved.blocks[0].data.text).toEqual([{ text: 'migrated' }]);
   }, 60_000);
 
   it('leaves an empty table content array alone on render', async () => {
@@ -350,11 +350,10 @@ describe('a third-party tool that declares no richTextFields', () => {
     }
   }
 
-  const bootItems = async (data: Record<string, unknown>, richText?: 'segments'): Promise<OutputBlockData> => {
+  const bootItems = async (data: Record<string, unknown>): Promise<OutputBlockData> => {
     const instance = new Blok({
       holder,
       tools: { paragraph: Paragraph, items: ItemsTool as unknown as BlockToolConstructable },
-      ...(richText !== undefined ? { richText } : {}),
       data: { blocks: [{ id: 'i1', type: 'items', data }] },
     }) as unknown as TestEditor;
 
@@ -387,15 +386,11 @@ describe('a third-party tool that declares no richTextFields', () => {
   it('saves an items array of text records unchanged', async () => {
     expect((await bootItems({ items: [{ text: 'x' }], style: 'ordered' })).data).toEqual({ items: [{ text: 'x' }], style: 'ordered' });
   }, 60_000);
-
-  it('saves a {}-rule string field unchanged in segments mode', async () => {
-    expect((await bootItems({ items: [], style: 'ordered' }, 'segments')).data).toEqual({ items: [], style: 'ordered' });
-  }, 60_000);
 });
 
 describe('a tool adapter that has no richTextFields', () => {
   // Test doubles and older adapters may lack the getter; conversion must not throw.
-  const bare = { name: 'paragraph', richTextFormat: 'segments' } as unknown as BlockToolAdapter;
+  const bare = { name: 'paragraph' } as unknown as BlockToolAdapter;
   const data = { text: [{ text: 'a' }] };
 
   it('passes input data through unchanged', () => {

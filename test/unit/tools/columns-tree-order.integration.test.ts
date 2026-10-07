@@ -15,6 +15,7 @@ import { Column } from '../../../src/tools/column';
 import { ToggleItem } from '../../../src/tools/toggle';
 import { addColumnToList, wrapBlocksInColumns, wrapInNewColumnList } from '../../../src/tools/column-drop';
 import type { API, OutputBlockData, OutputData } from '../../../types';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -507,7 +508,7 @@ describe('column paths keep the tree placement', () => {
 
       // The doc catches up through async saves.
       await vi.waitFor(async () => {
-        const saved = await instance.save();
+        const saved = savedAsHtml(await instance.save());
 
         expect(dataById(instance.module.yjsManager.toJSON())).toEqual(dataById(saved.blocks));
       }, { timeout: 3000 });

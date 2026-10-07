@@ -10,6 +10,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { Table } from '../../../../src/tools/table';
 import { ToggleItem } from '../../../../src/tools/toggle';
 import type { OutputBlockData, OutputData } from '../../../../types';
+import { htmlOf, savedAsHtml } from '../../helpers/saved-as-html';
 
 const PAGE_ID_ATTR = 'data-blok-page-id';
 const neutralText = '<a data-blok-page-id="p1">Page</a> + <a data-blok-page-id="p1">Page</a>';
@@ -150,7 +151,7 @@ describe('live inline page references', () => {
     expect(instance.history.canUndo()).toBe(false);
     expect(outbound).not.toHaveBeenCalled();
     expect(receiver.toJSON()).toEqual(before);
-    expect((await instance.save()).blocks[0]?.data).toEqual({ text: neutralText });
+    expect(savedAsHtml(await instance.save()).blocks[0]?.data).toEqual({ text: neutralText });
     unsubscribe();
   }, 30_000);
 
@@ -177,7 +178,7 @@ describe('live inline page references', () => {
 
     expect(copiedData).toEqual({ text: '<a data-blok-page-id="p1">Page</a>' });
     expect(anchors()[0]?.textContent).toBe('Secret Roadmap');
-    expect((await instance.save()).blocks.find(({ id }) => id === copy.id)?.data).toEqual(copiedData);
+    expect(savedAsHtml(await instance.save()).blocks.find(({ id }) => id === copy.id)?.data).toEqual(copiedData);
   }, 30_000);
 
   it('keeps page references neutral in shared cell data after duplicating a table', async () => {
@@ -549,7 +550,7 @@ describe('live inline page references', () => {
     }));
     await settleFrame();
 
-    const savedText = (await instance.save()).blocks[0]?.data.text;
+    const savedText = htmlOf((await instance.save()).blocks[0]?.data.text);
 
     expect(savedText).toContain('href="https://outside.example/page"');
     expect(savedText).not.toContain(PAGE_ID_ATTR);

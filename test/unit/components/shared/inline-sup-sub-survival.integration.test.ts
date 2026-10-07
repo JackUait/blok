@@ -9,6 +9,7 @@ import { ToggleItem } from '../../../../src/tools/toggle';
 import { Table } from '../../../../src/tools/table';
 import { SupSubInlineTool } from '../../../../src/components/inline-tools/inline-tool-sup-sub';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
+import { htmlOf } from '../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -79,7 +80,7 @@ describe('stored <sup>/<sub> survive load → save whatever the inline config', 
       it(`${type}: ${label}`, async () => {
         const instance = await boot(inlineToolbar, withSupSub, { id: 'b1', type, data });
         const saved = await instance.save();
-        const text = saved.blocks.find((b) => b.id === 'b1')?.data.text;
+        const text = htmlOf(saved.blocks.find((b) => b.id === 'b1')?.data.text);
 
         expect(text).toBe(TEXT);
       });
@@ -93,7 +94,7 @@ describe('stored <sup>/<sub> survive load → save whatever the inline config', 
     const saved = await instance.save();
 
     expect(saved.blocks[0]?.type).toBe('header');
-    expect(saved.blocks[0]?.data.text).toBe(TEXT);
+    expect(htmlOf(saved.blocks[0]?.data.text)).toBe(TEXT);
   });
 
   it('table legacy string cell keeps sup/sub when the sup/sub tool is not registered', async () => {
@@ -103,7 +104,7 @@ describe('stored <sup>/<sub> survive load → save whatever the inline config', 
       data: { withHeadings: false, content: [[TEXT]] },
     });
     const saved = await instance.save();
-    const texts = saved.blocks.filter((b) => b.id !== 't1').map((b) => b.data.text);
+    const texts = saved.blocks.filter((b) => b.id !== 't1').map((b) => htmlOf(b.data.text));
 
     expect(texts).toContain(TEXT);
   });

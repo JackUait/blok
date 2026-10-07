@@ -9,6 +9,7 @@ import { Quote } from '../../../../src/tools/quote';
 import { CodeTool } from '../../../../src/tools/code';
 import { ToggleItem } from '../../../../src/tools/toggle';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 /**
  * The code block's `code` field is plain text. Moving content between it and
@@ -55,7 +56,7 @@ const createEditor = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
 };
 
 const dataOf = async (instance: TestEditor, id: string): Promise<Record<string, unknown> | undefined> => {
-  const saved = await instance.save();
+  const saved = savedAsHtml(await instance.save());
 
   return saved.blocks.find((block) => block.id === id)?.data;
 };

@@ -10,6 +10,7 @@ import { ListItem } from '../../../../src/tools/list';
 import { PageTool } from '../../../../src/tools/page';
 import { PageLink } from '../../../../src/tools/page-link';
 import type { API, ConversionConfig, OutputData, PasteConfig } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 /**
  * A pasted page block is another entry point to the same page in the page's
@@ -145,7 +146,7 @@ describe('page block clipboard (entry points and links)', () => {
 
     await paste(instance, written);
 
-    const output = await instance.save();
+    const output = savedAsHtml(await instance.save());
 
     expect(pageIds(output)).toEqual(['p1', 'p1']);
     expect(linkParagraphs(output)).toEqual([]);
@@ -160,7 +161,7 @@ describe('page block clipboard (entry points and links)', () => {
 
     await paste(other, written);
 
-    const output = await other.save();
+    const output = savedAsHtml(await other.save());
 
     expect(pageCount(output)).toBe(0);
     expect(linkParagraphs(output)).toEqual([`<a href="${PAGE_URL}">Page</a>`]);
@@ -173,7 +174,7 @@ describe('page block clipboard (entry points and links)', () => {
     await paste(instance, written);
     await paste(instance, written);
 
-    expect(pageIds(await instance.save())).toEqual(['p1', 'p1', 'p1']);
+    expect(pageIds(savedAsHtml(await instance.save()))).toEqual(['p1', 'p1', 'p1']);
     expect([...written.values()].join(' ')).not.toContain('Plans');
     expect([...written.values()].join(' ')).not.toContain('cache');
 
@@ -182,7 +183,7 @@ describe('page block clipboard (entry points and links)', () => {
     await paste(other, written);
     await paste(other, written);
 
-    const output = await other.save();
+    const output = savedAsHtml(await other.save());
 
     expect(pageCount(output)).toBe(0);
     expect(linkParagraphs(output)).toEqual([
@@ -225,7 +226,7 @@ describe('page block clipboard (entry points and links)', () => {
 
     await paste(other, written);
     await paste(other, written);
-    const output = await other.save();
+    const output = savedAsHtml(await other.save());
 
     expect(pageCount(output)).toBe(0);
     expect(output.blocks.filter((block) => block.type === tool).map((block) => block.data)).toEqual([data, data]);
@@ -260,7 +261,7 @@ describe('page block clipboard (entry points and links)', () => {
     const other = await make(false);
 
     await paste(other, written);
-    const output = await other.save();
+    const output = savedAsHtml(await other.save());
 
     expect(linkParagraphs(output)).toEqual(['<a data-blok-page-id="p1">Page</a>']);
     expect(pageCount(output)).toBe(0);
@@ -300,14 +301,14 @@ describe('page block clipboard (entry points and links)', () => {
     await instance.blocks.delete(instance.blocks.getBlockIndex('pg'));
     await paste(instance, written);
 
-    const afterFirst = await instance.save();
+    const afterFirst = savedAsHtml(await instance.save());
 
     expect(pageIds(afterFirst)).toEqual(['p1']);
     expect(linkParagraphs(afterFirst)).toEqual([]);
 
     await paste(instance, written);
 
-    const afterSecond = await instance.save();
+    const afterSecond = savedAsHtml(await instance.save());
 
     expect(pageIds(afterSecond)).toEqual(['p1', 'p1']);
     expect(linkParagraphs(afterSecond)).toEqual([]);
@@ -318,11 +319,11 @@ describe('page block clipboard (entry points and links)', () => {
     const other = await openOtherDocument(true, true);
 
     await paste(other, written);
-    expect(pageIds(await other.save())).toEqual(['p1']);
+    expect(pageIds(savedAsHtml(await other.save()))).toEqual(['p1']);
 
     await paste(other, written);
 
-    const output = await other.save();
+    const output = savedAsHtml(await other.save());
 
     expect(pageIds(output)).toEqual(['p1', 'p1']);
   });
@@ -335,7 +336,7 @@ describe('page block clipboard (entry points and links)', () => {
     await instanceDelete(other, 'p1');
     await paste(other, written);
 
-    const output = await other.save();
+    const output = savedAsHtml(await other.save());
 
     expect(output.blocks.filter((block) => block.type === 'page-link').map((block) => block.data)).toEqual([{ pageId: 'p1' }]);
     expect(pageCount(output)).toBe(0);
@@ -346,7 +347,7 @@ describe('page block clipboard (entry points and links)', () => {
     const written = await copyPage(instance, true);
 
     await paste(instance, written);
-    const output = await instance.save();
+    const output = savedAsHtml(await instance.save());
 
     expect(pageIds(output)).toEqual(['p1', 'p1']);
     expect(output.blocks.filter((block) => block.type === 'page-link')).toEqual([]);

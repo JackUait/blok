@@ -5,6 +5,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { Header } from '../../../../src/tools/header';
 import { CalloutTool } from '../../../../src/tools/callout';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 /**
  * "Turn into callout" moves the source text into the callout's first child
@@ -39,7 +40,7 @@ const createEditor = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
 };
 
 const calloutBodyText = async (instance: TestEditor, calloutId: string): Promise<unknown> => {
-  const saved = await instance.save();
+  const saved = savedAsHtml(await instance.save());
   const child = saved.blocks.find((block) => block.parent === calloutId);
 
   return child?.data.text;

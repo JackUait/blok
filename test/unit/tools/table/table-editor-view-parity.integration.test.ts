@@ -5,6 +5,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { Table } from '../../../../src/tools/table';
 import { blocksToHtml } from '../../../../src/view';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -83,7 +84,7 @@ describe('table renders its saved JSON like the view does', () => {
 
     expect(cellTexts()).toEqual([['Saved fallback']]);
 
-    const saved = await editor?.save();
+    const saved = savedAsHtml(await editor?.save());
     const table = saved?.blocks.find(block => block.id === 't');
     const content: unknown = table?.data.content;
     const cell: unknown = Array.isArray(content) && Array.isArray(content[0]) ? content[0][0] : undefined;
@@ -177,7 +178,7 @@ describe('table renders its saved JSON like the view does', () => {
       },
       { id: 'x', type: 'paragraph', parent: 't', data: { text: 'X' } },
     ]);
-    const saved = await editor?.save();
+    const saved = savedAsHtml(await editor?.save());
     const table = saved?.blocks.find(block => block.id === 't');
 
     expect(cellTexts()).toEqual([[''], ['X']]);

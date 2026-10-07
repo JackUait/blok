@@ -417,7 +417,7 @@ describe('per-block content direction', () => {
       const saved = await instance.save();
 
       expect(JSON.stringify(saved)).not.toContain('dir');
-      expect(saved.blocks[0]?.data).toEqual({ text: 'مرحبا' });
+      expect(saved.blocks[0]?.data).toEqual({ text: [{ text: 'مرحبا' }] });
     });
   });
 

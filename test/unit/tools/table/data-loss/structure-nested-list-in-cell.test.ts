@@ -11,6 +11,7 @@ import { Paragraph } from '../../../../../src/tools/paragraph';
 import { Table } from '../../../../../src/tools/table/index';
 import type { TableConfig, TableData } from '../../../../../src/tools/table/types';
 import type { BlockToolConstructorOptions, OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -186,7 +187,7 @@ describe('a nested list item in a table cell', () => {
 
     expect(ids).toEqual(['l1', 'l2', 'l3']);
 
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
     const content = (out.blocks.find(b => b.id === 'tbl')?.data as { content: Array<Array<{ blocks: string[] }>> }).content;
 
     expect({ cell: content[0][0].blocks, l2: out.blocks.find(b => b.id === 'l2')?.parent })
@@ -214,7 +215,7 @@ describe('a nested list item in a table cell', () => {
     const instance = await boot(hierarchical());
 
     await menuAction('row', 0, 'Clear contents');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(out.blocks.map(b => b.id).filter(id => id === 'l2' || id === 'l3')).toEqual([]);
     expect(strayOutsideTable(out)).toEqual([]);
@@ -224,7 +225,7 @@ describe('a nested list item in a table cell', () => {
     const instance = await boot(hierarchical());
 
     await menuAction(kind, 0, 'Delete');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(out.blocks.map(b => b.id).filter(id => id === 'l2' || id === 'l3')).toEqual([]);
     expect(strayOutsideTable(out)).toEqual([]);
@@ -237,7 +238,7 @@ describe('a nested list item in a table cell', () => {
       content: [[{ blocks: ['l1'] }, { blocks: ['b'] }], [{ blocks: ['c'] }, { blocks: ['d'] }]],
     });
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
     const ids = Array.from(cellContainer(0, 0).children).map(el => el.getAttribute('data-blok-id'));
 
     expect({ ids, saved: out.blocks.map(b => b.id).filter(id => id === 'l2' || id === 'l3') })
@@ -253,7 +254,7 @@ describe('a nested list item in a table cell', () => {
       throw new Error('no editable in cell 1,1');
     }
     await paste(target, data);
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
     const texts = out.blocks.map(b => String((b.data as { text?: string }).text ?? ''));
 
     expect({ two: texts.filter(t => t === 'two').length, three: texts.filter(t => t === 'three').length })
@@ -274,7 +275,7 @@ describe('a nested list item in a table cell', () => {
     instance.module.yjsManager.stopCapturing();
     instance.history.undo();
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
     const parentOf = (id: string): unknown => out.blocks.find(b => b.id === id)?.parent;
     const ids = Array.from(cellContainer(0, 0).children).map(el => el.getAttribute('data-blok-id'));
 

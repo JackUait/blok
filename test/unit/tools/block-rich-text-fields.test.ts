@@ -84,11 +84,6 @@ describe('BlockToolAdapter rich text fields', () => {
 
     expect(createAdapter({ constructable }).richTextFields).toEqual([]);
   });
-
-  it('reports the configured output format, html by default', () => {
-    expect(createAdapter().richTextFormat).toBe('html');
-    expect(createAdapter({ richTextFormat: 'segments' }).richTextFormat).toBe('segments');
-  });
 });
 
 describe('built-in tools and the tool-less field tables', () => {

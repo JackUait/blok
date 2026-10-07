@@ -10,6 +10,7 @@ import { Table } from '../../../../../src/tools/table/index';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { List, Toggle } from '../../../../../src/tools';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -238,7 +239,7 @@ describe('fill and duplicate keep nested blocks in cells', () => {
 
   it('baseline: the fixture saves with nesting and top-level cell refs', async () => {
     const instance = await boot(nestedDoc());
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTable(out).content.map(row => row.map(cell => cell.blocks))).toEqual([[['tg'], ['b']], [['l1'], ['d']]]);
     expect(pick(cellTree(out, 0, 0))).toEqual(TOGGLE_TREE);
@@ -250,7 +251,7 @@ describe('fill and duplicate keep nested blocks in cells', () => {
     const instance = await boot(nestedDoc());
 
     await fill(instance, { minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 }, 'r');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(pick(cellTree(out, 0, 1))).toEqual(TOGGLE_TREE);
     expect(pick(cellTree(out, 1, 1))).toEqual(CHECKLIST_TREE);
@@ -264,7 +265,7 @@ describe('fill and duplicate keep nested blocks in cells', () => {
     const instance = await boot(nestedDoc());
 
     await fill(instance, { minRow: 0, maxRow: 1, minCol: 0, maxCol: 0 }, 'd');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(pick(cellTree(out, 1, 0))).toEqual(TOGGLE_TREE);
     expect(pick(cellTree(out, 0, 0))).toEqual(TOGGLE_TREE);
@@ -286,7 +287,7 @@ describe('fill and duplicate keep nested blocks in cells', () => {
     ]);
 
     await fill(instance, { minRow: 0, maxRow: 1, minCol: 0, maxCol: 0 }, 'd');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(pick(cellTree(out, 1, 0))).toEqual([{ type: 'paragraph', data: { text: 'P' }, children: [] }]);
     expect(pick(cellTree(out, 0, 0))).toEqual([{ type: 'paragraph', data: { text: 'P' }, children: [] }]);
@@ -298,7 +299,7 @@ describe('fill and duplicate keep nested blocks in cells', () => {
     const instance = await boot(nestedDoc());
 
     await menuAction('row', 0, 'Duplicate');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(pick(cellTree(out, 1, 0))).toEqual(TOGGLE_TREE);
     expect(savedTable(out).content[1][0]).toMatchObject({ color: '#ff0000', textColor: '#00ff00' });
@@ -312,7 +313,7 @@ describe('fill and duplicate keep nested blocks in cells', () => {
     const instance = await boot(nestedDoc());
 
     await menuAction('col', 0, 'Duplicate');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(pick(cellTree(out, 0, 1))).toEqual(TOGGLE_TREE);
     expect(pick(cellTree(out, 1, 1))).toEqual(CHECKLIST_TREE);
@@ -354,7 +355,7 @@ describe('fill and duplicate keep nested blocks in cells', () => {
     const instance = await boot(nestedDoc());
 
     await menuAction('col', 0, 'Duplicate');
-    const before = await instance.save();
+    const before = savedAsHtml(await instance.save());
     const copyChildId = before.blocks.find(b => b.id === savedTable(before).content[0][1].blocks[0])?.content?.[0];
 
     if (copyChildId === undefined) {
@@ -362,7 +363,7 @@ describe('fill and duplicate keep nested blocks in cells', () => {
     }
     await instance.blocks.update(copyChildId, { text: 'Changed' });
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(out.blocks.find(b => b.id === 'k')?.data).toMatchObject({ text: RED });
     expect(out.blocks.find(b => b.id === copyChildId)?.data).toMatchObject({ text: 'Changed' });

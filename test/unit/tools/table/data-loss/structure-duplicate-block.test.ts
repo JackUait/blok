@@ -13,6 +13,7 @@ import { PageLink } from '../../../../../src/tools/page-link';
 import type { PageConfig } from '../../../../../src/tools/page/types';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -113,7 +114,7 @@ const saveAsProduction = async (instance: TestEditor): Promise<OutputData> => {
   vi.stubEnv('NODE_ENV', 'production');
 
   try {
-    return await instance.save();
+    return savedAsHtml(await instance.save());
   } finally {
     vi.unstubAllEnvs();
   }
@@ -359,7 +360,7 @@ describe('duplicating a table block', () => {
     const copies = await instance.module.dragManager.duplicateBlocksInPlace(tbl);
 
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
     const byId = new Map(out.blocks.map(b => [b.id, b] as const));
     const copyId = String(copies[0]?.id);
     const cellBlocks = (tableId: string): string[] =>

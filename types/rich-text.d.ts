@@ -51,6 +51,3 @@ export interface RichTextEmbedSegment {
 export type RichTextSegment = RichTextTextSegment | RichTextEmbedSegment;
 
 export type RichText = RichTextSegment[];
-
-/** What the host receives for rich-text fields. */
-export type RichTextFormat = 'html' | 'segments';

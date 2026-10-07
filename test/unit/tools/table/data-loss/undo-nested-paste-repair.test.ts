@@ -9,6 +9,7 @@ import {
   CAPTURE, STD_2X2, STD_TEXTS, TABLE_ID, blockFacts, boot, buildDoc, consistency, gripAction, h,
   redo, savedCellTexts, setup, sleep, teardown, typeInto, undo, yjsDoc,
 } from './undo-harness';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 const P = (id: string, parent: string, text = id.toUpperCase()): OutputBlockData => ({ id, type: 'paragraph', data: { text }, parent });
 
@@ -36,7 +37,7 @@ const nestedDoc = (): OutputData => ({
 });
 
 const tableTexts = (out: OutputData, tableId: string): string[][] => {
-  const texts = new Map(out.blocks.map(b => [b.id ?? '', String((b.data as { text?: string }).text ?? (b.type === 'table' ? `<table:${b.id}>` : ''))]));
+  const texts = new Map(savedAsHtml(out).blocks.map(b => [b.id ?? '', String((b.data as { text?: string }).text ?? (b.type === 'table' ? `<table:${b.id}>` : ''))]));
   const table = out.blocks.find(b => b.id === tableId);
 
   return (table?.data as { content: { blocks: string[] }[][] } | undefined)?.content

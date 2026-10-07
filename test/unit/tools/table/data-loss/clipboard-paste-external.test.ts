@@ -24,6 +24,7 @@ import { isCellWithBlocks } from '../../../../../src/tools/table/types';
 import { blocksToHtml } from '../../../../../src/view';
 import type { CellContent, TableData } from '../../../../../src/tools/table/types';
 import type { OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -191,7 +192,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
 
     await pasteHtml(editableOf('p'), html, 'under\tstruck\nred\tlink\nx2\tplain');
 
-    return editor.save();
+    return savedAsHtml(await editor.save());
   };
 
   it('google docs: underlined text in a cell stays underlined', async () => {
@@ -219,7 +220,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       + gdocsP(gdocsSpan('under', 'text-decoration:underline;')) + '</b>';
 
     await pasteHtml(editableOf('p'), html, 'under');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(saved.blocks.map(block => block.data.text).join('|')).toMatch(/<u>under<\/u>/);
   });
@@ -232,7 +233,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
     ]);
 
     await pasteHtml(editableOf('p'), html, 'centered\tright\na\tb');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(cellHtml(saved, 0, 0)).toBe('centered');
     expect(cellAt(saved, 0, 0).placement).toBe('top-center');
@@ -245,7 +246,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
 
     expect(html).toContain('text-align:var(--_blok-end-side, right)');
     await pasteHtml(editableOf('p'), html, 'a\tb\nc\td');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(PLACEMENTS.map((row, r) => row.map((_, c) => cellAt(saved, r, c).placement))).toStrictEqual(PLACEMENTS);
   });
@@ -256,7 +257,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       + '<tr><td>a</td><td>b</td></tr></tbody></table>';
 
     await pasteHtml(editableOf('p'), html, 'Logo\t\na\tb');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const blocks = cellBlocks(saved, 0, 1);
     expect(blocks[0]).toMatchObject({ type: 'image', data: { url: 'https://example.com/logo.png' } });
   });
@@ -269,7 +270,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       + '</tbody></table>';
 
     await pasteHtml(editableOf('p'), html, 'A1\tn1 n2 n3 n4\nB1\tB2');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const content = (pastedTable(saved).data as TableData).content;
 
     // The outer table is 2x2: row 1 is B1/B2.
@@ -286,7 +287,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       + '</tbody></table>';
 
     await pasteHtml(editableOf('p'), html, 'Name\tAnn\nAge\t30');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const data = pastedTable(saved).data as TableData;
 
     expect(data.withHeadingColumn).toBe(true);
@@ -298,7 +299,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       + '<tr><td><strong>bold</strong></td><td><em>it</em></td></tr></tbody></table>';
 
     await pasteHtml(editableOf('p'), html, 'npm i\tx2\nbold\tit');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(cellHtml(saved, 0, 0)).toMatch(/<code[^>]*>npm i<\/code>/);
     expect(cellHtml(saved, 0, 1)).toMatch(/<sup>2<\/sup>/);
@@ -312,7 +313,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       + '<tr><td>a</td><td>b</td></tr></tbody></table>';
 
     await pasteHtml(editableOf('p'), html, 'one two\tx\na\tb');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const blocks = cellBlocks(saved, 0, 0);
 
     expect(blocks.map(block => [block.type, block.data.text])).toStrictEqual([['list', 'one'], ['list', 'two']]);
@@ -325,7 +326,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       + '<tr><td>g</td><td>h</td><td></td></tr></tbody></table>';
 
     await pasteHtml(editableOf('p'), html, 'a\t\tc\n\t\t\ng\th\t');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const content = (pastedTable(saved).data as TableData).content;
 
     expect(content.length).toBe(3);
@@ -358,7 +359,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       throw new Error('no cell');
     }
     await pasteHtml(cell, html, 'A1\tn1 n2\nB1\tB2');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     const texts = saved.blocks.map(block => (typeof block.data.text === 'string' ? block.data.text : ''));
 
@@ -377,7 +378,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       + '</tbody></table>';
 
     await pasteHtml(editableOf('p'), html, 'A1\tn1 n2 n3 n4\nB1\tB2');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(cellHtml(saved, 0, 1)).toBe('n1|n2|n3|n4');
     expect(cellHtml(saved, 0, 0)).toBe('A1');
@@ -407,7 +408,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       throw new Error('no cell');
     }
     await pasteHtml(cell, html, 'A1\tn1 n2\nB1\tB2');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(cellHtml(saved, 0, 1)).toBe('n1|n2');
     expect(cellHtml(saved, 0, 0)).toBe('A1');
@@ -421,7 +422,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       + '</tbody></table>';
 
     await pasteHtml(editableOf('p'), html, 'Name\tAge\nAnn\t30');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const data = pastedTable(saved).data as TableData;
 
     expect(data.withHeadingColumn).toBe(false);
@@ -438,7 +439,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       + gdocsP(`H${gdocsSpan('2', 'vertical-align:sub;')}O ${gdocsSpan('both', 'text-decoration:underline line-through;')}`) + '</b>';
 
     await pasteHtml(editableOf('p'), html, 'H2O both');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const text = saved.blocks.map(block => block.data.text).join('|');
 
     expect(text).toMatch(/<sub>2<\/sub>/);
@@ -454,7 +455,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
 
     await pasteHtml(editableOf('p'), html, 'mid\tyellow\na\tb');
 
-    return editor.save();
+    return savedAsHtml(await editor.save());
   };
 
   it('legacy cell attributes: align/valign become placement', async () => {
@@ -482,7 +483,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       throw new Error('no cell');
     }
     await pasteHtml(cell, html, 'A1\tA2\nB1\tB2\nbetween\nC1\tC2');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const texts = saved.blocks.map(block => (typeof block.data.text === 'string' ? block.data.text : ''));
 
     expect(texts.filter(text => /A1A2|A2B1|B1B2|C1C2/.test(text))).toStrictEqual([]);
@@ -496,7 +497,7 @@ describe('clipboard data loss: external tables pasted through a real Blok', { ti
       + '</tbody></table>';
 
     await pasteHtml(editableOf('p'), html, 'Title body\tSaid after\na\tb');
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
 
     expect(cellBlocks(saved, 0, 0).map(block => [block.type, block.data.text])).toStrictEqual([
       ['paragraph', 'Title'],

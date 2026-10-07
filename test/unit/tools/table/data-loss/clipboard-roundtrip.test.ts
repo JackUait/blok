@@ -11,6 +11,7 @@ import { Bold, Italic, List, Toggle } from '../../../../../src/tools';
 import { isCellWithBlocks } from '../../../../../src/tools/table/types';
 import type { CellContent, TableConfig, TableData } from '../../../../../src/tools/table/types';
 import type { BlockToolConstructorOptions, OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface SelectionRange { minRow: number; maxRow: number; minCol: number; maxCol: number }
 
@@ -180,7 +181,7 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
     const clip = copyRange('src', { minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
 
     await paste(freeEditable('free'), clip);
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const pasted = newTable(saved, ['src']);
 
     expect((pasted.data as TableData).withHeadings).toBe(true);
@@ -195,12 +196,12 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
       { id: 'free', type: 'paragraph', data: { text: '' } },
     ]);
 
-    const before = (await editor.save()).blocks.find(block => block.id === 'c1')?.data;
+    const before = (savedAsHtml(await editor.save())).blocks.find(block => block.id === 'c1')?.data;
 
     expect(before).toMatchObject({ textColor: 'red', backgroundColor: 'yellow' });
 
     await paste(freeEditable('free'), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 }));
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const [first] = blocksIn(saved, cellOf(newTable(saved, ['src']), 0, 0));
 
     expect(first?.data).toMatchObject({ text: 'red', textColor: 'red', backgroundColor: 'yellow' });
@@ -217,7 +218,7 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
     ]);
 
     await paste(cellEditable('dst', 0, 0), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 }));
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const dst = saved.blocks.find(block => block.id === 'dst');
 
     if (dst === undefined) {
@@ -239,7 +240,7 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
     ]);
 
     await paste(cellEditable('dst', 0, 1), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 }));
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const dst = saved.blocks.find(block => block.id === 'dst');
 
     if (dst === undefined) {
@@ -263,7 +264,7 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
     ]);
 
     await paste(cellEditable('dst', 0, 1), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 }));
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const dst = saved.blocks.find(block => block.id === 'dst');
 
     if (dst === undefined) {
@@ -283,12 +284,12 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
       { id: 'free', type: 'paragraph', data: { text: '' } },
     ]);
 
-    const before = (await editor.save()).blocks.find(block => block.id === 'l1')?.data;
+    const before = (savedAsHtml(await editor.save())).blocks.find(block => block.id === 'l1')?.data;
 
     expect(before).toMatchObject({ start: 5 });
 
     await paste(freeEditable('free'), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 }));
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const [first] = blocksIn(saved, cellOf(newTable(saved, ['src']), 0, 0));
 
     expect(first?.data).toMatchObject({ text: 'five', style: 'ordered', start: 5 });
@@ -303,12 +304,12 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
       { id: 'free', type: 'paragraph', data: { text: '' } },
     ]);
 
-    const before = await editor.save();
+    const before = savedAsHtml(await editor.save());
 
     expect(before.blocks.find(block => block.id === 'k1')?.parent).toBe('t1');
 
     await paste(freeEditable('free'), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 }));
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const pasted = newTable(saved, ['src']);
     const topLevel = blocksIn(saved, cellOf(pasted, 0, 0));
     const childCopies = saved.blocks.filter(block => block.data.text === 'child' && block.id !== 'k1');
@@ -328,7 +329,7 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
     ]);
 
     const clip = copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 }, 'cut');
-    const afterCut = await editor.save();
+    const afterCut = savedAsHtml(await editor.save());
 
     // The cut removes the original: no orphan child pointing at a gone toggle.
     const ids = new Set(afterCut.blocks.map(block => block.id));
@@ -336,7 +337,7 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
     expect(afterCut.blocks.filter(block => block.parent !== undefined && !ids.has(block.parent))).toStrictEqual([]);
 
     await paste(freeEditable('free'), clip);
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const topLevel = blocksIn(saved, cellOf(newTable(saved, ['src']), 0, 0));
     const child = saved.blocks.find(block => block.data.text === 'child');
 
@@ -363,7 +364,7 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
     ]);
 
     await paste(freeEditable('free'), copyRange('src', { minRow: 1, maxRow: 1, minCol: 1, maxCol: 1 }));
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const pasted = newTable(saved, ['src']);
 
     expect((pasted.data as TableData).withHeadings).toBe(false);
@@ -382,7 +383,7 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
     ]);
 
     await paste(cellEditable('dst', 0, 0), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 }));
-    const saved = await editor.save();
+    const saved = savedAsHtml(await editor.save());
     const dst = saved.blocks.find(block => block.id === 'dst');
 
     if (dst === undefined) {

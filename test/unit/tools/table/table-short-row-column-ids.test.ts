@@ -5,6 +5,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { normalizeTableData } from '../../../../src/tools/table/table-operations';
 import type { CellContent, TableData } from '../../../../src/tools/table/types';
 import type { OutputBlockData, OutputData } from '../../../../types';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 const TABLE_ID = 'table-1';
 
@@ -75,7 +76,7 @@ describe('a short row that carries column ids', () => {
     blok = new Blok({ holder, tools: { table: Table, paragraph: Paragraph }, data }) as unknown as TestEditor;
     await blok.isReady;
 
-    const saved = await blok.save();
+    const saved = savedAsHtml(await blok.save());
     const savedTable = saved.blocks.find((block: OutputBlockData) => block.type === 'table');
     const content = (savedTable?.data as TableData).content.map(row => row as CellContent[]);
     const textOf = (id: string): string => {

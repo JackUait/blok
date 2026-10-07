@@ -1,7 +1,7 @@
 /**
- * Built-in tools keep working when a host sets `richText: 'segments'`.
- * Host-facing reads (`BlockAPI.save`, `getBlockData`) hand out segment arrays
- * in that mode; tools read other blocks through internal data, which stays HTML.
+ * Built-in tools keep working now that rich text saves as segments.
+ * Host-facing reads (`BlockAPI.save`, `getBlockData`) hand out segment arrays;
+ * tools read other blocks through internal data, which stays HTML.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -89,7 +89,7 @@ const notesText = (data: unknown): unknown => {
 const blockData = (saved: OutputData, id: string): Record<string, unknown> | undefined =>
   saved.blocks.find(block => block.id === id)?.data;
 
-describe('built-in tools — richText segments', { timeout: 60_000 }, () => {
+describe('built-in tools — rich text segments', { timeout: 60_000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -101,18 +101,23 @@ describe('built-in tools — richText segments', { timeout: 60_000 }, () => {
     vi.restoreAllMocks();
   });
 
-  it('a table saves its formatted cell paragraphs as segments and keeps its grid as in html mode', async () => {
-    const segments = await (await createEditor({ richText: 'segments', data: { blocks: tableWithBoldCells() } })).save();
-    const html = await (await createEditor({ data: { blocks: tableWithBoldCells() } })).save();
+  it('a table saves its formatted cell paragraphs as segments and keeps its grid', async () => {
+    const saved = await (await createEditor({ data: { blocks: tableWithBoldCells() } })).save();
 
-    expect(blockData(segments, 'c1')?.text).toEqual(bold);
-    expect(blockData(segments, 'c2')?.text).toEqual([{ text: 'plain' }]);
-    expect(blockData(segments, 't')).toEqual(blockData(html, 't'));
+    expect(blockData(saved, 'c1')?.text).toEqual(bold);
+    expect(blockData(saved, 'c2')?.text).toEqual([{ text: 'plain' }]);
+    // The grid as the HTML output saved it.
+    expect(blockData(saved, 't')).toEqual({
+      withHeadings: false,
+      withHeadingColumn: false,
+      stretched: false,
+      content: [[{ blocks: ['c1'], id: 'k1', rowId: 'r1' }, { blocks: ['c2'], id: 'k2', rowId: 'r1' }]],
+      initialColWidth: 0,
+    });
   });
 
-  it('copying a table cell block carries HTML, as in html mode', async () => {
-    const segmentsEditor = await createEditor({ richText: 'segments', data: { blocks: tableWithBoldCells() } });
-    const htmlEditor = await createEditor({ data: { blocks: tableWithBoldCells() } });
+  it('copying a table cell block carries HTML', async () => {
+    const editor = await createEditor({ data: { blocks: tableWithBoldCells() } });
 
     const copy = (editor: TestEditor): unknown => {
       const cell = editor.blocks.getById('c1');
@@ -124,29 +129,22 @@ describe('built-in tools — richText segments', { timeout: 60_000 }, () => {
       return toClipboardBlock(editor as unknown as API, cell).data;
     };
 
-    expect(copy(segmentsEditor)).toEqual({ text: '<strong>a</strong>' });
-    expect(copy(segmentsEditor)).toEqual(copy(htmlEditor));
+    expect(copy(editor)).toEqual({ text: '<strong>a</strong>' });
   });
 
   it('turning a bold paragraph into a heading keeps the bold text', async () => {
     const blocks = [{ id: 'p1', type: 'paragraph', data: { text: '<b>a</b>' } }];
-    const segmentsEditor = await createEditor({ richText: 'segments', data: { blocks } });
-    const htmlEditor = await createEditor({ data: { blocks } });
+    const editor = await createEditor({ data: { blocks } });
 
-    await segmentsEditor.blocks.convert('p1', 'header', { level: 2 });
-    await htmlEditor.blocks.convert('p1', 'header', { level: 2 });
+    await editor.blocks.convert('p1', 'header', { level: 2 });
 
-    const segments = await segmentsEditor.save();
-    const html = await htmlEditor.save();
-
-    expect(segments.blocks[0]).toMatchObject({ type: 'header', data: { text: bold, level: 2 } });
-    expect(html.blocks[0]).toMatchObject({ type: 'header', data: { text: '<strong>a</strong>', level: 2 } });
+    expect((await editor.save()).blocks[0]).toMatchObject({ type: 'header', data: { text: bold, level: 2 } });
   });
 
   it('a database row given segment notes keeps them as HTML inside and hands the host segments', async () => {
-    const editor = await createEditor({ richText: 'segments', data: { blocks: databaseWithNotes(bold) } });
+    const editor = await createEditor({ data: { blocks: databaseWithNotes(bold) } });
 
-    // The card body editor runs in html mode and reads this document as-is.
+    // The card body editor reads this document as-is, so it must be HTML.
     expect(notesText(editor.blocks.getById('r1')?.preservedData)).toBe('<strong>a</strong>');
     expect(notesText(blockData(await editor.save(), 'r1'))).toEqual(bold);
   });

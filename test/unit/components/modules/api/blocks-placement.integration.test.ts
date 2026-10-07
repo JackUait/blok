@@ -342,7 +342,7 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       const output = await instance.save();
 
       expect(output.blocks.map(block => block.id)).toEqual(['a', 't', 'c1', 'c2', 'b']);
-      expect(output.blocks[0].data.text).toBe('edited');
+      expect(output.blocks[0].data.text).toEqual([{ text: 'edited' }]);
     }, 30_000);
 
     it('replace takes the replaced block\'s slot and parent', async () => {

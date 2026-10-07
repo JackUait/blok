@@ -18,7 +18,8 @@ import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { equalsOutputData, normalizeOutputBlocks } from '../../../shared/output-data';
-import { outputBlocksToHtml } from '../../../shared/rich-text/block-data';
+import { outputBlocksToHtml, outputBlocksToSegments } from '../../../shared/rich-text/block-data';
+import { htmlToSegmentsDom } from '../../utils/rich-text-dom';
 import { resolveHashTarget } from '../../utils/hash-target';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 import { assertCanMoveUnder, BlockPlacementError, findBlock, isUnder, resolvePlacement, type BlockTree } from './block-placement';
@@ -299,6 +300,20 @@ export class BlocksAPI extends Module {
   }
 
   /**
+   * True when `data` holds the blocks the editor would save. Rich fields
+   * compare as segments: the save holds segments, while a host may hand back
+   * the HTML it first loaded.
+   * @param current - the editor's host save
+   * @param data - the incoming document
+   */
+  private isEchoOf(current: OutputData, data: OutputData | LooseOutputData): boolean {
+    const resolve = (type: string): string[] => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? [];
+    const asSegments = (blocks: OutputBlockData[]): OutputBlockData[] => outputBlocksToSegments(blocks, resolve, htmlToSegmentsDom);
+
+    return equalsOutputData({ blocks: asSegments(current.blocks) }, { blocks: asSegments(normalizeOutputBlocks(data.blocks)) });
+  }
+
+  /**
    * The body of {@link render}.
    * @param data - the document to show
    * @param options - replace behaviour
@@ -327,7 +342,7 @@ export class BlocksAPI extends Module {
       this.Blok.Saver.adoptDocumentRecordId(incomingId);
     }
 
-    if (currentContent !== undefined && equalsOutputData(currentContent, data)) {
+    if (currentContent !== undefined && this.isEchoOf(currentContent, data)) {
       this.processPendingHashScroll();
 
       return;
@@ -409,10 +424,6 @@ export class BlocksAPI extends Module {
 
     await this.replaceDocument(data, { keepId: true });
 
-    if (this.config.richText !== 'segments') {
-      return data;
-    }
-
     // After the render: the legacy gate reads the detected input format.
     return {
       ...data,
@@ -442,9 +453,7 @@ export class BlocksAPI extends Module {
 
     // blocksToMarkdown reads HTML; the host save may hold segments. The
     // internal dialect would avoid this, but it also skips the legacy collapse.
-    const output = this.config.richText === 'segments'
-      ? { ...saved, blocks: outputBlocksToHtml(saved.blocks, type => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? []) }
-      : saved;
+    const output = { ...saved, blocks: outputBlocksToHtml(saved.blocks, type => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? []) };
 
     const parentOf = new Map<string, string | null>();
 

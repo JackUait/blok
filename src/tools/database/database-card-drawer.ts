@@ -7,6 +7,9 @@ import { IconChevronRight } from '../../components/icons';
 import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
+import { outputBlocksToHtml, outputBlocksToSegments, richTextFieldsFor } from '../../shared/rich-text/block-data';
+import type { FieldsResolver } from '../../shared/rich-text/block-data';
+import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
 
 interface BlokInstance {
   save(): Promise<OutputData>;
@@ -32,23 +35,34 @@ export interface CardDrawerOptions {
   onAddProperty?: (type: PropertyType) => void;
 }
 
+/** Rich fields of the body editor's tools: a tool's static `richTextFields`, else the built-in table. */
+const richFieldsOf = (tools: ToolsConfig['tools']): FieldsResolver => (type) => {
+  const entry = tools?.[type];
+  const constructable: unknown = typeof entry === 'function' ? entry : entry?.class;
+  const declared: unknown = constructable === undefined ? undefined : Reflect.get(Object(constructable), 'richTextFields');
+
+  return Array.isArray(declared) ? declared.filter((field): field is string => typeof field === 'string') : richTextFieldsFor(type);
+};
+
 /**
  * Compare key of a page body. `time`, `version` and the per-block edit stamps
  * change on every save, so they are left out: writing a body that differs
- * only there is a new undo step for nothing.
+ * only there is a new undo step for nothing. Rich fields compare as segments:
+ * the body editor saves segments while the row holds HTML.
  */
-const bodyKey = (data: OutputData | undefined): string =>
-  JSON.stringify((data?.blocks ?? []).map(({ lastEditedAt: _at, lastEditedBy: _by, ...block }) => block));
+const bodyKey = (data: OutputData | undefined, fieldsOf: FieldsResolver): string =>
+  JSON.stringify(outputBlocksToSegments(data?.blocks ?? [], fieldsOf, htmlToSegmentsDom)
+    .map(({ lastEditedAt: _at, lastEditedBy: _by, ...block }) => block));
 
 /**
  * Returns a check that is true when a saved body differs from the last one
  * written (starting from `initial`); that body then becomes the last written.
  */
-const createBodyChangeCheck = (initial: OutputData | undefined): ((data: OutputData) => boolean) => {
-  const last = { key: bodyKey(initial) };
+const createBodyChangeCheck = (initial: OutputData | undefined, fieldsOf: FieldsResolver): ((data: OutputData) => boolean) => {
+  const last = { key: bodyKey(initial, fieldsOf) };
 
   return (data) => {
-    const key = bodyKey(data);
+    const key = bodyKey(data, fieldsOf);
     const changed = key !== last.key;
 
     last.key = key;
@@ -702,6 +716,11 @@ export class DatabaseCardDrawer {
     }
   }
 
+  /** The body editor's host save holds segments; the row stores HTML, as every tool's data does. */
+  private bodyAsHtml(data: OutputData): OutputData {
+    return { ...data, blocks: outputBlocksToHtml(data.blocks, richFieldsOf(this.toolsConfig?.tools)) };
+  }
+
   private cleanupEditor(): void {
     this.pageMount?.destroy();
     this.pageMount = null;
@@ -716,7 +735,7 @@ export class DatabaseCardDrawer {
 
         instance.save().then((data) => {
           if (rowId !== null && !migrationPending && !this.pendingBodyRows.has(rowId) && isBodyChanged?.(data) === true) {
-            this.onDescriptionChange(rowId, data);
+            this.onDescriptionChange(rowId, this.bodyAsHtml(data));
           }
           instance.destroy();
         }).catch(() => {
@@ -778,7 +797,7 @@ export class DatabaseCardDrawer {
         return;
       }
       const description = this.descriptionFor(latest);
-      const isBodyChanged = createBodyChangeCheck(description);
+      const isBodyChanged = createBodyChangeCheck(description, richFieldsOf(this.toolsConfig?.tools));
       const saveState: {
         started: number;
         inFlight: number;
@@ -814,7 +833,7 @@ export class DatabaseCardDrawer {
 
             saveState.best = null;
             if (best !== null && !this.pendingBodyRows.has(rowId) && isBodyChanged(best.data)) {
-              this.onDescriptionChange(rowId, best.data);
+              this.onDescriptionChange(rowId, this.bodyAsHtml(best.data));
             }
           }
         },

@@ -8,6 +8,7 @@ import { Blok } from '../../../../../src/blok';
 import { Table } from '../../../../../src/tools/table/index';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -140,7 +141,7 @@ describe('row/column grip actions keep cell data', () => {
     const instance = await boot(plain());
 
     await menuAction('row', 1, 'Duplicate');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B', 'C'], ['D', 'E1|E2', 'F'], ['D', 'E1|E2', 'F'], ['G', 'H', 'I']]);
     expect(savedTable(out).content[2][1]).toMatchObject({ color: '#ff0000', textColor: '#00ff00', placement: 'middle-center' });
@@ -151,7 +152,7 @@ describe('row/column grip actions keep cell data', () => {
     const instance = await boot(plain());
 
     await menuAction('col', 1, 'Duplicate');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B', 'B', 'C'], ['D', 'E1|E2', 'E1|E2', 'F'], ['G', 'H', 'H', 'I']]);
     expect(savedTable(out).content[1][2]).toMatchObject({ color: '#ff0000', textColor: '#00ff00', placement: 'middle-center' });
@@ -162,7 +163,7 @@ describe('row/column grip actions keep cell data', () => {
     const instance = await boot(merged());
 
     await menuAction('row', 1, 'Duplicate');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', '~', 'C'], ['D', 'E1|E2', 'F'], ['D', 'E1|E2', 'F'], ['G', 'H', 'I']]);
     expect(visibleTexts()).toEqual([['A', 'C'], ['D', 'E1|E2', 'F'], ['D', 'E1|E2', 'F'], ['G', 'H', 'I']]);
@@ -172,7 +173,7 @@ describe('row/column grip actions keep cell data', () => {
     const instance = await boot(merged());
 
     await menuAction('col', 2, 'Duplicate');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', '~', 'C', 'C'], ['D', 'E1|E2', 'F', 'F'], ['G', 'H', 'I', 'I']]);
   }, 30_000);
@@ -181,7 +182,7 @@ describe('row/column grip actions keep cell data', () => {
     const instance = await boot(merged());
 
     await menuAction('row', 0, 'Duplicate');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
     const texts = savedTexts(out);
 
     expect(texts[0]).toEqual(['A', '~', 'C']);
@@ -195,7 +196,7 @@ describe('row/column grip actions keep cell data', () => {
 
     await menuAction('row', 1, 'Insert row above');
     await menuAction('col', 2, 'Insert column left');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([
       ['A', '~', '', 'C'],
@@ -210,7 +211,7 @@ describe('row/column grip actions keep cell data', () => {
     const instance = await boot(merged());
 
     await menuAction('row', 1, 'Delete');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', '~', 'C'], ['G', 'H', 'I']]);
     expect(out.blocks.map(b => b.id)).not.toContain('e1');
@@ -220,7 +221,7 @@ describe('row/column grip actions keep cell data', () => {
     const instance = await boot(merged());
 
     await menuAction('col', 1, 'Delete');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'C'], ['D', 'F'], ['G', 'I']]);
   }, 30_000);
@@ -229,7 +230,7 @@ describe('row/column grip actions keep cell data', () => {
     const instance = await boot(merged());
 
     await menuAction('col', 0, 'Delete');
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
     const texts = savedTexts(out);
 
     expect(texts).toEqual([['A', 'C'], ['E1|E2', 'F'], ['H', 'I']]);
@@ -242,7 +243,7 @@ describe('row/column grip actions keep cell data', () => {
     instance.module.yjsManager.stopCapturing();
     instance.history.undo();
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B', 'C'], ['D', 'E1|E2', 'F'], ['G', 'H', 'I']]);
     expect(savedTable(out).content[1][1]).toMatchObject({ color: '#ff0000' });
@@ -256,7 +257,7 @@ describe('row/column grip actions keep cell data', () => {
     instance.module.yjsManager.stopCapturing();
     instance.history.undo();
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', '~', 'C'], ['D', 'E1|E2', 'F'], ['G', 'H', 'I']]);
     expect(savedTable(out).content[0][0].colspan).toBe(2);
@@ -269,7 +270,7 @@ describe('row/column grip actions keep cell data', () => {
     instance.module.yjsManager.stopCapturing();
     instance.history.undo();
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B', 'C'], ['D', 'E1|E2', 'F'], ['G', 'H', 'I']]);
     expect(visibleTexts()).toEqual(savedTexts(out));
@@ -303,7 +304,7 @@ describe('row/column grip actions keep cell data', () => {
 
     stubGeometry();
     await drag('row', 1, 0, 50, 0, 0);
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['D', 'E1|E2', 'F'], ['A', 'B', 'C'], ['G', 'H', 'I']]);
     expect(savedTable(out).content[0][1]).toMatchObject({ color: '#ff0000', textColor: '#00ff00', placement: 'middle-center' });
@@ -315,7 +316,7 @@ describe('row/column grip actions keep cell data', () => {
 
     stubGeometry();
     await drag('col', 1, 75, 0, 0, 0);
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['B', 'A', 'C'], ['E1|E2', 'D', 'F'], ['H', 'G', 'I']]);
     expect(savedTable(out).content[1][0]).toMatchObject({ color: '#ff0000', textColor: '#00ff00', placement: 'middle-center' });
@@ -330,7 +331,7 @@ describe('row/column grip actions keep cell data', () => {
     instance.module.yjsManager.stopCapturing();
     instance.history.undo();
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B', 'C'], ['D', 'E1|E2', 'F'], ['G', 'H', 'I']]);
     expect(visibleTexts()).toEqual(savedTexts(out));
@@ -341,7 +342,7 @@ describe('row/column grip actions keep cell data', () => {
 
     stubGeometry();
     await drag('row', 2, 0, 90, 0, 45);
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', '~', 'C'], ['G', 'H', 'I'], ['D', 'E1|E2', 'F']]);
     expect(visibleTexts()).toEqual([['A', 'C'], ['G', 'H', 'I'], ['D', 'E1|E2', 'F']]);

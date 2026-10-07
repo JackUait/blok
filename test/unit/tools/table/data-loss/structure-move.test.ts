@@ -10,6 +10,7 @@ import { Table } from '../../../../../src/tools/table/index';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
+import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -94,7 +95,7 @@ const prodSave = async (instance: TestEditor): Promise<OutputData> => {
   vi.stubEnv('NODE_ENV', 'production');
 
   try {
-    return await instance.save();
+    return savedAsHtml(await instance.save());
   } finally {
     vi.unstubAllEnvs();
   }
@@ -122,7 +123,7 @@ describe('moving around a table keeps cell data', () => {
 
     instance.blocks.move(instance.blocks.getBlocksCount() - 1, from);
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B'], ['C', 'D']]);
     expect(visibleTexts()).toEqual([['A', 'B'], ['C', 'D']]);
@@ -134,7 +135,7 @@ describe('moving around a table keeps cell data', () => {
     instance.module.blockManager.currentBlockIndex = instance.blocks.getBlockIndex('after') ?? -1;
     instance.module.blockManager.moveCurrentBlockUp();
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B'], ['C', 'D']]);
     expect(visibleTexts()).toEqual([['A', 'B'], ['C', 'D']]);
@@ -147,7 +148,7 @@ describe('moving around a table keeps cell data', () => {
     instance.module.blockManager.currentBlockIndex = instance.blocks.getBlockIndex('tbl') ?? -1;
     instance.module.blockManager.moveCurrentBlockDown();
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B'], ['C', 'D']]);
     expect(visibleTexts()).toEqual([['A', 'B'], ['C', 'D']]);
@@ -202,7 +203,7 @@ describe('moving around a table keeps cell data', () => {
     instance.module.blockManager.currentBlockIndex = instance.blocks.getBlockIndex('tg') ?? -1;
     instance.module.blockManager.moveCurrentBlockUp();
     await flush();
-    const out = await instance.save();
+    const out = savedAsHtml(await instance.save());
 
     expect(savedTexts(out)).toEqual([['A', 'B'], ['C', 'D']]);
     expect(visibleTexts()).toEqual([['A', 'B'], ['C', 'D']]);

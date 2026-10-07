@@ -1146,3 +1146,36 @@ describe("loose wire-shape input and OutputData utilities", () => {
     expect(section?.description).toContain("LooseOutputData");
   });
 });
+
+describe("rich text segments are the only saved shape", () => {
+  const allMethods = API_SECTIONS.flatMap((section) => section.methods ?? []);
+
+  it("documents no richText config option", () => {
+    const options = API_SECTIONS.flatMap((section) => section.table ?? []).map((row) => row.option);
+
+    expect(options).not.toContain("richText");
+  });
+
+  it("never tells the reader to set the old richText flag", () => {
+    const files = [
+      "docs/src/components/api/api-data.ts",
+      "docs/src/i18n/en.json",
+      "docs/src/i18n/ru.json",
+      "MIGRATION.md",
+      "README.md",
+    ];
+
+    for (const file of files) {
+      expect(readSource(file), file).not.toMatch(/richText: ['"]segments['"]/);
+    }
+  });
+
+  it("migrates a stored document before blocksOfType reads it", () => {
+    const example = allMethods.find((method) => method.name === "blocksOfType(data, type)")?.example ?? "";
+    const migrateAt = example.indexOf("migrateToRichText(");
+    const readAt = example.indexOf("blocksOfType(");
+
+    expect(migrateAt).toBeGreaterThan(-1);
+    expect(migrateAt).toBeLessThan(readAt);
+  });
+});

@@ -42,13 +42,13 @@ import { blocksToHtml } from '@bloklabs/core/view';
 const editor = new Blok({ holder: 'editor', tools: defaultTools });
 
 const data = await editor.save();
-//=> { blocks: [{ id: 'a1', type: 'header', data: { text: 'Hello', level: 2 } },
-//               { id: 'a2', type: 'paragraph', data: { text: 'A <b>block</b>-based editor.' } }] }
-// With `richText: 'segments'`, rich text saves as runs instead of HTML:
-//=> data: { text: [{ text: 'A ' }, { text: 'block', marks: { bold: true } }, { text: '-based editor.' }] }
+//=> { blocks: [{ id: 'a1', type: 'header', data: { text: [{ text: 'Hello' }], level: 2 } },
+//               { id: 'a2', type: 'paragraph', data: { text: [
+//                 { text: 'A ' }, { text: 'block', marks: { bold: true } }, { text: '-based editor.' },
+//               ] } }] }
 
 blocksToHtml(data);
-//=> '<h2>Hello</h2><p>A <b>block</b>-based editor.</p>'
+//=> '<h2>Hello</h2><p>A <strong>block</strong>-based editor.</p>'
 ```
 
 <p align="center">

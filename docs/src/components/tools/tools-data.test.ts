@@ -270,3 +270,15 @@ describe('toggle open state', () => {
     expect(TOOL_SECTIONS.find((s) => s.id === id)?.saveDataShape ?? '').not.toContain('isOpen');
   });
 });
+
+describe('inline tool saved data', () => {
+  const inlineSections = TOOL_SECTIONS.filter((section) => section.type === 'inline');
+
+  it.each(inlineSections.map((section) => [section.id, section] as const))(
+    '%s shows text saved as segments',
+    (_id, section) => {
+      expect(section.saveDataExample).toMatch(/"data":\s*\{\s*"text":\s*\[/);
+      expect(section.saveDataShape).not.toContain('Stored as HTML');
+    },
+  );
+});

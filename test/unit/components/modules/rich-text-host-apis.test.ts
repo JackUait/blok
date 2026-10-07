@@ -180,13 +180,13 @@ describe('host APIs that bypass the Saver — segments', { timeout: 60_000 }, ()
     expect(data.blocks[0].data.text).toEqual(bold);
   });
 
-  it('importMarkdown returns what the editor saves, HTML in the default format', async () => {
+  it('importMarkdown returns what the editor saves', async () => {
     const editor = await createEditor({});
 
     const data = await editor.blocks.importMarkdown('**a**');
 
-    expect(data.blocks[0].data.text).toBe('<strong>a</strong>');
-    expect((await editor.save()).blocks[0].data.text).toBe('<strong>a</strong>');
+    expect(data.blocks[0].data.text).toEqual(bold);
+    expect((await editor.save()).blocks[0].data.text).toEqual(data.blocks[0].data.text);
   });
 
   it('exportMarkdown still writes markdown', async () => {

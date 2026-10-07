@@ -375,6 +375,10 @@ export const migrateToRichText = (data: OutputData, options?: MigrateToRichTextO
  * Canonical HTML for segments. The editor can save a different string for the
  * same segments: on render it maps a raw colour to the nearest preset and can
  * add `target` and `rel` to a link.
+ *
+ * Not sanitized: a `tag:*` mark, an `html` embed or a link keeps any attribute
+ * or URL it holds. To display untrusted content, use `blocksToHtml` from
+ * `@bloklabs/core/view`, which sanitizes.
  * @param rich - segments
  */
 export const richTextToHtml = (rich: RichText): string => segmentsToHtml(rich);

@@ -300,8 +300,7 @@ describe('BlockObserver mutants', () => {
     it('treats anything else as remote', () => {
       expect(observer.mapTransactionOrigin('something-else')).toBe('remote');
       expect(observer.mapTransactionOrigin(42)).toBe('remote');
-      // `null` is yjs's format cleanup (local, see block-observer.test.ts);
-      // `undefined` is not.
+      // `null` is local only for a yjs format cleanup (see block-observer.test.ts).
       expect(observer.mapTransactionOrigin(undefined)).toBe('remote');
     });
   });

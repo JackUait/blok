@@ -27,6 +27,36 @@ interface ChangeBuckets {
 type ObservedEvent = Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>;
 
 /**
+ * Whether a transaction looks like yjs's own format cleanup: it inserted no
+ * struct and deleted only format items. Must run before the transaction's GC
+ * (inside `afterTransaction`): GC replaces deleted content and hides its kind.
+ * @param transaction - a finished transaction, still in its cleanup
+ */
+const isFormatCleanup = (transaction: Y.Transaction): boolean => {
+  const { beforeState, afterState } = transaction;
+
+  if (afterState.size !== beforeState.size) {
+    return false;
+  }
+
+  for (const [client, clock] of afterState) {
+    if (beforeState.get(client) !== clock) {
+      return false;
+    }
+  }
+
+  const deletes = { formatOnly: true };
+
+  Y.iterateDeletedStructs(transaction, transaction.deleteSet, (struct) => {
+    if (!(struct instanceof Y.Item) || !(struct.content instanceof Y.ContentFormat)) {
+      deletes.formatOnly = false;
+    }
+  });
+
+  return deletes.formatOnly;
+};
+
+/**
  * BlockObserver observes Yjs events and emits domain events.
  *
  * Doc schema v2 mapping:
@@ -135,7 +165,8 @@ export class BlockObserver {
    *
    * Input shapes:
    *  - `Y.UndoManager` instance → `'undo'` or `'redo'`
-   *  - `null` (yjs format cleanup) → `'local'`
+   *  - `null` with a transaction that only deletes format items (yjs format
+   *    cleanup) → `'local'`; any other `null` → `'remote'`
    *  - `LocalOriginTag` string  → mapped by the exhaustive switch below
    *  - anything else            → `'remote'` (treated as a peer update)
    *
@@ -146,18 +177,17 @@ export class BlockObserver {
    * origin tag that silently falls through to `'remote'` — that is the
    * exact bug class that broke `ensureCellHasBlock` → table row deletion.
    */
-  public mapTransactionOrigin(origin: unknown): TransactionOrigin {
+  public mapTransactionOrigin(origin: unknown, transaction?: Y.Transaction): TransactionOrigin {
     if (this.undoManager && origin === this.undoManager) {
       return this.undoManager.undoing ? 'undo' : 'redo';
     }
 
     // yjs's own format cleanup (a peer's change left redundant format items
     // here) runs with no origin. It changes no segments, so 'remote' would
-    // rerender the block for nothing. Safe because every remote apply carries
-    // a provider origin (`DocumentStore.applyRemoteUpdate`); the other
-    // null-origin transactions in src are read-only scans.
+    // rerender the block for nothing. Any other null-origin write (a bare Y
+    // mutation outside a transaction) stays 'remote' so the DOM follows it.
     if (origin === null) {
-      return 'local';
+      return transaction !== undefined && isFormatCleanup(transaction) ? 'local' : 'remote';
     }
 
     if (!this.isLocalOriginTag(origin)) {
@@ -326,7 +356,7 @@ export class BlockObserver {
     // that must classify into fresh buckets.
     this.pendingBuckets.delete(transaction);
 
-    const origin = this.mapTransactionOrigin(transaction.origin);
+    const origin = this.mapTransactionOrigin(transaction.origin, transaction);
     const addSet = new Set(buckets.adds);
     const removeSet = new Set(buckets.removes);
     const moves = [...buckets.orderTouched]

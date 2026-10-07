@@ -472,8 +472,8 @@ export class Collaboration extends Module {
       acknowledge: (operationId) => store.acknowledge(operationId).then(() => {
         void this.refreshSave();
       }),
-      quarantineLineage: (lineage, reason, snapshot) =>
-        store.quarantineLineage(lineage, reason, snapshot).then((moved) => {
+      quarantineLineage: (lineage, reason, snapshot, filter) =>
+        store.quarantineLineage(lineage, reason, snapshot, filter).then((moved) => {
           // Read off THIS quarantine's own reason. THREE are not refusals: a
           // room reset, a row of a lineage this session no longer serves, and
           // a row an older build wrote in another format — the drain sweeps

@@ -90,6 +90,15 @@ export interface CollabOutboxRow {
   bytes: Uint8Array;
 }
 
+/** Narrows a lineage quarantine. */
+export interface QuarantineFilter {
+  /**
+   * Rows written in this format stay in the outbox, and the session keeps its
+   * lineage. Used to sweep stale-format rows out of a lineage still in use.
+   */
+  keepFormat?: number;
+}
+
 /**
  * The slice of the operation store the provider drains — again a structural
  * subset of `OperationStore`.
@@ -110,7 +119,7 @@ export interface CollabOutbox {
   /** Deletes exactly one row; an id no row carries is a no-op, not a failure. */
   acknowledge(operationId: string): Promise<void>;
   /** Moves every row of `lineage`, plus a recovery snapshot, to quarantine. */
-  quarantineLineage(lineage: string, reason: string, snapshot: Uint8Array): Promise<number>;
+  quarantineLineage(lineage: string, reason: string, snapshot: Uint8Array, filter?: QuarantineFilter): Promise<number>;
   /** Lossy hint that another tab committed something. Never fires for this tab. */
   onCommitted(listener: () => void): () => void;
 }

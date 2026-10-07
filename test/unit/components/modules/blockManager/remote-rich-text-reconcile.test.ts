@@ -290,8 +290,32 @@ describe('reconciling a peer update into a rich text block', () => {
 
     expect(setData).not.toHaveBeenCalled();
     expect(block.pluginsContent.innerHTML).toBe('The <b>quick brown</b> fox jumps');
+    // The cleanup is sent once and the editor writes nothing back for it.
+    expect(origins.slice(origins.indexOf(null))).toEqual([null]);
     // The premise: a cleanup really changed the doc on this side.
     expect(origins).toContain(null);
+  }, 30_000);
+
+  it('re-renders the block for a bare Y write outside any transaction (null origin)', async () => {
+    const { core } = await boot(
+      { paragraph: { class: Paragraph } },
+      [{ id: 'b1', type: 'paragraph', data: { text: 'hello world' } }]
+    );
+    const block = blockById(core, 'b1');
+    const ydoc = (core.moduleInstances.YjsManager as unknown as PrivateYjsManager).documentStore.ydoc;
+    const data = (ydoc.getMap('blocks').get('b1') as Y.Map<unknown>).get('data') as Y.Map<unknown>;
+    const text = data.get('text');
+
+    block.pluginsContent.setAttribute('contenteditable', 'true');
+
+    // The premise: the field is rich text, written here with no origin at all.
+    expect(text).toBeInstanceOf(Y.XmlText);
+    (text as Y.XmlText).insert(11, ' again');
+
+    await waitFor(() => block.pluginsContent.textContent === 'hello world again', 'the bare write in the DOM')
+      .catch(() => undefined);
+
+    expect(block.pluginsContent.textContent, 'a null-origin write left the DOM stale').toBe('hello world again');
   }, 30_000);
 
   it('rewrites once when a peer\'s edit and the cleanup it causes arrive together', async () => {

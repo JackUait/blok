@@ -152,6 +152,21 @@ describe('diffOutputData', () => {
     });
   });
 
+  it('lists changed and moved blocks in after order', () => {
+    const [a, b, c] = [paragraph('a', 'a0'), paragraph('b', 'b0'), paragraph('c', 'c0')];
+    const [a2, b2, c2] = [paragraph('a', 'a1'), paragraph('b', 'b1'), paragraph('c', 'c1')];
+
+    expect(diffOutputData(doc(a, b, c), doc(c2, b2, a2))).toEqual({
+      ...EMPTY,
+      changed: [
+        { id: 'c', before: c, after: c2, fields: ['data'] },
+        { id: 'b', before: b, after: b2, fields: ['data'] },
+        { id: 'a', before: a, after: a2, fields: ['data'] },
+      ],
+      moved: [{ id: 'c', before: c, after: c2 }, { id: 'b', before: b, after: b2 }],
+    });
+  });
+
   it('keeps children of each parent in their own order', () => {
     const parent = paragraph('p', 'P');
     const one = paragraph('c1', '1', { parent: 'p' });

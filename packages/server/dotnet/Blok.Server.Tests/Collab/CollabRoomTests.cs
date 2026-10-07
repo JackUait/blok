@@ -3060,6 +3060,31 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// Reading an edit's HTML happens before anything is written, so a reader
+  /// that fails (a runtime timeout, a spent allocation budget) refuses that
+  /// one request. It must not take the commit-failure path, which closes the
+  /// room for every member.
+  /// </summary>
+  [Fact]
+  public async Task UnderAJournalAnHtmlReaderFailureRefusesTheEditAndKeepsTheRoom()
+  {
+    endpoint.HoldsNothing(DocId);
+    var manager = CreateJournalManager(
+        docConverter: new CollabDocConverter(time, new FailingHtmlReader()));
+    var writer = V2Member();
+    await Join(manager, writer);
+
+    var result = await manager.EditAsync(
+        DocId,
+        [Appending("b-1", "<b>x</b>")],
+        CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Invalid, result.Status);
+    Assert.Empty(writer.Closes);
+    Assert.Empty(operations.Committed(DocId));
+  }
+
+  /// <summary>
   /// A /state read of an id Blok has never seen seeds the journal like a
   /// join does, so the reopen PUT above applies to a /state-only id too.
   /// </summary>
@@ -6186,5 +6211,14 @@ public sealed class CollabRoomTests
     room.Dispose();
 
     Assert.Equal(0, time.ArmedTimerCount);
+  }
+}
+
+internal sealed class FailingHtmlReader : IRichTextHtmlReader
+{
+  public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
+      IReadOnlyList<RichTextHtml> fields, CancellationToken cancellationToken = default)
+  {
+    throw new TimeoutException("the runtime took too long");
   }
 }

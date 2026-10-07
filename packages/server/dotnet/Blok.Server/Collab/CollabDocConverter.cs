@@ -42,9 +42,24 @@ internal sealed class CollabDocConverter(
       YDoc doc, IReadOnlyList<CollabEditOp> ops, CancellationToken cancellationToken = default)
   {
     // Collecting plans the whole request, so a refusal is thrown before any
-    // HTML is read. The doc cannot move during the await: the room's lane
-    // is held across it.
-    var input = await Converting(YDocConverter.CollectOpsHtml(doc, ops, fields), cancellationToken);
+    // HTML is read. ApplyOps plans again after the await, against the doc as
+    // it is then: a doc that moved in between can only cause a refusal.
+    var found = YDocConverter.CollectOpsHtml(doc, ops, fields);
+    RichTextInput input;
+
+    try
+    {
+      input = await Converting(found, cancellationToken);
+    }
+    catch (Exception error) when (
+        error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+    {
+      // Nothing is written yet, so this is a refusal of this one request. Any
+      // other exception from here is read by the room as a half-written
+      // commit, and that closes the room for every member.
+      throw new CollabEditException(
+          $"collab: the rich text HTML in this edit could not be read: {error.Message}", error);
+    }
 
     YDocConverter.ApplyOps(doc, ops, input);
   }

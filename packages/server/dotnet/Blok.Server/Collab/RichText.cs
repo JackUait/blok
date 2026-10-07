@@ -73,18 +73,19 @@ internal static partial class RichText
         continue;
       }
 
+      // Only the content survives: the text, else a valid embed. Neither
+      // means a peer or host wrote junk, and the item is dropped.
       var segment = new AnyObject();
 
-      foreach (var (key, value) in raw)
+      if (TextOf(raw) is { } content)
       {
-        if (key != "marks")
-        {
-          segment.Add(key, value);
-        }
+        segment.Add("text", content);
       }
-
-      // Neither valid text nor a valid embed: a peer or host wrote junk.
-      if (TextOf(raw) is null && !(raw.TryGet("embed", out var embed) && IsEmbed(embed)))
+      else if (raw.TryGet("embed", out var embed) && IsEmbed(embed))
+      {
+        segment.Add("embed", embed);
+      }
+      else
       {
         continue;
       }

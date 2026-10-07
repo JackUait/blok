@@ -38,6 +38,10 @@ public sealed class RichTextMalformedTests
       { """[{"embed":{"equation":{"expression":"e","extra":"1"}}},{"text":"b"}]""", """[{"text":"b"}]""" },
       { """[{"embed":{"page":{"id":["p"]}}},{"text":"b"}]""", """[{"text":"b"}]""" },
 
+      // Only the content and the marks survive; other keys are dropped.
+      { """[{"text":"a","checked":true},{"embed":{"html":"h"},"glow":1}]""", """[{"text":"a"},{"embed":{"html":"h"}}]""" },
+      { """[{"text":"a","marks":"bold"}]""", """[{"text":"a"}]""" },
+
       // The three valid shapes stay as written.
       {
         """[{"embed":{"equation":{"expression":"e"}}},{"embed":{"page":{"id":"p"}}},{"embed":{"html":"<b>h</b>"}}]""",

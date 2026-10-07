@@ -48,21 +48,38 @@ function lines(parts: Rich[]): Rich {
 }
 
 /**
- * `html.trim()` on both forms. HTML whitespace at the ends can only sit in an
- * edge text node: escaping never turns whitespace into markup.
+ * Trims the leading text run, as `html.trim()` does: a node that emitted no
+ * HTML (an unsafe image, a footnote ref) leaves its neighbours adjacent.
+ * @param tree - nodes to trim from the front
  */
+function trimStartRun(tree: InlineNode[]): InlineNode[] {
+  const [first, ...rest] = tree;
+
+  if (first === undefined || first.kind !== 'text') {
+    return tree;
+  }
+
+  const value = first.value.trimStart();
+
+  return value === '' ? trimStartRun(rest) : [{ ...first, value }, ...rest];
+}
+
+function trimEndRun(tree: InlineNode[]): InlineNode[] {
+  const last = tree[tree.length - 1];
+
+  if (last === undefined || last.kind !== 'text') {
+    return tree;
+  }
+
+  const value = last.value.trimEnd();
+  const rest = tree.slice(0, -1);
+
+  return value === '' ? trimEndRun(rest) : [...rest, { ...last, value }];
+}
+
+/** `html.trim()` on both forms. Escaping never turns whitespace into markup. */
 function trim(value: Rich): Rich {
-  const tree = value.tree.map((node, index): InlineNode => {
-    if (node.kind !== 'text') {
-      return node;
-    }
-
-    const start = index === 0 ? node.value.trimStart() : node.value;
-
-    return { ...node, value: index === value.tree.length - 1 ? start.trimEnd() : start };
-  });
-
-  return { html: value.html.trim(), tree };
+  return { html: value.html.trim(), tree: trimEndRun(trimStartRun(value.tree)) };
 }
 
 /**

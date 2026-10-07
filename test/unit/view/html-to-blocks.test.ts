@@ -8,12 +8,6 @@ import { richTextAsHtml } from '../helpers/rich-text-as-html';
 import type { OutputBlockData } from '../../../types';
 import { COLOR_PRESETS, COLOR_PRESETS_DARK } from '../../../src/components/shared/color-presets';
 
-/**
- * Blocks without their generated ids, so a test asserts shape rather than the
- * id generator's output. `parent` is rewritten to the index of the block it
- * points at, which is what a structural assertion actually cares about.
- * @param blocks - blocks to strip
- */
 /** Rich fields read back as HTML; the rich text output tests below pin segments. */
 const htmlToBlocks = (html: string): OutputBlockData[] => richTextAsHtml(htmlToSegmentBlocks(html));
 
@@ -23,6 +17,12 @@ const htmlToBlocksWithReport = (html: string): HtmlImportResult => {
   return { ...result, blocks: richTextAsHtml(result.blocks) };
 };
 
+/**
+ * Blocks without their generated ids, so a test asserts shape rather than the
+ * id generator's output. `parent` is rewritten to the index of the block it
+ * points at, which is what a structural assertion actually cares about.
+ * @param blocks - blocks to strip
+ */
 const shape = (blocks: OutputBlockData[]): unknown[] => {
   const indexOf = new Map(blocks.map((block, index) => [block.id, index]));
 

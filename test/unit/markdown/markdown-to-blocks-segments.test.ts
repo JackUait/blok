@@ -51,6 +51,10 @@ const CORPUS: string[] = [
   'x <kbd>K</kbd> y',
   'a\u00a0b',
   'see ![no\u00a0break](https://x.dev/a.png) inline',
+  '$x$ ![a](javascript:alert(1)) b',
+  'a ![a](javascript:alert(1)) $y$',
+  '$x$ [^1] b\n\n[^1]: n',
+  'a [^1] $x$\n\n[^1]: n',
 ];
 
 describe('markdownToBlocks rich text segments', () => {

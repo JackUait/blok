@@ -75,6 +75,9 @@ const ROOT_CTORS = { array: Y.Array, map: Y.Map, text: Y.Text };
 // Tags an update produced by a fixture op, so the recorder ignores the update
 // events that remote applies also fire.
 const LOCAL_ORIGIN = Symbol('blok-fixture-local');
+// Deliveries need an origin of their own: yjs's format cleanup is the only
+// write left with origin null.
+const REMOTE_ORIGIN = Symbol('blok-fixture-remote');
 
 const SEED_COUNT = 50;
 // 40, not the plan's ~80: at 80 ops a seed weighs ~24 KiB (the per-step sha256
@@ -173,7 +176,15 @@ function buildValue(desc) {
   }
 
   if ('$yxmltext' in desc) {
-    return new Y.XmlText(desc.$yxmltext);
+    const text = new Y.XmlText(desc.$yxmltext);
+
+    // Writes on a text that is not in a doc yet; yjs queues them and replays
+    // them in order when the text integrates.
+    for (const op of desc.ops ?? []) {
+      applyTextOp(text, op);
+    }
+
+    return text;
   }
 
   if ('$yxmlelement' in desc) {
@@ -232,20 +243,99 @@ function applyOp(doc, op) {
     case 'array.delete':
       target.delete(op.index, op.length);
       break;
+    default:
+      applyTextOp(target, op);
+  }
+}
+
+/**
+ * Attributes go through buildValue so every op gets FRESH objects: yjs
+ * compares object marks by reference in places (cleanupFormattingGap), and
+ * the C# side builds a new object per op too.
+ * @param {Y.Text} target
+ * @param {Record<string, unknown>} op
+ * @returns {void}
+ */
+function applyTextOp(target, op) {
+  const attributes = op.attributes === undefined ? undefined : buildValue(op.attributes);
+
+  switch (op.op) {
     case 'text.insert':
-      target.insert(op.index, op.text, op.attributes ?? undefined);
+      target.insert(op.index, op.text, attributes);
       break;
     case 'text.delete':
       target.delete(op.index, op.length);
       break;
     case 'text.format':
-      target.format(op.index, op.length, op.attributes);
+      target.format(op.index, op.length, attributes);
       break;
     case 'text.embed':
-      target.insertEmbed(op.index, buildValue(op.embed), op.attributes ?? undefined);
+      target.insertEmbed(op.index, buildValue(op.embed), attributes);
       break;
     default:
       throw new TypeError(`unknown op "${op.op}"`);
+  }
+}
+
+/**
+ * @param {Y.Doc} doc
+ * @param {Record<string, string>} roots
+ * @returns {{ hasPending: boolean, json: Record<string, unknown>, sv: string }}
+ */
+function observeDoc(doc, roots) {
+  return {
+    sv: b64(Y.encodeStateVector(doc)),
+    hasPending: hasPending(doc),
+    json: renderDoc(doc, roots),
+  };
+}
+
+/**
+ * A yjs doc that stands where the engine stands but never runs the format
+ * cleanup, which is what the engine does (contract section 7). yjs runs the
+ * cleanup only after a transaction that is not local (YText.js _callObserver),
+ * and applyUpdate forces local = false inside its own body, so the flag is
+ * set back AFTER it, before the transaction ends.
+ */
+class NoCleanupDoc {
+  /**
+   * @param {number} clientId
+   * @param {boolean} gc
+   */
+  constructor(clientId, gc) {
+    this.doc = new Y.Doc({ gc });
+    this.doc.clientID = clientId;
+  }
+
+  /** @param {Uint8Array} update */
+  deliver(update) {
+    this.doc.transact((transaction) => {
+      Y.applyUpdate(this.doc, update, REMOTE_ORIGIN);
+      transaction.local = true;
+    }, REMOTE_ORIGIN);
+  }
+
+  /**
+   * @param {Record<string, unknown>} op
+   * @returns {Uint8Array}
+   */
+  record(op) {
+    const captured = [];
+    const listener = (update, origin) => {
+      if (origin === LOCAL_ORIGIN) {
+        captured.push(update);
+      }
+    };
+
+    this.doc.on('update', listener);
+    this.doc.transact(() => applyOp(this.doc, op), LOCAL_ORIGIN);
+    this.doc.off('update', listener);
+
+    if (captured.length !== 1) {
+      throw new Error(`op ${op.op} on the no-cleanup doc emitted ${captured.length} updates (expected 1)`);
+    }
+
+    return captured[0];
   }
 }
 
@@ -314,7 +404,30 @@ class World {
    * @returns {void}
    */
   deliver(name, update) {
-    Y.applyUpdate(this.doc(name), update);
+    this.deliverCapturingCleanup(name, update);
+  }
+
+  /**
+   * Applies a remote update and answers what yjs wrote back on its own: the
+   * format cleanup it runs after a remote transaction, with origin null.
+   * @param {string} name
+   * @param {Uint8Array} update
+   * @returns {Uint8Array[]}
+   */
+  deliverCapturingCleanup(name, update) {
+    const doc = this.doc(name);
+    const cleanup = [];
+    const listener = (written, origin) => {
+      if (origin === null) {
+        cleanup.push(written);
+      }
+    };
+
+    doc.on('update', listener);
+    Y.applyUpdate(doc, update, REMOTE_ORIGIN);
+    doc.off('update', listener);
+
+    return cleanup;
   }
 
   /**
@@ -323,13 +436,7 @@ class World {
    * @returns {{ hasPending: boolean, json: Record<string, unknown>, sv: string }}
    */
   observe(name, roots) {
-    const doc = this.doc(name);
-
-    return {
-      sv: b64(Y.encodeStateVector(doc)),
-      hasPending: hasPending(doc),
-      json: renderDoc(doc, roots),
-    };
+    return observeDoc(this.doc(name), roots);
   }
 
   /** yjs regenerates clientID when a remote transaction advances the local clock. */
@@ -1055,6 +1162,14 @@ const arrayDelete = (index, length) => ({ op: 'array.delete', root: 'list', root
 const textInsert = (index, text) => ({ op: 'text.insert', root: 'content', rootKind: 'text', path: [], index, text });
 const textDelete = (index, length) => ({ op: 'text.delete', root: 'content', rootKind: 'text', path: [], index, length });
 
+// Formatted text the way Blok stores it: a Y.XmlText under a map key.
+const richOp = (op, extra) => ({ op, root: 'blocks', rootKind: 'map', path: ['b1'], ...extra });
+const richInsert = (index, text, attributes) => richOp('text.insert', { index, text, attributes });
+const richFormat = (index, length, attributes) => richOp('text.format', { index, length, attributes });
+const richEmbed = (index, embed, attributes) => richOp('text.embed', { index, embed, attributes });
+const richDelete = (index, length) => richOp('text.delete', { index, length });
+const prelimOp = (op, extra) => ({ op, ...extra });
+
 const MAP_ROOTS = { blocks: 'map' };
 const LIST_ROOTS = { list: 'array' };
 const TEXT_ROOTS = { content: 'text' };
@@ -1216,6 +1331,95 @@ const SCENARIOS = [
     ],
   },
   {
+    name: 'formatted-text-engine-writes',
+    description: 'The engine writes every formatted-text op into a fresh Y.XmlText: inserts with attributes, format add and remove, an object-valued mark, embeds with and without attributes, a delete across marks, and a format that runs past the end.',
+    roots: MAP_ROOTS,
+    steps: [
+      { engine: true, op: mapSet('b1', { $yxmltext: '' }), deliver: ['A'] },
+      { engine: true, op: richInsert(0, 'Hello world', {}), deliver: ['A'] },
+      { engine: true, op: richFormat(0, 5, { bold: true }), deliver: ['A'] },
+      { engine: true, op: richFormat(6, 5, { link: { href: 'https://blok.dev', rel: 'noopener' } }), deliver: ['A'] },
+      { engine: true, op: richFormat(2, 2, { bold: null }), deliver: ['A'] },
+      { engine: true, op: richInsert(11, '!', {}), deliver: ['A'] },
+      { engine: true, op: richInsert(0, 'A', { bold: true, color: 'red' }), deliver: ['A'] },
+      { engine: true, op: richInsert(3, 'z'), deliver: ['A'] },
+      { engine: true, op: richEmbed(5, { equation: { expression: 'x^2' } }, { italic: true }), deliver: ['A'] },
+      { engine: true, op: richEmbed(1, { page: { id: 'p1' } }), deliver: ['A'] },
+      { engine: true, op: richFormat(0, 3, { 'tag:abbr': { title: 'Blok' }, background: '#fff' }), deliver: ['A'] },
+      { engine: true, op: richDelete(3, 4), deliver: ['A'] },
+      { engine: true, op: richFormat(10, 50, { italic: true }), deliver: ['A'] },
+      { engine: true, op: richInsert(2, `a${NUL}${ASTRAL}\n"<b>`, { code: true, 7: 'x', 2: 'y' }), deliver: ['A'] },
+    ],
+  },
+  {
+    name: 'formatted-text-prelim-queue',
+    description: 'Writes on a Y.XmlText that is not in a doc yet are queued and replayed in order when it integrates.',
+    roots: MAP_ROOTS,
+    steps: [
+      {
+        engine: true,
+        op: mapSet('b1', {
+          $yxmltext: 'seed',
+          ops: [
+            prelimOp('text.insert', { index: 4, text: 'abc', attributes: { bold: true } }),
+            prelimOp('text.format', { index: 1, length: 4, attributes: { italic: true } }),
+            prelimOp('text.embed', { index: 7, embed: { html: '<hr>' }, attributes: {} }),
+            prelimOp('text.insert', { index: 0, text: 'x' }),
+            prelimOp('text.delete', { index: 2, length: 2 }),
+            prelimOp('text.format', { index: 0, length: 2, attributes: { italic: null } }),
+          ],
+        }),
+        deliver: ['A'],
+      },
+    ],
+  },
+  {
+    name: 'formatted-text-link-key-order',
+    description: 'A peer links "ab" with {href, rel}; the engine types right after it with {rel, href}. yjs compares object marks flat and key-order-free, so it writes no format item.',
+    roots: MAP_ROOTS,
+    steps: [
+      { doc: 'A', op: mapSet('b1', { $yxmltext: '' }), deliver: ['C'] },
+      { doc: 'A', op: richInsert(0, 'ab', { link: { href: 'https://blok.dev', rel: 'noopener' } }), deliver: ['C'] },
+      { engine: true, op: richInsert(2, 'c', { link: { rel: 'noopener', href: 'https://blok.dev' } }), deliver: ['A'] },
+      { engine: true, op: richInsert(3, 'd', {}), deliver: ['A'] },
+    ],
+  },
+  {
+    name: 'formatted-text-equal-links-cleanup',
+    description: 'Deleting the plain gap between two equal but distinct link marks keeps both: yjs cleanupFormattingGap compares with ===, which is reference identity for objects.',
+    roots: MAP_ROOTS,
+    steps: [
+      { engine: true, op: mapSet('b1', { $yxmltext: '' }), deliver: ['A'] },
+      { engine: true, op: richInsert(0, 'a', { link: { href: 'h' } }), deliver: ['A'] },
+      { engine: true, op: richInsert(1, 'b', {}), deliver: ['A'] },
+      { engine: true, op: richInsert(2, 'c', { link: { href: 'h' } }), deliver: ['A'] },
+      { engine: true, op: richDelete(1, 1), deliver: ['A'] },
+      { engine: true, op: richInsert(1, 'e'), deliver: ['A'] },
+    ],
+  },
+  {
+    name: 'formatted-text-remote-cleanup',
+    description: 'Two peers format overlapping ranges. On receipt, yjs runs a format cleanup that the engine does not port (contract section 7), and here that cleanup changes what "ab" reads as: a yjs peer that received s5 before s6 drops italic, the engine keeps it, as a yjs doc with no cleanup does. The gap is pinned against that no-cleanup oracle, then closed by delivering the cleanup peer A wrote and sent.',
+    compare: 'segments',
+    roots: MAP_ROOTS,
+    steps: [
+      { doc: 'A', op: mapSet('b1', { $yxmltext: '' }), deliver: ['B', 'C'] },
+      { doc: 'A', op: richInsert(0, 'abcdef', {}), deliver: ['B', 'C'] },
+      { doc: 'A', op: richFormat(0, 2, { italic: true, bold: null }) },
+      { doc: 'A', op: richFormat(2, 1, { bold: true, italic: true }) },
+      { doc: 'B', op: richFormat(0, 4, { italic: true, bold: null }) },
+      { doc: 'B', op: richFormat(0, 4, { bold: null, italic: null }) },
+      { deliverOf: 's3', to: ['C'] },
+      { deliverOf: 's4', to: ['C'] },
+      { deliverOf: 's5', to: ['C'] },
+      { deliverOf: 's6', to: ['C'], engineDiverges: true },
+      { deliverOf: 's5', to: ['A'], cleanupAs: 'c1' },
+      { deliverOf: 's6', to: ['A'] },
+      { engine: true, op: richInsert(6, '!', { bold: true }), engineDiverges: true },
+      { deliverOf: 'c1', to: ['C'] },
+    ],
+  },
+  {
     name: 'engine-writes-while-pending',
     description: 'The edit-API path: the engine writes locally while it still holds a parked struct, so its own diff has to interleave local structs with pending ones.',
     roots: MAP_ROOTS,
@@ -1254,10 +1458,19 @@ function runScenario(spec) {
   const world = new World(spec.docs ?? THREE_DOCS, spec.gc ?? true);
   const updates = new Map();
   const steps = [];
+  const noCleanup = spec.compare === 'segments'
+    ? new NoCleanupDoc(world.clientIds.get(engine), spec.gc ?? true)
+    : null;
   let counter = 0;
 
-  const expectEngine = () => {
-    steps.push({ kind: 'expect', doc: engine, expect: world.observe(engine, spec.roots) });
+  const expectEngine = (diverges) => {
+    steps.push({
+      kind: 'expect',
+      doc: engine,
+      ...(diverges === true ? { diverges: true } : {}),
+      expect: world.observe(engine, spec.roots),
+      ...(noCleanup === null ? {} : { noCleanup: observeDoc(noCleanup.doc, spec.roots) }),
+    });
   };
 
   for (const authored of spec.steps) {
@@ -1268,14 +1481,38 @@ function runScenario(spec) {
         throw new Error(`scenario "${spec.name}" delivers unknown step "${authored.deliverOf}"`);
       }
 
+      const cleanup = [];
+
       for (const target of authored.to) {
-        world.deliver(target, update);
+        cleanup.push(...world.deliverCapturingCleanup(target, update));
+      }
+
+      if (authored.to.includes(engine)) {
+        noCleanup?.deliver(update);
       }
 
       steps.push({ kind: 'deliver', updateOf: authored.deliverOf, to: authored.to });
 
       if (authored.to.includes(engine)) {
-        expectEngine();
+        expectEngine(authored.engineDiverges);
+      }
+
+      if (authored.cleanupAs !== undefined) {
+        if (cleanup.length === 0) {
+          throw new Error(`scenario "${spec.name}": step ${authored.cleanupAs} expected a yjs format cleanup, none ran`);
+        }
+
+        const merged = Y.mergeUpdates(cleanup);
+
+        updates.set(authored.cleanupAs, merged);
+        steps.push({
+          kind: 'op',
+          id: authored.cleanupAs,
+          doc: authored.to[0],
+          op: { op: 'yjs.cleanup' },
+          update: b64(merged),
+          deliver: [],
+        });
       }
 
       continue;
@@ -1287,11 +1524,16 @@ function runScenario(spec) {
     const actor = authored.engine === true ? engine : authored.doc;
     const update = world.record(actor, authored.op);
     const deliver = authored.deliver ?? [];
+    const noCleanupUpdate = noCleanup !== null && actor === engine ? noCleanup.record(authored.op) : null;
 
     updates.set(id, update);
 
     for (const target of deliver) {
       world.deliver(target, update);
+    }
+
+    if (actor !== engine && deliver.includes(engine)) {
+      noCleanup?.deliver(update);
     }
 
     steps.push({
@@ -1300,11 +1542,12 @@ function runScenario(spec) {
       doc: actor,
       op: authored.op,
       update: b64(update),
+      ...(noCleanupUpdate === null ? {} : { noCleanupUpdate: b64(noCleanupUpdate) }),
       deliver,
     });
 
     if (actor === engine || deliver.includes(engine)) {
-      expectEngine();
+      expectEngine(authored.engineDiverges);
     }
   }
 
@@ -1317,10 +1560,12 @@ function runScenario(spec) {
   const clientIds = Object.fromEntries(world.clientIds);
 
   world.destroy();
+  noCleanup?.doc.destroy();
 
   return {
     name: spec.name,
     description: spec.description,
+    ...(spec.compare === undefined ? {} : { compare: spec.compare }),
     gc: spec.gc ?? true,
     roots: spec.roots,
     engine,
@@ -1341,7 +1586,14 @@ function buildScenarios() {
       'duplicate delivery of the update produced by step `updateOf`; substitute the engine\'s own ' +
       'bytes when that step was an engineWrites), and "expect" (assert `sv`, `hasPending` and ' +
       '`json` on the engine doc). Update bytes need not match yjs byte-for-byte, but `sv` and ' +
-      '`json` must. Nested $ymap/$yarray/$ytext values integrate the container item first and then ' +
+      '`json` must. A case with `compare: "segments"` has remote formatting, which yjs cleans up ' +
+      'after the transaction and the engine does not: compare only `json`, with every Y.Text ' +
+      'delta merged into runs of equal attributes; compare engine bytes with `noCleanupUpdate`, and ' +
+      'every expect with its `noCleanup` oracle (`sv` and raw `json` of a yjs doc that applies the ' +
+      'same updates with the cleanup suppressed). An expect with `diverges: true` pins a KNOWN gap ' +
+      'from the missing cleanup: there the merged json must DIFFER from `json`. ' +
+      'An "op" whose op is `yjs.cleanup` is the cleanup a yjs doc wrote with origin null while ' +
+      'receiving an update; peers send it, so the engine converges once it arrives. Nested $ymap/$yarray/$ytext values integrate the container item first and then ' +
       'their entries in listed order — get that order wrong and the state vector diverges. The fuzz ' +
       'seed files use this same op grammar with two step shortcuts of their own, which each of them ' +
       'states in its own $description.',
@@ -1350,14 +1602,15 @@ function buildScenarios() {
       'map.delete': 'delete `key`',
       'array.insert': 'insert `values` at `index`',
       'array.delete': 'delete `length` entries at `index`',
-      'text.insert': 'insert `text` at `index` (optional `attributes`)',
+      'text.insert': 'insert `text` at `index` (optional `attributes`; absent means inherit the marks in force)',
       'text.delete': 'delete `length` code units at `index`',
       'text.format': 'apply `attributes` over `length` code units at `index`',
       'text.embed': 'insert `embed` at `index` (optional `attributes`)',
     },
     values:
       'JSON, except objects carrying one of $num/$bigint/$u8/$undefined (leaves) or ' +
-      '$ymap/$yarray/$ytext/$yxmlfragment/$yxmlelement/$yxmltext (shared types).',
+      '$ymap/$yarray/$ytext/$yxmlfragment/$yxmlelement/$yxmltext (shared types). A $yxmltext may ' +
+      'carry `ops`: text ops (no root/path) written while it is not in a doc yet, replayed in order.',
     cases: SCENARIOS.map(runScenario),
   };
 }
@@ -1738,7 +1991,8 @@ writeJson(
         'The fuzzer never formats text. yjs deletes redundant format items in a per-transaction ' +
         'cleanup, so two docs holding identical state can report different toDelta run boundaries ' +
         'and the JSON oracle would be unreachable. Formatting is pinned by structs.json ' +
-        '(text-insert-format-embed) and by the text-format-and-embed scenario instead.',
+        '(text-insert-format-embed) and by the text-format-and-embed and formatted-text-* ' +
+        'scenarios instead.',
       astralNote:
         'Astral characters appear in map and array values but never in fuzzed text: a random ' +
         'text.delete would split a surrogate pair, and lib0 writes a lone half as U+FFFD.',

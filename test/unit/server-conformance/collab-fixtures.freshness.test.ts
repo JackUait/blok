@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DocumentStore } from '../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
 import type { OutputBlockData } from '../../../types/data-formats/output-data';
 
 /**
@@ -100,7 +101,8 @@ function readCase(name: string): CollabFixtureCase {
   };
 }
 
-const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer());
+// Node has no DOM; the generator parses rich-field HTML with parse5 too.
+const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer({ htmlToSegments: htmlToSegmentsNode }));
 
 const caseNames = listCaseDirectories();
 

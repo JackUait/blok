@@ -64,7 +64,8 @@ async function loadClient() {
     stdin: {
       contents:
         `export { DocumentStore } from ${modulePath('document-store.ts')};\n` +
-        `export { YBlockSerializer, GRID_ORDER_KEY, GRID_ROWS_KEY } from ${modulePath('serializer.ts')};\n`,
+        `export { YBlockSerializer, GRID_ORDER_KEY, GRID_ROWS_KEY } from ${modulePath('serializer.ts')};\n` +
+        `export { htmlToSegmentsNode } from ${JSON.stringify(join(REPO_ROOT, 'src', 'view', 'rich-text-parse5.ts'))};\n`,
       resolveDir: REPO_ROOT,
       loader: 'ts',
     },
@@ -550,7 +551,7 @@ async function main() {
 
     names.add(testCase.name);
 
-    const serializer = new client.YBlockSerializer();
+    const serializer = new client.YBlockSerializer({ htmlToSegments: client.htmlToSegmentsNode });
     const store = new client.DocumentStore(serializer);
 
     store.fromJSON(testCase.input);
@@ -565,7 +566,7 @@ async function main() {
 
     // Generator-side sanity: the three laws the pins assert, checked before
     // anything is written.
-    const replayed = new client.DocumentStore(new client.YBlockSerializer());
+    const replayed = new client.DocumentStore(new client.YBlockSerializer({ htmlToSegments: client.htmlToSegmentsNode }));
 
     replayed.applyRemoteUpdate(update);
 
@@ -573,7 +574,7 @@ async function main() {
       throw new Error(`generate-collab-fixtures: "${testCase.name}" does not replay to its own canonical output`);
     }
 
-    const reseeded = new client.DocumentStore(new client.YBlockSerializer());
+    const reseeded = new client.DocumentStore(new client.YBlockSerializer({ htmlToSegments: client.htmlToSegmentsNode }));
 
     reseeded.fromJSON(canonical);
 

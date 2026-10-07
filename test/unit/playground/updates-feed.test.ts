@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { IconRotateLeft } from '../../../src/components/icons';
@@ -6,6 +8,7 @@ import {
   blockSnippet,
   editedLabel,
   loadUpdates,
+  mergeUpdates,
   mountEditedLink,
   mountUpdatesFeed,
   relativeTime,
@@ -215,17 +218,91 @@ describe('blockSnippet', () => {
   });
 });
 
-const item = (sequence: number, blocks: ChangeBlock[], actor: string | null = 'playground-anna', truncated = false): UpdateItem => ({
+// Records sit 3 minutes apart, so the feed keeps them on cards of their own.
+const item = (
+  sequence: number,
+  blocks: ChangeBlock[],
+  actor: string | null = 'playground-anna',
+  truncated = false,
+  extra: Partial<ChangeRecord> = {}
+): UpdateItem => ({
   lineage: 'L',
   sequence: 30,
   truncated,
-  record: { sequence, committedAt: ago(3 * 60 * MIN), actor, blocks },
+  record: { sequence, committedAt: ago(3 * 60 * MIN + (20 - sequence) * 3 * MIN), actor, blocks, ...extra },
 });
 
 const loaded = (items: UpdateItem[], failed: string[] = []): UpdatesLoad => ({ items, failed });
 
 const changed = (id: string, before: string, after: string): ChangeBlock =>
   ({ id, type: 'paragraph', kind: 'changed', before: p(id, before), after: p(id, after) });
+
+describe('mergeUpdates', () => {
+  const SEC = 1000;
+  const typed = (sequence: number, secondsAgo: number, extra: Partial<UpdateItem> = {}, record: Partial<ChangeRecord> = {}): UpdateItem => ({
+    lineage: 'L',
+    sequence: 30,
+    truncated: false,
+    ...extra,
+    record: { sequence, committedAt: ago(secondsAgo * SEC), actor: 'playground-anna', blocks: [], page: ['values.title'], ...record },
+  });
+
+  it('folds a typing run by one person in one version into one item', () => {
+    const run = Array.from({ length: 20 }, (_, index) => typed(40 - index, 10 + index * 5));
+    const merged = mergeUpdates(run);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].record.sequence).toBe(40);
+    expect(merged[0].record.committedAt).toBe(run[0].record.committedAt);
+    expect(merged[0].record.page).toEqual(['values.title']);
+    expect(merged[0].sequence).toBe(30);
+  });
+
+  it('measures the gap between neighbours, not from the newest record', () => {
+    expect(mergeUpdates([typed(3, 0), typed(2, 100), typed(1, 200)])).toHaveLength(1);
+    expect(mergeUpdates([typed(2, 0), typed(1, 121)])).toHaveLength(2);
+  });
+
+  it('keeps other people, other versions and undated or anonymous records apart', () => {
+    expect(mergeUpdates([typed(2, 0), typed(1, 10, {}, { actor: 'playground-ben' })])).toHaveLength(2);
+    expect(mergeUpdates([typed(2, 0), typed(1, 10, { sequence: 20 })])).toHaveLength(2);
+    expect(mergeUpdates([typed(2, 0), typed(1, 10, { lineage: 'K' })])).toHaveLength(2);
+    expect(mergeUpdates([typed(2, 0), typed(1, 10, {}, { committedAt: null })])).toHaveLength(2);
+    expect(mergeUpdates([typed(2, 0, {}, { actor: null }), typed(1, 10, {}, { actor: null })])).toHaveLength(2);
+  });
+
+  it('combines blocks: oldest before, newest after, and the kind of the whole run', () => {
+    const oldest = typed(1, 20, {}, { page: ['title'], blocks: [
+      changed('a', 'one', 'two'),
+      { id: 'b', type: 'paragraph', kind: 'added', after: p('b', 'new') },
+      { id: 'c', type: 'paragraph', kind: 'added', after: p('c', 'x') },
+      { id: 'd', type: 'paragraph', kind: 'moved', before: p('d', 'd'), after: p('d', 'd') },
+      changed('e', 'e', 'e2'),
+    ] });
+    const newest = typed(2, 0, {}, { page: ['values.k'], blocks: [
+      changed('a', 'two', 'three'),
+      { id: 'b', type: 'paragraph', kind: 'removed', before: p('b', 'new') },
+      changed('c', 'x', 'y'),
+      changed('d', 'd', 'd!'),
+      { id: 'e', type: 'paragraph', kind: 'removed', before: p('e', 'e2') },
+      { id: 'f', type: 'paragraph', kind: 'added', after: p('f', 'f') },
+    ] });
+    const [merged] = mergeUpdates([newest, oldest]);
+
+    expect(merged.record.blocks).toEqual([
+      { id: 'a', type: 'paragraph', kind: 'changed', before: p('a', 'one'), after: p('a', 'three') },
+      { id: 'c', type: 'paragraph', kind: 'added', after: p('c', 'y') },
+      { id: 'd', type: 'paragraph', kind: 'changed', before: p('d', 'd'), after: p('d', 'd!') },
+      { id: 'e', type: 'paragraph', kind: 'removed', before: p('e', 'e') },
+      { id: 'f', type: 'paragraph', kind: 'added', after: p('f', 'f') },
+    ]);
+    expect(merged.record.page).toEqual(['title', 'values.k']);
+  });
+
+  it('keeps the truncation note when any merged record carried it', () => {
+    expect(mergeUpdates([typed(2, 0), typed(1, 10, { truncated: true })])[0].truncated).toBe(true);
+  });
+});
 
 describe('updateCards', () => {
   it('makes one card per record with up to four snippets', () => {
@@ -239,6 +316,16 @@ describe('updateCards', () => {
     expect(card.version).toEqual({ lineage: 'L', sequence: 30 });
     expect(card.snippets.map((snippet) => snippet.id)).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
     expect(card.shown).toBe(4);
+  });
+
+  it('names the page fields a card changed', () => {
+    const [title, none] = updateCards(
+      [item(8, [], 'playground-anna', false, { page: ['values.title'] }), item(5, [])],
+      { nameOf, now: NOW, pageTitle: 'Demo Page', plainText: blocksToPlainText }
+    );
+
+    expect(title.fields).toBe('the page title');
+    expect(none.fields).toBeNull();
   });
 
   it('calls an untitled page Untitled', () => {
@@ -296,6 +383,21 @@ describe('mountUpdatesFeed', () => {
     expect(cards()[0].querySelector('.pg-hp-avatar')?.textContent).toBe('B');
     expect(cards()[0].querySelector('[data-pg-update-line]')?.textContent).toBe('ben edited Demo Page');
     expect(cards()[0].querySelector('[data-pg-update-time]')?.textContent).toBe('3 hours ago');
+  });
+
+  it('draws a title typing run as one card that opens its version', async () => {
+    const run = Array.from({ length: 20 }, (_, index) => ({
+      ...item(40 - index, []),
+      record: { sequence: 40 - index, committedAt: ago(3 * 60 * MIN + index * 5000), actor: 'playground-anna', blocks: [], page: ['values.title'] },
+    }));
+    const { feed, onOpenVersion } = mount(async () => loaded(run));
+
+    await feed.ready;
+
+    expect(cards()).toHaveLength(1);
+    expect(cards()[0].querySelector('[data-pg-update-fields]')?.textContent).toBe('Changed the page title');
+    cards()[0].querySelector<HTMLButtonElement>('[data-pg-update-open]')?.click();
+    expect(onOpenVersion).toHaveBeenCalledWith('L', 30);
   });
 
   it('opens the record’s version from the History icon button', async () => {
@@ -463,5 +565,14 @@ describe('mountEditedLink', () => {
 
     link.update(null);
     expect(link.element.hidden).toBe(true);
+  });
+});
+
+describe('feed diff styles', () => {
+  it('drops the browser underline from added words: the green fill marks them', () => {
+    const css = readFileSync(resolve(__dirname, '../../../src/playground/history-panels.css'), 'utf-8');
+    const added = /\.pg-hp-diff--added\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+    expect(added).toMatch(/text-decoration:\s*none/);
   });
 });

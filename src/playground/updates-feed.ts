@@ -7,7 +7,7 @@
  */
 import './history-panels.css';
 import { IconRotateLeft } from '../components/icons';
-import { avatar, blockName, changesUrl, fetchVersionChanges } from './history-changes';
+import { avatar, blockName, changesUrl, fetchVersionChanges, pageFieldsLabel } from './history-changes';
 import type { ChangeBlock, ChangeKind, ChangeRecord, HistoryRequest } from './history-changes';
 import type { LooseOutputBlockData } from '../../types';
 
@@ -57,6 +57,8 @@ export interface UpdateCard {
   when: string;
   version: { lineage: string; sequence: number };
   snippets: BlockSnippet[];
+  /** "the page title" when the card changed page fields, else null. */
+  fields: string | null;
   /** How many snippets show before "View N more". */
   shown: number;
   truncated: boolean;
@@ -66,6 +68,8 @@ export interface UpdateCard {
 export type PlainText = (data: { blocks: LooseOutputBlockData[] }) => string;
 
 const FEED_VERSIONS = 3;
+/** Neighbouring records by one person closer than this share a card: a typed title is one record per key. */
+const MERGE_GAP = 2 * 60_000;
 const SNIPPETS_SHOWN = 4;
 /** Word-diff table cells; past this the texts show as one removal and one addition. */
 const DIFF_CELL_LIMIT = 250_000;
@@ -195,6 +199,81 @@ export const loadUpdates = async (
   return { items, failed };
 };
 
+const joins = (newer: UpdateItem, older: UpdateItem): boolean =>
+  newer.lineage === older.lineage
+  && newer.sequence === older.sequence
+  && newer.record.actor !== null
+  && newer.record.actor === older.record.actor
+  && newer.record.committedAt !== null
+  && older.record.committedAt !== null
+  && Math.abs(newer.record.committedAt - older.record.committedAt) <= MERGE_GAP;
+
+/** One block over a run: `before` from the oldest record, `after` from the newest; null when added then removed. */
+const combineBlock = (older: ChangeBlock, newer: ChangeBlock): ChangeBlock | null => {
+  if (older.kind === 'added') {
+    return newer.kind === 'removed' ? null : { id: newer.id, type: newer.type, kind: 'added', after: newer.after };
+  }
+
+  if (newer.kind === 'removed') {
+    return { id: newer.id, type: newer.type, kind: 'removed', before: older.before };
+  }
+
+  const kind: ChangeKind = older.kind === 'moved' && newer.kind === 'moved' ? 'moved' : 'changed';
+
+  return { id: newer.id, type: newer.type, kind, before: older.before, after: newer.after };
+};
+
+/** Records of a run, oldest first, as one record dated by the newest. */
+const combineRecords = (run: ChangeRecord[]): ChangeRecord => {
+  const blocks = new Map<string, ChangeBlock | null>();
+  const page = new Set<string>();
+
+  run.forEach((record) => {
+    record.blocks.forEach((block) => {
+      const seen = blocks.get(block.id);
+
+      blocks.set(block.id, seen === undefined || seen === null ? block : combineBlock(seen, block));
+    });
+    record.page?.forEach((key) => page.add(key));
+  });
+
+  const newest = run[run.length - 1];
+
+  return {
+    sequence: newest.sequence,
+    committedAt: newest.committedAt,
+    actor: newest.actor,
+    blocks: [...blocks.values()].filter((block): block is ChangeBlock => block !== null),
+    ...(page.size > 0 ? { page: [...page] } : {}),
+  };
+};
+
+/**
+ * Folds runs of neighbouring records by one person, in one version and less
+ * than two minutes apart, into one item each.
+ * @param items - newest first, from {@link loadUpdates}
+ */
+export const mergeUpdates = (items: UpdateItem[]): UpdateItem[] => {
+  const runs: UpdateItem[][] = [];
+
+  items.forEach((next) => {
+    const run = runs[runs.length - 1];
+
+    if (run !== undefined && joins(run[run.length - 1], next)) {
+      run.push(next);
+    } else {
+      runs.push([next]);
+    }
+  });
+
+  return runs.map((run) => run.length === 1 ? run[0] : {
+    lineage: run[0].lineage,
+    sequence: run[0].sequence,
+    truncated: run.some((one) => one.truncated),
+    record: combineRecords(run.map((one) => one.record).reverse()),
+  });
+};
+
 const pushPart = (parts: DiffPart[], text: string, kind: DiffPart['kind']): void => {
   const last = parts[parts.length - 1];
 
@@ -285,7 +364,7 @@ export const blockSnippet = (block: ChangeBlock, plainText: PlainText): BlockSni
 export const updateCards = (
   items: UpdateItem[],
   options: { nameOf(actor: string | null): string; now: Date; pageTitle: string; plainText: PlainText }
-): UpdateCard[] => items.map(({ lineage, sequence, truncated, record }) => {
+): UpdateCard[] => mergeUpdates(items).map(({ lineage, sequence, truncated, record }) => {
   const snippets = record.blocks.map((block) => blockSnippet(block, options.plainText));
 
   return {
@@ -295,6 +374,7 @@ export const updateCards = (
     when: record.committedAt === null ? 'Time unknown' : relativeTime(record.committedAt, options.now),
     version: { lineage, sequence },
     snippets,
+    fields: pageFieldsLabel(record.page ?? []),
     shown: Math.min(SNIPPETS_SHOWN, snippets.length),
     truncated,
   };
@@ -399,6 +479,12 @@ export const mountUpdatesFeed = (host: HTMLElement, options: UpdatesFeedOptions)
     open.innerHTML = IconRotateLeft;
     open.addEventListener('click', () => options.onOpenVersion(card.version.lineage, card.version.sequence));
 
+    if (card.fields !== null) {
+      const fields = element('p', 'pg-hp-update__fields', `Changed ${card.fields}`);
+
+      fields.setAttribute('data-pg-update-fields', '');
+      snippets.append(fields);
+    }
     snippets.append(...card.snippets.slice(0, card.shown).map((snippet) => snippetNode(snippet, options.onScrollToBlock)));
 
     if (card.shown < card.snippets.length) {

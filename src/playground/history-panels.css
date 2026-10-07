@@ -167,7 +167,7 @@
 }
 button.pg-hp-snippet:hover { background: var(--pghp-hover); }
 .pg-hp-snippet__label { color: var(--pghp-muted); font-style: italic; }
-.pg-hp-diff--added { background: var(--pghp-added-bg); border-radius: 3px; }
+.pg-hp-diff--added { background: var(--pghp-added-bg); border-radius: 3px; text-decoration: none; }
 .pg-hp-diff--removed { color: var(--pghp-removed-ink); text-decoration: line-through; }
 .pg-hp-more {
   align-self: flex-start;
@@ -200,3 +200,4 @@ html[data-pg-modality="keyboard"] .pg-hp-edited:focus-visible {
   outline-offset: 2px;
 }
 .pg-hp-update__note { margin: 0; padding: 0 8px; color: var(--pghp-muted); font-size: 12px; }
+.pg-hp-update__fields { margin: 0; padding: 0 8px; color: var(--pghp-muted); font-size: 13px; }

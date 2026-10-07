@@ -519,15 +519,17 @@ test.describe('undo audit W4: inline formatting', () => {
     const html = '<i><strong>bold</strong> it</i> tail';
 
     await mount(page, [P('p', html)]);
-    const initial = await savedText(page, 'p');
-
     await select(page, 'bold');
     await page.keyboard.press(`${MOD}+b`);
     await gap(page);
     expect(await savedText(page, 'p')).not.toContain('<strong>');
 
     await undo(page);
-    expect(await savedText(page, 'p')).toBe(initial);
+    expect(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.find((b) => b.id === 'p')?.data.text)).toEqual([
+      { text: 'bold', marks: { bold: true, italic: true } },
+      { text: ' it', marks: { italic: true } },
+      { text: ' tail' },
+    ]);
     expect(await shownHtml(page, 'p')).toBe(html);
     await redo(page);
     expect(await savedText(page, 'p')).not.toContain('<strong>');

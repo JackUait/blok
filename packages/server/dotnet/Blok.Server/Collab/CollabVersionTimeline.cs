@@ -1,11 +1,10 @@
 namespace Blok.Server.Collab;
 
 /// <summary>One version in a document's history: the point to read and when it was edited.</summary>
-/// <param name="Lineage">The lineage the point is on.</param>
-/// <param name="Sequence">The last record of the version; 0 for a lineage baseline.</param>
-/// <param name="StartedAt">The first record's time, or the lineage created-at for a baseline.</param>
-/// <param name="SavedAt">The last record's time, or the lineage created-at for a baseline.</param>
-/// <param name="Actors">Who edited, distinct, in first-seen order.</param>
+/// <remarks>
+/// Sequence 0 is a lineage baseline; both its times are the lineage's
+/// created-at. Actors are distinct, in first-seen order.
+/// </remarks>
 internal sealed record CollabVersion(
     string Lineage,
     ulong Sequence,

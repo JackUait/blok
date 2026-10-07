@@ -142,6 +142,28 @@ describe('page title save and load', () => {
     expect(saved?.icon).toEqual({ type: 'emoji', value: '📌' });
   });
 
+  it('seeds the title from a persisted load that has no blocks', async () => {
+    const core = await boot({
+      persistence: {
+        load: async () => ({ title: 'Only', blocks: [] }),
+        save: async () => {},
+      },
+    });
+    const saved = await core.moduleInstances.Saver.save();
+
+    expect(saved?.title).toBe('Only');
+  });
+
+  it('an echo render with the same title and icon does not reload the page', async () => {
+    const data = { title: 'Same', icon: { type: 'emoji' as const, value: '🚀' }, blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] };
+    const core = await boot({ data });
+    const loadPage = vi.spyOn(core.moduleInstances.YjsManager, 'loadPage');
+
+    await core.moduleInstances.API.methods.blocks.render(data);
+
+    expect(loadPage).not.toHaveBeenCalled();
+  });
+
   it('does not seed the config title when collaboration owns the document', async () => {
     const loadPage = vi.spyOn(YjsManager.prototype, 'loadPage');
 

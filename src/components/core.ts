@@ -525,6 +525,11 @@ export class Core {
       const loaded = unwrapPersistedDocument(result);
       const blocks = loaded?.blocks;
 
+      // Before the blocks check: a title-only page saves with no blocks.
+      if (loaded !== null) {
+        this.moduleInstances.YjsManager.loadPage({ title: loaded.title ?? undefined, icon: loaded.icon ?? undefined });
+      }
+
       if (blocks !== undefined && blocks.length > 0) {
         /**
          * `loaded` is the host's own object graph (frozen store state, a cached
@@ -538,7 +543,6 @@ export class Core {
 
         this.config.data = { ...loaded, blocks: cloned };
         this.loadedFromPersistence = true;
-        this.moduleInstances.YjsManager.loadPage({ title: loaded?.title ?? undefined, icon: loaded?.icon ?? undefined });
 
         return renderer.render(cloned);
       }

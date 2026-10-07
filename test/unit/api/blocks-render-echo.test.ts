@@ -39,7 +39,7 @@ type BlokStub = {
     adoptDocumentRecordId: ReturnType<typeof vi.fn>;
     resetDocumentRecordId: ReturnType<typeof vi.fn>;
   };
-  YjsManager: { loadPage: ReturnType<typeof vi.fn> };
+  YjsManager: { loadPage: ReturnType<typeof vi.fn>; getPageFields: ReturnType<typeof vi.fn> };
   BlockSelection: { selectBlock: ReturnType<typeof vi.fn> };
   Tools: { blockTools: Map<string, unknown> };
 };
@@ -72,7 +72,7 @@ const createBlocksApi = (currentContent: OutputData | undefined): { blocksApi: B
       adoptDocumentRecordId: vi.fn(),
       resetDocumentRecordId: vi.fn(),
     },
-    YjsManager: { loadPage: vi.fn() },
+    YjsManager: { loadPage: vi.fn(), getPageFields: vi.fn(() => ({})) },
     BlockSelection: {
       selectBlock: vi.fn(),
     },

@@ -101,7 +101,7 @@ const createHarness = (): {
       adoptDocumentRecordId: vi.fn(),
       resetDocumentRecordId: vi.fn(),
     },
-    YjsManager: { loadPage: vi.fn() },
+    YjsManager: { loadPage: vi.fn(), getPageFields: vi.fn(() => ({})) },
     BlockSelection: {
       selectBlock: vi.fn(),
     },

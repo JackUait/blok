@@ -349,12 +349,17 @@ export class BlocksAPI extends Module {
 
     // Before the echo check: a rename with the same blocks is still a change.
     // A content-only replace (Markdown import) keeps each page field its data does not name.
-    const kept = keepId ? this.Blok.YjsManager.getPageFields() : {};
-
-    this.Blok.YjsManager.loadPage({
+    const current = this.Blok.YjsManager.getPageFields();
+    const kept = keepId ? current : {};
+    const page = {
       title: Object.hasOwn(data, 'title') ? data.title ?? undefined : kept.title,
       icon: Object.hasOwn(data, 'icon') ? data.icon ?? undefined : kept.icon,
-    });
+    };
+
+    // loadPage flushes the typing buffer, and an echo render can land mid-typing.
+    if (page.title !== current.title || JSON.stringify(page.icon) !== JSON.stringify(current.icon)) {
+      this.Blok.YjsManager.loadPage(page);
+    }
 
     if (currentContent !== undefined && this.isEchoOf(currentContent, data)) {
       this.processPendingHashScroll();

@@ -306,6 +306,22 @@ public sealed class CollabHistoryManagerTests
   }
 
   [Fact]
+  public async Task AStalePreconditionWinsOverAMissingPoint()
+  {
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    await EditAsync(manager, Update("a", "A"));
+    var lineage = Lineage();
+
+    var result = await manager.RestoreAsync(
+        DocId, lineage, 9, "op", null, new CollabEditPrecondition(lineage, 0));
+
+    Assert.Equal(CollabHistoryStatus.Ready, result.History);
+    Assert.Equal(CollabEditStatus.PreconditionFailed, result.Edit!.Status);
+    Assert.Single(operations.Committed(DocId));
+  }
+
+  [Fact]
   public async Task ARestoreTooLargeForOneFrameChangesNothing()
   {
     var manager = CreateManager(new CollabRoomOptions { AnnouncedMaxMessageBytes = 2048 });

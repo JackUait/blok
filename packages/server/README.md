@@ -327,7 +327,7 @@ An edit may also send `If-Match: "<lineage>:<sequence>"`. It is one quoted tag, 
 
 `GET /sync/{doc}/state` returns the live document as `application/json`, in the same shape your document endpoint receives, with rich text fields as segments. It includes edits made a moment ago. With a journal, it also sends `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag: "<lineage>:<sequence>"`, naming the exact head the body reflects. Send that `ETag` back as `If-Match` to edit only if nothing changed in between. A working-copy-only service sends the body without those three headers. A purged document answers 403. A document that cannot be loaded, is held by another process, or is on a service that is shutting down answers 503. An export that ran past the runtime's timeout or allocation budget also answers 503, with `Retry-After` (2 seconds by default). A document the service cannot write as JSON answers 500.
 
-Both routes add `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag` to `Access-Control-Expose-Headers` for an allowed origin, so a browser page can read them. Headers your app already exposes are kept.
+`edit`, `state` and the history `restore` add `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag` to `Access-Control-Expose-Headers` for an allowed origin, so a browser page can read them. Headers your app already exposes are kept.
 
 Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
 
@@ -362,28 +362,29 @@ The list looks like this:
 - Versions come newest first.
 - Times are Unix milliseconds. An unknown time is `null`, and the point read leaves `time` out.
 
-The point read's headers are deliberately not `Blok-Doc-*`. Those name the live head and feed `If-Match`. The point read sends no `ETag`, and adds `Blok-History-Lineage` and `Blok-History-Sequence` to `Access-Control-Expose-Headers` for an allowed origin. Every history answer sends `Cache-Control: no-store`.
+The point read's headers are deliberately not `Blok-Doc-*`. Those name the live head and feed `If-Match`. The point read sends no `ETag`, and adds `Blok-History-Lineage` and `Blok-History-Sequence` to `Access-Control-Expose-Headers` for an allowed origin. Every answer from the history handlers sends `Cache-Control: no-store`. Guard refusals, 405 answers and preflights come from the route shell all routes share.
 
 Restore is a forward edit, not a rewind. It runs inside the room, through the same path as `edit`, so every open tab sees it and the old versions stay listed.
 
-- It needs a `Blok-Idempotency-Key`. A retry with the same key returns the first receipt.
-- It takes an optional `If-Match`, checked as for `edit`. A stale tag answers 412 and changes nothing.
+- It needs a `Blok-Idempotency-Key`. A retry with the same key returns the first receipt. A missing or malformed key answers 400.
+- It takes an optional `If-Match`, checked as for `edit`. A malformed tag answers 400. A stale tag answers 412 and changes nothing, even when the point no longer exists.
 - A restore that changes nothing answers 204 at the current head.
-- A restore whose update would not fit one sync frame answers 413 and changes nothing. The limit is `CollabRoomOptions.AnnouncedMaxMessageBytes`, or 1 MiB when it is unset.
+- A restore whose update would not fit one sync frame answers 413 and changes nothing. The limit is `CollabMaxMessageBytes`. On the built-in journal it is also never above that journal's 1 MiB update limit.
+- A planned change the converter refuses answers 422 and changes nothing.
 - A block whose `type` or `tunes` changed is removed and inserted again.
 
-The history routes can also answer the statuses below. 400 and 404 need a lineage or sequence in the path, and 500 needs a replay.
+The history routes can also answer the statuses below. The list has no lineage or sequence in its path, so it never answers 400 or 404.
 
 | Status | When |
 | --- | --- |
 | 400 | The sequence is not an unsigned 64-bit whole number. |
 | 403 | The document was purged. |
-| 404 | The lineage is unknown, or the sequence is past its durable head. |
-| 500 | Replaying a record failed. The server logs it. |
+| 404 | The lineage is unknown or is not 32 lowercase hex characters, or the sequence is past its durable head. |
+| 500 | A stored manifest, ledger or journal could not be decoded, on the list too. Or a replay failed, or the export after it. The server logs it. |
 | 501 | `history needs a journal that keeps it`: there is no journal, or your store does not keep history. |
 | 503 with `Retry-After` | The converter failed for a moment, as on `state`. |
 
-History needs a journal that keeps it. `--collab-journal` does. A store you register keeps history only if it also implements `ICollabOperationHistoryStore` (`Blok.Server.Collab`). The service finds it by a type check on your `ICollabOperationStore`, which does not change. The interface lists lineages, reads a baseline, streams record headers and records, and deletes a lineage. Its reads take no fence and no document lock, because a live room keeps writing while history is read.
+History needs a journal that keeps it. `--collab-journal` does. A store you register keeps history only if it also implements `ICollabOperationHistoryStore` (`Blok.Server.Collab`). The service finds it by a type check on your `ICollabOperationStore`, which does not change. The interface lists lineages, reads a baseline, streams record headers and records, and deletes a lineage. Its reads take no fence and no document lock, because a live room keeps writing while history is read. It also has `IsPurgedAsync`, which you must implement. It must answer without a lock, and it must still report a purge after a restart. Lineage values come from requests, so compare them and never build paths from them.
 
 History starts at this release. The built-in journal never stored the lineage, epoch and format of the generations it finished before, so it cannot list them. Its oldest listed lineage is the one current when this release first touches the document.
 

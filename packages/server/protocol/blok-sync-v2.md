@@ -971,32 +971,37 @@ omits `time` when it is unknown.
 `Blok-History-Lineage` and `Blok-History-Sequence` name the point that was read.
 They are deliberately not `Blok-Doc-*`: those name the live head and feed
 `If-Match`. For an allowed origin the point read adds both to
-`Access-Control-Expose-Headers`. Every history response carries
-`Cache-Control: no-store`.
+`Access-Control-Expose-Headers`. Every response from the history handlers
+carries `Cache-Control: no-store`. Guard refusals, 405 responses and preflights
+come from the route shell all routes share.
 
 A restore is a forward edit against the live document. It is not a rewind, and
 it does not remove history.
 
 - It needs `Blok-Idempotency-Key` (12.1). The digest covers the request, that
   is `restore`, the lineage and the sequence, never the planned edits. So a
-  retry with the same key returns the first receipt.
-- It MAY send `If-Match` (12.2). A stale tag answers 412 and changes nothing.
+  retry with the same key returns the first receipt. A missing or malformed
+  key answers 400.
+- It MAY send `If-Match` (12.2). A malformed tag answers 400. A stale tag
+  answers 412 and changes nothing, even when the point no longer exists.
   A server without history answers 501 here, never 428.
 - A restore that changes nothing answers 204 with the current head.
 - The server measures the update before it applies it. If the sync frame that
   carries it would pass the announced message limit, or 1 MiB when none is
-  announced, the server answers 413 and changes nothing.
+  announced, the server answers 413 and changes nothing. A server whose
+  journal has a lower update limit uses that limit instead.
+- A planned change the converter refuses answers 422 and changes nothing.
 - A block whose `type` or `tunes` changed is removed and inserted again.
 
-The history routes can also answer the statuses below. 400 and 404 need a
-lineage or sequence in the path, and 500 needs a replay.
+The history routes can also answer the statuses below. The list has no lineage
+or sequence in its path, so it never answers 400 or 404.
 
 | Status | When |
 | --- | --- |
 | 400 | The sequence is not an unsigned 64-bit integer. |
 | 403 | The document was purged. |
-| 404 | The lineage is unknown, or the sequence is past the lineage's durable head. |
-| 500 | Replaying the point failed: a corrupt record, or one the update inspector refused. |
+| 404 | The lineage is unknown or is not 32 lowercase hex characters, or the sequence is past the lineage's durable head. |
+| 500 | A stored manifest, ledger or journal could not be decoded, on the list too. Or replaying the point failed, or the export after it. |
 | 501 | `history needs a journal that keeps it`. The server has no journal, or its journal keeps no history. |
 | 503 with `Retry-After` | The converter failed for a moment, as on `/state`. |
 

@@ -29,6 +29,9 @@ import { isSafeCssColor } from '../shared/css-color';
 import { normalizeFenceLang } from '../markdown/fence-language';
 import type { MarkdownDegradation } from '../markdown/blocks-to-markdown-core';
 import { sanitizeHtmlFragment } from './sanitize';
+import { outputBlocksToSegments } from '../shared/rich-text/block-data';
+import { CURRENT_RICH_TEXT_FIELDS } from '../shared/rich-text/fields';
+import { htmlToSegmentsNode } from './rich-text-parse5';
 
 export type { MarkdownDegradation } from '../markdown/blocks-to-markdown-core';
 
@@ -1388,6 +1391,13 @@ const reportTitle = (ctx: Ctx, head: P5ChildNode | undefined): void => {
 };
 
 /**
+ * Current fields only: a legacy field (`quote.caption`) stays a string.
+ * @param type - block type
+ */
+const currentRichTextFields = (type: string): string[] =>
+  Object.prototype.hasOwnProperty.call(CURRENT_RICH_TEXT_FIELDS, type) ? CURRENT_RICH_TEXT_FIELDS[type] : [];
+
+/**
  * Parse HTML into Blok blocks and report what it could not carry into them.
  *
  * Takes either a fragment (`<p>a</p>`) or a whole document — parse5 builds the
@@ -1409,7 +1419,7 @@ export const htmlToBlocksWithReport = (html: string): HtmlImportResult => {
     convertNodes(ctx, body.childNodes);
   }
 
-  return { blocks: ctx.blocks, warnings: ctx.warnings };
+  return { blocks: outputBlocksToSegments(ctx.blocks, currentRichTextFields, htmlToSegmentsNode), warnings: ctx.warnings };
 };
 
 /**

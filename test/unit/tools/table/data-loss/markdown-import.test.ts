@@ -8,10 +8,19 @@ import Blok from '../../../../../src/blok';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { Table } from '../../../../../src/tools/table';
 import { Image } from '../../../../../src/tools';
-import { markdownToBlocksWithReport } from '../../../../../src/markdown/index';
+import { markdownToBlocksWithReport as markdownToSegmentBlocksWithReport } from '../../../../../src/markdown/index';
+import type { MarkdownImportResult } from '../../../../../src/markdown/index';
+import { richTextAsHtml } from '../../../helpers/rich-text-as-html';
 import type { OutputBlockData, OutputData } from '../../../../../types';
 import { settle } from './roundtrip-harness';
 import { savedAsHtml } from '../../../helpers/saved-as-html';
+
+/** Rich fields read back as HTML, the shape these grid assertions read. */
+const markdownToBlocksWithReport = async (md: string): Promise<MarkdownImportResult> => {
+  const result = await markdownToSegmentBlocksWithReport(md);
+
+  return { ...result, blocks: richTextAsHtml(result.blocks) };
+};
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '');
 

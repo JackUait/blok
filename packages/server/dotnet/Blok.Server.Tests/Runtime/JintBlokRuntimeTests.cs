@@ -18,7 +18,7 @@ public sealed class JintBlokRuntimeTests
 
     var block = FirstBlock(output);
     Assert.Equal("header", block.GetProperty("type").GetString());
-    Assert.Equal("Hello", block.GetProperty("data").GetProperty("text").GetString());
+    Assert.Equal("""[{"text":"Hello"}]""", block.GetProperty("data").GetProperty("text").GetRawText());
     Assert.Equal(1, block.GetProperty("data").GetProperty("level").GetInt32());
   }
 

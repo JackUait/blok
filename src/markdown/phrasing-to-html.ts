@@ -119,10 +119,11 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap): strin
   }
 }
 
-function anchor(url: string, children: string): string {
-  const target = isSamePageLink(url) ? '_self' : '_blank';
+/** Where an imported link opens: same-page anchors stay in the window. */
+export const linkTarget = (url: string): string => (isSamePageLink(url) ? '_self' : '_blank');
 
-  return `<a href="${escapeHtml(url)}" target="${target}" rel="noopener noreferrer nofollow">${children}</a>`;
+function anchor(url: string, children: string): string {
+  return `<a href="${escapeHtml(url)}" target="${linkTarget(url)}" rel="noopener noreferrer nofollow">${children}</a>`;
 }
 
 /** Unsafe scheme → drop the image entirely. */

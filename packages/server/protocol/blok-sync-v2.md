@@ -986,10 +986,11 @@ come from the route shell all routes share.
 
 The changes read lists the edits inside one version, one row per journal
 record. The window is the records in `(since, sequence]` of the lineage in the
-path. The caller passes `since`, normally the sequence of the version before
-this one in the grouping it shows: only the caller knows that grouping. An
+path. The caller passes `since`, normally the sequence of the next older version in
+the grouping it shows: only the caller knows that grouping. An
 absent `since` is 0. A `since` that is not an unsigned 64-bit integer, or is
-above the sequence, answers 400. Sequence 0, or `since` equal to the sequence,
+above the sequence, answers 400, and so does an empty, signed or repeated
+`since`. Sequence 0, or `since` equal to the sequence,
 answers `{"changes":[]}`.
 
 ```json
@@ -999,8 +1000,7 @@ answers `{"changes":[]}`.
                    "before": { "id": "a", "type": "paragraph", "data": { "text": [{ "text": "one" }] } },
                    "after": { "id": "a", "type": "paragraph", "data": { "text": [{ "text": "two" }] } } }] },
     { "sequence": 13, "committedAt": 1760000004000, "actor": null, "blocks": [],
-      "page": ["title", "values.k"] } ],
-  "truncated": true }
+      "page": ["title", "values.k"] } ] }
 ```
 
 - Rows are oldest first. A record with no visible edit still has a row, with
@@ -1055,7 +1055,7 @@ or sequence in its path, so it never answers 404.
 
 | Status | When |
 | --- | --- |
-| 400 | The sequence is not an unsigned 64-bit integer. The list's `group` is not `1`, `15` or `60`. The changes read's `since` is not an unsigned 64-bit integer, or is above the sequence. |
+| 400 | The sequence is not an unsigned 64-bit integer. The list's `group` is not `1`, `15` or `60`. The changes read's `since` is not an unsigned 64-bit integer, is empty, signed or repeated, or is above the sequence. |
 | 403 | The document was purged. |
 | 404 | The lineage is unknown or is not 32 lowercase hex characters, or the sequence is past the lineage's durable head. |
 | 500 | A stored manifest, ledger or journal could not be decoded, on the list too. Or replaying the point failed, or the export after it. |

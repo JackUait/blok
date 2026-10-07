@@ -367,7 +367,7 @@ The list looks like this:
 
 The point read's headers are deliberately not `Blok-Doc-*`. Those name the live head and feed `If-Match`. The point read and the changes read send no `ETag`. Both add `Blok-History-Lineage` and `Blok-History-Sequence` to `Access-Control-Expose-Headers` for an allowed origin. On the changes read they name the point in the path. Every answer from the history handlers sends `Cache-Control: no-store`. Guard refusals, 405 answers and preflights come from the route shell all routes share.
 
-The changes read lists the edits inside one version. Pass `since` as the sequence of the version before it in the list you show. Only your app knows which grouping that list uses. The answer covers the records after `since`, up to and including `sequence`, oldest first. Without `since` it starts after 0.
+The changes read lists the edits inside one version. Pass `since` as the sequence of the next older version in the list you show. Only your app knows which grouping that list uses. The answer covers the records after `since`, up to and including `sequence`, oldest first. Without `since` it starts after 0.
 
 ```json
 {
@@ -387,8 +387,7 @@ The changes read lists the edits inside one version. Pass `since` as the sequenc
       ]
     },
     { "sequence": 13, "committedAt": 1760000004000, "actor": null, "blocks": [], "page": ["title", "values.k"] }
-  ],
-  "truncated": true
+  ]
 }
 ```
 
@@ -396,7 +395,7 @@ The changes read lists the edits inside one version. Pass `since` as the sequenc
 - `actor` is always there. It is `null` when the record has none.
 - A block's `kind` is `added`, `removed`, `changed` or `moved`. `before` is left out for `added`, and `after` for `removed`. Blocks have the same shape as in the point read.
 - `changed` means the `type`, `data` or `tunes` differ. It wins over `moved`.
-- `moved` means a new parent, or a place outside the longest run of siblings that kept their order. It is the same move test `diffOutputData` uses. A changed block still counts toward that order.
+- `moved` means a new parent, or a place outside the largest set of its siblings that kept their relative order. It is the same move test `diffOutputData` uses. A changed block still counts toward that order.
 - `page` lists the changed keys of the `page` map, such as `title` and `icon`. Then it lists changed tracked values as `values.<key>`. It is left out when nothing there changed.
 - One answer holds at most 200 rows. Past that, it holds the newest 200 and adds `"truncated": true`. The key is left out otherwise.
 - Sequence 0, or a `since` equal to the sequence, answers `{"changes":[]}`.

@@ -4,6 +4,7 @@ import { I18nChanged } from '../../events';
 import { logLabeled } from '../../utils';
 import type { EditorWidth } from '../../../../types/api/width';
 import type { TitleChange } from '../../../../types/api/title';
+import type { PageIcon } from '../../../../types/tools/page';
 import { normalizeTitleConfig, type ResolvedTitleConfig } from '../../utils/title-config';
 import { buildHeader, type HeaderNodes } from './header-dom';
 
@@ -60,6 +61,14 @@ export class PageTitle extends Module {
     this.Blok.YjsManager.setPageField('title', text);
     this.renderText();
     this.notifyTitle({ source });
+  }
+
+  public getIcon(): PageIcon | null {
+    return this.Blok.YjsManager.getPageFields().icon ?? null;
+  }
+
+  public setIcon(icon: PageIcon | null, _source: 'user' | 'api'): void {
+    this.Blok.YjsManager.setPageField('icon', icon);
   }
 
   /** Redraw from the document after a load. Fires no callbacks. */

@@ -485,6 +485,7 @@ export class UI extends Module<UINodes> {
     } else {
       this.nodes.wrapper.removeAttribute(DATA_ATTR.width);
     }
+    this.Blok.PageTitle?.syncWidth(mode);
   }
 
   /**
@@ -518,6 +519,7 @@ export class UI extends Module<UINodes> {
     } else {
       this.nodes.wrapper.removeAttribute(DATA_ATTR.rtl);
     }
+    this.Blok.PageTitle?.syncDirection();
 
     // Open menus, the find bar and toasts live outside the wrapper.
     resyncPortalDirections(this.nodes.wrapper);

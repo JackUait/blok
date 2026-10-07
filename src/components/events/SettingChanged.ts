@@ -1,5 +1,4 @@
-import type { ThemeMode } from '../../../types/api/theme';
-import type { EditorWidth } from '../../../types/api/width';
+export type { SettingChangedPayload } from '../../../types/events/editor-events';
 
 /**
  * Fired when the host changes the theme mode or the width at runtime through
@@ -10,7 +9,3 @@ import type { EditorWidth } from '../../../types/api/width';
  * other open tab.
  */
 export const SettingChanged = 'setting:changed';
-
-export type SettingChangedPayload =
-  | { setting: 'theme'; value: ThemeMode }
-  | { setting: 'width'; value: EditorWidth };

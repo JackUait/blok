@@ -43,6 +43,7 @@ import {
   ViewState,
   Width,
   Placeholder,
+  Title,
   Tokens,
   EditorI18n,
   Handlers,
@@ -54,7 +55,7 @@ import { BlockAddedMutationType, BlockAddedEvent } from './events/block/BlockAdd
 import { BlockChangedMutationType, BlockChangedEvent } from './events/block/BlockChanged';
 import { BlockMovedMutationType, BlockMovedEvent } from './events/block/BlockMoved';
 import { BlockRemovedMutationType, BlockRemovedEvent } from './events/block/BlockRemoved';
-import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload, BlockChildrenMountedPayload, I18nChangedPayload, CollaborationParticipant, CollaborationStatusChangedPayload, CollaborationTerminalReason } from './events/editor-events';
+import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload, BlockChildrenMountedPayload, I18nChangedPayload, SettingChangedPayload, CollaborationParticipant, CollaborationStatusChangedPayload, CollaborationTerminalReason } from './events/editor-events';
 
 /**
  * Interfaces used for development
@@ -223,6 +224,7 @@ export {
   BlocksRenderedPayload,
   BlockChildrenMountedPayload,
   I18nChangedPayload,
+  SettingChangedPayload,
   CollaborationParticipant,
   CollaborationTerminalReason,
   CollaborationStatusChangedPayload,
@@ -584,6 +586,8 @@ export interface PendingBlok {
   tokens: Tokens;
   /** Runtime i18n API (read + `update`), exposed immediately after construction. */
   i18n: EditorI18n;
+  /** Page title API, exposed immediately after construction. */
+  title: Title;
 }
 
 /** How deep a readiness query looks: boot completion, or content in the DOM. */
@@ -678,6 +682,11 @@ export class Blok {
    * construction; updates issued before `isReady` are replayed once modules exist.
    */
   public i18n: EditorI18n;
+  /**
+   * Page title and icon. Exposed immediately after construction; calls made
+   * before `isReady` are replayed once modules exist.
+   */
+  public title: Title;
   constructor(configuration?: BlokConfig|string);
 
   /**

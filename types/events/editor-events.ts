@@ -8,6 +8,9 @@
  * (`'blocks:rendered'`).
  */
 
+import type { ThemeMode } from '../api/theme';
+import type { EditorWidth } from '../api/width';
+
 /**
  * Payload for the `block:rendered` event.
  */
@@ -242,6 +245,11 @@ export interface I18nChangedPayload {
   direction: 'ltr' | 'rtl';
 }
 
+/** Fired when `theme.set`, `width.set` or `width.toggle` changes a setting at runtime. Never for the boot config. */
+export type SettingChangedPayload =
+  | { setting: 'theme'; value: ThemeMode }
+  | { setting: 'width'; value: EditorWidth };
+
 /**
  * Map of editor lifecycle event name -> payload.
  *
@@ -253,5 +261,6 @@ export interface BlokEditorEventMap {
   'blocks:rendered': BlocksRenderedPayload;
   'block:childrenMounted': BlockChildrenMountedPayload;
   'i18n:changed': I18nChangedPayload;
+  'setting:changed': SettingChangedPayload;
   'collaboration:status': CollaborationStatusChangedPayload;
 }

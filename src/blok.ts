@@ -24,6 +24,7 @@ import { releasePersistenceQueue } from './components/utils/persistence';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 import './components/polyfills';
 import type { BlokModules } from './types-internal/blok-modules';
+import type { PageIcon } from '../types/tools/page';
 
 /**
  * Export version as a named export
@@ -424,6 +425,53 @@ class Blok {
       set: (value: string | false): void => applyPlaceholder(value),
     };
 
+    // Buffered like width: calls before isReady replay once PageTitle exists.
+    const titleBuffer = {
+      text: null as string | null,
+      icon: undefined as PageIcon | null | undefined,
+      holder: null as HTMLElement | string | null,
+    };
+    const getPageTitle = (): BlokModules['PageTitle'] | undefined =>
+      (blok.moduleInstances as Partial<BlokModules>).PageTitle;
+
+    (this as Record<string, unknown>).title = {
+      get: (): string => getPageTitle()?.getText() ?? titleBuffer.text ?? '',
+      set: (text: string): void => {
+        const pageTitle = getPageTitle();
+
+        if (pageTitle === undefined) {
+          titleBuffer.text = text;
+
+          return;
+        }
+        pageTitle.setText(text, 'api');
+      },
+      focus: (position?: 'start' | 'end'): void => getPageTitle()?.focus(position),
+      mount: (holder: HTMLElement | string): void => {
+        const pageTitle = getPageTitle();
+
+        if (pageTitle === undefined) {
+          titleBuffer.holder = holder;
+
+          return;
+        }
+        pageTitle.mount(holder);
+      },
+      icon: {
+        get: (): PageIcon | null => getPageTitle()?.getIcon() ?? titleBuffer.icon ?? null,
+        set: (icon: PageIcon | null): void => {
+          const pageTitle = getPageTitle();
+
+          if (pageTitle === undefined) {
+            titleBuffer.icon = icon;
+
+            return;
+          }
+          pageTitle.setIcon(icon, 'api');
+        },
+      },
+    };
+
     /**
      * Theme tokens API — exposed immediately (mirrors theme/width/placeholder)
      * so hosts can flip tokens before isReady without a silent no-op. The set
@@ -549,6 +597,23 @@ class Blok {
         }
         placeholderBuffer.pending = null;
       }
+
+      const pageTitle = (blok.moduleInstances as Partial<BlokModules>).PageTitle;
+
+      if (pageTitle !== undefined) {
+        if (titleBuffer.holder !== null) {
+          pageTitle.mount(titleBuffer.holder);
+        }
+        if (titleBuffer.text !== null) {
+          pageTitle.setText(titleBuffer.text, 'api');
+        }
+        if (titleBuffer.icon !== undefined) {
+          pageTitle.setIcon(titleBuffer.icon, 'api');
+        }
+      }
+      titleBuffer.holder = null;
+      titleBuffer.text = null;
+      titleBuffer.icon = undefined;
 
       // Scroll to the block referenced by the URL hash, if present.
       // isReady resolves only after all blocks are in the DOM (requestIdleCallback fence in Renderer),

@@ -8,7 +8,7 @@ const HOLDER_ID = 'blok';
 declare global {
   interface Window {
     blokInstance?: Blok;
-    releaseLoad?: () => void;
+    releaseLoad?: (blocks?: unknown[]) => void;
   }
 }
 
@@ -38,7 +38,7 @@ const bootSlow = async (page: Page, extra: Record<string, unknown> = {}): Promis
   await page.evaluate(({ holder, extraConfig }) => {
     let release: (value: unknown) => void = () => undefined;
 
-    window.releaseLoad = (): void => release({ blocks: [{ id: 'x', type: 'paragraph', data: { text: 'Loaded text' } }] });
+    window.releaseLoad = (blocks = [{ id: 'x', type: 'paragraph', data: { text: 'Loaded text' } }]): void => release({ blocks });
     window.blokInstance = new window.Blok({
       holder,
       loader: { delay: 0 },
@@ -70,6 +70,21 @@ test.describe('boot loading skeleton', () => {
     await page.keyboard.press('End');
     await page.keyboard.type('!');
     await expect(page.getByText('Loaded text!')).toBeVisible();
+  });
+
+  test('an empty paragraph loaded under the skeleton keeps its line height', async ({ page }) => {
+    await bootSlow(page);
+    await expect(page.getByTestId('loading-skeleton')).toBeVisible();
+    await page.evaluate(() => window.releaseLoad?.([
+      { id: 'full', type: 'paragraph', data: { text: 'One line' } },
+      { id: 'empty', type: 'paragraph', data: { text: '' } },
+    ]));
+    await expect(page.getByTestId('loading-skeleton')).toHaveCount(0);
+
+    const height = (id: string): Promise<number> =>
+      page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).evaluate(el => el.getBoundingClientRect().height);
+
+    expect(await height('empty')).toBe(await height('full'));
   });
 
   test('reduced motion: bars do not animate', async ({ page }) => {

@@ -146,12 +146,34 @@ export class LoadingController {
     this.wait = null;
   }
 
+  /**
+   * Chrome lays out an empty editable under `inert` with no line, and does not
+   * redo it when `inert` goes: every empty paragraph stays padding-tall. A
+   * display round-trip forces the layout again.
+   */
+  private relayoutAfterInert(): void {
+    const { content } = this.args;
+
+    if (!content.hasAttribute('inert')) {
+      return;
+    }
+
+    content.removeAttribute('inert');
+
+    const { style } = content;
+    const saved = { value: style.getPropertyValue('display'), priority: style.getPropertyPriority('display') };
+
+    style.setProperty('display', 'none');
+    content.offsetHeight;
+    style.setProperty('display', saved.value, saved.priority);
+  }
+
   private teardown(): void {
     this.skeleton?.root.remove();
     this.skeleton = null;
     this.args.wrapper.removeAttribute(DATA_ATTR.loading);
     this.args.wrapper.removeAttribute('aria-busy');
-    this.args.content.removeAttribute('inert');
+    this.relayoutAfterInert();
     this.busy = false;
 
     if (this.savedMinHeight !== null) {

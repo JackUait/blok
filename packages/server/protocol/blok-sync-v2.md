@@ -845,9 +845,10 @@ the same canonical body returns the first receipt without applying anything.
 The same key with a different body answers 409. A server without a journal
 sends neither header and does not deduplicate.
 
-An edit that changes nothing is the exception. Examples are the same data
-again, or rich text spelled differently (`<b>` for `<strong>`). It answers 204
-with the current head as its sequence, and records nothing under the key.
+On a journal-backed document, an edit that changes nothing is the exception.
+Examples are the same data again, or rich text spelled differently (`<b>` for
+`<strong>`). It answers 204 with the current head as its sequence, and records
+nothing under the key.
 
 - A retry with that key runs the edit again, against the document as it is then.
 - The same key with a different body is not a 409.
@@ -886,7 +887,8 @@ The reference server refuses a request in this order:
 6. A malformed `If-Match` (400).
 7. A body over the size limit (413), then an invalid edit body (422).
 
-Only then does it reach the document, where 428 and 412 are decided.
+Only then does it reach the document, where 428 and 412 are decided, and
+the reader's 422 or 503 for rich text HTML (12.1).
 
 On a journal-backed document the server checks the tag after the key lookup and
 before it applies anything, in one step with the apply:

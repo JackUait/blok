@@ -302,11 +302,13 @@ A rich text field in an edit may be an HTML string or segments. The service read
 - If reading that HTML runs past the runtime's timeout or allocation budget, the edit answers 503 with `Retry-After: 2` and applies nothing. Retry with the same key.
 - HTML the reader refuses answers 422.
 
-An edit that changes nothing also answers 204. That covers the same data sent again, and rich text spelled differently, such as `<b>` for `<strong>` or `&nbsp;` for a space.
+With a journal, an edit that changes nothing also answers 204. That covers the same data sent again, and rich text spelled differently, such as `<b>` for `<strong>` or `&nbsp;` for a space.
 
-- Nothing is journalled. With a journal, `Blok-Doc-Sequence` names the current head, not a new sequence.
+- Nothing is journalled. `Blok-Doc-Sequence` names the current head, not a new sequence.
 - Nothing is recorded under the key. A retry with that key runs the edit again. If someone edited in between, the retry applies to the new document. A different body under the same key is not a 409.
 - Send `If-Match` on every edit you may retry. Then a retry after the document moved answers 412 instead of applying.
+
+A working-copy-only service never deduplicates, so there every retry runs again, and `If-Match` answers 428.
 
 An edit may also send `If-Match: "<lineage>:<sequence>"`. It is one quoted tag, built from the `Blok-Doc-Lineage` and `Blok-Doc-Sequence` values exactly as the service prints them.
 
@@ -353,7 +355,7 @@ The first time the service opens a document stored in format 1, it moves it to f
 - the room gets a new lineage and `epoch + 1`;
 - edits a format-1 editor saved offline are quarantined on that editor, not replayed.
 
-If that move fails, the document stays in format 1 and the next open tries again.
+If that move fails, the document stays in format 1. The service then holds the document off for a while (2 s at first, doubling up to 60 s). In that window, joins, edits and `/state` answer 503. The next open after the window tries again.
 
 ### Your own sync server
 

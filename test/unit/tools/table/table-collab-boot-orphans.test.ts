@@ -410,7 +410,7 @@ describe('table — collaborative boot writes its cell references', () => {
         const saved = await client.core.moduleInstances.Saver.save();
 
         expect(saved?.blocks.filter((block) => block.id === 'ghost')).toEqual([
-          expect.objectContaining({ data: expect.objectContaining({ text: 'Ghost text' }) }),
+          expect.objectContaining({ data: expect.objectContaining({ text: [{ text: 'Ghost text' }] }) }),
         ]);
       }
 

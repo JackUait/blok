@@ -1218,13 +1218,11 @@ export class Saver extends Module {
     const dataModelConfig = this.config.dataModel || 'auto';
     const detectedInputFormat = this.Blok.Renderer?.getDetectedInputFormat?.() ?? 'flat';
 
-    // Collaboration stays HTML for now, silently.
-    const collaborating = this.Blok.Collaboration?.isEnabled ?? false;
     const resolve = (type: string): string[] => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? [];
 
     // Convert BEFORE the collapse: it moves text into legacy paths (items[].content,
     // toggleList.title, body.blocks) that a tool's flat richTextFields cannot name.
-    const segmentBlocks = dialect === 'host' && !collaborating
+    const segmentBlocks = dialect === 'host'
       ? outputBlocksToSegments(extractedBlocks, resolve, htmlToSegmentsDom)
       : extractedBlocks;
 
@@ -1264,16 +1262,14 @@ export class Saver extends Module {
 
   /**
    * One block's data the way a host save would write it, for host APIs that
-   * skip the Saver (BlockAPI.save, getBlockData, importMarkdown). The gates
-   * must match makeOutput's, or a block's own save disagrees with the document.
+   * skip the Saver (BlockAPI.save, getBlockData, importMarkdown). It must
+   * convert like makeOutput, or a block's own save disagrees with the document.
    * @param tool - the block's tool
    * @param data - block data as the tool saved it
    * @returns `data` itself when nothing converts
    */
   public blockDataForHost(tool: BlockToolAdapter, data: BlockToolData): BlockToolData {
-    const collaborating = this.Blok.Collaboration?.isEnabled ?? false;
-
-    return richTextOutputForHost(tool, data, name => this.Blok.Tools.blockTools.get(name), { collaborating });
+    return richTextOutputForHost(tool, data, name => this.Blok.Tools.blockTools.get(name));
   }
 
   /**

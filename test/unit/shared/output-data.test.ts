@@ -398,6 +398,20 @@ describe('createEmittedEchoWindow', () => {
     expect(window.matches({ time: 99, blocks: [para('A')] })).toBe(true);
   });
 
+  it('matches a segments payload refetched through JSON, and not one with other marks', async () => {
+    const { createEmittedEchoWindow } = await import('../../../src/shared/output-data');
+    const window = createEmittedEchoWindow();
+    const block = (bold: boolean): OutputData['blocks'][number] =>
+      ({ type: 'paragraph', data: { text: [{ text: 'a', marks: { bold } }, { text: ' b' }] } });
+
+    window.record({ time: 1, blocks: [{ ...block(true), id: 'b1' }] });
+
+    const refetched: OutputData = JSON.parse(JSON.stringify({ time: 2, blocks: [block(true)] })) as OutputData;
+
+    expect(window.matches(refetched)).toBe(true);
+    expect(window.matches({ blocks: [block(false)] })).toBe(false);
+  });
+
   it('forgets everything on clear()', async () => {
     const { createEmittedEchoWindow } = await import('../../../src/shared/output-data');
     const window = createEmittedEchoWindow();

@@ -137,15 +137,17 @@ describe('Saver — rich text output', { timeout: 60_000 }, () => {
     expect(richTextWarnings(warnSpy)).toHaveLength(0);
   });
 
-  it('keeps HTML, silently, under collaboration', async () => {
-    const control = await createModuleSaver({}, false).save();
-
-    expect(Array.isArray(control?.blocks[0].data.text)).toBe(true);
-
+  it('saves segments under collaboration too', async () => {
     const saved = await createModuleSaver({}, true).save();
 
-    expect(typeof saved?.blocks[0].data.text).toBe('string');
+    expect(saved?.blocks[0].data.text).toEqual([{ text: 'a', marks: { bold: true } }, { text: ' b' }]);
     expect(richTextWarnings(warnSpy)).toHaveLength(0);
+  });
+
+  it('internal saves stay HTML under collaboration', async () => {
+    const internal = await createModuleSaver({}, true).save({ dialect: 'internal' });
+
+    expect(internal?.blocks[0].data.text).toBe('<strong>a</strong> b');
   });
 
   it('internal saves stay HTML', async () => {

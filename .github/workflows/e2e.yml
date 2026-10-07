@@ -17,7 +17,7 @@ on:
         required: true
         type: string
       shard:
-        description: "Playwright shard fraction"
+        description: "Shard fraction i/n, balanced by scripts/e2e-shard-list.mjs"
         required: true
         type: string
       artifact-index:
@@ -59,8 +59,13 @@ jobs:
           browsers: ${{ inputs.browser }}
           download: "false"
 
+      # Not Playwright's --shard: it takes contiguous runs of tests, so one
+      # slow folder piles into one shard.
+      - name: Pick this shard's spec files
+        run: node scripts/e2e-shard-list.mjs --project ${{ inputs.project }} --shard ${{ inputs.shard }} --out e2e-shard-files.txt
+
       - name: Run E2E Tests
-        run: yarn playwright test --project=${{ inputs.project }} --shard=${{ inputs.shard }}
+        run: yarn playwright test --project=${{ inputs.project }} --test-list=e2e-shard-files.txt
 
       - name: Upload E2E Test Results
         if: failure()

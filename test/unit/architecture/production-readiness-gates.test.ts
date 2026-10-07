@@ -82,6 +82,7 @@ describe('production readiness gates', () => {
       'codeql',
       'server-security',
       'server',
+      'server-delivery',
       'unit-tests',
       'workspace-unit-tests',
       'validate-spec-coverage',
@@ -265,13 +266,15 @@ describe('production readiness gates', () => {
 
     const frontendCoverage = job(ci, 'frontend-coverage');
     const unitTests = job(ci, 'unit-tests');
+    const workspaceUnitTests = job(ci, 'workspace-unit-tests');
     const docsQuality = job(ci, 'docs-quality');
 
     expect(needsList(frontendCoverage.needs)).toContain('unit-tests');
     expect(frontendCoverage.steps?.some(step =>
       step.run?.includes('--merge-reports=') === true && step.run.includes('--coverage')
     )).toBe(true);
-    expect(needsList(unitTests.needs)).toContain('build');
+    // The unit shards skip the tests that read dist/; those run after the build here.
+    expect(needsList(workspaceUnitTests.needs)).toContain('build');
     expect(unitTests.steps?.some(step =>
       step.run === 'yarn build:cli'
     )).toBe(true);

@@ -1,5 +1,5 @@
 name: "Setup Node.js and Dependencies"
-description: "Sets up Node.js and installs Yarn dependencies with caching"
+description: "Sets up Node.js and restores installed node_modules, installing only on a cache miss"
 
 inputs:
   node-version:
@@ -7,14 +7,14 @@ inputs:
     required: false
     default: "26.5.0"
   install-docs:
-    description: "Whether to install docs dependencies"
+    description: "Whether to install docs dependencies. Only jobs that run the docs site need them."
     required: false
-    default: "true"
+    default: "false"
 
 outputs:
   cache-hit:
-    description: "Whether the Yarn cache was hit"
-    value: ${{ steps.setup-node.outputs.cache-hit }}
+    description: "Whether installed node_modules were restored from cache"
+    value: ${{ steps.modules.outputs.cache-hit }}
 
 runs:
   using: "composite"
@@ -30,20 +30,64 @@ runs:
         corepack enable
 
     - name: Setup Node.js
-      id: setup-node
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: ${{ inputs.node-version }}
-        cache: "yarn"
+        package-manager-cache: false
+
+    # Caches the installed tree, not yarn's zip cache: a hit skips the link
+    # step and the native builds. The key holds the Node version because the
+    # native builds are compiled against it. install-state.gz must travel too,
+    # or yarn 4 thinks the project was never installed.
+    - name: Restore node_modules
+      id: modules
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+          .yarn/install-state.gz
+        key: modules-${{ runner.os }}-${{ runner.arch }}-node${{ inputs.node-version }}-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json', 'packages/*/package.json') }}
 
     - name: Install dependencies
+      if: steps.modules.outputs.cache-hit != 'true'
       shell: bash
       run: yarn install --immutable
 
-    - name: Install docs dependencies
+    # Saved right after install, before any job writes node_modules/.cache.
+    - name: Save node_modules
+      if: steps.modules.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+          .yarn/install-state.gz
+        key: ${{ steps.modules.outputs.cache-primary-key }}
+
+    - name: Restore docs node_modules
+      id: docs-modules
       if: inputs.install-docs == 'true'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          docs/node_modules
+          docs/.yarn/install-state.gz
+        key: docs-modules-${{ runner.os }}-${{ runner.arch }}-node${{ inputs.node-version }}-${{ hashFiles('docs/yarn.lock', 'docs/package.json') }}
+
+    - name: Install docs dependencies
+      if: inputs.install-docs == 'true' && steps.docs-modules.outputs.cache-hit != 'true'
       shell: bash
       run: |
         if [ -f docs/package.json ]; then
           cd docs && yarn install --immutable
         fi
+
+    - name: Save docs node_modules
+      if: inputs.install-docs == 'true' && steps.docs-modules.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          docs/node_modules
+          docs/.yarn/install-state.gz
+        key: ${{ steps.docs-modules.outputs.cache-primary-key }}

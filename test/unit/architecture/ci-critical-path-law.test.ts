@@ -147,22 +147,21 @@ const markBuildRun = [
   'echo "BLOK_BUILT=true" >> $GITHUB_ENV',
 ].join('\n');
 
+// Sized against the 20 concurrent jobs GitHub's free plan allows: one more
+// shard costs ~45s of setup and a slot other jobs wait for.
 const e2eMatrix: MatrixEntry[] = [
   { project: 'chromium', browser: 'chromium', shard: '1/2' },
   { project: 'chromium', browser: 'chromium', shard: '2/2' },
   { project: 'firefox', browser: 'firefox', shard: '1/2' },
   { project: 'firefox', browser: 'firefox', shard: '2/2' },
-  { project: 'webkit', browser: 'webkit', shard: '1/3' },
-  { project: 'webkit', browser: 'webkit', shard: '2/3' },
-  { project: 'webkit', browser: 'webkit', shard: '3/3' },
-  { project: 'chromium-logic', browser: 'chromium', shard: '1/2' },
-  { project: 'chromium-logic', browser: 'chromium', shard: '2/2' },
+  { project: 'webkit', browser: 'webkit', shard: '1/2' },
+  { project: 'webkit', browser: 'webkit', shard: '2/2' },
+  { project: 'chromium-logic', browser: 'chromium', shard: '1/1' },
   { project: 'chromium-default', browser: 'chromium', shard: '1/3' },
   { project: 'chromium-default', browser: 'chromium', shard: '2/3' },
   { project: 'chromium-default', browser: 'chromium', shard: '3/3' },
-  { project: 'chromium-undo', browser: 'chromium', shard: '1/3' },
-  { project: 'chromium-undo', browser: 'chromium', shard: '2/3' },
-  { project: 'chromium-undo', browser: 'chromium', shard: '3/3' },
+  { project: 'chromium-undo', browser: 'chromium', shard: '1/2' },
+  { project: 'chromium-undo', browser: 'chromium', shard: '2/2' },
 ];
 
 describe('CI critical-path law', () => {
@@ -176,6 +175,7 @@ describe('CI critical-path law', () => {
       'codeql',
       'server-security',
       'server',
+      'server-delivery',
       'unit-tests',
       'workspace-unit-tests',
       'validate-spec-coverage',
@@ -265,7 +265,7 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('retains the exact final server job contract', () => {
+  it('builds the .NET server once, then tests, measures and formats it', () => {
     const server = getJob(ci, 'server');
 
     expect(server.name).toBe('Server');
@@ -281,12 +281,19 @@ describe('CI critical-path law', () => {
           'dotnet-version': '10.0.x',
         },
       },
+      // A separate build lets `dotnet test --no-build` start every test
+      // assembly at once; building inside `dotnet test` holds one back.
+      {
+        name: 'Build .NET server',
+        run: 'dotnet build packages/server/dotnet/Blok.Server.slnx --configuration Release',
+      },
       {
         name: 'Test .NET server with coverage',
         run: [
           'rm -rf .server-test-results .server-coverage',
           'dotnet test packages/server/dotnet/Blok.Server.slnx \\',
           '  --configuration Release \\',
+          '  --no-build \\',
           '  --collect:"Code Coverage;Format=Cobertura" \\',
           '  --results-directory .server-test-results',
         ].join('\n'),
@@ -307,6 +314,25 @@ describe('CI critical-path law', () => {
       {
         name: 'Check .NET formatting',
         run: 'dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes',
+      },
+    ]);
+  });
+
+  it('ships and conformance-tests the .NET server in parallel with its tests', () => {
+    const delivery = getJob(ci, 'server-delivery');
+
+    expect(delivery.name).toBe('Server Delivery');
+    expect(delivery.needs).toBeUndefined();
+    expect(delivery['runs-on']).toBe('ubuntu-latest');
+    expectOrderedSteps('ci.server-delivery', delivery, [
+      checkout,
+      setupNodeDependencies,
+      {
+        name: 'Setup .NET',
+        uses: 'actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68',
+        with: {
+          'dotnet-version': '10.0.x',
+        },
       },
       {
         name: 'Test packed .NET packages',
@@ -338,33 +364,26 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('runs four exact unit-only coverage shards after build', () => {
+  it('runs five unit-only coverage shards without waiting for the build', () => {
     const unit = getJob(ci, 'unit-tests');
 
     expect(unit.name).toBe('Unit Tests (${{ matrix.shard }})');
-    expect(unit.needs).toEqual(['build']);
+    expect(unit.needs).toBeUndefined();
     expect(unit['runs-on']).toBe('ubuntu-latest');
     expect(unit.strategy).toEqual({
       'fail-fast': false,
-      matrix: { shard: ['1/4', '2/4', '3/4', '4/4'] },
+      matrix: { shard: ['1/5', '2/5', '3/5', '4/5', '5/5'] },
     });
     expectOrderedSteps('ci.unit-tests', unit, [
       checkout,
       setupNodeDependencies,
-      {
-        name: 'Download Build Artifacts',
-        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
-        with: {
-          name: 'dist',
-          path: '.',
-        },
-      },
       {
         name: 'Build CLI',
         run: 'yarn build:cli',
       },
       {
         name: 'Run Unit Tests with coverage',
+        env: { BLOK_UNIT_WITHOUT_DIST: '1' },
         run: [
           'yarn vitest run --coverage --project=unit \\',
           '  --shard=${{ matrix.shard }} \\',
@@ -391,8 +410,17 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('runs unsharded workspace suites in parallel after build', () => {
+  it('runs unsharded workspace suites and the dist-reading unit tests after build', () => {
     const workspace = getJob(ci, 'workspace-unit-tests');
+    const distTests = /const DIST_TESTS = \[([^\]]*)\]/.exec(readFileSync(resolve(root, 'vitest.config.ts'), 'utf8'))?.[1] ?? '';
+    const distRun = workspace.steps?.find((step) => step.name === 'Run dist unit tests')?.run ?? '';
+
+    // The unit shards skip these files, so they run here or nowhere.
+    for (const [, file] of distTests.matchAll(/'([^']+)'/g)) {
+      expect(distRun, `${file} is skipped by the unit shards and must run here`).toContain(
+        file.startsWith('test/unit/build/') ? 'test/unit/build/' : file,
+      );
+    }
 
     expect(workspace.name).toBe('Workspace Unit Tests');
     expect(workspace.needs).toEqual(['build']);
@@ -427,6 +455,14 @@ describe('CI critical-path law', () => {
       {
         name: 'Run @bloklabs/server Unit Tests',
         run: 'yarn workspace @bloklabs/server test',
+      },
+      // One path per vitest run: several paths in one run can silently drop one.
+      {
+        name: 'Run dist unit tests',
+        run: [
+          'yarn vitest run --project=unit test/unit/build/',
+          'yarn vitest run --project=unit test/unit/architecture/react-fixture-import-map-law.test.ts',
+        ].join('\n'),
       },
     ]);
   });
@@ -531,7 +567,8 @@ describe('CI critical-path law', () => {
       {
         name: 'Setup Playwright Browsers',
         uses: './.github/actions/setup-playwright-browsers',
-        with: { browsers: 'chromium firefox webkit' },
+        // apt packages are not cached, so installing them here helps no shard.
+        with: { browsers: 'chromium firefox webkit', 'os-deps': 'false' },
       },
     ]);
   });
@@ -640,7 +677,7 @@ describe('CI critical-path law', () => {
         type: 'string',
       },
       shard: {
-        description: 'Playwright shard fraction',
+        description: 'Shard fraction i/n, balanced by scripts/e2e-shard-list.mjs',
         required: true,
         type: 'string',
       },
@@ -683,9 +720,15 @@ describe('CI critical-path law', () => {
           download: 'false',
         },
       },
+      // Not Playwright's --shard: it takes contiguous runs of tests, so one
+      // slow folder piles into one shard.
+      {
+        name: "Pick this shard's spec files",
+        run: 'node scripts/e2e-shard-list.mjs --project ${{ inputs.project }} --shard ${{ inputs.shard }} --out e2e-shard-files.txt',
+      },
       {
         name: 'Run E2E Tests',
-        run: 'yarn playwright test --project=${{ inputs.project }} --shard=${{ inputs.shard }}',
+        run: 'yarn playwright test --project=${{ inputs.project }} --test-list=e2e-shard-files.txt',
       },
       {
         name: 'Upload E2E Test Results',

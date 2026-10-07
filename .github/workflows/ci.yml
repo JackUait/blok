@@ -159,6 +159,8 @@ jobs:
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
+        with:
+          install-docs: "true"
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -298,11 +300,17 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # A separate build lets `dotnet test --no-build` start every test
+      # assembly at once; building inside `dotnet test` holds one back.
+      - name: Build .NET server
+        run: dotnet build packages/server/dotnet/Blok.Server.slnx --configuration Release
+
       - name: Test .NET server with coverage
         run: |
           rm -rf .server-test-results .server-coverage
           dotnet test packages/server/dotnet/Blok.Server.slnx \
             --configuration Release \
+            --no-build \
             --collect:"Code Coverage;Format=Cobertura" \
             --results-directory .server-test-results
 
@@ -319,6 +327,22 @@ jobs:
 
       - name: Check .NET formatting
         run: dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
+
+  # Split from `server` so the two halves run side by side.
+  server-delivery:
+    name: Server Delivery
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
 
       - name: Test packed .NET packages
         run: node scripts/test-server-packages.mjs
@@ -342,14 +366,15 @@ jobs:
             test/unit/architecture/ci-critical-path-law.test.ts \
             test/unit/architecture/package-metadata-law.test.ts
 
+  # No `needs: build`: the tests that read build output run in
+  # workspace-unit-tests instead (DIST_TESTS in vitest.config.ts).
   unit-tests:
     name: Unit Tests (${{ matrix.shard }})
-    needs: [build]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: ["1/4", "2/4", "3/4", "4/4"]
+        shard: ["1/5", "2/5", "3/5", "4/5", "5/5"]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -357,17 +382,12 @@ jobs:
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: dist
-          # Archive keeps repo-relative paths (dist/, packages/*/dist/); extract at root.
-          path: .
-
       - name: Build CLI
         run: yarn build:cli
 
       - name: Run Unit Tests with coverage
+        env:
+          BLOK_UNIT_WITHOUT_DIST: '1'
         run: |
           yarn vitest run --coverage --project=unit \
             --shard=${{ matrix.shard }} \
@@ -420,6 +440,12 @@ jobs:
 
       - name: Run @bloklabs/server Unit Tests
         run: yarn workspace @bloklabs/server test
+
+      # One path per vitest run: several paths in one run can silently drop one.
+      - name: Run dist unit tests
+        run: |
+          yarn vitest run --project=unit test/unit/build/
+          yarn vitest run --project=unit test/unit/architecture/react-fixture-import-map-law.test.ts
 
   validate-spec-coverage:
     name: Validate Spec File Coverage
@@ -493,12 +519,16 @@ jobs:
         uses: ./.github/actions/setup-playwright-browsers
         with:
           browsers: chromium firefox webkit
+          # apt packages are not cached, so installing them here helps no shard.
+          os-deps: "false"
 
   e2e-tests:
     name: E2E Tests
     needs: [build, install-browsers]
     strategy:
       fail-fast: false
+      # Sized for the 20 concurrent jobs of GitHub's free plan: a shard costs
+      # ~45s of setup plus a slot that other jobs wait for.
       matrix:
         include:
           - project: chromium
@@ -515,37 +545,28 @@ jobs:
             shard: 2/2
           - project: webkit
             browser: webkit
-            shard: 1/3
+            shard: 1/2
           - project: webkit
             browser: webkit
-            shard: 2/3
-          - project: webkit
-            browser: webkit
-            shard: 3/3
+            shard: 2/2
           - project: chromium-logic
+            browser: chromium
+            shard: 1/1
+          - project: chromium-default
+            browser: chromium
+            shard: 1/3
+          - project: chromium-default
+            browser: chromium
+            shard: 2/3
+          - project: chromium-default
+            browser: chromium
+            shard: 3/3
+          - project: chromium-undo
             browser: chromium
             shard: 1/2
-          - project: chromium-logic
+          - project: chromium-undo
             browser: chromium
             shard: 2/2
-          - project: chromium-default
-            browser: chromium
-            shard: 1/3
-          - project: chromium-default
-            browser: chromium
-            shard: 2/3
-          - project: chromium-default
-            browser: chromium
-            shard: 3/3
-          - project: chromium-undo
-            browser: chromium
-            shard: 1/3
-          - project: chromium-undo
-            browser: chromium
-            shard: 2/3
-          - project: chromium-undo
-            browser: chromium
-            shard: 3/3
     uses: ./.github/workflows/e2e.yml
     with:
       artifact-name: dist
@@ -653,6 +674,7 @@ jobs:
       - codeql
       - server-security
       - server
+      - server-delivery
       - unit-tests
       - workspace-unit-tests
       - validate-spec-coverage

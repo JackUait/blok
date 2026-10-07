@@ -109,6 +109,16 @@ public sealed class SyncEndpointTests
     Assert.Contains("GET /blok/sync/{doc}/history/{lineage}/{sequence}", warning.Message, StringComparison.Ordinal);
     Assert.Contains("DELETE /blok/sync/{doc}/history/{lineage}", warning.Message, StringComparison.Ordinal);
     Assert.Contains("POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore", warning.Message, StringComparison.Ordinal);
+    // The four route fields shipped in 1.16.1; log queries may key on them.
+    var fields = Assert.Single(open.Structured, entry => entry.Id.Id == 2).Fields.ToDictionary();
+    Assert.Equal("GET /blok/sync/{doc}", fields["Sync"]);
+    Assert.Equal("POST /blok/sync/{doc}/reset", fields["Reset"]);
+    Assert.Equal("POST /blok/sync/{doc}/edit", fields["Edit"]);
+    Assert.Equal("GET /blok/sync/{doc}/state", fields["State"]);
+    Assert.Equal(
+        "GET /blok/sync/{doc}/history, GET /blok/sync/{doc}/history/{lineage}/{sequence}, " +
+        "DELETE /blok/sync/{doc}/history/{lineage}, POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore",
+        fields["History"]);
     // The standalone host forwards only this category to stderr, and its
     // none mode is loopback-only by validation: the warning is in-process only.
     Assert.NotEqual("Blok.Server.Collab", warning.Category);

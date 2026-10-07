@@ -19,12 +19,13 @@ public static class BlokServerEndpointRouteBuilderExtensions
     ("POST", "/sync/{doc}/history/{lineage}/{sequence}/restore"),
   ];
 
-  // One {Routes} argument: LoggerMessage.Define takes at most six.
-  private static readonly Action<ILogger, string, Exception?> LogOpenSyncRoutes =
-      LoggerMessage.Define<string>(
+  // {Sync} to {State} shipped in 1.16.1 and are kept as fields; the history
+  // routes share one, since LoggerMessage.Define takes at most six.
+  private static readonly Action<ILogger, string, string, string, string, string, Exception?> LogOpenSyncRoutes =
+      LoggerMessage.Define<string, string, string, string, string>(
           LogLevel.Warning,
           new EventId(2, "CollabOpen"),
-          "collab: no IBlokAuthorization is registered and Auth is \"none\", so {Routes} " +
+          "collab: no IBlokAuthorization is registered and Auth is \"none\", so {Sync}, {Reset}, {Edit}, {State} and {History} " +
           "are open to anyone who can reach this app unless the mapped group has RequireAuthorization(); " +
           "register a hook with AddBlokServer(...).UseAuthorization<T>() or set Auth to \"ticket\"");
 
@@ -137,16 +138,14 @@ public static class BlokServerEndpointRouteBuilderExtensions
       return;
     }
 
-    string[] open =
-    [
-      $"GET {pattern}/sync/{{doc}}",
-      $"POST {pattern}/sync/{{doc}}/reset",
-      $"POST {pattern}/sync/{{doc}}/edit",
-      $"GET {pattern}/sync/{{doc}}/state",
-      .. HistoryRoutes.Select(route => $"{route.Method} {pattern}{route.Pattern}"),
-    ];
-
-    LogOpenSyncRoutes(logger, string.Join(", ", open), null);
+    LogOpenSyncRoutes(
+        logger,
+        $"GET {pattern}/sync/{{doc}}",
+        $"POST {pattern}/sync/{{doc}}/reset",
+        $"POST {pattern}/sync/{{doc}}/edit",
+        $"GET {pattern}/sync/{{doc}}/state",
+        string.Join(", ", HistoryRoutes.Select(route => $"{route.Method} {pattern}{route.Pattern}")),
+        null);
   }
 
   private static void MapShell(RouteGroupBuilder routes, string pattern, string method)

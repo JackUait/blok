@@ -1158,6 +1158,9 @@ internal sealed class CapturingLoggerProvider : ILoggerProvider
 {
   internal List<(string Category, LogLevel Level, string Message)> Entries { get; } = [];
 
+  /// <summary>Each entry's structured fields, keyed by event id; Entries keeps its shape.</summary>
+  internal List<(EventId Id, IReadOnlyList<KeyValuePair<string, object?>> Fields)> Structured { get; } = [];
+
   public ILogger CreateLogger(string categoryName)
   {
     return new Logger(this, categoryName);
@@ -1189,6 +1192,7 @@ internal sealed class CapturingLoggerProvider : ILoggerProvider
       lock (owner.Entries)
       {
         owner.Entries.Add((category, logLevel, formatter(state, exception)));
+        owner.Structured.Add((eventId, state as IReadOnlyList<KeyValuePair<string, object?>> ?? []));
       }
     }
   }

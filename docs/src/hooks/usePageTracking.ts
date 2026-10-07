@@ -3,6 +3,7 @@ import { useLocation } from "react-router";
 import { trackPageView } from "@/lib/analytics";
 import { useFramework } from "@/contexts/FrameworkContext";
 import { localizedPath, servedPath, splitLocalePath } from "@/seo/locales";
+import { currentVersionId } from "@/versioning/versions";
 
 const KNOWN_SECTIONS = ["demo", "docs", "migration", "changelog"] as const;
 
@@ -28,6 +29,18 @@ export const getPageSection = (pathname: string): string => {
   return KNOWN_SECTIONS.find((section) => section === segment) ?? segment;
 };
 
+/**
+ * Every snapshot shares one GA property, so the build it came from is sent
+ * with each page view. BASE_URL is DOCS_BASE, the same value the router uses
+ * as its basename (build-snapshot.mjs sets both).
+ */
+const docsBuild = () => {
+  const base = import.meta.env.BASE_URL;
+  const channel = base === "/" ? "stable" : base === "/next/" ? "next" : "archive";
+
+  return { prefix: base.replace(/\/$/, ""), channel, version: currentVersionId() };
+};
+
 const pageQuery = (search: string): string => {
   const params = new URLSearchParams(search);
   params.delete(FRAMEWORK_PARAM);
@@ -42,7 +55,9 @@ const pageQuery = (search: string): string => {
  * is the only source of page views — client-side navigation never reloads the
  * document, and without it GA would only ever see the entry URL.
  *
- * The page is the localized path plus its query minus `framework`. Other
+ * The page is the served URL: the snapshot base (`/next/`, `/v/1.14/`), the
+ * localized path, and the query minus `framework`. useLocation() drops the
+ * base, so it is added back; `content_path` keeps the base-free path. Other
  * params stay: `?view=` switches the home panel, and utm/gclid in
  * page_location carry source attribution. The hash is ignored: in-page anchors
  * are the same page (`docs_section_jump` records them).
@@ -55,7 +70,8 @@ export const usePageTracking = (): void => {
   const lastTracked = useRef<string | null>(null);
 
   const { locale, path: contentPath } = splitLocalePath(pathname);
-  const pagePath = `${servedPath(localizedPath(contentPath, locale))}${pageQuery(search)}`;
+  const { prefix, channel, version } = docsBuild();
+  const pagePath = `${prefix}${servedPath(localizedPath(contentPath, locale))}${pageQuery(search)}`;
 
   useEffect(() => {
     // StrictMode double-invokes effects in development; without this guard
@@ -66,11 +82,12 @@ export const usePageTracking = (): void => {
     lastTracked.current = pagePath;
 
     trackPageView(pagePath, undefined, {
-      page_location: `${window.location.origin}${pagePath}`,
       page_section: getPageSection(contentPath),
       content_path: servedPath(contentPath),
       locale,
       framework: frameworkRef.current,
+      docs_channel: channel,
+      docs_version: version,
     });
-  }, [pagePath, contentPath, locale]);
+  }, [pagePath, contentPath, locale, channel, version]);
 };

@@ -43,14 +43,14 @@ const pageViewCalls = () =>
 const pageViews = (): PageViewParams[] => pageViewCalls().map((call) => call[2] as PageViewParams);
 
 /** Mounts the hook the way root.tsx does: inside the router and FrameworkProvider. */
-const renderTracked = (entry: string) => {
+const renderTracked = (entry: string, basename?: string) => {
   const handles: {
     navigate?: NavigateFunction;
     setFramework?: (framework: Framework) => void;
   } = {};
 
   render(
-    <MemoryRouter initialEntries={[entry]}>
+    <MemoryRouter initialEntries={[entry]} basename={basename}>
       <FrameworkProvider>
         <Tracked />
         <Controls
@@ -84,6 +84,7 @@ describe("usePageTracking", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     localStorage.clear();
     delete (window as unknown as { gtag?: unknown }).gtag;
   });
@@ -222,6 +223,94 @@ describe("usePageTracking", () => {
     );
 
     expect(pageViews()).toHaveLength(1);
+  });
+
+  describe("per docs build", () => {
+    /** Mirrors build-snapshot.mjs: DOCS_BASE is both the vite base and the router basename. */
+    const build = (base: string, version: string) => {
+      vi.stubEnv("BASE_URL", base);
+      vi.stubEnv("VITE_DOCS_VERSION", version);
+    };
+
+    it("reports the stable root as is, tagged with its minor", () => {
+      build("/", "1.16");
+      renderTracked("/docs/quick-start/");
+
+      expect(pageViews()[0]).toMatchObject({
+        page_location: `${window.location.origin}/docs/quick-start/`,
+        page_path: "/docs/quick-start/",
+        content_path: "/docs/quick-start/",
+        docs_channel: "stable",
+        docs_version: "1.16",
+        locale: "en",
+      });
+    });
+
+    it("keeps the /next/ prefix in the reported URL", () => {
+      build("/next/", "next");
+      renderTracked("/next/docs/quick-start/", "/next");
+
+      expect(pageViews()[0]).toMatchObject({
+        page_location: `${window.location.origin}/next/docs/quick-start/`,
+        page_path: "/next/docs/quick-start/",
+        content_path: "/docs/quick-start/",
+        docs_channel: "next",
+        docs_version: "next",
+        locale: "en",
+      });
+    });
+
+    it("reports the /next/ home with its trailing slash", () => {
+      build("/next/", "next");
+      renderTracked("/next/", "/next");
+
+      expect(pageViews()[0]).toMatchObject({
+        page_location: `${window.location.origin}/next/`,
+        page_section: "home",
+        content_path: "/",
+      });
+    });
+
+    it("keeps the prefix on a Russian page under /next/", () => {
+      build("/next/", "next");
+      renderTracked("/next/ru/docs/blocks", "/next");
+
+      expect(pageViews()[0]).toMatchObject({
+        page_location: `${window.location.origin}/next/ru/docs/blocks/`,
+        page_path: "/next/ru/docs/blocks/",
+        content_path: "/docs/blocks/",
+        page_section: "docs",
+        locale: "ru",
+        docs_channel: "next",
+      });
+    });
+
+    it("keeps the archive prefix and strips only the framework param", () => {
+      build("/v/1.14/", "1.14");
+      renderTracked("/v/1.14/docs/quick-start/?utm_source=x&framework=vue", "/v/1.14");
+
+      expect(pageViews()[0]).toMatchObject({
+        page_location: `${window.location.origin}/v/1.14/docs/quick-start/?utm_source=x`,
+        page_path: "/v/1.14/docs/quick-start/?utm_source=x",
+        content_path: "/docs/quick-start/",
+        framework: "vue",
+        docs_channel: "archive",
+        docs_version: "1.14",
+        locale: "en",
+      });
+    });
+
+    it("tracks an archive navigation under the same prefix", () => {
+      build("/v/1.14/", "1.14");
+      const { navigate } = renderTracked("/v/1.14/", "/v/1.14");
+
+      navigate("/ru/docs/table");
+
+      expect(pageViews().map((view) => view.page_location)).toEqual([
+        `${window.location.origin}/v/1.14/`,
+        `${window.location.origin}/v/1.14/ru/docs/table/`,
+      ]);
+    });
   });
 
   it("does not throw when analytics is unavailable", () => {

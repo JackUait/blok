@@ -203,6 +203,12 @@ describe('BlockObserver', () => {
       expect(observer.mapTransactionOrigin('unknown')).toBe('remote');
     });
 
+    // yjs opens its formatting-cleanup transaction with no origin, on the
+    // peer that RECEIVED overlapping formats. It is that peer's own write.
+    it('maps a null origin (yjs\'s own format cleanup) to "local"', () => {
+      expect(observer.mapTransactionOrigin(null)).toBe('local');
+    });
+
     // Regression guard: every tag in LOCAL_ORIGIN_TAGS must map to a
     // non-'remote' classification. If a future dev adds a new origin string
     // without teaching the mapper, this test fails in CI before the silent
@@ -469,6 +475,97 @@ describe('BlockObserver', () => {
       const event = updateEvents[0] as SingleBlockEvent;
 
       expect(event.blockId).toBe('toggle-1');
+    });
+  });
+
+  describe('formatted rich text (Y.XmlText) events', () => {
+    const SENTENCE = 'The quick brown fox jumps';
+
+    /** A peer of `store`, holding its paragraph `p1`, with a fixed client id. */
+    const peerWithParagraph = (ownId: number, peerId: number): DocumentStore => {
+      const doc = store.blocksMap.doc;
+
+      if (doc !== null) {
+        doc.clientID = ownId;
+      }
+      store.addBlock({ id: 'p1', type: 'paragraph', data: { text: SENTENCE } });
+
+      const peer = new DocumentStore(new YBlockSerializer());
+      const peerDoc = peer.blocksMap.doc;
+
+      if (peerDoc !== null) {
+        peerDoc.clientID = peerId;
+      }
+      peer.applyRemoteUpdate(store.encodeStateAsUpdate());
+
+      return peer;
+    };
+
+    const eventsFor = (callback: ReturnType<typeof vi.fn>, id: string): Array<{ type: string; origin: string }> =>
+      callback.mock.calls
+        .map((call) => call[0] as BlockChangeEvent)
+        .filter((event): event is SingleBlockEvent => 'blockId' in event && event.blockId === id)
+        .map((event) => ({ type: event.type, origin: event.origin }));
+
+    it('mints the paragraph text as a Y.XmlText (the class these cases exercise)', () => {
+      const peer = peerWithParagraph(1, 2);
+
+      expect((blocksMap.get('p1')?.get('data') as Y.Map<unknown>).get('text')).toBeInstanceOf(Y.XmlText);
+      peer.destroy();
+    });
+
+    it('emits a remote update for a peer\'s attributes-only format', () => {
+      const peer = peerWithParagraph(1, 2);
+      const callback = vi.fn();
+
+      observer.onBlocksChanged(callback);
+      peer.updateBlockData('p1', 'text', 'The <b>quick</b> brown fox jumps');
+      store.applyRemoteUpdate(peer.encodeStateAsUpdate(store.getStateVector()));
+      peer.destroy();
+
+      expect(eventsFor(callback, 'p1')).toEqual([{ type: 'update', origin: 'remote' }]);
+    });
+
+    it('emits a remote update for a peer\'s embed insert', () => {
+      const peer = peerWithParagraph(1, 2);
+      const callback = vi.fn();
+      const text = (peer.getBlockById('p1')?.get('data') as Y.Map<unknown>).get('text') as Y.XmlText;
+
+      observer.onBlocksChanged(callback);
+      peer.transact(() => text.insertEmbed(3, { equation: { expression: 'x' } }, {}), 'local');
+      store.applyRemoteUpdate(peer.encodeStateAsUpdate(store.getStateVector()));
+      peer.destroy();
+
+      expect(eventsFor(callback, 'p1')).toEqual([{ type: 'update', origin: 'remote' }]);
+    });
+
+    it.each([
+      [1, 2],
+      [2, 1],
+    ])('classifies the format cleanup after a peer deletes a range this editor bolded as local (ids %i/%i)', (ownId, peerId) => {
+      const peer = peerWithParagraph(ownId, peerId);
+      const callback = vi.fn();
+      const doc = store.blocksMap.doc;
+      const cleanups: number[] = [];
+
+      doc?.on('afterTransaction', (transaction: Y.Transaction) => {
+        if (transaction.origin === null && transaction.changed.size > 0) {
+          cleanups.push(transaction.changed.size);
+        }
+      });
+
+      store.updateBlockData('p1', 'text', 'The q<b>uic</b>k brown fox jumps');
+      peer.updateBlockData('p1', 'text', 'The  fox jumps');
+      observer.onBlocksChanged(callback);
+      store.applyRemoteUpdate(peer.encodeStateAsUpdate(store.getStateVector()));
+      peer.destroy();
+
+      expect(eventsFor(callback, 'p1')).toEqual([
+        { type: 'update', origin: 'remote' },
+        { type: 'update', origin: 'local' },
+      ]);
+      // Guard: yjs really ran a cleanup that changed the text.
+      expect(cleanups).toHaveLength(1);
     });
   });
 

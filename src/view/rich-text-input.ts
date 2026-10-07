@@ -5,13 +5,14 @@
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*).
  */
 import type { OutputBlockData } from '../../types';
-import { blockDataToHtml, nestedDocumentsFor, richTextFieldsFor } from '../shared/rich-text/block-data';
+import { blockDataToHtml, legacyNestingFor, richTextFieldsFor } from '../shared/rich-text/block-data';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /**
- * Rich-text fields holding segments become HTML strings. Entries that are not
+ * Rich-text fields holding segments become HTML strings, legacy `items[]` and
+ * `body.blocks` included. Entries that are not
  * a block with record `data` pass through untouched: the view tolerates the
  * loose wire shape and decides itself what to skip.
  * @param blocks - raw `blocks` entries
@@ -24,5 +25,5 @@ export const viewBlocksToHtml = (blocks: OutputBlockData[]): OutputBlockData[] =
 
     const type = typeof block.type === 'string' ? block.type : '';
 
-    return { ...block, data: blockDataToHtml(block.data, richTextFieldsFor(type), richTextFieldsFor, nestedDocumentsFor(type)) } as OutputBlockData;
+    return { ...block, data: blockDataToHtml(block.data, richTextFieldsFor(type), richTextFieldsFor, legacyNestingFor(type)) } as OutputBlockData;
   });

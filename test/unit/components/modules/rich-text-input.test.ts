@@ -398,7 +398,7 @@ describe('a tool adapter that has no richTextFields', () => {
   });
 
   it('passes output data through unchanged', () => {
-    expect(richTextOutputForHost(bare, data, () => undefined, { collaborating: false, legacyOutput: false })).toEqual(data);
+    expect(richTextOutputForHost(bare, data, () => undefined, { collaborating: false })).toEqual(data);
   });
 });
 

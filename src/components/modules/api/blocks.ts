@@ -18,7 +18,7 @@ import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { equalsOutputData, normalizeOutputBlocks } from '../../../shared/output-data';
-import { outputBlocksToHtml, outputBlocksToSegments } from '../../../shared/rich-text/block-data';
+import { outputBlocksToSegments } from '../../../shared/rich-text/block-data';
 import { htmlToSegmentsDom } from '../../utils/rich-text-dom';
 import { resolveHashTarget } from '../../utils/hash-target';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
@@ -447,15 +447,13 @@ export class BlocksAPI extends Module {
    * @returns the document as Markdown ('' when there is nothing to save)
    */
   public async exportMarkdown(): Promise<string> {
-    const saved = await this.Blok.Saver.save();
+    // Internal dialect: blocksToMarkdown reads flat blocks holding HTML. The host
+    // dialect holds segments and, with legacy output, list items[] and toggleList.
+    const output = await this.Blok.Saver.save({ dialect: 'internal' });
 
-    if (saved === undefined) {
+    if (output === undefined) {
       return '';
     }
-
-    // blocksToMarkdown reads HTML; the host save may hold segments. The
-    // internal dialect would avoid this, but it also skips the legacy collapse.
-    const output = { ...saved, blocks: outputBlocksToHtml(saved.blocks, type => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? []) };
 
     const parentOf = new Map<string, string | null>();
 

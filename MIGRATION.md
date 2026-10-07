@@ -713,10 +713,9 @@ In segments mode these return segments:
 
 `exportMarkdown()` is unchanged. `@bloklabs/core/view` (`blocksToHtml`, plain text, markdown, outline) reads both shapes in built-in block types. A custom block type's fields reach your renderer as stored. The C# server runtime reads both shapes.
 
-The output stays HTML, with one console warning, in two cases:
+The output stays HTML when `collaboration` is configured. Segments under collaboration come in a later release.
 
-- `dataModel` is `'legacy'`, or `'auto'` with legacy input.
-- `collaboration` is configured. Segments under collaboration come in a later release.
+With `dataModel: 'legacy'` (or `'auto'` with legacy input), the legacy shapes hold segments too: list `items[].content`, `toggleList.title` and the blocks in `body.blocks`. Blok and `@bloklabs/core/view` read them back without loss.
 
 ### What Stays HTML
 
@@ -759,7 +758,7 @@ richTextToPlainText([{ text: 'Hi ' }, { text: 'there', marks: { bold: true } }])
 //=> 'Hi there'
 ```
 
-- Run `migrate()` first on Editor.js data, then `migrateToRichText`. `migrateToRichText` leaves a block in a legacy shape untouched and reports it to `onLossy` as `'legacy-shape'`.
+- It converts Editor.js shapes too: list items, `toggleList` and callout titles and bodies, quote captions and warnings. You can run `migrate()` before or after it. Table string cells, `raw.html` and `attaches.title` stay strings.
 - It converts only built-in block types. A custom tool's fields are left as they are.
 - Fields that already hold segments pass through, so running it twice is safe.
 - `onLossy` reports `'html-embed'` for markup kept as an `{ embed: { html } }` segment, and `'custom-mark'` for an unknown tag kept as a `tag:<name>` mark.

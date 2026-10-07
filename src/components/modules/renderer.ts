@@ -238,18 +238,11 @@ export class Renderer extends Module {
     // save, quietly undoing the migration. Rules are contractually pure and
     // idempotent, so the composeBlock pass (which also covers blocks inserted
     // through the API later) can safely see already-migrated data.
-    const migratedBlocks = this.config.migrations !== undefined
+    const sourceBlocks = this.config.migrations !== undefined
       ? migrateBlocks(hookedBlocks, this.config.migrations, (type, error) => {
         logLabeled(`Migration for «${type}» blocks failed; keeping stored data.`, 'warn', error);
       })
       : hookedBlocks;
-    // Before `sanitizeToolData` below: it would HTML-parse a segment's plain text.
-    const resolveTool = (name: string): BlockToolAdapter | undefined => Tools.blockTools.get(name);
-    const sourceBlocks = migratedBlocks.map(block => {
-      const data = richTextInputToHtml(resolveTool(block.type), block.data, resolveTool);
-
-      return data === block.data ? block : { ...block, data };
-    });
 
     if (sourceBlocks.length === 0) {
       /**
@@ -291,9 +284,19 @@ export class Renderer extends Module {
     this.detectedInputFormat = analysis.format;
 
     // Transform to hierarchical if config requires it
-    const expandedBlocks = shouldExpandToHierarchical(dataModelConfig, analysis.format)
+    const hierarchicalBlocks = shouldExpandToHierarchical(dataModelConfig, analysis.format)
       ? expandToHierarchical(sourceBlocks)
       : sourceBlocks;
+
+    // After expansion: legacy paths (items[].content, toggleList.title, body.blocks)
+    // only become tool fields here. Before `sanitizeToolData` below: it would
+    // HTML-parse a segment's plain text.
+    const resolveTool = (name: string): BlockToolAdapter | undefined => Tools.blockTools.get(name);
+    const expandedBlocks = hierarchicalBlocks.map(block => {
+      const data = richTextInputToHtml(resolveTool(block.type), block.data, resolveTool);
+
+      return data === block.data ? block : { ...block, data };
+    });
 
     // Recover migrated cells whose text a pre-fix save detached to root:
     // re-attach `cell-<row>-<col>`-id orphans back into their empty cell.

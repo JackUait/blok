@@ -15,9 +15,8 @@ export const RICH_TEXT_FIELDS: Record<string, string[]> = {
 };
 
 /**
- * Current data model only, for @bloklabs/core/migrate. Legacy-only fields
- * (quote.caption, warning.title, …) must stay strings, or the legacy grammar
- * in migrate() drops them. Must equal the built-in tools' `richTextFields`.
+ * Current data model only: what a new block's rich fields are (also the Yjs
+ * creation contract). Must equal the built-in tools' `richTextFields`.
  */
 export const CURRENT_RICH_TEXT_FIELDS: Record<string, string[]> = {
   paragraph: ['text'],
@@ -30,3 +29,9 @@ export const CURRENT_RICH_TEXT_FIELDS: Record<string, string[]> = {
 /** Unknown types have none: a custom tool's fields are not ours to rewrite. */
 export const richTextFieldsFor = (type: string): string[] =>
   Object.prototype.hasOwnProperty.call(RICH_TEXT_FIELDS, type) ? RICH_TEXT_FIELDS[type] : [];
+
+/** Types whose LEGACY data nests item text in `data.items[]`. Current list blocks are flat. */
+export const LEGACY_ITEM_TYPES: ReadonlySet<string> = new Set(['list', 'checklist']);
+
+/** Types whose LEGACY data nests child blocks in `data.body.blocks[]`. */
+export const LEGACY_BODY_TYPES: ReadonlySet<string> = new Set(['callout', 'toggleList']);

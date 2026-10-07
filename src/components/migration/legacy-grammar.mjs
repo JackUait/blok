@@ -103,8 +103,18 @@ function isOldChecklistItem(item) {
   return typeof item === 'object' && item !== null && 'text' in item && !('content' in item);
 }
 
+// Rich text is an HTML string or a segment array. Arrays pass through opaquely:
+// this module stays dependency-free (the codemod shares it), so it never converts.
+function isTextValue(value) {
+  return typeof value === 'string' || Array.isArray(value);
+}
+
+function hasText(value) {
+  return isTextValue(value) && value.length > 0;
+}
+
 function normalizeListItem(item) {
-  if (typeof item === 'string') {
+  if (isTextValue(item)) {
     return { content: item };
   }
 
@@ -489,7 +499,7 @@ function expandCalloutEntry(block, ctx) {
   // The callout has no text field, so a title becomes its first child
   // paragraph. /view renders it the same way (src/view/document-model.ts).
   const title = block.data.title;
-  const titleBlock = typeof title === 'string' && title.length > 0
+  const titleBlock = hasText(title)
     ? { id: ctx.generateId(), type: 'paragraph', data: { text: title }, parent: calloutId }
     : null;
 
@@ -569,7 +579,7 @@ function expandQuoteEntry(block, ctx) {
     data: rest,
   };
 
-  if (typeof caption !== 'string' || caption.length === 0) {
+  if (!hasText(caption)) {
     return [quoteBlock];
   }
 
@@ -657,8 +667,8 @@ function expandRawEntry(block, ctx) {
 function expandWarningEntry(block, ctx) {
   const calloutId = block.id != null ? block.id : ctx.generateId();
   const data = block.data || {};
-  const title = typeof data.title === 'string' ? data.title : '';
-  const message = typeof data.message === 'string' ? data.message : '';
+  const title = isTextValue(data.title) ? data.title : '';
+  const message = isTextValue(data.message) ? data.message : '';
 
   const childBlocks = [];
 

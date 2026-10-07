@@ -552,10 +552,13 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   const host = options.pageHost ?? null;
   const sources = new Map<string, TicketSource>();
   const points = new Map<string, LooseOutputData>();
+  const savedGrouping = readGrouping(host !== null);
   const state = {
     mode: 'list' as HistoryDrawerMode,
     doc: null as string | null,
-    group: readGrouping(host !== null),
+    group: savedGrouping,
+    // The person's pick. `group` differs from it only during an openOn fallback.
+    chosen: savedGrouping,
     rows: [] as HistoryRow[],
     bookmarks: [] as HistoryBookmark[],
     selected: null as VersionRow | null,
@@ -1026,6 +1029,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   const pickGroup = async (value: HistoryGrouping): Promise<void> => {
     closeMenu(true);
     state.group = value;
+    state.chosen = value;
     saveGrouping(value);
     drawGroup();
 
@@ -1222,6 +1226,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       return;
     }
 
+    state.group = state.chosen;
     showPanel();
     await load();
 
@@ -1245,10 +1250,13 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     state.mode = 'list';
 
     if (doc === null) {
+      close();
+
       return;
     }
 
     closeDialog();
+    closeMenu();
     showPanel();
     await load();
 
@@ -1257,7 +1265,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     }
 
     if (find() === undefined && state.group !== '1') {
-      // Not saved: the person's own grouping comes back on the next open.
+      // Not saved, and `chosen` stays: open() puts the person's grouping back.
       state.group = '1';
       drawGroup();
       await load();

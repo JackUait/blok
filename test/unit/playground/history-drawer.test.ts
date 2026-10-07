@@ -388,7 +388,7 @@ describe('mountHistoryDrawer', () => {
     return answers.list();
   };
 
-  const setup = (): { drawer: ReturnType<typeof mountHistoryDrawer>; button: HTMLButtonElement; editor: HTMLElement; notify: ReturnType<typeof vi.fn> } => {
+  const setup = (doc: () => string | null = () => 'playground'): { drawer: ReturnType<typeof mountHistoryDrawer>; button: HTMLButtonElement; editor: HTMLElement; notify: ReturnType<typeof vi.fn> } => {
     const button = document.createElement('button');
     const editor = document.createElement('div');
     const notify = vi.fn();
@@ -402,7 +402,7 @@ describe('mountHistoryDrawer', () => {
       server: SERVER,
       ticketUrl: MINT,
       view: { blocksToHtml, diffOutputData },
-      doc: () => 'playground',
+      doc,
       self: () => SELF,
       notify,
       now: () => NOW,
@@ -998,6 +998,56 @@ describe('mountHistoryDrawer', () => {
     expect(preview().textContent).toContain('Viewing Today, 14:36. Read only.');
     // A fallback for one jump, not the person's choice.
     expect(localStorage.getItem('pg-history-group')).toBeNull();
+  });
+
+  it('brings the saved grouping back on the next open after a 1-minute fallback', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : input.toString();
+
+      return url.endsWith('/history/l2/7') ? Response.json({ blocks: [p('a', 'one')] }) : fakeFetch(input, init);
+    }));
+
+    const { drawer, button } = setup();
+
+    await drawer.openOn('l2', 7);
+    await settle();
+
+    expect(groupButton().textContent).toContain('1 minute');
+
+    drawer.close();
+    calls.length = 0;
+    button.click();
+    await settle();
+
+    expect(groupButton().textContent).toContain('15 minutes');
+    expect(calls.some((call) => call.url === LIST_URL)).toBe(true);
+  });
+
+  it('closes an open Group by menu when it jumps to a version', async () => {
+    const { drawer, button } = setup();
+
+    button.click();
+    await settle();
+    groupButton().click();
+    await drawer.openOn('l2', 5);
+    await settle();
+
+    expect(groupOptions()[0].closest<HTMLElement>('[role="menu"]')?.hidden).toBe(true);
+    expect(groupButton().getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('closes the drawer when asked to jump while no document is open', async () => {
+    const current: { doc: string | null } = { doc: 'playground' };
+    const { drawer, button, editor } = setup(() => current.doc);
+
+    button.click();
+    await settle();
+    current.doc = null;
+    await drawer.openOn('l2', 5);
+
+    expect(panel().hidden).toBe(true);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(editor.hidden).toBe(false);
   });
 
   it('opens on a version from the Bookmarks grouping by leaving it for the list', async () => {

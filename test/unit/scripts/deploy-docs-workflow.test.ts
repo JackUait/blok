@@ -262,7 +262,7 @@ describe('docs deployment workflow', () => {
     const upload = stepNamed('build', 'Upload Pages artifact');
 
     expect(stepNamed('build', 'Build docs')).toBeUndefined();
-    expect(next?.run).toBe('node docs/scripts/build-snapshot.mjs --version next --base /next/ --out next.tgz\n');
+    expect(next?.run).toBe('node docs/scripts/build-snapshot.mjs --version next --base /next/ --out next.tgz --root-pages root-pages.json\n');
     expect(assemble?.env).toEqual({
       GH_TOKEN: '${{ github.token }}',
       GH_REPO: '${{ github.repository }}',
@@ -272,6 +272,16 @@ describe('docs deployment workflow', () => {
       + 'cp CHANGELOG.md site/CHANGELOG.md\n',
     );
     expect(upload?.with?.path).toBe('site/');
+  });
+
+  it('builds next against the stable root routes and audits the literal URLs of the assembled site', () => {
+    const steps = (workflow.jobs.build.steps ?? []).map((step) => step.name);
+
+    expect(stepNamed('build', 'Fetch stable root routes')?.run).toBe('node docs/scripts/assemble-site.mjs --root-pages root-pages.json');
+    expect(steps.indexOf('Fetch stable root routes')).toBeLessThan(steps.indexOf('Build next snapshot'));
+    const audit = (workflow.jobs.build.steps ?? []).find((step) => step.run?.includes('site-audit.mjs'));
+    expect(audit?.run).toContain('--dir site --enforce /next/');
+    expect(steps.indexOf(audit?.name ?? '')).toBeGreaterThan(steps.indexOf('Assemble versioned site'));
   });
 
   it('verifies the assembled site before publishing it', () => {

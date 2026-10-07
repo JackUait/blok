@@ -293,7 +293,7 @@ describe('docs deploy law — the live site is proven to be the build just deplo
 
   it('records which release and commit each snapshot came from', () => {
     // assemble-site.mjs knows the root and archive tags; build info records them.
-    expect(buildSteps.find((step) => step.run?.includes('assemble-site.mjs'))?.run).toContain('--sources site-sources.json');
+    expect(buildSteps.find((step) => step.run?.includes('assemble-site.mjs --next'))?.run).toContain('--sources site-sources.json');
     expect(buildInfoStep?.run).toBe(`node scripts/docs-build-info.mjs ${ARTIFACT_ROOT} --sources site-sources.json`);
   });
 

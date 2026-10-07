@@ -173,4 +173,27 @@ describe('DatabaseCardDrawer — the body is stored as HTML', { timeout: 60_000 
       drawer.destroy();
     });
   });
+
+  it('an unregistered type held by the stub keeps its data after an edit elsewhere', async () => {
+    const onDescriptionChange = vi.fn();
+    const description: OutputData = {
+      blocks: [
+        { id: 'b1', type: 'paragraph', data: { text: 'p' } },
+        { id: 'c1', type: 'quote', data: { text: ['x', 'y'] } },
+      ],
+    };
+    const { drawer, wrapper } = await openDrawer(onDescriptionChange, description, { tools: { paragraph: Paragraph } });
+    const element = wrapper.querySelector('[data-blok-tool="paragraph"]');
+
+    if (!(element instanceof HTMLElement)) {
+      throw new Error('the body has no paragraph');
+    }
+    element.innerHTML = 'q';
+    await vi.waitFor(() => expect(onDescriptionChange).toHaveBeenCalled(), { timeout: 5000 });
+
+    const saved = onDescriptionChange.mock.calls.at(-1)?.[1] as OutputData;
+
+    expect(saved.blocks.find(block => block.id === 'c1')?.data).toEqual({ text: ['x', 'y'] });
+    drawer.destroy();
+  });
 });

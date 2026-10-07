@@ -7,7 +7,7 @@ import { IconChevronRight } from '../../components/icons';
 import { getElementDirection } from '../../components/utils/direction';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
-import { outputBlocksToHtml, outputBlocksToSegments, richTextFieldsFor } from '../../shared/rich-text/block-data';
+import { outputBlocksToHtml, outputBlocksToSegments } from '../../shared/rich-text/block-data';
 import type { FieldsResolver } from '../../shared/rich-text/block-data';
 import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
 import { declaredRichTextFields } from '../../components/tools/base';
@@ -38,14 +38,13 @@ export interface CardDrawerOptions {
 
 /**
  * Rich fields of the body editor's tools, as the editor's adapter reads them:
- * a configured tool's static `richTextFields` or none. Only unconfigured
- * (built-in default) types fall back to the built-in table.
+ * a configured tool's static `richTextFields`, else none. An unconfigured type
+ * renders as the stub, which has none, so its data is never rewritten.
  */
 const richFieldsOf = (tools: ToolsConfig['tools']): FieldsResolver => (type) => {
   const entry = tools?.[type];
-  const constructable: unknown = typeof entry === 'function' ? entry : entry?.class;
 
-  return constructable === undefined ? richTextFieldsFor(type) : declaredRichTextFields(constructable);
+  return declaredRichTextFields(typeof entry === 'function' ? entry : entry?.class);
 };
 
 /**

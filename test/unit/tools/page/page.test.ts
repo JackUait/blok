@@ -1323,6 +1323,38 @@ describe('Page tool', () => {
       expect(lines[0].getAttribute('data-blok-preview-heading')).toBe('true');
     });
 
+    it('reads an installed tool\'s fields from the tool, not from the built-in table', async () => {
+      const preview = vi.fn(() => Promise.resolve([
+        { type: 'paragraph', data: { text: [{ text: 'Shown' }] } },
+        // An installed `quote` that declares no rich fields: its array is not text.
+        { type: 'quote', data: { text: ['x', 'y'] } },
+        // A custom installed tool that declares one.
+        { type: 'note', data: { text: [{ text: 'Note' }] } },
+      ]));
+      const options = createOptions({ config: { resolve: () => ({ title: 'Roadmap' }), preview } });
+      const installed = [
+        { name: 'paragraph', constructable: class { public static get richTextFields(): string[] { return ['text']; } } },
+        { name: 'quote', constructable: class {} },
+        { name: 'note', constructable: class { public static get richTextFields(): string[] { return ['text']; } } },
+      ];
+
+      Object.assign(options.api, { tools: { ...options.api.tools, getBlockTools: () => installed } });
+      const tool = new PageTool(options);
+      const root = tool.render();
+
+      document.body.appendChild(root);
+      tool.rendered();
+      await flush();
+
+      vi.useFakeTimers();
+      hoverOver(anchorOf(root));
+      await vi.advanceTimersByTimeAsync(500);
+
+      const lines = [...document.querySelectorAll('[data-blok-testid="page-hover-preview-line"]')];
+
+      expect(lines.map((line) => line.textContent)).toEqual(['Shown', 'Note']);
+    });
+
     it('numbers ordered items, restarting after other blocks, and marks to-dos', () => {
       expect(previewLines([
         { type: 'list', data: { text: 'a', style: 'ordered' } },

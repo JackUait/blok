@@ -175,6 +175,7 @@ export function useBlocks(
       bound.value.splitBlock(currentBlockId, currentBlockData, newBlockType, newBlockData, insertIndex),
     insertInsideParent: (parentId, insertIndex, childData) =>
       bound.value.insertInsideParent(parentId, insertIndex, childData),
+    create: (spec) => bound.value.create(spec),
     render: (data) => bound.value.render(data),
     clear: () => bound.value.clear(),
     isSyncingFromYjs: () => bound.value.isSyncingFromYjs(),

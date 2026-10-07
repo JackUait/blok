@@ -11,7 +11,7 @@ const ALL_METHODS = [
   'move', 'nest', 'unnest', 'remove', 'update', 'convert', 'transact',
   'transactWithoutCapture', 'getBlocksCount', 'getCurrentBlockIndex', 'getBlockByIndex',
   'getBlockByElement', 'getBlockData', 'getBlockIndex', 'composeBlockData', 'renderFromHTML',
-  'insertOutputData', 'splitBlock', 'insertInsideParent', 'render', 'clear', 'isSyncingFromYjs',
+  'insertOutputData', 'splitBlock', 'insertInsideParent', 'create', 'render', 'clear', 'isSyncingFromYjs',
 ] as const;
 
 type FakeRecord = { id: string; name: string; parentId: string | null };

@@ -3,7 +3,7 @@
  * @classdesc Block creation operations: insert, split and paste.
  * @module BlockInsertion
  */
-import type { BlockToolData, PasteEvent } from '../../../../types';
+import type { BlockOrigin, BlockToolData, PasteEvent } from '../../../../types';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
 import type { Block } from '../../block';
@@ -35,6 +35,8 @@ import type { BlockYjsSync } from './yjs-sync';
 export interface InsertInsideParentWithCurrentOptions extends InsertInsideParentOptions {
   /** Leave the current block alone. */
   keepCurrent?: boolean;
+  /** Handed to the tool constructor; defaults to `'api'`. */
+  origin?: BlockOrigin;
 }
 
 /**
@@ -1101,7 +1103,7 @@ export class BlockInsertion {
       throw new BlockPlacementError(`"${parentId}" takes no children`);
     }
 
-    const { id: requestedId, tunes, focus = false, keepCurrent = false } = options;
+    const { id: requestedId, tunes, focus = false, keepCurrent = false, origin } = options;
     const insertIndex = this.clampIntoSubtree(parentBlock, requestedIndex);
     const newBlockId = requestedId ?? generateBlockId();
     const defaultBlockTool = this.dependencies.config.defaultBlock ?? 'paragraph';
@@ -1175,6 +1177,7 @@ export class BlockInsertion {
         skipYjsSync: true,
         ...(selfPlaced ? { index: insertIndex, eventParentId: parentId } : { placement }),
         ...(tunes !== undefined && { tunes }),
+        ...(origin !== undefined && { origin }),
       }, blocksStore);
 
       // Update the current block AFTER insert so blockDidMutated sees original as current

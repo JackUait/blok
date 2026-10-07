@@ -15,6 +15,7 @@ import {
   parentMap,
   type BlockNode,
   type CaretTarget,
+  type CreateSpec,
   type IndexReader,
   type InsertPosition,
   type InsertSpec,
@@ -74,6 +75,7 @@ export const EMPTY_API: UseBlocksApi = {
   insertOutputData: () => [],
   splitBlock: () => null,
   insertInsideParent: () => null,
+  create: async () => null,
   render: async () => undefined,
   clear: async () => undefined,
   isSyncingFromYjs: () => false,
@@ -1046,6 +1048,21 @@ export const createBlocksApiForEditor = (
     return created === undefined || created === null ? null : getById(created.id);
   };
 
+  const create = async (spec: CreateSpec = {}): Promise<BlockNode | null> => {
+    const { type, ...options } = spec;
+
+    try {
+      const created = await editor.blocks.create(type, options);
+
+      return getById(created.id);
+    } catch (error) {
+      if (error instanceof ToolNotFoundError || (error instanceof Error && error.name === 'BlockPlacementError')) {
+        return null;
+      }
+      throw error;
+    }
+  };
+
   /**
    * Replace the whole document with saved {@link OutputData} — a document-LOAD
    * primitive (clears existing content first), the counterpart of the additive
@@ -1106,6 +1123,7 @@ export const createBlocksApiForEditor = (
     insertOutputData,
     splitBlock,
     insertInsideParent,
+    create,
     render,
     clear,
     isSyncingFromYjs,

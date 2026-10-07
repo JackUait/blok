@@ -81,6 +81,7 @@ const CORE_TO_REACT: Record<keyof Blocks, Classification> = {
   },
   splitBlock: { kind: 'exposed' },
   insertInsideParent: { kind: 'exposed' },
+  create: { kind: 'exposed' },
   transact: { kind: 'exposed' },
   transactWithoutCapture: { kind: 'exposed' },
   // The gesture-spanning twins of transact(). Unlike transact(fn), which cannot

@@ -948,6 +948,19 @@ editor.blocks.insertAt('header', { text: 'Next', level: 2 }, { position: { after
 editor.blocks.insertAt('paragraph', { text: 'Top' }, { parentId: null, position: 'start' });`,
       },
       {
+        name: "blocks.create(type?, options?)",
+        returnType: "Promise<BlockAPI>",
+        description:
+          "Adds a block the way a toolbox pick does. Use it for your own button, such as \"New page\".\n\n- The block goes to the end of the root by default. `parentId` and `position` work as in `insertAt`.\n- It waits for the tool's `prepareInsert` first. For a page, that calls your `create` hook, so the block is born with your backend's id.\n- The insert counts as a user gesture (origin `'user'`). A page opens through your `open` hook, as it does from the toolbox.\n- `data` is merged under the `prepareInsert` answer. `id`, `tunes` and `focus` work as in `insertAt`.\n\nIt rejects, and inserts nothing, when `prepareInsert` rejects. It rejects like `insertAt` when the place does not exist.",
+        example: `// A "New page" button: a top-level page at the end of the document
+newPageButton.addEventListener('click', async () => {
+  await editor.blocks.create('page');
+});
+
+// The same, as the first child of a toggle
+await editor.blocks.create('page', { parentId: toggleId, position: 'start' });`,
+      },
+      {
         name: "blocks.moveTo(id, target)",
         returnType: "void",
         description:

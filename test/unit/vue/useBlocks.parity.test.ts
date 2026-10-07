@@ -38,6 +38,7 @@ const ALL_METHODS = [
   'insertOutputData',
   'splitBlock',
   'insertInsideParent',
+  'create',
   'render',
   'clear',
   'isSyncingFromYjs',

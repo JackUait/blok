@@ -20,6 +20,7 @@ export type {
   InsertPosition,
   InsertSpec,
   TreeInsertSpec,
+  CreateSpec,
   MoveTarget,
   BlocksReader,
   IndexReader,

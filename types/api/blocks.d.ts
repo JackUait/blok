@@ -69,6 +69,24 @@ export interface InsertAtOptions {
 }
 
 /**
+ * Options for {@link Blocks.create}.
+ */
+export interface CreateBlockOptions {
+  /** Tool data. A tool's `prepareInsert` answer overrides the same keys. */
+  data?: BlockToolData;
+  /** The parent of the new block. Defaults to `null`, the root. */
+  parentId?: string | null;
+  /** Where among the parent's children. Defaults to `'end'`. */
+  position?: BlockPosition;
+  /** Explicit id for the new block (generated when omitted). */
+  id?: string;
+  /** Block tune data to apply at creation, keyed by tune name. */
+  tunes?: { [name: string]: BlockTuneData };
+  /** Make the new block the current block. Defaults to `false`. */
+  focus?: boolean;
+}
+
+/**
  * Target for {@link Blocks.moveTo}.
  */
 export interface MoveToTarget {
@@ -267,6 +285,20 @@ export interface Blocks {
    *   block is not found, or the sibling is not a child of `parentId`
    */
   insertAt(type?: string, data?: BlockToolData, options?: InsertAtOptions): BlockAPI;
+
+  /**
+   * Add a block the way a toolbox pick does, for a host button such as
+   * "New page". Goes to the end of the root unless `parentId`/`position` say
+   * otherwise. Waits for the tool's `prepareInsert` (a page asks the host's
+   * `create` for its id there), then inserts with origin `'user'`.
+   *
+   * @param type - tool name; defaults to `config.defaultBlock`
+   * @param options - data, parent, position, id, tunes, focus
+   * @returns the new block
+   * @throws rejects with the `prepareInsert` error, inserting nothing; or with
+   *   {@link BlockPlacementError} as `insertAt` does
+   */
+  create(type?: string, options?: CreateBlockOptions): Promise<BlockAPI>;
 
   /**
    * Move a block, with its whole subtree, to a place in the tree named by its

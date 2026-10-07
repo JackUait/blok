@@ -311,6 +311,19 @@ export interface InsertSpec {
   caret?: CaretTarget;
 }
 
+/** Spec for {@link UseBlocksApi.create}. */
+export interface CreateSpec {
+  type?: string;
+  data?: BlockToolData;
+  /** Defaults to `null`, the root. */
+  parentId?: string | null;
+  /** Defaults to `'end'`. */
+  position?: InsertPosition;
+  id?: string;
+  tunes?: { [name: string]: BlockTuneData };
+  focus?: boolean;
+}
+
 /**
  * One node of a pre-built nested subtree for {@link UseBlocksApi.insertTree}.
  *
@@ -598,6 +611,14 @@ export interface UseBlocksApi {
    * dep array. Pre-ready: `null`.
    */
   insertInsideParent(parentId: string, insertIndex: number, childData?: BlockToolData): BlockNode | null;
+  /**
+   * Add a block the way a toolbox pick does, for a host button such as "New
+   * page" — delegates to core's `blocks.create`. Goes to the end of the root
+   * unless `parentId`/`position` say otherwise. Resolves `null` for an unknown
+   * tool or a place that does not exist; rejects with the tool's
+   * `prepareInsert` error, inserting nothing. Pre-ready: `null`.
+   */
+  create(spec?: CreateSpec): Promise<BlockNode | null>;
   /**
    * Replace the WHOLE document with blocks parsed from saved {@link OutputData}
    * (the `save()` shape) — delegates to core's `blocks.render`. Unlike

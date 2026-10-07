@@ -12,6 +12,7 @@ export type {
   InsertPosition,
   InsertSpec,
   TreeInsertSpec,
+  CreateSpec,
   MoveTarget,
   UseBlocksApi,
 } from '@bloklabs/core/adapters';

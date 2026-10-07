@@ -56,6 +56,7 @@ export type {
   CaretTarget,
   InsertSpec,
   TreeInsertSpec,
+  CreateSpec,
   InsertPosition,
   MoveTarget,
   UseBlocksApi,

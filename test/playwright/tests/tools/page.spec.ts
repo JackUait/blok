@@ -30,13 +30,15 @@ interface EditorOptions {
   /** What `resolve` answers per page id. Ids not listed answer `undefined`. */
   pages?: Record<string, PageInfo>;
   href?: string;
+  /** The id `create` answers with, as a host backend would. */
+  createAnswer?: string;
 }
 
 /** Builds an editor whose page tool records every host call on `window.__pageCalls`. */
-const createPageEditor = async (page: Page, { data, readOnly = false, pages, href }: EditorOptions): Promise<void> => {
+const createPageEditor = async (page: Page, { data, readOnly = false, pages, href, createAnswer }: EditorOptions): Promise<void> => {
   await resetBlok(page);
   await page.evaluate(
-    async ({ holder, initialData, ro, known, pageHref }) => {
+    async ({ holder, initialData, ro, known, pageHref, answer, nests }) => {
       const calls: PageCalls = { open: [], create: [], resolve: [], href: [] };
 
       window.__pageCalls = calls;
@@ -46,6 +48,7 @@ const createPageEditor = async (page: Page, { data, readOnly = false, pages, hre
         readOnly: ro,
         data: initialData,
         tools: {
+          ...(nests ? { toggle: window.defaultBlockTools.toggle } : {}),
           page: {
             class: window.defaultBlockTools.page.class,
             config: {
@@ -54,6 +57,8 @@ const createPageEditor = async (page: Page, { data, readOnly = false, pages, hre
               },
               create: ({ pageId }: { pageId: string }) => {
                 calls.create.push({ pageId });
+
+                return answer === undefined ? undefined : { pageId: answer };
               },
               ...(pageHref === undefined
                 ? {}
@@ -81,7 +86,7 @@ const createPageEditor = async (page: Page, { data, readOnly = false, pages, hre
       window.blokInstance = blok;
       await blok.isReady;
     },
-    { holder: HOLDER_ID, initialData: data, ro: readOnly, known: pages ?? null, pageHref: href }
+    { holder: HOLDER_ID, initialData: data, ro: readOnly, known: pages ?? null, pageHref: href, answer: createAnswer, nests: data.blocks.some((block) => block.type === 'toggle') }
   );
 };
 
@@ -327,6 +332,40 @@ test.describe('Page block', () => {
     expect(pages).toHaveLength(1);
     expect(pages[0].data.pageId).toBe(create[0].pageId);
     expect(pages[0].data).not.toHaveProperty('title');
+  });
+
+  test('a host button makes a top-level page with blocks.create, even with the caret in a nested block', async ({ page }) => {
+    await createPageEditor(page, {
+      data: {
+        blocks: [
+          { id: 'outer', type: 'toggle', data: { text: 'Outer' }, content: ['inner'] },
+          { id: 'inner', type: 'paragraph', data: { text: 'Inner' }, parent: 'outer' },
+        ],
+      },
+      createAnswer: 'host-page',
+    });
+    await page.evaluate(() => {
+      const button = document.createElement('button');
+
+      button.textContent = 'New page';
+      button.addEventListener('click', () => {
+        void window.blokInstance?.blocks.create('page');
+      });
+      document.body.appendChild(button);
+    });
+
+    await page.getByRole('button', { name: 'Expand' }).click();
+    await page.getByText('Inner', { exact: true }).click();
+    await page.getByRole('button', { name: 'New page' }).click();
+
+    await expect.poll(async () => (await calls(page)).open).toEqual([{ pageId: 'host-page', hasEvent: false }]);
+    expect((await calls(page)).create).toHaveLength(1);
+
+    const saved = await saveBlok(page);
+
+    expect(saved.blocks.map((block) => `${block.id ?? '?'}^${block.parent ?? '-'}`).slice(0, 2)).toEqual(['outer^-', 'inner^outer']);
+    expect(saved.blocks[2]).toMatchObject({ type: 'page', data: { pageId: 'host-page' } });
+    expect(saved.blocks[2].parent).toBeUndefined();
   });
 
   test('loading saved page blocks never calls create or open', async ({ page }) => {

@@ -1,5 +1,5 @@
 import type { BlockOrigin, BlockToolData, LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
-import type { BlockAPI as BlockAPIInterface, Blocks, InsertAtOptions, MoveToTarget } from '../../../../types/api';
+import type { BlockAPI as BlockAPIInterface, Blocks, CreateBlockOptions, InsertAtOptions, MoveToTarget } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { DerivedSource } from '../blockManager/types';
 import type { BlockToolAdapter } from '../../tools/block';
@@ -71,6 +71,7 @@ export class BlocksAPI extends Module {
       getChildren: (parentId: string): BlockAPIInterface[] => this.getChildren(parentId),
       insert: this.insert,
       insertAt: this.insertAt,
+      create: this.create,
       moveTo: (id: string, target: MoveToTarget): void => this.moveTo(id, target),
       insertMany: this.insertMany,
       update: this.update,
@@ -570,7 +571,34 @@ export class BlocksAPI extends Module {
    * @param data - tool data
    * @param options - parent, position, id, tunes, focus, replace
    */
-  public insertAt = (type?: string, data?: BlockToolData, options: InsertAtOptions = {}): BlockAPIInterface => {
+  public insertAt = (type?: string, data?: BlockToolData, options: InsertAtOptions = {}): BlockAPIInterface =>
+    this.placeBlock(type, data, options, 'api');
+
+  /**
+   * Add a block the way a toolbox pick does: wait for the tool's
+   * `prepareInsert`, then insert at the root's end with origin `'user'`.
+   * @param type - tool name; defaults to `config.defaultBlock`
+   * @param options - data, parent, position, id, tunes, focus
+   */
+  public create = async (type?: string, options: CreateBlockOptions = {}): Promise<BlockAPIInterface> => {
+    const { data, parentId = null, ...placement } = options;
+    const toolName = type ?? this.config.defaultBlock ?? 'paragraph';
+    const tool = this.Blok.Tools.blockTools.get(toolName);
+
+    if (tool === undefined) {
+      throw new ToolNotFoundError(toolName, `Block Tool with type "${toolName}" not found`);
+    }
+
+    // Check the place before prepareInsert: a page's hook makes the host page,
+    // which would be orphaned if the insert then failed.
+    resolvePlacement(this.tree, parentId, placement.position ?? 'end');
+
+    const prepared = await tool.prepareInsert();
+
+    return this.placeBlock(toolName, prepared === undefined ? data : { ...data, ...prepared }, { ...placement, parentId }, 'user');
+  };
+
+  private placeBlock(type: string | undefined, data: BlockToolData | undefined, options: InsertAtOptions, origin: BlockOrigin): BlockAPIInterface {
     this.Blok.YjsManager.beginApiCall();
     const { BlockManager } = this.Blok;
     const { parentId, position, id, tunes, focus = false, replace } = options;
@@ -582,7 +610,7 @@ export class BlocksAPI extends Module {
 
       const target = findBlock(this.tree, replace);
 
-      return this.insert(type, data, {}, BlockManager.getBlockIndex(target), focus, true, id, tunes);
+      return this.insert(type, data, {}, BlockManager.getBlockIndex(target), focus, true, id, tunes, origin);
     }
 
     const placement = resolvePlacement(this.tree, parentId, position ?? 'end');
@@ -590,7 +618,7 @@ export class BlocksAPI extends Module {
     // insertInsideParent turns the index back into `afterId`; it also keeps
     // the index path for table and database parents.
     if (placement.parentId !== null) {
-      return this.insertInsideParent(placement.parentId, placement.index, data, type, { id, tunes, focus, keepCurrent: !focus });
+      return this.insertInsideParent(placement.parentId, placement.index, data, type, { id, tunes, focus, keepCurrent: !focus, origin });
     }
 
     if (!BlockManager.suppressStopCapturing) {
@@ -603,11 +631,12 @@ export class BlocksAPI extends Module {
       data: data === undefined ? data : this.hostBlockDataForTool(type ?? this.config.defaultBlock ?? 'paragraph', data),
       needToFocus: focus,
       tunes,
+      origin,
       placement: { parentId: null, afterId: placement.afterId },
     });
 
     return new BlockAPI(block, this.Blok.API);
-  };
+  }
 
   /**
    * Move a block and its subtree to a parent + sibling-relative position, as

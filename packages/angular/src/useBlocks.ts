@@ -184,6 +184,7 @@ export function injectBlocks(
       bound().splitBlock(currentBlockId, currentBlockData, newBlockType, newBlockData, insertIndex),
     insertInsideParent: (parentId, insertIndex, childData) =>
       bound().insertInsideParent(parentId, insertIndex, childData),
+    create: (spec) => bound().create(spec),
     render: (data) => bound().render(data),
     clear: () => bound().clear(),
     isSyncingFromYjs: () => bound().isSyncingFromYjs(),

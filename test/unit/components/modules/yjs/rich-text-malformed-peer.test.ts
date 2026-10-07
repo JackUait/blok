@@ -94,7 +94,13 @@ const savedTexts = (saved: OutputData): Record<string, string> => Object.fromEnt
 const MALFORMED: Array<[string, (text: Y.XmlText) => void]> = [
   ['tag attr number', text => text.format(0, 4, { 'tag:b': { x: 1 } })],
   ['tag attr null', text => text.format(0, 4, { 'tag:b': { x: null } })],
+  ['tag value not a record', text => text.format(0, 4, { 'tag:b': 'x' })],
   ['color object', text => text.format(0, 4, { color: {} })],
+  ['background number', text => text.format(0, 4, { background: 5 })],
+  ['link href number', text => text.format(0, 4, { link: { href: 42 } })],
+  ['embed html number', text => text.insertEmbed(4, { html: 5 }, {})],
+  ['embed empty', text => text.insertEmbed(4, {}, {})],
+  ['embed extra key', text => text.insertEmbed(4, { page: { id: 'p', x: 1 } }, {})],
   ['embed equation expression number', text => text.insertEmbed(4, { equation: { expression: 5 } }, {})],
   ['embed equation null', text => text.insertEmbed(4, { equation: null }, {})],
   ['embed page id object', text => text.insertEmbed(4, { page: { id: {} } }, {})],

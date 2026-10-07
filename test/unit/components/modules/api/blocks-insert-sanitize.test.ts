@@ -7,9 +7,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../../../src/blok';
-import { Callout, Header, List, Paragraph } from '../../../../../src/tools';
+import { Callout, Code, Header, List, Paragraph } from '../../../../../src/tools';
 import type { BlockToolConstructable } from '../../../../../types/tools';
-import type { OutputBlockData, OutputData } from '../../../../../types';
+import type { BlokConfig, OutputBlockData, OutputData } from '../../../../../types';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -42,14 +42,16 @@ const requireHolder = (): HTMLDivElement => {
   return holder;
 };
 
-const boot = async (data: OutputData): Promise<TestEditor> => {
+const boot = async (data: OutputData, config: Partial<BlokConfig> = {}): Promise<TestEditor> => {
   const instance = new Blok({
+    ...config,
     holder,
     tools: {
       paragraph: Paragraph,
       header: Header as unknown as BlockToolConstructable,
       list: List as unknown as BlockToolConstructable,
       callout: Callout as unknown as BlockToolConstructable,
+      code: Code as unknown as BlockToolConstructable,
     },
     data,
   }) as unknown as TestEditor;
@@ -167,6 +169,45 @@ describe('blocks API host input is sanitized like render()', () => {
 
       expect(yjs).not.toMatch(/onerror/);
       await expectInert(instance);
+    });
+  });
+
+  describe('parity with render() for data render() transforms first', () => {
+    it('a host migration runs before the sanitizer, as on render()', async () => {
+      // Moves an old field into `text`; the paragraph's rule has no entry for the old one.
+      const migrations = { paragraph: (data: Record<string, unknown>) => ('content' in data ? { text: data.content } : data) };
+      const old = { content: 'a <b>bold</b>' };
+      const rendered = await boot({ blocks: [{ id: 'p', type: 'paragraph', data: old }] }, { migrations });
+      const expected = (await rendered.save()).blocks[0].data.text;
+
+      rendered.destroy();
+
+      const instance = await boot(one(), { migrations });
+      const inserted = instance.blocks.insert('paragraph', old);
+      const many = instance.blocks.insertMany([{ id: 'm', type: 'paragraph', data: old }]);
+      const saved = (await instance.save()).blocks;
+
+      expect(expected).toEqual([{ text: 'a ' }, { text: 'bold', marks: { bold: true } }]);
+      expect(saved.find(block => block.id === inserted.id)?.data.text).toEqual(expected);
+      expect(saved.find(block => block.id === many[0].id)?.data.text).toEqual(expected);
+    });
+
+    it('a plain-text field keeps markup characters as render() does', async () => {
+      const code = 'a < b && "c" <b>x</b>';
+      const rendered = await boot({ blocks: [{ id: 'c', type: 'code', data: { code } }] });
+      const expected = (await rendered.save()).blocks[0].data.code;
+
+      rendered.destroy();
+
+      const instance = await boot({ blocks: [{ id: 'c', type: 'code', data: { code: 'x' } }] });
+      const inserted = instance.blocks.insert('code', { code });
+
+      await instance.blocks.update('c', { code });
+
+      const saved = (await instance.save()).blocks;
+
+      expect(saved.find(block => block.id === inserted.id)?.data.code).toBe(expected);
+      expect(saved.find(block => block.id === 'c')?.data.code).toBe(expected);
     });
   });
 

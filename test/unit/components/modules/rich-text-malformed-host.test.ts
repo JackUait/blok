@@ -24,6 +24,13 @@ const MALFORMED: Array<[string, unknown]> = [
   ['embed equation expression number', [{ text: 'a' }, { embed: { equation: { expression: 5 } } }, { text: 'b' }]],
   ['tag attr number', [{ text: 'ab', marks: { 'tag:span': { a: 5 } } }]],
   ['tag attr null', [{ text: 'ab', marks: { 'tag:span': { a: null } } }]],
+  ['tag value not a record', [{ text: 'ab', marks: { 'tag:span': 'x' } }]],
+  ['color object', [{ text: 'ab', marks: { color: {} } }]],
+  ['background number', [{ text: 'ab', marks: { background: 5 } }]],
+  ['link href number', [{ text: 'ab', marks: { link: { href: 42 } } }]],
+  ['embed html number', [{ text: 'a' }, { embed: { html: 5 } }, { text: 'b' }]],
+  ['embed page id object', [{ text: 'a' }, { embed: { page: { id: {} } } }, { text: 'b' }]],
+  ['embed extra key', [{ text: 'a' }, { embed: { page: { id: 'p', x: 1 } } }, { text: 'b' }]],
 ];
 
 let holder: HTMLDivElement | undefined;

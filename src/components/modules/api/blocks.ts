@@ -14,6 +14,7 @@ import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { capitalize } from '../../utils';
 import { richTextInputToHtml } from '../../utils/rich-text-input';
 import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
+import { applyBlockMigration } from '../../migration/block-migrations';
 import { announce } from '../../utils/announcer';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
@@ -551,7 +552,7 @@ export class BlocksAPI extends Module {
     const insertedBlock = this.Blok.BlockManager.insert({
       id,
       tool,
-      data: this.hostDataForTool(tool ?? this.config.defaultBlock ?? 'paragraph', data),
+      data: this.hostBlockDataForTool(tool ?? this.config.defaultBlock ?? 'paragraph', data),
       index,
       needToFocus,
       replace,
@@ -599,7 +600,7 @@ export class BlocksAPI extends Module {
     const block = BlockManager.insert({
       id,
       tool: type,
-      data: data === undefined ? data : this.hostDataForTool(type ?? this.config.defaultBlock ?? 'paragraph', data),
+      data: data === undefined ? data : this.hostBlockDataForTool(type ?? this.config.defaultBlock ?? 'paragraph', data),
       needToFocus: focus,
       tunes,
       placement: { parentId: null, afterId: placement.afterId },
@@ -790,7 +791,7 @@ export class BlocksAPI extends Module {
       return this.Blok.BlockManager.composeBlock({
         id,
         tool,
-        data: this.hostDataForTool(tool, data),
+        data: this.hostBlockDataForTool(tool, data),
         tunes,
         parentId: parent,
         contentIds: content,
@@ -839,7 +840,7 @@ export class BlocksAPI extends Module {
       this.Blok.YjsManager.stopCapturing();
     }
 
-    const data = childData === undefined ? childData : this.hostDataForTool(toolName ?? this.config.defaultBlock ?? 'paragraph', childData);
+    const data = childData === undefined ? childData : this.hostBlockDataForTool(toolName ?? this.config.defaultBlock ?? 'paragraph', childData);
     const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex, data, toolName, options);
 
     // NOTE: Do NOT call stopCapturing in a trailing microtask. Late
@@ -928,6 +929,18 @@ export class BlocksAPI extends Module {
     };
 
     return stripUnsafeUrlsDeep(cleaned, this.Blok.Tools.blockTools.get(toolName)?.sanitizeConfig) as T;
+  }
+
+  /**
+   * {@link hostDataForTool} for a whole block's data. The host's
+   * `config.migrations` rule runs first, as on render(): it may move markup
+   * into a field the tool's rule allows. The factory runs it again; rules are
+   * idempotent. A throwing rule leaves the data as is (the factory warns).
+   * @param toolName - the tool the data is meant for
+   * @param data - a whole block's data from the host
+   */
+  private hostBlockDataForTool<T extends Partial<BlockToolData>>(toolName: string, data: T): T {
+    return this.hostDataForTool(toolName, applyBlockMigration(toolName, data, this.config.migrations) as T);
   }
 
   /**

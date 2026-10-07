@@ -262,6 +262,7 @@ internal sealed class CollabRoom : IDisposable
   private DateTimeOffset? exportRetryAt;
   private int exportFailures;
   private int transientExportFailures;
+  private bool migrationFailed;
   private Task<string?>? inFlightSave;
   private int purgeRequested;
   private bool disposed;
@@ -344,12 +345,13 @@ internal sealed class CollabRoom : IDisposable
   internal bool CommitUnavailable { get; private set; }
 
   /// <summary>
-  /// True when the load ran past the runtime's timeout or allocation budget
-  /// (a format-1 migration or a seed with a very large rich field). That
-  /// fails the same way on every open, so the manager holds the document off
-  /// rather than letting every reconnect spend a pooled engine on it.
+  /// True when the load failed in a way the next open repeats after the same
+  /// work: any failed format-1 migration, or a read past the runtime's
+  /// timeout or allocation budget (a seed with a very large rich field). The
+  /// manager then holds the document off rather than letting every reconnect
+  /// spend a pooled engine on it.
   /// </summary>
-  internal bool LoadHitRuntimeLimit { get; private set; }
+  internal bool LoadHeldOff { get; private set; }
 
   /// <summary>Distinct actors <see cref="activityStamps"/> holds; read by its bound tests.</summary>
   internal int ActivityStampCount => activityStamps.Count;
@@ -1630,7 +1632,7 @@ internal sealed class CollabRoom : IDisposable
     catch (Exception error)
     {
       log?.Invoke($"collab: room \"{DocId}\" could not load: {error.Message}");
-      LoadHitRuntimeLimit = IsRuntimeLimit(error);
+      LoadHeldOff = migrationFailed || IsRuntimeLimit(error);
 
       return new LoadFailure(null, error);
     }
@@ -1916,7 +1918,9 @@ internal sealed class CollabRoom : IDisposable
       : new CollabWorkingSetTag(CollabWorkingSetTag.CurrentFormat, 0, CollabWorkingSetTag.NewLineage());
     List<ReadOnlyMemory<byte>> baseline = [.. frames.Select(frame => (ReadOnlyMemory<byte>)frame)];
 
-    if (adopted.Format != CollabWorkingSetTag.CurrentFormat)
+    // The STORED format: the fallback above stamps the current one on a
+    // copy whose lineage is unusable, and that copy is still format 1.
+    if (stored.Tag.Format != CollabWorkingSetTag.CurrentFormat)
     {
       await MigrateRichTextLocked();
       baseline = [doc!.EncodeStateAsUpdate()];
@@ -1992,11 +1996,16 @@ internal sealed class CollabRoom : IDisposable
     return tag;
   }
 
+  /// <summary>
+  /// The runtime's own timeout or allocation budget, anywhere in the chain.
+  /// Not a wait for a pooled engine: that says the host is busy, not that
+  /// this document is too large.
+  /// </summary>
   private static bool IsRuntimeLimit(Exception error)
   {
     for (var cause = error; cause is not null; cause = cause.InnerException)
     {
-      if (cause is CollabTransientException or BlokDocumentConversionException
+      if (cause is BlokDocumentConversionException
         {
           Reason: BlokConversionFailure.TimedOut or BlokConversionFailure.DocumentTooLarge,
         })
@@ -2034,6 +2043,8 @@ internal sealed class CollabRoom : IDisposable
     }
     catch (Exception error) when (!lifetime.IsCancellationRequested)
     {
+      migrationFailed = true;
+
       throw new InvalidDataException(
           $"collab: room \"{DocId}\" could not migrate its format-1 rich text, so the store keeps " +
           "format 1 and the next open tries again (for a very large field, raise the runtime's " +
@@ -3223,7 +3234,8 @@ internal sealed class CollabRoom : IDisposable
 
       // Not reset by a refusal: after the give-up, the next checkpoint gets
       // one attempt, not another full round.
-      if (session is not null && ++transientExportFailures >= TransientExportFailureLimit)
+      if (session is not null && IsRuntimeLimit(error) &&
+          ++transientExportFailures >= TransientExportFailureLimit)
       {
         RefuseProjectionLocked(
             error,

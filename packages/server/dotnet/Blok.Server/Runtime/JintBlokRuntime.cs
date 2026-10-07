@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Threading.Channels;
 using Blok.Server.Documents;
 using Jint;
+using Jint.Constraints;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
@@ -166,18 +167,26 @@ internal sealed class JintBlokRuntime : IBlokRuntime
   public async ValueTask<string> InvokeAsync(
       string operation,
       string inputJson,
+      TimeSpan? timeout = null,
       CancellationToken cancellationToken = default)
   {
     ArgumentNullException.ThrowIfNull(operation);
     ArgumentNullException.ThrowIfNull(inputJson);
 
+    if (timeout is TimeSpan budget)
+    {
+      ArgumentOutOfRangeException.ThrowIfLessThan(budget, MinimumTimeout, nameof(timeout));
+    }
+
     var engine = await engines.Reader.ReadAsync(cancellationToken);
+    var deadline = Deadline(engine);
     var reusable = true;
     var returned = false;
     string result;
 
     try
     {
+      deadline.Begin(timeout ?? this.timeout, CancellationToken.None);
       result = (await engine.InvokeAsync(
           "blokServerInvoke",
           cancellationToken,
@@ -235,6 +244,8 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     }
     finally
     {
+      deadline.End();
+
       /*
        * The pool is fixed size, so a slot that is not refilled is gone for
        * good and the pool eventually blocks forever. Building the replacement
@@ -287,14 +298,37 @@ internal sealed class JintBlokRuntime : IBlokRuntime
    * an ordinary deeply indented outline through — the readers recurse once per
    * nesting level, and a frame count cannot tell those two apart.
    */
+  /*
+   * A deadline the HOST arms per call instead of `TimeoutInterval`, which is
+   * fixed when the engine is built and so could not give one call a larger
+   * budget. It also covers the whole call: the bundle's entry point is async,
+   * and the built-in timeout re-arms on every top-level entry.
+   */
   private Engine CreateEngine()
   {
-    return new Engine(options =>
-      {
-        options.TimeoutInterval(timeout);
-        options.LimitMemory(allocationBudgetBytes);
-        options.Constraints.StackOverflowGuard = true;
-      })
-      .Execute(script);
+    var deadline = new OperationDeadlineConstraint();
+    var engine = new Engine(options =>
+    {
+      options.Constraint(deadline);
+      options.LimitMemory(allocationBudgetBytes);
+      options.Constraints.StackOverflowGuard = true;
+    });
+
+    deadline.Begin(timeout, CancellationToken.None);
+
+    try
+    {
+      return engine.Execute(script);
+    }
+    finally
+    {
+      deadline.End();
+    }
+  }
+
+  private static OperationDeadlineConstraint Deadline(Engine engine)
+  {
+    return engine.Constraints.Find<OperationDeadlineConstraint>()
+        ?? throw new InvalidOperationException("A Blok runtime engine has no deadline constraint.");
   }
 }

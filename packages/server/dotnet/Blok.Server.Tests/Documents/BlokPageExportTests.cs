@@ -192,6 +192,7 @@ public sealed partial class BlokPageExportTests
     public ValueTask<string> InvokeAsync(
         string operation,
         string inputJson,
+        TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
       Calls.Add((operation, inputJson));

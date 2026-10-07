@@ -30,6 +30,21 @@ public sealed class RuntimeRichTextHtmlReaderTests
         read.Select(segments => segments[0]!["text"]!.GetValue<string>()));
   }
 
+  [Fact]
+  public async Task PassesTheCallersBudgetToEveryCall()
+  {
+    var runtime = new EchoRuntime();
+    var reader = new RuntimeRichTextHtmlReader(runtime);
+    var html = new string('x', RuntimeRichTextHtmlReader.MaxCallChars);
+
+    await reader.ReadAsync(
+        [new RichTextHtml("paragraph", "text", html), new RichTextHtml("paragraph", "text", html)],
+        timeout: TimeSpan.FromSeconds(60));
+    await reader.ReadAsync([new RichTextHtml("paragraph", "text", "a")]);
+
+    Assert.Equal([TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60), null], runtime.Timeouts);
+  }
+
   /// <summary>A field cannot be split; one larger than a call goes alone.</summary>
   [Fact]
   public async Task ReadsAnOversizedFieldInACallOfItsOwn()
@@ -54,9 +69,15 @@ public sealed class RuntimeRichTextHtmlReaderTests
   {
     internal List<List<string>> Calls { get; } = [];
 
+    internal List<TimeSpan?> Timeouts { get; } = [];
+
     public ValueTask<string> InvokeAsync(
-        string operation, string inputJson, CancellationToken cancellationToken = default)
+        string operation,
+        string inputJson,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
     {
+      Timeouts.Add(timeout);
       Assert.Equal("htmlFieldsToSegments", operation);
 
       var request = (AnyArray)JsJson.Parse(inputJson)!;

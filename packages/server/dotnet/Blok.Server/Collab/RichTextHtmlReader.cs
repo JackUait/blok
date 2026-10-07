@@ -8,8 +8,13 @@ namespace Blok.Server.Collab;
 internal interface IRichTextHtmlReader
 {
   /// <summary>Segments for each field, in the same order.</summary>
+  /// <param name="fields">The fields to read.</param>
+  /// <param name="timeout">Each runtime call's budget; null is the runtime's default.</param>
+  /// <param name="cancellationToken">Ends the read.</param>
   ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
-      IReadOnlyList<RichTextHtml> fields, CancellationToken cancellationToken = default);
+      IReadOnlyList<RichTextHtml> fields,
+      TimeSpan? timeout = null,
+      CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -31,7 +36,9 @@ internal sealed class RuntimeRichTextHtmlReader(IBlokRuntime runtime) : IRichTex
   private readonly IBlokRuntime runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
 
   public async ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
-      IReadOnlyList<RichTextHtml> fields, CancellationToken cancellationToken = default)
+      IReadOnlyList<RichTextHtml> fields,
+      TimeSpan? timeout = null,
+      CancellationToken cancellationToken = default)
   {
     ArgumentNullException.ThrowIfNull(fields);
 
@@ -49,7 +56,7 @@ internal sealed class RuntimeRichTextHtmlReader(IBlokRuntime runtime) : IRichTex
         end++;
       }
 
-      read.AddRange(await ReadCallAsync(fields, start, end, cancellationToken));
+      read.AddRange(await ReadCallAsync(fields, start, end, timeout, cancellationToken));
       start = end;
     }
 
@@ -57,7 +64,11 @@ internal sealed class RuntimeRichTextHtmlReader(IBlokRuntime runtime) : IRichTex
   }
 
   private async ValueTask<IEnumerable<JsonArray>> ReadCallAsync(
-      IReadOnlyList<RichTextHtml> fields, int start, int end, CancellationToken cancellationToken)
+      IReadOnlyList<RichTextHtml> fields,
+      int start,
+      int end,
+      TimeSpan? timeout,
+      CancellationToken cancellationToken)
   {
     var request = new AnyArray();
 
@@ -74,7 +85,7 @@ internal sealed class RuntimeRichTextHtmlReader(IBlokRuntime runtime) : IRichTex
     // JsJson on both sides: it carries a lone surrogate the way JS does,
     // where System.Text.Json refuses one.
     var answer = await runtime.InvokeAsync(
-        "htmlFieldsToSegments", JsJson.Stringify(request), cancellationToken);
+        "htmlFieldsToSegments", JsJson.Stringify(request), timeout, cancellationToken);
 
     if (JsJson.Parse(answer) is not AnyArray entries || entries.Count != end - start)
     {

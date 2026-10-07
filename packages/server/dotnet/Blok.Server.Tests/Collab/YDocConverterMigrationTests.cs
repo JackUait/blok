@@ -40,6 +40,49 @@ public sealed class YDocConverterMigrationTests
   }
 
   /// <summary>
+  /// The released client (v1.15.2) stored a rich field as a plain string
+  /// leaf, not a Y.Text; the fixtures were written by later builds. The
+  /// same rooms with every rich text turned into a string must migrate to
+  /// the same characters and marks.
+  /// </summary>
+  [Theory]
+  [MemberData(nameof(Cases))]
+  public void StringLeafRoomsMigrateToTheSameSegments(string name)
+  {
+    var fixture = YDocConverterFixtures.LoadFormat1(name);
+    var doc = Format1Room(fixture);
+    StringLeaves(doc);
+
+    Migrate(doc, RichTextFields.BuiltIn);
+
+    AssertJsonEqual(RichTextRuntime.WithSegments(fixture.Canonical), RichTextRuntime.Export(doc));
+    Assert.Empty(YDocConverter.CollectLegacyRichText(doc, RichTextFields.BuiltIn));
+  }
+
+  /// <summary>
+  /// The released client stripped NUL before storing, but a stored NUL would
+  /// otherwise fail the same way on every open. It is dropped, as the client
+  /// drops it.
+  /// </summary>
+  [Fact]
+  public void ANulInLegacyHtmlIsDropped()
+  {
+    var doc = new YDoc();
+
+    doc.Transact(transaction =>
+    {
+      doc.GetMap("blocks").Set(transaction, "p", Block("p", "paragraph", "a\0<b>b\0c</b>", null, asString: true));
+      doc.GetArray("root").Insert(transaction, 0, ["p"]);
+    });
+
+    Assert.Equal("a<b>bc</b>", Assert.Single(YDocConverter.CollectLegacyRichText(doc, RichTextFields.BuiltIn)).Html);
+    Assert.Equal(1, Migrate(doc, RichTextFields.BuiltIn));
+    Assert.Equal(
+        """[{"text":"a"},{"text":"bc","marks":{"bold":true}}]""",
+        RichText.ToJson(RichText.FromDelta(((YXmlText)DataValue(doc, "p", "text")!).ToDelta())).ToJsonString());
+  }
+
+  /// <summary>
   /// An oracle that is not the server's: the format-2 client seeded the same
   /// input.json and wrote what it reads back.
   /// </summary>
@@ -207,6 +250,37 @@ public sealed class YDocConverterMigrationTests
     Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(fixture.Update).Outcome);
 
     return doc;
+  }
+
+  /// <summary>Every built-in rich Y.Text becomes the string it holds, as the released client stored it.</summary>
+  internal static void StringLeaves(YDoc doc)
+  {
+    var blocks = doc.GetMap("blocks");
+
+    doc.Transact(transaction =>
+    {
+      foreach (var id in blocks.Keys.ToArray())
+      {
+        if (!blocks.TryGet(id, out var block) ||
+            block is not YMap entry ||
+            !entry.TryGet("type", out var type) ||
+            !entry.TryGet("data", out var data) ||
+            data is not YMap fields)
+        {
+          continue;
+        }
+
+        foreach (var key in fields.Keys.ToArray())
+        {
+          if (RichTextFields.BuiltIn.IsRich(type as string, key) &&
+              fields.TryGet(key, out var value) &&
+              value is YText text)
+          {
+            fields.Set(transaction, key, text.ToString());
+          }
+        }
+      }
+    });
   }
 
   private static int Migrate(YDoc doc, RichTextFields fields)

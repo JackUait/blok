@@ -634,7 +634,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
   {
     lock (rooms)
     {
-      if (room.CommitUnavailable || room.LoadHitRuntimeLimit)
+      if (room.CommitUnavailable || room.LoadHeldOff)
       {
         var failures = (cooldowns.TryGetValue(room.DocId, out var cooldown)
             ? cooldown.Failures
@@ -643,12 +643,11 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
 
         cooldowns[room.DocId] = new CommitCooldown(failures, timeProvider.GetUtcNow() + wait);
 
-        if (room.LoadHitRuntimeLimit)
+        if (room.LoadHeldOff)
         {
           log?.Invoke(
-              $"collab: document \"{room.DocId}\" ran past the runtime's limits while loading, " +
-              $"so it is held off for {wait} (failure {failures}); raise the runtime's timeout " +
-              "for documents this large");
+              $"collab: document \"{room.DocId}\" failed to load in a way the next open repeats, " +
+              $"so it is held off for {wait} (failure {failures}); the room's own log line says why");
         }
       }
       else

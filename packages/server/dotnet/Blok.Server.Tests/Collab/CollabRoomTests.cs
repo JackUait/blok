@@ -4625,7 +4625,8 @@ public sealed class CollabRoomTests
         Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
         CancellationToken.None);
     converter.ExportFailure = new CollabTransientException(
-        "collab: the rich text HTML could not be read", new TimeoutException());
+        "collab: the rich text HTML could not be read",
+        new BlokDocumentConversionException(BlokConversionFailure.TimedOut, new TimeoutException()));
 
     Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
 
@@ -4645,6 +4646,36 @@ public sealed class CollabRoomTests
 
     Assert.Equal(attempts, converter.Exports);
     Assert.Empty(endpoint.Saves);
+  }
+
+  /// <summary>
+  /// Waiting for a pooled engine says the host is busy, not that this
+  /// document is too large, so it never counts toward the give-up.
+  /// </summary>
+  [Fact]
+  public async Task AnEnginePoolWaitNeverGivesTheExportUp()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read", new OperationCanceledException());
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    for (var tick = 0; tick < 20; tick++)
+    {
+      time.Advance(TimeSpan.FromMinutes(1));
+      await manager.SettleAsync();
+    }
+
+    Assert.True(converter.Exports > 8, $"{converter.Exports} export attempts");
+    Assert.DoesNotContain(log, line => line.Contains("gave up exporting", StringComparison.Ordinal));
   }
 
   /// <summary>
@@ -6424,7 +6455,9 @@ public sealed class CollabRoomTests
 internal sealed class FailingHtmlReader(Exception? failure = null) : IRichTextHtmlReader
 {
   public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
-      IReadOnlyList<RichTextHtml> fields, CancellationToken cancellationToken = default)
+      IReadOnlyList<RichTextHtml> fields,
+      TimeSpan? timeout = null,
+      CancellationToken cancellationToken = default)
   {
     throw failure ?? new TimeoutException("the runtime took too long");
   }

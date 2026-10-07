@@ -58,6 +58,72 @@ public sealed class CollabRoomMigrationTests
     AssertJsonEqual(Expected(withTail: tail), RichTextRuntime.Export(rebuilt));
   }
 
+  /// <summary>The released client (v1.15.2) stored rich fields as string leaves, not Y.Text.</summary>
+  [Fact]
+  public async Task AStringLeafJournalIsMigratedOnOpen()
+  {
+    await SeedJournalAsync(CollabWorkingSetTag.HtmlRichTextFormat, baseline: StringLeafRoom());
+
+    var membership = await Join(JournalManager(), V2Member());
+
+    Assert.Equal(CollabWorkingSetTag.CurrentFormat, membership.Tag.Format);
+    var rebuilt = Replay(operations.Baseline(DocId));
+    AssertMigrated(rebuilt);
+    AssertJsonEqual(Expected(withTail: false), RichTextRuntime.Export(rebuilt));
+  }
+
+  [Fact]
+  public async Task AStringLeafWorkingSetIsMigratedInPlace()
+  {
+    store.Seed(DocId, [StringLeafRoom()], Format1(4));
+
+    var membership = await Join(WorkingSetManager(), V2Member());
+
+    Assert.Equal(CollabWorkingSetTag.CurrentFormat, membership.Tag.Format);
+    var rebuilt = Replay(store.FramesOf(DocId).Select(frame => (ReadOnlyMemory<byte>)frame).ToList());
+    AssertMigrated(rebuilt);
+    AssertJsonEqual(Expected(withTail: false), RichTextRuntime.Export(rebuilt));
+  }
+
+  /// <summary>
+  /// A failure that is not a runtime limit (a wrong-shape runtime answer, a
+  /// field the converter refuses) also repeats on every open after the whole
+  /// read, so it is held off the same way.
+  /// </summary>
+  [Fact]
+  public async Task AnyFailedMigrationIsHeldOff()
+  {
+    await SeedFormat1JournalAsync();
+    var reader = new ShapeReader();
+    var manager = new CollabRoomManager(
+        store,
+        endpoint,
+        new CollabDocConverter(time, reader),
+        new CollabRoomOptions(),
+        time,
+        log.Add,
+        operations);
+
+    var first = await manager.JoinAsync(DocId, V2Member(), CancellationToken.None);
+    var during = await manager.JoinAsync(DocId, V2Member(), CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.SeedFailed, first.Status);
+    Assert.Equal(CollabJoinStatus.Unavailable, during.Status);
+    Assert.Equal(1, reader.Calls);
+  }
+
+  /// <summary>A format-1 copy whose lineage is unusable is still format 1 and still migrates.</summary>
+  [Fact]
+  public async Task AFormat1WorkingSetWithAnUnusableLineageIsMigratedWhenAdopted()
+  {
+    store.Seed(DocId, [fixture.Update], new CollabWorkingSetTag(CollabWorkingSetTag.HtmlRichTextFormat, 4, "not-a-lineage"));
+
+    var membership = await Join(JournalManager(), V2Member());
+
+    Assert.Equal(CollabWorkingSetTag.CurrentFormat, membership.Tag.Format);
+    AssertMigrated(Replay(operations.Baseline(DocId)));
+  }
+
   [Fact]
   public async Task AMigratedJournalIsNotMigratedAgain()
   {
@@ -353,6 +419,16 @@ public sealed class CollabRoomMigrationTests
     Assert.Equal(CollabWorkingSetTag.CurrentFormat, store.Stored(DocId).Tag.Format);
   }
 
+  /// <summary>The fixture's room as the released client stored it: rich fields as string leaves.</summary>
+  private byte[] StringLeafRoom()
+  {
+    var doc = new YDoc();
+    doc.ApplyUpdate(fixture.Update);
+    YDocConverterMigrationTests.StringLeaves(doc);
+
+    return doc.EncodeStateAsUpdate();
+  }
+
   private static CollabWorkingSetTag Format1(long epoch)
   {
     return new CollabWorkingSetTag(CollabWorkingSetTag.HtmlRichTextFormat, epoch, Tags.Lineage);
@@ -366,11 +442,11 @@ public sealed class CollabRoomMigrationTests
     return withTail;
   }
 
-  private async Task SeedJournalAsync(int format, bool withTail = false)
+  private async Task SeedJournalAsync(int format, bool withTail = false, byte[]? baseline = null)
   {
     var open = await operations.OpenAsync(DocId);
     await using var session = open.Session!;
-    await session.ResetAsync(new CollabOperationReset(format, 4, Tags.Lineage, [fixture.Update]));
+    await session.ResetAsync(new CollabOperationReset(format, 4, Tags.Lineage, [baseline ?? fixture.Update]));
 
     if (withTail)
     {
@@ -473,12 +549,29 @@ public sealed class CollabRoomMigrationTests
     return membership;
   }
 
+  private sealed class ShapeReader : IRichTextHtmlReader
+  {
+    internal int Calls { get; private set; }
+
+    public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
+        IReadOnlyList<RichTextHtml> fields,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+      Calls++;
+
+      throw new InvalidDataException("collab: the runtime answered htmlFieldsToSegments with the wrong shape.");
+    }
+  }
+
   private sealed class LimitReader : IRichTextHtmlReader
   {
     internal int Calls { get; private set; }
 
     public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
-        IReadOnlyList<RichTextHtml> fields, CancellationToken cancellationToken = default)
+        IReadOnlyList<RichTextHtml> fields,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
     {
       Calls++;
 
@@ -490,7 +583,9 @@ public sealed class CollabRoomMigrationTests
   private sealed class FailingReader : IRichTextHtmlReader
   {
     public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
-        IReadOnlyList<RichTextHtml> fields, CancellationToken cancellationToken = default)
+        IReadOnlyList<RichTextHtml> fields,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
     {
       throw new TimeoutException("the runtime ran past its timeout");
     }

@@ -17,6 +17,13 @@ internal sealed class CollabDocConverter(
     RichTextFields? fields = null,
     Action<string>? log = null) : ICollabDocConverter
 {
+  /// <summary>
+  /// Each migration read call's budget. A migration runs once per room, and
+  /// one rich field of about 700 KB ran past the runtime's 10 s default on a
+  /// loaded host, which would keep that room from ever opening.
+  /// </summary>
+  internal static readonly TimeSpan MigrationReadTimeout = TimeSpan.FromSeconds(60);
+
   private readonly RichTextFields fields = fields ?? RichTextFields.BuiltIn;
 
   public async ValueTask SeedAsync(
@@ -67,7 +74,8 @@ internal sealed class CollabDocConverter(
 
   public async ValueTask<int> MigrateRichTextAsync(YDoc doc, CancellationToken cancellationToken = default)
   {
-    var input = await Converting(YDocConverter.CollectLegacyRichText(doc, fields), cancellationToken);
+    var found = YDocConverter.CollectLegacyRichText(doc, fields);
+    var input = RichTextInput.Converting(fields, await Read(found, cancellationToken, MigrationReadTimeout));
 
     return YDocConverter.MigrateRichText(doc, input);
   }
@@ -131,14 +139,14 @@ internal sealed class CollabDocConverter(
 
   /// <summary>Segments by HTML string; each distinct string is read once.</summary>
   private async ValueTask<Dictionary<string, JsonArray>> Read(
-      IReadOnlyList<RichTextHtml> found, CancellationToken cancellationToken)
+      IReadOnlyList<RichTextHtml> found, CancellationToken cancellationToken, TimeSpan? timeout = null)
   {
     // An empty string is an empty text; it needs no runtime.
     var distinct = found
         .Where(field => field.Html.Length > 0)
         .DistinctBy(field => field.Html, StringComparer.Ordinal)
         .ToList();
-    var segments = distinct.Count == 0 ? [] : await html.ReadAsync(distinct, cancellationToken);
+    var segments = distinct.Count == 0 ? [] : await html.ReadAsync(distinct, timeout, cancellationToken);
     var read = new Dictionary<string, JsonArray>(StringComparer.Ordinal) { [""] = [] };
 
     for (var index = 0; index < distinct.Count; index++)

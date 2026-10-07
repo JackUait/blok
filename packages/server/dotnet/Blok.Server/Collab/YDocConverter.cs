@@ -411,9 +411,11 @@ internal static class YDocConverter
           _ => null,
         };
 
+        // Dropped as the client's stripNul drops it. Kept, it would fail the
+        // NUL guard after the whole read, on every open.
         if (html is not null)
         {
-          found.Add((data, type, key, html));
+          found.Add((data, type, key, html.Replace("\0", "", StringComparison.Ordinal)));
         }
       }
     }

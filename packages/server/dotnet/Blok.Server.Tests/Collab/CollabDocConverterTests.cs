@@ -261,10 +261,45 @@ public sealed class CollabDocConverterTests
     return doc;
   }
 
+  /// <summary>
+  /// A migration runs once per room and may read a field far larger than
+  /// anything an edit sends, so it gets its own budget. Every other read
+  /// stays on the runtime's default.
+  /// </summary>
+  [Fact]
+  public async Task OnlyAMigrationReadsWithTheMigrationBudget()
+  {
+    var reader = new RecordingHtmlReader();
+    var converter = new CollabDocConverter(time, reader);
+
+    await converter.ExportAsync(LegacyHtmlDoc());
+    await converter.MigrateRichTextAsync(LegacyHtmlDoc());
+
+    Assert.Equal([null, CollabDocConverter.MigrationReadTimeout], reader.Timeouts);
+    Assert.Equal(TimeSpan.FromSeconds(60), CollabDocConverter.MigrationReadTimeout);
+  }
+
+  private sealed class RecordingHtmlReader : IRichTextHtmlReader
+  {
+    internal List<TimeSpan?> Timeouts { get; } = [];
+
+    public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
+        IReadOnlyList<RichTextHtml> fields,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+      Timeouts.Add(timeout);
+
+      return ValueTask.FromResult<IReadOnlyList<JsonArray>>([.. fields.Select(_ => new JsonArray())]);
+    }
+  }
+
   private sealed class CancellingHtmlReader : IRichTextHtmlReader
   {
     public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
-        IReadOnlyList<RichTextHtml> fields, CancellationToken cancellationToken = default)
+        IReadOnlyList<RichTextHtml> fields,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
     {
       cancellationToken.ThrowIfCancellationRequested();
 

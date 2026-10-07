@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Blok } from '../../../../src/blok';
 import { Callout, Header, List, Paragraph, Quote, Toggle } from '../../../../src/tools';
 import { richTextToPlainText } from '../../../../src/migrate';
+import { blocksToHtml, blocksToMarkdown, blocksToPlainText, extractTexts } from '../../../../src/view';
 import { isRichText } from '../../../../src/shared/rich-text/guards';
 import type { BlokConfig, OutputBlockData, OutputData } from '../../../../types';
 import type { BlockToolConstructable } from '../../../../types/tools';
@@ -81,7 +82,10 @@ const legacyTexts = (blocks: OutputBlockData[]): string[] => {
 const flatDocument: OutputData = {
   blocks: [
     { id: 'l1', type: 'list', data: { text: '<b>one</b> &amp; &lt;x&gt;', style: 'unordered' } },
-    { id: 'l2', type: 'list', data: { text: 'two', style: 'unordered' } },
+    { id: 'l2', type: 'list', data: { text: 'two', style: 'unordered' }, content: ['l3'] },
+    { id: 'l3', type: 'list', data: { text: 'nested &lt;n&gt;', style: 'unordered', depth: 1 }, parent: 'l2' },
+    { id: 'h1', type: 'header', data: { text: '<b>heading</b>', level: 2, isToggleable: true }, content: ['h1c'] },
+    { id: 'h1c', type: 'paragraph', data: { text: 'under heading' }, parent: 'h1' },
     { id: 't1', type: 'toggle', data: { text: '<i>title</i>' }, content: ['t1c'] },
     { id: 't1c', type: 'paragraph', data: { text: 'inside' }, parent: 't1' },
     { id: 'q1', type: 'quote', data: { text: 'quoted &amp; said' } },
@@ -106,11 +110,15 @@ describe('legacy output carries segments', { timeout: 60_000 }, () => {
 
     const saved = await editor.save();
     const list = saved.blocks.find(block => block.type === 'list');
-    const toggle = saved.blocks.find(block => block.type === 'toggleList');
+    const toggle = saved.blocks.find(block => block.id === 't1');
+    const headingToggle = saved.blocks.find(block => block.id === 'h1');
 
-    expect(legacyTexts(saved.blocks)).toEqual(['one & <x>', 'two', 'title', 'inside', 'quoted & said', 'called']);
+    expect(legacyTexts(saved.blocks)).toEqual([
+      'one & <x>', 'two', 'nested <n>', 'heading', 'under heading', 'title', 'inside', 'quoted & said', 'called',
+    ]);
     expect(list?.data.items).toEqual([{ content: [{ text: 'one', marks: { bold: true } }, { text: ' & <x>' }] }]);
     expect(toggle?.data.title).toEqual([{ text: 'title', marks: { italic: true } }]);
+    expect(headingToggle?.data).toMatchObject({ title: [{ text: 'heading', marks: { bold: true } }], titleVariant: 2 });
   });
 
   it('reloads its own legacy output with every character, markup characters included', async () => {
@@ -131,6 +139,25 @@ describe('legacy output carries segments', { timeout: 60_000 }, () => {
 
     expect(legacyTexts(saved.blocks)).toEqual([TRICKY, TRICKY, TRICKY, TRICKY]);
     expect(saved.blocks[1].data.title).toEqual([{ text: TRICKY, marks: { bold: true } }]);
+  });
+
+  it('the view reads its own legacy output without losing text', async () => {
+    const saved = await (await createEditor({ dataModel: 'legacy', data: flatDocument })).save();
+    const texts = ['one', 'two', 'nested', 'heading', 'under heading', 'title', 'inside', 'quoted', 'called'];
+
+    const html = blocksToHtml(saved);
+    const plain = blocksToPlainText(saved);
+    const markdown = blocksToMarkdown(saved);
+    const extracted = extractTexts(saved).join('\n');
+
+    for (const text of texts) {
+      expect(html).toContain(text);
+      expect(plain).toContain(text);
+      expect(markdown).toContain(text);
+      expect(extracted).toContain(text);
+    }
+    expect(plain).toContain('one & <x>');
+    expect(plain).toContain('nested <n>');
   });
 
   it('a legacy save survives a second editor round trip unchanged', async () => {

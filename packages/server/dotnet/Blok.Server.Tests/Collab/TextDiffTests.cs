@@ -194,6 +194,20 @@ public sealed class TextDiffTests
     Assert.Equal([new TextEdit(0, 3, ">>>")], TextDiff.Diff("<<<", ">>>"));
   }
 
+  /// <summary>
+  /// With markup off (a formatted text's characters), tag- and entity-shaped
+  /// text diffs one character at a time, and a cluster stays whole. Mirrors
+  /// the client's text-diff-atoms.test.ts.
+  /// </summary>
+  [Fact]
+  public void MarkupOffDiffsTagAndEntityShapedTextAsCharacters()
+  {
+    Assert.Equal(
+        [new TextEdit(4, 0, "Q"), new TextEdit(8, 0, "Q")],
+        TextDiff.Diff("x <b> &lt;", "x <bQ> &lQt;", markup: false));
+    Assert.Equal(["<", "b", ">", "\U0001F44D\U0001F3FD"], TextDiff.Atomize("<b>\U0001F44D\U0001F3FD", markup: false));
+  }
+
   /// <summary>An entity reference is one unit, so `&amp;` never half-becomes one.</summary>
   [Fact]
   public void AnEntityIsOneUnit()

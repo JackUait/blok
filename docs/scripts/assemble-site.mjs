@@ -1,6 +1,8 @@
 // Usage: node docs/scripts/assemble-site.mjs --next <next.tgz> --out <dir> [--local-dir <dir>] [--tags a,b]
+//    or: node docs/scripts/assemble-site.mjs --root-pages <file> [--local-dir <dir>] [--tags a,b]
+// --root-pages only writes the stable root's pages.json, for build-snapshot.mjs --root-pages.
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -12,9 +14,10 @@ const { values } = parseArgs({
     out: { type: 'string' },
     'local-dir': { type: 'string' },
     tags: { type: 'string' },
+    'root-pages': { type: 'string' },
   },
 });
-if (!values.next || !values.out) {
+if (!values['root-pages'] && (!values.next || !values.out)) {
   console.error('Usage: assemble-site.mjs --next <next.tgz> --out <dir> [--local-dir <dir>] [--tags a,b]');
   process.exit(1);
 }
@@ -53,6 +56,20 @@ const fetchAsset = (tag, asset) => {
 };
 
 const selection = selectSnapshots(listTags());
+
+if (values['root-pages']) {
+  const rootTarball = fetchAsset(selection.root.tag, snapshotAssetNames(selection.root.minor).root);
+  const extractDir = mkdtempSync(join(tmpdir(), 'docs-root-pages-'));
+  try {
+    execFileSync('tar', ['-xzf', rootTarball, '-C', extractDir, './pages.json'], { stdio: 'ignore' });
+  } catch {
+    fail(`The ${selection.root.tag} root snapshot has no pages.json.`);
+  }
+  copyFileSync(join(extractDir, 'pages.json'), resolve(values['root-pages']));
+  rmSync(extractDir, { recursive: true, force: true });
+  if (downloadDir) rmSync(downloadDir, { recursive: true, force: true });
+  process.exit(0);
+}
 const nextTarball = resolve(values.next);
 if (!existsSync(nextTarball)) fail(`Missing next snapshot ${nextTarball}.`);
 

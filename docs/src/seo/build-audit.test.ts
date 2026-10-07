@@ -255,9 +255,11 @@ describe('build output audit', () => {
   });
 });
 
-// The /next/ snapshot (build-snapshot.mjs --base /next/), as measured from a real
-// build: every page is `noindex, follow`, its canonical, hreflang and markdown
-// links all name the ROOT page, it ships no .md mirrors and no sitemap.xml.
+// The /next/ snapshot (build-snapshot.mjs --base /next/), audited inside the
+// assembled site: every page is `noindex, follow`, and its canonical names the
+// ROOT page only where the root ships it. It ships no hreflang (a one-way set
+// from a noindex copy), no markdown mirror (the root's describes another
+// version) and no sitemap.xml.
 describe('build output audit — a noindex snapshot under /next/', () => {
   const BASE = '/next/';
   const NOINDEX = '<meta name="robots" content="noindex, follow">';
@@ -271,7 +273,13 @@ describe('build output audit — a noindex snapshot under /next/', () => {
   };
   const snapshotFile = (route: string): string => `next/${fileFor(route)}`;
   const snapshotPage = (route: string, options: Parameters<typeof html>[1] = {}): string =>
-    html(route, { head: NOINDEX, links: ['/next/docs/table/', '/favicon.ico', '/'], ...options });
+    html(route, {
+      head: NOINDEX,
+      links: ['/next/docs/table/', '/favicon.ico', '/'],
+      alternates: '',
+      mirrorHref: null,
+      ...options,
+    });
 
   const audit = () => auditBuild({ outDir: out, siteUrl: SITE, pages, base: BASE });
   const failing = (result: ReturnType<typeof auditBuild>) =>
@@ -281,7 +289,11 @@ describe('build output audit — a noindex snapshot under /next/', () => {
     vi.clearAllMocks();
     out = mkdtempSync(join(tmpdir(), 'build-audit-next-'));
     pages = ROUTES.map((route) => ({ route, canonical: url(route) }));
-    for (const route of ROUTES) write(snapshotFile(route), snapshotPage(route));
+    for (const route of ROUTES) {
+      write(snapshotFile(route), snapshotPage(route));
+      // The stable root, as assembled next to the snapshot.
+      write(fileFor(route), html(route));
+    }
   });
 
   afterEach(() => {
@@ -299,7 +311,7 @@ describe('build output audit — a noindex snapshot under /next/', () => {
   });
 
   it('flags a snapshot page that could be indexed', () => {
-    write(snapshotFile('/docs/table'), html('/docs/table', { links: [] }));
+    write(snapshotFile('/docs/table'), snapshotPage('/docs/table', { head: '' }));
     write(snapshotFile('/ru'), snapshotPage('/ru', { head: '<meta name="description" content="noindex">' }));
 
     expect(failing(audit())).toEqual(['/docs/table indexable', '/ru indexable']);
@@ -309,6 +321,24 @@ describe('build output audit — a noindex snapshot under /next/', () => {
     write(snapshotFile('/docs/table'), snapshotPage('/docs/table', { canonicals: [`${SITE}/next/docs/table/`] }));
 
     expect(failing(audit())).toEqual(['/docs/table canonical']);
+  });
+
+  // A route new on main: the root has no twin to consolidate onto.
+  it('flags a canonical naming a root page the site does not ship', () => {
+    rmSync(join(out, fileFor('/docs/table')));
+
+    expect(audit().failures).toContainEqual({
+      route: '/docs/table',
+      check: 'canonical',
+      detail: `${url('/docs/table')} is not a page of the assembled site`,
+    });
+  });
+
+  it('accepts a snapshot page with no canonical, and never one naming another root page', () => {
+    write(snapshotFile('/docs/table'), snapshotPage('/docs/table', { canonicals: [] }));
+    write(snapshotFile('/ru'), snapshotPage('/ru', { canonicals: [url('/')] }));
+
+    expect(failing(audit())).toEqual(['/ru canonical']);
   });
 
   it('flags a page the snapshot did not emit, a shell page and a second h1', () => {
@@ -327,16 +357,21 @@ describe('build output audit — a noindex snapshot under /next/', () => {
     ]);
   });
 
-  it('requires each hreflang page to exist in the snapshot and list the same set back', () => {
-    rmSync(join(out, snapshotFile('/ru/docs/table')));
-    write(snapshotFile('/ru'), snapshotPage('/ru', { alternates: `${hreflang('/ru')}<link rel="alternate" hreflang="de" href="${url('/')}"/>` }));
+  it('flags any hreflang in a snapshot', () => {
+    write(snapshotFile('/ru'), snapshotPage('/ru', { alternates: hreflang('/ru') }));
 
-    const details = audit().failures.filter(({ check }) => check === 'hreflang').map(({ route, detail }) => `${route}: ${detail}`);
+    expect(failing(audit())).toEqual(['/ru hreflang']);
+  });
 
-    expect(details).toEqual(expect.arrayContaining([
-      `/docs/table: hreflang ru -> ${url('/ru/docs/table')} is not a built page`,
-      `/: hreflang is not reciprocal with ${url('/ru')}`,
-    ]));
+  // The root's .md is another version's page; the snapshot ships none of its own.
+  it('flags a markdown mirror advertised in the head or the body', () => {
+    write(snapshotFile('/docs/table'), snapshotPage('/docs/table', { mirrorHref: `${SITE}/docs/table.md` }));
+    write(
+      snapshotFile('/ru'),
+      snapshotPage('/ru', { links: [], prose: `${PROSE} A Markdown version of this page is available at ${SITE}/ru.md.` }),
+    );
+
+    expect(failing(audit())).toEqual(['/docs/table markdown-mirror', '/ru markdown-mirror']);
   });
 
   it('flags a sitemap shipped inside the snapshot', () => {

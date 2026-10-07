@@ -187,6 +187,14 @@ jobs:
       - name: Build Blok library
         run: yarn build
 
+      # /next/ pages name their root twin only where the stable root ships the
+      # route, so the build needs the root's route list first.
+      - name: Fetch stable root routes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: node docs/scripts/assemble-site.mjs --root-pages root-pages.json
+
       # Root = latest stable release snapshot, /v/<minor>/ = archived release
       # snapshots, both downloaded from release assets; /next/ = this commit.
       # The library is NOT copied into the artifact: the demo's `/dist/react.mjs`
@@ -195,7 +203,7 @@ jobs:
       # requests /dist from its own origin — the copy was 47 MB of dead weight.
       - name: Build next snapshot
         run: |
-          node docs/scripts/build-snapshot.mjs --version next --base /next/ --out next.tgz
+          node docs/scripts/build-snapshot.mjs --version next --base /next/ --out next.tgz --root-pages root-pages.json
 
       - name: Assemble versioned site
         env:
@@ -206,10 +214,25 @@ jobs:
           cp CHANGELOG.md site/CHANGELOG.md
 
       # The release snapshot at the root was audited when it was built. This
-      # audits the /next/ build by the snapshot rules: noindex pages whose
-      # canonical names the root page, and no sitemap. A failure stops the deploy.
+      # audits the /next/ build by the snapshot rules: noindex pages, a canonical
+      # only onto a root page that exists, no hreflang, no markdown mirror, and
+      # no sitemap. A failure stops the deploy.
       - name: Audit next snapshot
         run: node docs/scripts/audit-build-output.mjs --dir site --base /next/ --report docs-build-audit-next.json
+
+      # Follows every advertised URL and #fragment across the assembled site.
+      # Root and /v/ are release tarballs this commit cannot change, so their
+      # problems are warnings in the report; /next/ problems stop the deploy.
+      - name: Audit assembled site
+        run: node docs/scripts/site-audit.mjs --dir site --enforce /next/ --report docs-site-audit.json
+
+      - name: Upload assembled site audit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docs-site-audit
+          path: docs-site-audit.json
+          if-no-files-found: ignore
 
       - name: Upload next audit report
         if: ${{ !cancelled() }}

@@ -28,6 +28,13 @@ describe('versionHref', () => {
     expect(versionHref(v114, '/docs/table', null)).toBe('/v/1.14/docs/table/');
   });
 
+  // The root ships only `404.html`; `<base>404/` is not a page there, and
+  // pages.json never lists `/404`.
+  it('sends the 404 page to the target home, even when the page list is unknown', () => {
+    expect(versionHref(root, '/404', null)).toBe('/');
+    expect(versionHref(v114, '/404', null)).toBe('/v/1.14/');
+  });
+
   it('maps the home page to the target base', () => {
     expect(versionHref(v114, '/', ['/'])).toBe('/v/1.14/');
   });

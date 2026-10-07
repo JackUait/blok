@@ -7,6 +7,8 @@ import path from 'node:path';
 import { JSDOM } from 'jsdom';
 
 const REQUIRED_HREFLANG = ['en', 'ru', 'x-default'];
+// The body sentence src/seo/MarkdownPointer.tsx renders.
+const MARKDOWN_POINTER = /A Markdown version of this page is available at (\S+?\.md)/;
 
 const ownUrl = (siteUrl, route) => `${siteUrl}${route.endsWith('/') ? route : `${route}/`}`;
 
@@ -34,8 +36,9 @@ const markdownBody = (content) => content.replace(/^---\n[\s\S]*?\n---\n/, '').t
  * @param {{ route: string, canonical: string, noindex?: boolean, mirror?: boolean }[]} options.pages
  * @param {number} [options.minProseChars]
  * @param {string} [options.base]   `/` for the indexed root. Any other base (`/next/`) is a
- *   noindex snapshot: its pages must be noindex and canonicalise to the ROOT page, and its
- *   canonical, hreflang and markdown links name root URLs. It ships no sitemap or mirrors.
+ *   noindex snapshot audited inside the assembled site (`outDir` holds the root too): its
+ *   pages must be noindex, may canonicalise only to their ROOT twin and only where the root
+ *   ships it, and name no hreflang and no markdown mirror. It ships no sitemap or mirrors.
  */
 export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200, base = '/' }) => {
   const origin = new URL(siteUrl).origin;
@@ -44,11 +47,9 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200, base =
   const failures = [];
   const urlToRoute = new Map(pages.map((page) => [ownUrl(siteUrl, page.route), page]));
   const pageFile = (pathname) => path.join(outDir, decodeURIComponent(pathname), 'index.html');
-  // A snapshot's hreflang names root URLs; its own copy of that page is the one to compare.
-  const hreflangFile = (pathname) => path.join(baseDir, decodeURIComponent(pathname), 'index.html');
   const isBuiltPage = (url) => {
     const parsed = new URL(url);
-    return parsed.origin === origin && parsed.pathname.endsWith('/') && isFile(hreflangFile(parsed.pathname));
+    return parsed.origin === origin && parsed.pathname.endsWith('/') && isFile(pageFile(parsed.pathname));
   };
 
   const hreflangCache = new Map();
@@ -87,8 +88,12 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200, base =
     const { document } = new JSDOM(html).window;
 
     const canonicals = [...document.querySelectorAll('link[rel~="canonical"]')].map((link) => link.getAttribute('href'));
-    if (canonicals.length !== 1 || canonicals[0] !== url) {
-      fail('canonical', `expected one canonical ${url}, found [${canonicals.join(', ')}]`);
+    if (indexed || canonicals.length > 0) {
+      if (canonicals.length !== 1 || canonicals[0] !== url) {
+        fail('canonical', `expected one canonical ${url}, found [${canonicals.join(', ')}]`);
+      } else if (!isBuiltPage(url)) {
+        fail('canonical', `${url} is not a page of the assembled site`);
+      }
     }
 
     const robots = [...document.querySelectorAll('meta[name="robots" i], meta[name="googlebot" i]')]
@@ -136,20 +141,24 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200, base =
 
     const alternates = readHreflang(document);
     hreflangCache.set(file, alternates);
-    const byLang = new Map(alternates.map((entry) => entry.split(' ')));
-    const missingLangs = REQUIRED_HREFLANG.filter((lang) => !byLang.has(lang));
-    if (missingLangs.length > 0) fail('hreflang', `missing hreflang ${missingLangs.join(', ')}`);
-    if (alternates.length > 0 && ![...byLang.values()].includes(url)) {
-      fail('hreflang', `${url} is not in its own hreflang set`);
-    }
-    for (const [lang, href] of byLang) {
-      if (href === url) continue;
-      if (!isBuiltPage(href)) {
-        fail('hreflang', `hreflang ${lang} -> ${href} is not a built page`);
-        continue;
+    if (!indexed) {
+      if (alternates.length > 0) fail('hreflang', `a ${base} page names no hreflang, found [${alternates.join(', ')}]`);
+    } else {
+      const byLang = new Map(alternates.map((entry) => entry.split(' ')));
+      const missingLangs = REQUIRED_HREFLANG.filter((lang) => !byLang.has(lang));
+      if (missingLangs.length > 0) fail('hreflang', `missing hreflang ${missingLangs.join(', ')}`);
+      if (alternates.length > 0 && ![...byLang.values()].includes(url)) {
+        fail('hreflang', `${url} is not in its own hreflang set`);
       }
-      const other = hreflangSet(hreflangFile(new URL(href).pathname));
-      if (other.join('\n') !== alternates.join('\n')) fail('hreflang', `hreflang is not reciprocal with ${href}`);
+      for (const [lang, href] of byLang) {
+        if (href === url) continue;
+        if (!isBuiltPage(href)) {
+          fail('hreflang', `hreflang ${lang} -> ${href} is not a built page`);
+          continue;
+        }
+        const other = hreflangSet(pageFile(new URL(href).pathname));
+        if (other.join('\n') !== alternates.join('\n')) fail('hreflang', `hreflang is not reciprocal with ${href}`);
+      }
     }
 
     for (const script of document.querySelectorAll('script[type="application/ld+json"]')) {
@@ -160,11 +169,15 @@ export const auditBuild = ({ outDir, siteUrl, pages, minProseChars = 200, base =
       }
     }
 
-    // A snapshot ships no mirrors; its mirror link names the root's file.
-    if (!indexed) return { ...result, ok: problems.length === 0, problems };
+    const mirrorHref = document.querySelector('link[rel~="alternate"][type="text/markdown"]')?.getAttribute('href');
+    // A snapshot ships no mirrors, so any it names is the root's, for another version.
+    if (!indexed) {
+      const pointer = MARKDOWN_POINTER.exec(document.body?.textContent ?? '');
+      if (mirrorHref || pointer) fail('markdown-mirror', `a ${base} page names the mirror ${mirrorHref ?? pointer[1]}`);
+      return { ...result, ok: problems.length === 0, problems };
+    }
 
     const wantsMirror = page.mirror ?? true;
-    const mirrorHref = document.querySelector('link[rel~="alternate"][type="text/markdown"]')?.getAttribute('href');
     if (mirrorHref) {
       const mirrorFile = path.join(outDir, decodeURIComponent(new URL(mirrorHref, url).pathname));
       if (!isFile(mirrorFile)) fail('markdown-mirror', `${mirrorHref} is not in the build`);

@@ -122,8 +122,10 @@ export const useLocalePath = (): ((locale: Locale) => string) => {
 
       // Not every page exists in both trees — `/404` is served once from the
       // site root, so there is no `/ru/404` file to link to. Offer that tree's
-      // home rather than a link that 404s.
-      return servedPath(getRouteMetadata(twin) ? twin : localizedPath('/', locale));
+      // home rather than a link that 404s. Nor is there a `/404/`: the build
+      // keeps only `404.html`.
+      const hasTwin = getRouteMetadata(twin) && splitLocalePath(twin).path !== '/404';
+      return servedPath(hasTwin ? twin : localizedPath('/', locale));
     },
     [pathname],
   );

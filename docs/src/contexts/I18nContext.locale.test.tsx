@@ -94,6 +94,12 @@ describe('useLocalePath', () => {
   it('falls back to the other tree root where the page has no twin', () => {
     expect(renderAt('/404').result.current('ru')).toBe('/ru/');
   });
+
+  // The root build copies `/404/index.html` to `404.html` and deletes the
+  // directory, so `/404/` is itself a missing page.
+  it('never links the 404 page to /404/', () => {
+    expect(renderAt('/404').result.current('en')).toBe('/');
+  });
 });
 
 describe('useLocalizedHref', () => {

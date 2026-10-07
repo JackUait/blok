@@ -13,6 +13,7 @@ import {
   pruneToBudget,
   relocateBuild,
   selectSnapshots,
+  snapshotBuildEnv,
 } from '../../scripts/docs-versions.mjs';
 import { parseVersionsManifest } from './versions';
 
@@ -218,11 +219,67 @@ describe('assemble-site', () => {
     expect(readFileSync(join(out, 'index.html'), 'utf8')).toBe('ROOT');
   });
 
+  // The next build needs the stable root's routes before assembly runs.
+  it('writes only the root snapshot pages.json with --root-pages', () => {
+    const releases = fixtures();
+    page('root', 'pages.json', '["/","/docs/table"]\n');
+    tgz(join(dir, 'src', 'root'), join(releases, 'v1.15.2', 'docs-root.tgz'));
+    const target = join(dir, 'root-pages.json');
+    const result = spawnSync(
+      'node',
+      ['scripts/assemble-site.mjs', '--root-pages', target, '--local-dir', releases, '--tags', 'v1.15.2,v1.14.0'],
+      { cwd: docsDir, encoding: 'utf8' },
+    );
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+    expect(JSON.parse(readFileSync(target, 'utf8'))).toEqual(['/', '/docs/table']);
+  });
+
+  it('fails --root-pages when the root snapshot has no pages.json', () => {
+    const releases = fixtures();
+    const result = spawnSync(
+      'node',
+      ['scripts/assemble-site.mjs', '--root-pages', join(dir, 'root-pages.json'), '--local-dir', releases, '--tags', 'v1.15.2'],
+      { cwd: docsDir, encoding: 'utf8' },
+    );
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('pages.json');
+  });
+
   it('fails naming the tag whose snapshot is missing', () => {
     const releases = fixtures();
     rmSync(join(releases, 'v1.14.0', 'docs-v1.14.tgz'));
     const result = assemble(releases, join(dir, 'site'));
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('v1.14.0');
+  });
+});
+
+describe('snapshotBuildEnv', () => {
+  it('passes the root routes to a snapshot build as compact JSON', () => {
+    expect(snapshotBuildEnv({ base: '/next/', version: 'next', rootPages: '[\n "/", "/docs"\n]\n' })).toEqual({
+      DOCS_BASE: '/next/',
+      VITE_DOCS_VERSION: 'next',
+      VITE_DOCS_ROOT_ROUTES: '["/","/docs"]',
+    });
+  });
+
+  // Archives get none: a later root may drop their routes.
+  it('sets no root routes without a list', () => {
+    expect(snapshotBuildEnv({ base: '/v/1.16/', version: '1.16' })).toEqual({
+      DOCS_BASE: '/v/1.16/',
+      VITE_DOCS_VERSION: '1.16',
+    });
+  });
+
+  it('rejects a list that is not an array of route paths', () => {
+    expect(() => snapshotBuildEnv({ base: '/next/', version: 'next', rootPages: '{"a":1}' })).toThrow(/pages\.json/);
+    expect(() => snapshotBuildEnv({ base: '/next/', version: 'next', rootPages: '["docs"]' })).toThrow(/pages\.json/);
+    expect(() => snapshotBuildEnv({ base: '/next/', version: 'next', rootPages: 'not json' })).toThrow(/pages\.json/);
+  });
+
+  // The root build is the stable root; it never names cross-version twins.
+  it('refuses root routes for the root build', () => {
+    expect(() => snapshotBuildEnv({ base: '/', version: '1.16', rootPages: '["/"]' })).toThrow(/root/);
   });
 });

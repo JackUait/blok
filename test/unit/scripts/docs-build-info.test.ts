@@ -106,6 +106,10 @@ describe('docs build info', () => {
       builtAt: '2026-10-05T00:00:00.000Z',
       runId: '123',
       runAttempt: null,
+      rootTag: null,
+      rootCommit: null,
+      nextCommit: 'b'.repeat(40),
+      archiveTags: [],
       proof: proofPath({
         sha: 'b'.repeat(40),
         manifestHash: contentManifest(site).hash,
@@ -116,12 +120,34 @@ describe('docs build info', () => {
     });
   });
 
+  // The root and archives are release snapshots built from their tags, not
+  // from this commit; only /next/ comes from the commit that assembled them.
+  it('records which release and commit each snapshot came from', () => {
+    const info = createBuildInfo({
+      dir: site,
+      sha: 'b'.repeat(40),
+      version: '1.16.0',
+      builtAt: 'now',
+      sources: { rootTag: 'v1.16.0', rootCommit: 'c'.repeat(40), archiveTags: ['v1.15.2', 'v1.14.0'] },
+    });
+
+    expect(info).toMatchObject({
+      rootTag: 'v1.16.0',
+      rootCommit: 'c'.repeat(40),
+      nextCommit: 'b'.repeat(40),
+      archiveTags: ['v1.15.2', 'v1.14.0'],
+    });
+  });
+
   it('writes null for the fields a local build does not have', () => {
     const info = createBuildInfo({ dir: site, sha: 'c'.repeat(40), version: '1.0.0', builtAt: 'now' });
 
     expect(info.root).toBeNull();
     expect(info.runId).toBeNull();
     expect(info.runAttempt).toBeNull();
+    expect(info.rootTag).toBeNull();
+    expect(info.rootCommit).toBeNull();
+    expect(info.archiveTags).toEqual([]);
   });
 
   it('writes build-info.json at the site root', () => {
@@ -164,10 +190,14 @@ describe('docs build info', () => {
   it('hands the workflow exactly the sha and manifest outputs it reads', () => {
     const output = join(site, 'github-output');
 
-    execFileSync(process.execPath, [SCRIPT, site], {
+    const sources = join(site, '..', `${site.split('/').pop() ?? ''}-sources.json`);
+    writeFileSync(sources, JSON.stringify({ rootTag: 'v1.16.0', rootCommit: 'c'.repeat(40), archiveTags: ['v1.15.2'] }));
+
+    execFileSync(process.execPath, [SCRIPT, site, '--sources', sources], {
       env: { ...process.env, GITHUB_OUTPUT: output, GITHUB_RUN_ID: '7', GITHUB_RUN_ATTEMPT: '3' },
       stdio: 'pipe',
     });
+    rmSync(sources);
 
     const lines = readFileSync(output, 'utf8').trim().split('\n');
     const outputs = Object.fromEntries(lines.map((line): [string, string] => {
@@ -175,13 +205,13 @@ describe('docs build info', () => {
       return [key, value];
     }));
     const written = JSON.parse(readFileSync(join(site, 'build-info.json'), 'utf8')) as {
-      sha: string; manifestHash: string; proof: string; runId: string; runAttempt: string;
+      sha: string; manifestHash: string; proof: string; runId: string; runAttempt: string; rootTag: string;
     };
 
-    // deploy-docs.yml reads steps.build-info.outputs.sha / .manifest / .proof (pinned in docs-deploy-law).
-    expect(Object.keys(outputs)).toEqual(['sha', 'manifest', 'proof']);
-    expect(outputs).toEqual({ sha: written.sha, manifest: written.manifestHash, proof: written.proof });
-    expect(written).toMatchObject({ runId: '7', runAttempt: '3' });
+    // deploy-docs.yml reads steps.build-info.outputs.sha / .manifest / .proof / .root_tag (pinned in docs-deploy-law).
+    expect(Object.keys(outputs)).toEqual(['sha', 'manifest', 'proof', 'root_tag']);
+    expect(outputs).toEqual({ sha: written.sha, manifest: written.manifestHash, proof: written.proof, root_tag: 'v1.16.0' });
+    expect(written).toMatchObject({ runId: '7', runAttempt: '3', rootTag: 'v1.16.0', rootCommit: 'c'.repeat(40), archiveTags: ['v1.15.2'] });
     expect(existsSync(join(site, written.proof.slice(1)))).toBe(true);
   });
 

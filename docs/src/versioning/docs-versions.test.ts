@@ -175,7 +175,7 @@ describe('assemble-site', () => {
     return releases;
   };
 
-  const assemble = (releases: string, out: string) =>
+  const assemble = (releases: string, out: string, extra: string[] = []) =>
     spawnSync(
       'node',
       [
@@ -188,6 +188,7 @@ describe('assemble-site', () => {
         releases,
         '--tags',
         'v1.15.2,v1.14.0',
+        ...extra,
       ],
       { cwd: docsDir, encoding: 'utf8' },
     );
@@ -205,6 +206,23 @@ describe('assemble-site', () => {
     expect(JSON.parse(readFileSync(join(out, 'versions.json'), 'utf8'))).toEqual(
       buildVersionsManifest(selectSnapshots(['v1.15.2', 'v1.14.0'])),
     );
+  });
+
+  it('writes which release tags the root and archives came from, outside the site', () => {
+    const releases = fixtures();
+    const out = join(dir, 'site');
+    const sources = join(dir, 'sources.json');
+    const result = assemble(releases, out, ['--sources', sources]);
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+
+    // A local run has no GitHub API to resolve the tag's commit.
+    expect(JSON.parse(readFileSync(sources, 'utf8'))).toEqual({
+      rootTag: 'v1.15.2',
+      rootCommit: null,
+      archiveTags: ['v1.14.0'],
+    });
+    expect(existsSync(join(out, 'sources.json'))).toBe(false);
   });
 
   it('refuses an archive that would write outside its /v/<minor>/ and keeps the root', () => {

@@ -326,7 +326,9 @@ describe('production readiness gates', () => {
       contents: 'read',
       pages: 'read',
     });
+    // contents: write mints the commit that names the Pages build version.
     expect(job(docs, 'deploy').permissions).toEqual({
+      contents: 'write',
       pages: 'write',
       'id-token': 'write',
     });

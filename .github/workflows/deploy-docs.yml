@@ -160,6 +160,8 @@ jobs:
       build_sha: ${{ steps.build-info.outputs.sha }}
       manifest_hash: ${{ steps.build-info.outputs.manifest }}
       build_info_path: ${{ steps.build-info.outputs.proof }}
+      root_tag: ${{ steps.build-info.outputs.root_tag }}
+      artifact_id: ${{ steps.pages-artifact.outputs.artifact_id }}
     permissions:
       contents: read
       pages: read
@@ -210,7 +212,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          node docs/scripts/assemble-site.mjs --next next.tgz --out site
+          node docs/scripts/assemble-site.mjs --next next.tgz --out site --sources site-sources.json
           cp CHANGELOG.md site/CHANGELOG.md
 
       # The release snapshot at the root was audited when it was built. This
@@ -248,7 +250,7 @@ jobs:
       # last: a file written into site/ after it would not be in the hash.
       - name: Record build info
         id: build-info
-        run: node scripts/docs-build-info.mjs site
+        run: node scripts/docs-build-info.mjs site --sources site-sources.json
 
       # A prerender regression is invisible from a green build: the files are
       # still emitted, they are just empty shells again, and every crawler that
@@ -300,6 +302,7 @@ jobs:
           echo "path=/${asset#site/}" >> "$GITHUB_OUTPUT"
 
       - name: Upload Pages artifact
+        id: pages-artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site/
@@ -315,16 +318,36 @@ jobs:
     # artifact, and published nothing.
     # `dry_run` builds and verifies the artifact without publishing it.
     if: ${{ !cancelled() && needs.build.result == 'success' && !inputs.dry_run }}
+    # contents: write is for the one commit object scripts/deploy-pages.mjs
+    # writes as the build version. It moves no branch and creates no tag.
     permissions:
+      contents: write
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      # Not actions/deploy-pages: it always sends GITHUB_SHA as the build
+      # version, and Pages drops a second deploy of a version it already
+      # served. A release dispatch runs on the commit the main push deployed.
+      # exec hands the cancel signal to node, whose handler cancels the deploy.
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+        run: exec node scripts/deploy-pages.mjs
 
   # Everything else in this repo verifies bytes on the runner. This verifies
   # what the host serves: status codes, redirects, a real 404, and whether the
@@ -353,6 +376,7 @@ jobs:
           EXPECTED_BUILD_SHA: ${{ needs.build.outputs.build_sha }}
           EXPECTED_MANIFEST_HASH: ${{ needs.build.outputs.manifest_hash }}
           EXPECTED_BUILD_INFO_PATH: ${{ needs.build.outputs.build_info_path }}
+          EXPECTED_ROOT_TAG: ${{ needs.build.outputs.root_tag }}
         run: node scripts/verify-live-docs.mjs "https://blokeditor.com" --crawl --require-build-info --report live-docs-report.json
 
       - name: Upload live check report

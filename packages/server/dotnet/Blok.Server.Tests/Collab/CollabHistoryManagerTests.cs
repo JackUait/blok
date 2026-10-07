@@ -448,18 +448,20 @@ public sealed class CollabHistoryManagerTests
     try
     {
       var local = new LocalCollabOperationStore(directory);
+      var reader = new RecordingReader(RichTextRuntime.Reader);
       var manager = ManagerOver(local, new CollabRoomOptions
       {
         AnnouncedMaxMessageBytes = 4 * MiB,
         MaxUpdateBytes = local.MaxUpdateBytes,
-      });
+      }, reader);
       await LoadAsync(manager);
       var member = new FakeMember(true, acceptsControlFrames: true, null, CollabOperationSource.ClientV2);
       await JoinAsync(manager, member);
       // Three inserts under the store's 1 MiB limit add up to a 1.5 MiB point.
-      await EditAsync(manager, Insert("b1", new string('x', MiB / 2), after: "a"));
-      await EditAsync(manager, Insert("b2", new string('y', MiB / 2), after: "b1"));
-      await EditAsync(manager, Insert("b3", new string('z', MiB / 2), after: "b2"));
+      // Segments, not HTML, so no 0.5 MiB string goes through the runtime.
+      await EditAsync(manager, InsertSegments("b1", new string('x', MiB / 2), after: "a"));
+      await EditAsync(manager, InsertSegments("b2", new string('y', MiB / 2), after: "b1"));
+      await EditAsync(manager, InsertSegments("b3", new string('z', MiB / 2), after: "b2"));
       var result = await manager.EditAsync(
           DocId,
           [Remove("b1"), Remove("b2"), Remove("b3")],
@@ -475,6 +477,9 @@ public sealed class CollabHistoryManagerTests
       Assert.Empty(member.Closes);
       await EditAsync(manager, Update("a", "after"));
       Assert.Empty(member.Closes);
+      // Reading 0.5 MiB of HTML takes seconds against the runtime's 10 s
+      // wall-clock budget, so a loaded host answers Overloaded.
+      Assert.InRange(reader.LargestHtml, 0, 64);
     }
     finally
     {
@@ -582,12 +587,13 @@ public sealed class CollabHistoryManagerTests
 
   private CollabRoomManager ManagerOver(
       ICollabOperationStore? operationStore,
-      CollabRoomOptions? options = null)
+      CollabRoomOptions? options = null,
+      IRichTextHtmlReader? reader = null)
   {
     return new CollabRoomManager(
         store,
         endpoint,
-        new CollabDocConverter(time, RichTextRuntime.Reader),
+        new CollabDocConverter(time, reader ?? RichTextRuntime.Reader),
         options ?? new CollabRoomOptions(),
         time,
         log.Add,
@@ -698,6 +704,17 @@ public sealed class CollabHistoryManagerTests
           after,
           null);
 
+  private static CollabEditOp.Insert InsertSegments(string id, string text, string after) =>
+      new CollabEditOp.Insert(
+          id,
+          new JsonObject
+          {
+            ["type"] = "paragraph",
+            ["data"] = new JsonObject { ["text"] = new JsonArray(new JsonObject { ["text"] = text }) },
+          },
+          after,
+          null);
+
   private static CollabEditOp.Remove Remove(string id) => new CollabEditOp.Remove(id);
 
   private static JsonNode WithoutStamps(JsonNode blocks)
@@ -711,6 +728,21 @@ public sealed class CollabHistoryManagerTests
     }
 
     return copy;
+  }
+
+  private sealed class RecordingReader(IRichTextHtmlReader inner) : IRichTextHtmlReader
+  {
+    public int LargestHtml { get; private set; }
+
+    public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
+        IReadOnlyList<RichTextHtml> fields,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+      LargestHtml = Math.Max(LargestHtml, fields.Max(field => field.Html.Length));
+
+      return inner.ReadAsync(fields, timeout, cancellationToken);
+    }
   }
 
   private sealed class JournalWithoutHistory(FakeCollabOperationStore inner) : ICollabOperationStore

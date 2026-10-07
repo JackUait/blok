@@ -19,9 +19,13 @@ This guide covers the breaking changes when migrating from EditorJS to Blok.
   - [Auto-Migrated on Load](#auto-migrated-on-load)
   - [Dropped Fields](#dropped-fields)
 - [Rich Text Is Saved as Segments](#rich-text-is-saved-as-segments)
+  - [The Shape](#the-shape)
   - [What Returns Segments](#what-returns-segments)
+  - [What Stays HTML](#what-stays-html)
   - [Input Takes Both Shapes](#input-takes-both-shapes)
   - [Custom Block Tools](#custom-block-tools)
+  - [Types](#types)
+  - [Controlled Components](#controlled-components)
   - [Collaboration](#collaboration)
   - [Converting Stored Documents](#converting-stored-documents)
 - [Configuration Defaults](#configuration-defaults)
@@ -705,9 +709,9 @@ These fields become segments: `text` on `paragraph`, `header`, `list`, `toggle` 
 
 Every place that hands saved data to your code returns segments:
 
-- `editor.save()`, `onSave` and the React, Vue and Angular `onSubmit`.
+- `editor.save()`, `onSave` and `onSubmit`.
 - `BlockAPI.save()`, including `target.save()` inside `onChange`.
-- `getBlockData` from `useBlocks` in the React, Vue and Angular adapters. Its `.data` is a new object on every call, so do not use it as a memo dependency.
+- `getBlockData` from `useBlocks` in the React, Vue and Angular adapters. Its `.data` can be a new object on each call, so do not use it as a memo dependency.
 - The value `importMarkdown()` returns.
 - `htmlToBlocks()` from `@bloklabs/core/view` and `markdownToBlocks()` from `@bloklabs/core/markdown`.
 - The C# `FromHtmlAsync` and `FromMarkdownAsync`.
@@ -744,6 +748,8 @@ class MyCard {
 
 Without it, the tool's fields stay as the tool stores them, on input and on output. A sanitize rule does not count.
 
+A tool that reads another block through `BlockAPI.save()` receives segments. For a `database-row` block, that includes the nested documents in `properties.*.blocks`. Blok's built-in tools handle this. Check any third-party tool that reads other blocks.
+
 The tool class itself still reads and writes HTML. Its constructor, `merge()`, `validate()` and `save()` see HTML strings. Blok converts at the edge.
 
 If you run the C# collaboration server, list the same fields in `BlokServerOptions.RichTextFields`, for example `{ "my-card": ["title"] }`. List exactly what the client declares, or the two write the field in different shapes.
@@ -771,8 +777,9 @@ After a round trip, the HTML spelling is canonical. For example `<em>` becomes `
 Collaboration rooms move to format 2, which stores rich text as formatted text.
 
 - Upgrade the client and the server together. An old client gets `unsupported-format`.
-- A format-1 room is converted the first time the new server opens it. For a very large document this can take a few seconds. A very large first open can time out the client handshake. Reload to retry.
-- Offline edits made in format 1 are not replayed. They are set aside as `stale-format`.
+- A format-1 room is converted the first time the new server opens it. The server gives this 60 seconds. If it fails, the server answers "unavailable" and waits longer before each new try.
+- The client retries the handshake by itself. If the room is still not ready after about 33 seconds (3 tries of 10 seconds), the session ends with `handshake-timeout`. This can happen on the first open of a very large document. Reload to try again.
+- Offline edits made in format 1 are set aside and never sent.
 - The tab sync protocol changed too, so all tabs need the new version.
 - A third-party collaboration server must speak format 2.
 

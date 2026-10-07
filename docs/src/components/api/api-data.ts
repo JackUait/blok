@@ -4463,7 +4463,7 @@ blocks.move(nodeId, { toIndex: 0 });`,
         name: "getBlockData(id)",
         returnType: "{ data, tunes } | null",
         description:
-          "Read a block's current data and tunes by id without mutating anything. It makes a client-side duplicate composable: read a node, then insert({ type, data, tunes }).\n\nRich text fields in `data` are segments. `data` is a new object on every call, so do not use it as a memo dependency.",
+          "Read a block's current data and tunes by id without mutating anything. It makes a client-side duplicate composable: read a node, then insert({ type, data, tunes }).\n\nRich text fields in `data` are segments. `data` can be a new object on each call, so do not use it as a memo dependency.",
         example: `const saved = blocks.getBlockData(nodeId);
 if (saved) {
   blocks.insert({ type: 'paragraph', data: saved.data, position: { after: nodeId } });

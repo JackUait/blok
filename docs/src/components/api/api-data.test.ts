@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
 import ts from "typescript";
 import { API_SECTIONS } from "./api-data";
@@ -1163,6 +1163,10 @@ describe("rich text segments are the only saved shape", () => {
       "docs/src/i18n/ru.json",
       "MIGRATION.md",
       "README.md",
+      "packages/server/README.md",
+      ...readdirSync(join(BLOK_ROOT, "types"), { recursive: true, encoding: "utf8" })
+        .filter((file) => file.endsWith(".d.ts"))
+        .map((file) => join("types", file)),
     ];
 
     for (const file of files) {

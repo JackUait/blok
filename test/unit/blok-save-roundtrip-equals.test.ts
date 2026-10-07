@@ -54,7 +54,7 @@ describe('save() round-trips a loaded document', () => {
 
   it('does not stamp edit metadata onto a block that was merely loaded', async () => {
     const loaded: OutputData = {
-      blocks: [{ id: 'a1', type: 'paragraph', data: { text: 'Hello' } }],
+      blocks: [{ id: 'a1', type: 'paragraph', data: { text: [{ text: 'Hello' }] } }],
     };
 
     const instance = createEditor(loaded.blocks);
@@ -70,7 +70,7 @@ describe('save() round-trips a loaded document', () => {
   it('keeps a stamp the stored document already carried', async () => {
     const loaded: OutputData = {
       blocks: [
-        { id: 'a1', type: 'paragraph', data: { text: 'Hello' }, lastEditedAt: 1712880000000 },
+        { id: 'a1', type: 'paragraph', data: { text: [{ text: 'Hello' }] }, lastEditedAt: 1712880000000 },
       ],
     };
 

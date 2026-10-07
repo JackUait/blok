@@ -4,6 +4,7 @@ import { Paragraph } from '../../src/tools/paragraph';
 import { CalloutTool } from '../../src/tools/callout';
 import { migrateLegacyBlocks } from '../../src/migrate';
 import type { OutputBlockData, OutputData } from '../../types';
+import { htmlOf } from './helpers/saved-as-html';
 
 /**
  * A host grammar entry is a STRUCTURAL rule (type change + 1:N split), which the
@@ -90,7 +91,7 @@ describe('host grammar rules at editor load (onBeforeRender)', () => {
     expect(saved.blocks.some((block) => block.type === 'alert')).toBe(false);
     // …it became a real callout with the message as a parented child block.
     expect(callout?.id).toBe('a1');
-    expect(paragraph?.data.text).toBe('disk almost full');
+    expect(htmlOf(paragraph?.data.text)).toBe('disk almost full');
     expect(paragraph?.parent).toBe('a1');
     expect(callout?.content).toEqual([paragraph?.id]);
   }, 60_000);

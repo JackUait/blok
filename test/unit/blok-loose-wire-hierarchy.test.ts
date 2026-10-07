@@ -49,7 +49,7 @@ describe('loose wire hierarchy fields', () => {
 
   it('renders a DTO whose absent parent/content serialize as null', async () => {
     const loaded = {
-      blocks: [{ id: 'a1', type: 'paragraph', data: { text: 'Hello' }, parent: null, content: null }],
+      blocks: [{ id: 'a1', type: 'paragraph', data: { text: [{ text: 'Hello' }] }, parent: null, content: null }],
     };
 
     const instance = createEditor(loaded.blocks);
@@ -58,7 +58,7 @@ describe('loose wire hierarchy fields', () => {
 
     const saved = await instance.save();
 
-    expect(saved.blocks).toEqual([{ id: 'a1', type: 'paragraph', data: { text: 'Hello' } }]);
+    expect(saved.blocks).toEqual([{ id: 'a1', type: 'paragraph', data: { text: [{ text: 'Hello' }] } }]);
     expect(equalsOutputData(loaded, saved)).toBe(true);
   }, 60_000);
 
@@ -71,6 +71,6 @@ describe('loose wire hierarchy fields', () => {
 
     const saved = await instance.save();
 
-    expect(saved.blocks).toEqual([{ id: 'a1', type: 'paragraph', data: { text: 'Hello' } }]);
+    expect(saved.blocks).toEqual([{ id: 'a1', type: 'paragraph', data: { text: [{ text: 'Hello' }] } }]);
   }, 60_000);
 });

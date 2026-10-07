@@ -11,6 +11,7 @@ import type { TabChannel } from '../../../src/components/modules/tabSync/platfor
 import { resolveTabKey } from '../../../src/components/modules/tabSync/identity';
 import { CLAIM_SETTLE_MS, CLAIM_TIMEOUT_MS, YIELD_SAVE_WAIT_MS } from '../../../src/components/modules/tabSync';
 import type { BlokConfig, OutputBlockData, OutputData } from '../../../types';
+import { htmlOf } from '../helpers/saved-as-html';
 
 import { createFakeActivity } from './modules/tabSync/fakes';
 import type { createFakePlatform } from './modules/tabSync/fakes';
@@ -70,7 +71,7 @@ const savedIds = (call: unknown[] | undefined): string[] | undefined =>
   (call?.[0] as OutputData | undefined)?.blocks.map((block) => block.id ?? '');
 
 const savedText = (call: unknown[] | undefined, id: string): unknown =>
-  (call?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === id)?.data.text;
+  htmlOf((call?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === id)?.data.text);
 
 interface Pair {
   leader: Core;
@@ -246,7 +247,7 @@ const createStore = (): {
         }
         const ok = version === state.version;
 
-        writes.push({ by, ifMatch: version, ok, text: data.blocks.find((block) => block.id === 'a')?.data.text });
+        writes.push({ by, ifMatch: version, ok, text: htmlOf(data.blocks.find((block) => block.id === 'a')?.data.text) });
         if (!ok) {
           throw new Error('conflict');
         }
@@ -352,7 +353,7 @@ describe('Core — a demoted leader never saves', () => {
     expect(hostSaves.leader).not.toContain('follower');
     expect(store.writes.filter((write) => write.by === 'leader')).toEqual([]);
     expect(store.writes.every((write) => write.ok)).toBe(true);
-    expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a edited');
+    expect(htmlOf(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text)).toBe('a edited');
   }, 20_000);
 
   it('a leader that turns read-only with a request out: the tab that takes over writes after it, and the old request is never retried over newer content', async () => {
@@ -368,14 +369,14 @@ describe('Core — a demoted leader never saves', () => {
     // The read-only tab kept the lock until its request settled.
     expect(store.writes[0]).toEqual(expect.objectContaining({ by: 'leader', ok: true }));
     await follower.moduleInstances.API.methods.blocks.update('a', { text: 'a by follower' });
-    await until(() => expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a by follower'));
+    await until(() => expect(htmlOf(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text)).toBe('a by follower'));
     // Past the old queue's retry delays: a retry would show up here.
     await wait(2500);
 
     expect(hostSaves.leader).not.toContain('follower');
     expect(store.writes.filter((write) => write.by === 'leader' && !write.ok)).toEqual([]);
     expect(store.writes.filter((write) => write.by === 'leader' && typeof write.ifMatch === 'string' && write.ifMatch.startsWith('follower'))).toEqual([]);
-    expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a by follower');
+    expect(htmlOf(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text)).toBe('a by follower');
   }, 20_000);
 
   it('a read-only tab set read-only again with a request out keeps the lock until the request lands', async () => {
@@ -424,7 +425,7 @@ describe('Core — a demoted leader never saves', () => {
 
     expect(hostSaves.leader).not.toContain('follower');
     expect(store.writes.filter((write) => write.by === 'leader')).toEqual([]);
-    expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a edited');
+    expect(htmlOf(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text)).toBe('a edited');
   }, 20_000);
 
   it('the tab taking over keeps its own typing unsaved while it waits for the old leader, then saves it', async () => {
@@ -442,11 +443,11 @@ describe('Core — a demoted leader never saves', () => {
     expect(follower.moduleInstances.TabSync.role).toBe('follower');
     expect(follower.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(true);
 
-    await until(() => expect(store.current().doc.blocks.find((block) => block.id === 'b')?.data.text).toBe('b typed while waiting'), 5000);
+    await until(() => expect(htmlOf(store.current().doc.blocks.find((block) => block.id === 'b')?.data.text)).toBe('b typed while waiting'), 5000);
 
     expect(follower.moduleInstances.TabSync.role).toBe('leader');
     expect(store.writes.filter((write) => write.by === 'leader')).toEqual([expect.objectContaining({ ok: true })]);
-    expect(store.current().doc.blocks.find((block) => block.id === 'b')?.data.text).toBe('b typed while waiting');
+    expect(htmlOf(store.current().doc.blocks.find((block) => block.id === 'b')?.data.text)).toBe('b typed while waiting');
     expect(follower.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(false);
   }, 20_000);
 
@@ -459,7 +460,7 @@ describe('Core — a demoted leader never saves', () => {
     expect(leader.moduleInstances.TabSync.role).toBe('follower');
 
     await type(leader, 'a', 'a typed as follower');
-    await until(() => expect(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text).toBe('a typed as follower'));
+    await until(() => expect(htmlOf(store.current().doc.blocks.find((block) => block.id === 'a')?.data.text)).toBe('a typed as follower'));
 
     expect(leader.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(false);
   }, 20_000);

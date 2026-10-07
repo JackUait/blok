@@ -1034,7 +1034,10 @@ describe('golden harness: sanitize composition end-to-end', () => {
     const saved = await core.moduleInstances.Saver.save();
 
     expect(saved).toBeDefined();
-    expect(saved?.blocks[0]?.data.text).toContain('<kbd>K</kbd>');
+    expect(saved?.blocks[0]?.data.text).toEqual([
+      { text: 'Press ' },
+      { text: 'K', marks: { 'tag:kbd': {} } },
+    ]);
 
     const schema = defineBlokSchema({ tools: tools as never }).viewSchema;
     const viewHtml = blocksToHtml(saved, { schema });

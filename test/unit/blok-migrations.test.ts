@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Blok } from '../../src/blok';
 import { Paragraph } from '../../src/tools/paragraph';
 import type { OutputData } from '../../types';
+import { htmlOf } from './helpers/saved-as-html';
 
 /**
  * End-to-end proof that the editor-config `migrations` map reshapes a block's
@@ -54,6 +55,7 @@ describe('editor config migrations', () => {
 
     const saved = await instance.save();
 
-    expect(saved.blocks[0].data).toEqual({ text: 'migrated text' });
+    expect(htmlOf(saved.blocks[0].data.text)).toBe('migrated text');
+    expect(Object.keys(saved.blocks[0].data)).toEqual(['text']);
   }, 60_000);
 });

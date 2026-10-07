@@ -9,6 +9,7 @@ import type * as PlatformModule from '../../../src/components/modules/tabSync/pl
 import { CLAIM_SETTLE_MS } from '../../../src/components/modules/tabSync';
 import type { BlokConfig, OutputBlockData, OutputData } from '../../../types';
 import type { BlockMutationEvent } from '../../../types/events/block';
+import { htmlOf } from '../helpers/saved-as-html';
 
 // jsdom has no navigator.locks, so the browser platform would never open a session.
 vi.mock('../../../src/components/modules/tabSync/platform', async (importOriginal) => {
@@ -260,7 +261,7 @@ describe('Core — the leader saves structural changes made in a follower', () =
     expect(textOf(follower, 'a')).toBe('a one two');
     const saved = (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === 'a');
 
-    expect(saved?.data.text).toBe('a one two');
+    expect(htmlOf(saved?.data.text)).toBe('a one two');
   });
 
   it('a follower that turns read-only still posts its buffered typing', async () => {
@@ -288,7 +289,7 @@ describe('Core — the leader saves structural changes made in a follower', () =
     await oneWindow();
     const saved = (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === 'a');
 
-    expect(saved?.data.text).toBe('a one two');
+    expect(htmlOf(saved?.data.text)).toBe('a one two');
 
     await leader.moduleInstances.ReadOnly.set(false);
     await oneWindow();
@@ -333,7 +334,7 @@ describe('Core — the leader saves structural changes made in a follower', () =
     expect(save).toHaveBeenCalledTimes(1);
     const saved = (save.mock.lastCall as unknown as [ { blocks: OutputBlockData[] } ] | undefined)?.[0];
 
-    expect(saved?.blocks.find((block) => block.id === 'a')?.data.text).toBe('a typed');
+    expect(htmlOf(saved?.blocks.find((block) => block.id === 'a')?.data.text)).toBe('a typed');
     expect(leader.moduleInstances.ModificationsObserver.hasUnsavedChanges).toBe(false);
     expect(closePromptArmed()).toBe(false);
   });
@@ -355,13 +356,13 @@ describe('Core — the leader saves structural changes made in a follower', () =
 
     const saved = (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === 'a');
 
-    expect(saved?.data.text).toBe('a before read-only');
+    expect(htmlOf(saved?.data.text)).toBe('a before read-only');
   });
 
   it('a leader that turns read-only keeps the lock until its last write lands, so the next leader never writes beside it', async () => {
     const events: string[] = [];
     const slowSave = (tab: string) => vi.fn(async (data: OutputData) => {
-      const text = data.blocks.find((block) => block.id === 'a')?.data.text as string | undefined;
+      const text = htmlOf(data.blocks.find((block) => block.id === 'a')?.data.text) as string | undefined;
 
       events.push(`${tab} start ${text}`);
       await wait(400);
@@ -412,7 +413,7 @@ describe('Core — the leader saves structural changes made in a follower', () =
     expect(follower.moduleInstances.TabSync.role).toBe('leader');
     const saved = (onSave.mock.lastCall?.[0] as OutputData | undefined)?.blocks.find((block) => block.id === 'a');
 
-    expect(saved?.data.text).toBe('a edited');
+    expect(htmlOf(saved?.data.text)).toBe('a edited');
   });
 
   it('the leader gets onChange for a follower text edit within a frame, not a batch window', async () => {
@@ -474,7 +475,7 @@ describe('Core — the leader saves structural changes made in a follower', () =
     });
     const saved = (onSave.mock.lastCall?.[0] as OutputData).blocks.find((block) => block.id === 'b');
 
-    expect(saved?.data.text).toBe('six');
+    expect(htmlOf(saved?.data.text)).toBe('six');
   });
 });
 
@@ -516,18 +517,18 @@ describe('Core — the tab the user works in saves', () => {
     expect(follower.moduleInstances.TabSync.role).toBe('leader');
     expect(leader.moduleInstances.TabSync.role).toBe('follower');
     expect(leaderSave).toHaveBeenCalledTimes(1);
-    expect((leaderSave.mock.lastCall?.[0] as OutputData).blocks[0].data.text).toBe('a by leader');
+    expect(htmlOf((leaderSave.mock.lastCall?.[0] as OutputData).blocks[0].data.text)).toBe('a by leader');
 
     await oneWindow();
     // One save on takeover: bindings that ride onSave in this tab are current at once.
     expect(followerSave).toHaveBeenCalledTimes(1);
-    expect((followerSave.mock.lastCall?.[0] as OutputData).blocks[0].data.text).toBe('a by leader');
+    expect(htmlOf((followerSave.mock.lastCall?.[0] as OutputData).blocks[0].data.text)).toBe('a by leader');
 
     await follower.moduleInstances.API.methods.blocks.update('b', { text: 'b by follower' });
     await oneWindow();
 
     expect(followerSave).toHaveBeenCalledTimes(2);
-    expect((followerSave.mock.lastCall?.[0] as OutputData).blocks[1].data.text).toBe('b by follower');
+    expect(htmlOf((followerSave.mock.lastCall?.[0] as OutputData).blocks[1].data.text)).toBe('b by follower');
     expect(leaderSave).toHaveBeenCalledTimes(1);
   });
 });

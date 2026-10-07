@@ -3,6 +3,7 @@ import { Blok } from '../../src/blok';
 import { Paragraph } from '../../src/tools/paragraph';
 import { ListItem } from '../../src/tools/list';
 import type { OutputData } from '../../types';
+import { htmlOf } from './helpers/saved-as-html';
 
 /**
  * The sharpest trap in the migration surface: `config.migrations` used to run at
@@ -73,7 +74,7 @@ describe('config.migrations + dataModel: auto round-trip', () => {
     const saved = await instance.save();
     const listBlock = saved.blocks.find((block) => block.type === 'list');
 
-    expect(listBlock?.data.text).toBe('migrated item');
+    expect(htmlOf(listBlock?.data.text)).toBe('migrated item');
     // The legacy nested container must NOT come back: 'auto' saw the migrated
     // (flat) shape, so it preserves that shape instead of collapsing.
     expect(listBlock?.data.items).toBeUndefined();

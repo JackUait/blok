@@ -372,7 +372,7 @@ Restore is a forward edit, not a rewind. It runs inside the room, through the sa
 - A restore whose update would not fit one sync frame answers 413 and changes nothing. The limit is `CollabRoomOptions.AnnouncedMaxMessageBytes`, or 1 MiB when it is unset.
 - A block whose `type` or `tunes` changed is removed and inserted again.
 
-Other answers, on every history route:
+The history routes can also answer the statuses below. 400 and 404 need a lineage or sequence in the path, and 500 needs a replay.
 
 | Status | When |
 | --- | --- |

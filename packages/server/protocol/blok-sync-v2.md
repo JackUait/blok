@@ -980,14 +980,16 @@ it does not remove history.
 - It needs `Blok-Idempotency-Key` (12.1). The digest covers the request, that
   is `restore`, the lineage and the sequence, never the planned edits. So a
   retry with the same key returns the first receipt.
-- It MAY send `If-Match` (12.2), with the same 412 and 428 rules.
+- It MAY send `If-Match` (12.2). A stale tag answers 412 and changes nothing.
+  A server without history answers 501 here, never 428.
 - A restore that changes nothing answers 204 with the current head.
 - The server measures the update before it applies it. If the sync frame that
   carries it would pass the announced message limit, or 1 MiB when none is
   announced, the server answers 413 and changes nothing.
 - A block whose `type` or `tunes` changed is removed and inserted again.
 
-Every history route also answers:
+The history routes can also answer the statuses below. 400 and 404 need a
+lineage or sequence in the path, and 500 needs a replay.
 
 | Status | When |
 | --- | --- |

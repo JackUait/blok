@@ -401,8 +401,64 @@ public sealed class LocalCollabOperationHistoryTests : IDisposable
     Assert.Contains(logs, line => line.Contains(CollabLineageLedger.FileName, StringComparison.Ordinal));
   }
 
+  [Fact]
+  public async Task RefusesToDeleteWhenTheManifestIsEmpty()
+  {
+    var store = Store();
+    var lineages = await SeedThreeLineagesAsync(store);
+    File.WriteAllBytes(ManifestPath, []);
+
+    // Without a manifest nothing says which generation is live.
+    Assert.Equal(
+        CollabLineageDeleteOutcome.NotFound,
+        await store.DeleteLineageAsync(DocId, lineages[2]));
+    Assert.Equal(
+        CollabLineageDeleteOutcome.NotFound,
+        await store.DeleteLineageAsync(DocId, lineages[0]));
+    Assert.Single(Directory.GetFiles(DocDirectory, "journal.3.*"));
+    Assert.Single(Directory.GetFiles(DocDirectory, "journal.1.*"));
+  }
+
+  [Fact]
+  public async Task RefusesToDeleteWhenNoManifestSlotDecodes()
+  {
+    var store = Store();
+    var lineages = await SeedThreeLineagesAsync(store);
+    File.WriteAllBytes(ManifestPath, new byte[File.ReadAllBytes(ManifestPath).Length]);
+
+    await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        await store.DeleteLineageAsync(DocId, lineages[2]));
+    Assert.Single(Directory.GetFiles(DocDirectory, "journal.3.*"));
+  }
+
+  [Fact]
+  public async Task AListedLineageWhoseJournalIsGoneReadsAsCorrupt()
+  {
+    var store = Store();
+    var lineages = await SeedThreeLineagesAsync(store);
+    File.Delete(JournalPath(1));
+
+    await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        await ToListAsync(store.ReadHeadersAsync(DocId, lineages[0])));
+    await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        await ToListAsync(store.ReadRecordsAsync(DocId, lineages[0], 1)));
+  }
+
+  [Fact]
+  public async Task AListedLineageWhoseBaselineIsGoneReadsAsCorrupt()
+  {
+    var store = Store();
+    var lineages = await SeedThreeLineagesAsync(store);
+    File.Delete(Assert.Single(Directory.GetFiles(DocDirectory, "baseline.1.*")));
+
+    await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        await store.ReadBaselineAsync(DocId, lineages[0]));
+  }
+
   private string DocDirectory =>
       Path.Combine(root, CollabDocKey.For(DocId) + ".journal");
+
+  private string ManifestPath => Path.Combine(DocDirectory, "manifest");
 
   private string LedgerPath => Path.Combine(DocDirectory, CollabLineageLedger.FileName);
 

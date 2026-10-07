@@ -122,7 +122,15 @@ internal static class CollabLineageLedger
 
     try
     {
-      bytes = File.ReadAllBytes(path);
+      // Unlocked reads share everything, so on Windows they never block an
+      // append or a purge's delete.
+      using var file = new FileStream(
+          path,
+          FileMode.Open,
+          FileAccess.Read,
+          FileShare.ReadWrite | FileShare.Delete);
+      bytes = new byte[file.Length];
+      file.ReadExactly(bytes);
     }
     catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
     {

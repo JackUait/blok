@@ -120,6 +120,10 @@ internal sealed class LocalCollabOperationStore :
   private const int ManifestSize = ManifestSlotSize * 2;
 
   private const byte SealedVersion = 1;
+
+  // History reads take no lock, so they must not block a live writer, a purge
+  // or a delete where sharing is enforced (Windows).
+  private const FileShare HistoryShare = FileShare.ReadWrite | FileShare.Delete;
   private const int SealedHeaderSize = 24;
   private const int ChecksumSize = 32;
 
@@ -234,14 +238,25 @@ internal sealed class LocalCollabOperationStore :
       return ValueTask.FromResult<IReadOnlyList<ReadOnlyMemory<byte>>?>(null);
     }
 
-    return ValueTask.FromResult<IReadOnlyList<ReadOnlyMemory<byte>>?>(ReadBaseline(
-        docDirectory,
-        Manifest.Unseeded with
-        {
-          Generation = entry.Generation,
-          GenerationFence = entry.GenerationFence,
-        },
-        documentId));
+    try
+    {
+      return ValueTask.FromResult<IReadOnlyList<ReadOnlyMemory<byte>>?>(ReadBaseline(
+          docDirectory,
+          Manifest.Unseeded with
+          {
+            Generation = entry.Generation,
+            GenerationFence = entry.GenerationFence,
+          },
+          documentId,
+          HistoryShare));
+    }
+    catch (InvalidDataException error)
+        when (error.InnerException is FileNotFoundException or DirectoryNotFoundException &&
+            FindLineage(docDirectory, documentId, lineage) is null)
+    {
+      // Deleted while this read ran: unknown now, not corrupt.
+      return ValueTask.FromResult<IReadOnlyList<ReadOnlyMemory<byte>>?>(null);
+    }
   }
 
   public async IAsyncEnumerable<CollabRecordHeader> ReadHeadersAsync(
@@ -279,17 +294,13 @@ internal sealed class LocalCollabOperationStore :
       yield break;
     }
 
-    // Read-only and sharing everything: a live session keeps appending to this
-    // file, and no history read may take the fence or truncate a torn tail.
-    await using var file = new FileStream(
-        JournalPath(docDirectory, entry.Generation, entry.GenerationFence),
-        new FileStreamOptions
-        {
-          Mode = FileMode.Open,
-          Access = FileAccess.Read,
-          Share = FileShare.ReadWrite | FileShare.Delete,
-          BufferSize = 0,
-        });
+    await using var file = OpenHistoryJournal(docDirectory, documentId, lineage, entry);
+
+    if (file is null)
+    {
+      yield break;
+    }
+
     var reader = new HistoryJournalReader(file, documentId);
 
     while (await reader.NextAsync(cancellationToken) is { } record)
@@ -325,6 +336,46 @@ internal sealed class LocalCollabOperationStore :
   }
 
   /// <summary>
+  /// Opens a listed lineage's journal for a history read. Null when the
+  /// lineage was deleted meanwhile. A journal missing while its lineage is
+  /// still listed throws <see cref="InvalidDataException"/>, like a missing
+  /// baseline does, so callers see one corruption type.
+  /// </summary>
+  private FileStream? OpenHistoryJournal(
+      string docDirectory,
+      string documentId,
+      string lineage,
+      CollabLineageEntry entry)
+  {
+    var path = JournalPath(docDirectory, entry.Generation, entry.GenerationFence);
+
+    try
+    {
+      // Read-only and sharing everything: a live session keeps appending to
+      // this file, and no history read may take the fence or truncate a tail.
+      return new FileStream(path, new FileStreamOptions
+      {
+        Mode = FileMode.Open,
+        Access = FileAccess.Read,
+        Share = HistoryShare,
+        BufferSize = 0,
+      });
+    }
+    catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
+    {
+      if (FindLineage(docDirectory, documentId, lineage) is null)
+      {
+        return null;
+      }
+
+      throw new InvalidDataException(
+          $"collab: \"{documentId}\" lists lineage {lineage}, but " +
+          $"{Path.GetFileName(path)} is not there.",
+          error);
+    }
+  }
+
+  /// <summary>
   /// Removes one superseded generation's journal, baseline and checkpoints.
   /// The caller holds the document's ledger gate.
   /// </summary>
@@ -345,7 +396,14 @@ internal sealed class LocalCollabOperationStore :
 
     var lineages = ResolveLineages(docDirectory, documentId, out var current);
 
-    if (current is { } live && string.Equals(live.Lineage, lineage, StringComparison.Ordinal))
+    // Without a seeded manifest nothing says which generation is live, so
+    // nothing may be deleted. An unreadable one already threw above.
+    if (current is not { } live)
+    {
+      return CollabLineageDeleteOutcome.NotFound;
+    }
+
+    if (string.Equals(live.Lineage, lineage, StringComparison.Ordinal))
     {
       return CollabLineageDeleteOutcome.Current;
     }
@@ -362,7 +420,7 @@ internal sealed class LocalCollabOperationStore :
 
     // Generation numbers are never reused by two publications, so a matching
     // number is the live generation whatever its lineage reads as.
-    if (current is { } manifest && target.Generation == manifest.Generation)
+    if (target.Generation == live.Generation)
     {
       return CollabLineageDeleteOutcome.Current;
     }
@@ -508,7 +566,7 @@ internal sealed class LocalCollabOperationStore :
             createdAt));
       }
     }
-    catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+    catch (Exception error) when (error is not OperationCanceledException)
     {
       log?.Invoke(
           $"collab: could not record lineage {published.Lineage} of \"{documentId}\" " +
@@ -1287,13 +1345,15 @@ internal sealed class LocalCollabOperationStore :
   private static IReadOnlyList<ReadOnlyMemory<byte>> ReadBaseline(
       string docDirectory,
       Manifest manifest,
-      string documentId)
+      string documentId,
+      FileShare share = FileShare.Read)
   {
     var content = ReadSealed(
         BaselinePath(docDirectory, manifest.Generation, manifest.GenerationFence),
         BaselineMagic,
         documentId,
-        out _);
+        out _,
+        share);
 
     if (!CollabWorkingSetCodec.TryDecodeFrames(content, out var frames))
     {
@@ -1357,13 +1417,18 @@ internal sealed class LocalCollabOperationStore :
       string path,
       ReadOnlySpan<byte> magic,
       string documentId,
-      out ulong tag)
+      out ulong tag,
+      FileShare share = FileShare.Read)
   {
     byte[] bytes;
 
     try
     {
-      bytes = File.ReadAllBytes(path);
+      // FileShare.Read is what File.ReadAllBytes used, so the open path keeps
+      // its sharing; history reads pass HistoryShare.
+      using var file = new FileStream(path, FileMode.Open, FileAccess.Read, share);
+      bytes = new byte[file.Length];
+      file.ReadExactly(bytes);
     }
     catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
     {

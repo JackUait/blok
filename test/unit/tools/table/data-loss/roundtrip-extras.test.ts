@@ -65,9 +65,9 @@ describe('extra round trips', () => {
       booted = await boot(legacyDocWithNestedTable(), { dataModel });
       const out = flatten(await booted.editor.save());
       const items = (out?.blocks ?? []).filter(b => b.type === 'list')
-        .flatMap(b => ((b.data as { items?: Array<{ content: string }> }).items ?? []).map(i => i.content));
+        .flatMap(b => ((b.data as { items?: Array<{ content: unknown }> }).items ?? []).map(i => i.content));
 
-      expect(items).toEqual(['one', 'two']);
+      expect(items).toEqual([[{ text: 'one' }], [{ text: 'two' }]]);
     });
   }
 

@@ -148,7 +148,7 @@ describe('a tool calling the blocks API while a peer change is applied', () => {
     editor.history.undo();
     await settle();
 
-    expect(await paragraphText()).toBe('start');
+    expect(await paragraphText()).toEqual([{ text: 'start' }]);
   });
 
   it('keeps the local typing run one undo step when a peer changes a table', async () => {
@@ -170,7 +170,7 @@ describe('a tool calling the blocks API while a peer change is applied', () => {
     editor.history.undo();
     await settle();
 
-    expect(await paragraphText()).toBe('start');
+    expect(await paragraphText()).toEqual([{ text: 'start' }]);
   });
 
   it('keeps the local typing run one undo step across an untracked repair', async () => {
@@ -194,6 +194,6 @@ describe('a tool calling the blocks API while a peer change is applied', () => {
     instance.history.undo();
     await settle();
 
-    expect(await paragraphText()).toBe('start');
+    expect(await paragraphText()).toEqual([{ text: 'start' }]);
   });
 });

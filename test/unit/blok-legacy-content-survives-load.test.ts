@@ -67,7 +67,10 @@ describe('legacy content survives a load + save', () => {
     const callout = saved.blocks.find((block) => block.type === 'callout');
     const body = (callout?.data.body as { blocks: OutputBlockData[] } | undefined)?.blocks ?? [];
 
-    expect(body.map((block) => block.data.text)).toEqual(['<strong>Heads</strong><br>up', 'body']);
+    expect(body.map((block) => block.data.text)).toEqual([
+      [{ text: 'Heads', marks: { bold: true } }, { text: '\nup' }],
+      [{ text: 'body' }],
+    ]);
   }, 60_000);
 
   it.each(['legacy', 'auto'] as const)('keeps a list inside a string table cell (dataModel: %s)', async (dataModel) => {
@@ -80,10 +83,10 @@ describe('legacy content survives a load + save', () => {
     const cellBlocks = saved.blocks.filter((block) => block.parent === 't1');
 
     expect(cellBlocks.map((block) => [block.type, block.data.text])).toEqual([
-      ['paragraph', 'x'],
-      ['list', 'one'],
-      ['list', 'two'],
-      ['paragraph', 'plain'],
+      ['paragraph', [{ text: 'x' }]],
+      ['list', [{ text: 'one' }]],
+      ['list', [{ text: 'two' }]],
+      ['paragraph', [{ text: 'plain' }]],
     ]);
   }, 60_000);
 
@@ -96,9 +99,11 @@ describe('legacy content survives a load + save', () => {
 
     const cellText = saved.blocks.find((block) => block.parent === 't1')?.data.text;
 
-    expect(cellText).toContain('<u>u</u>');
-    expect(cellText).toMatch(/<(s|del)>s<\/\1>/);
-    expect(cellText).toMatch(/<(s|del)>d<\/\1>/);
-    expect(cellText).toContain('<code>c</code>');
+    // <s> and <del> are both strikethrough, so their adjacent runs merge.
+    expect(cellText).toEqual([
+      { text: 'u', marks: { underline: true } },
+      { text: 'sd', marks: { strikethrough: true } },
+      { text: 'c', marks: { code: true } },
+    ]);
   }, 60_000);
 });

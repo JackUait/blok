@@ -6,6 +6,7 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, gotoTestPage, test } from './helpers/shared-page';
+import { savedAsHtml } from './helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -148,13 +149,13 @@ const createBlokWithElements = async (page: Page, elements: OutputData['blocks']
 };
 
 const saveBlok = async (page: Page): Promise<OutputData> => {
-  return await page.evaluate(async () => {
+  return savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance not found');
     }
 
     return await window.blokInstance.save();
-  });
+  }));
 };
 
 const paste = async (page: Page, locator: Locator, data: Record<string, string>): Promise<void> => {

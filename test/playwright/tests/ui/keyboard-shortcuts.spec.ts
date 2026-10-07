@@ -7,6 +7,7 @@ import type { BlockToolConstructable, InlineToolConstructable } from '@/types/to
 import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const BLOK_BUNDLE_PATH = path.resolve(__dirname, '../../../../dist/editorjs.umd.js');
 
@@ -252,13 +253,13 @@ const createBlokWithTools = async (
 };
 
 const saveBlok = async (page: Page): Promise<OutputData> => {
-  return await page.evaluate(async () => {
+  return savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance not found');
     }
 
     return await window.blokInstance.save();
-  });
+  }));
 };
 
 test.describe('keyboard shortcuts', () => {

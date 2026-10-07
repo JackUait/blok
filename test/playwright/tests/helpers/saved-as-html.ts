@@ -18,7 +18,11 @@ export const blocksAsHtml = <T extends OutputBlockData>(blocks: T[]): T[] =>
  * A host save with its rich fields read back as HTML.
  * @param saved - a host save
  */
-export const savedAsHtml = <T extends OutputData>(saved: T): T => ({ ...saved, blocks: blocksAsHtml(saved.blocks) });
+export function savedAsHtml<T extends OutputData>(saved: T): T;
+export function savedAsHtml<T extends OutputData>(saved: T | undefined): T | undefined;
+export function savedAsHtml<T extends OutputData>(saved: T | undefined): T | undefined {
+  return saved === undefined ? saved : { ...saved, blocks: blocksAsHtml(saved.blocks) };
+}
 
 /**
  * One saved rich field as HTML. Strings (collaboration, legacy output) pass through.

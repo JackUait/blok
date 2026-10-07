@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputBlockData, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 /**
  * Pasted HTML must keep its lines apart: <br> in an inline paste, <div>
@@ -61,7 +62,7 @@ const paste = async (page: Page, data: { html?: string; text: string }): Promise
 };
 
 const save = async (page: Page): Promise<OutputData['blocks']> =>
-  await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []);
+  blocksAsHtml(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []));
 
 /** `type:text` of every saved block, skipping empty paragraphs. */
 const savedTexts = async (page: Page): Promise<string[]> =>
@@ -124,12 +125,15 @@ test.describe('paste keeps line structure', () => {
     await paste(page, { html: '<aside>loose <b>B</b><br>text <em>I</em></aside>', text: 'loose B\ntext I' });
 
     await expect.poll(async () => {
-      const blocks = await save(page);
+      const blocks = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []);
       const callout = blocks.find((block) => block.type === 'callout');
 
       return blocks.filter((block) => callout !== undefined && block.parent === callout.id)
-        .map((block) => `${block.type}:${String(block.data.text)}`);
-    }).toEqual(['paragraph:loose <strong>B</strong>', 'paragraph:text <em>I</em>']);
+        .map((block) => [block.type, block.data.text]);
+    }).toEqual([
+      ['paragraph', [{ text: 'loose ' }, { text: 'B', marks: { bold: true } }]],
+      ['paragraph', [{ text: 'text ' }, { text: 'I', marks: { italic: true } }]],
+    ]);
   });
 
   for (const html of ['<pre>line1<br>line2</pre>', '<pre><div>line1</div><div>line2</div></pre>']) {

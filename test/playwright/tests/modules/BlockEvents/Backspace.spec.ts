@@ -4,6 +4,7 @@ import type { OutputData } from '../../../../../types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 /**
  * Type for accessing internal Blok modules in tests
@@ -325,13 +326,13 @@ const createUnmergeableToolBlok = async (page: Page, options: { hasConversionCon
  * @param page - Playwright Page instance
  */
 const saveBlok = async (page: Page): Promise<OutputData> => {
-  return page.evaluate(async () => {
+  return savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance is not initialized');
     }
 
     return window.blokInstance.save();
-  });
+  }));
 };
 
 /**

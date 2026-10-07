@@ -4,6 +4,7 @@ import type { OutputData } from '../../../../../types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
@@ -53,13 +54,13 @@ const createParagraphBlok = async (page: Page, texts: string[]): Promise<void> =
 };
 
 const saveBlok = async (page: Page): Promise<OutputData> => {
-  return page.evaluate(async () => {
+  return savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance is not ready');
     }
 
     return window.blokInstance.save();
-  });
+  }));
 };
 
 /** Index of the highlighted result in the picker grid, read through the combobox host. */

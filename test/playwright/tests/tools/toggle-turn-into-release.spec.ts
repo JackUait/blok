@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 /**
  * Notion-parity bug #2: turning a TOGGLE heading into plain text/heading via the
@@ -76,7 +77,7 @@ const openBlockTunes = async (page: Page, hasText: string): Promise<void> => {
 };
 
 const save = async (page: Page): Promise<OutputData | undefined> =>
-  page.evaluate(async () => window.blokInstance?.save());
+  savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
 test.describe('toggle heading turn-into releases children', () => {
   test.beforeAll(() => {

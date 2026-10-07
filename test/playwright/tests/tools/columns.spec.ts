@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON = '[data-blok-interface=blok] [data-blok-testid="settings-toggler"]';
@@ -145,13 +146,24 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
   await openFixtureToggles(page, data);
 };
 
+/** The save as the host gets it, for reloading: a reload must read segments, not converted HTML. */
+const saveRaw = async (page: Page): Promise<OutputData> => {
+  const saved = await page.evaluate(async () => window.blokInstance?.save());
+
+  if (saved === undefined) {
+    throw new Error('Blok instance not found');
+  }
+
+  return saved;
+};
+
 const saveBlok = async (page: Page): Promise<OutputData> => {
-  return await page.evaluate(async () => {
+  return savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance not found');
     }
     return await window.blokInstance.save();
-  });
+  }));
 };
 
 test.describe('Columns tool', () => {
@@ -346,7 +358,7 @@ test.describe('Columns tool', () => {
     expect((leftColumn?.data as { widthRatio?: number }).widthRatio).toBeGreaterThan(1);
 
     // Reloading the saved tree restores the uneven widths
-    await createBlok(page, saved);
+    await createBlok(page, await saveRaw(page));
 
     const reloaded = page.locator('[data-blok-column]');
     const widthsReloaded = await reloaded.evaluateAll(els =>
@@ -466,7 +478,7 @@ test.describe('Columns tool', () => {
     expect(saved.blocks.find(b => b.id === 'p2')?.parent).toBeDefined();
 
     // Reload round-trips the layout
-    await createBlok(page, saved);
+    await createBlok(page, await saveRaw(page));
     await expect(page.locator('[data-blok-column]')).toHaveCount(2);
     await expect(page.getByText('Left para')).toBeVisible();
     await expect(page.getByText('Right para')).toBeVisible();
@@ -505,7 +517,7 @@ test.describe('Columns tool', () => {
       expect(saved.blocks.find(b => b.id === 'box')?.content).toEqual([list?.id, 'after']);
       expect((list?.content ?? []).map(id => saved.blocks.find(b => b.id === id)?.content)).toEqual([['inner'], ['src']]);
 
-      await createBlok(page, saved);
+      await createBlok(page, await saveRaw(page));
       await expect(page.locator('[data-blok-column]')).toHaveCount(2);
       await expect(page.getByText('Dragged para')).toBeVisible();
     });

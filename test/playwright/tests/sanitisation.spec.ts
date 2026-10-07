@@ -3,6 +3,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
 import { expect, gotoTestPage, test } from './helpers/shared-page';
+import { savedAsHtml } from './helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const INITIAL_BLOCK_ID = 'sanitisation-initial-block';
@@ -119,13 +120,13 @@ const createBlok = async (page: Page): Promise<void> => {
  * @returns The saved output data
  */
 const saveBlok = async (page: Page): Promise<OutputData> => {
-  return await page.evaluate<OutputData>(async () => {
+  return savedAsHtml(await page.evaluate<OutputData>(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance not found');
     }
 
     return await window.blokInstance.save();
-  });
+  }));
 };
 
 /**

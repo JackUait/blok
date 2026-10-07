@@ -18,6 +18,7 @@ import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const TOGGLE_CHILDREN_SELECTOR = '[data-blok-toggle-children]';
@@ -73,13 +74,13 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
 };
 
 const saveBlok = async (page: Page): Promise<OutputData> => {
-  return page.evaluate(async () => {
+  return savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance not found');
     }
 
     return window.blokInstance.save();
-  });
+  }));
 };
 
 const waitMs = async (page: Page, ms: number): Promise<void> => {

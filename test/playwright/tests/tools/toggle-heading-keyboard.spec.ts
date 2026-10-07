@@ -5,6 +5,7 @@ import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 // ---------------------------------------------------------------------------
 // Selectors
@@ -66,7 +67,7 @@ const createBlokWithData = async (
 };
 
 const saveData = async (page: Page): Promise<OutputData> => {
-  const data = await page.evaluate(() => window.blokInstance?.save());
+  const data = savedAsHtml(await page.evaluate(() => window.blokInstance?.save()));
 
   if (!data) {
     throw new Error('blokInstance is not available');

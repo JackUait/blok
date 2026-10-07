@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 /**
  * Regression suite for the "paste ejection" bug family across EVERY container
@@ -100,8 +101,19 @@ const createBlok = async (page: Page, data?: OutputData, extraTools: string[] = 
   await openFixtureToggles(page, data);
 };
 
-const saveBlok = async (page: Page): Promise<{ blocks: SavedBlock[] }> => {
+/** The save as the host gets it, for reloading: a reload must read segments, not converted HTML. */
+const saveRaw = async (page: Page): Promise<OutputData> => {
   const saved = await page.evaluate(async () => window.blokInstance?.save());
+
+  if (saved === undefined) {
+    throw new Error('Blok instance not found');
+  }
+
+  return saved;
+};
+
+const saveBlok = async (page: Page): Promise<{ blocks: SavedBlock[] }> => {
+  const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
   expect(saved, 'blok.save() returned undefined').toBeDefined();
 
@@ -147,7 +159,7 @@ const buildHeaderClipboardPayload = (text: string, level = 2): string => JSON.st
 const waitForSavedBlockText = async (page: Page, expectedText: string): Promise<void> => {
   await expect.poll(
     async () => {
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const blocks = (saved as { blocks: SavedBlock[] } | undefined)?.blocks ?? [];
 
       return blocks.some(b => typeof b.data?.text === 'string' && b.data.text.includes(expectedText));
@@ -203,7 +215,7 @@ test.describe('paste-into-container-child replace=true regression', () => {
 
     // Reload with the saved data — any drift that hides behind insertMany /
     // Renderer round-trip surfaces here.
-    await createBlok(page, saved);
+    await createBlok(page, await saveRaw(page));
     const reloaded = await saveBlok(page);
 
     const reloadedCallout = reloaded.blocks.find(b => b.type === 'callout');
@@ -252,7 +264,7 @@ test.describe('paste-into-container-child replace=true regression', () => {
     expect(rootBlocks.map(b => b.type), 'root should only contain the toggle').toStrictEqual(['toggle']);
 
     // Reload cycle.
-    await createBlok(page, saved);
+    await createBlok(page, await saveRaw(page));
     const reloaded = await saveBlok(page);
 
     const reloadedToggle = reloaded.blocks.find(b => b.type === 'toggle');
@@ -309,7 +321,7 @@ test.describe('paste-into-container-child replace=true regression', () => {
     expect(rootBlocks[0]?.id).toBe(parentHeader?.id);
 
     // Reload cycle.
-    await createBlok(page, saved);
+    await createBlok(page, await saveRaw(page));
     const reloaded = await saveBlok(page);
 
     const reloadedParent = reloaded.blocks.find(b => b.type === 'header' && b.data?.text === 'Section');
@@ -394,7 +406,7 @@ test.describe('paste-into-container-child replace=true regression', () => {
 
     // Reload cycle — any drift hidden behind the table's collapseToLegacy /
     // insertMany round-trip is caught here.
-    await createBlok(page, saved, ['Table']);
+    await createBlok(page, await saveRaw(page), ['Table']);
     const reloaded = await saveBlok(page);
 
     const reloadedTable = reloaded.blocks.find(b => b.type === 'table');

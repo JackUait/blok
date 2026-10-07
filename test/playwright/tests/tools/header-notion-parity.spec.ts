@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const HEADER_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`;
@@ -73,7 +74,7 @@ const openBlockTunes = async (page: Page): Promise<void> => {
 };
 
 const save = async (page: Page): Promise<OutputData | undefined> =>
-  page.evaluate(async () => window.blokInstance?.save());
+  savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
 const headerData = (text: string, level = 2, extra: Record<string, unknown> = {}): OutputData => ({
   blocks: [{ type: 'header', data: { text, level, ...extra } }],

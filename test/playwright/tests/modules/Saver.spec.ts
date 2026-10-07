@@ -168,7 +168,7 @@ test.describe('saver module', () => {
     expect(savedData.blocks).toHaveLength(1);
     expect(savedData.blocks[0]?.type).toBe('paragraph');
     expect(savedData.blocks[0]?.data).toMatchObject({
-      text: BLOCK_TEXT,
+      text: [{ text: BLOCK_TEXT }],
     });
   });
 
@@ -227,7 +227,7 @@ test.describe('saver module', () => {
 
     expect(savedData.blocks[0]?.type).toBe('header');
     expect(savedData.blocks[0]?.data).toMatchObject({
-      text: BLOCK_TEXT,
+      text: [{ text: BLOCK_TEXT }],
       level: 3,
     });
   });

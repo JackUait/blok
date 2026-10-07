@@ -42,7 +42,17 @@ internal static class HistoryEndpoint
       return;
     }
 
-    var result = await admitted.Rooms.HistoryAsync(admitted.Doc, context.RequestAborted);
+    if (!TryQueryNumber(context, "group", out var minutes) || minutes is not (null or 1 or 15 or 60))
+    {
+      await SyncEndpoint.RefuseAsync(context, StatusCodes.Status400BadRequest, "group must be 1, 15 or 60\n");
+
+      return;
+    }
+
+    var result = await admitted.Rooms.HistoryAsync(
+        admitted.Doc,
+        minutes is { } window ? TimeSpan.FromMinutes(window) : null,
+        context.RequestAborted);
 
     if (result.Status != CollabHistoryStatus.Ready)
     {
@@ -282,6 +292,31 @@ internal static class HistoryEndpoint
     }
 
     return (lineage, sequence);
+  }
+
+  /// <summary>
+  /// An optional query number, parsed like the route's sequence. Absent is
+  /// null; a repeated, empty or signed value is false.
+  /// </summary>
+  private static bool TryQueryNumber(HttpContext context, string name, out ulong? value)
+  {
+    value = null;
+
+    if (!context.Request.Query.TryGetValue(name, out var values))
+    {
+      return true;
+    }
+
+    // NumberStyles.None: the default would take "+1" and surrounding spaces.
+    if (values.Count != 1 ||
+        !ulong.TryParse(values[0], NumberStyles.None, CultureInfo.InvariantCulture, out var number))
+    {
+      return false;
+    }
+
+    value = number;
+
+    return true;
   }
 
   /// <summary>The route's lineage. Anything not shaped like one is a 404 and never reaches the store.</summary>

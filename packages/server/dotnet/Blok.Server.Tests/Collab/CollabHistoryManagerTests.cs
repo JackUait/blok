@@ -69,6 +69,23 @@ public sealed class CollabHistoryManagerTests
   }
 
   [Fact]
+  public async Task AGroupWindowReplacesTheDefaultGrouping()
+  {
+    operations.RecordSpacing = TimeSpan.FromSeconds(90);
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    await EditAsync(manager, Update("a", "1"));
+    await EditAsync(manager, Update("a", "2"));
+    await EditAsync(manager, Update("a", "3"));
+
+    var byDefault = await manager.HistoryAsync(DocId);
+    var byMinute = await manager.HistoryAsync(DocId, TimeSpan.FromMinutes(1));
+
+    Assert.Equal([3UL, 0UL], byDefault.Versions.Select(version => version.Sequence));
+    Assert.Equal([3UL, 2UL, 1UL, 0UL], byMinute.Versions.Select(version => version.Sequence));
+  }
+
+  [Fact]
   public async Task AReadAnswersTheExportAtThatPointWithItsTime()
   {
     var manager = CreateManager();

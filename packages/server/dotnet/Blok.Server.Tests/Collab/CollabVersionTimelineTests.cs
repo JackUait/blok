@@ -168,4 +168,35 @@ public sealed class CollabVersionTimelineTests
         [("new", 1UL), ("new", 0UL), ("old", 1UL), ("old", 0UL)],
         versions.Select(v => (v.Lineage, v.Sequence)));
   }
+
+  [Fact]
+  public void AWindowGroupsByThatWindowForBothTheGapAndTheSpan()
+  {
+    var window = TimeSpan.FromMinutes(15);
+    var versions = CollabVersionTimeline.Group(
+        [(Lineage("L1", T0), [
+            Record(1, T0),
+            Record(2, T0 + TimeSpan.FromMinutes(14)),
+            Record(3, T0 + TimeSpan.FromMinutes(15)),
+            Record(4, T0 + TimeSpan.FromMinutes(30)),
+            Record(5, T0 + TimeSpan.FromMinutes(45) + TimeSpan.FromTicks(1)),
+        ])],
+        window,
+        window);
+
+    // 3 and 4 each reach the span; 5 is one tick past the gap.
+    Assert.Equal([5UL, 4UL, 3UL, 2UL, 0UL], versions.Select(v => v.Sequence));
+  }
+
+  [Fact]
+  public void AOneMinuteWindowSplitsWhatTheDefaultKeepsTogether()
+  {
+    var headers = new[] { Record(1, T0), Record(2, T0 + TimeSpan.FromSeconds(90)) };
+    var window = TimeSpan.FromMinutes(1);
+
+    Assert.Equal([2UL, 0UL], Group((Lineage("L1", T0), headers)).Select(v => v.Sequence));
+    Assert.Equal(
+        [2UL, 1UL, 0UL],
+        CollabVersionTimeline.Group([(Lineage("L1", T0), headers)], window, window).Select(v => v.Sequence));
+  }
 }

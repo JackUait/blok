@@ -20,7 +20,13 @@ internal static class CollabVersionTimeline
   public static readonly TimeSpan MaxSpan = TimeSpan.FromMinutes(10);
 
   public static IReadOnlyList<CollabVersion> Group(
-      IReadOnlyList<(CollabLineageInfo Lineage, IReadOnlyList<CollabRecordHeader> Headers)> lineagesOldestFirst)
+      IReadOnlyList<(CollabLineageInfo Lineage, IReadOnlyList<CollabRecordHeader> Headers)> lineagesOldestFirst) =>
+      Group(lineagesOldestFirst, IdleGap, MaxSpan);
+
+  public static IReadOnlyList<CollabVersion> Group(
+      IReadOnlyList<(CollabLineageInfo Lineage, IReadOnlyList<CollabRecordHeader> Headers)> lineagesOldestFirst,
+      TimeSpan idleGap,
+      TimeSpan maxSpan)
   {
     var versions = new List<CollabVersion>();
     for (var i = lineagesOldestFirst.Count - 1; i >= 0; i--)
@@ -30,7 +36,7 @@ internal static class CollabVersionTimeline
       var start = 0;
       for (var r = 1; r <= headers.Count; r++)
       {
-        if (r < headers.Count && !StartsGroup(headers[r], headers[r - 1], headers[start]))
+        if (r < headers.Count && !StartsGroup(headers[r], headers[r - 1], headers[start], idleGap, maxSpan))
         {
           continue;
         }
@@ -49,9 +55,14 @@ internal static class CollabVersionTimeline
 
   // The store clock is wall time, so a record can be older than the one
   // before it. That negative gap never passes a limit, so it counts as 0.
-  private static bool StartsGroup(CollabRecordHeader record, CollabRecordHeader previous, CollabRecordHeader first) =>
-      record.CommittedAt - previous.CommittedAt > IdleGap
-      || record.CommittedAt - first.CommittedAt >= MaxSpan;
+  private static bool StartsGroup(
+      CollabRecordHeader record,
+      CollabRecordHeader previous,
+      CollabRecordHeader first,
+      TimeSpan idleGap,
+      TimeSpan maxSpan) =>
+      record.CommittedAt - previous.CommittedAt > idleGap
+      || record.CommittedAt - first.CommittedAt >= maxSpan;
 
   private static CollabVersion ToVersion(
       string lineage,

@@ -415,9 +415,13 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
         $"collab: the room for \"{docId}\" kept closing during an edit.");
   }
 
-  /// <summary>Every lineage the journal holds, and its versions newest first.</summary>
+  /// <summary>
+  /// Every lineage the journal holds, and its versions newest first. A
+  /// <paramref name="group"/> window replaces both default grouping limits.
+  /// </summary>
   internal async ValueTask<CollabHistoryListResult> HistoryAsync(
       string docId,
+      TimeSpan? group = null,
       CancellationToken cancellationToken = default)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
@@ -467,7 +471,9 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
     return new CollabHistoryListResult(
         CollabHistoryStatus.Ready,
         lineages,
-        CollabVersionTimeline.Group(withHeaders));
+        group is { } window
+          ? CollabVersionTimeline.Group(withHeaders, window, window)
+          : CollabVersionTimeline.Group(withHeaders));
   }
 
   /// <summary>One point of a lineage as OutputData JSON, read without the room.</summary>

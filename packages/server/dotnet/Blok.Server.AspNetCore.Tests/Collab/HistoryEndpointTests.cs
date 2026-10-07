@@ -65,6 +65,51 @@ public sealed class HistoryEndpointTests
   }
 
   [Fact]
+  public async Task TheGroupQueryChoosesTheGroupingWindow()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    await history.OpenAsync();
+    await history.EditTextAsync("two");
+    await history.EditTextAsync("three");
+    history.Journal.HeaderSpacing = TimeSpan.FromSeconds(90);
+
+    async Task<IEnumerable<ulong>> SequencesAsync(string query)
+    {
+      using var response = await history.SendAsync(HttpMethod.Get, $"/history{query}");
+
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      var body = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
+
+      return body["versions"]!.AsArray().Select(entry => entry!["sequence"]!.GetValue<ulong>()).ToList();
+    }
+
+    Assert.Equal([2UL, 0UL], await SequencesAsync(""));
+    Assert.Equal([2UL, 1UL, 0UL], await SequencesAsync("?group=1"));
+    Assert.Equal([2UL, 0UL], await SequencesAsync("?group=15"));
+    Assert.Equal([2UL, 0UL], await SequencesAsync("?group=60"));
+  }
+
+  [Theory]
+  [InlineData("?group=")]
+  [InlineData("?group=0")]
+  [InlineData("?group=5")]
+  [InlineData("?group=-1")]
+  [InlineData("?group=%2B1")]
+  [InlineData("?group=%201")]
+  [InlineData("?group=one")]
+  [InlineData("?group=1&group=1")]
+  public async Task AGroupOtherThanOneFifteenOrSixtyIsABadRequest(string query)
+  {
+    await using var history = await HistoryApp.StartAsync();
+    await history.OpenAsync();
+
+    using var response = await history.SendAsync(HttpMethod.Get, $"/history{query}");
+
+    await AssertError(response, HttpStatusCode.BadRequest, "group must be 1, 15 or 60\n");
+    Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
+  }
+
+  [Fact]
   public async Task AReadServesTheVersionWithItsPointAndNoEntityTag()
   {
     await using var history = await HistoryApp.StartAsync();
@@ -704,6 +749,9 @@ public sealed class HistoryEndpointTests
 
     internal bool CorruptLineages { get; set; }
 
+    /// <summary>When set, header N reads as committed at the Unix epoch plus N times this.</summary>
+    internal TimeSpan? HeaderSpacing { get; set; }
+
     internal ConcurrentQueue<string> LineagesAsked { get; } = new();
 
     public ValueTask<CollabDocumentOpen> OpenAsync(string documentId, CancellationToken cancellationToken = default)
@@ -741,8 +789,11 @@ public sealed class HistoryEndpointTests
         CancellationToken cancellationToken = default)
     {
       LineagesAsked.Enqueue(lineage);
+      var headers = inner.ReadHeadersAsync(documentId, lineage, cancellationToken);
 
-      return inner.ReadHeadersAsync(documentId, lineage, cancellationToken);
+      return HeaderSpacing is { } spacing
+        ? headers.Select(header => header with { CommittedAt = DateTimeOffset.UnixEpoch + (spacing * header.ServerSequence) })
+        : headers;
     }
 
     public IAsyncEnumerable<CollabOperationRecord> ReadRecordsAsync(

@@ -1130,6 +1130,9 @@ internal sealed class FakeCollabOperationStore :
   /// <summary>Resets record no created-at for the new lineage, as a backfilled store entry does.</summary>
   internal bool ResetsWithUnknownCreatedAt { get; set; }
 
+  /// <summary>Record N is committed at the Unix epoch plus N times this.</summary>
+  internal TimeSpan RecordSpacing { get; set; } = TimeSpan.FromSeconds(1);
+
   /// <summary>Cuts a current record's update short, so a replay cannot read it.</summary>
   internal void CorruptRecord(string docId, ulong sequence)
   {
@@ -1530,7 +1533,7 @@ internal sealed class FakeCollabOperationStore :
         document.Records.Add(new CollabOperationRecord(
             candidate.OperationId,
             sequence,
-            DateTimeOffset.UnixEpoch.AddSeconds(sequence),
+            DateTimeOffset.UnixEpoch + (store.RecordSpacing * sequence),
             candidate.ActorId,
             candidate.Source,
             candidate.Update,

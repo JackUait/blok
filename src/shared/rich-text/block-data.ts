@@ -25,8 +25,8 @@ export const nestedDocumentsFor: OptionsFor = type => ({ nestedDocuments: type =
 
 /**
  * {@link nestedDocumentsFor} plus the legacy containers, for readers of stored
- * documents. The editor never needs it: it converts after expanding legacy shapes
- * and before collapsing to them.
+ * documents and for editor input (a host may insert a legacy shape from a legacy
+ * save). Editor OUTPUT does not need it: it converts before collapsing.
  */
 export const legacyNestingFor: OptionsFor = type => ({ ...nestedDocumentsFor(type), legacyType: type });
 

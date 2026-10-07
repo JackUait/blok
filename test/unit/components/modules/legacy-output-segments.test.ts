@@ -13,7 +13,12 @@ interface TestEditor {
   isReady: Promise<unknown>;
   save: () => Promise<OutputData>;
   destroy: () => void;
-  blocks: { exportMarkdown: () => Promise<string> };
+  blocks: {
+    exportMarkdown: () => Promise<string>;
+    insert: (type: string, data: Record<string, unknown>) => { id: string };
+    update: (id: string, data: Record<string, unknown>) => Promise<unknown>;
+  };
+  module: { yjsManager: { toJSON: () => Array<{ id: string; data: Record<string, unknown> }> } };
 }
 
 const editors: TestEditor[] = [];
@@ -177,5 +182,28 @@ describe('legacy output carries segments', { timeout: 60_000 }, () => {
     expect(markdown).toContain('two');
     expect(markdown).toContain('title');
     expect(markdown).toContain('inside');
+  });
+
+  it('a legacy list from the host save inserts and updates as HTML inside the editor', async () => {
+    const saved = await (await createEditor({ dataModel: 'legacy', data: flatDocument })).save();
+    const legacyList = saved.blocks[0].data;
+    const editor = await createEditor({ data: { blocks: [{ id: 'p', type: 'paragraph', data: { text: 'x' } }] } });
+
+    const inserted = editor.blocks.insert('list', legacyList);
+    const updatedTarget = editor.blocks.insert('list', { text: 'old', style: 'unordered' });
+
+    await editor.blocks.update(updatedTarget.id, legacyList);
+
+    const yjsData = (id: string): Record<string, unknown> | undefined => editor.module.yjsManager.toJSON().find(block => block.id === id)?.data;
+    const html = '<strong>one</strong> &amp; &lt;x&gt;';
+    const saved2 = await editor.save();
+
+    // An update merges: the list's own text stays authoritative, but the merged
+    // legacy items must reach Yjs as HTML, never as raw segments.
+    expect(yjsData(updatedTarget.id)?.items).toEqual([{ content: html }]);
+
+    expect(yjsData(inserted.id)?.text).toBe(html);
+    expect(saved2.blocks.find(block => block.id === inserted.id)?.data.text)
+      .toEqual([{ text: 'one', marks: { bold: true } }, { text: ' & <x>' }]);
   });
 });

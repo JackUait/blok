@@ -38,8 +38,6 @@ export interface VersionChanges {
 /** The block marks for one record. Ids may be missing from the preview: a block added and removed in one version is never rendered. */
 export interface RecordPaint {
   marks: Record<string, ChangeKind>;
-  /** The block to scroll to. */
-  first: string;
 }
 
 export interface ChangeEntry {
@@ -140,11 +138,18 @@ export const blockName = (type: string): string => {
   return `${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name}`;
 };
 
-const pageFields = (keys: string[]): string | null => {
+/** The playground keeps its page title in the values map, through `history.track('title')`. */
+const VALUES_TITLE = 'values.title';
+
+/**
+ * "the page title", "the page title and data", or null for no keys.
+ * @param keys - a record's `page` keys
+ */
+export const pageFieldsLabel = (keys: string[]): string | null => {
   const names = [
-    keys.includes('title') ? 'title' : null,
+    keys.includes('title') || keys.includes(VALUES_TITLE) ? 'title' : null,
     keys.includes('icon') ? 'icon' : null,
-    keys.some((key) => key.startsWith('values.')) ? 'data' : null,
+    keys.some((key) => key.startsWith('values.') && key !== VALUES_TITLE) ? 'data' : null,
   ].filter((name): name is string => name !== null);
 
   if (names.length === 0) {
@@ -164,7 +169,7 @@ export const describeRecord = (record: ChangeRecord): string => {
   const blocks = record.blocks.length === 1 ? blockName(record.blocks[0].type) : null;
   const parts = [
     record.blocks.length > 1 ? `${record.blocks.length} blocks` : blocks,
-    pageFields(record.page ?? []),
+    pageFieldsLabel(record.page ?? []),
   ].filter((part): part is string => part !== null);
 
   return parts.length > 0 ? parts.join(' and ') : 'the page';
@@ -226,10 +231,7 @@ export const recordPaint = (record: ChangeRecord): RecordPaint | null => {
     return null;
   }
 
-  const marks = Object.fromEntries(record.blocks.map((block) => [block.id, block.kind]));
-  const shown = record.blocks.find((block) => block.kind !== 'removed') ?? record.blocks[0];
-
-  return { marks, first: shown.id };
+  return { marks: Object.fromEntries(record.blocks.map((block) => [block.id, block.kind])) };
 };
 
 const element = <K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text?: string): HTMLElementTagNameMap[K] => {

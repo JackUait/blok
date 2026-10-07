@@ -9,6 +9,7 @@ import {
   formatRecordTime,
   mountVersionChanges,
   notVisualizableNote,
+  pageFieldsLabel,
   recordPaint,
 } from '../../../src/playground/history-changes';
 import type { ChangeRecord, VersionChanges } from '../../../src/playground/history-changes';
@@ -96,6 +97,14 @@ describe('describeRecord', () => {
     expect(describeRecord(record(1, { page: ['title', 'values.k'] }))).toBe('the page title and data');
   });
 
+  it('reads the playground title, kept as values.title, as the page title', () => {
+    expect(describeRecord(record(1, { page: ['values.title'] }))).toBe('the page title');
+    expect(describeRecord(record(1, { page: ['title', 'values.title'] }))).toBe('the page title');
+    expect(describeRecord(record(1, { page: ['values.title', 'values.status'] }))).toBe('the page title and data');
+    expect(pageFieldsLabel(['values.title', 'icon'])).toBe('the page title and icon');
+    expect(pageFieldsLabel([])).toBeNull();
+  });
+
   it('joins blocks and page fields', () => {
     expect(describeRecord(record(1, { blocks: [{ id: 'a', type: 'header', kind: 'changed' }], page: ['title'] })))
       .toBe('a heading and the page title');
@@ -156,11 +165,7 @@ describe('recordPaint', () => {
       { id: 'c', type: 'paragraph', kind: 'changed' },
     ] }));
 
-    expect(paint).toEqual({ marks: { a: 'removed', b: 'moved', c: 'changed' }, first: 'b' });
-  });
-
-  it('scrolls to a removed block only when nothing else is there', () => {
-    expect(recordPaint(record(1, { blocks: [{ id: 'a', type: 'paragraph', kind: 'removed' }] }))?.first).toBe('a');
+    expect(paint).toEqual({ marks: { a: 'removed', b: 'moved', c: 'changed' } });
   });
 
   it('has nothing to paint for a record without blocks', () => {
@@ -255,7 +260,7 @@ describe('mountVersionChanges', () => {
     await panel.ready;
     entries()[1].click();
 
-    expect(onSelectRecord).toHaveBeenCalledWith(changes.changes[0], { marks: { a: 'changed' }, first: 'a' });
+    expect(onSelectRecord).toHaveBeenCalledWith(changes.changes[0], { marks: { a: 'changed' } });
     expect(entries().map((entry) => entry.getAttribute('aria-current'))).toEqual(['false', 'true']);
 
     entries()[0].click();

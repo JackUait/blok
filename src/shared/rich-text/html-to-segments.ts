@@ -3,7 +3,7 @@ import { PAGE_REFERENCE_ATTR } from '../page-reference';
 import { EQUATION_SOURCE_ATTR } from '../equation-mark';
 import type { InlineNode } from './inline-tree';
 import { readEmbed } from './guards';
-import { safeHref } from '../../components/utils/sanitize-url';
+import { hasUnsafeUrlProtocol } from '../url-policy';
 import type { RichText, RichTextLink, RichTextMarks, RichTextSegment, RichTextTextSegment } from '../../../types/rich-text';
 
 const SIMPLE_MARKS: Record<string, keyof RichTextMarks> = {
@@ -159,12 +159,12 @@ const walk = (nodes: InlineNode[], marks: RichTextMarks, out: RichTextSegment[])
       walk(node.children, { ...marks, [SIMPLE_MARKS[tag]]: true }, out);
     } else if (tag === 'a' && attrs[PAGE_REFERENCE_ATTR] !== undefined) {
       out.push(withMarks({ embed: { page: { id: attrs[PAGE_REFERENCE_ATTR] } } }, marks));
-    } else if (tag === 'a' && attrs.href !== undefined && safeHref(attrs.href) !== null) {
+    } else if (tag === 'a' && attrs.href !== undefined && !hasUnsafeUrlProtocol(attrs.href, 'href')) {
       const link = { href: attrs.href, ...(attrs.target === undefined ? {} : { target: attrs.target }), ...(attrs.rel === undefined ? {} : { rel: attrs.rel }) };
 
       walk(node.children, { ...marks, link }, out);
     } else if (tag === 'a') {
-      // No usable href (the sanitizer strips an unsafe one): keep the text, not a junk `tag:a` mark.
+      // No usable href (the sanitizer's policy strips an unsafe one): keep the text, not a junk `tag:a` mark.
       walk(node.children, marks, out);
     } else if (tag === 'span' && attrs[EQUATION_SOURCE_ATTR] !== undefined) {
       out.push(withMarks({ embed: { equation: { expression: attrs[EQUATION_SOURCE_ATTR] } } }, marks));

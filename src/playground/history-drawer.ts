@@ -6,8 +6,9 @@
  * The pure helpers come first; `mountHistoryDrawer` wires them to the page.
  */
 import './history-drawer.css';
-import { IconCheck } from '../components/icons';
+import { IconBookmark, IconCheck, IconChevronDown } from '../components/icons';
 import { createTicketSource } from '../components/utils/access-pass';
+import { prefersReducedMotion } from '../components/utils/reduced-motion';
 import type { TicketSource } from '../components/utils/access-pass';
 import type { LooseOutputBlockData, LooseOutputData } from '../../types';
 
@@ -53,11 +54,34 @@ export type HistoryRow =
     time: string;
     who: string;
     current: boolean;
+    /** Unix ms the version was saved, or null. Kept with a bookmark. */
+    at: number | null;
     /** The version under this one in the list; its changes are measured from there. */
     below: HistoryPoint | null;
   };
 
-export type ChangeMark = 'added' | 'changed' | 'removed';
+export type ChangeMark = 'added' | 'changed' | 'removed' | 'moved';
+
+/** A bookmarked point, as the page host stores it. */
+export interface HistoryBookmark extends HistoryPoint {
+  savedAt: number | null;
+}
+
+/** Minutes per version for the server, or the host's bookmarks. */
+export type HistoryGrouping = '1' | '15' | '60' | 'bookmarks';
+
+export const GROUPINGS: ReadonlyArray<{ value: HistoryGrouping; label: string }> = [
+  { value: '1', label: '1 minute' },
+  { value: '15', label: '15 minutes' },
+  { value: '60', label: '1 hour' },
+  { value: 'bookmarks', label: 'Bookmarks' },
+];
+
+/**
+ * What the drawer shows. Only the version list today; per-version edits and
+ * the Updates feed add their own modes and a draw function for each.
+ */
+export type HistoryDrawerMode = 'list';
 
 /**
  * The two `@bloklabs/core/view` functions the drawer uses. Handed in by the
@@ -69,6 +93,7 @@ export interface HistoryView {
     added: Array<{ id?: string }>;
     removed: Array<{ id?: string }>;
     changed: Array<{ id: string }>;
+    moved: Array<{ id: string }>;
   };
   blocksToHtml(
     data: LooseOutputData,
@@ -183,6 +208,7 @@ export const historyRows = (
       time: formatVersionTime(version.savedAt ?? version.startedAt, options.now, options.locale),
       who: index === 0 ? 'Current version' : authorsOf(names),
       current: index === 0,
+      at: version.savedAt ?? version.startedAt,
       below: below === undefined ? null : { lineage: below.lineage, sequence: below.sequence },
     };
     const startsLineage = index === 0 || list.versions[index - 1].lineage !== version.lineage;
@@ -191,6 +217,60 @@ export const historyRows = (
       ? [{ kind: 'lineage', label: lineageLabel(lineages.get(version.lineage), options.locale) }, row]
       : [row];
   });
+};
+
+const samePoint = (a: HistoryPoint, b: HistoryPoint): boolean => a.lineage === b.lineage && a.sequence === b.sequence;
+
+/**
+ * Whether a point is bookmarked.
+ * @param bookmarks - the host's list
+ * @param point - the version
+ */
+export const isBookmarked = (bookmarks: HistoryBookmark[], point: HistoryPoint): boolean =>
+  bookmarks.some((mark) => samePoint(mark, point));
+
+/**
+ * The list with the point added, or removed when it was there.
+ * @param bookmarks - the host's list
+ * @param mark - the point and its time
+ */
+export const toggleBookmark = (bookmarks: HistoryBookmark[], mark: HistoryBookmark): HistoryBookmark[] =>
+  isBookmarked(bookmarks, mark)
+    ? bookmarks.filter((other) => !samePoint(other, mark))
+    : [...bookmarks, mark];
+
+/**
+ * Rows for the Bookmarks grouping: newest first, the time only. Each compares
+ * with the point just before it in its lineage.
+ * @param bookmarks - the host's list
+ * @param options - clock and locale
+ */
+export const bookmarkRows = (bookmarks: HistoryBookmark[], options: { now: Date; locale?: string }): HistoryRow[] =>
+  [...bookmarks]
+    .sort((a, b) => (b.savedAt ?? -Infinity) - (a.savedAt ?? -Infinity) || b.sequence - a.sequence)
+    .map((mark) => ({
+      kind: 'version',
+      key: `${mark.lineage}:${mark.sequence}`,
+      lineage: mark.lineage,
+      sequence: mark.sequence,
+      time: formatVersionTime(mark.savedAt, options.now, options.locale),
+      who: '',
+      current: false,
+      at: mark.savedAt,
+      below: mark.sequence > 0 ? { lineage: mark.lineage, sequence: mark.sequence - 1 } : null,
+    }));
+
+/**
+ * The pages a version's page blocks point to, once each, in order.
+ * @param blocks - the version's blocks
+ */
+export const subPagesOf = (blocks: LooseOutputBlockData[]): string[] => {
+  const ids = blocks
+    .filter((block) => block.type === 'page')
+    .map((block) => block.data?.pageId)
+    .filter((id): id is string => typeof id === 'string' && id !== '');
+
+  return [...new Set(ids)];
 };
 
 const idOf = (block: LooseOutputBlockData): string | null =>
@@ -240,6 +320,10 @@ export const changePreview = (
   });
   diff.changed.forEach(({ id }) => {
     marks[id] = 'changed';
+  });
+  // A block that moved and changed shows as changed.
+  diff.moved.forEach(({ id }) => {
+    marks[id] ??= 'moved';
   });
 
   diff.removed.forEach(({ id: removedId }) => {
@@ -322,6 +406,40 @@ export const playgroundTicketUrl = (base: string, name: string | null): string =
   return trimmed ? `${base}?name=${encodeURIComponent(trimmed)}` : base;
 };
 
+
+/** How long a jumped-to block keeps its outline. */
+const FLASH_MS = 1200;
+
+/**
+ * Scrolls to the first marked block in `container` and outlines it for a
+ * moment. Returns that block, or null when nothing is marked.
+ * @param container - the rendered preview
+ */
+export const jumpToChange = (container: HTMLElement): HTMLElement | null => {
+  const target = container.querySelector<HTMLElement>('[data-pg-change]');
+
+  if (target === null) {
+    return null;
+  }
+
+  target.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  target.setAttribute('data-pg-flash', '');
+  window.setTimeout(() => target.removeAttribute('data-pg-flash'), FLASH_MS);
+
+  return target;
+};
+
+/**
+ * Sets `data-pg-change` on every rendered node of each marked block.
+ * @param container - the rendered preview
+ * @param marks - change marks by block id
+ */
+export const paintMarks = (container: HTMLElement, marks: Record<string, ChangeMark>): void => {
+  Object.entries(marks).forEach(([id, mark]) => {
+    container.querySelectorAll(`[data-blok-id="${CSS.escape(id)}"]`).forEach((node) => node.setAttribute('data-pg-change', mark));
+  });
+};
+
 export interface HistoryDrawerOptions {
   /** The header button that opens and closes the drawer. */
   button: HTMLButtonElement;
@@ -336,6 +454,10 @@ export interface HistoryDrawerOptions {
   doc(): string | null;
   self(): HistoryPerson;
   notify(message: string): void;
+  /** The dev page host that keeps bookmarks. Without it there are no bookmarks. */
+  pageHost?: string | null;
+  /** A page's title from the playground's records; null asks for the open page. */
+  titleOf?: (pageId: string | null) => string;
   now?: () => Date;
   idempotencyKey?: () => string;
 }
@@ -350,6 +472,9 @@ type VersionRow = Extract<HistoryRow, { kind: 'version' }>;
 /** Blok's menus and dialogs, which mount outside the editor column. */
 const BLOK_MENUS = '[data-blok-popover], [data-blok-top-layer]';
 const OPEN_MENU = '[data-blok-popover-opened]';
+const GROUPING_KEY = 'pg-history-group';
+const DEFAULT_GROUPING: HistoryGrouping = '15';
+const NO_BOOKMARKS = 'No bookmarked versions yet';
 
 /** Thrown for any non-OK answer; the message is what the person sees. */
 class HistoryRequestError extends Error {}
@@ -379,6 +504,37 @@ const textButton = (label: string, className: string, onClick: () => void): HTML
   return button;
 };
 
+const icon = (svg: string, className: string): HTMLSpanElement => {
+  const node = element('span', className);
+
+  node.innerHTML = svg;
+  node.setAttribute('aria-hidden', 'true');
+
+  return node;
+};
+
+const isGrouping = (value: unknown): value is HistoryGrouping => GROUPINGS.some((grouping) => grouping.value === value);
+
+const readGrouping = (bookmarks: boolean): HistoryGrouping => {
+  try {
+    const saved = localStorage.getItem(GROUPING_KEY);
+
+    return isGrouping(saved) && (bookmarks || saved !== 'bookmarks') ? saved : DEFAULT_GROUPING;
+  } catch {
+    return DEFAULT_GROUPING;
+  }
+};
+
+const saveGrouping = (value: HistoryGrouping): void => {
+  try {
+    localStorage.setItem(GROUPING_KEY, value);
+  } catch {
+    // Private windows may refuse storage; the choice then lasts for this page only.
+  }
+};
+
+const isBookmarkList = (value: unknown): value is HistoryBookmark[] => Array.isArray(value);
+
 /**
  * Mounts the drawer and its preview pane. The drawer resolves the document
  * each time it opens, so it never holds an editor or a doc id.
@@ -387,28 +543,46 @@ const textButton = (label: string, className: string, onClick: () => void): HTML
 export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer => {
   const now = options.now ?? ((): Date => new Date());
   const idempotencyKey = options.idempotencyKey ?? ((): string => crypto.randomUUID());
+  const titleOf = options.titleOf ?? ((pageId: string | null): string => pageId ?? 'this page');
+  const host = options.pageHost ?? null;
   const sources = new Map<string, TicketSource>();
   const points = new Map<string, LooseOutputData>();
   const state = {
+    mode: 'list' as HistoryDrawerMode,
     doc: null as string | null,
+    group: readGrouping(host !== null),
     rows: [] as HistoryRow[],
+    bookmarks: [] as HistoryBookmark[],
     selected: null as VersionRow | null,
     showChanges: true,
-    confirming: false,
+    restoring: false,
     busy: false,
     error: '',
     // Bumped on every selection: a slow answer for an older pick must not paint.
     request: 0,
+    // Bumped on every list load: a slow list for an older grouping must not paint.
+    load: 0,
   };
 
   const panel = element('aside', 'pg-history');
   const head = element('div', 'pg-history__head');
+  const groupBar = element('div', 'pg-history__group');
+  const groupButton = textButton('', 'pg-history__group-button', () => {
+    if (menu.hidden) {
+      openMenu();
+    } else {
+      closeMenu();
+    }
+  });
+  const menu = element('div', 'pg-history__menu');
   const status = element('p', 'pg-history__status');
   const list = element('ul', 'pg-history__list');
   const previewPane = element('section', 'pg-history-preview');
   const banner = element('div', 'pg-history-banner');
   const note = element('div', 'pg-history-note');
   const render = element('div', 'pg-history-render');
+  const dialog = element('div', 'pg-history-dialog');
+  const card = element('div', 'pg-history-dialog__card');
 
   panel.setAttribute('data-pg-history', '');
   panel.id = 'pg-history';
@@ -416,7 +590,14 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   panel.hidden = true;
   status.setAttribute('role', 'status');
   head.append(element('h2', 'pg-history__title', 'History'), textButton('Close', 'pg-history__button', () => close()));
-  panel.append(head, status, list);
+
+  groupButton.setAttribute('aria-haspopup', 'menu');
+  groupButton.setAttribute('aria-expanded', 'false');
+  menu.setAttribute('role', 'menu');
+  menu.setAttribute('aria-label', 'Group changes by');
+  menu.hidden = true;
+  groupBar.append(groupButton, menu);
+  panel.append(head, groupBar, status, list);
 
   previewPane.setAttribute('data-pg-history-preview', '');
   previewPane.setAttribute('aria-label', 'Version preview');
@@ -426,7 +607,14 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   previewPane.append(banner, element('div', 'pg-history-doc'));
   previewPane.lastElementChild?.append(note, render);
 
-  document.body.append(panel);
+  dialog.setAttribute('role', 'dialog');
+  dialog.setAttribute('aria-modal', 'true');
+  dialog.setAttribute('aria-labelledby', 'pg-history-dialog-title');
+  dialog.setAttribute('data-pg-history-restore', '');
+  dialog.hidden = true;
+  dialog.append(card);
+
+  document.body.append(panel, dialog);
   options.editorArea.after(previewPane);
 
   options.button.setAttribute('aria-expanded', 'false');
@@ -491,6 +679,26 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     return data;
   };
 
+  const bookmarksUrl = (doc: string): string | null => host === null ? null : `${host}/bookmarks/${encodeURIComponent(doc)}`;
+
+  /** The host's bookmarks, or null when there is no host or it did not answer. */
+  const readBookmarks = async (doc: string, init?: RequestInit): Promise<HistoryBookmark[] | null> => {
+    const url = bookmarksUrl(doc);
+
+    if (url === null) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(url, init);
+      const body: unknown = response.ok ? await response.json() : null;
+
+      return isBookmarkList(body) ? body : null;
+    } catch {
+      return null;
+    }
+  };
+
   const { editorArea } = options;
 
   const showEditor = (): void => {
@@ -506,28 +714,116 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     previewPane.hidden = false;
   };
 
-  const drawRows = (): void => {
-    list.replaceChildren(...state.rows.map((row) => {
-      if (row.kind === 'lineage') {
-        return element('li', 'pg-history__lineage', row.label);
-      }
+  const bookmarkToggle = (row: VersionRow): HTMLButtonElement => {
+    const marked = isBookmarked(state.bookmarks, row);
+    const toggle = textButton('', 'pg-history__mark', () => {
+      void flipBookmark(row);
+    });
 
-      const item = element('li', 'pg-history__item');
-      const button = textButton('', 'pg-history__row', () => {
-        void select(row);
-      });
-      const check = element('span', 'pg-history__check');
+    toggle.setAttribute('data-bookmark', row.key);
+    toggle.setAttribute('aria-pressed', String(marked));
+    toggle.setAttribute('aria-label', marked ? 'Remove bookmark' : 'Bookmark this version');
+    toggle.append(icon(IconBookmark, 'pg-history__mark-icon'));
 
-      check.innerHTML = IconCheck;
-      check.setAttribute('aria-hidden', 'true');
-      button.setAttribute('data-key', row.key);
-      button.setAttribute('aria-current', String(state.selected?.key === row.key));
-      button.append(element('span', 'pg-history__time', row.time), element('span', 'pg-history__who', row.who), check);
-      item.append(button);
-
-      return item;
-    }));
+    return toggle;
   };
+
+  const versionItem = (row: VersionRow): HTMLLIElement => {
+    const item = element('li', 'pg-history__item');
+    const button = textButton('', 'pg-history__row', () => {
+      void select(row);
+    });
+
+    button.setAttribute('data-key', row.key);
+    button.setAttribute('aria-current', String(state.selected?.key === row.key));
+    button.append(element('span', 'pg-history__time', row.time));
+
+    if (row.who !== '') {
+      button.append(element('span', 'pg-history__who', row.who));
+    }
+    button.append(icon(IconCheck, 'pg-history__check'));
+    item.append(button);
+
+    if (host !== null) {
+      item.append(bookmarkToggle(row));
+    }
+
+    return item;
+  };
+
+  const drawList = (): void => {
+    list.replaceChildren(...state.rows.map((row) =>
+      row.kind === 'lineage' ? element('li', 'pg-history__lineage', row.label) : versionItem(row)
+    ));
+  };
+
+  const views: Record<HistoryDrawerMode, () => void> = { list: drawList };
+
+  const drawRows = (): void => {
+    views[state.mode]();
+  };
+
+  const groupLabel = (value: HistoryGrouping): string =>
+    GROUPINGS.find((grouping) => grouping.value === value)?.label ?? value;
+
+  const drawGroup = (): void => {
+    groupButton.replaceChildren(
+      element('span', 'pg-history__group-name', 'Group by'),
+      element('span', 'pg-history__group-value', groupLabel(state.group)),
+      icon(IconChevronDown, 'pg-history__group-chevron')
+    );
+    menu.replaceChildren(
+      element('div', 'pg-history__menu-title', 'Group changes by'),
+      ...GROUPINGS.filter((grouping) => host !== null || grouping.value !== 'bookmarks').map((grouping) => {
+        const option = textButton('', 'pg-history__option', () => {
+          void pickGroup(grouping.value);
+        });
+
+        option.setAttribute('role', 'menuitemradio');
+        option.setAttribute('aria-checked', String(grouping.value === state.group));
+        option.append(element('span', 'pg-history__option-label', grouping.label), icon(IconCheck, 'pg-history__check'));
+
+        return option;
+      })
+    );
+    menu.firstElementChild?.setAttribute('aria-hidden', 'true');
+  };
+
+  const menuItems = (): HTMLButtonElement[] => Array.from(menu.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]'));
+
+  const openMenu = (): void => {
+    drawGroup();
+    menu.hidden = false;
+    groupButton.setAttribute('aria-expanded', 'true');
+    (menuItems().find((option) => option.getAttribute('aria-checked') === 'true') ?? menuItems()[0]).focus();
+  };
+
+  const closeMenu = (refocus = false): void => {
+    menu.hidden = true;
+    groupButton.setAttribute('aria-expanded', 'false');
+
+    if (refocus) {
+      groupButton.focus();
+    }
+  };
+
+  menu.addEventListener('keydown', (event) => {
+    const items = menuItems();
+    const step = { ArrowDown: 1, ArrowUp: -1 }[event.key];
+
+    if (step === undefined || !(event.target instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    event.preventDefault();
+    items[(items.indexOf(event.target) + step + items.length) % items.length].focus();
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!menu.hidden && event.target instanceof Node && !groupBar.contains(event.target)) {
+      closeMenu();
+    }
+  }, { capture: true });
 
   const drawBanner = (): void => {
     const row = state.selected;
@@ -539,27 +835,13 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     }
 
     const controls = element('span', 'pg-history-banner__controls');
+    const restoreButton = textButton('Restore', 'pg-history__button pg-history__button--primary', () => {
+      void openDialog(row);
+    });
 
-    if (state.confirming) {
-      controls.append(
-        element('span', 'pg-history-banner__ask', `Restore ${row.time}? Your current text stays in history.`),
-        textButton('Cancel', 'pg-history__button', () => {
-          state.confirming = false;
-          drawBanner();
-        }),
-        textButton('Restore', 'pg-history__button pg-history__button--primary', () => {
-          void restore(row);
-        })
-      );
-    } else {
-      controls.append(textButton('Restore', 'pg-history__button pg-history__button--primary', () => {
-        state.confirming = true;
-        state.error = '';
-        drawBanner();
-      }));
-    }
-
-    controls.querySelectorAll('button').forEach((button) => button.toggleAttribute('disabled', state.busy));
+    restoreButton.setAttribute('data-pg-history-begin-restore', '');
+    restoreButton.disabled = state.busy;
+    controls.append(restoreButton);
 
     const error = element('p', 'pg-history-banner__error', state.error);
 
@@ -569,8 +851,8 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   };
 
   const drawNote = (row: VersionRow): void => {
-    const author = row.who === 'No author recorded' ? row.who : `Edited by ${row.who}`;
-    const parts: HTMLElement[] = [element('span', 'pg-history-note__when', `${row.time} · ${author}`)];
+    const author = row.who === '' || row.who === 'No author recorded' ? row.who : `Edited by ${row.who}`;
+    const parts: HTMLElement[] = [element('span', 'pg-history-note__when', author === '' ? row.time : `${row.time} · ${author}`)];
 
     if (row.below !== null) {
       const label = element('label', 'pg-history-note__key');
@@ -586,7 +868,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       parts.push(label);
 
       if (state.showChanges) {
-        (['added', 'removed', 'changed'] as const).forEach((mark) => {
+        (['added', 'removed', 'changed', 'moved'] as const).forEach((mark) => {
           const key = element('span', 'pg-history-note__key');
           const swatch = element('i', `pg-history-note__swatch pg-history-note__swatch--${mark}`);
 
@@ -626,10 +908,9 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
         root: true,
         classes: true,
       });
-      Object.entries(preview.marks).forEach(([id, mark]) => {
-        render.querySelectorAll(`[data-blok-id="${CSS.escape(id)}"]`).forEach((node) => node.setAttribute('data-pg-change', mark));
-      });
+      paintMarks(render, preview.marks);
       drawNote(row);
+      jumpToChange(render);
     } catch (error) {
       if (request === state.request) {
         state.error = messageOf(error);
@@ -640,7 +921,6 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
 
   const select = async (row: VersionRow): Promise<void> => {
     state.selected = row;
-    state.confirming = false;
     state.error = '';
     drawRows();
 
@@ -658,27 +938,200 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     await drawPreview(row);
   };
 
-  const load = async (): Promise<void> => {
+  const bookmarkAnswer = (marks: HistoryBookmark[] | null): { rows: HistoryRow[]; message: string } => {
+    const rows = bookmarkRows(marks ?? [], { now: now() });
+
+    if (marks === null) {
+      return { rows, message: 'The page host did not answer.' };
+    }
+
+    return { rows, message: rows.length === 0 ? NO_BOOKMARKS : '' };
+  };
+
+  const versionsAnswer = async (doc: string): Promise<{ rows: HistoryRow[]; message: string }> => {
+    try {
+      const response = await send(doc, `${base(doc)}?group=${state.group}`);
+      const rows = historyRows(await response.json() as HistoryList, { now: now(), self: options.self() });
+
+      return { rows, message: rows.length === 0 ? 'No versions yet.' : '' };
+    } catch (error) {
+      return { rows: [], message: messageOf(error) };
+    }
+  };
+
+  /** Loads the rows for the current grouping. False when a newer load took over. */
+  const load = async (): Promise<boolean> => {
+    const doc = state.doc;
+    const ticket = ++state.load;
+
+    if (doc === null) {
+      return false;
+    }
+
+    status.textContent = 'Loading history…';
+
+    const bookmarks = readBookmarks(doc);
+    const { rows, message } = state.group === 'bookmarks'
+      ? bookmarkAnswer(await bookmarks)
+      : await versionsAnswer(doc);
+    const marks = await bookmarks;
+
+    if (ticket !== state.load) {
+      return false;
+    }
+
+    state.rows = rows;
+    state.bookmarks = marks ?? [];
+    status.textContent = message;
+    drawRows();
+
+    return true;
+  };
+
+  /** Selects what a fresh list opens on: the version before the current one. */
+  const selectFirst = async (): Promise<void> => {
+    if (state.group === 'bookmarks') {
+      return;
+    }
+
+    const versions = state.rows.filter((row): row is VersionRow => row.kind === 'version');
+    const first = versions[1] ?? versions[0];
+
+    if (first !== undefined) {
+      await select(first);
+    }
+  };
+
+  const pickGroup = async (value: HistoryGrouping): Promise<void> => {
+    closeMenu(true);
+    state.group = value;
+    saveGrouping(value);
+    drawGroup();
+    state.request++;
+    state.selected = null;
+    state.error = '';
+    showEditor();
+
+    if (await load()) {
+      await selectFirst();
+    }
+  };
+
+  const flipBookmark = async (row: VersionRow): Promise<void> => {
+    const doc = state.doc;
+    const url = doc === null ? null : bookmarksUrl(doc);
+
+    if (doc === null || url === null) {
+      return;
+    }
+
+    // Another tab may have changed the list since this one loaded it.
+    const fresh = await readBookmarks(doc) ?? state.bookmarks;
+    const saved = await readBookmarks(doc, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(toggleBookmark(fresh, { lineage: row.lineage, sequence: row.sequence, savedAt: row.at })),
+    });
+
+    if (saved === null || state.doc !== doc) {
+      status.textContent = saved === null ? 'The page host did not answer.' : status.textContent;
+
+      return;
+    }
+
+    state.bookmarks = saved;
+
+    if (state.group === 'bookmarks') {
+      state.rows = bookmarkRows(saved, { now: now() });
+      status.textContent = state.rows.length === 0 ? NO_BOOKMARKS : '';
+    }
+    drawRows();
+  };
+
+  /* Restore dialog */
+
+  const inerted: HTMLElement[] = [];
+
+  const closeDialog = (): void => {
+    if (dialog.hidden) {
+      return;
+    }
+
+    dialog.hidden = true;
+    state.restoring = false;
+    inerted.splice(0).forEach((node) => node.removeAttribute('inert'));
+    banner.querySelector<HTMLButtonElement>('[data-pg-history-begin-restore]')?.focus();
+  };
+
+  const drawDialog = (row: VersionRow, subPages: string[]): void => {
+    const title = element('h2', 'pg-history-dialog__title');
+    const primary = textButton('Restore this version', 'pg-history__button pg-history__button--primary pg-history-dialog__primary', () => {
+      void restore(row);
+    });
+    const cancel = textButton('Cancel', 'pg-history__button', () => closeDialog());
+    const section = (heading: string, items: string[]): HTMLElement => {
+      const part = element('section', 'pg-history-dialog__section');
+      const lines = element('ul', 'pg-history-dialog__items');
+
+      lines.append(...items.map((text) => element('li', 'pg-history-dialog__item', text)));
+      part.append(element('h3', 'pg-history-dialog__heading', heading), lines);
+
+      return part;
+    };
+
+    title.id = 'pg-history-dialog-title';
+    title.append('Restore ', element('strong', '', titleOf(null)), ' to ', element('strong', '', row.time));
+
+    const parts: HTMLElement[] = [
+      title,
+      section('What will be restored', [
+        'Page content — text, blocks, and everything nested in them, including database rows',
+        'Page title and icon',
+      ]),
+    ];
+
+    if (subPages.length > 0) {
+      const unchanged = section('Will remain unchanged', subPages.map((pageId) => titleOf(pageId)));
+
+      unchanged.append(element('p', 'pg-history-dialog__note', 'Sub-pages keep their own history.'));
+      parts.push(unchanged);
+    }
+
+    const actions = element('div', 'pg-history-dialog__actions');
+
+    actions.append(primary, cancel);
+    [primary, cancel].forEach((button) => button.toggleAttribute('disabled', state.busy));
+    parts.push(actions, element('p', 'pg-history-dialog__footnote', 'This will not delete any other versions and you can always restore again.'));
+    card.replaceChildren(...parts);
+  };
+
+  const openDialog = async (row: VersionRow): Promise<void> => {
     const doc = state.doc;
 
     if (doc === null) {
       return;
     }
 
-    status.textContent = 'Loading history…';
+    state.error = '';
+    drawBanner();
 
-    try {
-      const response = await send(doc, base(doc));
-      const body = await response.json() as HistoryList;
+    // The sub-page list is a courtesy; the restore itself does not need it.
+    const subPages = await readPoint(doc, row).then((data) => subPagesOf(data.blocks), () => []);
 
-      state.rows = historyRows(body, { now: now(), self: options.self() });
-      status.textContent = state.rows.length === 0 ? 'No versions yet.' : '';
-    } catch (error) {
-      state.rows = [];
-      status.textContent = messageOf(error);
+    if (state.selected?.key !== row.key || panel.hidden) {
+      return;
     }
 
-    drawRows();
+    drawDialog(row, subPages);
+    state.restoring = true;
+    Array.from(document.body.children).forEach((node) => {
+      if (node !== dialog && node instanceof HTMLElement && !node.inert) {
+        node.setAttribute('inert', '');
+        inerted.push(node);
+      }
+    });
+    dialog.hidden = false;
+    card.querySelector<HTMLButtonElement>('.pg-history-dialog__primary')?.focus();
   };
 
   const restore = async (row: VersionRow): Promise<void> => {
@@ -689,7 +1142,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     }
 
     state.busy = true;
-    drawBanner();
+    card.querySelectorAll('button').forEach((button) => button.setAttribute('disabled', ''));
 
     try {
       await send(doc, `${base(doc)}/${encodeURIComponent(row.lineage)}/${row.sequence}/restore`, {
@@ -697,16 +1150,16 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
         headers: { 'Blok-Idempotency-Key': idempotencyKey() },
       });
       state.busy = false;
-      state.confirming = false;
+      closeDialog();
       state.selected = null;
       showEditor();
       await load();
-      state.selected = state.rows.find((candidate): candidate is VersionRow => candidate.kind === 'version') ?? null;
+      state.selected = state.rows.find((candidate): candidate is VersionRow => candidate.kind === 'version' && candidate.current) ?? null;
       drawRows();
       options.notify(`Restored ${row.time}. It is now the newest version.`);
     } catch (error) {
       state.busy = false;
-      state.confirming = false;
+      closeDialog();
       state.error = messageOf(error);
       drawBanner();
     }
@@ -725,6 +1178,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     panel.hidden = false;
     document.body.classList.add('pg-history-open');
     options.button.setAttribute('aria-expanded', 'true');
+    drawGroup();
     await load();
 
     // Closed, or opened again on another document, while the list loaded.
@@ -732,20 +1186,15 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       return;
     }
 
-    const versions = state.rows.filter((row): row is VersionRow => row.kind === 'version');
-    // Open on the version before the current one: that is what people look for.
-    const first = versions[1] ?? versions[0];
-
-    if (first !== undefined) {
-      await select(first);
-    }
+    await selectFirst();
   };
 
   const close = (): void => {
     state.request++;
     state.selected = null;
-    state.confirming = false;
     state.error = '';
+    closeDialog();
+    closeMenu();
     panel.hidden = true;
     document.body.classList.remove('pg-history-open');
     options.button.setAttribute('aria-expanded', 'false');
@@ -769,17 +1218,40 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     target === document.body || target === document.documentElement
     || (target instanceof Node && [panel, previewPane, editorArea].some((area) => area.contains(target)));
 
-  window.addEventListener('keydown', (event) => {
-    const inMenu = event.target instanceof Element && event.target.closest(BLOK_MENUS) !== null;
+  const take = (event: KeyboardEvent, action: () => void): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    action();
+  };
 
-    if (event.key !== 'Escape' || event.defaultPrevented || panel.hidden || inMenu
-      || !isOurs(event.target) || document.querySelector(OPEN_MENU) !== null) {
+  window.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || event.defaultPrevented || !panel.isConnected || panel.hidden) {
       return;
     }
 
-    event.preventDefault();
-    event.stopPropagation();
-    close();
+    const target = event.target;
+    const isBody = target === document.body || target === document.documentElement;
+
+    // The dialog and the Group by menu sit above the drawer: each Escape closes one.
+    if (!dialog.hidden && (isBody || (target instanceof Node && dialog.contains(target)))) {
+      take(event, closeDialog);
+
+      return;
+    }
+
+    if (!menu.hidden && target instanceof Node && groupBar.contains(target)) {
+      take(event, () => closeMenu(true));
+
+      return;
+    }
+
+    const inMenu = target instanceof Element && target.closest(BLOK_MENUS) !== null;
+
+    if (inMenu || !isOurs(target) || document.querySelector(OPEN_MENU) !== null) {
+      return;
+    }
+
+    take(event, close);
   }, { capture: true });
 
   return { open, close };

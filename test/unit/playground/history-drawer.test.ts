@@ -2,21 +2,25 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { IconCheck } from '../../../src/components/icons';
+import { IconBookmark, IconCheck } from '../../../src/components/icons';
 import { Paragraph } from '../../../src/tools/paragraph';
 
 import { blocksToHtml, diffOutputData } from '../../../src/view';
 import {
   actorName,
+  bookmarkRows,
   changePreview,
   formatVersionTime,
   historyErrorMessage,
   historyRows,
+  isBookmarked,
   lineageLabel,
   mountHistoryDrawer,
   playgroundTicketUrl,
+  subPagesOf,
+  toggleBookmark,
 } from '../../../src/playground/history-drawer';
-import type { HistoryList } from '../../../src/playground/history-drawer';
+import type { HistoryBookmark, HistoryList } from '../../../src/playground/history-drawer';
 import type { LooseOutputBlockData } from '../../../types';
 
 const SELF = { id: 'playground-anna', name: 'Anna' };
@@ -221,6 +225,78 @@ describe('changePreview', () => {
   });
 });
 
+describe('changePreview moves', () => {
+  it('marks a block that moved', () => {
+    const preview = changePreview(
+      { blocks: [p('a', 'one'), p('b', 'two'), p('c', 'three')] },
+      { blocks: [p('b', 'two'), p('c', 'three'), p('a', 'one')] },
+      diffOutputData
+    );
+
+    expect(preview.marks).toEqual({ a: 'moved' });
+  });
+
+  it('calls a block that moved and changed changed', () => {
+    const preview = changePreview(
+      { blocks: [p('a', 'one'), p('b', 'two'), p('c', 'three')] },
+      { blocks: [p('b', 'two'), p('c', 'three'), p('a', 'one, edited')] },
+      diffOutputData
+    );
+
+    expect(preview.marks).toEqual({ a: 'changed' });
+  });
+});
+
+describe('bookmarks', () => {
+  const marks: HistoryBookmark[] = [
+    { lineage: 'l2', sequence: 5, savedAt: at(7, 14, 32) },
+    { lineage: 'l2', sequence: 0, savedAt: at(7, 10, 0) },
+    { lineage: 'l2', sequence: 9, savedAt: at(7, 14, 40) },
+  ];
+
+  it('lists bookmarked points newest first, with the time and no author', () => {
+    const rows = bookmarkRows(marks, { now: NOW });
+
+    expect(rows.map((row) => (row.kind === 'version' ? [row.key, row.time, row.who, row.current] : row.label))).toEqual([
+      ['l2:9', 'Today, 14:40', '', false],
+      ['l2:5', 'Today, 14:32', '', false],
+      ['l2:0', 'Today, 10:00', '', false],
+    ]);
+  });
+
+  it('compares a bookmark with the point just before it, and the first point with nothing', () => {
+    const rows = bookmarkRows(marks, { now: NOW });
+
+    expect(rows.map((row) => (row.kind === 'version' ? row.below : null))).toEqual([
+      { lineage: 'l2', sequence: 8 },
+      { lineage: 'l2', sequence: 4 },
+      null,
+    ]);
+  });
+
+  it('adds a bookmark, and removes it on the second toggle', () => {
+    const point = { lineage: 'l1', sequence: 3, savedAt: 1 };
+    const added = toggleBookmark(marks, point);
+
+    expect(added).toContainEqual(point);
+    expect(isBookmarked(added, point)).toBe(true);
+    expect(toggleBookmark(added, { ...point, savedAt: 2 })).toEqual(marks);
+    expect(isBookmarked(marks, point)).toBe(false);
+  });
+});
+
+describe('subPagesOf', () => {
+  it('lists the page blocks of a version once each, in order', () => {
+    expect(subPagesOf([
+      p('a', 'one'),
+      { id: 'x', type: 'page', data: { pageId: 'pg-2' } },
+      { id: 'y', type: 'page', data: { pageId: 'pg-1' } },
+      { id: 'z', type: 'page', data: { pageId: 'pg-2' } },
+      { id: 'w', type: 'page', data: {} },
+    ])).toEqual(['pg-2', 'pg-1']);
+  });
+});
+
 describe('historyErrorMessage', () => {
   it('shows the server message with its status', () => {
     expect(historyErrorMessage(501, 'history needs a journal that keeps it\n')).toBe('history needs a journal that keeps it (501)');
@@ -252,6 +328,11 @@ describe('playgroundTicketUrl', () => {
 
 describe('mountHistoryDrawer', () => {
   const SERVER = 'http://127.0.0.1:4000';
+  const HOST = 'http://127.0.0.1:4800';
+  const LIST_URL = `${SERVER}/sync/playground/history?group=15`;
+  const bookmarkStore: HistoryBookmark[] = [];
+  const scrolled: Array<{ id: string | undefined; options: unknown }> = [];
+  const setupScroll = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
   const MINT = 'http://127.0.0.1:4700/ticket?name=Anna';
   const pass = (doc: string): string => `h.${btoa(JSON.stringify({ doc, write: true, exp: 4_000_000_000 }))}.s`;
   const LIST: HistoryList = {
@@ -296,6 +377,14 @@ describe('mountHistoryDrawer', () => {
       return answers.restore();
     }
 
+    if (url.startsWith(`${HOST}/bookmarks/`)) {
+      if (init?.method === 'PUT') {
+        bookmarkStore.splice(0, bookmarkStore.length, ...(JSON.parse(typeof init.body === 'string' ? init.body : '[]') as HistoryBookmark[]));
+      }
+
+      return Response.json(bookmarkStore);
+    }
+
     return answers.list();
   };
 
@@ -318,6 +407,8 @@ describe('mountHistoryDrawer', () => {
       notify,
       now: () => NOW,
       idempotencyKey: () => 'key-1',
+      pageHost: HOST,
+      titleOf: (pageId) => (pageId === null ? 'Demo Page' : `Title of ${pageId}`),
     });
 
     return { drawer, button, editor, notify };
@@ -367,10 +458,23 @@ describe('mountHistoryDrawer', () => {
     answers.restore = () => new Response(null, { status: 204 });
     answers.list = () => Response.json(LIST);
     Object.assign(POINTS, points());
+    bookmarkStore.length = 0;
+    scrolled.length = 0;
+    localStorage.clear();
     vi.stubGlobal('fetch', vi.fn(fakeFetch));
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value(this: HTMLElement, options: unknown) {
+        scrolled.push({ id: this.dataset.blokId, options });
+      },
+    });
   });
 
   afterEach(() => {
+    // vitest.setup.ts polyfills it for every file: put that one back.
+    if (setupScroll !== undefined) {
+      Object.defineProperty(Element.prototype, 'scrollIntoView', setupScroll);
+    }
     document.body.replaceChildren();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -388,7 +492,7 @@ describe('mountHistoryDrawer', () => {
       expect.stringContaining('No author recorded'),
     ]);
 
-    const list = calls.find((call) => call.url === `${SERVER}/sync/playground/history`);
+    const list = calls.find((call) => call.url === LIST_URL);
 
     expect(calls.some((call) => call.url === `${MINT}&doc=playground`)).toBe(true);
     expect(new Headers(list?.init?.headers).get('Authorization')).toBe(`Bearer ${pass('playground')}`);
@@ -472,16 +576,34 @@ describe('mountHistoryDrawer', () => {
     expect(editor.inert).toBe(false);
   });
 
-  it('restores after a confirm, then returns to the live editor', async () => {
+  const dialog = (): HTMLElement => {
+    const element = document.querySelector<HTMLElement>('[role="dialog"][data-pg-history-restore]');
+
+    if (element === null || element.hidden) {
+      throw new Error('no restore dialog');
+    }
+
+    return element;
+  };
+
+  const restoreDialogOpen = (): boolean =>
+    document.querySelector<HTMLElement>('[data-pg-history-restore]')?.hidden === false;
+
+  it('asks in a dialog what a restore brings back, then restores and returns to the live editor', async () => {
     const { button, editor, notify } = setup();
 
     button.click();
     await settle();
     buttonNamed(preview(), 'Restore').click();
+    await settle();
 
-    expect(preview().textContent).toContain('Restore Today, 14:32? Your current text stays in history.');
+    expect(dialog().getAttribute('aria-modal')).toBe('true');
+    expect(dialog().textContent).toContain('Restore Demo Page to Today, 14:32');
+    expect(dialog().textContent).toContain('Page content — text, blocks, and everything nested in them, including database rows');
+    expect(dialog().textContent).toContain('Page title and icon');
+    expect(dialog().textContent).toContain('This will not delete any other versions and you can always restore again.');
 
-    buttonNamed(preview(), 'Restore').click();
+    buttonNamed(dialog(), 'Restore this version').click();
     await settle();
 
     const restore = calls.find((call) => call.url === `${SERVER}/sync/playground/history/l2/5/restore`);
@@ -491,9 +613,36 @@ describe('mountHistoryDrawer', () => {
     expect(headers.get('Blok-Idempotency-Key')).toBe('key-1');
     expect(headers.get('Authorization')).toBe(`Bearer ${pass('playground')}`);
     expect(notify).toHaveBeenCalledWith('Restored Today, 14:32. It is now the newest version.');
+    expect(restoreDialogOpen()).toBe(false);
     expect(preview().hidden).toBe(true);
     expect(editor.hidden).toBe(false);
-    expect(calls.filter((call) => call.url === `${SERVER}/sync/playground/history`)).toHaveLength(2);
+    expect(calls.filter((call) => call.url === LIST_URL)).toHaveLength(2);
+  });
+
+  it('lists the sub-pages a restore leaves alone, by their titles', async () => {
+    POINTS['5'] = { blocks: [p('a', 'one'), { id: 'pb', type: 'page', data: { pageId: 'pg-notes' } }] };
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    buttonNamed(preview(), 'Restore').click();
+    await settle();
+
+    expect(dialog().textContent).toContain('Will remain unchanged');
+    expect(dialog().textContent).toContain('Title of pg-notes');
+    expect(dialog().textContent).toContain('Sub-pages keep their own history.');
+  });
+
+  it('leaves out the unchanged section when the version has no sub-pages', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    buttonNamed(preview(), 'Restore').click();
+    await settle();
+
+    expect(dialog().textContent).not.toContain('Will remain unchanged');
   });
 
   it('cancels a restore without calling the server', async () => {
@@ -502,11 +651,34 @@ describe('mountHistoryDrawer', () => {
     button.click();
     await settle();
     buttonNamed(preview(), 'Restore').click();
-    buttonNamed(preview(), 'Cancel').click();
+    await settle();
+
+    expect(panel().hasAttribute('inert')).toBe(true);
+
+    buttonNamed(dialog(), 'Cancel').click();
     await settle();
 
     expect(calls.some((call) => call.url.endsWith('/restore'))).toBe(false);
-    expect(preview().textContent).not.toContain('Your current text stays in history.');
+    expect(restoreDialogOpen()).toBe(false);
+    expect(panel().hasAttribute('inert')).toBe(false);
+    expect(preview().hidden).toBe(false);
+  });
+
+  it('closes only the dialog on Escape, and keeps the drawer and preview open', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    buttonNamed(preview(), 'Restore').click();
+    await settle();
+
+    const target = buttonNamed(dialog(), 'Cancel');
+
+    target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+    expect(restoreDialogOpen()).toBe(false);
+    expect(panel().hidden).toBe(false);
+    expect(preview().hidden).toBe(false);
   });
 
   it('shows the server message when a restore fails and stays usable', async () => {
@@ -517,9 +689,11 @@ describe('mountHistoryDrawer', () => {
     button.click();
     await settle();
     buttonNamed(preview(), 'Restore').click();
-    buttonNamed(preview(), 'Restore').click();
+    await settle();
+    buttonNamed(dialog(), 'Restore this version').click();
     await settle();
 
+    expect(restoreDialogOpen()).toBe(false);
     expect(preview().textContent).toContain('the document changed (412)');
     expect(buttonNamed(preview(), 'Restore').disabled).toBe(false);
 
@@ -527,6 +701,211 @@ describe('mountHistoryDrawer', () => {
 
     expect(editor.hidden).toBe(false);
     expect(preview().hidden).toBe(true);
+  });
+
+  it('scrolls the preview to the first marked block and outlines it for a moment', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+
+    expect(scrolled.at(-1)).toEqual({ id: 'b', options: { block: 'center', behavior: 'smooth' } });
+    expect(preview().querySelector('[data-blok-id="b"]')?.hasAttribute('data-pg-flash')).toBe(true);
+
+    await new Promise((resolve) => setTimeout(resolve, 1300));
+
+    expect(preview().querySelector('[data-pg-flash]')).toBeNull();
+  });
+
+  it('jumps without smooth scrolling when the reader asks for less motion', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query }));
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+
+    expect(scrolled.at(-1)).toEqual({ id: 'b', options: { block: 'center', behavior: 'auto' } });
+  });
+
+  it('marks a moved block', async () => {
+    POINTS['5'] = { blocks: [p('c', 'three'), p('a', 'one')] };
+    POINTS['0'] = { blocks: [p('a', 'one'), p('c', 'three')] };
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+
+    expect(preview().querySelectorAll('[data-pg-change="moved"]')).toHaveLength(1);
+    expect(preview().textContent).toContain('Moved');
+  });
+
+  const groupButton = (): HTMLButtonElement => {
+    const found = panel().querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]');
+
+    if (found === null) {
+      throw new Error('no group by control');
+    }
+
+    return found;
+  };
+
+  const groupOptions = (): HTMLButtonElement[] => Array.from(panel().querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]'));
+
+  const pickGroup = async (name: string): Promise<void> => {
+    groupButton().click();
+
+    const option = groupOptions().find((item) => item.textContent?.trim() === name);
+
+    if (option === undefined) {
+      throw new Error(`no group option "${name}"`);
+    }
+    option.click();
+    await settle();
+  };
+
+  it('groups by 15 minutes by default, checked in the menu', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+
+    expect(groupButton().textContent).toContain('15 minutes');
+    groupButton().click();
+    expect(groupOptions().map((item) => [item.textContent?.trim(), item.getAttribute('aria-checked')])).toEqual([
+      ['1 minute', 'false'],
+      ['15 minutes', 'true'],
+      ['1 hour', 'false'],
+      ['Bookmarks', 'false'],
+    ]);
+  });
+
+  it('asks the server for the chosen grouping and remembers it in this browser', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    await pickGroup('1 hour');
+
+    expect(calls.some((call) => call.url === `${SERVER}/sync/playground/history?group=60`)).toBe(true);
+    expect(groupButton().textContent).toContain('1 hour');
+
+    document.body.replaceChildren();
+    calls.length = 0;
+
+    const next = setup();
+
+    next.button.click();
+    await settle();
+
+    expect(calls.some((call) => call.url === `${SERVER}/sync/playground/history?group=60`)).toBe(true);
+  });
+
+  it('still works when the browser refuses storage', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('denied');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('denied');
+    });
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    await pickGroup('1 minute');
+
+    expect(calls.some((call) => call.url === `${SERVER}/sync/playground/history?group=1`)).toBe(true);
+  });
+
+  it('closes only the Group by menu on Escape', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    groupButton().click();
+    groupOptions()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+    expect(groupOptions()[0].closest<HTMLElement>('[role="menu"]')?.hidden).toBe(true);
+    expect(groupButton().getAttribute('aria-expanded')).toBe('false');
+    expect(panel().hidden).toBe(false);
+  });
+
+  const bookmarkButton = (key: string): HTMLButtonElement => {
+    const found = panel().querySelector<HTMLButtonElement>(`button[data-bookmark="${key}"]`);
+
+    if (found === null) {
+      throw new Error(`no bookmark toggle for ${key}`);
+    }
+
+    return found;
+  };
+
+  it('bookmarks a version on the page host and shows it filled', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+
+    expect(bookmarkButton('l2:5').getAttribute('aria-pressed')).toBe('false');
+
+    bookmarkButton('l2:5').click();
+    await settle();
+
+    const put = calls.find((call) => call.url === `${HOST}/bookmarks/playground` && call.init?.method === 'PUT');
+
+    expect(typeof put?.init?.body === 'string' ? JSON.parse(put.init.body) : null).toEqual([{ lineage: 'l2', sequence: 5, savedAt: at(7, 14, 32) }]);
+    expect(bookmarkButton('l2:5').getAttribute('aria-pressed')).toBe('true');
+    expect(bookmarkButton('l2:5').getAttribute('aria-label')).toBe('Remove bookmark');
+
+    bookmarkButton('l2:5').click();
+    await settle();
+
+    expect(bookmarkStore).toEqual([]);
+    expect(bookmarkButton('l2:5').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('shows bookmarks made in any tab as filled', async () => {
+    bookmarkStore.push({ lineage: 'l2', sequence: 0, savedAt: at(7, 10, 0) });
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+
+    expect(bookmarkButton('l2:0').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('lists only bookmarked points under Bookmarks, compared with the point before', async () => {
+    bookmarkStore.push({ lineage: 'l2', sequence: 5, savedAt: at(7, 14, 32) });
+    POINTS['4'] = { blocks: [p('a', 'one'), p('c', 'three')] };
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    await pickGroup('Bookmarks');
+
+    expect(rowButtons().map((row) => row.dataset.key)).toEqual(['l2:5']);
+    expect(rowButtons()[0].textContent).not.toContain('Ben');
+
+    rowButtons()[0].click();
+    await settle();
+
+    expect(calls.some((call) => call.url === `${SERVER}/sync/playground/history/l2/4`)).toBe(true);
+    expect(Array.from(preview().querySelectorAll<HTMLElement>('[data-pg-change="added"]')).map((node) => node.dataset.blokId)).toEqual(['b']);
+  });
+
+  it('says so when nothing is bookmarked yet', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    await pickGroup('Bookmarks');
+
+    expect(rowButtons()).toHaveLength(0);
+    expect(panel().textContent).toContain('No bookmarked versions yet');
   });
 
   it('says so when the server keeps no history', async () => {
@@ -574,7 +953,7 @@ describe('mountHistoryDrawer', () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : input.toString();
 
-      if (url === `${SERVER}/sync/playground/history`) {
+      if (url === LIST_URL) {
         await new Promise<void>((resolve) => {
           pending.release = resolve;
         });
@@ -753,6 +1132,44 @@ describe('history drawer selected row', () => {
   it('draws the check mark in the row ink', () => {
     expect(IconCheck).toContain('stroke="currentColor"');
     expect(rules.find(({ selector }) => selector.includes('.pg-history__check') && selector.includes('aria-current'))?.body.trim()).toBe('opacity: 1;');
+  });
+
+  it('marks the checked grouping with a check and the gray fill, no ink of its own', () => {
+    const checked = rules.filter(({ selector }) => selector.includes('[aria-checked="true"]'));
+
+    expect(checked.length).toBeGreaterThan(0);
+    checked.forEach(({ selector, body }) => {
+      expect(body, selector).not.toMatch(/(^|[\s;])(color|stroke)\s*:/);
+      [...body.matchAll(/background(?:-color)?\s*:\s*([^;]+)/g)].forEach(([, value]) => expect(value.trim()).toBe('var(--pgh-hover)'));
+    });
+  });
+
+  it('fills a set bookmark with the row ink', () => {
+    const pressed = rules.filter(({ selector }) => selector.includes('[aria-pressed="true"]'));
+
+    expect(pressed.length).toBeGreaterThan(0);
+    expect(IconBookmark).toContain('stroke="currentColor"');
+    pressed.forEach(({ selector, body }) => {
+      expect(body, selector).not.toMatch(/(^|[\s;])(color|stroke|background(?:-color)?)\s*:/);
+      [...body.matchAll(/fill\s*:\s*([^;]+)/g)].forEach(([, value]) => expect(value.trim()).toBe('currentColor'));
+    });
+  });
+
+  it('draws a moved block with a dashed gray bar and a changed one with a solid bar', () => {
+    const moved = rules.find(({ selector }) => selector.includes('[data-pg-change="moved"]') && selector.includes('#pg-history-render'));
+    const changed = rules.find(({ selector }) => selector.includes('[data-pg-change="changed"]') && selector.includes('#pg-history-render'));
+
+    expect(moved?.body).toMatch(/border-inline-start:\s*3px dashed var\(--pgh-muted\)/);
+    expect(changed?.body).toMatch(/inset 3px 0 0 var\(--pgh-muted\)/);
+  });
+
+  it('outlines the jumped-to block in gray ink, never blue', () => {
+    const flash = rules.filter(({ selector }) => selector.includes('[data-pg-flash]'));
+
+    expect(flash.length).toBeGreaterThan(0);
+    flash.forEach(({ body }) => {
+      [...body.matchAll(/outline(?:-color)?\s*:\s*([^;]+)/g)].forEach(([, value]) => expect(value).toMatch(/var\(--pgh-(ink|muted)\)/));
+    });
   });
 
   it('gives the Show changes checkbox the ink, not the browser blue', () => {

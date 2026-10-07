@@ -2455,6 +2455,11 @@
         doc: () => collaborationConfig(editorPageId)?.doc ?? null,
         self: () => userConfig(),
         notify: (message) => blok.notifier.show({ message, style: 'success' }),
+        pageHost: new URLSearchParams(window.location.search).get('hostUrl') ?? import.meta.env.VITE_BLOK_PAGE_HOST_URL ?? null,
+        titleOf: (id) => {
+          const page = (id ?? editorPageId) === null ? pages.root() : pages.get(id ?? editorPageId);
+          return page?.title.trim() || 'New page';
+        },
       })
       : null;
     document.getElementById('pg-history-icon').innerHTML = Icons.IconRotateLeft;

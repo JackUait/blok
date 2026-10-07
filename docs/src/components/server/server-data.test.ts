@@ -381,6 +381,7 @@ describe('server docs data', () => {
       '--no-unfurl',
       '--public-url',
       '--rate-limit',
+      '--rich-text-fields',
       '--s3-addressing',
       '--s3-bucket',
       '--s3-bucket-url',
@@ -450,7 +451,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(inOrder('--rate-limit', 'ticket', '60', 'otherwise', '0'));
   });
 
-  it('states the thirty-one service limits the design refuses to bury', () => {
+  it('states the thirty-two service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -461,6 +462,7 @@ describe('server docs data', () => {
       'collab-access-lifecycle',
       'doc-endpoint-auth',
       'collab-new-documents',
+      'collab-rich-text-segments',
       'file-origin',
       'asset-cors',
       's3-untested',
@@ -640,6 +642,23 @@ describe('server docs data', () => {
     expect(body).toMatch(/one live writer|one writer/i);
     expect(body).toMatch(/durable before/i);
     expect(body).toMatch(/one step|atomic/i);
+  });
+
+  // The write-back PUT and /state switched from HTML strings to segments. A
+  // host that reads them as strings breaks, and custom rich fields need the
+  // standalone host's --rich-text-fields to be stored as formatted text.
+  it('says the document endpoint and /state carry rich text as segments', () => {
+    const body = serverLimits.find((l) => l.id === 'collab-rich-text-segments')?.body ?? '';
+
+    expect(body).toMatch(/segments/);
+    expect(body).toContain('/sync/{doc}/state');
+    expect(body).toMatch(/still accepts HTML|keep serving HTML/i);
+    expect(body).toContain('--rich-text-fields');
+    expect(body).toContain('BLOK_RICH_TEXT_FIELDS');
+    expect(body).toContain('options.RichTextFields');
+    expect(body).toMatch(/together/);
+    expect(getTranslation('ru', 'server.limits.collab-rich-text-segments.body')).toContain('--rich-text-fields');
+    expect(getTranslation('ru', 'server.limits.collab-rich-text-segments.body')).toMatch(/сегмент/);
   });
 
   // What the page ACTUALLY renders. An entry added to `server-data.ts` alone is

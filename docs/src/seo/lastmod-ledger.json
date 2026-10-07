@@ -120,8 +120,8 @@
     "date": "2026-09-28"
   },
   "/docs/header": {
-    "hash": "876aa9326c57c49f",
-    "date": "2026-10-06"
+    "hash": "d4308f91508dc24c",
+    "date": "2026-10-07"
   },
   "/docs/history-api": {
     "hash": "98dccab31e1ad77a",
@@ -152,8 +152,8 @@
     "date": "2026-09-08"
   },
   "/docs/list": {
-    "hash": "eda69a4e29be8af2",
-    "date": "2026-10-06"
+    "hash": "20d0bfefba1ff7f7",
+    "date": "2026-10-07"
   },
   "/docs/listeners-api": {
     "hash": "f6cda1d7503bda39",
@@ -172,7 +172,7 @@
     "date": "2026-09-08"
   },
   "/docs/output-data": {
-    "hash": "3deae2b74f151c8e",
+    "hash": "fe6166bac1a76494",
     "date": "2026-10-07"
   },
   "/docs/page": {
@@ -184,8 +184,8 @@
     "date": "2026-10-05"
   },
   "/docs/paragraph": {
-    "hash": "397c096c0fa4ae06",
-    "date": "2026-10-06"
+    "hash": "f6f4cbabd5dd2b57",
+    "date": "2026-10-07"
   },
   "/docs/placeholder-api": {
     "hash": "b85675e8c13ef6e0",
@@ -196,8 +196,8 @@
     "date": "2026-09-08"
   },
   "/docs/quote": {
-    "hash": "6fd70d6812f26703",
-    "date": "2026-10-06"
+    "hash": "6a72049874c5c351",
+    "date": "2026-10-07"
   },
   "/docs/readonly-api": {
     "hash": "e30c734e1732cf9f",
@@ -256,8 +256,8 @@
     "date": "2026-09-08"
   },
   "/docs/toggle": {
-    "hash": "58390cdb2942db34",
-    "date": "2026-10-06"
+    "hash": "280b91bce472f0e4",
+    "date": "2026-10-07"
   },
   "/docs/toolbar-api": {
     "hash": "1db67960c4d77b0c",
@@ -440,8 +440,8 @@
     "date": "2026-09-28"
   },
   "/ru/docs/header": {
-    "hash": "f88d54b8785e3570",
-    "date": "2026-10-06"
+    "hash": "c8fe07e03a951b9d",
+    "date": "2026-10-07"
   },
   "/ru/docs/history-api": {
     "hash": "68310da4af5c9191",
@@ -472,8 +472,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/list": {
-    "hash": "9c720df6e36e5646",
-    "date": "2026-10-06"
+    "hash": "fa5131e53b69bff4",
+    "date": "2026-10-07"
   },
   "/ru/docs/listeners-api": {
     "hash": "8647d11c003ca907",
@@ -492,7 +492,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/output-data": {
-    "hash": "c13df2e822c7ee65",
+    "hash": "9f15997cd91730aa",
     "date": "2026-10-07"
   },
   "/ru/docs/page": {
@@ -504,8 +504,8 @@
     "date": "2026-10-05"
   },
   "/ru/docs/paragraph": {
-    "hash": "56fce0fc056e79be",
-    "date": "2026-10-06"
+    "hash": "ca9479f9a9427d27",
+    "date": "2026-10-07"
   },
   "/ru/docs/placeholder-api": {
     "hash": "10b8b863c99d5715",
@@ -516,8 +516,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/quote": {
-    "hash": "c6669578c7d17d0d",
-    "date": "2026-10-06"
+    "hash": "899cb43d02111306",
+    "date": "2026-10-07"
   },
   "/ru/docs/readonly-api": {
     "hash": "817b46fd30ee1ace",
@@ -576,8 +576,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/toggle": {
-    "hash": "7e9e055478288e5b",
-    "date": "2026-10-06"
+    "hash": "24d09d23b1989bbd",
+    "date": "2026-10-07"
   },
   "/ru/docs/toolbar-api": {
     "hash": "529520a9bce1fbe5",
@@ -644,16 +644,16 @@
     "date": "2026-09-08"
   },
   "/ru/server": {
-    "hash": "4d4c323f43004465",
-    "date": "2026-10-05"
+    "hash": "6d08ae8c1d252c13",
+    "date": "2026-10-07"
   },
   "/ru/tools": {
     "hash": "2b0fddd440ba58c4",
     "date": null
   },
   "/server": {
-    "hash": "18da7678df7fe761",
-    "date": "2026-10-05"
+    "hash": "28bba0242abd5451",
+    "date": "2026-10-07"
   },
   "/tools": {
     "hash": "8ae406d370e08ec0",

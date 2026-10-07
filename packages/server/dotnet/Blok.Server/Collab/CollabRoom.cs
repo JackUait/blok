@@ -658,7 +658,11 @@ internal sealed class CollabRoom : IDisposable
             }
             catch (CollabEditException refusal)
             {
-              return new CollabEditResult(CollabEditStatus.Invalid, refusal);
+              return new CollabEditResult(RefusalStatus(refusal), refusal);
+            }
+            catch (CollabTransientException overloaded)
+            {
+              return new CollabEditResult(CollabEditStatus.Overloaded, overloaded);
             }
             finally
             {
@@ -716,7 +720,16 @@ internal sealed class CollabRoom : IDisposable
             localUpdates.Clear();
             UpdateEvictionLocked();
 
-            return new CollabEditResult(CollabEditStatus.Invalid, refusal);
+            return new CollabEditResult(RefusalStatus(refusal), refusal);
+          }
+          catch (CollabTransientException overloaded)
+          {
+            // Thrown before the first write, so unlike the catch below it
+            // holds no unjournalled state and must not close the room.
+            localUpdates.Clear();
+            UpdateEvictionLocked();
+
+            return new CollabEditResult(CollabEditStatus.Overloaded, overloaded);
           }
           catch (Exception error)
           {
@@ -810,7 +823,10 @@ internal sealed class CollabRoom : IDisposable
           {
             log?.Invoke($"collab: room \"{DocId}\" could not export its state: {error.Message}");
 
-            return new CollabStateResult(CollabStateStatus.ExportFailed, [], Error: error);
+            return new CollabStateResult(
+                error is CollabTransientException ? CollabStateStatus.Overloaded : CollabStateStatus.ExportFailed,
+                [],
+                Error: error);
           }
 
           return new CollabStateResult(
@@ -2001,6 +2017,13 @@ internal sealed class CollabRoom : IDisposable
   /// Not a wait for a pooled engine: that says the host is busy, not that
   /// this document is too large.
   /// </summary>
+  private static CollabEditStatus RefusalStatus(CollabEditException refusal)
+  {
+    return CollabDocConverter.IsTooLarge(refusal.InnerException)
+      ? CollabEditStatus.TooLarge
+      : CollabEditStatus.Invalid;
+  }
+
   private static bool IsRuntimeLimit(Exception error)
   {
     for (var cause = error; cause is not null; cause = cause.InnerException)

@@ -88,6 +88,14 @@ internal static class StateEndpoint
 
         return;
 
+      case CollabStateStatus.Overloaded:
+        await SyncEndpoint.RefuseRetryLaterAsync(
+            context,
+            rooms.RetryAfter,
+            "the server ran past its limits exporting this document, retry\n");
+
+        return;
+
       case CollabStateStatus.ExportFailed:
         await SyncEndpoint.RefuseAsync(
             context,

@@ -4,6 +4,8 @@ using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Blok.Server.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -532,6 +534,174 @@ public sealed class HostCollabTests
     {
       DeleteDirectory(root);
     }
+  }
+
+  /// <summary>
+  /// The edit route takes rich text as HTML (what v1.15.2 hosts send) or as
+  /// segments; /state and the write-back PUT both answer segments.
+  /// </summary>
+  [Fact]
+  public async Task AnEditInHtmlOrSegmentsIsServedAndWrittenBackAsSegments()
+  {
+    var root = UniqueDirectory("blok-host-segments");
+    await using var endpoint = await FixtureDocEndpoint.StartAsync();
+
+    try
+    {
+      await using var app = await StartCollabHostAsync(
+          endpoint,
+          Path.Combine(root, "collab"),
+          HostRequestTimeouts.DefaultRequestTimeout,
+          HostRequestTimeouts.DefaultKeepAliveTimeout);
+      using var client = new HttpClient { BaseAddress = new Uri($"http://{ListenAddress(app)}") };
+
+      using var html = await PostOpsAsync(
+          client,
+          "html-edit",
+          """[ { "op": "insert", "id": "html", "block": { "type": "paragraph", "data": { "text": "<b>bold</b> &amp; plain" } } } ]""");
+      using var segments = await PostOpsAsync(
+          client,
+          "segments-edit",
+          """[ { "op": "insert", "id": "segments", "after": "html", "block": { "type": "paragraph", "data": { "text": [ { "text": "seg", "marks": { "italic": true } } ] } } } ]""");
+      using var state = await client.GetAsync($"/sync/{DocId}/state");
+
+      Assert.Equal(HttpStatusCode.NoContent, html.StatusCode);
+      Assert.Equal(HttpStatusCode.NoContent, segments.StatusCode);
+      Assert.Equal(HttpStatusCode.OK, state.StatusCode);
+      var expected = new Dictionary<string, string>
+      {
+        ["html"] = """[{"text":"bold","marks":{"bold":true}},{"text":" & plain"}]""",
+        ["segments"] = """[{"text":"seg","marks":{"italic":true}}]""",
+      };
+      Assert.Equal(expected, Texts(JsonNode.Parse(await state.Content.ReadAsStringAsync())));
+
+      var put = await WaitForPutAsync(endpoint, body => Texts(body).Count == 2);
+      Assert.Equal(expected, Texts(put.Body));
+    }
+    finally
+    {
+      DeleteDirectory(root);
+    }
+  }
+
+  /// <summary>A document a v1.15.2 host stored as HTML comes back as segments on the first write-back.</summary>
+  [Fact]
+  public async Task AnHtmlDocumentFromTheEndpointIsWrittenBackAsSegments()
+  {
+    var root = UniqueDirectory("blok-host-html-seed");
+    await using var endpoint = await FixtureDocEndpoint.StartAsync();
+    endpoint.GetBody =
+        """{ "time": 1, "blocks": [ { "id": "old", "type": "paragraph", "data": { "text": "a <i>b</i>" } } ] }""";
+
+    try
+    {
+      await using var app = await StartCollabHostAsync(
+          endpoint,
+          Path.Combine(root, "collab"),
+          HostRequestTimeouts.DefaultRequestTimeout,
+          HostRequestTimeouts.DefaultKeepAliveTimeout);
+      using var client = new HttpClient { BaseAddress = new Uri($"http://{ListenAddress(app)}") };
+
+      using var edit = await PostEditAsync(client, "after-html-seed", "new");
+      using var state = await client.GetAsync($"/sync/{DocId}/state");
+
+      Assert.Equal(HttpStatusCode.NoContent, edit.StatusCode);
+      const string Old = """[{"text":"a "},{"text":"b","marks":{"italic":true}}]""";
+      Assert.Equal(Old, Texts(JsonNode.Parse(await state.Content.ReadAsStringAsync()))["old"]);
+      var put = await WaitForPutAsync(endpoint, body => Texts(body).ContainsKey("new"));
+      Assert.Equal(Old, Texts(put.Body)["old"]);
+    }
+    finally
+    {
+      DeleteDirectory(root);
+    }
+  }
+
+  /// <summary>
+  /// --rich-text-fields reaches the room: a listed custom field is stored as
+  /// formatted text and answered as segments; an unlisted one stays a string.
+  /// </summary>
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task TheRichTextFieldsFlagMakesACustomFieldSegments(bool listed)
+  {
+    var root = UniqueDirectory("blok-host-rich-fields");
+    await using var endpoint = await FixtureDocEndpoint.StartAsync();
+    var parsed = HostArguments.Parse(
+        listed ? ["--rich-text-fields", """{ "widget": ["text"] }"""] : [],
+        _ => null);
+    var fields = Assert.IsType<BlokServerOptions>(parsed.Options).RichTextFields;
+
+    try
+    {
+      await using var app = await StartCollabHostAsync(
+          endpoint,
+          Path.Combine(root, "collab"),
+          HostRequestTimeouts.DefaultRequestTimeout,
+          HostRequestTimeouts.DefaultKeepAliveTimeout,
+          configure: options => options.RichTextFields = fields);
+      using var client = new HttpClient { BaseAddress = new Uri($"http://{ListenAddress(app)}") };
+
+      using var edit = await PostOpsAsync(
+          client,
+          "widget-edit",
+          """[ { "op": "insert", "id": "w", "block": { "type": "widget", "data": { "text": "<i>w</i>" } } } ]""");
+      using var state = await client.GetAsync($"/sync/{DocId}/state");
+
+      Assert.Equal(HttpStatusCode.NoContent, edit.StatusCode);
+      Assert.Equal(
+          listed ? """[{"text":"w","marks":{"italic":true}}]""" : "\"<i>w</i>\"",
+          Texts(JsonNode.Parse(await state.Content.ReadAsStringAsync()))["w"]);
+    }
+    finally
+    {
+      DeleteDirectory(root);
+    }
+  }
+
+  private static Task<HttpResponseMessage> PostOpsAsync(HttpClient client, string key, string ops)
+  {
+    var request = new HttpRequestMessage(HttpMethod.Post, $"/sync/{DocId}/edit")
+    {
+      Content = new StringContent($$"""{ "ops": {{ops}} }""", Encoding.UTF8, "application/json"),
+    };
+    request.Headers.TryAddWithoutValidation("Blok-Idempotency-Key", key);
+
+    return client.SendAsync(request);
+  }
+
+  private static readonly JsonSerializerOptions Readable =
+      new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+  /// <summary>Each block's data.text as compact JSON, by block id.</summary>
+  private static Dictionary<string, string> Texts(JsonNode? outputData)
+  {
+    var blocks = outputData?["blocks"]?.AsArray() ??
+        throw new InvalidDataException($"the export carries no blocks array: {outputData}");
+
+    return blocks.ToDictionary(
+        block => block?["id"]?.GetValue<string>() ?? "",
+        block => block?["data"]?["text"]?.ToJsonString(Readable) ?? "");
+  }
+
+  /// <summary>Cold Jint and a loaded machine make the first write-back slow; 30 s is far above it.</summary>
+  private static async Task<RecordedPut> WaitForPutAsync(FixtureDocEndpoint endpoint, Func<JsonNode?, bool> carries)
+  {
+    var deadline = Stopwatch.StartNew();
+
+    while (deadline.Elapsed < TimeSpan.FromSeconds(30))
+    {
+      if (endpoint.Puts.LastOrDefault(put => put.DocId == DocId && carries(put.Body)) is { } put)
+      {
+        return put;
+      }
+
+      await Task.Delay(50);
+    }
+
+    throw new TimeoutException(
+        $"no write-back PUT within 30 s; PUTs: {string.Join(", ", endpoint.Puts.Select(put => put.Body?.ToJsonString()))}");
   }
 
   private static Task<HttpResponseMessage> PostEditAsync(HttpClient client, string key, string blockId)

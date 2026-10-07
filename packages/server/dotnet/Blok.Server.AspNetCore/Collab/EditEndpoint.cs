@@ -179,6 +179,22 @@ internal static class EditEndpoint
 
         return;
 
+      case CollabEditStatus.Overloaded:
+        await SyncEndpoint.RefuseRetryLaterAsync(
+            context,
+            rooms.RetryAfter,
+            "the server ran past its limits reading this edit's rich text, retry\n");
+
+        return;
+
+      case CollabEditStatus.TooLarge:
+        await SyncEndpoint.RefuseAsync(
+            context,
+            StatusCodes.Status413PayloadTooLarge,
+            $"{result.Error?.Message ?? "collab: the edit's rich text is too large to read."}\n");
+
+        return;
+
       case CollabEditStatus.Purged:
         await SyncEndpoint.RefuseAsync(
             context,

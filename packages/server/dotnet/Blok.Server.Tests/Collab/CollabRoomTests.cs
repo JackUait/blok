@@ -3143,6 +3143,120 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A read that ran past the runtime's limits may pass on a retry, so it is
+  /// not the caller's fault (422). Neither branch may close the room for it.
+  /// </summary>
+  [Fact]
+  public async Task UnderAJournalAnHtmlReadPastTheRuntimesLimitsIsOverloadedAndKeepsTheRoom()
+  {
+    endpoint.HoldsNothing(DocId);
+    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time, new FailingHtmlReader(TimedOut())));
+    var writer = V2Member();
+    await Join(manager, writer);
+
+    var result = await manager.EditAsync(DocId, [Appending("b-1", "<b>x</b>")], CancellationToken.None);
+    var next = await manager.EditAsync(DocId, [AppendingSegments("b-2", "y")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Overloaded, result.Status);
+    Assert.IsType<BlokDocumentConversionException>(result.Error?.InnerException);
+    Assert.Empty(writer.Closes);
+    Assert.Equal(CollabEditStatus.Applied, next.Status);
+    Assert.Single(operations.Committed(DocId));
+  }
+
+  [Fact]
+  public async Task OnAWorkingCopyAnHtmlReadPastTheRuntimesLimitsIsOverloadedAndKeepsTheRoom()
+  {
+    endpoint.HoldsNothing(DocId);
+    var manager = CreateManager(docConverter: new CollabDocConverter(time, new FailingHtmlReader(TimedOut())));
+    var writer = new FakeMember();
+    await Join(manager, writer);
+
+    var result = await manager.EditAsync(DocId, [Appending("b-1", "<b>x</b>")], CancellationToken.None);
+    var next = await manager.EditAsync(DocId, [AppendingSegments("b-2", "y")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Overloaded, result.Status);
+    Assert.Empty(writer.Closes);
+    Assert.Equal(CollabEditStatus.Applied, next.Status);
+  }
+
+  /// <summary>
+  /// The allocation budget is per call, so the same body runs out of it every
+  /// time: a retry can never pass, unlike a timeout under load.
+  /// </summary>
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task AnHtmlReadPastTheAllocationBudgetIsTooLargeAndKeepsTheRoom(bool journal)
+  {
+    endpoint.HoldsNothing(DocId);
+    var docConverter = new CollabDocConverter(
+        time,
+        new FailingHtmlReader(new BlokDocumentConversionException(
+            BlokConversionFailure.DocumentTooLarge,
+            new InvalidOperationException("memory"))));
+    var manager = journal
+      ? CreateJournalManager(docConverter: docConverter)
+      : CreateManager(docConverter: docConverter);
+    var writer = journal ? V2Member() : new FakeMember();
+    await Join(manager, writer);
+
+    var result = await manager.EditAsync(DocId, [Appending("b-1", "<b>x</b>")], CancellationToken.None);
+    var next = await manager.EditAsync(DocId, [AppendingSegments("b-2", "y")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.TooLarge, result.Status);
+    Assert.Empty(writer.Closes);
+    Assert.Equal(CollabEditStatus.Applied, next.Status);
+  }
+
+  /// <summary>A JavaScript error repeats on every retry, so it stays the caller's 422.</summary>
+  [Fact]
+  public async Task AJavaScriptErrorReadingAnEditsHtmlStaysARefusal()
+  {
+    endpoint.HoldsNothing(DocId);
+    var manager = CreateJournalManager(
+        docConverter: new CollabDocConverter(
+            time,
+            new FailingHtmlReader(new BlokDocumentConversionException(
+                BlokConversionFailure.InvalidDocument,
+                new InvalidOperationException("bad html")))));
+    await Join(manager, V2Member());
+
+    var result = await manager.EditAsync(DocId, [Appending("b-1", "<b>x</b>")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Invalid, result.Status);
+  }
+
+  [Fact]
+  public async Task AStateExportPastTheRuntimesLimitsIsOverloaded()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    await Join(manager, new FakeMember());
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read",
+        TimedOut());
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.Overloaded, state.Status);
+    Assert.Empty(state.Json);
+  }
+
+  [Fact]
+  public async Task AStateExportThatCanNeverBeWrittenStaysExportFailed()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    await Join(manager, new FakeMember());
+    converter.ExportFailure = new InvalidDataException("not JSON");
+
+    var state = await manager.StateAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabStateStatus.ExportFailed, state.Status);
+  }
+
+  /// <summary>
   /// A /state read of an id Blok has never seen seeds the journal like a
   /// join does, so the reopen PUT above applies to a /state-only id too.
   /// </summary>
@@ -6234,6 +6348,25 @@ public sealed class CollabRoomTests
         Parent: null);
   }
 
+  private static CollabEditOp.Insert AppendingSegments(string id, string text)
+  {
+    return new CollabEditOp.Insert(
+        id,
+        new JsonObject
+        {
+          ["id"] = id,
+          ["type"] = "paragraph",
+          ["data"] = new JsonObject { ["text"] = new JsonArray(new JsonObject { ["text"] = text }) },
+        },
+        After: null,
+        Parent: null);
+  }
+
+  private static BlokDocumentConversionException TimedOut()
+  {
+    return new BlokDocumentConversionException(BlokConversionFailure.TimedOut, new TimeoutException());
+  }
+
   private static FakeMember V2Member(string? actorId = null, bool canWrite = true)
   {
     return new FakeMember(
@@ -6243,12 +6376,14 @@ public sealed class CollabRoomTests
         CollabOperationSource.ClientV2);
   }
 
-  private CollabRoomManager CreateManager(CollabRoomOptions? options = null)
+  private CollabRoomManager CreateManager(
+      CollabRoomOptions? options = null,
+      ICollabDocConverter? docConverter = null)
   {
     return new CollabRoomManager(
         store,
         endpoint,
-        converter,
+        docConverter ?? converter,
         options ?? new CollabRoomOptions(),
         time,
         log.Add);

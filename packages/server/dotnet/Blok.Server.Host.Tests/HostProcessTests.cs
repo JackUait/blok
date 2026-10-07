@@ -1022,6 +1022,88 @@ public sealed class HostProcessTests
   }
 
   [Fact]
+  public void ParsesTheRichTextFieldsFlagAsAJsonObjectOfFieldLists()
+  {
+    var parsed = HostArguments.Parse(
+        ["--rich-text-fields", """{ "callout": ["title", "caption"], "widget": [] }"""],
+        _ => null);
+
+    Assert.NotNull(parsed.Options);
+    Assert.Equal(["callout", "widget"], parsed.Options.RichTextFields.Keys.Order(StringComparer.Ordinal));
+    Assert.Equal(["title", "caption"], parsed.Options.RichTextFields["callout"]);
+    Assert.Empty(parsed.Options.RichTextFields["widget"]);
+  }
+
+  [Fact]
+  public void DefaultsTheRichTextFieldsToNone()
+  {
+    var parsed = HostArguments.Parse([], _ => null);
+
+    Assert.NotNull(parsed.Options);
+    Assert.Empty(parsed.Options.RichTextFields);
+  }
+
+  [Theory]
+  [InlineData("not json")]
+  [InlineData("""["callout"]""")]
+  [InlineData("""{ "callout": "title" }""")]
+  [InlineData("""{ "callout": [1] }""")]
+  [InlineData("""{ "callout": [null] }""")]
+  [InlineData("""{ "callout": null }""")]
+  [InlineData("""{ "a": ["x"], "a": ["y"] }""")]
+  public void RefusesRichTextFieldsThatAreNotAnObjectOfStringLists(string value)
+  {
+    var parsed = HostArguments.Parse(["--rich-text-fields", value], _ => null);
+
+    Assert.Null(parsed.Options);
+    Assert.Equal($"invalid value \"{value}\" for flag -rich-text-fields: parse error", parsed.Error);
+  }
+
+  [Fact]
+  public void ReadsTheRichTextFieldsFromTheEnvironmentUnlessTheFlagIsGiven()
+  {
+    static string? Fields(string name) =>
+        name == "BLOK_RICH_TEXT_FIELDS" ? """{ "callout": ["title"] }""" : null;
+
+    var fromEnvironment = HostArguments.Parse([], Fields);
+    Assert.NotNull(fromEnvironment.Options);
+    Assert.Equal(["title"], fromEnvironment.Options.RichTextFields["callout"]);
+
+    var flagWins = HostArguments.Parse(["--rich-text-fields", """{ "widget": ["text"] }"""], Fields);
+    Assert.NotNull(flagWins.Options);
+    Assert.Equal(["widget"], flagWins.Options.RichTextFields.Keys);
+
+    // HostProcess.Start writes an unset variable as "", so empty means unset.
+    var empty = HostArguments.Parse([], name => name == "BLOK_RICH_TEXT_FIELDS" ? "" : null);
+    Assert.NotNull(empty.Options);
+    Assert.Empty(empty.Options.RichTextFields);
+
+    var invalid = HostArguments.Parse([], name => name == "BLOK_RICH_TEXT_FIELDS" ? "nope" : null);
+    Assert.Equal("invalid value \"nope\" for BLOK_RICH_TEXT_FIELDS: parse error", invalid.Error);
+  }
+
+  /// <summary>Well-formed JSON with an unusable name is the options' own refusal (exit 1), as in-process.</summary>
+  [Fact]
+  public async Task RefusesToStartWithAnEmptyRichTextBlockType()
+  {
+    var result = await RunHostCommandAsync(
+    [
+      "--listen", HostProcess.AllocateListenAddress(),
+      "--rich-text-fields", """{ "": ["text"] }""",
+    ]);
+
+    Assert.Equal(1, result.ExitCode);
+    Assert.Contains("RichTextFields", result.StandardError, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void DescribesTheRichTextFieldsFlag()
+  {
+    Assert.Contains("--rich-text-fields", HostArguments.Usage, StringComparison.Ordinal);
+    Assert.Contains("BLOK_RICH_TEXT_FIELDS", HostArguments.Usage, StringComparison.Ordinal);
+  }
+
+  [Fact]
   public async Task AnExplicitSecretWinsEvenWhenItIsInvalid()
   {
     var result = await RunHostCommandAsync(

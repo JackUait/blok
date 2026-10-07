@@ -42,6 +42,20 @@ internal enum CollabEditStatus
   /// <summary>An op failed validation; nothing was written. The endpoint answers 422.</summary>
   Invalid,
 
+  /// <summary>
+  /// Reading the edit's rich text HTML ran past the runtime's limits; nothing
+  /// was written and the room stays open. A retry may pass, so the endpoint
+  /// answers 503 with Retry-After.
+  /// </summary>
+  Overloaded,
+
+  /// <summary>
+  /// Reading the edit's rich text HTML ran out of the runtime's per-call
+  /// allocation budget. The same body fails every time; nothing was written.
+  /// The endpoint answers 413.
+  /// </summary>
+  TooLarge,
+
   Purged,
 
   /// <summary>The doc endpoint could not seed the room; the endpoint answers 503.</summary>
@@ -93,6 +107,12 @@ internal enum CollabStateStatus
 
   /// <summary>The converter cannot write this document as JSON; the endpoint answers 500.</summary>
   ExportFailed,
+
+  /// <summary>
+  /// The export ran past the runtime's limits reading rich text HTML. A retry
+  /// may pass, so the endpoint answers 503 with Retry-After.
+  /// </summary>
+  Overloaded,
 }
 
 /// <summary>
@@ -275,6 +295,9 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
         actorId: null,
         cancellationToken: cancellationToken);
   }
+
+  /// <summary>How long an overloaded request should wait: the room's first backoff.</summary>
+  internal TimeSpan RetryAfter => options.RetryBackoff;
 
   /// <summary>Block-level HTTP edit with the endpoint's idempotency receipt.</summary>
   internal async ValueTask<CollabEditResult> EditAsync(

@@ -582,14 +582,32 @@ internal sealed class FakeDocConverter : ICollabDocConverter
     return ValueTask.CompletedTask;
   }
 
+  /// <summary>Thrown by every export while set.</summary>
+  internal Exception? ExportFailure { get; set; }
+
+  /// <summary>Thrown by the next edit before it writes anything, then cleared.</summary>
+  internal Exception? NextEditFailure { get; set; }
+
   public ValueTask<JsonNode> ExportAsync(YDoc doc, CancellationToken cancellationToken = default)
   {
+    if (ExportFailure is { } failure)
+    {
+      throw failure;
+    }
+
     return ValueTask.FromResult<JsonNode>(Export(doc));
   }
 
   public ValueTask ApplyOpsAsync(
       YDoc doc, IReadOnlyList<CollabEditOp> ops, CancellationToken cancellationToken = default)
   {
+    if (NextEditFailure is { } failure)
+    {
+      NextEditFailure = null;
+
+      throw failure;
+    }
+
     ApplyOps(doc, ops);
 
     return ValueTask.CompletedTask;

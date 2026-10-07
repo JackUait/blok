@@ -16,7 +16,7 @@ import type { SessionProtocol, WorkingSetTag } from './types';
 const LINEAGE_PATTERN = /^[0-9a-f]{32}$/;
 
 /** The only CRDT schema these stored updates can be replayed into. */
-const SUPPORTED_FORMAT = 2;
+export const SUPPORTED_FORMAT = 2;
 
 /** What an outbox row without a `format` field was written in: the build before the stamp. */
 const UNSTAMPED_FORMAT = 1;

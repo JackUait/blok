@@ -3310,8 +3310,10 @@ describe('collaboration — sync-first load', () => {
       // Wakes this tab's drain.
       harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed beside the format-1 row');
 
-      await waitFor(() => states(seen).includes('quarantined'), 'the format quarantine', 5000)
-        .catch(() => undefined);
+      // No catch: both must happen. The typed edit on the wire proves the drain
+      // got past the format-1 row, so "never sent" cannot pass on an idle drain.
+      await waitFor(() => states(seen).includes('quarantined'), 'the format quarantine', 5000);
+      await waitFor(() => operationOn(socket) !== undefined, 'the typed edit on the wire', 5000);
 
       const quarantineRows = await new Promise<unknown[]>((resolve, reject) => {
         const request = db.transaction('quarantine', 'readonly').objectStore('quarantine').getAll();

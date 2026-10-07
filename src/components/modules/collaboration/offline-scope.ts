@@ -1,4 +1,4 @@
-import { escapePartitionSegment } from './operation-store';
+import { escapePartitionSegment, SUPPORTED_FORMAT } from './operation-store';
 
 const PREFIX = 'blok-ops-';
 const STORES = ['meta', 'updates', 'outbox', 'quarantine'] as const;
@@ -99,7 +99,7 @@ const isKnownV2Meta = (value: unknown): boolean => {
   }
 
   // Format 1 stays known: an older build's v2 session also kept its edits in the outbox.
-  return (value.format === 1 || value.format === 2) &&
+  return (value.format === 1 || value.format === SUPPORTED_FORMAT) &&
     value.protocol === 'v2' &&
     typeof value.lineage === 'string' &&
     LINEAGE_PATTERN.test(value.lineage);

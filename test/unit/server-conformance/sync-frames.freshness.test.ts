@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { SUPPORTED_FORMAT } from '../../../src/components/modules/collaboration/operation-store';
+
 /**
  * Lockstep pin for `fixtures/sync-frames.json`, the wire-frame fixture BOTH
  * sides read: `sync-wire.test.ts` in TypeScript and `SyncWireFramingTests.cs` +
@@ -116,6 +118,7 @@ const V2_NEGATIVE = [
 
 interface NamedCase {
   name: string;
+  control?: { format: number };
 }
 
 interface SyncFramesFixture {
@@ -174,6 +177,13 @@ describe('sync frame fixtures', () => {
     expect(names(fixture.frames)).toStrictEqual(V1_FRAMES);
     expect(names(fixture.v2.frames)).toStrictEqual(V2_FRAMES);
     expect(names(fixture.v2.negative)).toStrictEqual(V2_NEGATIVE);
+  }, TIMEOUT_MS);
+
+  it('announces the format the client speaks in its control frame', () => {
+    // The C# drift guard reads this frame and expects the server's own format.
+    const control = readFixture().frames.find((entry) => entry.name === 'blokControl')?.control;
+
+    expect(control?.format).toBe(SUPPORTED_FORMAT);
   }, TIMEOUT_MS);
 
   it('writes exactly one file', () => {

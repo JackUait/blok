@@ -4901,6 +4901,17 @@ public sealed class CollabRoomTests
 
     Assert.Equal(attempts, converter.Exports);
     Assert.Empty(endpoint.Saves);
+
+    // The next edit gets one attempt, and a success clears the give-up.
+    converter.ExportFailure = null;
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "?"))),
+        CancellationToken.None);
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count == 1,
+        "the next edit's export");
   }
 
   /// <summary>

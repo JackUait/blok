@@ -15,7 +15,8 @@ namespace Blok.Server.Tests.Collab;
 /// phrases each delete what the other re-inserts, so the shared words land
 /// twice and the rest is dropped. That is why the client (document-store.ts,
 /// <c>diffText</c>) is a bounded Myers diff over code points, and why this
-/// side is too.
+/// side is too. The block is a custom tool's plain <c>text</c>; a built-in
+/// rich field diffs segments instead (RichTextEditFixtureTests).
 /// </summary>
 public sealed class YDocConverterTextDiffTests
 {
@@ -238,7 +239,7 @@ public sealed class YDocConverterTextDiffTests
 
   private static string Paragraph(string text)
   {
-    return $$"""{ "id": "p", "type": "paragraph", "data": { "text": {{Quote(text)}} } }""";
+    return $$"""{ "id": "p", "type": "note", "data": { "text": {{Quote(text)}} } }""";
   }
 
   private static string UpdateText(string text)

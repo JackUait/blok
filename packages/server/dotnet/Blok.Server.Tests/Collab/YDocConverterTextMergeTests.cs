@@ -8,7 +8,9 @@ namespace Blok.Server.Tests.Collab;
 
 /// <summary>
 /// A block's mergeable text must reach the doc as a <see cref="YText"/>, not a
-/// plain string, so two people typing in one paragraph keep both bursts.
+/// plain string, so two people typing in one block keep both bursts. The
+/// blocks here are a custom "note" tool whose <c>text</c> is a plain diffable
+/// field; the built-in rich fields are formatted text (YDocConverterRichTextTests).
 ///
 /// These assertions are at the CRDT REPRESENTATION level on purpose: a plain
 /// string and a YText export to IDENTICAL JSON, so the conformance suite's
@@ -20,30 +22,30 @@ public sealed class YDocConverterTextMergeTests
   [Fact]
   public void SeedStoresBlockTextAsAYText()
   {
-    var doc = SeededDoc("""{ "id": "p", "type": "paragraph", "data": { "text": "hello" } }""");
+    var doc = SeededDoc("""{ "id": "p", "type": "note", "data": { "text": "hello" } }""");
 
     Assert.Equal("hello", Assert.IsType<YText>(DataValue(doc, "p", "text")).ToString());
   }
 
-  /// <summary>Empty paragraph data is normalized to { text: "" } — still a YText.</summary>
+  /// <summary>Empty paragraph data is normalized to { text: [] } — a formatted text.</summary>
   [Fact]
-  public void SeedStoresTheNormalizedEmptyParagraphTextAsAYText()
+  public void SeedStoresTheNormalizedEmptyParagraphTextAsFormattedText()
   {
     var doc = SeededDoc("""{ "id": "p", "type": "paragraph", "data": {} }""");
 
-    Assert.Equal(string.Empty, Assert.IsType<YText>(DataValue(doc, "p", "text")).ToString());
+    Assert.Empty(Assert.IsType<YXmlText>(DataValue(doc, "p", "text")).ToDelta());
   }
 
   /// <summary>A re-seed must not DOWNGRADE the key back to a plain string.</summary>
   [Fact]
   public void ReseedingTheSameDocumentStillMintsAYText()
   {
-    var doc = SeededDoc("""{ "id": "p", "type": "paragraph", "data": { "text": "one" } }""");
+    var doc = SeededDoc("""{ "id": "p", "type": "note", "data": { "text": "one" } }""");
 
     YDocConverter.Seed(
         doc,
         new JsonArray(
-            JsonNode.Parse("""{ "id": "p", "type": "paragraph", "data": { "text": "two" } }""")));
+            JsonNode.Parse("""{ "id": "p", "type": "note", "data": { "text": "two" } }""")));
 
     Assert.Equal("two", Assert.IsType<YText>(DataValue(doc, "p", "text")).ToString());
   }
@@ -52,7 +54,7 @@ public sealed class YDocConverterTextMergeTests
   [Fact]
   public void SeedKeepsANonStringTextAtomic()
   {
-    var doc = SeededDoc("""{ "id": "p", "type": "paragraph", "data": { "text": 42 } }""");
+    var doc = SeededDoc("""{ "id": "p", "type": "note", "data": { "text": 42 } }""");
 
     Assert.Equal(42d, DataValue(doc, "p", "text"));
   }
@@ -75,7 +77,7 @@ public sealed class YDocConverterTextMergeTests
   public void SeedKeepsATuneTextAtomic()
   {
     var doc = SeededDoc(
-        """{ "id": "p", "type": "paragraph", "data": {}, "tunes": { "text": "tuned" } }""");
+        """{ "id": "p", "type": "note", "data": {}, "tunes": { "text": "tuned" } }""");
 
     var tunes = Assert.IsType<YMap>(Entry(Block(doc, "p"), "tunes"));
 
@@ -87,7 +89,7 @@ public sealed class YDocConverterTextMergeTests
   [Fact]
   public void UpdateKeepsTheSameYTextInstance()
   {
-    var doc = SeededDoc("""{ "id": "p", "type": "paragraph", "data": { "text": "hello" } }""");
+    var doc = SeededDoc("""{ "id": "p", "type": "note", "data": { "text": "hello" } }""");
     var before = Assert.IsType<YText>(DataValue(doc, "p", "text"));
 
     Apply(doc, """{ "op": "update", "id": "p", "data": { "text": "hello!" } }""");
@@ -105,7 +107,7 @@ public sealed class YDocConverterTextMergeTests
   [Fact]
   public void AnUpdateOpAndAPeersTypingBothSurvive()
   {
-    var server = SeededDoc("""{ "id": "p", "type": "paragraph", "data": { "text": "hello" } }""");
+    var server = SeededDoc("""{ "id": "p", "type": "note", "data": { "text": "hello" } }""");
     var peer = new YDoc();
 
     Assert.Equal(
@@ -134,7 +136,7 @@ public sealed class YDocConverterTextMergeTests
   public void UpdateStillDropsTheKeysTheNewDataOmits()
   {
     var doc = SeededDoc(
-        """{ "id": "p", "type": "paragraph", "data": { "text": "old", "level": 3 } }""");
+        """{ "id": "p", "type": "note", "data": { "text": "old", "level": 3 } }""");
 
     Apply(doc, """{ "op": "update", "id": "p", "data": { "text": "new" } }""");
 

@@ -633,7 +633,7 @@ internal sealed class CollabRoom : IDisposable
           {
             try
             {
-              converter.ApplyOps(doc!, ops);
+              await converter.ApplyOpsAsync(doc!, ops, lifetime.Token);
             }
             catch (CollabEditException refusal)
             {
@@ -666,7 +666,7 @@ internal sealed class CollabRoom : IDisposable
 
           try
           {
-            converter.ApplyOps(doc!, ops);
+            await converter.ApplyOpsAsync(doc!, ops, lifetime.Token);
 
             // One update is what the append journals; zero or many means the
             // document moved by bytes the journal would never see.
@@ -769,7 +769,7 @@ internal sealed class CollabRoom : IDisposable
 
           try
           {
-            json = DocEndpointClient.Serialize(converter.Export(doc!));
+            json = DocEndpointClient.Serialize(await converter.ExportAsync(doc!, cancellationToken));
           }
           catch (Exception error)
           {
@@ -1796,7 +1796,7 @@ internal sealed class CollabRoom : IDisposable
 
     if (loaded.Data is not null)
     {
-      converter.Seed(doc!, loaded.Data);
+      await converter.SeedAsync(doc!, loaded.Data, lifetime.Token);
     }
 
     var baseline = new List<ReadOnlyMemory<byte>>();
@@ -1921,7 +1921,7 @@ internal sealed class CollabRoom : IDisposable
 
     if (loaded.Data is not null)
     {
-      converter.Seed(resetDoc, loaded.Data);
+      await converter.SeedAsync(resetDoc, loaded.Data, lifetime.Token);
     }
 
     var head = await session!.ResetAsync(
@@ -1980,7 +1980,7 @@ internal sealed class CollabRoom : IDisposable
 
     if (loaded.Data is not null)
     {
-      converter.Seed(doc!, loaded.Data);
+      await converter.SeedAsync(doc!, loaded.Data, lifetime.Token);
     }
 
     PublishLocalUpdatesLocked();
@@ -3027,7 +3027,7 @@ internal sealed class CollabRoom : IDisposable
     // off and retried, never left for the next edit to re-arm.
     try
     {
-      var snapshot = converter.Export(doc!);
+      var snapshot = await converter.ExportAsync(doc!, lifetime.Token);
 
       // Cleared at the SNAPSHOT, not at the save's completion: this document
       // is what the checkpoint owed, and clearing on completion would re-arm
@@ -3231,7 +3231,7 @@ internal sealed class CollabRoom : IDisposable
 
     try
     {
-      snapshot = converter.Export(doc!);
+      snapshot = await converter.ExportAsync(doc!, deadline.Token);
       projectionOwed = false;
     }
     catch (Exception error) when (!lifetime.IsCancellationRequested)

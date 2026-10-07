@@ -252,6 +252,18 @@ public sealed class BlokServerOptions
   /// </summary>
   public int CollabInboundAwarenessBytesPerSecond { get; set; } = 128 << 10;
 
+  /// <summary>
+  /// Your custom block tools' rich text fields, by block type: the
+  /// <c>richTextFields</c> each tool declares on the client, for example
+  /// <c>{ "callout": ["title"] }</c>. The built-in paragraph, header, quote,
+  /// toggle and list <c>text</c> fields are always rich and need no entry.
+  /// A rich field is stored as formatted text that merges per character and
+  /// is written to the document endpoint as segments; list exactly what the
+  /// client declares, or the two write the field in different shapes.
+  /// </summary>
+  public IDictionary<string, IList<string>> RichTextFields { get; set; } =
+      new Dictionary<string, IList<string>>(StringComparer.Ordinal);
+
   internal bool HasStorage => StorageDirectory != "" || S3Bucket != "";
 
   internal string LocalPublicPath { get; private set; } = "";
@@ -437,6 +449,15 @@ public sealed class BlokServerOptions
       throw new InvalidOperationException(
           $"CollabInboundBurstFrames must be a positive number of frames (got {CollabInboundBurstFrames}): " +
           "a zero burst closes every connection on its first frame");
+    }
+
+    try
+    {
+      Blok.Server.Collab.RichTextFields.With(RichTextFields);
+    }
+    catch (ArgumentException error)
+    {
+      throw new InvalidOperationException($"RichTextFields: {error.Message}", error);
     }
 
     if (CollabInboundResyncsPerMinute < 0)

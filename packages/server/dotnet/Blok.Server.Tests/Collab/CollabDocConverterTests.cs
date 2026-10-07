@@ -11,21 +11,23 @@ public sealed class CollabDocConverterTests
   private readonly ManualTimeProvider time = new();
 
   [Fact]
-  public void SeedsTheBlocksOfAnOutputDataObjectAndExportsThemBackWithATimestamp()
+  public async Task SeedsTheBlocksOfAnOutputDataObjectAndExportsThemBackWithATimestamp()
   {
     var doc = new YDoc();
-    var converter = new CollabDocConverter(time);
+    var converter = new CollabDocConverter(time, RichTextRuntime.Reader);
     var document = JsonNode.Parse(
-        """{"time":1,"blocks":[{"id":"a","type":"paragraph","data":{"text":"hi"}}],"version":"1.12.0"}""")!;
+        """{"time":1,"blocks":[{"id":"a","type":"paragraph","data":{"text":"hi <b>you</b>"}}],"version":"1.12.0"}""")!;
 
-    converter.Seed(doc, document);
-    var exported = Assert.IsType<JsonObject>(converter.Export(doc));
+    await converter.SeedAsync(doc, document);
+    var exported = Assert.IsType<JsonObject>(await converter.ExportAsync(doc));
 
     Assert.Equal(time.GetUtcNow().ToUnixTimeMilliseconds(), exported["time"]?.GetValue<long>());
     var block = Assert.IsType<JsonObject>(Assert.Single(Assert.IsType<JsonArray>(exported["blocks"])));
     Assert.Equal("a", block["id"]?.GetValue<string>());
     Assert.Equal("paragraph", block["type"]?.GetValue<string>());
-    Assert.Equal("hi", block["data"]?["text"]?.GetValue<string>());
+    Assert.Equal(
+        """[{"text":"hi "},{"text":"you","marks":{"bold":true}}]""",
+        block["data"]?["text"]?.ToJsonString());
   }
 
   /// <summary>
@@ -33,11 +35,11 @@ public sealed class CollabDocConverterTests
   /// the export cannot read into the room, so it must reach the room's log.
   /// </summary>
   [Fact]
-  public void ForwardsExportWarningsToTheLog()
+  public async Task ForwardsExportWarningsToTheLog()
   {
     var doc = new YDoc();
     var warnings = new List<string>();
-    var converter = new CollabDocConverter(time, warnings.Add);
+    var converter = new CollabDocConverter(time, RichTextRuntime.Reader, log: warnings.Add);
     var blocks = doc.GetMap("blocks");
 
     doc.Transact(transaction => blocks.Set(transaction, "bad", new YMap(
@@ -47,7 +49,7 @@ public sealed class CollabDocConverterTests
       new KeyValuePair<string, object?>("data", new YMap([])),
     ])));
 
-    converter.Export(doc);
+    await converter.ExportAsync(doc);
 
     Assert.Contains(warnings, warning => warning.Contains("\"bad\"", StringComparison.Ordinal));
   }
@@ -57,11 +59,144 @@ public sealed class CollabDocConverterTests
   [InlineData("\"text\"")]
   [InlineData("""{"time":1}""")]
   [InlineData("""{"blocks":{}}""")]
-  public void RefusesADocumentWithoutABlocksArray(string body)
+  public async Task RefusesADocumentWithoutABlocksArray(string body)
   {
     var doc = new YDoc();
-    var converter = new CollabDocConverter(time);
+    var converter = new CollabDocConverter(time, RichTextRuntime.Reader);
 
-    Assert.Throws<InvalidDataException>(() => converter.Seed(doc, JsonNode.Parse(body)!));
+    await Assert.ThrowsAsync<InvalidDataException>(
+        async () => await converter.SeedAsync(doc, JsonNode.Parse(body)!));
+  }
+
+  /// <summary>
+  /// Review Focus 1: a host that PUTs the same text spelled differently
+  /// (<c>&lt;b&gt;</c> for <c>&lt;strong&gt;</c>, an entity, attribute order)
+  /// must write nothing, or every respelling is an edit peers echo back.
+  /// </summary>
+  [Fact]
+  public async Task AnEditThatOnlyRespellsTheHtmlWritesNothing()
+  {
+    var doc = new YDoc();
+    var converter = new CollabDocConverter(time, RichTextRuntime.Reader);
+
+    await converter.SeedAsync(doc, JsonNode.Parse(
+        """{"blocks":[{"id":"a","type":"paragraph","data":{"text":"<strong>x</strong>&nbsp;<a href=\"h\" target=\"_blank\">y</a>"}}]}""")!);
+
+    var updates = 0;
+
+    doc.UpdateEmitted += _ => updates++;
+
+    await converter.ApplyOpsAsync(doc, Ops(
+        """{ "op": "update", "id": "a", "data": { "text": "<b>x</b> <a target=\"_blank\" href=\"h\">y</a><br>" } }"""));
+
+    Assert.Equal(0, updates);
+  }
+
+  [Fact]
+  public async Task AnEditReadsHtmlForTheBlocksTypeInTheDoc()
+  {
+    var doc = new YDoc();
+    var converter = new CollabDocConverter(time, RichTextRuntime.Reader);
+
+    await converter.SeedAsync(doc, JsonNode.Parse(
+        """{"blocks":[{"id":"a","type":"header","data":{"text":"x","level":2}}]}""")!);
+    await converter.ApplyOpsAsync(doc, Ops(
+        """{ "op": "update", "id": "a", "data": { "text": "x <i>y</i>", "level": 2 } }"""));
+
+    var exported = await converter.ExportAsync(doc);
+
+    Assert.Equal(
+        """[{"text":"x "},{"text":"y","marks":{"italic":true}}]""",
+        exported["blocks"]![0]!["data"]!["text"]!.ToJsonString());
+  }
+
+  /// <summary>Review Focus 3: HTML that ESCAPES markup characters reads as those characters.</summary>
+  [Fact]
+  public async Task EscapedMarkupCharactersReadAsText()
+  {
+    var doc = new YDoc();
+    var converter = new CollabDocConverter(time, RichTextRuntime.Reader);
+
+    await converter.SeedAsync(doc, JsonNode.Parse(
+        """{"blocks":[{"id":"a","type":"paragraph","data":{"text":"a &lt; b &amp;&amp; \"c\" &lt;b&gt;"}}]}""")!);
+
+    var exported = await converter.ExportAsync(doc);
+
+    Assert.Equal(
+        "a < b && \"c\" <b>",
+        Assert.Single(exported["blocks"]![0]!["data"]!["text"]!.AsArray())!["text"]!.GetValue<string>());
+  }
+
+  [Fact]
+  public async Task ExportReadsLegacyHtmlTextAsSegments()
+  {
+    var doc = new YDoc();
+
+    doc.Transact(transaction =>
+    {
+      var properties = new YMap(
+      [
+        new KeyValuePair<string, object?>("notes", new YMap(
+        [
+          new KeyValuePair<string, object?>("blocks", new YArray(
+          [
+            new YMap(
+            [
+              new KeyValuePair<string, object?>("type", "paragraph"),
+              new KeyValuePair<string, object?>("data", new YMap(
+                  [new KeyValuePair<string, object?>("text", "<i>n</i>")])),
+            ]),
+          ])),
+        ])),
+      ]);
+
+      doc.GetMap("blocks").Set(transaction, "a", Block("a", "paragraph",
+          new YMap([new KeyValuePair<string, object?>("text", new YText("<b>x</b>"))])));
+      doc.GetMap("blocks").Set(transaction, "r", Block("r", "database-row",
+          new YMap([new KeyValuePair<string, object?>("properties", properties)])));
+      doc.GetArray("root").Insert(transaction, 0, ["a", "r"]);
+    });
+
+    var blocks = (JsonArray)(await new CollabDocConverter(time, RichTextRuntime.Reader).ExportAsync(doc))["blocks"]!;
+
+    Assert.Equal("""[{"text":"x","marks":{"bold":true}}]""", blocks[0]!["data"]!["text"]!.ToJsonString());
+    Assert.Equal(
+        """[{"text":"n","marks":{"italic":true}}]""",
+        blocks[1]!["data"]!["properties"]!["notes"]!["blocks"]![0]!["data"]!["text"]!.ToJsonString());
+  }
+
+  [Fact]
+  public async Task CustomRichFieldsComeFromTheConstructor()
+  {
+    var doc = new YDoc();
+    var fields = RichTextFields.With(new Dictionary<string, IList<string>> { ["callout"] = ["title"] });
+    var converter = new CollabDocConverter(time, RichTextRuntime.Reader, fields);
+
+    await converter.SeedAsync(doc, JsonNode.Parse(
+        """{"blocks":[{"id":"c","type":"callout","data":{"title":"<u>T</u>"}}]}""")!);
+
+    doc.GetMap("blocks").TryGet("c", out var block);
+    ((YMap)block!).TryGet("data", out var data);
+    ((YMap)data!).TryGet("title", out var title);
+
+    Assert.IsType<YXmlText>(title);
+  }
+
+  private static YMap Block(string id, string type, YMap data)
+  {
+    return new YMap(
+    [
+      new KeyValuePair<string, object?>("id", id),
+      new KeyValuePair<string, object?>("type", type),
+      new KeyValuePair<string, object?>("data", data),
+      new KeyValuePair<string, object?>("tunes", new YMap([])),
+      new KeyValuePair<string, object?>("contentIds", new YArray([])),
+    ]);
+  }
+
+  private static IReadOnlyList<CollabEditOp> Ops(params string[] ops)
+  {
+    return CollabEditOps.Parse(
+        System.Text.Encoding.UTF8.GetBytes($$"""{ "ops": [{{string.Join(",", ops)}}] }"""));
   }
 }

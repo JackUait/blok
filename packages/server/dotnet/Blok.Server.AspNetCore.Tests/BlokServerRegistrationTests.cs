@@ -96,6 +96,28 @@ public sealed class BlokServerRegistrationTests
         StringComparison.Ordinal);
   }
 
+  [Theory]
+  [InlineData("", "title")]
+  [InlineData("callout", "")]
+  [InlineData("callout", "ti\0tle")]
+  public void RejectsAnEmptyOrNulRichTextFieldName(string type, string field)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options => options.RichTextFields[type] = [field]));
+
+    Assert.Contains("RichTextFields", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AcceptsCustomRichTextFields()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options => options.RichTextFields["callout"] = ["title"]);
+  }
+
   [Fact]
   public void RejectsADocEndpointWithoutCollab()
   {

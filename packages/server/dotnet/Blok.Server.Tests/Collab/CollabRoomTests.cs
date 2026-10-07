@@ -3032,7 +3032,7 @@ public sealed class CollabRoomTests
   public async Task UnderAJournalANullSeedPutsNothingAndItsReopenPutsOneEmptyDocument()
   {
     endpoint.HoldsNothing(DocId);
-    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time));
+    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time, RichTextRuntime.Reader));
     var first = await Join(manager, V2Member());
     var lineage = Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Lineage;
     await first.LeaveAsync();
@@ -3067,7 +3067,7 @@ public sealed class CollabRoomTests
   public async Task UnderAJournalAStateReadSeedsANullDocumentAndItsReopenPutsOnce()
   {
     endpoint.HoldsNothing(DocId);
-    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time));
+    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time, RichTextRuntime.Reader));
 
     var state = await manager.StateAsync(DocId, CancellationToken.None);
 

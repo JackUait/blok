@@ -574,6 +574,26 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
 /// </summary>
 internal sealed class FakeDocConverter : ICollabDocConverter
 {
+  public ValueTask SeedAsync(YDoc doc, JsonNode outputData, CancellationToken cancellationToken = default)
+  {
+    Seed(doc, outputData);
+
+    return ValueTask.CompletedTask;
+  }
+
+  public ValueTask<JsonNode> ExportAsync(YDoc doc, CancellationToken cancellationToken = default)
+  {
+    return ValueTask.FromResult(Export(doc));
+  }
+
+  public ValueTask ApplyOpsAsync(
+      YDoc doc, IReadOnlyList<CollabEditOp> ops, CancellationToken cancellationToken = default)
+  {
+    ApplyOps(doc, ops);
+
+    return ValueTask.CompletedTask;
+  }
+
   internal int Seeds { get; private set; }
 
   internal int Exports { get; private set; }

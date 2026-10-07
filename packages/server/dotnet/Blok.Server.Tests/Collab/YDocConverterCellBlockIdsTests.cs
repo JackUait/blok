@@ -22,7 +22,7 @@ public sealed class YDocConverterCellBlockIdsTests
   {
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, YDocConverterFixtures.Load(CaseName).Input);
+    RichTextRuntime.Seed(doc, YDocConverterFixtures.Load(CaseName).Input);
 
     AssertCellBlockIdsAreYArrays(doc);
   }

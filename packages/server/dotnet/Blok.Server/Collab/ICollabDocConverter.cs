@@ -7,6 +7,10 @@ namespace Blok.Server.Collab;
 /// The room's view of the OutputData ⇄ Doc conversion. Kept behind an
 /// interface so the room is tested against a tiny fake while
 /// <see cref="YDocConverter"/> carries the real lockstep laws.
+///
+/// Asynchronous because a rich text field may hold HTML, and reading HTML
+/// runs the embedded runtime. Every write happens after the last await, so a
+/// refusal still leaves the doc untouched.
 /// </summary>
 internal interface ICollabDocConverter
 {
@@ -16,15 +20,19 @@ internal interface ICollabDocConverter
   /// seed update. Throws on a malformed document; the room then fails the
   /// seed closed.
   /// </summary>
-  void Seed(YDoc doc, JsonNode outputData);
+  ValueTask SeedAsync(YDoc doc, JsonNode outputData, CancellationToken cancellationToken = default);
 
-  /// <summary>Reads the doc back as a bare OutputData object.</summary>
-  JsonNode Export(YDoc doc);
+  /// <summary>
+  /// Reads the doc back as a bare OutputData object. The doc is read before
+  /// the first await.
+  /// </summary>
+  ValueTask<JsonNode> ExportAsync(YDoc doc, CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Applies block-level edit ops in ONE write transaction, validating every
   /// op against the doc FIRST — a refusal (<see cref="CollabEditException"/>)
   /// leaves the doc untouched.
   /// </summary>
-  void ApplyOps(YDoc doc, IReadOnlyList<CollabEditOp> ops);
+  ValueTask ApplyOpsAsync(
+      YDoc doc, IReadOnlyList<CollabEditOp> ops, CancellationToken cancellationToken = default);
 }

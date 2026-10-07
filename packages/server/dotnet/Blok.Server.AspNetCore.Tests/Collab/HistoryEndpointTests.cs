@@ -273,13 +273,22 @@ public sealed class HistoryEndpointTests
         "big-insert",
         $$"""{ "ops": [ { "op": "insert", "id": "big", "after": "a", "block": { "type": "paragraph", "data": { "text": "{{new string('x', 8192)}}" } } } ] }""");
     await history.EditAsync("big-remove", """{ "ops": [ { "op": "remove", "id": "big" } ] }""");
+    await using var member = await history.App.ConnectAsync(protocols: [SyncApp.Protocol]);
+    await member.ReceiveAsync<BlokControlFrame>();
+    await member.SendAsync(new SyncStep1Frame(YDocs.StateVector(YDocs.NewClient())));
+    await member.ReceiveAsync<BlokLimitsFrame>();
+    await member.ReceiveAsync<SyncStep2Frame>();
+    await member.ReceiveAsync<SyncStep1Frame>();
 
     using var restore = await history.RestoreAsync(lineage, "1", "restore-big");
 
     Assert.Equal(HttpStatusCode.RequestEntityTooLarge, restore.StatusCode);
+    // The same member still gets the next edit: the room was not closed.
+    var relay = member.ReceiveAsync<SyncUpdateFrame>();
+    await history.EditTextAsync("after");
+    await relay;
     using var state = await history.SendAsync(HttpMethod.Get, "/state");
-    Assert.Equal(HttpStatusCode.OK, state.StatusCode);
-    Assert.Equal("2", Assert.Single(state.Headers.GetValues("Blok-Doc-Sequence")));
+    Assert.Equal("3", Assert.Single(state.Headers.GetValues("Blok-Doc-Sequence")));
   }
 
   [Fact]

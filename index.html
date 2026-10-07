@@ -1796,7 +1796,7 @@
     import './src/playground/playground.css';
     import DEFAULT_BLOCKS from './playground-document.json';
     import { Blok } from './src/blok.ts';
-    import { blocksToHtml, diffOutputData } from './src/view/index.ts';
+    import { blocksToHtml, blocksToPlainText, diffOutputData } from './src/view/index.ts';
     // Raw text of the published opt-in view stylesheet. We scope it under
     // #blokview-panel before injecting, because the live editor ALSO stamps
     // `data-blok-tool` on its blocks — an unscoped import would double-style the
@@ -2358,6 +2358,8 @@
       blok = editor;
       window.blok = editor;
       editorPageId = currentPageId;
+      // After editorPageId moves: the Edited link reads the new page's history.
+      void historyDrawer?.refresh();
       try {
         await editor.isReady;
         wirePageTitle(editor);
@@ -2451,7 +2453,7 @@
         editorArea: document.getElementById('editor-col'),
         server: DEV_SERVER_URL,
         ticketUrl: playgroundTicketUrl(DEV_TICKET_URL, collaborationConfig().user?.name ?? null),
-        view: { blocksToHtml, diffOutputData },
+        view: { blocksToHtml, blocksToPlainText, diffOutputData },
         doc: () => collaborationConfig(editorPageId)?.doc ?? null,
         self: () => userConfig(),
         notify: (message) => blok.notifier.show({ message, style: 'success' }),
@@ -2464,6 +2466,7 @@
       : null;
     document.getElementById('pg-history-icon').innerHTML = Icons.IconRotateLeft;
     document.getElementById('pg-history-button').hidden = historyDrawer === null;
+    void historyDrawer?.refresh();
     blok.isReady.then(() => {
       wirePageTitle(blok);
       wireCollaborationPresence(blok);

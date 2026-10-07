@@ -6,10 +6,14 @@
  * The pure helpers come first; `mountHistoryDrawer` wires them to the page.
  */
 import './history-drawer.css';
-import { IconBookmark, IconCheck, IconChevronDown } from '../components/icons';
+import { IconBookmark, IconCheck, IconChevronDown, IconChevronRight } from '../components/icons';
 import { createTicketSource } from '../components/utils/access-pass';
 import { prefersReducedMotion } from '../components/utils/reduced-motion';
 import type { TicketSource } from '../components/utils/access-pass';
+import { changesUrl, fetchVersionChanges, mountVersionChanges, notVisualizableNote } from './history-changes';
+import type { RecordPaint, VersionChangesPanel } from './history-changes';
+import { loadUpdates, mountEditedLink, mountUpdatesFeed } from './updates-feed';
+import type { UpdatesFeed } from './updates-feed';
 import type { LooseOutputBlockData, LooseOutputData } from '../../types';
 
 export interface HistoryLineage {
@@ -77,14 +81,11 @@ export const GROUPINGS: ReadonlyArray<{ value: HistoryGrouping; label: string }>
   { value: 'bookmarks', label: 'Bookmarks' },
 ];
 
-/**
- * What the drawer shows. Only the version list today; per-version edits and
- * the Updates feed add their own modes and a draw function for each.
- */
-export type HistoryDrawerMode = 'list';
+/** What the drawer shows: the version list, one version's edits, or the Updates feed. */
+export type HistoryDrawerMode = 'list' | 'changes' | 'updates';
 
 /**
- * The two `@bloklabs/core/view` functions the drawer uses. Handed in by the
+ * The `@bloklabs/core/view` functions the drawer uses. Handed in by the
  * page: the view-entry law keeps every module outside src/view from importing
  * it, so the editor bundles never pull in parse5.
  */
@@ -99,6 +100,7 @@ export interface HistoryView {
     data: LooseOutputData,
     options: { toolAttributes: boolean; blockIds: boolean; root: boolean; classes: boolean }
   ): string;
+  blocksToPlainText(data: LooseOutputData): string;
 }
 
 export interface ChangePreview {
@@ -406,6 +408,13 @@ export const playgroundTicketUrl = (base: string, name: string | null): string =
   return trimmed ? `${base}?name=${encodeURIComponent(trimmed)}` : base;
 };
 
+/**
+ * Where a version's edits start: the row below it in the same lineage, else
+ * the lineage's start. A bookmark's `below` is already the point before it.
+ * @param row - the version
+ */
+export const changesSince = (row: Extract<HistoryRow, { kind: 'version' }>): number =>
+  row.below !== null && row.below.lineage === row.lineage ? row.below.sequence : 0;
 
 /** How long a jumped-to block keeps its outline. */
 const FLASH_MS = 1200;
@@ -470,6 +479,8 @@ export interface HistoryDrawer {
    */
   openOn(lineage: string, sequence: number): Promise<void>;
   close(): void;
+  /** Re-reads the open document's newest version for the "Edited …" link. */
+  refresh(): Promise<void>;
 }
 
 type VersionRow = Extract<HistoryRow, { kind: 'version' }>;
@@ -572,10 +583,39 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     request: 0,
     // Bumped on every list load: a slow list for an older grouping must not paint.
     load: 0,
+    // Bumped on every Edited link refresh.
+    edited: 0,
+    // The edit picked in 'changes' mode; undefined paints the whole version.
+    picked: undefined as RecordPaint | null | undefined,
+    // The version whose edits are listed.
+    changesRow: null as VersionRow | null,
+  };
+  const mounted = {
+    changes: null as VersionChangesPanel | null,
+    feed: null as UpdatesFeed | null,
+    note: null as HTMLElement | null,
   };
 
   const panel = element('aside', 'pg-history');
   const head = element('div', 'pg-history__head');
+  const tablist = element('div', 'pg-history__tabs');
+  const tabPair = (name: string, label: string): { tab: HTMLButtonElement; tabPanel: HTMLDivElement } => {
+    const tab = element('button', 'pg-history__tab', label);
+    const tabPanel = element('div', `pg-history__tabpanel pg-history__tabpanel--${name}`);
+
+    tab.type = 'button';
+    tab.id = `pg-history-tab-${name}`;
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-controls', `pg-history-panel-${name}`);
+    tabPanel.id = `pg-history-panel-${name}`;
+    tabPanel.setAttribute('role', 'tabpanel');
+    tabPanel.setAttribute('aria-labelledby', tab.id);
+
+    return { tab, tabPanel };
+  };
+  const { tab: historyTab, tabPanel: historyPanel } = tabPair('history', 'History');
+  const { tab: updatesTab, tabPanel: updatesPanel } = tabPair('updates', 'Updates');
+  const changesHost = element('div', 'pg-history__changes');
   const groupBar = element('div', 'pg-history__group');
   const groupButton = textButton('', 'pg-history__group-button', () => {
     if (menu.hidden) {
@@ -591,6 +631,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   const banner = element('div', 'pg-history-banner');
   const note = element('div', 'pg-history-note');
   const render = element('div', 'pg-history-render');
+  const docBox = element('div', 'pg-history-doc');
   const dialog = element('div', 'pg-history-dialog');
   const card = element('div', 'pg-history-dialog__card');
 
@@ -599,7 +640,14 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   panel.setAttribute('aria-label', 'Version history');
   panel.hidden = true;
   status.setAttribute('role', 'status');
-  head.append(element('h2', 'pg-history__title', 'History'), textButton('Close', 'pg-history__button', () => close()));
+  tablist.setAttribute('role', 'tablist');
+  tablist.setAttribute('aria-label', 'Version history');
+  historyTab.addEventListener('click', () => {
+    void showHistory();
+  });
+  updatesTab.addEventListener('click', () => enterUpdates());
+  tablist.append(historyTab, updatesTab);
+  head.append(tablist, textButton('Close', 'pg-history__button', () => close()));
 
   groupButton.setAttribute('aria-haspopup', 'menu');
   groupButton.setAttribute('aria-expanded', 'false');
@@ -607,15 +655,16 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   menu.setAttribute('aria-label', 'Group changes by');
   menu.hidden = true;
   groupBar.append(groupButton, menu);
-  panel.append(head, groupBar, status, list);
+  historyPanel.append(groupBar, status, list, changesHost);
+  panel.append(head, historyPanel, updatesPanel);
 
   previewPane.setAttribute('data-pg-history-preview', '');
   previewPane.setAttribute('aria-label', 'Version preview');
   previewPane.hidden = true;
   // index.html scopes view.css to this id.
   render.id = 'pg-history-render';
-  previewPane.append(banner, element('div', 'pg-history-doc'));
-  previewPane.lastElementChild?.append(note, render);
+  docBox.append(note, render);
+  previewPane.append(banner, docBox);
 
   dialog.setAttribute('role', 'dialog');
   dialog.setAttribute('aria-modal', 'true');
@@ -711,7 +760,13 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
 
   const { editorArea } = options;
 
+  const dropNote = (): void => {
+    mounted.note?.remove();
+    mounted.note = null;
+  };
+
   const showEditor = (): void => {
+    dropNote();
     editorArea.hidden = false;
     editorArea.inert = false;
     previewPane.hidden = true;
@@ -758,6 +813,15 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       item.append(bookmarkToggle(row));
     }
 
+    const more = textButton('', 'pg-history__more', () => {
+      void showChanges(row);
+    });
+
+    more.setAttribute('data-changes', row.key);
+    more.setAttribute('aria-label', 'See all changes in version');
+    more.append(icon(IconChevronRight, 'pg-history__more-icon'));
+    item.append(more);
+
     return item;
   };
 
@@ -767,7 +831,8 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     ));
   };
 
-  const views: Record<HistoryDrawerMode, () => void> = { list: drawList };
+  // The changes panel and the feed draw themselves.
+  const views: Record<HistoryDrawerMode, () => void> = { list: drawList, changes: () => undefined, updates: () => undefined };
 
   const drawRows = (): void => {
     views[state.mode]();
@@ -865,7 +930,11 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
 
     restoreButton.setAttribute('data-pg-history-begin-restore', '');
     restoreButton.disabled = state.busy || state.opening;
-    controls.append(restoreButton);
+
+    // The current version is shown only while its edits are listed: nothing to restore.
+    if (!row.current) {
+      controls.append(restoreButton);
+    }
 
     const error = element('p', 'pg-history-banner__error', state.error);
 
@@ -932,9 +1001,14 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
         root: true,
         classes: true,
       });
-      paintMarks(render, preview.marks);
       drawNote(row);
-      jumpToChange(render);
+
+      if (state.picked === undefined) {
+        paintMarks(render, preview.marks);
+        jumpToChange(render);
+      } else {
+        paintPicked();
+      }
     } catch (error) {
       if (request === state.request) {
         state.error = messageOf(error);
@@ -943,12 +1017,37 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     }
   };
 
-  const select = async (row: VersionRow): Promise<void> => {
+  /** Marks only the picked edit's blocks, or says it cannot be shown. */
+  const paintPicked = (): void => {
+    const paint = state.picked;
+
+    dropNote();
+    render.querySelectorAll('[data-pg-change]').forEach((node) => node.removeAttribute('data-pg-change'));
+
+    if (paint === undefined) {
+      return;
+    }
+
+    if (paint !== null) {
+      paintMarks(render, paint.marks);
+    }
+
+    // Its blocks may be missing from the preview: one added and removed inside the version never renders.
+    if (paint === null || jumpToChange(render) === null) {
+      mounted.note = notVisualizableNote();
+      docBox.append(mounted.note);
+    }
+  };
+
+  /** `preview` shows even the current version read only, for its edits list. */
+  const select = async (row: VersionRow, preview = false): Promise<void> => {
     state.selected = row;
     state.error = '';
+    state.picked = undefined;
+    dropNote();
     drawRows();
 
-    if (row.current) {
+    if (row.current && !preview) {
       state.request++;
       showEditor();
 
@@ -1200,6 +1299,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       await load();
       state.selected = state.rows.find((candidate): candidate is VersionRow => candidate.kind === 'version' && candidate.current) ?? null;
       drawRows();
+      void refresh();
       options.notify(`Restored ${row.time}. It is now the newest version.`);
     } catch (error) {
       state.busy = false;
@@ -1227,6 +1327,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     }
 
     state.group = state.chosen;
+    setMode('list');
     showPanel();
     await load();
 
@@ -1238,7 +1339,8 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     await selectFirst();
   };
 
-  const openOn = async (lineage: string, sequence: number): Promise<void> => {
+  /** `focus` moves focus to the version's row: the Updates card that asked is gone. */
+  const showVersion = async (lineage: string, sequence: number, focus: boolean): Promise<void> => {
     const doc = options.doc();
     const request = ++state.request;
     const key = `${lineage}:${sequence}`;
@@ -1247,7 +1349,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     const stale = (): boolean => panel.hidden !== false || state.doc !== doc || state.request !== request;
 
     state.doc = doc;
-    state.mode = 'list';
+    setMode('list');
 
     if (doc === null) {
       close();
@@ -1258,6 +1360,10 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     closeDialog();
     closeMenu();
     showPanel();
+
+    if (focus) {
+      historyTab.focus();
+    }
     await load();
 
     if (stale()) {
@@ -1286,18 +1392,232 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       at: null,
       below: sequence > 0 ? { lineage, sequence: sequence - 1 } : null,
     });
+
+    // select() bumps the request, so stale() no longer fits here.
+    if (focus && !panel.hidden && state.doc === doc) {
+      list.querySelector<HTMLButtonElement>(`[data-key="${CSS.escape(key)}"]`)?.focus();
+    }
   };
 
+  const openOn = (lineage: string, sequence: number): Promise<void> => showVersion(lineage, sequence, false);
+
   const close = (): void => {
+    const wasOpen = !panel.hidden;
+
     state.request++;
     state.selected = null;
     state.error = '';
     closeDialog();
     closeMenu();
+    setMode('list');
     panel.hidden = true;
     document.body.classList.remove('pg-history-open');
     options.button.setAttribute('aria-expanded', 'false');
     showEditor();
+
+    if (wasOpen) {
+      void refresh();
+    }
+  };
+
+  /* Modes: the History tab's list and edits, and the Updates tab */
+
+  const setMode = (mode: HistoryDrawerMode): void => {
+    if (mode !== 'changes') {
+      mounted.changes?.destroy();
+      mounted.changes = null;
+      state.changesRow = null;
+      state.picked = undefined;
+      dropNote();
+    }
+
+    if (mode !== 'updates') {
+      mounted.feed?.destroy();
+      mounted.feed = null;
+    }
+
+    state.mode = mode;
+    [historyTab, updatesTab].forEach((tab) => {
+      const picked = (tab === updatesTab) === (mode === 'updates');
+
+      tab.setAttribute('aria-selected', String(picked));
+      tab.setAttribute('tabindex', picked ? '0' : '-1');
+    });
+    historyPanel.hidden = mode === 'updates';
+    updatesPanel.hidden = mode !== 'updates';
+    [groupBar, status, list].forEach((part) => part.toggleAttribute('hidden', mode !== 'list'));
+    changesHost.hidden = mode !== 'changes';
+    drawRows();
+  };
+
+  const nameOf = (actor: string | null): string => actor === null ? 'Someone' : actorName(actor, options.self());
+
+  const showChanges = async (row: VersionRow): Promise<void> => {
+    const doc = state.doc;
+
+    if (doc === null) {
+      return;
+    }
+
+    closeMenu();
+    setMode('changes');
+    state.changesRow = row;
+    mounted.changes = mountVersionChanges(changesHost, {
+      version: { time: row.time, who: row.who },
+      // The server answers an empty list for sequence 0; skip the trip.
+      load: () => row.sequence === 0
+        ? Promise.resolve({ changes: [], truncated: false })
+        : fetchVersionChanges((url) => send(doc, url), changesUrl(options.server, doc, row.lineage, row.sequence, changesSince(row))),
+      nameOf,
+      now,
+      onBack: () => leaveChanges(),
+      onSelectRecord: (_record, paint) => {
+        state.picked = paint;
+
+        // An empty preview is still loading; drawPreview paints the pick when it lands.
+        if (render.childElementCount > 0) {
+          paintPicked();
+        }
+      },
+    });
+    changesHost.querySelector<HTMLButtonElement>('[data-pg-changes-back]')?.focus();
+    await select(row, true);
+  };
+
+  const leaveChanges = (): void => {
+    const row = state.changesRow;
+
+    setMode('list');
+
+    if (row === null) {
+      return;
+    }
+
+    // select() redraws the rows before its first await, so the focus below lands on the new button.
+    void select(row);
+    list.querySelector<HTMLButtonElement>(`[data-changes="${CSS.escape(row.key)}"]`)?.focus();
+  };
+
+  const showHistory = async (): Promise<void> => {
+    if (state.mode !== 'updates') {
+      return;
+    }
+
+    const request = ++state.request;
+
+    setMode('list');
+    await load();
+
+    if (panel.hidden || state.request !== request) {
+      return;
+    }
+
+    await selectFirst();
+  };
+
+  /** A list from a time grouping. The feed needs one: in Bookmarks the row below is unrelated. */
+  const readList = async (doc: string, group: HistoryGrouping | null): Promise<HistoryList> => {
+    const response = await send(doc, group === null ? base(doc) : `${base(doc)}?group=${group}`);
+
+    return await response.json() as HistoryList;
+  };
+
+  const scrollToBlock = (id: string): void => {
+    state.request++;
+    state.selected = null;
+    showEditor();
+    // The live editor only: the preview stamps the same ids.
+    editorArea.querySelector<HTMLElement>(`[data-blok-id="${CSS.escape(id)}"]`)
+      ?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  };
+
+  const enterUpdates = (): void => {
+    const doc = state.doc;
+
+    if (doc === null || state.mode === 'updates') {
+      return;
+    }
+
+    state.request++;
+    state.selected = null;
+    state.error = '';
+    closeDialog();
+    closeMenu();
+    showEditor();
+    setMode('updates');
+    mounted.feed = mountUpdatesFeed(updatesPanel, {
+      load: async () => loadUpdates(
+        (url) => send(doc, url),
+        options.server,
+        doc,
+        await readList(doc, state.group === 'bookmarks' ? DEFAULT_GROUPING : state.group),
+        now()
+      ),
+      nameOf,
+      pageTitle: () => titleOf(null),
+      plainText: options.view.blocksToPlainText,
+      now,
+      onOpenVersion: (lineage, sequence) => {
+        void showVersion(lineage, sequence, true);
+      },
+      onScrollToBlock: scrollToBlock,
+    });
+  };
+
+  tablist.addEventListener('keydown', (event) => {
+    const tabs = [historyTab, updatesTab];
+    const index = event.target instanceof HTMLButtonElement ? tabs.indexOf(event.target) : -1;
+    const moves: Record<string, number | undefined> = {
+      ArrowRight: index + 1,
+      ArrowLeft: index - 1 + tabs.length,
+      Home: 0,
+      End: tabs.length - 1,
+    };
+    const next = moves[event.key];
+
+    if (next === undefined || index < 0) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const tab = tabs[next % tabs.length];
+
+    tab.focus();
+    tab.click();
+  });
+
+  /* The "Edited …" link beside the History button */
+
+  const openUpdates = (): void => {
+    state.doc = options.doc();
+
+    if (state.doc === null) {
+      return;
+    }
+
+    state.group = state.chosen;
+    // From 'list', so enterUpdates mounts a fresh feed for this document.
+    setMode('list');
+    showPanel();
+    enterUpdates();
+    updatesTab.focus();
+  };
+
+  const edited = mountEditedLink({ onOpen: openUpdates, now });
+
+  options.button.before(edited.element);
+
+  const refresh = async (): Promise<void> => {
+    const doc = options.doc();
+    const ticket = ++state.edited;
+
+    // No `group`: the newest version ends at the newest record in every grouping.
+    const answer = doc === null ? null : await readList(doc, null).catch(() => null);
+
+    if (ticket === state.edited) {
+      edited.update(answer);
+    }
   };
 
   options.button.addEventListener('click', () => {
@@ -1350,8 +1670,11 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       return;
     }
 
-    take(event, close);
+    // The edits list sits over the version list: Escape goes back to it first.
+    take(event, state.mode === 'changes' ? leaveChanges : close);
   }, { capture: true });
 
-  return { open, openOn, close };
+  setMode('list');
+
+  return { open, openOn, close, refresh };
 };

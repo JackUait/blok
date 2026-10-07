@@ -79,7 +79,26 @@
   justify-content: space-between;
   padding: 16px 16px 8px;
 }
-.pg-history__title { margin: 0; font-size: 15px; font-weight: 700; }
+/* Tabs: the picked one is a gray pill in the row ink, never blue. */
+.pg-history__tabs { display: inline-flex; gap: 2px; }
+.pg-history__tab {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pgh-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pg-history__tab:hover { color: var(--pgh-ink); }
+.pg-history__tab[aria-selected="true"] { background: var(--pgh-hover); color: var(--pgh-ink); }
+.pg-history__tabpanel { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.pg-history__tabpanel--updates,
+.pg-history__changes { overflow: auto; }
+.pg-history__tabpanel[hidden],
+.pg-history__changes[hidden] { display: none; }
 /* Group by: a quiet pill and a small menu; the chosen grouping gets a check. */
 .pg-history__group { position: relative; padding: 0 16px 8px; }
 .pg-history__group-button {
@@ -138,6 +157,7 @@
 .pg-history__status { margin: 0; padding: 0 16px; color: var(--pgh-muted); font-size: 13px; }
 .pg-history__status:empty { display: none; }
 .pg-history__list { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 6px; list-style: none; }
+.pg-history__list[hidden] { display: none; }
 .pg-history__lineage { padding: 14px 10px 6px; color: var(--pgh-muted); font-size: 12px; font-weight: 600; }
 
 /* Rows: a selected row is gray with a check mark, never blue. */
@@ -163,12 +183,16 @@
 .pg-history__check svg { width: 16px; height: 16px; }
 .pg-history__row[aria-current="true"] .pg-history__check { opacity: 1; }
 
-/* Bookmark toggle: a sibling of the row button (buttons cannot nest), left of the check. */
+/*
+  Trailing controls are siblings of the row button (buttons cannot nest):
+  the changes chevron at the end, then the check, then the bookmark.
+*/
 .pg-history__item { position: relative; }
+.pg-history__item .pg-history__row { padding-inline-end: 34px; }
 .pg-history__mark {
   position: absolute;
   inset-block-start: 8px;
-  inset-inline-end: 34px;
+  inset-inline-end: 56px;
   display: inline-flex;
   padding: 3px;
   border: 0;
@@ -185,9 +209,29 @@
 .pg-history__row[aria-current="true"] + .pg-history__mark { opacity: 1; }
 .pg-history__mark[aria-pressed="true"] { opacity: 1; }
 .pg-history__mark[aria-pressed="true"] svg path { fill: currentColor; }
-/* Touch screens have no hover, so the toggle is always shown there. */
+.pg-history__more {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 6px;
+  display: inline-flex;
+  padding: 3px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pgh-muted);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-50%);
+}
+.pg-history__more svg { width: 16px; height: 16px; }
+.pg-history__more:hover { background: var(--pgh-line); color: var(--pgh-ink); }
+.pg-history__item:hover .pg-history__more,
+.pg-history__more:focus-visible,
+.pg-history__row[aria-current="true"] ~ .pg-history__more { opacity: 1; }
+/* Touch screens have no hover, so the toggles are always shown there. */
 @media (hover: none) {
-  .pg-history__mark { opacity: 1; }
+  .pg-history__mark,
+  .pg-history__more { opacity: 1; }
 }
 
 .pg-history__button {
@@ -212,7 +256,9 @@ html[data-pg-modality="keyboard"] .pg-history__button:focus-visible,
 html[data-pg-modality="keyboard"] .pg-history-note__toggle:focus-visible,
 html[data-pg-modality="keyboard"] .pg-history__group-button:focus-visible,
 html[data-pg-modality="keyboard"] .pg-history__option:focus-visible,
-html[data-pg-modality="keyboard"] .pg-history__mark:focus-visible {
+html[data-pg-modality="keyboard"] .pg-history__mark:focus-visible,
+html[data-pg-modality="keyboard"] .pg-history__more:focus-visible,
+html[data-pg-modality="keyboard"] .pg-history__tab:focus-visible {
   outline: 2px solid var(--pgh-ink);
   outline-offset: 2px;
 }
@@ -256,7 +302,8 @@ html[data-pg-modality="keyboard"] .pg-history__mark:focus-visible {
 .pg-history-banner__ask { overflow-wrap: anywhere; }
 .pg-history-banner__error { flex-basis: 100%; margin: 0; color: var(--pgh-removed-ink); }
 .pg-history-banner__error[hidden] { display: none; }
-.pg-history-doc { padding: 20px 0 80px; }
+/* The box the "Not visualizable" note sits over. */
+.pg-history-doc { position: relative; padding: 20px 0 80px; }
 /* A wide table or image scrolls inside the preview instead of widening the page. */
 .pg-history-render { overflow-x: auto; }
 .pg-history-note {

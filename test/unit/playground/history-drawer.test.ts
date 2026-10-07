@@ -5,11 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IconBookmark, IconCheck } from '../../../src/components/icons';
 import { Paragraph } from '../../../src/tools/paragraph';
 
-import { blocksToHtml, diffOutputData } from '../../../src/view';
+import { blocksToHtml, blocksToPlainText, diffOutputData } from '../../../src/view';
 import {
   actorName,
   bookmarkRows,
   changePreview,
+  changesSince,
   formatVersionTime,
   historyErrorMessage,
   historyRows,
@@ -297,6 +298,21 @@ describe('subPagesOf', () => {
   });
 });
 
+describe('changesSince', () => {
+  const row = (below: { lineage: string; sequence: number } | null) => ({
+    kind: 'version' as const, key: 'l2:9', lineage: 'l2', sequence: 9, time: '', who: '', current: false, at: null, below,
+  });
+
+  it('measures from the row below in the same lineage', () => {
+    expect(changesSince(row({ lineage: 'l2', sequence: 5 }))).toBe(5);
+  });
+
+  it('measures from the start when the row below is another lineage, or there is none', () => {
+    expect(changesSince(row({ lineage: 'l1', sequence: 12 }))).toBe(0);
+    expect(changesSince(row(null))).toBe(0);
+  });
+});
+
 describe('historyErrorMessage', () => {
   it('shows the server message with its status', () => {
     expect(historyErrorMessage(501, 'history needs a journal that keeps it\n')).toBe('history needs a journal that keeps it (501)');
@@ -349,6 +365,16 @@ describe('mountHistoryDrawer', () => {
     '0': { blocks: [p('a', 'one'), p('c', 'three, first draft')] },
   });
   const POINTS = points();
+  // Version 5 (from 0) added b in record 3 and renamed the page in record 5; version 9 (from 5) edited c.
+  const CHANGES: Record<string, unknown> = {
+    '5': { changes: [
+      { sequence: 3, committedAt: at(7, 14, 30), actor: 'playground-ben', blocks: [{ id: 'b', type: 'paragraph', kind: 'added', after: p('b', 'two') }] },
+      { sequence: 5, committedAt: at(7, 14, 32), actor: 'playground-ben', blocks: [], page: ['title'] },
+    ] },
+    '9': { changes: [
+      { sequence: 8, committedAt: at(7, 14, 40), actor: 'playground-anna', blocks: [{ id: 'c', type: 'paragraph', kind: 'changed', before: p('c', 'three'), after: p('c', 'three, edited') }] },
+    ] },
+  };
 
   interface Call { url: string; init?: RequestInit }
 
@@ -365,6 +391,12 @@ describe('mountHistoryDrawer', () => {
 
     if (url.startsWith('http://127.0.0.1:4700/')) {
       return Response.json({ ticket: pass(new URL(url).searchParams.get('doc') ?? '') });
+    }
+
+    const changes = /\/history\/l2\/(\d+)\/changes\?since=\d+$/.exec(url);
+
+    if (changes !== null) {
+      return Response.json(CHANGES[changes[1]] ?? { changes: [] });
     }
 
     const point = /\/history\/l2\/(\d+)$/.exec(url);
@@ -401,7 +433,7 @@ describe('mountHistoryDrawer', () => {
       editorArea: editor,
       server: SERVER,
       ticketUrl: MINT,
-      view: { blocksToHtml, diffOutputData },
+      view: { blocksToHtml, blocksToPlainText, diffOutputData },
       doc,
       self: () => SELF,
       notify,
@@ -441,6 +473,7 @@ describe('mountHistoryDrawer', () => {
   };
 
   const rowButtons = (): HTMLButtonElement[] => Array.from(panel().querySelectorAll<HTMLButtonElement>('button[data-key]'));
+  const listShown = (): boolean => rowButtons().some((row) => row.closest('[hidden]') === null);
 
   const buttonNamed = (root: HTMLElement, name: string): HTMLButtonElement => {
     const found = Array.from(root.querySelectorAll('button')).find((element) => element.textContent?.trim() === name);
@@ -1340,6 +1373,442 @@ describe('mountHistoryDrawer', () => {
 
     expect(panel().hidden).toBe(false);
   });
+
+  /* P4: the edits inside one version */
+
+  const changesButton = (key: string): HTMLButtonElement => {
+    const found = panel().querySelector<HTMLButtonElement>(`button[data-changes="${key}"]`);
+
+    if (found === null) {
+      throw new Error(`no changes button for ${key}`);
+    }
+
+    return found;
+  };
+  const changeCalls = (): string[] => calls.map((call) => call.url).filter((url) => url.includes('/changes'));
+  const entries = (): HTMLButtonElement[] => Array.from(panel().querySelectorAll<HTMLButtonElement>('[data-pg-change-entry]'));
+  const marked = (): Record<string, string> => Object.fromEntries(
+    Array.from(preview().querySelectorAll<HTMLElement>('[data-pg-change]')).map((node) => [node.dataset.blokId ?? '', node.dataset.pgChange ?? ''])
+  );
+
+  it('gives every row a "See all changes in version" button', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+
+    expect(changesButton('l2:5').getAttribute('aria-label')).toBe('See all changes in version');
+    expect(panel().querySelectorAll('button[data-changes]')).toHaveLength(3);
+  });
+
+  it('lists a version\'s edits, measured from the version below it, newest first', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    changesButton('l2:5').click();
+    await settle();
+
+    expect(changeCalls()).toEqual([`${SERVER}/sync/playground/history/l2/5/changes?since=0`]);
+    expect(listShown()).toBe(false);
+    expect(panel().querySelector('[data-pg-changes-card]')?.textContent).toContain('Today, 14:32');
+    expect(entries().map((entry) => entry.textContent)).toEqual([
+      expect.stringContaining('Ben edited the page title'),
+      expect.stringContaining('Ben edited a paragraph'),
+    ]);
+    expect(document.activeElement?.hasAttribute('data-pg-changes-back')).toBe(true);
+  });
+
+  it('asks for the newest version\'s edits since the row below it', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    changesButton('l2:9').click();
+    await settle();
+
+    expect(changeCalls()).toEqual([`${SERVER}/sync/playground/history/l2/9/changes?since=5`]);
+  });
+
+  it('asks the server nothing for the first version of a lineage', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    changesButton('l2:0').click();
+    await settle();
+
+    expect(changeCalls()).toEqual([]);
+    expect(panel().textContent).toContain('No edits recorded in this version.');
+  });
+
+  it('marks only the picked edit\'s blocks and jumps to them', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    changesButton('l2:5').click();
+    await settle();
+    scrolled.length = 0;
+    entries()[1].click();
+    await settle();
+
+    expect(marked()).toEqual({ b: 'added' });
+    expect(scrolled.map((call) => call.id)).toEqual(['b']);
+  });
+
+  it('keeps the picked edit\'s marks when the version preview answers late', async () => {
+    const pending: { release: () => void } = { release: () => undefined };
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : input.toString();
+
+      if (url.endsWith('/history/l2/0')) {
+        await new Promise<void>((resolve) => {
+          pending.release = resolve;
+        });
+      }
+
+      return fakeFetch(input, init);
+    }));
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    changesButton('l2:5').click();
+    await settle();
+    entries()[1].click();
+    pending.release();
+    await settle();
+
+    expect(marked()).toEqual({ b: 'added' });
+  });
+
+  it('says an edit with no blocks is not visualizable, and drops the note for the next pick', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    changesButton('l2:5').click();
+    await settle();
+    entries()[0].click();
+    await settle();
+
+    expect(preview().textContent).toContain('Not visualizable');
+    expect(marked()).toEqual({});
+
+    entries()[1].click();
+    await settle();
+
+    expect(preview().textContent).not.toContain('Not visualizable');
+  });
+
+  it('goes back to all versions with the whole version marked and focus on its button', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    changesButton('l2:5').click();
+    await settle();
+    entries()[0].click();
+    await settle();
+    buttonNamed(panel(), 'All versions').click();
+    await settle();
+
+    expect(rowButtons()).toHaveLength(3);
+    expect(listShown()).toBe(true);
+    expect(rowButtons()[1].getAttribute('aria-current')).toBe('true');
+    expect(marked()).toEqual({ b: 'added', c: 'changed' });
+    expect(preview().textContent).not.toContain('Not visualizable');
+    expect(changesButton('l2:5')).toHaveFocus();
+  });
+
+  it('takes one Escape back to all versions and keeps the drawer open', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    changesButton('l2:5').click();
+    await settle();
+    document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle();
+
+    expect(panel().hidden).toBe(false);
+    expect(rowButtons()).toHaveLength(3);
+    expect(listShown()).toBe(true);
+  });
+
+  it('previews the current version read only while its edits are listed', async () => {
+    const { button, editor } = setup();
+
+    button.click();
+    await settle();
+    changesButton('l2:9').click();
+    await settle();
+
+    expect(editor.hidden).toBe(true);
+    expect(preview().hidden).toBe(false);
+    expect(preview().querySelector('[data-pg-history-begin-restore]')).toBeNull();
+
+    entries()[0].click();
+    await settle();
+
+    expect(marked()).toEqual({ c: 'changed' });
+  });
+
+  it('measures a bookmark\'s edits from the point just before it', async () => {
+    bookmarkStore.push({ lineage: 'l2', sequence: 5, savedAt: at(7, 14, 32) });
+    localStorage.setItem('pg-history-group', 'bookmarks');
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    changesButton('l2:5').click();
+    await settle();
+
+    expect(changeCalls()).toEqual([`${SERVER}/sync/playground/history/l2/5/changes?since=4`]);
+  });
+
+  /* P5: tabs, the Updates feed and the Edited link */
+
+  const tab = (name: string): HTMLButtonElement => {
+    const found = Array.from(panel().querySelectorAll<HTMLButtonElement>('[role="tab"]')).find((node) => node.textContent?.trim() === name);
+
+    if (found === undefined) {
+      throw new Error(`no tab "${name}"`);
+    }
+
+    return found;
+  };
+  const cards = (): HTMLElement[] => Array.from(panel().querySelectorAll<HTMLElement>('[data-pg-update]'));
+  const editedLink = (): HTMLButtonElement => {
+    const found = document.querySelector<HTMLButtonElement>('[data-pg-edited-link]');
+
+    if (found === null) {
+      throw new Error('no Edited link');
+    }
+
+    return found;
+  };
+
+  it('has History and Updates tabs, History picked, with a roving tab stop', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+
+    expect(panel().querySelector('[role="tablist"]')).not.toBeNull();
+    expect(tab('History').getAttribute('aria-selected')).toBe('true');
+    expect(tab('History').tabIndex).toBe(0);
+    expect(tab('Updates').getAttribute('aria-selected')).toBe('false');
+    expect(tab('Updates').tabIndex).toBe(-1);
+    expect(document.getElementById(tab('History').getAttribute('aria-controls') ?? '')?.getAttribute('role')).toBe('tabpanel');
+  });
+
+  it('moves between the tabs with the arrow keys', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    tab('History').focus();
+    tab('History').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await settle();
+
+    expect(tab('Updates')).toHaveFocus();
+    expect(tab('Updates').getAttribute('aria-selected')).toBe('true');
+    expect(tab('Updates').tabIndex).toBe(0);
+    expect(tab('History').tabIndex).toBe(-1);
+
+    tab('Updates').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await settle();
+
+    expect(tab('History')).toHaveFocus();
+    expect(rowButtons()).toHaveLength(3);
+    expect(listShown()).toBe(true);
+  });
+
+  it('shows one card per edit across the newest versions, on the live editor', async () => {
+    const { button, editor } = setup();
+
+    button.click();
+    await settle();
+    tab('Updates').click();
+    await settle();
+
+    expect(cards().map((card) => card.getAttribute('data-pg-update'))).toEqual(['l2:8', 'l2:5', 'l2:3']);
+    expect(cards()[0].textContent).toContain('Anna edited Demo Page');
+    expect(cards()[0].querySelector('ins')?.textContent).toContain('edited');
+    expect(listShown()).toBe(false);
+    expect(editor.hidden).toBe(false);
+    expect(preview().hidden).toBe(true);
+  });
+
+  it('feeds Updates from a time grouping when the drawer shows bookmarks', async () => {
+    localStorage.setItem('pg-history-group', 'bookmarks');
+
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    calls.length = 0;
+    tab('Updates').click();
+    await settle();
+
+    expect(calls.some((call) => call.url === LIST_URL)).toBe(true);
+    expect(changeCalls()).toEqual([
+      `${SERVER}/sync/playground/history/l2/9/changes?since=5`,
+      `${SERVER}/sync/playground/history/l2/5/changes?since=0`,
+    ]);
+  });
+
+  it('opens History on the version of an update', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    tab('Updates').click();
+    await settle();
+    cards()[1].querySelector<HTMLButtonElement>('[data-pg-update-open]')?.click();
+    await settle();
+
+    expect(tab('History').getAttribute('aria-selected')).toBe('true');
+    expect(cards()).toHaveLength(0);
+    expect(rowButtons()[1].getAttribute('aria-current')).toBe('true');
+    expect(rowButtons()[1]).toHaveFocus();
+  });
+
+  it('scrolls the live editor, not the preview, to an update\'s block', async () => {
+    const { button, editor } = setup();
+    const live = document.createElement('div');
+
+    live.setAttribute('data-blok-id', 'c');
+    editor.append(live);
+    button.click();
+    await settle();
+    tab('Updates').click();
+    await settle();
+    scrolled.length = 0;
+    cards()[0].querySelector<HTMLButtonElement>('[data-pg-update-snippet]')?.click();
+
+    expect(scrolled.map((call) => call.id)).toEqual(['c']);
+    expect(editor.hidden).toBe(false);
+  });
+
+  it('closes from the Updates tab on Escape', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    tab('Updates').click();
+    await settle();
+    tab('Updates').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(panel().hidden).toBe(true);
+  });
+
+  it('opens on History again after it was closed on Updates', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    tab('Updates').click();
+    await settle();
+    button.click();
+    button.click();
+    await settle();
+
+    expect(tab('History').getAttribute('aria-selected')).toBe('true');
+    expect(cards()).toHaveLength(0);
+    expect(rowButtons()).toHaveLength(3);
+    expect(listShown()).toBe(true);
+  });
+
+  it('shows when the page was last edited next to the History button', async () => {
+    const { drawer, button } = setup();
+
+    expect(editedLink().hidden).toBe(true);
+
+    await drawer.refresh();
+
+    expect(editedLink().hidden).toBe(false);
+    expect(editedLink().textContent).toBe('Edited 20 minutes ago');
+    expect(editedLink().nextElementSibling).toBe(button);
+  });
+
+  it('hides the Edited link when the server keeps no history', async () => {
+    answers.list = () => new Response('', { status: 501 });
+
+    const { drawer } = setup();
+
+    await drawer.refresh();
+
+    expect(editedLink().hidden).toBe(true);
+  });
+
+  it('opens the Updates tab from the Edited link', async () => {
+    const { drawer, button } = setup();
+
+    await drawer.refresh();
+    editedLink().click();
+    await settle();
+
+    expect(panel().hidden).toBe(false);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(tab('Updates').getAttribute('aria-selected')).toBe('true');
+    expect(cards()).toHaveLength(3);
+  });
+
+  it('refreshes the Edited link when the drawer closes and after a restore', async () => {
+    const { drawer, button } = setup();
+
+    await drawer.refresh();
+    button.click();
+    await settle();
+    answers.list = () => Response.json({ ...LIST, versions: [{ ...LIST.versions[0], savedAt: at(7, 14, 58) }, ...LIST.versions.slice(1)] });
+    buttonNamed(preview(), 'Restore').click();
+    await settle();
+    buttonNamed(document.body, 'Restore this version').click();
+    await settle();
+
+    expect(editedLink().textContent).toBe('Edited 2 minutes ago');
+
+    answers.list = () => Response.json({ ...LIST, versions: [{ ...LIST.versions[0], savedAt: at(7, 14, 59) }, ...LIST.versions.slice(1)] });
+    button.click();
+    await settle();
+
+    expect(editedLink().textContent).toBe('Edited 1 minute ago');
+  });
+
+  it('keeps the newest page\'s Edited time when an older refresh answers late', async () => {
+    const pending: { release: () => void } = { release: () => undefined };
+    const doc = { id: 'old' };
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : input.toString();
+
+      if (url.includes('/sync/old/history')) {
+        await new Promise<void>((resolve) => {
+          pending.release = resolve;
+        });
+
+        return Response.json({ lineages: [], versions: [] });
+      }
+
+      return fakeFetch(input, init);
+    }));
+
+    const { drawer } = setup(() => doc.id);
+    const older = drawer.refresh();
+
+    doc.id = 'playground';
+    await drawer.refresh();
+    pending.release();
+    await older;
+
+    expect(editedLink().textContent).toBe('Edited 20 minutes ago');
+  });
 });
 
 describe('history drawer selected row', () => {
@@ -1417,6 +1886,27 @@ describe('history drawer selected row', () => {
     flash.forEach(({ body }) => {
       [...body.matchAll(/outline(?:-color)?\s*:\s*([^;]+)/g)].forEach(([, value]) => expect(value).toMatch(/var\(--pgh-(ink|muted)\)/));
     });
+  });
+
+  it('marks the picked tab with the gray fill and no ink of its own', () => {
+    const picked = rules.filter(({ selector }) => selector.includes('[aria-selected="true"]'));
+
+    expect(picked.length).toBeGreaterThan(0);
+    picked.forEach(({ selector, body }) => {
+      expect(body, selector).not.toMatch(/(^|[\s;])(fill|stroke)\s*:/);
+      [...body.matchAll(/(?:^|[\s;])color\s*:\s*([^;]+)/g)].forEach(([, value]) => expect(value.trim()).toBe('var(--pgh-ink)'));
+      [...body.matchAll(/background(?:-color)?\s*:\s*([^;]+)/g)].forEach(([, value]) => expect(value.trim()).toBe('var(--pgh-hover)'));
+    });
+  });
+
+  it('gives the preview a box for the Not visualizable note', () => {
+    expect(rules.find(({ selector }) => selector === '.pg-history-doc')?.body).toMatch(/position:\s*relative/);
+  });
+
+  it('shows the changes button on touch screens, which have no hover', () => {
+    const raw = readFileSync(resolve(__dirname, '../../../src/playground/history-drawer.css'), 'utf-8');
+
+    expect(raw).toMatch(/@media \(hover: none\)\s*\{[^}]*\.pg-history__more[^{}]*\{\s*opacity:\s*1;?\s*\}/);
   });
 
   it('gives the Show changes checkbox the ink, not the browser blue', () => {

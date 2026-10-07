@@ -3118,6 +3118,23 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A v1.15.2 host record is HTML, and one large field can take longer to
+  /// read than the runtime's default timeout. The seed runs once per lineage,
+  /// so it reads with the one-time budget, or the document never opens.
+  /// </summary>
+  [Fact]
+  public async Task ASeedReadsItsHtmlWithTheOneTimeBudget()
+  {
+    endpoint.HoldsDocument(DocId, (JsonObject)JsonNode.Parse(
+        """{"blocks":[{"id":"b1","type":"paragraph","data":{"text":"<b>large</b>"}}]}""")!);
+    var manager = CreateManager(docConverter: new CollabDocConverter(time, new DefaultTimeoutTooShortReader()));
+
+    var result = await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.Joined, result.Status);
+  }
+
+  /// <summary>
   /// A host record and a peer both write malformed rich text. The room still
   /// opens, still exports every block with the junk normalised away, and
   /// still takes a REST edit of the poisoned text.
@@ -6643,6 +6660,23 @@ public sealed class CollabRoomTests
 }
 
 /// <summary>An HTML reader that always fails with <paramref name="failure"/>.</summary>
+/// <summary>Times out on the runtime's default; reads to empty text with a longer budget.</summary>
+internal sealed class DefaultTimeoutTooShortReader : IRichTextHtmlReader
+{
+  public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
+      IReadOnlyList<RichTextHtml> fields,
+      TimeSpan? timeout = null,
+      CancellationToken cancellationToken = default)
+  {
+    if (timeout is null)
+    {
+      throw new BlokDocumentConversionException(BlokConversionFailure.TimedOut, new TimeoutException());
+    }
+
+    return ValueTask.FromResult<IReadOnlyList<JsonArray>>([.. fields.Select(_ => new JsonArray())]);
+  }
+}
+
 internal sealed class FailingHtmlReader(Exception? failure = null) : IRichTextHtmlReader
 {
   public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(

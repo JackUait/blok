@@ -262,20 +262,27 @@ public sealed class CollabDocConverterTests
   }
 
   /// <summary>
-  /// A migration runs once per room and may read a field far larger than
-  /// anything an edit sends, so it gets its own budget. Every other read
-  /// stays on the runtime's default.
+  /// A seed and a migration each run once per lineage and may read a v1.15.2
+  /// field far larger than anything an edit sends, so both get the one-time
+  /// budget. On the default a large field would keep the document from ever
+  /// opening. Export and edit reads stay on the runtime's default.
   /// </summary>
   [Fact]
-  public async Task OnlyAMigrationReadsWithTheMigrationBudget()
+  public async Task SeedAndMigrationReadWithTheOneTimeBudget()
   {
     var reader = new RecordingHtmlReader();
     var converter = new CollabDocConverter(time, reader);
 
+    await converter.SeedAsync(new YDoc(), JsonNode.Parse(
+        """{"blocks":[{"id":"a","type":"paragraph","data":{"text":"<b>x</b>"}}]}""")!);
     await converter.ExportAsync(LegacyHtmlDoc());
+    await converter.ApplyOpsAsync(LegacyHtmlDoc(), CollabEditOps.Parse(
+        """{"ops":[{"op":"update","id":"a","data":{"text":"<i>y</i>"}}]}"""u8.ToArray()));
     await converter.MigrateRichTextAsync(LegacyHtmlDoc());
 
-    Assert.Equal([null, CollabDocConverter.MigrationReadTimeout], reader.Timeouts);
+    Assert.Equal(
+        [CollabDocConverter.MigrationReadTimeout, null, null, CollabDocConverter.MigrationReadTimeout],
+        reader.Timeouts);
     Assert.Equal(TimeSpan.FromSeconds(60), CollabDocConverter.MigrationReadTimeout);
   }
 

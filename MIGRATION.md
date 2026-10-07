@@ -777,7 +777,7 @@ After a round trip, the HTML spelling is canonical. For example `<em>` becomes `
 Collaboration rooms move to format 2, which stores rich text as formatted text.
 
 - Upgrade the client and the server together. An old client gets `unsupported-format`.
-- A format-1 room is converted the first time the new server opens it. Each conversion step gets up to 60 seconds. If one fails, the server answers "unavailable" and waits longer before each new try.
+- A format-1 room is converted the first time the new server opens it. Each conversion step gets up to 60 seconds. Building a room from an HTML host record gets the same 60 seconds. If one fails, the server answers "unavailable" and waits longer before each new try.
 - The client retries the handshake by itself. If the room is still not ready after about 33 seconds (3 tries of 10 seconds), the session ends with `handshake-timeout`. This can happen on the first open of a very large document. Reload to try again.
 - Offline edits made in format 1 are set aside and never sent.
 - The tab sync protocol changed too, so all tabs need the new version.

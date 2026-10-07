@@ -3118,6 +3118,62 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A host record and a peer both write malformed rich text. The room still
+  /// opens, still exports every block with the junk normalised away, and
+  /// still takes a REST edit of the poisoned text.
+  /// </summary>
+  [Fact]
+  public async Task MalformedRichTextFromTheHostOrAPeerKeepsTheRoomExportable()
+  {
+    endpoint.HoldsDocument(DocId, (JsonObject)JsonNode.Parse(
+        """
+        {"blocks":[
+          {"id":"b1","type":"paragraph","data":{"text":[{"text":"ab"}]}},
+          {"id":"b2","type":"paragraph","data":{"text":[
+            {"text":"c","marks":{"tag:b":{"x":1},"color":{}}},
+            {"embed":{"equation":null}}
+          ]}}
+        ]}
+        """)!);
+    var manager = CreateManager(docConverter: new CollabDocConverter(time, RichTextRuntime.Reader));
+    var writer = new FakeMember();
+    var membership = await Join(manager, writer);
+    var probe = new FakeMember(canWrite: false);
+    var probing = await Join(manager, probe);
+    var client = YDocs.NewClient();
+    await probing.ReceiveAsync(
+        SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(client))),
+        CancellationToken.None);
+    YDocs.Apply(client, Assert.IsType<SyncStep2Frame>(probe.Received.First(frame => frame is SyncStep2Frame)).Update);
+    await probing.LeaveAsync();
+    var before = YDocs.StateVector(client);
+
+    YDocConverterRichTextTests.PoisonFormattedText(client, "b1");
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(client.EncodeStateAsUpdate(before))),
+        CancellationToken.None);
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count > 0,
+        "the export");
+
+    var blocks = Assert.IsType<JsonArray>(endpoint.Saves[^1].Data["blocks"]);
+    Assert.Equal(
+        """[{"text":"a"},{"text":"x","marks":{"tag:b":{}}},{"text":"b"}]""",
+        blocks[0]!["data"]!["text"]!.ToJsonString());
+    Assert.Equal("""[{"text":"c","marks":{"tag:b":{}}}]""", blocks[1]!["data"]!["text"]!.ToJsonString());
+
+    var edit = await manager.EditAsync(
+        DocId,
+        [new CollabEditOp.Update("b1", (JsonObject)JsonNode.Parse("""{"text":[{"text":"abc"}]}""")!)],
+        CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Applied, edit.Status);
+    Assert.Empty(writer.Closes);
+  }
+
+  /// <summary>
   /// Reading an edit's HTML happens before anything is written, so a reader
   /// that fails (a runtime timeout, a spent allocation budget) refuses that
   /// one request. It must not take the commit-failure path, which closes the

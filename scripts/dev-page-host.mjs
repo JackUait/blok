@@ -14,6 +14,9 @@
 import { createServer } from 'node:http';
 
 const ACCESS_LEVELS = new Set(['read', 'write']);
+const MAX_BODY_BYTES = 1024 * 1024;
+const MAX_DOC_ID = 512;
+const MAX_BOOKMARKS = 500;
 
 const json = (status, value) => ({ status, body: JSON.stringify(value) });
 
@@ -95,6 +98,10 @@ const optional = (value) => (typeof value === 'string' ? value : undefined);
 export function handlePageHostRequest({ store, user, method, path, body }) {
   if (method === 'OPTIONS') {
     return { status: 204 };
+  }
+
+  if (body !== undefined && Buffer.byteLength(body, 'utf8') > MAX_BODY_BYTES) {
+    return json(413, { error: 'body over 1 MiB' });
   }
 
   if (path === '/__faults') {
@@ -244,6 +251,10 @@ function handleBookmarks(store, method, encodedDoc, body) {
     return json(400, { error: 'malformed document id' });
   }
 
+  if (doc === '' || doc.length > MAX_DOC_ID) {
+    return json(400, { error: `expected a document id of 1 to ${MAX_DOC_ID} characters` });
+  }
+
   if (method === 'GET') {
     return json(200, store.bookmarks.get(doc) ?? []);
   }
@@ -262,6 +273,10 @@ function handleBookmarks(store, method, encodedDoc, body) {
 
   if (!Array.isArray(list) || !list.every(isBookmark)) {
     return json(400, { error: 'expected [{ lineage, sequence, savedAt }]' });
+  }
+
+  if (list.length > MAX_BOOKMARKS) {
+    return json(413, { error: `at most ${MAX_BOOKMARKS} bookmarks per document` });
   }
 
   const kept = list.map(({ lineage, sequence, savedAt }) => ({ lineage, sequence, savedAt }));
@@ -365,10 +380,17 @@ export function startPageHost({ port, seed = [] }) {
     }
 
     const chunks = [];
+    let size = 0;
 
-    request.on('data', (chunk) => chunks.push(chunk));
+    // Past the cap the rest is read and dropped, so the 413 still reaches the client.
+    request.on('data', (chunk) => {
+      size += chunk.length;
+      if (size <= MAX_BODY_BYTES) {
+        chunks.push(chunk);
+      }
+    });
     request.once('end', () => {
-      const answer = handlePageHostRequest({
+      const answer = size > MAX_BODY_BYTES ? json(413, { error: 'body over 1 MiB' }) : handlePageHostRequest({
         store,
         user: typeof user === 'string' ? user : null,
         method: request.method ?? 'GET',

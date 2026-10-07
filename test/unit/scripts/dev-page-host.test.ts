@@ -217,6 +217,29 @@ describe('handlePageHostRequest', () => {
     expect(JSON.parse(request(null, 'GET', '/bookmarks/d').body ?? '')).toEqual([]);
   });
 
+  it('refuses an empty or over-long document id', () => {
+    expect(request(null, 'GET', '/bookmarks/').status).toBe(400);
+    expect(request(null, 'PUT', '/bookmarks/', []).status).toBe(400);
+    expect(request(null, 'GET', `/bookmarks/${'d'.repeat(513)}`).status).toBe(400);
+    expect(request(null, 'GET', `/bookmarks/${'d'.repeat(512)}`).status).toBe(200);
+  });
+
+  it('caps a document at 500 bookmarks', () => {
+    const marks = (count: number): unknown[] => Array.from({ length: count }, (_, sequence) => ({ lineage: 'l', sequence, savedAt: null }));
+
+    expect(request(null, 'PUT', '/bookmarks/d', marks(500)).status).toBe(200);
+    expect(request(null, 'PUT', '/bookmarks/d', marks(501)).status).toBe(413);
+    expect(JSON.parse(request(null, 'GET', '/bookmarks/d').body ?? '')).toHaveLength(500);
+  });
+
+  it('refuses a body over 1 MiB on every route', () => {
+    const big = 'x'.repeat(1024 * 1024 + 1);
+
+    expect(handlePageHostRequest({ store, user: 'alice', method: 'PUT', path: '/bookmarks/d', body: big }).status).toBe(413);
+    expect(handlePageHostRequest({ store, user: 'alice', method: 'PUT', path: '/pages/plan/title', body: big }).status).toBe(413);
+    expect(handlePageHostRequest({ store, user: 'alice', method: 'POST', path: '/pages', body: big }).status).toBe(413);
+  });
+
   it('answers other bookmark methods with 405 and a broken escape with 400', () => {
     expect(request(null, 'POST', '/bookmarks/d', []).status).toBe(405);
     expect(request(null, 'GET', '/bookmarks/%E0%A4%A').status).toBe(400);
@@ -306,6 +329,17 @@ describe('startPageHost', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('access-control-allow-origin')).toBe('*');
     expect(await (await fetch(`${host.url}/bookmarks/playground`)).json()).toEqual([{ lineage: 'l2', sequence: 3, savedAt: null }]);
+  });
+
+  it('answers an oversized upload with 413 without keeping it', async () => {
+    const host = await startPageHost({ port: 0, seed: SEED });
+
+    close = host.close;
+
+    const response = await fetch(`${host.url}/bookmarks/big`, { method: 'PUT', body: 'x'.repeat(2 * 1024 * 1024) });
+
+    expect(response.status).toBe(413);
+    expect(await (await fetch(`${host.url}/bookmarks/big`)).json()).toEqual([]);
   });
 
   it('answers a held GET later, and counts it once it is sent', async () => {

@@ -153,7 +153,7 @@ const bootLive = async (server: DocumentStore): Promise<{ core: Core; socket: Mo
   }
 
   socket.open();
-  socket.deliver({ type: 'control', tag: { format: 1, epoch: 0, lineage: LINEAGE } });
+  socket.deliver({ type: 'control', tag: { format: 2, epoch: 0, lineage: LINEAGE } });
   socket.deliver({ type: 'syncStep2', update: server.encodeStateAsUpdate() });
   await waitFor(() => !core.moduleInstances.ReadOnly.isEnabled, 'the veto to lift');
   await settle();

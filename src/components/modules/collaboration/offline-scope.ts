@@ -98,7 +98,8 @@ const isKnownV2Meta = (value: unknown): boolean => {
     return false;
   }
 
-  return value.format === 1 &&
+  // Format 1 stays known: an older build's v2 session also kept its edits in the outbox.
+  return (value.format === 1 || value.format === 2) &&
     value.protocol === 'v2' &&
     typeof value.lineage === 'string' &&
     LINEAGE_PATTERN.test(value.lineage);

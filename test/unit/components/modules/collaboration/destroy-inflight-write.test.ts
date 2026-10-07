@@ -67,7 +67,7 @@ class Room {
     socket.deliver({
       type: 'control',
       tag: {
-        format: 1,
+        format: 2,
         epoch: 0,
         lineage: LINEAGE,
       },

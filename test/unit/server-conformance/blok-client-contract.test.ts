@@ -672,7 +672,7 @@ class SharedOutbox implements CollabOutbox {
         throw new Error('the outbox has no lineage to stamp a local edit with');
       }
 
-      const row = { operationId: randomBytes(16).toString('hex'), lineage, bytes: update };
+      const row = { operationId: randomBytes(16).toString('hex'), lineage, format: 2, bytes: update };
 
       this.appended.push(update);
       this.rows.push(row);
@@ -771,7 +771,7 @@ it('connects with a doc-scoped pass offered as a subprotocol and reports connect
     // SyncStep2 that marks it synced can only have been applied after it.
     expect(client.provider.tag).toEqual({
       epoch: expect.any(Number),
-      format: 1,
+      format: 2,
       lineage: expect.stringMatching(/^[0-9a-f]{32}$/),
     });
     expect(client.sockets).toHaveLength(1);
@@ -901,7 +901,7 @@ it('resets its lineage on 4409 and reconnects carrying none of its pre-reset con
     // room nor the reconnecting client can carry it.
     expect(client.blockIds()).toEqual(['seed-1']);
     expect(client.provider.tag?.epoch).toBe((before?.epoch ?? 0) + 1);
-    expect(client.provider.tag?.format).toBe(1);
+    expect(client.provider.tag?.format).toBe(2);
   });
 }, TEST_TIMEOUT_MS);
 

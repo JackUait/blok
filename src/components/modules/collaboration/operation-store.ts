@@ -16,7 +16,10 @@ import type { SessionProtocol, WorkingSetTag } from './types';
 const LINEAGE_PATTERN = /^[0-9a-f]{32}$/;
 
 /** The only CRDT schema these stored updates can be replayed into. */
-const SUPPORTED_FORMAT = 1;
+const SUPPORTED_FORMAT = 2;
+
+/** What an outbox row without a `format` field was written in: the build before the stamp. */
+const UNSTAMPED_FORMAT = 1;
 
 /** Rows under one lineage before they are merged into a single update. */
 const DEFAULT_COMPACTION_THRESHOLD = 500;
@@ -103,6 +106,8 @@ export interface PendingOperation {
   /** 32 lowercase hex characters. */
   operationId: string;
   lineage: string;
+  /** The CRDT format the bytes were written in. The drain sends only its own. */
+  format: number;
   localOrder: number;
   bytes: Uint8Array;
   createdAt: number;
@@ -279,16 +284,18 @@ const toPendingOperation = (key: IDBValidKey, value: unknown): PendingOperation 
     return null;
   }
 
-  const { operationId, lineage, bytes, createdAt } = value as Record<string, unknown>;
+  const { operationId, lineage, format, bytes, createdAt } = value as Record<string, unknown>;
   const payload = toBytes(bytes);
 
   if (typeof operationId !== 'string' || typeof lineage !== 'string' || payload === null) {
     return null;
   }
 
+  // Never null for a missing format: a null head row would hide every row behind it.
   return {
     operationId,
     lineage,
+    format: typeof format === 'number' ? format : UNSTAMPED_FORMAT,
     localOrder: key,
     bytes: payload,
     createdAt: typeof createdAt === 'number' ? createdAt : 0,
@@ -668,6 +675,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
       allocated.request = outboxStore.add({
         operationId: operation.operationId,
         lineage: operation.lineage,
+        format: operation.format,
         bytes: operation.bytes,
         createdAt: operation.createdAt,
       });
@@ -890,6 +898,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
           const operation: PendingOperation = {
             operationId: newOperationId(),
             lineage,
+            format: SUPPORTED_FORMAT,
             localOrder: 0,
             bytes: update,
             createdAt: Date.now(),

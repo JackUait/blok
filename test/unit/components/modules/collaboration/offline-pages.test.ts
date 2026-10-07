@@ -9,7 +9,7 @@ import {
 import type { WorkingSetTag } from '../../../../../src/components/modules/collaboration/types';
 
 const LINEAGE = 'a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1';
-const tag: WorkingSetTag = { format: 1, epoch: 0, lineage: LINEAGE };
+const tag: WorkingSetTag = { format: 2, epoch: 0, lineage: LINEAGE };
 
 describe('collaboration — offline pages', () => {
   const stores: OperationStore[] = [];

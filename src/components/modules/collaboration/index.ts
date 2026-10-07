@@ -18,7 +18,7 @@ import {
 import { createPresenceRenderer } from './presence-renderer';
 import { normalizeUserId } from '../userDirectory';
 import { createOperationStore, type OperationStore, type OperationStoreStats } from './operation-store';
-import { createCollabProvider, RELINEAGE_REASON, STALE_LINEAGE_REASON } from './provider';
+import { createCollabProvider, RELINEAGE_REASON, STALE_LINEAGE_REASON, UNSUPPORTED_FORMAT_REASON } from './provider';
 import type {
   CollabDocSeam,
   CollabOutbox,
@@ -474,12 +474,15 @@ export class Collaboration extends Module {
       }),
       quarantineLineage: (lineage, reason, snapshot) =>
         store.quarantineLineage(lineage, reason, snapshot).then((moved) => {
-          // Read off THIS quarantine's own reason. TWO of the four are not
-          // refusals: a room reset, and a row of a lineage this session no
-          // longer serves, which the drain sweeps without anyone judging it.
-          // An oversized frame IS one — the client applying the verdict the
-          // server's own `oversized-update` rejection carries.
-          this.quarantineRejected = reason !== RELINEAGE_REASON && reason !== STALE_LINEAGE_REASON;
+          // Read off THIS quarantine's own reason. THREE are not refusals: a
+          // room reset, a row of a lineage this session no longer serves, and
+          // a row an older build wrote in another format — the drain sweeps
+          // those without anyone judging them. An oversized frame IS one — the
+          // client applying the verdict the server's own `oversized-update`
+          // rejection carries.
+          this.quarantineRejected = reason !== RELINEAGE_REASON
+            && reason !== STALE_LINEAGE_REASON
+            && reason !== UNSUPPORTED_FORMAT_REASON;
           void this.refreshSave();
 
           return moved;

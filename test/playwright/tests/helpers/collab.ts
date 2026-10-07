@@ -117,7 +117,7 @@ export const installCollabRelay = async (page: Page): Promise<void> => {
         const doc = decodeURIComponent(url.split('/sync/')[1] ?? 'default');
         const controlPayload = new TextEncoder()
           .encode(JSON.stringify({ epoch: 0,
-            format: 1,
+            format: 2,
             lineage: lineageFor(doc) }));
         /** `[100][varuint len][json]`. The payload is well under 128 bytes, so the length is one byte. */
         const controlFrame = new Uint8Array([100, controlPayload.length, ...controlPayload]);

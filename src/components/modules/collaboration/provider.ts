@@ -60,7 +60,7 @@ const subprotocolOffers = (outbox: CollabOutbox | undefined): string[] =>
   outbox === undefined ? [SYNC_SUBPROTOCOL_V1] : [SYNC_SUBPROTOCOL_V2, SYNC_SUBPROTOCOL_V1];
 
 /** CRDT schema this client speaks. A control frame naming another is terminal. */
-const SUPPORTED_FORMAT = 1;
+const SUPPORTED_FORMAT = 2;
 
 const DEFAULT_HANDSHAKE_TIMEOUT_MS = 10_000;
 const DEFAULT_AWARENESS_THROTTLE_MS = 100;
@@ -114,6 +114,9 @@ const OVERSIZED_REASON = 'oversized-update';
 
 /** Recorded with a row left behind by a quarantine that did not commit. */
 export const STALE_LINEAGE_REASON = 'stale-lineage';
+
+/** Recorded with a row an older build wrote in another format. Its bytes do not fit this room. */
+export const UNSUPPORTED_FORMAT_REASON = 'unsupported-format';
 
 /** Enough to hold a whole first sync ahead of the control frame, not enough to flood us. */
 const MAX_BUFFERED_INBOUND = 64;
@@ -818,6 +821,19 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       requestResidualSync(socket);
 
       return false;
+    }
+
+    // Checked before the lineage, and on its own: a server that migrated a room
+    // without minting a new lineage would otherwise get format-1 bytes (HTML
+    // characters) replayed into its rich text.
+    if (row.format !== SUPPORTED_FORMAT) {
+      void quarantineTail(row.lineage, UNSUPPORTED_FORMAT_REASON).then((moved) => {
+        if (moved && !isStale(generation)) {
+          drain();
+        }
+      });
+
+      return true;
     }
 
     // A row of a lineage this session no longer serves. It exists only after a

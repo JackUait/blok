@@ -37,7 +37,7 @@ const DB_NAME = 'blok-ops-wss://sync.test/api/sync|doc-1|user-7';
  * @param overrides - tag fields to override
  */
 const tagWith = (lineage: string, overrides: Partial<WorkingSetTag> = {}): WorkingSetTag => ({
-  format: 1,
+  format: 2,
   epoch: 0,
   lineage,
   ...overrides,
@@ -337,7 +337,7 @@ describe('collaboration — operation store', () => {
       expect(adopted).not.toBeNull();
       expect(adopted?.meta.lineage).toBe(LINEAGE_A);
       expect(adopted?.meta.epoch).toBe(3);
-      expect(adopted?.meta.format).toBe(1);
+      expect(adopted?.meta.format).toBe(2);
       expect(adopted?.meta.writeDenied).toBe(false);
       expect(adopted?.meta.protocol).toBe('v2');
       expect(typeof adopted?.meta.savedAt).toBe('number');
@@ -387,7 +387,7 @@ describe('collaboration — operation store', () => {
       const writer = storeWith();
 
       await writer.open();
-      await writer.recordSession(tagWith(LINEAGE_A, { format: 2 }), false, 'v2');
+      await writer.recordSession(tagWith(LINEAGE_A, { format: 1 }), false, 'v2');
       await writer.close();
 
       const reader = storeWith();
@@ -403,7 +403,7 @@ describe('collaboration — operation store', () => {
 
       // Routing a local edit needs a protocol this build can honour; anything
       // else would pick the wrong append path on every edit of the session.
-      await plantMeta({ format: 1,
+      await plantMeta({ format: 2,
         epoch: 0,
         lineage: LINEAGE_A,
         writeDenied: false,
@@ -413,6 +413,80 @@ describe('collaboration — operation store', () => {
       const reader = storeWith();
 
       expect(await reader.open()).toBeNull();
+    });
+  });
+
+  describe('format 2', () => {
+    /**
+     * Writes an outbox row straight into the store, the way a format-1 build
+     * wrote it: no `format` field.
+     * @param row - the row to plant
+     */
+    const plantOutbox = async (row: Record<string, unknown>): Promise<void> => {
+      const db = await openDatabase();
+      const [store] = idb.transact(db, ['outbox']);
+
+      await idb.rtop(store.add(row));
+      db.close();
+    };
+
+    it('does not adopt a format-1 copy an older build left behind', async () => {
+      const writer = storeWith();
+
+      await writer.open();
+      await writer.close();
+
+      await plantMeta({ format: 1,
+        epoch: 0,
+        lineage: LINEAGE_A,
+        writeDenied: false,
+        protocol: 'v2',
+        savedAt: 1 });
+      await plantUpdate({ lineage: LINEAGE_A, bytes: updateWith('block-1', '<b>html era</b>') });
+
+      const reader = storeWith();
+
+      expect(await reader.open(), 'a format-1 copy was adopted into a format-2 document').toBeNull();
+    });
+
+    it('stamps every outbox row with format 2', async () => {
+      const store = storeWith();
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+
+      const operation = await store.appendLocal(updateWith('block-1', 'one'));
+
+      expect((await rowsIn('outbox')).map((row) => (row as { format?: unknown }).format)).toEqual([2]);
+      expect(operation.format).toBe(2);
+      expect((await store.oldestPending())?.format).toBe(2);
+    });
+
+    it('stamps format 2 in memory mode too', async () => {
+      const store = storeWith({ offlineScope: null });
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+
+      expect((await store.appendLocal(updateWith('block-1', 'one'))).format).toBe(2);
+    });
+
+    it('reads an outbox row with no format as format 1, without hiding the rows behind it', async () => {
+      const store = storeWith();
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await plantOutbox({ operationId: 'f'.repeat(32),
+        lineage: LINEAGE_B,
+        bytes: updateWith('block-1', '<b>old</b>'),
+        createdAt: 1 });
+      await store.appendLocal(updateWith('block-2', 'new'));
+
+      const head = await store.oldestPending();
+
+      expect(head?.operationId).toBe('f'.repeat(32));
+      expect(head?.format).toBe(1);
+      expect((await store.stats()).pendingOperations).toBe(2);
     });
   });
 

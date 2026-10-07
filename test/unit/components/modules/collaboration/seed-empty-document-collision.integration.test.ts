@@ -184,7 +184,7 @@ const firstSyncEmpty = (harness: Harness): void => {
   const room = new DocumentStore(new YBlockSerializer());
 
   socket.open();
-  socket.deliver({ type: 'control', tag: { format: 1, epoch: 0, lineage: LINEAGE } });
+  socket.deliver({ type: 'control', tag: { format: 2, epoch: 0, lineage: LINEAGE } });
   socket.deliver({
     type: 'syncStep2',
     update: room.encodeStateAsUpdate(harness.core.moduleInstances.YjsManager.getStateVector()),

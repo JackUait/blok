@@ -140,7 +140,7 @@ const bootLive = async (): Promise<LiveClient> => {
 
   if (socket === undefined) throw new Error('no socket was opened');
   socket.open();
-  socket.deliver({ type: 'control', tag: { format: 1, epoch: 0, lineage: '0123456789abcdef0123456789abcdef' } });
+  socket.deliver({ type: 'control', tag: { format: 2, epoch: 0, lineage: '0123456789abcdef0123456789abcdef' } });
   socket.deliver({
     type: 'syncStep2',
     update: server.encodeStateAsUpdate(core.moduleInstances.YjsManager.getStateVector()),

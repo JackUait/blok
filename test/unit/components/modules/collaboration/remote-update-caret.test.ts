@@ -56,7 +56,7 @@ class MockSocket {
 
 const controlFrame = (): SyncWireFrame => ({
   type: 'control',
-  tag: { format: 1, epoch: 0, lineage: LINEAGE },
+  tag: { format: 2, epoch: 0, lineage: LINEAGE },
 });
 
 const waitFor = async (predicate: () => boolean, label = 'condition', timeoutMs = 2000): Promise<void> => {

@@ -425,14 +425,27 @@ class Blok {
       set: (value: string | false): void => applyPlaceholder(value),
     };
 
-    // Buffered like width: calls before isReady replay once PageTitle exists.
+    // Buffered until the isReady replay. The module exists one microtask after
+    // `new Blok` but is not prepared until then, so its presence is not the gate.
     const titleBuffer = {
+      ready: false,
       text: null as string | null,
       icon: undefined as PageIcon | null | undefined,
       holder: null as HTMLElement | string | null,
     };
     const getPageTitle = (): BlokModules['PageTitle'] | undefined =>
-      (blok.moduleInstances as Partial<BlokModules>).PageTitle;
+      titleBuffer.ready ? (blok.moduleInstances as Partial<BlokModules>).PageTitle : undefined;
+
+    // A bad selector must not reject isReady; only a direct call after ready throws.
+    const replayTitleMount = (pageTitle: BlokModules['PageTitle'], holder: HTMLElement | string): void => {
+      try {
+        pageTitle.mount(holder);
+      } catch {
+        const name = typeof holder === 'string' ? holder : holder.tagName;
+
+        logLabeled(`title.mount "${name}" found no element; the title stays where it is`, 'error');
+      }
+    };
 
     (this as Record<string, unknown>).title = {
       get: (): string => getPageTitle()?.getText() ?? titleBuffer.text ?? '',
@@ -598,16 +611,13 @@ class Blok {
         placeholderBuffer.pending = null;
       }
 
-      const pageTitle = (blok.moduleInstances as Partial<BlokModules>).PageTitle;
+      titleBuffer.ready = true;
+      const pageTitle = getPageTitle();
+      const bufferedHolder = titleBuffer.holder;
 
       if (pageTitle !== undefined) {
-        const bufferedHolder = titleBuffer.holder;
-
-        // A bad selector must not reject isReady; only a direct call after ready throws.
-        if (typeof bufferedHolder === 'string' && document.querySelector(bufferedHolder) === null) {
-          logLabeled(`title.mount "${bufferedHolder}" matches no element; the title stays where it is`, 'error');
-        } else if (bufferedHolder !== null) {
-          pageTitle.mount(bufferedHolder);
+        if (bufferedHolder !== null) {
+          replayTitleMount(pageTitle, bufferedHolder);
         }
         if (titleBuffer.text !== null) {
           pageTitle.setText(titleBuffer.text, 'api');

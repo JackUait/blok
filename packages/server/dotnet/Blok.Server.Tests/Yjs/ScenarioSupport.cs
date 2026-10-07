@@ -10,11 +10,21 @@ namespace Blok.Server.Tests.Yjs;
 
 /// <summary>What a step says the engine document must look like once it has run.</summary>
 /// <param name="Diverges">
-/// A known gap: yjs ran a format cleanup the engine does not port, so the
-/// merged json must DIFFER until a peer's cleanup arrives.
+/// A known gap: the yjs mirror ran a format cleanup the engine does not
+/// port, so the merged json must DIFFER from <paramref name="Json"/> until a
+/// peer's cleanup arrives.
+/// </param>
+/// <param name="NoCleanup">
+/// The same doc as yjs holds it with the cleanup suppressed, which is what
+/// the engine must equal exactly.
 /// </param>
 internal sealed record ScenarioExpect(
-    byte[]? StateVector, bool? HasPending, JsonNode? Json, string? JsonSha256, bool Diverges = false);
+    byte[]? StateVector,
+    bool? HasPending,
+    JsonNode? Json,
+    string? JsonSha256,
+    bool Diverges = false,
+    ScenarioExpect? NoCleanup = null);
 
 /// <summary>
 /// One step of a scenario or a fuzz seed, in the one shape both files reduce
@@ -29,11 +39,13 @@ internal sealed record ScenarioStep(
     byte[]? Update,
     string? UpdateOf,
     IReadOnlyList<string>? To,
-    ScenarioExpect? Expect);
+    ScenarioExpect? Expect,
+    byte[]? NoCleanupUpdate = null);
 
 /// <param name="Segments">
 /// The case carries remote formatting, which yjs cleans up after the
-/// transaction and the engine does not: only merged runs are comparable.
+/// transaction and the engine does not: the mirror compares as merged runs
+/// only, and the no-cleanup oracle compares exactly.
 /// </param>
 internal sealed record ScenarioCase(
     string Name,
@@ -160,8 +172,7 @@ internal static class ScenarioSupport
 
   /// <summary>
   /// The json oracle with every Y.Text delta merged into runs of equal
-  /// attributes. yjs's format cleanup only removes redundant marks, which
-  /// split runs without changing what any character carries.
+  /// attributes, so redundant marks that only split runs compare equal.
   /// </summary>
   internal static JsonNode? MergeTextRuns(JsonNode? node)
   {
@@ -559,8 +570,13 @@ internal static class ScenarioSupport
         step["updateOf"]?.GetValue<string>(),
         Names(kind == "deliver" ? step["to"] : step["deliver"]),
         ReadExpect(step["expect"]) is { } expect
-            ? expect with { Diverges = step["diverges"]?.GetValue<bool>() ?? false }
-            : null);
+            ? expect with
+            {
+              Diverges = step["diverges"]?.GetValue<bool>() ?? false,
+              NoCleanup = ReadExpect(step["noCleanup"]),
+            }
+            : null,
+        Bytes(step["noCleanupUpdate"]));
   }
 
   private static ScenarioCase ReadSeed(string fileName)
@@ -727,10 +743,9 @@ internal sealed class ScenarioRunner
 
     Assert.NotNull(written);
 
-    if (!testCase.Segments)
-    {
-      AssertMirrorBytes(step, written);
-    }
+    // In a segments case the mirror ran yjs's cleanup; the no-cleanup doc
+    // wrote the bytes the engine must.
+    AssertMirrorBytes(step, written, testCase.Segments ? step.NoCleanupUpdate : step.Update);
 
     if (step.Id is { } id)
     {
@@ -738,9 +753,9 @@ internal sealed class ScenarioRunner
     }
   }
 
-  private void AssertMirrorBytes(ScenarioStep step, byte[] written)
+  private void AssertMirrorBytes(ScenarioStep step, byte[] written, byte[]? expected)
   {
-    var mirror = step.Update ??
+    var mirror = expected ??
         throw new InvalidDataException($"step \"{step.Id}\" carries no mirror update");
     var where = $"{testCase.Name} step \"{step.Id}\" ({step.Op?.ToJsonString()})";
 
@@ -781,7 +796,8 @@ internal sealed class ScenarioRunner
 
   private void Check(ScenarioExpect expect)
   {
-    if (expect.StateVector is { } vector && !testCase.Segments)
+    // The cleanup only deletes, so the clocks agree even where the text does not.
+    if (expect.StateVector is { } vector)
     {
       Assert.Equal(vector, Doc.EncodeStateVector());
       Checks++;
@@ -810,6 +826,17 @@ internal sealed class ScenarioRunner
         Assert.Equal(wanted, actual);
       }
 
+      Checks++;
+    }
+
+    if (expect.NoCleanup is { } noCleanup)
+    {
+      Assert.Equal(
+          noCleanup.StateVector ?? throw new InvalidDataException("the no-cleanup oracle has no sv"),
+          Doc.EncodeStateVector());
+      Assert.Equal(
+          YjsEngineFixtures.Canonicalize(noCleanup.Json),
+          YjsEngineFixtures.Canonicalize(JsonRenderer.Render(Doc, testCase.Roots)));
       Checks++;
     }
 

@@ -277,6 +277,68 @@ function applyTextOp(target, op) {
   }
 }
 
+/**
+ * @param {Y.Doc} doc
+ * @param {Record<string, string>} roots
+ * @returns {{ hasPending: boolean, json: Record<string, unknown>, sv: string }}
+ */
+function observeDoc(doc, roots) {
+  return {
+    sv: b64(Y.encodeStateVector(doc)),
+    hasPending: hasPending(doc),
+    json: renderDoc(doc, roots),
+  };
+}
+
+/**
+ * A yjs doc that stands where the engine stands but never runs the format
+ * cleanup, which is what the engine does (contract section 7). yjs runs the
+ * cleanup only after a transaction that is not local (YText.js _callObserver),
+ * and applyUpdate forces local = false inside its own body, so the flag is
+ * set back AFTER it, before the transaction ends.
+ */
+class NoCleanupDoc {
+  /**
+   * @param {number} clientId
+   * @param {boolean} gc
+   */
+  constructor(clientId, gc) {
+    this.doc = new Y.Doc({ gc });
+    this.doc.clientID = clientId;
+  }
+
+  /** @param {Uint8Array} update */
+  deliver(update) {
+    this.doc.transact((transaction) => {
+      Y.applyUpdate(this.doc, update, REMOTE_ORIGIN);
+      transaction.local = true;
+    }, REMOTE_ORIGIN);
+  }
+
+  /**
+   * @param {Record<string, unknown>} op
+   * @returns {Uint8Array}
+   */
+  record(op) {
+    const captured = [];
+    const listener = (update, origin) => {
+      if (origin === LOCAL_ORIGIN) {
+        captured.push(update);
+      }
+    };
+
+    this.doc.on('update', listener);
+    this.doc.transact(() => applyOp(this.doc, op), LOCAL_ORIGIN);
+    this.doc.off('update', listener);
+
+    if (captured.length !== 1) {
+      throw new Error(`op ${op.op} on the no-cleanup doc emitted ${captured.length} updates (expected 1)`);
+    }
+
+    return captured[0];
+  }
+}
+
 /** A set of pinned docs plus the recorder that captures one update per local op. */
 class World {
   /**
@@ -374,13 +436,7 @@ class World {
    * @returns {{ hasPending: boolean, json: Record<string, unknown>, sv: string }}
    */
   observe(name, roots) {
-    const doc = this.doc(name);
-
-    return {
-      sv: b64(Y.encodeStateVector(doc)),
-      hasPending: hasPending(doc),
-      json: renderDoc(doc, roots),
-    };
+    return observeDoc(this.doc(name), roots);
   }
 
   /** yjs regenerates clientID when a remote transaction advances the local clock. */
@@ -1343,7 +1399,7 @@ const SCENARIOS = [
   },
   {
     name: 'formatted-text-remote-cleanup',
-    description: 'Two peers format overlapping ranges. On receipt, yjs runs a format cleanup that the engine does not port (contract section 7), and here that cleanup CHANGES what "ab" reads as: yjs drops italic, the engine keeps it. The divergence is pinned, then closed by delivering the cleanup a yjs peer (A) wrote and sent. See `compare` and `cleanupAs`.',
+    description: 'Two peers format overlapping ranges. On receipt, yjs runs a format cleanup that the engine does not port (contract section 7), and here that cleanup changes what "ab" reads as: a yjs peer that received s5 before s6 drops italic, the engine keeps it, as a yjs doc with no cleanup does. The gap is pinned against that no-cleanup oracle, then closed by delivering the cleanup peer A wrote and sent.',
     compare: 'segments',
     roots: MAP_ROOTS,
     steps: [
@@ -1402,6 +1458,9 @@ function runScenario(spec) {
   const world = new World(spec.docs ?? THREE_DOCS, spec.gc ?? true);
   const updates = new Map();
   const steps = [];
+  const noCleanup = spec.compare === 'segments'
+    ? new NoCleanupDoc(world.clientIds.get(engine), spec.gc ?? true)
+    : null;
   let counter = 0;
 
   const expectEngine = (diverges) => {
@@ -1410,6 +1469,7 @@ function runScenario(spec) {
       doc: engine,
       ...(diverges === true ? { diverges: true } : {}),
       expect: world.observe(engine, spec.roots),
+      ...(noCleanup === null ? {} : { noCleanup: observeDoc(noCleanup.doc, spec.roots) }),
     });
   };
 
@@ -1425,6 +1485,10 @@ function runScenario(spec) {
 
       for (const target of authored.to) {
         cleanup.push(...world.deliverCapturingCleanup(target, update));
+      }
+
+      if (authored.to.includes(engine)) {
+        noCleanup?.deliver(update);
       }
 
       steps.push({ kind: 'deliver', updateOf: authored.deliverOf, to: authored.to });
@@ -1460,11 +1524,16 @@ function runScenario(spec) {
     const actor = authored.engine === true ? engine : authored.doc;
     const update = world.record(actor, authored.op);
     const deliver = authored.deliver ?? [];
+    const noCleanupUpdate = noCleanup !== null && actor === engine ? noCleanup.record(authored.op) : null;
 
     updates.set(id, update);
 
     for (const target of deliver) {
       world.deliver(target, update);
+    }
+
+    if (actor !== engine && deliver.includes(engine)) {
+      noCleanup?.deliver(update);
     }
 
     steps.push({
@@ -1473,6 +1542,7 @@ function runScenario(spec) {
       doc: actor,
       op: authored.op,
       update: b64(update),
+      ...(noCleanupUpdate === null ? {} : { noCleanupUpdate: b64(noCleanupUpdate) }),
       deliver,
     });
 
@@ -1490,6 +1560,7 @@ function runScenario(spec) {
   const clientIds = Object.fromEntries(world.clientIds);
 
   world.destroy();
+  noCleanup?.doc.destroy();
 
   return {
     name: spec.name,
@@ -1517,8 +1588,10 @@ function buildScenarios() {
       '`json` on the engine doc). Update bytes need not match yjs byte-for-byte, but `sv` and ' +
       '`json` must. A case with `compare: "segments"` has remote formatting, which yjs cleans up ' +
       'after the transaction and the engine does not: compare only `json`, with every Y.Text ' +
-      'delta merged into runs of equal attributes, and skip engine bytes and `sv`. An expect with ' +
-      '`diverges: true` pins a KNOWN gap from that missing cleanup: the merged json must DIFFER. ' +
+      'delta merged into runs of equal attributes; compare engine bytes with `noCleanupUpdate`, and ' +
+      'every expect with its `noCleanup` oracle (`sv` and raw `json` of a yjs doc that applies the ' +
+      'same updates with the cleanup suppressed). An expect with `diverges: true` pins a KNOWN gap ' +
+      'from the missing cleanup: there the merged json must DIFFER from `json`. ' +
       'An "op" whose op is `yjs.cleanup` is the cleanup a yjs doc wrote with origin null while ' +
       'receiving an update; peers send it, so the engine converges once it arrives. Nested $ymap/$yarray/$ytext values integrate the container item first and then ' +
       'their entries in listed order — get that order wrong and the state vector diverges. The fuzz ' +

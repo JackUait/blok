@@ -213,6 +213,36 @@ public sealed class YTextFormattingTests
     Assert.Equal("[{\"insert\":null}]", replay.Json["content"]?["$text"]?.ToJsonString());
   }
 
+  /// <summary>
+  /// A bad argument to a text that is not in a doc yet throws from the call,
+  /// not later from whatever integrates the text.
+  /// </summary>
+  [Fact]
+  public void QueuedWritesAreCheckedWhenMade()
+  {
+    var text = new YXmlText();
+
+    Assert.Throws<ArgumentException>(
+        () => text.Insert(null, 0, "a", Attrs(("bold", YUndefined.Instance))));
+    Assert.Throws<ArgumentException>(
+        () => text.Format(null, 0, 1, Attrs(("bold", YUndefined.Instance))));
+    Assert.Throws<ArgumentException>(
+        () => text.InsertEmbed(null, 0, Attrs(("big", new BigInteger(1)))));
+    Assert.Throws<ArgumentException>(
+        () => text.InsertEmbed(null, 0, Attrs(("page", "p")), Attrs(("bold", YUndefined.Instance))));
+    Assert.Throws<ArgumentOutOfRangeException>(() => text.Insert(null, -1, "a"));
+    Assert.Throws<ArgumentOutOfRangeException>(() => text.InsertEmbed(null, -1, Attrs()));
+    Assert.Throws<ArgumentOutOfRangeException>(() => text.Format(null, -1, 1, Attrs()));
+    Assert.Throws<ArgumentOutOfRangeException>(() => text.Delete(null, -1, 1));
+
+    var doc = new YDoc(4242);
+
+    // Nothing bad was queued, so the text integrates cleanly.
+    doc.Transact(transaction => doc.GetMap("blocks").Set(transaction, "b1", text));
+
+    Assert.Empty(text.ToDelta());
+  }
+
   [Fact]
   public void AttachedTextNeedsATransaction()
   {

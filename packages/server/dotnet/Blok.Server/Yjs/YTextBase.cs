@@ -48,11 +48,14 @@ internal abstract class YTextBase : YAbstractType
   public void Insert(YTransaction? transaction, int index, string chunk, AnyObject? attributes = null)
   {
     ArgumentNullException.ThrowIfNull(chunk);
+    ArgumentOutOfRangeException.ThrowIfNegative(index);
 
     if (chunk.Length == 0)
     {
       return;
     }
+
+    var given = attributes is null ? null : Marks(attributes);
 
     if (Queue(transaction, attached => Insert(attached, index, chunk, attributes)) is not { } live)
     {
@@ -60,9 +63,8 @@ internal abstract class YTextBase : YAbstractType
     }
 
     var position = FindPosition(live, index);
-    var marks = attributes is null
-        ? new OrderedDictionary<string, object?>(position.CurrentAttributes, StringComparer.Ordinal)
-        : Marks(attributes);
+    var marks = given ??
+        new OrderedDictionary<string, object?>(position.CurrentAttributes, StringComparer.Ordinal);
 
     InsertText(live, position, new ContentString(chunk), marks);
   }
@@ -76,32 +78,36 @@ internal abstract class YTextBase : YAbstractType
   {
     ArgumentNullException.ThrowIfNull(embed);
 
+    ArgumentOutOfRangeException.ThrowIfNegative(index);
+
     if (embed is string or YAbstractType)
     {
       throw new ArgumentException("yjs: an embed is a JSON value other than a string.", nameof(embed));
     }
+
+    var json = JsJson.Stringify(embed);
+    var marks = attributes is null ? new(StringComparer.Ordinal) : Marks(attributes);
 
     if (Queue(transaction, attached => InsertEmbed(attached, index, embed, attributes)) is not { } live)
     {
       return;
     }
 
-    InsertText(
-        live,
-        FindPosition(live, index),
-        new ContentEmbed(JsJson.Stringify(embed)),
-        attributes is null ? new(StringComparer.Ordinal) : Marks(attributes));
+    InsertText(live, FindPosition(live, index), new ContentEmbed(json), marks);
   }
 
   /// <summary>yjs's YText.format: set (or, with a null value, remove) marks over a range.</summary>
   public void Format(YTransaction? transaction, int index, int length, AnyObject attributes)
   {
     ArgumentNullException.ThrowIfNull(attributes);
+    ArgumentOutOfRangeException.ThrowIfNegative(index);
 
     if (length == 0)
     {
       return;
     }
+
+    var marks = Marks(attributes);
 
     if (Queue(transaction, attached => Format(attached, index, length, attributes)) is not { } live)
     {
@@ -115,12 +121,13 @@ internal abstract class YTextBase : YAbstractType
       return;
     }
 
-    FormatText(live, position, length, Marks(attributes));
+    FormatText(live, position, length, marks);
   }
 
   /// <summary>yjs's YText.delete: deleteText from the position at that index.</summary>
   public void Delete(YTransaction? transaction, int index, int length)
   {
+    ArgumentOutOfRangeException.ThrowIfNegative(index);
     ArgumentOutOfRangeException.ThrowIfNegative(length);
 
     if (length == 0)

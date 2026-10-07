@@ -340,8 +340,8 @@
     {
       "path": "scenarios.json",
       "description": "Deterministic multi-doc delivery scripts with a per-step oracle.",
-      "bytes": 107567,
-      "sha256": "4d31819b16282cfe549048fa6e5e78ab26e68c119bfeb25b153d8342266ed39d"
+      "bytes": 113131,
+      "sha256": "e5e098fc2c95751c9ff82ab23607ee861031bfadf969d67eb502b366eb85f54e"
     },
     {
       "path": "structs.json",

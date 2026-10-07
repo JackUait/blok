@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type * as Y from 'yjs';
+import * as Y from 'yjs';
 
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
@@ -140,6 +140,60 @@ describe('yjs format cleanup on rich text', () => {
     expect(seen[1].segments).toEqual(seen[0].segments);
   });
 
+  const SCENARIOS: Array<[string, string, string, string]> = [
+    ['overlapping bold', SENTENCE, 'The <b>quick brown</b> fox jumps', 'The quick <b>brown fox</b> jumps'],
+    ['bold vs unbold', `<b>${SENTENCE}</b>`, '<b>The </b>quick brown<b> fox jumps</b>', '<b>The quick </b>brown fox<b> jumps</b>'],
+    ['delete a bold run vs type inside it', 'The <b>quick</b> fox', 'The  fox', 'The <b>quXick</b> fox'],
+    ['overlapping links', SENTENCE, 'The <a href="https://a.b">quick brown</a> fox jumps', 'The quick <a href="https://c.d">brown fox</a> jumps'],
+    ['delete vs format inside', SENTENCE, PEER_DELETES, BOLD_INSIDE],
+    ['bold vs italic', SENTENCE, 'The <b>quick brown</b> fox jumps', 'The quick <i>brown fox</i> jumps'],
+  ];
+
+  // Reading `YTextEvent.delta` in an observer makes yjs delete redundant
+  // format items in a null-origin transaction. Blok maps null to 'local' and
+  // does not rerender, so those deletions must never change segments.
+  it.each(ORDERS)('null-origin format deletions never change segments (ids %i/%i)', (ownId, peerId) => {
+    const serializer = new YBlockSerializer();
+    let changingNullTransactions = 0;
+    let deltaOps = 0;
+
+    const run = (start: string, mine: string, theirs: string, readDelta: boolean): unknown[] => {
+      const { a, b } = peers(ownId, peerId, start);
+
+      if (readDelta) {
+        for (const store of [a, b]) {
+          store.blocksMap.observeDeep((events) => events.forEach((event) => {
+            if (event instanceof Y.YTextEvent) {
+              deltaOps += event.delta.length;
+            }
+          }));
+          store.blocksMap.doc?.on('afterTransaction', (transaction: Y.Transaction) => {
+            if (transaction.origin === null && transaction.deleteSet.clients.size > 0) {
+              changingNullTransactions++;
+            }
+          });
+        }
+      }
+
+      a.updateBlockData('p1', 'text', mine);
+      b.updateBlockData('p1', 'text', theirs);
+      sync(a, b);
+      sync(a, b);
+
+      return [serializer.readRichText(liveText(a)), serializer.readRichText(liveText(b))];
+    };
+
+    for (const [name, start, mine, theirs] of SCENARIOS) {
+      const plain = run(start, mine, theirs, false);
+
+      expect(plain[1], name).toEqual(plain[0]);
+      expect(run(start, mine, theirs, true), name).toEqual(plain);
+    }
+    // Guard: the delta reads really produced deleting cleanups.
+    expect(deltaOps).toBeGreaterThan(0);
+    expect(changingNullTransactions).toBeGreaterThan(0);
+  });
+
   it.each(ORDERS)('adds no undo step (ids %i/%i)', (ownId, peerId) => {
     const { a, b } = peers(ownId, peerId, SENTENCE);
     const history = new UndoHistory(a.undoScope, createMockBlok());
@@ -276,8 +330,18 @@ describe('rich text known losses (accepted limitations)', () => {
     expect(deltaOf(a)).toEqual([{ insert: 'The quic' }, { insert: 'k fox' }]);
     expect(deltaOf(b)).toEqual(deltaOf(a));
   });
+});
 
-  it.each(ORDERS)('KNOWN LOSS: undoing a block\'s creation unbolds a peer\'s character typed in its bold run (ids %i/%i)', (ownId, peerId) => {
+/**
+ * Measured, NOT an accepted limitation: nobody has ruled on it yet. It
+ * asserts today's lossy value so a fix turns it red.
+ */
+describe('rich text undo, open defects', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each(ORDERS)('OPEN DEFECT (awaiting a ruling): undoing a block\'s creation unbolds a peer\'s character typed in its bold run (ids %i/%i)', (ownId, peerId) => {
     const a = createStore(ownId);
     const b = createStore(peerId);
 

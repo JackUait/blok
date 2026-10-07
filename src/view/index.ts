@@ -37,6 +37,8 @@ export type {
   RestoredHeadingAnchor,
   SkippedHeadingAnchor,
 } from './restore-heading-anchors';
+export { diffOutputData } from './diff-output-data';
+export type { OutputDataDiff, OutputBlockChange, OutputBlockMove, DiffOutputDataOptions } from './diff-output-data';
 /**
  * `blocksToViewNodes` and the `ViewNode` tree are `@experimental` — not
  * frozen until a second framework adapter consumes them.

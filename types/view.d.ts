@@ -455,6 +455,62 @@ export declare function outlineFromOutputData(
   data: OutputData | LooseOutputData | null | undefined
 ): OutlineItem[];
 
+/** A block whose `type`, `data` or `tunes` differ between two documents. */
+export interface OutputBlockChange {
+  id: string;
+  before: OutputBlockData;
+  after: OutputBlockData;
+  fields: Array<'type' | 'data' | 'tunes'>;
+}
+
+/** A block whose parent changed, or that left the kept order of its siblings. */
+export interface OutputBlockMove {
+  id: string;
+  before: OutputBlockData;
+  after: OutputBlockData;
+}
+
+/** What {@link diffOutputData} found. Blocks are the normalized input blocks. */
+export interface OutputDataDiff {
+  /** In `after` order. */
+  added: OutputBlockData[];
+  /** In `before` order. */
+  removed: OutputBlockData[];
+  /** In `after` order. */
+  changed: OutputBlockChange[];
+  /** In `after` order. */
+  moved: OutputBlockMove[];
+}
+
+export interface DiffOutputDataOptions {
+  /**
+   * Rich-text fields per tool type. Replaces the built-in table for every type,
+   * so return the built-in fields too when you need them. Fields not listed are
+   * compared raw.
+   */
+  richTextFields?: (type: string) => string[];
+}
+
+/**
+ * Compare two saved documents by block id, synchronously and DOM-free.
+ *
+ * - A block without an id is never matched. With duplicate ids the first wins.
+ * - Moved: a different parent, or not in the longest kept order of its parent's
+ *   children. A block can be moved and changed.
+ * - Rich text compares by content: HTML and segments that say the same thing are equal.
+ * - Missing `tunes` equals `{}`. `indent`, `content`, `lastEditedAt`,
+ *   `lastEditedBy` and the document `id`/`time`/`version` are ignored.
+ *
+ * @param before - the older document (nullish = no blocks)
+ * @param after - the newer document (nullish = no blocks)
+ * @param options - rich-text fields per tool
+ */
+export declare function diffOutputData(
+  before: OutputData | LooseOutputData | null | undefined,
+  after: OutputData | LooseOutputData | null | undefined,
+  options?: DiffOutputDataOptions
+): OutputDataDiff;
+
 /** Why {@link restoreHeadingAnchors} left a referenced fragment as it was. */
 export type HeadingAnchorSkipReason = 'no-match' | 'ambiguous';
 

@@ -18,6 +18,7 @@ describe('src/view purity', () => {
     expect(typeof view.blocksToPlainText).toBe('function');
     expect(typeof view.defineBlokSchema).toBe('function');
     expect(typeof view.sanitizeHtmlFragment).toBe('function');
+    expect(typeof view.diffOutputData).toBe('function');
   });
 
   it('both entry points execute DOM-free', async () => {

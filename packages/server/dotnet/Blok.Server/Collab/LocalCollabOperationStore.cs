@@ -479,7 +479,7 @@ internal sealed class LocalCollabOperationStore :
       return [];
     }
 
-    if (ReadManifest(Path.Combine(docDirectory, ManifestName), documentId) is { Seeded: true } seeded)
+    if (ReadManifest(Path.Combine(docDirectory, ManifestName), documentId, HistoryShare) is { Seeded: true } seeded)
     {
       current = seeded;
     }
@@ -1103,13 +1103,17 @@ internal sealed class LocalCollabOperationStore :
   /// slot decodes: a document whose identity is unreadable must not be handed
   /// back as a fresh one.
   /// </summary>
-  private static Manifest? ReadManifest(string path, string documentId)
+  private static Manifest? ReadManifest(string path, string documentId, FileShare share = FileShare.Read)
   {
     byte[] bytes;
 
     try
     {
-      bytes = File.ReadAllBytes(path);
+      // FileShare.Read is what File.ReadAllBytes used; history reads pass
+      // HistoryShare so a live session holding the manifest does not block them.
+      using var file = new FileStream(path, FileMode.Open, FileAccess.Read, share);
+      bytes = new byte[file.Length];
+      file.ReadExactly(bytes);
     }
     catch (FileNotFoundException)
     {

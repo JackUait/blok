@@ -42,6 +42,8 @@ const createSettings = (commonTunes: MenuConfigItem[], toolTunes: MenuConfigItem
           getById: (id: string) => ({ id, parentId: null }),
         } as unknown as API['blocks'],
       },
+      // BlockAPI.save() hands its data to the API module for host output.
+      blockDataForHost: (_tool: unknown, data: unknown) => data,
     },
     Toolbar: { close: vi.fn(), isDockedPhysicallyRight: false },
     DragManager: { duplicateBlocksInPlace: duplicate },

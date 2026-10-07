@@ -105,7 +105,8 @@ const buildSettings = () => {
       convert },
     CrossBlockSelection: { isCrossBlockSelectionStarted: false },
     Tools: { blockTools: tools },
-    API: { methods: api },
+    // BlockAPI.save() hands its data to the API module for host output.
+    API: { methods: api, blockDataForHost: (_tool: unknown, data: unknown) => data },
     Toolbar: { close: closeToolbar,
       isDockedPhysicallyRight: false },
     Caret: { setToBlock: vi.fn(),

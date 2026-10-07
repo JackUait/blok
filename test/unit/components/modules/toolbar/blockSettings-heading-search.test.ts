@@ -64,7 +64,8 @@ const createSettings = (data: Partial<HeaderData> = {}, locale: 'en' | 'ru' = 'e
     BlockManager: { currentBlock: block, convert },
     CrossBlockSelection: { isCrossBlockSelectionStarted: false },
     Tools: { blockTools: new Map([['header', tool]]) },
-    API: { methods: api },
+    // BlockAPI.save() hands its data to the API module for host output.
+    API: { methods: api, blockDataForHost: (_tool: unknown, data: unknown) => data },
     Toolbar: { close: closeToolbar, isDockedPhysicallyRight: false },
     Caret: { setToBlock: setCaret, positions: { DEFAULT: 'default', END: 'end' } },
     I18n: i18n,

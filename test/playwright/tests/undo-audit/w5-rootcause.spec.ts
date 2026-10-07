@@ -592,7 +592,7 @@ test.describe('W5R root causes', () => {
       await gap(page);
       await page.keyboard.type('new item');
       await gap(page);
-      const steps: Array<{ doc: string | undefined; saved: string | undefined }> = [];
+      const steps: Array<{ doc: string | undefined; saved: unknown }> = [];
 
       while ((await savedText(page)).length > blocksBeforeEnter) {
         expect(steps.length, '"new item" and Enter undo within 8 presses').toBeLessThan(8);

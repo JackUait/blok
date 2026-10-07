@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
@@ -193,12 +194,14 @@ internal static class HistoryEndpoint
         expect,
         context.RequestAborted);
 
-    if (result.History != CollabHistoryStatus.Ready || result.Edit is not { } edit)
+    if (result.History != CollabHistoryStatus.Ready)
     {
       await RefuseAsync(context, admitted, result.History);
 
       return;
     }
+
+    var edit = result.Edit ?? throw new UnreachableException("a ready restore carries its edit");
 
     await EditEndpoint.WriteResultAsync(context, edit, admitted.Rooms.RetryAfter);
   }
@@ -342,7 +345,7 @@ internal static class HistoryEndpoint
             StatusCodes.Status500InternalServerError,
             "the version could not be exported\n");
 
-      default:
+      case CollabHistoryStatus.Corrupt:
         var logger = context.RequestServices.GetService<ILoggerFactory>()?.CreateLogger(LogCategory);
 
         if (logger is not null)
@@ -354,6 +357,9 @@ internal static class HistoryEndpoint
             context,
             StatusCodes.Status500InternalServerError,
             "a stored version could not be read\n");
+
+      default:
+        throw new UnreachableException($"history status {status} is not a refusal");
     }
   }
 

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
+using Blok.Server.Yjs;
 using Xunit;
 
 namespace Blok.Server.Tests.Collab;
@@ -137,6 +138,31 @@ public sealed class CollabHistoryManagerTests
   }
 
   [Fact]
+  public async Task AFreshManagerSeesAPurgeFromAnEarlierProcess()
+  {
+    var earlier = CreateManager();
+    await LoadAsync(earlier);
+    var lineage = Lineage();
+    await earlier.PurgeDocumentAsync(DocId, _ => ValueTask.FromResult(true));
+    var manager = CreateManager();
+
+    Assert.Equal(CollabHistoryStatus.Purged, (await manager.HistoryAsync(DocId)).Status);
+    Assert.Equal(CollabHistoryStatus.Purged, (await manager.ReadVersionAsync(DocId, lineage, 0)).Status);
+    Assert.Equal(CollabHistoryStatus.Purged, (await manager.DeleteLineageAsync(DocId, lineage)).Status);
+    Assert.Equal(CollabHistoryStatus.Purged, (await manager.RestoreAsync(DocId, lineage, 0, "op", null)).History);
+  }
+
+  [Fact]
+  public async Task AnUnreadableLineageListIsCorrupt()
+  {
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    operations.FailListings = _ => new InvalidDataException("collab: torn ledger");
+
+    Assert.Equal(CollabHistoryStatus.Corrupt, (await manager.HistoryAsync(DocId)).Status);
+  }
+
+  [Fact]
   public async Task ACorruptRecordIsCorrupt()
   {
     var manager = CreateManager();
@@ -213,6 +239,56 @@ public sealed class CollabHistoryManagerTests
   }
 
   [Fact]
+  public async Task ARetryAfterItsLineageWasDeletedGetsTheFirstReceipt()
+  {
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    await EditAsync(manager, Update("a", "old"));
+    var old = Lineage();
+    await ResetAsync(manager);
+    var first = await manager.RestoreAsync(DocId, old, 1, "op-restore", null);
+    Assert.Equal(CollabEditStatus.Applied, first.Edit!.Status);
+    Assert.Equal(
+        (CollabHistoryStatus.Ready, CollabLineageDeleteOutcome.Deleted),
+        await manager.DeleteLineageAsync(DocId, old));
+
+    var retry = await manager.RestoreAsync(DocId, old, 1, "op-restore", null);
+    var fresh = await manager.RestoreAsync(DocId, old, 1, "op-other", null);
+
+    Assert.Equal(CollabHistoryStatus.Ready, retry.History);
+    Assert.Equal(CollabEditStatus.Applied, retry.Edit!.Status);
+    Assert.Equal(first.Edit.Receipt!.ServerSequence, retry.Edit.Receipt!.ServerSequence);
+    Assert.Equal(CollabHistoryStatus.NotFound, fresh.History);
+    Assert.Null(fresh.Edit);
+  }
+
+  [Fact]
+  public async Task TheGateMeasuresTheFrameTheLiveApplyBroadcasts()
+  {
+    var converter = new CollabDocConverter(time, RichTextRuntime.Reader);
+    var live = new YDoc();
+    await converter.SeedAsync(live, Document(("a", "one")));
+
+    // Rewrites push the live client's clock past 2^14, so its clock varints
+    // are wider than a fresh client's.
+    for (var round = 0; round < 20; round++)
+    {
+      await converter.ApplyOpsAsync(live, [Update("a", new string((char)('a' + round), 1000))]);
+    }
+
+    var ops = Enumerable.Range(0, 40)
+        .Select(index => (CollabEditOp)Insert($"n{index}", $"text {index}", index == 0 ? "a" : $"n{index - 1}"))
+        .ToList();
+
+    var measured = await CollabRoom.PlannedFrameBytesAsync(live, converter, ops, CancellationToken.None);
+    long broadcast = 0;
+    live.UpdateEmitted += update => broadcast += SyncWire.Encode(new SyncUpdateFrame(update.Update)).Length;
+    await converter.ApplyOpsAsync(live, ops);
+
+    Assert.Equal(broadcast, measured);
+  }
+
+  [Fact]
   public async Task AStalePreconditionRefusesTheRestore()
   {
     var manager = CreateManager();
@@ -263,7 +339,7 @@ public sealed class CollabHistoryManagerTests
 
     Assert.Equal(CollabEditStatus.Applied, result.Edit!.Status);
     var frame = SyncWire.Encode(new SyncUpdateFrame(operations.Committed(DocId)[^1].Update.ToArray())).Length;
-    Assert.InRange(frame, Limit - 8, Limit);
+    Assert.InRange(frame, Limit - 64, Limit);
   }
 
   [Fact]
@@ -295,9 +371,10 @@ public sealed class CollabHistoryManagerTests
     Assert.DoesNotContain(old, (await manager.HistoryAsync(DocId)).Lineages.Select(lineage => lineage.Lineage));
   }
 
-  // Measured: this restore's frame is the text plus 164 bytes, so 2044 here.
-  // The slack covers a client id one varint byte longer on the live doc.
-  private const int BorderlineText = 1880;
+  // Measured: with a 5-byte client id varint this restore's frame is the
+  // text plus 164 bytes, exactly the 2048 limit. The room's id is random; a
+  // shorter one makes the frame about 22 bytes smaller per varint byte.
+  private const int BorderlineText = 1884;
 
   private CollabRoomManager CreateManager(CollabRoomOptions? options = null)
   {

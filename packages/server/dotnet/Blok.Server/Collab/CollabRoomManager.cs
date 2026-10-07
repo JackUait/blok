@@ -425,16 +425,18 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       return new CollabHistoryListResult(CollabHistoryStatus.NoHistory, [], []);
     }
 
-    if (IsPurging(docId))
+    if (await IsPurgedAsync(history, docId, cancellationToken))
     {
       return new CollabHistoryListResult(CollabHistoryStatus.Purged, [], []);
     }
 
-    var lineages = await history.ListLineagesAsync(docId, cancellationToken);
-    var withHeaders = new List<(CollabLineageInfo, IReadOnlyList<CollabRecordHeader>)>(lineages.Count);
+    IReadOnlyList<CollabLineageInfo> lineages;
+    var withHeaders = new List<(CollabLineageInfo, IReadOnlyList<CollabRecordHeader>)>();
 
     try
     {
+      lineages = await history.ListLineagesAsync(docId, cancellationToken);
+
       foreach (var lineage in lineages)
       {
         var headers = new List<CollabRecordHeader>();
@@ -455,7 +457,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
     }
 
     // A purge that raced the reads leaves them empty.
-    if (IsPurging(docId))
+    if (await IsPurgedAsync(history, docId, cancellationToken))
     {
       return new CollabHistoryListResult(CollabHistoryStatus.Purged, [], []);
     }
@@ -511,7 +513,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       return (CollabHistoryStatus.NoHistory, null);
     }
 
-    if (IsPurging(docId))
+    if (await IsPurgedAsync(history, docId, cancellationToken))
     {
       return (CollabHistoryStatus.Purged, CollabLineageDeleteOutcome.Purged);
     }
@@ -542,36 +544,62 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
 
     var point = await ReadPointAsync(docId, lineage, sequence, cancellationToken);
 
-    if (point.Status != CollabHistoryStatus.Ready)
+    // A missing point still goes to the room: a retry whose lineage was
+    // deleted since must get its first receipt from the duplicate check.
+    if (point.Status is not (CollabHistoryStatus.Ready or CollabHistoryStatus.NotFound))
     {
       return new CollabRestoreResult(point.Status, null);
     }
 
-    var target = point.Output!["blocks"] as JsonArray ?? [];
+    var target = point.Output?["blocks"] as JsonArray ?? [];
     // The request, never the plan: a retry plans against a doc that moved.
     var digest = SHA256.HashData(Encoding.UTF8.GetBytes($"restore\n{lineage}\n{sequence}"));
+    CollabEditResult edit;
 
-    var edit = await EditInRoomAsync(
-        docId,
-        room => room.EditAsync(
-            async (doc, token) =>
-            {
-              var structure = YDocConverter.DescribeStructure(doc);
-              var current = await converter.ExportAsync(doc, token);
-
-              return CollabRestorePlanner.Plan(
-                  current["blocks"] as JsonArray ?? [],
-                  structure,
-                  target);
-            },
-            operationId,
-            digest,
-            actorId,
-            expect,
-            cancellationToken));
+    try
+    {
+      edit = await EditInRoomAsync(
+          docId,
+          room => room.EditAsync(
+              async (doc, token) =>
+              {
+                if (point.Status == CollabHistoryStatus.NotFound)
+                {
+                  throw new RestorePointMissingException();
+                }
+  
+                var structure = YDocConverter.DescribeStructure(doc);
+                var current = await converter.ExportAsync(doc, token);
+  
+                return CollabRestorePlanner.Plan(
+                    current["blocks"] as JsonArray ?? [],
+                    structure,
+                    target);
+              },
+              operationId,
+              digest,
+              actorId,
+              expect,
+              cancellationToken));
+    }
+    catch (RestorePointMissingException)
+    {
+      return new CollabRestoreResult(CollabHistoryStatus.NotFound, null);
+    }
 
     return new CollabRestoreResult(CollabHistoryStatus.Ready, edit);
   }
+
+  private async ValueTask<bool> IsPurgedAsync(
+      ICollabOperationHistoryStore history,
+      string docId,
+      CancellationToken cancellationToken)
+  {
+    return IsPurging(docId) || await history.IsPurgedAsync(docId, cancellationToken);
+  }
+
+  /// <summary>Thrown by a restore's planner when its point is gone and the op id was never committed.</summary>
+  private sealed class RestorePointMissingException : Exception;
 
   /// <summary>
   /// A point rebuilt and exported. Its bounds come from the store's headers:
@@ -591,7 +619,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       return (CollabHistoryStatus.NoHistory, null, null);
     }
 
-    if (IsPurging(docId))
+    if (await IsPurgedAsync(history, docId, cancellationToken))
     {
       return (CollabHistoryStatus.Purged, null, null);
     }
@@ -624,7 +652,12 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
 
       if (baseline is null)
       {
-        return (IsPurging(docId) ? CollabHistoryStatus.Purged : CollabHistoryStatus.NotFound, null, null);
+        return (
+            await IsPurgedAsync(history, docId, cancellationToken)
+              ? CollabHistoryStatus.Purged
+              : CollabHistoryStatus.NotFound,
+            null,
+            null);
       }
 
       replayed = await CollabHistoryReplay.BuildAsync(

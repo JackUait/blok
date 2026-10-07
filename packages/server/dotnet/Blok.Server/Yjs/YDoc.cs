@@ -28,6 +28,16 @@ internal sealed class YDoc
   /// </summary>
   public ulong ClientId { get; private set; }
 
+  /// <summary>
+  /// Writes from now on under <paramref name="clientId"/>, continuing its
+  /// clock in this store. Call it after the state is applied: a remote update
+  /// that advances this doc's own id mints a new one.
+  /// </summary>
+  internal void AdoptClientId(ulong clientId)
+  {
+    ClientId = clientId;
+  }
+
   public StructStore Store { get; } = new();
 
   /// <summary>Content GC of deleted items; on by default (Global Constraints).</summary>

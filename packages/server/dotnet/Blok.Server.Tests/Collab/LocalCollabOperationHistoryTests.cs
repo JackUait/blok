@@ -239,6 +239,18 @@ public sealed class LocalCollabOperationHistoryTests : IDisposable
   }
 
   [Fact]
+  public async Task ReportsAPurgeWithoutOpeningTheDocument()
+  {
+    var store = Store();
+    await SeedThreeLineagesAsync(store);
+    Assert.False(await store.IsPurgedAsync(DocId));
+    Assert.Equal(CollabDocumentPurgeOutcome.Purged, await store.PurgeAsync(DocId));
+
+    Assert.True(await Store().IsPurgedAsync(DocId));
+    Assert.False(await store.IsPurgedAsync("never-seen"));
+  }
+
+  [Fact]
   public async Task RefusesToDeleteFromAPurgedDocument()
   {
     var store = Store();

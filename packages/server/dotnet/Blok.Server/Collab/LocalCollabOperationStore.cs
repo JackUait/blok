@@ -202,6 +202,16 @@ internal sealed class LocalCollabOperationStore :
     }
   }
 
+  public ValueTask<bool> IsPurgedAsync(
+      string documentId,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(documentId);
+    cancellationToken.ThrowIfCancellationRequested();
+
+    return ValueTask.FromResult(File.Exists(Path.Combine(DocDirectoryFor(documentId), PurgeName)));
+  }
+
   public ValueTask<IReadOnlyList<CollabLineageInfo>> ListLineagesAsync(
       string documentId,
       CancellationToken cancellationToken = default)

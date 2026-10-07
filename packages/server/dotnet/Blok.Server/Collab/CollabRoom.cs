@@ -843,19 +843,34 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
-  /// Applies the ops to a scratch copy and measures the update frame the room
-  /// would broadcast. Without this, an update past the transport or store
-  /// limit fails the commit and closes the room for every member.
+  /// Without this, an update past the transport or store limit fails the
+  /// commit and closes the room for every member.
   /// </summary>
   private async Task<bool> FitsOneFrameLocked(IReadOnlyList<CollabEditOp> ops)
   {
     // 1 MiB is the local store's default append limit; the room cannot see
     // a custom store's own limit. 0 means unset, as in the options.
     var limit = options.AnnouncedMaxMessageBytes is > 0 ? options.AnnouncedMaxMessageBytes.Value : 1 << 20;
+
+    return await PlannedFrameBytesAsync(doc!, converter, ops, lifetime.Token) <= limit;
+  }
+
+  /// <summary>
+  /// The bytes of the update frames applying <paramref name="ops"/> to
+  /// <paramref name="live"/> would broadcast, measured on a scratch copy.
+  /// </summary>
+  internal static async Task<long> PlannedFrameBytesAsync(
+      YDoc live,
+      ICollabDocConverter converter,
+      IReadOnlyList<CollabEditOp> ops,
+      CancellationToken cancellationToken)
+  {
     var scratch = new YDoc();
     long frameBytes = 0;
 
-    scratch.ApplyUpdate(doc!.EncodeStateAsUpdate());
+    scratch.ApplyUpdate(live.EncodeStateAsUpdate());
+    // Same id and next clock as the live doc, so the varints match exactly.
+    scratch.AdoptClientId(live.ClientId);
     // The emitted update, not a state diff: a diff carries the doc's whole
     // delete set, and the room broadcasts only the transaction's own update.
     scratch.UpdateEmitted += update =>
@@ -866,9 +881,9 @@ internal sealed class CollabRoom : IDisposable
       }
     };
 
-    await converter.ApplyOpsAsync(scratch, ops, lifetime.Token);
+    await converter.ApplyOpsAsync(scratch, ops, cancellationToken);
 
-    return frameBytes <= limit;
+    return frameBytes;
   }
 
   /// <summary>

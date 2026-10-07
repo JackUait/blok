@@ -51,6 +51,14 @@ public enum CollabLineageDeleteOutcome
 /// </remarks>
 public interface ICollabOperationHistoryStore
 {
+  /// <summary>
+  /// True when the document was purged. Takes no fence and no lock, so it
+  /// answers while another process holds the document.
+  /// </summary>
+  ValueTask<bool> IsPurgedAsync(
+      string documentId,
+      CancellationToken cancellationToken = default);
+
   /// <summary>Every lineage still held for the document, oldest first.</summary>
   ValueTask<IReadOnlyList<CollabLineageInfo>> ListLineagesAsync(
       string documentId,

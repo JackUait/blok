@@ -1267,11 +1267,31 @@ internal sealed class FakeCollabOperationStore :
     }
   }
 
+  /// <summary>When it answers non-null for a doc, that doc's lineage listing throws it.</summary>
+  internal Func<string, Exception?>? FailListings { get; set; }
+
+  public ValueTask<bool> IsPurgedAsync(
+      string documentId,
+      CancellationToken cancellationToken = default)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    lock (guard)
+    {
+      return ValueTask.FromResult(documents.TryGetValue(documentId, out var document) && document.Purged);
+    }
+  }
+
   public ValueTask<IReadOnlyList<CollabLineageInfo>> ListLineagesAsync(
       string documentId,
       CancellationToken cancellationToken = default)
   {
     cancellationToken.ThrowIfCancellationRequested();
+
+    if (FailListings?.Invoke(documentId) is { } failure)
+    {
+      throw failure;
+    }
 
     lock (guard)
     {

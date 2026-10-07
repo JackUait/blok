@@ -333,6 +333,30 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
+  public void RoomsKnowTheBuiltInJournalsUpdateLimitButNotACustomStores()
+  {
+    var services = new ServiceCollection();
+    services.AddBlokServer(options =>
+    {
+      Journal(options);
+      options.CollabMaxMessageBytes = 4 << 20;
+    });
+
+    using (var provider = services.BuildServiceProvider())
+    {
+      var options = provider.GetRequiredService<CollabRoomManager>().Options;
+      Assert.Equal(4L << 20, options.AnnouncedMaxMessageBytes);
+      Assert.Equal(LocalCollabOperationStore.DefaultMaxUpdateBytes, options.MaxUpdateBytes);
+    }
+
+    var replaced = new ServiceCollection();
+    replaced.AddBlokServer(Journal).UseCollabOperationStore<StubCollabOperationStore>();
+
+    using var replacedProvider = replaced.BuildServiceProvider();
+    Assert.Null(replacedProvider.GetRequiredService<CollabRoomManager>().Options.MaxUpdateBytes);
+  }
+
+  [Fact]
   public void WithoutTheCollabJournalOptionNoStoreIsResolved()
   {
     var services = new ServiceCollection();

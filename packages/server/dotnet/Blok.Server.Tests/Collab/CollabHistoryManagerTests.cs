@@ -327,6 +327,49 @@ public sealed class CollabHistoryManagerTests
   }
 
   [Fact]
+  public async Task ARestorePastTheStoreLimitButUnderTheMessageLimitIsRefusedAndTheRoomStaysOpen()
+  {
+    const int MiB = 1 << 20;
+    var directory = Path.Combine(Path.GetTempPath(), $"blok-history-limit-{Guid.NewGuid():N}");
+
+    try
+    {
+      var local = new LocalCollabOperationStore(directory);
+      var manager = ManagerOver(local, new CollabRoomOptions
+      {
+        AnnouncedMaxMessageBytes = 4 * MiB,
+        MaxUpdateBytes = local.MaxUpdateBytes,
+      });
+      await LoadAsync(manager);
+      var member = new FakeMember(true, acceptsControlFrames: true, null, CollabOperationSource.ClientV2);
+      await JoinAsync(manager, member);
+      // Three inserts under the store's 1 MiB limit add up to a 1.5 MiB point.
+      await EditAsync(manager, Insert("b1", new string('x', MiB / 2), after: "a"));
+      await EditAsync(manager, Insert("b2", new string('y', MiB / 2), after: "b1"));
+      await EditAsync(manager, Insert("b3", new string('z', MiB / 2), after: "b2"));
+      var result = await manager.EditAsync(
+          DocId,
+          [Remove("b1"), Remove("b2"), Remove("b3")],
+          Guid.NewGuid().ToString("N"),
+          CollabEditOps.CanonicalBodyDigest([Remove("b1"), Remove("b2"), Remove("b3")]),
+          null);
+      Assert.Equal(CollabEditStatus.Applied, result.Status);
+      var lineage = (await manager.HistoryAsync(DocId)).Lineages[^1].Lineage;
+
+      var restore = await manager.RestoreAsync(DocId, lineage, 3, Guid.NewGuid().ToString("N"), null);
+
+      Assert.Equal(CollabEditStatus.TooLarge, restore.Edit!.Status);
+      Assert.Empty(member.Closes);
+      await EditAsync(manager, Update("a", "after"));
+      Assert.Empty(member.Closes);
+    }
+    finally
+    {
+      Directory.Delete(directory, recursive: true);
+    }
+  }
+
+  [Fact]
   public async Task ARestoreJustUnderTheFrameLimitIsApplied()
   {
     const int Limit = 2048;

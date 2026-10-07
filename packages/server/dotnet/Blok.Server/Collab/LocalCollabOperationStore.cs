@@ -164,6 +164,8 @@ internal sealed class LocalCollabOperationStore :
     this.log = log;
   }
 
+  internal long MaxUpdateBytes => maxUpdateBytes;
+
   private static ReadOnlySpan<byte> ManifestMagic => "BKJM"u8;
 
   private static ReadOnlySpan<byte> BaselineMagic => "BKJB"u8;

@@ -45,6 +45,13 @@ internal sealed class CollabRoomOptions
   /// </summary>
   public long? AnnouncedMaxMessageBytes { get; init; }
 
+  /// <summary>
+  /// The operation store's append limit (bytes), when the room can know it.
+  /// A restore over it would fail the commit and close the room. Null for a
+  /// custom store: the message limit is used alone.
+  /// </summary>
+  public long? MaxUpdateBytes { get; init; }
+
   /// <summary>First wait before a failed blob write or export is retried; it doubles per failure.</summary>
   public TimeSpan RetryBackoff { get; init; } = TimeSpan.FromSeconds(2);
 

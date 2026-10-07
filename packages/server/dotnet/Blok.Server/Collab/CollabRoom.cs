@@ -848,9 +848,16 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private async Task<bool> FitsOneFrameLocked(IReadOnlyList<CollabEditOp> ops)
   {
-    // 1 MiB is the local store's default append limit; the room cannot see
-    // a custom store's own limit. 0 means unset, as in the options.
+    // 0 means unset, as in the options. A custom store's limit is unknown,
+    // so 1 MiB, the local store's default, stands in when nothing is set.
     var limit = options.AnnouncedMaxMessageBytes is > 0 ? options.AnnouncedMaxMessageBytes.Value : 1 << 20;
+
+    if (options.MaxUpdateBytes is { } storeLimit)
+    {
+      // The store counts update bytes and this counts frame bytes, which
+      // are a few more: the gate errs on the safe side.
+      limit = Math.Min(limit, storeLimit);
+    }
 
     return await PlannedFrameBytesAsync(doc!, converter, ops, lifetime.Token) <= limit;
   }

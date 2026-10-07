@@ -29,4 +29,7 @@ internal sealed class CollabOperationStoreSource(IServiceProvider provider)
   });
 
   internal ICollabOperationStore? Store => store.Value;
+
+  /// <summary>The built-in journal's append limit; null for any other store.</summary>
+  internal long? MaxUpdateBytes => Store is LocalCollabOperationStore local ? local.MaxUpdateBytes : null;
 }

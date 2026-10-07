@@ -150,6 +150,7 @@ public static class BlokServerServiceCollectionExtensions
     {
       var effectiveOptions = RequireCollabOptions(provider);
       var timeProvider = provider.GetRequiredService<TimeProvider>();
+      var source = provider.GetRequiredService<CollabOperationStoreSource>();
 
       return new CollabRoomManager(
           provider.GetRequiredService<ICollabWorkingSetStore>(),
@@ -166,10 +167,11 @@ public static class BlokServerServiceCollectionExtensions
           new CollabRoomOptions
           {
             AnnouncedMaxMessageBytes = effectiveOptions.CollabMaxMessageBytes,
+            MaxUpdateBytes = source.MaxUpdateBytes,
           },
           timeProvider,
           CollabLog(provider),
-          provider.GetRequiredService<CollabOperationStoreSource>().Store,
+          source.Store,
           provider.GetService<ICollabActivityObserver>());
     });
 

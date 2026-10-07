@@ -343,6 +343,8 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
   /// <summary>How long an overloaded request should wait: the room's first backoff.</summary>
   internal TimeSpan RetryAfter => options.RetryBackoff;
 
+  internal CollabRoomOptions Options => options;
+
   /// <summary>Block-level HTTP edit with the endpoint's idempotency receipt.</summary>
   internal async ValueTask<CollabEditResult> EditAsync(
       string docId,

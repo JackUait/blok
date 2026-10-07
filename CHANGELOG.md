@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.16.1](https://github.com/JackUait/blok/compare/v1.16.0...v1.16.1) (2026-10-07)
+
+### Bug Fixes
+
+- **Markdown export failed on large image URLs** — `ToMarkdownAsync` in `Blok.Server` no longer fails on an image data URL of 2 MiB or more (#151).
+  - Articles with pasted screenshots export again. The Markdown output is unchanged.
+
 ## [1.16.0](https://github.com/JackUait/blok/compare/v1.15.2...v1.16.0) (2026-10-07)
 
 ### Breaking Changes

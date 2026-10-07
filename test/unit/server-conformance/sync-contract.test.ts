@@ -680,7 +680,11 @@ it('exports an edited document back to the doc endpoint with the served version'
 
     expect(exported?.headers['content-type']).toMatch(/^application\/json/);
     expect(exported?.headers['blok-doc-version']).toBe('v7');
-    expect(outputBlocks(exported?.body)).toEqual(readBlocks(client.doc));
+    // The server writes segments, whatever the client's own reader returns.
+    expect(outputBlocks(exported?.body)).toEqual([
+      { id: 'seed-1', type: 'paragraph', data: { text: [ { text: 'seeded' } ] } },
+      { id: 'e1', type: 'paragraph', data: { text: [ { text: 'exported edit' } ] } },
+    ]);
   });
 }, EXPORT_DEADLINE_MS + TEST_TIMEOUT_MS);
 

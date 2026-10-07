@@ -95,6 +95,22 @@ public sealed class BlokDocumentConverterTests
     Assert.True(schema.RootElement.GetProperty("$defs").TryGetProperty("paragraph", out _));
   }
 
+  /// <summary>Segments are what the server now writes; HTML is still accepted on input.</summary>
+  [Fact]
+  public async Task TheSchemaTakesSegmentsOrHtmlInARichTextField()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    using var schema = JsonDocument.Parse(await converter.GetSchemaAsync());
+    var text = schema.RootElement
+        .GetProperty("$defs").GetProperty("paragraph")
+        .GetProperty("properties").GetProperty("text");
+
+    Assert.Equal(
+        ["array", "string"],
+        text.GetProperty("oneOf").EnumerateArray().Select(shape => shape.GetProperty("type").GetString()));
+  }
+
   /// <summary>
   /// Handing a model a document's JSON makes it break the structure, so a
   /// translator takes the strings out, translates the list, and puts it back.

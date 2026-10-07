@@ -219,6 +219,8 @@ docker run \
 
 Add `--collab-journal` (or set `BLOK_COLLAB_JOURNAL=true`) to keep an operation journal under `--collab-dir`. This turns on the acknowledged profile described below. It needs `--collab`. It is refused with `--collab-s3-prefix`: the journal is on this machine's disk, so a second instance sharing the bucket would not see it. In-process, the switch is `options.CollabJournal`. A store registered with `UseCollabOperationStore<T>()` replaces it. The first open of each document adopts its working copy as the journal's starting point, then deletes it, so nothing the working copy held is lost. Turning it off again is not a restart: follow [Going back to the working-copy profile](#going-back-to-the-working-copy-profile) first, or documents edited under the journal reopen as they were on the day you switched.
 
+Your custom block tools' rich text fields go in `--rich-text-fields` (or `BLOK_RICH_TEXT_FIELDS`; the flag wins), as JSON: `--rich-text-fields '{"callout":["title"]}'`. List exactly what each tool's `richTextFields` declares on the client. The built-in paragraph, header, quote, toggle and list `text` fields need no entry. In-process, the same list is `options.RichTextFields`. See [Rich text is segments](#rich-text-is-segments).
+
 ## Point the editor at it
 
 ```ts
@@ -295,6 +297,17 @@ On a journal-backed service, `POST /sync/{doc}/reset` first adopts a working cop
 
 `POST /sync/{doc}/edit` needs one `Blok-Idempotency-Key` header with 1 to 128 printable ASCII characters. With an operation journal, retrying the same key returns the first result without applying it again; reusing it for different work receives 409. A 204 then means the edit is durable, and the response carries `Blok-Doc-Lineage` and `Blok-Doc-Sequence`. A working-copy-only service answers 204 without those headers and without that promise. If that journal cannot commit, the endpoint returns 503 without relaying the edit. A working-copy-only service does not deduplicate the key or make reuse a 409: requests have ordinary retry behavior, and its 204 starts the existing write-back retry path.
 
+A rich text field in an edit may be an HTML string or segments. The service reads the HTML into segments before it applies anything. A rich text field is the `text` of a paragraph, header, quote, toggle or list block, plus every field in `--rich-text-fields`.
+
+- If reading that HTML runs past the runtime's timeout or allocation budget, the edit answers 503 with `Retry-After: 2` and applies nothing. Retry with the same key.
+- HTML the reader refuses answers 422.
+
+An edit that changes nothing also answers 204. That covers the same data sent again, and rich text spelled differently, such as `<b>` for `<strong>` or `&nbsp;` for a space.
+
+- Nothing is journalled. With a journal, `Blok-Doc-Sequence` names the current head, not a new sequence.
+- Nothing is recorded under the key. A retry with that key runs the edit again. If someone edited in between, the retry applies to the new document. A different body under the same key is not a 409.
+- Send `If-Match` on every edit you may retry. Then a retry after the document moved answers 412 instead of applying.
+
 An edit may also send `If-Match: "<lineage>:<sequence>"`. It is one quoted tag, built from the `Blok-Doc-Lineage` and `Blok-Doc-Sequence` values exactly as the service prints them.
 
 - With a journal, the edit applies only if the document is still at that head. Otherwise it answers 412 and applies nothing. The 412 carries the current `Blok-Doc-Lineage` and `Blok-Doc-Sequence`.
@@ -303,7 +316,7 @@ An edit may also send `If-Match: "<lineage>:<sequence>"`. It is one quoted tag, 
 - A list, `*`, a weak tag, or any other shape answers 400, with or without a journal.
 - A 412 commits nothing, so you may retry the same key with a fresh tag.
 
-`GET /sync/{doc}/state` returns the live document as `application/json`, in the same shape your document endpoint receives. It includes edits made a moment ago. With a journal, it also sends `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag: "<lineage>:<sequence>"`, naming the exact head the body reflects. Send that `ETag` back as `If-Match` to edit only if nothing changed in between. A working-copy-only service sends the body without those three headers. A purged document answers 403. A document that cannot be loaded, is held by another process, or is on a service that is shutting down answers 503. A document the service cannot write as JSON answers 500.
+`GET /sync/{doc}/state` returns the live document as `application/json`, in the same shape your document endpoint receives. It includes edits made a moment ago. With a journal, it also sends `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag: "<lineage>:<sequence>"`, naming the exact head the body reflects. Send that `ETag` back as `If-Match` to edit only if nothing changed in between. A working-copy-only service sends the body without those three headers. A purged document answers 403. A document that cannot be loaded, is held by another process, or is on a service that is shutting down answers 503. An export that ran past the runtime's timeout or allocation budget also answers 503, with `Retry-After: 2`. A document the service cannot write as JSON answers 500. Rich text fields come back as segments.
 
 Both routes add `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag` to `Access-Control-Expose-Headers` for an allowed origin, so a browser page can read them. Headers your app already exposes are kept.
 
@@ -312,6 +325,44 @@ Upload routes exist only when local or S3-compatible storage is configured. Cons
 A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`.
 
 A ticket with `write: false` may call `GET /unfurl`, `GET /sync/{doc}/state` and open `GET /sync/{doc}` read-only; both upload routes, `reset` and `edit` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset`, its `edit` and its `state` are refused when the pass names no document or a different one. `state` asks your `IBlokAuthorization` for read access only. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
+
+## Rich text is segments
+
+**Breaking.** Rich text fields leave the service as segments, not HTML. This covers the write-back `PUT` to your document endpoint and `GET /sync/{doc}/state`. Before, `data.text` was a string:
+
+```json
+{ "id": "p1", "type": "paragraph", "data": { "text": "a <b>bold</b> word" } }
+```
+
+Now it is a list of segments:
+
+```json
+{ "id": "p1", "type": "paragraph", "data": { "text": [{ "text": "a " }, { "text": "bold", "marks": { "bold": true } }, { "text": " word" }] } }
+```
+
+What to change in your app:
+
+- Your document endpoint must accept segments in rich text fields.
+- It may keep serving HTML. The service reads HTML on the way in, from your endpoint and from `POST /sync/{doc}/edit`, and writes segments back.
+- List your custom tools' rich text fields with `--rich-text-fields` or `options.RichTextFields`, the same list as each tool's `richTextFields`. A field missing from the list keeps the shape the service was handed: HTML sent to the service for it stays an HTML string.
+- Upgrade the service and the editor together. Rooms are now format 2. An editor from before this change gets `unsupported-format` from the new service, and the new editor refuses an old service the same way.
+
+The first time the service opens a document stored in format 1, it moves it to format 2 once:
+
+- every rich text field becomes formatted text, with every character and mark kept;
+- the room gets a new lineage and `epoch + 1`;
+- edits a format-1 editor saved offline are quarantined on that editor, not replayed.
+
+If that move fails, the document stays in format 1 and the next open tries again.
+
+### Your own sync server
+
+If you run your own server against Blok's sync protocol, it must speak format 2 too. See [blok-sync-v2.md](protocol/blok-sync-v2.md), type 100.
+
+- Announce `"format":2` in the type-100 control frame. The editor closes a session that names any other format.
+- Store each rich text field as a formatted `Y.XmlText`, one Yjs attribute per mark. A plain `Y.Text` in a rich field is read as format-1 HTML.
+- When you move a room from format 1, mint a new `lineage` and announce `epoch + 1`. Keeping the old lineage would let format-1 offline edits replay into the format-2 room.
+- `test/unit/server-conformance/blok-client-contract.test.ts` drives Blok's own collaboration provider against a server and expects format 2.
 
 ## Live collaboration profiles
 

@@ -845,6 +845,23 @@ the same canonical body returns the first receipt without applying anything.
 The same key with a different body answers 409. A server without a journal
 sends neither header and does not deduplicate.
 
+An edit that changes nothing is the exception. Examples are the same data
+again, or rich text spelled differently (`<b>` for `<strong>`). It answers 204
+with the current head as its sequence, and records nothing under the key.
+
+- A retry with that key runs the edit again, against the document as it is then.
+- The same key with a different body is not a 409.
+- A caller that may retry should send `If-Match` (12.2). Then a retry after the
+  document moved answers 412 instead of applying.
+
+A rich text field in an edit may be an HTML string or segments. The server
+reads HTML into segments before it applies anything:
+
+| Status | When |
+| --- | --- |
+| 422 | The server's reader refuses the HTML. |
+| 503 with `Retry-After` | Reading the HTML ran past the server's time or memory limits. Nothing was applied, and nothing was recorded under the key. Retry. |
+
 ### 12.2 `If-Match` on an edit
 
 An edit MAY send `If-Match` with exactly one strong tag:
@@ -890,7 +907,8 @@ unguarded write.
 ### 12.3 State
 
 `GET /sync/{doc}/state` returns the live document as `application/json`, in the
-shape the document endpoint receives on write-back. It reflects every edit
+shape the document endpoint receives on write-back, with rich text fields as
+segments. It reflects every edit
 committed before the request. It needs read access only, and the same document
 scope as the edit route.
 
@@ -905,3 +923,4 @@ sends the body without those three headers.
 | 403 | The document was purged, or the caller may not read it. |
 | 500 | The service cannot write this document as JSON. |
 | 503 | The document could not be loaded, another process holds it, or the server is shutting down. Retry later. |
+| 503 with `Retry-After` | The export ran past the server's time or memory limits reading rich text HTML. Retry after that many seconds. |

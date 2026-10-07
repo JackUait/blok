@@ -9,8 +9,10 @@ browser's save describe the same change the same way and merge alike.
   It checks that `RichTextEdit.Plan` emits `ops`, and that an update op leaves
   `expected.delta` and `expected.segments`.
 - TS: `rich-text-edit-fixtures.test.ts` (next to this directory). It replays
-  `ops` in real yjs and pins `expected`. The client write path
-  (document-store.ts `updateBlockData`) must emit the same `ops`.
+  `ops` in real yjs, pins `expected`, and checks that the client planner
+  (`planRichTextEdit`, rich-text-write.ts) emits `ops`.
+  `rich-text-write-path.test.ts` (test/unit/components/modules/yjs) checks
+  that `DocumentStore.updateBlockData` makes exactly these calls.
 
 ## Case format
 
@@ -53,7 +55,9 @@ browser's save describe the same change the same way and merge alike.
    not from canonical segments. An item the canonical form drops (a nested
    type, a non-object embed) still takes one index in yjs.
 3. **Diff.** `diffText` (text-diff.ts; C# `TextDiff.Diff`) over the two
-   projections.
+   projections, with markup OFF (`{ markup: false }`; C# `markup: false`).
+   The projection holds no markup, so `<b>` and `&amp;` in it are typed
+   characters and diff one at a time. Character clusters still stay whole.
 4. **Pairing.** Units kept by the diff are paired in order. A pair whose units
    are not the same content becomes unpaired: text against an embed, two
    embeds whose objects differ (key order ignored), or a live item no segment

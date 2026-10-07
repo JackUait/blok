@@ -1442,14 +1442,12 @@ export class DocumentStore {
     const richSegments = currentValue instanceof Y.XmlText ? this.serializer.toRichSegments(value) : null;
 
     if (currentValue instanceof Y.XmlText && richSegments !== null) {
-      const current = this.serializer.readRichText(currentValue);
-
-      if (equals(current, richSegments)) {
+      if (equals(this.serializer.readRichText(currentValue), richSegments)) {
         return false;
       }
 
       this.transact(() => {
-        writeRichText(currentValue, current, richSegments);
+        writeRichText(currentValue, richSegments);
       }, 'local');
 
       return true;

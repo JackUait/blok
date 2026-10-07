@@ -437,7 +437,12 @@ const violationsIn = (file: string, source: string): string[] =>
     .map(({ key, receiver }) => `${key} (${receiver}.transact)`);
 
 describe('Null-Origin Transaction Law — static', () => {
-  const files = walk(SRC).map((full) => ({ file: relative(SRC, full).split('\\').join('/'), source: readFileSync(full, 'utf8') }));
+  // Parsing all of src with the TS parser blows the 5s test timeout on CI.
+  // Every call the scan can flag spells `transact` in the file (the method
+  // name, or the yjs import binding), so other files cannot match.
+  const files = walk(SRC)
+    .map((full) => ({ file: relative(SRC, full).split('\\').join('/'), source: readFileSync(full, 'utf8') }))
+    .filter(({ source }) => source.includes('transact'));
 
   it('every transact in src passes an origin, or is an exempt wrapper or read-only scan', () => {
     expect(files.flatMap(({ file, source }) => violationsIn(file, source))).toEqual([]);

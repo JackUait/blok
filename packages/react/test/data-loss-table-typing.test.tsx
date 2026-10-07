@@ -10,6 +10,7 @@ import type { UseBlokConfig } from '../src';
 import type { Blok, OutputData } from '@/types';
 import { Paragraph } from '../../../src/tools/paragraph';
 import { Table } from '../../../src/tools/table/index';
+import { blockTextAsHtml } from '../../../test/unit/helpers/saved-as-html';
 
 const TOOLS: UseBlokConfig['tools'] = {
   paragraph: { class: Paragraph },
@@ -31,7 +32,7 @@ const DOC: OutputData = {
 };
 
 const cellText = (doc: OutputData, id: string): unknown =>
-  (doc.blocks.find((b) => b.id === id)?.data as { text?: string } | undefined)?.text;
+  blockTextAsHtml(doc.blocks.find((b) => b.id === id));
 
 const typeInto = (root: HTMLElement, blockId: string, text: string): void => {
   const editable = root.querySelector<HTMLElement>(`[data-blok-id="${blockId}"] [data-blok-tool="paragraph"]`);

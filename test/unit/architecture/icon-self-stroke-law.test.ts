@@ -35,6 +35,7 @@ const FILL_ONLY_ICONS: Readonly<Record<string, string>> = {
   IconHeaderColumn: 'solid header band drawn with fill; the grid lines beside it are stroked separately',
   IconEmojiHearts: 'the small heart is solid on purpose so it survives 16px; the large one is stroked',
   IconFill: 'the droplet has a solid lower half; its outline is stroked separately',
+  IconQuote: 'quotation marks are solid punctuation; an outlined pair reads as the digits "66"',
 };
 
 /** Every exported icon markup string, keyed by its export name. */

@@ -7,6 +7,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
@@ -443,9 +444,9 @@ test.describe('Add Row and Column Controls', () => {
     await page.keyboard.type('NewContent');
 
     // 4. Call save() and verify saved output
-    const savedData = await page.evaluate(async () => {
+    const savedData = savedAsHtml(await page.evaluate(async () => {
       return window.blokInstance?.save();
-    });
+    }));
 
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 

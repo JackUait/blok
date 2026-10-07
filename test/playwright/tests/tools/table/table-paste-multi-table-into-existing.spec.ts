@@ -15,6 +15,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { blocksAsHtml } from '../../helpers/saved-as-html';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
@@ -282,7 +283,7 @@ test.describe('Multi-table paste into existing table — content preservation', 
     );
 
     // Now that the DOM is stable, save() should return the full state
-    const allBlocks = await page.waitForFunction(async () => {
+    const allBlocks = blocksAsHtml(await page.waitForFunction(async () => {
       const data = await window.blokInstance?.save();
       const blocks = data?.blocks;
 
@@ -297,7 +298,7 @@ test.describe('Multi-table paste into existing table — content preservation', 
       }
 
       return blocks;
-    }, undefined, { timeout: 5000 }).then(handle => handle.jsonValue()) as SavedBlock[];
+    }, undefined, { timeout: 5000 }).then(handle => handle.jsonValue()) as SavedBlock[]);
 
     const tableBlocks = allBlocks.filter(b => b.type === 'table');
 
@@ -384,11 +385,11 @@ test.describe('Multi-table paste into existing table — content preservation', 
     await expect(page.locator(BLOK_INTERFACE_SELECTOR)).toContainText('PastedB4', { timeout: 10000 });
 
     // Now that paste processing is fully complete, save and verify
-    const allBlocks = await page.evaluate(async () => {
+    const allBlocks = blocksAsHtml(await page.evaluate(async () => {
       const data = await window.blokInstance?.save();
 
       return data?.blocks ?? [];
-    }) as SavedBlock[];
+    }) as SavedBlock[]);
 
     const tableBlocks = allBlocks.filter(b => b.type === 'table');
 

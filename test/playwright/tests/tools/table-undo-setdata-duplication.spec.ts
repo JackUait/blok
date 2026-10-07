@@ -20,6 +20,7 @@ import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { blockTextAsHtml } from '../helpers/saved-as-html';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 declare global {
@@ -102,7 +103,11 @@ const summarizeSaved = async (page: Page): Promise<SavedSummary> => {
     tableId,
     childIds: children.map(block => block.id ?? ''),
     gridIds,
-    cellTexts: children.map(block => (block.data as { text?: string }).text ?? ''),
+    cellTexts: children.map(block => {
+      const text = blockTextAsHtml(block);
+
+      return typeof text === 'string' ? text : '';
+    }),
   };
 };
 

@@ -90,7 +90,7 @@ describe('useApiTranslations', () => {
     const coreSection = result.current.apiSections.find(s => s.id === 'core');
 
     const saveMethod = coreSection?.methods?.find(m => m.name === 'save()');
-    expect(saveMethod?.description).toBe('Извлекает текущее содержимое редактора в виде структурированных JSON-данных. Это основной метод для сохранения содержимого редактора.');
+    expect(saveMethod?.description).toBe('Извлекает текущее содержимое редактора в виде структурированных JSON-данных. Это основной метод для сохранения содержимого редактора.\n\nПоля с форматированным текстом, например `paragraph.text`, хранят фрагменты: массивы `{ text, marks? }`. Документ, сохранённый старой версией, может хранить HTML-строки, пока его не сохранят снова. `migrateToRichText` переводит его.');
 
     const renderMethod = coreSection?.methods?.find(m => m.name === 'render(data)');
     expect(renderMethod?.description).toBe('Отображает содержимое редактора из ранее сохранённых JSON-данных. Принимает нестрогий формат (`LooseOutputData`). Значение `null` для `data`, `id` или `time` блока из backend-DTO нормализуется на границе.');
@@ -160,7 +160,7 @@ describe('useApiTranslations', () => {
     const coreSection = result.current.apiSections.find(s => s.id === 'core');
 
     const saveMethod = coreSection?.methods?.find(m => m.name === 'save()');
-    expect(saveMethod?.description).toBe('Extracts the current editor content as structured JSON data. This is the main method for saving editor content.');
+    expect(saveMethod?.description).toBe('Extracts the current editor content as structured JSON data. This is the main method for saving editor content.\n\nRich text fields, such as `paragraph.text`, hold segments: arrays of `{ text, marks? }` runs. A document saved by an older version can hold HTML strings until it is saved again. `migrateToRichText` converts it.');
   });
 
   it('should keep English table descriptions unchanged in English locale', () => {

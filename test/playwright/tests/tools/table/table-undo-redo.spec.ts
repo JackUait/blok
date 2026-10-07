@@ -7,6 +7,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
@@ -329,7 +330,7 @@ test.describe('Table Undo/Redo', () => {
     await expect(cells.filter({ hasText: 'Delta' })).toHaveCount(1);
 
     // 8. Save and verify data integrity
-    const savedData = await saveBlok(page);
+    const savedData = savedAsHtml(await saveBlok(page));
     const tableBlock = savedData.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
@@ -466,7 +467,7 @@ test.describe('Table Undo/Redo', () => {
     await expect(cells.filter({ hasText: 'bar' })).toHaveCount(1);
 
     // 6. Save and verify data integrity
-    const savedData = await saveBlok(page);
+    const savedData = savedAsHtml(await saveBlok(page));
     const tableBlock = savedData.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
@@ -569,7 +570,7 @@ test.describe('Table Undo/Redo', () => {
     await expect(cellEditables.first()).toBeVisible();
 
     // 9. Save and verify data integrity
-    const savedData = await saveBlok(page);
+    const savedData = savedAsHtml(await saveBlok(page));
     const tableBlock = savedData.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
@@ -669,7 +670,7 @@ test.describe('Table Undo/Redo', () => {
     await expect(restoredCells.filter({ hasText: 'Delta' })).toHaveCount(1);
 
     // 8. Save and verify data integrity
-    const savedData = await saveBlok(page);
+    const savedData = savedAsHtml(await saveBlok(page));
     const paragraphBlocks = savedData.blocks.filter((b: { type: string }) => b.type === 'paragraph');
     const paragraphTexts = paragraphBlocks.map((b) => (b.data as { text: string }).text);
 

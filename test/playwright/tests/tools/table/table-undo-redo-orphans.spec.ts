@@ -29,6 +29,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -105,7 +106,7 @@ type BlockSummary = {
 };
 
 const summarizeBlocks = async (page: Page): Promise<BlockSummary[]> => {
-  const saved = await saveBlok(page);
+  const saved = savedAsHtml(await saveBlok(page));
 
   return page.evaluate((ids) => {
     const instance = window.blokInstance;

@@ -6,6 +6,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
@@ -147,9 +148,9 @@ test.describe('Data Save and Load', () => {
     });
 
     // 2. Call save() and verify output structure: type 'table', withHeadings true, content is 2x2 with blocks arrays
-    const savedData = await page.evaluate(async () => {
+    const savedData = savedAsHtml(await page.evaluate(async () => {
       return window.blokInstance?.save();
-    });
+    }));
 
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
@@ -322,9 +323,9 @@ test.describe('Data Save and Load', () => {
     });
 
     // 3. Call save() and verify no table block in output
-    const savedData = await page.evaluate(async () => {
+    const savedData = savedAsHtml(await page.evaluate(async () => {
       return window.blokInstance?.save();
-    });
+    }));
 
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 

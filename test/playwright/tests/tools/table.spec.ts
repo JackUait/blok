@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
@@ -228,9 +229,9 @@ test.describe('table tool', () => {
         },
       });
 
-      const savedData = await page.evaluate(async () => {
+      const savedData = savedAsHtml(await page.evaluate(async () => {
         return window.blokInstance?.save();
-      });
+      }));
 
       const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
@@ -289,9 +290,9 @@ test.describe('table tool', () => {
       await firstCellEditable.click();
       await page.keyboard.type('Hello');
 
-      const savedData = await page.evaluate(async () => {
+      const savedData = savedAsHtml(await page.evaluate(async () => {
         return window.blokInstance?.save();
-      });
+      }));
 
       // The cell's paragraph block should contain the typed text
       const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
@@ -787,9 +788,9 @@ test.describe('table tool', () => {
       });
       await page.keyboard.type('New');
 
-      const savedData = await page.evaluate(async () => {
+      const savedData = savedAsHtml(await page.evaluate(async () => {
         return window.blokInstance?.save();
-      });
+      }));
 
       const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 

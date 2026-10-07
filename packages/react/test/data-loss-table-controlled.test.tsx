@@ -10,6 +10,7 @@ import type { UseBlokConfig } from '../src';
 import type { Blok, OutputData } from '@/types';
 import { Paragraph } from '../../../src/tools/paragraph';
 import { Table } from '../../../src/tools/table/index';
+import { blockTextAsHtml } from '../../../test/unit/helpers/saved-as-html';
 
 const TOOLS: UseBlokConfig['tools'] = {
   paragraph: { class: Paragraph },
@@ -63,7 +64,7 @@ const savedGrid = (doc: OutputData): string[][] => {
   const content = (table?.data as { content: Array<Array<{ blocks: string[] }>> }).content;
 
   return content.map((row) =>
-    row.map((cell) => cell.blocks.map((id) => String((byId.get(id)?.data as { text?: string })?.text ?? `<missing ${id}>`)).join('|'))
+    row.map((cell) => cell.blocks.map((id) => byId.has(id) ? String(blockTextAsHtml(byId.get(id))) : `<missing ${id}>`).join('|'))
   );
 };
 

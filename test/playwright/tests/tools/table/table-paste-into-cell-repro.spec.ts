@@ -11,6 +11,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
@@ -248,9 +249,9 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await waitForPasteComplete(page, 'Pasted1');
 
     // Save and check results
-    const savedData = await page.evaluate(async () => {
+    const savedData = savedAsHtml(await page.evaluate(async () => {
       return window.blokInstance?.save();
-    });
+    }));
 
     expect(savedData).toBeDefined();
     expect(savedData).toHaveProperty('blocks');
@@ -376,9 +377,9 @@ test.describe('Paste into existing table cell — content integrity', () => {
     // Wait for pasted content to appear in the DOM
     await waitForPasteComplete(page, 'CopiedX');
 
-    const savedData = await page.evaluate(async () => {
+    const savedData = savedAsHtml(await page.evaluate(async () => {
       return window.blokInstance?.save();
-    });
+    }));
 
     expect(savedData).toBeDefined();
     expect(savedData).toHaveProperty('blocks');
@@ -503,9 +504,9 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await waitForPasteComplete(page, 'new column');
 
     // Save and check results
-    const savedData = await page.evaluate(async () => {
+    const savedData = savedAsHtml(await page.evaluate(async () => {
       return window.blokInstance?.save();
-    });
+    }));
 
     expect(savedData).toBeDefined();
     expect(savedData).toHaveProperty('blocks');
@@ -608,9 +609,9 @@ test.describe('Paste into existing table cell — content integrity', () => {
       return editables.length > 0;
     }, { timeout: 5000 });
 
-    const savedData = await page.evaluate(async () => {
+    const savedData = savedAsHtml(await page.evaluate(async () => {
       return window.blokInstance?.save();
-    });
+    }));
 
     expect(savedData).toBeDefined();
     expect(savedData).toHaveProperty('blocks');

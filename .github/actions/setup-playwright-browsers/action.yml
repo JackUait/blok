@@ -10,6 +10,10 @@ inputs:
     description: "true = download + cache browsers on miss (use in install/single jobs). false = restore from an already-populated cache and install OS deps only (use in test-only jobs)."
     required: false
     default: "true"
+  os-deps:
+    description: "false = skip the apt OS dependencies. Only for a job that warms the cache and runs no browser: apt packages are not cached, so installing them there helps no later job."
+    required: false
+    default: "true"
   cache-key-prefix:
     description: "Cache key prefix. Use a distinct prefix per browser set so a chromium-only cache never satisfies a job expecting all browsers."
     required: false
@@ -49,11 +53,11 @@ runs:
     - name: Install Playwright Browsers
       if: inputs.download == 'true' && steps.cache.outputs.cache-hit != 'true'
       shell: bash
-      run: npx playwright install --with-deps ${{ inputs.browsers }}
+      run: npx playwright install ${{ inputs.os-deps == 'true' && '--with-deps' || '' }} ${{ inputs.browsers }}
 
     # Browser binaries are cached in ~/.cache/ms-playwright, but apt OS deps are not —
     # so on a cache hit (and on every restore-only test job) we still install OS deps.
     - name: Install Browser OS Dependencies
-      if: (inputs.download == 'true' && steps.cache.outputs.cache-hit == 'true') || inputs.download != 'true'
+      if: inputs.os-deps == 'true' && ((inputs.download == 'true' && steps.cache.outputs.cache-hit == 'true') || inputs.download != 'true')
       shell: bash
       run: npx playwright install-deps ${{ inputs.browsers }}

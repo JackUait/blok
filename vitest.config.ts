@@ -17,6 +17,15 @@ const cliPkg = JSON.parse(readFileSync(path.resolve(dirname, 'packages/cli/packa
 // Must run at config-module evaluation, before the pool spawns any worker.
 enableJsdomWebStorageGuard();
 
+// Unit tests that read build output. CI's unit shards start before the build
+// and skip them; Workspace Unit Tests runs them after it (ci-critical-path-law).
+const DIST_TESTS = [
+  'test/unit/build/bundle-outputs.test.ts',
+  'test/unit/build/vendor-license.test.ts',
+  'test/unit/build/override-entries.test.ts',
+  'test/unit/architecture/react-fixture-import-map-law.test.ts',
+];
+
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   define: {
@@ -52,7 +61,10 @@ export default defineConfig({
           include: ['test/unit/**/*.test.ts', 'test/unit/**/*.test.tsx'],
           // Angular tests need the Angular compiler plugin + zone.js setup, so
           // they run in the dedicated `unit-angular` project below.
-          exclude: ['test/unit/angular/**'],
+          exclude: [
+            'test/unit/angular/**',
+            ...(process.env.BLOK_UNIT_WITHOUT_DIST === '1' ? DIST_TESTS : []),
+          ],
           setupFiles: ['test/unit/vitest.setup.ts']
         },
       },

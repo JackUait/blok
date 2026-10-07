@@ -191,14 +191,19 @@ describe('server release wiring', () => {
     expect(server.version).toBe(root.version);
   });
 
-  it('keeps Node and C# verification together in final CI', () => {
+  it('keeps every Node and C# server gate in final CI', () => {
     const workflow = parse(read('.github/workflows/ci.yml')) as Workflow;
-    const steps = workflow.jobs.server?.steps ?? [];
-    const actions = steps.map((step) => step.uses ?? '').join('\n');
+    const jobs = [workflow.jobs.server, workflow.jobs['server-delivery']];
+    const steps = jobs.flatMap((job) => job?.steps ?? []);
     const runs = steps.map((step) => step.run ?? '').join('\n');
 
-    expect(actions).toContain('./.github/actions/setup-node-deps');
-    expect(actions).toContain(SETUP_DOTNET_ACTION);
+    // The two jobs run in parallel; each builds the server, so each needs both toolchains.
+    for (const job of jobs) {
+      const actions = (job?.steps ?? []).map((step) => step.uses ?? '').join('\n');
+
+      expect(actions).toContain('./.github/actions/setup-node-deps');
+      expect(actions).toContain(SETUP_DOTNET_ACTION);
+    }
     expect(runs).toContain(
       'dotnet test packages/server/dotnet/Blok.Server.slnx',
     );
@@ -228,14 +233,14 @@ describe('server release wiring', () => {
     }
   });
 
-  it('lets release jobs skip the separate docs dependency install', () => {
+  it('installs docs dependencies only for jobs that ask for them', () => {
     const action = parse(read(SETUP_NODE_ACTION)) as CompositeAction;
     const docsInstall = action.runs?.steps?.find(
       (step) => step.name === 'Install docs dependencies',
     );
 
-    expect(action.inputs?.['install-docs']?.default).toBe('true');
-    expect(docsInstall?.if).toBe("inputs.install-docs == 'true'");
+    expect(action.inputs?.['install-docs']?.default).toBe('false');
+    expect(docsInstall?.if).toBe("inputs.install-docs == 'true' && steps.docs-modules.outputs.cache-hit != 'true'");
   });
 
   it('pins external actions used by the server release', () => {

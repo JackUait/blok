@@ -185,6 +185,10 @@
 .pg-history__row[aria-current="true"] + .pg-history__mark { opacity: 1; }
 .pg-history__mark[aria-pressed="true"] { opacity: 1; }
 .pg-history__mark[aria-pressed="true"] svg path { fill: currentColor; }
+/* Touch screens have no hover, so the toggle is always shown there. */
+@media (hover: none) {
+  .pg-history__mark { opacity: 1; }
+}
 
 .pg-history__button {
   padding: 7px 12px;

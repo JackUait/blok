@@ -664,6 +664,60 @@ describe('mountHistoryDrawer', () => {
     expect(preview().hidden).toBe(false);
   });
 
+  const beginRestore = (): HTMLButtonElement => {
+    const found = preview().querySelector<HTMLButtonElement>('[data-pg-history-begin-restore]');
+
+    if (found === null) {
+      throw new Error('no Restore button');
+    }
+
+    return found;
+  };
+
+  it('gives focus back to Restore when the dialog is cancelled', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    beginRestore().click();
+    await settle();
+    buttonNamed(dialog(), 'Cancel').click();
+
+    expect(beginRestore()).toHaveFocus();
+  });
+
+  it('leaves focus alone when the drawer closes under the dialog', async () => {
+    const { button, drawer } = setup();
+
+    button.click();
+    await settle();
+    beginRestore().click();
+    await settle();
+    drawer.close();
+
+    expect(restoreDialogOpen()).toBe(false);
+    expect(beginRestore()).not.toHaveFocus();
+  });
+
+  it('opens one dialog per click and holds Restore while it gets ready', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    beginRestore().click();
+
+    expect(beginRestore().disabled).toBe(true);
+
+    beginRestore().dispatchEvent(new MouseEvent('click'));
+    await settle();
+
+    expect(document.querySelectorAll('[data-pg-history-restore] h2')).toHaveLength(1);
+
+    buttonNamed(dialog(), 'Cancel').click();
+
+    expect(beginRestore().disabled).toBe(false);
+  });
+
   it('closes only the dialog on Escape, and keeps the drawer and preview open', async () => {
     const { button } = setup();
 
@@ -704,17 +758,26 @@ describe('mountHistoryDrawer', () => {
   });
 
   it('scrolls the preview to the first marked block and outlines it for a moment', async () => {
-    const { button } = setup();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 
-    button.click();
-    await settle();
+    try {
+      const { button } = setup();
 
-    expect(scrolled.at(-1)).toEqual({ id: 'b', options: { block: 'center', behavior: 'smooth' } });
-    expect(preview().querySelector('[data-blok-id="b"]')?.hasAttribute('data-pg-flash')).toBe(true);
+      button.click();
+      for (let round = 0; round < 10; round++) {
+        await vi.advanceTimersByTimeAsync(0);
+      }
 
-    await new Promise((resolve) => setTimeout(resolve, 1300));
+      expect(scrolled.at(-1)).toEqual({ id: 'b', options: { block: 'center', behavior: 'smooth' } });
+      expect(preview().querySelector('[data-blok-id="b"]')?.hasAttribute('data-pg-flash')).toBe(true);
 
-    expect(preview().querySelector('[data-pg-flash]')).toBeNull();
+      vi.advanceTimersByTime(1199);
+      expect(preview().querySelector('[data-pg-flash]')).not.toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(preview().querySelector('[data-pg-flash]')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('jumps without smooth scrolling when the reader asks for less motion', async () => {
@@ -862,6 +925,21 @@ describe('mountHistoryDrawer', () => {
     expect(editor.inert).toBe(false);
   });
 
+  it('moves through the Group by menu with Home and End', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    groupButton().click();
+    groupOptions()[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+
+    expect(groupOptions().at(-1)).toHaveFocus();
+
+    groupOptions()[3].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+
+    expect(groupOptions()[0]).toHaveFocus();
+  });
+
   it('closes the Group by menu when focus leaves it, so a later Escape closes one layer', async () => {
     const { button } = setup();
 
@@ -872,6 +950,65 @@ describe('mountHistoryDrawer', () => {
 
     expect(groupOptions()[0].closest<HTMLElement>('[role="menu"]')?.hidden).toBe(true);
     expect(groupButton().getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('opens on a given version that is a row in the current grouping', async () => {
+    const { drawer, button } = setup();
+
+    await drawer.openOn('l2', 0);
+    await settle();
+
+    expect(panel().hidden).toBe(false);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(rowButtons().find((row) => row.getAttribute('aria-current') === 'true')?.dataset.key).toBe('l2:0');
+    expect(preview().textContent).toContain('Viewing Today, 10:00. Read only.');
+  });
+
+  it('falls back to 1-minute groups when the version is not a row', async () => {
+    const minute: HistoryList = {
+      ...LIST,
+      versions: [LIST.versions[0], { lineage: 'l2', sequence: 7, startedAt: null, savedAt: at(7, 14, 36), actors: ['playground-ben'] }, ...LIST.versions.slice(1)],
+    };
+
+    answers.list = () => Response.json(LIST);
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : input.toString();
+
+      if (url === `${SERVER}/sync/playground/history?group=1`) {
+        calls.push({ url, init });
+
+        return Response.json(minute);
+      }
+      if (url.endsWith('/history/l2/7')) {
+        calls.push({ url, init });
+
+        return Response.json({ blocks: [p('a', 'one')] });
+      }
+
+      return fakeFetch(input, init);
+    }));
+
+    const { drawer } = setup();
+
+    await drawer.openOn('l2', 7);
+    await settle();
+
+    expect(groupButton().textContent).toContain('1 minute');
+    expect(rowButtons().find((row) => row.getAttribute('aria-current') === 'true')?.dataset.key).toBe('l2:7');
+    expect(preview().textContent).toContain('Viewing Today, 14:36. Read only.');
+    // A fallback for one jump, not the person's choice.
+    expect(localStorage.getItem('pg-history-group')).toBeNull();
+  });
+
+  it('opens on a version from the Bookmarks grouping by leaving it for the list', async () => {
+    localStorage.setItem('pg-history-group', 'bookmarks');
+
+    const { drawer } = setup();
+
+    await drawer.openOn('l2', 5);
+    await settle();
+
+    expect(rowButtons().find((row) => row.getAttribute('aria-current') === 'true')?.dataset.key).toBe('l2:5');
   });
 
   const bookmarkButton = (key: string): HTMLButtonElement => {
@@ -1196,6 +1333,12 @@ describe('history drawer selected row', () => {
       expect(body, selector).not.toMatch(/(^|[\s;])(color|stroke)\s*:/);
       [...body.matchAll(/background(?:-color)?\s*:\s*([^;]+)/g)].forEach(([, value]) => expect(value.trim()).toBe('var(--pgh-hover)'));
     });
+  });
+
+  it('shows the bookmark toggle on touch screens, which have no hover', () => {
+    const raw = readFileSync(resolve(__dirname, '../../../src/playground/history-drawer.css'), 'utf-8');
+
+    expect(raw).toMatch(/@media \(hover: none\)\s*\{[^{}]*\.pg-history__mark[^{}]*\{\s*opacity:\s*1;?\s*\}/);
   });
 
   it('fills a set bookmark with the row ink', () => {

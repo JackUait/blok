@@ -464,6 +464,11 @@ export interface HistoryDrawerOptions {
 
 export interface HistoryDrawer {
   open(): Promise<void>;
+  /**
+   * Opens the version list on one point. When the current grouping has no
+   * row for it, switches to 1-minute groups for this visit only.
+   */
+  openOn(lineage: string, sequence: number): Promise<void>;
   close(): void;
 }
 
@@ -556,6 +561,8 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     selected: null as VersionRow | null,
     showChanges: true,
     restoring: false,
+    // The dialog is reading the version to list its sub-pages.
+    opening: false,
     busy: false,
     error: '',
     // Bumped on every selection: a slow answer for an older pick must not paint.
@@ -809,14 +816,21 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
 
   menu.addEventListener('keydown', (event) => {
     const items = menuItems();
-    const step = { ArrowDown: 1, ArrowUp: -1 }[event.key];
+    const index = event.target instanceof HTMLButtonElement ? items.indexOf(event.target) : -1;
+    const moves: Record<string, number | undefined> = {
+      ArrowDown: index + 1,
+      ArrowUp: index - 1 + items.length,
+      Home: 0,
+      End: items.length - 1,
+    };
+    const next = moves[event.key];
 
-    if (step === undefined || !(event.target instanceof HTMLButtonElement)) {
+    if (next === undefined || index < 0) {
       return;
     }
 
     event.preventDefault();
-    items[(items.indexOf(event.target) + step + items.length) % items.length].focus();
+    items[next % items.length].focus();
   });
 
   // Only a focus move to another element closes it: Safari blurs to nothing on a button click.
@@ -847,7 +861,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     });
 
     restoreButton.setAttribute('data-pg-history-begin-restore', '');
-    restoreButton.disabled = state.busy;
+    restoreButton.disabled = state.busy || state.opening;
     controls.append(restoreButton);
 
     const error = element('p', 'pg-history-banner__error', state.error);
@@ -1070,7 +1084,8 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
 
   const inerted: HTMLElement[] = [];
 
-  const closeDialog = (): void => {
+  /** `refocus` only when the preview stays up: Cancel, Escape, a failed restore. */
+  const closeDialog = (refocus = false): void => {
     if (dialog.hidden) {
       return;
     }
@@ -1078,7 +1093,10 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     dialog.hidden = true;
     state.restoring = false;
     inerted.splice(0).forEach((node) => node.removeAttribute('inert'));
-    banner.querySelector<HTMLButtonElement>('[data-pg-history-begin-restore]')?.focus();
+
+    if (refocus) {
+      banner.querySelector<HTMLButtonElement>('[data-pg-history-begin-restore]')?.focus();
+    }
   };
 
   const drawDialog = (row: VersionRow, subPages: string[]): void => {
@@ -1086,7 +1104,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     const primary = textButton('Restore this version', 'pg-history__button pg-history__button--primary pg-history-dialog__primary', () => {
       void restore(row);
     });
-    const cancel = textButton('Cancel', 'pg-history__button', () => closeDialog());
+    const cancel = textButton('Cancel', 'pg-history__button', () => closeDialog(true));
     const section = (heading: string, items: string[]): HTMLElement => {
       const part = element('section', 'pg-history-dialog__section');
       const lines = element('ul', 'pg-history-dialog__items');
@@ -1126,15 +1144,19 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   const openDialog = async (row: VersionRow): Promise<void> => {
     const doc = state.doc;
 
-    if (doc === null) {
+    if (doc === null || state.opening || state.restoring) {
       return;
     }
 
     state.error = '';
+    state.opening = true;
     drawBanner();
 
     // The sub-page list is a courtesy; the restore itself does not need it.
     const subPages = await readPoint(doc, row).then((data) => subPagesOf(data.blocks), () => []);
+
+    state.opening = false;
+    drawBanner();
 
     if (state.selected?.key !== row.key || panel.hidden) {
       return;
@@ -1177,10 +1199,17 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       options.notify(`Restored ${row.time}. It is now the newest version.`);
     } catch (error) {
       state.busy = false;
-      closeDialog();
       state.error = messageOf(error);
       drawBanner();
+      closeDialog(true);
     }
+  };
+
+  const showPanel = (): void => {
+    panel.hidden = false;
+    document.body.classList.add('pg-history-open');
+    options.button.setAttribute('aria-expanded', 'true');
+    drawGroup();
   };
 
   const open = async (): Promise<void> => {
@@ -1193,10 +1222,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       return;
     }
 
-    panel.hidden = false;
-    document.body.classList.add('pg-history-open');
-    options.button.setAttribute('aria-expanded', 'true');
-    drawGroup();
+    showPanel();
     await load();
 
     // Closed, or opened again on another document, while the list loaded.
@@ -1205,6 +1231,53 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     }
 
     await selectFirst();
+  };
+
+  const openOn = async (lineage: string, sequence: number): Promise<void> => {
+    const doc = options.doc();
+    const request = ++state.request;
+    const key = `${lineage}:${sequence}`;
+    const find = (): VersionRow | undefined =>
+      state.rows.find((row): row is VersionRow => row.kind === 'version' && row.key === key);
+    const stale = (): boolean => panel.hidden !== false || state.doc !== doc || state.request !== request;
+
+    state.doc = doc;
+    state.mode = 'list';
+
+    if (doc === null) {
+      return;
+    }
+
+    closeDialog();
+    showPanel();
+    await load();
+
+    if (stale()) {
+      return;
+    }
+
+    if (find() === undefined && state.group !== '1') {
+      // Not saved: the person's own grouping comes back on the next open.
+      state.group = '1';
+      drawGroup();
+      await load();
+
+      if (stale()) {
+        return;
+      }
+    }
+
+    await select(find() ?? {
+      kind: 'version',
+      key,
+      lineage,
+      sequence,
+      time: formatVersionTime(null, now()),
+      who: '',
+      current: false,
+      at: null,
+      below: sequence > 0 ? { lineage, sequence: sequence - 1 } : null,
+    });
   };
 
   const close = (): void => {
@@ -1252,7 +1325,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
 
     // The dialog and the Group by menu sit above the drawer: each Escape closes one.
     if (!dialog.hidden && (isBody || (target instanceof Node && dialog.contains(target)))) {
-      take(event, closeDialog);
+      take(event, () => closeDialog(true));
 
       return;
     }
@@ -1272,5 +1345,5 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     take(event, close);
   }, { capture: true });
 
-  return { open, close };
+  return { open, openOn, close };
 };

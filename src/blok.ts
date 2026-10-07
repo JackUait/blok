@@ -6,7 +6,7 @@ import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
 import { SettingChanged } from './components/events/SettingChanged';
 import type { SettingChangedPayload } from './components/events/SettingChanged';
-import { getBlokVersion, isObject, isFunction } from './components/utils';
+import { getBlokVersion, isObject, isFunction, logLabeled } from './components/utils';
 import { announce } from './components/utils/announcer';
 import { prefersReducedMotion } from './components/utils/reduced-motion';
 import {
@@ -601,8 +601,13 @@ class Blok {
       const pageTitle = (blok.moduleInstances as Partial<BlokModules>).PageTitle;
 
       if (pageTitle !== undefined) {
-        if (titleBuffer.holder !== null) {
-          pageTitle.mount(titleBuffer.holder);
+        const bufferedHolder = titleBuffer.holder;
+
+        // A bad selector must not reject isReady; only a direct call after ready throws.
+        if (typeof bufferedHolder === 'string' && document.querySelector(bufferedHolder) === null) {
+          logLabeled(`title.mount "${bufferedHolder}" matches no element; the title stays where it is`, 'error');
+        } else if (bufferedHolder !== null) {
+          pageTitle.mount(bufferedHolder);
         }
         if (titleBuffer.text !== null) {
           pageTitle.setText(titleBuffer.text, 'api');

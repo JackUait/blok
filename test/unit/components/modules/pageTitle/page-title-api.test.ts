@@ -83,4 +83,18 @@ describe('blok.title API', () => {
 
     expect(target.querySelector(`[${DATA_ATTR.pageTitle}]`)).not.toBeNull();
   });
+
+  it('title.mount before ready with a missing selector logs and boot still resolves', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    blok = create({ holder, pageTitle: true });
+
+    blok.title.mount('#missing');
+    await expect(blok.isReady).resolves.toBeDefined();
+
+    expect(error.mock.calls.some((args) => args.some((arg) => String(arg).includes('#missing')))).toBe(true);
+    const header = holder.querySelector(`[${DATA_ATTR.pageHeader}]`);
+
+    expect(header?.nextElementSibling).toBe(holder.querySelector(`[${DATA_ATTR.redactor}]`));
+  });
 });

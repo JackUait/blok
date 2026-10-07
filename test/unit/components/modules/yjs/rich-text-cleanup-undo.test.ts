@@ -150,7 +150,7 @@ describe('yjs format cleanup on rich text', () => {
   ];
 
   // Reading `YTextEvent.delta` in an observer makes yjs delete redundant
-  // format items in a null-origin transaction. Blok maps null to 'local' and
+  // format items in a null-origin transaction. Blok maps that cleanup to 'local' and
   // does not rerender, so those deletions must never change segments.
   it.each(ORDERS)('null-origin format deletions never change segments (ids %i/%i)', (ownId, peerId) => {
     const serializer = new YBlockSerializer();

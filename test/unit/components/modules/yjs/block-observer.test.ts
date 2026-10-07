@@ -203,10 +203,10 @@ describe('BlockObserver', () => {
       expect(observer.mapTransactionOrigin('unknown')).toBe('remote');
     });
 
-    // yjs opens its formatting-cleanup transaction with no origin, on the
-    // peer that RECEIVED overlapping formats. It is that peer's own write.
-    it('maps a null origin (yjs\'s own format cleanup) to "local"', () => {
-      expect(observer.mapTransactionOrigin(null)).toBe('local');
+    // A null origin is local only when the transaction shows a yjs format
+    // cleanup; with no transaction to inspect it stays remote.
+    it('maps a null origin with no transaction to inspect to "remote"', () => {
+      expect(observer.mapTransactionOrigin(null)).toBe('remote');
     });
 
     // Regression guard: every tag in LOCAL_ORIGIN_TAGS must map to a
@@ -566,6 +566,45 @@ describe('BlockObserver', () => {
       ]);
       // Guard: yjs really ran a cleanup that changed the text.
       expect(cleanups).toHaveLength(1);
+    });
+
+    // A null origin is local only for yjs's cleanup: no inserts, format deletes
+    // only. Any other null-origin write must still re-render.
+    it('classifies a bare text insert outside any transaction (null origin) as remote', () => {
+      const peer = peerWithParagraph(1, 2);
+      const callback = vi.fn();
+      const text = (blocksMap.get('p1')?.get('data') as Y.Map<unknown>).get('text') as Y.XmlText;
+
+      peer.destroy();
+      observer.onBlocksChanged(callback);
+      text.insert(0, 'X');
+
+      expect(eventsFor(callback, 'p1')).toEqual([{ type: 'update', origin: 'remote' }]);
+    });
+
+    it('classifies a null-origin delete of a non-format item as remote', () => {
+      const peer = peerWithParagraph(1, 2);
+      const callback = vi.fn();
+      const data = blocksMap.get('p1')?.get('data') as Y.Map<unknown>;
+
+      peer.destroy();
+      store.transact(() => data.set('extra', 1), 'local');
+      observer.onBlocksChanged(callback);
+      data.doc?.transact(() => data.delete('extra'));
+
+      expect(eventsFor(callback, 'p1')).toEqual([{ type: 'update', origin: 'remote' }]);
+    });
+
+    it('classifies a null-origin text delete as remote', () => {
+      const peer = peerWithParagraph(1, 2);
+      const callback = vi.fn();
+      const text = (blocksMap.get('p1')?.get('data') as Y.Map<unknown>).get('text') as Y.XmlText;
+
+      peer.destroy();
+      observer.onBlocksChanged(callback);
+      text.delete(0, 4);
+
+      expect(eventsFor(callback, 'p1')).toEqual([{ type: 'update', origin: 'remote' }]);
     });
   });
 

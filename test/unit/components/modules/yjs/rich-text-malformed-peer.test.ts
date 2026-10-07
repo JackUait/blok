@@ -62,7 +62,8 @@ const deliverTo = (manager: YjsManager): void => {
 };
 
 const peerText = (id: string): Y.XmlText => {
-  const text = requirePeer().blocksMap.get(id)?.get('data')?.get('text');
+  const data = requirePeer().blocksMap.get(id)?.get('data');
+  const text = data instanceof Y.Map ? data.get('text') : undefined;
 
   if (!(text instanceof Y.XmlText)) {
     throw new Error(`the peer's «${id}».text is not formatted`);

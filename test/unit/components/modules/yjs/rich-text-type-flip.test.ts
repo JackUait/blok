@@ -14,9 +14,9 @@ import type { BlokModules } from '../../../../../src/types-internal/blok-modules
  * under a rich field must heal on the next local write.
  */
 
-/** `knownTypes`: the tools registered on this client (none by default). */
-const createStore = (clientId: number, knownTypes: string[] = []): DocumentStore => {
-  const store = new DocumentStore(new YBlockSerializer({ isKnownType: type => knownTypes.includes(type) }));
+/** `richFields`: this client's `static richTextFields` per type. */
+const createStore = (clientId: number, richFields: Record<string, string[]> = {}): DocumentStore => {
+  const store = new DocumentStore(new YBlockSerializer({ richTextFieldsFor: type => richFields[type] ?? [] }));
   const doc = store.blocksMap.doc;
 
   if (doc !== null) {
@@ -237,13 +237,13 @@ describe('a plain HTML Y.Text under a rich field', () => {
   });
 });
 
-describe('concurrent custom → paragraph that loses the type race', () => {
+describe('concurrent custom → paragraph that loses the type race (accepted, pinned)', () => {
   it.each([
     [1, 2],
     [2, 1],
-  ])('a registered tool that does not declare the key gets a plain Y.Text back on its next save (clientIDs A=%i B=%i)', (idA, idB) => {
-    const a = createStore(idA, ['custom']);
-    const b = createStore(idB, ['custom']);
+  ])('the custom field keeps the formatted text, and its saves go through the rich path (clientIDs A=%i B=%i)', (idA, idB) => {
+    const a = createStore(idA);
+    const b = createStore(idB);
 
     a.fromJSON([{ id: 'b1', type: 'custom', data: { text: '<b>a</b>' } }]);
     sync(a, b);
@@ -258,24 +258,32 @@ describe('concurrent custom → paragraph that loses the type race', () => {
       return;
     }
 
-    // The custom block holds A's formatted text. B's next save downgrades it.
-    expect(storedText(b, 'b1')).toBeInstanceOf(Y.XmlText);
+    const before = storedText(b, 'b1');
 
+    expect(before).toBeInstanceOf(Y.XmlText);
+
+    // Never re-minted back to an HTML Y.Text: a downgrade would fight a peer
+    // whose tool declares the field rich. The save is normalised to what
+    // segments can hold: `<b>` reads back as `<strong>`, and the `<div>` is
+    // stored as one opaque `html` embed (no character merging inside it).
     b.updateBlockData('b1', 'text', '<b>a</b><div>block</div>');
     sync(a, b);
 
     for (const store of [a, b]) {
-      const text = storedText(store, 'b1');
-
-      expect(text).not.toBeInstanceOf(Y.XmlText);
-      expect((text as Y.Text).toJSON()).toBe('<b>a</b><div>block</div>');
+      expect(storedText(store, 'b1')).toBeInstanceOf(Y.XmlText);
+      expect((storedText(store, 'b1') as Y.XmlText).toDelta()).toEqual([
+        { insert: 'a', attributes: { bold: true } },
+        { insert: { html: '<div>block</div>' } },
+      ]);
+      expect(textOf(store, 'b1')).toBe('<strong>a</strong><div>block</div>');
     }
+    expect(storedText(b, 'b1')).toBe(before);
   });
 
   it('runs the custom-wins order at least once', () => {
     const winners = [[1, 2], [2, 1]].map(([idA, idB]) => {
-      const a = createStore(idA, ['custom']);
-      const b = createStore(idB, ['custom']);
+      const a = createStore(idA);
+      const b = createStore(idB);
 
       a.fromJSON([{ id: 'b1', type: 'custom', data: { text: 'x' } }]);
       sync(a, b);
@@ -288,25 +296,40 @@ describe('concurrent custom → paragraph that loses the type race', () => {
 
     expect(winners).toContain('custom');
   });
+});
 
-  it('a save that changes nothing does not downgrade', () => {
-    const store = createStore(1, ['custom']);
+describe('peers whose registries disagree on a field', () => {
+  it.each([
+    [1, 2],
+    [2, 1],
+  ])('do not flip the field between classes, and keep both peers\' edits (clientIDs rich=%i plain=%i)', (idRich, idPlain) => {
+    // Two versions of one tool: only the newer declares `body` rich.
+    const rich = createStore(idRich, { custom: ['body'] });
+    const plain = createStore(idPlain);
 
-    store.fromJSON([{ id: 'b1', type: 'paragraph', data: { text: '<b>a</b>' } }]);
-    (store.getBlockById('b1') as Y.Map<unknown>).set('type', 'custom');
+    rich.fromJSON([{ id: 'b1', type: 'custom', data: { body: 'one' } }]);
+    sync(rich, plain);
 
-    expect(store.updateBlockData('b1', 'text', '<strong>a</strong>')).toBe(false);
-    expect(storedText(store, 'b1')).toBeInstanceOf(Y.XmlText);
-  });
+    const body = (store: DocumentStore): unknown => (store.getBlockById('b1')?.get('data') as Y.Map<unknown>).get('body');
+    const minted = body(rich);
+    const bodyOf = (store: DocumentStore): unknown => (blockOf(store, 'b1')?.data as Record<string, unknown>).body;
 
-  it('an unregistered tool keeps its formatted text', () => {
-    const store = createStore(1);
+    expect(minted).toBeInstanceOf(Y.XmlText);
 
-    store.fromJSON([{ id: 'b1', type: 'paragraph', data: { text: '<b>a</b>' } }]);
-    (store.getBlockById('b1') as Y.Map<unknown>).set('type', 'custom');
-    store.updateBlockData('b1', 'text', '<b>a</b>!');
+    plain.updateBlockData('b1', 'body', 'one two');
+    sync(rich, plain);
+    rich.updateBlockData('b1', 'body', 'one two three');
+    sync(rich, plain);
+    plain.updateBlockData('b1', 'body', 'one two three four');
+    sync(rich, plain);
 
-    expect(storedText(store, 'b1')).toBeInstanceOf(Y.XmlText);
-    expect(textOf(store, 'b1')).toBe('<strong>a</strong>!');
+    rich.updateBlockData('b1', 'body', 'R one two three four');
+    plain.updateBlockData('b1', 'body', 'one two three four P');
+    sync(rich, plain);
+
+    expect(bodyOf(rich)).toBe('R one two three four P');
+    expect(bodyOf(plain)).toBe(bodyOf(rich));
+    expect(body(rich)).toBe(minted);
+    expect(body(plain)).toBeInstanceOf(Y.XmlText);
   });
 });

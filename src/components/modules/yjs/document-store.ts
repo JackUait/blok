@@ -1439,23 +1439,6 @@ export class DocumentStore {
       return true;
     }
 
-    // A formatted text under a field its registered tool does not declare
-    // rich: what a lost type race leaves (A converts custom → paragraph while
-    // B's custom keeps the type). Downgrade it to an HTML Y.Text on a save
-    // that changes it; last-writer-wins once per field, like the upgrade.
-    if (currentValue instanceof Y.XmlText && typeof value === 'string' &&
-      this.serializer.isPlainTextField(yblock.get('type'), dataKey)) {
-      if (equals(this.serializer.readRichText(currentValue), this.serializer.toRichSegments(value))) {
-        return false;
-      }
-
-      this.transact(() => {
-        ydata.set(dataKey, this.serializer.mintDataValue(yblock.get('type'), dataKey, value));
-      }, 'local');
-
-      return true;
-    }
-
     // Formatted rich text. Before the Y.Text branch: an XmlText IS a Y.Text,
     // and diffing HTML into it would store tags as characters.
     const richSegments = currentValue instanceof Y.XmlText ? this.serializer.toRichSegments(value) : null;

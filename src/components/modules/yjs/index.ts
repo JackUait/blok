@@ -171,7 +171,6 @@ export class YjsManager extends Module {
     // Lazy: Tools is not ready at construct time, and test stubs may lack it.
     this.serializer = new YBlockSerializer({
       richTextFieldsFor: (type) => this.Blok?.Tools?.blockTools?.get(type)?.richTextFields ?? [],
-      isKnownType: (type) => this.Blok?.Tools?.blockTools?.get(type) !== undefined,
     });
     this.documentStore = new DocumentStore(this.serializer);
     this.blockObserver = new BlockObserver();

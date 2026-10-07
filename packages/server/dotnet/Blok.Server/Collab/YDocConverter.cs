@@ -467,6 +467,45 @@ internal static class YDocConverter
     return blocks;
   }
 
+  /// <summary>
+  /// The doc's raw structure for the restore planner: every key as the edit
+  /// planner reads it, plus which blocks the export's main pass reaches.
+  /// </summary>
+  internal static CollabDocStructure DescribeStructure(YDoc doc)
+  {
+    ArgumentNullException.ThrowIfNull(doc);
+
+    var blockMap = doc.GetMap(BlocksRoot);
+    var rootOrder = doc.GetArray(OrderRoot);
+    var keys = new Dictionary<string, CollabKeyShape>(StringComparer.Ordinal);
+
+    foreach (var id in blockMap.Keys.ToArray())
+    {
+      if (Value(blockMap, id) is not YMap block)
+      {
+        keys[id] = new CollabKeyShape(false, null, null);
+
+        continue;
+      }
+
+      // Raw, self-parent included: this is what EditPlanner's removal walk
+      // follows, and the restore planner predicts that walk.
+      var storedParent = Value(block, "parentId") as string;
+      var listed = Value(block, "contentIds") is YArray contentIds
+        ? contentIds.Enumerate().OfType<string>().ToList()
+        : null;
+      var isBlock = Value(block, "id") is string ownId && ownId == id &&
+          Value(block, "type") is string &&
+          Value(block, "data") is YMap;
+
+      keys[id] = new CollabKeyShape(isBlock, storedParent, listed);
+    }
+
+    var reached = new DocReader(blockMap, rootOrder, RichTextFields.BuiltIn, null).MainPassIds();
+
+    return new CollabDocStructure(keys, rootOrder.Enumerate().OfType<string>().ToList(), reached);
+  }
+
   private static bool TryGetString(JsonObject block, string key, out string value)
   {
     if (block.TryGetPropertyValue(key, out var node) &&
@@ -3034,13 +3073,7 @@ internal static class YDocConverter
       var ordered = new List<string>();
       var seen = new HashSet<string>(StringComparer.Ordinal);
 
-      foreach (var entry in rootOrder.Enumerate())
-      {
-        if (entry is string id)
-        {
-          VisitBlock(id, null, hierarchy, seen, ordered);
-        }
-      }
+      MainPass(hierarchy, seen, ordered);
 
       foreach (var id in Unreached(seen))
       {
@@ -3058,6 +3091,30 @@ internal static class YDocConverter
       }
 
       return ordered;
+    }
+
+    /// <summary>The ids the export reaches from the root order, before its orphan passes.</summary>
+    internal HashSet<string> MainPassIds()
+    {
+      var seen = new HashSet<string>(StringComparer.Ordinal);
+
+      MainPass(HierarchyView(), seen, []);
+
+      return seen;
+    }
+
+    private void MainPass(
+        Dictionary<string, string?> hierarchy,
+        HashSet<string> seen,
+        List<string> ordered)
+    {
+      foreach (var entry in rootOrder.Enumerate())
+      {
+        if (entry is string id)
+        {
+          VisitBlock(id, null, hierarchy, seen, ordered);
+        }
+      }
     }
 
     private List<string> Unreached(HashSet<string> seen)

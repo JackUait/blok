@@ -696,7 +696,9 @@ internal sealed class CollabRoom : IDisposable
             {
               UpdateEvictionLocked();
 
-              return new CollabEditResult(CollabEditStatus.TooLarge, null);
+              return new CollabEditResult(
+                  CollabEditStatus.TooLarge,
+                  new CollabEditException("collab: the restore is larger than one update may be."));
             }
           }
           catch (CollabEditException refusal)

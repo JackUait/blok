@@ -282,7 +282,7 @@ public sealed class HistoryEndpointTests
 
     using var restore = await history.RestoreAsync(lineage, "1", "restore-big");
 
-    Assert.Equal(HttpStatusCode.RequestEntityTooLarge, restore.StatusCode);
+    await AssertError(restore, HttpStatusCode.RequestEntityTooLarge, "collab: the restore is larger than one update may be.\n");
     // The same member still gets the next edit: the room was not closed.
     var relay = member.ReceiveAsync<SyncUpdateFrame>();
     await history.EditTextAsync("after");

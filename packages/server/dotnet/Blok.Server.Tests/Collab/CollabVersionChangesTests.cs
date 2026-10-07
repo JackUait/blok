@@ -206,6 +206,22 @@ public sealed class CollabVersionChangesTests
     Assert.Equal(CollabBlockChangeKind.Added, Assert.Single(fromOne[0].Blocks).Kind);
   }
 
+  /// <summary>The first "before" must be that record's state: with it missing, nothing is diffed against the baseline.</summary>
+  [Fact]
+  public async Task AMissingFirstBeforeRecordYieldsNoRows()
+  {
+    var client = new YDoc(1);
+    var text = client.GetText("t");
+    var u1 = client.Transact(transaction => text.Insert(transaction, 0, "a"))!;
+    var u2 = client.Transact(transaction => text.Insert(transaction, 1, "b"))!;
+    var u3 = client.Transact(transaction => text.Insert(transaction, 2, "c"))!;
+    var withoutTwo = Records([u1, u2, u3]).Where(record => record.ServerSequence != 2);
+
+    var changes = await CollabVersionChanges.ReplayAsync([], withoutTwo, 2, Converter(), CancellationToken.None);
+
+    Assert.Empty(changes);
+  }
+
   /// <summary>A record that is parked, or touches nothing shown, is still a row: the client says "not visualizable".</summary>
   [Fact]
   public async Task ARecordWithNothingVisibleIsARowWithNoBlocks()

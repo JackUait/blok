@@ -59,7 +59,7 @@ internal static class CollabVersionChanges
 
     await foreach (var (record, doc) in CollabHistoryReplay.StepAsync(baseline, records, ct).ConfigureAwait(false))
     {
-      if (record is not null && record.ServerSequence < firstBefore)
+      if ((record?.ServerSequence ?? 0) < firstBefore)
       {
         continue;
       }

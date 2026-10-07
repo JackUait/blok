@@ -101,3 +101,35 @@ describe('PasteMenuController virtual anchor lifecycle', () => {
     expect(openPopover?.style.getPropertyPriority('direction')).toBe('important');
   });
 });
+
+describe('PasteMenuController teardown', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('closes an open menu on destroy without treating it as a dismissal', () => {
+    const trigger = document.createElement('div');
+
+    document.body.appendChild(trigger);
+
+    const controller = new PasteMenuController({ t: (key) => key });
+    const onDismiss = vi.fn();
+
+    controller.open({
+      url: 'https://example.com/article',
+      hasSelection: false,
+      position: createRect({ top: 10, bottom: 26, left: 10, right: 10, height: 16 }),
+      trigger,
+      onSelect: vi.fn(),
+      onDismiss,
+    });
+
+    expect(document.body).toHaveAttribute('data-blok-scroll-locked', 'true');
+
+    controller.destroy();
+
+    expect(document.body).not.toHaveAttribute('data-blok-scroll-locked');
+    expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+});

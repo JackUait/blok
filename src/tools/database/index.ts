@@ -284,6 +284,7 @@ export class DatabaseTool implements BlockTool {
     this.destroyed = true;
     this.api.events.off('block changed', this.handleBlockChanged);
     this.stopWaitingForIdle();
+    this.cardMenuPopover?.destroy();
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();

@@ -45,6 +45,10 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     });
   }
 
+  destroy(): void {
+    this.menu.destroy?.();
+  }
+
   canHandle(data: unknown): number {
     if (typeof data !== 'string') {
       return 0;

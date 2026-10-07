@@ -78,6 +78,14 @@ export class Paste extends Module {
   }
 
   /**
+   * Closes the link paste menu if it is still open.
+   */
+  public destroy(): void {
+    // prepare() may not have run if the editor is destroyed mid-boot.
+    this.handlers?.forEach(handler => handler.destroy?.());
+  }
+
+  /**
    * Process text data (public API).
    * Used by API.renderFromHTML() to process HTML or plain text.
    * @param data - Text or HTML string to process

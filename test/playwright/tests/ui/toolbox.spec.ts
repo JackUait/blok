@@ -1159,4 +1159,23 @@ test.describe('toolbox page scroll lock', () => {
     await expect(page.locator(POPOVER_SELECTOR)).not.toHaveAttribute('data-blok-popover-opened', 'true');
     await expect(page.locator('[data-blok-scroll-locked]')).toHaveCount(0);
   });
+
+  test('destroying the editor with the toolbox open gives page scroll back', async ({ page }) => {
+    await resetBlok(page);
+
+    await page.evaluate(async ({ holder }) => {
+      const blok = new window.Blok({ holder });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    await openToolbox(page);
+    await expect(page.locator('[data-blok-scroll-locked]')).toHaveCount(1);
+
+    await page.evaluate(() => window.blokInstance?.destroy());
+
+    await expect(page.locator('[data-blok-scroll-locked]')).toHaveCount(0);
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+  });
 });

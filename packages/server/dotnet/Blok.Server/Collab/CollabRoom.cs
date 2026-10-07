@@ -658,7 +658,7 @@ internal sealed class CollabRoom : IDisposable
             }
             catch (CollabEditException refusal)
             {
-              return new CollabEditResult(CollabEditStatus.Invalid, refusal);
+              return new CollabEditResult(RefusalStatus(refusal), refusal);
             }
             catch (CollabTransientException overloaded)
             {
@@ -720,7 +720,7 @@ internal sealed class CollabRoom : IDisposable
             localUpdates.Clear();
             UpdateEvictionLocked();
 
-            return new CollabEditResult(CollabEditStatus.Invalid, refusal);
+            return new CollabEditResult(RefusalStatus(refusal), refusal);
           }
           catch (CollabTransientException overloaded)
           {
@@ -2017,6 +2017,13 @@ internal sealed class CollabRoom : IDisposable
   /// Not a wait for a pooled engine: that says the host is busy, not that
   /// this document is too large.
   /// </summary>
+  private static CollabEditStatus RefusalStatus(CollabEditException refusal)
+  {
+    return CollabDocConverter.IsTooLarge(refusal.InnerException)
+      ? CollabEditStatus.TooLarge
+      : CollabEditStatus.Invalid;
+  }
+
   private static bool IsRuntimeLimit(Exception error)
   {
     for (var cause = error; cause is not null; cause = cause.InnerException)

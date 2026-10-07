@@ -299,7 +299,8 @@ On a journal-backed service, `POST /sync/{doc}/reset` first adopts a working cop
 
 A rich text field in an edit may be an HTML string or segments. The service reads the HTML into segments before it applies anything. A rich text field is the `text` of a paragraph, header, quote, toggle or list block, plus every field in `--rich-text-fields`.
 
-- If reading that HTML runs past the runtime's timeout or allocation budget, the edit answers 503 with `Retry-After: 2` and applies nothing. Retry with the same key.
+- If reading that HTML runs past the runtime's timeout, the edit answers 503 with `Retry-After` (2 seconds by default) and applies nothing. Retry with the same key.
+- If that HTML runs out of the runtime's memory budget, the edit answers 413 and applies nothing. The budget is per request, so the same body fails every time. Do not retry it; send less rich text.
 - HTML the reader refuses answers 422.
 
 With a journal, an edit that changes nothing also answers 204. That covers the same data sent again, and rich text spelled differently, such as `<b>` for `<strong>` or `&nbsp;` for a space.
@@ -318,7 +319,7 @@ An edit may also send `If-Match: "<lineage>:<sequence>"`. It is one quoted tag, 
 - A list, `*`, a weak tag, or any other shape answers 400, with or without a journal.
 - A 412 commits nothing, so you may retry the same key with a fresh tag.
 
-`GET /sync/{doc}/state` returns the live document as `application/json`, in the same shape your document endpoint receives. It includes edits made a moment ago. With a journal, it also sends `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag: "<lineage>:<sequence>"`, naming the exact head the body reflects. Send that `ETag` back as `If-Match` to edit only if nothing changed in between. A working-copy-only service sends the body without those three headers. A purged document answers 403. A document that cannot be loaded, is held by another process, or is on a service that is shutting down answers 503. An export that ran past the runtime's timeout or allocation budget also answers 503, with `Retry-After: 2`. A document the service cannot write as JSON answers 500. Rich text fields come back as segments.
+`GET /sync/{doc}/state` returns the live document as `application/json`, in the same shape your document endpoint receives. It includes edits made a moment ago. With a journal, it also sends `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag: "<lineage>:<sequence>"`, naming the exact head the body reflects. Send that `ETag` back as `If-Match` to edit only if nothing changed in between. A working-copy-only service sends the body without those three headers. A purged document answers 403. A document that cannot be loaded, is held by another process, or is on a service that is shutting down answers 503. An export that ran past the runtime's timeout or allocation budget also answers 503, with `Retry-After` (2 seconds by default). A document the service cannot write as JSON answers 500. Rich text fields come back as segments.
 
 Both routes add `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag` to `Access-Control-Expose-Headers` for an allowed origin, so a browser page can read them. Headers your app already exposes are kept.
 
@@ -347,7 +348,7 @@ What to change in your app:
 - Your document endpoint must accept segments in rich text fields.
 - It may keep serving HTML. The service reads HTML on the way in, from your endpoint and from `POST /sync/{doc}/edit`, and writes segments back.
 - List your custom tools' rich text fields with `--rich-text-fields` or `options.RichTextFields`, the same list as each tool's `richTextFields`. A field missing from the list keeps the shape the service was handed: HTML sent to the service for it stays an HTML string.
-- Upgrade the service and the editor together. Rooms are now format 2. An editor from before this change gets `unsupported-format` from the new service, and the new editor refuses an old service the same way.
+- Upgrade the service and the editor together. Rooms are now format 2. An editor from before this change sees the new service announce format 2 and ends its own session with `unsupported-format`. The new editor does the same with an old service.
 
 The first time the service opens a document stored in format 1, it moves it to format 2 once:
 

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Blok.Server.Collab;
+using Blok.Server.Documents;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -633,6 +634,42 @@ public sealed class EditEndpointTests
     Assert.Equal(TimeSpan.FromSeconds(2), overloaded.Headers.RetryAfter?.Delta);
     Assert.Equal(HttpStatusCode.NoContent, retried.StatusCode);
     Assert.Equal("1", Assert.Single(retried.Headers.GetValues("Blok-Doc-Sequence")));
+  }
+
+  [Fact]
+  public async Task AnEditWhoseHtmlRanPastTheAllocationBudgetIsA413WithoutRetryAfter()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartWithOperationStore(operations);
+    app.Fakes.Converter.NextEditFailure = new CollabEditException(
+        "collab: the rich text HTML in this edit could not be read: too large",
+        new BlokDocumentConversionException(BlokConversionFailure.DocumentTooLarge, new InvalidOperationException()));
+
+    using var tooLarge = await Edit(app, key: "too-large-edit");
+
+    await AssertError(
+        tooLarge,
+        HttpStatusCode.RequestEntityTooLarge,
+        "collab: the rich text HTML in this edit could not be read: too large\n");
+    Assert.Null(tooLarge.Headers.RetryAfter);
+    Assert.Empty(operations.Committed(SyncApp.Doc));
+  }
+
+  [Fact]
+  public async Task TheRetryAfterOfAnOverloadedEditIsTheRoomsRetryBackoff()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await SyncApp.StartAsync(
+        services: collection => collection.AddSingleton<ICollabOperationStore>(operations),
+        fakes: new SyncFakes(
+            new CollabRoomOptions { RetryBackoff = TimeSpan.FromMilliseconds(4500) },
+            operations));
+    app.Fakes.Converter.NextEditFailure = new CollabTransientException("collab: the runtime timed out");
+
+    using var overloaded = await Edit(app, key: "slow-edit");
+
+    Assert.Equal(HttpStatusCode.ServiceUnavailable, overloaded.StatusCode);
+    Assert.Equal(TimeSpan.FromSeconds(5), overloaded.Headers.RetryAfter?.Delta);
   }
 
   [Fact]

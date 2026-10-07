@@ -180,9 +180,18 @@ internal static class EditEndpoint
         return;
 
       case CollabEditStatus.Overloaded:
-        await RefuseOverloadedAsync(
+        await SyncEndpoint.RefuseRetryLaterAsync(
             context,
+            rooms.RetryAfter,
             "the server ran past its limits reading this edit's rich text, retry\n");
+
+        return;
+
+      case CollabEditStatus.TooLarge:
+        await SyncEndpoint.RefuseAsync(
+            context,
+            StatusCodes.Status413PayloadTooLarge,
+            $"{result.Error?.Message ?? "collab: the edit's rich text is too large to read."}\n");
 
         return;
 
@@ -210,18 +219,6 @@ internal static class EditEndpoint
 
         return;
     }
-  }
-
-  /// <summary>
-  /// 503 with Retry-After: the runtime ran past its timeout or allocation
-  /// budget on this request, and nothing was written. Two seconds is the
-  /// room's first export backoff (CollabRoomOptions.RetryBackoff).
-  /// </summary>
-  internal static Task RefuseOverloadedAsync(HttpContext context, string body)
-  {
-    context.Response.Headers.RetryAfter = "2";
-
-    return SyncEndpoint.RefuseAsync(context, StatusCodes.Status503ServiceUnavailable, body);
   }
 
   /// <summary>Sets Blok-Doc-Lineage and Blok-Doc-Sequence; If-Match and the /state ETag use the same two values.</summary>

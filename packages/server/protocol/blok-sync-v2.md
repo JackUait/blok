@@ -861,7 +861,8 @@ reads HTML into segments before it applies anything:
 | Status | When |
 | --- | --- |
 | 422 | The server's reader refuses the HTML. |
-| 503 with `Retry-After` | Reading the HTML ran past the server's time or memory limits. Nothing was applied, and nothing was recorded under the key. Retry. |
+| 413 | Reading the HTML ran out of the server's memory budget. The budget is per request, so the same body fails every time. Nothing was applied or recorded. Do not retry it. |
+| 503 with `Retry-After` | Reading the HTML ran past the server's time limit. Nothing was applied, and nothing was recorded under the key. Retry after that many seconds. |
 
 ### 12.2 `If-Match` on an edit
 
@@ -888,7 +889,7 @@ The reference server refuses a request in this order:
 7. A body over the size limit (413), then an invalid edit body (422).
 
 Only then does it reach the document, where 428 and 412 are decided, and
-the reader's 422 or 503 for rich text HTML (12.1).
+the reader's 422, 413 or 503 for rich text HTML (12.1).
 
 On a journal-backed document the server checks the tag after the key lookup and
 before it applies anything, in one step with the apply:

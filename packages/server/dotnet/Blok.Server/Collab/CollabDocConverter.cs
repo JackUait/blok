@@ -59,10 +59,11 @@ internal sealed class CollabDocConverter(
     {
       input = await Converting(found, cancellationToken);
     }
-    catch (Exception error) when (IsTransient(error, cancellationToken))
+    catch (Exception error) when (IsTransient(error, cancellationToken) && !IsTooLarge(error))
     {
       // Nothing is written yet. The room answers this one request with a
-      // retry, and keeps every member.
+      // retry, and keeps every member. Out of allocation budget is not
+      // retryable here: the budget is per call, so the same body fails again.
       throw new CollabTransientException(
           $"collab: reading the rich text HTML in this edit ran past the runtime's limits: {error.Message}", error);
     }
@@ -136,6 +137,11 @@ internal sealed class CollabDocConverter(
       OperationCanceledException => !cancellationToken.IsCancellationRequested,
       _ => false,
     };
+  }
+
+  internal static bool IsTooLarge(Exception? error)
+  {
+    return error is BlokDocumentConversionException { Reason: BlokConversionFailure.DocumentTooLarge };
   }
 
   private async ValueTask<RichTextInput> Converting(

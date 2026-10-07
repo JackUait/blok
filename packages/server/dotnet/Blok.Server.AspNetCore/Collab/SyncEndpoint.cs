@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.WebSockets;
 using Blok.Server.Collab;
 using Microsoft.AspNetCore.Http;
@@ -64,6 +65,18 @@ internal static class SyncEndpoint
     context.Response.StatusCode = statusCode;
     context.Response.ContentType = "text/plain; charset=utf-8";
     await context.Response.WriteAsync(body);
+  }
+
+  /// <summary>
+  /// 503 with Retry-After in whole seconds, rounded up: the runtime ran past
+  /// its limits on this request and nothing was written.
+  /// </summary>
+  internal static Task RefuseRetryLaterAsync(HttpContext context, TimeSpan retryAfter, string body)
+  {
+    context.Response.Headers.RetryAfter =
+        Math.Max(1, (long)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+
+    return RefuseAsync(context, StatusCodes.Status503ServiceUnavailable, body);
   }
 
   private static async Task ServeAsync(HttpContext context, string doc, SyncAccepted accepted)

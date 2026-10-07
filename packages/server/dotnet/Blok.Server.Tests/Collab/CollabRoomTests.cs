@@ -3180,6 +3180,35 @@ public sealed class CollabRoomTests
     Assert.Equal(CollabEditStatus.Applied, next.Status);
   }
 
+  /// <summary>
+  /// The allocation budget is per call, so the same body runs out of it every
+  /// time: a retry can never pass, unlike a timeout under load.
+  /// </summary>
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task AnHtmlReadPastTheAllocationBudgetIsTooLargeAndKeepsTheRoom(bool journal)
+  {
+    endpoint.HoldsNothing(DocId);
+    var docConverter = new CollabDocConverter(
+        time,
+        new FailingHtmlReader(new BlokDocumentConversionException(
+            BlokConversionFailure.DocumentTooLarge,
+            new InvalidOperationException("memory"))));
+    var manager = journal
+      ? CreateJournalManager(docConverter: docConverter)
+      : CreateManager(docConverter: docConverter);
+    var writer = journal ? V2Member() : new FakeMember();
+    await Join(manager, writer);
+
+    var result = await manager.EditAsync(DocId, [Appending("b-1", "<b>x</b>")], CancellationToken.None);
+    var next = await manager.EditAsync(DocId, [AppendingSegments("b-2", "y")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.TooLarge, result.Status);
+    Assert.Empty(writer.Closes);
+    Assert.Equal(CollabEditStatus.Applied, next.Status);
+  }
+
   /// <summary>A JavaScript error repeats on every retry, so it stays the caller's 422.</summary>
   [Fact]
   public async Task AJavaScriptErrorReadingAnEditsHtmlStaysARefusal()

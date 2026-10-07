@@ -141,18 +141,19 @@ export const blockName = (type: string): string => {
 };
 
 const pageFields = (keys: string[]): string | null => {
-  const title = keys.includes('title');
-  const icon = keys.includes('icon');
+  const names = [
+    keys.includes('title') ? 'title' : null,
+    keys.includes('icon') ? 'icon' : null,
+    keys.some((key) => key.startsWith('values.')) ? 'data' : null,
+  ].filter((name): name is string => name !== null);
 
-  if (title && icon) {
-    return 'the page title and icon';
+  if (names.length === 0) {
+    return null;
   }
 
-  if (title || icon) {
-    return title ? 'the page title' : 'the page icon';
-  }
+  const last = names.pop();
 
-  return keys.length > 0 ? 'the page data' : null;
+  return `the page ${names.length > 0 ? `${names.join(', ')} and ${last}` : last}`;
 };
 
 /**
@@ -245,7 +246,7 @@ const element = <K extends keyof HTMLElementTagNameMap>(tag: K, className: strin
 
 /** The person's initial in a gray circle. */
 export const avatar = (name: string): HTMLElement => {
-  const face = element('span', 'pg-hp-avatar', (name.trim()[0] ?? '?').toUpperCase());
+  const face = element('span', 'pg-hp-avatar', ([...name.trim()][0] ?? '?').toUpperCase());
 
   face.setAttribute('aria-hidden', 'true');
 
@@ -312,21 +313,30 @@ export const mountVersionChanges = (host: HTMLElement, options: VersionChangesOp
   root.append(back, card, status, list);
   host.append(root);
 
-  const draw = (entries: ChangeEntry[], current: number | null): void => {
-    list.replaceChildren(...entries.map((entry) => {
-      const item = element('li', 'pg-hp-list__item');
+  const state = { destroyed: false };
+
+  const draw = (entries: ChangeEntry[]): void => {
+    const buttons = entries.map((entry) => {
       const button = element('button', 'pg-hp-entry');
       const line = element('span', 'pg-hp-entry__line');
 
       button.type = 'button';
       button.setAttribute('data-pg-change-entry', '');
-      button.setAttribute('aria-current', String(entry.sequence === current));
+      button.setAttribute('aria-current', 'false');
       line.append(element('strong', 'pg-hp-entry__who', entry.who), element('span', 'pg-hp-entry__what', ` edited ${entry.what}`));
       button.append(avatar(entry.who), line, element('span', 'pg-hp-entry__time', entry.time));
+      // Flip aria-current in place: rebuilding the buttons would drop keyboard focus.
       button.addEventListener('click', () => {
-        draw(entries, entry.sequence);
+        buttons.forEach((other) => other.setAttribute('aria-current', String(other === button)));
         options.onSelectRecord(entry.record, recordPaint(entry.record));
       });
+
+      return button;
+    });
+
+    list.replaceChildren(...buttons.map((button) => {
+      const item = element('li', 'pg-hp-list__item');
+
       item.append(button);
 
       return item;
@@ -334,6 +344,10 @@ export const mountVersionChanges = (host: HTMLElement, options: VersionChangesOp
   };
 
   const ready = options.load().then((changes) => {
+    if (state.destroyed) {
+      return;
+    }
+
     const entries = changeEntries(changes, { nameOf: options.nameOf, now: now() });
 
     if (entries.length === 0) {
@@ -341,14 +355,19 @@ export const mountVersionChanges = (host: HTMLElement, options: VersionChangesOp
     } else {
       status.textContent = changes.truncated ? 'Showing the newest 200 edits.' : '';
     }
-    draw(entries, null);
+    draw(entries);
   }, (error: unknown) => {
-    status.textContent = error instanceof Error ? error.message : 'Something went wrong.';
+    if (!state.destroyed) {
+      status.textContent = error instanceof Error ? error.message : 'Something went wrong.';
+    }
   });
 
   return {
     element: root,
     ready,
-    destroy: () => root.remove(),
+    destroy: () => {
+      state.destroyed = true;
+      root.remove();
+    },
   };
 };

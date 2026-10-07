@@ -199,3 +199,4 @@ html[data-pg-modality="keyboard"] .pg-hp-edited:focus-visible {
   outline: 2px solid var(--pghp-ink);
   outline-offset: 2px;
 }
+.pg-hp-update__note { margin: 0; padding: 0 8px; color: var(--pghp-muted); font-size: 12px; }

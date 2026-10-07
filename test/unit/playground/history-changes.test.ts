@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  avatar,
   changeEntries,
   changesUrl,
   describeRecord,
@@ -92,6 +93,7 @@ describe('describeRecord', () => {
     expect(describeRecord(record(1, { page: ['icon'] }))).toBe('the page icon');
     expect(describeRecord(record(1, { page: ['title', 'icon'] }))).toBe('the page title and icon');
     expect(describeRecord(record(1, { page: ['values.status'] }))).toBe('the page data');
+    expect(describeRecord(record(1, { page: ['title', 'values.k'] }))).toBe('the page title and data');
   });
 
   it('joins blocks and page fields', () => {
@@ -163,6 +165,12 @@ describe('recordPaint', () => {
 
   it('has nothing to paint for a record without blocks', () => {
     expect(recordPaint(record(1, { page: ['title'] }))).toBeNull();
+  });
+});
+
+describe('avatar', () => {
+  it('keeps a name that starts with an emoji whole', () => {
+    expect(avatar(' 😀 Anna').textContent).toBe('😀');
   });
 });
 
@@ -279,6 +287,68 @@ describe('mountVersionChanges', () => {
     await panel.ready;
 
     expect(host.querySelector('[data-pg-changes-status]')?.textContent).toBe('No edits recorded in this version.');
+  });
+
+  it('keeps focus on the picked entry', async () => {
+    const { panel } = mount(async () => changes);
+
+    await panel.ready;
+
+    const [first, second] = entries();
+
+    second.focus();
+    second.click();
+
+    expect(second).toHaveFocus();
+    expect(entries()[1]).toBe(second);
+    expect(first.getAttribute('aria-current')).toBe('false');
+    expect(second.getAttribute('aria-current')).toBe('true');
+  });
+
+  it('draws nothing when destroyed before the load answers', async () => {
+    const late: { resolve(value: VersionChanges): void } = { resolve: () => undefined };
+    const { panel } = mount(() => new Promise<VersionChanges>((resolve) => {
+      late.resolve = resolve;
+    }));
+    const element = panel.element;
+
+    panel.destroy();
+    late.resolve(changes);
+    await panel.ready;
+
+    expect(element.querySelectorAll('[data-pg-change-entry]')).toHaveLength(0);
+    expect(element.querySelector('[data-pg-changes-status]')?.textContent).toBe('Loading edits…');
+  });
+
+  it('reads the server record for a page-only edit', async () => {
+    const body = '{"changes":[{"sequence":7,"committedAt":1760000000000,"actor":null,"blocks":[],"page":["title","values.k"]}],"truncated":true}';
+    const { panel, onSelectRecord } = mount(() => fetchVersionChanges(async () => new Response(body), 'u'));
+
+    await panel.ready;
+
+    expect(entries()).toHaveLength(1);
+    expect(entries()[0].querySelector('.pg-hp-entry__line')?.textContent).toBe('Someone edited the page title and data');
+    expect(host.querySelector('[data-pg-changes-status]')?.textContent).toBe('Showing the newest 200 edits.');
+    entries()[0].click();
+    expect(onSelectRecord).toHaveBeenCalledWith(expect.objectContaining({ sequence: 7, page: ['title', 'values.k'] }), null);
+  });
+
+  it('renders an actor name as text, never as markup', async () => {
+    const evil = '<img src=x onerror=alert(1)>';
+    const panel = mountVersionChanges(host, {
+      version: { time: evil, who: evil },
+      load: async () => ({ changes: [record(1, { actor: evil })], truncated: false }),
+      nameOf: (actor) => actor ?? '',
+      now: () => NOW,
+      onBack: vi.fn(),
+      onSelectRecord: vi.fn(),
+    });
+
+    await panel.ready;
+
+    expect(host.querySelector('img')).toBeNull();
+    expect(entries()[0].textContent).toContain(evil);
+    expect(host.querySelector('[data-pg-changes-card]')?.textContent).toBe(evil + evil);
   });
 
   it('removes itself on destroy', async () => {

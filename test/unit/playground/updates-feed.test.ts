@@ -13,7 +13,7 @@ import {
   updateSources,
   wordDiff,
 } from '../../../src/playground/updates-feed';
-import type { UpdateItem } from '../../../src/playground/updates-feed';
+import type { UpdateItem, UpdatesLoad } from '../../../src/playground/updates-feed';
 import type { ChangeBlock, ChangeRecord } from '../../../src/playground/history-changes';
 
 const NOW = new Date(2026, 9, 7, 15, 0);
@@ -102,14 +102,41 @@ describe('loadUpdates', () => {
       return new Response(JSON.stringify({ changes: answers[key] ?? [] }));
     });
 
-    const items = await loadUpdates(request, 'http://s', 'doc', { versions: [version('L', 30), version('L', 20)] });
+    const { items, failed } = await loadUpdates(request, 'http://s', 'doc', { versions: [version('L', 30), version('L', 20)] });
 
+    expect(failed).toEqual([]);
     expect(request).toHaveBeenCalledWith('http://s/sync/doc/history/L/30/changes?since=20');
     expect(items.map((item) => [item.lineage, item.sequence, item.record.sequence])).toEqual([
       ['L', 30, 30],
       ['L', 30, 21],
       ['L', 20, 20],
     ]);
+  });
+});
+
+describe('loadUpdates failures and truncation', () => {
+  it('keeps the versions that loaded and names the one that failed', async () => {
+    const request = vi.fn(async (url: string) => {
+      if (url.includes('/20/')) {
+        throw new Error('Server down (500)');
+      }
+
+      return new Response('{"changes":[{"sequence":30,"committedAt":1,"actor":"a","blocks":[]}]}');
+    });
+
+    const result = await loadUpdates(request, 'http://s', 'doc', { versions: [version('L', 30, ago(MIN)), version('L', 20, ago(2 * 60 * MIN))] }, NOW);
+
+    expect(result.items.map((entry) => entry.record.sequence)).toEqual([30]);
+    expect(result.failed).toEqual(['Could not load the version from 2 hours ago: Server down (500)']);
+  });
+
+  it('flags the oldest record of a truncated version', async () => {
+    const body = '{"changes":[{"sequence":7,"committedAt":1760000000000,"actor":null,"blocks":[],"page":["title","values.k"]},'
+      + '{"sequence":8,"committedAt":1760000000001,"actor":null,"blocks":[]}],"truncated":true}';
+    const result = await loadUpdates(async () => new Response(body), 'http://s', 'doc', { versions: [version('L', 8)] });
+
+    expect(result.items.map((entry) => [entry.record.sequence, entry.truncated])).toEqual([[8, false], [7, true]]);
+    expect(result.items[1].record).toEqual({ sequence: 7, committedAt: 1760000000000, actor: null, blocks: [], page: ['title', 'values.k'] });
   });
 });
 
@@ -157,6 +184,16 @@ describe('blockSnippet', () => {
     });
   });
 
+  it('reads the server’s rich-text segments', () => {
+    const before = { id: 'a', type: 'paragraph', data: { text: [{ text: 'one' }] } };
+    const after = { id: 'a', type: 'paragraph', data: { text: [{ text: 'two' }] } };
+
+    expect(blockSnippet(change('changed', { before, after }), blocksToPlainText).parts).toEqual([
+      { text: 'one', kind: 'removed' },
+      { text: 'two', kind: 'added' },
+    ]);
+  });
+
   it('shows an added block as added and a removed one struck', () => {
     expect(blockSnippet(change('added', { after: p('b', 'new') }), blocksToPlainText).parts).toEqual([{ text: 'new', kind: 'added' }]);
     expect(blockSnippet(change('removed', { before: p('b', 'gone') }), blocksToPlainText).parts).toEqual([{ text: 'gone', kind: 'removed' }]);
@@ -178,11 +215,14 @@ describe('blockSnippet', () => {
   });
 });
 
-const item = (sequence: number, blocks: ChangeBlock[], actor: string | null = 'playground-anna'): UpdateItem => ({
+const item = (sequence: number, blocks: ChangeBlock[], actor: string | null = 'playground-anna', truncated = false): UpdateItem => ({
   lineage: 'L',
   sequence: 30,
+  truncated,
   record: { sequence, committedAt: ago(3 * 60 * MIN), actor, blocks },
 });
+
+const loaded = (items: UpdateItem[], failed: string[] = []): UpdatesLoad => ({ items, failed });
 
 const changed = (id: string, before: string, after: string): ChangeBlock =>
   ({ id, type: 'paragraph', kind: 'changed', before: p(id, before), after: p(id, after) });
@@ -229,7 +269,7 @@ describe('mountUpdatesFeed', () => {
     item(6, [{ id: 'gone', type: 'paragraph', kind: 'removed', before: p('gone', 'bye') }]),
   ];
 
-  const mount = (load: () => Promise<UpdateItem[]>) => {
+  const mount = (load: () => Promise<UpdatesLoad>) => {
     const onOpenVersion = vi.fn();
     const onScrollToBlock = vi.fn();
     const feed = mountUpdatesFeed(host, {
@@ -248,7 +288,7 @@ describe('mountUpdatesFeed', () => {
   const cards = (): HTMLElement[] => [...host.querySelectorAll<HTMLElement>('[data-pg-update]')];
 
   it('draws a card per record with avatar, line and time', async () => {
-    const { feed } = mount(async () => items);
+    const { feed } = mount(async () => loaded(items));
 
     await feed.ready;
 
@@ -259,7 +299,7 @@ describe('mountUpdatesFeed', () => {
   });
 
   it('opens the record’s version from the History icon button', async () => {
-    const { feed, onOpenVersion } = mount(async () => items);
+    const { feed, onOpenVersion } = mount(async () => loaded(items));
 
     await feed.ready;
 
@@ -276,7 +316,7 @@ describe('mountUpdatesFeed', () => {
   });
 
   it('shows the word diff and scrolls the editor to the block', async () => {
-    const { feed, onScrollToBlock } = mount(async () => items);
+    const { feed, onScrollToBlock } = mount(async () => loaded(items));
 
     await feed.ready;
 
@@ -289,7 +329,7 @@ describe('mountUpdatesFeed', () => {
   });
 
   it('does not offer to scroll to a removed block', async () => {
-    const { feed } = mount(async () => items);
+    const { feed } = mount(async () => loaded(items));
 
     await feed.ready;
 
@@ -300,7 +340,7 @@ describe('mountUpdatesFeed', () => {
   });
 
   it('shows four snippets and reveals the rest with View N more', async () => {
-    const { feed } = mount(async () => items);
+    const { feed } = mount(async () => loaded(items));
 
     await feed.ready;
 
@@ -309,13 +349,61 @@ describe('mountUpdatesFeed', () => {
 
     expect(card.querySelectorAll('[data-pg-update-snippet]')).toHaveLength(4);
     expect(more?.textContent).toBe('View 2 more');
+    more?.focus();
     more?.click();
     expect(card.querySelectorAll('[data-pg-update-snippet]')).toHaveLength(6);
     expect(card.querySelector('[data-pg-update-more]')).toBeNull();
+    expect(card.querySelectorAll('[data-pg-update-snippet]')[4]).toHaveFocus();
+  });
+
+  it('moves focus to a removed snippet too when it is the first one revealed', async () => {
+    const gone = (id: string): ChangeBlock => ({ id, type: 'paragraph', kind: 'removed', before: p(id, id) });
+    const { feed } = mount(async () => loaded([item(9, ['a', 'b', 'c', 'd', 'e'].map(gone))]));
+
+    await feed.ready;
+    cards()[0].querySelector<HTMLButtonElement>('[data-pg-update-more]')?.click();
+
+    expect(document.activeElement?.textContent).toBe('e');
+  });
+
+  it('notes a truncated version on its oldest card', async () => {
+    const { feed } = mount(async () => loaded([item(9, []), item(8, [], null, true)]));
+
+    await feed.ready;
+
+    expect(cards()[0].querySelector('[data-pg-update-note]')).toBeNull();
+    expect(cards()[1].querySelector('[data-pg-update-note]')?.textContent).toBe('Showing the newest 200 edits.');
+  });
+
+  it('shows the cards that loaded and a line for a version that failed', async () => {
+    const { feed } = mount(async () => loaded(items.slice(0, 1), ['Could not load the version from 2 hours ago: Nope (500)']));
+
+    await feed.ready;
+
+    expect(cards()).toHaveLength(1);
+    expect(host.querySelector('[data-pg-updates-status]')?.textContent).toBe('Could not load the version from 2 hours ago: Nope (500)');
+  });
+
+  it('renders names and the page title as text, never as markup', async () => {
+    const evil = '<img src=x onerror=alert(1)>';
+    const feed = mountUpdatesFeed(host, {
+      load: async () => loaded([item(1, [changed('a', evil, `${evil} x`)], evil)]),
+      nameOf: (actor) => actor ?? '',
+      pageTitle: () => evil,
+      plainText: blocksToPlainText,
+      now: () => NOW,
+      onOpenVersion: vi.fn(),
+      onScrollToBlock: vi.fn(),
+    });
+
+    await feed.ready;
+
+    expect(host.querySelectorAll('img')).toHaveLength(0);
+    expect(cards()[0].querySelector('[data-pg-update-line]')?.textContent).toBe(`${evil} edited ${evil}`);
   });
 
   it('says when there are no updates, and shows load errors', async () => {
-    const empty = mount(async () => []);
+    const empty = mount(async () => loaded([]));
 
     await empty.feed.ready;
     expect(host.querySelector('[data-pg-updates-status]')?.textContent).toBe('No updates yet.');
@@ -330,7 +418,7 @@ describe('mountUpdatesFeed', () => {
   });
 
   it('loads again on reload', async () => {
-    const load = vi.fn(async () => items.slice(0, 1));
+    const load = vi.fn(async () => loaded(items.slice(0, 1)));
     const { feed } = mount(load);
 
     await feed.ready;
@@ -341,17 +429,17 @@ describe('mountUpdatesFeed', () => {
   });
 
   it('keeps the newer load when an older one answers late', async () => {
-    const slow: { resolve(value: UpdateItem[]): void } = { resolve: () => undefined };
-    const late = new Promise<UpdateItem[]>((resolve) => {
+    const slow: { resolve(value: UpdatesLoad): void } = { resolve: () => undefined };
+    const late = new Promise<UpdatesLoad>((resolve) => {
       slow.resolve = resolve;
     });
     const load = vi.fn()
       .mockImplementationOnce(() => late)
-      .mockImplementationOnce(async () => items.slice(0, 1));
+      .mockImplementationOnce(async () => loaded(items.slice(0, 1)));
     const { feed } = mount(load);
 
     await feed.reload();
-    slow.resolve(items);
+    slow.resolve(loaded(items));
     await feed.ready;
 
     expect(cards()).toHaveLength(1);

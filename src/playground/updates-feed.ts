@@ -26,7 +26,15 @@ export interface UpdateSource {
 export interface UpdateItem {
   lineage: string;
   sequence: number;
+  /** Set on the oldest record of a version the server cut to its newest 200. */
+  truncated: boolean;
   record: ChangeRecord;
+}
+
+/** What {@link loadUpdates} answers: the records that loaded, and one line per version that did not. */
+export interface UpdatesLoad {
+  items: UpdateItem[];
+  failed: string[];
 }
 
 export interface DiffPart {
@@ -51,6 +59,7 @@ export interface UpdateCard {
   snippets: BlockSnippet[];
   /** How many snippets show before "View N more". */
   shown: number;
+  truncated: boolean;
 }
 
 /** `blocksToPlainText` from `@bloklabs/core/view`, handed in: the view-entry law keeps src/view out of this module. */
@@ -132,28 +141,58 @@ export const updateSources = (list: VersionListLike): UpdateSource[] =>
     .filter((source) => source.sequence > 0);
 
 /**
- * Every record of the newest versions, newest first.
+ * Every record of the newest versions, newest first. A version that fails to
+ * load leaves the others in place.
  * @param request - sends the drawer's authorised request
  * @param server - the sync server's base URL
  * @param doc - the document
- * @param list - the drawer's history list
+ * @param list - the drawer's history list from a time grouping (not Bookmarks: `since` is the row below)
+ * @param now - the clock, for naming a failed version
  */
 export const loadUpdates = async (
   request: HistoryRequest,
   server: string,
   doc: string,
-  list: VersionListLike
-): Promise<UpdateItem[]> => {
+  list: VersionListLike,
+  now: Date = new Date()
+): Promise<UpdatesLoad> => {
   const sources = updateSources(list);
-  const answers = await Promise.all(sources.map((source) =>
+  const answers = await Promise.allSettled(sources.map((source) =>
     fetchVersionChanges(request, changesUrl(server, doc, source.lineage, source.sequence, source.since))));
 
   // Server order, not committedAt: clocks across lineages need not agree.
-  return sources.flatMap((source, index) => [...answers[index].changes].reverse().map((record) => ({
-    lineage: source.lineage,
-    sequence: source.sequence,
-    record,
-  })));
+  const items = sources.flatMap((source, index) => {
+    const answer = answers[index];
+
+    if (answer.status === 'rejected') {
+      return [];
+    }
+
+    const records = [...answer.value.changes].reverse();
+
+    return records.map((record, at) => ({
+      lineage: source.lineage,
+      sequence: source.sequence,
+      truncated: answer.value.truncated && at === records.length - 1,
+      record,
+    }));
+  });
+  const failed = sources.flatMap((source, index) => {
+    const answer = answers[index];
+
+    if (answer.status === 'fulfilled') {
+      return [];
+    }
+
+    const version = list.versions.find((candidate) => candidate.lineage === source.lineage && candidate.sequence === source.sequence);
+    const at = version?.savedAt ?? version?.startedAt ?? null;
+    const which = at === null ? 'one version' : `the version from ${relativeTime(at, now)}`;
+    const reason = answer.reason instanceof Error ? answer.reason.message : 'Something went wrong.';
+
+    return [`Could not load ${which}: ${reason}`];
+  });
+
+  return { items, failed };
 };
 
 const pushPart = (parts: DiffPart[], text: string, kind: DiffPart['kind']): void => {
@@ -246,7 +285,7 @@ export const blockSnippet = (block: ChangeBlock, plainText: PlainText): BlockSni
 export const updateCards = (
   items: UpdateItem[],
   options: { nameOf(actor: string | null): string; now: Date; pageTitle: string; plainText: PlainText }
-): UpdateCard[] => items.map(({ lineage, sequence, record }) => {
+): UpdateCard[] => items.map(({ lineage, sequence, truncated, record }) => {
   const snippets = record.blocks.map((block) => blockSnippet(block, options.plainText));
 
   return {
@@ -257,6 +296,7 @@ export const updateCards = (
     version: { lineage, sequence },
     snippets,
     shown: Math.min(SNIPPETS_SHOWN, snippets.length),
+    truncated,
   };
 });
 
@@ -281,6 +321,9 @@ const snippetNode = (snippet: BlockSnippet, onScrollToBlock: (id: string) => voi
   if (node instanceof HTMLButtonElement) {
     node.type = 'button';
     node.addEventListener('click', () => onScrollToBlock(snippet.id));
+  } else {
+    // "View N more" may hand focus to it.
+    node.tabIndex = -1;
   }
 
   if (snippet.label !== undefined) {
@@ -302,7 +345,7 @@ const snippetNode = (snippet: BlockSnippet, onScrollToBlock: (id: string) => voi
 
 export interface UpdatesFeedOptions {
   /** Usually `loadUpdates(request, server, doc, list)`. */
-  load(): Promise<UpdateItem[]>;
+  load(): Promise<UpdatesLoad>;
   nameOf(actor: string | null): string;
   pageTitle(): string;
   plainText: PlainText;
@@ -356,23 +399,32 @@ export const mountUpdatesFeed = (host: HTMLElement, options: UpdatesFeedOptions)
     open.innerHTML = IconRotateLeft;
     open.addEventListener('click', () => options.onOpenVersion(card.version.lineage, card.version.sequence));
 
-    const drawSnippets = (count: number): void => {
-      snippets.replaceChildren(...card.snippets.slice(0, count).map((snippet) => snippetNode(snippet, options.onScrollToBlock)));
+    snippets.append(...card.snippets.slice(0, card.shown).map((snippet) => snippetNode(snippet, options.onScrollToBlock)));
 
-      if (count < card.snippets.length) {
-        const more = element('button', 'pg-hp-more', `View ${card.snippets.length - count} more`);
+    if (card.shown < card.snippets.length) {
+      const more = element('button', 'pg-hp-more', `View ${card.snippets.length - card.shown} more`);
 
-        more.type = 'button';
-        more.setAttribute('data-pg-update-more', '');
-        more.addEventListener('click', () => drawSnippets(card.snippets.length));
-        snippets.append(more);
-      }
-    };
+      more.type = 'button';
+      more.setAttribute('data-pg-update-more', '');
+      more.addEventListener('click', () => {
+        const rest = card.snippets.slice(card.shown).map((snippet) => snippetNode(snippet, options.onScrollToBlock));
 
-    drawSnippets(card.shown);
+        // The button goes away, so focus moves to what it revealed.
+        more.replaceWith(...rest);
+        rest[0].focus();
+      });
+      snippets.append(more);
+    }
+
+    if (card.truncated) {
+      const note = element('p', 'pg-hp-update__note', 'Showing the newest 200 edits.');
+
+      note.setAttribute('data-pg-update-note', '');
+      snippets.append(note);
+    }
     node.append(avatar(card.who), line, open, time);
 
-    if (card.snippets.length > 0) {
+    if (snippets.childElementCount > 0) {
       node.append(snippets);
     }
 
@@ -385,7 +437,7 @@ export const mountUpdatesFeed = (host: HTMLElement, options: UpdatesFeedOptions)
     status.textContent = 'Loading updates…';
 
     try {
-      const items = await options.load();
+      const { items, failed } = await options.load();
 
       if (current !== state.request) {
         return;
@@ -393,7 +445,9 @@ export const mountUpdatesFeed = (host: HTMLElement, options: UpdatesFeedOptions)
 
       const cards = updateCards(items, { nameOf: options.nameOf, now: now(), pageTitle: options.pageTitle(), plainText: options.plainText });
 
-      status.textContent = cards.length === 0 ? 'No updates yet.' : '';
+      const empty = cards.length === 0 ? 'No updates yet.' : '';
+
+      status.textContent = failed.length > 0 ? failed.join(' ') : empty;
       list.replaceChildren(...cards.map(drawCard));
     } catch (error) {
       if (current === state.request) {

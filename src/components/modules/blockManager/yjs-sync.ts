@@ -3,7 +3,7 @@
  * @classdesc Handles Yjs synchronization for blocks
  * @module BlockYjsSync
  */
-import { Array as YArray, Map as YMap } from 'yjs';
+import { Array as YArray, Map as YMap, XmlText as YXmlText } from 'yjs';
 
 import type { BlockToolData, SanitizerConfig } from '../../../../types';
 import { BlockToolAPI } from '../../block';
@@ -589,7 +589,9 @@ export class BlockYjsSync {
       return;
     }
 
-    if (saved !== undefined && equals(saved.data, appliedFromDocument)) {
+    const ydata = this.dependencies.YjsManager.getBlockById(block.id)?.get('data');
+
+    if (saved !== undefined && this.holdsSameContent(ydata, appliedFromDocument, saved.data)) {
       return;
     }
 
@@ -1284,7 +1286,7 @@ export class BlockYjsSync {
     // this ran. Stale it can only be when the user has typed since the last
     // save, and then skipping is what you want anyway: the local text is
     // newer than the doc, and its own write is already on its way.
-    if (equals(data, block.preservedData)) {
+    if (this.holdsSameContent(record.data, data, block.preservedData)) {
       // A container whose children moved in the doc while its own data did
       // not — a peer adding or removing a child block produces exactly that.
       // The only path that re-homes those children is `rematerialize`, which
@@ -1335,6 +1337,49 @@ export class BlockYjsSync {
         });
       }
     }, { extendThroughRAF: true, blockId });
+  }
+
+  /**
+   * Whether `shown` already holds `data`. A rich field (a `Y.XmlText` in the
+   * doc) is compared as canonical segments: readers spell it as canonical HTML
+   * while a saved block keeps the tool's spelling (`<b>`), and a string compare
+   * would rewrite the DOM, and lose the caret, for every peer change and every
+   * yjs format cleanup.
+   * @param ydata - the block's data map in the doc, which decides the rich keys
+   * @param data - the doc's data as this client reads it
+   * @param shown - what the block holds
+   */
+  private holdsSameContent(ydata: unknown, data: BlockToolData, shown: BlockToolData | undefined): boolean {
+    if (!(ydata instanceof YMap) || shown === undefined) {
+      return equals(data, shown);
+    }
+
+    const keys = new Set([...Object.keys(data), ...Object.keys(shown)]);
+    const richKeys = [...keys].filter((key) => ydata.get(key) instanceof YXmlText);
+
+    if (richKeys.length === 0) {
+      return equals(data, shown);
+    }
+
+    const withoutRich = (record: BlockToolData): BlockToolData =>
+      Object.fromEntries(Object.entries(record).filter(([key]) => !richKeys.includes(key)));
+
+    if (!equals(withoutRich(data), withoutRich(shown))) {
+      return false;
+    }
+
+    return richKeys.every((key) => {
+      if ((key in data) !== (key in shown)) {
+        return false;
+      }
+
+      const mine = this.dependencies.YjsManager.richSegmentsOf(shown[key]);
+      const theirs = this.dependencies.YjsManager.richSegmentsOf(data[key]);
+
+      return mine === null || theirs === null
+        ? equals(data[key], shown[key])
+        : equals(mine, theirs);
+    });
   }
 
   /**

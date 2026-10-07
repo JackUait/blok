@@ -1,12 +1,8 @@
 /**
  * A peer's update re-renders a block only when the block's rich text really
- * changed.
- *
- * Readers hand rich fields back as canonical HTML (`<strong>`), while a block
- * that saved its own DOM holds the tool's spelling (`<b>`). Compared as
- * strings, every peer change to the block's record — and every yjs
- * format-cleanup transaction — looked like new content, so the reconciler
- * rewrote the DOM and threw the local caret away for nothing.
+ * changed. Readers spell rich fields as canonical HTML (`<strong>`) while a
+ * saved block keeps the tool's spelling (`<b>`), so the reconciler must
+ * compare rich fields as segments, never as strings.
  *
  * Real Core with real tools; the peer is a second DocumentStore whose updates
  * arrive through `YjsManager.applyRemoteUpdate`, the provider's entry point.
@@ -387,6 +383,44 @@ describe('reconciling a peer update into a rich text block', () => {
       .map((detail) => detail.origin);
 
     expect(origins).toEqual(['remote']);
+  }, 30_000);
+
+  it('does not rewrite a block holding an equation and a page mention when a peer touches it', async () => {
+    const { core, peer, deliver } = await boot(
+      { paragraph: { class: Paragraph } },
+      [{
+        id: 'b1',
+        type: 'paragraph',
+        data: {
+          text: [
+            { text: 'x ' },
+            { embed: { equation: { expression: 'a^2' } } },
+            { text: ' y ' },
+            { embed: { page: { id: 'p1' } } },
+            { text: ' z' },
+          ],
+        },
+      }]
+    );
+    const block = blockById(core, 'b1');
+
+    block.pluginsContent.setAttribute('contenteditable', 'true');
+    await block.save();
+    peer.applyRemoteUpdate(core.moduleInstances.YjsManager.encodeStateAsUpdate(peer.getStateVector()));
+
+    const setData = setDataSpy(block);
+
+    peer.updateBlockMetadata('b1', Date.now(), 'someone-else');
+    deliver();
+    await settle();
+
+    expect(setData).not.toHaveBeenCalled();
+    // The premise: both embeds survived into what the block holds.
+    expect(block.preservedData.text).toContain('data-latex="a^2"');
+    expect(block.preservedData.text).toContain('data-blok-page-id="p1"');
+    expect(core.moduleInstances.YjsManager.richSegmentsOf(block.preservedData.text)).toEqual(
+      core.moduleInstances.YjsManager.richSegmentsOf(core.moduleInstances.YjsManager.getBlockDataObject('b1')?.text)
+    );
   }, 30_000);
 
   it('keeps the local caret when a peer types later in the same block', async () => {

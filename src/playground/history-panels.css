@@ -1,0 +1,201 @@
+/*
+  Version history panels: the per-version edits list (history-changes.ts),
+  the Updates feed and the "Edited …" header link (updates-feed.ts).
+  Playground chrome outside every Blok root, so plain values. The header link
+  sits outside the drawer, where the drawer's --pgh-* tokens are not set, so
+  these panels declare their own. Dark mode is the body's .dark-mode class.
+*/
+.pg-hp-changes,
+.pg-hp-feed,
+.pg-hp-edited,
+.pg-hp-note {
+  --pghp-bg: #ffffff;
+  --pghp-ink: #222222;
+  --pghp-muted: #717171;
+  --pghp-line: #ebebeb;
+  --pghp-hover: #f7f7f7;
+  --pghp-avatar: #ebebeb;
+  --pghp-added-bg: #e6f4ea;
+  --pghp-removed-ink: #b3261e;
+  --pghp-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+.dark-mode .pg-hp-changes,
+.dark-mode .pg-hp-feed,
+.dark-mode .pg-hp-edited,
+.dark-mode .pg-hp-note {
+  --pghp-bg: #191919;
+  --pghp-ink: #ececec;
+  --pghp-muted: #a8a8a8;
+  --pghp-line: #2f2f2f;
+  --pghp-hover: #232323;
+  --pghp-avatar: #3d3d3d;
+  --pghp-added-bg: #16301f;
+  --pghp-removed-ink: #f2918a;
+  --pghp-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.pg-hp-changes,
+.pg-hp-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+  color: var(--pghp-ink);
+  font-family: var(--pg-font);
+}
+/* :where keeps the reset below every class rule. */
+:where(.pg-hp-changes, .pg-hp-feed) button,
+.pg-hp-edited {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pg-hp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pg-hp-back:hover { background: var(--pghp-hover); }
+.pg-hp-back__icon { display: inline-flex; }
+.pg-hp-back__icon svg { width: 16px; height: 16px; }
+
+.pg-hp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--pghp-line);
+  border-radius: 10px;
+}
+.pg-hp-card__time { font-size: 14px; font-weight: 600; }
+.pg-hp-card__who { color: var(--pghp-muted); font-size: 12px; }
+
+.pg-hp-status { margin: 0; padding: 0 10px; color: var(--pghp-muted); font-size: 13px; }
+.pg-hp-status:empty { display: none; }
+
+.pg-hp-list { margin: 0; padding: 0; list-style: none; }
+.pg-hp-avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pghp-avatar);
+  color: var(--pghp-ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* A picked entry is a gray card, never blue. */
+.pg-hp-entry {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  text-align: start;
+}
+.pg-hp-entry:hover { background: var(--pghp-hover); }
+.pg-hp-entry[aria-current="true"] { border-color: var(--pghp-line); background: var(--pghp-hover); }
+.pg-hp-entry__line { font-size: 13px; }
+.pg-hp-entry__what { color: var(--pghp-muted); }
+.pg-hp-entry__time { grid-column: 2; color: var(--pghp-muted); font-size: 12px; }
+
+.pg-hp-note {
+  position: absolute;
+  inset-block-start: 40px;
+  inset-inline: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(320px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 16px 20px;
+  border: 1px solid var(--pghp-line);
+  border-radius: 12px;
+  background: var(--pghp-bg);
+  box-shadow: var(--pghp-shadow);
+  color: var(--pghp-ink);
+  font-family: var(--pg-font);
+}
+.pg-hp-note__title { font-size: 15px; }
+.pg-hp-note__text { color: var(--pghp-muted); font-size: 13px; }
+
+/* Updates feed. */
+.pg-hp-update {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 2px 8px;
+  padding: 12px 10px;
+  border-block-end: 1px solid var(--pghp-line);
+}
+.pg-hp-update__line { font-size: 13px; }
+.pg-hp-update__what { color: var(--pghp-muted); }
+.pg-hp-update__time { grid-column: 2; color: var(--pghp-muted); font-size: 12px; }
+.pg-hp-update__open {
+  grid-row: 1;
+  grid-column: 3;
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--pghp-muted);
+}
+.pg-hp-update__open:hover { background: var(--pghp-hover); color: var(--pghp-ink); }
+.pg-hp-update__open svg { width: 16px; height: 16px; }
+.pg-hp-update__snippets { grid-column: 2 / 4; display: flex; flex-direction: column; gap: 4px; margin-block-start: 6px; }
+.pg-hp-snippet {
+  display: block;
+  width: 100%;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+button.pg-hp-snippet:hover { background: var(--pghp-hover); }
+.pg-hp-snippet__label { color: var(--pghp-muted); font-style: italic; }
+.pg-hp-diff--added { background: var(--pghp-added-bg); border-radius: 3px; }
+.pg-hp-diff--removed { color: var(--pghp-removed-ink); text-decoration: line-through; }
+.pg-hp-more {
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--pghp-muted);
+  font-size: 12px;
+}
+.pg-hp-more:hover { background: var(--pghp-hover); }
+
+/* The header link, beside the History button. */
+.pg-hp-edited {
+  margin-inline-start: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: var(--pghp-muted);
+  font-family: var(--pg-font);
+  font-size: 13px;
+}
+.pg-hp-edited[hidden] { display: none; }
+.pg-hp-edited:hover { color: var(--pghp-ink); text-decoration: underline; }
+
+html[data-pg-modality="keyboard"] .pg-hp-back:focus-visible,
+html[data-pg-modality="keyboard"] .pg-hp-entry:focus-visible,
+html[data-pg-modality="keyboard"] .pg-hp-update__open:focus-visible,
+html[data-pg-modality="keyboard"] .pg-hp-snippet:focus-visible,
+html[data-pg-modality="keyboard"] .pg-hp-more:focus-visible,
+html[data-pg-modality="keyboard"] .pg-hp-edited:focus-visible {
+  outline: 2px solid var(--pghp-ink);
+  outline-offset: 2px;
+}

@@ -48,6 +48,10 @@ const STANDALONE_CSS_ENTRIES = [
     file: 'src/playground/history-drawer.css',
     reason: 'Dev-page history drawer styles, imported by src/playground/history-drawer.ts alone — never reachable from main.css.',
   },
+  {
+    file: 'src/playground/history-panels.css',
+    reason: 'Dev-page history edits list and Updates feed styles, imported by src/playground/history-changes.ts and updates-feed.ts alone — never reachable from main.css.',
+  },
 ];
 
 /** Every local .css file main.css pulls in, transitively. */

@@ -11,19 +11,28 @@ namespace Blok.Server.AspNetCore;
 /// <summary>Maps the Blok server's HTTP and WebSocket routes into an application.</summary>
 public static class BlokServerEndpointRouteBuilderExtensions
 {
-  private static readonly Action<ILogger, string, string, string, string, Exception?> LogOpenSyncRoutes =
-      LoggerMessage.Define<string, string, string, string>(
+  private static readonly (string Method, string Pattern)[] HistoryRoutes =
+  [
+    ("GET", "/sync/{doc}/history"),
+    ("GET", "/sync/{doc}/history/{lineage}/{sequence}"),
+    ("DELETE", "/sync/{doc}/history/{lineage}"),
+    ("POST", "/sync/{doc}/history/{lineage}/{sequence}/restore"),
+  ];
+
+  // One {Routes} argument: LoggerMessage.Define takes at most six.
+  private static readonly Action<ILogger, string, Exception?> LogOpenSyncRoutes =
+      LoggerMessage.Define<string>(
           LogLevel.Warning,
           new EventId(2, "CollabOpen"),
-          "collab: no IBlokAuthorization is registered and Auth is \"none\", so {Sync}, {Reset}, {Edit} and {State} " +
+          "collab: no IBlokAuthorization is registered and Auth is \"none\", so {Routes} " +
           "are open to anyone who can reach this app unless the mapped group has RequireAuthorization(); " +
           "register a hook with AddBlokServer(...).UseAuthorization<T>() or set Auth to \"ticket\"");
 
   /// <summary>
   /// Maps <c>/health</c> plus whatever the options switch on: the upload
   /// routes when storage is configured, the unfurl routes unless they are
-  /// closed, and <c>/sync/{doc}</c> with its reset, edit and state routes when
-  /// collaboration is on.
+  /// closed, and <c>/sync/{doc}</c> with its reset, edit, state and history
+  /// routes when collaboration is on.
   /// </summary>
   /// <remarks>
   /// Everything the group does not claim answers 404, so the group must not be
@@ -96,6 +105,11 @@ public static class BlokServerEndpointRouteBuilderExtensions
       MapShell(routes, "/sync/{doc}/edit", "POST");
       MapShell(routes, "/sync/{doc}/state", "GET");
 
+      foreach (var (method, history) in HistoryRoutes)
+      {
+        MapShell(routes, history, method);
+      }
+
       if (options.Auth == "none" &&
           endpoints.ServiceProvider.GetService<IBlokAuthorization>() is null)
       {
@@ -123,13 +137,16 @@ public static class BlokServerEndpointRouteBuilderExtensions
       return;
     }
 
-    LogOpenSyncRoutes(
-        logger,
-        $"GET {pattern}/sync/{{doc}}",
-        $"POST {pattern}/sync/{{doc}}/reset",
-        $"POST {pattern}/sync/{{doc}}/edit",
-        $"GET {pattern}/sync/{{doc}}/state",
-        null);
+    string[] open =
+    [
+      $"GET {pattern}/sync/{{doc}}",
+      $"POST {pattern}/sync/{{doc}}/reset",
+      $"POST {pattern}/sync/{{doc}}/edit",
+      $"GET {pattern}/sync/{{doc}}/state",
+      .. HistoryRoutes.Select(route => $"{route.Method} {pattern}{route.Pattern}"),
+    ];
+
+    LogOpenSyncRoutes(logger, string.Join(", ", open), null);
   }
 
   private static void MapShell(RouteGroupBuilder routes, string pattern, string method)
@@ -142,20 +159,28 @@ public static class BlokServerEndpointRouteBuilderExtensions
       "/delete" => DeleteEndpoint.HandleAsync,
       "/sync/{doc}/reset" => ResetEndpoint.HandleAsync,
       "/sync/{doc}/edit" => EditEndpoint.HandleAsync,
+      "/sync/{doc}/history" => HistoryEndpoint.ListAsync,
+      "/sync/{doc}/history/{lineage}/{sequence}" => HistoryEndpoint.ReadAsync,
+      "/sync/{doc}/history/{lineage}" => HistoryEndpoint.DeleteAsync,
+      "/sync/{doc}/history/{lineage}/{sequence}/restore" => HistoryEndpoint.RestoreAsync,
       _ => UploadByUrlEndpoint.HandleAsync,
     };
 
-    routes.MapMethods(pattern, [method], Guard(handler, method == "POST"));
+    routes.MapMethods(pattern, [method], Guard(handler, method != "GET"));
     routes.MapMethods(
         pattern,
         ["OPTIONS"],
         context => HandlePreflight(context, method))
         .AllowAnonymous();
 
-    // /state maps GET only, so it must not advertise HEAD.
-    var allowedMethods = method != "GET"
-      ? "OPTIONS, POST"
-      : pattern == "/sync/{doc}/state" ? "GET, OPTIONS" : "GET, HEAD, OPTIONS";
+    // The sync GET routes map GET only, so they must not advertise HEAD.
+    var allowedMethods = method switch
+    {
+      "POST" => "OPTIONS, POST",
+      "GET" when pattern.StartsWith("/sync/", StringComparison.Ordinal) => "GET, OPTIONS",
+      "GET" => "GET, HEAD, OPTIONS",
+      _ => $"{method}, OPTIONS",
+    };
     routes.Map(pattern, context => HandleMethodNotAllowed(context, allowedMethods)).WithOrder(1);
   }
 

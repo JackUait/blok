@@ -19,7 +19,7 @@ namespace Blok.Server.AspNetCore.Collab;
 /// </summary>
 internal static class EditEndpoint
 {
-  private const string IdempotencyKeyHeader = "Blok-Idempotency-Key";
+  internal const string IdempotencyKeyHeader = "Blok-Idempotency-Key";
   private const string LineageHeader = "Blok-Doc-Lineage";
   private const string SequenceHeader = "Blok-Doc-Sequence";
 
@@ -130,6 +130,12 @@ internal static class EditEndpoint
         expect,
         context.RequestAborted);
 
+    await WriteResultAsync(context, result, rooms.RetryAfter);
+  }
+
+  /// <summary>Answers one edit's outcome; a restore is an edit and answers the same way.</summary>
+  internal static async Task WriteResultAsync(HttpContext context, CollabEditResult result, TimeSpan retryAfter)
+  {
     switch (result.Status)
     {
       case CollabEditStatus.Applied:
@@ -182,7 +188,7 @@ internal static class EditEndpoint
       case CollabEditStatus.Overloaded:
         await SyncEndpoint.RefuseRetryLaterAsync(
             context,
-            rooms.RetryAfter,
+            retryAfter,
             "the server ran past its limits reading this edit's rich text, retry\n");
 
         return;
@@ -230,22 +236,30 @@ internal static class EditEndpoint
     // A browser hides non-safelisted headers from a cross-origin page unless
     // they are exposed; without this it cannot build If-Match or read a 412.
     // Merged, not replaced: the host's own CORS layer may have exposed others.
-    if (context.Response.Headers.ContainsKey(HeaderNames.AccessControlAllowOrigin))
+    Expose(context, LineageHeader, SequenceHeader, HeaderNames.ETag);
+  }
+
+  /// <summary>Adds names to Access-Control-Expose-Headers on a CORS response, keeping any already there.</summary>
+  internal static void Expose(HttpContext context, params string[] names)
+  {
+    if (!context.Response.Headers.ContainsKey(HeaderNames.AccessControlAllowOrigin))
     {
-      var exposed = context.Response.Headers.AccessControlExposeHeaders
-          .SelectMany(value => (value ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-          .ToList();
-
-      foreach (var name in new[] { LineageHeader, SequenceHeader, HeaderNames.ETag })
-      {
-        if (!exposed.Contains(name, StringComparer.OrdinalIgnoreCase))
-        {
-          exposed.Add(name);
-        }
-      }
-
-      context.Response.Headers.AccessControlExposeHeaders = string.Join(", ", exposed);
+      return;
     }
+
+    var exposed = context.Response.Headers.AccessControlExposeHeaders
+        .SelectMany(value => (value ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        .ToList();
+
+    foreach (var name in names)
+    {
+      if (!exposed.Contains(name, StringComparer.OrdinalIgnoreCase))
+      {
+        exposed.Add(name);
+      }
+    }
+
+    context.Response.Headers.AccessControlExposeHeaders = string.Join(", ", exposed);
   }
 
   /// <summary>The strong entity tag for one journal head: <c>"&lt;lineage&gt;:&lt;sequence&gt;"</c>.</summary>
@@ -259,7 +273,7 @@ internal static class EditEndpoint
   /// <c>*</c> or a weak tag is refused rather than half-read: a caller that
   /// meant a guard must not get an unguarded write.
   /// </summary>
-  private static bool TryParseEntityTag(StringValues values, out CollabEditPrecondition? expect)
+  internal static bool TryParseEntityTag(StringValues values, out CollabEditPrecondition? expect)
   {
     expect = null;
 

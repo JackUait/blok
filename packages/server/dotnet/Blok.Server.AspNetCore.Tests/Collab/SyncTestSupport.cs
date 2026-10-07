@@ -540,6 +540,12 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
     documents[docId] = new LoadedDocument(new JsonObject { ["text"] = text }, null);
   }
 
+  /// <summary>Seeds real OutputData, for tests on the real converter.</summary>
+  internal void HoldsDocument(string docId, JsonNode data)
+  {
+    documents[docId] = new LoadedDocument(data, null);
+  }
+
   public Task<LoadedDocument> LoadAsync(string docId, CancellationToken cancellationToken)
   {
     Interlocked.Increment(ref gets);
@@ -1099,15 +1105,17 @@ internal sealed class SyncFakes
 
   internal CollabRoomManager Manager { get; }
 
+  /// <param name="converter">Replaces <see cref="Converter"/> in the manager; the property then goes unused.</param>
   internal SyncFakes(
       CollabRoomOptions? roomOptions = null,
-      ICollabOperationStore? operationStore = null)
+      ICollabOperationStore? operationStore = null,
+      ICollabDocConverter? converter = null)
   {
     Endpoint.Holds(SyncApp.Doc, "seeded");
     Manager = new CollabRoomManager(
         Store,
         Endpoint,
-        Converter,
+        converter ?? Converter,
         roomOptions ?? new CollabRoomOptions(),
         TimeProvider.System,
         operationStore: operationStore);

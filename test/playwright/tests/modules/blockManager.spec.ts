@@ -4,6 +4,7 @@ import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { htmlOf, savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 
@@ -143,13 +144,13 @@ const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): P
 };
 
 const saveBlok = async (page: Page): Promise<OutputData> => {
-  return await page.evaluate(async () => {
+  return savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance not found');
     }
 
     return await window.blokInstance.save();
-  });
+  }));
 };
 
 test.describe('modules/blockManager', () => {
@@ -232,7 +233,7 @@ test.describe('modules/blockManager', () => {
 
     expect(block).not.toBeNull();
     expect(block?.id).not.toBe(initialId);
-    expect((block?.data as { text?: string }).text ?? '').toBe('');
+    expect(htmlOf((block?.data as { text?: unknown }).text ?? '')).toBe('');
 
     const { blocks } = await saveBlok(page);
 

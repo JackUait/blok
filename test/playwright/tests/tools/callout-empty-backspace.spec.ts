@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 /**
  * Backspace in a callout whose only line is empty turns the callout into an
@@ -40,11 +41,8 @@ const createBlok = async (page: Page, blocks: OutputBlockData[]): Promise<void> 
 
 /** `type:text:parent` of every saved block. */
 const savedBlocks = async (page: Page): Promise<string[]> =>
-  await page.evaluate(async () => {
-    const saved = await window.blokInstance?.save();
-
-    return (saved?.blocks ?? []).map((block) => `${block.type}:${String(block.data.text)}:${block.parent ?? 'root'}`);
-  });
+  blocksAsHtml(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []))
+    .map((block) => `${block.type}:${String(block.data.text)}:${block.parent ?? 'root'}`);
 
 test.describe('callout: Backspace in an empty only line', () => {
   test.beforeAll(() => {

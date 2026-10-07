@@ -351,7 +351,7 @@ test.describe('multi-block selection with toolbar menu', () => {
       });
 
       expect(savedData.blocks).toHaveLength(1);
-      expect(savedData.blocks[0].data).toMatchObject({ text: 'Fourth block' });
+      expect(savedData.blocks[0].data).toMatchObject({ text: [{ text: 'Fourth block' }] });
     });
   });
 });

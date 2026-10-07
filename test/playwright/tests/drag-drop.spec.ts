@@ -1,10 +1,11 @@
 import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';
-import type { OutputData } from '@/types';
+import type { OutputBlockData, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 import { DATA_ATTR, createSelector } from '../../../src/components/constants';
 import { expect, gotoTestPage, test } from './helpers/shared-page';
 import { openFixtureToggles } from './helpers/toggle-open';
+import { blockTextAsHtml } from './helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="settings-toggler"]`;
@@ -18,7 +19,7 @@ const getBlockText = (block: { data: unknown } | undefined): string => {
   if (!block) {
     throw new Error('Block is undefined');
   }
-  return (block.data as { text: string }).text;
+  return String(blockTextAsHtml(block as OutputBlockData));
 };
 
 /**

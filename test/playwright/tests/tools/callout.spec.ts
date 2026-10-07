@@ -5,6 +5,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const CALLOUT_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="callout"]`;
@@ -211,7 +212,7 @@ test('Enter on the empty last line exits the callout instead of padding it', asy
   // …and the caret came with it, so typing lands outside the callout.
   await page.keyboard.type('outside');
 
-  const saved = await page.evaluate(async () => window.blokInstance?.save());
+  const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
   const calloutId = saved?.blocks.find((b) => b.type === 'callout')?.id;
 
   expect(saved?.blocks.filter((b) => b.parent === calloutId).map((b) => b.data.text)).toEqual(['first line']);
@@ -232,7 +233,7 @@ test('Enter out of an empty callout keeps saved block order matching the page', 
   await page.keyboard.press('Enter');
   await page.keyboard.type('outside');
 
-  const saved = await page.evaluate(async () => window.blokInstance?.save());
+  const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
   const calloutId = saved?.blocks.find((b) => b.type === 'callout')?.id ?? '';
 
   expect(saved?.blocks.map((b) => `${b.type}:${b.parent ?? 'root'}`))
@@ -555,7 +556,7 @@ test.describe('Callout - within-container Backspace merge', () => {
     await page.keyboard.press('Home');
     await page.keyboard.press('Backspace');
 
-    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
     const blocks = saved?.blocks ?? [];
 
     expect(blocks.find((b) => b.id === 'child-2')).toBeUndefined();
@@ -585,7 +586,7 @@ test.describe('Callout - within-container Backspace merge', () => {
     await page.keyboard.press('End');
     await page.keyboard.press('Delete');
 
-    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
     const blocks = saved?.blocks ?? [];
 
     expect(blocks.find((b) => b.id === 'child-2')).toBeUndefined();
@@ -613,7 +614,7 @@ test.describe('Callout - within-container Backspace merge', () => {
     await page.keyboard.press('End');
     await page.keyboard.press('Delete');
 
-    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
     const blocks = saved?.blocks ?? [];
 
     const below = blocks.find((b) => b.id === 'root-below');
@@ -644,7 +645,7 @@ test.describe('Callout - within-container Backspace merge', () => {
     await page.keyboard.press('Home');
     await page.keyboard.press('Backspace');
 
-    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
     const blocks = saved?.blocks ?? [];
 
     // Nothing merged across the callout boundary
@@ -678,7 +679,7 @@ test.describe('Callout - within-container Backspace merge', () => {
     await page.keyboard.press('Home');
     await page.keyboard.press('Backspace');
 
-    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
     const blocks = saved?.blocks ?? [];
 
     const childAAfter = blocks.find((b) => b.id === 'child-a');

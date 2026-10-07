@@ -11,6 +11,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { dragBetweenCharacters } from '../helpers/text-drag';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const UNDO = `${MOD}+z`;
@@ -79,13 +80,13 @@ const pressRedo = async (page: Page): Promise<void> => {
 };
 
 /** Saved blocks without authorship metadata. */
-const save = (page: Page): Promise<Block[]> => page.evaluate(async () => {
+const save = async (page: Page): Promise<Block[]> => blocksAsHtml(await page.evaluate(async () => {
   if (!window.blokInstance) {
     throw new Error('no blok');
   }
 
   return (await window.blokInstance.save()).blocks.map(({ lastEditedAt: _a, lastEditedBy: _b, ...rest }) => rest);
-});
+}));
 
 /** Saved blocks as `id:type:text^parent`. */
 const lines = async (page: Page): Promise<string[]> => (await save(page)).map((b) => {

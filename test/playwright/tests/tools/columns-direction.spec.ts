@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 /**
  * Columns follow reading order: the first column sits at the inline start
@@ -45,13 +46,13 @@ const createBlok = async (page: Page, dir: Direction, data: OutputData): Promise
 };
 
 const saveBlok = async (page: Page): Promise<OutputData> =>
-  await page.evaluate(async () => {
+  savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance not found');
     }
 
     return await window.blokInstance.save();
-  });
+  }));
 
 /** Grab the drag handle of the block that shows `text`. */
 const handleOf = async (page: Page, text: string): Promise<{ x: number; y: number }> => {

@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { selectAllInEditable } from '../helpers/selection';
 import { gotoTestPage } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 declare global {
   interface Window {
@@ -25,13 +26,13 @@ const openConversion = async (page: Page, surface: 'settings' | 'inline', curren
   }
 };
 
-const saveBlocks = async (page: Page): Promise<OutputData['blocks']> => page.evaluate(async () => {
+const saveBlocks = async (page: Page): Promise<OutputData['blocks']> => blocksAsHtml(await page.evaluate(async () => {
   if (window.blokInstance === undefined) {
     throw new Error('Editor is unavailable');
   }
 
   return (await window.blokInstance.save()).blocks;
-});
+}));
 
 // Fake-selection highlights can stamp edit time without changing saved content.
 const withoutLastEditedAt = (blocks: OutputData['blocks']): OutputData['blocks'] =>
@@ -377,6 +378,6 @@ test('search keeps full conversion labels and keyboard activation', async ({ pag
 
   expect(saved?.blocks[0]).toMatchObject({
     type: 'header',
-    data: { text: 'A clearer convert menu', level: 6, isToggleable: true },
+    data: { text: [{ text: 'A clearer convert menu' }], level: 6, isToggleable: true },
   });
 });

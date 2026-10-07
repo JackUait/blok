@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '../../../../types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { htmlOf } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
@@ -49,7 +50,7 @@ const dumpTexts = async (page: Page): Promise<Array<unknown>> =>
     const data: OutputData = await instance.save();
 
     return data.blocks.map((b) => b.data.text);
-  });
+  }).then((texts) => texts.map((text) => htmlOf(text)));
 
 const selectBlockRange = async (page: Page, fromIndex: number, toIndex: number): Promise<void> => {
   await getParagraphByIndex(page, fromIndex).click();

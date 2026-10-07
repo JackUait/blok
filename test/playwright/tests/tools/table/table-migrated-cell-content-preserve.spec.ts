@@ -14,6 +14,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 
@@ -240,8 +241,8 @@ const detachedMigratedTableData = (): OutputData => {
   return { blocks: [tableBlock, ...intactChildren, orphan] };
 };
 
-const saveBlok = (page: Page): Promise<OutputData> =>
-  page.evaluate(async () => {
+const saveBlok = async (page: Page): Promise<OutputData> =>
+  savedAsHtml(await page.evaluate(async () => {
     const blok = window.blokInstance;
 
     if (!blok) {
@@ -249,7 +250,7 @@ const saveBlok = (page: Page): Promise<OutputData> =>
     }
 
     return await blok.save();
-  });
+  }));
 
 // Resolve, from saved output, the text of every block referenced by a table
 // cell. A dropped child (missing block or empty text) is the data-loss signature.

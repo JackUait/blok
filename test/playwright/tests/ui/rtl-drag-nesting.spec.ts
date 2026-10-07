@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 
@@ -108,15 +109,12 @@ const dropAtOffset = async (
   await page.mouse.up();
   await page.waitForFunction(() => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true');
 
-  const saved = await page.evaluate(async (mark) => {
-    const output = await window.blokInstance?.save();
-
-    return (output?.blocks ?? []).map((block): [string, number, string | null] => {
+  const saved = blocksAsHtml(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []))
+    .map((block): [string, number, string | null] => {
       const data = block.data as { text: string; depth?: number };
 
-      return [ data.text.replace(mark, ''), data.depth ?? 0, block.parent ?? null ];
+      return [ data.text.replace(RTL_MARK, ''), data.depth ?? 0, block.parent ?? null ];
     });
-  }, RTL_MARK);
 
   return { ...indicator, saved };
 };

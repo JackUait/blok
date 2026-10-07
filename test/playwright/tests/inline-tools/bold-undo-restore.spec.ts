@@ -29,12 +29,13 @@ const mount = async (page: Page, blocks: Blocks): Promise<void> => {
   }, blocks);
 };
 
-const savedText = (page: Page, id: string): Promise<string> => page.evaluate(async (blockId) => {
+const savedText = (page: Page, id: string): Promise<unknown> => page.evaluate(async (blockId) => {
   const output = await window.blokInstance?.save();
-  const text: unknown = output?.blocks.find((block) => block.id === blockId)?.data.text;
 
-  return typeof text === 'string' ? text : '';
+  return output?.blocks.find((block) => block.id === blockId)?.data.text;
 }, id);
+
+const BOLD_LD_TAIL = [{ text: 'ld', marks: { bold: true } }, { text: ' tail' }];
 
 const documentText = (page: Page, id: string): Promise<string> => page.evaluate((blockId) => {
   const blok = window.blokInstance as unknown as { module: { yjsManager: { toJSON: () => Array<{ id: string; data?: { text?: unknown } }> } } };
@@ -50,7 +51,7 @@ test.describe('stored <b> bold', () => {
       { id: 'a', type: 'paragraph', data: { text: 'first' } },
       { id: 'b', type: 'paragraph', data: { text: '<b>ld</b> tail' } },
     ]);
-    await expect.poll(() => savedText(page, 'b')).toBe('<strong>ld</strong> tail');
+    await expect.poll(() => savedText(page, 'b')).toEqual(BOLD_LD_TAIL);
 
     // Caret at the very start of block b, inside the bold text.
     await editable(page, 'b').evaluate((element) => {
@@ -70,7 +71,7 @@ test.describe('stored <b> bold', () => {
     await page.keyboard.press(UNDO);
     await expect(editable(page, 'b')).toHaveText('ld tail');
 
-    expect(await savedText(page, 'b')).toBe('<strong>ld</strong> tail');
+    expect(await savedText(page, 'b')).toEqual(BOLD_LD_TAIL);
     await expect.poll(() => editable(page, 'b').innerHTML()).toBe('<strong>ld</strong> tail');
   });
 

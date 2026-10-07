@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
-import { ensureBlokBundleBuilt, HOLDER_ID, resetBlok, saveBlok } from './columns-blocks/_helpers';
+import { ensureBlokBundleBuilt, HOLDER_ID, resetBlok, saveRaw } from './columns-blocks/_helpers';
 
 /**
  * A copied page link pastes as a mention: an inline reference with the page's
@@ -80,13 +80,11 @@ test.describe('Page mention', () => {
     await expect(mention.getByTestId('page-reference-title')).toHaveText('Roadmap');
     await expect(mention.getByTestId('page-reference-arrow')).toBeVisible();
 
-    const saved = await saveBlok(page);
+    const saved = await saveRaw(page);
 
-    const text = String(saved.blocks[0]?.data.text);
+    const text: unknown = saved.blocks[0]?.data.text;
 
-    expect(text).toContain('<a data-blok-page-id="roadmap">Page</a>');
-    expect(text).toContain('See');
-    expect(text).not.toContain('href=');
+    expect(text).toEqual([{ text: 'See' }, { embed: { page: { id: 'roadmap' } } }, { text: ' ' }]);
   });
 
   test('the icon sits on the title line and the hover fill hugs the mention', async ({ page }) => {
@@ -161,10 +159,9 @@ test.describe('Page mention', () => {
     await expect(mention.getByTestId('page-reference-icon')).toBeVisible();
     await expect(mention.getByTestId('page-reference-title')).toHaveText('Roadmap');
 
-    const saved = String((await saveBlok(page)).blocks[0]?.data.text);
+    const saved: unknown = (await saveRaw(page)).blocks[0]?.data.text;
 
-    expect(saved).toContain('<a data-blok-page-id="roadmap">Page</a>');
-    expect(saved).toContain('next');
+    expect(saved).toEqual([{ text: 'See' }, { embed: { page: { id: 'roadmap' } } }, { text: '\u00a0next' }]);
   });
 
   test('a link that is not a page offers no mention', async ({ page }) => {

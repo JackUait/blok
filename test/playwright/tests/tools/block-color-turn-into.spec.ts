@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
@@ -64,7 +65,7 @@ const openBlockTunes = async (page: Page, hasText: string): Promise<void> => {
 };
 
 const save = async (page: Page): Promise<OutputData | undefined> =>
-  page.evaluate(async () => window.blokInstance?.save());
+  savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
 test.describe('block-level color survives turn-into', () => {
   test.beforeAll(() => {

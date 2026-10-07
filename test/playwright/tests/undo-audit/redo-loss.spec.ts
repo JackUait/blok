@@ -11,6 +11,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -60,14 +61,14 @@ const wait = async (page: Page, ms: number): Promise<void> => {
   }, ms);
 };
 
-const save = async (page: Page): Promise<SavedBlock[]> => page.evaluate(async () => {
+const save = async (page: Page): Promise<SavedBlock[]> => blocksAsHtml(await page.evaluate(async () => {
   if (!window.blokInstance) {
     throw new Error('Blok instance not found');
   }
 
   // lastEdited* is authorship metadata, not document state.
   return (await window.blokInstance.save()).blocks.map(({ lastEditedAt: _a, lastEditedBy: _b, ...rest }) => rest);
-});
+}));
 
 const canRedo = async (page: Page): Promise<boolean> =>
   page.evaluate(() => window.blokInstance?.history.canRedo() ?? false);

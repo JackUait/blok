@@ -7,6 +7,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { blocksAsHtml, htmlOf } from '../../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 
@@ -57,11 +58,8 @@ const cellInput = (page: Page, row: number, col: number): Locator =>
   page.locator(`#${HOLDER_ID} [data-blok-table-cell-row="${row}"][data-blok-table-cell-col="${col}"] [contenteditable="true"]`).first();
 
 const savedText = async (page: Page, id: string): Promise<string | undefined> =>
-  page.evaluate(async (blockId) => {
-    const out = await window.blokInstance?.save();
-
-    return (out?.blocks.find((b) => b.id === blockId)?.data as { text?: string } | undefined)?.text;
-  }, id);
+  (blocksAsHtml(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []))
+    .find((b) => b.id === id)?.data as { text?: string } | undefined)?.text;
 
 const savedCellIds = async (page: Page): Promise<string[][]> =>
   page.evaluate(async () => {
@@ -151,9 +149,9 @@ test.describe('table data loss: browser-only paths', () => {
     await wait(page, 1000);
 
     const texts = await page.evaluate(() =>
-      (window.savedPayloads ?? []).map((p) => (p.blocks.find((b) => b.id === 'c11')?.data as { text?: string } | undefined)?.text)
+      (window.savedPayloads ?? []).map((p) => (p.blocks.find((b) => b.id === 'c11')?.data as { text?: unknown } | undefined)?.text)
     );
 
-    expect(texts).toContain('dXYZ');
+    expect(texts.map((text) => htmlOf(text))).toContain('dXYZ');
   });
 });

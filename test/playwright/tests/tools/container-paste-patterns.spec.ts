@@ -3,6 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 /**
  * Regression suite for the "paste ejection" bug family across the
@@ -75,8 +76,19 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
   );
 };
 
-const saveBlok = async (page: Page): Promise<{ blocks: SavedBlock[] }> => {
+/** The save as the host gets it, for reloading: a reload must read segments, not converted HTML. */
+const saveRaw = async (page: Page): Promise<OutputData> => {
   const saved = await page.evaluate(async () => window.blokInstance?.save());
+
+  if (saved === undefined) {
+    throw new Error('Blok instance not found');
+  }
+
+  return saved;
+};
+
+const saveBlok = async (page: Page): Promise<{ blocks: SavedBlock[] }> => {
+  const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
   expect(saved, 'blok.save() returned undefined').toBeDefined();
 
@@ -111,7 +123,7 @@ const paste = async (locator: Locator, data: Record<string, string>): Promise<vo
 const waitForSavedBlockContaining = async (page: Page, sentinel: string): Promise<void> => {
   await expect.poll(
     async () => {
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const blocks = (saved as { blocks: SavedBlock[] } | undefined)?.blocks ?? [];
 
       return blocks.some((b) => {
@@ -178,7 +190,7 @@ test.describe('paste-into-callout-child pattern/html handlers', () => {
     expect(rootBlocks.map(b => b.type), 'root should only contain the callout').toStrictEqual(['callout']);
 
     // Reload cycle.
-    await createBlok(page, saved);
+    await createBlok(page, await saveRaw(page));
     const reloaded = await saveBlok(page);
 
     const reloadedCallout = reloaded.blocks.find(b => b.type === 'callout');
@@ -249,7 +261,7 @@ test.describe('paste-into-callout-child pattern/html handlers', () => {
     expect(rootBlocks.map(b => b.type), 'root should only contain the callout').toStrictEqual(['callout']);
 
     // Reload cycle.
-    await createBlok(page, saved);
+    await createBlok(page, await saveRaw(page));
     const reloaded = await saveBlok(page);
 
     const reloadedCallout = reloaded.blocks.find(b => b.type === 'callout');

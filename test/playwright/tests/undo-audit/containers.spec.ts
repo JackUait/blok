@@ -12,6 +12,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -53,14 +54,14 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
   await openFixtureToggles(page, data);
 };
 
-const save = async (page: Page): Promise<SavedBlock[]> => page.evaluate(async () => {
+const save = async (page: Page): Promise<SavedBlock[]> => blocksAsHtml(await page.evaluate(async () => {
   if (!window.blokInstance) {
     throw new Error('no blok');
   }
 
   // lastEdited* is authorship metadata, not document state.
   return (await window.blokInstance.save()).blocks.map(({ lastEditedAt: _a, lastEditedBy: _b, ...rest }) => rest);
-});
+}));
 
 const gap = async (page: Page, ms = CAPTURE_GAP): Promise<void> => {
   await page.evaluate(async (t) => {

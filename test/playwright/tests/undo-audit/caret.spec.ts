@@ -4,6 +4,7 @@ import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -65,13 +66,13 @@ const wait = async (page: Page, ms: number): Promise<void> => {
 };
 
 const save = async (page: Page): Promise<OutputData> => {
-  return await page.evaluate(async () => {
+  return savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance not found');
     }
 
     return await window.blokInstance.save();
-  });
+  }));
 };
 
 /** Where the live caret is: owning block id, text offset in its editable (UTF-16), visibility, scroll. */
@@ -468,12 +469,12 @@ test.describe('undo audit — caret, scroll, selection', () => {
     await expect(page.locator('[data-blok-slash-search]')).toHaveCount(1);
 
     const stored = await page.evaluate(async () => {
-      const blok = window.blokInstance as unknown as { save: () => Promise<{ blocks: Array<{ data: { text: string } }> }>; module: { yjsManager: { toJSON: () => Array<{ data: { text: unknown } }> } } };
+      const blok = window.blokInstance as unknown as { save: () => Promise<{ blocks: Array<{ data: { text: unknown } }> }>; module: { yjsManager: { toJSON: () => Array<{ data: { text: unknown } }> } } };
 
       return { saved: (await blok.save()).blocks[0].data.text, doc: String(blok.module.yjsManager.toJSON()[0].data.text) };
     });
 
-    expect(stored).toEqual({ saved: 'Hello&nbsp;/he', doc: 'Hello&nbsp;/he' });
+    expect(stored).toEqual({ saved: [{ text: 'Hello\u00a0/he' }], doc: 'Hello\u00a0/he' });
   });
 
   // Expected source: the public blocks API must agree with the caret the undo just placed.

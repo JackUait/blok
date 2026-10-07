@@ -5,6 +5,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const TOGGLE_CONTENT_SELECTOR = '[data-blok-toggle-content]';
@@ -88,7 +89,7 @@ test.describe('Toggle - Delete key behavior', () => {
       await page.keyboard.press('Delete');
 
       // Save and verify all three blocks still exist
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -128,7 +129,7 @@ test.describe('Toggle - Delete key behavior', () => {
       await page.keyboard.press('Delete');
 
       // Save and verify blocks are unmodified
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -166,7 +167,7 @@ test.describe('Toggle - Delete key behavior', () => {
       await page.keyboard.press('Delete');
 
       // Save and verify: child should still be inside toggle
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -198,7 +199,7 @@ test.describe('Toggle - Delete key behavior', () => {
       await emptyFirstChild.click();
       await page.keyboard.press('Delete');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -234,7 +235,7 @@ test.describe('Toggle - Delete key behavior', () => {
       await emptyMiddleChild.click();
       await page.keyboard.press('Delete');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -271,7 +272,7 @@ test.describe('Toggle - Delete key behavior', () => {
       await page.keyboard.press('Delete');
 
       // All 3 blocks should still exist
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -302,7 +303,7 @@ test.describe('Toggle - Delete key behavior', () => {
       await emptyFirstChild.click();
       await page.keyboard.press('Delete');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 

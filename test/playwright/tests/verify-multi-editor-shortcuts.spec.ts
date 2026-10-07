@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 import { expect, gotoTestPage, test } from './helpers/shared-page';
+import { blocksAsHtml } from './helpers/saved-as-html';
 
 /**
  * Block move & duplicate shortcuts must work in EVERY editor on the page, from a
@@ -55,17 +56,16 @@ const bootTwo = async (page: Page): Promise<void> => {
   });
 };
 
-const texts = (page: Page, which: 'b1' | 'b2'): Promise<string[]> =>
-  page.evaluate(async (w) => {
+const texts = async (page: Page, which: 'b1' | 'b2'): Promise<string[]> =>
+  blocksAsHtml(await page.evaluate(async (w) => {
     const instance = window[w];
 
     if (!instance) {
       throw new Error(`Editor ${w} not found`);
     }
-    const out = await instance.save();
 
-    return out.blocks.map((b) => String((b.data as { text?: string }).text ?? ''));
-  }, which);
+    return (await instance.save()).blocks;
+  }, which)).map((b) => String((b.data as { text?: string }).text ?? ''));
 
 test.beforeAll(() => {
   ensureBlokBundleBuilt();

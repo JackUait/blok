@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -46,13 +47,13 @@ const waitForDelay = async (page: Page, ms: number): Promise<void> => {
 
 const canUndo = (page: Page): Promise<boolean> => page.evaluate(() => window.blokInstance?.history.canUndo() ?? false);
 
-const saveBlok = (page: Page): Promise<OutputData> => page.evaluate(async () => {
+const saveBlok = async (page: Page): Promise<OutputData> => savedAsHtml(await page.evaluate(async () => {
   if (!window.blokInstance) {
     throw new Error('Blok instance not found');
   }
 
   return await window.blokInstance.save();
-});
+}));
 
 const blockTexts = (page: Page): Promise<string[]> => page.getByTestId('block-wrapper').allInnerTexts();
 

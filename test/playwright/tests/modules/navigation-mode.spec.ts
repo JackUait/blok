@@ -5,6 +5,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -84,13 +85,13 @@ const createBlokWithBlocks = async (
 };
 
 const saveBlok = async (page: Page): Promise<OutputData> => {
-  return page.evaluate(async () => {
+  return savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance is not ready');
     }
 
     return window.blokInstance.save();
-  });
+  }));
 };
 
 

@@ -450,7 +450,7 @@ test.describe('paragraph tool', () => {
       expect(savedData?.blocks).toHaveLength(1);
       expect(savedData?.blocks[0].type).toBe('paragraph');
        
-      expect(savedData?.blocks[0].data.text).toBe('Test paragraph content');
+      expect(savedData?.blocks[0].data.text).toEqual([{ text: 'Test paragraph content' }]);
     });
 
     test('saves edited content', async ({ page }) => {
@@ -470,7 +470,7 @@ test.describe('paragraph tool', () => {
       });
 
        
-      expect(savedData?.blocks[0].data.text).toBe('Original Updated');
+      expect(savedData?.blocks[0].data.text).toEqual([{ text: 'Original Updated' }]);
     });
 
     test('saves formatted content with HTML', async ({ page }) => {
@@ -518,9 +518,7 @@ test.describe('paragraph tool', () => {
         return await window.blokInstance?.save();
       });
 
-      // Bold formatting should be saved as <b> tag
-       
-      expect(savedData?.blocks[0].data.text).toMatch(/<b>|<strong>/);
+      expect(savedData?.blocks[0].data.text).toEqual([{ text: 'Format me', marks: { bold: true } }]);
     });
   });
 

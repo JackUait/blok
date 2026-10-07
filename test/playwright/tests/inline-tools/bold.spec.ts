@@ -545,7 +545,7 @@ test.describe('inline tool bold', () => {
     const paragraphBlock = savedData?.blocks.find((block) => block.type === 'paragraph');
 
      
-    expect(paragraphBlock?.data.text).toMatch(/<strong>bold<\/strong> text/);
+    expect(paragraphBlock?.data.text).toEqual([{ text: 'bold', marks: { bold: true } }, { text: ' text' }]);
   });
 
   test('removes bold from selection within bold text', async ({ page }) => {

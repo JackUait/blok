@@ -4,6 +4,7 @@ import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
@@ -189,7 +190,7 @@ test.describe('inline tool sup-sub', () => {
 
     await expect(supInParagraph(page)).toHaveText('E = mc2');
 
-    const saved = await page.evaluate(() => window.blokInstance?.save());
+    const saved = savedAsHtml(await page.evaluate(() => window.blokInstance?.save()));
 
     expect(saved?.blocks[0]?.data.text).toContain('<sup>');
   });

@@ -23,6 +23,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -115,13 +116,13 @@ const createBlok = async (
 };
 
 const saveBlok = async (page: Page): Promise<OutputData> => {
-  return await page.evaluate(async () => {
+  return savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance not found');
     }
 
     return await window.blokInstance.save();
-  });
+  }));
 };
 
 const waitForDelay = async (page: Page, delayMs: number): Promise<void> => {

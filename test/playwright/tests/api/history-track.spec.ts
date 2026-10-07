@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { htmlOf } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const TITLE_ID = 'host-title';
@@ -74,14 +75,11 @@ const setup = async (page: Page): Promise<void> => {
 
 const titleText = (page: Page): Promise<string | null> => page.locator(`#${TITLE_ID}`).textContent();
 
-const firstBlockText = (page: Page): Promise<string> =>
-  page.evaluate(async () => {
-    const saved = await window.blokInstance?.save();
+const firstBlockText = async (page: Page): Promise<string> => {
+  const text = htmlOf(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks[0]?.data.text));
 
-    const text: unknown = saved?.blocks[0]?.data.text;
-
-    return typeof text === 'string' ? text : '';
-  });
+  return typeof text === 'string' ? text : '';
+};
 
 const waitForDelay = async (page: Page, delayMs: number): Promise<void> => {
   await page.evaluate(async (timeout) => {

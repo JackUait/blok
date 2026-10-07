@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '@/types';
 import { MODIFIER_KEY } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { htmlOf } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 
@@ -86,12 +87,12 @@ test.describe('Inline code shortcut', () => {
 
     await page.keyboard.press(`${MODIFIER_KEY}+KeyE`);
 
-    const savedText = await page.evaluate(async () => {
+    const savedText = htmlOf(await page.evaluate(async () => {
       const data = await window.blokInstance?.save();
       const block = data?.blocks?.[0] as { data?: { text?: string } } | undefined;
 
       return block?.data?.text ?? '';
-    });
+    }));
 
     expect(savedText).toContain('<code>');
     expect(savedText).toContain('Hello world');

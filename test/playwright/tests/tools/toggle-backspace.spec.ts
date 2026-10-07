@@ -5,6 +5,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const TOGGLE_CHILDREN_SELECTOR = '[data-blok-toggle-children]';
@@ -86,7 +87,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       await child1Block.click();
       await page.keyboard.press('Backspace');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -117,7 +118,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       await child1Block.click();
       await page.keyboard.press('Backspace');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -149,7 +150,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       await child2Block.click();
       await page.keyboard.press('Backspace');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -185,7 +186,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       await page.keyboard.press('Home');
       await page.keyboard.press('Backspace');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -222,7 +223,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       await page.keyboard.press('Home');
       await page.keyboard.press('Backspace');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -263,7 +264,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       await page.keyboard.press('Home');
       await page.keyboard.press('Backspace');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -301,7 +302,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       await child1Block.click();
       await page.keyboard.press('Backspace');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -331,7 +332,7 @@ test.describe('Toggle - Backspace key behavior', () => {
       await child1Block.click();
       await page.keyboard.press('Backspace');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 

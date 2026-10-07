@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 /**
  * Regression: converting a TOGGLE HEADING to a TOGGLE HEADING of another level
@@ -71,8 +72,19 @@ const openBlockTunes = async (page: Page, hasText: string): Promise<void> => {
   await expect(page.locator(POPOVER_CONTAINER_SELECTOR)).toBeVisible();
 };
 
+/** The save as the host gets it, for reloading: a reload must read segments, not converted HTML. */
+const saveRaw = async (page: Page): Promise<OutputData> => {
+  const saved = await page.evaluate(async () => window.blokInstance?.save());
+
+  if (saved === undefined) {
+    throw new Error('Blok instance not found');
+  }
+
+  return saved;
+};
+
 const save = async (page: Page): Promise<OutputData | undefined> =>
-  page.evaluate(async () => window.blokInstance?.save());
+  savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
 test.describe('toggle heading level conversion keeps children', () => {
   test.beforeAll(() => {
@@ -144,7 +156,7 @@ test.describe('toggle heading level conversion keeps children', () => {
     await expect(childInContainer).toBeVisible();
 
     // Reload cycle: re-create the editor from the saved data — the child must come back.
-    await createBlok(page, saved as OutputData);
+    await createBlok(page, await saveRaw(page));
     await expect(page.getByText('Nested child')).toBeVisible();
 
     const resaved = await save(page);

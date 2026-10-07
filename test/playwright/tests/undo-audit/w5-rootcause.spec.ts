@@ -13,6 +13,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const UNDO = `${MOD}+z`;
@@ -188,11 +189,11 @@ const docText = (page: Page, id: string): Promise<string | undefined> => run(pag
   return text === undefined || text === null ? undefined : text.toString();
 }`, id);
 
-const savedText = (page: Page): Promise<string[]> => page.evaluate(async () => {
+const savedText = async (page: Page): Promise<string[]> => blocksAsHtml(await page.evaluate(async () => {
   const out = await window.blokInstance?.save();
 
-  return (out?.blocks ?? []).map((b) => `${b.id}:${(b.data as { text?: string }).text ?? ''}`);
-});
+  return out?.blocks ?? [];
+})).map((b) => `${b.id}:${(b.data as { text?: string }).text ?? ''}`);
 
 const editable = (page: Page, id: string): Locator => page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).first();
 
@@ -237,13 +238,17 @@ const PEER_SETUP = String.raw`async function () {
   };
 }`;
 
-const peerState = (page: Page): Promise<{ saved: string[]; dom: string[] }> => run(page, String.raw`async function () {
+const peerState = async (page: Page): Promise<{ saved: string[]; dom: string[] }> => {
+  const { blocks, dom } = await run<{ blocks: OutputData['blocks']; dom: string[] }>(page, String.raw`async function () {
   const out = await window.__b2.save();
   return {
-    saved: out.blocks.map((b) => b.id + ':' + (b.data.text || '')),
+    blocks: out.blocks,
     dom: Array.from(document.querySelectorAll('#blok2 [data-blok-id]')).map((x) => x.getAttribute('data-blok-id') + ':' + x.textContent),
   };
 }`);
+
+  return { saved: blocksAsHtml(blocks).map((b) => `${b.id ?? ''}:${String((b.data as { text?: string }).text || '')}`), dom };
+};
 
 /* Public API groups the Vue adapter drives from its watchers, Selection mutators, and DOM mutations under #root. */
 const VUE_TRACE = String.raw`function () {
@@ -561,8 +566,8 @@ test.describe('W5R root causes', () => {
       const longTask = variant.startsWith('longtask') ? Number(variant.slice('longtask'.length)) : 0;
 
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: rates[variant] ?? 1 });
-      const l2 = async (): Promise<{ doc: string | undefined; saved: string | undefined }> =>
-        ({ doc: await docText(page, 'l2'), saved: (await savedText(page)).find((x) => x.startsWith('l2:')) });
+      const l2 = async (): Promise<{ doc: string | undefined; saved: unknown }> =>
+        ({ doc: await docText(page, 'l2'), saved: await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.find((b) => b.id === 'l2')?.data.text) });
 
       await editable(page, 'l2').click();
       await page.keyboard.press('End');
@@ -587,7 +592,7 @@ test.describe('W5R root causes', () => {
       await gap(page);
       await page.keyboard.type('new item');
       await gap(page);
-      const steps: Array<{ doc: string | undefined; saved: string | undefined }> = [];
+      const steps: Array<{ doc: string | undefined; saved: unknown }> = [];
 
       while ((await savedText(page)).length > blocksBeforeEnter) {
         expect(steps.length, '"new item" and Enter undo within 8 presses').toBeLessThan(8);
@@ -616,12 +621,12 @@ test.describe('W5R root causes', () => {
 
       dump(`5-${variant}`, { s1, steps, deepUndone, checkpoint, log });
       expect(spaceWrite?.origin, 'the typed space is written as a tracked local change').toBe('local');
-      expect(enterUndone, 'undoing Enter leaves " deep" whole').toEqual({ doc: 'Level two deep', saved: 'l2:Level two deep' });
+      expect(enterUndone, 'undoing Enter leaves " deep" whole').toEqual({ doc: 'Level two deep', saved: [{ text: 'Level two deep' }] });
       expect(checkpoint || stall + longTask < 100, 'a stall of 100 ms or more after the space always closes the group').toBe(true);
       // The space survives the undo of "deep" exactly when the checkpoint fired, whatever caused the pause.
       expect(deepUndone).toEqual(checkpoint
-        ? { doc: 'Level two&nbsp;', saved: 'l2:Level two&nbsp;' }
-        : { doc: 'Level two', saved: 'l2:Level two' });
+        ? { doc: 'Level two\u00a0', saved: [{ text: 'Level two\u00a0' }] }
+        : { doc: 'Level two', saved: [{ text: 'Level two' }] });
     });
   }
 });

@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { modificationsObserverBatchTimeout } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 declare global {
   interface Window {
@@ -54,15 +55,11 @@ const createEditor = async (
   );
 };
 
-const savedTexts = (page: Page): Promise<string[]> =>
-  page.evaluate(async () => {
-    const saved = await window.blokInstance?.save();
+const savedTexts = async (page: Page): Promise<string[]> =>
+  blocksAsHtml(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? [])).map((block) => {
+    const data = block.data as { text?: string; code?: string };
 
-    return (saved?.blocks ?? []).map((block) => {
-      const data = block.data as { text?: string; code?: string };
-
-      return data.text ?? data.code ?? '';
-    });
+    return data.text ?? data.code ?? '';
   });
 
 /** Text of each painted range, per highlight name; null when the name is not registered. */

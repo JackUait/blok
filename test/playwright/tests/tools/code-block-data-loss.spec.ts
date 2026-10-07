@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 /**
  * Regression suite for three independent silent-data-loss defects, each of
@@ -66,12 +67,12 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
   );
 };
 
-const save = (page: Page): Promise<OutputData> =>
-  page.evaluate(async () => {
+const save = async (page: Page): Promise<OutputData> =>
+  savedAsHtml(await page.evaluate(async () => {
     const saved = await window.blokInstance?.save();
 
     return saved as OutputData;
-  });
+  }));
 
 test.beforeEach(async ({ page }) => {
   await gotoTestPage(page);

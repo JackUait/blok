@@ -9,6 +9,7 @@ import {
   INLINE_TOOLBAR_INTERFACE_SELECTOR,
   MODIFIER_KEY
 } from '../../../../src/components/constants';
+import { htmlOf } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
@@ -194,8 +195,9 @@ const extractFirstBlockText = (data: { blocks?: unknown[] }): string => {
 
   const dataEntries = Object.entries(dataEntry[1] as Record<string, unknown>);
   const textEntry = dataEntries.find(([key]) => key === 'text');
+  const text = htmlOf(textEntry?.[1]);
 
-  return typeof textEntry?.[1] === 'string' ? textEntry[1] : '';
+  return typeof text === 'string' ? text : '';
 };
 
 const openToolbox = async (page: Page): Promise<void> => {

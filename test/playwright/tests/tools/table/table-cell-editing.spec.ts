@@ -7,6 +7,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
@@ -201,7 +202,7 @@ test.describe('Cell Editing', () => {
       (b: { id?: string }) => b.id === firstCellBlockId
     );
 
-    expect((cellParagraph as unknown as { data: { text: string } })?.data.text).toBe('Hello World');
+    expect((cellParagraph as unknown as { data: { text: unknown } })?.data.text).toEqual([{ text: 'Hello World' }]);
   });
 
   test('Pressing Enter in a cell creates a new block within the same cell', async ({ page }) => {
@@ -365,7 +366,7 @@ test.describe('Cell Editing', () => {
     await expect(blockHolders).toHaveCount(2);
 
     // 7. Save and verify no orphan blocks outside the table
-    const savedData = await page.evaluate(async () => {
+    const savedData = savedAsHtml(await page.evaluate(async () => {
       const blok = window.blokInstance;
 
       if (!blok) {
@@ -373,7 +374,7 @@ test.describe('Cell Editing', () => {
       }
 
       return blok.save();
-    });
+    }));
 
     // Find the table block index
     const tableIndex = savedData.blocks.findIndex(
@@ -439,7 +440,7 @@ test.describe('Cell Editing', () => {
     // containing the merged text sitting outside the table. The original bug
     // ejected the second line into the root tree — this assertion locks the
     // fix end-to-end and catches any regression that drifts the block out.
-    const savedData = await page.evaluate(async () => {
+    const savedData = savedAsHtml(await page.evaluate(async () => {
       const blok = window.blokInstance;
 
       if (!blok) {
@@ -447,7 +448,7 @@ test.describe('Cell Editing', () => {
       }
 
       return blok.save();
-    });
+    }));
 
     const tableBlock = savedData.blocks.find(
       (b: { type: string }) => b.type === 'table'
@@ -501,7 +502,7 @@ test.describe('Cell Editing', () => {
     await expect(cellB).toContainText('Cell B text');
 
     // Saver-level: no orphan paragraph carrying the cell content outside the table.
-    const savedData = await page.evaluate(async () => {
+    const savedData = savedAsHtml(await page.evaluate(async () => {
       const blok = window.blokInstance;
 
       if (!blok) {
@@ -509,7 +510,7 @@ test.describe('Cell Editing', () => {
       }
 
       return blok.save();
-    });
+    }));
 
     const tableBlock = savedData.blocks.find(
       (b: { type: string }) => b.type === 'table'

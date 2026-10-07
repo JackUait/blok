@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok } from '../../../../../types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { htmlOf } from '../../helpers/saved-as-html';
 
 declare global {
   interface Window {
@@ -150,10 +151,10 @@ test.describe('slash search in a block that has text', () => {
     const saved = await page.evaluate(async () => {
       const output = await window.blokInstance?.save();
 
-      return output?.blocks[0]?.data.text as string;
+      return output?.blocks[0]?.data.text;
     });
 
-    expect(saved).toBe('/Hello world');
+    expect(htmlOf(saved)).toBe('/Hello world');
   });
 
   test('does not save the pill from a heading', async ({ page }) => {
@@ -168,10 +169,10 @@ test.describe('slash search in a block that has text', () => {
     const saved = await page.evaluate(async () => {
       const output = await window.blokInstance?.save();
 
-      return output?.blocks[0]?.data.text as string;
+      return output?.blocks[0]?.data.text;
     });
 
-    expect(saved).toBe('/Hello world');
+    expect(htmlOf(saved)).toBe('/Hello world');
   });
 
   test('picking a tool converts the block without leaving the pill behind', async ({ page }) => {
@@ -186,10 +187,10 @@ test.describe('slash search in a block that has text', () => {
     const saved = await page.evaluate(async () => {
       const output = await window.blokInstance?.save();
 
-      return output?.blocks.map((block) => ({ type: block.type, text: block.data.text as string }));
+      return output?.blocks.map((block) => ({ type: block.type, text: block.data.text }));
     });
 
-    expect(saved).toEqual([{ type: 'header', text: 'Hello world' }]);
+    expect(saved?.map((block) => ({ ...block, text: htmlOf(block.text) }))).toEqual([{ type: 'header', text: 'Hello world' }]);
   });
 
   test('removes the pill when Backspace deletes the "/"', async ({ page }) => {

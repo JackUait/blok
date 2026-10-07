@@ -13,6 +13,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -61,14 +62,14 @@ const createBlok = async (page: Page, blocks: SavedBlock[]): Promise<void> => {
   await openFixtureToggles(page, { blocks });
 };
 
-const save = async (page: Page): Promise<SavedBlock[]> => page.evaluate(async () => {
+const save = async (page: Page): Promise<SavedBlock[]> => blocksAsHtml(await page.evaluate(async () => {
   if (!window.blokInstance) {
     throw new Error('no blok');
   }
 
   // lastEdited* is authorship metadata, not document state.
   return (await window.blokInstance.save()).blocks.map(({ lastEditedAt: _a, lastEditedBy: _b, ...rest }) => rest);
-});
+}));
 
 const tree = async (page: Page): Promise<Array<[string, string | null]>> =>
   (await save(page)).map(b => [b.id ?? '', b.parent ?? null]);
@@ -609,11 +610,11 @@ isolatedTest.describe('framework adapters', () => {
     await openAdapter(page, 'react', 'onSave');
     await typeAtEnd(page, 'p1', 'Z');
     await gap(page, SAVE_SETTLE);
-    expect(await lastEmitted(page, 'p1')).toEqual({ text: 'Hello from ReactZ' });
+    expect(await lastEmitted(page, 'p1')).toEqual({ text: [{ text: 'Hello from ReactZ' }] });
     await undo(page);
     await gap(page, SAVE_SETTLE);
 
-    expect(await lastEmitted(page, 'p1')).toEqual({ text: 'Hello from React' });
+    expect(await lastEmitted(page, 'p1')).toEqual({ text: [{ text: 'Hello from React' }] });
   });
 
   // Same as W4N-4, through the Vue adapter's v-model.
@@ -664,13 +665,13 @@ isolatedTest.describe('framework adapters', () => {
     const read = (): Promise<unknown> => page.evaluate(() => (window as unknown as { __saved?: unknown }).__saved);
 
     await expect(arrow).toHaveAttribute('aria-expanded', 'false');
-    expect(await read()).toEqual({ text: 'Tog' });
+    expect(await read()).toEqual({ text: [{ text: 'Tog' }] });
     await editable(page, 'top').click();
     await undo(page);
     await gap(page, SAVE_SETTLE);
 
     await expect(arrow).toHaveAttribute('aria-expanded', 'false');
-    expect(await read()).toEqual({ text: 'Tog' });
+    expect(await read()).toEqual({ text: [{ text: 'Tog' }] });
   });
 
   // Vue v-model is covered by W4N-5.

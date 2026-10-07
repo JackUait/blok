@@ -6,6 +6,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const LIST_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="list"]`;
@@ -380,9 +381,9 @@ test.describe('list tool (ListItem)', () => {
 
       // Save and verify depth increased
        
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       expect(savedData?.blocks).toHaveLength(2);
        
@@ -409,9 +410,9 @@ test.describe('list tool (ListItem)', () => {
       await page.keyboard.press('Tab');
 
       // Save and verify the first item stayed at depth 0 (unchanged).
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
     });
@@ -435,9 +436,9 @@ test.describe('list tool (ListItem)', () => {
 
       // Save and verify depth decreased
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
        
       expect(savedData?.blocks[1].data.depth ?? 0).toBe(0);
@@ -462,9 +463,9 @@ test.describe('list tool (ListItem)', () => {
 
       // Save and verify still 2 items at root level
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       expect(savedData?.blocks).toHaveLength(2);
        
@@ -492,9 +493,9 @@ test.describe('list tool (ListItem)', () => {
       // it can indent to depth 2
       await page.keyboard.press('Tab');
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
        
       expect(savedData?.blocks[2].data.depth).toBe(2);
@@ -503,9 +504,9 @@ test.describe('list tool (ListItem)', () => {
       // and current is now at depth 2 (already deeper than previous)
       await page.keyboard.press('Tab');
 
-      const savedData2 = await page.evaluate(async () => {
+      const savedData2 = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       // Should still be at depth 2
        
@@ -529,9 +530,9 @@ test.describe('list tool (ListItem)', () => {
       // Press Tab once - should indent to depth 1
       await page.keyboard.press('Tab');
 
-      let savedData = await page.evaluate(async () => {
+      let savedData = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
        
       expect(savedData?.blocks[1].data.depth).toBe(1);
@@ -540,9 +541,9 @@ test.describe('list tool (ListItem)', () => {
       // and we're already at depth 1 (which is parent depth 0 + 1)
       await page.keyboard.press('Tab');
 
-      savedData = await page.evaluate(async () => {
+      savedData = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       // Should still be at depth 1
        
@@ -568,9 +569,9 @@ test.describe('list tool (ListItem)', () => {
       // Press Tab - should indent to depth 3 because previous item is at depth 2
       await page.keyboard.press('Tab');
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
        
       expect(savedData?.blocks[3].data.depth).toBe(3);
@@ -587,9 +588,9 @@ test.describe('list tool (ListItem)', () => {
         ]),
       });
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       expect(savedData?.blocks).toHaveLength(2);
       expect(savedData?.blocks[0].type).toBe('list');
@@ -608,9 +609,9 @@ test.describe('list tool (ListItem)', () => {
         ]),
       });
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       expect(savedData?.blocks).toHaveLength(2);
        
@@ -649,9 +650,9 @@ test.describe('list tool (ListItem)', () => {
 
       // Save and verify the link is preserved with href attribute
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       expect(savedData?.blocks).toHaveLength(1);
        
@@ -705,9 +706,9 @@ test.describe('list tool (ListItem)', () => {
 
       // Save and verify the href is preserved
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
        
       expect(savedData?.blocks[0].data.text).toContain('href="https://google.com"');
@@ -1629,9 +1630,9 @@ test.describe('list tool (ListItem)', () => {
       await expect(page.getByText('Nested item')).toBeVisible();
 
       // First-in-group items are allowed up to depth 1, so depth stays at 1
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
        
       expect(savedData?.blocks[0].data.depth).toBe(1);
@@ -1655,9 +1656,9 @@ test.describe('list tool (ListItem)', () => {
       // Wait for DOM update after move
       await expect(page.getByText('Level 2')).toBeVisible();
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       // First-in-group items are capped at depth 1
        
@@ -1682,9 +1683,9 @@ test.describe('list tool (ListItem)', () => {
       // Wait for DOM update after move
       await expect(page.getByText('Deep item')).toBeVisible();
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       // Deep item should be capped at depth 1 (previous item depth 0 + 1)
        
@@ -1710,9 +1711,9 @@ test.describe('list tool (ListItem)', () => {
       // Wait for DOM update after move
       await expect(page.getByText('Third')).toBeVisible();
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       // Depth should remain 1 since it's still valid
        
@@ -1773,9 +1774,9 @@ test.describe('list tool (ListItem)', () => {
       expect(result.isStillSelected).toBe(true);
 
       // Verify depth was also adjusted correctly (capped at 1 for first-in-group)
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
        
       expect(savedData?.blocks[0].data.depth).toBe(1);
@@ -1848,9 +1849,9 @@ test.describe('list tool (ListItem)', () => {
 
       // Verify both items are now at depth 1
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
        
       expect(savedData?.blocks[1].data.depth).toBe(1);
@@ -1876,9 +1877,9 @@ test.describe('list tool (ListItem)', () => {
 
       // Verify both items are now at depth 0
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
        
       expect(savedData?.blocks[1].data.depth ?? 0).toBe(0);
@@ -1903,9 +1904,9 @@ test.describe('list tool (ListItem)', () => {
       // sibling so it CANNOT indent; the second nests structurally under it.
       await page.keyboard.press('Tab');
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       // First item stays at the root (depth 0); second item nests under it.
 
@@ -1934,9 +1935,9 @@ test.describe('list tool (ListItem)', () => {
 
       // Verify neither item changed
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
        
       expect(savedData?.blocks[1].data.depth).toBe(1);
@@ -1966,9 +1967,9 @@ test.describe('list tool (ListItem)', () => {
       // depth level, the paragraph nests structurally under its preceding sibling.
       await page.keyboard.press('Tab');
 
-      const savedData: OutputData | undefined = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = savedAsHtml(await page.evaluate(async () => {
         return await window.blokInstance?.save();
-      });
+      }));
 
       // List item indented one depth level (no longer a no-op).
 

@@ -474,7 +474,7 @@ test.describe('inline tool italic', () => {
     const paragraphBlock = savedData?.blocks.find((block) => block.type === 'paragraph');
 
      
-    expect(paragraphBlock?.data.text).toMatch(/<i>italic<\/i> text/);
+    expect(paragraphBlock?.data.text).toEqual([{ text: 'italic', marks: { italic: true } }, { text: ' text' }]);
   });
 
   test('removes italic from selection within italic text', async ({ page }) => {

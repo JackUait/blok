@@ -13,6 +13,9 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
+import { shownRuns } from '../helpers/shown-look';
+import type { ShownRun } from '../helpers/shown-look';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -92,7 +95,8 @@ interface State {
 }
 
 /** One line per block for the screen and for save() (ids and edit metadata left out). */
-const state = (page: Page): Promise<State> => page.evaluate(async (holder) => {
+const state = async (page: Page): Promise<State> => {
+  const { dom, out } = await page.evaluate(async (holder) => {
   const root = document.getElementById(holder);
   const wrappers = root === null ? [] : Array.from(root.querySelectorAll('[data-blok-testid="block-wrapper"]'));
   const own = (w: Element, sel: string): Element[] =>
@@ -106,12 +110,21 @@ const state = (page: Page): Promise<State> => page.evaluate(async (holder) => {
     return `${w.getAttribute('data-blok-component') ?? '?'}|d${w.getAttribute('data-blok-depth') ?? '0'}|${marker}${box === undefined ? '' : tick}|${text}`;
   });
   const out = await window.blokInstance?.save();
-  const blocks = out?.blocks ?? [];
+
+  return { dom, out };
+}, HOLDER_ID);
+  const blocks = blocksAsHtml(out?.blocks ?? []);
   const ids = blocks.map((b) => b.id);
   const saved = blocks.map((b) => `${b.type}|${JSON.stringify(b.data).replace(/&nbsp;/g, ' ')}|p${b.parent === undefined ? '-' : ids.indexOf(b.parent)}`);
 
   return { dom, saved };
-}, HOLDER_ID);
+};
+
+/** Screen structure without markup: component, depth, list marker and checkbox per block. */
+const structure = (dom: string[]): string[] => dom.map((line) => line.split('|').slice(0, 3).join('|'));
+
+/** Every editable's text and computed look, in document order. */
+const screenRuns = (page: Page): Promise<ShownRun[][]> => shownRuns(page.locator(`#${HOLDER_ID} [contenteditable]:not([contenteditable="false"])`));
 
 /** "id@offset" of the caret, 'none' without a selection, 'outside' when it is not in a block editable. */
 const caret = (page: Page): Promise<string> => page.evaluate(() => {
@@ -530,6 +543,7 @@ test.describe('W5F: spread of the wave-4 families', () => {
       await create(page, c.blocks);
       await gap(page);
       const loaded = await state(page);
+      const loadedRuns = await screenRuns(page);
 
       const target = c.edit === 'l'
         ? await page.evaluate(() => document.querySelector('[data-blok-component="list"]')?.getAttribute('data-blok-id') ?? 'l')
@@ -547,10 +561,9 @@ test.describe('W5F: spread of the wave-4 families', () => {
       const doc = await page.evaluate((id) => JSON.stringify((window.blokInstance as unknown as { module: { yjsManager: { getBlockDataObject: (i: string) => unknown } } }).module.yjsManager.getBlockDataObject(id)), target);
 
       expect(undone.saved, `save() after undo equals save() right after load (document data after undo: ${doc})`).toEqual(loaded.saved);
-      // A lone filler <br> in an empty editable comes and goes; it is not visible.
-      const filler = (dom: string[]): string[] => dom.map((line) => line.replace(/\|<br>$/, '|'));
-
-      expect(filler(undone.dom), 'screen after undo equals the screen right after load').toEqual(filler(loaded.dom));
+      // Undo re-renders from stored segments, so compare structure and what is seen, not markup spelling.
+      expect(structure(undone.dom), 'block structure after undo equals the structure right after load').toEqual(structure(loaded.dom));
+      expect(await screenRuns(page), 'screen after undo shows the same text and marks as right after load').toEqual(loadedRuns);
     });
   }
 
@@ -588,7 +601,7 @@ test.describe('W5F: spread of the wave-4 families', () => {
 
       const loadedBox: unknown = JSON.parse(loaded.saved[0].split('|')[1]);
 
-      expect(saved, 'save() after undo works and equals the loaded document').toBe(JSON.stringify([['box', null, loadedBox], ['k', 'box', { text: 'kid' }]]));
+      expect(saved, 'save() after undo works and equals the loaded document').toBe(JSON.stringify([['box', null, loadedBox], ['k', 'box', { text: [{ text: 'kid' }] }]]));
     });
   }
 

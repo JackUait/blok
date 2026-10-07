@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -39,14 +40,14 @@ const createBlok = async (page: Page, blocks?: Blocks, config: Record<string, un
   }, { holder: HOLDER_ID, initialBlocks: blocks ?? null, extra: config });
 };
 
-const saveBlok = (page: Page): Promise<OutputData> =>
-  page.evaluate(async () => {
+const saveBlok = async (page: Page): Promise<OutputData> =>
+  savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance not found');
     }
 
     return await window.blokInstance.save();
-  });
+  }));
 
 /** Three tabs, each holding one paragraph. */
 const threeTabs: Blocks = [

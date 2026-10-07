@@ -5,6 +5,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const TOGGLE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="toggle"]`;
@@ -162,7 +163,7 @@ test.describe('Toggle paste from Google Docs', () => {
       await simulatePaste(page, GDOCS_HTML);
 
       // Verify via saved data: every paragraph block must have a parent (i.e. none are root-level)
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -180,7 +181,7 @@ test.describe('Toggle paste from Google Docs', () => {
 
       await simulatePaste(page, GDOCS_HTML);
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -208,7 +209,7 @@ test.describe('Toggle paste from Google Docs', () => {
 
       await simulatePaste(page, GDOCS_HTML);
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -232,7 +233,7 @@ test.describe('Toggle paste from Google Docs', () => {
 
       await simulatePaste(page, GDOCS_HTML);
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -270,7 +271,7 @@ test.describe('Toggle paste from Google Docs', () => {
       await expect(child).toBeVisible();
 
       // "Regular paragraph after toggle" must be a root-level block (no parent field)
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -332,7 +333,7 @@ test.describe('Toggle paste from Google Docs', () => {
 
       await simulatePaste(page, PLAIN_DETAILS_HTML);
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
       expect(saved?.blocks).toHaveLength(2);

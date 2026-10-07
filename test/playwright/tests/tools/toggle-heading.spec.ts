@@ -5,6 +5,7 @@ import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 // ---------------------------------------------------------------------------
 // Selectors
@@ -440,7 +441,7 @@ test.describe('Toggle Heading', () => {
 
       await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const data = getHeaderData(savedData);
 
       expect(data.level).toBe(2);
@@ -462,7 +463,7 @@ test.describe('Toggle Heading', () => {
 
       await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const data = getHeaderData(savedData);
 
       expect(data.level).toBe(1);
@@ -484,7 +485,7 @@ test.describe('Toggle Heading', () => {
 
       await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const data = getHeaderData(savedData);
 
       expect(data.level).toBe(3);
@@ -509,7 +510,7 @@ test.describe('Toggle Heading', () => {
       await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
       await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(0);
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const data = getHeaderData(savedData);
 
       expect(data.level).toBe(2);
@@ -528,7 +529,7 @@ test.describe('Toggle Heading', () => {
 
       await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const data = getHeaderData(savedData);
 
       expect(data.level).toBe(1);
@@ -546,7 +547,7 @@ test.describe('Toggle Heading', () => {
 
       await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const data = getHeaderData(savedData);
 
       expect(data.level).toBe(3);
@@ -578,7 +579,7 @@ test.describe('Toggle Heading', () => {
 
       await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const data = getHeaderData(savedData);
 
       expect(data.text).toBe('Hello World');
@@ -595,7 +596,7 @@ test.describe('Toggle Heading', () => {
     test('saves isToggleable: true for a toggle heading', async ({ page }) => {
       await createBlokWithData(page, [makeToggleHeadingBlock('Saved Toggle H2', 2)]);
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(savedData?.blocks).toHaveLength(1);
       expect(savedData?.blocks[0].type).toBe('header');
@@ -617,7 +618,7 @@ test.describe('Toggle Heading', () => {
         'false'
       );
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const data = getHeaderData(savedData);
 
       expect(data).not.toHaveProperty('isOpen');
@@ -626,7 +627,7 @@ test.describe('Toggle Heading', () => {
     test('does not save isToggleable for regular headers', async ({ page }) => {
       await createBlokWithData(page, [makeRegularHeaderBlock('Regular Header', 2)]);
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const data = getHeaderData(savedData);
 
       expect(data.isToggleable).toBeUndefined();
@@ -726,7 +727,7 @@ test.describe('Toggle Heading', () => {
       await page.keyboard.press('Enter');
 
       // A new paragraph block should exist inside the toggle
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(savedData?.blocks).toHaveLength(2);
       expect(savedData?.blocks[1].type).toBe('paragraph');
@@ -754,7 +755,7 @@ test.describe('Toggle Heading', () => {
       await placeholder.click();
 
       // A new paragraph should exist as a child block
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(savedData?.blocks).toHaveLength(2);
       expect(savedData?.blocks[1].type).toBe('paragraph');

@@ -5,6 +5,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const TOGGLE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="toggle"]`;
@@ -361,7 +362,7 @@ test.describe('Toggle Tool', () => {
     test('save() includes the toggle text', async ({ page }) => {
       await createBlok(page, createToggleData('Saved text'));
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
       expect(saved?.blocks).toHaveLength(1);
@@ -378,7 +379,7 @@ test.describe('Toggle Tool', () => {
       await arrow.click();
       await expect(page.locator('[data-blok-toggle-open]')).toHaveAttribute('data-blok-toggle-open', 'false');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
       expect(saved?.blocks[0].data).not.toHaveProperty('isOpen');
@@ -389,7 +390,7 @@ test.describe('Toggle Tool', () => {
       await page.locator(TOGGLE_ARROW_SELECTOR).click();
       await expect(page.locator('[data-blok-toggle-open]')).toHaveAttribute('data-blok-toggle-open', 'true');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
       expect(saved?.blocks[0].data).not.toHaveProperty('isOpen');
@@ -484,7 +485,7 @@ test.describe('Toggle Tool', () => {
       await expect(toggle).toBeVisible();
 
       // No plain (non-child) paragraphs should remain at top level
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
 
@@ -505,7 +506,7 @@ test.describe('Toggle Tool', () => {
       await page.keyboard.press('End');
       await page.keyboard.press('Enter');
 
-      const saved = await page.evaluate(async () => window.blokInstance?.save());
+      const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
       expect(saved).toBeDefined();
       expect(saved?.blocks.length).toBeGreaterThanOrEqual(2);

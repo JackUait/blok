@@ -18,9 +18,9 @@ internal sealed class CollabDocConverter(
     Action<string>? log = null) : ICollabDocConverter
 {
   /// <summary>
-  /// Each migration read call's budget. A migration runs once per room, and
-  /// one rich field of about 700 KB ran past the runtime's 10 s default on a
-  /// loaded host, which would keep that room from ever opening.
+  /// Each seed and migration read call's budget. Both run once per lineage,
+  /// and one rich field of about 700 KB ran past the runtime's 10 s default on
+  /// a loaded host, which would keep that document from ever opening.
   /// </summary>
   internal static readonly TimeSpan MigrationReadTimeout = TimeSpan.FromSeconds(60);
 
@@ -41,7 +41,8 @@ internal sealed class CollabDocConverter(
       throw new InvalidDataException("collab: the document has no blocks array.");
     }
 
-    var input = await Converting(YDocConverter.CollectSeedHtml(blocks, fields), cancellationToken);
+    var found = YDocConverter.CollectSeedHtml(blocks, fields);
+    var input = RichTextInput.Converting(fields, await Read(found, cancellationToken, MigrationReadTimeout));
 
     YDocConverter.Seed(doc, blocks, input);
   }

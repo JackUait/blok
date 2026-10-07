@@ -344,6 +344,107 @@ public sealed class YDocConverterRichTextTests
     Assert.Equal(0, updates);
   }
 
+  /// <summary>
+  /// Host data is never trusted: a malformed mark or embed is normalised on
+  /// the way in, so no client reading the room later chokes on it.
+  /// </summary>
+  [Fact]
+  public void SeedNormalisesMalformedMarksAndEmbeds()
+  {
+    var doc = Seeded(
+        """
+        { "id": "b1", "type": "paragraph", "data": { "text": [
+          { "text": "a", "marks": { "tag:b": { "x": 1, "y": "1" }, "color": {}, "background": 5 } },
+          { "embed": { "equation": { "expression": 5 } } },
+          { "embed": { "equation": null } },
+          { "embed": { "page": { "id": {} } } },
+          { "embed": { "html": 5 } },
+          { "text": "b", "marks": { "tag:i": "str" } }
+        ] } }
+        """,
+        """{ "id": "b2", "type": "paragraph", "data": { "text": [{ "text": "other" }] } }""");
+
+    Assert.Equal("""[{"text":"a","marks":{"tag:b":{"y":"1"}}},{"text":"b"}]""", Text(doc, "b1"));
+    Assert.Equal("""[{"text":"other"}]""", Text(doc, "b2"));
+  }
+
+  [Fact]
+  public void ARestEditNormalisesMalformedMarksAndEmbeds()
+  {
+    var doc = Seeded("""{ "id": "b1", "type": "paragraph", "data": { "text": [{ "text": "a" }] } }""");
+
+    YDocConverter.ApplyOps(doc, Ops(
+        """
+        { "op": "update", "id": "b1", "data": { "text": [
+          { "text": "a", "marks": { "tag:b": { "x": null }, "color": [1] } },
+          { "embed": { "page": { "id": "p", "extra": "1" } } },
+          { "embed": { "equation": { "expression": "e" } } }
+        ] } }
+        """));
+
+    Assert.Equal(
+        """[{"text":"a","marks":{"tag:b":{}}},{"embed":{"equation":{"expression":"e"}}}]""",
+        Text(doc, "b1"));
+  }
+
+  /// <summary>
+  /// A peer writes what it likes into a formatted text. Export reads the
+  /// valid segments, and a REST edit of that text plans and applies.
+  /// </summary>
+  [Fact]
+  public void APeersMalformedWriteNeitherBreaksExportNorTheNextEdit()
+  {
+    var doc = Seeded(
+        """{ "id": "b1", "type": "paragraph", "data": { "text": [{ "text": "ab" }] } }""",
+        """{ "id": "b2", "type": "paragraph", "data": { "text": [{ "text": "other" }] } }""");
+
+    PoisonFormattedText(doc, "b1");
+
+    Assert.Equal(
+        """[{"text":"a"},{"text":"x","marks":{"tag:b":{}}},{"text":"b"}]""",
+        Text(doc, "b1"));
+    Assert.Equal("""[{"text":"other"}]""", Text(doc, "b2"));
+
+    YDocConverter.ApplyOps(doc, Ops(
+        """{ "op": "update", "id": "b1", "data": { "text": [{ "text": "abc" }] } }"""));
+
+    Assert.Equal("""[{"text":"abc"}]""", Text(doc, "b1"));
+    Assert.Equal(
+        "abc",
+        string.Concat(((YXmlText)DataValue(doc, "b1", "text")!).ToDelta().Select(op => op.Insert as string)));
+  }
+
+  /// <summary>
+  /// Writes, between "a" and "b": a malformed equation embed, an "x" whose
+  /// marks are a non-string tag attribute and a non-string color, and a
+  /// page embed whose id is not a string.
+  /// </summary>
+  internal static void PoisonFormattedText(YDoc doc, string blockId)
+  {
+    var text = (YXmlText)DataValue(doc, blockId, "text")!;
+    var marks = new AnyObject();
+    var tag = new AnyObject();
+    var equation = new AnyObject();
+    var badEquation = new AnyObject();
+    var page = new AnyObject();
+    var badPage = new AnyObject();
+
+    tag.Add("x", 1d);
+    marks.Add("color", new AnyObject());
+    marks.Add("tag:b", tag);
+    equation.Add("expression", 5d);
+    badEquation.Add("equation", equation);
+    page.Add("id", new AnyObject());
+    badPage.Add("page", page);
+
+    doc.Transact(transaction =>
+    {
+      text.InsertEmbed(transaction, 1, badEquation, new AnyObject());
+      text.Insert(transaction, 2, "x", marks);
+      text.InsertEmbed(transaction, 3, badPage, new AnyObject());
+    });
+  }
+
   private static YMap Block(string id, string type, YMap data)
   {
     return new YMap(

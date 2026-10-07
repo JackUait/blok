@@ -3118,6 +3118,79 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A v1.15.2 host record is HTML, and one large field can take longer to
+  /// read than the runtime's default timeout. The seed runs once per lineage,
+  /// so it reads with the one-time budget, or the document never opens.
+  /// </summary>
+  [Fact]
+  public async Task ASeedReadsItsHtmlWithTheOneTimeBudget()
+  {
+    endpoint.HoldsDocument(DocId, (JsonObject)JsonNode.Parse(
+        """{"blocks":[{"id":"b1","type":"paragraph","data":{"text":"<b>large</b>"}}]}""")!);
+    var manager = CreateManager(docConverter: new CollabDocConverter(time, new DefaultTimeoutTooShortReader()));
+
+    var result = await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.Joined, result.Status);
+  }
+
+  /// <summary>
+  /// A host record and a peer both write malformed rich text. The room still
+  /// opens, still exports every block with the junk normalised away, and
+  /// still takes a REST edit of the poisoned text.
+  /// </summary>
+  [Fact]
+  public async Task MalformedRichTextFromTheHostOrAPeerKeepsTheRoomExportable()
+  {
+    endpoint.HoldsDocument(DocId, (JsonObject)JsonNode.Parse(
+        """
+        {"blocks":[
+          {"id":"b1","type":"paragraph","data":{"text":[{"text":"ab"}]}},
+          {"id":"b2","type":"paragraph","data":{"text":[
+            {"text":"c","marks":{"tag:b":{"x":1},"color":{}}},
+            {"embed":{"equation":null}}
+          ]}}
+        ]}
+        """)!);
+    var manager = CreateManager(docConverter: new CollabDocConverter(time, RichTextRuntime.Reader));
+    var writer = new FakeMember();
+    var membership = await Join(manager, writer);
+    var probe = new FakeMember(canWrite: false);
+    var probing = await Join(manager, probe);
+    var client = YDocs.NewClient();
+    await probing.ReceiveAsync(
+        SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(client))),
+        CancellationToken.None);
+    YDocs.Apply(client, Assert.IsType<SyncStep2Frame>(probe.Received.First(frame => frame is SyncStep2Frame)).Update);
+    await probing.LeaveAsync();
+    var before = YDocs.StateVector(client);
+
+    YDocConverterRichTextTests.PoisonFormattedText(client, "b1");
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(client.EncodeStateAsUpdate(before))),
+        CancellationToken.None);
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count > 0,
+        "the export");
+
+    var blocks = Assert.IsType<JsonArray>(endpoint.Saves[^1].Data["blocks"]);
+    Assert.Equal(
+        """[{"text":"a"},{"text":"x","marks":{"tag:b":{}}},{"text":"b"}]""",
+        blocks[0]!["data"]!["text"]!.ToJsonString());
+    Assert.Equal("""[{"text":"c","marks":{"tag:b":{}}}]""", blocks[1]!["data"]!["text"]!.ToJsonString());
+
+    var edit = await manager.EditAsync(
+        DocId,
+        [new CollabEditOp.Update("b1", (JsonObject)JsonNode.Parse("""{"text":[{"text":"abc"}]}""")!)],
+        CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Applied, edit.Status);
+    Assert.Empty(writer.Closes);
+  }
+
+  /// <summary>
   /// Reading an edit's HTML happens before anything is written, so a reader
   /// that fails (a runtime timeout, a spent allocation budget) refuses that
   /// one request. It must not take the commit-failure path, which closes the
@@ -4790,6 +4863,113 @@ public sealed class CollabRoomTests
 
     Assert.True(converter.Exports > 8, $"{converter.Exports} export attempts");
     Assert.DoesNotContain(log, line => line.Contains("gave up exporting", StringComparison.Ordinal));
+  }
+
+  /// <summary>
+  /// A working copy has no journal, but an export that keeps hitting the
+  /// runtime's limits never heals there either. It gives up after the same
+  /// bound and stops spending a pooled engine on every retry.
+  /// </summary>
+  [Fact]
+  public async Task OnAWorkingCopyATransientExportFailureThatNeverHealsIsGivenUp()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var writer = new FakeMember();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read",
+        new BlokDocumentConversionException(BlokConversionFailure.TimedOut, new TimeoutException()));
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => log.Any(line => line.Contains("gave up exporting", StringComparison.Ordinal)),
+        "the export to be given up");
+
+    var attempts = converter.Exports;
+
+    for (var tick = 0; tick < 20; tick++)
+    {
+      time.Advance(TimeSpan.FromMinutes(1));
+      await manager.SettleAsync();
+    }
+
+    Assert.Equal(attempts, converter.Exports);
+    Assert.Empty(endpoint.Saves);
+
+    // The next edit gets one attempt, and a success clears the give-up.
+    converter.ExportFailure = null;
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "?"))),
+        CancellationToken.None);
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count == 1,
+        "the next edit's export");
+  }
+
+  /// <summary>
+  /// The working set holds every edit, so after the give-up the room may
+  /// unload: waiting cannot produce the projection, and holding the room
+  /// would only keep it in memory forever.
+  /// </summary>
+  [Fact]
+  public async Task OnAWorkingCopyAGivenUpExportLetsTheRoomUnload()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var writer = new FakeMember();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read",
+        new BlokDocumentConversionException(BlokConversionFailure.DocumentTooLarge, new InvalidOperationException()));
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+    await membership.LeaveAsync();
+
+    for (var tick = 0; tick < 20; tick++)
+    {
+      time.Advance(TimeSpan.FromMinutes(1));
+      await manager.SettleAsync();
+    }
+
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Empty(endpoint.Saves);
+    Assert.Equal("hello!", YDocs.Replay(store.FramesOf(DocId)));
+  }
+
+  [Fact]
+  public async Task OnAWorkingCopyAnEnginePoolWaitNeverGivesTheExportUp()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var writer = new FakeMember();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read", new OperationCanceledException());
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+
+    for (var tick = 0; tick < 20; tick++)
+    {
+      time.Advance(TimeSpan.FromMinutes(1));
+      await manager.SettleAsync();
+    }
+
+    Assert.DoesNotContain(log, line => line.Contains("gave up exporting", StringComparison.Ordinal));
+    Assert.True(converter.Exports > 8, $"{converter.Exports} export attempts");
   }
 
   /// <summary>
@@ -6587,6 +6767,23 @@ public sealed class CollabRoomTests
 }
 
 /// <summary>An HTML reader that always fails with <paramref name="failure"/>.</summary>
+/// <summary>Times out on the runtime's default; reads to empty text with a longer budget.</summary>
+internal sealed class DefaultTimeoutTooShortReader : IRichTextHtmlReader
+{
+  public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
+      IReadOnlyList<RichTextHtml> fields,
+      TimeSpan? timeout = null,
+      CancellationToken cancellationToken = default)
+  {
+    if (timeout is null)
+    {
+      throw new BlokDocumentConversionException(BlokConversionFailure.TimedOut, new TimeoutException());
+    }
+
+    return ValueTask.FromResult<IReadOnlyList<JsonArray>>([.. fields.Select(_ => new JsonArray())]);
+  }
+}
+
 internal sealed class FailingHtmlReader(Exception? failure = null) : IRichTextHtmlReader
 {
   public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(

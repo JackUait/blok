@@ -101,8 +101,8 @@ internal sealed class CollabRoom : IDisposable
   private const int CheckpointFailureLimit = 3;
 
   /// <summary>
-  /// Consecutive transient export failures a journal room retries before it
-  /// gives the projection up. A field too large for the runtime's timeout
+  /// Consecutive transient export failures a room retries before it gives
+  /// the projection up. A field too large for the runtime's timeout
   /// fails the same way every time; without this the room would retry it,
   /// and stay loaded for it, forever. With the default backoff the last
   /// attempt is about three minutes after the first.
@@ -3255,16 +3255,18 @@ internal sealed class CollabRoom : IDisposable
         return;
       }
 
-      // Not reset by a refusal: after the give-up, the next checkpoint gets
-      // one attempt, not another full round.
-      if (session is not null && IsRuntimeLimit(error) &&
-          ++transientExportFailures >= TransientExportFailureLimit)
+      // Not reset by a refusal: after the give-up, the next checkpoint (or,
+      // on a working copy, the next edit) gets one attempt, not another full
+      // round. A working copy gives up too: its working set holds every edit,
+      // so only the projection is lost, and the room may then unload.
+      if (IsRuntimeLimit(error) && ++transientExportFailures >= TransientExportFailureLimit)
       {
         RefuseProjectionLocked(
             error,
             $"collab: room \"{DocId}\" gave up exporting after {transientExportFailures} attempts " +
             "that ran past the runtime's limits, so the consumer's record stays behind until the " +
-            "next checkpoint retries it (raise the runtime's timeout for documents this large)");
+            (session is null ? "next edit" : "next checkpoint") +
+            " retries it (raise the runtime's timeout for documents this large)");
 
         return;
       }

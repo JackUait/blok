@@ -73,14 +73,21 @@ internal static partial class RichText
         continue;
       }
 
+      // Only the content survives: the text, else a valid embed. Neither
+      // means a peer or host wrote junk, and the item is dropped.
       var segment = new AnyObject();
 
-      foreach (var (key, value) in raw)
+      if (TextOf(raw) is { } content)
       {
-        if (key != "marks")
-        {
-          segment.Add(key, value);
-        }
+        segment.Add("text", content);
+      }
+      else if (raw.TryGet("embed", out var embed) && IsEmbed(embed))
+      {
+        segment.Add("embed", embed);
+      }
+      else
+      {
+        continue;
       }
 
       raw.TryGet("marks", out var marks);
@@ -129,8 +136,9 @@ internal static partial class RichText
   }
 
   /// <summary>
-  /// <c>deltaToSegments</c>: a string insert is text, a plain object insert
-  /// an embed, anything else (a nested type, an array, a scalar) is skipped.
+  /// <c>deltaToSegments</c>: a string insert is text, an insert of one of the
+  /// three embed shapes an embed, anything else (a nested type, an array, a
+  /// scalar, a malformed embed) is skipped.
   /// </summary>
   internal static AnyArray FromDelta(IReadOnlyList<YTextDelta> delta)
   {
@@ -144,7 +152,7 @@ internal static partial class RichText
       {
         segment.Add("text", text);
       }
-      else if (op.Insert is AnyObject embed)
+      else if (op.Insert is AnyObject embed && IsEmbed(embed))
       {
         segment.Add("embed", embed);
       }
@@ -335,7 +343,46 @@ internal static partial class RichText
     }
 
     return (text is string && HasOnlyKeys(record, "text")) ||
-        (embed is AnyObject && HasOnlyKeys(record, "embed"));
+        (IsEmbed(embed) && HasOnlyKeys(record, "embed"));
+  }
+
+  /// <summary>
+  /// Exactly one of <c>{equation:{expression:string}}</c>,
+  /// <c>{page:{id:string}}</c> or <c>{html:string}</c>, no other key at
+  /// either level. The client's HTML writer reads these unchecked, so any
+  /// other shape would make it throw for the whole document.
+  /// </summary>
+  private static bool IsEmbed(object? value)
+  {
+    if (value is not AnyObject embed)
+    {
+      return false;
+    }
+
+    var present = embed.Where(entry => entry.Value is not YUndefined).ToList();
+
+    if (present.Count != 1)
+    {
+      return false;
+    }
+
+    var (key, inner) = present[0];
+
+    return key switch
+    {
+      "html" => inner is string,
+      "equation" => HasOneString(inner, "expression"),
+      "page" => HasOneString(inner, "id"),
+      _ => false,
+    };
+  }
+
+  private static bool HasOneString(object? value, string key)
+  {
+    return value is AnyObject record &&
+        record.Where(entry => entry.Value is not YUndefined).ToList() is [{ } only] &&
+        only.Key == key &&
+        only.Value is string;
   }
 
   private static bool HasOnlyKeys(AnyObject record, string shapeKey)
@@ -362,7 +409,7 @@ internal static partial class RichText
       {
         segment.Add("text", text);
       }
-      else if (record.TryGet("embed", out var embed) && embed is AnyObject)
+      else if (record.TryGet("embed", out var embed) && IsEmbed(embed))
       {
         segment.Add("embed", embed);
       }
@@ -481,11 +528,27 @@ internal static partial class RichText
       return false;
     }
 
-    if (key.StartsWith("tag:", StringComparison.Ordinal) && raw is AnyObject attributes)
+    // The client's HTML writer escapes these with string calls, so any other
+    // value would make it throw for the whole document.
+    if (key is "color" or "background")
     {
+      value = raw;
+
+      return raw is string;
+    }
+
+    if (key.StartsWith("tag:", StringComparison.Ordinal))
+    {
+      if (raw is not AnyObject attributes)
+      {
+        return false;
+      }
+
       var sorted = new AnyObject();
 
-      foreach (var (name, attribute) in attributes.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+      foreach (var (name, attribute) in attributes
+          .Where(entry => entry.Value is string)
+          .OrderBy(entry => entry.Key, StringComparer.Ordinal))
       {
         sorted.Add(name, attribute);
       }

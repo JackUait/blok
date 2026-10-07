@@ -4,6 +4,8 @@ import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
 import { blocksAsHtml } from '../helpers/saved-as-html';
+import { shownRuns } from '../helpers/shown-look';
+import type { ShownRun } from '../helpers/shown-look';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -79,6 +81,12 @@ const state = async (page: Page): Promise<State> => {
 
   return { dom, saved };
 };
+
+/** Screen structure without markup: component, depth, list marker and checkbox per block. */
+const structure = (dom: string[]): string[] => dom.map((line) => line.split('|').slice(0, 3).join('|'));
+
+/** Every editable's text and computed look, in document order. */
+const screenRuns = (page: Page): Promise<ShownRun[][]> => shownRuns(page.locator(`#${HOLDER_ID} [contenteditable]:not([contenteditable="false"])`));
 
 /** Plain "type:text" per block from the screen and from save(), for the markdown checks. */
 const plain = async (page: Page): Promise<{ dom: string[]; saved: string[] }> => {
@@ -242,6 +250,7 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
       await page.keyboard.type(s.typed);
       await gap(page);
       const converted = await state(page);
+      const convertedRuns = await screenRuns(page);
 
       expect((await plain(page)).dom).toEqual(s.converted);
 
@@ -251,7 +260,12 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
 
       await page.keyboard.press(REDO);
       await settle(page);
-      expect(await state(page), 'redo replays the conversion exactly').toEqual(converted);
+      const redone = await state(page);
+
+      // A redo re-renders from stored segments, so compare what is saved and what is seen, not markup spelling.
+      expect(redone.saved, 'redo replays the saved conversion exactly').toEqual(converted.saved);
+      expect(structure(redone.dom), 'redo replays the block structure').toEqual(structure(converted.dom));
+      expect(await screenRuns(page), 'redo shows the same text and marks').toEqual(convertedRuns);
     });
   }
 

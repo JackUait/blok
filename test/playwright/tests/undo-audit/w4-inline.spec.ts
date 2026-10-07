@@ -3,6 +3,8 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { blocksAsHtml } from '../helpers/saved-as-html';
+import { shownRuns } from '../helpers/shown-look';
+import type { ShownRun } from '../helpers/shown-look';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
@@ -68,6 +70,13 @@ const savedText = async (page: Page, id: string): Promise<string> => {
 
   return clean(typeof text === 'string' ? text : '');
 };
+
+/** What the block's first editable shows, run by run (computed style, not markup). */
+const look = async (page: Page, id: string): Promise<ShownRun[]> => (await shownRuns(page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).first()))[0];
+
+/** The block's saved `text` exactly as the host gets it. */
+const rich = (page: Page, id: string): Promise<unknown> => page.evaluate(async (blockId) =>
+  (await window.blokInstance?.save())?.blocks.find((b) => b.id === blockId)?.data.text, id);
 
 /** innerHTML of the first editable inside the block's holder. */
 const shownHtml = async (page: Page, id: string): Promise<string> => clean(await page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).first()
@@ -255,16 +264,16 @@ test.describe('undo audit W4: inline formatting', () => {
     await page.getByTestId('marker-swatch-color-red').click();
     await page.mouse.click(5, 5);
     await gap(page);
-    const formatted = await savedText(page, 'p');
-    const formattedDom = await shownHtml(page, 'p');
+    const formatted = await rich(page, 'p');
+    const formattedLook = await look(page, 'p');
 
-    expect(formatted).toContain('<mark');
+    expect(formatted).toContainEqual({ text: 'world', marks: { color: 'red' } });
     await undo(page);
     expect(await savedText(page, 'p')).toBe('Hello world');
     expect(await shownHtml(page, 'p')).toBe('Hello world');
     await redo(page);
-    expect(await savedText(page, 'p')).toBe(formatted);
-    expect(await shownHtml(page, 'p')).toBe(formattedDom);
+    expect(await rich(page, 'p')).toEqual(formatted);
+    expect(await look(page, 'p')).toEqual(formattedLook);
   });
 
   test('W4I-6: undo with the colour picker still open removes the background colour', async ({ page }) => {
@@ -306,15 +315,16 @@ test.describe('undo audit W4: inline formatting', () => {
     await select(page, 'world');
     await page.keyboard.press(`${MOD}+Shift+h`);
     await gap(page);
-    const formatted = await savedText(page, 'p');
-    const formattedDom = await shownHtml(page, 'p');
+    const formatted = await rich(page, 'p');
+    const formattedLook = await look(page, 'p');
 
-    expect(formatted).toContain('<mark');
+    expect(JSON.stringify(formatted)).toMatch(/"(color|background)"/);
     await undo(page);
     expect(await savedText(page, 'p')).toBe('Hello world');
     expect(await shownHtml(page, 'p')).toBe('Hello world');
     await redo(page);
-    expect(await shownHtml(page, 'p')).toBe(formattedDom);
+    expect(await rich(page, 'p')).toEqual(formatted);
+    expect(await look(page, 'p')).toEqual(formattedLook);
   });
 
   test('W4I-9: clear format undoes in one step and redoes', async ({ page }) => {
@@ -519,6 +529,8 @@ test.describe('undo audit W4: inline formatting', () => {
     const html = '<i><strong>bold</strong> it</i> tail';
 
     await mount(page, [P('p', html)]);
+    const loadedLook = await look(page, 'p');
+
     await select(page, 'bold');
     await page.keyboard.press(`${MOD}+b`);
     await gap(page);
@@ -530,7 +542,7 @@ test.describe('undo audit W4: inline formatting', () => {
       { text: ' it', marks: { italic: true } },
       { text: ' tail' },
     ]);
-    expect(await shownHtml(page, 'p')).toBe(html);
+    expect(await look(page, 'p')).toEqual(loadedLook);
     await redo(page);
     expect(await savedText(page, 'p')).not.toContain('<strong>');
     expect(await shownHtml(page, 'p')).not.toContain('<strong>');
@@ -730,7 +742,8 @@ test.describe('undo audit W4: inline formatting', () => {
 
     await mount(page, [P('p', html)]);
     const before = await savedText(page, 'p');
-    const beforeDom = await shownHtml(page, 'p');
+    const beforeRich = await rich(page, 'p');
+    const beforeLook = await look(page, 'p');
 
     await select(page, 'world');
     await toolbarItem(page, 'marker').click();
@@ -741,7 +754,8 @@ test.describe('undo audit W4: inline formatting', () => {
 
     await undo(page);
     expect(await savedText(page, 'p')).toBe(before);
-    expect(await shownHtml(page, 'p')).toBe(beforeDom);
+    expect(await rich(page, 'p')).toEqual(beforeRich);
+    expect(await look(page, 'p')).toEqual(beforeLook);
     await redo(page);
     expect(await savedText(page, 'p')).toBe('Hello world');
   });
@@ -768,15 +782,17 @@ test.describe('undo audit W4: inline formatting', () => {
     await toolbarItem(page, 'marker').click();
     await page.getByTestId('marker-swatch-color-red').click();
     await gap(page);
-    const coloured = await savedText(page, 'p');
+    const coloured = await rich(page, 'p');
+    const colouredLook = await look(page, 'p');
 
+    expect(coloured).toContainEqual({ text: 'world', marks: { color: 'red' } });
     await undo(page);
     await redo(page);
-    expect(await savedText(page, 'p')).toBe(coloured);
+    expect(await rich(page, 'p')).toEqual(coloured);
     await page.mouse.click(5, 5);
     await gap(page, 200);
-    expect(await savedText(page, 'p')).toBe(coloured);
-    expect(await shownHtml(page, 'p')).toBe('Hello <mark style="color: var(--blok-color-red-text); background-color: transparent;">world</mark>');
+    expect(await rich(page, 'p')).toEqual(coloured);
+    expect(await look(page, 'p')).toEqual(colouredLook);
   });
 
   test('W4I-33: colour on bold text undoes to just the bold', async ({ page }) => {
@@ -788,15 +804,16 @@ test.describe('undo audit W4: inline formatting', () => {
     await page.getByTestId('marker-swatch-color-red').click();
     await page.mouse.click(5, 5);
     await gap(page);
-    const coloured = await savedText(page, 'p');
-    const colouredDom = await shownHtml(page, 'p');
+    const coloured = await rich(page, 'p');
+    const colouredLook = await look(page, 'p');
 
-    expect(coloured).toContain('<mark');
+    expect(coloured).toContainEqual({ text: 'world', marks: { bold: true, color: 'red' } });
     await undo(page);
     expect(await savedText(page, 'p')).toBe(html);
     expect(await shownHtml(page, 'p')).toBe(html);
     await redo(page);
-    expect(await shownHtml(page, 'p')).toBe(colouredDom);
+    expect(await rich(page, 'p')).toEqual(coloured);
+    expect(await look(page, 'p')).toEqual(colouredLook);
   });
 
   test('W4I-34: bold across a paragraph and a heading is one undo step', async ({ page }) => {
@@ -839,14 +856,20 @@ test.describe('undo audit W4: inline formatting', () => {
 
   test('W4I-30b: undo of an edit next to a loaded colour keeps the theme-aware colour', async ({ page }) => {
     await mount(page, [P('p', 'Hello <mark style="color: rgb(212, 76, 71); background-color: transparent;">world</mark> end')]);
-    const markStyle = (): Promise<string> => page.getByTestId('blok').evaluate((root) => root.querySelector('mark')?.getAttribute('style') ?? '');
-    const loaded = await markStyle();
+    // The declared colour, not the computed one: rgb(212, 76, 71) and the red theme token compute the same in light mode.
+    const markColour = (): Promise<string> => page.getByTestId('blok').evaluate((root) => root.querySelector('mark')?.style.color ?? '');
+    const loaded = await markColour();
+    const loadedRich = await rich(page, 'p');
+    const loadedLook = await look(page, 'p');
 
+    expect(loaded).toBe('var(--blok-color-red-text)');
     await select(page, 'end');
     await page.keyboard.press(`${MOD}+b`);
     await gap(page);
     await undo(page);
-    expect(await markStyle()).toBe(loaded);
+    expect(await markColour()).toBe(loaded);
+    expect(await rich(page, 'p')).toEqual(loadedRich);
+    expect(await look(page, 'p')).toEqual(loadedLook);
   });
 
   test('W4I-35: undo keeps the editor link config on loaded links', async ({ page }) => {
@@ -887,15 +910,16 @@ test.describe('undo audit W4: inline formatting', () => {
     await page.mouse.click(5, 5);
     await gap(page);
     const both = await savedText(page, 'p');
-    const bothDom = await shownHtml(page, 'p');
+    const bothRich = await rich(page, 'p');
+    const bothLook = await look(page, 'p');
 
     expect(both.match(/<mark/g)?.length).toBe(2);
     await undo(page);
     expect((await savedText(page, 'p')).match(/<mark/g)?.length).toBe(1);
     expect((await shownHtml(page, 'p')).match(/<mark/g)?.length).toBe(1);
     await redo(page);
-    expect(await savedText(page, 'p')).toBe(both);
-    expect(await shownHtml(page, 'p')).toBe(bothDom);
+    expect(await rich(page, 'p')).toEqual(bothRich);
+    expect(await look(page, 'p')).toEqual(bothLook);
   });
 
   // Keyboard path of W4I-29.

@@ -14,6 +14,8 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { blocksAsHtml } from '../helpers/saved-as-html';
+import { shownRuns } from '../helpers/shown-look';
+import type { ShownRun } from '../helpers/shown-look';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -117,6 +119,12 @@ const state = async (page: Page): Promise<State> => {
 
   return { dom, saved };
 };
+
+/** Screen structure without markup: component, depth, list marker and checkbox per block. */
+const structure = (dom: string[]): string[] => dom.map((line) => line.split('|').slice(0, 3).join('|'));
+
+/** Every editable's text and computed look, in document order. */
+const screenRuns = (page: Page): Promise<ShownRun[][]> => shownRuns(page.locator(`#${HOLDER_ID} [contenteditable]:not([contenteditable="false"])`));
 
 /** "id@offset" of the caret, 'none' without a selection, 'outside' when it is not in a block editable. */
 const caret = (page: Page): Promise<string> => page.evaluate(() => {
@@ -535,6 +543,7 @@ test.describe('W5F: spread of the wave-4 families', () => {
       await create(page, c.blocks);
       await gap(page);
       const loaded = await state(page);
+      const loadedRuns = await screenRuns(page);
 
       const target = c.edit === 'l'
         ? await page.evaluate(() => document.querySelector('[data-blok-component="list"]')?.getAttribute('data-blok-id') ?? 'l')
@@ -552,10 +561,9 @@ test.describe('W5F: spread of the wave-4 families', () => {
       const doc = await page.evaluate((id) => JSON.stringify((window.blokInstance as unknown as { module: { yjsManager: { getBlockDataObject: (i: string) => unknown } } }).module.yjsManager.getBlockDataObject(id)), target);
 
       expect(undone.saved, `save() after undo equals save() right after load (document data after undo: ${doc})`).toEqual(loaded.saved);
-      // A lone filler <br> in an empty editable comes and goes; it is not visible.
-      const filler = (dom: string[]): string[] => dom.map((line) => line.replace(/\|<br>$/, '|'));
-
-      expect(filler(undone.dom), 'screen after undo equals the screen right after load').toEqual(filler(loaded.dom));
+      // Undo re-renders from stored segments, so compare structure and what is seen, not markup spelling.
+      expect(structure(undone.dom), 'block structure after undo equals the structure right after load').toEqual(structure(loaded.dom));
+      expect(await screenRuns(page), 'screen after undo shows the same text and marks as right after load').toEqual(loadedRuns);
     });
   }
 

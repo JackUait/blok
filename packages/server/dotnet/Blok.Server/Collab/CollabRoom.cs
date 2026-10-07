@@ -850,8 +850,8 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private async Task<bool> FitsOneFrameLocked(IReadOnlyList<CollabEditOp> ops)
   {
-    // 0 means unset, as in the options. A custom store's limit is unknown,
-    // so 1 MiB, the local store's default, stands in when nothing is set.
+    // 0 means unset, as in the options. With no announced limit, 1 MiB, the
+    // local store's default, stands in. A custom store's own limit is unknown.
     var limit = options.AnnouncedMaxMessageBytes is > 0 ? options.AnnouncedMaxMessageBytes.Value : 1 << 20;
 
     if (options.MaxUpdateBytes is { } storeLimit)

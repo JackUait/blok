@@ -2,8 +2,9 @@ namespace Blok.Server.Collab;
 
 /// <summary>One version in a document's history: the point to read and when it was edited.</summary>
 /// <remarks>
-/// Sequence 0 is a lineage baseline; both its times are the lineage's
-/// created-at. Actors are distinct, in first-seen order.
+/// Sequence is the version's last record. Sequence 0 is a lineage baseline;
+/// both its times are the lineage's created-at. Actors are distinct, in
+/// first-seen order.
 /// </remarks>
 internal sealed record CollabVersion(
     string Lineage,

@@ -1,5 +1,7 @@
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -13,7 +15,8 @@ namespace Blok.Server.Collab;
 /// <remarks>
 /// <para>
 /// LAYOUT. <c>&lt;directory&gt;/&lt;CollabDocKey&gt;.journal/</c> holds
-/// <c>lock</c>, <c>manifest</c>,
+/// <c>lock</c>, <c>manifest</c>, <c>lineages</c> (the history ledger, see
+/// <see cref="CollabLineageLedger"/>),
 /// <c>journal.&lt;generation&gt;.&lt;mintingFence&gt;</c>,
 /// <c>baseline.&lt;generation&gt;.&lt;mintingFence&gt;</c> and
 /// <c>checkpoint.&lt;generation&gt;.&lt;through&gt;.&lt;writingFence&gt;</c>.
@@ -84,7 +87,10 @@ namespace Blok.Server.Collab;
 /// first's hold has evaporated. Nothing here makes several writers safe.
 /// </para>
 /// </remarks>
-internal sealed class LocalCollabOperationStore : ICollabOperationStore, ICollabOperationPurgeStore
+internal sealed class LocalCollabOperationStore :
+    ICollabOperationStore,
+    ICollabOperationPurgeStore,
+    ICollabOperationHistoryStore
 {
   /// <summary>
   /// Matches the default <c>CollabMaxMessageBytes</c>. The codec's own 32 MiB
@@ -127,6 +133,12 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore, ICollab
   private readonly string directory;
   private readonly long maxUpdateBytes;
   private readonly Action<string>? log;
+
+  // One ledger writer per document, in this process only. Two processes on one
+  // directory are not supported: the lock file refuses the second for writes,
+  // but a history delete takes no lock file and is guarded by this alone.
+  private readonly ConcurrentDictionary<string, SemaphoreSlim> ledgerGates =
+      new(StringComparer.Ordinal);
 
   internal LocalCollabOperationStore(
       string directory,
@@ -171,7 +183,381 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore, ICollab
     ArgumentException.ThrowIfNullOrEmpty(documentId);
     cancellationToken.ThrowIfCancellationRequested();
 
-    return ValueTask.FromResult(Purge(documentId));
+    // Under the ledger gate, so a history delete cannot write its tombstone
+    // after the purge removed the ledger.
+    var gate = LedgerGate(documentId);
+    gate.Wait(cancellationToken);
+
+    try
+    {
+      return ValueTask.FromResult(Purge(documentId));
+    }
+    finally
+    {
+      gate.Release();
+    }
+  }
+
+  public ValueTask<IReadOnlyList<CollabLineageInfo>> ListLineagesAsync(
+      string documentId,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(documentId);
+    cancellationToken.ThrowIfCancellationRequested();
+
+    var lineages = ResolveLineages(DocDirectoryFor(documentId), documentId, out var current);
+
+    return ValueTask.FromResult<IReadOnlyList<CollabLineageInfo>>([.. lineages.Select(entry =>
+        new CollabLineageInfo(
+            entry.Lineage,
+            entry.Epoch,
+            entry.Format,
+            entry.CreatedAt,
+            current is { } manifest &&
+                entry.Generation == manifest.Generation &&
+                entry.GenerationFence == manifest.GenerationFence))]);
+  }
+
+  public ValueTask<IReadOnlyList<ReadOnlyMemory<byte>>?> ReadBaselineAsync(
+      string documentId,
+      string lineage,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(documentId);
+    ArgumentNullException.ThrowIfNull(lineage);
+    cancellationToken.ThrowIfCancellationRequested();
+
+    var docDirectory = DocDirectoryFor(documentId);
+
+    if (FindLineage(docDirectory, documentId, lineage) is not { } entry)
+    {
+      return ValueTask.FromResult<IReadOnlyList<ReadOnlyMemory<byte>>?>(null);
+    }
+
+    return ValueTask.FromResult<IReadOnlyList<ReadOnlyMemory<byte>>?>(ReadBaseline(
+        docDirectory,
+        Manifest.Unseeded with
+        {
+          Generation = entry.Generation,
+          GenerationFence = entry.GenerationFence,
+        },
+        documentId));
+  }
+
+  public async IAsyncEnumerable<CollabRecordHeader> ReadHeadersAsync(
+      string documentId,
+      string lineage,
+      [EnumeratorCancellation] CancellationToken cancellationToken = default)
+  {
+    await foreach (var record in ReadRecordsAsync(
+        documentId,
+        lineage,
+        ulong.MaxValue,
+        cancellationToken))
+    {
+      yield return new CollabRecordHeader(
+          record.ServerSequence,
+          record.CommittedAt,
+          record.ActorId);
+    }
+  }
+
+  public async IAsyncEnumerable<CollabOperationRecord> ReadRecordsAsync(
+      string documentId,
+      string lineage,
+      ulong through,
+      [EnumeratorCancellation] CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(documentId);
+    ArgumentNullException.ThrowIfNull(lineage);
+    cancellationToken.ThrowIfCancellationRequested();
+
+    var docDirectory = DocDirectoryFor(documentId);
+
+    if (through == 0 || FindLineage(docDirectory, documentId, lineage) is not { } entry)
+    {
+      yield break;
+    }
+
+    // Read-only and sharing everything: a live session keeps appending to this
+    // file, and no history read may take the fence or truncate a torn tail.
+    await using var file = new FileStream(
+        JournalPath(docDirectory, entry.Generation, entry.GenerationFence),
+        new FileStreamOptions
+        {
+          Mode = FileMode.Open,
+          Access = FileAccess.Read,
+          Share = FileShare.ReadWrite | FileShare.Delete,
+          BufferSize = 0,
+        });
+    var reader = new HistoryJournalReader(file, documentId);
+
+    while (await reader.NextAsync(cancellationToken) is { } record)
+    {
+      if (record.ServerSequence > through)
+      {
+        yield break;
+      }
+
+      yield return record;
+    }
+  }
+
+  public async ValueTask<CollabLineageDeleteOutcome> DeleteLineageAsync(
+      string documentId,
+      string lineage,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(documentId);
+    ArgumentNullException.ThrowIfNull(lineage);
+
+    var gate = LedgerGate(documentId);
+    await gate.WaitAsync(cancellationToken);
+
+    try
+    {
+      return DeleteLineage(DocDirectoryFor(documentId), documentId, lineage);
+    }
+    finally
+    {
+      gate.Release();
+    }
+  }
+
+  /// <summary>
+  /// Removes one superseded generation's journal, baseline and checkpoints.
+  /// The caller holds the document's ledger gate.
+  /// </summary>
+  /// <remarks>
+  /// The manifest's older slot names the previous publication, so deleting
+  /// generation N-1 gives up that fallback for it. It only matters after media
+  /// corruption of the newer slot.
+  /// </remarks>
+  private CollabLineageDeleteOutcome DeleteLineage(
+      string docDirectory,
+      string documentId,
+      string lineage)
+  {
+    if (File.Exists(Path.Combine(docDirectory, PurgeName)))
+    {
+      return CollabLineageDeleteOutcome.Purged;
+    }
+
+    var lineages = ResolveLineages(docDirectory, documentId, out var current);
+
+    if (current is { } live && string.Equals(live.Lineage, lineage, StringComparison.Ordinal))
+    {
+      return CollabLineageDeleteOutcome.Current;
+    }
+
+    var found = lineages.FindIndex(entry =>
+        string.Equals(entry.Lineage, lineage, StringComparison.Ordinal));
+
+    if (found < 0)
+    {
+      return CollabLineageDeleteOutcome.NotFound;
+    }
+
+    var target = lineages[found];
+
+    // Generation numbers are never reused by two publications, so a matching
+    // number is the live generation whatever its lineage reads as.
+    if (current is { } manifest && target.Generation == manifest.Generation)
+    {
+      return CollabLineageDeleteOutcome.Current;
+    }
+
+    // The tombstone goes first: a crash after it leaves unlisted files behind,
+    // never a listed lineage whose files are gone.
+    AppendLedgerEntry(docDirectory, target with { Kind = CollabLineageEntryKind.Deleted });
+
+    File.Delete(JournalPath(docDirectory, target.Generation, target.GenerationFence));
+    File.Delete(BaselinePath(docDirectory, target.Generation, target.GenerationFence));
+
+    var checkpoints = string.Create(
+        CultureInfo.InvariantCulture,
+        $"checkpoint.{target.Generation}.");
+
+    foreach (var path in Directory.GetFiles(docDirectory, checkpoints + "*"))
+    {
+      // .NET's glob also matches a bare "checkpoint.<generation>"; the exact
+      // prefix keeps the delete to this generation's checkpoints.
+      if (Path.GetFileName(path).StartsWith(checkpoints, StringComparison.Ordinal))
+      {
+        File.Delete(path);
+      }
+    }
+
+    return CollabLineageDeleteOutcome.Deleted;
+  }
+
+  /// <summary>
+  /// Every listed lineage, oldest first. Reads the ledger and the manifest
+  /// without any lock and creates nothing. <c>current</c> is the manifest
+  /// when it is seeded, otherwise null.
+  /// </summary>
+  private List<CollabLineageEntry> ResolveLineages(
+      string docDirectory,
+      string documentId,
+      out Manifest? current)
+  {
+    current = null;
+
+    if (!Directory.Exists(docDirectory) ||
+        File.Exists(Path.Combine(docDirectory, PurgeName)))
+    {
+      return [];
+    }
+
+    if (ReadManifest(Path.Combine(docDirectory, ManifestName), documentId) is { Seeded: true } seeded)
+    {
+      current = seeded;
+    }
+
+    var entries = CollabLineageLedger.Read(LedgerPath(docDirectory), log);
+    var deleted = entries
+        .Where(entry => entry.Kind == CollabLineageEntryKind.Deleted)
+        .Select(entry => (entry.Generation, entry.GenerationFence))
+        .ToHashSet();
+    var published = entries
+        .Where(entry => entry.Kind == CollabLineageEntryKind.Published && entry.Generation != 0)
+        .ToList();
+
+    // A document not opened since the ledger shipped has no entry for its
+    // current generation. It is added here, in memory only.
+    if (current is { } manifest &&
+        !published.Exists(entry =>
+            entry.Generation == manifest.Generation &&
+            entry.GenerationFence == manifest.GenerationFence))
+    {
+      published.Add(new CollabLineageEntry(
+          CollabLineageEntryKind.Published,
+          manifest.Generation,
+          manifest.GenerationFence,
+          manifest.Lineage,
+          manifest.Epoch,
+          manifest.Format,
+          CreatedAt: null));
+    }
+
+    // Newest generation wins a shared lineage, and the older ones stay hidden
+    // even after the newest is deleted.
+    var newest = new Dictionary<string, CollabLineageEntry>(StringComparer.Ordinal);
+
+    foreach (var entry in published)
+    {
+      if (!newest.TryGetValue(entry.Lineage, out var seen) || entry.Generation >= seen.Generation)
+      {
+        newest[entry.Lineage] = entry;
+      }
+    }
+
+    return [.. newest.Values
+        .Where(entry => !deleted.Contains((entry.Generation, entry.GenerationFence)))
+        .OrderBy(entry => entry.Generation)];
+  }
+
+  private CollabLineageEntry? FindLineage(string docDirectory, string documentId, string lineage)
+  {
+    foreach (var entry in ResolveLineages(docDirectory, documentId, out _))
+    {
+      if (string.Equals(entry.Lineage, lineage, StringComparison.Ordinal))
+      {
+        return entry;
+      }
+    }
+
+    return null;
+  }
+
+  /// <summary>
+  /// Appends a published entry for <paramref name="published"/> unless the
+  /// ledger already has one. Best effort: history is not worth failing an open
+  /// or a reset over, so a failure is logged and swallowed.
+  /// </summary>
+  private void RecordLineage(
+      string docDirectory,
+      string documentId,
+      Manifest published,
+      DateTimeOffset? createdAt)
+  {
+    if (!published.Seeded || published.Generation == 0)
+    {
+      return;
+    }
+
+    var gate = LedgerGate(documentId);
+    gate.Wait();
+
+    try
+    {
+      var recorded = CollabLineageLedger.Read(LedgerPath(docDirectory), log).Exists(entry =>
+          entry.Kind == CollabLineageEntryKind.Published &&
+          entry.Generation == published.Generation &&
+          entry.GenerationFence == published.GenerationFence);
+
+      if (!recorded)
+      {
+        AppendLedgerEntry(docDirectory, new CollabLineageEntry(
+            CollabLineageEntryKind.Published,
+            published.Generation,
+            published.GenerationFence,
+            published.Lineage,
+            published.Epoch,
+            published.Format,
+            createdAt));
+      }
+    }
+    catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+    {
+      log?.Invoke(
+          $"collab: could not record lineage {published.Lineage} of \"{documentId}\" " +
+          $"in {CollabLineageLedger.FileName}: {error.Message}");
+    }
+    finally
+    {
+      gate.Release();
+    }
+  }
+
+  /// <summary>Appends one entry. The caller holds the document's ledger gate.</summary>
+  private static void AppendLedgerEntry(string docDirectory, CollabLineageEntry entry)
+  {
+    var encoded = CollabLineageLedger.Encode(entry);
+
+    using var file = new FileStream(
+        LedgerPath(docDirectory),
+        CreateOptions(FileAccess.Write, FileMode.Append, FileShare.ReadWrite));
+    var created = file.Length == 0;
+
+    // Pads a torn tail back onto the entry grid in the same write, so the
+    // padding and the torn bytes read as one bad entry.
+    var padding = (int)((CollabLineageLedger.EntrySize -
+        (file.Length % CollabLineageLedger.EntrySize)) % CollabLineageLedger.EntrySize);
+    var bytes = new byte[padding + encoded.Length];
+    encoded.CopyTo(bytes, padding);
+    file.Write(bytes);
+    file.Flush(flushToDisk: true);
+
+    if (created)
+    {
+      SyncDirectory(docDirectory);
+    }
+  }
+
+  private SemaphoreSlim LedgerGate(string documentId)
+  {
+    return ledgerGates.GetOrAdd(documentId, _ => new SemaphoreSlim(1, 1));
+  }
+
+  private string DocDirectoryFor(string documentId)
+  {
+    return Path.Combine(directory, CollabDocKey.For(documentId) + JournalDirectorySuffix);
+  }
+
+  private static string LedgerPath(string docDirectory)
+  {
+    return Path.Combine(docDirectory, CollabLineageLedger.FileName);
   }
 
   private CollabDocumentPurgeOutcome Purge(string documentId)
@@ -302,6 +688,9 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore, ICollab
       {
         fenced = ImportWorkingSet(docDirectory, manifestFile, documentId, fenced);
       }
+
+      // Backfills a lineage that began before the ledger existed.
+      RecordLineage(docDirectory, documentId, fenced, createdAt: null);
 
       var index = new JournalIndex();
       IReadOnlyList<CollabOperationRecord> records = [];
@@ -1174,6 +1563,98 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore, ICollab
     }
   }
 
+  /// <summary>
+  /// Decodes a journal one record at a time for history reads. Stops at a torn
+  /// tail and never writes.
+  /// </summary>
+  private sealed class HistoryJournalReader(FileStream file, string documentId)
+  {
+    private byte[] buffer = new byte[64 * 1024];
+    private int start;
+    private int end;
+    private long offset;
+    private ulong sequence;
+    private bool atEnd;
+
+    internal async ValueTask<CollabOperationRecord?> NextAsync(CancellationToken cancellationToken)
+    {
+      while (true)
+      {
+        if (TryTake() is { } record)
+        {
+          return record;
+        }
+
+        if (atEnd)
+        {
+          return null;
+        }
+
+        await FillAsync(cancellationToken);
+      }
+    }
+
+    private CollabOperationRecord? TryTake()
+    {
+      var status = CollabJournalCodec.TryDecodeRecord(
+          buffer.AsSpan(start, end - start),
+          out var record,
+          out var consumed,
+          out var error);
+
+      if (status == CollabJournalRecordStatus.Incomplete)
+      {
+        return null;
+      }
+
+      if (status != CollabJournalRecordStatus.Ok || record is null)
+      {
+        throw new InvalidDataException(
+            $"collab: the journal for \"{documentId}\" is corrupt at byte {offset}: {error}.");
+      }
+
+      if (record.ServerSequence != sequence + 1)
+      {
+        throw new InvalidDataException(
+            $"collab: the journal for \"{documentId}\" jumps from sequence " +
+            $"{sequence} to {record.ServerSequence}.");
+      }
+
+      sequence = record.ServerSequence;
+      start += consumed;
+      offset += consumed;
+
+      return record;
+    }
+
+    private async ValueTask FillAsync(CancellationToken cancellationToken)
+    {
+      if (start > 0)
+      {
+        Buffer.BlockCopy(buffer, start, buffer, 0, end - start);
+        end -= start;
+        start = 0;
+      }
+
+      // A record longer than the buffer stays Incomplete until it fits.
+      if (end == buffer.Length)
+      {
+        Array.Resize(ref buffer, buffer.Length * 2);
+      }
+
+      var read = await file.ReadAsync(buffer.AsMemory(end), cancellationToken);
+
+      if (read == 0)
+      {
+        atEnd = true;
+      }
+      else
+      {
+        end += read;
+      }
+    }
+  }
+
   private sealed class Session : ICollabOperationSession
   {
     private readonly LocalCollabOperationStore store;
@@ -1366,30 +1847,16 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore, ICollab
       // an unscoped sweep is a delete of another holder's live checkpoint, with
       // no fence check in front of it.
       //
-      // The cost is a LEAK, and nothing collects it. A fence is minted once per
-      // Open, so it churns at the rate of 0-to-1 member transitions gated by the
-      // 30s eviction linger — far above the restart rate. Each such session
-      // strands one full-document-state file per generation. ResetAsync strands
-      // more: it publishes a new generation and collects nothing, so the whole
-      // superseded generation stays, JOURNAL INCLUDED, which is the larger half.
+      // Checkpoints written under OTHER fences still leak, and nothing collects
+      // them. A fence is minted per Open, so each session can strand one
+      // full-state file per generation.
       //
-      // Unfixed deliberately: this class is internal and registered only from
-      // BlokServerConformanceExtensions, whose file is entirely inside
-      // #if BLOK_SERVER_CONFORMANCE, and that harness runs in per-run mkdtemp
-      // directories. No shipped configuration reaches this code.
-      //
-      // The collector, if it is ever reachable: under the lock in Open, right
-      // after the fence is minted, delete every checkpoint/journal/baseline
-      // whose fence is < manifest.Fence and which is not one of the three files
-      // the manifest names. No lease and no mtime grace period — a fenced-out
-      // session's Republish throws CollabOperationFenceLostException, so its
-      // bytes are unreferenceable by construction, and mtime freezes during
-      // WriteSealed's flush anyway, so there is no smallest safe age. One
-      // constraint that is not obvious: the manifest is a two-slot double
-      // buffer and ReadManifest falls back to the older slot, which names the
-      // PREVIOUS publication. For checkpoints that fallback is already dead —
-      // this sweep kills it today. For generations it still works, so a
-      // generation collector must retain generation N-1 or knowingly give it up.
+      // Superseded generations are NOT a leak: they are version history, read
+      // through ICollabOperationHistoryStore and removed only by
+      // DeleteLineageAsync. Shipped configs reach this store
+      // (CollabOperationStoreSource), so a collector that swept old journals
+      // or baselines would delete users' history. One for stale checkpoints
+      // must touch checkpoints only.
       var mine = string.Create(CultureInfo.InvariantCulture, $".{manifest.Fence}");
 
       foreach (var stale in Directory.GetFiles(
@@ -1415,6 +1882,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore, ICollab
       cancellationToken.ThrowIfCancellationRequested();
 
       RequireFence();
+      store.RecordLineage(docDirectory, documentId, manifest, createdAt: null);
 
       if (!CollabWorkingSetTag.IsLineage(reset.Lineage))
       {
@@ -1518,6 +1986,11 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore, ICollab
       journal?.Dispose();
       journal = swapped;
       index.Clear();
+
+      // Only after the publication returned: a delete that finds this entry
+      // must also read a manifest naming it as current, or it would remove
+      // the live generation.
+      store.RecordLineage(docDirectory, documentId, manifest, DateTimeOffset.UtcNow);
 
       return ValueTask.FromResult(
           new CollabDocumentHead(reset.Format, reset.Epoch, reset.Lineage, DurableThrough: 0));

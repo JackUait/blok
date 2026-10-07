@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
 using Blok.Server.Yjs;
@@ -1067,7 +1068,10 @@ internal static class Waits
 /// store behaviours a room has to survive — slow, failing, and "committed but
 /// could not say so".
 /// </summary>
-internal sealed class FakeCollabOperationStore : ICollabOperationStore, ICollabOperationPurgeStore
+internal sealed class FakeCollabOperationStore :
+    ICollabOperationStore,
+    ICollabOperationPurgeStore,
+    ICollabOperationHistoryStore
 {
   private readonly Dictionary<string, FakeOperationDocument> documents =
       new(StringComparer.Ordinal);
@@ -1239,11 +1243,134 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore, ICollabO
 
       document.Baseline.Clear();
       document.Records.Clear();
+      document.Superseded.Clear();
       document.Checkpoint = null;
       document.Head = null;
 
       return ValueTask.FromResult(CollabDocumentPurgeOutcome.Purged);
     }
+  }
+
+  public ValueTask<IReadOnlyList<CollabLineageInfo>> ListLineagesAsync(
+      string documentId,
+      CancellationToken cancellationToken = default)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    lock (guard)
+    {
+      var lineages = Lineages(Document(documentId));
+
+      return ValueTask.FromResult<IReadOnlyList<CollabLineageInfo>>([.. lineages.Select(
+          lineage => new CollabLineageInfo(
+              lineage.Head.Lineage,
+              lineage.Head.Epoch,
+              lineage.Head.Format,
+              lineage.CreatedAt,
+              lineage.IsCurrent))]);
+    }
+  }
+
+  public ValueTask<IReadOnlyList<ReadOnlyMemory<byte>>?> ReadBaselineAsync(
+      string documentId,
+      string lineage,
+      CancellationToken cancellationToken = default)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    lock (guard)
+    {
+      return ValueTask.FromResult<IReadOnlyList<ReadOnlyMemory<byte>>?>(
+          Find(Document(documentId), lineage)?.Baseline);
+    }
+  }
+
+  public async IAsyncEnumerable<CollabRecordHeader> ReadHeadersAsync(
+      string documentId,
+      string lineage,
+      [EnumeratorCancellation] CancellationToken cancellationToken = default)
+  {
+    await foreach (var record in ReadRecordsAsync(documentId, lineage, ulong.MaxValue, cancellationToken))
+    {
+      yield return new CollabRecordHeader(record.ServerSequence, record.CommittedAt, record.ActorId);
+    }
+  }
+
+  public async IAsyncEnumerable<CollabOperationRecord> ReadRecordsAsync(
+      string documentId,
+      string lineage,
+      ulong through,
+      [EnumeratorCancellation] CancellationToken cancellationToken = default)
+  {
+    List<CollabOperationRecord> records;
+
+    lock (guard)
+    {
+      records = [.. Find(Document(documentId), lineage)?.Records
+          .Where(record => record.ServerSequence <= through) ?? []];
+    }
+
+    foreach (var record in records)
+    {
+      cancellationToken.ThrowIfCancellationRequested();
+      await Task.Yield();
+
+      yield return record;
+    }
+  }
+
+  public ValueTask<CollabLineageDeleteOutcome> DeleteLineageAsync(
+      string documentId,
+      string lineage,
+      CancellationToken cancellationToken = default)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    lock (guard)
+    {
+      var document = Document(documentId);
+
+      if (document.Purged)
+      {
+        return ValueTask.FromResult(CollabLineageDeleteOutcome.Purged);
+      }
+
+      if (document.Head?.Lineage == lineage)
+      {
+        return ValueTask.FromResult(CollabLineageDeleteOutcome.Current);
+      }
+
+      // Every superseded copy goes, so an older one sharing the id is not
+      // listed in its place. The local store hides those the same way.
+      return ValueTask.FromResult(
+          document.Superseded.RemoveAll(old => old.Head.Lineage == lineage) > 0
+            ? CollabLineageDeleteOutcome.Deleted
+            : CollabLineageDeleteOutcome.NotFound);
+    }
+  }
+
+  /// <summary>Oldest first, current last, one per lineage id (the newest).</summary>
+  private static List<FakeLineage> Lineages(FakeOperationDocument document)
+  {
+    if (document.Purged)
+    {
+      return [];
+    }
+
+    var all = new List<FakeLineage>(document.Superseded);
+
+    if (document.Head is { } head)
+    {
+      all.Add(new FakeLineage(head, [.. document.Baseline], [.. document.Records], document.CreatedAt, IsCurrent: true));
+    }
+
+    return [.. all.Where((lineage, index) =>
+        !all.Skip(index + 1).Any(newer => newer.Head.Lineage == lineage.Head.Lineage))];
+  }
+
+  private static FakeLineage? Find(FakeOperationDocument document, string lineage)
+  {
+    return Lineages(document).FirstOrDefault(entry => entry.Head.Lineage == lineage);
   }
 
   private FakeOperationDocument Document(string docId)
@@ -1272,7 +1399,19 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore, ICollabO
     internal bool IsOpen { get; set; }
 
     internal bool Purged { get; set; }
+
+    /// <summary>Lineages a reset replaced, oldest first, kept as history.</summary>
+    internal List<FakeLineage> Superseded { get; } = [];
+
+    internal DateTimeOffset? CreatedAt { get; set; }
   }
+
+  private sealed record FakeLineage(
+      CollabDocumentHead Head,
+      List<ReadOnlyMemory<byte>> Baseline,
+      List<CollabOperationRecord> Records,
+      DateTimeOffset? CreatedAt,
+      bool IsCurrent = false);
 
   private sealed class FakeOperationSession(
       FakeCollabOperationStore store,
@@ -1424,6 +1563,18 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore, ICollabO
       {
         var document = Fenced();
 
+        if (document.Head is { } previous)
+        {
+          document.Superseded.Add(new FakeLineage(
+              previous,
+              document.Baseline,
+              [.. document.Records],
+              document.CreatedAt));
+        }
+
+        // Record times count seconds from the epoch, so a lineage start there
+        // never sorts after its own records.
+        document.CreatedAt = DateTimeOffset.UnixEpoch;
         document.Baseline = [.. reset.Baseline];
         document.Checkpoint = null;
         document.Records.Clear();

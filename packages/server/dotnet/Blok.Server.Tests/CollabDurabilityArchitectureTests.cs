@@ -40,6 +40,7 @@ public sealed class CollabDurabilityArchitectureTests
     ("WriteSealed", "file", "Write"),
     ("ResetAsync", "swapped", "SetLength"),
     ("ImportWorkingSet", "journal", "SetLength"),
+    ("AppendLedgerEntry", "file", "Write"),
   ];
 
   /// <summary>
@@ -128,6 +129,13 @@ public sealed class CollabDurabilityArchitectureTests
       "FileMode.Create can only truncate a name THIS session already " +
       "abandoned, because every baseline and checkpoint name carries the " +
       "fence of the session that wrote it and two holders never share a fence."),
+    (
+      "DeleteLineage",
+      false,
+      "Deletes only a superseded generation's files, named by the ledger's " +
+      "(generation, fence). It runs under the document's ledger gate, refuses " +
+      "a purged document, and refuses the manifest's current lineage and " +
+      "generation, which only the fence holder may change."),
     ("ResetAsync", true, ""),
     ("ScanForward", true, ""),
     ("RollBack", true, ""),

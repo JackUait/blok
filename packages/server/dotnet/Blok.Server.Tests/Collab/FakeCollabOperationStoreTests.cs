@@ -273,6 +273,73 @@ public sealed class FakeCollabOperationStoreTests
         await session.ResetAsync(Reset(epoch: 1)));
   }
 
+  [Fact]
+  public async Task KeepsSupersededLineagesForHistory()
+  {
+    var store = new FakeCollabOperationStore();
+    var first = new string('a', CollabWorkingSetTag.LineageLength);
+    var second = new string('b', CollabWorkingSetTag.LineageLength);
+    await using var session = (await store.OpenAsync(DocId)).Session!;
+    await session.ResetAsync(new CollabOperationReset(
+        CollabWorkingSetTag.CurrentFormat,
+        1,
+        first,
+        [new byte[] { 0xb1 }]));
+    await session.AppendAsync(Candidate("a", update: 1));
+    await session.AppendAsync(Candidate("b", update: 2));
+    await session.ResetAsync(Reset(epoch: 2, second));
+    await session.AppendAsync(Candidate("c", update: 3));
+
+    var listed = await store.ListLineagesAsync(DocId);
+    var headers = new List<CollabRecordHeader>();
+    await foreach (var header in store.ReadHeadersAsync(DocId, first))
+    {
+      headers.Add(header);
+    }
+
+    var records = new List<CollabOperationRecord>();
+    await foreach (var record in store.ReadRecordsAsync(DocId, first, through: 1))
+    {
+      records.Add(record);
+    }
+
+    Assert.Equal([first, second], listed.Select(info => info.Lineage));
+    Assert.Equal([false, true], listed.Select(info => info.Current));
+    Assert.Equal([1L, 2L], listed.Select(info => info.Epoch));
+    Assert.Equal([1UL, 2UL], headers.Select(header => header.ServerSequence));
+    Assert.Equal(["a"], records.Select(record => record.OperationId));
+    Assert.Equal([0xb1], Assert.Single((await store.ReadBaselineAsync(DocId, first))!).ToArray());
+    Assert.Null(await store.ReadBaselineAsync(DocId, new string('f', CollabWorkingSetTag.LineageLength)));
+
+    // The current lineage's accessors are unchanged by the history kept beside it.
+    Assert.Equal(["c"], store.Committed(DocId).Select(record => record.OperationId));
+    Assert.Equal(second, store.Head(DocId)?.Lineage);
+  }
+
+  [Fact]
+  public async Task DeletesOnlyASupersededLineage()
+  {
+    var store = new FakeCollabOperationStore();
+    var first = new string('a', CollabWorkingSetTag.LineageLength);
+    var second = new string('b', CollabWorkingSetTag.LineageLength);
+
+    await using (var session = (await store.OpenAsync(DocId)).Session!)
+    {
+      await session.ResetAsync(Reset(epoch: 1, first));
+      await session.ResetAsync(Reset(epoch: 2, second));
+    }
+
+    Assert.Equal(CollabLineageDeleteOutcome.Current, await store.DeleteLineageAsync(DocId, second));
+    Assert.Equal(CollabLineageDeleteOutcome.Deleted, await store.DeleteLineageAsync(DocId, first));
+    Assert.Equal(CollabLineageDeleteOutcome.NotFound, await store.DeleteLineageAsync(DocId, first));
+    Assert.Equal([second], (await store.ListLineagesAsync(DocId)).Select(info => info.Lineage));
+
+    await store.PurgeAsync(DocId);
+
+    Assert.Equal(CollabLineageDeleteOutcome.Purged, await store.DeleteLineageAsync(DocId, second));
+    Assert.Empty(await store.ListLineagesAsync(DocId));
+  }
+
   private static async Task<ICollabOperationSession> OpenSeededAsync(
       FakeCollabOperationStore store)
   {

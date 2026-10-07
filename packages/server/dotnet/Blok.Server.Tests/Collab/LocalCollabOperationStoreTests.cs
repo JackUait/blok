@@ -131,7 +131,9 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
     Assert.Equal(baselineBefore, File.ReadAllBytes(baselinePath));
     Assert.Equal(journalBefore, File.ReadAllBytes(JournalPath(1)));
     Assert.Equal(checkpointBefore, File.ReadAllBytes(checkpointPath));
-    Assert.Equal(5, Directory.GetFiles(DocDirectory).Length);
+
+    // lock, manifest, baseline, journal, checkpoint and the lineage ledger.
+    Assert.Equal(6, Directory.GetFiles(DocDirectory).Length);
   }
 
   [Fact]

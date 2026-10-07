@@ -97,6 +97,7 @@ describe('markdown paste keeps soft line breaks', () => {
   it('leaves the public importer CommonMark-faithful', async () => {
     const [block] = await markdownToBlocks('Line one\nLine **bold** two');
 
-    expect(block.data.text).toBe('Line one\nLine <strong>bold</strong> two');
+    // A soft line ending renders as a space; "\n" in segments is a hard break.
+    expect(block.data.text).toEqual([{ text: 'Line one Line ' }, { text: 'bold', marks: { bold: true } }, { text: ' two' }]);
   });
 });

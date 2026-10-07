@@ -72,7 +72,7 @@ describe('useBlocks insertMarkdown — converter edge cases', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
-  it('forwards a MarkdownImportConfig to the converter', async () => {
+  it('forwards a MarkdownImportConfig to the converter, asking for the HTML text tools store', async () => {
     markdownToBlocksMock.mockResolvedValue([{ type: 'paragraph', data: {} }]);
     const { editor } = makeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));
@@ -82,7 +82,7 @@ describe('useBlocks insertMarkdown — converter edge cases', () => {
       await result.current.insertMarkdown('# A', { config });
     });
 
-    expect(markdownToBlocksMock).toHaveBeenCalledWith('# A', config);
+    expect(markdownToBlocksMock).toHaveBeenCalledWith('# A', { ...config, htmlText: true });
   });
 
   it('swallows a converter rejection and returns [] but surfaces the error to console.warn (diagnostics not lost)', async () => {

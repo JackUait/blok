@@ -231,7 +231,7 @@ public sealed class BlokDocumentConverterTests
     using var document = JsonDocument.Parse(import.DocumentJson);
     var block = document.RootElement.GetProperty("blocks")[0];
     Assert.Equal("header", block.GetProperty("type").GetString());
-    Assert.Equal("Hello", block.GetProperty("data").GetProperty("text").GetString());
+    Assert.Equal("""[{"text":"Hello"}]""", block.GetProperty("data").GetProperty("text").GetRawText());
 
     // The report rides beside the document, never inside what a caller stores.
     Assert.False(document.RootElement.TryGetProperty("warnings", out _));
@@ -305,8 +305,10 @@ public sealed class BlokDocumentConverterTests
     using var document = JsonDocument.Parse(import.DocumentJson);
     var blocks = document.RootElement.GetProperty("blocks");
     Assert.Equal("header", blocks[0].GetProperty("type").GetString());
-    Assert.Equal("Hello", blocks[0].GetProperty("data").GetProperty("text").GetString());
-    Assert.Equal("A <b>bold</b> claim.", blocks[1].GetProperty("data").GetProperty("text").GetString());
+    Assert.Equal("""[{"text":"Hello"}]""", blocks[0].GetProperty("data").GetProperty("text").GetRawText());
+    Assert.Equal(
+        """[{"text":"A "},{"text":"bold","marks":{"bold":true}},{"text":" claim."}]""",
+        blocks[1].GetProperty("data").GetProperty("text").GetRawText());
 
     // The report rides beside the document, never inside what a caller stores.
     Assert.False(document.RootElement.TryGetProperty("warnings", out _));
@@ -338,7 +340,8 @@ public sealed class BlokDocumentConverterTests
   public async Task RoundTripsHtmlThroughBlocks()
   {
     var converter = BlokDocuments.Create(poolSize: 1);
-    const string html = "<h2>Release notes</h2><p>Ships <b>today</b>.</p>";
+    // The canonical spelling: an import reads <b> as bold, which renders as <strong>.
+    const string html = "<h2>Release notes</h2><p>Ships <strong>today</strong>.</p>";
 
     var import = await converter.FromHtmlAsync(html);
 

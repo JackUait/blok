@@ -192,6 +192,15 @@ describe('host APIs that bypass the Saver — richText segments', { timeout: 60_
     expect(data.blocks[0].data.text).toEqual(bold);
   });
 
+  it('importMarkdown returns what the editor saves, HTML in the default format', async () => {
+    const editor = await createEditor({});
+
+    const data = await editor.blocks.importMarkdown('**a**');
+
+    expect(data.blocks[0].data.text).toBe('<strong>a</strong>');
+    expect((await editor.save()).blocks[0].data.text).toBe('<strong>a</strong>');
+  });
+
   it('exportMarkdown still writes markdown', async () => {
     const markdown = '**a** _b_ [c](https://example.com) `d`';
     const htmlEditor = await createEditor({});

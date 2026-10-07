@@ -24,7 +24,7 @@ describe('server runtime boundary', () => {
     const output = JSON.parse(await invoke('markdownToBlocks', '{"markdown":"# Hello"}')) as unknown;
 
     expect(output).toMatchObject({
-      blocks: [{ type: 'header', data: { text: 'Hello', level: 1 } }],
+      blocks: [{ type: 'header', data: { text: [{ text: 'Hello' }], level: 1 } }],
     });
   });
 
@@ -86,11 +86,20 @@ describe('server runtime boundary', () => {
     expect(unreadable).toMatchObject({ isEmpty: true, blockCount: 1, unrecognizedBlockTypes: ['gantt'] });
   });
 
+  it('returns rich text as segments from both importers', async () => {
+    const fromHtml = JSON.parse(await invoke('htmlToBlocks', '{"html":"<p>a <b>b</b> &amp; c</p>"}')) as unknown;
+    const fromMarkdown = JSON.parse(await invoke('markdownToBlocks', '{"markdown":"a **b** & c"}')) as unknown;
+    const text = [{ text: 'a ' }, { text: 'b', marks: { bold: true } }, { text: ' & c' }];
+
+    expect(fromHtml).toMatchObject({ blocks: [{ type: 'paragraph', data: { text } }] });
+    expect(fromMarkdown).toMatchObject({ blocks: [{ type: 'paragraph', data: { text } }] });
+  });
+
   it('converts HTML into a serialized OutputData envelope with a report', async () => {
     const output = JSON.parse(await invoke('htmlToBlocks', '{"html":"<h1>Hello</h1>"}')) as unknown;
 
     expect(output).toMatchObject({
-      blocks: [{ type: 'header', data: { text: 'Hello', level: 1 } }],
+      blocks: [{ type: 'header', data: { text: [{ text: 'Hello' }], level: 1 } }],
       warnings: [],
     });
   });

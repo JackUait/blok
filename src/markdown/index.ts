@@ -224,10 +224,12 @@ export async function markdownToBlocksWithReport(
     mdastExtensions,
   });
 
-  if ((config as InternalMarkdownImportConfig).softBreaks === true) {
+  const internal: InternalMarkdownImportConfig = config;
+
+  if (internal.softBreaks === true) {
     tree.children.forEach(softBreaksToBreaks);
   }
 
-  return { blocks: mdastToBlocks(tree, config),
+  return { blocks: mdastToBlocks(tree, config, internal.htmlText === true ? 'html' : 'segments'),
     warnings: collectImportWarnings(tree) };
 }

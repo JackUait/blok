@@ -144,8 +144,12 @@ public sealed class BlokTabsDocumentTests
         blocks.EnumerateArray().Select(block => block.GetProperty("type").GetString()));
     Assert.Equal("Fruit & <Veg>", blocks[1].GetProperty("data").GetProperty("title").GetString());
     Assert.Equal("🍎", blocks[1].GetProperty("data").GetProperty("icon").GetString());
+    Assert.Equal(
+        """[{"text":"Body "},{"text":"one","marks":{"bold":true}}]""",
+        blocks[2].GetProperty("data").GetProperty("text").GetRawText());
     Assert.Empty(import.Warnings);
-    Assert.Equal(html, await converter.ToHtmlAsync(import.DocumentJson));
+    // Bold comes back in its canonical spelling.
+    Assert.Equal(html.Replace("<b>one</b>", "<strong>one</strong>", StringComparison.Ordinal), await converter.ToHtmlAsync(import.DocumentJson));
   }
 
   /// <summary>

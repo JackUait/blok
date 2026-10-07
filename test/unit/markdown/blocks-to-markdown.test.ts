@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { blocksToMarkdown, type SerializableBlock } from '../../../src/markdown/blocks-to-markdown';
 import { markdownToBlocks } from '../../../src/markdown/index';
+import { richTextAsHtml } from '../helpers/rich-text-as-html';
 
 describe('blocksToMarkdown', () => {
   it('serializes a paragraph as plain text', () => {
@@ -358,7 +359,8 @@ describe('blocksToMarkdown: table', () => {
       [p('Ada'), p('Engineer')],
     ]));
 
-    const blocks = await markdownToBlocks(md);
+    // The editor-side exporter reads HTML, as the editor saves it.
+    const blocks = richTextAsHtml(await markdownToBlocks(md));
     const table = blocks.find((block) => block.type === 'table');
 
     expect(table).toBeDefined();

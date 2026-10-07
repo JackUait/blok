@@ -294,6 +294,10 @@ Passes are needed whenever the routes run with `Auth = "ticket"`, including rout
 | `POST /sync/{doc}/reset` | Drops the working copy, reloads the document from your endpoint and tells every open tab to pick it up |
 | `POST /sync/{doc}/edit` | Inserts, updates or removes blocks from outside; all-or-nothing, reaches every open tab, and requires an idempotency key |
 | `GET /sync/{doc}/state` | Returns the live document as JSON, with the journal head it reflects when there is a journal |
+| `GET /sync/{doc}/history` | Lists the document's past versions as points; needs an operation journal |
+| `GET /sync/{doc}/history/{lineage}/{sequence}` | Returns the document as it was at one point |
+| `POST /sync/{doc}/history/{lineage}/{sequence}/restore` | Makes the live document match one point, as a forward edit; requires an idempotency key |
+| `DELETE /sync/{doc}/history/{lineage}` | Deletes one lineage that is not current |
 
 On a journal-backed service, `POST /sync/{doc}/reset` first adopts a working copy the journal does not hold yet and writes it back to your endpoint, so the reset rebaselines from a record that includes it. It then retires that working copy before it resets. If the retire fails, the reset answers 503 and changes nothing; retry it.
 
@@ -329,7 +333,61 @@ Upload routes exist only when local or S3-compatible storage is configured. Cons
 
 A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`.
 
-A ticket with `write: false` may call `GET /unfurl`, `GET /sync/{doc}/state` and open `GET /sync/{doc}` read-only; both upload routes, `reset` and `edit` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset`, its `edit` and its `state` are refused when the pass names no document or a different one. `state` asks your `IBlokAuthorization` for read access only. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
+A ticket with `write: false` may call `GET /unfurl`, `GET /sync/{doc}/state`, both `GET` history routes and open `GET /sync/{doc}` read-only; both upload routes, `reset`, `edit`, the history `DELETE` and `restore` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset`, its `edit`, its `state` and its history routes are refused when the pass names no document or a different one. `state` and the two history reads ask your `IBlokAuthorization` for read access only. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
+
+### Version history
+
+A journal-backed document keeps its past. Four routes list it, read one version, restore one and delete old history. Blok ships the data and the routes. Your app builds the history UI.
+
+A version is a point, the pair `(lineage, sequence)`. A lineage is one unbroken run of the journal. A reset, a first seed or the format migration starts a new one. Sequence 0 is the state the lineage started from. Store points in your own records, never positions in the list: the newest version keeps growing while people edit.
+
+| Route | Access | Answer |
+| --- | --- | --- |
+| `GET /sync/{doc}/history` | read | `200 { lineages, versions }` |
+| `GET /sync/{doc}/history/{lineage}/{sequence}` | read | `200 { time?, blocks }` with `Blok-History-Lineage` and `Blok-History-Sequence` |
+| `POST /sync/{doc}/history/{lineage}/{sequence}/restore` | read and write | As `edit`: `204` with the new `Blok-Doc-Lineage` and `Blok-Doc-Sequence` |
+| `DELETE /sync/{doc}/history/{lineage}` | read and write | `204`; `404` for an unknown lineage; `409` for the current one |
+
+The list looks like this:
+
+```json
+{
+  "lineages": [{ "lineage": "…", "epoch": 2, "format": 2, "createdAt": 1760000000000, "current": true }],
+  "versions": [{ "lineage": "…", "sequence": 41, "startedAt": 1760000000000, "savedAt": 1760000300000, "actors": ["u1"] }]
+}
+```
+
+- Each lineage's baseline is a version at sequence 0.
+- The records after it are grouped by time. A new group starts after a gap of more than 2 minutes, or once a group spans 10 minutes. A group's `sequence` is its last record, and `actors` lists the distinct actor ids in the order they first appear.
+- Versions come newest first.
+- Times are Unix milliseconds. An unknown time is `null`, and the point read leaves `time` out.
+
+The point read's headers are deliberately not `Blok-Doc-*`. Those name the live head and feed `If-Match`. The point read sends no `ETag`, and adds `Blok-History-Lineage` and `Blok-History-Sequence` to `Access-Control-Expose-Headers` for an allowed origin. Every history answer sends `Cache-Control: no-store`.
+
+Restore is a forward edit, not a rewind. It runs inside the room, through the same path as `edit`, so every open tab sees it and the old versions stay listed.
+
+- It needs a `Blok-Idempotency-Key`. A retry with the same key returns the first receipt.
+- It takes an optional `If-Match`, checked as for `edit`. A stale tag answers 412 and changes nothing.
+- A restore that changes nothing answers 204 at the current head.
+- A restore whose update would not fit one sync frame answers 413 and changes nothing. The limit is `CollabRoomOptions.AnnouncedMaxMessageBytes`, or 1 MiB when it is unset.
+- A block whose `type` or `tunes` changed is removed and inserted again.
+
+Other answers, on every history route:
+
+| Status | When |
+| --- | --- |
+| 400 | The sequence is not a whole number. |
+| 403 | The document was purged. |
+| 404 | The lineage is unknown, or the sequence is past its durable head. |
+| 500 | Replaying a record failed. The server logs it. |
+| 501 | `history needs a journal that keeps it`: there is no journal, or your store does not keep history. |
+| 503 with `Retry-After` | The converter failed for a moment, as on `state`. |
+
+History needs a journal that keeps it. `--collab-journal` does. A store you register keeps history only if it also implements `ICollabOperationHistoryStore` (`Blok.Server.Collab`). The service finds it by a type check on your `ICollabOperationStore`, which does not change. The interface lists lineages, reads a baseline, streams record headers and records, and deletes a lineage. Its reads take no fence and no document lock, because a live room keeps writing while history is read.
+
+History starts at this release. The built-in journal never stored the lineage, epoch and format of the generations it finished before, so it cannot list them. Its oldest listed lineage is the one current when this release first touches the document.
+
+Blok has no retention policy, and it never deletes history by itself. A lineage is kept whole or deleted whole. To trim, call `POST /sync/{doc}/reset`, then `DELETE` the lineage that was current before it. On the built-in journal, deleting the lineage just before the current one also gives up its fallback copy, which only matters after disk corruption.
 
 ## Rich text is segments
 

@@ -21,8 +21,8 @@ documents both entry shapes field by field.
 Sections 1–10 fix the bytes. Section 11 fixes the eight behaviours a durable v2
 server owes on top of them, and names the executable case that proves each one
 against the reference server.
-Section 12 covers the HTTP edit and state routes that share the journal with
-the socket.
+Section 12 covers the HTTP edit, state and history routes that share the
+journal with the socket.
 
 ## 1. Notation
 
@@ -820,11 +820,11 @@ the client, before the frame is sent, against the limit the type-101 frame
 announced. A server MAY send it; a client MUST handle it either way, and every
 implementation MUST accept an unrecognised code as a final rejection.
 
-## 12. HTTP edit and state
+## 12. HTTP edit, state and history
 
 A backend that is not a socket peer edits through `POST /sync/{doc}/edit` and
-reads through `GET /sync/{doc}/state`. On a journal-backed document both carry
-the same two headers:
+reads through `GET /sync/{doc}/state`. Section 12.4 adds four history routes.
+On a journal-backed document edit and state carry the same two headers:
 
 | Header | Value |
 | --- | --- |
@@ -927,3 +927,77 @@ sends the body without those three headers.
 | 500 | The service cannot write this document as JSON. |
 | 503 | The document could not be loaded, another process holds it, or the server is shutting down. Retry later. |
 | 503 with `Retry-After` | The export ran past the server's time or memory limits reading rich text HTML. Retry after that many seconds. |
+
+### 12.4 History
+
+A journal that keeps history serves four more routes. They sit behind the same
+guard and the same document scope as the edit route.
+
+A version is a point: a lineage and a sequence on it. Sequence 0 is the
+lineage's baseline. A reset, a first seed or the format migration starts a new
+lineage. A point is a stable address. A position in the version list is not,
+because the newest version keeps growing while edits arrive. A caller stores
+points.
+
+| Route | Access | Answer |
+| --- | --- | --- |
+| `GET /sync/{doc}/history` | read | `200` with `{ lineages, versions }`. |
+| `GET /sync/{doc}/history/{lineage}/{sequence}` | read | `200` with `{ time?, blocks }`, `Blok-History-Lineage` and `Blok-History-Sequence`. No `ETag`. |
+| `POST /sync/{doc}/history/{lineage}/{sequence}/restore` | read and write | As the edit route (12.1, 12.2). |
+| `DELETE /sync/{doc}/history/{lineage}` | read and write | `204`, or `404` for an unknown lineage, or `409` for the current lineage. |
+
+The list body:
+
+```json
+{ "lineages": [{ "lineage": "…", "epoch": 2, "format": 2, "createdAt": 1760000000000, "current": true }],
+  "versions": [{ "lineage": "…", "sequence": 41, "startedAt": 1760000000000, "savedAt": 1760000300000, "actors": ["u1"] }] }
+```
+
+- Every lineage has a version at sequence 0, timed at the lineage's
+  `createdAt`.
+- Records are grouped in sequence order. A record starts a new group when it
+  comes more than 2 minutes after the previous record, or 10 minutes or more
+  after the group's first record. A negative gap counts as 0.
+- A group's version has the group's last sequence, its first and last times as
+  `startedAt` and `savedAt`, and the distinct non-null actor ids in the order
+  they first appear.
+- Versions are newest first: lineages newest first, then versions within a
+  lineage newest first.
+
+Times are Unix milliseconds. An unknown time is `null`. The point read sends the
+point's own time, record N's commit time or the lineage's `createdAt` for 0, and
+omits `time` when it is unknown.
+
+`Blok-History-Lineage` and `Blok-History-Sequence` name the point that was read.
+They are deliberately not `Blok-Doc-*`: those name the live head and feed
+`If-Match`. For an allowed origin the point read adds both to
+`Access-Control-Expose-Headers`. Every history response carries
+`Cache-Control: no-store`.
+
+A restore is a forward edit against the live document. It is not a rewind, and
+it does not remove history.
+
+- It needs `Blok-Idempotency-Key` (12.1). The digest covers the request, that
+  is `restore`, the lineage and the sequence, never the planned edits. So a
+  retry with the same key returns the first receipt.
+- It MAY send `If-Match` (12.2), with the same 412 and 428 rules.
+- A restore that changes nothing answers 204 with the current head.
+- The server measures the update before it applies it. If the sync frame that
+  carries it would pass the announced message limit, or 1 MiB when none is
+  announced, the server answers 413 and changes nothing.
+- A block whose `type` or `tunes` changed is removed and inserted again.
+
+Every history route also answers:
+
+| Status | When |
+| --- | --- |
+| 400 | The sequence is not an unsigned 64-bit integer. |
+| 403 | The document was purged. |
+| 404 | The lineage is unknown, or the sequence is past the lineage's durable head. |
+| 500 | Replaying the point failed: a corrupt record, or one the update inspector refused. |
+| 501 | `history needs a journal that keeps it`. The server has no journal, or its journal keeps no history. |
+| 503 with `Retry-After` | The converter failed for a moment, as on `/state`. |
+
+A server keeps no retention policy. To trim history, a caller resets the
+document (`POST /sync/{doc}/reset`), then deletes the old lineage. History is
+never pruned inside one lineage.

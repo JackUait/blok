@@ -451,7 +451,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(inOrder('--rate-limit', 'ticket', '60', 'otherwise', '0'));
   });
 
-  it('states the thirty-two service limits the design refuses to bury', () => {
+  it('states the thirty-three service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -459,6 +459,7 @@ describe('server docs data', () => {
       'collab-operation-journal',
       'collab-rollback-boundary',
       'collab-reset',
+      'collab-version-history',
       'collab-access-lifecycle',
       'doc-endpoint-auth',
       'collab-new-documents',
@@ -490,6 +491,18 @@ describe('server docs data', () => {
       expect(limit.title.length).toBeGreaterThan(0);
       expect(limit.body.length).toBeGreaterThan(0);
     }
+  });
+
+  it('prices version history: points, the four routes, the journal and trimming', () => {
+    const body = serverLimits.find((l) => l.id === 'collab-version-history')?.body ?? '';
+
+    expect(body).toMatch(inOrder('\\(lineage, sequence\\)', 'store'));
+    expect(body).toMatch(inOrder('GET /sync/\\{doc\\}/history', 'GET /sync/\\{doc\\}/history/\\{lineage\\}/\\{sequence\\}'));
+    expect(body).toMatch(inOrder('POST /sync/\\{doc\\}/history/\\{lineage\\}/\\{sequence\\}/restore', 'Blok-Idempotency-Key', 'If-Match'));
+    expect(body).toMatch(inOrder('DELETE /sync/\\{doc\\}/history/\\{lineage\\}', '409'));
+    expect(body).toMatch(inOrder('ICollabOperationHistoryStore', '501'));
+    expect(body).toMatch(inOrder('POST /sync/\\{doc\\}/reset', 'delete'));
+    expect(body).toMatch(/this release/i);
   });
 
   // Live collaboration made the old "stores no documents" claim false: the

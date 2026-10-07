@@ -4785,6 +4785,23 @@ const { data, report } = restoreHeadingAnchors(savedData);
 await save(data);`,
       },
       {
+        name: "diffOutputData(before, after, options?)",
+        returnType: "OutputDataDiff",
+        description:
+          "Compare two saved documents and list what changed, block by block. It is synchronous and DOM-free, so it runs in Node and in workers. Pair it with two version reads from the server's history routes.\n\nBlocks are matched by block id. A block without an id is never matched. With duplicate ids the first one wins.\n\nThe result holds four lists.\n\n- added: blocks only in after, in after order.\n- removed: blocks only in before, in before order.\n- changed: matched blocks whose type, data or tunes differ, in after order. Each entry lists those fields in fields.\n- moved: matched blocks with a different parent, or out of order among their siblings, in after order.\n\nA block can be both moved and changed. A sibling counts as moved only when it leaves the longest run of siblings that kept their order. So adding or removing a block does not mark its siblings as moved.\n\nRich text compares by content. HTML and segments that say the same thing are equal. options.richTextFields names the rich text fields per tool type. It replaces the built-in table, so return the built-in fields too, and fields it does not name are compared raw.\n\nMissing tunes equal {}. indent, content, lastEditedAt, lastEditedBy and the document id, time and version are ignored.",
+        example: `import { diffOutputData } from '@bloklabs/core/view';
+
+const readVersion = async (lineage: string, sequence: number) => {
+  const response = await fetch(\`/api/blok/sync/\${doc}/history/\${lineage}/\${sequence}\`);
+  return response.json();
+};
+
+const diff = diffOutputData(await readVersion(lineage, 12), await readVersion(lineage, 41));
+// diff.added   → [{ id: 'p9', type: 'paragraph', data: { ... } }]
+// diff.changed → [{ id: 'h1', fields: ['data'], before, after }]
+// diff.moved   → [{ id: 'img2', before, after }]`,
+      },
+      {
         name: "defineBlokSchema(config)",
         returnType: "{ editorConfig, viewSchema }",
         description:

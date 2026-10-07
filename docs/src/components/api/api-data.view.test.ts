@@ -45,6 +45,7 @@ describe("view renderer section", () => {
       "sanitizeHtmlFragment(html, config)",
       "outlineFromOutputData(data)",
       "restoreHeadingAnchors(data)",
+      "diffOutputData(before, after, options?)",
       "defineBlokSchema(config)",
       "composeBaseSanitizeConfig(configs)",
       "blocksToViewNodes(data, options?)",
@@ -73,6 +74,14 @@ describe("view renderer section", () => {
 
     expect(async_!.description).toContain("trust");
     expect(async_!.returnType).toBe("Promise<string>");
+  });
+
+  it("says diffOutputData matches blocks by id and what it reports", () => {
+    const method = section!.methods!.find((m) => m.name.startsWith("diffOutputData("));
+    const description = method?.description ?? "";
+    expect(description).toMatch(/block id/i);
+    expect(description).toMatch(/added[\s\S]*removed[\s\S]*changed[\s\S]*moved/);
+    expect(method?.example).toContain("@bloklabs/core/view");
   });
 
   it("has a non-empty example on every method", () => {

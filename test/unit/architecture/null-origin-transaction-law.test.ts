@@ -9,9 +9,11 @@
  * `!transaction.local`; Transaction.js runs it after `afterTransaction`), and
  * it never changes the segments.
  *
- * A Blok write with a null origin is therefore not silent any more, but it is
- * still wrong: it re-renders its own block as if a peer wrote it, and the undo
- * manager does not track it.
+ * A Blok write with a null origin is still wrong: the undo manager does not
+ * track it, and most shapes re-render the block as if a peer wrote it. One
+ * shape stays silent: removing a mark over exactly its whole run deletes only
+ * format items, so it looks like a cleanup and leaves the DOM stale (pinned
+ * below). The static half exists for that case.
  *
  * Three halves:
  * 1. Runtime: every changing null-origin transaction is a format cleanup, and
@@ -270,6 +272,24 @@ describe('Null-Origin Transaction Law — classification', () => {
     own.destroy();
 
     expect(own.origins).toEqual(['remote', 'remote', 'local', 'remote']);
+  });
+
+  // Known gap: a bare unformat of a whole run has the cleanup's shape (no
+  // insert, format deletes only), so it maps 'local' though the segments
+  // change. Only the static half keeps Blok from writing it.
+  it('maps a bare null-origin unformat of a whole run to local (indistinguishable from a cleanup)', () => {
+    const own = observed(1);
+
+    own.store.fromJSON([{ id: 'p1', type: 'paragraph', data: { text: 'The <b>quick</b> fox' } }]);
+
+    const text = (own.store.getBlockById('p1')?.get('data') as Y.Map<unknown>).get('text') as Y.XmlText;
+
+    own.origins.length = 0;
+    text.format(4, 5, { bold: null });
+    own.destroy();
+
+    expect(own.origins).toEqual(['local']);
+    expect(text.toDelta()).toEqual([{ insert: 'The quick fox' }]);
   });
 });
 

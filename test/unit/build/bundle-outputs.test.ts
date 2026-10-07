@@ -324,13 +324,31 @@ describe('view bundle isolation (parse5 stays out of editor bundles)', () => {
     return existsSync(implPath) ? implPath : resolve(dist, bundle)
   }
 
+  // parse5 sits in a shared chunk when ./view and ./migrate both use it, so
+  // read every relative file the bundle loads, lazy import() and require included.
+  const RELATIVE_IMPORT_RE = /(?:\bfrom|\bimport|\brequire)\s*\(?\s*["'`](\.{1,2}\/[^"'`]+)["'`]/g
+  const shippedCode = (bundle: string): string => {
+    const seen = new Set<string>()
+    const visit = (file: string): void => {
+      if (seen.has(file)) {
+        return
+      }
+      seen.add(file)
+      for (const [, spec] of readFileSync(file, 'utf-8').matchAll(RELATIVE_IMPORT_RE)) {
+        visit(join(dirname(file), spec))
+      }
+    }
+    visit(contentBearingPath(bundle))
+    return [...seen].map((file) => readFileSync(file, 'utf-8')).join('\n')
+  }
+
   it('view.mjs actually contains parse5 (fingerprint non-vacuity)', () => {
-    expect(readFileSync(contentBearingPath('view.mjs'), 'utf-8').includes(PARSE5_FINGERPRINT)).toBe(true)
+    expect(shippedCode('view.mjs').includes(PARSE5_FINGERPRINT)).toBe(true)
   })
 
   for (const bundle of ['blok.mjs', 'full.mjs', 'tools.mjs', 'adapters.mjs', 'blok.cjs', 'blok.iife.js', 'blok.umd.js']) {
     it(`${bundle} ships no parse5`, () => {
-      expect(readFileSync(contentBearingPath(bundle), 'utf-8').includes(PARSE5_FINGERPRINT)).toBe(false)
+      expect(shippedCode(bundle).includes(PARSE5_FINGERPRINT)).toBe(false)
     })
   }
 })

@@ -129,6 +129,7 @@ const createMockBlock = (): {
 const apiStub = {
   methods: { blocks: {} },
   blockDataForHost: (_tool: unknown, data: BlockToolData): BlockToolData => data,
+  blockDataForTool: (_tool: unknown, data: BlockToolData): BlockToolData => data,
 } as unknown as ApiModules;
 
 describe('BlockAPI', () => {

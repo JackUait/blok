@@ -93,6 +93,8 @@ const createLiveBlocksApi = (): {
   blocksApi.state = {
     BlockManager: blockManager,
     YjsManager: { stopCapturing: vi.fn(), beginApiCall },
+    // No tool is registered, so host data passes to the block unchanged.
+    Tools: { blockTools: new Map() },
     /**
      * The API module is a thin facade over the very same BlocksAPI instance,
      * mirroring `API.methods.blocks = this.Blok.BlocksAPI.methods`.

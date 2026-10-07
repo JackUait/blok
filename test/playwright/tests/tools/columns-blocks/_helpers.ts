@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
 import { openFixtureToggles } from '../../helpers/toggle-open';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 export { ensureBlokBundleBuilt, TEST_PAGE_URL };
 
@@ -41,7 +42,8 @@ export const createBlok = async (page: Page, data?: OutputData): Promise<void> =
   await openFixtureToggles(page, data);
 };
 
-export const saveBlok = async (page: Page): Promise<OutputData> => {
+/** The save as the host gets it. Reload from this, not from `saveBlok`. */
+export const saveRaw = async (page: Page): Promise<OutputData> => {
   return await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance not found');
@@ -50,13 +52,15 @@ export const saveBlok = async (page: Page): Promise<OutputData> => {
   });
 };
 
+/** A save with rich text read back as HTML, for assertions. */
+export const saveBlok = async (page: Page): Promise<OutputData> => savedAsHtml(await saveRaw(page));
+
 /**
  * Full save -> reload -> save round-trip. Saves the current editor state,
  * re-creates the editor from that data, then returns the freshly re-saved output.
  */
 export const reloadFromSave = async (page: Page): Promise<OutputData> => {
-  const saved = await saveBlok(page);
-  await createBlok(page, saved);
+  await createBlok(page, await saveRaw(page));
   return await saveBlok(page);
 };
 

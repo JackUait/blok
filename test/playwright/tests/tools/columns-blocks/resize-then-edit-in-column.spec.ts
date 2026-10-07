@@ -8,6 +8,7 @@ import {
   ensureBlokBundleBuilt,
   findBlock,
   saveBlok,
+  saveRaw,
 } from './_helpers';
 
 /**
@@ -132,7 +133,7 @@ test.describe('Resize separators then edit/insert inside the resized column', ()
     expect(Math.abs((leftRatio ?? 0) - (leftRatioAfterResize ?? 0))).toBeLessThan(0.05);
 
     // Reload preserves both the edit and the uneven widths.
-    await createBlok(page, saved);
+    await createBlok(page, await saveRaw(page));
     await expect(page.getByText('Edited left content')).toBeVisible();
 
     const widthsReloaded = await liveColumnWidths(page);

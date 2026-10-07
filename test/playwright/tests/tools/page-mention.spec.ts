@@ -82,11 +82,11 @@ test.describe('Page mention', () => {
 
     const saved = await saveBlok(page);
 
-    const text = String(saved.blocks[0]?.data.text);
+    const text: unknown = saved.blocks[0]?.data.text;
 
-    expect(text).toContain('<a data-blok-page-id="roadmap">Page</a>');
-    expect(text).toContain('See');
-    expect(text).not.toContain('href=');
+    expect(text).toContainEqual({ embed: { page: { id: 'roadmap' } } });
+    expect(JSON.stringify(text)).toContain('See');
+    expect(JSON.stringify(text)).not.toContain('"link"');
   });
 
   test('the icon sits on the title line and the hover fill hugs the mention', async ({ page }) => {
@@ -161,10 +161,10 @@ test.describe('Page mention', () => {
     await expect(mention.getByTestId('page-reference-icon')).toBeVisible();
     await expect(mention.getByTestId('page-reference-title')).toHaveText('Roadmap');
 
-    const saved = String((await saveBlok(page)).blocks[0]?.data.text);
+    const saved: unknown = (await saveBlok(page)).blocks[0]?.data.text;
 
-    expect(saved).toContain('<a data-blok-page-id="roadmap">Page</a>');
-    expect(saved).toContain('next');
+    expect(saved).toContainEqual({ embed: { page: { id: 'roadmap' } } });
+    expect(JSON.stringify(saved)).toContain('next');
   });
 
   test('a link that is not a page offers no mention', async ({ page }) => {

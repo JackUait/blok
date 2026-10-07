@@ -464,8 +464,8 @@ isolatedTest('inline page reference follows a two-tab rename and denial without 
     const beforeRename = await saveBlok(page);
     const savedText = beforeRename.blocks.find((block) => block.id === 'intro')?.data.text;
 
-    expect(savedText).toContain('data-blok-page-id="roadmap"');
-    expect(savedText).not.toContain('Roadmap');
+    expect(savedText).toContainEqual({ embed: { page: { id: 'roadmap' } } });
+    expect(JSON.stringify(savedText)).not.toContain('Roadmap');
     expect(beforeRename.blocks.find((block) => block.id === 'link')?.data).toEqual({ pageId: 'roadmap' });
 
     await gotoTestPage(other);
@@ -487,7 +487,7 @@ isolatedTest('inline page reference follows a two-tab rename and denial without 
       await expect(tab.getByTestId('page-icon')).toHaveText('🚀');
       const saved = await saveBlok(tab);
 
-      expect(saved.blocks.find((block) => block.id === 'intro')?.data.text).toBe(savedText);
+      expect(saved.blocks.find((block) => block.id === 'intro')?.data.text).toEqual(savedText);
       expect(saved.blocks.find((block) => block.id === 'link')?.data).toEqual({ pageId: 'roadmap' });
     }
 

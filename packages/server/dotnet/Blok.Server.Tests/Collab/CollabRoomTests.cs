@@ -2473,7 +2473,7 @@ public sealed class CollabRoomTests
     store.Seed(
         DocId,
         [YDocs.FullState(YDocs.DocWith("from-ws"))],
-        new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2 + 1, 0, Tags.Lineage));
+        new CollabWorkingSetTag(CollabWorkingSetTag.CurrentFormat + 1, 0, Tags.Lineage));
     var manager = CreateJournalManager();
 
     var state = await manager.StateAsync(DocId, CancellationToken.None);
@@ -3933,7 +3933,7 @@ public sealed class CollabRoomTests
     {
       await session.ResetAsync(
           new CollabOperationReset(
-              CollabWorkingSetTag.SchemaV2,
+              CollabWorkingSetTag.CurrentFormat,
               Epoch: 3,
               CollabWorkingSetTag.NewLineage(),
               [new byte[] { 0xde, 0xad, 0xbe, 0xef, 0x01 }]),
@@ -3972,7 +3972,7 @@ public sealed class CollabRoomTests
     {
       await session.ResetAsync(
           new CollabOperationReset(
-              CollabWorkingSetTag.SchemaV2,
+              CollabWorkingSetTag.CurrentFormat,
               Epoch: 3,
               CollabWorkingSetTag.NewLineage(),
               [
@@ -4609,6 +4609,76 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A transient failure that never heals — one rich field too large for the
+  /// runtime's timeout — must not be retried for as long as the room stays
+  /// loaded. The give-up is a refusal, which also lets the room be evicted.
+  /// </summary>
+  [Fact]
+  public async Task ATransientExportFailureThatNeverHealsIsGivenUp()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read",
+        new BlokDocumentConversionException(BlokConversionFailure.TimedOut, new TimeoutException()));
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => log.Any(line => line.Contains("gave up exporting", StringComparison.Ordinal)),
+        "the export to be given up");
+
+    var attempts = converter.Exports;
+
+    for (var tick = 0; tick < 20; tick++)
+    {
+      time.Advance(TimeSpan.FromMinutes(1));
+      await manager.SettleAsync();
+    }
+
+    Assert.Equal(attempts, converter.Exports);
+    Assert.Empty(endpoint.Saves);
+  }
+
+  /// <summary>
+  /// Waiting for a pooled engine says the host is busy, not that this
+  /// document is too large, so it never counts toward the give-up.
+  /// </summary>
+  [Fact]
+  public async Task AnEnginePoolWaitNeverGivesTheExportUp()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read", new OperationCanceledException());
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    for (var tick = 0; tick < 20; tick++)
+    {
+      time.Advance(TimeSpan.FromMinutes(1));
+      await manager.SettleAsync();
+    }
+
+    Assert.True(converter.Exports > 8, $"{converter.Exports} export attempts");
+    Assert.DoesNotContain(log, line => line.Contains("gave up exporting", StringComparison.Ordinal));
+  }
+
+  /// <summary>
   /// Eviction and drain export through the flush, which must classify the
   /// same way: a transient failure is logged and left for the next load, not
   /// marked as a document that can never be exported.
@@ -4815,7 +4885,7 @@ public sealed class CollabRoomTests
     {
       await session.ResetAsync(
           new CollabOperationReset(
-              CollabWorkingSetTag.SchemaV2,
+              CollabWorkingSetTag.CurrentFormat,
               Epoch: 2,
               Tags.Lineage,
               [baseline]),
@@ -6385,7 +6455,9 @@ public sealed class CollabRoomTests
 internal sealed class FailingHtmlReader(Exception? failure = null) : IRichTextHtmlReader
 {
   public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
-      IReadOnlyList<RichTextHtml> fields, CancellationToken cancellationToken = default)
+      IReadOnlyList<RichTextHtml> fields,
+      TimeSpan? timeout = null,
+      CancellationToken cancellationToken = default)
   {
     throw failure ?? new TimeoutException("the runtime took too long");
   }

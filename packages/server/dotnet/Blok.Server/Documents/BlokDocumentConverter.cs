@@ -21,7 +21,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
       return version;
     }
 
-    var reported = await runtime.InvokeAsync("version", "{}", cancellationToken);
+    var reported = await runtime.InvokeAsync("version", "{}", cancellationToken: cancellationToken);
 
     /*
      * `dev` is what the bundle answers when it was built without the VERSION
@@ -46,7 +46,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   {
     ArgumentNullException.ThrowIfNull(documentJson);
 
-    var output = await runtime.InvokeAsync("blocksToMarkdown", documentJson, cancellationToken);
+    var output = await runtime.InvokeAsync("blocksToMarkdown", documentJson, cancellationToken: cancellationToken);
 
     return JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
         ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion.");
@@ -61,7 +61,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     var output = await runtime.InvokeAsync(
         "blocksToMarkdownWithPages",
         PagesRequest(documentJson, pages, pageHref),
-        cancellationToken);
+        cancellationToken: cancellationToken);
 
     return JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
         ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion.");
@@ -72,7 +72,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   // Constant for the life of the bundle, and large, so it is fetched once.
   public async ValueTask<string> GetSchemaAsync(CancellationToken cancellationToken = default)
   {
-    return schema ??= await runtime.InvokeAsync("schema", "{}", cancellationToken);
+    return schema ??= await runtime.InvokeAsync("schema", "{}", cancellationToken: cancellationToken);
   }
 
   public async ValueTask<IReadOnlyList<string>> ExtractTextsAsync(
@@ -85,7 +85,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     var output = await runtime.InvokeAsync(
         "extractTexts",
         TextsRequest(documentJson, texts: null, includeCode),
-        cancellationToken);
+        cancellationToken: cancellationToken);
 
     return JsonSerializer.Deserialize<string[]>(output)
         ?? throw new InvalidOperationException("The Blok runtime returned no texts.");
@@ -103,7 +103,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     var output = await runtime.InvokeAsync(
         "injectTexts",
         TextsRequest(documentJson, texts, includeCode),
-        cancellationToken);
+        cancellationToken: cancellationToken);
 
     var result = JsonNode.Parse(output)
         ?? throw new InvalidOperationException("The Blok runtime returned no document.");
@@ -128,7 +128,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     var output = await runtime.InvokeAsync(
         "pageIndex",
         new JsonObject { ["document"] = ParseDocument(documentJson) }.ToJsonString(),
-        cancellationToken);
+        cancellationToken: cancellationToken);
 
     return JsonSerializer.Deserialize<BlokPageIndex>(output)
         ?? throw new InvalidOperationException("The Blok runtime returned no page index.");
@@ -150,7 +150,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
       ["blockIds"] = IdMap(blockIds),
       ["pageIds"] = IdMap(pageIds),
     };
-    var output = await runtime.InvokeAsync("remapPageDocument", request.ToJsonString(), cancellationToken);
+    var output = await runtime.InvokeAsync("remapPageDocument", request.ToJsonString(), cancellationToken: cancellationToken);
     var result = JsonNode.Parse(output)
         ?? throw new InvalidOperationException("The Blok runtime returned no document.");
 
@@ -311,7 +311,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   {
     ArgumentNullException.ThrowIfNull(documentJson);
 
-    return runtime.InvokeAsync("blocksToHtml", documentJson, cancellationToken);
+    return runtime.InvokeAsync("blocksToHtml", documentJson, cancellationToken: cancellationToken);
   }
 
   public ValueTask<string> ToHtmlAsync(
@@ -323,7 +323,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     return runtime.InvokeAsync(
         "blocksToHtmlWithPages",
         PagesRequest(documentJson, pages, pageHref),
-        cancellationToken);
+        cancellationToken: cancellationToken);
   }
 
   public ValueTask<string> ToPlainTextAsync(
@@ -336,7 +336,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     return runtime.InvokeAsync(
         "blocksToPlainText",
         PlainTextRequest(documentJson, includeHiddenText),
-        cancellationToken);
+        cancellationToken: cancellationToken);
   }
 
   public async ValueTask<BlokPlainTextConversion> ToPlainTextWithReportAsync(
@@ -349,7 +349,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     var output = await runtime.InvokeAsync(
         "blocksToPlainTextWithReport",
         PlainTextRequest(documentJson, includeHiddenText),
-        cancellationToken);
+        cancellationToken: cancellationToken);
 
     return JsonSerializer.Deserialize<BlokPlainTextConversion>(output)
         ?? throw new InvalidOperationException("The Blok runtime returned no plain-text conversion.");
@@ -373,7 +373,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
 
     try
     {
-      var output = await runtime.InvokeAsync("inspect", documentJson!, cancellationToken);
+      var output = await runtime.InvokeAsync("inspect", documentJson!, cancellationToken: cancellationToken);
 
       return (JsonSerializer.Deserialize<BlokDocumentValidation>(output)
           ?? new BlokDocumentValidation { Failure = BlokConversionFailure.Unknown })
@@ -428,7 +428,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
       string input,
       CancellationToken cancellationToken)
   {
-    var output = await runtime.InvokeAsync(operation, input, cancellationToken);
+    var output = await runtime.InvokeAsync(operation, input, cancellationToken: cancellationToken);
 
     var payload = JsonNode.Parse(output)?.AsObject()
         ?? throw new InvalidOperationException("The Blok runtime returned no document.");

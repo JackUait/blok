@@ -261,7 +261,7 @@ public sealed class ResetEndpointTests
   /// <summary>Epoch 1 after one reset, under the new lineage the reset minted.</summary>
   private static void AssertResetTag(CollabWorkingSetTag tag)
   {
-    Assert.Equal(CollabWorkingSetTag.SchemaV2, tag.Format);
+    Assert.Equal(CollabWorkingSetTag.CurrentFormat, tag.Format);
     Assert.Equal(1, tag.Epoch);
     Assert.Matches("^[0-9a-f]{32}$", tag.Lineage);
   }

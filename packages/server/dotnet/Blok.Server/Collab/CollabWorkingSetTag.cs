@@ -4,7 +4,7 @@ namespace Blok.Server.Collab;
 
 /// <summary>
 /// Identity of a persisted working set. Format names the schema the update
-/// frames were produced against (1 = client schema v2). Epoch counts resets.
+/// frames were produced against (see <see cref="CurrentFormat"/>). Epoch counts resets.
 /// Lineage is 16 random bytes as lower hex, minted every time a fresh CRDT
 /// history is created — the first seed, a re-seed after the blob was lost or
 /// unreadable, and a reset.
@@ -21,7 +21,11 @@ internal readonly record struct CollabWorkingSetTag(
     long Epoch,
     string Lineage)
 {
-  internal const int SchemaV2 = 1;
+  /// <summary>Rich text as HTML in a plain Y.Text. A room still in it is migrated on open.</summary>
+  internal const int HtmlRichTextFormat = 1;
+
+  /// <summary>Rich text as formatted Y.XmlText: the only format this server writes or announces.</summary>
+  internal const int CurrentFormat = 2;
 
   /// <summary>Length of <see cref="Lineage"/> in hex characters.</summary>
   internal const int LineageLength = 32;

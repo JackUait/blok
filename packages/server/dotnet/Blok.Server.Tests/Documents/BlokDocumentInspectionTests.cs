@@ -178,6 +178,7 @@ public sealed class BlokDocumentInspectionTests
     public ValueTask<string> InvokeAsync(
         string operation,
         string inputJson,
+        TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
       Calls++;

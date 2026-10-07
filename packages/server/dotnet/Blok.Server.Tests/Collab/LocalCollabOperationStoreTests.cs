@@ -31,9 +31,9 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
   /// <summary>
   /// A schema version this build never mints, so a migration that carried the
   /// stored format over is told apart from one that hard-coded
-  /// <see cref="CollabWorkingSetTag.SchemaV2"/>.
+  /// <see cref="CollabWorkingSetTag.CurrentFormat"/>.
   /// </summary>
-  private const int LegacyFormat = CollabWorkingSetTag.SchemaV2 + 1;
+  private const int LegacyFormat = CollabWorkingSetTag.CurrentFormat + 1;
 
   private readonly string root = Path.Combine(
       Path.GetTempPath(),
@@ -1166,7 +1166,7 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
     var workingSet = new LocalCollabStore(root, logs.Add);
     var frames = CollabWorkingSetCodec.EncodeFrames([[0x0a, 0x0b]]);
     await workingSet.WriteAsync(DocId, frames, new CollabWorkingSetTag(
-        CollabWorkingSetTag.SchemaV2,
+        CollabWorkingSetTag.CurrentFormat,
         3,
         CollabWorkingSetTag.NewLineage()), CancellationToken.None);
 

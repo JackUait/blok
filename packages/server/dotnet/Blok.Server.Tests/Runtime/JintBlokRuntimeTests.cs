@@ -112,7 +112,7 @@ public sealed class JintBlokRuntimeTests
             },
       });
 
-      var output = await runtime.InvokeAsync("blocksToPlainText", input, timeout.Token);
+      var output = await runtime.InvokeAsync("blocksToPlainText", input, cancellationToken: timeout.Token);
       Assert.Equal(expected, output);
     });
 
@@ -132,10 +132,10 @@ public sealed class JintBlokRuntimeTests
     using var cancelled = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
 
     await Assert.ThrowsAnyAsync<OperationCanceledException>(
-        () => runtime.InvokeAsync("wait", "{}", cancelled.Token).AsTask());
+        () => runtime.InvokeAsync("wait", "{}", cancellationToken: cancelled.Token).AsTask());
 
     using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-    var output = await runtime.InvokeAsync("ready", "{}", timeout.Token);
+    var output = await runtime.InvokeAsync("ready", "{}", cancellationToken: timeout.Token);
     Assert.Equal("ok", output);
   }
 
@@ -221,6 +221,33 @@ public sealed class JintBlokRuntimeTests
         async () => await runtime.InvokeAsync("runaway", "{}"));
 
     Assert.Equal("ok", await runtime.InvokeAsync("blocksToMarkdown", "{}"));
+  }
+
+  /// <summary>
+  /// A one-off job (migrating a room) may need more than the runtime's
+  /// default. The budget is per call: the next call is back on the default.
+  /// </summary>
+  [Fact]
+  public async Task APerCallTimeoutReplacesTheDefaultForThatCallOnly()
+  {
+    var runtime = new JintBlokRuntime(SpinningScript, poolSize: 1, timeout: TimeSpan.FromMilliseconds(200));
+
+    Assert.Equal("ok", await runtime.InvokeAsync("spin", "{}", timeout: TimeSpan.FromSeconds(30)));
+
+    var failure = await Assert.ThrowsAsync<BlokDocumentConversionException>(
+        async () => await runtime.InvokeAsync("spin", "{}"));
+    Assert.Equal(BlokConversionFailure.TimedOut, failure.Reason);
+  }
+
+  [Fact]
+  public async Task APerCallTimeoutCanBeShorterThanTheDefault()
+  {
+    var runtime = new JintBlokRuntime(SpinningScript, poolSize: 1);
+
+    var failure = await Assert.ThrowsAsync<BlokDocumentConversionException>(
+        async () => await runtime.InvokeAsync("spin", "{}", timeout: TimeSpan.FromMilliseconds(200)));
+
+    Assert.Equal(BlokConversionFailure.TimedOut, failure.Reason);
   }
 
   [Fact]
@@ -386,6 +413,15 @@ public sealed class JintBlokRuntimeTests
   /// bold, a link and an entity, which is the markup density measured on the
   /// article that first failed.
   /// </summary>
+  /// <summary>Runs for about 600 ms of wall clock, then answers.</summary>
+  private const string SpinningScript = """
+    globalThis.blokServerInvoke = function () {
+      const until = Date.now() + 600;
+      while (Date.now() < until) {}
+      return 'ok';
+    };
+    """;
+
   private static string MarkedUpArticle()
   {
     const string plain = "An entirely ordinary paragraph with no markup at all inside it, ";

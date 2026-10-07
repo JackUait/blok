@@ -151,7 +151,7 @@ public sealed class SyncWireFramingTests
     Assert.Equal(
         new CollabWorkingSetTag(control.Format, control.Epoch, control.Lineage),
         message.Tag);
-    Assert.Equal(CollabWorkingSetTag.SchemaV2, message.Tag.Format);
+    Assert.Equal(CollabWorkingSetTag.CurrentFormat, message.Tag.Format);
     Assert.Matches("^[0-9a-f]{32}$", message.Tag.Lineage);
   }
 

@@ -617,7 +617,9 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
   /// <summary>
   /// A document whose commit failed is refused for a doubling wait. Without it
   /// every reconnect through the outage would reload that document's baseline
-  /// and tail from the store that is already in trouble.
+  /// and tail from the store that is already in trouble. A load that ran past
+  /// the runtime's limits is held off the same way: each retry would hold a
+  /// pooled engine for the whole timeout, at the same rate.
   /// </summary>
   private bool InCommitCooldown(string docId)
   {
@@ -632,15 +634,21 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
   {
     lock (rooms)
     {
-      if (room.CommitUnavailable)
+      if (room.CommitUnavailable || room.LoadHeldOff)
       {
         var failures = (cooldowns.TryGetValue(room.DocId, out var cooldown)
             ? cooldown.Failures
             : 0) + 1;
+        var wait = options.Backoff(failures);
 
-        cooldowns[room.DocId] = new CommitCooldown(
-            failures,
-            timeProvider.GetUtcNow() + options.Backoff(failures));
+        cooldowns[room.DocId] = new CommitCooldown(failures, timeProvider.GetUtcNow() + wait);
+
+        if (room.LoadHeldOff)
+        {
+          log?.Invoke(
+              $"collab: document \"{room.DocId}\" failed to load in a way the next open repeats, " +
+              $"so it is held off for {wait} (failure {failures}); the room's own log line says why");
+        }
       }
       else
       {

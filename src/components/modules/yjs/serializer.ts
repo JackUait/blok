@@ -567,21 +567,30 @@ export class YBlockSerializer {
 
     for (const [key, value] of Object.entries(data)) {
       const dataKey = stripNul(key);
-      const segments = this.isRichTextField(type, dataKey) ? this.toRichSegments(value) : null;
 
-      if (segments !== null) {
-        ymap.set(dataKey, this.mintRichText(segments));
-      } else {
-        ymap.set(
-          dataKey,
-          isDiffableTextKey(dataKey) && typeof value === 'string'
-            ? new Y.Text(stripNul(value))
-            : this.plainToYValue(value)
-        );
-      }
+      ymap.set(dataKey, this.mintDataValue(type, dataKey, value));
     }
 
     return ymap;
+  }
+
+  /**
+   * What `blockDataToYMap` stores under one data key. Also used where a
+   * conversion re-mints a key whose class no longer fits the block's type.
+   * @param type - the block's type
+   * @param dataKey - the NUL-free data key
+   * @param value - the plain value
+   */
+  public mintDataValue(type: unknown, dataKey: string, value: unknown): unknown {
+    const segments = this.isRichTextField(type, dataKey) ? this.toRichSegments(value) : null;
+
+    if (segments !== null) {
+      return this.mintRichText(segments);
+    }
+
+    return isDiffableTextKey(dataKey) && typeof value === 'string'
+      ? new Y.Text(stripNul(value))
+      : this.plainToYValue(value);
   }
 
   /**

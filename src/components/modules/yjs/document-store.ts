@@ -761,6 +761,24 @@ export class DocumentStore {
       // not — the field is gone from the new tool's data, so the prune below
       // removes it on both peers. Replace still replaces.
       for (const [key, value] of Object.entries(normalized)) {
+        const dataKey = stripNul(key);
+        const current: unknown = ydata.get(dataKey);
+        const rich = this.serializer.isRichTextField(type, dataKey);
+
+        // A flip between rich and non-rich (paragraph → a tool whose `text`
+        // is HTML, or back) re-mints the key in the SAME transaction as the
+        // type: readers decide by class, and a formatted text cannot hold
+        // arbitrary HTML.
+        const flips = current instanceof Y.XmlText
+          ? !rich
+          : rich && current instanceof Y.Text;
+
+        if (flips) {
+          ydata.set(dataKey, this.serializer.mintDataValue(type, dataKey, value));
+
+          continue;
+        }
+
         this.updateBlockData(id, key, value);
       }
 
@@ -1432,6 +1450,28 @@ export class DocumentStore {
 
       this.transact(() => {
         writeRichText(currentValue, current, richSegments);
+      }, 'local');
+
+      return true;
+    }
+
+    // An HTML Y.Text under a rich field: a format-1 field, a conversion from
+    // a non-rich tool, or what a type race leaves (A converts to a tool with
+    // an HTML `text` while B converts to a header). Upgrade it to formatted
+    // text on this write. A whole-key set is last-writer-wins against a peer
+    // typing into the old value at this moment; it happens once per field.
+    const upgradeSegments = currentValue instanceof Y.Text && !(currentValue instanceof Y.XmlText) &&
+      this.serializer.isRichTextField(yblock.get('type'), dataKey)
+      ? this.serializer.toRichSegments(value)
+      : null;
+
+    if (currentValue instanceof Y.Text && upgradeSegments !== null) {
+      if (equals(this.serializer.toRichSegments(currentValue.toJSON()), upgradeSegments)) {
+        return false;
+      }
+
+      this.transact(() => {
+        ydata.set(dataKey, this.serializer.mintRichText(upgradeSegments));
       }, 'local');
 
       return true;

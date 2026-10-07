@@ -26,6 +26,7 @@ internal static class CollabHistoryReplay
 
     await foreach (var record in records.WithCancellation(ct).ConfigureAwait(false))
     {
+      ct.ThrowIfCancellationRequested();
       Apply(doc, record.Update, record.ServerSequence, $"record {record.ServerSequence}");
     }
 
@@ -38,6 +39,8 @@ internal static class CollabHistoryReplay
   /// </summary>
   private static void Apply(YDoc doc, ReadOnlyMemory<byte> update, ulong? sequence, string name)
   {
+    // The default depth equals YDocConverter.MaxValueDepth: the edit path
+    // journals uninspected, and its deepest Any is exactly that deep.
     var inspection = UpdateInspector.Inspect(update.Span);
 
     if (inspection.Verdict != UpdateVerdict.Ok || inspection.Decoded is null)
@@ -46,18 +49,22 @@ internal static class CollabHistoryReplay
           sequence, $"collab: history replay could not read {name}: {inspection.Reason}");
     }
 
-    var applied = doc.ApplyUpdate(inspection.Decoded);
-
-    if (applied.Outcome != ApplyOutcome.Applied)
+    try
+    {
+      doc.ApplyUpdate(inspection.Decoded);
+    }
+    catch (Exception error) when (error is not OperationCanceledException)
     {
       throw new CollabHistoryReplayException(
-          sequence, $"collab: history replay could not apply {name}: {applied.Reason}");
+          sequence, $"collab: history replay could not apply {name}: {error.Message}", error);
     }
   }
 }
 
 /// <summary>A baseline frame or record that the replay could not read or apply.</summary>
-internal sealed class CollabHistoryReplayException(ulong? sequence, string message) : Exception(message)
+internal sealed class CollabHistoryReplayException(
+    ulong? sequence, string message, Exception? innerException = null)
+    : Exception(message, innerException)
 {
   /// <summary>The record's server sequence, or null for a baseline frame.</summary>
   public ulong? Sequence { get; } = sequence;

@@ -115,8 +115,91 @@ public sealed class CollabHistoryReplayTests
         async () => await CollabHistoryReplay.BuildAsync(
             [], Records([fine, NestedArrayUpdate(257)]), CancellationToken.None));
 
-    Assert.Contains("2", refused.Message);
+    Assert.Contains("record 2", refused.Message, StringComparison.Ordinal);
     Assert.Equal(2UL, refused.Sequence);
+  }
+
+  [Fact]
+  public async Task CancellingBetweenRecordsStopsTheReplay()
+  {
+    var client = new YDoc(1);
+    var text = client.GetText("t");
+    var u1 = client.Transact(transaction => text.Insert(transaction, 0, "a"))!;
+    var u2 = client.Transact(transaction => text.Insert(transaction, 1, "b"))!;
+    using var cancel = new CancellationTokenSource();
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(
+        async () => await CollabHistoryReplay.BuildAsync(
+            [], CancelAfterFirst(Records([u1, u2]), cancel), cancel.Token));
+  }
+
+  /// <summary>
+  /// The edit endpoint journals its update without the inspector, so replay
+  /// must take the deepest data an edit can write. Nested objects become Y
+  /// maps (shallow Any). An array holding a scalar stays one Any value all
+  /// the way down; the converter's 256-level cap keeps it at the inspector's
+  /// 256-level cap.
+  /// </summary>
+  [Theory]
+  [InlineData("{ \"k\": ", "}", 0)]
+  [InlineData("[1, ", "]", 256)]
+  public async Task AnEditAtTheDeepestDataTheConverterTakesReplays(string open, string close, int anyDepth)
+  {
+    var live = new YDoc();
+    RichTextRuntime.Seed(live, new JsonArray(
+        JsonNode.Parse("""{ "id": "root", "type": "paragraph", "data": { "text": "r" } }""")));
+    var baseline = new ReadOnlyMemory<byte>[] { live.EncodeStateAsUpdate() };
+    var emitted = new List<byte[]>();
+    live.UpdateEmitted += update =>
+    {
+      if (update.Local)
+      {
+        emitted.Add(update.Update);
+      }
+    };
+
+    // "deep" is level 1 inside data, so this many containers is the limit.
+    RichTextRuntime.ApplyOps(live, Ops(DeepUpdate(open, close, YDocConverter.MaxValueDepth)));
+
+    var update = Assert.Single(emitted);
+    Assert.Equal(anyDepth, UpdateInspector.Inspect(update).Decoded?.MaxNestingDepth);
+    var replayed = await CollabHistoryReplay.BuildAsync(baseline, Records([update]), CancellationToken.None);
+
+    Assert.Equal(Blocks(RichTextRuntime.Export(live)), Blocks(RichTextRuntime.Export(replayed)));
+
+    // One more level and the edit itself is refused, so it never reaches the journal.
+    Assert.Throws<CollabEditException>(
+        () => RichTextRuntime.ApplyOps(live, Ops(DeepUpdate(open, close, YDocConverter.MaxValueDepth + 1))));
+    Assert.Single(emitted);
+  }
+
+  private static string DeepUpdate(string open, string close, int containers)
+  {
+    var deep = new StringBuilder();
+
+    for (var level = 0; level < containers; level++)
+    {
+      deep.Append(open);
+    }
+
+    deep.Append('1');
+
+    for (var level = 0; level < containers; level++)
+    {
+      deep.Append(close);
+    }
+
+    return $$"""{ "op": "update", "id": "root", "data": { "deep": {{deep}} } }""";
+  }
+
+  private static async IAsyncEnumerable<CollabOperationRecord> CancelAfterFirst(
+      IAsyncEnumerable<CollabOperationRecord> records, CancellationTokenSource cancel)
+  {
+    await foreach (var record in records)
+    {
+      yield return record;
+      await cancel.CancelAsync();
+    }
   }
 
   private static async IAsyncEnumerable<CollabOperationRecord> Records(IEnumerable<byte[]> updates)

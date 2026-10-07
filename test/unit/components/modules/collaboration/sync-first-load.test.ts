@@ -3342,6 +3342,90 @@ describe('collaboration — sync-first load', () => {
       expect(quarantined?.save?.quarantinedOperations).toBe(1);
     }, 30_000);
 
+    /**
+     * A server that moved the room to format 2 without minting a new lineage:
+     * the format-1 row carries THIS session's lineage. Only that row may go;
+     * the session's own format-2 edits keep draining.
+     */
+    it('a format-1 row under the session lineage is set aside alone and later edits still reach the server', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const { harness, seen } = await watched({ offline: true });
+
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+      await settle(seen);
+
+      const options = storeOptions();
+      const dbName = `${CACHE_DB_PREFIX}${operationStore.escapePartitionSegment(options.url)}|${options.doc}|${options.offlineScope ?? ''}`;
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(dbName);
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction('outbox', 'readwrite');
+
+        transaction.objectStore('outbox').add({
+          operationId: 'f'.repeat(32),
+          lineage: LINEAGE,
+          bytes: new Uint8Array([9, 9, 9]),
+          createdAt: 1,
+        });
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      });
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed beside the format-1 row');
+
+      await waitFor(() => operationOn(socket) !== undefined, 'the typed edit on the wire', 5000)
+        .catch(() => undefined);
+
+      const sentIds = (): string[] => socket.sent
+        .map((bytes) => decode(bytes))
+        .filter((frame): frame is Extract<SyncWireFrame, { type: 'operation' }> => frame.type === 'operation')
+        .map((frame) => frame.operationId);
+
+      expect(sentIds(), 'the session\'s own format-2 edit was quarantined with the format-1 row').toHaveLength(1);
+      expect(states(seen), 'setting a stale row aside blocked the session').not.toContain('blocked');
+
+      const firstEdit = sentIds()[0];
+
+      socket.deliver({
+        type: 'acknowledgement',
+        lineage: LINEAGE,
+        operationId: firstEdit,
+        serverSequence: '1',
+      });
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed after the quarantine');
+
+      await waitFor(() => sentIds().length === 2, 'the later edit on the wire', 5000)
+        .catch(() => undefined);
+
+      const quarantineRows = await new Promise<unknown[]>((resolve, reject) => {
+        const request = db.transaction('quarantine', 'readonly').objectStore('quarantine').getAll();
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+
+      db.close();
+
+      expect(sentIds(), 'an edit typed after the quarantine never reached the server').toHaveLength(2);
+      expect(sentIds()).not.toContain('f'.repeat(32));
+      expect(
+        quarantineRows
+          .filter((row) => (row as { kind?: unknown }).kind === 'operation')
+          .map((row) => (row as { operationId?: unknown }).operationId)
+      ).toEqual(['f'.repeat(32)]);
+      expect(states(seen)).not.toContain('blocked');
+    }, 30_000);
+
     it('server sequence remains a decimal string', async () => {
       const { harness, seen } = await watched();
       const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);

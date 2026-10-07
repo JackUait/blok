@@ -488,6 +488,42 @@ describe('collaboration — operation store', () => {
       expect(head?.format).toBe(1);
       expect((await store.stats()).pendingOperations).toBe(2);
     });
+
+    it('a keepFormat quarantine moves only the other-format rows and keeps the session', async () => {
+      const store = storeWith();
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await plantOutbox({ operationId: 'f'.repeat(32),
+        lineage: LINEAGE_A,
+        bytes: updateWith('block-1', '<b>old</b>'),
+        createdAt: 1 });
+
+      const current = await store.appendLocal(updateWith('block-2', 'new'));
+
+      expect(
+        await store.quarantineLineage(LINEAGE_A, 'stale-format', updateWith('block-9', 'recovery'), { keepFormat: 2 })
+      ).toBe(1);
+      expect((await store.oldestPending())?.operationId, 'the format-2 row left with the stale one')
+        .toBe(current.operationId);
+      expect((await store.appendLocal(updateWith('block-3', 'later'))).lineage).toBe(LINEAGE_A);
+      expect((await store.stats()).pendingOperations).toBe(2);
+    });
+
+    it('a keepFormat quarantine keeps the session in memory mode too', async () => {
+      const store = storeWith({ offlineScope: null });
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+
+      const current = await store.appendLocal(updateWith('block-1', 'one'));
+
+      expect(
+        await store.quarantineLineage(LINEAGE_A, 'stale-format', updateWith('block-9', 'recovery'), { keepFormat: 2 })
+      ).toBe(0);
+      expect((await store.oldestPending())?.operationId).toBe(current.operationId);
+      expect((await store.appendLocal(updateWith('block-2', 'two'))).lineage).toBe(LINEAGE_A);
+    });
   });
 
   describe('lineage stamping', () => {

@@ -10,6 +10,7 @@ import type {
   CollabStatus,
   CollabStatusDetail,
   CollabTerminalError,
+  QuarantineFilter,
   SessionProtocol,
   SyncWireFrame,
   WebSocketLike,
@@ -643,10 +644,11 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
    * @param lineage - the lineage to empty
    * @param reason - a fixed string, or a codec-validated rejection code; never
    * text a peer wrote
+   * @param filter - narrows the move; see `QuarantineFilter`
    * @returns whether the move committed — a caller that goes on to read the
    * outbox has to know, because a failure leaves the rows in place
    */
-  const quarantineTail = async (lineage: string, reason: string): Promise<boolean> => {
+  const quarantineTail = async (lineage: string, reason: string, filter?: QuarantineFilter): Promise<boolean> => {
     const outbox = options.outbox;
 
     if (outbox === undefined) {
@@ -661,7 +663,8 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       await outbox.quarantineLineage(
         lineage,
         reason,
-        options.keepsLocalCopy === true ? yjs.encodeStateAsUpdate() : NO_SNAPSHOT
+        options.keepsLocalCopy === true ? yjs.encodeStateAsUpdate() : NO_SNAPSHOT,
+        filter
       );
 
       return true;
@@ -831,7 +834,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     // without minting a new lineage would otherwise get format-1 bytes (HTML
     // characters) replayed into its rich text.
     if (row.format !== SUPPORTED_FORMAT) {
-      void quarantineTail(row.lineage, STALE_FORMAT_REASON).then((moved) => {
+      // Only the stale rows go. The lineage may be this session's own, and
+      // nothing reconnects after this sweep to record a new one.
+      void quarantineTail(row.lineage, STALE_FORMAT_REASON, { keepFormat: SUPPORTED_FORMAT }).then((moved) => {
         if (moved && !isStale(generation)) {
           drain();
         }

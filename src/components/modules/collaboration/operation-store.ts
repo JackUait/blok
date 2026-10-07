@@ -7,7 +7,7 @@
 import * as idb from 'lib0/indexeddb';
 import * as Y from 'yjs';
 
-import type { SessionProtocol, WorkingSetTag } from './types';
+import type { QuarantineFilter, SessionProtocol, WorkingSetTag } from './types';
 
 /**
  * Lineage is compared by EQUALITY and must look like the server's: 32 lower-hex
@@ -173,8 +173,14 @@ export interface OperationStore {
   /**
    * One transaction: every outbox row of `lineage` plus the recovery snapshot
    * move to `quarantine`. Returns the number of quarantined outbox rows.
+   * With `keepFormat`, rows written in that format stay and the session is kept.
    */
-  quarantineLineage: (lineage: string, reason: string, snapshot: Uint8Array) => Promise<number>;
+  quarantineLineage: (
+    lineage: string,
+    reason: string,
+    snapshot: Uint8Array,
+    filter?: QuarantineFilter
+  ) => Promise<number>;
 
   stats: () => Promise<OperationStoreStats>;
 
@@ -1046,19 +1052,25 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
       });
     },
 
-    quarantineLineage: async (lineage, reason, snapshot) => enqueue(async () => {
+    quarantineLineage: async (lineage, reason, snapshot, filter) => enqueue(async () => {
+      const keepFormat = filter?.keepFormat;
+      const moves = (row: PendingOperation): boolean =>
+        row.lineage === lineage && row.format !== keepFormat;
+
       // A quarantined lineage can take no further rows; the caller records the
-      // next session before editing resumes.
-      if (state.lineage === lineage) {
+      // next session before editing resumes. A stale-format sweep keeps the
+      // lineage live: nothing reconnects after it, so dropping the session here
+      // would block every later edit.
+      if (state.lineage === lineage && keepFormat === undefined) {
         dropSession();
       }
 
       const db = state.db;
 
       if (db === null) {
-        const moved = state.memory.filter((row) => row.lineage === lineage).length;
+        const moved = state.memory.filter(moves).length;
 
-        state.memory = state.memory.filter((row) => row.lineage !== lineage);
+        state.memory = state.memory.filter((row) => !moves(row));
         state.memoryQuarantined += moved;
 
         return moved;
@@ -1092,7 +1104,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
 
             const row = toPendingOperation(cursor.key, cursor.value);
 
-            if (row !== null && row.lineage === lineage) {
+            if (row !== null && moves(row)) {
               quarantineStore.add({
                 kind: 'operation',
                 lineage,

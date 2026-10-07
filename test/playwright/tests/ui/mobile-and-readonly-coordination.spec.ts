@@ -4,6 +4,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
@@ -206,10 +207,10 @@ test.describe('read-only toggle coordination with controllers', () => {
     // Type some text
     await page.keyboard.type(' - more text');
 
-    const savedData = await page.evaluate(async () => {
+    const savedData = savedAsHtml(await page.evaluate(async () => {
       const blok = window.blokInstance;
       return blok ? await blok.save() : { blocks: [] };
-    });
+    }));
 
     expect((savedData.blocks[0]?.data as { text?: string } | undefined)?.text).toBe('First block - more text');
   });

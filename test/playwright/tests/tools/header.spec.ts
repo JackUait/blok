@@ -497,7 +497,7 @@ test.describe('header Tool', () => {
       expect(savedData?.blocks).toHaveLength(1);
       expect(savedData?.blocks[0].type).toBe('header');
        
-      expect(savedData?.blocks[0].data.text).toBe('Test Header');
+      expect(savedData?.blocks[0].data.text).toEqual([{ text: 'Test Header' }]);
        
       expect(savedData?.blocks[0].data.level).toBe(3);
     });

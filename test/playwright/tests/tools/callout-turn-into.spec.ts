@@ -4,6 +4,7 @@ import type { Blok, OutputBlockData } from '@/types';
 import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 /**
  * A callout's block menu offers "Turn into" (Notion). Its first line becomes
@@ -57,12 +58,8 @@ const createBlok = async (page: Page): Promise<void> => {
 
 /** Every saved block as `id:type:parent` plus its text. */
 const savedBlocks = async (page: Page): Promise<string[]> =>
-  await page.evaluate(async () => {
-    const saved = await window.blokInstance?.save();
-
-    return (saved?.blocks ?? []).map((block) =>
-      `${String(block.id)}:${block.type}:${block.parent ?? 'root'}:${String(block.data.text)}`);
-  });
+  blocksAsHtml(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? [])).map((block) =>
+    `${String(block.id)}:${block.type}:${block.parent ?? 'root'}:${String(block.data.text)}`);
 
 const turnCalloutInto = async (page: Page, title: string, caretIn = 'c2'): Promise<void> => {
   await page.locator(`[data-blok-id="${caretIn}"] [contenteditable="true"]`).click();

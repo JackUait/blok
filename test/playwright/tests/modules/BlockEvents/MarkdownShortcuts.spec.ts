@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '../../../../../types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]`;
@@ -94,7 +95,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(listBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('list');
@@ -114,7 +115,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(listBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('list');
@@ -144,7 +145,7 @@ test.describe('markdown shortcuts', () => {
       await paragraph.click();
       await paragraph.type('- <b>bold</b>');
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('list');
@@ -165,7 +166,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(listBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('list');
@@ -184,7 +185,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(listBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('list');
@@ -203,7 +204,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(listBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('list');
@@ -225,7 +226,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(listBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('list');
@@ -245,7 +246,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(listBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('list');
@@ -265,7 +266,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(listBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('list');
@@ -286,7 +287,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(headerBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('header');
@@ -305,7 +306,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(headerBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('header');
@@ -324,7 +325,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(headerBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('header');
@@ -343,7 +344,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(headerBlock).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('header');
@@ -410,7 +411,7 @@ test.describe('markdown shortcuts', () => {
       // Should convert to list but preserve depth 1
       await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(2);
       expect(blocks[1].type).toBe('list');
@@ -464,7 +465,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(listBlocks).toHaveCount(0);
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('header');
@@ -483,7 +484,7 @@ test.describe('markdown shortcuts', () => {
       await expect(listBlock).toBeHidden();
       await expect(paragraph).toBeVisible();
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('paragraph');
@@ -499,7 +500,7 @@ test.describe('markdown shortcuts', () => {
       await page.keyboard.type('-');
 
       // Should still be paragraph
-      const { blocks: blocksBefore } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks: blocksBefore } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocksBefore[0].type).toBe('paragraph');
 
@@ -511,7 +512,7 @@ test.describe('markdown shortcuts', () => {
 
       await expect(listBlock).toBeVisible();
 
-      const { blocks: blocksAfter } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks: blocksAfter } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocksAfter).toHaveLength(1);
       expect(blocksAfter[0].type).toBe('list');
@@ -545,7 +546,7 @@ test.describe('markdown shortcuts', () => {
       const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
 
       expect(blocks).toHaveLength(1);
-      expect((blocks[0].data as { text: string }).text).toContain('<a href="blok.dev" target="_blank" rel="nofollow">Blok</a>');
+      expect((blocks[0].data as { text: unknown }).text).toContainEqual({ text: 'Blok', marks: { link: { href: 'blok.dev', rel: 'nofollow', target: '_blank' } } });
     });
   });
 });

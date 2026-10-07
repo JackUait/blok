@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '@/types';
 import { MODIFIER_KEY, selectionChangeDebounceTimeout } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { htmlOf } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 
@@ -166,12 +167,12 @@ test.describe('Inline equation shortcut', () => {
     // Confirm the formula.
     await input.press('Enter');
 
-    const savedText = await page.evaluate(async () => {
+    const savedText = htmlOf(await page.evaluate(async () => {
       const data = await window.blokInstance?.save();
       const block = data?.blocks?.[0] as { data?: { text?: string } } | undefined;
 
       return block?.data?.text ?? '';
-    });
+    }));
 
     expect(savedText).toContain('data-latex="x^2"');
   });
@@ -217,12 +218,12 @@ test.describe('Inline equation shortcut', () => {
     await input.fill('a^2');
     await input.press('Enter');
 
-    const savedText = await page.evaluate(async () => {
+    const savedText = htmlOf(await page.evaluate(async () => {
       const data = await window.blokInstance?.save();
       const block = data?.blocks?.[0] as { data?: { text?: string } } | undefined;
 
       return block?.data?.text ?? '';
-    });
+    }));
 
     expect(savedText).toContain('data-latex="a^2"');
   });
@@ -288,12 +289,12 @@ test.describe('Inline equation shortcut', () => {
 
     await expect.poll(() => countRenderedFormulas(page)).toBeGreaterThan(0);
 
-    const savedText = await page.evaluate(async () => {
+    const savedText = htmlOf(await page.evaluate(async () => {
       const data = await window.blokInstance?.save();
       const block = data?.blocks?.[0] as { data?: { text?: string } } | undefined;
 
       return block?.data?.text ?? '';
-    });
+    }));
 
     // The rendering is derived: it must not accumulate in the document.
     expect(savedText).toBe('<span data-latex="E=mc^2">E=mc^2</span>');
@@ -319,12 +320,12 @@ test.describe('Inline equation shortcut', () => {
     await expect(input).toBeHidden();
     await expect.poll(() => readChip(page)).toEqual({ latex: 'y^3', shown: 'y^3', highlighted: false });
 
-    const savedText = await page.evaluate(async () => {
+    const savedText = htmlOf(await page.evaluate(async () => {
       const data = await window.blokInstance?.save();
       const block = data?.blocks?.[0] as { data?: { text?: string } } | undefined;
 
       return block?.data?.text ?? '';
-    });
+    }));
 
     expect(savedText).toBe('<span data-latex="y^3">y^3</span>');
   });
@@ -400,12 +401,12 @@ test.describe('Inline equation shortcut', () => {
 
     await expect(input).toBeHidden();
 
-    const savedText = await page.evaluate(async () => {
+    const savedText = htmlOf(await page.evaluate(async () => {
       const data = await window.blokInstance?.save();
       const block = data?.blocks?.[0] as { data?: { text?: string } } | undefined;
 
       return block?.data?.text ?? '';
-    });
+    }));
 
     expect(savedText).toBe('mass: <span data-latex="E=mc^3">E=mc^3</span> end');
   });

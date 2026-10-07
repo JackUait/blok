@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 /**
  * Turning text into a callout moves it into the callout's first child
@@ -39,16 +40,14 @@ const createBlok = async (page: Page, blocks: OutputBlockData[]): Promise<void> 
 };
 
 /** `type:text` of every block saved inside a callout. */
-const savedCalloutBody = async (page: Page): Promise<string[]> =>
-  await page.evaluate(async () => {
-    const saved = await window.blokInstance?.save();
-    const blocks = saved?.blocks ?? [];
-    const calloutIds = new Set(blocks.filter((block) => block.type === 'callout').map((block) => block.id));
+const savedCalloutBody = async (page: Page): Promise<string[]> => {
+  const blocks = blocksAsHtml(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []));
+  const calloutIds = new Set(blocks.filter((block) => block.type === 'callout').map((block) => block.id));
 
-    return blocks
-      .filter((block) => block.parent !== undefined && calloutIds.has(block.parent))
-      .map((block) => `${block.type}:${String(block.data.text)}`);
-  });
+  return blocks
+    .filter((block) => block.parent !== undefined && calloutIds.has(block.parent))
+    .map((block) => `${block.type}:${String(block.data.text)}`);
+};
 
 test.describe('callout: turn into keeps line breaks and bold', () => {
   test.beforeAll(() => {

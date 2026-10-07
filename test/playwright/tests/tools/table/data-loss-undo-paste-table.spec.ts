@@ -7,6 +7,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { blocksAsHtml } from '../../helpers/saved-as-html';
 
 declare global {
   interface Window {
@@ -48,11 +49,7 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
 };
 
 /** "id:type:parent:text" per block, sorted, with generated ids masked. */
-const savedFacts = (page: Page): Promise<string[]> => page.evaluate(async () => {
-  const out = await window.blokInstance?.save();
-
-  return (out?.blocks ?? []).map(b => `${['keep', 'p', 'after'].includes(b.id ?? '') ? b.id : 'NEW'}:${b.type}:${b.parent === undefined ? '' : 'PARENT'}:${String((b.data as { text?: string }).text ?? '')}`).sort();
-});
+const savedFacts = async (page: Page): Promise<string[]> => blocksAsHtml(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? [])).map(b => `${['keep', 'p', 'after'].includes(b.id ?? '') ? b.id : 'NEW'}:${b.type}:${b.parent === undefined ? '' : 'PARENT'}:${String((b.data as { text?: string }).text ?? '')}`).sort();
 
 const yjsFacts = (page: Page): Promise<string[]> => page.evaluate(() => {
   const blok = window.blokInstance as unknown as { module: { yjsManager: { toJSON: () => OutputData['blocks'] } } };

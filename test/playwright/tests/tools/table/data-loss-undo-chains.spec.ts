@@ -6,6 +6,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { blocksAsHtml } from '../../helpers/saved-as-html';
 
 declare global {
   interface Window {
@@ -64,14 +65,13 @@ const texts = async (page: Page): Promise<string[][]> => page.evaluate(() =>
     Array.from(r.querySelectorAll(':scope > [data-blok-table-cell]')).map(c =>
       Array.from(c.querySelectorAll('[data-blok-table-cell-blocks] > [data-blok-id]')).map(b => (b.textContent ?? '').trim()).join('|'))));
 
-const savedTexts = async (page: Page): Promise<string[][]> => page.evaluate(async () => {
-  const out = await window.blokInstance?.save();
-  const blocks = out?.blocks ?? [];
+const savedTexts = async (page: Page): Promise<string[][]> => {
+  const blocks = blocksAsHtml(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []));
   const byId = new Map(blocks.map(b => [b.id, String((b.data as { text?: string }).text ?? '')]));
   const table = blocks.find(b => b.id === 'tbl');
 
   return (table?.data as { content: { blocks: string[] }[][] }).content.map(row => row.map(cell => cell.blocks.map(id => byId.get(id) ?? `<missing:${id}>`).join('|')));
-});
+};
 
 const kbUndo = async (page: Page): Promise<void> => {
   await page.locator('[data-blok-id="p-before"] [contenteditable="true"]').click();

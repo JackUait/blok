@@ -258,7 +258,7 @@ test.describe('api.blocks', () => {
 
       expect(savedData.blocks).toHaveLength(1);
       expect(savedData.blocks[0].type).toBe('paragraph');
-      expect((savedData.blocks[0].data as { text: string }).text).toBe('Rendered from HTML');
+      expect((savedData.blocks[0].data as { text: unknown }).text).toEqual([{ text: 'Rendered from HTML' }]);
     });
   });
 
@@ -395,9 +395,9 @@ test.describe('api.blocks', () => {
         return await window.blokInstance.save();
       });
 
-      const text = (output.blocks[0].data as { text: string }).text;
+      const text = (output.blocks[0].data as { text: unknown }).text;
 
-      expect(text).toBe(newBlockData.text);
+      expect(text).toEqual([{ text: newBlockData.text }]);
     });
 
     test('should update tune data when it is provided', async ({ page }) => {

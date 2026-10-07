@@ -5,6 +5,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 /**
  * Type for a block with unknown data that can be narrowed
@@ -81,7 +82,7 @@ const assertSavedDataExists = (savedData: OutputData | null | undefined): Output
   if (!savedData || !savedData.blocks || savedData.blocks.length === 0) {
     throw new Error('Expected saved data to exist with at least one block');
   }
-  return savedData;
+  return savedAsHtml(savedData);
 };
 
 const HOLDER_ID = 'blok';

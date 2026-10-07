@@ -47,7 +47,8 @@ public enum CollabLineageDeleteOutcome
 /// a record is durable before it is acknowledged, and the next holder adopts
 /// every complete record. Lineage ids are unique in
 /// <see cref="ListLineagesAsync"/>; if two entries ever share one, the newest
-/// wins.
+/// wins. Lineage values come from requests and are untrusted: compare them,
+/// never build paths from them.
 /// </remarks>
 public interface ICollabOperationHistoryStore
 {

@@ -23,6 +23,7 @@ internal static class HistoryEndpoint
 {
   private const string LineageHeader = "Blok-History-Lineage";
   private const string SequenceHeader = "Blok-History-Sequence";
+  private const string NoSuchVersion = "no such version\n";
 
   // The standalone host forwards only this category to stderr.
   private const string LogCategory = "Blok.Server.Collab";
@@ -103,14 +104,15 @@ internal static class HistoryEndpoint
 
   public static async Task DeleteAsync(HttpContext context)
   {
-    if (await AdmitAsync(context, requireWrite: true) is not { } admitted)
+    if (await AdmitAsync(context, requireWrite: true) is not { } admitted ||
+        await LineageAsync(context) is not { } lineage)
     {
       return;
     }
 
     var (status, outcome) = await admitted.Rooms.DeleteLineageAsync(
         admitted.Doc,
-        Lineage(context),
+        lineage,
         context.RequestAborted);
 
     if (status != CollabHistoryStatus.Ready)
@@ -258,6 +260,11 @@ internal static class HistoryEndpoint
   /// <summary>The route's lineage and sequence; a sequence that is not a plain ulong is refused.</summary>
   private static async Task<(string Lineage, ulong Sequence)?> PointAsync(HttpContext context)
   {
+    if (await LineageAsync(context) is not { } lineage)
+    {
+      return null;
+    }
+
     var digits = context.Request.RouteValues["sequence"] as string ?? "";
 
     // NumberStyles.None: the default would take "+1" and surrounding spaces.
@@ -271,12 +278,22 @@ internal static class HistoryEndpoint
       return null;
     }
 
-    return (Lineage(context), sequence);
+    return (lineage, sequence);
   }
 
-  private static string Lineage(HttpContext context)
+  /// <summary>The route's lineage. Anything not shaped like one is a 404 and never reaches the store.</summary>
+  private static async Task<string?> LineageAsync(HttpContext context)
   {
-    return context.Request.RouteValues["lineage"] as string ?? "";
+    var lineage = context.Request.RouteValues["lineage"] as string;
+
+    if (CollabWorkingSetTag.IsLineage(lineage))
+    {
+      return lineage;
+    }
+
+    await SyncEndpoint.RefuseAsync(context, StatusCodes.Status404NotFound, NoSuchVersion);
+
+    return null;
   }
 
   /// <summary>Not Blok-Doc-*: those name the live head and feed If-Match.</summary>
@@ -306,7 +323,7 @@ internal static class HistoryEndpoint
         return SyncEndpoint.RefuseAsync(
             context,
             StatusCodes.Status404NotFound,
-            "no such version\n");
+            NoSuchVersion);
 
       case CollabHistoryStatus.Purged:
         return SyncEndpoint.RefuseAsync(context, StatusCodes.Status403Forbidden, "forbidden\n");

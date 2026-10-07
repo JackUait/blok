@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -289,6 +290,27 @@ public sealed class HistoryEndpointTests
     await relay;
     using var state = await history.SendAsync(HttpMethod.Get, "/state");
     Assert.Equal("3", Assert.Single(state.Headers.GetValues("Blok-Doc-Sequence")));
+  }
+
+  [Theory]
+  [InlineData("..%2Fx")]
+  [InlineData("abc")]
+  [InlineData("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")]
+  public async Task AMalformedLineageIsNotFoundAndNeverReachesTheStore(string lineage)
+  {
+    await using var history = await HistoryApp.StartAsync();
+    await history.OpenAsync();
+
+    using var read = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0");
+    using var delete = await history.SendAsync(HttpMethod.Delete, $"/history/{lineage}");
+    using var restore = await history.RestoreAsync(lineage, "0", "restore-malformed-lineage");
+
+    foreach (var response in new[] { read, delete, restore })
+    {
+      await AssertError(response, HttpStatusCode.NotFound, "no such version\n");
+    }
+
+    Assert.Empty(history.Journal.LineagesAsked);
   }
 
   [Fact]
@@ -682,6 +704,8 @@ public sealed class HistoryEndpointTests
 
     internal bool CorruptLineages { get; set; }
 
+    internal ConcurrentQueue<string> LineagesAsked { get; } = new();
+
     public ValueTask<CollabDocumentOpen> OpenAsync(string documentId, CancellationToken cancellationToken = default)
     {
       return Purged ? ValueTask.FromResult(CollabDocumentOpen.Purged) : inner.OpenAsync(documentId, cancellationToken);
@@ -706,6 +730,8 @@ public sealed class HistoryEndpointTests
         string lineage,
         CancellationToken cancellationToken = default)
     {
+      LineagesAsked.Enqueue(lineage);
+
       return inner.ReadBaselineAsync(documentId, lineage, cancellationToken);
     }
 
@@ -714,6 +740,8 @@ public sealed class HistoryEndpointTests
         string lineage,
         CancellationToken cancellationToken = default)
     {
+      LineagesAsked.Enqueue(lineage);
+
       return inner.ReadHeadersAsync(documentId, lineage, cancellationToken);
     }
 
@@ -723,6 +751,8 @@ public sealed class HistoryEndpointTests
         ulong through,
         CancellationToken cancellationToken = default)
     {
+      LineagesAsked.Enqueue(lineage);
+
       return CorruptRecords ? Unreadable(cancellationToken) : inner.ReadRecordsAsync(documentId, lineage, through, cancellationToken);
     }
 
@@ -731,6 +761,8 @@ public sealed class HistoryEndpointTests
         string lineage,
         CancellationToken cancellationToken = default)
     {
+      LineagesAsked.Enqueue(lineage);
+
       return Purged
         ? CollabLineageDeleteOutcome.Purged
         : await inner.DeleteLineageAsync(documentId, lineage, cancellationToken);

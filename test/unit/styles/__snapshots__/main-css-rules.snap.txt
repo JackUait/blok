@@ -10464,7 +10464,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__path {
-  color: var(--blok-text-secondary);
+  color: color-mix(in srgb, var(--blok-text-secondary) 65%, var(--blok-text-primary));
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__image {
@@ -10526,7 +10526,7 @@ span[data-blok-slash-search] {
   padding-inline: calc(var(--bookmark-scale) * 5 / 14);
   border-radius: var(--blok-radius-control-sm);
   background: var(--blok-item-hover-bg);
-  color: var(--blok-text-secondary);
+  color: color-mix(in srgb, var(--blok-text-secondary) 85%, var(--blok-text-primary));
   font-size: calc(var(--bookmark-scale) * 15 / 28);
   font-weight: 500;
   line-height: calc(var(--bookmark-scale) * 11 / 14);

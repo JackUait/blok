@@ -331,6 +331,18 @@ describe('rich text known losses (accepted limitations)', () => {
     expect(deltaOf(b)).toEqual(deltaOf(a));
   });
 
+  it.each(ORDERS)('KNOWN LOSS: a peer\'s character typed into a bold run that I delete survives unbolded (ids %i/%i)', (ownId, peerId) => {
+    const { a, b } = peers(ownId, peerId, 'The <b>quick</b> fox');
+
+    a.updateBlockData('p1', 'text', 'The  fox');
+    b.updateBlockData('p1', 'text', 'The <b>quXick</b> fox');
+    sync(a, b);
+
+    // The bold's format markers went with my deletion, so "X" stays but plain.
+    expect(new YBlockSerializer().readRichText(liveText(a))).toEqual([{ text: 'The X fox' }]);
+    expect(deltaOf(b)).toEqual(deltaOf(a));
+  });
+
   it.each(ORDERS)('ACCEPTED: undoing a block\'s creation unbolds a peer\'s character typed in its bold run (ids %i/%i)', (ownId, peerId) => {
     const a = createStore(ownId);
     const b = createStore(peerId);

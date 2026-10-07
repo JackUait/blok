@@ -11,6 +11,11 @@ const base: TabKeyInput = {
 };
 
 describe('resolveTabKey', () => {
+  it('keys format-2 documents apart from tabs of a format-1 build', () => {
+    expect(resolveTabKey({ ...base, documentId: 'doc-42' })).toBe('blok-tab:2:id:doc-42');
+    expect(resolveTabKey(base)).toBe('blok-tab:2:auto:abc:/docs/42');
+  });
+
   it('uses the host documentId alone, whatever the path', () => {
     expect(resolveTabKey({ ...base, documentId: 'doc-42', pathname: '/a' }))
       .toBe(resolveTabKey({ ...base, documentId: 'doc-42', pathname: '/b' }));

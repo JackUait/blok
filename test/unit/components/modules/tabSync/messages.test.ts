@@ -39,6 +39,10 @@ describe('tab messages', () => {
     expect(unwrap('k', wrap('other', { kind: 'hello', from: 'a', stateVector: null }))).toBeNull();
   });
 
+  it('drops an envelope from a build whose documents keep rich text as HTML', () => {
+    expect(unwrap('k', { protocol: 1, key: 'k', message: { kind: 'hello', from: 'a', stateVector: null } })).toBeNull();
+  });
+
   it('drops another protocol version', () => {
     expect(unwrap('k', { protocol: TAB_SYNC_PROTOCOL + 1, key: 'k', message: { kind: 'hello', from: 'a', stateVector: null } })).toBeNull();
   });

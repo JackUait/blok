@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Blok.Server.Documents;
 using Blok.Server.Yjs;
 
 namespace Blok.Server.Collab;
@@ -77,11 +78,12 @@ internal sealed class CollabDocConverter(
       {
         read = await Read(slots.Select(slot => slot.Html).ToList(), cancellationToken);
       }
-      catch (Exception error) when (
-          error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+      catch (Exception error) when (IsTransient(error, cancellationToken))
       {
         // The room gives up on a projection it can never build; this one a
-        // retry may build, so it must not look like that.
+        // retry may build, so it must not look like that. Anything else (a
+        // JavaScript error, a malformed answer) repeats on every attempt and
+        // keeps the refusal path, or a journal room would retry forever.
         throw new CollabTransientException(
             $"collab: the rich text HTML in this document could not be read: {error.Message}", error);
       }
@@ -96,6 +98,21 @@ internal sealed class CollabDocConverter(
     {
       ["time"] = time,
       ["blocks"] = blocks,
+    };
+  }
+
+  /// <summary>
+  /// The runtime's own limits (JintBlokRuntime classifies them) and a wait
+  /// for a pooled engine that someone other than the caller cancelled.
+  /// </summary>
+  private static bool IsTransient(Exception error, CancellationToken cancellationToken)
+  {
+    return error switch
+    {
+      BlokDocumentConversionException conversion =>
+          conversion.Reason is BlokConversionFailure.TimedOut or BlokConversionFailure.DocumentTooLarge,
+      OperationCanceledException => !cancellationToken.IsCancellationRequested,
+      _ => false,
     };
   }
 
@@ -114,7 +131,7 @@ internal sealed class CollabDocConverter(
         .Where(field => field.Html.Length > 0)
         .DistinctBy(field => field.Html, StringComparer.Ordinal)
         .ToList();
-    var segments = await html.ReadAsync(distinct, cancellationToken);
+    var segments = distinct.Count == 0 ? [] : await html.ReadAsync(distinct, cancellationToken);
     var read = new Dictionary<string, JsonArray>(StringComparer.Ordinal) { [""] = [] };
 
     for (var index = 0; index < distinct.Count; index++)

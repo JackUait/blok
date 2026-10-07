@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
+using Blok.Server.Documents;
 using Blok.Server.Yjs;
 using Xunit;
 
@@ -182,16 +183,56 @@ public sealed class CollabDocConverterTests
     Assert.IsType<YXmlText>(title);
   }
 
-  [Fact]
-  public async Task AnExportReaderFailureIsTransient()
+  /// <summary>
+  /// Only a failure a retry can heal is transient: the runtime's timeout or
+  /// allocation budget, or a wait for a pooled engine cancelled by someone
+  /// other than the caller.
+  /// </summary>
+  [Theory]
+  [InlineData(BlokConversionFailure.TimedOut)]
+  [InlineData(BlokConversionFailure.DocumentTooLarge)]
+  public async Task AnExportRuntimeLimitIsTransient(BlokConversionFailure reason)
   {
-    var doc = LegacyHtmlDoc();
-    var converter = new CollabDocConverter(time, new FailingHtmlReader());
+    var failure = new BlokDocumentConversionException(reason, new TimeoutException());
+    var converter = new CollabDocConverter(time, new FailingHtmlReader(failure));
 
     var error = await Assert.ThrowsAsync<CollabTransientException>(
-        async () => await converter.ExportAsync(doc));
+        async () => await converter.ExportAsync(LegacyHtmlDoc()));
 
-    Assert.IsType<TimeoutException>(error.InnerException);
+    Assert.Same(failure, error.InnerException);
+  }
+
+  [Fact]
+  public async Task AnEnginePoolWaitCancelledElsewhereIsTransient()
+  {
+    var converter = new CollabDocConverter(time, new FailingHtmlReader(new OperationCanceledException()));
+
+    await Assert.ThrowsAsync<CollabTransientException>(
+        async () => await converter.ExportAsync(LegacyHtmlDoc()));
+  }
+
+  /// <summary>These repeat on every attempt, so they are NOT transient.</summary>
+  [Theory]
+  [InlineData("javascript")]
+  [InlineData("unknown")]
+  [InlineData("shape")]
+  [InlineData("timeout-exception")]
+  public async Task AnExportFailureThatRepeatsIsNotTransient(string kind)
+  {
+    Exception failure = kind switch
+    {
+      "javascript" => new BlokDocumentConversionException(
+          BlokConversionFailure.InvalidDocument, new InvalidOperationException("TypeError")),
+      "unknown" => new BlokDocumentConversionException(
+          BlokConversionFailure.Unknown, new InvalidOperationException("RangeError")),
+      "shape" => new InvalidDataException("collab: the runtime answered htmlFieldsToSegments with the wrong shape."),
+      _ => new TimeoutException("not the runtime's own classification"),
+    };
+    var converter = new CollabDocConverter(time, new FailingHtmlReader(failure));
+
+    var error = await Assert.ThrowsAnyAsync<Exception>(async () => await converter.ExportAsync(LegacyHtmlDoc()));
+
+    Assert.Same(failure, error);
   }
 
   [Fact]

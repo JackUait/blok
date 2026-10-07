@@ -2961,22 +2961,23 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
-  /// The converter refusing the room's own document — an unreadable block
-  /// shape, a depth the JSON writer will not take. Retrying cannot heal it,
-  /// and on a journal-backed room every operation is already durable, so the
-  /// room stops holding itself loaded for a PUT it can never build. Logged
-  /// once per room: it takes an operator reset, not a wait.
-  /// </summary>
-  /// <summary>
-  /// A failure a retry may heal — the runtime timed out reading rich text, or
-  /// the export was cancelled — as opposed to a document the converter can
-  /// never read, which <see cref="RefuseProjectionLocked"/> gives up on.
+  /// An export failure a retry may heal, which backs off instead of being
+  /// refused: <see cref="CollabTransientException"/> (reading rich text HTML
+  /// ran past the runtime's timeout or allocation budget, or an engine wait
+  /// was cancelled) or a cancelled export.
   /// </summary>
   private static bool IsTransientExportFailure(Exception error)
   {
     return error is CollabTransientException or OperationCanceledException;
   }
 
+  /// <summary>
+  /// The converter refusing the room's own document — an unreadable block
+  /// shape, a depth the JSON writer will not take. Retrying cannot heal it,
+  /// and on a journal-backed room every operation is already durable, so the
+  /// room stops holding itself loaded for a PUT it can never build. Logged
+  /// once per room: it takes an operator reset, not a wait.
+  /// </summary>
   private void RefuseProjectionLocked(Exception error)
   {
     if (projectionRefused)

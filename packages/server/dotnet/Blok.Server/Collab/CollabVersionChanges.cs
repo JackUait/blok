@@ -55,6 +55,7 @@ internal static class CollabVersionChanges
   {
     var changes = new List<CollabRecordChanges>();
     var kept = new HashSet<RichTextHtmlSlot>(ReferenceEqualityComparer.Instance);
+    var warned = new HashSet<string>(StringComparer.Ordinal);
     StepExport? previous = null;
 
     await foreach (var (record, doc) in CollabHistoryReplay.StepAsync(baseline, records, ct).ConfigureAwait(false))
@@ -64,7 +65,7 @@ internal static class CollabVersionChanges
         continue;
       }
 
-      var current = StepExport.Of(converter, doc);
+      var current = StepExport.Of(converter, doc, warned);
 
       if (record is not null && record.ServerSequence > firstBefore && previous is not null)
       {
@@ -84,8 +85,11 @@ internal static class CollabVersionChanges
             Page(previous.Page, current.Page)));
       }
 
+      previous?.DetachKept();
       previous = current;
     }
+
+    previous?.DetachKept();
 
     try
     {
@@ -299,6 +303,7 @@ internal static class CollabVersionChanges
 internal sealed class StepExport
 {
   private readonly Dictionary<JsonObject, List<RichTextHtmlSlot>> slotsByBlock;
+  private readonly HashSet<JsonObject> keptBlocks = new(ReferenceEqualityComparer.Instance);
 
   private StepExport(
       JsonArray blocks,
@@ -314,14 +319,14 @@ internal sealed class StepExport
 
   internal IReadOnlyDictionary<string, string> Page { get; }
 
-  internal static StepExport Of(ICollabDocConverter converter, YDoc doc)
+  internal static StepExport Of(ICollabDocConverter converter, YDoc doc, ISet<string> warned)
   {
     JsonArray blocks;
     IReadOnlyList<RichTextHtmlSlot> slots;
 
     try
     {
-      blocks = converter.ExportBlocks(doc, out slots);
+      blocks = converter.ExportBlocks(doc, warned, out slots);
     }
     catch (Exception error) when (error is not (CollabTransientException or OperationCanceledException))
     {
@@ -357,10 +362,32 @@ internal sealed class StepExport
 
   internal void Keep(JsonObject? block, HashSet<RichTextHtmlSlot> kept)
   {
-    if (block is not null && slotsByBlock.TryGetValue(block, out var owned))
+    if (block is null)
+    {
+      return;
+    }
+
+    keptBlocks.Add(block);
+
+    if (slotsByBlock.TryGetValue(block, out var owned))
     {
       kept.UnionWith(owned);
     }
+  }
+
+  /// <summary>
+  /// Takes kept blocks out of this export once no later step reads it, so
+  /// they stop holding the whole array alive. Their slots stay valid: a
+  /// slot points inside its block.
+  /// </summary>
+  internal void DetachKept()
+  {
+    foreach (var block in keptBlocks)
+    {
+      Blocks.Remove(block);
+    }
+
+    keptBlocks.Clear();
   }
 }
 

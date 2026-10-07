@@ -125,9 +125,19 @@ internal sealed class CollabDocConverter(
     };
   }
 
-  public JsonArray ExportBlocks(YDoc doc, out IReadOnlyList<RichTextHtmlSlot> slots)
+  public JsonArray ExportBlocks(YDoc doc, ISet<string> warned, out IReadOnlyList<RichTextHtmlSlot> slots)
   {
-    return YDocConverter.Export(doc, fields, log, out slots);
+    Action<string>? warn = log is { } sink
+      ? message =>
+      {
+        if (warned.Add(message))
+        {
+          sink(message);
+        }
+      }
+    : null;
+
+    return YDocConverter.Export(doc, fields, warn, out slots);
   }
 
   public async ValueTask ResolveAsync(

@@ -411,7 +411,6 @@ internal static class HistoryEndpoint
     EditEndpoint.Expose(context, LineageHeader, SequenceHeader);
   }
 
-  /// <summary>Cloned: a block can be one record's after and the next one's before.</summary>
   private static JsonNode BlockChange(CollabBlockChange change)
   {
     var entry = new JsonObject
@@ -429,15 +428,24 @@ internal static class HistoryEndpoint
 
     if (change.Before is { } before)
     {
-      entry["before"] = before.DeepClone();
+      entry["before"] = Unparented(before);
     }
 
     if (change.After is { } after)
     {
-      entry["after"] = after.DeepClone();
+      entry["after"] = Unparented(after);
     }
 
     return entry;
+  }
+
+  /// <summary>
+  /// A block can be one record's after and the next one's before. Its first
+  /// use takes the detached node; only the second needs a copy.
+  /// </summary>
+  private static JsonObject Unparented(JsonObject block)
+  {
+    return block.Parent is null ? block : (JsonObject)block.DeepClone();
   }
 
   private static JsonValue? UnixMilliseconds(DateTimeOffset? at)

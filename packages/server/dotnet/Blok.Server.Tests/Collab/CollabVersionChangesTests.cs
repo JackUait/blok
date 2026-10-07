@@ -114,6 +114,22 @@ public sealed class CollabVersionChangesTests
         changes.Select(change => (change.Id, change.Kind)));
   }
 
+  /// <summary>
+  /// As the client diff, unlike the restore planner's kept order: a changed
+  /// block still holds its place, so its unchanged sibling is the one moved.
+  /// </summary>
+  [Fact]
+  public void AChangedBlockStillTakesPartInTheKeptOrder()
+  {
+    var changes = CollabVersionChanges.Blocks(
+        Blocks(Block("a", text: "x"), Block("b")),
+        Blocks(Block("b"), Block("a", text: "y")));
+
+    Assert.Equal(
+        [("b", CollabBlockChangeKind.Moved), ("a", CollabBlockChangeKind.Changed)],
+        changes.Select(change => (change.Id, change.Kind)));
+  }
+
   [Fact]
   public void SiblingOrderIsComparedWithinEachParent()
   {
@@ -204,6 +220,43 @@ public sealed class CollabVersionChangesTests
 
     Assert.Equal([2UL, 3UL], fromOne.Select(record => record.Sequence));
     Assert.Equal(CollabBlockChangeKind.Added, Assert.Single(fromOne[0].Blocks).Kind);
+
+    // Detached, so a kept block does not hold its whole step export alive.
+    Assert.All(
+        all.SelectMany(record => record.Blocks).SelectMany(change => new[] { change.Before, change.After }).OfType<JsonObject>(),
+        block => Assert.Null(block.Parent));
+  }
+
+  [Fact]
+  public async Task ASkippedBlockIsLoggedOncePerCall()
+  {
+    var source = new YDoc(1);
+    var blocks = source.GetMap("blocks");
+    var baseline = source.Transact(transaction =>
+    {
+      blocks.Set(transaction, "a", HtmlBlock("a", "x"));
+      blocks.Set(transaction, "bad", new YMap(
+      [
+        new KeyValuePair<string, object?>("id", "bad"),
+        new KeyValuePair<string, object?>("type", "paragraph"),
+        new KeyValuePair<string, object?>("data", "not a map"),
+      ]));
+      source.GetArray("root").Insert(transaction, 0, ["a", "bad"]);
+    })!;
+    var aText = (YText)Value((YMap)Value((YMap)Value(blocks, "a")!, "data")!, "text")!;
+    var u1 = source.Transact(transaction => aText.Insert(transaction, 1, "y"))!;
+    var u2 = source.Transact(transaction => aText.Insert(transaction, 2, "z"))!;
+    var log = new List<string>();
+
+    var changes = await CollabVersionChanges.ReplayAsync(
+        [baseline],
+        Records([u1, u2]),
+        0,
+        new CollabDocConverter(TimeProvider.System, RichTextRuntime.Reader, log: log.Add),
+        CancellationToken.None);
+
+    Assert.Equal(2, changes.Count);
+    Assert.Contains("\"bad\"", Assert.Single(log), StringComparison.Ordinal);
   }
 
   /// <summary>The first "before" must be that record's state: with it missing, nothing is diffed against the baseline.</summary>

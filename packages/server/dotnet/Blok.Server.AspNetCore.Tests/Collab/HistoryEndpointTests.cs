@@ -233,6 +233,81 @@ public sealed class HistoryEndpointTests
   }
 
   [Fact]
+  public async Task ChangesNamePageKeysOnlyForARecordThatChangedThem()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+    await using var member = await history.App.ConnectAsync(protocols: [SyncApp.Protocol]);
+    await member.ReceiveAsync<BlokControlFrame>();
+    var mirror = YDocs.NewClient();
+    await member.SendAsync(new SyncStep1Frame(YDocs.StateVector(mirror)));
+    YDocs.Apply(mirror, (await member.ReceiveAsync<SyncStep2Frame>()).Update);
+    await member.ReceiveAsync<SyncStep1Frame>();
+
+    var update = mirror.Transact(transaction =>
+    {
+      mirror.GetMap("page").Set(transaction, "title", "Plan");
+      mirror.GetMap("values").Set(transaction, "k", 1.0);
+    })!;
+    await member.SendAsync(new SyncUpdateFrame(update));
+    await history.WaitForSequenceAsync(1);
+    await history.EditTextAsync("two");
+
+    using var response = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/2/changes");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var changes = JsonNode.Parse(await response.Content.ReadAsStringAsync())!["changes"]!.AsArray();
+    Assert.Equal("""["title","values.k"]""", changes[0]!["page"]!.ToJsonString());
+    Assert.Empty(changes[0]!["blocks"]!.AsArray());
+    Assert.False(changes[1]!.AsObject().ContainsKey("page"));
+  }
+
+  /// <summary>A block that is one record's after and the next one's before is written into both rows.</summary>
+  [Fact]
+  public async Task ABlockChangedInTwoRecordsInARowReadsTheSameInBoth()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+    await history.EditTextAsync("two");
+    var atOne = await history.BlocksAsync();
+    await history.EditTextAsync("three");
+    var atTwo = await history.BlocksAsync();
+
+    using var response = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/2/changes");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var changes = JsonNode.Parse(await response.Content.ReadAsStringAsync())!["changes"]!.AsArray();
+    Assert.True(JsonNode.DeepEquals(atOne[0], changes[0]!["blocks"]![0]!["after"]), $"{changes[0]}");
+    Assert.True(JsonNode.DeepEquals(atOne[0], changes[1]!["blocks"]![0]!["before"]), $"{changes[1]}");
+    Assert.True(JsonNode.DeepEquals(atTwo[0], changes[1]!["blocks"]![0]!["after"]), $"{changes[1]}");
+  }
+
+  [Fact]
+  public async Task ChangesPastTheCapAreTheNewestAndSayTruncated()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+
+    for (var edit = 1; edit <= CollabRoomManager.MaxChangeRecords + 1; edit++)
+    {
+      await history.EditTextAsync($"v{edit}");
+    }
+
+    using var atCap = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/{CollabRoomManager.MaxChangeRecords}/changes");
+    using var overCap = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/{CollabRoomManager.MaxChangeRecords + 1}/changes");
+
+    var under = JsonNode.Parse(await atCap.Content.ReadAsStringAsync())!.AsObject();
+    Assert.False(under.ContainsKey("truncated"));
+    Assert.Equal(CollabRoomManager.MaxChangeRecords, under["changes"]!.AsArray().Count);
+    var over = JsonNode.Parse(await overCap.Content.ReadAsStringAsync())!.AsObject();
+    Assert.True(over["truncated"]!.GetValue<bool>());
+    var rows = over["changes"]!.AsArray();
+    Assert.Equal(CollabRoomManager.MaxChangeRecords, rows.Count);
+    Assert.Equal(2UL, rows[0]!["sequence"]!.GetValue<ulong>());
+    Assert.Equal("""[{"text":"v1"}]""", rows[0]!["blocks"]![0]!["before"]!["data"]!["text"]!.ToJsonString());
+  }
+
+  [Fact]
   public async Task ChangesOfTheBaselineAreEmptyAndAnUnknownPointIsNotFound()
   {
     await using var history = await HistoryApp.StartAsync();
@@ -800,6 +875,25 @@ public sealed class HistoryEndpointTests
       return JsonNode.Parse(await state.Content.ReadAsStringAsync())!["blocks"]!;
     }
 
+    /// <summary>Waits until the live head reaches <paramref name="sequence"/>: a socket write commits on its own time.</summary>
+    internal async Task WaitForSequenceAsync(ulong sequence)
+    {
+      var deadline = DateTime.UtcNow + Deadline.Length;
+
+      while (true)
+      {
+        using var state = await SendAsync(HttpMethod.Get, "/state");
+
+        if (ulong.Parse(Assert.Single(state.Headers.GetValues("Blok-Doc-Sequence")), System.Globalization.CultureInfo.InvariantCulture) >= sequence)
+        {
+          return;
+        }
+
+        Assert.True(DateTime.UtcNow < deadline, $"the head never reached {sequence}");
+        await Task.Delay(20);
+      }
+    }
+
     internal Task EditTextAsync(string text, string? ticket = null)
     {
       return EditAsync(
@@ -968,9 +1062,9 @@ public sealed class HistoryEndpointTests
       return inner.MigrateRichTextAsync(doc, cancellationToken);
     }
 
-    public JsonArray ExportBlocks(YDoc doc, out IReadOnlyList<RichTextHtmlSlot> slots)
+    public JsonArray ExportBlocks(YDoc doc, ISet<string> warned, out IReadOnlyList<RichTextHtmlSlot> slots)
     {
-      return ExportFailure is { } failure ? throw failure : inner.ExportBlocks(doc, out slots);
+      return ExportFailure is { } failure ? throw failure : inner.ExportBlocks(doc, warned, out slots);
     }
 
     public ValueTask ResolveAsync(IReadOnlyList<RichTextHtmlSlot> slots, CancellationToken cancellationToken = default)

@@ -417,6 +417,49 @@ public sealed class CollabHistoryManagerTests
   }
 
   [Fact]
+  public async Task ARestoreBringsBackTheTitleWithTheBlocksInOneRecord()
+  {
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    var titles = await TitleWriterAsync(manager);
+    await titles.WriteAsync("Old");
+    await EditAsync(manager, Update("a", "A"));
+    var point = await BlocksAsync(manager);
+    await titles.WriteAsync("New");
+    await EditAsync(manager, Update("a", "B"));
+
+    var result = await manager.RestoreAsync(DocId, Lineage(), 2, "op-restore", null);
+
+    Assert.Equal(CollabEditStatus.Applied, result.Edit!.Status);
+    Assert.Equal(5UL, result.Edit.Receipt!.ServerSequence);
+    Assert.Equal(5, operations.Committed(DocId).Count);
+    var live = await ReplayAsync(5);
+    Assert.True(live.GetMap("page").TryGet("title", out var title));
+    Assert.Equal("Old", title);
+    Assert.True(JsonNode.DeepEquals(WithoutStamps(point), WithoutStamps(await BlocksAsync(manager))));
+  }
+
+  [Fact]
+  public async Task ARestoreWhoseTitleIsTooLargeForOneFrameChangesNothing()
+  {
+    var manager = CreateManager(new CollabRoomOptions { AnnouncedMaxMessageBytes = 2048 });
+    await LoadAsync(manager);
+    var titles = await TitleWriterAsync(manager);
+    await titles.WriteAsync(new string('x', 8192));
+    await titles.WriteAsync("short");
+    var before = await BlocksAsync(manager);
+
+    var result = await manager.RestoreAsync(DocId, Lineage(), 1, "op", null);
+
+    Assert.Equal(CollabEditStatus.TooLarge, result.Edit!.Status);
+    Assert.Equal(2, operations.Committed(DocId).Count);
+    Assert.Empty(titles.Member.Closes);
+    Assert.True(JsonNode.DeepEquals(before, await BlocksAsync(manager)));
+    await EditAsync(manager, Update("a", "after"));
+    Assert.Empty(titles.Member.Closes);
+  }
+
+  [Fact]
   public async Task ADeleteRefusesTheCurrentLineageAndRemovesAnOldOne()
   {
     var manager = CreateManager();
@@ -488,6 +531,46 @@ public sealed class CollabHistoryManagerTests
     await result.Membership!.ReceiveAsync(
         SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(YDocs.NewClient()))),
         CancellationToken.None);
+  }
+
+  /// <summary>A v2 peer that writes only the page title, so its own map items chain in order.</summary>
+  private static async Task<TitleWriter> TitleWriterAsync(CollabRoomManager manager)
+  {
+    var member = new FakeMember(true, acceptsControlFrames: true, null, CollabOperationSource.ClientV2);
+    var joined = await manager.JoinAsync(DocId, member);
+
+    Assert.Equal(CollabJoinStatus.Joined, joined.Status);
+    var client = YDocs.NewClient();
+    await joined.Membership!.ReceiveAsync(
+        SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(client))),
+        CancellationToken.None);
+
+    return new TitleWriter(joined.Membership, member, client);
+  }
+
+  private async Task<YDoc> ReplayAsync(ulong through)
+  {
+    var lineage = Lineage();
+
+    return await CollabHistoryReplay.BuildAsync(
+        (await operations.ReadBaselineAsync(DocId, lineage))!,
+        operations.ReadRecordsAsync(DocId, lineage, through),
+        CancellationToken.None);
+  }
+
+  private sealed record TitleWriter(CollabMembership Membership, FakeMember Member, YDoc Client)
+  {
+    internal async Task WriteAsync(string title)
+    {
+      var update = Client.Transact(transaction => Client.GetMap("page").Set(transaction, "title", title))!;
+      var committed = Member.Received.OfType<AcknowledgementFrame>().Count();
+
+      await Membership.ReceiveAsync(
+          SyncWire.Encode(new OperationFrame(Membership.Tag.Lineage, Guid.NewGuid().ToString("N"), update)),
+          CancellationToken.None);
+
+      Assert.Equal(committed + 1, Member.Received.OfType<AcknowledgementFrame>().Count());
+    }
   }
 
   private static JsonObject Document(params (string Id, string Text)[] blocks)

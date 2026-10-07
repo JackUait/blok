@@ -292,6 +292,158 @@ public sealed class CollabRestorePlannerTests
     }
   }
 
+  [Fact]
+  public async Task PlansOneMapPatchForATitleOnlyChange()
+  {
+    var blocks = new[] { P("a"), P("b") };
+    var doc = Doc(blocks);
+    var target = Doc(blocks);
+    SetMap(doc, "page", "title", "Old");
+    SetMap(target, "page", "title", "New");
+    var converter = Converter();
+    var before = await Export(converter, doc);
+
+    var ops = await PlanWithMaps(converter, doc, target);
+    await converter.ApplyOpsAsync(doc, ops);
+
+    var patch = Assert.IsType<CollabEditOp.PatchMaps>(Assert.Single(ops));
+    Assert.Equal(new CollabMapPatch("page", "title", "New", Remove: false), Assert.Single(patch.Patches));
+    Assert.Equal("New", MapValue(doc, "page", "title"));
+    Assert.Equal(Unstamped(before), Unstamped(await Export(converter, doc)));
+  }
+
+  [Fact]
+  public async Task DeletesMapKeysTheTargetLacks()
+  {
+    var doc = Doc(P("a"));
+    var target = Doc(P("a"));
+    SetMap(doc, "page", "icon", Icon("🌿"));
+    SetMap(doc, "values", "k", 5d);
+    var converter = Converter();
+
+    var ops = await PlanWithMaps(converter, doc, target);
+    await converter.ApplyOpsAsync(doc, ops);
+
+    Assert.False(doc.GetMap("page").TryGet("icon", out _));
+    Assert.False(doc.GetMap("values").TryGet("k", out _));
+  }
+
+  [Fact]
+  public async Task SetsAPlainValueOverALiveNestedTypeAndCopiesIt()
+  {
+    var doc = Doc(P("a"));
+    var target = Doc(P("a"));
+    doc.Transact(transaction => doc.GetMap("values").Set(transaction, "k", new YMap()));
+    SetMap(target, "values", "k", Icon("🌿"));
+    var converter = Converter();
+
+    var ops = await PlanWithMaps(converter, doc, target);
+    await converter.ApplyOpsAsync(doc, ops);
+
+    var written = Assert.IsType<AnyObject>(MapValue(doc, "values", "k"));
+    Assert.NotSame(MapValue(target, "values", "k"), written);
+    Assert.NotSame(Assert.Single(Assert.IsType<CollabEditOp.PatchMaps>(Assert.Single(ops)).Patches).Value, written);
+    Assert.Equal(Icon("🌿").ToArray(), written.ToArray());
+  }
+
+  [Fact]
+  public async Task LeavesAKeyAloneWhenTheTargetHoldsANestedTypeOrUndefined()
+  {
+    var doc = Doc(P("a"));
+    var target = Doc(P("a"));
+    SetMap(doc, "page", "title", "Live");
+    SetMap(doc, "values", "k", 5d);
+    target.Transact(transaction =>
+    {
+      target.GetMap("page").Set(transaction, "title", new YText("nested"));
+      target.GetMap("values").Set(transaction, "k", YUndefined.Instance);
+      target.GetMap("values").Set(transaction, "absent", YUndefined.Instance);
+    });
+
+    var ops = await PlanWithMaps(Converter(), doc, target);
+
+    Assert.Empty(ops);
+  }
+
+  [Fact]
+  public async Task PlansNothingForEqualMaps()
+  {
+    var doc = Doc(P("a"));
+    var target = Doc(P("a"));
+
+    foreach (var side in new[] { doc, target })
+    {
+      SetMap(side, "page", "title", "Same");
+      SetMap(side, "values", "k", Icon("🌿"));
+    }
+
+    Assert.Empty(await PlanWithMaps(Converter(), doc, target));
+  }
+
+  [Theory]
+  [InlineData("blocks")]
+  [InlineData("root")]
+  public void TheEditPlannerRefusesAPatchOfAnotherMap(string map)
+  {
+    var doc = Doc(P("a"));
+    var state = doc.EncodeStateAsUpdate();
+
+    Assert.Throws<CollabEditException>(() => YDocConverter.ApplyOps(
+        doc, [new CollabEditOp.PatchMaps([new CollabMapPatch(map, "a", "x", Remove: false)])]));
+    Assert.Equal(state, doc.EncodeStateAsUpdate());
+  }
+
+  [Fact]
+  public void TheEditPlannerRefusesAValueAMapCannotHold()
+  {
+    var doc = Doc(P("a"));
+    var state = doc.EncodeStateAsUpdate();
+
+    Assert.Throws<CollabEditException>(() => YDocConverter.ApplyOps(
+        doc,
+        [
+          new CollabEditOp.PatchMaps(
+          [
+            new CollabMapPatch("page", "title", "ok", Remove: false),
+            new CollabMapPatch("values", "k", new System.Numerics.BigInteger(7), Remove: false),
+          ]),
+        ]));
+    Assert.Equal(state, doc.EncodeStateAsUpdate());
+  }
+
+  private static async Task<IReadOnlyList<CollabEditOp>> PlanWithMaps(
+      CollabDocConverter converter, YDoc doc, YDoc target)
+  {
+    return CollabRestorePlanner.Plan(
+        await Export(converter, doc),
+        YDocConverter.DescribeStructure(doc),
+        await Export(converter, target),
+        YDocConverter.ReadPageMaps(doc),
+        YDocConverter.ReadPageMaps(target));
+  }
+
+  private static void SetMap(YDoc doc, string map, string key, object? value)
+  {
+    doc.Transact(transaction => doc.GetMap(map).Set(transaction, key, value));
+  }
+
+  private static object? MapValue(YDoc doc, string map, string key)
+  {
+    Assert.True(doc.GetMap(map).TryGet(key, out var value));
+
+    return value;
+  }
+
+  private static AnyObject Icon(string emoji)
+  {
+    var icon = new AnyObject();
+
+    icon.Add("type", "emoji");
+    icon.Add("value", emoji);
+
+    return icon;
+  }
+
   /// <summary>
   /// Plans against <paramref name="doc"/>, applies the plan, and checks the
   /// export equals the normalized target, edit stamps aside. The return

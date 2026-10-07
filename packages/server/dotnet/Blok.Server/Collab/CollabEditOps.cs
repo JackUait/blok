@@ -39,7 +39,16 @@ internal abstract record CollabEditOp
 
   /// <summary>Removes the block and everything parented to it.</summary>
   internal sealed record Remove(string Id) : CollabEditOp;
+
+  /// <summary>
+  /// Sets or deletes keys of the doc's <c>page</c> and <c>values</c> maps.
+  /// Restore only: <see cref="CollabEditOps.Parse"/> never makes one.
+  /// </summary>
+  internal sealed record PatchMaps(IReadOnlyList<CollabMapPatch> Patches) : CollabEditOp;
 }
+
+/// <summary>One key of a root map: set to <paramref name="Value"/>, or deleted when <paramref name="Remove"/>.</summary>
+internal sealed record CollabMapPatch(string Map, string Key, object? Value, bool Remove);
 
 /// <summary>
 /// The edit request wire: <c>{ "ops": [ … ] }</c>, at least one op, every op

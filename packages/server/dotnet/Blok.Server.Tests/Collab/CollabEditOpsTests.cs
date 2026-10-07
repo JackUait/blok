@@ -118,6 +118,18 @@ public sealed class CollabEditOpsTests
     Assert.StartsWith("collab: op 1:", message, StringComparison.Ordinal);
   }
 
+  /// <summary>A restore's page/values patch is internal: no wire spelling reaches it.</summary>
+  [Theory]
+  [InlineData("""{ "op": "patchMaps", "patches": [{ "map": "page", "key": "title", "value": "x" }] }""")]
+  [InlineData("""{ "op": "PatchMaps", "patches": [{ "map": "page", "key": "title", "value": "x" }] }""")]
+  [InlineData("""{ "op": "patch", "map": "page", "key": "title", "value": "x" }""")]
+  public void RefusesAMapPatchFromTheWire(string op)
+  {
+    var message = Refused($$"""{ "ops": [{{op}}] }""");
+
+    Assert.StartsWith("collab: op 0:", message, StringComparison.Ordinal);
+  }
+
   /// <summary>
   /// The NUL law reaches every string in the request, not just the ids: yrs
   /// truncates one on write and ABORTS THE PROCESS on read, so an edit

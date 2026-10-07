@@ -554,6 +554,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
     }
 
     var target = point.Output?["blocks"] as JsonArray ?? [];
+    var targetMaps = point.Doc is { } replayed ? YDocConverter.ReadPageMaps(replayed) : null;
     // The request, never the plan: a retry plans against a doc that moved.
     var digest = SHA256.HashData(Encoding.UTF8.GetBytes($"restore\n{lineage}\n{sequence}"));
     CollabEditResult edit;
@@ -565,7 +566,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
           room => room.EditAsync(
               async (doc, token) =>
               {
-                if (point.Status == CollabHistoryStatus.NotFound)
+                if (point.Status == CollabHistoryStatus.NotFound || targetMaps is null)
                 {
                   throw new RestorePointMissingException();
                 }
@@ -576,7 +577,9 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
                 return CollabRestorePlanner.Plan(
                     current["blocks"] as JsonArray ?? [],
                     structure,
-                    target);
+                    target,
+                    YDocConverter.ReadPageMaps(doc),
+                    targetMaps);
               },
               operationId,
               digest,
@@ -607,7 +610,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
   /// A point rebuilt and exported. Its bounds come from the store's headers:
   /// a record read stops early without saying so.
   /// </summary>
-  private async ValueTask<(CollabHistoryStatus Status, JsonNode? Output, DateTimeOffset? Time)> ReadPointAsync(
+  private async ValueTask<(CollabHistoryStatus Status, JsonNode? Output, DateTimeOffset? Time, YDoc? Doc)> ReadPointAsync(
       string docId,
       string lineage,
       ulong sequence,
@@ -618,12 +621,12 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
 
     if (operationStore is not ICollabOperationHistoryStore history)
     {
-      return (CollabHistoryStatus.NoHistory, null, null);
+      return (CollabHistoryStatus.NoHistory, null, null, null);
     }
 
     if (await IsPurgedAsync(history, docId, cancellationToken))
     {
-      return (CollabHistoryStatus.Purged, null, null);
+      return (CollabHistoryStatus.Purged, null, null, null);
     }
 
     YDoc replayed;
@@ -659,6 +662,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
               ? CollabHistoryStatus.Purged
               : CollabHistoryStatus.NotFound,
             null,
+            null,
             null);
       }
 
@@ -672,23 +676,23 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       log?.Invoke(
           $"collab: version {sequence} of lineage {lineage} of \"{docId}\" could not be rebuilt: {error.Message}");
 
-      return (CollabHistoryStatus.Corrupt, null, null);
+      return (CollabHistoryStatus.Corrupt, null, null, null);
     }
 
     try
     {
-      return (CollabHistoryStatus.Ready, await converter.ExportAsync(replayed, cancellationToken), time);
+      return (CollabHistoryStatus.Ready, await converter.ExportAsync(replayed, cancellationToken), time, replayed);
     }
     catch (CollabTransientException)
     {
-      return (CollabHistoryStatus.Unavailable, null, null);
+      return (CollabHistoryStatus.Unavailable, null, null, null);
     }
     catch (Exception error) when (error is not OperationCanceledException)
     {
       log?.Invoke(
           $"collab: version {sequence} of lineage {lineage} of \"{docId}\" could not be exported: {error.Message}");
 
-      return (CollabHistoryStatus.ExportFailed, null, null);
+      return (CollabHistoryStatus.ExportFailed, null, null, null);
     }
   }
 

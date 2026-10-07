@@ -81,6 +81,9 @@ internal static class YDocConverter
   private const int RowKeyLength = 10;
   private const double MaxSafeInteger = 9007199254740992d;
 
+  /// <summary>The client's built-in title/icon map and its history.track map (document-store.ts).</summary>
+  internal static readonly string[] PageMaps = ["page", "values"];
+
   /// <summary>
   /// THE list of block-data keys whose value is stored as a <see cref="YText"/>
   /// so two peers typing in one block merge per character instead of the later
@@ -259,7 +262,7 @@ internal static class YDocConverter
 
     var input = RichTextInput.Collecting(fields);
 
-    new EditPlanner(doc.GetMap(BlocksRoot), doc.GetArray(OrderRoot), input).Plan(ops);
+    new EditPlanner(doc, doc.GetMap(BlocksRoot), doc.GetArray(OrderRoot), input).Plan(ops);
 
     return input.Found;
   }
@@ -288,7 +291,7 @@ internal static class YDocConverter
 
     var blockMap = doc.GetMap(BlocksRoot);
     var rootOrder = doc.GetArray(OrderRoot);
-    var planner = new EditPlanner(blockMap, rootOrder, input);
+    var planner = new EditPlanner(doc, blockMap, rootOrder, input);
     var steps = planner.Plan(ops);
 
     visited = planner.Visited;
@@ -468,6 +471,65 @@ internal static class YDocConverter
   }
 
   /// <summary>
+  /// The live top-level keys of the <see cref="PageMaps"/>, raw: a value may
+  /// be a shared type or <see cref="YUndefined"/>.
+  /// </summary>
+  internal static CollabPageMaps ReadPageMaps(YDoc doc)
+  {
+    ArgumentNullException.ThrowIfNull(doc);
+
+    var maps = new Dictionary<string, IReadOnlyDictionary<string, object?>>(StringComparer.Ordinal);
+
+    foreach (var name in PageMaps)
+    {
+      var map = doc.GetMap(name);
+      var entries = new Dictionary<string, object?>(StringComparer.Ordinal);
+
+      foreach (var key in map.Keys.ToArray())
+      {
+        entries[key] = Value(map, key);
+      }
+
+      maps[name] = entries;
+    }
+
+    return new CollabPageMaps(maps);
+  }
+
+  /// <summary>
+  /// What the client writes into the page maps (plain JSON) and
+  /// <see cref="YMap.Set"/> accepts as one Any value.
+  /// </summary>
+  internal static bool IsPlainMapValue(object? value)
+  {
+    return value is null or bool or double or string or AnyObject or AnyArray;
+  }
+
+  /// <summary>Equal plain values encode to the same bytes, keys in their stored order.</summary>
+  internal static bool PlainMapValuesEqual(object? left, object? right)
+  {
+    return IsPlainMapValue(left) &&
+        IsPlainMapValue(right) &&
+        EncodeAny(left).AsSpan().SequenceEqual(EncodeAny(right));
+  }
+
+  private static object? DecodeAny(byte[] encoded)
+  {
+    var reader = new Lib0Reader(encoded);
+
+    return AnyCodec.Read(ref reader);
+  }
+
+  private static byte[] EncodeAny(object? value)
+  {
+    var writer = new Lib0Writer();
+
+    AnyCodec.Write(writer, value);
+
+    return writer.ToArray();
+  }
+
+  /// <summary>
   /// The doc's raw structure for the restore planner: every key as the edit
   /// planner reads it, plus which blocks the export's main pass reaches.
   /// </summary>
@@ -631,7 +693,7 @@ internal static class YDocConverter
   /// dangling parent and resurface as a root orphan on the client's orphan
   /// pass — and why a listed child that names a different parent survives.
   /// </summary>
-  private sealed class EditPlanner(YMap blockMap, YArray rootOrder, RichTextInput input)
+  private sealed class EditPlanner(YDoc doc, YMap blockMap, YArray rootOrder, RichTextInput input)
   {
     private readonly Dictionary<string, string?> parents = new(StringComparer.Ordinal);
 
@@ -809,6 +871,7 @@ internal static class YDocConverter
         CollabEditOp.Insert insert => PlanInsert(insert, index),
         CollabEditOp.Update update => PlanUpdate(update, index),
         CollabEditOp.Remove remove => PlanRemove(remove, index),
+        CollabEditOp.PatchMaps patch => PlanPatchMaps(patch, index),
         _ => throw new CollabEditException(Where(index, "the op is not one this server knows.")),
       };
     }
@@ -1050,6 +1113,52 @@ internal static class YDocConverter
     }
 
     /// <summary>
+    /// A step must not throw mid-transaction, so a map or a value
+    /// <see cref="YMap.Set"/> would refuse is refused here.
+    /// </summary>
+    private List<EditStep> PlanPatchMaps(CollabEditOp.PatchMaps op, int index)
+    {
+      var steps = new List<EditStep>();
+
+      foreach (var patch in op.Patches)
+      {
+        if (!PageMaps.Contains(patch.Map, StringComparer.Ordinal))
+        {
+          throw new CollabEditException(Where(index, $"\"{patch.Map}\" is not a map a patch may write."));
+        }
+
+        if (patch.Remove)
+        {
+          steps.Add(EditStep.PatchMap(doc.GetMap(patch.Map), patch.Key, null));
+
+          continue;
+        }
+
+        if (!IsPlainMapValue(patch.Value))
+        {
+          throw new CollabEditException(
+              Where(index, $"the value for \"{patch.Map}.{patch.Key}\" is not plain JSON."));
+        }
+
+        byte[] encoded;
+
+        try
+        {
+          encoded = EncodeAny(patch.Value);
+        }
+        catch (Lib0FormatException tooDeep)
+        {
+          throw new CollabEditException(
+              Where(index, $"the value for \"{patch.Map}.{patch.Key}\" nests too deep."), tooDeep);
+        }
+
+        steps.Add(EditStep.PatchMap(doc.GetMap(patch.Map), patch.Key, encoded));
+      }
+
+      return steps;
+    }
+
+    /// <summary>
     /// Refuses an op whose target is in the blocks map but is not a block.
     ///
     /// A peer can write anything into that map through an ordinary update, and
@@ -1231,6 +1340,26 @@ internal static class YDocConverter
           live.Delete(transaction, edit.Index + edit.Insert.Length, edit.Remove);
         }
       }
+    }
+
+    /// <summary>
+    /// Null <paramref name="encoded"/> deletes the key. Decoded at apply time:
+    /// one op list is applied to a scratch doc for the size gate and then to
+    /// the live doc, and the two must not share a value.
+    /// </summary>
+    internal static EditStep PatchMap(YMap map, string key, byte[]? encoded)
+    {
+      return new EditStep((transaction, _, _) =>
+      {
+        if (encoded is null)
+        {
+          map.Remove(transaction, key);
+        }
+        else
+        {
+          map.Set(transaction, key, DecodeAny(encoded));
+        }
+      });
     }
 
     internal static EditStep InsertRootOrder(int at, string id)

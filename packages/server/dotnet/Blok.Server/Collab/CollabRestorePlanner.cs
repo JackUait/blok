@@ -10,6 +10,9 @@ internal sealed record CollabDocStructure(
     IReadOnlyList<string> RootOrder,
     IReadOnlySet<string> ReachedInMainPass);
 
+/// <summary>The top-level keys of a doc's page maps, by map name (see <see cref="YDocConverter.ReadPageMaps"/>).</summary>
+internal sealed record CollabPageMaps(IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>> Maps);
+
 /// <summary>
 /// One key of the blocks map. <paramref name="StoredParent"/> is the raw
 /// string parentId of any map entry (null for a non-map), and
@@ -31,6 +34,51 @@ internal sealed record CollabKeyShape(
 /// </summary>
 internal static class CollabRestorePlanner
 {
+  internal static IReadOnlyList<CollabEditOp> Plan(
+      JsonArray currentBlocks,
+      CollabDocStructure current,
+      JsonArray targetBlocks,
+      CollabPageMaps currentMaps,
+      CollabPageMaps targetMaps)
+  {
+    ArgumentNullException.ThrowIfNull(currentMaps);
+    ArgumentNullException.ThrowIfNull(targetMaps);
+
+    var ops = Plan(currentBlocks, current, targetBlocks).ToList();
+    var patches = new List<CollabMapPatch>();
+
+    foreach (var name in YDocConverter.PageMaps)
+    {
+      var live = currentMaps.Maps.GetValueOrDefault(name) ?? new Dictionary<string, object?>();
+      var wanted = targetMaps.Maps.GetValueOrDefault(name) ?? new Dictionary<string, object?>();
+
+      foreach (var key in live.Keys.Where(key => !wanted.ContainsKey(key)).Order(StringComparer.Ordinal))
+      {
+        patches.Add(new CollabMapPatch(name, key, null, Remove: true));
+      }
+
+      foreach (var (key, value) in wanted.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+      {
+        // The client writes plain JSON only; a shared type or undefined here
+        // has no copy this server can make, so the live key stays as it is.
+        if (!YDocConverter.IsPlainMapValue(value) ||
+            (live.TryGetValue(key, out var now) && YDocConverter.PlainMapValuesEqual(now, value)))
+        {
+          continue;
+        }
+
+        patches.Add(new CollabMapPatch(name, key, value, Remove: false));
+      }
+    }
+
+    if (patches.Count > 0)
+    {
+      ops.Add(new CollabEditOp.PatchMaps(patches));
+    }
+
+    return ops;
+  }
+
   internal static IReadOnlyList<CollabEditOp> Plan(
       JsonArray currentBlocks, CollabDocStructure current, JsonArray targetBlocks)
   {

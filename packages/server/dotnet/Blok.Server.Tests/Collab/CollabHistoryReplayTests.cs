@@ -57,6 +57,25 @@ public sealed class CollabHistoryReplayTests
     }
   }
 
+  [Fact]
+  public async Task SteppingYieldsTheBaselineThenTheDocumentAfterEachRecord()
+  {
+    var source = new YDoc(1);
+    var text = source.GetText("t");
+    var baseline = source.Transact(transaction => text.Insert(transaction, 0, "a"))!;
+    var u1 = source.Transact(transaction => text.Insert(transaction, 1, "b"))!;
+    var u2 = source.Transact(transaction => text.Insert(transaction, 2, "c"))!;
+    var seen = new List<(ulong? Sequence, string Text)>();
+
+    await foreach (var (record, doc) in CollabHistoryReplay.StepAsync(
+        [baseline], Records([u1, u2]), CancellationToken.None))
+    {
+      seen.Add((record?.ServerSequence, doc.GetText("t").ToString()));
+    }
+
+    Assert.Equal([(null, "a"), (1UL, "ab"), (2UL, "abc")], seen);
+  }
+
   /// <summary>
   /// Journal order is commit order, not causal order: a record whose
   /// dependency comes later is parked, then lands when the dependency does.

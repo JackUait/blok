@@ -177,6 +177,12 @@ internal sealed record CollabHistoryReadResult(
     byte[] Json,
     DateTimeOffset? Time);
 
+/// <summary>Each record's edits, oldest first. <paramref name="Truncated"/>: older records were left out.</summary>
+internal sealed record CollabHistoryChangesResult(
+    CollabHistoryStatus Status,
+    IReadOnlyList<CollabRecordChanges> Changes,
+    bool Truncated);
+
 /// <summary><paramref name="Edit"/> is set only when <paramref name="History"/> is Ready.</summary>
 internal sealed record CollabRestoreResult(
     CollabHistoryStatus History,
@@ -506,6 +512,149 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
         CollabHistoryStatus.Ready,
         DocEndpointClient.Serialize(output),
         point.Time);
+  }
+
+  /// <summary>The most records one changes answer carries; the newest are kept.</summary>
+  internal const int MaxChangeRecords = 200;
+
+  /// <summary>
+  /// The edits of each record in (<paramref name="since"/>, <paramref name="sequence"/>]
+  /// of one lineage, read without the room. The replay always starts at the
+  /// baseline; the cap only limits which records are diffed.
+  /// </summary>
+  internal async ValueTask<CollabHistoryChangesResult> ChangesAsync(
+      string docId,
+      string lineage,
+      ulong sequence,
+      ulong since,
+      int maxRecords = MaxChangeRecords,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(docId);
+    ArgumentException.ThrowIfNullOrEmpty(lineage);
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(since, sequence);
+    ArgumentOutOfRangeException.ThrowIfLessThan(maxRecords, 1);
+
+    if (operationStore is not ICollabOperationHistoryStore history)
+    {
+      return new CollabHistoryChangesResult(CollabHistoryStatus.NoHistory, [], false);
+    }
+
+    if (await IsPurgedAsync(history, docId, cancellationToken))
+    {
+      return new CollabHistoryChangesResult(CollabHistoryStatus.Purged, [], false);
+    }
+
+    IReadOnlyList<CollabRecordChanges> changes = [];
+    var truncated = false;
+
+    try
+    {
+      var known = (await history.ListLineagesAsync(docId, cancellationToken))
+          .Any(entry => string.Equals(entry.Lineage, lineage, StringComparison.Ordinal));
+      var found = known && sequence == 0;
+      // The record whose state is the first "before": the last at or below since, 0 for the baseline.
+      ulong firstBefore = 0;
+      var window = new List<ulong>();
+
+      if (known && sequence > 0)
+      {
+        // The bound comes from the headers: a record read stops early without saying so.
+        await foreach (var header in history.ReadHeadersAsync(docId, lineage, cancellationToken))
+        {
+          if (header.ServerSequence > sequence)
+          {
+            break;
+          }
+
+          if (header.ServerSequence <= since)
+          {
+            firstBefore = header.ServerSequence;
+          }
+          else
+          {
+            window.Add(header.ServerSequence);
+          }
+
+          if (header.ServerSequence == sequence)
+          {
+            found = true;
+
+            break;
+          }
+        }
+      }
+
+      if (!found)
+      {
+        return new CollabHistoryChangesResult(
+            await IsPurgedAsync(history, docId, cancellationToken)
+              ? CollabHistoryStatus.Purged
+              : CollabHistoryStatus.NotFound,
+            [],
+            false);
+      }
+
+      if (window.Count > maxRecords)
+      {
+        firstBefore = window[window.Count - maxRecords - 1];
+        window.RemoveRange(0, window.Count - maxRecords);
+        truncated = true;
+      }
+
+      if (window.Count > 0)
+      {
+        var baseline = await history.ReadBaselineAsync(docId, lineage, cancellationToken);
+
+        if (baseline is null)
+        {
+          return new CollabHistoryChangesResult(
+              await IsPurgedAsync(history, docId, cancellationToken)
+                ? CollabHistoryStatus.Purged
+                : CollabHistoryStatus.NotFound,
+              [],
+              false);
+        }
+
+        changes = await CollabVersionChanges.ReplayAsync(
+            baseline,
+            history.ReadRecordsAsync(docId, lineage, sequence, cancellationToken),
+            firstBefore,
+            converter,
+            cancellationToken);
+
+        if (!changes.Select(record => record.Sequence).SequenceEqual(window))
+        {
+          throw new InvalidDataException("collab: the records do not match their headers.");
+        }
+      }
+    }
+    catch (Exception error) when (error is InvalidDataException or CollabHistoryReplayException)
+    {
+      log?.Invoke(
+          $"collab: the changes through {sequence} of lineage {lineage} of \"{docId}\" could not be rebuilt: {error.Message}");
+
+      return new CollabHistoryChangesResult(CollabHistoryStatus.Corrupt, [], false);
+    }
+    catch (CollabTransientException)
+    {
+      return new CollabHistoryChangesResult(CollabHistoryStatus.Unavailable, [], false);
+    }
+    catch (CollabChangesExportException error)
+    {
+      log?.Invoke(
+          $"collab: the changes through {sequence} of lineage {lineage} of \"{docId}\" could not be exported: {error.Message}");
+
+      return new CollabHistoryChangesResult(CollabHistoryStatus.ExportFailed, [], false);
+    }
+
+    // A purge that raced the reads leaves them empty.
+    if (await IsPurgedAsync(history, docId, cancellationToken))
+    {
+      return new CollabHistoryChangesResult(CollabHistoryStatus.Purged, [], false);
+    }
+
+    return new CollabHistoryChangesResult(CollabHistoryStatus.Ready, changes, truncated);
   }
 
   internal async ValueTask<(CollabHistoryStatus Status, CollabLineageDeleteOutcome? Outcome)> DeleteLineageAsync(

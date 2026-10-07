@@ -13,8 +13,9 @@ namespace Blok.Server.AspNetCore.Collab;
 /// <summary>
 /// The version history kept by the operation journal:
 /// <c>GET /sync/{doc}/history</c>, <c>GET /sync/{doc}/history/{lineage}/{sequence}</c>,
-/// <c>DELETE /sync/{doc}/history/{lineage}</c> and
-/// <c>POST /sync/{doc}/history/{lineage}/{sequence}/restore</c>.
+/// <c>DELETE /sync/{doc}/history/{lineage}</c>,
+/// <c>POST /sync/{doc}/history/{lineage}/{sequence}/restore</c> and
+/// <c>GET /sync/{doc}/history/{lineage}/{sequence}/changes</c>.
 ///
 /// Same door as the edit endpoint: the HTTP guard checks origin, ticket and
 /// rate limit, and these handlers add the ticket's doc claim and the
@@ -111,6 +112,74 @@ internal static class HistoryEndpoint
     context.Response.StatusCode = StatusCodes.Status200OK;
     context.Response.ContentType = "application/json";
     await context.Response.Body.WriteAsync(result.Json, context.RequestAborted);
+  }
+
+  /// <summary>
+  /// The edits of each record in (since, sequence]. Only the client knows
+  /// which grouping it shows, so it names the previous version's sequence.
+  /// </summary>
+  public static async Task ChangesAsync(HttpContext context)
+  {
+    if (await AdmitAsync(context, requireWrite: false) is not { } admitted ||
+        await PointAsync(context) is not { } point)
+    {
+      return;
+    }
+
+    if (!TryQueryNumber(context, "since", out var since) || since > point.Sequence)
+    {
+      await SyncEndpoint.RefuseAsync(
+          context,
+          StatusCodes.Status400BadRequest,
+          "since must be a whole number no greater than the sequence\n");
+
+      return;
+    }
+
+    var result = await admitted.Rooms.ChangesAsync(
+        admitted.Doc,
+        point.Lineage,
+        point.Sequence,
+        since ?? 0,
+        cancellationToken: context.RequestAborted);
+
+    if (result.Status != CollabHistoryStatus.Ready)
+    {
+      await RefuseAsync(context, admitted, result.Status);
+
+      return;
+    }
+
+    var body = new JsonObject
+    {
+      ["changes"] = new JsonArray([.. result.Changes.Select(record =>
+      {
+        var entry = new JsonObject
+        {
+          ["sequence"] = record.Sequence,
+          ["committedAt"] = record.CommittedAt.ToUnixTimeMilliseconds(),
+          ["actor"] = record.ActorId,
+          ["blocks"] = new JsonArray([.. record.Blocks.Select(BlockChange)]),
+        };
+
+        if (record.Page.Count > 0)
+        {
+          entry["page"] = new JsonArray([.. record.Page.Select(key => (JsonNode)key)]);
+        }
+
+        return (JsonNode)entry;
+      })]),
+    };
+
+    if (result.Truncated)
+    {
+      body["truncated"] = true;
+    }
+
+    WriteHistoryHead(context, point.Lineage, point.Sequence);
+    context.Response.StatusCode = StatusCodes.Status200OK;
+    context.Response.ContentType = "application/json";
+    await context.Response.WriteAsync(body.ToJsonString(), context.RequestAborted);
   }
 
   public static async Task DeleteAsync(HttpContext context)
@@ -340,6 +409,35 @@ internal static class HistoryEndpoint
     context.Response.Headers[LineageHeader] = lineage;
     context.Response.Headers[SequenceHeader] = sequence.ToString(CultureInfo.InvariantCulture);
     EditEndpoint.Expose(context, LineageHeader, SequenceHeader);
+  }
+
+  /// <summary>Cloned: a block can be one record's after and the next one's before.</summary>
+  private static JsonNode BlockChange(CollabBlockChange change)
+  {
+    var entry = new JsonObject
+    {
+      ["id"] = change.Id,
+      ["type"] = change.Type,
+      ["kind"] = change.Kind switch
+      {
+        CollabBlockChangeKind.Added => "added",
+        CollabBlockChangeKind.Removed => "removed",
+        CollabBlockChangeKind.Changed => "changed",
+        _ => "moved",
+      },
+    };
+
+    if (change.Before is { } before)
+    {
+      entry["before"] = before.DeepClone();
+    }
+
+    if (change.After is { } after)
+    {
+      entry["after"] = after.DeepClone();
+    }
+
+    return entry;
   }
 
   private static JsonValue? UnixMilliseconds(DateTimeOffset? at)

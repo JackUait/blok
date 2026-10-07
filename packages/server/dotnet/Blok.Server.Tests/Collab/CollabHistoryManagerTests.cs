@@ -34,6 +34,7 @@ public sealed class CollabHistoryManagerTests
       Assert.Equal(CollabHistoryStatus.NoHistory, (await manager.HistoryAsync(DocId)).Status);
       Assert.Equal(CollabHistoryStatus.NoHistory, (await manager.ReadVersionAsync(DocId, "l", 0)).Status);
       Assert.Equal((CollabHistoryStatus.NoHistory, null), await manager.DeleteLineageAsync(DocId, "l"));
+      Assert.Equal(CollabHistoryStatus.NoHistory, (await manager.ChangesAsync(DocId, "l", 0, 0)).Status);
       var restore = await manager.RestoreAsync(DocId, "l", 0, "op", null);
       Assert.Equal(CollabHistoryStatus.NoHistory, restore.History);
       Assert.Null(restore.Edit);
@@ -112,6 +113,82 @@ public sealed class CollabHistoryManagerTests
   }
 
   [Fact]
+  public async Task ChangesListEachRecordAfterSinceThroughThePointOldestFirst()
+  {
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    await EditAsync(manager, Update("a", "two"), actor: "u1");
+    await EditAsync(manager, Insert("b", "three", after: "a"), actor: "u2");
+    await EditAsync(manager, Remove("a"));
+    var lineage = Lineage();
+
+    var all = await manager.ChangesAsync(DocId, lineage, 3, 0);
+    var fromOne = await manager.ChangesAsync(DocId, lineage, 3, 1);
+
+    Assert.Equal(CollabHistoryStatus.Ready, all.Status);
+    Assert.False(all.Truncated);
+    Assert.Equal([1UL, 2UL, 3UL], all.Changes.Select(record => record.Sequence));
+    Assert.Equal(["u1", "u2", null], all.Changes.Select(record => record.ActorId));
+    Assert.Equal(DateTimeOffset.UnixEpoch.AddSeconds(2), all.Changes[1].CommittedAt);
+    Assert.Equal(
+        [
+          [("a", CollabBlockChangeKind.Changed)],
+          [("b", CollabBlockChangeKind.Added)],
+          [("a", CollabBlockChangeKind.Removed)],
+        ],
+        all.Changes.Select(record => record.Blocks.Select(change => (change.Id, change.Kind)).ToList()));
+    Assert.Equal("""[{"text":"two"}]""", all.Changes[2].Blocks[0].Before!["data"]!["text"]!.ToJsonString());
+    Assert.Equal([2UL, 3UL], fromOne.Changes.Select(record => record.Sequence));
+  }
+
+  [Fact]
+  public async Task ChangesOfAnEmptyRangeAreEmpty()
+  {
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    await EditAsync(manager, Update("a", "two"));
+
+    foreach (var (sequence, since) in new[] { (0UL, 0UL), (1UL, 1UL) })
+    {
+      var result = await manager.ChangesAsync(DocId, Lineage(), sequence, since);
+
+      Assert.Equal(CollabHistoryStatus.Ready, result.Status);
+      Assert.Empty(result.Changes);
+      Assert.False(result.Truncated);
+    }
+  }
+
+  [Fact]
+  public async Task ChangesPastTheCapAreTheNewestAndSaySo()
+  {
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    await EditAsync(manager, Update("a", "two"));
+    await EditAsync(manager, Insert("b", "three", after: "a"));
+    await EditAsync(manager, Remove("a"));
+
+    var result = await manager.ChangesAsync(DocId, Lineage(), 3, 0, maxRecords: 2);
+
+    Assert.Equal(CollabHistoryStatus.Ready, result.Status);
+    Assert.True(result.Truncated);
+    Assert.Equal([2UL, 3UL], result.Changes.Select(record => record.Sequence));
+    Assert.Equal(CollabBlockChangeKind.Added, Assert.Single(result.Changes[0].Blocks).Kind);
+  }
+
+  [Fact]
+  public async Task ChangesOfAnUnknownPointAreNotFound()
+  {
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    await EditAsync(manager, Update("a", "two"));
+
+    Assert.Equal(CollabHistoryStatus.NotFound, (await manager.ChangesAsync(DocId, Lineage(), 2, 0)).Status);
+    Assert.Equal(
+        CollabHistoryStatus.NotFound,
+        (await manager.ChangesAsync(DocId, "ffffffffffffffffffffffffffffffff", 0, 0)).Status);
+  }
+
+  [Fact]
   public async Task ABaselineWithAnUnknownCreatedAtHasNoTime()
   {
     operations.ResetsWithUnknownCreatedAt = true;
@@ -152,6 +229,7 @@ public sealed class CollabHistoryManagerTests
     Assert.Equal(CollabHistoryStatus.Purged, (await manager.ReadVersionAsync(DocId, lineage, 0)).Status);
     Assert.Equal(CollabHistoryStatus.Purged, (await manager.DeleteLineageAsync(DocId, lineage)).Status);
     Assert.Equal(CollabHistoryStatus.Purged, (await manager.RestoreAsync(DocId, lineage, 0, "op", null)).History);
+    Assert.Equal(CollabHistoryStatus.Purged, (await manager.ChangesAsync(DocId, lineage, 0, 0)).Status);
   }
 
   [Fact]
@@ -167,6 +245,7 @@ public sealed class CollabHistoryManagerTests
     Assert.Equal(CollabHistoryStatus.Purged, (await manager.ReadVersionAsync(DocId, lineage, 0)).Status);
     Assert.Equal(CollabHistoryStatus.Purged, (await manager.DeleteLineageAsync(DocId, lineage)).Status);
     Assert.Equal(CollabHistoryStatus.Purged, (await manager.RestoreAsync(DocId, lineage, 0, "op", null)).History);
+    Assert.Equal(CollabHistoryStatus.Purged, (await manager.ChangesAsync(DocId, lineage, 0, 0)).Status);
   }
 
   [Fact]
@@ -190,6 +269,7 @@ public sealed class CollabHistoryManagerTests
     Assert.Equal(CollabHistoryStatus.Corrupt, (await manager.ReadVersionAsync(DocId, Lineage(), 1)).Status);
     Assert.Equal(CollabHistoryStatus.Ready, (await manager.ReadVersionAsync(DocId, Lineage(), 0)).Status);
     Assert.Equal(CollabHistoryStatus.Corrupt, (await manager.RestoreAsync(DocId, Lineage(), 1, "op", null)).History);
+    Assert.Equal(CollabHistoryStatus.Corrupt, (await manager.ChangesAsync(DocId, Lineage(), 1, 0)).Status);
   }
 
   [Fact]

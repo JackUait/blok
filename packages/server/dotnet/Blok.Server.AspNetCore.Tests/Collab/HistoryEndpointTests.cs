@@ -14,8 +14,8 @@ using Xunit;
 namespace Blok.Server.AspNetCore.Tests.Collab;
 
 /// <summary>
-/// The four history routes: list, read, delete and restore versions kept by
-/// the operation journal. Runs on the real converter and the local journal.
+/// The five history routes: list, read, delete and restore versions kept by
+/// the operation journal, and list the edits inside one. Runs on the real converter and the local journal.
 /// </summary>
 public sealed class HistoryEndpointTests
 {
@@ -179,6 +179,94 @@ public sealed class HistoryEndpointTests
 
     Assert.Equal(HttpStatusCode.BadRequest, read.StatusCode);
     Assert.Equal(HttpStatusCode.BadRequest, restore.StatusCode);
+  }
+
+  [Fact]
+  public async Task ChangesListEachRecordsEditsOldestFirst()
+  {
+    await using var history = await HistoryApp.StartAsync(auth: "ticket");
+    var lineage = await history.OpenAsync(fixture.Compatible);
+    var atZero = await history.BlocksAsync(fixture.Compatible);
+    await history.EditTextAsync("two", fixture.Compatible);
+    await history.EditAsync(
+        Guid.NewGuid().ToString("N"),
+        """{ "ops": [ { "op": "insert", "id": "b", "after": "a", "block": { "type": "header", "data": { "text": "h", "level": 2 } } } ] }""",
+        fixture.Compatible);
+    var atTwo = await history.BlocksAsync(fixture.Compatible);
+
+    using var response = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/2/changes", fixture.Compatible);
+    using var since = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/2/changes?since=1", fixture.Compatible);
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+    Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
+    Assert.Equal(lineage, Assert.Single(response.Headers.GetValues("Blok-History-Lineage")));
+    Assert.Equal("2", Assert.Single(response.Headers.GetValues("Blok-History-Sequence")));
+    var body = JsonNode.Parse(await response.Content.ReadAsStringAsync())!.AsObject();
+    Assert.Equal(["changes"], body.Select(member => member.Key));
+    var changes = body["changes"]!.AsArray();
+    Assert.Equal([1UL, 2UL], changes.Select(entry => entry!["sequence"]!.GetValue<ulong>()));
+
+    var first = changes[0]!.AsObject();
+    Assert.Equal(["sequence", "committedAt", "actor", "blocks"], first.Select(member => member.Key));
+    AssertUnixMilliseconds(first["committedAt"]);
+    Assert.Equal("u1", first["actor"]!.GetValue<string>());
+    var changed = Assert.Single(first["blocks"]!.AsArray())!.AsObject();
+    Assert.Equal(["id", "type", "kind", "before", "after"], changed.Select(member => member.Key));
+    Assert.Equal(("a", "paragraph", "changed"), (
+        changed["id"]!.GetValue<string>(),
+        changed["type"]!.GetValue<string>(),
+        changed["kind"]!.GetValue<string>()));
+    Assert.True(JsonNode.DeepEquals(atZero[0], changed["before"]), $"{changed["before"]}");
+
+    var added = Assert.Single(changes[1]!["blocks"]!.AsArray())!.AsObject();
+    Assert.Equal(["id", "type", "kind", "after"], added.Select(member => member.Key));
+    Assert.Equal(("b", "header", "added"), (
+        added["id"]!.GetValue<string>(),
+        added["type"]!.GetValue<string>(),
+        added["kind"]!.GetValue<string>()));
+    Assert.True(JsonNode.DeepEquals(atTwo[1], added["after"]), $"{added["after"]}");
+
+    Assert.Equal(HttpStatusCode.OK, since.StatusCode);
+    var sinceChanges = JsonNode.Parse(await since.Content.ReadAsStringAsync())!["changes"]!.AsArray();
+    Assert.Equal([2UL], sinceChanges.Select(entry => entry!["sequence"]!.GetValue<ulong>()));
+  }
+
+  [Fact]
+  public async Task ChangesOfTheBaselineAreEmptyAndAnUnknownPointIsNotFound()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+    await history.EditTextAsync("two");
+
+    using var baseline = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0/changes");
+    using var pastHead = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/2/changes");
+    using var unknown = await history.SendAsync(HttpMethod.Get, $"/history/{UnknownLineage}/0/changes");
+
+    Assert.Equal(HttpStatusCode.OK, baseline.StatusCode);
+    Assert.Equal("""{"changes":[]}""", await baseline.Content.ReadAsStringAsync());
+    await AssertError(pastHead, HttpStatusCode.NotFound, "no such version\n");
+    await AssertError(unknown, HttpStatusCode.NotFound, "no such version\n");
+  }
+
+  [Theory]
+  [InlineData("1/changes?since=2")]
+  [InlineData("1/changes?since=")]
+  [InlineData("1/changes?since=-1")]
+  [InlineData("1/changes?since=%2B1")]
+  [InlineData("1/changes?since=one")]
+  [InlineData("1/changes?since=0&since=0")]
+  [InlineData("one/changes")]
+  public async Task ChangesWithABadSinceOrSequenceAreABadRequest(string path)
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+    await history.EditTextAsync("two");
+
+    using var response = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/{path}");
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
   }
 
   [Fact]
@@ -375,6 +463,7 @@ public sealed class HistoryEndpointTests
         await Send(app, HttpMethod.Get, $"/history/{UnknownLineage}/0"),
         await Send(app, HttpMethod.Delete, $"/history/{UnknownLineage}"),
         await Send(app, HttpMethod.Post, $"/history/{UnknownLineage}/0/restore", key: "no-history"),
+        await Send(app, HttpMethod.Get, $"/history/{UnknownLineage}/0/changes"),
       })
       {
         using (response)
@@ -397,7 +486,9 @@ public sealed class HistoryEndpointTests
     using var read = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0");
     using var delete = await history.SendAsync(HttpMethod.Delete, $"/history/{lineage}");
     using var restore = await history.RestoreAsync(lineage, "0", "purged");
+    using var changes = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0/changes");
 
+    await AssertError(changes, HttpStatusCode.Forbidden, "forbidden\n");
     await AssertError(list, HttpStatusCode.Forbidden, "forbidden\n");
     await AssertError(read, HttpStatusCode.Forbidden, "forbidden\n");
     await AssertError(delete, HttpStatusCode.Forbidden, "forbidden\n");
@@ -410,13 +501,23 @@ public sealed class HistoryEndpointTests
   {
     await using var history = await HistoryApp.StartAsync();
     var lineage = await history.OpenAsync();
+    await history.EditTextAsync("two");
 
     history.Converter.ExportFailure = new CollabTransientException("collab: the runtime timed out");
     using var overloaded = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0");
     using var restoreOverloaded = await history.RestoreAsync(lineage, "0", "overloaded");
+    using var changesOverloaded = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/1/changes");
     history.Converter.ExportFailure = new InvalidDataException("not JSON");
     using var failed = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0");
+    using var changesFailed = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/1/changes");
     history.Converter.ExportFailure = null;
+
+    await AssertError(
+        changesOverloaded,
+        HttpStatusCode.ServiceUnavailable,
+        "the server ran past its limits exporting this version, retry\n");
+    Assert.Equal(TimeSpan.FromSeconds(2), changesOverloaded.Headers.RetryAfter?.Delta);
+    await AssertError(changesFailed, HttpStatusCode.InternalServerError, "the version could not be exported\n");
 
     await AssertError(
         overloaded,
@@ -439,6 +540,7 @@ public sealed class HistoryEndpointTests
 
     using var read = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/1");
     using var restore = await history.RestoreAsync(lineage, "1", "corrupt");
+    using var changes = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/1/changes");
     history.Journal.CorruptRecords = false;
     history.Journal.CorruptLineages = true;
     using var list = await history.SendAsync(HttpMethod.Get, "/history");
@@ -447,8 +549,9 @@ public sealed class HistoryEndpointTests
     Assert.Null(read.Headers.RetryAfter);
     await AssertError(restore, HttpStatusCode.InternalServerError, "a stored version could not be read\n");
     await AssertError(list, HttpStatusCode.InternalServerError, "a stored version could not be read\n");
+    await AssertError(changes, HttpStatusCode.InternalServerError, "a stored version could not be read\n");
     var errors = history.Logs.Entries.Where(entry => entry.Level == LogLevel.Error).ToList();
-    Assert.Equal(3, errors.Count);
+    Assert.Equal(4, errors.Count);
     Assert.All(errors, entry =>
     {
       Assert.Equal("Blok.Server.Collab", entry.Category);
@@ -468,6 +571,7 @@ public sealed class HistoryEndpointTests
       await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0", fixture.DocMismatch),
       await history.SendAsync(HttpMethod.Delete, $"/history/{lineage}", fixture.DocMismatch),
       await history.RestoreAsync(lineage, "0", "mismatch", ticket: fixture.DocMismatch),
+      await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0/changes", fixture.DocMismatch),
     })
     {
       using (response)
@@ -491,7 +595,9 @@ public sealed class HistoryEndpointTests
     using var read = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0");
     using var delete = await history.SendAsync(HttpMethod.Delete, $"/history/{lineage}");
     using var restore = await history.RestoreAsync(lineage, "0", "denied");
+    using var changes = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0/changes");
 
+    await AssertError(changes, HttpStatusCode.Forbidden, "forbidden\n");
     await AssertError(list, HttpStatusCode.Forbidden, "forbidden\n");
     await AssertError(read, HttpStatusCode.Forbidden, "forbidden\n");
     await AssertError(delete, HttpStatusCode.Forbidden, "forbidden\n");
@@ -502,7 +608,9 @@ public sealed class HistoryEndpointTests
     authorization.Calls.Clear();
     using var allowedList = await history.SendAsync(HttpMethod.Get, "/history");
     using var allowedRead = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0");
+    using var allowedChanges = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0/changes");
 
+    Assert.Equal(HttpStatusCode.OK, allowedChanges.StatusCode);
     Assert.Equal(HttpStatusCode.OK, allowedList.StatusCode);
     Assert.Equal(HttpStatusCode.OK, allowedRead.StatusCode);
     Assert.DoesNotContain(authorization.Calls, call => call.Method == "write");
@@ -522,6 +630,7 @@ public sealed class HistoryEndpointTests
     using var delete = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}");
     using var restore = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/0/restore");
     using var head = await history.SendAsync(HttpMethod.Head, "/history");
+    using var changes = await history.SendAsync(HttpMethod.Post, $"/history/{lineage}/0/changes");
 
     Assert.Equal(HttpStatusCode.MethodNotAllowed, list.StatusCode);
     Assert.Equal("GET, OPTIONS", string.Join(", ", list.Content.Headers.Allow));
@@ -529,6 +638,8 @@ public sealed class HistoryEndpointTests
     Assert.Equal("DELETE, OPTIONS", string.Join(", ", delete.Content.Headers.Allow));
     Assert.Equal("OPTIONS, POST", string.Join(", ", restore.Content.Headers.Allow));
     Assert.Equal(HttpStatusCode.MethodNotAllowed, head.StatusCode);
+    Assert.Equal(HttpStatusCode.MethodNotAllowed, changes.StatusCode);
+    Assert.Equal("GET, OPTIONS", string.Join(", ", changes.Content.Headers.Allow));
   }
 
   [Fact]
@@ -680,9 +791,9 @@ public sealed class HistoryEndpointTests
       return Assert.Single(state.Headers.GetValues("Blok-Doc-Lineage"));
     }
 
-    internal async Task<JsonNode> BlocksAsync()
+    internal async Task<JsonNode> BlocksAsync(string? ticket = null)
     {
-      using var state = await SendAsync(HttpMethod.Get, "/state");
+      using var state = await SendAsync(HttpMethod.Get, "/state", ticket);
 
       Assert.Equal(HttpStatusCode.OK, state.StatusCode);
 
@@ -855,6 +966,16 @@ public sealed class HistoryEndpointTests
     public ValueTask<int> MigrateRichTextAsync(YDoc doc, CancellationToken cancellationToken = default)
     {
       return inner.MigrateRichTextAsync(doc, cancellationToken);
+    }
+
+    public JsonArray ExportBlocks(YDoc doc, out IReadOnlyList<RichTextHtmlSlot> slots)
+    {
+      return ExportFailure is { } failure ? throw failure : inner.ExportBlocks(doc, out slots);
+    }
+
+    public ValueTask ResolveAsync(IReadOnlyList<RichTextHtmlSlot> slots, CancellationToken cancellationToken = default)
+    {
+      return inner.ResolveAsync(slots, cancellationToken);
     }
   }
 }

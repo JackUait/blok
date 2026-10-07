@@ -125,6 +125,37 @@ internal sealed class CollabDocConverter(
     };
   }
 
+  public JsonArray ExportBlocks(YDoc doc, out IReadOnlyList<RichTextHtmlSlot> slots)
+  {
+    return YDocConverter.Export(doc, fields, log, out slots);
+  }
+
+  public async ValueTask ResolveAsync(
+      IReadOnlyList<RichTextHtmlSlot> slots, CancellationToken cancellationToken = default)
+  {
+    if (slots.Count == 0)
+    {
+      return;
+    }
+
+    Dictionary<string, JsonArray> read;
+
+    try
+    {
+      read = await Read(slots.Select(slot => slot.Html).ToList(), cancellationToken);
+    }
+    catch (Exception error) when (IsTransient(error, cancellationToken))
+    {
+      throw new CollabTransientException(
+          $"collab: the rich text HTML in this document could not be read: {error.Message}", error);
+    }
+
+    foreach (var slot in slots)
+    {
+      slot.Target[slot.Key] = read[slot.Html.Html].DeepClone();
+    }
+  }
+
   /// <summary>
   /// The runtime's own limits (JintBlokRuntime classifies them) and a wait
   /// for a pooled engine that someone other than the caller cancelled.

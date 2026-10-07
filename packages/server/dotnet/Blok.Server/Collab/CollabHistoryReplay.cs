@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Blok.Server.Yjs;
 
 namespace Blok.Server.Collab;
@@ -31,6 +32,35 @@ internal static class CollabHistoryReplay
     }
 
     return doc;
+  }
+
+  /// <summary>
+  /// The same replay, one step at a time: the baseline (record null), then
+  /// each record. Every step yields the same doc, changed in place, so read
+  /// it before asking for the next step.
+  /// </summary>
+  public static async IAsyncEnumerable<(CollabOperationRecord? Record, YDoc Doc)> StepAsync(
+      IReadOnlyList<ReadOnlyMemory<byte>> baseline,
+      IAsyncEnumerable<CollabOperationRecord> records,
+      [EnumeratorCancellation] CancellationToken ct)
+  {
+    var doc = new YDoc();
+
+    for (var index = 0; index < baseline.Count; index++)
+    {
+      ct.ThrowIfCancellationRequested();
+      Apply(doc, baseline[index], null, $"baseline frame {index}");
+    }
+
+    yield return (null, doc);
+
+    await foreach (var record in records.WithCancellation(ct).ConfigureAwait(false))
+    {
+      ct.ThrowIfCancellationRequested();
+      Apply(doc, record.Update, record.ServerSequence, $"record {record.ServerSequence}");
+
+      yield return (record, doc);
+    }
   }
 
   /// <summary>

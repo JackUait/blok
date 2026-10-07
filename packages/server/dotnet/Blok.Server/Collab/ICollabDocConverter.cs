@@ -43,6 +43,18 @@ internal interface ICollabDocConverter
   /// leaves it untouched. Returns how many fields were replaced.
   /// </summary>
   ValueTask<int> MigrateRichTextAsync(YDoc doc, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// The export's blocks, read synchronously. Rich fields still holding HTML
+  /// are left as strings and listed in <paramref name="slots"/>; pass the
+  /// ones you keep to <see cref="ResolveAsync"/>.
+  /// </summary>
+  JsonArray ExportBlocks(YDoc doc, out IReadOnlyList<RichTextHtmlSlot> slots) =>
+      throw new NotSupportedException("collab: this converter cannot export blocks step by step.");
+
+  /// <summary>Writes each slot's segments into its block. Transient runtime limits throw <see cref="CollabTransientException"/>.</summary>
+  ValueTask ResolveAsync(IReadOnlyList<RichTextHtmlSlot> slots, CancellationToken cancellationToken = default) =>
+      throw new NotSupportedException("collab: this converter cannot read rich text slots.");
 }
 
 /// <summary>

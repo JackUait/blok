@@ -129,16 +129,41 @@ const writeApart = async (room: Room, writes: () => Promise<unknown>): Promise<v
   await Promise.all([waitForHeldDocFramesToSettle(room.pageA), waitForHeldDocFramesToSettle(room.pageB)]);
 };
 
-const reunite = async (room: Room): Promise<void> => {
+/** How many edits each page has sent so far. */
+const sentCounts = async (room: Room): Promise<{ alpha: number; beta: number }> => ({
+  alpha: (await collabUpdateClients(room.pageA, room.doc)).length,
+  beta: (await collabUpdateClients(room.pageB, room.doc)).length,
+});
+
+/**
+ * Releases the held frames and returns how many edits each page had sent
+ * before. A page that sends more after the merge either published part of
+ * its burst after release (so it wrote against the peer's text) or wrote a
+ * peer's update back.
+ * @param room - the room
+ */
+const reunite = async (room: Room): Promise<{ alpha: number; beta: number }> => {
+  const before = await sentCounts(room);
+
   await Promise.all([releaseCollabDocFrames(room.pageA), releaseCollabDocFrames(room.pageB)]);
+
+  return before;
 };
 
 /**
- * The client id order the room was opened with really is the one each editor
- * wrote with: the update frames each page sent came from its announced id.
+ * Nothing was sent after the release, and the client id order the room was
+ * opened with really is the one each editor wrote with: the update frames
+ * each page sent came from its announced id.
  * @param room - the room
+ * @param sentBeforeRelease - what `reunite` returned
  */
-const expectWritersMatchAwareness = async (room: Room): Promise<void> => {
+const expectNoLateSendsAndKnownWriters = async (room: Room, sentBeforeRelease: { alpha: number; beta: number }): Promise<void> => {
+  // Longer than the 400ms write window, so a write-back would have been sent.
+  await new Promise((resolve) => {
+    setTimeout(resolve, 700);
+  });
+  expect(await sentCounts(room)).toEqual(sentBeforeRelease);
+
   const [alphaId, betaId] = [await collabClientId(room.pageA, room.doc), await collabClientId(room.pageB, room.doc)];
 
   expect({ alpha: [...new Set(await collabUpdateClients(room.pageA, room.doc))],
@@ -168,7 +193,7 @@ for (const lower of ['alpha', 'beta'] as const) {
         beta: [{ text: 'hello woBBBBBrld',
           marks: { bold: true } }] });
 
-      await reunite(room);
+      const sentBeforeRelease = await reunite(room);
 
       const merged = lower === 'alpha' ? 'hello woAAAAABBBBBrld' : 'hello woBBBBBAAAAArld';
       const expected: RichText = [{ text: merged,
@@ -182,7 +207,7 @@ for (const lower of ['alpha', 'beta'] as const) {
         await expect(paragraph(page, name).getByRole('strong')).toHaveText([merged]);
       }
 
-      await expectWritersMatchAwareness(room);
+      await expectNoLateSendsAndKnownWriters(room, sentBeforeRelease);
     });
 
     test('text typed right after a link is not linked for the other person', async ({ context }) => {
@@ -206,7 +231,7 @@ for (const lower of ['alpha', 'beta'] as const) {
         beta: [{ text: 'see ' }, { text: 'docs',
           marks: link }, { text: 'BBBBB now' }] });
 
-      await reunite(room);
+      const sentBeforeRelease = await reunite(room);
 
       const typed = lower === 'alpha' ? 'AAAAABBBBB' : 'BBBBBAAAAA';
       const expected: RichText = [{ text: 'see ' }, { text: 'docs',
@@ -220,7 +245,7 @@ for (const lower of ['alpha', 'beta'] as const) {
         await expect(paragraph(page, name).getByRole('link')).toHaveText(['docs']);
       }
 
-      await expectWritersMatchAwareness(room);
+      await expectNoLateSendsAndKnownWriters(room, sentBeforeRelease);
     });
 
     test('a character typed inside a word the other person bolds ends up bold', async ({ context }) => {
@@ -244,7 +269,7 @@ for (const lower of ['alpha', 'beta'] as const) {
           beta: [{ text: 'the ' }, { text: 'quick',
             marks: { bold: true } }, { text: ' fox' }] });
 
-      await reunite(room);
+      const sentBeforeRelease = await reunite(room);
 
       const expected: RichText = [{ text: 'the ' }, { text: 'quXick',
         marks: { bold: true } }, { text: ' fox' }];
@@ -257,7 +282,7 @@ for (const lower of ['alpha', 'beta'] as const) {
         await expect(paragraph(page, name).getByRole('strong')).toHaveText(['quXick']);
       }
 
-      await expectWritersMatchAwareness(room);
+      await expectNoLateSendsAndKnownWriters(room, sentBeforeRelease);
     });
   });
 }

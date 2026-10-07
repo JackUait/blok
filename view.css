@@ -1526,3 +1526,13 @@
 [data-blok-tool="list"]:not([class]) {
   padding-inline-start: calc(var(--blok-block-padding-inline, 2px) + 1.5em);
 }
+
+/* List markers for classed output: its item rows carry no marker element. */
+[data-blok-interface=view] ul[data-list-style="unordered"] { padding-inline-start: 27px; }
+[data-blok-interface=view] ol[data-list-style="ordered"] { padding-inline-start: 26px; }
+[data-blok-interface=view] ul[data-list-style="unordered"], [data-blok-interface=view] [data-list-style] [data-list-style] [data-list-style] ul[data-list-style="unordered"] { list-style-type: disc; }
+[data-blok-interface=view] [data-list-style] ul[data-list-style="unordered"], [data-blok-interface=view] [data-list-style] [data-list-style] [data-list-style] [data-list-style] ul[data-list-style="unordered"] { list-style-type: circle; }
+[data-blok-interface=view] [data-list-style] [data-list-style] ul[data-list-style="unordered"], [data-blok-interface=view] [data-list-style] [data-list-style] [data-list-style] [data-list-style] [data-list-style] ul[data-list-style="unordered"] { list-style-type: square; }
+[data-blok-interface=view] ol[data-list-style="ordered"], [data-blok-interface=view] [data-list-style] [data-list-style] [data-list-style] ol[data-list-style="ordered"] { list-style-type: decimal; }
+[data-blok-interface=view] [data-list-style] ol[data-list-style="ordered"], [data-blok-interface=view] [data-list-style] [data-list-style] [data-list-style] [data-list-style] ol[data-list-style="ordered"] { list-style-type: lower-alpha; }
+[data-blok-interface=view] [data-list-style] [data-list-style] ol[data-list-style="ordered"], [data-blok-interface=view] [data-list-style] [data-list-style] [data-list-style] [data-list-style] [data-list-style] ol[data-list-style="ordered"] { list-style-type: lower-roman; }

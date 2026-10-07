@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { IconCheck } from '../../../src/components/icons';
+import { Paragraph } from '../../../src/tools/paragraph';
 
 import { blocksToHtml, diffOutputData } from '../../../src/view';
 import {
@@ -608,6 +609,66 @@ describe('mountHistoryDrawer', () => {
     field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
     expect(panel().hidden).toBe(true);
+  });
+
+  // Blok's keyboard controller stops Escape in the document capture phase.
+  it('closes on the first Escape from a real Blok paragraph, and Blok does not also act on it', async () => {
+    const { button, editor } = setup();
+    const holder = document.createElement('div');
+
+    editor.append(holder);
+
+    const { Blok } = await import('../../../src/blok');
+    const blok = new Blok({ holder, tools: { paragraph: Paragraph }, data: { blocks: [{ type: 'paragraph', data: { text: 'live text' } }] } });
+
+    try {
+      await blok.isReady;
+      button.click();
+      await settle();
+      rowButtons()[0].click();
+      await settle();
+
+      // jsdom does not reflect contentEditable to the attribute, so find the tool root.
+      const editable = holder.querySelector<HTMLElement>('[data-blok-tool="paragraph"]');
+
+      if (editable === null) {
+        throw new Error('no editable paragraph');
+      }
+
+      const reachedBlok = vi.fn();
+
+      editable.focus();
+      window.getSelection()?.collapse(editable.firstChild ?? editable, 1);
+      // Blok's own listeners sit in the document capture phase; this one runs right after them.
+      document.addEventListener('keydown', reachedBlok, { capture: true });
+      editable.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      document.removeEventListener('keydown', reachedBlok, { capture: true });
+
+      expect(panel().hidden).toBe(true);
+      // One Escape, one layer: the drawer took it, so Blok must not select the block too.
+      expect(reachedBlok).not.toHaveBeenCalled();
+    } finally {
+      blok.destroy();
+    }
+  }, 120_000);
+
+  // The settings drawer and the page tree close themselves on Escape from their own controls.
+  it('leaves an Escape from other playground chrome to that chrome', async () => {
+    const { button } = setup();
+    const settings = document.createElement('aside');
+    const control = document.createElement('button');
+    const settingsSaw = vi.fn();
+
+    settings.append(control);
+    document.body.append(settings);
+    document.addEventListener('keydown', settingsSaw);
+    button.click();
+    await settle();
+    control.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    document.removeEventListener('keydown', settingsSaw);
+
+    expect(settingsSaw).toHaveBeenCalled();
+    expect(panel().hidden).toBe(false);
   });
 
   it('leaves the first Escape in the editor to an open Blok menu', async () => {

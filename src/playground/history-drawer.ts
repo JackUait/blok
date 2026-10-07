@@ -760,23 +760,27 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     }
   });
 
-  // Blok closes its menus during the same Escape without preventDefault, so
-  // whether one was open is read before any document listener runs.
-  const escape = { menuWasOpen: false };
+  // The drawer is the topmost layer, so it takes Escape first, unless a Blok
+  // menu or dialog is open. Window capture runs before Blok's document-capture
+  // keyboard controller, which would otherwise stop the event and select the
+  // block; stopping it here keeps one Escape to one layer.
+  // Other chrome (settings, page tree) handles an Escape aimed at its own controls.
+  const isOurs = (target: EventTarget | null): boolean =>
+    target === document.body || target === document.documentElement
+    || (target instanceof Node && [panel, previewPane, editorArea].some((area) => area.contains(target)));
 
   window.addEventListener('keydown', (event) => {
-    escape.menuWasOpen = event.key === 'Escape' && document.querySelector(OPEN_MENU) !== null;
-  }, { capture: true });
-
-  document.addEventListener('keydown', (event) => {
     const inMenu = event.target instanceof Element && event.target.closest(BLOK_MENUS) !== null;
 
-    if (event.key !== 'Escape' || event.defaultPrevented || panel.hidden || escape.menuWasOpen || inMenu) {
+    if (event.key !== 'Escape' || event.defaultPrevented || panel.hidden || inMenu
+      || !isOurs(event.target) || document.querySelector(OPEN_MENU) !== null) {
       return;
     }
 
+    event.preventDefault();
+    event.stopPropagation();
     close();
-  });
+  }, { capture: true });
 
   return { open, close };
 };

@@ -1,6 +1,7 @@
 import type * as Y from 'yjs';
 
 import type { RichText } from '../../../../types/rich-text';
+import type { PageIcon } from '../../../../types/tools/page';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { modificationsObserverBatchTimeout } from '../../constants';
@@ -9,6 +10,7 @@ import { logLabeled } from '../../utils';
 
 import { BlockObserver } from './block-observer';
 import { DocumentStore, type DataKeySnapshot } from './document-store';
+import { readPageFields, writePageField, type PageFieldKey, type PageFields } from './page-fields';
 import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from './serializer';
 import type { AwarenessChange, BlockChangeCallback, BlockPlacement, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
@@ -74,6 +76,11 @@ export class YjsManager extends Module {
 
   /** The values map {@link onValuesChanged} watches; swapped by a lineage reset. */
   private observedValues: Y.Map<unknown> | null = null;
+
+  private readonly pageListeners = new Set<(key: PageFieldKey, source: 'undo' | 'redo' | 'remote') => void>();
+
+  /** The page map {@link onPageChanged} watches; swapped by a lineage reset. */
+  private observedPage: Y.Map<unknown> | null = null;
 
   /**
    * Coalescing buffer for typing-driven block data writes (leading + trailing
@@ -209,6 +216,9 @@ export class YjsManager extends Module {
     this.observedValues?.unobserve(this.onValuesChanged);
     this.observedValues = this.documentStore.values;
     this.observedValues.observe(this.onValuesChanged);
+    this.observedPage?.unobserve(this.onPageChanged);
+    this.observedPage = this.documentStore.page;
+    this.observedPage.observe(this.onPageChanged);
     this.blockObserver.observe(
       {
         blocksMap: this.documentStore.blocksMap,
@@ -236,6 +246,23 @@ export class YjsManager extends Module {
 
     event.keysChanged.forEach((key: string) => {
       this.valueListeners.get(key)?.(event.target.get(key), source);
+    });
+  };
+
+  // Same source rules as onValuesChanged: own writes and loads stay silent.
+  private readonly onPageChanged = (event: Y.YMapEvent<unknown>, transaction: Y.Transaction): void => {
+    const { undoManager } = this.undoHistory;
+
+    if (transaction.local && transaction.origin !== undoManager) {
+      return;
+    }
+    const replay = undoManager.redoing ? 'redo' : 'undo';
+    const source = transaction.local ? replay : 'remote';
+
+    event.keysChanged.forEach((key: string) => {
+      if (key === 'title' || key === 'icon') {
+        this.pageListeners.forEach((listener) => listener(key, source));
+      }
     });
   };
 
@@ -922,6 +949,34 @@ export class YjsManager extends Module {
       this.undoHistory.beginValueEdit(key, options.typing === true);
     }
     this.transact(() => values.set(key, value));
+  }
+
+  public getPageFields(): PageFields {
+    return readPageFields(this.documentStore.page);
+  }
+
+  public loadPage(fields: PageFields): void {
+    this.flushPendingBlockWrites();
+    this.documentStore.pageFromJSON(fields);
+  }
+
+  public setPageField(key: PageFieldKey, value: string | PageIcon | null, options: { typing?: boolean } = {}): void {
+    const current = this.documentStore.page.get(key);
+
+    if (JSON.stringify(current ?? null) === JSON.stringify(value === '' ? null : value)) {
+      return;
+    }
+    if (!this.Blok.BlockManager.isApplyingRemoteChange && !this.documentStore.isTransactingWithoutCapture) {
+      // 'page:' keeps the typing run apart from a host track() key of the same name.
+      this.undoHistory.beginValueEdit(`page:${key}`, options.typing === true);
+    }
+    this.transact(() => writePageField(this.documentStore.page, key, value));
+  }
+
+  public onPageChange(listener: (key: PageFieldKey, source: 'undo' | 'redo' | 'remote') => void): () => void {
+    this.pageListeners.add(listener);
+
+    return () => this.pageListeners.delete(listener);
   }
 
   /**

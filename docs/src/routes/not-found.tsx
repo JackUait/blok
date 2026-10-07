@@ -1,5 +1,6 @@
 import { Link } from '../components/common/Link';
 import { Nav } from '../components/layout/Nav';
+import { PageMain } from '../components/layout/PageMain';
 import { Footer } from '../components/layout/Footer';
 import { NAV_LINKS } from '../utils/constants';
 
@@ -17,11 +18,7 @@ export const meta = () => [
 const NotFoundPage = () => (
   <>
     <Nav links={NAV_LINKS} />
-    <main
-      id="main-content"
-      tabIndex={-1}
-      className="mx-auto flex max-w-3xl flex-col items-center px-6 pt-32 pb-24 text-center"
-    >
+    <PageMain className="mx-auto flex max-w-3xl flex-col items-center px-6 pt-32 pb-24 text-center">
       <p className="font-mono text-sm font-bold tracking-widest text-muted-foreground uppercase">
         404
       </p>
@@ -46,7 +43,7 @@ const NotFoundPage = () => (
           Read the docs
         </Link>
       </div>
-    </main>
+    </PageMain>
     <Footer />
   </>
 );

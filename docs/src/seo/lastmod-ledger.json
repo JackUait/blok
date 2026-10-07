@@ -1,18 +1,18 @@
 {
   "/": {
-    "hash": "862188178dbfa0a8",
+    "hash": "62c0e240e24ef7fb",
     "date": "2026-10-06"
   },
   "/404": {
-    "hash": "53bdd9729858a544",
+    "hash": "a05d42b0bc88b227",
     "date": null
   },
   "/changelog": {
-    "hash": "178ddc8a652182e0",
+    "hash": "097a17316d3f9f6a",
     "date": "2026-09-04"
   },
   "/demo": {
-    "hash": "4cc817aebe98c50f",
+    "hash": "d263719e55000758",
     "date": "2026-10-07"
   },
   "/docs": {
@@ -312,27 +312,27 @@
     "date": "2026-09-08"
   },
   "/migration": {
-    "hash": "07efb40769b4d200",
+    "hash": "8defd2719fc1e9ba",
     "date": "2026-10-05"
   },
   "/migration/reference": {
-    "hash": "e304c1a5fb583213",
+    "hash": "a33e46b3013c3816",
     "date": "2026-09-08"
   },
   "/presets": {
-    "hash": "d296de679d9bba1e",
+    "hash": "eaf065e5eb3c1d30",
     "date": "2026-09-08"
   },
   "/ru": {
-    "hash": "ccdb627e33732847",
+    "hash": "651d6a031805f73a",
     "date": "2026-10-06"
   },
   "/ru/changelog": {
-    "hash": "b0aea1391ee1ce9a",
+    "hash": "9c2511d89a54424b",
     "date": "2026-09-04"
   },
   "/ru/demo": {
-    "hash": "bbcc47ee27d215cf",
+    "hash": "a6c83c6b9d48cce3",
     "date": "2026-10-07"
   },
   "/ru/docs": {
@@ -632,19 +632,19 @@
     "date": "2026-09-08"
   },
   "/ru/migration": {
-    "hash": "97d8b01766dbb3db",
+    "hash": "dc6b984b426ae0e7",
     "date": "2026-10-05"
   },
   "/ru/migration/reference": {
-    "hash": "547df1f30f3bcfda",
+    "hash": "41d9020f58defc97",
     "date": "2026-09-08"
   },
   "/ru/presets": {
-    "hash": "cc793f77cde6a20f",
+    "hash": "ad6285fa77895440",
     "date": "2026-09-08"
   },
   "/ru/server": {
-    "hash": "6d08ae8c1d252c13",
+    "hash": "b296b63d48f93c47",
     "date": "2026-10-07"
   },
   "/ru/tools": {
@@ -652,7 +652,7 @@
     "date": null
   },
   "/server": {
-    "hash": "28bba0242abd5451",
+    "hash": "b8fa138ae64e9ca1",
     "date": "2026-10-07"
   },
   "/tools": {

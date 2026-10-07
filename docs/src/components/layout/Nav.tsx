@@ -9,6 +9,7 @@ import { LanguageSelector } from "../common/LanguageSelector";
 import { VersionPicker } from "../../versioning/VersionPicker";
 import { VersionBanner } from "../../versioning/VersionBanner";
 import { Typo } from "../common/Typo";
+import { MAIN_CONTENT_ID } from "./PageMain";
 import { useI18n } from "../../contexts/I18nContext";
 import { splitLocalePath } from "../../seo/locales";
 import type { NavLink } from "@/types/navigation";
@@ -190,7 +191,10 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false, staticPos
           actual page content. Hidden until it receives focus (first Tab
           stop), then pops into view. */}
       <a
-        href="#main-content"
+        href={`#${MAIN_CONTENT_ID}`}
+        // Focus explicitly: jsdom never focuses a fragment target, so the
+        // skip-link test can only check this handler.
+        onClick={() => document.getElementById(MAIN_CONTENT_ID)?.focus()}
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         {t("common.skipToContent")}

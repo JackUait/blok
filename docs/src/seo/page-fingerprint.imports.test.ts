@@ -201,3 +201,36 @@ describe('page fingerprint inputs', () => {
     expect(unfingerprinted(files)).toEqual([]);
   });
 });
+
+/** Every module reached from the inputs through static imports, non-code files included. */
+const staticImportGraph = (inputs: string[]): string[] => {
+  const seen = new Set<string>();
+  const queue = [...inputs];
+  while (queue.length > 0) {
+    const file = queue.pop() as string;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    queue.push(...importsOf(file));
+  }
+  return [...seen].sort();
+};
+
+// The site root and every page's head reach these, so whatever they import
+// statically is preloaded on every route.
+const SHARED_ENTRIES = [
+  'docs/src/root.tsx',
+  'docs/src/seo/lastmod.ts',
+  'docs/src/seo/meta-descriptors.ts',
+  'docs/src/seo/route-metadata.ts',
+  'docs/src/seo/jsonld.ts',
+];
+
+describe('shared metadata', () => {
+  it('never imports the changelog text, which only the changelog page needs', () => {
+    expect(staticImportGraph(SHARED_ENTRIES)).not.toContain('CHANGELOG.md');
+  });
+
+  it('sees a ?raw import of the changelog', () => {
+    expect(staticImportGraph(['docs/src/pages/ChangelogPage.tsx'])).toContain('CHANGELOG.md');
+  });
+});

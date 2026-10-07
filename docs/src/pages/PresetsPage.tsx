@@ -1,5 +1,6 @@
 // docs/src/pages/PresetsPage.tsx
 import { Nav } from '../components/layout/Nav';
+import { PageMain } from '../components/layout/PageMain';
 import { Footer } from '../components/layout/Footer';
 import { Typo } from '../components/common/Typo';
 import { PresetSection } from '../components/presets/PresetSection';
@@ -76,9 +77,9 @@ export const PresetsContent: React.FC = () => {
 export const PresetsPage: React.FC = () => (
   <>
     <Nav links={NAV_LINKS} />
-    <main className="min-h-screen bg-background pt-16">
+    <PageMain className="min-h-screen bg-background pt-16">
       <PresetsContent />
-    </main>
+    </PageMain>
     <Footer />
   </>
 );

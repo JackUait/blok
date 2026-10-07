@@ -198,4 +198,12 @@ describe('Footer', () => {
       });
     });
   });
+
+  it.each([
+    ['en', '/', 'Quick Start', '/docs/quick-start/'],
+    ['ru', '/ru', 'Быстрый старт', '/ru/docs/quick-start/'],
+  ] as const)('links %s Quick Start to the real route, not a hub hash', (locale, path, name, href) => {
+    renderFooter(locale, path);
+    expect(screen.getByRole('link', { name })).toHaveAttribute('href', href);
+  });
 });

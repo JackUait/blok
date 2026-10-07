@@ -2189,7 +2189,7 @@ export const Features: React.FC = () => {
           t('home.features.cleanJson.details.benefit3'),
           t('home.features.cleanJson.details.benefit4'),
         ],
-        apiLink: "/docs#saver-api",
+        apiLink: "/docs/saver-api",
       },
     },
     {
@@ -2238,7 +2238,7 @@ export const Features: React.FC = () => {
           t('home.features.customBlocks.details.benefit3'),
           t('home.features.customBlocks.details.benefit4'),
         ],
-        apiLink: "/docs#tools-api",
+        apiLink: "/docs/tools-api",
       },
     },
     {
@@ -2261,7 +2261,7 @@ export const Features: React.FC = () => {
           t('home.features.slashCommands.details.benefit3'),
           t('home.features.slashCommands.details.benefit4'),
         ],
-        apiLink: "/docs#toolbar-api",
+        apiLink: "/docs/toolbar-api",
       },
     },
     {
@@ -2284,7 +2284,7 @@ export const Features: React.FC = () => {
           t('home.features.tables.details.benefit3'),
           t('home.features.tables.details.benefit4'),
         ],
-        apiLink: "/tools#table",
+        apiLink: "/docs/table",
       },
     },
     {
@@ -2307,7 +2307,7 @@ export const Features: React.FC = () => {
           t('home.features.embeds.details.benefit3'),
           t('home.features.embeds.details.benefit4'),
         ],
-        apiLink: "/tools#embed",
+        apiLink: "/docs/embed",
       },
     },
     {
@@ -2332,7 +2332,7 @@ export const Features: React.FC = () => {
           t('home.features.undoRedo.details.benefit3'),
           t('home.features.undoRedo.details.benefit4'),
         ],
-        apiLink: "/docs#history-api",
+        apiLink: "/docs/history-api",
       },
     },
     {
@@ -2356,7 +2356,7 @@ export const Features: React.FC = () => {
           t('home.features.languages.details.benefit3'),
           t('home.features.languages.details.benefit4'),
         ],
-        apiLink: "/docs#i18n-api",
+        apiLink: "/docs/i18n-api",
       },
     },
     {
@@ -2380,7 +2380,7 @@ export const Features: React.FC = () => {
           t('home.features.media.details.benefit3'),
           t('home.features.media.details.benefit4'),
         ],
-        apiLink: "/tools#image",
+        apiLink: "/docs/image",
       },
     },
   ], [t]);

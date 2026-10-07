@@ -1,4 +1,3 @@
-import CHANGELOG from '../../../CHANGELOG.md?raw';
 import ledger from './lastmod-ledger.json';
 import { splitLocalePath } from './locales';
 
@@ -16,17 +15,17 @@ export const LASTMOD_LEDGER = ledger as Ledger;
 export const latestReleaseDate = (markdown: string): string | undefined =>
   /^## \[[^\]]+\]\([^)]*\) \((\d{4}-\d{2}-\d{2})\)/m.exec(markdown)?.[1];
 
-const RELEASE_DATE = latestReleaseDate(CHANGELOG);
-
 /**
  * One record behind sitemap lastmod, mirror lastmod, TechArticle dateModified
  * and the visible "Last updated" line. Both changelog trees render
  * CHANGELOG.md, so their release date counts too; the ledger covers their chrome.
+ * The release date comes in as an argument (release-lastmod.ts): importing
+ * CHANGELOG.md here would preload it on every page.
  */
-export const lastModified = (route: string): string | undefined => {
+export const lastModified = (route: string, releaseDate?: string): string | undefined => {
   const recorded = LASTMOD_LEDGER[route]?.date ?? undefined;
   if (splitLocalePath(route).path !== '/changelog') return recorded;
-  return [recorded, RELEASE_DATE].filter((date): date is string => date !== undefined).sort().at(-1);
+  return [recorded, releaseDate].filter((date): date is string => date !== undefined).sort().at(-1);
 };
 
 /**

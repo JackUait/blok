@@ -1,6 +1,7 @@
 // docs/src/pages/ToolsPage.tsx
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Nav } from '../components/layout/Nav';
+import { PageMain } from '../components/layout/PageMain';
 import { Footer } from '../components/layout/Footer';
 import { Sidebar } from '../components/common/Sidebar';
 import { MobileSectionNav } from '../components/common/MobileSectionNav';
@@ -108,9 +109,9 @@ export const ToolsContent: React.FC<ToolsContentProps> = ({ inline = false }) =>
 export const ToolsPage: React.FC = () => (
   <>
     <Nav links={NAV_LINKS} />
-    <main>
+    <PageMain>
       <ToolsContent />
-    </main>
+    </PageMain>
     <Footer />
   </>
 );

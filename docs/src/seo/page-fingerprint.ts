@@ -61,7 +61,7 @@ export const STATIC_PAGES: Record<string, { files: string[]; catalog: string[] }
     ],
     catalog: ['migration'],
   },
-  // CHANGELOG.md is left out: the release heading dates it (lastmod.ts), so a
+  // CHANGELOG.md is left out: the release heading dates it (release-lastmod.ts), so a
   // release needs no ledger update.
   '/changelog': { files: ['docs/src/pages/ChangelogPage.tsx'], catalog: ['changelog'] },
   '/404': { files: ['docs/src/routes/not-found.tsx'], catalog: [] },

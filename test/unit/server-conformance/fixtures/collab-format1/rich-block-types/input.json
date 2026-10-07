@@ -1,0 +1,84 @@
+[
+  {
+    "id": "h1",
+    "type": "header",
+    "data": {
+      "text": "Title with <i>italic</i> and <a href=\"https://example.com\">link</a>",
+      "level": 2
+    }
+  },
+  {
+    "id": "q1",
+    "type": "quote",
+    "data": {
+      "text": "<b>Quoted</b> words<br>second line",
+      "alignment": "left"
+    }
+  },
+  {
+    "id": "tg",
+    "type": "toggle",
+    "data": {
+      "text": "Toggle <mark style=\"color: var(--blok-color-red-text);\">red</mark>"
+    },
+    "content": [
+      "tg-child"
+    ]
+  },
+  {
+    "id": "tg-child",
+    "type": "paragraph",
+    "data": {
+      "text": "child <u>under</u> the toggle"
+    },
+    "parent": "tg"
+  },
+  {
+    "id": "li1",
+    "type": "list",
+    "data": {
+      "text": "<b>first</b> bullet",
+      "style": "unordered",
+      "depth": 0
+    }
+  },
+  {
+    "id": "li2",
+    "type": "list",
+    "data": {
+      "text": "nested <i>bullet</i>",
+      "style": "unordered",
+      "depth": 1
+    }
+  },
+  {
+    "id": "li3",
+    "type": "list",
+    "data": {
+      "text": "number <code>one</code>",
+      "style": "ordered",
+      "start": 3,
+      "depth": 0
+    }
+  },
+  {
+    "id": "li4",
+    "type": "list",
+    "data": {
+      "text": "done <s>task</s>",
+      "style": "checklist",
+      "checked": true,
+      "depth": 0
+    }
+  },
+  {
+    "id": "li5",
+    "type": "list",
+    "data": {
+      "text": "open <span data-latex=\"y\">y</span> task",
+      "style": "checklist",
+      "checked": false,
+      "depth": 0
+    }
+  }
+]

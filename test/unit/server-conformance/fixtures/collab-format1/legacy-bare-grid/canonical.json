@@ -1,0 +1,23 @@
+[
+  {
+    "id": "legacy",
+    "type": "table",
+    "data": {
+      "content": [
+        [
+          {
+            "text": "legacy a1"
+          },
+          {
+            "text": "legacy b1"
+          }
+        ],
+        [
+          {
+            "text": "legacy a2"
+          }
+        ]
+      ]
+    }
+  }
+]

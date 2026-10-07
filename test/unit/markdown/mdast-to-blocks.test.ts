@@ -739,9 +739,9 @@ describe('mdastToBlocks', () => {
       const blocks = await markdownToBlocks(md);
 
       expect(blocks.map(b => b.type)).toEqual(['list', 'code', 'list']);
-      expect(blocks[0].data).toMatchObject({ text: 'Install it:', style: 'ordered' });
+      expect(blocks[0].data).toMatchObject({ text: [{ text: 'Install it:' }], style: 'ordered' });
       expect(blocks[1].data).toMatchObject({ code: 'npm i thing', language: 'bash' });
-      expect(blocks[2].data).toMatchObject({ text: 'Then run it.', style: 'ordered', start: 2 });
+      expect(blocks[2].data).toMatchObject({ text: [{ text: 'Then run it.' }], style: 'ordered', start: 2 });
     });
 
     it('does not stamp start on an uninterrupted ordered list', () => {

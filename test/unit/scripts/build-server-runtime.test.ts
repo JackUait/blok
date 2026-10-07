@@ -86,6 +86,23 @@ describe('buildServerRuntime', () => {
     expect(output).toBe('{"document":{"blocks":[{"id":"A","type":"page","data":{"pageId":"P","__proto__":{"keep":"me"}},"tunes":{"__proto__":{"t":1}}}]}}');
   });
 
+  /** parse5 decodes entities through `atob`, which the bare realm lacks. */
+  it('converts HTML fields to segments in a realm with no host globals', async () => {
+    const outputPath = await buildServerRuntime(outDir);
+    const source = readFileSync(outputPath, 'utf8');
+    const sandbox: Record<string, unknown> = {};
+
+    runInContext(source, createContext(sandbox));
+
+    const invoke = sandbox.blokServerInvoke as (op: string, input: string) => Promise<string>;
+    const output = await invoke(
+      'htmlFieldsToSegments',
+      '[{"id":"a","type":"paragraph","field":"text","html":"<b>a &lt; b</b>&nbsp;c"}]'
+    );
+
+    expect(output).toBe('[{"id":"a","type":"paragraph","field":"text","segments":[{"text":"a < b","marks":{"bold":true}},{"text":"\u00a0c"}]}]');
+  });
+
   /** Own-key lookups and the unsafe-scheme strip must hold in the bare realm too. */
   it('renders page metadata from an envelope in a realm with no host globals', async () => {
     const outputPath = await buildServerRuntime(outDir);

@@ -3,7 +3,7 @@ import type { Blok } from '../../../types';
 import type { BlockToolData } from '../../../types/tools';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { OutputBlockData, OutputData } from '../../../types/data-formats/output-data';
-import type { MarkdownImportConfig } from '../../markdown/types';
+import type { InternalMarkdownImportConfig, MarkdownImportConfig } from '../../markdown/types';
 import { ToolNotFoundError } from '../errors/tool-not-found';
 import { HOST_PRESERVED_DATA } from './host-preserved-data';
 
@@ -715,7 +715,10 @@ export const createBlocksApiForEditor = (
     try {
       const { markdownToBlocks } = await import('../../markdown/index');
 
-      conversion.blocks = await markdownToBlocks(markdown, options?.config);
+      // HTML text: what insertMany hands tools, and what the editor's own save gates expect.
+      const config: InternalMarkdownImportConfig = { ...options?.config, htmlText: true };
+
+      conversion.blocks = await markdownToBlocks(markdown, config);
     } catch (error) {
       // Graceful no-op: a converter failure (chunk-load or parse error) returns
       // [] rather than surfacing an unhandled rejection to the caller. But

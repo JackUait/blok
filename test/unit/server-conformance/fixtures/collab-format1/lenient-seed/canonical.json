@@ -1,0 +1,95 @@
+[
+  {
+    "id": "l-data-array",
+    "type": "widget",
+    "data": {
+      "0": "a",
+      "1": "b"
+    }
+  },
+  {
+    "id": "l-data-string",
+    "type": "widget",
+    "data": {
+      "0": "a",
+      "1": "b",
+      "2": "c"
+    }
+  },
+  {
+    "id": "l-data-number",
+    "type": "widget",
+    "data": {}
+  },
+  {
+    "id": "l-data-boolean",
+    "type": "widget",
+    "data": {}
+  },
+  {
+    "id": "l-data-empty-array",
+    "type": "widget",
+    "data": {}
+  },
+  {
+    "id": "l-para-number",
+    "type": "paragraph",
+    "data": {
+      "text": ""
+    }
+  },
+  {
+    "id": "l-para-empty-array",
+    "type": "paragraph",
+    "data": {
+      "text": ""
+    }
+  },
+  {
+    "id": "l-tunes-array",
+    "type": "widget",
+    "data": {
+      "a": 1
+    },
+    "tunes": {
+      "0": "x"
+    }
+  },
+  {
+    "id": "l-tunes-string",
+    "type": "widget",
+    "data": {
+      "a": 1
+    },
+    "tunes": {
+      "0": "a",
+      "1": "b"
+    }
+  },
+  {
+    "id": "l-tunes-number",
+    "type": "widget",
+    "data": {
+      "a": 1
+    }
+  },
+  {
+    "id": "l-content-string",
+    "type": "widget",
+    "data": {
+      "a": 1
+    },
+    "content": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  {
+    "id": "l-content-null",
+    "type": "widget",
+    "data": {
+      "a": 1
+    }
+  }
+]

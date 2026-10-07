@@ -24,7 +24,7 @@ describe('server runtime boundary', () => {
     const output = JSON.parse(await invoke('markdownToBlocks', '{"markdown":"# Hello"}')) as unknown;
 
     expect(output).toMatchObject({
-      blocks: [{ type: 'header', data: { text: 'Hello', level: 1 } }],
+      blocks: [{ type: 'header', data: { text: [{ text: 'Hello' }], level: 1 } }],
     });
   });
 
@@ -86,11 +86,20 @@ describe('server runtime boundary', () => {
     expect(unreadable).toMatchObject({ isEmpty: true, blockCount: 1, unrecognizedBlockTypes: ['gantt'] });
   });
 
+  it('returns rich text as segments from both importers', async () => {
+    const fromHtml = JSON.parse(await invoke('htmlToBlocks', '{"html":"<p>a <b>b</b> &amp; c</p>"}')) as unknown;
+    const fromMarkdown = JSON.parse(await invoke('markdownToBlocks', '{"markdown":"a **b** & c"}')) as unknown;
+    const text = [{ text: 'a ' }, { text: 'b', marks: { bold: true } }, { text: ' & c' }];
+
+    expect(fromHtml).toMatchObject({ blocks: [{ type: 'paragraph', data: { text } }] });
+    expect(fromMarkdown).toMatchObject({ blocks: [{ type: 'paragraph', data: { text } }] });
+  });
+
   it('converts HTML into a serialized OutputData envelope with a report', async () => {
     const output = JSON.parse(await invoke('htmlToBlocks', '{"html":"<h1>Hello</h1>"}')) as unknown;
 
     expect(output).toMatchObject({
-      blocks: [{ type: 'header', data: { text: 'Hello', level: 1 } }],
+      blocks: [{ type: 'header', data: { text: [{ text: 'Hello' }], level: 1 } }],
       warnings: [],
     });
   });
@@ -703,6 +712,55 @@ describe('server runtime boundary', () => {
 
       expect(outcome).not.toBeInstanceOf(Error);
       expect(Object.keys(outcome as Record<string, unknown>)).toEqual([expect.stringMatching(/^(document|unmapped)$/)]);
+    });
+  });
+
+  describe('htmlFieldsToSegments', () => {
+    const convert = async (batch: unknown): Promise<unknown> =>
+      JSON.parse(await invoke('htmlFieldsToSegments', JSON.stringify(batch))) as unknown;
+
+    it('converts each field to canonical segments, in order, echoing its address', async () => {
+      const output = await convert([
+        { id: 'b1', type: 'paragraph', field: 'text', html: 'Hi <b>there</b>' },
+        { type: 'header', field: 'text', html: '<a href="https://x.dev">x</a>' },
+        { id: 'b3', type: 'quote', field: 'text', html: '' },
+      ]);
+
+      expect(output).toEqual([
+        { id: 'b1', type: 'paragraph', field: 'text', segments: [{ text: 'Hi ' }, { text: 'there', marks: { bold: true } }] },
+        { type: 'header', field: 'text', segments: [{ text: 'x', marks: { link: { href: 'https://x.dev' } } }] },
+        { id: 'b3', type: 'quote', field: 'text', segments: [] },
+      ]);
+    });
+
+    it('reads a null id as no id', async () => {
+      const output = await convert([{ id: null, type: 'paragraph', field: 'text', html: 'x' }]);
+
+      expect(output).toEqual([{ type: 'paragraph', field: 'text', segments: [{ text: 'x' }] }]);
+    });
+
+    it('keeps markup characters that were text as text', async () => {
+      const output = await convert([{ type: 'paragraph', field: 'text', html: 'a &lt; b &amp;&amp; "c"' }]);
+
+      expect(output).toEqual([{ type: 'paragraph', field: 'text', segments: [{ text: 'a < b && "c"' }] }]);
+    });
+
+    it('keeps markup it has no mark for as an html embed', async () => {
+      const output = await convert([{ type: 'paragraph', field: 'text', html: 'a<img src="x.png">' }]);
+
+      expect(output).toEqual([
+        { type: 'paragraph', field: 'text', segments: [{ text: 'a' }, { embed: { html: '<img src="x.png">' } }] },
+      ]);
+    });
+
+    it.each([
+      ['a non-array batch', { type: 'paragraph', field: 'text', html: '' }],
+      ['an entry with no html string', [{ type: 'paragraph', field: 'text' }]],
+      ['an entry with no type', [{ field: 'text', html: '' }]],
+      ['an entry with no field', [{ type: 'paragraph', html: '' }]],
+      ['an entry with a non-string id', [{ id: 1, type: 'paragraph', field: 'text', html: '' }]],
+    ])('refuses %s', async (_name, batch) => {
+      await expect(invoke('htmlFieldsToSegments', JSON.stringify(batch))).rejects.toThrow(/^htmlFieldsToSegments (input|entry 0) /);
     });
   });
 });

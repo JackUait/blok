@@ -67,10 +67,12 @@ internal static class JsonRenderer
       case byte[] bytes:
         return new JsonObject { ["$u8"] = Convert.ToBase64String(bytes) };
 
-      case YText text:
-        return new JsonObject { ["$text"] = RenderDelta(text) };
+      // A Y.XmlText IS a Y.Text in yjs, and the Node renderer tests for
+      // Y.Text first; only a text inside an XML element renders as XML.
+      case YText or YXmlText:
+        return new JsonObject { ["$text"] = RenderDelta((YAbstractType)value) };
 
-      case YXmlText or YXmlElement or YXmlFragment or YXmlHook:
+      case YXmlElement or YXmlFragment or YXmlHook:
         return new JsonObject { ["$xml"] = RenderXml((YAbstractType)value) };
 
       case YMap map:

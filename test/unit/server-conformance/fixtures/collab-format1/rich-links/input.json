@@ -1,0 +1,37 @@
+[
+  {
+    "id": "l-plain",
+    "type": "paragraph",
+    "data": {
+      "text": "visit <a href=\"https://example.com\">example</a> now"
+    }
+  },
+  {
+    "id": "l-target",
+    "type": "paragraph",
+    "data": {
+      "text": "<a href=\"https://example.com/a\" target=\"_blank\" rel=\"noopener noreferrer\">new tab</a>"
+    }
+  },
+  {
+    "id": "l-bold",
+    "type": "paragraph",
+    "data": {
+      "text": "<b><a href=\"https://example.com/b\">bold link</a></b> then text"
+    }
+  },
+  {
+    "id": "l-query",
+    "type": "paragraph",
+    "data": {
+      "text": "<a href=\"https://example.com/?a=1&amp;b=2\">query &amp; more</a>"
+    }
+  },
+  {
+    "id": "l-inner-mark",
+    "type": "paragraph",
+    "data": {
+      "text": "<a href=\"https://example.com/c\">a <i>styled</i> link</a>"
+    }
+  }
+]

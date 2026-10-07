@@ -1,0 +1,78 @@
+[
+  {
+    "id": "tb1",
+    "type": "table",
+    "data": {
+      "withHeadings": false,
+      "content": [
+        [
+          {
+            "blocks": [
+              "p1",
+              "p2"
+            ]
+          },
+          {
+            "blocks": []
+          }
+        ],
+        [
+          {
+            "blocks": [
+              "p3"
+            ],
+            "mergedInto": null
+          },
+          {
+            "blocks": [],
+            "mergedInto": {
+              "row": 1,
+              "col": 0
+            }
+          }
+        ]
+      ],
+      "colWidths": [
+        120,
+        240
+      ]
+    }
+  },
+  {
+    "id": "tb2",
+    "type": "widget",
+    "data": {
+      "panel": {
+        "blocks": []
+      },
+      "blocks": [
+        "top1",
+        "top2"
+      ]
+    }
+  },
+  {
+    "id": "p1",
+    "type": "paragraph",
+    "data": {
+      "text": "one"
+    },
+    "parent": "tb1"
+  },
+  {
+    "id": "p2",
+    "type": "paragraph",
+    "data": {
+      "text": "two"
+    },
+    "parent": "tb1"
+  },
+  {
+    "id": "p3",
+    "type": "paragraph",
+    "data": {
+      "text": "three"
+    },
+    "parent": "tb1"
+  }
+]

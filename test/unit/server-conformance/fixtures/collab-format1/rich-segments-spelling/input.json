@@ -1,0 +1,65 @@
+[
+  {
+    "id": "s0",
+    "type": "paragraph",
+    "data": {
+      "text": ""
+    }
+  },
+  {
+    "id": "s1",
+    "type": "paragraph",
+    "data": {
+      "text": "a &lt; b &amp;&amp; \"c\""
+    }
+  },
+  {
+    "id": "s2",
+    "type": "paragraph",
+    "data": {
+      "text": "<mark style=\"color: var(--blok-color-red-text);\">Hello </mark><strong>bold </strong><a href=\"https://x.com\"><strong>link</strong></a> x<sup>2</sup>"
+    }
+  },
+  {
+    "id": "s3",
+    "type": "paragraph",
+    "data": {
+      "text": "line<br>next<br><br>"
+    }
+  },
+  {
+    "id": "s4",
+    "type": "paragraph",
+    "data": {
+      "text": "<mark>a</mark><span data-latex=\"a^2\">a^2</span><a data-blok-page-id=\"p1\">Page</a>"
+    }
+  },
+  {
+    "id": "s5",
+    "type": "paragraph",
+    "data": {
+      "text": "<mark style=\"color: var(--blok-color-blue-text); background-color: var(--blok-color-yellow-bg);\"><i>x</i></mark>"
+    }
+  },
+  {
+    "id": "s6",
+    "type": "paragraph",
+    "data": {
+      "text": "<abbr title=\"t\">x</abbr>"
+    }
+  },
+  {
+    "id": "s7",
+    "type": "paragraph",
+    "data": {
+      "text": "a<input type=\"checkbox\" checked=\"\">b"
+    }
+  },
+  {
+    "id": "s8",
+    "type": "paragraph",
+    "data": {
+      "text": "<a href=\"https://y.com/?a=1&amp;b=2\" rel=\"noopener noreferrer\" target=\"_blank\"><i>go</i></a>"
+    }
+  }
+]

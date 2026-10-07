@@ -5,6 +5,9 @@ import type { CellPlacement } from '../tools/table/types';
 import { safeImageSrc } from '../components/utils/sanitize-url';
 import { isBareBreak, phrasingToHtml } from './phrasing-to-html';
 import type { DefinitionMap } from './phrasing-to-html';
+import { BREAK, literalTree, phrasingToTree } from './phrasing-to-tree';
+import type { InlineNode } from '../shared/rich-text/inline-tree';
+import { inlineTreeToSegments } from '../shared/rich-text/html-to-segments';
 import { normalizeFenceLang } from './fence-language';
 import { matchAlert, type AlertKind } from './alerts';
 
@@ -13,6 +16,70 @@ interface ConvertContext {
   config: MarkdownImportConfig;
   generateId: () => string;
   definitions: DefinitionMap;
+  /** Writes a rich field in the shape the caller asked for. */
+  write: (value: Rich) => unknown;
+}
+
+/**
+ * A rich field built twice, as the HTML tools store and as the tree segments
+ * are read from, so segments never need an HTML parser.
+ */
+interface Rich {
+  html: string;
+  tree: InlineNode[];
+}
+
+const EMPTY: Rich = { html: '', tree: [] };
+
+function phrasing(nodes: PhrasingContent[], definitions: DefinitionMap): Rich {
+  return { html: phrasingToHtml(nodes, definitions), tree: phrasingToTree(nodes, definitions) };
+}
+
+function literal(text: string): Rich {
+  return { html: escapeHtml(text), tree: literalTree(text) };
+}
+
+/** Lines joined by hard breaks. */
+function lines(parts: Rich[]): Rich {
+  return {
+    html: parts.map(part => part.html).join('<br>'),
+    tree: parts.flatMap((part, index) => (index === 0 ? part.tree : [BREAK, ...part.tree])),
+  };
+}
+
+/**
+ * Trims the leading text run, as `html.trim()` does: a node that emitted no
+ * HTML (an unsafe image, a footnote ref) leaves its neighbours adjacent.
+ * @param tree - nodes to trim from the front
+ */
+function trimStartRun(tree: InlineNode[]): InlineNode[] {
+  const [first, ...rest] = tree;
+
+  if (first === undefined || first.kind !== 'text') {
+    return tree;
+  }
+
+  const value = first.value.trimStart();
+
+  return value === '' ? trimStartRun(rest) : [{ ...first, value }, ...rest];
+}
+
+function trimEndRun(tree: InlineNode[]): InlineNode[] {
+  const last = tree[tree.length - 1];
+
+  if (last === undefined || last.kind !== 'text') {
+    return tree;
+  }
+
+  const value = last.value.trimEnd();
+  const rest = tree.slice(0, -1);
+
+  return value === '' ? trimEndRun(rest) : [...rest, { ...last, value }];
+}
+
+/** `html.trim()` on both forms. Escaping never turns whitespace into markup. */
+function trim(value: Rich): Rich {
+  return { html: value.html.trim(), tree: trimEndRun(trimStartRun(value.tree)) };
 }
 
 /**
@@ -57,11 +124,12 @@ function collectDefinitions(tree: Root): DefinitionMap {
 /**
  * Convert an mdast tree to an array of Blok OutputBlockData.
  */
-export function mdastToBlocks(tree: Root, config: MarkdownImportConfig = {}): OutputBlockData[] {
+export function mdastToBlocks(tree: Root, config: MarkdownImportConfig = {}, richText: 'html' | 'segments' = 'html'): OutputBlockData[] {
   const ctx: ConvertContext = {
     config,
     generateId: createIdGenerator(),
     definitions: collectDefinitions(tree),
+    write: richText === 'html' ? value => value.html : value => inlineTreeToSegments(value.tree),
   };
 
   return convertNodes(tree.children, ctx, 0);
@@ -109,7 +177,7 @@ function convertNode(
 
   // 4. Fallback: extract any text content as paragraph
   if ('value' in node && typeof node.value === 'string') {
-    return [makeParagraph(escapeHtml(node.value), ctx.generateId)];
+    return [makeParagraph(literal(node.value), ctx)];
   }
 
   return null;
@@ -145,7 +213,7 @@ function handleBuiltInNode(
   }
 
   if (node.type === 'heading') {
-    return [makeBlock('header', { text: phrasingToHtml(node.children, ctx.definitions), level: node.depth }, ctx.generateId)];
+    return [makeBlock('header', { text: ctx.write(phrasing(node.children, ctx.definitions)), level: node.depth }, ctx.generateId)];
   }
 
   if (node.type === 'thematicBreak') {
@@ -185,7 +253,7 @@ function handleBuiltInNode(
 
   if (node.type === 'html') {
     // A `<br>` alone on its line is a blank line, not markup to show.
-    return handleFallback(node, ctx, isBareBreak(node.value) ? '' : escapeHtml(node.value));
+    return handleFallback(node, ctx, isBareBreak(node.value) ? EMPTY : literal(node.value));
   }
 
   return undefined;
@@ -280,7 +348,7 @@ function handleParagraph(children: ParagraphChild[], ctx: ConvertContext): Outpu
   const hasInlineMath = children.some(c => c.type === 'inlineMath');
 
   if (!hasInlineMath) {
-    return [makeParagraph(phrasingToHtml(children as PhrasingContent[], ctx.definitions), ctx.generateId)];
+    return [makeParagraph(phrasing(children as PhrasingContent[], ctx.definitions), ctx)];
   }
 
   return splitOnInlineMath(children, ctx);
@@ -296,10 +364,10 @@ function splitOnInlineMath(children: ParagraphChild[], ctx: ConvertContext): Out
       continue;
     }
 
-    const text = phrasingToHtml(segment.nodes as PhrasingContent[], ctx.definitions).trim();
+    const text = trim(phrasing(segment.nodes as PhrasingContent[], ctx.definitions));
 
-    if (text) {
-      blocks.push(makeParagraph(text, ctx.generateId));
+    if (text.html !== '') {
+      blocks.push(makeParagraph(text, ctx));
     }
   }
 
@@ -425,9 +493,9 @@ function handleListItem(
   const paragraphChild = item.children.find(
     (c): c is Extract<typeof c, { type: 'paragraph' }> => c.type === 'paragraph',
   );
-  const text = paragraphChild ? phrasingToHtml(paragraphChild.children, ctx.definitions) : '';
+  const text = paragraphChild ? phrasing(paragraphChild.children, ctx.definitions) : EMPTY;
 
-  const data: Record<string, unknown> = { text, style, depth };
+  const data: Record<string, unknown> = { text: ctx.write(text), style, depth };
 
   if (isChecklist) {
     data.checked = item.checked;
@@ -481,17 +549,17 @@ function handleBlockquote(bq: Blockquote, ctx: ConvertContext): OutputBlockData[
   }
 
   const blocks: OutputBlockData[] = [];
-  const parts: string[] = [];
+  const parts: Rich[] = [];
   const flush = (): void => {
     if (parts.length > 0) {
-      blocks.push(makeBlock('quote', { text: parts.join('<br>'), size: 'default' }, ctx.generateId));
+      blocks.push(makeBlock('quote', { text: ctx.write(lines(parts)), size: 'default' }, ctx.generateId));
       parts.length = 0;
     }
   };
 
   for (const child of bq.children) {
     if (child.type === 'paragraph') {
-      parts.push(phrasingToHtml(child.children, ctx.definitions));
+      parts.push(phrasing(child.children, ctx.definitions));
       continue;
     }
 
@@ -501,7 +569,7 @@ function handleBlockquote(bq: Blockquote, ctx: ConvertContext): OutputBlockData[
 
   // An empty `>` still makes a quote.
   if (blocks.length === 0 && parts.length === 0) {
-    parts.push('');
+    parts.push(EMPTY);
   }
 
   flush();
@@ -517,7 +585,7 @@ function handleAlert(kind: AlertKind, children: RootContent[], ctx: ConvertConte
   const callout = makeBlock('callout', { ...ALERT_STYLE[kind], textColor: null }, ctx.generateId);
   const converted = convertNodes(children, ctx, 0);
   // A callout keeps its text in children, so an empty one still needs a paragraph.
-  const body = converted.length > 0 ? converted : [makeParagraph('', ctx.generateId)];
+  const body = converted.length > 0 ? converted : [makeParagraph(EMPTY, ctx)];
   const own = body.filter((block) => block.parent === undefined);
 
   for (const block of own) {
@@ -583,9 +651,9 @@ function processTableRow(
   const rowContent: TableCell[] = [];
 
   for (const [index, cell] of cells.entries()) {
-    const html = phrasingToHtml(cell.children, ctx.definitions);
+    const text = phrasing(cell.children, ctx.definitions);
     /** The exporter marks a blank heading row with a lone `<br>` (see `tableToMarkdown`). */
-    const cellText = html === '<br>' ? '' : html;
+    const cellText = ctx.write(text.html === '<br>' ? EMPTY : text);
     const cellBlockId = ctx.generateId();
 
     blocks.push({
@@ -606,7 +674,7 @@ function processTableRow(
 function handleFallback(
   node: RootContent,
   ctx: ConvertContext,
-  fallbackText: string,
+  fallbackText: Rich,
 ): OutputBlockData[] | null {
   // Try onUnknownNode first for unmapped block types
   if (ctx.config.onUnknownNode) {
@@ -621,11 +689,11 @@ function handleFallback(
     return result;
   }
 
-  return [makeParagraph(fallbackText, ctx.generateId)];
+  return [makeParagraph(fallbackText, ctx)];
 }
 
-function makeParagraph(text: string, generateId: () => string): OutputBlockData {
-  return makeBlock('paragraph', { text }, generateId);
+function makeParagraph(text: Rich, ctx: ConvertContext): OutputBlockData {
+  return makeBlock('paragraph', { text: ctx.write(text) }, ctx.generateId);
 }
 
 function makeBlock(type: string, data: Record<string, unknown>, generateId: () => string): OutputBlockData {

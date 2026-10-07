@@ -1,0 +1,51 @@
+[
+  {
+    "id": "m-simple",
+    "type": "paragraph",
+    "data": {
+      "text": "<b>b</b> <strong>strong</strong> <i>i</i> <em>em</em> <u>u</u> <s>s</s> <del>del</del> <code>code</code> x<sup>2</sup> H<sub>2</sub>O"
+    }
+  },
+  {
+    "id": "m-nested",
+    "type": "paragraph",
+    "data": {
+      "text": "<b>bold <i>bold italic <u>and underlined</u></i></b> plain"
+    }
+  },
+  {
+    "id": "m-highlight",
+    "type": "paragraph",
+    "data": {
+      "text": "a <mark>plain highlight</mark> b"
+    }
+  },
+  {
+    "id": "m-preset",
+    "type": "paragraph",
+    "data": {
+      "text": "<mark style=\"color: var(--blok-color-red-text);\">red</mark> and <mark style=\"background-color: var(--blok-color-yellow-bg);\">yellow bg</mark>"
+    }
+  },
+  {
+    "id": "m-both",
+    "type": "paragraph",
+    "data": {
+      "text": "<mark style=\"color: var(--blok-color-blue-text); background-color: var(--blok-color-gray-bg);\"><i>blue on gray</i></mark>"
+    }
+  },
+  {
+    "id": "m-custom",
+    "type": "paragraph",
+    "data": {
+      "text": "<mark style=\"color: #ff0000; background-color: rgb(1, 2, 3);\">custom colours</mark>"
+    }
+  },
+  {
+    "id": "m-abbr",
+    "type": "paragraph",
+    "data": {
+      "text": "see <abbr title=\"HyperText Markup Language\">HTML</abbr>"
+    }
+  }
+]

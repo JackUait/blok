@@ -1,8 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { markdownToBlocks, markdownToBlocksWithReport } from '../../../src/markdown/index';
+import { markdownToBlocks as markdownToSegmentBlocks, markdownToBlocksWithReport as markdownToSegmentBlocksWithReport } from '../../../src/markdown/index';
+import type { MarkdownImportConfig, MarkdownImportResult } from '../../../src/markdown/index';
 import type { OutputBlockData } from '../../../types';
+import { richTextAsHtml } from '../helpers/rich-text-as-html';
+
+/** Rich fields read back as HTML; markdown-to-blocks-segments.test.ts pins the segments. */
+const markdownToBlocks = async (md: string, config?: MarkdownImportConfig): Promise<OutputBlockData[]> =>
+  richTextAsHtml(await markdownToSegmentBlocks(md, config));
+
+const markdownToBlocksWithReport = async (md: string, config?: MarkdownImportConfig): Promise<MarkdownImportResult> => {
+  const result = await markdownToSegmentBlocksWithReport(md, config);
+
+  return { ...result, blocks: richTextAsHtml(result.blocks) };
+};
 
 describe('markdownToBlocks', () => {
+  it('returns paragraph text as segments', async () => {
+    const blocks = await markdownToSegmentBlocks('a **b**');
+
+    expect(blocks).toMatchObject([{ type: 'paragraph', data: { text: [{ text: 'a ' }, { text: 'b', marks: { bold: true } }] } }]);
+  });
+
   it('converts a full markdown document to blocks', async () => {
     const md = `# Hello World
 
@@ -174,12 +192,14 @@ $$e^{i\\pi} + 1 = 0$$`;
     it('resolves a reference link against its definition', async () => {
       const md = 'Read [the docs][site] today.\n\n[site]: https://example.com/docs';
 
-      const blocks = await markdownToBlocks(md);
+      const blocks = await markdownToSegmentBlocks(md);
 
       expect(blocks).toHaveLength(1);
-      expect(blocks[0].data.text).toBe(
-        'Read <a href="https://example.com/docs" target="_blank" rel="noopener noreferrer nofollow">the docs</a> today.'
-      );
+      expect(blocks[0].data.text).toEqual([
+        { text: 'Read ' },
+        { text: 'the docs', marks: { link: { href: 'https://example.com/docs', target: '_blank', rel: 'noopener noreferrer nofollow' } } },
+        { text: ' today.' },
+      ]);
     });
 
     it('resolves a definition that appears before the reference', async () => {
@@ -247,10 +267,10 @@ describe('markdownToBlocksWithReport', () => {
    * otherwise not learn its `<div>` became visible characters.
    */
   it('reports block-level HTML escaped into a paragraph', async () => {
-    const { blocks, warnings } = await markdownToBlocksWithReport('<div class="note">hi</div>');
+    const { blocks, warnings } = await markdownToSegmentBlocksWithReport('<div class="note">hi</div>');
 
     expect(blocks[0].type).toBe('paragraph');
-    expect(blocks[0].data.text).toBe('&lt;div class=&quot;note&quot;&gt;hi&lt;/div&gt;');
+    expect(blocks[0].data.text).toEqual([{ text: '<div class="note">hi</div>' }]);
     expect(warnings).toEqual([
       { construct: 'html', action: 'degraded', detail: expect.stringContaining('escaped') },
     ]);
@@ -352,10 +372,10 @@ describe('markdownToBlocks — currency is not math', () => {
 
 describe('markdownToBlocks — inline math in a table cell', () => {
   it('becomes an equation mark holding the escaped source', async () => {
-    const blocks = await markdownToBlocks('| a |\n| --- |\n| $a<b & "c"$ |');
-    const cell = blocks.find(b => b.type === 'paragraph' && b.data.text !== 'a');
+    const blocks = await markdownToSegmentBlocks('| a |\n| --- |\n| $a<b & "c"$ |');
+    const cells = blocks.filter(b => b.type === 'paragraph');
 
-    expect(cell?.data.text).toBe('<span data-latex="a&lt;b &amp; &quot;c&quot;">a&lt;b &amp; &quot;c&quot;</span>');
+    expect(cells[1]?.data.text).toEqual([{ embed: { equation: { expression: 'a<b & "c"' } } }]);
   });
 
   it('is not reported as degraded', async () => {

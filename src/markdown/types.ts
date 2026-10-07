@@ -18,4 +18,9 @@ export interface InternalMarkdownImportConfig extends MarkdownImportConfig {
    * path sets it: a pasted line break is one the user can see.
    */
   softBreaks?: boolean;
+  /**
+   * Keep rich fields as the HTML strings tools store. The editor's own callers
+   * set it; the public importer returns segments.
+   */
+  htmlText?: boolean;
 }

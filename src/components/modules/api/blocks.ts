@@ -5,7 +5,7 @@ import type { DerivedSource } from '../blockManager/types';
 import type { BlockToolAdapter } from '../../tools/block';
 import type { InsertInsideParentWithCurrentOptions } from '../blockManager/block-insertion';
 import { blocksToMarkdown } from '../../../markdown/blocks-to-markdown';
-import type { MarkdownImportConfig } from '../../../markdown/types';
+import type { InternalMarkdownImportConfig, MarkdownImportConfig } from '../../../markdown/types';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { Module } from '../../__module';
 import { Block } from '../../block';
@@ -419,7 +419,9 @@ export class BlocksAPI extends Module {
     this.refuseWholesaleReplace('importMarkdown');
 
     const { markdownToBlocks } = await import('../../../markdown/index');
-    const blocks = await markdownToBlocks(md, options);
+    // HTML in, so the Saver's own format gates below decide what the host gets.
+    const config: InternalMarkdownImportConfig = { ...options, htmlText: true };
+    const blocks = await markdownToBlocks(md, config);
     const data: OutputData = { blocks };
 
     await this.replaceDocument(data, { keepId: true });

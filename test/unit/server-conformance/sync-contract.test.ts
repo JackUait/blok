@@ -530,7 +530,7 @@ it('accepts a compatible ticket offered as a subprotocol and announces the epoch
     );
 
     expect(client.controlFrames).toEqual([
-      { epoch: expect.any(Number), format: 1, lineage: expect.stringMatching(/^[0-9a-f]{32}$/) },
+      { epoch: expect.any(Number), format: 2, lineage: expect.stringMatching(/^[0-9a-f]{32}$/) },
     ]);
     expect(client.provider.ws?.protocol).toBe(SYNC_PROTOCOL);
     expect(client.closeCodes).toEqual([]);
@@ -734,7 +734,7 @@ it('resets a document: 204, open sockets close 4409, the next join sees epoch + 
     // which is the only thing a client holding cached updates can act on.
     expect(bob.controlFrames[0]).toEqual({
       epoch: epoch + 1,
-      format: 1,
+      format: 2,
       lineage: expect.stringMatching(/^[0-9a-f]{32}$/),
     });
     expect(bob.controlFrames[0].lineage).not.toBe(lineage);

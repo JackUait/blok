@@ -130,6 +130,15 @@ be at least 1; `epoch` MUST be at least 0; `lineage` MUST match
 `^[0-9a-f]{32}$`. `lineage` is the value every v2 metadata section carries, so a
 server cannot serve v2 without sending this frame.
 
+The current `format` is 2: rich text is a formatted Y.XmlText, not an HTML
+string. A client ends the session with `unsupported-format` when the frame
+names any other format.
+
+A server that migrates a room from format 1 MUST mint a new `lineage` and
+announce `epoch + 1`. A client then quarantines its old outbox rows instead of
+replaying them. A row written by a format-1 client is quarantined with the
+reason `stale-format`, so its bytes never reach a format-2 room.
+
 **Type 101 — Blok limits** (server → client)
 
 ```text

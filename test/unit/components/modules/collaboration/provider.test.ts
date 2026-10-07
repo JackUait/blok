@@ -27,7 +27,7 @@ const LINEAGE_B = 'fedcba9876543210fedcba9876543210';
 /** A control frame with the announceable defaults; override one field per test. */
 const controlFrame = (over: Partial<{ format: number; epoch: number; lineage: string }> = {}): SyncWireFrame => ({
   type: 'control',
-  tag: { format: 1, epoch: 0, lineage: LINEAGE_A, ...over },
+  tag: { format: 2, epoch: 0, lineage: LINEAGE_A, ...over },
 });
 
 /**
@@ -599,7 +599,7 @@ describe('createCollabProvider', () => {
 
       harness.socket().deliver(controlFrame());
 
-      expect(harness.provider.tag).toEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+      expect(harness.provider.tag).toEqual({ format: 2, epoch: 0, lineage: LINEAGE_A });
     });
 
     // `activity` is client→server only, dropped unconditionally. `identities`
@@ -628,7 +628,7 @@ describe('createCollabProvider', () => {
 
       harness.socket().deliver(controlFrame());
 
-      expect(harness.provider.tag).toEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+      expect(harness.provider.tag).toEqual({ format: 2, epoch: 0, lineage: LINEAGE_A });
     });
 
     it('reads frames delivered as an ArrayBuffer', () => {
@@ -638,7 +638,7 @@ describe('createCollabProvider', () => {
       harness.socket().open();
       harness.socket().deliver(controlFrame(), true);
 
-      expect(harness.provider.tag).toEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+      expect(harness.provider.tag).toEqual({ format: 2, epoch: 0, lineage: LINEAGE_A });
     });
   });
 
@@ -648,7 +648,7 @@ describe('createCollabProvider', () => {
 
       connectAndHandshake(harness);
 
-      expect(harness.provider.tag).toEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+      expect(harness.provider.tag).toEqual({ format: 2, epoch: 0, lineage: LINEAGE_A });
     });
 
     it('is terminal on an unknown format and does not reconnect', () => {
@@ -656,7 +656,7 @@ describe('createCollabProvider', () => {
 
       harness.provider.connect();
       harness.socket().open();
-      harness.socket().deliver(controlFrame({ format: 2 }));
+      harness.socket().deliver(controlFrame({ format: 1 }));
 
       expect(harness.statuses.at(-1)).toEqual({
         status: 'error',
@@ -824,7 +824,7 @@ describe('createCollabProvider', () => {
       third.deliver(controlFrame({ lineage: LINEAGE_B, epoch: 1 }));
 
       expect(resets).toHaveLength(1);
-      expect(harness.provider.tag).toEqual({ format: 1, epoch: 1, lineage: LINEAGE_B });
+      expect(harness.provider.tag).toEqual({ format: 2, epoch: 1, lineage: LINEAGE_B });
       expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
     });
 
@@ -836,7 +836,7 @@ describe('createCollabProvider', () => {
       harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'once' } });
 
       expect(socket.frameTypes.filter((type) => type === 'update')).toHaveLength(1);
-      expect(harness.provider.tag).toEqual({ format: 1, epoch: 1, lineage: LINEAGE_A });
+      expect(harness.provider.tag).toEqual({ format: 2, epoch: 1, lineage: LINEAGE_A });
     });
 
     it('accepts a later control frame that repeats the same lineage', () => {
@@ -2390,6 +2390,7 @@ describe('createCollabProvider', () => {
     interface OutboxRow {
       operationId: string;
       lineage: string;
+      format: number;
       bytes: Uint8Array;
     }
 
@@ -2440,7 +2441,7 @@ describe('createCollabProvider', () => {
 
       /** Puts a row in without going through the provider. */
       public seed(bytes: Uint8Array): OutboxRow {
-        const row = { operationId: this.mintId(), lineage: this.lineage ?? LINEAGE_A, bytes };
+        const row = { operationId: this.mintId(), lineage: this.lineage ?? LINEAGE_A, format: 2, bytes };
 
         this.rows.push(row);
 
@@ -2466,7 +2467,7 @@ describe('createCollabProvider', () => {
 
           this.appended.push(update);
 
-          const row = { operationId: this.mintId(), lineage, bytes: update };
+          const row = { operationId: this.mintId(), lineage, format: 2, bytes: update };
 
           this.rows.push(row);
 

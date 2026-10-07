@@ -196,7 +196,7 @@ class Room {
     member.outbound.push({
       type: 'control',
       tag: {
-        format: 1,
+        format: 2,
         epoch: this.epoch,
         lineage: this.lineage,
       },

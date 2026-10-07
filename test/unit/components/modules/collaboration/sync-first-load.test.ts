@@ -118,7 +118,7 @@ class PlainTool {
 /** A control frame the client accepts: our format, a stable lineage. */
 const controlFrame = (): SyncWireFrame => ({
   type: 'control',
-  tag: { format: 1, epoch: 0, lineage: LINEAGE },
+  tag: { format: 2, epoch: 0, lineage: LINEAGE },
 });
 
 /** Mock transport — the same shape provider.test.ts drives. */
@@ -973,7 +973,7 @@ describe('collaboration — sync-first load', () => {
       const seed = createOperationStore(storeOptions());
 
       await seed.open();
-      await seed.recordSession({ format: 1, epoch: 0, lineage: LINEAGE }, true, 'v1', snapshot.encodeStateAsUpdate());
+      await seed.recordSession({ format: 2, epoch: 0, lineage: LINEAGE }, true, 'v1', snapshot.encodeStateAsUpdate());
       await seed.close();
       snapshot.destroy();
 
@@ -1127,7 +1127,7 @@ describe('collaboration — sync-first load', () => {
 
       await seed.open();
       await seed.recordSession(
-        { format: 1, epoch: 0, lineage: LINEAGE },
+        { format: 2, epoch: 0, lineage: LINEAGE },
         false,
         'v1',
         new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff])
@@ -1816,7 +1816,7 @@ describe('collaboration — sync-first load', () => {
 
       harness.socket().deliver({
         type: 'control',
-        tag: { format: 1, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
+        tag: { format: 2, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
       });
 
       await waitFor(async () => (await storeCounts()).quarantined > 0, 'the quarantine', 5000);
@@ -2002,7 +2002,7 @@ describe('collaboration — sync-first load', () => {
 
       harness.socket().deliver({
         type: 'control',
-        tag: { format: 1, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
+        tag: { format: 2, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
       });
       await waitFor(() => harness.sockets.length === 2, 'the reconnect', 8000);
 
@@ -2078,7 +2078,7 @@ describe('collaboration — sync-first load', () => {
       // are quarantined, so by the next connection nothing is waiting.
       reloaded.socket().deliver({
         type: 'control',
-        tag: { format: 1, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
+        tag: { format: 2, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
       });
       await waitFor(() => reloaded.sockets.length === 2, 'the reconnect', 8000);
       await waitFor(async () => (await readStore()).pending === null, 'the quarantine', 5000);
@@ -3144,7 +3144,7 @@ describe('collaboration — sync-first load', () => {
       // move to quarantine and the session reconnects into the new room.
       socket.deliver({
         type: 'control',
-        tag: { format: 1, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
+        tag: { format: 2, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
       });
 
       await waitFor(() => harness.sockets.length === 2, 'the reconnect', 8000);
@@ -3247,7 +3247,7 @@ describe('collaboration — sync-first load', () => {
 
       await otherTab.open();
       await otherTab.recordSession(
-        { format: 1, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
+        { format: 2, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
         false,
         'v2'
       );
@@ -3265,6 +3265,79 @@ describe('collaboration — sync-first load', () => {
       expect(
         quarantined?.save?.reason,
         'a row dropped for belonging to an old lineage was published as a server rejection'
+      ).toBeUndefined();
+      expect(quarantined?.save?.quarantinedOperations).toBe(1);
+    }, 30_000);
+
+    /**
+     * A format-1 build wrote this row: no `format` field, and a lineage the
+     * server dropped when it migrated the room to format 2. Nothing was refused.
+     */
+    it('a format-1 row is quarantined as stale-format, never sent, and not reported as a rejection', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const { harness, seen } = await watched({ offline: true });
+
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+      await settle(seen);
+
+      const options = storeOptions();
+      const dbName = `${CACHE_DB_PREFIX}${operationStore.escapePartitionSegment(options.url)}|${options.doc}|${options.offlineScope ?? ''}`;
+      const formatOneBytes = new Uint8Array([9, 9, 9]);
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(dbName);
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction('outbox', 'readwrite');
+
+        transaction.objectStore('outbox').add({
+          operationId: 'f'.repeat(32),
+          lineage: 'fedcba9876543210fedcba9876543210',
+          bytes: formatOneBytes,
+          createdAt: 1,
+        });
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      });
+
+      // Wakes this tab's drain.
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed beside the format-1 row');
+
+      // No catch: both must happen. The typed edit on the wire proves the drain
+      // got past the format-1 row, so "never sent" cannot pass on an idle drain.
+      await waitFor(() => states(seen).includes('quarantined'), 'the format quarantine', 5000);
+      await waitFor(() => operationOn(socket) !== undefined, 'the typed edit on the wire', 5000);
+
+      const quarantineRows = await new Promise<unknown[]>((resolve, reject) => {
+        const request = db.transaction('quarantine', 'readonly').objectStore('quarantine').getAll();
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+
+      db.close();
+
+      const quarantined = seen.filter((payload) => payload.save?.state === 'quarantined').at(-1);
+      const sent = socket.sent
+        .map((bytes) => decode(bytes))
+        .filter((frame): frame is Extract<SyncWireFrame, { type: 'operation' }> => frame.type === 'operation');
+
+      expect(
+        sent.some((frame) => frame.operationId === 'f'.repeat(32)),
+        'a format-1 row was replayed into a format-2 room'
+      ).toBe(false);
+      expect(quarantineRows.map((row) => (row as { reason?: unknown }).reason))
+        .toEqual(['stale-format', 'stale-format']);
+      expect(
+        quarantined?.save?.reason,
+        'a row dropped for its format was published as a server rejection'
       ).toBeUndefined();
       expect(quarantined?.save?.quarantinedOperations).toBe(1);
     }, 30_000);

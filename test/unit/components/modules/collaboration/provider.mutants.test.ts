@@ -124,7 +124,7 @@ class MockSocket implements WebSocketLike {
   }
 }
 
-const controlFrame = (lineage = LINEAGE_A, format = 1): SyncWireFrame => ({
+const controlFrame = (lineage = LINEAGE_A, format = 2): SyncWireFrame => ({
   type: 'control',
   tag: { format, epoch: 0, lineage },
 });
@@ -150,7 +150,7 @@ class FakeOutbox implements CollabOutbox {
   }
 
   public static pending(lineage = LINEAGE_A, operationId = OP_A): CollabOutboxRow {
-    return { operationId, lineage, bytes: new Uint8Array([1, 2, 3]) };
+    return { operationId, lineage, format: 2, bytes: new Uint8Array([1, 2, 3]) };
   }
 
   public async appendLocal(update: Uint8Array): Promise<CollabOutboxRow> {
@@ -158,7 +158,7 @@ class FakeOutbox implements CollabOutbox {
       throw new Error('append failed');
     }
 
-    const row: CollabOutboxRow = { operationId: `${OP_A.slice(0, 31)}${this.rows.length}`, lineage: LINEAGE_A, bytes: update };
+    const row: CollabOutboxRow = { operationId: `${OP_A.slice(0, 31)}${this.rows.length}`, lineage: LINEAGE_A, format: 2, bytes: update };
 
     this.rows.push(row);
 
@@ -589,7 +589,7 @@ describe('createCollabProvider (mutation hardening)', () => {
 
       socket.deliverRaw(new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength));
 
-      expect(harness.provider.tag).toStrictEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+      expect(harness.provider.tag).toStrictEqual({ format: 2, epoch: 0, lineage: LINEAGE_A });
     });
 
     it('normalizes an ArrayBuffer into its bytes', () => {
@@ -605,7 +605,7 @@ describe('createCollabProvider (mutation hardening)', () => {
 
       socket.deliverRaw(bytes.buffer.slice(0));
 
-      expect(harness.provider.tag).toStrictEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+      expect(harness.provider.tag).toStrictEqual({ format: 2, epoch: 0, lineage: LINEAGE_A });
     });
   });
 
@@ -1114,11 +1114,27 @@ describe('createCollabProvider (mutation hardening)', () => {
       });
     });
 
+    it('refuses a format-1 room, which still stores rich text as HTML', () => {
+      const harness = createHarness();
+
+      harness.provider.connect();
+
+      const socket = harness.socket();
+
+      socket.open();
+      socket.deliver(controlFrame(LINEAGE_A, 1));
+
+      expect(harness.statuses.at(-1)).toStrictEqual({
+        status: 'error',
+        detail: { error: 'unsupported-format', reason: `${DOC_ID} is stored in format 1` },
+      });
+    });
+
     it('adopts the lineage of the first control frame', () => {
       const harness = createHarness();
       const socket = ready(harness);
 
-      expect(harness.provider.tag).toStrictEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+      expect(harness.provider.tag).toStrictEqual({ format: 2, epoch: 0, lineage: LINEAGE_A });
       expect(harness.provider.protocol).toBe('v1');
       expect(harness.provider.status).toBe('connecting');
       expect(socket.count('syncStep1')).toBe(1);
@@ -1149,7 +1165,7 @@ describe('createCollabProvider (mutation hardening)', () => {
 
       expect(socket.count('update')).toBe(1);
 
-      socket.deliver(controlFrame(LINEAGE_A, 1));
+      socket.deliver(controlFrame(LINEAGE_A));
       harness.store.applyRemoteUpdate(peerUpdate(), { from: 'local-2' });
 
       expect(socket.count('update')).toBe(2);
@@ -1168,7 +1184,7 @@ describe('createCollabProvider (mutation hardening)', () => {
       socket.deliver(controlFrame());
       harness.store.applyRemoteUpdate(peerUpdate(), { from: 'local' });
 
-      expect(harness.provider.tag).toStrictEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+      expect(harness.provider.tag).toStrictEqual({ format: 2, epoch: 0, lineage: LINEAGE_A });
       expect(socket.count('update')).toBe(1);
     });
 
@@ -1235,7 +1251,7 @@ describe('createCollabProvider (mutation hardening)', () => {
       socket.deliverRaw(null);
 
       expect(harness.statuses).toHaveLength(before);
-      expect(harness.provider.tag).toStrictEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+      expect(harness.provider.tag).toStrictEqual({ format: 2, epoch: 0, lineage: LINEAGE_A });
     });
 
     it('does not let unknown or malformed frames fill the pre-control buffer', () => {
@@ -1254,7 +1270,7 @@ describe('createCollabProvider (mutation hardening)', () => {
 
       socket.deliver(controlFrame());
 
-      expect(harness.provider.tag).toStrictEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+      expect(harness.provider.tag).toStrictEqual({ format: 2, epoch: 0, lineage: LINEAGE_A });
       expect(harness.statuses).toHaveLength(1);
     });
 
@@ -1630,6 +1646,32 @@ describe('createCollabProvider (mutation hardening)', () => {
       expect(outbox.quarantined[0].reason).toBe('stale-lineage');
       expect(socket.count('operation')).toBe(0);
       expect(harness.provider.status).toBe('connected');
+    });
+
+    it('quarantines a format-1 row of this very lineage instead of sending it', async () => {
+      const outbox = new FakeOutbox([{ ...FakeOutbox.pending(), format: 1 }]);
+      const harness = createHarness({ outbox });
+      const socket = ready(harness, PROTOCOL_V2);
+
+      completeSync(harness, socket);
+      await flushMicrotasks();
+
+      expect(socket.count('operation'), 'format-1 bytes went into a format-2 room').toBe(0);
+      expect(outbox.quarantined.map((entry) => [entry.lineage, entry.reason]))
+        .toStrictEqual([[LINEAGE_A, 'stale-format']]);
+    });
+
+    it('names the format, not the lineage, when a format-1 row of an older lineage is quarantined', async () => {
+      const outbox = new FakeOutbox([{ ...FakeOutbox.pending(LINEAGE_B, OP_B), format: 1 }, FakeOutbox.pending()]);
+      const harness = createHarness({ outbox });
+      const socket = ready(harness, PROTOCOL_V2);
+
+      completeSync(harness, socket);
+      await flushMicrotasks();
+
+      expect(outbox.quarantined.map((entry) => [entry.lineage, entry.reason]))
+        .toStrictEqual([[LINEAGE_B, 'stale-format']]);
+      expect(socket.count('operation')).toBe(1);
     });
 
     it('re-wakes the drain once a stale row is quarantined away', async () => {

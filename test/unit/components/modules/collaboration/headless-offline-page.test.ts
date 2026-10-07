@@ -17,8 +17,8 @@ const SYNC_URL = 'wss://sync.test/api/sync/child';
 const DOC = 'child';
 const SCOPE = 'account-a';
 type ReadyEditor = Blok & Pick<API, 'blocks' | 'readOnly'>;
-const TAG: WorkingSetTag = { format: 1, epoch: 0, lineage: '0123456789abcdef0123456789abcdef' };
-const NEW_TAG: WorkingSetTag = { format: 1, epoch: 1, lineage: 'fedcba9876543210fedcba9876543210' };
+const TAG: WorkingSetTag = { format: 2, epoch: 0, lineage: '0123456789abcdef0123456789abcdef' };
+const NEW_TAG: WorkingSetTag = { format: 2, epoch: 1, lineage: 'fedcba9876543210fedcba9876543210' };
 
 class ScriptedSocket implements WebSocketLike {
   public binaryType = 'blob';

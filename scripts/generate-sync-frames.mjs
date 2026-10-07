@@ -119,7 +119,7 @@ const AWARENESS_STATE = { user: { name: 'Ada', color: '#ff0000' }, blockId: 'blo
 const PERMISSION_DENIED_REASON = 'permission denied: read-only ticket';
 // The lineage is 16 random bytes at runtime; the fixture pins one value so
 // regenerating the file does not churn the bytes.
-const CONTROL = { epoch: 7, format: 1, lineage: '5f3a9c1e7b04d28a6cf1e0937b52d84a' };
+const CONTROL = { epoch: 7, format: 2, lineage: '5f3a9c1e7b04d28a6cf1e0937b52d84a' };
 // The server default (BlokServerOptions.CollabMaxMessageBytes = 1 MiB).
 const LIMITS = { maxMessageBytes: 1048576 };
 // 128 CSPRNG bits at runtime; pinned here so regenerating does not churn bytes.

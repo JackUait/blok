@@ -1,5 +1,8 @@
-/** Bump when the message envelope changes: tabs on different versions must not merge. */
-export const TAB_SYNC_PROTOCOL = 1;
+/**
+ * Bump when the message envelope or the Yjs document format changes: tabs on
+ * different versions must not merge. 2 = rich text as formatted Y.XmlText.
+ */
+export const TAB_SYNC_PROTOCOL = 2;
 
 export type IdSource = 'host' | 'persistence' | 'minted' | 'data';
 

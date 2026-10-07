@@ -84,6 +84,8 @@ export interface CollabOutboxRow {
   operationId: string;
   /** The lineage the row was stamped with when it was journalled. */
   lineage: string;
+  /** The CRDT format the bytes were written in; a row without one is format 1. */
+  format: number;
   /** The raw Yjs update the operation carries. At least one byte. */
   bytes: Uint8Array;
 }

@@ -23,7 +23,7 @@ const DB_A = 'blok-ops-wss://first.test/sync|same-id|user-a';
 const DB_A_SECOND = 'blok-ops-wss://second.test/sync|other-id|user-a';
 
 const tagWith = (lineage: string): WorkingSetTag => ({
-  format: 1,
+  format: 2,
   epoch: 0,
   lineage,
 });
@@ -174,6 +174,19 @@ describe('collaboration — offline scope', () => {
     expect((await inspectOfflineScope(SCOPE_A)).partitions[0]).toMatchObject({
       updates: { count: 1, bytes: 2 },
       mayHaveUnsentV1Edits: true,
+    });
+  });
+
+  it('does not flag a format-1 v2 session an older build left behind', async () => {
+    const store = await storeWith(URL_A, 'same-id', SCOPE_A);
+
+    await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+    await store.appendCached(new Uint8Array([1, 2]));
+    await closeStores();
+    await replaceMeta(DB_A, { format: 1, protocol: 'v2', lineage: LINEAGE_A });
+
+    expect((await inspectOfflineScope(SCOPE_A)).partitions[0]).toMatchObject({
+      mayHaveUnsentV1Edits: false,
     });
   });
 

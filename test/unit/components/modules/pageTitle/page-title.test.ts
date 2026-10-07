@@ -1,0 +1,174 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { Core } from '../../../../../src/components/core';
+import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
+import { Paragraph } from '../../../../../src/tools/paragraph';
+import type { BlokConfig } from '../../../../../types';
+
+describe('PageTitle module', () => {
+  let holder: HTMLDivElement;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    holder.remove();
+    vi.restoreAllMocks();
+  });
+
+  const boot = async (config: Partial<BlokConfig>): Promise<Core> => {
+    const core = new Core({ holder, tools: { paragraph: { class: Paragraph } }, data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] }, ...config });
+
+    await core.isReady;
+
+    return core;
+  };
+  const titleIn = (root: ParentNode): HTMLElement | null => root.querySelector(`[${DATA_ATTR.pageTitle}]`);
+
+  it('draws nothing without the title config', async () => {
+    await boot({});
+    expect(titleIn(holder)).toBeNull();
+  });
+
+  it('draws the header inside the editor, before the blocks', async () => {
+    await boot({ pageTitle: true });
+    const header = holder.querySelector(`[${DATA_ATTR.pageHeader}]`);
+    const redactor = holder.querySelector(`[${DATA_ATTR.redactor}]`);
+
+    expect(header?.nextElementSibling).toBe(redactor);
+  });
+
+  it('draws into an outside holder given by selector', async () => {
+    const outside = document.createElement('section');
+
+    outside.id = 'page-title';
+    document.body.appendChild(outside);
+    await boot({ pageTitle: { holder: '#page-title' } });
+
+    expect(titleIn(outside)).not.toBeNull();
+    expect(titleIn(holder)).toBeNull();
+    outside.remove();
+  });
+
+  it('falls back to inside the editor when the holder selector matches nothing', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await boot({ pageTitle: { holder: '#missing' } });
+
+    expect(titleIn(holder)).not.toBeNull();
+    expect(error).toHaveBeenCalled();
+  });
+
+  it('shows the loaded title and the i18n placeholder', async () => {
+    await boot({ pageTitle: true, data: { title: 'Plans', blocks: [] } });
+    const title = titleIn(holder);
+
+    expect(title?.textContent).toBe('Plans');
+    expect(title?.getAttribute('data-placeholder')).toBe('New page');
+    expect(title?.getAttribute('role')).toBe('textbox');
+    expect(title?.getAttribute('aria-label')).toBe('Page title');
+  });
+
+  it('shows the title of a persisted load', async () => {
+    // Given data skips the persisted load.
+    await boot({
+      pageTitle: true,
+      data: undefined,
+      persistence: { load: async () => ({ title: 'Saved', blocks: [] }), save: async () => {} },
+    });
+
+    expect(titleIn(holder)?.textContent).toBe('Saved');
+  });
+
+  it('typing writes the document and fires onChange with source user', async () => {
+    const onChange = vi.fn();
+    const core = await boot({ pageTitle: { onChange } });
+    const title = titleIn(holder);
+
+    if (title === null) {
+      throw new Error('no title');
+    }
+    title.textContent = 'Plans';
+    title.dispatchEvent(new InputEvent('input', { bubbles: true }));
+
+    expect(core.moduleInstances.YjsManager.getPageFields().title).toBe('Plans');
+    expect(onChange).toHaveBeenCalledWith('Plans', { source: 'user' });
+  });
+
+  it('turns newlines into spaces and leaves no stray br when emptied', async () => {
+    await boot({ pageTitle: true });
+    const title = titleIn(holder);
+
+    if (title === null) {
+      throw new Error('no title');
+    }
+    title.textContent = 'a\nb';
+    title.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    expect(title.textContent).toBe('a b');
+
+    title.innerHTML = '<br>';
+    title.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    expect(title.childNodes.length).toBe(0);
+  });
+
+  it('undo restores the text and fires onChange with source undo', async () => {
+    const onChange = vi.fn();
+    const core = await boot({ pageTitle: { onChange } });
+
+    core.moduleInstances.PageTitle.setText('Plans', 'api');
+    core.moduleInstances.YjsManager.stopCapturing();
+    core.moduleInstances.YjsManager.undo();
+
+    expect(titleIn(holder)?.textContent).toBe('');
+    expect(onChange).toHaveBeenLastCalledWith('', { source: 'undo' });
+  });
+
+  it('read-only makes the title not editable, and back', async () => {
+    const core = await boot({ pageTitle: true, readOnly: true });
+
+    expect(titleIn(holder)?.getAttribute('contenteditable')).toBe('false');
+    await core.moduleInstances.ReadOnly.toggle(false);
+    expect(titleIn(holder)?.getAttribute('contenteditable')).toBe('true');
+  });
+
+  it('carries data-blok-interface so tokens and theme reach an outside holder', async () => {
+    await boot({ pageTitle: true });
+    expect(holder.querySelector(`[${DATA_ATTR.pageHeader}]`)?.getAttribute(DATA_ATTR.interface)).toBe('blok');
+  });
+
+  it('destroy empties an outside holder', async () => {
+    const outside = document.createElement('div');
+
+    document.body.appendChild(outside);
+    const core = await boot({ pageTitle: { holder: outside } });
+
+    core.moduleInstances.PageTitle.destroy();
+
+    expect(outside.childElementCount).toBe(0);
+    outside.remove();
+  });
+
+  it('render() with a new title redraws the header', async () => {
+    const blocks = [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }];
+    const core = await boot({ pageTitle: true, data: { title: 'Old', blocks } });
+
+    await core.moduleInstances.API.methods.blocks.render({ title: 'New', blocks });
+
+    expect(titleIn(holder)?.textContent).toBe('New');
+  });
+
+  it('mount() moves the same element', async () => {
+    const core = await boot({ pageTitle: true });
+    const before = titleIn(holder);
+    const target = document.createElement('div');
+
+    document.body.appendChild(target);
+    core.moduleInstances.PageTitle.mount(target);
+
+    expect(titleIn(target)).toBe(before);
+    target.remove();
+  });
+});

@@ -447,6 +447,7 @@ export class Core {
       'ThemeManager',
       'Find',
       'PageReferences',
+      'PageTitle',
     ];
 
     await modulesToPrepare.reduce(
@@ -509,6 +510,7 @@ export class Core {
     }
 
     this.moduleInstances.YjsManager.loadPage({ title: data.title ?? undefined, icon: data.icon ?? undefined });
+    this.moduleInstances.PageTitle?.refresh();
 
     // Idempotent re-normalization: `config.data` is declared with the loose
     // wire type, but prepare() already normalized it — this narrows the type
@@ -528,6 +530,7 @@ export class Core {
       // Before the blocks check: a title-only page saves with no blocks.
       if (loaded !== null) {
         this.moduleInstances.YjsManager.loadPage({ title: loaded.title ?? undefined, icon: loaded.icon ?? undefined });
+        this.moduleInstances.PageTitle?.refresh();
       }
 
       if (blocks !== undefined && blocks.length > 0) {

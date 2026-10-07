@@ -34,6 +34,7 @@ import { I18n } from './i18n';
 import { ModificationsObserver } from './modificationsObserver';
 import { Paste } from './paste';
 import { PageReferences } from './pageReferences';
+import { PageTitle } from './pageTitle';
 import { ReadOnly } from './readonly';
 import { RectangleSelection } from './rectangleSelection';
 import { Renderer } from './renderer';
@@ -106,6 +107,7 @@ export const Modules = {
   Saver,
   Tools,
   UI,
+  PageTitle,
   ThemeManager,
   UserDirectory,
 

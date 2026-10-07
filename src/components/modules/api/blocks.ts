@@ -359,6 +359,7 @@ export class BlocksAPI extends Module {
     // loadPage flushes the typing buffer, and an echo render can land mid-typing.
     if (page.title !== current.title || JSON.stringify(page.icon) !== JSON.stringify(current.icon)) {
       this.Blok.YjsManager.loadPage(page);
+      this.Blok.PageTitle?.refresh();
     }
 
     if (currentContent !== undefined && this.isEchoOf(currentContent, data)) {

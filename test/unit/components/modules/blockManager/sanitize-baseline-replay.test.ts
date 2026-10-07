@@ -228,8 +228,13 @@ describe('the replay baseline under a sanitizer that normalises', () => {
     };
 
     pushPeerEdit('x & y');
+
+    const clocksBefore = Y.decodeStateVector(yjsManager.getStateVector());
+
     await settle();
 
+    // The defect assertion first: no write at all from this client.
+    expect(Y.decodeStateVector(yjsManager.getStateVector())).toEqual(clocksBefore);
     expect(domText).toBe('x &amp; y');
     // Both spellings are the same segments, so the doc reads canonical HTML.
     expect(docText()).toBe('x &amp; y');

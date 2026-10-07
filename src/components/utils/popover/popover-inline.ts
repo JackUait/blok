@@ -19,6 +19,14 @@ import type { PopoverParams } from '@/types/utils/popover/popover';
  */
 export class PopoverInline extends PopoverDesktop {
   /**
+   * The bar shows on every text selection, so locking would block scrolling
+   * while reading. Its dropdowns are plain desktop popovers and still lock.
+   */
+  protected override get locksPageScroll(): boolean {
+    return false;
+  }
+
+  /**
    * Returns true if a nested popover is currently open
    */
   public get hasNestedPopoverOpen(): boolean {

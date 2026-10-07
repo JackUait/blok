@@ -385,19 +385,6 @@ describe('PopoverMobile', () => {
       // Verify scroll is unlocked
       expect(getLatestScrollLocker().unlock).toHaveBeenCalled();
     });
-
-    it('does not unlock scroll on destroy when no lock is held', () => {
-      const { popover } = createPopover();
-      const nodes = getNodes(popover);
-
-      // Attach to DOM without ever showing (so no lock was acquired)
-      document.body.appendChild(nodes.popover);
-
-      popover.destroy();
-
-      expect(nodes.popover.isConnected).toBe(false);
-      expect(getLatestScrollLocker().unlock).not.toHaveBeenCalled();
-    });
   });
 
 

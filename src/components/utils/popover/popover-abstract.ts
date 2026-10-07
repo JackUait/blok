@@ -13,6 +13,7 @@ import { searchPreviewSvg } from '../media-preview-art';
 import { leanPreview } from '../media-preview-3d';
 import type { SearchInput } from './components/search-input';
 import { PopoverRegistry } from './popover-registry';
+import { ScrollLocker } from '../scroll-locker';
 import { css, REEL_DISTORTION } from './popover.const';
 
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
@@ -47,6 +48,19 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * The strip is chrome that filters the menu, not an entry of it.
    */
   private tabs: HTMLElement | null = null;
+
+  /**
+   * Holds the page scroll lock while this menu is open. The count is shared,
+   * so nested menus and menu-to-menu handoffs keep the page locked.
+   */
+  private readonly scrollLocker = new ScrollLocker();
+
+  /**
+   * Whether an open popover locks page scroll
+   */
+  protected get locksPageScroll(): boolean {
+    return true;
+  }
 
   /**
    * List of default popover items that are searchable and may have confirmation state
@@ -250,6 +264,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.updateScrollbar();
     requestAnimationFrame(() => this.updateScrollbar());
 
+    // Lock before register(): it hides the sibling menu, and that unlock must
+    // not drop the shared count to zero mid-handoff.
+    if (this.locksPageScroll) {
+      this.scrollLocker.lock();
+    }
+
     const { trigger } = this.params;
     const isRootWithTrigger = (this.params.nestingLevel ?? 0) === 0 && trigger !== undefined;
 
@@ -299,6 +319,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     this.onHide();
+
+    this.scrollLocker.unlock();
 
     PopoverRegistry.instance.unregister(this);
 
@@ -361,6 +383,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * transition, and removed once that transition ends (with a timeout fallback).
    */
   public destroy(): void {
+    this.scrollLocker.unlock();
     this.items.forEach(item => item.destroy());
     this.listeners.removeAll();
     this.search?.destroy();

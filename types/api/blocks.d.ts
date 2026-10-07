@@ -74,7 +74,11 @@ export interface InsertAtOptions {
 export interface CreateBlockOptions {
   /** Tool data. A tool's `prepareInsert` answer overrides the same keys. */
   data?: BlockToolData;
-  /** The parent of the new block. Defaults to `null`, the root. */
+  /**
+   * The parent of the new block. `null` is the root.
+   * When omitted: the parent of the `before`/`after` sibling, or the root for
+   * `'start'`/`'end'`.
+   */
   parentId?: string | null;
   /** Where among the parent's children. Defaults to `'end'`. */
   position?: BlockPosition;

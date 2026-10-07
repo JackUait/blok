@@ -146,6 +146,14 @@ describe('blocks.create', () => {
     expect(origins).toEqual([]);
   });
 
+  it('takes the sibling\'s parent when only a sibling is named, as insertAt does', async () => {
+    const instance = await boot();
+
+    await instance.blocks.create('plain', { id: 'n', position: { after: 'c1' } });
+
+    expect(flat(instance)).toEqual(['a^-', 't^-', 'c1^t', 'n^t']);
+  });
+
   it('checks the place before asking the host, so a bad parent leaves no orphan page', async () => {
     prepare.mockResolvedValue({ pageId: 'host-1' });
     const instance = await boot();

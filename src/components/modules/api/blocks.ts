@@ -581,7 +581,7 @@ export class BlocksAPI extends Module {
    * @param options - data, parent, position, id, tunes, focus
    */
   public create = async (type?: string, options: CreateBlockOptions = {}): Promise<BlockAPIInterface> => {
-    const { data, parentId = null, ...placement } = options;
+    const { data, ...placement } = options;
     const toolName = type ?? this.config.defaultBlock ?? 'paragraph';
     const tool = this.Blok.Tools.blockTools.get(toolName);
 
@@ -591,11 +591,11 @@ export class BlocksAPI extends Module {
 
     // Check the place before prepareInsert: a page's hook makes the host page,
     // which would be orphaned if the insert then failed.
-    resolvePlacement(this.tree, parentId, placement.position ?? 'end');
+    resolvePlacement(this.tree, placement.parentId, placement.position ?? 'end');
 
     const prepared = await tool.prepareInsert();
 
-    return this.placeBlock(toolName, prepared === undefined ? data : { ...data, ...prepared }, { ...placement, parentId }, 'user');
+    return this.placeBlock(toolName, prepared === undefined ? data : { ...data, ...prepared }, placement, 'user');
   };
 
   private placeBlock(type: string | undefined, data: BlockToolData | undefined, options: InsertAtOptions, origin: BlockOrigin): BlockAPIInterface {

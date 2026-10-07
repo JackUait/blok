@@ -315,7 +315,7 @@ export interface InsertSpec {
 export interface CreateSpec {
   type?: string;
   data?: BlockToolData;
-  /** Defaults to `null`, the root. */
+  /** `null` is the root. Omitted: the `before`/`after` sibling's parent, or the root. */
   parentId?: string | null;
   /** Defaults to `'end'`. */
   position?: InsertPosition;

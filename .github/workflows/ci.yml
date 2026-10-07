@@ -159,6 +159,8 @@ jobs:
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
+        with:
+          install-docs: "true"
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -298,11 +300,15 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Build .NET server
+        run: dotnet build packages/server/dotnet/Blok.Server.slnx --configuration Release
+
       - name: Test .NET server with coverage
         run: |
           rm -rf .server-test-results .server-coverage
           dotnet test packages/server/dotnet/Blok.Server.slnx \
             --configuration Release \
+            --no-build \
             --collect:"Code Coverage;Format=Cobertura" \
             --results-directory .server-test-results
 
@@ -319,6 +325,21 @@ jobs:
 
       - name: Check .NET formatting
         run: dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
+
+  server-delivery:
+    name: Server Delivery
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
 
       - name: Test packed .NET packages
         run: node scripts/test-server-packages.mjs
@@ -344,7 +365,6 @@ jobs:
 
   unit-tests:
     name: Unit Tests (${{ matrix.shard }})
-    needs: [build]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -357,19 +377,18 @@ jobs:
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: dist
-          # Archive keeps repo-relative paths (dist/, packages/*/dist/); extract at root.
-          path: .
+      - name: Runner capacity
+        run: nproc && free -g
 
       - name: Build CLI
         run: yarn build:cli
 
       - name: Run Unit Tests with coverage
+        env:
+          BLOK_UNIT_WITHOUT_DIST: '1'
         run: |
           yarn vitest run --coverage --project=unit \
+            --maxWorkers=4 \
             --shard=${{ matrix.shard }} \
             --reporter=default \
             --reporter=blob \
@@ -420,6 +439,10 @@ jobs:
 
       - name: Run @bloklabs/server Unit Tests
         run: yarn workspace @bloklabs/server test
+
+      # The unit shards start before the build, so they skip these.
+      - name: Run dist unit tests
+        run: yarn vitest run --project=unit test/unit/build/
 
   validate-spec-coverage:
     name: Validate Spec File Coverage
@@ -493,6 +516,7 @@ jobs:
         uses: ./.github/actions/setup-playwright-browsers
         with:
           browsers: chromium firefox webkit
+          os-deps: "false"
 
   e2e-tests:
     name: E2E Tests
@@ -653,6 +677,7 @@ jobs:
       - codeql
       - server-security
       - server
+      - server-delivery
       - unit-tests
       - workspace-unit-tests
       - validate-spec-coverage

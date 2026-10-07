@@ -18,6 +18,8 @@ const cliPkg = JSON.parse(readFileSync(path.resolve(dirname, 'packages/cli/packa
 enableJsdomWebStorageGuard();
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
+const DIST_TESTS = ['test/unit/build/bundle-outputs.test.ts', 'test/unit/build/vendor-license.test.ts'];
+
 export default defineConfig({
   define: {
     __CLI_VERSION__: JSON.stringify(cliPkg.version),
@@ -52,7 +54,12 @@ export default defineConfig({
           include: ['test/unit/**/*.test.ts', 'test/unit/**/*.test.tsx'],
           // Angular tests need the Angular compiler plugin + zone.js setup, so
           // they run in the dedicated `unit-angular` project below.
-          exclude: ['test/unit/angular/**'],
+          // CI's unit shards start before the build, so the tests that read
+          // dist/ run in the Workspace Unit Tests job instead.
+          exclude: [
+            'test/unit/angular/**',
+            ...(process.env.BLOK_UNIT_WITHOUT_DIST === '1' ? DIST_TESTS : []),
+          ],
           setupFiles: ['test/unit/vitest.setup.ts']
         },
       },

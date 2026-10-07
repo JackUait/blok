@@ -49,6 +49,8 @@ jobs:
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
+        with:
+          install-docs: "true"
 
       - name: Run docs tests
         run: cd docs && npm test
@@ -120,6 +122,8 @@ jobs:
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
+        with:
+          install-docs: "true"
 
       # No token here: build and dependency scripts would see the write token.
       - name: Build snapshots
@@ -183,6 +187,8 @@ jobs:
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
+        with:
+          install-docs: "true"
 
       - name: Build Blok library
         run: yarn build

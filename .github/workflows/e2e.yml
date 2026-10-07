@@ -59,8 +59,11 @@ jobs:
           browsers: ${{ inputs.browser }}
           download: "false"
 
+      - name: Runner capacity
+        run: nproc && free -g
+
       - name: Run E2E Tests
-        run: yarn playwright test --project=${{ inputs.project }} --shard=${{ inputs.shard }}
+        run: yarn playwright test --project=${{ inputs.project }} --shard=${{ inputs.shard }} --workers=4
 
       - name: Upload E2E Test Results
         if: failure()

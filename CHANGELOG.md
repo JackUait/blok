@@ -2,6 +2,220 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.16.0](https://github.com/JackUait/blok/compare/v1.15.2...v1.16.0) (2026-10-07)
+
+### Breaking Changes
+
+- **Saved rich text is segments** — Rich fields in every host save now hold a `RichText` segment array instead of an HTML string.
+  - Covers `save()`, `onSave`, `BlockAPI.save()`, `onChange` saves, `getBlockData()` and `importMarkdown()`, also with `collaboration` and `dataModel: 'legacy'`. `getBlockData()` returns a new `.data` object each call.
+  - Input still accepts HTML. Read a field with `richTextToHtml`, and convert stored documents with `migrateToRichText` from `@bloklabs/core/migrate`.
+  - `ParagraphData` and its siblings now type `text` as `RichText`. Tool subclasses use the new `ParagraphToolData` and siblings, with `text: string`.
+- **HTML and Markdown importers return segments** — `htmlToBlocks`, `markdownToBlocks`, their `WithReport` forms and the .NET `FromHtmlAsync` and `FromMarkdownAsync` return rich `data.text` as segments.
+  - Old: `"a <b>b</b>"`. New: `[{ text: 'a ' }, { text: 'b', marks: { bold: true } }]`.
+  - Pass the output to the editor or the view as is, or read a field as HTML with `richTextToHtml`.
+- **Collaboration speaks format 2** — Rooms store rich text as formatted text, so the editor and the sync server must upgrade together.
+  - The client ends a format-1 room with `unsupported-format`, drops format-1 offline copies and never sends format-1 outbox rows.
+  - Blok.Server migrates a format-1 room once on open, under a new lineage. A third-party sync server must announce format 2 and mint a new lineage at epoch + 1 when it migrates.
+  - The write-back PUT to your document endpoint now carries segments. List custom rich fields in `--rich-text-fields` or `options.RichTextFields`.
+- **Saved output keeps content it used to drop** — Some documents now save blocks that earlier versions lost.
+  - With `dataModel: 'legacy'`, a legacy list keeps every item and saves in the `'auto'` shape: one list block per root item, checklists as `style: 'checklist'`.
+  - A table child that no cell names, with content, now saves at the root after its table. Empty ones are still removed.
+  - Video Loop Off now saves `loop: false`. Treat `false` as off instead of checking for a missing `loop`.
+- **Tab sync is on by default** — Tabs of one browser showing the same document now share one live copy, and only the leader tab saves.
+  - Only the tab the user works in calls `onSave` and writes through `persistence`. Set `tabSync: false` to keep the old per-tab saving.
+  - `save()` output now carries a top-level `id`, the document record id. Allow the new key if you compare `OutputData` strictly.
+  - Locale, theme mode and width now follow across tabs. Set `tabSync: { settings: false }` to keep them per tab.
+- **Toggle open state is no longer saved** — Toggles and toggle headings keep their open state per browser, and load collapsed by default.
+  - `isOpen` is no longer read from input, written by `save()`, or part of `ToggleData` and `HeaderData`.
+  - Expanding or collapsing no longer fires a document change.
+- **Blocks API keeps the tree in order** — Placement calls now give a block the parent its position implies, and loaded data is reordered depth-first.
+  - `blocks.insert()` at an index inside a container makes the block that container's child. Insert after the whole subtree, or call `setBlockParent(id, null)` afterwards.
+  - `blocks.setBlockParent()` moves the block and its subtree to the end of the new parent's subtree, or just after the subtree it left. Re-read indexes after reparenting. `blocks.insertInsideParent()` clamps its index into the parent's subtree.
+  - `Block.isEmpty` is true for empty toggles, toggle headings, list items, checklist items and code blocks, and false for any block with children.
+- **Two API calls now refuse instead of acting** — `blocks.convert()` can reject, and undo or redo do nothing while read-only.
+  - `blocks.convert()` rejects when a peer is editing the block, where it used to resolve and could overwrite their text. Await it and handle the rejection, or retry later.
+  - `history.undo()` and `history.redo()` are no-ops in read-only mode. Call `readOnly.set(false)` first.
+- **Markdown and HTML output changed** — Exports keep line breaks, table cells, quote captions and legacy blocks, so their text differs.
+  - Markdown writes `<br>` as a hard break, escapes `\*`, `\[`, `\#` and `\<`, writes equations as `$…$` and adds `:---:` alignment. Use `markdownToBlocks` instead of custom regexes.
+  - `importMarkdown` reads GitHub alerts (`> [!NOTE]`) as `callout` blocks, not `quote`. A host without the callout tool should map them.
+  - Legacy `warning`, `linkTool`, `raw`, `attaches` and `toggleList` blocks now render in `/view`. A legacy quote caption exports as an attribution line inside the quote. Update snapshot tests and warning-text matches.
+- **HTML table import reads more structure** — `htmlToBlocks` reads cell colors, placement and widths, and treats a heading column more strictly.
+  - Rows that all start with `<th>`, without `<thead>`, now import a heading column only, not also a heading row.
+  - Cells carry `color`, `textColor` and `placement` from inline style. `blocksToHtml` can write `data-blok-col-widths` and `data-blok-stretched`.
+- **Loading skeleton is on by default** — The editor shows a skeleton while `persistence.load()` runs or until the first collaboration sync.
+  - When `load()` takes over 150 ms, `isReady`, `onReady` and autofocus resolve after the skeleton hands off, up to about 0.9 s later.
+  - The wrapper carries `aria-busy` and an overlay child while loading.
+  - Pass `loader: false` to keep the old timing and blank boot.
+- **Blok owns Cmd/Ctrl+F** — Cmd/Ctrl+F inside an editor opens Blok's find bar, not the browser's.
+  - This also applies on the page body when the page has one editor.
+  - Pass `find: false` to keep the browser's find.
+- **Hints wait for hover** — `api.tooltip.show` and `api.tooltip.onHover` never show a hint at once, and focus no longer opens one.
+  - The default delay is 500 ms, and any delay below 300 ms becomes 300 ms.
+  - For an always-visible label, render it yourself and set an `aria-label` for keyboard users.
+- **`contentAlign` follows the reading direction** — In an RTL editor, `'left'` and `'right'` now mean the start and end of the line.
+  - The default `'left'` now puts an RTL content column on the right. LTR editors are unchanged.
+  - To keep the old placement in RTL, swap `'left'` and `'right'`.
+- **Gray selected states and one focus ring** — Default token values changed so selected and active states are gray and focus rings use one blue token.
+  - Now gray: `--blok-icon-active-bg`, `--blok-popover-icon-active-bg`, `--blok-item-focus-bg`, `--blok-item-focus-shadow` and `--blok-database-card-border-active`. `--blok-icon-active-text` is primary ink, and `--blok-audio-bar-head` no longer mixes in the accent.
+  - Focus rings are 2px `--blok-focus-ring`, and `--blok-video-focus-ring` defaults to it. The light `--blok-table-heading-bg` is `#f7f6f3`, not `#f9fafb`.
+  - `--blok-search-input-bg`, `--blok-search-input-border` and `--blok-search-input-focus-border` no longer style search fields; override `--blok-item-hover-bg` and `--blok-popover-border`. Set the old values in `style.tokens` to keep the old look.
+- **Old radius tokens and `IconMarker` removed** — The unordered radius scale, `--blok-audio-radius` and the `IconMarker` icon are gone.
+  - `--blok-radius-xs` → `--blok-radius-4`, `-md` → `--blok-radius-control`, `-lg` → `--blok-radius-12`, `-xl` → `--blok-radius-16`, `-md-plus` → `--blok-radius-8`, `-hairline` → `--blok-radius-notch`, `-none` → `0`, `-sm` → a role token.
+  - Replace `--blok-audio-radius` with `--blok-radius-block` or `--blok-radius-control`.
+  - Replace `IconMarker` from `@bloklabs/core/icons` with `IconPaintRoller`.
+- **Mermaid 12 renders code-block diagrams** — Mermaid previews use ELK layout and mermaid 12's new look, so diagrams change layout and color.
+  - Previews need Safari 17.4+, Chrome 117+ or Firefox 119+. Older browsers show an error instead of the diagram.
+  - Saved data is unchanged, and there is no option yet to restore the old look.
+- **`defineBlokSchema` uses the editor's inline tool order** — Inline sanitizer rules now compose in canonical editor order, not `inlineToolbar` or registration order.
+  - If two inline tools have conflicting rules, check which one wins now.
+- **Blok.Server contract changes** — Custom `IBlokDocumentConverter` implementations need new members, and `/edit` reads `If-Match`.
+  - Implement `GetPageIndexAsync`, `RemapPageDocumentAsync` and the page-aware `ToHtmlAsync` and `ToMarkdownAsync` overloads, for example by forwarding to `BlokDocuments.Create()`.
+  - `POST /sync/{doc}/edit` with an `If-Match` header now gets 400, 412 or 428 instead of 204. Leave it out unless you want the precondition.
+  - Collaboration document IDs with literal or encoded backslashes are rejected. Rename them first.
+
+### Features
+
+- **Page block** — A `Page` block points at a sub-page your app owns, showing its icon and title and opening it through your host.
+  - Configure `create`, `resolve`, `href` and `open` to connect it to your pages.
+  - `create` may return `{ pageId }` to use your backend's id instead of Blok's.
+  - Pass `rename`, `setIcon` and `peek` to show Rename, Edit icon and side peek in the block menu.
+- **Tabs block** — A Notion-style `tabs` block holds `tab` children, each with a title, optional emoji and its own child blocks.
+  - Drop a block onto a tab's pill to move it into that tab.
+  - The open tab is per-editor UI state and is never saved.
+  - Markdown, HTML, plain text and Notion paste all handle tabs.
+- **Table of contents block** — A `table_of_contents` block lists the page's headings live, indented by depth, with click and keyboard jumps.
+  - `blocksToHtml` renders it as a `<nav>` of links to the saved headings.
+- **Find and replace** — Cmd/Ctrl+F opens a Notion-style find bar with match case, whole word and Replace / Replace all.
+  - Matching ignores case, accents, curly quotes and dash kinds.
+  - Replacements preview in the text before you apply them.
+  - Set `find: { placement, offset }` to choose where the bar sits.
+- **Live sync between browser tabs** — Tabs of one browser showing the same document stay in sync live, with no server.
+  - Set `documentId` when your app copies documents or serves every document at one path.
+- **Loading skeleton** — Placeholder rows show while `persistence.load()` or the first collaboration sync is pending, then hand off to the real blocks.
+  - Choose the rows with `loader: { skeleton }` and the wait before showing with `loader: { delay }`.
+- **Image darkroom** — The image editor now crops, rotates, flips, straightens, adjusts brightness, contrast and saturation, and applies filters.
+  - Every edit is non-destructive: saved as data and applied when the image is drawn.
+  - Filters come with a strength slider.
+  - `filters` in the image config picks, orders or adds looks, and `[]` hides the Filters tab.
+- **Image markup** — A Markup tab draws on photos with a pen and highlighter, adds text, and places shapes.
+  - Marks turn and mirror with the photo.
+  - Marks are saved in `data.markup`.
+- **Failed image notices** — Blok tells the user when an image fails to upload or load, and before they leave with lost uploads.
+  - Each failed image gets its own toast card with Retry and Show.
+  - `onImageFailure` reports failures to your app.
+  - `confirmLeave()` shows a Retry / Show / Stay / Leave anyway banner and resolves to a boolean.
+- **Media format variants** — Uploaded images and videos can be converted into several formats in the background and rendered best-first.
+  - Turn it on with `media: { formats: { image, video } }`.
+  - Video conversion needs `mediabunny: () => import('mediabunny')`, which you install yourself.
+  - Pass `convert` to use your own converter instead.
+- **Upload error handling** — Image, video, audio and file tools take `onUploadError` to change what a failed upload shows.
+  - Return a string to show your own message, or `false` to return the block to its empty state.
+  - A rejection from your own uploader now reaches the handler as `UPLOAD_FAILED` with the original error in `cause`.
+- **Code block redesign** — Code blocks gain an optional filename, a highlighted active line, a labelled Copy button and a language picker.
+  - The picker suggests the detected and recent languages and recolors the code as you browse.
+  - The new `filename` field is written to Markdown as a `title="name"` attribute on the code fence.
+- **Toolbox hover previews** — Hovering or arrowing to a toolbox entry shows a small animated drawing of the block with a one-line caption.
+  - Custom tools can opt in with `toolbox.preview`, typed by the exported `ToolboxPreviewConfig`.
+- **Concurrent typing in collaboration** — Two people typing in the same paragraph now merge their text instead of one losing a burst.
+  - Database row titles typed at once also merge.
+  - A collaborator's selected text is now shaded, not drawn as a lone caret.
+- **Host values in undo history** — `history.track(key, onChange)` keeps a value your app owns, like a page title, in Blok's undo history.
+  - Cmd+Z walks back through host and block edits in order.
+  - Collaborators share the value, and it is not part of `save()`.
+- **Personal block state** — `api.viewState` stores per-browser block state that is never saved in the document.
+  - Toggles and toggle headings keep their open state here, so each reader's choice stays theirs.
+- **Sibling-relative block placement** — `blocks.insertAt` and `blocks.moveTo` place blocks by parent and sibling instead of a flat index.
+  - Positions are `'start'`, `'end'`, `{ before }` or `{ after }`.
+  - A bad place throws `BlockPlacementError` and changes nothing.
+  - Block events carry `parentId`, `previousSiblingId` and an `origin` of `'local'`, `'tab'` or `'remote'`.
+- **Rich text migration tool** — `@bloklabs/core/migrate` converts stored HTML documents to rich-text segments offline, in Node with no DOM.
+  - Use `migrateToRichText`, `richTextToHtml` and `richTextToPlainText`.
+  - `onLossy` reports markup it could not map.
+- **Smarter link field** — An empty link field lists your three most recent links, the page's headings, and the link kinds it accepts.
+  - Picking a heading links `#<block id>`, which survives a heading rename.
+  - Set `link.unfurl` to show page titles for recent links, or let `server` fill it in.
+- **Paste improvements** — Pasted links and spreadsheets keep more of what you meant.
+  - A URL pasted over selected text links that text instead of making a bookmark.
+  - Excel cell bold, fills, colors and alignment survive paste.
+  - List your own site's other hostnames in `linkPaste.hostAliases` so their links skip "Create bookmark".
+- **Notion-style formatting menus** — The inline toolbar is a Notion grid card, and text and background colors share one panel.
+  - "Turn into" is a plain list with a checkmark on the current type, and now works on callouts.
+  - Click an inline equation to edit it in a one-row menu with a live chip.
+- **Bookmark and embed redesign** — Bookmarks frame their cover in a leaning browser window with a favicon address pill.
+  - Embed empty states draw each provider kind and morph as you type a link.
+  - Embeds and the link paste menu show brand marks for covered providers.
+- **Media empty and error states** — Empty uploaders show a live preview of the block, and failures now look like the media they replace.
+  - Failed video and audio cards offer a file picker to try again.
+  - The video settings card shows speed, a speed ruler and a loop switch in one pane.
+  - Right-click on page, bookmark, embed, file, image and video blocks opens their block menu.
+- **Table alignment picker** — Cell alignment picks from nine positions with a live preview of the cell.
+  - Every row and column now has a stable id, so concurrent moves and deletes land on the right column.
+- **Right-to-left export** — `blocksToHtml` and `BlokView` take `direction: 'ltr' | 'rtl'` and stamp each block with its own text direction.
+- **Server and .NET** — The Blok server and `Blok.Server` gain page-aware exports, cross-page moves and C# ticket minting.
+  - `BlokTicket.Create` mints ticket passes in C#.
+  - `--collab-journal` adds durable `/edit` receipts for cross-page moves.
+  - `--rich-text-fields` lists custom rich-text fields for the standalone host.
+- **Tool author levers** — New block tool statics replace per-tool workarounds.
+  - `isLayout` and `deletesChildren` describe layout containers.
+  - `frameRadius` rounds the selection fill to the block's frame.
+  - `prepareInsert` lets a toolbox insert wait for data, and `copyAsLink` makes a copy carry a link.
+
+### Bug Fixes
+
+- **`insertMany` and `insertMarkdown` deleted the rest of the document** — Both replaced the whole shared document with the batch, so every other block vanished on the next load and for every peer.
+  - The screen and `save()` still showed the old blocks, so nothing looked wrong until a reload.
+- **Undo deleted a block someone else had typed in** — Undoing your own insert removed the block with the other person's sentence inside it, on both screens.
+  - Your own characters still go; theirs and the block stay.
+- **A peer's edit swallowed the character you had just typed** — A keystroke landing while a peer's change was applied to the same block was dropped on both sides, nested blocks included.
+- **Two people filling one table cell lost a block** — Each person's cell block list overwrote the other's, leaving one block orphaned and unreachable.
+- **A full save deleted a key the other person had just added** — A key a peer added during the save window, such as an image caption, was removed locally and then on their screen.
+- **Two peers opening an empty document lost a whole paragraph** — Both created the first block with the same id, and one person's typing was overwritten.
+  - Two peers who open the same empty document at the same moment now get two empty paragraphs.
+- **Every collaborative boot added another copy of a table's cells** — Converted legacy cells reached the shared document but the table's references did not, so each boot converted them again.
+- **A peer's edit threw your caret to the start of the block** — Any remote update to the block you were typing in rebuilt its content and lost your selection.
+- **Tools stayed half-dead after a collaborative boot** — Blocks rendered read-only until the first sync never wired their editing when they turned editable.
+  - Checklist ticks were not saved, code Tab and highlighting did nothing, and toggle placeholders and the database title stopped responding.
+- **The last edit before `destroy()` never reached `onSave`** — An edit inside the final save window was dropped on teardown, on an i18n repaint and when read-only turned on.
+  - `onSave`, `persistence.save`, Vue `update:data` and the Angular outputs can now fire once after `destroy()` or unmount returns.
+  - With only synchronous tools, the final `onSave` now runs inside `destroy()`. `onSave` can also fire once as read-only turns on.
+  - Angular `[(ngModel)]` still misses the final save when any tool saves asynchronously.
+- **Merged table cells lost styling and content** — Merge, split, row and column operations dropped header styling, cell colours and alignment, and load deleted blocks left in covered cells.
+- **Merging table cells misbehaved across the menu, reload and undo** — The menu offered Merge instead of Split, block order in a merged cell changed on reload, and undoing a split left a ghost paragraph.
+  - Malformed merge data is now repaired the same way in the editor, read-only mode and the view renderers.
+- **Pasting into an existing table dropped everything around it** — Only the pasted table was read; Excel, Google Sheets, LibreOffice and Word formatting was also lost.
+  - The surrounding content now lands after the table, in order, as one undo step.
+- **Pasted text lost its line breaks** — Inline paste glued `<br>` lines together, and `<div>`-per-line HTML from Notion, Word, Gmail, Slack and Google Docs became one run.
+- **Copying out of Blok lost bold, block breaks and code lines** — Other apps received plain text for bold, merged blocks into one run, and collapsed code lines.
+  - Marker colours are now written as the light preset colour, since Blok's CSS variables cannot resolve elsewhere.
+- **Stored marks and plain text were stripped on load** — Toggles lost bold and underline, `sup` and `sub` vanished when that inline tool was off, and media URLs were HTML-escaped.
+  - Signed URLs containing `&` broke because they were saved as `&amp;`.
+- **Legacy callout titles and table cell lists were lost on load** — A callout's `title` was never read and the first save erased it, and lists inside legacy cells were flattened.
+- **Converting text into a callout or a code block lost its lines** — Line breaks and bold were stripped, and literal `<b>` in code turned into real bold.
+- **Host data from `blocks.insert` reached the page unsanitized** — `insert`, `insertAt`, `insertMany`, `update` and `insertInsideParent` let handler attributes and `javascript:` links reach the DOM and peers.
+- **Markdown export could write a script link** — `href`, image `src` and block URLs were written raw, so `javascript:` and crafted URLs became live links in unsanitized renderers.
+- **Undoing moves pulled blocks into a toggle** — Cmd+Shift+Up/Down moved blocks by a stale index, and undo restored a deleted block in the wrong place.
+  - A keyboard move is now one undo step.
+- **One table gesture took several undos and left phantom cells** — Add-row and add-column drags split into extra steps, and added cells survived undo.
+- **Toggles vanished, stuck or became columns when dragged** — A block dropped below a collapsed toggle holding an open one was swallowed and hidden.
+- **Text nested under a toggle child escaped the toggle** — Collapsing the toggle left it visible, and inside a callout it rendered outside the box.
+  - React, Vue and Angular containers mount these nested lines too.
+- **Backspace could not merge a block that starts with bold, italic or a link** — After Enter inside bold, the two halves could never be joined again.
+- **An image's "…" menu deleted a different block** — The menu opened for the block holding the caret, so Delete removed that block instead of the image.
+- **A submenu stayed open after the pointer left** — Its row stayed highlighted forever, and inline toolbar submenus slid under a fixed host header.
+- **An RTL editor laid out left-to-right in production** — The build lowered logical CSS into rules keyed on the page's `lang`, so an RTL editor on an English page broke.
+- **RTL editing put controls and keys on the wrong side** — Block controls covered the text, drag-to-nest nested almost every drop, and arrows stuck at block edges.
+  - Popovers and submenus now open toward the inline end with mirrored chevrons and keys.
+- **`Blok.Server` dropped edits held only in the working copy** — A host-supplied journal or S3 working copy lost them when the journal started.
+  - `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag` are now exposed to browsers for `If-Match` retries.
+
+### Maintenance
+
+- **Yjs 13.6.33 and lib0 0.2.119, deduplicated** — The bundled collaboration runtime moves up a patch and ships a single lib0 copy instead of two.
+- **KaTeX 0.18.10** — The bundled math renderer moves from 0.18.5.
+- **music-metadata 12** — The bundled audio title and artist reader moves up a major version.
+- **Office previews update `docx-preview` and `@aiden0z/pptx-renderer`** — Word previews use 0.4.1 and PowerPoint previews use 1.3.0.
+- **`Blok.Server` takes AngleSharp 1.8.3 and Jint 4.16.4** — The NuGet package's HTML parser and JavaScript runtime move up a patch.
+
 ## [1.15.2](https://github.com/JackUait/blok/compare/v1.15.1...v1.15.2) (2026-09-17)
 
 ### Features

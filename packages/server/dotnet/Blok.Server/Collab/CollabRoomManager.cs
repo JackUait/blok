@@ -567,10 +567,10 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
                 {
                   throw new RestorePointMissingException();
                 }
-  
+
                 var structure = YDocConverter.DescribeStructure(doc);
                 var current = await converter.ExportAsync(doc, token);
-  
+
                 return CollabRestorePlanner.Plan(
                     current["blocks"] as JsonArray ?? [],
                     structure,

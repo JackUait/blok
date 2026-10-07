@@ -289,8 +289,7 @@ describe('merge audit: editor load of malformed merge data', () => {
       await instance.readOnly.set(false);
     }
 
-    // A legacy string cell makes the output legacy, still HTML until task A3.
-    expect(originTexts(savedAsHtml(await instance.save(), { allowHtml: true }))).toStrictEqual(['orig', 'legacy']);
+    expect(originTexts(savedAsHtml(await instance.save()))).toStrictEqual(['orig', 'legacy']);
   });
 
   it('edit mode: a text-only cell a rowspan claims is saved inside the origin, after a cell to its right', async () => {

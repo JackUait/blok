@@ -6,8 +6,8 @@ import { richTextToHtml } from '../../../src/migrate';
 
 export interface HtmlReadOptions {
   /**
-   * Accept HTML strings in built-in rich fields. Only for output that is
-   * still HTML on purpose: collaboration, legacy output, the internal Yjs doc.
+   * Accept HTML strings in built-in rich fields. Only for data that is
+   * still HTML on purpose: input documents, migrate() output, the internal Yjs doc.
    * Without it a string throws, so a regression back to HTML output fails.
    */
   allowHtml?: boolean;
@@ -17,7 +17,7 @@ const builtInFields = (type: string): string[] =>
   Object.prototype.hasOwnProperty.call(CURRENT_RICH_TEXT_FIELDS, type) ? CURRENT_RICH_TEXT_FIELDS[type] : [];
 
 const refuseHtml = (where: string): never => {
-  throw new Error(`${where} is an HTML string; a host save must hold segments. Pass { allowHtml: true } only for collaboration, legacy output or internal data.`);
+  throw new Error(`${where} is an HTML string; a host save must hold segments. Pass { allowHtml: true } only for input documents, migrate() output or internal data.`);
 };
 
 /**

@@ -102,8 +102,7 @@ describe('an inline tag wrapping a block element in a legacy cell', () => {
             blocks: [{ id: 't', type: 'table', data: { withHeadings: false, content: [[html, 'z']] } }] as OutputBlockData[],
           }, { dataModel });
           const out = await booted.editor.save();
-          // Both give legacy output (auto: string cells are legacy input), still HTML until task A3.
-          const cell = viewTable(out, 0, { allowHtml: true })?.grid[0]?.[0]?.texts.map(t => textOf(t.replace(/^[a-z]+:/, ''))).join('');
+          const cell = viewTable(out, 0)?.grid[0]?.[0]?.texts.map(t => textOf(t.replace(/^[a-z]+:/, ''))).join('');
 
           expect(cell).toBe(text);
         });

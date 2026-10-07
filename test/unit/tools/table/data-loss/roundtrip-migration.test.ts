@@ -26,29 +26,26 @@ describe('editor.js string cells holding block markup', () => {
   });
 
   for (const dataModel of ['auto', 'legacy'] as const) {
-    // Both give legacy output (auto: string cells are legacy input), still HTML until task A3.
-    const html = { allowHtml: true };
-
     it(`dataModel ${dataModel}: <p> paragraphs in a cell keep their boundary`, async () => {
       booted = await boot(editorJsTable(['<p>first</p><p>second</p>', 'x']), { dataModel });
       const out = await booted.editor.save();
 
-      expect(cellTexts(out, html)?.[0][0]).not.toBe('paragraph:firstsecond');
-      expect(cellTexts(out, html)?.[0][0]).toMatch(/first.*second/);
+      expect(cellTexts(out)?.[0][0]).not.toBe('paragraph:firstsecond');
+      expect(cellTexts(out)?.[0][0]).toMatch(/first.*second/);
     });
 
     it(`dataModel ${dataModel}: <div> lines in a cell keep their boundary`, async () => {
       booted = await boot(editorJsTable(['one<div>two</div>', 'x']), { dataModel });
       const out = await booted.editor.save();
 
-      expect(cellTexts(out, html)?.[0][0]).not.toBe('paragraph:onetwo');
+      expect(cellTexts(out)?.[0][0]).not.toBe('paragraph:onetwo');
     });
 
     it(`dataModel ${dataModel}: inline sup/sub formatting in a string cell survives`, async () => {
       booted = await boot(editorJsTable(['E = mc<sup>2</sup>', 'H<sub>2</sub>O']), { dataModel });
       const out = await booted.editor.save();
 
-      expect(cellTexts(out, html)?.[0]).toEqual(['paragraph:E = mc<sup>2</sup>', 'paragraph:H<sub>2</sub>O']);
+      expect(cellTexts(out)?.[0]).toEqual(['paragraph:E = mc<sup>2</sup>', 'paragraph:H<sub>2</sub>O']);
     });
   }
 

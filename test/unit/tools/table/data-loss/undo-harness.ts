@@ -293,7 +293,7 @@ export const reload = async (editor: TestEditor): Promise<{ editor: TestEditor; 
 /** Saved table content, cell texts and ids vs what the Yjs doc holds. */
 /**
  * @param editor - the editor
- * @param options - pass `allowHtml` when the editor's output is legacy (still HTML)
+ * @param options - pass `allowHtml` only to read an HTML document
  */
 export const consistency = async (editor: TestEditor, options: HtmlReadOptions = {}): Promise<{
   savedTexts: string[][];

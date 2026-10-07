@@ -142,8 +142,7 @@ describe('table round trip in one editor keeps every persisted field', () => {
   for (const dataModel of ['legacy', 'flat', 'hierarchical', 'auto'] as const) {
     it(`dataModel ${dataModel}: edit boot → save`, async () => {
       booted = await boot(richDocument(), { dataModel });
-      // Legacy output stays HTML until task A3.
-      expect(viewTable(await saveChecked(), 0, { allowHtml: dataModel === 'legacy' })).toEqual(expected);
+      expect(viewTable(await saveChecked(), 0)).toEqual(expected);
     });
   }
 });

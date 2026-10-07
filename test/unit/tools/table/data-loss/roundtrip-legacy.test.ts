@@ -71,16 +71,14 @@ describe('legacy and mixed table data survive a save → render → save round t
         }
 
         const first = await booted.editor.save();
-        // Legacy output (legacy, or auto with this legacy input) stays HTML until task A3.
-        const html = { allowHtml: dataModel === 'legacy' || dataModel === 'auto' };
 
         expect(booted.onError).not.toHaveBeenCalled();
-        const firstView = viewTable(first, 0, html);
+        const firstView = viewTable(first, 0);
 
         expect(firstView?.withHeadings).toBe(true);
         expect(firstView?.stretched).toBe(true);
         expect(firstView?.colWidths).toEqual([100, 200]);
-        expect(cellTexts(first, html)).toEqual([
+        expect(cellTexts(first)).toEqual([
           ['paragraph:Head <strong>1</strong>', 'paragraph:Head 2'],
           ['paragraph:Line one | paragraph:line two', 'list:x | list:y'],
           ['paragraph:', 'paragraph:Last'],
@@ -92,8 +90,8 @@ describe('legacy and mixed table data survive a save → render → save round t
         const second = await booted.editor.save();
 
         expect(booted.onError).not.toHaveBeenCalled();
-        expect(cellTexts(second, html)).toEqual(cellTexts(first, html));
-        expect(allTexts(second, html)).toEqual(allTexts(first, html));
+        expect(cellTexts(second)).toEqual(cellTexts(first));
+        expect(allTexts(second)).toEqual(allTexts(first));
       });
     }
   }
@@ -110,12 +108,11 @@ describe('legacy and mixed table data survive a save → render → save round t
       const out = await booted.editor.save();
 
       expect(booted.onError).not.toHaveBeenCalled();
-      // auto with legacy input: legacy output, still HTML until task A3.
-      expect(cellTexts(out, { allowHtml: true })).toEqual([
+      expect(cellTexts(out)).toEqual([
         ['paragraph:A', 'paragraph:legacy B'],
         ['paragraph:legacy C', 'paragraph:D'],
       ]);
-      expect(viewTable(out, 0, { allowHtml: true })?.grid[0][0].color).toBe('#fbecdd');
+      expect(viewTable(out, 0)?.grid[0][0].color).toBe('#fbecdd');
     });
   }
 
@@ -131,8 +128,7 @@ describe('legacy and mixed table data survive a save → render → save round t
     const out = await booted.editor.save();
 
     expect(booted.onError).not.toHaveBeenCalled();
-    // auto with legacy input: legacy output, still HTML until task A3.
-    expect(cellTexts(out, { allowHtml: true })).toEqual([
+    expect(cellTexts(out)).toEqual([
       ['paragraph:Head <strong>1</strong>', 'paragraph:Head 2'],
       ['paragraph:Line one | paragraph:line two', 'list:x | list:y'],
       ['paragraph:', 'paragraph:Last'],

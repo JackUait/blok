@@ -4609,6 +4609,45 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A transient failure that never heals — one rich field too large for the
+  /// runtime's timeout — must not be retried for as long as the room stays
+  /// loaded. The give-up is a refusal, which also lets the room be evicted.
+  /// </summary>
+  [Fact]
+  public async Task ATransientExportFailureThatNeverHealsIsGivenUp()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read", new TimeoutException());
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => log.Any(line => line.Contains("gave up exporting", StringComparison.Ordinal)),
+        "the export to be given up");
+
+    var attempts = converter.Exports;
+
+    for (var tick = 0; tick < 20; tick++)
+    {
+      time.Advance(TimeSpan.FromMinutes(1));
+      await manager.SettleAsync();
+    }
+
+    Assert.Equal(attempts, converter.Exports);
+    Assert.Empty(endpoint.Saves);
+  }
+
+  /// <summary>
   /// Eviction and drain export through the flush, which must classify the
   /// same way: a transient failure is logged and left for the next load, not
   /// marked as a document that can never be exported.

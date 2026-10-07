@@ -117,6 +117,9 @@ public sealed class CollabRoomMigrationTests
 
     Assert.Equal(CollabJoinStatus.SeedFailed, result.Status);
     Assert.Equal(before, operations.Head(DocId));
+    Assert.Contains(log, line =>
+        line.Contains("could not migrate its format-1 rich text", StringComparison.Ordinal) &&
+        line.Contains("ran past its timeout", StringComparison.Ordinal));
   }
 
   /// <summary>The migration's reset leaves the head at sequence 0, so the room's own counters must follow it.</summary>

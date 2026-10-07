@@ -100,6 +100,15 @@ internal sealed class CollabRoom : IDisposable
   private const int CheckpointFailureLimit = 3;
 
   /// <summary>
+  /// Consecutive transient export failures a journal room retries before it
+  /// gives the projection up. A field too large for the runtime's timeout
+  /// fails the same way every time; without this the room would retry it,
+  /// and stay loaded for it, forever. With the default backoff the last
+  /// attempt is about three minutes after the first.
+  /// </summary>
+  private const int TransientExportFailureLimit = 8;
+
+  /// <summary>
   /// How long one actor's Active/Edited report silences the next.
   ///
   /// SHORTER than the client's 60-second send cadence on purpose. The client
@@ -251,6 +260,7 @@ internal sealed class CollabRoom : IDisposable
   private DateTimeOffset? dirtySince;
   private DateTimeOffset? exportRetryAt;
   private int exportFailures;
+  private int transientExportFailures;
   private Task<string?>? inFlightSave;
   private int purgeRequested;
   private bool disposed;
@@ -1896,8 +1906,7 @@ internal sealed class CollabRoom : IDisposable
 
     if (adopted.Format != CollabWorkingSetTag.CurrentFormat)
     {
-      await converter.MigrateRichTextAsync(doc!, lifetime.Token);
-      localUpdates.Clear();
+      await MigrateRichTextLocked();
       baseline = [doc!.EncodeStateAsUpdate()];
       adopted = new CollabWorkingSetTag(
           CollabWorkingSetTag.CurrentFormat, adopted.Epoch + 1, CollabWorkingSetTag.NewLineage());
@@ -1986,6 +1995,28 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
+  /// The doc half of a migration. Its update is never published: the caller
+  /// commits the whole state instead.
+  /// </summary>
+  private async Task MigrateRichTextLocked()
+  {
+    try
+    {
+      await converter.MigrateRichTextAsync(doc!, lifetime.Token);
+    }
+    catch (Exception error) when (!lifetime.IsCancellationRequested)
+    {
+      throw new InvalidDataException(
+          $"collab: room \"{DocId}\" could not migrate its format-1 rich text, so the store keeps " +
+          "format 1 and the next open tries again (for a very large field, raise the runtime's " +
+          $"timeout): {error.Message}",
+          error);
+    }
+
+    localUpdates.Clear();
+  }
+
+  /// <summary>
   /// Format 1 → 2 on a hydrated journal room. The whole migrated state becomes
   /// the baseline of a NEW lineage, so format-1 clients and their offline
   /// operations can never write into it. The reset is the commit point: until
@@ -1994,8 +2025,7 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private async Task MigrateJournalLocked()
   {
-    await converter.MigrateRichTextAsync(doc!, lifetime.Token);
-    localUpdates.Clear();
+    await MigrateRichTextLocked();
 
     var whole = doc!.EncodeStateAsUpdate();
     var head = await session!.ResetAsync(
@@ -2025,8 +2055,7 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private async Task MigrateWorkingSetLocked()
   {
-    await converter.MigrateRichTextAsync(doc!, lifetime.Token);
-    localUpdates.Clear();
+    await MigrateRichTextLocked();
     CompactLocked();
     tag = new CollabWorkingSetTag(
         CollabWorkingSetTag.CurrentFormat, tag.Epoch + 1, CollabWorkingSetTag.NewLineage());
@@ -3064,7 +3093,7 @@ internal sealed class CollabRoom : IDisposable
   /// room stops holding itself loaded for a PUT it can never build. Logged
   /// once per room: it takes an operator reset, not a wait.
   /// </summary>
-  private void RefuseProjectionLocked(Exception error)
+  private void RefuseProjectionLocked(Exception error, string? why = null)
   {
     if (projectionRefused)
     {
@@ -3076,8 +3105,8 @@ internal sealed class CollabRoom : IDisposable
     // Says only what is true: no retry produces this JSON. A reset, or a
     // client repairing the block, would — the room cannot tell which.
     log?.Invoke(
-        $"collab: room \"{DocId}\" cannot export its document, so the consumer's record " +
-        $"stays behind and no retry will change that: {error.Message}");
+        (why ?? $"collab: room \"{DocId}\" cannot export its document, so the consumer's record " +
+            "stays behind and no retry will change that") + $": {error.Message}");
   }
 
   /// <summary>
@@ -3139,6 +3168,7 @@ internal sealed class CollabRoom : IDisposable
     try
     {
       var snapshot = await converter.ExportAsync(doc!, lifetime.Token);
+      transientExportFailures = 0;
 
       // Cleared at the SNAPSHOT, not at the save's completion: this document
       // is what the checkpoint owed, and clearing on completion would re-arm
@@ -3157,6 +3187,19 @@ internal sealed class CollabRoom : IDisposable
 
       if (lifetime.IsCancellationRequested)
       {
+        return;
+      }
+
+      // Not reset by a refusal: after the give-up, the next checkpoint gets
+      // one attempt, not another full round.
+      if (session is not null && ++transientExportFailures >= TransientExportFailureLimit)
+      {
+        RefuseProjectionLocked(
+            error,
+            $"collab: room \"{DocId}\" gave up exporting after {transientExportFailures} attempts " +
+            "that ran past the runtime's limits, so the consumer's record stays behind until the " +
+            "next checkpoint retries it (raise the runtime's timeout for documents this large)");
+
         return;
       }
 

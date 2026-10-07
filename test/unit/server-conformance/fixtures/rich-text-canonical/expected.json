@@ -106,10 +106,7 @@
     ],
     "non-string-color-kept": [
       {
-        "text": "x",
-        "marks": {
-          "color": 5
-        }
+        "text": "x"
       }
     ],
     "tag-record-keys-sorted": [
@@ -128,18 +125,14 @@
         "text": "x",
         "marks": {
           "tag:abbr": {
-            "data-a": "1",
-            "title": null
+            "data-a": "1"
           }
         }
       }
     ],
     "tag-non-record-kept": [
       {
-        "text": "x",
-        "marks": {
-          "tag:x": "str"
-        }
+        "text": "x"
       }
     ],
     "tag-null-is-absent": [

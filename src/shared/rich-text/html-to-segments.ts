@@ -2,6 +2,7 @@ import { COLOR_PRESETS } from '../../components/shared/color-presets';
 import { PAGE_REFERENCE_ATTR } from '../page-reference';
 import { EQUATION_SOURCE_ATTR } from '../equation-mark';
 import type { InlineNode } from './inline-tree';
+import { readEmbed } from './guards';
 import type { RichText, RichTextLink, RichTextMarks, RichTextSegment, RichTextTextSegment } from '../../../types/rich-text';
 
 const SIMPLE_MARKS: Record<string, keyof RichTextMarks> = {
@@ -70,6 +71,9 @@ const canonicalLink = (link: unknown): RichTextLink | undefined => {
   };
 };
 
+const stringEntries = (record: Record<string, unknown>): Record<string, string> =>
+  Object.fromEntries(Object.entries(record).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
+
 /** Off marks are absent: `null` (a Yjs format removal) counts as `undefined`. */
 const markValue = (key: string, value: unknown): unknown => {
   if (key === 'link') {
@@ -82,8 +86,15 @@ const markValue = (key: string, value: unknown): unknown => {
   if (value === null) {
     return undefined;
   }
+  // A peer or host can store any value; a non-string attribute or colour would crash the writer.
+  if (key === 'color' || key === 'background') {
+    return typeof value === 'string' ? value : undefined;
+  }
+  if (key.startsWith('tag:')) {
+    return isRecord(value) ? sortedRecord(stringEntries(value)) : undefined;
+  }
 
-  return key.startsWith('tag:') && isRecord(value) ? sortedRecord(value as Record<string, string>) : value;
+  return value;
 };
 
 const orderMarks = (marks: RichTextMarks): RichTextMarks | undefined => {
@@ -106,8 +117,8 @@ const orderMarks = (marks: RichTextMarks): RichTextMarks | undefined => {
 export const canonicalMarks = (marks: Record<string, unknown> | undefined): Record<string, unknown> =>
   (orderMarks((marks ?? {}) as RichTextMarks) ?? {}) as Record<string, unknown>;
 
-const withMarks = (segment: RichTextSegment, marks: RichTextMarks): RichTextSegment => {
-  const ordered = orderMarks(marks);
+const withMarks = (segment: RichTextSegment, marks: unknown): RichTextSegment => {
+  const ordered = isRecord(marks) ? orderMarks(marks as RichTextMarks) : undefined;
 
   return ordered === undefined ? segment : { ...segment, marks: ordered };
 };
@@ -181,23 +192,38 @@ const sameMarks = (a: RichTextSegment, b: RichTextSegment): boolean =>
 export const isTextSegment = (segment: RichTextSegment): segment is RichTextTextSegment =>
   'text' in segment && typeof segment.text === 'string';
 
-const withoutMarks = (segment: RichTextSegment): RichTextSegment => {
-  const { marks: _marks, ...rest } = segment;
+/** The segment without its marks; `undefined` for an item no reader can show. */
+const contentOf = (item: unknown): RichTextSegment | undefined => {
+  if (!isRecord(item)) {
+    return undefined;
+  }
+  if (typeof item.text === 'string') {
+    return { text: item.text };
+  }
 
-  return rest;
+  const embed = readEmbed(item.embed);
+
+  return embed === undefined ? undefined : { embed };
 };
 
 /**
  * One spelling per document: marks in fixed order, empty marks and empty runs
- * dropped, adjacent runs with equal marks merged. The echo check in
+ * dropped, adjacent runs with equal marks merged. Malformed items, embeds
+ * and mark values are dropped, never thrown on. The echo check in
  * `blocks.render` compares this output, so it must be stable.
  * @param rich - segments in any spelling
  */
 export const canonicalizeSegments = (rich: RichText): RichText => {
   const out: RichTextSegment[] = [];
 
-  for (const raw of rich) {
-    const segment = withMarks(withoutMarks(raw), raw.marks ?? {});
+  for (const raw of rich as unknown[]) {
+    const content = contentOf(raw);
+
+    if (content === undefined) {
+      continue;
+    }
+
+    const segment = withMarks(content, (raw as { marks?: unknown }).marks);
     const previous = out[out.length - 1];
 
     if (isTextSegment(segment) && segment.text === '') {

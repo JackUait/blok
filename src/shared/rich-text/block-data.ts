@@ -139,11 +139,16 @@ const mapBlockData = (
   blocks: OutputBlockData[],
   convert: (block: OutputBlockData, data: Record<string, unknown>) => Record<string, unknown>
 ): OutputBlockData[] => {
-  const next = blocks.map((block) => {
-    const data = block.data ?? {};
-    const converted = convert(block, data);
+  const next = blocks.map((block: unknown) => {
+    // Stored and peer documents can hold anything; what is not a block with record data is not ours to convert.
+    if (!isRecord(block) || (block.data !== undefined && block.data !== null && !isRecord(block.data))) {
+      return block as OutputBlockData;
+    }
 
-    return converted === data ? block : { ...block, data: converted };
+    const data = block.data ?? {};
+    const converted = convert(block as unknown as OutputBlockData, data);
+
+    return converted === data ? block as unknown as OutputBlockData : { ...block, data: converted } as OutputBlockData;
   });
 
   return next.every((block, index) => block === blocks[index]) ? blocks : next;

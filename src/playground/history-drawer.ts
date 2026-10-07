@@ -344,6 +344,9 @@ export interface HistoryDrawer {
 
 type VersionRow = Extract<HistoryRow, { kind: 'version' }>;
 
+/** Every element Blok mounts its own UI in, popovers in the top layer included. */
+const BLOK_ROOTS = '[data-blok-interface], [data-blok-popover], [data-blok-top-layer]';
+
 /** Thrown for any non-OK answer; the message is what the person sees. */
 class HistoryRequestError extends Error {}
 
@@ -739,10 +742,15 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     }
   });
 
+  // An Escape inside the editor or one of its popovers closes that first. Blok's
+  // popover backstop does not preventDefault, so the target is all there is to go on.
+  const isEditorEscape = (target: EventTarget | null): boolean =>
+    target instanceof Element
+      ? editorArea.contains(target) || target.closest(BLOK_ROOTS) !== null
+      : target instanceof Node && editorArea.contains(target);
+
   document.addEventListener('keydown', (event) => {
-    // An Escape inside the editor belongs to its own menus first.
-    if (event.key !== 'Escape' || event.defaultPrevented || panel.hidden
-      || (event.target instanceof Node && editorArea.contains(event.target))) {
+    if (event.key !== 'Escape' || event.defaultPrevented || panel.hidden || isEditorEscape(event.target)) {
       return;
     }
 

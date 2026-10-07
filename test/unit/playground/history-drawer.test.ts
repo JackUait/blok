@@ -551,6 +551,22 @@ describe('mountHistoryDrawer', () => {
     expect(editor.hidden).toBe(false);
   });
 
+  // Blok mounts popovers outside the editor column, and its Escape backstop does not preventDefault.
+  it('leaves an Escape inside a Blok popover to the popover', async () => {
+    const { button } = setup();
+    const popover = document.createElement('div');
+    const field = document.createElement('input');
+
+    popover.setAttribute('data-blok-popover', '');
+    popover.append(field);
+    document.body.append(popover);
+    button.click();
+    await settle();
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(panel().hidden).toBe(false);
+  });
+
   it('leaves an Escape that something else already handled alone', async () => {
     const { button } = setup();
 

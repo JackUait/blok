@@ -180,16 +180,19 @@ html[data-pg-modality="keyboard"] .pg-history-note__toggle:focus-visible {
 .pg-history-note__swatch--removed { background: var(--pgh-removed-bg); }
 .pg-history-note__swatch--changed { width: 3px; background: var(--pgh-muted); }
 
-/* Change marks, keyed off the [data-blok-id] roots the view renderer stamps. */
-.pg-history-render [data-pg-change="added"] {
+/*
+  Change marks, keyed off the [data-blok-id] roots the view renderer stamps.
+  The id keeps them above index.html's view.css copy, which is scoped by id too.
+*/
+#pg-history-render [data-blok-id][data-pg-change="added"] {
   background: var(--pgh-added-bg);
   box-shadow: -6px 0 0 var(--pgh-added-bg), 6px 0 0 var(--pgh-added-bg);
 }
-.pg-history-render [data-pg-change="changed"] {
+#pg-history-render [data-blok-id][data-pg-change="changed"] {
   box-shadow: inset 3px 0 0 var(--pgh-muted);
   padding-inline-start: 12px;
 }
-.pg-history-render [data-pg-change="removed"] {
+#pg-history-render [data-blok-id][data-pg-change="removed"] {
   background: var(--pgh-removed-bg);
   box-shadow: -6px 0 0 var(--pgh-removed-bg), 6px 0 0 var(--pgh-removed-bg);
   color: var(--pgh-removed-ink);

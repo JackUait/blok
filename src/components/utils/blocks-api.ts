@@ -3,7 +3,7 @@ import type { Blok } from '../../../types';
 import type { BlockToolData } from '../../../types/tools';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { OutputBlockData, OutputData } from '../../../types/data-formats/output-data';
-import type { InternalMarkdownImportConfig, MarkdownImportConfig } from '../../markdown/types';
+import type { MarkdownImportConfig } from '../../markdown/types';
 import { ToolNotFoundError } from '../errors/tool-not-found';
 import { HOST_PRESERVED_DATA } from './host-preserved-data';
 
@@ -716,7 +716,8 @@ export const createBlocksApiForEditor = (
       const { markdownToBlocks } = await import('../../markdown/index');
 
       // HTML text: what insertMany hands tools, and what the editor's own save gates expect.
-      const config: InternalMarkdownImportConfig = { ...options?.config, htmlText: true };
+      // Typed inline: the Angular build maps markdown/types to @bloklabs/core, which lacks InternalMarkdownImportConfig.
+      const config: MarkdownImportConfig & { htmlText: boolean } = { ...options?.config, htmlText: true };
 
       conversion.blocks = await markdownToBlocks(markdown, config);
     } catch (error) {

@@ -144,8 +144,8 @@ function checkFileImports(file: string, buildScript: string, violations: string[
   return next;
 }
 
-/** Walk a seed set transitively, recording every unstaged module reached. */
-function walkStagingGraph(seeds: string[], buildScript: string, violations: string[]): void {
+/** Walk a seed set transitively, recording every unstaged module reached. Returns every staged file visited. */
+function walkStagingGraph(seeds: string[], buildScript: string, violations: string[]): Set<string> {
   const visited = new Set<string>();
   const queue = [...seeds];
 
@@ -159,6 +159,26 @@ function walkStagingGraph(seeds: string[], buildScript: string, violations: stri
 
     queue.push(...checkFileImports(file, buildScript, violations));
   }
+
+  return visited;
+}
+
+/**
+ * Types `src/markdown/types.ts` declares itself. The build rewrites a
+ * `markdown/types` import to `@bloklabs/core`, which has only the published
+ * types, so a staged file importing one of these fails with TS2724.
+ */
+function srcOnlyMarkdownTypes(): Set<string> {
+  const source = readFileSync(join(MARKDOWN_DIR, 'types.ts'), 'utf8');
+
+  return new Set([...source.matchAll(/^export\s+(?:interface|type)\s+(\w+)/gm)].map((match) => match[1]));
+}
+
+/** Symbols a source imports from a relative `markdown/types` specifier. */
+function markdownTypesImports(source: string): string[] {
+  return [...source.matchAll(/import\s+type\s*\{([^}]*)\}\s*from\s*['"](?:\.\.?\/)+markdown\/types['"]/g)]
+    .flatMap((match) => match[1].split(',').map((clause) => clause.trim().split(/\s+as\s+/)[0]))
+    .filter((symbol) => symbol.length > 0);
 }
 
 /**
@@ -273,6 +293,24 @@ describe('Angular staging law', () => {
 
     walkStagingGraph(contract, buildScript, violations);
 
+    expect(violations, `\n${violations.join('\n')}\n`).toEqual([]);
+  });
+
+  it('imports from markdown/types only the types @bloklabs/core publishes', () => {
+    const buildScript = readFileSync(BUILD_SCRIPT, 'utf8');
+    const srcOnly = srcOnlyMarkdownTypes();
+    const staged = new Set([
+      ...walkStagingGraph(collectTsFiles(ANGULAR_DIR), buildScript, []),
+      ...walkStagingGraph(adaptersContractModules(excludedContractModules(buildScript)), buildScript, []),
+    ]);
+    const violations = [...staged].flatMap((file) => markdownTypesImports(readFileSync(file, 'utf8'))
+      .filter((symbol) => srcOnly.has(symbol))
+      .map((symbol) =>
+        `${relative(REPO_ROOT, file)} imports '${symbol}' from markdown/types; the Angular build rewrites ` +
+        `that import to '@bloklabs/core', which does not export it, so ng-packagr fails with TS2724`
+      ));
+
+    expect(srcOnly.size, 'found no type declared in src/markdown/types.ts — the scan is disarmed').toBeGreaterThan(0);
     expect(violations, `\n${violations.join('\n')}\n`).toEqual([]);
   });
 

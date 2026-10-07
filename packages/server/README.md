@@ -296,6 +296,7 @@ Passes are needed whenever the routes run with `Auth = "ticket"`, including rout
 | `GET /sync/{doc}/state` | Returns the live document as JSON, with the journal head it reflects when there is a journal |
 | `GET /sync/{doc}/history` | Lists the document's past versions as points; needs an operation journal |
 | `GET /sync/{doc}/history/{lineage}/{sequence}` | Returns the document as it was at one point |
+| `GET /sync/{doc}/history/{lineage}/{sequence}/changes` | Lists the edits inside one version, one row per journal record |
 | `POST /sync/{doc}/history/{lineage}/{sequence}/restore` | Makes the live document match one point, as a forward edit; requires an idempotency key |
 | `DELETE /sync/{doc}/history/{lineage}` | Deletes one lineage that is not current |
 
@@ -333,11 +334,11 @@ Upload routes exist only when local or S3-compatible storage is configured. Cons
 
 A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`.
 
-A ticket with `write: false` may call `GET /unfurl`, `GET /sync/{doc}/state`, both `GET` history routes and open `GET /sync/{doc}` read-only; both upload routes, `reset`, `edit`, the history `DELETE` and `restore` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset`, its `edit`, its `state` and its history routes are refused when the pass names no document or a different one. `state` and the two history reads ask your `IBlokAuthorization` for read access only. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
+A ticket with `write: false` may call `GET /unfurl`, `GET /sync/{doc}/state`, the three `GET` history routes and open `GET /sync/{doc}` read-only; both upload routes, `reset`, `edit`, the history `DELETE` and `restore` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset`, its `edit`, its `state` and its history routes are refused when the pass names no document or a different one. `state` and the three history reads ask your `IBlokAuthorization` for read access only. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
 
 ### Version history
 
-A journal-backed document keeps its past. Four routes list it, read one version, restore one and delete old history. Blok ships the data and the routes. Your app builds the history UI.
+A journal-backed document keeps its past. Five routes list it, read one version, list the edits inside one, restore one and delete old history. Blok ships the data and the routes. Your app builds the history UI.
 
 A version is a point, the pair `(lineage, sequence)`. A lineage is one unbroken run of the journal. A reset, a first seed or the format migration starts a new one. Sequence 0 is the state the lineage started from. Store points in your own records, never positions in the list: the newest version keeps growing while people edit.
 
@@ -345,6 +346,7 @@ A version is a point, the pair `(lineage, sequence)`. A lineage is one unbroken 
 | --- | --- | --- |
 | `GET /sync/{doc}/history` | read | `200 { lineages, versions }` |
 | `GET /sync/{doc}/history/{lineage}/{sequence}` | read | `200 { time?, blocks }` with `Blok-History-Lineage` and `Blok-History-Sequence` |
+| `GET /sync/{doc}/history/{lineage}/{sequence}/changes?since=` | read | `200 { changes, truncated? }` with `Blok-History-Lineage` and `Blok-History-Sequence` |
 | `POST /sync/{doc}/history/{lineage}/{sequence}/restore` | read and write | As `edit`: `204` with the new `Blok-Doc-Lineage` and `Blok-Doc-Sequence` |
 | `DELETE /sync/{doc}/history/{lineage}` | read and write | `204`; `404` for an unknown lineage; `409` for the current one |
 
@@ -359,10 +361,45 @@ The list looks like this:
 
 - Each lineage's baseline is a version at sequence 0.
 - The records after it are grouped by time. A new group starts after a gap of more than 2 minutes, or once a group spans 10 minutes. A group's `sequence` is its last record, and `actors` lists the distinct actor ids in the order they first appear.
+- `?group=1`, `?group=15` or `?group=60` sets both limits to that many minutes. A new group then starts after a gap of more than that window, or once a group spans it. Any other value answers 400, and so do an empty, signed or repeated `group`. The JSON shape does not change.
 - Versions come newest first.
 - Times are Unix milliseconds. An unknown time is `null`, and the point read leaves `time` out.
 
-The point read's headers are deliberately not `Blok-Doc-*`. Those name the live head and feed `If-Match`. The point read sends no `ETag`, and adds `Blok-History-Lineage` and `Blok-History-Sequence` to `Access-Control-Expose-Headers` for an allowed origin. Every answer from the history handlers sends `Cache-Control: no-store`. Guard refusals, 405 answers and preflights come from the route shell all routes share.
+The point read's headers are deliberately not `Blok-Doc-*`. Those name the live head and feed `If-Match`. The point read and the changes read send no `ETag`. Both add `Blok-History-Lineage` and `Blok-History-Sequence` to `Access-Control-Expose-Headers` for an allowed origin. On the changes read they name the point in the path. Every answer from the history handlers sends `Cache-Control: no-store`. Guard refusals, 405 answers and preflights come from the route shell all routes share.
+
+The changes read lists the edits inside one version. Pass `since` as the sequence of the version before it in the list you show. Only your app knows which grouping that list uses. The answer covers the records after `since`, up to and including `sequence`, oldest first. Without `since` it starts after 0.
+
+```json
+{
+  "changes": [
+    {
+      "sequence": 12,
+      "committedAt": 1760000000000,
+      "actor": "u1",
+      "blocks": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "kind": "changed",
+          "before": { "id": "a", "type": "paragraph", "data": { "text": [{ "text": "one" }] } },
+          "after": { "id": "a", "type": "paragraph", "data": { "text": [{ "text": "two" }] } }
+        }
+      ]
+    },
+    { "sequence": 13, "committedAt": 1760000004000, "actor": null, "blocks": [], "page": ["title", "values.k"] }
+  ],
+  "truncated": true
+}
+```
+
+- Each journal record gets one row, even one with no visible edit. Its `blocks` is then empty.
+- `actor` is always there. It is `null` when the record has none.
+- A block's `kind` is `added`, `removed`, `changed` or `moved`. `before` is left out for `added`, and `after` for `removed`. Blocks have the same shape as in the point read.
+- `changed` means the `type`, `data` or `tunes` differ. It wins over `moved`.
+- `moved` means a new parent, or a place outside the longest run of siblings that kept their order. It is the same move test `diffOutputData` uses. A changed block still counts toward that order.
+- `page` lists the changed keys of the `page` map, such as `title` and `icon`. Then it lists changed tracked values as `values.<key>`. It is left out when nothing there changed.
+- One answer holds at most 200 rows. Past that, it holds the newest 200 and adds `"truncated": true`. The key is left out otherwise.
+- Sequence 0, or a `since` equal to the sequence, answers `{"changes":[]}`.
 
 Restore is a forward edit, not a rewind. It runs inside the room, through the same path as `edit`, so every open tab sees it and the old versions stay listed.
 
@@ -372,12 +409,15 @@ Restore is a forward edit, not a rewind. It runs inside the room, through the sa
 - A restore whose update would not fit one sync frame answers 413 and changes nothing. The limit is `CollabMaxMessageBytes`. On the built-in journal it is also never above that journal's 1 MiB update limit.
 - A planned change the converter refuses answers 422 and changes nothing.
 - A block whose `type` or `tunes` changed is removed and inserted again.
+- It also makes the `page` map (the built-in title and icon) and the `values` map (`history.track`) match the point. A key whose value differs is set to a copy. A key the point lacks is removed.
+- That map patch is part of the same edit. It lands in the same single journal record and counts toward the 413 limit.
+- A key whose value at the point is not plain JSON, such as a nested Yjs type, is left as it is.
 
-The history routes can also answer the statuses below. The list has no lineage or sequence in its path, so it never answers 400 or 404.
+The history routes can also answer the statuses below. The list has no lineage or sequence in its path, so it never answers 404.
 
 | Status | When |
 | --- | --- |
-| 400 | The sequence is not an unsigned 64-bit whole number. |
+| 400 | The sequence is not an unsigned 64-bit whole number. Or the list's `group` is not 1, 15 or 60. Or the changes read's `since` is not a whole number, or is above the sequence. |
 | 403 | The document was purged. |
 | 404 | The lineage is unknown or is not 32 lowercase hex characters, or the sequence is past its durable head. |
 | 500 | A stored manifest, ledger or journal could not be decoded, on the list too. Or a replay failed, or the export after it. The server logs it. |

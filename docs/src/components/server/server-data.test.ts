@@ -493,8 +493,14 @@ describe('server docs data', () => {
     }
   });
 
-  it('prices version history: points, the four routes, the journal and trimming', () => {
+  it('prices version history: points, the five routes, the journal and trimming', () => {
     const body = serverLimits.find((l) => l.id === 'collab-version-history')?.body ?? '';
+
+    expect(body).toMatch(/Five routes/);
+    expect(body).toMatch(inOrder('group', '1, 15 or 60', '400'));
+    expect(body).toMatch(inOrder('GET /sync/\\{doc\\}/history/\\{lineage\\}/\\{sequence\\}/changes', 'since', 'truncated'));
+    expect(body).toMatch(inOrder('added', 'removed', 'changed', 'moved'));
+    expect(body).toMatch(inOrder('restore', 'title', 'icon', 'history.track'));
 
     expect(body).toMatch(inOrder('\\(lineage, sequence\\)', 'store'));
     expect(body).toMatch(inOrder('GET /sync/\\{doc\\}/history', 'GET /sync/\\{doc\\}/history/\\{lineage\\}/\\{sequence\\}'));

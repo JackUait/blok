@@ -823,7 +823,7 @@ implementation MUST accept an unrecognised code as a final rejection.
 ## 12. HTTP edit, state and history
 
 A backend that is not a socket peer edits through `POST /sync/{doc}/edit` and
-reads through `GET /sync/{doc}/state`. Section 12.4 adds four history routes.
+reads through `GET /sync/{doc}/state`. Section 12.4 adds five history routes.
 On a journal-backed document edit and state carry the same two headers:
 
 | Header | Value |
@@ -930,7 +930,7 @@ sends the body without those three headers.
 
 ### 12.4 History
 
-A journal that keeps history serves four more routes. They sit behind the same
+A journal that keeps history serves five more routes. They sit behind the same
 guard and the same document scope as the edit route.
 
 A version is a point: a lineage and a sequence on it. Sequence 0 is the
@@ -943,6 +943,7 @@ points.
 | --- | --- | --- |
 | `GET /sync/{doc}/history` | read | `200` with `{ lineages, versions }`. |
 | `GET /sync/{doc}/history/{lineage}/{sequence}` | read | `200` with `{ time?, blocks }`, `Blok-History-Lineage` and `Blok-History-Sequence`. No `ETag`. |
+| `GET /sync/{doc}/history/{lineage}/{sequence}/changes` | read | `200` with `{ changes, truncated? }`, `Blok-History-Lineage` and `Blok-History-Sequence`. No `ETag`. |
 | `POST /sync/{doc}/history/{lineage}/{sequence}/restore` | read and write | As the edit route (12.1, 12.2). |
 | `DELETE /sync/{doc}/history/{lineage}` | read and write | `204`, or `404` for an unknown lineage, or `409` for the current lineage. |
 
@@ -964,16 +965,66 @@ The list body:
 - Versions are newest first: lineages newest first, then versions within a
   lineage newest first.
 
+The list takes an optional `group` query: `1`, `15` or `60`. With `group=W`, a
+record starts a new group when it comes more than W minutes after the previous
+record, or W minutes or more after the group's first record. A negative gap
+still counts as 0. Without `group`, the limits are 2 and 10 minutes, as above.
+Any other value answers 400, and so do an empty, signed or repeated `group`.
+The body has the same shape either way.
+
 Times are Unix milliseconds. An unknown time is `null`. The point read sends the
 point's own time, record N's commit time or the lineage's `createdAt` for 0, and
 omits `time` when it is unknown.
 
-`Blok-History-Lineage` and `Blok-History-Sequence` name the point that was read.
+`Blok-History-Lineage` and `Blok-History-Sequence` name the point in the path
+of the point read or the changes read.
 They are deliberately not `Blok-Doc-*`: those name the live head and feed
-`If-Match`. For an allowed origin the point read adds both to
+`If-Match`. For an allowed origin both reads add them to
 `Access-Control-Expose-Headers`. Every response from the history handlers
 carries `Cache-Control: no-store`. Guard refusals, 405 responses and preflights
 come from the route shell all routes share.
+
+The changes read lists the edits inside one version, one row per journal
+record. The window is the records in `(since, sequence]` of the lineage in the
+path. The caller passes `since`, normally the sequence of the version before
+this one in the grouping it shows: only the caller knows that grouping. An
+absent `since` is 0. A `since` that is not an unsigned 64-bit integer, or is
+above the sequence, answers 400. Sequence 0, or `since` equal to the sequence,
+answers `{"changes":[]}`.
+
+```json
+{ "changes": [
+    { "sequence": 12, "committedAt": 1760000000000, "actor": "u1",
+      "blocks": [{ "id": "a", "type": "paragraph", "kind": "changed",
+                   "before": { "id": "a", "type": "paragraph", "data": { "text": [{ "text": "one" }] } },
+                   "after": { "id": "a", "type": "paragraph", "data": { "text": [{ "text": "two" }] } } }] },
+    { "sequence": 13, "committedAt": 1760000004000, "actor": null, "blocks": [],
+      "page": ["title", "values.k"] } ],
+  "truncated": true }
+```
+
+- Rows are oldest first. A record with no visible edit still has a row, with
+  `blocks: []`.
+- `committedAt` is Unix milliseconds. `actor` is always present and is `null`
+  when the record has none.
+- Each row diffs the document after its record against the document after the
+  record before it, or the baseline for record 1. Blocks are matched by `id`
+  and have the point read's shape.
+- `kind` is `added`, `removed`, `changed` or `moved`. `before` is absent for
+  `added`, and `after` is absent for `removed`.
+- `changed`: the `type`, `data` or `tunes` differ. A missing `tunes` counts as
+  `{}`, and object key order does not matter. `changed` wins over `moved`.
+- `moved`: the block has a different parent, or it is not in the longest
+  subsequence of its parent's matched children that kept their order. Changed
+  blocks take part in that subsequence.
+- Within a row, `added`, `changed` and `moved` blocks come in their order
+  after the record, then `removed` blocks in their order before it.
+- `page` lists the changed keys of the `page` map, then the changed keys of
+  the `values` map as `values.<key>`, each group in ordinal order. It is
+  absent when none changed.
+- One answer holds at most 200 rows. When the window has more records, the
+  answer holds the newest 200 and `"truncated": true`. `truncated` is absent
+  otherwise.
 
 A restore is a forward edit against the live document. It is not a rewind, and
 it does not remove history.
@@ -992,13 +1043,19 @@ it does not remove history.
   journal has a lower update limit uses that limit instead.
 - A planned change the converter refuses answers 422 and changes nothing.
 - A block whose `type` or `tunes` changed is removed and inserted again.
+- A restore also makes the top-level `page` and `values` maps equal to the
+  point's. A key whose value differs is set to a copy of the point's value,
+  and a key the point lacks is deleted. A key whose value at the point is not
+  plain JSON (a nested shared type, or undefined) is left as it is.
+- That map patch is part of the same update as the block edits. It is one
+  journal record, and the size check above measures it too.
 
 The history routes can also answer the statuses below. The list has no lineage
-or sequence in its path, so it never answers 400 or 404.
+or sequence in its path, so it never answers 404.
 
 | Status | When |
 | --- | --- |
-| 400 | The sequence is not an unsigned 64-bit integer. |
+| 400 | The sequence is not an unsigned 64-bit integer. The list's `group` is not `1`, `15` or `60`. The changes read's `since` is not an unsigned 64-bit integer, or is above the sequence. |
 | 403 | The document was purged. |
 | 404 | The lineage is unknown or is not 32 lowercase hex characters, or the sequence is past the lineage's durable head. |
 | 500 | A stored manifest, ledger or journal could not be decoded, on the list too. Or replaying the point failed, or the export after it. |

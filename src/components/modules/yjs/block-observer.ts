@@ -135,6 +135,7 @@ export class BlockObserver {
    *
    * Input shapes:
    *  - `Y.UndoManager` instance → `'undo'` or `'redo'`
+   *  - `null` (yjs format cleanup) → `'local'`
    *  - `LocalOriginTag` string  → mapped by the exhaustive switch below
    *  - anything else            → `'remote'` (treated as a peer update)
    *
@@ -148,6 +149,15 @@ export class BlockObserver {
   public mapTransactionOrigin(origin: unknown): TransactionOrigin {
     if (this.undoManager && origin === this.undoManager) {
       return this.undoManager.undoing ? 'undo' : 'redo';
+    }
+
+    // yjs's own format cleanup (a peer's change left redundant format items
+    // here) runs with no origin. It changes no segments, so 'remote' would
+    // rerender the block for nothing. Safe because every remote apply carries
+    // a provider origin (`DocumentStore.applyRemoteUpdate`); the other
+    // null-origin transactions in src are read-only scans.
+    if (origin === null) {
+      return 'local';
     }
 
     if (!this.isLocalOriginTag(origin)) {

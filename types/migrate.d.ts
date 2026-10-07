@@ -276,16 +276,14 @@ export declare function migrate(
  */
 export declare const LEGACY_GRAMMAR: LegacyGrammarEntry[];
 
-/** What {@link migrateToRichText} could not convert cleanly: markup with no plain mark, or a legacy block it left as it is. */
+/** What {@link migrateToRichText} could not convert cleanly: markup with no plain mark. */
 export interface RichTextLossyReport {
   blockId?: string;
   blockType: string;
+  /** The field, or `'items'` for legacy list item text. */
   field: string;
-  /**
-   * `html-embed`: markup kept verbatim. `custom-mark`: an unknown tag kept as a `tag:*` mark.
-   * `legacy-shape`: an Editor.js block left unconverted (`field` is `'data'`); run `migrate()` first.
-   */
-  reason: 'html-embed' | 'custom-mark' | 'legacy-shape';
+  /** `html-embed`: markup kept verbatim. `custom-mark`: an unknown tag kept as a `tag:*` mark. */
+  reason: 'html-embed' | 'custom-mark';
 }
 
 /** Options for {@link migrateToRichText}. */
@@ -296,11 +294,12 @@ export interface MigrateToRichTextOptions {
 /**
  * Convert the HTML rich-text fields of a stored document to segments, without a DOM.
  * Only built-in block types are converted: a custom tool's fields are left as they are.
- * A block in a legacy Editor.js shape is left as it is and reported as `legacy-shape`:
- * run `migrate()` first to upgrade it.
+ * Legacy Editor.js shapes are converted too (list items, toggleList and callout titles
+ * and bodies, quote captions, warnings), so `migrate()` can run before or after it.
+ * Table string cells, `raw.html` and `attaches.title` stay strings.
  * Fields that already hold segments pass through, so running it twice is safe.
  * @param data - a stored OutputData document
- * @param options - `onLossy` hears about legacy blocks and markup kept as an embed or a custom mark
+ * @param options - `onLossy` hears about markup kept as an embed or a custom mark
  * @returns the document with segment fields
  */
 export declare function migrateToRichText(data: OutputData, options?: MigrateToRichTextOptions): OutputData;

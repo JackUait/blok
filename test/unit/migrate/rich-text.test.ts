@@ -110,24 +110,55 @@ describe('migrate rich text', () => {
       return () => `id-${n++}`;
     };
 
-    it.each<[string, OutputData]>([
-      ['a warning title and message', { blocks: [{ id: 'w', type: 'warning', data: { title: '<b>T</b>', message: 'M' } }] }],
+    const legacyCases: Array<[string, OutputData]> = [
+      ['a warning title and message', { blocks: [{ id: 'w', type: 'warning', data: { title: '<b>T</b>', message: 'a &lt; b &amp;&amp; c' } }] }],
       ['a quote caption', { blocks: [{ id: 'q', type: 'quote', data: { text: 'Q', caption: '<b>C</b>' } }] }],
       ['a callout title with a body', { blocks: [{
         id: 'c',
         type: 'callout',
         data: { title: '<b>T</b>', body: { blocks: [{ id: 'b', type: 'paragraph', data: { text: '<i>inner</i>' } }] } },
       }] }],
-      ['a toggleList title', { blocks: [{ id: 't', type: 'toggleList', data: { title: '<b>T</b>' } }] }],
-      ['legacy list items', { blocks: [{ id: 'l', type: 'list', data: { style: 'unordered', items: [{ content: '<b>a</b>', items: [] }] } }] }],
-    ])('keeps %s when run before migrate()', (_label, doc) => {
+      ['a toggleList title with a body', { blocks: [{
+        id: 't',
+        type: 'toggleList',
+        data: { title: '<b>T</b>', body: { blocks: [{ id: 'tb', type: 'toggleList', data: { title: 'deep', body: { blocks: [{ id: 'tp', type: 'paragraph', data: { text: 'x' } }] } } }] } },
+      }] }],
+      ['legacy list items', { blocks: [{ id: 'l', type: 'list', data: { style: 'unordered', items: [{ content: '<b>a</b>', items: [{ content: 'n', items: [] }] }] } }] }],
+      ['bare-string list items', { blocks: [{ id: 'l', type: 'list', data: { style: 'ordered', items: ['<b>a</b>', 'b &amp; c'] } }] }],
+      ['old checklist items', { blocks: [{ id: 'k', type: 'checklist', data: { items: [{ text: '<i>done</i>', checked: true }] } }] }],
+      ['a table with string cells', { blocks: [{ id: 'tb', type: 'table', data: { withHeadings: false, content: [['<b>a</b>', 'b'], ['c', '']] } }] }],
+    ];
+
+    it.each(legacyCases)('converts %s, and migrate() commutes with it', (_label, doc) => {
       const onLossy = vi.fn();
       const converted = migrateToRichText(doc, { onLossy });
-      const block = doc.blocks[0];
 
-      expect(converted).toEqual(doc);
-      expect(migrate(converted, { generateId: counterIds() })).toEqual(migrate(doc, { generateId: counterIds() }));
-      expect(onLossy).toHaveBeenCalledWith({ blockId: block.id, blockType: block.type, field: 'data', reason: 'legacy-shape' });
+      expect(migrateToRichText(migrate(converted, { generateId: counterIds() }).data))
+        .toEqual(migrateToRichText(migrate(doc, { generateId: counterIds() }).data));
+      expect(onLossy).not.toHaveBeenCalled();
+    });
+
+    it('turns legacy text fields into segments and leaves non-rich strings alone', () => {
+      const out = migrateToRichText({ blocks: [
+        { id: 'w', type: 'warning', data: { title: '<b>T</b>', message: 'a &lt; b' } },
+        { id: 'q', type: 'quote', data: { text: 'Q', caption: 'C' } },
+        { id: 't', type: 'toggleList', data: { title: 'T', body: { blocks: [{ id: 'p', type: 'paragraph', data: { text: '<i>x</i>' } }] } } },
+        { id: 'l', type: 'list', data: { style: 'unordered', items: [{ content: '<b>a</b>', items: [{ content: 'n' }] }, 'bare'] } },
+        { id: 'tb', type: 'table', data: { content: [['<b>cell</b>']] } },
+        { id: 'r', type: 'raw', data: { html: '<div>raw</div>' } },
+        { id: 'at', type: 'attaches', data: { file: { url: 'https://ex.com/f.pdf' }, title: 'Report &amp; co' } },
+      ] });
+
+      expect(out.blocks[0].data).toEqual({ title: [{ text: 'T', marks: { bold: true } }], message: [{ text: 'a < b' }] });
+      expect(out.blocks[1].data.caption).toEqual([{ text: 'C' }]);
+      expect(out.blocks[2].data).toEqual({ title: [{ text: 'T' }], body: { blocks: [{ id: 'p', type: 'paragraph', data: { text: [{ text: 'x', marks: { italic: true } }] } }] } });
+      expect(out.blocks[3].data.items).toEqual([
+        { content: [{ text: 'a', marks: { bold: true } }], items: [{ content: [{ text: 'n' }] }] },
+        [{ text: 'bare' }],
+      ]);
+      expect(out.blocks[4].data.content).toEqual([['<b>cell</b>']]);
+      expect(out.blocks[5].data.html).toBe('<div>raw</div>');
+      expect(out.blocks[6].data.title).toBe('Report &amp; co');
     });
 
     it('still converts current blocks next to a legacy one', () => {

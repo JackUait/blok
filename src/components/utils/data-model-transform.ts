@@ -5,6 +5,8 @@
  * Used for automatic detection and transformation when dataModel config is 'auto'.
  */
 import type { OutputBlockData, BlockId } from '../../../types';
+import type { RichText } from '../../../types/rich-text';
+import { isRichText } from '../../shared/rich-text/guards';
 import { generateBlockId } from '../utils';
 // The forward legacy→hierarchical expansion lives in ONE zero-dep grammar module
 // shared verbatim with the standalone codemod, so the two migration surfaces
@@ -40,7 +42,7 @@ const createMigrationWarn = (): ((blockType: string, field: string, verb: string
  * Legacy list item as object with content property
  */
 interface LegacyListItemObject {
-  content: string;
+  content: string | RichText;
   checked?: boolean;
   items?: LegacyListItem[];
 }
@@ -49,7 +51,7 @@ interface LegacyListItemObject {
  * Old checklist item format (uses 'text' instead of 'content')
  */
 interface OldChecklistItem {
-  text: string;
+  text: string | RichText;
   checked?: boolean;
 }
 
@@ -86,10 +88,10 @@ export interface DataFormatAnalysis {
 }
 
 /**
- * Type guard for object with text property
+ * Type guard for object with text property: an HTML string or segments
  */
-const isObjectWithText = (data: unknown): data is { text: string } & Record<string, unknown> => {
-  return typeof data === 'object' && data !== null && 'text' in data && typeof (data).text === 'string';
+const isObjectWithText = (data: unknown): data is { text: string | RichText } & Record<string, unknown> => {
+  return typeof data === 'object' && data !== null && 'text' in data && (typeof data.text === 'string' || isRichText(data.text));
 };
 
 /**

@@ -1,6 +1,6 @@
 import type { BlockToolData } from '../../../types';
 import type { BlockToolAdapter } from '../tools/block';
-import { blockDataToHtml, nestedDocumentsFor } from '../../shared/rich-text/block-data';
+import { blockDataToHtml, legacyNestingFor } from '../../shared/rich-text/block-data';
 import { isRichText, readRichTextLeniently } from '../../shared/rich-text/guards';
 import { logLabeled } from '../utils';
 
@@ -82,5 +82,6 @@ export const richTextInputToHtml = (
 
   warnUnknownMarksOnce(read, fields);
 
-  return blockDataToHtml(read, fields, type => resolveTool(type)?.richTextFields ?? [], nestedDocumentsFor(tool.name));
+  // Legacy walk too: a host may insert or update a legacy shape (list items[]) taken from a legacy save.
+  return blockDataToHtml(read, fields, type => resolveTool(type)?.richTextFields ?? [], legacyNestingFor(tool.name));
 };

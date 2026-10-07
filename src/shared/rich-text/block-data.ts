@@ -3,6 +3,8 @@ import { isRichText, readRichTextLeniently } from './guards';
 import { segmentsToHtml } from './segments-to-html';
 import type { RichText } from '../../../types/rich-text';
 
+import { LEGACY_BODY_TYPES, LEGACY_ITEM_TYPES } from './fields';
+
 export { richTextFieldsFor } from './fields';
 
 export type FieldsResolver = (type: string) => string[];
@@ -12,16 +14,62 @@ type Convert = (value: unknown) => unknown;
 export interface ConvertOptions {
   /** Walk `properties.*.blocks`. Only database-row stores documents there; a custom tool's nested data is not ours to rewrite. */
   nestedDocuments?: boolean;
+  /** The block's type, to walk its legacy `items[]` / `body.blocks`. Only readers of stored documents set it. */
+  legacyType?: string;
 }
 
+type OptionsFor = (type: string) => ConvertOptions;
+
 /** The nested-document gate for a block or tool of this type. */
-export const nestedDocumentsFor = (type: string): ConvertOptions => ({ nestedDocuments: type === 'database-row' });
+export const nestedDocumentsFor: OptionsFor = type => ({ nestedDocuments: type === 'database-row' });
+
+/**
+ * {@link nestedDocumentsFor} plus the legacy containers, for readers of stored
+ * documents and for editor input (a host may insert a legacy shape from a legacy
+ * save). Editor OUTPUT does not need it: it converts before collapsing.
+ */
+export const legacyNestingFor: OptionsFor = type => ({ ...nestedDocumentsFor(type), legacyType: type });
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 export const isNestedDocument = (value: unknown): value is { blocks: OutputBlockData[] } =>
   isRecord(value) && Array.isArray(value.blocks);
+
+/**
+ * Legacy list items: `content` (old checklist: `text`) and nested `items`. A bare
+ * item (string or segments) is its own text. The same array when nothing changed.
+ */
+const convertItems = (items: unknown[], convertField: Convert): unknown[] => {
+  const next = items.map((item) => {
+    if (!isRecord(item)) {
+      return typeof item === 'string' || Array.isArray(item) ? convertField(item) : item;
+    }
+
+    const key = 'content' in item ? 'content' : 'text';
+    const changes: Record<string, unknown> = {};
+
+    if (key in item) {
+      const value = convertField(item[key]);
+
+      if (value !== item[key]) {
+        changes[key] = value;
+      }
+    }
+
+    if (Array.isArray(item.items)) {
+      const nested = convertItems(item.items, convertField);
+
+      if (nested !== item.items) {
+        changes.items = nested;
+      }
+    }
+
+    return Object.keys(changes).length === 0 ? item : { ...item, ...changes };
+  });
+
+  return next.every((item, index) => item === items[index]) ? items : next;
+};
 
 /**
  * Returns `data` itself when nothing converted, so callers can skip the copy
@@ -63,6 +111,26 @@ const convertData = (
     }
   }
 
+  const legacyType = options.legacyType;
+
+  if (legacyType !== undefined && LEGACY_ITEM_TYPES.has(legacyType) && Array.isArray(data.items)) {
+    const items = convertItems(data.items, convertField);
+
+    if (items !== data.items) {
+      changes.items = items;
+    }
+  }
+
+  const body = data.body;
+
+  if (legacyType !== undefined && LEGACY_BODY_TYPES.has(legacyType) && isNestedDocument(body)) {
+    const blocks = convertBlocks(body.blocks);
+
+    if (blocks !== body.blocks) {
+      changes.body = { ...body, blocks };
+    }
+  }
+
   return Object.keys(changes).length === 0 ? data : { ...data, ...changes };
 };
 
@@ -81,15 +149,24 @@ const mapBlockData = (
   return next.every((block, index) => block === blocks[index]) ? blocks : next;
 };
 
-export const outputBlocksToHtml = (blocks: OutputBlockData[], resolve: FieldsResolver): OutputBlockData[] =>
-  mapBlockData(blocks, (block, data) => blockDataToHtml(data, resolve(block.type), resolve, nestedDocumentsFor(block.type)));
+export const outputBlocksToHtml = (
+  blocks: OutputBlockData[],
+  resolve: FieldsResolver,
+  optionsFor: OptionsFor = nestedDocumentsFor
+): OutputBlockData[] =>
+  mapBlockData(blocks, (block, data) => blockDataToHtml(data, resolve(block.type), resolve, optionsFor(block.type)));
 
 export const outputBlocksToSegments = (
   blocks: OutputBlockData[],
   resolve: FieldsResolver,
-  read: (html: string) => RichText
+  read: (html: string) => RichText,
+  optionsFor: OptionsFor = nestedDocumentsFor
 ): OutputBlockData[] =>
-  mapBlockData(blocks, (block, data) => blockDataToSegments(data, resolve(block.type), resolve, read, nestedDocumentsFor(block.type)));
+  mapBlockData(blocks, (block, data) => blockDataToSegments(data, resolve(block.type), resolve, read, optionsFor(block.type)));
+
+/** Nested blocks keep walking legacy containers when their parent did. */
+const nestedOptionsFor = (options: ConvertOptions): OptionsFor =>
+  options.legacyType !== undefined ? legacyNestingFor : nestedDocumentsFor;
 
 /**
  * Segment fields → HTML strings. HTML strings and non-array values pass through.
@@ -105,7 +182,7 @@ export function blockDataToHtml(
     data,
     fields,
     value => (Array.isArray(value) ? segmentsToHtml(isRichText(value) ? value : readRichTextLeniently(value)) : value),
-    blocks => outputBlocksToHtml(blocks, resolve),
+    blocks => outputBlocksToHtml(blocks, resolve, nestedOptionsFor(options)),
     options
   );
 }
@@ -122,7 +199,7 @@ export function blockDataToSegments(
     data,
     fields,
     value => (typeof value === 'string' ? read(value) : value),
-    blocks => outputBlocksToSegments(blocks, resolve, read),
+    blocks => outputBlocksToSegments(blocks, resolve, read, nestedOptionsFor(options)),
     options
   );
 }

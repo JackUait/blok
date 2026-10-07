@@ -128,12 +128,12 @@ describe('Saver — rich text output', { timeout: 60_000 }, () => {
     expect(isEmptyOutputData(saved)).toBe(true);
   });
 
-  it('keeps HTML, silently, when the output is collapsed to legacy', async () => {
+  it('saves segments, silently, when the output is collapsed to legacy', async () => {
     const editor = await createEditor({ dataModel: 'legacy', data: { blocks } });
 
     const saved = await editor.save();
 
-    expect(saved.blocks[0].data.text).toBe('<strong>a</strong> b');
+    expect(saved.blocks[0].data.text).toEqual([{ text: 'a', marks: { bold: true } }, { text: ' b' }]);
     expect(richTextWarnings(warnSpy)).toHaveLength(0);
   });
 

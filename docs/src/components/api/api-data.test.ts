@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
 import ts from "typescript";
 import { API_SECTIONS } from "./api-data";
@@ -1144,5 +1144,49 @@ describe("loose wire-shape input and OutputData utilities", () => {
   it("output-data section description mentions the loose input variant", () => {
     const section = findSection("output-data");
     expect(section?.description).toContain("LooseOutputData");
+  });
+});
+
+describe("rich text segments are the only saved shape", () => {
+  const allMethods = API_SECTIONS.flatMap((section) => section.methods ?? []);
+
+  it("documents no richText config option", () => {
+    const options = API_SECTIONS.flatMap((section) => section.table ?? []).map((row) => row.option);
+
+    expect(options).not.toContain("richText");
+  });
+
+  it("never tells the reader to set the old richText flag", () => {
+    const files = [
+      "docs/src/components/api/api-data.ts",
+      "docs/src/i18n/en.json",
+      "docs/src/i18n/ru.json",
+      "MIGRATION.md",
+      "README.md",
+      "packages/server/README.md",
+      ...readdirSync(join(BLOK_ROOT, "types"), { recursive: true, encoding: "utf8" })
+        .filter((file) => file.endsWith(".d.ts"))
+        .map((file) => join("types", file)),
+    ];
+
+    for (const file of files) {
+      expect(readSource(file), file).not.toMatch(/richText: ['"]segments['"]/);
+    }
+  });
+
+  it.each(["output-data", "block-data"])("shows rich text as segments in the %s example", (id) => {
+    const example = API_SECTIONS.find((section) => section.id === id)?.example ?? "";
+
+    expect(example).toContain('"text": [');
+    expect(example).not.toMatch(/data"?:\s*\{\s*"text":\s*"/);
+  });
+
+  it("migrates a stored document before blocksOfType reads it", () => {
+    const example = allMethods.find((method) => method.name === "blocksOfType(data, type)")?.example ?? "";
+    const migrateAt = example.indexOf("migrateToRichText(");
+    const readAt = example.indexOf("blocksOfType(");
+
+    expect(migrateAt).toBeGreaterThan(-1);
+    expect(migrateAt).toBeLessThan(readAt);
   });
 });

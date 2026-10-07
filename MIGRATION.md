@@ -18,7 +18,16 @@ This guide covers the breaking changes when migrating from EditorJS to Blok.
 - [Saved Content / Data Migration](#saved-content--data-migration)
   - [Auto-Migrated on Load](#auto-migrated-on-load)
   - [Dropped Fields](#dropped-fields)
-- [Rich Text as Segments](#rich-text-as-segments)
+- [Rich Text Is Saved as Segments](#rich-text-is-saved-as-segments)
+  - [The Shape](#the-shape)
+  - [What Returns Segments](#what-returns-segments)
+  - [What Stays HTML](#what-stays-html)
+  - [Input Takes Both Shapes](#input-takes-both-shapes)
+  - [Custom Block Tools](#custom-block-tools)
+  - [Types](#types)
+  - [Controlled Components](#controlled-components)
+  - [Collaboration](#collaboration)
+  - [Converting Stored Documents](#converting-stored-documents)
 - [Configuration Defaults](#configuration-defaults)
 - [New API Methods](#new-api-methods)
 - [DOM Selectors](#dom-selectors)
@@ -671,17 +680,17 @@ expand: (block, ctx, { siblings, index }) => {
 
 ---
 
-## Rich Text as Segments
+## Rich Text Is Saved as Segments
 
-By default, rich text fields such as `paragraph.text` save as an inline HTML string. Set `richText: 'segments'` to save them as an array of runs instead. The default stays `'html'`, so nothing changes until you opt in.
+**Breaking.** Rich text fields such as `paragraph.text` used to save as an inline HTML string. They now save as an array of runs, called segments. There is no flag to turn this off.
 
 ```javascript
-const editor = new Blok({ holder: 'editor', tools, richText: 'segments' });
-
 const data = await editor.save();
 // data.blocks[0].data.text
 //=> [{ text: 'Hello ' }, { text: 'world', marks: { bold: true } }]
 ```
+
+This breaks you if your code reads `text` as a string. That includes server code that reads stored documents, search indexing, and previews. Read on for what to change.
 
 ### The Shape
 
@@ -694,56 +703,91 @@ The types are `RichText`, `RichTextSegment` and `RichTextMarks`, exported from `
 - A custom inline tool's tag is stored as `"tag:<name>": { <attribute>: <value> }`.
 - An inline object is `{ embed: { equation: { expression } } }`, `{ embed: { page: { id } } }` or `{ embed: { html } }`. The `html` embed keeps markup that has no mark, such as an `<img>`, verbatim.
 
-These fields become segments: `text` on `paragraph`, `header`, `list`, `toggle` and `quote`. A custom block tool takes part only when it lists its fields in `static richTextFields`, such as `['text']`. Without it, the tool's fields stay as the tool stores them, on input and on output. A sanitize rule does not count. Table cells and plain-text fields such as captions stay strings.
-
-### Input Takes Both Shapes
-
-Blok reads HTML and segments on every input path, whatever `richText` says. That covers the `data` config, `render()`, `blocks.insert()`, `insertMany()`, `update()`, `splitBlock()` and `convert()`. You can switch the flag on before you convert stored documents.
-
-A mark key Blok does not know, such as `"acme:x"`, is dropped on input with one console warning per key. A `tag:<name>` mark survives only if an enabled inline tool allows that tag.
+These fields become segments: `text` on `paragraph`, `header`, `list`, `toggle` and `quote`. Table cells and plain-text fields such as captions stay strings.
 
 ### What Returns Segments
 
-In segments mode these return segments:
+Every place that hands saved data to your code returns segments:
 
-- `editor.save()` and `onSave`.
+- `editor.save()`, `onSave` and `onSubmit`.
 - `BlockAPI.save()`, including `target.save()` inside `onChange`.
-- `getBlockData` from `useBlocks` in the React, Vue and Angular adapters. Its `.data` is a new object on every call, so do not use it as a memo dependency.
+- `getBlockData` from `useBlocks` in the React, Vue and Angular adapters. Its `.data` can be a new object on each call, so do not use it as a memo dependency.
 - The value `importMarkdown()` returns.
-
-`exportMarkdown()` is unchanged. `@bloklabs/core/view` (`blocksToHtml`, plain text, markdown, outline) reads both shapes in built-in block types. A custom block type's fields reach your renderer as stored. The C# server runtime reads both shapes.
-
-The output stays HTML when `collaboration` is configured. Segments under collaboration come in a later release.
+- `htmlToBlocks()` from `@bloklabs/core/view` and `markdownToBlocks()` from `@bloklabs/core/markdown`.
+- The C# `FromHtmlAsync` and `FromMarkdownAsync`.
+- Collaboration: what the editor saves, what the server writes to your document endpoint, and `GET /sync/{doc}/state`.
 
 With `dataModel: 'legacy'` (or `'auto'` with legacy input), the legacy shapes hold segments too: list `items[].content`, `toggleList.title` and the blocks in `body.blocks`. Blok and `@bloklabs/core/view` read them back without loss.
 
+`exportMarkdown()` is unchanged. `@bloklabs/core/view` (`blocksToHtml`, plain text, markdown, outline) reads both shapes in built-in block types. A custom block type's fields reach your renderer as stored. The C# server runtime reads both shapes.
+
 ### What Stays HTML
 
-- The Yjs document behind undo and collaboration.
 - `BlockAPI.preservedData` and `target.preservedData` in `onChange`. They are an internal snapshot.
 - The database `rowPages` `body` and `acceptedBody` sent to your host. Store and echo them unchanged.
 - `extractTexts()` returns HTML strings. `injectTexts()` writes each field back in the shape it found.
 - Fields of custom block tools that do not declare `static richTextFields`.
 
-### Things to Check Before You Turn It On
+### Input Takes Both Shapes
 
-**Third-party tools.** A tool that reads another block through `BlockAPI.save()` receives segments once you set the flag. For a `database-row` block, that includes the nested documents in `properties.*.blocks`. Blok's built-in tools handle this. Check any third-party tool that reads other blocks.
+Blok reads HTML and segments on every input path, and it will keep reading HTML. That covers the `data` config, `render()`, `blocks.insert()`, `insertMany()`, `update()`, `splitBlock()` and `convert()`. You do not have to convert stored documents before you upgrade.
 
-**Tool data types.** `ParagraphData.text` and the other published tool data types are still typed `string`. In segments mode, cast the field:
+An old document turns into segments the next time the editor saves it. Until then your database holds both shapes. To convert everything at once, see [Converting Stored Documents](#converting-stored-documents).
 
-```typescript
-import type { RichText } from '@bloklabs/core';
+A mark key Blok does not know, such as `"acme:x"`, is dropped on input with one console warning per key. A `tag:<name>` mark survives only if an enabled inline tool allows that tag.
 
-const text = block.data.text as unknown as RichText;
+### Custom Block Tools
+
+A custom block tool takes part only when it lists its rich fields in `static richTextFields`:
+
+```javascript
+class MyCard {
+  static richTextFields = ['title'];
+}
 ```
 
-The types change in a later major release.
+Without it, the tool's fields stay as the tool stores them, on input and on output. A sanitize rule does not count.
 
-**Controlled components.** Feed the `onSave` output back into the editor, not your original HTML. Original HTML always re-renders once in segments mode. Two inputs also re-render once, because Blok normalises them on render: a raw hex colour, and a link without `target` or `rel`. After that the output is stable and the caret stays put.
+A tool that reads another block through `BlockAPI.save()` receives segments. For a `database-row` block, that includes the nested documents in `properties.*.blocks`. Blok's built-in tools handle this. Check any third-party tool that reads other blocks.
+
+The tool class itself still reads and writes HTML. Its constructor, `merge()`, `validate()` and `save()` see HTML strings. Blok converts at the edge.
+
+If you run the C# collaboration server, list the same fields in `BlokServerOptions.RichTextFields`, for example `{ "my-card": ["title"] }`. List exactly what the client declares, or the two write the field in different shapes.
+
+### Types
+
+- `ParagraphData`, `HeaderData`, `ListData`, `ToggleData` and `QuoteData` now type `text` as `RichText`. These are the saved shapes.
+- `ParagraphToolData`, `HeaderToolData`, `ListToolData`, `ToggleToolData` and `QuoteToolData` type `text` as `string`. Use them in a tool's constructor, `merge()`, `validate()` and `save()`.
+- For data you write by hand as input, use the `*ToolData` types or `BlockToolData`. Input accepts HTML and segments.
+
+`isBlockType` and `blocksOfType` narrow to the `RichText` types. That is only true for documents saved by this version, or converted with `migrateToRichText`. Convert an older document before a typed read.
+
+### Controlled Components
+
+Feed the `onSave` output back into the editor, not your original HTML.
+
+- Original HTML re-renders once, because Blok turns it into segments.
+- A raw hex colour and a link without `target` or `rel` also re-render once, because Blok normalises them on render.
+- After that the output is stable and the caret stays put.
+
+After a round trip, the HTML spelling is canonical. For example `<em>` becomes `<i>` and `&nbsp;` becomes a plain U+00A0 character. The meaning does not change.
+
+### Collaboration
+
+Collaboration rooms move to format 2, which stores rich text as formatted text.
+
+- Upgrade the client and the server together. An old client gets `unsupported-format`.
+- A format-1 room is converted the first time the new server opens it. Each conversion step gets up to 60 seconds. If one fails, the server answers "unavailable" and waits longer before each new try.
+- The client retries the handshake by itself. If the room is still not ready after about 33 seconds (3 tries of 10 seconds), the session ends with `handshake-timeout`. This can happen on the first open of a very large document. Reload to try again.
+- Offline edits made in format 1 are set aside and never sent.
+- The tab sync protocol changed too, so all tabs need the new version.
+- A third-party collaboration server must speak format 2.
+
+One limitation is accepted. When two people format overlapping text at the same time, one person's formatting can be lost.
 
 ### Converting Stored Documents
 
-`migrateToRichText` converts the HTML fields of a stored document offline:
+`migrateToRichText` converts the HTML fields of a stored document offline. Run it to convert your database in bulk, and before typed reads such as `blocksOfType`:
 
 ```javascript
 import { migrateToRichText, richTextToHtml, richTextToPlainText } from '@bloklabs/core/migrate';
@@ -763,6 +807,8 @@ richTextToPlainText([{ text: 'Hi ' }, { text: 'there', marks: { bold: true } }])
 - Fields that already hold segments pass through, so running it twice is safe.
 - `onLossy` reports `'html-embed'` for markup kept as an `{ embed: { html } }` segment, and `'custom-mark'` for an unknown tag kept as a `tag:<name>` mark.
 - It runs in Node without a DOM. The `@bloklabs/core/migrate` bundle now includes parse5, about 70 KB gzip.
+
+Use `richTextToHtml` and `richTextToPlainText` to display segments outside the editor.
 
 ---
 

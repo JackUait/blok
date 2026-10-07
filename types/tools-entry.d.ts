@@ -179,6 +179,10 @@ import { PageLinkData as _PageLinkData } from './tools/page-link';
  * site re-implements a `block.type === 'x'` check plus a `data as XData` cast.
  * {@link isBlockType} narrows off this map so those casts disappear.
  *
+ * Rich text fields are typed `RichText`. That holds for documents saved by
+ * this version or converted with `migrateToRichText`. An older stored
+ * document can still hold HTML strings there.
+ *
  * The interface is **augmentable** — register a custom tool's data shape via
  * declaration merging and {@link isBlockType} will narrow to it:
  *
@@ -220,6 +224,8 @@ export interface BlokBlockDataMap {
 /**
  * Type guard narrowing a saved block to a known block type, so its `data` is
  * typed via {@link BlokBlockDataMap} instead of `Record<string, unknown>`.
+ * Rich text is `RichText` for docs saved by this version or after
+ * `migrateToRichText`. Convert an older stored document first.
  *
  * @example
  * for (const block of editor.save().then(d => d.blocks)) {
@@ -244,6 +250,8 @@ export function isBlockType<K extends keyof BlokBlockDataMap>(
  * {@link isBlockType} — replaces the `(data?.blocks ?? []).filter(...)` +
  * `data as XData` cast every feature re-does. Narrows off the augmentable
  * registry, so custom tools registered via declaration merging are typed too.
+ * Rich text is `RichText` for docs saved by this version or after
+ * `migrateToRichText`. Convert an older stored document first.
  *
  * @example
  * const headers = blocksOfType(editor.save(), 'header');

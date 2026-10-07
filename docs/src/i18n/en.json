@@ -120,7 +120,7 @@
       "description": "The main editor class. It creates the Blok editor instance and manages it. Every namespace a tool reaches through `api.*` is also on the instance as `editor.*`. The properties below are that same surface, plus the `width`, `placeholder`, `tokens` and `i18n` namespaces the class declares itself.",
       "methods": {
         "save": {
-          "description": "Extracts the current editor content as structured JSON data. This is the main method for saving editor content.",
+          "description": "Extracts the current editor content as structured JSON data. This is the main method for saving editor content.\n\nRich text fields, such as `paragraph.text`, hold segments: arrays of `{ text, marks? }` runs. A document saved by an older version can hold HTML strings until it is saved again. `migrateToRichText` converts it.",
           "note": "Call it after `await editor.isReady`. The returned JSON is your source of truth. Store it and pass it back to `render()`."
         },
         "render": {
@@ -1105,13 +1105,13 @@
           "description": "Creates a bounded window of recently emitted onSave payloads, so you can recognize controlled-`data` echoes. Exported from the main entry.\n\nDeduping against only the LAST emitted payload is not enough. A host that persists on save and refetches can hand back a STALE echo, an earlier save arriving after a newer one already replaced the baseline. Re-rendering that echo would clobber the caret and any content typed since.\n\nMatching is structural (equalsOutputData), so envelopes reshaped in transit (fresh `time`, stripped ids) still count as echoes."
         },
         "isBlockType": {
-          "description": "A type guard exported from `@bloklabs/core/tools`. It narrows a saved block to a known block type, so its `data` is typed through the `BlokBlockDataMap` registry instead of `Record<string, unknown>`. It replaces the `block.type === 'header'` check plus the `data as HeaderData` cast.\n\n`BlokBlockDataMap` maps each built-in block type to its data shape and is exported from the same subpath. It is augmentable, so a custom tool registers its own shape by declaration merging and gets narrowed the same way."
+          "description": "A type guard exported from `@bloklabs/core/tools`. It narrows a saved block to a known block type, so its `data` is typed through the `BlokBlockDataMap` registry instead of `Record<string, unknown>`. It replaces the `block.type === 'header'` check plus the `data as HeaderData` cast.\n\n`BlokBlockDataMap` maps each built-in block type to its data shape and is exported from the same subpath. It is augmentable, so a custom tool registers its own shape by declaration merging and gets narrowed the same way.\n\nThe types describe documents saved by this version, or converted with `migrateToRichText`. A document stored earlier can still hold HTML strings in rich text fields. Convert it before a typed read."
         },
         "normalizeOutputBlocks": {
           "description": "Block-level counterpart of normalizeOutputData, exported from the main entry. It normalizes an array of loose wire blocks into the strict saved shape.\n\nA `null` or missing `data` becomes `{}`, a `null` or empty `id` is dropped so a new one is generated, and nullish or empty `parent`/`content` is dropped as absent. Every other field passes through untouched.\n\nUse normalizeOutputData when you hold the whole document envelope."
         },
         "blocksOfType": {
-          "description": "The collection counterpart of `isBlockType`, also exported from `@bloklabs/core/tools`. It collects every saved block of a given type from a document, and each result's `data` is typed through `BlokBlockDataMap`.\n\nIt tolerates null: a `null` or `undefined` document is accepted, and so is the loose `LooseOutputData` wire shape. So it replaces the `(data?.blocks ?? []).filter(...)` plus cast that every feature re-writes."
+          "description": "The collection counterpart of `isBlockType`, also exported from `@bloklabs/core/tools`. It collects every saved block of a given type from a document, and each result's `data` is typed through `BlokBlockDataMap`.\n\nIt tolerates null: a `null` or `undefined` document is accepted, and so is the loose `LooseOutputData` wire shape. So it replaces the `(data?.blocks ?? []).filter(...)` plus cast that every feature re-writes.\n\nThe types describe documents saved by this version, or converted with `migrateToRichText`. A document stored earlier can still hold HTML strings in rich text fields. Convert it before a typed read."
         },
         "toRenderableData": {
           "description": "Maps a controlled `data` value to something render()/blocks.render() accepts, exported from the main entry. A whole-document `null`, which is a controlled \"clear to empty\", becomes `{ blocks: [] }`. Any real document passes through untouched.\n\nThe strict guard in render() reads `data.blocks` and would throw on `null`, so route a nullable controlled value through this first."
@@ -1365,7 +1365,7 @@
         },
         "save": {
           "title": "Save it to JSON",
-          "body": "Call `save()` to get your content as a plain object. The structure is typed JSON with no hidden state, only blocks you can store anywhere. Inline formatting is stored as HTML in rich text fields.\n\nSet `richText: 'segments'` to store it as an array of `{ text, marks }` runs instead.",
+          "body": "Call `save()` to get your content as a plain object. The structure is typed JSON with no hidden state, only blocks you can store anywhere. Inline formatting is stored in rich text fields as an array of `{ text, marks }` runs.",
           "payoff": "That object is the whole point. It's portable JSON you can drop into a database, a file, or an API. It's exactly what you'll load back next."
         },
         "render": {
@@ -1876,7 +1876,7 @@
     "tryReadOnlyTitle": "Read-only mode",
     "tryReadOnlyDesc": "Open Settings and switch the editor to read-only to see the page exactly as a reader gets it.",
     "tryJsonTitle": "JSON output",
-    "tryJsonDesc": "The structure here is typed JSON. Only the text inside a block carries inline HTML markup. The content is saved as a plain array of blocks, ready to store or render anywhere.",
+    "tryJsonDesc": "The structure here is typed JSON. Text inside a block is stored as runs of text with their formatting marks, not as HTML. The content is saved as a plain array of blocks, ready to store or render anywhere.",
     "nextTitle": "Where to go next",
     "nextQuickStartDesc": "Install the package and mount your first editor in a few lines.",
     "nextConfigDesc": "Every option the Blok constructor accepts, and what each one defaults to.",

@@ -1530,14 +1530,15 @@ const editor = new Blok({
       'Wraps selected text in `<strong>`. Activated with Cmd/Ctrl+B or by clicking the B button in the inline toolbar. Supports nested bold ranges and normalises overlapping markup on paste.',
     importExample: `import { Bold } from '@bloklabs/core/tools';`,
     configOptions: [],
-    saveDataShape: `// No separate data shape — Bold is stored as HTML inside the block's text field.
-// Example HTML stored in a paragraph:
-// "Hello <strong>world</strong>"`,
+    saveDataShape: `// No separate data shape. Bold is a mark on a run of the block's text field:
+// { "text": "world", "marks": { "bold": true } }`,
     saveDataExample: `// Inline tools affect the text field of the containing block.
 // A paragraph with bold text:
 {
   "type": "paragraph",
-  "data": { "text": "Hello <strong>world</strong>" }
+  "data": {
+    "text": [{ "text": "Hello " }, { "text": "world", "marks": { "bold": true } }]
+  }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
 import { Bold, Paragraph } from '@bloklabs/core/tools';
@@ -1563,11 +1564,13 @@ const editor = new Blok({
       'Wraps selected text in `<i>` (pasted `<em>` is also preserved). Activated with Cmd/Ctrl+I or by clicking the I button in the inline toolbar.',
     importExample: `import { Italic } from '@bloklabs/core/tools';`,
     configOptions: [],
-    saveDataShape: `// Stored as HTML inside the block's text field.
-// "Hello <i>world</i>"`,
+    saveDataShape: `// A mark on a run of the block's text field:
+// { "text": "world", "marks": { "italic": true } }`,
     saveDataExample: `{
   "type": "paragraph",
-  "data": { "text": "Hello <i>world</i>" }
+  "data": {
+    "text": [{ "text": "Hello " }, { "text": "world", "marks": { "italic": true } }]
+  }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
 import { Italic, Paragraph } from '@bloklabs/core/tools';
@@ -1591,13 +1594,19 @@ const editor = new Blok({
       'Wraps selected text in `<a href="...">`. Activated with Cmd/Ctrl+K. Clicking the button on existing linked text opens the URL input, so the link can be edited or removed.\n\n`target` and `rel` are always written alongside `href` and come from `BlokConfig.link`. The defaults are `_blank` and `nofollow`.\n\nFor same-page hrefs, `target="_self"` is forced: that means a `#anchor`, or a URL resolving to the current origin and pathname. A `link.transform` can override any of href, target and rel.',
     importExample: `import { Link } from '@bloklabs/core/tools';`,
     configOptions: [],
-    saveDataShape: `// Stored as HTML inside the block's text field.
-// target and rel are always present — these are the defaults:
-// '<a href="https://example.com" target="_blank" rel="nofollow">Example</a>'`,
+    saveDataShape: `// A link mark on a run of the block's text field.
+// target and rel are always written. These are the defaults:
+// { "text": "Example", "marks": { "link": { "href": "https://example.com", "target": "_blank", "rel": "nofollow" } } }`,
     saveDataExample: `{
   "type": "paragraph",
   "data": {
-    "text": "Visit <a href=\\"https://example.com\\" target=\\"_blank\\" rel=\\"nofollow\\">Example</a>"
+    "text": [
+      { "text": "Visit " },
+      {
+        "text": "Example",
+        "marks": { "link": { "href": "https://example.com", "target": "_blank", "rel": "nofollow" } }
+      }
+    ]
   }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
@@ -1622,13 +1631,13 @@ const editor = new Blok({
       'Applies text colour or background colour to selected text. It uses `<mark style="color:...">` or `<mark style="background-color:...">`.\n\nClick the toolbar button to open the colour panel. It lists recently used colours first, then the Text color and Background sections. Each section has a Default swatch and nine presets. The Default swatch removes that colour.\n\nEvery colour is normalised to a CSS custom property (`var(--blok-color-<name>-<text|bg>)`), so themes can restyle it.\n\nThe picker offers only the nine presets. Any other CSS colour applied programmatically is snapped to the perceptually nearest preset. There is no distance threshold.\n\nThree kinds of value pass through untouched.\n\n- A value already written as `var(...)`.\n- A value the colour parser cannot read, such as the CSS named colour `rebeccapurple`.\n- The default page background colours.\n\nRaw colours can sit on `<mark>` elements, for example when pasted from another editor. On load they are rewritten to the nearest preset var. So arbitrary hex values are not preserved.\n\nCmd/Ctrl+Shift+H does not open the picker. It re-applies the last colour picked in this session straight to the selection. On first use that is a yellow highlight (`var(--blok-color-yellow-bg)`). It does nothing when the selection is collapsed.',
     importExample: `import { Marker } from '@bloklabs/core/tools';`,
     configOptions: [],
-    saveDataShape: `// Stored as HTML inside the block's text field.
-// Text colour:       '<mark style="color: var(--blok-color-red-text); background-color: transparent;">red text</mark>'
-// Background colour: '<mark style="background-color: var(--blok-color-yellow-bg);">highlighted text</mark>'`,
+    saveDataShape: `// A colour mark on a run of the block's text field. A preset is saved by name.
+// Text colour:       { "text": "red text", "marks": { "color": "red" } }
+// Background colour: { "text": "highlighted text", "marks": { "background": "yellow" } }`,
     saveDataExample: `{
   "type": "paragraph",
   "data": {
-    "text": "<mark style=\\"background-color: var(--blok-color-yellow-bg);\\">highlighted text</mark>"
+    "text": [{ "text": "highlighted text", "marks": { "background": "yellow" } }]
   }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
@@ -1653,11 +1662,13 @@ const editor = new Blok({
       'Wraps selected text in `<u>`. Activated with Cmd/Ctrl+U or by clicking the U button in the inline toolbar.',
     importExample: `import { Underline } from '@bloklabs/core/tools';`,
     configOptions: [],
-    saveDataShape: `// Stored as HTML inside the block's text field.
-// "Hello <u>world</u>"`,
+    saveDataShape: `// A mark on a run of the block's text field:
+// { "text": "world", "marks": { "underline": true } }`,
     saveDataExample: `{
   "type": "paragraph",
-  "data": { "text": "Hello <u>world</u>" }
+  "data": {
+    "text": [{ "text": "Hello " }, { "text": "world", "marks": { "underline": true } }]
+  }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
 import { Underline, Paragraph } from '@bloklabs/core/tools';
@@ -1681,11 +1692,13 @@ const editor = new Blok({
       'Wraps selected text in `<s>`. Activated with Cmd/Ctrl+Shift+S or by clicking the S button in the inline toolbar.',
     importExample: `import { Strikethrough } from '@bloklabs/core/tools';`,
     configOptions: [],
-    saveDataShape: `// Stored as HTML inside the block's text field.
-// "Hello <s>world</s>"`,
+    saveDataShape: `// A mark on a run of the block's text field:
+// { "text": "world", "marks": { "strikethrough": true } }`,
     saveDataExample: `{
   "type": "paragraph",
-  "data": { "text": "Hello <s>world</s>" }
+  "data": {
+    "text": [{ "text": "Hello " }, { "text": "world", "marks": { "strikethrough": true } }]
+  }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
 import { Strikethrough, Paragraph } from '@bloklabs/core/tools';
@@ -1709,11 +1722,17 @@ const editor = new Blok({
       'Wraps selected text in `<code>`. Activated with Cmd/Ctrl+E or by clicking the code button in the inline toolbar. Useful for marking up variable names, function calls, and short code snippets within text.',
     importExample: `import { InlineCode } from '@bloklabs/core/tools';`,
     configOptions: [],
-    saveDataShape: `// Stored as HTML inside the block's text field.
-// "Call <code>getData()</code> to fetch results"`,
+    saveDataShape: `// A mark on a run of the block's text field:
+// { "text": "getData()", "marks": { "code": true } }`,
     saveDataExample: `{
   "type": "paragraph",
-  "data": { "text": "Call <code>getData()</code> to fetch results" }
+  "data": {
+    "text": [
+      { "text": "Call " },
+      { "text": "getData()", "marks": { "code": true } },
+      { "text": " to fetch results" }
+    ]
+  }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
 import { InlineCode, Paragraph } from '@bloklabs/core/tools';
@@ -1737,11 +1756,10 @@ const editor = new Blok({
       'Renders inline math (LaTeX) with KaTeX. Press Cmd/Ctrl+Shift+E to activate it. It wraps the selected text, or a formula typed into the popover input, in a `<span data-latex="...">`.\n\nThe `data-latex` attribute is the formula. The KaTeX markup is derived from it, is stripped on save, and is regenerated whenever the block renders (load, paste, undo).\n\nRead-only surfaces that never mount an editor, `blocksToHtml` and `<BlokView>`, display the source instead. Pass an `inlineRenderers` entry to render the math there too.',
     importExample: `import { Equation } from '@bloklabs/core/tools';`,
     configOptions: [],
-    saveDataShape: `// Stored as HTML inside the block's text field. The data-latex attribute is
-// the formula; the span's text is normalized to that same source on save, so
-// nothing derived from KaTeX's rendering is persisted (which is why plain-text
-// previews and search indexes read the formula, not its rendered fragments).
-// '<span data-latex="E = mc^2">E = mc^2</span>'`,
+    saveDataShape: `// An embed in the block's text field. It holds only the formula, so nothing
+// derived from KaTeX's rendering is saved. Plain-text previews and search
+// indexes read the formula.
+// { "embed": { "equation": { "expression": "E = mc^2" } } }`,
     saveDataExample: `// Render the math on a DOM-free view surface by plugging KaTeX in:
 //   blocksToHtml(data, {
 //     inlineRenderers: {
@@ -1753,7 +1771,7 @@ const editor = new Blok({
 {
   "type": "paragraph",
   "data": {
-    "text": "Einstein wrote <span data-latex=\\"E = mc^2\\">E = mc^2</span>"
+    "text": [{ "text": "Einstein wrote " }, { "embed": { "equation": { "expression": "E = mc^2" } } }]
   }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
@@ -1778,11 +1796,12 @@ const editor = new Blok({
       'Removes inline formatting (bold, italic, underline, strikethrough, inline code, highlight) from the selected text. Links stay intact. Apply it by clicking the Tx button in the inline toolbar.',
     importExample: `import { ClearFormat } from '@bloklabs/core/tools';`,
     configOptions: [],
-    saveDataShape: `// Removes formatting tags from the block's text field.
-// "<b>Hello</b> world" becomes "Hello world"`,
+    saveDataShape: `// Removes marks from the runs of the block's text field.
+// [{ "text": "Hello", "marks": { "bold": true } }, { "text": " world" }]
+// becomes [{ "text": "Hello world" }]`,
     saveDataExample: `{
   "type": "paragraph",
-  "data": { "text": "Hello world" }
+  "data": { "text": [{ "text": "Hello world" }] }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
 import { ClearFormat, Paragraph } from '@bloklabs/core/tools';
@@ -1806,11 +1825,13 @@ const editor = new Blok({
       'One toolbar button with a two-option popover. It toggles superscript (`<sup>`) or subscript (`<sub>`) on the selection. The two modes are mutually exclusive, so applying one removes the other. Shortcuts: Cmd/Ctrl+Period for superscript, Cmd/Ctrl+Comma for subscript.',
     importExample: `import { SupSub } from '@bloklabs/core/tools';`,
     configOptions: [],
-    saveDataShape: `// Stored as HTML inside the block's text field:
-// "E = mc<sup>2</sup>" or "H<sub>2</sub>O"`,
+    saveDataShape: `// A mark on a run of the block's text field:
+// { "text": "2", "marks": { "sup": true } } or { "text": "2", "marks": { "sub": true } }`,
     saveDataExample: `{
   "type": "paragraph",
-  "data": { "text": "E = mc<sup>2</sup>" }
+  "data": {
+    "text": [{ "text": "E = mc" }, { "text": "2", "marks": { "sup": true } }]
+  }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';
 import { Paragraph, SupSub } from '@bloklabs/core/tools';

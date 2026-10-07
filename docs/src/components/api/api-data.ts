@@ -130,7 +130,7 @@ export const API_SECTIONS: ApiSection[] = [
         name: "save()",
         returnType: "Promise<OutputData>",
         description:
-          "Extracts the current editor content as structured JSON data. This is the main method for saving editor content.",
+          "Extracts the current editor content as structured JSON data. This is the main method for saving editor content.\n\nRich text fields, such as `paragraph.text`, hold segments: arrays of `{ text, marks? }` runs. A document saved by an older version can hold HTML strings until it is saved again. `migrateToRichText` converts it.",
         example: `// Save editor content
 const data = await editor.save();
 console.log(data.blocks); // Array of block data`,
@@ -488,13 +488,6 @@ const editor = new Blok(config);`,
         default: "'auto'",
         description:
           "Input/output data model. 'auto' detects the format of the data you render and preserves it on save. 'legacy' always uses the nested `items[]` structure. 'hierarchical' always uses flat blocks with `parent`/`content` references.",
-      },
-      {
-        option: "richText",
-        type: "'html' | 'segments'",
-        default: "'html'",
-        description:
-          "The shape of rich text fields in saved data, such as `paragraph.text`. 'html' saves an inline HTML string. 'segments' saves an array of runs, for example `[{ text: 'Hello ' }, { text: 'world', marks: { bold: true } }]`.\n\nBlok reads both shapes on input, whatever this says. In segments mode, `save()`, `onSave`, `BlockAPI.save()` and the adapters' `getBlockData` all return segments.\n\nThe output stays HTML, with one console warning, in two cases.\n\n- `dataModel` is 'legacy', or 'auto' with legacy input.\n- `collaboration` is configured.\n\nA third-party block tool takes part only when it declares `static richTextFields`, such as `['text']`. Without it, the tool's fields stay as the tool stores them.\n\nSee the migration guide for the full shape and for converting stored documents.",
       },
       {
         option: "sanitizer",
@@ -1530,7 +1523,7 @@ block?.moveChild('child-id', 1);  // one position toward the end`,
         name: "preservedData",
         type: "BlockToolData",
         description:
-          "Last successfully extracted block tool data. It is synchronous, so it helps when async save() is not feasible, e.g. clipboard operations",
+          "Last successfully extracted block tool data. It is synchronous, so it helps when async save() is not feasible, e.g. clipboard operations.\n\nIt is an internal snapshot, so rich text fields here stay HTML strings. `save()` returns them as segments.",
       },
       {
         name: "preservedTunes",
@@ -3566,12 +3559,12 @@ interface OutputData {
     {
       "id": "p6QK0Xz1Ab",
       "type": "paragraph",
-      "data": { "text": "Hello, world!" }
+      "data": { "text": [{ "text": "Hello, world!" }] }
     },
     {
       "id": "hM3lTn9RdC",
       "type": "header",
-      "data": { "text": "Title", "level": 2 }
+      "data": { "text": [{ "text": "Title" }], "level": 2 }
     }
   ]
 }`,
@@ -3693,7 +3686,7 @@ const migrated = flattenTree({
         name: "isBlockType(block, type)",
         returnType: "block is OutputBlockData<K, BlokBlockDataMap[K]>",
         description:
-          "A type guard exported from `@bloklabs/core/tools`. It narrows a saved block to a known block type, so its `data` is typed through the `BlokBlockDataMap` registry instead of `Record<string, unknown>`. It replaces the `block.type === 'header'` check plus the `data as HeaderData` cast.\n\n`BlokBlockDataMap` maps each built-in block type to its data shape and is exported from the same subpath. It is augmentable, so a custom tool registers its own shape by declaration merging and gets narrowed the same way.",
+          "A type guard exported from `@bloklabs/core/tools`. It narrows a saved block to a known block type, so its `data` is typed through the `BlokBlockDataMap` registry instead of `Record<string, unknown>`. It replaces the `block.type === 'header'` check plus the `data as HeaderData` cast.\n\n`BlokBlockDataMap` maps each built-in block type to its data shape and is exported from the same subpath. It is augmentable, so a custom tool registers its own shape by declaration merging and gets narrowed the same way.\n\nThe types describe documents saved by this version, or converted with `migrateToRichText`. A document stored earlier can still hold HTML strings in rich text fields. Convert it before a typed read.",
         example: `import { isBlockType } from '@bloklabs/core/tools';
 import type { OutputData } from '@bloklabs/core';
 
@@ -3716,13 +3709,16 @@ declare module '@bloklabs/core/tools' {
         name: "blocksOfType(data, type)",
         returnType: "Array<OutputBlockData<K, BlokBlockDataMap[K]>>",
         description:
-          "The collection counterpart of `isBlockType`, also exported from `@bloklabs/core/tools`. It collects every saved block of a given type from a document, and each result's `data` is typed through `BlokBlockDataMap`.\n\nIt tolerates null: a `null` or `undefined` document is accepted, and so is the loose `LooseOutputData` wire shape. So it replaces the `(data?.blocks ?? []).filter(...)` plus cast that every feature re-writes.",
+          "The collection counterpart of `isBlockType`, also exported from `@bloklabs/core/tools`. It collects every saved block of a given type from a document, and each result's `data` is typed through `BlokBlockDataMap`.\n\nIt tolerates null: a `null` or `undefined` document is accepted, and so is the loose `LooseOutputData` wire shape. So it replaces the `(data?.blocks ?? []).filter(...)` plus cast that every feature re-writes.\n\nThe types describe documents saved by this version, or converted with `migrateToRichText`. A document stored earlier can still hold HTML strings in rich text fields. Convert it before a typed read.",
         example: `import { blocksOfType } from '@bloklabs/core/tools';
-import { richTextToPlainText } from '@bloklabs/core/migrate';
+import { migrateToRichText, richTextToPlainText } from '@bloklabs/core/migrate';
 import type { OutputData } from '@bloklabs/core';
 
-// \`saved\` may be null — blocksOfType tolerates it and returns []
-function buildToc(saved: OutputData | null) {
+// \`stored\` may be null — blocksOfType tolerates it and returns []
+function buildToc(stored: OutputData | null) {
+  // A document saved by an older version can still hold HTML strings
+  const saved = stored === null ? null : migrateToRichText(stored);
+
   return blocksOfType(saved, 'header')
     // data.text is RichText, data.level is number — no cast
     .map((block) => ({ text: richTextToPlainText(block.data.text), level: block.data.level }));
@@ -3885,7 +3881,7 @@ LEGACY_GRAMMAR.map((entry) => [entry.legacyType, entry.targetType, entry.lossyFi
         name: "migrateToRichText(data, options?)",
         returnType: "OutputData",
         description:
-          "Converts the HTML rich text fields of a stored document to segments, the shape `richText: 'segments'` saves. It is exported from `@bloklabs/core/migrate` and runs in Node without a DOM.\n\nOnly built-in block types are converted. A custom tool's fields are left as they are. Legacy Editor.js shapes are converted too, so `migrate()` can run before or after it. Fields that already hold segments pass through, so running it twice is safe.\n\n`onLossy` hears about markup that has no plain mark.\n\n- `html-embed`: markup kept verbatim as an `{ embed: { html } }` segment.\n- `custom-mark`: an unknown tag kept as a `tag:<name>` mark.\n\n`richTextToHtml(rich)` turns segments back into canonical HTML. The editor can save a different string for the same segments. On render it maps a raw colour to the nearest preset and can add `target` and `rel` to a link.\n\n`richTextToPlainText(rich)` returns the plain text.",
+          "Converts the HTML rich text fields of a stored document to segments, the shape `save()` returns. It is exported from `@bloklabs/core/migrate` and runs in Node without a DOM.\n\nThe editor converts an old document on its next save. Until then a database can hold both shapes. Run this to convert stored documents in bulk, and run it before typed reads such as `blocksOfType`.\n\nOnly built-in block types are converted. A custom tool's fields are left as they are. Legacy Editor.js shapes are converted too, so `migrate()` can run before or after it. Fields that already hold segments pass through, so running it twice is safe.\n\n`onLossy` hears about markup that has no plain mark.\n\n- `html-embed`: markup kept verbatim as an `{ embed: { html } }` segment.\n- `custom-mark`: an unknown tag kept as a `tag:<name>` mark.\n\n`richTextToHtml(rich)` turns segments back into canonical HTML. The editor can save a different string for the same segments. On render it maps a raw colour to the nearest preset and can add `target` and `rel` to a link.\n\n`richTextToPlainText(rich)` returns the plain text.",
         example: `import { migrateToRichText, richTextToHtml, richTextToPlainText } from '@bloklabs/core/migrate';
 
 const converted = migrateToRichText(storedDocument, {
@@ -3919,13 +3915,13 @@ interface OutputBlockData {
 const paragraphBlock: OutputBlockData = {
   id: "p6QK0Xz1Ab",
   type: "paragraph",
-  data: { "text": "Hello, world!" }
+  data: { "text": [{ "text": "Hello, world!" }] }
 };
 
 const headerBlock: OutputBlockData = {
   id: "hM3lTn9RdC",
   type: "header",
-  data: { "text": "Chapter 1", "level": 1 }
+  data: { "text": [{ "text": "Chapter 1" }], "level": 1 }
 };
 
 // Each list item is its own block — the list tool saves a single item,
@@ -3934,7 +3930,7 @@ const listItemBlock: OutputBlockData = {
   id: "wY7bV2sQ8e",
   type: "list",
   data: {
-    "text": "Item 1",
+    "text": [{ "text": "Item 1" }],
     "style": "unordered"
   }
 };`,
@@ -4467,7 +4463,7 @@ blocks.move(nodeId, { toIndex: 0 });`,
         name: "getBlockData(id)",
         returnType: "{ data, tunes } | null",
         description:
-          "Read a block's current data and tunes by id without mutating anything. It makes a client-side duplicate composable: read a node, then insert({ type, data, tunes }).",
+          "Read a block's current data and tunes by id without mutating anything. It makes a client-side duplicate composable: read a node, then insert({ type, data, tunes }).\n\nRich text fields in `data` are segments. `data` can be a new object on each call, so do not use it as a memo dependency.",
         example: `const saved = blocks.getBlockData(nodeId);
 if (saved) {
   blocks.insert({ type: 'paragraph', data: saved.data, position: { after: nodeId } });

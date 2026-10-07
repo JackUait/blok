@@ -3718,13 +3718,14 @@ declare module '@bloklabs/core/tools' {
         description:
           "The collection counterpart of `isBlockType`, also exported from `@bloklabs/core/tools`. It collects every saved block of a given type from a document, and each result's `data` is typed through `BlokBlockDataMap`.\n\nIt tolerates null: a `null` or `undefined` document is accepted, and so is the loose `LooseOutputData` wire shape. So it replaces the `(data?.blocks ?? []).filter(...)` plus cast that every feature re-writes.",
         example: `import { blocksOfType } from '@bloklabs/core/tools';
+import { richTextToPlainText } from '@bloklabs/core/migrate';
 import type { OutputData } from '@bloklabs/core';
 
 // \`saved\` may be null — blocksOfType tolerates it and returns []
 function buildToc(saved: OutputData | null) {
   return blocksOfType(saved, 'header')
-    // data.text / data.level are typed — no cast
-    .map((block) => ({ text: block.data.text, level: block.data.level }));
+    // data.text is RichText, data.level is number — no cast
+    .map((block) => ({ text: richTextToPlainText(block.data.text), level: block.data.level }));
 }`,
       },
       {

@@ -1,13 +1,24 @@
 import { ConversionConfig, PasteConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
+import { RichText } from '../rich-text';
 import { MenuConfig } from './menu-config';
 import { ToolboxConfig } from './tool-settings';
 
 /**
- * Quote Tool's input and output data format.
+ * A saved quote, as the editor hands it to the host.
  */
 export interface QuoteData extends BlockToolData {
+  text: RichText;
+  size: 'default' | 'large';
+}
+
+/**
+ * The data the Quote tool class reads and writes (constructor, `merge`,
+ * `validate`, `save`). The editor converts it to {@link QuoteData} on output.
+ */
+export interface QuoteToolData extends BlockToolData {
+  /** Inline HTML. */
   text: string;
   size: 'default' | 'large';
 }
@@ -15,7 +26,7 @@ export interface QuoteData extends BlockToolData {
 /**
  * Quote Tool constructor options
  */
-export type QuoteConstructorOptions = BlockToolConstructorOptions<QuoteData>;
+export type QuoteConstructorOptions = BlockToolConstructorOptions<QuoteToolData>;
 
 /**
  * Quote Tool for the Blok Editor
@@ -63,17 +74,17 @@ export declare class Quote implements BlockTool {
    * Method that specified how to merge two Quote blocks.
    * Called by Editor by backspace at the beginning of the Block
    */
-  merge(data: QuoteData): void;
+  merge(data: QuoteToolData): void;
 
   /**
    * Validate Quote block data
    */
-  validate(savedData: QuoteData): boolean;
+  validate(savedData: QuoteToolData): boolean;
 
   /**
    * Extract Tool's data from the view
    */
-  save(blockContent: HTMLQuoteElement): QuoteData;
+  save(blockContent: HTMLQuoteElement): QuoteToolData;
 
   /**
    * Toggle read-only mode in place

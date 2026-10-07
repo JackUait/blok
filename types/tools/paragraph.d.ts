@@ -1,13 +1,22 @@
 import { ConversionConfig, PasteConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
+import { RichText } from '../rich-text';
 import { ToolboxConfig } from './tool-settings';
 
 /**
- * Paragraph Tool's input and output data format
+ * A saved paragraph, as the editor hands it to the host.
  */
 export interface ParagraphData extends BlockToolData {
-  /** Paragraph's content. Can include HTML tags: <a><b><i> */
+  text: RichText;
+}
+
+/**
+ * The data the Paragraph tool class reads and writes (constructor, `merge`,
+ * `validate`, `save`). The editor converts it to {@link ParagraphData} on output.
+ */
+export interface ParagraphToolData extends BlockToolData {
+  /** Inline HTML: <a><b><i> and the other inline tags. */
   text: string;
 }
 
@@ -42,7 +51,7 @@ export interface ParagraphConfig {
 /**
  * Paragraph Tool constructor options
  */
-export type ParagraphConstructorOptions = BlockToolConstructorOptions<ParagraphData, ParagraphConfig>;
+export type ParagraphConstructorOptions = BlockToolConstructorOptions<ParagraphToolData, ParagraphConfig>;
 
 /**
  * Paragraph Tool for the Blok Editor
@@ -85,17 +94,17 @@ export declare class Paragraph implements BlockTool {
    * Method that specified how to merge two Paragraph blocks.
    * Called by Editor by backspace at the beginning of the Block
    */
-  merge(data: ParagraphData): void;
+  merge(data: ParagraphToolData): void;
 
   /**
    * Validate Paragraph block data
    */
-  validate(savedData: ParagraphData): boolean;
+  validate(savedData: ParagraphToolData): boolean;
 
   /**
    * Extract Tool's data from the view
    */
-  save(toolsContent: HTMLDivElement): ParagraphData;
+  save(toolsContent: HTMLDivElement): ParagraphToolData;
 }
 
 /**

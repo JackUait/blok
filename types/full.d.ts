@@ -23,10 +23,13 @@ export {
   defaultBlockTools,
   defaultInlineTools,
   HeaderData,
+  HeaderToolData,
   HeaderConfig,
   ParagraphData,
+  ParagraphToolData,
   ParagraphConfig,
   ListData,
+  ListToolData,
   ListConfig,
   ListStyle,
 } from './tools-entry';

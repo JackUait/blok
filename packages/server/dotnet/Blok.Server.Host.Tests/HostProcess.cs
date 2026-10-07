@@ -32,6 +32,7 @@ internal static class HostProcess
     startInfo.Environment["BLOK_S3_SECRET_KEY"] = "";
     startInfo.Environment["BLOK_DOC_ENDPOINT_AUTH"] = "";
     startInfo.Environment["BLOK_COLLAB_JOURNAL"] = "";
+    startInfo.Environment["BLOK_RICH_TEXT_FIELDS"] = "";
 
     if (environment is not null)
     {

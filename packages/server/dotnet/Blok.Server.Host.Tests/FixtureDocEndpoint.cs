@@ -15,7 +15,8 @@ internal sealed record RecordedPut(
 /// A loopback stand-in for the consumer's document routes (the C# twin of
 /// test/unit/server-conformance/doc-endpoint.ts): rooms GET {Url}/{docId} to
 /// seed and PUT the same path to export. GETs answer a bare JSON null — the
-/// endpoint's "nothing saved yet" — unless <see cref="GetStatus"/> is set.
+/// endpoint's "nothing saved yet" — unless <see cref="GetStatus"/> or
+/// <see cref="GetBody"/> is set.
 /// </summary>
 internal sealed class FixtureDocEndpoint : IAsyncDisposable
 {
@@ -33,6 +34,9 @@ internal sealed class FixtureDocEndpoint : IAsyncDisposable
 
   /// <summary>When set, every GET answers this status with an empty body instead of null.</summary>
   internal int? GetStatus { get; set; }
+
+  /// <summary>When set, every GET answers this JSON instead of null.</summary>
+  internal string? GetBody { get; set; }
 
   internal IReadOnlyList<RecordedPut> Puts
   {
@@ -64,7 +68,7 @@ internal sealed class FixtureDocEndpoint : IAsyncDisposable
 
       context.Response.ContentType = "application/json; charset=utf-8";
 
-      return context.Response.WriteAsync("null");
+      return context.Response.WriteAsync(endpoint.GetBody ?? "null");
     });
     app.MapPut("/docs/{docId}", async (HttpContext context, string docId) =>
     {

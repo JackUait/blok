@@ -1,4 +1,6 @@
 using System.Net;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Blok.Server.AspNetCore;
 
 namespace Blok.Server.Host;
@@ -58,6 +60,9 @@ internal static class HostArguments
         --collab-journal
           keep an operation journal under --collab-dir: edit receipts, key dedupe, blok-sync.v2
           (needs --collab; refused with --collab-s3-prefix; or set BLOK_COLLAB_JOURNAL)
+        --rich-text-fields value
+          your custom tools' rich text fields as JSON, e.g. {"callout":["title"]};
+          list what each tool's richTextFields declares (or set BLOK_RICH_TEXT_FIELDS)
 
       """;
 
@@ -80,6 +85,7 @@ internal static class HostArguments
     var secretFromFlag = false;
     var docEndpointAuthFromFlag = false;
     var collabJournalFromFlag = false;
+    var richTextFieldsFromFlag = false;
 
     for (var index = 0; index < args.Length; index++)
     {
@@ -248,6 +254,16 @@ internal static class HostArguments
         case "collab-s3-prefix":
           options.CollabS3Prefix = value;
           break;
+        case "rich-text-fields":
+          if (!TryParseRichTextFields(value, out var fields))
+          {
+            return ParseError(
+                $"invalid value \"{value}\" for flag -rich-text-fields: parse error");
+          }
+
+          options.RichTextFields = fields;
+          richTextFieldsFromFlag = true;
+          break;
       }
     }
 
@@ -278,6 +294,18 @@ internal static class HostArguments
       }
 
       options.CollabJournal = journal;
+    }
+
+    if (!richTextFieldsFromFlag &&
+        getEnvironmentVariable("BLOK_RICH_TEXT_FIELDS") is { Length: > 0 } fieldsVariable)
+    {
+      if (!TryParseRichTextFields(fieldsVariable, out var fields))
+      {
+        return ParseError(
+            $"invalid value \"{fieldsVariable}\" for BLOK_RICH_TEXT_FIELDS: parse error");
+      }
+
+      options.RichTextFields = fields;
     }
 
     options.S3AccessKey = getEnvironmentVariable("BLOK_S3_ACCESS_KEY") ?? "";
@@ -315,7 +343,45 @@ internal static class HostArguments
         "doc-endpoint" or
         "doc-endpoint-auth" or
         "collab-dir" or
-        "collab-s3-prefix";
+        "collab-s3-prefix" or
+        "rich-text-fields";
+  }
+
+  /// <summary>
+  /// A JSON object of string lists, the shape of options.RichTextFields.
+  /// Unusable names (empty, NUL) are left to Validate, as in-process.
+  /// </summary>
+  private static bool TryParseRichTextFields(
+      string value,
+      out IDictionary<string, IList<string>> fields)
+  {
+    fields = new Dictionary<string, IList<string>>(StringComparer.Ordinal);
+
+    try
+    {
+      if (JsonNode.Parse(value) is not JsonObject blocks)
+      {
+        return false;
+      }
+
+      foreach (var (blockType, keys) in blocks)
+      {
+        if (keys is not JsonArray list ||
+            list.Any(key => key?.GetValueKind() != JsonValueKind.String))
+        {
+          return false;
+        }
+
+        fields[blockType] = list.Select(key => key!.GetValue<string>()).ToList();
+      }
+
+      return true;
+    }
+    catch (Exception error) when (error is JsonException or InvalidOperationException or ArgumentException)
+    {
+      // A duplicate key throws when the object is first read.
+      return false;
+    }
   }
 
   private static bool TryParseBoolean(string value, out bool result)

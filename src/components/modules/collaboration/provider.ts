@@ -115,8 +115,12 @@ const OVERSIZED_REASON = 'oversized-update';
 /** Recorded with a row left behind by a quarantine that did not commit. */
 export const STALE_LINEAGE_REASON = 'stale-lineage';
 
-/** Recorded with a row an older build wrote in another format. Its bytes do not fit this room. */
-export const UNSUPPORTED_FORMAT_REASON = 'unsupported-format';
+/**
+ * Recorded with a row an older build wrote in another format. Client-only on
+ * purpose: rejection codes are an open set and land in the same field, so a
+ * server code with this name would be counted as a sweep, not a rejection.
+ */
+export const STALE_FORMAT_REASON = 'stale-format';
 
 /** Enough to hold a whole first sync ahead of the control frame, not enough to flood us. */
 const MAX_BUFFERED_INBOUND = 64;
@@ -827,7 +831,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     // without minting a new lineage would otherwise get format-1 bytes (HTML
     // characters) replayed into its rich text.
     if (row.format !== SUPPORTED_FORMAT) {
-      void quarantineTail(row.lineage, UNSUPPORTED_FORMAT_REASON).then((moved) => {
+      void quarantineTail(row.lineage, STALE_FORMAT_REASON).then((moved) => {
         if (moved && !isStale(generation)) {
           drain();
         }

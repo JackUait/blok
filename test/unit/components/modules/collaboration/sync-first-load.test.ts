@@ -3273,7 +3273,7 @@ describe('collaboration — sync-first load', () => {
      * A format-1 build wrote this row: no `format` field, and a lineage the
      * server dropped when it migrated the room to format 2. Nothing was refused.
      */
-    it('a format-1 row is quarantined as unsupported-format, never sent, and not reported as a rejection', async () => {
+    it('a format-1 row is quarantined as stale-format, never sent, and not reported as a rejection', async () => {
       vi.stubGlobal('indexedDB', new IDBFactory());
 
       const { harness, seen } = await watched({ offline: true });
@@ -3332,7 +3332,7 @@ describe('collaboration — sync-first load', () => {
         'a format-1 row was replayed into a format-2 room'
       ).toBe(false);
       expect(quarantineRows.map((row) => (row as { reason?: unknown }).reason))
-        .toEqual(['unsupported-format', 'unsupported-format']);
+        .toEqual(['stale-format', 'stale-format']);
       expect(
         quarantined?.save?.reason,
         'a row dropped for its format was published as a server rejection'

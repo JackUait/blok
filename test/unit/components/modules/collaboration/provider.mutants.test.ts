@@ -1658,7 +1658,7 @@ describe('createCollabProvider (mutation hardening)', () => {
 
       expect(socket.count('operation'), 'format-1 bytes went into a format-2 room').toBe(0);
       expect(outbox.quarantined.map((entry) => [entry.lineage, entry.reason]))
-        .toStrictEqual([[LINEAGE_A, 'unsupported-format']]);
+        .toStrictEqual([[LINEAGE_A, 'stale-format']]);
     });
 
     it('names the format, not the lineage, when a format-1 row of an older lineage is quarantined', async () => {
@@ -1670,7 +1670,7 @@ describe('createCollabProvider (mutation hardening)', () => {
       await flushMicrotasks();
 
       expect(outbox.quarantined.map((entry) => [entry.lineage, entry.reason]))
-        .toStrictEqual([[LINEAGE_B, 'unsupported-format']]);
+        .toStrictEqual([[LINEAGE_B, 'stale-format']]);
       expect(socket.count('operation')).toBe(1);
     });
 

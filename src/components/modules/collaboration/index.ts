@@ -18,7 +18,7 @@ import {
 import { createPresenceRenderer } from './presence-renderer';
 import { normalizeUserId } from '../userDirectory';
 import { createOperationStore, type OperationStore, type OperationStoreStats } from './operation-store';
-import { createCollabProvider, RELINEAGE_REASON, STALE_LINEAGE_REASON, UNSUPPORTED_FORMAT_REASON } from './provider';
+import { createCollabProvider, RELINEAGE_REASON, STALE_LINEAGE_REASON, STALE_FORMAT_REASON } from './provider';
 import type {
   CollabDocSeam,
   CollabOutbox,
@@ -482,7 +482,7 @@ export class Collaboration extends Module {
           // rejection carries.
           this.quarantineRejected = reason !== RELINEAGE_REASON
             && reason !== STALE_LINEAGE_REASON
-            && reason !== UNSUPPORTED_FORMAT_REASON;
+            && reason !== STALE_FORMAT_REASON;
           void this.refreshSave();
 
           return moved;

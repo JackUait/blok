@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Er zou niets veranderen",
   "find.matchCase": "Hoofdlettergevoelig",
   "find.wholeWord": "Alleen hele woorden",
-  "find.options": "Zoekopties"
+  "find.options": "Zoekopties",
+  "title.placeholder": "Nieuwe pagina",
+  "title.ariaLabel": "Paginatitel",
+  "title.addIcon": "Pictogram toevoegen",
+  "title.changeIcon": "Pictogram wijzigen"
 }

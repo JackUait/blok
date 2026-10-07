@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Nu s-ar schimba nimic",
   "find.matchCase": "Potrivire majuscule/minuscule",
   "find.wholeWord": "Doar cuvinte întregi",
-  "find.options": "Opțiuni de căutare"
+  "find.options": "Opțiuni de căutare",
+  "title.placeholder": "Pagină nouă",
+  "title.ariaLabel": "Titlul paginii",
+  "title.addIcon": "Adaugă o pictogramă",
+  "title.changeIcon": "Schimbă pictograma"
 }

@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "އެއްވެސް ބަދަލެއް ނާދާނެ",
   "find.matchCase": "ބޮޑު ކުޑަ އަކުރު ދިމާކުރޭ",
   "find.wholeWord": "ފުރިހަމަ ބަސް ދިމާކުރޭ",
-  "find.options": "ހޯދުމުގެ ޚިޔާރުތައް"
+  "find.options": "ހޯދުމުގެ ޚިޔާރުތައް",
+  "title.placeholder": "އައު ޞަފްޙާ",
+  "title.ariaLabel": "ޞަފްޙާގެ ސުރުޚީ",
+  "title.addIcon": "އައިކަން އިތުރުކުރޭ",
+  "title.changeIcon": "އައިކަން ބަދަލުކުރޭ"
 }

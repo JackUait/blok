@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "変更はありません",
   "find.matchCase": "大文字と小文字を区別",
   "find.wholeWord": "単語単位で検索",
-  "find.options": "検索オプション"
+  "find.options": "検索オプション",
+  "title.placeholder": "新しいページ",
+  "title.ariaLabel": "ページのタイトル",
+  "title.addIcon": "アイコンを追加",
+  "title.changeIcon": "アイコンを変更"
 }

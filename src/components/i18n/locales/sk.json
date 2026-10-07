@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Nič by sa nezmenilo",
   "find.matchCase": "Rozlišovať veľké a malé písmená",
   "find.wholeWord": "Iba celé slová",
-  "find.options": "Možnosti vyhľadávania"
+  "find.options": "Možnosti vyhľadávania",
+  "title.placeholder": "Nová stránka",
+  "title.ariaLabel": "Názov stránky",
+  "title.addIcon": "Pridať ikonu",
+  "title.changeIcon": "Zmeniť ikonu"
 }

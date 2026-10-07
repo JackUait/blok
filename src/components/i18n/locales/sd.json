@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "ڪجهه به تبديل نه ٿيندو",
   "find.matchCase": "وڏن ننڍن اکرن جو فرق",
   "find.wholeWord": "رڳو پورا لفظ",
-  "find.options": "ڳولا جا اختيار"
+  "find.options": "ڳولا جا اختيار",
+  "title.placeholder": "نئون صفحو",
+  "title.ariaLabel": "صفحي جو عنوان",
+  "title.addIcon": "آئڪن شامل ڪريو",
+  "title.changeIcon": "آئڪن مٽايو"
 }

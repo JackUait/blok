@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "کچھ بھی تبدیل نہیں ہوگا",
   "find.matchCase": "حروف کا کیس ملائیں",
   "find.wholeWord": "پورا لفظ ملائیں",
-  "find.options": "تلاش کے اختیارات"
+  "find.options": "تلاش کے اختیارات",
+  "title.placeholder": "نیا صفحہ",
+  "title.ariaLabel": "صفحے کا عنوان",
+  "title.addIcon": "آئیکن شامل کریں",
+  "title.changeIcon": "آئیکن تبدیل کریں"
 }

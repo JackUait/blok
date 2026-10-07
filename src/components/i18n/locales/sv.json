@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Inget skulle ändras",
   "find.matchCase": "Matcha gemener/versaler",
   "find.wholeWord": "Endast hela ord",
-  "find.options": "Sökalternativ"
+  "find.options": "Sökalternativ",
+  "title.placeholder": "Ny sida",
+  "title.ariaLabel": "Sidtitel",
+  "title.addIcon": "Lägg till ikon",
+  "title.changeIcon": "Byt ikon"
 }

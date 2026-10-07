@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "ഒന്നും മാറില്ല",
   "find.matchCase": "അക്ഷരവലുപ്പം പൊരുത്തപ്പെടുത്തുക",
   "find.wholeWord": "മുഴുവൻ വാക്ക് പൊരുത്തപ്പെടുത്തുക",
-  "find.options": "തിരയൽ ഓപ്ഷനുകൾ"
+  "find.options": "തിരയൽ ഓപ്ഷനുകൾ",
+  "title.placeholder": "പുതിയ പേജ്",
+  "title.ariaLabel": "പേജ് ശീർഷകം",
+  "title.addIcon": "ഐക്കൺ ചേർക്കുക",
+  "title.changeIcon": "ഐക്കൺ മാറ്റുക"
 }

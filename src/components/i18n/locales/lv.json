@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Nekas nemainītos",
   "find.matchCase": "Reģistrjutīgs",
   "find.wholeWord": "Tikai veseli vārdi",
-  "find.options": "Meklēšanas opcijas"
+  "find.options": "Meklēšanas opcijas",
+  "title.placeholder": "Jauna lapa",
+  "title.ariaLabel": "Lapas nosaukums",
+  "title.addIcon": "Pievienot ikonu",
+  "title.changeIcon": "Mainīt ikonu"
 }

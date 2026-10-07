@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "ਕੁਝ ਵੀ ਨਹੀਂ ਬਦਲੇਗਾ",
   "find.matchCase": "ਅੱਖਰਾਂ ਦਾ ਕੇਸ ਮਿਲਾਓ",
   "find.wholeWord": "ਪੂਰਾ ਸ਼ਬਦ ਮਿਲਾਓ",
-  "find.options": "ਖੋਜ ਵਿਕਲਪ"
+  "find.options": "ਖੋਜ ਵਿਕਲਪ",
+  "title.placeholder": "ਨਵਾਂ ਪੰਨਾ",
+  "title.ariaLabel": "ਪੰਨੇ ਦਾ ਸਿਰਲੇਖ",
+  "title.addIcon": "ਆਈਕਨ ਜੋੜੋ",
+  "title.changeIcon": "ਆਈਕਨ ਬਦਲੋ"
 }

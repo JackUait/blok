@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Ոչինչ չի փոխվի",
   "find.matchCase": "Հաշվի առնել մեծատառերը",
   "find.wholeWord": "Միայն ամբողջական բառեր",
-  "find.options": "Որոնման ընտրանքներ"
+  "find.options": "Որոնման ընտրանքներ",
+  "title.placeholder": "Նոր էջ",
+  "title.ariaLabel": "Էջի վերնագիր",
+  "title.addIcon": "Ավելացնել պատկերակ",
+  "title.changeIcon": "Փոխել պատկերակը"
 }

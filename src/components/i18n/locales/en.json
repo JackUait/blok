@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Nothing would change",
   "find.matchCase": "Match case",
   "find.wholeWord": "Match whole word",
-  "find.options": "Search options"
+  "find.options": "Search options",
+  "title.placeholder": "New page",
+  "title.ariaLabel": "Page title",
+  "title.addIcon": "Add icon",
+  "title.changeIcon": "Change icon"
 }

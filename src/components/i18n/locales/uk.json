@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Нічого не зміниться",
   "find.matchCase": "Враховувати регістр",
   "find.wholeWord": "Слово цілком",
-  "find.options": "Параметри пошуку"
+  "find.options": "Параметри пошуку",
+  "title.placeholder": "Нова сторінка",
+  "title.ariaLabel": "Назва сторінки",
+  "title.addIcon": "Додати іконку",
+  "title.changeIcon": "Змінити іконку"
 }

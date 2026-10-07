@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "لن يتغيّر شيء",
   "find.matchCase": "مطابقة حالة الأحرف",
   "find.wholeWord": "مطابقة الكلمة بأكملها",
-  "find.options": "خيارات البحث"
+  "find.options": "خيارات البحث",
+  "title.placeholder": "صفحة جديدة",
+  "title.ariaLabel": "عنوان الصفحة",
+  "title.addIcon": "إضافة أيقونة",
+  "title.changeIcon": "تغيير الأيقونة"
 }

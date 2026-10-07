@@ -131,6 +131,21 @@ export const DATA_ATTR = {
   crossSelection: 'data-blok-cross-selection',
 
   // ============================================
+  // Page title
+  // ============================================
+
+  /** Page title header root (icon row + title) */
+  pageHeader: 'data-blok-page-header',
+  /** Editable page title */
+  pageTitle: 'data-blok-page-title',
+  /** Row above the title holding the icon or "Add icon" */
+  pageIconRow: 'data-blok-page-icon-row',
+  /** Page icon button */
+  pageIcon: 'data-blok-page-icon',
+  /** "Add icon" button */
+  pageAddIcon: 'data-blok-page-add-icon',
+
+  // ============================================
   // Drag and Drop
   // ============================================
 

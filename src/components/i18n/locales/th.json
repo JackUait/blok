@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "ไม่มีอะไรเปลี่ยนแปลง",
   "find.matchCase": "ตรงตามตัวพิมพ์เล็ก-ใหญ่",
   "find.wholeWord": "ตรงทั้งคำ",
-  "find.options": "ตัวเลือกการค้นหา"
+  "find.options": "ตัวเลือกการค้นหา",
+  "title.placeholder": "หน้าใหม่",
+  "title.ariaLabel": "ชื่อหน้า",
+  "title.addIcon": "เพิ่มไอคอน",
+  "title.changeIcon": "เปลี่ยนไอคอน"
 }

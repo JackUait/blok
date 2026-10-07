@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "કશું બદલાશે નહીં",
   "find.matchCase": "અક્ષરનું કદ મેળવો",
   "find.wholeWord": "આખો શબ્દ મેળવો",
-  "find.options": "શોધ વિકલ્પો"
+  "find.options": "શોધ વિકલ્પો",
+  "title.placeholder": "નવું પૃષ્ઠ",
+  "title.ariaLabel": "પૃષ્ઠનું શીર્ષક",
+  "title.addIcon": "આઇકન ઉમેરો",
+  "title.changeIcon": "આઇકન બદલો"
 }

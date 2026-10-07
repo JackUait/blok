@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Midagi ei muutuks",
   "find.matchCase": "Tõstutundlik",
   "find.wholeWord": "Ainult terved sõnad",
-  "find.options": "Otsingu valikud"
+  "find.options": "Otsingu valikud",
+  "title.placeholder": "Uus leht",
+  "title.ariaLabel": "Lehe pealkiri",
+  "title.addIcon": "Lisa ikoon",
+  "title.changeIcon": "Vaheta ikooni"
 }

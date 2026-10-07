@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Ничего не изменится",
   "find.matchCase": "Учитывать регистр",
   "find.wholeWord": "Слово целиком",
-  "find.options": "Параметры поиска"
+  "find.options": "Параметры поиска",
+  "title.placeholder": "Новая страница",
+  "title.ariaLabel": "Название страницы",
+  "title.addIcon": "Добавить значок",
+  "title.changeIcon": "Сменить значок"
 }

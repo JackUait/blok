@@ -123,6 +123,19 @@ export const DATA_ATTR: {
    *  paint such a range natively too and would otherwise double it up. */
   readonly crossSelection: 'data-blok-cross-selection';
 
+  // Page title
+
+  /** Page title header root (icon row + title) */
+  readonly pageHeader: 'data-blok-page-header';
+  /** Editable page title */
+  readonly pageTitle: 'data-blok-page-title';
+  /** Row above the title holding the icon or "Add icon" */
+  readonly pageIconRow: 'data-blok-page-icon-row';
+  /** Page icon button */
+  readonly pageIcon: 'data-blok-page-icon';
+  /** "Add icon" button */
+  readonly pageAddIcon: 'data-blok-page-add-icon';
+
   // Drag and Drop
 
   /** Block is being dragged */

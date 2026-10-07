@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "ಏನೂ ಬದಲಾಗುವುದಿಲ್ಲ",
   "find.matchCase": "ಅಕ್ಷರದ ಕೇಸ್ ಹೊಂದಿಸಿ",
   "find.wholeWord": "ಪೂರ್ಣ ಪದ ಹೊಂದಿಸಿ",
-  "find.options": "ಹುಡುಕಾಟ ಆಯ್ಕೆಗಳು"
+  "find.options": "ಹುಡುಕಾಟ ಆಯ್ಕೆಗಳು",
+  "title.placeholder": "ಹೊಸ ಪುಟ",
+  "title.ariaLabel": "ಪುಟದ ಶೀರ್ಷಿಕೆ",
+  "title.addIcon": "ಐಕಾನ್ ಸೇರಿಸಿ",
+  "title.changeIcon": "ಐಕಾನ್ ಬದಲಿಸಿ"
 }

@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Asgjë nuk do të ndryshonte",
   "find.matchCase": "Dallo shkronjat e mëdha/të vogla",
   "find.wholeWord": "Vetëm fjalë të plota",
-  "find.options": "Opsionet e kërkimit"
+  "find.options": "Opsionet e kërkimit",
+  "title.placeholder": "Faqe e re",
+  "title.ariaLabel": "Titulli i faqes",
+  "title.addIcon": "Shto ikonë",
+  "title.changeIcon": "Ndërro ikonën"
 }

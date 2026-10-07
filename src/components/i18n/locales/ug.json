@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "ھېچنېمە ئۆزگەرمەيدۇ",
   "find.matchCase": "چوڭ-كىچىك ھەرپنى پەرقلەندۈرۈش",
   "find.wholeWord": "پەقەت پۈتۈن سۆز",
-  "find.options": "ئىزدەش تاللانمىلىرى"
+  "find.options": "ئىزدەش تاللانمىلىرى",
+  "title.placeholder": "يېڭى بەت",
+  "title.ariaLabel": "بەت ماۋزۇسى",
+  "title.addIcon": "سىنبەلگە قوشۇش",
+  "title.changeIcon": "سىنبەلگە ئالماشتۇرۇش"
 }

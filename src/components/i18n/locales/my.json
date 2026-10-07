@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "ဘာမှ ပြောင်းလဲမည် မဟုတ်ပါ",
   "find.matchCase": "စာလုံးအကြီးအသေး ကိုက်ညီရန်",
   "find.wholeWord": "စကားလုံးအပြည့် ကိုက်ညီရန်",
-  "find.options": "ရှာဖွေမှု ရွေးချယ်စရာများ"
+  "find.options": "ရှာဖွေမှု ရွေးချယ်စရာများ",
+  "title.placeholder": "စာမျက်နှာအသစ်",
+  "title.ariaLabel": "စာမျက်နှာ ခေါင်းစဉ်",
+  "title.addIcon": "အိုင်ကွန် ထည့်ရန်",
+  "title.changeIcon": "အိုင်ကွန် ပြောင်းရန်"
 }

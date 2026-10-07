@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "ບໍ່ມີຫຍັງປ່ຽນແປງ",
   "find.matchCase": "ກົງກັບຕົວພິມໃຫຍ່-ນ້ອຍ",
   "find.wholeWord": "ກົງກັບຄຳທັງໝົດ",
-  "find.options": "ຕົວເລືອກການຊອກຫາ"
+  "find.options": "ຕົວເລືອກການຊອກຫາ",
+  "title.placeholder": "ໜ້າໃໝ່",
+  "title.ariaLabel": "ຫົວຂໍ້ໜ້າ",
+  "title.addIcon": "ເພີ່ມໄອຄອນ",
+  "title.changeIcon": "ປ່ຽນໄອຄອນ"
 }

@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "არაფერი შეიცვლება",
   "find.matchCase": "რეგისტრის გათვალისწინება",
   "find.wholeWord": "მხოლოდ მთლიანი სიტყვა",
-  "find.options": "ძიების პარამეტრები"
+  "find.options": "ძიების პარამეტრები",
+  "title.placeholder": "ახალი გვერდი",
+  "title.ariaLabel": "გვერდის სათაური",
+  "title.addIcon": "ხატულის დამატება",
+  "title.changeIcon": "ხატულის შეცვლა"
 }

@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "ምንም አይለወጥም",
   "find.matchCase": "የፊደል መጠን አዛምድ",
   "find.wholeWord": "ሙሉ ቃል አዛምድ",
-  "find.options": "የፍለጋ አማራጮች"
+  "find.options": "የፍለጋ አማራጮች",
+  "title.placeholder": "አዲስ ገጽ",
+  "title.ariaLabel": "የገጽ ርዕስ",
+  "title.addIcon": "አዶ ጨምር",
+  "title.changeIcon": "አዶ ቀይር"
 }

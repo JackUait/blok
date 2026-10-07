@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Mikään ei muuttuisi",
   "find.matchCase": "Sama kirjainkoko",
   "find.wholeWord": "Vain kokonaiset sanat",
-  "find.options": "Hakuvaihtoehdot"
+  "find.options": "Hakuvaihtoehdot",
+  "title.placeholder": "Uusi sivu",
+  "title.ariaLabel": "Sivun otsikko",
+  "title.addIcon": "Lisää kuvake",
+  "title.changeIcon": "Vaihda kuvake"
 }

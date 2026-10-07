@@ -24,6 +24,12 @@ const CATALOG_ONLY_KEYS = new Set([
   // in the catalog rather than deleted from all locales — same rationale as
   // tools.bookmark.error above.
   'emoji.nothingFound',
+  // Not called yet. Move them to executable-literal once the page title
+  // header calls them by literal.
+  'title.placeholder',
+  'title.ariaLabel',
+  'title.addIcon',
+  'title.changeIcon',
 ]);
 
 const sourceFiles = (directory: string): string[] => {
@@ -265,7 +271,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 596 + 117 + 61 + 4 closure for all 778 keys', () => {
+  it('rebuilds a disjoint 596 + 117 + 61 + 8 closure for all 782 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -279,7 +285,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(778);
+    expect(lifecycle.size).toBe(782);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -334,7 +340,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +5: the video keys above.
       // -9: the shortcut sheet now names those 9 markup tools by literal.
       'registered-namespace-compatible': 61,
-      'catalog-only': 4,
+      // +4: the title.* keys above.
+      'catalog-only': 8,
     });
     expect(
       [...lifecycle.entries()]

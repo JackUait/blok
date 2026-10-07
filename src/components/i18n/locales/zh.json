@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "不会有任何变化",
   "find.matchCase": "区分大小写",
   "find.wholeWord": "全字匹配",
-  "find.options": "查找选项"
+  "find.options": "查找选项",
+  "title.placeholder": "新页面",
+  "title.ariaLabel": "页面标题",
+  "title.addIcon": "添加图标",
+  "title.changeIcon": "更换图标"
 }

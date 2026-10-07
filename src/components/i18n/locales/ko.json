@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "바뀌는 내용이 없습니다",
   "find.matchCase": "대/소문자 구분",
   "find.wholeWord": "단어 단위로",
-  "find.options": "검색 옵션"
+  "find.options": "검색 옵션",
+  "title.placeholder": "새 페이지",
+  "title.ariaLabel": "페이지 제목",
+  "title.addIcon": "아이콘 추가",
+  "title.changeIcon": "아이콘 변경"
 }

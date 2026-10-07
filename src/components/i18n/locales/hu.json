@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Semmi sem változna",
   "find.matchCase": "Kis- és nagybetűk megkülönböztetése",
   "find.wholeWord": "Csak teljes szavak",
-  "find.options": "Keresési beállítások"
+  "find.options": "Keresési beállítások",
+  "title.placeholder": "Új oldal",
+  "title.ariaLabel": "Oldal címe",
+  "title.addIcon": "Ikon hozzáadása",
+  "title.changeIcon": "Ikon módosítása"
 }

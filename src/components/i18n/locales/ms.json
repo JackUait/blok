@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Tiada apa yang akan berubah",
   "find.matchCase": "Padankan huruf besar/kecil",
   "find.wholeWord": "Padankan seluruh perkataan",
-  "find.options": "Pilihan carian"
+  "find.options": "Pilihan carian",
+  "title.placeholder": "Halaman baharu",
+  "title.ariaLabel": "Tajuk halaman",
+  "title.addIcon": "Tambah ikon",
+  "title.changeIcon": "Tukar ikon"
 }

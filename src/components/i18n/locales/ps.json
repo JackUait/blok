@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "هیڅ به بدل نه شي",
   "find.matchCase": "د لویو او کوچنیو تورو توپیر",
   "find.wholeWord": "یوازې بشپړ ټکي",
-  "find.options": "د لټون اختیارونه"
+  "find.options": "د لټون اختیارونه",
+  "title.placeholder": "نوې پاڼه",
+  "title.ariaLabel": "د پاڼې سرلیک",
+  "title.addIcon": "آیکون اضافه کړئ",
+  "title.changeIcon": "آیکون بدل کړئ"
 }

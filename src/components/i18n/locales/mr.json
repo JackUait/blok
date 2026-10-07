@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "काहीही बदलणार नाही",
   "find.matchCase": "अक्षरांचा केस जुळवा",
   "find.wholeWord": "संपूर्ण शब्द जुळवा",
-  "find.options": "शोध पर्याय"
+  "find.options": "शोध पर्याय",
+  "title.placeholder": "नवीन पृष्ठ",
+  "title.ariaLabel": "पृष्ठ शीर्षक",
+  "title.addIcon": "चिन्ह जोडा",
+  "title.changeIcon": "चिन्ह बदला"
 }

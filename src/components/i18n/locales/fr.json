@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Rien ne changerait",
   "find.matchCase": "Respecter la casse",
   "find.wholeWord": "Mot entier uniquement",
-  "find.options": "Options de recherche"
+  "find.options": "Options de recherche",
+  "title.placeholder": "Nouvelle page",
+  "title.ariaLabel": "Titre de la page",
+  "title.addIcon": "Ajouter une icône",
+  "title.changeIcon": "Changer l’icône"
 }

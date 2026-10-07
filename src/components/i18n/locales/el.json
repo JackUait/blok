@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Δεν θα άλλαζε τίποτα",
   "find.matchCase": "Διάκριση πεζών-κεφαλαίων",
   "find.wholeWord": "Μόνο ολόκληρες λέξεις",
-  "find.options": "Επιλογές αναζήτησης"
+  "find.options": "Επιλογές αναζήτησης",
+  "title.placeholder": "Νέα σελίδα",
+  "title.ariaLabel": "Τίτλος σελίδας",
+  "title.addIcon": "Προσθήκη εικονιδίου",
+  "title.changeIcon": "Αλλαγή εικονιδίου"
 }

@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "不會有任何變更",
   "find.matchCase": "大小寫須相符",
   "find.wholeWord": "全字拼寫須相符",
-  "find.options": "搜尋選項"
+  "find.options": "搜尋選項",
+  "title.placeholder": "新頁面",
+  "title.ariaLabel": "頁面標題",
+  "title.addIcon": "新增圖示",
+  "title.changeIcon": "變更圖示"
 }

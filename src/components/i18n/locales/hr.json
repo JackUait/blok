@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Ništa se ne bi promijenilo",
   "find.matchCase": "Razlikuj velika i mala slova",
   "find.wholeWord": "Samo cijele riječi",
-  "find.options": "Opcije pretraživanja"
+  "find.options": "Opcije pretraživanja",
+  "title.placeholder": "Nova stranica",
+  "title.ariaLabel": "Naslov stranice",
+  "title.addIcon": "Dodaj ikonu",
+  "title.changeIcon": "Promijeni ikonu"
 }

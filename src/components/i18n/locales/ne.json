@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "केही पनि परिवर्तन हुँदैन",
   "find.matchCase": "अक्षरको केस मिलाउनुहोस्",
   "find.wholeWord": "पूरा शब्द मिलाउनुहोस्",
-  "find.options": "खोज विकल्पहरू"
+  "find.options": "खोज विकल्पहरू",
+  "title.placeholder": "नयाँ पृष्ठ",
+  "title.ariaLabel": "पृष्ठ शीर्षक",
+  "title.addIcon": "आइकन थप्नुहोस्",
+  "title.changeIcon": "आइकन बदल्नुहोस्"
 }

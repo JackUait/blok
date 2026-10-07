@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Юу ч өөрчлөгдөхгүй",
   "find.matchCase": "Том жижиг үсгийг ялгах",
   "find.wholeWord": "Зөвхөн бүтэн үг",
-  "find.options": "Хайлтын сонголтууд"
+  "find.options": "Хайлтын сонголтууд",
+  "title.placeholder": "Шинэ хуудас",
+  "title.ariaLabel": "Хуудасны гарчиг",
+  "title.addIcon": "Дүрс нэмэх",
+  "title.changeIcon": "Дүрс солих"
 }

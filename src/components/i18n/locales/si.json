@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "කිසිවක් වෙනස් නොවේ",
   "find.matchCase": "අකුරු ප්‍රමාණය ගළපන්න",
   "find.wholeWord": "සම්පූර්ණ වචනය ගළපන්න",
-  "find.options": "සෙවුම් විකල්ප"
+  "find.options": "සෙවුම් විකල්ප",
+  "title.placeholder": "නව පිටුව",
+  "title.ariaLabel": "පිටුවේ මාතෘකාව",
+  "title.addIcon": "නිරූපකයක් එක් කරන්න",
+  "title.changeIcon": "නිරූපකය වෙනස් කරන්න"
 }

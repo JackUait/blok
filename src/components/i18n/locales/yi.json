@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "גאָרנישט וואָלט זיך נישט געביטן",
   "find.matchCase": "אונטערשיידן גרויסע און קליינע אותיות",
   "find.wholeWord": "נאָר גאַנצע ווערטער",
-  "find.options": "זוך־אפציעס"
+  "find.options": "זוך־אפציעס",
+  "title.placeholder": "נייע בלאט",
+  "title.ariaLabel": "בלאַט טיטל",
+  "title.addIcon": "צולייגן בילדל",
+  "title.changeIcon": "בייטן בילדל"
 }

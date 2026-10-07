@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Nic by się nie zmieniło",
   "find.matchCase": "Uwzględniaj wielkość liter",
   "find.wholeWord": "Tylko całe wyrazy",
-  "find.options": "Opcje wyszukiwania"
+  "find.options": "Opcje wyszukiwania",
+  "title.placeholder": "Nowa strona",
+  "title.ariaLabel": "Tytuł strony",
+  "title.addIcon": "Dodaj ikonę",
+  "title.changeIcon": "Zmień ikonę"
 }

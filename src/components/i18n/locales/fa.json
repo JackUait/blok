@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "چیزی تغییر نمی‌کند",
   "find.matchCase": "تطبیق بزرگی و کوچکی حروف",
   "find.wholeWord": "تطبیق کل کلمه",
-  "find.options": "گزینه‌های جستجو"
+  "find.options": "گزینه‌های جستجو",
+  "title.placeholder": "صفحه جدید",
+  "title.ariaLabel": "عنوان صفحه",
+  "title.addIcon": "افزودن نماد",
+  "title.changeIcon": "تغییر نماد"
 }

@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "কিছুই বদলাবে না",
   "find.matchCase": "বড়/ছোট হাতের অক্ষর মেলান",
   "find.wholeWord": "সম্পূর্ণ শব্দ মেলান",
-  "find.options": "অনুসন্ধানের বিকল্প"
+  "find.options": "অনুসন্ধানের বিকল্প",
+  "title.placeholder": "নতুন পৃষ্ঠা",
+  "title.ariaLabel": "পৃষ্ঠার শিরোনাম",
+  "title.addIcon": "আইকন যোগ করুন",
+  "title.changeIcon": "আইকন বদলান"
 }

@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "គ្មានអ្វីផ្លាស់ប្ដូរទេ",
   "find.matchCase": "ផ្គូផ្គងអក្សរធំតូច",
   "find.wholeWord": "ផ្គូផ្គងពាក្យទាំងមូល",
-  "find.options": "ជម្រើសស្វែងរក"
+  "find.options": "ជម្រើសស្វែងរក",
+  "title.placeholder": "ទំព័រថ្មី",
+  "title.ariaLabel": "ចំណងជើងទំព័រ",
+  "title.addIcon": "បន្ថែមរូបតំណាង",
+  "title.changeIcon": "ប្ដូររូបតំណាង"
 }

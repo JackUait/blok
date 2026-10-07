@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "எதுவும் மாறாது",
   "find.matchCase": "எழுத்து வடிவத்தைப் பொருத்து",
   "find.wholeWord": "முழுச் சொல்லைப் பொருத்து",
-  "find.options": "தேடல் விருப்பங்கள்"
+  "find.options": "தேடல் விருப்பங்கள்",
+  "title.placeholder": "புதிய பக்கம்",
+  "title.ariaLabel": "பக்கத் தலைப்பு",
+  "title.addIcon": "ஐகானைச் சேர்",
+  "title.changeIcon": "ஐகானை மாற்று"
 }

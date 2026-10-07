@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Es würde sich nichts ändern",
   "find.matchCase": "Groß-/Kleinschreibung beachten",
   "find.wholeWord": "Nur ganzes Wort",
-  "find.options": "Suchoptionen"
+  "find.options": "Suchoptionen",
+  "title.placeholder": "Neue Seite",
+  "title.ariaLabel": "Seitentitel",
+  "title.addIcon": "Symbol hinzufügen",
+  "title.changeIcon": "Symbol ändern"
 }

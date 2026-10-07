@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Ништо нема да се промени",
   "find.matchCase": "Разликувај големи и мали букви",
   "find.wholeWord": "Само цели зборови",
-  "find.options": "Опции за пребарување"
+  "find.options": "Опции за пребарување",
+  "title.placeholder": "Нова страница",
+  "title.ariaLabel": "Наслов на страницата",
+  "title.addIcon": "Додај икона",
+  "title.changeIcon": "Промени икона"
 }

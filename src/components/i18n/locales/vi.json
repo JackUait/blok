@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Không có gì thay đổi",
   "find.matchCase": "Khớp chữ hoa/thường",
   "find.wholeWord": "Khớp toàn bộ từ",
-  "find.options": "Tùy chọn tìm kiếm"
+  "find.options": "Tùy chọn tìm kiếm",
+  "title.placeholder": "Trang mới",
+  "title.ariaLabel": "Tiêu đề trang",
+  "title.addIcon": "Thêm biểu tượng",
+  "title.changeIcon": "Đổi biểu tượng"
 }

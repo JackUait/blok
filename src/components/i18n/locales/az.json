@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Heç nə dəyişməyəcək",
   "find.matchCase": "Böyük-kiçik hərfə uyğun",
   "find.wholeWord": "Yalnız bütöv söz",
-  "find.options": "Axtarış seçimləri"
+  "find.options": "Axtarış seçimləri",
+  "title.placeholder": "Yeni səhifə",
+  "title.ariaLabel": "Səhifə başlığı",
+  "title.addIcon": "Simvol əlavə et",
+  "title.changeIcon": "Simvolu dəyiş"
 }

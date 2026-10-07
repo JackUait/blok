@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Ingenting ville endret seg",
   "find.matchCase": "Skill mellom store og små bokstaver",
   "find.wholeWord": "Bare hele ord",
-  "find.options": "Søkealternativer"
+  "find.options": "Søkealternativer",
+  "title.placeholder": "Ny side",
+  "title.ariaLabel": "Sidetittel",
+  "title.addIcon": "Legg til ikon",
+  "title.changeIcon": "Endre ikon"
 }

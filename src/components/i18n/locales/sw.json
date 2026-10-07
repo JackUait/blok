@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Hakuna kitakachobadilika",
   "find.matchCase": "Tofautisha herufi kubwa na ndogo",
   "find.wholeWord": "Maneno kamili pekee",
-  "find.options": "Chaguo za utafutaji"
+  "find.options": "Chaguo za utafutaji",
+  "title.placeholder": "Ukurasa mpya",
+  "title.ariaLabel": "Kichwa cha ukurasa",
+  "title.addIcon": "Ongeza ikoni",
+  "title.changeIcon": "Badilisha ikoni"
 }

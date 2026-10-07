@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Nada mudaria",
   "find.matchCase": "Diferenciar maiúsculas de minúsculas",
   "find.wholeWord": "Somente palavras inteiras",
-  "find.options": "Opções de pesquisa"
+  "find.options": "Opções de pesquisa",
+  "title.placeholder": "Nova página",
+  "title.ariaLabel": "Título da página",
+  "title.addIcon": "Adicionar ícone",
+  "title.changeIcon": "Alterar ícone"
 }

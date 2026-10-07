@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Nič se ne bi spremenilo",
   "find.matchCase": "Razlikuj velike in male črke",
   "find.wholeWord": "Samo cele besede",
-  "find.options": "Možnosti iskanja"
+  "find.options": "Možnosti iskanja",
+  "title.placeholder": "Nova stran",
+  "title.ariaLabel": "Naslov strani",
+  "title.addIcon": "Dodaj ikono",
+  "title.changeIcon": "Zamenjaj ikono"
 }

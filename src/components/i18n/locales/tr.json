@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Hiçbir şey değişmez",
   "find.matchCase": "Büyük/küçük harf duyarlı",
   "find.wholeWord": "Yalnızca tam sözcük",
-  "find.options": "Arama seçenekleri"
+  "find.options": "Arama seçenekleri",
+  "title.placeholder": "Yeni sayfa",
+  "title.ariaLabel": "Sayfa başlığı",
+  "title.addIcon": "Simge ekle",
+  "title.changeIcon": "Simgeyi değiştir"
 }

@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "שום דבר לא ישתנה",
   "find.matchCase": "התאמת רישיות",
   "find.wholeWord": "מילה שלמה בלבד",
-  "find.options": "אפשרויות חיפוש"
+  "find.options": "אפשרויות חיפוש",
+  "title.placeholder": "דף חדש",
+  "title.ariaLabel": "כותרת הדף",
+  "title.addIcon": "הוסף סמל",
+  "title.changeIcon": "החלף סמל"
 }

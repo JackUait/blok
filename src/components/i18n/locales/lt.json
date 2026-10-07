@@ -776,5 +776,9 @@
   "find.replaceUnchanged": "Niekas nepasikeistų",
   "find.matchCase": "Skirti didžiąsias ir mažąsias raides",
   "find.wholeWord": "Tik visi žodžiai",
-  "find.options": "Paieškos parinktys"
+  "find.options": "Paieškos parinktys",
+  "title.placeholder": "Naujas puslapis",
+  "title.ariaLabel": "Puslapio pavadinimas",
+  "title.addIcon": "Pridėti piktogramą",
+  "title.changeIcon": "Keisti piktogramą"
 }

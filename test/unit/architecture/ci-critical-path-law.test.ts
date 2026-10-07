@@ -265,7 +265,7 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('builds the .NET server once, then tests, measures and formats it', () => {
+  it('tests, measures and formats the .NET server', () => {
     const server = getJob(ci, 'server');
 
     expect(server.name).toBe('Server');
@@ -281,19 +281,15 @@ describe('CI critical-path law', () => {
           'dotnet-version': '10.0.x',
         },
       },
-      // A separate build lets `dotnet test --no-build` start every test
-      // assembly at once; building inside `dotnet test` holds one back.
-      {
-        name: 'Build .NET server',
-        run: 'dotnet build packages/server/dotnet/Blok.Server.slnx --configuration Release',
-      },
+      // Build inside `dotnet test`: a separate build plus --no-build runs all
+      // three test assemblies at once, and HostCollabTests' 10s socket
+      // deadlines then time out on a 4-vCPU runner.
       {
         name: 'Test .NET server with coverage',
         run: [
           'rm -rf .server-test-results .server-coverage',
           'dotnet test packages/server/dotnet/Blok.Server.slnx \\',
           '  --configuration Release \\',
-          '  --no-build \\',
           '  --collect:"Code Coverage;Format=Cobertura" \\',
           '  --results-directory .server-test-results',
         ].join('\n'),

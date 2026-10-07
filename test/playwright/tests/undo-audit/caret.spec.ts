@@ -474,7 +474,7 @@ test.describe('undo audit — caret, scroll, selection', () => {
       return { saved: (await blok.save()).blocks[0].data.text, doc: String(blok.module.yjsManager.toJSON()[0].data.text) };
     });
 
-    expect(stored).toEqual({ saved: [{ text: 'Hello\u00a0/he' }], doc: 'Hello&nbsp;/he' });
+    expect(stored).toEqual({ saved: [{ text: 'Hello\u00a0/he' }], doc: 'Hello\u00a0/he' });
   });
 
   // Expected source: the public blocks API must agree with the caret the undo just placed.

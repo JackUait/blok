@@ -152,6 +152,6 @@ test.describe('table data loss: browser-only paths', () => {
       (window.savedPayloads ?? []).map((p) => (p.blocks.find((b) => b.id === 'c11')?.data as { text?: unknown } | undefined)?.text)
     );
 
-    expect(texts.map(htmlOf)).toContain('dXYZ');
+    expect(texts.map((text) => htmlOf(text))).toContain('dXYZ');
   });
 });

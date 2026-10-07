@@ -1,7 +1,7 @@
 import { test as isolatedTest, type Page } from '@playwright/test';
 import type { OutputData } from '@/types';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
-import { ensureBlokBundleBuilt, HOLDER_ID, resetBlok, saveBlok } from './columns-blocks/_helpers';
+import { ensureBlokBundleBuilt, HOLDER_ID, resetBlok, saveBlok, saveRaw } from './columns-blocks/_helpers';
 
 type PageInfo = { title?: string; icon?: { type: 'emoji'; value: string }; access?: 'none' } | null;
 
@@ -461,7 +461,7 @@ isolatedTest('inline page reference follows a two-tab rename and denial without 
     await page.getByRole('option', { name: 'Roadmap' }).click();
     await expect(paragraph.getByRole('link', { name: 'Roadmap' })).toHaveAttribute('data-blok-page-id', 'roadmap');
 
-    const beforeRename = await saveBlok(page);
+    const beforeRename = await saveRaw(page);
     const savedText = beforeRename.blocks.find((block) => block.id === 'intro')?.data.text;
 
     expect(savedText).toContainEqual({ embed: { page: { id: 'roadmap' } } });
@@ -485,7 +485,7 @@ isolatedTest('inline page reference follows a two-tab rename and denial without 
         .toHaveAttribute('data-blok-page-id', 'roadmap');
       await expect(tab.getByTestId('page-title')).toHaveText('Q4 Roadmap');
       await expect(tab.getByTestId('page-icon')).toHaveText('🚀');
-      const saved = await saveBlok(tab);
+      const saved = await saveRaw(tab);
 
       expect(saved.blocks.find((block) => block.id === 'intro')?.data.text).toEqual(savedText);
       expect(saved.blocks.find((block) => block.id === 'link')?.data).toEqual({ pageId: 'roadmap' });

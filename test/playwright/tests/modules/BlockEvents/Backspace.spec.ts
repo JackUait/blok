@@ -5,6 +5,7 @@ import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { savedAsHtml } from '../../helpers/saved-as-html';
+import type { HtmlReadOptions } from '../../helpers/saved-as-html';
 
 /**
  * Type for accessing internal Blok modules in tests
@@ -325,14 +326,14 @@ const createUnmergeableToolBlok = async (page: Page, options: { hasConversionCon
  *
  * @param page - Playwright Page instance
  */
-const saveBlok = async (page: Page): Promise<OutputData> => {
+const saveBlok = async (page: Page, options?: HtmlReadOptions): Promise<OutputData> => {
   return savedAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('Blok instance is not initialized');
     }
 
     return window.blokInstance.save();
-  }));
+  }), options);
 };
 
 /**
@@ -1020,7 +1021,8 @@ test.describe('backspace keydown', () => {
     await setCaret(lastParagraph, 0, 0);
     await lastParagraph.press('Backspace');
 
-    const { blocks } = await saveBlok(page);
+    // SimpleHeader is a custom tool named `header` with no richTextFields, so it saves its own HTML.
+    const { blocks } = await saveBlok(page, { allowHtml: true });
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].id).toBe('block1');

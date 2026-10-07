@@ -1256,9 +1256,8 @@ test.describe('sanitizing', () => {
       const output = await saveBlok(page);
       const text = getBlockText(output.blocks[0].data);
 
-      expect(text).toContain('<strong>Valid</strong>');
-      // Empty strong should be removed
-      expect(text).not.toContain('<strong></strong>');
+      // A custom tool without richTextFields saves its own HTML string.
+      expect(text).toBe('<strong>Valid</strong> ');
     });
   });
 });

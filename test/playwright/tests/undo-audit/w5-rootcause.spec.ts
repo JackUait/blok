@@ -625,7 +625,7 @@ test.describe('W5R root causes', () => {
       expect(checkpoint || stall + longTask < 100, 'a stall of 100 ms or more after the space always closes the group').toBe(true);
       // The space survives the undo of "deep" exactly when the checkpoint fired, whatever caused the pause.
       expect(deepUndone).toEqual(checkpoint
-        ? { doc: 'Level two&nbsp;', saved: [{ text: 'Level two\u00a0' }] }
+        ? { doc: 'Level two\u00a0', saved: [{ text: 'Level two\u00a0' }] }
         : { doc: 'Level two', saved: [{ text: 'Level two' }] });
     });
   }

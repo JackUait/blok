@@ -50,7 +50,7 @@ const dumpTexts = async (page: Page): Promise<Array<unknown>> =>
     const data: OutputData = await instance.save();
 
     return data.blocks.map((b) => b.data.text);
-  }).then((texts) => texts.map(htmlOf));
+  }).then((texts) => texts.map((text) => htmlOf(text)));
 
 const selectBlockRange = async (page: Page, fromIndex: number, toIndex: number): Promise<void> => {
   await getParagraphByIndex(page, fromIndex).click();

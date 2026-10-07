@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
@@ -30,15 +31,14 @@ const mount = async (page: Page, blocks: OutputData['blocks']): Promise<void> =>
   }, blocks);
 };
 
-const dataOf = (page: Page, id: string): Promise<Record<string, unknown>> =>
-  page.evaluate(async (blockId) => {
+const dataOf = async (page: Page, id: string): Promise<Record<string, unknown>> =>
+  blocksAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('no editor');
     }
-    const out = await window.blokInstance.save();
 
-    return out.blocks.find((b) => b.id === blockId)?.data ?? {};
-  }, id);
+    return (await window.blokInstance.save()).blocks;
+  })).find((b) => b.id === id)?.data ?? {};
 
 const canRedo = (page: Page): Promise<boolean> => page.evaluate(() => window.blokInstance?.history.canRedo() ?? false);
 

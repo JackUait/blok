@@ -2,6 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -60,20 +61,24 @@ const dom = async (page: Page): Promise<string[]> => {
 
 /** Saved data, one "type:text" entry per block. */
 const saved = async (page: Page): Promise<string[]> => {
-  return page.evaluate(async () => {
+  const blocks = await page.evaluate(async () => {
     const out = await window.blokInstance?.save();
 
-    return (out?.blocks ?? []).map((block) => `${block.type}:${(block.data as { text?: string }).text ?? ''}`);
+    return out?.blocks ?? [];
   });
+
+  return blocksAsHtml(blocks).map((block) => `${block.type}:${(block.data as { text?: string }).text ?? ''}`);
 };
 
 const fullSaved = async (page: Page): Promise<string> => {
-  return page.evaluate(async () => JSON.stringify((await window.blokInstance?.save())?.blocks.map((b) => ({
+  const blocks = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks);
+
+  return JSON.stringify(blocks === undefined ? undefined : blocksAsHtml(blocks).map((b) => ({
     type: b.type,
     data: b.data,
     parent: b.parent,
     content: b.content,
-  }))));
+  })));
 };
 
 const input = (page: Page, index: number): Locator =>
@@ -171,7 +176,7 @@ test.describe('undo audit: grouping and boundaries', () => {
     await undoOnce(page);
 
     expect(await dom(page)).toEqual(['paragraph:&gt;&nbsp;']);
-    expect(await saved(page)).toEqual(['paragraph:&gt;&nbsp;']);
+    expect(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.map((b) => [b.type, b.data.text]))).toEqual([['paragraph', [{ text: '>\u00a0' }]]]);
   });
 
   // GRP-4. Expected: typing over selected blocks is one gesture, so one undo restores them

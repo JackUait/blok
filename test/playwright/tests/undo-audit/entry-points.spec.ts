@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const CAPTURE_GAP_MS = 700;
@@ -35,17 +36,16 @@ const mount = async (page: Page, specs: Array<{ key: Which; holder: string; bloc
   }, specs);
 };
 
-const texts = (page: Page, which: Which = 'blokInstance'): Promise<string[]> =>
-  page.evaluate(async (w) => {
+const texts = async (page: Page, which: Which = 'blokInstance'): Promise<string[]> =>
+  blocksAsHtml(await page.evaluate(async (w) => {
     const instance = window[w];
 
     if (!instance) {
       throw new Error(`Editor ${w} not found`);
     }
-    const out = await instance.save();
 
-    return out.blocks.map((b) => String((b.data as { text?: string }).text ?? ''));
-  }, which);
+    return (await instance.save()).blocks;
+  }, which)).map((b) => String((b.data as { text?: string }).text ?? ''));
 
 const domTexts = (page: Page, holder: string): Promise<string[]> =>
   page.evaluate((h) => Array.from(document.querySelectorAll(`#${h} [data-blok-testid="block-wrapper"] [contenteditable]`))

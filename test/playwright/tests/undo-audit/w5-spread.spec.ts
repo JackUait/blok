@@ -13,6 +13,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -92,7 +93,8 @@ interface State {
 }
 
 /** One line per block for the screen and for save() (ids and edit metadata left out). */
-const state = (page: Page): Promise<State> => page.evaluate(async (holder) => {
+const state = async (page: Page): Promise<State> => {
+  const { dom, out } = await page.evaluate(async (holder) => {
   const root = document.getElementById(holder);
   const wrappers = root === null ? [] : Array.from(root.querySelectorAll('[data-blok-testid="block-wrapper"]'));
   const own = (w: Element, sel: string): Element[] =>
@@ -106,12 +108,15 @@ const state = (page: Page): Promise<State> => page.evaluate(async (holder) => {
     return `${w.getAttribute('data-blok-component') ?? '?'}|d${w.getAttribute('data-blok-depth') ?? '0'}|${marker}${box === undefined ? '' : tick}|${text}`;
   });
   const out = await window.blokInstance?.save();
-  const blocks = out?.blocks ?? [];
+
+  return { dom, out };
+}, HOLDER_ID);
+  const blocks = blocksAsHtml(out?.blocks ?? []);
   const ids = blocks.map((b) => b.id);
   const saved = blocks.map((b) => `${b.type}|${JSON.stringify(b.data).replace(/&nbsp;/g, ' ')}|p${b.parent === undefined ? '-' : ids.indexOf(b.parent)}`);
 
   return { dom, saved };
-}, HOLDER_ID);
+};
 
 /** "id@offset" of the caret, 'none' without a selection, 'outside' when it is not in a block editable. */
 const caret = (page: Page): Promise<string> => page.evaluate(() => {
@@ -588,7 +593,7 @@ test.describe('W5F: spread of the wave-4 families', () => {
 
       const loadedBox: unknown = JSON.parse(loaded.saved[0].split('|')[1]);
 
-      expect(saved, 'save() after undo works and equals the loaded document').toBe(JSON.stringify([['box', null, loadedBox], ['k', 'box', { text: 'kid' }]]));
+      expect(saved, 'save() after undo works and equals the loaded document').toBe(JSON.stringify([['box', null, loadedBox], ['k', 'box', { text: [{ text: 'kid' }] }]]));
     });
   }
 

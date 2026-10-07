@@ -6,6 +6,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 // Yjs captureTimeout (500ms) plus a buffer: waiting this long closes the current undo entry.
@@ -44,8 +45,8 @@ const mountTwo = async (page: Page, first: Blocks, second: Blocks): Promise<void
   }, { a: first, b: second });
 };
 
-const texts = async (page: Page, key: 'b1' | 'b2'): Promise<string[]> => page.evaluate(async (k) =>
-  ((await window[k]?.save())?.blocks ?? []).map((b) => `${b.type}:${(b.data as { text?: string }).text ?? ''}`), key);
+const texts = async (page: Page, key: 'b1' | 'b2'): Promise<string[]> => blocksAsHtml(await page.evaluate(async (k) =>
+  (await window[k]?.save())?.blocks ?? [], key)).map((b) => `${b.type}:${(b.data as { text?: string }).text ?? ''}`);
 
 const typeAtEnd = async (page: Page, text: string, value: string): Promise<void> => {
   await page.getByText(text, { exact: true }).click();

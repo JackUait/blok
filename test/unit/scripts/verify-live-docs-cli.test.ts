@@ -49,7 +49,9 @@ const writeSite = (root: string, overrides: Record<string, string> = {}): void =
 const recordBuildInfo = (root: string, scratch: string): Record<string, string> => {
   const output = join(scratch, 'github-output');
   rmSync(output, { force: true });
-  execFileSync(process.execPath, [BUILD_INFO, root], {
+  const sources = join(scratch, 'site-sources.json');
+  writeFileSync(sources, JSON.stringify({ rootTag: 'v1.16.0', rootCommit: 'c'.repeat(40), archiveTags: [] }));
+  execFileSync(process.execPath, [BUILD_INFO, root, '--sources', sources], {
     env: { ...process.env, GITHUB_OUTPUT: output, GITHUB_RUN_ID: '4242', GITHUB_RUN_ATTEMPT: '1' },
     stdio: 'pipe',
   });
@@ -139,6 +141,7 @@ describe('verify-live-docs CLI, end to end', () => {
         EXPECTED_BUILD_SHA: '',
         EXPECTED_MANIFEST_HASH: '',
         EXPECTED_BUILD_INFO_PATH: '',
+        EXPECTED_ROOT_TAG: '',
         DEPLOY_MARKER: '',
         ...env,
       },
@@ -165,6 +168,7 @@ describe('verify-live-docs CLI, end to end', () => {
     EXPECTED_BUILD_SHA: outputs.sha ?? '',
     EXPECTED_MANIFEST_HASH: outputs.manifest ?? '',
     EXPECTED_BUILD_INFO_PATH: outputs.proof ?? '',
+    EXPECTED_ROOT_TAG: outputs.root_tag ?? '',
   });
 
   const readReport = (): Report => JSON.parse(readFileSync(report, 'utf8')) as Report;
@@ -208,6 +212,26 @@ describe('verify-live-docs CLI, end to end', () => {
     expect(run.code).toBe(1);
     expect(run.ms).toBeLessThan(RUN_LIMIT_MS);
     expect(readReport().failures).toEqual([expect.stringContaining('live build info matches the artifact just built')]);
+  }, 30_000);
+
+  it('fails when the live root snapshot is not the release this build put there', async () => {
+    writeSite(root);
+    const outputs = recordBuildInfo(root, scratch);
+
+    const run = await verify([...mapped(), '--require-build-info'], { ...expectedEnv(outputs), EXPECTED_ROOT_TAG: 'v1.17.0' });
+
+    expect(run.stdout).toMatch(/FAIL {2}live build info matches the artifact just built — .*rootTag: live v1\.16\.0, expected v1\.17\.0/);
+    expect(run.code).toBe(1);
+  }, 30_000);
+
+  it('requires the root tag in CI too', async () => {
+    writeSite(root);
+    const outputs = recordBuildInfo(root, scratch);
+
+    const run = await verify([...mapped(), '--require-build-info'], { ...expectedEnv(outputs), EXPECTED_ROOT_TAG: '' });
+
+    expect(readReport().error).toMatch(/--require-build-info: .*EXPECTED_ROOT_TAG/);
+    expect(run.code).toBe(1);
   }, 30_000);
 
   it('fails with exit 1 and still writes the report when CI passes no build info', async () => {

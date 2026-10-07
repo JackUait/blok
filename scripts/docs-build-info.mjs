@@ -4,13 +4,16 @@
 // It also writes the same JSON to a proof file whose name is unique to this
 // build, which the live check polls.
 //
-// Usage: node scripts/docs-build-info.mjs <siteDir>
-// In CI it also writes `sha`, `manifest` and `proof` (the proof file's path) to $GITHUB_OUTPUT.
+// Usage: node scripts/docs-build-info.mjs <siteDir> [--sources <file.json>]
+// --sources is assemble-site.mjs's record of the root and archive release tags.
+// In CI it also writes `sha`, `manifest`, `proof` (the proof file's path) and
+// `root_tag` to $GITHUB_OUTPUT.
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
 export const BUILD_INFO_FILE = 'build-info.json';
 
@@ -57,9 +60,13 @@ export const proofPath = ({ sha, manifestHash, runId, runAttempt, builtAt }) => 
 };
 
 /**
- * @param {{ dir: string, sha: string, version: string, runId?: string | null, runAttempt?: string | null, builtAt: string }} options
+ * The root and archives are release snapshots built from their tags; only
+ * /next/ comes from `sha`. `sources` names the tags.
+ *
+ * @param {{ dir: string, sha: string, version: string, runId?: string | null, runAttempt?: string | null, builtAt: string,
+ *   sources?: { rootTag?: string | null, rootCommit?: string | null, archiveTags?: string[] } }} options
  */
-export const createBuildInfo = ({ dir, sha, version, runId = null, runAttempt = null, builtAt }) => {
+export const createBuildInfo = ({ dir, sha, version, runId = null, runAttempt = null, builtAt, sources = {} }) => {
   if (!/^[a-f0-9]{40}$/.test(sha ?? '')) throw new Error(`build info needs a full commit sha, got ${sha}`);
   const manifest = contentManifest(dir);
   const info = {
@@ -71,6 +78,10 @@ export const createBuildInfo = ({ dir, sha, version, runId = null, runAttempt = 
     builtAt,
     runId: runId || null,
     runAttempt: runAttempt || null,
+    rootTag: sources.rootTag ?? null,
+    rootCommit: sources.rootCommit ?? null,
+    nextCommit: sha,
+    archiveTags: sources.archiveTags ?? [],
   };
   return { ...info, proof: proofPath(info) };
 };
@@ -84,9 +95,10 @@ export const writeBuildInfo = (dir, info) => {
 };
 
 const main = () => {
-  const target = process.argv[2];
+  const { positionals, values } = parseArgs({ options: { sources: { type: 'string' } }, allowPositionals: true });
+  const target = positionals[0];
   if (!target) {
-    console.error('Usage: docs-build-info.mjs <siteDir>');
+    console.error('Usage: docs-build-info.mjs <siteDir> [--sources <file.json>]');
     process.exit(1);
   }
   const dir = resolve(target);
@@ -98,12 +110,19 @@ const main = () => {
     runId: process.env.GITHUB_RUN_ID,
     runAttempt: process.env.GITHUB_RUN_ATTEMPT,
     builtAt: new Date().toISOString(),
+    sources: values.sources ? JSON.parse(readFileSync(resolve(values.sources), 'utf8')) : {},
   });
   writeBuildInfo(dir, info);
   if (process.env.GITHUB_OUTPUT) {
-    appendFileSync(process.env.GITHUB_OUTPUT, `sha=${info.sha}\nmanifest=${info.manifestHash}\nproof=${info.proof}\n`);
+    appendFileSync(
+      process.env.GITHUB_OUTPUT,
+      `sha=${info.sha}\nmanifest=${info.manifestHash}\nproof=${info.proof}\nroot_tag=${info.rootTag ?? ''}\n`,
+    );
   }
-  console.log(`${BUILD_INFO_FILE}: ${info.sha} ${info.version} root=${info.root} ${info.files} files ${info.manifestHash} proof=${info.proof}`);
+  console.log(
+    `${BUILD_INFO_FILE}: ${info.sha} ${info.version} root=${info.root} (${info.rootTag} @ ${info.rootCommit}) `
+    + `archives=${info.archiveTags.join(',')} ${info.files} files ${info.manifestHash} proof=${info.proof}`,
+  );
 };
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

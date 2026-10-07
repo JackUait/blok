@@ -291,6 +291,12 @@ describe('docs deploy law — the live site is proven to be the build just deplo
   const smoke = getJob('seo-smoke');
   const verifyStep = smoke.steps?.find((step) => step.run?.includes('verify-live-docs.mjs'));
 
+  it('records which release and commit each snapshot came from', () => {
+    // assemble-site.mjs knows the root and archive tags; build info records them.
+    expect(buildSteps.find((step) => step.run?.includes('assemble-site.mjs'))?.run).toContain('--sources site-sources.json');
+    expect(buildInfoStep?.run).toBe(`node scripts/docs-build-info.mjs ${ARTIFACT_ROOT} --sources site-sources.json`);
+  });
+
   it('records build-info.json into the artifact before verifying and uploading it', () => {
     expect(buildInfoStep, `the build job does not write ${BUILD_INFO_FILE}`).toBeDefined();
     expect(buildInfoStep?.id, 'the build-info step needs an id so its outputs can be read').toBeTruthy();
@@ -313,10 +319,12 @@ describe('docs deploy law — the live site is proven to be the build just deplo
     expect(build.outputs?.build_sha).toBe(`\${{ steps.${id}.outputs.sha }}`);
     expect(build.outputs?.manifest_hash).toBe(`\${{ steps.${id}.outputs.manifest }}`);
     expect(build.outputs?.build_info_path).toBe(`\${{ steps.${id}.outputs.proof }}`);
+    expect(build.outputs?.root_tag).toBe(`\${{ steps.${id}.outputs.root_tag }}`);
     expect(verifyStep?.env).toMatchObject({
       EXPECTED_BUILD_SHA: '${{ needs.build.outputs.build_sha }}',
       EXPECTED_MANIFEST_HASH: '${{ needs.build.outputs.manifest_hash }}',
       EXPECTED_BUILD_INFO_PATH: '${{ needs.build.outputs.build_info_path }}',
+      EXPECTED_ROOT_TAG: '${{ needs.build.outputs.root_tag }}',
     });
   });
 
@@ -327,6 +335,7 @@ describe('docs deploy law — the live site is proven to be the build just deplo
     expect(verifier).toContain('process.env.EXPECTED_BUILD_SHA');
     expect(verifier).toContain('process.env.EXPECTED_MANIFEST_HASH');
     expect(verifier).toContain('process.env.EXPECTED_BUILD_INFO_PATH');
+    expect(verifier).toContain('process.env.EXPECTED_ROOT_TAG');
     expect(verifier).toContain('awaitBuildInfo(');
   });
 

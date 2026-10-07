@@ -7,8 +7,10 @@ interface Workflow {
   concurrency?: Record<string, unknown>;
   on: Record<string, unknown>;
   jobs: Record<string, {
+    environment?: Record<string, string>;
     if?: string;
     needs?: string | string[];
+    outputs?: Record<string, string>;
     permissions?: Record<string, string>;
     'timeout-minutes'?: number;
     steps?: Array<{
@@ -166,6 +168,38 @@ describe('docs deployment workflow', () => {
     expect(workflow.jobs.deploy.needs).toBe('build');
   });
 
+  // Pages drops a deployment whose build version it already served, and
+  // deploy-pages always sends GITHUB_SHA: the release dispatch after a main
+  // push on the same commit published nothing (v1.15.2, v1.16.0).
+  it('deploys with a build version made for the run, not with actions/deploy-pages', () => {
+    const job = workflow.jobs.deploy;
+    const deploy = job.steps?.find((step) => step.id === 'deployment');
+    const checkout = job.steps?.find((step) => step.name === 'Checkout code');
+    const upload = stepNamed('build', 'Upload Pages artifact');
+
+    expect(source).not.toContain('actions/deploy-pages@');
+    // exec: a cancelled run signals the shell, which would not pass it on, and
+    // the script's handler cancels the Pages deployment.
+    expect(deploy?.run).toBe('exec node scripts/deploy-pages.mjs');
+    expect(deploy?.env).toEqual({
+      GH_TOKEN: '${{ github.token }}',
+      ARTIFACT_ID: '${{ needs.build.outputs.artifact_id }}',
+    });
+    expect(workflow.jobs.build.outputs?.artifact_id).toBe(`\${{ steps.${upload?.id ?? 'missing'}.outputs.artifact_id }}`);
+    // Writes the build-version commit; it creates no ref.
+    expect(job.permissions).toEqual({ contents: 'write', pages: 'write', 'id-token': 'write' });
+    expect(job.environment).toEqual({ name: 'github-pages', url: '${{ steps.deployment.outputs.page_url }}' });
+    expect(checkout?.with).toMatchObject({ 'persist-credentials': false });
+  });
+
+  // The runner rewrites GITHUB_* after reading a step's env, so this looks
+  // like a fix in the log and changes nothing.
+  it('never tries to override GITHUB_SHA through env', () => {
+    const envs = Object.values(workflow.jobs).flatMap((job) => job.steps ?? []).map((step) => step.env ?? {});
+
+    expect(envs.filter((env) => 'GITHUB_SHA' in env)).toEqual([]);
+  });
+
   it('snapshots only stable releases, from the release tag with full history', () => {
     const job = workflow.jobs.snapshot;
     const checkout = job.steps?.find((step) => step.name === 'Checkout code');
@@ -234,7 +268,7 @@ describe('docs deployment workflow', () => {
       GH_REPO: '${{ github.repository }}',
     });
     expect(assemble?.run).toBe(
-      'node docs/scripts/assemble-site.mjs --next next.tgz --out site\n'
+      'node docs/scripts/assemble-site.mjs --next next.tgz --out site --sources site-sources.json\n'
       + 'cp CHANGELOG.md site/CHANGELOG.md\n',
     );
     expect(upload?.with?.path).toBe('site/');

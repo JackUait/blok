@@ -120,7 +120,8 @@ const readLiveBuildInfo = async () => {
 const printLag = (info) => {
   const lag = deployLag(info.sha, git);
   process.stdout.write(
-    `live: ${info.sha} (version ${info.version}, root snapshot ${info.root}, built ${info.builtAt}, run ${info.runId})\n`
+    `live: ${info.sha} (version ${info.version}, root snapshot ${info.root} from ${info.rootTag ?? 'unknown tag'}`
+    + ` @ ${info.rootCommit ?? 'unknown commit'}, built ${info.builtAt}, run ${info.runId})\n`
     + (lag.behind === null
       ? `lag:  unknown — ${lag.error}\n`
       : `lag:  ${lag.behind} commit(s) behind origin/main ${lag.mainSha} (git fetch first for current numbers)\n`),
@@ -153,11 +154,13 @@ const checks = async (report) => {
   const expected = {
     sha: process.env.EXPECTED_BUILD_SHA ?? '',
     manifestHash: process.env.EXPECTED_MANIFEST_HASH ?? '',
+    // The manifest hash already proves live = built; this names the release when it is not.
+    rootTag: process.env.EXPECTED_ROOT_TAG ?? '',
   };
   const proof = process.env.EXPECTED_BUILD_INFO_PATH ?? '';
-  if (options['require-build-info'] && (!expected.sha || !expected.manifestHash || !proof)) {
+  if (options['require-build-info'] && (!expected.sha || !expected.manifestHash || !proof || !expected.rootTag)) {
     throw new Error(
-      '--require-build-info: EXPECTED_BUILD_SHA, EXPECTED_MANIFEST_HASH and EXPECTED_BUILD_INFO_PATH must all be set',
+      '--require-build-info: EXPECTED_BUILD_SHA, EXPECTED_MANIFEST_HASH, EXPECTED_BUILD_INFO_PATH and EXPECTED_ROOT_TAG must all be set',
     );
   }
   if (expected.sha || expected.manifestHash || proof) {

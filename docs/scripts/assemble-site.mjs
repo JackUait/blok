@@ -1,4 +1,5 @@
-// Usage: node docs/scripts/assemble-site.mjs --next <next.tgz> --out <dir> [--local-dir <dir>] [--tags a,b]
+// Usage: node docs/scripts/assemble-site.mjs --next <next.tgz> --out <dir> [--local-dir <dir>] [--tags a,b] [--sources <file.json>]
+// --sources writes which release tags the root and archives came from, for scripts/docs-build-info.mjs.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -12,10 +13,11 @@ const { values } = parseArgs({
     out: { type: 'string' },
     'local-dir': { type: 'string' },
     tags: { type: 'string' },
+    sources: { type: 'string' },
   },
 });
 if (!values.next || !values.out) {
-  console.error('Usage: assemble-site.mjs --next <next.tgz> --out <dir> [--local-dir <dir>] [--tags a,b]');
+  console.error('Usage: assemble-site.mjs --next <next.tgz> --out <dir> [--local-dir <dir>] [--tags a,b] [--sources <file.json>]');
   process.exit(1);
 }
 
@@ -91,4 +93,18 @@ const manifest = buildVersionsManifest({
   archives: selection.archives.filter(({ minor }) => kept.includes(minor)),
 });
 writeFileSync(join(out, 'versions.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+
+// The commit the root snapshot was built from. commits/<tag> peels an annotated tag.
+const tagCommit = (tag) => {
+  if (values['local-dir']) return null;
+  return execFileSync('gh', ['api', `repos/{owner}/{repo}/commits/${tag}`, '--jq', '.sha'], { encoding: 'utf8' }).trim();
+};
+if (values.sources) {
+  const sources = {
+    rootTag: selection.root.tag,
+    rootCommit: tagCommit(selection.root.tag),
+    archiveTags: selection.archives.filter(({ minor }) => kept.includes(minor)).map(({ tag }) => tag),
+  };
+  writeFileSync(resolve(values.sources), `${JSON.stringify(sources, null, 2)}\n`);
+}
 if (downloadDir) rmSync(downloadDir, { recursive: true, force: true });

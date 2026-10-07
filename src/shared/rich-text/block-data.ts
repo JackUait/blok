@@ -1,6 +1,7 @@
 import type { OutputBlockData } from '../../../types';
 import { isRichText, readRichTextLeniently } from './guards';
 import { segmentsToHtml } from './segments-to-html';
+import { canonicalizeSegments } from './html-to-segments';
 import type { RichText } from '../../../types/rich-text';
 
 import { LEGACY_BODY_TYPES, LEGACY_ITEM_TYPES } from './fields';
@@ -139,11 +140,16 @@ const mapBlockData = (
   blocks: OutputBlockData[],
   convert: (block: OutputBlockData, data: Record<string, unknown>) => Record<string, unknown>
 ): OutputBlockData[] => {
-  const next = blocks.map((block) => {
-    const data = block.data ?? {};
-    const converted = convert(block, data);
+  const next = blocks.map((block: unknown) => {
+    // Stored and peer documents can hold anything; what is not a block with record data is not ours to convert.
+    if (!isRecord(block) || (block.data !== undefined && block.data !== null && !isRecord(block.data))) {
+      return block as OutputBlockData;
+    }
 
-    return converted === data ? block : { ...block, data: converted };
+    const data = block.data ?? {};
+    const converted = convert(block as unknown as OutputBlockData, data);
+
+    return converted === data ? block as unknown as OutputBlockData : { ...block, data: converted } as OutputBlockData;
   });
 
   return next.every((block, index) => block === blocks[index]) ? blocks : next;
@@ -187,6 +193,21 @@ export function blockDataToHtml(
   );
 }
 
+const toSegmentsBy = (
+  data: Record<string, unknown>,
+  fields: string[],
+  resolve: FieldsResolver,
+  convertField: Convert,
+  options: ConvertOptions
+): Record<string, unknown> => convertData(
+  data,
+  fields,
+  convertField,
+  blocks => mapBlockData(blocks, (block, nested) =>
+    toSegmentsBy(nested, resolve(block.type), resolve, convertField, nestedOptionsFor(options)(block.type))),
+  options
+);
+
 /** HTML string fields → segments. Segment arrays and non-rich values pass through. */
 export function blockDataToSegments(
   data: Record<string, unknown>,
@@ -195,11 +216,26 @@ export function blockDataToSegments(
   read: (html: string) => RichText,
   options: ConvertOptions = {}
 ): Record<string, unknown> {
-  return convertData(
-    data,
-    fields,
-    value => (typeof value === 'string' ? read(value) : value),
-    blocks => outputBlocksToSegments(blocks, resolve, read, nestedOptionsFor(options)),
-    options
-  );
+  return toSegmentsBy(data, fields, resolve, value => (typeof value === 'string' ? read(value) : value), options);
 }
+
+/**
+ * {@link outputBlocksToSegments}, plus segment arrays canonicalized: equal
+ * content in any spelling compares equal. Copies every array it meets, so it
+ * is for comparing, not for output (callers rely on unchanged identity there).
+ */
+export const outputBlocksToCanonicalSegments = (
+  blocks: OutputBlockData[],
+  resolve: FieldsResolver,
+  read: (html: string) => RichText
+): OutputBlockData[] => {
+  const convertField: Convert = (value) => {
+    if (typeof value === 'string') {
+      return read(value);
+    }
+
+    return Array.isArray(value) ? canonicalizeSegments(isRichText(value) ? value : readRichTextLeniently(value)) : value;
+  };
+
+  return mapBlockData(blocks, (block, data) => toSegmentsBy(data, resolve(block.type), resolve, convertField, nestedDocumentsFor(block.type)));
+};

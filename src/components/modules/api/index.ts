@@ -9,6 +9,7 @@ import type { API as APIInterfaces } from '../../../../types';
 import type { BlockToolData } from '../../../../types/tools';
 import type { BlockToolAdapter } from '../../tools/block';
 import { Module } from '../../__module';
+import { richTextInputToHtml } from '../../utils/rich-text-input';
 
 /**
  * @class API
@@ -22,6 +23,15 @@ export class API extends Module {
    */
   public blockDataForHost(tool: BlockToolAdapter, data: BlockToolData): BlockToolData {
     return this.Blok.Saver.blockDataForHost(tool, data);
+  }
+
+  /**
+   * Host block data the way the tool reads it: segment fields become HTML.
+   * @param tool - the block's tool
+   * @param data - block data as a host passes it
+   */
+  public blockDataForTool(tool: BlockToolAdapter, data: BlockToolData): BlockToolData {
+    return richTextInputToHtml(tool, data, name => this.Blok.Tools.blockTools.get(name));
   }
 
   /**

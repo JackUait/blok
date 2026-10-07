@@ -71,10 +71,10 @@ describe('htmlToBlocks — structure', () => {
     ]);
   });
 
-  it('strips an unsafe href while keeping the link text', () => {
+  it('strips an unsafe link while keeping its text', () => {
     const [block] = htmlToBlocks('<p><a href="javascript:alert(1)">x</a></p>');
 
-    expect(block.data.text).toBe('<a>x</a>');
+    expect(block.data.text).toBe('x');
   });
 
   it('reads a full document and ignores head markup', () => {

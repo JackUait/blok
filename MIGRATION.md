@@ -808,7 +808,9 @@ richTextToPlainText([{ text: 'Hi ' }, { text: 'there', marks: { bold: true } }])
 - `onLossy` reports `'html-embed'` for markup kept as an `{ embed: { html } }` segment, and `'custom-mark'` for an unknown tag kept as a `tag:<name>` mark.
 - It runs in Node without a DOM. The `@bloklabs/core/migrate` bundle now includes parse5, about 70 KB gzip.
 
-Use `richTextToHtml` and `richTextToPlainText` to display segments outside the editor.
+To display segments outside the editor, use `blocksToHtml` from `@bloklabs/core/view`. It sanitizes its output.
+
+`richTextToHtml` does not sanitize. It is a raw converter. Segments can come from collaborators, the server or a host, so do not put its output into a page as is. `richTextToPlainText` returns plain text.
 
 ---
 

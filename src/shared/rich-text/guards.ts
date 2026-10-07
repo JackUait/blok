@@ -7,6 +7,44 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const hasOnlyKeys = (record: Record<string, unknown>, allowed: string[]): boolean =>
   Object.keys(record).every(key => allowed.includes(key) || record[key] === undefined);
 
+const definedKeys = (record: Record<string, unknown>): string[] =>
+  Object.keys(record).filter(key => record[key] !== undefined);
+
+const isOnly = (value: unknown, key: string): value is Record<string, unknown> => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const keys = definedKeys(value);
+
+  return keys.length === 1 && keys[0] === key;
+};
+
+/**
+ * The embed if it has exactly one of the three shapes, else `undefined`.
+ * LOCKSTEP with C# `RichText.cs`: both sides drop the same embeds.
+ * @param value - a segment's `embed`
+ */
+export const readEmbed = (value: unknown): RichTextEmbed | undefined => {
+  if (isOnly(value, 'html')) {
+    return typeof value.html === 'string' ? { html: value.html } : undefined;
+  }
+  if (isOnly(value, 'equation')) {
+    const { equation } = value;
+
+    return isOnly(equation, 'expression') && typeof equation.expression === 'string'
+      ? { equation: { expression: equation.expression } }
+      : undefined;
+  }
+  if (isOnly(value, 'page')) {
+    const { page } = value;
+
+    return isOnly(page, 'id') && typeof page.id === 'string' ? { page: { id: page.id } } : undefined;
+  }
+
+  return undefined;
+};
+
 /**
  * A segment has exactly the keys of one shape. An extra key means the array is
  * some other record list (a custom tool's `{ text, checked }` items), not rich text.
@@ -32,7 +70,7 @@ export const isRichText = (value: unknown): value is RichText =>
 
 /**
  * Segments out of an array that fails {@link isRichText}: keeps a string `text`
- * or a record `embed`, plus a record `marks`; drops other keys and items.
+ * or a valid `embed`, plus a record `marks`; drops other keys and items.
  * @param value - an array stored in a rich-text field
  */
 export const readRichTextLeniently = (value: unknown[]): RichText => value.flatMap((item): RichTextSegment[] => {
@@ -47,5 +85,7 @@ export const readRichTextLeniently = (value: unknown[]): RichText => value.flatM
     return [{ text: item.text, ...marks }];
   }
 
-  return isRecord(item.embed) ? [{ embed: item.embed as RichTextEmbed, ...marks }] : [];
+  const embed = readEmbed(item.embed);
+
+  return embed === undefined ? [] : [{ embed, ...marks }];
 });

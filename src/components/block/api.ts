@@ -198,7 +198,8 @@ const BlockAPIConstructor = function BlockAPI(
      * @returns {Promise<boolean>}
      */
     validate(data: BlockToolData): Promise<boolean> {
-      return block.validate(data);
+      // save() hands out segments; the tool's validate reads its own HTML shape.
+      return block.validate(api.blockDataForTool(block.tool, data));
     },
 
     /**

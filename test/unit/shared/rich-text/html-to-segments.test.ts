@@ -48,6 +48,27 @@ describe.each(readers)('htmlToSegments (%s)', (_name, read) => {
       .toEqual([{ text: 'x', marks: { link: { href: 'https://x.com', target: '_blank', rel: 'noopener' } } }]);
   });
 
+  it('unwraps an anchor with no href: its text stays, no tag:a mark', () => {
+    expect(read('a<a>l</a>b')).toEqual([{ text: 'alb' }]);
+    expect(read('<a name="x"><b>l</b></a>')).toEqual([{ text: 'l', marks: { bold: true } }]);
+  });
+
+  it('unwraps an anchor whose href has an unsafe scheme', () => {
+    expect(read('<a href="javascript:alert(1)">l</a>')).toEqual([{ text: 'l' }]);
+    expect(read('<a href="java&#9;script:alert(1)">l</a>')).toEqual([{ text: 'l' }]);
+    expect(read('<a href="data:text/html,x">l</a>')).toEqual([{ text: 'l' }]);
+  });
+
+  it('keeps relative and safe-scheme links', () => {
+    expect(read('<a href="/p">l</a>')).toEqual([{ text: 'l', marks: { link: { href: '/p' } } }]);
+    expect(read('<a href="mailto:a@b.c">l</a>')).toEqual([{ text: 'l', marks: { link: { href: 'mailto:a@b.c' } } }]);
+  });
+
+  it('keeps links with a custom scheme the sanitizer keeps', () => {
+    expect(read('<a href="slack://open">l</a>')).toEqual([{ text: 'l', marks: { link: { href: 'slack://open' } } }]);
+    expect(read('<a href="ftp://h/f">l</a>')).toEqual([{ text: 'l', marks: { link: { href: 'ftp://h/f' } } }]);
+  });
+
   it('reads embeds', () => {
     expect(read('<span data-latex="E=mc^2">E=mc^2</span>')).toEqual([{ embed: { equation: { expression: 'E=mc^2' } } }]);
     expect(read('<a data-blok-page-id="p1">Page</a>')).toEqual([{ embed: { page: { id: 'p1' } } }]);

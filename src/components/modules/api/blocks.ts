@@ -13,12 +13,15 @@ import { BlockAPI } from '../../block/api';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { capitalize } from '../../utils';
 import { richTextInputToHtml } from '../../utils/rich-text-input';
+import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
+import { applyBlockMigration } from '../../migration/block-migrations';
 import { announce } from '../../utils/announcer';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { equalsOutputData, normalizeOutputBlocks } from '../../../shared/output-data';
-import { outputBlocksToSegments } from '../../../shared/rich-text/block-data';
+import { isNestedDocument, outputBlocksToCanonicalSegments, outputBlocksToSegments } from '../../../shared/rich-text/block-data';
+import { LEGACY_BODY_TYPES, LEGACY_ITEM_TYPES } from '../../../shared/rich-text/fields';
 import { htmlToSegmentsDom } from '../../utils/rich-text-dom';
 import { resolveHashTarget } from '../../utils/hash-target';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
@@ -302,15 +305,16 @@ export class BlocksAPI extends Module {
   /**
    * True when `data` holds the blocks the editor would save. Rich fields
    * compare as segments: the save holds segments, while a host may hand back
-   * the HTML it first loaded.
+   * the HTML it first loaded, or segments in another spelling (split runs,
+   * `bold: false`), which compare canonicalized.
    * @param current - the editor's host save
    * @param data - the incoming document
    */
   private isEchoOf(current: OutputData, data: OutputData | LooseOutputData): boolean {
     const resolve = (type: string): string[] => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? [];
-    const asSegments = (blocks: OutputBlockData[]): OutputBlockData[] => outputBlocksToSegments(blocks, resolve, htmlToSegmentsDom);
+    const incoming = outputBlocksToCanonicalSegments(normalizeOutputBlocks(data.blocks), resolve, htmlToSegmentsDom);
 
-    return equalsOutputData({ blocks: asSegments(current.blocks) }, { blocks: asSegments(normalizeOutputBlocks(data.blocks)) });
+    return equalsOutputData({ blocks: outputBlocksToSegments(current.blocks, resolve, htmlToSegmentsDom) }, { blocks: incoming });
   }
 
   /**
@@ -548,7 +552,7 @@ export class BlocksAPI extends Module {
     const insertedBlock = this.Blok.BlockManager.insert({
       id,
       tool,
-      data,
+      data: this.hostBlockDataForTool(tool ?? this.config.defaultBlock ?? 'paragraph', data),
       index,
       needToFocus,
       replace,
@@ -596,7 +600,7 @@ export class BlocksAPI extends Module {
     const block = BlockManager.insert({
       id,
       tool: type,
-      data,
+      data: data === undefined ? data : this.hostBlockDataForTool(type ?? this.config.defaultBlock ?? 'paragraph', data),
       needToFocus: focus,
       tunes,
       placement: { parentId: null, afterId: placement.afterId },
@@ -708,7 +712,7 @@ export class BlocksAPI extends Module {
     if (derivedFrom === undefined) {
       this.Blok.YjsManager.beginApiCall();
     }
-    const updatedBlock = await BlockManager.update(block, data === undefined ? data : this.richTextToHtml(block.name, data), tunes, derivedFrom);
+    const updatedBlock = await BlockManager.update(block, data === undefined ? data : this.hostDataForTool(block.name, data), tunes, derivedFrom);
 
     return new BlockAPI(updatedBlock, this.Blok.API);
   };
@@ -782,10 +786,12 @@ export class BlocksAPI extends Module {
     const normalizedBlocks = normalizeTableChildParents(normalizeOutputBlocks(blocks));
 
     const blocksToInsert = normalizedBlocks.map(({ id, type, data, tunes, parent, content, lastEditedAt, lastEditedBy }) => {
+      const tool = type || (this.config.defaultBlock as string);
+
       return this.Blok.BlockManager.composeBlock({
         id,
-        tool: type || (this.config.defaultBlock as string),
-        data: data,
+        tool,
+        data: this.hostBlockDataForTool(tool, data),
         tunes,
         parentId: parent,
         contentIds: content,
@@ -834,7 +840,8 @@ export class BlocksAPI extends Module {
       this.Blok.YjsManager.stopCapturing();
     }
 
-    const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex, childData, toolName, options);
+    const data = childData === undefined ? childData : this.hostBlockDataForTool(toolName ?? this.config.defaultBlock ?? 'paragraph', childData);
+    const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex, data, toolName, options);
 
     // NOTE: Do NOT call stopCapturing in a trailing microtask. Late
     // mutation-observer writes from deferred DOM callbacks belong to this
@@ -898,6 +905,94 @@ export class BlocksAPI extends Module {
     const resolveTool = (name: string): BlockToolAdapter | undefined => this.Blok.Tools.blockTools.get(name);
 
     return richTextInputToHtml(resolveTool(toolName), data, resolveTool) as T;
+  }
+
+  /**
+   * Host data → what the tool may render: segments to HTML, then the same
+   * sanitize passes `render()` runs (`Renderer.sanitizeToolData`). Order
+   * matters: the sanitizer HTML-parses strings, and a segment's text is plain.
+   * @param toolName - the tool the data is meant for
+   * @param data - data from the host
+   */
+  private hostDataForTool<T extends Partial<BlockToolData>>(toolName: string, data: T): T {
+    const html: Record<string, unknown> = this.richTextToHtml(toolName, data);
+    // render() expands legacy shapes into blocks before it sanitizes; the tool's
+    // rule has no entry for them, so sanitize them as the blocks they become.
+    const items = LEGACY_ITEM_TYPES.has(toolName) && Array.isArray(html.items) ? html.items : undefined;
+    const body = LEGACY_BODY_TYPES.has(toolName) && isNestedDocument(html.body) ? html.body : undefined;
+    const rest = Object.fromEntries(Object.entries(html).filter(([key]) =>
+      !(key === 'items' && items !== undefined) && !(key === 'body' && body !== undefined)));
+    const cleaned = {
+      ...this.sanitizeToolData(toolName, rest),
+      ...(items === undefined ? {} : { items: this.sanitizeLegacyItems(toolName, items) }),
+      ...(body === undefined ? {} : { body: { ...body, blocks: body.blocks.map(block => this.sanitizeNestedBlock(block)) } }),
+    };
+
+    return stripUnsafeUrlsDeep(cleaned, this.Blok.Tools.blockTools.get(toolName)?.sanitizeConfig) as T;
+  }
+
+  /**
+   * {@link hostDataForTool} for a whole block's data. The host's
+   * `config.migrations` rule runs first, as on render(): it may move markup
+   * into a field the tool's rule allows. The factory runs it again; rules are
+   * idempotent. A throwing rule leaves the data as is (the factory warns).
+   * @param toolName - the tool the data is meant for
+   * @param data - a whole block's data from the host
+   */
+  private hostBlockDataForTool<T extends Partial<BlockToolData>>(toolName: string, data: T): T {
+    return this.hostDataForTool(toolName, applyBlockMigration(toolName, data, this.config.migrations) as T);
+  }
+
+  /**
+   * The tool's sanitize config plus the global one.
+   * @param toolName - the tool the data is meant for
+   * @param data - tool-shaped data
+   */
+  private sanitizeToolData(toolName: string, data: BlockToolData): BlockToolData {
+    const [sanitized] = sanitizeBlocks(
+      [{ tool: toolName, data }],
+      () => this.Blok.Tools.blockTools.get(toolName)?.sanitizeConfig,
+      this.config.sanitizer
+    );
+
+    return sanitized.data;
+  }
+
+  /**
+   * Legacy item text, sanitized as the `text` of the block it expands into.
+   * @param toolName - the list tool
+   * @param items - legacy `items[]`: strings or `{ content | text, items }`
+   */
+  private sanitizeLegacyItems(toolName: string, items: unknown[]): unknown[] {
+    const clean = (value: unknown): unknown =>
+      typeof value === 'string' ? this.sanitizeToolData(toolName, { text: value }).text : value;
+
+    return items.map((item) => {
+      if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+        return clean(item);
+      }
+
+      const record = item as Record<string, unknown>;
+
+      return {
+        ...record,
+        ...('content' in record ? { content: clean(record.content) } : {}),
+        ...('text' in record ? { text: clean(record.text) } : {}),
+        ...(Array.isArray(record.items) ? { items: this.sanitizeLegacyItems(toolName, record.items) } : {}),
+      };
+    });
+  }
+
+  /**
+   * A legacy `body.blocks` entry, sanitized as a block of its own type.
+   * @param block - one nested block
+   */
+  private sanitizeNestedBlock(block: OutputBlockData): OutputBlockData {
+    if (typeof block !== 'object' || block === null || typeof block.type !== 'string' || typeof block.data !== 'object' || block.data === null) {
+      return block;
+    }
+
+    return { ...block, data: this.hostDataForTool(block.type, block.data) };
   }
 
   /**

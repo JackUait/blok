@@ -104,6 +104,7 @@ const createHarness = (): {
     BlockSelection: {
       selectBlock: vi.fn(),
     },
+    Tools: { blockTools: new Map() },
   } as unknown as BlokModules;
 
   return {

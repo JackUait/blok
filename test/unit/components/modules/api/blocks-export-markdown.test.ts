@@ -27,6 +27,7 @@ describe('BlocksAPI.exportMarkdown', () => {
       Saver: {
         save: async (): Promise<OutputData | undefined> => saved,
       },
+      Tools: { blockTools: new Map() },
     } as unknown as BlokModules
 
     return blocksApi

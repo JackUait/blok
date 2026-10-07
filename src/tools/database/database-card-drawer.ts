@@ -35,13 +35,21 @@ export interface CardDrawerOptions {
   onAddProperty?: (type: PropertyType) => void;
 }
 
-/** Rich fields of the body editor's tools: a tool's static `richTextFields`, else the built-in table. */
+/**
+ * Rich fields of the body editor's tools, as the editor's adapter reads them:
+ * a configured tool's static `richTextFields` or none. Only unconfigured
+ * (built-in default) types fall back to the built-in table.
+ */
 const richFieldsOf = (tools: ToolsConfig['tools']): FieldsResolver => (type) => {
   const entry = tools?.[type];
   const constructable: unknown = typeof entry === 'function' ? entry : entry?.class;
-  const declared: unknown = constructable === undefined ? undefined : Reflect.get(Object(constructable), 'richTextFields');
 
-  return Array.isArray(declared) ? declared.filter((field): field is string => typeof field === 'string') : richTextFieldsFor(type);
+  if (constructable === undefined) {
+    return richTextFieldsFor(type);
+  }
+  const declared: unknown = Reflect.get(Object(constructable), 'richTextFields');
+
+  return Array.isArray(declared) ? declared.filter((field): field is string => typeof field === 'string') : [];
 };
 
 /**

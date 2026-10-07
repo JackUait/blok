@@ -40,6 +40,7 @@ type BlokStub = {
     resetDocumentRecordId: ReturnType<typeof vi.fn>;
   };
   BlockSelection: { selectBlock: ReturnType<typeof vi.fn> };
+  Tools: { blockTools: Map<string, unknown> };
 };
 
 const savedDoc = (text: string): OutputData => ({
@@ -73,6 +74,7 @@ const createBlocksApi = (currentContent: OutputData | undefined): { blocksApi: B
     BlockSelection: {
       selectBlock: vi.fn(),
     },
+    Tools: { blockTools: new Map() },
   };
 
   const moduleConfig: ModuleConfig = {

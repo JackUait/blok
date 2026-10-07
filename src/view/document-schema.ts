@@ -43,14 +43,13 @@ const RICH_TEXT_MARKS = {
   patternProperties: { '^tag:': { type: 'object', additionalProperties: { type: 'string' } } },
 } as const;
 
-/** A rich-text field: inline HTML, or an array of segments (types/rich-text.d.ts). */
+/** A rich-text field: an array of segments (types/rich-text.d.ts), or inline HTML. */
 const richText = (description: string): Record<string, unknown> => ({
   description,
   oneOf: [
-    { type: 'string', description: 'Inline HTML: <b>, <i>, <u>, <s>, <a>, <code>, <mark>, <sup>, <sub>, <br>.' },
     {
       type: 'array',
-      description: 'Rich-text segments, in order.',
+      description: 'Rich-text segments, in order. Preferred: this is the shape Blok saves.',
       items: {
         anyOf: [
           {
@@ -77,6 +76,7 @@ const richText = (description: string): Record<string, unknown> => ({
         ],
       },
     },
+    { type: 'string', description: 'Inline HTML: <b>, <i>, <u>, <s>, <a>, <code>, <mark>, <sup>, <sub>, <br>. Accepted on input.' },
   ],
 });
 

@@ -1,14 +1,27 @@
 import { ConversionConfig, PasteConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
+import { RichText } from '../rich-text';
 import { MenuConfig } from './menu-config';
 import { ToolboxConfig } from './tool-settings';
 
 /**
- * Toggle Tool's input and output data format
+ * A saved toggle, as the editor hands it to the host.
  */
 export interface ToggleData extends BlockToolData {
-  /** Toggle item text content (can include HTML) */
+  text: RichText;
+  /** Block text color, a preset name such as 'red'. Absent = inherit. */
+  textColor?: string;
+  /** Block background color, a preset name such as 'blue'. Absent = none. */
+  backgroundColor?: string;
+}
+
+/**
+ * The data the Toggle tool class reads and writes (constructor, `merge`,
+ * `validate`, `save`). The editor converts it to {@link ToggleData} on output.
+ */
+export interface ToggleToolData extends BlockToolData {
+  /** Inline HTML. */
   text: string;
   /** Block text color, a preset name such as 'red'. Absent = inherit. */
   textColor?: string;
@@ -27,7 +40,7 @@ export interface ToggleConfig {
 /**
  * Toggle Tool constructor options
  */
-export type ToggleConstructorOptions = BlockToolConstructorOptions<ToggleData, ToggleConfig>;
+export type ToggleConstructorOptions = BlockToolConstructorOptions<ToggleToolData, ToggleConfig>;
 
 /**
  * Toggle Tool for the Blok Editor
@@ -81,17 +94,17 @@ export declare class Toggle implements BlockTool {
    * Method that specified how to merge two Toggle blocks.
    * Called by Editor by backspace at the beginning of the Block
    */
-  merge(data: ToggleData): void;
+  merge(data: ToggleToolData): void;
 
   /**
    * Validate Toggle block data
    */
-  validate(blockData: ToggleData): boolean;
+  validate(blockData: ToggleToolData): boolean;
 
   /**
    * Extract Tool's data from the view
    */
-  save(): ToggleData;
+  save(): ToggleToolData;
 
   /**
    * Toggle read-only mode in place

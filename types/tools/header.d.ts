@@ -1,14 +1,27 @@
 import { ConversionConfig, PasteConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
+import { RichText } from '../rich-text';
 import { MenuConfig } from './menu-config';
 import { ToolboxConfig } from './tool-settings';
 
 /**
- * Header Tool's input and output data format
+ * A saved heading, as the editor hands it to the host.
  */
 export interface HeaderData extends BlockToolData {
-  /** Header's content */
+  text: RichText;
+  /** Header's level from 1 to 6 */
+  level: number;
+  /** See {@link HeaderToolData.anchor}. */
+  anchor?: string;
+}
+
+/**
+ * The data the Header tool class reads and writes (constructor, `merge`,
+ * `validate`, `save`, `data`). The editor converts it to {@link HeaderData} on output.
+ */
+export interface HeaderToolData extends BlockToolData {
+  /** Inline HTML. */
   text: string;
   /** Header's level from 1 to 6 */
   level: number;
@@ -72,7 +85,7 @@ export interface HeaderConfig {
 /**
  * Header Tool constructor options
  */
-export type HeaderConstructorOptions = BlockToolConstructorOptions<HeaderData, HeaderConfig>;
+export type HeaderConstructorOptions = BlockToolConstructorOptions<HeaderToolData, HeaderConfig>;
 
 /**
  * Header Tool for the Blok Editor
@@ -120,22 +133,22 @@ export declare class Header implements BlockTool {
    * Method that specified how to merge two Header blocks.
    * Called by Editor by backspace at the beginning of the Block
    */
-  merge(data: HeaderData): void;
+  merge(data: HeaderToolData): void;
 
   /**
    * Validate Header block data
    */
-  validate(blockData: HeaderData): boolean;
+  validate(blockData: HeaderToolData): boolean;
 
   /**
    * Extract Tool's data from the view
    */
-  save(toolsContent: HTMLHeadingElement): HeaderData;
+  save(toolsContent: HTMLHeadingElement): HeaderToolData;
 
   /**
    * Get current Tool's data
    */
-  data: HeaderData;
+  data: HeaderToolData;
 }
 
 /**

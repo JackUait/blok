@@ -170,13 +170,15 @@ describe('src/view reads rich-text segments like HTML', () => {
       ['list', 'text'],
       ['toggle', 'text'],
       ['quote', 'text'],
-    ])('%s.%s accepts an HTML string or a segment array', (type, field) => {
-      const schema = defs[type].properties?.[field] as { oneOf?: Array<{ type?: string; items?: { anyOf?: Array<{ required?: string[] }> } }> };
+    ])('%s.%s prefers a segment array and accepts an HTML string', (type, field) => {
+      const schema = defs[type].properties?.[field] as { oneOf?: Array<{ type?: string; description?: string; items?: { anyOf?: Array<{ required?: string[] }> } }> };
       const branches = schema.oneOf ?? [];
 
-      expect(branches.map(branch => branch.type)).toEqual(['string', 'array']);
+      // Segments come first: generators that take the first branch emit the saved shape.
+      expect(branches.map(branch => branch.type)).toEqual(['array', 'string']);
+      expect(branches[0]?.description).toMatch(/preferred/i);
 
-      const items = branches[1]?.items?.anyOf ?? [];
+      const items = branches[0]?.items?.anyOf ?? [];
 
       expect(items.map(item => item.required)).toEqual([['text'], ['embed']]);
     });

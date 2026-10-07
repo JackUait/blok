@@ -34,23 +34,23 @@ import {
 } from '../../../types/tools-entry';
 import type {
   ParagraphConstructorOptions,
-  ParagraphData,
+  ParagraphToolData,
   ParagraphConfig,
   HeaderConstructorOptions,
-  HeaderData,
+  HeaderToolData,
   ListConstructorOptions,
-  ListData,
+  ListToolData,
   TableConstructorOptions,
   TableData,
   ToggleConstructorOptions,
-  ToggleData,
+  ToggleToolData,
   DividerConstructorOptions,
   SpacerConstructorOptions,
   SpacerData,
   CalloutConstructorOptions,
   CalloutData,
   QuoteConstructorOptions,
-  QuoteData,
+  QuoteToolData,
   ColumnListConstructorOptions,
   ColumnListData,
   ColumnConstructorOptions,
@@ -78,19 +78,19 @@ import type { BlockToolConstructable, ToolSettings } from '../../../types';
 
 // Each published tool class must be subclassable with one typed method override.
 class SubParagraph extends Paragraph {
-  public save(toolsContent: HTMLDivElement): ParagraphData {
+  public save(toolsContent: HTMLDivElement): ParagraphToolData {
     return super.save(toolsContent);
   }
 }
 
 class SubHeader extends Header {
-  public validate(blockData: HeaderData): boolean {
+  public validate(blockData: HeaderToolData): boolean {
     return super.validate(blockData);
   }
 }
 
 class SubList extends List {
-  public save(): ListData {
+  public save(): ListToolData {
     return super.save();
   }
 }
@@ -102,7 +102,7 @@ class SubTable extends Table {
 }
 
 class SubToggle extends Toggle {
-  public merge(data: ToggleData): void {
+  public merge(data: ToggleToolData): void {
     super.merge(data);
   }
 }
@@ -126,7 +126,7 @@ class SubCallout extends Callout {
 }
 
 class SubQuote extends Quote {
-  public merge(data: QuoteData): void {
+  public merge(data: QuoteToolData): void {
     super.merge(data);
   }
 }

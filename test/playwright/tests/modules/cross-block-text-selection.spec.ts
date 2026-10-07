@@ -6,6 +6,7 @@ import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { dragBetweenCharacters, pointAtCharacter, readTextSelectionState, seamBetweenInputs } from '../helpers/text-drag';
 import type { TextSelectionState } from '../helpers/text-drag';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const MODIFIER = process.platform === 'darwin' ? 'Meta' : 'Control';
@@ -134,7 +135,7 @@ const saveTexts = async (page: Page): Promise<string[]> => {
     return blok.save();
   });
 
-  return saved.blocks.map((block) => (block.data as { text?: string }).text ?? '');
+  return savedAsHtml(saved).blocks.map((block) => (block.data as { text?: string }).text ?? '');
 };
 
 const clipboardFromEvent = async (
@@ -507,7 +508,7 @@ test.describe('cross-block text selection', () => {
       return blok.save();
     });
 
-    expect(saved.blocks.map((block) => (block.data as { text?: string }).text)).toStrictEqual([
+    expect(savedAsHtml(saved).blocks.map((block) => (block.data as { text?: string }).text)).toStrictEqual([
       'First <strong>block text</strong>',
       '<strong>Second block text</strong>',
       '<strong>Third </strong>block text',

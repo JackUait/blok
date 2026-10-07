@@ -462,7 +462,7 @@ test.describe('inline tool link', () => {
     const paragraphBlock = savedData?.blocks.find((block) => block.type === 'paragraph');
 
      
-    expect(paragraphBlock?.data.text).toContain('<a href="https://google.com" target="_blank" rel="nofollow">Persist me</a>');
+    expect(paragraphBlock?.data.text).toEqual([{ text: 'Persist me', marks: { link: { href: 'https://google.com', rel: 'nofollow', target: '_blank' } } }]);
   });
 
   test('should work in read-only mode', async ({ page }) => {

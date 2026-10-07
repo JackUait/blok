@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { BLOK_INTERFACE_SELECTOR } from "../../../../src/components/constants";
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from "../helpers/ensure-build";
+import { htmlOf } from '../helpers/saved-as-html';
 
 /**
  * E2E regression specs for the Notion text/header parity keyboard bugs.
@@ -198,7 +199,7 @@ test.describe("Notion keyboard parity bugs", () => {
     // The styled (heading) block wins: it absorbs the paragraph's text.
     expect(saved?.blocks).toHaveLength(1);
     expect(saved?.blocks[0].type).toBe("header");
-    expect(saved?.blocks[0].data.text).toContain("Body text");
+    expect(htmlOf(saved?.blocks[0].data.text)).toContain("Body text");
   });
 
   test("BUG #11 — Backspace at the start of a nested list item outdents it one level", async ({ page }) => {
@@ -294,6 +295,6 @@ test.describe("Notion keyboard parity bugs", () => {
     });
 
     expect(state?.parentId).toBeNull();
-    expect(state?.text).toContain("typed text");
+    expect(htmlOf(state?.text)).toContain("typed text");
   });
 });

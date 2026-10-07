@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { blocksAsHtml } from './helpers/saved-as-html';
 
 const REACT_TEST_URL = 'http://localhost:4444/test/playwright/fixtures/react-test.html';
 
@@ -73,7 +74,7 @@ test.describe('React adapter', () => {
     await page.getByTestId('save').click();
     const raw = await page.getByTestId('output').textContent();
 
-    return (JSON.parse(raw ?? '{"blocks":[]}') as { blocks: SavedBlock[] }).blocks;
+    return blocksAsHtml((JSON.parse(raw ?? '{"blocks":[]}') as { blocks: SavedBlock[] }).blocks);
   };
 
   test('useBlocks.insertTree builds a REAL nested block tree (real insertMany)', async ({ page }) => {
@@ -262,7 +263,7 @@ test.describe('React adapter', () => {
       const api = (window as unknown as {
         __blocksApi: {
           insert: (s: unknown) => { id: string } | null;
-          getBlockData: (id: string) => { data: { text?: string } } | null;
+          getBlockData: (id: string) => { data: { text?: unknown } } | null;
           getBlockIndex: (id: string) => number | null;
           getById: (id: string) => { type: string } | null;
         };
@@ -285,7 +286,7 @@ test.describe('React adapter', () => {
       };
     });
 
-    expect(probed.readText).toBe('Original');
+    expect(probed.readText).toEqual([{ text: 'Original' }]);
     expect(typeof probed.index).toBe('number');
     expect(probed.missingIndex).toBeNull();
 

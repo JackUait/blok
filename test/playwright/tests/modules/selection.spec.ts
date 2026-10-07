@@ -6,6 +6,7 @@ import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -545,7 +546,7 @@ test.describe('modules/selection', () => {
 
     expect(savedData.blocks).toHaveLength(1);
 
-    const blockTexts = savedData.blocks.map((block) => {
+    const blockTexts = savedAsHtml(savedData).blocks.map((block) => {
       return (block.data as { text?: string }).text ?? '';
     });
 

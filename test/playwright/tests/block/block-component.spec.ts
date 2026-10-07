@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { BLOK_INTERFACE_SELECTOR } from "../../../../src/components/constants";
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from "../helpers/ensure-build";
+import { htmlOf } from '../helpers/saved-as-html';
 
 const HOLDER_ID = "blok-e2e-test";
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -699,7 +700,7 @@ test.describe("block component - refactored modules", () => {
 
       expect(savedData.blocks).toHaveLength(1);
       expect(savedData.blocks[0].type).toBe("paragraph");
-      expect((savedData.blocks[0].data as { text: string }).text).toBe(
+      expect(htmlOf((savedData.blocks[0].data as { text: unknown }).text)).toBe(
         "Test content",
       );
     });
@@ -736,7 +737,7 @@ test.describe("block component - refactored modules", () => {
         return await window.blokInstance.save();
       });
 
-      expect((savedData.blocks[0].data as { text: string }).text).toBe(
+      expect(htmlOf((savedData.blocks[0].data as { text: unknown }).text)).toBe(
         "Updated text",
       );
     });

@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 import { expect, gotoTestPage, test } from './helpers/shared-page';
+import { blocksAsHtml } from './helpers/saved-as-html';
 
 /**
  * End-to-end coverage for list keyboard shortcuts (Tab/Shift+Tab nesting, block
@@ -46,20 +47,19 @@ const boot = async (page: Page, blocks: OutputData['blocks']): Promise<void> => 
 };
 
 /** Compact view of each block: text, structural depth marker, and parent presence. */
-const layout = (page: Page): Promise<string[]> =>
-  page.evaluate(async () => {
+const layout = async (page: Page): Promise<string[]> =>
+  blocksAsHtml(await page.evaluate(async () => {
     if (!window.d) {
       throw new Error('Editor not found');
     }
-    const out = await window.d.save();
 
-    return out.blocks.map((b) => {
-      const data = b.data as { text?: string; depth?: number };
-      const depth = data.depth ? `@${data.depth}` : '';
-      const parent = b.parent ? '/nested' : '/root';
+    return (await window.d.save()).blocks;
+  })).map((b) => {
+    const data = b.data as { text?: string; depth?: number };
+    const depth = data.depth ? `@${data.depth}` : '';
+    const parent = b.parent ? '/nested' : '/root';
 
-      return `${data.text ?? ''}${depth}${parent}`;
-    });
+    return `${data.text ?? ''}${depth}${parent}`;
   });
 
 const li = (text: string): OutputData['blocks'][number] => ({

@@ -705,10 +705,9 @@ test.describe('inline tool marker', () => {
       return window.blokInstance?.save();
     });
 
-    const paragraphData = savedData?.blocks[0]?.data as { text: string } | undefined;
+    const paragraphData = savedData?.blocks[0]?.data as { text: unknown } | undefined;
 
-    expect(paragraphData?.text).toContain('<mark');
-    expect(paragraphData?.text).toMatch(/color:/);
+    expect(paragraphData?.text).toContainEqual(expect.objectContaining({ marks: expect.objectContaining({ color: expect.any(String) }) }));
   });
 
   test('background color is preserved in blok.save() output', async ({ page }) => {
@@ -738,10 +737,9 @@ test.describe('inline tool marker', () => {
       return window.blokInstance?.save();
     });
 
-    const paragraphData = savedData?.blocks[0]?.data as { text: string } | undefined;
+    const paragraphData = savedData?.blocks[0]?.data as { text: unknown } | undefined;
 
-    expect(paragraphData?.text).toContain('<mark');
-    expect(paragraphData?.text).toMatch(/background-color:/);
+    expect(paragraphData?.text).toContainEqual(expect.objectContaining({ marks: expect.objectContaining({ background: expect.any(String) }) }));
   });
 
   test('both text and background colors are preserved in blok.save() output', async ({ page }) => {
@@ -778,11 +776,9 @@ test.describe('inline tool marker', () => {
       return window.blokInstance?.save();
     });
 
-    const paragraphData = savedData?.blocks[0]?.data as { text: string } | undefined;
+    const paragraphData = savedData?.blocks[0]?.data as { text: unknown } | undefined;
 
-    expect(paragraphData?.text).toContain('<mark');
-    expect(paragraphData?.text).toMatch(/color:/);
-    expect(paragraphData?.text).toMatch(/background-color:/);
+    expect(paragraphData?.text).toContainEqual(expect.objectContaining({ marks: expect.objectContaining({ color: expect.any(String), background: expect.any(String) }) }));
   });
 
   test('text can be both bold and color-marked simultaneously', async ({ page }) => {

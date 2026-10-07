@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '../../../../../types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 
@@ -339,7 +340,7 @@ test.describe('block selection keyboard shortcuts', () => {
       // Press Backspace to delete selected blocks
       await page.keyboard.press('Backspace');
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(2);
       expect(blocks.map((b) => (b.data as { text: string }).text)).toStrictEqual(['First', 'Fourth']);
@@ -361,7 +362,7 @@ test.describe('block selection keyboard shortcuts', () => {
       // Press Delete to delete selected blocks
       await page.keyboard.press('Delete');
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(2);
       expect(blocks.map((b) => (b.data as { text: string }).text)).toStrictEqual(['First', 'Fourth']);
@@ -427,7 +428,7 @@ test.describe('block selection keyboard shortcuts', () => {
       }, { timeout: 2000 });
 
       // Should have more blocks after paste
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks.length).toBeGreaterThan(3);
     });
@@ -461,7 +462,7 @@ test.describe('block selection keyboard shortcuts', () => {
         return wrappers.length === 2;
       }, { timeout: 2000 });
 
-      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+      const { blocks } = savedAsHtml(await page.evaluate(async () => await window.blokInstance?.save() as OutputData));
 
       expect(blocks).toHaveLength(2);
       expect(blocks.map((b) => (b.data as { text: string }).text)).toStrictEqual(['First', 'Fourth']);

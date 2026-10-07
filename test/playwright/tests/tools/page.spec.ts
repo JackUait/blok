@@ -129,6 +129,27 @@ test.describe('Page block', () => {
     await expect(link).toHaveAttribute('data-blok-page-state', 'normal');
   });
 
+  // Hosts often reset `* { border: none }`, which leaves every border width at medium (3px).
+  // The title's underline must not depend on Blok's preflight winning that tie: only the bottom draws.
+  test('the title keeps only its underline under a host border reset', async ({ page }) => {
+    await page.addStyleTag({ content: '* { padding: 0; margin: 0; border: none; }' });
+    await createPageEditor(page, {
+      data: pageBlock('roadmap'),
+      pages: { roadmap: { title: 'Roadmap' } },
+    });
+
+    const title = page.getByTestId('page-link').getByTestId('page-title');
+
+    await expect(title).toHaveText('Roadmap');
+    const widths = await title.evaluate(element => {
+      const style = getComputedStyle(element);
+
+      return [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth];
+    });
+
+    expect(widths).toEqual(['0px', '0px', '1px', '0px']);
+  });
+
   test('resolve refreshes a stale cached title without saving host metadata', async ({ page }) => {
     await createPageEditor(page, {
       data: pageBlock('roadmap', { title: 'Old name' }),

@@ -160,6 +160,7 @@ const createSaver = (options: CreateSaverOptions = {}): { saver: Saver; eventsDi
       blockTools,
       stubTool,
     },
+    YjsManager: { getPageFields: () => ({}) },
     MediaFailures: {
       onSave: vi.fn(),
     },

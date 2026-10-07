@@ -58,6 +58,7 @@ const createBlocksApi = (
       adoptDocumentRecordId: vi.fn(),
       resetDocumentRecordId: vi.fn(),
     },
+    YjsManager: { loadPage: vi.fn() },
     InlineToolbar: {
       close: vi.fn(),
     },

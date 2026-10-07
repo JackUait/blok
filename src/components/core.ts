@@ -311,10 +311,15 @@ export class Core {
       this.config.collaboration === undefined &&
       (isEmpty(this.config.data) || this.config.data.blocks.length === 0)
     ) {
-      const { id } = this.config.data;
+      const { id, title, icon } = this.config.data;
 
-      // Keep the id: the Saver reads it from here to keep the document's identity.
-      this.config.data = { ...(typeof id === 'string' && id !== '' ? { id } : {}), blocks: [ defaultBlockData ] };
+      // Keep the id and page fields: the Saver and boot seed read them from here.
+      this.config.data = {
+        ...(typeof id === 'string' && id !== '' ? { id } : {}),
+        ...(title !== undefined && { title }),
+        ...(icon !== undefined && { icon }),
+        blocks: [ defaultBlockData ],
+      };
     }
 
     this.config.readOnly = this.config.readOnly ?? false;
@@ -502,6 +507,8 @@ export class Core {
     if (collaboration?.isEnabled === true) {
       return collaboration.load(normalizeOutputBlocks(data.blocks));
     }
+
+    this.moduleInstances.YjsManager.loadPage({ title: data.title ?? undefined, icon: data.icon ?? undefined });
 
     // Idempotent re-normalization: `config.data` is declared with the loose
     // wire type, but prepare() already normalized it — this narrows the type

@@ -347,6 +347,9 @@ export class BlocksAPI extends Module {
       this.Blok.Saver.adoptDocumentRecordId(incomingId);
     }
 
+    // Before the echo check: a rename with the same blocks is still a change.
+    this.Blok.YjsManager.loadPage({ title: data.title ?? undefined, icon: data.icon ?? undefined });
+
     if (currentContent !== undefined && this.isEchoOf(currentContent, data)) {
       this.processPendingHashScroll();
 

@@ -420,6 +420,7 @@ export class Saver extends Module {
         output: {
           id: this.getDocumentRecordId(),
           time: +new Date(),
+          ...this.Blok.YjsManager.getPageFields(),
           blocks: [],
           version: getBlokVersion(),
         },
@@ -1255,6 +1256,7 @@ export class Saver extends Module {
     return {
       id: this.getDocumentRecordId(),
       time: +new Date(),
+      ...this.Blok.YjsManager.getPageFields(),
       blocks: hostBlocks,
       version: getBlokVersion(),
     };

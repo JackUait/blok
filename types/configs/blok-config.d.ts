@@ -1,4 +1,5 @@
 import type { ThemeMode, ResolvedTheme } from '../api/theme';
+import type { TitleConfig } from '../api/title';
 import {ToolConstructable, ToolSettings} from '../tools';
 import {API, Blok, LogLevels, LooseOutputData, OutputBlockData, OutputData} from '../index';
 import {SanitizerConfig} from './sanitizer-config';
@@ -558,6 +559,12 @@ export interface BlokMountOptions {
    * First Block placeholder
    */
   placeholder?: string|false;
+
+  /**
+   * The page title and icon. `true` uses the defaults. Off by default; a saved
+   * title and icon still round-trip when it is off.
+   */
+  title?: boolean | TitleConfig;
 
   /**
    * Define default sanitizer configuration

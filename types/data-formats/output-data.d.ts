@@ -1,6 +1,7 @@
 import {BlockToolData} from '../tools';
 import {BlockTuneData} from '../block-tunes/block-tune-data';
 import { BlockId } from './block-id';
+import type { PageIcon } from '../tools/page';
 
 /**
  * Adapts a block-data shape declared as a plain `interface` so it drops into
@@ -124,6 +125,12 @@ export interface OutputData {
    */
   time?: number;
 
+  /** The page title. Absent when empty. */
+  title?: string;
+
+  /** The page icon. Absent when none. */
+  icon?: PageIcon;
+
   /**
    * Saved Blocks
    */
@@ -185,6 +192,12 @@ export interface LooseOutputData {
    * Timestamp of saving in milliseconds
    */
   time?: number | null;
+
+  /** See {@link OutputData.title}. `null` and `''` mean absent. */
+  title?: string | null;
+
+  /** See {@link OutputData.icon}. `null` means absent. */
+  icon?: PageIcon | null;
 
   /**
    * Blocks to render

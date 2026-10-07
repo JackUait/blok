@@ -289,6 +289,7 @@ type BlokStub = {
     stopCapturing: ReturnType<typeof vi.fn>;
     beginApiCall: ReturnType<typeof vi.fn>;
     runAfterSavesOf: Mock<(blockId: string, run: () => void) => void>;
+    loadPage: ReturnType<typeof vi.fn>;
   };
   I18n: {
     t: ReturnType<typeof vi.fn>;
@@ -357,6 +358,7 @@ const createBlokStub = (
       stopCapturing: vi.fn(),
       beginApiCall: vi.fn(),
       runAfterSavesOf: vi.fn((_blockId: string, run: () => void) => run()),
+      loadPage: vi.fn(),
     },
     I18n: {
       t: vi.fn((key: string) => key),

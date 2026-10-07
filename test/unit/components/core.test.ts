@@ -175,9 +175,18 @@ vi.mock('../../../src/components/modules', () => {
     }
   }
 
+  /**
+   * Minimal YjsManager module stub used in Core tests.
+   */
+  class MockYjsManager {
+    public state?: BlokModules;
+    public loadPage = (): void => {};
+  }
+
   return {
     __esModule: true,
     Modules: {
+      YjsManager: MockYjsManager,
       I18n: MockI18n,
       Tools: MockTools,
       UI: MockUI,

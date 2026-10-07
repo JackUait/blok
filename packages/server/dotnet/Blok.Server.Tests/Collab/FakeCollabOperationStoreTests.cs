@@ -285,7 +285,7 @@ public sealed class FakeCollabOperationStoreTests
   private static CollabOperationReset Reset(long epoch, string? lineage = null)
   {
     return new CollabOperationReset(
-        CollabWorkingSetTag.SchemaV2,
+        CollabWorkingSetTag.CurrentFormat,
         epoch,
         lineage ?? new string('a', CollabWorkingSetTag.LineageLength),
         []);

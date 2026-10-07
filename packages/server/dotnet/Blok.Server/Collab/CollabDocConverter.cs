@@ -65,6 +65,13 @@ internal sealed class CollabDocConverter(
     YDocConverter.ApplyOps(doc, ops, input);
   }
 
+  public async ValueTask<int> MigrateRichTextAsync(YDoc doc, CancellationToken cancellationToken = default)
+  {
+    var input = await Converting(YDocConverter.CollectLegacyRichText(doc, fields), cancellationToken);
+
+    return YDocConverter.MigrateRichText(doc, input);
+  }
+
   public async ValueTask<JsonNode> ExportAsync(YDoc doc, CancellationToken cancellationToken = default)
   {
     var time = timeProvider.GetUtcNow().ToUnixTimeMilliseconds();

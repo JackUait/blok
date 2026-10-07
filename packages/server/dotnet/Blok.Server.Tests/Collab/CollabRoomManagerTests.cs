@@ -819,7 +819,7 @@ public sealed class CollabRoomManagerTests
     store.Seed(
         DocId,
         [YDocs.FullState(YDocs.DocWith("x"))],
-        new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2 + 1, 0, Tags.Lineage));
+        new CollabWorkingSetTag(CollabWorkingSetTag.CurrentFormat + 1, 0, Tags.Lineage));
     var manager = CreateManager(log: log);
 
     var result = await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None);
@@ -971,7 +971,7 @@ public sealed class CollabRoomManagerTests
     await disk.WriteAsync(
         DocId,
         CollabWorkingSetCodec.EncodeFrames([YDocs.FullState(YDocs.DocWith("old"))]),
-        new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2, 5, before),
+        new CollabWorkingSetTag(CollabWorkingSetTag.CurrentFormat, 5, before),
         CancellationToken.None);
     var path = Path.Combine(directory.Path, CollabDocKey.For(DocId));
     var bytes = await File.ReadAllBytesAsync(path);

@@ -7,7 +7,7 @@ public sealed class CollabWorkingSetCodecTests
 {
   private const string Lineage = "0123456789abcdef0123456789abcdef";
   private static readonly CollabWorkingSetTag Tag = new(
-      CollabWorkingSetTag.SchemaV2,
+      CollabWorkingSetTag.CurrentFormat,
       7,
       Lineage);
 
@@ -139,7 +139,7 @@ public sealed class CollabWorkingSetCodecTests
   public void RoundTripsTheLineage()
   {
     var tag = new CollabWorkingSetTag(
-        CollabWorkingSetTag.SchemaV2,
+        CollabWorkingSetTag.CurrentFormat,
         2,
         CollabWorkingSetTag.NewLineage());
 
@@ -176,7 +176,7 @@ public sealed class CollabWorkingSetCodecTests
   {
     Assert.Throws<ArgumentException>(() =>
         CollabWorkingSetCodec.EncodeDocument(
-            new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2, 0, lineage),
+            new CollabWorkingSetTag(CollabWorkingSetTag.CurrentFormat, 0, lineage),
             []));
   }
 

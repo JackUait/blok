@@ -163,7 +163,7 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
       document.Baseline = [];
       document.Records.Clear();
       document.Head = new CollabDocumentHead(
-          CollabWorkingSetTag.SchemaV2,
+          CollabWorkingSetTag.CurrentFormat,
           epoch,
           CollabWorkingSetTag.NewLineage(),
           DurableThrough: 0);
@@ -593,6 +593,12 @@ internal sealed class FakeDocConverter : ICollabDocConverter
     ApplyOps(doc, ops);
 
     return ValueTask.CompletedTask;
+  }
+
+  /// <summary>Its "content" root holds no rich fields, so there is nothing to migrate.</summary>
+  public ValueTask<int> MigrateRichTextAsync(YDoc doc, CancellationToken cancellationToken = default)
+  {
+    return ValueTask.FromResult(0);
   }
 
   internal int ApplyOpsCalls { get; private set; }

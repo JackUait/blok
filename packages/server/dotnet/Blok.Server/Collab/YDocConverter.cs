@@ -322,6 +322,106 @@ internal static class YDocConverter
   }
 
   /// <summary>
+  /// The HTML a format-1 room still holds in its rich fields, each string
+  /// once — what <see cref="MigrateRichText"/> needs read. Writes nothing.
+  /// </summary>
+  internal static IReadOnlyList<RichTextHtml> CollectLegacyRichText(YDoc doc, RichTextFields fields)
+  {
+    ArgumentNullException.ThrowIfNull(doc);
+
+    var input = RichTextInput.Collecting(fields);
+
+    foreach (var (_, type, key, html) in LegacyRichText(doc, fields))
+    {
+      input.Segments(type, key, html);
+    }
+
+    return input.Found;
+  }
+
+  /// <summary>
+  /// Format 1 → 2: each top-level rich field holding HTML (a plain text or a
+  /// string) is replaced by a formatted text built from
+  /// <paramref name="input"/>'s segments, all in ONE transaction. Every other
+  /// value stays as it was. Every field is built before the transaction
+  /// opens, so a refused one writes nothing. Returns how many were replaced.
+  /// </summary>
+  internal static int MigrateRichText(YDoc doc, RichTextInput input)
+  {
+    ArgumentNullException.ThrowIfNull(doc);
+    ArgumentNullException.ThrowIfNull(input);
+
+    var planned = LegacyRichText(doc, input.Fields)
+        .Select(field => (
+            field.Data,
+            field.Key,
+            Text: InputWriter.NewRichText(
+                InputWriter.RichSegments(field.Type, field.Key, JsonValue.Create(field.Html), input))))
+        .ToList();
+
+    if (planned.Count == 0)
+    {
+      return 0;
+    }
+
+    doc.Transact(transaction =>
+    {
+      foreach (var (data, key, text) in planned)
+      {
+        data.Set(transaction, key, text);
+      }
+    });
+
+    return planned.Count;
+  }
+
+  /// <summary>
+  /// Every block map entry, not only the ones the export reaches: an orphan
+  /// left holding HTML would surface later as HTML in a format-2 room.
+  /// Nested documents in a database-row stay plain JSON (contract §8).
+  /// </summary>
+  private static List<(YMap Data, string Type, string Key, string Html)> LegacyRichText(
+      YDoc doc, RichTextFields fields)
+  {
+    var found = new List<(YMap Data, string Type, string Key, string Html)>();
+    var blockMap = doc.GetMap(BlocksRoot);
+
+    foreach (var id in blockMap.Keys.ToArray())
+    {
+      if (Value(blockMap, id) is not YMap block ||
+          Value(block, "type") is not string type ||
+          Value(block, "data") is not YMap data)
+      {
+        continue;
+      }
+
+      foreach (var key in data.Keys.ToArray())
+      {
+        if (!fields.IsRich(type, key))
+        {
+          continue;
+        }
+
+        // YXmlText is not a YText here (both derive from YTextBase), so a
+        // migrated field never matches.
+        var html = Value(data, key) switch
+        {
+          YText text => text.ToString(),
+          string text => text,
+          _ => null,
+        };
+
+        if (html is not null)
+        {
+          found.Add((data, type, key, html));
+        }
+      }
+    }
+
+    return found;
+  }
+
+  /// <summary>
   /// Serializes the doc in derived flat order the way
   /// <c>DocumentStore.toJSON</c> does. The hierarchy view is computed once
   /// and used for both the order and the emitted parent/content, so a
@@ -2114,7 +2214,7 @@ internal static class YDocConverter
     /// caller's conversion table, then the NUL and depth guards, then the
     /// client's input reading (guards, lenient read, unknown marks dropped).
     /// </summary>
-    private static AnyArray RichSegments(string type, string key, JsonNode value, RichTextInput input)
+    internal static AnyArray RichSegments(string type, string key, JsonNode value, RichTextInput input)
     {
       var segments = value is JsonArray array
         ? array

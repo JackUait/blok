@@ -177,13 +177,13 @@ internal static class Tags
 
   internal static CollabWorkingSetTag At(long epoch, string lineage = Lineage)
   {
-    return new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2, epoch, lineage);
+    return new CollabWorkingSetTag(CollabWorkingSetTag.CurrentFormat, epoch, lineage);
   }
 
   /// <summary>Asserts a freshly minted tag and returns its lineage for comparison.</summary>
   internal static string AssertMinted(long epoch, CollabWorkingSetTag tag)
   {
-    Assert.Equal(CollabWorkingSetTag.SchemaV2, tag.Format);
+    Assert.Equal(CollabWorkingSetTag.CurrentFormat, tag.Format);
     Assert.Equal(epoch, tag.Epoch);
     Assert.Matches("^[0-9a-f]{32}$", tag.Lineage);
     Assert.NotEqual(Lineage, tag.Lineage);
@@ -598,6 +598,12 @@ internal sealed class FakeDocConverter : ICollabDocConverter
     ApplyOps(doc, ops);
 
     return ValueTask.CompletedTask;
+  }
+
+  /// <summary>Its "content" root holds no rich fields, so there is nothing to migrate.</summary>
+  public ValueTask<int> MigrateRichTextAsync(YDoc doc, CancellationToken cancellationToken = default)
+  {
+    return ValueTask.FromResult(0);
   }
 
   internal int Seeds { get; private set; }
@@ -1114,6 +1120,18 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore, ICollabO
   /// </summary>
   internal Func<string, Exception?>? FailCheckpoints { get; set; }
 
+  /// <summary>When it answers non-null for a doc, that doc's ResetAsync throws it and changes nothing.</summary>
+  internal Func<string, Exception?>? FailResets { get; set; }
+
+  /// <summary>The baseline a doc's head was reset with.</summary>
+  internal IReadOnlyList<ReadOnlyMemory<byte>> Baseline(string docId)
+  {
+    lock (guard)
+    {
+      return documents.TryGetValue(docId, out var document) ? [.. document.Baseline] : [];
+    }
+  }
+
   /// <summary>
   /// With <see cref="FailAppends"/> set, journal the record before throwing:
   /// the UNKNOWN outcome — durable to the store, failed to the caller. Retrying
@@ -1396,6 +1414,11 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore, ICollabO
     {
       ArgumentNullException.ThrowIfNull(reset);
       cancellationToken.ThrowIfCancellationRequested();
+
+      if (store.FailResets?.Invoke(documentId) is { } failure)
+      {
+        throw failure;
+      }
 
       lock (store.guard)
       {

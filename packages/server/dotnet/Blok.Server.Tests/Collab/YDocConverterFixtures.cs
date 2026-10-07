@@ -28,7 +28,13 @@ internal static class YDocConverterFixtures
   private const string RelativeRoot =
       "test/unit/server-conformance/fixtures/collab";
 
-  private static readonly Lazy<string> Root = new(LocateRoot);
+  /// <summary>Frozen format-1 rooms (rich fields as HTML in a plain Y.Text); same layout.</summary>
+  private const string Format1RelativeRoot =
+      "test/unit/server-conformance/fixtures/collab-format1";
+
+  private static readonly Lazy<string> Root = new(() => LocateRoot(RelativeRoot));
+
+  private static readonly Lazy<string> Format1Root = new(() => LocateRoot(Format1RelativeRoot));
 
   internal static IReadOnlyList<string> CaseNames()
   {
@@ -52,9 +58,28 @@ internal static class YDocConverterFixtures
         .ToArray();
   }
 
+  internal static IReadOnlyList<string> Format1CaseNames()
+  {
+    return Directory.GetDirectories(Format1Root.Value)
+        .Select(Path.GetFileName)
+        .OfType<string>()
+        .Order(StringComparer.Ordinal)
+        .ToArray();
+  }
+
   internal static YDocConverterFixture Load(string name)
   {
-    var directory = Path.Combine(Root.Value, name);
+    return LoadFrom(Root.Value, name);
+  }
+
+  internal static YDocConverterFixture LoadFormat1(string name)
+  {
+    return LoadFrom(Format1Root.Value, name);
+  }
+
+  private static YDocConverterFixture LoadFrom(string root, string name)
+  {
+    var directory = Path.Combine(root, name);
 
     var segments = Path.Combine(directory, "canonical.segments.json");
 
@@ -162,13 +187,13 @@ internal static class YDocConverterFixtures
         throw new InvalidDataException($"{path} does not hold a JSON array");
   }
 
-  private static string LocateRoot()
+  private static string LocateRoot(string relativeRoot)
   {
     var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
     for (var depth = 0; directory is not null && depth < 12; depth++)
     {
-      var candidate = Path.Combine(directory.FullName, RelativeRoot);
+      var candidate = Path.Combine(directory.FullName, relativeRoot);
 
       if (File.Exists(Path.Combine(candidate, "manifest.json")))
       {
@@ -180,7 +205,7 @@ internal static class YDocConverterFixtures
 
     throw new DirectoryNotFoundException(
         $"collab fixtures not found: no ancestor of {AppContext.BaseDirectory} " +
-        $"holds {RelativeRoot}/manifest.json (run " +
+        $"holds {relativeRoot}/manifest.json (run " +
         "node scripts/generate-collab-fixtures.mjs)");
   }
 }

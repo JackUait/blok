@@ -35,6 +35,14 @@ internal interface ICollabDocConverter
   /// </summary>
   ValueTask ApplyOpsAsync(
       YDoc doc, IReadOnlyList<CollabEditOp> ops, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Room format 1 → 2: every rich field still holding HTML becomes formatted
+  /// text, in ONE local transaction (none when nothing is left). The doc is
+  /// read before the first await and written after the last, so a failure
+  /// leaves it untouched. Returns how many fields were replaced.
+  /// </summary>
+  ValueTask<int> MigrateRichTextAsync(YDoc doc, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

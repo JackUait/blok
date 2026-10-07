@@ -697,7 +697,7 @@ public sealed class SyncHandshakeTests
   /// </summary>
   private static void AssertFreshTag(CollabWorkingSetTag tag)
   {
-    Assert.Equal(CollabWorkingSetTag.SchemaV2, tag.Format);
+    Assert.Equal(CollabWorkingSetTag.CurrentFormat, tag.Format);
     Assert.Equal(0, tag.Epoch);
     Assert.Matches("^[0-9a-f]{32}$", tag.Lineage);
   }

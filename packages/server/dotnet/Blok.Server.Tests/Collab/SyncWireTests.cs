@@ -8,7 +8,7 @@ public sealed class SyncWireTests
 {
   private const string Lineage = "0123456789abcdef0123456789abcdef";
   private const string OperationId = "fedcba9876543210fedcba9876543210";
-  private static readonly CollabWorkingSetTag Tag = new(CollabWorkingSetTag.SchemaV2, 7, Lineage);
+  private static readonly CollabWorkingSetTag Tag = new(CollabWorkingSetTag.CurrentFormat, 7, Lineage);
 
   // Only what sync-frames.json does not carry (SyncWireFramingTests pins
   // the rest). Keyed by name because SyncWireMessage is internal and xunit
@@ -289,7 +289,7 @@ public sealed class SyncWireTests
     Assert.True(SyncWire.TryReadVarUint(ref input, out var type));
     Assert.Equal(SyncWire.MessageBlokControl, type);
     Assert.True(SyncWire.TryReadVarBytes(ref input, out var payload));
-    Assert.Equal(Control(7, 1, Lineage), Encoding.UTF8.GetString(payload));
+    Assert.Equal(Control(7, CollabWorkingSetTag.CurrentFormat, Lineage), Encoding.UTF8.GetString(payload));
     Assert.True(input.IsEmpty);
   }
 

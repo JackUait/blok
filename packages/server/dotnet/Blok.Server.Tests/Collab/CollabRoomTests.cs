@@ -2473,7 +2473,7 @@ public sealed class CollabRoomTests
     store.Seed(
         DocId,
         [YDocs.FullState(YDocs.DocWith("from-ws"))],
-        new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2 + 1, 0, Tags.Lineage));
+        new CollabWorkingSetTag(CollabWorkingSetTag.CurrentFormat + 1, 0, Tags.Lineage));
     var manager = CreateJournalManager();
 
     var state = await manager.StateAsync(DocId, CancellationToken.None);
@@ -3933,7 +3933,7 @@ public sealed class CollabRoomTests
     {
       await session.ResetAsync(
           new CollabOperationReset(
-              CollabWorkingSetTag.SchemaV2,
+              CollabWorkingSetTag.CurrentFormat,
               Epoch: 3,
               CollabWorkingSetTag.NewLineage(),
               [new byte[] { 0xde, 0xad, 0xbe, 0xef, 0x01 }]),
@@ -3972,7 +3972,7 @@ public sealed class CollabRoomTests
     {
       await session.ResetAsync(
           new CollabOperationReset(
-              CollabWorkingSetTag.SchemaV2,
+              CollabWorkingSetTag.CurrentFormat,
               Epoch: 3,
               CollabWorkingSetTag.NewLineage(),
               [
@@ -4815,7 +4815,7 @@ public sealed class CollabRoomTests
     {
       await session.ResetAsync(
           new CollabOperationReset(
-              CollabWorkingSetTag.SchemaV2,
+              CollabWorkingSetTag.CurrentFormat,
               Epoch: 2,
               Tags.Lineage,
               [baseline]),

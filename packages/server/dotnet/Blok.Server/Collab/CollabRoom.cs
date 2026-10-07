@@ -198,7 +198,7 @@ internal sealed class CollabRoom : IDisposable
   // Replaced by load-or-seed before the room turns Ready; a tag without a
   // lineage is never persisted and never announced.
   private CollabWorkingSetTag tag = new(
-      CollabWorkingSetTag.SchemaV2,
+      CollabWorkingSetTag.CurrentFormat,
       0,
       CollabWorkingSetTag.NoLineage);
   private YDoc? doc;
@@ -944,7 +944,7 @@ internal sealed class CollabRoom : IDisposable
 
                   try
                   {
-                    await LoadFromJournalLocked();
+                    await LoadFromJournalLocked(migrate: false);
                     state = RoomState.Ready;
                   }
                   catch (Exception error)
@@ -1069,7 +1069,7 @@ internal sealed class CollabRoom : IDisposable
           }
 
           var legacyNext = new CollabWorkingSetTag(
-              legacyCurrent.Format,
+              CollabWorkingSetTag.CurrentFormat,
               legacyCurrent.Epoch + 1,
               CollabWorkingSetTag.NewLineage());
 
@@ -1565,20 +1565,25 @@ internal sealed class CollabRoom : IDisposable
 
       if (stored is not null)
       {
-        if (stored.Tag.Format != CollabWorkingSetTag.SchemaV2)
-        {
-          throw new InvalidDataException(
-              $"collab: the stored working set for \"{DocId}\" has format {stored.Tag.Format}; " +
-              $"this server reads format {CollabWorkingSetTag.SchemaV2}.");
-        }
-
+        RequireReadableFormat(stored.Tag.Format);
         tag = stored.Tag;
         HydrateLocked(stored.Updates);
       }
 
       if (frameCount == 0)
       {
+        if (tag.Format != CollabWorkingSetTag.CurrentFormat)
+        {
+          // Nothing to migrate; the seed below writes the current format.
+          tag = new CollabWorkingSetTag(
+              CollabWorkingSetTag.CurrentFormat, tag.Epoch + 1, CollabWorkingSetTag.NewLineage());
+        }
+
         await SeedLocked();
+      }
+      else if (tag.Format != CollabWorkingSetTag.CurrentFormat)
+      {
+        await MigrateWorkingSetLocked();
       }
       else if (CompactIfOversizedLocked())
       {
@@ -1615,7 +1620,11 @@ internal sealed class CollabRoom : IDisposable
   /// document with no head has never been seeded, and seeding it is what mints
   /// its lineage.
   /// </summary>
-  private async Task LoadFromJournalLocked()
+  /// <param name="migrate">
+  /// False only before a reset, which rebaselines from the endpoint in the
+  /// current format anyway.
+  /// </param>
+  private async Task LoadFromJournalLocked(bool migrate = true)
   {
     var opened = session!.OpenResult;
 
@@ -1626,6 +1635,7 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
+    RequireReadableFormat(opened.Head.Format);
     tag = new CollabWorkingSetTag(
         opened.Head.Format,
         opened.Head.Epoch,
@@ -1656,6 +1666,11 @@ internal sealed class CollabRoom : IDisposable
 
     HydrateCommittedLocked(
         [.. opened.Tail.Select(record => record.Update)]);
+
+    if (migrate && tag.Format != CollabWorkingSetTag.CurrentFormat)
+    {
+      await MigrateJournalLocked();
+    }
 
     // The journal is the record now, so a working set beside it is stale: a
     // lost journal or a swapped store would otherwise adopt it again.
@@ -1825,7 +1840,7 @@ internal sealed class CollabRoom : IDisposable
 
     var head = await session!.ResetAsync(
         new CollabOperationReset(
-            CollabWorkingSetTag.SchemaV2,
+            CollabWorkingSetTag.CurrentFormat,
             Epoch: 0,
             CollabWorkingSetTag.NewLineage(),
             baseline),
@@ -1852,12 +1867,7 @@ internal sealed class CollabRoom : IDisposable
       return false;
     }
 
-    if (stored.Tag.Format != CollabWorkingSetTag.SchemaV2)
-    {
-      throw new InvalidDataException(
-          $"collab: the stored working set for \"{DocId}\" has format {stored.Tag.Format}; " +
-          $"this server reads format {CollabWorkingSetTag.SchemaV2}.");
-    }
+    RequireReadableFormat(stored.Tag.Format);
 
     if (!CollabWorkingSetCodec.TryDecodeFrames(stored.Updates, out var frames))
     {
@@ -1881,13 +1891,24 @@ internal sealed class CollabRoom : IDisposable
 
     var adopted = stored.Tag.IsAnnounceable()
       ? stored.Tag
-      : new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2, 0, CollabWorkingSetTag.NewLineage());
+      : new CollabWorkingSetTag(CollabWorkingSetTag.CurrentFormat, 0, CollabWorkingSetTag.NewLineage());
+    List<ReadOnlyMemory<byte>> baseline = [.. frames.Select(frame => (ReadOnlyMemory<byte>)frame)];
+
+    if (adopted.Format != CollabWorkingSetTag.CurrentFormat)
+    {
+      await converter.MigrateRichTextAsync(doc!, lifetime.Token);
+      localUpdates.Clear();
+      baseline = [doc!.EncodeStateAsUpdate()];
+      adopted = new CollabWorkingSetTag(
+          CollabWorkingSetTag.CurrentFormat, adopted.Epoch + 1, CollabWorkingSetTag.NewLineage());
+    }
+
     var head = await session!.ResetAsync(
         new CollabOperationReset(
             adopted.Format,
             adopted.Epoch,
             adopted.Lineage,
-            [.. frames.Select(frame => (ReadOnlyMemory<byte>)frame)]),
+            baseline),
         lifetime.Token);
     tag = new CollabWorkingSetTag(head.Format, head.Epoch, head.Lineage);
 
@@ -1940,7 +1961,7 @@ internal sealed class CollabRoom : IDisposable
 
     var head = await session!.ResetAsync(
         new CollabOperationReset(
-            current.Format,
+            CollabWorkingSetTag.CurrentFormat,
             current.Epoch + 1,
             CollabWorkingSetTag.NewLineage(),
             baseline),
@@ -1948,6 +1969,68 @@ internal sealed class CollabRoom : IDisposable
     tag = new CollabWorkingSetTag(head.Format, head.Epoch, head.Lineage);
 
     return tag;
+  }
+
+  /// <summary>
+  /// Format 1 is read only to be migrated. Anything newer was written by a
+  /// newer server, and reading it as ours could lose what that one stored.
+  /// </summary>
+  private void RequireReadableFormat(int format)
+  {
+    if (format is not (CollabWorkingSetTag.HtmlRichTextFormat or CollabWorkingSetTag.CurrentFormat))
+    {
+      throw new InvalidDataException(
+          $"collab: the stored document \"{DocId}\" has format {format}; this server reads format " +
+          $"{CollabWorkingSetTag.CurrentFormat} and migrates format {CollabWorkingSetTag.HtmlRichTextFormat}.");
+    }
+  }
+
+  /// <summary>
+  /// Format 1 → 2 on a hydrated journal room. The whole migrated state becomes
+  /// the baseline of a NEW lineage, so format-1 clients and their offline
+  /// operations can never write into it. The reset is the commit point: until
+  /// it lands the journal still holds format 1, and the next open migrates
+  /// again.
+  /// </summary>
+  private async Task MigrateJournalLocked()
+  {
+    await converter.MigrateRichTextAsync(doc!, lifetime.Token);
+    localUpdates.Clear();
+
+    var whole = doc!.EncodeStateAsUpdate();
+    var head = await session!.ResetAsync(
+        new CollabOperationReset(
+            CollabWorkingSetTag.CurrentFormat,
+            tag.Epoch + 1,
+            CollabWorkingSetTag.NewLineage(),
+            [whole]),
+        lifetime.Token);
+
+    tag = new CollabWorkingSetTag(head.Format, head.Epoch, head.Lineage);
+
+    // The reset emptied the journal; counting from the old head would name
+    // a checkpoint past what is durable.
+    committedThrough = head.DurableThrough;
+    checkpointedThrough = 0;
+    operationsSinceCheckpoint = 0;
+    bytesSinceCheckpoint = 0;
+    ReplaceLogLocked(whole);
+  }
+
+  /// <summary>
+  /// Format 1 → 2 on a hydrated working set: its frames are replaced by the
+  /// migrated state under a new lineage. A write, never a store reset, which
+  /// stores an empty log and would drop edits the endpoint never got. Awaited
+  /// so a failed write fails the open and leaves format 1 for the next one.
+  /// </summary>
+  private async Task MigrateWorkingSetLocked()
+  {
+    await converter.MigrateRichTextAsync(doc!, lifetime.Token);
+    localUpdates.Clear();
+    CompactLocked();
+    tag = new CollabWorkingSetTag(
+        CollabWorkingSetTag.CurrentFormat, tag.Epoch + 1, CollabWorkingSetTag.NewLineage());
+    await PersistLocked(lifetime.Token);
   }
 
   private void HydrateLocked(byte[] storedFrames)
@@ -2226,8 +2309,11 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private void CompactLocked()
   {
-    var whole = doc!.EncodeStateAsUpdate();
+    ReplaceLogLocked(doc!.EncodeStateAsUpdate());
+  }
 
+  private void ReplaceLogLocked(byte[] whole)
+  {
     frameSection.SetLength(0);
     frameCount = 0;
     AppendLocked(whole);

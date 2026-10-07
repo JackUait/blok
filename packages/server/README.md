@@ -376,7 +376,7 @@ The history routes can also answer the statuses below. 400 and 404 need a lineag
 
 | Status | When |
 | --- | --- |
-| 400 | The sequence is not a whole number. |
+| 400 | The sequence is not an unsigned 64-bit whole number. |
 | 403 | The document was purged. |
 | 404 | The lineage is unknown, or the sequence is past its durable head. |
 | 500 | Replaying a record failed. The server logs it. |

@@ -27,6 +27,12 @@ export const modificationsObserverBatchTimeout = 400;
 export const BLOK_INTERFACE_VALUE = 'blok';
 
 /**
+ * Value for the data-blok-interface attribute on the page title header.
+ * Not "blok": isolation.css resets every [data-blok-interface=blok] with `all: initial !important`.
+ */
+export const PAGE_TITLE_INTERFACE_VALUE = 'page-title';
+
+/**
  * Value for the data-blok-interface attribute on inline toolbar elements
  * Used as a single source of truth for inline toolbar identification
  */

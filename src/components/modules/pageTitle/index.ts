@@ -36,6 +36,12 @@ export class PageTitle extends Module {
       placeholder: this.resolved.placeholder ?? I18n.t('title.placeholder'),
       ariaLabel: I18n.t('title.ariaLabel'),
     });
+    const instance = UI.nodes.wrapper.getAttribute(DATA_ATTR.instance);
+
+    // UI's font-token rule is scoped by this id.
+    if (instance !== null) {
+      this.dom.header.setAttribute(DATA_ATTR.instance, instance);
+    }
     this.placeInitially(this.resolved.holder);
     this.renderText();
     this.syncWidth(UI.getWidthMode());

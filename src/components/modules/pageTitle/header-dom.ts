@@ -1,5 +1,5 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
-import { BLOK_INTERFACE_VALUE } from '../../constants';
+import { PAGE_TITLE_INTERFACE_VALUE } from '../../constants';
 
 export interface HeaderNodes {
   header: HTMLElement;
@@ -14,7 +14,7 @@ export const buildHeader = (labels: { placeholder: string; ariaLabel: string }):
 
   header.setAttribute(DATA_ATTR.pageHeader, '');
   // Tokens and theme are declared on [data-blok-interface]; an outside holder has no other source.
-  header.setAttribute(DATA_ATTR.interface, BLOK_INTERFACE_VALUE);
+  header.setAttribute(DATA_ATTR.interface, PAGE_TITLE_INTERFACE_VALUE);
   // Blok's block and editor key handling stand down; the title handles its own keys.
   header.setAttribute(DATA_ATTR.keyboardOwner, '');
   header.setAttribute('data-blok-testid', 'page-header');

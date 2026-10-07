@@ -967,7 +967,7 @@ export class UI extends Module<UINodes> {
      * popover rules follow <head> order.
      */
     const css = [
-      `[data-blok-interface=blok]:where([data-blok-instance="${this.instanceId}"]), [data-blok-interface=tooltip] {`,
+      `[data-blok-interface=blok]:where([data-blok-instance="${this.instanceId}"]), [data-blok-interface=page-title]:where([data-blok-instance="${this.instanceId}"]), [data-blok-interface=tooltip] {`,
       vars,
       `}`,
       `[data-blok-popover]:not([data-blok-popover-inline]) {`,

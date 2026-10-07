@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Core } from '../../../../../src/components/core';
 import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
+import { findRanges } from '../../../../../src/components/modules/find/text-index';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { BlokConfig } from '../../../../../types';
 
@@ -134,9 +135,34 @@ describe('PageTitle module', () => {
     expect(titleIn(holder)?.getAttribute('contenteditable')).toBe('true');
   });
 
-  it('carries data-blok-interface so tokens and theme reach an outside holder', async () => {
+  it('carries its own interface value and the editor instance id', async () => {
     await boot({ pageTitle: true });
-    expect(holder.querySelector(`[${DATA_ATTR.pageHeader}]`)?.getAttribute(DATA_ATTR.interface)).toBe('blok');
+    const header = holder.querySelector(`[${DATA_ATTR.pageHeader}]`);
+    const wrapper = holder.querySelector(`[${DATA_ATTR.editor}]`);
+
+    expect(header?.getAttribute(DATA_ATTR.interface)).toBe('page-title');
+    expect(header?.getAttribute(DATA_ATTR.instance)).toBe(wrapper?.getAttribute(DATA_ATTR.instance));
+  });
+
+  it('font config reaches the header through the instance-scoped font tag', async () => {
+    await boot({ pageTitle: true, style: { fontFamily: 'Georgia' } });
+    const instance = holder.querySelector(`[${DATA_ATTR.editor}]`)?.getAttribute(DATA_ATTR.instance) ?? 'none';
+    const tag = Array.from(document.head.querySelectorAll('style')).find((candidate) => candidate.id.startsWith('blok-font-'));
+
+    expect(tag?.textContent).toContain(`[data-blok-interface=page-title]:where([data-blok-instance="${instance}"])`);
+    tag?.remove();
+  });
+
+  it('find matches the title in an outside holder', async () => {
+    const outside = document.createElement('div');
+
+    document.body.appendChild(outside);
+    await boot({ pageTitle: { holder: outside }, data: { title: 'Plans', blocks: [] } });
+
+    const ranges = findRanges(document.body, 'Plans');
+
+    expect(ranges.some((range) => titleIn(outside)?.contains(range.startContainer) === true)).toBe(true);
+    outside.remove();
   });
 
   it('destroy empties an outside holder', async () => {

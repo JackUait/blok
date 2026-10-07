@@ -311,6 +311,29 @@ public sealed class JintBlokRuntimeTests
   }
 
   /// <summary>
+  /// A pasted screenshot is stored as a data URL in an image's url, often
+  /// several MiB long. Writing a URL as a Markdown destination must cost about
+  /// its length, not a string per character. A bookmark cannot take a data
+  /// URL as a link, so it carries a long https URL instead.
+  /// </summary>
+  [Theory]
+  [InlineData("image", "data:image/png;base64,")]
+  [InlineData("bookmark", "https://example.com/?q=")]
+  public async Task WritesAMultiMegabyteUrlToMarkdown(string type, string prefix)
+  {
+    var runtime = JintBlokRuntime.FromEmbeddedResource(poolSize: 1, timeout: TimeSpan.FromMinutes(2));
+    var url = prefix + new string('A', 3 * 1024 * 1024);
+    var input = JsonSerializer.Serialize(new
+    {
+      blocks = new[] { new { id = "u1", type, data = new { url } } },
+    });
+
+    var output = await runtime.InvokeAsync("blocksToMarkdown", input);
+
+    Assert.Contains($"({url})", output, StringComparison.Ordinal);
+  }
+
+  /// <summary>
   /// A deeply indented outline has to convert. The readers recurse once per
   /// nesting level, and a frame COUNT on one function definition cannot tell an
   /// ordinary nested list from a runaway recursion — it stops both. The

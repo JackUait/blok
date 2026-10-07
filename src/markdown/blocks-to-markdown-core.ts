@@ -209,6 +209,9 @@ const EQUATION_MARKER = 'data-latex';
 /** Characters a bare destination cannot hold: they end it or start raw HTML. */
 const DESTINATION_BREAKER = /[\u0000-\u0020\u007f<>]/;
 
+/** Every character {@link markdownDestination} may rewrite: breakers, `&`, parens and `\`. */
+const DESTINATION_SPECIAL = /[\u0000-\u0020\u007f<>&()\\]/g;
+
 /** What follows `&` in a CommonMark character reference. The longest entity name is 31 letters. */
 const CHARACTER_REFERENCE_TAIL = /^(?:#\d{1,7}|#[xX][\da-fA-F]{1,6}|[A-Za-z][A-Za-z\d]{0,31});/;
 
@@ -217,17 +220,16 @@ const CHARACTER_REFERENCE_TAIL = /^(?:#\d{1,7}|#[xX][\da-fA-F]{1,6}|[A-Za-z][A-Z
  * destination. Every backslash before them is escaped, so all of them count.
  * @param url - the raw URL
  */
-const parensBalanced = (url: string): boolean => Array.from(url).reduce((depth, char) => {
+const parensBalanced = (url: string): boolean => Array.from(
+  /** Only the parens are split apart: a pasted image's data URL runs to MiB. */
+  url.replace(/[^()]/g, '')
+).reduce((depth, char) => {
   /** Once below zero a `)` has closed the destination; later parens cannot fix it. */
   if (depth < 0) {
     return depth;
   }
 
-  if (char === '(') {
-    return depth + 1;
-  }
-
-  return char === ')' ? depth - 1 : depth;
+  return char === '(' ? depth + 1 : depth - 1;
 }, 0) === 0;
 
 /**
@@ -248,27 +250,29 @@ export const markdownDestination = (url: string, kind: 'href' | 'src'): string |
   }
 
   const escapeParens = !parensBalanced(url);
-  const chars = Array.from(url);
-  const pieces = chars.map((char, index) => {
+
+  /**
+   * Only these characters can change, so the rest is never split apart. Jint
+   * caps allocation per call, and a string per character of a pasted image's
+   * data URL ran past it.
+   */
+  return url.replace(DESTINATION_SPECIAL, (char: string, index: number) => {
     if (DESTINATION_BREAKER.test(char)) {
       return encodeURIComponent(char);
     }
     /** A renderer decodes `&#106;` to `j`, so `&#106;avascript:` would pass the check above. */
-    if (char === '&' && CHARACTER_REFERENCE_TAIL.test(chars.slice(index + 1, index + 40).join(''))) {
-      return '\\&';
+    if (char === '&') {
+      return CHARACTER_REFERENCE_TAIL.test(url.slice(index + 1, index + 40)) ? '\\&' : char;
+    }
+    /** Decided on what the next character is written as: `\%20` would escape the `%`. */
+    if (char === '\\') {
+      const next = url[index + 1];
+
+      return next === undefined || DESTINATION_BREAKER.test(next) || ASCII_PUNCTUATION.test(next) ? '\\\\' : char;
     }
 
-    return escapeParens && (char === '(' || char === ')') ? `\\${char}` : char;
+    return escapeParens ? `\\${char}` : char;
   });
-
-  /** Decided on the written next piece: `\%20` would escape the `%`. */
-  return pieces
-    .map((piece, index) => {
-      const next = pieces[index + 1];
-
-      return piece === '\\' && (next === undefined || ASCII_PUNCTUATION.test(next[0])) ? '\\\\' : piece;
-    })
-    .join('');
 };
 
 /**

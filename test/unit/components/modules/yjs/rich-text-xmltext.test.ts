@@ -139,10 +139,13 @@ describe('readers check Y.XmlText first', () => {
 
     const [first] = canonical;
 
+    // The next local write upgrades it to formatted text (B3b).
     store.updateBlockData(first.id, 'text', `${first.data.text}!`);
 
-    expect(ytextOf(store, first.id)).not.toBeInstanceOf(Y.XmlText);
-    expect(textOf(store, first.id)).toBe(`${first.data.text}!`);
+    expect(ytextOf(store, first.id)).toBeInstanceOf(Y.XmlText);
+    expect(textOf(store, first.id)).toBe(
+      textOf(storeWith({ id: first.id, type: 'paragraph', data: { text: `${first.data.text}!` } }), first.id)
+    );
   });
 });
 

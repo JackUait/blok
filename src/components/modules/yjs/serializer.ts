@@ -346,9 +346,11 @@ export class YBlockSerializer {
   }
 
   /**
-   * Whether `key` of a `type` block is minted as formatted text. Asked only
-   * at mint time: afterwards the stored class decides, because a block's type
-   * can change under a peer's feet.
+   * Whether `key` of a `type` block should be formatted text. Asked when a
+   * value is minted, by a conversion that flips the class, and by the
+   * upgrade of an HTML Y.Text on save. Reads never ask:
+   * they go by the stored class, because a block's type can change under a
+   * peer's feet.
    */
   public isRichTextField(type: unknown, key: string): boolean {
     if (typeof type !== 'string') {
@@ -567,21 +569,30 @@ export class YBlockSerializer {
 
     for (const [key, value] of Object.entries(data)) {
       const dataKey = stripNul(key);
-      const segments = this.isRichTextField(type, dataKey) ? this.toRichSegments(value) : null;
 
-      if (segments !== null) {
-        ymap.set(dataKey, this.mintRichText(segments));
-      } else {
-        ymap.set(
-          dataKey,
-          isDiffableTextKey(dataKey) && typeof value === 'string'
-            ? new Y.Text(stripNul(value))
-            : this.plainToYValue(value)
-        );
-      }
+      ymap.set(dataKey, this.mintDataValue(type, dataKey, value));
     }
 
     return ymap;
+  }
+
+  /**
+   * What `blockDataToYMap` stores under one data key. Also used where a
+   * conversion re-mints a key whose class no longer fits the block's type.
+   * @param type - the block's type
+   * @param dataKey - the NUL-free data key
+   * @param value - the plain value
+   */
+  public mintDataValue(type: unknown, dataKey: string, value: unknown): unknown {
+    const segments = this.isRichTextField(type, dataKey) ? this.toRichSegments(value) : null;
+
+    if (segments !== null) {
+      return this.mintRichText(segments);
+    }
+
+    return isDiffableTextKey(dataKey) && typeof value === 'string'
+      ? new Y.Text(stripNul(value))
+      : this.plainToYValue(value);
   }
 
   /**

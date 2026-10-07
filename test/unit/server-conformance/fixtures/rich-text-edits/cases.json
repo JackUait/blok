@@ -939,6 +939,111 @@
     }
   },
   {
+    "name": "markup-characters-edit-as-text",
+    "description": "A tag-shaped run in the text is plain characters: typing inside it is one narrow insert, never a rewrite of the whole \"<b>\".",
+    "current": [
+      {
+        "text": "x <b> y"
+      }
+    ],
+    "next": [
+      {
+        "text": "x <bz> y"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 4,
+        "text": "z",
+        "attributes": {}
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "x <bz> y"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "x <bz> y"
+        }
+      ]
+    }
+  },
+  {
+    "name": "entity-characters-edit-as-text",
+    "description": "An entity-shaped run in the text is plain characters: finishing \"&amp\" is one narrow insert.",
+    "current": [
+      {
+        "text": "Tom &amp Jerry"
+      }
+    ],
+    "next": [
+      {
+        "text": "Tom &amp; Jerry"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 8,
+        "text": ";",
+        "attributes": {}
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "Tom &amp; Jerry"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "Tom &amp; Jerry"
+        }
+      ]
+    }
+  },
+  {
+    "name": "markup-characters-next-to-a-cluster",
+    "description": "Tag-shaped text next to a multi-code-point character: the tag characters still diff one at a time, and the emoji with its skin tone stays one unit.",
+    "current": [
+      {
+        "text": "<b>👍🏽"
+      }
+    ],
+    "next": [
+      {
+        "text": "<bQ>👍🏽"
+      }
+    ],
+    "ops": [
+      {
+        "op": "insert",
+        "index": 2,
+        "text": "Q",
+        "attributes": {}
+      }
+    ],
+    "expected": {
+      "writes": true,
+      "segments": [
+        {
+          "text": "<bQ>👍🏽"
+        }
+      ],
+      "delta": [
+        {
+          "insert": "<bQ>👍🏽"
+        }
+      ]
+    }
+  },
+  {
     "name": "delete-everything",
     "description": "An empty field is [].",
     "current": [

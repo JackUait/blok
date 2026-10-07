@@ -102,6 +102,10 @@ const orderMarks = (marks: RichTextMarks): RichTextMarks | undefined => {
   return Object.keys(ordered).length === 0 ? undefined : ordered as RichTextMarks;
 };
 
+/** One run's marks as `canonicalizeSegments` writes them; `{}` when none are on. */
+export const canonicalMarks = (marks: Record<string, unknown> | undefined): Record<string, unknown> =>
+  (orderMarks((marks ?? {}) as RichTextMarks) ?? {}) as Record<string, unknown>;
+
 const withMarks = (segment: RichTextSegment, marks: RichTextMarks): RichTextSegment => {
   const ordered = orderMarks(marks);
 

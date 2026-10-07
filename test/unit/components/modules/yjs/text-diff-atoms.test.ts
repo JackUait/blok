@@ -104,3 +104,16 @@ describe('atomize: the segmenter is asked about clusters, not about characters',
     expect(atomize('\u{1f44d}\u{1f3fd}')).toEqual(['\u{1f44d}\u{1f3fd}']);
   });
 });
+
+describe('diffText with markup: false (a formatted text\'s characters)', () => {
+  it('edits inside tag- and entity-shaped text one character at a time', () => {
+    expect(diffText('x <b> &lt;', 'x <bQ> &lQt;', { markup: false })).toEqual([
+      { index: 4, remove: 0, insert: 'Q' },
+      { index: 8, remove: 0, insert: 'Q' },
+    ]);
+  });
+
+  it('still keeps a character cluster whole', () => {
+    expect(atomize(`<b>\u{1f44d}\u{1f3fd}`, false)).toEqual(['<', 'b', '>', '\u{1f44d}\u{1f3fd}']);
+  });
+});

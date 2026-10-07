@@ -622,13 +622,15 @@ const clusterAtoms = (text: string, runs: number[]): string[] => {
  * typed, a colour swatch stranded on a `!`, a family emoji coming apart. 54 of
  * a 144-pair sweep carried a character neither peer had typed.
  * @param text - the string to split
+ * @param markup - false when the text holds no markup, so tags and entities
+ *   are not kept whole
  */
-export const atomize = (text: string): string[] => {
+export const atomize = (text: string, markup = true): string[] => {
   const runs = clusterRuns(text);
 
   // Nothing structured to protect: the scanner below is only there to keep a
   // tag and an entity whole, and it costs a tag test and a `slice` per atom.
-  if (!text.includes('<') && !text.includes('&')) {
+  if (!markup || (!text.includes('<') && !text.includes('&'))) {
     return runs.length === 0 ? [...text] : clusterAtoms(text, runs);
   }
 
@@ -1049,10 +1051,14 @@ const anchors = (
  * through `StringInfo`/`TextElementEnumerator`.
  * @param before - the stored text
  * @param after - the saved text
+ * @param options - `markup: false` for text that holds no markup (a formatted
+ *   text's characters): `<b>` and `&amp;` there are typed characters, each
+ *   its own atom. C# `TextDiff.Diff(…, markup: false)` must match.
  */
-export const diffText = (before: string, after: string): TextEditOp[] => {
-  const beforeAtoms = atomize(before);
-  const afterAtoms = atomize(after);
+export const diffText = (before: string, after: string, options: { markup?: boolean } = {}): TextEditOp[] => {
+  const markup = options.markup ?? true;
+  const beforeAtoms = atomize(before, markup);
+  const afterAtoms = atomize(after, markup);
   const atomOps = myersOps(beforeAtoms, afterAtoms);
 
   if (atomOps !== null) {

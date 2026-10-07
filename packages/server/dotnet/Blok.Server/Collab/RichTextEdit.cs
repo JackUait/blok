@@ -52,7 +52,8 @@ internal static class RichTextEdit
     // non-object embed) still takes one index in Yjs.
     var before = LiveUnits(live);
     var after = NextUnits(next);
-    var edits = TextDiff.Diff(Project(before), Project(after));
+    // The characters of a formatted text are text: `<b>` there was typed.
+    var edits = TextDiff.Diff(Project(before), Project(after), markup: false);
     var (matchBefore, matchAfter) = Align(before, after, edits);
     var ops = new List<RichTextOp>();
 

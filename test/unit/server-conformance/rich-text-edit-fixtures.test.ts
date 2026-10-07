@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
+import { planRichTextEdit } from '../../../src/components/modules/yjs/rich-text-write';
 import { deltaToSegments, segmentsToDeltaOps, type ReadDeltaOp } from '../../../src/shared/rich-text/delta';
 import { canonicalizeSegments } from '../../../src/shared/rich-text/html-to-segments';
 import type { RichText, RichTextEmbed } from '../../../types/rich-text';
@@ -15,7 +16,7 @@ import type { RichText, RichTextEmbed } from '../../../types/rich-text';
  * This test replays each case's ops in REAL yjs and pins what they leave, so
  * the ops are checked independently of the C# planner that wrote them. The
  * C# suite (RichTextEditFixtureTests) asserts its planner emits these ops and
- * its engine leaves this delta; the client write path must emit them too.
+ * its engine leaves this delta; the client planner must emit them too.
  * `UPDATE_RICH_TEXT_FIXTURES=1` rewrites each case's `expected`.
  */
 const FILE = fileURLToPath(new URL('./fixtures/rich-text-edits/cases.json', import.meta.url));
@@ -124,5 +125,13 @@ describe('rich-text edit fixtures', () => {
     expect(JSON.stringify(deltaToSegments(delta))).toBe(JSON.stringify(canonicalizeSegments(entry.next)));
     expect(JSON.stringify(deltaToSegments(delta))).toBe(JSON.stringify(entry.expected.segments));
     expect(JSON.stringify(delta)).toBe(JSON.stringify(entry.expected.delta));
+  });
+
+  // The client planner (document-store.ts `updateBlockData` runs it; the
+  // store-level replay is rich-text-write-path.test.ts).
+  it.each(cases.map(entry => [entry.name, entry] as const))('the client plans exactly the ops: %s', (_name, entry) => {
+    const live = seeded(entry.current).text.toDelta() as ReadDeltaOp[];
+
+    expect(planRichTextEdit(live, canonicalizeSegments(entry.next))).toEqual(entry.ops);
   });
 });

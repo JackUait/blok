@@ -90,10 +90,17 @@ internal static partial class TextDiff
   /// <paramref name="before"/>. Apply them BACK TO FRONT, and each one INSERT
   /// FIRST (see <c>YDocConverter.EditText</c>).
   /// </summary>
-  internal static IReadOnlyList<TextEdit> Diff(string before, string after)
+  /// <param name="before">The stored text.</param>
+  /// <param name="after">The saved text.</param>
+  /// <param name="markup">
+  /// False for text that holds no markup (a formatted text's characters):
+  /// <c>&lt;b&gt;</c> and <c>&amp;amp;</c> there are typed characters, each its
+  /// own atom. The client's <c>diffText(…, { markup: false })</c> must match.
+  /// </param>
+  internal static IReadOnlyList<TextEdit> Diff(string before, string after, bool markup = true)
   {
-    var beforeAtoms = Atomize(before);
-    var afterAtoms = Atomize(after);
+    var beforeAtoms = Atomize(before, markup);
+    var afterAtoms = Atomize(after, markup);
     var atomOps = MyersOps(beforeAtoms, afterAtoms);
 
     if (atomOps is not null)
@@ -301,13 +308,13 @@ internal static partial class TextDiff
   /// the two sides split a character alike. Its range tables are a V8
   /// workaround, not part of the contract, and are deliberately NOT ported.
   /// </summary>
-  internal static string[] Atomize(string text)
+  internal static string[] Atomize(string text, bool markup = true)
   {
     var interiors = ClusterInteriors(text);
 
     // Nothing structured to protect and no character longer than a code point:
     // split code points in one pass.
-    if (interiors.Count == 0 && !text.Contains('<') && !text.Contains('&'))
+    if (interiors.Count == 0 && (!markup || (!text.Contains('<') && !text.Contains('&'))))
     {
       return CodePoints(text);
     }
@@ -317,7 +324,7 @@ internal static partial class TextDiff
 
     while (index < text.Length)
     {
-      var structured = StructuredEnd(text, index, text[index]);
+      var structured = markup ? StructuredEnd(text, index, text[index]) : index;
 
       // A tag or an entity is never part of a character, so it is never
       // extended: a `>` and an accent typed after it are two atoms, and the
@@ -343,7 +350,7 @@ internal static partial class TextDiff
       // `<` inside the previous atom, so retagging landed an edit boundary
       // between `<` and `b`. That is the boundary-inside-markup this file
       // exists to stop. A bare `<` that starts no tag still clusters.
-      while (interiors.Contains(end) && StructuredEnd(text, end, text[end]) == end)
+      while (interiors.Contains(end) && (!markup || StructuredEnd(text, end, text[end]) == end))
       {
         end++;
       }

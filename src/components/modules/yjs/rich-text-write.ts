@@ -2,141 +2,257 @@ import type * as Y from 'yjs';
 
 import { diffText, type TextEditOp } from './text-diff';
 import { deltaToSegments, normalizeMarkValue, type ReadDeltaOp } from '../../../shared/rich-text/delta';
-import { isTextSegment } from '../../../shared/rich-text/html-to-segments';
-import type { RichText, RichTextEmbed } from '../../../../types/rich-text';
+import { canonicalMarks, isTextSegment } from '../../../shared/rich-text/html-to-segments';
+import type { RichText } from '../../../../types/rich-text';
 
-/** Stands in for an embed in the plain projection the character diff runs on. */
-const OBJECT_REPLACEMENT = '￼';
+type Attributes = Record<string, unknown>;
 
-/** One Y index unit: a UTF-16 code unit of text, or one embed. */
-interface Atom {
-  char: string;
-  embed?: RichTextEmbed;
-  marks: Record<string, unknown>;
-  /** JSON of `marks`; equal for equal marks because both sides are canonical. */
-  marksKey: string;
-}
+/** One write to a formatted text. The shape of the shared edit fixtures' `ops`. */
+export type RichTextOp =
+  | { op: 'insert'; index: number; text: string; attributes: Attributes }
+  | { op: 'insertEmbed'; index: number; embed: Attributes; attributes: Attributes }
+  | { op: 'delete'; index: number; length: number }
+  | { op: 'format'; index: number; length: number; attributes: Attributes };
 
-const atomsOf = (segments: RichText): Atom[] => segments.flatMap((segment): Atom[] => {
-  const marks = (segment.marks ?? {}) as Record<string, unknown>;
-  const marksKey = JSON.stringify(marks);
-
-  if (isTextSegment(segment)) {
-    return Array.from({ length: segment.text.length }, (_, i) => ({ char: segment.text[i], marks, marksKey }));
-  }
-
-  return [{ char: OBJECT_REPLACEMENT, embed: segment.embed, marks, marksKey }];
-});
-
-const atomsOfText = (text: Y.XmlText): Atom[] => atomsOf(deltaToSegments(text.toDelta() as ReadDeltaOp[]));
-
-const plainOf = (atoms: Atom[]): string => atoms.map(atom => atom.char).join('');
-
-const attributesOf = (atom: Atom): Record<string, unknown> => normalizeMarkValue(atom.marks) as Record<string, unknown>;
-
-/** One insert call each: an embed alone, or a stretch of text with equal marks. */
-const runsOf = (atoms: Atom[]): Atom[][] => atoms.reduce<Atom[][]>((runs, atom) => {
-  const last = runs.at(-1);
-
-  if (last !== undefined && atom.embed === undefined && last[0].embed === undefined && last[0].marksKey === atom.marksKey) {
-    last.push(atom);
-  } else {
-    runs.push([atom]);
-  }
-
-  return runs;
-}, []);
-
-/** Insert `atoms` at `index`, each run with its full marks (`{}` when unmarked), so nothing inherits. */
-const insertAtoms = (text: Y.XmlText, index: number, atoms: Atom[]): void => {
-  runsOf(atoms).reduce((at, run) => {
-    const [first] = run;
-
-    if (first.embed !== undefined) {
-      text.insertEmbed(at, first.embed, attributesOf(first));
-
-      return at + 1;
-    }
-
-    const chars = plainOf(run);
-
-    text.insert(at, chars, attributesOf(first));
-
-    return at + chars.length;
-  }, index);
-};
-
-/** The marks that differ at one position, `null` for a mark to remove. */
-const patchOf = (current: Atom, target: Atom): Record<string, unknown> => {
-  if (current.marksKey === target.marksKey) {
-    return {};
-  }
-
-  const keys = [...new Set([...Object.keys(current.marks), ...Object.keys(target.marks)])];
-
-  return Object.fromEntries(keys
-    .filter(key => JSON.stringify(current.marks[key]) !== JSON.stringify(target.marks[key]))
-    .map(key => [key, target.marks[key] === undefined ? null : normalizeMarkValue(target.marks[key])]));
-};
-
-/** Each diff op with where its inserted text starts in the TARGET. */
-const withTargetOffsets = (ops: TextEditOp[]): Array<TextEditOp & { targetAt: number }> =>
-  ops.reduce<Array<TextEditOp & { targetAt: number }>>((planned, op) => {
-    const previous = planned.at(-1);
-    const shift = previous === undefined ? 0 : previous.targetAt - previous.index + previous.insert.length - previous.remove;
-
-    return [...planned, { ...op, targetAt: op.index + shift }];
-  }, []);
+/** Stands for one embed (or foreign item) in the diffed projection. */
+const EMBED_UNIT = '￼';
 
 /**
- * INTERIM (B2): bring a formatted text to `target` with narrow edits, so two
- * peers typing in one paragraph keep both bursts. Characters first (the plain
- * projection through `diffText`, insert before delete, right to left), then
- * embeds whose payload differs, then one `format` per run of equal mark
- * patches. B3 owns the final write path, its shared edit fixtures and perf.
- * @param text - the stored formatted text
- * @param current - its canonical segments, as read
- * @param target - the saved canonical segments
+ * One Y index: a UTF-16 code unit of text, or one embed. `foreign` is a live
+ * item no segment can name (a nested type), which never pairs with anything.
+ * `segment` is the index of the `next` segment it came from, -1 when live.
  */
-export const writeRichText = (text: Y.XmlText, current: RichText, target: RichText): void => {
-  const after = atomsOf(target);
+interface Unit {
+  char: string;
+  embed?: Attributes;
+  foreign: boolean;
+  marks: Attributes;
+  segment: number;
+}
 
-  // Right to left keeps earlier offsets valid. Insert BEFORE delete, for the
-  // reason given at the unformatted Y.Text branch in `updateBlockData`.
-  withTargetOffsets(diffText(plainOf(atomsOf(current)), plainOf(after))).reverse().forEach((op) => {
-    insertAtoms(text, op.index, after.slice(op.targetAt, op.targetAt + op.insert.length));
+const isPlainObject = (value: unknown): value is Attributes =>
+  typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype;
 
-    if (op.remove > 0) {
-      text.delete(op.index + op.insert.length, op.remove);
+const sameValue = (left: unknown, right: unknown): boolean =>
+  JSON.stringify(normalizeMarkValue(left)) === JSON.stringify(normalizeMarkValue(right));
+
+/** From the RAW delta: an item the canonical form drops still takes one index in yjs. */
+const liveUnits = (live: readonly ReadDeltaOp[]): Unit[] => live.flatMap((op): Unit[] => {
+  const marks = canonicalMarks(op.attributes);
+
+  const insert = op.insert;
+
+  if (typeof insert === 'string') {
+    return Array.from({ length: insert.length }, (_, i) => ({ char: insert[i], foreign: false, marks, segment: -1 }));
+  }
+
+  return isPlainObject(insert)
+    ? [{ char: EMBED_UNIT, embed: insert, foreign: false, marks, segment: -1 }]
+    : [{ char: EMBED_UNIT, foreign: true, marks, segment: -1 }];
+});
+
+const nextUnits = (next: RichText): Unit[] => next.flatMap((segment, index): Unit[] => {
+  const marks = (segment.marks ?? {}) as Attributes;
+
+  if (isTextSegment(segment)) {
+    return Array.from({ length: segment.text.length }, (_, i) => ({ char: segment.text[i], foreign: false, marks, segment: index }));
+  }
+
+  return [{ char: EMBED_UNIT, embed: segment.embed, foreign: false, marks, segment: index }];
+});
+
+const project = (units: Unit[]): string => units.map(unit => unit.char).join('');
+
+const sameContent = (live: Unit, next: Unit): boolean => {
+  if (live.foreign) {
+    return false;
+  }
+  if (live.embed === undefined && next.embed === undefined) {
+    return true;
+  }
+
+  return live.embed !== undefined && next.embed !== undefined && sameValue(live.embed, next.embed);
+};
+
+/**
+ * Which unit each kept unit pairs with, from the diff of the projections. A
+ * kept pair that is not the same content (a typed U+FFFC against an embed,
+ * two different embeds, a foreign item) is unpaired, so it is replaced.
+ */
+const align = (before: Unit[], after: Unit[], edits: TextEditOp[]): { matchBefore: number[]; matchAfter: number[] } => {
+  const matchBefore = new Array<number>(before.length).fill(-1);
+  const matchAfter = new Array<number>(after.length).fill(-1);
+  const cursor = { b: 0, a: 0 };
+  const keep = (until: number): void => {
+    for (; cursor.b < until; cursor.b += 1, cursor.a += 1) {
+      if (sameContent(before[cursor.b], after[cursor.a])) {
+        matchBefore[cursor.b] = cursor.a;
+        matchAfter[cursor.a] = cursor.b;
+      }
     }
+  };
+
+  edits.forEach((edit) => {
+    keep(edit.index);
+    cursor.b += edit.remove;
+    cursor.a += edit.insert.length;
   });
+  keep(before.length);
 
-  // Positions now match one to one. A typed U+FFFC diffs equal to an embed, so
-  // embeds are compared by payload, not by their stand-in character.
-  const placed = atomsOfText(text);
+  return { matchBefore, matchAfter };
+};
 
-  [...after.keys()].reverse().forEach((i) => {
-    if (JSON.stringify(placed[i].embed) !== JSON.stringify(after[i].embed)) {
-      insertAtoms(text, i, [after[i]]);
-      text.delete(i + 1, 1);
+interface Region { before: number; removed: number; after: number; inserted: number }
+
+/** Each maximal run of unpaired units on either side, front to back. */
+const regionsOf = (matchBefore: number[], matchAfter: number[]): Region[] => {
+  const regions: Region[] = [];
+  const at = { b: 0, a: 0 };
+
+  while (at.b < matchBefore.length || at.a < matchAfter.length) {
+    if (at.b < matchBefore.length && at.a < matchAfter.length && matchBefore[at.b] === at.a) {
+      at.b += 1;
+      at.a += 1;
+      continue;
     }
-  });
 
-  const ranges = atomsOfText(text).reduce<Array<{ start: number; length: number; patch: Record<string, unknown>; key: string }>>((acc, atom, i) => {
-    const patch = patchOf(atom, after[i]);
-    const key = JSON.stringify(patch);
-    const last = acc.at(-1);
+    const start = { ...at };
 
-    if (last !== undefined && last.key === key && last.start + last.length === i) {
+    while (at.b < matchBefore.length && matchBefore[at.b] < 0) {
+      at.b += 1;
+    }
+    while (at.a < matchAfter.length && matchAfter[at.a] < 0) {
+      at.a += 1;
+    }
+    regions.push({ before: start.b, removed: at.b - start.b, after: start.a, inserted: at.a - start.a });
+  }
+
+  return regions;
+};
+
+/** Inserts for one region: one per piece of a `next` segment, one per embed. */
+const insertOps = (after: Unit[], region: Region): RichTextOp[] => {
+  const ops: RichTextOp[] = [];
+  const end = region.after + region.inserted;
+  const at = { index: region.after, position: region.before };
+
+  while (at.index < end) {
+    const unit = after[at.index];
+    const attributes = normalizeMarkValue(unit.marks) as Attributes;
+
+    if (unit.embed !== undefined) {
+      ops.push({ op: 'insertEmbed', index: at.position, embed: normalizeMarkValue(unit.embed) as Attributes, attributes });
+      at.position += 1;
+      at.index += 1;
+      continue;
+    }
+
+    const stop = { index: at.index };
+
+    while (stop.index < end && after[stop.index].embed === undefined && after[stop.index].segment === unit.segment) {
+      stop.index += 1;
+    }
+
+    const text = project(after.slice(at.index, stop.index));
+
+    ops.push({ op: 'insert', index: at.position, text, attributes });
+    at.position += text.length;
+    at.index = stop.index;
+  }
+
+  return ops;
+};
+
+/** Only the mark keys whose canonical value changed, sorted; `null` for a removed one. */
+const changesOf = (live: Attributes, next: Attributes): Attributes | null => {
+  const keys = [...new Set([...Object.keys(live), ...Object.keys(next)])].sort();
+  const changes = keys
+    .filter(key => (key in live) !== (key in next) || !sameValue(live[key], next[key]))
+    .map(key => [key, key in next ? normalizeMarkValue(next[key]) : null] as const);
+
+  return changes.length === 0 ? null : Object.fromEntries(changes);
+};
+
+/** Over the kept units, in final positions. Adjacent units with the same change share one call. */
+const formatOps = (before: Unit[], after: Unit[], matchAfter: number[]): RichTextOp[] => {
+  const ops: Array<RichTextOp & { op: 'format'; key: string }> = [];
+
+  after.forEach((unit, index) => {
+    const changes = matchAfter[index] < 0 ? null : changesOf(before[matchAfter[index]].marks, unit.marks);
+
+    if (changes === null) {
+      return;
+    }
+
+    const key = JSON.stringify(changes);
+    const last = ops.at(-1);
+
+    if (last !== undefined && last.key === key && last.index + last.length === index) {
       last.length += 1;
     } else {
-      acc.push({ start: i, length: 1, patch, key });
+      ops.push({ op: 'format', index, length: 1, attributes: changes, key });
     }
+  });
 
-    return acc;
-  }, []);
+  return ops.map(({ key: _key, ...op }) => op);
+};
 
-  ranges.filter(range => range.key !== '{}').forEach((range) => {
-    text.format(range.start, range.length, range.patch);
+/**
+ * The writes turning a formatted text holding `live` into `next`, fewest
+ * first, so characters outside the change keep their CRDT identity and a
+ * peer's concurrent typing or formatting there survives.
+ *
+ * LOCKSTEP with C# `RichTextEdit.Plan` (packages/server/dotnet/Blok.Server/
+ * Collab/RichTextEdit.cs): both must issue the same ops for the same change,
+ * pinned by test/unit/server-conformance/fixtures/rich-text-edits/ (its
+ * README states the rules). Content ops come back to front, each region's
+ * inserts before its delete; then format calls front to back.
+ * @param live - the text's raw `toDelta()`
+ * @param next - canonical segments to store
+ */
+export const planRichTextEdit = (live: readonly ReadDeltaOp[], next: RichText): RichTextOp[] => {
+  // A respelling must write nothing, or two peers re-saving it ping-pong.
+  if (JSON.stringify(deltaToSegments(live)) === JSON.stringify(next)) {
+    return [];
+  }
+
+  const before = liveUnits(live);
+  const after = nextUnits(next);
+  // The characters of a formatted text are text: `<b>` there was typed.
+  const edits = diffText(project(before), project(after), { markup: false });
+  const { matchBefore, matchAfter } = align(before, after, edits);
+  const content = regionsOf(matchBefore, matchAfter).reverse().flatMap(region => [
+    ...insertOps(after, region),
+    ...(region.removed > 0
+      ? [{ op: 'delete', index: region.before + region.inserted, length: region.removed } as const]
+      : []),
+  ]);
+
+  return [...content, ...formatOps(before, after, matchAfter)];
+};
+
+/**
+ * Bring a formatted text to `next` (canonical segments). Call inside a
+ * transaction. Every attributes object is fresh: yjs writes `null` into the
+ * one it is handed for each mark in force that it does not name.
+ * @param text - the stored formatted text
+ * @param next - the saved canonical segments
+ */
+export const writeRichText = (text: Y.XmlText, next: RichText): void => {
+  planRichTextEdit(text.toDelta() as ReadDeltaOp[], next).forEach((op) => {
+    switch (op.op) {
+      case 'insert':
+        text.insert(op.index, op.text, op.attributes);
+        break;
+      case 'insertEmbed':
+        text.insertEmbed(op.index, op.embed, op.attributes);
+        break;
+      case 'delete':
+        text.delete(op.index, op.length);
+        break;
+      case 'format':
+        text.format(op.index, op.length, op.attributes);
+        break;
+    }
   });
 };

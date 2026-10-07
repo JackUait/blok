@@ -45,14 +45,18 @@ export const PAGE_ICON_CLASSES: readonly string[] = [
   '[&>img]:rounded-(--blok-radius-mark)',
 ];
 
-/** The border is the soft underline; the text itself is never underlined. */
+/**
+ * The border is the soft underline; the text itself is never underlined. Only the bottom gets a
+ * style: `border-solid` styles all four sides, and a host reset such as `* { border: none }`
+ * leaves their widths at medium, so the title would draw a box.
+ */
 export const PAGE_TITLE_CLASSES: readonly string[] = [
   'min-w-0',
   'truncate',
   'font-medium',
   'leading-normal',
   'border-b',
-  'border-solid',
+  '[border-bottom-style:solid]',
   '[border-color:var(--blok-border-primary)]',
 ];
 

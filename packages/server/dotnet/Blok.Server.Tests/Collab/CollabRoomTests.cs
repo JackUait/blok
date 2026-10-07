@@ -4866,6 +4866,102 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A working copy has no journal, but an export that keeps hitting the
+  /// runtime's limits never heals there either. It gives up after the same
+  /// bound and stops spending a pooled engine on every retry.
+  /// </summary>
+  [Fact]
+  public async Task OnAWorkingCopyATransientExportFailureThatNeverHealsIsGivenUp()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var writer = new FakeMember();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read",
+        new BlokDocumentConversionException(BlokConversionFailure.TimedOut, new TimeoutException()));
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => log.Any(line => line.Contains("gave up exporting", StringComparison.Ordinal)),
+        "the export to be given up");
+
+    var attempts = converter.Exports;
+
+    for (var tick = 0; tick < 20; tick++)
+    {
+      time.Advance(TimeSpan.FromMinutes(1));
+      await manager.SettleAsync();
+    }
+
+    Assert.Equal(attempts, converter.Exports);
+    Assert.Empty(endpoint.Saves);
+  }
+
+  /// <summary>
+  /// The working set holds every edit, so after the give-up the room may
+  /// unload: waiting cannot produce the projection, and holding the room
+  /// would only keep it in memory forever.
+  /// </summary>
+  [Fact]
+  public async Task OnAWorkingCopyAGivenUpExportLetsTheRoomUnload()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var writer = new FakeMember();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read",
+        new BlokDocumentConversionException(BlokConversionFailure.DocumentTooLarge, new InvalidOperationException()));
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+    await membership.LeaveAsync();
+
+    for (var tick = 0; tick < 20; tick++)
+    {
+      time.Advance(TimeSpan.FromMinutes(1));
+      await manager.SettleAsync();
+    }
+
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Empty(endpoint.Saves);
+    Assert.Equal("hello!", YDocs.Replay(store.FramesOf(DocId)));
+  }
+
+  [Fact]
+  public async Task OnAWorkingCopyAnEnginePoolWaitNeverGivesTheExportUp()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var writer = new FakeMember();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read", new OperationCanceledException());
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+
+    for (var tick = 0; tick < 20; tick++)
+    {
+      time.Advance(TimeSpan.FromMinutes(1));
+      await manager.SettleAsync();
+    }
+
+    Assert.DoesNotContain(log, line => line.Contains("gave up exporting", StringComparison.Ordinal));
+    Assert.True(converter.Exports > 8, $"{converter.Exports} export attempts");
+  }
+
+  /// <summary>
   /// Eviction and drain export through the flush, which must classify the
   /// same way: a transient failure is logged and left for the next load, not
   /// marked as a document that can never be exported.

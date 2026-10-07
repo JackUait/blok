@@ -48,7 +48,8 @@ export const versionHref = (
   targetPages: readonly string[] | null,
 ): string => {
   const path = trimSlash(routerPath) || '/';
-  const exists = targetPages === null || targetPages.includes(path);
+  // `/404` is never a page of its own: the root ships only `404.html`.
+  const exists = path !== '/404' && (targetPages === null || targetPages.includes(path));
   const page = exists ? path : localeHome(path);
   return page === '/' ? target.path : `${target.path}${page.slice(1)}/`;
 };

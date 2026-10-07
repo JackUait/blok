@@ -170,3 +170,53 @@ describe('JSON-LD', () => {
     expect(graphTypes(buildMetaDescriptors('/demo'))).not.toContain('TechArticle');
   });
 });
+
+// A `/next/` or `/v/<minor>/` build. Its pages are noindex copies; every URL in
+// these tags is a ROOT URL, which only exists if the stable root has the route.
+describe('buildMetaDescriptors in a snapshot build', () => {
+  const snapshot = (rootRoutes: string[]) => ({ isSnapshot: true, rootRoutes: new Set(rootRoutes) });
+  const links = (descriptors: Descriptor[]) => descriptors.filter((d) => d.tagName === 'link');
+
+  it('names no canonical or og:url when the stable root lacks the route', () => {
+    const descriptors = buildMetaDescriptors('/docs/table', snapshot(['/', '/docs']));
+    expect(find(descriptors, 'rel', 'canonical')).toBeUndefined();
+    expect(find(descriptors, 'property', 'og:url')).toBeUndefined();
+  });
+
+  it('never falls back to the homepage canonical', () => {
+    const descriptors = buildMetaDescriptors('/docs/table', snapshot(['/']));
+    expect(JSON.stringify(links(descriptors))).not.toContain(`"${SITE_URL}/"`);
+  });
+
+  it('canonicalises to the root twin when the stable root has it', () => {
+    const descriptors = buildMetaDescriptors('/ru/docs/table', snapshot(['/ru/docs/table']));
+    expect(find(descriptors, 'rel', 'canonical')?.href).toBe(`${SITE_URL}/ru/docs/table/`);
+    expect(find(descriptors, 'property', 'og:url')?.content).toBe(`${SITE_URL}/ru/docs/table/`);
+  });
+
+  // `/tools` canonicalises to `/docs/paragraph`, so the target decides, not the pathname.
+  it('checks the canonical target, not the requested path', () => {
+    expect(find(buildMetaDescriptors('/tools', snapshot(['/tools'])), 'rel', 'canonical')).toBeUndefined();
+    expect(find(buildMetaDescriptors('/tools', snapshot(['/docs/paragraph'])), 'rel', 'canonical')?.href).toBe(
+      `${SITE_URL}/docs/paragraph/`,
+    );
+  });
+
+  // Snapshots get noindex only after the build, so the noindex rule above never
+  // removed their hreflang; a one-way set from a noindex copy is ignored anyway.
+  it('emits no hreflang alternates', () => {
+    const descriptors = buildMetaDescriptors('/docs/table', snapshot(['/docs/table', '/ru/docs/table']));
+    expect(descriptors.filter((d) => 'hreflang' in d)).toEqual([]);
+  });
+
+  // A snapshot ships no .md files; the root's mirror describes a different version.
+  it('advertises no markdown mirror', () => {
+    const descriptors = buildMetaDescriptors('/docs/table', snapshot(['/docs/table']));
+    expect(find(descriptors, 'type', 'text/markdown')).toBeUndefined();
+  });
+
+  // Its ids and urls all name root pages that describe another version.
+  it('emits no JSON-LD', () => {
+    expect(jsonLd(buildMetaDescriptors('/docs/table', snapshot(['/docs/table'])))).toEqual([]);
+  });
+});

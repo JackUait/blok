@@ -1,5 +1,6 @@
 import { hasMarkdownMirror, markdownMirrorUrl } from './locales';
 import { getRouteMetadata } from './route-metadata';
+import { SNAPSHOT_CONTEXT, type SnapshotContext } from './snapshot';
 
 /**
  * One sentence in the body naming this page's markdown mirror.
@@ -18,10 +19,17 @@ import { getRouteMetadata } from './route-metadata';
  * `data-nosnippet` is the one attribute Google honours for that; the ordering
  * fix (rendering it after the app) is what covers every other extractor.
  */
-export const MarkdownPointer = ({ pathname }: { pathname: string }) => {
+export const MarkdownPointer = ({
+  pathname,
+  snapshot = SNAPSHOT_CONTEXT,
+}: {
+  pathname: string;
+  snapshot?: SnapshotContext;
+}) => {
   // Every route renders this, including the noindex ones and any address that
-  // matches no route at all — and the build writes a mirror for neither.
-  if (!hasMarkdownMirror(getRouteMetadata(pathname))) return null;
+  // matches no route at all — and the build writes a mirror for neither. A
+  // snapshot writes none at all.
+  if (snapshot.isSnapshot || !hasMarkdownMirror(getRouteMetadata(pathname))) return null;
 
   return (
     <div className="sr-only" aria-hidden="true" data-nosnippet="">

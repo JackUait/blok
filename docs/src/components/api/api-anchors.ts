@@ -1,6 +1,6 @@
 /** "blocks.clear()" -> "blocks-api-blocks-clear" */
 export const generateMethodId = (sectionId: string, methodName: string): string => {
-  const methodBase = methodName.split('(')[0];
+  const methodBase = methodName.split('(')[0].trim();
   const cleanName = methodBase
     .replace(/[.]+/g, '-')
     .replace(/-+/g, '-')

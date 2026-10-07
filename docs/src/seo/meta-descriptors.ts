@@ -9,6 +9,7 @@ import {
   splitLocalePath,
 } from './locales';
 import { ROUTE_METADATA, getRouteMetadata } from './route-metadata';
+import { SNAPSHOT_CONTEXT, rootHasUrl, type SnapshotContext } from './snapshot';
 
 /**
  * A React Router meta descriptor. `title` renders <title>, `tagName: 'link'`
@@ -26,7 +27,10 @@ const SITE_NAME = 'Blok';
  * tag hoisting: `root.tsx` already renders `<Meta />`, and a hoisted `<title>`
  * would sit alongside the one `<Meta />` emits instead of replacing it.
  */
-export const buildMetaDescriptors = (pathname: string): MetaDescriptor[] => {
+export const buildMetaDescriptors = (
+  pathname: string,
+  snapshot: SnapshotContext = SNAPSHOT_CONTEXT,
+): MetaDescriptor[] => {
   const meta = getRouteMetadata(pathname);
 
   if (!meta) {
@@ -45,18 +49,23 @@ export const buildMetaDescriptors = (pathname: string): MetaDescriptor[] => {
   // path: `/ru/docs/table` and `/docs/table` are the same page in two languages.
   const { locale, path } = splitLocalePath(pathname);
 
+  // A snapshot names a root URL only where the stable root ships that route.
+  // Its hreflang, mirror and JSON-LD would all describe another version.
+  const { isSnapshot } = snapshot;
+  const canonical = !isSnapshot || rootHasUrl(meta.canonical, snapshot) ? meta.canonical : undefined;
+
   return [
     { title: meta.title },
     { name: 'description', content: meta.description },
     ...(meta.noindex ? [{ name: 'robots', content: 'noindex, follow' }] : []),
-    { tagName: 'link', rel: 'canonical', href: meta.canonical },
+    ...(canonical ? [{ tagName: 'link', rel: 'canonical', href: canonical }] : []),
 
     // The page as clean markdown, for agents that fetch URLs. Emitted as a tag
     // rather than the `Link: <...>; rel="alternate"` response header because
     // GitHub Pages serves static files and lets nobody set headers; a
     // DOM-parsing fetcher is therefore the only client that can be reached.
     // Omitted where the build writes no mirror: there would be no file to point at.
-    ...(hasMarkdownMirror(meta)
+    ...(!isSnapshot && hasMarkdownMirror(meta)
       ? [
           {
             tagName: 'link',
@@ -69,7 +78,7 @@ export const buildMetaDescriptors = (pathname: string): MetaDescriptor[] => {
 
     // Reciprocal on both trees — an unreciprocated hreflang set is ignored
     // outright. Omitted where the page is noindex, which hreflang cannot rescue.
-    ...(meta.noindex
+    ...(meta.noindex || isSnapshot
       ? []
       : alternateUrls(path).map((alternate) => ({
           tagName: 'link',
@@ -86,7 +95,7 @@ export const buildMetaDescriptors = (pathname: string): MetaDescriptor[] => {
       property: 'og:locale:alternate',
       content: OG_LOCALE[other],
     })),
-    { property: 'og:url', content: meta.canonical },
+    ...(canonical ? [{ property: 'og:url', content: canonical }] : []),
     { property: 'og:title', content: meta.title },
     { property: 'og:description', content: meta.description },
     { property: 'og:image', content: meta.ogImage },
@@ -100,6 +109,6 @@ export const buildMetaDescriptors = (pathname: string): MetaDescriptor[] => {
     { name: 'twitter:image', content: meta.ogImage },
     { name: 'twitter:image:alt', content: `${SITE_NAME} — ${meta.h1}` },
 
-    { 'script:ld+json': buildJsonLd(path, meta, locale) },
+    ...(isSnapshot ? [] : [{ 'script:ld+json': buildJsonLd(path, meta, locale) }]),
   ];
 };

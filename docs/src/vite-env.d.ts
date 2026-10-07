@@ -4,6 +4,8 @@
 interface ImportMetaEnv {
   readonly VITE_APP_TITLE: string;
   readonly VITE_DOCS_VERSION?: string;
+  /** JSON array of the stable root's routes; see src/seo/snapshot.ts. */
+  readonly VITE_DOCS_ROOT_ROUTES?: string;
 }
 
 interface ImportMeta {

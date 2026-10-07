@@ -45,3 +45,11 @@ describe('MarkdownPointer', () => {
     expect(render(<MarkdownPointer pathname="/not-a-real-page" />).container.firstChild).toBeNull();
   });
 });
+
+describe('MarkdownPointer in a snapshot build', () => {
+  // Snapshots ship no mirrors; the root's file describes another version.
+  it('renders nothing', () => {
+    const snapshot = { isSnapshot: true, rootRoutes: new Set(['/docs/table']) };
+    expect(render(<MarkdownPointer pathname="/docs/table" snapshot={snapshot} />).container.firstChild).toBeNull();
+  });
+});

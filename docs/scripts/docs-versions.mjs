@@ -98,3 +98,24 @@ export const pruneToBudget = (entries, fixedBytes, budget = 900 * 1024 ** 2) => 
 };
 
 export const dirBytes = (dir) => (existsSync(dir) ? walk(dir).reduce((sum, path) => sum + statSync(path).size, 0) : 0);
+
+/**
+ * The env a snapshot build runs with. `rootPages` is the stable root's
+ * pages.json; with it, a snapshot page names its root twin only where that
+ * twin exists (src/seo/snapshot.ts reads VITE_DOCS_ROOT_ROUTES).
+ */
+export const snapshotBuildEnv = ({ base, version, rootPages }) => {
+  const env = { DOCS_BASE: base, VITE_DOCS_VERSION: version };
+  if (rootPages === undefined) return env;
+  if (base === '/') throw new Error('The root build is the stable root; it takes no root pages.json.');
+  let routes;
+  try {
+    routes = JSON.parse(rootPages);
+  } catch {
+    routes = null;
+  }
+  if (!Array.isArray(routes) || !routes.every((route) => typeof route === 'string' && route.startsWith('/'))) {
+    throw new Error('Root pages.json must be a JSON array of site paths.');
+  }
+  return { ...env, VITE_DOCS_ROOT_ROUTES: JSON.stringify(routes) };
+};

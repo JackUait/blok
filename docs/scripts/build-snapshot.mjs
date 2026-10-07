@@ -1,17 +1,19 @@
 // Usage (from repo root, after the library `yarn build`):
-//   node docs/scripts/build-snapshot.mjs --version <id> --base <base> --out <file.tgz>
+//   node docs/scripts/build-snapshot.mjs --version <id> --base <base> --out <file.tgz> [--root-pages <pages.json>]
+// --root-pages is the stable root's route list (assemble-site.mjs --root-pages writes it).
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { injectNoindex, listPages, relocateBuild } from './docs-versions.mjs';
+import { injectNoindex, listPages, relocateBuild, snapshotBuildEnv } from './docs-versions.mjs';
 
 const { values } = parseArgs({
   options: {
     version: { type: 'string' },
     base: { type: 'string' },
     out: { type: 'string' },
+    'root-pages': { type: 'string' },
   },
 });
 if (!values.version || !values.base || !values.out) {
@@ -20,6 +22,11 @@ if (!values.version || !values.base || !values.out) {
 }
 
 const { version, base } = values;
+const buildEnv = snapshotBuildEnv({
+  base,
+  version,
+  rootPages: values['root-pages'] && readFileSync(resolve(values['root-pages']), 'utf8'),
+});
 const out = resolve(values.out);
 const docsDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const clientDir = join(docsDir, 'dist', 'client');
@@ -27,7 +34,7 @@ const run = (command, args) =>
   execFileSync(command, args, {
     cwd: docsDir,
     stdio: 'inherit',
-    env: { ...process.env, DOCS_BASE: base, VITE_DOCS_VERSION: version },
+    env: { ...process.env, ...buildEnv },
   });
 
 // A stale dist would leak the previous snapshot's tree into this tarball.

@@ -1618,6 +1618,7 @@
         </a>
       </div>
       <div id="presence-stack" class="playground-presence-stack"></div>
+      <button id="pg-history-button" class="pg-history-button" type="button" hidden><span id="pg-history-icon" aria-hidden="true"></span>History</button>
     </div>
 
     <!-- Editor tab -->
@@ -1795,7 +1796,7 @@
     import './src/playground/playground.css';
     import DEFAULT_BLOCKS from './playground-document.json';
     import { Blok } from './src/blok.ts';
-    import { blocksToHtml } from './src/view/index.ts';
+    import { blocksToHtml, diffOutputData } from './src/view/index.ts';
     // Raw text of the published opt-in view stylesheet. We scope it under
     // #blokview-panel before injecting, because the live editor ALSO stamps
     // `data-blok-tool` on its blocks — an unscoped import would double-style the
@@ -1822,6 +1823,7 @@
     import { remotePagePlayground } from './src/playground/remote-page-host.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
+    import { mountHistoryDrawer, playgroundTicketUrl } from './src/playground/history-drawer.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
     import { renderErrorState as renderAudioErrorState } from './src/tools/audio/ui.ts';
     import { renderErrorState as renderVideoErrorState } from './src/tools/video/ui.ts';
@@ -1871,6 +1873,9 @@
         page: true,
       },
     };
+
+    // The pass mint `yarn serve` starts; absent with --no-server.
+    const DEV_TICKET_URL = import.meta.env.VITE_BLOK_TICKET_URL ?? null;
 
     /**
      * `yarn serve` starts a sync service beside Vite and sets this flag;
@@ -2050,7 +2055,7 @@
         // seeds it from this same file — passing `data` too would give it two owners.
         ...(collaboration === null
           ? documentSource
-          : { server: DEV_SERVER_URL, collaboration }),
+          : { server: DEV_SERVER_URL, collaboration, ...(DEV_TICKET_URL !== null && { ticket: playgroundTicketUrl(DEV_TICKET_URL, collaboration.user?.name ?? null) }) }),
         onChange(api, event) {
           console.log('something changed', event);
           refreshBlokView();
@@ -2345,6 +2350,7 @@
     async function swapEditor(overrides = {}) {
       clearTimeout(persistTimer);
       persistPending = false;
+      historyDrawer?.close();
       blok.destroy();
       titleHistory = null;
       const editor = new Blok({ ...buildConfig(), ...overrides });
@@ -2436,6 +2442,22 @@
 
     let blok = new Blok(buildConfig());
     window.blok = blok;
+
+    // History needs the server's passes, so it is off with ?collab=off or --no-server.
+    const historyDrawer = DEV_TICKET_URL !== null && collaborationConfig() !== null
+      ? mountHistoryDrawer({
+        button: document.getElementById('pg-history-button'),
+        editorArea: document.getElementById('editor-col'),
+        server: DEV_SERVER_URL,
+        ticketUrl: playgroundTicketUrl(DEV_TICKET_URL, collaborationConfig().user?.name ?? null),
+        view: { blocksToHtml, diffOutputData },
+        doc: () => collaborationConfig(editorPageId)?.doc ?? null,
+        self: () => userConfig(),
+        notify: (message) => blok.notifier.show({ message, style: 'success' }),
+      })
+      : null;
+    document.getElementById('pg-history-icon').innerHTML = Icons.IconRotateLeft;
+    document.getElementById('pg-history-button').hidden = historyDrawer === null;
     blok.isReady.then(() => {
       wirePageTitle(blok);
       wireCollaborationPresence(blok);
@@ -2799,14 +2821,14 @@
     const blokviewCol = document.getElementById('blokview-col');
     const blokviewPanel = document.getElementById('blokview-panel');
 
-    // Scope every view.css rule under #blokview-panel, then inject once. The
+    // Scope every view.css rule under the Blok View panel and the history preview, then inject once. The
     // editor stamps `data-blok-tool` on its own blocks, so an unscoped sheet
     // would restyle the editor too.
     (function injectScopedViewCss() {
       const scoped = viewCssText
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/([^{}]+)\{/g, (_m, sel) =>
-          sel.split(',').map((s) => `#blokview-panel ${s.trim()}`).filter(Boolean).join(', ') + ' {');
+          sel.split(',').map((s) => `:is(#blokview-panel, #pg-history-render) ${s.trim()}`).filter(Boolean).join(', ') + ' {');
       const style = document.createElement('style');
       style.id = 'blokview-scoped-css';
       style.textContent = scoped;

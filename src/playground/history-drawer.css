@@ -1,0 +1,213 @@
+/*
+  Version history drawer (src/playground/history-drawer.ts). Playground chrome
+  outside every Blok root, so plain values: the --blok-radius-* roles resolve
+  to nothing out here. Dark mode is the body's .dark-mode class, not a media
+  query — the playground's theme switch only flips that class.
+*/
+.pg-history,
+.pg-history-preview,
+.pg-history-button {
+  --pgh-bg: #ffffff;
+  --pgh-ink: #222222;
+  --pgh-muted: #717171;
+  --pgh-line: #ebebeb;
+  --pgh-line-strong: #dddddd;
+  --pgh-hover: #f7f7f7;
+  --pgh-on-ink: #ffffff;
+  --pgh-added-bg: #e6f4ea;
+  --pgh-removed-ink: #b3261e;
+  --pgh-removed-bg: #fdecea;
+}
+.dark-mode .pg-history,
+.dark-mode .pg-history-preview,
+.dark-mode .pg-history-button {
+  --pgh-bg: #191919;
+  --pgh-ink: #ececec;
+  --pgh-muted: #a8a8a8;
+  --pgh-line: #2f2f2f;
+  --pgh-line-strong: #3d3d3d;
+  --pgh-hover: #232323;
+  --pgh-on-ink: #191919;
+  --pgh-added-bg: #16301f;
+  --pgh-removed-ink: #f2918a;
+  --pgh-removed-bg: #3a1d1b;
+}
+
+/* Header button: sits beside the presence faces. */
+.pg-history-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-start: 12px;
+  padding: 7px 12px;
+  border: 1px solid var(--pgh-line-strong);
+  border-radius: 8px;
+  background: var(--pgh-bg);
+  color: var(--pgh-ink);
+  font-family: var(--pg-font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pg-history-button[hidden] { display: none; }
+.pg-history-button:hover,
+.pg-history-button[aria-expanded="true"] { background: var(--pgh-hover); }
+.pg-history-button svg { width: 16px; height: 16px; }
+
+/* The drawer: fixed under the 80px playground header. */
+.pg-history {
+  position: fixed;
+  inset-block: 80px 0;
+  inset-inline-end: 0;
+  z-index: 19;
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  max-width: 100%;
+  background: var(--pgh-bg);
+  border-inline-start: 1px solid var(--pgh-line);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.06);
+  color: var(--pgh-ink);
+  font-family: var(--pg-font);
+}
+.pg-history[hidden] { display: none; }
+.pg-history__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 8px;
+}
+.pg-history__title { margin: 0; font-size: 15px; font-weight: 700; }
+.pg-history__status { margin: 0; padding: 0 16px; color: var(--pgh-muted); font-size: 13px; }
+.pg-history__status:empty { display: none; }
+.pg-history__list { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 6px; list-style: none; }
+.pg-history__lineage { padding: 14px 10px 6px; color: var(--pgh-muted); font-size: 12px; font-weight: 600; }
+
+/* Rows: a selected row is gray with a check mark, never blue. */
+.pg-history__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.pg-history__row:hover,
+.pg-history__row[aria-current="true"] { background: var(--pgh-hover); }
+.pg-history__time { font-size: 14px; font-weight: 600; }
+.pg-history__who { grid-column: 1; color: var(--pgh-muted); font-size: 12px; }
+.pg-history__check { grid-row: 1 / 3; grid-column: 2; align-self: center; display: inline-flex; opacity: 0; }
+.pg-history__check svg { width: 16px; height: 16px; }
+.pg-history__row[aria-current="true"] .pg-history__check { opacity: 1; }
+
+.pg-history__button {
+  padding: 7px 12px;
+  border: 1px solid var(--pgh-line-strong);
+  border-radius: 8px;
+  background: var(--pgh-bg);
+  color: var(--pgh-ink);
+  font-family: var(--pg-font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pg-history__button:hover { background: var(--pgh-hover); }
+.pg-history__button--primary { border-color: var(--pgh-ink); background: var(--pgh-ink); color: var(--pgh-on-ink); }
+.pg-history__button--primary:hover { background: var(--pgh-ink); opacity: 0.88; }
+.pg-history__button:disabled { cursor: default; opacity: 0.5; }
+
+html[data-pg-modality="keyboard"] .pg-history-button:focus-visible,
+html[data-pg-modality="keyboard"] .pg-history__row:focus-visible,
+html[data-pg-modality="keyboard"] .pg-history__button:focus-visible,
+html[data-pg-modality="keyboard"] .pg-history-note__toggle:focus-visible {
+  outline: 2px solid var(--pgh-ink);
+  outline-offset: 2px;
+}
+
+/* The editor column moves over so the drawer never covers the text. */
+@media (min-width: 761px) {
+  body.pg-history-open #editor-sheet { padding-inline-end: 320px; }
+}
+
+/* Preview: stands in for the hidden editor. */
+.pg-history-preview {
+  /* A flex item in #editor-split, like the editor column it replaces. */
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 720px;
+  margin: 0 auto;
+  color: var(--pgh-ink);
+}
+.pg-history-preview[hidden] { display: none; }
+.pg-history-banner {
+  position: sticky;
+  inset-block-start: 80px;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-block-end: 1px solid var(--pgh-line);
+  background: var(--pgh-bg);
+  font-family: var(--pg-font);
+  font-size: 13px;
+}
+.pg-history-banner__controls { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pg-history-banner__error { flex-basis: 100%; margin: 0; color: var(--pgh-removed-ink); }
+.pg-history-banner__error[hidden] { display: none; }
+.pg-history-doc { padding: 20px 0 80px; }
+.pg-history-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 20px;
+  color: var(--pgh-muted);
+  font-family: var(--pg-font);
+  font-size: 13px;
+}
+.pg-history-note__key { display: inline-flex; align-items: center; gap: 6px; }
+.pg-history-note__swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.pg-history-note__swatch--added { background: var(--pgh-added-bg); }
+.pg-history-note__swatch--removed { background: var(--pgh-removed-bg); }
+.pg-history-note__swatch--changed { width: 3px; background: var(--pgh-muted); }
+
+/* Change marks, keyed off the [data-blok-id] roots the view renderer stamps. */
+.pg-history-render [data-pg-change="added"] {
+  background: var(--pgh-added-bg);
+  box-shadow: -6px 0 0 var(--pgh-added-bg), 6px 0 0 var(--pgh-added-bg);
+}
+.pg-history-render [data-pg-change="changed"] {
+  box-shadow: inset 3px 0 0 var(--pgh-muted);
+  padding-inline-start: 12px;
+}
+.pg-history-render [data-pg-change="removed"] {
+  background: var(--pgh-removed-bg);
+  box-shadow: -6px 0 0 var(--pgh-removed-bg), 6px 0 0 var(--pgh-removed-bg);
+  color: var(--pgh-removed-ink);
+  text-decoration: line-through;
+}
+
+@media (max-width: 760px) {
+  .pg-history {
+    inset-block-start: auto;
+    width: 100%;
+    height: 55%;
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--pgh-line);
+  }
+  body.pg-history-open .pg-history-preview { padding-block-end: 55vh; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pg-history { animation: pg-history-rise 0.18s ease-out; }
+  @keyframes pg-history-rise { from { opacity: 0; transform: translateY(6px); } }
+}

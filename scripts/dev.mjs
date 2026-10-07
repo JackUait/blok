@@ -11,6 +11,7 @@
  * touch the backend.
  */
 import { spawn, spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,6 +35,7 @@ const SYNC_PORT = 4000;
 const DOCUMENT_PORT = 4500;
 const DEFAULT_VITE_PORT = 3303;
 const PAGE_HOST_PORT = 4600;
+const TICKET_PORT = 4700;
 
 /**
  * Split our own flags from Vite's.
@@ -165,6 +167,35 @@ export function vitePort(viteArgs) {
 }
 
 /**
+ * The sync service's command line.
+ *
+ * Ticket mode, so every write is journalled under a user and history can name
+ * its authors. The secret goes in BLOK_SECRET, never on the command line.
+ *
+ * @param {object} options
+ * @param {string} options.listen
+ * @param {string[]} options.origins Playground origins.
+ * @param {string} options.collabDir
+ * @param {string} options.docEndpoint
+ * @param {string} options.storageDir
+ * @returns {string[]}
+ */
+export function syncServiceArgs({ listen, origins, collabDir, docEndpoint, storageDir }) {
+  return [
+    '--listen', listen,
+    '--auth', 'ticket',
+    // Ticket mode defaults to 60 requests a minute; one playground tab uses more.
+    '--rate-limit', '0',
+    '--collab',
+    '--collab-journal',
+    '--collab-dir', collabDir,
+    '--doc-endpoint', docEndpoint,
+    '--allow-origin', origins.join(','),
+    '--storage-dir', storageDir,
+  ];
+}
+
+/**
  * The first content of each collaboration room: the showcase for the root
  * document, a demo page's own blocks, and nothing for a page the user made.
  *
@@ -222,38 +253,49 @@ async function main() {
   process.on('SIGTERM', () => shutdown(0));
 
   let backendRunning = false;
+  let ticketUrl = null;
 
-  if (mode.enabled) {
-    if (buildSyncService()) {
-      // The shared document lives exactly as long as this command does, so the
-      // playground opens on its showcase again after every restart. The room
-      // would otherwise reload its own saved copy and ignore the store.
-      rmSync(join(DEV_DIRECTORY, 'collab'), { recursive: true, force: true });
+  if (mode.enabled && !buildSyncService()) {
+    console.error('[blok] the sync service did not build — starting the playground without the backend.');
+  } else if (mode.enabled) {
+    // The shared document lives exactly as long as this command does, so the
+    // playground opens on its showcase again after every restart. The room
+    // would otherwise reload its own saved copy and ignore the store.
+    rmSync(join(DEV_DIRECTORY, 'collab'), { recursive: true, force: true });
 
-      await startDocumentStore({
-        port: DOCUMENT_PORT,
-        seedFor: playgroundSeedFor({
-          showcase: { blocks: JSON.parse(readFileSync(PLAYGROUND_DOCUMENT, 'utf8')) },
-          pages: JSON.parse(readFileSync(PLAYGROUND_PAGES, 'utf8')),
-        }),
+    await startDocumentStore({
+      port: DOCUMENT_PORT,
+      seedFor: playgroundSeedFor({
+        showcase: { blocks: JSON.parse(readFileSync(PLAYGROUND_DOCUMENT, 'utf8')) },
+        pages: JSON.parse(readFileSync(PLAYGROUND_PAGES, 'utf8')),
+      }),
+    });
+
+    const origins = [`http://localhost:${vitePort(viteArgs)}`, `http://127.0.0.1:${vitePort(viteArgs)}`];
+    // A new secret per run: passes from an earlier run stop working with it.
+    const secret = randomBytes(32).toString('hex');
+
+    // Imported late: on a Node that cannot run .ts the playground still starts.
+    ticketUrl = await import('./dev-ticket.mjs')
+      .then(({ startTicketMint }) => startTicketMint({ port: TICKET_PORT, secret, origins }))
+      .then(({ url }) => url)
+      .catch((error) => {
+        console.error(`[blok] the ticket mint did not start (${error.message}) — starting the playground without the backend. It needs Node 22.18+.`);
+
+        return null;
       });
 
-      const origins = [`http://localhost:${vitePort(viteArgs)}`, `http://127.0.0.1:${vitePort(viteArgs)}`];
-
-      supervise('sync service', spawn(BINARY, [
-        '--listen', `127.0.0.1:${SYNC_PORT}`,
-        '--auth', 'none',
-        '--collab',
-        '--collab-dir', join(DEV_DIRECTORY, 'collab'),
-        '--doc-endpoint', `http://127.0.0.1:${DOCUMENT_PORT}/docs`,
-        '--allow-origin', origins.join(','),
-        '--storage-dir', join(DEV_DIRECTORY, 'uploads'),
-      ], { cwd: ROOT, stdio: 'inherit' }));
+    if (ticketUrl !== null) {
+      supervise('sync service', spawn(BINARY, syncServiceArgs({
+        listen: `127.0.0.1:${SYNC_PORT}`,
+        origins,
+        collabDir: join(DEV_DIRECTORY, 'collab'),
+        docEndpoint: `http://127.0.0.1:${DOCUMENT_PORT}/docs`,
+        storageDir: join(DEV_DIRECTORY, 'uploads'),
+      }), { cwd: ROOT, stdio: 'inherit', env: { ...process.env, BLOK_SECRET: secret } }));
 
       backendRunning = true;
-      console.log(`[blok] collaboration is on — open the playground in two windows to see it.`);
-    } else {
-      console.error('[blok] the sync service did not build — starting the playground without the backend.');
+      console.log(`[blok] collaboration is on — open the playground in two windows to see it. Passes come from ${ticketUrl}.`);
     }
   }
 
@@ -284,6 +326,7 @@ async function main() {
     env: {
       ...process.env,
       BLOK_DEV_BACKEND: backendRunning ? '1' : '0',
+      ...(ticketUrl !== null && { VITE_BLOK_TICKET_URL: ticketUrl }),
       ...(pageHost !== null && { VITE_BLOK_PAGE_HOST_URL: pageHost.url }),
     },
   }));

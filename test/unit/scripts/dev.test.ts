@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { isBuildStale, parseDevArgs, playgroundSeedFor, resolveBackendMode, vitePort } from '../../../scripts/dev.mjs';
+import { isBuildStale, parseDevArgs, playgroundSeedFor, resolveBackendMode, syncServiceArgs, vitePort } from '../../../scripts/dev.mjs';
 
 describe('parseDevArgs', () => {
   it('takes --no-server off the list Vite receives', () => {
@@ -107,5 +107,48 @@ describe('playgroundSeedFor', () => {
 
   it('seeds a demo page with its own blocks', () => {
     expect(seedFor('playground--page--getting-started')).toEqual({ blocks: pages['getting-started'].blocks });
+  });
+});
+
+describe('syncServiceArgs', () => {
+  const args = syncServiceArgs({
+    listen: '127.0.0.1:4000',
+    origins: ['http://localhost:3303', 'http://127.0.0.1:3303'],
+    collabDir: '/repo/.dev/collab',
+    docEndpoint: 'http://127.0.0.1:4500/docs',
+    storageDir: '/repo/.dev/uploads',
+  });
+  const valueOf = (flag: string): string | undefined => {
+    const index = args.indexOf(flag);
+
+    return index === -1 ? undefined : args[index + 1];
+  };
+
+  // History names its authors from ticket users; --auth none journals no actor.
+  it('runs the service in ticket mode', () => {
+    expect(valueOf('--auth')).toBe('ticket');
+  });
+
+  // Ticket mode turns on 60 requests a minute; one playground session uses more.
+  it('turns the ticket-mode rate limit off', () => {
+    expect(valueOf('--rate-limit')).toBe('0');
+  });
+
+  it('keeps the operation journal history is read from', () => {
+    expect(args).toContain('--collab-journal');
+    expect(args).toContain('--collab');
+  });
+
+  // The secret goes by BLOK_SECRET so it never shows in a process list.
+  it('never puts a secret on the command line', () => {
+    expect(args).not.toContain('--secret');
+  });
+
+  it('keeps the listen address, origins, rooms, store and uploads', () => {
+    expect(valueOf('--listen')).toBe('127.0.0.1:4000');
+    expect(valueOf('--allow-origin')).toBe('http://localhost:3303,http://127.0.0.1:3303');
+    expect(valueOf('--collab-dir')).toBe('/repo/.dev/collab');
+    expect(valueOf('--doc-endpoint')).toBe('http://127.0.0.1:4500/docs');
+    expect(valueOf('--storage-dir')).toBe('/repo/.dev/uploads');
   });
 });

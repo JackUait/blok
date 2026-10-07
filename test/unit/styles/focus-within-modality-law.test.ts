@@ -44,6 +44,10 @@ const STANDALONE_CSS_ENTRIES = [
     file: 'src/playground/page-tree.css',
     reason: 'Dev-page drawer styles, imported by src/playground/page-tree.ts alone — never reachable from main.css.',
   },
+  {
+    file: 'src/playground/history-drawer.css',
+    reason: 'Dev-page history drawer styles, imported by src/playground/history-drawer.ts alone — never reachable from main.css.',
+  },
 ];
 
 /** Every local .css file main.css pulls in, transitively. */

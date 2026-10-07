@@ -37,6 +37,7 @@ const EXEMPT_FILES: Exemption[] = [
   { file: 'src/tools/database/database-view.ts', reason: 'not rendered by the product; only unit tests import it' },
   { file: 'src/playground/radius-gallery.ts', reason: 'the rounding page draws any radius and every primitive to explain the rule' },
   { file: 'src/playground/page-tree.css', reason: 'playground chrome outside every Blok root, where the radius roles are not defined and resolve to 0' },
+  { file: 'src/playground/history-drawer.css', reason: 'playground chrome outside every Blok root, where the radius roles are not defined and resolve to 0' },
 ];
 
 const exempt = new Set(EXEMPT_FILES.map((e) => e.file));

@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Nav } from '../components/layout/Nav';
+import { PageMain } from '../components/layout/PageMain';
 import { Footer } from '../components/layout/Footer';
 import { Hero } from '../components/home/Hero';
 import { CategoryBar, HOME_CATEGORIES, type HomeView } from '../components/home/CategoryBar';
@@ -142,7 +143,7 @@ export const HomePage: React.FC = () => {
   return (
     <>
       <Nav links={NAV_LINKS} />
-      <main>
+      <PageMain>
         <Hero />
         <CategoryBar activeView={activeView} onSelect={handleSelect} />
         <AnimatePresence mode="wait" initial={false}>
@@ -156,7 +157,7 @@ export const HomePage: React.FC = () => {
             {renderPanel()}
           </motion.div>
         </AnimatePresence>
-      </main>
+      </PageMain>
       <Footer />
     </>
   );

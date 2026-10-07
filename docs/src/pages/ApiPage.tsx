@@ -1,5 +1,6 @@
 import { Routes, Route, useLocation } from 'react-router';
 import { Nav } from '../components/layout/Nav';
+import { PageMain } from '../components/layout/PageMain';
 import { Footer } from '../components/layout/Footer';
 import { Sidebar } from '../components/common/Sidebar';
 import { FrameworkToggle } from '../components/common/FrameworkToggle';
@@ -79,9 +80,9 @@ export const ApiContent: React.FC = () => {
 export const ApiPage: React.FC = () => (
   <>
     <Nav links={NAV_LINKS} keepExpanded />
-    <main id="main-content" tabIndex={-1}>
+    <PageMain>
       <ApiContent />
-    </main>
+    </PageMain>
     <Footer />
   </>
 );

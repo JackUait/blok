@@ -1,5 +1,6 @@
 // docs/src/pages/ServerPage.tsx
 import { Nav } from '../components/layout/Nav';
+import { PageMain } from '../components/layout/PageMain';
 import { Footer } from '../components/layout/Footer';
 import { Typo } from '../components/common/Typo';
 import { Prose } from '../components/common/Prose';
@@ -119,9 +120,9 @@ export const ServerContent: React.FC = () => {
 export const ServerPage: React.FC = () => (
   <>
     <Nav links={NAV_LINKS} />
-    <main className="min-h-screen bg-background pt-16">
+    <PageMain className="min-h-screen bg-background pt-16">
       <ServerContent />
-    </main>
+    </PageMain>
     <Footer />
   </>
 );

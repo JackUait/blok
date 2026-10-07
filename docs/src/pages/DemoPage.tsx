@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Nav } from '../components/layout/Nav';
+import { PageMain } from '../components/layout/PageMain';
 import { Footer } from '../components/layout/Footer';
 import { EditorWrapper } from '../components/demo/EditorWrapper';
 import { OutputPanel } from '../components/demo/OutputPanel';
@@ -418,7 +419,7 @@ export const DemoPage: React.FC = () => {
     <>
       <div className="flex min-h-screen flex-col bg-background">
         <Nav links={NAV_LINKS} keepExpanded staticPosition />
-        <main className="flex min-h-0 flex-1 flex-col">
+        <PageMain className="flex min-h-0 flex-1 flex-col">
           <div className="mx-auto w-full max-w-6xl px-6 pt-10 sm:pt-12">
             <DemoIntro />
           </div>
@@ -455,7 +456,7 @@ export const DemoPage: React.FC = () => {
             <DemoGuide />
           </div>
           <SettingsPanel settings={editorSettings} onSettingsChange={handleSettingsChange} />
-        </main>
+        </PageMain>
       </div>
       <Footer />
     </>

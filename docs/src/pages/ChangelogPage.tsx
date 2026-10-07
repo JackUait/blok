@@ -3,6 +3,7 @@ import { useMemo } from "react";
 // Inlined at build time so the changelog prose lands in the prerendered HTML.
 import CHANGELOG_MARKDOWN from "../../../CHANGELOG.md?raw";
 import { Nav } from "../components/layout/Nav";
+import { PageMain } from "../components/layout/PageMain";
 import { Footer } from "../components/layout/Footer";
 import { parseChangelog } from "../utils/changelog-parser";
 import type { Release } from "@/types/changelog";
@@ -408,9 +409,9 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
 const ChangelogPage: React.FC = () => (
   <>
     <Nav links={NAV_LINKS} />
-    <main className="min-h-screen bg-background pt-16">
+    <PageMain className="min-h-screen bg-background pt-16">
       <ChangelogContent />
-    </main>
+    </PageMain>
     <Footer />
   </>
 );

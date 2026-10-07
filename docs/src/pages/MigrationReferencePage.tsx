@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Nav } from "../components/layout/Nav";
+import { PageMain } from "../components/layout/PageMain";
 import { Footer } from "../components/layout/Footer";
 import { CodemodCard } from "../components/migration/CodemodCard";
 import { MigrationSteps } from "../components/migration/MigrationSteps";
@@ -46,7 +47,7 @@ export const MigrationReferencePage: React.FC = () => {
   return (
     <>
       <Nav links={NAV_LINKS} />
-      <main className="min-h-screen bg-background pt-16">
+      <PageMain className="min-h-screen bg-background pt-16">
         <div className="mx-auto w-full max-w-6xl px-6 pt-16 sm:pt-24">
           <h1 className="font-display text-4xl font-extrabold tracking-tight text-balance text-foreground sm:text-5xl">
             <Typo>{t("migration.referencePageTitle")}</Typo>
@@ -68,7 +69,7 @@ export const MigrationReferencePage: React.FC = () => {
             <MigrationSteps />
           </div>
         </div>
-      </main>
+      </PageMain>
       <Footer />
     </>
   );

@@ -51,7 +51,7 @@ public interface ICollabOperationHistoryStore
   ValueTask<CollabLineageDeleteOutcome> DeleteLineageAsync(string documentId, string lineage, CancellationToken ct = default);
 }
 
-public sealed record CollabLineageInfo(string Lineage, ulong Epoch, int Format, DateTimeOffset? CreatedAt, bool Current);
+public sealed record CollabLineageInfo(string Lineage, long Epoch, int Format, DateTimeOffset? CreatedAt, bool Current);
 public sealed record CollabRecordHeader(ulong ServerSequence, DateTimeOffset CommittedAt, string? ActorId);
 public enum CollabLineageDeleteOutcome { Deleted, NotFound, Current, Purged }
 ```
@@ -71,7 +71,7 @@ Rules:
 - New file `lineages` in the document's `.journal` directory. Append-only entries, each with its own checksum: kind (`published` / `deleted`), generation, generation fence, lineage (16 bytes), epoch, format, created-at (UTC ticks or "unknown"). A torn or bad entry is skipped and logged.
 - Entries are keyed by `(generation, fence)`, which names the files exactly. Orphans from failed resets are never listed. Listing reads the ledger; it never globs.
 - **One writer at a time.** A per-document `SemaphoreSlim` inside the store guards every ledger append and every delete.
-- **Reset.** At the start of `ResetAsync`, append the outgoing generation if it has no entry. After the journal swap (`journal = swapped; index.Clear()`), append the new generation. Never between `Republish` and the swap: that gap must not throw (`:1468-1472`). Ledger appends are best-effort: a failure is logged and the reset still succeeds.
+- **Reset.** At the start of `ResetAsync`, append the outgoing generation if it has no entry. After the journal swap (`journal = swapped; index.Clear()`), append the new generation. Never between `Republish` (~1499) and the swap (~1519-1520): that gap must not throw. Ledger appends are best-effort: a failure is logged and the reset still succeeds.
 - **Open.** After `ImportWorkingSet` (`:302-305`), append the current generation if it has no entry.
 - **List without opening.** If the ledger lacks the manifest's current generation, `ListLineagesAsync` adds it in memory from `ReadManifest` (static, no lock), created-at unknown. So a document never opened since the upgrade still shows its current lineage.
 - **Reads.** `journal.G.F` is opened read-only with `FileShare.ReadWrite | FileShare.Delete` and decoded one record at a time with `CollabJournalCodec.TryDecodeRecord`, stopping at a torn tail without truncating. The baseline is read with the existing sealed reader (`ReadSealed` + `TryDecodeFrames`).
@@ -130,7 +130,7 @@ All behind the existing guard and the ticket doc-claim check.
 | `DELETE /sync/{doc}/history/{lineage}` | read + write | `204`; `404` unknown; `409` current |
 | `POST /sync/{doc}/history/{lineage}/{sequence}/restore` | read + write | as `/edit`: `204` with the new head (`Blok-Doc-Lineage`/`Blok-Doc-Sequence`), `412`, `409`, `413`, `503`… Needs `Blok-Idempotency-Key`; optional `If-Match`. |
 
-- History headers are deliberately not `Blok-Doc-*`: those name the live head and feed `If-Match`.
+- History headers are deliberately not `Blok-Doc-*`: those name the live head and feed `If-Match`. They are added to `Access-Control-Expose-Headers` so a browser host can read them.
 - No journal, or a store without the interface: `501 history needs a journal that keeps it`.
 - Unknown lineage, or a sequence past the durable head: `404`. A sequence that is not a `ulong`: `400`.
 - Purged document: `403`, as `/state`. Converter transient failure: `503` with `Retry-After`, as `/state`. Replay refused by the inspector or a corrupt record: `500`, logged.

@@ -190,6 +190,37 @@ describe('handlePageHostRequest', () => {
     expect(request('alice', 'GET', '/nowhere').status).toBe(404);
     expect(request('alice', 'GET', '/pages/%E0%A4%A').status).toBe(400);
   });
+
+  it('starts every document with no bookmarks', () => {
+    const response = request(null, 'GET', '/bookmarks/playground');
+
+    expect(response.status).toBe(200);
+    expect(JSON.parse(response.body ?? '')).toEqual([]);
+  });
+
+  it('keeps the bookmarks put for a document, for any user, apart from other documents', () => {
+    const marks = [{ lineage: 'l2', sequence: 5, savedAt: 1_760_000_000_000 }, { lineage: 'l1', sequence: 0, savedAt: null }];
+    const put = request('alice', 'PUT', '/bookmarks/doc%3Aone', marks);
+
+    expect(put.status).toBe(200);
+    expect(JSON.parse(put.body ?? '')).toEqual(marks);
+    expect(JSON.parse(request('bob', 'GET', '/bookmarks/doc%3Aone').body ?? '')).toEqual(marks);
+    expect(JSON.parse(request('bob', 'GET', '/bookmarks/other').body ?? '')).toEqual([]);
+  });
+
+  it('refuses a bookmark list that is not one', () => {
+    expect(request(null, 'PUT', '/bookmarks/d', { lineage: 'l2' }).status).toBe(400);
+    expect(request(null, 'PUT', '/bookmarks/d', [{ lineage: 'l2', sequence: -1, savedAt: null }]).status).toBe(400);
+    expect(request(null, 'PUT', '/bookmarks/d', [{ lineage: 'l2', sequence: 1.5, savedAt: null }]).status).toBe(400);
+    expect(request(null, 'PUT', '/bookmarks/d', [{ lineage: 2, sequence: 1, savedAt: null }]).status).toBe(400);
+    expect(request(null, 'PUT', '/bookmarks/d', [{ lineage: 'l2', sequence: 1, savedAt: 'now' }]).status).toBe(400);
+    expect(JSON.parse(request(null, 'GET', '/bookmarks/d').body ?? '')).toEqual([]);
+  });
+
+  it('answers other bookmark methods with 405 and a broken escape with 400', () => {
+    expect(request(null, 'POST', '/bookmarks/d', []).status).toBe(405);
+    expect(request(null, 'GET', '/bookmarks/%E0%A4%A').status).toBe(400);
+  });
 });
 
 describe('startPageHost', () => {
@@ -259,6 +290,22 @@ describe('startPageHost', () => {
 
     expect(response.headers.get('access-control-allow-origin')).toBe('*');
     expect((await response.json()).title).toBe('Secret plan');
+  });
+
+  it('lets the playground origin put bookmarks', async () => {
+    const host = await startPageHost({ port: 0, seed: SEED });
+
+    close = host.close;
+
+    const response = await fetch(`${host.url}/bookmarks/playground`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify([{ lineage: 'l2', sequence: 3, savedAt: null }]),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('access-control-allow-origin')).toBe('*');
+    expect(await (await fetch(`${host.url}/bookmarks/playground`)).json()).toEqual([{ lineage: 'l2', sequence: 3, savedAt: null }]);
   });
 
   it('answers a held GET later, and counts it once it is sent', async () => {

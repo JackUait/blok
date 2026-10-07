@@ -7,6 +7,9 @@
  * per-user access, and an event stream that names changed pages but never
  * carries their metadata. The user is whoever `X-Dev-User` (or `?user=`, for
  * EventSource, which cannot send headers) says. There is no authentication.
+ *
+ * It also keeps the playground's version-history bookmarks per document,
+ * shared by every user: `GET/PUT /bookmarks/<doc>`.
  */
 import { createServer } from 'node:http';
 
@@ -34,6 +37,8 @@ export function createPageStore(seed = []) {
   return {
     pages,
     faults,
+    /** Document id → `[{ lineage, sequence, savedAt }]`. */
+    bookmarks: new Map(),
     isMuted: (user) => faults.muted.has(user),
   };
 }
@@ -98,6 +103,10 @@ export function handlePageHostRequest({ store, user, method, path, body }) {
 
   if (path === '/pages' && method === 'POST') {
     return createPage(store, user, body);
+  }
+
+  if (path.startsWith('/bookmarks/')) {
+    return handleBookmarks(store, method, path.slice('/bookmarks/'.length), body);
   }
 
   const match = /^\/pages\/([^/]+)(\/title|\/acl)?$/.exec(path);
@@ -219,6 +228,47 @@ function createPage(store, user, body) {
   store.pages.set(record.pageId, record);
 
   return { ...json(201, publicRecord(record)), broadcast: [record.pageId] };
+}
+
+const isBookmark = (value) => isObject(value)
+  && typeof value.lineage === 'string'
+  && Number.isSafeInteger(value.sequence) && value.sequence >= 0
+  && (value.savedAt === null || Number.isFinite(value.savedAt));
+
+function handleBookmarks(store, method, encodedDoc, body) {
+  let doc;
+
+  try {
+    doc = decodeURIComponent(encodedDoc);
+  } catch {
+    return json(400, { error: 'malformed document id' });
+  }
+
+  if (method === 'GET') {
+    return json(200, store.bookmarks.get(doc) ?? []);
+  }
+
+  if (method !== 'PUT') {
+    return { status: 405 };
+  }
+
+  let list;
+
+  try {
+    list = JSON.parse(body ?? '');
+  } catch {
+    list = null;
+  }
+
+  if (!Array.isArray(list) || !list.every(isBookmark)) {
+    return json(400, { error: 'expected [{ lineage, sequence, savedAt }]' });
+  }
+
+  const kept = list.map(({ lineage, sequence, savedAt }) => ({ lineage, sequence, savedAt }));
+
+  store.bookmarks.set(doc, kept);
+
+  return json(200, kept);
 }
 
 /**

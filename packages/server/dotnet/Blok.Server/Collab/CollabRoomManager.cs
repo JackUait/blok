@@ -1,3 +1,8 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Nodes;
+using Blok.Server.Yjs;
+
 namespace Blok.Server.Collab;
 
 internal enum CollabJoinStatus
@@ -137,6 +142,45 @@ internal sealed record CollabResetResult(
     CollabResetStatus Status,
     CollabWorkingSetTag? Tag,
     Exception? Error);
+
+/// <summary>How a history request resolved before any version was read or restored.</summary>
+internal enum CollabHistoryStatus
+{
+  Ready,
+
+  /// <summary>No journal, or a journal store without history reads.</summary>
+  NoHistory,
+
+  /// <summary>Unknown lineage, or a sequence past the lineage's durable head.</summary>
+  NotFound,
+
+  Purged,
+
+  /// <summary>The converter hit a limit a retry may pass.</summary>
+  Unavailable,
+
+  /// <summary>The converter cannot write the version as JSON.</summary>
+  ExportFailed,
+
+  /// <summary>A stored baseline or record could not be read or replayed.</summary>
+  Corrupt,
+}
+
+internal sealed record CollabHistoryListResult(
+    CollabHistoryStatus Status,
+    IReadOnlyList<CollabLineageInfo> Lineages,
+    IReadOnlyList<CollabVersion> Versions);
+
+/// <summary>A version as OutputData JSON. <paramref name="Time"/> is the point's time, null when unknown.</summary>
+internal sealed record CollabHistoryReadResult(
+    CollabHistoryStatus Status,
+    byte[] Json,
+    DateTimeOffset? Time);
+
+/// <summary><paramref name="Edit"/> is set only when <paramref name="History"/> is Ready.</summary>
+internal sealed record CollabRestoreResult(
+    CollabHistoryStatus History,
+    CollabEditResult? Edit);
 
 /// <summary>
 /// Owns one <see cref="CollabRoom"/> per open doc. Rooms remove themselves
@@ -319,6 +363,15 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       return new CollabEditResult(CollabEditStatus.PreconditionRequired, null);
     }
 
+    return await EditInRoomAsync(
+        docId,
+        room => room.EditAsync(ops, operationId, digest, actorId, expect, cancellationToken));
+  }
+
+  private async ValueTask<CollabEditResult> EditInRoomAsync(
+      string docId,
+      Func<CollabRoom, Task<CollabEditResult?>> edit)
+  {
     for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
     {
       if (IsPurging(docId))
@@ -346,13 +399,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
         return new CollabEditResult(CollabEditStatus.Purged, null);
       }
 
-      var result = await room.EditAsync(
-          ops,
-          operationId,
-          digest,
-          actorId,
-          expect,
-          cancellationToken);
+      var result = await edit(room);
 
       if (result is not null)
       {
@@ -364,6 +411,250 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
 
     throw new InvalidOperationException(
         $"collab: the room for \"{docId}\" kept closing during an edit.");
+  }
+
+  /// <summary>Every lineage the journal holds, and its versions newest first.</summary>
+  internal async ValueTask<CollabHistoryListResult> HistoryAsync(
+      string docId,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(docId);
+
+    if (operationStore is not ICollabOperationHistoryStore history)
+    {
+      return new CollabHistoryListResult(CollabHistoryStatus.NoHistory, [], []);
+    }
+
+    if (IsPurging(docId))
+    {
+      return new CollabHistoryListResult(CollabHistoryStatus.Purged, [], []);
+    }
+
+    var lineages = await history.ListLineagesAsync(docId, cancellationToken);
+    var withHeaders = new List<(CollabLineageInfo, IReadOnlyList<CollabRecordHeader>)>(lineages.Count);
+
+    try
+    {
+      foreach (var lineage in lineages)
+      {
+        var headers = new List<CollabRecordHeader>();
+
+        await foreach (var header in history.ReadHeadersAsync(docId, lineage.Lineage, cancellationToken))
+        {
+          headers.Add(header);
+        }
+
+        withHeaders.Add((lineage, headers));
+      }
+    }
+    catch (InvalidDataException error)
+    {
+      log?.Invoke($"collab: the history of \"{docId}\" could not be read: {error.Message}");
+
+      return new CollabHistoryListResult(CollabHistoryStatus.Corrupt, [], []);
+    }
+
+    // A purge that raced the reads leaves them empty.
+    if (IsPurging(docId))
+    {
+      return new CollabHistoryListResult(CollabHistoryStatus.Purged, [], []);
+    }
+
+    return new CollabHistoryListResult(
+        CollabHistoryStatus.Ready,
+        lineages,
+        CollabVersionTimeline.Group(withHeaders));
+  }
+
+  /// <summary>One point of a lineage as OutputData JSON, read without the room.</summary>
+  internal async ValueTask<CollabHistoryReadResult> ReadVersionAsync(
+      string docId,
+      string lineage,
+      ulong sequence,
+      CancellationToken cancellationToken = default)
+  {
+    var point = await ReadPointAsync(docId, lineage, sequence, cancellationToken);
+
+    if (point.Status != CollabHistoryStatus.Ready)
+    {
+      return new CollabHistoryReadResult(point.Status, [], null);
+    }
+
+    var output = point.Output!.AsObject();
+
+    // The export stamps the export time; a version carries its own, or none.
+    if (point.Time is { } at)
+    {
+      output["time"] = at.ToUnixTimeMilliseconds();
+    }
+    else
+    {
+      output.Remove("time");
+    }
+
+    return new CollabHistoryReadResult(
+        CollabHistoryStatus.Ready,
+        DocEndpointClient.Serialize(output),
+        point.Time);
+  }
+
+  internal async ValueTask<(CollabHistoryStatus Status, CollabLineageDeleteOutcome? Outcome)> DeleteLineageAsync(
+      string docId,
+      string lineage,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(docId);
+    ArgumentException.ThrowIfNullOrEmpty(lineage);
+
+    if (operationStore is not ICollabOperationHistoryStore history)
+    {
+      return (CollabHistoryStatus.NoHistory, null);
+    }
+
+    if (IsPurging(docId))
+    {
+      return (CollabHistoryStatus.Purged, CollabLineageDeleteOutcome.Purged);
+    }
+
+    var outcome = await history.DeleteLineageAsync(docId, lineage, cancellationToken);
+
+    return outcome == CollabLineageDeleteOutcome.Purged || IsPurging(docId)
+      ? (CollabHistoryStatus.Purged, CollabLineageDeleteOutcome.Purged)
+      : (CollabHistoryStatus.Ready, outcome);
+  }
+
+  /// <summary>
+  /// Makes the live document equal one point, as one journalled edit. The
+  /// point is rebuilt outside the room; the edit is planned inside its lane,
+  /// after the duplicate and precondition checks, so a retry gets its first
+  /// receipt and nothing lands between planning and applying.
+  /// </summary>
+  internal async ValueTask<CollabRestoreResult> RestoreAsync(
+      string docId,
+      string lineage,
+      ulong sequence,
+      string operationId,
+      string? actorId,
+      CollabEditPrecondition? expect = null,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(operationId);
+
+    var point = await ReadPointAsync(docId, lineage, sequence, cancellationToken);
+
+    if (point.Status != CollabHistoryStatus.Ready)
+    {
+      return new CollabRestoreResult(point.Status, null);
+    }
+
+    var target = point.Output!["blocks"] as JsonArray ?? [];
+    // The request, never the plan: a retry plans against a doc that moved.
+    var digest = SHA256.HashData(Encoding.UTF8.GetBytes($"restore\n{lineage}\n{sequence}"));
+
+    var edit = await EditInRoomAsync(
+        docId,
+        room => room.EditAsync(
+            async (doc, token) =>
+            {
+              var structure = YDocConverter.DescribeStructure(doc);
+              var current = await converter.ExportAsync(doc, token);
+
+              return CollabRestorePlanner.Plan(
+                  current["blocks"] as JsonArray ?? [],
+                  structure,
+                  target);
+            },
+            operationId,
+            digest,
+            actorId,
+            expect,
+            cancellationToken));
+
+    return new CollabRestoreResult(CollabHistoryStatus.Ready, edit);
+  }
+
+  /// <summary>
+  /// A point rebuilt and exported. Its bounds come from the store's headers:
+  /// a record read stops early without saying so.
+  /// </summary>
+  private async ValueTask<(CollabHistoryStatus Status, JsonNode? Output, DateTimeOffset? Time)> ReadPointAsync(
+      string docId,
+      string lineage,
+      ulong sequence,
+      CancellationToken cancellationToken)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(docId);
+    ArgumentException.ThrowIfNullOrEmpty(lineage);
+
+    if (operationStore is not ICollabOperationHistoryStore history)
+    {
+      return (CollabHistoryStatus.NoHistory, null, null);
+    }
+
+    if (IsPurging(docId))
+    {
+      return (CollabHistoryStatus.Purged, null, null);
+    }
+
+    YDoc replayed;
+    DateTimeOffset? time;
+
+    try
+    {
+      var info = (await history.ListLineagesAsync(docId, cancellationToken))
+          .FirstOrDefault(entry => string.Equals(entry.Lineage, lineage, StringComparison.Ordinal));
+      time = info?.CreatedAt;
+      var found = info is not null && sequence == 0;
+
+      if (info is not null && sequence > 0)
+      {
+        await foreach (var header in history.ReadHeadersAsync(docId, lineage, cancellationToken))
+        {
+          if (header.ServerSequence >= sequence)
+          {
+            found = header.ServerSequence == sequence;
+            time = header.CommittedAt;
+
+            break;
+          }
+        }
+      }
+
+      var baseline = found ? await history.ReadBaselineAsync(docId, lineage, cancellationToken) : null;
+
+      if (baseline is null)
+      {
+        return (IsPurging(docId) ? CollabHistoryStatus.Purged : CollabHistoryStatus.NotFound, null, null);
+      }
+
+      replayed = await CollabHistoryReplay.BuildAsync(
+          baseline,
+          history.ReadRecordsAsync(docId, lineage, sequence, cancellationToken),
+          cancellationToken);
+    }
+    catch (Exception error) when (error is InvalidDataException or CollabHistoryReplayException)
+    {
+      log?.Invoke(
+          $"collab: version {sequence} of lineage {lineage} of \"{docId}\" could not be rebuilt: {error.Message}");
+
+      return (CollabHistoryStatus.Corrupt, null, null);
+    }
+
+    try
+    {
+      return (CollabHistoryStatus.Ready, await converter.ExportAsync(replayed, cancellationToken), time);
+    }
+    catch (CollabTransientException)
+    {
+      return (CollabHistoryStatus.Unavailable, null, null);
+    }
+    catch (Exception error) when (error is not OperationCanceledException)
+    {
+      log?.Invoke(
+          $"collab: version {sequence} of lineage {lineage} of \"{docId}\" could not be exported: {error.Message}");
+
+      return (CollabHistoryStatus.ExportFailed, null, null);
+    }
   }
 
   /// <summary>GET /sync/{doc}/state: the live document, loading the room the way an edit does.</summary>

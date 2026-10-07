@@ -546,6 +546,24 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
+  /// An edit whose ops are planned against the live doc, inside the lane,
+  /// after the duplicate and precondition checks. The planned update must fit
+  /// one sync frame, or nothing is applied and the answer is TooLarge.
+  /// </summary>
+  internal Task<CollabEditResult?> EditAsync(
+      Func<YDoc, CancellationToken, ValueTask<IReadOnlyList<CollabEditOp>>> planOps,
+      string operationId,
+      ReadOnlyMemory<byte> digest,
+      string? actorId,
+      CollabEditPrecondition? expect,
+      CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(planOps);
+
+    return EditCoreAsync(planOps, gateFrameSize: true, operationId, digest, actorId, expect, cancellationToken);
+  }
+
+  /// <summary>
   /// Block-level edits from POST /sync/{doc}/edit. Null when the room has
   /// already closed — the caller should retry on a fresh room.
   ///
@@ -563,6 +581,26 @@ internal sealed class CollabRoom : IDisposable
   {
     ArgumentNullException.ThrowIfNull(ops);
 
+    // Ungated: /edit keeps its own outcomes and pays for no scratch copy.
+    return EditCoreAsync(
+        (_, _) => ValueTask.FromResult(ops),
+        gateFrameSize: false,
+        operationId,
+        digest,
+        actorId,
+        expect,
+        cancellationToken);
+  }
+
+  private Task<CollabEditResult?> EditCoreAsync(
+      Func<YDoc, CancellationToken, ValueTask<IReadOnlyList<CollabEditOp>>> planOps,
+      bool gateFrameSize,
+      string operationId,
+      ReadOnlyMemory<byte> digest,
+      string? actorId,
+      CollabEditPrecondition? expect,
+      CancellationToken cancellationToken)
+  {
     return RunAsync<CollabEditResult?>(
         async () =>
         {
@@ -646,6 +684,39 @@ internal sealed class CollabRoom : IDisposable
                   null,
                   new CollabEditReceipt(tag, committedThrough));
             }
+          }
+
+          IReadOnlyList<CollabEditOp> ops;
+
+          try
+          {
+            ops = await planOps(doc!, lifetime.Token);
+
+            if (gateFrameSize && ops.Count > 0 && !await FitsOneFrameLocked(ops))
+            {
+              UpdateEvictionLocked();
+
+              return new CollabEditResult(CollabEditStatus.TooLarge, null);
+            }
+          }
+          catch (CollabEditException refusal)
+          {
+            UpdateEvictionLocked();
+
+            return new CollabEditResult(RefusalStatus(refusal), refusal);
+          }
+          catch (CollabTransientException overloaded)
+          {
+            UpdateEvictionLocked();
+
+            return new CollabEditResult(CollabEditStatus.Overloaded, overloaded);
+          }
+          catch
+          {
+            // Planning only reads the live doc, so the room stays open.
+            UpdateEvictionLocked();
+
+            throw;
           }
 
           localUpdates.Clear();
@@ -769,6 +840,35 @@ internal sealed class CollabRoom : IDisposable
               new CollabEditReceipt(tag, sequence.Value));
         },
         cancellationToken);
+  }
+
+  /// <summary>
+  /// Applies the ops to a scratch copy and measures the update frame the room
+  /// would broadcast. Without this, an update past the transport or store
+  /// limit fails the commit and closes the room for every member.
+  /// </summary>
+  private async Task<bool> FitsOneFrameLocked(IReadOnlyList<CollabEditOp> ops)
+  {
+    // 1 MiB is the local store's default append limit; the room cannot see
+    // a custom store's own limit. 0 means unset, as in the options.
+    var limit = options.AnnouncedMaxMessageBytes is > 0 ? options.AnnouncedMaxMessageBytes.Value : 1 << 20;
+    var scratch = new YDoc();
+    long frameBytes = 0;
+
+    scratch.ApplyUpdate(doc!.EncodeStateAsUpdate());
+    // The emitted update, not a state diff: a diff carries the doc's whole
+    // delete set, and the room broadcasts only the transaction's own update.
+    scratch.UpdateEmitted += update =>
+    {
+      if (update.Local)
+      {
+        frameBytes += SyncWire.Encode(new SyncUpdateFrame(update.Update)).Length;
+      }
+    };
+
+    await converter.ApplyOpsAsync(scratch, ops, lifetime.Token);
+
+    return frameBytes <= limit;
   }
 
   /// <summary>

@@ -1127,6 +1127,22 @@ internal sealed class FakeCollabOperationStore :
   /// <summary>When it answers non-null for a doc, that doc's ResetAsync throws it and changes nothing.</summary>
   internal Func<string, Exception?>? FailResets { get; set; }
 
+  /// <summary>Resets record no created-at for the new lineage, as a backfilled store entry does.</summary>
+  internal bool ResetsWithUnknownCreatedAt { get; set; }
+
+  /// <summary>Cuts a current record's update short, so a replay cannot read it.</summary>
+  internal void CorruptRecord(string docId, ulong sequence)
+  {
+    lock (guard)
+    {
+      var records = Document(docId).Records;
+      var index = records.FindIndex(record => record.ServerSequence == sequence);
+      var record = records[index];
+
+      records[index] = record with { Update = record.Update[..(record.Update.Length / 2)] };
+    }
+  }
+
   /// <summary>The baseline a doc's head was reset with.</summary>
   internal IReadOnlyList<ReadOnlyMemory<byte>> Baseline(string docId)
   {
@@ -1574,7 +1590,7 @@ internal sealed class FakeCollabOperationStore :
 
         // Record times count seconds from the epoch, so a lineage start there
         // never sorts after its own records.
-        document.CreatedAt = DateTimeOffset.UnixEpoch;
+        document.CreatedAt = store.ResetsWithUnknownCreatedAt ? null : DateTimeOffset.UnixEpoch;
         document.Baseline = [.. reset.Baseline];
         document.Checkpoint = null;
         document.Records.Clear();

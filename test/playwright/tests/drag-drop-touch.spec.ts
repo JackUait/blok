@@ -14,6 +14,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 import { DATA_ATTR, createSelector } from '../../../src/components/constants';
 import { expect, gotoTestPage, test } from './helpers/shared-page';
+import { htmlOf } from './helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="settings-toggler"]`;
@@ -25,7 +26,7 @@ const getBlockText = (block: { data: unknown } | undefined): string => {
   if (!block) {
     throw new Error('Block is undefined');
   }
-  return (block.data as { text: string }).text;
+  return String(htmlOf((block.data as { text: unknown }).text));
 };
 
 /**

@@ -4,6 +4,7 @@ import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 
@@ -37,7 +38,7 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
 };
 
 const savedShape = async (page: Page): Promise<unknown[]> => {
-  const saved = await page.evaluate(async () => window.blokInstance?.save());
+  const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
   return (saved?.blocks ?? []).map((block) => {
     const data = block.data as { text?: unknown; code?: unknown };

@@ -5,6 +5,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 
@@ -47,7 +48,7 @@ const placeCaret = async (page: Page, text: string, charsFromEnd: number): Promi
 };
 
 const savedShape = async (page: Page): Promise<unknown[]> => {
-  const saved = await page.evaluate(async () => window.blokInstance?.save());
+  const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
   return (saved?.blocks ?? []).map(block => [block.type, (block.data as { text?: unknown }).text]);
 };

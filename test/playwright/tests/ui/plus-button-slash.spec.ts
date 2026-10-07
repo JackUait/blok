@@ -4,6 +4,7 @@ import type { OutputData } from '../../../../types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml, savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -247,7 +248,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
 
     // Verify the new empty paragraph was inserted between First and Second blocks
     // by checking the output data order
-    const outputData = await page.evaluate(() => window.blokInstance?.save());
+    const outputData = savedAsHtml(await page.evaluate(() => window.blokInstance?.save()));
     const blockTexts = outputData?.blocks.map((b) => (b.data as { text: string }).text);
 
     expect(blockTexts).toStrictEqual(['First block', '', 'Second block']);
@@ -277,7 +278,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
 
     // Verify the new empty paragraph was inserted at the top
-    const outputData = await page.evaluate(() => window.blokInstance?.save());
+    const outputData = savedAsHtml(await page.evaluate(() => window.blokInstance?.save()));
     const blockTexts = outputData?.blocks.map((b) => (b.data as { text: string }).text);
 
     expect(blockTexts).toStrictEqual(['', 'Only block']);
@@ -309,7 +310,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
 
     // Verify the second block remains empty (no "/" inserted)
-    const outputData = await page.evaluate(() => window.blokInstance?.save());
+    const outputData = savedAsHtml(await page.evaluate(() => window.blokInstance?.save()));
     const blockTexts = outputData?.blocks.map((b) => (b.data as { text: string }).text);
 
     expect(blockTexts).toStrictEqual(['First block', '']);
@@ -950,9 +951,9 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     await page.keyboard.press('Slash');
     await page.keyboard.type('head');
 
-    const blockTexts = await page.evaluate(
-      () => window.blokInstance?.save().then(data => data.blocks.map(b => (b.data as { text: string }).text))
-    );
+    const blockTexts = blocksAsHtml(await page.evaluate(
+      () => window.blokInstance?.save().then(data => data.blocks)
+    ) ?? []).map(b => (b.data as { text: string }).text);
 
     expect(blockTexts).toStrictEqual(['AAA', '/head', 'BBB', 'CCC']);
 
@@ -982,9 +983,9 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Typing now must land in CCC (the originally-focused block).
     await page.keyboard.type('XYZ');
 
-    const blockTexts = await page.evaluate(
-      () => window.blokInstance?.save().then(data => data.blocks.map(b => (b.data as { text: string }).text))
-    );
+    const blockTexts = blocksAsHtml(await page.evaluate(
+      () => window.blokInstance?.save().then(data => data.blocks)
+    ) ?? []).map(b => (b.data as { text: string }).text);
 
     expect(blockTexts).toStrictEqual(['AAA', '', 'BBB', 'CCCXYZ']);
   });

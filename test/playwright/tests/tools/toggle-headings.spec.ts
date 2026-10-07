@@ -5,6 +5,7 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { savedAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 
@@ -229,9 +230,9 @@ test.describe('Toggle Headings', () => {
       expect(savedData).toBeDefined();
       expect(savedData?.blocks).toHaveLength(1);
       expect(savedData?.blocks[0].type).toBe('header');
-      const blockData = savedData?.blocks[0].data as { text: string; level: number; isToggleable: boolean };
+      const blockData = savedData?.blocks[0].data as { text: unknown; level: number; isToggleable: boolean };
 
-      expect(blockData.text).toBe('Saved Toggle H2');
+      expect(blockData.text).toEqual([{ text: 'Saved Toggle H2' }]);
       expect(blockData.level).toBe(2);
       expect(blockData.isToggleable).toBe(true);
     });
@@ -277,7 +278,7 @@ test.describe('Toggle Headings', () => {
       await header.click();
       await page.keyboard.type('Hello');
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const blockData = savedData?.blocks[0].data as { text: string };
 
       expect(blockData.text).toBe('Hello');
@@ -292,7 +293,7 @@ test.describe('Toggle Headings', () => {
       await page.keyboard.press('End');
       await page.keyboard.type(' there');
 
-      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const savedData = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
       const blockData = savedData?.blocks[0].data as { text: string };
 
       expect(blockData.text).toBe('Hi there');

@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { openFixtureToggles } from '../../helpers/toggle-open';
+import { blocksAsHtml } from '../../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -38,11 +39,11 @@ const create = async (page: Page, blocks: Blocks): Promise<void> => {
 };
 
 /** Saved `id:text` of every block, in order. */
-const saved = (page: Page): Promise<string[]> => page.evaluate(async () => {
+const saved = async (page: Page): Promise<string[]> => blocksAsHtml(await page.evaluate(async () => {
   const out = await window.blokInstance?.save();
 
-  return (out?.blocks ?? []).map((b) => `${String(b.id)}:${String((b.data as { text?: unknown }).text)}`);
-});
+  return out?.blocks ?? [];
+})).map((b) => `${String(b.id)}:${String((b.data as { text?: unknown }).text)}`);
 
 const editable = (page: Page, id: string): ReturnType<Page['locator']> =>
   page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).first();

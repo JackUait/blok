@@ -7,6 +7,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
+import { savedAsHtml } from '../../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
@@ -472,7 +473,7 @@ test.describe('Paste HTML Table into Editor', () => {
     await expect(table.locator(CELL_SELECTOR)).toHaveCount(4);
     await expect(table).toContainText('extra');
 
-    const output = await page.evaluate(async () => window.blokInstance?.save());
+    const output = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
 
     const tableBlock = output?.blocks.find((b: { type: string }) => b.type === 'table');
 
@@ -553,7 +554,7 @@ test.describe('Paste HTML table with merged cells', () => {
     await expect(lastRowCells.nth(0)).toHaveAttribute('data-blok-table-cell-col', '1');
 
     // The merge structure round-trips through save()
-    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const saved = savedAsHtml(await page.evaluate(async () => window.blokInstance?.save()));
     const tableBlock = saved?.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();

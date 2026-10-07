@@ -110,4 +110,19 @@ describe('rich text segments — controlled-component echo', { timeout: 60_000 }
 
     expect(rebuild.rendered()).toBe(false);
   });
+
+  it.each([
+    ['split runs', [ { text: 'a' }, { text: 'b', marks: { bold: true } }, { text: 'c', marks: { bold: true } } ]],
+    ['an off mark', [ { text: 'a', marks: { bold: false } }, { text: 'bc', marks: { bold: true } } ]],
+    ['an empty run', [ { text: 'a' }, { text: '' }, { text: 'bc', marks: { bold: true } } ]],
+  ])('host-built segments equal to the content echo without a rebuild (%s)', async (_label, text) => {
+    const editor = await createEditor({ data: { blocks: [ { id: 'p', type: 'paragraph', data: { text: 'a<b>bc</b>' } } ] } });
+    const input = { blocks: [ { id: 'p', type: 'paragraph', data: { text } } ] } as OutputData;
+    const rebuild = spyOnRebuild();
+
+    await editor.render(input);
+    await editor.render(input);
+
+    expect(rebuild.rendered()).toBe(false);
+  });
 });

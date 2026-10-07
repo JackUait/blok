@@ -19,7 +19,7 @@ import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { equalsOutputData, normalizeOutputBlocks } from '../../../shared/output-data';
-import { isNestedDocument, outputBlocksToSegments } from '../../../shared/rich-text/block-data';
+import { isNestedDocument, outputBlocksToCanonicalSegments, outputBlocksToSegments } from '../../../shared/rich-text/block-data';
 import { LEGACY_BODY_TYPES, LEGACY_ITEM_TYPES } from '../../../shared/rich-text/fields';
 import { htmlToSegmentsDom } from '../../utils/rich-text-dom';
 import { resolveHashTarget } from '../../utils/hash-target';
@@ -304,15 +304,16 @@ export class BlocksAPI extends Module {
   /**
    * True when `data` holds the blocks the editor would save. Rich fields
    * compare as segments: the save holds segments, while a host may hand back
-   * the HTML it first loaded.
+   * the HTML it first loaded, or segments in another spelling (split runs,
+   * `bold: false`), which compare canonicalized.
    * @param current - the editor's host save
    * @param data - the incoming document
    */
   private isEchoOf(current: OutputData, data: OutputData | LooseOutputData): boolean {
     const resolve = (type: string): string[] => this.Blok.Tools.blockTools.get(type)?.richTextFields ?? [];
-    const asSegments = (blocks: OutputBlockData[]): OutputBlockData[] => outputBlocksToSegments(blocks, resolve, htmlToSegmentsDom);
+    const incoming = outputBlocksToCanonicalSegments(normalizeOutputBlocks(data.blocks), resolve, htmlToSegmentsDom);
 
-    return equalsOutputData({ blocks: asSegments(current.blocks) }, { blocks: asSegments(normalizeOutputBlocks(data.blocks)) });
+    return equalsOutputData({ blocks: outputBlocksToSegments(current.blocks, resolve, htmlToSegmentsDom) }, { blocks: incoming });
   }
 
   /**

@@ -1,6 +1,7 @@
 import type { OutputBlockData } from '../../../types';
 import { isRichText, readRichTextLeniently } from './guards';
 import { segmentsToHtml } from './segments-to-html';
+import { canonicalizeSegments } from './html-to-segments';
 import type { RichText } from '../../../types/rich-text';
 
 import { LEGACY_BODY_TYPES, LEGACY_ITEM_TYPES } from './fields';
@@ -192,6 +193,21 @@ export function blockDataToHtml(
   );
 }
 
+const toSegmentsBy = (
+  data: Record<string, unknown>,
+  fields: string[],
+  resolve: FieldsResolver,
+  convertField: Convert,
+  options: ConvertOptions
+): Record<string, unknown> => convertData(
+  data,
+  fields,
+  convertField,
+  blocks => mapBlockData(blocks, (block, nested) =>
+    toSegmentsBy(nested, resolve(block.type), resolve, convertField, nestedOptionsFor(options)(block.type))),
+  options
+);
+
 /** HTML string fields → segments. Segment arrays and non-rich values pass through. */
 export function blockDataToSegments(
   data: Record<string, unknown>,
@@ -200,11 +216,26 @@ export function blockDataToSegments(
   read: (html: string) => RichText,
   options: ConvertOptions = {}
 ): Record<string, unknown> {
-  return convertData(
-    data,
-    fields,
-    value => (typeof value === 'string' ? read(value) : value),
-    blocks => outputBlocksToSegments(blocks, resolve, read, nestedOptionsFor(options)),
-    options
-  );
+  return toSegmentsBy(data, fields, resolve, value => (typeof value === 'string' ? read(value) : value), options);
 }
+
+/**
+ * {@link outputBlocksToSegments}, plus segment arrays canonicalized: equal
+ * content in any spelling compares equal. Copies every array it meets, so it
+ * is for comparing, not for output (callers rely on unchanged identity there).
+ */
+export const outputBlocksToCanonicalSegments = (
+  blocks: OutputBlockData[],
+  resolve: FieldsResolver,
+  read: (html: string) => RichText
+): OutputBlockData[] => {
+  const convertField: Convert = (value) => {
+    if (typeof value === 'string') {
+      return read(value);
+    }
+
+    return Array.isArray(value) ? canonicalizeSegments(isRichText(value) ? value : readRichTextLeniently(value)) : value;
+  };
+
+  return mapBlockData(blocks, (block, data) => toSegmentsBy(data, resolve(block.type), resolve, convertField, nestedDocumentsFor(block.type)));
+};

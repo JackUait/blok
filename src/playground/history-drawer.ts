@@ -819,6 +819,13 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     items[(items.indexOf(event.target) + step + items.length) % items.length].focus();
   });
 
+  // Only a focus move to another element closes it: Safari blurs to nothing on a button click.
+  groupBar.addEventListener('focusout', (event) => {
+    if (!menu.hidden && event.relatedTarget instanceof Node && !groupBar.contains(event.relatedTarget)) {
+      closeMenu();
+    }
+  });
+
   document.addEventListener('pointerdown', (event) => {
     if (!menu.hidden && event.target instanceof Node && !groupBar.contains(event.target)) {
       closeMenu();
@@ -1007,12 +1014,15 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     state.group = value;
     saveGrouping(value);
     drawGroup();
-    state.request++;
+
+    const request = ++state.request;
+
     state.selected = null;
     state.error = '';
     showEditor();
 
-    if (await load()) {
+    // Closed, or another pick, while the list loaded.
+    if (await load() && !panel.hidden && state.request === request) {
       await selectFirst();
     }
   };
@@ -1045,7 +1055,15 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       state.rows = bookmarkRows(saved, { now: now() });
       status.textContent = state.rows.length === 0 ? NO_BOOKMARKS : '';
     }
+
+    const selector = `[data-bookmark="${CSS.escape(row.key)}"]`;
+    const hadFocus = document.activeElement?.matches(selector) === true;
+
     drawRows();
+
+    if (hadFocus) {
+      list.querySelector<HTMLButtonElement>(selector)?.focus();
+    }
   };
 
   /* Restore dialog */

@@ -832,6 +832,48 @@ describe('mountHistoryDrawer', () => {
     expect(panel().hidden).toBe(false);
   });
 
+  it('stays on the live editor when closed while another grouping loads', async () => {
+    const pending: { release: () => void } = { release: () => undefined };
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : input.toString();
+
+      if (url === `${SERVER}/sync/playground/history?group=60`) {
+        await new Promise<void>((resolve) => {
+          pending.release = resolve;
+        });
+      }
+
+      return fakeFetch(input, init);
+    }));
+
+    const { button, editor } = setup();
+
+    button.click();
+    await settle();
+    await pickGroup('1 hour');
+    buttonNamed(panel(), 'Close').click();
+    pending.release();
+    await settle();
+
+    expect(panel().hidden).toBe(true);
+    expect(preview().hidden).toBe(true);
+    expect(editor.hidden).toBe(false);
+    expect(editor.inert).toBe(false);
+  });
+
+  it('closes the Group by menu when focus leaves it, so a later Escape closes one layer', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    groupButton().click();
+    buttonNamed(panel(), 'Close').focus();
+
+    expect(groupOptions()[0].closest<HTMLElement>('[role="menu"]')?.hidden).toBe(true);
+    expect(groupButton().getAttribute('aria-expanded')).toBe('false');
+  });
+
   const bookmarkButton = (key: string): HTMLButtonElement => {
     const found = panel().querySelector<HTMLButtonElement>(`button[data-bookmark="${key}"]`);
 
@@ -864,6 +906,18 @@ describe('mountHistoryDrawer', () => {
 
     expect(bookmarkStore).toEqual([]);
     expect(bookmarkButton('l2:5').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('keeps focus on a bookmark toggle after it redraws', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+    bookmarkButton('l2:5').focus();
+    bookmarkButton('l2:5').click();
+    await settle();
+
+    expect(bookmarkButton('l2:5')).toHaveFocus();
   });
 
   it('shows bookmarks made in any tab as filled', async () => {

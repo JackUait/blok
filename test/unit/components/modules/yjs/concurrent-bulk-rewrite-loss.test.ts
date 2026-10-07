@@ -423,6 +423,10 @@ describe('bulk text rewrites versus a peer typing', () => {
    * above so the measurement keeps running while the damage assertions are red.
    */
   describe('measuring the tier each gesture lands in', () => {
+    // A paragraph's text is formatted, so stripping bold there writes marks, not
+    // characters. These tiers belong to text that holds HTML.
+    const HTML_TEXT_TYPE = 'custom-html-text';
+
     const opsFor = (type: string, key: string, before: string, after: string): RecordedOp[] => {
       const { a } = twoPeers(type, { [key]: before });
 
@@ -433,7 +437,7 @@ describe('bulk text rewrites versus a peer typing', () => {
 
     it('stripping 40 bold spans answers one narrow delete per tag', () => {
       const before = boldParagraph(40);
-      const ops = opsFor('paragraph', 'text', before, convertedText(before));
+      const ops = opsFor(HTML_TEXT_TYPE, 'text', before, convertedText(before));
 
       // A complete tag is ONE unit to the diff, so 40 spans are 80 deletes of
       // 8 or 9 characters each — not the block-wide region this measured while
@@ -444,14 +448,14 @@ describe('bulk text rewrites versus a peer typing', () => {
 
     it('stripping 20 bold spans still answers in narrow regions', () => {
       const before = boldParagraph(20);
-      const ops = opsFor('paragraph', 'text', before, convertedText(before, TOGGLE_TEXT_ALLOWLIST));
+      const ops = opsFor(HTML_TEXT_TYPE, 'text', before, convertedText(before, TOGGLE_TEXT_ALLOWLIST));
 
       expect(ops.length).toBeGreaterThan(2);
     });
 
     it('stripping four bold spans in CJK is eight narrow deletes, word breaks or not', () => {
       const before = boldCjkParagraph(4);
-      const ops = opsFor('paragraph', 'text', before, convertedText(before));
+      const ops = opsFor(HTML_TEXT_TYPE, 'text', before, convertedText(before));
 
       // The word pass cannot narrow this — there is not one word break in the
       // paragraph — but tags are units, so the distance is 8 and the character
@@ -462,7 +466,7 @@ describe('bulk text rewrites versus a peer typing', () => {
 
     it('stripping four bold spans in Latin text stays on the character pass', () => {
       const before = boldParagraph(3);
-      const ops = opsFor('paragraph', 'text', before, convertedText(before));
+      const ops = opsFor(HTML_TEXT_TYPE, 'text', before, convertedText(before));
 
       expect(ops.length).toBeGreaterThan(2);
     });

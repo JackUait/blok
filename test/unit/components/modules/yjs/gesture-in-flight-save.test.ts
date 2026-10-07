@@ -139,7 +139,8 @@ describe('a gesture that starts while an earlier save is still in flight', () =>
     await drainMicrotasks();
     vi.runAllTimers();
 
-    expect(harness.peerText()).toBe('<b>hello</b> X');
+    // Read back in canonical spelling.
+    expect(harness.peerText()).toBe('<strong>hello</strong> X');
     expect(undoSteps(harness) - steps).toBe(2);
   });
 

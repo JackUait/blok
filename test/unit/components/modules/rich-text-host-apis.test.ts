@@ -12,6 +12,7 @@ import { API } from '../../../../src/components/modules/api';
 import { Saver } from '../../../../src/components/modules/saver';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
 import { createBlocksApiForEditor } from '../../../../src/components/utils/blocks-api';
+import { HOST_PRESERVED_DATA } from '../../../../src/components/utils/host-preserved-data';
 import { Header } from '../../../../src/tools/header';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
@@ -84,6 +85,7 @@ const blockApiUnder = (
     name,
     tool,
     save: () => Promise.resolve({ id: 'p1', tool: name, data, time: 0 }),
+    preservedData: data,
   } as unknown as Block;
 
   return new BlockAPI(block, api);
@@ -111,13 +113,21 @@ describe('host APIs that bypass the Saver — segments', { timeout: 60_000 }, ()
     expect(saved?.data.text).toEqual(bold);
   });
 
-  it('BlockAPI.save keeps HTML, silently, under collaboration', async () => {
-    expect((await blockApiUnder(false).save())?.data.text).toEqual(bold);
-
+  it('BlockAPI.save returns segments under collaboration too', async () => {
     const saved = await blockApiUnder(true).save();
 
-    expect(saved?.data.text).toBe('<b>a</b>');
+    expect(saved?.data.text).toEqual(bold);
     expect(richTextWarnings(warnSpy)).toHaveLength(0);
+  });
+
+  it('getBlockData returns segments under collaboration too', () => {
+    const readHostData: unknown = Reflect.get(blockApiUnder(true), HOST_PRESERVED_DATA);
+
+    if (typeof readHostData !== 'function') {
+      throw new Error('BlockAPI has no host data reader');
+    }
+
+    expect(readHostData()).toEqual({ text: bold });
   });
 
   it('BlockAPI.save converts a nested row document too', async () => {

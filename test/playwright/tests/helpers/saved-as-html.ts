@@ -7,7 +7,7 @@ import { segmentsToHtml } from '../../../../src/shared/rich-text/segments-to-htm
 export interface HtmlReadOptions {
   /**
    * Accept HTML strings in built-in rich fields. Only for output that is
-   * still HTML on purpose: collaboration, legacy output, the internal Yjs doc.
+   * still HTML on purpose: legacy output, the internal Yjs doc.
    * Without it a string throws, so a regression back to HTML output fails.
    */
   allowHtml?: boolean;
@@ -17,7 +17,7 @@ const builtInFields = (type: string): string[] =>
   Object.prototype.hasOwnProperty.call(CURRENT_RICH_TEXT_FIELDS, type) ? CURRENT_RICH_TEXT_FIELDS[type] : [];
 
 const refuseHtml = (where: string): never => {
-  throw new Error(`${where} is an HTML string; a host save must hold segments. Pass { allowHtml: true } only for collaboration, legacy output or internal data.`);
+  throw new Error(`${where} is an HTML string; a host save must hold segments. Pass { allowHtml: true } only for legacy output or internal data.`);
 };
 
 /**

@@ -431,7 +431,7 @@ describe('downloadOfflinePage', { timeout: 30_000 }, () => {
       await waitFor(() => holder.textContent?.includes('Offline text') ?? false);
       const saved = await ready.blocks.getById('p')?.save();
 
-      expect(saved?.data.text).toBe('Offline text');
+      expect(saved?.data.text).toEqual([{ text: 'Offline text' }]);
       expect(ready.readOnly.isEnabled).toBe(true);
     } finally {
       editor.destroy();
@@ -520,7 +520,7 @@ describe('downloadOfflinePage', { timeout: 30_000 }, () => {
 
       expect(ready.readOnly.isEnabled).toBe(true);
       expect(editorSocket.readyState).toBe(0);
-      expect((await ready.blocks.getById('p')?.save())?.data.text).toBe('Offline text');
+      expect((await ready.blocks.getById('p')?.save())?.data.text).toEqual([{ text: 'Offline text' }]);
     } finally {
       editor.destroy();
       holder.remove();

@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputBlockData } from '@/types';
 
 import { TEST_PAGE_URL } from './ensure-build';
+import { blockTextAsHtml } from './saved-as-html';
 
 /**
  * In-browser collaboration harness.
@@ -400,8 +401,7 @@ export interface SavedBlock extends OutputBlockData {
  * @param page - the page the editor lives on
  * @param name - the editor's harness name
  */
-export const savedBlocks = (page: Page, name: string): Promise<SavedBlock[]> =>
-  page.evaluate(async (editorName: string) => {
+export const savedBlocks = async (page: Page, name: string): Promise<SavedBlock[]> => (await page.evaluate(async (editorName: string) => {
     const editor = window.__collabEditors?.[editorName];
 
     if (editor === undefined) {
@@ -420,14 +420,16 @@ export const savedBlocks = (page: Page, name: string): Promise<SavedBlock[]> =>
       return {
         ...block,
         id: block.id,
-        text: typeof (block.data as { text?: unknown }).text === 'string'
-          ? (block.data as { text: string }).text
-          : '',
         parent: block.parent ?? '',
         content: block.content ?? [],
       };
     });
-  }, name);
+  }, name)).map((block) => {
+    // Built-in rich fields save as segments; a string there throws (HTML output regressed).
+    const text = blockTextAsHtml(block);
+
+    return { ...block, text: typeof text === 'string' ? text : '' };
+  });
 
 /** One block a test asks the harness to author. */
 export interface SeedBlock {

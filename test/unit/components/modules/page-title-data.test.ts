@@ -113,6 +113,35 @@ describe('page title save and load', () => {
     expect(core.moduleInstances.YjsManager.getPageFields()).toEqual({});
   });
 
+  it('keeps the title through a Markdown import', async () => {
+    const core = await boot({ data: { title: 'Kept', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
+
+    await core.moduleInstances.API.methods.blocks.importMarkdown('other text');
+
+    expect(core.moduleInstances.YjsManager.getPageFields().title).toBe('Kept');
+  });
+
+  it('keeps the title through an HTML import', async () => {
+    const core = await boot({ data: { title: 'Kept', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] } });
+
+    await core.moduleInstances.API.methods.blocks.renderFromHTML('<p>other</p>');
+
+    expect(core.moduleInstances.YjsManager.getPageFields().title).toBe('Kept');
+  });
+
+  it('seeds the title and icon from a persisted load', async () => {
+    const core = await boot({
+      persistence: {
+        load: async () => ({ title: 'Saved', icon: { type: 'emoji', value: '📌' }, blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'hi' } }] }),
+        save: async () => {},
+      },
+    });
+    const saved = await core.moduleInstances.Saver.save();
+
+    expect(saved?.title).toBe('Saved');
+    expect(saved?.icon).toEqual({ type: 'emoji', value: '📌' });
+  });
+
   it('does not seed the config title when collaboration owns the document', async () => {
     const loadPage = vi.spyOn(YjsManager.prototype, 'loadPage');
 

@@ -538,6 +538,7 @@ export class Core {
 
         this.config.data = { ...loaded, blocks: cloned };
         this.loadedFromPersistence = true;
+        this.moduleInstances.YjsManager.loadPage({ title: loaded?.title ?? undefined, icon: loaded?.icon ?? undefined });
 
         return renderer.render(cloned);
       }

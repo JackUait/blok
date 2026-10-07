@@ -564,7 +564,7 @@ export interface BlokMountOptions {
    * The page title and icon. `true` uses the defaults. Off by default; a saved
    * title and icon still round-trip when it is off.
    */
-  title?: boolean | TitleConfig;
+  pageTitle?: boolean | TitleConfig;
 
   /**
    * Define default sanitizer configuration

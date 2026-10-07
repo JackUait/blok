@@ -62,6 +62,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'documentId',
   'tabSync',
   'captureClicksBelowEditor',
+  'pageTitle',
 ] as const satisfies readonly (keyof UseBlokConfig)[];
 
 /**

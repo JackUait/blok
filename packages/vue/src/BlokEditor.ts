@@ -114,6 +114,8 @@ export const BlokEditor = defineComponent({
     tabSync: { type: [Boolean, Object] as PropType<BlokConfig['tabSync']>, default: undefined },
     /** Opt-in: clicks on the host page below the editor append a block. */
     captureClicksBelowEditor: { type: Boolean as PropType<boolean | undefined>, default: undefined },
+    /** The built-in page title and icon. */
+    pageTitle: { type: [Boolean, Object] as PropType<BlokConfig['pageTitle']>, default: undefined },
     /** Changing this prop's identity destroys and recreates the editor. */
     recreateKey: { type: null as unknown as PropType<unknown> },
   },

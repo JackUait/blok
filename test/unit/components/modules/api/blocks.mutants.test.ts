@@ -230,6 +230,7 @@ type BlokStub = {
     runAfterSavesOf: Mock<(blockId: string, run: () => void) => void>;
     transactWithoutCapture: Mock<(fn: () => void) => void>;
     loadPage: Mock<() => void>;
+    getPageFields: Mock<() => Record<string, unknown>>;
   };
   I18n: { t: Mock<(key: string) => string> };
   API: Record<string, unknown>;
@@ -266,6 +267,7 @@ const createBlokStub = (blockManager: BlockManagerMock, overrides: Partial<BlokS
     runAfterSavesOf: vi.fn((_blockId: string, run: () => void) => run()),
     transactWithoutCapture: vi.fn(),
     loadPage: vi.fn(),
+    getPageFields: vi.fn(() => ({})),
   },
   I18n: { t: vi.fn((key: string) => key) },
   API: {},

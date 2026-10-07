@@ -1,0 +1,401 @@
+{
+  "segments": {
+    "adjacent-plain-runs-merge": [
+      {
+        "text": "ab"
+      }
+    ],
+    "empty-runs-dropped": [
+      {
+        "text": "a",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "mark-order": [
+      {
+        "text": "x",
+        "marks": {
+          "link": {
+            "href": "h"
+          },
+          "color": "red",
+          "background": "blue",
+          "highlight": true,
+          "bold": true,
+          "italic": true,
+          "underline": true,
+          "strikethrough": true,
+          "code": true,
+          "sup": true,
+          "sub": true
+        }
+      }
+    ],
+    "link-null-is-absent": [
+      {
+        "text": "x",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "link-without-href-dropped": [
+      {
+        "text": "x"
+      }
+    ],
+    "link-href-not-string-dropped": [
+      {
+        "text": "x"
+      }
+    ],
+    "link-key-order-and-extra-keys": [
+      {
+        "text": "x",
+        "marks": {
+          "link": {
+            "href": "h",
+            "target": "_blank",
+            "rel": "noopener"
+          }
+        }
+      }
+    ],
+    "link-non-string-target-dropped": [
+      {
+        "text": "x",
+        "marks": {
+          "link": {
+            "href": "h"
+          }
+        }
+      }
+    ],
+    "boolean-false-is-absent": [
+      {
+        "text": "x",
+        "marks": {
+          "italic": true
+        }
+      }
+    ],
+    "boolean-non-true-is-absent": [
+      {
+        "text": "x"
+      }
+    ],
+    "all-off-marks-drop-the-key": [
+      {
+        "text": "x"
+      }
+    ],
+    "empty-marks-object-dropped": [
+      {
+        "text": "x"
+      }
+    ],
+    "null-color-is-absent": [
+      {
+        "text": "x",
+        "marks": {
+          "background": "blue"
+        }
+      }
+    ],
+    "non-string-color-kept": [
+      {
+        "text": "x",
+        "marks": {
+          "color": 5
+        }
+      }
+    ],
+    "tag-record-keys-sorted": [
+      {
+        "text": "x",
+        "marks": {
+          "tag:abbr": {
+            "class": "y",
+            "title": "x"
+          }
+        }
+      }
+    ],
+    "tag-record-null-member-kept": [
+      {
+        "text": "x",
+        "marks": {
+          "tag:abbr": {
+            "data-a": "1",
+            "title": null
+          }
+        }
+      }
+    ],
+    "tag-non-record-kept": [
+      {
+        "text": "x",
+        "marks": {
+          "tag:x": "str"
+        }
+      }
+    ],
+    "tag-null-is-absent": [
+      {
+        "text": "x",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "unknown-keys-sorted-after-known": [
+      {
+        "text": "x",
+        "marks": {
+          "bold": true,
+          "Beta": true,
+          "alpha": "a",
+          "tag:a": {},
+          "tag:b": {
+            "a": "1"
+          },
+          "zeta": 1
+        }
+      }
+    ],
+    "unknown-null-dropped": [
+      {
+        "text": "x",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "integer-like-keys-js-order": [
+      {
+        "text": "x",
+        "marks": {
+          "9": 2,
+          "10": 1,
+          "b": 3,
+          "tag:t": {
+            "2": "a",
+            "10": "b",
+            "z": "1"
+          }
+        }
+      }
+    ],
+    "nested-key-order-does-not-split-runs": [
+      {
+        "text": "ab",
+        "marks": {
+          "link": {
+            "href": "h",
+            "target": "t"
+          }
+        }
+      }
+    ],
+    "tag-record-order-does-not-split-runs": [
+      {
+        "text": "ab",
+        "marks": {
+          "tag:x": {
+            "a": "2",
+            "b": "1"
+          }
+        }
+      }
+    ],
+    "unknown-object-order-does-not-split-runs": [
+      {
+        "text": "a",
+        "marks": {
+          "foo": {
+            "b": 1,
+            "a": [
+              1,
+              {
+                "y": 1,
+                "x": 2
+              }
+            ]
+          }
+        }
+      },
+      {
+        "text": "b",
+        "marks": {
+          "foo": {
+            "a": [
+              1,
+              {
+                "x": 2,
+                "y": 1
+              }
+            ],
+            "b": 1
+          }
+        }
+      }
+    ],
+    "different-marks-do-not-merge": [
+      {
+        "text": "a",
+        "marks": {
+          "bold": true
+        }
+      },
+      {
+        "text": "b",
+        "marks": {
+          "bold": true,
+          "italic": true
+        }
+      },
+      {
+        "text": "c"
+      }
+    ],
+    "merged-run-keeps-first-spelling": [
+      {
+        "text": "ab",
+        "marks": {
+          "foo": {
+            "b": 1,
+            "a": 2
+          }
+        }
+      }
+    ],
+    "embed-between-text": [
+      {
+        "text": "a"
+      },
+      {
+        "embed": {
+          "equation": {
+            "expression": "x^2"
+          }
+        }
+      },
+      {
+        "text": "b"
+      }
+    ],
+    "embeds-never-merge": [
+      {
+        "embed": {
+          "page": {
+            "id": "p"
+          }
+        }
+      },
+      {
+        "embed": {
+          "page": {
+            "id": "p"
+          }
+        }
+      }
+    ],
+    "embed-with-marks": [
+      {
+        "embed": {
+          "html": "<img src=\"x.png\">"
+        },
+        "marks": {
+          "bold": true,
+          "italic": true
+        }
+      },
+      {
+        "text": "b",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "newlines-and-markup-characters-stay-text": [
+      {
+        "text": "a < b && \"c\"\n"
+      },
+      {
+        "text": "<b>x</b>",
+        "marks": {
+          "code": true
+        }
+      }
+    ],
+    "marks-key-before-text-key": [
+      {
+        "text": "a",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "empty": []
+  },
+  "deltas": {
+    "string-runs-with-equal-marks-merge": [
+      {
+        "text": "abc",
+        "marks": {
+          "bold": true
+        }
+      },
+      {
+        "text": "d"
+      }
+    ],
+    "embed-object-reads-as-embed": [
+      {
+        "text": "a"
+      },
+      {
+        "embed": {
+          "page": {
+            "id": "p"
+          }
+        },
+        "marks": {
+          "italic": true
+        }
+      },
+      {
+        "text": "b"
+      }
+    ],
+    "non-object-inserts-skipped": [
+      {
+        "text": "ab"
+      }
+    ],
+    "empty-attributes-is-unmarked": [
+      {
+        "text": "ab"
+      }
+    ],
+    "stored-sorted-link-reads-canonical": [
+      {
+        "text": "a",
+        "marks": {
+          "link": {
+            "href": "h",
+            "target": "t",
+            "rel": "r"
+          }
+        }
+      }
+    ],
+    "foreign-false-mark-reads-absent": [
+      {
+        "text": "ab"
+      }
+    ]
+  }
+}

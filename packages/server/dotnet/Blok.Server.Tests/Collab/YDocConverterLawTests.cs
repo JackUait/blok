@@ -28,7 +28,7 @@ public sealed class YDocConverterLawTests
         ("b", Block("b", contentIds: ["x"])),
         ("x", Block("x", parentId: "b")));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Equal(["a", "b", "x"], Ids(exported));
     Assert.Null(BlockNamed(exported, "a")["content"]);
@@ -48,7 +48,7 @@ public sealed class YDocConverterLawTests
         ("b", Block("b", contentIds: ["x"])),
         ("x", Block("x", parentId: "b")));
 
-    Assert.Equal(["a", "y", "b", "x"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["a", "y", "b", "x"], Ids(RichTextRuntime.Export(doc)));
   }
 
   [Fact]
@@ -59,7 +59,7 @@ public sealed class YDocConverterLawTests
         ("q", Block("q", parentId: "p", contentIds: ["p"])),
         ("p", Block("p", parentId: "q", contentIds: ["q"])));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Equal(["q", "p"], Ids(exported));
     Assert.Null(BlockNamed(exported, "q")["parent"]);
@@ -78,7 +78,7 @@ public sealed class YDocConverterLawTests
         ("Ａ", Block("Ａ", parentId: "😀")),
         ("😀", Block("😀", parentId: "Ａ")));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Null(BlockNamed(exported, "Ａ")["parent"]);
     Assert.Equal("Ａ", BlockNamed(exported, "😀")["parent"]?.GetValue<string>());
@@ -91,7 +91,7 @@ public sealed class YDocConverterLawTests
         [],
         ("a", Block("a", parentId: "a", contentIds: ["a"])));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Equal(["a"], Ids(exported));
     Assert.Null(BlockNamed(exported, "a")["parent"]);
@@ -106,7 +106,7 @@ public sealed class YDocConverterLawTests
         ("a", Block("a", contentIds: ["k", "k"])),
         ("k", Block("k", parentId: "a")));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Equal(["a", "k"], Ids(exported));
     // The projection filters by ownership only; it never dedupes.
@@ -127,7 +127,7 @@ public sealed class YDocConverterLawTests
         ("w", Block("w", parentId: "y", contentIds: ["v"])),
         ("v", Block("v", parentId: "w")));
 
-    Assert.Equal(["x", "y", "y-kid", "v", "w"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["x", "y", "y-kid", "v", "w"], Ids(RichTextRuntime.Export(doc)));
   }
 
   [Fact]
@@ -140,7 +140,7 @@ public sealed class YDocConverterLawTests
         ("é", Block("é", parentId: "ghost")),
         ("z", Block("z", parentId: "ghost")));
 
-    Assert.Equal(["z", "é", "😀", "Ａ"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["z", "é", "😀", "Ａ"], Ids(RichTextRuntime.Export(doc)));
   }
 
   [Fact]
@@ -150,7 +150,7 @@ public sealed class YDocConverterLawTests
 
     Assert.Equal(
         "not-yet-arrived",
-        BlockNamed(YDocConverter.Export(doc), "a")["parent"]?.GetValue<string>());
+        BlockNamed(RichTextRuntime.Export(doc), "a")["parent"]?.GetValue<string>());
   }
 
   [Fact]
@@ -158,7 +158,7 @@ public sealed class YDocConverterLawTests
   {
     var doc = BuildDoc(["a"], ("a", Block("a", contentIds: ["missing"])));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Equal(["a"], Ids(exported));
     Assert.Equal(["missing"], Strings(BlockNamed(exported, "a")["content"]));
@@ -169,11 +169,11 @@ public sealed class YDocConverterLawTests
   {
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "a", "type": "paragraph", "data": { "text": "a" }, "content": [7, "b"] }""",
         """{ "id": "b", "type": "paragraph", "data": { "text": "b" }, "parent": "a" }"""));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Equal(["a", "b"], Ids(exported));
     AssertJson("""[7,"b"]""", BlockNamed(exported, "a")["content"]);
@@ -184,13 +184,13 @@ public sealed class YDocConverterLawTests
   {
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "a", "type": "paragraph", "data": { "text": "a" } }"""));
 
     var contentIds = Assert.IsType<YArray>(Entry(BlockOf(doc, "a"), "contentIds"));
 
     Assert.Equal(0, contentIds.Count);
-    Assert.Null(BlockNamed(YDocConverter.Export(doc), "a")["content"]);
+    Assert.Null(BlockNamed(RichTextRuntime.Export(doc), "a")["content"]);
   }
 
   /// <summary>
@@ -205,14 +205,14 @@ public sealed class YDocConverterLawTests
   {
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "a", "type": "paragraph", "data": { "text": "a" }, "tunes": {} }""",
         """{ "id": "b", "type": "paragraph", "data": { "text": "b" } }"""));
 
     Assert.IsType<YMap>(Entry(BlockOf(doc, "a"), "tunes"));
     Assert.Equal(0, Assert.IsType<YMap>(Entry(BlockOf(doc, "b"), "tunes")).Count);
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Null(BlockNamed(exported, "a")["tunes"]);
     Assert.Null(BlockNamed(exported, "b")["tunes"]);
@@ -223,13 +223,13 @@ public sealed class YDocConverterLawTests
   {
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "p", "type": "paragraph", "data": {} }""",
         """{ "id": "h", "type": "header", "data": {} }"""));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
-    AssertJson("""{"text":""}""", BlockNamed(exported, "p")["data"]);
+    AssertJson("""{"text":[]}""", BlockNamed(exported, "p")["data"]);
     AssertJson("{}", BlockNamed(exported, "h")["data"]);
   }
 
@@ -240,12 +240,12 @@ public sealed class YDocConverterLawTests
     // level block; it lands in the orphan tail and reads back parentless.
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "first", "type": "paragraph", "data": { "text": "1" } }""",
         """{ "id": "nullish", "type": "paragraph", "data": { "text": "2" }, "parent": null }""",
         """{ "id": "last", "type": "paragraph", "data": { "text": "3" } }"""));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Equal(["first", "last", "nullish"], Ids(exported));
     Assert.Null(BlockNamed(exported, "nullish")["parent"]);
@@ -258,7 +258,7 @@ public sealed class YDocConverterLawTests
     // as a BigInt: `typeof x === 'number'` fails and JSON.stringify throws.
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "a", "type": "paragraph", "data": { "n": 5, "big": 1735689600000, "f": 2.5 }, "lastEditedAt": 1735689600000 }"""));
 
     var block = BlockOf(doc, "a");
@@ -285,7 +285,7 @@ public sealed class YDocConverterLawTests
 
     AssertJson(
         """{"whole":3,"fraction":2.5,"long":7}""",
-        BlockNamed(YDocConverter.Export(doc), "a")["data"]);
+        BlockNamed(RichTextRuntime.Export(doc), "a")["data"]);
   }
 
   [Fact]
@@ -293,7 +293,7 @@ public sealed class YDocConverterLawTests
   {
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "a", "type": "widget", "data": { "objects": [{ "k": 1 }], "primitives": [1, 2], "empty": [], "mixed": [1, {}], "grid": [[{ "k": 1 }]] } }"""));
 
     var data = Assert.IsType<YMap>(Entry(BlockOf(doc, "a"), "data"));
@@ -326,7 +326,7 @@ public sealed class YDocConverterLawTests
 
     AssertJson(
         """[[{"text":"r1"}],[{"text":"r2"}],[{"text":"orphan a"}],[{"text":"orphan z"}]]""",
-        BlockNamed(YDocConverter.Export(doc), "t")["data"]?["content"]);
+        BlockNamed(RichTextRuntime.Export(doc), "t")["data"]?["content"]);
   }
 
   [Fact]
@@ -340,7 +340,7 @@ public sealed class YDocConverterLawTests
         ["t"],
         ("t", Table("t", ("plainKeys", plainKeys), ("rowsOnly", rowsOnly))));
 
-    var data = BlockNamed(YDocConverter.Export(doc), "t")["data"];
+    var data = BlockNamed(RichTextRuntime.Export(doc), "t")["data"];
 
     AssertJson("""{"__rows":{"k1":"row"},"__rowKeys":["k1"]}""", data?["plainKeys"]);
     AssertJson("""{"__rows":{"k1":"row"}}""", data?["rowsOnly"]);
@@ -369,7 +369,7 @@ public sealed class YDocConverterLawTests
         ("good", Block("good")));
     var warnings = new List<string>();
 
-    var exported = YDocConverter.Export(doc, warnings.Add);
+    var exported = RichTextRuntime.Export(doc, warnings.Add);
 
     Assert.Equal(["kid", "good"], Ids(exported));
     Assert.Equal("bad-id", BlockNamed(exported, "kid")["parent"]?.GetValue<string>());
@@ -395,7 +395,7 @@ public sealed class YDocConverterLawTests
 
     var warnings = new List<string>();
 
-    Assert.Equal(["good"], Ids(YDocConverter.Export(doc, warnings.Add)));
+    Assert.Equal(["good"], Ids(RichTextRuntime.Export(doc, warnings.Add)));
     Assert.Empty(warnings);
   }
 
@@ -410,7 +410,7 @@ public sealed class YDocConverterLawTests
   {
     var doc = new YDoc();
 
-    var error = Assert.Throws<InvalidDataException>(() => YDocConverter.Seed(doc, Blocks(block)));
+    var error = Assert.Throws<InvalidDataException>(() => RichTextRuntime.Seed(doc, Blocks(block)));
 
     Assert.Contains("\"a\"", error.Message, StringComparison.Ordinal);
   }
@@ -428,7 +428,7 @@ public sealed class YDocConverterLawTests
   {
     var doc = new YDoc();
 
-    var error = Assert.Throws<InvalidDataException>(() => YDocConverter.Seed(doc, Blocks(block)));
+    var error = Assert.Throws<InvalidDataException>(() => RichTextRuntime.Seed(doc, Blocks(block)));
 
     Assert.Contains("\"a\"", error.Message, StringComparison.Ordinal);
     Assert.Contains("type", error.Message, StringComparison.Ordinal);
@@ -440,10 +440,10 @@ public sealed class YDocConverterLawTests
   {
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "w", "type": "widget", "data": { "k": 1 }, "content": "a😀b" }"""));
 
-    AssertJson("""["a","😀","b"]""", BlockNamed(YDocConverter.Export(doc), "w")["content"]);
+    AssertJson("""["a","😀","b"]""", BlockNamed(RichTextRuntime.Export(doc), "w")["content"]);
   }
 
   [Fact]
@@ -451,12 +451,12 @@ public sealed class YDocConverterLawTests
   {
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": 42, "type": "paragraph", "data": { "text": "skipped" } }""",
         """{ "type": "paragraph", "data": { "text": "skipped too" } }""",
         """{ "id": "kept", "type": "paragraph", "data": { "text": "kept" } }"""));
 
-    Assert.Equal(["kept"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["kept"], Ids(RichTextRuntime.Export(doc)));
   }
 
   [Fact]
@@ -464,12 +464,12 @@ public sealed class YDocConverterLawTests
   {
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "old", "type": "paragraph", "data": { "text": "old" } }"""));
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "new", "type": "paragraph", "data": { "text": "new" } }"""));
 
-    Assert.Equal(["new"], Ids(YDocConverter.Export(doc)));
+    Assert.Equal(["new"], Ids(RichTextRuntime.Export(doc)));
   }
 
   private static YDoc BuildDoc(

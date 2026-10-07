@@ -575,9 +575,29 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
 /// <summary>Stand-in for YDocConverter over one "content" text root and a {"text": ...} shape.</summary>
 internal sealed class FakeDocConverter : ICollabDocConverter
 {
+  public ValueTask SeedAsync(YDoc doc, JsonNode outputData, CancellationToken cancellationToken = default)
+  {
+    Seed(doc, outputData);
+
+    return ValueTask.CompletedTask;
+  }
+
+  public ValueTask<JsonNode> ExportAsync(YDoc doc, CancellationToken cancellationToken = default)
+  {
+    return ValueTask.FromResult<JsonNode>(Export(doc));
+  }
+
+  public ValueTask ApplyOpsAsync(
+      YDoc doc, IReadOnlyList<CollabEditOp> ops, CancellationToken cancellationToken = default)
+  {
+    ApplyOps(doc, ops);
+
+    return ValueTask.CompletedTask;
+  }
+
   internal int ApplyOpsCalls { get; private set; }
 
-  public void Seed(YDoc doc, JsonNode outputData)
+  private static void Seed(YDoc doc, JsonNode outputData)
   {
     var text = doc.GetText("content");
 
@@ -625,7 +645,7 @@ internal sealed class FakeDocConverter : ICollabDocConverter
     });
   }
 
-  public JsonNode Export(YDoc doc)
+  private static JsonObject Export(YDoc doc)
   {
     return new JsonObject { ["text"] = YDocs.Text(doc) };
   }

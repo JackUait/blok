@@ -6,11 +6,16 @@ using Blok.Server.Collab;
 
 namespace Blok.Server.Tests.Collab;
 
+/// <param name="CanonicalSegments">
+/// The host-shape canonical (rich fields as segments), or null when the
+/// fixture predates format 2.
+/// </param>
 internal sealed record YDocConverterFixture(
     string Name,
     JsonArray Input,
     JsonArray Canonical,
-    byte[] Update);
+    byte[] Update,
+    JsonArray? CanonicalSegments = null);
 
 /// <summary>
 /// Reads the lockstep fixtures that scripts/generate-collab-fixtures.mjs
@@ -51,12 +56,15 @@ internal static class YDocConverterFixtures
   {
     var directory = Path.Combine(Root.Value, name);
 
+    var segments = Path.Combine(directory, "canonical.segments.json");
+
     return new YDocConverterFixture(
         name,
         ReadBlocks(Path.Combine(directory, "input.json")),
         ReadBlocks(Path.Combine(directory, "canonical.json")),
         Convert.FromBase64String(
-            File.ReadAllText(Path.Combine(directory, "update.b64"))));
+            File.ReadAllText(Path.Combine(directory, "update.b64"))),
+        File.Exists(segments) ? ReadBlocks(segments) : null);
   }
 
   /// <summary>

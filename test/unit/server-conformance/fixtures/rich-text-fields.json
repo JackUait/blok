@@ -1,0 +1,7 @@
+{
+  "paragraph": ["text"],
+  "header": ["text"],
+  "quote": ["text"],
+  "toggle": ["text"],
+  "list": ["text"]
+}

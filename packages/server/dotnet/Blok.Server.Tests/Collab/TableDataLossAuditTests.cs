@@ -35,11 +35,11 @@ public sealed class TableDataLossAuditTests
 
   private static readonly string[] CellChildren =
   [
-    """{ "id": "p00", "type": "paragraph", "parent": "tb", "data": { "text": "origin" } }""",
-    """{ "id": "p01", "type": "paragraph", "parent": "tb", "data": { "text": "tall" } }""",
-    """{ "id": "p10", "type": "paragraph", "parent": "tb", "data": { "text": "first" } }""",
-    """{ "id": "p11", "type": "list", "parent": "tb", "data": { "text": "second", "style": "unordered" } }""",
-    """{ "id": "p12", "type": "paragraph", "parent": "tb", "data": { "text": "x" } }""",
+    """{ "id": "p00", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "origin" }] } }""",
+    """{ "id": "p01", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "tall" }] } }""",
+    """{ "id": "p10", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "first" }] } }""",
+    """{ "id": "p11", "type": "list", "parent": "tb", "data": { "text": [{ "text": "second" }], "style": "unordered" } }""",
+    """{ "id": "p12", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "x" }] } }""",
   ];
 
   [Fact]
@@ -48,9 +48,9 @@ public sealed class TableDataLossAuditTests
     var input = Blocks([FullTable, .. CellChildren]);
     var doc = new YDoc(1);
 
-    YDocConverter.Seed(doc, input);
+    RichTextRuntime.Seed(doc, input);
 
-    AssertSameDocument(input, YDocConverter.Export(doc));
+    AssertSameDocument(input, RichTextRuntime.Export(doc));
   }
 
   [Fact]
@@ -59,9 +59,9 @@ public sealed class TableDataLossAuditTests
     var input = Blocks([FullTable, .. CellChildren]);
     var doc = new YDoc(1);
 
-    YDocConverter.Seed(doc, input);
+    RichTextRuntime.Seed(doc, input);
 
-    AssertSameDocument(input, YDocConverter.Export(Fork(doc)));
+    AssertSameDocument(input, RichTextRuntime.Export(Fork(doc)));
   }
 
   /// <summary>Legacy string cells, an empty row, and a mixed string/object row.</summary>
@@ -75,9 +75,9 @@ public sealed class TableDataLossAuditTests
         """);
     var doc = new YDoc(1);
 
-    YDocConverter.Seed(doc, input);
+    RichTextRuntime.Seed(doc, input);
 
-    AssertSameDocument(input, YDocConverter.Export(doc));
+    AssertSameDocument(input, RichTextRuntime.Export(doc));
   }
 
   public static TheoryData<string, string> TableEdits() => new()
@@ -152,14 +152,14 @@ public sealed class TableDataLossAuditTests
   {
     var doc = new YDoc(1);
 
-    YDocConverter.Seed(doc, Blocks([FullTable, .. CellChildren]));
+    RichTextRuntime.Seed(doc, Blocks([FullTable, .. CellChildren]));
 
     var data = JsonNode.Parse(
         $$"""{ "withHeadings": true, "withHeadingColumn": false, "colWidths": [100, 200], "content": {{content}} }""")!;
 
     Apply(doc, $$"""{ "op": "update", "id": "tb", "data": {{data.ToJsonString()}} }""");
 
-    var exported = BlockNamed(YDocConverter.Export(doc), "tb")["data"];
+    var exported = BlockNamed(RichTextRuntime.Export(doc), "tb")["data"];
 
     Assert.True(
         JsonNode.DeepEquals(Normalize(data), Normalize(exported)),
@@ -178,14 +178,14 @@ public sealed class TableDataLossAuditTests
     {
       var doc = new YDoc(1);
 
-      YDocConverter.Seed(doc, Blocks([FullTable, .. CellChildren]));
+      RichTextRuntime.Seed(doc, Blocks([FullTable, .. CellChildren]));
       Apply(doc, $$"""{ "op": "update", "id": "tb", "data": { "content": {{first}} } }""");
 
       var data = JsonNode.Parse($$"""{ "content": {{content}} }""")!;
 
       Apply(doc, $$"""{ "op": "update", "id": "tb", "data": {{data.ToJsonString()}} }""");
 
-      var exported = BlockNamed(YDocConverter.Export(doc), "tb")["data"];
+      var exported = BlockNamed(RichTextRuntime.Export(doc), "tb")["data"];
 
       Assert.True(
           JsonNode.DeepEquals(Normalize(data), Normalize(exported)),
@@ -203,7 +203,7 @@ public sealed class TableDataLossAuditTests
   {
     var doc = new YDoc(1);
 
-    YDocConverter.Seed(doc, Blocks([FullTable, .. CellChildren]));
+    RichTextRuntime.Seed(doc, Blocks([FullTable, .. CellChildren]));
 
     var peer = Fork(doc);
     var before = doc.EncodeStateVector();
@@ -227,7 +227,7 @@ public sealed class TableDataLossAuditTests
 
     doc.ApplyUpdate(peer.EncodeStateAsUpdate(before));
 
-    var content = BlockNamed(YDocConverter.Export(doc), "tb")["data"]!["content"]!.AsArray();
+    var content = BlockNamed(RichTextRuntime.Export(doc), "tb")["data"]!["content"]!.AsArray();
 
     Assert.Equal("red", content[0]![0]!["color"]?.GetValue<string>());
     Assert.Equal(["c0", "c1", "c2", "c3"], content[0]!.AsArray().Select(cell => cell!["id"]!.GetValue<string>()));
@@ -243,7 +243,7 @@ public sealed class TableDataLossAuditTests
   {
     var doc = new YDoc(1);
 
-    YDocConverter.Seed(doc, Blocks([FullTable, .. CellChildren]));
+    RichTextRuntime.Seed(doc, Blocks([FullTable, .. CellChildren]));
 
     var peer = Fork(doc);
     var before = doc.EncodeStateVector();
@@ -266,7 +266,7 @@ public sealed class TableDataLossAuditTests
 
     doc.ApplyUpdate(peer.EncodeStateAsUpdate(before));
 
-    var row = BlockNamed(YDocConverter.Export(doc), "tb")["data"]!["content"]![0]!.AsArray();
+    var row = BlockNamed(RichTextRuntime.Export(doc), "tb")["data"]!["content"]![0]!.AsArray();
     var c2 = row.Single(cell => cell!["id"]!.GetValue<string>() == "c2");
 
     Assert.Equal(["p01", "pNew"], c2!["blocks"]!.AsArray().Select(id => id!.GetValue<string>()));
@@ -281,9 +281,9 @@ public sealed class TableDataLossAuditTests
   {
     var doc = new YDoc(1);
 
-    YDocConverter.Seed(doc, Blocks([FullTable, .. CellChildren]));
+    RichTextRuntime.Seed(doc, Blocks([FullTable, .. CellChildren]));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     foreach (var id in new[] { "p00", "p01", "p10", "p11", "p12" })
     {
@@ -319,7 +319,7 @@ public sealed class TableDataLossAuditTests
 
   private static void Apply(YDoc doc, params string[] opJson)
   {
-    YDocConverter.ApplyOps(
+    RichTextRuntime.ApplyOps(
         doc,
         CollabEditOps.Parse(
             Encoding.UTF8.GetBytes($$"""{ "ops": [{{string.Join(",", opJson)}}] }""")));

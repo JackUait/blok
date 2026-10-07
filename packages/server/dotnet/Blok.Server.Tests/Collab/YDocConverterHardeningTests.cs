@@ -38,11 +38,11 @@ public sealed class YDocConverterHardeningTests
         ApplyOutcome.Applied,
         doc.ApplyUpdate(Convert.FromBase64String(Update)).Outcome);
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
     var block = Assert.Single(exported);
 
     Assert.Equal($"a{NUL}b", block!["id"]!.GetValue<string>());
-    Assert.Equal("x", block["data"]!["text"]!.GetValue<string>());
+    Assert.Equal("""[{"text":"x"}]""", block["data"]!["text"]!.ToJsonString());
   }
 
   [Theory]
@@ -117,7 +117,7 @@ public sealed class YDocConverterHardeningTests
   [Fact]
   public void SeedNamesTheNulInItsRefusal()
   {
-    var error = Assert.Throws<InvalidDataException>(() => YDocConverter.Seed(
+    var error = Assert.Throws<InvalidDataException>(() => RichTextRuntime.Seed(
         new YDoc(),
         Blocks("""
           { "id": "n1", "type": "paragraph", "data": { "text": "a\u0000b" } }
@@ -136,14 +136,14 @@ public sealed class YDocConverterHardeningTests
   {
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
+    RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "old", "type": "paragraph", "data": { "text": "old" } }"""));
 
-    Assert.Throws<InvalidDataException>(() => YDocConverter.Seed(doc, Blocks(
+    Assert.Throws<InvalidDataException>(() => RichTextRuntime.Seed(doc, Blocks(
         """{ "id": "good", "type": "paragraph", "data": { "text": "good" } }""",
         """{ "id": "bad", "type": "paragraph", "data": { "text": "a\u0000b" } }""")));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     Assert.Equal("old", Assert.Single(exported)!["id"]!.GetValue<string>());
   }
@@ -157,12 +157,12 @@ public sealed class YDocConverterHardeningTests
   {
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, Blocks(
-        """{ "id": "n1", "type": "paragraph", "data": { "text": "a\u0001b\u001Fc\td" } }"""));
+    RichTextRuntime.Seed(doc, Blocks(
+        """{ "id": "n1", "type": "paragraph", "data": { "text": [{ "text": "a\u0001b\u001Fc\td" }] } }"""));
 
     Assert.Equal(
         "a\u0001b\u001Fc\td",
-        YDocConverter.Export(doc)[0]!["data"]!["text"]!.GetValue<string>());
+        RichTextRuntime.Export(doc)[0]!["data"]!["text"]![0]!["text"]!.GetValue<string>());
   }
 
   /// <summary>
@@ -176,11 +176,11 @@ public sealed class YDocConverterHardeningTests
 
     var doc = new YDoc();
 
-    YDocConverter.Seed(doc, ParentChain(Length));
+    RichTextRuntime.Seed(doc, ParentChain(Length));
 
     RunOnAOneMegabyteStack(() =>
     {
-      var exported = YDocConverter.Export(doc);
+      var exported = RichTextRuntime.Export(doc);
 
       Assert.Equal(Length, exported.Count);
       Assert.Equal("b0", exported[0]!["id"]!.GetValue<string>());
@@ -200,9 +200,9 @@ public sealed class YDocConverterHardeningTests
     RunOnAOneMegabyteStack(() =>
     {
       // data plus MaxValueDepth levels inside it: the deepest record a seed takes.
-      YDocConverter.Seed(doc, NestedData(YDocConverter.MaxValueDepth + 1));
+      RichTextRuntime.Seed(doc, NestedData(YDocConverter.MaxValueDepth + 1));
 
-      var exported = YDocConverter.Export(doc);
+      var exported = RichTextRuntime.Export(doc);
 
       Assert.Single(exported);
 
@@ -217,7 +217,7 @@ public sealed class YDocConverterHardeningTests
   {
     var doc = new YDoc();
     var error = Assert.Throws<InvalidDataException>(
-        () => YDocConverter.Seed(doc, NestedData(YDocConverter.MaxValueDepth + 2)));
+        () => RichTextRuntime.Seed(doc, NestedData(YDocConverter.MaxValueDepth + 2)));
 
     Assert.Contains("nested", error.Message, StringComparison.OrdinalIgnoreCase);
   }
@@ -234,7 +234,7 @@ public sealed class YDocConverterHardeningTests
 
     WriteBlock(doc, "deep", ("data", NestedMaps(YDocConverter.MaxValueDepth + 5)));
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
     var last = Descend(exported[0]!["data"]!.AsObject(), YDocConverter.MaxValueDepth);
 
@@ -261,7 +261,7 @@ public sealed class YDocConverterHardeningTests
     doc.Transact(transaction => data.Set(transaction, "blob", new byte[] { 1, 2, 3 }));
     ApplyForeign(doc, Keyed(0, data, "sub", new ContentDoc("sub-guid", null)));
 
-    var exported = YDocConverter.Export(doc)[0]!["data"]!;
+    var exported = RichTextRuntime.Export(doc)[0]!["data"]!;
 
     AssertJson("""{"0":1,"1":2,"2":3}""", exported["blob"]);
     AssertJson("{}", exported["sub"]);
@@ -290,7 +290,7 @@ public sealed class YDocConverterHardeningTests
 
     var warnings = new List<string>();
 
-    var exported = YDocConverter.Export(replica, warnings.Add);
+    var exported = RichTextRuntime.Export(replica, warnings.Add);
 
     Assert.Equal(["deep", "fine"], exported.Select(block => block!["id"]!.GetValue<string>()));
     Assert.Collection(
@@ -320,7 +320,7 @@ public sealed class YDocConverterHardeningTests
         Keyed(0, DataOf(doc, "n1"), "legacy", new ContentJson(["""{"a":1}"""])),
         Keyed(1, DataOf(doc, "n1"), "embed", new ContentEmbed("""{"kind":"image"}""")));
 
-    var block = Assert.Single(YDocConverter.Export(doc));
+    var block = Assert.Single(RichTextRuntime.Export(doc));
 
     Assert.Equal("""{"a":1}""", block!["data"]!["legacy"]!.ToJsonString());
     Assert.Equal("""{"kind":"image"}""", block["data"]!["embed"]!.ToJsonString());
@@ -343,9 +343,9 @@ public sealed class YDocConverterHardeningTests
 
     ApplyForeign(doc, Keyed(0, DataOf(doc, "n1"), "lone", new ContentEmbed("\"\\ud800\"")));
 
-    var block = Assert.Single(YDocConverter.Export(doc));
+    var block = Assert.Single(RichTextRuntime.Export(doc));
 
-    Assert.Equal("n1", block!["data"]!["text"]!.GetValue<string>());
+    Assert.Equal("""[{"text":"n1"}]""", block!["data"]!["text"]!.ToJsonString());
     Assert.False(block["data"]!.AsObject().ContainsKey("lone"));
   }
 
@@ -362,7 +362,7 @@ public sealed class YDocConverterHardeningTests
     WriteBlock(doc, "n1");
     ApplyForeign(doc, Keyed(0, DataOf(doc, "n1"), "deep", new ContentEmbed(deep)));
 
-    var block = Assert.Single(YDocConverter.Export(doc));
+    var block = Assert.Single(RichTextRuntime.Export(doc));
 
     Assert.Equal(deep, block!["data"]!["deep"]!.ToJsonString());
   }
@@ -375,17 +375,18 @@ public sealed class YDocConverterHardeningTests
 
   /// <summary>
   /// A non-Blok peer inserting a Y.Text must not brick the room forever. The
-  /// JS client renders these as their string form, so Y.Text and Y.XmlText
-  /// render their text here too. The XML CONTAINERS render "" instead of
-  /// their markup (Locked Decision 8): they are placeholders in this engine,
-  /// and no Blok client writes one.
+  /// JS client renders these as their string form, so Y.Text renders its
+  /// text here too, and a Y.XmlText — formatted rich text, read by class —
+  /// renders segments. The XML CONTAINERS render "" instead of their markup
+  /// (Locked Decision 8): they are placeholders in this engine, and no Blok
+  /// client writes one.
   /// </summary>
   [Theory]
-  [InlineData("text", "hello world")]
-  [InlineData("xmltext", "xml text")]
-  [InlineData("xmlelement", "")]
-  [InlineData("xmlfragment", "")]
-  [InlineData("xmlhook", "")]
+  [InlineData("text", "\"hello world\"")]
+  [InlineData("xmltext", """[{"text":"xml text"}]""")]
+  [InlineData("xmlelement", "\"\"")]
+  [InlineData("xmlfragment", "\"\"")]
+  [InlineData("xmlhook", "\"\"")]
   public void ExportReadsAForeignSharedTypeAsItsStringForm(string kind, string expected)
   {
     var doc = new YDoc();
@@ -420,9 +421,9 @@ public sealed class YDocConverterHardeningTests
       doc.Transact(transaction => data.Set(transaction, "rich", ForeignType(kind)));
     }
 
-    var exported = YDocConverter.Export(doc);
+    var exported = RichTextRuntime.Export(doc);
 
-    Assert.Equal(expected, exported[0]!["data"]!["rich"]!.GetValue<string>());
+    Assert.Equal(expected, exported[0]!["data"]!["rich"]!.ToJsonString());
   }
 
   private static YAbstractType ForeignType(string kind)
@@ -551,7 +552,7 @@ public sealed class YDocConverterHardeningTests
   {
     var doc = new YDoc();
 
-    Assert.Throws<InvalidDataException>(() => YDocConverter.Seed(doc, blocks));
+    Assert.Throws<InvalidDataException>(() => RichTextRuntime.Seed(doc, blocks));
   }
 
   private static JsonArray Blocks(params string[] blockJson)

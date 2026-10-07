@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
+using Blok.Server.Documents;
 using Blok.Server.Yjs;
 using Xunit;
 
@@ -2314,8 +2315,12 @@ public sealed class CollabRoomTests
     Assert.Equal("hello", await ExportedTextAsync(manager));
   }
 
+  /// <summary>
+  /// Zero local updates is a failure only when the doc MOVED: bytes the
+  /// journal never sees. An edit that wrote nothing is the no-op below.
+  /// </summary>
   [Fact]
-  public async Task AnEditWithNoLocalUpdateClosesWithoutObservation()
+  public async Task AnEditThatMovesTheDocWithoutALocalUpdateClosesWithoutObservation()
   {
     endpoint.Holds(DocId, "hello");
     var manager = CreateJournalManager();
@@ -2325,7 +2330,7 @@ public sealed class CollabRoomTests
     await Join(manager, observer);
     writer.Received.Clear();
     observer.Received.Clear();
-    converter.SuppressEditUpdates = true;
+    converter.EditMovesTheDocUnseen = true;
 
     var result = await manager.EditAsync(DocId, [Appending("b-1", "x")], CancellationToken.None);
 
@@ -2337,8 +2342,61 @@ public sealed class CollabRoomTests
     Assert.Empty(operations.Committed(DocId));
     Assert.Empty(endpoint.Saves);
     time.Advance(TimeSpan.FromSeconds(2));
-    converter.SuppressEditUpdates = false;
+    converter.EditMovesTheDocUnseen = false;
     Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// An edit that changes nothing (a host re-sending the same data, or HTML
+  /// spelled differently) writes no bytes. That is applied, with nothing to
+  /// append, and the room stays open.
+  /// </summary>
+  [Fact]
+  public async Task AnEditThatWritesNothingIsAppliedWithoutAnAppend()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    await Join(manager, writer);
+    writer.Received.Clear();
+    converter.EditWritesNothing = true;
+
+    var result = await manager.EditAsync(DocId, [Appending("b-1", "x")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Applied, result.Status);
+    Assert.Equal(
+        Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).DurableThrough,
+        Assert.IsType<CollabEditReceipt>(result.Receipt).ServerSequence);
+    Assert.Empty(writer.Closes);
+    Assert.Empty(writer.Received);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal(1, manager.LiveRoomCount);
+  }
+
+  /// <summary>
+  /// Review Focus 1 end to end: the real converter writes nothing for a
+  /// paragraph whose HTML only changed spelling, and the journal room takes
+  /// that as applied rather than as a failed commit.
+  /// </summary>
+  [Fact]
+  public async Task UnderAJournalARespelledParagraphEditIsAppliedAndKeepsTheRoom()
+  {
+    endpoint.HoldsDocument(DocId, (JsonObject)JsonNode.Parse(
+        """{"blocks":[{"id":"p","type":"paragraph","data":{"text":"<strong>x</strong>&nbsp;y"}}]}""")!);
+    var manager = CreateJournalManager(
+        docConverter: new CollabDocConverter(time, RichTextRuntime.Reader));
+    var writer = V2Member();
+    await Join(manager, writer);
+
+    var result = await manager.EditAsync(
+        DocId,
+        [new CollabEditOp.Update("p", new JsonObject { ["text"] = "<b>x</b>\u00a0y<br>" })],
+        CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Applied, result.Status);
+    Assert.Empty(writer.Closes);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal(1, manager.LiveRoomCount);
   }
 
   [Fact]
@@ -3032,7 +3090,7 @@ public sealed class CollabRoomTests
   public async Task UnderAJournalANullSeedPutsNothingAndItsReopenPutsOneEmptyDocument()
   {
     endpoint.HoldsNothing(DocId);
-    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time));
+    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time, RichTextRuntime.Reader));
     var first = await Join(manager, V2Member());
     var lineage = Assert.IsType<CollabDocumentHead>(operations.Head(DocId)).Lineage;
     await first.LeaveAsync();
@@ -3060,6 +3118,31 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// Reading an edit's HTML happens before anything is written, so a reader
+  /// that fails (a runtime timeout, a spent allocation budget) refuses that
+  /// one request. It must not take the commit-failure path, which closes the
+  /// room for every member.
+  /// </summary>
+  [Fact]
+  public async Task UnderAJournalAnHtmlReaderFailureRefusesTheEditAndKeepsTheRoom()
+  {
+    endpoint.HoldsNothing(DocId);
+    var manager = CreateJournalManager(
+        docConverter: new CollabDocConverter(time, new FailingHtmlReader()));
+    var writer = V2Member();
+    await Join(manager, writer);
+
+    var result = await manager.EditAsync(
+        DocId,
+        [Appending("b-1", "<b>x</b>")],
+        CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Invalid, result.Status);
+    Assert.Empty(writer.Closes);
+    Assert.Empty(operations.Committed(DocId));
+  }
+
+  /// <summary>
   /// A /state read of an id Blok has never seen seeds the journal like a
   /// join does, so the reopen PUT above applies to a /state-only id too.
   /// </summary>
@@ -3067,7 +3150,7 @@ public sealed class CollabRoomTests
   public async Task UnderAJournalAStateReadSeedsANullDocumentAndItsReopenPutsOnce()
   {
     endpoint.HoldsNothing(DocId);
-    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time));
+    var manager = CreateJournalManager(docConverter: new CollabDocConverter(time, RichTextRuntime.Reader));
 
     var state = await manager.StateAsync(DocId, CancellationToken.None);
 
@@ -4493,6 +4576,115 @@ public sealed class CollabRoomTests
     Assert.Empty(endpoint.Saves);
     Assert.Single(log, line => line.Contains("b-1", StringComparison.Ordinal));
     Assert.Single(operations.Committed(DocId));
+  }
+
+  /// <summary>
+  /// A runtime timeout reading rich text HTML is not a document the room can
+  /// never export: it backs off and retries, and the retry's PUT lands.
+  /// </summary>
+  [Fact]
+  public async Task ATransientExportFailureIsRetriedNotRefused()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    converter.NextExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read", new TimeoutException());
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count > 0,
+        "the retried export to land");
+
+    Assert.DoesNotContain(log, line => line.Contains("cannot export its document", StringComparison.Ordinal));
+    Assert.Equal("hello!", endpoint.Saves[^1].Data["text"]?.GetValue<string>());
+  }
+
+  /// <summary>
+  /// Eviction and drain export through the flush, which must classify the
+  /// same way: a transient failure is logged and left for the next load, not
+  /// marked as a document that can never be exported.
+  /// </summary>
+  [Fact]
+  public async Task ATransientFlushExportFailureIsNotARefusal()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    converter.ExportFailure = new CollabTransientException(
+        "collab: the rich text HTML could not be read", new TimeoutException());
+
+    await manager.DrainAsync(CancellationToken.None);
+
+    Assert.Contains(log, line => line.Contains("could not export during flush", StringComparison.Ordinal));
+    Assert.DoesNotContain(log, line => line.Contains("cannot export its document", StringComparison.Ordinal));
+    Assert.Empty(endpoint.Saves);
+  }
+
+  /// <summary>
+  /// A JavaScript error in the HTML reader repeats on every attempt, so it
+  /// takes the refusal path: retrying would keep the room loaded forever.
+  /// </summary>
+  [Fact]
+  public async Task AJavaScriptErrorReadingExportHtmlIsARefusal()
+  {
+    endpoint.HoldsNothing(DocId);
+    var manager = CreateJournalManager(docConverter: new CollabDocConverter(
+        time,
+        new FailingHtmlReader(new BlokDocumentConversionException(
+            BlokConversionFailure.InvalidDocument, new InvalidOperationException("TypeError")))));
+    var writer = V2Member();
+    await Join(manager, writer);
+    var edit = await manager.EditAsync(
+        DocId,
+        [new CollabEditOp.Insert("r", (JsonObject)JsonNode.Parse(
+            """{"type":"database-row","data":{"properties":{"notes":{"blocks":[{"id":"n","type":"paragraph","data":{"text":"<i>n</i>"}}]}}}}""")!, null, null)],
+        CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Applied, edit.Status);
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync();
+
+    Assert.Contains(log, line => line.Contains("cannot export its document", StringComparison.Ordinal));
+  }
+
+  /// <summary>A cancelled export is not a refusal either.</summary>
+  [Fact]
+  public async Task ACancelledExportIsRetriedNotRefused()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    converter.NextExportFailure = new OperationCanceledException();
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count > 0,
+        "the retried export to land");
+
+    Assert.DoesNotContain(log, line => line.Contains("cannot export its document", StringComparison.Ordinal));
   }
 
   /// <summary>
@@ -6186,5 +6378,15 @@ public sealed class CollabRoomTests
     room.Dispose();
 
     Assert.Equal(0, time.ArmedTimerCount);
+  }
+}
+
+/// <summary>An HTML reader that always fails with <paramref name="failure"/>.</summary>
+internal sealed class FailingHtmlReader(Exception? failure = null) : IRichTextHtmlReader
+{
+  public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
+      IReadOnlyList<RichTextHtml> fields, CancellationToken cancellationToken = default)
+  {
+    throw failure ?? new TimeoutException("the runtime took too long");
   }
 }

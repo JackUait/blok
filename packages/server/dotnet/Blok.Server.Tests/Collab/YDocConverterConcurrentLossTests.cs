@@ -201,20 +201,20 @@ public sealed class YDocConverterConcurrentLossTests
   [Fact]
   public void ConcurrentTypingInTopLevelTextMerges()
   {
-    var doc = SeededDoc("""{ "id": "p", "type": "paragraph", "data": { "text": "hello" } }""");
+    var doc = SeededDoc("""{ "id": "p", "type": "paragraph", "data": { "text": [{ "text": "hello" }] } }""");
     var peer = Fork(doc);
     var before = doc.EncodeStateVector();
 
     peer.Transact(transaction =>
-        Assert.IsType<YText>(Get(Data(peer, "p"), "text")).Insert(transaction, 0, "X"));
+        Assert.IsType<YXmlText>(Get(Data(peer, "p"), "text")).Insert(transaction, 0, "X", new AnyObject()));
 
-    Apply(doc, """{ "op": "update", "id": "p", "data": { "text": "hello!" } }""");
+    Apply(doc, """{ "op": "update", "id": "p", "data": { "text": [{ "text": "hello!" }] } }""");
 
     doc.ApplyUpdate(peer.EncodeStateAsUpdate(before));
 
     Assert.Equal(
-        "Xhello!",
-        BlockNamed(YDocConverter.Export(doc), "p")["data"]?["text"]?.GetValue<string>());
+        """[{"text":"Xhello!"}]""",
+        BlockNamed(YDocConverter.Export(doc), "p")["data"]?["text"]?.ToJsonString());
   }
 
   /// <summary>
@@ -226,13 +226,13 @@ public sealed class YDocConverterConcurrentLossTests
   [Fact]
   public void ATopLevelKeyAddedConcurrentlySurvivesAServerUpdate()
   {
-    var doc = SeededDoc("""{ "id": "p", "type": "paragraph", "data": { "text": "hi" } }""");
+    var doc = SeededDoc("""{ "id": "p", "type": "paragraph", "data": { "text": [{ "text": "hi" }] } }""");
     var peer = Fork(doc);
     var before = doc.EncodeStateVector();
 
     peer.Transact(transaction => Data(peer, "p").Set(transaction, "align", "center"));
 
-    Apply(doc, """{ "op": "update", "id": "p", "data": { "text": "hi there" } }""");
+    Apply(doc, """{ "op": "update", "id": "p", "data": { "text": [{ "text": "hi there" }] } }""");
 
     doc.ApplyUpdate(peer.EncodeStateAsUpdate(before));
 

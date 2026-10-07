@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../../../../src/components/constants';
-import { destroy, hide, onHover, show } from '../../../../src/components/utils/tooltip';
+import { destroy, hide, HINT_DELAY, MIN_HINT_DELAY, onHover, show, showReadout } from '../../../../src/components/utils/tooltip';
 import type { TooltipContent } from '../../../../src/components/utils/tooltip';
 import { resyncPortalDirections } from '../../../../src/components/utils/portal-direction';
 
@@ -200,7 +200,7 @@ describe('Tooltip utility', () => {
     rtlTarget.style.direction = 'rtl';
     ltrTarget.style.direction = 'ltr';
 
-    show(rtlTarget, 'راهنما');
+    showReadout(rtlTarget, 'راهنما');
 
     const wrapper = getTooltipWrapper();
 
@@ -208,13 +208,13 @@ describe('Tooltip utility', () => {
     expect(wrapper?.style.getPropertyValue('direction')).toBe('rtl');
     expect(wrapper?.style.getPropertyPriority('direction')).toBe('important');
 
-    show(ltrTarget, 'Help');
+    showReadout(ltrTarget, 'Help');
 
     expect(wrapper).toHaveAttribute('dir', 'ltr');
     expect(wrapper?.style.getPropertyValue('direction')).toBe('ltr');
     expect(wrapper?.style.getPropertyPriority('direction')).toBe('important');
 
-    show(rtlTarget, 'راهنما');
+    showReadout(rtlTarget, 'راهنما');
 
     expect(wrapper).toHaveAttribute('dir', 'rtl');
     expect(wrapper?.style.getPropertyValue('direction')).toBe('rtl');
@@ -229,7 +229,7 @@ describe('Tooltip utility', () => {
     editor.style.direction = 'ltr';
     editor.appendChild(target);
     document.body.appendChild(editor);
-    show(target, 'Help');
+    showReadout(target, 'Help');
     expect(getTooltipWrapper()).toHaveAttribute('data-blok-shown', 'true');
 
     editor.style.direction = 'rtl';
@@ -256,7 +256,7 @@ describe('Tooltip utility', () => {
      */
     const target = createTargetElement();
 
-    show(target, 'fixed-check');
+    showReadout(target, 'fixed-check');
 
     const wrapper = getTooltipWrapper();
     const classes = Array.from(wrapper?.classList ?? []);
@@ -282,7 +282,7 @@ describe('Tooltip utility', () => {
      */
     const target = createTargetElement();
 
-    show(target, 'pointer-check');
+    showReadout(target, 'pointer-check');
 
     const wrapper = getTooltipWrapper();
 
@@ -310,13 +310,13 @@ describe('Tooltip utility', () => {
 
     const target = createTargetElement();
 
-    show(target, 'lifecycle-check');
+    showReadout(target, 'lifecycle-check');
     expectTransparent('after show');
 
     hide();
     expectTransparent('after hide');
 
-    show(target, 'lifecycle-check-again');
+    showReadout(target, 'lifecycle-check-again');
     expectTransparent('after re-show');
   });
 
@@ -335,6 +335,7 @@ describe('Tooltip utility', () => {
 
     onHover(target, 'grace-check');
     target.dispatchEvent(new Event('mouseenter'));
+    vi.advanceTimersByTime(HINT_DELAY);
 
     const wrapper = getTooltipWrapper();
 
@@ -353,7 +354,7 @@ describe('Tooltip utility', () => {
   it('has no transition or transform animation classes on the wrapper', () => {
     const target = createTargetElement();
 
-    show(target, 'No animation');
+    showReadout(target, 'No animation');
 
     const wrapper = getTooltipWrapper();
 
@@ -388,7 +389,7 @@ describe('Tooltip utility', () => {
     const placements = ['top', 'bottom', 'left', 'right'] as const;
 
     for (const placement of placements) {
-      show(target, `${placement} tooltip`, { placement });
+      showReadout(target, `${placement} tooltip`, { placement });
 
       const wrapper = getTooltipWrapper();
       const classes = Array.from(wrapper?.classList ?? []);
@@ -402,21 +403,10 @@ describe('Tooltip utility', () => {
     }
   });
 
-  it('shows immediately by default when no delay is specified', () => {
-    const target = createTargetElement();
-
-    show(target, 'No delay');
-
-    const wrapper = getTooltipWrapper();
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-    expect(wrapper?.style.visibility).toBe('visible');
-  });
-
   it('renders tooltip content, accessible attributes', () => {
     const target = createTargetElement();
 
-    show(target, 'Tooltip text', { delay: 0 });
+    showReadout(target, 'Tooltip text');
 
     const wrapper = getTooltipWrapper();
 
@@ -428,7 +418,7 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
     expect(wrapper?.style.visibility).toBe('visible');
 
-    show(target, 'New text', { delay: 0 });
+    showReadout(target, 'New text');
 
     expect(wrapper?.textContent).toBe('New text');
   });
@@ -440,7 +430,7 @@ describe('Tooltip utility', () => {
     customContent.setAttribute('data-blok-testid', 'content');
     customContent.textContent = 'node content';
 
-    show(target, customContent, { delay: 0 });
+    showReadout(target, customContent);
 
     const wrapper = getTooltipWrapper();
     const contentHolder = wrapper?.querySelector('[data-blok-testid="tooltip-content"]');
@@ -452,7 +442,7 @@ describe('Tooltip utility', () => {
     const target = createTargetElement();
 
     expect(() => {
-      show(target, 123 as unknown as TooltipContent, { delay: 0 });
+      show(target, 123 as unknown as TooltipContent);
     }).toThrow('[Blok Tooltip] Wrong type of «content» passed. It should be an instance of Node or String. But number given.');
   });
 
@@ -463,7 +453,7 @@ describe('Tooltip utility', () => {
       width: 120,
     });
 
-    show(target, 'bottom', { delay: 0 });
+    showReadout(target, 'bottom');
 
     const wrapper = getTooltipWrapper();
 
@@ -476,9 +466,8 @@ describe('Tooltip utility', () => {
     setWrapperSize(wrapper, 80, 30);
     setWindowScrollY(5);
 
-    show(target, 'bottom', { placement: 'bottom',
-      marginTop: 8,
-      delay: 0 });
+    showReadout(target, 'bottom', { placement: 'bottom',
+      marginTop: 8 });
 
     /**
      * Wrapper is `position: fixed` and `getBoundingClientRect()` is already
@@ -500,7 +489,7 @@ describe('Tooltip utility', () => {
       height: 50,
     });
 
-    show(target, 'left', { delay: 0 });
+    showReadout(target, 'left');
 
     const wrapper = getTooltipWrapper();
 
@@ -513,9 +502,8 @@ describe('Tooltip utility', () => {
     setWrapperSize(wrapper, 50, 30);
     setWindowScrollY(0);
 
-    show(target, 'left', { placement: 'left',
-      marginLeft: 15,
-      delay: 0 });
+    showReadout(target, 'left', { placement: 'left',
+      marginLeft: 15 });
 
     expect(wrapper?.style.left).toBe('145px');
     expect(wrapper?.style.top).toBe('110px');
@@ -531,7 +519,7 @@ describe('Tooltip utility', () => {
       left: 220,
     });
 
-    show(target, 'right', { delay: 0 });
+    showReadout(target, 'right');
 
     const wrapper = getTooltipWrapper();
 
@@ -543,9 +531,8 @@ describe('Tooltip utility', () => {
 
     setWrapperSize(wrapper, 40, 20);
 
-    show(target, 'right', { placement: 'right',
-      marginRight: 6,
-      delay: 0 });
+    showReadout(target, 'right', { placement: 'right',
+      marginRight: 6 });
 
     expect(wrapper?.style.left).toBe('276px');
     expect(wrapper?.style.top).toBe('45px');
@@ -560,7 +547,7 @@ describe('Tooltip utility', () => {
       height: 20,
     });
 
-    show(target, 'top', { delay: 0 });
+    showReadout(target, 'top');
 
     const wrapper = getTooltipWrapper();
 
@@ -574,8 +561,7 @@ describe('Tooltip utility', () => {
     setWindowScrollY(undefined);
     document.documentElement.scrollTop = 30;
 
-    show(target, 'top', { placement: 'top',
-      delay: 0 });
+    showReadout(target, 'top', { placement: 'top' });
 
     /**
      * Fixed positioning means the `scrollTop` fallback branch is a no-op:
@@ -588,56 +574,50 @@ describe('Tooltip utility', () => {
   });
 
   it('responds to hover events by showing and hiding the tooltip', () => {
+    vi.useFakeTimers();
+
     const target = createTargetElement();
 
-    onHover(target, 'hover text', { delay: 0 });
-
-    // Verify the tooltip is shown via the public API (what onHover's mouseenter listener does)
-    show(target, 'hover text', { delay: 0 });
+    onHover(target, 'hover text');
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
 
     const wrapper = getTooltipWrapper();
 
     expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+    expect(wrapper?.textContent).toBe('hover text');
 
-    // Verify the tooltip is hidden via the public API (what onHover's mouseleave listener does)
-    hide();
+    target.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
 
     expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('does not show tooltip on hover when a Popover is open', () => {
-    const target = createTargetElement();
+    vi.useFakeTimers();
 
-    // Create a mock open popover element
+    const target = createTargetElement();
     const openPopover = document.createElement('div');
 
     openPopover.setAttribute('data-blok-popover-opened', 'true');
     document.body.appendChild(openPopover);
 
-    onHover(target, 'hover text', { delay: 0 });
-
-    // Simulate mouseenter by calling show directly (what the mouseenter listener does)
-    // The onHover function's mouseenter listener checks for open popovers before showing
-    // Since there's an open popover that doesn't contain the target, show should not display the tooltip
-    show(target, 'hover text', { delay: 0 });
+    onHover(target, 'hover text');
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
 
     const wrapper = getTooltipWrapper();
 
-    // Manually hide since the popover check only happens in onHover's event listener
-    hide();
-
-    // Tooltip should not be shown (aria-hidden should be true or wrapper should not exist)
     expect(wrapper?.getAttribute('aria-hidden')).not.toBe('false');
 
-    // Clean up the popover
     openPopover.remove();
 
-    // Now tooltip should work since popover is gone
-    show(target, 'hover text', { delay: 0 });
+    // With the popover gone the same hover shows the hint.
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
 
     expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
 
-    // Clean up
     hide();
   });
 
@@ -664,7 +644,7 @@ describe('Tooltip utility', () => {
   it('keeps aria-hidden synchronized with CSS class changes', async () => {
     const target = createTargetElement();
 
-    show(target, 'visible', { delay: 0 });
+    showReadout(target, 'visible');
 
     const wrapper = getTooltipWrapper();
 
@@ -681,7 +661,7 @@ describe('Tooltip utility', () => {
   it('hides the tooltip automatically when the page scrolls', () => {
     const target = createTargetElement();
 
-    show(target, 'scroll', { delay: 0 });
+    showReadout(target, 'scroll');
 
     const wrapper = getTooltipWrapper();
 
@@ -698,7 +678,7 @@ describe('Tooltip utility', () => {
 
     scrollContainer.appendChild(target);
     document.body.appendChild(scrollContainer);
-    show(target, 'nested scroll', { delay: 0 });
+    showReadout(target, 'nested scroll');
 
     const wrapper = getTooltipWrapper();
 
@@ -714,7 +694,7 @@ describe('Tooltip utility', () => {
   it('destroy removes DOM nodes and allows reinitialization', () => {
     const target = createTargetElement();
 
-    show(target, 'first', { delay: 0 });
+    show(target, 'first');
 
     expect(getTooltipWrapper()).not.toBeNull();
 
@@ -724,7 +704,7 @@ describe('Tooltip utility', () => {
 
     const secondTarget = createTargetElement();
 
-    show(secondTarget, 'second', { delay: 0 });
+    show(secondTarget, 'second');
 
     expect(getTooltipWrapper()).not.toBeNull();
   });
@@ -733,29 +713,23 @@ describe('Tooltip utility', () => {
     vi.useFakeTimers();
     const target = createTargetElement();
 
-    // First show call with delay
-    show(target, 'first tooltip', { delay: 100 });
+    show(target, 'first tooltip', { delay: MIN_HINT_DELAY });
+    vi.advanceTimersByTime(100);
 
-    // Second show call before first timeout completes
-    // This should clear the first timeout and schedule a new one
-    show(target, 'second tooltip', { delay: 100 });
-
-    // Advance time by 50ms - neither timeout should have fired yet
-    vi.advanceTimersByTime(50);
+    // Replaces the first timer; this one fires 100ms after the first would have.
+    show(target, 'second tooltip', { delay: MIN_HINT_DELAY });
+    vi.advanceTimersByTime(MIN_HINT_DELAY - 100);
 
     const wrapper = getTooltipWrapper();
-    expect(wrapper?.textContent).toBe('second tooltip');
 
-    // Advance past the first timeout's delay (100ms)
-    // The first timeout should have been cleared and not fire
-    vi.advanceTimersByTime(50);
+    // The first timer's deadline has passed: it must not have fired.
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
 
-    // Tooltip content should still be from the second show call
-    // The first timeout should not have overwritten it
+    vi.advanceTimersByTime(100);
+
     expect(wrapper?.textContent).toBe('second tooltip');
     expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
 
-    // Clean up
     hide();
   });
 
@@ -763,14 +737,10 @@ describe('Tooltip utility', () => {
     vi.useFakeTimers();
     const target = createTargetElement();
 
-    // Show tooltip with delay
-    show(target, 'delayed tooltip', { delay: 200 });
-
-    // Hide before timeout expires
+    show(target, 'delayed tooltip');
     hide();
 
-    // Advance past the original timeout delay
-    vi.advanceTimersByTime(250);
+    vi.advanceTimersByTime(HINT_DELAY);
 
     const wrapper = getTooltipWrapper();
     // Tooltip should remain hidden
@@ -784,7 +754,7 @@ describe('Tooltip utility', () => {
 
     const target = createTargetElement({ left: 15, bottom: 75, width: 120 });
 
-    show(target, 'bottom', { delay: 0 });
+    showReadout(target, 'bottom');
 
     const wrapper = getTooltipWrapper();
 
@@ -795,7 +765,7 @@ describe('Tooltip utility', () => {
     setWrapperSize(wrapper, 80, 30);
     setWindowScrollY(500);
 
-    show(target, 'bottom', { placement: 'bottom', marginTop: 8, delay: 0 });
+    showReadout(target, 'bottom', { placement: 'bottom', marginTop: 8 });
 
     // When tooltip is promoted to Top Layer, its containing block is the
     // viewport. `getBoundingClientRect()` is already viewport-relative, so
@@ -813,7 +783,7 @@ describe('Tooltip utility', () => {
 
     const target = createTargetElement();
 
-    show(target, 'tooltip text', { delay: 0 });
+    showReadout(target, 'tooltip text');
 
     const wrapper = getTooltipWrapper();
 
@@ -828,17 +798,11 @@ describe('Tooltip utility', () => {
     vi.useFakeTimers();
     const target = createTargetElement();
 
-    // First show
-    show(target, 'first', { delay: 100 });
-
-    // Hide immediately
+    show(target, 'first');
     hide();
+    show(target, 'second');
 
-    // Second show (with different content)
-    show(target, 'second', { delay: 100 });
-
-    // Advance time past the delay
-    vi.advanceTimersByTime(150);
+    vi.advanceTimersByTime(HINT_DELAY);
 
     const wrapper = getTooltipWrapper();
     // Only the second tooltip content should be visible
@@ -891,7 +855,7 @@ describe('Tooltip utility', () => {
       height: 20,
     });
 
-    show(target, 'top', { delay: 0 });
+    showReadout(target, 'top');
 
     const wrapper = getTooltipWrapper();
 
@@ -904,7 +868,7 @@ describe('Tooltip utility', () => {
     // is available, so the placement must NOT add scrollY to top.
     setWindowScrollY(750);
 
-    show(target, 'top', { placement: 'top', delay: 0 });
+    showReadout(target, 'top', { placement: 'top' });
 
     // left = elementLeft + clientWidth/2 - wrapperWidth/2 = 200 + 20 - 40 = 180
     // top  = elementTop  + 0 (Top Layer)  - wrapperHeight - offsetTop = 300 - 24 - 10 = 266
@@ -913,26 +877,13 @@ describe('Tooltip utility', () => {
     expect(wrapper.getAttribute('data-blok-placement')).toBe('top');
   });
 
-  it('shows the tooltip when the registered element receives focus and hides on blur (WCAG 1.4.13)', () => {
-    const target = createTargetElement();
-
-    onHover(target, 'focus text');
-
-    target.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-
-    const wrapper = getTooltipWrapper();
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    target.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
-  });
-
   it('links the target to the tooltip via aria-describedby on show and clears it on hide', () => {
+    vi.useFakeTimers();
+
     const target = createTargetElement();
 
-    show(target, 'described', { delay: 0 });
+    show(target, 'described');
+    vi.advanceTimersByTime(HINT_DELAY);
 
     const wrapper = getTooltipWrapper();
 
@@ -947,7 +898,7 @@ describe('Tooltip utility', () => {
   it('hides the tooltip on a capture-phase Escape keydown without preventing default', () => {
     const target = createTargetElement();
 
-    show(target, 'escape me', { delay: 0 });
+    showReadout(target, 'escape me');
 
     const wrapper = getTooltipWrapper();
 
@@ -973,7 +924,7 @@ describe('Tooltip utility', () => {
       width: 80,
     });
 
-    show(target, 'flip', { delay: 0 });
+    showReadout(target, 'flip');
 
     const wrapper = getTooltipWrapper();
 
@@ -985,8 +936,7 @@ describe('Tooltip utility', () => {
     // but fits comfortably above → it must flip to `top`.
     setWrapperSize(wrapper, 80, 100);
 
-    show(target, 'flip', { placement: 'bottom',
-      delay: 0 });
+    showReadout(target, 'flip', { placement: 'bottom' });
 
     expect(wrapper.getAttribute('data-blok-placement')).toBe('top');
     expect(wrapper.getAttribute('data-side')).toBe('top');
@@ -1004,7 +954,7 @@ describe('Tooltip utility', () => {
       height: 40,
     });
 
-    show(target, 'clamp', { delay: 0 });
+    showReadout(target, 'clamp');
 
     const wrapper = getTooltipWrapper();
 
@@ -1014,8 +964,7 @@ describe('Tooltip utility', () => {
 
     setWrapperSize(wrapper, 200, 30);
 
-    show(target, 'clamp', { placement: 'bottom',
-      delay: 0 });
+    showReadout(target, 'clamp', { placement: 'bottom' });
 
     // Raw left = triggerLeft(1000) + clientWidth/2(50) − wrapperWidth/2(100) = 950;
     // right edge 950 + 200 = 1150 > viewport width 1024 → clamp to 1024 − 200 = 824.
@@ -1027,8 +976,7 @@ describe('Tooltip utility', () => {
   it('stamps data-side reflecting the resolved placement', () => {
     const target = createTargetElement();
 
-    show(target, 'side', { placement: 'right',
-      delay: 0 });
+    showReadout(target, 'side', { placement: 'right' });
 
     const wrapper = getTooltipWrapper();
 
@@ -1038,7 +986,7 @@ describe('Tooltip utility', () => {
   it('toggles data-state between open (shown) and closed (hidden)', () => {
     const target = createTargetElement();
 
-    show(target, 'state', { delay: 0 });
+    showReadout(target, 'state');
 
     const wrapper = getTooltipWrapper();
 
@@ -1049,62 +997,17 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('data-state')).toBe('closed');
   });
 
-  it('opens instantly when re-triggered within the skip-delay warm window after a recent hide', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(0);
-
-    const target = createTargetElement();
-
-    show(target, 'first', { delay: 0 });
-    hide();
-
-    // 50ms after the hide — well inside the ~300ms warm window.
-    vi.setSystemTime(50);
-
-    show(target, 'warm', { delay: 200 });
-
-    const wrapper = getTooltipWrapper();
-
-    // Despite the 200ms delay, the warm window forces an instant reveal:
-    // aria-hidden is already false without advancing any timer.
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    hide();
-  });
-
-  it('respects the configured delay when the last hide is older than the warm window', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(0);
-
-    const target = createTargetElement();
-
-    show(target, 'first', { delay: 0 });
-    hide();
-
-    // 400ms after the hide — outside the ~300ms warm window.
-    vi.setSystemTime(400);
-
-    show(target, 'cold', { delay: 200 });
-
-    const wrapper = getTooltipWrapper();
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
-
-    vi.advanceTimersByTime(200);
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    hide();
-  });
-
   it('does not reveal on hover when the pointer type is touch (touch guard)', () => {
+    vi.useFakeTimers();
+
     const target = createTargetElement();
 
-    onHover(target, 'touchy', { delay: 0 });
+    onHover(target, 'touchy');
 
     target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'touch',
       bubbles: true }));
     target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
 
     const wrapper = getTooltipWrapper();
 
@@ -1112,13 +1015,16 @@ describe('Tooltip utility', () => {
   });
 
   it('reveals on hover when the pointer type is mouse', () => {
+    vi.useFakeTimers();
+
     const target = createTargetElement();
 
-    onHover(target, 'mousey', { delay: 0 });
+    onHover(target, 'mousey');
 
     target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
       bubbles: true }));
     target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
 
     const wrapper = getTooltipWrapper();
 
@@ -1132,11 +1038,12 @@ describe('Tooltip utility', () => {
 
     const target = createTargetElement();
 
-    onHover(target, 'grace-out', { delay: 0 });
+    onHover(target, 'grace-out');
 
     target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
       bubbles: true }));
     target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
 
     const wrapper = getTooltipWrapper();
 
@@ -1158,25 +1065,21 @@ describe('Tooltip utility', () => {
     const triggerA = createTargetElement();
     const triggerB = createTargetElement();
 
-    onHover(triggerA, 'tooltip A', { delay: 0 });
+    onHover(triggerA, 'tooltip A');
 
+    // Sweep over A: leave before its hint opens. This arms A's grace hide
+    // while nothing is shown, so show(B) takes no hide() path of its own.
     triggerA.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
       bubbles: true }));
     triggerA.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-
-    const wrapper = getTooltipWrapper();
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    // Leaving A arms its grace-hide timer.
     triggerA.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
 
-    // Immediately request B with a delay — this must cancel A's pending
-    // grace hide, otherwise the grace hide fires mid-delay and clears B's
-    // showing timeout so B never appears.
-    show(triggerB, 'tooltip B', { delay: 200 });
+    // If A's grace hide survived, it would fire mid-delay and clear B's timer.
+    show(triggerB, 'tooltip B', { delay: MIN_HINT_DELAY });
 
-    vi.advanceTimersByTime(200);
+    vi.advanceTimersByTime(MIN_HINT_DELAY);
+
+    const wrapper = getTooltipWrapper();
 
     expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
     expect(wrapper?.textContent).toBe('tooltip B');
@@ -1184,71 +1087,10 @@ describe('Tooltip utility', () => {
     hide();
   });
 
-  it('does not arm the skip-delay warm window when the hide funnel runs while the tooltip was never shown', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(0);
-
-    const sweptTrigger = createTargetElement();
-    const target = createTargetElement();
-
-    onHover(sweptTrigger, 'swept', { delay: 500 });
-
-    // Sweep over the delayed trigger: enter then leave before its delay elapses.
-    sweptTrigger.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
-      bubbles: true }));
-    sweptTrigger.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-    sweptTrigger.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-
-    // The grace timer routes into hide() at 100ms with nothing visible.
-    vi.advanceTimersByTime(100);
-
-    const wrapper = getTooltipWrapper();
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
-
-    // Well inside what would be the warm window if it had (wrongly) been armed.
-    show(target, 'cold open', { delay: 200 });
-
-    // The delay must be honored — no tooltip was actually visible, so no warm window.
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
-
-    vi.advanceTimersByTime(200);
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    hide();
-  });
-
-  it('suppresses the focus-triggered open right after a touch interaction, while keyboard focus still opens', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(0);
-
-    const target = createTargetElement();
-
-    onHover(target, 'tap focus', { delay: 0 });
-
-    // Tap-focus on a touch device: pointerdown(touch) then focus.
-    target.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch',
-      bubbles: true }));
-    target.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-
-    const wrapper = getTooltipWrapper();
-
-    expect(wrapper?.getAttribute('aria-hidden')).not.toBe('false');
-
-    // Keyboard focus with no recent touch interaction must still open (WCAG 1.4.13).
-    vi.setSystemTime(1000);
-    target.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    hide();
-  });
-
   it('destroy() disables trigger handlers so they cannot re-open the tooltip or re-register the document keydown listener', () => {
     const target = createTargetElement();
 
-    onHover(target, 'destroyed', { delay: 0 });
+    onHover(target, 'destroyed');
 
     destroy();
 
@@ -1257,7 +1099,6 @@ describe('Tooltip utility', () => {
     target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
       bubbles: true }));
     target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-    target.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
 
     expect(getTooltipWrapper()).toBeNull();
 
@@ -1274,12 +1115,13 @@ describe('Tooltip utility', () => {
 
     const target = createTargetElement();
 
-    show(target, 'delayed promote', { delay: 100 });
+    show(target, 'delayed promote');
 
     // Nothing promoted yet — the reveal is still pending behind the delay.
+    vi.advanceTimersByTime(HINT_DELAY - 1);
     expect(showPopoverSpy).not.toHaveBeenCalled();
 
-    vi.advanceTimersByTime(100);
+    vi.advanceTimersByTime(1);
 
     const wrapper = getTooltipWrapper();
 
@@ -1302,7 +1144,7 @@ describe('Tooltip utility', () => {
   it('declines to anchor to a trigger that has no layout box', () => {
     const target = createTargetElement();
 
-    show(target, 'visible anchor');
+    showReadout(target, 'visible anchor');
 
     const wrapper = getTooltipWrapper();
 
@@ -1322,7 +1164,7 @@ describe('Tooltip utility', () => {
   it('declines to anchor to a trigger detached from the document', () => {
     const target = createTargetElement();
 
-    show(target, 'visible anchor');
+    showReadout(target, 'visible anchor');
 
     const wrapper = getTooltipWrapper();
 
@@ -1342,12 +1184,12 @@ describe('Tooltip utility', () => {
 
     const target = createTargetElement();
 
-    show(target, 'delayed', { delay: 100 });
+    show(target, 'delayed');
 
     // The owning surface closes before the delay elapses.
     target.checkVisibility = vi.fn(() => false);
 
-    vi.advanceTimersByTime(100);
+    vi.advanceTimersByTime(HINT_DELAY);
 
     expect(getTooltipWrapper()).toHaveAttribute('data-blok-shown', 'false');
   });

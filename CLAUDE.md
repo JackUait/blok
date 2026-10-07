@@ -171,6 +171,15 @@ A selected, current, or active item is NEVER blue: no blue fill, no blue text, n
 - Selected states come from `--blok-icon-active-bg`, `--blok-icon-active-text` and `--blok-popover-icon-active-bg` (`src/styles/colors.css`). Their defaults are gray fills and primary ink. `test/unit/styles/selected-state-neutral.test.ts` fails if a blue value comes back. Paint new selected states with these tokens, not a local color.
 - When you add a selected state, add a test asserting it has no fill and the same ink as an unselected row.
 
+### Hints show on hover only, after a delay
+A hint (tooltip) NEVER shows instantly. It shows only when the pointer hovers its trigger, and only after a delay. Focus never shows a hint, because a click focuses its target and the hint would pop up at once.
+
+- Use `onHover` or `show` from `src/components/utils/tooltip.ts`. They wait `HINT_DELAY` (500ms) by default. They raise any shorter `delay` to `MIN_HINT_DELAY` (300ms). There is no warm window, so moving to the next trigger waits again.
+- `showReadout` skips the wait. Use it only for live feedback during a gesture, like the table's `3×4` size readout while dragging. Never use it for a hover hint.
+- Do not add a `focus`/`focusin` listener that shows a hint, and do not pass a `delay` below the minimum.
+- Hover cards with their own timer follow the same rule: the toolbox preview card (`src/components/ui/toolbox-preview.ts`) and the link hover card. No warm window. One exception (USER, 2026-10-07): an open toolbox preview card moves to the next row and swaps its drawing at once, and stays open over a section label; only its first open waits.
+- `test/unit/architecture/hint-delay-law.test.ts` enforces this. A new `showReadout` user goes in its `READOUT_USERS` with a reason.
+
 
 ## Testing
 

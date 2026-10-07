@@ -699,6 +699,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.stopPreviewTracking = popover.onCurrentItemChange((current) => {
       const config = current?.name === undefined ? undefined : this.previewConfigs.get(current.name);
 
+      // A section label sits between two entries: the pointer is passing through, so keep the card.
+      if (current?.source === 'pointer' && current.name?.startsWith(Toolbox.sectionHeaderName('')) === true) {
+        return;
+      }
+
       // Pointer only: typing a query and arrow keys also move the current row.
       if (current === null || current.source !== 'pointer' || config === undefined) {
         preview.hide();
@@ -706,7 +711,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         return;
       }
 
-      preview.show({ item: current.element, surface, config, source: current.source });
+      preview.show({ item: current.element, surface, config });
     });
   }
 

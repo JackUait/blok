@@ -1,7 +1,7 @@
 # Blok Line
 
 Blok's editor icons form one light, precise line family. Design each icon for a
-menu at 16 px, not for a large illustration. Keep silhouettes familiar and
+menu at 20 px, not for a large illustration. Keep silhouettes familiar and
 interiors open.
 
 ## Construction
@@ -27,7 +27,7 @@ a framed tool icon.
 Use one path per continuous stroke. Do not draw a shared edge twice. Keep
 separate features at least one stroke width apart where possible.
 
-Filled dots, play controls and highlighted regions carry meaning. Do not use
+Filled dots, play controls, quotation marks and highlighted regions carry meaning. Do not use
 solid fills to make a letter or outline heavier. Do not use opacity tints,
 gradients, font glyphs, embedded images, or external SVG references.
 

@@ -48,6 +48,16 @@ const openToolbox = async (page: Page): Promise<void> => {
 
 const option = (page: Page, name: string) => page.getByTestId('toolbox-popover').locator(`[data-blok-item-name="${name}"]`);
 
+const rowCenter = async (page: Page, name: string): Promise<{ x: number; y: number }> => {
+  const box = await option(page, name).boundingBox();
+
+  if (box === null) {
+    throw new Error(`row ${name} has no box`);
+  }
+
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+};
+
 test.describe('Toolbox hover preview', () => {
   test.beforeAll(ensureBlokBundleBuilt);
 
@@ -117,6 +127,8 @@ test.describe('Toolbox hover preview', () => {
   });
 
   test('the live card keeps its 232x156 paper on every row', async ({ page }) => {
+    // Every row waits out the open delay again, and there are ~40 rows.
+    test.setTimeout(60_000);
     await openToolbox(page);
 
     const rows = page.getByTestId('toolbox-popover').getByRole('option');
@@ -153,6 +165,66 @@ test.describe('Toolbox hover preview', () => {
 
     expect(seen.size).toBeGreaterThan(20);
     expect([ ...seen ].filter(([, size]) => size !== '232x156')).toEqual([]);
+  });
+
+  test('shows the card for the first search match when the pointer moves onto it', async ({ page }) => {
+    await page.mouse.move(1, 1);
+    await openToolbox(page);
+    await page.locator(PARAGRAPH_SELECTOR).type('head');
+    await expect(option(page, 'header-1')).toBeVisible();
+
+    const center = await rowCenter(page, 'header-1');
+
+    await page.mouse.move(center.x, center.y, { steps: 6 });
+
+    await expect(page.getByTestId('toolbox-preview')).toBeVisible();
+    await expect(page.getByTestId('toolbox-preview')).toContainText('Big section heading');
+  });
+
+  test('opens while the pointer keeps moving down the rows', async ({ page }) => {
+    await page.mouse.move(1, 1);
+    await openToolbox(page);
+
+    const centers = [];
+
+    for (const name of [ 'paragraph', 'header-1', 'header-2' ]) {
+      centers.push(await rowCenter(page, name));
+    }
+
+    // ~200ms of moving, under PREVIEW_OPEN_DELAY (320ms), so the card first opens on the last row.
+    for (const center of centers) {
+      await page.mouse.move(center.x, center.y);
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 100)));
+    }
+
+    // Under 320ms: a delay that restarted on each row would not be done yet.
+    await expect(page.getByTestId('toolbox-preview')).toBeVisible({ timeout: 250 });
+    await expect(page.getByTestId('toolbox-preview')).toContainText('Medium section heading');
+  });
+
+  test('comes back on the next pointer move after a scroll closed it', async ({ page }) => {
+    // A scroll box away from the menu: scrolling it closes the card but leaves the rows where they are.
+    await page.evaluate(() => {
+      const box = document.createElement('div');
+
+      box.setAttribute('data-blok-testid', 'scroll-box');
+      box.style.cssText = 'position:fixed;left:0;bottom:0;width:40px;height:40px;overflow:auto';
+      box.innerHTML = '<div style="height:400px"></div>';
+      document.body.appendChild(box);
+    });
+    await openToolbox(page);
+
+    const center = await rowCenter(page, 'header-1');
+
+    await page.mouse.move(center.x, center.y, { steps: 3 });
+    await expect(page.getByTestId('toolbox-preview')).toBeVisible();
+    await page.getByTestId('scroll-box').evaluate((box) => box.scrollBy(0, 1));
+    await expect(page.getByTestId('toolbox-preview')).toBeHidden();
+    await page.mouse.move(center.x + 4, center.y + 1, { steps: 2 });
+
+    // toContainText alone also passes on the hidden card.
+    await expect(page.getByTestId('toolbox-preview')).toBeVisible();
+    await expect(page.getByTestId('toolbox-preview')).toContainText('Big section heading');
   });
 
   test('closes with the menu', async ({ page }) => {
@@ -364,6 +436,22 @@ test.describe('Toolbox hover preview', () => {
 
         const bounds = paper.getBoundingClientRect();
         const rects: DOMRect[] = [];
+        // Only the part an overflow-clipping ancestor lets through is painted.
+        const visibleRect = (rect: DOMRect, from: Element | null): DOMRect => {
+          let [ left, top, right, bottom ] = [ rect.left, rect.top, rect.right, rect.bottom ];
+
+          for (let parent = from; parent !== null && parent !== paper; parent = parent.parentElement) {
+            const style = getComputedStyle(parent);
+
+            if (style.overflowX !== 'visible' || style.overflowY !== 'visible') {
+              const clip = parent.getBoundingClientRect();
+
+              [ left, top, right, bottom ] = [ Math.max(left, clip.left), Math.max(top, clip.top), Math.min(right, clip.right), Math.min(bottom, clip.bottom) ];
+            }
+          }
+
+          return new DOMRect(left, top, Math.max(0, right - left), Math.max(0, bottom - top));
+        };
         const walker = document.createTreeWalker(paper, NodeFilter.SHOW_TEXT);
 
         for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
@@ -371,7 +459,7 @@ test.describe('Toolbox hover preview', () => {
             const range = document.createRange();
 
             range.selectNodeContents(node);
-            rects.push(...Array.from(range.getClientRects()));
+            rects.push(...Array.from(range.getClientRects(), (rect) => visibleRect(rect, node.parentElement)));
           }
         }
 
@@ -380,7 +468,7 @@ test.describe('Toolbox hover preview', () => {
           const style = getComputedStyle(el);
 
           if (style.backgroundColor !== 'rgba(0, 0, 0, 0)' || style.boxShadow !== 'none' || style.borderTopWidth !== '0px') {
-            rects.push(el.getBoundingClientRect());
+            rects.push(visibleRect(el.getBoundingClientRect(), el.parentElement));
           }
         });
 

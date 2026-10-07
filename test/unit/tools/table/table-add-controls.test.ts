@@ -18,7 +18,7 @@ const mockCreateTooltipContent = vi.fn((_lines: string[]) => document.createElem
 vi.mock('../../../../src/components/utils/tooltip', () => ({
   onHover: (...args: unknown[]): void => { mockOnHover(...(args as [unknown, unknown, unknown])); },
   hide: (): void => { mockHide(); },
-  show: (...args: unknown[]): void => { mockShow(...args); },
+  showReadout: (...args: unknown[]): void => { mockShow(...args); },
 }));
 
 vi.mock('../../../../src/components/modules/toolbar/tooltip', () => ({

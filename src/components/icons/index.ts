@@ -250,10 +250,11 @@ export const IconToggleList = `
 </svg>
 `;
 
-// Table of contents icon — rules stepped in by outline depth
+// Table of contents icon — Notion's stairs: each row is a dash and a rule,
+// stepped right by depth
 export const IconTableOfContents = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3 5.5H14M6.5 10H17M10 14.5H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 5.25H4.25M6.75 5.25H13.25M5 10H6.25M8.75 10H15.25M7 14.75H8.25M10.75 14.75H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -517,10 +518,11 @@ export const IconReturn = `
 </svg>
 `;
 
-// Quote icon
+// Quote icon — solid round quotation marks: a ball with a thin hook that ends
+// in a round cap. The second mark is the first moved right by 5.4.
 export const IconQuote = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.5 4.5v11M8 6h8.5M8 10h8.5M8 14h5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.9 11.1C4.9 8.1 6.3 6.8 8.3 6.55A0.55 0.55 0 0 1 8.35 7.65C6.85 7.8 5.8 8.35 5.55 9.46A2.4 2.4 0 1 1 4.9 11.1ZM10.3 11.1C10.3 8.1 11.7 6.8 13.7 6.55A0.55 0.55 0 0 1 13.75 7.65C12.25 7.8 11.2 8.35 10.95 9.46A2.4 2.4 0 1 1 10.3 11.1Z" fill="currentColor"/>
 </svg>
 `;
 
@@ -1063,12 +1065,14 @@ export const IconColumns = `
 </svg>
 `;
 
-// Tabs tool: a panel with a raised tab and a lower tab beside it. The lower
-// tab is an open path so the body's top edge is drawn once.
+// Tabs tool: the open tab is lit and has no floor. The floor under the other
+// tabs curves up into its edge, which keeps it apart from IconCalendar's
+// full-width header line.
 export const IconTabs = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M5 4h1.5a2 2 0 0 1 2 2v2H15a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M11 8V6.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1V8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17 8H9.5A1.5 1.5 0 0 1 8 6.5V4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5 4h3v2.5A1.5 1.5 0 0 0 9.5 8H3V6a2 2 0 0 1 2-2Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

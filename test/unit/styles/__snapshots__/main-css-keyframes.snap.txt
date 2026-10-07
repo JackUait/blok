@@ -431,10 +431,6 @@
   50% { opacity: 0.3 }
 }
 
-@keyframes blok-preview-card-in {
-  from { opacity: 0; transform: translateX(-6px) scale(0.96) }
-}
-
 @keyframes blok-preview-database-card-close-gap {
   0%, 26% { transform: none }
   40%, 90% { transform: translateY(-49px) }
@@ -485,10 +481,6 @@
   0%, 24% { opacity: 0 }
   34% { opacity: 1 }
   70%, 100% { opacity: 0 }
-}
-
-@keyframes blok-preview-drawing-in {
-  from { opacity: 0; transform: translateY(4px); filter: blur(2px) }
 }
 
 @keyframes blok-preview-lists-arrow-open {
@@ -734,10 +726,6 @@
 
 @keyframes blok-preview-media-twinkle {
   to { opacity: 0.2; transform: scale(0.6) }
-}
-
-@keyframes blok-preview-media-wave {
-  50% { transform: scaleY(0.5) }
 }
 
 @keyframes blok-preview-media-wave-flag {

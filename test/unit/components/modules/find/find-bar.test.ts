@@ -4,7 +4,7 @@ import type { Mock } from 'vitest';
 import { FindBar } from '../../../../../src/components/modules/find/find-bar';
 import type { FindBarCallbacks } from '../../../../../src/components/modules/find/find-bar';
 import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
-import { destroy as destroyTooltip } from '../../../../../src/components/utils/tooltip';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../../src/components/utils/tooltip';
 
 const t = (key: string, vars?: Record<string, string | number>): string =>
   vars === undefined ? key : `${key}${JSON.stringify(vars)}`;
@@ -206,11 +206,19 @@ describe('FindBar', () => {
 
   describe('close button tooltip', () => {
     // The tooltip is a singleton; afterEach empties <body> and detaches it. The bar binds on construction.
+    // Matches the delay FindBar passes to onHover.
+    const FIND_HINT_DELAY = 400;
     const closeTooltipText = (isMac: boolean): string => {
       bar.destroy();
       destroyTooltip();
       bar = create(isMac);
-      byTestId<HTMLButtonElement>(bar.element, 'find-close').focus();
+      vi.useFakeTimers();
+      try {
+        byTestId<HTMLButtonElement>(bar.element, 'find-close').dispatchEvent(new MouseEvent('mouseenter'));
+        vi.advanceTimersByTime(FIND_HINT_DELAY);
+      } finally {
+        vi.useRealTimers();
+      }
 
       return document.getElementById('blok-tooltip')?.textContent ?? '';
     };
@@ -234,9 +242,15 @@ describe('FindBar', () => {
       bar = create();
       const toggle = byTestId<HTMLButtonElement>(bar.element, 'find-replace-toggle');
 
-      toggle.focus();
-      toggle.dispatchEvent(new MouseEvent('mouseenter'));
-      toggle.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      vi.useFakeTimers();
+      try {
+        toggle.focus();
+        toggle.dispatchEvent(new MouseEvent('mouseenter'));
+        toggle.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        vi.advanceTimersByTime(HINT_DELAY);
+      } finally {
+        vi.useRealTimers();
+      }
 
       expect(document.getElementById('blok-tooltip')?.textContent ?? '').not.toContain('find.toggleReplace');
       expect(toggle.getAttribute('aria-label')).toBe('find.toggleReplace');

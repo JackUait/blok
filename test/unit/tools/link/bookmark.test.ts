@@ -297,7 +297,7 @@ describe('Bookmark tool', () => {
       expect(roles).toEqual(['bookmark-title', 'bookmark-description', 'bookmark-link-row']);
     });
 
-    it('places the favicon inside the link row and shows the full url text', () => {
+    it('places the favicon inside the link row and shows the url as host and path', () => {
       const card = renderCard(fullMeta);
 
       const linkRow = card.querySelector('[data-role="bookmark-link-row"]');
@@ -315,7 +315,50 @@ describe('Bookmark tool', () => {
       expect(urlSpan).not.toBeNull();
       expect(urlSpan?.tagName).toBe('SPAN');
       expect(urlSpan?.classList.contains('blok-bookmark__url')).toBe(true);
-      expect(urlSpan?.textContent).toBe('https://example.com/article');
+      expect(urlSpan?.querySelector('[data-role="bookmark-host"]')?.textContent).toBe('example.com');
+      expect(urlSpan?.querySelector('[data-role="bookmark-path"]')?.textContent).toBe('/article');
+      expect(urlSpan?.textContent).toBe('example.com/article');
+    });
+
+    it('wraps the favicon and url in one address pill', () => {
+      const card = renderCard(fullMeta);
+
+      const pill = card.querySelector('[data-role="bookmark-link-row"] > [data-role="bookmark-address"]');
+
+      expect(pill?.classList.contains('blok-bookmark__address')).toBe(true);
+      expect(Array.from(pill?.children ?? [], (child) => child.getAttribute('data-role'))).toEqual([ 'bookmark-favicon', 'bookmark-url' ]);
+    });
+
+    it('keeps the query and hash in the path', () => {
+      const card = renderCard({ url: 'https://example.com/a?b=1#c' });
+
+      expect(card.querySelector('[data-role="bookmark-path"]')?.textContent).toBe('/a?b=1#c');
+    });
+
+    it('shows only the host for a site root', () => {
+      const card = renderCard({ url: 'https://example.com/' });
+
+      expect(card.querySelector('[data-role="bookmark-url"]')?.textContent).toBe('example.com');
+      expect(card.querySelector('[data-role="bookmark-path"]')).toBeNull();
+    });
+
+    it('shows an unparseable url as it was saved', () => {
+      const card = renderCard({ url: 'not-a-url' });
+
+      expect(card.querySelector('[data-role="bookmark-url"]')?.textContent).toBe('not-a-url');
+      expect(card.querySelector('[data-role="bookmark-host"]')).toBeNull();
+    });
+
+    it('frames the cover in a small browser window whose bar shows the address', () => {
+      const card = renderCard(fullMeta);
+
+      const frame = card.querySelector('[data-role="bookmark-image"] [data-role="bookmark-window"]');
+      const bar = frame?.querySelector('[data-role="bookmark-window-bar"]');
+
+      expect(bar?.getAttribute('aria-hidden')).toBe('true');
+      expect(bar?.textContent).toBe('example.com/article');
+      expect(bar?.querySelector('img')).toBeNull();
+      expect(frame?.querySelector('img')?.getAttribute('src')).toBe('https://example.com/og.png');
     });
 
     it('renders the cover image in its own container outside the content column', () => {
@@ -366,7 +409,7 @@ describe('Bookmark tool', () => {
 
       const urlSpan = card.querySelector('[data-role="bookmark-link-row"] [data-role="bookmark-url"]');
 
-      expect(urlSpan?.textContent).toBe('https://example.com/article');
+      expect(urlSpan?.textContent).toBe('example.com/article');
     });
   });
 
@@ -448,6 +491,13 @@ describe('Bookmark tool', () => {
       const afterReload = new Bookmark(createOptions({ url: URL })).render();
 
       expect(afterFailedPaste.innerHTML).toBe(afterReload.innerHTML);
+    });
+
+    it('owns its link, so Blok shows no link hover card over the card', () => {
+      const card = new Bookmark(createOptions({ url: URL })).render()
+        .querySelector('[data-blok-testid="bookmark-card"]');
+
+      expect(card?.closest('[data-blok-link-owner]')).not.toBeNull();
     });
 
     it('keeps the link clickable in read-only mode', () => {

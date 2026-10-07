@@ -1097,3 +1097,85 @@ test.describe('toolbox keyboard navigation', () => {
     await expect(popoverItems.first()).toHaveAttribute('data-blok-focused', 'true');
   });
 });
+
+test.describe('toolbox page scroll lock', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await gotoTestPage(page);
+  });
+
+  test('the page does not scroll while the toolbox is open, but the menu list does', async ({ page }) => {
+    await resetBlok(page);
+
+    await page.evaluate(async ({ holder }) => {
+      const filler = document.createElement('div');
+
+      filler.style.height = '3000px';
+      document.body.appendChild(filler);
+
+      const blok = new window.Blok({ holder });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    await openToolbox(page);
+
+    const twoFrames = (): Promise<void> => page.evaluate(async () => new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    }));
+    const pageScrollBefore = await page.evaluate(() => window.scrollY);
+    const firstBlock = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+    const blockBox = await firstBlock.boundingBox();
+
+    if (blockBox === null) {
+      throw new Error('paragraph has no box');
+    }
+
+    // Wheel over the editor, outside the menu.
+    await page.mouse.move(blockBox.x + 4, blockBox.y + blockBox.height / 2);
+    await page.mouse.wheel(0, 600);
+    await twoFrames();
+
+    expect(await page.evaluate(() => window.scrollY)).toBe(pageScrollBefore);
+
+    const items = page.locator(`${POPOVER_SELECTOR} [data-blok-popover-items]`);
+    const itemsBox = await items.boundingBox();
+
+    if (itemsBox === null) {
+      throw new Error('menu list has no box');
+    }
+
+    await page.mouse.move(itemsBox.x + itemsBox.width / 2, itemsBox.y + itemsBox.height / 2);
+    await page.mouse.wheel(0, 200);
+
+    await expect.poll(() => items.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+    expect(await page.evaluate(() => window.scrollY)).toBe(pageScrollBefore);
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator(POPOVER_SELECTOR)).not.toHaveAttribute('data-blok-popover-opened', 'true');
+    await expect(page.locator('[data-blok-scroll-locked]')).toHaveCount(0);
+  });
+
+  test('destroying the editor with the toolbox open gives page scroll back', async ({ page }) => {
+    await resetBlok(page);
+
+    await page.evaluate(async ({ holder }) => {
+      const blok = new window.Blok({ holder });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    await openToolbox(page);
+    await expect(page.locator('[data-blok-scroll-locked]')).toHaveCount(1);
+
+    await page.evaluate(() => window.blokInstance?.destroy());
+
+    await expect(page.locator('[data-blok-scroll-locked]')).toHaveCount(0);
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+  });
+});

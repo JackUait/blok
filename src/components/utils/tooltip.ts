@@ -17,12 +17,13 @@ export type { TooltipContent, TooltipOptions };
 
 const DEFAULT_OFFSET = 10;
 /**
- * If a new tooltip is requested within this window (ms) of the last hide, it
- * opens instantly regardless of the requested `delay` — the "skip-delay warm
- * window" (Radix Tooltip). Sweeping across adjacent triggers should feel
- * continuous, not re-incur the open delay on each one.
+ * Hints never show instantly: a hover hint waits {@link HINT_DELAY} ms unless
+ * the caller asks for longer, and never less than {@link MIN_HINT_DELAY} ms.
+ * Only {@link showReadout} skips the wait. Pinned by
+ * test/unit/architecture/hint-delay-law.test.ts.
  */
-const SKIP_DELAY_DURATION = 300;
+export const HINT_DELAY = 500;
+export const MIN_HINT_DELAY = 300;
 /**
  * Grace period (ms) between the pointer leaving the trigger and the tooltip
  * hiding. Smooths brief exits/re-entries of the trigger so the bubble does
@@ -30,14 +31,6 @@ const SKIP_DELAY_DURATION = 300;
  * so this timer — not bubble hover — is the only thing keeping it open.
  */
 const GRACE_HIDE_DURATION = 100;
-/**
- * Window (ms) after a touch interaction during which a focus-triggered open is
- * suppressed. Tap-focus on touch devices fires `focusin` right after the touch
- * `pointerdown`, and the tooltip must not open there (same touch guard as the
- * hover path) — while genuine keyboard focus, which has no recent touch,
- * still opens the tooltip (WCAG 1.4.13).
- */
-const TOUCH_FOCUS_SUPPRESS_DURATION = 500;
 const TOOLTIP_ID = 'blok-tooltip';
 const ARIA_DESCRIBEDBY_ATTRIBUTE = 'aria-describedby';
 const TOOLTIP_ROLE = 'tooltip';
@@ -143,27 +136,12 @@ class Tooltip {
   private graceHideTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
-   * Timestamp (ms, `Date.now()`) of the last hide. Drives the skip-delay warm
-   * window: a show requested within {@link SKIP_DELAY_DURATION} of this opens
-   * instantly. Starts at -Infinity so the first show always honors its delay.
-   */
-  private lastHideTimestamp: number = Number.NEGATIVE_INFINITY;
-
-  /**
    * The `pointerType` of the most recent pointer interaction on a hover
    * target. Used to suppress hover tooltips for touch input (Radix touch
    * guard) — touch users get no hover affordance and a tooltip would just
    * cover the content they tapped.
    */
   private lastPointerType: string | null = null;
-
-  /**
-   * Timestamp (ms, `Date.now()`) of the most recent touch interaction on a
-   * hover target. Drives the focus-path touch guard: a `focusin` arriving
-   * within {@link TOUCH_FOCUS_SUPPRESS_DURATION} of a touch is a tap-focus,
-   * not keyboard focus, and must not open the tooltip.
-   */
-  private lastTouchTimestamp: number = Number.NEGATIVE_INFINITY;
 
   /**
    * Set once {@link destroy} has run. Orphaned per-trigger handlers (bound
@@ -223,6 +201,20 @@ class Tooltip {
    * @param {TooltipOptions} options — Available options {@link TooltipOptions}
    */
   public show(element: HTMLElement, content: TooltipContent, options: TooltipOptions = {}): void {
+    this.display(element, content, options, false);
+  }
+
+  /**
+   * Show live feedback (e.g. a drag size readout) at once. Not for hover hints.
+   * @param {HTMLElement} element - target element to place Tooltip near that
+   * @param {TooltipContent} content — any HTML Element of String that will be used as content
+   * @param {TooltipOptions} options — Available options {@link TooltipOptions}
+   */
+  public showReadout(element: HTMLElement, content: TooltipContent, options: TooltipOptions = {}): void {
+    this.display(element, content, options, true);
+  }
+
+  private display(element: HTMLElement, content: TooltipContent, options: TooltipOptions, immediate: boolean): void {
     if (this.destroyed) {
       return;
     }
@@ -269,20 +261,58 @@ class Tooltip {
       marginLeft: 0,
       marginRight: 0,
       marginBottom: 0,
-      delay: 0,
     };
     const showingOptions = Object.assign(basicOptions, options);
+    const contentNode = this.createContentNode(content);
 
-    if (!this.nodes.content) {
+    // Re-entering the trigger whose hint is already open keeps it open.
+    if (immediate || (this.showed && this.currentTarget === element)) {
+      this.render(element, contentNode, showingOptions);
+
+      return;
+    }
+
+    /**
+     * A bubble still open for another trigger (grace hide pending) closes now;
+     * swapping it to this trigger would show the new hint with no delay.
+     */
+    if (this.showed) {
+      this.hide();
+    }
+
+    const delay = Math.max(showingOptions.delay ?? HINT_DELAY, MIN_HINT_DELAY);
+
+    this.showingTimeout = setTimeout(() => {
+      this.showingTimeout = null;
+
+      /**
+       * The surface owning the trigger may have closed while the delay ran,
+       * which would reveal the bubble at coordinates measured against an
+       * element that is no longer on screen.
+       */
+      if (!this.canAnchorTo(element) || this.isBehindOpenPopover(element)) {
+        this.hide();
+
+        return;
+      }
+
+      this.render(element, contentNode, showingOptions);
+    }, delay);
+  }
+
+  /**
+   * Fill, place and reveal the bubble for `element`.
+   * @param {HTMLElement} element - target element to place Tooltip near that
+   * @param {Node} contentNode - bubble content
+   * @param {TooltipOptions} showingOptions - placement and margins
+   */
+  private render(element: HTMLElement, contentNode: Node, showingOptions: TooltipOptions): void {
+    if (!this.nodes.content || !this.nodes.wrapper) {
       return;
     }
 
     this.nodes.content.innerHTML = '';
-    this.nodes.content.appendChild(this.createContentNode(content));
-
-    if (!this.nodes.wrapper) {
-      return;
-    }
+    this.nodes.content.appendChild(contentNode);
 
     /**
      * The singleton lives under body/Top Layer, outside its owning editor.
@@ -314,38 +344,6 @@ class Tooltip {
     }
 
     this.setDescribedBy(element);
-
-    /**
-     * Skip-delay warm window: if the previous tooltip hid within
-     * {@link SKIP_DELAY_DURATION}, open instantly and ignore the requested
-     * delay so sweeping across adjacent triggers stays continuous.
-     */
-    const withinWarmWindow = Date.now() - this.lastHideTimestamp < SKIP_DELAY_DURATION;
-
-    if (showingOptions && showingOptions.delay && !withinWarmWindow) {
-      this.showingTimeout = setTimeout(() => {
-        /**
-         * Clear the timeout reference after execution to maintain correct state.
-         */
-        this.showingTimeout = null;
-
-        /**
-         * The surface owning the trigger may have closed while the delay ran,
-         * which would reveal the bubble at coordinates measured against an
-         * element that is no longer on screen.
-         */
-        if (!this.canAnchorTo(element) || this.isBehindOpenPopover(element)) {
-          this.hide();
-
-          return;
-        }
-
-        this.reveal();
-      }, showingOptions.delay);
-
-      return;
-    }
-
     this.reveal();
   }
 
@@ -467,12 +465,6 @@ class Tooltip {
     }
 
     /**
-     * Remember whether the tooltip was actually visible when hide ran: only a
-     * real open→close transition may arm the skip-delay warm window below.
-     */
-    const wasVisible = this.showed;
-
-    /**
      * Cancel any pending show timeout when hiding.
      * This prevents the tooltip from appearing after the user has already left the element.
      */
@@ -499,16 +491,6 @@ class Tooltip {
       this.removeFromTopLayer();
     }
     this.showed = false;
-
-    /**
-     * Stamp the hide time so an imminent re-show can skip its open delay —
-     * but only when the tooltip was actually visible. A hide funnelled from a
-     * suppressed touch tap or a sweep over a delayed trigger (never shown)
-     * must NOT arm the instant-open warm window.
-     */
-    if (wasVisible) {
-      this.lastHideTimestamp = Date.now();
-    }
   }
 
   /**
@@ -581,82 +563,35 @@ class Tooltip {
      */
     this.hoverBindings.get(element)?.();
 
-    const revealFor = (revealOptions: TooltipOptions): void => {
-      if (this.isBehindOpenPopover(element)) {
-        return;
-      }
-
-      this.show(element, content, revealOptions);
-    };
-
     /**
      * Record the pointer type so {@link handleMouseEnter} can suppress the
      * hover tooltip for touch input (touch guard) — `pointerenter` fires
      * before the synthesized `mouseenter`.
      */
-    const handlePointerEnter = (event: PointerEvent): void => this.recordPointer(event);
-    /**
-     * Tap-focus on touch devices fires `pointerdown` before `focusin`; record
-     * it so the focus handler can apply the same touch guard as the hover
-     * path.
-     */
-    const handlePointerDown = (event: PointerEvent): void => this.recordPointer(event);
+    const handlePointerEnter = (event: PointerEvent): void => {
+      this.lastPointerType = event.pointerType;
+    };
     const handleMouseEnter = (): void => {
       // Touch users don't hover; a hover tooltip would just cover the tap target.
-      if (this.lastPointerType === 'touch') {
+      if (this.lastPointerType === 'touch' || this.isBehindOpenPopover(element)) {
         return;
       }
 
-      revealFor(options);
+      this.show(element, content, options);
     };
     // Defer the hide so brief trigger exits/re-entries do not flicker.
     const handleMouseLeave = (): void => this.scheduleGraceHide();
-    /**
-     * Keyboard focus must also surface the tooltip (WCAG 1.4.13). Focus-driven
-     * reveals are immediate — the hover `delay` is a pointer affordance and
-     * would make keyboard users wait. A focus arriving right after a touch
-     * interaction is a tap-focus, not keyboard focus, and stays suppressed
-     * (touch guard).
-     */
-    const handleFocusIn = (): void => {
-      if (Date.now() - this.lastTouchTimestamp < TOUCH_FOCUS_SUPPRESS_DURATION) {
-        return;
-      }
 
-      revealFor({ ...options,
-        delay: 0 });
-    };
-    const handleFocusOut = (): void => this.hide();
-
+    // No focus listener on purpose: hints show on hover only, so a click that focuses the trigger shows nothing.
     element.addEventListener('pointerenter', handlePointerEnter);
-    element.addEventListener('pointerdown', handlePointerDown);
     element.addEventListener('mouseenter', handleMouseEnter);
     element.addEventListener('mouseleave', handleMouseLeave);
-    element.addEventListener('focusin', handleFocusIn);
-    element.addEventListener('focusout', handleFocusOut);
 
     this.hoverBindings.set(element, () => {
       element.removeEventListener('pointerenter', handlePointerEnter);
-      element.removeEventListener('pointerdown', handlePointerDown);
       element.removeEventListener('mouseenter', handleMouseEnter);
       element.removeEventListener('mouseleave', handleMouseLeave);
-      element.removeEventListener('focusin', handleFocusIn);
-      element.removeEventListener('focusout', handleFocusOut);
     });
-  }
-
-  /**
-   * Record a pointer interaction on a hover target: remembers the pointer
-   * type for the hover touch guard and stamps the touch timestamp for the
-   * focus-path touch guard.
-   * @param {PointerEvent} event - the pointer event to record
-   */
-  private recordPointer(event: PointerEvent): void {
-    this.lastPointerType = event.pointerType;
-
-    if (event.pointerType === 'touch') {
-      this.lastTouchTimestamp = Date.now();
-    }
   }
 
   /**
@@ -1013,6 +948,17 @@ const getTooltip = (): Tooltip => {
  */
 export const show = (element: HTMLElement, content: TooltipContent, options?: TooltipOptions): void => {
   getTooltip().show(element, content, options ?? {});
+};
+
+/**
+ * Show live feedback at once, skipping the hint delay. Only drag readouts and
+ * gesture feedback may use it; see test/unit/architecture/hint-delay-law.test.ts.
+ * @param {HTMLElement} element - target element to place tooltip near
+ * @param {TooltipContent} content - tooltip content
+ * @param {TooltipOptions} options - tooltip options
+ */
+export const showReadout = (element: HTMLElement, content: TooltipContent, options?: TooltipOptions): void => {
+  getTooltip().showReadout(element, content, options ?? {});
 };
 
 /**

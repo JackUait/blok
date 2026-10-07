@@ -24,6 +24,11 @@ export interface PasteHandler {
    * @returns true if handled, false otherwise
    */
   handle(data: unknown, context: HandlerContext): Promise<boolean>;
+
+  /**
+   * Releases anything the handler left open, such as a menu.
+   */
+  destroy?(): void;
 }
 
 /**

@@ -114,8 +114,8 @@ describe('Blok Line type family', () => {
     }
   });
 
-  it('keeps the approved quote edge and three evenly spaced content lines', () => {
-    expect(pathOf(IconQuote)).toBe('M3.5 4.5v11M8 6h8.5M8 10h8.5M8 14h5.5');
+  it('keeps the approved round quotation marks', () => {
+    expect(pathOf(IconQuote)).toBe('M4.9 11.1C4.9 8.1 6.3 6.8 8.3 6.55A0.55 0.55 0 0 1 8.35 7.65C6.85 7.8 5.8 8.35 5.55 9.46A2.4 2.4 0 1 1 4.9 11.1ZM10.3 11.1C10.3 8.1 11.7 6.8 13.7 6.55A0.55 0.55 0 0 1 13.75 7.65C12.25 7.8 11.2 8.35 10.95 9.46A2.4 2.4 0 1 1 10.3 11.1Z');
   });
 
   it('uses optically lighter superscript and subscript numerals', () => {

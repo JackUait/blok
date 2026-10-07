@@ -267,6 +267,7 @@ export class Bookmark implements BlockTool {
     card.classList.add('blok-bookmark');
     card.setAttribute('data-blok-testid', 'bookmark-card');
     card.setAttribute(DATA_ATTR.blockContextMenu, '');
+    card.setAttribute(DATA_ATTR.linkOwner, '');
 
     // Only navigate http(s) URLs. Saved JSON or a compromised unfurl endpoint
     // could carry a javascript:/data: URL; leaving href unset prevents XSS.
@@ -304,6 +305,11 @@ export class Bookmark implements BlockTool {
     linkRow.classList.add('blok-bookmark__link-row');
     linkRow.setAttribute('data-role', 'bookmark-link-row');
 
+    const addressPill = document.createElement('span');
+
+    addressPill.classList.add('blok-bookmark__address');
+    addressPill.setAttribute('data-role', 'bookmark-address');
+
     if (this.data.favicon) {
       const favicon = document.createElement('img');
 
@@ -311,15 +317,16 @@ export class Bookmark implements BlockTool {
       favicon.setAttribute('data-role', 'bookmark-favicon');
       favicon.src = this.data.favicon;
       favicon.alt = '';
-      linkRow.appendChild(favicon);
+      addressPill.appendChild(favicon);
     }
 
     const urlText = document.createElement('span');
 
     urlText.classList.add('blok-bookmark__url');
     urlText.setAttribute('data-role', 'bookmark-url');
-    urlText.textContent = this.data.url;
-    linkRow.appendChild(urlText);
+    urlText.append(...this.addressParts());
+    addressPill.appendChild(urlText);
+    linkRow.appendChild(addressPill);
     content.appendChild(linkRow);
 
     card.appendChild(content);
@@ -330,15 +337,72 @@ export class Bookmark implements BlockTool {
       imageContainer.classList.add('blok-bookmark__image');
       imageContainer.setAttribute('data-role', 'bookmark-image');
 
+      const frame = document.createElement('div');
+
+      frame.classList.add('blok-bookmark__window');
+      frame.setAttribute('data-role', 'bookmark-window');
+
+      const bar = document.createElement('div');
+
+      bar.classList.add('blok-bookmark__window-bar');
+      bar.setAttribute('data-role', 'bookmark-window-bar');
+      bar.setAttribute('aria-hidden', 'true');
+
+      const address = this.splitAddress();
+      const barAddress = document.createElement('span');
+
+      barAddress.textContent = address === null ? this.data.url : address.host + address.path;
+      bar.appendChild(barAddress);
+
       const image = document.createElement('img');
 
       image.src = this.data.image;
       image.alt = '';
-      imageContainer.appendChild(image);
+      frame.append(bar, image);
+      imageContainer.appendChild(frame);
       card.appendChild(imageContainer);
     }
 
     return card;
+  }
+
+  /** Host in ink, path in gray; an unparseable url is shown as saved. */
+  private addressParts(): Array<string | HTMLElement> {
+    const address = this.splitAddress();
+
+    if (address === null) {
+      return [ this.data.url ];
+    }
+
+    const host = document.createElement('span');
+
+    host.classList.add('blok-bookmark__host');
+    host.setAttribute('data-role', 'bookmark-host');
+    host.textContent = address.host;
+
+    if (address.path === '') {
+      return [ host ];
+    }
+
+    const path = document.createElement('span');
+
+    path.classList.add('blok-bookmark__path');
+    path.setAttribute('data-role', 'bookmark-path');
+    path.textContent = address.path;
+
+    return [ host, path ];
+  }
+
+  /** The scheme is dropped; a bare site root has no path. */
+  private splitAddress(): { host: string; path: string } | null {
+    try {
+      const { host, pathname, search, hash } = new URL(this.data.url);
+      const path = pathname + search + hash;
+
+      return host === '' ? null : { host, path: path === '/' ? '' : path };
+    } catch {
+      return null;
+    }
   }
 
   /** Notion reduces a URL-ish title to the hostname; raw url if unparseable. */

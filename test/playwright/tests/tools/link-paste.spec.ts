@@ -340,6 +340,22 @@ test.describe('Link paste', () => {
     expect(movedMenu.y + movedMenu.height).toBeLessThanOrEqual(720);
   });
 
+  test('destroying the editor with the paste menu open gives page scroll back', async ({ page }) => {
+    await createBlok(page);
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await pasteText(editable, 'https://example.com/article');
+
+    await expect(page.locator('[data-blok-item-name="paste-menu-bookmark"]')).toBeVisible();
+    await expect(page.locator('[data-blok-scroll-locked]')).toHaveCount(1);
+
+    await page.evaluate(() => window.blokInstance?.destroy());
+
+    await expect(page.locator('[data-blok-scroll-locked]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-item-name="paste-menu-bookmark"]')).toHaveCount(0);
+  });
+
   test('pasting a generic URL opens the menu, and Bookmark inserts a card', async ({ page }) => {
     await createBlok(page);
     const editable = firstEditable(page);

@@ -699,6 +699,31 @@ describe('DatabaseTool', () => {
     });
   });
 
+  describe('card menu teardown', () => {
+    it('closes an open card menu when the tool is destroyed', () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+      ];
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks }));
+      const element = tool.render();
+
+      tool.rendered();
+
+      const cardMenuBtn = queryByData(element, 'data-blok-database-card-menu');
+
+      if (cardMenuBtn === null) throw new Error('card menu was not rendered');
+
+      cardMenuBtn.click();
+
+      expect(queryByData(document.body, 'data-mock-popover')).not.toBeNull();
+
+      tool.destroy();
+
+      // An open menu holds the page scroll lock until it is destroyed.
+      expect(queryByData(document.body, 'data-mock-popover')).toBeNull();
+    });
+  });
+
   describe('column delete cascades block deletions for rows', () => {
     it('calls api.blocks.delete for each row then adapter.updateProperty when option is deleted', async () => {
       const deleteRowCalls: string[] = [];

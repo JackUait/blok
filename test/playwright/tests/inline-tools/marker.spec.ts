@@ -1026,6 +1026,8 @@ test.describe('inline tool marker', () => {
      * contract.
      */
     test('no swatch is click-shielded while any other swatch tooltip is open', async ({ page }) => {
+      // 20 hovers, each waiting out the 500ms hint delay.
+      test.setTimeout(45_000);
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',

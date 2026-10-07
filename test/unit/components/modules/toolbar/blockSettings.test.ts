@@ -596,36 +596,7 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
-  it('locks page scroll while the menu is open and releases it on close', async () => {
-    blockSettings.make();
-
-    const block = createBlock();
-
-    blokMock.BlockManager.currentBlock = block;
-
-    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
-
-    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
-
-    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
-      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
-    }, 'getTunesItems').mockResolvedValue([]);
-
-    expect(document.body.hasAttribute('data-blok-scroll-locked')).toBe(false);
-
-    await blockSettings.open(block);
-
-    // The page must not scroll away from the anchored menu while it is open.
-    expect(document.body.hasAttribute('data-blok-scroll-locked')).toBe(true);
-
-    blockSettings.close();
-
-    expect(document.body.hasAttribute('data-blok-scroll-locked')).toBe(false);
-
-    getTunesItemsSpy.mockRestore();
-  });
-
-  it('releases the scroll lock on destroy even if the menu was left open', async () => {
+  it('destroys a menu left open when the module is destroyed', async () => {
     blockSettings.make();
 
     const block = createBlock();
@@ -642,11 +613,12 @@ describe('BlockSettings', () => {
 
     await blockSettings.open(block);
 
-    expect(document.body.hasAttribute('data-blok-scroll-locked')).toBe(true);
+    const popover = getLastPopover();
 
     blockSettings.destroy();
 
-    expect(document.body.hasAttribute('data-blok-scroll-locked')).toBe(false);
+    // The popover holds the page scroll lock; only its destroy() releases it.
+    expect(popover?.destroy).toHaveBeenCalledTimes(1);
 
     getTunesItemsSpy.mockRestore();
   });

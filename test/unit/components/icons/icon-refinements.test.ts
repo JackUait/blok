@@ -38,30 +38,64 @@ describe('icon refinements', () => {
   });
 
   describe('IconQuote', () => {
-    it('should draw the bar as a hairline stroke, not a heavy solid fill', () => {
+    const marksOf = (): string[] => (parseSvg(IconQuote).querySelector('path')?.getAttribute('d') ?? '')
+      .split('Z')
+      .filter(Boolean);
+    const numbersOf = (d: string): number[] => (d.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+
+    it('should draw printed quotation marks as solid shapes with no outline', () => {
       const svg = parseSvg(IconQuote);
-      const strokes = Array.from(svg.querySelectorAll('path'));
+      const paths = Array.from(svg.querySelectorAll('path'));
 
-      expect(svg.querySelector('rect')).toBeNull();
-      expect(strokes).toHaveLength(1);
-      expect(strokes[0]?.getAttribute('stroke')).toBe('currentColor');
-      expect(strokes[0]?.getAttribute('stroke-width')).toBe('1.25');
-      expect(strokes[0]?.getAttribute('fill')).not.toBe('currentColor');
+      expect(paths).toHaveLength(1);
+      expect(paths[0]?.getAttribute('fill')).toBe('currentColor');
+      expect(paths[0]?.hasAttribute('stroke')).toBe(false);
+      expect(svg.querySelector('rect, circle, line, polyline')).toBeNull();
+    });
 
-      const d = strokes[0]?.getAttribute('d') ?? '';
-      const bar = d.match(/^M([\d.]+) ([\d.]+)v([\d.]+)/);
-      const lines = Array.from(d.matchAll(/M([\d.]+) ([\d.]+)h([\d.]+)/g))
-        .map((match) => match.slice(1).map(Number));
+    it('should give each mark a round ball and a round-ended tail, and set the pair as one shape moved sideways', () => {
+      const [first, second] = marksOf();
 
-      expect(bar).not.toBeNull();
-      expect(lines).toHaveLength(3);
-      expect(lines.map(([x]) => x)).toEqual([8, 8, 8]);
-      expect(lines[1][1] - lines[0][1]).toBe(4);
-      expect(lines[2][1] - lines[1][1]).toBe(4);
-      expect(lines[0][0] - Number(bar?.[1])).toBeGreaterThan(1.25);
-      expect(Number(bar?.[2])).toBeLessThan(lines[0][1]);
-      expect(Number(bar?.[2]) + Number(bar?.[3])).toBeGreaterThan(lines[2][1]);
-      expect(lines[2][2]).toBeLessThan(lines[0][2]);
+      expect(marksOf()).toHaveLength(2);
+
+      for (const mark of [first, second]) {
+        const arcs = Array.from(mark.matchAll(/A([\d.]+) ([\d.]+) /g));
+
+        expect(arcs).toHaveLength(2);
+
+        for (const [, rx, ry] of arcs) {
+          expect(rx).toBe(ry);
+        }
+      }
+
+      const a = numbersOf(first.replace(/A[\d.]+ [\d.]+ \d \d \d /g, 'A'));
+      const b = numbersOf(second.replace(/A[\d.]+ [\d.]+ \d \d \d /g, 'A'));
+      const shift = b[0] - a[0];
+
+      expect(shift).toBeGreaterThan(0);
+      expect(b).toHaveLength(a.length);
+      b.forEach((value, i) => {
+        expect(value).toBeCloseTo(i % 2 === 0 ? a[i] + shift : a[i], 5);
+      });
+    });
+
+    it('should stay inside the 3-17 frame and sit centred', () => {
+      const [first, second] = marksOf();
+      // Each mark starts at its ball's left edge; the ball is its last, largest arc.
+      const ballOf = (mark: string): { left: number; radius: number } => ({
+        left: numbersOf(mark)[0],
+        radius: Math.max(...Array.from(mark.matchAll(/A([\d.]+) /g), ([, rx]) => Number(rx))),
+      });
+      const left = ballOf(first).left;
+      const right = ballOf(second).left + 2 * ballOf(second).radius;
+      const ys = numbersOf(marksOf().join('').replace(/A[\d.]+ [\d.]+ \d \d \d /g, 'A'))
+        .filter((_, i) => i % 2 === 1);
+
+      expect(left).toBeGreaterThanOrEqual(3);
+      expect(right).toBeLessThanOrEqual(17);
+      expect(left + right).toBeCloseTo(20, 5);
+      expect(Math.min(...ys)).toBeGreaterThanOrEqual(3);
+      expect(Math.max(...ys)).toBeLessThanOrEqual(17);
     });
   });
 

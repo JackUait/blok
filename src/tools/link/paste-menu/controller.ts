@@ -41,6 +41,7 @@ export interface PasteMenuOpenParams {
 
 export interface LinkPasteMenu {
   open(params: PasteMenuOpenParams): void;
+  destroy?(): void;
 }
 
 /**
@@ -86,6 +87,8 @@ const virtualPositionParams = (
  */
 export class PasteMenuController implements LinkPasteMenu {
   private popover: PopoverDesktop | null = null;
+
+  private closeSilently: () => void = () => undefined;
 
   constructor(private readonly i18n: PasteMenuI18n) {}
 
@@ -158,7 +161,22 @@ export class PasteMenuController implements LinkPasteMenu {
 
     popover.on(PopoverEvent.Closed, finalize);
 
+    this.closeSilently = (): void => {
+      state.picked = true;
+      popover.hide();
+    };
+
     popover.show();
+  }
+
+  /**
+   * Closes an open menu without calling onDismiss: the editor is going away,
+   * so there is no paste left to keep.
+   */
+  public destroy(): void {
+    if (this.popover !== null) {
+      this.closeSilently();
+    }
   }
 
   private closeExisting(): void {

@@ -66,6 +66,8 @@ describe('Blok Line authoring contract', () => {
     const solidControls = [
       'IconMenu', 'IconDotsHorizontal', 'IconPlacement',
       'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerBackward', 'IconPlayerForward',
+      // Quotation marks are printed punctuation; an outline reads as the digits "66".
+      'IconQuote',
     ];
 
     if (!solidControls.includes(name)) {

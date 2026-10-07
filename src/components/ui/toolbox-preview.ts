@@ -6,11 +6,8 @@ import type { ToolboxPreviewConfig } from '@/types';
 /** Must match the card width in block-preview.css; placement math uses it before layout. */
 export const PREVIEW_CARD_WIDTH = 248;
 
-/** How long the pointer rests on a row before the first card opens. */
+/** How long the pointer rests on a row before the first card opens (see CLAUDE.md). */
 export const PREVIEW_OPEN_DELAY = 320;
-
-/** After a close, the next card opens without the delay for this long (moving between rows). */
-const WARM_WINDOW = 400;
 
 const GAP = 8;
 const VIEWPORT_MARGIN = 8;
@@ -21,7 +18,6 @@ export interface ToolboxPreviewShowParams {
   /** The menu surface; the card sits beside it, never over it. */
   surface: HTMLElement;
   config: ToolboxPreviewConfig;
-  source: 'pointer' | 'keyboard';
 }
 
 interface ToolboxPreviewOptions {
@@ -53,29 +49,46 @@ export class ToolboxPreview {
   private paper: HTMLElement | null = null;
   private caption: HTMLElement | null = null;
   private openTimer: ReturnType<typeof setTimeout> | null = null;
-  private warmUntil = 0;
   private visible = false;
   private current: ToolboxPreviewShowParams | null = null;
+  private pending: ToolboxPreviewShowParams | null = null;
+  private scrolledAway: ToolboxPreviewShowParams | null = null;
 
   constructor(private readonly options: ToolboxPreviewOptions) {}
 
   public show(params: ToolboxPreviewShowParams): void {
-    this.cancelOpen();
+    this.stopWaitingForPointer();
 
-    if (this.visible || params.source === 'keyboard' || Date.now() < this.warmUntil) {
+    // Only the first card waits: an open card moves to the new row and swaps its drawing.
+    if (this.visible) {
+      this.cancelOpen();
       this.open(params);
 
       return;
     }
 
+    // The delay runs once per hover: moving to the next row swaps the card it will open.
+    this.pending = params;
+
+    if (this.openTimer !== null) {
+      return;
+    }
+
     this.openTimer = setTimeout(() => {
+      const pending = this.pending;
+
       this.openTimer = null;
-      this.open(params);
+      this.pending = null;
+
+      if (pending !== null) {
+        this.open(pending);
+      }
     }, PREVIEW_OPEN_DELAY);
   }
 
   public hide(): void {
     this.cancelOpen();
+    this.stopWaitingForPointer();
 
     if (!this.visible || this.root === null) {
       return;
@@ -83,7 +96,6 @@ export class ToolboxPreview {
 
     this.visible = false;
     this.current = null;
-    this.warmUntil = Date.now() + WARM_WINDOW;
     this.root.hidden = true;
     this.root.removeAttribute('data-state');
     removeFromTopLayer(this.root);
@@ -192,11 +204,32 @@ export class ToolboxPreview {
   }
 
   private cancelOpen(): void {
+    this.pending = null;
+
     if (this.openTimer !== null) {
       clearTimeout(this.openTimer);
       this.openTimer = null;
     }
   }
+
+  private stopWaitingForPointer(): void {
+    this.scrolledAway = null;
+    document.removeEventListener('mousemove', this.onPointerMove, { capture: true });
+  }
+
+  /**
+   * The menu reports a row only when the pointer enters it, so a card a scroll
+   * closed would stay closed while the pointer rests on the same row.
+   */
+  private onPointerMove = (event: MouseEvent): void => {
+    const params = this.scrolledAway;
+
+    this.stopWaitingForPointer();
+
+    if (params !== null && event.target instanceof Node && params.item.contains(event.target)) {
+      this.show(params);
+    }
+  };
 
   private onScroll = (event: Event): void => {
     // Arrow keys scroll the menu's own list to reveal the focused row: follow the row.
@@ -206,6 +239,13 @@ export class ToolboxPreview {
       return;
     }
 
+    const current = this.current;
+
     this.hide();
+
+    if (current !== null) {
+      this.scrolledAway = current;
+      document.addEventListener('mousemove', this.onPointerMove, { capture: true });
+    }
   };
 }

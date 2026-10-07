@@ -69,11 +69,6 @@
     inset 0 0 0 1px rgb(255 255 255 / 0.06),
     0 1px 2px rgb(0 0 0 / 0.16),
     0 12px 32px -6px rgb(0 0 0 / 0.36);
-  transform-origin: left 24px;
-}
-
-[data-blok-interface='block-preview'][data-blok-preview-side='left'] [data-blok-preview-card] {
-  transform-origin: right 24px;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview-paper] {
@@ -102,30 +97,4 @@
   box-sizing: border-box;
   height: 100%;
   padding: var(--blok-preview-space-16) var(--blok-preview-space-18);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  [data-blok-interface='block-preview'][data-state='open'] [data-blok-preview-card] {
-    animation: blok-preview-card-in 240ms var(--blok-preview-ease-spring);
-  }
-
-  /* A new drawing replaces the old one on every row change. */
-  [data-blok-interface='block-preview'] [data-blok-preview-paper] > [data-blok-preview] {
-    animation: blok-preview-drawing-in 260ms var(--blok-preview-ease-out);
-  }
-}
-
-@keyframes blok-preview-card-in {
-  from {
-    opacity: 0;
-    transform: translateX(-6px) scale(0.96);
-  }
-}
-
-@keyframes blok-preview-drawing-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-    filter: blur(2px);
-  }
 }

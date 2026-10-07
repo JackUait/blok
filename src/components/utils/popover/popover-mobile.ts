@@ -3,7 +3,6 @@ import { Dom } from '../../dom';
 import { Flipper } from '../../flipper';
 import { keyCodes } from '../../utils';
 import { isKeyboardModality } from '../input-modality';
-import { ScrollLocker } from '../scroll-locker';
 import { twMerge } from '../tw';
 
 import { PopoverHeader } from './components/popover-header';
@@ -24,11 +23,6 @@ import type { PopoverMobileNodes, PopoverParams } from '@/types/utils/popover/po
  * On mobile devices Popover behaves like a fixed panel at the bottom of screen. Nested item appears like "pages" with the "back" button
  */
 export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
-  /**
-   * ScrollLocker instance
-   */
-  private scrollLocker = new ScrollLocker();
-
   /**
    * Reference to popover header if exists
    */
@@ -213,8 +207,6 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
       'max-h-none z-4'
     );
 
-    this.scrollLocker.lock();
-
     this.isHidden = false;
     this.setSheetInert(false);
 
@@ -285,8 +277,6 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
       css.popoverContainerMobile
     );
 
-    this.scrollLocker.unlock();
-
     this.history.reset();
 
     this.isHidden = true;
@@ -301,10 +291,6 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     this.restorePreviousFocus();
 
     super.destroy();
-
-    if (this.scrollLocker.isLocked) {
-      this.scrollLocker.unlock();
-    }
   }
 
   /**

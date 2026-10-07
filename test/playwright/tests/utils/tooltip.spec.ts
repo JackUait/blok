@@ -81,7 +81,7 @@ test.describe('tooltip API', () => {
 
   test.describe('show()', () => {
     test('refreshes semantic and computed direction for every owning trigger', async ({ page }) => {
-      const states = await page.evaluate(({ holder, tooltipSelector }) => {
+      const states = await page.evaluate(async ({ holder, tooltipSelector }) => {
         const container = document.getElementById(holder);
         const rtlTarget = document.createElement('button');
         const ltrTarget = document.createElement('button');
@@ -90,13 +90,15 @@ test.describe('tooltip API', () => {
         ltrTarget.style.direction = 'ltr';
         container?.append(rtlTarget, ltrTarget);
 
-        const capture = (target: HTMLElement, content: string): {
+        const capture = async (target: HTMLElement, content: string): Promise<{
           dir: string | null;
           computedDirection: string;
           inlineDirection: string;
           priority: string;
-        } => {
+        }> => {
           window.blokInstance?.tooltip?.show(target, content);
+          // Direction is written when the bubble reveals, after the 500ms hint delay.
+          await new Promise((resolve) => setTimeout(resolve, 600));
 
           const tooltip = document.querySelector<HTMLElement>(tooltipSelector);
 
@@ -113,9 +115,9 @@ test.describe('tooltip API', () => {
         };
 
         return [
-          capture(rtlTarget, 'راهنما'),
-          capture(ltrTarget, 'Help'),
-          capture(rtlTarget, 'راهنما'),
+          await capture(rtlTarget, 'راهنما'),
+          await capture(ltrTarget, 'Help'),
+          await capture(rtlTarget, 'راهنما'),
         ];
       }, {
         holder: HOLDER_ID,

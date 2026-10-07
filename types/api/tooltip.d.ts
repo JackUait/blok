@@ -37,14 +37,15 @@ export interface TooltipOptions {
   marginBottom?: number;
 
   /**
-   * Timeout before showing
+   * Milliseconds to wait before the hint shows. Defaults to 500.
+   * Values below 300 are raised to 300: a hint never shows instantly.
    */
   delay?: number;
 }
 
 export interface Tooltip {
   /**
-   * Show tooltip
+   * Show tooltip after `delay`
    *
    * @param {HTMLElement} element
    * @param {TooltipContent} content
@@ -58,7 +59,8 @@ export interface Tooltip {
   hide: () => void;
 
   /**
-   * Decorator for showing Tooltip by mouseenter/mouseleave
+   * Show the tooltip when the pointer hovers `element`, after `delay`.
+   * Focus does not show it.
    *
    * @param {HTMLElement} element
    * @param {TooltipContent} content

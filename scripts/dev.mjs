@@ -196,6 +196,22 @@ export function syncServiceArgs({ listen, origins, collabDir, docEndpoint, stora
 }
 
 /**
+ * What to log when the ticket mint does not start. Only a Node that cannot
+ * load `.ts` gets the version advice; anything else prints as it is.
+ *
+ * @param {unknown} error
+ * @returns {string}
+ */
+export function mintFailureMessage(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const cannotLoadTs = typeof error === 'object' && error !== null && 'code' in error && error.code === 'ERR_UNKNOWN_FILE_EXTENSION';
+
+  return cannotLoadTs
+    ? `[blok] the ticket mint did not start (${message}): it imports a .ts file, which needs Node 22.18+. Starting the playground without the backend.`
+    : `[blok] the ticket mint did not start (${message}). Starting the playground without the backend.`;
+}
+
+/**
  * The first content of each collaboration room: the showcase for the root
  * document, a demo page's own blocks, and nothing for a page the user made.
  *
@@ -280,7 +296,7 @@ async function main() {
       .then(({ startTicketMint }) => startTicketMint({ port: TICKET_PORT, secret, origins }))
       .then(({ url }) => url)
       .catch((error) => {
-        console.error(`[blok] the ticket mint did not start (${error.message}) — starting the playground without the backend. It needs Node 22.18+.`);
+        console.error(mintFailureMessage(error));
 
         return null;
       });

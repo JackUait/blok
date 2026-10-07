@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { isBuildStale, parseDevArgs, playgroundSeedFor, resolveBackendMode, syncServiceArgs, vitePort } from '../../../scripts/dev.mjs';
+import { isBuildStale, mintFailureMessage, parseDevArgs, playgroundSeedFor, resolveBackendMode, syncServiceArgs, vitePort } from '../../../scripts/dev.mjs';
 
 describe('parseDevArgs', () => {
   it('takes --no-server off the list Vite receives', () => {
@@ -150,5 +150,23 @@ describe('syncServiceArgs', () => {
     expect(valueOf('--collab-dir')).toBe('/repo/.dev/collab');
     expect(valueOf('--doc-endpoint')).toBe('http://127.0.0.1:4500/docs');
     expect(valueOf('--storage-dir')).toBe('/repo/.dev/uploads');
+  });
+});
+
+describe('mintFailureMessage', () => {
+  // What an older Node throws when dev-ticket.mjs imports a .ts file.
+  it('names the Node requirement when Node cannot load .ts', () => {
+    const error = Object.assign(new TypeError('Unknown file extension ".ts" for /repo/packages/server/src/ticket.ts'), { code: 'ERR_UNKNOWN_FILE_EXTENSION' });
+
+    expect(mintFailureMessage(error)).toContain('Node 22.18+');
+    expect(mintFailureMessage(error)).toContain('Unknown file extension');
+  });
+
+  it('prints the real error, and no Node advice, for any other failure', () => {
+    const error = Object.assign(new Error('listen EACCES: permission denied 127.0.0.1:4700'), { code: 'EACCES' });
+    const message = mintFailureMessage(error);
+
+    expect(message).toContain('listen EACCES: permission denied 127.0.0.1:4700');
+    expect(message).not.toContain('Node');
   });
 });

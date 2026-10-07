@@ -16,8 +16,15 @@ const decode = (ticket: string): Record<string, unknown> => {
   return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as Record<string, unknown>;
 };
 
-const request = (url: string, origin: string | undefined = ORIGINS[0], method = 'GET'): ReturnType<typeof handleTicketRequest> =>
-  handleTicketRequest({ secret: SECRET, origins: ORIGINS, origin, method, url });
+const HOSTS = ['127.0.0.1:4700', 'localhost:4700'];
+
+const request = (
+  url: string,
+  origin: string | undefined = ORIGINS[0],
+  method = 'GET',
+  host: string | undefined = HOSTS[0]
+): ReturnType<typeof handleTicketRequest> =>
+  handleTicketRequest({ secret: SECRET, origins: ORIGINS, hosts: HOSTS, host, origin, method, url });
 
 describe('ticketClaimsFor', () => {
   // Must match userConfig() in index.html, or history names the wrong person.
@@ -67,6 +74,19 @@ describe('handleTicketRequest', () => {
 
   it('gives no CORS grant to another origin', () => {
     expect(request('/ticket', 'https://evil.example').headers).not.toHaveProperty('Access-Control-Allow-Origin');
+  });
+
+  // DNS rebinding: a page on evil.example resolving to 127.0.0.1 still sends its own Host.
+  it('refuses a request whose Host is not this mint', () => {
+    const response = request('/ticket?name=Anna', ORIGINS[0], 'GET', 'evil.example:4700');
+
+    expect(response.status).toBe(403);
+    expect(response.body ?? '').not.toContain('ticket');
+    expect(handleTicketRequest({ secret: SECRET, origins: ORIGINS, hosts: HOSTS, host: undefined, origin: ORIGINS[0], method: 'GET', url: '/ticket' }).status).toBe(403);
+  });
+
+  it('serves both loopback spellings of its own address', () => {
+    expect(request('/ticket', ORIGINS[0], 'GET', 'localhost:4700').status).toBe(200);
   });
 
   it('answers 404 for any other path and 405 for other methods', () => {

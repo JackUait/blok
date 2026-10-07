@@ -33,16 +33,23 @@ export function ticketClaimsFor(params) {
  * @param {object} options
  * @param {string} options.secret The secret the sync service runs with.
  * @param {string[]} options.origins Origins allowed to read a pass.
+ * @param {string[]} options.hosts This mint's own `host:port` spellings.
+ * @param {string | undefined} options.host The request's Host header.
  * @param {string | undefined} options.origin The request's Origin header.
  * @param {string} options.method
  * @param {string} options.url The request path and query.
  * @returns {{ status: number, headers: Record<string, string>, body?: string }}
  */
-export function handleTicketRequest({ secret, origins, origin, method, url }) {
+export function handleTicketRequest({ secret, origins, hosts, host, origin, method, url }) {
   const headers = origin !== undefined && origins.includes(origin)
     ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
     : { Vary: 'Origin' };
   const parsed = new URL(url, 'http://127.0.0.1');
+
+  // DNS rebinding: a hostile name pointed at 127.0.0.1 still arrives with its own Host.
+  if (host === undefined || !hosts.includes(host.toLowerCase())) {
+    return { status: 403, headers };
+  }
 
   if (parsed.pathname !== '/ticket') {
     return { status: 404, headers };
@@ -70,10 +77,14 @@ export function handleTicketRequest({ secret, origins, origin, method, url }) {
  * @returns {Promise<{ server: import('node:http').Server, url: string }>}
  */
 export function startTicketMint({ port, secret, origins }) {
+  // Filled in once the port is known.
+  const hosts = [];
   const server = createServer((request, response) => {
     const { status, headers, body } = handleTicketRequest({
       secret,
       origins,
+      hosts,
+      host: request.headers.host,
       origin: request.headers.origin,
       method: request.method ?? 'GET',
       url: request.url ?? '/',
@@ -93,5 +104,11 @@ export function startTicketMint({ port, secret, origins }) {
 
   return listen(port)
     .catch(() => listen(0))
-    .then(() => ({ server, url: `http://127.0.0.1:${server.address().port}/ticket` }));
+    .then(() => {
+      const bound = server.address().port;
+
+      hosts.push(`127.0.0.1:${bound}`, `localhost:${bound}`);
+
+      return { server, url: `http://127.0.0.1:${bound}/ticket` };
+    });
 }

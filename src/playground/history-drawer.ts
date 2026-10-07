@@ -70,7 +70,10 @@ export interface HistoryView {
     removed: Array<{ id?: string }>;
     changed: Array<{ id: string }>;
   };
-  blocksToHtml(data: LooseOutputData, options: { toolAttributes: boolean; blockIds: boolean }): string;
+  blocksToHtml(
+    data: LooseOutputData,
+    options: { toolAttributes: boolean; blockIds: boolean; root: boolean; classes: boolean }
+  ): string;
 }
 
 export interface ChangePreview {
@@ -344,8 +347,9 @@ export interface HistoryDrawer {
 
 type VersionRow = Extract<HistoryRow, { kind: 'version' }>;
 
-/** Every element Blok mounts its own UI in, popovers in the top layer included. */
-const BLOK_ROOTS = '[data-blok-interface], [data-blok-popover], [data-blok-top-layer]';
+/** Blok's menus and dialogs, which mount outside the editor column. */
+const BLOK_MENUS = '[data-blok-popover], [data-blok-top-layer]';
+const OPEN_MENU = '[data-blok-popover-opened]';
 
 /** Thrown for any non-OK answer; the message is what the person sees. */
 class HistoryRequestError extends Error {}
@@ -615,7 +619,13 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
         ? { blocks: data.blocks, marks: {} }
         : changePreview(before, data, options.view.diffOutputData);
 
-      render.innerHTML = options.view.blocksToHtml({ blocks: preview.blocks }, { toolAttributes: true, blockIds: true });
+      render.innerHTML = options.view.blocksToHtml({ blocks: preview.blocks }, {
+        toolAttributes: true,
+        blockIds: true,
+        // view.css paints only under [data-blok-interface] and on the editor's classes.
+        root: true,
+        classes: true,
+      });
       Object.entries(preview.marks).forEach(([id, mark]) => {
         render.querySelectorAll(`[data-blok-id="${CSS.escape(id)}"]`).forEach((node) => node.setAttribute('data-pg-change', mark));
       });
@@ -703,9 +713,12 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
   };
 
   const open = async (): Promise<void> => {
-    state.doc = options.doc();
+    const doc = options.doc();
+    const request = ++state.request;
 
-    if (state.doc === null) {
+    state.doc = doc;
+
+    if (doc === null) {
       return;
     }
 
@@ -713,6 +726,11 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     document.body.classList.add('pg-history-open');
     options.button.setAttribute('aria-expanded', 'true');
     await load();
+
+    // Closed, or opened again on another document, while the list loaded.
+    if (panel.hidden || state.doc !== doc || state.request !== request) {
+      return;
+    }
 
     const versions = state.rows.filter((row): row is VersionRow => row.kind === 'version');
     // Open on the version before the current one: that is what people look for.
@@ -742,15 +760,18 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
     }
   });
 
-  // An Escape inside the editor or one of its popovers closes that first. Blok's
-  // popover backstop does not preventDefault, so the target is all there is to go on.
-  const isEditorEscape = (target: EventTarget | null): boolean =>
-    target instanceof Element
-      ? editorArea.contains(target) || target.closest(BLOK_ROOTS) !== null
-      : target instanceof Node && editorArea.contains(target);
+  // Blok closes its menus during the same Escape without preventDefault, so
+  // whether one was open is read before any document listener runs.
+  const escape = { menuWasOpen: false };
+
+  window.addEventListener('keydown', (event) => {
+    escape.menuWasOpen = event.key === 'Escape' && document.querySelector(OPEN_MENU) !== null;
+  }, { capture: true });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape' || event.defaultPrevented || panel.hidden || isEditorEscape(event.target)) {
+    const inMenu = event.target instanceof Element && event.target.closest(BLOK_MENUS) !== null;
+
+    if (event.key !== 'Escape' || event.defaultPrevented || panel.hidden || escape.menuWasOpen || inMenu) {
       return;
     }
 

@@ -1824,6 +1824,7 @@
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
     import { mountHistoryDrawer, playgroundTicketUrl } from './src/playground/history-drawer.ts';
+    import { scopeStylesheet } from './src/playground/scope-view-css.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
     import { renderErrorState as renderAudioErrorState } from './src/tools/audio/ui.ts';
     import { renderErrorState as renderVideoErrorState } from './src/tools/video/ui.ts';
@@ -2825,10 +2826,7 @@
     // editor stamps `data-blok-tool` on its own blocks, so an unscoped sheet
     // would restyle the editor too.
     (function injectScopedViewCss() {
-      const scoped = viewCssText
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-        .replace(/([^{}]+)\{/g, (_m, sel) =>
-          sel.split(',').map((s) => `:is(#blokview-panel, #pg-history-render) ${s.trim()}`).filter(Boolean).join(', ') + ' {');
+      const scoped = scopeStylesheet(viewCssText, ':is(#blokview-panel, #pg-history-render)');
       const style = document.createElement('style');
       style.id = 'blokview-scoped-css';
       style.textContent = scoped;

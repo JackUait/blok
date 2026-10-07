@@ -1,4 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { IconCheck } from '../../../src/components/icons';
 
 import { blocksToHtml, diffOutputData } from '../../../src/view';
 import {
@@ -428,6 +432,17 @@ describe('mountHistoryDrawer', () => {
     expect(preview().querySelectorAll('[data-pg-change]')).toHaveLength(0);
   });
 
+  // Without the root wrapper and the editor classes, view.css cannot paint links, tables and tokens.
+  it('renders the preview like a read-only editor', async () => {
+    const { button } = setup();
+
+    button.click();
+    await settle();
+
+    expect(preview().querySelector('#pg-history-render > [data-blok-interface="view"]')).not.toBeNull();
+    expect(preview().querySelector('[data-blok-id="c"][data-pg-change="changed"]')).not.toBeNull();
+  });
+
   it('shows a removed block where it used to be', async () => {
     POINTS['5'] = { blocks: [p('a', 'one'), p('c', 'three')] };
     POINTS['0'] = { blocks: [p('a', 'one'), p('gone', 'old'), p('c', 'three')] };
@@ -551,6 +566,70 @@ describe('mountHistoryDrawer', () => {
     expect(editor.hidden).toBe(false);
   });
 
+  it('stays on the live editor when closed while the list is still loading', async () => {
+    const pending: { release: () => void } = { release: () => undefined };
+
+    answers.list = () => Response.json(LIST);
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : input.toString();
+
+      if (url === `${SERVER}/sync/playground/history`) {
+        await new Promise<void>((resolve) => {
+          pending.release = resolve;
+        });
+      }
+
+      return fakeFetch(input, init);
+    }));
+
+    const { button, editor } = setup();
+
+    button.click();
+    await settle();
+    buttonNamed(panel(), 'Close').click();
+    pending.release();
+    await settle();
+
+    expect(editor.hidden).toBe(false);
+    expect(editor.inert).toBe(false);
+    expect(preview().hidden).toBe(true);
+    expect(panel().hidden).toBe(true);
+  });
+
+  it('closes on Escape from the live editor when no Blok menu is open', async () => {
+    const { button, editor } = setup();
+    const field = document.createElement('div');
+
+    editor.append(field);
+    button.click();
+    await settle();
+    rowButtons()[0].click();
+    await settle();
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(panel().hidden).toBe(true);
+  });
+
+  it('leaves the first Escape in the editor to an open Blok menu', async () => {
+    const { button, editor } = setup();
+    const field = document.createElement('div');
+    const menu = document.createElement('div');
+
+    editor.append(field);
+    menu.setAttribute('data-blok-popover', '');
+    menu.setAttribute('data-blok-popover-opened', 'true');
+    // Like Blok's own handlers: the menu closes during the same Escape.
+    document.addEventListener('keydown', () => menu.removeAttribute('data-blok-popover-opened'), { capture: true, once: true });
+    document.body.append(menu);
+    button.click();
+    await settle();
+    rowButtons()[0].click();
+    await settle();
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(panel().hidden).toBe(false);
+  });
+
   // Blok mounts popovers outside the editor column, and its Escape backstop does not preventDefault.
   it('leaves an Escape inside a Blok popover to the popover', async () => {
     const { button } = setup();
@@ -579,5 +658,43 @@ describe('mountHistoryDrawer', () => {
     document.body.dispatchEvent(event);
 
     expect(panel().hidden).toBe(false);
+  });
+});
+
+describe('history drawer selected row', () => {
+  const css = readFileSync(resolve(__dirname, '../../../src/playground/history-drawer.css'), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector, body]) => ({ selector: selector.trim(), body }));
+  const values = (token: string): string[] => [...css.matchAll(new RegExp(`${token}:\\s*([^;]+);`, 'g'))].map((match) => match[1].trim());
+  const isGray = (hex: string): boolean => {
+    const [r, g, b] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
+
+    return Math.max(r, g, b) - Math.min(r, g, b) <= 10;
+  };
+
+  // CLAUDE.md "No blue selected states": gray fill, check mark, same ink as any row.
+  it('paints the selected row with the gray hover fill and no ink of its own', () => {
+    const selected = rules.filter(({ selector }) => selector.includes('[aria-current="true"]'));
+
+    expect(selected.length).toBeGreaterThan(0);
+    selected.forEach(({ selector, body }) => {
+      expect(body, selector).not.toMatch(/(^|[\s;])(color|fill|stroke)\s*:/);
+      [...body.matchAll(/background(?:-color)?\s*:\s*([^;]+)/g)].forEach(([, value]) => expect(value.trim()).toBe('var(--pgh-hover)'));
+    });
+  });
+
+  it('keeps the fill and the ink gray in both themes', () => {
+    const tokens = [...values('--pgh-hover'), ...values('--pgh-ink')];
+
+    expect(tokens).toHaveLength(4);
+    tokens.forEach((value) => expect(isGray(value), value).toBe(true));
+  });
+
+  it('draws the check mark in the row ink', () => {
+    expect(IconCheck).toContain('stroke="currentColor"');
+    expect(rules.find(({ selector }) => selector.includes('.pg-history__check') && selector.includes('aria-current'))?.body.trim()).toBe('opacity: 1;');
+  });
+
+  it('gives the Show changes checkbox the ink, not the browser blue', () => {
+    expect(rules.find(({ selector }) => selector === '.pg-history-note__toggle')?.body).toMatch(/accent-color:\s*var\(--pgh-ink\)/);
   });
 });

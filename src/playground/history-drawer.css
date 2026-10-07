@@ -137,8 +137,12 @@ html[data-pg-modality="keyboard"] .pg-history-note__toggle:focus-visible {
 
 /* Preview: stands in for the hidden editor. */
 .pg-history-preview {
-  /* A flex item in #editor-split, like the editor column it replaces. */
+  /* A flex item in #editor-split, like the editor column it replaces. Below
+     the narrow breakpoint that split is a column aligned to start, so the
+     width has to be set here or the preview grows to max-content. */
   flex: 1 1 0;
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
   max-width: 720px;
   margin: 0 auto;
@@ -160,10 +164,14 @@ html[data-pg-modality="keyboard"] .pg-history-note__toggle:focus-visible {
   font-family: var(--pg-font);
   font-size: 13px;
 }
-.pg-history-banner__controls { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pg-history-banner__text { min-width: 0; overflow-wrap: anywhere; }
+.pg-history-banner__controls { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.pg-history-banner__ask { overflow-wrap: anywhere; }
 .pg-history-banner__error { flex-basis: 100%; margin: 0; color: var(--pgh-removed-ink); }
 .pg-history-banner__error[hidden] { display: none; }
 .pg-history-doc { padding: 20px 0 80px; }
+/* A wide table or image scrolls inside the preview instead of widening the page. */
+.pg-history-render { overflow-x: auto; }
 .pg-history-note {
   display: flex;
   flex-wrap: wrap;
@@ -175,6 +183,9 @@ html[data-pg-modality="keyboard"] .pg-history-note__toggle:focus-visible {
   font-size: 13px;
 }
 .pg-history-note__key { display: inline-flex; align-items: center; gap: 6px; }
+.pg-history-note__toggle {
+  accent-color: var(--pgh-ink);
+}
 .pg-history-note__swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
 .pg-history-note__swatch--added { background: var(--pgh-added-bg); }
 .pg-history-note__swatch--removed { background: var(--pgh-removed-bg); }

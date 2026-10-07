@@ -59,6 +59,13 @@ internal sealed class CollabDocConverter(
     {
       input = await Converting(found, cancellationToken);
     }
+    catch (Exception error) when (IsTransient(error, cancellationToken))
+    {
+      // Nothing is written yet. The room answers this one request with a
+      // retry, and keeps every member.
+      throw new CollabTransientException(
+          $"collab: reading the rich text HTML in this edit ran past the runtime's limits: {error.Message}", error);
+    }
     catch (Exception error) when (
         error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
     {

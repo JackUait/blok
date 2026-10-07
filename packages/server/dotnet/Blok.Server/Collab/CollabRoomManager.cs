@@ -42,6 +42,13 @@ internal enum CollabEditStatus
   /// <summary>An op failed validation; nothing was written. The endpoint answers 422.</summary>
   Invalid,
 
+  /// <summary>
+  /// Reading the edit's rich text HTML ran past the runtime's limits; nothing
+  /// was written and the room stays open. A retry may pass, so the endpoint
+  /// answers 503 with Retry-After.
+  /// </summary>
+  Overloaded,
+
   Purged,
 
   /// <summary>The doc endpoint could not seed the room; the endpoint answers 503.</summary>
@@ -93,6 +100,12 @@ internal enum CollabStateStatus
 
   /// <summary>The converter cannot write this document as JSON; the endpoint answers 500.</summary>
   ExportFailed,
+
+  /// <summary>
+  /// The export ran past the runtime's limits reading rich text HTML. A retry
+  /// may pass, so the endpoint answers 503 with Retry-After.
+  /// </summary>
+  Overloaded,
 }
 
 /// <summary>

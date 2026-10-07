@@ -192,6 +192,29 @@ public sealed class StateEndpointTests
     Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
   }
 
+  /// <summary>An export that ran past the runtime's limits may pass on a retry; one that can never be written is a 500.</summary>
+  [Fact]
+  public async Task AStateExportPastTheRuntimesLimitsIsARetryable503()
+  {
+    await using var app = await SyncApp.StartAsync();
+    app.Fakes.Converter.ExportFailure = new CollabTransientException("collab: the runtime timed out");
+
+    using var overloaded = await State(app);
+    app.Fakes.Converter.ExportFailure = new InvalidDataException("not JSON");
+    using var failed = await State(app);
+    app.Fakes.Converter.ExportFailure = null;
+    using var served = await State(app);
+
+    await AssertError(
+        overloaded,
+        HttpStatusCode.ServiceUnavailable,
+        "the server ran past its limits exporting this document, retry\n");
+    Assert.Equal(TimeSpan.FromSeconds(2), overloaded.Headers.RetryAfter?.Delta);
+    await AssertError(failed, HttpStatusCode.InternalServerError, "the document could not be exported\n");
+    Assert.Null(failed.Headers.RetryAfter);
+    Assert.Equal(HttpStatusCode.OK, served.StatusCode);
+  }
+
   [Fact]
   public async Task StateAnswersOnlyGet()
   {

@@ -660,6 +660,10 @@ internal sealed class CollabRoom : IDisposable
             {
               return new CollabEditResult(CollabEditStatus.Invalid, refusal);
             }
+            catch (CollabTransientException overloaded)
+            {
+              return new CollabEditResult(CollabEditStatus.Overloaded, overloaded);
+            }
             finally
             {
               PublishLocalUpdatesLocked();
@@ -717,6 +721,15 @@ internal sealed class CollabRoom : IDisposable
             UpdateEvictionLocked();
 
             return new CollabEditResult(CollabEditStatus.Invalid, refusal);
+          }
+          catch (CollabTransientException overloaded)
+          {
+            // Thrown before the first write, so unlike the catch below it
+            // holds no unjournalled state and must not close the room.
+            localUpdates.Clear();
+            UpdateEvictionLocked();
+
+            return new CollabEditResult(CollabEditStatus.Overloaded, overloaded);
           }
           catch (Exception error)
           {
@@ -810,7 +823,10 @@ internal sealed class CollabRoom : IDisposable
           {
             log?.Invoke($"collab: room \"{DocId}\" could not export its state: {error.Message}");
 
-            return new CollabStateResult(CollabStateStatus.ExportFailed, [], Error: error);
+            return new CollabStateResult(
+                error is CollabTransientException ? CollabStateStatus.Overloaded : CollabStateStatus.ExportFailed,
+                [],
+                Error: error);
           }
 
           return new CollabStateResult(

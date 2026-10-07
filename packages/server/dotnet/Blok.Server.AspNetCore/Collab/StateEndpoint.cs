@@ -88,6 +88,13 @@ internal static class StateEndpoint
 
         return;
 
+      case CollabStateStatus.Overloaded:
+        await EditEndpoint.RefuseOverloadedAsync(
+            context,
+            "the server ran past its limits exporting this document, retry\n");
+
+        return;
+
       case CollabStateStatus.ExportFailed:
         await SyncEndpoint.RefuseAsync(
             context,

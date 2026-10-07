@@ -612,6 +612,44 @@ public sealed class EditEndpointTests
     Assert.Equal("OPTIONS, POST", string.Join(", ", wrongMethod.Content.Headers.Allow));
   }
 
+  /// <summary>
+  /// Reading the edit's HTML ran past the runtime's limits: a server fault a
+  /// retry may heal, so not the caller's 422, and the same key may be sent again.
+  /// </summary>
+  [Fact]
+  public async Task AnEditWhoseHtmlReadRanPastTheRuntimesLimitsIsARetryable503()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartWithOperationStore(operations);
+    app.Fakes.Converter.NextEditFailure = new CollabTransientException("collab: the runtime timed out");
+
+    using var overloaded = await Edit(app, key: "overloaded-edit");
+    using var retried = await Edit(app, key: "overloaded-edit");
+
+    await AssertError(
+        overloaded,
+        HttpStatusCode.ServiceUnavailable,
+        "the server ran past its limits reading this edit's rich text, retry\n");
+    Assert.Equal(TimeSpan.FromSeconds(2), overloaded.Headers.RetryAfter?.Delta);
+    Assert.Equal(HttpStatusCode.NoContent, retried.StatusCode);
+    Assert.Equal("1", Assert.Single(retried.Headers.GetValues("Blok-Doc-Sequence")));
+  }
+
+  [Fact]
+  public async Task AnEditTheConverterRefusesStaysA422()
+  {
+    await using var app = await SyncApp.StartAsync();
+    app.Fakes.Converter.NextEditFailure = new CollabEditException("collab: the rich text HTML in this edit could not be read: bad");
+
+    using var refused = await Edit(app, key: "refused-edit");
+
+    await AssertError(
+        refused,
+        HttpStatusCode.UnprocessableEntity,
+        "collab: the rich text HTML in this edit could not be read: bad\n");
+    Assert.Null(refused.Headers.RetryAfter);
+  }
+
   private static async Task<HttpResponseMessage> Edit(
       SyncApp app,
       string doc = SyncApp.Doc,

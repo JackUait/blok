@@ -182,6 +182,55 @@ public sealed class CollabDocConverterTests
     Assert.IsType<YXmlText>(title);
   }
 
+  [Fact]
+  public async Task AnExportReaderFailureIsTransient()
+  {
+    var doc = LegacyHtmlDoc();
+    var converter = new CollabDocConverter(time, new FailingHtmlReader());
+
+    var error = await Assert.ThrowsAsync<CollabTransientException>(
+        async () => await converter.ExportAsync(doc));
+
+    Assert.IsType<TimeoutException>(error.InnerException);
+  }
+
+  [Fact]
+  public async Task AnExportCancelledByItsTokenStaysACancel()
+  {
+    var doc = LegacyHtmlDoc();
+    using var cancel = new CancellationTokenSource();
+
+    await cancel.CancelAsync();
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        await new CollabDocConverter(time, new CancellingHtmlReader()).ExportAsync(doc, cancel.Token));
+  }
+
+  private static YDoc LegacyHtmlDoc()
+  {
+    var doc = new YDoc();
+
+    doc.Transact(transaction =>
+    {
+      doc.GetMap("blocks").Set(transaction, "a", Block("a", "paragraph",
+          new YMap([new KeyValuePair<string, object?>("text", new YText("<b>x</b>"))])));
+      doc.GetArray("root").Insert(transaction, 0, ["a"]);
+    });
+
+    return doc;
+  }
+
+  private sealed class CancellingHtmlReader : IRichTextHtmlReader
+  {
+    public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
+        IReadOnlyList<RichTextHtml> fields, CancellationToken cancellationToken = default)
+    {
+      cancellationToken.ThrowIfCancellationRequested();
+
+      throw new InvalidOperationException("the token was not passed through");
+    }
+  }
+
   private static YMap Block(string id, string type, YMap data)
   {
     return new YMap(

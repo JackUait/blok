@@ -664,12 +664,26 @@ internal sealed class CollabRoom : IDisposable
             return new CollabEditResult(CollabEditStatus.Applied, null);
           }
 
+          var stateBefore = doc!.EncodeStateVector();
+
           try
           {
             await converter.ApplyOpsAsync(doc!, ops, lifetime.Token);
 
-            // One update is what the append journals; zero or many means the
-            // document moved by bytes the journal would never see.
+            // An edit that changed nothing (the same data again, or rich text
+            // spelled differently) wrote no bytes: applied, nothing to append.
+            if (localUpdates.Count == 0 && doc!.EncodeStateVector().AsSpan().SequenceEqual(stateBefore))
+            {
+              UpdateEvictionLocked();
+
+              return new CollabEditResult(
+                  CollabEditStatus.Applied,
+                  null,
+                  new CollabEditReceipt(tag, committedThrough));
+            }
+
+            // One update is what the append journals; zero with a moved doc,
+            // or many, means bytes the journal would never see.
             if (localUpdates.Count != 1)
             {
               throw new InvalidOperationException(
@@ -2953,6 +2967,16 @@ internal sealed class CollabRoom : IDisposable
   /// room stops holding itself loaded for a PUT it can never build. Logged
   /// once per room: it takes an operator reset, not a wait.
   /// </summary>
+  /// <summary>
+  /// A failure a retry may heal — the runtime timed out reading rich text, or
+  /// the export was cancelled — as opposed to a document the converter can
+  /// never read, which <see cref="RefuseProjectionLocked"/> gives up on.
+  /// </summary>
+  private static bool IsTransientExportFailure(Exception error)
+  {
+    return error is CollabTransientException or OperationCanceledException;
+  }
+
   private void RefuseProjectionLocked(Exception error)
   {
     if (projectionRefused)
@@ -3037,10 +3061,15 @@ internal sealed class CollabRoom : IDisposable
     }
     catch (Exception error)
     {
-      if (session is not null)
+      if (session is not null && !IsTransientExportFailure(error))
       {
         RefuseProjectionLocked(error);
 
+        return;
+      }
+
+      if (lifetime.IsCancellationRequested)
+      {
         return;
       }
 
@@ -3236,7 +3265,7 @@ internal sealed class CollabRoom : IDisposable
     }
     catch (Exception error) when (!lifetime.IsCancellationRequested)
     {
-      if (session is not null)
+      if (session is not null && !IsTransientExportFailure(error))
       {
         RefuseProjectionLocked(error);
       }

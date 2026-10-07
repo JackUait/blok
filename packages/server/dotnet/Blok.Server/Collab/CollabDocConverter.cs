@@ -71,7 +71,20 @@ internal sealed class CollabDocConverter(
 
     if (slots.Count > 0)
     {
-      var read = await Read(slots.Select(slot => slot.Html).ToList(), cancellationToken);
+      Dictionary<string, JsonArray> read;
+
+      try
+      {
+        read = await Read(slots.Select(slot => slot.Html).ToList(), cancellationToken);
+      }
+      catch (Exception error) when (
+          error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+      {
+        // The room gives up on a projection it can never build; this one a
+        // retry may build, so it must not look like that.
+        throw new CollabTransientException(
+            $"collab: the rich text HTML in this document could not be read: {error.Message}", error);
+      }
 
       foreach (var slot in slots)
       {

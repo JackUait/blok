@@ -36,3 +36,12 @@ internal interface ICollabDocConverter
   ValueTask ApplyOpsAsync(
       YDoc doc, IReadOnlyList<CollabEditOp> ops, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// A conversion that failed for a reason a retry may heal — the embedded
+/// runtime timed out, ran out of its allocation budget, or waited too long
+/// for a free engine. Not a document the converter can never read: the room
+/// backs off and retries instead of giving up on the projection.
+/// </summary>
+internal sealed class CollabTransientException(string message, Exception? inner = null)
+    : Exception(message, inner);

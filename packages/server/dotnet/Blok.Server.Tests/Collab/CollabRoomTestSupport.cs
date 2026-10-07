@@ -501,6 +501,12 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
     documents[docId] = new LoadedDocument(new JsonObject { ["text"] = text }, version);
   }
 
+  /// <summary>A real OutputData object, for a room running the real converter.</summary>
+  internal void HoldsDocument(string docId, JsonObject document, string? version = null)
+  {
+    documents[docId] = new LoadedDocument(document, version);
+  }
+
   internal void HoldsNothing(string docId, string? version = null)
   {
     documents[docId] = new LoadedDocument(null, version);
@@ -607,7 +613,14 @@ internal sealed class FakeDocConverter : ICollabDocConverter
 
   internal Exception? EditFailureAfterApply { get; set; }
 
-  internal bool SuppressEditUpdates { get; set; }
+  /// <summary>Makes ApplyOps write nothing, as a real edit that changes nothing does.</summary>
+  internal bool EditWritesNothing { get; set; }
+
+  /// <summary>
+  /// Makes ApplyOps move the doc by a NON-local update: bytes the room's
+  /// local-update capture never sees, so the journal could not hold them.
+  /// </summary>
+  internal bool EditMovesTheDocUnseen { get; set; }
 
   internal bool EmitSecondEditUpdate { get; set; }
 
@@ -650,8 +663,18 @@ internal sealed class FakeDocConverter : ICollabDocConverter
       throw EditFailure;
     }
 
-    if (SuppressEditUpdates)
+    if (EditWritesNothing)
     {
+      return;
+    }
+
+    if (EditMovesTheDocUnseen)
+    {
+      var foreign = new YDoc();
+
+      foreign.Transact(transaction => foreign.GetText("content").Insert(transaction, 0, "unseen"));
+      doc.ApplyUpdate(foreign.EncodeStateAsUpdate());
+
       return;
     }
 

@@ -3,6 +3,7 @@ import { PRERENDER_PATHS } from '../prerender-paths';
 import { buildJsonLd } from './jsonld';
 import CHANGELOG from '../../../CHANGELOG.md?raw';
 import { LASTMOD_LEDGER, lastModified, latestReleaseDate } from './lastmod';
+import { lastModifiedWithRelease } from './release-lastmod';
 import { localizedPrerenderPaths } from './locales';
 import { nodeDigests } from '../../scripts/source-digest.mjs';
 import { fingerprintRoutes, pageData } from './page-fingerprint';
@@ -82,6 +83,12 @@ describe('changelog date', () => {
     const release = latestReleaseDate(CHANGELOG);
     expect(release).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
-    expect(lastModified(route)).toBe([release, LASTMOD_LEDGER[route].date].filter(Boolean).sort().at(-1));
+    expect(lastModifiedWithRelease(route)).toBe([release, LASTMOD_LEDGER[route].date].filter(Boolean).sort().at(-1));
+  });
+
+  it('leaves every other route on its ledger date', () => {
+    for (const route of ROUTES.filter((r) => !r.endsWith('/changelog'))) {
+      expect(lastModifiedWithRelease(route), route).toBe(lastModified(route));
+    }
   });
 });

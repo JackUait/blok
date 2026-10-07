@@ -34,7 +34,7 @@ const loadManifest = async () => {
     resolve: { alias: { '@': path.join(DOCS_ROOT, 'src') } },
   });
   try {
-    const [paths, locales, metadata, nav, tools, fingerprint, lastmod] = await Promise.all([
+    const [paths, locales, metadata, nav, tools, fingerprint, lastmod, releaseLastmod] = await Promise.all([
       server.ssrLoadModule('/src/prerender-paths.ts'),
       server.ssrLoadModule('/src/seo/locales.ts'),
       server.ssrLoadModule('/src/seo/route-metadata.ts'),
@@ -42,6 +42,7 @@ const loadManifest = async () => {
       server.ssrLoadModule('/src/components/tools/tools-data.ts'),
       server.ssrLoadModule('/src/seo/page-fingerprint.ts'),
       server.ssrLoadModule('/src/seo/lastmod.ts'),
+      server.ssrLoadModule('/src/seo/release-lastmod.ts'),
     ]);
     const routes = locales.localizedPrerenderPaths(paths.PRERENDER_PATHS);
     return {
@@ -51,7 +52,7 @@ const loadManifest = async () => {
       // Computed while the module server is up: it reads the page sources.
       FINGERPRINTS: fingerprint.fingerprintRoutes(routes, { ...fingerprint.pageData(), ...nodeDigests }),
       LASTMOD_LEDGER: lastmod.LASTMOD_LEDGER,
-      lastModified: lastmod.lastModified,
+      lastModified: releaseLastmod.lastModifiedWithRelease,
       STATIC_PATHS: paths.STATIC_PATHS,
       DEFAULT_LOCALE: locales.DEFAULT_LOCALE,
       absoluteUrl: locales.absoluteUrl,

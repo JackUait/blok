@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
+using Blok.Server.Documents;
 using Blok.Server.Yjs;
 using Xunit;
 
@@ -122,6 +123,65 @@ public sealed class CollabRoomMigrationTests
         line.Contains("ran past its timeout", StringComparison.Ordinal));
   }
 
+  /// <summary>
+  /// A field too large for the runtime's timeout fails the same way on every
+  /// open. Each attempt holds a pooled engine for the whole timeout, so the
+  /// document is held off for a doubling wait instead of being reloaded by
+  /// every reconnect.
+  /// </summary>
+  [Fact]
+  public async Task AMigrationThatRunsPastTheRuntimesLimitsIsHeldOff()
+  {
+    await SeedFormat1JournalAsync();
+    var reader = new LimitReader();
+    var manager = new CollabRoomManager(
+        store,
+        endpoint,
+        new CollabDocConverter(time, reader),
+        new CollabRoomOptions(),
+        time,
+        log.Add,
+        operations);
+
+    var first = await manager.JoinAsync(DocId, V2Member(), CancellationToken.None);
+    var during = await manager.JoinAsync(DocId, V2Member(), CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.SeedFailed, first.Status);
+    Assert.Equal(CollabJoinStatus.Unavailable, during.Status);
+    Assert.Equal(1, reader.Calls);
+    Assert.Contains(log, line => line.Contains("held off", StringComparison.Ordinal));
+
+    time.Advance(new CollabRoomOptions().Backoff(1));
+    var after = await manager.JoinAsync(DocId, V2Member(), CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.SeedFailed, after.Status);
+    Assert.Equal(2, reader.Calls);
+    Assert.Equal(CollabWorkingSetTag.HtmlRichTextFormat, operations.Head(DocId)!.Format);
+  }
+
+  /// <summary>
+  /// The pre-reset load does not migrate. A reset that is then refused must
+  /// not leave that format-1 room serving: every joiner would be told format 1
+  /// and the old lineage.
+  /// </summary>
+  [Fact]
+  public async Task ARefusedResetDoesNotLeaveAFormat1RoomServing()
+  {
+    await SeedFormat1JournalAsync();
+    store.FailRetires = _ => new IOException("the disk is busy");
+    var manager = JournalManager();
+
+    var reset = await manager.ResetForHttpAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabResetStatus.Unavailable, reset.Status);
+
+    store.FailRetires = null;
+    var membership = await Join(manager, V2Member());
+
+    Assert.Equal(CollabWorkingSetTag.CurrentFormat, membership.Tag.Format);
+    Assert.NotEqual(Tags.Lineage, membership.Tag.Lineage);
+  }
+
   /// <summary>The migration's reset leaves the head at sequence 0, so the room's own counters must follow it.</summary>
   [Fact]
   public async Task AnEditAfterMigrationCommitsAtSequenceOneAndCheckpoints()
@@ -210,6 +270,23 @@ public sealed class CollabRoomMigrationTests
     var rebuilt = Replay(store.FramesOf(DocId).Select(frame => (ReadOnlyMemory<byte>)frame).ToList());
     AssertMigrated(rebuilt);
     AssertJsonEqual(Expected(withTail: false), RichTextRuntime.Export(rebuilt));
+  }
+
+  /// <summary>The host record still holds HTML; a migrated room writes it back as segments, as the journal path does.</summary>
+  [Fact]
+  public async Task AMigratedWorkingSetWritesTheRecordBack()
+  {
+    store.Seed(DocId, [fixture.Update], Format1(4));
+    var manager = WorkingSetManager();
+    await Join(manager, V2Member());
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(5),
+        () => endpoint.Saves.Count > 0,
+        "the migrated record to be written back");
+
+    AssertJsonEqual(Expected(withTail: false), endpoint.Saves[0].Data["blocks"]!);
   }
 
   [Fact]
@@ -394,6 +471,20 @@ public sealed class CollabRoomMigrationTests
         CancellationToken.None);
 
     return membership;
+  }
+
+  private sealed class LimitReader : IRichTextHtmlReader
+  {
+    internal int Calls { get; private set; }
+
+    public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
+        IReadOnlyList<RichTextHtml> fields, CancellationToken cancellationToken = default)
+    {
+      Calls++;
+
+      throw new BlokDocumentConversionException(
+          BlokConversionFailure.TimedOut, new TimeoutException("ran past the runtime's timeout"));
+    }
   }
 
   private sealed class FailingReader : IRichTextHtmlReader

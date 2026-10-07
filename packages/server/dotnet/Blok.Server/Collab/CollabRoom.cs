@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
+using Blok.Server.Documents;
 using Blok.Server.Yjs;
 
 namespace Blok.Server.Collab;
@@ -341,6 +342,14 @@ internal sealed class CollabRoom : IDisposable
   /// hold the document off until the store has had time to recover.
   /// </summary>
   internal bool CommitUnavailable { get; private set; }
+
+  /// <summary>
+  /// True when the load ran past the runtime's timeout or allocation budget
+  /// (a format-1 migration or a seed with a very large rich field). That
+  /// fails the same way on every open, so the manager holds the document off
+  /// rather than letting every reconnect spend a pooled engine on it.
+  /// </summary>
+  internal bool LoadHitRuntimeLimit { get; private set; }
 
   /// <summary>Distinct actors <see cref="activityStamps"/> holds; read by its bound tests.</summary>
   internal int ActivityStampCount => activityStamps.Count;
@@ -1031,7 +1040,9 @@ internal sealed class CollabRoom : IDisposable
               log?.Invoke(
                   $"collab: room \"{DocId}\" could not retire its working set, so the reset is refused: {error.Message}");
 
-              if (state == RoomState.Ready)
+              // A format-1 room loaded for this reset was not migrated, so
+              // it must not go on serving.
+              if (state == RoomState.Ready && tag.Format == CollabWorkingSetTag.CurrentFormat)
               {
                 UpdateEvictionLocked();
               }
@@ -1619,6 +1630,7 @@ internal sealed class CollabRoom : IDisposable
     catch (Exception error)
     {
       log?.Invoke($"collab: room \"{DocId}\" could not load: {error.Message}");
+      LoadHitRuntimeLimit = IsRuntimeLimit(error);
 
       return new LoadFailure(null, error);
     }
@@ -1980,6 +1992,22 @@ internal sealed class CollabRoom : IDisposable
     return tag;
   }
 
+  private static bool IsRuntimeLimit(Exception error)
+  {
+    for (var cause = error; cause is not null; cause = cause.InnerException)
+    {
+      if (cause is CollabTransientException or BlokDocumentConversionException
+        {
+          Reason: BlokConversionFailure.TimedOut or BlokConversionFailure.DocumentTooLarge,
+        })
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /// <summary>
   /// Format 1 is read only to be migrated. Anything newer was written by a
   /// newer server, and reading it as ours could lose what that one stored.
@@ -2060,6 +2088,9 @@ internal sealed class CollabRoom : IDisposable
     tag = new CollabWorkingSetTag(
         CollabWorkingSetTag.CurrentFormat, tag.Epoch + 1, CollabWorkingSetTag.NewLineage());
     await PersistLocked(lifetime.Token);
+
+    // The host record still holds HTML.
+    MarkDirtyLocked();
   }
 
   private void HydrateLocked(byte[] storedFrames)

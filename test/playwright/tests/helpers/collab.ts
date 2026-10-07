@@ -57,6 +57,12 @@ declare global {
     __blokRelayHoldDoc?: boolean;
     /** The held document frames, in arrival order. */
     __blokRelayHeldDoc?: Array<() => void>;
+    /** `Date.now()` when the last document frame was held. */
+    __blokRelayLastHeldAt?: number;
+    /** Per doc: the Yjs client id this page's first awareness frame announced. */
+    __blokRelayAwarenessClient?: Record<string, number>;
+    /** Per doc: the Yjs client id of every update frame this page sent. */
+    __blokRelayUpdateClients?: Record<string, number[]>;
   }
 }
 
@@ -97,6 +103,73 @@ export const installCollabRelay = async (page: Page): Promise<void> => {
     const isSyncStep1 = (bytes: Uint8Array): boolean =>
       bytes.length >= 2 && bytes[0] === 0 && bytes[1] === 0;
 
+    /**
+     * A lib0 varuint reader over `bytes`, starting at `start`. Multiplies
+     * instead of shifting: client ids reach 2^32.
+     */
+    const varUintReader = (bytes: Uint8Array, start: number): (() => number) => {
+      let offset = start;
+
+      return () => {
+        let value = 0;
+        let scale = 1;
+
+        while (offset < bytes.length) {
+          const byte = bytes[offset];
+
+          offset += 1;
+          value += (byte & 0x7f) * scale;
+          scale *= 128;
+
+          if (byte < 0x80) {
+            break;
+          }
+        }
+
+        return value;
+      };
+    };
+
+    /**
+     * Notes which Yjs client this page writes as, so a spec can tell the two
+     * client-id orders apart. Awareness `[1][len][count][client]…` lists the
+     * local client first; an update `[0][2][len][groups][structs][client]…`
+     * from a local edit holds only local structs.
+     */
+    const recordClient = (doc: string, bytes: Uint8Array): void => {
+      if (bytes[0] === 1) {
+        const next = varUintReader(bytes, 1);
+
+        next();
+
+        const count = next();
+        const known = window.__blokRelayAwarenessClient ?? {};
+
+        if (count > 0 && known[doc] === undefined) {
+          window.__blokRelayAwarenessClient = { ...known,
+            [doc]: next() };
+        }
+
+        return;
+      }
+
+      if (bytes[0] === 0 && bytes[1] === 2) {
+        const next = varUintReader(bytes, 2);
+
+        next();
+
+        if (next() === 0) {
+          return;
+        }
+        next();
+
+        const all = window.__blokRelayUpdateClients ?? {};
+
+        window.__blokRelayUpdateClients = { ...all,
+          [doc]: [...(all[doc] ?? []), next()] };
+      }
+    };
+
     class RelaySocket {
       public binaryType = 'blob';
 
@@ -114,8 +187,12 @@ export const installCollabRelay = async (page: Page): Promise<void> => {
 
       private readonly channel: BroadcastChannel;
 
+      private readonly doc: string;
+
       public constructor(url: string, private readonly seedsEmptyRoom: boolean) {
         const doc = decodeURIComponent(url.split('/sync/')[1] ?? 'default');
+
+        this.doc = doc;
         const controlPayload = new TextEncoder()
           .encode(JSON.stringify({ epoch: 0,
             format: 2,
@@ -152,6 +229,7 @@ export const installCollabRelay = async (page: Page): Promise<void> => {
           ? new Uint8Array(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength))
           : new Uint8Array(data as ArrayBuffer);
 
+        recordClient(this.doc, bytes);
         this.channel.postMessage(bytes);
 
         // Nobody else is in the room, so nothing would ever answer this and the
@@ -187,6 +265,7 @@ export const installCollabRelay = async (page: Page): Promise<void> => {
 
             held.push(() => this.onmessage?.({ data: bytes }));
             window.__blokRelayHeldDoc = held;
+            window.__blokRelayLastHeldAt = Date.now();
 
             return;
           }
@@ -243,6 +322,47 @@ export const releaseCollabDocFrames = (page: Page): Promise<void> =>
     window.__blokRelayHeldDoc = [];
     held.forEach((deliver) => deliver());
   });
+
+/**
+ * Waits until this page holds at least one document frame and none has
+ * arrived for `quietMs`. The write buffer publishes a burst's tail up to 400ms
+ * after the last keystroke, so a quiet spell longer than that means the peer
+ * published everything it typed while this page was still blind to it.
+ * @param page - a page whose doc frames are held
+ * @param quietMs - how long no new frame may arrive
+ */
+export const waitForHeldDocFramesToSettle = async (page: Page, quietMs = 700): Promise<void> => {
+  await page.waitForFunction(
+    (quiet: number) => (window.__blokRelayHeldDoc?.length ?? 0) > 0
+      && Date.now() - (window.__blokRelayLastHeldAt ?? 0) > quiet,
+    quietMs,
+    { polling: 50 }
+  );
+};
+
+/**
+ * The Yjs client id this page's editor in `doc` announced in its first
+ * awareness frame. Yjs breaks ties between concurrent inserts by client id,
+ * so a spec reads this to know (and choose) the order it is testing.
+ * @param page - the page the editor is on
+ * @param doc - the room
+ */
+export const collabClientId = async (page: Page, doc: string): Promise<number> => {
+  const handle = await page.waitForFunction(
+    (room: string) => window.__blokRelayAwarenessClient?.[room],
+    doc
+  );
+
+  return Number(await handle.jsonValue());
+};
+
+/**
+ * The client ids of every update frame this page sent in `doc`.
+ * @param page - the page the editor is on
+ * @param doc - the room
+ */
+export const collabUpdateClients = (page: Page, doc: string): Promise<number[]> =>
+  page.evaluate((room: string) => window.__blokRelayUpdateClients?.[room] ?? [], doc);
 
 export interface MountOptions {
   /** Collaboration document id — one path segment, shared by every peer. */

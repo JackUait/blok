@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { dragBetweenCharacters } from '../helpers/text-drag';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const UNDO = `${MOD}+z`;
@@ -37,17 +38,17 @@ const P = (id: string, text: string, parent?: string): OutputData['blocks'][numb
 });
 
 /** Saved blocks as `id:type:text^parent`. */
-const saved = (page: Page): Promise<string[]> => page.evaluate(async () => {
+const saved = async (page: Page): Promise<string[]> => blocksAsHtml(await page.evaluate(async () => {
   if (!window.blokInstance) {
     throw new Error('no editor');
   }
 
-  return (await window.blokInstance.save()).blocks.map((b) => {
-    const text = (b.data as { text?: string }).text ?? '';
-    const parent = (b as { parent?: string }).parent;
+  return (await window.blokInstance.save()).blocks;
+})).map((b) => {
+  const text = (b.data as { text?: string }).text ?? '';
+  const parent = (b as { parent?: string }).parent;
 
-    return `${b.id ?? '?'}:${b.type}:${text}${parent !== undefined ? `^${parent}` : ''}`;
-  });
+  return `${b.id ?? '?'}:${b.type}:${text}${parent !== undefined ? `^${parent}` : ''}`;
 });
 
 /** What is on screen: `id:innerHTML` of each block's first editable. */

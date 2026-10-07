@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, BlockMutationEvent, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml, htmlOf } from '../helpers/saved-as-html';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
@@ -51,14 +52,14 @@ const mount = async (page: Page, blocks: Block[]): Promise<void> => {
   }, { list: blocks });
 };
 
-const saved = (page: Page): Promise<Block[]> =>
-  page.evaluate(async () => {
+const saved = async (page: Page): Promise<Block[]> =>
+  blocksAsHtml(await page.evaluate(async () => {
     if (!window.blokInstance) {
       throw new Error('no editor');
     }
 
     return (await window.blokInstance.save()).blocks;
-  });
+  }));
 
 const texts = async (page: Page): Promise<string[]> =>
   (await saved(page)).map((b) => {
@@ -314,15 +315,16 @@ test.describe('undo audit W4A: public API, events, history engine', () => {
     await gap(page);
     const immediate = await page.evaluate(async () => {
       window.blokInstance?.history.undo();
-      const first = (await window.blokInstance?.save())?.blocks.map((b) => String(b.data.text));
+      const first = (await window.blokInstance?.save())?.blocks;
 
       window.blokInstance?.history.undo();
-      const second = (await window.blokInstance?.save())?.blocks.map((b) => String(b.data.text));
+      const second = (await window.blokInstance?.save())?.blocks;
 
       return { first, second };
     });
+    const textsOf = (blocks: Block[] | undefined): string[] | undefined => blocks?.map((b) => String(htmlOf(b.data.text)));
 
-    expect(immediate).toEqual({ first: ['alphaX', 'beta'], second: ['alpha', 'beta'] });
+    expect({ first: textsOf(immediate.first), second: textsOf(immediate.second) }).toEqual({ first: ['alphaX', 'beta'], second: ['alpha', 'beta'] });
   });
 
   test('W4A-c15: undo and redo each notify onChange and onSave with the new document', async ({ page }) => {
@@ -337,11 +339,11 @@ test.describe('undo audit W4A: public API, events, history engine', () => {
     await gap(page);
     const afterUndo = await page.evaluate(() => ({
       changes: window.__changes ?? [],
-      lastSave: window.__saves?.at(-1)?.blocks.map((b) => String(b.data.text)),
+      lastSave: window.__saves?.at(-1)?.blocks,
     }));
 
     expect(afterUndo.changes.length).toBeGreaterThan(0);
-    expect(afterUndo.lastSave).toEqual(['alpha']);
+    expect(afterUndo.lastSave?.map((b) => String(htmlOf(b.data.text)))).toEqual(['alpha']);
 
     await page.evaluate(() => {
       window.__changes = [];
@@ -351,11 +353,11 @@ test.describe('undo audit W4A: public API, events, history engine', () => {
     await gap(page);
     const afterRedo = await page.evaluate(() => ({
       changes: window.__changes ?? [],
-      lastSave: window.__saves?.at(-1)?.blocks.map((b) => String(b.data.text)),
+      lastSave: window.__saves?.at(-1)?.blocks,
     }));
 
     expect(afterRedo.changes.length).toBeGreaterThan(0);
-    expect(afterRedo.lastSave).toEqual(['alphaX']);
+    expect(afterRedo.lastSave?.map((b) => String(htmlOf(b.data.text)))).toEqual(['alphaX']);
   });
 
   test('W4A-c16: undo of a block delete reports the block as added to onChange', async ({ page }) => {

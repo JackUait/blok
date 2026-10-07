@@ -3,6 +3,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -54,7 +55,8 @@ interface State {
  * Screen: component, depth, list marker, checkbox, and the block's OWN editables (not a child's).
  * Saved: type, data, and the parent as an index into the saved list (ids stay out).
  */
-const state = (page: Page): Promise<State> => page.evaluate(async (holder) => {
+const state = async (page: Page): Promise<State> => {
+  const { dom, out } = await page.evaluate(async (holder) => {
   const root = document.getElementById(holder);
   const wrappers = root === null ? [] : Array.from(root.querySelectorAll('[data-blok-testid="block-wrapper"]'));
   const own = (w: Element, sel: string): Element[] =>
@@ -68,15 +70,19 @@ const state = (page: Page): Promise<State> => page.evaluate(async (holder) => {
     return `${w.getAttribute('data-blok-component') ?? '?'}|d${w.getAttribute('data-blok-depth') ?? '0'}|${marker}${box === undefined ? '' : tick}|${text}`;
   });
   const out = await window.blokInstance?.save();
-  const blocks = out?.blocks ?? [];
+
+  return { dom, out };
+}, HOLDER_ID);
+  const blocks = blocksAsHtml(out?.blocks ?? []);
   const ids = blocks.map((b) => b.id);
   const saved = blocks.map((b) => `${b.type}|${JSON.stringify(b.data).replace(/&nbsp;/g, ' ')}|p${b.parent === undefined ? '-' : ids.indexOf(b.parent)}`);
 
   return { dom, saved };
-}, HOLDER_ID);
+};
 
 /** Plain "type:text" per block from the screen and from save(), for the markdown checks. */
-const plain = (page: Page): Promise<{ dom: string[]; saved: string[] }> => page.evaluate(async (holder) => {
+const plain = async (page: Page): Promise<{ dom: string[]; saved: string[] }> => {
+  const { dom, out } = await page.evaluate(async (holder) => {
   const root = document.getElementById(holder);
   const wrappers = root === null ? [] : Array.from(root.querySelectorAll('[data-blok-testid="block-wrapper"]'));
   const dom = wrappers.map((w) => {
@@ -85,17 +91,20 @@ const plain = (page: Page): Promise<{ dom: string[]; saved: string[] }> => page.
     return `${w.getAttribute('data-blok-component') ?? '?'}:${(ed?.textContent ?? '').replace(/\u00a0/g, ' ')}`;
   });
   const out = await window.blokInstance?.save();
-  const saved = (out?.blocks ?? []).map((b) => {
+
+  return { dom, out };
+}, HOLDER_ID);
+  const saved = await page.evaluate((blocks) => blocks.map((b) => {
     const d = b.data as { text?: string; code?: string };
     const t = document.createElement('div');
 
     t.innerHTML = d.text ?? d.code ?? '';
 
     return `${b.type}:${(t.textContent ?? '').replace(/\u00a0/g, ' ')}`;
-  });
+  }), blocksAsHtml(out?.blocks ?? []));
 
   return { dom, saved };
-}, HOLDER_ID);
+};
 
 /** Which block holds the caret, and the text offset inside that block's editable. */
 const caret = (page: Page): Promise<string> => page.evaluate(() => {

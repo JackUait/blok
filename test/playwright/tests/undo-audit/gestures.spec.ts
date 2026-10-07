@@ -12,6 +12,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 import { openFixtureToggles } from '../helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
@@ -78,14 +79,14 @@ const createEquationBlok = async (page: Page, blocks: SavedBlock[]): Promise<voi
   }, { holder: HOLDER_ID, initial: blocks });
 };
 
-const save = async (page: Page): Promise<SavedBlock[]> => page.evaluate(async () => {
+const save = async (page: Page): Promise<SavedBlock[]> => blocksAsHtml(await page.evaluate(async () => {
   if (!window.blokInstance) {
     throw new Error('no blok');
   }
 
   // lastEdited* is authorship metadata, not document state.
   return (await window.blokInstance.save()).blocks.map(({ lastEditedAt: _a, lastEditedBy: _b, ...rest }) => rest);
-});
+}));
 
 const gap = async (page: Page, ms = CAPTURE_GAP): Promise<void> => {
   await page.evaluate(async (t) => {

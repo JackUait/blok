@@ -15,6 +15,7 @@
  * directions.
  */
 
+import { describeParagraph } from '../shared/tool-descriptions/paragraph';
 import { ALIGNMENT, richText } from '../shared/tool-descriptions/rich-text';
 
 export const blokDocumentSchema = {
@@ -114,17 +115,7 @@ export const blokDocumentSchema = {
   },
 
   $defs: {
-    paragraph: {
-      type: 'object',
-      description: 'A line of rich text.',
-      required: ['text'],
-      additionalProperties: false,
-      properties: {
-        text: richText('The line\'s rich text.'),
-        textColor: { type: 'string', description: 'Text color preset name, e.g. "red".' },
-        backgroundColor: { type: 'string', description: 'Background color preset name.' },
-      },
-    },
+    paragraph: describeParagraph().data,
 
     header: {
       type: 'object',

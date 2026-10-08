@@ -1,3 +1,4 @@
+import { describeParagraph } from '../../shared/tool-descriptions/paragraph';
 import { paragraphSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 /**
  * Paragraph Tool for the Blok Editor
@@ -104,6 +105,8 @@ const parseHtml = (html: string): DocumentFragment => {
  * @license MIT
  */
 export class Paragraph implements BlockTool {
+  public static describe = describeParagraph;
+
   /**
    * Default placeholder for Paragraph Tool
    *

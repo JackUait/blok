@@ -1,4 +1,5 @@
 import type { PropertyDefinition, PropertyValue } from '../types';
+import { openTextEditor } from './text-editor';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 export { renderCellValue, createOptionPill } from './display';
@@ -15,8 +16,30 @@ const CLOSED: CellEditorHandle = { isOpen: false, close: () => undefined };
  * Checkbox has no editor: it commits the flipped value at once.
  */
 export const openCellEditor = (
-  _property: PropertyDefinition,
-  _value: PropertyValue | undefined,
-  _anchor: HTMLElement,
-  _ctx: CellEditorContext
-): CellEditorHandle => CLOSED;
+  property: PropertyDefinition,
+  value: PropertyValue | undefined,
+  anchor: HTMLElement,
+  ctx: CellEditorContext
+): CellEditorHandle => {
+  if (ctx.readOnly) {
+    return CLOSED;
+  }
+
+  switch (property.type) {
+    case 'checkbox':
+      ctx.onCommit(value !== true);
+      ctx.onClose?.();
+
+      return CLOSED;
+    case 'select':
+    case 'multiSelect':
+    case 'date':
+      return CLOSED;
+    case 'title':
+    case 'text':
+    case 'number':
+    case 'url':
+    case 'richText':
+      return openTextEditor(property, value, anchor, ctx);
+  }
+};

@@ -39,7 +39,7 @@ export const definePageTitleTests = (url: string, editorTestId: string): void =>
     await page.keyboard.type('Plans');
     await page.keyboard.press('ArrowDown');
 
-    const firstBlock = page.getByTestId(editorTestId).locator('[data-blok-id] [contenteditable="true"]').first();
+    const firstBlock = page.getByTestId(editorTestId).locator('[data-blok-id]').locator('[contenteditable="true"]').first();
 
     await expect(firstBlock).toBeFocused();
   });
@@ -62,7 +62,7 @@ export const definePageTitleTests = (url: string, editorTestId: string): void =>
     await expect(page.getByTestId(editorTestId).getByTestId('page-header-title')).toBeVisible();
 
     // The title is connected again, so Backspace at the start of the first block joins into it.
-    const firstBlock = page.getByTestId(editorTestId).locator('[data-blok-id] [contenteditable="true"]').first();
+    const firstBlock = page.getByTestId(editorTestId).locator('[data-blok-id]').locator('[contenteditable="true"]').first();
     const text = (await firstBlock.textContent()) ?? '';
 
     await firstBlock.evaluate((element) => {

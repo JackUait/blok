@@ -1,6 +1,9 @@
-import { useLayoutEffect, useRef, forwardRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, forwardRef } from 'react';
 import type { Blok } from '@/types';
 import type { BlokTitleProps } from './types';
+
+// React 18 warns on a server useLayoutEffect. Neither effect runs on the server.
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 /**
  * Places the editor's page title in a div of your own.
@@ -23,7 +26,7 @@ export const BlokTitle = forwardRef<HTMLDivElement, BlokTitleProps>(
     };
 
     // Layout, not passive: its cleanup runs before React removes the div, so the header is never detached.
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       const host = containerRef.current;
 
       if (editor === null || host === null) {

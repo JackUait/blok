@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Blok } from '@/types';
 import { BlokEditorComponent } from '../../../packages/angular/src/blok-editor.component';
 import { BlokTitleComponent } from '../../../packages/angular/src/blok-title.component';
+import RawBlok from '../../../src/blok';
 import { Paragraph } from '../../../src/tools/paragraph';
 
 const TOOLS = { paragraph: { class: Paragraph } };
@@ -134,6 +135,31 @@ describe('BlokTitleComponent', () => {
 
     expect(titleHost().querySelectorAll(HEADER)).toHaveLength(1);
     expect(document.querySelectorAll(HEADER)).toHaveLength(1);
+  });
+
+  it('gives the title back to an editor the adapter did not create', async () => {
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+    // The src class gets its module APIs by a prototype swap at boot; the published type lists them.
+    const editor = new RawBlok({ holder, tools: TOOLS, pageTitle: true }) as unknown as Blok;
+
+    await editor.isReady;
+    const fixture = TestBed.createComponent(BlokTitleComponent);
+
+    document.body.appendChild(fixture.nativeElement as HTMLElement);
+    fixture.componentRef.setInput('editor', editor);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector(HEADER)).not.toBeNull();
+    fixture.destroy();
+
+    const header = holder.querySelector(HEADER);
+    const editorWrapper = holder.querySelector('[data-blok-editor]');
+
+    expect(header?.parentElement).toBe(editorWrapper);
+    expect(header?.nextElementSibling).toBe(editorWrapper?.querySelector('[data-blok-redactor]'));
+    editor.destroy();
   });
 
   it('keeps host attributes and renders no projected content', async () => {

@@ -27,6 +27,7 @@ interface FakeEditor {
     move: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
     transact: ReturnType<typeof vi.fn>;
+    exportMarkdown: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -65,6 +66,7 @@ const makeFakeEditor = (initial: FakeRecord[]): FakeEditor => {
   const move = vi.fn();
   const del = vi.fn();
   const transact = vi.fn((fn: () => void) => fn());
+  const exportMarkdown = vi.fn(async (_options?: { title?: boolean }) => '# Plan');
   const placement = fakePlacement({
     blocks: () => flat,
     insert: (type, data, index) => insert(type, data, {}, index),
@@ -98,6 +100,7 @@ const makeFakeEditor = (initial: FakeRecord[]): FakeEditor => {
     move,
     delete: del,
     transact,
+    exportMarkdown,
   };
 
   const editor = {
@@ -119,7 +122,7 @@ const makeFakeEditor = (initial: FakeRecord[]): FakeEditor => {
     emitChanged: (): void => {
       listeners.get('block changed')?.forEach((h) => h());
     },
-    spies: { insertInsideParent, insert, setBlockParent, insertAt, moveTo, move, delete: del, transact },
+    spies: { insertInsideParent, insert, setBlockParent, insertAt, moveTo, move, delete: del, transact, exportMarkdown },
   };
 };
 
@@ -166,6 +169,14 @@ describe('useBlocks (Vue)', () => {
     expect(api.getById('x')).toBeNull();
     expect(api.getBlocksCount()).toBe(0);
     expect(api.insert()).toBeNull();
+  });
+
+  it('exportMarkdown passes { title: true } through to the editor', async () => {
+    const { editor, spies } = makeFakeEditor([]);
+    const { api } = mountUseBlocks(ref<Blok | null>(editor));
+
+    await expect(api.exportMarkdown({ title: true })).resolves.toBe('# Plan');
+    expect(spies.exportMarkdown).toHaveBeenCalledWith({ title: true });
   });
 
   it('reads the block tree by id and parent', () => {

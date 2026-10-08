@@ -33,6 +33,7 @@ const makeFakeEditor = (initial: FakeRecord[]): { editor: Blok; handlers: Array<
     renderFromHTML: vi.fn(() => Promise.resolve()), clear: vi.fn(() => Promise.resolve()),
     splitBlock: vi.fn(), getCurrentBlockIndex: vi.fn(() => 0), getBlockByElement: vi.fn(),
     transact: vi.fn((fn: () => void) => fn()), transactWithoutCapture: vi.fn((fn: () => void) => fn()),
+    exportMarkdown: vi.fn(async (_options?: { title?: boolean }) => '# Plan'),
   };
   const editor = {
     blocks,
@@ -90,6 +91,14 @@ describe('injectBlocks (Angular) — React/Vue parity surface', () => {
     api.transactWithoutCapture(vi.fn(), options);
 
     expect(editor.blocks.transactWithoutCapture).toHaveBeenCalledWith(expect.any(Function), options);
+  });
+
+  it('exportMarkdown passes { title: true } through to core', async () => {
+    const { editor } = makeFakeEditor([]);
+    const api = run(() => injectBlocks(signal<Blok | null>(editor)));
+
+    await expect(api.exportMarkdown({ title: true })).resolves.toBe('# Plan');
+    expect(editor.blocks.exportMarkdown).toHaveBeenCalledWith({ title: true });
   });
 
   it('remove is subtree-aware: deletes the block AND its descendants', () => {

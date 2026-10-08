@@ -477,6 +477,19 @@ describe('markdownToBlocks with title: true', () => {
     expect(result).not.toHaveProperty('icon');
   });
 
+  it('reports the marks a lifted title loses', async () => {
+    const marked = await markdownToSegmentBlocksWithReport('# **Plan**\n\nBody', { title: true });
+    const plain = await markdownToSegmentBlocksWithReport('# 🚀 Plan\n\nBody', { title: true });
+
+    expect(marked.title).toBe('Plan');
+    expect(marked.warnings).toEqual([{
+      construct: 'heading',
+      action: 'degraded',
+      detail: 'The page title is plain text, so the formatting in the leading heading is dropped',
+    }]);
+    expect(plain.warnings).toEqual([]);
+  });
+
   it('counts only a leading emoji followed by a space as the icon', async () => {
     const glued = await markdownToSegmentBlocksWithReport('# 🚀Plan', { title: true });
     const word = await markdownToSegmentBlocksWithReport('# Go 🚀 now', { title: true });

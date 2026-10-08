@@ -214,7 +214,7 @@ function plainText(node: RootContent): string {
  * @param tree - the parsed document, changed in place
  * @returns the title and icon, or nothing when there is no such heading
  */
-function liftTitle(tree: Root): { title?: string; icon?: PageIcon } {
+function liftTitle(tree: Root): { title?: string; icon?: PageIcon; marked?: boolean } {
   const first = tree.children[0];
 
   if (first?.type !== 'heading' || first.depth !== 1) {
@@ -229,8 +229,14 @@ function liftTitle(tree: Root): { title?: string; icon?: PageIcon } {
 
   tree.children.shift();
 
-  return lifted;
+  return first.children.some((child) => child.type !== 'text') ? { ...lifted, marked: true } : lifted;
 }
+
+const TITLE_MARKS_DROPPED: MarkdownDegradation = {
+  construct: 'heading',
+  action: 'degraded',
+  detail: 'The page title is plain text, so the formatting in the leading heading is dropped',
+};
 
 /**
  * Convert a Markdown string to blocks and report what degraded on the way in.
@@ -273,13 +279,14 @@ export async function markdownToBlocksWithReport(
   });
 
   const internal: InternalMarkdownImportConfig = config;
-  const page = config.title === true ? liftTitle(tree) : {};
+  const { marked, ...page } = config.title === true ? liftTitle(tree) : {};
 
   if (internal.softBreaks === true) {
     tree.children.forEach(softBreaksToBreaks);
   }
 
   return { blocks: mdastToBlocks(tree, config, internal.htmlText === true ? 'html' : 'segments'),
-    warnings: collectImportWarnings(tree),
+    // The heading came first, so its warning does too.
+    warnings: [...(marked === true ? [{ ...TITLE_MARKS_DROPPED }] : []), ...collectImportWarnings(tree)],
     ...page };
 }

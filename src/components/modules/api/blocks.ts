@@ -789,7 +789,7 @@ export class BlocksAPI extends Module {
     if (originalBlockConvertable && targetBlockConvertable) {
       this.Blok.YjsManager.beginApiCall();
       // Overrides reach the Yjs document before the factory converts anything.
-      const newBlock = await BlockManager.convert(blockToConvert, newType, dataOverrides === undefined ? dataOverrides : this.richTextToHtml(newType, dataOverrides));
+      const newBlock = await BlockManager.convert(blockToConvert, newType, dataOverrides === undefined ? dataOverrides : this.hostDataForTool(newType, dataOverrides));
 
       return new BlockAPI(newBlock, this.Blok.API);
     } else {

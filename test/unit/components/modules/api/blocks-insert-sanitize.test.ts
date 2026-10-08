@@ -20,6 +20,7 @@ interface TestEditor {
     insertAt: (type?: string, data?: Record<string, unknown>, options?: { parentId?: string }) => { id: string };
     insertMany: (blocks: OutputBlockData[]) => Array<{ id: string }>;
     update: (id: string, data?: Record<string, unknown>) => Promise<{ id: string }>;
+    convert: (id: string, type: string, data?: Record<string, unknown>) => Promise<{ id: string }>;
   };
   module: { yjsManager: { toJSON: () => Array<{ id: string; data: Record<string, unknown> }> } };
 }
@@ -139,6 +140,14 @@ describe('blocks API host input is sanitized like render()', () => {
 
       await expectInert(instance);
     });
+
+    it('blocks.convert overrides', async () => {
+      const instance = await boot(one());
+
+      await instance.blocks.convert('p', 'header', { text });
+
+      await expectInert(instance);
+    });
   });
 
   describe('legacy shapes', () => {
@@ -227,6 +236,38 @@ describe('blocks API host input is sanitized like render()', () => {
 
     expect(saved.find(block => block.id === inserted.id)?.data.text).toEqual(expected);
     expect(saved.find(block => block.id === 'p')?.data.text).toEqual(expected);
+  });
+
+  it.each([
+    ['html', '<b>bold</b> <i>italic</i> <a href="https://x.dev">link</a>'],
+    ['segments', [
+      { text: 'bold', marks: { bold: true } },
+      { text: ' ' },
+      { text: 'italic', marks: { italic: true } },
+      { text: ' ' },
+      { text: 'link', marks: { link: { href: 'https://x.dev' } } },
+    ]],
+  ])('blocks.convert keeps permitted override markup (%s)', async (_label, text) => {
+    const instance = await boot(one());
+
+    await instance.blocks.convert('p', 'header', { text });
+
+    const converted = requireHolder().querySelector('[data-blok-id="p"]');
+
+    expect(converted?.querySelector('b, strong')?.textContent).toBe('bold');
+    expect(converted?.querySelector('i, em')?.textContent).toBe('italic');
+    expect(converted?.querySelector('a')?.textContent).toBe('link');
+    expect(converted?.querySelector('a')?.getAttribute('href')).toBe('https://x.dev');
+
+    const saved = (await instance.save()).blocks;
+
+    expect(saved.find(block => block.id === 'p')?.data.text).toEqual([
+      { text: 'bold', marks: { bold: true } },
+      { text: ' ' },
+      { text: 'italic', marks: { italic: true } },
+      { text: ' ' },
+      { text: 'link', marks: { link: { href: 'https://x.dev' } } },
+    ]);
   });
 
   it.each([

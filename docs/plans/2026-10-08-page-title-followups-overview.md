@@ -29,6 +29,7 @@ Every surface these plans change shipped after `v1.16.1`, with one exception. Ch
 
 - `git log v1.16.1 -- types/api/title.d.ts` is empty. Its first commit is 8d86c376, which is after the tag.
 - The C# converters are `internal`.
+- `blokDocumentSchema` shipped in v1.16.1, but plan 1b only adds optional properties to it. That is additive.
 
 The exception is the shipped exporters, importers and text helpers (`blocksToHtml`, `blocksToMarkdown`, `blocksToPlainText`, `blocks.exportMarkdown`, `markdownToBlocks`/`htmlToBlocks`, `extractTexts`/`injectTexts`). They shipped before the tag and accept any record. Turning title output on by default would change their output for a host that already stores its own `{ title, blocks }`. That counts as "changing a default", so plan 4 makes all of it opt-in (decisions D1, D2, D12).
 
@@ -43,10 +44,10 @@ These are real gaps in what is on `main` today:
    - `ExportAsync` writes `{time, blocks}` only (`:121-125`).
    - A collab title syncs live and survives compaction. It is lost on seed and reset, and the host never receives it. Fixed by plan 2.
 3. **A title host that leaves the page keeps the title "enabled".**
-   - `PageTitle.isEnabled` is `dom !== null` (`pageTitle/index.ts:44-46`).
-   - Backspace-join (`keyboardNavigation.ts:116-131`) and ArrowUp (`caret.ts:1051-1056`) trust it.
+   - `PageTitle.isEnabled` is `dom !== null` (`pageTitle/index.ts:48-50`).
+   - Backspace-join (`blockEvents/composers/keyboardNavigation.ts:116-139`, called at `:914-916`) and ArrowUp (`caret.ts:1052`) trust it.
    - After the app removes the holder (any framework unmount), Backspace at the start of the first block would move its text into a title nobody sees.
-   - Found by reading code, not reproduced. Plan 1b Task 3 reproduces it first.
+   - Found by reading code, and confirmed by a second read: `joinIntoTitle` appends the text, dispatches `input` (the Yjs title is written), then removes the block. Not reproduced at runtime. Plan 1b Task 3 reproduces it first.
 
 ## Decisions
 
@@ -57,8 +58,8 @@ Each decision has a recommended default. The plan task named in the last column 
 | D1 | Exporters emit the title by default, or only when asked? | Opt-in: `{ title: true }` on `blocksToMarkdown`, `blocksToHtml`, `blocks.exportMarkdown`, `blocksToPlainText` | Changing the default output of a shipped exporter is breaking. Opt-in is the compatible route. | 4, Task 8 |
 | D2 | Importers lift a leading H1 / `#` line into `title`? | Opt-in `{ title: true }` on `markdownToBlocks` / `htmlToBlocks` (and `importMarkdown`) returns `title` and drops that block | Export then import otherwise duplicates the title as a header block | 4, Task 9 |
 | D3 | Icon in exports? | Emoji icon: `# 🚀 Title` and `<h1><span aria-hidden="true">🚀</span> Title</h1>`. Image icon: left out of Markdown; `<img alt="">` in HTML. | Follows the tab (`blocks-to-markdown-core.ts:1182`) and page-card (`emitters.ts:482-491`) precedents | 4, Task 8 |
-| D4 | How does `<BlokTitle>` get the editor? | An explicit `editor` prop, like `BlokContent` | No context reaches a sibling of `BlokEditor` in any adapter today (React `BlokContent.tsx:104`, Vue `BlokContent.ts:48`, Angular `block-portal-registry.ts:140`) | 3, Task 3 |
-| D5 | Does `<BlokTitle>` switch the title on by itself? | No. `pageTitle` must be set at construction. `<BlokTitle>` only places it. | Core builds the header only in `prepare()` (`pageTitle/index.ts:56-79`) | 3, Task 3 |
+| D4 | How does `<BlokTitle>` get the editor? | An explicit `editor` prop, like `BlokContent`. A `BlokEditor` user passes the instance from a state-setter ref (React), `instance` (Vue) or `instance()` (Angular). | No context reaches a sibling of `BlokEditor` in any adapter today (React `BlokContent.tsx:104`, Vue `BlokContent.ts:48`, Angular `block-portal-registry.ts:140`) | 3, Task 3 |
+| D5 | Does `<BlokTitle>` switch the title on by itself? | No. `pageTitle` must be set at construction. `<BlokTitle>` only places it. | Core builds the header only in `prepare()` (`pageTitle/index.ts:60-110`) | 3, Task 3 |
 | D6 | Where does the header go when `<BlokTitle>` unmounts? | Back to its default spot, through a new `blok.title.mount(null)` | Leaving it detached is a dead title, and Defect 3 shows that is unsafe | 1b, Task 3 |
 | D7 | Non-recording set: what does `onChange` report? | `title.set(text, { record: false })` fires `onChange` with source `'api'` and `change.record === false` | The host can tell its own seed from a user action, and the source union stays the same | 1b, Task 2 |
 | D8 | Icon morph hard cut | No core change. The playground names the icon element for the transition only when the new page already has an icon when the snapshot is taken. | `icon-control.ts:134-145` replaces the button only when its kind changes (add↔icon). In local mode the icon is in `config.data` at construction, so its kind is fixed before the snapshot. Only a collab icon that arrives late changes the kind. Plan 4 Task 7 tests that case first. Moving to one stable button would change the shipped testids `page-header-add-icon` / `page-header-icon`. | 4, Task 7 |

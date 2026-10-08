@@ -21,13 +21,19 @@
   - Vue provides the instance only to `BlokContent`'s subtree (`packages/vue/src/BlokContent.ts:48-51`).
   - Angular provides it only on block element injectors (`packages/angular/src/block-portal-registry.ts:140`).
   
-  So the component takes an `editor` prop (D4). For the all-in-one `BlokEditor` the app gets the instance the way it already does (React `useBlokHandle`, Vue/Angular the ready event).
-- **`<BlokTitle>` does not switch the title on (D5).** Core builds the header only in `prepare()`, when `pageTitle` is set (`src/components/modules/pageTitle/index.ts:56-79`). `mount` does nothing when it is off (`:190-199`). In dev builds the component warns when `editor.title` has no header. Check this through a public signal; if there is none, the warning is skipped and the docs say it instead.
+  So the component takes an `editor` prop (D4). The exported `useBlokInstance` (React and Vue `index.ts`) and `injectBlokInstance` / `BLOK_EDITOR_INSTANCE` (Angular) resolve only under `BlokContent` or a block injector. Do not use them here.
+- **How a `BlokEditor` user gets the instance for `editor`:**
+  - React: a state setter as the ref, `const [ed, setEd] = useState<Blok | null>(null); <BlokEditor ref={setEd} />`. `BlokEditor.tsx:137` hands the instance through `useImperativeHandle(ref, () => editor, [editor])`, so the setter gets `null` on recreate and unmount.
+  - Never use `useBlokHandle().current`. It is a plain `useRef` getter (`useBlokHandle.ts:81-96`), so it never re-renders when the editor becomes ready.
+  - Vue: the `instance` computed that `BlokEditor` exposes (`BlokEditor.ts:294`).
+  - Angular: `[editor]="ed.instance()"` (the computed signal at `blok-editor.component.ts:458`).
+  - A `title` slot or prop on `BlokEditor` would save this wiring. It is out of scope here; offer it in the hand-off if the docs example reads awkwardly.
+- **`<BlokTitle>` does not switch the title on (D5).** Core builds the header only in `prepare()`, when `pageTitle` is set (`src/components/modules/pageTitle/index.ts:60-110`). `mount` does nothing when it is off (`:190-199`). In dev builds the component warns when `editor.title` has no header. Check this through a public signal; if there is none, the warning is skipped and the docs say it instead.
 - **`pageTitle` callbacks freeze today:**
-  - React spreads the config once into `new Blok` (`packages/react/src/useBlok.ts:358`). Only top-level handlers get live wrappers (`:330-372`).
+  - React spreads the config once into `new Blok` (`packages/react/src/useBlok.ts:360`). Only top-level handlers get live wrappers (`:314-372`).
   - Core captures the callbacks once (`src/components/utils/title-config.ts:22-23`).
   - So `pageTitle={{ onChange }}` keeps the first closure, which breaks the published promise that callback identity is live (`packages/react/types/index.d.ts:39-44`).
-  - Vue (`useBlok.ts:296`) and Angular (`[config]`, `blok-editor.component.ts:470`) read config once too.
+  - Vue (construct `useBlok.ts:295`, snapshot `:237`) and Angular (`[config]`, `blok-editor.component.ts:470`) read config once too.
   
   Fixed in Task 2.
 
@@ -47,8 +53,12 @@
   - The export tests: `packages/react/test/exports.test.ts`, `test/unit/vue/exports.test.ts`, `test/unit/angular/exports.test.ts`.
   - `react-fixture-import-map-law.test.ts`, only if a new bare import is added.
 - Angular: classic `@Input` decorators only. The `unit-angular` project uses Analog JIT (`vitest.config.ts:54-91`). `build-angular.mjs:69` stages every file in `packages/angular/src`.
-- **After destroy, `editor.title` is gone.** Teardown deletes instance fields (`src/blok.ts:121-129`). Cleanup must never call a destroyed editor's `title`. Guard it with the adapter's own "is this editor still live" check, or skip the call when the editor changed.
+- **After destroy, `editor.title` is gone.** Teardown runs synchronously, deletes instance fields and sets a null prototype (`src/blok.ts:123-130`, called at `:567, :682, :727`). Cleanup must never call a destroyed editor's `title`.
+  - React and Vue: check `getHolder(editor) !== undefined`. Both call `removeHolder` before every `destroy()` (React `useBlok.ts:260, 404, 893`; Vue `useBlok.ts:250`).
+  - Angular has no holder map: check `typeof editor.title?.mount === 'function'`.
+  - `BlokContent`'s cleanup never touches the editor, so it is not a precedent for this.
 - **React StrictMode reuses the same editor across the remount** (`useBlok.ts:248-256`). A mount effect that runs twice just moves the header again.
+- **`pageTitle` stays read-once.** `api-data.ts:4042` lists the props that stay reactive after mount, and `api-data.reactive-config.test.ts` checks it. Do not add `pageTitle` there. Say in its docs that later changes go through `editor.title`.
 
 ## Review Focus
 
@@ -91,11 +101,10 @@
 
 - [ ] **Step 1: Failing test** (React): render `BlokEditor` with `pageTitle={{ onChange: a }}`, then re-render with `pageTitle={{ onChange: b }}`. Call `editor.title.set('x')`. Expect `b` called once and `a` not called. Write the same for `onIconChange`, and the Vue and Angular twins.
 - [ ] **Step 2: Run.** Expect FAIL (`a` fires).
-- [ ] **Step 3: Implement.** Following `handlerWrappers` (`useBlok.ts:330-372`): when `currentConfig.pageTitle` is an object, pass `{ ...pageTitle, onChange: wrapper, onIconChange: wrapper }`. Each wrapper reads `configRef.current.pageTitle` at call time.
-  - Keep presence as it is: add a wrapper only when the prop had that callback. Core's `normalizeTitleConfig` stores `null` for an absent callback, and presence is not load-bearing there today. Do not add a wrapper that was not asked for.
-  - `pageTitle: true` stays `true`.
-  - Vue: read the reactive prop at call time.
-  - Angular: read the current `config` input at call time.
+- [ ] **Step 3: Implement.** Following `handlerWrappers` (`useBlok.ts:314-372`): whenever `currentConfig.pageTitle` is truthy, pass `{ ...(typeof pageTitle === 'object' ? pageTitle : {}), onChange: wrapper, onIconChange: wrapper }`. Each wrapper reads the latest `pageTitle` at call time and calls its callback if there is one.
+  - Always attach both wrappers. Core reads these callbacks only with optional chaining (`pageTitle/index.ts:133, 347, 375`), so their presence means nothing. Unlike top-level handlers, there is no channel to push a presence flip after mount. An app that mounts with `pageTitle: true` and later passes `onChange` must still be heard. Add that case to Step 1.
+  - Vue: read `mergedConfig().pageTitle` (`vue/useBlok.ts:132` re-reads `toValue(config)`; `BlokEditor` passes a getter, `BlokEditor.ts:240`). A plain object passed to `useBlok` stays a snapshot; document that.
+  - Angular: read through `escapeHatchConfig()` (`blok-editor.component.ts:414-416`, defaults merged with `[config]`). Re-enter the zone with `ngZone.run`, as the existing wrappers do (`:356, :379`). The editor is built in `runOutsideAngular` (`blok-content.directive.ts:167`), so without it no change detection runs. Add a test that a bound template value updates after a title `onChange`.
 - [ ] **Step 4: Run** (PASS). Then run `test/unit/react/useBlok*.test.ts*` and `test/unit/react/BlokEditor.test.tsx`, and the Vue and Angular `useBlok` / `BlokEditor` tests.
 - [ ] **Step 5: Commit** `fix(adapters): pageTitle callbacks follow the latest render`.
 
@@ -107,12 +116,13 @@
   - (a) `editor={null}` renders an empty div and throws nothing;
   - (b) once the editor is ready, the header is inside the div;
   - (c) StrictMode: still exactly one header in the div;
-  - (d) unmount `BlokTitle` while the editor lives: the header is back in the editor wrapper, before the redactor;
+  - (d) unmount `BlokTitle` while the editor lives: the header is back in the editor wrapper, before the redactor. Hypothesis to settle here: `useLayoutEffect` may be needed so the header is never detached for a frame between the div's removal and `mount(null)`;
+  - (h) the documented wiring works: `<BlokEditor ref={setEd} />` + `<BlokTitle editor={ed} />`, with `ed` from `useState`;
   - (e) recreate the editor (change `deps`): the header from the new editor is in the div, and nothing throws from cleanup on the old one;
   - (f) extra div props (`className`, `id`) pass through;
   - (g) children are not rendered (the div is Blok-owned, like `BlockChildren`, `createReactBlock.tsx:755-780`).
 - [ ] **Step 2: Run** `yarn test test/unit/react/BlokTitle.test.tsx`. Expect FAIL (module missing).
-- [ ] **Step 3: Implement.** `forwardRef` div. Effect keyed on `[editor]`: `editor.title.mount(div)`. Cleanup: `if (isLive(editor)) editor.title.mount(null)`. Use the same liveness signal `BlokContent` uses before touching an editor in cleanup. If there is none, check `'title' in editor`, because teardown deletes the field.
+- [ ] **Step 3: Implement.** `forwardRef` div. Effect keyed on `[editor]`: `editor.title.mount(div)`. Cleanup: `if (getHolder(editor) !== undefined) editor.title.mount(null)` (the liveness check in Global Constraints).
 - [ ] **Step 4:**
   - Export it from `index.ts`.
   - Declare `export declare const BlokTitle: React.ForwardRefExoticComponent<BlokTitleProps & React.RefAttributes<HTMLDivElement>>` in `types/index.d.ts`, with `BlokTitleProps = { editor: Blok | null } & Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>`.
@@ -141,6 +151,7 @@ Same tests, in `packages/angular/src/blok-title.component.ts` (standalone, class
 **Files:** `test/playwright/tests/{react,vue,angular}-adapter.spec.ts`, `test/playwright/fixtures/{react,vue,angular}-test.html`.
 
 - [ ] Write the spec first. The fixture renders `<BlokTitle>` in a host above a sibling "metadata" div, above the editor.
+  - The Angular fixture app is not in the HTML: `angular-test.html:43` imports a gitignored `vendor/angular/app.mjs`, built from the inline `APP_SOURCE` in `scripts/build-angular-vendor.mjs:32, 168` and checked by `test/playwright/build-freshness.ts:21`. Edit that script.
   - Title shows inside the host.
   - Typing fires the fixture's `onChange` log.
   - ArrowDown at the end of the title lands in the first block across the gap.

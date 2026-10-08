@@ -76,6 +76,7 @@ internal static class YDocConverter
 
   private const string BlocksRoot = "blocks";
   private const string OrderRoot = "root";
+  private const string PageRoot = "page";
   private const string GridRowsKey = "__rows";
   private const string GridOrderKey = "__rowKeys";
   private const int RowKeyLength = 10;
@@ -145,6 +146,18 @@ internal static class YDocConverter
   /// </summary>
   internal static void Seed(YDoc doc, JsonArray blocks, RichTextInput input)
   {
+    Seed(doc, blocks, input, null);
+  }
+
+  /// <summary>
+  /// Also replaces the page map's <c>title</c> and <c>icon</c> with the ones in
+  /// <paramref name="page"/>, by the client's rules (page-fields.ts): a
+  /// malformed value is dropped, not refused, because the client reads it as
+  /// absent anyway. A null <paramref name="page"/> leaves the page map alone.
+  /// The <c>values</c> map is never touched.
+  /// </summary>
+  internal static void Seed(YDoc doc, JsonArray blocks, RichTextInput input, JsonObject? page)
+  {
     ArgumentNullException.ThrowIfNull(doc);
     ArgumentNullException.ThrowIfNull(blocks);
     ArgumentNullException.ThrowIfNull(input);
@@ -155,9 +168,27 @@ internal static class YDocConverter
     // Composed BEFORE the transaction opens, because composing is where the
     // NUL and depth guards fire: a refused document leaves the doc as it was.
     var (prepared, topLevelIds) = Compose(blocks, input);
+    var pageFields = page is null ? null : ComposePage(page);
 
     doc.Transact(transaction =>
     {
+      if (pageFields is not null)
+      {
+        var pageMap = doc.GetMap(PageRoot);
+
+        foreach (var (key, value) in pageFields)
+        {
+          if (value is not null)
+          {
+            pageMap.Set(transaction, key, value);
+          }
+          else if (pageMap.TryGet(key, out _))
+          {
+            pageMap.Remove(transaction, key);
+          }
+        }
+      }
+
       var length = rootOrder.Count;
 
       if (length > 0)
@@ -177,6 +208,75 @@ internal static class YDocConverter
         rootOrder.Insert(transaction, 0, topLevelIds);
       }
     });
+  }
+
+  /// <summary>
+  /// The page fields to write, in the client's order: a valid value, or null
+  /// for "delete the key".
+  /// </summary>
+  private static List<(string Key, object? Value)> ComposePage(JsonObject page)
+  {
+    var title = page["title"] is JsonValue value &&
+        value.GetValueKind() == JsonValueKind.String &&
+        value.GetValue<string>() is { Length: > 0 } text
+      ? NoNul(text, "a page title")
+      : null;
+    var icon = page["icon"] is JsonObject raw ? InputWriter.Atomic(raw, 1) : null;
+
+    return [("title", title), ("icon", IsPageIcon(icon) ? icon : null)];
+  }
+
+  /// <summary>
+  /// The page map's title and icon, by the client's <c>readPageFields</c>:
+  /// only a non-empty string title and a well-formed icon, extra icon keys
+  /// included. Anything else reads as absent.
+  /// </summary>
+  internal static JsonObject ExportPage(YDoc doc)
+  {
+    ArgumentNullException.ThrowIfNull(doc);
+
+    var map = doc.GetMap(PageRoot);
+    var page = new JsonObject();
+
+    if (Value(map, "title") is string { Length: > 0 } title)
+    {
+      page["title"] = title;
+    }
+
+    var icon = Value(map, "icon");
+
+    if (IsPageIcon(icon))
+    {
+      try
+      {
+        page["icon"] = RichText.ToJsonNode(icon);
+      }
+      catch (InvalidDataException)
+      {
+        // A value JSON cannot hold (bytes, a bigint). Throwing would fail every PUT.
+      }
+    }
+
+    return page;
+  }
+
+  /// <summary>
+  /// <c>isPageIcon</c> in page-fields.ts: <c>{type:'emoji', value:string}</c> or
+  /// <c>{type:'image', url:string}</c>. Seed and export share it so they cannot drift.
+  /// </summary>
+  private static bool IsPageIcon(object? value)
+  {
+    if (value is not AnyObject icon || !icon.TryGet("type", out var type))
+    {
+      return false;
+    }
+
+    return type switch
+    {
+      "emoji" => icon.TryGet("value", out var emoji) && emoji is string,
+      "image" => icon.TryGet("url", out var url) && url is string,
+      _ => false,
+    };
   }
 
   /// <summary>
@@ -2692,7 +2792,7 @@ internal static class YDocConverter
     /// A plain (non-shared) value: what a bare <c>ymap.set(key, value)</c>
     /// stores. Nested objects and arrays stay plain all the way down.
     /// </summary>
-    private static object? Atomic(JsonNode? value, int depth)
+    internal static object? Atomic(JsonNode? value, int depth)
     {
       switch (value)
       {

@@ -71,6 +71,52 @@ public sealed class YDocConverterConformanceTests
     AssertJsonEqual(RichTextRuntime.Export(source), exported);
   }
 
+  public static TheoryData<string> PageCases()
+  {
+    return new TheoryData<string>(YDocConverterFixtures.PageCaseNames());
+  }
+
+  [Fact]
+  public void EveryPageCaseHasItsCanonicalPage()
+  {
+    Assert.Equal(7, YDocConverterFixtures.PageCaseNames().Count);
+
+    foreach (var name in YDocConverterFixtures.PageCaseNames())
+    {
+      Assert.NotNull(YDocConverterFixtures.Load(name).PageCanonical);
+    }
+  }
+
+  [Theory]
+  [MemberData(nameof(PageCases))]
+  public void SeedingPageJsonExportsCanonicalPage(string name)
+  {
+    var fixture = YDocConverterFixtures.Load(name);
+    var doc = new YDoc();
+
+    RichTextRuntime.Seed(doc, fixture.Input, fixture.Page);
+
+    AssertJsonEqual(CanonicalPage(fixture), YDocConverter.ExportPage(doc));
+  }
+
+  [Theory]
+  [MemberData(nameof(PageCases))]
+  public void ApplyingTheClientUpdateExportsCanonicalPage(string name)
+  {
+    var fixture = YDocConverterFixtures.Load(name);
+    var doc = new YDoc();
+
+    Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(fixture.Update).Outcome);
+
+    AssertJsonEqual(CanonicalPage(fixture), YDocConverter.ExportPage(doc));
+  }
+
+  private static System.Text.Json.Nodes.JsonObject CanonicalPage(YDocConverterFixture fixture)
+  {
+    return fixture.PageCanonical ?? throw new InvalidDataException(
+        $"collab fixture \"{fixture.Name}\" has page.json but no page-canonical.json.");
+  }
+
   /// <summary>
   /// The host shape (contract §9): <c>canonical.segments.json</c>, which the
   /// format-2 generator writes next to <c>canonical.json</c> (the editor

@@ -636,4 +636,153 @@ public sealed class YDocConverterHardeningTests
       throw new InvalidOperationException("the walk failed on a 1 MiB stack", failure);
     }
   }
+
+  private static JsonArray OneParagraph()
+  {
+    return JsonNode.Parse("""[{"id":"p1","type":"paragraph","data":{"text":""}}]""")!.AsArray();
+  }
+
+  private static JsonObject Page(string json)
+  {
+    return JsonNode.Parse(json)!.AsObject();
+  }
+
+  private static string ExportedPage(YDoc doc)
+  {
+    return YDocConverterFixtures.Canonicalize(YDocConverter.ExportPage(doc));
+  }
+
+  /// <summary>A reseed is a replace: a title the new record lacks is removed.</summary>
+  [Fact]
+  public void ReseedFromARecordWithNoTitleRemovesTheOldTitle()
+  {
+    var doc = new YDoc();
+
+    YDocConverter.Seed(doc, OneParagraph(), RichTextInput.Refusing(RichTextFields.BuiltIn),
+        Page("""{"title":"Old","icon":{"type":"emoji","value":"🚀"}}"""));
+    YDocConverter.Seed(doc, OneParagraph(), RichTextInput.Refusing(RichTextFields.BuiltIn), Page("{}"));
+
+    Assert.Equal("{}", ExportedPage(doc));
+    Assert.False(doc.GetMap("page").TryGet("title", out _));
+    Assert.False(doc.GetMap("page").TryGet("icon", out _));
+  }
+
+  /// <summary>History-tracked host values are not part of the record.</summary>
+  [Fact]
+  public void SeedLeavesTheValuesMapAlone()
+  {
+    var doc = new YDoc();
+
+    doc.Transact(transaction => doc.GetMap("values").Set(transaction, "k", "kept"));
+
+    YDocConverter.Seed(doc, OneParagraph(), RichTextInput.Refusing(RichTextFields.BuiltIn),
+        Page("""{"title":"Plan"}"""));
+
+    Assert.True(doc.GetMap("values").TryGet("k", out var value));
+    Assert.Equal("kept", value);
+  }
+
+  /// <summary>The overloads without a page leave the page map as it is.</summary>
+  [Fact]
+  public void SeedWithoutAPageLeavesThePageMapAlone()
+  {
+    var doc = new YDoc();
+
+    YDocConverter.Seed(doc, OneParagraph(), RichTextInput.Refusing(RichTextFields.BuiltIn),
+        Page("""{"title":"Plan"}"""));
+    YDocConverter.Seed(doc, OneParagraph());
+
+    Assert.Equal("""{"title":"Plan"}""", ExportedPage(doc));
+  }
+
+  /// <summary>
+  /// The client reads a malformed value as absent, so a host record carrying
+  /// one must still open: the seed drops it instead of refusing the join.
+  /// </summary>
+  [Theory]
+  [InlineData("""{"title":42,"icon":"🚀"}""")]
+  [InlineData("""{"title":"","icon":{"type":"emoji"}}""")]
+  [InlineData("""{"title":null,"icon":{"type":"image","url":5}}""")]
+  [InlineData("""{"title":true,"icon":{"type":"sticker","value":"x"}}""")]
+  [InlineData("""{"title":["a"],"icon":null}""")]
+  public void SeedDropsAMalformedTitleOrIcon(string page)
+  {
+    var doc = new YDoc();
+
+    YDocConverter.Seed(doc, OneParagraph(), RichTextInput.Refusing(RichTextFields.BuiltIn), Page(page));
+
+    Assert.Equal("{}", ExportedPage(doc));
+    Assert.False(doc.GetMap("page").TryGet("title", out _));
+    Assert.False(doc.GetMap("page").TryGet("icon", out _));
+  }
+
+  /// <summary>Extra icon keys ride along, as the client stores them.</summary>
+  [Fact]
+  public void SeedKeepsAValidIconWithItsExtraKeys()
+  {
+    var doc = new YDoc();
+
+    YDocConverter.Seed(doc, OneParagraph(), RichTextInput.Refusing(RichTextFields.BuiltIn),
+        Page("""{"title":"Plan","icon":{"type":"image","url":"https://x/i.png","alt":"logo"}}"""));
+
+    Assert.Equal(
+        YDocConverterFixtures.Canonicalize(
+            Page("""{"title":"Plan","icon":{"type":"image","url":"https://x/i.png","alt":"logo"}}""")),
+        ExportedPage(doc));
+  }
+
+  /// <summary>
+  /// A NUL is refused like every other string the JSON seam writes, before
+  /// the transaction opens, so the doc is left as it was.
+  /// </summary>
+  [Theory]
+  [InlineData("""{"title":"a\u0000b"}""")]
+  [InlineData("""{"icon":{"type":"emoji","value":"a\u0000b"}}""")]
+  public void SeedRefusesANulInAPageStringAndWritesNothing(string page)
+  {
+    var doc = new YDoc();
+
+    YDocConverter.Seed(doc, OneParagraph(), RichTextInput.Refusing(RichTextFields.BuiltIn),
+        Page("""{"title":"Before"}"""));
+
+    Assert.Throws<InvalidDataException>(() => YDocConverter.Seed(
+        doc, JsonNode.Parse("""[{"id":"p2","type":"paragraph","data":{"text":""}}]""")!.AsArray(),
+        RichTextInput.Refusing(RichTextFields.BuiltIn), Page(page)));
+
+    Assert.Equal("""{"title":"Before"}""", ExportedPage(doc));
+    Assert.True(doc.GetMap("blocks").TryGet("p1", out _));
+  }
+
+  /// <summary>A shared type where a title belongs reads as absent, as on the client.</summary>
+  [Fact]
+  public void ExportPageSkipsASharedTypeTitle()
+  {
+    var doc = new YDoc();
+
+    doc.Transact(transaction => doc.GetMap("page").Set(transaction, "title", new YText("nested")));
+
+    Assert.Equal("{}", ExportedPage(doc));
+  }
+
+  /// <summary>
+  /// A peer can put bytes inside an icon. JSON has no bytes, and a throw here
+  /// would fail every PUT, so the icon reads as absent instead.
+  /// </summary>
+  [Fact]
+  public void ExportPageSkipsAnIconThatIsNotJson()
+  {
+    var doc = new YDoc();
+    var icon = new AnyObject();
+
+    icon.Add("type", "emoji");
+    icon.Add("value", "x");
+    icon.Add("raw", new byte[] { 1, 2 });
+    doc.Transact(transaction =>
+    {
+      doc.GetMap("page").Set(transaction, "title", "Plan");
+      doc.GetMap("page").Set(transaction, "icon", icon);
+    });
+
+    Assert.Equal("""{"title":"Plan"}""", ExportedPage(doc));
+  }
 }

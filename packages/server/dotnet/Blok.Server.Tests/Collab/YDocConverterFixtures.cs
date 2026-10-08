@@ -10,12 +10,16 @@ namespace Blok.Server.Tests.Collab;
 /// The host-shape canonical (rich fields as segments), or null when the
 /// fixture predates format 2.
 /// </param>
+/// <param name="Page">page.json, or null for a case that pins no page fields.</param>
+/// <param name="PageCanonical">page-canonical.json; null exactly when <paramref name="Page"/> is.</param>
 internal sealed record YDocConverterFixture(
     string Name,
     JsonArray Input,
     JsonArray Canonical,
     byte[] Update,
-    JsonArray? CanonicalSegments = null);
+    JsonArray? CanonicalSegments = null,
+    JsonObject? Page = null,
+    JsonObject? PageCanonical = null);
 
 /// <summary>
 /// Reads the lockstep fixtures that scripts/generate-collab-fixtures.mjs
@@ -82,6 +86,8 @@ internal static class YDocConverterFixtures
     var directory = Path.Combine(root, name);
 
     var segments = Path.Combine(directory, "canonical.segments.json");
+    var page = Path.Combine(directory, "page.json");
+    var pageCanonical = Path.Combine(directory, "page-canonical.json");
 
     return new YDocConverterFixture(
         name,
@@ -89,7 +95,23 @@ internal static class YDocConverterFixtures
         ReadBlocks(Path.Combine(directory, "canonical.json")),
         Convert.FromBase64String(
             File.ReadAllText(Path.Combine(directory, "update.b64"))),
-        File.Exists(segments) ? ReadBlocks(segments) : null);
+        File.Exists(segments) ? ReadBlocks(segments) : null,
+        File.Exists(page) ? ReadObject(page) : null,
+        File.Exists(pageCanonical) ? ReadObject(pageCanonical) : null);
+  }
+
+  /// <summary>The cases that carry page.json.</summary>
+  internal static IReadOnlyList<string> PageCaseNames()
+  {
+    return CaseNames()
+        .Where(name => File.Exists(Path.Combine(Root.Value, name, "page.json")))
+        .ToArray();
+  }
+
+  private static JsonObject ReadObject(string path)
+  {
+    return JsonNode.Parse(File.ReadAllText(path))?.AsObject() ??
+        throw new InvalidDataException($"{path} does not hold a JSON object");
   }
 
   /// <summary>

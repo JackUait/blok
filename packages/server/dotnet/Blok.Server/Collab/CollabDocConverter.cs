@@ -44,7 +44,11 @@ internal sealed class CollabDocConverter(
     var found = YDocConverter.CollectSeedHtml(blocks, fields);
     var input = RichTextInput.Converting(fields, await Read(found, cancellationToken, MigrationReadTimeout));
 
-    YDocConverter.Seed(doc, blocks, input);
+    YDocConverter.Seed(doc, blocks, input, new JsonObject
+    {
+      ["title"] = document["title"]?.DeepClone(),
+      ["icon"] = document["icon"]?.DeepClone(),
+    });
   }
 
   public async ValueTask ApplyOpsAsync(
@@ -93,6 +97,8 @@ internal sealed class CollabDocConverter(
   {
     var time = timeProvider.GetUtcNow().ToUnixTimeMilliseconds();
     var blocks = YDocConverter.Export(doc, fields, log, out var slots);
+    // Read with the blocks, before the await, so both come from one state.
+    var page = YDocConverter.ExportPage(doc);
 
     if (slots.Count > 0)
     {
@@ -118,11 +124,18 @@ internal sealed class CollabDocConverter(
       }
     }
 
-    return new JsonObject
+    var output = new JsonObject
     {
       ["time"] = time,
       ["blocks"] = blocks,
     };
+
+    foreach (var (key, value) in page)
+    {
+      output[key] = value?.DeepClone();
+    }
+
+    return output;
   }
 
   public JsonArray ExportBlocks(YDoc doc, ISet<string> warned, out IReadOnlyList<RichTextHtmlSlot> slots)

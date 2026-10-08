@@ -27,6 +27,16 @@ internal static class RichTextRuntime
         Converting(YDocConverter.CollectSeedHtml(blocks, RichTextFields.BuiltIn)));
   }
 
+  /// <summary>The same seed with page fields, the way <c>CollabDocConverter.SeedAsync</c> passes them.</summary>
+  internal static void Seed(YDoc doc, JsonArray blocks, JsonObject? page)
+  {
+    YDocConverter.Seed(
+        doc,
+        blocks,
+        Converting(YDocConverter.CollectSeedHtml(blocks, RichTextFields.BuiltIn)),
+        page);
+  }
+
   /// <summary><see cref="YDocConverter.ApplyOps(YDoc, IReadOnlyList{CollabEditOp})"/> with the HTML read first.</summary>
   internal static void ApplyOps(YDoc doc, IReadOnlyList<CollabEditOp> ops)
   {

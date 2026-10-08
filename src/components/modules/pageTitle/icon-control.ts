@@ -84,10 +84,18 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost): { re
     button.innerHTML = IconEmojiSmile;
     button.append(document.createElement('span'));
     button.addEventListener('click', () => {
+      // Read-only can engage while the emoji data loads.
       void randomEmoji().then((native) => {
+        if (host.isReadOnly()) {
+          return;
+        }
         host.setIcon({ type: 'emoji', value: native });
         openPicker(shown.button ?? button);
-      }, () => openPicker(button));
+      }, () => {
+        if (!host.isReadOnly()) {
+          openPicker(button);
+        }
+      });
     });
     // Loaded now so the click's random pick resolves at once.
     void loadEmojiGrid().catch(() => undefined);
